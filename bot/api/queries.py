@@ -119,7 +119,7 @@ query WeaponPropertiesList {
 # ---------------------------------------------------------------------------
 
 SPELL_DETAIL = """
-query SpellDetail($index: String) {
+query SpellDetail($index: String!) {
   spell(index: $index) {
     index
     name
@@ -147,7 +147,7 @@ query SpellDetail($index: String) {
 """
 
 MONSTER_DETAIL = """
-query MonsterDetail($index: String) {
+query MonsterDetail($index: String!) {
   monster(index: $index) {
     index
     name
@@ -183,7 +183,7 @@ query MonsterDetail($index: String) {
 """
 
 CLASS_DETAIL = """
-query ClassDetail($index: String) {
+query ClassDetail($index: String!) {
   class(index: $index) {
     index
     name
@@ -201,7 +201,7 @@ query ClassDetail($index: String) {
 """
 
 RACE_DETAIL = """
-query RaceDetail($index: String) {
+query RaceDetail($index: String!) {
   race(index: $index) {
     index
     name
@@ -221,7 +221,7 @@ query RaceDetail($index: String) {
 """
 
 EQUIPMENT_DETAIL = """
-query EquipmentDetail($index: String) {
+query EquipmentDetail($index: String!) {
   equipment(index: $index) {
     index
     name
@@ -234,7 +234,7 @@ query EquipmentDetail($index: String) {
 """
 
 CONDITION_DETAIL = """
-query ConditionDetail($index: String) {
+query ConditionDetail($index: String!) {
   condition(index: $index) {
     index
     name
@@ -244,7 +244,7 @@ query ConditionDetail($index: String) {
 """
 
 MAGIC_ITEM_DETAIL = """
-query MagicItemDetail($index: String) {
+query MagicItemDetail($index: String!) {
   magicItem(index: $index) {
     index
     name
@@ -256,7 +256,7 @@ query MagicItemDetail($index: String) {
 """
 
 FEAT_DETAIL = """
-query FeatDetail($index: String) {
+query FeatDetail($index: String!) {
   feat(index: $index) {
     index
     name
@@ -267,7 +267,7 @@ query FeatDetail($index: String) {
 """
 
 RULE_DETAIL = """
-query RuleDetail($index: String) {
+query RuleDetail($index: String!) {
   rule(index: $index) {
     index
     name
@@ -277,7 +277,7 @@ query RuleDetail($index: String) {
 """
 
 BACKGROUND_DETAIL = """
-query BackgroundDetail($index: String) {
+query BackgroundDetail($index: String!) {
   background(index: $index) {
     index
     name
@@ -290,7 +290,7 @@ query BackgroundDetail($index: String) {
 """
 
 WEAPON_PROPERTY_DETAIL = """
-query WeaponPropertyDetail($index: String) {
+query WeaponPropertyDetail($index: String!) {
   weaponProperty(index: $index) {
     index
     name
