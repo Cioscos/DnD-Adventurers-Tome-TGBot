@@ -136,7 +136,7 @@ query SpellDetail($index: String!) {
     higher_level
     damage {
       damage_type { name }
-      damage_at_slot_level { level damage }
+      damage_at_slot_level { level value }
     }
     area_of_effect { type size }
     dc { dc_type { name } dc_success }
@@ -159,7 +159,13 @@ query MonsterDetail($index: String!) {
     hit_dice
     hit_points_roll
     speed { walk swim fly burrow climb }
-    armor_class { value type }
+    armor_class {
+      ... on ArmorClassDex { type value desc }
+      ... on ArmorClassNatural { type value desc }
+      ... on ArmorClassArmor { type value desc }
+      ... on ArmorClassSpell { type value desc }
+      ... on ArmorClassCondition { type value desc }
+    }
     strength
     dexterity
     constitution
@@ -175,7 +181,7 @@ query MonsterDetail($index: String!) {
     damage_immunities
     condition_immunities { name }
     special_abilities { name desc }
-    actions { name desc attack_bonus damage { damage_type { name } damage_dice } }
+    actions { name desc attack_bonus damage { ... on Damage { damage_type { name } damage_dice } } }
     legendary_actions { name desc }
     reactions { name desc }
   }
@@ -214,7 +220,6 @@ query RaceDetail($index: String!) {
     language_desc
     traits { name }
     subraces { name }
-    starting_proficiencies { name }
     ability_bonuses { bonus ability_score { name } }
   }
 }
@@ -223,12 +228,13 @@ query RaceDetail($index: String!) {
 EQUIPMENT_DETAIL = """
 query EquipmentDetail($index: String!) {
   equipment(index: $index) {
-    index
-    name
-    equipment_category { name }
-    cost { quantity unit }
-    weight
-    desc
+    ... on Gear { index name equipment_category { name } cost { quantity unit } weight desc }
+    ... on Weapon { index name equipment_category { name } cost { quantity unit } weight desc }
+    ... on Armor { index name equipment_category { name } cost { quantity unit } weight desc }
+    ... on Tool { index name equipment_category { name } cost { quantity unit } weight desc }
+    ... on Pack { index name equipment_category { name } cost { quantity unit } weight desc }
+    ... on Ammunition { index name equipment_category { name } cost { quantity unit } weight desc }
+    ... on Vehicle { index name equipment_category { name } cost { quantity unit } weight desc }
   }
 }
 """
@@ -283,7 +289,6 @@ query BackgroundDetail($index: String!) {
     name
     starting_proficiencies { name }
     starting_equipment { equipment { name } quantity }
-    starting_equipment_options { choose type from { options { ... on EquipmentOption { item { name } } } } }
     feature { name desc }
   }
 }

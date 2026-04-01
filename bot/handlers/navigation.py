@@ -230,7 +230,7 @@ def _format_spell(item: dict[str, Any]) -> str:
         slots = damage.get("damage_at_slot_level", [])
         if slots:
             slot_str = ", ".join(
-                f"Lvl {s['level']}: {s['damage']}" for s in slots[:5]
+                f"Lvl {s['level']}: {s['value']}" for s in slots[:5]
             )
             lines.append(f"*Damage by Slot:* {_esc(slot_str)}")
 
