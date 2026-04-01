@@ -66,13 +66,27 @@ class DnDClient:
         body = response.json()
         if "errors" in body:
             msg = body["errors"][0].get("message", "Unknown GraphQL error")
+            if "data" in body and body["data"]:
+                # Partial success — log the error but return available data
+                logger.warning("GraphQL partial error (returning data): %s", msg)
+                return body["data"]
             logger.error("GraphQL error: %s", msg)
             raise APIError(f"GraphQL error: {msg}")
 
         return body.get("data", {})
 
     # ------------------------------------------------------------------
-    # High-level helpers
+    # Generic execute (used by introspection & query builder)
+    # ------------------------------------------------------------------
+
+    async def execute(
+        self, query: str, variables: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Execute an arbitrary GraphQL query and return ``data``."""
+        return await self._execute(query, variables)
+
+    # ------------------------------------------------------------------
+    # High-level helpers (kept for backward compatibility)
     # ------------------------------------------------------------------
 
     async def fetch_list(

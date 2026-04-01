@@ -5,11 +5,13 @@ An interactive Telegram bot that lets you browse the entire **D&D 5th Edition** 
 ## ✨ Features
 
 - **11 browsable categories**: Spells, Monsters, Classes, Races, Equipment, Conditions, Magic Items, Feats, Rules, Backgrounds, Weapon Properties
-- **3-level inline navigation**: Categories → Paginated item list → Full item detail
-- **Smart pagination**: 10 items per page with Next ➡️ / ⬅️ Prev buttons
-- **Rich formatting**: Detailed item views formatted in Telegram MarkdownV2
+- **N-level deep navigation**: Categories → Paginated item list → Full item detail → Navigable sub-entities (e.g. Class → Wizard → 📂 Subclasses → Evocation)
+- **Dynamic schema discovery**: At startup the bot introspects the GraphQL API and automatically discovers navigable relationships between entities
+- **Smart pagination**: 10 items per page with Next ➡️ / ⬅️ Prev buttons (server-side for top-level lists, client-side for sub-lists)
+- **Rich formatting**: Detailed item views formatted in Telegram MarkdownV2 with custom formatters for major types and a generic formatter for all others
+- **Arbitrary callback data**: Uses PTB's callback-data cache so navigation state is a Python dataclass — no 64-byte string limit
 - **Fully async**: All API calls use `httpx.AsyncClient` for non-blocking I/O
-- **Graceful error handling**: User-friendly messages on API failures
+- **Graceful error handling**: User-friendly messages on API failures; partial GraphQL data returned when possible
 
 ## 🚀 Quick Start
 
@@ -52,26 +54,31 @@ The bot will start polling for updates. Open your bot in Telegram and send `/sta
 
 ```
 bot/
-├── main.py              # Entry point — builds & starts the Application
+├── main.py                  # Entry point — builds Application, inits schema, starts polling
 ├── handlers/
-│   ├── start.py         # /start command handler
-│   └── navigation.py    # Inline-button callback handlers & detail formatters
+│   ├── start.py             # /start command handler
+│   └── navigation.py        # N-level callback handlers & detail formatters
 ├── api/
-│   ├── client.py        # Async GraphQL client (httpx)
-│   └── queries.py       # All GraphQL query constants
+│   ├── client.py            # Async GraphQL client (httpx)
+│   ├── introspection.py     # __schema query & parser
+│   └── query_builder.py     # Dynamic GraphQL query generation
+├── schema/
+│   ├── types.py             # FieldInfo, TypeInfo, MenuCategory dataclasses
+│   └── registry.py          # SchemaRegistry — introspection cache & navigable field discovery
 ├── keyboards/
-│   └── builder.py       # Dynamic InlineKeyboardMarkup builders
+│   └── builder.py           # Dynamic InlineKeyboardMarkup builders
 └── models/
-    └── state.py         # Category registry & callback_data encoding
+    └── state.py             # NavAction callback dataclass & helpers
 ```
 
 ## 🎮 Usage
 
 1. Start the bot with `/start`
-2. Tap a category button (e.g. 🔮 Spells)
-3. Browse the paginated list and tap an item
-4. View the full detail card
-5. Use ⬅️ Back to return to the list or 🏠 Menu to go home
+2. Tap a category button (e.g. ⚔️ Classes)
+3. Browse the paginated list and tap an item (e.g. Wizard)
+4. View the full detail card with 📂 buttons for related entities
+5. Tap 📂 Subclasses to drill into navigable sub-entities
+6. Use ⬅️ Back to return or 🏠 Menu to go home
 
 ## 🔧 Configuration
 
