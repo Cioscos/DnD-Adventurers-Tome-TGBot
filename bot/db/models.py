@@ -81,6 +81,11 @@ class Character(Base):
         Enum(SpellSlotsMode), default=SpellSlotsMode.MANUAL
     )
 
+    # Concentration tracking
+    concentrating_spell_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("spells.id", ondelete="SET NULL"), nullable=True
+    )
+
     # Flexible JSON fields
     rolls_history: Mapped[Optional[list]] = mapped_column(JSON, default=list)
     notes: Mapped[Optional[dict]] = mapped_column(JSON, default=dict)
@@ -94,7 +99,8 @@ class Character(Base):
         back_populates="character", cascade="all, delete-orphan"
     )
     spells: Mapped[List["Spell"]] = relationship(
-        back_populates="character", cascade="all, delete-orphan"
+        back_populates="character", cascade="all, delete-orphan",
+        foreign_keys="[Spell.character_id]",
     )
     spell_slots: Mapped[List["SpellSlot"]] = relationship(
         back_populates="character", cascade="all, delete-orphan"
@@ -197,7 +203,20 @@ class Spell(Base):
     level: Mapped[int] = mapped_column(Integer, default=0)
     description: Mapped[Optional[str]] = mapped_column(Text)
 
-    character: Mapped["Character"] = relationship(back_populates="spells")
+    # Extended D&D 5e properties
+    casting_time: Mapped[Optional[str]] = mapped_column(String(100))
+    range_area: Mapped[Optional[str]] = mapped_column(String(100))
+    components: Mapped[Optional[str]] = mapped_column(String(200))
+    duration: Mapped[Optional[str]] = mapped_column(String(100))
+    is_concentration: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_ritual: Mapped[bool] = mapped_column(Boolean, default=False)
+    higher_level: Mapped[Optional[str]] = mapped_column(Text)
+    attack_save: Mapped[Optional[str]] = mapped_column(String(100))
+    is_pinned: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    character: Mapped["Character"] = relationship(
+        back_populates="spells", foreign_keys=[character_id]
+    )
 
 
 # ---------------------------------------------------------------------------

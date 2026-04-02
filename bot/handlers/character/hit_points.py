@@ -132,6 +132,9 @@ async def handle_rest(
 
         if rest_type == "long":
             char.current_hit_points = char.hit_points
+            # Clear active concentration
+            was_concentrating = char.concentrating_spell_id is not None
+            char.concentrating_spell_id = None
             # Restore all spell slots
             slots_res = await session.execute(
                 select(SpellSlot).where(SpellSlot.character_id == char_id)
@@ -146,8 +149,12 @@ async def handle_rest(
                 if ability.restoration_type == RestorationType.LONG_REST:
                     ability.restore()
             msg = "🌙 *Riposo lungo completato\\!*\nHP ripristinati e slot incantesimi recuperati\\."
+            if was_concentrating:
+                msg += "\n🔮 Concentrazione interrotta\\."
         else:
-            # Short rest: restore short-rest abilities
+            # Short rest: clear concentration + restore short-rest abilities
+            was_concentrating = char.concentrating_spell_id is not None
+            char.concentrating_spell_id = None
             abilities_res = await session.execute(
                 select(Ability).where(Ability.character_id == char_id)
             )
@@ -155,6 +162,8 @@ async def handle_rest(
                 if ability.restoration_type == RestorationType.SHORT_REST:
                     ability.restore()
             msg = "⏸️ *Riposo breve completato\\!*\nAbilità ripristinate\\."
+            if was_concentrating:
+                msg += "\n🔮 Concentrazione interrotta\\."
 
     if update.callback_query:
         await update.callback_query.answer()

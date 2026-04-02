@@ -57,13 +57,23 @@ def format_character_header(char: Character) -> str:
     )
 
 
-def format_character_summary(char: Character) -> str:
-    """Full character sheet summary."""
+def format_character_summary(
+    char: Character,
+    spells: list[Spell] | None = None,
+    abilities: list[Ability] | None = None,
+) -> str:
+    """Full character sheet summary with active status."""
     lines = [format_character_header(char)]
     if char.race:
         lines.append(f"🧝 Razza: {_esc(char.race)}")
     if char.gender:
         lines.append(f"👤 Genere: {_esc(char.gender)}")
+    # Active status (concentration, pinned spells, passive abilities)
+    if spells is not None and abilities is not None:
+        active = format_character_active_status(char, spells, abilities)
+        if active:
+            lines.append("")
+            lines.append(active)
     return "\n".join(lines)
 
 
@@ -102,7 +112,8 @@ def format_ac(char: Character) -> str:
     )
 
 
-def format_spells(spells: list[Spell]) -> str:
+def format_spells(spells: list[Spell], concentrating_spell_id: int | None = None) -> str:
+    """Format spells grouped by level with status indicators."""
     if not spells:
         return "Nessun incantesimo conosciuto\\."
     by_level: dict[int, list[Spell]] = {}
@@ -113,8 +124,88 @@ def format_spells(spells: list[Spell]) -> str:
         label = "Trucchetti" if lvl == 0 else f"Livello {lvl}"
         lines.append(f"*{label}*")
         for s in by_level[lvl]:
-            lines.append(f"  • {_esc(s.name)}")
+            indicators = ""
+            if concentrating_spell_id == s.id:
+                indicators = "⚡ "
+            elif s.is_concentration:
+                indicators = "🔮 "
+            if s.is_pinned:
+                indicators += "📌 "
+            if s.is_ritual:
+                indicators += "®️ "
+            lines.append(f"  • {indicators}{_esc(s.name)}")
     return "\n".join(lines)
+
+
+def format_spell_detail(spell: Spell) -> str:
+    """Format full spell detail with all D&D 5e properties."""
+    level_label = "Trucchetto" if spell.level == 0 else f"Livello {spell.level}"
+    lines = [f"✨ *{_esc(spell.name)}*"]
+    lines.append(f"📖 {_esc(level_label)}")
+
+    if spell.casting_time:
+        lines.append(f"⏱️ Tempo di lancio: {_esc(spell.casting_time)}")
+    if spell.range_area:
+        lines.append(f"📏 Gittata: {_esc(spell.range_area)}")
+    if spell.components:
+        lines.append(f"🧩 Componenti: {_esc(spell.components)}")
+    if spell.duration:
+        lines.append(f"⏳ Durata: {_esc(spell.duration)}")
+
+    flags = []
+    if spell.is_concentration:
+        flags.append("🔮 Concentrazione")
+    if spell.is_ritual:
+        flags.append("📖 Rituale")
+    if flags:
+        lines.append(" \\| ".join(flags))
+
+    if spell.attack_save:
+        lines.append(f"🎯 Attacco/TS: {_esc(spell.attack_save)}")
+
+    if spell.description:
+        lines.append(f"\n📜 {_esc(spell.description)}")
+    if spell.higher_level:
+        lines.append(f"\n📈 *A livelli superiori:* {_esc(spell.higher_level)}")
+
+    if spell.is_pinned:
+        lines.append("\n📌 _Fissato nel menù_")
+
+    return "\n".join(lines)
+
+
+def format_character_active_status(
+    char: Character,
+    spells: list[Spell],
+    abilities: list[Ability],
+) -> str:
+    """Format active status section for the character summary.
+
+    Shows: concentration, pinned spells, passive abilities.
+    """
+    lines: list[str] = []
+
+    # Active concentration
+    if char.concentrating_spell_id:
+        conc_spell = next(
+            (s for s in spells if s.id == char.concentrating_spell_id), None
+        )
+        if conc_spell:
+            lines.append(f"🔮 Concentrazione: *{_esc(conc_spell.name)}*")
+
+    # Pinned spells
+    pinned = [s for s in spells if s.is_pinned]
+    if pinned:
+        names = ", ".join(_esc(s.name) for s in pinned)
+        lines.append(f"📌 Fissati: {names}")
+
+    # Passive abilities that are active
+    passive_active = [a for a in abilities if a.is_passive and a.is_active]
+    if passive_active:
+        names = ", ".join(_esc(a.name) for a in passive_active)
+        lines.append(f"⚡ Passivi attivi: {names}")
+
+    return "\n".join(lines) if lines else ""
 
 
 def format_spell_slots(slots: list[SpellSlot]) -> str:

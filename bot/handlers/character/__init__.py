@@ -50,6 +50,9 @@ from __future__ import annotations
     CHAR_MAP_ADD_FILE,
     CHAR_SETTINGS_MENU,
     CHAR_DELETE_CONFIRM,
-) = range(44)
+    # Spell enhancement states
+    CHAR_SPELL_EDIT,
+    CHAR_CONC_SAVE,
+) = range(46)
 
 STOPPING = 99

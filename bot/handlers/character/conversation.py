@@ -34,6 +34,7 @@ from bot.handlers.character import (
     CHAR_BAG_ADD_WEIGHT,
     CHAR_BAG_EDIT,
     CHAR_BAG_MENU,
+    CHAR_CONC_SAVE,
     CHAR_CURRENCY_CONVERT,
     CHAR_CURRENCY_EDIT,
     CHAR_CURRENCY_MENU,
@@ -57,6 +58,7 @@ from bot.handlers.character import (
     CHAR_NOTES_MENU,
     CHAR_SELECT,
     CHAR_SETTINGS_MENU,
+    CHAR_SPELL_EDIT,
     CHAR_SPELL_LEARN,
     CHAR_SPELL_SLOTS_MENU,
     CHAR_SPELL_SLOT_ADD,
@@ -119,8 +121,11 @@ async def character_callback_handler(
         restore_slot, show_slot_detail, show_spell_slots_menu, use_slot,
     )
     from bot.handlers.character.spells import (
-        ask_spell_learn, forget_spell, show_spell_detail, show_spells_menu,
-        show_use_spell_level_picker, use_spell_at_level,
+        activate_concentration, ask_concentration_save_damage,
+        ask_spell_learn, ask_spell_edit_field, drop_concentration,
+        finalize_spell_learn, forget_spell, show_spell_detail,
+        show_spell_edit_menu, show_spells_menu,
+        show_use_spell_level_picker, toggle_pin_spell, use_spell_at_level,
     )
     from bot.handlers.character.stats import ask_stat_input, show_stats_menu
 
@@ -224,6 +229,10 @@ async def character_callback_handler(
     if action == "char_spells":
         if sub == "learn":
             return await ask_spell_learn(update, context, cid)
+        if sub == "learn_conc_yes":
+            return await finalize_spell_learn(update, context, is_concentration=True)
+        if sub == "learn_conc_no":
+            return await finalize_spell_learn(update, context, is_concentration=False)
         if sub == "detail":
             back_page = int(data.back[4]) if len(data.back) > 4 else 0
             return await show_spell_detail(update, context, cid, data.item_id, back_page)
@@ -237,6 +246,19 @@ async def character_callback_handler(
             except (ValueError, AttributeError):
                 slot_level = 1
             return await use_spell_at_level(update, context, cid, data.item_id, slot_level)
+        if sub == "activate_conc":
+            return await activate_concentration(update, context, cid, data.item_id)
+        if sub == "drop_conc":
+            return await drop_concentration(update, context, cid)
+        if sub == "conc_save":
+            return await ask_concentration_save_damage(update, context, cid)
+        if sub == "pin":
+            return await toggle_pin_spell(update, context, cid, data.item_id)
+        if sub == "edit_menu":
+            return await show_spell_edit_menu(update, context, cid, data.item_id)
+        if sub and sub.startswith("edit_"):
+            field = sub[5:]  # strip "edit_" prefix
+            return await ask_spell_edit_field(update, context, cid, data.item_id, field)
         return await show_spells_menu(update, context, cid, data.page)
 
     # ─── Spell slots ───
@@ -403,7 +425,10 @@ def build_character_conversation_handler() -> ConversationHandler:
         show_character_selection,
     )
     from bot.handlers.character.spell_slots import handle_slot_add_text
-    from bot.handlers.character.spells import handle_spell_learn_text
+    from bot.handlers.character.spells import (
+        handle_concentration_save_text, handle_spell_edit_text,
+        handle_spell_learn_text,
+    )
     from bot.handlers.character.stats import handle_stat_text
 
     # Generic CharAction handler (covers all inline-button actions)
@@ -478,6 +503,14 @@ def build_character_conversation_handler() -> ConversationHandler:
                 char_callback,
             ],
             CHAR_SPELL_SLOT_REMOVE: [char_callback],
+            CHAR_SPELL_EDIT: [
+                MessageHandler(text_filter, handle_spell_edit_text),
+                char_callback,
+            ],
+            CHAR_CONC_SAVE: [
+                MessageHandler(text_filter, handle_concentration_save_text),
+                char_callback,
+            ],
             CHAR_BAG_MENU: [char_callback],
             CHAR_BAG_ADD_NAME: [
                 MessageHandler(text_filter, handle_bag_text),

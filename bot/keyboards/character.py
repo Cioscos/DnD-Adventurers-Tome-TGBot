@@ -203,8 +203,10 @@ def build_level_class_choice_keyboard(
 # ---------------------------------------------------------------------------
 
 def build_spells_menu_keyboard(
-    char_id: int, spells: list[Spell], page: int
+    char_id: int, spells: list[Spell], page: int,
+    concentrating_spell_id: int | None = None,
 ) -> InlineKeyboardMarkup:
+    """Build keyboard for viewing spell list with pagination."""
     cid = char_id
     back = CharAction("char_menu", char_id=cid)
     start = page * PAGE_SIZE
@@ -213,7 +215,7 @@ def build_spells_menu_keyboard(
 
     rows = [
         [_btn(
-            f"{'✨' if s.level == 0 else f'Liv.{s.level}'} {s.name}",
+            _spell_list_label(s, concentrating_spell_id),
             CharAction("char_spells", char_id=cid, sub="detail", item_id=s.id,
                        back=make_char_back("char_spells", cid, page=page)),
         )]
@@ -231,16 +233,96 @@ def build_spells_menu_keyboard(
     return InlineKeyboardMarkup(rows)
 
 
+def _spell_list_label(spell: Spell, concentrating_spell_id: int | None = None) -> str:
+    """Build the label for a spell in the list view."""
+    prefix = "✨" if spell.level == 0 else f"Liv.{spell.level}"
+    indicators = ""
+    if concentrating_spell_id == spell.id:
+        indicators += "⚡"
+    elif spell.is_concentration:
+        indicators += "🔮"
+    if spell.is_ritual:
+        indicators += "®️"
+    if spell.is_pinned:
+        indicators += "📌"
+    name = spell.name
+    if indicators:
+        name = f"{indicators} {name}"
+    return f"{prefix} {name}"
+
+
 def build_spell_detail_keyboard(
-    char_id: int, spell_id: int, back_page: int = 0
+    char_id: int, spell: Spell, back_page: int = 0,
+    *, is_concentrating: bool = False,
 ) -> InlineKeyboardMarkup:
+    """Build keyboard for spell detail view with all actions."""
     cid = char_id
+    sid = spell.id
     back = CharAction("char_spells", char_id=cid, page=back_page)
-    rows = [
-        [_btn("🎯 Usa Incantesimo", CharAction("char_spells", char_id=cid, sub="use", item_id=spell_id))],
-        [_btn("🗑️ Dimentica",       CharAction("char_spells", char_id=cid, sub="forget", item_id=spell_id))],
-        _nav_row(back_action=back, menu_char_id=cid),
+    rows: list[list[InlineKeyboardButton]] = []
+
+    # Use spell
+    rows.append([_btn("🎯 Usa Incantesimo", CharAction("char_spells", char_id=cid, sub="use", item_id=sid))])
+
+    # Concentration controls
+    if spell.is_concentration:
+        if is_concentrating:
+            rows.append([
+                _btn("❌ Interrompi Concentrazione", CharAction("char_spells", char_id=cid, sub="drop_conc")),
+                _btn("🎲 TS Concentrazione", CharAction("char_spells", char_id=cid, sub="conc_save")),
+            ])
+        else:
+            rows.append([
+                _btn("🔮 Attiva Concentrazione", CharAction("char_spells", char_id=cid, sub="activate_conc", item_id=sid)),
+            ])
+
+    # Pin / Edit / Forget
+    pin_label = "📌 Rimuovi" if spell.is_pinned else "📌 Fissa"
+    rows.append([
+        _btn(pin_label, CharAction("char_spells", char_id=cid, sub="pin", item_id=sid)),
+        _btn("✏️ Modifica", CharAction("char_spells", char_id=cid, sub="edit_menu", item_id=sid)),
+    ])
+    rows.append([_btn("🗑️ Dimentica", CharAction("char_spells", char_id=cid, sub="forget", item_id=sid))])
+    rows.append(_nav_row(back_action=back, menu_char_id=cid))
+    return InlineKeyboardMarkup(rows)
+
+
+def build_spell_edit_field_keyboard(
+    char_id: int, spell_id: int,
+) -> InlineKeyboardMarkup:
+    """Build keyboard to choose which spell field to edit."""
+    cid = char_id
+    back = CharAction("char_spells", char_id=cid, sub="detail", item_id=spell_id)
+
+    fields = [
+        ("🔢 Livello", "level"),
+        ("⏱️ Tempo di lancio", "casting_time"),
+        ("📏 Gittata/Area", "range_area"),
+        ("🧩 Componenti", "components"),
+        ("⏳ Durata", "duration"),
+        ("🔮 Concentrazione", "is_concentration"),
+        ("📖 Rituale", "is_ritual"),
+        ("🎯 Attacco/TS", "attack_save"),
+        ("📝 Descrizione", "description"),
+        ("📈 Livelli superiori", "higher_level"),
     ]
+    rows = [
+        [_btn(label, CharAction("char_spells", char_id=cid, sub=f"edit_{key}", item_id=spell_id))]
+        for label, key in fields
+    ]
+    rows.append(_nav_row(back_action=back, menu_char_id=cid))
+    return InlineKeyboardMarkup(rows)
+
+
+def build_yes_no_keyboard(
+    char_id: int, *, yes_sub: str, no_sub: str, action: str = "char_spells",
+) -> InlineKeyboardMarkup:
+    """Generic yes/no keyboard for inline choices."""
+    cid = char_id
+    rows = [[
+        _btn("✅ Sì", CharAction(action, char_id=cid, sub=yes_sub)),
+        _btn("❌ No", CharAction(action, char_id=cid, sub=no_sub)),
+    ]]
     return InlineKeyboardMarkup(rows)
 
 

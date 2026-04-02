@@ -9,7 +9,7 @@ from telegram import Update
 from telegram.ext import ContextTypes
 
 from bot.db.engine import get_session
-from bot.db.models import Character
+from bot.db.models import Ability, Character, Spell
 from bot.handlers.character import CHAR_MENU
 from bot.keyboards.character import build_character_main_menu_keyboard
 from bot.utils.formatting import format_character_summary
@@ -41,9 +41,18 @@ async def show_character_menu(
             return await show_character_selection(update, context)
         # Load relationships needed for summary
         await session.refresh(char, ["classes", "ability_scores"])
+        # Load spells and abilities for active status display
+        spells_result = await session.execute(
+            select(Spell).where(Spell.character_id == char_id)
+        )
+        spells = list(spells_result.scalars().all())
+        abilities_result = await session.execute(
+            select(Ability).where(Ability.character_id == char_id)
+        )
+        abilities = list(abilities_result.scalars().all())
 
     keyboard = build_character_main_menu_keyboard(char_id)
-    text = format_character_summary(char)
+    text = format_character_summary(char, spells=spells, abilities=abilities)
 
     if update.callback_query:
         await update.callback_query.answer()
