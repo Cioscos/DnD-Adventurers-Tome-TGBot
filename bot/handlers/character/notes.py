@@ -74,8 +74,9 @@ async def show_note(
                     chat_id=chat_id, document=f,
                     filename=f"{title}.ogg",
                     caption=f"🎤 {title}",
+                    disable_content_type_detection=True,
                 )
-        except Exception:
+        except Exception as e:
             logger.exception("Failed to send voice note '%s'", title)
             await context.bot.send_message(
                 chat_id=chat_id,
