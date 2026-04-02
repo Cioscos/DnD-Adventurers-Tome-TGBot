@@ -41,6 +41,41 @@ def _esc(text: Any) -> str:
     return _MD2_ESCAPE_RE.sub(r"\\\1", str(text))
 
 
+# Patterns used by _md_to_telegram to convert API Markdown → MarkdownV2
+_MD_HEADING_RE = re.compile(r"^(#{1,6})\s+(.+)$", re.MULTILINE)
+_MD_BOLD_RE = re.compile(r"\*\*(.+?)\*\*")
+
+
+def _md_to_telegram(text: str) -> str:
+    """Convert API Markdown (headings, bold) to Telegram MarkdownV2.
+
+    The D&D 5e API returns ``desc`` for Rule / RuleSection types in
+    Markdown format.  Telegram MarkdownV2 does *not* support ``#``
+    headings, so we convert them to bold lines and escape the rest.
+    """
+    lines: list[str] = []
+    for line in text.split("\n"):
+        heading = _MD_HEADING_RE.match(line)
+        if heading:
+            # Convert # Heading → bold line with separator
+            title = heading.group(2).strip()
+            lines.append(f"*{_esc(title)}*")
+            continue
+
+        # Handle **bold** spans before escaping
+        parts: list[str] = []
+        last = 0
+        for m in _MD_BOLD_RE.finditer(line):
+            # Escape text before the bold span
+            parts.append(_esc(line[last:m.start()]))
+            parts.append(f"*{_esc(m.group(1))}*")
+            last = m.end()
+        parts.append(_esc(line[last:]))
+        lines.append("".join(parts))
+
+    return "\n".join(lines)
+
+
 # ------------------------------------------------------------------
 # Main dispatcher
 # ------------------------------------------------------------------
@@ -533,8 +568,16 @@ def _format_rule(item: dict[str, Any]) -> str:
     name = _esc(item.get("name", "Unknown"))
     desc = item.get("desc", "")
     if isinstance(desc, list):
-        desc = " ".join(desc)
-    return f"📖 *{name}*\n\n{_esc(desc[:2000])}"
+        desc = "\n".join(desc)
+    return f"📖 *{name}*\n\n{_md_to_telegram(desc[:2000])}"
+
+
+def _format_rule_section(item: dict[str, Any]) -> str:
+    name = _esc(item.get("name", "Unknown"))
+    desc = item.get("desc", "")
+    if isinstance(desc, list):
+        desc = "\n".join(desc)
+    return f"📖 *{name}*\n\n{_md_to_telegram(desc[:3000])}"
 
 
 def _format_background(item: dict[str, Any]) -> str:
@@ -633,6 +676,7 @@ _FORMATTERS: dict[str, Any] = {
     "MagicItem": _format_magic_item,
     "Feat": _format_feat,
     "Rule": _format_rule,
+    "RuleSection": _format_rule_section,
     "Background": _format_background,
     "WeaponProperty": _format_weapon_property,
 }

@@ -32,9 +32,7 @@ MENU_CATEGORIES: list[MenuCategory] = [
     MenuCategory("AnyEquipment", "Equipment", "🎒"),
     MenuCategory("Condition", "Conditions", "🩹"),
     MenuCategory("MagicItem", "Magic Items", "✨"),
-    MenuCategory("Feat", "Feats", "💪"),
     MenuCategory("Rule", "Rules", "📖"),
-    MenuCategory("Background", "Backgrounds", "📜"),
     MenuCategory("WeaponProperty", "Weapon Props", "🗡️"),
 ]
 
