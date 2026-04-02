@@ -55,9 +55,43 @@ async def show_note(
             return CHAR_MENU
         notes: dict = char.notes or {}
 
-    body = notes.get(title, "_Nota vuota_")
-    text = f"📝 *{_esc(title)}*\n\n{_esc(body)}"
+    body = notes.get(title, "")
     keyboard = build_note_detail_keyboard(char_id, title, back_page)
+
+    if body.startswith("[VOICE:") and body.endswith("]"):
+        voice_ref = body[7:-1]
+        chat_id = update.effective_chat.id
+
+        if update.callback_query:
+            await update.callback_query.answer()
+
+        try:
+            if os.path.sep in voice_ref or "/" in voice_ref:
+                # Legacy: local file path
+                with open(voice_ref, "rb") as f:
+                    await context.bot.send_voice(chat_id=chat_id, voice=f)
+            else:
+                # New format: Telegram file_id
+                await context.bot.send_voice(chat_id=chat_id, voice=voice_ref)
+        except Exception:
+            logger.exception("Failed to send voice note '%s'", title)
+            await context.bot.send_message(
+                chat_id=chat_id,
+                text=f"⚠️ Impossibile riprodurre la nota vocale *{_esc(title)}*\\.",
+                parse_mode="MarkdownV2",
+            )
+
+        await context.bot.send_message(
+            chat_id=chat_id,
+            text=f"📝 *{_esc(title)}* \\(nota vocale\\)",
+            parse_mode="MarkdownV2",
+            reply_markup=keyboard,
+        )
+        return CHAR_NOTES_MENU
+
+    # Regular text note
+    display_body = _esc(body) if body else "_Nota vuota_"
+    text = f"📝 *{_esc(title)}*\n\n{display_body}"
     await _edit_or_reply(update, text, keyboard)
     return CHAR_NOTES_MENU
 
@@ -134,7 +168,7 @@ async def handle_note_body_text(
 async def handle_voice_note(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> int:
-    """Receive a voice message, download it, store as a note body (file path)."""
+    """Receive a voice message and store its Telegram file_id as the note body."""
     if update.message is None or update.message.voice is None:
         return CHAR_VOICE_NOTE_TITLE
 
@@ -146,13 +180,9 @@ async def handle_voice_note(
     title: str = pending.get("title", "Nota vocale")
 
     voice = update.message.voice
-    file = await context.bot.get_file(voice.file_id)
-    os.makedirs(_FILES_DIR, exist_ok=True)
-    file_path = os.path.join(_FILES_DIR, f"voice_{char_id}_{voice.file_id}.ogg")
-    await file.download_to_drive(file_path)
 
-    # Store the file path as the note body
-    await _save_note(char_id, title, f"[VOICE:{file_path}]")
+    # Store the Telegram file_id directly — no need to download locally
+    await _save_note(char_id, title, f"[VOICE:{voice.file_id}]")
     await update.message.reply_text(
         f"✅ Nota vocale *{_esc(title)}* salvata\\!", parse_mode="MarkdownV2"
     )
