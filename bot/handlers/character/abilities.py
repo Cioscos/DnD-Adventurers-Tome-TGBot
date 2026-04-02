@@ -118,7 +118,7 @@ async def handle_ability_learn_text(
         context.user_data[_OP_KEY]["is_passive"] = is_passive
         context.user_data[_OP_KEY]["step"] = "uses"
         await update.message.reply_text(
-            "🔢 Quanti *usi massimi* ha? \\(0 = illimitati\\):",
+            "🔢 Quanti *usi massimi* ha? \\(0 \\= illimitati\\):",
             parse_mode="MarkdownV2",
         )
         return CHAR_ABILITY_LEARN_USES
