@@ -136,7 +136,7 @@ def format_bag(items: list[Item], carry_cap: int, encumbrance: float) -> str:
         items_text = "_Zaino vuoto_"
     else:
         item_lines = [
-            f"  • {_esc(i.name)} x{i.quantity} \\({i.weight * i.quantity:.1f} kg\\)"
+            f"  • {_esc(i.name)} x{i.quantity} \\({_esc(f'{i.weight * i.quantity:.1f}')} kg\\)"
             for i in items
         ]
         items_text = "\n".join(item_lines)

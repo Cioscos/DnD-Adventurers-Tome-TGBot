@@ -55,12 +55,12 @@ async def show_item_detail(
         if item is None or item.character_id != char_id:
             return await show_bag_menu(update, context, char_id)
 
-    desc = item.description or "_Nessuna descrizione_"
+    desc = _esc(item.description) if item.description else "_Nessuna descrizione_"
     text = (
         f"📦 *{_esc(item.name)}*\n\n"
         f"Quantità: *{item.quantity}*\n"
-        f"Peso unitario: *{item.weight} kg*\n"
-        f"Peso totale: *{item.weight * item.quantity:.1f} kg*\n\n"
+        f"Peso unitario: *{_esc(f'{item.weight:.1f}')} kg*\n"
+        f"Peso totale: *{_esc(f'{item.weight * item.quantity:.1f}')} kg*\n\n"
         f"{desc}"
     )
     keyboard = build_item_detail_keyboard(char_id, item_id, back_page)
