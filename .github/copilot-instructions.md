@@ -3,7 +3,7 @@
 ## Repository
 
 - Remote: `https://github.com/Cioscos/dnd_bot_revamped.git` — branch `main`.
-- Active feature branch: `bugfix/spell-management-setting`.
+- Active feature branch: `main`.
 - Always commit and push changes to this repository.
 
 ## MCP Servers
@@ -33,6 +33,7 @@ The top-level `/start` menu always shows two buttons:
 | `python-dotenv` | ≥ 1.0.0 | `.env` file loading |
 | `sqlalchemy` | ≥ 2.0 | Async ORM for character persistence |
 | `aiosqlite` | ≥ 0.20 | SQLite async driver (used by SQLAlchemy) |
+| `rapidfuzz` | ≥ 3.0 | Fuzzy string matching for spell search |
 | `cachetools` | (auto) | Installed by the `[callback-data]` extra for the callback LRU cache |
 
 ### Architecture
@@ -55,14 +56,14 @@ bot/
 │   ├── start.py             # /start command → top-level 2-choice menu (Wiki | Personaggio)
 │   ├── navigation.py        # N-level CallbackQueryHandler dispatcher + MarkdownV2 formatters (wiki)
 │   └── character/
-│       ├── __init__.py      # Conversation state constants (46 states)
+│       ├── __init__.py      # Conversation state constants (47 states)
 │       ├── conversation.py  # Master ConversationHandler — routes CharAction callbacks, stop_command_handler, builds handler
 │       ├── selection.py     # Character create / select / delete
 │       ├── menu.py          # Character main menu with summary
 │       ├── hit_points.py    # HP (set max, set current, damage, healing) + rest
 │       ├── armor_class.py   # CA (base, shield, magic)
 │       ├── stats.py         # Ability scores (FOR/DES/COS/INT/SAG/CAR) with modifiers
-│       ├── spells.py        # Learn / forget / use spells (slot picker, concentration tracking, TS, pin)
+│       ├── spells.py        # Learn / forget / use spells (slot picker, concentration tracking, TS, pin) + fuzzy search
 │       ├── spell_slots.py   # Add / use / restore / remove spell slot levels
 │       ├── bag.py           # Inventory with encumbrance tracking
 │       ├── currency.py      # Coins management + currency conversion
@@ -146,7 +147,7 @@ class CharAction:
 
 Key `action` values: `char_select`, `char_new`, `char_menu`, `char_hp`, `char_ac`, `char_stats`, `char_level`, `char_spells`, `char_slots`, `char_bag`, `char_currency`, `char_abilities`, `char_multiclass`, `char_dice`, `char_notes`, `char_maps`, `char_rest`, `char_settings`, `char_delete`.
 
-Key `char_spells` sub-actions: `learn`, `learn_conc_yes`, `learn_conc_no`, `detail`, `forget`, `use`, `use_slot`, `activate_conc`, `drop_conc`, `conc_save`, `pin`, `edit_menu`, `edit_<field>` (e.g. `edit_casting_time`, `edit_is_concentration`).
+Key `char_spells` sub-actions: `learn`, `learn_conc_yes`, `learn_conc_no`, `detail`, `forget`, `use`, `use_slot`, `activate_conc`, `drop_conc`, `conc_save`, `pin`, `edit_menu`, `edit_<field>` (e.g. `edit_casting_time`, `edit_is_concentration`), `search`, `search_show`.
 
 ### Schema Registry & Navigable Fields (Wiki)
 
@@ -238,6 +239,7 @@ Navigable sub-entity buttons (📂) are discovered automatically from the schema
 - **Editable spell fields**: `level`, `casting_time`, `range_area`, `components`, `duration`, `is_concentration` (toggle), `is_ritual` (toggle), `attack_save`, `description`, `higher_level`. Each dispatched via `edit_<field>` sub-action.
 - **Concentration**: only one active at a time (`concentrating_spell_id` on `Character`). Auto-activated on "Usa Incantesimo" for concentration spells. Dropped on both short and long rest.
 - **Concentration saving throw**: DC = `max(10, damage // 2)`. Roll = `d20 + CON modifier`. Nat 1 always fails, nat 20 always succeeds. On failure, `concentrating_spell_id` is set to `None`.
+- **Fuzzy spell search**: `sub="search"` → `ask_spell_search()` (state `CHAR_SPELL_SEARCH`); user types query; `handle_spell_search_text()` runs `rapidfuzz.process.extract(WRatio, score_cutoff=50, limit=20)` against spell names; results shown via `build_spell_search_results_keyboard()`. Back from spell detail to search results uses `extra="search_show"` (routed by `not sub and data.extra == "search_show"` check). Query is stored in `context.user_data["char_spell_search_pending"]`.
 - **Pin**: `is_pinned=True` shows the spell in the main menu summary alongside passive active abilities.
 - **`format_character_summary`** must receive `spells` and `abilities` lists to display the active status section.
 - **`spell_management` setting** (`characters.settings["spell_management"]`): controls how the spell list is navigated.
