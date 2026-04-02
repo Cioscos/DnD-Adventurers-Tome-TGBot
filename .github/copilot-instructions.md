@@ -55,14 +55,14 @@ bot/
 │   ├── start.py             # /start command → top-level 2-choice menu (Wiki | Personaggio)
 │   ├── navigation.py        # N-level CallbackQueryHandler dispatcher + MarkdownV2 formatters (wiki)
 │   └── character/
-│       ├── __init__.py      # Conversation state constants (44 states)
+│       ├── __init__.py      # Conversation state constants (46 states)
 │       ├── conversation.py  # Master ConversationHandler — routes CharAction callbacks + builds handler
 │       ├── selection.py     # Character create / select / delete
 │       ├── menu.py          # Character main menu with summary
 │       ├── hit_points.py    # HP (set max, set current, damage, healing) + rest
 │       ├── armor_class.py   # CA (base, shield, magic)
 │       ├── stats.py         # Ability scores (FOR/DES/COS/INT/SAG/CAR) with modifiers
-│       ├── spells.py        # Learn / forget / use spells (with slot picker)
+│       ├── spells.py        # Learn / forget / use spells (slot picker, concentration tracking, TS, pin)
 │       ├── spell_slots.py   # Add / use / restore / remove spell slot levels
 │       ├── bag.py           # Inventory with encumbrance tracking
 │       ├── currency.py      # Coins management + currency conversion
@@ -94,17 +94,17 @@ bot/
 ### Database (Character Management)
 
 - **File**: `data/dnd_bot.db` (SQLite, path overridable via `DB_PATH` env var)
-- **Init**: `init_db()` called once in `post_init` — creates tables if they don't exist (safe to call on every startup)
+- **Init**: `init_db()` called once in `post_init` — creates tables if they don't exist AND runs `_migrate_schema()` which adds missing columns via `ALTER TABLE` (idempotent, safe for existing DBs)
 - **Session**: use the `get_session()` async context manager from `bot/db/engine.py` for all DB operations
 
 #### ORM Tables
 
 | Table | Key fields |
 |---|---|
-| `characters` | `id`, `user_id`, `name`, `race`, `gender`, `hit_points`, `current_hit_points`, `base_armor_class`, `shield_armor_class`, `magic_armor`, `spell_slots_mode`, `rolls_history` (JSON), `notes` (JSON), `settings` (JSON) |
+| `characters` | `id`, `user_id`, `name`, `race`, `gender`, `hit_points`, `current_hit_points`, `base_armor_class`, `shield_armor_class`, `magic_armor`, `spell_slots_mode`, `concentrating_spell_id` (FK → spells.id), `rolls_history` (JSON), `notes` (JSON), `settings` (JSON) |
 | `character_classes` | `character_id` → FK, `class_name`, `level` |
 | `ability_scores` | `character_id` → FK, `name` (strength/dexterity/…), `value` |
-| `spells` | `character_id` → FK, `name`, `level`, `description` |
+| `spells` | `character_id` → FK, `name`, `level`, `description`, `casting_time`, `range_area`, `components`, `duration`, `is_concentration`, `is_ritual`, `higher_level`, `attack_save`, `is_pinned` |
 | `spell_slots` | `character_id` → FK, `level`, `total`, `used` |
 | `items` | `character_id` → FK, `name`, `description`, `weight`, `quantity` |
 | `currencies` | `character_id` → FK (1:1), `copper`, `silver`, `electrum`, `gold`, `platinum` |
@@ -146,6 +146,8 @@ class CharAction:
 
 Key `action` values: `char_select`, `char_new`, `char_menu`, `char_hp`, `char_ac`, `char_stats`, `char_level`, `char_spells`, `char_slots`, `char_bag`, `char_currency`, `char_abilities`, `char_multiclass`, `char_dice`, `char_notes`, `char_maps`, `char_rest`, `char_settings`, `char_delete`.
 
+Key `char_spells` sub-actions: `learn`, `learn_conc_yes`, `learn_conc_no`, `detail`, `forget`, `use`, `use_slot`, `activate_conc`, `drop_conc`, `conc_save`, `pin`, `edit_menu`, `edit_<field>` (e.g. `edit_casting_time`, `edit_is_concentration`).
+
 ### Schema Registry & Navigable Fields (Wiki)
 
 A field is **navigable** (shown as a 📂 button in the detail view) when:
@@ -181,7 +183,7 @@ Union types (e.g. `AnyEquipment`) are handled with `__typename` + inline fragmen
 
 ### Character Formatters
 
-`bot/utils/formatting.py` provides Italian-language formatters for every character screen: `format_character_summary`, `format_hp`, `format_ac`, `format_ability_scores`, `format_spells`, `format_spell_slots`, `format_bag`, `format_currency`, `format_abilities`, `format_maps`, `format_dice_history`. All use MarkdownV2 with `_esc()`.
+`bot/utils/formatting.py` provides Italian-language formatters for every character screen: `format_character_summary` (accepts optional `spells` and `abilities` for active status), `format_hp`, `format_ac`, `format_ability_scores`, `format_spells`, `format_spell_detail`, `format_spell_slots`, `format_bag`, `format_currency`, `format_abilities`, `format_maps`, `format_dice_history`, `format_character_active_status`. All use MarkdownV2 with `_esc()`.
 
 ## Coding Conventions
 
@@ -219,12 +221,21 @@ Navigable sub-entity buttons (📂) are discovered automatically from the schema
 
 ### Adding a New Character Feature
 
-1. Add new state constant(s) to `bot/handlers/character/__init__.py`.
+1. Add new state constant(s) to `bot/handlers/character/__init__.py` (update the `range()` count).
 2. Create the handler module in `bot/handlers/character/<feature>.py`.
 3. Add keyboard builder(s) to `bot/keyboards/character.py`.
 4. Add formatter(s) to `bot/utils/formatting.py`.
 5. Wire the new action into `character_callback_handler()` in `conversation.py`.
 6. Add the new state(s) to the `states` dict in `build_character_conversation_handler()`.
+
+### Spell Management Details
+
+- **Quick-add flow**: name (text) → level (text) → concentration? (inline Sì/No keyboard). All other fields added afterwards via ✏️ Modifica in the detail view.
+- **Editable spell fields**: `level`, `casting_time`, `range_area`, `components`, `duration`, `is_concentration` (toggle), `is_ritual` (toggle), `attack_save`, `description`, `higher_level`. Each dispatched via `edit_<field>` sub-action.
+- **Concentration**: only one active at a time (`concentrating_spell_id` on `Character`). Auto-activated on "Usa Incantesimo" for concentration spells. Dropped on both short and long rest.
+- **Concentration saving throw**: DC = `max(10, damage // 2)`. Roll = `d20 + CON modifier`. Nat 1 always fails, nat 20 always succeeds. On failure, `concentrating_spell_id` is set to `None`.
+- **Pin**: `is_pinned=True` shows the spell in the main menu summary alongside passive active abilities.
+- **`format_character_summary`** must receive `spells` and `abilities` lists to display the active status section.
 
 ### Voice Notes
 
