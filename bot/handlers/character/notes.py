@@ -18,7 +18,7 @@ from bot.handlers.character import (
     CHAR_NOTE_EDIT,
     CHAR_VOICE_NOTE_TITLE,
 )
-from bot.keyboards.character import build_note_detail_keyboard, build_notes_keyboard
+from bot.keyboards.character import build_note_detail_keyboard, build_notes_keyboard, build_cancel_keyboard
 
 logger = logging.getLogger(__name__)
 
@@ -103,7 +103,7 @@ async def ask_new_note_title(
     update: Update, context: ContextTypes.DEFAULT_TYPE, char_id: int
 ) -> int:
     context.user_data[_OP_KEY] = {"char_id": char_id, "step": "title", "type": "text"}
-    await _edit_or_reply(update, "📝 Inserisci il *titolo* della nota:")
+    await _edit_or_reply(update, "📝 Inserisci il *titolo* della nota:", build_cancel_keyboard(char_id, "char_notes"))
     return CHAR_NOTE_NEW_TITLE
 
 
@@ -111,7 +111,7 @@ async def ask_voice_note_title(
     update: Update, context: ContextTypes.DEFAULT_TYPE, char_id: int
 ) -> int:
     context.user_data[_OP_KEY] = {"char_id": char_id, "step": "title", "type": "voice"}
-    await _edit_or_reply(update, "🎤 Inserisci il *titolo* della nota vocale:")
+    await _edit_or_reply(update, "🎤 Inserisci il *titolo* della nota vocale:", build_cancel_keyboard(char_id, "char_notes"))
     return CHAR_VOICE_NOTE_TITLE
 
 
@@ -135,13 +135,16 @@ async def handle_note_title_text(
     if note_type == "voice":
         context.user_data[_OP_KEY]["step"] = "voice_body"
         await update.message.reply_text(
-            "🎤 Invia ora il *messaggio vocale*:", parse_mode="MarkdownV2"
+            "🎤 Invia ora il *messaggio vocale*:",
+            reply_markup=build_cancel_keyboard(char_id, "char_notes"),
+            parse_mode="MarkdownV2",
         )
         return CHAR_VOICE_NOTE_TITLE
 
     context.user_data[_OP_KEY]["step"] = "body"
     await update.message.reply_text(
         f"📝 Inserisci il *contenuto* della nota *{_esc(title)}*:",
+        reply_markup=build_cancel_keyboard(char_id, "char_notes"),
         parse_mode="MarkdownV2",
     )
     return CHAR_NOTE_NEW_BODY
@@ -211,7 +214,8 @@ async def ask_edit_note(
 ) -> int:
     context.user_data[_OP_KEY] = {"char_id": char_id, "step": "edit", "title": title}
     await _edit_or_reply(
-        update, f"✏️ Inserisci il nuovo contenuto per *{_esc(title)}*:"
+        update, f"✏️ Inserisci il nuovo contenuto per *{_esc(title)}*:",
+        build_cancel_keyboard(char_id, "char_notes"),
     )
     return CHAR_NOTE_EDIT
 

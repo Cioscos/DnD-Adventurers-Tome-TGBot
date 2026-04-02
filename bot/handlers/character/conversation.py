@@ -145,9 +145,11 @@ async def character_callback_handler(
     if action == "char_select":
         return await show_character_selection(update, context)
     if action == "char_new":
+        from bot.keyboards.character import build_cancel_keyboard
         await query.answer()
         await query.edit_message_text(
             "✍️ Inserisci il *nome* del nuovo personaggio:",
+            reply_markup=build_cancel_keyboard(0, "char_select"),
             parse_mode="MarkdownV2",
         )
         return CHAR_NEW_NAME
@@ -402,6 +404,40 @@ def _is_char_action(data) -> bool:
 
 
 # ---------------------------------------------------------------------------
+# /stop command handler
+# ---------------------------------------------------------------------------
+
+async def stop_command_handler(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> int:
+    """Cancel the current input operation and return to the character menu."""
+    from bot.handlers.character.menu import show_character_menu
+    from bot.handlers.character.selection import show_character_selection
+
+    # Clear all known pending-op keys left by text-input flows
+    pending_keys = [k for k in list(context.user_data.keys()) if "pending" in k]
+    for k in pending_keys:
+        context.user_data.pop(k, None)
+
+    char_id: int = context.user_data.get("active_char_id", 0)
+    if not char_id:
+        # Fallback: scan user_data values for a dict carrying char_id
+        for v in context.user_data.values():
+            if isinstance(v, dict) and v.get("char_id"):
+                char_id = v["char_id"]
+                break
+
+    if update.message:
+        await update.message.reply_text(
+            "✋ Operazione annullata\\.", parse_mode="MarkdownV2"
+        )
+
+    if char_id:
+        return await show_character_menu(update, context, char_id=char_id)
+    return await show_character_selection(update, context)
+
+
+# ---------------------------------------------------------------------------
 # Build the ConversationHandler
 # ---------------------------------------------------------------------------
 
@@ -590,6 +626,7 @@ def build_character_conversation_handler() -> ConversationHandler:
         },
         fallbacks=[
             CommandHandler("start", lambda u, c: ConversationHandler.END),
+            CommandHandler("stop", stop_command_handler),
         ],
         allow_reentry=True,
         name="character_conversation",

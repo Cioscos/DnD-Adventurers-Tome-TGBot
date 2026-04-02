@@ -17,7 +17,7 @@ from bot.handlers.character import (
     CHAR_ABILITY_LEARN_USES,
     CHAR_MENU,
 )
-from bot.keyboards.character import build_abilities_keyboard, build_ability_detail_keyboard
+from bot.keyboards.character import build_abilities_keyboard, build_ability_detail_keyboard, build_cancel_keyboard
 from bot.utils.formatting import RESTORATION_LABELS, format_abilities
 
 logger = logging.getLogger(__name__)
@@ -77,7 +77,7 @@ async def ask_learn_ability(
     update: Update, context: ContextTypes.DEFAULT_TYPE, char_id: int
 ) -> int:
     context.user_data[_OP_KEY] = {"char_id": char_id, "step": "name"}
-    await _edit_or_reply(update, "⚡ Inserisci il *nome* dell'abilità:")
+    await _edit_or_reply(update, "⚡ Inserisci il *nome* dell'abilità:", build_cancel_keyboard(char_id, "char_abilities"))
     return CHAR_ABILITY_LEARN_NAME
 
 
@@ -100,6 +100,7 @@ async def handle_ability_learn_text(
         context.user_data[_OP_KEY]["step"] = "desc"
         await update.message.reply_text(
             "📝 Inserisci la *descrizione* \\(o \\- per saltare\\):",
+            reply_markup=build_cancel_keyboard(char_id, "char_abilities"),
             parse_mode="MarkdownV2",
         )
         return CHAR_ABILITY_LEARN_DESC
@@ -109,6 +110,7 @@ async def handle_ability_learn_text(
         context.user_data[_OP_KEY]["step"] = "passive"
         await update.message.reply_text(
             "🔵 È un'abilità *passiva*? Rispondi *si* o *no*:",
+            reply_markup=build_cancel_keyboard(char_id, "char_abilities"),
             parse_mode="MarkdownV2",
         )
         return CHAR_ABILITY_LEARN_USES
@@ -119,6 +121,7 @@ async def handle_ability_learn_text(
         context.user_data[_OP_KEY]["step"] = "uses"
         await update.message.reply_text(
             "🔢 Quanti *usi massimi* ha? \\(0 \\= illimitati\\):",
+            reply_markup=build_cancel_keyboard(char_id, "char_abilities"),
             parse_mode="MarkdownV2",
         )
         return CHAR_ABILITY_LEARN_USES
@@ -136,6 +139,7 @@ async def handle_ability_learn_text(
         restoration_options = "\\- `long_rest` \\(riposo lungo\\)\n\\- `short_rest` \\(riposo breve\\)\n\\- `none` \\(mai\\)"
         await update.message.reply_text(
             f"😴 *Tipo di ripristino*:\n{restoration_options}",
+            reply_markup=build_cancel_keyboard(char_id, "char_abilities"),
             parse_mode="MarkdownV2",
         )
         return CHAR_ABILITY_LEARN_USES

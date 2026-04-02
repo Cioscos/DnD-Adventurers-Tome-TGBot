@@ -46,6 +46,15 @@ async def post_init(application: Application) -> None:
     logger.info("Database initialised.")
 
 
+async def stop_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle /stop outside the character conversation (no active operation)."""
+    if update.message:
+        await update.message.reply_text(
+            "✋ Nessuna operazione in corso da interrompere\\.",
+            parse_mode="MarkdownV2",
+        )
+
+
 def main() -> None:
     """Initialize and run the Telegram bot."""
     load_dotenv()
@@ -64,6 +73,7 @@ def main() -> None:
 
     # Command handlers
     application.add_handler(CommandHandler("start", start_command))
+    application.add_handler(CommandHandler("stop", stop_command))
 
     # Character ConversationHandler (must come before the generic wiki callback)
     application.add_handler(build_character_conversation_handler())

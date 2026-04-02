@@ -10,7 +10,7 @@ from telegram.ext import ContextTypes
 from bot.db.engine import get_session
 from bot.db.models import Character
 from bot.handlers.character import CHAR_AC_MENU, CHAR_AC_SET_BASE, CHAR_AC_SET_SHIELD, CHAR_AC_SET_MAGIC, CHAR_MENU
-from bot.keyboards.character import build_ac_keyboard
+from bot.keyboards.character import build_ac_keyboard, build_cancel_keyboard
 from bot.utils.formatting import format_ac
 
 logger = logging.getLogger(__name__)
@@ -44,7 +44,7 @@ async def ask_ac_input(
         "set_shield": "✏️ Inserisci il bonus *CA scudo* \\(es\\. 2\\):",
         "set_magic":  "✏️ Inserisci il bonus *CA magica* \\(es\\. 1\\):",
     }
-    await _edit_or_reply(update, prompts.get(ac_type, "Inserisci un numero:"))
+    await _edit_or_reply(update, prompts.get(ac_type, "Inserisci un numero:"), build_cancel_keyboard(char_id, "char_ac"))
     state_map = {
         "set_base":   CHAR_AC_SET_BASE,
         "set_shield": CHAR_AC_SET_SHIELD,

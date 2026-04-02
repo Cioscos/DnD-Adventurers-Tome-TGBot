@@ -11,7 +11,7 @@ from telegram.ext import ContextTypes
 from bot.db.engine import get_session
 from bot.db.models import ABILITY_NAMES, AbilityScore, Character
 from bot.handlers.character import CHAR_STATS_MENU, CHAR_STATS_SET, CHAR_MENU
-from bot.keyboards.character import build_stats_keyboard
+from bot.keyboards.character import build_stats_keyboard, build_cancel_keyboard
 from bot.utils.formatting import format_ability_scores
 
 logger = logging.getLogger(__name__)
@@ -47,7 +47,7 @@ async def ask_stat_input(
     label, emoji = ABILITY_LABELS.get(stat_name, (stat_name, "•"))
     context.user_data[_OP_KEY] = {"char_id": char_id, "stat": stat_name}
     text = f"{emoji} Inserisci il valore per *{label}* \\(1\\-30\\):"
-    await _edit_or_reply(update, text)
+    await _edit_or_reply(update, text, build_cancel_keyboard(char_id, "char_stats"))
     return CHAR_STATS_SET
 
 

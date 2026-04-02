@@ -16,7 +16,7 @@ from bot.handlers.character import (
     CHAR_SPELL_SLOT_ADD,
     CHAR_SPELL_SLOT_REMOVE,
 )
-from bot.keyboards.character import build_spell_slot_detail_keyboard, build_spell_slots_keyboard
+from bot.keyboards.character import build_spell_slot_detail_keyboard, build_spell_slots_keyboard, build_cancel_keyboard
 from bot.utils.formatting import format_spell_slots
 
 logger = logging.getLogger(__name__)
@@ -65,7 +65,8 @@ async def ask_add_slot(
 ) -> int:
     context.user_data[_OP_KEY] = {"char_id": char_id, "step": "level"}
     await _edit_or_reply(
-        update, "🔢 Inserisci il *livello* dello slot \\(1\\-9\\):"
+        update, "🔢 Inserisci il *livello* dello slot \\(1\\-9\\):",
+        build_cancel_keyboard(char_id, "char_slots"),
     )
     return CHAR_SPELL_SLOT_ADD
 
@@ -93,6 +94,7 @@ async def handle_slot_add_text(
         context.user_data[_OP_KEY]["step"] = "total"
         await update.message.reply_text(
             "🔢 Inserisci il numero *totale* di slot per questo livello:",
+            reply_markup=build_cancel_keyboard(char_id, "char_slots"),
             parse_mode="MarkdownV2",
         )
         return CHAR_SPELL_SLOT_ADD

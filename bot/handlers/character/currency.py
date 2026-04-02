@@ -17,6 +17,7 @@ from bot.handlers.character import (
     CHAR_MENU,
 )
 from bot.keyboards.character import (
+    build_cancel_keyboard,
     build_currency_convert_source_keyboard,
     build_currency_convert_target_keyboard,
     build_currency_edit_keyboard,
@@ -162,6 +163,7 @@ async def ask_convert_amount(
     await _edit_or_reply(
         update,
         f"🔢 Quante monete di *{src_label}* convertire in *{tgt_label}*?",
+        build_cancel_keyboard(char_id, "char_currency"),
     )
     return CHAR_CURRENCY_CONVERT
 

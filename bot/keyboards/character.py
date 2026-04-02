@@ -19,6 +19,8 @@ from bot.utils.formatting import CURRENCY_LABELS
 
 PAGE_SIZE = 8
 COLUMNS = 2
+# Buttons whose label length exceeds this threshold are placed in a single column
+_LONG_THRESHOLD = 20
 
 
 # ---------------------------------------------------------------------------
@@ -39,6 +41,15 @@ def _nav_row(
         row.append(_btn("⬅️ Indietro", back_action))
     row.append(_btn("🏠 Menu", CharAction("char_menu", char_id=menu_char_id)))
     return row
+
+
+def build_cancel_keyboard(
+    char_id: int, back_action: str = "char_menu"
+) -> InlineKeyboardMarkup:
+    """Return a single-button keyboard with an ❌ Annulla button."""
+    return InlineKeyboardMarkup(
+        [[_btn("❌ Annulla", CharAction(back_action, char_id=char_id))]]
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -81,7 +92,17 @@ def build_character_main_menu_keyboard(char_id: int) -> InlineKeyboardMarkup:
         ("⚙️ Impostazioni",      CharAction("char_settings",  char_id=cid)),
         ("🗑️ Elimina Personaggio", CharAction("char_delete",  char_id=cid)),
     ]
-    rows = [[_btn(t, a)] for t, a in buttons]
+    short_btns = [(t, a) for t, a in buttons if len(t) <= _LONG_THRESHOLD]
+    long_btns  = [(t, a) for t, a in buttons if len(t) >  _LONG_THRESHOLD]
+
+    rows: list[list[InlineKeyboardButton]] = []
+    # Short buttons: 2 per row
+    for i in range(0, len(short_btns), COLUMNS):
+        rows.append([_btn(t, a) for t, a in short_btns[i:i + COLUMNS]])
+    # Long buttons: 1 per row, after the short ones
+    for t, a in long_btns:
+        rows.append([_btn(t, a)])
+    # "Change character" always last (long label, single column)
     rows.append([_btn("🔄 Cambia Personaggio", CharAction("char_select"))])
     return InlineKeyboardMarkup(rows)
 

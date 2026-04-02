@@ -17,7 +17,7 @@ from bot.handlers.character import (
     CHAR_BAG_MENU,
     CHAR_MENU,
 )
-from bot.keyboards.character import build_bag_keyboard, build_item_detail_keyboard
+from bot.keyboards.character import build_bag_keyboard, build_item_detail_keyboard, build_cancel_keyboard
 from bot.utils.formatting import format_bag
 
 logger = logging.getLogger(__name__)
@@ -72,7 +72,7 @@ async def ask_add_item(
     update: Update, context: ContextTypes.DEFAULT_TYPE, char_id: int
 ) -> int:
     context.user_data[_OP_KEY] = {"char_id": char_id, "step": "name"}
-    await _edit_or_reply(update, "📦 Inserisci il *nome* dell'oggetto:")
+    await _edit_or_reply(update, "📦 Inserisci il *nome* dell'oggetto:", build_cancel_keyboard(char_id, "char_bag"))
     return CHAR_BAG_ADD_NAME
 
 
@@ -95,6 +95,7 @@ async def handle_bag_text(
         context.user_data[_OP_KEY]["step"] = "weight"
         await update.message.reply_text(
             "⚖️ Inserisci il *peso* unitario in kg \\(es\\. 1\\.5, o 0 se non pesa\\):",
+            reply_markup=build_cancel_keyboard(char_id, "char_bag"),
             parse_mode="MarkdownV2",
         )
         return CHAR_BAG_ADD_WEIGHT
@@ -111,6 +112,7 @@ async def handle_bag_text(
         context.user_data[_OP_KEY]["step"] = "qty"
         await update.message.reply_text(
             "🔢 Inserisci la *quantità* \\(es\\. 1\\):",
+            reply_markup=build_cancel_keyboard(char_id, "char_bag"),
             parse_mode="MarkdownV2",
         )
         return CHAR_BAG_ADD_QTY

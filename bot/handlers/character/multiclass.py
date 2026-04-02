@@ -17,6 +17,7 @@ from bot.handlers.character import (
     CHAR_MULTICLASS_MENU,
 )
 from bot.keyboards.character import (
+    build_cancel_keyboard,
     build_level_class_choice_keyboard,
     build_level_keyboard,
     build_multiclass_keyboard,
@@ -54,7 +55,7 @@ async def ask_add_class(
     update: Update, context: ContextTypes.DEFAULT_TYPE, char_id: int
 ) -> int:
     context.user_data[_OP_KEY] = {"char_id": char_id, "step": "class_name"}
-    await _edit_or_reply(update, "🎭 Inserisci il *nome della classe* \\(es\\. Guerriero, Mago\\):")
+    await _edit_or_reply(update, "🎭 Inserisci il *nome della classe* \\(es\\. Guerriero, Mago\\):", build_cancel_keyboard(char_id, "char_multiclass"))
     return CHAR_MULTICLASS_ADD
 
 
@@ -77,6 +78,7 @@ async def handle_multiclass_add_text(
         context.user_data[_OP_KEY]["step"] = "levels"
         await update.message.reply_text(
             f"🔢 Quanti *livelli* in *{_esc(text)}*?",
+            reply_markup=build_cancel_keyboard(char_id, "char_multiclass"),
             parse_mode="MarkdownV2",
         )
         return CHAR_MULTICLASS_ADD_LEVELS

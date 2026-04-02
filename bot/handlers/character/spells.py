@@ -24,6 +24,7 @@ from bot.handlers.character import (
     CHAR_SPELL_LEARN,
 )
 from bot.keyboards.character import (
+    build_cancel_keyboard,
     build_spell_detail_keyboard,
     build_spell_edit_field_keyboard,
     build_spell_use_level_keyboard,
@@ -108,6 +109,7 @@ async def ask_spell_learn(
     await _edit_or_reply(
         update,
         "✨ Inserisci il *nome dell'incantesimo* da imparare:",
+        build_cancel_keyboard(char_id, "char_spells"),
     )
     return CHAR_SPELL_LEARN
 
@@ -135,6 +137,7 @@ async def handle_spell_learn_text(
         context.user_data[_OP_KEY]["step"] = "level"
         await update.message.reply_text(
             "🔢 Inserisci il *livello* dell'incantesimo \\(0 per trucchetto, 1\\-9\\):",
+            reply_markup=build_cancel_keyboard(char_id, "char_spells"),
             parse_mode="MarkdownV2",
         )
         return CHAR_SPELL_LEARN
@@ -372,6 +375,7 @@ async def ask_concentration_save_damage(
     await _edit_or_reply(
         update,
         "🎲 Inserisci il *danno subito* per il tiro salvezza concentrazione:",
+        build_cancel_keyboard(char_id, "char_spells"),
     )
     return CHAR_CONC_SAVE
 
@@ -482,6 +486,7 @@ async def ask_spell_edit_field(
         await _edit_or_reply(
             update,
             "🔢 Inserisci il nuovo *livello* \\(0\\-9\\):",
+            build_cancel_keyboard(char_id, "char_spells"),
         )
         return CHAR_SPELL_EDIT
 
@@ -493,7 +498,7 @@ async def ask_spell_edit_field(
     context.user_data[_OP_KEY] = {
         "char_id": char_id, "spell_id": spell_id, "field": field, "step": "edit",
     }
-    await _edit_or_reply(update, prompt)
+    await _edit_or_reply(update, prompt, build_cancel_keyboard(char_id, "char_spells"))
     return CHAR_SPELL_EDIT
 
 

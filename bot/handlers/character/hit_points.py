@@ -16,7 +16,7 @@ from bot.handlers.character import (
     CHAR_HP_HEAL,
     CHAR_MENU,
 )
-from bot.keyboards.character import build_hp_keyboard
+from bot.keyboards.character import build_hp_keyboard, build_cancel_keyboard
 from bot.utils.formatting import format_hp
 
 logger = logging.getLogger(__name__)
@@ -54,7 +54,7 @@ async def ask_hp_input(
         "heal":        "💚 Inserisci i *Punti Vita curati*:",
     }
     text = prompts.get(operation, "Inserisci un numero:")
-    await _edit_or_reply(update, text)
+    await _edit_or_reply(update, text, build_cancel_keyboard(char_id, "char_hp"))
     state_map = {
         "set_max":     CHAR_HP_SET,
         "set_current": CHAR_HP_SET,

@@ -16,7 +16,7 @@ from bot.handlers.character import (
     CHAR_MAPS_MENU,
     CHAR_MENU,
 )
-from bot.keyboards.character import build_map_zone_keyboard, build_maps_keyboard
+from bot.keyboards.character import build_map_zone_keyboard, build_maps_keyboard, build_cancel_keyboard
 from bot.utils.formatting import format_maps
 
 logger = logging.getLogger(__name__)
@@ -93,7 +93,7 @@ async def ask_new_zone(
     update: Update, context: ContextTypes.DEFAULT_TYPE, char_id: int
 ) -> int:
     context.user_data[_OP_KEY] = {"char_id": char_id, "step": "zone_name"}
-    await _edit_or_reply(update, "📍 Inserisci il *nome della zona*:")
+    await _edit_or_reply(update, "📍 Inserisci il *nome della zona*:", build_cancel_keyboard(char_id, "char_maps"))
     return CHAR_MAP_NEW_ZONE
 
 
@@ -131,6 +131,7 @@ async def ask_add_file(
     await _edit_or_reply(
         update,
         f"📤 Invia una *foto o documento* da aggiungere alla zona *{_esc(zone)}*:",
+        build_cancel_keyboard(char_id, "char_maps"),
     )
     return CHAR_MAP_ADD_FILE
 
