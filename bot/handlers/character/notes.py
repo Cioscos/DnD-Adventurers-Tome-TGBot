@@ -70,8 +70,10 @@ async def show_note(
             if not voice_path.is_file():
                 raise FileNotFoundError(f"Voice file not found: {voice_ref}")
             with open(voice_path, "rb") as f:
-                await context.bot.send_audio(
-                    chat_id=chat_id, audio=f, title=title,
+                await context.bot.send_document(
+                    chat_id=chat_id, document=f,
+                    filename=f"{title}.ogg",
+                    caption=f"🎤 {title}",
                 )
         except Exception:
             logger.exception("Failed to send voice note '%s'", title)
