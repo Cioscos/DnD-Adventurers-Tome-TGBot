@@ -3,7 +3,7 @@
 ## Repository
 
 - Remote: `https://github.com/Cioscos/dnd_bot_revamped.git` — branch `main`.
-- Active feature branch: `feature/character-management`.
+- Active feature branch: `feature/ux-improvements`.
 - Always commit and push changes to this repository.
 
 ## MCP Servers
@@ -39,7 +39,7 @@ The top-level `/start` menu always shows two buttons:
 
 ```
 bot/
-├── main.py                  # Entry point — Application builder, schema init + DB init (post_init), handler registration
+├── main.py                  # Entry point — Application builder, schema init + DB init (post_init), handler registration; global /stop command
 ├── api/
 │   ├── client.py            # DnDClient: async GraphQL client (httpx.AsyncClient, singleton)
 │   ├── introspection.py     # __schema query constant + parser → TypeInfo objects
@@ -56,7 +56,7 @@ bot/
 │   ├── navigation.py        # N-level CallbackQueryHandler dispatcher + MarkdownV2 formatters (wiki)
 │   └── character/
 │       ├── __init__.py      # Conversation state constants (46 states)
-│       ├── conversation.py  # Master ConversationHandler — routes CharAction callbacks + builds handler
+│       ├── conversation.py  # Master ConversationHandler — routes CharAction callbacks, stop_command_handler, builds handler
 │       ├── selection.py     # Character create / select / delete
 │       ├── menu.py          # Character main menu with summary
 │       ├── hit_points.py    # HP (set max, set current, damage, healing) + rest
@@ -74,7 +74,7 @@ bot/
 │       └── settings.py      # Per-character settings
 ├── keyboards/
 │   ├── builder.py           # Wiki keyboards: categories, paginated list, detail (📂 buttons), sub-list
-│   └── character.py         # Character keyboards: selection, main menu, all feature screens
+│   └── character.py         # Character keyboards: selection, main menu (multi-column), all feature screens, build_cancel_keyboard
 ├── models/
 │   ├── state.py             # NavAction frozen dataclass (wiki callback data) + make_back()
 │   └── character_state.py   # CharAction frozen dataclass (character callback data) + make_char_back()
@@ -174,7 +174,8 @@ Union types (e.g. `AnyEquipment`) are handled with `__typename` + inline fragmen
 
 - `PAGE_SIZE = 10` — items per wiki keyboard page
 - `PAGE_SIZE = 8` — items per character keyboard page (in `keyboards/character.py`)
-- `COLUMNS = 2` — buttons per row in wiki category grid
+- `COLUMNS = 2` — buttons per row in wiki category grid and character main menu short-button columns
+- `_LONG_THRESHOLD = 20` — character main menu: buttons with `len(label) > 20` are placed in a single column at the end; shorter buttons are paired 2-per-row
 - `_DETAIL_DEPTH = 2` — recursion limit for wiki detail query field expansion
 
 ### Detail Formatters (Wiki)
@@ -206,6 +207,8 @@ Union types (e.g. `AnyEquipment`) are handled with `__typename` + inline fragmen
 - **Navigation**: use `InlineKeyboardMarkup` + `InlineKeyboardButton` only. Never use `ReplyKeyboardMarkup` for navigation.
 - **Pagination**: wiki top-level lists use server-side `skip`/`limit` (detect next page by fetching `PAGE_SIZE + 1`). Sub-lists and character lists use client-side slicing.
 - **Database sessions**: always use `async with get_session() as session:` — never create a session directly. The context manager handles commit and rollback automatically.
+- **Cancel pattern for text inputs**: every `ask_*` function that transitions to a text-input state MUST include a `build_cancel_keyboard(char_id, back_action)` keyboard in its prompt message. The `back_action` must be the `CharAction.action` string of the parent menu (e.g. `"char_hp"`, `"char_bag"`). Intermediate prompts within multi-step flows (e.g. weight step in bag, levels step in multiclass) must also include the cancel keyboard. This ensures the user can always abort without using `/stop`.
+- **`/stop` command**: `stop_command_handler()` in `conversation.py` is registered as a `ConversationHandler` fallback. It clears all `*pending*` keys from `context.user_data`, sends "✋ Operazione annullata." and routes to the character menu or selection. A lightweight global `/stop` command in `main.py` handles the case when the user is outside the conversation.
 
 ### Adding a New Wiki Menu Category
 
@@ -227,6 +230,7 @@ Navigable sub-entity buttons (📂) are discovered automatically from the schema
 4. Add formatter(s) to `bot/utils/formatting.py`.
 5. Wire the new action into `character_callback_handler()` in `conversation.py`.
 6. Add the new state(s) to the `states` dict in `build_character_conversation_handler()`.
+7. For every state that awaits **text input**: include `build_cancel_keyboard(char_id, back_action)` in the prompt message (see *Cancel pattern for text inputs* above).
 
 ### Spell Management Details
 
