@@ -226,7 +226,23 @@ Navigable sub-entity buttons (📂) are discovered automatically from the schema
 5. Wire the new action into `character_callback_handler()` in `conversation.py`.
 6. Add the new state(s) to the `states` dict in `build_character_conversation_handler()`.
 
-### Thin Handlers Principle
+### Voice Notes
+
+Voice notes are stored as local `.ogg` files on disk and referenced in the `notes` JSON field as `[VOICE:files/<char_id>/<safe_title>.ogg]`.
+
+**Saving** (`handle_voice_note`):
+- Download the Telegram voice file via `get_file()` + `download_to_drive()` to `files/<char_id>/<safe_title>.ogg`.
+- Store the local path in the DB as `[VOICE:<path>]`.
+- Never store only the Telegram `file_id` — it expires and bots cannot re-send it as voice.
+
+**Sending** (`show_note`):
+- **Never use `send_voice` or `send_audio`** — Telegram raises `Voice_messages_forbidden` for users who have the privacy setting enabled, and also detects OGG/Opus files as voice even via `send_audio`.
+- Always use `send_document` with **`disable_content_type_detection=True`** to prevent server-side content detection from reclassifying the file as a voice message.
+
+**Deleting** (`delete_note`):
+- Remove the local `.ogg` file via `Path.unlink()` when deleting a voice note from the DB.
+
+
 
 Handlers in `handlers/` should only orchestrate: parse callback data → query DB or API → format → send response. Business logic belongs in `bot/db/` (character) or `bot/api/` and `bot/schema/` (wiki).
 
