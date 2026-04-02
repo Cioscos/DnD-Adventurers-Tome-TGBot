@@ -292,6 +292,24 @@ def build_spells_menu_keyboard(
     return InlineKeyboardMarkup(rows)
 
 
+def _spell_list_label(spell: Spell, concentrating_spell_id: int | None = None) -> str:
+    """Build the label for a spell in the list view."""
+    prefix = "✨" if spell.level == 0 else f"Liv.{spell.level}"
+    indicators = ""
+    if concentrating_spell_id == spell.id:
+        indicators += "⚡"
+    elif spell.is_concentration:
+        indicators += "🔮"
+    if spell.is_ritual:
+        indicators += "®️"
+    if spell.is_pinned:
+        indicators += "📌"
+    name = spell.name
+    if indicators:
+        name = f"{indicators} {name}"
+    return f"{prefix} {name}"
+
+
 def build_spell_search_results_keyboard(
     char_id: int, spells: list[Spell],
     concentrating_spell_id: int | None = None,
@@ -322,21 +340,6 @@ def build_spell_search_results_keyboard(
 
 
 
-    """Build the label for a spell in the list view."""
-    prefix = "✨" if spell.level == 0 else f"Liv.{spell.level}"
-    indicators = ""
-    if concentrating_spell_id == spell.id:
-        indicators += "⚡"
-    elif spell.is_concentration:
-        indicators += "🔮"
-    if spell.is_ritual:
-        indicators += "®️"
-    if spell.is_pinned:
-        indicators += "📌"
-    name = spell.name
-    if indicators:
-        name = f"{indicators} {name}"
-    return f"{prefix} {name}"
 
 
 def build_spell_detail_keyboard(
