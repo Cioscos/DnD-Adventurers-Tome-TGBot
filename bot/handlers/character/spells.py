@@ -74,7 +74,7 @@ async def show_spells_menu(
 
     spell_mgmt = settings.get("spell_management", "paginate_by_level")
 
-    if spell_mgmt == "select_level_directly" and level_filter is None:
+    if spell_mgmt == "paginate_by_level" and level_filter is None:
         return await show_spell_level_picker(update, context, char_id, spells)
 
     display_spells = (
