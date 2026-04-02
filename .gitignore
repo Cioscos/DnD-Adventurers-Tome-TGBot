@@ -29,7 +29,7 @@ build/
 
 # Logs
 *.log
-.old_bot/
+old_bot/
 
 #DB
 data/
