@@ -6,6 +6,7 @@ import logging
 import os
 
 from telegram import Update
+from telegram.error import BadRequest
 from telegram.ext import ContextTypes
 
 from bot.db.engine import get_session
@@ -73,6 +74,36 @@ async def show_note(
             else:
                 # New format: Telegram file_id
                 await context.bot.send_voice(chat_id=chat_id, voice=voice_ref)
+        except BadRequest as exc:
+            if "Voice_messages_forbidden" in str(exc):
+                # Privacy settings block voice messages — fall back to audio
+                logger.info(
+                    "Voice forbidden for chat %s, falling back to send_audio", chat_id
+                )
+                try:
+                    if os.path.sep in voice_ref or "/" in voice_ref:
+                        with open(voice_ref, "rb") as f:
+                            await context.bot.send_audio(
+                                chat_id=chat_id, audio=f, title=title
+                            )
+                    else:
+                        await context.bot.send_audio(
+                            chat_id=chat_id, audio=voice_ref, title=title
+                        )
+                except Exception:
+                    logger.exception("Failed to send voice note '%s' as audio", title)
+                    await context.bot.send_message(
+                        chat_id=chat_id,
+                        text=f"⚠️ Impossibile riprodurre la nota vocale *{_esc(title)}*\\.",
+                        parse_mode="MarkdownV2",
+                    )
+            else:
+                logger.exception("Failed to send voice note '%s'", title)
+                await context.bot.send_message(
+                    chat_id=chat_id,
+                    text=f"⚠️ Impossibile riprodurre la nota vocale *{_esc(title)}*\\.",
+                    parse_mode="MarkdownV2",
+                )
         except Exception:
             logger.exception("Failed to send voice note '%s'", title)
             await context.bot.send_message(
