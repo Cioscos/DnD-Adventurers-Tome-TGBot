@@ -22,7 +22,9 @@ COLUMNS = 2
 # ------------------------------------------------------------------
 
 def build_categories_keyboard() -> InlineKeyboardMarkup:
-    """Build the ``/start`` category-selection keyboard (2-column grid)."""
+    """Build the wiki category-selection keyboard (2-column grid)."""
+    from bot.models.character_state import CharAction
+
     buttons: list[InlineKeyboardButton] = []
     for mc in MENU_CATEGORIES:
         ti = registry.get_type(mc.type_name)
@@ -35,6 +37,10 @@ def build_categories_keyboard() -> InlineKeyboardMarkup:
             )
         )
     rows = [buttons[i : i + COLUMNS] for i in range(0, len(buttons), COLUMNS)]
+    # Back button to top-level main menu
+    rows.append([
+        InlineKeyboardButton("🏠 Menu Principale", callback_data=NavAction("menu"))
+    ])
     return InlineKeyboardMarkup(rows)
 
 

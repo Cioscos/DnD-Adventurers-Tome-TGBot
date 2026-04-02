@@ -1,33 +1,57 @@
 """/start command handler.
 
-Sends a welcome message with the top-level D&D category keyboard.
+Shows the top-level menu with two sections:
+- 📖 Wiki D&D  (existing wiki explorer)
+- ⚔️ Il mio personaggio  (character management)
 """
 
 from __future__ import annotations
 
 import logging
 
-from telegram import Update
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes
 
-from bot.keyboards.builder import build_categories_keyboard
+from bot.models.character_state import CharAction
+from bot.models.state import NavAction
 
 logger = logging.getLogger(__name__)
 
 WELCOME_TEXT = (
-    "🎲 *Welcome to the D&D 5e Explorer\\!*\n\n"
-    "Choose a category below to start browsing the world of "
-    "Dungeons \\& Dragons\\."
+    "🎲 *Benvenuto nel Bot D&D 5e\\!*\n\n"
+    "Scegli cosa vuoi fare:"
 )
 
 
+def build_main_menu_keyboard() -> InlineKeyboardMarkup:
+    """Build the top-level 2-choice keyboard."""
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("📖 Wiki D&D", callback_data=NavAction("wiki"))],
+        [InlineKeyboardButton("⚔️ Il mio personaggio", callback_data=CharAction("char_select"))],
+    ])
+
+
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Handle the /start command — greet user and show category buttons."""
+    """Handle the /start command — show the main menu."""
     if update.message is None:
         return
-    keyboard = build_categories_keyboard()
+    keyboard = build_main_menu_keyboard()
     await update.message.reply_text(
         WELCOME_TEXT,
         reply_markup=keyboard,
         parse_mode="MarkdownV2",
     )
+
+
+async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Show the main menu (usable from callback queries too)."""
+    keyboard = build_main_menu_keyboard()
+    if update.callback_query:
+        await update.callback_query.answer()
+        await update.callback_query.edit_message_text(
+            WELCOME_TEXT, reply_markup=keyboard, parse_mode="MarkdownV2"
+        )
+    elif update.message:
+        await update.message.reply_text(
+            WELCOME_TEXT, reply_markup=keyboard, parse_mode="MarkdownV2"
+        )
