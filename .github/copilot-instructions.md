@@ -3,7 +3,7 @@
 ## Repository
 
 - Remote: `https://github.com/Cioscos/dnd_bot_revamped.git` — branch `main`.
-- Active feature branch: `feature/ux-improvements`.
+- Active feature branch: `bugfix/spell-management-setting`.
 - Always commit and push changes to this repository.
 
 ## MCP Servers
@@ -240,6 +240,10 @@ Navigable sub-entity buttons (📂) are discovered automatically from the schema
 - **Concentration saving throw**: DC = `max(10, damage // 2)`. Roll = `d20 + CON modifier`. Nat 1 always fails, nat 20 always succeeds. On failure, `concentrating_spell_id` is set to `None`.
 - **Pin**: `is_pinned=True` shows the spell in the main menu summary alongside passive active abilities.
 - **`format_character_summary`** must receive `spells` and `abilities` lists to display the active status section.
+- **`spell_management` setting** (`characters.settings["spell_management"]`): controls how the spell list is navigated.
+  - `"paginate_by_level"` (default) — shows a **level picker** first (one button per level that has ≥1 spell, max 3 per row); tapping a level shows only the spells of that level with pagination. The `extra` field of `CharAction` carries the selected level as a string (e.g. `"3"`; `"0"` = cantrips). Empty `extra` → show picker.
+  - `"select_level_directly"` — flat paginated list of all spells ordered by `level, name` (direct scroll, no level filter).
+  - The `back` tuple in `CharAction` for the detail view encodes `extra` at index 5 (`make_char_back(..., extra=level_extra)`) so the ⬅️ button in the detail view returns to the correct filtered page.
 
 ### Voice Notes
 
