@@ -2,12 +2,10 @@
 
 from __future__ import annotations
 
-import io
 import logging
-import os
+from pathlib import Path
 
 from telegram import Update
-from telegram.error import BadRequest
 from telegram.ext import ContextTypes
 
 from bot.db.engine import get_session
@@ -25,7 +23,7 @@ from bot.keyboards.character import build_note_detail_keyboard, build_notes_keyb
 logger = logging.getLogger(__name__)
 
 _OP_KEY = "char_note_pending"
-_FILES_DIR = "files"
+_FILES_DIR = Path("files")
 
 
 async def show_notes_menu(
@@ -68,49 +66,12 @@ async def show_note(
             await update.callback_query.answer()
 
         try:
-            if os.path.sep in voice_ref or "/" in voice_ref:
-                # Legacy: local file path
-                with open(voice_ref, "rb") as f:
-                    await context.bot.send_voice(chat_id=chat_id, voice=f)
-            else:
-                # New format: Telegram file_id
-                await context.bot.send_voice(chat_id=chat_id, voice=voice_ref)
-        except BadRequest as exc:
-            if "Voice_messages_forbidden" in str(exc):
-                # Privacy settings block voice messages — download and
-                # re-send as a regular document to bypass the restriction.
-                logger.info(
-                    "Voice forbidden for chat %s, falling back to send_document",
-                    chat_id,
-                )
-                try:
-                    if os.path.sep in voice_ref or "/" in voice_ref:
-                        with open(voice_ref, "rb") as f:
-                            await context.bot.send_document(
-                                chat_id=chat_id, document=f,
-                                filename=f"{title}.ogg",
-                            )
-                    else:
-                        tg_file = await context.bot.get_file(voice_ref)
-                        buf = io.BytesIO(await tg_file.download_as_bytearray())
-                        buf.name = f"{title}.ogg"
-                        await context.bot.send_document(
-                            chat_id=chat_id, document=buf,
-                            filename=f"{title}.ogg",
-                        )
-                except Exception:
-                    logger.exception("Failed to send voice note '%s' as document", title)
-                    await context.bot.send_message(
-                        chat_id=chat_id,
-                        text=f"⚠️ Impossibile riprodurre la nota vocale *{_esc(title)}*\\.",
-                        parse_mode="MarkdownV2",
-                    )
-            else:
-                logger.exception("Failed to send voice note '%s'", title)
-                await context.bot.send_message(
-                    chat_id=chat_id,
-                    text=f"⚠️ Impossibile riprodurre la nota vocale *{_esc(title)}*\\.",
-                    parse_mode="MarkdownV2",
+            voice_path = Path(voice_ref)
+            if not voice_path.is_file():
+                raise FileNotFoundError(f"Voice file not found: {voice_ref}")
+            with open(voice_path, "rb") as f:
+                await context.bot.send_audio(
+                    chat_id=chat_id, audio=f, title=title,
                 )
         except Exception:
             logger.exception("Failed to send voice note '%s'", title)
@@ -207,7 +168,7 @@ async def handle_note_body_text(
 async def handle_voice_note(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> int:
-    """Receive a voice message and store its Telegram file_id as the note body."""
+    """Receive a voice message and download it to the local files/ directory."""
     if update.message is None or update.message.voice is None:
         return CHAR_VOICE_NOTE_TITLE
 
@@ -220,8 +181,19 @@ async def handle_voice_note(
 
     voice = update.message.voice
 
-    # Store the Telegram file_id directly — no need to download locally
-    await _save_note(char_id, title, f"[VOICE:{voice.file_id}]")
+    # Ensure the files directory exists
+    voice_dir = _FILES_DIR / str(char_id)
+    voice_dir.mkdir(parents=True, exist_ok=True)
+
+    # Download the voice file locally
+    safe_title = "".join(c if c.isalnum() or c in " _-" else "_" for c in title)
+    file_path = voice_dir / f"{safe_title}.ogg"
+
+    tg_file = await context.bot.get_file(voice.file_id)
+    await tg_file.download_to_drive(custom_path=str(file_path))
+
+    # Store the local path reference in DB
+    await _save_note(char_id, title, f"[VOICE:{file_path}]")
     await update.message.reply_text(
         f"✅ Nota vocale *{_esc(title)}* salvata\\!", parse_mode="MarkdownV2"
     )
@@ -270,8 +242,17 @@ async def delete_note(
         char = await session.get(Character, char_id)
         if char and char.notes:
             notes = dict(char.notes)
-            notes.pop(title, None)
+            body = notes.pop(title, "")
             char.notes = notes
+
+            # Remove local voice file if present
+            if body.startswith("[VOICE:") and body.endswith("]"):
+                voice_path = Path(body[7:-1])
+                if voice_path.is_file():
+                    try:
+                        voice_path.unlink()
+                    except OSError:
+                        logger.warning("Could not delete voice file %s", voice_path)
 
     if update.callback_query:
         await update.callback_query.answer("Nota eliminata.")
