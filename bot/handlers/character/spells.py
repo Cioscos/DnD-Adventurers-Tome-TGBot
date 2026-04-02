@@ -55,10 +55,10 @@ async def show_spell_detail(
             return await show_spells_menu(update, context, char_id)
 
     level_label = "Trucchetto" if spell.level == 0 else f"Livello {spell.level}"
-    desc = spell.description or "_Nessuna descrizione_"
+    desc = _esc(spell.description) if spell.description else "_Nessuna descrizione_"
     text = (
         f"✨ *{_esc(spell.name)}*\n"
-        f"Livello: {level_label}\n\n"
+        f"Livello: {_esc(level_label)}\n\n"
         f"{desc}"
     )
     keyboard = build_spell_detail_keyboard(char_id, spell_id, back_page)
