@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import io
 import logging
 import os
 
@@ -76,22 +77,29 @@ async def show_note(
                 await context.bot.send_voice(chat_id=chat_id, voice=voice_ref)
         except BadRequest as exc:
             if "Voice_messages_forbidden" in str(exc):
-                # Privacy settings block voice messages — fall back to audio
+                # Privacy settings block voice messages — download and
+                # re-send as a regular document to bypass the restriction.
                 logger.info(
-                    "Voice forbidden for chat %s, falling back to send_audio", chat_id
+                    "Voice forbidden for chat %s, falling back to send_document",
+                    chat_id,
                 )
                 try:
                     if os.path.sep in voice_ref or "/" in voice_ref:
                         with open(voice_ref, "rb") as f:
-                            await context.bot.send_audio(
-                                chat_id=chat_id, audio=f, title=title
+                            await context.bot.send_document(
+                                chat_id=chat_id, document=f,
+                                filename=f"{title}.ogg",
                             )
                     else:
-                        await context.bot.send_audio(
-                            chat_id=chat_id, audio=voice_ref, title=title
+                        tg_file = await context.bot.get_file(voice_ref)
+                        buf = io.BytesIO(await tg_file.download_as_bytearray())
+                        buf.name = f"{title}.ogg"
+                        await context.bot.send_document(
+                            chat_id=chat_id, document=buf,
+                            filename=f"{title}.ogg",
                         )
                 except Exception:
-                    logger.exception("Failed to send voice note '%s' as audio", title)
+                    logger.exception("Failed to send voice note '%s' as document", title)
                     await context.bot.send_message(
                         chat_id=chat_id,
                         text=f"⚠️ Impossibile riprodurre la nota vocale *{_esc(title)}*\\.",
