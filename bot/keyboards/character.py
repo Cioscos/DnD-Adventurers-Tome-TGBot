@@ -244,6 +244,7 @@ def build_spell_level_picker_keyboard(
             level_row = []
     if level_row:
         rows.append(level_row)
+    rows.append([_btn("🔍 Cerca Incantesimo", CharAction("char_spells", char_id=cid, sub="search"))])
     rows.append([_btn("➕ Impara Incantesimo", CharAction("char_spells", char_id=cid, sub="learn"))])
     rows.append(_nav_row(back_action=CharAction("char_menu", char_id=cid), menu_char_id=cid))
     return InlineKeyboardMarkup(rows)
@@ -278,6 +279,7 @@ def build_spells_menu_keyboard(
         )]
         for s in page_spells
     ]
+    rows.append([_btn("🔍 Cerca Incantesimo", CharAction("char_spells", char_id=cid, sub="search"))])
     rows.append([_btn("➕ Impara Incantesimo", CharAction("char_spells", char_id=cid, sub="learn"))])
 
     nav: list[InlineKeyboardButton] = []
@@ -290,7 +292,36 @@ def build_spells_menu_keyboard(
     return InlineKeyboardMarkup(rows)
 
 
-def _spell_list_label(spell: Spell, concentrating_spell_id: int | None = None) -> str:
+def build_spell_search_results_keyboard(
+    char_id: int, spells: list[Spell],
+    concentrating_spell_id: int | None = None,
+) -> InlineKeyboardMarkup:
+    """Build a keyboard showing fuzzy search results for spells.
+
+    Each matched spell opens the detail view; the back button from the detail
+    view returns here (via ``extra="search_show"``).  Bottom row has a
+    *Nuova Ricerca* shortcut, a *Tutti gli Incantesimi* link, and the 🏠 Menu.
+    """
+    cid = char_id
+    # Back tuple used by each spell button so the detail view can return here
+    search_back = make_char_back("char_spells", cid, extra="search_show")
+    rows = [
+        [_btn(
+            _spell_list_label(s, concentrating_spell_id),
+            CharAction("char_spells", char_id=cid, sub="detail", item_id=s.id,
+                       back=search_back),
+        )]
+        for s in spells
+    ]
+    rows.append([_btn("🔍 Nuova Ricerca", CharAction("char_spells", char_id=cid, sub="search"))])
+    rows.append([
+        _btn("📋 Tutti gli Incantesimi", CharAction("char_spells", char_id=cid)),
+        _btn("🏠 Menu", CharAction("char_menu", char_id=cid)),
+    ])
+    return InlineKeyboardMarkup(rows)
+
+
+
     """Build the label for a spell in the list view."""
     prefix = "✨" if spell.level == 0 else f"Liv.{spell.level}"
     indicators = ""

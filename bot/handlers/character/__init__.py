@@ -53,6 +53,8 @@ from __future__ import annotations
     # Spell enhancement states
     CHAR_SPELL_EDIT,
     CHAR_CONC_SAVE,
-) = range(46)
+    # Spell search
+    CHAR_SPELL_SEARCH,
+) = range(47)
 
 STOPPING = 99

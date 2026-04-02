@@ -8,4 +8,5 @@ dependencies = [
     "python-telegram-bot[callback-data]>=22.0",
     "sqlalchemy>=2.0",
     "aiosqlite>=0.20",
+    "rapidfuzz>=3.0",
 ]

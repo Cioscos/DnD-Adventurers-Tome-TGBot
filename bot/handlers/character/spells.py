@@ -10,6 +10,7 @@ from __future__ import annotations
 import logging
 import random
 
+from rapidfuzz import fuzz, process as rfuzz_process
 from sqlalchemy import delete, select
 from telegram import Update
 from telegram.ext import ContextTypes
@@ -20,6 +21,7 @@ from bot.handlers.character import (
     CHAR_CONC_SAVE,
     CHAR_MENU,
     CHAR_SPELL_EDIT,
+    CHAR_SPELL_SEARCH,
     CHAR_SPELLS_MENU,
     CHAR_SPELL_LEARN,
 )
@@ -28,6 +30,7 @@ from bot.keyboards.character import (
     build_spell_detail_keyboard,
     build_spell_edit_field_keyboard,
     build_spell_level_picker_keyboard,
+    build_spell_search_results_keyboard,
     build_spell_use_level_keyboard,
     build_spells_menu_keyboard,
 )
@@ -36,6 +39,7 @@ from bot.utils.formatting import format_spell_detail, format_spells
 logger = logging.getLogger(__name__)
 
 _OP_KEY = "char_spell_pending"
+_SEARCH_KEY = "char_spell_search_pending"
 
 # Editable spell fields: internal key -> (Italian label, prompt text)
 SPELL_EDITABLE_FIELDS: dict[str, tuple[str, str]] = {
@@ -47,6 +51,105 @@ SPELL_EDITABLE_FIELDS: dict[str, tuple[str, str]] = {
     "description": ("Descrizione", "📝 Inserisci la *descrizione*:"),
     "higher_level": ("Livelli superiori", "📈 Inserisci la descrizione per *livelli superiori*:"),
 }
+
+
+
+# ---------------------------------------------------------------------------
+# Spell search (fuzzy)
+# ---------------------------------------------------------------------------
+
+_FUZZY_THRESHOLD = 50   # minimum WRatio score to include a result
+_FUZZY_MAX = 20         # maximum results to show
+
+
+async def ask_spell_search(
+    update: Update, context: ContextTypes.DEFAULT_TYPE, char_id: int,
+) -> int:
+    """Ask the user to type a search query for fuzzy spell name matching."""
+    context.user_data[_SEARCH_KEY] = {"char_id": char_id}
+    await _edit_or_reply(
+        update,
+        "🔍 Inserisci il *nome dell'incantesimo* da cercare:",
+        build_cancel_keyboard(char_id, "char_spells"),
+    )
+    return CHAR_SPELL_SEARCH
+
+
+async def handle_spell_search_text(
+    update: Update, context: ContextTypes.DEFAULT_TYPE,
+) -> int:
+    """Process the typed search query and display fuzzy-matched results."""
+    if update.message is None:
+        return CHAR_SPELL_SEARCH
+
+    pending = context.user_data.get(_SEARCH_KEY, {})
+    char_id: int = pending.get("char_id", 0)
+    query = update.message.text.strip()
+
+    if not query:
+        await update.message.reply_text(
+            "❌ Inserisci almeno un carattere\\.", parse_mode="MarkdownV2"
+        )
+        return CHAR_SPELL_SEARCH
+
+    context.user_data[_SEARCH_KEY]["query"] = query
+    return await show_spell_search_results(update, context, char_id, query=query)
+
+
+async def show_spell_search_results(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    char_id: int,
+    query: str | None = None,
+) -> int:
+    """Display fuzzy-matched spells for the stored (or provided) query.
+
+    When *query* is None the query is read from ``context.user_data[_SEARCH_KEY]``.
+    This lets the function be called both right after text input and when
+    navigating back from a spell detail view.
+    """
+    if query is None:
+        pending = context.user_data.get(_SEARCH_KEY, {})
+        query = pending.get("query", "")
+
+    async with get_session() as session:
+        char = await session.get(Character, char_id)
+        conc_id = char.concentrating_spell_id if char else None
+        result = await session.execute(
+            select(Spell).where(Spell.character_id == char_id).order_by(Spell.level, Spell.name)
+        )
+        spells = list(result.scalars().all())
+
+    matched: list[Spell] = []
+    if query and spells:
+        spell_names = [s.name for s in spells]
+        hits = rfuzz_process.extract(
+            query,
+            spell_names,
+            scorer=fuzz.WRatio,
+            score_cutoff=_FUZZY_THRESHOLD,
+            limit=_FUZZY_MAX,
+        )
+        # Map name back to Spell preserving result order (best match first)
+        name_to_spell = {s.name: s for s in spells}
+        matched = [name_to_spell[name] for name, _score, _idx in hits if name in name_to_spell]
+
+    escaped_query = _esc(query)
+    if matched:
+        text = (
+            f"🔍 Risultati per *{escaped_query}* "
+            f"\\({_esc(str(len(matched)))} trovati\\):"
+        )
+        keyboard = build_spell_search_results_keyboard(char_id, matched, conc_id)
+    else:
+        text = (
+            f"🔍 Nessun incantesimo trovato per *{escaped_query}*\\.\n\n"
+            "Prova con un termine diverso\\."
+        )
+        keyboard = build_spell_search_results_keyboard(char_id, [], conc_id)
+
+    await _edit_or_reply(update, text, keyboard)
+    return CHAR_SPELLS_MENU
 
 
 # ---------------------------------------------------------------------------

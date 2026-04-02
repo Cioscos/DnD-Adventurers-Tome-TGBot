@@ -60,6 +60,7 @@ from bot.handlers.character import (
     CHAR_SETTINGS_MENU,
     CHAR_SPELL_EDIT,
     CHAR_SPELL_LEARN,
+    CHAR_SPELL_SEARCH,
     CHAR_SPELL_SLOTS_MENU,
     CHAR_SPELL_SLOT_ADD,
     CHAR_SPELL_SLOT_REMOVE,
@@ -122,10 +123,11 @@ async def character_callback_handler(
     )
     from bot.handlers.character.spells import (
         activate_concentration, ask_concentration_save_damage,
-        ask_spell_learn, ask_spell_edit_field, drop_concentration,
-        finalize_spell_learn, forget_spell, show_spell_detail,
-        show_spell_edit_menu, show_spells_menu,
-        show_use_spell_level_picker, toggle_pin_spell, use_spell_at_level,
+        ask_spell_learn, ask_spell_edit_field, ask_spell_search,
+        drop_concentration, finalize_spell_learn, forget_spell,
+        show_spell_detail, show_spell_edit_menu, show_spell_search_results,
+        show_spells_menu, show_use_spell_level_picker,
+        toggle_pin_spell, use_spell_at_level,
     )
     from bot.handlers.character.stats import ask_stat_input, show_stats_menu
 
@@ -231,6 +233,10 @@ async def character_callback_handler(
     if action == "char_spells":
         if sub == "learn":
             return await ask_spell_learn(update, context, cid)
+        if sub == "search":
+            return await ask_spell_search(update, context, cid)
+        if sub == "search_show" or (not sub and data.extra == "search_show"):
+            return await show_spell_search_results(update, context, cid)
         if sub == "learn_conc_yes":
             return await finalize_spell_learn(update, context, is_concentration=True)
         if sub == "learn_conc_no":
@@ -465,7 +471,7 @@ def build_character_conversation_handler() -> ConversationHandler:
     from bot.handlers.character.spell_slots import handle_slot_add_text
     from bot.handlers.character.spells import (
         handle_concentration_save_text, handle_spell_edit_text,
-        handle_spell_learn_text,
+        handle_spell_learn_text, handle_spell_search_text,
     )
     from bot.handlers.character.stats import handle_stat_text
 
@@ -547,6 +553,10 @@ def build_character_conversation_handler() -> ConversationHandler:
             ],
             CHAR_CONC_SAVE: [
                 MessageHandler(text_filter, handle_concentration_save_text),
+                char_callback,
+            ],
+            CHAR_SPELL_SEARCH: [
+                MessageHandler(text_filter, handle_spell_search_text),
                 char_callback,
             ],
             CHAR_BAG_MENU: [char_callback],
