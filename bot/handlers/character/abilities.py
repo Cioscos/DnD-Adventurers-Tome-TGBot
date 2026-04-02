@@ -60,13 +60,13 @@ async def show_ability_detail(
         else "Usi: illimitati"
     )
     rest_label = RESTORATION_LABELS.get(ability.restoration_type, "—")
-    desc = ability.description or "_Nessuna descrizione_"
+    desc = _esc(ability.description) if ability.description else "_Nessuna descrizione_"
     text = (
         f"⚡ *{_esc(ability.name)}*\n\n"
         f"{desc}\n\n"
-        f"{passive_label} | {active_mark}\n"
+        f"{passive_label} \\| {active_mark}\n"
         f"{uses_text}\n"
-        f"Ripristino: {rest_label}"
+        f"Ripristino: {_esc(rest_label)}"
     )
     keyboard = build_ability_detail_keyboard(char_id, ability, back_page)
     await _edit_or_reply(update, text, keyboard)
