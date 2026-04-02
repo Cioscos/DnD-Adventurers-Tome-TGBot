@@ -237,7 +237,8 @@ async def character_callback_handler(
             return await finalize_spell_learn(update, context, is_concentration=False)
         if sub == "detail":
             back_page = int(data.back[4]) if len(data.back) > 4 else 0
-            return await show_spell_detail(update, context, cid, data.item_id, back_page)
+            back_extra = data.back[5] if len(data.back) > 5 else ""
+            return await show_spell_detail(update, context, cid, data.item_id, back_page, back_extra)
         if sub == "forget":
             return await forget_spell(update, context, cid, data.item_id)
         if sub == "use":
@@ -261,7 +262,8 @@ async def character_callback_handler(
         if sub and sub.startswith("edit_"):
             field = sub[5:]  # strip "edit_" prefix
             return await ask_spell_edit_field(update, context, cid, data.item_id, field)
-        return await show_spells_menu(update, context, cid, data.page)
+        level_filter: int | None = int(data.extra) if data.extra and data.extra.lstrip("-").isdigit() else None
+        return await show_spells_menu(update, context, cid, data.page, level_filter)
 
     # ─── Spell slots ───
     if action == "char_slots":

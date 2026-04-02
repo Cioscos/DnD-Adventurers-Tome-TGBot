@@ -223,13 +223,49 @@ def build_level_class_choice_keyboard(
 # Spells
 # ---------------------------------------------------------------------------
 
+def build_spell_level_picker_keyboard(
+    char_id: int, available_levels: list[int],
+) -> InlineKeyboardMarkup:
+    """Build a level picker keyboard for the 'select_level_directly' mode.
+
+    Shows one button per spell level that has at least one spell, plus a
+    ➕ learn button and the standard ⬅️ / 🏠 nav row.
+    """
+    cid = char_id
+    rows: list[list[InlineKeyboardButton]] = []
+    level_row: list[InlineKeyboardButton] = []
+    for lvl in available_levels:
+        label = "✨ Trucchi" if lvl == 0 else f"Livello {lvl}"
+        level_row.append(
+            _btn(label, CharAction("char_spells", char_id=cid, extra=str(lvl)))
+        )
+        if len(level_row) == 3:
+            rows.append(level_row)
+            level_row = []
+    if level_row:
+        rows.append(level_row)
+    rows.append([_btn("➕ Impara Incantesimo", CharAction("char_spells", char_id=cid, sub="learn"))])
+    rows.append(_nav_row(back_action=CharAction("char_menu", char_id=cid), menu_char_id=cid))
+    return InlineKeyboardMarkup(rows)
+
+
 def build_spells_menu_keyboard(
     char_id: int, spells: list[Spell], page: int,
     concentrating_spell_id: int | None = None,
+    level_filter: int | None = None,
 ) -> InlineKeyboardMarkup:
-    """Build keyboard for viewing spell list with pagination."""
+    """Build keyboard for viewing spell list with pagination.
+
+    When *level_filter* is set the ⬅️ Indietro navigates back to the level
+    picker rather than the character menu.
+    """
     cid = char_id
-    back = CharAction("char_menu", char_id=cid)
+    back = (
+        CharAction("char_spells", char_id=cid)          # → level picker
+        if level_filter is not None
+        else CharAction("char_menu", char_id=cid)        # → char menu
+    )
+    level_extra = str(level_filter) if level_filter is not None else ""
     start = page * PAGE_SIZE
     page_spells = spells[start: start + PAGE_SIZE]
     has_next = len(spells) > start + PAGE_SIZE
@@ -238,7 +274,7 @@ def build_spells_menu_keyboard(
         [_btn(
             _spell_list_label(s, concentrating_spell_id),
             CharAction("char_spells", char_id=cid, sub="detail", item_id=s.id,
-                       back=make_char_back("char_spells", cid, page=page)),
+                       back=make_char_back("char_spells", cid, page=page, extra=level_extra)),
         )]
         for s in page_spells
     ]
@@ -246,10 +282,10 @@ def build_spells_menu_keyboard(
 
     nav: list[InlineKeyboardButton] = []
     if page > 0:
-        nav.append(_btn("⬅️ Prec", CharAction("char_spells", char_id=cid, page=page - 1)))
+        nav.append(_btn("⬅️ Prec", CharAction("char_spells", char_id=cid, page=page - 1, extra=level_extra)))
     nav.append(_btn("⬅️ Indietro", back))
     if has_next:
-        nav.append(_btn("Succ ➡️", CharAction("char_spells", char_id=cid, page=page + 1)))
+        nav.append(_btn("Succ ➡️", CharAction("char_spells", char_id=cid, page=page + 1, extra=level_extra)))
     rows.append(nav)
     return InlineKeyboardMarkup(rows)
 
@@ -274,12 +310,12 @@ def _spell_list_label(spell: Spell, concentrating_spell_id: int | None = None) -
 
 def build_spell_detail_keyboard(
     char_id: int, spell: Spell, back_page: int = 0,
-    *, is_concentrating: bool = False,
+    *, is_concentrating: bool = False, back_extra: str = "",
 ) -> InlineKeyboardMarkup:
     """Build keyboard for spell detail view with all actions."""
     cid = char_id
     sid = spell.id
-    back = CharAction("char_spells", char_id=cid, page=back_page)
+    back = CharAction("char_spells", char_id=cid, page=back_page, extra=back_extra)
     rows: list[list[InlineKeyboardButton]] = []
 
     # Use spell

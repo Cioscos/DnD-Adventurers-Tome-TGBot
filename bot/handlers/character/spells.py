@@ -27,6 +27,7 @@ from bot.keyboards.character import (
     build_cancel_keyboard,
     build_spell_detail_keyboard,
     build_spell_edit_field_keyboard,
+    build_spell_level_picker_keyboard,
     build_spell_use_level_keyboard,
     build_spells_menu_keyboard,
 )
@@ -53,19 +54,49 @@ SPELL_EDITABLE_FIELDS: dict[str, tuple[str, str]] = {
 # ---------------------------------------------------------------------------
 
 async def show_spells_menu(
-    update: Update, context: ContextTypes.DEFAULT_TYPE, char_id: int, page: int = 0
+    update: Update, context: ContextTypes.DEFAULT_TYPE, char_id: int,
+    page: int = 0, level_filter: int | None = None,
 ) -> int:
-    """Show the paginated spell list."""
+    """Show the spell list, respecting the character's spell_management setting.
+
+    In *paginate_by_level* mode (default): flat paginated list ordered by level.
+    In *select_level_directly* mode: level picker first; once a level is chosen
+    the list is filtered to that level only.
+    """
     async with get_session() as session:
         char = await session.get(Character, char_id)
         conc_id = char.concentrating_spell_id if char else None
+        settings = char.settings or {} if char else {}
         result = await session.execute(
             select(Spell).where(Spell.character_id == char_id).order_by(Spell.level, Spell.name)
         )
         spells = list(result.scalars().all())
 
-    keyboard = build_spells_menu_keyboard(char_id, spells, page, conc_id)
-    text = format_spells(spells, conc_id) if spells else "Nessun incantesimo conosciuto\\."
+    spell_mgmt = settings.get("spell_management", "paginate_by_level")
+
+    if spell_mgmt == "select_level_directly" and level_filter is None:
+        return await show_spell_level_picker(update, context, char_id, spells)
+
+    display_spells = (
+        [s for s in spells if s.level == level_filter]
+        if level_filter is not None
+        else spells
+    )
+
+    keyboard = build_spells_menu_keyboard(char_id, display_spells, page, conc_id, level_filter)
+    text = format_spells(display_spells, conc_id) if display_spells else "Nessun incantesimo conosciuto\\."
+    await _edit_or_reply(update, text, keyboard)
+    return CHAR_SPELLS_MENU
+
+
+async def show_spell_level_picker(
+    update: Update, context: ContextTypes.DEFAULT_TYPE,
+    char_id: int, spells: list,
+) -> int:
+    """Show a level picker when spell_management == 'select_level_directly'."""
+    available_levels = sorted({s.level for s in spells})
+    text = "✨ *Scegli il livello degli incantesimi:*" if available_levels else "Nessun incantesimo conosciuto\\."
+    keyboard = build_spell_level_picker_keyboard(char_id, available_levels)
     await _edit_or_reply(update, text, keyboard)
     return CHAR_SPELLS_MENU
 
@@ -80,6 +111,7 @@ async def show_spell_detail(
     char_id: int,
     spell_id: int,
     back_page: int = 0,
+    back_extra: str = "",
 ) -> int:
     """Show detailed spell view with all D&D 5e properties."""
     async with get_session() as session:
@@ -92,6 +124,7 @@ async def show_spell_detail(
     text = format_spell_detail(spell)
     keyboard = build_spell_detail_keyboard(
         char_id, spell, back_page, is_concentrating=is_concentrating,
+        back_extra=back_extra,
     )
     await _edit_or_reply(update, text, keyboard)
     return CHAR_SPELLS_MENU
