@@ -40,7 +40,7 @@ The top-level `/start` menu always shows two buttons:
 
 ```
 bot/
-├── main.py                  # Entry point — Application builder, schema init + DB init (post_init), handler registration; global /stop command
+├── main.py                  # Entry point — Application builder, dual-handler logging setup, schema init + DB init (post_init), handler registration; global error handler + /stop command
 ├── api/
 │   ├── client.py            # DnDClient: async GraphQL client (httpx.AsyncClient, singleton)
 │   ├── introspection.py     # __schema query constant + parser → TypeInfo objects
@@ -97,6 +97,14 @@ bot/
 - **File**: `data/dnd_bot.db` (SQLite, path overridable via `DB_PATH` env var)
 - **Init**: `init_db()` called once in `post_init` — creates tables if they don't exist AND runs `_migrate_schema()` which adds missing columns via `ALTER TABLE` (idempotent, safe for existing DBs)
 - **Session**: use the `get_session()` async context manager from `bot/db/engine.py` for all DB operations
+
+### Environment Variables
+
+| Variable | Required | Description |
+|---|---|---|
+| `BOT_TOKEN` | ✅ Yes | Telegram bot token from @BotFather |
+| `DEV_CHAT_ID` | Optional | Developer's Telegram chat ID — unhandled exceptions are sent here as private messages. Get it from @userinfobot. |
+| `DB_PATH` | Optional | Override the SQLite database path (default: `data/dnd_bot.db`) |
 
 #### ORM Tables
 
@@ -202,7 +210,8 @@ Union types (e.g. `AnyEquipment`) are handled with `__typename` + inline fragmen
 - **Formatting**: Telegram MarkdownV2 — escape special chars with `_esc()`. Wiki uses `_esc()` from `navigation.py`; character screens use `_esc()` from `utils/formatting.py`.
 - **UI language**: Italian for all user-facing strings in character management. Wiki strings may remain in English.
 - **Error handling**: catch `telegram.error.BadRequest`, `telegram.ext.InvalidCallbackData`, and `bot.api.client.APIError` in every handler. Show user-friendly message with 🏠 Menu button.
-- **Logging**: use `logging` module, not `print()`.
+- **Logging**: use `logging` module, not `print()`. The root logger is configured in `main.py` with two handlers: `StreamHandler` (console) and `RotatingFileHandler` (`logs/dnd_bot.log`, 5 MB / 3 backups, append mode). After setup, `logging.getLogger("httpx").setLevel(logging.WARNING)` silences per-request Telegram API noise from `httpx`.
+- **Error handler**: `error_handler(update, context)` in `main.py` is registered with `application.add_error_handler()`. It logs the exception locally and sends the full HTML-formatted traceback (chunked to ≤4096 chars) to the developer's private chat via `DEV_CHAT_ID` env variable. If `DEV_CHAT_ID` is not set, only local logging occurs. Never remove this handler.
 - **Type hints**: required on all function signatures.
 - **Docstrings**: every module must have a module-level docstring explaining its purpose.
 - **Navigation**: use `InlineKeyboardMarkup` + `InlineKeyboardButton` only. Never use `ReplyKeyboardMarkup` for navigation.
