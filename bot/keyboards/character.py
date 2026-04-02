@@ -1,0 +1,645 @@
+"""Inline keyboard builders for character management screens."""
+
+from __future__ import annotations
+
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+
+from bot.db.models import (
+    ABILITY_NAMES,
+    Ability,
+    Character,
+    Currency,
+    Item,
+    Map,
+    Spell,
+    SpellSlot,
+)
+from bot.models.character_state import CharAction, make_char_back
+from bot.utils.formatting import CURRENCY_LABELS
+
+PAGE_SIZE = 8
+COLUMNS = 2
+
+
+# ---------------------------------------------------------------------------
+# Helper
+# ---------------------------------------------------------------------------
+
+def _btn(text: str, action: CharAction) -> InlineKeyboardButton:
+    return InlineKeyboardButton(text=text, callback_data=action)
+
+
+def _nav_row(
+    *,
+    back_action: CharAction | None = None,
+    menu_char_id: int = 0,
+) -> list[InlineKeyboardButton]:
+    row: list[InlineKeyboardButton] = []
+    if back_action is not None:
+        row.append(_btn("⬅️ Indietro", back_action))
+    row.append(_btn("🏠 Menu", CharAction("char_menu", char_id=menu_char_id)))
+    return row
+
+
+# ---------------------------------------------------------------------------
+# Character selection
+# ---------------------------------------------------------------------------
+
+def build_character_selection_keyboard(
+    characters: list[Character],
+) -> InlineKeyboardMarkup:
+    rows: list[list[InlineKeyboardButton]] = []
+    for char in characters:
+        lvl = char.total_level
+        label = f"⚔️ {char.name}  (Liv. {lvl})"
+        rows.append([_btn(label, CharAction("char_menu", char_id=char.id))])
+    rows.append([_btn("➕ Nuovo personaggio", CharAction("char_new"))])
+    return InlineKeyboardMarkup(rows)
+
+
+# ---------------------------------------------------------------------------
+# Character main menu
+# ---------------------------------------------------------------------------
+
+def build_character_main_menu_keyboard(char_id: int) -> InlineKeyboardMarkup:
+    cid = char_id
+    buttons = [
+        ("❤️ Punti Vita",        CharAction("char_hp",        char_id=cid)),
+        ("🛡️ Classe Armatura",   CharAction("char_ac",        char_id=cid)),
+        ("⚔️ Livello/Classe",    CharAction("char_level",     char_id=cid)),
+        ("📊 Punteggi Abilità",  CharAction("char_stats",     char_id=cid)),
+        ("✨ Incantesimi",        CharAction("char_spells",    char_id=cid)),
+        ("🎲 Slot Incantesimi",  CharAction("char_slots",     char_id=cid)),
+        ("📦 Zaino",             CharAction("char_bag",       char_id=cid)),
+        ("💰 Monete",            CharAction("char_currency",  char_id=cid)),
+        ("⚡ Abilità Speciali",  CharAction("char_abilities", char_id=cid)),
+        ("🎭 Multiclasse",       CharAction("char_multiclass",char_id=cid)),
+        ("🎲 Tira Dado",         CharAction("char_dice",      char_id=cid)),
+        ("📝 Note",              CharAction("char_notes",     char_id=cid)),
+        ("🗺️ Mappe",             CharAction("char_maps",      char_id=cid)),
+        ("😴 Riposo",            CharAction("char_rest",      char_id=cid)),
+        ("⚙️ Impostazioni",      CharAction("char_settings",  char_id=cid)),
+        ("🗑️ Elimina Personaggio", CharAction("char_delete",  char_id=cid)),
+    ]
+    rows = [[_btn(t, a)] for t, a in buttons]
+    rows.append([_btn("🔄 Cambia Personaggio", CharAction("char_select"))])
+    return InlineKeyboardMarkup(rows)
+
+
+# ---------------------------------------------------------------------------
+# HP / Combat
+# ---------------------------------------------------------------------------
+
+def build_hp_keyboard(char_id: int) -> InlineKeyboardMarkup:
+    cid = char_id
+    back = CharAction("char_menu", char_id=cid)
+    rows = [
+        [
+            _btn("⚔️ Subisci Danno",   CharAction("char_hp", char_id=cid, sub="damage")),
+            _btn("💚 Guarigione",       CharAction("char_hp", char_id=cid, sub="heal")),
+        ],
+        [_btn("✏️ Imposta HP Max",     CharAction("char_hp", char_id=cid, sub="set_max"))],
+        [_btn("✏️ Imposta HP Attuali", CharAction("char_hp", char_id=cid, sub="set_current"))],
+        _nav_row(back_action=back, menu_char_id=cid),
+    ]
+    return InlineKeyboardMarkup(rows)
+
+
+def build_rest_keyboard(char_id: int) -> InlineKeyboardMarkup:
+    cid = char_id
+    back = CharAction("char_menu", char_id=cid)
+    rows = [
+        [_btn("🌙 Riposo Lungo", CharAction("char_rest", char_id=cid, sub="long"))],
+        [_btn("⏸️ Riposo Breve", CharAction("char_rest", char_id=cid, sub="short"))],
+        _nav_row(back_action=back, menu_char_id=cid),
+    ]
+    return InlineKeyboardMarkup(rows)
+
+
+def build_rest_confirm_keyboard(char_id: int, rest_type: str) -> InlineKeyboardMarkup:
+    cid = char_id
+    rows = [
+        [
+            _btn("✅ Conferma", CharAction("char_rest", char_id=cid, sub=f"{rest_type}_confirm")),
+            _btn("❌ Annulla",  CharAction("char_rest", char_id=cid)),
+        ]
+    ]
+    return InlineKeyboardMarkup(rows)
+
+
+# ---------------------------------------------------------------------------
+# Armor Class
+# ---------------------------------------------------------------------------
+
+def build_ac_keyboard(char_id: int) -> InlineKeyboardMarkup:
+    cid = char_id
+    back = CharAction("char_menu", char_id=cid)
+    rows = [
+        [_btn("✏️ CA Base",   CharAction("char_ac", char_id=cid, sub="set_base"))],
+        [_btn("✏️ CA Scudo",  CharAction("char_ac", char_id=cid, sub="set_shield"))],
+        [_btn("✏️ CA Magica", CharAction("char_ac", char_id=cid, sub="set_magic"))],
+        _nav_row(back_action=back, menu_char_id=cid),
+    ]
+    return InlineKeyboardMarkup(rows)
+
+
+# ---------------------------------------------------------------------------
+# Ability Scores
+# ---------------------------------------------------------------------------
+
+STAT_LABELS = {
+    "strength":     "💪 Forza",
+    "dexterity":    "🤸 Destrezza",
+    "constitution": "🛡️ Costituzione",
+    "intelligence": "🧠 Intelligenza",
+    "wisdom":       "🦉 Saggezza",
+    "charisma":     "✨ Carisma",
+}
+
+
+def build_stats_keyboard(char_id: int) -> InlineKeyboardMarkup:
+    cid = char_id
+    back = CharAction("char_menu", char_id=cid)
+    rows = [
+        [_btn(label, CharAction("char_stats", char_id=cid, sub=name))]
+        for name, label in STAT_LABELS.items()
+    ]
+    rows.append(_nav_row(back_action=back, menu_char_id=cid))
+    return InlineKeyboardMarkup(rows)
+
+
+# ---------------------------------------------------------------------------
+# Level / Class
+# ---------------------------------------------------------------------------
+
+def build_level_keyboard(char_id: int) -> InlineKeyboardMarkup:
+    cid = char_id
+    back = CharAction("char_menu", char_id=cid)
+    rows = [
+        [
+            _btn("⬆️ Sali di Livello",  CharAction("char_level", char_id=cid, sub="up")),
+            _btn("⬇️ Scendi di Livello", CharAction("char_level", char_id=cid, sub="down")),
+        ],
+        _nav_row(back_action=back, menu_char_id=cid),
+    ]
+    return InlineKeyboardMarkup(rows)
+
+
+def build_level_class_choice_keyboard(
+    char_id: int, direction: str, class_names: list[str]
+) -> InlineKeyboardMarkup:
+    cid = char_id
+    back = CharAction("char_level", char_id=cid)
+    rows = [
+        [_btn(cn, CharAction("char_level", char_id=cid, sub=direction, extra=cn))]
+        for cn in class_names
+    ]
+    rows.append(_nav_row(back_action=back, menu_char_id=cid))
+    return InlineKeyboardMarkup(rows)
+
+
+# ---------------------------------------------------------------------------
+# Spells
+# ---------------------------------------------------------------------------
+
+def build_spells_menu_keyboard(
+    char_id: int, spells: list[Spell], page: int
+) -> InlineKeyboardMarkup:
+    cid = char_id
+    back = CharAction("char_menu", char_id=cid)
+    start = page * PAGE_SIZE
+    page_spells = spells[start: start + PAGE_SIZE]
+    has_next = len(spells) > start + PAGE_SIZE
+
+    rows = [
+        [_btn(
+            f"{'✨' if s.level == 0 else f'Liv.{s.level}'} {s.name}",
+            CharAction("char_spells", char_id=cid, sub="detail", item_id=s.id,
+                       back=make_char_back("char_spells", cid, page=page)),
+        )]
+        for s in page_spells
+    ]
+    rows.append([_btn("➕ Impara Incantesimo", CharAction("char_spells", char_id=cid, sub="learn"))])
+
+    nav: list[InlineKeyboardButton] = []
+    if page > 0:
+        nav.append(_btn("⬅️ Prec", CharAction("char_spells", char_id=cid, page=page - 1)))
+    nav.append(_btn("⬅️ Indietro", back))
+    if has_next:
+        nav.append(_btn("Succ ➡️", CharAction("char_spells", char_id=cid, page=page + 1)))
+    rows.append(nav)
+    return InlineKeyboardMarkup(rows)
+
+
+def build_spell_detail_keyboard(
+    char_id: int, spell_id: int, back_page: int = 0
+) -> InlineKeyboardMarkup:
+    cid = char_id
+    back = CharAction("char_spells", char_id=cid, page=back_page)
+    rows = [
+        [_btn("🎯 Usa Incantesimo", CharAction("char_spells", char_id=cid, sub="use", item_id=spell_id))],
+        [_btn("🗑️ Dimentica",       CharAction("char_spells", char_id=cid, sub="forget", item_id=spell_id))],
+        _nav_row(back_action=back, menu_char_id=cid),
+    ]
+    return InlineKeyboardMarkup(rows)
+
+
+def build_spell_use_level_keyboard(
+    char_id: int, spell_id: int, available_slots: list[SpellSlot]
+) -> InlineKeyboardMarkup:
+    cid = char_id
+    back = CharAction("char_spells", char_id=cid, sub="detail", item_id=spell_id)
+    rows = [
+        [_btn(
+            f"Slot Livello {s.level} ({s.available}/{s.total})",
+            CharAction("char_spells", char_id=cid, sub="use_slot", item_id=spell_id, extra=str(s.level)),
+        )]
+        for s in available_slots
+    ]
+    rows.append(_nav_row(back_action=back, menu_char_id=cid))
+    return InlineKeyboardMarkup(rows)
+
+
+# ---------------------------------------------------------------------------
+# Spell Slots
+# ---------------------------------------------------------------------------
+
+def build_spell_slots_keyboard(
+    char_id: int, slots: list[SpellSlot]
+) -> InlineKeyboardMarkup:
+    cid = char_id
+    back = CharAction("char_menu", char_id=cid)
+    rows = [
+        [
+            _btn(
+                f"Liv.{s.level} ({s.available}/{s.total})",
+                CharAction("char_slots", char_id=cid, sub="slot_detail", item_id=s.id),
+            )
+        ]
+        for s in sorted(slots, key=lambda x: x.level)
+    ]
+    rows.append([_btn("➕ Aggiungi Slot", CharAction("char_slots", char_id=cid, sub="add"))])
+    rows.append([_btn("🔄 Ripristina Tutti", CharAction("char_slots", char_id=cid, sub="reset_all"))])
+    rows.append(_nav_row(back_action=back, menu_char_id=cid))
+    return InlineKeyboardMarkup(rows)
+
+
+def build_spell_slot_detail_keyboard(
+    char_id: int, slot: SpellSlot
+) -> InlineKeyboardMarkup:
+    cid = char_id
+    back = CharAction("char_slots", char_id=cid)
+    rows = [
+        [_btn("🎯 Usa Slot", CharAction("char_slots", char_id=cid, sub="use", item_id=slot.id))],
+        [_btn("🔄 Ripristina 1", CharAction("char_slots", char_id=cid, sub="restore", item_id=slot.id))],
+        [_btn("🗑️ Rimuovi Livello", CharAction("char_slots", char_id=cid, sub="remove", item_id=slot.id))],
+        _nav_row(back_action=back, menu_char_id=cid),
+    ]
+    return InlineKeyboardMarkup(rows)
+
+
+# ---------------------------------------------------------------------------
+# Bag / Items
+# ---------------------------------------------------------------------------
+
+def build_bag_keyboard(
+    char_id: int, items: list[Item], page: int
+) -> InlineKeyboardMarkup:
+    cid = char_id
+    back = CharAction("char_menu", char_id=cid)
+    start = page * PAGE_SIZE
+    page_items = items[start: start + PAGE_SIZE]
+    has_next = len(items) > start + PAGE_SIZE
+
+    rows = [
+        [_btn(
+            f"📦 {i.name} x{i.quantity}",
+            CharAction("char_bag", char_id=cid, sub="item_detail", item_id=i.id,
+                       back=make_char_back("char_bag", cid, page=page)),
+        )]
+        for i in page_items
+    ]
+    rows.append([_btn("➕ Aggiungi Oggetto", CharAction("char_bag", char_id=cid, sub="add"))])
+
+    nav: list[InlineKeyboardButton] = []
+    if page > 0:
+        nav.append(_btn("⬅️ Prec", CharAction("char_bag", char_id=cid, page=page - 1)))
+    nav.append(_btn("⬅️ Indietro", back))
+    if has_next:
+        nav.append(_btn("Succ ➡️", CharAction("char_bag", char_id=cid, page=page + 1)))
+    rows.append(nav)
+    return InlineKeyboardMarkup(rows)
+
+
+def build_item_detail_keyboard(
+    char_id: int, item_id: int, back_page: int = 0
+) -> InlineKeyboardMarkup:
+    cid = char_id
+    back = CharAction("char_bag", char_id=cid, page=back_page)
+    rows = [
+        [
+            _btn("➕ +1",  CharAction("char_bag", char_id=cid, sub="qty_add", item_id=item_id)),
+            _btn("➖ -1",  CharAction("char_bag", char_id=cid, sub="qty_rem", item_id=item_id)),
+        ],
+        [_btn("🗑️ Rimuovi tutto", CharAction("char_bag", char_id=cid, sub="remove_all", item_id=item_id))],
+        _nav_row(back_action=back, menu_char_id=cid),
+    ]
+    return InlineKeyboardMarkup(rows)
+
+
+# ---------------------------------------------------------------------------
+# Currency
+# ---------------------------------------------------------------------------
+
+def build_currency_keyboard(char_id: int) -> InlineKeyboardMarkup:
+    cid = char_id
+    back = CharAction("char_menu", char_id=cid)
+    rows = [
+        [_btn(f"{emoji} {label}", CharAction("char_currency", char_id=cid, sub="edit", extra=key))]
+        for key, (label, emoji) in CURRENCY_LABELS.items()
+    ]
+    rows.append([_btn("🔄 Converti Monete", CharAction("char_currency", char_id=cid, sub="convert"))])
+    rows.append(_nav_row(back_action=back, menu_char_id=cid))
+    return InlineKeyboardMarkup(rows)
+
+
+def build_currency_edit_keyboard(char_id: int, currency_key: str) -> InlineKeyboardMarkup:
+    cid = char_id
+    back = CharAction("char_currency", char_id=cid)
+    rows = [
+        [
+            _btn("➕ Aggiungi",  CharAction("char_currency", char_id=cid, sub="add",    extra=currency_key)),
+            _btn("➖ Rimuovi",   CharAction("char_currency", char_id=cid, sub="remove", extra=currency_key)),
+        ],
+        _nav_row(back_action=back, menu_char_id=cid),
+    ]
+    return InlineKeyboardMarkup(rows)
+
+
+def build_currency_convert_source_keyboard(
+    char_id: int, currency_keys: list[str]
+) -> InlineKeyboardMarkup:
+    cid = char_id
+    back = CharAction("char_currency", char_id=cid)
+    rows = [
+        [_btn(
+            f"{CURRENCY_LABELS[k][1]} {CURRENCY_LABELS[k][0]}",
+            CharAction("char_currency", char_id=cid, sub="conv_source", extra=k),
+        )]
+        for k in currency_keys
+    ]
+    rows.append(_nav_row(back_action=back, menu_char_id=cid))
+    return InlineKeyboardMarkup(rows)
+
+
+def build_currency_convert_target_keyboard(
+    char_id: int, source_key: str, currency_keys: list[str]
+) -> InlineKeyboardMarkup:
+    cid = char_id
+    back = CharAction("char_currency", char_id=cid, sub="convert")
+    rows = [
+        [_btn(
+            f"{CURRENCY_LABELS[k][1]} {CURRENCY_LABELS[k][0]}",
+            CharAction("char_currency", char_id=cid, sub="conv_target", extra=f"{source_key}|{k}"),
+        )]
+        for k in currency_keys if k != source_key
+    ]
+    rows.append(_nav_row(back_action=back, menu_char_id=cid))
+    return InlineKeyboardMarkup(rows)
+
+
+# ---------------------------------------------------------------------------
+# Abilities
+# ---------------------------------------------------------------------------
+
+def build_abilities_keyboard(
+    char_id: int, abilities: list[Ability], page: int
+) -> InlineKeyboardMarkup:
+    cid = char_id
+    back = CharAction("char_menu", char_id=cid)
+    start = page * PAGE_SIZE
+    page_items = abilities[start: start + PAGE_SIZE]
+    has_next = len(abilities) > start + PAGE_SIZE
+
+    rows = [
+        [_btn(
+            f"{'🔵' if a.is_passive else '⚡'} {a.name}"
+            + (f" ({a.uses}/{a.max_uses})" if a.max_uses is not None else ""),
+            CharAction("char_abilities", char_id=cid, sub="detail", item_id=a.id,
+                       back=make_char_back("char_abilities", cid, page=page)),
+        )]
+        for a in page_items
+    ]
+    rows.append([_btn("➕ Impara Abilità", CharAction("char_abilities", char_id=cid, sub="learn"))])
+
+    nav: list[InlineKeyboardButton] = []
+    if page > 0:
+        nav.append(_btn("⬅️ Prec", CharAction("char_abilities", char_id=cid, page=page - 1)))
+    nav.append(_btn("⬅️ Indietro", back))
+    if has_next:
+        nav.append(_btn("Succ ➡️", CharAction("char_abilities", char_id=cid, page=page + 1)))
+    rows.append(nav)
+    return InlineKeyboardMarkup(rows)
+
+
+def build_ability_detail_keyboard(
+    char_id: int, ability: Ability, back_page: int = 0
+) -> InlineKeyboardMarkup:
+    cid = char_id
+    back = CharAction("char_abilities", char_id=cid, page=back_page)
+    rows: list[list[InlineKeyboardButton]] = []
+    if not ability.is_passive and ability.max_uses is not None:
+        rows.append([_btn("🎯 Usa Abilità", CharAction("char_abilities", char_id=cid, sub="use", item_id=ability.id))])
+    if ability.is_passive:
+        label = "✅ Disattiva" if ability.is_active else "⬛ Attiva"
+        rows.append([_btn(label, CharAction("char_abilities", char_id=cid, sub="toggle", item_id=ability.id))])
+    rows.append([_btn("🗑️ Dimentica", CharAction("char_abilities", char_id=cid, sub="forget", item_id=ability.id))])
+    rows.append(_nav_row(back_action=back, menu_char_id=cid))
+    return InlineKeyboardMarkup(rows)
+
+
+# ---------------------------------------------------------------------------
+# Multiclass
+# ---------------------------------------------------------------------------
+
+def build_multiclass_keyboard(char_id: int) -> InlineKeyboardMarkup:
+    cid = char_id
+    back = CharAction("char_menu", char_id=cid)
+    rows = [
+        [_btn("➕ Aggiungi Classe",  CharAction("char_multiclass", char_id=cid, sub="add"))],
+        [_btn("➖ Rimuovi Classe",   CharAction("char_multiclass", char_id=cid, sub="remove"))],
+        _nav_row(back_action=back, menu_char_id=cid),
+    ]
+    return InlineKeyboardMarkup(rows)
+
+
+def build_multiclass_remove_keyboard(
+    char_id: int, class_names: list[str]
+) -> InlineKeyboardMarkup:
+    cid = char_id
+    back = CharAction("char_multiclass", char_id=cid)
+    rows = [
+        [_btn(cn, CharAction("char_multiclass", char_id=cid, sub="remove_confirm", extra=cn))]
+        for cn in class_names
+    ]
+    rows.append(_nav_row(back_action=back, menu_char_id=cid))
+    return InlineKeyboardMarkup(rows)
+
+
+# ---------------------------------------------------------------------------
+# Dice
+# ---------------------------------------------------------------------------
+
+DICE_TYPES = ["d4", "d6", "d8", "d10", "d12", "d20", "d100"]
+
+
+def build_dice_keyboard(char_id: int) -> InlineKeyboardMarkup:
+    cid = char_id
+    back = CharAction("char_menu", char_id=cid)
+    rows = [
+        [_btn(f"🎲 {d}", CharAction("char_dice", char_id=cid, sub=d))]
+        for d in DICE_TYPES
+    ]
+    rows.append([_btn("🗑️ Cancella Storico", CharAction("char_dice", char_id=cid, sub="clear_history"))])
+    rows.append(_nav_row(back_action=back, menu_char_id=cid))
+    return InlineKeyboardMarkup(rows)
+
+
+def build_dice_count_keyboard(char_id: int, die: str) -> InlineKeyboardMarkup:
+    cid = char_id
+    back = CharAction("char_dice", char_id=cid)
+    counts = [1, 2, 3, 4, 5, 6, 8, 10]
+    rows = [
+        [_btn(f"{n}{die}", CharAction("char_dice", char_id=cid, sub="roll", extra=f"{n}|{die}"))]
+        for n in counts
+    ]
+    rows.append(_nav_row(back_action=back, menu_char_id=cid))
+    return InlineKeyboardMarkup(rows)
+
+
+# ---------------------------------------------------------------------------
+# Notes
+# ---------------------------------------------------------------------------
+
+def build_notes_keyboard(
+    char_id: int, note_titles: list[str], page: int
+) -> InlineKeyboardMarkup:
+    cid = char_id
+    back = CharAction("char_menu", char_id=cid)
+    start = page * PAGE_SIZE
+    page_notes = note_titles[start: start + PAGE_SIZE]
+    has_next = len(note_titles) > start + PAGE_SIZE
+
+    rows = [
+        [_btn(f"📝 {title}", CharAction("char_notes", char_id=cid, sub="open", extra=title,
+                                        back=make_char_back("char_notes", cid, page=page)))]
+        for title in page_notes
+    ]
+    rows.append([_btn("➕ Nuova Nota", CharAction("char_notes", char_id=cid, sub="new"))])
+    rows.append([_btn("🎤 Nota Vocale", CharAction("char_notes", char_id=cid, sub="new_voice"))])
+
+    nav: list[InlineKeyboardButton] = []
+    if page > 0:
+        nav.append(_btn("⬅️ Prec", CharAction("char_notes", char_id=cid, page=page - 1)))
+    nav.append(_btn("⬅️ Indietro", back))
+    if has_next:
+        nav.append(_btn("Succ ➡️", CharAction("char_notes", char_id=cid, page=page + 1)))
+    rows.append(nav)
+    return InlineKeyboardMarkup(rows)
+
+
+def build_note_detail_keyboard(
+    char_id: int, title: str, back_page: int = 0
+) -> InlineKeyboardMarkup:
+    cid = char_id
+    back = CharAction("char_notes", char_id=cid, page=back_page)
+    rows = [
+        [_btn("✏️ Modifica", CharAction("char_notes", char_id=cid, sub="edit", extra=title))],
+        [_btn("🗑️ Elimina",  CharAction("char_notes", char_id=cid, sub="delete", extra=title))],
+        _nav_row(back_action=back, menu_char_id=cid),
+    ]
+    return InlineKeyboardMarkup(rows)
+
+
+# ---------------------------------------------------------------------------
+# Maps
+# ---------------------------------------------------------------------------
+
+def build_maps_keyboard(
+    char_id: int, zone_names: list[str], page: int
+) -> InlineKeyboardMarkup:
+    cid = char_id
+    back = CharAction("char_menu", char_id=cid)
+    start = page * PAGE_SIZE
+    page_zones = zone_names[start: start + PAGE_SIZE]
+    has_next = len(zone_names) > start + PAGE_SIZE
+
+    rows = [
+        [_btn(f"📍 {z}", CharAction("char_maps", char_id=cid, sub="zone", extra=z,
+                                    back=make_char_back("char_maps", cid, page=page)))]
+        for z in page_zones
+    ]
+    rows.append([_btn("➕ Nuova Zona", CharAction("char_maps", char_id=cid, sub="new_zone"))])
+
+    nav: list[InlineKeyboardButton] = []
+    if page > 0:
+        nav.append(_btn("⬅️ Prec", CharAction("char_maps", char_id=cid, page=page - 1)))
+    nav.append(_btn("⬅️ Indietro", back))
+    if has_next:
+        nav.append(_btn("Succ ➡️", CharAction("char_maps", char_id=cid, page=page + 1)))
+    rows.append(nav)
+    return InlineKeyboardMarkup(rows)
+
+
+def build_map_zone_keyboard(
+    char_id: int, zone: str, maps: list[Map], back_page: int = 0
+) -> InlineKeyboardMarkup:
+    cid = char_id
+    back = CharAction("char_maps", char_id=cid, page=back_page)
+    rows: list[list[InlineKeyboardButton]] = []
+    for i, m in enumerate(maps):
+        label = f"{'🖼️' if m.file_type == 'photo' else '📄'} File {i + 1}"
+        rows.append([
+            _btn(label, CharAction("char_maps", char_id=cid, sub="view_file", item_id=m.id, extra=zone)),
+            _btn("🗑️", CharAction("char_maps", char_id=cid, sub="delete_file", item_id=m.id, extra=zone)),
+        ])
+    rows.append([_btn("➕ Aggiungi File", CharAction("char_maps", char_id=cid, sub="add_file", extra=zone))])
+    rows.append([_btn("🗑️ Elimina Zona", CharAction("char_maps", char_id=cid, sub="delete_zone", extra=zone))])
+    rows.append(_nav_row(back_action=back, menu_char_id=cid))
+    return InlineKeyboardMarkup(rows)
+
+
+# ---------------------------------------------------------------------------
+# Settings
+# ---------------------------------------------------------------------------
+
+def build_settings_keyboard(char_id: int, settings: dict) -> InlineKeyboardMarkup:
+    cid = char_id
+    back = CharAction("char_menu", char_id=cid)
+    spell_mgmt = settings.get("spell_management", "paginate_by_level")
+    spell_label = (
+        "✅ Per livello / Selezione diretta"
+        if spell_mgmt == "paginate_by_level"
+        else "Livello / ✅ Selezione diretta"
+    )
+    rows = [
+        [_btn(f"✨ Gestione Magie: {spell_label}",
+              CharAction("char_settings", char_id=cid, sub="toggle_spell_mgmt"))],
+        _nav_row(back_action=back, menu_char_id=cid),
+    ]
+    return InlineKeyboardMarkup(rows)
+
+
+# ---------------------------------------------------------------------------
+# Character deletion
+# ---------------------------------------------------------------------------
+
+def build_delete_confirm_keyboard(char_id: int) -> InlineKeyboardMarkup:
+    cid = char_id
+    rows = [
+        [
+            _btn("✅ Sì, elimina", CharAction("char_delete", char_id=cid, sub="confirm")),
+            _btn("❌ No, annulla", CharAction("char_menu",   char_id=cid)),
+        ]
+    ]
+    return InlineKeyboardMarkup(rows)

@@ -29,3 +29,8 @@ build/
 
 # Logs
 *.log
+old_bot/
+
+#DB
+data/
+files/

@@ -106,6 +106,8 @@ async def navigation_callback(
             return
         if data.action == "menu":
             await _show_main_menu(query)
+        elif data.action == "wiki":
+            await _show_wiki_categories(query)
         elif data.action == "list":
             await _show_item_list(query, data)
         elif data.action == "detail":
@@ -128,9 +130,19 @@ async def navigation_callback(
 # ------------------------------------------------------------------
 
 async def _show_main_menu(query: Any) -> None:
+    from bot.handlers.start import build_main_menu_keyboard, WELCOME_TEXT
+    keyboard = build_main_menu_keyboard()
+    await query.edit_message_text(
+        text=WELCOME_TEXT,
+        reply_markup=keyboard,
+        parse_mode="MarkdownV2",
+    )
+
+
+async def _show_wiki_categories(query: Any) -> None:
     keyboard = build_categories_keyboard()
     await query.edit_message_text(
-        text="🎲 *D&D 5e Explorer*\n\nChoose a category:",
+        text="📖 *Wiki D&D 5e*\n\nScegli una categoria:",
         reply_markup=keyboard,
         parse_mode="MarkdownV2",
     )

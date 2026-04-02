@@ -1,9 +1,10 @@
-"""Entry point for the D&D 5e Telegram Explorer Bot.
+"""Entry point for the D&D 5e Telegram Bot.
 
 Loads configuration from ``.env``, builds the ``Application`` with
 ``arbitrary_callback_data`` enabled, initialises the
-:class:`~bot.schema.registry.SchemaRegistry` via introspection, registers
-all handlers, and starts long-polling.
+:class:`~bot.schema.registry.SchemaRegistry` via introspection,
+initialises the SQLite database, registers all handlers, and starts
+long-polling.
 """
 
 from __future__ import annotations
@@ -12,13 +13,18 @@ import asyncio
 import logging
 import os
 import sys
+from warnings import filterwarnings
 
 from dotenv import load_dotenv
 from telegram import Update
 from telegram.ext import Application, CallbackQueryHandler, CommandHandler
+from telegram.warnings import PTBUserWarning
 
+from bot.db.engine import init_db
+from bot.handlers.character.conversation import build_character_conversation_handler
 from bot.handlers.navigation import navigation_callback
 from bot.handlers.start import start_command
+from bot.models.character_state import CharAction
 from bot.schema.registry import registry
 
 # ---------------------------------------------------------------------------
@@ -30,10 +36,14 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+filterwarnings(action="ignore", message=r".*CallbackQueryHandler", category=PTBUserWarning)
+
 
 async def post_init(application: Application) -> None:
     """Called after the Application has been fully initialised."""
     await registry.initialize()
+    await init_db()
+    logger.info("Database initialised.")
 
 
 def main() -> None:
@@ -55,8 +65,16 @@ def main() -> None:
     # Command handlers
     application.add_handler(CommandHandler("start", start_command))
 
-    # Callback-query handler (catches all inline-button presses)
-    application.add_handler(CallbackQueryHandler(navigation_callback))
+    # Character ConversationHandler (must come before the generic wiki callback)
+    application.add_handler(build_character_conversation_handler())
+
+    # Wiki callback-query handler (catches all NavAction inline-button presses)
+    application.add_handler(
+        CallbackQueryHandler(
+            navigation_callback,
+            pattern=lambda d: not isinstance(d, CharAction),
+        )
+    )
 
     logger.info("Bot started — polling for updates…")
     application.run_polling(allowed_updates=Update.ALL_TYPES)
