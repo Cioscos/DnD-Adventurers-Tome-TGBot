@@ -45,9 +45,11 @@ bot/
 │   ├── client.py            # DnDClient: async GraphQL client (httpx.AsyncClient, singleton)
 │   ├── introspection.py     # __schema query constant + parser → TypeInfo objects
 │   └── query_builder.py     # Dynamic GraphQL query generation from TypeInfo (list, detail, sub-list)
+├── data/
+│   └── classes.py           # DND_CLASSES list, ResourceConfig dataclass, CLASS_RESOURCES formulas, get_resources_for_class()
 ├── db/
 │   ├── engine.py            # SQLAlchemy async engine, AsyncSession factory, init_db(), get_session()
-│   └── models.py            # ORM models: Character, CharacterClass, AbilityScore, Spell, SpellSlot,
+│   └── models.py            # ORM models: Character, CharacterClass, ClassResource, AbilityScore, Spell, SpellSlot,
 │                            #             Item, Currency, Ability, Map + enums
 ├── schema/
 │   ├── types.py             # FieldInfo, TypeInfo, MenuCategory dataclasses
@@ -56,11 +58,11 @@ bot/
 │   ├── start.py             # /start command → top-level 2-choice menu (Wiki | Personaggio)
 │   ├── navigation.py        # N-level CallbackQueryHandler dispatcher + MarkdownV2 formatters (wiki)
 │   └── character/
-│       ├── __init__.py      # Conversation state constants (47 states)
+│       ├── __init__.py      # Conversation state constants (48 states)
 │       ├── conversation.py  # Master ConversationHandler — routes CharAction callbacks, stop_command_handler, builds handler
-│       ├── selection.py     # Character create / select / delete
+│       ├── selection.py     # Character create / select / delete; creation wizard includes class selection step
 │       ├── menu.py          # Character main menu with summary
-│       ├── hit_points.py    # HP (set max, set current, damage, healing) + rest
+│       ├── hit_points.py    # HP (set max, set current, damage, healing) + rest (restores ClassResource on rest)
 │       ├── armor_class.py   # CA (base, shield, magic)
 │       ├── stats.py         # Ability scores (FOR/DES/COS/INT/SAG/CAR) with modifiers
 │       ├── spells.py        # Learn / forget / use spells (slot picker, concentration tracking, TS, pin) + fuzzy search
@@ -68,7 +70,8 @@ bot/
 │       ├── bag.py           # Inventory with encumbrance tracking
 │       ├── currency.py      # Coins management + currency conversion
 │       ├── abilities.py     # Special abilities (passive/active, uses, restoration type)
-│       ├── multiclass.py    # Multiclassing + level up/down
+│       ├── multiclass.py    # Multiclassing: guided/custom class add, subclass, level up/down, resource auto-gen
+│       ├── class_resources.py # Class-specific resources (Ki, Rage, etc.): view / use / restore per ClassResource
 │       ├── dice.py          # Dice roller (d4–d100) with history
 │       ├── notes.py         # Text notes + voice notes
 │       ├── maps.py          # Map images/documents organised by zone
@@ -111,7 +114,8 @@ bot/
 | Table | Key fields |
 |---|---|
 | `characters` | `id`, `user_id`, `name`, `race`, `gender`, `hit_points`, `current_hit_points`, `base_armor_class`, `shield_armor_class`, `magic_armor`, `spell_slots_mode`, `concentrating_spell_id` (FK → spells.id), `rolls_history` (JSON), `notes` (JSON), `settings` (JSON) |
-| `character_classes` | `character_id` → FK, `class_name`, `level` |
+| `character_classes` | `character_id` → FK, `class_name`, `level`, `subclass` (optional) |
+| `class_resources` | `class_id` → FK (character_classes.id, cascade), `name`, `current`, `total`, `restoration_type`, `note` |
 | `ability_scores` | `character_id` → FK, `name` (strength/dexterity/…), `value` |
 | `spells` | `character_id` → FK, `name`, `level`, `description`, `casting_time`, `range_area`, `components`, `duration`, `is_concentration`, `is_ritual`, `higher_level`, `attack_save`, `is_pinned` |
 | `spell_slots` | `character_id` → FK, `level`, `total`, `used` |
@@ -153,9 +157,13 @@ class CharAction:
     back: tuple[str, ...] = ()
 ```
 
-Key `action` values: `char_select`, `char_new`, `char_menu`, `char_hp`, `char_ac`, `char_stats`, `char_level`, `char_spells`, `char_slots`, `char_bag`, `char_currency`, `char_abilities`, `char_multiclass`, `char_dice`, `char_notes`, `char_maps`, `char_rest`, `char_settings`, `char_delete`.
+Key `action` values: `char_select`, `char_new`, `char_menu`, `char_hp`, `char_ac`, `char_stats`, `char_level`, `char_spells`, `char_slots`, `char_bag`, `char_currency`, `char_abilities`, `char_multiclass`, `char_class_res`, `char_dice`, `char_notes`, `char_maps`, `char_rest`, `char_settings`, `char_delete`.
 
 Key `char_spells` sub-actions: `learn`, `learn_conc_yes`, `learn_conc_no`, `detail`, `forget`, `use`, `use_slot`, `activate_conc`, `drop_conc`, `conc_save`, `pin`, `edit_menu`, `edit_<field>` (e.g. `edit_casting_time`, `edit_is_concentration`), `search`, `search_show`.
+
+Key `char_multiclass` sub-actions: `add`, `guided` (show class list), `custom` (free-text entry), `select_guided` (class chosen from list, `extra=class_name`), `skip_subclass`, `remove`, `remove_confirm` (`extra=class_name`).
+
+Key `char_class_res` sub-actions: `menu` (`extra=class_id`), `use` (`item_id=resource_id, extra=class_id`), `restore_one` (`item_id=resource_id, extra=class_id`), `restore_all` (`extra=class_id`), `noop`.
 
 ### Schema Registry & Navigable Fields (Wiki)
 
@@ -193,7 +201,7 @@ Union types (e.g. `AnyEquipment`) are handled with `__typename` + inline fragmen
 
 ### Character Formatters
 
-`bot/utils/formatting.py` provides Italian-language formatters for every character screen: `format_character_summary` (accepts optional `spells` and `abilities` for active status), `format_hp`, `format_ac`, `format_ability_scores`, `format_spells`, `format_spell_detail`, `format_spell_slots`, `format_bag`, `format_currency`, `format_abilities`, `format_maps`, `format_dice_history`, `format_character_active_status`. All use MarkdownV2 with `_esc()`.
+`bot/utils/formatting.py` provides Italian-language formatters for every character screen: `format_character_summary` (accepts optional `spells` and `abilities` for active status), `format_hp`, `format_ac`, `format_ability_scores`, `format_spells`, `format_spell_detail`, `format_spell_slots`, `format_bag`, `format_currency`, `format_abilities`, `format_maps`, `format_dice_history`, `format_character_active_status`, `format_multiclass_menu`, `format_class_resources`. All use MarkdownV2 with `_esc()`.
 
 ## Coding Conventions
 
@@ -255,6 +263,21 @@ Navigable sub-entity buttons (📂) are discovered automatically from the schema
   - `"paginate_by_level"` (default) — shows a **level picker** first (one button per level that has ≥1 spell, max 3 per row); tapping a level shows only the spells of that level with pagination. The `extra` field of `CharAction` carries the selected level as a string (e.g. `"3"`; `"0"` = cantrips). Empty `extra` → show picker.
   - `"select_level_directly"` — flat paginated list of all spells ordered by `level, name` (direct scroll, no level filter).
   - The `back` tuple in `CharAction` for the detail view encodes `extra` at index 5 (`make_char_back(..., extra=level_extra)`) so the ⬅️ button in the detail view returns to the correct filtered page.
+
+### Class Management Details
+
+- **Class selection mode**: when adding a class (both during creation and in the multiclass menu) the user first chooses between "📖 Scegli da lista" (guided) and "✍️ Personalizzata" (free text). Guided shows 12 predefined D&D 5e class buttons; custom falls back to free text (`CHAR_MULTICLASS_ADD` state).
+- **Creation wizard**: after entering the character name, `selection.py` immediately calls `ask_add_class(flow="creation")`. When the flow completes it goes to `show_character_menu` instead of `show_multiclass_menu`.
+- **Subclass**: optional free-text step after the level input. A "⏭️ Salta" button (`sub="skip_subclass"`) skips it. Stored in `CharacterClass.subclass`; shown in `class_summary` and `format_multiclass_menu`.
+- **`bot/data/classes.py`**: single source of truth for class resource configuration. `DND_CLASSES` lists the 12 Italian-named classes. `ResourceConfig` dataclass holds `name`, `formula: Callable[[int], int]`, `restoration_type`, `note`, `cha_based`. `CLASS_RESOURCES: dict[str, list[ResourceConfig]]` maps class name → configs. `get_resources_for_class(class_name, level, char)` returns ready-to-insert dicts. `update_resources_for_level(class_name, new_level, existing_resources, char)` recalculates totals in-place after a level change.
+- **Auto-generated resources**: when a predefined class is added, `_finalize_add_class()` in `multiclass.py` calls `get_resources_for_class()` and creates `ClassResource` rows. Resources with `total == 0` at that level are skipped; they are added when level increases.
+- **Level change hook**: `apply_level_change()` calls `update_class_resources_on_level_change()` from `class_resources.py` after each level change. `current` is capped to the new `total` but never reset.
+- **Barbaro lv20**: `total = 99` represents unlimited Furie; the UI displays "∞".
+- **Bardo Ispirazione Bardica**: `cha_based=True` — `total` is set to `max(1, CHA_modifier)` at class creation time, reading from `char.ability_scores`. If the character's CHA changes later, the user must update manually.
+- **Warlock Slot Patto**: tracked as `ClassResource` with `restoration_type=SHORT_REST`, separate from the spell slot system. Note displayed in UI.
+- **Guerriero Dadi Superiorità**: included for all fighters (not just Battle Master) for simplicity. A `note` field on the resource record explains this.
+- **Rest integration**: `handle_rest()` in `hit_points.py` calls `restore_class_resources_on_rest(char_id, rest_type)` from `class_resources.py` after the standard rest logic. This restores all `ClassResource` rows matching the rest type.
+- **Resource screen** (`char_class_res`): shows `[➖] [🔋 Name: current/total] [➕]` rows per resource, a "🔄 Ripristina Tutto" button, and a back/menu nav row. Tapping ➖/➕ adjusts by 1; restore all resets `current = total`.
 
 ### Voice Notes
 
