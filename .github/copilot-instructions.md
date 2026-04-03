@@ -12,10 +12,11 @@
 
 ## Project Overview
 
-An async Telegram bot with two main sections:
+An async Telegram bot with three main sections:
 
 1. **Wiki D&D 5e** — browse the D&D 5e compendium (spells, monsters, classes, races, equipment, etc.) via inline keyboards, fetching data from the public GraphQL API. The bot **dynamically discovers** the API schema at startup via GraphQL introspection.
 2. **Gestione Personaggio** — full D&D character management: HP, AC, ability scores, spells, inventory, currency, dice, notes, maps, and more. Data is persisted in a local SQLite database via SQLAlchemy async.
+3. **Funzionalità Gruppo (Party)** — group Telegram feature: `/party` and `/party_stop` commands that show a live-updated party status message with all active characters' HP.
 
 The top-level `/start` menu always shows two buttons:
 - `📖 Wiki D&D` → opens the wiki explorer
@@ -49,19 +50,20 @@ bot/
 ├── db/
 │   ├── engine.py            # SQLAlchemy async engine, AsyncSession factory, init_db(), get_session()
 │   └── models.py            # ORM models: Character, CharacterClass, ClassResource, AbilityScore, Spell, SpellSlot,
-│                            #             Item, Currency, Ability, Map + enums
+│                            #             Item, Currency, Ability, Map, GroupMember, PartySession + enums
 ├── schema/
 │   ├── types.py             # FieldInfo, TypeInfo, MenuCategory dataclasses
 │   └── registry.py          # SchemaRegistry singleton — introspects API, maps root queries, computes navigable fields
 ├── handlers/
 │   ├── start.py             # /start command → top-level 2-choice menu (Wiki | Personaggio)
 │   ├── navigation.py        # N-level CallbackQueryHandler dispatcher + MarkdownV2 formatters (wiki)
+│   ├── party.py             # /party, /party_stop commands + PartyAction callbacks + track_group_member + maybe_update_party_message
 │   └── character/
 │       ├── __init__.py      # Conversation state constants (48 states)
 │       ├── conversation.py  # Master ConversationHandler — routes CharAction callbacks, stop_command_handler, builds handler
 │       ├── selection.py     # Character create / select / delete; creation wizard includes class selection step
 │       ├── menu.py          # Character main menu with summary
-│       ├── hit_points.py    # HP (set max, set current, damage, healing) + rest (restores ClassResource on rest)
+│       ├── hit_points.py    # HP (set max, set current, damage, healing) + rest (restores ClassResource on rest); fires party update hook
 │       ├── armor_class.py   # CA (base, shield, magic)
 │       ├── stats.py         # Ability scores (FOR/DES/COS/INT/SAG/CAR) with modifiers
 │       ├── spells.py        # Learn / forget / use spells (slot picker, concentration tracking, TS, pin) + fuzzy search
@@ -74,15 +76,18 @@ bot/
 │       ├── dice.py          # Dice roller (d4–d100) with history
 │       ├── notes.py         # Text notes + voice notes
 │       ├── maps.py          # Map images/documents organised by zone
-│       └── settings.py      # Per-character settings
+│       └── settings.py      # Per-character settings (spell management mode, party active toggle)
 ├── keyboards/
 │   ├── builder.py           # Wiki keyboards: categories, paginated list, detail (📂 buttons), sub-list
-│   └── character.py         # Character keyboards: selection, main menu (multi-column), all feature screens, build_cancel_keyboard
+│   ├── character.py         # Character keyboards: selection, main menu (multi-column), all feature screens, build_cancel_keyboard
+│   └── party.py             # Party keyboards: mode selection (public/private), master reveal button
 ├── models/
 │   ├── state.py             # NavAction frozen dataclass (wiki callback data) + make_back()
-│   └── character_state.py   # CharAction frozen dataclass (character callback data) + make_char_back()
+│   ├── character_state.py   # CharAction frozen dataclass (character callback data) + make_char_back()
+│   └── party_state.py       # PartyAction frozen dataclass (party callback data)
 └── utils/
-    └── formatting.py        # Italian-language text formatters for character screens
+    ├── formatting.py        # Italian-language text formatters for character screens
+    └── party_formatting.py  # Party message formatter: format_party_message(characters, session) → MarkdownV2
 ```
 
 ### D&D API (Wiki)
@@ -112,7 +117,7 @@ bot/
 
 | Table | Key fields |
 |---|---|
-| `characters` | `id`, `user_id`, `name`, `race`, `gender`, `hit_points`, `current_hit_points`, `base_armor_class`, `shield_armor_class`, `magic_armor`, `spell_slots_mode`, `concentrating_spell_id` (FK → spells.id), `rolls_history` (JSON), `notes` (JSON), `settings` (JSON) |
+| `characters` | `id`, `user_id`, `name`, `race`, `gender`, `hit_points`, `current_hit_points`, `base_armor_class`, `shield_armor_class`, `magic_armor`, `spell_slots_mode`, `concentrating_spell_id` (FK → spells.id), `rolls_history` (JSON), `notes` (JSON), `settings` (JSON), `is_party_active` (bool, default False) |
 | `character_classes` | `character_id` → FK, `class_name`, `level`, `subclass` (optional) |
 | `class_resources` | `class_id` → FK (character_classes.id, cascade), `name`, `current`, `total`, `restoration_type`, `note` |
 | `ability_scores` | `character_id` → FK, `name` (strength/dexterity/…), `value` |
@@ -122,6 +127,8 @@ bot/
 | `currencies` | `character_id` → FK (1:1), `copper`, `silver`, `electrum`, `gold`, `platinum` |
 | `abilities` | `character_id` → FK, `name`, `description`, `max_uses`, `uses`, `is_passive`, `is_active`, `restoration_type` |
 | `maps` | `character_id` → FK, `zone_name`, `file_id`, `file_type` |
+| `group_members` | `group_id` (BigInt), `user_id` (BigInt) — unique together; tracks every user who has ever written in the group |
+| `party_sessions` | `id`, `group_id` (BigInt, unique), `group_title`, `mode` (public/private), `message_chat_id` (BigInt), `message_id` (Int), `started_at` (ISO str), `expires_at` (ISO str) |
 
 ### Navigation Model
 
@@ -156,13 +163,31 @@ class CharAction:
     back: tuple[str, ...] = ()
 ```
 
-Key `action` values: `char_select`, `char_new`, `char_menu`, `char_hp`, `char_ac`, `char_stats`, `char_level`, `char_spells`, `char_slots`, `char_bag`, `char_currency`, `char_abilities`, `char_multiclass`, `char_class_res`, `char_dice`, `char_notes`, `char_maps`, `char_rest`, `char_settings`, `char_delete`.
+Key `action` values: `char_select`, `char_new`, `char_menu`, `char_hp`, `char_ac`, `char_stats`, `char_level`, `char_spells`, `char_slots`, `char_bag`, `char_currency`, `char_abilities`, `char_multiclass`, `char_class_res`, `char_dice`, `char_notes`, `char_maps`, `char_rest`, `char_settings`, `char_party_active`, `char_delete`.
 
 Key `char_spells` sub-actions: `learn`, `learn_conc_yes`, `learn_conc_no`, `detail`, `forget`, `use`, `use_slot`, `activate_conc`, `drop_conc`, `conc_save`, `pin`, `edit_menu`, `edit_<field>` (e.g. `edit_casting_time`, `edit_is_concentration`), `search`, `search_show`.
 
 Key `char_multiclass` sub-actions: `add`, `guided` (show class list), `custom` (free-text entry), `select_guided` (class chosen from list, `extra=class_name`), `skip_subclass`, `remove`, `remove_confirm` (`extra=class_name`).
 
 Key `char_class_res` sub-actions: `menu` (`extra=class_id`), `use` (`item_id=resource_id, extra=class_id`), `restore_one` (`item_id=resource_id, extra=class_id`), `restore_all` (`extra=class_id`), `noop`.
+
+#### Party Feature (PartyAction)
+
+**Standalone** inline keyboard flow for group party management (NOT inside `ConversationHandler`).
+
+```python
+@dataclass(frozen=True)
+class PartyAction:
+    action: str       # "party_mode" | "party_master_reveal" | "party_noop"
+    group_id: int = 0 # Telegram group chat_id
+    extra: str = ""   # e.g. "public" or "private" for party_mode
+```
+
+| `PartyAction.action` | Purpose |
+|---|---|
+| `"party_mode"` | User chose display mode; `extra` = `"public"` or `"private"` |
+| `"party_master_reveal"` | Master presses the button to receive party list privately |
+| `"party_noop"` | No-op (informational buttons) |
 
 ### Schema Registry & Navigable Fields (Wiki)
 
@@ -211,9 +236,10 @@ Union types (e.g. `AnyEquipment`) are handled with `__typename` + inline fragmen
 - **Token**: never hardcode — always read from env via `python-dotenv`.
 - **GraphQL queries**: generate dynamically using `bot/api/query_builder.py`. Never hardcode query strings.
 - **HTTP client**: `httpx.AsyncClient` for all API calls. Use `DnDClient` singleton from `bot/api/client.py`.
-- **Handler registration**: all handlers registered in `main.py` via `application.add_handler()`. Character `ConversationHandler` must be registered **before** the wiki `CallbackQueryHandler`.
+- **Handler registration**: all handlers registered in `main.py` via `application.add_handler()`. Character `ConversationHandler` must be registered **before** the party `CallbackQueryHandler`, which must come before the wiki `CallbackQueryHandler`.
 - **Wiki callback data**: use `NavAction` dataclass instances. Never encode state as raw strings.
-- **Character callback data**: use `CharAction` dataclass instances. The wiki `CallbackQueryHandler` must filter out `CharAction` instances with `pattern=lambda d: not isinstance(d, CharAction)`.
+- **Character callback data**: use `CharAction` dataclass instances. The party and wiki `CallbackQueryHandler`s must filter out `CharAction` instances.
+- **Party callback data**: use `PartyAction` dataclass instances (`bot/models/party_state.py`). The wiki `CallbackQueryHandler` must also exclude `PartyAction` via `pattern=lambda d: not isinstance(d, CharAction) and not isinstance(d, PartyAction)`.
 - **Formatting**: Telegram MarkdownV2 — escape special chars with `_esc()`. Wiki uses `_esc()` from `navigation.py`; character screens use `_esc()` from `utils/formatting.py`.
 - **UI language**: Italian for all user-facing strings in character management. Wiki strings may remain in English.
 - **Error handling**: catch `telegram.error.BadRequest`, `telegram.ext.InvalidCallbackData`, and `bot.api.client.APIError` in every handler. Show user-friendly message with 🏠 Menu button.
@@ -277,6 +303,21 @@ Navigable sub-entity buttons (📂) are discovered automatically from the schema
 - **Guerriero Dadi Superiorità**: included for all fighters (not just Battle Master) for simplicity. A `note` field on the resource record explains this.
 - **Rest integration**: `handle_rest()` in `hit_points.py` calls `restore_class_resources_on_rest(char_id, rest_type)` from `class_resources.py` after the standard rest logic. This restores all `ClassResource` rows matching the rest type.
 - **Resource screen** (`char_class_res`): shows `[➖] [🔋 Name: current/total] [➕]` rows per resource, a "🔄 Ripristina Tutto" button, and a back/menu nav row. Tapping ➖/➕ adjusts by 1; restore all resets `current = total`.
+
+### Party Feature Details
+
+- **Commands**: `/party` (group-only) and `/party_stop`. Both refuse to run outside groups.
+- **Session lifetime**: 48 hours. Stored as ISO timestamp strings in `party_sessions.expires_at`. The countdown is displayed in every party message and updated on each HP change.
+- **Group member tracking**: a `MessageHandler` (registered with `group=1` so it runs alongside other handlers) records every user who sends a text message in a group into the `group_members` table. The `/party` command issuer is also tracked on invocation.
+- **Active character selection**: `Character.is_party_active` (bool, default `False`) flags the character used in party display. Toggle via `char_party_active` action → `toggle_party_active()` in `settings.py`. Only one character per `user_id` can be `is_party_active=True` at a time (others are set to `False` automatically). If a user has exactly **one** character and none is active, it is included automatically in the party list.
+- **Mode selection flow**:
+  - `/party` → shows `build_party_mode_keyboard(group_id)` with 🌐 Pubblica / 🔒 Privata.
+  - **Public mode** (`party_mode`, `extra="public"`): sends the party message in the group, stores `message_chat_id = group_id` in the session.
+  - **Private mode** (`party_mode`, `extra="private"`): edits the mode-selection message to show a "master presses here" prompt with `build_party_master_reveal_keyboard(group_id)`. The master presses the button (`party_master_reveal`) → bot sends a private message to the master → stores `message_chat_id = master.user_id` in the session.
+- **Real-time updates**: `maybe_update_party_message(char_id, bot)` in `handlers/party.py` finds all active `PartySession`s that include the character's user (via `GroupMember` join), rebuilds the message text, and calls `bot.edit_message_text`. It is invoked as `asyncio.create_task(_trigger_party_update(...))` from `hit_points.py` after every HP change and rest — fire-and-forget, never blocks the user response.
+- **Session cleanup**: if `edit_message_text` raises `BadRequest` (message too old/deleted), the session row is deleted. `/party_stop` also edits the party message to "🛑 Sessione party terminata." before deleting the session.
+- **Party message format** (`bot/utils/party_formatting.py`): MarkdownV2 with group title, countdown, and per-character rows showing name, class/level, HP bar, and AC. `format_party_message(characters, session)` takes `list[tuple[Character, str | None]]` (character + optional username) and the active `PartySession`.
+- **`build_settings_keyboard`** now accepts `is_party_active: bool` to render the current toggle state.
 
 ### Voice Notes
 
