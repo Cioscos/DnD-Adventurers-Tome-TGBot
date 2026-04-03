@@ -67,6 +67,8 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> N
 
     The developer chat ID is read from the ``DEV_CHAT_ID`` env variable.
     If the variable is not set the error is only logged locally.
+    Each log section is sent as a separate message so that HTML ``<pre>``
+    tags are never split across chunk boundaries.
     """
     logger.error("Exception while handling an update:", exc_info=context.error)
 
@@ -74,28 +76,43 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> N
         traceback.format_exception(None, context.error, context.error.__traceback__)
     )
 
-    update_str = update.to_dict() if isinstance(update, Update) else str(update)
-    message = (
-        "⚠️ <b>Eccezione nel bot</b>\n\n"
-        f"<pre>update = {html.escape(json.dumps(update_str, indent=2, ensure_ascii=False))}"
-        "</pre>\n\n"
-        f"<pre>context.chat_data = {html.escape(str(context.chat_data))}</pre>\n\n"
-        f"<pre>context.user_data = {html.escape(str(context.user_data))}</pre>\n\n"
-        f"<pre>{html.escape(tb_string)}</pre>"
-    )
-
     dev_chat_id = os.getenv("DEV_CHAT_ID")
     if not dev_chat_id:
         return
 
-    # Telegram messages are capped at 4096 characters — split if needed
-    chunk_size = 4096
-    for i in range(0, len(message), chunk_size):
-        await context.bot.send_message(
-            chat_id=int(dev_chat_id),
-            text=message[i : i + chunk_size],
-            parse_mode=ParseMode.HTML,
-        )
+    update_str = update.to_dict() if isinstance(update, Update) else str(update)
+
+    _MAX = 4096
+
+    def _pre_section(label: str, content: str) -> str:
+        """Wrap *content* in a ``<pre>`` block, truncating to fit in one message."""
+        prefix = f"<pre>{label}"
+        suffix = "</pre>"
+        available = _MAX - len(prefix) - len(suffix)
+        if len(content) > available:
+            content = content[: available - 20] + "\n…(troncato)"
+        return prefix + content + suffix
+
+    sections = [
+        "⚠️ <b>Eccezione nel bot</b>",
+        _pre_section(
+            "update = ",
+            html.escape(json.dumps(update_str, indent=2, ensure_ascii=False)),
+        ),
+        _pre_section("context.chat_data = ", html.escape(str(context.chat_data))),
+        _pre_section("context.user_data = ", html.escape(str(context.user_data))),
+        _pre_section("", html.escape(tb_string)),
+    ]
+
+    for section in sections:
+        try:
+            await context.bot.send_message(
+                chat_id=int(dev_chat_id),
+                text=section,
+                parse_mode=ParseMode.HTML,
+            )
+        except Exception:
+            logger.exception("Impossibile inviare la notifica di errore allo sviluppatore.")
 
 
 async def post_init(application: Application) -> None:
