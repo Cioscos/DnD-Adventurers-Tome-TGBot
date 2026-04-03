@@ -3,8 +3,7 @@
 ## Repository
 
 - Remote: `https://github.com/Cioscos/dnd_bot_revamped.git` — branch `main`.
-- Active feature branch: `main`.
-- Always commit and push changes to this repository.
+- Always commit and push changes to a new branch based on the feature you're working on.
 
 ## MCP Servers
 
