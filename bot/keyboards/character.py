@@ -863,7 +863,9 @@ def build_map_zone_keyboard(
 # Settings
 # ---------------------------------------------------------------------------
 
-def build_settings_keyboard(char_id: int, settings: dict) -> InlineKeyboardMarkup:
+def build_settings_keyboard(
+    char_id: int, settings: dict, is_party_active: bool = False
+) -> InlineKeyboardMarkup:
     cid = char_id
     back = CharAction("char_menu", char_id=cid)
     spell_mgmt = settings.get("spell_management", "paginate_by_level")
@@ -872,9 +874,11 @@ def build_settings_keyboard(char_id: int, settings: dict) -> InlineKeyboardMarku
         if spell_mgmt == "paginate_by_level"
         else "Livello / ✅ Selezione diretta"
     )
+    party_label = "🎯 Attivo nel Party: ✅ Sì" if is_party_active else "🎯 Attivo nel Party: ❌ No"
     rows = [
         [_btn(f"✨ Gestione Magie: {spell_label}",
               CharAction("char_settings", char_id=cid, sub="toggle_spell_mgmt"))],
+        [_btn(party_label, CharAction("char_party_active", char_id=cid))],
         _nav_row(back_action=back, menu_char_id=cid),
     ]
     return InlineKeyboardMarkup(rows)

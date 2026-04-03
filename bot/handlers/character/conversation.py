@@ -118,7 +118,7 @@ async def character_callback_handler(
     from bot.handlers.character.selection import (
         handle_delete_confirm, show_character_selection, show_delete_confirm,
     )
-    from bot.handlers.character.settings import show_settings_menu, toggle_spell_management
+    from bot.handlers.character.settings import show_settings_menu, toggle_spell_management, toggle_party_active
     from bot.handlers.character.spell_slots import (
         ask_add_slot, remove_slot_level, reset_all_slots,
         restore_slot, show_slot_detail, show_spell_slots_menu, use_slot,
@@ -437,6 +437,10 @@ async def character_callback_handler(
         if sub == "toggle_spell_mgmt":
             return await toggle_spell_management(update, context, cid)
         return await show_settings_menu(update, context, cid)
+
+    # ─── Party active toggle ───
+    if action == "char_party_active":
+        return await toggle_party_active(update, context, cid)
 
     return CHAR_MENU
 

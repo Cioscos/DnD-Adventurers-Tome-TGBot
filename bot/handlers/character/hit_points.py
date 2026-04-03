@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 
 from telegram import Update
@@ -112,6 +113,8 @@ async def handle_hp_text(
                 char.current_hit_points = new_hp
 
     await update.message.reply_text("✅ Aggiornato\\!", parse_mode="MarkdownV2")
+    # Fire-and-forget: update any active party messages for this character
+    asyncio.create_task(_trigger_party_update(char_id, context))
     return await show_hp_menu(update, context, char_id)
 
 
@@ -174,6 +177,8 @@ async def handle_rest(
 
     await _edit_or_reply(update, msg)
     from bot.handlers.character.menu import show_character_menu
+    # Fire-and-forget: update any active party messages for this character
+    asyncio.create_task(_trigger_party_update(char_id, context))
     return await show_character_menu(update, context, char_id=char_id)
 
 
@@ -190,3 +195,12 @@ async def _edit_or_reply(update: Update, text: str, keyboard=None) -> None:
         await update.callback_query.edit_message_text(**kwargs)
     elif update.message:
         await update.message.reply_text(**kwargs)
+
+
+async def _trigger_party_update(char_id: int, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Fire-and-forget wrapper that calls maybe_update_party_message."""
+    try:
+        from bot.handlers.party import maybe_update_party_message
+        await maybe_update_party_message(char_id, context.bot)
+    except Exception as e:
+        logger.warning("Party update trigger failed for char %s: %s", char_id, e)

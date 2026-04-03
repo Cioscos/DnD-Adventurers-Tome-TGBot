@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 
+from sqlalchemy import select
 from telegram import Update
 from telegram.ext import ContextTypes
 
@@ -23,17 +24,20 @@ async def show_settings_menu(
         if char is None:
             return CHAR_MENU
         settings = char.settings or {}
+        is_party_active = char.is_party_active
 
     spell_mgmt = settings.get("spell_management", "paginate_by_level")
     spell_label = (
         "Per livello ✅" if spell_mgmt == "paginate_by_level" else "Selezione diretta ✅"
     )
+    party_label = "Sì ✅" if is_party_active else "No ❌"
 
     text = (
         "⚙️ *Impostazioni*\n\n"
-        f"Gestione incantesimi: {spell_label}"
+        f"Gestione incantesimi: {spell_label}\n"
+        f"Attivo nel Party: {party_label}"
     )
-    keyboard = build_settings_keyboard(char_id, settings)
+    keyboard = build_settings_keyboard(char_id, settings, is_party_active=is_party_active)
     await _edit_or_reply(update, text, keyboard)
     return CHAR_SETTINGS_MENU
 
@@ -53,6 +57,39 @@ async def toggle_spell_management(
             else "paginate_by_level"
         )
         char.settings = settings
+
+    if update.callback_query:
+        await update.callback_query.answer("Impostazione aggiornata.")
+    return await show_settings_menu(update, context, char_id)
+
+
+async def toggle_party_active(
+    update: Update, context: ContextTypes.DEFAULT_TYPE, char_id: int
+) -> int:
+    """Toggle whether this character is the user's active party character.
+
+    Ensures only one character per user has ``is_party_active = True``.
+    """
+    async with get_session() as session:
+        char = await session.get(Character, char_id)
+        if char is None:
+            return CHAR_MENU
+
+        if char.is_party_active:
+            # Deactivate
+            char.is_party_active = False
+        else:
+            # Deactivate all other characters for this user, then activate this one
+            other_chars_result = await session.execute(
+                select(Character).where(
+                    Character.user_id == char.user_id,
+                    Character.id != char_id,
+                    Character.is_party_active.is_(True),
+                )
+            )
+            for other in other_chars_result.scalars().all():
+                other.is_party_active = False
+            char.is_party_active = True
 
     if update.callback_query:
         await update.callback_query.answer("Impostazione aggiornata.")

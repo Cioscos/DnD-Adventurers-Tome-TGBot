@@ -13,6 +13,7 @@ from sqlalchemy import (
     JSON,
     BigInteger,
     Boolean,
+    DateTime,
     Enum,
     Float,
     ForeignKey,
@@ -46,6 +47,11 @@ class RestorationType(str, PyEnum):
 class FileType(str, PyEnum):
     PHOTO = "photo"
     DOCUMENT = "document"
+
+
+class PartyMode(str, PyEnum):
+    PUBLIC = "public"
+    PRIVATE = "private"
 
 
 # ---------------------------------------------------------------------------
@@ -90,6 +96,9 @@ class Character(Base):
     rolls_history: Mapped[Optional[list]] = mapped_column(JSON, default=list)
     notes: Mapped[Optional[dict]] = mapped_column(JSON, default=dict)
     settings: Mapped[Optional[dict]] = mapped_column(JSON, default=dict)
+
+    # Party feature: whether this character is the user's active party character
+    is_party_active: Mapped[bool] = mapped_column(Boolean, default=False)
 
     # Relationships
     classes: Mapped[List["CharacterClass"]] = relationship(
@@ -406,3 +415,39 @@ class Map(Base):
     file_type: Mapped[str] = mapped_column(Enum(FileType), default=FileType.PHOTO)
 
     character: Mapped["Character"] = relationship(back_populates="maps")
+
+
+# ---------------------------------------------------------------------------
+# GroupMember (party feature — tracks who has written in each group)
+# ---------------------------------------------------------------------------
+
+class GroupMember(Base):
+    """Records every Telegram user that has ever sent a message in a group."""
+
+    __tablename__ = "group_members"
+    __table_args__ = (UniqueConstraint("group_id", "user_id"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    group_id: Mapped[int] = mapped_column(BigInteger, nullable=False, index=True)
+    user_id: Mapped[int] = mapped_column(BigInteger, nullable=False, index=True)
+
+
+# ---------------------------------------------------------------------------
+# PartySession (party feature — one active session per group)
+# ---------------------------------------------------------------------------
+
+class PartySession(Base):
+    """An active party tracking session for a Telegram group."""
+
+    __tablename__ = "party_sessions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    # One session per group at a time
+    group_id: Mapped[int] = mapped_column(BigInteger, nullable=False, unique=True, index=True)
+    group_title: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    mode: Mapped[str] = mapped_column(Enum(PartyMode), default=PartyMode.PUBLIC)
+    # Where the live party message lives (group_id for public, master's user_id for private)
+    message_chat_id: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
+    message_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    started_at: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    expires_at: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
