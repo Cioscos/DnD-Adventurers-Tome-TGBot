@@ -42,6 +42,8 @@ _MIGRATIONS: list[tuple[str, str, str, str | None]] = [
     ("spells", "is_pinned", "BOOLEAN", "0"),
     # Character concentration tracking
     ("characters", "concentrating_spell_id", "INTEGER REFERENCES spells(id) ON DELETE SET NULL", None),
+    # CharacterClass subclass
+    ("character_classes", "subclass", "VARCHAR(100)", None),
 ]
 
 

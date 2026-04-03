@@ -55,6 +55,8 @@ from __future__ import annotations
     CHAR_CONC_SAVE,
     # Spell search
     CHAR_SPELL_SEARCH,
-) = range(47)
+    # Class subclass input
+    CHAR_CLASS_SUBCLASS_INPUT,
+) = range(48)
 
 STOPPING = 99

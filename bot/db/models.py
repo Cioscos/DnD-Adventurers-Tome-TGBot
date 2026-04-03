@@ -132,7 +132,12 @@ class Character(Base):
     def class_summary(self) -> str:
         if not self.classes:
             return "Nessuna classe"
-        parts = [f"{c.class_name} {c.level}" for c in self.classes]
+        parts = []
+        for c in self.classes:
+            part = f"{c.class_name} {c.level}"
+            if c.subclass:
+                part += f" ({c.subclass})"
+            parts.append(part)
         return " / ".join(parts)
 
     def recalculate_encumbrance(self) -> None:
@@ -159,8 +164,12 @@ class CharacterClass(Base):
     )
     class_name: Mapped[str] = mapped_column(String(100), nullable=False)
     level: Mapped[int] = mapped_column(Integer, default=1)
+    subclass: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
 
     character: Mapped["Character"] = relationship(back_populates="classes")
+    resources: Mapped[List["ClassResource"]] = relationship(
+        back_populates="character_class", cascade="all, delete-orphan"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -168,6 +177,37 @@ class CharacterClass(Base):
 # ---------------------------------------------------------------------------
 
 ABILITY_NAMES = ("strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma")
+
+
+# ---------------------------------------------------------------------------
+# ClassResource (class-specific resource like Ki points, Rage uses, etc.)
+# ---------------------------------------------------------------------------
+
+class ClassResource(Base):
+    """A class-specific resource (Ki points, Rage uses, etc.) linked to a CharacterClass."""
+    __tablename__ = "class_resources"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    class_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("character_classes.id", ondelete="CASCADE"), nullable=False
+    )
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    current: Mapped[int] = mapped_column(Integer, default=0)
+    total: Mapped[int] = mapped_column(Integer, default=0)
+    restoration_type: Mapped[str] = mapped_column(
+        Enum(RestorationType), default=RestorationType.NONE
+    )
+    note: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    character_class: Mapped["CharacterClass"] = relationship(back_populates="resources")
+
+    def use(self) -> None:
+        if self.current <= 0:
+            raise ValueError(f"Nessuna risorsa disponibile: '{self.name}'.")
+        self.current -= 1
+
+    def restore_all(self) -> None:
+        self.current = self.total
 
 
 class AbilityScore(Base):

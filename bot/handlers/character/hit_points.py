@@ -123,6 +123,7 @@ async def handle_rest(
 ) -> int:
     """Perform a short or long rest."""
     from bot.db.models import Ability, RestorationType, SpellSlot
+    from bot.handlers.character.class_resources import restore_class_resources_on_rest
     from sqlalchemy import select
 
     async with get_session() as session:
@@ -164,6 +165,9 @@ async def handle_rest(
             msg = "⏸️ *Riposo breve completato\\!*\nAbilità ripristinate\\."
             if was_concentrating:
                 msg += "\n🔮 Concentrazione interrotta\\."
+
+    # Restore class resources outside the session to avoid nested session issues
+    await restore_class_resources_on_rest(char_id, rest_type)
 
     if update.callback_query:
         await update.callback_query.answer()

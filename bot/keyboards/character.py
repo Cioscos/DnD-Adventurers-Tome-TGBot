@@ -635,14 +635,91 @@ def build_ability_detail_keyboard(
 # Multiclass
 # ---------------------------------------------------------------------------
 
-def build_multiclass_keyboard(char_id: int) -> InlineKeyboardMarkup:
+def build_multiclass_keyboard(char_id: int, classes: list | None = None) -> InlineKeyboardMarkup:
     cid = char_id
     back = CharAction("char_menu", char_id=cid)
     rows = [
-        [_btn("➕ Aggiungi Classe",  CharAction("char_multiclass", char_id=cid, sub="add"))],
-        [_btn("➖ Rimuovi Classe",   CharAction("char_multiclass", char_id=cid, sub="remove"))],
+        [_btn("➕ Aggiungi Classe", CharAction("char_multiclass", char_id=cid, sub="add"))],
+        [_btn("➖ Rimuovi Classe",  CharAction("char_multiclass", char_id=cid, sub="remove"))],
+    ]
+    # Add resource buttons for classes that have resources
+    if classes:
+        for cls in classes:
+            has_resources = hasattr(cls, 'resources') and cls.resources
+            if has_resources:
+                label = f"🔋 Risorse: {cls.class_name}"
+                rows.append([_btn(label, CharAction("char_class_res", char_id=cid,
+                                                     sub="menu", extra=str(cls.id)))])
+    rows.append(_nav_row(back_action=back, menu_char_id=cid))
+    return InlineKeyboardMarkup(rows)
+
+
+def build_class_add_mode_keyboard(char_id: int) -> InlineKeyboardMarkup:
+    """Keyboard to choose between guided class selection and custom entry."""
+    cid = char_id
+    back = CharAction("char_multiclass", char_id=cid)
+    rows = [
+        [
+            _btn("📖 Scegli da lista",  CharAction("char_multiclass", char_id=cid, sub="guided")),
+            _btn("✍️ Personalizzata",   CharAction("char_multiclass", char_id=cid, sub="custom")),
+        ],
         _nav_row(back_action=back, menu_char_id=cid),
     ]
+    return InlineKeyboardMarkup(rows)
+
+
+def build_class_guided_keyboard(char_id: int) -> InlineKeyboardMarkup:
+    """Keyboard listing all predefined D&D 5e classes for guided selection."""
+    from bot.data.classes import DND_CLASSES
+    cid = char_id
+    back = CharAction("char_multiclass", char_id=cid, sub="add")
+    rows = []
+    # 2 classes per row
+    for i in range(0, len(DND_CLASSES), 2):
+        row = []
+        for cls in DND_CLASSES[i:i + 2]:
+            row.append(_btn(cls, CharAction("char_multiclass", char_id=cid, sub="select_guided", extra=cls)))
+        rows.append(row)
+    rows.append(_nav_row(back_action=back, menu_char_id=cid))
+    return InlineKeyboardMarkup(rows)
+
+
+def build_subclass_input_keyboard(char_id: int) -> InlineKeyboardMarkup:
+    """Keyboard shown while waiting for subclass text input — offers a skip button."""
+    cid = char_id
+    rows = [
+        [_btn("⏭️ Salta (nessuna sottoclasse)", CharAction("char_multiclass", char_id=cid, sub="skip_subclass"))],
+        [_btn("❌ Annulla", CharAction("char_multiclass", char_id=cid))],
+    ]
+    return InlineKeyboardMarkup(rows)
+
+
+def build_class_resources_keyboard(
+    char_id: int, class_id: int, resources: list
+) -> InlineKeyboardMarkup:
+    """Keyboard for the class resources management screen.
+
+    Shows [➖] [ResourceName: current/total] [➕] for each resource,
+    plus a 'Ripristina Tutto' button and navigation.
+    """
+    cid = char_id
+    back = CharAction("char_multiclass", char_id=cid)
+    rows = []
+    for res in resources:
+        total_display = "∞" if res.total >= 99 else str(res.total)
+        label = f"🔋 {res.name}: {res.current}/{total_display}"
+        rows.append([
+            _btn("➖", CharAction("char_class_res", char_id=cid, sub="use",
+                                  item_id=res.id, extra=str(class_id))),
+            _btn(label, CharAction("char_class_res", char_id=cid, sub="noop",
+                                   item_id=res.id, extra=str(class_id))),
+            _btn("➕", CharAction("char_class_res", char_id=cid, sub="restore_one",
+                                  item_id=res.id, extra=str(class_id))),
+        ])
+    if resources:
+        rows.append([_btn("🔄 Ripristina Tutto", CharAction("char_class_res", char_id=cid,
+                                                             sub="restore_all", extra=str(class_id)))])
+    rows.append(_nav_row(back_action=back, menu_char_id=cid))
     return InlineKeyboardMarkup(rows)
 
 

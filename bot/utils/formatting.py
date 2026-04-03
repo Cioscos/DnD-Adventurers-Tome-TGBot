@@ -313,3 +313,58 @@ def _esc(text: str) -> str:
     """Escape special MarkdownV2 characters."""
     special = r"\_*[]()~`>#+-=|{}.!"
     return "".join(f"\\{c}" if c in special else c for c in str(text))
+
+
+def format_multiclass_menu(classes: list) -> str:
+    """Format the multiclass menu display with subclass and resource summary."""
+    if not classes:
+        return "🎭 *Multiclasse*\n\n_Nessuna classe assegnata\\._"
+
+    lines = ["🎭 *Multiclasse*\n"]
+    for cls in classes:
+        subclass_str = f" \\({_esc(cls.subclass)}\\)" if cls.subclass else ""
+        lines.append(f"  • *{_esc(cls.class_name)}* {cls.level}{subclass_str}")
+        # Show resource summary if any
+        if hasattr(cls, 'resources') and cls.resources:
+            res_parts = []
+            for r in cls.resources:
+                total_display = "∞" if r.total >= 99 else str(r.total)
+                res_parts.append(f"{_esc(r.name)}: {r.current}/{total_display}")
+            lines.append("    🔋 " + " \\| ".join(res_parts))
+
+    total = sum(c.level for c in classes)
+    lines.append(f"\n*Livello totale: {total}*")
+    return "\n".join(lines)
+
+
+def format_class_resources(
+    class_name: str,
+    subclass: str | None,
+    level: int,
+    resources: list,
+) -> str:
+    """Format the class resource management screen."""
+    subclass_str = f" \\({_esc(subclass)}\\)" if subclass else ""
+    lines = [
+        f"🎭 *{_esc(class_name)}*{subclass_str} — Livello {level}",
+        "",
+        "*Risorse di Classe:*",
+    ]
+    for res in resources:
+        total_display = "∞" if res.total >= 99 else str(res.total)
+        bar = _resource_bar(res.current, res.total)
+        rest_label = RESTORATION_LABELS.get(res.restoration_type, str(res.restoration_type))
+        lines.append(f"🔋 *{_esc(res.name)}*: {res.current}/{total_display} {bar}")
+        lines.append(f"   ↩️ Recupero: {_esc(rest_label)}")
+        if res.note:
+            lines.append(f"   📝 _{_esc(res.note)}_")
+    return "\n".join(lines)
+
+
+def _resource_bar(current: int, total: int) -> str:
+    """Visual bar for resource usage (capped at 10 segments)."""
+    if total <= 0 or total >= 99:
+        return ""
+    segments = min(total, 10)
+    filled = round(current * segments / total) if total > 0 else 0
+    return "▓" * filled + "░" * (segments - filled)

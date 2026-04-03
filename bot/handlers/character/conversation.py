@@ -34,6 +34,7 @@ from bot.handlers.character import (
     CHAR_BAG_ADD_WEIGHT,
     CHAR_BAG_EDIT,
     CHAR_BAG_MENU,
+    CHAR_CLASS_SUBCLASS_INPUT,
     CHAR_CONC_SAVE,
     CHAR_CURRENCY_CONVERT,
     CHAR_CURRENCY_EDIT,
@@ -106,8 +107,9 @@ async def character_callback_handler(
     )
     from bot.handlers.character.menu import show_character_menu
     from bot.handlers.character.multiclass import (
-        apply_level_change, ask_add_class, change_level, remove_class,
-        show_multiclass_menu, show_remove_class,
+        apply_level_change, ask_add_class, ask_custom_class, change_level,
+        handle_guided_class_selected, remove_class, show_guided_class_list,
+        show_multiclass_menu, show_remove_class, skip_subclass,
     )
     from bot.handlers.character.notes import (
         ask_edit_note, ask_new_note_title, ask_voice_note_title,
@@ -348,11 +350,43 @@ async def character_callback_handler(
     if action == "char_multiclass":
         if sub == "add":
             return await ask_add_class(update, context, cid)
+        if sub == "guided":
+            return await show_guided_class_list(update, context, cid)
+        if sub == "custom":
+            return await ask_custom_class(update, context, cid)
+        if sub == "select_guided":
+            return await handle_guided_class_selected(update, context, cid, data.extra)
+        if sub == "skip_subclass":
+            return await skip_subclass(update, context, cid)
         if sub == "remove":
             return await show_remove_class(update, context, cid)
         if sub == "remove_confirm":
             return await remove_class(update, context, cid, data.extra)
         return await show_multiclass_menu(update, context, cid)
+
+    # ─── Class Resources ───
+    if action == "char_class_res":
+        from bot.handlers.character.class_resources import (
+            show_class_resources_menu, use_class_resource,
+            restore_one_class_resource, restore_all_class_resources,
+        )
+        try:
+            class_id = int(data.extra)
+        except (ValueError, TypeError):
+            return CHAR_MULTICLASS_MENU
+        if sub == "menu":
+            return await show_class_resources_menu(update, context, cid, class_id)
+        if sub == "use":
+            return await use_class_resource(update, context, cid, class_id, data.item_id)
+        if sub == "restore_one":
+            return await restore_one_class_resource(update, context, cid, class_id, data.item_id)
+        if sub == "restore_all":
+            return await restore_all_class_resources(update, context, cid, class_id)
+        if sub == "noop":
+            if update.callback_query:
+                await update.callback_query.answer()
+            return CHAR_MULTICLASS_MENU
+        return await show_class_resources_menu(update, context, cid, class_id)
 
     # ─── Dice ───
     if action == "char_dice":
@@ -455,7 +489,7 @@ def build_character_conversation_handler() -> ConversationHandler:
     from bot.handlers.character.bag import handle_bag_text
     from bot.handlers.character.currency import handle_convert_text, handle_currency_text
     from bot.handlers.character.abilities import handle_ability_learn_text
-    from bot.handlers.character.multiclass import handle_multiclass_add_text
+    from bot.handlers.character.multiclass import handle_multiclass_add_text, handle_subclass_text
     from bot.handlers.character.hit_points import handle_hp_text
     from bot.handlers.character.maps import handle_map_file, handle_new_zone_text
     from bot.handlers.character.notes import (
@@ -602,6 +636,10 @@ def build_character_conversation_handler() -> ConversationHandler:
             ],
             CHAR_MULTICLASS_ADD_LEVELS: [
                 MessageHandler(text_filter, handle_multiclass_add_text),
+                char_callback,
+            ],
+            CHAR_CLASS_SUBCLASS_INPUT: [
+                MessageHandler(text_filter, handle_subclass_text),
                 char_callback,
             ],
             CHAR_DICE_MENU: [char_callback],

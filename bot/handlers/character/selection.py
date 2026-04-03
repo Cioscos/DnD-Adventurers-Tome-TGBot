@@ -108,7 +108,9 @@ async def handle_new_character_name(
         f"✅ Personaggio *{_esc(name)}* creato con successo\\!",
         parse_mode="MarkdownV2",
     )
-    return await show_character_menu(update, context, char_id=char_id)
+    # Start class selection as part of the creation wizard
+    from bot.handlers.character.multiclass import ask_add_class
+    return await ask_add_class(update, context, char_id, flow="creation")
 
 
 # ---------------------------------------------------------------------------
