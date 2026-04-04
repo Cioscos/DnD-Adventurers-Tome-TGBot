@@ -688,5 +688,5 @@ def build_character_conversation_handler() -> ConversationHandler:
         ],
         allow_reentry=True,
         name="character_conversation",
-        persistent=False,
+        persistent=True,
     )
