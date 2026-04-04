@@ -126,6 +126,11 @@ async def post_init(application: Application) -> None:
     logger.info("Database initialised; i18n watcher started.")
 
 
+async def post_shutdown(application: Application) -> None:
+    """Called after the Application has fully stopped; cancels background tasks."""
+    await translator.stop_watcher()
+
+
 async def stop_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle /stop outside the character conversation (no active operation)."""
     if update.message:
@@ -149,6 +154,7 @@ def main() -> None:
         .token(token)
         .arbitrary_callback_data(True)
         .post_init(post_init)
+        .post_shutdown(post_shutdown)
         .build()
     )
 
