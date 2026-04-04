@@ -121,8 +121,11 @@ async def party_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
             if result.scalar_one_or_none() is None:
                 session.add(GroupMember(group_id=group_id, user_id=user.id))
 
-    # Find members with active characters
-    chars_with_users = await _get_party_characters(group_id)
+    # Find members with active characters; pass the issuer so they are always
+    # included even if GroupMember tracking hasn't persisted yet.
+    chars_with_users = await _get_party_characters(
+        group_id, issuer_user_id=user.id if user else None
+    )
 
     if not chars_with_users:
         await message.reply_text(
@@ -447,20 +450,33 @@ async def _delete_session(session_id: int) -> None:
 
 async def _get_party_characters(
     group_id: int,
+    issuer_user_id: int | None = None,
 ) -> list[tuple[Character, str | None]]:
     """Return (Character, username) tuples for all active party characters in the group.
 
     If a group member has exactly one character and has not explicitly set
     ``is_party_active``, that character is included automatically.
+
+    ``issuer_user_id`` is always added to the candidate set regardless of whether
+    the user appears in the ``GroupMember`` table, ensuring the ``/party`` command
+    issuer is never excluded due to a read-after-write timing gap or because
+    Telegram Privacy Mode prevented their messages from being tracked.
     """
     async with get_session() as session:
         # Get all user_ids that have written in this group
         members_result = await session.execute(
             select(GroupMember.user_id).where(GroupMember.group_id == group_id)
         )
-        member_user_ids = [row[0] for row in members_result.all()]
+        member_user_ids_set: set[int] = {row[0] for row in members_result.all()}
+
+    # Always include the party initiator even if not yet persisted in GroupMember
+    if issuer_user_id is not None:
+        member_user_ids_set.add(issuer_user_id)
+
+    member_user_ids = list(member_user_ids_set)
 
     if not member_user_ids:
+        logger.debug("_get_party_characters: no members found for group %s", group_id)
         return []
 
     result: list[tuple[Character, str | None]] = []

@@ -188,10 +188,13 @@ def main() -> None:
     application.add_handler(CommandHandler("party", party_command))
     application.add_handler(CommandHandler("party_stop", party_stop_command))
 
-    # Group member tracking (group=True → runs alongside other handlers, not blocking)
+    # Group member tracking — fires for any text OR command in a group.
+    # Using (TEXT | COMMAND) instead of (TEXT & ~COMMAND) ensures users are
+    # tracked even in groups where Telegram Privacy Mode is on (bot only
+    # receives commands in those groups, not plain text).
     application.add_handler(
         MessageHandler(
-            filters.ChatType.GROUPS & filters.TEXT & ~filters.COMMAND,
+            filters.ChatType.GROUPS & (filters.TEXT | filters.COMMAND),
             track_group_member,
         ),
         group=1,
