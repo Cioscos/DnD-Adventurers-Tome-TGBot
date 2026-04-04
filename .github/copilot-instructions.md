@@ -22,6 +22,8 @@ The top-level `/start` menu always shows two buttons:
 - `📖 Wiki D&D` → opens the wiki explorer
 - `⚔️ Il mio personaggio` → opens character selection / creation
 
+**Chat-type scoping**: `/start` is **private-chat only**. If called inside a group or supergroup, it replies with an Italian warning message and returns early — no menu is shown. `/party` and `/party_stop` are **group-only** (they reject private chats). No other commands have chat-type restrictions.
+
 **UI language**: Italian (all user-facing strings).
 
 ### Tech Stack
@@ -55,7 +57,7 @@ bot/
 │   ├── types.py             # FieldInfo, TypeInfo, MenuCategory dataclasses
 │   └── registry.py          # SchemaRegistry singleton — introspects API, maps root queries, computes navigable fields
 ├── handlers/
-│   ├── start.py             # /start command → top-level 2-choice menu (Wiki | Personaggio)
+│   ├── start.py             # /start command → top-level 2-choice menu (Wiki | Personaggio); private-chat only — warns in groups
 │   ├── navigation.py        # N-level CallbackQueryHandler dispatcher + MarkdownV2 formatters (wiki)
 │   ├── party.py             # /party, /party_stop commands + PartyAction callbacks + track_group_member + maybe_update_party_message
 │   └── character/
@@ -251,6 +253,7 @@ Union types (e.g. `AnyEquipment`) are handled with `__typename` + inline fragmen
 - **Pagination**: wiki top-level lists use server-side `skip`/`limit` (detect next page by fetching `PAGE_SIZE + 1`). Sub-lists and character lists use client-side slicing.
 - **Database sessions**: always use `async with get_session() as session:` — never create a session directly. The context manager handles commit and rollback automatically.
 - **Cancel pattern for text inputs**: every `ask_*` function that transitions to a text-input state MUST include a `build_cancel_keyboard(char_id, back_action)` keyboard in its prompt message. The `back_action` must be the `CharAction.action` string of the parent menu (e.g. `"char_hp"`, `"char_bag"`). Intermediate prompts within multi-step flows (e.g. weight step in bag, levels step in multiclass) must also include the cancel keyboard. This ensures the user can always abort without using `/stop`.
+- **Chat-type scoping**: `/start` (and all Wiki/Gestione Personaggio features) are **private-chat only**. `start_command()` checks `chat.type in ("group", "supergroup")` and replies with an Italian warning if so. `/party` and `/party_stop` are **group-only** and perform the symmetric check. Never remove these guards.
 - **`/stop` command**: `stop_command_handler()` in `conversation.py` is registered as a `ConversationHandler` fallback. It clears all `*pending*` keys from `context.user_data`, sends "✋ Operazione annullata." and routes to the character menu or selection. A lightweight global `/stop` command in `main.py` handles the case when the user is outside the conversation.
 
 ### Adding a New Wiki Menu Category
