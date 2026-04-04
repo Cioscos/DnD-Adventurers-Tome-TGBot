@@ -43,7 +43,7 @@ The top-level `/start` menu always shows two buttons:
 
 ```
 bot/
-├── main.py                  # Entry point — Application builder, dual-handler logging setup, schema init + DB init (post_init), handler registration; global error handler + /stop command
+├── main.py                  # Entry point — Application builder (with PicklePersistence), dual-handler logging setup, schema init + DB init (post_init), handler registration; global error handler + /stop command
 ├── api/
 │   ├── client.py            # DnDClient: async GraphQL client (httpx.AsyncClient, singleton)
 │   ├── introspection.py     # __schema query constant + parser → TypeInfo objects
@@ -239,7 +239,7 @@ Union types (e.g. `AnyEquipment`) are handled with `__typename` + inline fragmen
 ### Must Follow
 
 - **Async only**: use `python-telegram-bot` v20+ async API. Never use the synchronous API.
-- **Bot init**: `Application.builder().token(...).arbitrary_callback_data(True).post_init(post_init).build()` pattern.
+- **Bot init**: `Application.builder().token(...).arbitrary_callback_data(True).persistence(persistence).post_init(post_init).build()` pattern. A `PicklePersistence` instance must always be passed — see the *Persistence* section below.
 - **Token**: never hardcode — always read from env via `python-dotenv`.
 - **GraphQL queries**: generate dynamically using `bot/api/query_builder.py`. Never hardcode query strings.
 - **HTTP client**: `httpx.AsyncClient` for all API calls. Use `DnDClient` singleton from `bot/api/client.py`.
@@ -349,6 +349,37 @@ Navigable sub-entity buttons (📂) are discovered automatically from the schema
 1. Copy `bot/locales/it.yaml` to `bot/locales/<code>.yaml` (e.g. `de.yaml`).
 2. Translate all values.
 3. The `Translator` automatically discovers and loads any `.yaml` file present in `bot/locales/` at startup.
+
+### Persistence
+
+The bot uses `PicklePersistence` (PTB built-in) to survive restarts. Configuration lives in `main.py`.
+
+```python
+persistence = PicklePersistence(
+    filepath="data/persistence.pkl",
+    store_data=PersistenceInput(
+        user_data=True,
+        chat_data=False,
+        bot_data=False,
+        callback_data=True,
+    ),
+    update_interval=60,
+)
+```
+
+| What | Persisted | Why |
+|---|---|---|
+| `user_data` | ✅ | Stores `"active_char_id"` (avoids re-selection after restart) and all `*_pending` mid-flow keys |
+| `chat_data` | ❌ | Not used |
+| `bot_data` | ❌ | Not used |
+| `callback_data` cache | ✅ | **Required** with `arbitrary_callback_data=True` — without it every inline button becomes invalid after a restart |
+| `ConversationHandler` state | ✅ | `persistent=True` + `name="character_conversation"` are set on the handler — the user resumes at the exact menu/step they were in |
+
+**Important rules:**
+- `os.makedirs("data", exist_ok=True)` must be called **before** `Application.builder()` — PTB reads the pickle file at `build()` time, before `post_init` (which is where `init_db()` creates `data/`).
+- `data/persistence.pkl` is already covered by `/data/` in `.gitignore` — never commit it.
+- `CharAction`, `NavAction`, and `PartyAction` are frozen dataclasses and are natively picklable — no custom `__reduce__` needed.
+- The `*_pending` keys (e.g. `char_hp_pending_op`, `char_spell_pending`) are restored on restart together with the conversation state, so multi-step flows resume seamlessly. `/stop` clears all of them if the user wants a clean slate.
 
 ### Voice Notes
 
