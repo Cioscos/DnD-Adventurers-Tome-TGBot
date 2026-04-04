@@ -10,6 +10,7 @@ from __future__ import annotations
 import logging
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram.constants import ParseMode
 from telegram.ext import ContextTypes
 
 from bot.models.character_state import CharAction
@@ -32,8 +33,16 @@ def build_main_menu_keyboard() -> InlineKeyboardMarkup:
 
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Handle the /start command — show the main menu."""
+    """Handle the /start command — show the main menu (private chat only)."""
     if update.message is None:
+        return
+    chat = update.effective_chat
+    if chat is not None and chat.type in ("group", "supergroup"):
+        await update.message.reply_text(
+            "⚠️ Le funzionalità *Wiki D&D* e *Gestore Personaggio* sono disponibili solo nella chat privata con il bot\\.\n\n"
+            "Usa /party e /party\\_stop per le funzionalità di gruppo\\.",
+            parse_mode=ParseMode.MARKDOWN_V2,
+        )
         return
     keyboard = build_main_menu_keyboard()
     await update.message.reply_text(
