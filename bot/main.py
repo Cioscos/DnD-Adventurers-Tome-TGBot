@@ -23,7 +23,16 @@ from warnings import filterwarnings
 from dotenv import load_dotenv
 from telegram import Update
 from telegram.constants import ParseMode
-from telegram.ext import Application, CallbackQueryHandler, CommandHandler, ContextTypes, MessageHandler, filters
+from telegram.ext import (
+    Application,
+    CallbackQueryHandler,
+    CommandHandler,
+    ContextTypes,
+    MessageHandler,
+    PicklePersistence,
+    PersistenceInput,
+    filters,
+)
 from telegram.warnings import PTBUserWarning
 
 from bot.db.engine import init_db
@@ -149,10 +158,25 @@ def main() -> None:
         logger.critical("BOT_TOKEN not set. Create a .env file (see .env.example).")
         sys.exit(1)
 
+    # Ensure the data directory exists before the builder reads the pickle file.
+    os.makedirs("data", exist_ok=True)
+
+    persistence = PicklePersistence(
+        filepath="data/persistence.pkl",
+        store_data=PersistenceInput(
+            user_data=True,
+            chat_data=False,
+            bot_data=False,
+            callback_data=True,
+        ),
+        update_interval=60,
+    )
+
     application = (
         Application.builder()
         .token(token)
         .arbitrary_callback_data(True)
+        .persistence(persistence)
         .post_init(post_init)
         .post_shutdown(post_shutdown)
         .build()
