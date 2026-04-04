@@ -37,6 +37,8 @@ from bot.keyboards.character import (
 
 logger = logging.getLogger(__name__)
 
+from bot.utils.i18n import get_lang, translator
+
 _OP_KEY = "char_multiclass_pending"
 
 
@@ -44,6 +46,7 @@ async def show_multiclass_menu(
     update: Update, context: ContextTypes.DEFAULT_TYPE, char_id: int
 ) -> int:
     from bot.utils.formatting import format_multiclass_menu
+    lang = get_lang(update)
 
     async with get_session() as session:
         result = await session.execute(
@@ -54,8 +57,8 @@ async def show_multiclass_menu(
         for cls in classes:
             await session.refresh(cls, ["resources"])
 
-    text = format_multiclass_menu(classes)
-    keyboard = build_multiclass_keyboard(char_id, classes)
+    text = format_multiclass_menu(classes, lang=lang)
+    keyboard = build_multiclass_keyboard(char_id, classes, lang=lang)
     await _edit_or_reply(update, text, keyboard)
     return CHAR_MULTICLASS_MENU
 
@@ -65,11 +68,12 @@ async def ask_add_class(
     flow: str = "multiclass",
 ) -> int:
     """Show the choice between guided class selection and custom entry."""
+    lang = get_lang(update)
     context.user_data[_OP_KEY] = {"char_id": char_id, "step": "mode", "flow": flow}
-    keyboard = build_class_add_mode_keyboard(char_id)
+    keyboard = build_class_add_mode_keyboard(char_id, lang=lang)
     await _edit_or_reply(
         update,
-        "🎭 *Aggiungi Classe*\n\nCome vuoi scegliere la classe?",
+        translator.t("character.multiclass.add_title", lang=lang),
         keyboard,
     )
     return CHAR_MULTICLASS_MENU
@@ -79,8 +83,9 @@ async def show_guided_class_list(
     update: Update, context: ContextTypes.DEFAULT_TYPE, char_id: int
 ) -> int:
     """Show the list of predefined D&D 5e classes."""
-    keyboard = build_class_guided_keyboard(char_id)
-    await _edit_or_reply(update, "🎭 *Scegli una classe:*", keyboard)
+    lang = get_lang(update)
+    keyboard = build_class_guided_keyboard(char_id, lang=lang)
+    await _edit_or_reply(update, translator.t("character.multiclass.guided_list_title", lang=lang), keyboard)
     return CHAR_MULTICLASS_MENU
 
 
@@ -92,10 +97,11 @@ async def handle_guided_class_selected(
     pending["class_name"] = class_name
     pending["step"] = "levels"
     context.user_data[_OP_KEY] = pending
+    lang = get_lang(update)
     await _edit_or_reply(
         update,
-        f"🔢 Quanti *livelli* in *{_esc(class_name)}*? \\(1\\-20\\)",
-        build_cancel_keyboard(char_id, "char_multiclass"),
+        translator.t("character.multiclass.prompt_levels", lang=lang, class_name=_esc(class_name)),
+        build_cancel_keyboard(char_id, "char_multiclass", lang=lang),
     )
     return CHAR_MULTICLASS_ADD_LEVELS
 
@@ -107,10 +113,11 @@ async def ask_custom_class(
     pending = context.user_data.get(_OP_KEY, {})
     pending["step"] = "class_name"
     context.user_data[_OP_KEY] = pending
+    lang = get_lang(update)
     await _edit_or_reply(
         update,
-        "✍️ Inserisci il *nome della classe personalizzata*:",
-        build_cancel_keyboard(char_id, "char_multiclass"),
+        translator.t("character.multiclass.prompt_custom_class", lang=lang),
+        build_cancel_keyboard(char_id, "char_multiclass", lang=lang),
     )
     return CHAR_MULTICLASS_ADD
 
@@ -121,7 +128,7 @@ async def handle_multiclass_add_text(
     """Handle text input for custom class name or level number."""
     if update.message is None:
         return CHAR_MULTICLASS_ADD
-
+    lang = get_lang(update)
     pending = context.user_data.get(_OP_KEY, {})
     char_id: int = pending.get("char_id", 0)
     step: str = pending.get("step", "class_name")
@@ -130,15 +137,15 @@ async def handle_multiclass_add_text(
     if step == "class_name":
         if not text or len(text) > 100:
             await update.message.reply_text(
-                "❌ Nome non valido \\(max 100 caratteri\\)\\.",
+                translator.t("character.multiclass.custom_invalid", lang=lang),
                 parse_mode="MarkdownV2",
             )
             return CHAR_MULTICLASS_ADD
         context.user_data[_OP_KEY]["class_name"] = text
         context.user_data[_OP_KEY]["step"] = "levels"
         await update.message.reply_text(
-            f"🔢 Quanti *livelli* in *{_esc(text)}*? \\(1\\-20\\)",
-            reply_markup=build_cancel_keyboard(char_id, "char_multiclass"),
+            translator.t("character.multiclass.prompt_levels", lang=lang, class_name=_esc(text)),
+            reply_markup=build_cancel_keyboard(char_id, "char_multiclass", lang=lang),
             parse_mode="MarkdownV2",
         )
         return CHAR_MULTICLASS_ADD_LEVELS
@@ -150,7 +157,7 @@ async def handle_multiclass_add_text(
                 raise ValueError
         except ValueError:
             await update.message.reply_text(
-                "❌ Valore non valido \\(inserisci un numero tra 1 e 20\\)\\.",
+                translator.t("character.multiclass.levels_invalid", lang=lang),
                 parse_mode="MarkdownV2",
             )
             return CHAR_MULTICLASS_ADD_LEVELS
@@ -160,9 +167,8 @@ async def handle_multiclass_add_text(
 
         class_name = pending.get("class_name", "")
         await update.message.reply_text(
-            f"📛 Inserisci la *sottoclasse* per *{_esc(class_name)}* "
-            f"\\(es\\. Campione, Abiuratore\\) oppure salta:",
-            reply_markup=build_subclass_input_keyboard(char_id),
+            translator.t("character.multiclass.prompt_subclass", lang=lang, class_name=_esc(class_name)),
+            reply_markup=build_subclass_input_keyboard(char_id, lang=lang),
             parse_mode="MarkdownV2",
         )
         return CHAR_CLASS_SUBCLASS_INPUT
@@ -198,6 +204,7 @@ async def _finalize_add_class(
     subclass: str | None,
 ) -> int:
     """Save the CharacterClass and auto-generate class resources."""
+    lang = get_lang(update)
     pending = context.user_data.pop(_OP_KEY, {})
     class_name: str = pending.get("class_name", "")
     level: int = pending.get("level", 1)
@@ -246,7 +253,7 @@ async def _finalize_add_class(
             session.add(ClassResource(class_id=cls_id, **res_dict))
 
     sub_str = f" \\({_esc(subclass)}\\)" if subclass else ""
-    await _send_reply(update, f"✅ Classe *{_esc(class_name)}*{sub_str} \\(Livello {level}\\) aggiunta\\!")
+    await _send_reply(update, translator.t("character.multiclass.added", lang=lang, class_name=_esc(class_name), subclass_str=sub_str, level=level))
 
     if flow == "creation":
         from bot.handlers.character.menu import show_character_menu
@@ -257,6 +264,7 @@ async def _finalize_add_class(
 async def show_remove_class(
     update: Update, context: ContextTypes.DEFAULT_TYPE, char_id: int
 ) -> int:
+    lang = get_lang(update)
     async with get_session() as session:
         result = await session.execute(
             select(CharacterClass).where(CharacterClass.character_id == char_id)
@@ -264,12 +272,12 @@ async def show_remove_class(
         classes = list(result.scalars().all())
 
     if not classes:
-        await _edit_or_reply(update, "❌ Nessuna classe da rimuovere\\.")
+        await _edit_or_reply(update, translator.t("character.multiclass.no_remove", lang=lang))
         return await show_multiclass_menu(update, context, char_id)
 
     class_names = [c.class_name for c in classes]
     keyboard = build_multiclass_remove_keyboard(char_id, class_names)
-    await _edit_or_reply(update, "🎭 Seleziona la classe da rimuovere:", keyboard)
+    await _edit_or_reply(update, translator.t("character.multiclass.remove_title", lang=lang), keyboard)
     return CHAR_MULTICLASS_MENU
 
 
@@ -298,6 +306,7 @@ async def change_level(
     direction: str,
 ) -> int:
     """Show level up/down menu — if multiple classes, pick which one."""
+    lang = get_lang(update)
     async with get_session() as session:
         result = await session.execute(
             select(CharacterClass).where(CharacterClass.character_id == char_id)
@@ -307,7 +316,7 @@ async def change_level(
     if not classes:
         await _edit_or_reply(
             update,
-            "❌ Nessuna classe assegnata\\. Aggiungi prima una classe dal menu Multiclasse\\.",
+            translator.t("character.multiclass.no_classes_level", lang=lang),
         )
         return CHAR_MULTICLASS_MENU
 
@@ -315,9 +324,9 @@ async def change_level(
         return await apply_level_change(update, context, char_id, classes[0].class_name, direction)
 
     class_names = [c.class_name for c in classes]
-    keyboard = build_level_class_choice_keyboard(char_id, direction, class_names)
-    label = "salire" if direction == "up" else "scendere"
-    await _edit_or_reply(update, f"⚔️ In quale classe vuoi {label} di livello?", keyboard)
+    label = translator.t("character.multiclass.direction_up", lang=lang) if direction == "up" else translator.t("character.multiclass.direction_down", lang=lang)
+    keyboard = build_level_class_choice_keyboard(char_id, direction, class_names, lang=lang)
+    await _edit_or_reply(update, translator.t("character.multiclass.which_class", lang=lang, direction=label), keyboard)
     return CHAR_MULTICLASS_MENU
 
 
@@ -328,6 +337,7 @@ async def apply_level_change(
     class_name: str,
     direction: str,
 ) -> int:
+    lang = get_lang(update)
     from bot.handlers.character.class_resources import update_class_resources_on_level_change
 
     async with get_session() as session:

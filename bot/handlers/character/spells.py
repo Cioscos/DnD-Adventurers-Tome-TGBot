@@ -35,6 +35,7 @@ from bot.keyboards.character import (
     build_spells_menu_keyboard,
 )
 from bot.utils.formatting import format_spell_detail, format_spells
+from bot.utils.i18n import get_lang, translator
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +53,17 @@ SPELL_EDITABLE_FIELDS: dict[str, tuple[str, str]] = {
     "higher_level": ("Livelli superiori", "📈 Inserisci la descrizione per *livelli superiori*:"),
 }
 
+# Maps editable spell field → i18n prompt key
+_SPELL_FIELD_PROMPT_KEYS: dict[str, str] = {
+    "casting_time": "character.spells.prompt_edit_casting_time",
+    "range_area": "character.spells.prompt_edit_range",
+    "components": "character.spells.prompt_edit_components",
+    "duration": "character.spells.prompt_edit_duration",
+    "attack_save": "character.spells.prompt_edit_attack_save",
+    "description": "character.spells.prompt_edit_description",
+    "higher_level": "character.spells.prompt_edit_higher_level",
+}
+
 
 
 # ---------------------------------------------------------------------------
@@ -66,11 +78,12 @@ async def ask_spell_search(
     update: Update, context: ContextTypes.DEFAULT_TYPE, char_id: int,
 ) -> int:
     """Ask the user to type a search query for fuzzy spell name matching."""
+    lang = get_lang(update)
     context.user_data[_SEARCH_KEY] = {"char_id": char_id}
     await _edit_or_reply(
         update,
-        "🔍 Inserisci il *nome dell'incantesimo* da cercare:",
-        build_cancel_keyboard(char_id, "char_spells"),
+        translator.t("character.spells.prompt_search", lang=lang),
+        build_cancel_keyboard(char_id, "char_spells", lang=lang),
     )
     return CHAR_SPELL_SEARCH
 
@@ -82,13 +95,14 @@ async def handle_spell_search_text(
     if update.message is None:
         return CHAR_SPELL_SEARCH
 
+    lang = get_lang(update)
     pending = context.user_data.get(_SEARCH_KEY, {})
     char_id: int = pending.get("char_id", 0)
     query = update.message.text.strip()
 
     if not query:
         await update.message.reply_text(
-            "❌ Inserisci almeno un carattere\\.", parse_mode="MarkdownV2"
+            translator.t("character.spells.search_empty", lang=lang), parse_mode="MarkdownV2"
         )
         return CHAR_SPELL_SEARCH
 
@@ -108,6 +122,7 @@ async def show_spell_search_results(
     This lets the function be called both right after text input and when
     navigating back from a spell detail view.
     """
+    lang = get_lang(update)
     if query is None:
         pending = context.user_data.get(_SEARCH_KEY, {})
         query = pending.get("query", "")
@@ -136,17 +151,11 @@ async def show_spell_search_results(
 
     escaped_query = _esc(query)
     if matched:
-        text = (
-            f"🔍 Risultati per *{escaped_query}* "
-            f"\\({_esc(str(len(matched)))} trovati\\):"
-        )
-        keyboard = build_spell_search_results_keyboard(char_id, matched, conc_id)
+        text = translator.t("character.spells.search_results", lang=lang, query=escaped_query, count=_esc(str(len(matched))))
+        keyboard = build_spell_search_results_keyboard(char_id, matched, conc_id, lang=lang)
     else:
-        text = (
-            f"🔍 Nessun incantesimo trovato per *{escaped_query}*\\.\n\n"
-            "Prova con un termine diverso\\."
-        )
-        keyboard = build_spell_search_results_keyboard(char_id, [], conc_id)
+        text = translator.t("character.spells.search_no_results", lang=lang, query=escaped_query)
+        keyboard = build_spell_search_results_keyboard(char_id, [], conc_id, lang=lang)
 
     await _edit_or_reply(update, text, keyboard)
     return CHAR_SPELLS_MENU
@@ -166,6 +175,7 @@ async def show_spells_menu(
     In *select_level_directly* mode: level picker first; once a level is chosen
     the list is filtered to that level only.
     """
+    lang = get_lang(update)
     async with get_session() as session:
         char = await session.get(Character, char_id)
         conc_id = char.concentrating_spell_id if char else None
@@ -186,8 +196,8 @@ async def show_spells_menu(
         else spells
     )
 
-    keyboard = build_spells_menu_keyboard(char_id, display_spells, page, conc_id, level_filter)
-    text = format_spells(display_spells, conc_id) if display_spells else "Nessun incantesimo conosciuto\\."
+    keyboard = build_spells_menu_keyboard(char_id, display_spells, page, conc_id, level_filter, lang=lang)
+    text = format_spells(display_spells, conc_id, lang=lang) if display_spells else translator.t("character.spells.no_spells", lang=lang)
     await _edit_or_reply(update, text, keyboard)
     return CHAR_SPELLS_MENU
 
@@ -197,9 +207,10 @@ async def show_spell_level_picker(
     char_id: int, spells: list,
 ) -> int:
     """Show a level picker when spell_management == 'select_level_directly'."""
+    lang = get_lang(update)
     available_levels = sorted({s.level for s in spells})
-    text = "✨ *Scegli il livello degli incantesimi:*" if available_levels else "Nessun incantesimo conosciuto\\."
-    keyboard = build_spell_level_picker_keyboard(char_id, available_levels)
+    text = translator.t("character.spells.level_picker_title", lang=lang) if available_levels else translator.t("character.spells.no_spells", lang=lang)
+    keyboard = build_spell_level_picker_keyboard(char_id, available_levels, lang=lang)
     await _edit_or_reply(update, text, keyboard)
     return CHAR_SPELLS_MENU
 
@@ -217,6 +228,7 @@ async def show_spell_detail(
     back_extra: str = "",
 ) -> int:
     """Show detailed spell view with all D&D 5e properties."""
+    lang = get_lang(update)
     async with get_session() as session:
         spell = await session.get(Spell, spell_id)
         if spell is None or spell.character_id != char_id:
@@ -224,10 +236,10 @@ async def show_spell_detail(
         char = await session.get(Character, char_id)
         is_concentrating = char.concentrating_spell_id == spell_id if char else False
 
-    text = format_spell_detail(spell)
+    text = format_spell_detail(spell, lang=lang)
     keyboard = build_spell_detail_keyboard(
         char_id, spell, back_page, is_concentrating=is_concentrating,
-        back_extra=back_extra,
+        back_extra=back_extra, lang=lang,
     )
     await _edit_or_reply(update, text, keyboard)
     return CHAR_SPELLS_MENU
@@ -241,11 +253,12 @@ async def ask_spell_learn(
     update: Update, context: ContextTypes.DEFAULT_TYPE, char_id: int
 ) -> int:
     """Ask user to type the spell name."""
+    lang = get_lang(update)
     context.user_data[_OP_KEY] = {"char_id": char_id, "step": "name"}
     await _edit_or_reply(
         update,
-        "✨ Inserisci il *nome dell'incantesimo* da imparare:",
-        build_cancel_keyboard(char_id, "char_spells"),
+        translator.t("character.spells.prompt_learn_name", lang=lang),
+        build_cancel_keyboard(char_id, "char_spells", lang=lang),
     )
     return CHAR_SPELL_LEARN
 
@@ -260,6 +273,7 @@ async def handle_spell_learn_text(
     if update.message is None:
         return CHAR_SPELL_LEARN
 
+    lang = get_lang(update)
     pending = context.user_data.get(_OP_KEY, {})
     char_id: int = pending.get("char_id")
     step: str = pending.get("step", "name")
@@ -267,13 +281,13 @@ async def handle_spell_learn_text(
 
     if step == "name":
         if not text:
-            await update.message.reply_text("❌ Nome non valido\\.", parse_mode="MarkdownV2")
+            await update.message.reply_text(translator.t("character.spells.learn_name_invalid", lang=lang), parse_mode="MarkdownV2")
             return CHAR_SPELL_LEARN
         context.user_data[_OP_KEY]["spell_name"] = text
         context.user_data[_OP_KEY]["step"] = "level"
         await update.message.reply_text(
-            "🔢 Inserisci il *livello* dell'incantesimo \\(0 per trucchetto, 1\\-9\\):",
-            reply_markup=build_cancel_keyboard(char_id, "char_spells"),
+            translator.t("character.spells.prompt_learn_level", lang=lang),
+            reply_markup=build_cancel_keyboard(char_id, "char_spells", lang=lang),
             parse_mode="MarkdownV2",
         )
         return CHAR_SPELL_LEARN
@@ -285,7 +299,7 @@ async def handle_spell_learn_text(
                 raise ValueError
         except ValueError:
             await update.message.reply_text(
-                "❌ Livello non valido \\(0\\-9\\)\\.", parse_mode="MarkdownV2"
+                translator.t("character.spells.learn_level_invalid", lang=lang), parse_mode="MarkdownV2"
             )
             return CHAR_SPELL_LEARN
         context.user_data[_OP_KEY]["spell_level"] = level
@@ -294,10 +308,10 @@ async def handle_spell_learn_text(
         from bot.keyboards.character import build_yes_no_keyboard
         keyboard = build_yes_no_keyboard(
             char_id, yes_sub="learn_conc_yes", no_sub="learn_conc_no",
-            action="char_spells",
+            action="char_spells", lang=lang,
         )
         await update.message.reply_text(
-            "🔮 L'incantesimo richiede *concentrazione*?",
+            translator.t("character.spells.prompt_learn_concentration", lang=lang),
             reply_markup=keyboard,
             parse_mode="MarkdownV2",
         )
@@ -310,6 +324,7 @@ async def finalize_spell_learn(
     update: Update, context: ContextTypes.DEFAULT_TYPE, is_concentration: bool,
 ) -> int:
     """Save the new spell after the concentration choice."""
+    lang = get_lang(update)
     pending = context.user_data.pop(_OP_KEY, {})
     char_id: int = pending.get("char_id")
     spell_name: str = pending.get("spell_name", "???")
@@ -363,6 +378,7 @@ async def show_use_spell_level_picker(
     spell_id: int,
 ) -> int:
     """Show available spell slots to cast the spell with."""
+    lang = get_lang(update)
     async with get_session() as session:
         spell = await session.get(Spell, spell_id)
         if spell is None:
@@ -386,11 +402,11 @@ async def show_use_spell_level_picker(
         slots = [s for s in result.scalars() if s.available > 0]
 
     if not slots:
-        await _edit_or_reply(update, "❌ Nessuno slot disponibile per questo livello\\.")
+        await _edit_or_reply(update, translator.t("character.spells.no_slots", lang=lang))
         return CHAR_SPELLS_MENU
 
-    keyboard = build_spell_use_level_keyboard(char_id, spell_id, slots)
-    await _edit_or_reply(update, "🎯 Scegli il livello dello slot da usare:", keyboard)
+    keyboard = build_spell_use_level_keyboard(char_id, spell_id, slots, lang=lang)
+    await _edit_or_reply(update, translator.t("character.spells.slot_picker_title", lang=lang), keyboard)
     return CHAR_SPELLS_MENU
 
 
@@ -402,6 +418,7 @@ async def use_spell_at_level(
     slot_level: int,
 ) -> int:
     """Use a spell slot and auto-activate concentration if applicable."""
+    lang = get_lang(update)
     async with get_session() as session:
         result = await session.execute(
             select(SpellSlot).where(
@@ -411,7 +428,7 @@ async def use_spell_at_level(
         )
         slot = result.scalar_one_or_none()
         if slot is None or slot.available == 0:
-            await _edit_or_reply(update, "❌ Slot non disponibile\\.")
+            await _edit_or_reply(update, translator.t("character.spells.no_slots", lang=lang))
             return await show_spells_menu(update, context, char_id)
         slot.use_slot()
 
@@ -507,11 +524,12 @@ async def ask_concentration_save_damage(
     char_id: int,
 ) -> int:
     """Ask the user for the damage taken to compute the concentration DC."""
+    lang = get_lang(update)
     context.user_data[_OP_KEY] = {"char_id": char_id, "step": "conc_save"}
     await _edit_or_reply(
         update,
-        "🎲 Inserisci il *danno subito* per il tiro salvezza concentrazione:",
-        build_cancel_keyboard(char_id, "char_spells"),
+        translator.t("character.spells.prompt_conc_damage", lang=lang),
+        build_cancel_keyboard(char_id, "char_spells", lang=lang),
     )
     return CHAR_CONC_SAVE
 
@@ -523,6 +541,7 @@ async def handle_concentration_save_text(
     if update.message is None:
         return CHAR_CONC_SAVE
 
+    lang = get_lang(update)
     pending = context.user_data.pop(_OP_KEY, {})
     char_id: int = pending.get("char_id")
 
@@ -532,7 +551,7 @@ async def handle_concentration_save_text(
             raise ValueError
     except ValueError:
         await update.message.reply_text(
-            "❌ Valore non valido\\. Inserisci un numero intero positivo\\.",
+            translator.t("character.spells.conc_damage_invalid", lang=lang),
             parse_mode="MarkdownV2",
         )
         context.user_data[_OP_KEY] = pending
@@ -575,22 +594,21 @@ async def handle_concentration_save_text(
     mod_str = f"\\+{con_mod}" if con_mod >= 0 else str(con_mod)
     nat_tag = ""
     if roll == 20:
-        nat_tag = " 🌟 *NAT 20\\!*"
+        nat_tag = translator.t("character.spells.conc_save_nat20", lang=lang)
     elif roll == 1:
-        nat_tag = " 💀 *NAT 1\\!*"
+        nat_tag = translator.t("character.spells.conc_save_nat1", lang=lang)
 
     if success:
-        result_text = "✅ *Successo\\!* Concentrazione mantenuta\\."
+        result_text = translator.t("character.spells.conc_save_success", lang=lang)
     else:
         lost_text = f" su *{_esc(spell_name)}*" if spell_name else ""
-        result_text = f"❌ *Fallimento\\!* Concentrazione persa{lost_text}\\."
+        result_text = translator.t("character.spells.conc_save_failure", lang=lang) + lost_text + "\\."
 
     text = (
-        f"🎲 *Tiro Salvezza Concentrazione*\n\n"
-        f"Danno subito: *{damage}*\n"
-        f"CD: *{dc}* \\(max\\(10, {damage}÷2\\)\\)\n"
-        f"Tiro: 🎲 *{roll}* {mod_str} \\= *{total}*{nat_tag}\n\n"
-        f"{result_text}"
+        translator.t("character.spells.conc_save_title", lang=lang) + "\n\n"
+        + translator.t("character.spells.conc_save_dc", lang=lang, dc=dc, damage=damage) + "\n"
+        + translator.t("character.spells.conc_save_roll", lang=lang, roll=roll, mod_str=mod_str, total=total) + nat_tag + "\n\n"
+        + result_text
     )
 
     await update.message.reply_text(text, parse_mode="MarkdownV2")
@@ -611,6 +629,7 @@ async def ask_spell_edit_field(
     field: str,
 ) -> int:
     """Prompt the user to enter a new value for a spell field."""
+    lang = get_lang(update)
     if field == "is_concentration":
         return await _toggle_spell_bool(update, context, char_id, spell_id, "is_concentration")
     if field == "is_ritual":
@@ -621,20 +640,20 @@ async def ask_spell_edit_field(
         }
         await _edit_or_reply(
             update,
-            "🔢 Inserisci il nuovo *livello* \\(0\\-9\\):",
-            build_cancel_keyboard(char_id, "char_spells"),
+            translator.t("character.spells.prompt_edit_level", lang=lang),
+            build_cancel_keyboard(char_id, "char_spells", lang=lang),
         )
         return CHAR_SPELL_EDIT
 
-    field_info = SPELL_EDITABLE_FIELDS.get(field)
-    if not field_info:
+    prompt_key = _SPELL_FIELD_PROMPT_KEYS.get(field)
+    if not prompt_key:
         return await show_spell_detail(update, context, char_id, spell_id)
 
-    _, prompt = field_info
+    prompt = translator.t(prompt_key, lang=lang)
     context.user_data[_OP_KEY] = {
         "char_id": char_id, "spell_id": spell_id, "field": field, "step": "edit",
     }
-    await _edit_or_reply(update, prompt, build_cancel_keyboard(char_id, "char_spells"))
+    await _edit_or_reply(update, prompt, build_cancel_keyboard(char_id, "char_spells", lang=lang))
     return CHAR_SPELL_EDIT
 
 
@@ -645,6 +664,7 @@ async def handle_spell_edit_text(
     if update.message is None:
         return CHAR_SPELL_EDIT
 
+    lang = get_lang(update)
     pending = context.user_data.pop(_OP_KEY, {})
     char_id: int = pending.get("char_id")
     spell_id: int = pending.get("spell_id")
@@ -658,7 +678,7 @@ async def handle_spell_edit_text(
                 raise ValueError
         except ValueError:
             await update.message.reply_text(
-                "❌ Livello non valido \\(0\\-9\\)\\.", parse_mode="MarkdownV2"
+                translator.t("character.spells.edit_level_invalid", lang=lang), parse_mode="MarkdownV2"
             )
             context.user_data[_OP_KEY] = pending
             return CHAR_SPELL_EDIT
@@ -666,7 +686,7 @@ async def handle_spell_edit_text(
             spell = await session.get(Spell, spell_id)
             if spell and spell.character_id == char_id:
                 spell.level = level
-        await update.message.reply_text("✅ Livello aggiornato\\!", parse_mode="MarkdownV2")
+        await update.message.reply_text(translator.t("character.spells.edit_updated", lang=lang), parse_mode="MarkdownV2")
         return await show_spell_detail(update, context, char_id, spell_id)
 
     # Text fields — dash or empty means clear
@@ -676,7 +696,7 @@ async def handle_spell_edit_text(
         if spell and spell.character_id == char_id and hasattr(spell, field):
             setattr(spell, field, value)
 
-    await update.message.reply_text("✅ Aggiornato\\!", parse_mode="MarkdownV2")
+    await update.message.reply_text(translator.t("character.spells.edit_updated", lang=lang), parse_mode="MarkdownV2")
     return await show_spell_detail(update, context, char_id, spell_id)
 
 
@@ -737,8 +757,9 @@ async def show_spell_edit_menu(
     spell_id: int,
 ) -> int:
     """Show the keyboard with editable spell fields."""
-    keyboard = build_spell_edit_field_keyboard(char_id, spell_id)
-    await _edit_or_reply(update, "✏️ *Scegli il campo da modificare:*", keyboard)
+    lang = get_lang(update)
+    keyboard = build_spell_edit_field_keyboard(char_id, spell_id, lang=lang)
+    await _edit_or_reply(update, translator.t("character.spells.edit_menu_title", lang=lang), keyboard)
     return CHAR_SPELLS_MENU
 
 

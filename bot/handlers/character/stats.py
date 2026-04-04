@@ -12,7 +12,8 @@ from bot.db.engine import get_session
 from bot.db.models import ABILITY_NAMES, AbilityScore, Character
 from bot.handlers.character import CHAR_STATS_MENU, CHAR_STATS_SET, CHAR_MENU
 from bot.keyboards.character import build_stats_keyboard, build_cancel_keyboard
-from bot.utils.formatting import format_ability_scores
+from bot.utils.formatting import format_ability_scores, get_ability_labels
+from bot.utils.i18n import get_lang, translator
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +23,7 @@ _OP_KEY = "char_stats_pending"
 async def show_stats_menu(
     update: Update, context: ContextTypes.DEFAULT_TYPE, char_id: int
 ) -> int:
+    lang = get_lang(update)
     async with get_session() as session:
         char = await session.get(Character, char_id)
         if char is None:
@@ -31,8 +33,8 @@ async def show_stats_menu(
         )
         scores = list(result.scalars().all())
 
-    keyboard = build_stats_keyboard(char_id)
-    text = format_ability_scores(scores)
+    keyboard = build_stats_keyboard(char_id, lang=lang)
+    text = format_ability_scores(scores, lang=lang)
     await _edit_or_reply(update, text, keyboard)
     return CHAR_STATS_MENU
 
@@ -43,11 +45,12 @@ async def ask_stat_input(
     char_id: int,
     stat_name: str,
 ) -> int:
-    from bot.utils.formatting import ABILITY_LABELS
-    label, emoji = ABILITY_LABELS.get(stat_name, (stat_name, "•"))
+    lang = get_lang(update)
+    labels = get_ability_labels(lang=lang)
+    label, emoji = labels.get(stat_name, (stat_name, "•"))
     context.user_data[_OP_KEY] = {"char_id": char_id, "stat": stat_name}
-    text = f"{emoji} Inserisci il valore per *{label}* \\(1\\-30\\):"
-    await _edit_or_reply(update, text, build_cancel_keyboard(char_id, "char_stats"))
+    text = translator.t("character.stats.prompt", lang=lang, emoji=emoji, label=label)
+    await _edit_or_reply(update, text, build_cancel_keyboard(char_id, "char_stats", lang=lang))
     return CHAR_STATS_SET
 
 
@@ -57,6 +60,7 @@ async def handle_stat_text(
     if update.message is None:
         return CHAR_STATS_MENU
 
+    lang = get_lang(update)
     pending = context.user_data.pop(_OP_KEY, None)
     if pending is None:
         return CHAR_STATS_MENU
@@ -70,7 +74,7 @@ async def handle_stat_text(
             raise ValueError
     except ValueError:
         await update.message.reply_text(
-            "❌ Valore non valido\\. Inserisci un numero tra 1 e 30\\.",
+            translator.t("character.stats.invalid", lang=lang),
             parse_mode="MarkdownV2",
         )
         context.user_data[_OP_KEY] = pending
@@ -96,7 +100,7 @@ async def handle_stat_text(
             if char:
                 char.carry_capacity = value * 15
 
-    await update.message.reply_text("✅ Punteggio aggiornato\\!", parse_mode="MarkdownV2")
+    await update.message.reply_text(translator.t("character.stats.updated", lang=lang), parse_mode="MarkdownV2")
     return await show_stats_menu(update, context, char_id)
 
 

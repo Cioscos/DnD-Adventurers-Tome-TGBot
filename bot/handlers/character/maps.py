@@ -18,6 +18,7 @@ from bot.handlers.character import (
 )
 from bot.keyboards.character import build_map_zone_keyboard, build_maps_keyboard, build_cancel_keyboard
 from bot.utils.formatting import format_maps
+from bot.utils.i18n import get_lang, translator
 
 logger = logging.getLogger(__name__)
 
@@ -33,9 +34,10 @@ async def show_maps_menu(
         )
         maps = list(result.scalars().all())
 
+    lang = get_lang(update)
     zone_names = sorted({m.zone_name for m in maps})
     keyboard = build_maps_keyboard(char_id, zone_names, page)
-    text = format_maps(maps)
+    text = format_maps(maps, lang=lang)
     await _edit_or_reply(update, text, keyboard)
     return CHAR_MAPS_MENU
 
@@ -55,8 +57,11 @@ async def show_zone(
         )
         maps = list(result.scalars().all())
 
+    lang = get_lang(update)
     count = len(maps)
-    text = f"📍 *{_esc(zone)}*\n\n{count} file salvati\\."
+    zone_title = translator.t("character.maps.zone_detail", lang=lang, zone=_esc(zone))
+    count_str = translator.t("character.maps.zone_count", lang=lang, count=count)
+    text = f"{zone_title}\n\n{count_str}"
     keyboard = build_map_zone_keyboard(char_id, zone, maps, back_page)
     await _edit_or_reply(update, text, keyboard)
     return CHAR_MAPS_MENU
@@ -92,8 +97,9 @@ async def send_map_file(
 async def ask_new_zone(
     update: Update, context: ContextTypes.DEFAULT_TYPE, char_id: int
 ) -> int:
+    lang = get_lang(update)
     context.user_data[_OP_KEY] = {"char_id": char_id, "step": "zone_name"}
-    await _edit_or_reply(update, "📍 Inserisci il *nome della zona*:", build_cancel_keyboard(char_id, "char_maps"))
+    await _edit_or_reply(update, translator.t("character.maps.prompt_zone", lang=lang), build_cancel_keyboard(char_id, "char_maps", lang=lang))
     return CHAR_MAP_NEW_ZONE
 
 
@@ -102,7 +108,7 @@ async def handle_new_zone_text(
 ) -> int:
     if update.message is None:
         return CHAR_MAP_NEW_ZONE
-
+    lang = get_lang(update)
     pending = context.user_data.pop(_OP_KEY, None)
     if pending is None:
         return CHAR_MAPS_MENU
@@ -110,12 +116,12 @@ async def handle_new_zone_text(
     char_id: int = pending["char_id"]
     zone = update.message.text.strip()
     if not zone:
-        await update.message.reply_text("❌ Nome non valido\\.", parse_mode="MarkdownV2")
+        await update.message.reply_text(translator.t("character.maps.zone_invalid", lang=lang), parse_mode="MarkdownV2")
         context.user_data[_OP_KEY] = pending
         return CHAR_MAP_NEW_ZONE
 
     await update.message.reply_text(
-        f"✅ Zona *{_esc(zone)}* creata\\!\nOra puoi aggiungere file dalla zona\\.",
+        translator.t("character.maps.zone_created", lang=lang, zone=_esc(zone)),
         parse_mode="MarkdownV2",
     )
     return await show_zone(update, context, char_id, zone)
@@ -127,11 +133,12 @@ async def ask_add_file(
     char_id: int,
     zone: str,
 ) -> int:
+    lang = get_lang(update)
     context.user_data[_OP_KEY] = {"char_id": char_id, "zone": zone, "step": "file"}
     await _edit_or_reply(
         update,
-        f"📤 Invia una *foto o documento* da aggiungere alla zona *{_esc(zone)}*:",
-        build_cancel_keyboard(char_id, "char_maps"),
+        translator.t("character.maps.prompt_file", lang=lang, zone=_esc(zone)),
+        build_cancel_keyboard(char_id, "char_maps", lang=lang),
     )
     return CHAR_MAP_ADD_FILE
 
@@ -143,7 +150,7 @@ async def handle_map_file(
     pending = context.user_data.pop(_OP_KEY, None)
     if pending is None or update.message is None:
         return CHAR_MAPS_MENU
-
+    lang = get_lang(update)
     char_id: int = pending["char_id"]
     zone: str = pending["zone"]
 
@@ -158,7 +165,7 @@ async def handle_map_file(
         file_type = FileType.DOCUMENT
 
     if file_id is None:
-        await update.message.reply_text("❌ Invia una foto o un documento\\.", parse_mode="MarkdownV2")
+        await update.message.reply_text(translator.t("character.maps.file_invalid", lang=lang), parse_mode="MarkdownV2")
         context.user_data[_OP_KEY] = pending
         return CHAR_MAP_ADD_FILE
 
@@ -171,7 +178,7 @@ async def handle_map_file(
         ))
 
     await update.message.reply_text(
-        f"✅ File aggiunto alla zona *{_esc(zone)}*\\!", parse_mode="MarkdownV2"
+        translator.t("character.maps.file_added", lang=lang, zone=_esc(zone)), parse_mode="MarkdownV2"
     )
     return await show_zone(update, context, char_id, zone)
 

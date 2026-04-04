@@ -19,6 +19,7 @@ from bot.handlers.character import (
 )
 from bot.keyboards.character import build_hp_keyboard, build_cancel_keyboard
 from bot.utils.formatting import format_hp
+from bot.utils.i18n import get_lang, translator
 
 logger = logging.getLogger(__name__)
 
@@ -29,13 +30,14 @@ _OP_KEY = "char_hp_pending_op"
 async def show_hp_menu(
     update: Update, context: ContextTypes.DEFAULT_TYPE, char_id: int
 ) -> int:
+    lang = get_lang(update)
     async with get_session() as session:
         char = await session.get(Character, char_id)
         if char is None:
             return CHAR_MENU
 
-    keyboard = build_hp_keyboard(char_id)
-    text = format_hp(char)
+    keyboard = build_hp_keyboard(char_id, lang=lang)
+    text = format_hp(char, lang=lang)
     await _edit_or_reply(update, text, keyboard)
     return CHAR_HP_MENU
 
@@ -47,15 +49,16 @@ async def ask_hp_input(
     operation: str,
 ) -> int:
     """Ask the user to type a numeric value for the HP operation."""
+    lang = get_lang(update)
     context.user_data[_OP_KEY] = {"char_id": char_id, "op": operation}
     prompts = {
-        "set_max":     "✏️ Inserisci i *Punti Vita massimi*:",
-        "set_current": "✏️ Inserisci i *Punti Vita attuali*:",
-        "damage":      "⚔️ Inserisci i *danni subiti*:",
-        "heal":        "💚 Inserisci i *Punti Vita curati*:",
+        "set_max":     translator.t("character.hp.prompt_set_max", lang=lang),
+        "set_current": translator.t("character.hp.prompt_set_current", lang=lang),
+        "damage":      translator.t("character.hp.prompt_damage", lang=lang),
+        "heal":        translator.t("character.hp.prompt_heal", lang=lang),
     }
-    text = prompts.get(operation, "Inserisci un numero:")
-    await _edit_or_reply(update, text, build_cancel_keyboard(char_id, "char_hp"))
+    text = prompts.get(operation, translator.t("character.hp.prompt_set_max", lang=lang))
+    await _edit_or_reply(update, text, build_cancel_keyboard(char_id, "char_hp", lang=lang))
     state_map = {
         "set_max":     CHAR_HP_SET,
         "set_current": CHAR_HP_SET,
@@ -74,6 +77,7 @@ async def handle_hp_text(
     if update.message is None:
         return CHAR_HP_MENU
 
+    lang = get_lang(update)
     pending = context.user_data.pop(_OP_KEY, None)
     if pending is None:
         return CHAR_HP_MENU
@@ -85,7 +89,7 @@ async def handle_hp_text(
         value = int(update.message.text.strip())
     except ValueError:
         await update.message.reply_text(
-            "❌ Valore non valido\\. Inserisci un numero intero\\.",
+            translator.t("character.common.invalid_number", lang=lang),
             parse_mode="MarkdownV2",
         )
         context.user_data[_OP_KEY] = pending
@@ -112,7 +116,7 @@ async def handle_hp_text(
             else:
                 char.current_hit_points = new_hp
 
-    await update.message.reply_text("✅ Aggiornato\\!", parse_mode="MarkdownV2")
+    await update.message.reply_text(translator.t("character.common.updated", lang=lang), parse_mode="MarkdownV2")
     # Fire-and-forget: update any active party messages for this character
     asyncio.create_task(_trigger_party_update(char_id, context))
     return await show_hp_menu(update, context, char_id)
@@ -128,6 +132,8 @@ async def handle_rest(
     from bot.db.models import Ability, RestorationType, SpellSlot
     from bot.handlers.character.class_resources import restore_class_resources_on_rest
     from sqlalchemy import select
+
+    lang = get_lang(update)
 
     async with get_session() as session:
         char = await session.get(Character, char_id)
@@ -152,9 +158,9 @@ async def handle_rest(
             for ability in abilities_res.scalars():
                 if ability.restoration_type == RestorationType.LONG_REST:
                     ability.restore()
-            msg = "🌙 *Riposo lungo completato\\!*\nHP ripristinati e slot incantesimi recuperati\\."
+            msg = translator.t("character.rest.long_completed", lang=lang)
             if was_concentrating:
-                msg += "\n🔮 Concentrazione interrotta\\."
+                msg += translator.t("character.rest.conc_interrupted", lang=lang)
         else:
             # Short rest: clear concentration + restore short-rest abilities
             was_concentrating = char.concentrating_spell_id is not None
@@ -165,9 +171,9 @@ async def handle_rest(
             for ability in abilities_res.scalars():
                 if ability.restoration_type == RestorationType.SHORT_REST:
                     ability.restore()
-            msg = "⏸️ *Riposo breve completato\\!*\nAbilità ripristinate\\."
+            msg = translator.t("character.rest.short_completed", lang=lang)
             if was_concentrating:
-                msg += "\n🔮 Concentrazione interrotta\\."
+                msg += translator.t("character.rest.conc_interrupted", lang=lang)
 
     # Restore class resources outside the session to avoid nested session issues
     await restore_class_resources_on_rest(char_id, rest_type)

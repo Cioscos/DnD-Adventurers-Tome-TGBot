@@ -13,6 +13,7 @@ from bot.db.models import Ability, Character, Spell
 from bot.handlers.character import CHAR_MENU
 from bot.keyboards.character import build_character_main_menu_keyboard
 from bot.utils.formatting import format_character_summary
+from bot.utils.i18n import get_lang, translator
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +34,7 @@ async def show_character_menu(
         return await show_character_selection(update, context)
 
     context.user_data[ACTIVE_CHAR_KEY] = char_id
+    lang = get_lang(update)
 
     async with get_session() as session:
         char = await session.get(Character, char_id)
@@ -51,8 +53,8 @@ async def show_character_menu(
         )
         abilities = list(abilities_result.scalars().all())
 
-    keyboard = build_character_main_menu_keyboard(char_id)
-    text = format_character_summary(char, spells=spells, abilities=abilities)
+    keyboard = build_character_main_menu_keyboard(char_id, lang=lang)
+    text = format_character_summary(char, spells=spells, abilities=abilities, lang=lang)
 
     if update.callback_query:
         await update.callback_query.answer()

@@ -15,20 +15,16 @@ from telegram.ext import ContextTypes
 
 from bot.models.character_state import CharAction
 from bot.models.state import NavAction
+from bot.utils.i18n import get_lang, translator
 
 logger = logging.getLogger(__name__)
 
-WELCOME_TEXT = (
-    "🎲 *Benvenuto nel Bot D&D 5e\\!*\n\n"
-    "Scegli cosa vuoi fare:"
-)
 
-
-def build_main_menu_keyboard() -> InlineKeyboardMarkup:
+def build_main_menu_keyboard(lang: str = "it") -> InlineKeyboardMarkup:
     """Build the top-level 2-choice keyboard."""
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("📖 Wiki D&D", callback_data=NavAction("wiki"))],
-        [InlineKeyboardButton("⚔️ Il mio personaggio", callback_data=CharAction("char_select"))],
+        [InlineKeyboardButton(translator.t("start.menu_wiki", lang=lang), callback_data=NavAction("wiki"))],
+        [InlineKeyboardButton(translator.t("start.menu_character", lang=lang), callback_data=CharAction("char_select"))],
     ])
 
 
@@ -36,17 +32,17 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     """Handle the /start command — show the main menu (private chat only)."""
     if update.message is None:
         return
+    lang = get_lang(update)
     chat = update.effective_chat
     if chat is not None and chat.type in ("group", "supergroup"):
         await update.message.reply_text(
-            "⚠️ Le funzionalità *Wiki D&D* e *Gestore Personaggio* sono disponibili solo nella chat privata con il bot\\.\n\n"
-            "Usa /party e /party\\_stop per le funzionalità di gruppo\\.",
+            translator.t("start.group_only", lang=lang),
             parse_mode=ParseMode.MARKDOWN_V2,
         )
         return
-    keyboard = build_main_menu_keyboard()
+    keyboard = build_main_menu_keyboard(lang=lang)
     await update.message.reply_text(
-        WELCOME_TEXT,
+        translator.t("start.welcome", lang=lang),
         reply_markup=keyboard,
         parse_mode="MarkdownV2",
     )
@@ -54,13 +50,15 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
 async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Show the main menu (usable from callback queries too)."""
-    keyboard = build_main_menu_keyboard()
+    lang = get_lang(update)
+    keyboard = build_main_menu_keyboard(lang=lang)
+    welcome = translator.t("start.welcome", lang=lang)
     if update.callback_query:
         await update.callback_query.answer()
         await update.callback_query.edit_message_text(
-            WELCOME_TEXT, reply_markup=keyboard, parse_mode="MarkdownV2"
+            welcome, reply_markup=keyboard, parse_mode="MarkdownV2"
         )
     elif update.message:
         await update.message.reply_text(
-            WELCOME_TEXT, reply_markup=keyboard, parse_mode="MarkdownV2"
+            welcome, reply_markup=keyboard, parse_mode="MarkdownV2"
         )

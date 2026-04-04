@@ -18,6 +18,7 @@ from bot.handlers.character import (
 )
 from bot.keyboards.character import build_spell_slot_detail_keyboard, build_spell_slots_keyboard, build_cancel_keyboard
 from bot.utils.formatting import format_spell_slots
+from bot.utils.i18n import get_lang, translator
 
 logger = logging.getLogger(__name__)
 
@@ -27,14 +28,15 @@ _OP_KEY = "char_slot_pending"
 async def show_spell_slots_menu(
     update: Update, context: ContextTypes.DEFAULT_TYPE, char_id: int
 ) -> int:
+    lang = get_lang(update)
     async with get_session() as session:
         result = await session.execute(
             select(SpellSlot).where(SpellSlot.character_id == char_id).order_by(SpellSlot.level)
         )
         slots = list(result.scalars().all())
 
-    keyboard = build_spell_slots_keyboard(char_id, slots)
-    text = format_spell_slots(slots)
+    keyboard = build_spell_slots_keyboard(char_id, slots, lang=lang)
+    text = format_spell_slots(slots, lang=lang)
     await _edit_or_reply(update, text, keyboard)
     return CHAR_SPELL_SLOTS_MENU
 
@@ -50,12 +52,13 @@ async def show_slot_detail(
         if slot is None or slot.character_id != char_id:
             return await show_spell_slots_menu(update, context, char_id)
 
+    lang = get_lang(update)
     text = (
-        f"🎲 *Slot Livello {slot.level}*\n\n"
-        f"Disponibili: *{slot.available}* / {slot.total}\n"
-        f"Usati: *{slot.used}*"
+        translator.t("character.slots.slot_detail_title", lang=lang, level=slot.level) + "\n\n"
+        + translator.t("character.slots.available_label", lang=lang, available=slot.available, total=slot.total) + "\n"
+        + translator.t("character.slots.used_label", lang=lang, used=slot.used)
     )
-    keyboard = build_spell_slot_detail_keyboard(char_id, slot)
+    keyboard = build_spell_slot_detail_keyboard(char_id, slot, lang=lang)
     await _edit_or_reply(update, text, keyboard)
     return CHAR_SPELL_SLOTS_MENU
 
@@ -63,10 +66,11 @@ async def show_slot_detail(
 async def ask_add_slot(
     update: Update, context: ContextTypes.DEFAULT_TYPE, char_id: int
 ) -> int:
+    lang = get_lang(update)
     context.user_data[_OP_KEY] = {"char_id": char_id, "step": "level"}
     await _edit_or_reply(
-        update, "🔢 Inserisci il *livello* dello slot \\(1\\-9\\):",
-        build_cancel_keyboard(char_id, "char_slots"),
+        update, translator.t("character.slots.prompt_level", lang=lang),
+        build_cancel_keyboard(char_id, "char_slots", lang=lang),
     )
     return CHAR_SPELL_SLOT_ADD
 
@@ -77,6 +81,7 @@ async def handle_slot_add_text(
     if update.message is None:
         return CHAR_SPELL_SLOT_ADD
 
+    lang = get_lang(update)
     pending = context.user_data.get(_OP_KEY, {})
     char_id: int = pending.get("char_id")
     step: str = pending.get("step", "level")
@@ -88,13 +93,13 @@ async def handle_slot_add_text(
             if not 1 <= level <= 9:
                 raise ValueError
         except ValueError:
-            await update.message.reply_text("❌ Livello non valido \\(1\\-9\\)\\.", parse_mode="MarkdownV2")
+            await update.message.reply_text(translator.t("character.slots.level_invalid", lang=lang), parse_mode="MarkdownV2")
             return CHAR_SPELL_SLOT_ADD
         context.user_data[_OP_KEY]["slot_level"] = level
         context.user_data[_OP_KEY]["step"] = "total"
         await update.message.reply_text(
-            "🔢 Inserisci il numero *totale* di slot per questo livello:",
-            reply_markup=build_cancel_keyboard(char_id, "char_slots"),
+            translator.t("character.slots.prompt_total", lang=lang),
+            reply_markup=build_cancel_keyboard(char_id, "char_slots", lang=lang),
             parse_mode="MarkdownV2",
         )
         return CHAR_SPELL_SLOT_ADD
@@ -105,7 +110,7 @@ async def handle_slot_add_text(
             if total < 1:
                 raise ValueError
         except ValueError:
-            await update.message.reply_text("❌ Valore non valido\\.", parse_mode="MarkdownV2")
+            await update.message.reply_text(translator.t("character.slots.total_invalid", lang=lang), parse_mode="MarkdownV2")
             return CHAR_SPELL_SLOT_ADD
 
         level = pending["slot_level"]
@@ -124,7 +129,7 @@ async def handle_slot_add_text(
 
         context.user_data.pop(_OP_KEY, None)
         await update.message.reply_text(
-            f"✅ Slot livello {level} configurati \\({total} totali\\)\\!", parse_mode="MarkdownV2"
+            translator.t("character.slots.configured", lang=lang, level=level, total=total), parse_mode="MarkdownV2"
         )
         return await show_spell_slots_menu(update, context, char_id)
 

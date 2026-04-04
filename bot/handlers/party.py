@@ -24,11 +24,11 @@ from bot.db.engine import get_session
 from bot.db.models import Character, GroupMember, PartySession, PartyMode
 from bot.keyboards.party import build_party_master_reveal_keyboard, build_party_mode_keyboard
 from bot.models.party_state import PartyAction
+from bot.utils.i18n import get_lang, translator
 from bot.utils.party_formatting import format_party_message
 
 logger = logging.getLogger(__name__)
 
-# Session lifetime
 _SESSION_HOURS = 48
 
 
@@ -71,13 +71,15 @@ async def party_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
     # Only allowed in groups
     if chat.type not in ("group", "supergroup"):
+        lang = get_lang(update)
         await message.reply_text(
-            "⚠️ Il comando /party funziona solo all'interno di un gruppo Telegram\\.",
+            translator.t("party.group_only", lang=lang),
             parse_mode=ParseMode.MARKDOWN_V2,
         )
         return
 
     group_id = chat.id
+    lang = get_lang(update)
 
     # Check for an existing active session
     async with get_session() as session:
@@ -94,8 +96,7 @@ async def party_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
                 expires = expires.replace(tzinfo=timezone.utc)
             if expires > datetime.now(tz=timezone.utc):
                 await message.reply_text(
-                    "⚠️ *Sessione party già attiva\\.*\n"
-                    "Usa /party\\_stop per terminarla prima di avviarne una nuova\\.",
+                    translator.t("party.already_active", lang=lang),
                     parse_mode=ParseMode.MARKDOWN_V2,
                 )
                 return
@@ -125,19 +126,14 @@ async def party_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
     if not chars_with_users:
         await message.reply_text(
-            "⚠️ *Nessun membro del gruppo ha un personaggio attivo nel party\\.*\n\n"
-            "Per attivare il tuo personaggio vai nel gestore personaggi "
-            "\\(⚙️ Impostazioni → 🎯 Attivo nel Party\\)\\.",
+            translator.t("party.no_members", lang=lang),
             parse_mode=ParseMode.MARKDOWN_V2,
         )
         return
 
     await message.reply_text(
-        "🎯 *Avvia Sessione Party*\n\n"
-        "Scegli la modalità di visualizzazione:\n\n"
-        "🌐 *Pubblica* — La lista dei personaggi sarà visibile nel gruppo\\.\n"
-        "🔒 *Privata* — Solo il master riceverà la lista in privato\\.",
-        reply_markup=build_party_mode_keyboard(group_id),
+        translator.t("party.mode_title", lang=lang),
+        reply_markup=build_party_mode_keyboard(group_id, lang=lang),
         parse_mode=ParseMode.MARKDOWN_V2,
     )
 
@@ -155,13 +151,15 @@ async def party_stop_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
         return
 
     if chat.type not in ("group", "supergroup"):
+        lang = get_lang(update)
         await message.reply_text(
-            "⚠️ Il comando /party\\_stop funziona solo all'interno di un gruppo Telegram\\.",
+            translator.t("party.stop_group_only", lang=lang),
             parse_mode=ParseMode.MARKDOWN_V2,
         )
         return
 
     group_id = chat.id
+    lang = get_lang(update)
 
     async with get_session() as session:
         result = await session.execute(
@@ -171,7 +169,7 @@ async def party_stop_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
         if party_session is None:
             await message.reply_text(
-                "ℹ️ Nessuna sessione party attiva in questo gruppo\\.",
+                translator.t("party.no_session", lang=lang),
                 parse_mode=ParseMode.MARKDOWN_V2,
             )
             return
@@ -186,14 +184,14 @@ async def party_stop_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
             await context.bot.edit_message_text(
                 chat_id=msg_chat_id,
                 message_id=msg_id,
-                text="🛑 *Sessione party terminata\\.*",
+                text=translator.t("party.stop_message", lang=lang),
                 parse_mode=ParseMode.MARKDOWN_V2,
             )
         except (BadRequest, Exception) as e:
             logger.warning("Could not edit party message on stop: %s", e)
 
     await message.reply_text(
-        "✅ Sessione party terminata\\.",
+        translator.t("party.stop_completed", lang=lang),
         parse_mode=ParseMode.MARKDOWN_V2,
     )
 
@@ -231,7 +229,8 @@ async def _handle_party_mode(
     """Create the party session with the chosen mode (public or private)."""
     query = update.callback_query
     group_id = data.group_id
-    mode = data.extra  # "public" or "private"
+    mode = data.extra
+    lang = get_lang(update)
 
     await query.answer()
 
@@ -244,14 +243,13 @@ async def _handle_party_mode(
     expires = now + timedelta(hours=_SESSION_HOURS)
 
     if mode == "public":
-        # Build and send the party message in the group
         dummy_session = PartySession(
             group_id=group_id,
             group_title=group_title,
             mode=PartyMode.PUBLIC,
             expires_at=expires.isoformat(),
         )
-        text = format_party_message(chars_with_users, dummy_session)
+        text = format_party_message(chars_with_users, dummy_session, lang=lang)
 
         try:
             sent_msg = await context.bot.send_message(
@@ -262,12 +260,11 @@ async def _handle_party_mode(
         except Exception as e:
             logger.error("Failed to send public party message: %s", e)
             await query.edit_message_text(
-                "❌ Errore nell'invio del messaggio party\\.",
+                translator.t("party.send_error", lang=lang),
                 parse_mode=ParseMode.MARKDOWN_V2,
             )
             return
 
-        # Persist the session
         async with get_session() as session:
             party_session = PartySession(
                 group_id=group_id,
@@ -280,14 +277,12 @@ async def _handle_party_mode(
             )
             session.add(party_session)
 
-        # Delete the mode-selection message
         try:
             await query.delete_message()
         except Exception:
             pass
 
     else:
-        # Private mode — edit the mode selection message and wait for master
         async with get_session() as session:
             party_session = PartySession(
                 group_id=group_id,
@@ -301,11 +296,8 @@ async def _handle_party_mode(
             session.add(party_session)
 
         await query.edit_message_text(
-            "🔒 *Modalità Privata*\n\n"
-            "Il master della sessione deve premere il pulsante qui sotto "
-            "per ricevere in privato lo stato del party\\.\n\n"
-            "⚠️ Assicurati di aver avviato una chat privata con il bot prima di premere\\.",
-            reply_markup=build_party_master_reveal_keyboard(group_id),
+            translator.t("party.private_waiting", lang=lang),
+            reply_markup=build_party_master_reveal_keyboard(group_id, lang=lang),
             parse_mode=ParseMode.MARKDOWN_V2,
         )
 
@@ -317,9 +309,10 @@ async def _handle_party_master_reveal(
     query = update.callback_query
     master_user = update.effective_user
     group_id = data.group_id
+    lang = get_lang(update)
 
     if master_user is None:
-        await query.answer("Errore: utente non identificato.")
+        await query.answer(translator.t("party.reveal_error_user", lang=lang))
         return
 
     # Load session
@@ -330,7 +323,7 @@ async def _handle_party_master_reveal(
         party_session = result.scalar_one_or_none()
 
     if party_session is None:
-        await query.answer("⚠️ Sessione party non trovata o scaduta.")
+        await query.answer(translator.t("party.session_not_found", lang=lang))
         return
 
     # Check expiry
@@ -339,13 +332,13 @@ async def _handle_party_master_reveal(
         if expires.tzinfo is None:
             expires = expires.replace(tzinfo=timezone.utc)
         if expires <= datetime.now(tz=timezone.utc):
-            await query.answer("⚠️ La sessione party è scaduta.")
+            await query.answer(translator.t("party.session_expired_toast", lang=lang))
             return
     except Exception:
         pass
 
     chars_with_users = await _get_party_characters(group_id)
-    text = format_party_message(chars_with_users, party_session)
+    text = format_party_message(chars_with_users, party_session, lang=lang)
 
     # Send private message to master
     try:
@@ -356,14 +349,13 @@ async def _handle_party_master_reveal(
         )
     except Forbidden:
         await query.answer(
-            "⚠️ Non riesco ad inviarti un messaggio privato. "
-            "Avvia prima una chat con il bot scrivendo /start in privato.",
+            translator.t("party.reveal_error_private", lang=lang),
             show_alert=True,
         )
         return
     except Exception as e:
         logger.error("Failed to send private party message to master: %s", e)
-        await query.answer("❌ Errore nell'invio del messaggio privato.")
+        await query.answer(translator.t("party.reveal_error_generic", lang=lang))
         return
 
     # Save the private message reference into the session
@@ -373,7 +365,7 @@ async def _handle_party_master_reveal(
             ps.message_chat_id = master_user.id
             ps.message_id = sent_msg.message_id
 
-    await query.answer("✅ Lista party inviata in privato!", show_alert=False)
+    await query.answer(translator.t("party.reveal_sent", lang=lang), show_alert=False)
 
 
 # ---------------------------------------------------------------------------

@@ -34,6 +34,7 @@ from bot.handlers.start import start_command
 from bot.models.character_state import CharAction
 from bot.models.party_state import PartyAction
 from bot.schema.registry import registry
+from bot.utils.i18n import get_lang, translator
 
 # ---------------------------------------------------------------------------
 # Logging — console + rotating file, httpx silenced at INFO level
@@ -121,14 +122,16 @@ async def post_init(application: Application) -> None:
     """Called after the Application has been fully initialised."""
     await registry.initialize()
     await init_db()
-    logger.info("Database initialised.")
+    asyncio.create_task(translator.start_watcher())
+    logger.info("Database initialised; i18n watcher started.")
 
 
 async def stop_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle /stop outside the character conversation (no active operation)."""
     if update.message:
+        lang = get_lang(update)
         await update.message.reply_text(
-            "✋ Nessuna operazione in corso da interrompere\\.",
+            translator.t("start.stop_no_op", lang=lang),
             parse_mode="MarkdownV2",
         )
 

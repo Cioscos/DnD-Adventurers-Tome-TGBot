@@ -2,7 +2,8 @@
 
 All keyboards are driven by the :class:`~bot.schema.registry.SchemaRegistry`
 and use :class:`~bot.models.state.NavAction` objects as callback data
-(arbitrary callback data — no 64-byte limit).
+(arbitrary callback data — no 64-byte limit).  Every builder accepts an
+optional ``lang`` parameter for localised button labels.
 """
 
 from __future__ import annotations
@@ -12,6 +13,7 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from bot.models.state import NavAction, make_back
 from bot.schema.registry import MENU_CATEGORIES, registry
 from bot.schema.types import TypeInfo
+from bot.utils.i18n import translator
 
 PAGE_SIZE = 10
 COLUMNS = 2
@@ -21,7 +23,7 @@ COLUMNS = 2
 # Top-level category keyboard
 # ------------------------------------------------------------------
 
-def build_categories_keyboard() -> InlineKeyboardMarkup:
+def build_categories_keyboard(lang: str = "it") -> InlineKeyboardMarkup:
     """Build the wiki category-selection keyboard (2-column grid)."""
     from bot.models.character_state import CharAction
 
@@ -37,9 +39,11 @@ def build_categories_keyboard() -> InlineKeyboardMarkup:
             )
         )
     rows = [buttons[i : i + COLUMNS] for i in range(0, len(buttons), COLUMNS)]
-    # Back button to top-level main menu
     rows.append([
-        InlineKeyboardButton("🏠 Menu Principale", callback_data=NavAction("menu"))
+        InlineKeyboardButton(
+            translator.t("wiki.btn_menu_main", lang=lang),
+            callback_data=NavAction("menu"),
+        )
     ])
     return InlineKeyboardMarkup(rows)
 
@@ -55,18 +59,15 @@ def build_list_keyboard(
     has_next: bool,
     *,
     back_tuple: tuple[str, ...] = (),
+    lang: str = "it",
 ) -> InlineKeyboardMarkup:
-    """Build a paginated item-list keyboard.
-
-    *back_tuple* is stored in the Back button's ``NavAction.back`` so the
-    user can return to the previous screen.
-    """
+    """Build a paginated item-list keyboard."""
     ti = registry.get_type(type_name)
     rows: list[list[InlineKeyboardButton]] = []
 
     for item in items:
         label = item.get("name") or item.get("index", "???")
-        extra = _item_label_extra(ti, item)
+        extra = _item_label_extra(ti, item, lang=lang)
         if extra:
             label = f"{label}  ({extra})"
         rows.append([
@@ -81,12 +82,11 @@ def build_list_keyboard(
             )
         ])
 
-    # Navigation row
     nav_row: list[InlineKeyboardButton] = []
     if page > 0:
         nav_row.append(
             InlineKeyboardButton(
-                text="⬅️ Prev",
+                text=translator.t("wiki.btn_prev", lang=lang),
                 callback_data=NavAction(
                     "list", type_name=type_name, page=page - 1,
                     back=back_tuple,
@@ -95,14 +95,14 @@ def build_list_keyboard(
         )
     nav_row.append(
         InlineKeyboardButton(
-            text="🏠 Menu",
+            text=translator.t("wiki.btn_menu", lang=lang),
             callback_data=NavAction("menu"),
         )
     )
     if has_next:
         nav_row.append(
             InlineKeyboardButton(
-                text="Next ➡️",
+                text=translator.t("wiki.btn_next", lang=lang),
                 callback_data=NavAction(
                     "list", type_name=type_name, page=page + 1,
                     back=back_tuple,
@@ -124,13 +124,9 @@ def build_detail_keyboard(
     *,
     concrete_type: str = "",
     back_nav: NavAction | None = None,
+    lang: str = "it",
 ) -> InlineKeyboardMarkup:
-    """Build the keyboard shown below an item detail view.
-
-    Includes a ``📂`` button for every navigable sub-field that has at
-    least one item, plus the usual ⬅️ Back / 🏠 Menu row.
-    """
-    # Determine which TypeInfo to use for navigable fields
+    """Build the keyboard shown below an item detail view."""
     effective_type = concrete_type or type_name
     ti = registry.get_type(effective_type)
 
@@ -162,14 +158,19 @@ def build_detail_keyboard(
                 )
             ])
 
-    # ⬅️ Back / 🏠 Menu
     nav_row: list[InlineKeyboardButton] = []
     if back_nav is not None:
         nav_row.append(
-            InlineKeyboardButton(text="⬅️ Back", callback_data=back_nav)
+            InlineKeyboardButton(
+                text=translator.t("wiki.btn_back", lang=lang),
+                callback_data=back_nav,
+            )
         )
     nav_row.append(
-        InlineKeyboardButton(text="🏠 Menu", callback_data=NavAction("menu"))
+        InlineKeyboardButton(
+            text=translator.t("wiki.btn_menu", lang=lang),
+            callback_data=NavAction("menu"),
+        )
     )
     rows.append(nav_row)
     return InlineKeyboardMarkup(rows)
@@ -189,6 +190,7 @@ def build_sub_list_keyboard(
     parent_index: str,
     field_name: str,
     parent_concrete: str = "",
+    lang: str = "it",
 ) -> InlineKeyboardMarkup:
     """Build a paginated sub-list keyboard (items inside a navigable field)."""
     sub_ti = registry.get_type(sub_type_name)
@@ -201,11 +203,10 @@ def build_sub_list_keyboard(
 
     for item in items:
         label = item.get("name") or item.get("index", "???")
-        extra = _item_label_extra(sub_ti, item)
+        extra = _item_label_extra(sub_ti, item, lang=lang)
         if extra:
             label = f"{label}  ({extra})"
 
-        # Determine the detail type (for union sub-items, use __typename)
         detail_type = item.get("__typename", sub_type_name)
 
         rows.append([
@@ -221,12 +222,11 @@ def build_sub_list_keyboard(
             )
         ])
 
-    # Pagination + back to parent detail
     nav_row: list[InlineKeyboardButton] = []
     if page > 0:
         nav_row.append(
             InlineKeyboardButton(
-                text="⬅️ Prev",
+                text=translator.t("wiki.btn_prev", lang=lang),
                 callback_data=NavAction(
                     "sub_list",
                     type_name=parent_type,
@@ -237,10 +237,9 @@ def build_sub_list_keyboard(
                 ),
             )
         )
-    # Back goes to parent detail
     nav_row.append(
         InlineKeyboardButton(
-            text="⬅️ Back",
+            text=translator.t("wiki.btn_back", lang=lang),
             callback_data=NavAction(
                 "detail",
                 type_name=parent_type,
@@ -251,12 +250,15 @@ def build_sub_list_keyboard(
         )
     )
     nav_row.append(
-        InlineKeyboardButton(text="🏠 Menu", callback_data=NavAction("menu"))
+        InlineKeyboardButton(
+            text=translator.t("wiki.btn_menu", lang=lang),
+            callback_data=NavAction("menu"),
+        )
     )
     if has_next:
         nav_row.append(
             InlineKeyboardButton(
-                text="Next ➡️",
+                text=translator.t("wiki.btn_next", lang=lang),
                 callback_data=NavAction(
                     "sub_list",
                     type_name=parent_type,
@@ -275,7 +277,7 @@ def build_sub_list_keyboard(
 # Helpers
 # ------------------------------------------------------------------
 
-def _item_label_extra(ti: TypeInfo | None, item: dict) -> str:
+def _item_label_extra(ti: TypeInfo | None, item: dict, lang: str = "it") -> str:
     """Short badge text for the list buttons (e.g. spell level, CR)."""
     if ti is None:
         return ""
@@ -283,13 +285,13 @@ def _item_label_extra(ti: TypeInfo | None, item: dict) -> str:
     if type_name == "Spell":
         lvl = item.get("level")
         if lvl is not None:
-            return f"Lvl {lvl}" if lvl > 0 else "Cantrip"
+            return translator.t("wiki.spell_level_cantrip", lang=lang) if lvl == 0 else translator.t("wiki.spell_level_generic", lang=lang, level=lvl)
     if type_name == "Monster":
         cr = item.get("challenge_rating")
         if cr is not None:
-            return f"CR {cr:g}"
+            return translator.t("wiki.monster_cr", lang=lang, cr=f"{cr:g}")
     if type_name == "Class":
         hd = item.get("hit_die")
         if hd is not None:
-            return f"d{hd}"
+            return translator.t("wiki.class_hit_die", lang=lang, hd=hd)
     return ""
