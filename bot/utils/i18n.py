@@ -67,6 +67,8 @@ class Translator:
         self._locales: dict[str, dict[str, Any]] = {}
         # lang_code → last known mtime (float)
         self._mtimes: dict[str, float] = {}
+        # asyncio Task reference so it can be cleanly cancelled on shutdown
+        self._watcher_task: asyncio.Task[None] | None = None
 
         self._load_all()
 
@@ -132,14 +134,33 @@ class Translator:
 
             asyncio.create_task(translator.start_watcher())
         """
+        self._watcher_task = asyncio.current_task()
         logger.info(
             "i18n watcher started (interval=%ds, dir=%s)",
             self._reload_interval,
             self._locales_dir,
         )
-        while True:
-            await asyncio.sleep(self._reload_interval)
-            self._check_and_reload()
+        try:
+            while True:
+                await asyncio.sleep(self._reload_interval)
+                logger.debug("i18n watcher: checking locale files for changes")
+                self._check_and_reload()
+        except asyncio.CancelledError:
+            logger.info("i18n watcher stopped.")
+            raise
+
+    async def stop_watcher(self) -> None:
+        """Cancel the running watcher task, if any.
+
+        Call this from the application's ``post_shutdown`` hook to avoid
+        the ``Task was destroyed but it is pending!`` asyncio warning.
+        """
+        if self._watcher_task and not self._watcher_task.done():
+            self._watcher_task.cancel()
+            try:
+                await self._watcher_task
+            except asyncio.CancelledError:
+                pass
 
     # ------------------------------------------------------------------
     # Internal helpers
