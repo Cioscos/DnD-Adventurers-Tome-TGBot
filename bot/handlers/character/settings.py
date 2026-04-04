@@ -12,6 +12,7 @@ from bot.db.engine import get_session
 from bot.db.models import Character
 from bot.handlers.character import CHAR_MENU, CHAR_SETTINGS_MENU
 from bot.keyboards.character import build_settings_keyboard
+from bot.utils.i18n import get_lang, translator
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +20,7 @@ logger = logging.getLogger(__name__)
 async def show_settings_menu(
     update: Update, context: ContextTypes.DEFAULT_TYPE, char_id: int
 ) -> int:
+    lang = get_lang(update)
     async with get_session() as session:
         char = await session.get(Character, char_id)
         if char is None:
@@ -28,15 +30,19 @@ async def show_settings_menu(
 
     spell_mgmt = settings.get("spell_management", "paginate_by_level")
     spell_label = (
-        "Per livello ✅" if spell_mgmt == "paginate_by_level" else "Selezione diretta ✅"
+        translator.t("character.settings.spell_mgmt_by_level", lang=lang)
+        if spell_mgmt == "paginate_by_level"
+        else translator.t("character.settings.spell_mgmt_direct", lang=lang)
     )
-    party_label = "Sì ✅" if is_party_active else "No ❌"
-
-    text = (
-        "⚙️ *Impostazioni*\n\n"
-        f"Gestione incantesimi: {spell_label}\n"
-        f"Attivo nel Party: {party_label}"
+    party_label = (
+        translator.t("character.settings.party_yes", lang=lang)
+        if is_party_active
+        else translator.t("character.settings.party_no", lang=lang)
     )
+    title = translator.t("character.settings.title", lang=lang)
+    spell_mgmt_text = translator.t("character.settings.spell_mgmt_label", lang=lang, label=spell_label)
+    party_active_text = translator.t("character.settings.party_active_label", lang=lang, label=party_label)
+    text = f"{title}\n\n{spell_mgmt_text}\n{party_active_text}"
     keyboard = build_settings_keyboard(char_id, settings, is_party_active=is_party_active)
     await _edit_or_reply(update, text, keyboard)
     return CHAR_SETTINGS_MENU
@@ -45,6 +51,7 @@ async def show_settings_menu(
 async def toggle_spell_management(
     update: Update, context: ContextTypes.DEFAULT_TYPE, char_id: int
 ) -> int:
+    lang = get_lang(update)
     async with get_session() as session:
         char = await session.get(Character, char_id)
         if char is None:
@@ -70,6 +77,7 @@ async def toggle_party_active(
 
     Ensures only one character per user has ``is_party_active = True``.
     """
+    lang = get_lang(update)
     async with get_session() as session:
         char = await session.get(Character, char_id)
         if char is None:

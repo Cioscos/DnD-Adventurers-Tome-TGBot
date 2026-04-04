@@ -72,6 +72,7 @@ from bot.handlers.character import (
     STOPPING,
 )
 from bot.models.character_state import CharAction
+from bot.utils.i18n import get_lang, translator
 
 logger = logging.getLogger(__name__)
 
@@ -144,6 +145,7 @@ async def character_callback_handler(
     action = data.action
     cid = data.char_id
     sub = data.sub
+    lang = get_lang(update)
 
     # ─── Character selection ───
     if action == "char_select":
@@ -152,8 +154,8 @@ async def character_callback_handler(
         from bot.keyboards.character import build_cancel_keyboard
         await query.answer()
         await query.edit_message_text(
-            "✍️ Inserisci il *nome* del nuovo personaggio:",
-            reply_markup=build_cancel_keyboard(0, "char_select"),
+            translator.t("character.selection.enter_name", lang=lang),
+            reply_markup=build_cancel_keyboard(0, "char_select", lang=lang),
             parse_mode="MarkdownV2",
         )
         return CHAR_NEW_NAME
@@ -177,8 +179,8 @@ async def character_callback_handler(
             from bot.utils.formatting import _esc
             await query.answer()
             await query.edit_message_text(
-                "🌙 Vuoi fare un *riposo lungo*? HP e slot saranno ripristinati\\.",
-                reply_markup=build_rest_confirm_keyboard(cid, "long"),
+                translator.t("character.rest.confirm_long", lang=lang),
+                reply_markup=build_rest_confirm_keyboard(cid, "long", lang=lang),
                 parse_mode="MarkdownV2",
             )
             return CHAR_HP_MENU
@@ -186,8 +188,8 @@ async def character_callback_handler(
             from bot.keyboards.character import build_rest_confirm_keyboard
             await query.answer()
             await query.edit_message_text(
-                "⏸️ Vuoi fare un *riposo breve*?",
-                reply_markup=build_rest_confirm_keyboard(cid, "short"),
+                translator.t("character.rest.confirm_short", lang=lang),
+                reply_markup=build_rest_confirm_keyboard(cid, "short", lang=lang),
                 parse_mode="MarkdownV2",
             )
             return CHAR_HP_MENU
@@ -198,8 +200,8 @@ async def character_callback_handler(
         from bot.keyboards.character import build_rest_keyboard
         await query.answer()
         await query.edit_message_text(
-            "😴 *Scegli il tipo di riposo:*",
-            reply_markup=build_rest_keyboard(cid),
+            translator.t("character.rest.title", lang=lang),
+            reply_markup=build_rest_keyboard(cid, lang=lang),
             parse_mode="MarkdownV2",
         )
         return CHAR_HP_MENU
@@ -226,7 +228,7 @@ async def character_callback_handler(
         await query.answer()
         await query.edit_message_text(
             "⚔️ *Gestione Livello*",
-            reply_markup=build_level_keyboard(cid),
+            reply_markup=build_level_keyboard(cid, lang=lang),
             parse_mode="MarkdownV2",
         )
         return CHAR_MULTICLASS_MENU
@@ -319,13 +321,14 @@ async def character_callback_handler(
         if sub == "edit":
             # Show currency editor for the given currency type
             from bot.keyboards.character import build_currency_edit_keyboard
-            from bot.utils.formatting import CURRENCY_LABELS
+            from bot.utils.formatting import get_currency_labels
             key = data.extra
-            label, emoji = CURRENCY_LABELS.get(key, (key, "💰"))
+            labels = get_currency_labels(lang=lang)
+            label, emoji = labels.get(key, (key, "💰"))
             await query.answer()
             await query.edit_message_text(
                 f"{emoji} *{label}*\n\nScegli un'operazione:",
-                reply_markup=build_currency_edit_keyboard(cid, key),
+                reply_markup=build_currency_edit_keyboard(cid, key, lang=lang),
                 parse_mode="MarkdownV2",
             )
             return CHAR_CURRENCY_MENU
@@ -465,6 +468,7 @@ async def stop_command_handler(
     for k in pending_keys:
         context.user_data.pop(k, None)
 
+    lang = get_lang(update)
     char_id: int = context.user_data.get("active_char_id", 0)
     if not char_id:
         # Fallback: scan user_data values for a dict carrying char_id
@@ -475,7 +479,7 @@ async def stop_command_handler(
 
     if update.message:
         await update.message.reply_text(
-            "✋ Operazione annullata\\.", parse_mode="MarkdownV2"
+            translator.t("character.common.cancelled", lang=lang), parse_mode="MarkdownV2"
         )
 
     if char_id:

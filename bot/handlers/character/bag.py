@@ -19,6 +19,7 @@ from bot.handlers.character import (
 )
 from bot.keyboards.character import build_bag_keyboard, build_item_detail_keyboard, build_cancel_keyboard
 from bot.utils.formatting import format_bag
+from bot.utils.i18n import get_lang, translator
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +29,7 @@ _OP_KEY = "char_bag_pending"
 async def show_bag_menu(
     update: Update, context: ContextTypes.DEFAULT_TYPE, char_id: int, page: int = 0
 ) -> int:
+    lang = get_lang(update)
     async with get_session() as session:
         char = await session.get(Character, char_id)
         if char is None:
@@ -37,8 +39,8 @@ async def show_bag_menu(
         )
         items = list(result.scalars().all())
 
-    keyboard = build_bag_keyboard(char_id, items, page)
-    text = format_bag(items, char.carry_capacity, char.encumbrance)
+    keyboard = build_bag_keyboard(char_id, items, page, lang=lang)
+    text = format_bag(items, char.carry_capacity, char.encumbrance, lang=lang)
     await _edit_or_reply(update, text, keyboard)
     return CHAR_BAG_MENU
 
@@ -55,15 +57,16 @@ async def show_item_detail(
         if item is None or item.character_id != char_id:
             return await show_bag_menu(update, context, char_id)
 
-    desc = _esc(item.description) if item.description else "_Nessuna descrizione_"
+    lang = get_lang(update)
+    desc = _esc(item.description) if item.description else translator.t("character.bag.no_description", lang=lang)
     text = (
         f"📦 *{_esc(item.name)}*\n\n"
-        f"Quantità: *{item.quantity}*\n"
-        f"Peso unitario: *{_esc(f'{item.weight:.1f}')} kg*\n"
-        f"Peso totale: *{_esc(f'{item.weight * item.quantity:.1f}')} kg*\n\n"
-        f"{desc}"
+        + translator.t("character.bag.item_detail_qty", lang=lang, qty=item.quantity) + "\n"
+        + translator.t("character.bag.item_detail_weight_unit", lang=lang, weight=_esc(f'{item.weight:.1f}')) + "\n"
+        + translator.t("character.bag.item_detail_weight_total", lang=lang, total_weight=_esc(f'{item.weight * item.quantity:.1f}')) + "\n\n"
+        + desc
     )
-    keyboard = build_item_detail_keyboard(char_id, item_id, back_page)
+    keyboard = build_item_detail_keyboard(char_id, item_id, back_page, lang=lang)
     await _edit_or_reply(update, text, keyboard)
     return CHAR_BAG_MENU
 
@@ -71,8 +74,9 @@ async def show_item_detail(
 async def ask_add_item(
     update: Update, context: ContextTypes.DEFAULT_TYPE, char_id: int
 ) -> int:
+    lang = get_lang(update)
     context.user_data[_OP_KEY] = {"char_id": char_id, "step": "name"}
-    await _edit_or_reply(update, "📦 Inserisci il *nome* dell'oggetto:", build_cancel_keyboard(char_id, "char_bag"))
+    await _edit_or_reply(update, translator.t("character.bag.prompt_name", lang=lang), build_cancel_keyboard(char_id, "char_bag", lang=lang))
     return CHAR_BAG_ADD_NAME
 
 
@@ -82,6 +86,7 @@ async def handle_bag_text(
     if update.message is None:
         return CHAR_BAG_MENU
 
+    lang = get_lang(update)
     pending = context.user_data.get(_OP_KEY, {})
     char_id: int = pending.get("char_id")
     step: str = pending.get("step", "name")
@@ -89,13 +94,13 @@ async def handle_bag_text(
 
     if step == "name":
         if not text:
-            await update.message.reply_text("❌ Nome non valido\\.", parse_mode="MarkdownV2")
+            await update.message.reply_text(translator.t("character.bag.name_invalid", lang=lang), parse_mode="MarkdownV2")
             return CHAR_BAG_ADD_NAME
         context.user_data[_OP_KEY]["item_name"] = text
         context.user_data[_OP_KEY]["step"] = "weight"
         await update.message.reply_text(
-            "⚖️ Inserisci il *peso* unitario in kg \\(es\\. 1\\.5, o 0 se non pesa\\):",
-            reply_markup=build_cancel_keyboard(char_id, "char_bag"),
+            translator.t("character.bag.prompt_weight", lang=lang),
+            reply_markup=build_cancel_keyboard(char_id, "char_bag", lang=lang),
             parse_mode="MarkdownV2",
         )
         return CHAR_BAG_ADD_WEIGHT
@@ -106,13 +111,13 @@ async def handle_bag_text(
             if weight < 0:
                 raise ValueError
         except ValueError:
-            await update.message.reply_text("❌ Peso non valido\\.", parse_mode="MarkdownV2")
+            await update.message.reply_text(translator.t("character.bag.weight_invalid", lang=lang), parse_mode="MarkdownV2")
             return CHAR_BAG_ADD_WEIGHT
         context.user_data[_OP_KEY]["item_weight"] = weight
         context.user_data[_OP_KEY]["step"] = "qty"
         await update.message.reply_text(
-            "🔢 Inserisci la *quantità* \\(es\\. 1\\):",
-            reply_markup=build_cancel_keyboard(char_id, "char_bag"),
+            translator.t("character.bag.prompt_qty", lang=lang),
+            reply_markup=build_cancel_keyboard(char_id, "char_bag", lang=lang),
             parse_mode="MarkdownV2",
         )
         return CHAR_BAG_ADD_QTY
@@ -123,7 +128,7 @@ async def handle_bag_text(
             if qty < 1:
                 raise ValueError
         except ValueError:
-            await update.message.reply_text("❌ Quantità non valida\\.", parse_mode="MarkdownV2")
+            await update.message.reply_text(translator.t("character.bag.qty_invalid", lang=lang), parse_mode="MarkdownV2")
             return CHAR_BAG_ADD_QTY
 
         item_name = pending["item_name"]
@@ -156,7 +161,7 @@ async def handle_bag_text(
 
         context.user_data.pop(_OP_KEY, None)
         await update.message.reply_text(
-            f"✅ *{_esc(item_name)}* aggiunto allo zaino\\!", parse_mode="MarkdownV2"
+            translator.t("character.bag.item_added", lang=lang, name=_esc(item_name)), parse_mode="MarkdownV2"
         )
         return await show_bag_menu(update, context, char_id)
 

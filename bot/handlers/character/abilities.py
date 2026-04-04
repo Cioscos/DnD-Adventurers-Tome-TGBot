@@ -18,7 +18,8 @@ from bot.handlers.character import (
     CHAR_MENU,
 )
 from bot.keyboards.character import build_abilities_keyboard, build_ability_detail_keyboard, build_cancel_keyboard
-from bot.utils.formatting import RESTORATION_LABELS, format_abilities
+from bot.utils.formatting import RESTORATION_LABELS, format_abilities, get_restoration_labels
+from bot.utils.i18n import get_lang, translator
 
 logger = logging.getLogger(__name__)
 
@@ -28,14 +29,15 @@ _OP_KEY = "char_ability_pending"
 async def show_abilities_menu(
     update: Update, context: ContextTypes.DEFAULT_TYPE, char_id: int, page: int = 0
 ) -> int:
+    lang = get_lang(update)
     async with get_session() as session:
         result = await session.execute(
             select(Ability).where(Ability.character_id == char_id).order_by(Ability.name)
         )
         abilities = list(result.scalars().all())
 
-    keyboard = build_abilities_keyboard(char_id, abilities, page)
-    text = format_abilities(abilities)
+    keyboard = build_abilities_keyboard(char_id, abilities, page, lang=lang)
+    text = format_abilities(abilities, lang=lang)
     await _edit_or_reply(update, text, keyboard)
     return CHAR_ABILITIES_MENU
 
@@ -52,6 +54,7 @@ async def show_ability_detail(
         if ability is None or ability.character_id != char_id:
             return await show_abilities_menu(update, context, char_id)
 
+    lang = get_lang(update)
     passive_label = "✅ Passiva" if ability.is_passive else "⚡ Attiva"
     active_mark = "✅ Attivata" if ability.is_active else "⬛ Non attivata"
     uses_text = (
@@ -59,7 +62,8 @@ async def show_ability_detail(
         if ability.max_uses is not None
         else "Usi: illimitati"
     )
-    rest_label = RESTORATION_LABELS.get(ability.restoration_type, "—")
+    rest_labels = get_restoration_labels(lang=lang)
+    rest_label = rest_labels.get(ability.restoration_type, rest_labels.get(str(ability.restoration_type), "—"))
     desc = _esc(ability.description) if ability.description else "_Nessuna descrizione_"
     text = (
         f"⚡ *{_esc(ability.name)}*\n\n"
@@ -68,7 +72,7 @@ async def show_ability_detail(
         f"{uses_text}\n"
         f"Ripristino: {_esc(rest_label)}"
     )
-    keyboard = build_ability_detail_keyboard(char_id, ability, back_page)
+    keyboard = build_ability_detail_keyboard(char_id, ability, back_page, lang=lang)
     await _edit_or_reply(update, text, keyboard)
     return CHAR_ABILITIES_MENU
 
@@ -76,8 +80,9 @@ async def show_ability_detail(
 async def ask_learn_ability(
     update: Update, context: ContextTypes.DEFAULT_TYPE, char_id: int
 ) -> int:
+    lang = get_lang(update)
     context.user_data[_OP_KEY] = {"char_id": char_id, "step": "name"}
-    await _edit_or_reply(update, "⚡ Inserisci il *nome* dell'abilità:", build_cancel_keyboard(char_id, "char_abilities"))
+    await _edit_or_reply(update, translator.t("character.abilities.prompt_name", lang=lang), build_cancel_keyboard(char_id, "char_abilities", lang=lang))
     return CHAR_ABILITY_LEARN_NAME
 
 
@@ -87,6 +92,7 @@ async def handle_ability_learn_text(
     if update.message is None:
         return CHAR_ABILITY_LEARN_NAME
 
+    lang = get_lang(update)
     pending = context.user_data.get(_OP_KEY, {})
     char_id: int = pending.get("char_id")
     step: str = pending.get("step", "name")
@@ -94,13 +100,13 @@ async def handle_ability_learn_text(
 
     if step == "name":
         if not text:
-            await update.message.reply_text("❌ Nome non valido\\.", parse_mode="MarkdownV2")
+            await update.message.reply_text(translator.t("character.abilities.name_invalid", lang=lang), parse_mode="MarkdownV2")
             return CHAR_ABILITY_LEARN_NAME
         context.user_data[_OP_KEY]["ability_name"] = text
         context.user_data[_OP_KEY]["step"] = "desc"
         await update.message.reply_text(
-            "📝 Inserisci la *descrizione* \\(o \\- per saltare\\):",
-            reply_markup=build_cancel_keyboard(char_id, "char_abilities"),
+            translator.t("character.abilities.prompt_desc", lang=lang),
+            reply_markup=build_cancel_keyboard(char_id, "char_abilities", lang=lang),
             parse_mode="MarkdownV2",
         )
         return CHAR_ABILITY_LEARN_DESC
@@ -109,8 +115,8 @@ async def handle_ability_learn_text(
         context.user_data[_OP_KEY]["ability_desc"] = None if text == "-" else text
         context.user_data[_OP_KEY]["step"] = "passive"
         await update.message.reply_text(
-            "🔵 È un'abilità *passiva*? Rispondi *si* o *no*:",
-            reply_markup=build_cancel_keyboard(char_id, "char_abilities"),
+            translator.t("character.abilities.prompt_passive", lang=lang),
+            reply_markup=build_cancel_keyboard(char_id, "char_abilities", lang=lang),
             parse_mode="MarkdownV2",
         )
         return CHAR_ABILITY_LEARN_USES
@@ -120,8 +126,8 @@ async def handle_ability_learn_text(
         context.user_data[_OP_KEY]["is_passive"] = is_passive
         context.user_data[_OP_KEY]["step"] = "uses"
         await update.message.reply_text(
-            "🔢 Quanti *usi massimi* ha? \\(0 \\= illimitati\\):",
-            reply_markup=build_cancel_keyboard(char_id, "char_abilities"),
+            translator.t("character.abilities.prompt_uses", lang=lang),
+            reply_markup=build_cancel_keyboard(char_id, "char_abilities", lang=lang),
             parse_mode="MarkdownV2",
         )
         return CHAR_ABILITY_LEARN_USES
@@ -132,14 +138,13 @@ async def handle_ability_learn_text(
             if uses < 0:
                 raise ValueError
         except ValueError:
-            await update.message.reply_text("❌ Valore non valido\\.", parse_mode="MarkdownV2")
+            await update.message.reply_text(translator.t("character.abilities.uses_invalid", lang=lang), parse_mode="MarkdownV2")
             return CHAR_ABILITY_LEARN_USES
         context.user_data[_OP_KEY]["max_uses"] = uses if uses > 0 else None
         context.user_data[_OP_KEY]["step"] = "restoration"
-        restoration_options = "\\- `long_rest` \\(riposo lungo\\)\n\\- `short_rest` \\(riposo breve\\)\n\\- `none` \\(mai\\)"
         await update.message.reply_text(
-            f"😴 *Tipo di ripristino*:\n{restoration_options}",
-            reply_markup=build_cancel_keyboard(char_id, "char_abilities"),
+            translator.t("character.abilities.prompt_restoration", lang=lang),
+            reply_markup=build_cancel_keyboard(char_id, "char_abilities", lang=lang),
             parse_mode="MarkdownV2",
         )
         return CHAR_ABILITY_LEARN_USES
@@ -170,7 +175,7 @@ async def handle_ability_learn_text(
 
         context.user_data.pop(_OP_KEY, None)
         await update.message.reply_text(
-            f"✅ Abilità *{_esc(ability_name)}* imparata\\!", parse_mode="MarkdownV2"
+            translator.t("character.abilities.learned", lang=lang, name=_esc(ability_name)), parse_mode="MarkdownV2"
         )
         return await show_abilities_menu(update, context, char_id)
 

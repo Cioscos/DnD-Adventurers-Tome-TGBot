@@ -24,7 +24,7 @@ The top-level `/start` menu always shows two buttons:
 
 **Chat-type scoping**: `/start` is **private-chat only**. If called inside a group or supergroup, it replies with an Italian warning message and returns early — no menu is shown. `/party` and `/party_stop` are **group-only** (they reject private chats). No other commands have chat-type restrictions.
 
-**UI language**: Italian (all user-facing strings).
+**UI language**: Detected automatically from `update.effective_user.language_code`. Supported locales: `it` (default) and `en`. All user-facing strings are loaded from YAML locale files — never hardcoded.
 
 ### Tech Stack
 
@@ -36,6 +36,7 @@ The top-level `/start` menu always shows two buttons:
 | `sqlalchemy` | ≥ 2.0 | Async ORM for character persistence |
 | `aiosqlite` | ≥ 0.20 | SQLite async driver (used by SQLAlchemy) |
 | `rapidfuzz` | ≥ 3.0 | Fuzzy string matching for spell search |
+| `pyyaml` | ≥ 6.0 | YAML locale file parsing for i18n |
 | `cachetools` | (auto) | Installed by the `[callback-data]` extra for the callback LRU cache |
 
 ### Architecture
@@ -53,6 +54,9 @@ bot/
 │   ├── engine.py            # SQLAlchemy async engine, AsyncSession factory, init_db(), get_session()
 │   └── models.py            # ORM models: Character, CharacterClass, ClassResource, AbilityScore, Spell, SpellSlot,
 │                            #             Item, Currency, Ability, Map, GroupMember, PartySession + enums
+├── locales/
+│   ├── it.yaml              # Italian strings (~500 keys, hierarchical)
+│   └── en.yaml              # English translations (mirrors it.yaml structure)
 ├── schema/
 │   ├── types.py             # FieldInfo, TypeInfo, MenuCategory dataclasses
 │   └── registry.py          # SchemaRegistry singleton — introspects API, maps root queries, computes navigable fields
@@ -88,8 +92,9 @@ bot/
 │   ├── character_state.py   # CharAction frozen dataclass (character callback data) + make_char_back()
 │   └── party_state.py       # PartyAction frozen dataclass (party callback data)
 └── utils/
-    ├── formatting.py        # Italian-language text formatters for character screens
-    └── party_formatting.py  # Party message formatter: format_party_message(characters, session) → MarkdownV2
+    ├── formatting.py        # Character screen formatters — all accept lang: str = "it", use translator.t()
+    ├── party_formatting.py  # Party message formatter: format_party_message(characters, session, lang) → MarkdownV2
+    └── i18n.py              # Translator singleton, get_lang(update) helper, asyncio hot-reload watcher
 ```
 
 ### D&D API (Wiki)
@@ -227,7 +232,7 @@ Union types (e.g. `AnyEquipment`) are handled with `__typename` + inline fragmen
 
 ### Character Formatters
 
-`bot/utils/formatting.py` provides Italian-language formatters for every character screen: `format_character_summary` (accepts optional `spells` and `abilities` for active status), `format_hp`, `format_ac`, `format_ability_scores`, `format_spells`, `format_spell_detail`, `format_spell_slots`, `format_bag`, `format_currency`, `format_abilities`, `format_maps`, `format_dice_history`, `format_character_active_status`, `format_multiclass_menu`, `format_class_resources`. All use MarkdownV2 with `_esc()`.
+`bot/utils/formatting.py` provides localized formatters for every character screen: `format_character_summary` (accepts optional `spells` and `abilities` for active status), `format_hp`, `format_ac`, `format_ability_scores`, `format_spells`, `format_spell_detail`, `format_spell_slots`, `format_bag`, `format_currency`, `format_abilities`, `format_maps`, `format_dice_history`, `format_character_active_status`, `format_multiclass_menu`, `format_class_resources`. All accept `lang: str = "it"`, use `translator.t()` for all strings, and output MarkdownV2 with `_esc()`. Helper functions `get_ability_labels(lang)`, `get_currency_labels(lang)`, `get_restoration_labels(lang)` return language-aware label dicts.
 
 ## Coding Conventions
 
@@ -243,7 +248,8 @@ Union types (e.g. `AnyEquipment`) are handled with `__typename` + inline fragmen
 - **Character callback data**: use `CharAction` dataclass instances. The party and wiki `CallbackQueryHandler`s must filter out `CharAction` instances.
 - **Party callback data**: use `PartyAction` dataclass instances (`bot/models/party_state.py`). The wiki `CallbackQueryHandler` must also exclude `PartyAction` via `pattern=lambda d: not isinstance(d, CharAction) and not isinstance(d, PartyAction)`.
 - **Formatting**: Telegram MarkdownV2 — escape special chars with `_esc()`. Wiki uses `_esc()` from `navigation.py`; character screens use `_esc()` from `utils/formatting.py`.
-- **UI language**: Italian for all user-facing strings in character management. Wiki strings may remain in English.
+- **UI language**: All user-facing strings are loaded from YAML locale files via the `Translator` singleton (`bot/utils/i18n.py`). Never hardcode Italian (or any) strings — use `translator.t("key", lang=lang, **kwargs)`. Default language is `"it"`. See *i18n / Localization* section below.
+- **Language detection**: call `lang = get_lang(update)` at the top of every handler function that has access to an `Update` object. Pass `lang=lang` to all formatter and keyboard builder calls.
 - **Error handling**: catch `telegram.error.BadRequest`, `telegram.ext.InvalidCallbackData`, and `bot.api.client.APIError` in every handler. Show user-friendly message with 🏠 Menu button.
 - **Logging**: use `logging` module, not `print()`. The root logger is configured in `main.py` with two handlers: `StreamHandler` (console) and `RotatingFileHandler` (`logs/dnd_bot.log`, 5 MB / 3 backups, append mode). After setup, `logging.getLogger("httpx").setLevel(logging.WARNING)` silences per-request Telegram API noise from `httpx`.
 - **Error handler**: `error_handler(update, context)` in `main.py` is registered with `application.add_error_handler()`. It logs the exception locally and sends the full HTML-formatted traceback (chunked to ≤4096 chars) to the developer's private chat via `DEV_CHAT_ID` env variable. If `DEV_CHAT_ID` is not set, only local logging occurs. Never remove this handler.
@@ -272,11 +278,12 @@ Navigable sub-entity buttons (📂) are discovered automatically from the schema
 
 1. Add new state constant(s) to `bot/handlers/character/__init__.py` (update the `range()` count).
 2. Create the handler module in `bot/handlers/character/<feature>.py`.
-3. Add keyboard builder(s) to `bot/keyboards/character.py`.
-4. Add formatter(s) to `bot/utils/formatting.py`.
-5. Wire the new action into `character_callback_handler()` in `conversation.py`.
-6. Add the new state(s) to the `states` dict in `build_character_conversation_handler()`.
-7. For every state that awaits **text input**: include `build_cancel_keyboard(char_id, back_action)` in the prompt message (see *Cancel pattern for text inputs* above).
+3. Add keyboard builder(s) to `bot/keyboards/character.py` — each must accept `lang: str = "it"`.
+4. Add formatter(s) to `bot/utils/formatting.py` — each must accept `lang: str = "it"` and use `translator.t()`.
+5. Add all new user-facing strings to **both** `bot/locales/it.yaml` and `bot/locales/en.yaml` under an appropriate key hierarchy.
+6. Wire the new action into `character_callback_handler()` in `conversation.py`.
+7. Add the new state(s) to the `states` dict in `build_character_conversation_handler()`.
+8. For every state that awaits **text input**: include `build_cancel_keyboard(char_id, back_action, lang=lang)` in the prompt message (see *Cancel pattern for text inputs* above).
 
 ### Spell Management Details
 
@@ -319,8 +326,29 @@ Navigable sub-entity buttons (📂) are discovered automatically from the schema
   - **Private mode** (`party_mode`, `extra="private"`): edits the mode-selection message to show a "master presses here" prompt with `build_party_master_reveal_keyboard(group_id)`. The master presses the button (`party_master_reveal`) → bot sends a private message to the master → stores `message_chat_id = master.user_id` in the session.
 - **Real-time updates**: `maybe_update_party_message(char_id, bot)` in `handlers/party.py` finds all active `PartySession`s that include the character's user (via `GroupMember` join), rebuilds the message text, and calls `bot.edit_message_text`. It is invoked as `asyncio.create_task(_trigger_party_update(...))` from `hit_points.py` after every HP change and rest — fire-and-forget, never blocks the user response.
 - **Session cleanup**: if `edit_message_text` raises `BadRequest` (message too old/deleted), the session row is deleted. `/party_stop` also edits the party message to "🛑 Sessione party terminata." before deleting the session.
-- **Party message format** (`bot/utils/party_formatting.py`): MarkdownV2 with group title, countdown, and per-character rows showing name, class/level, HP bar, and AC. `format_party_message(characters, session)` takes `list[tuple[Character, str | None]]` (character + optional username) and the active `PartySession`.
+- **Party message format** (`bot/utils/party_formatting.py`): MarkdownV2 with group title, countdown, and per-character rows showing name, class/level, HP bar, and AC. `format_party_message(characters, session, lang="it")` takes `list[tuple[Character, str | None]]` (character + optional username) and the active `PartySession`. Fire-and-forget callers (no `Update`) pass `lang="it"` explicitly.
 - **`build_settings_keyboard`** now accepts `is_party_active: bool` to render the current toggle state.
+
+### i18n / Localization
+
+- **`Translator` singleton** (`bot/utils/i18n.py`): loaded at import time from `bot/locales/`. Key lookup uses dot-notation (e.g. `"character.hp.title"`). Fallback chain: `user_lang → "it" → key itself` (missing key returns the key string and logs a warning). Kwarg interpolation via `str.format_map()` (e.g. `translator.t("character.hp.current_label", lang=lang, current=45, max=60)`).
+- **Language detection**: `get_lang(update: Update) -> str` normalises `update.effective_user.language_code` (e.g. `"it-IT"` → `"it"`). Falls back to `"it"` if the code is not among loaded locales. Import from `bot.utils.i18n`.
+- **Hot-reload**: `translator.start_watcher()` is started as an asyncio task in `post_init`. It checks file mtimes every 300 seconds and reloads changed YAML files without restarting the bot. Locale edits take effect within 5 minutes automatically.
+- **Locale files**: `bot/locales/it.yaml` and `bot/locales/en.yaml`. Keys are hierarchical YAML — match the structure in the existing files when adding new keys.
+- **Button labels vs message text**: button label keys must NOT contain MarkdownV2 escaping (e.g. `(Liv. 5)` not `\(Liv\. 5\)`). Message text keys may contain MarkdownV2 escaping where needed (e.g. `*bold*`).
+
+#### Adding a new locale string
+
+1. Add the key (and Italian text) to `bot/locales/it.yaml`.
+2. Add the same key (with the English translation) to `bot/locales/en.yaml`.
+3. Use it in code via `translator.t("your.key", lang=lang, **kwargs)`.
+4. Never skip step 2 — a missing key in `en.yaml` falls back to Italian but logs a warning.
+
+#### Adding a new language
+
+1. Copy `bot/locales/it.yaml` to `bot/locales/<code>.yaml` (e.g. `de.yaml`).
+2. Translate all values.
+3. The `Translator` automatically discovers and loads any `.yaml` file present in `bot/locales/` at startup.
 
 ### Voice Notes
 

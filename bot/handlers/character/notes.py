@@ -19,6 +19,7 @@ from bot.handlers.character import (
     CHAR_VOICE_NOTE_TITLE,
 )
 from bot.keyboards.character import build_note_detail_keyboard, build_notes_keyboard, build_cancel_keyboard
+from bot.utils.i18n import get_lang, translator
 
 logger = logging.getLogger(__name__)
 
@@ -35,9 +36,12 @@ async def show_notes_menu(
             return CHAR_MENU
         notes: dict = char.notes or {}
 
+    lang = get_lang(update)
     titles = sorted(notes.keys())
     keyboard = build_notes_keyboard(char_id, titles, page)
-    text = f"📝 *Note*\n\n{len(titles)} note totali\\."
+    title = translator.t("character.notes.title", lang=lang)
+    count_str = translator.t("character.notes.count", lang=lang, count=len(titles))
+    text = f"{title}\n\n{count_str}"
     await _edit_or_reply(update, text, keyboard)
     return CHAR_NOTES_MENU
 
@@ -55,6 +59,7 @@ async def show_note(
             return CHAR_MENU
         notes: dict = char.notes or {}
 
+    lang = get_lang(update)
     body = notes.get(title, "")
     keyboard = build_note_detail_keyboard(char_id, title, back_page)
 
@@ -80,20 +85,20 @@ async def show_note(
             logger.exception("Failed to send voice note '%s'", title)
             await context.bot.send_message(
                 chat_id=chat_id,
-                text=f"⚠️ Impossibile riprodurre la nota vocale *{_esc(title)}*\\.",
+                text=translator.t("character.notes.voice_error", lang=lang, title=_esc(title)),
                 parse_mode="MarkdownV2",
             )
 
         await context.bot.send_message(
             chat_id=chat_id,
-            text=f"📝 *{_esc(title)}* \\(nota vocale\\)",
+            text=translator.t("character.notes.voice_label", lang=lang, title=_esc(title)),
             parse_mode="MarkdownV2",
             reply_markup=keyboard,
         )
         return CHAR_NOTES_MENU
 
     # Regular text note
-    display_body = _esc(body) if body else "_Nota vuota_"
+    display_body = _esc(body) if body else translator.t("character.notes.empty_body", lang=lang)
     text = f"📝 *{_esc(title)}*\n\n{display_body}"
     await _edit_or_reply(update, text, keyboard)
     return CHAR_NOTES_MENU
@@ -102,16 +107,18 @@ async def show_note(
 async def ask_new_note_title(
     update: Update, context: ContextTypes.DEFAULT_TYPE, char_id: int
 ) -> int:
+    lang = get_lang(update)
     context.user_data[_OP_KEY] = {"char_id": char_id, "step": "title", "type": "text"}
-    await _edit_or_reply(update, "📝 Inserisci il *titolo* della nota:", build_cancel_keyboard(char_id, "char_notes"))
+    await _edit_or_reply(update, translator.t("character.notes.prompt_title", lang=lang), build_cancel_keyboard(char_id, "char_notes", lang=lang))
     return CHAR_NOTE_NEW_TITLE
 
 
 async def ask_voice_note_title(
     update: Update, context: ContextTypes.DEFAULT_TYPE, char_id: int
 ) -> int:
+    lang = get_lang(update)
     context.user_data[_OP_KEY] = {"char_id": char_id, "step": "title", "type": "voice"}
-    await _edit_or_reply(update, "🎤 Inserisci il *titolo* della nota vocale:", build_cancel_keyboard(char_id, "char_notes"))
+    await _edit_or_reply(update, translator.t("character.notes.prompt_voice_title", lang=lang), build_cancel_keyboard(char_id, "char_notes", lang=lang))
     return CHAR_VOICE_NOTE_TITLE
 
 
@@ -120,14 +127,14 @@ async def handle_note_title_text(
 ) -> int:
     if update.message is None:
         return CHAR_NOTE_NEW_TITLE
-
+    lang = get_lang(update)
     pending = context.user_data.get(_OP_KEY, {})
     char_id: int = pending.get("char_id")
     note_type: str = pending.get("type", "text")
     title = update.message.text.strip()
 
     if not title:
-        await update.message.reply_text("❌ Titolo non valido\\.", parse_mode="MarkdownV2")
+        await update.message.reply_text(translator.t("character.notes.title_invalid", lang=lang), parse_mode="MarkdownV2")
         return CHAR_NOTE_NEW_TITLE
 
     context.user_data[_OP_KEY]["title"] = title
@@ -135,16 +142,16 @@ async def handle_note_title_text(
     if note_type == "voice":
         context.user_data[_OP_KEY]["step"] = "voice_body"
         await update.message.reply_text(
-            "🎤 Invia ora il *messaggio vocale*:",
-            reply_markup=build_cancel_keyboard(char_id, "char_notes"),
+            translator.t("character.notes.prompt_voice", lang=lang),
+            reply_markup=build_cancel_keyboard(char_id, "char_notes", lang=lang),
             parse_mode="MarkdownV2",
         )
         return CHAR_VOICE_NOTE_TITLE
 
     context.user_data[_OP_KEY]["step"] = "body"
     await update.message.reply_text(
-        f"📝 Inserisci il *contenuto* della nota *{_esc(title)}*:",
-        reply_markup=build_cancel_keyboard(char_id, "char_notes"),
+        translator.t("character.notes.prompt_content", lang=lang, title=_esc(title)),
+        reply_markup=build_cancel_keyboard(char_id, "char_notes", lang=lang),
         parse_mode="MarkdownV2",
     )
     return CHAR_NOTE_NEW_BODY
@@ -155,7 +162,7 @@ async def handle_note_body_text(
 ) -> int:
     if update.message is None:
         return CHAR_NOTE_NEW_BODY
-
+    lang = get_lang(update)
     pending = context.user_data.pop(_OP_KEY, None)
     if pending is None:
         return CHAR_NOTES_MENU
@@ -166,7 +173,7 @@ async def handle_note_body_text(
 
     await _save_note(char_id, title, body)
     await update.message.reply_text(
-        f"✅ Nota *{_esc(title)}* salvata\\!", parse_mode="MarkdownV2"
+        translator.t("character.notes.saved", lang=lang, title=_esc(title)), parse_mode="MarkdownV2"
     )
     return await show_notes_menu(update, context, char_id)
 
@@ -177,7 +184,7 @@ async def handle_voice_note(
     """Receive a voice message and download it to the local files/ directory."""
     if update.message is None or update.message.voice is None:
         return CHAR_VOICE_NOTE_TITLE
-
+    lang = get_lang(update)
     pending = context.user_data.pop(_OP_KEY, None)
     if pending is None:
         return CHAR_NOTES_MENU
@@ -201,7 +208,7 @@ async def handle_voice_note(
     # Store the local path reference in DB
     await _save_note(char_id, title, f"[VOICE:{file_path}]")
     await update.message.reply_text(
-        f"✅ Nota vocale *{_esc(title)}* salvata\\!", parse_mode="MarkdownV2"
+        translator.t("character.notes.voice_saved", lang=lang, title=_esc(title)), parse_mode="MarkdownV2"
     )
     return await show_notes_menu(update, context, char_id)
 
@@ -212,10 +219,11 @@ async def ask_edit_note(
     char_id: int,
     title: str,
 ) -> int:
+    lang = get_lang(update)
     context.user_data[_OP_KEY] = {"char_id": char_id, "step": "edit", "title": title}
     await _edit_or_reply(
-        update, f"✏️ Inserisci il nuovo contenuto per *{_esc(title)}*:",
-        build_cancel_keyboard(char_id, "char_notes"),
+        update, translator.t("character.notes.prompt_edit", lang=lang, title=_esc(title)),
+        build_cancel_keyboard(char_id, "char_notes", lang=lang),
     )
     return CHAR_NOTE_EDIT
 
@@ -225,7 +233,7 @@ async def handle_edit_note_text(
 ) -> int:
     if update.message is None:
         return CHAR_NOTE_EDIT
-
+    lang = get_lang(update)
     pending = context.user_data.pop(_OP_KEY, None)
     if pending is None:
         return CHAR_NOTES_MENU
@@ -235,7 +243,7 @@ async def handle_edit_note_text(
     new_body = update.message.text.strip()
 
     await _save_note(char_id, title, new_body)
-    await update.message.reply_text("✅ Nota aggiornata\\!", parse_mode="MarkdownV2")
+    await update.message.reply_text(translator.t("character.notes.updated", lang=lang), parse_mode="MarkdownV2")
     return await show_notes_menu(update, context, char_id)
 
 

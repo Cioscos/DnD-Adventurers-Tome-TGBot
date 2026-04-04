@@ -22,6 +22,7 @@ from bot.keyboards.character import (
     build_delete_confirm_keyboard,
 )
 from bot.models.character_state import CharAction
+from bot.utils.i18n import get_lang, translator
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +38,7 @@ async def show_character_selection(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> int:
     """Fetch user's characters and show selection menu."""
+    lang = get_lang(update)
     user_id = update.effective_user.id
     async with get_session() as session:
         result = await session.execute(
@@ -48,19 +50,12 @@ async def show_character_selection(
             await session.refresh(char, ["classes"])
 
     if not characters:
-        text = (
-            "⚔️ *Benvenuto nel gestore dei personaggi\\!*\n\n"
-            "Non hai ancora nessun personaggio\\. "
-            "Inserisci il nome del tuo primo eroe:"
-        )
+        text = translator.t("character.selection.welcome_new", lang=lang)
         await _reply_or_edit(update, text)
         return CHAR_NEW_NAME
 
-    keyboard = build_character_selection_keyboard(characters)
-    text = (
-        "⚔️ *I tuoi personaggi*\n\n"
-        "Seleziona un personaggio o creane uno nuovo:"
-    )
+    keyboard = build_character_selection_keyboard(characters, lang=lang)
+    text = translator.t("character.selection.select_prompt", lang=lang)
     await _reply_or_edit(update, text, keyboard)
     return CHAR_SELECT
 
@@ -78,10 +73,11 @@ async def handle_new_character_name(
     if update.message is None:
         return CHAR_NEW_NAME
 
+    lang = get_lang(update)
     name = update.message.text.strip()
     if not name or len(name) > 100:
         await update.message.reply_text(
-            "❌ Nome non valido\\. Inserisci un nome tra 1 e 100 caratteri:",
+            translator.t("character.selection.name_invalid", lang=lang),
             parse_mode="MarkdownV2",
         )
         return CHAR_NEW_NAME
@@ -105,7 +101,7 @@ async def handle_new_character_name(
 
     context.user_data[ACTIVE_CHAR_KEY] = char_id
     await update.message.reply_text(
-        f"✅ Personaggio *{_esc(name)}* creato con successo\\!",
+        translator.t("character.selection.char_created", lang=lang, name=_esc(name)),
         parse_mode="MarkdownV2",
     )
     # Start class selection as part of the creation wizard
@@ -121,6 +117,7 @@ async def show_delete_confirm(
     update: Update, context: ContextTypes.DEFAULT_TYPE, char_id: int
 ) -> int:
     """Show deletion confirmation screen."""
+    lang = get_lang(update)
     async with get_session() as session:
         char = await session.get(Character, char_id)
         if char is None:
@@ -128,11 +125,7 @@ async def show_delete_confirm(
         name = char.name
 
     keyboard = build_delete_confirm_keyboard(char_id)
-    text = (
-        f"🗑️ *Eliminare il personaggio '{_esc(name)}'?*\n\n"
-        "⚠️ Questa azione è *irreversibile*\\. Tutti i dati del personaggio "
-        "\\(oggetti, incantesimi, note, mappe\\) saranno cancellati\\."
-    )
+    text = translator.t("character.selection.delete_confirm", lang=lang, name=_esc(name))
     await _reply_or_edit(update, text, keyboard)
     return CHAR_SELECT
 

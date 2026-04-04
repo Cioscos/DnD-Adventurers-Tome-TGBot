@@ -1,4 +1,10 @@
-"""Italian-language text formatters for character display."""
+"""Localised text formatters for character display.
+
+All public functions accept an optional ``lang`` parameter (BCP-47 language
+code, e.g. ``"it"``, ``"en"``).  When not provided it defaults to ``"it"``
+to preserve existing behaviour.  Pass the result of
+:func:`bot.utils.i18n.get_lang` from the handler layer to localise output.
+"""
 
 from __future__ import annotations
 
@@ -13,8 +19,14 @@ from bot.db.models import (
     Spell,
     SpellSlot,
 )
+from bot.utils.i18n import translator
 
-# Mapping ability internal name → Italian label + emoji
+# ---------------------------------------------------------------------------
+# Legacy module-level label constants (Italian default).
+# These are kept for backward compatibility; prefer the get_*_labels()
+# functions when you have a language code available.
+# ---------------------------------------------------------------------------
+
 ABILITY_LABELS: dict[str, tuple[str, str]] = {
     "strength":     ("Forza",         "💪"),
     "dexterity":    ("Destrezza",     "🤸"),
@@ -39,21 +51,57 @@ RESTORATION_LABELS: dict[str, str] = {
 }
 
 
+# ---------------------------------------------------------------------------
+# Localised label helpers
+# ---------------------------------------------------------------------------
+
+def get_ability_labels(lang: str = "it") -> dict[str, tuple[str, str]]:
+    """Return a dict mapping ability name → (localised label, emoji)."""
+    return {
+        name: (
+            translator.t(f"ability_labels.{name}", lang=lang),
+            translator.t(f"ability_labels.{name}_emoji", lang=lang),
+        )
+        for name in ("strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma")
+    }
+
+
+def get_currency_labels(lang: str = "it") -> dict[str, tuple[str, str]]:
+    """Return a dict mapping currency key → (localised label, emoji)."""
+    return {
+        key: (
+            translator.t(f"currency_labels.{key}", lang=lang),
+            translator.t(f"currency_labels.{key}_emoji", lang=lang),
+        )
+        for key in ("copper", "silver", "electrum", "gold", "platinum")
+    }
+
+
+def get_restoration_labels(lang: str = "it") -> dict[str, str]:
+    """Return a dict mapping restoration type → localised label."""
+    return {
+        key: translator.t(f"restoration_labels.{key}", lang=lang)
+        for key in ("long_rest", "short_rest", "none")
+    }
+
+
 def modifier_str(value: int) -> str:
     mod = (value - 10) // 2
     return f"+{mod}" if mod >= 0 else str(mod)
 
 
-def format_character_header(char: Character) -> str:
+def format_character_header(char: Character, lang: str = "it") -> str:
     """Short one-line summary shown at the top of most menus."""
     lvl = char.total_level
     cls = char.class_summary
     hp_bar = _hp_bar(char.current_hit_points, char.hit_points)
+    level_label = translator.t("character.common.level_label", lang=lang)
+    ac_label = translator.t("character.common.ac_label", lang=lang)
     return (
         f"⚔️ *{_esc(char.name)}*\n"
-        f"🎭 {_esc(cls)} — Livello {lvl}\n"
+        f"🎭 {_esc(cls)} — {level_label} {lvl}\n"
         f"❤️ HP: {char.current_hit_points}/{char.hit_points} {hp_bar}\n"
-        f"🛡️ CA: {char.ac}"
+        f"🛡️ {ac_label}: {char.ac}"
     )
 
 
@@ -61,29 +109,33 @@ def format_character_summary(
     char: Character,
     spells: list[Spell] | None = None,
     abilities: list[Ability] | None = None,
+    lang: str = "it",
 ) -> str:
     """Full character sheet summary with active status."""
-    lines = [format_character_header(char)]
+    lines = [format_character_header(char, lang=lang)]
     if char.race:
-        lines.append(f"🧝 Razza: {_esc(char.race)}")
+        race_label = translator.t("character.common.race_label", lang=lang)
+        lines.append(f"{race_label}: {_esc(char.race)}")
     if char.gender:
-        lines.append(f"👤 Genere: {_esc(char.gender)}")
-    # Active status (concentration, pinned spells, passive abilities)
+        gender_label = translator.t("character.common.gender_label", lang=lang)
+        lines.append(f"{gender_label}: {_esc(char.gender)}")
     if spells is not None and abilities is not None:
-        active = format_character_active_status(char, spells, abilities)
+        active = format_character_active_status(char, spells, abilities, lang=lang)
         if active:
             lines.append("")
             lines.append(active)
     return "\n".join(lines)
 
 
-def format_ability_scores(scores: list[AbilityScore]) -> str:
+def format_ability_scores(scores: list[AbilityScore], lang: str = "it") -> str:
     if not scores:
-        return "Nessun punteggio impostato\\."
-    lines = ["*Punteggi Abilità*\n"]
+        return translator.t("character.stats.no_scores", lang=lang)
+    header = translator.t("character.common.ability_score_header", lang=lang)
+    lines = [f"{header}\n"]
     score_map = {s.name: s for s in scores}
+    labels = get_ability_labels(lang)
     for name in ABILITY_NAMES:
-        label, emoji = ABILITY_LABELS.get(name, (name, "•"))
+        label, emoji = labels.get(name, (name, "•"))
         score = score_map.get(name)
         val = score.value if score else 10
         mod = (val - 10) // 2
@@ -92,36 +144,43 @@ def format_ability_scores(scores: list[AbilityScore]) -> str:
     return "\n".join(lines)
 
 
-def format_hp(char: Character) -> str:
+def format_hp(char: Character, lang: str = "it") -> str:
     bar = _hp_bar(char.current_hit_points, char.hit_points)
-    return (
-        f"❤️ *Punti Vita*\n\n"
-        f"Attuali: *{char.current_hit_points}* / {char.hit_points}\n"
-        f"{bar}"
+    title = translator.t("character.hp.title", lang=lang)
+    current_label = translator.t(
+        "character.hp.current_label", lang=lang,
+        current=char.current_hit_points, max=char.hit_points,
     )
+    return f"{title}\n\n{current_label}\n{bar}"
 
 
-def format_ac(char: Character) -> str:
-    return (
-        f"🛡️ *Classe Armatura*\n\n"
-        f"Base: *{char.base_armor_class}*\n"
-        f"Scudo: *{char.shield_armor_class}*\n"
-        f"Magica: *{char.magic_armor}*\n"
-        f"━━━━━━━━\n"
-        f"Totale: *{char.ac}*"
-    )
+def format_ac(char: Character, lang: str = "it") -> str:
+    title = translator.t("character.ac.title", lang=lang)
+    base = translator.t("character.ac.base_label", lang=lang, base=char.base_armor_class)
+    shield = translator.t("character.ac.shield_label", lang=lang, shield=char.shield_armor_class)
+    magic = translator.t("character.ac.magic_label", lang=lang, magic=char.magic_armor)
+    total = translator.t("character.ac.total_label", lang=lang, total=char.ac)
+    return f"{title}\n\n{base}\n{shield}\n{magic}\n━━━━━━━━\n{total}"
 
 
-def format_spells(spells: list[Spell], concentrating_spell_id: int | None = None) -> str:
+def format_spells(
+    spells: list[Spell],
+    concentrating_spell_id: int | None = None,
+    lang: str = "it",
+) -> str:
     """Format spells grouped by level with status indicators."""
     if not spells:
-        return "Nessun incantesimo conosciuto\\."
+        return translator.t("character.spells.no_spells", lang=lang)
     by_level: dict[int, list[Spell]] = {}
     for s in spells:
         by_level.setdefault(s.level, []).append(s)
-    lines = ["*Incantesimi*\n"]
+    title = translator.t("character.spells.title", lang=lang)
+    lines = [f"{title}\n"]
     for lvl in sorted(by_level):
-        label = "Trucchetti" if lvl == 0 else f"Livello {lvl}"
+        if lvl == 0:
+            label = translator.t("character.spells.level_cantrips", lang=lang)
+        else:
+            label = translator.t("character.spells.level_generic", lang=lang, level=lvl)
         lines.append(f"*{label}*")
         for s in by_level[lvl]:
             indicators = ""
@@ -137,39 +196,43 @@ def format_spells(spells: list[Spell], concentrating_spell_id: int | None = None
     return "\n".join(lines)
 
 
-def format_spell_detail(spell: Spell) -> str:
+def format_spell_detail(spell: Spell, lang: str = "it") -> str:
     """Format full spell detail with all D&D 5e properties."""
-    level_label = "Trucchetto" if spell.level == 0 else f"Livello {spell.level}"
+    if spell.level == 0:
+        level_label = translator.t("character.spells.spell_detail_level_cantrip", lang=lang)
+    else:
+        level_label = translator.t("character.spells.spell_detail_level", lang=lang, level=spell.level)
     lines = [f"✨ *{_esc(spell.name)}*"]
     lines.append(f"📖 {_esc(level_label)}")
 
     if spell.casting_time:
-        lines.append(f"⏱️ Tempo di lancio: {_esc(spell.casting_time)}")
+        lines.append(translator.t("character.spells.spell_detail_casting_time", lang=lang, val=_esc(spell.casting_time)))
     if spell.range_area:
-        lines.append(f"📏 Gittata: {_esc(spell.range_area)}")
+        lines.append(translator.t("character.spells.spell_detail_range", lang=lang, val=_esc(spell.range_area)))
     if spell.components:
-        lines.append(f"🧩 Componenti: {_esc(spell.components)}")
+        lines.append(translator.t("character.spells.spell_detail_components", lang=lang, val=_esc(spell.components)))
     if spell.duration:
-        lines.append(f"⏳ Durata: {_esc(spell.duration)}")
+        lines.append(translator.t("character.spells.spell_detail_duration", lang=lang, val=_esc(spell.duration)))
 
     flags = []
     if spell.is_concentration:
-        flags.append("🔮 Concentrazione")
+        flags.append(translator.t("character.spells.spell_detail_concentration_flag", lang=lang))
     if spell.is_ritual:
-        flags.append("📖 Rituale")
+        flags.append(translator.t("character.spells.spell_detail_ritual_flag", lang=lang))
     if flags:
         lines.append(" \\| ".join(flags))
 
     if spell.attack_save:
-        lines.append(f"🎯 Attacco/TS: {_esc(spell.attack_save)}")
+        lines.append(translator.t("character.spells.spell_detail_attack_save", lang=lang, val=_esc(spell.attack_save)))
 
     if spell.description:
-        lines.append(f"\n📜 {_esc(spell.description)}")
+        desc_key = translator.t("character.spells.spell_detail_desc", lang=lang, desc=_esc(spell.description))
+        lines.append(f"\n{desc_key}")
     if spell.higher_level:
-        lines.append(f"\n📈 *A livelli superiori:* {_esc(spell.higher_level)}")
+        lines.append("\n" + translator.t("character.spells.spell_detail_higher_level", lang=lang, val=_esc(spell.higher_level)))
 
     if spell.is_pinned:
-        lines.append("\n📌 _Fissato nel menù_")
+        lines.append("\n" + translator.t("character.spells.spell_detail_pinned", lang=lang))
 
     return "\n".join(lines)
 
@@ -178,6 +241,7 @@ def format_character_active_status(
     char: Character,
     spells: list[Spell],
     abilities: list[Ability],
+    lang: str = "it",
 ) -> str:
     """Format active status section for the character summary.
 
@@ -185,33 +249,31 @@ def format_character_active_status(
     """
     lines: list[str] = []
 
-    # Active concentration
     if char.concentrating_spell_id:
         conc_spell = next(
             (s for s in spells if s.id == char.concentrating_spell_id), None
         )
         if conc_spell:
-            lines.append(f"🔮 Concentrazione: *{_esc(conc_spell.name)}*")
+            lines.append(translator.t("character.spells.concentration_active", lang=lang, name=_esc(conc_spell.name)))
 
-    # Pinned spells
     pinned = [s for s in spells if s.is_pinned]
     if pinned:
         names = ", ".join(_esc(s.name) for s in pinned)
-        lines.append(f"📌 Fissati: {names}")
+        lines.append(translator.t("character.spells.pinned_spells", lang=lang, names=names))
 
-    # Passive abilities that are active
     passive_active = [a for a in abilities if a.is_passive and a.is_active]
     if passive_active:
         names = ", ".join(_esc(a.name) for a in passive_active)
-        lines.append(f"⚡ Passivi attivi: {names}")
+        lines.append(translator.t("character.spells.passive_active", lang=lang, names=names))
 
     return "\n".join(lines) if lines else ""
 
 
-def format_spell_slots(slots: list[SpellSlot]) -> str:
+def format_spell_slots(slots: list[SpellSlot], lang: str = "it") -> str:
     if not slots:
-        return "Nessuno slot incantesimo\\."
-    lines = ["*Slot Incantesimi*\n"]
+        return translator.t("character.slots.no_slots", lang=lang)
+    title = translator.t("character.slots.title", lang=lang)
+    lines = [f"{title}\n"]
     for slot in sorted(slots, key=lambda s: s.level):
         avail = slot.available
         pips = "🔵" * avail + "⚫" * (slot.total - avail)
@@ -221,10 +283,11 @@ def format_spell_slots(slots: list[SpellSlot]) -> str:
     return "\n".join(lines)
 
 
-def format_bag(items: list[Item], carry_cap: int, encumbrance: float) -> str:
+def format_bag(items: list[Item], carry_cap: int, encumbrance: float, lang: str = "it") -> str:
     enc_int = int(encumbrance)
+    title = translator.t("character.bag.title", lang=lang)
     if not items:
-        items_text = "_Zaino vuoto_"
+        items_text = translator.t("character.bag.empty", lang=lang)
     else:
         item_lines = [
             f"  • {_esc(i.name)} x{i.quantity} \\({_esc(f'{i.weight * i.quantity:.1f}')} kg\\)"
@@ -232,60 +295,65 @@ def format_bag(items: list[Item], carry_cap: int, encumbrance: float) -> str:
         ]
         items_text = "\n".join(item_lines)
     bar = _load_bar(enc_int, carry_cap)
-    return (
-        f"📦 *Zaino*\n\n"
-        f"{items_text}\n\n"
-        f"Peso: {enc_int}/{carry_cap} kg {bar}"
-    )
+    weight_text = translator.t("character.bag.weight_display", lang=lang, current=enc_int, max=carry_cap, bar=bar)
+    return f"{title}\n\n{items_text}\n\n{weight_text}"
 
 
-def format_currency(cur: Currency | None) -> str:
+def format_currency(cur: Currency | None, lang: str = "it") -> str:
     if cur is None:
-        return "Nessuna moneta\\."
-    lines = ["💰 *Monete*\n"]
-    for key, (label, emoji) in CURRENCY_LABELS.items():
+        return translator.t("character.currency.no_currency", lang=lang)
+    title = translator.t("character.currency.title", lang=lang)
+    lines = [f"{title}\n"]
+    currency_labels = get_currency_labels(lang)
+    for key, (label, emoji) in currency_labels.items():
         val = getattr(cur, key, 0)
         lines.append(f"{emoji} {label}: *{val}*")
-    lines.append(f"\nTotale in rame: *{cur.total_in_copper()}* 🟤")
+    total_text = translator.t("character.currency.total_copper", lang=lang, total=cur.total_in_copper())
+    lines.append(f"\n{total_text}")
     return "\n".join(lines)
 
 
-def format_abilities(abilities: list[Ability]) -> str:
+def format_abilities(abilities: list[Ability], lang: str = "it") -> str:
     if not abilities:
-        return "Nessuna abilità speciale\\."
-    lines = ["*Abilità Speciali*\n"]
+        return translator.t("character.abilities.no_abilities", lang=lang)
+    title = translator.t("character.abilities.title", lang=lang)
+    lines = [f"{title}\n"]
+    passive_label = translator.t("character.abilities.passive_label", lang=lang)
     for a in abilities:
-        passive = "\\[Passiva\\]" if a.is_passive else ""
+        passive = passive_label if a.is_passive else ""
         active_mark = "✅" if a.is_active else ""
         uses = ""
         if a.max_uses is not None:
-            uses = f" — Usi: {a.uses}/{a.max_uses}"
+            uses = translator.t("character.abilities.uses_label", lang=lang, uses=a.uses, max=a.max_uses)
         lines.append(f"⚡ *{_esc(a.name)}* {passive}{active_mark}{uses}")
     return "\n".join(lines)
 
 
-def format_maps(maps: list[Map]) -> str:
+def format_maps(maps: list[Map], lang: str = "it") -> str:
     if not maps:
-        return "Nessuna mappa\\."
+        return translator.t("character.maps.no_maps", lang=lang)
+    title = translator.t("character.maps.title", lang=lang)
     zones: dict[str, int] = {}
     for m in maps:
         zones[m.zone_name] = zones.get(m.zone_name, 0) + 1
-    lines = ["🗺️ *Mappe*\n"]
+    lines = [f"{title}\n"]
     for zone, count in zones.items():
-        lines.append(f"📍 *{_esc(zone)}* — {count} file")
+        lines.append(translator.t("character.maps.zones_entry", lang=lang, zone=_esc(zone), count=count))
     return "\n".join(lines)
 
 
-def format_dice_history(rolls_history: list | None) -> str:
+def format_dice_history(rolls_history: list | None, lang: str = "it") -> str:
     if not rolls_history:
-        return "_Nessun tiro registrato\\._"
-    lines = ["🎲 *Storico Tiri*\n"]
+        return translator.t("character.dice.no_history", lang=lang)
+    title = translator.t("character.dice.history_title", lang=lang)
+    lines = [f"{title}\n"]
     for die_name, results in rolls_history[-10:]:
         total = sum(results)
         results_str = ", ".join(str(r) for r in results)
-        lines.append(
-            f"{_esc(die_name)}: \\[{_esc(results_str)}\\] \\= *{total}*"
-        )
+        lines.append(translator.t(
+            "character.dice.history_entry", lang=lang,
+            die=_esc(die_name), results=_esc(results_str), total=total,
+        ))
     return "\n".join(lines)
 
 
@@ -315,25 +383,28 @@ def _esc(text: str) -> str:
     return "".join(f"\\{c}" if c in special else c for c in str(text))
 
 
-def format_multiclass_menu(classes: list) -> str:
+def format_multiclass_menu(classes: list, lang: str = "it") -> str:
     """Format the multiclass menu display with subclass and resource summary."""
+    title = translator.t("character.multiclass.title", lang=lang)
     if not classes:
-        return "🎭 *Multiclasse*\n\n_Nessuna classe assegnata\\._"
+        no_classes = translator.t("character.multiclass.no_classes", lang=lang)
+        return f"{title}\n\n{no_classes}"
 
-    lines = ["🎭 *Multiclasse*\n"]
+    level_label = translator.t("character.common.level_label", lang=lang)
+    infinity = translator.t("character.class_resources.infinity", lang=lang)
+    lines = [f"{title}\n"]
     for cls in classes:
         subclass_str = f" \\({_esc(cls.subclass)}\\)" if cls.subclass else ""
         lines.append(f"  • *{_esc(cls.class_name)}* {cls.level}{subclass_str}")
-        # Show resource summary if any
         if hasattr(cls, 'resources') and cls.resources:
             res_parts = []
             for r in cls.resources:
-                total_display = "∞" if r.total >= 99 else str(r.total)
+                total_display = infinity if r.total >= 99 else str(r.total)
                 res_parts.append(f"{_esc(r.name)}: {r.current}/{total_display}")
             lines.append("    🔋 " + " \\| ".join(res_parts))
 
     total = sum(c.level for c in classes)
-    lines.append(f"\n*Livello totale: {total}*")
+    lines.append("\n" + translator.t("character.multiclass.total_level", lang=lang, total=total))
     return "\n".join(lines)
 
 
@@ -342,20 +413,27 @@ def format_class_resources(
     subclass: str | None,
     level: int,
     resources: list,
+    lang: str = "it",
 ) -> str:
     """Format the class resource management screen."""
+    level_label = translator.t("character.common.level_label", lang=lang)
     subclass_str = f" \\({_esc(subclass)}\\)" if subclass else ""
+    res_title = translator.t("character.class_resources.title", lang=lang)
+    infinity = translator.t("character.class_resources.infinity", lang=lang)
+    restoration_labels = get_restoration_labels(lang)
     lines = [
-        f"🎭 *{_esc(class_name)}*{subclass_str} — Livello {level}",
+        f"🎭 *{_esc(class_name)}*{subclass_str} — {level_label} {level}",
         "",
-        "*Risorse di Classe:*",
+        res_title,
     ]
     for res in resources:
-        total_display = "∞" if res.total >= 99 else str(res.total)
+        total_display = infinity if res.total >= 99 else str(res.total)
         bar = _resource_bar(res.current, res.total)
-        rest_label = RESTORATION_LABELS.get(res.restoration_type, str(res.restoration_type))
+        rest_label = restoration_labels.get(res.restoration_type, str(res.restoration_type))
         lines.append(f"🔋 *{_esc(res.name)}*: {res.current}/{total_display} {bar}")
-        lines.append(f"   ↩️ Recupero: {_esc(rest_label)}")
+        lines.append(
+            translator.t("character.class_resources.restoration_label", lang=lang, label=_esc(rest_label))
+        )
         if res.note:
             lines.append(f"   📝 _{_esc(res.note)}_")
     return "\n".join(lines)

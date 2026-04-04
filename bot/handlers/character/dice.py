@@ -13,6 +13,7 @@ from bot.db.models import Character
 from bot.handlers.character import CHAR_DICE_MENU, CHAR_MENU
 from bot.keyboards.character import build_dice_count_keyboard, build_dice_keyboard
 from bot.utils.formatting import format_dice_history
+from bot.utils.i18n import get_lang, translator
 
 logger = logging.getLogger(__name__)
 
@@ -26,9 +27,10 @@ async def show_dice_menu(
             return CHAR_MENU
         history = char.rolls_history or []
 
+    lang = get_lang(update)
     keyboard = build_dice_keyboard(char_id)
-    history_text = format_dice_history(history)
-    text = f"🎲 *Tira Dado*\n\n{history_text}"
+    history_text = format_dice_history(history, lang=lang)
+    text = translator.t("character.dice.title", lang=lang) + "\n\n" + history_text
     await _edit_or_reply(update, text, keyboard)
     return CHAR_DICE_MENU
 
@@ -36,8 +38,9 @@ async def show_dice_menu(
 async def show_dice_count_picker(
     update: Update, context: ContextTypes.DEFAULT_TYPE, char_id: int, die: str
 ) -> int:
+    lang = get_lang(update)
     keyboard = build_dice_count_keyboard(char_id, die)
-    await _edit_or_reply(update, f"🎲 Quanti *{die}* vuoi tirare?", keyboard)
+    await _edit_or_reply(update, translator.t("character.dice.prompt_count", lang=lang, die=die), keyboard)
     return CHAR_DICE_MENU
 
 
@@ -64,10 +67,11 @@ async def roll_dice(
         char.rolls_history = history
 
     result_str = ", ".join(str(r) for r in results)
+    lang = get_lang(update)
     text = (
-        f"🎲 *{count}{die}*\n\n"
-        f"Risultati: \\[{_esc(result_str)}\\]\n"
-        f"*Totale: {total}*"
+        translator.t("character.dice.results_title", lang=lang, count=count, die=die) + "\n\n"
+        + translator.t("character.dice.results_line", lang=lang, results=_esc(result_str)) + "\n"
+        + translator.t("character.dice.total_line", lang=lang, total=total)
     )
     if update.callback_query:
         await update.callback_query.answer(f"{count}{die} = {total}")

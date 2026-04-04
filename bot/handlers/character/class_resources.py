@@ -19,6 +19,8 @@ from bot.handlers.character import CHAR_MULTICLASS_MENU
 
 logger = logging.getLogger(__name__)
 
+from bot.utils.i18n import get_lang, translator
+
 
 async def show_class_resources_menu(
     update: Update,
@@ -29,6 +31,7 @@ async def show_class_resources_menu(
     """Show the resource management screen for a specific class."""
     from bot.keyboards.character import build_class_resources_keyboard
     from bot.utils.formatting import format_class_resources
+    lang = get_lang(update)
 
     async with get_session() as session:
         cls = await session.get(CharacterClass, class_id)
@@ -49,7 +52,7 @@ async def show_class_resources_menu(
         )
         keyboard = build_class_resources_keyboard(char_id, class_id, [])
     else:
-        text = format_class_resources(class_name, subclass, level, resources)
+        text = format_class_resources(class_name, subclass, level, resources, lang=lang)
         keyboard = build_class_resources_keyboard(char_id, class_id, resources)
 
     await _edit_or_reply(update, text, keyboard)
