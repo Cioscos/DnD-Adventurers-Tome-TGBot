@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import random
 
@@ -76,6 +77,7 @@ async def roll_dice(
     if update.callback_query:
         await update.callback_query.answer(f"{count}{die} = {total}")
 
+    asyncio.create_task(_trigger_party_update(char_id, context))
     await _edit_or_reply(update, text)
     return await show_dice_menu(update, context, char_id)
 
@@ -94,6 +96,15 @@ async def clear_dice_history(
 
 
 # ---------------------------------------------------------------------------
+
+async def _trigger_party_update(char_id: int, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Fire-and-forget wrapper that calls maybe_update_party_message."""
+    try:
+        from bot.handlers.party import maybe_update_party_message
+        await maybe_update_party_message(char_id, context.bot)
+    except Exception as e:
+        logger.warning("Party update trigger failed for char %s: %s", char_id, e)
+
 
 async def _edit_or_reply(update: Update, text: str, keyboard=None) -> None:
     kwargs = dict(text=text, parse_mode="MarkdownV2")

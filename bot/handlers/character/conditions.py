@@ -8,6 +8,7 @@ Conditions are stored as a JSON dict in ``Character.conditions``.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 
 from telegram import Update
@@ -79,6 +80,7 @@ async def toggle_condition(
         conditions[slug] = not bool(conditions.get(slug, False))
         char.conditions = conditions
 
+    asyncio.create_task(_trigger_party_update(char_id, context))
     if update.callback_query:
         await update.callback_query.answer(
             translator.t("character.conditions.updated", lang=lang)
@@ -117,6 +119,7 @@ async def adjust_exhaustion(
 
         char.conditions = conditions
 
+    asyncio.create_task(_trigger_party_update(char_id, context))
     if update.callback_query:
         await update.callback_query.answer(
             translator.t("character.conditions.updated", lang=lang)
@@ -127,6 +130,15 @@ async def adjust_exhaustion(
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
+
+async def _trigger_party_update(char_id: int, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Fire-and-forget wrapper that calls maybe_update_party_message."""
+    try:
+        from bot.handlers.party import maybe_update_party_message
+        await maybe_update_party_message(char_id, context.bot)
+    except Exception as e:
+        logger.warning("Party update trigger failed for char %s: %s", char_id, e)
+
 
 async def _edit_or_reply(update: Update, text: str, keyboard=None) -> None:
     kwargs = dict(text=text, parse_mode="MarkdownV2")
