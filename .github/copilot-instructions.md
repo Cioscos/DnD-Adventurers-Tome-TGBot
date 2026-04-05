@@ -16,7 +16,7 @@ An async Telegram bot with three main sections:
 
 1. **Wiki D&D 5e** — browse the D&D 5e compendium (spells, monsters, classes, races, equipment, etc.) via inline keyboards, fetching data from the public GraphQL API. The bot **dynamically discovers** the API schema at startup via GraphQL introspection.
 2. **Gestione Personaggio** — full D&D character management: HP, AC, ability scores, spells, inventory, currency, dice, notes, maps, conditions, and more. Data is persisted in a local SQLite database via SQLAlchemy async.
-3. **Funzionalità Gruppo (Party)** — group Telegram feature: `/party` and `/party_stop` commands that show a live-updated party status message with all active characters' HP.
+3. **Funzionalità Gruppo (Party)** — group Telegram feature: `/party` and `/party_stop` commands that show a live-updated party status message with all active characters' HP, AC, active conditions, and last dice roll.
 
 The top-level `/start` menu always shows two buttons:
 - `📖 Wiki D&D` → opens the wiki explorer
@@ -70,7 +70,7 @@ bot/
 │       ├── selection.py     # Character create / select / delete; creation wizard includes class selection step
 │       ├── menu.py          # Character main menu with summary
 │       ├── hit_points.py    # HP (set max, set current, damage, healing) + rest (restores ClassResource on rest); fires party update hook
-│       ├── armor_class.py   # CA (base, shield, magic)
+│       ├── armor_class.py   # CA (base, shield, magic); fires party update hook on change
 │       ├── stats.py         # Ability scores (FOR/DES/COS/INT/SAG/CAR) with modifiers
 │       ├── spells.py        # Learn / forget / use spells (slot picker, concentration tracking, TS, pin) + fuzzy search
 │       ├── spell_slots.py   # Add / use / restore / remove spell slot levels
@@ -79,10 +79,10 @@ bot/
 │       ├── abilities.py     # Special abilities (passive/active, uses, restoration type)
 │       ├── multiclass.py    # Multiclassing: guided/custom class add, subclass, level up/down, resource auto-gen
 │       ├── class_resources.py # Class-specific resources (Ki, Rage, etc.): view / use / restore per ClassResource
-│       ├── dice.py          # Dice roller (d4–d100) with history
+│       ├── dice.py          # Dice roller (d4–d100) with history; fires party update hook on roll
 │       ├── notes.py         # Text notes + voice notes
 │       ├── maps.py          # Map images/documents organised by zone
-│       ├── conditions.py    # D&D 5e conditions tracker (14 binary + Exhaustion 0–6)
+│       ├── conditions.py    # D&D 5e conditions tracker (14 binary + Exhaustion 0–6); fires party update hook on toggle/adjust
 │       └── settings.py      # Per-character settings (spell management mode, party active toggle)
 ├── keyboards/
 │   ├── builder.py           # Wiki keyboards: categories, paginated list, detail (📂 buttons), sub-list
@@ -94,7 +94,7 @@ bot/
 │   └── party_state.py       # PartyAction frozen dataclass (party callback data)
 └── utils/
     ├── formatting.py        # Character screen formatters — all accept lang: str = "it", use translator.t()
-    ├── party_formatting.py  # Party message formatter: format_party_message(characters, session, lang) → MarkdownV2
+    ├── party_formatting.py  # Party message formatter: format_party_message(characters, session, lang) → MarkdownV2; helpers _get_active_conditions(), _get_last_roll()
     └── i18n.py              # Translator singleton, get_lang(update) helper, asyncio hot-reload watcher
 ```
 
@@ -340,9 +340,13 @@ Navigable sub-entity buttons (📂) are discovered automatically from the schema
   - `/party` → shows `build_party_mode_keyboard(group_id)` with 🌐 Pubblica / 🔒 Privata.
   - **Public mode** (`party_mode`, `extra="public"`): sends the party message in the group, stores `message_chat_id = group_id` in the session.
   - **Private mode** (`party_mode`, `extra="private"`): edits the mode-selection message to show a "master presses here" prompt with `build_party_master_reveal_keyboard(group_id)`. The master presses the button (`party_master_reveal`) → bot sends a private message to the master → stores `message_chat_id = master.user_id` in the session.
-- **Real-time updates**: `maybe_update_party_message(char_id, bot)` in `handlers/party.py` finds all active `PartySession`s that include the character's user (via `GroupMember` join), rebuilds the message text, and calls `bot.edit_message_text`. It is invoked as `asyncio.create_task(_trigger_party_update(...))` from `hit_points.py` after every HP change and rest — fire-and-forget, never blocks the user response.
+- **Real-time updates**: `maybe_update_party_message(char_id, bot)` in `handlers/party.py` finds all active `PartySession`s that include the character's user (via `GroupMember` join), rebuilds the message text, and calls `bot.edit_message_text`. It is invoked as `asyncio.create_task(_trigger_party_update(...))` — fire-and-forget, never blocks the user response — from:
+  - `hit_points.py` after every HP change (set max, set current, damage, heal) and rest
+  - `armor_class.py` after every AC change (base, shield, magic)
+  - `conditions.py` after every condition toggle or exhaustion adjustment
+  - `dice.py` after every dice roll
 - **Session cleanup**: if `edit_message_text` raises `BadRequest` (message too old/deleted), the session row is deleted. `/party_stop` also edits the party message to "🛑 Sessione party terminata." before deleting the session.
-- **Party message format** (`bot/utils/party_formatting.py`): MarkdownV2 with group title, countdown, and per-character rows showing name, class/level, HP bar, and AC. `format_party_message(characters, session, lang="it")` takes `list[tuple[Character, str | None]]` (character + optional username) and the active `PartySession`. Fire-and-forget callers (no `Update`) pass `lang="it"` explicitly.
+- **Party message format** (`bot/utils/party_formatting.py`): MarkdownV2 with group title, countdown, and per-character rows showing name, class/level, HP bar, AC, active conditions (omitted when none), and last dice roll (omitted when history is empty). `format_party_message(characters, session, lang="it")` takes `list[tuple[Character, str | None]]` (character + optional username) and the active `PartySession`. Fire-and-forget callers (no `Update`) pass `lang="it"` explicitly. Helper functions `_get_active_conditions(char, lang)` and `_get_last_roll(char)` return compact strings or `""` to conditionally include those lines.
 - **`build_settings_keyboard`** now accepts `is_party_active: bool` to render the current toggle state.
 
 ### i18n / Localization
