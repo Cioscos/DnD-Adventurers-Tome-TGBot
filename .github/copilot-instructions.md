@@ -15,7 +15,7 @@
 An async Telegram bot with three main sections:
 
 1. **Wiki D&D 5e** — browse the D&D 5e compendium (spells, monsters, classes, races, equipment, etc.) via inline keyboards, fetching data from the public GraphQL API. The bot **dynamically discovers** the API schema at startup via GraphQL introspection.
-2. **Gestione Personaggio** — full D&D character management: HP, AC, ability scores, spells, inventory, currency, dice, notes, maps, and more. Data is persisted in a local SQLite database via SQLAlchemy async.
+2. **Gestione Personaggio** — full D&D character management: HP, AC, ability scores, spells, inventory, currency, dice, notes, maps, conditions, and more. Data is persisted in a local SQLite database via SQLAlchemy async.
 3. **Funzionalità Gruppo (Party)** — group Telegram feature: `/party` and `/party_stop` commands that show a live-updated party status message with all active characters' HP.
 
 The top-level `/start` menu always shows two buttons:
@@ -65,7 +65,7 @@ bot/
 │   ├── navigation.py        # N-level CallbackQueryHandler dispatcher + MarkdownV2 formatters (wiki)
 │   ├── party.py             # /party, /party_stop commands + PartyAction callbacks + track_group_member + maybe_update_party_message
 │   └── character/
-│       ├── __init__.py      # Conversation state constants (48 states)
+│       ├── __init__.py      # Conversation state constants (49 states)
 │       ├── conversation.py  # Master ConversationHandler — routes CharAction callbacks, stop_command_handler, builds handler
 │       ├── selection.py     # Character create / select / delete; creation wizard includes class selection step
 │       ├── menu.py          # Character main menu with summary
@@ -82,6 +82,7 @@ bot/
 │       ├── dice.py          # Dice roller (d4–d100) with history
 │       ├── notes.py         # Text notes + voice notes
 │       ├── maps.py          # Map images/documents organised by zone
+│       ├── conditions.py    # D&D 5e conditions tracker (14 binary + Exhaustion 0–6)
 │       └── settings.py      # Per-character settings (spell management mode, party active toggle)
 ├── keyboards/
 │   ├── builder.py           # Wiki keyboards: categories, paginated list, detail (📂 buttons), sub-list
@@ -124,7 +125,7 @@ bot/
 
 | Table | Key fields |
 |---|---|
-| `characters` | `id`, `user_id`, `name`, `race`, `gender`, `hit_points`, `current_hit_points`, `base_armor_class`, `shield_armor_class`, `magic_armor`, `spell_slots_mode`, `concentrating_spell_id` (FK → spells.id), `rolls_history` (JSON), `notes` (JSON), `settings` (JSON), `is_party_active` (bool, default False) |
+| `characters` | `id`, `user_id`, `name`, `race`, `gender`, `hit_points`, `current_hit_points`, `base_armor_class`, `shield_armor_class`, `magic_armor`, `spell_slots_mode`, `concentrating_spell_id` (FK → spells.id), `rolls_history` (JSON), `notes` (JSON), `settings` (JSON), `is_party_active` (bool, default False), `conditions` (JSON, default empty dict) |
 | `character_classes` | `character_id` → FK, `class_name`, `level`, `subclass` (optional) |
 | `class_resources` | `class_id` → FK (character_classes.id, cascade), `name`, `current`, `total`, `restoration_type`, `note` |
 | `ability_scores` | `character_id` → FK, `name` (strength/dexterity/…), `value` |
@@ -170,13 +171,15 @@ class CharAction:
     back: tuple[str, ...] = ()
 ```
 
-Key `action` values: `char_select`, `char_new`, `char_menu`, `char_hp`, `char_ac`, `char_stats`, `char_level`, `char_spells`, `char_slots`, `char_bag`, `char_currency`, `char_abilities`, `char_multiclass`, `char_class_res`, `char_dice`, `char_notes`, `char_maps`, `char_rest`, `char_settings`, `char_party_active`, `char_delete`.
+Key `action` values: `char_select`, `char_new`, `char_menu`, `char_hp`, `char_ac`, `char_stats`, `char_level`, `char_spells`, `char_slots`, `char_bag`, `char_currency`, `char_abilities`, `char_multiclass`, `char_class_res`, `char_dice`, `char_notes`, `char_maps`, `char_rest`, `char_conditions`, `char_settings`, `char_party_active`, `char_delete`.
 
 Key `char_spells` sub-actions: `learn`, `learn_conc_yes`, `learn_conc_no`, `detail`, `forget`, `use`, `use_slot`, `activate_conc`, `drop_conc`, `conc_save`, `pin`, `edit_menu`, `edit_<field>` (e.g. `edit_casting_time`, `edit_is_concentration`), `search`, `search_show`.
 
 Key `char_multiclass` sub-actions: `add`, `guided` (show class list), `custom` (free-text entry), `select_guided` (class chosen from list, `extra=class_name`), `skip_subclass`, `remove`, `remove_confirm` (`extra=class_name`).
 
 Key `char_class_res` sub-actions: `menu` (`extra=class_id`), `use` (`item_id=resource_id, extra=class_id`), `restore_one` (`item_id=resource_id, extra=class_id`), `restore_all` (`extra=class_id`), `noop`.
+
+Key `char_conditions` sub-actions: `detail` (`extra=slug`, opens condition detail), `toggle` (`extra=slug`, toggles a binary condition on/off), `exhaust_up` (increases Exhaustion level by 1), `exhaust_down` (decreases Exhaustion level by 1). The `extra` field carries the condition slug (e.g. `"blinded"`, `"exhaustion"`).
 
 #### Party Feature (PartyAction)
 
@@ -232,7 +235,9 @@ Union types (e.g. `AnyEquipment`) are handled with `__typename` + inline fragmen
 
 ### Character Formatters
 
-`bot/utils/formatting.py` provides localized formatters for every character screen: `format_character_summary` (accepts optional `spells` and `abilities` for active status), `format_hp`, `format_ac`, `format_ability_scores`, `format_spells`, `format_spell_detail`, `format_spell_slots`, `format_bag`, `format_currency`, `format_abilities`, `format_maps`, `format_dice_history`, `format_character_active_status`, `format_multiclass_menu`, `format_class_resources`. All accept `lang: str = "it"`, use `translator.t()` for all strings, and output MarkdownV2 with `_esc()`. Helper functions `get_ability_labels(lang)`, `get_currency_labels(lang)`, `get_restoration_labels(lang)` return language-aware label dicts.
+`bot/utils/formatting.py` provides localized formatters for every character screen: `format_character_summary` (accepts optional `spells` and `abilities` for active status), `format_hp`, `format_ac`, `format_ability_scores`, `format_spells`, `format_spell_detail`, `format_spell_slots`, `format_bag`, `format_currency`, `format_abilities`, `format_maps`, `format_dice_history`, `format_character_active_status`, `format_multiclass_menu`, `format_class_resources`, `format_conditions`, `format_condition_detail`. All accept `lang: str = "it"`, use `translator.t()` for all strings, and output MarkdownV2 with `_esc()`. Helper functions `get_ability_labels(lang)`, `get_currency_labels(lang)`, `get_restoration_labels(lang)` return language-aware label dicts.
+
+**Important**: condition description strings stored in YAML locale files are **pre-escaped MarkdownV2** (e.g. `\.` for a literal dot). Do **not** pass them through `_esc()` — use them directly. Only plain-text strings (names, labels) should be escaped.
 
 ## Coding Conventions
 
@@ -313,6 +318,17 @@ Navigable sub-entity buttons (📂) are discovered automatically from the schema
 - **Guerriero Dadi Superiorità**: included for all fighters (not just Battle Master) for simplicity. A `note` field on the resource record explains this.
 - **Rest integration**: `handle_rest()` in `hit_points.py` calls `restore_class_resources_on_rest(char_id, rest_type)` from `class_resources.py` after the standard rest logic. This restores all `ClassResource` rows matching the rest type.
 - **Resource screen** (`char_class_res`): shows `[➖] [🔋 Name: current/total] [➕]` rows per resource, a "🔄 Ripristina Tutto" button, and a back/menu nav row. Tapping ➖/➕ adjusts by 1; restore all resets `current = total`.
+
+### Conditions Details
+
+- **14 binary conditions** (on/off): Blinded, Charmed, Deafened, Frightened, Grappled, Incapacitated, Invisible, Paralyzed, Petrified, Poisoned, Prone, Restrained, Stunned, Unconscious.
+- **Exhaustion** condition with levels 0–6 (0 = inactive). Adjusted via ➕/➖ buttons; 6 = death.
+- **Storage**: stored as a JSON dict in `Character.conditions` (e.g. `{"blinded": true, "exhaustion": 3}`). All missing keys default to `False`/`0`. Column added via idempotent DB migration.
+- **`CONDITIONS_ORDER`** constant in `bot/utils/formatting.py` defines the canonical display order of all 15 slugs. It is imported by `bot/keyboards/character.py` to guarantee consistent ordering.
+- **Condition slugs** (snake_case): `blinded`, `charmed`, `deafened`, `frightened`, `grappled`, `incapacitated`, `invisible`, `paralyzed`, `petrified`, `poisoned`, `prone`, `restrained`, `stunned`, `unconscious`, `exhaustion`.
+- **Locale keys**: names under `character.conditions.names.<slug>`, descriptions under `character.conditions.desc.<slug>`. Descriptions are **pre-escaped MarkdownV2** in YAML — never pass them through `_esc()`.
+- **List view** (`format_conditions`): shows `✅ *Name*` / `⬛ *Name*` per condition; exhaustion shows `✅ *Esaurimento*: {level}/6` when active.
+- **Detail view** (`format_condition_detail`): shows name (bold), full D&D 5e description (raw, pre-escaped MarkdownV2), then status line `{marker} {label}` (binary) or `{marker} Livello: *N*/6` (exhaustion).
 
 ### Party Feature Details
 
