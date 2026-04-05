@@ -476,6 +476,8 @@ party:
   msg_char_class: "🎭 {classes}"
   msg_char_hp: "❤️ HP: {current}/{max} {bar}"
   msg_char_ac: "🛡️ CA: {ac}"
+  msg_char_conditions: "⚠️ {conditions}"
+  msg_char_last_roll: "🎲 {roll}"
   time_expired: "scaduta"
   time_format: "{hours}h {minutes}m"
   time_unknown: "N/D"

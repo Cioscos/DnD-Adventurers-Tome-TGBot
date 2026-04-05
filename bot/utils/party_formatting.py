@@ -41,6 +41,44 @@ def _time_remaining(expires_at_iso: str, lang: str = "it") -> str:
         return translator.t("party.time_unknown", lang=lang)
 
 
+def _get_active_conditions(char: Character, lang: str = "it") -> str:
+    """Return a compact comma-separated string of active conditions, or '' if none."""
+    from bot.utils.formatting import CONDITIONS_ORDER
+    if not char.conditions:
+        return ""
+    conditions = char.conditions
+    parts: list[str] = []
+    for slug in CONDITIONS_ORDER:
+        if slug == "exhaustion":
+            level = int(conditions.get("exhaustion", 0))
+            if level > 0:
+                name = translator.t("character.conditions.names.exhaustion", lang=lang)
+                parts.append(_esc(f"{name} {level}/6"))
+        else:
+            if bool(conditions.get(slug, False)):
+                name = translator.t(f"character.conditions.names.{slug}", lang=lang)
+                parts.append(_esc(name))
+    return ", ".join(parts)
+
+
+def _get_last_roll(char: Character) -> str:
+    """Return the last dice roll as a compact escaped string, or '' if no history."""
+    if not char.rolls_history:
+        return ""
+    last = char.rolls_history[-1]
+    if not isinstance(last, (list, tuple)) or len(last) < 2:
+        return ""
+    dice_str = str(last[0])        # e.g. "2d6"
+    results = last[1]              # e.g. [3, 4]
+    if not isinstance(results, (list, tuple)) or not results:
+        return ""
+    total = sum(int(r) for r in results)
+    if len(results) == 1:
+        return _esc(f"{dice_str} → {total}")
+    results_str = ", ".join(str(r) for r in results)
+    return _esc(f"{dice_str} → {total} ({results_str})")
+
+
 def format_party_message(
     characters: list[tuple[Character, str | None]],
     session: PartySession,
@@ -95,5 +133,13 @@ def format_party_message(
             )
         )
         lines.append(translator.t("party.msg_char_ac", lang=lang, ac=_esc(str(char.ac))))
+
+        active_conditions = _get_active_conditions(char, lang=lang)
+        if active_conditions:
+            lines.append(translator.t("party.msg_char_conditions", lang=lang, conditions=active_conditions))
+
+        last_roll = _get_last_roll(char)
+        if last_roll:
+            lines.append(translator.t("party.msg_char_last_roll", lang=lang, roll=last_roll))
 
     return "\n".join(lines)
