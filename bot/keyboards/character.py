@@ -15,7 +15,7 @@ from bot.db.models import (
     SpellSlot,
 )
 from bot.models.character_state import CharAction, make_char_back
-from bot.utils.formatting import get_currency_labels
+from bot.utils.formatting import get_currency_labels, CONDITIONS_ORDER
 from bot.utils.i18n import translator
 
 PAGE_SIZE = 8
@@ -91,8 +91,9 @@ def build_character_main_menu_keyboard(char_id: int, lang: str = "it") -> Inline
         (translator.t("character.menu.btn_dice",       lang=lang), CharAction("char_dice",      char_id=cid)),
         (translator.t("character.menu.btn_notes",      lang=lang), CharAction("char_notes",     char_id=cid)),
         (translator.t("character.menu.btn_maps",       lang=lang), CharAction("char_maps",      char_id=cid)),
-        (translator.t("character.menu.btn_rest",       lang=lang), CharAction("char_rest",      char_id=cid)),
-        (translator.t("character.menu.btn_settings",   lang=lang), CharAction("char_settings",  char_id=cid)),
+        (translator.t("character.menu.btn_rest",       lang=lang), CharAction("char_rest",       char_id=cid)),
+        (translator.t("character.menu.btn_conditions", lang=lang), CharAction("char_conditions", char_id=cid)),
+        (translator.t("character.menu.btn_settings",   lang=lang), CharAction("char_settings",   char_id=cid)),
         (translator.t("character.selection.delete_btn",lang=lang), CharAction("char_delete",    char_id=cid)),
     ]
     short_btns = [(t, a) for t, a in buttons if len(t) <= _LONG_THRESHOLD]
@@ -923,4 +924,64 @@ def build_delete_confirm_keyboard(char_id: int, lang: str = "it") -> InlineKeybo
             _btn(translator.t("character.selection.delete_confirm_no",  lang=lang), CharAction("char_menu",   char_id=cid)),
         ]
     ]
+    return InlineKeyboardMarkup(rows)
+
+
+# ---------------------------------------------------------------------------
+# Conditions
+# ---------------------------------------------------------------------------
+
+def build_conditions_keyboard(
+    char_id: int, conditions: dict, lang: str = "it"
+) -> InlineKeyboardMarkup:
+    """Full list of conditions, each as a toggle button showing active/inactive state."""
+    cid = char_id
+    back = CharAction("char_menu", char_id=cid)
+    rows: list[list[InlineKeyboardButton]] = []
+
+    for slug in CONDITIONS_ORDER:
+        name = translator.t(f"character.conditions.names.{slug}", lang=lang)
+        if slug == "exhaustion":
+            level = int(conditions.get("exhaustion", 0))
+            marker = f"✅ {level}/6" if level > 0 else "⬛"
+        else:
+            active = bool(conditions.get(slug, False))
+            marker = "✅" if active else "⬛"
+        label = f"{marker} {name}"
+        rows.append([_btn(label, CharAction("char_conditions", char_id=cid, sub="detail", extra=slug))])
+
+    rows.append(_nav_row(back_action=back, menu_char_id=cid, lang=lang))
+    return InlineKeyboardMarkup(rows)
+
+
+def build_condition_detail_keyboard(
+    char_id: int, slug: str, conditions: dict, lang: str = "it"
+) -> InlineKeyboardMarkup:
+    """Detail view for a single condition: toggle (or +/- for exhaustion)."""
+    cid = char_id
+    back = CharAction("char_conditions", char_id=cid)
+    rows: list[list[InlineKeyboardButton]] = []
+
+    if slug == "exhaustion":
+        level = int(conditions.get("exhaustion", 0))
+        rows.append([
+            _btn(translator.t("character.conditions.btn_exhaust_down", lang=lang),
+                 CharAction("char_conditions", char_id=cid, sub="exhaust_down", extra=slug)),
+            _btn(translator.t("character.conditions.btn_exhaust_up", lang=lang),
+                 CharAction("char_conditions", char_id=cid, sub="exhaust_up", extra=slug)),
+        ])
+    else:
+        active = bool(conditions.get(slug, False))
+        if active:
+            rows.append([_btn(
+                translator.t("character.conditions.btn_deactivate", lang=lang),
+                CharAction("char_conditions", char_id=cid, sub="toggle", extra=slug),
+            )])
+        else:
+            rows.append([_btn(
+                translator.t("character.conditions.btn_activate", lang=lang),
+                CharAction("char_conditions", char_id=cid, sub="toggle", extra=slug),
+            )])
+
+    rows.append(_nav_row(back_action=back, menu_char_id=cid, lang=lang))
     return InlineKeyboardMarkup(rows)

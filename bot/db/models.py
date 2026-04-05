@@ -100,6 +100,9 @@ class Character(Base):
     # Party feature: whether this character is the user's active party character
     is_party_active: Mapped[bool] = mapped_column(Boolean, default=False)
 
+    # Active conditions (JSON dict: condition_slug → bool or int for exhaustion)
+    conditions: Mapped[Optional[dict]] = mapped_column(JSON, default=dict)
+
     # Relationships
     classes: Mapped[List["CharacterClass"]] = relationship(
         back_populates="character", cascade="all, delete-orphan"

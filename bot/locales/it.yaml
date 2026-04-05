@@ -67,6 +67,7 @@ character:
     btn_maps: "🗺️ Mappe"
     btn_rest: "😴 Riposo"
     btn_settings: "⚙️ Impostazioni"
+    btn_conditions: "⚠️ Condizioni"
 
   hp:
     title: "❤️ *Punti Vita*"
@@ -382,6 +383,55 @@ character:
     file_added: "✅ File aggiunto alla zona *{zone}*\\!"
     file_removed: "File rimosso\\."
     zone_deleted: "Zona '{zone}' eliminata\\."
+
+  conditions:
+    title: "⚠️ *Condizioni*"
+    no_conditions: "Nessuna condizione attiva\\."
+    active_label: "✅ Attiva"
+    inactive_label: "⬛ Non attiva"
+    exhaustion_level: "Livello: *{level}*/6"
+    exhaustion_inactive: "Livello: *0* \\(non attiva\\)"
+    btn_activate: "✅ Attiva"
+    btn_deactivate: "⬛ Disattiva"
+    btn_exhaust_up: "➕ Aumenta"
+    btn_exhaust_down: "➖ Riduci"
+    exhaustion_at_max: "Livello massimo raggiunto\\."
+    exhaustion_at_min: "Già a livello 0\\."
+    updated: "Condizione aggiornata\\."
+
+    names:
+      blinded: "Accecato"
+      charmed: "Affascinato"
+      deafened: "Assordato"
+      frightened: "Spaventato"
+      grappled: "Afferrato"
+      incapacitated: "Incapacitato"
+      invisible: "Invisibile"
+      paralyzed: "Paralizzato"
+      petrified: "Pietrificato"
+      poisoned: "Avvelenato"
+      prone: "A Terra"
+      restrained: "Trattenuto"
+      stunned: "Stordito"
+      unconscious: "Privo di Sensi"
+      exhaustion: "Esaurimento"
+
+    desc:
+      blinded: "Una creatura accecata non può vedere e fallisce automaticamente qualsiasi prova di caratteristica che richieda la vista\\. I tiri per colpire contro la creatura hanno vantaggio, e i tiri per colpire della creatura hanno svantaggio\\."
+      charmed: "Una creatura affascinata non può attaccare il suo incantatore né prenderlo di mira con effetti magici dannosi\\. L'incantatore ha vantaggio nelle prove di caratteristica per interagire socialmente con la creatura\\."
+      deafened: "Una creatura assordita non può sentire e fallisce automaticamente qualsiasi prova di caratteristica che richieda l'udito\\."
+      frightened: "Una creatura spaventata ha svantaggio ai tiri per colpire e alle prove di caratteristica mentre può vedere la fonte della sua paura\\. La creatura non può avvicinarsi volontariamente alla fonte della sua paura\\."
+      grappled: "La velocità di una creatura afferrata diventa 0, e non può beneficiare di bonus alla sua velocità\\. La condizione termina se l'afferratore è incapacitato\\. La condizione termina anche se un effetto rimuove la creatura afferrata dall'area di portata dell'afferratore\\."
+      incapacitated: "Una creatura incapacitata non può compiere azioni o reazioni\\."
+      invisible: "Una creatura invisibile è impossibile da vedere senza l'ausilio di magia o sensi speciali\\. Ai fini del nascondersi, la creatura è fortemente oscurata\\. I tiri per colpire contro la creatura hanno svantaggio, e i tiri per colpire della creatura hanno vantaggio\\."
+      paralyzed: "Una creatura paralizzata è incapacitata e non può muoversi né parlare\\. La creatura fallisce automaticamente i tiri salvezza di Forza e Destrezza\\. I tiri per colpire contro la creatura hanno vantaggio\\. Qualsiasi attacco che colpisce la creatura è un colpo critico se l'attaccante si trova entro 1,5 m dalla creatura\\."
+      petrified: "Una creatura pietrificata è trasformata insieme a tutti gli oggetti non magici che indossa o trasporta in una sostanza solida e inerte \\(di solito pietra\\)\\. Il suo peso aumenta di un fattore dieci e cessa di invecchiare\\. La creatura è incapacitata, non può muoversi né parlare, ed è inconsapevole degli eventi che la circondano\\. I tiri per colpire contro la creatura hanno vantaggio\\. La creatura fallisce automaticamente i tiri salvezza di Forza e Destrezza\\. La creatura ha resistenza a tutti i danni\\. La creatura è immune ai veleni e alle malattie, sebbene un veleno o una malattia già presenti nel suo organismo siano sospesi, non neutralizzati\\."
+      poisoned: "Una creatura avvelenata ha svantaggio ai tiri per colpire e alle prove di caratteristica\\."
+      prone: "L'unica opzione di movimento di una creatura a terra è strisciare, a meno che non si rialzi e ponga così fine alla condizione\\. La creatura ha svantaggio ai tiri per colpire\\. Un tiro per colpire contro la creatura ha vantaggio se l'attaccante si trova entro 1,5 m dalla creatura\\. Altrimenti, il tiro per colpire ha svantaggio\\."
+      restrained: "La velocità di una creatura trattenuta diventa 0 e non può beneficiare di bonus alla sua velocità\\. I tiri per colpire contro la creatura hanno vantaggio e i tiri per colpire della creatura hanno svantaggio\\. La creatura ha svantaggio ai tiri salvezza di Destrezza\\."
+      stunned: "Una creatura stordita è incapacitata, non può muoversi e può parlare solo in modo stentato\\. La creatura fallisce automaticamente i tiri salvezza di Forza e Destrezza\\. I tiri per colpire contro la creatura hanno vantaggio\\."
+      unconscious: "Una creatura priva di sensi è incapacitata, non può muoversi né parlare ed è inconsapevole degli eventi che la circondano\\. La creatura lascia cadere ciò che ha in mano ed è a terra\\. I tiri per colpire contro la creatura hanno vantaggio\\. Qualsiasi attacco che colpisce la creatura è un colpo critico se l'attaccante si trova entro 1,5 m dalla creatura\\. La creatura fallisce automaticamente i tiri salvezza di Forza e Destrezza\\."
+      exhaustion: "L'esaurimento è misurato in sei livelli\\. Un effetto può conferire a una creatura uno o più livelli di esaurimento\\.\n\n*Livello 1*: Svantaggio alle prove di caratteristica\\.\n*Livello 2*: Velocità dimezzata\\.\n*Livello 3*: Svantaggio ai tiri per colpire e ai tiri salvezza\\.\n*Livello 4*: Massimo dei punti ferita dimezzato\\.\n*Livello 5*: Velocità ridotta a 0\\.\n*Livello 6*: Morte\\.\n\nTerminare un riposo lungo riduce il livello di esaurimento di 1, a condizione che la creatura abbia anche mangiato e bevuto qualcosa\\."
 
   settings:
     title: "⚙️ *Impostazioni*"

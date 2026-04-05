@@ -36,6 +36,7 @@ from bot.handlers.character import (
     CHAR_BAG_MENU,
     CHAR_CLASS_SUBCLASS_INPUT,
     CHAR_CONC_SAVE,
+    CHAR_CONDITIONS_MENU,
     CHAR_CURRENCY_CONVERT,
     CHAR_CURRENCY_EDIT,
     CHAR_CURRENCY_MENU,
@@ -445,6 +446,21 @@ async def character_callback_handler(
     if action == "char_party_active":
         return await toggle_party_active(update, context, cid)
 
+    # ─── Conditions ───
+    if action == "char_conditions":
+        from bot.handlers.character.conditions import (
+            adjust_exhaustion, show_condition_detail, show_conditions_menu, toggle_condition,
+        )
+        if sub == "detail":
+            return await show_condition_detail(update, context, cid, data.extra)
+        if sub == "toggle":
+            return await toggle_condition(update, context, cid, data.extra)
+        if sub == "exhaust_up":
+            return await adjust_exhaustion(update, context, cid, "up")
+        if sub == "exhaust_down":
+            return await adjust_exhaustion(update, context, cid, "down")
+        return await show_conditions_menu(update, context, cid)
+
     return CHAR_MENU
 
 
@@ -681,6 +697,7 @@ def build_character_conversation_handler() -> ConversationHandler:
             ],
             CHAR_SETTINGS_MENU: [char_callback],
             CHAR_DELETE_CONFIRM: [char_callback],
+            CHAR_CONDITIONS_MENU: [char_callback],
         },
         fallbacks=[
             CommandHandler("start", lambda u, c: ConversationHandler.END),
