@@ -57,6 +57,8 @@ from __future__ import annotations
     CHAR_SPELL_SEARCH,
     # Class subclass input
     CHAR_CLASS_SUBCLASS_INPUT,
-) = range(48)
+    # Conditions
+    CHAR_CONDITIONS_MENU,
+) = range(49)
 
 STOPPING = 99

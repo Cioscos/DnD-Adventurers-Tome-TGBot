@@ -46,6 +46,8 @@ _MIGRATIONS: list[tuple[str, str, str, str | None]] = [
     ("character_classes", "subclass", "VARCHAR(100)", None),
     # Party feature
     ("characters", "is_party_active", "BOOLEAN", "0"),
+    # Conditions feature
+    ("characters", "conditions", "TEXT", None),
 ]
 
 

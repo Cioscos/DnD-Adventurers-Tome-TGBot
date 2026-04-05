@@ -377,6 +377,83 @@ def _load_bar(current: int, maximum: int, length: int = 10) -> str:
     return "🟩" * filled + "⬛" * (length - filled)
 
 
+# ---------------------------------------------------------------------------
+# Conditions
+# ---------------------------------------------------------------------------
+
+# Ordered list of all D&D 5e condition slugs (shared with keyboards/character.py).
+CONDITIONS_ORDER = [
+    "blinded", "charmed", "deafened", "frightened", "grappled",
+    "incapacitated", "invisible", "paralyzed", "petrified", "poisoned",
+    "prone", "restrained", "stunned", "unconscious", "exhaustion",
+]
+
+
+def format_conditions(conditions: dict, lang: str = "it") -> str:
+    """Return a MarkdownV2 summary of all character conditions."""
+    lines: list[str] = [translator.t("character.conditions.title", lang=lang), ""]
+    has_active = False
+
+    for slug in CONDITIONS_ORDER:
+        name = translator.t(f"character.conditions.names.{slug}", lang=lang)
+        if slug == "exhaustion":
+            level = int(conditions.get("exhaustion", 0))
+            if level > 0:
+                has_active = True
+                lines.append(f"✅ *{_esc(name)}*: {level}/6")
+            else:
+                lines.append(f"⬛ *{_esc(name)}*")
+        else:
+            active = bool(conditions.get(slug, False))
+            if active:
+                has_active = True
+            marker = "✅" if active else "⬛"
+            lines.append(f"{marker} *{_esc(name)}*")
+
+    if not has_active:
+        lines.append("")
+        lines.append(f"_{_esc(translator.t('character.conditions.no_conditions', lang=lang))}_")
+
+    return "\n".join(lines)
+
+
+def format_condition_detail(slug: str, conditions: dict, lang: str = "it") -> str:
+    """Return a MarkdownV2 detail view for a single condition.
+
+    Note: description strings in locale files are already pre-escaped MarkdownV2
+    so they must NOT be passed through _esc().
+    """
+    name = translator.t(f"character.conditions.names.{slug}", lang=lang)
+    desc = translator.t(f"character.conditions.desc.{slug}", lang=lang)
+
+    if slug == "exhaustion":
+        level = int(conditions.get("exhaustion", 0))
+        # exhaustion_level / exhaustion_inactive are pre-formatted MarkdownV2 — no _esc()
+        status = (
+            translator.t("character.conditions.exhaustion_level", lang=lang, level=level)
+            if level > 0
+            else translator.t("character.conditions.exhaustion_inactive", lang=lang)
+        )
+        marker = "✅" if level > 0 else "⬛"
+        status_line = f"{marker} {status}"
+    else:
+        active = bool(conditions.get(slug, False))
+        # active_label / inactive_label are plain text after locale fix — _esc() is safe
+        raw_label = (
+            translator.t("character.conditions.active_label", lang=lang)
+            if active
+            else translator.t("character.conditions.inactive_label", lang=lang)
+        )
+        marker = "✅" if active else "⬛"
+        status_line = f"{marker} {_esc(raw_label)}"
+
+    return (
+        f"⚠️ *{_esc(name)}*\n\n"
+        f"{desc}\n\n"
+        f"{status_line}"
+    )
+
+
 def _esc(text: str) -> str:
     """Escape special MarkdownV2 characters."""
     special = r"\_*[]()~`>#+-=|{}.!"

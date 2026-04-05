@@ -66,6 +66,7 @@ character:
     btn_maps: "🗺️ Maps"
     btn_rest: "😴 Rest"
     btn_settings: "⚙️ Settings"
+    btn_conditions: "⚠️ Conditions"
 
   hp:
     title: "❤️ *Hit Points*"
@@ -382,8 +383,58 @@ character:
     file_removed: "File removed\\."
     zone_deleted: "Zone '{zone}' deleted\\."
 
+  conditions:
+    title: "⚠️ *Conditions*"
+    no_conditions: "No active conditions\\."
+    active_label: "Active"
+    inactive_label: "Not active"
+    exhaustion_level: "Level: *{level}*/6"
+    exhaustion_inactive: "Level: *0* \\(not active\\)"
+    btn_activate: "✅ Activate"
+    btn_deactivate: "⬛ Deactivate"
+    btn_exhaust_up: "➕ Increase"
+    btn_exhaust_down: "➖ Reduce"
+    exhaustion_at_max: "Maximum level reached\\."
+    exhaustion_at_min: "Already at level 0\\."
+    updated: "Condition updated\\."
+
+    names:
+      blinded: "Blinded"
+      charmed: "Charmed"
+      deafened: "Deafened"
+      frightened: "Frightened"
+      grappled: "Grappled"
+      incapacitated: "Incapacitated"
+      invisible: "Invisible"
+      paralyzed: "Paralyzed"
+      petrified: "Petrified"
+      poisoned: "Poisoned"
+      prone: "Prone"
+      restrained: "Restrained"
+      stunned: "Stunned"
+      unconscious: "Unconscious"
+      exhaustion: "Exhaustion"
+
+    desc:
+      blinded: "A blinded creature cannot see and automatically fails any ability check that requires sight\\. Attack rolls against the creature have advantage, and the creature's attack rolls have disadvantage\\."
+      charmed: "A charmed creature cannot attack the charmer or target the charmer with harmful abilities or magical effects\\. The charmer has advantage on any ability check to interact socially with the creature\\."
+      deafened: "A deafened creature cannot hear and automatically fails any ability check that requires hearing\\."
+      frightened: "A frightened creature has disadvantage on ability checks and attack rolls while the source of its fear is within line of sight\\. The creature cannot willingly move closer to the source of its fear\\."
+      grappled: "A grappled creature's speed becomes 0, and it cannot benefit from any bonus to its speed\\. The condition ends if the grappler is incapacitated\\. The condition also ends if an effect removes the grappled creature from the reach of the grappler\\."
+      incapacitated: "An incapacitated creature cannot take actions or reactions\\."
+      invisible: "An invisible creature is impossible to see without the aid of magic or a special sense\\. For the purpose of hiding, the creature is heavily obscured\\. Attack rolls against the creature have disadvantage, and the creature's attack rolls have advantage\\."
+      paralyzed: "A paralyzed creature is incapacitated and cannot move or speak\\. The creature automatically fails Strength and Dexterity saving throws\\. Attack rolls against the creature have advantage\\. Any attack that hits the creature is a critical hit if the attacker is within 5 feet of the creature\\."
+      petrified: "A petrified creature is transformed, along with any nonmagical object it is wearing or carrying, into a solid inanimate substance \\(usually stone\\)\\. Its weight increases by a factor of ten, and it ceases aging\\. The creature is incapacitated, cannot move or speak, and is unaware of its surroundings\\. Attack rolls against the creature have advantage\\. The creature automatically fails Strength and Dexterity saving throws\\. The creature has resistance to all damage\\. The creature is immune to poison and disease, although a poison or disease already in its system is suspended, not neutralized\\."
+      poisoned: "A poisoned creature has disadvantage on attack rolls and ability checks\\."
+      prone: "A prone creature's only movement option is to crawl, unless it stands up and thereby ends the condition\\. The creature has disadvantage on attack rolls\\. An attack roll against the creature has advantage if the attacker is within 5 feet of the creature\\. Otherwise, the attack roll has disadvantage\\."
+      restrained: "A restrained creature's speed becomes 0, and it cannot benefit from any bonus to its speed\\. Attack rolls against the creature have advantage, and the creature's attack rolls have disadvantage\\. The creature has disadvantage on Dexterity saving throws\\."
+      stunned: "A stunned creature is incapacitated, cannot move, and can speak only falteringly\\. The creature automatically fails Strength and Dexterity saving throws\\. Attack rolls against the creature have advantage\\."
+      unconscious: "An unconscious creature is incapacitated, cannot move or speak, and is unaware of its surroundings\\. The creature drops everything it is holding and falls prone\\. Attack rolls against the creature have advantage\\. Any attack that hits the creature is a critical hit if the attacker is within 5 feet of the creature\\. The creature automatically fails Strength and Dexterity saving throws\\."
+      exhaustion: "Exhaustion is measured in six levels\\. An effect can give a creature one or more levels of exhaustion\\.\n\n*Level 1*: Disadvantage on ability checks\\.\n*Level 2*: Speed halved\\.\n*Level 3*: Disadvantage on attack rolls and saving throws\\.\n*Level 4*: Hit point maximum halved\\.\n*Level 5*: Speed reduced to 0\\.\n*Level 6*: Death\\.\n\nFinishing a long rest reduces a creature's exhaustion level by 1, provided that the creature has also ingested some food and drink\\."
+
   settings:
     title: "⚙️ *Settings*"
+
     spell_mgmt_label: "Spell management: {label}"
     spell_mgmt_by_level: "By level ✅"
     spell_mgmt_direct: "Direct selection ✅"
