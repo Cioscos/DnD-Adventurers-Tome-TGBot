@@ -387,8 +387,8 @@ character:
   conditions:
     title: "⚠️ *Condizioni*"
     no_conditions: "Nessuna condizione attiva\\."
-    active_label: "✅ Attiva"
-    inactive_label: "⬛ Non attiva"
+    active_label: "Attiva"
+    inactive_label: "Non attiva"
     exhaustion_level: "Livello: *{level}*/6"
     exhaustion_inactive: "Livello: *0* \\(non attiva\\)"
     btn_activate: "✅ Attiva"
