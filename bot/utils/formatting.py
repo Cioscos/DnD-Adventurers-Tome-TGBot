@@ -139,7 +139,7 @@ def format_ability_scores(scores: list[AbilityScore], lang: str = "it") -> str:
         score = score_map.get(name)
         val = score.value if score else 10
         mod = (val - 10) // 2
-        mod_str = f"\\+{mod}" if mod >= 0 else str(mod)
+        mod_str = f"\\+{mod}" if mod >= 0 else f"\\-{abs(mod)}"
         lines.append(f"{emoji} {label}: *{val}* \\({mod_str}\\)")
     return "\n".join(lines)
 
