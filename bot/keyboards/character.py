@@ -897,6 +897,7 @@ def build_dice_keyboard(char_id: int, lang: str = "it") -> InlineKeyboardMarkup:
         [_btn(f"🎲 {d}", CharAction("char_dice", char_id=cid, sub=d))]
         for d in DICE_TYPES
     ]
+    rows.append([_btn(translator.t("character.dice.btn_initiative", lang=lang), CharAction("char_dice", char_id=cid, sub="initiative"))])
     rows.append([_btn(translator.t("character.dice.btn_clear", lang=lang), CharAction("char_dice", char_id=cid, sub="clear_history"))])
     rows.append(_nav_row(back_action=back, menu_char_id=cid, lang=lang))
     return InlineKeyboardMarkup(rows)
