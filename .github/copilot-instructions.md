@@ -15,7 +15,7 @@
 An async Telegram bot with three main sections:
 
 1. **Wiki D&D 5e** — browse the D&D 5e compendium (spells, monsters, classes, races, equipment, etc.) via inline keyboards, fetching data from the public GraphQL API. The bot **dynamically discovers** the API schema at startup via GraphQL introspection.
-2. **Gestione Personaggio** — full D&D character management: HP, AC, ability scores, spells, inventory, currency, dice, notes, maps, conditions, and more. Data is persisted in a local SQLite database via SQLAlchemy async.
+2. **Gestione Personaggio** — full D&D character management: HP, AC, ability scores, spells, inventory, currency, dice, notes, maps, conditions, modification history, and more. Data is persisted in a local SQLite database via SQLAlchemy async.
 3. **Funzionalità Gruppo (Party)** — group Telegram feature: `/party` and `/party_stop` commands that show a live-updated party status message with all active characters' HP, AC, active conditions, and last dice roll.
 
 The top-level `/start` menu always shows two buttons:
@@ -52,8 +52,9 @@ bot/
 │   └── classes.py           # DND_CLASSES list, ResourceConfig dataclass, CLASS_RESOURCES formulas, get_resources_for_class()
 ├── db/
 │   ├── engine.py            # SQLAlchemy async engine, AsyncSession factory, init_db(), get_session()
+│   ├── history.py           # Character history helpers: log_history_event, get_history, clear_history (50-entry cap)
 │   └── models.py            # ORM models: Character, CharacterClass, ClassResource, AbilityScore, Spell, SpellSlot,
-│                            #             Item, Currency, Ability, Map, GroupMember, PartySession + enums
+│                            #             Item, Currency, Ability, Map, GroupMember, PartySession, CharacterHistory + enums
 ├── locales/
 │   ├── it.yaml              # Italian strings (~500 keys, hierarchical)
 │   └── en.yaml              # English translations (mirrors it.yaml structure)
@@ -65,7 +66,7 @@ bot/
 │   ├── navigation.py        # N-level CallbackQueryHandler dispatcher + MarkdownV2 formatters (wiki)
 │   ├── party.py             # /party, /party_stop commands + PartyAction callbacks + track_group_member + maybe_update_party_message
 │   └── character/
-│       ├── __init__.py      # Conversation state constants (49 states)
+│       ├── __init__.py      # Conversation state constants (50 states)
 │       ├── conversation.py  # Master ConversationHandler — routes CharAction callbacks, stop_command_handler, builds handler
 │       ├── selection.py     # Character create / select / delete; creation wizard includes class selection step
 │       ├── menu.py          # Character main menu with summary
@@ -83,6 +84,7 @@ bot/
 │       ├── notes.py         # Text notes + voice notes
 │       ├── maps.py          # Map images/documents organised by zone
 │       ├── conditions.py    # D&D 5e conditions tracker (14 binary + Exhaustion 0–6); fires party update hook on toggle/adjust
+│       ├── history.py       # Character modification history: show_history (multi-msg split), handle_clear_history, HISTORY_EXTRA_MSGS_KEY
 │       └── settings.py      # Per-character settings (spell management mode, party active toggle)
 ├── keyboards/
 │   ├── builder.py           # Wiki keyboards: categories, paginated list, detail (📂 buttons), sub-list
@@ -137,6 +139,7 @@ bot/
 | `maps` | `character_id` → FK, `zone_name`, `file_id`, `file_type` |
 | `group_members` | `group_id` (BigInt), `user_id` (BigInt) — unique together; tracks every user who has ever written in the group |
 | `party_sessions` | `id`, `group_id` (BigInt, unique), `group_title`, `mode` (public/private), `message_chat_id` (BigInt), `message_id` (Int), `started_at` (ISO str), `expires_at` (ISO str) |
+| `character_history` | `id`, `character_id` (FK → characters.id, cascade), `timestamp` (String 20, `DD/MM/YYYY HH:MM` UTC), `event_type` (String 50), `description` (Text) — max 50 rows per character (oldest pruned automatically) |
 
 ### Navigation Model
 
@@ -171,7 +174,7 @@ class CharAction:
     back: tuple[str, ...] = ()
 ```
 
-Key `action` values: `char_select`, `char_new`, `char_menu`, `char_hp`, `char_ac`, `char_stats`, `char_level`, `char_spells`, `char_slots`, `char_bag`, `char_currency`, `char_abilities`, `char_multiclass`, `char_class_res`, `char_dice`, `char_notes`, `char_maps`, `char_rest`, `char_conditions`, `char_settings`, `char_party_active`, `char_delete`.
+Key `action` values: `char_select`, `char_new`, `char_menu`, `char_hp`, `char_ac`, `char_stats`, `char_level`, `char_spells`, `char_slots`, `char_bag`, `char_currency`, `char_abilities`, `char_multiclass`, `char_class_res`, `char_dice`, `char_notes`, `char_maps`, `char_rest`, `char_conditions`, `char_history`, `char_settings`, `char_party_active`, `char_delete`.
 
 Key `char_spells` sub-actions: `learn`, `learn_conc_yes`, `learn_conc_no`, `detail`, `forget`, `use`, `use_slot`, `activate_conc`, `drop_conc`, `conc_save`, `pin`, `edit_menu`, `edit_<field>` (e.g. `edit_casting_time`, `edit_is_concentration`), `search`, `search_show`.
 
@@ -180,6 +183,8 @@ Key `char_multiclass` sub-actions: `add`, `guided` (show class list), `custom` (
 Key `char_class_res` sub-actions: `menu` (`extra=class_id`), `use` (`item_id=resource_id, extra=class_id`), `restore_one` (`item_id=resource_id, extra=class_id`), `restore_all` (`extra=class_id`), `noop`.
 
 Key `char_conditions` sub-actions: `detail` (`extra=slug`, opens condition detail), `toggle` (`extra=slug`, toggles a binary condition on/off), `exhaust_up` (increases Exhaustion level by 1), `exhaust_down` (decreases Exhaustion level by 1). The `extra` field carries the condition slug (e.g. `"blinded"`, `"exhaustion"`).
+
+Key `char_history` sub-actions: `clear` (deletes all history entries for the character and re-shows the empty screen).
 
 #### Party Feature (PartyAction)
 
@@ -329,6 +334,19 @@ Navigable sub-entity buttons (📂) are discovered automatically from the schema
 - **Locale keys**: names under `character.conditions.names.<slug>`, descriptions under `character.conditions.desc.<slug>`. Descriptions are **pre-escaped MarkdownV2** in YAML — never pass them through `_esc()`.
 - **List view** (`format_conditions`): shows `✅ *Name*` / `⬛ *Name*` per condition; exhaustion shows `✅ *Esaurimento*: {level}/6` when active.
 - **Detail view** (`format_condition_detail`): shows name (bold), full D&D 5e description (raw, pre-escaped MarkdownV2), then status line `{marker} {label}` (binary) or `{marker} Livello: *N*/6` (exhaustion).
+
+### Character History Details
+
+- **Purpose**: tracks the last 50 modifications per character across 10 event types, accessible via the `📜 Storico` button in the character main menu.
+- **DB table**: `character_history` (`id`, `character_id` FK cascade, `timestamp` String 20, `event_type` String 50, `description` Text). New table — auto-created by `Base.metadata.create_all`, no migration entry needed.
+- **Helper module**: `bot/db/history.py` — `log_history_event(char_id, event_type, description)` inserts a row and prunes oldest if count > `MAX_HISTORY = 50`; `get_history(char_id)` returns rows newest-first; `clear_history(char_id)` deletes all rows.
+- **Timestamps**: stored as `DD/MM/YYYY HH:MM` UTC strings (String 20) — human-readable, timezone-agnostic.
+- **Event types** (string slugs): `hp_change`, `rest`, `ac_change`, `stats_change`, `spell_slot_change`, `spell_change`, `bag_change`, `currency_change`, `ability_change`, `multiclass_change`, `level_change`, `condition_change`.
+- **Logging pattern**: every handler that modifies character state fires `asyncio.create_task(_log(char_id, event_type, description))` — fire-and-forget, never blocks user response. Each handler file defines its own `async def _log(char_id, event_type, description)` helper at the bottom that wraps `log_history_event` in a try/except.
+- **Display**: `show_history()` in `handlers/character/history.py` splits the formatted text at **3800 chars** per Telegram message. The first message gets the `🗑️ Cancella Storico` + `🏠 Menu` keyboard; extra messages are plain text. Extra message IDs are stored as `[(chat_id, msg_id), …]` in `context.user_data["char_history_extra_msgs"]` (`HISTORY_EXTRA_MSGS_KEY` constant).
+- **Multi-message cleanup**: `show_character_menu()` in `menu.py` imports `HISTORY_EXTRA_MSGS_KEY` and deletes all extra messages at the start before editing the primary message to the menu. This ensures no orphaned messages remain when navigating back.
+- **Clear button**: `sub="clear"` on `char_history` action → `handle_clear_history()` → calls `clear_history`, re-shows the empty history screen.
+- **Locale keys**: `character.history.title`, `character.history.empty`, `character.history.count`, `character.history.part_indicator`, `character.history.btn_clear`, `character.history.cleared`, `character.history.other`, and `character.history.events.<slug>` for each event type label. Menu button: `character.menu.btn_history`.
 
 ### Party Feature Details
 

@@ -439,6 +439,24 @@ class GroupMember(Base):
 # PartySession (party feature — one active session per group)
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# CharacterHistory (audit log of character changes)
+# ---------------------------------------------------------------------------
+
+class CharacterHistory(Base):
+    """One entry in the character's modification history."""
+
+    __tablename__ = "character_history"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    character_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("characters.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    timestamp: Mapped[str] = mapped_column(String(20), nullable=False)
+    event_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+
+
 class PartySession(Base):
     """An active party tracking session for a Telegram group."""
 

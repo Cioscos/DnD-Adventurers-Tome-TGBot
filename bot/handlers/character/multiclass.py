@@ -255,6 +255,10 @@ async def _finalize_add_class(
     sub_str = f" \\({_esc(subclass)}\\)" if subclass else ""
     await _send_reply(update, translator.t("character.multiclass.added", lang=lang, class_name=_esc(class_name), subclass_str=sub_str, level=level))
 
+    import asyncio as _asyncio
+    sub_desc = f" ({subclass})" if subclass else ""
+    _asyncio.create_task(_log(char_id, "multiclass_change", f"Aggiunta: {class_name}{sub_desc} Liv.{level}"))
+
     if flow == "creation":
         from bot.handlers.character.menu import show_character_menu
         return await show_character_menu(update, context, char_id=char_id)
@@ -294,6 +298,8 @@ async def remove_class(
                 CharacterClass.class_name == class_name,
             )
         )
+    import asyncio as _asyncio
+    _asyncio.create_task(_log(char_id, "multiclass_change", f"Rimossa: {class_name}"))
     if update.callback_query:
         await update.callback_query.answer(f"{class_name} rimossa.")
     return await show_multiclass_menu(update, context, char_id)
@@ -351,6 +357,7 @@ async def apply_level_change(
         if cls is None:
             return await show_multiclass_menu(update, context, char_id)
 
+        old_level = cls.level
         if direction == "up":
             if cls.level >= 20:
                 if update.callback_query:
@@ -369,6 +376,9 @@ async def apply_level_change(
 
     # Update class resources outside the session
     await update_class_resources_on_level_change(cls_id, class_name, new_level)
+
+    import asyncio as _asyncio
+    _asyncio.create_task(_log(char_id, "level_change", f"Livello {class_name}: {old_level} → {new_level}"))
 
     if update.callback_query:
         await update.callback_query.answer()
@@ -402,3 +412,12 @@ async def _send_reply(update: Update, text: str) -> None:
 def _esc(text: str) -> str:
     special = r"\_*[]()~`>#+-=|{}.!"
     return "".join(f"\\{c}" if c in special else c for c in str(text))
+
+
+async def _log(char_id: int, event_type: str, description: str) -> None:
+    """Fire-and-forget wrapper for history logging."""
+    try:
+        from bot.db.history import log_history_event
+        await log_history_event(char_id, event_type, description)
+    except Exception as exc:
+        logger.warning("History log failed for char %s: %s", char_id, exc)

@@ -128,6 +128,8 @@ async def handle_slot_add_text(
                 session.add(SpellSlot(character_id=char_id, level=level, total=total, used=0))
 
         context.user_data.pop(_OP_KEY, None)
+        import asyncio as _asyncio
+        _asyncio.create_task(_log(char_id, "spell_slot_change", f"Slot Liv.{level}: configurati {total} totali"))
         await update.message.reply_text(
             translator.t("character.slots.configured", lang=lang, level=level, total=total), parse_mode="MarkdownV2"
         )
@@ -145,11 +147,14 @@ async def use_slot(
             return await show_spell_slots_menu(update, context, char_id)
         try:
             slot.use_slot()
+            slot_level = slot.level
         except ValueError as e:
             if update.callback_query:
                 await update.callback_query.answer(str(e))
             return await show_spell_slots_menu(update, context, char_id)
 
+    import asyncio as _asyncio
+    _asyncio.create_task(_log(char_id, "spell_slot_change", f"Slot Liv.{slot_level} usato"))
     if update.callback_query:
         await update.callback_query.answer("Slot usato.")
     return await show_spell_slots_menu(update, context, char_id)
@@ -162,7 +167,13 @@ async def restore_slot(
         slot = await session.get(SpellSlot, slot_id)
         if slot and slot.character_id == char_id:
             slot.restore_slot()
+            slot_level = slot.level
+        else:
+            slot_level = None
 
+    if slot_level is not None:
+        import asyncio as _asyncio
+        _asyncio.create_task(_log(char_id, "spell_slot_change", f"Slot Liv.{slot_level} ripristinato"))
     if update.callback_query:
         await update.callback_query.answer("Slot ripristinato.")
     return await show_spell_slots_menu(update, context, char_id)
@@ -178,6 +189,8 @@ async def reset_all_slots(
         for slot in result.scalars():
             slot.restore_all()
 
+    import asyncio as _asyncio
+    _asyncio.create_task(_log(char_id, "spell_slot_change", "Tutti gli slot ripristinati"))
     if update.callback_query:
         await update.callback_query.answer("Tutti gli slot ripristinati.")
     return await show_spell_slots_menu(update, context, char_id)
@@ -187,16 +200,30 @@ async def remove_slot_level(
     update: Update, context: ContextTypes.DEFAULT_TYPE, char_id: int, slot_id: int
 ) -> int:
     async with get_session() as session:
+        slot = await session.get(SpellSlot, slot_id)
+        slot_level = slot.level if slot and slot.character_id == char_id else None
         await session.execute(
             delete(SpellSlot).where(SpellSlot.id == slot_id, SpellSlot.character_id == char_id)
         )
 
+    if slot_level is not None:
+        import asyncio as _asyncio
+        _asyncio.create_task(_log(char_id, "spell_slot_change", f"Slot Liv.{slot_level} rimosso"))
     if update.callback_query:
         await update.callback_query.answer("Livello slot rimosso.")
     return await show_spell_slots_menu(update, context, char_id)
 
 
 # ---------------------------------------------------------------------------
+
+async def _log(char_id: int, event_type: str, description: str) -> None:
+    """Fire-and-forget wrapper for history logging."""
+    try:
+        from bot.db.history import log_history_event
+        await log_history_event(char_id, event_type, description)
+    except Exception as exc:
+        logger.warning("History log failed for char %s: %s", char_id, exc)
+
 
 async def _edit_or_reply(update: Update, text: str, keyboard=None) -> None:
     kwargs = dict(text=text, parse_mode="MarkdownV2")

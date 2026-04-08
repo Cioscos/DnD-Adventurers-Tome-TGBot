@@ -338,6 +338,10 @@ async def finalize_spell_learn(
             is_concentration=is_concentration,
         ))
 
+    import asyncio as _asyncio
+    level_label = "Trucchetto" if spell_level == 0 else f"Liv.{spell_level}"
+    conc_label = " (conc.)" if is_concentration else ""
+    _asyncio.create_task(_log(char_id, "spell_change", f"Imparato: {spell_name} [{level_label}{conc_label}]"))
     if update.callback_query:
         await update.callback_query.answer(f"Incantesimo {spell_name} imparato!")
     return await show_spells_menu(update, context, char_id)
@@ -359,9 +363,14 @@ async def forget_spell(
         char = await session.get(Character, char_id)
         if char and char.concentrating_spell_id == spell_id:
             char.concentrating_spell_id = None
+        spell = await session.get(Spell, spell_id)
+        spell_name = spell.name if spell else "?"
         await session.execute(
             delete(Spell).where(Spell.id == spell_id, Spell.character_id == char_id)
         )
+
+    import asyncio as _asyncio
+    _asyncio.create_task(_log(char_id, "spell_change", f"Dimenticato: {spell_name}"))
     if update.callback_query:
         await update.callback_query.answer("Incantesimo dimenticato.")
     return await show_spells_menu(update, context, char_id)
@@ -444,6 +453,10 @@ async def use_spell_at_level(
         if spell and spell.is_concentration:
             msg += f" 🔮 Concentrazione su {spell.name}"
         await update.callback_query.answer(msg)
+
+    import asyncio as _asyncio
+    spell_name = spell.name if spell else "?"
+    _asyncio.create_task(_log(char_id, "spell_change", f"Usato: {spell_name} (Slot Liv.{slot_level})"))
     return await show_spells_menu(update, context, char_id)
 
 
@@ -766,6 +779,15 @@ async def show_spell_edit_menu(
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+async def _log(char_id: int, event_type: str, description: str) -> None:
+    """Fire-and-forget wrapper for history logging."""
+    try:
+        from bot.db.history import log_history_event
+        await log_history_event(char_id, event_type, description)
+    except Exception as exc:
+        logger.warning("History log failed for char %s: %s", char_id, exc)
+
 
 async def _edit_or_reply(update: Update, text: str, keyboard=None) -> None:
     kwargs = dict(text=text, parse_mode="MarkdownV2")

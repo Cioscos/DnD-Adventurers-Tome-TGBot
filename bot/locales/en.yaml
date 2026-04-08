@@ -67,6 +67,28 @@ character:
     btn_rest: "😴 Rest"
     btn_settings: "⚙️ Settings"
     btn_conditions: "⚠️ Conditions"
+    btn_history: "📜 History"
+
+  history:
+    title: "📜 *Modification History — {name}*"
+    empty: "_No modifications recorded\\._"
+    count: "{count} events recorded"
+    part_indicator: "\\[Part {n}/{total}\\]"
+    btn_clear: "🗑️ Clear History"
+    cleared: "History cleared\\."
+    other: "📌 Change"
+    hp_change: "❤️ HP"
+    rest: "😴 Rest"
+    ac_change: "🛡️ AC"
+    level_change: "⚔️ Level"
+    multiclass_change: "🎭 Class"
+    stats_change: "📊 Stat"
+    spell_slot_change: "🎲 Slot"
+    spell_change: "✨ Spell"
+    bag_change: "📦 Inventory"
+    currency_change: "💰 Currency"
+    ability_change: "⚡ Ability"
+    condition_change: "⚠️ Condition"
 
   hp:
     title: "❤️ *Hit Points*"

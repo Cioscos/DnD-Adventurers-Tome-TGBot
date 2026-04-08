@@ -25,9 +25,18 @@ async def show_character_menu(
 ) -> int:
     """Display the character's main menu."""
     from bot.handlers.character.selection import ACTIVE_CHAR_KEY
+    from bot.handlers.character.history import HISTORY_EXTRA_MSGS_KEY
 
     if char_id is None:
         char_id = context.user_data.get(ACTIVE_CHAR_KEY)
+
+    # Clean up any extra history messages still open
+    extra: list[tuple[int, int]] = context.user_data.pop(HISTORY_EXTRA_MSGS_KEY, [])
+    for chat_id_msg, msg_id in extra:
+        try:
+            await context.bot.delete_message(chat_id=chat_id_msg, message_id=msg_id)
+        except Exception:
+            pass
 
     if char_id is None:
         from bot.handlers.character.selection import show_character_selection

@@ -78,9 +78,12 @@ async def toggle_condition(
             return await show_conditions_menu(update, context, char_id)
         conditions = _get_conditions(char)
         conditions[slug] = not bool(conditions.get(slug, False))
+        new_val = conditions[slug]
         char.conditions = conditions
 
     asyncio.create_task(_trigger_party_update(char_id, context))
+    state_label = "attivata" if new_val else "disattivata"
+    asyncio.create_task(_log(char_id, "condition_change", f"{slug} {state_label}"))
     if update.callback_query:
         await update.callback_query.answer(
             translator.t("character.conditions.updated", lang=lang)
@@ -120,6 +123,8 @@ async def adjust_exhaustion(
         char.conditions = conditions
 
     asyncio.create_task(_trigger_party_update(char_id, context))
+    new_level = conditions["exhaustion"]
+    asyncio.create_task(_log(char_id, "condition_change", f"Esaurimento: {current} → {new_level}"))
     if update.callback_query:
         await update.callback_query.answer(
             translator.t("character.conditions.updated", lang=lang)
@@ -138,6 +143,15 @@ async def _trigger_party_update(char_id: int, context: ContextTypes.DEFAULT_TYPE
         await maybe_update_party_message(char_id, context.bot)
     except Exception as e:
         logger.warning("Party update trigger failed for char %s: %s", char_id, e)
+
+
+async def _log(char_id: int, event_type: str, description: str) -> None:
+    """Fire-and-forget wrapper for history logging."""
+    try:
+        from bot.db.history import log_history_event
+        await log_history_event(char_id, event_type, description)
+    except Exception as exc:
+        logger.warning("History log failed for char %s: %s", char_id, exc)
 
 
 async def _edit_or_reply(update: Update, text: str, keyboard=None) -> None:

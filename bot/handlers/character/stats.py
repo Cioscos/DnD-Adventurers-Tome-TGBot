@@ -88,6 +88,7 @@ async def handle_stat_text(
             )
         )
         score = result.scalar_one_or_none()
+        old_val = score.value if score else None
         if score is None:
             score = AbilityScore(character_id=char_id, name=stat_name, value=value)
             session.add(score)
@@ -100,11 +101,25 @@ async def handle_stat_text(
             if char:
                 char.carry_capacity = value * 15
 
+    labels = get_ability_labels(lang=lang)
+    stat_label = labels.get(stat_name, (stat_name, ""))[0]
+    desc = f"{stat_label}: {old_val} → {value}" if old_val is not None else f"{stat_label}: {value}"
+    import asyncio as _asyncio
+    _asyncio.create_task(_log(char_id, "stats_change", desc))
     await update.message.reply_text(translator.t("character.stats.updated", lang=lang), parse_mode="MarkdownV2")
     return await show_stats_menu(update, context, char_id)
 
 
 # ---------------------------------------------------------------------------
+
+async def _log(char_id: int, event_type: str, description: str) -> None:
+    """Fire-and-forget wrapper for history logging."""
+    try:
+        from bot.db.history import log_history_event
+        await log_history_event(char_id, event_type, description)
+    except Exception as exc:
+        logger.warning("History log failed for char %s: %s", char_id, exc)
+
 
 async def _edit_or_reply(update: Update, text: str, keyboard=None) -> None:
     kwargs = dict(text=text, parse_mode="MarkdownV2")
