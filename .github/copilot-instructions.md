@@ -1,4 +1,4 @@
-# Copilot Instructions
+﻿# Copilot Instructions
 
 ## Repository
 
@@ -81,7 +81,7 @@ bot/
 │       ├── abilities.py     # Special abilities (passive/active, uses, restoration type)
 │       ├── multiclass.py    # Multiclassing: guided/custom class add, subclass, level up/down, resource auto-gen
 │       ├── class_resources.py # Class-specific resources (Ki, Rage, etc.): view / use / restore per ClassResource
-│       ├── dice.py          # Dice roller (d4–d100) with history; fires party update hook on roll
+│       ├── dice.py          # Dice roller (d4–d100) + dedicated initiative roll (1d20+DEX mod); fires party update hook on every roll
 │       ├── notes.py         # Text notes + voice notes
 │       ├── maps.py          # Map images/documents organised by zone
 │       ├── conditions.py    # D&D 5e conditions tracker (14 binary + Exhaustion 0–6); fires party update hook on toggle/adjust
@@ -190,6 +190,8 @@ Key `char_history` sub-actions: `clear` (deletes all history entries for the cha
 
 Key `char_bag` sub-actions: `detail` (`item_id=item_id`, opens item detail), `equip` (`item_id=item_id`, toggles equip/unequip), `qty_add` (`item_id=item_id`, +1 quantity), `qty_rem` (`item_id=item_id`, −1 quantity), `delete` / `delete_confirm` (`item_id=item_id`), `skip` (skips an optional field in the add flow).
 
+Key `char_dice` sub-actions: `initiative` (rolls 1d20+DEX modifier directly, saves to `rolls_history` as `["🎯 INI", [total]]`, logs `dice_roll` to character history, triggers party update). No `sub` → show dice menu; `sub` starts with `d` (e.g. `d6`) → count picker; `sub=roll` with `extra="{count}|{die}"` → roll; `sub=clear_history` → clear.
+
 Key `char_skills` sub-actions: `detail` (`extra=slug`, opens the detail screen for that skill), `toggle` (`extra=slug`, toggles proficiency on/off and stays on the detail screen), `roll` (`extra=slug`, rolls d20 + computed bonus, shows result inline on the detail screen and logs to history with event type `dice_roll`). No `extra` → shows the skills list.
 
 #### Party Feature (PartyAction)
@@ -246,7 +248,7 @@ Union types (e.g. `AnyEquipment`) are handled with `__typename` + inline fragmen
 
 ### Character Formatters
 
-`bot/utils/formatting.py` provides localized formatters for every character screen: `format_character_summary` (accepts optional `spells`, `abilities`, and `equipped_items` for active/equipped status), `format_hp`, `format_ac`, `format_ability_scores`, `format_spells`, `format_spell_detail`, `format_spell_slots`, `format_bag`, `format_item_detail`, `format_equipped_items`, `format_currency`, `format_abilities`, `format_maps`, `format_dice_history`, `format_character_active_status`, `format_multiclass_menu`, `format_class_resources`, `format_conditions`, `format_condition_detail`, `format_skills`, `format_skill_detail`. All accept `lang: str = "it"`, use `translator.t()` for all strings, and output MarkdownV2 with `_esc()`. Helper functions `get_ability_labels(lang)`, `get_currency_labels(lang)`, `get_restoration_labels(lang)` return language-aware label dicts.
+`bot/utils/formatting.py` provides localized formatters for every character screen: `format_character_summary` (accepts optional `spells`, `abilities`, `equipped_items` for active/equipped status, and `dex_score: int | None` to display initiative bonus in the header), `format_hp`, `format_ac`, `format_ability_scores`, `format_spells`, `format_spell_detail`, `format_spell_slots`, `format_bag`, `format_item_detail`, `format_equipped_items`, `format_currency`, `format_abilities`, `format_maps`, `format_dice_history`, `format_character_active_status`, `format_multiclass_menu`, `format_class_resources`, `format_conditions`, `format_condition_detail`, `format_skills`, `format_skill_detail`. All accept `lang: str = "it"`, use `translator.t()` for all strings, and output MarkdownV2 with `_esc()`. Helper functions `get_ability_labels(lang)`, `get_currency_labels(lang)`, `get_restoration_labels(lang)` return language-aware label dicts.
 
 **Important**: condition description strings stored in YAML locale files are **pre-escaped MarkdownV2** (e.g. `\.` for a literal dot). Do **not** pass them through `_esc()` — use them directly. Only plain-text strings (names, labels) should be escaped.
 
@@ -309,7 +311,7 @@ Navigable sub-entity buttons (📂) are discovered automatically from the schema
 - **Concentration saving throw**: DC = `max(10, damage // 2)`. Roll = `d20 + CON modifier`. Nat 1 always fails, nat 20 always succeeds. On failure, `concentrating_spell_id` is set to `None`.
 - **Fuzzy spell search**: `sub="search"` → `ask_spell_search()` (state `CHAR_SPELL_SEARCH`); user types query; `handle_spell_search_text()` runs `rapidfuzz.process.extract(WRatio, score_cutoff=50, limit=20)` against spell names; results shown via `build_spell_search_results_keyboard()`. Back from spell detail to search results uses `extra="search_show"` (routed by `not sub and data.extra == "search_show"` check). Query is stored in `context.user_data["char_spell_search_pending"]`.
 - **Pin**: `is_pinned=True` shows the spell in the main menu summary alongside passive active abilities.
-- **`format_character_summary`** must receive `spells`, `abilities`, and `equipped_items` lists to display the active/equipped status section.
+- **`format_character_summary`** must receive `spells`, `abilities`, and `equipped_items` lists to display the active/equipped status section. Pass `dex_score` (DEX ability score integer) to show the initiative bonus (`⚡ Ini: +2`) in the character header.
 - **`spell_management` setting** (`characters.settings["spell_management"]`): controls how the spell list is navigated.
   - `"paginate_by_level"` (default) — shows a **level picker** first (one button per level that has ≥1 spell, max 3 per row); tapping a level shows only the spells of that level with pagination. The `extra` field of `CharAction` carries the selected level as a string (e.g. `"3"`; `"0"` = cantrips). Empty `extra` → show picker.
   - `"select_level_directly"` — flat paginated list of all spells ordered by `level, name` (direct scroll, no level filter).
@@ -357,6 +359,14 @@ Navigable sub-entity buttons (📂) are discovered automatically from the schema
 - **Locale keys**: `character.skills.names.<slug>` (18 names), `character.skills.desc.<slug>` (18 plain-text descriptions, passed through `_esc()` in the formatter — NOT pre-escaped in YAML), `character.skills.ability_abbr.<ability>` (6 abbreviations), plus `title`, `prof_bonus_label`, `instruction`, `updated`, `proficient_icon`, `not_proficient_icon`, `detail_proficient`, `detail_not_proficient`, `btn_toggle_proficient`, `btn_toggle_not_proficient`, `btn_roll`, `roll_result`, `roll_logged`.
 - **Button position**: 🎯 Abilità appears immediately after 📊 Punteggi Abilità in the character main menu.
 
+### Dice Details
+
+- **Dice types**: d4, d6, d8, d10, d12, d20, d100. Selecting a die opens a count picker (1–10); confirming rolls `{count}{die}` and saves to `rolls_history` as `["{count}{die}", [list_of_results]]`.
+- **Initiative roll**: dedicated `🎯 Iniziativa` button in `build_dice_keyboard` (`sub="initiative"`). Rolls 1d20 + DEX modifier in a single tap — no count picker. Saved to `rolls_history` as `["🎯 INI", [total]]` where `total = die + dex_mod`. Result screen shows full breakdown: `d20: {die} + DES: {mod} = {total}`.
+- **`roll_initiative`** in `dice.py`: loads `AbilityScore` for `dexterity` from DB (defaults to 10 if not set), rolls, appends to history, fires `_trigger_party_update` and `_log` (event type `dice_roll`).
+- **`format_character_header`** accepts optional `dex_score: int | None` — when provided adds `⚡ Ini: {modifier}` line below the CA line. Only passed from `menu.py` (main menu); other screens that call the header do not pass it.
+- **Rolls history storage**: JSON list on `Character.rolls_history`, capped at 50 entries. Format: `[label, list_of_values]` — e.g. `["3d6", [2, 5, 4]]` or `["🎯 INI", [15]]`.
+- **Locale keys**: `character.dice.btn_initiative`, `character.dice.initiative_title`, `character.dice.initiative_result` (MarkdownV2 with `{die}`, `{mod_str}`, `{total}`), `character.common.initiative_label`.
 ### Bag / Inventory Details
 
 - **Item types**: `generic` (default), `weapon`, `armor`, `shield`, `consumable`, `tool`. Chosen via inline keyboard at the start of the add-item flow.
@@ -392,7 +402,7 @@ Navigable sub-entity buttons (📂) are discovered automatically from the schema
 - **Deduplication** (stacking): only applies to `item_type == "generic"` — same as the original behaviour.
 - **`format_item_detail`**: accepts a `dict` with keys `name, description, weight, quantity, item_type, item_metadata, is_equipped`. Metadata fields are rendered only when present/non-null.
 - **`format_equipped_items`**: accepts `list[dict]` with keys `name, item_type, item_metadata`. Called from `menu.py` to populate the equipped-items section of the character summary.
-- **`format_character_summary`** accepts `equipped_items: list | None = None`. When provided, renders an equipped-items block at the bottom of the summary.
+- **`format_character_summary`** accepts `equipped_items: list | None = None` and `dex_score: int | None = None`. When `dex_score` is provided, `format_character_header` shows the initiative line `⚡ Ini: {modifier}` below the AC line. When `equipped_items` is provided, renders an equipped-items block at the bottom of the summary.
 - **Conversation states added** (6 new): `CHAR_BAG_ADD_INLINE`, `CHAR_BAG_ADD_DAMAGE_DICE`, `CHAR_BAG_ADD_EFFECT`, `CHAR_BAG_ADD_AC_VALUE`, `CHAR_BAG_ADD_STR_REQ`, `CHAR_BAG_ADD_TOOL_TYPE`. Total state count: **57**.
 - **Locale keys**: all under `character.bag.*` — `item_types.*` (6 type labels), `item_type_icons.*`, weapon/armor/shield/consumable/tool metadata labels, `btn_equip`, `btn_unequip`, `equipped_label`, `not_equipped_label`, `btn_qty_add` (`"➕ +1"`), `btn_qty_rem` (`"➖ -1"`).
 - **Button labels**: must NOT contain MarkdownV2 escaping. `btn_qty_add`/`btn_qty_rem` use plain `+1`/`-1`, not `\+1`/`\-1`.
