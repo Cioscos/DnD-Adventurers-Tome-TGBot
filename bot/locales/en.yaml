@@ -68,6 +68,7 @@ character:
     btn_settings: "⚙️ Settings"
     btn_conditions: "⚠️ Conditions"
     btn_history: "📜 History"
+    btn_skills: "🎯 Skills"
 
   history:
     title: "📜 *Modification History — {name}*"
@@ -89,6 +90,7 @@ character:
     currency_change: "💰 Currency"
     ability_change: "⚡ Ability"
     condition_change: "⚠️ Condition"
+    skill_change: "🎯 Skill"
 
   hp:
     title: "❤️ *Hit Points*"
@@ -466,6 +468,40 @@ character:
     btn_spell_mgmt: "✨ Spell Mgmt: {label}"
     btn_party_active: "🎯 Active in Party: {label}"
     updated: "Setting updated\\."
+
+  skills:
+    title: "🎯 *Skills*"
+    prof_bonus_label: "🔑 Proficiency Bonus: *{bonus:+d}* \\(Level {level}\\)"
+    instruction: "Tap a skill to toggle proficiency\\."
+    updated: "✅ Proficiency updated\\!"
+    proficient_icon: "🎯"
+    not_proficient_icon: "⬛"
+    names:
+      acrobatics: "Acrobatics"
+      animal_handling: "Animal Handling"
+      arcana: "Arcana"
+      athletics: "Athletics"
+      deception: "Deception"
+      history: "History"
+      insight: "Insight"
+      intimidation: "Intimidation"
+      investigation: "Investigation"
+      medicine: "Medicine"
+      nature: "Nature"
+      perception: "Perception"
+      performance: "Performance"
+      persuasion: "Persuasion"
+      religion: "Religion"
+      sleight_of_hand: "Sleight of Hand"
+      stealth: "Stealth"
+      survival: "Survival"
+    ability_abbr:
+      strength: "STR"
+      dexterity: "DEX"
+      constitution: "CON"
+      intelligence: "INT"
+      wisdom: "WIS"
+      charisma: "CHA"
 
 # ---------------------------------------------------------------------------
 # Party feature

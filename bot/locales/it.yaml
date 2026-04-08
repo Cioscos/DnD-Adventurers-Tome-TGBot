@@ -69,6 +69,7 @@ character:
     btn_settings: "⚙️ Impostazioni"
     btn_conditions: "⚠️ Condizioni"
     btn_history: "📜 Storico"
+    btn_skills: "🎯 Abilità"
 
   history:
     title: "📜 *Storico Modifiche — {name}*"
@@ -90,6 +91,7 @@ character:
     currency_change: "💰 Monete"
     ability_change: "⚡ Abilità"
     condition_change: "⚠️ Condizione"
+    skill_change: "🎯 Abilità"
 
   hp:
     title: "❤️ *Punti Vita*"
@@ -466,6 +468,40 @@ character:
     btn_spell_mgmt: "✨ Gestione Magie: {label}"
     btn_party_active: "🎯 Attivo nel Party: {label}"
     updated: "Impostazione aggiornata\\."
+
+  skills:
+    title: "🎯 *Abilità (Skills)*"
+    prof_bonus_label: "🔑 Bonus Competenza: *{bonus:+d}* \\(Livello {level}\\)"
+    instruction: "Tocca un'abilità per attivare/disattivare la competenza\\."
+    updated: "✅ Competenza aggiornata\\!"
+    proficient_icon: "🎯"
+    not_proficient_icon: "⬛"
+    names:
+      acrobatics: "Acrobazie"
+      animal_handling: "Gestione Animali"
+      arcana: "Arcana"
+      athletics: "Atletica"
+      deception: "Inganno"
+      history: "Storia"
+      insight: "Intuizione"
+      intimidation: "Intimidazione"
+      investigation: "Indagare"
+      medicine: "Medicina"
+      nature: "Natura"
+      perception: "Percezione"
+      performance: "Intrattenere"
+      persuasion: "Persuasione"
+      religion: "Religione"
+      sleight_of_hand: "Rapidità di Mano"
+      stealth: "Furtività"
+      survival: "Sopravvivenza"
+    ability_abbr:
+      strength: "FOR"
+      dexterity: "DES"
+      constitution: "COS"
+      intelligence: "INT"
+      wisdom: "SAG"
+      charisma: "CAR"
 
 # ---------------------------------------------------------------------------
 # Party feature

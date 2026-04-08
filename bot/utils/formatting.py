@@ -460,6 +460,22 @@ def _esc(text: str) -> str:
     return "".join(f"\\{c}" if c in special else c for c in str(text))
 
 
+def format_skills(
+    char: "Character",
+    ability_scores: "list[AbilityScore]",
+    lang: str = "it",
+) -> str:
+    """Format the skills screen header showing proficiency bonus and instructions."""
+    title = translator.t("character.skills.title", lang=lang)
+    level = char.total_level
+    bonus = char.proficiency_bonus
+    prof_line = translator.t(
+        "character.skills.prof_bonus_label", lang=lang, bonus=bonus, level=level
+    )
+    instruction = translator.t("character.skills.instruction", lang=lang)
+    return f"{title}\n\n{prof_line}\n{instruction}"
+
+
 def format_multiclass_menu(classes: list, lang: str = "it") -> str:
     """Format the multiclass menu display with subclass and resource summary."""
     title = translator.t("character.multiclass.title", lang=lang)

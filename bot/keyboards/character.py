@@ -7,6 +7,7 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from bot.db.models import (
     ABILITY_NAMES,
     Ability,
+    AbilityScore,
     Character,
     Currency,
     Item,
@@ -94,6 +95,7 @@ def build_character_main_menu_keyboard(char_id: int, lang: str = "it") -> Inline
         (translator.t("character.menu.btn_rest",       lang=lang), CharAction("char_rest",       char_id=cid)),
         (translator.t("character.menu.btn_conditions", lang=lang), CharAction("char_conditions", char_id=cid)),
         (translator.t("character.menu.btn_history",    lang=lang), CharAction("char_history",    char_id=cid)),
+        (translator.t("character.menu.btn_skills",     lang=lang), CharAction("char_skills",     char_id=cid)),
         (translator.t("character.menu.btn_settings",   lang=lang), CharAction("char_settings",   char_id=cid)),
         (translator.t("character.selection.delete_btn",lang=lang), CharAction("char_delete",    char_id=cid)),
     ]
@@ -985,4 +987,55 @@ def build_condition_detail_keyboard(
             )])
 
     rows.append(_nav_row(back_action=back, menu_char_id=cid, lang=lang))
+    return InlineKeyboardMarkup(rows)
+
+
+# ---------------------------------------------------------------------------
+# Skills
+# ---------------------------------------------------------------------------
+
+def build_skills_keyboard(
+    char_id: int,
+    char: Character,
+    ability_scores: list[AbilityScore],
+    lang: str = "it",
+) -> InlineKeyboardMarkup:
+    """Keyboard for the skills screen: one button per skill showing proficiency + bonus."""
+    from bot.data.skills import SKILLS
+
+    cid = char_id
+    proficiency_bonus = char.proficiency_bonus
+
+    # Build a map ability_name → ability score value for quick lookup
+    score_map = {s.name: s.value for s in ability_scores}
+
+    rows: list[list[InlineKeyboardButton]] = []
+    row: list[InlineKeyboardButton] = []
+
+    for slug, ability in SKILLS:
+        score_val = score_map.get(ability, 10)
+        mod = (score_val - 10) // 2
+        skills_data: dict = char.skills or {}
+        is_proficient = bool(skills_data.get(slug, False))
+        bonus = mod + (proficiency_bonus if is_proficient else 0)
+
+        skill_name = translator.t(f"character.skills.names.{slug}", lang=lang)
+        ability_abbr = translator.t(f"character.skills.ability_abbr.{ability}", lang=lang)
+        prof_icon = translator.t(
+            "character.skills.proficient_icon" if is_proficient else "character.skills.not_proficient_icon",
+            lang=lang,
+        )
+        bonus_str = f"+{bonus}" if bonus >= 0 else str(bonus)
+        label = f"{prof_icon} {skill_name} ({ability_abbr}): {bonus_str}"
+
+        btn = _btn(label, CharAction("char_skills", char_id=cid, sub="toggle", extra=slug))
+        row.append(btn)
+        if len(row) == 2:
+            rows.append(row)
+            row = []
+
+    if row:
+        rows.append(row)
+
+    rows.append(_nav_row(back_action=CharAction("char_menu", char_id=cid), menu_char_id=cid, lang=lang))
     return InlineKeyboardMarkup(rows)

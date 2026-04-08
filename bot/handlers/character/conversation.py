@@ -61,6 +61,7 @@ from bot.handlers.character import (
     CHAR_NOTES_MENU,
     CHAR_SELECT,
     CHAR_SETTINGS_MENU,
+    CHAR_SKILLS_MENU,
     CHAR_SPELL_EDIT,
     CHAR_SPELL_LEARN,
     CHAR_SPELL_SEARCH,
@@ -469,6 +470,13 @@ async def character_callback_handler(
             return await handle_clear_history(update, context, cid)
         return await show_history(update, context, cid)
 
+    # ─── Skills ───
+    if action == "char_skills":
+        from bot.handlers.character.skills import show_skills_menu, toggle_skill_proficiency
+        if sub == "toggle" and data.extra:
+            return await toggle_skill_proficiency(update, context, cid, data.extra)
+        return await show_skills_menu(update, context, cid)
+
     return CHAR_MENU
 
 
@@ -707,6 +715,7 @@ def build_character_conversation_handler() -> ConversationHandler:
             CHAR_DELETE_CONFIRM: [char_callback],
             CHAR_CONDITIONS_MENU: [char_callback],
             CHAR_HISTORY_MENU: [char_callback],
+            CHAR_SKILLS_MENU: [char_callback],
         },
         fallbacks=[
             CommandHandler("start", lambda u, c: ConversationHandler.END),
