@@ -423,7 +423,7 @@ def _format_monster(item: dict[str, Any]) -> str:
     ac_list = item.get("armor_class", [])
     ac_str = ", ".join(str(a.get("value", "?")) for a in ac_list) if ac_list else "?"
     lines.append(
-        f"*AC:* {_esc(ac_str)}  |  *HP:* {_esc(item.get('hit_points', '?'))} "
+        f"*AC:* {_esc(ac_str)}  \\|  *HP:* {_esc(item.get('hit_points', '?'))} "
         f"\\({_esc(item.get('hit_dice', ''))}\\)"
     )
 
@@ -431,12 +431,12 @@ def _format_monster(item: dict[str, Any]) -> str:
     xp = item.get("xp", "?")
     lines.append(
         f"*CR:* {_esc(f'{cr:g}' if isinstance(cr, float) else str(cr))}  "
-        f"|  *XP:* {_esc(str(xp))}"
+        f"\\|  *XP:* {_esc(str(xp))}"
     )
 
     abilities = ["strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma"]
     abbr = ["STR", "DEX", "CON", "INT", "WIS", "CHA"]
-    scores = " | ".join(f"{a} {_esc(str(item.get(ab, '—')))}" for a, ab in zip(abbr, abilities))
+    scores = " \\| ".join(f"{a} {_esc(str(item.get(ab, '—')))}" for a, ab in zip(abbr, abilities))
     lines.append(f"\n{scores}")
 
     speed = item.get("speed", {})
