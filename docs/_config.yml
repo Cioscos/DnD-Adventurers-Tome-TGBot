@@ -6,7 +6,7 @@ plugins:
 title: "D&D Adventurer's Tome"
 description: "Wiki · Character Management · Group Party — Full-featured async D&D 5e companion on Telegram"
 
-baseurl: "/dnd_bot_revamped"
+baseurl: "/DnD-Adventurers-Tome-TGBot"
 url: "https://cioscos.github.io"
 
 show_downloads: false
