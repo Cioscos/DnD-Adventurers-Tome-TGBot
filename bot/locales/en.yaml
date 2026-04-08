@@ -471,7 +471,7 @@ character:
 
   skills:
     title: "🎯 *Skills*"
-    prof_bonus_label: "🔑 Proficiency Bonus: *{bonus:+d}* \\(Level {level}\\)"
+    prof_bonus_label: "🔑 Proficiency Bonus: *{bonus}* \\(Level {level}\\)"
     instruction: "Tap a skill to toggle proficiency\\."
     updated: "✅ Proficiency updated\\!"
     proficient_icon: "🎯"

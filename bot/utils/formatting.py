@@ -469,8 +469,10 @@ def format_skills(
     title = translator.t("character.skills.title", lang=lang)
     level = char.total_level
     bonus = char.proficiency_bonus
+    # Pre-escape the sign (+ and - are reserved in MarkdownV2)
+    bonus_esc = f"\\+{bonus}" if bonus >= 0 else f"\\-{abs(bonus)}"
     prof_line = translator.t(
-        "character.skills.prof_bonus_label", lang=lang, bonus=bonus, level=level
+        "character.skills.prof_bonus_label", lang=lang, bonus=bonus_esc, level=level
     )
     instruction = translator.t("character.skills.instruction", lang=lang)
     return f"{title}\n\n{prof_line}\n{instruction}"

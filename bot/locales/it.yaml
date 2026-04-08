@@ -470,8 +470,8 @@ character:
     updated: "Impostazione aggiornata\\."
 
   skills:
-    title: "🎯 *Abilità (Skills)*"
-    prof_bonus_label: "🔑 Bonus Competenza: *{bonus:+d}* \\(Livello {level}\\)"
+    title: "🎯 *Abilità \\(Skills\\)*"
+    prof_bonus_label: "🔑 Bonus Competenza: *{bonus}* \\(Livello {level}\\)"
     instruction: "Tocca un'abilità per attivare/disattivare la competenza\\."
     updated: "✅ Competenza aggiornata\\!"
     proficient_icon: "🎯"
