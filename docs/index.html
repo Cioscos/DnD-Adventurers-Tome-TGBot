@@ -20,64 +20,79 @@ title: "D&D Adventurer's Tome — Wiki · Characters · Party"
   <img src="{{ '/assets/images/botpic.png' | relative_url }}" alt="D&D Bot Avatar" class="bot-avatar">
 
   <h1>
-    <span class="lang-en">D&amp;D 5e Telegram Bot</span>
-    <span class="lang-it">Bot Telegram D&amp;D 5e</span>
+    <span class="lang-en">D&amp;D Adventurer's Tome</span>
+    <span class="lang-it">D&amp;D Adventurer's Tome</span>
   </h1>
 
-  <p style="font-size:1.1rem; max-width:640px; margin:0 auto 1rem;">
+  <p class="hero-tagline">
     <span class="lang-en">
-      A fully async Telegram bot bringing the entire D&amp;D 5e compendium, deep character management and live group party sessions right into your chat.
+      Your ultimate D&amp;D 5e companion on Telegram. Browse the entire compendium, manage your characters, and run live party sessions &mdash; all without leaving your chat.
     </span>
     <span class="lang-it">
-      Un bot Telegram completamente async che porta l'intero compendio D&amp;D 5e, la gestione avanzata del personaggio e le sessioni party live direttamente nella tua chat.
+      Il tuo compagno D&amp;D 5e definitivo su Telegram. Esplora l'intero compendio, gestisci i tuoi personaggi e avvia sessioni party dal vivo &mdash; tutto senza uscire dalla chat.
     </span>
   </p>
 
+  <div class="hero-cta">
+    <a href="https://github.com/Cioscos/DnD-Adventurers-Tome-TGBot" target="_blank" class="btn-primary">
+      <span class="lang-en">View on GitHub</span>
+      <span class="lang-it">Vedi su GitHub</span>
+    </a>
+    <a href="#features" class="btn-secondary">
+      <span class="lang-en">Discover Features</span>
+      <span class="lang-it">Scopri le Funzioni</span>
+    </a>
+  </div>
+
   <div class="badges">
     <img src="https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white" alt="Python 3.10+">
-    <img src="https://img.shields.io/badge/python--telegram--bot-22.0+-2CA5E0?logo=telegram&logoColor=white" alt="PTB 22+">
-    <img src="https://img.shields.io/badge/SQLite-async-003B57?logo=sqlite&logoColor=white" alt="SQLite">
-    <img src="https://img.shields.io/badge/GraphQL-D&amp;D%205e%20API-E10098?logo=graphql&logoColor=white" alt="GraphQL">
+    <img src="https://img.shields.io/badge/Telegram-Bot-2CA5E0?logo=telegram&logoColor=white" alt="Telegram Bot">
+    <img src="https://img.shields.io/badge/D%26D-5e%20SRD-8b0000" alt="D&amp;D 5e">
     <img src="https://img.shields.io/badge/i18n-EN%20%7C%20IT-success" alt="i18n EN/IT">
-    <img src="https://img.shields.io/badge/license-SRD-lightgrey" alt="License SRD">
   </div>
 </div>
 
 <!-- ============================================================
      FEATURE OVERVIEW CARDS
      ============================================================ -->
-<div class="feature-grid">
-  <!-- Wiki -->
-  <div class="feature-card">
-    <span class="card-icon">📖</span>
-    <h3 class="lang-en">D&amp;D 5e Wiki</h3>
-    <h3 class="lang-it">Wiki D&amp;D 5e</h3>
-    <p class="lang-en">Browse the entire D&amp;D 5e compendium. 11 categories, N-level navigation, dynamic GraphQL queries, automatic schema introspection.</p>
-    <p class="lang-it">Naviga l'intero compendio D&amp;D 5e. 11 categorie, navigazione N-livelli, query GraphQL dinamiche, introspezione schema automatica.</p>
-    <a href="#wiki" class="lang-en">Explore →</a>
-    <a href="#wiki" class="lang-it">Esplora →</a>
+<section id="features">
+  <h2 class="section-title">
+    <span class="lang-en">What Can This Bot Do?</span>
+    <span class="lang-it">Cosa Pu&ograve; Fare Questo Bot?</span>
+  </h2>
+  <div class="feature-grid">
+    <!-- Wiki -->
+    <div class="feature-card">
+      <span class="card-icon">&#x1F4D6;</span>
+      <h3 class="lang-en">D&amp;D 5e Encyclopedia</h3>
+      <h3 class="lang-it">Enciclopedia D&amp;D 5e</h3>
+      <p class="lang-en">Look up spells, monsters, classes, races, equipment and more &mdash; all 11 categories of the official D&amp;D 5e compendium, browsable with inline buttons right inside Telegram.</p>
+      <p class="lang-it">Cerca incantesimi, mostri, classi, razze, equipaggiamento e altro &mdash; tutte le 11 categorie del compendio ufficiale D&amp;D 5e, navigabili con bottoni inline direttamente in Telegram.</p>
+      <a href="#wiki" class="card-link lang-en">Learn more &#8594;</a>
+      <a href="#wiki" class="card-link lang-it">Scopri di pi&ugrave; &#8594;</a>
+    </div>
+    <!-- Character -->
+    <div class="feature-card">
+      <span class="card-icon">&#x2694;&#xFE0F;</span>
+      <h3 class="lang-en">Character Sheet</h3>
+      <h3 class="lang-it">Scheda Personaggio</h3>
+      <p class="lang-en">Create and manage full D&amp;D characters: HP, armor, abilities, spells, inventory, dice rolls, conditions and much more. Everything is saved automatically.</p>
+      <p class="lang-it">Crea e gestisci personaggi D&amp;D completi: HP, armatura, abilit&agrave;, incantesimi, inventario, tiri di dado, condizioni e molto altro. Tutto viene salvato automaticamente.</p>
+      <a href="#character" class="card-link lang-en">Learn more &#8594;</a>
+      <a href="#character" class="card-link lang-it">Scopri di pi&ugrave; &#8594;</a>
+    </div>
+    <!-- Party -->
+    <div class="feature-card">
+      <span class="card-icon">&#x1F6E1;&#xFE0F;</span>
+      <h3 class="lang-en">Live Group Party</h3>
+      <h3 class="lang-it">Party di Gruppo Live</h3>
+      <p class="lang-en">Start a party session in your Telegram group. See everyone&rsquo;s HP bars, armor class, conditions and dice rolls in a single, auto-updating message.</p>
+      <p class="lang-it">Avvia una sessione party nel tuo gruppo Telegram. Vedi le barre HP, classe armatura, condizioni e tiri di dado di tutti in un unico messaggio che si aggiorna da solo.</p>
+      <a href="#party" class="card-link lang-en">Learn more &#8594;</a>
+      <a href="#party" class="card-link lang-it">Scopri di pi&ugrave; &#8594;</a>
+    </div>
   </div>
-  <!-- Character -->
-  <div class="feature-card">
-    <span class="card-icon">⚔️</span>
-    <h3 class="lang-en">Character Management</h3>
-    <h3 class="lang-it">Gestione Personaggio</h3>
-    <p class="lang-en">Full D&amp;D character sheet — HP, AC, ability scores, skills, spells, inventory, currencies, conditions, heroic inspiration and much more.</p>
-    <p class="lang-it">Scheda personaggio D&amp;D completa — HP, CA, punteggi abilità, skills, incantesimi, inventario, valute, condizioni, ispirazione eroica e molto altro.</p>
-    <a href="#character" class="lang-en">Explore →</a>
-    <a href="#character" class="lang-it">Esplora →</a>
-  </div>
-  <!-- Party -->
-  <div class="feature-card">
-    <span class="card-icon">🛡️</span>
-    <h3 class="lang-en">Group Party</h3>
-    <h3 class="lang-it">Party di Gruppo</h3>
-    <p class="lang-en">Live party status in your Telegram group. Real-time HP bars, AC, active conditions and last roll per character. 48-hour session with public/private display.</p>
-    <p class="lang-it">Stato party live nel tuo gruppo Telegram. Barre HP in tempo reale, CA, condizioni attive e ultimo tiro per personaggio. Sessione 48 ore con display pubblico/privato.</p>
-    <a href="#party" class="lang-en">Explore →</a>
-    <a href="#party" class="lang-it">Esplora →</a>
-  </div>
-</div>
+</section>
 
 <hr class="section-divider">
 
@@ -85,128 +100,98 @@ title: "D&D Adventurer's Tome — Wiki · Characters · Party"
      D&D 5e WIKI
      ============================================================ -->
 <section id="wiki">
-  <h2><span class="section-icon">📖</span>
-    <span class="lang-en">D&amp;D 5e Wiki</span>
-    <span class="lang-it">Wiki D&amp;D 5e</span>
+  <h2><span class="section-icon">&#x1F4D6;</span>
+    <span class="lang-en">D&amp;D 5e Encyclopedia</span>
+    <span class="lang-it">Enciclopedia D&amp;D 5e</span>
   </h2>
 
   <!-- EN -->
   <div class="lang-en">
     <p>
-      The wiki feature connects directly to the official <strong><a href="https://www.dnd5eapi.co/" target="_blank">D&amp;D 5e API</a></strong>
-      via its GraphQL endpoint, giving you deep access to the complete System Reference Document (SRD) — directly inside Telegram.
+      Need to quickly check a spell during a session? Wondering what abilities a monster has? The bot gives you instant access to the entire <strong><a href="https://www.dnd5eapi.co/" target="_blank">D&amp;D 5e System Reference Document</a></strong> &mdash; directly inside Telegram.
     </p>
 
-    <h3>🔍 Automatic Schema Discovery</h3>
-    <p>
-      At bot startup, a single <code>__schema</code> GraphQL introspection query downloads the complete API schema (203+ types).
-      The bot automatically discovers root queries, navigable fields, union types, and pagination support — <strong>no hardcoded query strings</strong>.
-      All GraphQL queries are generated dynamically from the schema at runtime.
-    </p>
-
-    <h3>📂 11 Browse Categories</h3>
-    <p>Use the inline keyboard to navigate across all content types:</p>
+    <h3>&#x1F4C2; 11 Content Categories</h3>
+    <p>Tap a category and start browsing:</p>
     <ul class="category-list">
-      <li>🧙 Spells</li>
-      <li>👹 Monsters</li>
-      <li>🏹 Classes</li>
-      <li>🧝 Races</li>
-      <li>⚔️ Equipment</li>
-      <li>🌀 Conditions</li>
-      <li>✨ Magic Items</li>
-      <li>🌟 Feats</li>
-      <li>📜 Rules</li>
-      <li>📖 Backgrounds</li>
-      <li>🗡️ Weapon Properties</li>
+      <li>&#x1F9D9; Spells</li>
+      <li>&#x1F479; Monsters</li>
+      <li>&#x1F3F9; Classes</li>
+      <li>&#x1F9DD; Races</li>
+      <li>&#x2694;&#xFE0F; Equipment</li>
+      <li>&#x1F300; Conditions</li>
+      <li>&#x2728; Magic Items</li>
+      <li>&#x1F31F; Feats</li>
+      <li>&#x1F4DC; Rules</li>
+      <li>&#x1F4D6; Backgrounds</li>
+      <li>&#x1F5E1;&#xFE0F; Weapon Properties</li>
     </ul>
 
-    <h3>🗺️ N-Level Navigation</h3>
-    <p>Navigate through the compendium via a fully inline keyboard — never leave Telegram:</p>
+    <h3>&#x1F5FA;&#xFE0F; Deep Navigation</h3>
+    <p>Each entry lets you drill deeper. Select a class and explore its proficiencies, saving throws, spells and subclasses. Pick a race to see traits, languages and subraces. Every connection is automatically discovered and browsable.</p>
     <div class="nav-flow">
-      <span class="step">📖 Wiki</span>
-      <span class="arrow">→</span>
+      <span class="step">&#x1F4D6; Wiki</span>
+      <span class="arrow">&#8594;</span>
       <span class="step">Category</span>
-      <span class="arrow">→</span>
+      <span class="arrow">&#8594;</span>
       <span class="step">Paginated List</span>
-      <span class="arrow">→</span>
+      <span class="arrow">&#8594;</span>
       <span class="step">Item Detail</span>
-      <span class="arrow">→</span>
-      <span class="step">📂 Sub-entities</span>
-      <span class="arrow">→</span>
-      <span class="step">…</span>
+      <span class="arrow">&#8594;</span>
+      <span class="step">&#x1F4C2; Sub-entities</span>
+      <span class="arrow">&#8594;</span>
+      <span class="step">&hellip;</span>
     </div>
-    <p>
-      Each item detail page auto-discovers its navigable sub-entities (e.g., a <em>Class</em> shows its proficiencies, saving throws, spells, and subclasses; a <em>Race</em> shows traits, languages, subraces; a <em>Spell</em> shows the classes that can cast it). These relationships are computed from the schema — no manual configuration needed.
-    </p>
 
-    <h3>⚙️ Technical Highlights</h3>
-    <ul>
-      <li><strong>Union type support</strong> — uses <code>__typename</code> + inline fragments to handle polymorphic types like <code>AnyEquipment</code></li>
-      <li><strong>Server-side pagination</strong> — top-level lists use <code>skip</code>/<code>limit</code> GraphQL arguments; sub-lists use client-side slicing</li>
-      <li><strong>Partial error handling</strong> — if the API returns <code>errors</code> alongside <code>data</code>, the bot still shows available content and logs a warning</li>
-      <li><strong>15-second HTTP timeout</strong> via <code>httpx.AsyncClient</code></li>
-    </ul>
+    <div class="info-box">
+      &#x1F4A1; <strong>Tip:</strong> You never leave Telegram. Everything happens through inline buttons &mdash; no links, no browser tabs.
+    </div>
   </div><!-- /lang-en -->
 
   <!-- IT -->
   <div class="lang-it">
     <p>
-      La funzione wiki si collega direttamente all'<strong><a href="https://www.dnd5eapi.co/" target="_blank">API ufficiale D&amp;D 5e</a></strong>
-      tramite il suo endpoint GraphQL, offrendo accesso completo al System Reference Document (SRD) — direttamente dentro Telegram.
+      Hai bisogno di controllare un incantesimo durante una sessione? Ti chiedi quali abilit&agrave; ha un mostro? Il bot ti d&agrave; accesso istantaneo all&rsquo;intero <strong><a href="https://www.dnd5eapi.co/" target="_blank">System Reference Document D&amp;D 5e</a></strong> &mdash; direttamente dentro Telegram.
     </p>
 
-    <h3>🔍 Scoperta Schema Automatica</h3>
-    <p>
-      All'avvio del bot, una singola query GraphQL <code>__schema</code> scarica l'intero schema dell'API (203+ tipi).
-      Il bot scopre automaticamente root query, campi navigabili, union type e supporto alla paginazione — <strong>nessuna query hardcoded</strong>.
-      Tutte le query GraphQL sono generate dinamicamente dallo schema a runtime.
-    </p>
-
-    <h3>📂 11 Categorie di Navigazione</h3>
-    <p>Usa la tastiera inline per navigare tra tutti i tipi di contenuto:</p>
+    <h3>&#x1F4C2; 11 Categorie di Contenuto</h3>
+    <p>Tocca una categoria e inizia a navigare:</p>
     <ul class="category-list">
-      <li>🧙 Incantesimi</li>
-      <li>👹 Mostri</li>
-      <li>🏹 Classi</li>
-      <li>🧝 Razze</li>
-      <li>⚔️ Equipaggiamento</li>
-      <li>🌀 Condizioni</li>
-      <li>✨ Oggetti Magici</li>
-      <li>🌟 Talenti</li>
-      <li>📜 Regole</li>
-      <li>📖 Background</li>
-      <li>🗡️ Proprietà Armi</li>
+      <li>&#x1F9D9; Incantesimi</li>
+      <li>&#x1F479; Mostri</li>
+      <li>&#x1F3F9; Classi</li>
+      <li>&#x1F9DD; Razze</li>
+      <li>&#x2694;&#xFE0F; Equipaggiamento</li>
+      <li>&#x1F300; Condizioni</li>
+      <li>&#x2728; Oggetti Magici</li>
+      <li>&#x1F31F; Talenti</li>
+      <li>&#x1F4DC; Regole</li>
+      <li>&#x1F4D6; Background</li>
+      <li>&#x1F5E1;&#xFE0F; Propriet&agrave; Armi</li>
     </ul>
 
-    <h3>🗺️ Navigazione N-Livelli</h3>
-    <p>Naviga il compendio tramite tastiera inline — senza mai uscire da Telegram:</p>
+    <h3>&#x1F5FA;&#xFE0F; Navigazione Profonda</h3>
+    <p>Ogni voce ti permette di approfondire. Seleziona una classe ed esplora competenze, tiri salvezza, incantesimi e sottoclassi. Scegli una razza per vedere tratti, lingue e sottorazze. Ogni connessione viene scoperta automaticamente ed &egrave; navigabile.</p>
     <div class="nav-flow">
-      <span class="step">📖 Wiki</span>
-      <span class="arrow">→</span>
+      <span class="step">&#x1F4D6; Wiki</span>
+      <span class="arrow">&#8594;</span>
       <span class="step">Categoria</span>
-      <span class="arrow">→</span>
+      <span class="arrow">&#8594;</span>
       <span class="step">Lista Paginata</span>
-      <span class="arrow">→</span>
+      <span class="arrow">&#8594;</span>
       <span class="step">Dettaglio</span>
-      <span class="arrow">→</span>
-      <span class="step">📂 Sotto-entità</span>
-      <span class="arrow">→</span>
-      <span class="step">…</span>
+      <span class="arrow">&#8594;</span>
+      <span class="step">&#x1F4C2; Sotto-entit&agrave;</span>
+      <span class="arrow">&#8594;</span>
+      <span class="step">&hellip;</span>
     </div>
-    <p>
-      Ogni pagina di dettaglio scopre automaticamente le sotto-entità navigabili (es: una <em>Classe</em> mostra competenze, tiri salvezza, incantesimi e sottoclassi; una <em>Razza</em> mostra tratti, lingue, sotto-razze; un <em>Incantesimo</em> mostra le classi che possono lanciarlo). Le relazioni sono calcolate dallo schema — senza configurazione manuale.
-    </p>
 
-    <h3>⚙️ Dettagli Tecnici</h3>
-    <ul>
-      <li><strong>Supporto union type</strong> — usa <code>__typename</code> + inline fragment per tipi polimorfici come <code>AnyEquipment</code></li>
-      <li><strong>Paginazione server-side</strong> — le liste di primo livello usano argomenti GraphQL <code>skip</code>/<code>limit</code>; le sotto-liste usano slicing lato client</li>
-      <li><strong>Gestione errori parziali</strong> — se l'API restituisce <code>errors</code> insieme ai <code>data</code>, il bot mostra comunque il contenuto disponibile</li>
-      <li><strong>Timeout HTTP 15 secondi</strong> via <code>httpx.AsyncClient</code></li>
-    </ul>
+    <div class="info-box">
+      &#x1F4A1; <strong>Suggerimento:</strong> Non esci mai da Telegram. Tutto avviene tramite bottoni inline &mdash; niente link, niente browser.
+    </div>
   </div><!-- /lang-it -->
 
-  <div class="back-to-top"><a href="#top">↑ Top</a></div>
+  <div class="back-to-top"><a href="#top">&#8593; Top</a></div>
 </section>
 
 <hr class="section-divider">
@@ -215,425 +200,268 @@ title: "D&D Adventurer's Tome — Wiki · Characters · Party"
      CHARACTER MANAGEMENT
      ============================================================ -->
 <section id="character">
-  <h2><span class="section-icon">⚔️</span>
-    <span class="lang-en">Character Management</span>
-    <span class="lang-it">Gestione Personaggio</span>
+  <h2><span class="section-icon">&#x2694;&#xFE0F;</span>
+    <span class="lang-en">Character Sheet</span>
+    <span class="lang-it">Scheda Personaggio</span>
   </h2>
 
   <!-- EN -->
   <div class="lang-en">
     <p>
-      A complete digital D&amp;D character sheet, fully managed via Telegram inline keyboards and a persistent conversation flow. Characters are stored in a local SQLite database and survive bot restarts.
+      Think of it as a full digital character sheet that lives in your pocket. Create as many characters as you want, switch between them anytime, and every change is saved automatically &mdash; even if the bot restarts.
     </p>
 
     <!-- Creation -->
-    <h3>🧙 Character Creation &amp; Selection</h3>
-    <ul>
-      <li>Create multiple characters per Telegram account</li>
-      <li>Creation wizard: enter name → choose class (12 predefined D&amp;D 5e classes or free text) → optionally set subclass → set starting level</li>
-      <li>Switch between characters at any time from the selection screen</li>
-      <li>Delete characters with confirmation prompt</li>
-      <li>Character state (active menu, mid-flow step) persists across bot restarts via <code>PicklePersistence</code></li>
-    </ul>
+    <h3>&#x1F9D9; Create &amp; Manage Characters</h3>
+    <p>A guided wizard walks you through character creation: pick a name, choose one of the 12 D&amp;D 5e classes (or type your own), set a subclass and starting level. You can create multiple characters on the same Telegram account and switch between them freely.</p>
 
     <!-- HP & AC -->
-    <h3>❤️ Hit Points &amp; Armor Class</h3>
+    <h3>&#x2764;&#xFE0F; Hit Points &amp; Armor Class</h3>
+    <p>Track your health in real time. Set max HP, apply damage, heal, or set HP directly. Take a short rest to recover class resources, or a long rest to fully restore your health.</p>
     <ul class="sub-features">
-      <li>⬆️ Set max HP</li>
-      <li>📉 Apply damage</li>
-      <li>💚 Apply healing</li>
-      <li>🎯 Set current HP directly</li>
-      <li>🌙 Short rest (restores short-rest class resources)</li>
-      <li>☀️ Long rest (full HP, resets long-rest resources, drops concentration)</li>
-      <li>🛡️ Base AC, shield AC, magic AC bonus — combined automatically</li>
+      <li>&#x2B06;&#xFE0F; Set max HP</li>
+      <li>&#x1F4C9; Apply damage</li>
+      <li>&#x1F49A; Heal</li>
+      <li>&#x1F3AF; Set current HP directly</li>
+      <li>&#x1F319; Short rest</li>
+      <li>&#x2600;&#xFE0F; Long rest (full HP + resource reset)</li>
+      <li>&#x1F6E1;&#xFE0F; Armor Class: base + shield + magic bonuses, calculated automatically</li>
     </ul>
-    <p>Every HP and AC change instantly syncs the live party message (if a party session is active).</p>
 
     <!-- Ability Scores & Skills -->
-    <h3>📊 Ability Scores &amp; Skills</h3>
-    <p>Set all six ability scores (STR, DEX, CON, INT, WIS, CHA). Modifiers are computed automatically using the standard D&amp;D formula <code>(score − 10) ÷ 2</code>.</p>
-    <p><strong>18 standard D&amp;D 5e skills</strong>, each linked to its ability score:</p>
+    <h3>&#x1F4CA; Ability Scores &amp; Skills</h3>
+    <p>Set your six ability scores (STR, DEX, CON, INT, WIS, CHA) and the bot calculates modifiers automatically. All 18 D&amp;D 5e skills are included &mdash; toggle proficiency, see your computed bonus, and roll skill checks with a single tap.</p>
     <ul class="sub-features">
-      <li>Acrobatics (DEX)</li>
-      <li>Animal Handling (WIS)</li>
-      <li>Arcana (INT)</li>
-      <li>Athletics (STR)</li>
-      <li>Deception (CHA)</li>
-      <li>History (INT)</li>
-      <li>Insight (WIS)</li>
-      <li>Intimidation (CHA)</li>
-      <li>Investigation (INT)</li>
-      <li>Medicine (WIS)</li>
-      <li>Nature (INT)</li>
-      <li>Perception (WIS)</li>
-      <li>Performance (CHA)</li>
-      <li>Persuasion (CHA)</li>
-      <li>Religion (INT)</li>
-      <li>Sleight of Hand (DEX)</li>
-      <li>Stealth (DEX)</li>
-      <li>Survival (WIS)</li>
+      <li>Acrobatics</li>
+      <li>Animal Handling</li>
+      <li>Arcana</li>
+      <li>Athletics</li>
+      <li>Deception</li>
+      <li>History</li>
+      <li>Insight</li>
+      <li>Intimidation</li>
+      <li>Investigation</li>
+      <li>Medicine</li>
+      <li>Nature</li>
+      <li>Perception</li>
+      <li>Performance</li>
+      <li>Persuasion</li>
+      <li>Religion</li>
+      <li>Sleight of Hand</li>
+      <li>Stealth</li>
+      <li>Survival</li>
     </ul>
-    <p>
-      For each skill: toggle <strong>proficiency</strong> on/off, view the computed bonus (<em>ability mod + proficiency bonus</em>), and roll <code>d20 + bonus</code> directly from the detail screen. Results are saved in history.
-      Proficiency bonus scales with total level: +2 (lv 1–4) → +3 (lv 5–8) → +4 (lv 9–12) → +5 (lv 13–16) → +6 (lv 17–20).
-    </p>
 
     <!-- Spells -->
-    <h3>🔮 Spells &amp; Spell Slots</h3>
-    <p>
-      A full spell management system. Supports <strong>two navigation modes</strong> (configurable in Settings):
-      <em>Browse by level</em> (level picker → filtered list) or <em>Flat list</em> (all spells scrollable).
-    </p>
-    <ul>
-      <li><strong>Learn spells</strong> — quick-add: name → level → concentration? (all other fields editable later)</li>
-      <li><strong>Edit any field</strong> — level, casting time, range/area, components, duration, concentration, ritual, attack/save, description, higher-level description</li>
-      <li><strong>Use spell</strong> — consumes a spell slot of the chosen level from your slots pool</li>
-      <li><strong>Concentration tracking</strong> — only one concentration spell active at a time; auto-activated when casting; dropped on rest</li>
-      <li><strong>Concentration saving throw</strong> — DC = max(10, damage ÷ 2); roll d20 + CON modifier; natural 1 always fails, natural 20 always succeeds</li>
-      <li><strong>Fuzzy spell search</strong> — type a partial name and get ranked results instantly using <em>rapidfuzz</em></li>
-      <li><strong>Pin spells</strong> — pinned spells appear in the character main menu summary</li>
-      <li><strong>Forget spells</strong> — remove a spell from your sheet</li>
-      <li><strong>Manage spell slots</strong> — add, use, restore, and remove slot levels independently of spells</li>
+    <h3>&#x1F52E; Spells &amp; Spell Slots</h3>
+    <p>A complete spell management system. Learn spells with a quick-add flow, edit every detail (casting time, range, components, duration, description), and cast them by consuming spell slots. The bot tracks concentration for you &mdash; only one concentration spell at a time, with automatic saving throw checks.</p>
+    <ul class="highlight-list">
+      <li><strong>Fuzzy search</strong> &mdash; type a partial name and get instant results</li>
+      <li><strong>Pin favourite spells</strong> to your character summary</li>
+      <li><strong>Browse by level</strong> or as a flat list (configurable)</li>
+      <li><strong>Manage spell slots</strong> independently &mdash; add, use, restore</li>
     </ul>
 
     <!-- Inventory -->
-    <h3>🎒 Typed Inventory</h3>
-    <p>Items have one of six types, each with dedicated metadata fields:</p>
-    <table>
-      <thead><tr><th>Type</th><th>Icon</th><th>Extra Fields</th></tr></thead>
-      <tbody>
-        <tr><td>Generic</td><td>📦</td><td>Name, quantity, weight, description</td></tr>
-        <tr><td>Weapon</td><td>🗡️</td><td>Damage dice, damage type, weapon type, properties</td></tr>
-        <tr><td>Armor</td><td>🛡️</td><td>Armor type, AC value, stealth disadvantage, STR requirement</td></tr>
-        <tr><td>Shield</td><td>🔰</td><td>AC bonus</td></tr>
-        <tr><td>Consumable</td><td>🧪</td><td>Effect description</td></tr>
-        <tr><td>Tool</td><td>🔧</td><td>Tool type</td></tr>
-      </tbody>
-    </table>
-    <ul>
-      <li><strong>Equip / Unequip</strong> — Armor and Shield update character AC automatically (with party message sync); Weapons support multiple equipped simultaneously</li>
-      <li>Adjust quantity (+1 / −1) without reopening the add flow</li>
-      <li>Delete with confirmation; optional fields are skippable during add</li>
-      <li>Encumbrance awareness: weight is tracked per item</li>
-    </ul>
+    <h3>&#x1F392; Inventory</h3>
+    <p>Carry everything your adventurer needs. Items are organised into six types, each with dedicated fields:</p>
+    <div class="inventory-grid">
+      <div class="inv-item"><span class="inv-icon">&#x1F4E6;</span><strong>Generic</strong><br><small>Name, quantity, weight, description</small></div>
+      <div class="inv-item"><span class="inv-icon">&#x1F5E1;&#xFE0F;</span><strong>Weapon</strong><br><small>Damage dice, type, properties</small></div>
+      <div class="inv-item"><span class="inv-icon">&#x1F6E1;&#xFE0F;</span><strong>Armor</strong><br><small>AC value, stealth disadvantage</small></div>
+      <div class="inv-item"><span class="inv-icon">&#x1F530;</span><strong>Shield</strong><br><small>AC bonus</small></div>
+      <div class="inv-item"><span class="inv-icon">&#x1F9EA;</span><strong>Consumable</strong><br><small>Effect description</small></div>
+      <div class="inv-item"><span class="inv-icon">&#x1F527;</span><strong>Tool</strong><br><small>Tool type</small></div>
+    </div>
+    <p>Equip armor and shields to automatically update your AC. Equip multiple weapons at once. Adjust quantities on the fly.</p>
 
     <!-- Currency -->
-    <h3>💰 Currencies</h3>
-    <p>Track all five D&amp;D coin types — Copper, Silver, Electrum, Gold, Platinum — with add, subtract and currency conversion operations.</p>
+    <h3>&#x1F4B0; Currencies</h3>
+    <p>Track all five D&amp;D coin types &mdash; Copper, Silver, Electrum, Gold and Platinum &mdash; with add, subtract and automatic conversion.</p>
 
     <!-- Abilities -->
-    <h3>✨ Special Abilities</h3>
-    <ul>
-      <li>Add passive or active abilities with name, description, max uses, current uses, and restoration type (short rest / long rest / manual)</li>
-      <li>Spend and restore uses; passive abilities appear in the character summary</li>
-    </ul>
+    <h3>&#x2728; Special Abilities</h3>
+    <p>Add passive or active abilities with usage limits and a restoration type (short rest, long rest, or manual). Spend and restore uses with a tap.</p>
 
     <!-- Multiclassing -->
-    <h3>🔀 Multiclassing &amp; Class Resources</h3>
-    <p>
-      Full multiclassing support. Add a class by choosing from the 12 predefined D&amp;D 5e classes or entering a custom name. Set subclass (optional) and level.
-    </p>
-    <ul>
-      <li>Level up / level down per class — class resources (Ki, Rage, etc.) are recalculated automatically</li>
-      <li>Barbarian lv 20 Rage displayed as ∞</li>
-      <li>Bard Bardic Inspiration scales with CHA modifier</li>
-      <li>Warlock Pact Slot tracked as a short-rest class resource (separate from spell slot system)</li>
-      <li>Fighter Superiority Dice included for all fighters</li>
-      <li><strong>Rest integration</strong> — short rest / long rest restores the correct resources per class</li>
-    </ul>
+    <h3>&#x1F500; Multiclassing</h3>
+    <p>Full multiclass support. Add additional classes, set subclasses, level up or down &mdash; class resources like Ki, Rage and Bardic Inspiration are recalculated automatically. Resting restores the right resources for each class.</p>
 
     <!-- Dice -->
-    <h3>🎲 Dice Roller</h3>
-    <p>
-      Roll any of <strong>d4, d6, d8, d10, d12, d20, d100</strong>. Choose the die → pick the count (1–10) → roll. All results are saved in the rolls history (last 50 rolls).
-    </p>
-    <p>
-      Dedicated <strong>🎯 Initiative</strong> button: one tap rolls 1d20 + DEX modifier and shows the full breakdown (<code>d20: N + DEX: M = Total</code>). Also visible as <em>⚡ Ini: +N</em> in the character header.
-    </p>
+    <h3>&#x1F3B2; Dice Roller</h3>
+    <p>Roll any die from d4 to d100 with a configurable count (1&ndash;10). Results are saved in your roll history (last 50 rolls). A dedicated <strong>Initiative</strong> button rolls 1d20 + your DEX modifier with a single tap.</p>
 
     <!-- Conditions -->
-    <h3>🌀 D&amp;D 5e Conditions</h3>
-    <p>Track all official conditions directly on your character sheet:</p>
+    <h3>&#x1F300; Conditions</h3>
+    <p>Toggle all 14 official D&amp;D 5e conditions on your character with one tap. Exhaustion has a level system (0&ndash;6). Every change syncs in real time with the party message.</p>
     <ul class="condition-grid">
-      <li>😵 Blinded</li>
-      <li>💕 Charmed</li>
-      <li>🔇 Deafened</li>
-      <li>😨 Frightened</li>
-      <li>🤝 Grappled</li>
-      <li>🚫 Incapacitated</li>
-      <li>👻 Invisible</li>
-      <li>💀 Paralyzed</li>
-      <li>🗿 Petrified</li>
-      <li>🤢 Poisoned</li>
-      <li>⬇️ Prone</li>
-      <li>⛓️ Restrained</li>
-      <li>😵‍💫 Stunned</li>
-      <li>😴 Unconscious</li>
-      <li>😩 Exhaustion (0–6)</li>
+      <li>&#x1F635; Blinded</li>
+      <li>&#x1F495; Charmed</li>
+      <li>&#x1F507; Deafened</li>
+      <li>&#x1F628; Frightened</li>
+      <li>&#x1F91D; Grappled</li>
+      <li>&#x1F6AB; Incapacitated</li>
+      <li>&#x1F47B; Invisible</li>
+      <li>&#x1F480; Paralyzed</li>
+      <li>&#x1F5FF; Petrified</li>
+      <li>&#x1F922; Poisoned</li>
+      <li>&#x2B07;&#xFE0F; Prone</li>
+      <li>&#x26D3;&#xFE0F; Restrained</li>
+      <li>&#x1F635;&#x200D;&#x1F4AB; Stunned</li>
+      <li>&#x1F634; Unconscious</li>
+      <li>&#x1F629; Exhaustion (0&ndash;6)</li>
     </ul>
-    <p>
-      Toggle binary conditions on/off with one tap. Exhaustion has ➕/➖ buttons (level 6 = death). Each toggle fires a real-time update to the party message.
-      Every condition includes its full D&amp;D 5e rules description.
-    </p>
 
-    <!-- Heroic Inspiration -->
-    <h3>✨ Heroic Inspiration</h3>
-    <p>
-      Implements the D&amp;D 5e 2024 mechanic. Your character either holds the token or not — one tap grants or spends it. When active, <em>✨ Heroic Inspiration active</em> appears in the character summary. History is logged automatically.
-    </p>
+    <!-- Inspiration -->
+    <h3>&#x2728; Heroic Inspiration</h3>
+    <p>Based on the D&amp;D 5e 2024 rules. One tap to grant or spend your inspiration token. When active, it shows up in your character summary.</p>
 
     <!-- Notes -->
-    <h3>📝 Notes</h3>
-    <ul>
-      <li><strong>Text notes</strong> — write free-form notes saved to your character sheet</li>
-      <li><strong>Voice notes</strong> — record a Telegram voice message; the bot saves the <code>.ogg</code> file locally and sends it back as a document (bypassing Telegram's voice message privacy restrictions)</li>
-    </ul>
+    <h3>&#x1F4DD; Notes &amp; Voice Memos</h3>
+    <p>Jot down text notes or record voice memos directly in Telegram. Voice messages are saved and can be retrieved anytime.</p>
 
     <!-- Maps -->
-    <h3>🗺️ Maps</h3>
-    <p>
-      Upload images or documents as maps, organised by zone name. Retrieve any map by zone from your character sheet at any time.
-    </p>
+    <h3>&#x1F5FA;&#xFE0F; Maps</h3>
+    <p>Upload images or documents as maps, organised by zone name. Pull up any map from your character sheet whenever you need it.</p>
 
     <!-- History -->
-    <h3>📜 Modification History</h3>
-    <p>
-      Every significant character change is automatically logged with a timestamp, event type, and description. Up to <strong>50 events</strong> are stored. Tracked event types:
-    </p>
-    <ul class="sub-features">
-      <li>HP change</li>
-      <li>Rest</li>
-      <li>AC change</li>
-      <li>Stats change</li>
-      <li>Spell slot change</li>
-      <li>Spell change</li>
-      <li>Bag change</li>
-      <li>Currency change</li>
-      <li>Ability change</li>
-      <li>Multiclass change</li>
-      <li>Level change</li>
-      <li>Condition change</li>
-      <li>Skill change</li>
-      <li>Dice roll</li>
-      <li>Inspiration change</li>
-    </ul>
-    <p>View history as a paginated message thread. Clear all history with one button.</p>
+    <h3>&#x1F4DC; Change History</h3>
+    <p>Every important change is logged automatically &mdash; HP, AC, spells, inventory, conditions, dice rolls and more (up to 50 events). Browse your history as a paginated list or clear it with a single button.</p>
 
     <!-- Settings -->
-    <h3>⚙️ Settings</h3>
-    <ul>
-      <li><strong>Spell management mode</strong> — switch between <em>Browse by level</em> (level picker first) and <em>Flat list</em> (all spells at once)</li>
-      <li><strong>Party active toggle</strong> — mark this character as the one shown in group party sessions</li>
-    </ul>
+    <h3>&#x2699;&#xFE0F; Settings</h3>
+    <p>Customise how spells are displayed (by level or flat list) and choose which character appears in group party sessions.</p>
   </div><!-- /lang-en -->
 
   <!-- IT -->
   <div class="lang-it">
     <p>
-      Una scheda personaggio D&amp;D completa, gestita interamente tramite tastiere inline Telegram e un flusso di conversazione persistente. I personaggi sono salvati in un database SQLite locale e sopravvivono ai riavvii del bot.
+      Pensalo come una scheda personaggio digitale completa che vive nella tua tasca. Crea quanti personaggi vuoi, passa dall&rsquo;uno all&rsquo;altro in qualsiasi momento, e ogni modifica viene salvata automaticamente &mdash; anche se il bot si riavvia.
     </p>
 
     <!-- Creation IT -->
-    <h3>🧙 Creazione e Selezione Personaggio</h3>
-    <ul>
-      <li>Crea più personaggi per account Telegram</li>
-      <li>Wizard di creazione: inserisci nome → scegli classe (12 classi D&amp;D 5e predefinite o testo libero) → imposta opzionalmente la sottoclasse → imposta il livello iniziale</li>
-      <li>Passa da un personaggio all'altro in qualsiasi momento dalla schermata di selezione</li>
-      <li>Elimina personaggi con richiesta di conferma</li>
-      <li>Lo stato del personaggio (menu attivo, step a metà flusso) persiste tra i riavvii del bot tramite <code>PicklePersistence</code></li>
-    </ul>
+    <h3>&#x1F9D9; Crea e Gestisci Personaggi</h3>
+    <p>Un wizard guidato ti accompagna nella creazione del personaggio: scegli un nome, seleziona una delle 12 classi D&amp;D 5e (o scrivi la tua), imposta una sottoclasse e il livello iniziale. Puoi creare pi&ugrave; personaggi sullo stesso account Telegram e passare liberamente dall&rsquo;uno all&rsquo;altro.</p>
 
     <!-- HP & AC IT -->
-    <h3>❤️ Punti Ferita e Classe Armatura</h3>
+    <h3>&#x2764;&#xFE0F; Punti Ferita e Classe Armatura</h3>
+    <p>Tieni traccia della tua salute in tempo reale. Imposta gli HP massimi, applica danni, cura o imposta gli HP direttamente. Fai un riposo breve per recuperare risorse di classe, o un riposo lungo per ripristinare tutta la salute.</p>
     <ul class="sub-features">
-      <li>⬆️ Imposta HP massimi</li>
-      <li>📉 Applica danno</li>
-      <li>💚 Applica cura</li>
-      <li>🎯 Imposta HP correnti direttamente</li>
-      <li>🌙 Riposo breve (ripristina risorse di classe short-rest)</li>
-      <li>☀️ Riposo lungo (HP completi, risorse long-rest, annulla concentrazione)</li>
-      <li>🛡️ CA base, CA scudo, bonus magia CA — sommati automaticamente</li>
+      <li>&#x2B06;&#xFE0F; Imposta HP massimi</li>
+      <li>&#x1F4C9; Applica danno</li>
+      <li>&#x1F49A; Cura</li>
+      <li>&#x1F3AF; Imposta HP correnti</li>
+      <li>&#x1F319; Riposo breve</li>
+      <li>&#x2600;&#xFE0F; Riposo lungo (HP pieni + reset risorse)</li>
+      <li>&#x1F6E1;&#xFE0F; Classe Armatura: base + scudo + bonus magici, calcolata automaticamente</li>
     </ul>
-    <p>Ogni variazione di HP e CA sincronizza istantaneamente il messaggio party live (se attivo).</p>
 
     <!-- Ability IT -->
-    <h3>📊 Punteggi Abilità e Skill</h3>
-    <p>Imposta tutti e sei i punteggi (FOR, DES, COS, INT, SAG, CAR). I modificatori vengono calcolati automaticamente con la formula standard D&amp;D <code>(punteggio − 10) ÷ 2</code>.</p>
-    <p><strong>18 skill standard D&amp;D 5e</strong>, ognuna collegata al suo punteggio abilità:</p>
+    <h3>&#x1F4CA; Punteggi Abilit&agrave; e Skill</h3>
+    <p>Imposta i sei punteggi abilit&agrave; (FOR, DES, COS, INT, SAG, CAR) e il bot calcola i modificatori automaticamente. Tutte le 18 skill D&amp;D 5e sono incluse &mdash; attiva la competenza, vedi il bonus calcolato e tira prove di abilit&agrave; con un solo tocco.</p>
     <ul class="sub-features">
-      <li>Acrobazia (DES)</li>
-      <li>Addestrare Animali (SAG)</li>
-      <li>Arcano (INT)</li>
-      <li>Atletica (FOR)</li>
-      <li>Inganno (CAR)</li>
-      <li>Storia (INT)</li>
-      <li>Intuizione (SAG)</li>
-      <li>Intimidire (CAR)</li>
-      <li>Investigazione (INT)</li>
-      <li>Medicina (SAG)</li>
-      <li>Natura (INT)</li>
-      <li>Percezione (SAG)</li>
-      <li>Intrattenere (CAR)</li>
-      <li>Persuasione (CAR)</li>
-      <li>Religione (INT)</li>
-      <li>Destrezza di Mano (DES)</li>
-      <li>Furtività (DES)</li>
-      <li>Sopravvivenza (SAG)</li>
+      <li>Acrobazia</li>
+      <li>Addestrare Animali</li>
+      <li>Arcano</li>
+      <li>Atletica</li>
+      <li>Inganno</li>
+      <li>Storia</li>
+      <li>Intuizione</li>
+      <li>Intimidire</li>
+      <li>Investigazione</li>
+      <li>Medicina</li>
+      <li>Natura</li>
+      <li>Percezione</li>
+      <li>Intrattenere</li>
+      <li>Persuasione</li>
+      <li>Religione</li>
+      <li>Destrezza di Mano</li>
+      <li>Furtivit&agrave;</li>
+      <li>Sopravvivenza</li>
     </ul>
-    <p>
-      Per ogni skill: attiva/disattiva la <strong>competenza</strong>, visualizza il bonus calcolato (<em>mod abilità + bonus competenza</em>), e tira <code>d20 + bonus</code> direttamente dalla schermata di dettaglio. I risultati vengono salvati nello storico.
-      Il bonus competenza scala con il livello totale: +2 (lv 1–4) → +3 (lv 5–8) → +4 (lv 9–12) → +5 (lv 13–16) → +6 (lv 17–20).
-    </p>
 
     <!-- Spells IT -->
-    <h3>🔮 Incantesimi e Slot</h3>
-    <p>
-      Un sistema di gestione incantesimi completo. Supporta <strong>due modalità di navigazione</strong> (configurabili nelle Impostazioni):
-      <em>Naviga per livello</em> (selettore livello → lista filtrata) o <em>Lista piatta</em> (tutti gli incantesimi scorrevoli).
-    </p>
-    <ul>
-      <li><strong>Apprendi incantesimi</strong> — aggiunta rapida: nome → livello → concentrazione? (tutti gli altri campi modificabili dopo)</li>
-      <li><strong>Modifica qualsiasi campo</strong> — livello, tempo di lancio, gittata/area, componenti, durata, concentrazione, rituale, attacco/TS, descrizione, a livelli superiori</li>
-      <li><strong>Usa incantesimo</strong> — consuma uno slot incantesimo del livello scelto dal pool di slot</li>
-      <li><strong>Tracciamento concentrazione</strong> — un solo incantesimo di concentrazione attivo alla volta; auto-attivato al lancio; rimosso al riposo</li>
-      <li><strong>Tiro salvezza concentrazione</strong> — CD = max(10, danno ÷ 2); tiro d20 + mod COS; 1 naturale sempre fallisce, 20 naturale sempre riesce</li>
-      <li><strong>Ricerca fuzzy</strong> — digita un nome parziale e ottieni risultati classificati istantaneamente con <em>rapidfuzz</em></li>
-      <li><strong>Fissa incantesimi</strong> — gli incantesimi fissati appaiono nel riepilogo del menu principale</li>
-      <li><strong>Dimentica incantesimi</strong> — rimuovi un incantesimo dalla scheda</li>
-      <li><strong>Gestisci slot</strong> — aggiungi, usa, ripristina e rimuovi livelli di slot indipendentemente dagli incantesimi</li>
+    <h3>&#x1F52E; Incantesimi e Slot</h3>
+    <p>Un sistema di gestione incantesimi completo. Apprendi incantesimi con un flusso rapido, modifica ogni dettaglio (tempo di lancio, gittata, componenti, durata, descrizione) e lanciali consumando slot incantesimo. Il bot traccia la concentrazione per te &mdash; un solo incantesimo di concentrazione alla volta, con tiri salvezza automatici.</p>
+    <ul class="highlight-list">
+      <li><strong>Ricerca fuzzy</strong> &mdash; digita un nome parziale e ottieni risultati istantanei</li>
+      <li><strong>Fissa gli incantesimi preferiti</strong> nel riepilogo del personaggio</li>
+      <li><strong>Naviga per livello</strong> o come lista piatta (configurabile)</li>
+      <li><strong>Gestisci gli slot</strong> indipendentemente &mdash; aggiungi, usa, ripristina</li>
     </ul>
 
     <!-- Inventory IT -->
-    <h3>🎒 Inventario Tipizzato</h3>
-    <p>Gli oggetti hanno uno dei sei tipi, ognuno con campi metadata dedicati:</p>
-    <table>
-      <thead><tr><th>Tipo</th><th>Icona</th><th>Campi Aggiuntivi</th></tr></thead>
-      <tbody>
-        <tr><td>Generico</td><td>📦</td><td>Nome, quantità, peso, descrizione</td></tr>
-        <tr><td>Arma</td><td>🗡️</td><td>Dado danno, tipo danno, tipo arma, proprietà</td></tr>
-        <tr><td>Armatura</td><td>🛡️</td><td>Tipo armatura, valore CA, svantaggio furtività, requisito FOR</td></tr>
-        <tr><td>Scudo</td><td>🔰</td><td>Bonus CA</td></tr>
-        <tr><td>Consumabile</td><td>🧪</td><td>Descrizione effetto</td></tr>
-        <tr><td>Strumento</td><td>🔧</td><td>Tipo strumento</td></tr>
-      </tbody>
-    </table>
-    <ul>
-      <li><strong>Equipaggia / Disequipaggia</strong> — Armatura e Scudo aggiornano automaticamente la CA del personaggio (con sync del messaggio party); le Armi supportano più equipaggiate contemporaneamente</li>
-      <li>Modifica quantità (+1 / −1) senza riaprire il flusso di aggiunta</li>
-      <li>Elimina con conferma; i campi opzionali sono saltabili durante l'aggiunta</li>
-    </ul>
+    <h3>&#x1F392; Inventario</h3>
+    <p>Porta con te tutto ci&ograve; che serve al tuo avventuriero. Gli oggetti sono organizzati in sei tipi, ognuno con campi dedicati:</p>
+    <div class="inventory-grid">
+      <div class="inv-item"><span class="inv-icon">&#x1F4E6;</span><strong>Generico</strong><br><small>Nome, quantit&agrave;, peso, descrizione</small></div>
+      <div class="inv-item"><span class="inv-icon">&#x1F5E1;&#xFE0F;</span><strong>Arma</strong><br><small>Dado danno, tipo, propriet&agrave;</small></div>
+      <div class="inv-item"><span class="inv-icon">&#x1F6E1;&#xFE0F;</span><strong>Armatura</strong><br><small>Valore CA, svantaggio furtivit&agrave;</small></div>
+      <div class="inv-item"><span class="inv-icon">&#x1F530;</span><strong>Scudo</strong><br><small>Bonus CA</small></div>
+      <div class="inv-item"><span class="inv-icon">&#x1F9EA;</span><strong>Consumabile</strong><br><small>Descrizione effetto</small></div>
+      <div class="inv-item"><span class="inv-icon">&#x1F527;</span><strong>Strumento</strong><br><small>Tipo strumento</small></div>
+    </div>
+    <p>Equipaggia armature e scudi per aggiornare automaticamente la CA. Equipaggia pi&ugrave; armi contemporaneamente. Modifica le quantit&agrave; al volo.</p>
 
     <!-- Currency IT -->
-    <h3>💰 Valute</h3>
-    <p>Tieni traccia di tutte e cinque le monete D&amp;D — Rame, Argento, Electrum, Oro, Platino — con operazioni di aggiunta, sottrazione e conversione valuta.</p>
+    <h3>&#x1F4B0; Valute</h3>
+    <p>Tieni traccia di tutte e cinque le monete D&amp;D &mdash; Rame, Argento, Electrum, Oro e Platino &mdash; con addizione, sottrazione e conversione automatica.</p>
 
     <!-- Abilities IT -->
-    <h3>✨ Abilità Speciali</h3>
-    <ul>
-      <li>Aggiungi abilità passive o attive con nome, descrizione, usi massimi, usi correnti e tipo di ripristino (riposo breve / lungo / manuale)</li>
-      <li>Spendi e ripristina usi; le abilità passive appaiono nel riepilogo personaggio</li>
-    </ul>
+    <h3>&#x2728; Abilit&agrave; Speciali</h3>
+    <p>Aggiungi abilit&agrave; passive o attive con limiti di utilizzo e tipo di ripristino (riposo breve, lungo o manuale). Spendi e ripristina usi con un tocco.</p>
 
     <!-- Multiclassing IT -->
-    <h3>🔀 Multiclasse e Risorse di Classe</h3>
-    <p>
-      Supporto multiclasse completo. Aggiungi una classe scegliendo tra le 12 classi D&amp;D 5e predefinite o inserendo un nome personalizzato. Imposta la sottoclasse (opzionale) e il livello.
-    </p>
-    <ul>
-      <li>Level up / level down per classe — le risorse di classe (Ki, Furia, ecc.) vengono ricalcolate automaticamente</li>
-      <li>Furia Barbaro lv 20 mostrata come ∞</li>
-      <li>Ispirazione Bardica del Bardo scala con il modificatore CAR</li>
-      <li>Slot Patto del Warlock tracciato come risorsa di classe short-rest (separato dal sistema slot)</li>
-      <li>Dadi Superiorità del Guerriero inclusi per tutti i guerrieri</li>
-      <li><strong>Integrazione riposo</strong> — il riposo breve/lungo ripristina le risorse corrette per classe</li>
-    </ul>
+    <h3>&#x1F500; Multiclasse</h3>
+    <p>Supporto multiclasse completo. Aggiungi classi aggiuntive, imposta sottoclassi, sali o scendi di livello &mdash; le risorse di classe come Ki, Furia e Ispirazione Bardica vengono ricalcolate automaticamente. Il riposo ripristina le risorse giuste per ogni classe.</p>
 
     <!-- Dice IT -->
-    <h3>🎲 Lanciatore di Dadi</h3>
-    <p>
-      Tira uno qualsiasi tra <strong>d4, d6, d8, d10, d12, d20, d100</strong>. Scegli il dado → seleziona il numero (1–10) → tira. Tutti i risultati vengono salvati nello storico dei tiri (ultimi 50).
-    </p>
-    <p>
-      Pulsante dedicato <strong>🎯 Iniziativa</strong>: un tocco tira 1d20 + modificatore DES e mostra il dettaglio completo (<code>d20: N + DES: M = Totale</code>). Visibile anche come <em>⚡ Ini: +N</em> nell'intestazione del personaggio.
-    </p>
+    <h3>&#x1F3B2; Lanciatore di Dadi</h3>
+    <p>Tira qualsiasi dado dal d4 al d100 con quantit&agrave; configurabile (1&ndash;10). I risultati vengono salvati nello storico (ultimi 50 tiri). Il pulsante <strong>Iniziativa</strong> dedicato tira 1d20 + modificatore DES con un solo tocco.</p>
 
     <!-- Conditions IT -->
-    <h3>🌀 Condizioni D&amp;D 5e</h3>
-    <p>Tieni traccia di tutte le condizioni ufficiali direttamente sulla scheda:</p>
+    <h3>&#x1F300; Condizioni</h3>
+    <p>Attiva/disattiva tutte le 14 condizioni ufficiali D&amp;D 5e sul tuo personaggio con un tocco. L&rsquo;Esaurimento ha un sistema a livelli (0&ndash;6). Ogni modifica si sincronizza in tempo reale con il messaggio party.</p>
     <ul class="condition-grid">
-      <li>😵 Accecato</li>
-      <li>💕 Affascinato</li>
-      <li>🔇 Assordato</li>
-      <li>😨 Spaventato</li>
-      <li>🤝 Afferrato</li>
-      <li>🚫 Incapacitato</li>
-      <li>👻 Invisibile</li>
-      <li>💀 Paralizzato</li>
-      <li>🗿 Pietrificato</li>
-      <li>🤢 Avvelenato</li>
-      <li>⬇️ Prono</li>
-      <li>⛓️ Trattenuto</li>
-      <li>😵‍💫 Stordito</li>
-      <li>😴 Privo di Sensi</li>
-      <li>😩 Esaurimento (0–6)</li>
+      <li>&#x1F635; Accecato</li>
+      <li>&#x1F495; Affascinato</li>
+      <li>&#x1F507; Assordato</li>
+      <li>&#x1F628; Spaventato</li>
+      <li>&#x1F91D; Afferrato</li>
+      <li>&#x1F6AB; Incapacitato</li>
+      <li>&#x1F47B; Invisibile</li>
+      <li>&#x1F480; Paralizzato</li>
+      <li>&#x1F5FF; Pietrificato</li>
+      <li>&#x1F922; Avvelenato</li>
+      <li>&#x2B07;&#xFE0F; Prono</li>
+      <li>&#x26D3;&#xFE0F; Trattenuto</li>
+      <li>&#x1F635;&#x200D;&#x1F4AB; Stordito</li>
+      <li>&#x1F634; Privo di Sensi</li>
+      <li>&#x1F629; Esaurimento (0&ndash;6)</li>
     </ul>
-    <p>
-      Attiva/disattiva condizioni binarie con un tocco. L'Esaurimento ha pulsanti ➕/➖ (livello 6 = morte). Ogni toggle invia un aggiornamento in tempo reale al messaggio party.
-      Ogni condizione include la sua descrizione completa delle regole D&amp;D 5e.
-    </p>
 
     <!-- Inspiration IT -->
-    <h3>✨ Ispirazione Eroica</h3>
-    <p>
-      Implementa la meccanica D&amp;D 5e 2024. Il tuo personaggio detiene il token oppure no — un tocco lo ottiene o lo spende. Quando attivo, <em>✨ Ispirazione Eroica attiva</em> appare nel riepilogo del personaggio. Lo storico viene aggiornato automaticamente.
-    </p>
+    <h3>&#x2728; Ispirazione Eroica</h3>
+    <p>Basata sulle regole D&amp;D 5e 2024. Un tocco per ottenere o spendere il token ispirazione. Quando attivo, appare nel riepilogo del personaggio.</p>
 
     <!-- Notes IT -->
-    <h3>📝 Note</h3>
-    <ul>
-      <li><strong>Note testuali</strong> — scrivi note a testo libero salvate sulla scheda personaggio</li>
-      <li><strong>Note vocali</strong> — registra un messaggio vocale Telegram; il bot salva il file <code>.ogg</code> localmente e lo rimanda come documento (aggirando le restrizioni sulla privacy dei messaggi vocali)</li>
-    </ul>
+    <h3>&#x1F4DD; Note e Memo Vocali</h3>
+    <p>Annota note testuali o registra memo vocali direttamente in Telegram. I messaggi vocali vengono salvati e possono essere recuperati in qualsiasi momento.</p>
 
     <!-- Maps IT -->
-    <h3>🗺️ Mappe</h3>
-    <p>
-      Carica immagini o documenti come mappe, organizzate per nome zona. Recupera qualsiasi mappa per zona dalla scheda personaggio in qualsiasi momento.
-    </p>
+    <h3>&#x1F5FA;&#xFE0F; Mappe</h3>
+    <p>Carica immagini o documenti come mappe, organizzate per nome zona. Recupera qualsiasi mappa dalla scheda personaggio quando ne hai bisogno.</p>
 
     <!-- History IT -->
-    <h3>📜 Storico Modifiche</h3>
-    <p>
-      Ogni modifica significativa al personaggio viene registrata automaticamente con timestamp, tipo di evento e descrizione. Vengono conservati fino a <strong>50 eventi</strong>. Tipi di evento tracciati:
-    </p>
-    <ul class="sub-features">
-      <li>Variazione HP</li>
-      <li>Riposo</li>
-      <li>Variazione CA</li>
-      <li>Variazione statistiche</li>
-      <li>Variazione slot incantesimo</li>
-      <li>Variazione incantesimi</li>
-      <li>Variazione zaino</li>
-      <li>Variazione valute</li>
-      <li>Variazione abilità</li>
-      <li>Variazione multiclasse</li>
-      <li>Variazione livello</li>
-      <li>Variazione condizioni</li>
-      <li>Variazione skill</li>
-      <li>Tiro dadi</li>
-      <li>Variazione ispirazione</li>
-    </ul>
-    <p>Visualizza lo storico come thread di messaggi paginati. Cancella tutto lo storico con un pulsante.</p>
+    <h3>&#x1F4DC; Storico Modifiche</h3>
+    <p>Ogni modifica importante viene registrata automaticamente &mdash; HP, CA, incantesimi, inventario, condizioni, tiri di dado e altro (fino a 50 eventi). Sfoglia lo storico come lista paginata o cancellalo con un pulsante.</p>
 
     <!-- Settings IT -->
-    <h3>⚙️ Impostazioni</h3>
-    <ul>
-      <li><strong>Modalità gestione incantesimi</strong> — passa tra <em>Naviga per livello</em> (prima il selettore livello) e <em>Lista piatta</em> (tutti gli incantesimi insieme)</li>
-      <li><strong>Toggle party attivo</strong> — indica questo personaggio come quello mostrato nelle sessioni party di gruppo</li>
-    </ul>
+    <h3>&#x2699;&#xFE0F; Impostazioni</h3>
+    <p>Personalizza come vengono mostrati gli incantesimi (per livello o lista piatta) e scegli quale personaggio appare nelle sessioni party di gruppo.</p>
   </div><!-- /lang-it -->
 
-  <div class="back-to-top"><a href="#top">↑ Top</a></div>
+  <div class="back-to-top"><a href="#top">&#8593; Top</a></div>
 </section>
 
 <hr class="section-divider">
@@ -642,106 +470,76 @@ title: "D&D Adventurer's Tome — Wiki · Characters · Party"
      GROUP PARTY
      ============================================================ -->
 <section id="party">
-  <h2><span class="section-icon">🛡️</span>
-    <span class="lang-en">Group Party</span>
-    <span class="lang-it">Party di Gruppo</span>
+  <h2><span class="section-icon">&#x1F6E1;&#xFE0F;</span>
+    <span class="lang-en">Live Group Party</span>
+    <span class="lang-it">Party di Gruppo Live</span>
   </h2>
 
   <!-- EN -->
   <div class="lang-en">
     <p>
-      Bring your D&amp;D session to Telegram! The party feature displays a live-updated status card for every active character in your group — refreshed automatically whenever anything changes.
+      Playing D&amp;D with friends on Telegram? The party feature creates a live dashboard for your entire group &mdash; updated automatically every time something changes.
     </p>
 
-    <h3>🚀 Starting a Party Session</h3>
-    <ol>
-      <li>Send <code>/party</code> in your Telegram group</li>
-      <li>Choose display mode:
-        <ul>
-          <li><strong>🌐 Public</strong> — the party status message is posted in the group for everyone to see</li>
-          <li><strong>🔒 Private (GM mode)</strong> — the bot sends the party status directly to the Game Master's private chat</li>
-        </ul>
-      </li>
-      <li>The session lasts <strong>48 hours</strong> with a live countdown. End it early with <code>/party_stop</code></li>
-    </ol>
+    <h3>&#x1F680; How It Works</h3>
+    <div class="steps-grid">
+      <div class="step-card">
+        <span class="step-number">1</span>
+        <p>Send <strong>/party</strong> in your Telegram group</p>
+      </div>
+      <div class="step-card">
+        <span class="step-number">2</span>
+        <p>Choose <strong>Public</strong> (visible to everyone) or <strong>Private</strong> (GM-only view)</p>
+      </div>
+      <div class="step-card">
+        <span class="step-number">3</span>
+        <p>A live status message appears showing every character&rsquo;s state</p>
+      </div>
+    </div>
 
-    <h3>👥 Who Appears in the Party?</h3>
-    <ul>
-      <li>Each player marks one character as <em>Party Active</em> from their character settings</li>
-      <li>If a player has exactly one character and hasn't marked it active, it is included automatically</li>
-      <li>The bot tracks all users who write in the group to know who belongs to the session</li>
-    </ul>
+    <h3>&#x1F465; Who Appears?</h3>
+    <p>Each player marks a character as &ldquo;Party Active&rdquo; in their settings. If someone only has one character, they&rsquo;re included automatically. The bot tracks who writes in the group so it knows who&rsquo;s in the session.</p>
 
-    <h3>🔄 Real-Time Updates</h3>
-    <p>The party message is automatically refreshed whenever a party member changes:</p>
-    <ul class="sub-features">
-      <li>❤️ HP (damage / heal / rest)</li>
-      <li>🛡️ AC (base / shield / equip armor)</li>
-      <li>🌀 Conditions (toggle / exhaustion)</li>
-      <li>🎲 Any dice roll</li>
-    </ul>
-    <p>Updates are fire-and-forget (never block the user's response) and handle stale/deleted messages gracefully.</p>
+    <h3>&#x1F504; Real-Time Updates</h3>
+    <p>The party message refreshes instantly whenever someone changes their HP, armor class, conditions or makes a dice roll. No manual refresh needed.</p>
 
-    <h3>📋 Party Message Format</h3>
-    <p>Each character row in the party message shows:</p>
-    <ul>
-      <li><strong>Name &amp; class/level</strong> (e.g. <em>Thorin — Warrior 5 / Paladin 3</em>)</li>
-      <li><strong>HP bar</strong> — visual progress bar (<code>████░░░░ 42/60</code>) colour-coded by health percentage</li>
-      <li><strong>AC</strong> — current armour class</li>
-      <li><strong>Active conditions</strong> — compact emoji list (hidden when none)</li>
-      <li><strong>Last dice roll</strong> — most recent roll label and result (hidden when no history)</li>
-    </ul>
-    <p>The message header shows the group name and the remaining session time.</p>
+    <h3>&#x1F4CB; What You See</h3>
+    <p>For each character: name and class/level, a colour-coded HP bar, current AC, active conditions, and their last dice roll. The header shows the group name and remaining session time (sessions last 48 hours, or end early with <strong>/party_stop</strong>).</p>
   </div><!-- /lang-en -->
 
   <!-- IT -->
   <div class="lang-it">
     <p>
-      Porta la tua sessione D&amp;D su Telegram! La funzione party mostra una scheda di stato live per ogni personaggio attivo nel gruppo — aggiornata automaticamente ogni volta che qualcosa cambia.
+      Giochi a D&amp;D con gli amici su Telegram? La funzione party crea una dashboard live per tutto il gruppo &mdash; aggiornata automaticamente ogni volta che qualcosa cambia.
     </p>
 
-    <h3>🚀 Avviare una Sessione Party</h3>
-    <ol>
-      <li>Invia <code>/party</code> nel tuo gruppo Telegram</li>
-      <li>Scegli la modalità di visualizzazione:
-        <ul>
-          <li><strong>🌐 Pubblica</strong> — il messaggio di stato party viene pubblicato nel gruppo, visibile a tutti</li>
-          <li><strong>🔒 Privata (modalità Master)</strong> — il bot invia lo stato party direttamente nella chat privata del Game Master</li>
-        </ul>
-      </li>
-      <li>La sessione dura <strong>48 ore</strong> con un conto alla rovescia live. Terminala prima con <code>/party_stop</code></li>
-    </ol>
+    <h3>&#x1F680; Come Funziona</h3>
+    <div class="steps-grid">
+      <div class="step-card">
+        <span class="step-number">1</span>
+        <p>Invia <strong>/party</strong> nel tuo gruppo Telegram</p>
+      </div>
+      <div class="step-card">
+        <span class="step-number">2</span>
+        <p>Scegli <strong>Pubblica</strong> (visibile a tutti) o <strong>Privata</strong> (solo per il GM)</p>
+      </div>
+      <div class="step-card">
+        <span class="step-number">3</span>
+        <p>Appare un messaggio di stato live che mostra lo stato di ogni personaggio</p>
+      </div>
+    </div>
 
-    <h3>👥 Chi Appare nel Party?</h3>
-    <ul>
-      <li>Ogni giocatore marca un personaggio come <em>Party Attivo</em> dalle impostazioni del personaggio</li>
-      <li>Se un giocatore ha esattamente un personaggio e non l'ha marcato attivo, viene incluso automaticamente</li>
-      <li>Il bot tiene traccia di tutti gli utenti che scrivono nel gruppo per sapere chi appartiene alla sessione</li>
-    </ul>
+    <h3>&#x1F465; Chi Appare?</h3>
+    <p>Ogni giocatore segna un personaggio come &ldquo;Party Attivo&rdquo; nelle impostazioni. Se qualcuno ha un solo personaggio, viene incluso automaticamente. Il bot tiene traccia di chi scrive nel gruppo per sapere chi fa parte della sessione.</p>
 
-    <h3>🔄 Aggiornamenti in Tempo Reale</h3>
-    <p>Il messaggio party viene aggiornato automaticamente ogni volta che un membro del party cambia:</p>
-    <ul class="sub-features">
-      <li>❤️ HP (danno / cura / riposo)</li>
-      <li>🛡️ CA (base / scudo / equipaggia armatura)</li>
-      <li>🌀 Condizioni (toggle / esaurimento)</li>
-      <li>🎲 Qualsiasi tiro di dado</li>
-    </ul>
-    <p>Gli aggiornamenti sono fire-and-forget (non bloccano mai la risposta dell'utente) e gestiscono in modo elegante i messaggi obsoleti/eliminati.</p>
+    <h3>&#x1F504; Aggiornamenti in Tempo Reale</h3>
+    <p>Il messaggio party si aggiorna istantaneamente ogni volta che qualcuno modifica HP, classe armatura, condizioni o fa un tiro di dado. Nessun aggiornamento manuale necessario.</p>
 
-    <h3>📋 Formato del Messaggio Party</h3>
-    <p>Ogni riga personaggio nel messaggio party mostra:</p>
-    <ul>
-      <li><strong>Nome e classe/livello</strong> (es. <em>Thorin — Guerriero 5 / Paladino 3</em>)</li>
-      <li><strong>Barra HP</strong> — barra di progresso visiva (<code>████░░░░ 42/60</code>) con colore in base alla percentuale di salute</li>
-      <li><strong>CA</strong> — classe armatura corrente</li>
-      <li><strong>Condizioni attive</strong> — lista emoji compatta (nascosta se nessuna)</li>
-      <li><strong>Ultimo tiro di dado</strong> — etichetta e risultato dell'ultimo tiro (nascosto se nessuno storico)</li>
-    </ul>
-    <p>L'intestazione del messaggio mostra il nome del gruppo e il tempo rimanente della sessione.</p>
+    <h3>&#x1F4CB; Cosa Vedi</h3>
+    <p>Per ogni personaggio: nome e classe/livello, una barra HP colorata, CA corrente, condizioni attive e l&rsquo;ultimo tiro di dado. L&rsquo;intestazione mostra il nome del gruppo e il tempo rimanente della sessione (le sessioni durano 48 ore, oppure si terminano prima con <strong>/party_stop</strong>).</p>
   </div><!-- /lang-it -->
 
-  <div class="back-to-top"><a href="#top">↑ Top</a></div>
+  <div class="back-to-top"><a href="#top">&#8593; Top</a></div>
 </section>
 
 <hr class="section-divider">
@@ -750,379 +548,114 @@ title: "D&D Adventurer's Tome — Wiki · Characters · Party"
      COMMANDS REFERENCE
      ============================================================ -->
 <section id="commands">
-  <h2><span class="section-icon">💬</span>
-    <span class="lang-en">Commands Reference</span>
-    <span class="lang-it">Riferimento Comandi</span>
+  <h2><span class="section-icon">&#x1F4AC;</span>
+    <span class="lang-en">Commands</span>
+    <span class="lang-it">Comandi</span>
   </h2>
 
-  <!-- EN -->
-  <div class="lang-en">
-    <table>
-      <thead>
-        <tr>
-          <th>Command</th>
-          <th>Scope</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td><code>/start</code></td>
-          <td>Private chat only</td>
-          <td>Opens the main menu with <em>📖 Wiki D&amp;D</em> and <em>⚔️ My character</em> buttons. In groups, responds with a warning and exits.</td>
-        </tr>
-        <tr>
-          <td><code>/party</code></td>
-          <td>Groups &amp; supergroups only</td>
-          <td>Starts a party session. Prompts for display mode (Public / Private).</td>
-        </tr>
-        <tr>
-          <td><code>/party_stop</code></td>
-          <td>Groups &amp; supergroups only</td>
-          <td>Ends the active party session and updates the party message to a stopped state.</td>
-        </tr>
-        <tr>
-          <td><code>/stop</code></td>
-          <td>Private chat (global)</td>
-          <td>Cancels the current flow, clears all mid-flow pending data, and returns to the character menu or selection screen.</td>
-        </tr>
-      </tbody>
-    </table>
-  </div><!-- /lang-en -->
+  <div class="commands-grid">
+    <div class="cmd-card">
+      <code>/start</code>
+      <p class="lang-en">Opens the main menu with Wiki and Character options. <em>Private chat only.</em></p>
+      <p class="lang-it">Apre il menu principale con Wiki e Personaggio. <em>Solo chat privata.</em></p>
+    </div>
+    <div class="cmd-card">
+      <code>/party</code>
+      <p class="lang-en">Starts a party session in your group. Choose public or private display.</p>
+      <p class="lang-it">Avvia una sessione party nel gruppo. Scegli visualizzazione pubblica o privata.</p>
+    </div>
+    <div class="cmd-card">
+      <code>/party_stop</code>
+      <p class="lang-en">Ends the active party session in your group.</p>
+      <p class="lang-it">Termina la sessione party attiva nel gruppo.</p>
+    </div>
+    <div class="cmd-card">
+      <code>/stop</code>
+      <p class="lang-en">Cancels the current action and returns to the menu. <em>Private chat only.</em></p>
+      <p class="lang-it">Annulla l&rsquo;azione corrente e torna al menu. <em>Solo chat privata.</em></p>
+    </div>
+  </div>
 
-  <!-- IT -->
-  <div class="lang-it">
-    <table>
-      <thead>
-        <tr>
-          <th>Comando</th>
-          <th>Scope</th>
-          <th>Descrizione</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td><code>/start</code></td>
-          <td>Solo chat privata</td>
-          <td>Apre il menu principale con i pulsanti <em>📖 Wiki D&amp;D</em> e <em>⚔️ Il mio personaggio</em>. Nei gruppi risponde con un avviso e termina.</td>
-        </tr>
-        <tr>
-          <td><code>/party</code></td>
-          <td>Solo gruppi e supergruppi</td>
-          <td>Avvia una sessione party. Chiede la modalità di visualizzazione (Pubblica / Privata).</td>
-        </tr>
-        <tr>
-          <td><code>/party_stop</code></td>
-          <td>Solo gruppi e supergruppi</td>
-          <td>Termina la sessione party attiva e aggiorna il messaggio party allo stato terminato.</td>
-        </tr>
-        <tr>
-          <td><code>/stop</code></td>
-          <td>Chat privata (globale)</td>
-          <td>Annulla il flusso corrente, cancella tutti i dati di flusso in sospeso e torna al menu o alla selezione personaggio.</td>
-        </tr>
-      </tbody>
-    </table>
-  </div><!-- /lang-it -->
-
-  <div class="back-to-top"><a href="#top">↑ Top</a></div>
+  <div class="back-to-top"><a href="#top">&#8593; Top</a></div>
 </section>
 
 <hr class="section-divider">
 
 <!-- ============================================================
-     SETUP & INSTALLATION
+     QUICK START
      ============================================================ -->
 <section id="setup">
-  <h2><span class="section-icon">🛠️</span>
-    <span class="lang-en">Setup &amp; Installation</span>
-    <span class="lang-it">Installazione e Configurazione</span>
+  <h2><span class="section-icon">&#x1F680;</span>
+    <span class="lang-en">Quick Start</span>
+    <span class="lang-it">Avvio Rapido</span>
   </h2>
 
   <!-- EN -->
   <div class="lang-en">
-    <h3>Prerequisites</h3>
-    <ul>
-      <li>Python 3.10 or newer</li>
-      <li>A Telegram Bot token from <a href="https://t.me/BotFather" target="_blank">@BotFather</a></li>
-    </ul>
-
-    <h3>Install</h3>
-    <pre><code>git clone https://github.com/Cioscos/DnD-Adventurers-Tome-TGBot.git
-cd DnD-Adventurers-Tome-TGBot
-python -m venv .venv
-# Windows:
-.\.venv\Scripts\Activate.ps1
-# Linux / macOS:
-source .venv/bin/activate
-pip install -r requirements.txt</code></pre>
-
-    <h3>Configuration</h3>
-    <p>Create a <code>.env</code> file in the project root:</p>
-    <pre><code>BOT_TOKEN=your_bot_token_here
-DEV_CHAT_ID=optional_telegram_chat_id
-DB_PATH=data/dnd_bot.db</code></pre>
-
-    <table>
-      <thead><tr><th>Variable</th><th>Required</th><th>Description</th></tr></thead>
-      <tbody>
-        <tr><td><code>BOT_TOKEN</code></td><td>✅ Yes</td><td>Telegram bot token from @BotFather</td></tr>
-        <tr><td><code>DEV_CHAT_ID</code></td><td>No</td><td>Your Telegram chat ID — unhandled exceptions are forwarded here as full tracebacks</td></tr>
-        <tr><td><code>DB_PATH</code></td><td>No</td><td>SQLite DB file path (default: <code>data/dnd_bot.db</code>)</td></tr>
-      </tbody>
-    </table>
-
-    <h3>Run</h3>
-    <pre><code>python -m bot.main</code></pre>
-
+    <p>Want to run your own instance? You&rsquo;ll need Python 3.10+ and a Telegram bot token from <a href="https://t.me/BotFather" target="_blank">@BotFather</a>.</p>
+    <div class="steps-grid">
+      <div class="step-card">
+        <span class="step-number">1</span>
+        <p><strong>Clone</strong> the repository and install dependencies</p>
+      </div>
+      <div class="step-card">
+        <span class="step-number">2</span>
+        <p>Create a <strong>.env</strong> file with your <code>BOT_TOKEN</code></p>
+      </div>
+      <div class="step-card">
+        <span class="step-number">3</span>
+        <p>Run <code>python -m bot.main</code> and start playing!</p>
+      </div>
+    </div>
     <div class="info-box">
-      💡 <strong>Tip:</strong> Set <code>DEV_CHAT_ID</code> to receive full Python tracebacks for unhandled errors directly in your Telegram DM — extremely useful during development.
+      &#x1F4A1; <strong>Tip:</strong> Add your Telegram chat ID as <code>DEV_CHAT_ID</code> in the .env to receive error reports directly in your DMs.
     </div>
   </div><!-- /lang-en -->
 
   <!-- IT -->
   <div class="lang-it">
-    <h3>Prerequisiti</h3>
-    <ul>
-      <li>Python 3.10 o superiore</li>
-      <li>Un token bot Telegram da <a href="https://t.me/BotFather" target="_blank">@BotFather</a></li>
-    </ul>
-
-    <h3>Installazione</h3>
-    <pre><code>git clone https://github.com/Cioscos/DnD-Adventurers-Tome-TGBot.git
-cd DnD-Adventurers-Tome-TGBot
-python -m venv .venv
-# Windows:
-.\.venv\Scripts\Activate.ps1
-# Linux / macOS:
-source .venv/bin/activate
-pip install -r requirements.txt</code></pre>
-
-    <h3>Configurazione</h3>
-    <p>Crea un file <code>.env</code> nella root del progetto:</p>
-    <pre><code>BOT_TOKEN=your_bot_token_here
-DEV_CHAT_ID=optional_telegram_chat_id
-DB_PATH=data/dnd_bot.db</code></pre>
-
-    <table>
-      <thead><tr><th>Variabile</th><th>Obbligatoria</th><th>Descrizione</th></tr></thead>
-      <tbody>
-        <tr><td><code>BOT_TOKEN</code></td><td>✅ Sì</td><td>Token bot Telegram da @BotFather</td></tr>
-        <tr><td><code>DEV_CHAT_ID</code></td><td>No</td><td>Il tuo chat ID Telegram — le eccezioni non gestite vengono inviate qui come traceback completo</td></tr>
-        <tr><td><code>DB_PATH</code></td><td>No</td><td>Percorso file DB SQLite (default: <code>data/dnd_bot.db</code>)</td></tr>
-      </tbody>
-    </table>
-
-    <h3>Avvio</h3>
-    <pre><code>python -m bot.main</code></pre>
-
+    <p>Vuoi eseguire la tua istanza? Ti servono Python 3.10+ e un token bot Telegram da <a href="https://t.me/BotFather" target="_blank">@BotFather</a>.</p>
+    <div class="steps-grid">
+      <div class="step-card">
+        <span class="step-number">1</span>
+        <p><strong>Clona</strong> il repository e installa le dipendenze</p>
+      </div>
+      <div class="step-card">
+        <span class="step-number">2</span>
+        <p>Crea un file <strong>.env</strong> con il tuo <code>BOT_TOKEN</code></p>
+      </div>
+      <div class="step-card">
+        <span class="step-number">3</span>
+        <p>Esegui <code>python -m bot.main</code> e inizia a giocare!</p>
+      </div>
+    </div>
     <div class="info-box">
-      💡 <strong>Suggerimento:</strong> Imposta <code>DEV_CHAT_ID</code> per ricevere traceback Python completi per gli errori non gestiti direttamente nel tuo DM Telegram — estremamente utile durante lo sviluppo.
+      &#x1F4A1; <strong>Suggerimento:</strong> Aggiungi il tuo chat ID Telegram come <code>DEV_CHAT_ID</code> nel .env per ricevere report degli errori direttamente nei tuoi DM.
     </div>
   </div><!-- /lang-it -->
 
-  <div class="back-to-top"><a href="#top">↑ Top</a></div>
+  <div class="back-to-top"><a href="#top">&#8593; Top</a></div>
 </section>
 
 <hr class="section-divider">
 
 <!-- ============================================================
-     TECH STACK
+     LANGUAGES
      ============================================================ -->
-<section id="tech">
-  <h2><span class="section-icon">🧰</span>
-    <span class="lang-en">Tech Stack</span>
-    <span class="lang-it">Stack Tecnologico</span>
-  </h2>
-
-  <table>
-    <thead>
-      <tr>
-        <th><span class="lang-en">Dependency</span><span class="lang-it">Dipendenza</span></th>
-        <th><span class="lang-en">Version</span><span class="lang-it">Versione</span></th>
-        <th><span class="lang-en">Purpose</span><span class="lang-it">Scopo</span></th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td><code>python-telegram-bot[callback-data]</code></td>
-        <td>≥ 22.0</td>
-        <td>
-          <span class="lang-en">Async Telegram Bot API + arbitrary callback data (LRU cache)</span>
-          <span class="lang-it">Bot API Telegram async + callback data arbitrari (cache LRU)</span>
-        </td>
-      </tr>
-      <tr>
-        <td><code>httpx</code></td>
-        <td>≥ 0.27.0</td>
-        <td>
-          <span class="lang-en">Async HTTP client for GraphQL requests</span>
-          <span class="lang-it">Client HTTP async per richieste GraphQL</span>
-        </td>
-      </tr>
-      <tr>
-        <td><code>sqlalchemy</code></td>
-        <td>≥ 2.0</td>
-        <td>
-          <span class="lang-en">Async ORM for character persistence</span>
-          <span class="lang-it">ORM async per la persistenza dei personaggi</span>
-        </td>
-      </tr>
-      <tr>
-        <td><code>aiosqlite</code></td>
-        <td>≥ 0.20</td>
-        <td>
-          <span class="lang-en">SQLite async driver (used by SQLAlchemy)</span>
-          <span class="lang-it">Driver SQLite async (usato da SQLAlchemy)</span>
-        </td>
-      </tr>
-      <tr>
-        <td><code>rapidfuzz</code></td>
-        <td>≥ 3.0</td>
-        <td>
-          <span class="lang-en">Fuzzy string matching for spell search</span>
-          <span class="lang-it">Corrispondenza fuzzy per la ricerca incantesimi</span>
-        </td>
-      </tr>
-      <tr>
-        <td><code>pyyaml</code></td>
-        <td>≥ 6.0</td>
-        <td>
-          <span class="lang-en">YAML locale file parsing for i18n</span>
-          <span class="lang-it">Parsing file YAML locale per i18n</span>
-        </td>
-      </tr>
-      <tr>
-        <td><code>python-dotenv</code></td>
-        <td>≥ 1.0.0</td>
-        <td>
-          <span class="lang-en">Loading environment variables from <code>.env</code></span>
-          <span class="lang-it">Caricamento variabili d'ambiente da <code>.env</code></span>
-        </td>
-      </tr>
-    </tbody>
-  </table>
-
-  <div class="back-to-top"><a href="#top">↑ Top</a></div>
-</section>
-
-<hr class="section-divider">
-
-<!-- ============================================================
-     ARCHITECTURE
-     ============================================================ -->
-<section id="architecture">
-  <h2><span class="section-icon">🏗️</span>
-    <span class="lang-en">Architecture</span>
-    <span class="lang-it">Architettura</span>
+<section id="languages">
+  <h2><span class="section-icon">&#x1F30D;</span>
+    <span class="lang-en">Languages</span>
+    <span class="lang-it">Lingue</span>
   </h2>
 
   <div class="lang-en">
-    <p>The codebase is organised into clean, separated layers:</p>
+    <p>The bot speaks <strong>Italian</strong> and <strong>English</strong> and automatically detects your Telegram language setting. Adding new languages is straightforward &mdash; just a YAML file.</p>
   </div>
   <div class="lang-it">
-    <p>Il codice è organizzato in livelli puliti e separati:</p>
+    <p>Il bot parla <strong>Italiano</strong> e <strong>Inglese</strong> e rileva automaticamente la lingua impostata su Telegram. Aggiungere nuove lingue &egrave; semplice &mdash; basta un file YAML.</p>
   </div>
 
-  <div class="code-tree">bot/
-├── main.py                  # App bootstrap, persistence, handler registration, error handler
-├── api/
-│   ├── client.py            # DnDClient: async GraphQL client (singleton, httpx)
-│   ├── introspection.py     # __schema query + parser → TypeInfo objects
-│   └── query_builder.py     # Dynamic GraphQL query generation from TypeInfo
-├── data/
-│   ├── classes.py           # DND_CLASSES, ResourceConfig, CLASS_RESOURCES formulas
-│   └── skills.py            # 18 skills (slug, ability) + SKILL_ABILITY_MAP
-├── db/
-│   ├── engine.py            # SQLAlchemy async engine, session factory, init_db()
-│   ├── history.py           # log_history_event, get_history, clear_history
-│   └── models.py            # ORM models: Character, CharacterClass, Spell, Item, …
-├── locales/
-│   ├── it.yaml              # Italian strings (~570 keys, hierarchical)
-│   └── en.yaml              # English translations (mirrors it.yaml)
-├── schema/
-│   ├── types.py             # FieldInfo, TypeInfo, MenuCategory dataclasses
-│   └── registry.py          # SchemaRegistry: introspects API, maps queries, navigable fields
-├── handlers/
-│   ├── start.py             # /start (private-chat only)
-│   ├── navigation.py        # Wiki N-level CallbackQueryHandler + MarkdownV2 formatters
-│   ├── party.py             # /party, /party_stop, live update hooks
-│   └── character/
-│       ├── conversation.py  # Master ConversationHandler (58 states)
-│       ├── selection.py     # Create / select / delete characters
-│       ├── menu.py          # Character main menu + summary
-│       ├── hit_points.py    # HP management + rest
-│       ├── armor_class.py   # AC management
-│       ├── stats.py         # Ability scores
-│       ├── skills.py        # 18 skills: list, detail, toggle, roll
-│       ├── spells.py        # Spell learn / edit / use / concentration / search
-│       ├── spell_slots.py   # Spell slot management
-│       ├── bag.py           # Typed inventory (6 types) + equip/unequip
-│       ├── currency.py      # Coin management + conversion
-│       ├── abilities.py     # Special abilities
-│       ├── multiclass.py    # Multiclassing: guided/custom, subclass, level up/down
-│       ├── class_resources.py # Class resources: view / use / restore
-│       ├── dice.py          # Dice roller + initiative
-│       ├── notes.py         # Text + voice notes
-│       ├── maps.py          # Zone maps
-│       ├── conditions.py    # Conditions tracker (14 binary + Exhaustion)
-│       ├── history.py       # Modification history: show + clear
-│       ├── inspiration.py   # Heroic Inspiration toggle
-│       └── settings.py      # Per-character settings
-├── keyboards/
-│   ├── builder.py           # Wiki inline keyboards
-│   ├── character.py         # Character inline keyboards
-│   └── party.py             # Party inline keyboards
-├── models/
-│   ├── state.py             # NavAction frozen dataclass (wiki callbacks)
-│   ├── character_state.py   # CharAction frozen dataclass (character callbacks)
-│   └── party_state.py       # PartyAction frozen dataclass (party callbacks)
-└── utils/
-    ├── formatting.py        # Character screen formatters (MarkdownV2)
-    ├── party_formatting.py  # Party message formatter
-    └── i18n.py              # Translator singleton + hot-reload watcher</div>
-
-  <div class="back-to-top"><a href="#top">↑ Top</a></div>
-</section>
-
-<hr class="section-divider">
-
-<!-- ============================================================
-     I18N
-     ============================================================ -->
-<section id="i18n">
-  <h2><span class="section-icon">🌍</span>
-    <span class="lang-en">Internationalisation (i18n)</span>
-    <span class="lang-it">Internazionalizzazione (i18n)</span>
-  </h2>
-
-  <!-- EN -->
-  <div class="lang-en">
-    <ul>
-      <li>User language is detected from <code>update.effective_user.language_code</code> (e.g., <code>it-IT</code> → <code>it</code>)</li>
-      <li>Supported locales out of the box: <strong>Italian</strong> (default) and <strong>English</strong></li>
-      <li>All user-facing strings live in <code>bot/locales/it.yaml</code> and <code>bot/locales/en.yaml</code> — never hardcoded</li>
-      <li>Fallback chain: <code>user_lang → "it" → key itself</code></li>
-      <li>Interpolation with named kwargs: <code>translator.t("character.hp.title", lang=lang, current=45, max=60)</code></li>
-      <li>Adding a new language is as simple as creating a new <code>&lt;code&gt;.yaml</code> file in <code>bot/locales/</code></li>
-      <li>Hot-reload: the bot checks YAML file modification times every 5 minutes and reloads changed files — no restart needed</li>
-    </ul>
-  </div><!-- /lang-en -->
-
-  <!-- IT -->
-  <div class="lang-it">
-    <ul>
-      <li>La lingua dell'utente viene rilevata da <code>update.effective_user.language_code</code> (es. <code>it-IT</code> → <code>it</code>)</li>
-      <li>Locali supportate: <strong>Italiano</strong> (default) e <strong>Inglese</strong></li>
-      <li>Tutte le stringhe visibili all'utente si trovano in <code>bot/locales/it.yaml</code> e <code>bot/locales/en.yaml</code> — mai hardcoded</li>
-      <li>Catena di fallback: <code>lingua_utente → "it" → chiave stessa</code></li>
-      <li>Interpolazione con kwargs nominativi: <code>translator.t("character.hp.title", lang=lang, current=45, max=60)</code></li>
-      <li>Aggiungere una nuova lingua è semplice come creare un nuovo file <code>&lt;codice&gt;.yaml</code> in <code>bot/locales/</code></li>
-      <li>Hot-reload: il bot controlla i timestamp di modifica dei file YAML ogni 5 minuti e ricarica i file cambiati — senza riavvio</li>
-    </ul>
-  </div><!-- /lang-it -->
-
-  <div class="back-to-top"><a href="#top">↑ Top</a></div>
+  <div class="back-to-top"><a href="#top">&#8593; Top</a></div>
 </section>
 
 <hr class="section-divider">
@@ -1131,26 +664,26 @@ DB_PATH=data/dnd_bot.db</code></pre>
      LICENSE
      ============================================================ -->
 <section id="license">
-  <h2><span class="section-icon">📄</span>
+  <h2><span class="section-icon">&#x1F4C4;</span>
     <span class="lang-en">License</span>
     <span class="lang-it">Licenza</span>
   </h2>
 
   <div class="lang-en">
     <p>
-      This project is intended for educational and personal use.
-      D&amp;D game content is sourced from the <a href="https://www.dnd5eapi.co/" target="_blank">D&amp;D 5e API</a>
+      This project is for educational and personal use.
+      D&amp;D content comes from the <a href="https://www.dnd5eapi.co/" target="_blank">D&amp;D 5e API</a>
       under the <strong>Systems Reference Document (SRD)</strong> licensed by Wizards of the Coast under the
       <a href="https://media.wizards.com/2016/downloads/DND/SRD-OGL_V5.1.pdf" target="_blank">Open Game License v1.0a</a>.
     </p>
-  </div><!-- /lang-en -->
+  </div>
 
   <div class="lang-it">
     <p>
-      Questo progetto è destinato a uso educativo e personale.
-      I contenuti di gioco D&amp;D provengono dalla <a href="https://www.dnd5eapi.co/" target="_blank">D&amp;D 5e API</a>
+      Questo progetto &egrave; destinato a uso educativo e personale.
+      I contenuti D&amp;D provengono dalla <a href="https://www.dnd5eapi.co/" target="_blank">D&amp;D 5e API</a>
       sotto il <strong>Systems Reference Document (SRD)</strong> concesso in licenza da Wizards of the Coast sotto la
       <a href="https://media.wizards.com/2016/downloads/DND/SRD-OGL_V5.1.pdf" target="_blank">Open Game License v1.0a</a>.
     </p>
-  </div><!-- /lang-it -->
+  </div>
 </section>

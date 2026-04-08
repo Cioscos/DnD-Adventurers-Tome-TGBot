@@ -4,15 +4,65 @@
 @import "jekyll-theme-cayman";
 
 /* ================================================================
-   D&D Bot — Custom style overrides on top of Cayman theme
+   D&D Adventurer's Tome — Premium Fantasy Theme
    ================================================================ */
 
 /* CSS custom properties */
 :root {
-  --dnd-red:    #8b0000;
-  --dnd-gold:   #c8a84b;
-  --dnd-dark:   #1a1a2e;
-  --cayman-blue: #155799;
+  --dnd-red:       #8b0000;
+  --dnd-gold:      #d4a843;
+  --dnd-gold-light:#f0d88a;
+  --dnd-dark:      #1a1a2e;
+  --dnd-darker:    #0f0f1a;
+  --dnd-surface:   #16213e;
+  --accent-blue:   #4a7dff;
+  --accent-teal:   #38bdf8;
+  --text-primary:  #e2e8f0;
+  --text-muted:    #94a3b8;
+  --card-bg:       #1e293b;
+  --card-border:   #334155;
+  --glow-gold:     rgba(212, 168, 67, 0.25);
+}
+
+/* ---- Global overrides ---- */
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--dnd-darker);
+  color: var(--text-primary);
+}
+
+.page-header {
+  background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 40%, #1e3a5f 70%, #0f0f1a 100%);
+  padding: 2rem 1rem;
+}
+
+.page-header h1.project-name {
+  font-size: 2rem;
+}
+
+.main-content {
+  background: var(--dnd-darker);
+  color: var(--text-primary);
+}
+
+.main-content h1,
+.main-content h2,
+.main-content h3 {
+  color: var(--dnd-gold);
+}
+
+.main-content h2 {
+  border-bottom: 2px solid rgba(212, 168, 67, 0.2);
+  padding-bottom: 0.5rem;
+}
+
+.main-content a {
+  color: var(--accent-teal);
+}
+
+.main-content a:hover {
+  color: var(--dnd-gold-light);
 }
 
 /* ---- Language toggle (fixed top-right) ---- */
@@ -22,106 +72,224 @@
   right: 1rem;
   z-index: 9999;
   display: flex;
-  border-radius: 20px;
+  border-radius: 24px;
   overflow: hidden;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
   border: 2px solid var(--dnd-gold);
+  backdrop-filter: blur(10px);
 }
 
 .lang-btn {
-  padding: 0.35rem 0.85rem;
-  background: #fff;
+  padding: 0.4rem 1rem;
+  background: rgba(30, 41, 59, 0.9);
   border: none;
   cursor: pointer;
   font-weight: 700;
   font-size: 0.8rem;
-  letter-spacing: 0.04em;
-  color: #555;
-  transition: background 0.18s, color 0.18s;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  transition: background 0.25s, color 0.25s, transform 0.15s;
 }
 
-.lang-btn:first-child { border-right: 1px solid #e1e4e8; }
+.lang-btn:first-child { border-right: 1px solid var(--card-border); }
+
+.lang-btn:hover {
+  color: var(--dnd-gold-light);
+}
 
 .lang-btn.active {
-  background: var(--cayman-blue);
-  color: #fff;
+  background: linear-gradient(135deg, var(--dnd-gold), #b8912e);
+  color: var(--dnd-darker);
 }
 
 /* ---- Hero section ---- */
 .hero-section {
   text-align: center;
-  padding: 1rem 0 2rem;
+  padding: 2rem 0 2.5rem;
 }
 
 .bot-avatar {
-  width: 120px;
-  height: 120px;
+  width: 130px;
+  height: 130px;
   border-radius: 50%;
   border: 4px solid var(--dnd-gold);
   display: block;
-  margin: 0 auto 1rem;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  margin: 0 auto 1.2rem;
+  box-shadow: 0 0 30px var(--glow-gold), 0 8px 32px rgba(0, 0, 0, 0.4);
+  transition: transform 0.3s ease;
+}
+
+.bot-avatar:hover {
+  transform: scale(1.05);
+}
+
+.hero-section h1 {
+  font-size: 2.4rem;
+  margin-bottom: 0.8rem;
+  background: linear-gradient(135deg, var(--dnd-gold-light), var(--dnd-gold), #b8912e);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero-tagline {
+  font-size: 1.15rem;
+  max-width: 660px;
+  margin: 0 auto 1.5rem;
+  color: var(--text-muted);
+  line-height: 1.7;
+}
+
+.hero-cta {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 1.2rem;
+  flex-wrap: wrap;
+}
+
+.btn-primary,
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.7rem 1.8rem;
+  border-radius: 30px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  text-decoration: none;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--dnd-gold), #b8912e);
+  color: var(--dnd-darker);
+  box-shadow: 0 4px 16px var(--glow-gold);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px var(--glow-gold);
+  color: var(--dnd-darker);
+}
+
+.btn-secondary {
+  background: transparent;
+  color: var(--dnd-gold);
+  border: 2px solid var(--dnd-gold);
+}
+
+.btn-secondary:hover {
+  background: rgba(212, 168, 67, 0.1);
+  transform: translateY(-2px);
+  color: var(--dnd-gold-light);
 }
 
 .badges {
-  margin: 0.8rem 0 1.2rem;
+  margin: 0.8rem 0 0.5rem;
 }
 
 .badges img {
   margin: 0.2rem;
   vertical-align: middle;
+  border-radius: 4px;
+}
+
+/* ---- Section titles ---- */
+.section-title {
+  text-align: center;
+  font-size: 1.8rem;
+  margin-bottom: 1.8rem;
+  color: var(--dnd-gold) !important;
 }
 
 /* ---- Feature card grid ---- */
 .feature-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 1.4rem;
-  margin: 1.8rem 0 2.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.6rem;
+  margin: 0 0 2.5rem;
 }
 
 .feature-card {
-  border: 2px solid var(--dnd-gold);
-  border-radius: 10px;
-  padding: 1.6rem 1.4rem;
-  background: #fafafa;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 16px;
+  padding: 2rem 1.6rem;
   text-align: center;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.feature-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, var(--dnd-gold), transparent);
+  opacity: 0;
+  transition: opacity 0.3s;
 }
 
 .feature-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.12);
+  transform: translateY(-6px);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+  border-color: var(--dnd-gold);
+}
+
+.feature-card:hover::before {
+  opacity: 1;
 }
 
 .feature-card .card-icon {
-  font-size: 2.8rem;
+  font-size: 3rem;
   display: block;
-  margin-bottom: 0.6rem;
+  margin-bottom: 0.8rem;
 }
 
 .feature-card h3 {
-  margin: 0.2rem 0 0.7rem;
-  font-size: 1.15rem;
-  color: var(--dnd-dark);
+  margin: 0.2rem 0 0.8rem;
+  font-size: 1.2rem;
+  color: var(--dnd-gold-light) !important;
+}
+
+.feature-card p {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.card-link {
+  display: inline-block;
+  margin-top: 0.8rem;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--accent-teal) !important;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.card-link:hover {
+  color: var(--dnd-gold-light) !important;
 }
 
 /* ---- Section styling ---- */
 .section-divider {
   border: none;
-  border-top: 2px solid var(--dnd-gold);
-  opacity: 0.35;
-  margin: 2.5rem 0;
+  border-top: 1px solid rgba(212, 168, 67, 0.15);
+  margin: 3rem 0;
 }
 
 h2 .section-icon {
-  margin-right: 0.4rem;
+  margin-right: 0.5rem;
 }
 
 /* ---- Sub-feature pills grid ---- */
 .sub-features {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(195px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   gap: 0.6rem;
   margin: 1rem 0 1.4rem;
   padding: 0;
@@ -129,12 +297,40 @@ h2 .section-icon {
 }
 
 .sub-features li {
-  background: #f3f4f6;
-  border-left: 4px solid var(--dnd-gold);
-  padding: 0.5rem 0.75rem;
-  border-radius: 0 6px 6px 0;
+  background: var(--card-bg);
+  border-left: 3px solid var(--dnd-gold);
+  padding: 0.55rem 0.85rem;
+  border-radius: 0 8px 8px 0;
   font-size: 0.88rem;
   line-height: 1.45;
+  color: var(--text-primary);
+  transition: background 0.2s;
+}
+
+.sub-features li:hover {
+  background: var(--dnd-surface);
+}
+
+/* ---- Highlight list ---- */
+.highlight-list {
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0;
+}
+
+.highlight-list li {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  padding: 0.7rem 1rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.93rem;
+  color: var(--text-primary);
+  transition: border-color 0.2s;
+}
+
+.highlight-list li:hover {
+  border-color: var(--dnd-gold);
 }
 
 /* ---- Category pill list (wiki) ---- */
@@ -148,12 +344,140 @@ h2 .section-icon {
 }
 
 .category-list li {
-  background: var(--cayman-blue);
-  color: #fff;
-  padding: 0.35rem 0.9rem;
-  border-radius: 20px;
+  background: linear-gradient(135deg, var(--dnd-surface), var(--card-bg));
+  color: var(--dnd-gold-light);
+  padding: 0.4rem 1rem;
+  border-radius: 24px;
   font-size: 0.85rem;
   font-weight: 600;
+  border: 1px solid var(--dnd-gold);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.category-list li:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px var(--glow-gold);
+}
+
+/* ---- Inventory grid ---- */
+.inventory-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.8rem;
+  margin: 1rem 0 1.4rem;
+}
+
+.inv-item {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  padding: 1rem;
+  text-align: center;
+  transition: transform 0.2s, border-color 0.2s;
+}
+
+.inv-item:hover {
+  transform: translateY(-3px);
+  border-color: var(--dnd-gold);
+}
+
+.inv-icon {
+  font-size: 2rem;
+  display: block;
+  margin-bottom: 0.4rem;
+}
+
+.inv-item strong {
+  color: var(--dnd-gold-light);
+  display: block;
+  margin-bottom: 0.3rem;
+}
+
+.inv-item small {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+/* ---- Steps grid (How it works / Quick Start) ---- */
+.steps-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.2rem;
+  margin: 1.4rem 0;
+}
+
+.step-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+  padding: 1.4rem 1.2rem;
+  text-align: center;
+  position: relative;
+  transition: transform 0.2s, border-color 0.2s;
+}
+
+.step-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--dnd-gold);
+}
+
+.step-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--dnd-gold), #b8912e);
+  color: var(--dnd-darker);
+  font-weight: 800;
+  font-size: 1.1rem;
+  margin-bottom: 0.8rem;
+  box-shadow: 0 4px 12px var(--glow-gold);
+}
+
+.step-card p {
+  margin: 0;
+  font-size: 0.93rem;
+  color: var(--text-muted);
+}
+
+/* ---- Commands grid ---- */
+.commands-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.cmd-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  padding: 1.2rem 1.4rem;
+  transition: border-color 0.2s;
+}
+
+.cmd-card:hover {
+  border-color: var(--dnd-gold);
+}
+
+.cmd-card code {
+  display: inline-block;
+  background: rgba(212, 168, 67, 0.15);
+  border: 1px solid rgba(212, 168, 67, 0.3);
+  color: var(--dnd-gold-light);
+  font-size: 1.05rem;
+  font-weight: 700;
+  padding: 0.2em 0.6em;
+  border-radius: 6px;
+  margin-bottom: 0.5rem;
+}
+
+.cmd-card p {
+  margin: 0.4rem 0 0;
+  font-size: 0.9rem;
+  color: var(--text-muted);
 }
 
 /* ---- Tables ---- */
@@ -165,51 +489,41 @@ table {
 }
 
 th {
-  background: var(--cayman-blue);
-  color: #fff;
-  padding: 0.6rem 1rem;
+  background: var(--dnd-surface);
+  color: var(--dnd-gold);
+  padding: 0.7rem 1rem;
   text-align: left;
+  border-bottom: 2px solid var(--dnd-gold);
 }
 
 td {
   padding: 0.5rem 1rem;
-  border-bottom: 1px solid #e1e4e8;
+  border-bottom: 1px solid var(--card-border);
   vertical-align: top;
+  color: var(--text-primary);
 }
 
-tr:nth-child(even) td { background: #f6f8fa; }
-
-/* ---- Code / monospace tree ---- */
-.code-tree {
-  background: #1e2235;
-  color: #c9d1d9;
-  padding: 1.4rem 1.6rem;
-  border-radius: 8px;
-  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
-  font-size: 0.82rem;
-  line-height: 1.6;
-  overflow-x: auto;
-  white-space: pre;
-}
+tr:nth-child(even) td { background: rgba(30, 41, 59, 0.5); }
 
 /* ---- Inline command badge ---- */
 code {
-  background: #eef0f3;
-  border: 1px solid #d0d7de;
-  border-radius: 4px;
-  padding: 0.1em 0.4em;
+  background: rgba(74, 125, 255, 0.1);
+  border: 1px solid rgba(74, 125, 255, 0.2);
+  border-radius: 5px;
+  padding: 0.15em 0.45em;
   font-size: 0.88em;
-  color: #2c3e50;
+  color: var(--accent-teal);
 }
 
 /* ---- Info box ---- */
 .info-box {
-  background: #f0f7ff;
-  border-left: 4px solid var(--cayman-blue);
-  padding: 0.9rem 1.2rem;
-  border-radius: 0 6px 6px 0;
-  margin: 1rem 0;
+  background: rgba(56, 189, 248, 0.08);
+  border-left: 4px solid var(--accent-teal);
+  padding: 1rem 1.3rem;
+  border-radius: 0 10px 10px 0;
+  margin: 1.2rem 0;
   font-size: 0.93rem;
+  color: var(--text-primary);
 }
 
 /* ---- Navigation flow diagram ---- */
@@ -217,22 +531,23 @@ code {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.45rem;
   margin: 1rem 0;
   font-size: 0.9rem;
 }
 
 .nav-flow .step {
-  background: #f3f4f6;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  padding: 0.3rem 0.7rem;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  padding: 0.35rem 0.8rem;
   font-weight: 600;
+  color: var(--text-primary);
 }
 
 .nav-flow .arrow {
   color: var(--dnd-gold);
-  font-size: 1.1rem;
+  font-size: 1.2rem;
   font-weight: 700;
 }
 
@@ -247,24 +562,47 @@ code {
 }
 
 .condition-grid li {
-  background: #f9f3e8;
-  border: 1px solid #e0c97f;
-  border-radius: 6px;
-  padding: 0.4rem 0.7rem;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  padding: 0.45rem 0.75rem;
   font-size: 0.85rem;
   text-align: center;
+  color: var(--text-primary);
+  transition: border-color 0.2s, transform 0.15s;
+}
+
+.condition-grid li:hover {
+  border-color: var(--dnd-gold);
+  transform: translateY(-2px);
 }
 
 /* ---- Back-to-top link ---- */
 .back-to-top {
   text-align: right;
-  margin-top: 1.5rem;
+  margin-top: 1.8rem;
 }
 
 .back-to-top a {
   font-size: 0.85rem;
-  color: var(--cayman-blue);
+  color: var(--text-muted);
   text-decoration: none;
+  transition: color 0.2s;
+}
+
+.back-to-top a:hover {
+  color: var(--dnd-gold);
+}
+
+/* ---- Footer ---- */
+.site-footer {
+  background: var(--dnd-darker);
+  border-top: 1px solid var(--card-border);
+  color: var(--text-muted);
+}
+
+.site-footer-credits {
+  color: var(--text-muted);
 }
 
 /* ---- Responsive tweaks ---- */
@@ -274,12 +612,27 @@ code {
     right: 0.6rem;
   }
 
-  .feature-grid {
+  .feature-grid,
+  .steps-grid,
+  .commands-grid {
     grid-template-columns: 1fr;
+  }
+
+  .hero-section h1 {
+    font-size: 1.8rem;
   }
 
   .nav-flow {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .hero-cta {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .inventory-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
