@@ -106,6 +106,9 @@ class Character(Base):
     # Skills proficiencies (JSON dict: skill_slug → bool; True = proficient)
     skills: Mapped[Optional[dict]] = mapped_column(JSON, default=dict)
 
+    # Heroic Inspiration token (D&D 5e 2024)
+    heroic_inspiration: Mapped[bool] = mapped_column(Boolean, default=False)
+
     # Relationships
     classes: Mapped[List["CharacterClass"]] = relationship(
         back_populates="character", cascade="all, delete-orphan"

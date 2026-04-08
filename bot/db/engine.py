@@ -54,6 +54,8 @@ _MIGRATIONS: list[tuple[str, str, str, str | None]] = [
     ("items", "item_type", "VARCHAR(20)", "'generic'"),
     ("items", "item_metadata", "TEXT", None),
     ("items", "is_equipped", "BOOLEAN", "0"),
+    # Heroic Inspiration
+    ("characters", "heroic_inspiration", "BOOLEAN", "0"),
 ]
 
 

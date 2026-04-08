@@ -70,6 +70,7 @@ character:
     btn_conditions: "⚠️ Conditions"
     btn_history: "📜 History"
     btn_skills: "🎯 Skills"
+    btn_inspiration: "✨ Heroic Inspiration"
 
   history:
     title: "📜 *Modification History — {name}*"
@@ -77,7 +78,7 @@ character:
     count: "{count} events recorded"
     part_indicator: "\\[Part {n}/{total}\\]"
     btn_clear: "🗑️ Clear History"
-    cleared: "History cleared\\."
+    cleared: "History cleared."
     other: "📌 Change"
     hp_change: "❤️ HP"
     rest: "😴 Rest"
@@ -92,6 +93,7 @@ character:
     ability_change: "⚡ Ability"
     condition_change: "⚠️ Condition"
     skill_change: "🎯 Skill"
+    inspiration_change: "✨ Inspiration"
 
   hp:
     title: "❤️ *Hit Points*"
@@ -459,7 +461,7 @@ character:
     history_title: "🎲 *Roll History*"
     no_history: "_No rolls recorded\\._"
     history_entry: "{die}: \\[{results}\\] \\= *{total}*"
-    cleared: "History cleared\\."
+    cleared: "History cleared."
 
   notes:
     title: "📝 *Notes*"
@@ -623,6 +625,17 @@ character:
       sleight_of_hand: "Pickpocket, conceal objects on your person, or perform sleight of hand tricks."
       stealth: "Move silently and unseen, hiding in shadows or among a crowd."
       survival: "Hunt, track, navigate the wilderness, and survive in adverse conditions."
+
+  inspiration:
+    title: "✨ *Heroic Inspiration*"
+    status_active: "✅ You have *Heroic Inspiration*\\!"
+    status_inactive: "⬛ You do not have Heroic Inspiration\\."
+    description: "Heroic Inspiration allows you to reroll any die\\. You can have at most one at a time\\."
+    btn_grant: "✨ Gain Inspiration"
+    btn_spend: "💫 Use Inspiration"
+    granted: "✨ Heroic Inspiration gained\\!"
+    spent: "💫 Heroic Inspiration used\\!"
+    active_label: "✨ *Heroic Inspiration active*"
 
 # ---------------------------------------------------------------------------
 # Party feature

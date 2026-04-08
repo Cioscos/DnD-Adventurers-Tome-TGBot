@@ -96,6 +96,7 @@ def build_character_main_menu_keyboard(char_id: int, lang: str = "it") -> Inline
         (translator.t("character.menu.btn_rest",       lang=lang), CharAction("char_rest",       char_id=cid)),
         (translator.t("character.menu.btn_conditions", lang=lang), CharAction("char_conditions", char_id=cid)),
         (translator.t("character.menu.btn_history",    lang=lang), CharAction("char_history",    char_id=cid)),
+        (translator.t("character.menu.btn_inspiration",lang=lang), CharAction("char_inspiration",char_id=cid)),
         (translator.t("character.menu.btn_settings",   lang=lang), CharAction("char_settings",   char_id=cid)),
         (translator.t("character.selection.delete_btn",lang=lang), CharAction("char_delete",    char_id=cid)),
     ]
@@ -1188,5 +1189,27 @@ def build_skill_detail_keyboard(
         [_btn(toggle_label, CharAction("char_skills", char_id=cid, sub="toggle", extra=slug))],
         [_btn(roll_label, CharAction("char_skills", char_id=cid, sub="roll", extra=slug))],
         _nav_row(back_action=CharAction("char_skills", char_id=cid), menu_char_id=cid, lang=lang),
+    ]
+    return InlineKeyboardMarkup(rows)
+
+
+# ---------------------------------------------------------------------------
+# Heroic Inspiration
+# ---------------------------------------------------------------------------
+
+def build_inspiration_keyboard(
+    char_id: int,
+    has_inspiration: bool,
+    lang: str = "it",
+) -> InlineKeyboardMarkup:
+    """Keyboard for the Heroic Inspiration screen: grant/spend toggle and back."""
+    cid = char_id
+    if has_inspiration:
+        toggle_label = translator.t("character.inspiration.btn_spend", lang=lang)
+    else:
+        toggle_label = translator.t("character.inspiration.btn_grant", lang=lang)
+    rows = [
+        [_btn(toggle_label, CharAction("char_inspiration", char_id=cid, sub="toggle"))],
+        _nav_row(menu_char_id=cid, lang=lang),
     ]
     return InlineKeyboardMarkup(rows)

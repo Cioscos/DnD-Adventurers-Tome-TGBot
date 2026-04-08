@@ -279,7 +279,21 @@ def format_character_active_status(
         names = ", ".join(_esc(a.name) for a in passive_active)
         lines.append(translator.t("character.spells.passive_active", lang=lang, names=names))
 
+    if getattr(char, "heroic_inspiration", False):
+        lines.append(translator.t("character.inspiration.active_label", lang=lang))
+
     return "\n".join(lines) if lines else ""
+
+
+def format_inspiration(char: Character, lang: str = "it") -> str:
+    """Format the Heroic Inspiration screen."""
+    title = translator.t("character.inspiration.title", lang=lang)
+    description = translator.t("character.inspiration.description", lang=lang)
+    if getattr(char, "heroic_inspiration", False):
+        status = translator.t("character.inspiration.status_active", lang=lang)
+    else:
+        status = translator.t("character.inspiration.status_inactive", lang=lang)
+    return f"{title}\n\n{status}\n\n{description}"
 
 
 def format_spell_slots(slots: list[SpellSlot], lang: str = "it") -> str:
