@@ -9,7 +9,7 @@ from telegram import Update
 from telegram.ext import ContextTypes
 
 from bot.db.engine import get_session
-from bot.db.models import Ability, Character, Spell
+from bot.db.models import Ability, Character, Item, Spell
 from bot.handlers.character import CHAR_MENU
 from bot.keyboards.character import build_character_main_menu_keyboard
 from bot.utils.formatting import format_character_summary
@@ -61,9 +61,24 @@ async def show_character_menu(
             select(Ability).where(Ability.character_id == char_id)
         )
         abilities = list(abilities_result.scalars().all())
+        # Load equipped items for summary display
+        items_result = await session.execute(
+            select(Item).where(Item.character_id == char_id, Item.is_equipped == True)  # noqa: E712
+        )
+        equipped_items_raw = list(items_result.scalars().all())
+
+    import json as _json
+    equipped_items = [
+        {
+            "name": it.name,
+            "item_type": it.item_type or "generic",
+            "item_metadata": _json.loads(it.item_metadata) if it.item_metadata else {},
+        }
+        for it in equipped_items_raw
+    ]
 
     keyboard = build_character_main_menu_keyboard(char_id, lang=lang)
-    text = format_character_summary(char, spells=spells, abilities=abilities, lang=lang)
+    text = format_character_summary(char, spells=spells, abilities=abilities, equipped_items=equipped_items, lang=lang)
 
     if update.callback_query:
         await update.callback_query.answer()

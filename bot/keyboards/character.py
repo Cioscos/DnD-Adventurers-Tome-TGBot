@@ -499,14 +499,23 @@ def build_bag_keyboard(
     page_items = items[start: start + PAGE_SIZE]
     has_next = len(items) > start + PAGE_SIZE
 
-    rows = [
-        [_btn(
-            f"📦 {i.name} x{i.quantity}",
+    _ITEM_ICONS = {
+        "weapon": "⚔️",
+        "armor": "🛡️",
+        "shield": "🛡️",
+        "consumable": "🧪",
+        "tool": "🔧",
+        "generic": "📦",
+    }
+    rows = []
+    for i in page_items:
+        icon = _ITEM_ICONS.get(getattr(i, "item_type", "generic"), "📦")
+        equip_mark = " ✅" if getattr(i, "is_equipped", False) else ""
+        rows.append([_btn(
+            f"{icon} {i.name} x{i.quantity}{equip_mark}",
             CharAction("char_bag", char_id=cid, sub="item_detail", item_id=i.id,
                        back=make_char_back("char_bag", cid, page=page)),
-        )]
-        for i in page_items
-    ]
+        )])
     rows.append([_btn(translator.t("character.bag.btn_add", lang=lang), CharAction("char_bag", char_id=cid, sub="add"))])
 
     nav: list[InlineKeyboardButton] = []
@@ -519,19 +528,135 @@ def build_bag_keyboard(
     return InlineKeyboardMarkup(rows)
 
 
+def build_item_type_keyboard(char_id: int, lang: str = "it") -> InlineKeyboardMarkup:
+    """Type selection keyboard shown at the start of the add-item flow."""
+    cid = char_id
+    types = [
+        ("type_generic", "generic"),
+        ("type_weapon", "weapon"),
+        ("type_armor", "armor"),
+        ("type_shield", "shield"),
+        ("type_consumable", "consumable"),
+        ("type_tool", "tool"),
+    ]
+    rows = [
+        [_btn(translator.t(f"character.bag.{key}", lang=lang),
+              CharAction("char_bag", char_id=cid, sub="select_type", extra=itype))]
+        for key, itype in types
+    ]
+    rows.append([_btn(translator.t("nav.cancel", lang=lang), CharAction("char_bag", char_id=cid))])
+    return InlineKeyboardMarkup(rows)
+
+
+def build_damage_type_keyboard(char_id: int, lang: str = "it") -> InlineKeyboardMarkup:
+    """Damage type selection keyboard for weapons."""
+    cid = char_id
+    dmg_keys = [
+        "dmg_slashing", "dmg_piercing", "dmg_bludgeoning", "dmg_fire",
+        "dmg_cold", "dmg_lightning", "dmg_acid", "dmg_poison",
+        "dmg_necrotic", "dmg_radiant", "dmg_force", "dmg_psychic",
+        "dmg_thunder", "dmg_other",
+    ]
+    rows: list[list[InlineKeyboardButton]] = []
+    for i in range(0, len(dmg_keys), 2):
+        row = [_btn(translator.t(f"character.bag.{dmg_keys[i]}", lang=lang),
+                    CharAction("char_bag", char_id=cid, sub="set_damage_type", extra=dmg_keys[i]))]
+        if i + 1 < len(dmg_keys):
+            row.append(_btn(translator.t(f"character.bag.{dmg_keys[i+1]}", lang=lang),
+                            CharAction("char_bag", char_id=cid, sub="set_damage_type", extra=dmg_keys[i+1])))
+        rows.append(row)
+    rows.append([_btn(translator.t("nav.cancel", lang=lang), CharAction("char_bag", char_id=cid))])
+    return InlineKeyboardMarkup(rows)
+
+
+def build_weapon_type_keyboard(char_id: int, lang: str = "it") -> InlineKeyboardMarkup:
+    """Melee / Ranged selection keyboard."""
+    cid = char_id
+    return InlineKeyboardMarkup([
+        [
+            _btn(translator.t("character.bag.weapon_type_melee", lang=lang),
+                 CharAction("char_bag", char_id=cid, sub="set_weapon_type", extra="melee")),
+            _btn(translator.t("character.bag.weapon_type_ranged", lang=lang),
+                 CharAction("char_bag", char_id=cid, sub="set_weapon_type", extra="ranged")),
+        ],
+        [_btn(translator.t("nav.cancel", lang=lang), CharAction("char_bag", char_id=cid))],
+    ])
+
+
+def build_weapon_properties_keyboard(
+    char_id: int, selected: list[str], lang: str = "it"
+) -> InlineKeyboardMarkup:
+    """Multi-select properties keyboard; selected items show ✅."""
+    cid = char_id
+    prop_keys = [
+        "prop_finesse", "prop_versatile", "prop_heavy", "prop_light",
+        "prop_thrown", "prop_two_handed", "prop_ammunition", "prop_loading",
+        "prop_reach", "prop_special",
+    ]
+    rows: list[list[InlineKeyboardButton]] = []
+    for i in range(0, len(prop_keys), 2):
+        row = []
+        for k in prop_keys[i:i+2]:
+            label = translator.t(f"character.bag.{k}", lang=lang)
+            mark = "✅ " if k in selected else ""
+            row.append(_btn(f"{mark}{label}", CharAction("char_bag", char_id=cid, sub="toggle_prop", extra=k)))
+        rows.append(row)
+    rows.append([_btn(translator.t("character.bag.btn_confirm_properties", lang=lang),
+                      CharAction("char_bag", char_id=cid, sub="confirm_props"))])
+    rows.append([_btn(translator.t("nav.cancel", lang=lang), CharAction("char_bag", char_id=cid))])
+    return InlineKeyboardMarkup(rows)
+
+
+def build_armor_type_keyboard(char_id: int, lang: str = "it") -> InlineKeyboardMarkup:
+    """Light / Medium / Heavy selection keyboard."""
+    cid = char_id
+    return InlineKeyboardMarkup([
+        [
+            _btn(translator.t("character.bag.armor_type_light", lang=lang),
+                 CharAction("char_bag", char_id=cid, sub="set_armor_type", extra="light")),
+            _btn(translator.t("character.bag.armor_type_medium", lang=lang),
+                 CharAction("char_bag", char_id=cid, sub="set_armor_type", extra="medium")),
+            _btn(translator.t("character.bag.armor_type_heavy", lang=lang),
+                 CharAction("char_bag", char_id=cid, sub="set_armor_type", extra="heavy")),
+        ],
+        [_btn(translator.t("nav.cancel", lang=lang), CharAction("char_bag", char_id=cid))],
+    ])
+
+
+def build_stealth_keyboard(char_id: int, lang: str = "it") -> InlineKeyboardMarkup:
+    """Yes / No stealth disadvantage keyboard."""
+    cid = char_id
+    return InlineKeyboardMarkup([
+        [
+            _btn(translator.t("character.bag.stealth_yes", lang=lang),
+                 CharAction("char_bag", char_id=cid, sub="set_stealth", extra="yes")),
+            _btn(translator.t("character.bag.stealth_no", lang=lang),
+                 CharAction("char_bag", char_id=cid, sub="set_stealth", extra="no")),
+        ],
+        [_btn(translator.t("nav.cancel", lang=lang), CharAction("char_bag", char_id=cid))],
+    ])
+
+
 def build_item_detail_keyboard(
-    char_id: int, item_id: int, back_page: int = 0, lang: str = "it",
+    char_id: int, item_id: int, item_type: str = "generic",
+    is_equipped: bool = False, back_page: int = 0, lang: str = "it",
 ) -> InlineKeyboardMarkup:
     cid = char_id
     back = CharAction("char_bag", char_id=cid, page=back_page)
-    rows = [
+    rows: list[list[InlineKeyboardButton]] = [
         [
             _btn(translator.t("character.bag.btn_qty_add", lang=lang), CharAction("char_bag", char_id=cid, sub="qty_add", item_id=item_id)),
             _btn(translator.t("character.bag.btn_qty_rem", lang=lang), CharAction("char_bag", char_id=cid, sub="qty_rem", item_id=item_id)),
         ],
         [_btn(translator.t("character.bag.btn_remove_all", lang=lang), CharAction("char_bag", char_id=cid, sub="remove_all", item_id=item_id))],
-        _nav_row(back_action=back, menu_char_id=cid, lang=lang),
     ]
+    if item_type in ("weapon", "armor", "shield"):
+        if is_equipped:
+            equip_label = translator.t("character.bag.btn_unequip", lang=lang)
+        else:
+            equip_label = translator.t("character.bag.btn_equip", lang=lang)
+        rows.insert(0, [_btn(equip_label, CharAction("char_bag", char_id=cid, sub="equip", item_id=item_id))])
+    rows.append(_nav_row(back_action=back, menu_char_id=cid, lang=lang))
     return InlineKeyboardMarkup(rows)
 
 
