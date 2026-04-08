@@ -10,7 +10,7 @@ from telegram import Update
 from telegram.ext import ContextTypes
 
 from bot.db.engine import get_session
-from bot.db.models import Character
+from bot.db.models import AbilityScore, Character
 from bot.handlers.character import CHAR_DICE_MENU, CHAR_MENU
 from bot.keyboards.character import build_dice_count_keyboard, build_dice_keyboard
 from bot.utils.formatting import format_dice_history
@@ -95,6 +95,54 @@ async def clear_dice_history(
     return await show_dice_menu(update, context, char_id)
 
 
+async def roll_initiative(
+    update: Update, context: ContextTypes.DEFAULT_TYPE, char_id: int
+) -> int:
+    """Roll 1d20 + DEX modifier and display the initiative result."""
+    from sqlalchemy import select
+
+    async with get_session() as session:
+        char = await session.get(Character, char_id)
+        if char is None:
+            return CHAR_MENU
+        result = await session.execute(
+            select(AbilityScore).where(
+                AbilityScore.character_id == char_id,
+                AbilityScore.name == "dexterity",
+            )
+        )
+        dex_score_obj = result.scalar_one_or_none()
+        dex_score = dex_score_obj.value if dex_score_obj else 10
+        dex_mod = (dex_score - 10) // 2
+
+        die = random.randint(1, 20)
+        total = die + dex_mod
+
+        history = list(char.rolls_history or [])
+        history.append(["🎯 INI", [total]])
+        if len(history) > 50:
+            history = history[-50:]
+        char.rolls_history = history
+
+    mod_str = f"+{dex_mod}" if dex_mod >= 0 else str(dex_mod)
+    lang = get_lang(update)
+    text = (
+        translator.t("character.dice.initiative_title", lang=lang) + "\n\n"
+        + translator.t(
+            "character.dice.initiative_result", lang=lang,
+            die=die, mod_str=_esc(mod_str), total=total,
+        )
+    )
+
+    if update.callback_query:
+        await update.callback_query.answer(f"Iniziativa: {total}")
+
+    asyncio.create_task(_trigger_party_update(char_id, context))
+    asyncio.create_task(_log(char_id, "dice_roll", f"Iniziativa: d20({die}) {mod_str} = {total}"))
+    await _edit_or_reply(update, text)
+    return await show_dice_menu(update, context, char_id)
+
+
 # ---------------------------------------------------------------------------
 
 async def _trigger_party_update(char_id: int, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -104,6 +152,15 @@ async def _trigger_party_update(char_id: int, context: ContextTypes.DEFAULT_TYPE
         await maybe_update_party_message(char_id, context.bot)
     except Exception as e:
         logger.warning("Party update trigger failed for char %s: %s", char_id, e)
+
+
+async def _log(char_id: int, event_type: str, description: str) -> None:
+    """Fire-and-forget wrapper for history logging."""
+    try:
+        from bot.db.history import log_history_event
+        await log_history_event(char_id, event_type, description)
+    except Exception as exc:
+        logger.warning("History log failed for char %s: %s", char_id, exc)
 
 
 async def _edit_or_reply(update: Update, text: str, keyboard=None) -> None:

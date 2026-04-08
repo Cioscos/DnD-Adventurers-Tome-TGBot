@@ -109,7 +109,7 @@ async def character_callback_handler(
         show_currency_edit, show_currency_menu,
     )
     from bot.handlers.character.dice import (
-        clear_dice_history, roll_dice, show_dice_count_picker, show_dice_menu,
+        clear_dice_history, roll_dice, roll_initiative, show_dice_count_picker, show_dice_menu,
     )
     from bot.handlers.character.hit_points import ask_hp_input, handle_rest, show_hp_menu
     from bot.handlers.character.maps import (
@@ -412,6 +412,8 @@ async def character_callback_handler(
     if action == "char_dice":
         if sub == "clear_history":
             return await clear_dice_history(update, context, cid)
+        if sub == "initiative":
+            return await roll_initiative(update, context, cid)
         if sub == "roll":
             parts = data.extra.split("|", 1)
             count, die = int(parts[0]), parts[1]

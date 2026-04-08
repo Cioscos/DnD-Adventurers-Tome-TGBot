@@ -78,7 +78,10 @@ async def show_character_menu(
     ]
 
     keyboard = build_character_main_menu_keyboard(char_id, lang=lang)
-    text = format_character_summary(char, spells=spells, abilities=abilities, equipped_items=equipped_items, lang=lang)
+    dex_value = next(
+        (s.value for s in char.ability_scores if s.name == "dexterity"), None
+    )
+    text = format_character_summary(char, spells=spells, abilities=abilities, equipped_items=equipped_items, dex_score=dex_value, lang=lang)
 
     if update.callback_query:
         await update.callback_query.answer()

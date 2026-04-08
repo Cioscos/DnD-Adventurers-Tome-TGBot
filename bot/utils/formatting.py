@@ -90,19 +90,25 @@ def modifier_str(value: int) -> str:
     return f"+{mod}" if mod >= 0 else str(mod)
 
 
-def format_character_header(char: Character, lang: str = "it") -> str:
+def format_character_header(char: Character, dex_score: int | None = None, lang: str = "it") -> str:
     """Short one-line summary shown at the top of most menus."""
     lvl = char.total_level
     cls = char.class_summary
     hp_bar = _hp_bar(char.current_hit_points, char.hit_points)
     level_label = translator.t("character.common.level_label", lang=lang)
     ac_label = translator.t("character.common.ac_label", lang=lang)
-    return (
+    header = (
         f"⚔️ *{_esc(char.name)}*\n"
         f"🎭 {_esc(cls)} — {level_label} {lvl}\n"
         f"❤️ HP: {char.current_hit_points}/{char.hit_points} {hp_bar}\n"
         f"🛡️ {ac_label}: {char.ac}"
     )
+    if dex_score is not None:
+        ini_mod = (dex_score - 10) // 2
+        ini_str = f"\\+{ini_mod}" if ini_mod >= 0 else f"\\-{abs(ini_mod)}"
+        ini_label = translator.t("character.common.initiative_label", lang=lang)
+        header += f"\n{_esc(ini_label)}: {ini_str}"
+    return header
 
 
 def format_character_summary(
@@ -110,10 +116,11 @@ def format_character_summary(
     spells: list[Spell] | None = None,
     abilities: list[Ability] | None = None,
     equipped_items: list | None = None,
+    dex_score: int | None = None,
     lang: str = "it",
 ) -> str:
     """Full character sheet summary with active status and equipped items."""
-    lines = [format_character_header(char, lang=lang)]
+    lines = [format_character_header(char, dex_score=dex_score, lang=lang)]
     if char.race:
         race_label = translator.t("character.common.race_label", lang=lang)
         lines.append(f"{race_label}: {_esc(char.race)}")
