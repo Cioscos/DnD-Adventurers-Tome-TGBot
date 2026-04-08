@@ -96,7 +96,7 @@ def build_list_keyboard(
     nav_row.append(
         InlineKeyboardButton(
             text=translator.t("wiki.btn_menu", lang=lang),
-            callback_data=NavAction("menu"),
+            callback_data=NavAction("wiki"),
         )
     )
     if has_next:
@@ -169,7 +169,7 @@ def build_detail_keyboard(
     nav_row.append(
         InlineKeyboardButton(
             text=translator.t("wiki.btn_menu", lang=lang),
-            callback_data=NavAction("menu"),
+            callback_data=NavAction("wiki"),
         )
     )
     rows.append(nav_row)
@@ -252,7 +252,7 @@ def build_sub_list_keyboard(
     nav_row.append(
         InlineKeyboardButton(
             text=translator.t("wiki.btn_menu", lang=lang),
-            callback_data=NavAction("menu"),
+            callback_data=NavAction("wiki"),
         )
     )
     if has_next:
