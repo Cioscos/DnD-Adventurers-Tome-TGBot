@@ -48,6 +48,8 @@ _MIGRATIONS: list[tuple[str, str, str, str | None]] = [
     ("characters", "is_party_active", "BOOLEAN", "0"),
     # Conditions feature
     ("characters", "conditions", "TEXT", None),
+    # Skills feature
+    ("characters", "skills", "TEXT", None),
 ]
 
 

@@ -103,6 +103,9 @@ class Character(Base):
     # Active conditions (JSON dict: condition_slug → bool or int for exhaustion)
     conditions: Mapped[Optional[dict]] = mapped_column(JSON, default=dict)
 
+    # Skills proficiencies (JSON dict: skill_slug → bool; True = proficient)
+    skills: Mapped[Optional[dict]] = mapped_column(JSON, default=dict)
+
     # Relationships
     classes: Mapped[List["CharacterClass"]] = relationship(
         back_populates="character", cascade="all, delete-orphan"
@@ -139,6 +142,19 @@ class Character(Base):
     @property
     def total_level(self) -> int:
         return sum(c.level for c in self.classes)
+
+    @property
+    def proficiency_bonus(self) -> int:
+        """Return the proficiency bonus for the character's total level.
+
+        Follows the standard D&D 5e table:
+        Levels 1–4 → +2, 5–8 → +3, 9–12 → +4, 13–16 → +5, 17–20 → +6.
+        Returns +2 for level 0 (no class assigned yet).
+        """
+        level = self.total_level
+        if level <= 0:
+            return 2
+        return 2 + (level - 1) // 4
 
     @property
     def class_summary(self) -> str:

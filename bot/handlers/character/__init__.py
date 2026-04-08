@@ -61,6 +61,8 @@ from __future__ import annotations
     CHAR_CONDITIONS_MENU,
     # History
     CHAR_HISTORY_MENU,
-) = range(50)
+    # Skills
+    CHAR_SKILLS_MENU,
+) = range(51)
 
 STOPPING = 99

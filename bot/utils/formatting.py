@@ -460,7 +460,85 @@ def _esc(text: str) -> str:
     return "".join(f"\\{c}" if c in special else c for c in str(text))
 
 
-def format_multiclass_menu(classes: list, lang: str = "it") -> str:
+def format_skills(
+    char: "Character",
+    ability_scores: "list[AbilityScore]",
+    lang: str = "it",
+) -> str:
+    """Format the skills screen header showing proficiency bonus and instructions."""
+    title = translator.t("character.skills.title", lang=lang)
+    level = char.total_level
+    bonus = char.proficiency_bonus
+    # Pre-escape the sign (+ and - are reserved in MarkdownV2)
+    bonus_esc = f"\\+{bonus}" if bonus >= 0 else f"\\-{abs(bonus)}"
+    prof_line = translator.t(
+        "character.skills.prof_bonus_label", lang=lang, bonus=bonus_esc, level=level
+    )
+    instruction = translator.t("character.skills.instruction", lang=lang)
+    return f"{title}\n\n{prof_line}\n{instruction}"
+
+
+def format_skill_detail(
+    slug: str,
+    char: "Character",
+    ability_scores: "list[AbilityScore]",
+    lang: str = "it",
+    last_roll: "tuple[int, int] | None" = None,
+) -> str:
+    """Format a single skill's detail screen.
+
+    Args:
+        slug: Snake-case skill identifier (e.g. ``"athletics"``).
+        char: The character record.
+        ability_scores: All ability score rows for this character.
+        lang: UI language code.
+        last_roll: Optional ``(die_result, total)`` tuple from the last d20 roll
+            to show the roll result line at the bottom.
+    """
+    from bot.data.skills import SKILL_ABILITY_MAP
+
+    ability = SKILL_ABILITY_MAP.get(slug, "strength")
+    score_map = {s.name: s.value for s in ability_scores}
+    score_val = score_map.get(ability, 10)
+    mod = (score_val - 10) // 2
+    is_proficient = bool((char.skills or {}).get(slug, False))
+    prof_bonus = char.proficiency_bonus
+    bonus = mod + (prof_bonus if is_proficient else 0)
+
+    skill_name = translator.t(f"character.skills.names.{slug}", lang=lang)
+    ability_abbr = translator.t(f"character.skills.ability_abbr.{ability}", lang=lang)
+    description = translator.t(f"character.skills.desc.{slug}", lang=lang)
+
+    bonus_str = f"\\+{bonus}" if bonus >= 0 else f"\\-{abs(bonus)}"
+    prof_status = translator.t(
+        "character.skills.detail_proficient" if is_proficient else "character.skills.detail_not_proficient",
+        lang=lang,
+    )
+
+    lines = [
+        f"🎯 *{_esc(skill_name)}*",
+        f"⚡ {_esc(ability_abbr)} \\| Bonus: *{bonus_str}*",
+        f"{prof_status}",
+        "",
+        _esc(description),
+    ]
+
+    if last_roll is not None:
+        die_result, total = last_roll
+        bonus_display = f"\\+{bonus}" if bonus >= 0 else f"\\-{abs(bonus)}"
+        roll_line = translator.t(
+            "character.skills.roll_result",
+            lang=lang,
+            die=die_result,
+            bonus=bonus_display,
+            total=total,
+        )
+        lines.extend(["", roll_line])
+
+    return "\n".join(lines)
+
+
+
     """Format the multiclass menu display with subclass and resource summary."""
     title = translator.t("character.multiclass.title", lang=lang)
     if not classes:
