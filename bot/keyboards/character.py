@@ -83,6 +83,7 @@ def build_character_main_menu_keyboard(char_id: int, lang: str = "it") -> Inline
         (translator.t("character.menu.btn_ac",         lang=lang), CharAction("char_ac",        char_id=cid)),
         (translator.t("character.menu.btn_level",      lang=lang), CharAction("char_level",     char_id=cid)),
         (translator.t("character.menu.btn_stats",      lang=lang), CharAction("char_stats",     char_id=cid)),
+        (translator.t("character.menu.btn_skills",     lang=lang), CharAction("char_skills",     char_id=cid)),
         (translator.t("character.menu.btn_spells",     lang=lang), CharAction("char_spells",    char_id=cid)),
         (translator.t("character.menu.btn_slots",      lang=lang), CharAction("char_slots",     char_id=cid)),
         (translator.t("character.menu.btn_bag",        lang=lang), CharAction("char_bag",       char_id=cid)),
@@ -95,7 +96,6 @@ def build_character_main_menu_keyboard(char_id: int, lang: str = "it") -> Inline
         (translator.t("character.menu.btn_rest",       lang=lang), CharAction("char_rest",       char_id=cid)),
         (translator.t("character.menu.btn_conditions", lang=lang), CharAction("char_conditions", char_id=cid)),
         (translator.t("character.menu.btn_history",    lang=lang), CharAction("char_history",    char_id=cid)),
-        (translator.t("character.menu.btn_skills",     lang=lang), CharAction("char_skills",     char_id=cid)),
         (translator.t("character.menu.btn_settings",   lang=lang), CharAction("char_settings",   char_id=cid)),
         (translator.t("character.selection.delete_btn",lang=lang), CharAction("char_delete",    char_id=cid)),
     ]
