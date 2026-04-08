@@ -5,6 +5,20 @@
 - Remote: `https://github.com/Cioscos/dnd_bot_revamped.git` — branch `main`.
 - Always commit and push changes to a new branch based on the feature you're working on.
 
+## GitHub Pages (docs/)
+
+The `docs/` folder contains a Jekyll-based GitHub Pages site showcasing the bot's features.
+
+- **URL**: `https://cioscos.github.io/dnd_bot_revamped`
+- **Theme**: `pages-themes/cayman@v0.2.0` (via `jekyll-remote-theme`)
+- **Config**: `docs/_config.yml` — `baseurl: "/dnd_bot_revamped"`, `url: "https://cioscos.github.io"`
+- **Pages source**: GitHub repository Settings → Pages → branch `main`, folder `/docs`
+- **Languages**: bilingual EN/IT via `.lang-en` / `.lang-it` CSS classes + `assets/js/lang-switch.js`
+- **Assets**: custom CSS in `docs/assets/css/style.scss`, images in `docs/assets/images/`
+- **Excluded from Jekyll build**: `Gemfile`, `Gemfile.lock`, `README.it.md`
+
+When updating the site, always use `{{ '/path' | relative_url }}` for all asset and internal links — never hardcode paths.
+
 ## MCP Servers
 
 - **Context7**: ALWAYS use it to retrieve up-to-date documentation for every library before writing code.
