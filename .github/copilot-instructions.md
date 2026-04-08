@@ -15,7 +15,7 @@
 An async Telegram bot with three main sections:
 
 1. **Wiki D&D 5e** — browse the D&D 5e compendium (spells, monsters, classes, races, equipment, etc.) via inline keyboards, fetching data from the public GraphQL API. The bot **dynamically discovers** the API schema at startup via GraphQL introspection.
-2. **Gestione Personaggio** — full D&D character management: HP, AC, ability scores, skills (with proficiency and d20 rolls), spells, inventory, currency, dice, notes, maps, conditions, modification history, and more. Data is persisted in a local SQLite database via SQLAlchemy async.
+2. **Gestione Personaggio** — full D&D character management: HP, AC, ability scores, skills (with proficiency and d20 rolls), spells, inventory, currency, dice, notes, maps, conditions, heroic inspiration, modification history, and more. Data is persisted in a local SQLite database via SQLAlchemy async.
 3. **Funzionalità Gruppo (Party)** — group Telegram feature: `/party` and `/party_stop` commands that show a live-updated party status message with all active characters' HP, AC, active conditions, and last dice roll.
 
 The top-level `/start` menu always shows two buttons:
@@ -67,7 +67,7 @@ bot/
 │   ├── navigation.py        # N-level CallbackQueryHandler dispatcher + MarkdownV2 formatters (wiki)
 │   ├── party.py             # /party, /party_stop commands + PartyAction callbacks + track_group_member + maybe_update_party_message
 │   └── character/
-│       ├── __init__.py      # Conversation state constants (57 states)
+│       ├── __init__.py      # Conversation state constants (58 states)
 │       ├── conversation.py  # Master ConversationHandler — routes CharAction callbacks, stop_command_handler, builds handler
 │       ├── selection.py     # Character create / select / delete; creation wizard includes class selection step
 │       ├── menu.py          # Character main menu with summary
@@ -87,6 +87,7 @@ bot/
 │       ├── conditions.py    # D&D 5e conditions tracker (14 binary + Exhaustion 0–6); fires party update hook on toggle/adjust
 │       ├── history.py       # Character modification history: show_history (multi-msg split), handle_clear_history, HISTORY_EXTRA_MSGS_KEY
 │       ├── skills.py        # Skills (Abilità) screen: list view + detail view with proficiency toggle and d20 roll + history logging
+│       ├── inspiration.py   # Heroic Inspiration token: show screen, toggle grant/spend, history logging
 │       └── settings.py      # Per-character settings (spell management mode, party active toggle)
 ├── keyboards/
 │   ├── builder.py           # Wiki keyboards: categories, paginated list, detail (📂 buttons), sub-list
@@ -129,7 +130,7 @@ bot/
 
 | Table | Key fields |
 |---|---|
-| `characters` | `id`, `user_id`, `name`, `race`, `gender`, `hit_points`, `current_hit_points`, `base_armor_class`, `shield_armor_class`, `magic_armor`, `spell_slots_mode`, `concentrating_spell_id` (FK → spells.id), `rolls_history` (JSON), `notes` (JSON), `settings` (JSON), `is_party_active` (bool, default False), `conditions` (JSON, default empty dict), `skills` (JSON, default empty dict) |
+| `characters` | `id`, `user_id`, `name`, `race`, `gender`, `hit_points`, `current_hit_points`, `base_armor_class`, `shield_armor_class`, `magic_armor`, `spell_slots_mode`, `concentrating_spell_id` (FK → spells.id), `rolls_history` (JSON), `notes` (JSON), `settings` (JSON), `is_party_active` (bool, default False), `conditions` (JSON, default empty dict), `skills` (JSON, default empty dict), `heroic_inspiration` (bool, default False) |
 | `character_classes` | `character_id` → FK, `class_name`, `level`, `subclass` (optional) |
 | `class_resources` | `class_id` → FK (character_classes.id, cascade), `name`, `current`, `total`, `restoration_type`, `note` |
 | `ability_scores` | `character_id` → FK, `name` (strength/dexterity/…), `value` |
@@ -176,7 +177,7 @@ class CharAction:
     back: tuple[str, ...] = ()
 ```
 
-Key `action` values: `char_select`, `char_new`, `char_menu`, `char_hp`, `char_ac`, `char_stats`, `char_level`, `char_skills`, `char_spells`, `char_slots`, `char_bag`, `char_currency`, `char_abilities`, `char_multiclass`, `char_class_res`, `char_dice`, `char_notes`, `char_maps`, `char_rest`, `char_conditions`, `char_history`, `char_settings`, `char_party_active`, `char_delete`.
+Key `action` values: `char_select`, `char_new`, `char_menu`, `char_hp`, `char_ac`, `char_stats`, `char_level`, `char_skills`, `char_spells`, `char_slots`, `char_bag`, `char_currency`, `char_abilities`, `char_multiclass`, `char_class_res`, `char_dice`, `char_notes`, `char_maps`, `char_rest`, `char_conditions`, `char_history`, `char_inspiration`, `char_settings`, `char_party_active`, `char_delete`.
 
 Key `char_spells` sub-actions: `learn`, `learn_conc_yes`, `learn_conc_no`, `detail`, `forget`, `use`, `use_slot`, `activate_conc`, `drop_conc`, `conc_save`, `pin`, `edit_menu`, `edit_<field>` (e.g. `edit_casting_time`, `edit_is_concentration`), `search`, `search_show`.
 
@@ -193,6 +194,8 @@ Key `char_bag` sub-actions: `detail` (`item_id=item_id`, opens item detail), `eq
 Key `char_dice` sub-actions: `initiative` (rolls 1d20+DEX modifier directly, saves to `rolls_history` as `["🎯 INI", [total]]`, logs `dice_roll` to character history, triggers party update). No `sub` → show dice menu; `sub` starts with `d` (e.g. `d6`) → count picker; `sub=roll` with `extra="{count}|{die}"` → roll; `sub=clear_history` → clear.
 
 Key `char_skills` sub-actions: `detail` (`extra=slug`, opens the detail screen for that skill), `toggle` (`extra=slug`, toggles proficiency on/off and stays on the detail screen), `roll` (`extra=slug`, rolls d20 + computed bonus, shows result inline on the detail screen and logs to history with event type `dice_roll`). No `extra` → shows the skills list.
+
+Key `char_inspiration` sub-actions: `toggle` (grants the token if inactive, spends it if active, then returns to the inspiration screen). No `sub` → shows the inspiration screen.
 
 #### Party Feature (PartyAction)
 
@@ -248,7 +251,7 @@ Union types (e.g. `AnyEquipment`) are handled with `__typename` + inline fragmen
 
 ### Character Formatters
 
-`bot/utils/formatting.py` provides localized formatters for every character screen: `format_character_summary` (accepts optional `spells`, `abilities`, `equipped_items` for active/equipped status, and `dex_score: int | None` to display initiative bonus in the header), `format_hp`, `format_ac`, `format_ability_scores`, `format_spells`, `format_spell_detail`, `format_spell_slots`, `format_bag`, `format_item_detail`, `format_equipped_items`, `format_currency`, `format_abilities`, `format_maps`, `format_dice_history`, `format_character_active_status`, `format_multiclass_menu`, `format_class_resources`, `format_conditions`, `format_condition_detail`, `format_skills`, `format_skill_detail`. All accept `lang: str = "it"`, use `translator.t()` for all strings, and output MarkdownV2 with `_esc()`. Helper functions `get_ability_labels(lang)`, `get_currency_labels(lang)`, `get_restoration_labels(lang)` return language-aware label dicts.
+`bot/utils/formatting.py` provides localized formatters for every character screen: `format_character_summary` (accepts optional `spells`, `abilities`, `equipped_items` for active/equipped status, and `dex_score: int | None` to display initiative bonus in the header), `format_hp`, `format_ac`, `format_ability_scores`, `format_spells`, `format_spell_detail`, `format_spell_slots`, `format_bag`, `format_item_detail`, `format_equipped_items`, `format_currency`, `format_abilities`, `format_maps`, `format_dice_history`, `format_character_active_status`, `format_multiclass_menu`, `format_class_resources`, `format_conditions`, `format_condition_detail`, `format_skills`, `format_skill_detail`, `format_inspiration`. All accept `lang: str = "it"`, use `translator.t()` for all strings, and output MarkdownV2 with `_esc()`. Helper functions `get_ability_labels(lang)`, `get_currency_labels(lang)`, `get_restoration_labels(lang)` return language-aware label dicts.
 
 **Important**: condition description strings stored in YAML locale files are **pre-escaped MarkdownV2** (e.g. `\.` for a literal dot). Do **not** pass them through `_esc()` — use them directly. Only plain-text strings (names, labels) should be escaped.
 
@@ -359,6 +362,19 @@ Navigable sub-entity buttons (📂) are discovered automatically from the schema
 - **Locale keys**: `character.skills.names.<slug>` (18 names), `character.skills.desc.<slug>` (18 plain-text descriptions, passed through `_esc()` in the formatter — NOT pre-escaped in YAML), `character.skills.ability_abbr.<ability>` (6 abbreviations), plus `title`, `prof_bonus_label`, `instruction`, `updated`, `proficient_icon`, `not_proficient_icon`, `detail_proficient`, `detail_not_proficient`, `btn_toggle_proficient`, `btn_toggle_not_proficient`, `btn_roll`, `roll_result`, `roll_logged`.
 - **Button position**: 🎯 Abilità appears immediately after 📊 Punteggi Abilità in the character main menu.
 
+### Heroic Inspiration Details
+
+- **Rule**: D&D 5e 2024 mechanic — a character either has the token (`True`) or doesn't (`False`). When held, it can be spent to reroll any die.
+- **Storage**: `Character.heroic_inspiration` (Boolean, default `False`). Column added via idempotent DB migration entry in `engine.py`.
+- **Handler**: `bot/handlers/character/inspiration.py` — `show_inspiration_menu(update, context, char_id)` and `toggle_heroic_inspiration(update, context, char_id)`. No text input needed — all interactions are pure callbacks.
+- **State**: `CHAR_INSPIRATION_MENU` (state 57, the 58th total state in `range(58)`).
+- **Action routing**: `char_inspiration` with no `sub` → show screen; `sub="toggle"` → grant if inactive / spend if active.
+- **Character summary**: when `char.heroic_inspiration == True`, `format_character_active_status` appends the line `✨ *Ispirazione Eroica attiva*` to the active-status section of the main menu summary.
+- **Screen** (`format_inspiration`): shows title, status line (`✅ Hai l'Ispirazione Eroica!` / `⬛ Non hai l'Ispirazione Eroica.`), and a plain-text description. Button label switches between `✨ Ottieni Ispirazione` and `💫 Usa Ispirazione` depending on current state.
+- **History**: toggle fires `asyncio.create_task(_log(char_id, "inspiration_change", ...))` — fire-and-forget.
+- **Rest behaviour**: inspiration is **not** reset automatically on rest (the DM awards it manually).
+- **Locale keys**: all under `character.inspiration.*` — `title`, `status_active`, `status_inactive`, `description`, `btn_grant`, `btn_spend`, `granted`, `spent`, `active_label`. Menu button: `character.menu.btn_inspiration`. History label: `character.history.inspiration_change`.
+
 ### Dice Details
 
 - **Dice types**: d4, d6, d8, d10, d12, d20, d100. Selecting a die opens a count picker (1–10); confirming rolls `{count}{die}` and saves to `rolls_history` as `["{count}{die}", [list_of_results]]`.
@@ -403,7 +419,7 @@ Navigable sub-entity buttons (📂) are discovered automatically from the schema
 - **`format_item_detail`**: accepts a `dict` with keys `name, description, weight, quantity, item_type, item_metadata, is_equipped`. Metadata fields are rendered only when present/non-null.
 - **`format_equipped_items`**: accepts `list[dict]` with keys `name, item_type, item_metadata`. Called from `menu.py` to populate the equipped-items section of the character summary.
 - **`format_character_summary`** accepts `equipped_items: list | None = None` and `dex_score: int | None = None`. When `dex_score` is provided, `format_character_header` shows the initiative line `⚡ Ini: {modifier}` below the AC line. When `equipped_items` is provided, renders an equipped-items block at the bottom of the summary.
-- **Conversation states added** (6 new): `CHAR_BAG_ADD_INLINE`, `CHAR_BAG_ADD_DAMAGE_DICE`, `CHAR_BAG_ADD_EFFECT`, `CHAR_BAG_ADD_AC_VALUE`, `CHAR_BAG_ADD_STR_REQ`, `CHAR_BAG_ADD_TOOL_TYPE`. Total state count: **57**.
+- **Conversation states added** (6 new): `CHAR_BAG_ADD_INLINE`, `CHAR_BAG_ADD_DAMAGE_DICE`, `CHAR_BAG_ADD_EFFECT`, `CHAR_BAG_ADD_AC_VALUE`, `CHAR_BAG_ADD_STR_REQ`, `CHAR_BAG_ADD_TOOL_TYPE`. Total state count: **58** (including `CHAR_INSPIRATION_MENU` added later).
 - **Locale keys**: all under `character.bag.*` — `item_types.*` (6 type labels), `item_type_icons.*`, weapon/armor/shield/consumable/tool metadata labels, `btn_equip`, `btn_unequip`, `equipped_label`, `not_equipped_label`, `btn_qty_add` (`"➕ +1"`), `btn_qty_rem` (`"➖ -1"`).
 - **Button labels**: must NOT contain MarkdownV2 escaping. `btn_qty_add`/`btn_qty_rem` use plain `+1`/`-1`, not `\+1`/`\-1`.
 
@@ -411,7 +427,7 @@ Navigable sub-entity buttons (📂) are discovered automatically from the schema
 - **DB table**: `character_history` (`id`, `character_id` FK cascade, `timestamp` String 20, `event_type` String 50, `description` Text). New table — auto-created by `Base.metadata.create_all`, no migration entry needed.
 - **Helper module**: `bot/db/history.py` — `log_history_event(char_id, event_type, description)` inserts a row and prunes oldest if count > `MAX_HISTORY = 50`; `get_history(char_id)` returns rows newest-first; `clear_history(char_id)` deletes all rows.
 - **Timestamps**: stored as `DD/MM/YYYY HH:MM` UTC strings (String 20) — human-readable, timezone-agnostic.
-- **Event types** (string slugs): `hp_change`, `rest`, `ac_change`, `stats_change`, `spell_slot_change`, `spell_change`, `bag_change`, `currency_change`, `ability_change`, `multiclass_change`, `level_change`, `condition_change`, `skill_change`, `dice_roll`.
+- **Event types** (string slugs): `hp_change`, `rest`, `ac_change`, `stats_change`, `spell_slot_change`, `spell_change`, `bag_change`, `currency_change`, `ability_change`, `multiclass_change`, `level_change`, `condition_change`, `skill_change`, `dice_roll`, `inspiration_change`.
 - **Logging pattern**: every handler that modifies character state fires `asyncio.create_task(_log(char_id, event_type, description))` — fire-and-forget, never blocks user response. Each handler file defines its own `async def _log(char_id, event_type, description)` helper at the bottom that wraps `log_history_event` in a try/except.
 - **Display**: `show_history()` in `handlers/character/history.py` splits the formatted text at **3800 chars** per Telegram message. The first message gets the `🗑️ Cancella Storico` + `🏠 Menu` keyboard; extra messages are plain text. Extra message IDs are stored as `[(chat_id, msg_id), …]` in `context.user_data["char_history_extra_msgs"]` (`HISTORY_EXTRA_MSGS_KEY` constant).
 - **Multi-message cleanup**: `show_character_menu()` in `menu.py` imports `HISTORY_EXTRA_MSGS_KEY` and deletes all extra messages at the start before editing the primary message to the menu. This ensures no orphaned messages remain when navigating back.
