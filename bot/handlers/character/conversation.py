@@ -68,6 +68,7 @@ from bot.handlers.character import (
     CHAR_SELECT,
     CHAR_SETTINGS_MENU,
     CHAR_SKILLS_MENU,
+    CHAR_INSPIRATION_MENU,
     CHAR_SPELL_EDIT,
     CHAR_SPELL_LEARN,
     CHAR_SPELL_SEARCH,
@@ -502,6 +503,13 @@ async def character_callback_handler(
             return await toggle_skill_proficiency(update, context, cid, data.extra)
         return await show_skills_menu(update, context, cid)
 
+    # ─── Heroic Inspiration ───
+    if action == "char_inspiration":
+        from bot.handlers.character.inspiration import show_inspiration_menu, toggle_heroic_inspiration
+        if sub == "toggle":
+            return await toggle_heroic_inspiration(update, context, cid)
+        return await show_inspiration_menu(update, context, cid)
+
     return CHAR_MENU
 
 
@@ -762,6 +770,7 @@ def build_character_conversation_handler() -> ConversationHandler:
             CHAR_CONDITIONS_MENU: [char_callback],
             CHAR_HISTORY_MENU: [char_callback],
             CHAR_SKILLS_MENU: [char_callback],
+            CHAR_INSPIRATION_MENU: [char_callback],
         },
         fallbacks=[
             CommandHandler("start", lambda u, c: ConversationHandler.END),

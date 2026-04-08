@@ -69,6 +69,8 @@ from __future__ import annotations
     CHAR_HISTORY_MENU,
     # Skills
     CHAR_SKILLS_MENU,
-) = range(57)
+    # Heroic Inspiration
+    CHAR_INSPIRATION_MENU,
+) = range(58)
 
 STOPPING = 99

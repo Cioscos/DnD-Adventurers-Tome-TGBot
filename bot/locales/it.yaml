@@ -71,6 +71,7 @@ character:
     btn_conditions: "⚠️ Condizioni"
     btn_history: "📜 Storico"
     btn_skills: "🎯 Abilità"
+    btn_inspiration: "✨ Ispirazione Eroica"
 
   history:
     title: "📜 *Storico Modifiche — {name}*"
@@ -78,7 +79,7 @@ character:
     count: "{count} eventi registrati"
     part_indicator: "\\[Parte {n}/{total}\\]"
     btn_clear: "🗑️ Cancella Storico"
-    cleared: "Storico cancellato\\."
+    cleared: "Storico cancellato."
     other: "📌 Modifica"
     hp_change: "❤️ HP"
     rest: "😴 Riposo"
@@ -93,6 +94,7 @@ character:
     ability_change: "⚡ Abilità"
     condition_change: "⚠️ Condizione"
     skill_change: "🎯 Abilità"
+    inspiration_change: "✨ Ispirazione"
 
   hp:
     title: "❤️ *Punti Vita*"
@@ -460,7 +462,7 @@ character:
     history_title: "🎲 *Storico Tiri*"
     no_history: "_Nessun tiro registrato\\._"
     history_entry: "{die}: \\[{results}\\] \\= *{total}*"
-    cleared: "Storico cancellato\\."
+    cleared: "Storico cancellato."
 
   notes:
     title: "📝 *Note*"
@@ -623,6 +625,17 @@ character:
       sleight_of_hand: "Borseggiare, nascondere oggetti sul proprio corpo o compiere giochi di prestigio."
       stealth: "Muoversi in silenzio e senza essere visti, nascondersi nell'ombra o tra la folla."
       survival: "Cacciare, seguire tracce, navigare nel territorio selvaggio e sopravvivere in condizioni avverse."
+
+  inspiration:
+    title: "✨ *Ispirazione Eroica*"
+    status_active: "✅ Hai l'*Ispirazione Eroica*\\!"
+    status_inactive: "⬛ Non hai l'Ispirazione Eroica\\."
+    description: "L'Ispirazione Eroica ti consente di ritirare qualsiasi dado\\. Puoi averne al massimo una alla volta\\."
+    btn_grant: "✨ Ottieni Ispirazione"
+    btn_spend: "💫 Usa Ispirazione"
+    granted: "✨ Ispirazione Eroica ottenuta\\!"
+    spent: "💫 Ispirazione Eroica usata\\!"
+    active_label: "✨ *Ispirazione Eroica attiva*"
 
 # ---------------------------------------------------------------------------
 # Party feature
