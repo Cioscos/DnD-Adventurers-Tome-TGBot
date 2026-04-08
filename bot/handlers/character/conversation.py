@@ -472,7 +472,16 @@ async def character_callback_handler(
 
     # ─── Skills ───
     if action == "char_skills":
-        from bot.handlers.character.skills import show_skills_menu, toggle_skill_proficiency
+        from bot.handlers.character.skills import (
+            roll_skill,
+            show_skill_detail,
+            show_skills_menu,
+            toggle_skill_proficiency,
+        )
+        if sub == "detail" and data.extra:
+            return await show_skill_detail(update, context, cid, data.extra)
+        if sub == "roll" and data.extra:
+            return await roll_skill(update, context, cid, data.extra)
         if sub == "toggle" and data.extra:
             return await toggle_skill_proficiency(update, context, cid, data.extra)
         return await show_skills_menu(update, context, cid)

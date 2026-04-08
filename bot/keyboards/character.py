@@ -1028,7 +1028,7 @@ def build_skills_keyboard(
         bonus_str = f"+{bonus}" if bonus >= 0 else str(bonus)
         label = f"{prof_icon} {skill_name} ({ability_abbr}): {bonus_str}"
 
-        btn = _btn(label, CharAction("char_skills", char_id=cid, sub="toggle", extra=slug))
+        btn = _btn(label, CharAction("char_skills", char_id=cid, sub="detail", extra=slug))
         row.append(btn)
         if len(row) == 2:
             rows.append(row)
@@ -1038,4 +1038,29 @@ def build_skills_keyboard(
         rows.append(row)
 
     rows.append(_nav_row(back_action=CharAction("char_menu", char_id=cid), menu_char_id=cid, lang=lang))
+    return InlineKeyboardMarkup(rows)
+
+
+def build_skill_detail_keyboard(
+    char_id: int,
+    slug: str,
+    is_proficient: bool,
+    bonus: int,
+    lang: str = "it",
+) -> InlineKeyboardMarkup:
+    """Keyboard for the skill detail screen: toggle proficiency, roll dice, and back."""
+    cid = char_id
+    bonus_str = f"+{bonus}" if bonus >= 0 else str(bonus)
+
+    toggle_label = translator.t(
+        "character.skills.btn_toggle_not_proficient" if is_proficient else "character.skills.btn_toggle_proficient",
+        lang=lang,
+    )
+    roll_label = translator.t("character.skills.btn_roll", lang=lang, bonus=bonus_str)
+
+    rows = [
+        [_btn(toggle_label, CharAction("char_skills", char_id=cid, sub="toggle", extra=slug))],
+        [_btn(roll_label, CharAction("char_skills", char_id=cid, sub="roll", extra=slug))],
+        _nav_row(back_action=CharAction("char_skills", char_id=cid), menu_char_id=cid, lang=lang),
+    ]
     return InlineKeyboardMarkup(rows)
