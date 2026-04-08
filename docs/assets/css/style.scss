@@ -1,0 +1,285 @@
+---
+---
+
+@import "jekyll-theme-cayman";
+
+/* ================================================================
+   D&D Bot — Custom style overrides on top of Cayman theme
+   ================================================================ */
+
+/* CSS custom properties */
+:root {
+  --dnd-red:    #8b0000;
+  --dnd-gold:   #c8a84b;
+  --dnd-dark:   #1a1a2e;
+  --cayman-blue: #155799;
+}
+
+/* ---- Language toggle (fixed top-right) ---- */
+.lang-toggle {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 9999;
+  display: flex;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+  border: 2px solid var(--dnd-gold);
+}
+
+.lang-btn {
+  padding: 0.35rem 0.85rem;
+  background: #fff;
+  border: none;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  color: #555;
+  transition: background 0.18s, color 0.18s;
+}
+
+.lang-btn:first-child { border-right: 1px solid #e1e4e8; }
+
+.lang-btn.active {
+  background: var(--cayman-blue);
+  color: #fff;
+}
+
+/* ---- Hero section ---- */
+.hero-section {
+  text-align: center;
+  padding: 1rem 0 2rem;
+}
+
+.bot-avatar {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  border: 4px solid var(--dnd-gold);
+  display: block;
+  margin: 0 auto 1rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.badges {
+  margin: 0.8rem 0 1.2rem;
+}
+
+.badges img {
+  margin: 0.2rem;
+  vertical-align: middle;
+}
+
+/* ---- Feature card grid ---- */
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.4rem;
+  margin: 1.8rem 0 2.5rem;
+}
+
+.feature-card {
+  border: 2px solid var(--dnd-gold);
+  border-radius: 10px;
+  padding: 1.6rem 1.4rem;
+  background: #fafafa;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  text-align: center;
+}
+
+.feature-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.12);
+}
+
+.feature-card .card-icon {
+  font-size: 2.8rem;
+  display: block;
+  margin-bottom: 0.6rem;
+}
+
+.feature-card h3 {
+  margin: 0.2rem 0 0.7rem;
+  font-size: 1.15rem;
+  color: var(--dnd-dark);
+}
+
+/* ---- Section styling ---- */
+.section-divider {
+  border: none;
+  border-top: 2px solid var(--dnd-gold);
+  opacity: 0.35;
+  margin: 2.5rem 0;
+}
+
+h2 .section-icon {
+  margin-right: 0.4rem;
+}
+
+/* ---- Sub-feature pills grid ---- */
+.sub-features {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(195px, 1fr));
+  gap: 0.6rem;
+  margin: 1rem 0 1.4rem;
+  padding: 0;
+  list-style: none;
+}
+
+.sub-features li {
+  background: #f3f4f6;
+  border-left: 4px solid var(--dnd-gold);
+  padding: 0.5rem 0.75rem;
+  border-radius: 0 6px 6px 0;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+/* ---- Category pill list (wiki) ---- */
+.category-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0;
+  list-style: none;
+  margin: 1rem 0;
+}
+
+.category-list li {
+  background: var(--cayman-blue);
+  color: #fff;
+  padding: 0.35rem 0.9rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+/* ---- Tables ---- */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0 1.5rem;
+  font-size: 0.93rem;
+}
+
+th {
+  background: var(--cayman-blue);
+  color: #fff;
+  padding: 0.6rem 1rem;
+  text-align: left;
+}
+
+td {
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid #e1e4e8;
+  vertical-align: top;
+}
+
+tr:nth-child(even) td { background: #f6f8fa; }
+
+/* ---- Code / monospace tree ---- */
+.code-tree {
+  background: #1e2235;
+  color: #c9d1d9;
+  padding: 1.4rem 1.6rem;
+  border-radius: 8px;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 0.82rem;
+  line-height: 1.6;
+  overflow-x: auto;
+  white-space: pre;
+}
+
+/* ---- Inline command badge ---- */
+code {
+  background: #eef0f3;
+  border: 1px solid #d0d7de;
+  border-radius: 4px;
+  padding: 0.1em 0.4em;
+  font-size: 0.88em;
+  color: #2c3e50;
+}
+
+/* ---- Info box ---- */
+.info-box {
+  background: #f0f7ff;
+  border-left: 4px solid var(--cayman-blue);
+  padding: 0.9rem 1.2rem;
+  border-radius: 0 6px 6px 0;
+  margin: 1rem 0;
+  font-size: 0.93rem;
+}
+
+/* ---- Navigation flow diagram ---- */
+.nav-flow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 1rem 0;
+  font-size: 0.9rem;
+}
+
+.nav-flow .step {
+  background: #f3f4f6;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  padding: 0.3rem 0.7rem;
+  font-weight: 600;
+}
+
+.nav-flow .arrow {
+  color: var(--dnd-gold);
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+/* ---- Condition grid ---- */
+.condition-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+  gap: 0.5rem;
+  margin: 1rem 0;
+  padding: 0;
+  list-style: none;
+}
+
+.condition-grid li {
+  background: #f9f3e8;
+  border: 1px solid #e0c97f;
+  border-radius: 6px;
+  padding: 0.4rem 0.7rem;
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+/* ---- Back-to-top link ---- */
+.back-to-top {
+  text-align: right;
+  margin-top: 1.5rem;
+}
+
+.back-to-top a {
+  font-size: 0.85rem;
+  color: var(--cayman-blue);
+  text-decoration: none;
+}
+
+/* ---- Responsive tweaks ---- */
+@media (max-width: 640px) {
+  .lang-toggle {
+    top: 0.6rem;
+    right: 0.6rem;
+  }
+
+  .feature-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .nav-flow {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
