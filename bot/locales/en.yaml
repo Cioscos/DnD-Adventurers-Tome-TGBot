@@ -17,6 +17,8 @@ start:
   menu_wiki: "📖 D&D Wiki"
   menu_character: "⚔️ My Character"
   stop_no_op: "✋ No active operation to cancel\\."
+  about_text: "ℹ️ *D&D Adventurers Tome Bot*\n\nYour digital companion for D&D 5e adventures\\!\n\nManage your character, browse the Player's Handbook Wiki and coordinate your party — all from Telegram\\.\n\nVisit the website for more information:"
+  about_btn: "🌐 Website"
 
 character:
   common:

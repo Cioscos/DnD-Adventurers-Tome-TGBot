@@ -28,6 +28,24 @@ def build_main_menu_keyboard(lang: str = "it") -> InlineKeyboardMarkup:
     ])
 
 
+async def about_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle the /about command — send bot info with a website link button."""
+    if update.message is None:
+        return
+    lang = get_lang(update)
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton(
+            translator.t("start.about_btn", lang=lang),
+            url="https://cioscos.github.io/DnD-Adventurers-Tome-TGBot/",
+        )],
+    ])
+    await update.message.reply_text(
+        translator.t("start.about_text", lang=lang),
+        reply_markup=keyboard,
+        parse_mode="MarkdownV2",
+    )
+
+
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle the /start command — show the main menu (private chat only)."""
     if update.message is None:
