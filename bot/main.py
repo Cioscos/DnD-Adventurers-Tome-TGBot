@@ -39,7 +39,7 @@ from bot.db.engine import init_db
 from bot.handlers.character.conversation import build_character_conversation_handler
 from bot.handlers.navigation import navigation_callback
 from bot.handlers.party import party_callback_handler, party_command, party_stop_command, track_group_member
-from bot.handlers.start import start_command
+from bot.handlers.start import about_command, start_command
 from bot.models.character_state import CharAction
 from bot.models.party_state import PartyAction
 from bot.schema.registry import registry
@@ -184,6 +184,7 @@ def main() -> None:
 
     # Command handlers
     application.add_handler(CommandHandler("start", start_command))
+    application.add_handler(CommandHandler("about", about_command))
     application.add_handler(CommandHandler("stop", stop_command))
     application.add_handler(CommandHandler("party", party_command))
     application.add_handler(CommandHandler("party_stop", party_stop_command))

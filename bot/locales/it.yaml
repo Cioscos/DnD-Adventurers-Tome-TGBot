@@ -18,6 +18,8 @@ start:
   menu_wiki: "📖 Wiki D&D"
   menu_character: "⚔️ Il mio personaggio"
   stop_no_op: "✋ Nessuna operazione in corso da interrompere\\."
+  about_text: "ℹ️ *D&D Adventurers Tome Bot*\n\nIl tuo compagno digitale per le avventure in D&D 5e\\!\n\nGestisci il tuo personaggio, consulta la Wiki del Manuale del Giocatore e coordina il tuo gruppo — tutto da Telegram\\.\n\nVisita il sito web per ulteriori informazioni:"
+  about_btn: "🌐 Sito Web"
 
 character:
   common:
