@@ -686,7 +686,7 @@ wiki:
   page_info: " — Page {page}"
   no_items: "No items found in this category\\."
   btn_menu_main: "🏠 Main Menu"
-  btn_menu: "🏠 Menu"
+  btn_menu: "📖 Wiki"
   btn_prev: "⬅️ Prev"
   btn_next: "Next ➡️"
   btn_back: "⬅️ Back"

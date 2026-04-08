@@ -21,6 +21,31 @@ _LIST_BADGE_FIELDS = frozenset(
 
 _DETAIL_DEPTH = 2  # recursion limit for detail field expansion
 
+# Fields excluded from ALL generated queries due to API compatibility issues.
+# Key: (TypeName, field_name)
+#
+# The DnD 5e 2014 API uses `desc` with conflicting GraphQL types across different
+# types that appear as union members in the same query.  When two or more union
+# members (e.g. Equipment and Skill inside ProficiencyReference) both have a
+# `desc` field but with different nullability ([String!] vs [String!]!), the
+# server rejects the query with HTTP 400 ("Fields desc conflict because they
+# return conflicting types").  Excluding the outlier types from generated queries
+# removes the conflict while still fetching desc in direct (non-union) queries.
+#
+# AbilityScore.desc is also excluded because the API returns null for it despite
+# declaring it [String!]! (server bug), which causes partial-error warnings.
+_FIELD_EXCLUSIONS: frozenset[tuple[str, str]] = frozenset({
+    # [String!]! but the API server returns null → partial-error warning.
+    # Also a conflict source when AbilityScore appears inside union fragments.
+    ("AbilityScore", "desc"),
+    # [String!] (nullable list) while all other desc-list fields are [String!]!
+    # — the sole outlier in the ProficiencyReference union, causing HTTP 400.
+    ("Equipment", "desc"),
+    # [String!]! but the API server returns null for DamageType items that
+    # appear nested inside Monster actions — causes partial-error warnings.
+    ("DamageType", "desc"),
+})
+
 
 # ------------------------------------------------------------------
 # Public API
@@ -197,7 +222,8 @@ def _build_fields(
 
         # ---- Scalars / enums ----
         if fi.type_kind in ("SCALAR", "ENUM"):
-            lines.append(f"{prefix}{fi.name}")
+            if (ti.name, fi.name) not in _FIELD_EXCLUSIONS:
+                lines.append(f"{prefix}{fi.name}")
             continue
 
         # ---- Navigable list fields ----
@@ -265,9 +291,12 @@ def _emit_union(
 
 
 def _scalar_names(ti: TypeInfo) -> list[str]:
-    """Return the names of all scalar/enum fields, excluding updated_at."""
+    """Return the names of all scalar/enum fields, excluding updated_at and any
+    field listed in *_FIELD_EXCLUSIONS* for this type."""
     return [
         fi.name
         for fi in ti.fields.values()
-        if fi.type_kind in ("SCALAR", "ENUM") and fi.name != "updated_at"
+        if fi.type_kind in ("SCALAR", "ENUM")
+        and fi.name != "updated_at"
+        and (ti.name, fi.name) not in _FIELD_EXCLUSIONS
     ]
