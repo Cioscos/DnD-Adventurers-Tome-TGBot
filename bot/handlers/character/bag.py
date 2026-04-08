@@ -1,8 +1,10 @@
-"""Inventory (bag) management handler."""
+"""Inventory (bag) management handler — supports typed items (weapon, armor, shield, consumable, tool)."""
 
 from __future__ import annotations
 
+import json
 import logging
+import re
 
 from sqlalchemy import delete, select
 from telegram import Update
@@ -11,20 +13,39 @@ from telegram.ext import ContextTypes
 from bot.db.engine import get_session
 from bot.db.models import Character, Item
 from bot.handlers.character import (
+    CHAR_BAG_ADD_AC_VALUE,
+    CHAR_BAG_ADD_DAMAGE_DICE,
+    CHAR_BAG_ADD_EFFECT,
+    CHAR_BAG_ADD_INLINE,
     CHAR_BAG_ADD_NAME,
-    CHAR_BAG_ADD_WEIGHT,
     CHAR_BAG_ADD_QTY,
+    CHAR_BAG_ADD_STR_REQ,
+    CHAR_BAG_ADD_TOOL_TYPE,
+    CHAR_BAG_ADD_WEIGHT,
     CHAR_BAG_MENU,
     CHAR_MENU,
 )
-from bot.keyboards.character import build_bag_keyboard, build_item_detail_keyboard, build_cancel_keyboard
-from bot.utils.formatting import format_bag
+from bot.keyboards.character import (
+    build_armor_type_keyboard,
+    build_cancel_keyboard,
+    build_bag_keyboard,
+    build_damage_type_keyboard,
+    build_item_detail_keyboard,
+    build_item_type_keyboard,
+    build_stealth_keyboard,
+    build_weapon_properties_keyboard,
+    build_weapon_type_keyboard,
+)
+from bot.utils.formatting import format_bag, format_item_detail
 from bot.utils.i18n import get_lang, translator
 
 logger = logging.getLogger(__name__)
 
 _OP_KEY = "char_bag_pending"
 
+# ---------------------------------------------------------------------------
+# Bag menu
+# ---------------------------------------------------------------------------
 
 async def show_bag_menu(
     update: Update, context: ContextTypes.DEFAULT_TYPE, char_id: int, page: int = 0
@@ -56,29 +77,132 @@ async def show_item_detail(
         item = await session.get(Item, item_id)
         if item is None or item.character_id != char_id:
             return await show_bag_menu(update, context, char_id)
+        item_data = {
+            "id": item.id,
+            "name": item.name,
+            "description": item.description,
+            "weight": item.weight,
+            "quantity": item.quantity,
+            "item_type": item.item_type or "generic",
+            "item_metadata": json.loads(item.item_metadata) if item.item_metadata else {},
+            "is_equipped": item.is_equipped,
+        }
 
     lang = get_lang(update)
-    desc = _esc(item.description) if item.description else translator.t("character.bag.no_description", lang=lang)
-    text = (
-        f"📦 *{_esc(item.name)}*\n\n"
-        + translator.t("character.bag.item_detail_qty", lang=lang, qty=item.quantity) + "\n"
-        + translator.t("character.bag.item_detail_weight_unit", lang=lang, weight=_esc(f'{item.weight:.1f}')) + "\n"
-        + translator.t("character.bag.item_detail_weight_total", lang=lang, total_weight=_esc(f'{item.weight * item.quantity:.1f}')) + "\n\n"
-        + desc
+    text = format_item_detail(item_data, lang=lang)
+    keyboard = build_item_detail_keyboard(
+        char_id, item_id,
+        item_type=item_data["item_type"],
+        is_equipped=item_data["is_equipped"],
+        back_page=back_page,
+        lang=lang,
     )
-    keyboard = build_item_detail_keyboard(char_id, item_id, back_page, lang=lang)
     await _edit_or_reply(update, text, keyboard)
     return CHAR_BAG_MENU
 
+# ---------------------------------------------------------------------------
+# Add-item flow — step 1: type selection (inline)
+# ---------------------------------------------------------------------------
 
 async def ask_add_item(
     update: Update, context: ContextTypes.DEFAULT_TYPE, char_id: int
 ) -> int:
     lang = get_lang(update)
-    context.user_data[_OP_KEY] = {"char_id": char_id, "step": "name"}
-    await _edit_or_reply(update, translator.t("character.bag.prompt_name", lang=lang), build_cancel_keyboard(char_id, "char_bag", lang=lang))
-    return CHAR_BAG_ADD_NAME
+    context.user_data[_OP_KEY] = {"char_id": char_id, "step": "type"}
+    await _edit_or_reply(
+        update,
+        translator.t("character.bag.prompt_type", lang=lang),
+        build_item_type_keyboard(char_id, lang=lang),
+    )
+    return CHAR_BAG_ADD_INLINE
 
+
+async def handle_bag_add_inline(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> int:
+    """Handle all inline-only steps of the add-item flow."""
+    if update.callback_query is None:
+        return CHAR_BAG_MENU
+    await update.callback_query.answer()
+
+    lang = get_lang(update)
+    pending = context.user_data.get(_OP_KEY, {})
+    char_id: int = pending.get("char_id", 0)
+    step: str = pending.get("step", "type")
+    data = update.callback_query.data
+
+    # ── Type selection ──
+    if step == "type":
+        if not (hasattr(data, "sub") and data.sub == "select_type"):
+            # User hit cancel / back
+            context.user_data.pop(_OP_KEY, None)
+            return await show_bag_menu(update, context, char_id)
+        item_type = data.extra
+        context.user_data[_OP_KEY]["item_type"] = item_type
+        return await _ask_name(update, context, char_id, lang)
+
+    # ── Weapon: damage type ──
+    if step == "damage_type":
+        if not (hasattr(data, "sub") and data.sub == "set_damage_type"):
+            context.user_data.pop(_OP_KEY, None)
+            return await show_bag_menu(update, context, char_id)
+        context.user_data[_OP_KEY]["damage_type"] = data.extra
+        return await _ask_weapon_type(update, context, char_id, lang)
+
+    # ── Weapon: melee / ranged ──
+    if step == "weapon_type":
+        if not (hasattr(data, "sub") and data.sub == "set_weapon_type"):
+            context.user_data.pop(_OP_KEY, None)
+            return await show_bag_menu(update, context, char_id)
+        context.user_data[_OP_KEY]["weapon_type"] = data.extra
+        context.user_data[_OP_KEY]["properties"] = []
+        return await _ask_properties(update, context, char_id, lang)
+
+    # ── Weapon: property multi-select toggle ──
+    if step == "properties":
+        if hasattr(data, "sub") and data.sub == "toggle_prop":
+            props: list[str] = context.user_data[_OP_KEY].get("properties", [])
+            key = data.extra
+            if key in props:
+                props.remove(key)
+            else:
+                props.append(key)
+            context.user_data[_OP_KEY]["properties"] = props
+            await update.callback_query.edit_message_text(
+                translator.t("character.bag.prompt_properties", lang=lang),
+                reply_markup=build_weapon_properties_keyboard(char_id, props, lang=lang),
+                parse_mode="MarkdownV2",
+            )
+            return CHAR_BAG_ADD_INLINE
+        if hasattr(data, "sub") and data.sub == "confirm_props":
+            return await _ask_weight(update, context, char_id, lang)
+        # Cancel
+        context.user_data.pop(_OP_KEY, None)
+        return await show_bag_menu(update, context, char_id)
+
+    # ── Armor: armor type ──
+    if step == "armor_type":
+        if not (hasattr(data, "sub") and data.sub == "set_armor_type"):
+            context.user_data.pop(_OP_KEY, None)
+            return await show_bag_menu(update, context, char_id)
+        context.user_data[_OP_KEY]["armor_type"] = data.extra
+        return await _ask_ac_value(update, context, char_id, lang)
+
+    # ── Armor: stealth disadvantage ──
+    if step == "stealth":
+        if not (hasattr(data, "sub") and data.sub == "set_stealth"):
+            context.user_data.pop(_OP_KEY, None)
+            return await show_bag_menu(update, context, char_id)
+        context.user_data[_OP_KEY]["stealth_disadvantage"] = (data.extra == "yes")
+        return await _ask_str_req(update, context, char_id, lang)
+
+    context.user_data.pop(_OP_KEY, None)
+    return await show_bag_menu(update, context, char_id)
+
+
+# ---------------------------------------------------------------------------
+# Add-item flow — text input steps
+# ---------------------------------------------------------------------------
 
 async def handle_bag_text(
     update: Update, context: ContextTypes.DEFAULT_TYPE
@@ -88,22 +212,70 @@ async def handle_bag_text(
 
     lang = get_lang(update)
     pending = context.user_data.get(_OP_KEY, {})
-    char_id: int = pending.get("char_id")
+    char_id: int = pending.get("char_id", 0)
     step: str = pending.get("step", "name")
     text = update.message.text.strip()
 
     if step == "name":
         if not text:
-            await update.message.reply_text(translator.t("character.bag.name_invalid", lang=lang), parse_mode="MarkdownV2")
+            await update.message.reply_text(
+                translator.t("character.bag.name_invalid", lang=lang),
+                parse_mode="MarkdownV2",
+            )
             return CHAR_BAG_ADD_NAME
         context.user_data[_OP_KEY]["item_name"] = text
-        context.user_data[_OP_KEY]["step"] = "weight"
-        await update.message.reply_text(
-            translator.t("character.bag.prompt_weight", lang=lang),
-            reply_markup=build_cancel_keyboard(char_id, "char_bag", lang=lang),
-            parse_mode="MarkdownV2",
-        )
-        return CHAR_BAG_ADD_WEIGHT
+        item_type = pending.get("item_type", "generic")
+        return await _route_after_name(update, context, char_id, item_type, lang)
+
+    if step == "damage_dice":
+        # Accept free text like "1d8", "2d6+3", or "-" to skip
+        if text != "-" and not re.match(r"^\d+d\d+([+-]\d+)?$", text, re.IGNORECASE):
+            await update.message.reply_text(
+                translator.t("character.bag.damage_dice_invalid", lang=lang),
+                parse_mode="MarkdownV2",
+            )
+            return CHAR_BAG_ADD_DAMAGE_DICE
+        context.user_data[_OP_KEY]["damage_dice"] = "" if text == "-" else text
+        return await _ask_damage_type(update, context, char_id, lang)
+
+    if step == "effect":
+        context.user_data[_OP_KEY]["effect"] = "" if text == "-" else text
+        return await _ask_weight(update, context, char_id, lang)
+
+    if step == "ac_value":
+        try:
+            ac = int(text)
+            if ac <= 0:
+                raise ValueError
+        except ValueError:
+            await update.message.reply_text(
+                translator.t("character.bag.ac_value_invalid", lang=lang),
+                parse_mode="MarkdownV2",
+            )
+            return CHAR_BAG_ADD_AC_VALUE
+        context.user_data[_OP_KEY]["ac_value"] = ac
+        item_type = pending.get("item_type", "armor")
+        if item_type == "shield":
+            return await _ask_weight(update, context, char_id, lang)
+        return await _ask_stealth(update, context, char_id, lang)
+
+    if step == "str_req":
+        try:
+            req = int(text)
+            if req < 0:
+                raise ValueError
+        except ValueError:
+            await update.message.reply_text(
+                translator.t("character.bag.str_req_invalid", lang=lang),
+                parse_mode="MarkdownV2",
+            )
+            return CHAR_BAG_ADD_STR_REQ
+        context.user_data[_OP_KEY]["str_req"] = req
+        return await _ask_weight(update, context, char_id, lang)
+
+    if step == "tool_type":
+        context.user_data[_OP_KEY]["tool_type"] = "" if text == "-" else text
+        return await _ask_weight(update, context, char_id, lang)
 
     if step == "weight":
         try:
@@ -111,7 +283,10 @@ async def handle_bag_text(
             if weight < 0:
                 raise ValueError
         except ValueError:
-            await update.message.reply_text(translator.t("character.bag.weight_invalid", lang=lang), parse_mode="MarkdownV2")
+            await update.message.reply_text(
+                translator.t("character.bag.weight_invalid", lang=lang),
+                parse_mode="MarkdownV2",
+            )
             return CHAR_BAG_ADD_WEIGHT
         context.user_data[_OP_KEY]["item_weight"] = weight
         context.user_data[_OP_KEY]["step"] = "qty"
@@ -128,47 +303,124 @@ async def handle_bag_text(
             if qty < 1:
                 raise ValueError
         except ValueError:
-            await update.message.reply_text(translator.t("character.bag.qty_invalid", lang=lang), parse_mode="MarkdownV2")
-            return CHAR_BAG_ADD_QTY
-
-        item_name = pending["item_name"]
-        item_weight = pending["item_weight"]
-
-        async with get_session() as session:
-            # Check if item with same name already exists
-            result = await session.execute(
-                select(Item).where(
-                    Item.character_id == char_id, Item.name == item_name
-                )
+            await update.message.reply_text(
+                translator.t("character.bag.qty_invalid", lang=lang),
+                parse_mode="MarkdownV2",
             )
-            existing = result.scalar_one_or_none()
-            if existing:
-                existing.quantity += qty
-            else:
-                session.add(Item(
-                    character_id=char_id,
-                    name=item_name,
-                    weight=item_weight,
-                    quantity=qty,
-                ))
-            # Recalculate encumbrance
-            char = await session.get(Character, char_id)
-            if char:
-                all_items_res = await session.execute(
-                    select(Item).where(Item.character_id == char_id)
-                )
-                char.encumbrance = sum(i.weight * i.quantity for i in all_items_res.scalars())
-
-        context.user_data.pop(_OP_KEY, None)
-        import asyncio as _asyncio
-        _asyncio.create_task(_log(char_id, "bag_change", f"Aggiunto: {item_name} x{qty} ({item_weight} kg)"))
-        await update.message.reply_text(
-            translator.t("character.bag.item_added", lang=lang, name=_esc(item_name)), parse_mode="MarkdownV2"
-        )
-        return await show_bag_menu(update, context, char_id)
+            return CHAR_BAG_ADD_QTY
+        return await _save_item(update, context, char_id, qty, lang)
 
     return CHAR_BAG_MENU
 
+
+# ---------------------------------------------------------------------------
+# Equip / Unequip
+# ---------------------------------------------------------------------------
+
+async def toggle_equip_item(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    char_id: int,
+    item_id: int,
+) -> int:
+    """Toggle the equipped state of an item; armor/shield update character AC."""
+    lang = get_lang(update)
+    if update.callback_query:
+        await update.callback_query.answer()
+
+    async with get_session() as session:
+        item = await session.get(Item, item_id)
+        if item is None or item.character_id != char_id:
+            return await show_bag_menu(update, context, char_id)
+
+        item_type = item.item_type or "generic"
+        meta = json.loads(item.item_metadata) if item.item_metadata else {}
+        new_equipped = not item.is_equipped
+        ac_note = ""
+
+        if item_type == "armor":
+            if new_equipped:
+                # Unequip any currently equipped armor first
+                result = await session.execute(
+                    select(Item).where(
+                        Item.character_id == char_id,
+                        Item.item_type == "armor",
+                        Item.is_equipped == True,  # noqa: E712
+                        Item.id != item_id,
+                    )
+                )
+                for other in result.scalars():
+                    other.is_equipped = False
+                # Update character base AC
+                char = await session.get(Character, char_id)
+                if char:
+                    char.base_armor_class = meta.get("ac_value", 10)
+                    ac_note = translator.t(
+                        "character.bag.armor_equip_note",
+                        lang=lang, ac=meta.get("ac_value", 10),
+                    )
+            else:
+                char = await session.get(Character, char_id)
+                if char:
+                    char.base_armor_class = 10
+                    ac_note = translator.t("character.bag.armor_unequip_note", lang=lang)
+
+        elif item_type == "shield":
+            if new_equipped:
+                # Unequip any currently equipped shield first
+                result = await session.execute(
+                    select(Item).where(
+                        Item.character_id == char_id,
+                        Item.item_type == "shield",
+                        Item.is_equipped == True,  # noqa: E712
+                        Item.id != item_id,
+                    )
+                )
+                for other in result.scalars():
+                    other.is_equipped = False
+                char = await session.get(Character, char_id)
+                if char:
+                    char.shield_armor_class = meta.get("ac_bonus", 2)
+                    ac_note = translator.t(
+                        "character.bag.shield_equip_note",
+                        lang=lang, bonus=meta.get("ac_bonus", 2),
+                    )
+            else:
+                char = await session.get(Character, char_id)
+                if char:
+                    char.shield_armor_class = 0
+                    ac_note = translator.t("character.bag.shield_unequip_note", lang=lang)
+
+        item.is_equipped = new_equipped
+        item_name = item.name
+
+    if new_equipped:
+        msg = translator.t("character.bag.equip_done", lang=lang, name=_esc(item_name)) + ac_note
+    else:
+        msg = translator.t("character.bag.unequip_done", lang=lang, name=_esc(item_name)) + ac_note
+
+    if update.callback_query:
+        await update.callback_query.edit_message_text(msg, parse_mode="MarkdownV2")
+    elif update.message:
+        await update.message.reply_text(msg, parse_mode="MarkdownV2")
+
+    import asyncio as _asyncio
+    action_str = "Equipaggiato" if new_equipped else "De-equipaggiato"
+    _asyncio.create_task(_log(char_id, "bag_change", f"{action_str}: {item_name}"))
+
+    # Trigger party update if AC changed
+    if item_type in ("armor", "shield"):
+        from bot.handlers.party import maybe_update_party_message
+        bot = update.get_bot()
+        if bot:
+            _asyncio.create_task(maybe_update_party_message(char_id, bot))
+
+    return await show_item_detail(update, context, char_id, item_id)
+
+
+# ---------------------------------------------------------------------------
+# Quantity modify / remove
+# ---------------------------------------------------------------------------
 
 async def modify_item_quantity(
     update: Update,
@@ -189,7 +441,6 @@ async def modify_item_quantity(
         if removed:
             await session.delete(item)
         new_qty = max(0, item.quantity)
-        # Recalculate encumbrance
         char = await session.get(Character, char_id)
         if char:
             all_items_res = await session.execute(
@@ -235,6 +486,323 @@ async def remove_all_item(
 
 
 # ---------------------------------------------------------------------------
+# Internal helpers: add-flow prompt functions
+# ---------------------------------------------------------------------------
+
+async def _ask_name(
+    update: Update, context: ContextTypes.DEFAULT_TYPE, char_id: int, lang: str
+) -> int:
+    context.user_data[_OP_KEY]["step"] = "name"
+    await _edit_or_reply(
+        update,
+        translator.t("character.bag.prompt_name", lang=lang),
+        build_cancel_keyboard(char_id, "char_bag", lang=lang),
+    )
+    return CHAR_BAG_ADD_NAME
+
+
+async def _route_after_name(
+    update: Update, context: ContextTypes.DEFAULT_TYPE,
+    char_id: int, item_type: str, lang: str,
+) -> int:
+    """Dispatch to the first type-specific step after the name is captured."""
+    if item_type == "weapon":
+        context.user_data[_OP_KEY]["step"] = "damage_dice"
+        await update.message.reply_text(
+            translator.t("character.bag.prompt_damage_dice", lang=lang),
+            reply_markup=_skip_keyboard(char_id, lang),
+            parse_mode="MarkdownV2",
+        )
+        return CHAR_BAG_ADD_DAMAGE_DICE
+    if item_type == "armor":
+        context.user_data[_OP_KEY]["step"] = "armor_type"
+        await update.message.reply_text(
+            translator.t("character.bag.prompt_armor_type", lang=lang),
+            reply_markup=build_armor_type_keyboard(char_id, lang=lang),
+            parse_mode="MarkdownV2",
+        )
+        return CHAR_BAG_ADD_INLINE
+    if item_type == "shield":
+        context.user_data[_OP_KEY]["step"] = "ac_value"
+        await update.message.reply_text(
+            translator.t("character.bag.prompt_ac_bonus", lang=lang),
+            reply_markup=build_cancel_keyboard(char_id, "char_bag", lang=lang),
+            parse_mode="MarkdownV2",
+        )
+        return CHAR_BAG_ADD_AC_VALUE
+    if item_type == "consumable":
+        context.user_data[_OP_KEY]["step"] = "effect"
+        await update.message.reply_text(
+            translator.t("character.bag.prompt_effect", lang=lang),
+            reply_markup=_skip_keyboard(char_id, lang),
+            parse_mode="MarkdownV2",
+        )
+        return CHAR_BAG_ADD_EFFECT
+    if item_type == "tool":
+        context.user_data[_OP_KEY]["step"] = "tool_type"
+        await update.message.reply_text(
+            translator.t("character.bag.prompt_tool_type", lang=lang),
+            reply_markup=_skip_keyboard(char_id, lang),
+            parse_mode="MarkdownV2",
+        )
+        return CHAR_BAG_ADD_TOOL_TYPE
+    # generic → straight to weight
+    return await _ask_weight_msg(update, context, char_id, lang)
+
+
+async def _ask_damage_type(
+    update: Update, context: ContextTypes.DEFAULT_TYPE, char_id: int, lang: str
+) -> int:
+    context.user_data[_OP_KEY]["step"] = "damage_type"
+    await _edit_or_reply(
+        update,
+        translator.t("character.bag.prompt_damage_type", lang=lang),
+        build_damage_type_keyboard(char_id, lang=lang),
+    )
+    return CHAR_BAG_ADD_INLINE
+
+
+async def _ask_weapon_type(
+    update: Update, context: ContextTypes.DEFAULT_TYPE, char_id: int, lang: str
+) -> int:
+    context.user_data[_OP_KEY]["step"] = "weapon_type"
+    await _edit_or_reply(
+        update,
+        translator.t("character.bag.prompt_weapon_type", lang=lang),
+        build_weapon_type_keyboard(char_id, lang=lang),
+    )
+    return CHAR_BAG_ADD_INLINE
+
+
+async def _ask_properties(
+    update: Update, context: ContextTypes.DEFAULT_TYPE, char_id: int, lang: str
+) -> int:
+    context.user_data[_OP_KEY]["step"] = "properties"
+    props = context.user_data[_OP_KEY].get("properties", [])
+    await _edit_or_reply(
+        update,
+        translator.t("character.bag.prompt_properties", lang=lang),
+        build_weapon_properties_keyboard(char_id, props, lang=lang),
+    )
+    return CHAR_BAG_ADD_INLINE
+
+
+async def _ask_ac_value(
+    update: Update, context: ContextTypes.DEFAULT_TYPE, char_id: int, lang: str
+) -> int:
+    context.user_data[_OP_KEY]["step"] = "ac_value"
+    await _edit_or_reply(
+        update,
+        translator.t("character.bag.prompt_ac_value", lang=lang),
+        build_cancel_keyboard(char_id, "char_bag", lang=lang),
+    )
+    return CHAR_BAG_ADD_AC_VALUE
+
+
+async def _ask_stealth(
+    update: Update, context: ContextTypes.DEFAULT_TYPE, char_id: int, lang: str
+) -> int:
+    context.user_data[_OP_KEY]["step"] = "stealth"
+    await _edit_or_reply(
+        update,
+        translator.t("character.bag.prompt_stealth", lang=lang),
+        build_stealth_keyboard(char_id, lang=lang),
+    )
+    return CHAR_BAG_ADD_INLINE
+
+
+async def _ask_str_req(
+    update: Update, context: ContextTypes.DEFAULT_TYPE, char_id: int, lang: str
+) -> int:
+    context.user_data[_OP_KEY]["step"] = "str_req"
+    await _edit_or_reply(
+        update,
+        translator.t("character.bag.prompt_str_req", lang=lang),
+        _skip_keyboard_cancel(char_id, lang),
+    )
+    return CHAR_BAG_ADD_STR_REQ
+
+
+async def _ask_weight(
+    update: Update, context: ContextTypes.DEFAULT_TYPE, char_id: int, lang: str
+) -> int:
+    """Send weight prompt via edit_message (from inline flow)."""
+    context.user_data[_OP_KEY]["step"] = "weight"
+    await _edit_or_reply(
+        update,
+        translator.t("character.bag.prompt_weight", lang=lang),
+        build_cancel_keyboard(char_id, "char_bag", lang=lang),
+    )
+    return CHAR_BAG_ADD_WEIGHT
+
+
+async def _ask_weight_msg(
+    update: Update, context: ContextTypes.DEFAULT_TYPE, char_id: int, lang: str
+) -> int:
+    """Send weight prompt via reply_text (from text input flow)."""
+    context.user_data[_OP_KEY]["step"] = "weight"
+    await update.message.reply_text(
+        translator.t("character.bag.prompt_weight", lang=lang),
+        reply_markup=build_cancel_keyboard(char_id, "char_bag", lang=lang),
+        parse_mode="MarkdownV2",
+    )
+    return CHAR_BAG_ADD_WEIGHT
+
+
+# ---------------------------------------------------------------------------
+# Save item to DB
+# ---------------------------------------------------------------------------
+
+async def _save_item(
+    update: Update, context: ContextTypes.DEFAULT_TYPE,
+    char_id: int, qty: int, lang: str,
+) -> int:
+    pending = context.user_data.get(_OP_KEY, {})
+    item_name = pending["item_name"]
+    item_weight = pending.get("item_weight", 0.0)
+    item_type = pending.get("item_type", "generic")
+    meta = _build_metadata(pending, item_type)
+
+    async with get_session() as session:
+        # Deduplication only for generic items with same name
+        existing = None
+        if item_type == "generic":
+            result = await session.execute(
+                select(Item).where(
+                    Item.character_id == char_id,
+                    Item.name == item_name,
+                    Item.item_type == "generic",
+                )
+            )
+            existing = result.scalar_one_or_none()
+
+        if existing:
+            existing.quantity += qty
+        else:
+            session.add(Item(
+                character_id=char_id,
+                name=item_name,
+                weight=item_weight,
+                quantity=qty,
+                item_type=item_type,
+                item_metadata=json.dumps(meta) if meta else None,
+            ))
+
+        char = await session.get(Character, char_id)
+        if char:
+            all_items_res = await session.execute(
+                select(Item).where(Item.character_id == char_id)
+            )
+            char.encumbrance = sum(i.weight * i.quantity for i in all_items_res.scalars())
+
+    context.user_data.pop(_OP_KEY, None)
+    import asyncio as _asyncio
+    _asyncio.create_task(_log(char_id, "bag_change", f"Aggiunto ({item_type}): {item_name} x{qty} ({item_weight} kg)"))
+    await update.message.reply_text(
+        translator.t("character.bag.item_added", lang=lang, name=_esc(item_name)),
+        parse_mode="MarkdownV2",
+    )
+    return await show_bag_menu(update, context, char_id)
+
+
+def _build_metadata(pending: dict, item_type: str) -> dict:
+    """Extract type-specific metadata from the pending dict."""
+    if item_type == "weapon":
+        return {
+            "damage_dice": pending.get("damage_dice", ""),
+            "damage_type": pending.get("damage_type", ""),
+            "weapon_type": pending.get("weapon_type", "melee"),
+            "properties": pending.get("properties", []),
+        }
+    if item_type == "armor":
+        return {
+            "armor_type": pending.get("armor_type", "light"),
+            "ac_value": pending.get("ac_value", 10),
+            "stealth_disadvantage": pending.get("stealth_disadvantage", False),
+            "strength_req": pending.get("str_req", 0),
+        }
+    if item_type == "shield":
+        return {"ac_bonus": pending.get("ac_value", 2)}
+    if item_type == "consumable":
+        return {"effect": pending.get("effect", "")}
+    if item_type == "tool":
+        return {"tool_type": pending.get("tool_type", "")}
+    return {}
+
+
+# ---------------------------------------------------------------------------
+# Skip handler (callback for optional steps)
+# ---------------------------------------------------------------------------
+
+async def handle_bag_skip(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> int:
+    """Handle ⏭️ Salta for optional text-input steps."""
+    if update.callback_query is None:
+        return CHAR_BAG_MENU
+    await update.callback_query.answer()
+
+    lang = get_lang(update)
+    pending = context.user_data.get(_OP_KEY, {})
+    char_id: int = pending.get("char_id", 0)
+    step: str = pending.get("step", "")
+
+    if step == "damage_dice":
+        context.user_data[_OP_KEY]["damage_dice"] = ""
+        return await _ask_damage_type(update, context, char_id, lang)
+    if step == "effect":
+        context.user_data[_OP_KEY]["effect"] = ""
+        return await _ask_weight(update, context, char_id, lang)
+    if step == "tool_type":
+        context.user_data[_OP_KEY]["tool_type"] = ""
+        return await _ask_weight(update, context, char_id, lang)
+    if step == "str_req":
+        context.user_data[_OP_KEY]["str_req"] = 0
+        return await _ask_weight(update, context, char_id, lang)
+
+    context.user_data.pop(_OP_KEY, None)
+    return await show_bag_menu(update, context, char_id)
+
+
+# ---------------------------------------------------------------------------
+# Keyboard helpers
+# ---------------------------------------------------------------------------
+
+def _skip_keyboard(char_id: int, lang: str):
+    """Cancel keyboard augmented with a Skip button."""
+    from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+    from bot.models.character_state import CharAction
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton(
+            text=translator.t("character.bag.btn_skip", lang=lang),
+            callback_data=CharAction("char_bag", char_id=char_id, sub="skip"),
+        )],
+        [InlineKeyboardButton(
+            text=translator.t("nav.cancel", lang=lang),
+            callback_data=CharAction("char_bag", char_id=char_id),
+        )],
+    ])
+
+
+def _skip_keyboard_cancel(char_id: int, lang: str):
+    """Cancel keyboard with Skip for str_req step."""
+    from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+    from bot.models.character_state import CharAction
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton(
+            text=translator.t("character.bag.btn_skip", lang=lang),
+            callback_data=CharAction("char_bag", char_id=char_id, sub="skip"),
+        )],
+        [InlineKeyboardButton(
+            text=translator.t("nav.cancel", lang=lang),
+            callback_data=CharAction("char_bag", char_id=char_id),
+        )],
+    ])
+
+
+# ---------------------------------------------------------------------------
+# Logging / utility
+# ---------------------------------------------------------------------------
 
 async def _log(char_id: int, event_type: str, description: str) -> None:
     """Fire-and-forget wrapper for history logging."""
@@ -259,3 +827,4 @@ async def _edit_or_reply(update: Update, text: str, keyboard=None) -> None:
 def _esc(text: str) -> str:
     special = r"\_*[]()~`>#+-=|{}.!"
     return "".join(f"\\{c}" if c in special else c for c in str(text))
+

@@ -29,6 +29,12 @@ from __future__ import annotations
     CHAR_BAG_ADD_WEIGHT,
     CHAR_BAG_ADD_QTY,
     CHAR_BAG_EDIT,
+    CHAR_BAG_ADD_INLINE,
+    CHAR_BAG_ADD_DAMAGE_DICE,
+    CHAR_BAG_ADD_EFFECT,
+    CHAR_BAG_ADD_AC_VALUE,
+    CHAR_BAG_ADD_STR_REQ,
+    CHAR_BAG_ADD_TOOL_TYPE,
     CHAR_CURRENCY_MENU,
     CHAR_CURRENCY_EDIT,
     CHAR_CURRENCY_CONVERT,
@@ -63,6 +69,6 @@ from __future__ import annotations
     CHAR_HISTORY_MENU,
     # Skills
     CHAR_SKILLS_MENU,
-) = range(51)
+) = range(57)
 
 STOPPING = 99

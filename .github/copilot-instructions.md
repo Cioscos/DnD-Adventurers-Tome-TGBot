@@ -57,7 +57,7 @@ bot/
 │   └── models.py            # ORM models: Character, CharacterClass, ClassResource, AbilityScore, Spell, SpellSlot,
 │                            #             Item, Currency, Ability, Map, GroupMember, PartySession, CharacterHistory + enums
 ├── locales/
-│   ├── it.yaml              # Italian strings (~500 keys, hierarchical)
+│   ├── it.yaml              # Italian strings (~570 keys, hierarchical)
 │   └── en.yaml              # English translations (mirrors it.yaml structure)
 ├── schema/
 │   ├── types.py             # FieldInfo, TypeInfo, MenuCategory dataclasses
@@ -67,7 +67,7 @@ bot/
 │   ├── navigation.py        # N-level CallbackQueryHandler dispatcher + MarkdownV2 formatters (wiki)
 │   ├── party.py             # /party, /party_stop commands + PartyAction callbacks + track_group_member + maybe_update_party_message
 │   └── character/
-│       ├── __init__.py      # Conversation state constants (51 states)
+│       ├── __init__.py      # Conversation state constants (57 states)
 │       ├── conversation.py  # Master ConversationHandler — routes CharAction callbacks, stop_command_handler, builds handler
 │       ├── selection.py     # Character create / select / delete; creation wizard includes class selection step
 │       ├── menu.py          # Character main menu with summary
@@ -76,7 +76,7 @@ bot/
 │       ├── stats.py         # Ability scores (FOR/DES/COS/INT/SAG/CAR) with modifiers
 │       ├── spells.py        # Learn / forget / use spells (slot picker, concentration tracking, TS, pin) + fuzzy search
 │       ├── spell_slots.py   # Add / use / restore / remove spell slot levels
-│       ├── bag.py           # Inventory with encumbrance tracking
+│       ├── bag.py           # Typed inventory: Generic/Weapon/Armor/Shield/Consumable/Tool; encumbrance tracking; equip/unequip with AC sync
 │       ├── currency.py      # Coins management + currency conversion
 │       ├── abilities.py     # Special abilities (passive/active, uses, restoration type)
 │       ├── multiclass.py    # Multiclassing: guided/custom class add, subclass, level up/down, resource auto-gen
@@ -135,7 +135,7 @@ bot/
 | `ability_scores` | `character_id` → FK, `name` (strength/dexterity/…), `value` |
 | `spells` | `character_id` → FK, `name`, `level`, `description`, `casting_time`, `range_area`, `components`, `duration`, `is_concentration`, `is_ritual`, `higher_level`, `attack_save`, `is_pinned` |
 | `spell_slots` | `character_id` → FK, `level`, `total`, `used` |
-| `items` | `character_id` → FK, `name`, `description`, `weight`, `quantity` |
+| `items` | `character_id` → FK, `name`, `description`, `weight`, `quantity`, `item_type` (String, default `"generic"`), `item_metadata` (Text/JSON), `is_equipped` (Boolean, default `False`) |
 | `currencies` | `character_id` → FK (1:1), `copper`, `silver`, `electrum`, `gold`, `platinum` |
 | `abilities` | `character_id` → FK, `name`, `description`, `max_uses`, `uses`, `is_passive`, `is_active`, `restoration_type` |
 | `maps` | `character_id` → FK, `zone_name`, `file_id`, `file_type` |
@@ -187,6 +187,8 @@ Key `char_class_res` sub-actions: `menu` (`extra=class_id`), `use` (`item_id=res
 Key `char_conditions` sub-actions: `detail` (`extra=slug`, opens condition detail), `toggle` (`extra=slug`, toggles a binary condition on/off), `exhaust_up` (increases Exhaustion level by 1), `exhaust_down` (decreases Exhaustion level by 1). The `extra` field carries the condition slug (e.g. `"blinded"`, `"exhaustion"`).
 
 Key `char_history` sub-actions: `clear` (deletes all history entries for the character and re-shows the empty screen).
+
+Key `char_bag` sub-actions: `detail` (`item_id=item_id`, opens item detail), `equip` (`item_id=item_id`, toggles equip/unequip), `qty_add` (`item_id=item_id`, +1 quantity), `qty_rem` (`item_id=item_id`, −1 quantity), `delete` / `delete_confirm` (`item_id=item_id`), `skip` (skips an optional field in the add flow).
 
 Key `char_skills` sub-actions: `detail` (`extra=slug`, opens the detail screen for that skill), `toggle` (`extra=slug`, toggles proficiency on/off and stays on the detail screen), `roll` (`extra=slug`, rolls d20 + computed bonus, shows result inline on the detail screen and logs to history with event type `dice_roll`). No `extra` → shows the skills list.
 
@@ -244,7 +246,7 @@ Union types (e.g. `AnyEquipment`) are handled with `__typename` + inline fragmen
 
 ### Character Formatters
 
-`bot/utils/formatting.py` provides localized formatters for every character screen: `format_character_summary` (accepts optional `spells` and `abilities` for active status), `format_hp`, `format_ac`, `format_ability_scores`, `format_spells`, `format_spell_detail`, `format_spell_slots`, `format_bag`, `format_currency`, `format_abilities`, `format_maps`, `format_dice_history`, `format_character_active_status`, `format_multiclass_menu`, `format_class_resources`, `format_conditions`, `format_condition_detail`, `format_skills`, `format_skill_detail`. All accept `lang: str = "it"`, use `translator.t()` for all strings, and output MarkdownV2 with `_esc()`. Helper functions `get_ability_labels(lang)`, `get_currency_labels(lang)`, `get_restoration_labels(lang)` return language-aware label dicts.
+`bot/utils/formatting.py` provides localized formatters for every character screen: `format_character_summary` (accepts optional `spells`, `abilities`, and `equipped_items` for active/equipped status), `format_hp`, `format_ac`, `format_ability_scores`, `format_spells`, `format_spell_detail`, `format_spell_slots`, `format_bag`, `format_item_detail`, `format_equipped_items`, `format_currency`, `format_abilities`, `format_maps`, `format_dice_history`, `format_character_active_status`, `format_multiclass_menu`, `format_class_resources`, `format_conditions`, `format_condition_detail`, `format_skills`, `format_skill_detail`. All accept `lang: str = "it"`, use `translator.t()` for all strings, and output MarkdownV2 with `_esc()`. Helper functions `get_ability_labels(lang)`, `get_currency_labels(lang)`, `get_restoration_labels(lang)` return language-aware label dicts.
 
 **Important**: condition description strings stored in YAML locale files are **pre-escaped MarkdownV2** (e.g. `\.` for a literal dot). Do **not** pass them through `_esc()` — use them directly. Only plain-text strings (names, labels) should be escaped.
 
@@ -307,7 +309,7 @@ Navigable sub-entity buttons (📂) are discovered automatically from the schema
 - **Concentration saving throw**: DC = `max(10, damage // 2)`. Roll = `d20 + CON modifier`. Nat 1 always fails, nat 20 always succeeds. On failure, `concentrating_spell_id` is set to `None`.
 - **Fuzzy spell search**: `sub="search"` → `ask_spell_search()` (state `CHAR_SPELL_SEARCH`); user types query; `handle_spell_search_text()` runs `rapidfuzz.process.extract(WRatio, score_cutoff=50, limit=20)` against spell names; results shown via `build_spell_search_results_keyboard()`. Back from spell detail to search results uses `extra="search_show"` (routed by `not sub and data.extra == "search_show"` check). Query is stored in `context.user_data["char_spell_search_pending"]`.
 - **Pin**: `is_pinned=True` shows the spell in the main menu summary alongside passive active abilities.
-- **`format_character_summary`** must receive `spells` and `abilities` lists to display the active status section.
+- **`format_character_summary`** must receive `spells`, `abilities`, and `equipped_items` lists to display the active/equipped status section.
 - **`spell_management` setting** (`characters.settings["spell_management"]`): controls how the spell list is navigated.
   - `"paginate_by_level"` (default) — shows a **level picker** first (one button per level that has ≥1 spell, max 3 per row); tapping a level shows only the spells of that level with pagination. The `extra` field of `CharAction` carries the selected level as a string (e.g. `"3"`; `"0"` = cantrips). Empty `extra` → show picker.
   - `"select_level_directly"` — flat paginated list of all spells ordered by `level, name` (direct scroll, no level filter).
@@ -355,6 +357,46 @@ Navigable sub-entity buttons (📂) are discovered automatically from the schema
 - **Locale keys**: `character.skills.names.<slug>` (18 names), `character.skills.desc.<slug>` (18 plain-text descriptions, passed through `_esc()` in the formatter — NOT pre-escaped in YAML), `character.skills.ability_abbr.<ability>` (6 abbreviations), plus `title`, `prof_bonus_label`, `instruction`, `updated`, `proficient_icon`, `not_proficient_icon`, `detail_proficient`, `detail_not_proficient`, `btn_toggle_proficient`, `btn_toggle_not_proficient`, `btn_roll`, `roll_result`, `roll_logged`.
 - **Button position**: 🎯 Abilità appears immediately after 📊 Punteggi Abilità in the character main menu.
 
+### Bag / Inventory Details
+
+- **Item types**: `generic` (default), `weapon`, `armor`, `shield`, `consumable`, `tool`. Chosen via inline keyboard at the start of the add-item flow.
+- **Type icons**: shown in the bag list and detail — 🗡️ weapon, 🛡️ armor, 🔰 shield, 🧪 consumable, 🔧 tool, 📦 generic.
+- **Add-item flow** (multi-step):
+  1. Name (text, `CHAR_BAG_ADD_NAME`)
+  2. Quantity (text, `CHAR_BAG_ADD_QUANTITY`)
+  3. Weight (text, `CHAR_BAG_ADD_WEIGHT`) — required for all types; shown with cancel keyboard
+  4. Item type selection (inline, `CHAR_BAG_ADD_INLINE`, `step="type"`)
+  5. Type-specific inline steps dispatched through `step` key in `context.user_data["char_bag_pending"]`:
+     - **Weapon**: damage type → weapon type → properties multi-select (state `CHAR_BAG_ADD_INLINE`)
+     - **Weapon** optional: damage dice (text, `CHAR_BAG_ADD_DAMAGE_DICE`)
+     - **Armor**: armor type → stealth penalty (state `CHAR_BAG_ADD_INLINE`)
+     - **Armor** optional: AC value (text, `CHAR_BAG_ADD_AC_VALUE`), strength requirement (text, `CHAR_BAG_ADD_STR_REQ`)
+     - **Shield** optional: AC bonus (text, `CHAR_BAG_ADD_AC_VALUE`)
+     - **Consumable** optional: effect (text, `CHAR_BAG_ADD_EFFECT`)
+     - **Tool** optional: tool type (text, `CHAR_BAG_ADD_TOOL_TYPE`)
+  6. Description (text, `CHAR_BAG_ADD_DESCRIPTION`) — optional; "⏭️ Salta" button available
+- **Optional steps**: skippable via a "⏭️ Salta" button that routes through `handle_bag_skip` callback handler.
+- **Metadata storage**: the `item_metadata` column stores a JSON string. Structure per type:
+  - **weapon**: `{"damage_dice": "1d8|null", "damage_type": "str", "weapon_type": "str", "properties": ["str", …]}`
+  - **armor**: `{"armor_type": "str", "ac_value": int|null, "stealth_disadvantage": bool, "strength_req": int|null}`
+  - **shield**: `{"ac_bonus": int|null}`
+  - **consumable**: `{"effect": "str|null"}`
+  - **tool**: `{"tool_type": "str|null"}`
+  - **generic**: `{}` (empty dict)
+- **Equip / unequip** (`toggle_equip_item`): only Weapon, Armor, Shield support equipping.
+  - **Armor**: at most 1 equipped at a time (auto-unequips the previous one). On equip, sets `character.base_armor_class = ac_value`; on unequip resets to `10`.
+  - **Shield**: at most 1 equipped at a time. On equip, sets `character.shield_armor_class = ac_bonus`; on unequip resets to `0`.
+  - **Weapon**: multiple can be equipped simultaneously (simple toggle).
+  - After equipping/unequipping Armor or Shield, `maybe_update_party_message` is called (fire-and-forget) to sync the party display.
+- **`is_equipped` display**: equipped items show a ⚔️/🛡️ marker in the bag list and "✅ Equipaggiato / ❌ Non equipaggiato" in the detail view.
+- **Deduplication** (stacking): only applies to `item_type == "generic"` — same as the original behaviour.
+- **`format_item_detail`**: accepts a `dict` with keys `name, description, weight, quantity, item_type, item_metadata, is_equipped`. Metadata fields are rendered only when present/non-null.
+- **`format_equipped_items`**: accepts `list[dict]` with keys `name, item_type, item_metadata`. Called from `menu.py` to populate the equipped-items section of the character summary.
+- **`format_character_summary`** accepts `equipped_items: list | None = None`. When provided, renders an equipped-items block at the bottom of the summary.
+- **Conversation states added** (6 new): `CHAR_BAG_ADD_INLINE`, `CHAR_BAG_ADD_DAMAGE_DICE`, `CHAR_BAG_ADD_EFFECT`, `CHAR_BAG_ADD_AC_VALUE`, `CHAR_BAG_ADD_STR_REQ`, `CHAR_BAG_ADD_TOOL_TYPE`. Total state count: **57**.
+- **Locale keys**: all under `character.bag.*` — `item_types.*` (6 type labels), `item_type_icons.*`, weapon/armor/shield/consumable/tool metadata labels, `btn_equip`, `btn_unequip`, `equipped_label`, `not_equipped_label`, `btn_qty_add` (`"➕ +1"`), `btn_qty_rem` (`"➖ -1"`).
+- **Button labels**: must NOT contain MarkdownV2 escaping. `btn_qty_add`/`btn_qty_rem` use plain `+1`/`-1`, not `\+1`/`\-1`.
+
 ### Character History Details
 - **DB table**: `character_history` (`id`, `character_id` FK cascade, `timestamp` String 20, `event_type` String 50, `description` Text). New table — auto-created by `Base.metadata.create_all`, no migration entry needed.
 - **Helper module**: `bot/db/history.py` — `log_history_event(char_id, event_type, description)` inserts a row and prunes oldest if count > `MAX_HISTORY = 50`; `get_history(char_id)` returns rows newest-first; `clear_history(char_id)` deletes all rows.
@@ -379,6 +421,7 @@ Navigable sub-entity buttons (📂) are discovered automatically from the schema
 - **Real-time updates**: `maybe_update_party_message(char_id, bot)` in `handlers/party.py` finds all active `PartySession`s that include the character's user (via `GroupMember` join), rebuilds the message text, and calls `bot.edit_message_text`. It is invoked as `asyncio.create_task(_trigger_party_update(...))` — fire-and-forget, never blocks the user response — from:
   - `hit_points.py` after every HP change (set max, set current, damage, heal) and rest
   - `armor_class.py` after every AC change (base, shield, magic)
+  - `bag.py` after equip/unequip of Armor or Shield (since CA changes)
   - `conditions.py` after every condition toggle or exhaustion adjustment
   - `dice.py` after every dice roll
 - **Session cleanup**: if `edit_message_text` raises `BadRequest` (message too old/deleted), the session row is deleted. `/party_stop` also edits the party message to "🛑 Sessione party terminata." before deleting the session.

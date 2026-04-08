@@ -109,9 +109,10 @@ def format_character_summary(
     char: Character,
     spells: list[Spell] | None = None,
     abilities: list[Ability] | None = None,
+    equipped_items: list | None = None,
     lang: str = "it",
 ) -> str:
-    """Full character sheet summary with active status."""
+    """Full character sheet summary with active status and equipped items."""
     lines = [format_character_header(char, lang=lang)]
     if char.race:
         race_label = translator.t("character.common.race_label", lang=lang)
@@ -124,6 +125,11 @@ def format_character_summary(
         if active:
             lines.append("")
             lines.append(active)
+    if equipped_items:
+        equip_section = format_equipped_items(equipped_items, lang=lang)
+        if equip_section:
+            lines.append("")
+            lines.append(equip_section)
     return "\n".join(lines)
 
 
@@ -286,17 +292,170 @@ def format_spell_slots(slots: list[SpellSlot], lang: str = "it") -> str:
 def format_bag(items: list[Item], carry_cap: int, encumbrance: float, lang: str = "it") -> str:
     enc_int = int(encumbrance)
     title = translator.t("character.bag.title", lang=lang)
+    _ITEM_ICONS = {
+        "weapon": "⚔️",
+        "armor": "🛡️",
+        "shield": "🛡️",
+        "consumable": "🧪",
+        "tool": "🔧",
+        "generic": "📦",
+    }
     if not items:
         items_text = translator.t("character.bag.empty", lang=lang)
     else:
-        item_lines = [
-            f"  • {_esc(i.name)} x{i.quantity} \\({_esc(f'{i.weight * i.quantity:.1f}')} kg\\)"
-            for i in items
-        ]
+        item_lines = []
+        for i in items:
+            icon = _ITEM_ICONS.get(getattr(i, "item_type", "generic"), "📦")
+            equip = " ✅" if getattr(i, "is_equipped", False) else ""
+            item_lines.append(
+                f"  {icon} {_esc(i.name)} x{i.quantity}{equip} \\({_esc(f'{i.weight * i.quantity:.1f}')} kg\\)"
+            )
         items_text = "\n".join(item_lines)
     bar = _load_bar(enc_int, carry_cap)
     weight_text = translator.t("character.bag.weight_display", lang=lang, current=enc_int, max=carry_cap, bar=bar)
     return f"{title}\n\n{items_text}\n\n{weight_text}"
+
+
+def format_item_detail(item_data: dict, lang: str = "it") -> str:
+    """Format a typed item's detail screen text."""
+    name = item_data["name"]
+    qty = item_data["quantity"]
+    weight = item_data["weight"]
+    item_type = item_data.get("item_type", "generic")
+    meta = item_data.get("item_metadata", {})
+    is_equipped = item_data.get("is_equipped", False)
+    description = item_data.get("description")
+
+    _TYPE_ICONS = {
+        "weapon": "⚔️",
+        "armor": "🛡️",
+        "shield": "🛡️",
+        "consumable": "🧪",
+        "tool": "🔧",
+        "generic": "📦",
+    }
+    icon = _TYPE_ICONS.get(item_type, "📦")
+
+    lines = [f"{icon} *{_esc(name)}*\n"]
+    # Equipped status for equippable types
+    if item_type in ("weapon", "armor", "shield"):
+        if is_equipped:
+            lines.append(translator.t("character.bag.equipped_label", lang=lang))
+        else:
+            lines.append(translator.t("character.bag.not_equipped_label", lang=lang))
+        lines.append("")
+
+    # Common fields
+    lines.append(translator.t("character.bag.item_detail_qty", lang=lang, qty=qty))
+    lines.append(translator.t("character.bag.item_detail_weight_unit", lang=lang, weight=_esc(f"{weight:.1f}")))
+    lines.append(translator.t("character.bag.item_detail_weight_total", lang=lang, total_weight=_esc(f"{weight * qty:.1f}")))
+
+    # Type-specific fields
+    if item_type == "weapon" and meta:
+        lines.append("")
+        damage_dice = meta.get("damage_dice", "")
+        damage_type_key = meta.get("damage_type", "")
+        damage_type_label = translator.t(f"character.bag.{damage_type_key}", lang=lang) if damage_type_key else ""
+        if damage_dice or damage_type_label:
+            lines.append(translator.t(
+                "character.bag.weapon_damage_label", lang=lang,
+                dice=_esc(damage_dice) if damage_dice else "—",
+                dtype=_esc(damage_type_label),
+            ))
+        wtype_raw = meta.get("weapon_type", "")
+        if wtype_raw:
+            wtype_label_key = f"character.bag.weapon_type_{wtype_raw}"
+            wtype_label = translator.t(wtype_label_key, lang=lang)
+            lines.append(translator.t("character.bag.weapon_type_label", lang=lang, wtype=_esc(wtype_label)))
+        props: list[str] = meta.get("properties", [])
+        if props:
+            prop_labels = ", ".join(translator.t(f"character.bag.{p}", lang=lang) for p in props)
+            lines.append(translator.t("character.bag.weapon_props_label", lang=lang, props=_esc(prop_labels)))
+        else:
+            lines.append(translator.t("character.bag.weapon_no_props", lang=lang))
+
+    elif item_type == "armor" and meta:
+        lines.append("")
+        atype_raw = meta.get("armor_type", "")
+        if atype_raw:
+            atype_label = translator.t(f"character.bag.armor_type_{atype_raw}", lang=lang)
+            lines.append(translator.t("character.bag.armor_type_label", lang=lang, atype=_esc(atype_label)))
+        ac = meta.get("ac_value", 10)
+        lines.append(translator.t("character.bag.armor_ac_label", lang=lang, ac=ac))
+        stealth = meta.get("stealth_disadvantage", False)
+        stealth_val = _esc("Sì" if lang == "it" else "Yes") if stealth else _esc("No")
+        lines.append(translator.t("character.bag.armor_stealth_label", lang=lang, val=stealth_val))
+        str_req = meta.get("strength_req", 0)
+        if str_req:
+            lines.append(translator.t("character.bag.armor_str_req_label", lang=lang, val=str_req))
+        else:
+            none_label = translator.t("character.bag.armor_str_none", lang=lang)
+            lines.append(translator.t("character.bag.armor_str_req_label", lang=lang, val=_esc(none_label)))
+
+    elif item_type == "shield" and meta:
+        lines.append("")
+        bonus = meta.get("ac_bonus", 2)
+        lines.append(translator.t("character.bag.shield_bonus_label", lang=lang, bonus=bonus))
+
+    elif item_type == "consumable" and meta:
+        effect = meta.get("effect", "")
+        if effect:
+            lines.append("")
+            lines.append(translator.t("character.bag.consumable_effect_label", lang=lang, effect=_esc(effect)))
+
+    elif item_type == "tool" and meta:
+        ttype = meta.get("tool_type", "")
+        if ttype:
+            lines.append("")
+            lines.append(translator.t("character.bag.tool_type_label", lang=lang, ttype=_esc(ttype)))
+
+    # Description
+    if description:
+        lines.append("")
+        lines.append(_esc(description))
+    else:
+        lines.append("")
+        lines.append(translator.t("character.bag.no_description", lang=lang))
+
+    return "\n".join(lines)
+
+
+def format_equipped_items(items: list, lang: str = "it") -> str:
+    """Format the equipped items section for the character summary.
+
+    ``items`` is a list of dicts with keys: name, item_type, metadata.
+    """
+    if not items:
+        return ""
+
+    title = translator.t("character.bag.equipped_title", lang=lang)
+    lines = [title]
+    for item in items:
+        item_type = item.get("item_type", "generic")
+        name = item.get("name", "")
+        meta = item.get("item_metadata", {}) or {}
+
+        if item_type == "weapon":
+            damage_dice = meta.get("damage_dice", "")
+            damage_type_key = meta.get("damage_type", "")
+            damage_type_label = translator.t(f"character.bag.{damage_type_key}", lang=lang) if damage_type_key else ""
+            if damage_dice or damage_type_label:
+                dmg_suffix = translator.t(
+                    "character.bag.equipped_weapon_damage", lang=lang,
+                    dice=_esc(damage_dice), dtype=_esc(damage_type_label),
+                )
+            else:
+                dmg_suffix = ""
+            weapon_line = translator.t("character.bag.equipped_weapon", lang=lang, name=_esc(name))
+            lines.append(weapon_line + dmg_suffix)
+        elif item_type == "armor":
+            ac = meta.get("ac_value", 10)
+            lines.append(translator.t("character.bag.equipped_armor", lang=lang, name=_esc(name), ac=ac))
+        elif item_type == "shield":
+            bonus = meta.get("ac_bonus", 2)
+            lines.append(translator.t("character.bag.equipped_shield", lang=lang, name=_esc(name), bonus=bonus))
+
+    return "\n".join(lines) if len(lines) > 1 else ""
 
 
 def format_currency(cur: Currency | None, lang: str = "it") -> str:

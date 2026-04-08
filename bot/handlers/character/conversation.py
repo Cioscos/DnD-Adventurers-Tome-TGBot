@@ -29,8 +29,14 @@ from bot.handlers.character import (
     CHAR_AC_SET_BASE,
     CHAR_AC_SET_MAGIC,
     CHAR_AC_SET_SHIELD,
+    CHAR_BAG_ADD_AC_VALUE,
+    CHAR_BAG_ADD_DAMAGE_DICE,
+    CHAR_BAG_ADD_EFFECT,
+    CHAR_BAG_ADD_INLINE,
     CHAR_BAG_ADD_NAME,
     CHAR_BAG_ADD_QTY,
+    CHAR_BAG_ADD_STR_REQ,
+    CHAR_BAG_ADD_TOOL_TYPE,
     CHAR_BAG_ADD_WEIGHT,
     CHAR_BAG_EDIT,
     CHAR_BAG_MENU,
@@ -94,8 +100,9 @@ async def character_callback_handler(
     )
     from bot.handlers.character.armor_class import ask_ac_input, show_ac_menu
     from bot.handlers.character.bag import (
-        ask_add_item, modify_item_quantity, remove_all_item,
-        show_bag_menu, show_item_detail,
+        ask_add_item, handle_bag_add_inline, handle_bag_skip,
+        modify_item_quantity, remove_all_item,
+        show_bag_menu, show_item_detail, toggle_equip_item,
     )
     from bot.handlers.character.currency import (
         ask_convert_amount, show_convert_source, show_convert_target,
@@ -307,6 +314,13 @@ async def character_callback_handler(
             return await modify_item_quantity(update, context, cid, data.item_id, -1)
         if sub == "remove_all":
             return await remove_all_item(update, context, cid, data.item_id)
+        if sub == "equip":
+            return await toggle_equip_item(update, context, cid, data.item_id)
+        if sub in ("select_type", "set_damage_type", "set_weapon_type",
+                   "toggle_prop", "confirm_props", "set_armor_type", "set_stealth"):
+            return await handle_bag_add_inline(update, context)
+        if sub == "skip":
+            return await handle_bag_skip(update, context)
         return await show_bag_menu(update, context, cid, data.page)
 
     # ─── Currency ───
@@ -535,7 +549,7 @@ async def stop_command_handler(
 def build_character_conversation_handler() -> ConversationHandler:
     """Assemble and return the character management ConversationHandler."""
     from bot.handlers.character.armor_class import handle_ac_text
-    from bot.handlers.character.bag import handle_bag_text
+    from bot.handlers.character.bag import handle_bag_text, handle_bag_add_inline, handle_bag_skip
     from bot.handlers.character.currency import handle_convert_text, handle_currency_text
     from bot.handlers.character.abilities import handle_ability_learn_text
     from bot.handlers.character.multiclass import handle_multiclass_add_text, handle_subclass_text
@@ -643,7 +657,28 @@ def build_character_conversation_handler() -> ConversationHandler:
                 char_callback,
             ],
             CHAR_BAG_MENU: [char_callback],
+            CHAR_BAG_ADD_INLINE: [char_callback],
             CHAR_BAG_ADD_NAME: [
+                MessageHandler(text_filter, handle_bag_text),
+                char_callback,
+            ],
+            CHAR_BAG_ADD_DAMAGE_DICE: [
+                MessageHandler(text_filter, handle_bag_text),
+                char_callback,
+            ],
+            CHAR_BAG_ADD_EFFECT: [
+                MessageHandler(text_filter, handle_bag_text),
+                char_callback,
+            ],
+            CHAR_BAG_ADD_AC_VALUE: [
+                MessageHandler(text_filter, handle_bag_text),
+                char_callback,
+            ],
+            CHAR_BAG_ADD_STR_REQ: [
+                MessageHandler(text_filter, handle_bag_text),
+                char_callback,
+            ],
+            CHAR_BAG_ADD_TOOL_TYPE: [
                 MessageHandler(text_filter, handle_bag_text),
                 char_callback,
             ],

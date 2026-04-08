@@ -50,6 +50,10 @@ _MIGRATIONS: list[tuple[str, str, str, str | None]] = [
     ("characters", "conditions", "TEXT", None),
     # Skills feature
     ("characters", "skills", "TEXT", None),
+    # Item type system
+    ("items", "item_type", "VARCHAR(20)", "'generic'"),
+    ("items", "item_metadata", "TEXT", None),
+    ("items", "is_equipped", "BOOLEAN", "0"),
 ]
 
 
