@@ -605,6 +605,91 @@ code {
   color: var(--text-muted);
 }
 
+/* ---- Story / Timeline ---- */
+.timeline {
+  position: relative;
+  padding: 0.5rem 0 0.5rem 1.8rem;
+  margin: 1.6rem 0;
+}
+
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 18px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: linear-gradient(to bottom, var(--dnd-gold), rgba(212, 168, 67, 0.15));
+}
+
+.timeline-item {
+  position: relative;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+  padding: 1.4rem 1.5rem;
+  margin-bottom: 2rem;
+  transition: border-color 0.25s, transform 0.25s;
+}
+
+.timeline-item:last-child {
+  margin-bottom: 0;
+}
+
+.timeline-item:hover {
+  border-color: var(--dnd-gold);
+  transform: translateX(4px);
+}
+
+.timeline-badge {
+  position: absolute;
+  left: -2.45rem;
+  top: 1.2rem;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--dnd-gold), #b8912e);
+  color: var(--dnd-darker);
+  font-weight: 800;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px var(--glow-gold);
+  flex-shrink: 0;
+}
+
+.timeline-item h3 {
+  margin: 0 0 0.7rem;
+  font-size: 1.1rem;
+  color: var(--dnd-gold-light) !important;
+}
+
+.timeline-item p {
+  margin: 0 0 0.6rem;
+  font-size: 0.93rem;
+  color: var(--text-muted);
+  line-height: 1.65;
+}
+
+.timeline-item p:last-child {
+  margin-bottom: 0;
+}
+
+.timeline-tag {
+  display: inline-block;
+  background: rgba(212, 168, 67, 0.12);
+  border: 1px solid rgba(212, 168, 67, 0.35);
+  color: var(--dnd-gold-light);
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.2em 0.7em;
+  border-radius: 20px;
+  margin-bottom: 0.7rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 /* ---- Responsive tweaks ---- */
 @media (max-width: 640px) {
   .lang-toggle {
