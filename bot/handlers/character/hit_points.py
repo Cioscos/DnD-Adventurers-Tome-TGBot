@@ -102,20 +102,31 @@ async def handle_hp_text(
         if char is None:
             return CHAR_MENU
 
+        old_hp = char.current_hit_points
+        old_max = char.hit_points
+
         if operation == "set_max":
             char.hit_points = max(0, value)
+            desc = f"HP Max: {old_max} → {char.hit_points}"
         elif operation == "set_current":
             char.current_hit_points = max(0, min(value, char.hit_points))
+            desc = f"HP Attuali: {old_hp} → {char.current_hit_points}"
         elif operation == "damage":
             char.current_hit_points = max(0, char.current_hit_points - value)
+            desc = f"HP: {old_hp} → {char.current_hit_points} (danno: -{value})"
         elif operation == "heal":
             new_hp = char.current_hit_points + value
             if new_hp > char.hit_points:
-                # Over-healing: cap to max
                 char.current_hit_points = char.hit_points
             else:
                 char.current_hit_points = new_hp
+            actual = char.current_hit_points - old_hp
+            desc = f"HP: {old_hp} → {char.current_hit_points} (cura: +{actual})"
+        else:
+            desc = f"HP modificati"
 
+    import asyncio as _asyncio
+    _asyncio.create_task(_log(char_id, "hp_change", desc))
     await update.message.reply_text(translator.t("character.common.updated", lang=lang), parse_mode="MarkdownV2")
     # Fire-and-forget: update any active party messages for this character
     asyncio.create_task(_trigger_party_update(char_id, context))
@@ -178,6 +189,9 @@ async def handle_rest(
     # Restore class resources outside the session to avoid nested session issues
     await restore_class_resources_on_rest(char_id, rest_type)
 
+    rest_label = "Lungo" if rest_type == "long" else "Breve"
+    asyncio.create_task(_log(char_id, "rest", f"Riposo {rest_label} eseguito"))
+
     if update.callback_query:
         await update.callback_query.answer()
 
@@ -191,6 +205,15 @@ async def handle_rest(
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+async def _log(char_id: int, event_type: str, description: str) -> None:
+    """Fire-and-forget wrapper for history logging."""
+    try:
+        from bot.db.history import log_history_event
+        await log_history_event(char_id, event_type, description)
+    except Exception as exc:
+        logger.warning("History log failed for char %s: %s", char_id, exc)
+
 
 async def _edit_or_reply(update: Update, text: str, keyboard=None) -> None:
     kwargs = dict(text=text, parse_mode="MarkdownV2")

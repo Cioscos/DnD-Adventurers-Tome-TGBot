@@ -42,6 +42,7 @@ from bot.handlers.character import (
     CHAR_CURRENCY_MENU,
     CHAR_DELETE_CONFIRM,
     CHAR_DICE_MENU,
+    CHAR_HISTORY_MENU,
     CHAR_HP_DAMAGE,
     CHAR_HP_HEAL,
     CHAR_HP_MENU,
@@ -461,6 +462,13 @@ async def character_callback_handler(
             return await adjust_exhaustion(update, context, cid, "down")
         return await show_conditions_menu(update, context, cid)
 
+    # ─── History ───
+    if action == "char_history":
+        from bot.handlers.character.history import handle_clear_history, show_history
+        if sub == "clear":
+            return await handle_clear_history(update, context, cid)
+        return await show_history(update, context, cid)
+
     return CHAR_MENU
 
 
@@ -698,6 +706,7 @@ def build_character_conversation_handler() -> ConversationHandler:
             CHAR_SETTINGS_MENU: [char_callback],
             CHAR_DELETE_CONFIRM: [char_callback],
             CHAR_CONDITIONS_MENU: [char_callback],
+            CHAR_HISTORY_MENU: [char_callback],
         },
         fallbacks=[
             CommandHandler("start", lambda u, c: ConversationHandler.END),

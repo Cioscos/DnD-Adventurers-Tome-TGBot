@@ -84,13 +84,23 @@ async def handle_ac_text(
         char = await session.get(Character, char_id)
         if char is None:
             return CHAR_MENU
+        old_base = char.base_armor_class
+        old_shield = char.shield_armor_class
+        old_magic = char.magic_armor
         if ac_type == "set_base":
             char.base_armor_class = max(0, value)
+            desc = f"CA Base: {old_base} → {char.base_armor_class}"
         elif ac_type == "set_shield":
             char.shield_armor_class = max(0, value)
+            desc = f"CA Scudo: {old_shield} → {char.shield_armor_class}"
         elif ac_type == "set_magic":
             char.magic_armor = max(0, value)
+            desc = f"CA Magica: {old_magic} → {char.magic_armor}"
+        else:
+            desc = "CA modificata"
 
+    import asyncio as _asyncio
+    _asyncio.create_task(_log(char_id, "ac_change", desc))
     await update.message.reply_text(translator.t("character.ac.updated", lang=lang), parse_mode="MarkdownV2")
     asyncio.create_task(_trigger_party_update(char_id, context))
     return await show_ac_menu(update, context, char_id)
@@ -105,6 +115,15 @@ async def _trigger_party_update(char_id: int, context: ContextTypes.DEFAULT_TYPE
         await maybe_update_party_message(char_id, context.bot)
     except Exception as e:
         logger.warning("Party update trigger failed for char %s: %s", char_id, e)
+
+
+async def _log(char_id: int, event_type: str, description: str) -> None:
+    """Fire-and-forget wrapper for history logging."""
+    try:
+        from bot.db.history import log_history_event
+        await log_history_event(char_id, event_type, description)
+    except Exception as exc:
+        logger.warning("History log failed for char %s: %s", char_id, exc)
 
 
 async def _edit_or_reply(update: Update, text: str, keyboard=None) -> None:

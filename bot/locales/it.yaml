@@ -68,6 +68,28 @@ character:
     btn_rest: "😴 Riposo"
     btn_settings: "⚙️ Impostazioni"
     btn_conditions: "⚠️ Condizioni"
+    btn_history: "📜 Storico"
+
+  history:
+    title: "📜 *Storico Modifiche — {name}*"
+    empty: "_Nessuna modifica registrata\\._"
+    count: "{count} eventi registrati"
+    part_indicator: "\\[Parte {n}/{total}\\]"
+    btn_clear: "🗑️ Cancella Storico"
+    cleared: "Storico cancellato\\."
+    other: "📌 Modifica"
+    hp_change: "❤️ HP"
+    rest: "😴 Riposo"
+    ac_change: "🛡️ CA"
+    level_change: "⚔️ Livello"
+    multiclass_change: "🎭 Classe"
+    stats_change: "📊 Stat"
+    spell_slot_change: "🎲 Slot"
+    spell_change: "✨ Incantesimo"
+    bag_change: "📦 Zaino"
+    currency_change: "💰 Monete"
+    ability_change: "⚡ Abilità"
+    condition_change: "⚠️ Condizione"
 
   hp:
     title: "❤️ *Punti Vita*"

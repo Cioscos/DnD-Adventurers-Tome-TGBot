@@ -107,6 +107,7 @@ async def handle_currency_text(
         current = getattr(cur, currency_key, 0)
         if operation == "add":
             setattr(cur, currency_key, current + amount)
+            desc = f"{currency_key}: +{amount} (da {current} a {current + amount})"
         else:
             new_val = current - amount
             if new_val < 0:
@@ -117,7 +118,10 @@ async def handle_currency_text(
                 context.user_data[_OP_KEY] = pending
                 return CHAR_CURRENCY_EDIT
             setattr(cur, currency_key, new_val)
+            desc = f"{currency_key}: -{amount} (da {current} a {new_val})"
 
+    import asyncio as _asyncio
+    _asyncio.create_task(_log(char_id, "currency_change", desc))
     await update.message.reply_text(translator.t("character.currency.updated", lang=lang), parse_mode="MarkdownV2")
     return await show_currency_menu(update, context, char_id)
 
@@ -206,11 +210,22 @@ async def handle_convert_text(
         await update.message.reply_text(translator.t("character.currency.convert_insufficient", lang=lang), parse_mode="MarkdownV2")
         return await show_currency_menu(update, context, char_id)
 
+    import asyncio as _asyncio
+    _asyncio.create_task(_log(char_id, "currency_change", f"Convertiti {amount} {source_key} → {target_key}"))
     await update.message.reply_text(translator.t("character.currency.convert_completed", lang=lang), parse_mode="MarkdownV2")
     return await show_currency_menu(update, context, char_id)
 
 
 # ---------------------------------------------------------------------------
+
+async def _log(char_id: int, event_type: str, description: str) -> None:
+    """Fire-and-forget wrapper for history logging."""
+    try:
+        from bot.db.history import log_history_event
+        await log_history_event(char_id, event_type, description)
+    except Exception as exc:
+        logger.warning("History log failed for char %s: %s", char_id, exc)
+
 
 async def _edit_or_reply(update: Update, text: str, keyboard=None) -> None:
     kwargs = dict(text=text, parse_mode="MarkdownV2")

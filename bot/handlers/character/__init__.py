@@ -59,6 +59,8 @@ from __future__ import annotations
     CHAR_CLASS_SUBCLASS_INPUT,
     # Conditions
     CHAR_CONDITIONS_MENU,
-) = range(49)
+    # History
+    CHAR_HISTORY_MENU,
+) = range(50)
 
 STOPPING = 99

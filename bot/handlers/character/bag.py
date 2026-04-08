@@ -160,6 +160,8 @@ async def handle_bag_text(
                 char.encumbrance = sum(i.weight * i.quantity for i in all_items_res.scalars())
 
         context.user_data.pop(_OP_KEY, None)
+        import asyncio as _asyncio
+        _asyncio.create_task(_log(char_id, "bag_change", f"Aggiunto: {item_name} x{qty} ({item_weight} kg)"))
         await update.message.reply_text(
             translator.t("character.bag.item_added", lang=lang, name=_esc(item_name)), parse_mode="MarkdownV2"
         )
@@ -180,9 +182,13 @@ async def modify_item_quantity(
         item = await session.get(Item, item_id)
         if item is None or item.character_id != char_id:
             return await show_bag_menu(update, context, char_id)
+        item_name = item.name
+        old_qty = item.quantity
         item.quantity += delta
-        if item.quantity <= 0:
+        removed = item.quantity <= 0
+        if removed:
             await session.delete(item)
+        new_qty = max(0, item.quantity)
         # Recalculate encumbrance
         char = await session.get(Character, char_id)
         if char:
@@ -191,6 +197,12 @@ async def modify_item_quantity(
             )
             char.encumbrance = sum(i.weight * i.quantity for i in all_items_res.scalars())
 
+    import asyncio as _asyncio
+    if removed:
+        _asyncio.create_task(_log(char_id, "bag_change", f"Rimosso: {item_name}"))
+    else:
+        sign = "+" if delta > 0 else ""
+        _asyncio.create_task(_log(char_id, "bag_change", f"{item_name}: qty {old_qty} → {new_qty} ({sign}{delta})"))
     if update.callback_query:
         await update.callback_query.answer()
     return await show_bag_menu(update, context, char_id)
@@ -203,6 +215,8 @@ async def remove_all_item(
     item_id: int,
 ) -> int:
     async with get_session() as session:
+        item = await session.get(Item, item_id)
+        item_name = item.name if item and item.character_id == char_id else "?"
         await session.execute(
             delete(Item).where(Item.id == item_id, Item.character_id == char_id)
         )
@@ -213,12 +227,23 @@ async def remove_all_item(
             )
             char.encumbrance = sum(i.weight * i.quantity for i in all_items_res.scalars())
 
+    import asyncio as _asyncio
+    _asyncio.create_task(_log(char_id, "bag_change", f"Rimosso tutto: {item_name}"))
     if update.callback_query:
         await update.callback_query.answer("Oggetto rimosso.")
     return await show_bag_menu(update, context, char_id)
 
 
 # ---------------------------------------------------------------------------
+
+async def _log(char_id: int, event_type: str, description: str) -> None:
+    """Fire-and-forget wrapper for history logging."""
+    try:
+        from bot.db.history import log_history_event
+        await log_history_event(char_id, event_type, description)
+    except Exception as exc:
+        logger.warning("History log failed for char %s: %s", char_id, exc)
+
 
 async def _edit_or_reply(update: Update, text: str, keyboard=None) -> None:
     kwargs = dict(text=text, parse_mode="MarkdownV2")

@@ -93,6 +93,7 @@ def build_character_main_menu_keyboard(char_id: int, lang: str = "it") -> Inline
         (translator.t("character.menu.btn_maps",       lang=lang), CharAction("char_maps",      char_id=cid)),
         (translator.t("character.menu.btn_rest",       lang=lang), CharAction("char_rest",       char_id=cid)),
         (translator.t("character.menu.btn_conditions", lang=lang), CharAction("char_conditions", char_id=cid)),
+        (translator.t("character.menu.btn_history",    lang=lang), CharAction("char_history",    char_id=cid)),
         (translator.t("character.menu.btn_settings",   lang=lang), CharAction("char_settings",   char_id=cid)),
         (translator.t("character.selection.delete_btn",lang=lang), CharAction("char_delete",    char_id=cid)),
     ]

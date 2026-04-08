@@ -174,6 +174,8 @@ async def handle_ability_learn_text(
             ))
 
         context.user_data.pop(_OP_KEY, None)
+        import asyncio as _asyncio
+        _asyncio.create_task(_log(char_id, "ability_change", f"Imparata: {ability_name}"))
         await update.message.reply_text(
             translator.t("character.abilities.learned", lang=lang, name=_esc(ability_name)), parse_mode="MarkdownV2"
         )
@@ -192,6 +194,7 @@ async def use_ability(
         ability = await session.get(Ability, ability_id)
         if ability is None or ability.character_id != char_id:
             return await show_abilities_menu(update, context, char_id)
+        ability_name = ability.name
         try:
             ability.use()
         except ValueError as e:
@@ -199,6 +202,8 @@ async def use_ability(
                 await update.callback_query.answer(str(e))
             return await show_ability_detail(update, context, char_id, ability_id)
 
+    import asyncio as _asyncio
+    _asyncio.create_task(_log(char_id, "ability_change", f"Usata: {ability_name}"))
     if update.callback_query:
         await update.callback_query.answer("Abilità usata.")
     return await show_ability_detail(update, context, char_id, ability_id)
@@ -214,7 +219,15 @@ async def toggle_ability(
         ability = await session.get(Ability, ability_id)
         if ability and ability.character_id == char_id:
             ability.is_active = not ability.is_active
+            ability_name = ability.name
+            new_state = ability.is_active
+        else:
+            ability_name = None
 
+    if ability_name:
+        import asyncio as _asyncio
+        state_label = "attivata" if new_state else "disattivata"
+        _asyncio.create_task(_log(char_id, "ability_change", f"{ability_name} {state_label}"))
     if update.callback_query:
         await update.callback_query.answer()
     return await show_ability_detail(update, context, char_id, ability_id)
@@ -227,15 +240,29 @@ async def forget_ability(
     ability_id: int,
 ) -> int:
     async with get_session() as session:
+        ability = await session.get(Ability, ability_id)
+        ability_name = ability.name if ability and ability.character_id == char_id else "?"
         await session.execute(
             delete(Ability).where(Ability.id == ability_id, Ability.character_id == char_id)
         )
+
+    import asyncio as _asyncio
+    _asyncio.create_task(_log(char_id, "ability_change", f"Dimenticata: {ability_name}"))
     if update.callback_query:
         await update.callback_query.answer("Abilità dimenticata.")
     return await show_abilities_menu(update, context, char_id)
 
 
 # ---------------------------------------------------------------------------
+
+async def _log(char_id: int, event_type: str, description: str) -> None:
+    """Fire-and-forget wrapper for history logging."""
+    try:
+        from bot.db.history import log_history_event
+        await log_history_event(char_id, event_type, description)
+    except Exception as exc:
+        logger.warning("History log failed for char %s: %s", char_id, exc)
+
 
 async def _edit_or_reply(update: Update, text: str, keyboard=None) -> None:
     kwargs = dict(text=text, parse_mode="MarkdownV2")
