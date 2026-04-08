@@ -34,4 +34,5 @@ old_bot/
 #DB
 /data/
 bot/data/dnd_bot.db
+bot/data/persistence.pkl
 files/
