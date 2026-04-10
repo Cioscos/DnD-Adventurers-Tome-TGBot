@@ -703,7 +703,7 @@ character:
     header_dead: "☠️ *Morto*"
     header_stable: "😴 *Stabilizzato* \\(0 HP\\)"
     already_stable: "Il personaggio è già stabilizzato."
-    stabilized: "✅ Personaggio stabilizzato\\!"
+    stabilized: "✅ Personaggio stabilizzato!"
     success_added: "✅ Successo aggiunto."
     failure_added: "❌ Fallimento aggiunto."
     dead: "☠️ Il personaggio è morto!"
