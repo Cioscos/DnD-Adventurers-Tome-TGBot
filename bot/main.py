@@ -109,7 +109,7 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> N
         "⚠️ <b>Eccezione nel bot</b>",
         _pre_section(
             "update = ",
-            html.escape(json.dumps(update_str, indent=2, ensure_ascii=False)),
+            html.escape(json.dumps(update_str, indent=2, ensure_ascii=False, default=str)),
         ),
         _pre_section("context.chat_data = ", html.escape(str(context.chat_data))),
         _pre_section("context.user_data = ", html.escape(str(context.user_data))),
