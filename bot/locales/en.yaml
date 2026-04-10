@@ -73,6 +73,9 @@ character:
     btn_history: "📜 History"
     btn_skills: "🎯 Skills"
     btn_inspiration: "✨ Heroic Inspiration"
+    btn_identity: "🧝 Identity"
+    btn_saving_throws: "🛡️ Saving Throws"
+    btn_xp: "⭐ Experience \\(XP\\)"
 
   history:
     title: "📜 *Modification History — {name}*"
@@ -638,6 +641,72 @@ character:
     granted: "✨ Heroic Inspiration gained\\!"
     spent: "💫 Heroic Inspiration used\\!"
     active_label: "✨ *Heroic Inspiration active*"
+
+  identity:
+    title: "🧝 *Character Identity*"
+    not_set: "_Not set_"
+    btn_race: "✏️ Edit Race"
+    btn_gender: "✏️ Edit Gender"
+    prompt_race: "🧝 Enter the character's *race* \\(e\\.g\\. Elf, Dwarf, Human\\):"
+    prompt_gender: "👤 Enter the character's *gender*:"
+    invalid: "❌ Invalid value\\. Enter a non-empty text\\."
+    updated: "✅ Identity updated\\!"
+
+  saving_throws:
+    title: "🛡️ *Saving Throws*"
+    prof_bonus_label: "🔑 Proficiency Bonus: *{bonus}* \\(Level {level}\\)"
+    instruction: "Tap a saving throw to manage proficiency and roll the die\\."
+    updated: "✅ Proficiency updated\\!"
+    proficient_icon: "🎯"
+    not_proficient_icon: "⬛"
+    detail_proficient: "🎯 Proficient"
+    detail_not_proficient: "⬛ Not proficient"
+    btn_toggle_proficient: "✅ Activate Proficiency"
+    btn_toggle_not_proficient: "❌ Remove Proficiency"
+    btn_roll: "🎲 Roll dice \\(d20{bonus}\\)"
+    roll_result: "🎲 Roll\\: d20 \\({die}\\) {bonus} \\= *{total}*"
+    roll_logged: "Saving Throw {ability_name} (d20({die}) {bonus} = {total})"
+    names:
+      strength: "STR Save"
+      dexterity: "DEX Save"
+      constitution: "CON Save"
+      intelligence: "INT Save"
+      wisdom: "WIS Save"
+      charisma: "CHA Save"
+
+  xp:
+    title: "⭐ *Experience Points \\(XP\\)*"
+    current_xp: "⭐ Total XP: *{xp}*"
+    xp_level: "📊 XP Level: *{level}*"
+    next_level: "📈 *{xp} XP* remaining to level {level}"
+    max_level: "🌟 Maximum level reached\\!"
+    level_up_hint: "🎉 *You have enough XP for level {level}\\!* Go to Level/Class to update it\\."
+    btn_add: "➕ Add XP"
+    btn_level_up: "⬆️ Level up to {level}"
+    prompt_add: "⭐ Enter the amount of *XP* to add:"
+    invalid: "❌ Invalid value\\. Enter a positive integer\\."
+
+  death_saves:
+    title: "💀 *Death Saving Throws*"
+    description: "With 3 *successes* the character stabilizes\\.\nWith 3 *failures* the character dies\\."
+    successes_label: "✅ Successes"
+    failures_label: "❌ Failures"
+    status_stable: "✅ *Character stabilized\\!*\nRest or receive healing to return to combat\\."
+    status_dead: "☠️ *The character has died\\.*\n3 failures accumulated\\."
+    btn_success: "✅ Success"
+    btn_failure: "❌ Failure"
+    btn_reset: "🔄 Reset"
+    btn_open: "💀 Death Saves"
+    already_stable: "The character is already stabilized\\."
+    stabilized: "✅ Character stabilized\\!"
+    success_added: "✅ Success added\\."
+    failure_added: "❌ Failure added\\."
+    dead: "☠️ The character has died\\!"
+    reset: "🔄 Death saves reset\\."
+
+  passive:
+    perception_label: "Passive Perception"
+    investigation_label: "Passive Investigation"
 
 # ---------------------------------------------------------------------------
 # Party feature

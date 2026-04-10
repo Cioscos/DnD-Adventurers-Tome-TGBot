@@ -645,7 +645,7 @@ def format_skills(
     ability_scores: "list[AbilityScore]",
     lang: str = "it",
 ) -> str:
-    """Format the skills screen header showing proficiency bonus and instructions."""
+    """Format the skills screen header showing proficiency bonus, passive stats, and instructions."""
     title = translator.t("character.skills.title", lang=lang)
     level = char.total_level
     bonus = char.proficiency_bonus
@@ -654,8 +654,9 @@ def format_skills(
     prof_line = translator.t(
         "character.skills.prof_bonus_label", lang=lang, bonus=bonus_esc, level=level
     )
+    passive = format_passive_stats(char, ability_scores, lang=lang)
     instruction = translator.t("character.skills.instruction", lang=lang)
-    return f"{title}\n\n{prof_line}\n{instruction}"
+    return f"{title}\n\n{prof_line}\n{passive}\n\n{instruction}"
 
 
 def format_skill_detail(
@@ -782,3 +783,183 @@ def _resource_bar(current: int, total: int) -> str:
     segments = min(total, 10)
     filled = round(current * segments / total) if total > 0 else 0
     return "▓" * filled + "░" * (segments - filled)
+
+
+# ---------------------------------------------------------------------------
+# Identity (race / gender)
+# ---------------------------------------------------------------------------
+
+def format_identity(char: "Character", lang: str = "it") -> str:
+    title = translator.t("character.identity.title", lang=lang)
+    race_label = translator.t("character.common.race_label", lang=lang)
+    gender_label = translator.t("character.common.gender_label", lang=lang)
+    race_val = _esc(char.race) if char.race else translator.t("character.identity.not_set", lang=lang)
+    gender_val = _esc(char.gender) if char.gender else translator.t("character.identity.not_set", lang=lang)
+    return f"{title}\n\n{race_label}: *{race_val}*\n{gender_label}: *{gender_val}*"
+
+
+# ---------------------------------------------------------------------------
+# Saving Throws
+# ---------------------------------------------------------------------------
+
+def format_saving_throws(
+    char: "Character",
+    ability_scores: "list[AbilityScore]",
+    lang: str = "it",
+) -> str:
+    title = translator.t("character.saving_throws.title", lang=lang)
+    level = char.total_level
+    bonus_val = char.proficiency_bonus
+    bonus_esc = f"\\+{bonus_val}" if bonus_val >= 0 else f"\\-{abs(bonus_val)}"
+    prof_line = translator.t(
+        "character.saving_throws.prof_bonus_label", lang=lang, bonus=bonus_esc, level=level
+    )
+    instruction = translator.t("character.saving_throws.instruction", lang=lang)
+    return f"{title}\n\n{prof_line}\n{instruction}"
+
+
+def format_saving_throw_detail(
+    ability_slug: str,
+    char: "Character",
+    ability_scores: "list[AbilityScore]",
+    lang: str = "it",
+    last_roll: "tuple[int, int] | None" = None,
+) -> str:
+    score_map = {s.name: s.value for s in ability_scores}
+    score_val = score_map.get(ability_slug, 10)
+    mod = (score_val - 10) // 2
+    is_proficient = bool((char.saving_throws or {}).get(ability_slug, False))
+    bonus = mod + (char.proficiency_bonus if is_proficient else 0)
+
+    name = translator.t(f"character.saving_throws.names.{ability_slug}", lang=lang)
+    bonus_str = f"\\+{bonus}" if bonus >= 0 else f"\\-{abs(bonus)}"
+    prof_status = translator.t(
+        "character.saving_throws.detail_proficient" if is_proficient
+        else "character.saving_throws.detail_not_proficient",
+        lang=lang,
+    )
+
+    lines = [
+        f"🛡️ *{_esc(name)}*",
+        f"Bonus: *{bonus_str}*",
+        prof_status,
+    ]
+
+    if last_roll is not None:
+        die_result, total = last_roll
+        bonus_display = f"\\+{bonus}" if bonus >= 0 else f"\\-{abs(bonus)}"
+        roll_line = translator.t(
+            "character.saving_throws.roll_result",
+            lang=lang,
+            die=die_result,
+            bonus=bonus_display,
+            total=total,
+        )
+        lines.extend(["", roll_line])
+
+    return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# Experience Points
+# ---------------------------------------------------------------------------
+
+def format_experience(char: "Character", lang: str = "it") -> str:
+    from bot.data.xp_thresholds import XP_THRESHOLDS, xp_for_next_level, xp_to_level
+
+    current_xp = char.experience_points or 0
+    current_level = xp_to_level(current_xp)
+    actual_level = char.total_level
+    level_label, xp_needed = xp_for_next_level(current_xp)
+
+    title = translator.t("character.xp.title", lang=lang)
+    xp_line = translator.t("character.xp.current_xp", lang=lang, xp=current_xp)
+    level_line = translator.t("character.xp.xp_level", lang=lang, level=current_level)
+
+    if xp_needed is None:
+        next_line = translator.t("character.xp.max_level", lang=lang)
+        bar = "🌟" * 10
+    else:
+        next_threshold = XP_THRESHOLDS[current_level] if current_level < 20 else XP_THRESHOLDS[-1]
+        prev_threshold = XP_THRESHOLDS[current_level - 1]
+        progress_xp = current_xp - prev_threshold
+        range_xp = next_threshold - prev_threshold
+        bar = _hp_bar(progress_xp, range_xp)
+        next_line = translator.t(
+            "character.xp.next_level", lang=lang, xp=xp_needed, level=current_level + 1
+        )
+
+    lines = [f"{title}\n", xp_line, level_line, "", bar, next_line]
+
+    if current_level > actual_level:
+        hint = translator.t("character.xp.level_up_hint", lang=lang, level=current_level)
+        lines.extend(["", hint])
+
+    return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# Death Saving Throws
+# ---------------------------------------------------------------------------
+
+def format_death_saves(char: "Character", lang: str = "it") -> str:
+    saves = char.death_saves or {}
+    successes = saves.get("successes", 0)
+    failures = saves.get("failures", 0)
+    stable = bool(saves.get("stable", False))
+
+    title = translator.t("character.death_saves.title", lang=lang)
+
+    if stable:
+        status = translator.t("character.death_saves.status_stable", lang=lang)
+        return f"{title}\n\n{status}"
+
+    if failures >= 3:
+        status = translator.t("character.death_saves.status_dead", lang=lang)
+        return f"{title}\n\n{status}"
+
+    success_icons = "✅" * successes + "⬛" * (3 - successes)
+    failure_icons = "❌" * failures + "⬛" * (3 - failures)
+
+    success_label = translator.t("character.death_saves.successes_label", lang=lang)
+    failure_label = translator.t("character.death_saves.failures_label", lang=lang)
+    desc = translator.t("character.death_saves.description", lang=lang)
+
+    return (
+        f"{title}\n\n"
+        f"{success_label}: {success_icons}\n"
+        f"{failure_label}: {failure_icons}\n\n"
+        f"{desc}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Passive Stats (Perception / Investigation)
+# ---------------------------------------------------------------------------
+
+def format_passive_stats(
+    char: "Character",
+    ability_scores: "list[AbilityScore]",
+    lang: str = "it",
+) -> str:
+    """Return a formatted string with Passive Perception and Passive Investigation."""
+    score_map = {s.name: s.value for s in ability_scores}
+
+    wis_mod = (score_map.get("wisdom", 10) - 10) // 2
+    int_mod = (score_map.get("intelligence", 10) - 10) // 2
+    skills_data: dict = char.skills or {}
+    prof = char.proficiency_bonus
+
+    perception_bonus = prof if skills_data.get("perception") else 0
+    investigation_bonus = prof if skills_data.get("investigation") else 0
+
+    passive_perception = 10 + wis_mod + perception_bonus
+    passive_investigation = 10 + int_mod + investigation_bonus
+
+    label_perception = translator.t("character.passive.perception_label", lang=lang)
+    label_investigation = translator.t("character.passive.investigation_label", lang=lang)
+
+    return (
+        f"👁️ {label_perception}: *{passive_perception}*\n"
+        f"🔍 {label_investigation}: *{passive_investigation}*"
+    )

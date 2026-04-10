@@ -109,6 +109,15 @@ class Character(Base):
     # Heroic Inspiration token (D&D 5e 2024)
     heroic_inspiration: Mapped[bool] = mapped_column(Boolean, default=False)
 
+    # Saving throw proficiencies (JSON dict: ability_slug → bool; True = proficient)
+    saving_throws: Mapped[Optional[dict]] = mapped_column(JSON, default=dict)
+
+    # Experience points (D&D 5e XP progression)
+    experience_points: Mapped[int] = mapped_column(Integer, default=0)
+
+    # Death saving throws (JSON: {"successes": 0, "failures": 0, "stable": false})
+    death_saves: Mapped[Optional[dict]] = mapped_column(JSON, default=dict)
+
     # Relationships
     classes: Mapped[List["CharacterClass"]] = relationship(
         back_populates="character", cascade="all, delete-orphan"
