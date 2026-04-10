@@ -36,7 +36,12 @@ async def show_hp_menu(
         if char is None:
             return CHAR_MENU
 
-    keyboard = build_hp_keyboard(char_id, lang=lang)
+    at_zero = char.current_hit_points <= 0
+    saves = char.death_saves or {}
+    already_stable = bool(saves.get("stable", False))
+    show_death_saves = at_zero and not already_stable
+
+    keyboard = build_hp_keyboard(char_id, lang=lang, show_death_saves=show_death_saves)
     text = format_hp(char, lang=lang)
     await _edit_or_reply(update, text, keyboard)
     return CHAR_HP_MENU
@@ -125,8 +130,18 @@ async def handle_hp_text(
         else:
             desc = f"HP modificati"
 
+        # Reset death saves when healed from 0
+        healed_from_zero = (
+            (operation in ("heal", "set_current"))
+            and old_hp <= 0
+            and char.current_hit_points > 0
+        )
+
     import asyncio as _asyncio
     _asyncio.create_task(_log(char_id, "hp_change", desc))
+    if healed_from_zero:
+        from bot.handlers.character.death_saves import reset_death_saves
+        _asyncio.create_task(reset_death_saves(char_id))
     await update.message.reply_text(translator.t("character.common.updated", lang=lang), parse_mode="MarkdownV2")
     # Fire-and-forget: update any active party messages for this character
     asyncio.create_task(_trigger_party_update(char_id, context))
@@ -156,6 +171,8 @@ async def handle_rest(
             # Clear active concentration
             was_concentrating = char.concentrating_spell_id is not None
             char.concentrating_spell_id = None
+            # Reset death saving throws on long rest
+            char.death_saves = {"successes": 0, "failures": 0, "stable": False}
             # Restore all spell slots
             slots_res = await session.execute(
                 select(SpellSlot).where(SpellSlot.character_id == char_id)

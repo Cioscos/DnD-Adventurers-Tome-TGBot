@@ -56,6 +56,12 @@ _MIGRATIONS: list[tuple[str, str, str, str | None]] = [
     ("items", "is_equipped", "BOOLEAN", "0"),
     # Heroic Inspiration
     ("characters", "heroic_inspiration", "BOOLEAN", "0"),
+    # Saving throw proficiencies
+    ("characters", "saving_throws", "TEXT", None),
+    # Experience points
+    ("characters", "experience_points", "INTEGER", "0"),
+    # Death saving throws
+    ("characters", "death_saves", "TEXT", None),
 ]
 
 

@@ -96,9 +96,12 @@ def build_character_main_menu_keyboard(char_id: int, lang: str = "it") -> Inline
         (translator.t("character.menu.btn_rest",       lang=lang), CharAction("char_rest",       char_id=cid)),
         (translator.t("character.menu.btn_conditions", lang=lang), CharAction("char_conditions", char_id=cid)),
         (translator.t("character.menu.btn_history",    lang=lang), CharAction("char_history",    char_id=cid)),
-        (translator.t("character.menu.btn_inspiration",lang=lang), CharAction("char_inspiration",char_id=cid)),
-        (translator.t("character.menu.btn_settings",   lang=lang), CharAction("char_settings",   char_id=cid)),
-        (translator.t("character.selection.delete_btn",lang=lang), CharAction("char_delete",    char_id=cid)),
+        (translator.t("character.menu.btn_inspiration",    lang=lang), CharAction("char_inspiration",    char_id=cid)),
+        (translator.t("character.menu.btn_identity",        lang=lang), CharAction("char_identity",        char_id=cid)),
+        (translator.t("character.menu.btn_saving_throws",   lang=lang), CharAction("char_saving_throws",   char_id=cid)),
+        (translator.t("character.menu.btn_xp",              lang=lang), CharAction("char_xp",              char_id=cid)),
+        (translator.t("character.menu.btn_settings",        lang=lang), CharAction("char_settings",        char_id=cid)),
+        (translator.t("character.selection.delete_btn",     lang=lang), CharAction("char_delete",          char_id=cid)),
     ]
     short_btns = [(t, a) for t, a in buttons if len(t) <= _LONG_THRESHOLD]
     long_btns  = [(t, a) for t, a in buttons if len(t) >  _LONG_THRESHOLD]
@@ -119,7 +122,11 @@ def build_character_main_menu_keyboard(char_id: int, lang: str = "it") -> Inline
 # HP / Combat
 # ---------------------------------------------------------------------------
 
-def build_hp_keyboard(char_id: int, lang: str = "it") -> InlineKeyboardMarkup:
+def build_hp_keyboard(
+    char_id: int,
+    lang: str = "it",
+    show_death_saves: bool = False,
+) -> InlineKeyboardMarkup:
     cid = char_id
     back = CharAction("char_menu", char_id=cid)
     rows = [
@@ -129,8 +136,13 @@ def build_hp_keyboard(char_id: int, lang: str = "it") -> InlineKeyboardMarkup:
         ],
         [_btn(translator.t("character.hp.btn_set_max",     lang=lang), CharAction("char_hp", char_id=cid, sub="set_max"))],
         [_btn(translator.t("character.hp.btn_set_current", lang=lang), CharAction("char_hp", char_id=cid, sub="set_current"))],
-        _nav_row(back_action=back, menu_char_id=cid, lang=lang),
     ]
+    if show_death_saves:
+        rows.append([_btn(
+            translator.t("character.death_saves.btn_open", lang=lang),
+            CharAction("char_death_saves", char_id=cid),
+        )])
+    rows.append(_nav_row(back_action=back, menu_char_id=cid, lang=lang))
     return InlineKeyboardMarkup(rows)
 
 
@@ -1190,6 +1202,155 @@ def build_skill_detail_keyboard(
         [_btn(roll_label, CharAction("char_skills", char_id=cid, sub="roll", extra=slug))],
         _nav_row(back_action=CharAction("char_skills", char_id=cid), menu_char_id=cid, lang=lang),
     ]
+    return InlineKeyboardMarkup(rows)
+
+
+# ---------------------------------------------------------------------------
+# Identity (race / gender)
+# ---------------------------------------------------------------------------
+
+def build_identity_keyboard(char_id: int, lang: str = "it") -> InlineKeyboardMarkup:
+    cid = char_id
+    rows = [
+        [_btn(translator.t("character.identity.btn_race",   lang=lang), CharAction("char_identity", char_id=cid, sub="race"))],
+        [_btn(translator.t("character.identity.btn_gender", lang=lang), CharAction("char_identity", char_id=cid, sub="gender"))],
+        _nav_row(back_action=CharAction("char_menu", char_id=cid), menu_char_id=cid, lang=lang),
+    ]
+    return InlineKeyboardMarkup(rows)
+
+
+# ---------------------------------------------------------------------------
+# Saving Throws
+# ---------------------------------------------------------------------------
+
+def build_saving_throws_keyboard(
+    char_id: int,
+    char: Character,
+    ability_scores: list[AbilityScore],
+    lang: str = "it",
+) -> InlineKeyboardMarkup:
+    """One button per ability showing saving throw proficiency + bonus."""
+    cid = char_id
+    proficiency_bonus = char.proficiency_bonus
+    score_map = {s.name: s.value for s in ability_scores}
+    saves_data: dict = char.saving_throws or {}
+
+    rows: list[list[InlineKeyboardButton]] = []
+    row: list[InlineKeyboardButton] = []
+
+    for ability in ABILITY_NAMES:
+        score_val = score_map.get(ability, 10)
+        mod = (score_val - 10) // 2
+        is_proficient = bool(saves_data.get(ability, False))
+        bonus = mod + (proficiency_bonus if is_proficient else 0)
+
+        name = translator.t(f"character.saving_throws.names.{ability}", lang=lang)
+        prof_icon = translator.t(
+            "character.saving_throws.proficient_icon" if is_proficient
+            else "character.saving_throws.not_proficient_icon",
+            lang=lang,
+        )
+        bonus_str = f"+{bonus}" if bonus >= 0 else str(bonus)
+        label = f"{prof_icon} {name}: {bonus_str}"
+
+        btn = _btn(label, CharAction("char_saving_throws", char_id=cid, sub="detail", extra=ability))
+        row.append(btn)
+        if len(row) == 2:
+            rows.append(row)
+            row = []
+
+    if row:
+        rows.append(row)
+
+    rows.append(_nav_row(back_action=CharAction("char_menu", char_id=cid), menu_char_id=cid, lang=lang))
+    return InlineKeyboardMarkup(rows)
+
+
+def build_saving_throw_detail_keyboard(
+    char_id: int,
+    ability_slug: str,
+    is_proficient: bool,
+    bonus: int,
+    lang: str = "it",
+) -> InlineKeyboardMarkup:
+    cid = char_id
+    bonus_str = f"+{bonus}" if bonus >= 0 else str(bonus)
+
+    toggle_label = translator.t(
+        "character.saving_throws.btn_toggle_not_proficient" if is_proficient
+        else "character.saving_throws.btn_toggle_proficient",
+        lang=lang,
+    )
+    roll_label = translator.t("character.saving_throws.btn_roll", lang=lang, bonus=bonus_str)
+
+    rows = [
+        [_btn(toggle_label, CharAction("char_saving_throws", char_id=cid, sub="toggle", extra=ability_slug))],
+        [_btn(roll_label,   CharAction("char_saving_throws", char_id=cid, sub="roll",   extra=ability_slug))],
+        _nav_row(back_action=CharAction("char_saving_throws", char_id=cid), menu_char_id=cid, lang=lang),
+    ]
+    return InlineKeyboardMarkup(rows)
+
+
+# ---------------------------------------------------------------------------
+# Experience Points
+# ---------------------------------------------------------------------------
+
+def build_xp_keyboard(char_id: int, char: Character, lang: str = "it") -> InlineKeyboardMarkup:
+    from bot.data.xp_thresholds import xp_to_level, XP_THRESHOLDS
+    cid = char_id
+    current_xp = char.experience_points or 0
+    xp_level = xp_to_level(current_xp)
+    actual_level = char.total_level
+
+    rows: list[list[InlineKeyboardButton]] = [
+        [_btn(translator.t("character.xp.btn_add", lang=lang), CharAction("char_xp", char_id=cid, sub="add"))],
+    ]
+    # Shortcut to multiclass if XP suggests a higher level
+    if xp_level > actual_level:
+        rows.append([_btn(
+            translator.t("character.xp.btn_level_up", lang=lang, level=xp_level),
+            CharAction("char_multiclass", char_id=cid),
+        )])
+    rows.append(_nav_row(back_action=CharAction("char_menu", char_id=cid), menu_char_id=cid, lang=lang))
+    return InlineKeyboardMarkup(rows)
+
+
+# ---------------------------------------------------------------------------
+# Death Saving Throws
+# ---------------------------------------------------------------------------
+
+def build_death_saves_keyboard(
+    char_id: int,
+    successes: int,
+    failures: int,
+    stable: bool,
+    lang: str = "it",
+) -> InlineKeyboardMarkup:
+    cid = char_id
+    rows: list[list[InlineKeyboardButton]] = []
+
+    if stable:
+        rows.append([_btn(
+            translator.t("character.death_saves.btn_reset", lang=lang),
+            CharAction("char_death_saves", char_id=cid, sub="reset"),
+        )])
+    else:
+        rows.append([
+            _btn(
+                translator.t("character.death_saves.btn_success", lang=lang),
+                CharAction("char_death_saves", char_id=cid, sub="success"),
+            ),
+            _btn(
+                translator.t("character.death_saves.btn_failure", lang=lang),
+                CharAction("char_death_saves", char_id=cid, sub="failure"),
+            ),
+        ])
+        rows.append([_btn(
+            translator.t("character.death_saves.btn_reset", lang=lang),
+            CharAction("char_death_saves", char_id=cid, sub="reset"),
+        )])
+
+    rows.append(_nav_row(back_action=CharAction("char_hp", char_id=cid), menu_char_id=cid, lang=lang))
     return InlineKeyboardMarkup(rows)
 
 

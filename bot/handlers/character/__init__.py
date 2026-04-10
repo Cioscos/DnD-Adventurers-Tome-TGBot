@@ -71,6 +71,16 @@ from __future__ import annotations
     CHAR_SKILLS_MENU,
     # Heroic Inspiration
     CHAR_INSPIRATION_MENU,
-) = range(58)
+    # Identity (race / gender)
+    CHAR_RACE_INPUT,
+    CHAR_GENDER_INPUT,
+    # Saving throws
+    CHAR_SAVING_THROWS_MENU,
+    # Experience points
+    CHAR_XP_MENU,
+    CHAR_XP_ADD,
+    # Death saving throws
+    CHAR_DEATH_SAVES_MENU,
+) = range(64)
 
 STOPPING = 99

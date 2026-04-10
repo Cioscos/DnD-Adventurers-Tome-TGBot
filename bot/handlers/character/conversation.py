@@ -69,6 +69,12 @@ from bot.handlers.character import (
     CHAR_SETTINGS_MENU,
     CHAR_SKILLS_MENU,
     CHAR_INSPIRATION_MENU,
+    CHAR_RACE_INPUT,
+    CHAR_GENDER_INPUT,
+    CHAR_SAVING_THROWS_MENU,
+    CHAR_XP_MENU,
+    CHAR_XP_ADD,
+    CHAR_DEATH_SAVES_MENU,
     CHAR_SPELL_EDIT,
     CHAR_SPELL_LEARN,
     CHAR_SPELL_SEARCH,
@@ -510,6 +516,51 @@ async def character_callback_handler(
             return await toggle_heroic_inspiration(update, context, cid)
         return await show_inspiration_menu(update, context, cid)
 
+    # ─── Identity (race / gender) ───
+    if action == "char_identity":
+        from bot.handlers.character.identity import ask_gender_input, ask_race_input, show_identity_menu
+        if sub == "race":
+            return await ask_race_input(update, context, cid)
+        if sub == "gender":
+            return await ask_gender_input(update, context, cid)
+        return await show_identity_menu(update, context, cid)
+
+    # ─── Saving Throws ───
+    if action == "char_saving_throws":
+        from bot.handlers.character.saving_throws import (
+            roll_saving_throw,
+            show_saving_throw_detail,
+            show_saving_throws_menu,
+            toggle_saving_throw_proficiency,
+        )
+        if sub == "detail" and data.extra:
+            return await show_saving_throw_detail(update, context, cid, data.extra)
+        if sub == "toggle" and data.extra:
+            return await toggle_saving_throw_proficiency(update, context, cid, data.extra)
+        if sub == "roll" and data.extra:
+            return await roll_saving_throw(update, context, cid, data.extra)
+        return await show_saving_throws_menu(update, context, cid)
+
+    # ─── Experience Points ───
+    if action == "char_xp":
+        from bot.handlers.character.experience import ask_add_xp, show_xp_menu
+        if sub == "add":
+            return await ask_add_xp(update, context, cid)
+        return await show_xp_menu(update, context, cid)
+
+    # ─── Death Saving Throws ───
+    if action == "char_death_saves":
+        from bot.handlers.character.death_saves import (
+            add_failure, add_success, reset_death_saves_handler, show_death_saves_menu,
+        )
+        if sub == "success":
+            return await add_success(update, context, cid)
+        if sub == "failure":
+            return await add_failure(update, context, cid)
+        if sub == "reset":
+            return await reset_death_saves_handler(update, context, cid)
+        return await show_death_saves_menu(update, context, cid)
+
     return CHAR_MENU
 
 
@@ -581,6 +632,8 @@ def build_character_conversation_handler() -> ConversationHandler:
         handle_spell_learn_text, handle_spell_search_text,
     )
     from bot.handlers.character.stats import handle_stat_text
+    from bot.handlers.character.identity import handle_race_text, handle_gender_text
+    from bot.handlers.character.experience import handle_xp_text
 
     # Generic CharAction handler (covers all inline-button actions)
     char_callback = CallbackQueryHandler(
@@ -771,6 +824,21 @@ def build_character_conversation_handler() -> ConversationHandler:
             CHAR_HISTORY_MENU: [char_callback],
             CHAR_SKILLS_MENU: [char_callback],
             CHAR_INSPIRATION_MENU: [char_callback],
+            CHAR_RACE_INPUT: [
+                MessageHandler(text_filter, handle_race_text),
+                char_callback,
+            ],
+            CHAR_GENDER_INPUT: [
+                MessageHandler(text_filter, handle_gender_text),
+                char_callback,
+            ],
+            CHAR_SAVING_THROWS_MENU: [char_callback],
+            CHAR_XP_MENU: [char_callback],
+            CHAR_XP_ADD: [
+                MessageHandler(text_filter, handle_xp_text),
+                char_callback,
+            ],
+            CHAR_DEATH_SAVES_MENU: [char_callback],
         },
         fallbacks=[
             CommandHandler("start", lambda u, c: ConversationHandler.END),

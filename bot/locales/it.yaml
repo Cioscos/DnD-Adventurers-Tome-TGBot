@@ -74,6 +74,9 @@ character:
     btn_history: "📜 Storico"
     btn_skills: "🎯 Abilità"
     btn_inspiration: "✨ Ispirazione Eroica"
+    btn_identity: "🧝 Identità"
+    btn_saving_throws: "🛡️ Tiri Salvezza"
+    btn_xp: "⭐ Esperienza (XP)"
 
   history:
     title: "📜 *Storico Modifiche — {name}*"
@@ -639,6 +642,77 @@ character:
     spent: "💫 Ispirazione Eroica usata\\!"
     active_label: "✨ *Ispirazione Eroica attiva*"
 
+  identity:
+    title: "🧝 *Identità Personaggio*"
+    not_set: "_Non impostato_"
+    btn_race: "✏️ Modifica Razza"
+    btn_gender: "✏️ Modifica Genere"
+    prompt_race: "🧝 Inserisci la *razza* del personaggio \\(es\\. Elfo, Nano, Umano\\):"
+    prompt_gender: "👤 Inserisci il *genere* del personaggio:"
+    invalid: "❌ Valore non valido\\. Inserisci un testo non vuoto\\."
+    updated: "✅ Identità aggiornata\\!"
+
+  saving_throws:
+    title: "🛡️ *Tiri Salvezza*"
+    prof_bonus_label: "🔑 Bonus Competenza: *{bonus}* \\(Livello {level}\\)"
+    instruction: "Tocca un tiro salvezza per gestire la competenza e tirare il dado\\."
+    updated: "✅ Competenza aggiornata\\!"
+    proficient_icon: "🎯"
+    not_proficient_icon: "⬛"
+    detail_proficient: "🎯 Competente"
+    detail_not_proficient: "⬛ Non competente"
+    btn_toggle_proficient: "✅ Attiva Competenza"
+    btn_toggle_not_proficient: "❌ Rimuovi Competenza"
+    btn_roll: "🎲 Tira dado (d20{bonus})"
+    roll_result: "🎲 Tiro\\: d20 \\({die}\\) {bonus} \\= *{total}*"
+    roll_logged: "Tiro Salvezza {ability_name} (d20({die}) {bonus} = {total})"
+    names:
+      strength: "For. Salvezza"
+      dexterity: "Des. Salvezza"
+      constitution: "Cos. Salvezza"
+      intelligence: "Int. Salvezza"
+      wisdom: "Sag. Salvezza"
+      charisma: "Car. Salvezza"
+
+  xp:
+    title: "⭐ *Punti Esperienza \\(XP\\)*"
+    current_xp: "⭐ XP Totali: *{xp}*"
+    actual_level: "⚔️ Livello personaggio: *{level}*"
+    xp_level: "📊 Livello da XP: *{level}*"
+    xp_not_set: "_Gli XP non sono ancora stati impostati\\. Usa ➕ Aggiungi XP per iniziare a tracciarli\\._"
+    next_level: "📈 Mancano *{xp} XP* al livello {level}"
+    max_level: "🌟 Livello massimo raggiunto\\!"
+    level_up_hint: "🎉 *Hai abbastanza XP per il livello {level}\\!* Vai in Livello/Classe per aggiornarlo\\."
+    btn_add: "➕ Aggiungi XP"
+    btn_level_up: "⬆️ Sali al livello {level}"
+    prompt_add: "⭐ Inserisci la quantità di *XP* da aggiungere:"
+    invalid: "❌ Valore non valido\\. Inserisci un numero intero positivo\\."
+
+  death_saves:
+    title: "💀 *Tiri Salvezza della Morte*"
+    description: "Con 3 *successi* il personaggio si stabilizza\\.\nCon 3 *fallimenti* il personaggio muore\\."
+    successes_label: "✅ Successi"
+    failures_label: "❌ Fallimenti"
+    status_stable: "✅ *Personaggio stabilizzato\\!*\nRiposa o ricevi cure per tornare in combattimento\\."
+    status_dead: "☠️ *Il personaggio è morto\\.*\n3 fallimenti accumulati\\."
+    btn_success: "✅ Successo"
+    btn_failure: "❌ Fallimento"
+    btn_reset: "🔄 Reset"
+    btn_open: "💀 Tiri Morte"
+    header_dying: "💀 *A terra* \\(✅ {successes}/3 ❌ {failures}/3\\)"
+    header_dead: "☠️ *Morto*"
+    header_stable: "😴 *Stabilizzato* \\(0 HP\\)"
+    already_stable: "Il personaggio è già stabilizzato."
+    stabilized: "✅ Personaggio stabilizzato!"
+    success_added: "✅ Successo aggiunto."
+    failure_added: "❌ Fallimento aggiunto."
+    dead: "☠️ Il personaggio è morto!"
+    reset: "🔄 Tiri della morte azzerati."
+
+  passive:
+    perception_label: "Percezione Passiva"
+    investigation_label: "Investigazione Passiva"
+
 # ---------------------------------------------------------------------------
 # Party feature
 # ---------------------------------------------------------------------------
@@ -670,6 +744,7 @@ party:
   msg_char_class: "🎭 {classes}"
   msg_char_hp: "❤️ HP: {current}/{max} {bar}"
   msg_char_ac: "🛡️ CA: {ac}"
+  msg_char_death_state: "{state}"
   msg_char_conditions: "⚠️ {conditions}"
   msg_char_last_roll: "🎲 {roll}"
   time_expired: "scaduta"
