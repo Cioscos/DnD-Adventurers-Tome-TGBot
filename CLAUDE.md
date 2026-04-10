@@ -81,3 +81,9 @@ Three frozen dataclasses drive all callback state via PTB's `arbitrary_callback_
 ## GitHub Pages
 
 `docs/` contains a Jekyll site at `https://cioscos.github.io/dnd_bot_revamped`. Always use `{{ '/path' | relative_url }}` for asset/internal links — never hardcode paths.
+
+# General rules
+
+1. Always ask for clarification if the user's request is ambiguous or incomplete. Never make assumptions about what they want.
+2. Always work on a feature branch, never directly on main.
+3. Use Context7 MCP server when it makes sense.
