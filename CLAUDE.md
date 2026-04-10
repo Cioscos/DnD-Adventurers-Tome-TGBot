@@ -61,6 +61,7 @@ Three frozen dataclasses drive all callback state via PTB's `arbitrary_callback_
 - **HTTP client** — use the `DnDClient` singleton from `bot/api/client.py` (`httpx.AsyncClient`).
 - **Database sessions** — always `async with get_session() as session:` from `bot/db/engine.py`; never instantiate a session directly.
 - **MarkdownV2 escaping** — use `_esc()` from `navigation.py` for wiki output, and `_esc()` from `utils/formatting.py` for character screens. Condition description strings in YAML are **pre-escaped** — do not pass them through `_esc()` again.
+- **Plain text surfaces** — inline keyboard button labels and `callback_query.answer()` toast messages are **plain text only**; never apply MarkdownV2 escaping or special characters there. Locale strings used exclusively in these surfaces must not contain backslash escapes (e.g. write `(XP)` not `\(XP\)`).
 - **i18n** — call `lang = get_lang(update)` at the top of every handler, pass `lang=lang` everywhere. Use `translator.t("key", lang=lang)` for all strings; never hardcode Italian or English text. Default language is `"it"`.
 - **Logging** — use `logging` module; never `print()`.
 - **Type hints** — required on all function signatures.
