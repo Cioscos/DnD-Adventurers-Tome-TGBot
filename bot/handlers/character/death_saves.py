@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 
 from telegram import Update
@@ -93,8 +94,7 @@ async def add_success(
             saves["successes"] = 0
             saves["failures"] = 0
             char.death_saves = saves
-            import asyncio as _asyncio
-            _asyncio.create_task(_log(char_id, "death_saves", "Personaggio stabilizzato ✅"))
+            asyncio.create_task(_log(char_id, "death_saves", "Personaggio stabilizzato ✅"))
             if update.callback_query:
                 await update.callback_query.answer(
                     translator.t("character.death_saves.stabilized", lang=lang)
@@ -106,6 +106,7 @@ async def add_success(
                     translator.t("character.death_saves.success_added", lang=lang)
                 )
 
+    asyncio.create_task(_trigger_party_update(char_id, context))
     return await show_death_saves_menu(update, context, char_id)
 
 
@@ -134,9 +135,8 @@ async def add_failure(
         saves["failures"] = min(3, saves.get("failures", 0) + 1)
         char.death_saves = saves
 
-    import asyncio as _asyncio
     if saves["failures"] >= 3:
-        _asyncio.create_task(_log(char_id, "death_saves", "Personaggio morto ☠️"))
+        asyncio.create_task(_log(char_id, "death_saves", "Personaggio morto ☠️"))
         if update.callback_query:
             await update.callback_query.answer(
                 translator.t("character.death_saves.dead", lang=lang)
@@ -147,6 +147,7 @@ async def add_failure(
                 translator.t("character.death_saves.failure_added", lang=lang)
             )
 
+    asyncio.create_task(_trigger_party_update(char_id, context))
     return await show_death_saves_menu(update, context, char_id)
 
 
@@ -160,6 +161,7 @@ async def reset_death_saves_handler(
         await update.callback_query.answer(
             translator.t("character.death_saves.reset", lang=get_lang(update))
         )
+    asyncio.create_task(_trigger_party_update(char_id, context))
     return await show_death_saves_menu(update, context, char_id)
 
 
@@ -181,3 +183,12 @@ async def _log(char_id: int, event_type: str, description: str) -> None:
         await log_history_event(char_id, event_type, description)
     except Exception as exc:
         logger.warning("History log failed for char %s: %s", char_id, exc)
+
+
+async def _trigger_party_update(char_id: int, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Fire-and-forget wrapper that calls maybe_update_party_message."""
+    try:
+        from bot.handlers.party import maybe_update_party_message
+        await maybe_update_party_message(char_id, context.bot)
+    except Exception as e:
+        logger.warning("Party update trigger failed for char %s: %s", char_id, e)
