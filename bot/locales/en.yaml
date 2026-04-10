@@ -75,7 +75,7 @@ character:
     btn_inspiration: "✨ Heroic Inspiration"
     btn_identity: "🧝 Identity"
     btn_saving_throws: "🛡️ Saving Throws"
-    btn_xp: "⭐ Experience \\(XP\\)"
+    btn_xp: "⭐ Experience (XP)"
 
   history:
     title: "📜 *Modification History — {name}*"
@@ -663,7 +663,7 @@ character:
     detail_not_proficient: "⬛ Not proficient"
     btn_toggle_proficient: "✅ Activate Proficiency"
     btn_toggle_not_proficient: "❌ Remove Proficiency"
-    btn_roll: "🎲 Roll dice \\(d20{bonus}\\)"
+    btn_roll: "🎲 Roll dice (d20{bonus})"
     roll_result: "🎲 Roll\\: d20 \\({die}\\) {bonus} \\= *{total}*"
     roll_logged: "Saving Throw {ability_name} (d20({die}) {bonus} = {total})"
     names:
@@ -677,7 +677,9 @@ character:
   xp:
     title: "⭐ *Experience Points \\(XP\\)*"
     current_xp: "⭐ Total XP: *{xp}*"
+    actual_level: "⚔️ Character level: *{level}*"
     xp_level: "📊 XP Level: *{level}*"
+    xp_not_set: "_XP have not been set yet\\. Use ➕ Add XP to start tracking them\\._"
     next_level: "📈 *{xp} XP* remaining to level {level}"
     max_level: "🌟 Maximum level reached\\!"
     level_up_hint: "🎉 *You have enough XP for level {level}\\!* Go to Level/Class to update it\\."

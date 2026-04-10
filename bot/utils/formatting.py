@@ -868,31 +868,43 @@ def format_experience(char: "Character", lang: str = "it") -> str:
     from bot.data.xp_thresholds import XP_THRESHOLDS, xp_for_next_level, xp_to_level
 
     current_xp = char.experience_points or 0
-    current_level = xp_to_level(current_xp)
+    xp_level = xp_to_level(current_xp)
     actual_level = char.total_level
-    level_label, xp_needed = xp_for_next_level(current_xp)
 
     title = translator.t("character.xp.title", lang=lang)
     xp_line = translator.t("character.xp.current_xp", lang=lang, xp=current_xp)
-    level_line = translator.t("character.xp.xp_level", lang=lang, level=current_level)
+
+    # Show actual class level (authoritative) and XP-derived level separately
+    actual_level_line = translator.t("character.xp.actual_level", lang=lang, level=actual_level)
+
+    lines = [f"{title}\n", xp_line, actual_level_line]
+
+    # If XP is 0 and character has class levels, the XP hasn't been set yet
+    if current_xp == 0 and actual_level > 0:
+        lines.append("")
+        lines.append(translator.t("character.xp.xp_not_set", lang=lang))
+        return "\n".join(lines)
+
+    # XP progress bar relative to actual_level range, if both are tracked
+    _, xp_needed = xp_for_next_level(current_xp)
 
     if xp_needed is None:
         next_line = translator.t("character.xp.max_level", lang=lang)
         bar = "🌟" * 10
     else:
-        next_threshold = XP_THRESHOLDS[current_level] if current_level < 20 else XP_THRESHOLDS[-1]
-        prev_threshold = XP_THRESHOLDS[current_level - 1]
+        next_threshold = XP_THRESHOLDS[xp_level] if xp_level < 20 else XP_THRESHOLDS[-1]
+        prev_threshold = XP_THRESHOLDS[xp_level - 1]
         progress_xp = current_xp - prev_threshold
         range_xp = next_threshold - prev_threshold
         bar = _hp_bar(progress_xp, range_xp)
         next_line = translator.t(
-            "character.xp.next_level", lang=lang, xp=xp_needed, level=current_level + 1
+            "character.xp.next_level", lang=lang, xp=xp_needed, level=xp_level + 1
         )
 
-    lines = [f"{title}\n", xp_line, level_line, "", bar, next_line]
+    lines += ["", bar, next_line]
 
-    if current_level > actual_level:
-        hint = translator.t("character.xp.level_up_hint", lang=lang, level=current_level)
+    if xp_level > actual_level:
+        hint = translator.t("character.xp.level_up_hint", lang=lang, level=xp_level)
         lines.extend(["", hint])
 
     return "\n".join(lines)
