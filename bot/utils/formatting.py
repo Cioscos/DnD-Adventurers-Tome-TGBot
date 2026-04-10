@@ -90,6 +90,30 @@ def modifier_str(value: int) -> str:
     return f"+{mod}" if mod >= 0 else str(mod)
 
 
+def death_state_label(char: Character, lang: str = "it") -> str | None:
+    """Return a compact death-state label if the character is dying, dead, or stable at 0 HP.
+
+    Returns ``None`` when the character is alive (HP > 0).
+    """
+    if char.current_hit_points > 0:
+        return None
+    saves: dict = char.death_saves or {}
+    failures = saves.get("failures", 0)
+    successes = saves.get("successes", 0)
+    stable = bool(saves.get("stable", False))
+
+    if failures >= 3:
+        return translator.t("character.death_saves.header_dead", lang=lang)
+    if stable:
+        return translator.t("character.death_saves.header_stable", lang=lang)
+    return translator.t(
+        "character.death_saves.header_dying",
+        lang=lang,
+        successes=successes,
+        failures=failures,
+    )
+
+
 def format_character_header(char: Character, dex_score: int | None = None, lang: str = "it") -> str:
     """Short one-line summary shown at the top of most menus."""
     lvl = char.total_level
@@ -108,6 +132,9 @@ def format_character_header(char: Character, dex_score: int | None = None, lang:
         ini_str = f"\\+{ini_mod}" if ini_mod >= 0 else f"\\-{abs(ini_mod)}"
         ini_label = translator.t("character.common.initiative_label", lang=lang)
         header += f"\n{_esc(ini_label)}: {ini_str}"
+    death_label = death_state_label(char, lang=lang)
+    if death_label:
+        header += f"\n{death_label}"
     return header
 
 

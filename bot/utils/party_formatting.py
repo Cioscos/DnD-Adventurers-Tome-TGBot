@@ -134,6 +134,11 @@ def format_party_message(
         )
         lines.append(translator.t("party.msg_char_ac", lang=lang, ac=_esc(str(char.ac))))
 
+        from bot.utils.formatting import death_state_label
+        death_label = death_state_label(char, lang=lang)
+        if death_label:
+            lines.append(translator.t("party.msg_char_death_state", lang=lang, state=death_label))
+
         active_conditions = _get_active_conditions(char, lang=lang)
         if active_conditions:
             lines.append(translator.t("party.msg_char_conditions", lang=lang, conditions=active_conditions))
