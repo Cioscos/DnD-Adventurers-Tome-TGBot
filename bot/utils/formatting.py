@@ -719,6 +719,7 @@ def format_skill_detail(
 
 
 
+def format_multiclass_menu(classes: list, lang: str = "it") -> str:
     """Format the multiclass menu display with subclass and resource summary."""
     title = translator.t("character.multiclass.title", lang=lang)
     if not classes:
