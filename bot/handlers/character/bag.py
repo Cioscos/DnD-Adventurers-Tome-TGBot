@@ -533,8 +533,8 @@ async def attack_with_weapon(
                         rolls_d = [_random.randint(1, die_size) for _ in range(num_dice)]
                     dmg_rolled = max(0, sum(rolls_d) + total_mod)
                     rolls_str = ", ".join(str(r) for r in rolls_d)
-                    # dmg_detail = just the dice rolls; modifier shown separately via mod_str
-                    dmg_detail = f"\\[{_esc(rolls_str)}\\]"
+                    shown_dice = num_dice * 2 if is_crit else num_dice
+                    dmg_detail = f"{shown_dice}d{die_size}\\({_esc(rolls_str)}\\)"
             except Exception:
                 pass
 
