@@ -513,10 +513,10 @@ async def attack_with_weapon(
         is_crit = d20 == 20
         is_fumble = d20 == 1
 
-        # Roll damage
+        # Roll damage — dmg_detail is None if the dice string is absent or unparseable
         damage_dice_str = meta.get("damage_dice", "")
         dmg_rolled = 0
-        dmg_detail = "—"
+        dmg_detail = None  # None → don't show damage line
         total_mod = atk_mod  # combined modifier (atk_mod + flat weapon bonus)
         if damage_dice_str:
             try:
@@ -551,14 +551,14 @@ async def attack_with_weapon(
     lines = [f"⚔️ *{_esc(item_name)}*\n", hit_line]
     if is_crit:
         lines.append(translator.t("character.bag.attack_crit", lang=lang))
-        if damage_dice_str:
+        if dmg_detail is not None:
             lines.append(translator.t(
                 "character.bag.attack_crit_dmg", lang=lang,
                 dice=dmg_detail, mod_str=_signed(total_mod), total=dmg_rolled,
             ))
     elif is_fumble:
         lines.append(translator.t("character.bag.attack_fumble", lang=lang))
-    elif damage_dice_str:
+    elif dmg_detail is not None:
         lines.append(translator.t(
             "character.bag.attack_dmg", lang=lang,
             dice=dmg_detail, mod_str=_signed(total_mod), total=dmg_rolled,
