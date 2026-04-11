@@ -92,6 +92,7 @@ from bot.handlers.character import (
     CHAR_PERSONALITY_INPUT,
     CHAR_LANGUAGE_ADD,
     CHAR_PROFICIENCY_ADD,
+    CHAR_HIT_DIE_INPUT,
     STOPPING,
 )
 from bot.models.character_state import CharAction
