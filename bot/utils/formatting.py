@@ -191,7 +191,11 @@ def format_hp(char: Character, lang: str = "it") -> str:
         "character.hp.current_label", lang=lang,
         current=char.current_hit_points, max=char.hit_points,
     )
-    return f"{title}\n\n{current_label}\n{bar}"
+    lines = [f"{title}\n\n{current_label}\n{bar}"]
+    temp = getattr(char, "temp_hp", 0) or 0
+    if temp > 0:
+        lines.append(translator.t("character.hp.temp_label", lang=lang, temp=temp))
+    return "\n".join(lines)
 
 
 def format_ac(char: Character, lang: str = "it") -> str:
@@ -361,7 +365,10 @@ def format_bag(items: list[Item], carry_cap: int, encumbrance: float, lang: str 
         items_text = "\n".join(item_lines)
     bar = _load_bar(enc_int, carry_cap)
     weight_text = translator.t("character.bag.weight_display", lang=lang, current=enc_int, max=carry_cap, bar=bar)
-    return f"{title}\n\n{items_text}\n\n{weight_text}"
+    lines = [f"{title}\n\n{items_text}\n\n{weight_text}"]
+    if carry_cap > 0 and enc_int > carry_cap:
+        lines.append(translator.t("character.bag.encumbrance_warning", lang=lang, current=enc_int, max=carry_cap))
+    return "\n".join(lines)
 
 
 def format_item_detail(item_data: dict, lang: str = "it") -> str:
@@ -705,23 +712,27 @@ def format_skill_detail(
     """
     from bot.data.skills import SKILL_ABILITY_MAP
 
+    from bot.handlers.character.skills import _get_skill_level_from_dict, _skill_bonus
+
     ability = SKILL_ABILITY_MAP.get(slug, "strength")
     score_map = {s.name: s.value for s in ability_scores}
     score_val = score_map.get(ability, 10)
     mod = (score_val - 10) // 2
-    is_proficient = bool((char.skills or {}).get(slug, False))
-    prof_bonus = char.proficiency_bonus
-    bonus = mod + (prof_bonus if is_proficient else 0)
+    skills_dict = char.skills or {}
+    skill_level = _get_skill_level_from_dict(skills_dict, slug)
+    bonus = _skill_bonus(char, slug, mod)
 
     skill_name = translator.t(f"character.skills.names.{slug}", lang=lang)
     ability_abbr = translator.t(f"character.skills.ability_abbr.{ability}", lang=lang)
     description = translator.t(f"character.skills.desc.{slug}", lang=lang)
 
     bonus_str = f"\\+{bonus}" if bonus >= 0 else f"\\-{abs(bonus)}"
-    prof_status = translator.t(
-        "character.skills.detail_proficient" if is_proficient else "character.skills.detail_not_proficient",
-        lang=lang,
-    )
+    if skill_level == "expert":
+        prof_status = translator.t("character.skills.detail_expert", lang=lang)
+    elif skill_level == "proficient":
+        prof_status = translator.t("character.skills.detail_proficient", lang=lang)
+    else:
+        prof_status = translator.t("character.skills.detail_not_proficient", lang=lang)
 
     lines = [
         f"🎯 *{_esc(skill_name)}*",
@@ -760,6 +771,18 @@ def format_multiclass_menu(classes: list, lang: str = "it") -> str:
     for cls in classes:
         subclass_str = f" \\({_esc(cls.subclass)}\\)" if cls.subclass else ""
         lines.append(f"  • *{_esc(cls.class_name)}* {cls.level}{subclass_str}")
+        # Hit die
+        hit_die = getattr(cls, "hit_die", None)
+        if hit_die:
+            lines.append("    " + translator.t("character.multiclass.hit_die_label", lang=lang, die=hit_die))
+        # Spellcasting DC and attack bonus
+        spell_ability = getattr(cls, "spellcasting_ability", None)
+        if spell_ability:
+            from bot.data.classes import CLASS_SPELLCASTING
+            # Lookup proficiency bonus from the first available class (or use total level heuristic)
+            # We don't have char here so we skip DC calculation; just show ability
+            ability_label = translator.t(f"ability_labels.{spell_ability}", lang=lang)
+            lines.append("    " + translator.t("character.multiclass.spell_ability_label", lang=lang, ability=_esc(ability_label)))
         if hasattr(cls, 'resources') and cls.resources:
             res_parts = []
             for r in cls.resources:
@@ -818,11 +841,71 @@ def _resource_bar(current: int, total: int) -> str:
 
 def format_identity(char: "Character", lang: str = "it") -> str:
     title = translator.t("character.identity.title", lang=lang)
+    not_set = translator.t("character.identity.not_set", lang=lang)
     race_label = translator.t("character.common.race_label", lang=lang)
     gender_label = translator.t("character.common.gender_label", lang=lang)
-    race_val = _esc(char.race) if char.race else translator.t("character.identity.not_set", lang=lang)
-    gender_val = _esc(char.gender) if char.gender else translator.t("character.identity.not_set", lang=lang)
-    return f"{title}\n\n{race_label}: *{race_val}*\n{gender_label}: *{gender_val}*"
+    race_val = _esc(char.race) if char.race else not_set
+    gender_val = _esc(char.gender) if char.gender else not_set
+
+    lines = [f"{title}\n"]
+    lines.append(f"{race_label}: *{race_val}*")
+    lines.append(f"{gender_label}: *{gender_val}*")
+
+    # Speed
+    speed = getattr(char, "speed", 30) or 30
+    lines.append(translator.t("character.identity.speed_label", lang=lang, speed=speed))
+
+    # Background
+    background = getattr(char, "background", None)
+    if background:
+        lines.append(translator.t("character.identity.background_label", lang=lang, background=_esc(background)))
+
+    # Alignment
+    alignment = getattr(char, "alignment", None)
+    if alignment:
+        lines.append(translator.t("character.identity.alignment_label", lang=lang, alignment=_esc(alignment)))
+
+    # Personality traits
+    personality = getattr(char, "personality", None) or {}
+    if isinstance(personality, dict):
+        for key, label_key in [
+            ("traits", "personality_traits_label"),
+            ("ideals", "personality_ideals_label"),
+            ("bonds", "personality_bonds_label"),
+            ("flaws", "personality_flaws_label"),
+        ]:
+            val = personality.get(key)
+            if val:
+                lines.append(translator.t(f"character.identity.{label_key}", lang=lang, val=_esc(str(val))))
+
+    # Languages
+    languages = getattr(char, "languages", None) or []
+    if languages:
+        langs_str = ", ".join(_esc(l) for l in languages)
+        lines.append(translator.t("character.identity.languages_label", lang=lang, langs=langs_str))
+
+    # General proficiencies
+    profs = getattr(char, "general_proficiencies", None) or []
+    if profs:
+        profs_str = ", ".join(_esc(p) for p in profs)
+        lines.append(translator.t("character.identity.proficiencies_label", lang=lang, profs=profs_str))
+
+    # Damage modifiers
+    dmg_mods = getattr(char, "damage_modifiers", None) or {}
+    if isinstance(dmg_mods, dict):
+        resistances = dmg_mods.get("resistances", [])
+        immunities = dmg_mods.get("immunities", [])
+        vulnerabilities = dmg_mods.get("vulnerabilities", [])
+        none_label = translator.t("character.identity.none_label", lang=lang)
+        if resistances or immunities or vulnerabilities:
+            r_str = ", ".join(_esc(r) for r in resistances) if resistances else none_label
+            i_str = ", ".join(_esc(i) for i in immunities) if immunities else none_label
+            v_str = ", ".join(_esc(v) for v in vulnerabilities) if vulnerabilities else none_label
+            lines.append(translator.t("character.identity.resistances_label", lang=lang, vals=r_str))
+            lines.append(translator.t("character.identity.immunities_label", lang=lang, vals=i_str))
+            lines.append(translator.t("character.identity.vulnerabilities_label", lang=lang, vals=v_str))
+
+    return "\n".join(lines)
 
 
 # ---------------------------------------------------------------------------

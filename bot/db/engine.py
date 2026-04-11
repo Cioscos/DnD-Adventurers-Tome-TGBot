@@ -11,7 +11,7 @@ import os
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
-from sqlalchemy import inspect as sa_inspect, text
+from sqlalchemy import event, inspect as sa_inspect, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from bot.db.models import Base
@@ -23,6 +23,14 @@ _DATABASE_URL = f"sqlite+aiosqlite:///{_DB_PATH}"
 
 engine = create_async_engine(_DATABASE_URL, echo=False)
 AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False)
+
+
+@event.listens_for(engine.sync_engine, "connect")
+def _set_sqlite_pragma(dbapi_connection, _connection_record) -> None:
+    """Enable FK enforcement (and cascade deletes) for every SQLite connection."""
+    cursor = dbapi_connection.cursor()
+    cursor.execute("PRAGMA foreign_keys=ON")
+    cursor.close()
 
 # ---------------------------------------------------------------------------
 # Schema migration helpers
@@ -62,6 +70,20 @@ _MIGRATIONS: list[tuple[str, str, str, str | None]] = [
     ("characters", "experience_points", "INTEGER", "0"),
     # Death saving throws
     ("characters", "death_saves", "TEXT", None),
+    # Temporary hit points
+    ("characters", "temp_hp", "INTEGER", "0"),
+    # Movement speed
+    ("characters", "speed", "INTEGER", "30"),
+    # Expanded identity
+    ("characters", "background", "VARCHAR(200)", None),
+    ("characters", "alignment", "VARCHAR(50)", None),
+    ("characters", "personality", "TEXT", None),
+    ("characters", "languages", "TEXT", None),
+    ("characters", "general_proficiencies", "TEXT", None),
+    ("characters", "damage_modifiers", "TEXT", None),
+    # CharacterClass extensions
+    ("character_classes", "spellcasting_ability", "VARCHAR(50)", None),
+    ("character_classes", "hit_die", "INTEGER", None),
 ]
 
 

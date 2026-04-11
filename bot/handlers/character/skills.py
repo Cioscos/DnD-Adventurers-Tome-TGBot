@@ -106,11 +106,12 @@ async def show_skill_detail(
     ability = SKILL_ABILITY_MAP[skill_slug]
     score_map = {s.name: s.value for s in scores}
     mod = (score_map.get(ability, 10) - 10) // 2
-    is_proficient = bool((char.skills or {}).get(skill_slug, False))
-    bonus = mod + (char.proficiency_bonus if is_proficient else 0)
+    skill_level = _get_skill_level(char, skill_slug)
+    is_proficient = skill_level in ("proficient", "expert")
+    bonus = mod + _skill_bonus(char, skill_slug, mod)
 
     text = format_skill_detail(skill_slug, char, scores, lang=lang, last_roll=last_roll)
-    keyboard = build_skill_detail_keyboard(char_id, skill_slug, is_proficient, bonus, lang=lang)
+    keyboard = build_skill_detail_keyboard(char_id, skill_slug, skill_level, bonus, lang=lang)
 
     if update.callback_query:
         await update.callback_query.answer()
@@ -163,8 +164,7 @@ async def roll_skill(
     ability = SKILL_ABILITY_MAP[skill_slug]
     score_map = {s.name: s.value for s in scores}
     mod = (score_map.get(ability, 10) - 10) // 2
-    is_proficient = bool((char.skills or {}).get(skill_slug, False))
-    bonus = mod + (char.proficiency_bonus if is_proficient else 0)
+    bonus = _skill_bonus(char, skill_slug, mod)
 
     die_result = random.randint(1, 20)
     total = die_result + bonus
@@ -191,7 +191,7 @@ async def toggle_skill_proficiency(
     char_id: int,
     skill_slug: str,
 ) -> int:
-    """Toggle the proficiency flag for *skill_slug* and refresh the skill detail screen."""
+    """Cycle skill level: none → proficient → expert → none."""
     lang = get_lang(update)
 
     if skill_slug not in SKILL_ABILITY_MAP:
@@ -207,14 +207,21 @@ async def toggle_skill_proficiency(
             return CHAR_MENU
 
         skills: dict = dict(char.skills or {})
-        was_proficient = bool(skills.get(skill_slug, False))
-        skills[skill_slug] = not was_proficient
+        current = _get_skill_level_from_dict(skills, skill_slug)
+        if current == "none":
+            new_level = "proficient"
+        elif current == "proficient":
+            new_level = "expert"
+        else:
+            new_level = "none"
+        skills[skill_slug] = new_level
         char.skills = skills
 
     skill_name = translator.t(f"character.skills.names.{skill_slug}", lang=lang)
-    state = "✅" if not was_proficient else "❌"
+    level_icons = {"none": "⬛", "proficient": "🎯", "expert": "⭐"}
+    state = level_icons.get(new_level, "")
     import asyncio as _asyncio
-    _asyncio.create_task(_log(char_id, "skill_change", f"{skill_name} {state}"))
+    _asyncio.create_task(_log(char_id, "skill_change", f"{skill_name} → {new_level} {state}"))
 
     if update.callback_query:
         await update.callback_query.answer(
@@ -222,6 +229,43 @@ async def toggle_skill_proficiency(
         )
 
     return await show_skill_detail(update, context, char_id, skill_slug)
+
+
+# ---------------------------------------------------------------------------
+# Expertise / proficiency helpers
+# ---------------------------------------------------------------------------
+
+def _get_skill_level_from_dict(skills_dict: dict, skill_slug: str) -> str:
+    """Return 'none', 'proficient', or 'expert' from a raw skills dict."""
+    val = skills_dict.get(skill_slug, False)
+    if val == "expert":
+        return "expert"
+    if val == "proficient" or val is True:
+        return "proficient"
+    return "none"
+
+
+def _get_skill_level(char, skill_slug: str) -> str:
+    """Return 'none', 'proficient', or 'expert' for *skill_slug* on *char*."""
+    return _get_skill_level_from_dict(char.skills or {}, skill_slug)
+
+
+def _skill_bonus(char, skill_slug: str, ability_mod: int) -> int:
+    """Return the total skill bonus considering expertise."""
+    level = _get_skill_level(char, skill_slug)
+    if level == "expert":
+        return ability_mod + char.proficiency_bonus * 2
+    if level == "proficient":
+        return ability_mod + char.proficiency_bonus
+    return ability_mod
+
+
+def get_passive_perception(char, scores: list) -> int:
+    """Return the character's passive Perception score."""
+    score_map = {s.name: s.value for s in scores}
+    wis_mod = (score_map.get("wisdom", 10) - 10) // 2
+    bonus = _skill_bonus(char, "perception", wis_mod)
+    return 10 + bonus
 
 
 # ---------------------------------------------------------------------------

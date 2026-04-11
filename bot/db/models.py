@@ -118,6 +118,27 @@ class Character(Base):
     # Death saving throws (JSON: {"successes": 0, "failures": 0, "stable": false})
     death_saves: Mapped[Optional[dict]] = mapped_column(JSON, default=dict)
 
+    # Temporary hit points (separate pool, absorb damage before regular HP)
+    temp_hp: Mapped[int] = mapped_column(Integer, default=0)
+
+    # Movement speed in feet (default 30)
+    speed: Mapped[int] = mapped_column(Integer, default=30)
+
+    # Expanded identity fields
+    background: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    alignment: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    # personality: {traits, ideals, bonds, flaws} all Optional[str]
+    personality: Mapped[Optional[dict]] = mapped_column(JSON, default=dict)
+
+    # Languages known (JSON list of strings)
+    languages: Mapped[Optional[list]] = mapped_column(JSON, default=list)
+
+    # General proficiencies (armor, weapons, tools — JSON list of strings)
+    general_proficiencies: Mapped[Optional[list]] = mapped_column(JSON, default=list)
+
+    # Damage modifiers (JSON: {resistances: [], immunities: [], vulnerabilities: []})
+    damage_modifiers: Mapped[Optional[dict]] = mapped_column(JSON, default=dict)
+
     # Relationships
     classes: Mapped[List["CharacterClass"]] = relationship(
         back_populates="character", cascade="all, delete-orphan"
@@ -205,6 +226,10 @@ class CharacterClass(Base):
     class_name: Mapped[str] = mapped_column(String(100), nullable=False)
     level: Mapped[int] = mapped_column(Integer, default=1)
     subclass: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    # Spellcasting ability for this class (e.g. "intelligence", "wisdom", "charisma")
+    spellcasting_ability: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    # Hit die size for this class (e.g. 6, 8, 10, 12)
+    hit_die: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
 
     character: Mapped["Character"] = relationship(back_populates="classes")
     resources: Mapped[List["ClassResource"]] = relationship(

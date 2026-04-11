@@ -13,11 +13,12 @@ from sqlalchemy import delete, select
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from bot.data.classes import DND_CLASSES, CLASS_RESOURCES, get_resources_for_class
+from bot.data.classes import DND_CLASSES, CLASS_RESOURCES, CLASS_SPELLCASTING, CLASS_HIT_DIE, get_resources_for_class
 from bot.db.engine import get_session
 from bot.db.models import Character, CharacterClass, ClassResource
 from bot.handlers.character import (
     CHAR_CLASS_SUBCLASS_INPUT,
+    CHAR_HIT_DIE_INPUT,
     CHAR_MENU,
     CHAR_MULTICLASS_ADD,
     CHAR_MULTICLASS_ADD_LEVELS,
@@ -227,9 +228,17 @@ async def _finalize_add_class(
             )
         )
         existing = result.scalar_one_or_none()
+        # Auto-fill spellcasting_ability and hit_die for predefined classes
+        auto_spell_ability = CLASS_SPELLCASTING.get(class_name)
+        auto_hit_die = CLASS_HIT_DIE.get(class_name)
+
         if existing:
             existing.level = level
             existing.subclass = subclass
+            if auto_spell_ability is not None and not existing.spellcasting_ability:
+                existing.spellcasting_ability = auto_spell_ability
+            if auto_hit_die is not None and not existing.hit_die:
+                existing.hit_die = auto_hit_die
             cls_id = existing.id
             # Remove old resources before re-generating
             await session.execute(
@@ -242,6 +251,8 @@ async def _finalize_add_class(
                 class_name=class_name,
                 level=level,
                 subclass=subclass,
+                spellcasting_ability=auto_spell_ability,
+                hit_die=auto_hit_die,
             )
             session.add(new_cls)
             await session.flush()
@@ -382,6 +393,78 @@ async def apply_level_change(
 
     if update.callback_query:
         await update.callback_query.answer()
+    return await show_multiclass_menu(update, context, char_id)
+
+
+# ---------------------------------------------------------------------------
+# Hit Die editing
+# ---------------------------------------------------------------------------
+
+async def ask_set_hit_die(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    char_id: int,
+    class_id: int,
+) -> int:
+    """Ask the user to type the hit die size (e.g. 6, 8, 10, 12) for a class."""
+    lang = get_lang(update)
+    async with get_session() as session:
+        cls = await session.get(CharacterClass, class_id)
+        if cls is None or cls.character_id != char_id:
+            return await show_multiclass_menu(update, context, char_id)
+        class_name = cls.class_name
+        current_die = cls.hit_die
+
+    context.user_data[_OP_KEY] = {"char_id": char_id, "op": "set_hit_die", "class_id": class_id}
+    text = translator.t("character.multiclass.prompt_hit_die", lang=lang,
+                        cls=_esc(class_name),
+                        current=f"d{current_die}" if current_die else "—")
+    await _edit_or_reply(update, text, build_cancel_keyboard(char_id, "char_multiclass", lang=lang))
+    return CHAR_HIT_DIE_INPUT
+
+
+async def handle_set_hit_die_text(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> int:
+    """Save the hit die size entered by the user."""
+    import asyncio as _asyncio
+    if update.message is None:
+        return CHAR_HIT_DIE_INPUT
+
+    lang = get_lang(update)
+    pending = context.user_data.pop(_OP_KEY, None)
+    if pending is None or pending.get("op") != "set_hit_die":
+        return CHAR_MULTICLASS_MENU
+
+    char_id: int = pending["char_id"]
+    class_id: int = pending["class_id"]
+
+    valid_dice = {4, 6, 8, 10, 12, 20}
+    try:
+        raw = update.message.text.strip().lstrip("dD")
+        value = int(raw)
+        if value not in valid_dice:
+            raise ValueError
+    except ValueError:
+        await update.message.reply_text(
+            translator.t("character.multiclass.hit_die_invalid", lang=lang),
+            parse_mode="MarkdownV2",
+        )
+        context.user_data[_OP_KEY] = pending
+        return CHAR_HIT_DIE_INPUT
+
+    async with get_session() as session:
+        cls = await session.get(CharacterClass, class_id)
+        if cls is None or cls.character_id != char_id:
+            return CHAR_MULTICLASS_MENU
+        old = cls.hit_die
+        cls.hit_die = value
+
+    _asyncio.create_task(_log(char_id, "multiclass", f"Hit die {cls.class_name}: d{old} → d{value}"))
+    await update.message.reply_text(
+        translator.t("character.multiclass.hit_die_set", lang=lang, die=value),
+        parse_mode="MarkdownV2",
+    )
     return await show_multiclass_menu(update, context, char_id)
 
 
