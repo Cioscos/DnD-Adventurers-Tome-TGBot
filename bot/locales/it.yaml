@@ -378,11 +378,11 @@ character:
     equipped_shield: "🛡️ Scudo: *{name}* \\(\\+{bonus}\\)"
     # Attack roll
     btn_attack: "⚔️ Tiro Attacco"
-    attack_hit: "🎯 Attacco \\({class_name}\\): d20\\({die}\\) \\+ {bonus_str} \\= *{total}*"
+    attack_hit: "🎯 Attacco \\({class_name}\\): d20\\({die}\\) {bonus_str} \\= *{total}*"
     attack_crit: "🌟 *CRITICO\\!*"
     attack_fumble: "💀 *FUMBLE\\!* Mancato automaticamente\\."
-    attack_dmg: "💢 Danno: {dice} \\+ {mod_str} \\= *{total}*"
-    attack_crit_dmg: "💢 Danno \\(critico, dadi raddoppiati\\): {dice} \\+ {mod_str} \\= *{total}*"
+    attack_dmg: "💢 Danno: {dice} {mod_str} \\= *{total}*"
+    attack_crit_dmg: "💢 Danno \\(critico, dadi raddoppiati\\): {dice} {mod_str} \\= *{total}*"
     encumbrance_warning: "⚠️ *Sovraccarico\\!* \\({current}/{max} kg\\)"
 
   currency:

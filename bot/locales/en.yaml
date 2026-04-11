@@ -377,11 +377,11 @@ character:
     equipped_shield: "🛡️ Shield: *{name}* \\(\\+{bonus}\\)"
     # Attack roll
     btn_attack: "⚔️ Attack Roll"
-    attack_hit: "🎯 Attack \\({class_name}\\): d20\\({die}\\) \\+ {bonus_str} \\= *{total}*"
+    attack_hit: "🎯 Attack \\({class_name}\\): d20\\({die}\\) {bonus_str} \\= *{total}*"
     attack_crit: "🌟 *CRITICAL HIT\\!*"
     attack_fumble: "💀 *FUMBLE\\!* Automatic miss\\."
-    attack_dmg: "💢 Damage: {dice} \\+ {mod_str} \\= *{total}*"
-    attack_crit_dmg: "💢 Damage \\(critical, dice doubled\\): {dice} \\+ {mod_str} \\= *{total}*"
+    attack_dmg: "💢 Damage: {dice} {mod_str} \\= *{total}*"
+    attack_crit_dmg: "💢 Damage \\(critical, dice doubled\\): {dice} {mod_str} \\= *{total}*"
     encumbrance_warning: "⚠️ *Encumbered\\!* \\({current}/{max} kg\\)"
 
   currency:

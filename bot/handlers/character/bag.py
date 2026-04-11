@@ -517,6 +517,7 @@ async def attack_with_weapon(
         damage_dice_str = meta.get("damage_dice", "")
         dmg_rolled = 0
         dmg_detail = "—"
+        total_mod = atk_mod  # combined modifier (atk_mod + flat weapon bonus)
         if damage_dice_str:
             try:
                 import re as _re
@@ -525,24 +526,27 @@ async def attack_with_weapon(
                     num_dice = int(m.group(1))
                     die_size = int(m.group(2))
                     flat_bonus = int(m.group(3)) if m.group(3) else 0
+                    total_mod = atk_mod + flat_bonus
                     if is_crit:
                         rolls_d = [_random.randint(1, die_size) for _ in range(num_dice * 2)]
                     else:
                         rolls_d = [_random.randint(1, die_size) for _ in range(num_dice)]
-                    dmg_rolled = sum(rolls_d) + flat_bonus + atk_mod
-                    dmg_rolled = max(0, dmg_rolled)
+                    dmg_rolled = max(0, sum(rolls_d) + total_mod)
                     rolls_str = ", ".join(str(r) for r in rolls_d)
-                    dmg_detail = f"\\[{_esc(rolls_str)}\\] {_esc(f'+{atk_mod}' if atk_mod >= 0 else str(atk_mod))}"
+                    # dmg_detail = just the dice rolls; modifier shown separately via mod_str
+                    dmg_detail = f"\\[{_esc(rolls_str)}\\]"
             except Exception:
                 pass
 
         item_name = item.name
 
+    def _signed(n: int) -> str:
+        return f"\\+{n}" if n >= 0 else _esc(str(n))
+
     # Build result message
-    hit_str = f"\\+{to_hit_bonus}" if to_hit_bonus >= 0 else str(to_hit_bonus)
     hit_line = translator.t(
         "character.bag.attack_hit", lang=lang,
-        class_name=_esc(item_name), die=d20, bonus_str=hit_str, total=total_hit,
+        class_name=_esc(item_name), die=d20, bonus_str=_signed(to_hit_bonus), total=total_hit,
     )
     lines = [f"⚔️ *{_esc(item_name)}*\n", hit_line]
     if is_crit:
@@ -550,14 +554,14 @@ async def attack_with_weapon(
         if damage_dice_str:
             lines.append(translator.t(
                 "character.bag.attack_crit_dmg", lang=lang,
-                dice=dmg_detail, mod_str=_esc(f"+{atk_mod}" if atk_mod >= 0 else str(atk_mod)), total=dmg_rolled,
+                dice=dmg_detail, mod_str=_signed(total_mod), total=dmg_rolled,
             ))
     elif is_fumble:
         lines.append(translator.t("character.bag.attack_fumble", lang=lang))
     elif damage_dice_str:
         lines.append(translator.t(
             "character.bag.attack_dmg", lang=lang,
-            dice=dmg_detail, mod_str=_esc(f"+{atk_mod}" if atk_mod >= 0 else str(atk_mod)), total=dmg_rolled,
+            dice=dmg_detail, mod_str=_signed(total_mod), total=dmg_rolled,
         ))
 
     msg = "\n".join(lines)
