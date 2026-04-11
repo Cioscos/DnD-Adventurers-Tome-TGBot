@@ -175,6 +175,7 @@ character:
     btn_forget: "🗑️ Forget"
     prompt_learn_name: "✨ Enter the *spell name* to learn:"
     prompt_learn_level: "🔢 Enter the *spell level* \\(0 for cantrip, 1\\-9\\):"
+    prompt_learn_description: "📝 Enter the *spell description* \\(or \\- to skip\\):"
     prompt_learn_concentration: "🔮 Does the spell require *concentration*?"
     learn_level_invalid: "❌ Invalid level \\(0\\-9\\)\\."
     learn_name_invalid: "❌ Invalid name\\."
