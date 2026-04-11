@@ -561,15 +561,17 @@ async def attack_with_weapon(
         ))
 
     msg = "\n".join(lines)
-    if update.callback_query:
-        await update.callback_query.edit_message_text(msg, parse_mode="MarkdownV2")
-    else:
-        await update.message.reply_text(msg, parse_mode="MarkdownV2")
+    # Send as a new message so the item detail screen stays intact
+    await context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text=msg,
+        parse_mode="MarkdownV2",
+    )
 
     import asyncio as _asyncio
     log_txt = f"Attacco con {item_name}: d20({d20}){'+' if to_hit_bonus>=0 else ''}{to_hit_bonus}={total_hit}"
     _asyncio.create_task(_log(char_id, "dice_roll", log_txt))
-    return await show_item_detail(update, context, char_id, item_id)
+    return CHAR_BAG_MENU
 
 
 async def remove_all_item(
