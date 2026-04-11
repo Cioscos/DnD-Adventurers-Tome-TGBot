@@ -81,6 +81,17 @@ from __future__ import annotations
     CHAR_XP_ADD,
     # Death saving throws
     CHAR_DEATH_SAVES_MENU,
-) = range(64)
+    # Temporary hit points
+    CHAR_HP_TEMP_HP,
+    # Short rest hit dice
+    CHAR_HP_HIT_DICE,
+    # Movement speed
+    CHAR_SPEED_INPUT,
+    # Extended identity: background / personality / languages / proficiencies
+    CHAR_BACKGROUND_INPUT,
+    CHAR_PERSONALITY_INPUT,
+    CHAR_LANGUAGE_ADD,
+    CHAR_PROFICIENCY_ADD,
+) = range(71)
 
 STOPPING = 99

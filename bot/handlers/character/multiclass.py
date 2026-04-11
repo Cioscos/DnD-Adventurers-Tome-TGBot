@@ -13,7 +13,7 @@ from sqlalchemy import delete, select
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from bot.data.classes import DND_CLASSES, CLASS_RESOURCES, get_resources_for_class
+from bot.data.classes import DND_CLASSES, CLASS_RESOURCES, CLASS_SPELLCASTING, CLASS_HIT_DIE, get_resources_for_class
 from bot.db.engine import get_session
 from bot.db.models import Character, CharacterClass, ClassResource
 from bot.handlers.character import (
@@ -227,9 +227,17 @@ async def _finalize_add_class(
             )
         )
         existing = result.scalar_one_or_none()
+        # Auto-fill spellcasting_ability and hit_die for predefined classes
+        auto_spell_ability = CLASS_SPELLCASTING.get(class_name)
+        auto_hit_die = CLASS_HIT_DIE.get(class_name)
+
         if existing:
             existing.level = level
             existing.subclass = subclass
+            if auto_spell_ability is not None and not existing.spellcasting_ability:
+                existing.spellcasting_ability = auto_spell_ability
+            if auto_hit_die is not None and not existing.hit_die:
+                existing.hit_die = auto_hit_die
             cls_id = existing.id
             # Remove old resources before re-generating
             await session.execute(
@@ -242,6 +250,8 @@ async def _finalize_add_class(
                 class_name=class_name,
                 level=level,
                 subclass=subclass,
+                spellcasting_ability=auto_spell_ability,
+                hit_die=auto_hit_die,
             )
             session.add(new_cls)
             await session.flush()

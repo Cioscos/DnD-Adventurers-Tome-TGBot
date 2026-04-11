@@ -62,6 +62,20 @@ _MIGRATIONS: list[tuple[str, str, str, str | None]] = [
     ("characters", "experience_points", "INTEGER", "0"),
     # Death saving throws
     ("characters", "death_saves", "TEXT", None),
+    # Temporary hit points
+    ("characters", "temp_hp", "INTEGER", "0"),
+    # Movement speed
+    ("characters", "speed", "INTEGER", "30"),
+    # Expanded identity
+    ("characters", "background", "VARCHAR(200)", None),
+    ("characters", "alignment", "VARCHAR(50)", None),
+    ("characters", "personality", "TEXT", None),
+    ("characters", "languages", "TEXT", None),
+    ("characters", "general_proficiencies", "TEXT", None),
+    ("characters", "damage_modifiers", "TEXT", None),
+    # CharacterClass extensions
+    ("character_classes", "spellcasting_ability", "VARCHAR(50)", None),
+    ("character_classes", "hit_die", "INTEGER", None),
 ]
 
 

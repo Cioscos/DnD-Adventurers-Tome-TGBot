@@ -36,6 +36,38 @@ DND_CLASSES: list[str] = [
     "Warlock",
 ]
 
+# Spellcasting ability per class (None = non-caster / depends on subclass)
+CLASS_SPELLCASTING: dict[str, str | None] = {
+    "Barbaro":   None,
+    "Bardo":     "charisma",
+    "Chierico":  "wisdom",
+    "Druido":    "wisdom",
+    "Guerriero": None,        # Eldritch Knight uses INT, but depends on subclass
+    "Ladro":     None,        # Arcane Trickster uses INT, but depends on subclass
+    "Mago":      "intelligence",
+    "Monaco":    None,
+    "Paladino":  "charisma",
+    "Ranger":    "wisdom",
+    "Stregone":  "charisma",
+    "Warlock":   "charisma",
+}
+
+# Hit die per class
+CLASS_HIT_DIE: dict[str, int] = {
+    "Barbaro":   12,
+    "Bardo":     8,
+    "Chierico":  8,
+    "Druido":    8,
+    "Guerriero": 10,
+    "Ladro":     8,
+    "Mago":      6,
+    "Monaco":    8,
+    "Paladino":  10,
+    "Ranger":    10,
+    "Stregone":  6,
+    "Warlock":   8,
+}
+
 
 # ---------------------------------------------------------------------------
 # ResourceConfig dataclass

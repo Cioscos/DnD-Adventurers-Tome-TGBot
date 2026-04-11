@@ -85,6 +85,13 @@ from bot.handlers.character import (
     CHAR_STATS_MENU,
     CHAR_STATS_SET,
     CHAR_VOICE_NOTE_TITLE,
+    CHAR_HP_TEMP_HP,
+    CHAR_HP_HIT_DICE,
+    CHAR_SPEED_INPUT,
+    CHAR_BACKGROUND_INPUT,
+    CHAR_PERSONALITY_INPUT,
+    CHAR_LANGUAGE_ADD,
+    CHAR_PROFICIENCY_ADD,
     STOPPING,
 )
 from bot.models.character_state import CharAction
@@ -187,7 +194,7 @@ async def character_callback_handler(
 
     # ─── HP / Combat ───
     if action == "char_hp":
-        if sub in ("damage", "heal", "set_max", "set_current"):
+        if sub in ("damage", "heal", "set_max", "set_current", "set_temp"):
             return await ask_hp_input(update, context, cid, sub)
         return await show_hp_menu(update, context, cid)
     if action == "char_rest":
@@ -210,6 +217,9 @@ async def character_callback_handler(
                 parse_mode="MarkdownV2",
             )
             return CHAR_HP_MENU
+        if sub == "hit_dice":
+            from bot.handlers.character.hit_points import ask_hit_dice_count
+            return await ask_hit_dice_count(update, context, cid)
         if sub in ("long_confirm", "short_confirm"):
             rest_type = sub.split("_")[0]
             return await handle_rest(update, context, cid, rest_type)
@@ -323,6 +333,9 @@ async def character_callback_handler(
             return await remove_all_item(update, context, cid, data.item_id)
         if sub == "equip":
             return await toggle_equip_item(update, context, cid, data.item_id)
+        if sub == "attack":
+            from bot.handlers.character.bag import attack_with_weapon
+            return await attack_with_weapon(update, context, cid, data.item_id)
         if sub in ("select_type", "set_damage_type", "set_weapon_type",
                    "toggle_prop", "confirm_props", "set_armor_type", "set_stealth"):
             return await handle_bag_add_inline(update, context)
@@ -516,13 +529,54 @@ async def character_callback_handler(
             return await toggle_heroic_inspiration(update, context, cid)
         return await show_inspiration_menu(update, context, cid)
 
-    # ─── Identity (race / gender) ───
+    # ─── Identity ───
     if action == "char_identity":
-        from bot.handlers.character.identity import ask_gender_input, ask_race_input, show_identity_menu
+        from bot.handlers.character.identity import (
+            ask_add_language, ask_add_modifier, ask_add_proficiency,
+            ask_alignment_input, ask_background_input, ask_gender_input,
+            ask_personality_field, ask_race_input, ask_speed_input,
+            remove_language, remove_modifier, remove_proficiency,
+            show_damage_modifiers_menu, show_identity_menu,
+            show_languages_menu, show_modifier_type_menu,
+            show_personality_menu, show_proficiencies_menu,
+        )
         if sub == "race":
             return await ask_race_input(update, context, cid)
         if sub == "gender":
             return await ask_gender_input(update, context, cid)
+        if sub == "speed":
+            return await ask_speed_input(update, context, cid)
+        if sub == "background":
+            return await ask_background_input(update, context, cid)
+        if sub == "alignment":
+            return await ask_alignment_input(update, context, cid)
+        if sub == "personality":
+            return await show_personality_menu(update, context, cid)
+        if sub in ("personality_traits", "personality_ideals", "personality_bonds", "personality_flaws"):
+            field = sub.split("_", 1)[1]  # traits, ideals, bonds, flaws
+            return await ask_personality_field(update, context, cid, field)
+        if sub == "languages":
+            return await show_languages_menu(update, context, cid)
+        if sub == "languages_add":
+            return await ask_add_language(update, context, cid)
+        if sub == "languages_remove" and data.extra:
+            return await remove_language(update, context, cid, data.extra)
+        if sub == "proficiencies":
+            return await show_proficiencies_menu(update, context, cid)
+        if sub == "proficiencies_add":
+            return await ask_add_proficiency(update, context, cid)
+        if sub == "proficiencies_remove" and data.extra:
+            return await remove_proficiency(update, context, cid, data.extra)
+        if sub == "damage_modifiers":
+            return await show_damage_modifiers_menu(update, context, cid)
+        if sub in ("resistances", "immunities", "vulnerabilities"):
+            return await show_modifier_type_menu(update, context, cid, sub)
+        if sub in ("resistances_add", "immunities_add", "vulnerabilities_add"):
+            modifier_type = sub.rsplit("_", 1)[0]
+            return await ask_add_modifier(update, context, cid, modifier_type)
+        if sub in ("resistances_remove", "immunities_remove", "vulnerabilities_remove") and data.extra:
+            modifier_type = sub.rsplit("_", 1)[0]
+            return await remove_modifier(update, context, cid, modifier_type, data.extra)
         return await show_identity_menu(update, context, cid)
 
     # ─── Saving Throws ───
@@ -551,12 +605,15 @@ async def character_callback_handler(
     # ─── Death Saving Throws ───
     if action == "char_death_saves":
         from bot.handlers.character.death_saves import (
-            add_failure, add_success, reset_death_saves_handler, show_death_saves_menu,
+            add_failure, add_success, reset_death_saves_handler,
+            roll_death_save, show_death_saves_menu,
         )
         if sub == "success":
             return await add_success(update, context, cid)
         if sub == "failure":
             return await add_failure(update, context, cid)
+        if sub == "roll":
+            return await roll_death_save(update, context, cid)
         if sub == "reset":
             return await reset_death_saves_handler(update, context, cid)
         return await show_death_saves_menu(update, context, cid)
@@ -566,6 +623,18 @@ async def character_callback_handler(
 
 def _is_char_action(data) -> bool:
     return isinstance(data, CharAction)
+
+
+async def _handle_proficiency_or_modifier(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> int:
+    """Dispatch CHAR_PROFICIENCY_ADD text input to the correct handler."""
+    from bot.handlers.character.identity import handle_modifier_text, handle_proficiency_text
+    pending = context.user_data.get("char_identity_pending", {})
+    field = pending.get("field", "proficiency")
+    if field in ("resistances", "immunities", "vulnerabilities"):
+        return await handle_modifier_text(update, context)
+    return await handle_proficiency_text(update, context)
 
 
 # ---------------------------------------------------------------------------
@@ -632,8 +701,13 @@ def build_character_conversation_handler() -> ConversationHandler:
         handle_spell_learn_text, handle_spell_search_text,
     )
     from bot.handlers.character.stats import handle_stat_text
-    from bot.handlers.character.identity import handle_race_text, handle_gender_text
+    from bot.handlers.character.identity import (
+        handle_race_text, handle_gender_text, handle_speed_text,
+        handle_background_text, handle_personality_text,
+        handle_language_text, handle_proficiency_text, handle_modifier_text,
+    )
     from bot.handlers.character.experience import handle_xp_text
+    from bot.handlers.character.hit_points import handle_hit_dice_text
 
     # Generic CharAction handler (covers all inline-button actions)
     char_callback = CallbackQueryHandler(
@@ -839,6 +913,35 @@ def build_character_conversation_handler() -> ConversationHandler:
                 char_callback,
             ],
             CHAR_DEATH_SAVES_MENU: [char_callback],
+            # New states
+            CHAR_HP_TEMP_HP: [
+                MessageHandler(text_filter, handle_hp_text),
+                char_callback,
+            ],
+            CHAR_HP_HIT_DICE: [
+                MessageHandler(text_filter, handle_hit_dice_text),
+                char_callback,
+            ],
+            CHAR_SPEED_INPUT: [
+                MessageHandler(text_filter, handle_speed_text),
+                char_callback,
+            ],
+            CHAR_BACKGROUND_INPUT: [
+                MessageHandler(text_filter, handle_background_text),
+                char_callback,
+            ],
+            CHAR_PERSONALITY_INPUT: [
+                MessageHandler(text_filter, handle_personality_text),
+                char_callback,
+            ],
+            CHAR_LANGUAGE_ADD: [
+                MessageHandler(text_filter, handle_language_text),
+                char_callback,
+            ],
+            CHAR_PROFICIENCY_ADD: [
+                MessageHandler(text_filter, _handle_proficiency_or_modifier),
+                char_callback,
+            ],
         },
         fallbacks=[
             CommandHandler("start", lambda u, c: ConversationHandler.END),

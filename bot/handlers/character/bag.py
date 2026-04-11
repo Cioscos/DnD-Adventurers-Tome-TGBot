@@ -459,6 +459,119 @@ async def modify_item_quantity(
     return await show_bag_menu(update, context, char_id)
 
 
+async def attack_with_weapon(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    char_id: int,
+    item_id: int,
+) -> int:
+    """Roll to-hit and damage for a weapon item."""
+    import random as _random
+    from sqlalchemy import select as _select
+    from bot.db.models import AbilityScore, CharacterClass
+
+    lang = get_lang(update)
+    if update.callback_query:
+        await update.callback_query.answer()
+
+    async with get_session() as session:
+        item = await session.get(Item, item_id)
+        if item is None or item.character_id != char_id:
+            return await show_bag_menu(update, context, char_id)
+        if item.item_type != "weapon":
+            return await show_item_detail(update, context, char_id, item_id)
+
+        meta = json.loads(item.item_metadata) if item.item_metadata else {}
+        char = await session.get(Character, char_id)
+        if char is None:
+            return CHAR_MENU
+        await session.refresh(char, ["classes"])
+
+        scores_res = await session.execute(
+            _select(AbilityScore).where(AbilityScore.character_id == char_id)
+        )
+        scores = {s.name: s.value for s in scores_res.scalars()}
+        str_mod = (scores.get("strength", 10) - 10) // 2
+        dex_mod = (scores.get("dexterity", 10) - 10) // 2
+
+        props: list[str] = meta.get("properties", [])
+        weapon_type = meta.get("weapon_type", "melee")
+        # Finesse: use best of STR/DEX; ranged: use DEX
+        if "finesse" in props:
+            atk_mod = max(str_mod, dex_mod)
+        elif weapon_type == "ranged":
+            atk_mod = dex_mod
+        else:
+            atk_mod = str_mod
+
+        prof_bonus = char.proficiency_bonus
+        to_hit_bonus = atk_mod + prof_bonus
+
+        # Roll to-hit
+        d20 = _random.randint(1, 20)
+        total_hit = d20 + to_hit_bonus
+        is_crit = d20 == 20
+        is_fumble = d20 == 1
+
+        # Roll damage
+        damage_dice_str = meta.get("damage_dice", "")
+        dmg_rolled = 0
+        dmg_detail = "—"
+        if damage_dice_str:
+            try:
+                import re as _re
+                m = _re.match(r"(\d+)d(\d+)([+-]\d+)?", damage_dice_str, _re.IGNORECASE)
+                if m:
+                    num_dice = int(m.group(1))
+                    die_size = int(m.group(2))
+                    flat_bonus = int(m.group(3)) if m.group(3) else 0
+                    if is_crit:
+                        rolls_d = [_random.randint(1, die_size) for _ in range(num_dice * 2)]
+                    else:
+                        rolls_d = [_random.randint(1, die_size) for _ in range(num_dice)]
+                    dmg_rolled = sum(rolls_d) + flat_bonus + atk_mod
+                    dmg_rolled = max(0, dmg_rolled)
+                    rolls_str = ", ".join(str(r) for r in rolls_d)
+                    dmg_detail = f"\\[{_esc(rolls_str)}\\] {_esc(f'+{atk_mod}' if atk_mod >= 0 else str(atk_mod))}"
+            except Exception:
+                pass
+
+        item_name = item.name
+
+    # Build result message
+    hit_str = f"\\+{to_hit_bonus}" if to_hit_bonus >= 0 else str(to_hit_bonus)
+    hit_line = translator.t(
+        "character.bag.attack_hit", lang=lang,
+        class_name=_esc(item_name), die=d20, bonus_str=hit_str, total=total_hit,
+    )
+    lines = [f"⚔️ *{_esc(item_name)}*\n", hit_line]
+    if is_crit:
+        lines.append(translator.t("character.bag.attack_crit", lang=lang))
+        if damage_dice_str:
+            lines.append(translator.t(
+                "character.bag.attack_crit_dmg", lang=lang,
+                dice=dmg_detail, mod_str=_esc(f"+{atk_mod}" if atk_mod >= 0 else str(atk_mod)), total=dmg_rolled,
+            ))
+    elif is_fumble:
+        lines.append(translator.t("character.bag.attack_fumble", lang=lang))
+    elif damage_dice_str:
+        lines.append(translator.t(
+            "character.bag.attack_dmg", lang=lang,
+            dice=dmg_detail, mod_str=_esc(f"+{atk_mod}" if atk_mod >= 0 else str(atk_mod)), total=dmg_rolled,
+        ))
+
+    msg = "\n".join(lines)
+    if update.callback_query:
+        await update.callback_query.edit_message_text(msg, parse_mode="MarkdownV2")
+    else:
+        await update.message.reply_text(msg, parse_mode="MarkdownV2")
+
+    import asyncio as _asyncio
+    log_txt = f"Attacco con {item_name}: d20({d20}){'+' if to_hit_bonus>=0 else ''}{to_hit_bonus}={total_hit}"
+    _asyncio.create_task(_log(char_id, "dice_roll", log_txt))
+    return await show_item_detail(update, context, char_id, item_id)
+
+
 async def remove_all_item(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,

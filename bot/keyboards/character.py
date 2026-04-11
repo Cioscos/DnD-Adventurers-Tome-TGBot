@@ -137,6 +137,7 @@ def build_hp_keyboard(
         [_btn(translator.t("character.hp.btn_set_max",     lang=lang), CharAction("char_hp", char_id=cid, sub="set_max"))],
         [_btn(translator.t("character.hp.btn_set_current", lang=lang), CharAction("char_hp", char_id=cid, sub="set_current"))],
     ]
+    rows.append([_btn(translator.t("character.hp.btn_set_temp", lang=lang), CharAction("char_hp", char_id=cid, sub="set_temp"))])
     if show_death_saves:
         rows.append([_btn(
             translator.t("character.death_saves.btn_open", lang=lang),
@@ -165,6 +166,8 @@ def build_rest_confirm_keyboard(char_id: int, rest_type: str, lang: str = "it") 
             _btn(translator.t("nav.cancel",  lang=lang), CharAction("char_rest", char_id=cid)),
         ]
     ]
+    if rest_type == "short":
+        rows.insert(0, [_btn(translator.t("character.rest.btn_hit_dice", lang=lang), CharAction("char_rest", char_id=cid, sub="hit_dice"))])
     return InlineKeyboardMarkup(rows)
 
 
@@ -669,6 +672,8 @@ def build_item_detail_keyboard(
         else:
             equip_label = translator.t("character.bag.btn_equip", lang=lang)
         rows.insert(0, [_btn(equip_label, CharAction("char_bag", char_id=cid, sub="equip", item_id=item_id))])
+    if item_type == "weapon":
+        rows.insert(1, [_btn(translator.t("character.bag.btn_attack", lang=lang), CharAction("char_bag", char_id=cid, sub="attack", item_id=item_id))])
     rows.append(_nav_row(back_action=back, menu_char_id=cid, lang=lang))
     return InlineKeyboardMarkup(rows)
 
@@ -1151,19 +1156,23 @@ def build_skills_keyboard(
     rows: list[list[InlineKeyboardButton]] = []
     row: list[InlineKeyboardButton] = []
 
+    from bot.handlers.character.skills import _get_skill_level_from_dict, _skill_bonus
+
     for slug, ability in SKILLS:
         score_val = score_map.get(ability, 10)
         mod = (score_val - 10) // 2
         skills_data: dict = char.skills or {}
-        is_proficient = bool(skills_data.get(slug, False))
-        bonus = mod + (proficiency_bonus if is_proficient else 0)
+        skill_level = _get_skill_level_from_dict(skills_data, slug)
+        bonus = _skill_bonus(char, slug, mod)
 
         skill_name = translator.t(f"character.skills.names.{slug}", lang=lang)
         ability_abbr = translator.t(f"character.skills.ability_abbr.{ability}", lang=lang)
-        prof_icon = translator.t(
-            "character.skills.proficient_icon" if is_proficient else "character.skills.not_proficient_icon",
-            lang=lang,
-        )
+        if skill_level == "expert":
+            prof_icon = translator.t("character.skills.expert_icon", lang=lang)
+        elif skill_level == "proficient":
+            prof_icon = translator.t("character.skills.proficient_icon", lang=lang)
+        else:
+            prof_icon = translator.t("character.skills.not_proficient_icon", lang=lang)
         bonus_str = f"+{bonus}" if bonus >= 0 else str(bonus)
         label = f"{prof_icon} {skill_name} ({ability_abbr}): {bonus_str}"
 
@@ -1183,19 +1192,24 @@ def build_skills_keyboard(
 def build_skill_detail_keyboard(
     char_id: int,
     slug: str,
-    is_proficient: bool,
+    skill_level: str,
     bonus: int,
     lang: str = "it",
 ) -> InlineKeyboardMarkup:
-    """Keyboard for the skill detail screen: toggle proficiency, roll dice, and back."""
+    """Keyboard for the skill detail screen: toggle proficiency/expertise, roll dice, and back.
+
+    skill_level: "none" | "proficient" | "expert"
+    """
     cid = char_id
     bonus_str = f"+{bonus}" if bonus >= 0 else str(bonus)
-
-    toggle_label = translator.t(
-        "character.skills.btn_toggle_not_proficient" if is_proficient else "character.skills.btn_toggle_proficient",
-        lang=lang,
-    )
     roll_label = translator.t("character.skills.btn_roll", lang=lang, bonus=bonus_str)
+
+    if skill_level == "none":
+        toggle_label = translator.t("character.skills.btn_toggle_proficient", lang=lang)
+    elif skill_level == "proficient":
+        toggle_label = translator.t("character.skills.btn_toggle_expert", lang=lang)
+    else:  # expert
+        toggle_label = translator.t("character.skills.btn_toggle_not_proficient", lang=lang)
 
     rows = [
         [_btn(toggle_label, CharAction("char_skills", char_id=cid, sub="toggle", extra=slug))],
@@ -1211,10 +1225,64 @@ def build_skill_detail_keyboard(
 
 def build_identity_keyboard(char_id: int, lang: str = "it") -> InlineKeyboardMarkup:
     cid = char_id
+    t = translator.t
     rows = [
-        [_btn(translator.t("character.identity.btn_race",   lang=lang), CharAction("char_identity", char_id=cid, sub="race"))],
-        [_btn(translator.t("character.identity.btn_gender", lang=lang), CharAction("char_identity", char_id=cid, sub="gender"))],
+        [_btn(t("character.identity.btn_race",   lang=lang), CharAction("char_identity", char_id=cid, sub="race"))],
+        [_btn(t("character.identity.btn_gender", lang=lang), CharAction("char_identity", char_id=cid, sub="gender"))],
+        [_btn(t("character.identity.btn_speed",  lang=lang), CharAction("char_identity", char_id=cid, sub="speed"))],
+        [_btn(t("character.identity.btn_background",  lang=lang), CharAction("char_identity", char_id=cid, sub="background"))],
+        [_btn(t("character.identity.btn_alignment",   lang=lang), CharAction("char_identity", char_id=cid, sub="alignment"))],
+        [_btn(t("character.identity.btn_personality", lang=lang), CharAction("char_identity", char_id=cid, sub="personality"))],
+        [_btn(t("character.identity.btn_languages",   lang=lang), CharAction("char_identity", char_id=cid, sub="languages"))],
+        [_btn(t("character.identity.btn_proficiencies", lang=lang), CharAction("char_identity", char_id=cid, sub="proficiencies"))],
+        [_btn(t("character.identity.btn_damage_modifiers", lang=lang), CharAction("char_identity", char_id=cid, sub="damage_modifiers"))],
         _nav_row(back_action=CharAction("char_menu", char_id=cid), menu_char_id=cid, lang=lang),
+    ]
+    return InlineKeyboardMarkup(rows)
+
+
+def build_identity_personality_keyboard(char_id: int, lang: str = "it") -> InlineKeyboardMarkup:
+    cid = char_id
+    t = translator.t
+    rows = [
+        [_btn(t("character.identity.btn_traits", lang=lang), CharAction("char_identity", char_id=cid, sub="personality_traits"))],
+        [_btn(t("character.identity.btn_ideals", lang=lang), CharAction("char_identity", char_id=cid, sub="personality_ideals"))],
+        [_btn(t("character.identity.btn_bonds",  lang=lang), CharAction("char_identity", char_id=cid, sub="personality_bonds"))],
+        [_btn(t("character.identity.btn_flaws",  lang=lang), CharAction("char_identity", char_id=cid, sub="personality_flaws"))],
+        _nav_row(back_action=CharAction("char_identity", char_id=cid), menu_char_id=cid, lang=lang),
+    ]
+    return InlineKeyboardMarkup(rows)
+
+
+def build_identity_list_keyboard(
+    char_id: int, sub: str, items: list[str], lang: str = "it"
+) -> InlineKeyboardMarkup:
+    """Generic keyboard for managing a list (languages / proficiencies / damage modifiers)."""
+    cid = char_id
+    t = translator.t
+    rows: list[list[InlineKeyboardButton]] = [
+        [_btn(f"➖ {item}", CharAction("char_identity", char_id=cid, sub=f"{sub}_remove", extra=item))]
+        for item in items
+    ]
+    if sub == "languages":
+        add_label = t("character.identity.btn_add_language", lang=lang)
+    elif sub in ("resistances", "immunities", "vulnerabilities"):
+        add_label = t("character.identity.btn_add_modifier", lang=lang)
+    else:
+        add_label = t("character.identity.btn_add_proficiency", lang=lang)
+    rows.append([_btn(add_label, CharAction("char_identity", char_id=cid, sub=f"{sub}_add"))])
+    rows.append(_nav_row(back_action=CharAction("char_identity", char_id=cid), menu_char_id=cid, lang=lang))
+    return InlineKeyboardMarkup(rows)
+
+
+def build_identity_damage_modifiers_keyboard(char_id: int, lang: str = "it") -> InlineKeyboardMarkup:
+    cid = char_id
+    t = translator.t
+    rows = [
+        [_btn(t("character.identity.btn_resistances",    lang=lang), CharAction("char_identity", char_id=cid, sub="resistances"))],
+        [_btn(t("character.identity.btn_immunities",     lang=lang), CharAction("char_identity", char_id=cid, sub="immunities"))],
+        [_btn(t("character.identity.btn_vulnerabilities", lang=lang), CharAction("char_identity", char_id=cid, sub="vulnerabilities"))],
+        _nav_row(back_action=CharAction("char_identity", char_id=cid), menu_char_id=cid, lang=lang),
     ]
     return InlineKeyboardMarkup(rows)
 
@@ -1345,6 +1413,10 @@ def build_death_saves_keyboard(
                 CharAction("char_death_saves", char_id=cid, sub="failure"),
             ),
         ])
+        rows.append([_btn(
+            translator.t("character.death_saves.btn_roll", lang=lang),
+            CharAction("char_death_saves", char_id=cid, sub="roll"),
+        )])
         rows.append([_btn(
             translator.t("character.death_saves.btn_reset", lang=lang),
             CharAction("char_death_saves", char_id=cid, sub="reset"),
