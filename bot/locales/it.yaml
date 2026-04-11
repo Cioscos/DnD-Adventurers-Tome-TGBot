@@ -176,6 +176,7 @@ character:
     btn_forget: "🗑️ Dimentica"
     prompt_learn_name: "✨ Inserisci il *nome dell'incantesimo* da imparare:"
     prompt_learn_level: "🔢 Inserisci il *livello* dell'incantesimo \\(0 per trucchetto, 1\\-9\\):"
+    prompt_learn_description: "📝 Inserisci la *descrizione* dell'incantesimo \\(o \\- per saltare\\):"
     prompt_learn_concentration: "🔮 L'incantesimo richiede *concentrazione*?"
     learn_level_invalid: "❌ Livello non valido \\(0\\-9\\)\\."
     learn_name_invalid: "❌ Nome non valido\\."

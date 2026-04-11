@@ -303,6 +303,17 @@ async def handle_spell_learn_text(
             )
             return CHAR_SPELL_LEARN
         context.user_data[_OP_KEY]["spell_level"] = level
+        context.user_data[_OP_KEY]["step"] = "desc"
+        await update.message.reply_text(
+            translator.t("character.spells.prompt_learn_description", lang=lang),
+            reply_markup=build_cancel_keyboard(char_id, "char_spells", lang=lang),
+            parse_mode="MarkdownV2",
+        )
+        return CHAR_SPELL_LEARN
+
+    if step == "desc":
+        description = None if text in ("-", "") else text
+        context.user_data[_OP_KEY]["spell_description"] = description
         context.user_data[_OP_KEY]["step"] = "conc"
         # Show concentration yes/no keyboard
         from bot.keyboards.character import build_yes_no_keyboard
@@ -329,6 +340,7 @@ async def finalize_spell_learn(
     char_id: int = pending.get("char_id")
     spell_name: str = pending.get("spell_name", "???")
     spell_level: int = pending.get("spell_level", 0)
+    spell_description: str | None = pending.get("spell_description")
 
     async with get_session() as session:
         session.add(Spell(
@@ -336,6 +348,7 @@ async def finalize_spell_learn(
             name=spell_name,
             level=spell_level,
             is_concentration=is_concentration,
+            description=spell_description,
         ))
 
     import asyncio as _asyncio
@@ -794,7 +807,10 @@ async def _edit_or_reply(update: Update, text: str, keyboard=None) -> None:
     if keyboard:
         kwargs["reply_markup"] = keyboard
     if update.callback_query:
-        await update.callback_query.answer()
+        try:
+            await update.callback_query.answer()
+        except Exception:
+            pass  # Already answered with a toast by the caller
         await update.callback_query.edit_message_text(**kwargs)
     elif update.message:
         await update.message.reply_text(**kwargs)
