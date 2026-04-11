@@ -92,6 +92,8 @@ from __future__ import annotations
     CHAR_PERSONALITY_INPUT,
     CHAR_LANGUAGE_ADD,
     CHAR_PROFICIENCY_ADD,
-) = range(71)
+    # Hit Die per class
+    CHAR_HIT_DIE_INPUT,
+) = range(72)
 
 STOPPING = 99

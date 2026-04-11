@@ -464,6 +464,10 @@ character:
     spell_dc_label: "CD Incantesimi: {dc}"
     spell_attack_label: "Attacco Incantesimo: {bonus}"
     no_spell_ability: "nessuna"
+    btn_set_hit_die: "🎲 Dado Vita {cls} ({current})"
+    prompt_hit_die: "🎲 Dado Vita di *{cls}* \\(attuale: {current}\\)\n\nInserisci la dimensione del dado vita \\(4, 6, 8, 10, 12, 20\\):"
+    hit_die_invalid: "❌ Valore non valido\\. Inserisci uno tra: 4, 6, 8, 10, 12, 20\\."
+    hit_die_set: "✅ Dado vita impostato a d{die}\\."
 
   class_resources:
     title: "*Risorse di Classe:*"

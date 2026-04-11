@@ -132,7 +132,7 @@ async def character_callback_handler(
     )
     from bot.handlers.character.menu import show_character_menu
     from bot.handlers.character.multiclass import (
-        apply_level_change, ask_add_class, ask_custom_class, change_level,
+        apply_level_change, ask_add_class, ask_custom_class, ask_set_hit_die, change_level,
         handle_guided_class_selected, remove_class, show_guided_class_list,
         show_multiclass_menu, show_remove_class, skip_subclass,
     )
@@ -402,6 +402,12 @@ async def character_callback_handler(
             return await show_remove_class(update, context, cid)
         if sub == "remove_confirm":
             return await remove_class(update, context, cid, data.extra)
+        if sub == "set_hit_die":
+            try:
+                class_id = int(data.extra)
+            except (ValueError, TypeError):
+                return await show_multiclass_menu(update, context, cid)
+            return await ask_set_hit_die(update, context, cid, class_id)
         return await show_multiclass_menu(update, context, cid)
 
     # ─── Class Resources ───
@@ -682,7 +688,7 @@ def build_character_conversation_handler() -> ConversationHandler:
     from bot.handlers.character.bag import handle_bag_text, handle_bag_add_inline, handle_bag_skip
     from bot.handlers.character.currency import handle_convert_text, handle_currency_text
     from bot.handlers.character.abilities import handle_ability_learn_text
-    from bot.handlers.character.multiclass import handle_multiclass_add_text, handle_subclass_text
+    from bot.handlers.character.multiclass import handle_multiclass_add_text, handle_set_hit_die_text, handle_subclass_text
     from bot.handlers.character.hit_points import handle_hp_text
     from bot.handlers.character.maps import handle_map_file, handle_new_zone_text
     from bot.handlers.character.notes import (
@@ -940,6 +946,10 @@ def build_character_conversation_handler() -> ConversationHandler:
             ],
             CHAR_PROFICIENCY_ADD: [
                 MessageHandler(text_filter, _handle_proficiency_or_modifier),
+                char_callback,
+            ],
+            CHAR_HIT_DIE_INPUT: [
+                MessageHandler(text_filter, handle_set_hit_die_text),
                 char_callback,
             ],
         },

@@ -807,9 +807,16 @@ def build_multiclass_keyboard(char_id: int, classes: list | None = None, lang: s
         [_btn(translator.t("character.multiclass.btn_add",    lang=lang), CharAction("char_multiclass", char_id=cid, sub="add"))],
         [_btn(translator.t("character.multiclass.btn_remove", lang=lang), CharAction("char_multiclass", char_id=cid, sub="remove"))],
     ]
-    # Add resource buttons for classes that have resources
+    # Add per-class buttons: hit die editor + resource manager
     if classes:
         for cls in classes:
+            die_label = translator.t(
+                "character.multiclass.btn_set_hit_die", lang=lang,
+                cls=cls.class_name,
+                current=f"d{cls.hit_die}" if cls.hit_die else "—",
+            )
+            rows.append([_btn(die_label, CharAction("char_multiclass", char_id=cid,
+                                                     sub="set_hit_die", extra=str(cls.id)))])
             has_resources = hasattr(cls, 'resources') and cls.resources
             if has_resources:
                 label = translator.t("character.multiclass.resources_label", lang=lang, resources=cls.class_name)

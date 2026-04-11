@@ -463,6 +463,10 @@ character:
     spell_dc_label: "Spell Save DC: {dc}"
     spell_attack_label: "Spell Attack: {bonus}"
     no_spell_ability: "none"
+    btn_set_hit_die: "🎲 Hit Die {cls} ({current})"
+    prompt_hit_die: "🎲 Hit Die for *{cls}* \\(current: {current}\\)\n\nEnter the hit die size \\(4, 6, 8, 10, 12, 20\\):"
+    hit_die_invalid: "❌ Invalid value\\. Enter one of: 4, 6, 8, 10, 12, 20\\."
+    hit_die_set: "✅ Hit die set to d{die}\\."
 
   class_resources:
     title: "*Class Resources:*"
