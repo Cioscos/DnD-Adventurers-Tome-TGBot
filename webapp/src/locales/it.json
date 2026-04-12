@@ -12,7 +12,8 @@
     "edit": "Modifica",
     "close": "Chiudi",
     "yes": "Sì",
-    "no": "No"
+    "no": "No",
+    "none": "Nessuno"
   },
   "character": {
     "select": {
@@ -80,6 +81,33 @@
       "magic": "Magia",
       "total": "Totale"
     },
+    "skills": {
+      "title": "Abilità",
+      "proficient": "Competente",
+      "prof_bonus": "Bonus competenza",
+      "acrobatics": "Acrobatica",
+      "animal_handling": "Anim. Selvatici",
+      "arcana": "Arcano",
+      "athletics": "Atletica",
+      "deception": "Inganno",
+      "history": "Storia",
+      "insight": "Perspicacia",
+      "intimidation": "Intimidire",
+      "investigation": "Investigare",
+      "medicine": "Medicina",
+      "nature": "Natura",
+      "perception": "Percezione",
+      "performance": "Intrattenere",
+      "persuasion": "Persuasione",
+      "religion": "Religione",
+      "sleight_of_hand": "Destr. di Mano",
+      "stealth": "Furtività",
+      "survival": "Sopravvivenza"
+    },
+    "saves": {
+      "title": "Tiri Salvezza",
+      "proficient": "Competente"
+    },
     "spells": {
       "title": "Magie",
       "search": "Cerca magia...",
@@ -91,7 +119,14 @@
       "forget": "Dimentica",
       "use": "Usa",
       "pin": "Fissa",
-      "edit": "Modifica"
+      "edit": "Modifica",
+      "name": "Nome",
+      "description": "Descrizione",
+      "casting_time": "Tempo lancio",
+      "range": "Gittata",
+      "components": "Componenti",
+      "duration": "Durata",
+      "stop_concentration": "Interrompi concentrazione"
     },
     "slots": {
       "title": "Slot Incantesimo",
@@ -99,7 +134,8 @@
       "used": "Usati",
       "total": "Totale",
       "available": "Disponibili",
-      "reset_all": "Ripristina tutti"
+      "reset_all": "Ripristina tutti",
+      "add_level": "Aggiungi livello slot"
     },
     "dice": {
       "title": "Tira Dadi",
@@ -109,7 +145,24 @@
     },
     "conditions": {
       "title": "Condizioni",
-      "exhaustion": "Spossatezza (livello {{level}})"
+      "exhaustion": "Spossatezza (livello {{level}})",
+      "exhaustion_level": "Livello spossatezza",
+      "none_active": "Nessuna condizione attiva",
+      "blinded": "Accecato",
+      "charmed": "Affascinato",
+      "deafened": "Assordato",
+      "exhaustion_condition": "Spossatezza",
+      "frightened": "Spaventato",
+      "grappled": "Agguantato",
+      "incapacitated": "Incapacitato",
+      "invisible": "Invisibile",
+      "paralyzed": "Paralizzato",
+      "petrified": "Pietrificato",
+      "poisoned": "Avvelenato",
+      "prone": "Prono",
+      "restrained": "Trattenuto",
+      "stunned": "Stordito",
+      "unconscious": "Privo di Sensi"
     },
     "identity": {
       "title": "Identità",
@@ -133,27 +186,101 @@
       "electrum": "Elettro",
       "gold": "Oro",
       "platinum": "Platino",
-      "convert": "Converti"
+      "convert": "Converti",
+      "total_gold": "Totale in oro"
     },
     "xp": {
       "title": "Esperienza",
       "add": "Aggiungi XP",
       "current": "XP attuali",
-      "level": "Livello {{level}}"
+      "level": "Livello {{level}}",
+      "next_level": "Prossimo livello",
+      "xp_to_next": "XP al prossimo livello"
     },
     "notes": {
       "title": "Note",
       "new": "Nuova nota",
-      "voice": "Nota vocale (non disponibile nella Mini App)"
+      "voice": "Nota vocale (non disponibile nella Mini App)",
+      "title_label": "Titolo",
+      "body_label": "Contenuto",
+      "title_placeholder": "Titolo nota...",
+      "body_placeholder": "Scrivi qui..."
     },
     "maps": {
       "title": "Mappe",
       "upload_hint": "Per aggiungere mappe usa /upload_map <zona> nella chat del bot",
-      "zone": "Zona"
+      "zone": "Zona",
+      "loading_image": "Caricamento immagine...",
+      "delete_confirm": "Eliminare la mappa di {{zone}}?"
     },
     "history": {
       "title": "Cronologia",
-      "clear": "Svuota cronologia"
+      "clear": "Svuota cronologia",
+      "empty": "Nessun evento registrato",
+      "clear_confirm": "Svuotare tutta la cronologia?"
+    },
+    "inventory": {
+      "title": "Inventario",
+      "add": "Aggiungi oggetto",
+      "equipped": "Equipaggiato",
+      "weight": "Peso",
+      "quantity": "Quantità",
+      "carry": "{{enc}} / {{cap}} lb",
+      "item_name": "Nome oggetto",
+      "item_type": "Tipo",
+      "description": "Descrizione",
+      "types": {
+        "weapon": "Arma",
+        "armor": "Armatura",
+        "potion": "Pozione",
+        "scroll": "Pergamena",
+        "tool": "Strumento",
+        "gear": "Equipaggiamento",
+        "other": "Altro"
+      }
+    },
+    "abilities": {
+      "title": "Abilità Speciali",
+      "add": "Aggiungi abilità",
+      "uses_left": "{{current}}/{{max}} usi",
+      "passive": "Passiva",
+      "active": "Attiva",
+      "use": "Usa",
+      "restore": "Ripristina",
+      "restoration": {
+        "short_rest": "Riposo breve",
+        "long_rest": "Riposo lungo",
+        "manual": "Manuale"
+      },
+      "name_label": "Nome",
+      "description_label": "Descrizione",
+      "max_uses_label": "Usi massimi",
+      "restoration_label": "Ripristino"
+    },
+    "multiclass": {
+      "title": "Classe",
+      "add_class": "Aggiungi classe",
+      "class_name": "Nome classe",
+      "level": "Livello",
+      "subclass": "Sottoclasse",
+      "hit_die": "Dado vita",
+      "spellcasting": "Abilità da incantatore",
+      "resources": "Risorse di classe",
+      "add_resource": "Aggiungi risorsa",
+      "resource_name": "Nome risorsa",
+      "resource_total": "Totale",
+      "resource_current": "Attuali",
+      "restoration": "Ripristino",
+      "use_resource": "Usa",
+      "restore_resource": "Ripristina"
+    },
+    "settings": {
+      "title": "Impostazioni",
+      "spell_slots_mode": "Modalità slot incantesimi",
+      "mode_auto": "Automatica (da livello classe)",
+      "mode_manual": "Manuale",
+      "carry_capacity": "Mostra capacità di carico",
+      "language": "Lingua"
     }
   }
 }
