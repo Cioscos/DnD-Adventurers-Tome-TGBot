@@ -19,4 +19,3 @@ exclude:
   - README.it.md
   - "*.gemspec"
   - node_modules/
-  - app/
