@@ -17,7 +17,7 @@ export default function HP() {
   const qc = useQueryClient()
   const [value, setValue] = useState('')
   const [activeOp, setActiveOp] = useState<HPOp>('damage')
-  const [deathAction, setDeathAction] = useState<string | null>(null)
+
 
   const { data: char } = useQuery({
     queryKey: ['character', charId],

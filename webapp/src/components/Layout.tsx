@@ -1,5 +1,4 @@
 import { useNavigate } from 'react-router-dom'
-import { WebApp } from '@/auth/telegram'
 
 interface LayoutProps {
   title: string
