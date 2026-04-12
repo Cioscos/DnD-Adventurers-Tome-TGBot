@@ -1,0 +1,29 @@
+# Systemd service file for the FastAPI backend on Raspberry Pi.
+#
+# Installation:
+#   sudo cp api/dnd-api.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable dnd-api
+#   sudo systemctl start dnd-api
+#
+# Logs:
+#   journalctl -u dnd-api -f
+
+[Unit]
+Description=D&D Bot FastAPI Backend
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/dnd_bot_revamped
+# Activate the same virtualenv used by the bot
+ExecStart=/home/pi/dnd_bot_revamped/.venv/bin/uvicorn api.main:app --host 127.0.0.1 --port 8000
+Restart=on-failure
+RestartSec=5s
+EnvironmentFile=/home/pi/dnd_bot_revamped/.env
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

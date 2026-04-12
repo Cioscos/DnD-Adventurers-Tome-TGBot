@@ -1,0 +1,159 @@
+{
+  "common": {
+    "back": "Back",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "confirm": "Confirm",
+    "loading": "Loading...",
+    "error": "Error",
+    "retry": "Retry",
+    "add": "Add",
+    "edit": "Edit",
+    "close": "Close",
+    "yes": "Yes",
+    "no": "No"
+  },
+  "character": {
+    "select": {
+      "title": "Your characters",
+      "new": "New character",
+      "empty": "No characters yet. Create one!",
+      "delete_confirm": "Delete {{name}}? This action is irreversible."
+    },
+    "menu": {
+      "hp": "Hit Points",
+      "ac": "Armor Class",
+      "stats": "Ability Scores",
+      "skills": "Skills",
+      "saves": "Saving Throws",
+      "spells": "Spells",
+      "slots": "Spell Slots",
+      "inventory": "Inventory",
+      "currency": "Currency",
+      "abilities": "Special Abilities",
+      "class": "Class",
+      "xp": "Experience",
+      "conditions": "Conditions",
+      "history": "History",
+      "notes": "Notes",
+      "maps": "Maps",
+      "dice": "Dice",
+      "identity": "Identity",
+      "settings": "Settings",
+      "death_saves": "Death Saves"
+    },
+    "hp": {
+      "title": "Hit Points",
+      "current": "Current",
+      "max": "Maximum",
+      "temp": "Temporary",
+      "damage": "Damage",
+      "heal": "Heal",
+      "set_max": "Set maximum",
+      "set_current": "Set current",
+      "set_temp": "Set temporary"
+    },
+    "death_saves": {
+      "title": "Death Saves",
+      "successes": "Successes",
+      "failures": "Failures",
+      "success": "Success",
+      "failure": "Failure",
+      "stabilize": "Stabilize",
+      "reset": "Reset"
+    },
+    "stats": {
+      "title": "Ability Scores",
+      "strength": "Strength",
+      "dexterity": "Dexterity",
+      "constitution": "Constitution",
+      "intelligence": "Intelligence",
+      "wisdom": "Wisdom",
+      "charisma": "Charisma",
+      "modifier": "Modifier"
+    },
+    "ac": {
+      "title": "Armor Class",
+      "base": "Base",
+      "shield": "Shield",
+      "magic": "Magic",
+      "total": "Total"
+    },
+    "spells": {
+      "title": "Spells",
+      "search": "Search spells...",
+      "level": "Level",
+      "cantrip": "Cantrip",
+      "concentration": "Concentration",
+      "ritual": "Ritual",
+      "add": "Add spell",
+      "forget": "Forget",
+      "use": "Use",
+      "pin": "Pin",
+      "edit": "Edit"
+    },
+    "slots": {
+      "title": "Spell Slots",
+      "level": "Level {{level}}",
+      "used": "Used",
+      "total": "Total",
+      "available": "Available",
+      "reset_all": "Reset all"
+    },
+    "dice": {
+      "title": "Roll Dice",
+      "send_to_chat": "Send to group",
+      "history": "History",
+      "clear": "Clear history"
+    },
+    "conditions": {
+      "title": "Conditions",
+      "exhaustion": "Exhaustion (level {{level}})"
+    },
+    "identity": {
+      "title": "Identity",
+      "name": "Name",
+      "race": "Race",
+      "gender": "Gender",
+      "background": "Background",
+      "alignment": "Alignment",
+      "speed": "Speed (feet)",
+      "personality": "Personality traits",
+      "ideals": "Ideals",
+      "bonds": "Bonds",
+      "flaws": "Flaws",
+      "languages": "Languages",
+      "proficiencies": "Proficiencies"
+    },
+    "currency": {
+      "title": "Currency",
+      "copper": "Copper",
+      "silver": "Silver",
+      "electrum": "Electrum",
+      "gold": "Gold",
+      "platinum": "Platinum",
+      "convert": "Convert"
+    },
+    "xp": {
+      "title": "Experience",
+      "add": "Add XP",
+      "current": "Current XP",
+      "level": "Level {{level}}"
+    },
+    "notes": {
+      "title": "Notes",
+      "new": "New note",
+      "voice": "Voice note (not available in the Mini App)"
+    },
+    "maps": {
+      "title": "Maps",
+      "upload_hint": "To add maps use /upload_map <zone> in the bot chat",
+      "zone": "Zone"
+    },
+    "history": {
+      "title": "History",
+      "clear": "Clear history"
+    }
+  }
+}

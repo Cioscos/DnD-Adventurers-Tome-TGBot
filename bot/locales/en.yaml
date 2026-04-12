@@ -16,6 +16,7 @@ start:
   group_only: "⚠️ The *D&D Wiki* and *Character Manager* features are only available in private chat with the bot\\.\n\nUse /party and /party\\_stop for group features\\."
   menu_wiki: "📖 D&D Wiki"
   menu_character: "⚔️ My Character"
+  character_shortcut: "Use the button below to open your character sheet:"
   stop_no_op: "✋ No active operation to cancel\\."
   about_text: "ℹ️ *D&D Adventurers Tome Bot*\n\nYour digital companion for D&D 5e adventures\\!\n\nManage your character, browse the Player's Handbook Wiki and coordinate your party — all from Telegram\\.\n\nVisit the website for more information:"
   about_btn: "🌐 Website"

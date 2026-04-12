@@ -17,6 +17,7 @@ start:
   group_only: "⚠️ Le funzionalità *Wiki D&D* e *Gestore Personaggio* sono disponibili solo nella chat privata con il bot\\.\n\nUsa /party e /party\\_stop per le funzionalità di gruppo\\."
   menu_wiki: "📖 Wiki D&D"
   menu_character: "⚔️ Il mio personaggio"
+  character_shortcut: "Usa il pulsante qui sotto per aprire la scheda del personaggio:"
   stop_no_op: "✋ Nessuna operazione in corso da interrompere\\."
   about_text: "ℹ️ *D&D Adventurers Tome Bot*\n\nIl tuo compagno digitale per le avventure in D&D 5e\\!\n\nGestisci il tuo personaggio, consulta la Wiki del Manuale del Giocatore e coordina il tuo gruppo — tutto da Telegram\\.\n\nVisita il sito web per ulteriori informazioni:"
   about_btn: "🌐 Sito Web"

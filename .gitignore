@@ -36,3 +36,11 @@ old_bot/
 bot/data/dnd_bot.db
 bot/data/persistence.pkl
 files/
+
+# webapp
+webapp/node_modules/
+webapp/.env.local
+webapp/dist/
+
+# api
+api/__pycache__/

@@ -1,0 +1,45 @@
+name: Build & Deploy Mini App
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'webapp/**'
+
+  # Allow manual trigger
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: webapp/package-lock.json
+
+      - name: Install dependencies
+        working-directory: webapp
+        run: npm ci
+
+      - name: Build
+        working-directory: webapp
+        env:
+          # Set via GitHub repository secrets
+          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
+        run: npm run build
+        # Output goes to docs/app/ (configured in vite.config.ts)
+
+      - name: Commit build output to docs/app
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: build React Mini App [skip ci]"
+          file_pattern: "docs/app/**"
+          commit_user_name: "github-actions[bot]"
+          commit_user_email: "github-actions[bot]@users.noreply.github.com"
