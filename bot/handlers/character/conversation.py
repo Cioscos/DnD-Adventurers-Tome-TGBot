@@ -93,6 +93,7 @@ from bot.handlers.character import (
     CHAR_LANGUAGE_ADD,
     CHAR_PROFICIENCY_ADD,
     CHAR_HIT_DIE_INPUT,
+    CHAR_NAME_INPUT,
     STOPPING,
 )
 from bot.models.character_state import CharAction
@@ -153,6 +154,7 @@ async def character_callback_handler(
         activate_concentration, ask_concentration_save_damage,
         ask_spell_learn, ask_spell_edit_field, ask_spell_search,
         drop_concentration, finalize_spell_learn, forget_spell,
+        roll_spell_damage,
         show_spell_detail, show_spell_edit_menu, show_spell_search_results,
         show_spells_menu, show_use_spell_level_picker,
         toggle_pin_spell, use_spell_at_level,
@@ -290,7 +292,7 @@ async def character_callback_handler(
         if sub == "activate_conc":
             return await activate_concentration(update, context, cid, data.item_id)
         if sub == "drop_conc":
-            return await drop_concentration(update, context, cid)
+            return await drop_concentration(update, context, cid, data.item_id)
         if sub == "conc_save":
             return await ask_concentration_save_damage(update, context, cid)
         if sub == "pin":
@@ -300,6 +302,8 @@ async def character_callback_handler(
         if sub and sub.startswith("edit_"):
             field = sub[5:]  # strip "edit_" prefix
             return await ask_spell_edit_field(update, context, cid, data.item_id, field)
+        if sub == "roll_dmg":
+            return await roll_spell_damage(update, context, cid, data.item_id)
         level_filter: int | None = int(data.extra) if data.extra and data.extra.lstrip("-").isdigit() else None
         return await show_spells_menu(update, context, cid, data.page, level_filter)
 
@@ -541,12 +545,14 @@ async def character_callback_handler(
         from bot.handlers.character.identity import (
             ask_add_language, ask_add_modifier, ask_add_proficiency,
             ask_alignment_input, ask_background_input, ask_gender_input,
-            ask_personality_field, ask_race_input, ask_speed_input,
+            ask_personality_field, ask_race_input, ask_rename_character, ask_speed_input,
             remove_language, remove_modifier, remove_proficiency,
             show_damage_modifiers_menu, show_identity_menu,
             show_languages_menu, show_modifier_type_menu,
             show_personality_menu, show_proficiencies_menu,
         )
+        if sub == "rename":
+            return await ask_rename_character(update, context, cid)
         if sub == "race":
             return await ask_race_input(update, context, cid)
         if sub == "gender":
@@ -709,7 +715,7 @@ def build_character_conversation_handler() -> ConversationHandler:
     )
     from bot.handlers.character.stats import handle_stat_text
     from bot.handlers.character.identity import (
-        handle_race_text, handle_gender_text, handle_speed_text,
+        handle_race_text, handle_gender_text, handle_rename_text, handle_speed_text,
         handle_background_text, handle_personality_text,
         handle_language_text, handle_proficiency_text, handle_modifier_text,
     )
@@ -951,6 +957,10 @@ def build_character_conversation_handler() -> ConversationHandler:
             ],
             CHAR_HIT_DIE_INPUT: [
                 MessageHandler(text_filter, handle_set_hit_die_text),
+                char_callback,
+            ],
+            CHAR_NAME_INPUT: [
+                MessageHandler(text_filter, handle_rename_text),
                 char_callback,
             ],
         },

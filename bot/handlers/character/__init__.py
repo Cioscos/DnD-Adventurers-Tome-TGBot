@@ -94,6 +94,8 @@ from __future__ import annotations
     CHAR_PROFICIENCY_ADD,
     # Hit Die per class
     CHAR_HIT_DIE_INPUT,
-) = range(72)
+    # Rename character
+    CHAR_NAME_INPUT,
+) = range(73)
 
 STOPPING = 99

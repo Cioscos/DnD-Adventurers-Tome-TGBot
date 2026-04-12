@@ -382,11 +382,15 @@ def build_spell_detail_keyboard(
     # Use spell
     rows.append([_btn(translator.t("character.spells.btn_use", lang=lang), CharAction("char_spells", char_id=cid, sub="use", item_id=sid))])
 
+    # Damage roll button (only when damage_dice is configured)
+    if spell.damage_dice:
+        rows.append([_btn(translator.t("character.spells.btn_roll_damage", lang=lang), CharAction("char_spells", char_id=cid, sub="roll_dmg", item_id=sid))])
+
     # Concentration controls
     if spell.is_concentration:
         if is_concentrating:
             rows.append([
-                _btn(translator.t("character.spells.btn_drop_conc",    lang=lang), CharAction("char_spells", char_id=cid, sub="drop_conc")),
+                _btn(translator.t("character.spells.btn_drop_conc",    lang=lang), CharAction("char_spells", char_id=cid, sub="drop_conc", item_id=sid)),
                 _btn(translator.t("character.spells.btn_conc_save",    lang=lang), CharAction("char_spells", char_id=cid, sub="conc_save")),
             ])
         else:
@@ -425,6 +429,8 @@ def build_spell_edit_field_keyboard(
         (translator.t("character.spells.edit_field_concentration",  lang=lang), "is_concentration"),
         (translator.t("character.spells.edit_field_ritual",         lang=lang), "is_ritual"),
         (translator.t("character.spells.edit_field_attack_save",    lang=lang), "attack_save"),
+        (translator.t("character.spells.edit_field_damage_dice",    lang=lang), "damage_dice"),
+        (translator.t("character.spells.edit_field_damage_type",    lang=lang), "damage_type"),
         (translator.t("character.spells.edit_field_description",    lang=lang), "description"),
         (translator.t("character.spells.edit_field_higher_level",   lang=lang), "higher_level"),
     ]
@@ -1243,6 +1249,7 @@ def build_identity_keyboard(char_id: int, lang: str = "it") -> InlineKeyboardMar
         [_btn(t("character.identity.btn_languages",   lang=lang), CharAction("char_identity", char_id=cid, sub="languages"))],
         [_btn(t("character.identity.btn_proficiencies", lang=lang), CharAction("char_identity", char_id=cid, sub="proficiencies"))],
         [_btn(t("character.identity.btn_damage_modifiers", lang=lang), CharAction("char_identity", char_id=cid, sub="damage_modifiers"))],
+        [_btn(t("character.identity.btn_rename", lang=lang), CharAction("char_identity", char_id=cid, sub="rename"))],
         _nav_row(back_action=CharAction("char_menu", char_id=cid), menu_char_id=cid, lang=lang),
     ]
     return InlineKeyboardMarkup(rows)

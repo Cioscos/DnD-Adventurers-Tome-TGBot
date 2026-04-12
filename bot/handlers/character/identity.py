@@ -15,6 +15,7 @@ from bot.handlers.character import (
     CHAR_GENDER_INPUT,
     CHAR_LANGUAGE_ADD,
     CHAR_MENU,
+    CHAR_NAME_INPUT,
     CHAR_PERSONALITY_INPUT,
     CHAR_PROFICIENCY_ADD,
     CHAR_RACE_INPUT,
@@ -50,6 +51,51 @@ async def show_identity_menu(
     keyboard = build_identity_keyboard(char_id, lang=lang)
     await _edit_or_reply(update, text, keyboard)
     return CHAR_MENU
+
+
+# ---------------------------------------------------------------------------
+# Rename character
+# ---------------------------------------------------------------------------
+
+async def ask_rename_character(
+    update: Update, context: ContextTypes.DEFAULT_TYPE, char_id: int,
+) -> int:
+    lang = get_lang(update)
+    context.user_data[_OP_KEY] = {"char_id": char_id, "field": "name"}
+    await _edit_or_reply(
+        update,
+        translator.t("character.identity.prompt_rename", lang=lang),
+        build_cancel_keyboard(char_id, "char_identity", lang=lang),
+    )
+    return CHAR_NAME_INPUT
+
+
+async def handle_rename_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    if update.message is None:
+        return CHAR_NAME_INPUT
+    lang = get_lang(update)
+    pending = context.user_data.pop(_OP_KEY, None)
+    if pending is None:
+        return CHAR_MENU
+    char_id: int = pending["char_id"]
+    name = update.message.text.strip()
+    if not 1 <= len(name) <= 100:
+        await update.message.reply_text(
+            translator.t("character.identity.rename_too_long", lang=lang),
+            parse_mode="MarkdownV2",
+        )
+        context.user_data[_OP_KEY] = pending
+        return CHAR_NAME_INPUT
+    async with get_session() as session:
+        char = await session.get(Character, char_id)
+        if char:
+            char.name = name
+    from bot.utils.formatting import _esc
+    await update.message.reply_text(
+        translator.t("character.identity.rename_success", lang=lang, name=_esc(name)),
+        parse_mode="MarkdownV2",
+    )
+    return await show_identity_menu(update, context, char_id)
 
 
 # ---------------------------------------------------------------------------

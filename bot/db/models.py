@@ -317,6 +317,8 @@ class Spell(Base):
     is_ritual: Mapped[bool] = mapped_column(Boolean, default=False)
     higher_level: Mapped[Optional[str]] = mapped_column(Text)
     attack_save: Mapped[Optional[str]] = mapped_column(String(100))
+    damage_dice: Mapped[Optional[str]] = mapped_column(String(100))
+    damage_type: Mapped[Optional[str]] = mapped_column(String(100))
     is_pinned: Mapped[bool] = mapped_column(Boolean, default=False)
 
     character: Mapped["Character"] = relationship(
