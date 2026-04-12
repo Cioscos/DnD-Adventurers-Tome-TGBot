@@ -21,6 +21,10 @@ from fastapi import Header, HTTPException, status
 
 _BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
 
+# When set, bypasses Telegram initData verification and returns this user_id.
+# Set DEV_USER_ID=<your_telegram_id> in .env for local development.
+_DEV_USER_ID: int | None = int(os.environ["DEV_USER_ID"]) if os.environ.get("DEV_USER_ID") else None
+
 # Maximum age (in seconds) of a valid initData.
 _MAX_AGE_SECONDS = 86400  # 24 hours
 
@@ -96,7 +100,14 @@ def verify_init_data(init_data: str, bot_token: str = _BOT_TOKEN) -> int:
 
 
 def get_current_user(
-    x_telegram_init_data: str = Header(..., alias="X-Telegram-Init-Data"),
+    x_telegram_init_data: str = Header("", alias="X-Telegram-Init-Data"),
 ) -> int:
     """FastAPI dependency that returns the verified Telegram user_id."""
+    if _DEV_USER_ID is not None:
+        return _DEV_USER_ID
+    if not x_telegram_init_data:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing X-Telegram-Init-Data header",
+        )
     return verify_init_data(x_telegram_init_data)

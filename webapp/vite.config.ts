@@ -2,8 +2,8 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
 // https://vitejs.dev/config/
-export default defineConfig({
-  base: '/DnD-Adventurers-Tome-TGBot/app/',
+export default defineConfig(({ command }) => ({
+  base: command === 'build' ? '/DnD-Adventurers-Tome-TGBot/app/' : '/',
   build: {
     outDir: '../docs/app',
     emptyOutDir: true,
@@ -14,4 +14,4 @@ export default defineConfig({
       '@': '/src',
     },
   },
-})
+}))

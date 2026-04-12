@@ -8,6 +8,12 @@
       "port": 8080
     },
     {
+      "name": "dnd-api",
+      "runtimeExecutable": "uv",
+      "runtimeArgs": ["run", "uvicorn", "api.main:app", "--host", "127.0.0.1", "--port", "8000", "--reload"],
+      "port": 8000
+    },
+    {
       "name": "webapp",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],

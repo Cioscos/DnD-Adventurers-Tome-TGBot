@@ -29,6 +29,72 @@ npm install
 npm run dev
 ```
 
+## Local Development (no Raspberry Pi)
+
+### First-time setup
+Make sure `.env` contains `DEV_USER_ID=<your_telegram_id>` and `webapp/.env.local` points to localhost:
+
+```
+# .env
+DEV_USER_ID=<userID>   # bypasses Telegram auth — your Telegram user ID
+
+# webapp/.env.local
+VITE_API_BASE_URL=http://localhost:8000
+```
+
+Both files are already configured this way if you cloned the repo and haven't changed them.
+
+### Starting the stack
+```bash
+# Terminal 1 — FastAPI (port 8000, auto-reload)
+uv run uvicorn api.main:app --host 127.0.0.1 --port 8000 --reload
+
+# Terminal 2 — React dev server (port 5173, HMR)
+cd webapp && npm run dev
+```
+
+Then open **http://localhost:5173/** in any browser. No Telegram required.
+
+The API creates `data/dnd_bot.db` automatically on first startup (tables are created via `Base.metadata.create_all`). The bot is optional — you only need it if you're working on bot commands.
+
+---
+
+## Before Committing webapp Changes
+
+When you edit files under `webapp/src/` you must rebuild `docs/app/` before committing, otherwise GitHub Pages will serve a broken or stale build.
+
+**Checklist:**
+
+1. **Switch `.env.local` to production URL**
+   ```bash
+   # webapp/.env.local
+   VITE_API_BASE_URL=https://api.cischi.dev
+   ```
+
+2. **Build**
+   ```bash
+   cd webapp && npm run build
+   ```
+   Fix any TypeScript errors before continuing.
+
+3. **Stage everything together**
+   ```bash
+   git add webapp/src/ docs/app/
+   # (add other changed files as needed)
+   git commit -m "feat: ..."
+   ```
+
+4. **Restore local URL for continued development**
+   ```bash
+   # webapp/.env.local
+   VITE_API_BASE_URL=http://localhost:8000
+   ```
+   Do **not** commit `.env.local` — it is gitignored.
+
+5. Open a PR from your feature branch → merge → Pages redeploys automatically.
+
+---
+
 ## Deploy (Raspberry Pi)
 
 ```bash

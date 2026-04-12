@@ -18,6 +18,12 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 _DB_PATH = os.environ.get("DB_PATH", "data/dnd_bot.db")
 _DATABASE_URL = f"sqlite+aiosqlite:///{_DB_PATH}"
 
+# Ensure the parent directory exists (e.g. data/ is gitignored and won't be
+# present on a fresh clone or local dev environment).
+_db_dir = os.path.dirname(_DB_PATH)
+if _db_dir:
+    os.makedirs(_db_dir, exist_ok=True)
+
 engine = create_async_engine(_DATABASE_URL, echo=False)
 AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False)
 

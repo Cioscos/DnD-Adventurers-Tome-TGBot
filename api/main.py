@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import logging
 import os
+from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
 from fastapi import FastAPI
@@ -20,6 +21,7 @@ from fastapi.middleware.cors import CORSMiddleware
 # Load .env before importing routers — auth.py reads BOT_TOKEN at module level.
 load_dotenv()
 
+from api.database import engine
 from api.routers import (
     abilities,
     characters,
@@ -39,6 +41,17 @@ from api.routers import (
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    # Create all tables on startup so the API works on a fresh local DB
+    # without needing to run the bot first.
+    from bot.db.models import Base
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    yield
+
+
 # ---------------------------------------------------------------------------
 # CORS: allow only the GitHub Pages origin (add localhost for dev)
 # ---------------------------------------------------------------------------
@@ -53,6 +66,7 @@ app = FastAPI(
     title="D&D Bot API",
     description="REST backend for the D&D Bot Telegram Mini App",
     version="1.0.0",
+    lifespan=lifespan,
 )
 
 app.add_middleware(
