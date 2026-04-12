@@ -84,7 +84,9 @@
     "skills": {
       "title": "Abilità",
       "proficient": "Competente",
+      "expert": "Esperto",
       "prof_bonus": "Bonus competenza",
+      "passive_perception": "Percezione Passiva",
       "acrobatics": "Acrobatica",
       "animal_handling": "Anim. Selvatici",
       "arcana": "Arcano",
@@ -118,6 +120,9 @@
       "add": "Aggiungi magia",
       "forget": "Dimentica",
       "use": "Usa",
+      "cast": "Lancia",
+      "cast_cantrip": "Lancia (trucchetto)",
+      "cast_slot_title": "Scegli slot",
       "pin": "Fissa",
       "edit": "Modifica",
       "name": "Nome",
@@ -141,7 +146,9 @@
       "title": "Tira Dadi",
       "send_to_chat": "Invia al gruppo",
       "history": "Cronologia",
-      "clear": "Svuota cronologia"
+      "clear": "Svuota cronologia",
+      "initiative": "Tira Iniziativa",
+      "initiative_result": "Iniziativa: d20 ({{roll}}) {{mod}} = {{total}}"
     },
     "conditions": {
       "title": "Condizioni",
@@ -177,7 +184,17 @@
       "bonds": "Legami",
       "flaws": "Difetti",
       "languages": "Lingue",
-      "proficiencies": "Competenze"
+      "proficiencies": "Competenze",
+      "damage_modifiers": "Modificatori Danno",
+      "resistances": "Resistenze",
+      "immunities": "Immunità",
+      "vulnerabilities": "Vulnerabilità",
+      "damage_type_placeholder": "es. fuoco"
+    },
+    "inspiration": {
+      "title": "Ispirazione Eroica",
+      "tap_to_grant": "Tocca per concedere",
+      "tap_to_spend": "Tocca per usare"
     },
     "currency": {
       "title": "Monete",
@@ -280,7 +297,17 @@
       "mode_auto": "Automatica (da livello classe)",
       "mode_manual": "Manuale",
       "carry_capacity": "Mostra capacità di carico",
-      "language": "Lingua"
+      "language": "Lingua",
+      "party_active": "Attivo nel Party",
+      "party_active_hint": "Solo un personaggio può essere attivo nel Party alla volta"
+    },
+    "create": {
+      "step_name": "Nuovo personaggio",
+      "step_class": "Scegli classe iniziale",
+      "skip_class": "Salta (aggiungi dopo)",
+      "custom_class": "Personalizzata",
+      "custom_class_name": "Nome classe",
+      "hit_die": "Dado vita"
     }
   }
 }

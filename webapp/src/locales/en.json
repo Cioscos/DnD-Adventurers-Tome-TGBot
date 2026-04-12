@@ -84,7 +84,9 @@
     "skills": {
       "title": "Skills",
       "proficient": "Proficient",
+      "expert": "Expert",
       "prof_bonus": "Proficiency bonus",
+      "passive_perception": "Passive Perception",
       "acrobatics": "Acrobatics",
       "animal_handling": "Animal Handling",
       "arcana": "Arcana",
@@ -118,6 +120,9 @@
       "add": "Add spell",
       "forget": "Forget",
       "use": "Use",
+      "cast": "Cast",
+      "cast_cantrip": "Cast (no slot)",
+      "cast_slot_title": "Choose slot level",
       "pin": "Pin",
       "edit": "Edit",
       "name": "Name",
@@ -141,7 +146,9 @@
       "title": "Roll Dice",
       "send_to_chat": "Send to group",
       "history": "History",
-      "clear": "Clear history"
+      "clear": "Clear history",
+      "initiative": "Roll Initiative",
+      "initiative_result": "Initiative: d20 ({{roll}}) {{mod}} = {{total}}"
     },
     "conditions": {
       "title": "Conditions",
@@ -177,7 +184,17 @@
       "bonds": "Bonds",
       "flaws": "Flaws",
       "languages": "Languages",
-      "proficiencies": "Proficiencies"
+      "proficiencies": "Proficiencies",
+      "damage_modifiers": "Damage Modifiers",
+      "resistances": "Resistances",
+      "immunities": "Immunities",
+      "vulnerabilities": "Vulnerabilities",
+      "damage_type_placeholder": "e.g. fire"
+    },
+    "inspiration": {
+      "title": "Heroic Inspiration",
+      "tap_to_grant": "Tap to grant",
+      "tap_to_spend": "Tap to spend"
     },
     "currency": {
       "title": "Currency",
@@ -280,7 +297,17 @@
       "mode_auto": "Automatic (from class level)",
       "mode_manual": "Manual",
       "carry_capacity": "Show carry capacity",
-      "language": "Language"
+      "language": "Language",
+      "party_active": "Active in Party",
+      "party_active_hint": "Only one character can be active in Party at a time"
+    },
+    "create": {
+      "step_name": "New Character",
+      "step_class": "Choose Initial Class",
+      "skip_class": "Skip (add later)",
+      "custom_class": "Custom",
+      "custom_class_name": "Class name",
+      "hit_die": "Hit die"
     }
   }
 }

@@ -100,6 +100,28 @@ async def update_item(
     for field, value in data.items():
         setattr(item, field, value)
 
+    # Auto-update character AC when equipping/unequipping armor or shields
+    if "is_equipped" in data:
+        item_meta = json.loads(item.item_metadata) if item.item_metadata else {}
+        if item.item_type == "armor":
+            if item.is_equipped:
+                # Unequip any other armor first
+                for other in char.items:
+                    if other.id != item.id and other.item_type == "armor" and other.is_equipped:
+                        other.is_equipped = False
+                char.base_armor_class = item_meta.get("ac_value", 10)
+            else:
+                char.base_armor_class = 10
+        elif item.item_type == "shield":
+            if item.is_equipped:
+                # Unequip any other shield first
+                for other in char.items:
+                    if other.id != item.id and other.item_type == "shield" and other.is_equipped:
+                        other.is_equipped = False
+                char.shield_armor_class = item_meta.get("ac_value", 2)
+            else:
+                char.shield_armor_class = 0
+
     char.recalculate_encumbrance()
     return char
 

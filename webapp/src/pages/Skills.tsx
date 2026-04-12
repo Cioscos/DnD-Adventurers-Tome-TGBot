@@ -27,8 +27,22 @@ const SKILLS: { key: string; ability: string }[] = [
   { key: 'survival',       ability: 'wisdom' },
 ]
 
+type ProfLevel = false | true | 'expert'
+
 function profBonus(level: number) {
   return Math.floor((level - 1) / 4) + 2
+}
+
+function getLevel(val: unknown): ProfLevel {
+  if (val === 'expert') return 'expert'
+  if (val === true || val === 1) return true
+  return false
+}
+
+function nextLevel(current: ProfLevel): ProfLevel {
+  if (current === false) return true
+  if (current === true) return 'expert'
+  return false
 }
 
 export default function Skills() {
@@ -43,7 +57,7 @@ export default function Skills() {
   })
 
   const mutation = useMutation({
-    mutationFn: (skills: Record<string, boolean>) =>
+    mutationFn: (skills: Record<string, unknown>) =>
       api.characters.updateSkills(charId, skills),
     onSuccess: (updated) => {
       qc.setQueryData(['character', charId], updated)
@@ -54,7 +68,7 @@ export default function Skills() {
 
   if (!char) return null
 
-  const skills: Record<string, boolean> = (char.skills as Record<string, boolean>) ?? {}
+  const skills: Record<string, unknown> = (char.skills as Record<string, unknown>) ?? {}
   const pb = profBonus(char.total_level || 1)
   const abilityModifier = (abilityName: string) => {
     const score = char.ability_scores.find((s) => s.name === abilityName)
@@ -62,23 +76,37 @@ export default function Skills() {
   }
 
   const toggle = (key: string) => {
-    const current = skills[key] ?? false
-    mutation.mutate({ ...skills, [key]: !current })
+    const current = getLevel(skills[key])
+    const next = nextLevel(current)
+    mutation.mutate({ ...skills, [key]: next })
   }
+
+  // passive perception
+  const perceptionMod = abilityModifier('wisdom')
+  const perceptionLevel = getLevel(skills['perception'])
+  const perceptionBonus = perceptionMod + (perceptionLevel === 'expert' ? 2 * pb : perceptionLevel ? pb : 0)
+  const passivePerception = 10 + perceptionBonus
 
   return (
     <Layout title={t('character.skills.title')} backTo={`/char/${charId}`}>
       <Card>
-        <p className="text-sm text-[var(--tg-theme-hint-color)]">
-          {t('character.skills.prof_bonus')}: <span className="font-bold text-white">+{pb}</span>
-        </p>
+        <div className="flex justify-between items-center">
+          <p className="text-sm text-[var(--tg-theme-hint-color)]">
+            {t('character.skills.prof_bonus')}: <span className="font-bold text-white">+{pb}</span>
+          </p>
+          <p className="text-sm text-[var(--tg-theme-hint-color)]">
+            {t('character.skills.passive_perception')}: <span className="font-bold text-white">{passivePerception}</span>
+          </p>
+        </div>
       </Card>
 
       <div className="space-y-1">
         {SKILLS.map((skill) => {
-          const isProficient = skills[skill.key] ?? false
+          const level = getLevel(skills[skill.key])
           const abilMod = abilityModifier(skill.ability)
-          const total = abilMod + (isProficient ? pb : 0)
+          const bonus = abilMod + (level === 'expert' ? 2 * pb : level ? pb : 0)
+          const isExpert = level === 'expert'
+          const isProficient = level === true
 
           return (
             <button
@@ -88,8 +116,13 @@ export default function Skills() {
                          bg-[var(--tg-theme-secondary-bg-color)] active:opacity-70"
             >
               <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0
-                ${isProficient ? 'bg-[var(--tg-theme-button-color)] border-[var(--tg-theme-button-color)]' : 'border-white/30'}`}
+                ${isExpert
+                  ? 'bg-yellow-500 border-yellow-500'
+                  : isProficient
+                    ? 'bg-[var(--tg-theme-button-color)] border-[var(--tg-theme-button-color)]'
+                    : 'border-white/30'}`}
               >
+                {isExpert && <span className="text-xs text-white font-bold">★</span>}
                 {isProficient && <span className="text-xs text-white font-bold">✓</span>}
               </div>
               <span className="flex-1 text-left text-sm font-medium">
@@ -98,8 +131,8 @@ export default function Skills() {
               <span className="text-xs text-[var(--tg-theme-hint-color)] uppercase shrink-0">
                 {skill.ability.slice(0, 3)}
               </span>
-              <span className={`text-sm font-bold w-8 text-right shrink-0 ${total >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                {total >= 0 ? '+' : ''}{total}
+              <span className={`text-sm font-bold w-8 text-right shrink-0 ${bonus >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                {bonus >= 0 ? '+' : ''}{bonus}
               </span>
             </button>
           )

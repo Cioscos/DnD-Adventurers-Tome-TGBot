@@ -10,6 +10,12 @@ import type { DiceRollResult } from '@/types'
 
 const DICE = ['d4', 'd6', 'd8', 'd10', 'd12', 'd20', 'd100'] as const
 
+type InitiativeResult = {
+  roll: number
+  dexMod: number
+  total: number
+}
+
 export default function Dice() {
   const { id } = useParams<{ id: string }>()
   const charId = Number(id)
@@ -17,6 +23,12 @@ export default function Dice() {
   const qc = useQueryClient()
   const [count, setCount] = useState(1)
   const [lastResult, setLastResult] = useState<DiceRollResult | null>(null)
+  const [initiativeResult, setInitiativeResult] = useState<InitiativeResult | null>(null)
+
+  const { data: char } = useQuery({
+    queryKey: ['character', charId],
+    queryFn: () => api.characters.get(charId),
+  })
 
   const { data: history = [] } = useQuery({
     queryKey: ['dice-history', charId],
@@ -27,6 +39,20 @@ export default function Dice() {
     mutationFn: ({ die }: { die: string }) => api.dice.roll(charId, count, die),
     onSuccess: (result) => {
       setLastResult(result)
+      setInitiativeResult(null)
+      qc.invalidateQueries({ queryKey: ['dice-history', charId] })
+      haptic.light()
+    },
+    onError: () => haptic.error(),
+  })
+
+  const initiativeMutation = useMutation({
+    mutationFn: () => api.dice.roll(charId, 1, 'd20'),
+    onSuccess: (result) => {
+      const dexScore = char?.ability_scores.find((s) => s.name === 'dexterity')
+      const dexMod = dexScore?.modifier ?? 0
+      setInitiativeResult({ roll: result.total, dexMod, total: result.total + dexMod })
+      setLastResult(null)
       qc.invalidateQueries({ queryKey: ['dice-history', charId] })
       haptic.light()
     },
@@ -35,8 +61,22 @@ export default function Dice() {
 
   const handleRoll = (die: string) => rollMutation.mutate({ die })
 
+  const dexMod = char?.ability_scores.find((s) => s.name === 'dexterity')?.modifier ?? 0
+  const modLabel = dexMod >= 0 ? `+${dexMod}` : String(dexMod)
+
   return (
     <Layout title={t('character.dice.title')} backTo={`/char/${charId}`}>
+      {/* Initiative button */}
+      <button
+        onClick={() => initiativeMutation.mutate()}
+        disabled={initiativeMutation.isPending || rollMutation.isPending}
+        className="w-full py-3 rounded-2xl font-bold text-base
+                   bg-yellow-500/20 text-yellow-300 active:opacity-70
+                   disabled:opacity-40 transition-opacity"
+      >
+        ⚔️ {t('character.dice.initiative')} (d20 {modLabel})
+      </button>
+
       {/* Dice count selector */}
       <Card>
         <p className="text-sm text-[var(--tg-theme-hint-color)] mb-2">Numero di dadi</p>
@@ -62,7 +102,7 @@ export default function Dice() {
           <button
             key={die}
             onClick={() => handleRoll(die)}
-            disabled={rollMutation.isPending}
+            disabled={rollMutation.isPending || initiativeMutation.isPending}
             className="py-4 rounded-2xl bg-[var(--tg-theme-secondary-bg-color)]
                        font-bold text-lg active:opacity-70 transition-opacity
                        disabled:opacity-40"
@@ -72,7 +112,18 @@ export default function Dice() {
         ))}
       </div>
 
-      {/* Last result */}
+      {/* Initiative result */}
+      {initiativeResult && (
+        <Card className="text-center">
+          <p className="text-sm text-[var(--tg-theme-hint-color)] mb-1">⚔️ {t('character.dice.initiative')}</p>
+          <p className="text-5xl font-bold mb-1">{initiativeResult.total}</p>
+          <p className="text-sm text-[var(--tg-theme-hint-color)]">
+            d20 ({initiativeResult.roll}) {initiativeResult.dexMod >= 0 ? '+' : ''}{initiativeResult.dexMod}
+          </p>
+        </Card>
+      )}
+
+      {/* Last dice result */}
       {lastResult && (
         <Card className="text-center">
           <p className="text-sm text-[var(--tg-theme-hint-color)] mb-1">

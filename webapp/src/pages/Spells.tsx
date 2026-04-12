@@ -6,7 +6,7 @@ import { api } from '@/api/client'
 import Layout from '@/components/Layout'
 import Card from '@/components/Card'
 import { haptic } from '@/auth/telegram'
-import type { Spell } from '@/types'
+import type { Spell, SpellSlot } from '@/types'
 
 type AddForm = {
   name: string; level: string; description: string; casting_time: string
@@ -28,6 +28,7 @@ export default function Spells() {
   const [showAdd, setShowAdd] = useState(false)
   const [form, setForm] = useState<AddForm>(emptyForm)
   const [expanded, setExpanded] = useState<number | null>(null)
+  const [castingSpell, setCastingSpell] = useState<Spell | null>(null)
 
   const { data: char } = useQuery({
     queryKey: ['character', charId],
@@ -72,9 +73,39 @@ export default function Spells() {
     },
   })
 
+  const castMutation = useMutation({
+    mutationFn: async ({ spell, slotLevel }: { spell: Spell; slotLevel: number }) => {
+      const updated = await api.spells.use(charId, spell.id, slotLevel)
+      if (spell.is_concentration) {
+        return api.spells.updateConcentration(charId, spell.id)
+      }
+      return updated
+    },
+    onSuccess: (updated) => {
+      qc.setQueryData(['character', charId], updated)
+      setCastingSpell(null)
+      haptic.success()
+    },
+    onError: () => haptic.error(),
+  })
+
+  const castCantrip = useMutation({
+    mutationFn: async (spell: Spell) => {
+      if (spell.is_concentration) {
+        return api.spells.updateConcentration(charId, spell.id)
+      }
+      return Promise.resolve(char!)
+    },
+    onSuccess: (updated) => {
+      qc.setQueryData(['character', charId], updated)
+      haptic.success()
+    },
+  })
+
   if (!char) return null
 
   const spells: Spell[] = char.spells ?? []
+  const spellSlots: SpellSlot[] = char.spell_slots ?? []
   const filtered = search
     ? spells.filter((s) => s.name.toLowerCase().includes(search.toLowerCase()))
     : spells
@@ -87,8 +118,13 @@ export default function Spells() {
   }, {})
 
   const sortedLevels = Object.keys(byLevel).map(Number).sort((a, b) => a - b)
-
   const concentratingId = char.concentrating_spell_id
+
+  // Available slots for casting (level >= spell.level, available > 0)
+  const availableSlotsFor = (spellLevel: number) =>
+    spellSlots
+      .filter((s) => s.level >= spellLevel && s.available > 0)
+      .sort((a, b) => a.level - b.level)
 
   return (
     <Layout title={t('character.spells.title')} backTo={`/char/${charId}`}>
@@ -169,7 +205,25 @@ export default function Spells() {
                         <span>⚔️ {spell.damage_dice}{spell.damage_type ? ` (${spell.damage_type})` : ''}</span>
                       )}
                     </div>
-                    <div className="flex gap-2 pt-1">
+                    <div className="flex gap-2 pt-1 flex-wrap">
+                      {/* Cast button */}
+                      {spell.level === 0 ? (
+                        <button
+                          onClick={() => castCantrip.mutate(spell)}
+                          disabled={castCantrip.isPending}
+                          className="text-xs px-2 py-1 rounded-lg bg-green-500/20 text-green-300 disabled:opacity-40"
+                        >
+                          ⚡ {t('character.spells.cast_cantrip')}
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => setCastingSpell(spell)}
+                          className="text-xs px-2 py-1 rounded-lg bg-green-500/20 text-green-300"
+                        >
+                          ⚡ {t('character.spells.cast')}
+                        </button>
+                      )}
+
                       {spell.is_concentration && (
                         <button
                           onClick={() => concentrationMutation.mutate(
@@ -201,6 +255,39 @@ export default function Spells() {
         </div>
       ))}
 
+      {/* Slot picker modal */}
+      {castingSpell && (
+        <div className="fixed inset-0 bg-black/60 flex items-end z-50 p-4">
+          <Card className="w-full space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold">{t('character.spells.cast_slot_title')}</h3>
+              <button onClick={() => setCastingSpell(null)} className="text-[var(--tg-theme-hint-color)] text-sm">
+                ✕
+              </button>
+            </div>
+            <p className="text-sm text-[var(--tg-theme-hint-color)]">{castingSpell.name}</p>
+            <div className="space-y-2">
+              {availableSlotsFor(castingSpell.level).length === 0 ? (
+                <p className="text-sm text-red-400 text-center py-2">Nessuno slot disponibile</p>
+              ) : (
+                availableSlotsFor(castingSpell.level).map((slot) => (
+                  <button
+                    key={slot.id}
+                    onClick={() => castMutation.mutate({ spell: castingSpell, slotLevel: slot.level })}
+                    disabled={castMutation.isPending}
+                    className="w-full py-2.5 rounded-xl bg-white/10 font-medium
+                               active:opacity-70 disabled:opacity-40 text-sm"
+                  >
+                    {t('character.slots.level', { level: slot.level })} — {slot.available}/{slot.total}
+                  </button>
+                ))
+              )}
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Add spell modal */}
       {showAdd && (
         <div className="fixed inset-0 bg-black/60 flex items-end z-50 p-4 overflow-y-auto">
           <Card className="w-full space-y-3">

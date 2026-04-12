@@ -1,9 +1,10 @@
 import { useParams, useNavigate } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { api } from '@/api/client'
 import HPBar from '@/components/HPBar'
 import Card from '@/components/Card'
+import { haptic } from '@/auth/telegram'
 
 const MENU_ITEMS = [
   { key: 'hp',         emoji: '❤️',  path: 'hp' },
@@ -33,11 +34,20 @@ export default function CharacterMain() {
   const charId = Number(id)
   const navigate = useNavigate()
   const { t } = useTranslation()
+  const qc = useQueryClient()
 
   const { data: char, isLoading, isError } = useQuery({
     queryKey: ['character', charId],
     queryFn: () => api.characters.get(charId),
     enabled: !!charId,
+  })
+
+  const inspirationMutation = useMutation({
+    mutationFn: (value: boolean) => api.characters.updateInspiration(charId, value),
+    onSuccess: (updated) => {
+      qc.setQueryData(['character', charId], updated)
+      haptic.light()
+    },
   })
 
   if (isLoading) {
@@ -73,7 +83,13 @@ export default function CharacterMain() {
           </svg>
         </button>
         <h1 className="text-xl font-bold truncate flex-1">{char.name}</h1>
-        {char.heroic_inspiration && <span title="Ispirazione Eroica">✨</span>}
+        <button
+          onClick={() => inspirationMutation.mutate(!char.heroic_inspiration)}
+          title={char.heroic_inspiration ? t('character.inspiration.tap_to_spend') : t('character.inspiration.tap_to_grant')}
+          className={`text-xl transition-opacity active:opacity-60 ${char.heroic_inspiration ? 'opacity-100' : 'opacity-25'}`}
+        >
+          ✨
+        </button>
         {char.is_party_active && (
           <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/20 text-green-400">
             Party
