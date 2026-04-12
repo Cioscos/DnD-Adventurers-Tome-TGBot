@@ -13,8 +13,12 @@ from __future__ import annotations
 import logging
 import os
 
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
+# Load .env before importing routers — auth.py reads BOT_TOKEN at module level.
+load_dotenv()
 
 from api.routers import (
     abilities,
