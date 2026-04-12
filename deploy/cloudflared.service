@@ -1,0 +1,32 @@
+# Systemd service template for cloudflared (named tunnel with config.yml).
+#
+# NOTE: If you set up via `cloudflared service install` (Option A or B in
+# setup-cloudflare-tunnel.sh), this file is created automatically at
+# /etc/systemd/system/cloudflared.service — you don't need to install this manually.
+#
+# Use this template ONLY if you need to customize the service or reinstall manually.
+#
+# Installation:
+#   sudo cp deploy/cloudflared.service /etc/systemd/system/cloudflared.service
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable cloudflared
+#   sudo systemctl start cloudflared
+#
+# Logs:
+#   journalctl -u cloudflared -f
+
+[Unit]
+Description=Cloudflare Tunnel (dnd-api)
+After=network.target
+
+[Service]
+Type=simple
+User=cioscospi
+ExecStart=/usr/local/bin/cloudflared tunnel --config /home/cioscospi/.cloudflared/config.yml run
+Restart=on-failure
+RestartSec=5s
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
