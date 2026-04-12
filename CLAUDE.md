@@ -8,89 +8,124 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-# Create .env with BOT_TOKEN (required), DEV_CHAT_ID (optional), DB_PATH (optional)
+# Create .env with BOT_TOKEN (required), DEV_CHAT_ID (optional), DB_PATH (optional), WEBAPP_URL (required for Mini App button)
 python -m bot.main
+```
+
+## Running the API
+
+```bash
+# From repo root (same venv as bot)
+pip install -r api/requirements.txt
+uvicorn api.main:app --host 127.0.0.1 --port 8000 --reload
+```
+
+## Running the Frontend (dev)
+
+```bash
+cd webapp
+npm install
+# Create webapp/.env.local with VITE_API_BASE_URL=http://localhost:8000
+npm run dev
 ```
 
 No test suite or linter is configured.
 
 ## Architecture Overview
 
-Async Telegram bot for D&D 5e with three integrated sections:
+Three-component system:
 
-1. **Wiki D&D 5e** — N-level inline keyboard navigation over the public GraphQL API (`https://www.dnd5eapi.co/graphql/2014`), with full schema introspected at startup.
-2. **Character Management** — full D&D character CRUD (HP, AC, spells, inventory, skills, etc.) persisted in SQLite via SQLAlchemy async.
-3. **Party** — group Telegram feature with live-updated party status message.
+1. **Telegram Bot** (`bot/`) — handles `/start`, `/wiki`, `/party`, `/party_stop`. Character management has moved to the Mini App. Entry point: `bot/main.py`.
+2. **FastAPI Backend** (`api/`) — REST API for all character CRUD, shared SQLite DB with the bot. Runs on the same machine (Raspberry Pi), exposed via Cloudflare Tunnel.
+3. **React Mini App** (`webapp/`) — Telegram Mini App (WebApp) for full character sheet management. Builds to `docs/app/`, served by GitHub Pages.
 
-Entry point: `bot/main.py` — builds the `Application`, initialises `SchemaRegistry` + DB in `post_init`, and registers all handlers.
+### Bot commands
+- `/start` — private chat; shows persistent reply keyboard with Mini App button + wiki inline button
+- `/wiki` — private chat; inline navigation over D&D 5e GraphQL API
+- `/party`, `/party_stop` — group chat; live party status message
+- `web_app_data` — receives `sendData()` payloads from Mini App (dice roll results → posted to chat)
 
-## Navigation Model (Critical)
+### Mini App URL
+`https://cioscos.github.io/dnd_bot_revamped/app/` (HashRouter, built to `docs/app/`)
 
-Three frozen dataclasses drive all callback state via PTB's `arbitrary_callback_data` (LRU cache):
+## Navigation Model
+
+Two frozen dataclasses drive callback state via PTB's `arbitrary_callback_data` (LRU cache):
 
 | Dataclass | File | Used for |
 |---|---|---|
 | `NavAction` | `bot/models/state.py` | Wiki navigation callbacks |
-| `CharAction` | `bot/models/character_state.py` | Character management callbacks |
 | `PartyAction` | `bot/models/party_state.py` | Party session callbacks |
 
-**Handler registration order in `main.py` is mandatory**: Character `ConversationHandler` first, then Party `CallbackQueryHandler`, then Wiki `CallbackQueryHandler`. The wiki handler pattern must exclude both `CharAction` and `PartyAction` instances.
+**Handler registration order in `main.py`**: Party `CallbackQueryHandler` first, then Wiki `CallbackQueryHandler`. Wiki handler pattern: `lambda d: not isinstance(d, PartyAction)`.
 
 ## Key Patterns
-
-### Adding a New Character Feature
-
-1. Add state constant(s) to `bot/handlers/character/__init__.py` (update the `range()` count — currently `range(73)`).
-2. Create `bot/handlers/character/<feature>.py`.
-3. Add keyboard builder(s) to `bot/keyboards/character.py` — each must accept `lang: str = "it"`.
-4. Add formatter(s) to `bot/utils/formatting.py` — each must accept `lang: str = "it"` and use `translator.t()`.
-5. Add all user-facing strings to **both** `bot/locales/it.yaml` and `bot/locales/en.yaml`.
-6. Wire the new action into `character_callback_handler()` in `conversation.py`.
-7. Add the new state(s) to the `states` dict in `build_character_conversation_handler()`.
-8. Every state awaiting text input must include `build_cancel_keyboard(char_id, back_action, lang=lang)` in its prompt.
-
-### Action Result Messages (dice rolls, attacks, spell damage)
-
-When an action produces a result (roll outcome, damage, etc.) from a detail view, **send the result as a new message** via `context.bot.send_message()` rather than editing the current message. This preserves the detail view (item, spell, etc.) so the user does not lose their context. See `bag.py::attack_with_weapon()` and `spells.py::roll_spell_damage()` as reference implementations.
-
-### Navigation: always return to the most specific context
-
-After completing an action that originates from a detail view (e.g. spell detail), always return to that same detail view — not to the parent list. For example: using a spell, dropping concentration, and rolling spell damage all return to `show_spell_detail()`. Similarly, edits made from an edit menu should return to `show_spell_edit_menu()`, not to the detail view.
 
 ### Adding a New Wiki Category
 
 1. Add a `MenuCategory(type_name, label, emoji)` to `MENU_CATEGORIES` in `bot/schema/registry.py`.
 2. Optionally add a `_format_<type>()` function in `bot/handlers/navigation.py` and register it in `_FORMATTERS`. Without one, the generic formatter applies.
 
+### Adding a New API Endpoint
+
+1. Create/extend a router in `api/routers/`.
+2. Add Pydantic schemas in `api/schemas/`.
+3. Use `user_id: int = Depends(get_current_user)` for auth — every endpoint must verify ownership.
+4. Register the router in `api/main.py` with the correct prefix.
+
+### Adding a New Mini App Page
+
+1. Create `webapp/src/pages/<PageName>.tsx`.
+2. Add a route in `webapp/src/App.tsx`.
+3. Add API calls via `api` object from `webapp/src/api/client.ts`.
+4. Add i18n keys to `webapp/src/locales/it.json` and `en.json`.
+
 ## Coding Conventions
 
+### Bot
 - **Async only** — use the python-telegram-bot v20+ async API throughout.
 - **GraphQL queries** — always generated dynamically via `bot/api/query_builder.py`; never hardcode query strings.
 - **HTTP client** — use the `DnDClient` singleton from `bot/api/client.py` (`httpx.AsyncClient`).
 - **Database sessions** — always `async with get_session() as session:` from `bot/db/engine.py`; never instantiate a session directly.
-- **MarkdownV2 escaping** — use `_esc()` from `navigation.py` for wiki output, and `_esc()` from `utils/formatting.py` for character screens. Condition description strings in YAML are **pre-escaped** — do not pass them through `_esc()` again.
-- **Plain text surfaces** — inline keyboard button labels and `callback_query.answer()` toast messages are **plain text only**; never apply MarkdownV2 escaping or special characters there. Locale strings used exclusively in these surfaces must not contain backslash escapes (e.g. write `(XP)` not `\(XP\)`).
-- **i18n** — call `lang = get_lang(update)` at the top of every handler, pass `lang=lang` everywhere. Use `translator.t("key", lang=lang)` for all strings; never hardcode Italian or English text. Default language is `"it"`.
+- **MarkdownV2 escaping** — use `_esc()` from `navigation.py` for wiki output. Condition description strings in YAML are **pre-escaped** — do not pass them through `_esc()` again.
+- **Plain text surfaces** — inline keyboard button labels and `callback_query.answer()` toast messages are **plain text only**.
+- **i18n** — call `lang = get_lang(update)` at the top of every handler. Use `translator.t("key", lang=lang)` for all strings; never hardcode text. Default language is `"it"`.
 - **Logging** — use `logging` module; never `print()`.
 - **Type hints** — required on all function signatures.
-- **Chat-type guards** — `/start` and character features are private-chat only; `/party`/`/party_stop` are group-only. Never remove these guards.
-- **Cancel keyboard** — every multi-step text-input flow must offer `build_cancel_keyboard(char_id, back_action)` so users can abort without `/stop`.
+- **Chat-type guards** — `/start` is private-chat only; `/party`/`/party_stop` are group-only.
+
+### API
+- **Auth** — every endpoint uses `Depends(get_current_user)` from `api/auth.py`. Never trust user-supplied IDs; always filter by the authenticated `user_id`.
+- **Ownership check** — `_get_owned(session, Model, id, user_id)` raises 404/403 appropriately.
+- **Async SQLAlchemy** — use `AsyncSession` from `api/database.py`; never sync sessions.
+
+### Frontend
+- **Auth header** — every API call includes `X-Telegram-Init-Data` header (handled by `api/client.ts`).
+- **Routing** — `HashRouter` only; GitHub Pages cannot serve server-side routes.
+- **State** — TanStack Query for server data, Zustand for `activeCharId` and `locale`.
+- **sendData** — only call `window.Telegram.WebApp.sendData()` for actions that should post to Telegram chat (e.g. dice results). The Mini App closes after `sendData`.
 
 ## Persistence
 
-- **Character DB**: SQLite at `data/dnd_bot.db` (override via `DB_PATH`). Schema migrations run idempotently via `ALTER TABLE` in `_migrate_schema()` in `bot/db/engine.py` on every startup. Always add new columns to `_MIGRATIONS` — never rely solely on `create_all`.
-- **Bot state**: `data/persistence.pkl` — stores `user_data`, callback LRU cache, and conversation state across restarts.
-- **Transient user_data**: short-lived state shared between handlers within a session (e.g. `context.user_data[f"spell_{spell_id}_cast_level"]` to carry the last-cast slot level to the damage roll handler). Use namespaced keys to avoid collisions.
+- **Character DB**: SQLite at `data/dnd_bot.db` (override via `DB_PATH`). Shared between bot and API. Schema migrations run idempotently via `ALTER TABLE` in `_migrate_schema()` in `bot/db/engine.py` on every startup. Always add new columns to `_MIGRATIONS` — never rely solely on `create_all`.
+- **Bot state**: `data/persistence.pkl` — stores `user_data` and callback LRU cache across restarts.
 
 ## i18n
 
-- Locale files: `bot/locales/it.yaml` (default) and `bot/locales/en.yaml` (~570 keys, hierarchical).
+### Bot
+- Locale files: `bot/locales/it.yaml` (default) and `bot/locales/en.yaml`.
 - `Translator` singleton in `bot/utils/i18n.py` with a hot-reload watcher.
 - Language detected from `update.effective_user.language_code`.
 
+### Frontend
+- Locale files: `webapp/src/locales/it.json` (default) and `en.json`.
+- Language detected from `window.Telegram.WebApp.initDataUnsafe.user.language_code`.
+
 ## GitHub Pages
 
-`docs/` contains a Jekyll site at `https://cioscos.github.io/dnd_bot_revamped`. Always use `{{ '/path' | relative_url }}` for asset/internal links — never hardcode paths.
+`docs/` contains a Jekyll site at `https://cioscos.github.io/dnd_bot_revamped`. The `docs/app/` directory is the React build output — excluded from Jekyll processing via `docs/_config.yml`. Always use `{{ '/path' | relative_url }}` for Jekyll asset/internal links.
+
+The GitHub Actions workflow `.github/workflows/deploy-webapp.yml` auto-builds and commits `docs/app/` when `webapp/**` changes on `main`.
 
 # General rules
 

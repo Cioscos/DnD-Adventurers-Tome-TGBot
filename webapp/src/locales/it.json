@@ -1,0 +1,159 @@
+{
+  "common": {
+    "back": "Indietro",
+    "save": "Salva",
+    "cancel": "Annulla",
+    "delete": "Elimina",
+    "confirm": "Conferma",
+    "loading": "Caricamento...",
+    "error": "Errore",
+    "retry": "Riprova",
+    "add": "Aggiungi",
+    "edit": "Modifica",
+    "close": "Chiudi",
+    "yes": "Sì",
+    "no": "No"
+  },
+  "character": {
+    "select": {
+      "title": "I tuoi personaggi",
+      "new": "Nuovo personaggio",
+      "empty": "Nessun personaggio. Creane uno!",
+      "delete_confirm": "Eliminare {{name}}? L'azione è irreversibile."
+    },
+    "menu": {
+      "hp": "Punti Ferita",
+      "ac": "Classe Armatura",
+      "stats": "Caratteristiche",
+      "skills": "Abilità",
+      "saves": "Tiri Salvezza",
+      "spells": "Magie",
+      "slots": "Slot Magie",
+      "inventory": "Inventario",
+      "currency": "Monete",
+      "abilities": "Abilità Speciali",
+      "class": "Classe",
+      "xp": "Esperienza",
+      "conditions": "Condizioni",
+      "history": "Cronologia",
+      "notes": "Note",
+      "maps": "Mappe",
+      "dice": "Dadi",
+      "identity": "Identità",
+      "settings": "Impostazioni",
+      "death_saves": "Tiri vs Morte"
+    },
+    "hp": {
+      "title": "Punti Ferita",
+      "current": "Attuali",
+      "max": "Massimi",
+      "temp": "Temporanei",
+      "damage": "Danni",
+      "heal": "Cura",
+      "set_max": "Imposta massimo",
+      "set_current": "Imposta attuali",
+      "set_temp": "Imposta temporanei"
+    },
+    "death_saves": {
+      "title": "Tiri vs Morte",
+      "successes": "Successi",
+      "failures": "Fallimenti",
+      "success": "Successo",
+      "failure": "Fallimento",
+      "stabilize": "Stabilizza",
+      "reset": "Azzera"
+    },
+    "stats": {
+      "title": "Caratteristiche",
+      "strength": "Forza",
+      "dexterity": "Destrezza",
+      "constitution": "Costituzione",
+      "intelligence": "Intelligenza",
+      "wisdom": "Saggezza",
+      "charisma": "Carisma",
+      "modifier": "Modificatore"
+    },
+    "ac": {
+      "title": "Classe Armatura",
+      "base": "Base",
+      "shield": "Scudo",
+      "magic": "Magia",
+      "total": "Totale"
+    },
+    "spells": {
+      "title": "Magie",
+      "search": "Cerca magia...",
+      "level": "Livello",
+      "cantrip": "Trucchetto",
+      "concentration": "Concentrazione",
+      "ritual": "Rituale",
+      "add": "Aggiungi magia",
+      "forget": "Dimentica",
+      "use": "Usa",
+      "pin": "Fissa",
+      "edit": "Modifica"
+    },
+    "slots": {
+      "title": "Slot Incantesimo",
+      "level": "Livello {{level}}",
+      "used": "Usati",
+      "total": "Totale",
+      "available": "Disponibili",
+      "reset_all": "Ripristina tutti"
+    },
+    "dice": {
+      "title": "Tira Dadi",
+      "send_to_chat": "Invia al gruppo",
+      "history": "Cronologia",
+      "clear": "Svuota cronologia"
+    },
+    "conditions": {
+      "title": "Condizioni",
+      "exhaustion": "Spossatezza (livello {{level}})"
+    },
+    "identity": {
+      "title": "Identità",
+      "name": "Nome",
+      "race": "Razza",
+      "gender": "Genere",
+      "background": "Background",
+      "alignment": "Allineamento",
+      "speed": "Velocità (piedi)",
+      "personality": "Tratti caratteriali",
+      "ideals": "Ideali",
+      "bonds": "Legami",
+      "flaws": "Difetti",
+      "languages": "Lingue",
+      "proficiencies": "Competenze"
+    },
+    "currency": {
+      "title": "Monete",
+      "copper": "Rame",
+      "silver": "Argento",
+      "electrum": "Elettro",
+      "gold": "Oro",
+      "platinum": "Platino",
+      "convert": "Converti"
+    },
+    "xp": {
+      "title": "Esperienza",
+      "add": "Aggiungi XP",
+      "current": "XP attuali",
+      "level": "Livello {{level}}"
+    },
+    "notes": {
+      "title": "Note",
+      "new": "Nuova nota",
+      "voice": "Nota vocale (non disponibile nella Mini App)"
+    },
+    "maps": {
+      "title": "Mappe",
+      "upload_hint": "Per aggiungere mappe usa /upload_map <zona> nella chat del bot",
+      "zone": "Zona"
+    },
+    "history": {
+      "title": "Cronologia",
+      "clear": "Svuota cronologia"
+    }
+  }
+}

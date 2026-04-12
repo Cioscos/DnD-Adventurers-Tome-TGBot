@@ -1,31 +1,59 @@
 """/start command handler.
 
-Shows the top-level menu with two sections:
-- 📖 Wiki D&D  (existing wiki explorer)
-- ⚔️ Il mio personaggio  (character management)
+Shows the wiki inline button and sets a persistent reply keyboard with the
+Mini App WebApp button for character management.
+
+The character button MUST be a ``KeyboardButton`` (reply keyboard), not an
+``InlineKeyboardButton``, so that ``Telegram.WebApp.sendData()`` works —
+which is required for posting dice roll results back to the chat.
 """
 
 from __future__ import annotations
 
 import logging
+import os
 
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram import (
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    KeyboardButton,
+    ReplyKeyboardMarkup,
+    Update,
+    WebAppInfo,
+)
 from telegram.constants import ParseMode
 from telegram.ext import ContextTypes
 
-from bot.models.character_state import CharAction
 from bot.models.state import NavAction
 from bot.utils.i18n import get_lang, translator
 
 logger = logging.getLogger(__name__)
 
+_WEBAPP_URL = os.environ.get("WEBAPP_URL", "https://cioscos.github.io/dnd_bot_revamped/app/")
 
-def build_main_menu_keyboard(lang: str = "it") -> InlineKeyboardMarkup:
-    """Build the top-level 2-choice keyboard."""
+
+def build_wiki_keyboard(lang: str = "it") -> InlineKeyboardMarkup:
+    """Build the inline keyboard that only shows the wiki entry point."""
     return InlineKeyboardMarkup([
         [InlineKeyboardButton(translator.t("start.menu_wiki", lang=lang), callback_data=NavAction("wiki"))],
-        [InlineKeyboardButton(translator.t("start.menu_character", lang=lang), callback_data=CharAction("char_select"))],
     ])
+
+
+def build_character_keyboard(lang: str = "it") -> ReplyKeyboardMarkup:
+    """Build the persistent reply keyboard with the Mini App WebApp button.
+
+    Reply keyboard (not inline) is required for ``Telegram.WebApp.sendData()``
+    to work when the Mini App needs to post dice results back to the chat.
+    """
+    return ReplyKeyboardMarkup(
+        [[KeyboardButton(
+            translator.t("start.menu_character", lang=lang),
+            web_app=WebAppInfo(url=_WEBAPP_URL),
+        )]],
+        resize_keyboard=True,
+        is_persistent=True,
+        input_field_placeholder="Usa il menu qui sotto…",
+    )
 
 
 async def about_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -58,18 +86,26 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
             parse_mode=ParseMode.MARKDOWN_V2,
         )
         return
-    keyboard = build_main_menu_keyboard(lang=lang)
+
+    # 1. Set the persistent reply keyboard with the character Mini App button.
+    #    This keyboard stays visible at the bottom across all future messages.
+    await update.message.reply_text(
+        translator.t("start.character_shortcut", lang=lang),
+        reply_markup=build_character_keyboard(lang=lang),
+    )
+
+    # 2. Send the welcome message with the wiki inline button.
     await update.message.reply_text(
         translator.t("start.welcome", lang=lang),
-        reply_markup=keyboard,
-        parse_mode="MarkdownV2",
+        reply_markup=build_wiki_keyboard(lang=lang),
+        parse_mode=ParseMode.MARKDOWN_V2,
     )
 
 
 async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Show the main menu (usable from callback queries too)."""
+    """Show the wiki inline menu (used from callback queries in the wiki navigator)."""
     lang = get_lang(update)
-    keyboard = build_main_menu_keyboard(lang=lang)
+    keyboard = build_wiki_keyboard(lang=lang)
     welcome = translator.t("start.welcome", lang=lang)
     if update.callback_query:
         await update.callback_query.answer()
