@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 import random
+import re
 
 from rapidfuzz import fuzz, process as rfuzz_process
 from sqlalchemy import delete, select
@@ -49,6 +50,8 @@ SPELL_EDITABLE_FIELDS: dict[str, tuple[str, str]] = {
     "components": ("Componenti", "🧩 Inserisci le *componenti* \\(es\\. V, S, M \\(un po\\' di zolfo\\)\\):"),
     "duration": ("Durata", "⏳ Inserisci la *durata* \\(es\\. Istantanea, 1 minuto\\):"),
     "attack_save": ("Attacco/TS", "🎯 Inserisci *attacco/tiro salvezza* \\(es\\. DEX save, Attacco a distanza\\):"),
+    "damage_dice": ("Dado danno", "🎲 Inserisci il *dado danno* \\(es\\. 3d10, 2d8\\+3\\):"),
+    "damage_type": ("Tipo danno", "💥 Inserisci il *tipo di danno* \\(es\\. fuoco, lampo\\):"),
     "description": ("Descrizione", "📝 Inserisci la *descrizione*:"),
     "higher_level": ("Livelli superiori", "📈 Inserisci la descrizione per *livelli superiori*:"),
 }
@@ -60,6 +63,8 @@ _SPELL_FIELD_PROMPT_KEYS: dict[str, str] = {
     "components": "character.spells.prompt_edit_components",
     "duration": "character.spells.prompt_edit_duration",
     "attack_save": "character.spells.prompt_edit_attack_save",
+    "damage_dice": "character.spells.prompt_edit_damage_dice",
+    "damage_type": "character.spells.prompt_edit_damage_type",
     "description": "character.spells.prompt_edit_description",
     "higher_level": "character.spells.prompt_edit_higher_level",
 }
@@ -399,7 +404,7 @@ async def show_use_spell_level_picker(
                 return await _activate_concentration(update, context, char_id, spell_id)
             if update.callback_query:
                 await update.callback_query.answer("Trucchetto lanciato!")
-            return await show_spells_menu(update, context, char_id)
+            return await show_spell_detail(update, context, char_id, spell_id)
 
         result = await session.execute(
             select(SpellSlot).where(
@@ -411,8 +416,11 @@ async def show_use_spell_level_picker(
         slots = [s for s in result.scalars() if s.available > 0]
 
     if not slots:
-        await _edit_or_reply(update, translator.t("character.spells.no_slots", lang=lang))
-        return CHAR_SPELLS_MENU
+        if update.callback_query:
+            await update.callback_query.answer(
+                translator.t("character.spells.no_slots", lang=lang), show_alert=True
+            )
+        return await show_spell_detail(update, context, char_id, spell_id)
 
     keyboard = build_spell_use_level_keyboard(char_id, spell_id, slots, lang=lang)
     await _edit_or_reply(update, translator.t("character.spells.slot_picker_title", lang=lang), keyboard)
@@ -437,8 +445,11 @@ async def use_spell_at_level(
         )
         slot = result.scalar_one_or_none()
         if slot is None or slot.available == 0:
-            await _edit_or_reply(update, translator.t("character.spells.no_slots", lang=lang))
-            return await show_spells_menu(update, context, char_id)
+            if update.callback_query:
+                await update.callback_query.answer(
+                    translator.t("character.spells.no_slots", lang=lang), show_alert=True
+                )
+            return await show_spell_detail(update, context, char_id, spell_id)
         slot.use_slot()
 
         # Auto-activate concentration
@@ -454,10 +465,13 @@ async def use_spell_at_level(
             msg += f" 🔮 Concentrazione su {spell.name}"
         await update.callback_query.answer(msg)
 
+    # Track the cast level for potential damage roll at higher levels
+    context.user_data[f"spell_{spell_id}_cast_level"] = slot_level
+
     import asyncio as _asyncio
     spell_name = spell.name if spell else "?"
     _asyncio.create_task(_log(char_id, "spell_change", f"Usato: {spell_name} (Slot Liv.{slot_level})"))
-    return await show_spells_menu(update, context, char_id)
+    return await show_spell_detail(update, context, char_id, spell_id)
 
 
 # ---------------------------------------------------------------------------
@@ -477,7 +491,7 @@ async def _activate_concentration(
             char.concentrating_spell_id = spell_id
     if update.callback_query:
         await update.callback_query.answer("🔮 Concentrazione attivata!")
-    return await show_spells_menu(update, context, char_id)
+    return await show_spell_detail(update, context, char_id, spell_id)
 
 
 async def activate_concentration(
@@ -516,15 +530,16 @@ async def drop_concentration(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
     char_id: int,
+    spell_id: int,
 ) -> int:
-    """Drop active concentration."""
+    """Drop active concentration and return to the spell detail."""
     async with get_session() as session:
         char = await session.get(Character, char_id)
         if char:
             char.concentrating_spell_id = None
     if update.callback_query:
         await update.callback_query.answer("❌ Concentrazione interrotta.")
-    return await show_spells_menu(update, context, char_id)
+    return await show_spell_detail(update, context, char_id, spell_id)
 
 
 # ---------------------------------------------------------------------------
@@ -700,7 +715,7 @@ async def handle_spell_edit_text(
             if spell and spell.character_id == char_id:
                 spell.level = level
         await update.message.reply_text(translator.t("character.spells.edit_updated", lang=lang), parse_mode="MarkdownV2")
-        return await show_spell_detail(update, context, char_id, spell_id)
+        return await show_spell_edit_menu(update, context, char_id, spell_id)
 
     # Text fields — dash or empty means clear
     value = None if text in ("-", "") else text
@@ -710,7 +725,7 @@ async def handle_spell_edit_text(
             setattr(spell, field, value)
 
     await update.message.reply_text(translator.t("character.spells.edit_updated", lang=lang), parse_mode="MarkdownV2")
-    return await show_spell_detail(update, context, char_id, spell_id)
+    return await show_spell_edit_menu(update, context, char_id, spell_id)
 
 
 async def _toggle_spell_bool(
@@ -734,7 +749,7 @@ async def _toggle_spell_bool(
 
     if update.callback_query:
         await update.callback_query.answer("Aggiornato!")
-    return await show_spell_detail(update, context, char_id, spell_id)
+    return await show_spell_edit_menu(update, context, char_id, spell_id)
 
 
 # ---------------------------------------------------------------------------
@@ -773,6 +788,105 @@ async def show_spell_edit_menu(
     lang = get_lang(update)
     keyboard = build_spell_edit_field_keyboard(char_id, spell_id, lang=lang)
     await _edit_or_reply(update, translator.t("character.spells.edit_menu_title", lang=lang), keyboard)
+    return CHAR_SPELLS_MENU
+
+
+# ---------------------------------------------------------------------------
+# Spell damage roll
+# ---------------------------------------------------------------------------
+
+_DICE_RE = re.compile(r"^(\d+)d(\d+)([+-]\d+)?$", re.IGNORECASE)
+# Detects patterns like "1d10 for each slot level above 3rd" in higher_level text
+_HIGHER_LEVEL_RE = re.compile(
+    r"(\d+)d(\d+)\s+(?:for each|per each|for every|per ogni)\s+(?:slot\s+)?level",
+    re.IGNORECASE,
+)
+
+
+async def roll_spell_damage(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    char_id: int,
+    spell_id: int,
+) -> int:
+    """Roll damage dice for a spell and send the result as a new message."""
+    lang = get_lang(update)
+    async with get_session() as session:
+        spell = await session.get(Spell, spell_id)
+        if spell is None or not spell.damage_dice:
+            if update.callback_query:
+                await update.callback_query.answer("Nessun dado danno configurato.")
+            return CHAR_SPELLS_MENU
+
+        spell_name = spell.name
+        damage_dice_str = spell.damage_dice.strip()
+        damage_type = spell.damage_type or ""
+        spell_level = spell.level
+        higher_level_text = spell.higher_level or ""
+
+    m = _DICE_RE.match(damage_dice_str)
+    if not m:
+        if update.callback_query:
+            await update.callback_query.answer("Formato dado non valido.")
+        return CHAR_SPELLS_MENU
+
+    num_dice = int(m.group(1))
+    die_sides = int(m.group(2))
+    flat_bonus = int(m.group(3)) if m.group(3) else 0
+
+    base_rolls = [random.randint(1, die_sides) for _ in range(num_dice)]
+    total = sum(base_rolls) + flat_bonus
+
+    # Check for higher-level bonus dice (detect pattern in higher_level text)
+    cast_level: int | None = context.user_data.get(f"spell_{spell_id}_cast_level")
+    bonus_rolls: list[int] = []
+    bonus_dice_str = ""
+    if cast_level and cast_level > spell_level and higher_level_text:
+        hl_match = _HIGHER_LEVEL_RE.search(higher_level_text)
+        if hl_match:
+            hl_num = int(hl_match.group(1))
+            hl_sides = int(hl_match.group(2))
+            extra_levels = cast_level - spell_level
+            bonus_rolls = [random.randint(1, hl_sides) for _ in range(hl_num * extra_levels)]
+            total += sum(bonus_rolls)
+            bonus_dice_str = f"{hl_num * extra_levels}d{hl_sides}"
+
+    # Build result text
+    rolls_str = _esc(", ".join(str(r) for r in base_rolls))
+    flat_str = f" \\+{flat_bonus}" if flat_bonus > 0 else (f" \\-{abs(flat_bonus)}" if flat_bonus < 0 else "")
+    type_str = f" \\({_esc(damage_type)}\\)" if damage_type else ""
+    dice_notation = _esc(damage_dice_str)
+
+    higher_str = ""
+    if bonus_rolls:
+        bonus_rolls_str = _esc(", ".join(str(r) for r in bonus_rolls))
+        higher_str = translator.t(
+            "character.spells.damage_higher_level",
+            lang=lang,
+            extra=_esc(bonus_dice_str),
+            bonus_rolls=bonus_rolls_str,
+        )
+
+    text = translator.t(
+        "character.spells.damage_roll_result",
+        lang=lang,
+        name=_esc(spell_name),
+        dice=dice_notation,
+        rolls=rolls_str + flat_str,
+        total=total,
+        type=type_str,
+        higher=higher_str,
+    )
+
+    if update.callback_query:
+        await update.callback_query.answer(
+            f"🎲 {damage_dice_str} = {total}{(' ' + damage_type) if damage_type else ''}"
+        )
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text=text,
+            parse_mode="MarkdownV2",
+        )
     return CHAR_SPELLS_MENU
 
 

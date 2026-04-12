@@ -269,6 +269,10 @@ def format_spell_detail(spell: Spell, lang: str = "it") -> str:
     if spell.attack_save:
         lines.append(translator.t("character.spells.spell_detail_attack_save", lang=lang, val=_esc(spell.attack_save)))
 
+    if getattr(spell, "damage_dice", None):
+        type_str = f" \\({_esc(spell.damage_type)}\\)" if getattr(spell, "damage_type", None) else ""
+        lines.append(translator.t("character.spells.spell_detail_damage", lang=lang, val=_esc(spell.damage_dice), type=type_str))
+
     if spell.description:
         desc_key = translator.t("character.spells.spell_detail_desc", lang=lang, desc=_esc(spell.description))
         lines.append(f"\n{desc_key}")

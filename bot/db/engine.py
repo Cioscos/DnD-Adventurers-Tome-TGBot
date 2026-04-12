@@ -84,6 +84,9 @@ _MIGRATIONS: list[tuple[str, str, str, str | None]] = [
     # CharacterClass extensions
     ("character_classes", "spellcasting_ability", "VARCHAR(50)", None),
     ("character_classes", "hit_die", "INTEGER", None),
+    # Spell damage fields
+    ("spells", "damage_dice", "VARCHAR(100)", None),
+    ("spells", "damage_type", "VARCHAR(100)", None),
 ]
 
 

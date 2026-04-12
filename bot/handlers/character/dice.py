@@ -67,18 +67,11 @@ async def roll_dice(
             history = history[-50:]
         char.rolls_history = history
 
-    result_str = ", ".join(str(r) for r in results)
-    lang = get_lang(update)
-    text = (
-        translator.t("character.dice.results_title", lang=lang, count=count, die=die) + "\n\n"
-        + translator.t("character.dice.results_line", lang=lang, results=_esc(result_str)) + "\n"
-        + translator.t("character.dice.total_line", lang=lang, total=total)
-    )
     if update.callback_query:
-        await update.callback_query.answer(f"{count}{die} = {total}")
+        result_str = ", ".join(str(r) for r in results)
+        await update.callback_query.answer(f"{count}{die} = {total}  [{result_str}]")
 
     asyncio.create_task(_trigger_party_update(char_id, context))
-    await _edit_or_reply(update, text)
     return await show_dice_menu(update, context, char_id)
 
 
