@@ -162,6 +162,7 @@ class MapRead(BaseModel):
     zone_name: str
     file_id: str
     file_type: str
+    local_file_path: Optional[str] = None
 
     model_config = {"from_attributes": True}
 
@@ -193,10 +194,21 @@ class DeathSaveAction(str, Enum):
     FAILURE = "failure"
     RESET = "reset"
     STABILIZE = "stabilize"
+    ROLL = "roll"
 
 
 class DeathSaveUpdate(BaseModel):
     action: DeathSaveAction
+
+
+class DeathSaveRollResult(BaseModel):
+    die: int
+    outcome: str  # "nat20" | "nat1" | "success" | "failure"
+    successes: int
+    failures: int
+    stable: bool
+    revived: bool = False
+    current_hp: int
 
 
 # ---------------------------------------------------------------------------

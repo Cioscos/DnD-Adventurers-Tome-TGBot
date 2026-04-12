@@ -74,3 +74,13 @@ async def get_dice_history(
         )
         for entry in reversed(history)  # most recent first
     ]
+
+
+@router.delete("/{char_id}/dice/history", status_code=204)
+async def clear_dice_history(
+    char_id: int,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> None:
+    char = await _get_owned(char_id, user_id, session)
+    char.rolls_history = []

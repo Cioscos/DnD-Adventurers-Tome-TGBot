@@ -45,10 +45,13 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     # Create all tables on startup so the API works on a fresh local DB
-    # without needing to run the bot first.
+    # without needing to run the bot first. Also run migrations to add
+    # columns that were added after table creation.
     from bot.db.models import Base
+    from bot.db.engine import _migrate_schema
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        await conn.run_sync(_migrate_schema)
     yield
 
 

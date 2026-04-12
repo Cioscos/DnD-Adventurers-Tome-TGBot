@@ -87,6 +87,8 @@ _MIGRATIONS: list[tuple[str, str, str, str | None]] = [
     # Spell damage fields
     ("spells", "damage_dice", "VARCHAR(100)", None),
     ("spells", "damage_type", "VARCHAR(100)", None),
+    # Map local file upload support
+    ("maps", "local_file_path", "VARCHAR(500)", None),
 ]
 
 

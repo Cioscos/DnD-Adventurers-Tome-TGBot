@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { api } from '@/api/client'
+import { api, type DeathSaveRollResult } from '@/api/client'
 import Layout from '@/components/Layout'
 import Card from '@/components/Card'
 import HPBar from '@/components/HPBar'
@@ -41,6 +41,9 @@ export default function HP() {
   const [hitDiceCounts, setHitDiceCounts] = useState<Record<number, number>>({})
   const [hitDiceResult, setHitDiceResult] = useState<HitDiceSpendResult | null>(null)
 
+  // Death save roll result
+  const [deathRollResult, setDeathRollResult] = useState<DeathSaveRollResult | null>(null)
+
   // Concentration save (after taking damage)
   const [concDamageInput, setConcDamageInput] = useState('')
   const [concSaveResult, setConcSaveResult] = useState<ConcentrationSaveResult | null>(null)
@@ -77,6 +80,16 @@ export default function HP() {
       qc.setQueryData(['character', charId], updated)
       haptic.success()
     },
+  })
+
+  const deathRollMutation = useMutation({
+    mutationFn: () => api.characters.rollDeathSave(charId),
+    onSuccess: (result) => {
+      setDeathRollResult(result)
+      qc.invalidateQueries({ queryKey: ['character', charId] })
+      haptic.success()
+    },
+    onError: () => haptic.error(),
   })
 
   const hitDiceMutation = useMutation({
@@ -290,6 +303,14 @@ export default function HP() {
               </div>
             </div>
           </div>
+          <button
+            onClick={() => deathRollMutation.mutate()}
+            disabled={deathRollMutation.isPending}
+            className="w-full py-3 rounded-xl bg-yellow-500/20 text-yellow-300 font-bold text-base
+                       active:opacity-70 disabled:opacity-40 mb-2"
+          >
+            🎲 {t('character.death_saves.roll')}
+          </button>
           <div className="grid grid-cols-3 gap-2">
             <button
               onClick={() => deathMutation.mutate('success')}
@@ -406,6 +427,73 @@ export default function HP() {
             <button
               onClick={() => setHitDiceResult(null)}
               className="w-full py-2.5 rounded-xl bg-[var(--tg-theme-button-color)]
+                         text-[var(--tg-theme-button-text-color)] font-semibold"
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Death save roll result modal */}
+      {deathRollResult && (
+        <div
+          className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+          onClick={() => setDeathRollResult(null)}
+        >
+          <div
+            className={`rounded-2xl p-5 w-full max-w-xs text-center space-y-3
+              ${deathRollResult.outcome === 'nat20'
+                ? 'bg-yellow-500/20 border border-yellow-500/40'
+                : deathRollResult.outcome === 'success'
+                  ? 'bg-green-500/20 border border-green-500/40'
+                  : 'bg-red-500/20 border border-red-500/40'}`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="text-sm text-[var(--tg-theme-hint-color)]">
+              💀 {t('character.death_saves.roll_result')}
+            </p>
+            {deathRollResult.outcome === 'nat20' && (
+              <p className="text-yellow-400 font-bold text-lg">{t('character.death_saves.nat20')}</p>
+            )}
+            {deathRollResult.outcome === 'nat1' && (
+              <p className="text-red-400 font-bold text-lg">{t('character.death_saves.nat1')}</p>
+            )}
+            <p className={`text-5xl font-black ${
+              deathRollResult.outcome === 'nat20' ? 'text-yellow-400'
+                : deathRollResult.outcome === 'success' ? 'text-green-400'
+                  : 'text-red-400'
+            }`}>
+              {deathRollResult.die}
+            </p>
+            <p className={`font-bold ${
+              deathRollResult.outcome === 'success' || deathRollResult.outcome === 'nat20'
+                ? 'text-green-400' : 'text-red-400'
+            }`}>
+              {deathRollResult.outcome === 'success' || deathRollResult.outcome === 'nat20'
+                ? t('character.death_saves.success') : t('character.death_saves.failure')}
+            </p>
+            {deathRollResult.revived && (
+              <p className="text-yellow-300 text-sm font-medium">
+                {t('character.death_saves.revived')}
+              </p>
+            )}
+            {deathRollResult.stable && !deathRollResult.revived && (
+              <p className="text-green-300 text-sm font-medium">
+                {t('character.death_saves.stable_3_successes')}
+              </p>
+            )}
+            {deathRollResult.failures >= 3 && (
+              <p className="text-red-300 text-sm font-medium">
+                {t('character.death_saves.dead_3_failures')}
+              </p>
+            )}
+            <p className="text-xs text-[var(--tg-theme-hint-color)]">
+              {t('character.death_saves.successes')}: {deathRollResult.successes}/3 | {t('character.death_saves.failures')}: {deathRollResult.failures}/3
+            </p>
+            <button
+              onClick={() => setDeathRollResult(null)}
+              className="w-full py-2 rounded-xl bg-[var(--tg-theme-button-color)]
                          text-[var(--tg-theme-button-text-color)] font-semibold"
             >
               OK

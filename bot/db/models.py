@@ -475,8 +475,9 @@ class Map(Base):
         Integer, ForeignKey("characters.id", ondelete="CASCADE"), nullable=False
     )
     zone_name: Mapped[str] = mapped_column(String(200), nullable=False)
-    file_id: Mapped[str] = mapped_column(String(500), nullable=False)
+    file_id: Mapped[str] = mapped_column(String(500), nullable=False, default="")
     file_type: Mapped[str] = mapped_column(Enum(FileType), default=FileType.PHOTO)
+    local_file_path: Mapped[str | None] = mapped_column(String(500), nullable=True, default=None)
 
     character: Mapped["Character"] = relationship(back_populates="maps")
 

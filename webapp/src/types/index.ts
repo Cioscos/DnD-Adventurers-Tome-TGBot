@@ -51,6 +51,7 @@ export interface MapEntry {
   zone_name: string
   file_id: string
   file_type: string
+  local_file_path?: string | null
 }
 
 export interface Spell {

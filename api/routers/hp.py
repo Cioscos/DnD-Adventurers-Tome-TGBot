@@ -17,6 +17,7 @@ from api.database import get_db
 from bot.db.models import Character, CharacterHistory
 from api.schemas.character import CharacterFull
 from api.schemas.common import (
+    DeathSaveRollResult,
     DeathSaveUpdate,
     DeathSaveAction,
     HPOp,
@@ -91,6 +92,8 @@ async def update_hp(
 ) -> Character:
     char = await _get_owned_full(char_id, user_id, session)
 
+    was_at_zero = char.current_hit_points == 0
+
     if body.op == HPOp.DAMAGE:
         amount = body.value
         # Absorb temp HP first
@@ -126,6 +129,14 @@ async def update_hp(
     elif body.op == HPOp.SET_TEMP:
         char.temp_hp = max(0, body.value)
 
+    # Auto-reset death saves when rising from 0 HP
+    if was_at_zero and char.current_hit_points > 0:
+        ds = dict(char.death_saves or {})
+        if ds.get("successes", 0) > 0 or ds.get("failures", 0) > 0 or ds.get("stable", False):
+            char.death_saves = {"successes": 0, "failures": 0, "stable": False}
+            _add_history(session, char.id, "death_save",
+                         "Tiri salvezza morte azzerati (HP risaliti sopra 0)")
+
     return char
 
 
@@ -145,23 +156,27 @@ async def rest(
     if body.rest_type == "long":
         char.current_hit_points = char.hit_points
         char.temp_hp = 0
+        # Break concentration
+        char.concentrating_spell_id = None
         # Reset all spell slots
         for slot in char.spell_slots:
             slot.used = 0
-        # Restore long-rest abilities
+        # Restore long-rest AND short-rest abilities (long rest includes short rest benefits)
         for ability in char.abilities:
-            if ability.restoration_type == "long_rest" and ability.max_uses is not None:
+            if ability.restoration_type in ("long_rest", "short_rest") and ability.max_uses is not None:
                 ability.uses = ability.max_uses
-        # Restore long-rest class resources
+        # Restore long-rest AND short-rest class resources
         for cls in char.classes:
             for res in cls.resources:
-                if res.restoration_type == "long_rest":
+                if res.restoration_type in ("long_rest", "short_rest"):
                     res.current = res.total
         # Reset death saves
         char.death_saves = {"successes": 0, "failures": 0, "stable": False}
         _add_history(session, char.id, "rest", "Riposo lungo completato")
 
     elif body.rest_type == "short":
+        # Break concentration
+        char.concentrating_spell_id = None
         healed = 0
         if body.hit_dice_used and body.hit_dice_used > 0:
             # Simple roll: average hit die value * count (frontend handles the roll display)
@@ -267,5 +282,73 @@ async def update_death_saves(
     elif body.action == DeathSaveAction.RESET:
         ds = {"successes": 0, "failures": 0, "stable": False}
 
+    elif body.action == DeathSaveAction.ROLL:
+        # Handled by the dedicated roll endpoint below
+        pass
+
     char.death_saves = ds
     return char
+
+
+# ---------------------------------------------------------------------------
+# Death save roll (d20 with special D&D 5e rules)
+# ---------------------------------------------------------------------------
+
+@router.post("/{char_id}/death_saves/roll", response_model=DeathSaveRollResult)
+async def roll_death_save(
+    char_id: int,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> DeathSaveRollResult:
+    char = await _get_owned_full(char_id, user_id, session)
+    ds = dict(char.death_saves or {"successes": 0, "failures": 0, "stable": False})
+
+    die = random.randint(1, 20)
+    revived = False
+
+    if die == 20:
+        # Natural 20: revive with 1 HP
+        ds = {"successes": 0, "failures": 0, "stable": False}
+        char.current_hit_points = 1
+        revived = True
+        outcome = "nat20"
+        _add_history(session, char.id, "death_save",
+                     f"Tiro morte d20={die} — Naturale 20! Rianimato con 1 HP")
+
+    elif die == 1:
+        # Natural 1: counts as 2 failures
+        ds["failures"] = min(3, ds.get("failures", 0) + 2)
+        outcome = "nat1"
+        _add_history(session, char.id, "death_save",
+                     f"Tiro morte d20={die} — Naturale 1! 2 fallimenti ({ds['failures']}/3)")
+
+    elif die >= 10:
+        # 10+: 1 success
+        ds["successes"] = min(3, ds.get("successes", 0) + 1)
+        outcome = "success"
+        if ds["successes"] >= 3:
+            ds["stable"] = True
+            _add_history(session, char.id, "death_save",
+                         f"Tiro morte d20={die} — Successo! Stabilizzato (3/3)")
+        else:
+            _add_history(session, char.id, "death_save",
+                         f"Tiro morte d20={die} — Successo ({ds['successes']}/3)")
+
+    else:
+        # 2-9: 1 failure
+        ds["failures"] = min(3, ds.get("failures", 0) + 1)
+        outcome = "failure"
+        _add_history(session, char.id, "death_save",
+                     f"Tiro morte d20={die} — Fallimento ({ds['failures']}/3)")
+
+    char.death_saves = ds
+
+    return DeathSaveRollResult(
+        die=die,
+        outcome=outcome,
+        successes=ds["successes"],
+        failures=ds["failures"],
+        stable=ds.get("stable", False),
+        revived=revived,
+        current_hp=char.current_hit_points,
+    )

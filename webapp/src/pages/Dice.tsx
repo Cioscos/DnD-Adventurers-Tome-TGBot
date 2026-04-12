@@ -24,6 +24,7 @@ export default function Dice() {
   const [count, setCount] = useState(1)
   const [lastResult, setLastResult] = useState<DiceRollResult | null>(null)
   const [initiativeResult, setInitiativeResult] = useState<InitiativeResult | null>(null)
+  const [showClearConfirm, setShowClearConfirm] = useState(false)
 
   const { data: char } = useQuery({
     queryKey: ['character', charId],
@@ -55,6 +56,16 @@ export default function Dice() {
       setLastResult(null)
       qc.invalidateQueries({ queryKey: ['dice-history', charId] })
       haptic.light()
+    },
+    onError: () => haptic.error(),
+  })
+
+  const clearHistoryMutation = useMutation({
+    mutationFn: () => api.dice.clearHistory(charId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['dice-history', charId] })
+      setShowClearConfirm(false)
+      haptic.success()
     },
     onError: () => haptic.error(),
   })
@@ -147,9 +158,17 @@ export default function Dice() {
       {/* History */}
       {history.length > 0 && (
         <div>
-          <h3 className="font-semibold mb-2 text-sm text-[var(--tg-theme-hint-color)]">
-            {t('character.dice.history')}
-          </h3>
+          <div className="flex justify-between items-center mb-2">
+            <h3 className="font-semibold text-sm text-[var(--tg-theme-hint-color)]">
+              {t('character.dice.history')}
+            </h3>
+            <button
+              onClick={() => setShowClearConfirm(true)}
+              className="text-xs text-red-400 active:opacity-70"
+            >
+              {t('character.dice.clear')}
+            </button>
+          </div>
           <div className="space-y-1">
             {history.slice(0, 10).map((entry, i) => (
               <Card key={i} className="!p-2 flex justify-between items-center">
@@ -163,6 +182,32 @@ export default function Dice() {
               </Card>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Clear history confirmation */}
+      {showClearConfirm && (
+        <div className="fixed inset-0 bg-black/60 flex items-end z-50 p-4">
+          <Card className="w-full">
+            <p className="text-sm text-center mb-3">
+              {t('character.dice.clear_confirm')}
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => clearHistoryMutation.mutate()}
+                disabled={clearHistoryMutation.isPending}
+                className="flex-1 py-2 rounded-xl bg-red-500/80 text-white font-medium"
+              >
+                {t('common.confirm')}
+              </button>
+              <button
+                onClick={() => setShowClearConfirm(false)}
+                className="flex-1 py-2 rounded-xl bg-white/10 font-medium"
+              >
+                {t('common.cancel')}
+              </button>
+            </div>
+          </Card>
         </div>
       )}
     </Layout>

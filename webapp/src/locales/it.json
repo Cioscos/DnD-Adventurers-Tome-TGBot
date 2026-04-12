@@ -69,7 +69,14 @@
       "success": "Successo",
       "failure": "Fallimento",
       "stabilize": "Stabilizza",
-      "reset": "Azzera"
+      "reset": "Azzera",
+      "roll": "Tira d20",
+      "roll_result": "Tiro Salvezza Morte",
+      "nat20": "Naturale 20! Rianimato!",
+      "nat1": "Naturale 1! Doppio fallimento!",
+      "revived": "Torni cosciente con 1 HP!",
+      "stable_3_successes": "Stabilizzato! (3 successi)",
+      "dead_3_failures": "3 fallimenti... il personaggio è morto."
     },
     "stats": {
       "title": "Caratteristiche",
@@ -161,6 +168,7 @@
       "send_to_chat": "Invia al gruppo",
       "history": "Cronologia",
       "clear": "Svuota cronologia",
+      "clear_confirm": "Svuotare tutta la cronologia dei lanci?",
       "initiative": "Tira Iniziativa",
       "initiative_result": "Iniziativa: d20 ({{roll}}) {{mod}} = {{total}}"
     },
@@ -241,10 +249,15 @@
     },
     "maps": {
       "title": "Mappe",
-      "upload_hint": "Per aggiungere mappe usa /upload_map <zona> nella chat del bot",
       "zone": "Zona",
       "loading_image": "Caricamento immagine...",
-      "delete_confirm": "Eliminare la mappa di {{zone}}?"
+      "delete_confirm": "Eliminare la mappa di {{zone}}?",
+      "add_map": "Aggiungi mappa",
+      "zone_name": "Nome zona",
+      "zone_name_placeholder": "es. Dungeon livello 1",
+      "select_file": "Seleziona immagine",
+      "upload_btn": "Carica",
+      "open": "Apri"
     },
     "history": {
       "title": "Cronologia",

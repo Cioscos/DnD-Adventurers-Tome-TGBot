@@ -55,7 +55,7 @@ cd webapp && npm run dev
 
 Then open **http://localhost:5173/** in any browser. No Telegram required.
 
-The API creates `data/dnd_bot.db` automatically on first startup (tables are created via `Base.metadata.create_all`). The bot is optional — you only need it if you're working on bot commands.
+The API creates `data/dnd_bot.db` automatically on first startup (tables are created via `Base.metadata.create_all` **and** schema migrations run via `_migrate_schema`). The bot is optional — you only need it if you're working on bot commands.
 
 ---
 
@@ -154,6 +154,8 @@ Two frozen dataclasses drive callback state via PTB's `arbitrary_callback_data` 
 2. Add Pydantic schemas in `api/schemas/`.
 3. Use `user_id: int = Depends(get_current_user)` for auth — every endpoint must verify ownership.
 4. Register the router in `api/main.py` with the correct prefix.
+5. For endpoints that return a `Response` subclass (`FileResponse`, `StreamingResponse`), use `response_model=None` and omit the return type annotation — FastAPI cannot introspect these types.
+6. For multipart file uploads, use `Form(...)` and `File(...)` parameters — requires `python-multipart` (already in `pyproject.toml`).
 
 ### Adding a New Mini App Page
 
@@ -186,11 +188,28 @@ Two frozen dataclasses drive callback state via PTB's `arbitrary_callback_data` 
 - **Routing** — `HashRouter` only; GitHub Pages cannot serve server-side routes.
 - **State** — TanStack Query for server data, Zustand for `activeCharId` and `locale`.
 - **sendData** — only call `window.Telegram.WebApp.sendData()` for actions that should post to Telegram chat (e.g. dice results). The Mini App closes after `sendData`.
+- **Multipart uploads** — use the `requestFormData<T>()` helper in `api/client.ts` (does not set `Content-Type`; browser sets it automatically with the correct boundary). Never use the regular `request()` helper for `FormData` payloads.
 
 ## Persistence
 
-- **Character DB**: SQLite at `data/dnd_bot.db` (override via `DB_PATH`). Shared between bot and API. Schema migrations run idempotently via `ALTER TABLE` in `_migrate_schema()` in `bot/db/engine.py` on every startup. Always add new columns to `_MIGRATIONS` — never rely solely on `create_all`.
+- **Character DB**: SQLite at `data/dnd_bot.db` (override via `DB_PATH`). Shared between bot and API. Schema migrations run idempotently via `ALTER TABLE` in `_migrate_schema()` in `bot/db/engine.py`. **Both the bot and the API run migrations on startup** (bot via `bot/main.py`, API via the `lifespan` hook in `api/main.py`). Always add new columns to `_MIGRATIONS` in `bot/db/engine.py` — never rely solely on `create_all`.
+- **Map files**: Uploaded via the webapp are stored locally at `data/maps/{char_id}/{uuid}.{ext}` (up to 10 MB, image/PDF formats). The `Map` model stores the path in `local_file_path`; Telegram-sourced maps use `file_id` instead. The `data/maps/` directory is created automatically on first upload.
 - **Bot state**: `data/persistence.pkl` — stores `user_data` and callback LRU cache across restarts.
+
+## Notable API Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/characters/{id}/death_saves/roll` | Roll 1d20 for death save (D&D 5e rules: nat 20 = revive, nat 1 = 2 failures) |
+| `DELETE` | `/characters/{id}/dice/history` | Clear the character's dice roll history |
+| `POST` | `/characters/{id}/maps/upload` | Upload a map image from the webapp (multipart/form-data: `zone_name` + `file`) |
+| `GET` | `/characters/{id}/maps/{map_id}/file` | Serve map file — local disk if `local_file_path` set, else Telegram proxy |
+
+### D&D 5e Rule Compliance Notes
+- **Death save roll**: nat 20 → revive with 1 HP + reset saves; nat 1 → 2 failures; 10+ → 1 success; 2-9 → 1 failure
+- **Rests break concentration**: both short and long rest clear `concentrating_spell_id`
+- **HP above 0 resets death saves**: HEAL/SET_CURRENT automatically clears death saves when HP crosses from 0 to positive
+- **Long rest includes short-rest resources**: long rest restores abilities/resources with `restoration_type` of `long_rest` OR `short_rest`
 
 ## i18n
 

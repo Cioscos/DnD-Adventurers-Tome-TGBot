@@ -49,6 +49,16 @@ export type HitDiceSpendResult = {
   new_current_hp: number
 }
 
+export type DeathSaveRollResult = {
+  die: number
+  outcome: 'nat20' | 'nat1' | 'success' | 'failure'
+  successes: number
+  failures: number
+  stable: boolean
+  revived: boolean
+  current_hp: number
+}
+
 export type ConcentrationSaveResult = {
   die: number
   bonus: number
@@ -90,6 +100,25 @@ async function request<T>(
     throw new ApiError(res.status, body.detail ?? res.statusText)
   }
   if (res.status === 204) return undefined as T
+  return res.json() as Promise<T>
+}
+
+async function requestFormData<T>(
+  path: string,
+  formData: FormData,
+): Promise<T> {
+  const initData = getInitData()
+  const res = await fetch(`${BASE_URL}${path}`, {
+    method: 'POST',
+    headers: {
+      'X-Telegram-Init-Data': initData,
+    },
+    body: formData,
+  })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ detail: res.statusText }))
+    throw new ApiError(res.status, body.detail ?? res.statusText)
+  }
   return res.json() as Promise<T>
 }
 
@@ -185,6 +214,12 @@ export const api = {
       request<HitDiceSpendResult>(`/characters/${id}/hit_dice/spend`, {
         method: 'POST',
         body: JSON.stringify({ class_id: classId, count }),
+      }),
+
+    // Death save roll
+    rollDeathSave: (id: number) =>
+      request<DeathSaveRollResult>(`/characters/${id}/death_saves/roll`, {
+        method: 'POST',
       }),
   },
 
@@ -370,6 +405,12 @@ export const api = {
       request<void>(`/characters/${charId}/maps/zone/${encodeURIComponent(zoneName)}`, {
         method: 'DELETE',
       }),
+    upload: (charId: number, zoneName: string, file: File) => {
+      const fd = new FormData()
+      fd.append('zone_name', zoneName)
+      fd.append('file', file)
+      return requestFormData<MapEntry>(`/characters/${charId}/maps/upload`, fd)
+    },
   },
 
   // ---------------------------------------------------------------------------
@@ -382,6 +423,8 @@ export const api = {
         body: JSON.stringify({ count, die }),
       }),
     history: (charId: number) => request<DiceRollResult[]>(`/characters/${charId}/dice/history`),
+    clearHistory: (charId: number) =>
+      request<void>(`/characters/${charId}/dice/history`, { method: 'DELETE' }),
   },
 
   // ---------------------------------------------------------------------------

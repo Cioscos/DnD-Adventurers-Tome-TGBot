@@ -69,7 +69,14 @@
       "success": "Success",
       "failure": "Failure",
       "stabilize": "Stabilize",
-      "reset": "Reset"
+      "reset": "Reset",
+      "roll": "Roll d20",
+      "roll_result": "Death Save Roll",
+      "nat20": "Natural 20! Revived!",
+      "nat1": "Natural 1! Double failure!",
+      "revived": "You regain consciousness with 1 HP!",
+      "stable_3_successes": "Stabilized! (3 successes)",
+      "dead_3_failures": "3 failures... the character is dead."
     },
     "stats": {
       "title": "Ability Scores",
@@ -161,6 +168,7 @@
       "send_to_chat": "Send to group",
       "history": "History",
       "clear": "Clear history",
+      "clear_confirm": "Clear all dice roll history?",
       "initiative": "Roll Initiative",
       "initiative_result": "Initiative: d20 ({{roll}}) {{mod}} = {{total}}"
     },
@@ -241,10 +249,15 @@
     },
     "maps": {
       "title": "Maps",
-      "upload_hint": "To add maps use /upload_map <zone> in the bot chat",
       "zone": "Zone",
       "loading_image": "Loading image...",
-      "delete_confirm": "Delete map of {{zone}}?"
+      "delete_confirm": "Delete map of {{zone}}?",
+      "add_map": "Add map",
+      "zone_name": "Zone name",
+      "zone_name_placeholder": "e.g. Dungeon level 1",
+      "select_file": "Select image",
+      "upload_btn": "Upload",
+      "open": "Open"
     },
     "history": {
       "title": "History",

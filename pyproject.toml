@@ -16,4 +16,5 @@ dependencies = [
     "python-dotenv>=1.0.0",
     "sqlalchemy[asyncio]>=2.0",
     "aiosqlite>=0.20",
+    "python-multipart>=0.0.26",
 ]
