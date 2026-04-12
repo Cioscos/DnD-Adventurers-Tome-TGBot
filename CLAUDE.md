@@ -40,7 +40,7 @@ Three frozen dataclasses drive all callback state via PTB's `arbitrary_callback_
 
 ### Adding a New Character Feature
 
-1. Add state constant(s) to `bot/handlers/character/__init__.py` (update the `range()` count).
+1. Add state constant(s) to `bot/handlers/character/__init__.py` (update the `range()` count — currently `range(73)`).
 2. Create `bot/handlers/character/<feature>.py`.
 3. Add keyboard builder(s) to `bot/keyboards/character.py` — each must accept `lang: str = "it"`.
 4. Add formatter(s) to `bot/utils/formatting.py` — each must accept `lang: str = "it"` and use `translator.t()`.
@@ -48,6 +48,14 @@ Three frozen dataclasses drive all callback state via PTB's `arbitrary_callback_
 6. Wire the new action into `character_callback_handler()` in `conversation.py`.
 7. Add the new state(s) to the `states` dict in `build_character_conversation_handler()`.
 8. Every state awaiting text input must include `build_cancel_keyboard(char_id, back_action, lang=lang)` in its prompt.
+
+### Action Result Messages (dice rolls, attacks, spell damage)
+
+When an action produces a result (roll outcome, damage, etc.) from a detail view, **send the result as a new message** via `context.bot.send_message()` rather than editing the current message. This preserves the detail view (item, spell, etc.) so the user does not lose their context. See `bag.py::attack_with_weapon()` and `spells.py::roll_spell_damage()` as reference implementations.
+
+### Navigation: always return to the most specific context
+
+After completing an action that originates from a detail view (e.g. spell detail), always return to that same detail view — not to the parent list. For example: using a spell, dropping concentration, and rolling spell damage all return to `show_spell_detail()`. Similarly, edits made from an edit menu should return to `show_spell_edit_menu()`, not to the detail view.
 
 ### Adding a New Wiki Category
 
@@ -70,8 +78,9 @@ Three frozen dataclasses drive all callback state via PTB's `arbitrary_callback_
 
 ## Persistence
 
-- **Character DB**: SQLite at `data/dnd_bot.db` (override via `DB_PATH`). Schema migrations run idempotently via `ALTER TABLE` in `_migrate_schema()` on every startup.
+- **Character DB**: SQLite at `data/dnd_bot.db` (override via `DB_PATH`). Schema migrations run idempotently via `ALTER TABLE` in `_migrate_schema()` in `bot/db/engine.py` on every startup. Always add new columns to `_MIGRATIONS` — never rely solely on `create_all`.
 - **Bot state**: `data/persistence.pkl` — stores `user_data`, callback LRU cache, and conversation state across restarts.
+- **Transient user_data**: short-lived state shared between handlers within a session (e.g. `context.user_data[f"spell_{spell_id}_cast_level"]` to carry the last-cast slot level to the damage roll handler). Use namespaced keys to avoid collisions.
 
 ## i18n
 
