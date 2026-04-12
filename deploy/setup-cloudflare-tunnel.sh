@@ -102,7 +102,8 @@ echo "    Or use a free cfargotunnel.com URL (already stable without DNS routing
 
 echo ""
 echo "==> Step 6: Install cloudflared as systemd service"
-sudo cloudflared service install
+# Must pass the absolute config path — sudo runs as root, so ~ resolves to /root/
+sudo cloudflared --config "/home/$(logname)/.cloudflared/config.yml" service install
 sudo systemctl enable cloudflared
 sudo systemctl start cloudflared
 
