@@ -12,7 +12,8 @@
     "edit": "Edit",
     "close": "Close",
     "yes": "Yes",
-    "no": "No"
+    "no": "No",
+    "none": "None"
   },
   "character": {
     "select": {
@@ -80,6 +81,33 @@
       "magic": "Magic",
       "total": "Total"
     },
+    "skills": {
+      "title": "Skills",
+      "proficient": "Proficient",
+      "prof_bonus": "Proficiency bonus",
+      "acrobatics": "Acrobatics",
+      "animal_handling": "Animal Handling",
+      "arcana": "Arcana",
+      "athletics": "Athletics",
+      "deception": "Deception",
+      "history": "History",
+      "insight": "Insight",
+      "intimidation": "Intimidation",
+      "investigation": "Investigation",
+      "medicine": "Medicine",
+      "nature": "Nature",
+      "perception": "Perception",
+      "performance": "Performance",
+      "persuasion": "Persuasion",
+      "religion": "Religion",
+      "sleight_of_hand": "Sleight of Hand",
+      "stealth": "Stealth",
+      "survival": "Survival"
+    },
+    "saves": {
+      "title": "Saving Throws",
+      "proficient": "Proficient"
+    },
     "spells": {
       "title": "Spells",
       "search": "Search spells...",
@@ -91,7 +119,14 @@
       "forget": "Forget",
       "use": "Use",
       "pin": "Pin",
-      "edit": "Edit"
+      "edit": "Edit",
+      "name": "Name",
+      "description": "Description",
+      "casting_time": "Casting time",
+      "range": "Range",
+      "components": "Components",
+      "duration": "Duration",
+      "stop_concentration": "Stop concentration"
     },
     "slots": {
       "title": "Spell Slots",
@@ -99,7 +134,8 @@
       "used": "Used",
       "total": "Total",
       "available": "Available",
-      "reset_all": "Reset all"
+      "reset_all": "Reset all",
+      "add_level": "Add slot level"
     },
     "dice": {
       "title": "Roll Dice",
@@ -109,7 +145,24 @@
     },
     "conditions": {
       "title": "Conditions",
-      "exhaustion": "Exhaustion (level {{level}})"
+      "exhaustion": "Exhaustion (level {{level}})",
+      "exhaustion_level": "Exhaustion level",
+      "none_active": "No active conditions",
+      "blinded": "Blinded",
+      "charmed": "Charmed",
+      "deafened": "Deafened",
+      "exhaustion_condition": "Exhaustion",
+      "frightened": "Frightened",
+      "grappled": "Grappled",
+      "incapacitated": "Incapacitated",
+      "invisible": "Invisible",
+      "paralyzed": "Paralyzed",
+      "petrified": "Petrified",
+      "poisoned": "Poisoned",
+      "prone": "Prone",
+      "restrained": "Restrained",
+      "stunned": "Stunned",
+      "unconscious": "Unconscious"
     },
     "identity": {
       "title": "Identity",
@@ -133,27 +186,101 @@
       "electrum": "Electrum",
       "gold": "Gold",
       "platinum": "Platinum",
-      "convert": "Convert"
+      "convert": "Convert",
+      "total_gold": "Total in gold"
     },
     "xp": {
       "title": "Experience",
       "add": "Add XP",
       "current": "Current XP",
-      "level": "Level {{level}}"
+      "level": "Level {{level}}",
+      "next_level": "Next level",
+      "xp_to_next": "XP to next level"
     },
     "notes": {
       "title": "Notes",
       "new": "New note",
-      "voice": "Voice note (not available in the Mini App)"
+      "voice": "Voice note (not available in the Mini App)",
+      "title_label": "Title",
+      "body_label": "Content",
+      "title_placeholder": "Note title...",
+      "body_placeholder": "Write here..."
     },
     "maps": {
       "title": "Maps",
       "upload_hint": "To add maps use /upload_map <zone> in the bot chat",
-      "zone": "Zone"
+      "zone": "Zone",
+      "loading_image": "Loading image...",
+      "delete_confirm": "Delete map of {{zone}}?"
     },
     "history": {
       "title": "History",
-      "clear": "Clear history"
+      "clear": "Clear history",
+      "empty": "No events recorded",
+      "clear_confirm": "Clear all history?"
+    },
+    "inventory": {
+      "title": "Inventory",
+      "add": "Add item",
+      "equipped": "Equipped",
+      "weight": "Weight",
+      "quantity": "Quantity",
+      "carry": "{{enc}} / {{cap}} lb",
+      "item_name": "Item name",
+      "item_type": "Type",
+      "description": "Description",
+      "types": {
+        "weapon": "Weapon",
+        "armor": "Armor",
+        "potion": "Potion",
+        "scroll": "Scroll",
+        "tool": "Tool",
+        "gear": "Gear",
+        "other": "Other"
+      }
+    },
+    "abilities": {
+      "title": "Special Abilities",
+      "add": "Add ability",
+      "uses_left": "{{current}}/{{max}} uses",
+      "passive": "Passive",
+      "active": "Active",
+      "use": "Use",
+      "restore": "Restore",
+      "restoration": {
+        "short_rest": "Short rest",
+        "long_rest": "Long rest",
+        "manual": "Manual"
+      },
+      "name_label": "Name",
+      "description_label": "Description",
+      "max_uses_label": "Max uses",
+      "restoration_label": "Restoration"
+    },
+    "multiclass": {
+      "title": "Class",
+      "add_class": "Add class",
+      "class_name": "Class name",
+      "level": "Level",
+      "subclass": "Subclass",
+      "hit_die": "Hit die",
+      "spellcasting": "Spellcasting ability",
+      "resources": "Class resources",
+      "add_resource": "Add resource",
+      "resource_name": "Resource name",
+      "resource_total": "Total",
+      "resource_current": "Current",
+      "restoration": "Restoration",
+      "use_resource": "Use",
+      "restore_resource": "Restore"
+    },
+    "settings": {
+      "title": "Settings",
+      "spell_slots_mode": "Spell slots mode",
+      "mode_auto": "Automatic (from class level)",
+      "mode_manual": "Manual",
+      "carry_capacity": "Show carry capacity",
+      "language": "Language"
     }
   }
 }

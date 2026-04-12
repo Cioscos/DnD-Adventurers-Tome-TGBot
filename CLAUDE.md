@@ -46,7 +46,7 @@ Three-component system:
 - `web_app_data` — receives `sendData()` payloads from Mini App (dice roll results → posted to chat)
 
 ### Mini App URL
-`https://cioscos.github.io/dnd_bot_revamped/app/` (HashRouter, built to `docs/app/`)
+`https://cioscos.github.io/DnD-Adventurers-Tome-TGBot/app/` (HashRouter, built to `docs/app/`)
 
 ## Navigation Model
 
@@ -123,9 +123,9 @@ Two frozen dataclasses drive callback state via PTB's `arbitrary_callback_data` 
 
 ## GitHub Pages
 
-`docs/` contains a Jekyll site at `https://cioscos.github.io/dnd_bot_revamped`. The `docs/app/` directory is the React build output — excluded from Jekyll processing via `docs/_config.yml`. Always use `{{ '/path' | relative_url }}` for Jekyll asset/internal links.
+`docs/` contains a Jekyll site at `https://cioscos.github.io/DnD-Adventurers-Tome-TGBot`. The `docs/app/` directory is the React build output — **not** excluded from Jekyll (static files are copied as-is). Always use `{{ '/path' | relative_url }}` for Jekyll asset/internal links.
 
-The GitHub Actions workflow `.github/workflows/deploy-webapp.yml` auto-builds and commits `docs/app/` when `webapp/**` changes on `main`.
+The GitHub Actions workflow `.github/workflows/deploy-webapp.yml` runs a build check on `webapp/**` changes. The `docs/app/` build output must be committed manually to the branch before merging, as direct pushes to `main` are blocked by branch protection.
 
 # General rules
 
