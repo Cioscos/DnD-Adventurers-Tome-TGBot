@@ -1,8 +1,11 @@
-name: Build & Deploy Mini App
+name: Build Mini App
 
 on:
   push:
     branches: [main]
+    paths:
+      - 'webapp/**'
+  pull_request:
     paths:
       - 'webapp/**'
 
@@ -10,10 +13,10 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
 
     steps:
       - uses: actions/checkout@v4
@@ -31,15 +34,5 @@ jobs:
       - name: Build
         working-directory: webapp
         env:
-          # Set via GitHub repository secrets
           VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
         run: npm run build
-        # Output goes to docs/app/ (configured in vite.config.ts)
-
-      - name: Commit build output to docs/app
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: "chore: build React Mini App [skip ci]"
-          file_pattern: "docs/app/**"
-          commit_user_name: "github-actions[bot]"
-          commit_user_email: "github-actions[bot]@users.noreply.github.com"
