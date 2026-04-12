@@ -10,6 +10,24 @@ import { haptic } from '@/auth/telegram'
 
 type HPOp = 'damage' | 'heal' | 'set_max' | 'set_current' | 'set_temp'
 
+type HitDiceSpendResult = {
+  rolls: number[]
+  con_bonus: number
+  healed: number
+  new_current_hp: number
+}
+
+type ConcentrationSaveResult = {
+  die: number
+  bonus: number
+  total: number
+  dc: number
+  success: boolean
+  lost_concentration: boolean
+  is_critical: boolean
+  is_fumble: boolean
+}
+
 export default function HP() {
   const { id } = useParams<{ id: string }>()
   const charId = Number(id)
@@ -18,6 +36,14 @@ export default function HP() {
   const [value, setValue] = useState('')
   const [activeOp, setActiveOp] = useState<HPOp>('damage')
 
+  // Short rest hit dice modal
+  const [showShortRest, setShowShortRest] = useState(false)
+  const [hitDiceCounts, setHitDiceCounts] = useState<Record<number, number>>({})
+  const [hitDiceResult, setHitDiceResult] = useState<HitDiceSpendResult | null>(null)
+
+  // Concentration save (after taking damage)
+  const [concDamageInput, setConcDamageInput] = useState('')
+  const [concSaveResult, setConcSaveResult] = useState<ConcentrationSaveResult | null>(null)
 
   const { data: char } = useQuery({
     queryKey: ['character', charId],
@@ -53,6 +79,30 @@ export default function HP() {
     },
   })
 
+  const hitDiceMutation = useMutation({
+    mutationFn: ({ classId, count }: { classId: number; count: number }) =>
+      api.characters.spendHitDice(charId, classId, count),
+    onSuccess: (result) => {
+      setHitDiceResult(result)
+      qc.invalidateQueries({ queryKey: ['character', charId] })
+      haptic.success()
+    },
+    onError: () => haptic.error(),
+  })
+
+  const concSaveMutation = useMutation({
+    mutationFn: (damage: number) => api.spells.concentrationSave(charId, damage),
+    onSuccess: (result) => {
+      setConcSaveResult(result)
+      if (result.lost_concentration) {
+        qc.invalidateQueries({ queryKey: ['character', charId] })
+      }
+      setConcDamageInput('')
+      haptic.success()
+    },
+    onError: () => haptic.error(),
+  })
+
   const handleApply = () => {
     const n = parseInt(value, 10)
     if (isNaN(n) || n <= 0) return
@@ -63,6 +113,8 @@ export default function HP() {
 
   const ds = char.death_saves ?? { successes: 0, failures: 0, stable: false }
   const isDying = char.current_hit_points === 0 && !ds.stable
+  const isConcentrating = !!char.concentrating_spell_id
+  const classes = char.classes ?? []
 
   const ops: { key: HPOp; label: string; color: string }[] = [
     { key: 'damage',      label: t('character.hp.damage'),      color: 'bg-red-500/80' },
@@ -93,6 +145,37 @@ export default function HP() {
         </div>
         <HPBar current={char.current_hit_points} max={char.hit_points} temp={char.temp_hp} />
       </Card>
+
+      {/* Concentration save banner (shown when concentrating) */}
+      {isConcentrating && (
+        <Card>
+          <p className="text-sm text-purple-300 font-medium mb-2">
+            🔮 {t('character.hp.concentration_active')}
+          </p>
+          <div className="flex gap-2 items-center">
+            <input
+              type="number"
+              min="0"
+              value={concDamageInput}
+              onChange={(e) => setConcDamageInput(e.target.value)}
+              placeholder={t('character.spells.conc_save_damage_placeholder')}
+              className="flex-1 bg-white/10 rounded-xl px-3 py-1.5 text-sm outline-none
+                         focus:ring-2 focus:ring-purple-500"
+            />
+            <button
+              onClick={() => {
+                const dmg = parseInt(concDamageInput, 10)
+                if (!isNaN(dmg) && dmg >= 0) concSaveMutation.mutate(dmg)
+              }}
+              disabled={concSaveMutation.isPending || !concDamageInput}
+              className="px-3 py-1.5 rounded-xl bg-purple-500/30 text-purple-300 text-sm font-medium
+                         disabled:opacity-30 active:opacity-70"
+            >
+              {concSaveMutation.isPending ? '...' : t('character.spells.conc_save_btn')}
+            </button>
+          </div>
+        </Card>
+      )}
 
       {/* Op selector */}
       <div className="flex gap-1 overflow-x-auto pb-1 scrollbar-hide">
@@ -152,18 +235,18 @@ export default function HP() {
       {/* Rest buttons */}
       <div className="grid grid-cols-2 gap-2">
         <button
-          onClick={() => restMutation.mutate('short')}
+          onClick={() => setShowShortRest(true)}
           disabled={restMutation.isPending}
           className="py-3 rounded-2xl bg-blue-500/20 text-blue-300 font-medium active:opacity-70"
         >
-          🌙 Riposo breve
+          🌙 {t('character.hp.short_rest')}
         </button>
         <button
           onClick={() => restMutation.mutate('long')}
           disabled={restMutation.isPending}
           className="py-3 rounded-2xl bg-purple-500/20 text-purple-300 font-medium active:opacity-70"
         >
-          💤 Riposo lungo
+          💤 {t('character.hp.long_rest')}
         </button>
       </div>
 
@@ -234,6 +317,140 @@ export default function HP() {
             {t('character.death_saves.reset')}
           </button>
         </Card>
+      )}
+
+      {/* Short rest modal: choose hit dice to spend */}
+      {showShortRest && (
+        <div className="fixed inset-0 bg-black/60 flex items-end z-50 p-4">
+          <Card className="w-full space-y-3">
+            <h3 className="font-semibold">🌙 {t('character.hp.short_rest')}</h3>
+            <p className="text-sm text-[var(--tg-theme-hint-color)]">
+              {t('character.hp.hit_dice_spend_hint')}
+            </p>
+
+            {classes.length === 0 && (
+              <p className="text-sm text-[var(--tg-theme-hint-color)]">{t('common.none')}</p>
+            )}
+
+            {classes.map((cls) => (
+              <div key={cls.id} className="flex items-center gap-3">
+                <span className="flex-1 text-sm">
+                  {cls.class_name} (d{cls.hit_die ?? 8})
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setHitDiceCounts((c) => ({ ...c, [cls.id]: Math.max(0, (c[cls.id] ?? 0) - 1) }))}
+                    className="w-7 h-7 rounded-lg bg-white/10 font-bold active:opacity-70"
+                  >−</button>
+                  <span className="w-6 text-center font-bold">{hitDiceCounts[cls.id] ?? 0}</span>
+                  <button
+                    onClick={() => setHitDiceCounts((c) => ({ ...c, [cls.id]: (c[cls.id] ?? 0) + 1 }))}
+                    className="w-7 h-7 rounded-lg bg-white/10 font-bold active:opacity-70"
+                  >+</button>
+                  <button
+                    onClick={() => {
+                      const count = hitDiceCounts[cls.id] ?? 0
+                      if (count > 0) hitDiceMutation.mutate({ classId: cls.id, count })
+                    }}
+                    disabled={!hitDiceCounts[cls.id] || hitDiceMutation.isPending}
+                    className="px-3 py-1 rounded-lg bg-green-500/30 text-green-300 text-sm font-medium
+                               disabled:opacity-30 active:opacity-70"
+                  >
+                    🎲
+                  </button>
+                </div>
+              </div>
+            ))}
+
+            <div className="flex gap-2 pt-1">
+              <button
+                onClick={() => {
+                  restMutation.mutate('short')
+                  setShowShortRest(false)
+                  setHitDiceCounts({})
+                }}
+                disabled={restMutation.isPending}
+                className="flex-1 py-2.5 rounded-xl bg-blue-500/30 text-blue-300 font-medium disabled:opacity-40"
+              >
+                {t('character.hp.confirm_rest')}
+              </button>
+              <button
+                onClick={() => { setShowShortRest(false); setHitDiceCounts({}) }}
+                className="flex-1 py-2.5 rounded-xl bg-white/10"
+              >
+                {t('common.cancel')}
+              </button>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Hit dice result modal */}
+      {hitDiceResult && (
+        <div
+          className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+          onClick={() => setHitDiceResult(null)}
+        >
+          <div
+            className="rounded-2xl p-5 w-full max-w-xs text-center space-y-3 bg-green-500/20 border border-green-500/40"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="text-sm text-[var(--tg-theme-hint-color)]">{t('character.hp.hit_dice_result')}</p>
+            <p className="text-4xl font-black text-green-400">+{hitDiceResult.healed}</p>
+            <p className="text-sm text-[var(--tg-theme-hint-color)]">
+              [{hitDiceResult.rolls.join(', ')}] +{hitDiceResult.con_bonus} (COS)
+            </p>
+            <p className="text-sm">
+              {t('character.hp.new_hp')}: <span className="font-bold">{hitDiceResult.new_current_hp}</span>
+            </p>
+            <button
+              onClick={() => setHitDiceResult(null)}
+              className="w-full py-2.5 rounded-xl bg-[var(--tg-theme-button-color)]
+                         text-[var(--tg-theme-button-text-color)] font-semibold"
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Concentration save result modal */}
+      {concSaveResult && (
+        <div
+          className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+          onClick={() => setConcSaveResult(null)}
+        >
+          <div
+            className={`rounded-2xl p-5 w-full max-w-xs text-center space-y-3
+              ${concSaveResult.success ? 'bg-green-500/20 border border-green-500/40' : 'bg-red-500/20 border border-red-500/40'}`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="text-sm text-[var(--tg-theme-hint-color)]">
+              🔮 {t('character.spells.concentration')} — DC {concSaveResult.dc}
+            </p>
+            {concSaveResult.is_critical && <p className="text-yellow-400 font-bold">✨ CRITICO!</p>}
+            {concSaveResult.is_fumble && <p className="text-red-400 font-bold">💀 FUMBLE!</p>}
+            <p className={`text-4xl font-black ${concSaveResult.success ? 'text-green-400' : 'text-red-400'}`}>
+              {concSaveResult.total}
+            </p>
+            <p className="text-sm text-[var(--tg-theme-hint-color)]">
+              d20 ({concSaveResult.die}) {concSaveResult.bonus >= 0 ? '+' : ''}{concSaveResult.bonus}
+            </p>
+            <p className={`font-bold ${concSaveResult.success ? 'text-green-400' : 'text-red-400'}`}>
+              {concSaveResult.success ? t('character.spells.conc_save_success') : t('character.spells.conc_save_fail')}
+            </p>
+            {concSaveResult.lost_concentration && (
+              <p className="text-xs text-red-300">{t('character.spells.conc_lost')}</p>
+            )}
+            <button
+              onClick={() => setConcSaveResult(null)}
+              className="w-full py-2 rounded-xl bg-[var(--tg-theme-button-color)]
+                         text-[var(--tg-theme-button-text-color)] font-semibold"
+            >
+              OK
+            </button>
+          </div>
+        </div>
       )}
     </Layout>
   )

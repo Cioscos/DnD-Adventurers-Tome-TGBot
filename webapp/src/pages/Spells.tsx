@@ -8,6 +8,17 @@ import Card from '@/components/Card'
 import { haptic } from '@/auth/telegram'
 import type { Spell, SpellSlot } from '@/types'
 
+type ConcentrationSaveResult = {
+  die: number
+  bonus: number
+  total: number
+  dc: number
+  success: boolean
+  lost_concentration: boolean
+  is_critical: boolean
+  is_fumble: boolean
+}
+
 type AddForm = {
   name: string; level: string; description: string; casting_time: string
   range_area: string; components: string; duration: string
@@ -29,6 +40,8 @@ export default function Spells() {
   const [form, setForm] = useState<AddForm>(emptyForm)
   const [expanded, setExpanded] = useState<number | null>(null)
   const [castingSpell, setCastingSpell] = useState<Spell | null>(null)
+  const [concDamage, setConcDamage] = useState('')
+  const [concSaveResult, setConcSaveResult] = useState<ConcentrationSaveResult | null>(null)
 
   const { data: char } = useQuery({
     queryKey: ['character', charId],
@@ -84,6 +97,18 @@ export default function Spells() {
     onSuccess: (updated) => {
       qc.setQueryData(['character', charId], updated)
       setCastingSpell(null)
+      haptic.success()
+    },
+    onError: () => haptic.error(),
+  })
+
+  const concSaveMutation = useMutation({
+    mutationFn: (damage: number) => api.spells.concentrationSave(charId, damage),
+    onSuccess: (result) => {
+      setConcSaveResult(result)
+      if (result.lost_concentration) {
+        qc.invalidateQueries({ queryKey: ['character', charId] })
+      }
       haptic.success()
     },
     onError: () => haptic.error(),
@@ -148,8 +173,8 @@ export default function Spells() {
 
       {concentratingId && (
         <Card>
-          <div className="flex items-center justify-between">
-            <span className="text-purple-300 text-sm">🔮 {t('character.spells.concentration')}</span>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-purple-300 text-sm font-medium">🔮 {t('character.spells.concentration')}</span>
             <button
               onClick={() => concentrationMutation.mutate(null)}
               className="text-xs text-red-400"
@@ -157,7 +182,72 @@ export default function Spells() {
               {t('character.spells.stop_concentration')}
             </button>
           </div>
+          {/* Concentration save input */}
+          <div className="flex gap-2 items-center">
+            <input
+              type="number"
+              min="0"
+              value={concDamage}
+              onChange={(e) => setConcDamage(e.target.value)}
+              placeholder={t('character.spells.conc_save_damage_placeholder')}
+              className="flex-1 bg-white/10 rounded-xl px-3 py-1.5 text-sm outline-none
+                         focus:ring-2 focus:ring-purple-500"
+            />
+            <button
+              onClick={() => {
+                const dmg = parseInt(concDamage, 10)
+                if (!isNaN(dmg) && dmg >= 0) {
+                  concSaveMutation.mutate(dmg)
+                  setConcDamage('')
+                }
+              }}
+              disabled={concSaveMutation.isPending || !concDamage}
+              className="px-3 py-1.5 rounded-xl bg-purple-500/30 text-purple-300 text-sm font-medium
+                         disabled:opacity-30 active:opacity-70"
+            >
+              {concSaveMutation.isPending ? '...' : t('character.spells.conc_save_btn')}
+            </button>
+          </div>
         </Card>
+      )}
+
+      {/* Concentration save result modal */}
+      {concSaveResult && (
+        <div
+          className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+          onClick={() => setConcSaveResult(null)}
+        >
+          <div
+            className={`rounded-2xl p-5 w-full max-w-xs text-center space-y-3
+              ${concSaveResult.success ? 'bg-green-500/20 border border-green-500/40' : 'bg-red-500/20 border border-red-500/40'}`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="text-sm text-[var(--tg-theme-hint-color)]">
+              🔮 {t('character.spells.concentration')} — DC {concSaveResult.dc}
+            </p>
+            {concSaveResult.is_critical && <p className="text-yellow-400 font-bold">✨ CRITICO!</p>}
+            {concSaveResult.is_fumble && <p className="text-red-400 font-bold">💀 FUMBLE!</p>}
+            <p className={`text-4xl font-black ${concSaveResult.success ? 'text-green-400' : 'text-red-400'}`}>
+              {concSaveResult.total}
+            </p>
+            <p className="text-sm text-[var(--tg-theme-hint-color)]">
+              d20 ({concSaveResult.die}) {concSaveResult.bonus >= 0 ? '+' : ''}{concSaveResult.bonus}
+            </p>
+            <p className={`font-bold ${concSaveResult.success ? 'text-green-400' : 'text-red-400'}`}>
+              {concSaveResult.success ? t('character.spells.conc_save_success') : t('character.spells.conc_save_fail')}
+            </p>
+            {concSaveResult.lost_concentration && (
+              <p className="text-xs text-red-300">{t('character.spells.conc_lost')}</p>
+            )}
+            <button
+              onClick={() => setConcSaveResult(null)}
+              className="w-full py-2 rounded-xl bg-[var(--tg-theme-button-color)]
+                         text-[var(--tg-theme-button-text-color)] font-semibold"
+            >
+              OK
+            </button>
+          </div>
+        </div>
       )}
 
       {spells.length === 0 && !showAdd && (

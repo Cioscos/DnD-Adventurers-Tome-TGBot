@@ -49,3 +49,16 @@ class ItemUpdate(BaseModel):
     item_type: Optional[str] = None
     item_metadata: Optional[dict[str, Any]] = None
     is_equipped: Optional[bool] = None
+
+
+class WeaponAttackResult(BaseModel):
+    weapon_name: str
+    to_hit_die: int
+    to_hit_bonus: int
+    to_hit_total: int
+    is_critical: bool
+    is_fumble: bool
+    damage_dice: str
+    damage_rolls: list[int]
+    damage_bonus: int
+    damage_total: int

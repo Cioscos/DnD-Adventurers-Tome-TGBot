@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import random
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -21,6 +23,18 @@ from api.schemas.common import (
     HPUpdate,
     RestRequest,
 )
+
+
+class HitDiceSpendRequest(BaseModel):
+    class_id: int
+    count: int
+
+
+class HitDiceSpendResult(BaseModel):
+    rolls: list[int]
+    con_bonus: int
+    healed: int
+    new_current_hp: int
 
 router = APIRouter(prefix="/characters", tags=["hp"])
 
@@ -173,6 +187,53 @@ async def rest(
 # ---------------------------------------------------------------------------
 # Death saves
 # ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+# Hit dice spending (during short rest)
+# ---------------------------------------------------------------------------
+
+@router.post("/{char_id}/hit_dice/spend", response_model=HitDiceSpendResult)
+async def spend_hit_dice(
+    char_id: int,
+    body: HitDiceSpendRequest,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> HitDiceSpendResult:
+    char = await _get_owned_full(char_id, user_id, session)
+
+    # Find the class
+    cls = next((c for c in char.classes if c.id == body.class_id), None)
+    if cls is None:
+        raise HTTPException(status_code=404, detail="Class not found")
+    if body.count < 1:
+        raise HTTPException(status_code=400, detail="count must be >= 1")
+
+    hit_die = cls.hit_die or 8
+
+    # CON modifier
+    con_score = next((s for s in char.ability_scores if s.name == "constitution"), None)
+    con_mod = con_score.modifier if con_score else 0
+
+    rolls = [random.randint(1, hit_die) for _ in range(body.count)]
+    # Each die heals roll + CON mod (minimum 1 per die)
+    per_die = [max(1, r + con_mod) for r in rolls]
+    total_healed = sum(per_die)
+
+    old_hp = char.current_hit_points
+    char.current_hit_points = min(char.hit_points, old_hp + total_healed)
+    actual_healed = char.current_hit_points - old_hp
+
+    _add_history(session, char.id, "hit_dice",
+                 f"Dado vita {body.count}d{hit_die}+{con_mod}: "
+                 f"tiri={rolls}, curati={actual_healed} HP ({old_hp} → {char.current_hit_points})")
+
+    return HitDiceSpendResult(
+        rolls=rolls,
+        con_bonus=con_mod,
+        healed=actual_healed,
+        new_current_hp=char.current_hit_points,
+    )
+
 
 @router.patch("/{char_id}/death_saves", response_model=CharacterFull)
 async def update_death_saves(

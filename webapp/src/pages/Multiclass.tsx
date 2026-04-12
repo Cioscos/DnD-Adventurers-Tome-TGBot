@@ -8,10 +8,49 @@ import Card from '@/components/Card'
 import { haptic } from '@/auth/telegram'
 import type { CharacterClass, ClassResource } from '@/types'
 
-type ClassForm = { class_name: string; level: string; subclass: string; hit_die: string; spellcasting_ability: string }
+// Predefined D&D 5e classes (Italian names) with their attributes.
+const PREDEFINED_CLASSES: Record<string, { hit_die: number; spellcasting_ability: string | null }> = {
+  Barbaro:   { hit_die: 12, spellcasting_ability: null },
+  Bardo:     { hit_die: 8,  spellcasting_ability: 'charisma' },
+  Chierico:  { hit_die: 8,  spellcasting_ability: 'wisdom' },
+  Druido:    { hit_die: 8,  spellcasting_ability: 'wisdom' },
+  Guerriero: { hit_die: 10, spellcasting_ability: null },
+  Ladro:     { hit_die: 8,  spellcasting_ability: null },
+  Mago:      { hit_die: 6,  spellcasting_ability: 'intelligence' },
+  Monaco:    { hit_die: 8,  spellcasting_ability: null },
+  Paladino:  { hit_die: 10, spellcasting_ability: 'charisma' },
+  Ranger:    { hit_die: 10, spellcasting_ability: 'wisdom' },
+  Stregone:  { hit_die: 6,  spellcasting_ability: 'charisma' },
+  Warlock:   { hit_die: 8,  spellcasting_ability: 'charisma' },
+}
+
+const CUSTOM_KEY = '__custom__'
+
+type ClassForm = {
+  class_key: string      // predefined key or CUSTOM_KEY
+  custom_name: string
+  level: string
+  subclass: string
+  hit_die: string
+  spellcasting_ability: string
+}
+
 type ResForm = { name: string; total: string; current: string; restoration_type: string }
-const emptyClass: ClassForm = { class_name: '', level: '1', subclass: '', hit_die: '8', spellcasting_ability: '' }
+
+const emptyClass: ClassForm = {
+  class_key: '',
+  custom_name: '',
+  level: '1',
+  subclass: '',
+  hit_die: '8',
+  spellcasting_ability: '',
+}
+
 const emptyRes: ResForm = { name: '', total: '1', current: '1', restoration_type: 'long_rest' }
+
+function resolveClassName(form: ClassForm): string {
+  return form.class_key === CUSTOM_KEY ? form.custom_name.trim() : form.class_key
+}
 
 export default function Multiclass() {
   const { id } = useParams<{ id: string }>()
@@ -28,15 +67,38 @@ export default function Multiclass() {
     queryFn: () => api.characters.get(charId),
   })
 
+  const isPredefined = classForm.class_key !== '' && classForm.class_key !== CUSTOM_KEY
+  const predefinedAttrs = isPredefined ? PREDEFINED_CLASSES[classForm.class_key] : null
+
+  function handleClassKeyChange(key: string) {
+    if (key === CUSTOM_KEY) {
+      setClassForm((f) => ({ ...f, class_key: key }))
+    } else if (PREDEFINED_CLASSES[key]) {
+      const attrs = PREDEFINED_CLASSES[key]
+      setClassForm((f) => ({
+        ...f,
+        class_key: key,
+        custom_name: '',
+        hit_die: String(attrs.hit_die),
+        spellcasting_ability: attrs.spellcasting_ability ?? '',
+      }))
+    } else {
+      setClassForm((f) => ({ ...f, class_key: key }))
+    }
+  }
+
   const addClass = useMutation({
-    mutationFn: () =>
-      api.classes.add(charId, {
-        class_name: classForm.class_name.trim(),
+    mutationFn: () => {
+      const class_name = resolveClassName(classForm)
+      return api.classes.add(charId, {
+        class_name,
         level: Number(classForm.level),
         subclass: classForm.subclass.trim() || undefined,
+        // For predefined classes the backend auto-fills these; pass them anyway for custom classes.
         hit_die: Number(classForm.hit_die) || 8,
         spellcasting_ability: classForm.spellcasting_ability.trim() || undefined,
-      }),
+      })
+    },
     onSuccess: (updated) => {
       qc.setQueryData(['character', charId], updated)
       setShowAddClass(false)
@@ -91,6 +153,7 @@ export default function Multiclass() {
   if (!char) return null
 
   const classes: CharacterClass[] = char.classes ?? []
+  const canAdd = classForm.class_key !== '' && (classForm.class_key !== CUSTOM_KEY || classForm.custom_name.trim() !== '')
 
   return (
     <Layout title={t('character.multiclass.title')} backTo={`/char/${charId}`}>
@@ -181,13 +244,32 @@ export default function Multiclass() {
         <div className="fixed inset-0 bg-black/60 flex items-end z-50 p-4">
           <Card className="w-full space-y-3">
             <h3 className="font-semibold">{t('character.multiclass.add_class')}</h3>
-            <input
-              type="text" value={classForm.class_name}
-              onChange={(e) => setClassForm((f) => ({ ...f, class_name: e.target.value }))}
-              placeholder={t('character.multiclass.class_name')}
-              className="w-full bg-white/10 rounded-xl px-3 py-2 outline-none
-                         focus:ring-2 focus:ring-[var(--tg-theme-button-color)]"
-            />
+
+            {/* Class selector */}
+            <select
+              value={classForm.class_key}
+              onChange={(e) => handleClassKeyChange(e.target.value)}
+              className="w-full bg-[var(--tg-theme-secondary-bg-color)] rounded-xl px-3 py-2 outline-none"
+            >
+              <option value="" disabled>{t('character.multiclass.class_name')}</option>
+              {Object.keys(PREDEFINED_CLASSES).map((name) => (
+                <option key={name} value={name}>{name}</option>
+              ))}
+              <option value={CUSTOM_KEY}>{t('character.multiclass.custom_class')}</option>
+            </select>
+
+            {/* Custom class name input */}
+            {classForm.class_key === CUSTOM_KEY && (
+              <input
+                type="text"
+                value={classForm.custom_name}
+                onChange={(e) => setClassForm((f) => ({ ...f, custom_name: e.target.value }))}
+                placeholder={t('character.multiclass.custom_class_name')}
+                className="w-full bg-white/10 rounded-xl px-3 py-2 outline-none
+                           focus:ring-2 focus:ring-[var(--tg-theme-button-color)]"
+              />
+            )}
+
             <div className="flex gap-2">
               <div className="flex-1">
                 <p className="text-xs text-[var(--tg-theme-hint-color)] mb-1">{t('character.multiclass.level')}</p>
@@ -198,34 +280,55 @@ export default function Multiclass() {
               </div>
               <div className="flex-1">
                 <p className="text-xs text-[var(--tg-theme-hint-color)] mb-1">{t('character.multiclass.hit_die')}</p>
-                <select value={classForm.hit_die}
+                <select
+                  value={classForm.hit_die}
+                  disabled={!!predefinedAttrs}
                   onChange={(e) => setClassForm((f) => ({ ...f, hit_die: e.target.value }))}
-                  className="w-full bg-[var(--tg-theme-secondary-bg-color)] rounded-xl px-2 py-2 outline-none"
+                  className="w-full bg-[var(--tg-theme-secondary-bg-color)] rounded-xl px-2 py-2 outline-none disabled:opacity-60"
                 >
-                  {[6,8,10,12].map((d) => <option key={d} value={d}>d{d}</option>)}
+                  {[6, 8, 10, 12].map((d) => <option key={d} value={d}>d{d}</option>)}
                 </select>
               </div>
             </div>
+
             <input type="text" value={classForm.subclass}
               onChange={(e) => setClassForm((f) => ({ ...f, subclass: e.target.value }))}
               placeholder={t('character.multiclass.subclass')}
               className="w-full bg-white/10 rounded-xl px-3 py-2 outline-none"
             />
-            <input type="text" value={classForm.spellcasting_ability}
-              onChange={(e) => setClassForm((f) => ({ ...f, spellcasting_ability: e.target.value }))}
-              placeholder={t('character.multiclass.spellcasting')}
-              className="w-full bg-white/10 rounded-xl px-3 py-2 outline-none"
-            />
+
+            {/* Spellcasting ability: auto-filled and read-only for predefined classes */}
+            {classForm.class_key === CUSTOM_KEY || !predefinedAttrs ? (
+              <input
+                type="text"
+                value={classForm.spellcasting_ability}
+                onChange={(e) => setClassForm((f) => ({ ...f, spellcasting_ability: e.target.value }))}
+                placeholder={t('character.multiclass.spellcasting')}
+                className="w-full bg-white/10 rounded-xl px-3 py-2 outline-none"
+              />
+            ) : (
+              <p className="text-sm text-[var(--tg-theme-hint-color)] px-1">
+                {t('character.multiclass.spellcasting')}: {predefinedAttrs.spellcasting_ability ?? '—'}
+              </p>
+            )}
+
+            {/* Auto-resources hint for predefined classes */}
+            {isPredefined && (
+              <p className="text-xs text-[var(--tg-theme-hint-color)] italic px-1">
+                {t('character.multiclass.auto_resources_hint')}
+              </p>
+            )}
+
             <div className="flex gap-2">
               <button
                 onClick={() => addClass.mutate()}
-                disabled={!classForm.class_name.trim() || addClass.isPending}
+                disabled={!canAdd || addClass.isPending}
                 className="flex-1 py-2 rounded-xl bg-[var(--tg-theme-button-color)]
                            text-[var(--tg-theme-button-text-color)] font-semibold disabled:opacity-40"
               >
                 {addClass.isPending ? '...' : t('common.add')}
               </button>
-              <button onClick={() => setShowAddClass(false)} className="flex-1 py-2 rounded-xl bg-white/10">
+              <button onClick={() => { setShowAddClass(false); setClassForm(emptyClass) }} className="flex-1 py-2 rounded-xl bg-white/10">
                 {t('common.cancel')}
               </button>
             </div>

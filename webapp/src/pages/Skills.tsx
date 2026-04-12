@@ -1,9 +1,11 @@
+import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
 import Card from '@/components/Card'
+import RollResultModal, { type RollResult } from '@/components/RollResultModal'
 import { haptic } from '@/auth/telegram'
 
 const SKILLS: { key: string; ability: string }[] = [
@@ -50,6 +52,7 @@ export default function Skills() {
   const charId = Number(id)
   const { t } = useTranslation()
   const qc = useQueryClient()
+  const [rollResult, setRollResult] = useState<{ result: RollResult; title: string } | null>(null)
 
   const { data: char } = useQuery({
     queryKey: ['character', charId],
@@ -62,6 +65,18 @@ export default function Skills() {
     onSuccess: (updated) => {
       qc.setQueryData(['character', charId], updated)
       haptic.light()
+    },
+    onError: () => haptic.error(),
+  })
+
+  const rollMutation = useMutation({
+    mutationFn: (skillName: string) => api.characters.rollSkill(charId, skillName),
+    onSuccess: (result, skillName) => {
+      setRollResult({
+        result,
+        title: t(`character.skills.${skillName}`),
+      })
+      haptic.success()
     },
     onError: () => haptic.error(),
   })
@@ -109,35 +124,64 @@ export default function Skills() {
           const isProficient = level === true
 
           return (
-            <button
+            <div
               key={skill.key}
-              onClick={() => toggle(skill.key)}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl
-                         bg-[var(--tg-theme-secondary-bg-color)] active:opacity-70"
+              className="flex items-center gap-2 px-4 py-3 rounded-xl
+                         bg-[var(--tg-theme-secondary-bg-color)]"
             >
-              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0
-                ${isExpert
-                  ? 'bg-yellow-500 border-yellow-500'
-                  : isProficient
-                    ? 'bg-[var(--tg-theme-button-color)] border-[var(--tg-theme-button-color)]'
-                    : 'border-white/30'}`}
+              {/* Proficiency toggle */}
+              <button
+                onClick={() => toggle(skill.key)}
+                className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0
+                  ${isExpert
+                    ? 'bg-yellow-500 border-yellow-500'
+                    : isProficient
+                      ? 'bg-[var(--tg-theme-button-color)] border-[var(--tg-theme-button-color)]'
+                      : 'border-white/30'}`}
               >
                 {isExpert && <span className="text-xs text-white font-bold">★</span>}
                 {isProficient && <span className="text-xs text-white font-bold">✓</span>}
-              </div>
-              <span className="flex-1 text-left text-sm font-medium">
+              </button>
+
+              {/* Name */}
+              <button
+                onClick={() => toggle(skill.key)}
+                className="flex-1 text-left text-sm font-medium active:opacity-70"
+              >
                 {t(`character.skills.${skill.key}`)}
-              </span>
+              </button>
+
+              {/* Ability abbr */}
               <span className="text-xs text-[var(--tg-theme-hint-color)] uppercase shrink-0">
                 {skill.ability.slice(0, 3)}
               </span>
+
+              {/* Bonus */}
               <span className={`text-sm font-bold w-8 text-right shrink-0 ${bonus >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                 {bonus >= 0 ? '+' : ''}{bonus}
               </span>
-            </button>
+
+              {/* Roll button */}
+              <button
+                onClick={() => rollMutation.mutate(skill.key)}
+                disabled={rollMutation.isPending}
+                className="text-lg leading-none shrink-0 active:opacity-60 disabled:opacity-30"
+                title={t('character.skills.roll')}
+              >
+                🎲
+              </button>
+            </div>
           )
         })}
       </div>
+
+      {rollResult && (
+        <RollResultModal
+          result={rollResult.result}
+          title={rollResult.title}
+          onClose={() => setRollResult(null)}
+        />
+      )}
     </Layout>
   )
 }

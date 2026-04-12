@@ -53,7 +53,14 @@
       "heal": "Heal",
       "set_max": "Set maximum",
       "set_current": "Set current",
-      "set_temp": "Set temporary"
+      "set_temp": "Set temporary",
+      "short_rest": "Short rest",
+      "long_rest": "Long rest",
+      "hit_dice_spend_hint": "Spend hit dice to recover HP",
+      "hit_dice_result": "Hit dice spent",
+      "new_hp": "New HP",
+      "confirm_rest": "Confirm rest",
+      "concentration_active": "Concentrating — make a saving throw?"
     },
     "death_saves": {
       "title": "Death Saves",
@@ -87,6 +94,7 @@
       "expert": "Expert",
       "prof_bonus": "Proficiency bonus",
       "passive_perception": "Passive Perception",
+      "roll": "Roll dice",
       "acrobatics": "Acrobatics",
       "animal_handling": "Animal Handling",
       "arcana": "Arcana",
@@ -108,7 +116,8 @@
     },
     "saves": {
       "title": "Saving Throws",
-      "proficient": "Proficient"
+      "proficient": "Proficient",
+      "roll": "Roll dice"
     },
     "spells": {
       "title": "Spells",
@@ -131,7 +140,12 @@
       "range": "Range",
       "components": "Components",
       "duration": "Duration",
-      "stop_concentration": "Stop concentration"
+      "stop_concentration": "Stop concentration",
+      "conc_save_damage_placeholder": "Damage taken",
+      "conc_save_btn": "Concentration Save",
+      "conc_save_success": "Concentration maintained!",
+      "conc_save_fail": "Concentration lost!",
+      "conc_lost": "Concentration has been broken"
     },
     "slots": {
       "title": "Spell Slots",
@@ -212,7 +226,9 @@
       "current": "Current XP",
       "level": "Level {{level}}",
       "next_level": "Next level",
-      "xp_to_next": "XP to next level"
+      "xp_to_next": "XP to next level",
+      "level_up_available": "Level up available! Go to the Class page to assign the level.",
+      "single_class_synced": "Class level updates automatically with XP."
     },
     "notes": {
       "title": "Notes",
@@ -294,6 +310,9 @@
         "dmg_thunder": "Thunder",
         "dmg_other": "Other"
       },
+      "attack": "Attack",
+      "equip": "Equip",
+      "unequip": "Remove",
       "weapon_properties": {
         "prop_finesse": "Finesse",
         "prop_versatile": "Versatile",
@@ -329,6 +348,8 @@
       "title": "Class",
       "add_class": "Add class",
       "class_name": "Class name",
+      "custom_class": "Custom",
+      "custom_class_name": "Custom name",
       "level": "Level",
       "subclass": "Subclass",
       "hit_die": "Hit die",
@@ -340,7 +361,8 @@
       "resource_current": "Current",
       "restoration": "Restoration",
       "use_resource": "Use",
-      "restore_resource": "Restore"
+      "restore_resource": "Restore",
+      "auto_resources_hint": "Standard resources will be created automatically"
     },
     "settings": {
       "title": "Settings",

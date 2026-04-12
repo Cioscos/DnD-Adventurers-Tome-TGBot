@@ -216,6 +216,19 @@ class DiceRollResult(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Generic roll result (skill check, saving throw, initiative…)
+# ---------------------------------------------------------------------------
+
+class RollResult(BaseModel):
+    die: int = 20
+    bonus: int
+    total: int
+    is_critical: bool = False
+    is_fumble: bool = False
+    description: str = ""
+
+
+# ---------------------------------------------------------------------------
 # History
 # ---------------------------------------------------------------------------
 

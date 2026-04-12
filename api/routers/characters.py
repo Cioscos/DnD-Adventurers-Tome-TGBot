@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import random
+from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -15,8 +17,13 @@ from bot.db.models import (
     AbilityScore,
     ABILITY_NAMES,
     Character,
+    CharacterClass,
+    CharacterHistory,
+    ClassResource,
     Currency,
 )
+from bot.data.xp_thresholds import xp_to_level
+from bot.data.classes import get_resources_for_class, update_resources_for_level
 from api.schemas.character import (
     CharacterCreate,
     CharacterFull,
@@ -28,8 +35,44 @@ from api.schemas.character import (
     SavingThrowsUpdate,
     XPUpdate,
 )
+from api.schemas.common import RollResult
 
 router = APIRouter(prefix="/characters", tags=["characters"])
+
+# Mapping from skill name to governing ability
+_SKILL_ABILITY: dict[str, str] = {
+    "acrobatics": "dexterity",
+    "animal_handling": "wisdom",
+    "arcana": "intelligence",
+    "athletics": "strength",
+    "deception": "charisma",
+    "history": "intelligence",
+    "insight": "wisdom",
+    "intimidation": "charisma",
+    "investigation": "intelligence",
+    "medicine": "wisdom",
+    "nature": "intelligence",
+    "perception": "wisdom",
+    "performance": "charisma",
+    "persuasion": "charisma",
+    "religion": "intelligence",
+    "sleight_of_hand": "dexterity",
+    "stealth": "dexterity",
+    "survival": "wisdom",
+}
+
+
+def _now() -> str:
+    return datetime.utcnow().strftime("%Y-%m-%d %H:%M")
+
+
+def _add_history(session, char_id: int, event_type: str, description: str) -> None:
+    session.add(CharacterHistory(
+        character_id=char_id,
+        timestamp=_now(),
+        event_type=event_type,
+        description=description,
+    ))
 
 
 def _full_load():
@@ -245,4 +288,107 @@ async def update_xp(
         char.experience_points = max(0, body.set)
     elif body.add is not None:
         char.experience_points = max(0, (char.experience_points or 0) + body.add)
+
+    # For single-class characters, keep class level in sync with XP-derived level.
+    if len(char.classes) == 1:
+        cls = char.classes[0]
+        new_level = xp_to_level(char.experience_points)
+        if new_level != cls.level:
+            cls.level = new_level
+            update_resources_for_level(cls.class_name, new_level, list(cls.resources), char)
+            existing_names = {r.name for r in cls.resources}
+            for res_data in get_resources_for_class(cls.class_name, new_level, char):
+                if res_data["name"] not in existing_names:
+                    session.add(ClassResource(class_id=cls.id, **res_data))
+
     return char
+
+
+# ---------------------------------------------------------------------------
+# Skill roll
+# ---------------------------------------------------------------------------
+
+@router.post("/{char_id}/skills/{skill_name}/roll", response_model=RollResult)
+async def roll_skill(
+    char_id: int,
+    skill_name: str,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> RollResult:
+    if skill_name not in _SKILL_ABILITY:
+        raise HTTPException(status_code=400, detail=f"Unknown skill: {skill_name}")
+    char = await _get_owned(char_id, user_id, session, full=True)
+
+    ability_name = _SKILL_ABILITY[skill_name]
+    score = next((s for s in char.ability_scores if s.name == ability_name), None)
+    ability_mod = score.modifier if score else 0
+
+    skills: dict = char.skills or {}
+    level = skills.get(skill_name)
+    pb = char.proficiency_bonus
+    if level == "expert":
+        bonus = ability_mod + 2 * pb
+    elif level is True or level == 1:
+        bonus = ability_mod + pb
+    else:
+        bonus = ability_mod
+
+    die = random.randint(1, 20)
+    total = die + bonus
+    is_crit = die == 20
+    is_fumble = die == 1
+
+    _add_history(session, char.id, "skill_roll",
+                 f"Abilità {skill_name}: d20={die} {'+ ' if bonus >= 0 else ''}{bonus} = {total}"
+                 + (" (CRITICO)" if is_crit else " (FUMBLE)" if is_fumble else ""))
+
+    return RollResult(
+        die=die,
+        bonus=bonus,
+        total=total,
+        is_critical=is_crit,
+        is_fumble=is_fumble,
+        description=skill_name,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Saving throw roll
+# ---------------------------------------------------------------------------
+
+@router.post("/{char_id}/saving_throws/{ability}/roll", response_model=RollResult)
+async def roll_saving_throw(
+    char_id: int,
+    ability: str,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> RollResult:
+    if ability not in ABILITY_NAMES:
+        raise HTTPException(status_code=400, detail=f"Unknown ability: {ability}")
+    char = await _get_owned(char_id, user_id, session, full=True)
+
+    score = next((s for s in char.ability_scores if s.name == ability), None)
+    ability_mod = score.modifier if score else 0
+
+    saves: dict = char.saving_throws or {}
+    is_proficient = bool(saves.get(ability, False))
+    pb = char.proficiency_bonus
+    bonus = ability_mod + (pb if is_proficient else 0)
+
+    die = random.randint(1, 20)
+    total = die + bonus
+    is_crit = die == 20
+    is_fumble = die == 1
+
+    _add_history(session, char.id, "saving_throw",
+                 f"TS {ability}: d20={die} {'+ ' if bonus >= 0 else ''}{bonus} = {total}"
+                 + (" (CRITICO)" if is_crit else " (FUMBLE)" if is_fumble else ""))
+
+    return RollResult(
+        die=die,
+        bonus=bonus,
+        total=total,
+        is_critical=is_crit,
+        is_fumble=is_fumble,
+        description=ability,
+    )

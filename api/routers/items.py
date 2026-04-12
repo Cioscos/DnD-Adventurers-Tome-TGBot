@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import json
+import random
+import re
+from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -12,11 +15,38 @@ from sqlalchemy.orm import selectinload
 
 from api.auth import get_current_user
 from api.database import get_db
-from bot.db.models import Character, CharacterClass, Item
+from bot.db.models import Character, CharacterClass, CharacterHistory, Item
 from api.schemas.character import CharacterFull
-from api.schemas.item import ItemCreate, ItemRead, ItemUpdate
+from api.schemas.item import ItemCreate, ItemRead, ItemUpdate, WeaponAttackResult
 
 router = APIRouter(prefix="/characters", tags=["items"])
+
+_DICE_RE = re.compile(r"^(\d+)d(\d+)([+-]\d+)?$", re.IGNORECASE)
+
+
+def _now() -> str:
+    return datetime.utcnow().strftime("%Y-%m-%d %H:%M")
+
+
+def _add_history(session, char_id: int, event_type: str, description: str) -> None:
+    session.add(CharacterHistory(
+        character_id=char_id,
+        timestamp=_now(),
+        event_type=event_type,
+        description=description,
+    ))
+
+
+def _roll_dice(notation: str) -> tuple[list[int], int]:
+    """Roll dice from notation like '1d8' or '2d6+2'. Returns (rolls, bonus)."""
+    m = _DICE_RE.match(notation.strip())
+    if not m:
+        return [0], 0
+    count = int(m.group(1))
+    sides = int(m.group(2))
+    bonus = int(m.group(3)) if m.group(3) else 0
+    rolls = [random.randint(1, sides) for _ in range(count)]
+    return rolls, bonus
 
 
 async def _get_owned_full(char_id: int, user_id: int, session: AsyncSession) -> Character:
@@ -163,3 +193,92 @@ async def delete_item(
     char.recalculate_encumbrance()
     await session.refresh(char, attribute_names=["items"])
     return char
+
+
+# ---------------------------------------------------------------------------
+# Weapon attack roll
+# ---------------------------------------------------------------------------
+
+@router.post("/{char_id}/items/{item_id}/attack", response_model=WeaponAttackResult)
+async def attack_with_weapon(
+    char_id: int,
+    item_id: int,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> WeaponAttackResult:
+    char = await _get_owned_full(char_id, user_id, session)
+    result = await session.execute(
+        select(Item).where(Item.id == item_id, Item.character_id == char_id)
+    )
+    item = result.scalar_one_or_none()
+    if item is None:
+        raise HTTPException(status_code=404, detail="Item not found")
+    if item.item_type != "weapon":
+        raise HTTPException(status_code=400, detail="Item is not a weapon")
+
+    meta = json.loads(item.item_metadata) if item.item_metadata else {}
+    damage_dice_str: str = meta.get("damage_dice", "1d4")
+    weapon_type: str = meta.get("weapon_type", "melee")
+    properties: list[str] = meta.get("properties", [])
+
+    # Determine ability modifier
+    def _mod(ability: str) -> int:
+        sc = next((s for s in char.ability_scores if s.name == ability), None)
+        return sc.modifier if sc else 0
+
+    str_mod = _mod("strength")
+    dex_mod = _mod("dexterity")
+
+    is_finesse = any("finesse" in p.lower() for p in properties)
+    is_ranged = weapon_type == "ranged"
+
+    if is_finesse:
+        ability_mod = max(str_mod, dex_mod)
+    elif is_ranged:
+        ability_mod = dex_mod
+    else:
+        ability_mod = str_mod
+
+    pb = char.proficiency_bonus
+
+    # To-hit roll
+    to_hit_die = random.randint(1, 20)
+    to_hit_bonus = ability_mod + pb
+    to_hit_total = to_hit_die + to_hit_bonus
+    is_critical = to_hit_die == 20
+    is_fumble = to_hit_die == 1
+
+    # Damage roll
+    damage_rolls, dice_bonus = _roll_dice(damage_dice_str)
+    if is_critical:
+        # Double the dice on crit
+        extra_rolls, _ = _roll_dice(damage_dice_str)
+        damage_rolls = damage_rolls + extra_rolls
+    if is_fumble:
+        damage_rolls = [0]
+        dice_bonus = 0
+        damage_bonus = 0
+        damage_total = 0
+    else:
+        damage_bonus = ability_mod + dice_bonus
+        damage_total = max(0, sum(damage_rolls) + damage_bonus)
+
+    result_str = (
+        f"Attacco {item.name}: colpire d20={to_hit_die}+{to_hit_bonus}={to_hit_total}"
+        + (" (CRITICO!)" if is_critical else " (FUMBLE!)" if is_fumble else "")
+        + f" | Danno: {'+'.join(str(r) for r in damage_rolls)}+{damage_bonus}={damage_total}"
+    )
+    _add_history(session, char.id, "attack_roll", result_str)
+
+    return WeaponAttackResult(
+        weapon_name=item.name,
+        to_hit_die=to_hit_die,
+        to_hit_bonus=to_hit_bonus,
+        to_hit_total=to_hit_total,
+        is_critical=is_critical,
+        is_fumble=is_fumble,
+        damage_dice=damage_dice_str,
+        damage_rolls=damage_rolls,
+        damage_bonus=damage_bonus if not is_fumble else 0,
+        damage_total=damage_total,
+    )

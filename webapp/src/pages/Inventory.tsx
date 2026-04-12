@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
 import Card from '@/components/Card'
+import WeaponAttackModal, { type WeaponAttackResult } from '@/components/WeaponAttackModal'
 import { haptic } from '@/auth/telegram'
 import type { Item } from '@/types'
 
@@ -175,6 +176,8 @@ export default function Inventory() {
   const [showAdd, setShowAdd] = useState(false)
   const [form, setForm] = useState<AddForm>(emptyForm)
   const [deleteTarget, setDeleteTarget] = useState<number | null>(null)
+  const [attackResult, setAttackResult] = useState<WeaponAttackResult | null>(null)
+  const [expanded, setExpanded] = useState<number | null>(null)
 
   const { data: char } = useQuery({
     queryKey: ['character', charId],
@@ -218,6 +221,15 @@ export default function Inventory() {
     onSuccess: (updated) => {
       qc.setQueryData(['character', charId], updated)
       setDeleteTarget(null)
+      haptic.success()
+    },
+    onError: () => haptic.error(),
+  })
+
+  const attackMutation = useMutation({
+    mutationFn: (itemId: number) => api.items.attack(charId, itemId),
+    onSuccess: (result) => {
+      setAttackResult(result)
       haptic.success()
     },
     onError: () => haptic.error(),
@@ -269,12 +281,24 @@ export default function Inventory() {
         {items.map((item) => {
           const icon = TYPE_ICON[item.item_type] ?? '📦'
           const meta = item.item_metadata as Record<string, unknown> | undefined
+          const isOpen = expanded === item.id
+          const canEquip = ['armor', 'shield', 'weapon'].includes(item.item_type)
+
           return (
-            <Card key={item.id}>
-              <div className="flex items-start justify-between gap-2">
+            <div
+              key={item.id}
+              className={`rounded-2xl overflow-hidden bg-[var(--tg-theme-secondary-bg-color)]
+                ${item.is_equipped ? 'ring-1 ring-green-500/50' : ''}`}
+            >
+              {/* Header row — tap to expand */}
+              <button
+                className="w-full flex items-center gap-2 px-4 py-3 text-left active:opacity-70"
+                onClick={() => setExpanded(isOpen ? null : item.id)}
+              >
+                <span className="text-lg shrink-0">{icon}</span>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-medium">{icon} {item.name}</span>
+                    <span className="font-medium text-sm">{item.name}</span>
                     {item.is_equipped && (
                       <span className="text-xs px-1.5 py-0.5 rounded-full bg-green-500/20 text-green-400 shrink-0">
                         {t('character.inventory.equipped')}
@@ -294,41 +318,70 @@ export default function Inventory() {
                   <p className="text-xs text-[var(--tg-theme-hint-color)] mt-0.5">
                     {t(`character.inventory.types.${item.item_type}`, { defaultValue: item.item_type })}
                     {item.weight > 0 && ` · ${item.weight}lb`}
+                    {` · ×${item.quantity}`}
                   </p>
-                  <ItemMetaBadge item={item} t={t} />
-                  {item.description && (
-                    <p className="text-xs text-[var(--tg-theme-hint-color)] mt-1 line-clamp-2">{item.description}</p>
-                  )}
                 </div>
-                <div className="flex flex-col items-end gap-1 shrink-0">
-                  <div className="flex items-center gap-1">
+                <span className="text-[var(--tg-theme-hint-color)] text-xs shrink-0">
+                  {isOpen ? '▲' : '▼'}
+                </span>
+              </button>
+
+              {/* Expanded detail panel */}
+              {isOpen && (
+                <div className="px-4 pb-4 space-y-3 border-t border-white/10 pt-3">
+                  <ItemMetaBadge item={item} t={t} />
+
+                  {item.description && (
+                    <p className="text-xs text-[var(--tg-theme-hint-color)] whitespace-pre-wrap">{item.description}</p>
+                  )}
+
+                  {/* Quantity controls */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-[var(--tg-theme-hint-color)] flex-1">{t('character.inventory.quantity')}</span>
                     <button
                       onClick={() => updateQty.mutate({ itemId: item.id, quantity: item.quantity - 1 })}
-                      className="w-6 h-6 rounded-lg bg-white/10 text-sm font-bold active:opacity-70"
+                      className="w-7 h-7 rounded-lg bg-white/10 font-bold active:opacity-70"
                     >−</button>
-                    <span className="w-6 text-center text-sm font-bold">{item.quantity}</span>
+                    <span className="w-6 text-center font-bold">{item.quantity}</span>
                     <button
                       onClick={() => updateQty.mutate({ itemId: item.id, quantity: item.quantity + 1 })}
-                      className="w-6 h-6 rounded-lg bg-white/10 text-sm font-bold active:opacity-70"
+                      className="w-7 h-7 rounded-lg bg-white/10 font-bold active:opacity-70"
                     >+</button>
                   </div>
-                  <div className="flex gap-1">
-                    <button
-                      onClick={() => toggleEquip.mutate({ itemId: item.id, equipped: !item.is_equipped })}
-                      className="text-xs text-[var(--tg-theme-link-color)]"
-                    >
-                      {item.is_equipped ? '↩' : '⚔'}
-                    </button>
+
+                  {/* Action buttons */}
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    {canEquip && (
+                      <button
+                        onClick={() => toggleEquip.mutate({ itemId: item.id, equipped: !item.is_equipped })}
+                        disabled={toggleEquip.isPending}
+                        className={`flex-1 py-2 rounded-xl text-sm font-semibold active:opacity-70 disabled:opacity-40
+                          ${item.is_equipped
+                            ? 'bg-orange-500/20 text-orange-300'
+                            : 'bg-green-500/20 text-green-300'}`}
+                      >
+                        {item.is_equipped ? `↩ ${t('character.inventory.unequip')}` : `⚔ ${t('character.inventory.equip')}`}
+                      </button>
+                    )}
+                    {item.item_type === 'weapon' && (
+                      <button
+                        onClick={() => attackMutation.mutate(item.id)}
+                        disabled={attackMutation.isPending}
+                        className="flex-1 py-2 rounded-xl text-sm font-semibold bg-orange-500/20 text-orange-300 active:opacity-70 disabled:opacity-40"
+                      >
+                        🎲 {t('character.inventory.attack')}
+                      </button>
+                    )}
                     <button
                       onClick={() => setDeleteTarget(item.id)}
-                      className="text-xs text-red-400"
+                      className="px-4 py-2 rounded-xl text-sm bg-red-500/20 text-red-300 active:opacity-70"
                     >
                       {t('common.delete')}
                     </button>
                   </div>
                 </div>
-              </div>
-            </Card>
+              )}
+            </div>
           )
         })}
       </div>
@@ -569,6 +622,10 @@ export default function Inventory() {
             </div>
           </Card>
         </div>
+      )}
+
+      {attackResult && (
+        <WeaponAttackModal result={attackResult} onClose={() => setAttackResult(null)} />
       )}
 
       {deleteTarget !== null && (

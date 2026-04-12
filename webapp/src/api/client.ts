@@ -20,6 +20,46 @@ import type {
   SpellSlot,
 } from '@/types'
 
+export type RollResult = {
+  die: number
+  bonus: number
+  total: number
+  is_critical: boolean
+  is_fumble: boolean
+  description?: string
+}
+
+export type WeaponAttackResult = {
+  weapon_name: string
+  to_hit_die: number
+  to_hit_bonus: number
+  to_hit_total: number
+  is_critical: boolean
+  is_fumble: boolean
+  damage_dice: string
+  damage_rolls: number[]
+  damage_bonus: number
+  damage_total: number
+}
+
+export type HitDiceSpendResult = {
+  rolls: number[]
+  con_bonus: number
+  healed: number
+  new_current_hp: number
+}
+
+export type ConcentrationSaveResult = {
+  die: number
+  bonus: number
+  total: number
+  dc: number
+  success: boolean
+  lost_concentration: boolean
+  is_critical: boolean
+  is_fumble: boolean
+}
+
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000'
 
 class ApiError extends Error {
@@ -129,6 +169,23 @@ export const api = {
         method: 'PATCH',
         body: JSON.stringify(data),
       }),
+
+    // Roll endpoints
+    rollSkill: (id: number, skillName: string) =>
+      request<RollResult>(`/characters/${id}/skills/${encodeURIComponent(skillName)}/roll`, {
+        method: 'POST',
+      }),
+    rollSavingThrow: (id: number, ability: string) =>
+      request<RollResult>(`/characters/${id}/saving_throws/${encodeURIComponent(ability)}/roll`, {
+        method: 'POST',
+      }),
+
+    // Hit dice spending
+    spendHitDice: (id: number, classId: number, count: number) =>
+      request<HitDiceSpendResult>(`/characters/${id}/hit_dice/spend`, {
+        method: 'POST',
+        body: JSON.stringify({ class_id: classId, count }),
+      }),
   },
 
   // ---------------------------------------------------------------------------
@@ -193,6 +250,11 @@ export const api = {
         method: 'PATCH',
         body: JSON.stringify({ spell_id: spellId }),
       }),
+    concentrationSave: (charId: number, damage: number) =>
+      request<ConcentrationSaveResult>(`/characters/${charId}/concentration/save`, {
+        method: 'POST',
+        body: JSON.stringify({ damage }),
+      }),
   },
 
   // ---------------------------------------------------------------------------
@@ -232,6 +294,10 @@ export const api = {
       }),
     remove: (charId: number, itemId: number) =>
       request<CharacterFull>(`/characters/${charId}/items/${itemId}`, { method: 'DELETE' }),
+    attack: (charId: number, itemId: number) =>
+      request<WeaponAttackResult>(`/characters/${charId}/items/${itemId}/attack`, {
+        method: 'POST',
+      }),
   },
 
   // ---------------------------------------------------------------------------

@@ -53,6 +53,11 @@ export default function Experience() {
     : 100
   const xpToNext = nextThreshold ? nextThreshold - xp : 0
 
+  const totalClassLevel = (char.classes ?? []).reduce((s: number, c: { level: number }) => s + c.level, 0)
+  const isSingleClass = (char.classes ?? []).length === 1
+  const isMulticlass = (char.classes ?? []).length > 1
+  const levelUpAvailable = isMulticlass && level > totalClassLevel
+
   const handleApply = () => {
     const n = parseInt(addValue, 10)
     if (isNaN(n)) return
@@ -63,6 +68,20 @@ export default function Experience() {
 
   return (
     <Layout title={t('character.xp.title')} backTo={`/char/${charId}`}>
+      {/* Level-up notification for multiclass characters */}
+      {levelUpAvailable && (
+        <div className="rounded-2xl bg-yellow-500/20 border border-yellow-500/40 px-4 py-3 text-sm text-yellow-300">
+          ⬆️ {t('character.xp.level_up_available')}
+        </div>
+      )}
+
+      {/* Info for single-class characters */}
+      {isSingleClass && (
+        <p className="text-xs text-[var(--tg-theme-hint-color)] text-center px-2">
+          {t('character.xp.single_class_synced')}
+        </p>
+      )}
+
       <Card>
         <div className="text-center">
           <p className="text-sm text-[var(--tg-theme-hint-color)] mb-1">

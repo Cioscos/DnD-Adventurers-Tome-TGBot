@@ -53,7 +53,14 @@
       "heal": "Cura",
       "set_max": "Imposta massimo",
       "set_current": "Imposta attuali",
-      "set_temp": "Imposta temporanei"
+      "set_temp": "Imposta temporanei",
+      "short_rest": "Riposo breve",
+      "long_rest": "Riposo lungo",
+      "hit_dice_spend_hint": "Spendi dadi vita per recuperare HP",
+      "hit_dice_result": "Dadi vita spesi",
+      "new_hp": "Nuovi HP",
+      "confirm_rest": "Conferma riposo",
+      "concentration_active": "In concentrazione — tiro salvezza?"
     },
     "death_saves": {
       "title": "Tiri vs Morte",
@@ -87,6 +94,7 @@
       "expert": "Esperto",
       "prof_bonus": "Bonus competenza",
       "passive_perception": "Percezione Passiva",
+      "roll": "Tira dado",
       "acrobatics": "Acrobatica",
       "animal_handling": "Anim. Selvatici",
       "arcana": "Arcano",
@@ -108,7 +116,8 @@
     },
     "saves": {
       "title": "Tiri Salvezza",
-      "proficient": "Competente"
+      "proficient": "Competente",
+      "roll": "Tira dado"
     },
     "spells": {
       "title": "Magie",
@@ -131,7 +140,12 @@
       "range": "Gittata",
       "components": "Componenti",
       "duration": "Durata",
-      "stop_concentration": "Interrompi concentrazione"
+      "stop_concentration": "Interrompi concentrazione",
+      "conc_save_damage_placeholder": "Danno subito",
+      "conc_save_btn": "TS Concentrazione",
+      "conc_save_success": "Concentrazione mantenuta!",
+      "conc_save_fail": "Concentrazione persa!",
+      "conc_lost": "La concentrazione è stata interrotta"
     },
     "slots": {
       "title": "Slot Incantesimo",
@@ -212,7 +226,9 @@
       "current": "XP attuali",
       "level": "Livello {{level}}",
       "next_level": "Prossimo livello",
-      "xp_to_next": "XP al prossimo livello"
+      "xp_to_next": "XP al prossimo livello",
+      "level_up_available": "Livello disponibile! Vai nella pagina Classe per distribuire il livello.",
+      "single_class_synced": "Il livello della classe viene aggiornato automaticamente con gli XP."
     },
     "notes": {
       "title": "Note",
@@ -294,6 +310,9 @@
         "dmg_thunder": "Tuono",
         "dmg_other": "Altro"
       },
+      "attack": "Attacca",
+      "equip": "Equipaggia",
+      "unequip": "Rimuovi",
       "weapon_properties": {
         "prop_finesse": "Finezza",
         "prop_versatile": "Versatile",
@@ -329,6 +348,8 @@
       "title": "Classe",
       "add_class": "Aggiungi classe",
       "class_name": "Nome classe",
+      "custom_class": "Personalizzata",
+      "custom_class_name": "Nome personalizzato",
       "level": "Livello",
       "subclass": "Sottoclasse",
       "hit_die": "Dado vita",
@@ -340,7 +361,8 @@
       "resource_current": "Attuali",
       "restoration": "Ripristino",
       "use_resource": "Usa",
-      "restore_resource": "Ripristina"
+      "restore_resource": "Ripristina",
+      "auto_resources_hint": "Le risorse standard saranno create automaticamente"
     },
     "settings": {
       "title": "Impostazioni",

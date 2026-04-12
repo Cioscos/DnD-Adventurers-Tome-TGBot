@@ -21,6 +21,12 @@ from api.schemas.common import (
     ClassResourceRead,
     ClassResourceUpdate,
 )
+from bot.data.classes import (
+    CLASS_HIT_DIE,
+    CLASS_SPELLCASTING,
+    get_resources_for_class,
+    update_resources_for_level,
+)
 
 router = APIRouter(prefix="/characters", tags=["classes"])
 
@@ -72,16 +78,31 @@ async def add_class(
     session: Annotated[AsyncSession, Depends(get_db)],
 ) -> Character:
     char = await _get_owned_full(char_id, user_id, session)
+
+    # Auto-fill hit_die and spellcasting_ability for predefined classes.
+    hit_die = body.hit_die
+    spellcasting_ability = body.spellcasting_ability
+    if body.class_name in CLASS_HIT_DIE:
+        if hit_die is None:
+            hit_die = CLASS_HIT_DIE[body.class_name]
+        if spellcasting_ability is None:
+            spellcasting_ability = CLASS_SPELLCASTING.get(body.class_name)
+
     cls = CharacterClass(
         character_id=char_id,
         class_name=body.class_name,
         level=body.level,
         subclass=body.subclass,
-        spellcasting_ability=body.spellcasting_ability,
-        hit_die=body.hit_die,
+        spellcasting_ability=spellcasting_ability,
+        hit_die=hit_die,
     )
     session.add(cls)
     await session.flush()
+
+    # Auto-create class resources for predefined classes.
+    for res_data in get_resources_for_class(body.class_name, body.level, char):
+        session.add(ClassResource(class_id=cls.id, **res_data))
+
     session.expire(char)
     return await _get_owned_full(char_id, user_id, session)
 
@@ -96,8 +117,19 @@ async def update_class(
 ) -> Character:
     char = await _get_owned_full(char_id, user_id, session)
     cls = await _get_class(class_id, char_id, session)
+    old_level = cls.level
     for field, value in body.model_dump(exclude_unset=True).items():
         setattr(cls, field, value)
+
+    # When level changes, sync resources for predefined classes.
+    if body.level is not None and body.level != old_level:
+        new_level = cls.level  # already updated by setattr
+        update_resources_for_level(cls.class_name, new_level, list(cls.resources), char)
+        existing_names = {r.name for r in cls.resources}
+        for res_data in get_resources_for_class(cls.class_name, new_level, char):
+            if res_data["name"] not in existing_names:
+                session.add(ClassResource(class_id=cls.id, **res_data))
+
     return char
 
 

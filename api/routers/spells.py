@@ -2,17 +2,21 @@
 
 from __future__ import annotations
 
+import random
+from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from api.auth import get_current_user
 from api.database import get_db
-from bot.db.models import Character, CharacterClass, Spell, SpellSlot
+from bot.db.models import Character, CharacterClass, CharacterHistory, Spell, SpellSlot
 from api.schemas.character import CharacterFull
+from api.schemas.common import RollResult
 from api.schemas.spell import (
     ConcentrationUpdate,
     SpellCreate,
@@ -21,7 +25,24 @@ from api.schemas.spell import (
     SpellUseRequest,
 )
 
+
+class ConcentrationSaveRequest(BaseModel):
+    damage: int
+
 router = APIRouter(prefix="/characters", tags=["spells"])
+
+
+def _now() -> str:
+    return datetime.utcnow().strftime("%Y-%m-%d %H:%M")
+
+
+def _add_history(session, char_id: int, event_type: str, description: str) -> None:
+    session.add(CharacterHistory(
+        character_id=char_id,
+        timestamp=_now(),
+        event_type=event_type,
+        description=description,
+    ))
 
 
 async def _get_owned_full(char_id: int, user_id: int, session: AsyncSession) -> Character:
@@ -164,3 +185,65 @@ async def update_concentration(
     char = await _get_owned_full(char_id, user_id, session)
     char.concentrating_spell_id = body.spell_id
     return char
+
+
+# ---------------------------------------------------------------------------
+# Concentration saving throw
+# ---------------------------------------------------------------------------
+
+class ConcentrationSaveResult(RollResult):
+    dc: int
+    success: bool
+    lost_concentration: bool
+
+
+@router.post("/{char_id}/concentration/save", response_model=ConcentrationSaveResult)
+async def concentration_save(
+    char_id: int,
+    body: ConcentrationSaveRequest,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> ConcentrationSaveResult:
+    char = await _get_owned_full(char_id, user_id, session)
+
+    dc = max(10, body.damage // 2)
+
+    # CON modifier
+    con_score = next((s for s in char.ability_scores if s.name == "constitution"), None)
+    con_mod = con_score.modifier if con_score else 0
+
+    die = random.randint(1, 20)
+    total = die + con_mod
+    is_crit = die == 20
+    is_fumble = die == 1
+
+    # Nat 20 = auto succeed, Nat 1 = auto fail, otherwise compare to DC
+    if is_crit:
+        success = True
+    elif is_fumble:
+        success = False
+    else:
+        success = total >= dc
+
+    lost_concentration = not success and char.concentrating_spell_id is not None
+
+    if lost_concentration:
+        char.concentrating_spell_id = None
+
+    outcome = "SUCCESSO" if success else "FALLIMENTO"
+    _add_history(session, char.id, "concentration_save",
+                 f"TS Concentrazione (danno {body.damage}, DC {dc}): "
+                 f"d20={die}+{con_mod}={total} — {outcome}"
+                 + (" → concentrazione persa" if lost_concentration else ""))
+
+    return ConcentrationSaveResult(
+        die=die,
+        bonus=con_mod,
+        total=total,
+        is_critical=is_crit,
+        is_fumble=is_fumble,
+        description=f"DC {dc}",
+        dc=dc,
+        success=success,
+        lost_concentration=lost_concentration,
+    )
