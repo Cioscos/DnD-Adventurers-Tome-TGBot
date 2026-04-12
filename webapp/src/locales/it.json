@@ -246,14 +246,65 @@
       "item_name": "Nome oggetto",
       "item_type": "Tipo",
       "description": "Descrizione",
+      "damage_dice_label": "Dado danno (es. 1d8)",
+      "damage_type_label": "Tipo danno",
+      "weapon_type_label": "Tipo arma",
+      "properties_label": "Proprietà",
+      "armor_type_label": "Tipo armatura",
+      "ac_value_label": "Valore CA",
+      "stealth_disadvantage_label": "Svantaggio Furtività",
+      "strength_req_label": "Requisito Forza (min)",
+      "ac_bonus_label": "Bonus CA",
+      "effect_label": "Effetto",
+      "tool_type_label": "Tipo strumento",
       "types": {
+        "generic": "Generico",
         "weapon": "Arma",
         "armor": "Armatura",
+        "shield": "Scudo",
+        "consumable": "Consumabile",
+        "tool": "Strumento",
         "potion": "Pozione",
         "scroll": "Pergamena",
-        "tool": "Strumento",
         "gear": "Equipaggiamento",
         "other": "Altro"
+      },
+      "weapon_type": {
+        "melee": "Corpo a corpo",
+        "ranged": "A distanza"
+      },
+      "armor_type": {
+        "light": "Leggera",
+        "medium": "Media",
+        "heavy": "Pesante"
+      },
+      "damage_types": {
+        "dmg_slashing": "Taglio",
+        "dmg_piercing": "Perforazione",
+        "dmg_bludgeoning": "Contundente",
+        "dmg_fire": "Fuoco",
+        "dmg_cold": "Freddo",
+        "dmg_lightning": "Fulmine",
+        "dmg_acid": "Acido",
+        "dmg_poison": "Veleno",
+        "dmg_necrotic": "Necrotico",
+        "dmg_radiant": "Radiante",
+        "dmg_force": "Forza",
+        "dmg_psychic": "Psichico",
+        "dmg_thunder": "Tuono",
+        "dmg_other": "Altro"
+      },
+      "weapon_properties": {
+        "prop_finesse": "Finezza",
+        "prop_versatile": "Versatile",
+        "prop_heavy": "Pesante",
+        "prop_light": "Leggera",
+        "prop_thrown": "Da lancio",
+        "prop_two_handed": "A due mani",
+        "prop_ammunition": "Munizioni",
+        "prop_loading": "Ricarica",
+        "prop_reach": "Lunga gittata",
+        "prop_special": "Speciale"
       }
     },
     "abilities": {

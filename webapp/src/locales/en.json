@@ -246,14 +246,65 @@
       "item_name": "Item name",
       "item_type": "Type",
       "description": "Description",
+      "damage_dice_label": "Damage dice (e.g. 1d8)",
+      "damage_type_label": "Damage type",
+      "weapon_type_label": "Weapon type",
+      "properties_label": "Properties",
+      "armor_type_label": "Armor type",
+      "ac_value_label": "AC value",
+      "stealth_disadvantage_label": "Stealth disadvantage",
+      "strength_req_label": "Strength requirement (min)",
+      "ac_bonus_label": "AC bonus",
+      "effect_label": "Effect",
+      "tool_type_label": "Tool type",
       "types": {
+        "generic": "Generic",
         "weapon": "Weapon",
         "armor": "Armor",
+        "shield": "Shield",
+        "consumable": "Consumable",
+        "tool": "Tool",
         "potion": "Potion",
         "scroll": "Scroll",
-        "tool": "Tool",
         "gear": "Gear",
         "other": "Other"
+      },
+      "weapon_type": {
+        "melee": "Melee",
+        "ranged": "Ranged"
+      },
+      "armor_type": {
+        "light": "Light",
+        "medium": "Medium",
+        "heavy": "Heavy"
+      },
+      "damage_types": {
+        "dmg_slashing": "Slashing",
+        "dmg_piercing": "Piercing",
+        "dmg_bludgeoning": "Bludgeoning",
+        "dmg_fire": "Fire",
+        "dmg_cold": "Cold",
+        "dmg_lightning": "Lightning",
+        "dmg_acid": "Acid",
+        "dmg_poison": "Poison",
+        "dmg_necrotic": "Necrotic",
+        "dmg_radiant": "Radiant",
+        "dmg_force": "Force",
+        "dmg_psychic": "Psychic",
+        "dmg_thunder": "Thunder",
+        "dmg_other": "Other"
+      },
+      "weapon_properties": {
+        "prop_finesse": "Finesse",
+        "prop_versatile": "Versatile",
+        "prop_heavy": "Heavy",
+        "prop_light": "Light",
+        "prop_thrown": "Thrown",
+        "prop_two_handed": "Two-Handed",
+        "prop_ammunition": "Ammunition",
+        "prop_loading": "Loading",
+        "prop_reach": "Reach",
+        "prop_special": "Special"
       }
     },
     "abilities": {

@@ -60,6 +60,24 @@ async def add_item(
     session: Annotated[AsyncSession, Depends(get_db)],
 ) -> Character:
     char = await _get_owned_full(char_id, user_id, session)
+
+    # Deduplication for generic items: merge quantity if same name exists
+    if body.item_type == "generic":
+        existing_result = await session.execute(
+            select(Item).where(
+                Item.character_id == char_id,
+                Item.item_type == "generic",
+                Item.name == body.name,
+            )
+        )
+        existing = existing_result.scalar_one_or_none()
+        if existing is not None:
+            existing.quantity += body.quantity
+            await session.flush()
+            char.recalculate_encumbrance()
+            await session.refresh(char, attribute_names=["items"])
+            return char
+
     metadata_str = json.dumps(body.item_metadata) if body.item_metadata else None
     item = Item(
         character_id=char_id,
@@ -118,7 +136,7 @@ async def update_item(
                 for other in char.items:
                     if other.id != item.id and other.item_type == "shield" and other.is_equipped:
                         other.is_equipped = False
-                char.shield_armor_class = item_meta.get("ac_value", 2)
+                char.shield_armor_class = item_meta.get("ac_bonus", 2)
             else:
                 char.shield_armor_class = 0
 

@@ -82,8 +82,8 @@ async def add_class(
     )
     session.add(cls)
     await session.flush()
-    await session.refresh(char, attribute_names=["classes"])
-    return char
+    session.expire(char)
+    return await _get_owned_full(char_id, user_id, session)
 
 
 @router.patch("/{char_id}/classes/{class_id}", response_model=CharacterFull)
@@ -112,8 +112,8 @@ async def remove_class(
     cls = await _get_class(class_id, char_id, session)
     await session.delete(cls)
     await session.flush()
-    await session.refresh(char, attribute_names=["classes"])
-    return char
+    session.expire(char)
+    return await _get_owned_full(char_id, user_id, session)
 
 
 # ---------------------------------------------------------------------------
