@@ -128,6 +128,15 @@ export default function Spells() {
     onError: () => haptic.error(),
   })
 
+  const useSlotMutation = useMutation({
+    mutationFn: ({ slotId, newUsed }: { slotId: number; newUsed: number }) =>
+      api.spellSlots.update(charId, slotId, { used: newUsed }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['character', charId] })
+      haptic.success()
+    },
+  })
+
   const concSaveMutation = useMutation({
     mutationFn: (damage: number) => api.spells.concentrationSave(charId, damage),
     onSuccess: (result) => {
@@ -282,11 +291,40 @@ export default function Spells() {
         </Card>
       )}
 
-      {sortedLevels.map((level) => (
+      {sortedLevels.map((level) => {
+        const slot = level > 0 ? spellSlots.find((s) => s.level === level) : undefined
+        return (
         <div key={level}>
-          <p className="text-sm font-semibold text-[var(--tg-theme-hint-color)] px-1 mb-1">
-            {level === 0 ? t('character.spells.cantrip') : `${t('character.spells.level')} ${level}`}
-          </p>
+          <div
+            className="sticky z-[5] -mx-4 px-5 py-1.5 flex items-center gap-2"
+            style={{ top: '53px', background: 'var(--tg-theme-bg-color)' }}
+          >
+            <p className="text-sm font-semibold text-[var(--tg-theme-hint-color)] flex-1">
+              {level === 0 ? t('character.spells.cantrip') : `${t('character.spells.level')} ${level}`}
+            </p>
+            {slot && slot.total > 0 && (
+              <div className="flex gap-1 items-center">
+                {Array.from({ length: slot.total }).map((_, i) => {
+                  const isAvailable = i < slot.available
+                  return (
+                    <button
+                      key={i}
+                      disabled={!isAvailable || useSlotMutation.isPending}
+                      onClick={() =>
+                        isAvailable &&
+                        useSlotMutation.mutate({ slotId: slot.id, newUsed: slot.used + 1 })
+                      }
+                      className={`w-3 h-3 rounded-full border transition-opacity active:opacity-60
+                        ${isAvailable
+                          ? 'bg-[var(--tg-theme-button-color)] border-transparent'
+                          : 'bg-transparent border-[var(--tg-theme-hint-color)] opacity-30'
+                        }`}
+                    />
+                  )
+                })}
+              </div>
+            )}
+          </div>
           <div className="space-y-1">
             {byLevel[level].map((spell) => (
               <div
@@ -438,7 +476,8 @@ export default function Spells() {
             ))}
           </div>
         </div>
-      ))}
+        )
+      })}
 
       {/* Slot picker modal */}
       {castingSpell && (
