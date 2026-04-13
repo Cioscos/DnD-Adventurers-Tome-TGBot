@@ -191,7 +191,7 @@ export default function HP() {
       )}
 
       {/* Op selector */}
-      <div className="flex gap-1 overflow-x-auto pb-1 scrollbar-hide">
+      <div className="w-full flex gap-1 overflow-x-auto pb-1 scrollbar-hide">
         {ops.map((op) => (
           <button
             key={op.key}

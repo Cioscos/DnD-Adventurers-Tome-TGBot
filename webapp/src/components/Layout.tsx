@@ -16,7 +16,7 @@ export default function Layout({ title, children, backTo }: LayoutProps) {
   }
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: 'var(--tg-theme-bg-color)' }}>
+    <div className="min-h-screen w-full flex flex-col" style={{ background: 'var(--tg-theme-bg-color)' }}>
       {/* Header */}
       <header
         className="sticky top-0 z-10 flex items-center gap-3 px-4 py-3 border-b"
@@ -38,7 +38,7 @@ export default function Layout({ title, children, backTo }: LayoutProps) {
       </header>
 
       {/* Content */}
-      <main className="flex-1 p-4 space-y-3">{children}</main>
+      <main className="flex-1 min-w-0 p-4 space-y-3">{children}</main>
     </div>
   )
 }
