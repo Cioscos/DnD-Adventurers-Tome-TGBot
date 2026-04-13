@@ -192,14 +192,16 @@ export default function Dice() {
           </div>
           <div className="space-y-1">
             {history.slice(0, 10).map((entry, i) => (
-              <Card key={i} className="!p-2 flex justify-between items-center">
-                <span className="text-sm text-[var(--tg-theme-hint-color)]">{entry.notation}</span>
-                <span className="font-bold">{entry.total}</span>
-                {entry.rolls.length > 1 && (
-                  <span className="text-xs text-[var(--tg-theme-hint-color)]">
-                    [{entry.rolls.join('+')}]
-                  </span>
-                )}
+              <Card key={i} className="!p-2 flex justify-between items-center gap-2">
+                <div className="flex items-baseline gap-1.5 min-w-0">
+                  <span className="text-sm text-[var(--tg-theme-hint-color)] shrink-0">{entry.notation}</span>
+                  {entry.rolls.length > 1 && (
+                    <span className="text-xs text-[var(--tg-theme-hint-color)] truncate">
+                      [{entry.rolls.join('+')}]
+                    </span>
+                  )}
+                </div>
+                <span className="font-bold shrink-0">{entry.total}</span>
               </Card>
             ))}
           </div>
