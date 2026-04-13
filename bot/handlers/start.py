@@ -87,14 +87,9 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         )
         return
 
-    # 1. Set the persistent reply keyboard with the character Mini App button.
-    #    This keyboard stays visible at the bottom across all future messages.
-    await update.message.reply_text(
-        translator.t("start.character_shortcut", lang=lang),
-        reply_markup=build_character_keyboard(lang=lang),
-    )
-
-    # 2. Send the welcome message with the wiki inline button.
+    # Send the welcome message with the wiki inline button.
+    # The Mini App is opened via the BotFather menu button (bottom-left icon),
+    # which is the only launch method that provides initData for authentication.
     await update.message.reply_text(
         translator.t("start.welcome", lang=lang),
         reply_markup=build_wiki_keyboard(lang=lang),

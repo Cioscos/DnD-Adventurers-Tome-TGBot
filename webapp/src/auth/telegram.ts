@@ -18,7 +18,6 @@ interface TelegramWebApp {
   initData: string
   platform?: string
   version?: string
-  receiveEvent?: (type: string, data: unknown) => void
   initDataUnsafe: {
     user?: {
       id: number
