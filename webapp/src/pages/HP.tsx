@@ -191,12 +191,12 @@ export default function HP() {
       )}
 
       {/* Op selector */}
-      <div className="w-full flex gap-1 overflow-x-auto pb-1 scrollbar-hide">
+      <div className="w-full flex flex-wrap gap-1">
         {ops.map((op) => (
           <button
             key={op.key}
             onClick={() => setActiveOp(op.key)}
-            className={`shrink-0 px-3 py-1.5 rounded-xl text-sm font-medium transition-all
+            className={`px-3 py-1.5 rounded-xl text-sm font-medium transition-all
               ${activeOp === op.key ? op.color + ' text-white' : 'bg-white/10'}`}
           >
             {op.label}
@@ -206,7 +206,7 @@ export default function HP() {
 
       {/* Number input */}
       <Card>
-        <div className="flex gap-3 items-center">
+        <div className="flex flex-col gap-2">
           <input
             type="number"
             min="0"
@@ -214,14 +214,14 @@ export default function HP() {
             onChange={(e) => setValue(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleApply()}
             placeholder="0"
-            className="flex-1 bg-white/10 rounded-xl px-3 py-3 text-xl font-bold text-center
+            className="w-full bg-white/10 rounded-xl px-3 py-3 text-xl font-bold text-center
                        outline-none focus:ring-2 focus:ring-[var(--tg-theme-button-color)]"
           />
           <button
             onClick={handleApply}
             disabled={!value || hpMutation.isPending}
-            className="px-5 py-3 rounded-xl bg-[var(--tg-theme-button-color)]
-                       text-[var(--tg-theme-button-text-color)] font-semibold
+            className="w-full py-3 rounded-xl bg-[var(--tg-theme-button-color)]
+                       text-[var(--tg-theme-button-text-color)] font-semibold text-lg
                        disabled:opacity-40 active:opacity-80"
           >
             {hpMutation.isPending ? '...' : '✓'}
