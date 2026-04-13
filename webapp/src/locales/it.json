@@ -261,14 +261,17 @@
     "maps": {
       "title": "Mappe",
       "zone": "Zona",
-      "loading_image": "Caricamento immagine...",
-      "delete_confirm": "Eliminare la mappa di {{zone}}?",
       "add_map": "Aggiungi mappa",
+      "add_more": "Aggiungi",
       "zone_name": "Nome zona",
       "zone_name_placeholder": "es. Dungeon livello 1",
-      "select_file": "Seleziona immagine",
+      "select_files": "Seleziona immagini",
+      "files_selected": "{{count}} file selezionati",
       "upload_btn": "Carica",
-      "open": "Apri"
+      "delete_zone": "Elimina zona",
+      "delete_file_confirm": "Eliminare questo file da {{zone}}?",
+      "delete_zone_confirm": "Eliminare tutta la zona {{zone}} con tutti i suoi file?",
+      "open_file": "Apri file"
     },
     "history": {
       "title": "Cronologia",

@@ -8,12 +8,12 @@ from pathlib import Path
 from typing import Annotated
 
 import httpx
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, Query, UploadFile, status
 from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.auth import get_current_user
+from api.auth import DEV_USER_ID, get_current_user, verify_init_data
 from api.database import get_db
 from bot.db.models import Character, Map
 from api.schemas.common import MapRead
@@ -65,10 +65,22 @@ async def list_maps(
 async def get_map_file(
     char_id: int,
     map_id: int,
-    user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
+    x_telegram_init_data: str = Header("", alias="X-Telegram-Init-Data"),
+    init_data: str = Query(""),
 ):
-    """Serve a map file — from local disk if uploaded via webapp, or proxied from Telegram."""
+    """Serve a map file — from local disk if uploaded via webapp, or proxied from Telegram.
+
+    <img src> cannot set custom headers, so auth falls back to the ``init_data`` query param.
+    """
+    # Auth: DEV_USER_ID → header → query param (same pattern as voice notes endpoint)
+    if DEV_USER_ID is not None:
+        user_id = DEV_USER_ID
+    else:
+        raw = x_telegram_init_data or init_data
+        if not raw:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing auth")
+        user_id = verify_init_data(raw)
     await _get_owned(char_id, user_id, session)
     map_row = await _get_map(map_id, char_id, session)
 

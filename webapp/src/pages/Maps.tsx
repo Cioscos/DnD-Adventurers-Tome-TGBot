@@ -6,19 +6,27 @@ import { api } from '@/api/client'
 import Layout from '@/components/Layout'
 import Card from '@/components/Card'
 import { haptic } from '@/auth/telegram'
+import type { MapEntry } from '@/types'
 
 export default function Maps() {
   const { id } = useParams<{ id: string }>()
   const charId = Number(id)
   const { t } = useTranslation()
   const qc = useQueryClient()
-  const [deleteTarget, setDeleteTarget] = useState<number | null>(null)
-  const [expanded, setExpanded] = useState<number | null>(null)
 
-  // Upload form state
+  // Overlay
+  const [overlayMap, setOverlayMap] = useState<MapEntry | null>(null)
+
+  // Delete targets
+  const [deleteTarget, setDeleteTarget] = useState<{ id: number; zone: string } | null>(null)
+  const [deleteZoneTarget, setDeleteZoneTarget] = useState<string | null>(null)
+
+  // Upload form
   const [showUpload, setShowUpload] = useState(false)
   const [zoneName, setZoneName] = useState('')
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([])
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  const [isUploading, setIsUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const { data: char } = useQuery({
@@ -36,43 +44,54 @@ export default function Maps() {
     onError: () => haptic.error(),
   })
 
-  const [uploadError, setUploadError] = useState<string | null>(null)
-
-  const uploadMutation = useMutation({
-    mutationFn: ({ zone, file }: { zone: string; file: File }) =>
-      api.maps.upload(charId, zone, file),
+  const deleteZoneMutation = useMutation({
+    mutationFn: (zone: string) => api.maps.removeZone(charId, zone),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['character', charId] })
-      setShowUpload(false)
-      setZoneName('')
-      setSelectedFile(null)
-      setUploadError(null)
-      if (fileInputRef.current) fileInputRef.current.value = ''
+      setDeleteZoneTarget(null)
       haptic.success()
     },
-    onError: (error: Error) => {
-      setUploadError(error.message)
-      haptic.error()
-    },
+    onError: () => haptic.error(),
   })
 
-  const handleUpload = () => {
-    if (!zoneName.trim() || !selectedFile) return
-    uploadMutation.mutate({ zone: zoneName.trim(), file: selectedFile })
+  const handleUpload = async () => {
+    if (!zoneName.trim() || selectedFiles.length === 0) return
+    setIsUploading(true)
+    setUploadError(null)
+    try {
+      for (const file of selectedFiles) {
+        await api.maps.upload(charId, zoneName.trim(), file)
+      }
+      await qc.invalidateQueries({ queryKey: ['character', charId] })
+      setShowUpload(false)
+      setZoneName('')
+      setSelectedFiles([])
+      if (fileInputRef.current) fileInputRef.current.value = ''
+      haptic.success()
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'Upload failed')
+      haptic.error()
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
+  const openUploadForZone = (zone: string) => {
+    setZoneName(zone)
+    setShowUpload(true)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   if (!char) return null
 
   const maps = char.maps ?? []
 
-  // Group by zone
-  const zones = maps.reduce<Record<string, typeof maps>>((acc, m) => {
+  const zones = maps.reduce<Record<string, MapEntry[]>>((acc, m) => {
     if (!acc[m.zone_name]) acc[m.zone_name] = []
     acc[m.zone_name].push(m)
     return acc
   }, {})
 
-  // Collect existing zone names for quick-select
   const existingZones = Object.keys(zones)
 
   return (
@@ -103,7 +122,6 @@ export default function Maps() {
             />
           </div>
 
-          {/* Quick-select existing zones */}
           {existingZones.length > 0 && (
             <div className="flex gap-1 flex-wrap">
               {existingZones.map((z) => (
@@ -111,7 +129,9 @@ export default function Maps() {
                   key={z}
                   onClick={() => setZoneName(z)}
                   className={`px-2 py-1 rounded-lg text-xs ${
-                    zoneName === z ? 'bg-[var(--tg-theme-button-color)] text-[var(--tg-theme-button-text-color)]' : 'bg-white/10'
+                    zoneName === z
+                      ? 'bg-[var(--tg-theme-button-color)] text-[var(--tg-theme-button-text-color)]'
+                      : 'bg-white/10'
                   }`}
                 >
                   {z}
@@ -122,17 +142,23 @@ export default function Maps() {
 
           <div>
             <label className="block text-sm text-[var(--tg-theme-hint-color)] mb-1">
-              {t('character.maps.select_file')}
+              {t('character.maps.select_files')}
             </label>
             <input
               ref={fileInputRef}
               type="file"
+              multiple
               accept="image/*,.pdf,.heic,.heif"
-              onChange={(e) => setSelectedFile(e.target.files?.[0] ?? null)}
+              onChange={(e) => setSelectedFiles(Array.from(e.target.files ?? []))}
               className="w-full text-sm file:mr-3 file:py-1.5 file:px-3 file:rounded-lg
                          file:border-0 file:text-sm file:font-medium
                          file:bg-white/10 file:text-[var(--tg-theme-text-color)]"
             />
+            {selectedFiles.length > 1 && (
+              <p className="text-xs text-[var(--tg-theme-hint-color)] mt-1">
+                {t('character.maps.files_selected', { count: selectedFiles.length })}
+              </p>
+            )}
           </div>
 
           {uploadError && (
@@ -142,18 +168,18 @@ export default function Maps() {
           <div className="flex gap-2">
             <button
               onClick={handleUpload}
-              disabled={!zoneName.trim() || !selectedFile || uploadMutation.isPending}
+              disabled={!zoneName.trim() || selectedFiles.length === 0 || isUploading}
               className="flex-1 py-2.5 rounded-xl bg-[var(--tg-theme-button-color)]
                          text-[var(--tg-theme-button-text-color)] font-semibold
                          disabled:opacity-40 active:opacity-80"
             >
-              {uploadMutation.isPending ? '...' : t('character.maps.upload_btn')}
+              {isUploading ? '...' : t('character.maps.upload_btn')}
             </button>
             <button
               onClick={() => {
                 setShowUpload(false)
                 setZoneName('')
-                setSelectedFile(null)
+                setSelectedFiles([])
                 if (fileInputRef.current) fileInputRef.current.value = ''
               }}
               className="flex-1 py-2.5 rounded-xl bg-white/10"
@@ -164,67 +190,163 @@ export default function Maps() {
         </Card>
       )}
 
+      {/* Zone list */}
       {maps.length === 0 && !showUpload ? (
         <Card>
           <p className="text-center text-[var(--tg-theme-hint-color)]">{t('common.none')}</p>
         </Card>
       ) : (
         Object.entries(zones).map(([zone, zoneMaps]) => (
-          <div key={zone}>
-            <p className="text-sm font-semibold text-[var(--tg-theme-hint-color)] px-1 mb-1">
-              📍 {zone}
-            </p>
-            {zoneMaps.map((m) => (
-              <Card key={m.id} className="mb-2">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium">{m.file_type.toUpperCase()}</span>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setExpanded(expanded === m.id ? null : m.id)}
-                      className="text-xs text-[var(--tg-theme-link-color)]"
-                    >
-                      {expanded === m.id ? t('common.close') : t('character.maps.open')}
-                    </button>
-                    <button
-                      onClick={() => setDeleteTarget(m.id)}
-                      className="text-xs text-red-400"
-                    >
-                      {t('common.delete')}
-                    </button>
-                  </div>
-                </div>
+          <div key={zone} className="mb-4">
+            {/* Zone header */}
+            <div className="flex items-center justify-between px-1 mb-2">
+              <p className="text-sm font-semibold text-[var(--tg-theme-hint-color)]">
+                📍 {zone}
+                <span className="ml-1.5 font-normal opacity-70">({zoneMaps.length})</span>
+              </p>
+              <div className="flex gap-3 items-center">
+                <button
+                  onClick={() => openUploadForZone(zone)}
+                  className="text-xs text-[var(--tg-theme-link-color)]"
+                >
+                  + {t('character.maps.add_more')}
+                </button>
+                <button
+                  onClick={() => setDeleteZoneTarget(zone)}
+                  className="text-xs text-red-400"
+                >
+                  {t('character.maps.delete_zone')}
+                </button>
+              </div>
+            </div>
 
-                {expanded === m.id && (
-                  <img
-                    src={api.maps.fileUrl(charId, m.id)}
-                    alt={zone}
-                    className="w-full rounded-lg"
-                    loading="lazy"
-                  />
-                )}
-              </Card>
-            ))}
+            {/* Thumbnail grid */}
+            <div className="grid grid-cols-3 gap-1.5">
+              {zoneMaps.map((m) => (
+                <div
+                  key={m.id}
+                  className="relative aspect-square rounded-xl overflow-hidden bg-white/5 cursor-pointer active:opacity-80"
+                >
+                  {m.file_type === 'photo' ? (
+                    <img
+                      src={api.maps.fileUrl(charId, m.id)}
+                      alt={zone}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                      onClick={() => setOverlayMap(m)}
+                    />
+                  ) : (
+                    <div
+                      className="w-full h-full flex flex-col items-center justify-center
+                                 text-[var(--tg-theme-hint-color)]"
+                      onClick={() => setOverlayMap(m)}
+                    >
+                      <span className="text-3xl">📄</span>
+                      <span className="text-xs mt-1 uppercase opacity-60">{m.file_type}</span>
+                    </div>
+                  )}
+                  {/* Per-file delete button */}
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setDeleteTarget({ id: m.id, zone }) }}
+                    className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 text-white
+                               text-xs flex items-center justify-center leading-none"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
         ))
       )}
 
+      {/* Full-screen overlay */}
+      {overlayMap && (
+        <div
+          className="fixed inset-0 bg-black/90 z-50 flex flex-col"
+          onClick={() => setOverlayMap(null)}
+        >
+          <div className="flex justify-end p-4 shrink-0">
+            <button
+              onClick={() => setOverlayMap(null)}
+              className="text-white text-lg w-9 h-9 flex items-center justify-center
+                         rounded-full bg-white/20"
+            >
+              ✕
+            </button>
+          </div>
+          <div
+            className="flex-1 flex items-center justify-center p-4 overflow-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {overlayMap.file_type === 'photo' ? (
+              <img
+                src={api.maps.fileUrl(charId, overlayMap.id)}
+                alt={overlayMap.zone_name}
+                className="max-w-full max-h-full rounded-xl object-contain"
+              />
+            ) : (
+              <div className="text-center text-white space-y-4">
+                <div className="text-6xl">📄</div>
+                <p className="text-sm opacity-70">{overlayMap.zone_name}</p>
+                <a
+                  href={api.maps.fileUrl(charId, overlayMap.id)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-block px-4 py-2 rounded-xl
+                             bg-[var(--tg-theme-button-color)]
+                             text-[var(--tg-theme-button-text-color)] text-sm font-medium"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {t('character.maps.open_file')}
+                </a>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Delete single file confirm */}
       {deleteTarget !== null && (
         <div className="fixed inset-0 bg-black/60 flex items-end z-50 p-4">
           <Card className="w-full">
             <p className="text-sm text-center mb-3">
-              {t('character.maps.delete_confirm', {
-                zone: maps.find((m) => m.id === deleteTarget)?.zone_name ?? '',
-              })}
+              {t('character.maps.delete_file_confirm', { zone: deleteTarget.zone })}
             </p>
             <div className="flex gap-2">
               <button
-                onClick={() => deleteMutation.mutate(deleteTarget)}
+                onClick={() => deleteMutation.mutate(deleteTarget.id)}
                 className="flex-1 py-2 rounded-xl bg-red-500/80 text-white font-medium"
               >
                 {t('common.delete')}
               </button>
               <button
                 onClick={() => setDeleteTarget(null)}
+                className="flex-1 py-2 rounded-xl bg-white/10 font-medium"
+              >
+                {t('common.cancel')}
+              </button>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Delete entire zone confirm */}
+      {deleteZoneTarget !== null && (
+        <div className="fixed inset-0 bg-black/60 flex items-end z-50 p-4">
+          <Card className="w-full">
+            <p className="text-sm text-center mb-3">
+              {t('character.maps.delete_zone_confirm', { zone: deleteZoneTarget })}
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => deleteZoneMutation.mutate(deleteZoneTarget)}
+                className="flex-1 py-2 rounded-xl bg-red-500/80 text-white font-medium"
+              >
+                {t('common.delete')}
+              </button>
+              <button
+                onClick={() => setDeleteZoneTarget(null)}
                 className="flex-1 py-2 rounded-xl bg-white/10 font-medium"
               >
                 {t('common.cancel')}
