@@ -425,6 +425,12 @@ export const api = {
     history: (charId: number) => request<DiceRollResult[]>(`/characters/${charId}/dice/history`),
     clearHistory: (charId: number) =>
       request<void>(`/characters/${charId}/dice/history`, { method: 'DELETE' }),
+    /** Send a dice result to the user's private Telegram chat via the bot. */
+    postToChat: (charId: number, result: { notation: string; rolls: number[]; total: number }) =>
+      request<{ ok: boolean }>(`/characters/${charId}/dice/post-to-chat`, {
+        method: 'POST',
+        body: JSON.stringify(result),
+      }),
   },
 
   // ---------------------------------------------------------------------------

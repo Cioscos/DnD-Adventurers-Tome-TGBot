@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react'
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
 import CharacterSelect from './pages/CharacterSelect'
 import CharacterMain from './pages/CharacterMain'
@@ -22,51 +21,8 @@ import Dice from './pages/Dice'
 import Identity from './pages/Identity'
 import Settings from './pages/Settings'
 
-/** Temporary diagnostic overlay — remove once keyboard-button 401 is resolved. */
-function TelegramDebugOverlay() {
-  const [info, setInfo] = useState<string | null>(null)
-
-  useEffect(() => {
-    const wa = window.Telegram?.WebApp
-    if (wa?.initData) return  // auth works — hide overlay
-
-    // Read snapshot captured in main.tsx BEFORE HashRouter mutated the hash.
-    const dbg = (window as any).__tgDebug ?? {}
-    const rawHash: string = dbg.hash ?? window.location.hash
-    const hasTgData = rawHash.includes('tgWebAppData')
-    const events: Array<{ type: string }> = dbg.nativeEvents ?? []
-
-    const lines = [
-      `initData: EMPTY`,
-      `platform: ${wa?.platform ?? 'N/A'}  ver: ${wa?.version ?? 'N/A'}`,
-      `TgProxy: ${dbg.hasTgProxy ? 'YES' : 'NO'}`,
-      `tgWebAppData in hash: ${hasTgData ? 'YES' : 'NO'}`,
-      `hash len: ${rawHash.length}  first 80:`,
-      rawHash.slice(0, 80) || '(empty)',
-      `nativeBridge events (${events.length}): ${events.map(e => e.type).join(', ') || 'none'}`,
-      `initDataUnsafe.user: ${wa?.initDataUnsafe?.user?.id ?? 'missing'}`,
-    ]
-    setInfo(lines.join('\n'))
-  }, [])
-
-  if (!info) return null
-
-  return (
-    <div style={{
-      position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9999,
-      background: '#b00020', color: '#fff', padding: '8px 10px',
-      fontSize: '11px', whiteSpace: 'pre-wrap', lineHeight: 1.5,
-      fontFamily: 'monospace', wordBreak: 'break-all',
-    }}>
-      {info}
-    </div>
-  )
-}
-
 export default function App() {
   return (
-    <>
-    <TelegramDebugOverlay />
     <HashRouter>
       <Routes>
         <Route path="/" element={<CharacterSelect />} />
@@ -93,6 +49,5 @@ export default function App() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </HashRouter>
-    </>
   )
 }

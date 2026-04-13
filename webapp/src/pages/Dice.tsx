@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
 import Card from '@/components/Card'
-import { haptic, sendDiceResultToChat } from '@/auth/telegram'
+import { haptic } from '@/auth/telegram'
 import type { DiceRollResult } from '@/types'
 
 const DICE = ['d4', 'd6', 'd8', 'd10', 'd12', 'd20', 'd100'] as const
@@ -147,7 +147,10 @@ export default function Dice() {
             </p>
           )}
           <button
-            onClick={() => sendDiceResultToChat(lastResult)}
+            onClick={() => {
+              haptic.light()
+              api.dice.postToChat(charId, lastResult).catch(() => {})
+            }}
             className="mt-3 px-4 py-2 rounded-xl bg-blue-500/20 text-blue-300 text-sm font-medium"
           >
             📤 {t('character.dice.send_to_chat')}
