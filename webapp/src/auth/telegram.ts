@@ -119,8 +119,10 @@ export function sendDiceResultToChat(result: {
 
 /** Signal to Telegram that the Mini App has finished loading. */
 export function telegramReady(): void {
-  twa?.ready()
-  twa?.expand()
+  // Read from window directly to avoid stale-capture of the `twa` constant.
+  const webApp = typeof window !== 'undefined' ? window.Telegram?.WebApp : undefined
+  webApp?.ready()
+  webApp?.expand()
 }
 
 /** Show a native Telegram confirm dialog. */
