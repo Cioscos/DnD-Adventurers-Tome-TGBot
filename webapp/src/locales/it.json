@@ -378,7 +378,8 @@
       "name_label": "Nome",
       "description_label": "Descrizione",
       "max_uses_label": "Usi massimi",
-      "restoration_label": "Ripristino"
+      "restoration_label": "Ripristino",
+      "edit": "Modifica"
     },
     "multiclass": {
       "title": "Classe",

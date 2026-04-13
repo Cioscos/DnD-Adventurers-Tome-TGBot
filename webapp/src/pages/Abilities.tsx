@@ -11,6 +11,16 @@ import type { Ability } from '@/types'
 type AddForm = { name: string; description: string; max_uses: string; is_passive: boolean; restoration_type: string }
 const emptyForm: AddForm = { name: '', description: '', max_uses: '', is_passive: false, restoration_type: 'long_rest' }
 
+function abilityToForm(ab: Ability): AddForm {
+  return {
+    name: ab.name,
+    description: ab.description ?? '',
+    max_uses: ab.max_uses != null ? String(ab.max_uses) : '',
+    is_passive: ab.is_passive,
+    restoration_type: ab.restoration_type,
+  }
+}
+
 export default function Abilities() {
   const { id } = useParams<{ id: string }>()
   const charId = Number(id)
@@ -18,6 +28,8 @@ export default function Abilities() {
   const qc = useQueryClient()
   const [showAdd, setShowAdd] = useState(false)
   const [form, setForm] = useState<AddForm>(emptyForm)
+  const [expanded, setExpanded] = useState<number | null>(null)
+  const [editingAbility, setEditingAbility] = useState<Ability | null>(null)
 
   const { data: char } = useQuery({
     queryKey: ['character', charId],
@@ -37,14 +49,31 @@ export default function Abilities() {
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['character', charId] })
-      setShowAdd(false)
-      setForm(emptyForm)
+      closeForm()
       haptic.success()
     },
     onError: () => haptic.error(),
   })
 
-  const useMutation_ = useMutation({
+  const updateMutation = useMutation({
+    mutationFn: () =>
+      api.abilities.update(charId, editingAbility!.id, {
+        name: form.name.trim(),
+        description: form.description.trim() || undefined,
+        max_uses: form.max_uses !== '' ? Number(form.max_uses) : undefined,
+        is_passive: form.is_passive,
+        is_active: !form.is_passive,
+        restoration_type: form.restoration_type,
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['character', charId] })
+      closeForm()
+      haptic.success()
+    },
+    onError: () => haptic.error(),
+  })
+
+  const usesMutation = useMutation({
     mutationFn: ({ abilityId, uses }: { abilityId: number; uses: number }) =>
       api.abilities.update(charId, abilityId, { uses }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['character', charId] }),
@@ -58,14 +87,41 @@ export default function Abilities() {
     },
   })
 
+  function openAdd() {
+    setEditingAbility(null)
+    setForm(emptyForm)
+    setShowAdd(true)
+  }
+
+  function openEdit(ab: Ability) {
+    setEditingAbility(ab)
+    setForm(abilityToForm(ab))
+    setShowAdd(true)
+  }
+
+  function closeForm() {
+    setShowAdd(false)
+    setEditingAbility(null)
+    setForm(emptyForm)
+  }
+
+  function submitForm() {
+    if (editingAbility) {
+      updateMutation.mutate()
+    } else {
+      addMutation.mutate()
+    }
+  }
+
   if (!char) return null
 
   const abilities: Ability[] = char.abilities ?? []
+  const isPending = addMutation.isPending || updateMutation.isPending
 
   return (
     <Layout title={t('character.abilities.title')} backTo={`/char/${charId}`}>
       <button
-        onClick={() => setShowAdd(true)}
+        onClick={openAdd}
         className="w-full py-3 rounded-2xl bg-[var(--tg-theme-button-color)]
                    text-[var(--tg-theme-button-text-color)] font-semibold"
       >
@@ -78,58 +134,109 @@ export default function Abilities() {
         </Card>
       )}
 
-      <div className="space-y-2">
+      <div className="space-y-1">
         {abilities.map((ab) => (
-          <Card key={ab.id}>
-            <div className="flex items-start justify-between gap-2">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">{ab.name}</span>
-                  <span className="text-xs text-[var(--tg-theme-hint-color)]">
-                    {ab.is_passive ? t('character.abilities.passive') : t('character.abilities.active')}
-                  </span>
-                </div>
-                {ab.description && (
-                  <p className="text-xs text-[var(--tg-theme-hint-color)] mt-1 line-clamp-2">{ab.description}</p>
-                )}
+          <div
+            key={ab.id}
+            className="rounded-xl bg-[var(--tg-theme-secondary-bg-color)] overflow-hidden"
+          >
+            {/* Collapsed header row — tappable */}
+            <button
+              className="w-full flex items-center gap-2 px-3 py-3 text-left"
+              onClick={() => setExpanded(expanded === ab.id ? null : ab.id)}
+            >
+              <span className="flex-1 font-medium text-sm">{ab.name}</span>
+              <div className="flex gap-1.5 items-center shrink-0">
+                <span
+                  className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-md border
+                    ${ab.is_passive
+                      ? 'bg-blue-500/20 text-blue-400 border-blue-500/30'
+                      : 'bg-amber-500/20 text-amber-400 border-amber-500/30'
+                    }`}
+                >
+                  {ab.is_passive ? t('character.abilities.passive') : t('character.abilities.active')}
+                </span>
                 {ab.max_uses != null && (
-                  <p className="text-sm font-medium mt-1">
-                    ⚡ {t('character.abilities.uses_left', { current: ab.uses ?? 0, max: ab.max_uses })}
-                    {' '}· {t(`character.abilities.restoration.${ab.restoration_type}`, { defaultValue: ab.restoration_type })}
-                  </p>
+                  <span className="text-xs text-[var(--tg-theme-hint-color)] font-medium tabular-nums">
+                    {ab.uses ?? 0}/{ab.max_uses}
+                  </span>
                 )}
               </div>
-              <div className="flex flex-col items-end gap-1 shrink-0">
+              <span className="text-[var(--tg-theme-hint-color)] text-xs ml-1">
+                {expanded === ab.id ? '˄' : '˅'}
+              </span>
+            </button>
+
+            {/* Expanded details */}
+            {expanded === ab.id && (
+              <div className="px-3 pb-3 space-y-3 border-t border-white/10">
+                {ab.description ? (
+                  <p className="text-xs text-[var(--tg-theme-hint-color)] mt-2 whitespace-pre-wrap leading-relaxed border-l-2 border-amber-500/40 pl-2">
+                    {ab.description}
+                  </p>
+                ) : (
+                  <p className="text-xs text-[var(--tg-theme-hint-color)]/50 mt-2 italic">—</p>
+                )}
+
+                {/* Restoration type chip */}
                 {ab.max_uses != null && (
-                  <div className="flex gap-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs text-[var(--tg-theme-hint-color)]">
+                      🔄 {t(`character.abilities.restoration.${ab.restoration_type}`, { defaultValue: ab.restoration_type })}
+                    </span>
+                  </div>
+                )}
+
+                {/* Uses tracker */}
+                {ab.max_uses != null && (
+                  <div className="flex items-center gap-3">
                     <button
-                      onClick={() => useMutation_.mutate({ abilityId: ab.id, uses: Math.max(0, (ab.uses ?? 0) - 1) })}
-                      disabled={(ab.uses ?? 0) <= 0}
-                      className="w-7 h-7 rounded-lg bg-red-500/20 text-red-300 font-bold text-sm disabled:opacity-30"
+                      onClick={() => usesMutation.mutate({ abilityId: ab.id, uses: Math.max(0, (ab.uses ?? 0) - 1) })}
+                      disabled={(ab.uses ?? 0) <= 0 || usesMutation.isPending}
+                      className="w-10 h-10 rounded-xl bg-red-500/20 text-red-300 font-bold text-lg
+                                 flex items-center justify-center active:opacity-70 disabled:opacity-30"
                     >−</button>
+                    <span className="text-sm font-semibold tabular-nums flex-1 text-center">
+                      ⚡ {t('character.abilities.uses_left', { current: ab.uses ?? 0, max: ab.max_uses })}
+                    </span>
                     <button
-                      onClick={() => useMutation_.mutate({ abilityId: ab.id, uses: Math.min(ab.max_uses!, (ab.uses ?? 0) + 1) })}
-                      disabled={(ab.uses ?? 0) >= (ab.max_uses ?? 0)}
-                      className="w-7 h-7 rounded-lg bg-green-500/20 text-green-300 font-bold text-sm disabled:opacity-30"
+                      onClick={() => usesMutation.mutate({ abilityId: ab.id, uses: Math.min(ab.max_uses!, (ab.uses ?? 0) + 1) })}
+                      disabled={(ab.uses ?? 0) >= (ab.max_uses ?? 0) || usesMutation.isPending}
+                      className="w-10 h-10 rounded-xl bg-green-500/20 text-green-300 font-bold text-lg
+                                 flex items-center justify-center active:opacity-70 disabled:opacity-30"
                     >+</button>
                   </div>
                 )}
-                <button
-                  onClick={() => deleteMutation.mutate(ab.id)}
-                  className="text-xs text-red-400"
-                >
-                  {t('common.delete')}
-                </button>
+
+                {/* Action buttons */}
+                <div className="flex gap-2 pt-1 border-t border-white/10">
+                  <button
+                    onClick={() => openEdit(ab)}
+                    className="text-xs px-3 py-2 rounded-lg bg-white/10 text-[var(--tg-theme-text-color)] font-medium active:opacity-70"
+                  >
+                    ✏️ {t('character.abilities.edit')}
+                  </button>
+                  <button
+                    onClick={() => deleteMutation.mutate(ab.id)}
+                    disabled={deleteMutation.isPending}
+                    className="text-xs px-3 py-2 rounded-lg bg-red-500/20 text-red-400 font-medium active:opacity-70 disabled:opacity-40"
+                  >
+                    🗑 {t('common.delete')}
+                  </button>
+                </div>
               </div>
-            </div>
-          </Card>
+            )}
+          </div>
         ))}
       </div>
 
+      {/* Add / Edit bottom sheet */}
       {showAdd && (
-        <div className="fixed inset-0 bg-black/60 flex items-end z-50 p-4">
-          <Card className="w-full space-y-3">
-            <h3 className="font-semibold">{t('character.abilities.add')}</h3>
+        <div className="fixed inset-0 bg-black/60 flex items-end z-50 p-4" onClick={closeForm}>
+          <Card className="w-full space-y-3" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+            <h3 className="font-semibold">
+              {editingAbility ? t('character.abilities.edit') : t('character.abilities.add')}
+            </h3>
             <input
               type="text"
               value={form.name}
@@ -179,14 +286,14 @@ export default function Abilities() {
             </label>
             <div className="flex gap-2">
               <button
-                onClick={() => addMutation.mutate()}
-                disabled={!form.name.trim() || addMutation.isPending}
+                onClick={submitForm}
+                disabled={!form.name.trim() || isPending}
                 className="flex-1 py-2 rounded-xl bg-[var(--tg-theme-button-color)]
                            text-[var(--tg-theme-button-text-color)] font-semibold disabled:opacity-40"
               >
-                {addMutation.isPending ? '...' : t('common.add')}
+                {isPending ? '...' : editingAbility ? t('common.save') : t('common.add')}
               </button>
-              <button onClick={() => setShowAdd(false)} className="flex-1 py-2 rounded-xl bg-white/10">
+              <button onClick={closeForm} className="flex-1 py-2 rounded-xl bg-white/10">
                 {t('common.cancel')}
               </button>
             </div>
