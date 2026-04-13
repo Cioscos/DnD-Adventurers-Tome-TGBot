@@ -5,6 +5,26 @@ import App from './App'
 import './index.css'
 import './i18n'
 
+// ─── Diagnostic: capture early state before HashRouter mutates the hash ────
+// Stored in window.__tgDebug so TelegramDebugOverlay can read it.
+;(window as any).__tgDebug = {
+  hash: window.location.hash,         // full hash before HashRouter changes it
+  search: window.location.search,
+  hasTgProxy: 'TelegramWebviewProxy' in window,
+  nativeEvents: [] as Array<{ type: string; data: unknown }>,
+}
+
+// Intercept events sent from the native Telegram bridge to the WebView so we
+// can see what the native app is (or isn't) delivering.
+const wa = window.Telegram?.WebApp
+if (wa && typeof wa.receiveEvent === 'function') {
+  const orig = wa.receiveEvent.bind(wa)
+  wa.receiveEvent = function(type: string, data: unknown) {
+    ;(window as any).__tgDebug.nativeEvents.push({ type, data })
+    return orig(type, data)
+  }
+}
+
 // Signal Telegram that the Mini App is ready. For keyboard-button launch
 // contexts on some native clients, this triggers async delivery of initData
 // via the native bridge. Calling directly on window avoids the stale-capture
