@@ -28,16 +28,23 @@ function TelegramDebugOverlay() {
 
   useEffect(() => {
     const wa = window.Telegram?.WebApp
-    const initDataLen = wa?.initData?.length ?? 0
-    if (initDataLen > 0) return  // auth works — hide overlay
+    if (wa?.initData) return  // auth works — hide overlay
+
+    // Read snapshot captured in main.tsx BEFORE HashRouter mutated the hash.
+    const dbg = (window as any).__tgDebug ?? {}
+    const rawHash: string = dbg.hash ?? window.location.hash
+    const hasTgData = rawHash.includes('tgWebAppData')
+    const events: Array<{ type: string }> = dbg.nativeEvents ?? []
 
     const lines = [
-      `initData: ${initDataLen > 0 ? `${initDataLen} chars` : 'EMPTY'}`,
-      `platform: ${wa?.platform ?? 'N/A'}`,
-      `version: ${wa?.version ?? 'N/A'}`,
-      `hash(60): ${window.location.hash.slice(0, 60) || '(empty)'}`,
-      `search: ${window.location.search.slice(0, 60) || '(empty)'}`,
-      `TgProxy: ${'TelegramWebviewProxy' in window ? 'YES' : 'NO'}`,
+      `initData: EMPTY`,
+      `platform: ${wa?.platform ?? 'N/A'}  ver: ${wa?.version ?? 'N/A'}`,
+      `TgProxy: ${dbg.hasTgProxy ? 'YES' : 'NO'}`,
+      `tgWebAppData in hash: ${hasTgData ? 'YES' : 'NO'}`,
+      `hash len: ${rawHash.length}  first 80:`,
+      rawHash.slice(0, 80) || '(empty)',
+      `nativeBridge events (${events.length}): ${events.map(e => e.type).join(', ') || 'none'}`,
+      `initDataUnsafe.user: ${wa?.initDataUnsafe?.user?.id ?? 'missing'}`,
     ]
     setInfo(lines.join('\n'))
   }, [])
@@ -48,8 +55,8 @@ function TelegramDebugOverlay() {
     <div style={{
       position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9999,
       background: '#b00020', color: '#fff', padding: '8px 10px',
-      fontSize: '11px', whiteSpace: 'pre', lineHeight: 1.5,
-      fontFamily: 'monospace',
+      fontSize: '11px', whiteSpace: 'pre-wrap', lineHeight: 1.5,
+      fontFamily: 'monospace', wordBreak: 'break-all',
     }}>
       {info}
     </div>
