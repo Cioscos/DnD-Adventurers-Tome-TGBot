@@ -63,35 +63,24 @@ The API creates `data/dnd_bot.db` automatically on first startup (tables are cre
 
 When you edit files under `webapp/src/` you must rebuild `docs/app/` before committing, otherwise GitHub Pages will serve a broken or stale build.
 
-**Checklist:**
+**Use the helper script — it handles everything automatically:**
 
-1. **Switch `.env.local` to production URL**
-   ```bash
-   # webapp/.env.local
-   VITE_API_BASE_URL=https://api.cischi.dev
-   ```
+```bash
+cd webapp && npm run build:prod
+# then:
+git add webapp/src/          # (and any other changed source files)
+git commit -m "feat: ..."
+```
 
-2. **Build**
-   ```bash
-   cd webapp && npm run build
-   ```
-   Fix any TypeScript errors before continuing.
+`npm run build:prod` (`webapp/scripts/build-prod.sh`) does in one shot:
+1. Switches `.env.local` to the production API URL (`https://api.cischi.dev`)
+2. Runs `tsc && vite build` (fails fast on TypeScript errors)
+3. Restores `.env.local` to `http://localhost:8000` (even on error, via `trap`)
+4. Runs `git add docs/app/` so the build output is staged and ready
 
-3. **Stage everything together**
-   ```bash
-   git add webapp/src/ docs/app/
-   # (add other changed files as needed)
-   git commit -m "feat: ..."
-   ```
+Do **not** commit `.env.local` — it is gitignored.
 
-4. **Restore local URL for continued development**
-   ```bash
-   # webapp/.env.local
-   VITE_API_BASE_URL=http://localhost:8000
-   ```
-   Do **not** commit `.env.local` — it is gitignored.
-
-5. Open a PR from your feature branch → merge → Pages redeploys automatically.
+Open a PR from your feature branch → merge → Pages redeploys automatically.
 
 ---
 
