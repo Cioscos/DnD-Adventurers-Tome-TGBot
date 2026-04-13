@@ -25,8 +25,6 @@ COLUMNS = 2
 
 def build_categories_keyboard(lang: str = "it") -> InlineKeyboardMarkup:
     """Build the wiki category-selection keyboard (2-column grid)."""
-    from bot.models.character_state import CharAction
-
     buttons: list[InlineKeyboardButton] = []
     for mc in MENU_CATEGORIES:
         ti = registry.get_type(mc.type_name)
