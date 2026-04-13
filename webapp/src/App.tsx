@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
 import CharacterSelect from './pages/CharacterSelect'
 import CharacterMain from './pages/CharacterMain'
@@ -21,8 +22,44 @@ import Dice from './pages/Dice'
 import Identity from './pages/Identity'
 import Settings from './pages/Settings'
 
+/** Temporary diagnostic overlay — remove once keyboard-button 401 is resolved. */
+function TelegramDebugOverlay() {
+  const [info, setInfo] = useState<string | null>(null)
+
+  useEffect(() => {
+    const wa = window.Telegram?.WebApp
+    const initDataLen = wa?.initData?.length ?? 0
+    if (initDataLen > 0) return  // auth works — hide overlay
+
+    const lines = [
+      `initData: ${initDataLen > 0 ? `${initDataLen} chars` : 'EMPTY'}`,
+      `platform: ${wa?.platform ?? 'N/A'}`,
+      `version: ${wa?.version ?? 'N/A'}`,
+      `hash(60): ${window.location.hash.slice(0, 60) || '(empty)'}`,
+      `search: ${window.location.search.slice(0, 60) || '(empty)'}`,
+      `TgProxy: ${'TelegramWebviewProxy' in window ? 'YES' : 'NO'}`,
+    ]
+    setInfo(lines.join('\n'))
+  }, [])
+
+  if (!info) return null
+
+  return (
+    <div style={{
+      position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9999,
+      background: '#b00020', color: '#fff', padding: '8px 10px',
+      fontSize: '11px', whiteSpace: 'pre', lineHeight: 1.5,
+      fontFamily: 'monospace',
+    }}>
+      {info}
+    </div>
+  )
+}
+
 export default function App() {
   return (
+    <>
+    <TelegramDebugOverlay />
     <HashRouter>
       <Routes>
         <Route path="/" element={<CharacterSelect />} />
@@ -49,5 +86,6 @@ export default function App() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </HashRouter>
+    </>
   )
 }
