@@ -41,8 +41,7 @@
       "maps": "Maps",
       "dice": "Dice",
       "identity": "Identity",
-      "settings": "Settings",
-      "death_saves": "Death Saves"
+      "settings": "Settings"
     },
     "hp": {
       "title": "Hit Points",
@@ -152,6 +151,8 @@
       "conc_save_btn": "Concentration Save",
       "conc_save_success": "Concentration maintained!",
       "conc_save_fail": "Concentration lost!",
+      "damage": "Damage",
+      "no_slots": "No slots available",
       "conc_lost": "Concentration has been broken"
     },
     "slots": {
@@ -226,7 +227,12 @@
       "gold": "Gold",
       "platinum": "Platinum",
       "convert": "Convert",
-      "total_gold": "Total in gold"
+      "total_gold": "Total in gold",
+      "mode_set": "Set",
+      "mode_add": "Add/Remove",
+      "convert_from": "From",
+      "convert_to": "To",
+      "convert_amount": "Amount"
     },
     "xp": {
       "title": "Experience",
@@ -241,11 +247,16 @@
     "notes": {
       "title": "Notes",
       "new": "New note",
-      "voice": "Voice note (not available in the Mini App)",
+      "voice": "Voice note (recorded via bot)",
       "title_label": "Title",
       "body_label": "Content",
       "title_placeholder": "Note title...",
-      "body_placeholder": "Write here..."
+      "body_placeholder": "Write here...",
+      "record_voice": "Voice note",
+      "recording": "Recording...",
+      "discard_recording": "Discard and re-record",
+      "mic_denied": "Microphone permission denied. Please enable microphone access.",
+      "delete_confirm": "Delete \"{{title}}\"?"
     },
     "maps": {
       "title": "Maps",

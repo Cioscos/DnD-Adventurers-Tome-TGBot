@@ -36,6 +36,8 @@ export default function Maps() {
     onError: () => haptic.error(),
   })
 
+  const [uploadError, setUploadError] = useState<string | null>(null)
+
   const uploadMutation = useMutation({
     mutationFn: ({ zone, file }: { zone: string; file: File }) =>
       api.maps.upload(charId, zone, file),
@@ -44,10 +46,14 @@ export default function Maps() {
       setShowUpload(false)
       setZoneName('')
       setSelectedFile(null)
+      setUploadError(null)
       if (fileInputRef.current) fileInputRef.current.value = ''
       haptic.success()
     },
-    onError: () => haptic.error(),
+    onError: (error: Error) => {
+      setUploadError(error.message)
+      haptic.error()
+    },
   })
 
   const handleUpload = () => {
@@ -121,13 +127,17 @@ export default function Maps() {
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/*,.pdf"
+              accept="image/*,.pdf,.heic,.heif"
               onChange={(e) => setSelectedFile(e.target.files?.[0] ?? null)}
               className="w-full text-sm file:mr-3 file:py-1.5 file:px-3 file:rounded-lg
                          file:border-0 file:text-sm file:font-medium
                          file:bg-white/10 file:text-[var(--tg-theme-text-color)]"
             />
           </div>
+
+          {uploadError && (
+            <p className="text-sm text-red-400 bg-red-500/10 rounded-xl px-3 py-2">{uploadError}</p>
+          )}
 
           <div className="flex gap-2">
             <button

@@ -3,14 +3,18 @@
 Notes are stored as a JSON dict on the Character model:
   {title: body_string, ...}
 
-Voice notes are stored with body = "[VOICE:unavailable]" (display only).
+Voice notes are stored with body = "[VOICE:{relative_path}]".
+Audio files are saved under data/voice_notes/{char_id}/.
 """
 
 from __future__ import annotations
 
+import uuid
+from pathlib import Path
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -21,6 +25,10 @@ from api.database import get_db
 from bot.db.models import Character, CharacterClass
 
 router = APIRouter(prefix="/characters", tags=["notes"])
+
+_VOICE_DIR = Path("data/voice_notes")
+_ALLOWED_AUDIO_EXTS = {".webm", ".ogg", ".mp3", ".wav", ".m4a", ".aac"}
+_MAX_VOICE_SIZE = 5 * 1024 * 1024  # 5 MB
 
 
 class NoteRead(BaseModel):
@@ -116,6 +124,85 @@ async def delete_note(
     notes = dict(char.notes or {})
     if title not in notes:
         raise HTTPException(status_code=404, detail="Note not found")
+    body = notes[title]
+    # Clean up voice file if applicable
+    if isinstance(body, str) and body.startswith("[VOICE:") and body.endswith("]"):
+        file_path = Path(body[7:-1])
+        if file_path.exists():
+            file_path.unlink()
     del notes[title]
     char.notes = notes
     return _notes_list(char)
+
+
+# ---------------------------------------------------------------------------
+# Voice notes
+# ---------------------------------------------------------------------------
+
+@router.post("/{char_id}/notes/voice", response_model=list[NoteRead], status_code=201)
+async def upload_voice_note(
+    char_id: int,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+    title: str = Form(...),
+    file: UploadFile = File(...),
+) -> list[NoteRead]:
+    """Upload a voice note (audio file) and associate it with the character."""
+    char = await _get_owned(char_id, user_id, session)
+
+    notes = dict(char.notes or {})
+    if title in notes:
+        raise HTTPException(status_code=409, detail="A note with this title already exists")
+
+    # Validate file extension
+    original_name = file.filename or "voice.webm"
+    suffix = Path(original_name).suffix.lower()
+    if suffix not in _ALLOWED_AUDIO_EXTS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Audio format not allowed. Allowed: {', '.join(_ALLOWED_AUDIO_EXTS)}",
+        )
+
+    # Read file content with size check
+    content = await file.read()
+    if len(content) > _MAX_VOICE_SIZE:
+        raise HTTPException(status_code=400, detail="File too large (max 5 MB)")
+
+    # Save to data/voice_notes/{char_id}/{uuid}.{ext}
+    char_dir = _VOICE_DIR / str(char_id)
+    char_dir.mkdir(parents=True, exist_ok=True)
+    file_name = f"{uuid.uuid4().hex}{suffix}"
+    file_path = char_dir / file_name
+    file_path.write_bytes(content)
+
+    # Store reference in notes dict
+    notes[title] = f"[VOICE:{file_path}]"
+    char.notes = notes
+    return _notes_list(char)
+
+
+@router.get("/{char_id}/notes/voice/{filename}", response_model=None)
+async def get_voice_file(
+    char_id: int,
+    filename: str,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+):
+    """Serve a voice note audio file."""
+    await _get_owned(char_id, user_id, session)
+
+    file_path = _VOICE_DIR / str(char_id) / filename
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Voice file not found")
+
+    # Prevent path traversal
+    if not file_path.resolve().is_relative_to(_VOICE_DIR.resolve()):
+        raise HTTPException(status_code=400, detail="Invalid filename")
+
+    media_map = {
+        ".webm": "audio/webm", ".ogg": "audio/ogg",
+        ".mp3": "audio/mpeg", ".wav": "audio/wav",
+        ".m4a": "audio/mp4", ".aac": "audio/aac",
+    }
+    content_type = media_map.get(file_path.suffix.lower(), "application/octet-stream")
+    return FileResponse(file_path, media_type=content_type)

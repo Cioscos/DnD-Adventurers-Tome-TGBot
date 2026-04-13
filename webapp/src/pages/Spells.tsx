@@ -37,6 +37,7 @@ export default function Spells() {
   const qc = useQueryClient()
   const [search, setSearch] = useState('')
   const [showAdd, setShowAdd] = useState(false)
+  const [editingSpell, setEditingSpell] = useState<Spell | null>(null)
   const [form, setForm] = useState<AddForm>(emptyForm)
   const [expanded, setExpanded] = useState<number | null>(null)
   const [castingSpell, setCastingSpell] = useState<Spell | null>(null)
@@ -67,6 +68,31 @@ export default function Spells() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['character', charId] })
       setShowAdd(false)
+      setForm(emptyForm)
+      haptic.success()
+    },
+    onError: () => haptic.error(),
+  })
+
+  const updateMutation = useMutation({
+    mutationFn: () =>
+      api.spells.update(charId, editingSpell!.id, {
+        name: form.name.trim(),
+        level: Number(form.level),
+        description: form.description.trim() || undefined,
+        casting_time: form.casting_time.trim() || undefined,
+        range_area: form.range_area.trim() || undefined,
+        components: form.components.trim() || undefined,
+        duration: form.duration.trim() || undefined,
+        is_concentration: form.is_concentration,
+        is_ritual: form.is_ritual,
+        damage_dice: form.damage_dice.trim() || undefined,
+        damage_type: form.damage_type.trim() || undefined,
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['character', charId] })
+      setShowAdd(false)
+      setEditingSpell(null)
       setForm(emptyForm)
       haptic.success()
     },
@@ -331,6 +357,28 @@ export default function Spells() {
                         </button>
                       )}
                       <button
+                        onClick={() => {
+                          setEditingSpell(spell)
+                          setForm({
+                            name: spell.name,
+                            level: String(spell.level),
+                            description: spell.description || '',
+                            casting_time: spell.casting_time || '',
+                            range_area: spell.range_area || '',
+                            components: spell.components || '',
+                            duration: spell.duration || '',
+                            is_concentration: spell.is_concentration,
+                            is_ritual: spell.is_ritual,
+                            damage_dice: spell.damage_dice || '',
+                            damage_type: spell.damage_type || '',
+                          })
+                          setShowAdd(true)
+                        }}
+                        className="text-xs px-3 py-2 rounded-lg bg-blue-500/20 text-blue-300 active:opacity-70"
+                      >
+                        ✏️ {t('character.spells.edit')}
+                      </button>
+                      <button
                         onClick={() => removeMutation.mutate(spell.id)}
                         className="text-xs px-3 py-2 rounded-lg bg-red-500/20 text-red-300 active:opacity-70"
                       >
@@ -358,7 +406,7 @@ export default function Spells() {
             <p className="text-sm text-[var(--tg-theme-hint-color)]">{castingSpell.name}</p>
             <div className="space-y-2">
               {availableSlotsFor(castingSpell.level).length === 0 ? (
-                <p className="text-sm text-red-400 text-center py-2">Nessuno slot disponibile</p>
+                <p className="text-sm text-red-400 text-center py-2">{t('character.spells.no_slots')}</p>
               ) : (
                 availableSlotsFor(castingSpell.level).map((slot) => (
                   <button
@@ -384,7 +432,7 @@ export default function Spells() {
           onFocusCapture={(e) => (e.target as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'nearest' })}
         >
           <Card className="w-full space-y-3 max-h-[80vh] overflow-y-auto">
-            <h3 className="font-semibold">{t('character.spells.add')}</h3>
+            <h3 className="font-semibold">{editingSpell ? t('character.spells.edit') : t('character.spells.add')}</h3>
             <input
               type="text" value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
@@ -447,7 +495,7 @@ export default function Spells() {
                 />
               </div>
               <div className="flex-1">
-                <p className="text-xs text-[var(--tg-theme-hint-color)] mb-1">Danno</p>
+                <p className="text-xs text-[var(--tg-theme-hint-color)] mb-1">{t('character.spells.damage')}</p>
                 <input
                   type="text" value={form.damage_dice}
                   onChange={(e) => setForm((f) => ({ ...f, damage_dice: e.target.value }))}
@@ -483,14 +531,16 @@ export default function Spells() {
             </div>
             <div className="flex gap-2">
               <button
-                onClick={() => addMutation.mutate()}
-                disabled={!form.name.trim() || addMutation.isPending}
+                onClick={() => editingSpell ? updateMutation.mutate() : addMutation.mutate()}
+                disabled={!form.name.trim() || addMutation.isPending || updateMutation.isPending}
                 className="flex-1 py-2 rounded-xl bg-[var(--tg-theme-button-color)]
                            text-[var(--tg-theme-button-text-color)] font-semibold disabled:opacity-40"
               >
-                {addMutation.isPending ? '...' : t('common.add')}
+                {(addMutation.isPending || updateMutation.isPending)
+                  ? '...'
+                  : editingSpell ? t('common.save') : t('common.add')}
               </button>
-              <button onClick={() => setShowAdd(false)} className="flex-1 py-2 rounded-xl bg-white/10">
+              <button onClick={() => { setShowAdd(false); setEditingSpell(null); setForm(emptyForm) }} className="flex-1 py-2 rounded-xl bg-white/10">
                 {t('common.cancel')}
               </button>
             </div>

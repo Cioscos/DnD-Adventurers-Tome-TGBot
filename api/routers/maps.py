@@ -22,7 +22,7 @@ router = APIRouter(prefix="/characters", tags=["maps"])
 
 _BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
 _MAPS_DIR = Path("data/maps")
-_ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".pdf"}
+_ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".pdf", ".heic", ".heif"}
 _MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
 
 
@@ -83,6 +83,7 @@ async def get_map_file(
             ".png": "image/png", ".gif": "image/gif",
             ".webp": "image/webp", ".bmp": "image/bmp",
             ".pdf": "application/pdf",
+            ".heic": "image/heic", ".heif": "image/heif",
         }
         content_type = media_map.get(suffix, "application/octet-stream")
         return FileResponse(local_path, media_type=content_type)
@@ -154,7 +155,7 @@ async def upload_map(
     file_path.write_bytes(content)
 
     # Determine file_type
-    image_exts = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"}
+    image_exts = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".heic", ".heif"}
     file_type = "photo" if suffix in image_exts else "document"
 
     map_row = Map(

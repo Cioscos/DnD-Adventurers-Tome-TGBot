@@ -20,7 +20,6 @@ const MENU_ITEMS = [
   { key: 'class',      emoji: '📜',  path: 'class' },
   { key: 'xp',         emoji: '⭐',  path: 'xp' },
   { key: 'conditions', emoji: '🌀',  path: 'conditions' },
-  { key: 'death_saves',emoji: '💀',  path: 'hp' },   // redirects to HP page which has death saves
   { key: 'dice',       emoji: '🎲',  path: 'dice' },
   { key: 'notes',      emoji: '📝',  path: 'notes' },
   { key: 'maps',       emoji: '🗺️',  path: 'maps' },
@@ -128,10 +127,42 @@ export default function CharacterMain() {
         <div className="flex gap-4 mt-3 text-sm text-[var(--tg-theme-hint-color)]">
           <span>⭐ {char.experience_points} XP</span>
           <span>💨 {char.speed}ft</span>
-          {char.concentrating_spell_id && (
-            <span className="text-purple-400">🔮 Concentrazione</span>
-          )}
         </div>
+
+        {/* Concentration spell */}
+        {char.concentrating_spell_id && (() => {
+          const spell = char.spells?.find(s => s.id === char.concentrating_spell_id)
+          return (
+            <div className="mt-2">
+              <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300">
+                🔮 {spell?.name ?? t('character.spells.concentration')}
+              </span>
+            </div>
+          )
+        })()}
+
+        {/* Active passive abilities */}
+        {char.abilities?.filter(a => a.is_passive).length > 0 && (
+          <div className="flex flex-wrap gap-1 mt-2">
+            {char.abilities.filter(a => a.is_passive).map(a => (
+              <span key={a.id} className="text-xs px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-300">
+                ⚡ {a.name}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Active conditions */}
+        {char.conditions && Object.entries(char.conditions).filter(([, v]) => v).length > 0 && (
+          <div className="flex flex-wrap gap-1 mt-2">
+            {Object.entries(char.conditions).filter(([, v]) => v).map(([key, val]) => (
+              <span key={key} className="text-xs px-2 py-0.5 rounded-full bg-red-500/20 text-red-300">
+                🌀 {t(`character.conditions.${key}`)}
+                {typeof val === 'number' && val > 1 ? ` (${val})` : ''}
+              </span>
+            ))}
+          </div>
+        )}
       </Card>
 
       {/* Ability scores row */}

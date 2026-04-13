@@ -63,6 +63,11 @@ class CharacterFull(BaseModel):
     carry_capacity: int
     encumbrance: float
 
+    # Computed
+    total_level: int = 0
+    class_summary: str = ""
+    proficiency_bonus: int = 2
+
     # Meta
     experience_points: int = 0
     heroic_inspiration: bool = False
