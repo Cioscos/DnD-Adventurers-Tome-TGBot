@@ -13,6 +13,13 @@
   --tg-theme-secondary-bg-color: #2c2c2e;
 }
 
+html,
+body,
+#root {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
 body {
   background-color: var(--tg-theme-bg-color);
   color: var(--tg-theme-text-color);
