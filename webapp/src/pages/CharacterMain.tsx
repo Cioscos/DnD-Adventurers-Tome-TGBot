@@ -74,7 +74,7 @@ export default function CharacterMain() {
     : 0
 
   return (
-    <div className="min-h-screen p-4 space-y-4">
+    <div className="min-h-screen p-4 space-y-4 pb-safe">
       {/* Header bar */}
       <div className="flex items-center gap-2 pt-1">
         <button onClick={() => navigate('/')} className="p-1 active:opacity-60">

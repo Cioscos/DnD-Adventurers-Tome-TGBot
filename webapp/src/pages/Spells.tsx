@@ -301,14 +301,14 @@ export default function Spells() {
                         <button
                           onClick={() => castCantrip.mutate(spell)}
                           disabled={castCantrip.isPending}
-                          className="text-xs px-2 py-1 rounded-lg bg-green-500/20 text-green-300 disabled:opacity-40"
+                          className="text-xs px-3 py-2 rounded-lg bg-green-500/20 text-green-300 disabled:opacity-40 active:opacity-70"
                         >
                           ⚡ {t('character.spells.cast_cantrip')}
                         </button>
                       ) : (
                         <button
                           onClick={() => setCastingSpell(spell)}
-                          className="text-xs px-2 py-1 rounded-lg bg-green-500/20 text-green-300"
+                          className="text-xs px-3 py-2 rounded-lg bg-green-500/20 text-green-300 active:opacity-70"
                         >
                           ⚡ {t('character.spells.cast')}
                         </button>
@@ -319,7 +319,7 @@ export default function Spells() {
                           onClick={() => concentrationMutation.mutate(
                             concentratingId === spell.id ? null : spell.id
                           )}
-                          className={`text-xs px-2 py-1 rounded-lg ${
+                          className={`text-xs px-3 py-2 rounded-lg active:opacity-70 ${
                             concentratingId === spell.id
                               ? 'bg-red-500/20 text-red-300'
                               : 'bg-purple-500/20 text-purple-300'
@@ -332,7 +332,7 @@ export default function Spells() {
                       )}
                       <button
                         onClick={() => removeMutation.mutate(spell.id)}
-                        className="text-xs px-2 py-1 rounded-lg bg-red-500/20 text-red-300"
+                        className="text-xs px-3 py-2 rounded-lg bg-red-500/20 text-red-300 active:opacity-70"
                       >
                         {t('character.spells.forget')}
                       </button>
