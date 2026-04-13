@@ -13,14 +13,14 @@ import uuid
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, Query, UploadFile, status
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from api.auth import get_current_user
+from api.auth import DEV_USER_ID, get_current_user, verify_init_data
 from api.database import get_db
 from bot.db.models import Character, CharacterClass
 
@@ -185,10 +185,19 @@ async def upload_voice_note(
 async def get_voice_file(
     char_id: int,
     filename: str,
-    user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
+    x_telegram_init_data: str = Header("", alias="X-Telegram-Init-Data"),
+    init_data: str = Query(""),
 ):
     """Serve a voice note audio file."""
+    # <audio src> cannot set custom headers, so accept init_data as query param fallback.
+    if DEV_USER_ID is not None:
+        user_id = DEV_USER_ID
+    else:
+        raw = x_telegram_init_data or init_data
+        if not raw:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing auth")
+        user_id = verify_init_data(raw)
     await _get_owned(char_id, user_id, session)
 
     file_path = _VOICE_DIR / str(char_id) / filename

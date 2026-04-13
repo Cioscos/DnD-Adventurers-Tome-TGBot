@@ -26,7 +26,8 @@ _BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
 
 # When set, bypasses Telegram initData verification and returns this user_id.
 # Set DEV_USER_ID=<your_telegram_id> in .env for local development.
-_DEV_USER_ID: int | None = int(os.environ["DEV_USER_ID"]) if os.environ.get("DEV_USER_ID") else None
+DEV_USER_ID: int | None = int(os.environ["DEV_USER_ID"]) if os.environ.get("DEV_USER_ID") else None
+_DEV_USER_ID = DEV_USER_ID  # kept for internal use
 
 # Maximum age (in seconds) of a valid initData.
 _MAX_AGE_SECONDS = 86400  # 24 hours
