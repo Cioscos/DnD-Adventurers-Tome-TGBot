@@ -73,6 +73,14 @@ const twa: TelegramWebApp | null =
 
 /** Raw initData string for use as the X-Telegram-Init-Data header. */
 export function getInitData(): string {
+  // Always read from the live window.Telegram.WebApp reference to avoid
+  // stale-capture issues: when the Mini App is opened via a reply keyboard
+  // button, Telegram may inject window.Telegram.WebApp *after* this module
+  // has been evaluated (twa would be null). Reading dynamically guarantees
+  // we get the current initData regardless of injection timing.
+  if (typeof window !== 'undefined' && window.Telegram?.WebApp?.initData) {
+    return window.Telegram.WebApp.initData
+  }
   return twa?.initData ?? ''
 }
 
@@ -88,7 +96,9 @@ export function getLanguageCode(): string {
 
 /** Whether we're actually running inside Telegram. */
 export function isInsideTelegram(): boolean {
-  return !!twa?.initData
+  return typeof window !== 'undefined'
+    ? !!(window.Telegram?.WebApp?.initData || twa?.initData)
+    : false
 }
 
 /**
