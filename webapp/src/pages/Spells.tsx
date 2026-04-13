@@ -379,8 +379,11 @@ export default function Spells() {
 
       {/* Add spell modal */}
       {showAdd && (
-        <div className="fixed inset-0 bg-black/60 flex items-end z-50 p-4 overflow-y-auto">
-          <Card className="w-full space-y-3">
+        <div
+          className="fixed inset-0 bg-black/60 flex items-end z-50 p-4"
+          onFocusCapture={(e) => (e.target as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'nearest' })}
+        >
+          <Card className="w-full space-y-3 max-h-[80vh] overflow-y-auto">
             <h3 className="font-semibold">{t('character.spells.add')}</h3>
             <input
               type="text" value={form.name}
