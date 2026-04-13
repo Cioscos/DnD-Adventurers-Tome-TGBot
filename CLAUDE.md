@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```bash
 # Uses uv (not pip). Install uv: https://docs.astral.sh/uv/
 uv sync
-# Create .env with BOT_TOKEN (required), DEV_CHAT_ID (optional), DB_PATH (optional), WEBAPP_URL (required for Mini App button)
+# Create .env with BOT_TOKEN (required), DEV_CHAT_ID (optional), DB_PATH (optional)
 uv run python -m bot.main
 ```
 
@@ -122,10 +122,10 @@ Three-component system:
 3. **React Mini App** (`webapp/`) — Telegram Mini App (WebApp) for full character sheet management. Builds to `docs/app/`, served by GitHub Pages.
 
 ### Bot commands
-- `/start` — private chat; shows persistent reply keyboard with Mini App button + wiki inline button
+- `/start` — private chat; shows welcome message with wiki inline button (Mini App opened via BotFather menu button)
 - `/wiki` — private chat; inline navigation over D&D 5e GraphQL API
 - `/party`, `/party_stop` — group chat; live party status message
-- `web_app_data` — receives `sendData()` payloads from Mini App (dice roll results → posted to chat)
+- `web_app_data` — legacy handler kept for compatibility; dice results now sent via `POST /characters/{id}/dice/post-to-chat` API endpoint instead of `sendData()`
 
 ### Mini App URL
 `https://cioscos.github.io/DnD-Adventurers-Tome-TGBot/app/` (HashRouter, built to `docs/app/`)
@@ -187,7 +187,7 @@ Two frozen dataclasses drive callback state via PTB's `arbitrary_callback_data` 
 - **Auth header** — every API call includes `X-Telegram-Init-Data` header (handled by `api/client.ts`).
 - **Routing** — `HashRouter` only; GitHub Pages cannot serve server-side routes.
 - **State** — TanStack Query for server data, Zustand for `activeCharId` and `locale`.
-- **sendData** — only call `window.Telegram.WebApp.sendData()` for actions that should post to Telegram chat (e.g. dice results). The Mini App closes after `sendData`.
+- **sendData** — do **not** use `window.Telegram.WebApp.sendData()`. It only works when the Mini App is opened via a reply keyboard button, which on Telegram Android does not provide `initData` (confirmed: `tgWebAppData` absent from hash, no native bridge events). Use the authenticated API endpoint `POST /characters/{id}/dice/post-to-chat` instead — the bot sends the message directly to the user's private chat via the Telegram Bot API.
 - **Multipart uploads** — use the `requestFormData<T>()` helper in `api/client.ts` (does not set `Content-Type`; browser sets it automatically with the correct boundary). Never use the regular `request()` helper for `FormData` payloads.
 
 ## Persistence
@@ -201,6 +201,7 @@ Two frozen dataclasses drive callback state via PTB's `arbitrary_callback_data` 
 | Method | Path | Description |
 |--------|------|-------------|
 | `POST` | `/characters/{id}/death_saves/roll` | Roll 1d20 for death save (D&D 5e rules: nat 20 = revive, nat 1 = 2 failures) |
+| `POST` | `/characters/{id}/dice/post-to-chat` | Send a dice result to the user's private Telegram chat via the Bot API (replaces `sendData()`) |
 | `DELETE` | `/characters/{id}/dice/history` | Clear the character's dice roll history |
 | `POST` | `/characters/{id}/maps/upload` | Upload a map image from the webapp (multipart/form-data: `zone_name` + `file`) |
 | `GET` | `/characters/{id}/maps/{map_id}/file` | Serve map file — local disk if `local_file_path` set, else Telegram proxy |
