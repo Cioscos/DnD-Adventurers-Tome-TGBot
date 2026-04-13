@@ -29,6 +29,14 @@ const SKILLS: { key: string; ability: string }[] = [
   { key: 'survival',       ability: 'wisdom' },
 ]
 
+const ABILITY_GROUPS: { ability: string; emoji: string }[] = [
+  { ability: 'strength',     emoji: '💪' },
+  { ability: 'dexterity',    emoji: '🤸' },
+  { ability: 'intelligence', emoji: '🧠' },
+  { ability: 'wisdom',       emoji: '🦉' },
+  { ability: 'charisma',     emoji: '✨' },
+]
+
 type ProfLevel = false | true | 'expert'
 
 function profBonus(level: number) {
@@ -115,61 +123,82 @@ export default function Skills() {
         </div>
       </Card>
 
-      <div className="space-y-1">
-        {SKILLS.map((skill) => {
-          const level = getLevel(skills[skill.key])
-          const abilMod = abilityModifier(skill.ability)
-          const bonus = abilMod + (level === 'expert' ? 2 * pb : level ? pb : 0)
-          const isExpert = level === 'expert'
-          const isProficient = level === true
+      <div className="space-y-4">
+        {ABILITY_GROUPS.map((group) => {
+          const groupSkills = SKILLS.filter((s) => s.ability === group.ability)
+          if (groupSkills.length === 0) return null
 
           return (
-            <div
-              key={skill.key}
-              className="flex items-center gap-2 px-4 py-3 rounded-xl
-                         bg-[var(--tg-theme-secondary-bg-color)]"
-            >
-              {/* Proficiency toggle */}
-              <button
-                onClick={() => toggle(skill.key)}
-                className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0
-                  ${isExpert
-                    ? 'bg-yellow-500 border-yellow-500'
-                    : isProficient
-                      ? 'bg-[var(--tg-theme-button-color)] border-[var(--tg-theme-button-color)]'
-                      : 'border-white/30'}`}
-              >
-                {isExpert && <span className="text-xs text-white font-bold">★</span>}
-                {isProficient && <span className="text-xs text-white font-bold">✓</span>}
-              </button>
+            <div key={group.ability}>
+              {/* Section header */}
+              <div className="flex items-center gap-2 px-1 mb-1.5">
+                <span className="text-base leading-none">{group.emoji}</span>
+                <span className="text-xs font-semibold uppercase tracking-wider text-[var(--tg-theme-hint-color)]">
+                  {t(`character.stats.${group.ability}`)}
+                </span>
+                <div className="flex-1 h-px bg-white/10" />
+              </div>
 
-              {/* Name */}
-              <button
-                onClick={() => toggle(skill.key)}
-                className="flex-1 text-left text-sm font-medium active:opacity-70"
-              >
-                {t(`character.skills.${skill.key}`)}
-              </button>
+              <div className="space-y-1">
+                {groupSkills.map((skill) => {
+                  const level = getLevel(skills[skill.key])
+                  const abilMod = abilityModifier(skill.ability)
+                  const bonus = abilMod + (level === 'expert' ? 2 * pb : level ? pb : 0)
+                  const isExpert = level === 'expert'
+                  const isProficient = level === true
 
-              {/* Ability abbr */}
-              <span className="text-xs text-[var(--tg-theme-hint-color)] uppercase shrink-0">
-                {skill.ability.slice(0, 3)}
-              </span>
+                  return (
+                    <div
+                      key={skill.key}
+                      className="flex items-center gap-2 px-3 py-2.5 rounded-xl
+                                 bg-[var(--tg-theme-secondary-bg-color)]"
+                    >
+                      {/* Proficiency toggle */}
+                      <button
+                        onClick={() => toggle(skill.key)}
+                        className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0
+                          ${isExpert
+                            ? 'bg-yellow-500 border-yellow-500'
+                            : isProficient
+                              ? 'bg-[var(--tg-theme-button-color)] border-[var(--tg-theme-button-color)]'
+                              : 'border-white/30'}`}
+                      >
+                        {isExpert && <span className="text-[10px] text-white font-bold leading-none">★</span>}
+                        {isProficient && <span className="text-[10px] text-white font-bold leading-none">✓</span>}
+                      </button>
 
-              {/* Bonus */}
-              <span className={`text-sm font-bold w-8 text-right shrink-0 ${bonus >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                {bonus >= 0 ? '+' : ''}{bonus}
-              </span>
+                      {/* Name */}
+                      <button
+                        onClick={() => toggle(skill.key)}
+                        className="flex-1 text-left text-sm font-medium active:opacity-70"
+                      >
+                        {t(`character.skills.${skill.key}`)}
+                      </button>
 
-              {/* Roll button */}
-              <button
-                onClick={() => rollMutation.mutate(skill.key)}
-                disabled={rollMutation.isPending}
-                className="text-lg leading-none shrink-0 active:opacity-60 disabled:opacity-30"
-                title={t('character.skills.roll')}
-              >
-                🎲
-              </button>
+                      {/* Bonus */}
+                      <span className={`text-sm font-bold w-8 text-right shrink-0 tabular-nums
+                        ${bonus >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                        {bonus >= 0 ? '+' : ''}{bonus}
+                      </span>
+
+                      {/* Roll button */}
+                      <button
+                        onClick={() => rollMutation.mutate(skill.key)}
+                        disabled={rollMutation.isPending}
+                        className="shrink-0 w-9 h-9 rounded-xl
+                                   bg-[var(--tg-theme-button-color)]/15
+                                   flex items-center justify-center text-base
+                                   active:bg-[var(--tg-theme-button-color)]/30
+                                   active:opacity-60 disabled:opacity-30
+                                   transition-colors"
+                        title={t('character.skills.roll')}
+                      >
+                        🎲
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
           )
         })}

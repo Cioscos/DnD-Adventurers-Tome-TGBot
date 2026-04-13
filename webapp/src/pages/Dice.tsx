@@ -88,39 +88,57 @@ export default function Dice() {
         ⚔️ {t('character.dice.initiative')} (d20 {modLabel})
       </button>
 
-      {/* Dice count selector */}
+      {/* Dice count stepper */}
       <Card>
-        <p className="text-sm text-[var(--tg-theme-hint-color)] mb-2">Numero di dadi</p>
-        <div className="flex gap-2 flex-wrap">
-          {[1, 2, 3, 4].map((n) => (
-            <button
-              key={n}
-              onClick={() => setCount(n)}
-              className={`px-4 py-2 rounded-xl font-bold transition-all
-                ${count === n
-                  ? 'bg-[var(--tg-theme-button-color)] text-[var(--tg-theme-button-text-color)]'
-                  : 'bg-white/10'}`}
-            >
-              {n}
-            </button>
-          ))}
+        <p className="text-sm text-[var(--tg-theme-hint-color)] mb-3">{t('character.dice.count')}</p>
+        <div className="flex items-center justify-between gap-3">
+          <button
+            onClick={() => setCount((c) => Math.max(1, c - 1))}
+            disabled={count <= 1}
+            className="w-12 h-12 rounded-2xl bg-[var(--tg-theme-secondary-bg-color)]
+                       font-bold text-2xl active:opacity-70 transition-opacity
+                       disabled:opacity-30 flex items-center justify-center"
+            aria-label="Diminuisci"
+          >
+            −
+          </button>
+          <span className="text-3xl font-bold min-w-[2.5rem] text-center">{count}</span>
+          <button
+            onClick={() => setCount((c) => Math.min(10, c + 1))}
+            disabled={count >= 10}
+            className="w-12 h-12 rounded-2xl bg-[var(--tg-theme-secondary-bg-color)]
+                       font-bold text-2xl active:opacity-70 transition-opacity
+                       disabled:opacity-30 flex items-center justify-center"
+            aria-label="Aumenta"
+          >
+            +
+          </button>
         </div>
       </Card>
 
       {/* Dice buttons */}
       <div className="grid grid-cols-4 gap-2">
-        {DICE.map((die) => (
+        {DICE.slice(0, 6).map((die) => (
           <button
             key={die}
             onClick={() => handleRoll(die)}
             disabled={rollMutation.isPending || initiativeMutation.isPending}
-            className="py-4 rounded-2xl bg-[var(--tg-theme-secondary-bg-color)]
+            className="py-5 rounded-2xl bg-[var(--tg-theme-secondary-bg-color)]
                        font-bold text-lg active:opacity-70 transition-opacity
                        disabled:opacity-40"
           >
             {die}
           </button>
         ))}
+        <button
+          onClick={() => handleRoll('d100')}
+          disabled={rollMutation.isPending || initiativeMutation.isPending}
+          className="col-span-2 py-5 rounded-2xl bg-[var(--tg-theme-secondary-bg-color)]
+                     font-bold text-lg active:opacity-70 transition-opacity
+                     disabled:opacity-40"
+        >
+          d100
+        </button>
       </div>
 
       {/* Initiative result */}
@@ -174,14 +192,16 @@ export default function Dice() {
           </div>
           <div className="space-y-1">
             {history.slice(0, 10).map((entry, i) => (
-              <Card key={i} className="!p-2 flex justify-between items-center">
-                <span className="text-sm text-[var(--tg-theme-hint-color)]">{entry.notation}</span>
-                <span className="font-bold">{entry.total}</span>
-                {entry.rolls.length > 1 && (
-                  <span className="text-xs text-[var(--tg-theme-hint-color)]">
-                    [{entry.rolls.join('+')}]
-                  </span>
-                )}
+              <Card key={i} className="!p-2 flex justify-between items-center gap-2">
+                <div className="flex items-baseline gap-1.5 min-w-0">
+                  <span className="text-sm text-[var(--tg-theme-hint-color)] shrink-0">{entry.notation}</span>
+                  {entry.rolls.length > 1 && (
+                    <span className="text-xs text-[var(--tg-theme-hint-color)] truncate">
+                      [{entry.rolls.join('+')}]
+                    </span>
+                  )}
+                </div>
+                <span className="font-bold shrink-0">{entry.total}</span>
               </Card>
             ))}
           </div>

@@ -303,25 +303,38 @@ export default function Spells() {
               {level === 0 ? t('character.spells.cantrip') : `${t('character.spells.level')} ${level}`}
             </p>
             {slot && slot.total > 0 && (
-              <div className="flex gap-1 items-center">
-                {Array.from({ length: slot.total }).map((_, i) => {
-                  const isAvailable = i < slot.available
-                  return (
-                    <button
+              <div className="flex items-center gap-2">
+                {/* Dots — visual only */}
+                <div className="flex gap-1 items-center flex-wrap">
+                  {Array.from({ length: slot.total }).map((_, i) => (
+                    <span
                       key={i}
-                      disabled={!isAvailable || useSlotMutation.isPending}
-                      onClick={() =>
-                        isAvailable &&
-                        useSlotMutation.mutate({ slotId: slot.id, newUsed: slot.used + 1 })
-                      }
-                      className={`w-3 h-3 rounded-full border transition-opacity active:opacity-60
-                        ${isAvailable
+                      className={`w-3 h-3 rounded-full border-2 inline-block
+                        ${i < slot.available
                           ? 'bg-[var(--tg-theme-button-color)] border-transparent'
                           : 'bg-transparent border-[var(--tg-theme-hint-color)] opacity-30'
                         }`}
                     />
-                  )
-                })}
+                  ))}
+                </div>
+                {/* − restore */}
+                <button
+                  disabled={slot.used === 0 || useSlotMutation.isPending}
+                  onClick={() => useSlotMutation.mutate({ slotId: slot.id, newUsed: slot.used - 1 })}
+                  className="w-8 h-8 rounded-lg bg-white/10 text-lg font-bold leading-none
+                             flex items-center justify-center active:opacity-60 disabled:opacity-25"
+                >
+                  −
+                </button>
+                {/* + consume */}
+                <button
+                  disabled={slot.available === 0 || useSlotMutation.isPending}
+                  onClick={() => useSlotMutation.mutate({ slotId: slot.id, newUsed: slot.used + 1 })}
+                  className="w-8 h-8 rounded-lg bg-[var(--tg-theme-button-color)]/80 text-lg font-bold leading-none
+                             flex items-center justify-center active:opacity-60 disabled:opacity-25"
+                >
+                  +
+                </button>
               </div>
             )}
           </div>
