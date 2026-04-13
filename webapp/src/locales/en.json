@@ -180,7 +180,8 @@
       "clear": "Clear history",
       "clear_confirm": "Clear all dice roll history?",
       "initiative": "Roll Initiative",
-      "initiative_result": "Initiative: d20 ({{roll}}) {{mod}} = {{total}}"
+      "initiative_result": "Initiative: d20 ({{roll}}) {{mod}} = {{total}}",
+      "count": "Number of dice"
     },
     "conditions": {
       "title": "Conditions",

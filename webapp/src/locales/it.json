@@ -180,7 +180,8 @@
       "clear": "Svuota cronologia",
       "clear_confirm": "Svuotare tutta la cronologia dei lanci?",
       "initiative": "Tira Iniziativa",
-      "initiative_result": "Iniziativa: d20 ({{roll}}) {{mod}} = {{total}}"
+      "initiative_result": "Iniziativa: d20 ({{roll}}) {{mod}} = {{total}}",
+      "count": "Numero di dadi"
     },
     "conditions": {
       "title": "Condizioni",
