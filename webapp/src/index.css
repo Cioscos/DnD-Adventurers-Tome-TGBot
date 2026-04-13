@@ -47,6 +47,15 @@ body {
   min-height: 100vh;
 }
 
+/* Spell detail accordion fade-in */
+@keyframes spellFadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.spell-detail-enter {
+  animation: spellFadeIn 150ms ease forwards;
+}
+
 /* Scrollbar styling */
 ::-webkit-scrollbar {
   width: 4px;

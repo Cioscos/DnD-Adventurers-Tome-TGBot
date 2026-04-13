@@ -153,7 +153,16 @@
       "conc_save_fail": "Concentrazione persa!",
       "damage": "Danno",
       "no_slots": "Nessuno slot disponibile",
-      "conc_lost": "La concentrazione è stata interrotta"
+      "conc_lost": "La concentrazione è stata interrotta",
+      "higher_level": "A livelli superiori",
+      "attack_save": "Attacco / TS",
+      "chip_casting_time": "LANCIO",
+      "chip_range": "GITTATA",
+      "chip_components": "COMP.",
+      "chip_duration": "DURATA",
+      "chip_damage": "DANNO",
+      "chip_attack_save": "ATT / TS",
+      "chip_higher_level": "LIV. SUP."
     },
     "slots": {
       "title": "Slot Incantesimo",

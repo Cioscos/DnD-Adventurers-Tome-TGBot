@@ -153,7 +153,16 @@
       "conc_save_fail": "Concentration lost!",
       "damage": "Damage",
       "no_slots": "No slots available",
-      "conc_lost": "Concentration has been broken"
+      "conc_lost": "Concentration has been broken",
+      "higher_level": "At higher levels",
+      "attack_save": "Attack / Save",
+      "chip_casting_time": "CAST",
+      "chip_range": "RANGE",
+      "chip_components": "COMP.",
+      "chip_duration": "DURATION",
+      "chip_damage": "DAMAGE",
+      "chip_attack_save": "ATK / SAVE",
+      "chip_higher_level": "HIGHER LVL"
     },
     "slots": {
       "title": "Spell Slots",

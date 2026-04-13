@@ -299,42 +299,89 @@ export default function Spells() {
                   onClick={() => setExpanded(expanded === spell.id ? null : spell.id)}
                 >
                   <span className="flex-1 font-medium text-sm">{spell.name}</span>
-                  <div className="flex gap-1 shrink-0">
-                    {spell.is_concentration && <span className="text-xs text-purple-400">C</span>}
-                    {spell.is_ritual && <span className="text-xs text-blue-400">R</span>}
+                  <div className="flex gap-1 shrink-0 items-center">
+                    {spell.is_concentration && (
+                      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-purple-500/20 text-purple-400 border border-purple-500/30">C</span>
+                    )}
+                    {spell.is_ritual && (
+                      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-blue-500/20 text-blue-400 border border-blue-500/30">R</span>
+                    )}
                     {spell.is_pinned && <span className="text-xs">📌</span>}
                   </div>
-                  <span className="text-[var(--tg-theme-hint-color)] text-xs">{expanded === spell.id ? '▲' : '▼'}</span>
+                  <span className="text-[var(--tg-theme-hint-color)] text-xs ml-1">{expanded === spell.id ? '˄' : '˅'}</span>
                 </button>
 
                 {expanded === spell.id && (
-                  <div className="px-3 pb-3 space-y-2 border-t border-white/10">
+                  <div className="spell-detail-enter px-3 pb-3 space-y-3 border-t border-white/10">
+                    {/* Description */}
                     {spell.description && (
-                      <p className="text-xs text-[var(--tg-theme-hint-color)] mt-2 whitespace-pre-wrap">{spell.description}</p>
+                      <p className="text-xs text-[var(--tg-theme-hint-color)] mt-2 whitespace-pre-wrap leading-relaxed border-l-2 border-purple-500/40 pl-2">{spell.description}</p>
                     )}
-                    <div className="grid grid-cols-2 gap-1 text-xs">
-                      {spell.casting_time && <span>⏱ {spell.casting_time}</span>}
-                      {spell.range_area && <span>📏 {spell.range_area}</span>}
-                      {spell.components && <span>🧪 {spell.components}</span>}
-                      {spell.duration && <span>⏳ {spell.duration}</span>}
-                      {spell.damage_dice && (
-                        <span>⚔️ {spell.damage_dice}{spell.damage_type ? ` (${spell.damage_type})` : ''}</span>
-                      )}
-                    </div>
-                    <div className="flex gap-2 pt-1 flex-wrap">
-                      {/* Cast button */}
+
+                    {/* Stats chips */}
+                    {(spell.casting_time || spell.range_area || spell.components || spell.duration || spell.damage_dice || spell.attack_save) && (
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {spell.casting_time && (
+                          <div className="flex flex-col bg-black/20 rounded-lg px-2 py-1.5">
+                            <span className="text-[10px] uppercase tracking-wide text-[var(--tg-theme-hint-color)] mb-0.5">{t('character.spells.chip_casting_time')}</span>
+                            <span className="text-xs font-medium">⏱ {spell.casting_time}</span>
+                          </div>
+                        )}
+                        {spell.range_area && (
+                          <div className="flex flex-col bg-black/20 rounded-lg px-2 py-1.5">
+                            <span className="text-[10px] uppercase tracking-wide text-[var(--tg-theme-hint-color)] mb-0.5">{t('character.spells.chip_range')}</span>
+                            <span className="text-xs font-medium">📏 {spell.range_area}</span>
+                          </div>
+                        )}
+                        {spell.components && (
+                          <div className="flex flex-col bg-black/20 rounded-lg px-2 py-1.5">
+                            <span className="text-[10px] uppercase tracking-wide text-[var(--tg-theme-hint-color)] mb-0.5">{t('character.spells.chip_components')}</span>
+                            <span className="text-xs font-medium">🧪 {spell.components}</span>
+                          </div>
+                        )}
+                        {spell.duration && (
+                          <div className="flex flex-col bg-black/20 rounded-lg px-2 py-1.5">
+                            <span className="text-[10px] uppercase tracking-wide text-[var(--tg-theme-hint-color)] mb-0.5">{t('character.spells.chip_duration')}</span>
+                            <span className="text-xs font-medium">⏳ {spell.duration}</span>
+                          </div>
+                        )}
+                        {spell.damage_dice && (
+                          <div className="flex flex-col bg-black/20 rounded-lg px-2 py-1.5">
+                            <span className="text-[10px] uppercase tracking-wide text-[var(--tg-theme-hint-color)] mb-0.5">{t('character.spells.chip_damage')}</span>
+                            <span className="text-xs font-medium">⚔️ {spell.damage_dice}{spell.damage_type ? ` ${spell.damage_type}` : ''}</span>
+                          </div>
+                        )}
+                        {spell.attack_save && (
+                          <div className="flex flex-col bg-black/20 rounded-lg px-2 py-1.5">
+                            <span className="text-[10px] uppercase tracking-wide text-[var(--tg-theme-hint-color)] mb-0.5">{t('character.spells.chip_attack_save')}</span>
+                            <span className="text-xs font-medium">🎯 {spell.attack_save}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Higher level note */}
+                    {spell.higher_level && (
+                      <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg px-2 py-1.5">
+                        <span className="text-[10px] uppercase tracking-wide text-amber-400/70 block mb-0.5">📈 {t('character.spells.chip_higher_level')}</span>
+                        <p className="text-xs text-amber-200/80 leading-relaxed">{spell.higher_level}</p>
+                      </div>
+                    )}
+
+                    {/* Action buttons */}
+                    <div className="flex gap-2 pt-0.5 flex-wrap border-t border-white/10 pt-2">
                       {spell.level === 0 ? (
                         <button
                           onClick={() => castCantrip.mutate(spell)}
                           disabled={castCantrip.isPending}
-                          className="text-xs px-3 py-2 rounded-lg bg-green-500/20 text-green-300 disabled:opacity-40 active:opacity-70"
+                          className="text-xs px-3 py-2 rounded-lg bg-green-500/20 text-green-300 font-medium disabled:opacity-40 active:opacity-70"
                         >
                           ⚡ {t('character.spells.cast_cantrip')}
                         </button>
                       ) : (
                         <button
                           onClick={() => setCastingSpell(spell)}
-                          className="text-xs px-3 py-2 rounded-lg bg-green-500/20 text-green-300 active:opacity-70"
+                          className="text-xs px-3 py-2 rounded-lg bg-green-500/20 text-green-300 font-medium active:opacity-70"
                         >
                           ⚡ {t('character.spells.cast')}
                         </button>
@@ -345,7 +392,7 @@ export default function Spells() {
                           onClick={() => concentrationMutation.mutate(
                             concentratingId === spell.id ? null : spell.id
                           )}
-                          className={`text-xs px-3 py-2 rounded-lg active:opacity-70 ${
+                          className={`text-xs px-3 py-2 rounded-lg font-medium active:opacity-70 ${
                             concentratingId === spell.id
                               ? 'bg-red-500/20 text-red-300'
                               : 'bg-purple-500/20 text-purple-300'
@@ -374,13 +421,13 @@ export default function Spells() {
                           })
                           setShowAdd(true)
                         }}
-                        className="text-xs px-3 py-2 rounded-lg bg-blue-500/20 text-blue-300 active:opacity-70"
+                        className="text-xs px-3 py-2 rounded-lg bg-blue-500/20 text-blue-300 font-medium active:opacity-70"
                       >
                         ✏️ {t('character.spells.edit')}
                       </button>
                       <button
                         onClick={() => removeMutation.mutate(spell.id)}
-                        className="text-xs px-3 py-2 rounded-lg bg-red-500/20 text-red-300 active:opacity-70"
+                        className="text-xs px-3 py-2 rounded-lg bg-red-500/20 text-red-300 font-medium active:opacity-70"
                       >
                         {t('character.spells.forget')}
                       </button>
