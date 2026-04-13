@@ -28,8 +28,8 @@
       "stats": "Caratteristiche",
       "skills": "Abilità",
       "saves": "Tiri Salvezza",
-      "spells": "Magie",
-      "slots": "Slot Magie",
+      "spells": "Incantesimi",
+      "slots": "Slot Incantesimi",
       "inventory": "Inventario",
       "currency": "Monete",
       "abilities": "Abilità Speciali",
@@ -41,8 +41,7 @@
       "maps": "Mappe",
       "dice": "Dadi",
       "identity": "Identità",
-      "settings": "Impostazioni",
-      "death_saves": "Tiri vs Morte"
+      "settings": "Impostazioni"
     },
     "hp": {
       "title": "Punti Ferita",
@@ -127,13 +126,13 @@
       "roll": "Tira dado"
     },
     "spells": {
-      "title": "Magie",
-      "search": "Cerca magia...",
+      "title": "Incantesimi",
+      "search": "Cerca incantesimo...",
       "level": "Livello",
       "cantrip": "Trucchetto",
       "concentration": "Concentrazione",
       "ritual": "Rituale",
-      "add": "Aggiungi magia",
+      "add": "Aggiungi incantesimo",
       "forget": "Dimentica",
       "use": "Usa",
       "cast": "Lancia",
@@ -152,6 +151,8 @@
       "conc_save_btn": "TS Concentrazione",
       "conc_save_success": "Concentrazione mantenuta!",
       "conc_save_fail": "Concentrazione persa!",
+      "damage": "Danno",
+      "no_slots": "Nessuno slot disponibile",
       "conc_lost": "La concentrazione è stata interrotta"
     },
     "slots": {
@@ -182,7 +183,7 @@
       "deafened": "Assordato",
       "exhaustion_condition": "Spossatezza",
       "frightened": "Spaventato",
-      "grappled": "Agguantato",
+      "grappled": "Afferrato",
       "incapacitated": "Incapacitato",
       "invisible": "Invisibile",
       "paralyzed": "Paralizzato",
@@ -226,7 +227,12 @@
       "gold": "Oro",
       "platinum": "Platino",
       "convert": "Converti",
-      "total_gold": "Totale in oro"
+      "total_gold": "Totale in oro",
+      "mode_set": "Imposta",
+      "mode_add": "Aggiungi/Rimuovi",
+      "convert_from": "Da",
+      "convert_to": "A",
+      "convert_amount": "Quantità"
     },
     "xp": {
       "title": "Esperienza",
@@ -241,11 +247,16 @@
     "notes": {
       "title": "Note",
       "new": "Nuova nota",
-      "voice": "Nota vocale (non disponibile nella Mini App)",
+      "voice": "Nota vocale (registrata dal bot)",
       "title_label": "Titolo",
       "body_label": "Contenuto",
       "title_placeholder": "Titolo nota...",
-      "body_placeholder": "Scrivi qui..."
+      "body_placeholder": "Scrivi qui...",
+      "record_voice": "Nota vocale",
+      "recording": "Registrazione in corso...",
+      "discard_recording": "Scarta e riregistra",
+      "mic_denied": "Permesso microfono negato. Abilita l'accesso al microfono.",
+      "delete_confirm": "Eliminare \"{{title}}\"?"
     },
     "maps": {
       "title": "Mappe",

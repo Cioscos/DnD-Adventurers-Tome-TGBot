@@ -390,6 +390,14 @@ export const api = {
       request<Note[]>(`/characters/${charId}/notes/${encodeURIComponent(title)}`, {
         method: 'DELETE',
       }),
+    uploadVoice: (charId: number, title: string, audioBlob: Blob) => {
+      const fd = new FormData()
+      fd.append('title', title)
+      fd.append('file', audioBlob, 'voice.webm')
+      return requestFormData<Note[]>(`/characters/${charId}/notes/voice`, fd)
+    },
+    voiceUrl: (charId: number, filename: string) =>
+      `${BASE_URL}/characters/${charId}/notes/voice/${encodeURIComponent(filename)}?init_data=${encodeURIComponent(getInitData())}`,
   },
 
   // ---------------------------------------------------------------------------

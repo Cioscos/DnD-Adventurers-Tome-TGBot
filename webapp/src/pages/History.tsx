@@ -36,7 +36,8 @@ export default function History() {
   const EVENT_EMOJIS: Record<string, string> = {
     hp_change: '❤️', rest: '😴', ac_change: '🛡️', level_change: '⚔️',
     spell_slot_change: '🔮', spell_change: '✨', bag_change: '🎒',
-    currency_change: '💰', ability_change: '⚡', death_save: '💀', other: '📌',
+    currency_change: '💰', ability_change: '⚡', death_save: '💀',
+    condition_change: '🌀', other: '📌',
   }
 
   return (

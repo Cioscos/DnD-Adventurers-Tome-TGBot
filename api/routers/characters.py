@@ -250,9 +250,25 @@ async def update_conditions(
     session: Annotated[AsyncSession, Depends(get_db)],
 ) -> Character:
     char = await _get_owned(char_id, user_id, session, full=True)
-    current = dict(char.conditions or {})
+    old_conditions = dict(char.conditions or {})
+    current = dict(old_conditions)
     current.update(body.conditions)
     char.conditions = current
+
+    # Log changes to history
+    for cond, new_val in body.conditions.items():
+        old_val = old_conditions.get(cond, False)
+        if new_val != old_val:
+            if cond == "exhaustion":
+                _add_history(session, char.id, "condition_change",
+                             f"Spossatezza: livello {old_val} → {new_val}")
+            elif new_val:
+                _add_history(session, char.id, "condition_change",
+                             f"Condizione attivata: {cond}")
+            else:
+                _add_history(session, char.id, "condition_change",
+                             f"Condizione rimossa: {cond}")
+
     return char
 
 
