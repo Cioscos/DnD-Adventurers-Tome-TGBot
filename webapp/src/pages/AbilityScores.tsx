@@ -50,10 +50,10 @@ export default function AbilityScores() {
   if (!char) return null
 
   return (
-    <Layout title={t('character.stats.title')} backTo={`/char/${charId}`}>
+    <Layout title={t('character.stats.title')} backTo={`/char/${charId}`} group="skills" page="stats">
       <div className="grid grid-cols-2 gap-3">
         {char.ability_scores.map((score: AbilityScore) => (
-          <Card key={score.name}>
+          <Card key={score.name} variant="elevated">
             <div className="flex items-center justify-between mb-1">
               <span className="text-sm font-medium">
                 {ABILITY_LABELS[score.name] ?? '—'}{' '}
@@ -83,18 +83,18 @@ export default function AbilityScores() {
                     if (e.key === 'Escape') setEditing(null)
                   }}
                   autoFocus
-                  className="w-16 bg-white/10 rounded-lg px-2 py-1 text-center text-lg font-bold
-                             outline-none focus:ring-1 focus:ring-[var(--tg-theme-button-color)]"
+                  className="w-16 bg-dnd-surface rounded-lg px-2 py-1 text-center text-lg font-bold
+                             outline-none focus:ring-1 focus:ring-dnd-gold"
                 />
                 <button
                   onClick={() => handleSave(score.name)}
-                  className="text-green-400 font-bold"
+                  className="text-[#2ecc71] font-bold"
                 >
                   ✓
                 </button>
                 <button
                   onClick={() => setEditing(null)}
-                  className="text-red-400"
+                  className="text-[var(--dnd-danger)]"
                 >
                   ✗
                 </button>
@@ -102,7 +102,7 @@ export default function AbilityScores() {
             ) : (
               <div className="flex items-end gap-2">
                 <span className="text-4xl font-bold">{score.value}</span>
-                <span className="text-lg text-[var(--tg-theme-hint-color)] mb-1">
+                <span className="text-lg text-dnd-text-secondary mb-1">
                   {score.modifier >= 0 ? '+' : ''}{score.modifier}
                 </span>
               </div>
