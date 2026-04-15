@@ -192,6 +192,7 @@ Reusable form input replacing ~40 duplicate input patterns across pages.
 - **Touch target:** 48px min-height (12px padding × 2 + 14px font + breathing room)
 - **Validation:** Triggered on blur, not keystroke. Error clears when user starts typing.
 - **Number inputs:** Use `inputMode="numeric"` instead of `type="number"` to avoid browser spinners. Manual validation.
+- **Placeholder-only hints:** Always use `placeholder` for suggested/example values (e.g., `placeholder="Es. Palla di Fuoco"`), never `value` or `defaultValue`. Fields must start empty to prevent accidental wrong submissions. Existing pre-filled patterns in the codebase must be converted to placeholders during migration.
 - **Styling:** Background `--dnd-surface`, border transparent → `--dnd-gold-dim` on focus with `box-shadow: 0 0 0 2px rgba(gold, 0.2)`. Border-radius 12px.
 
 ### 4.6 DndButton — new
