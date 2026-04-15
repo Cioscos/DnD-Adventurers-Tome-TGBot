@@ -5,6 +5,8 @@ import { useTranslation } from 'react-i18next'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
 import Card from '@/components/Card'
+import DndInput from '@/components/DndInput'
+import DndButton from '@/components/DndButton'
 import { haptic } from '@/auth/telegram'
 
 type DamageModifiers = {
@@ -90,11 +92,13 @@ export default function Identity() {
 
   if (!char || !draft) return null
 
-  const set = (key: keyof Draft) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+  const set = (key: keyof Draft) => (v: string) =>
+    setDraft((d) => d ? { ...d, [key]: v } : d)
+
+  const setTA = (key: keyof Draft) => (e: React.ChangeEvent<HTMLTextAreaElement>) =>
     setDraft((d) => d ? { ...d, [key]: e.target.value } : d)
 
-  const inputClass = 'w-full bg-white/10 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-[var(--tg-theme-button-color)]'
-  const taClass = inputClass + ' resize-none'
+  const taClass = 'w-full px-3 py-3 min-h-[48px] rounded-xl bg-dnd-surface text-dnd-text border border-transparent outline-none transition-all duration-150 placeholder:text-dnd-text-secondary/50 focus:border-dnd-gold-dim focus:shadow-[0_0_0_2px_var(--dnd-gold-glow)] resize-none'
 
   const addDmgModifier = (type: keyof DamageModifiers) => {
     const val = dmgInputs[type].trim()
@@ -128,37 +132,31 @@ export default function Identity() {
   ]
 
   return (
-    <Layout title={t('character.identity.title')} backTo={`/char/${charId}`}>
+    <Layout title={t('character.identity.title')} backTo={`/char/${charId}`} group="character" page="identity">
       <Card>
-        <p className="text-xs text-[var(--tg-theme-hint-color)] mb-1">{t('character.identity.name')}</p>
-        <input type="text" value={draft.name} onChange={set('name')} className={inputClass} />
+        <DndInput label={t('character.identity.name')} value={draft.name} onChange={set('name')} />
       </Card>
 
       <div className="grid grid-cols-2 gap-2">
         <Card>
-          <p className="text-xs text-[var(--tg-theme-hint-color)] mb-1">{t('character.identity.race')}</p>
-          <input type="text" value={draft.race} onChange={set('race')} placeholder="—" className={inputClass} />
+          <DndInput label={t('character.identity.race')} value={draft.race} onChange={set('race')} placeholder="\u2014" />
         </Card>
         <Card>
-          <p className="text-xs text-[var(--tg-theme-hint-color)] mb-1">{t('character.identity.gender')}</p>
-          <input type="text" value={draft.gender} onChange={set('gender')} placeholder="—" className={inputClass} />
+          <DndInput label={t('character.identity.gender')} value={draft.gender} onChange={set('gender')} placeholder="\u2014" />
         </Card>
       </div>
 
       <div className="grid grid-cols-2 gap-2">
         <Card>
-          <p className="text-xs text-[var(--tg-theme-hint-color)] mb-1">{t('character.identity.background')}</p>
-          <input type="text" value={draft.background} onChange={set('background')} placeholder="—" className={inputClass} />
+          <DndInput label={t('character.identity.background')} value={draft.background} onChange={set('background')} placeholder="\u2014" />
         </Card>
         <Card>
-          <p className="text-xs text-[var(--tg-theme-hint-color)] mb-1">{t('character.identity.alignment')}</p>
-          <input type="text" value={draft.alignment} onChange={set('alignment')} placeholder="—" className={inputClass} />
+          <DndInput label={t('character.identity.alignment')} value={draft.alignment} onChange={set('alignment')} placeholder="\u2014" />
         </Card>
       </div>
 
       <Card>
-        <p className="text-xs text-[var(--tg-theme-hint-color)] mb-1">{t('character.identity.speed')}</p>
-        <input type="number" min="0" value={draft.speed} onChange={set('speed')} className={inputClass} />
+        <DndInput label={t('character.identity.speed')} type="number" min={0} value={draft.speed} onChange={set('speed')} />
       </Card>
 
       {[
@@ -168,23 +166,27 @@ export default function Identity() {
         { key: 'flaws' as const, label: t('character.identity.flaws') },
       ].map(({ key, label }) => (
         <Card key={key}>
-          <p className="text-xs text-[var(--tg-theme-hint-color)] mb-1">{label}</p>
-          <textarea value={draft[key]} onChange={set(key)} rows={2} placeholder="—" className={taClass} />
+          <p className="block text-[11px] uppercase tracking-wider mb-1 font-medium text-dnd-gold-dim">{label}</p>
+          <textarea value={draft[key] as string} onChange={setTA(key)} rows={2} placeholder="\u2014" className={taClass} />
         </Card>
       ))}
 
       <Card>
-        <p className="text-xs text-[var(--tg-theme-hint-color)] mb-1">
-          {t('character.identity.languages')} <span className="text-[var(--tg-theme-hint-color)]">(separati da virgola)</span>
-        </p>
-        <input type="text" value={draft.languages} onChange={set('languages')} placeholder="Comune, Elfico..." className={inputClass} />
+        <DndInput
+          label={`${t('character.identity.languages')} (separati da virgola)`}
+          value={draft.languages}
+          onChange={set('languages')}
+          placeholder="Comune, Elfico..."
+        />
       </Card>
 
       <Card>
-        <p className="text-xs text-[var(--tg-theme-hint-color)] mb-1">
-          {t('character.identity.proficiencies')} <span className="text-[var(--tg-theme-hint-color)]">(separati da virgola)</span>
-        </p>
-        <input type="text" value={draft.general_proficiencies} onChange={set('general_proficiencies')} placeholder="Armature leggere, Spade..." className={inputClass} />
+        <DndInput
+          label={`${t('character.identity.proficiencies')} (separati da virgola)`}
+          value={draft.general_proficiencies}
+          onChange={set('general_proficiencies')}
+          placeholder="Armature leggere, Spade..."
+        />
       </Card>
 
       {/* Damage Modifiers */}
@@ -193,53 +195,49 @@ export default function Identity() {
         <div className="space-y-4">
           {dmgSections.map(({ key, label }) => (
             <div key={key}>
-              <p className="text-xs text-[var(--tg-theme-hint-color)] mb-2">{label}</p>
+              <p className="text-xs text-dnd-text-secondary mb-2">{label}</p>
               <div className="flex flex-wrap gap-1 mb-2">
                 {draft.damageModifiers[key].map((val) => (
                   <span
                     key={val}
-                    className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/10 text-sm"
+                    className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-dnd-surface text-sm"
                   >
                     {val}
                     <button
                       onClick={() => removeDmgModifier(key, val)}
-                      className="text-red-400 hover:text-red-300 leading-none"
+                      className="text-[var(--dnd-danger)] hover:opacity-70 leading-none"
                     >
-                      ×
+                      &times;
                     </button>
                   </span>
                 ))}
               </div>
               <div className="flex gap-2">
-                <input
-                  type="text"
+                <DndInput
                   value={dmgInputs[key]}
-                  onChange={(e) => setDmgInputs((prev) => ({ ...prev, [key]: e.target.value }))}
-                  onKeyDown={(e) => e.key === 'Enter' && addDmgModifier(key)}
+                  onChange={(v) => setDmgInputs((prev) => ({ ...prev, [key]: v }))}
                   placeholder={t('character.identity.damage_type_placeholder')}
-                  className="flex-1 bg-white/10 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[var(--tg-theme-button-color)]"
+                  className="flex-1"
                 />
-                <button
+                <DndButton
                   onClick={() => addDmgModifier(key)}
-                  className="px-3 py-2 rounded-xl bg-[var(--tg-theme-button-color)] text-[var(--tg-theme-button-text-color)] font-bold"
+                  className="px-3"
                 >
                   +
-                </button>
+                </DndButton>
               </div>
             </div>
           ))}
         </div>
       </Card>
 
-      <button
+      <DndButton
         onClick={() => mutation.mutate()}
-        disabled={mutation.isPending}
-        className="w-full py-3 rounded-2xl bg-[var(--tg-theme-button-color)]
-                   text-[var(--tg-theme-button-text-color)] font-semibold
-                   disabled:opacity-40 active:opacity-80"
+        loading={mutation.isPending}
+        className="w-full"
       >
-        {mutation.isPending ? '...' : t('common.save')}
-      </button>
+        {t('common.save')}
+      </DndButton>
     </Layout>
   )
 }

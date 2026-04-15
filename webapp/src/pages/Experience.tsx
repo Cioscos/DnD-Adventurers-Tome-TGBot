@@ -5,6 +5,8 @@ import { useTranslation } from 'react-i18next'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
 import Card from '@/components/Card'
+import DndInput from '@/components/DndInput'
+import DndButton from '@/components/DndButton'
 import { haptic } from '@/auth/telegram'
 
 const XP_THRESHOLDS = [0, 300, 900, 2700, 6500, 14000, 23000, 34000, 48000, 64000, 85000, 100000, 120000, 140000, 165000, 195000, 225000, 265000, 305000, 355000]
@@ -67,97 +69,96 @@ export default function Experience() {
   const quickAmounts = [50, 100, 200, 500]
 
   return (
-    <Layout title={t('character.xp.title')} backTo={`/char/${charId}`}>
+    <Layout title={t('character.xp.title')} backTo={`/char/${charId}`} group="character" page="xp">
       {/* Level-up notification for multiclass characters */}
       {levelUpAvailable && (
-        <div className="rounded-2xl bg-yellow-500/20 border border-yellow-500/40 px-4 py-3 text-sm text-yellow-300">
-          ⬆️ {t('character.xp.level_up_available')}
+        <div className="rounded-2xl bg-[var(--dnd-gold-glow)] border border-dnd-gold-dim/40 px-4 py-3 text-sm text-dnd-gold">
+          {t('character.xp.level_up_available')}
         </div>
       )}
 
       {/* Info for single-class characters */}
       {isSingleClass && (
-        <p className="text-xs text-[var(--tg-theme-hint-color)] text-center px-2">
+        <p className="text-xs text-dnd-text-secondary text-center px-2">
           {t('character.xp.single_class_synced')}
         </p>
       )}
 
-      <Card>
+      <Card variant="elevated">
         <div className="text-center">
-          <p className="text-sm text-[var(--tg-theme-hint-color)] mb-1">
+          <p className="text-sm text-dnd-text-secondary mb-1">
             {t('character.xp.level', { level })}
           </p>
-          <p className="text-5xl font-bold text-yellow-400">⭐ {xp.toLocaleString()}</p>
-          <p className="text-sm text-[var(--tg-theme-hint-color)] mt-1">{t('character.xp.current')}</p>
+          <p className="text-5xl font-bold text-dnd-gold">{xp.toLocaleString()}</p>
+          <p className="text-sm text-dnd-text-secondary mt-1">{t('character.xp.current')}</p>
         </div>
 
         {nextThreshold && (
           <div className="mt-4">
-            <div className="flex justify-between text-xs text-[var(--tg-theme-hint-color)] mb-1">
+            <div className="flex justify-between text-xs text-dnd-text-secondary mb-1">
               <span>Liv. {level}</span>
               <span>{xpToNext.toLocaleString()} XP al Liv. {level + 1}</span>
             </div>
-            <div className="w-full bg-white/10 rounded-full h-2">
+            <div className="w-full bg-dnd-surface rounded-full h-2">
               <div
-                className="bg-yellow-400 h-2 rounded-full transition-all"
+                className="bg-dnd-gold h-2 rounded-full transition-all"
                 style={{ width: `${progress}%` }}
               />
             </div>
-            <p className="text-xs text-right text-[var(--tg-theme-hint-color)] mt-1">{progress}%</p>
+            <p className="text-xs text-right text-dnd-text-secondary mt-1">{progress}%</p>
           </div>
         )}
       </Card>
 
       {/* Mode toggle */}
       <div className="flex gap-2">
-        <button
+        <DndButton
+          variant={!setMode ? 'primary' : 'secondary'}
           onClick={() => setSetMode(false)}
-          className={`flex-1 py-2 rounded-xl text-sm font-medium
-            ${!setMode ? 'bg-[var(--tg-theme-button-color)] text-[var(--tg-theme-button-text-color)]' : 'bg-white/10'}`}
+          className="flex-1"
         >
           + {t('character.xp.add')}
-        </button>
-        <button
+        </DndButton>
+        <DndButton
+          variant={setMode ? 'primary' : 'secondary'}
           onClick={() => setSetMode(true)}
-          className={`flex-1 py-2 rounded-xl text-sm font-medium
-            ${setMode ? 'bg-[var(--tg-theme-button-color)] text-[var(--tg-theme-button-text-color)]' : 'bg-white/10'}`}
+          className="flex-1"
         >
           = Imposta
-        </button>
+        </DndButton>
       </div>
 
       <Card>
         <div className="flex gap-3">
-          <input
+          <DndInput
             type="number"
-            min="0"
+            min={0}
             value={addValue}
-            onChange={(e) => setAddValue(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleApply()}
+            onChange={setAddValue}
             placeholder="XP"
-            className="flex-1 bg-white/10 rounded-xl px-3 py-3 text-xl font-bold text-center
-                       outline-none focus:ring-2 focus:ring-[var(--tg-theme-button-color)]"
+            className="flex-1"
           />
-          <button
+          <DndButton
             onClick={handleApply}
-            disabled={!addValue || mutation.isPending}
-            className="px-5 py-3 rounded-xl bg-[var(--tg-theme-button-color)]
-                       text-[var(--tg-theme-button-text-color)] font-semibold disabled:opacity-40"
+            disabled={!addValue}
+            loading={mutation.isPending}
+            className="px-5"
           >
-            {mutation.isPending ? '...' : '✓'}
-          </button>
+            &#x2713;
+          </DndButton>
         </div>
       </Card>
 
       <div className="grid grid-cols-4 gap-2">
         {quickAmounts.map((n) => (
-          <button
+          <DndButton
             key={n}
+            variant="secondary"
             onClick={() => mutation.mutate({ add: n })}
-            className="py-2 rounded-xl bg-white/10 text-sm font-medium active:opacity-70"
+            className="py-2"
           >
             +{n}
-          </button>
+          </DndButton>
         ))}
       </div>
     </Layout>
