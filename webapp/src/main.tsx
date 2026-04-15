@@ -5,11 +5,19 @@ import App from './App'
 import './index.css'
 import './i18n'
 
-// Signal Telegram that the Mini App is ready. Reading from window directly
-// avoids the stale-capture issue with the module-level `twa` constant in
-// telegram.ts (Telegram may inject WebApp after the module is first evaluated).
+// Signal Telegram that the Mini App is ready
 window.Telegram?.WebApp?.ready()
 window.Telegram?.WebApp?.expand()
+
+// Theme detection: apply .light class if Telegram reports light mode
+function applyTheme() {
+  const scheme = window.Telegram?.WebApp?.colorScheme
+  document.documentElement.classList.toggle('light', scheme === 'light')
+}
+applyTheme()
+
+// Listen for live theme changes (user toggles dark/light in Telegram)
+window.Telegram?.WebApp?.onEvent?.('themeChanged', applyTheme)
 
 const queryClient = new QueryClient({
   defaultOptions: {

@@ -3,14 +3,54 @@
 @tailwind utilities;
 
 :root {
-  /* Fallback colors when not in Telegram */
-  --tg-theme-bg-color: #1c1c1e;
-  --tg-theme-text-color: #ffffff;
-  --tg-theme-hint-color: #8e8e93;
-  --tg-theme-link-color: #0a84ff;
-  --tg-theme-button-color: #0a84ff;
-  --tg-theme-button-text-color: #ffffff;
-  --tg-theme-secondary-bg-color: #2c2c2e;
+  /* D&D "Pergamena & Oro" design tokens — Dark mode (default) */
+  --dnd-bg: #1a1614;
+  --dnd-surface: #2a2320;
+  --dnd-surface-elevated: #352d28;
+  --dnd-gold: #d4a847;
+  --dnd-gold-dim: #8b7335;
+  --dnd-gold-glow: rgba(212, 168, 71, 0.15);
+  --dnd-parchment: #f4e8c1;
+  --dnd-text: #e8e0d4;
+  --dnd-text-secondary: #9a8e7f;
+  --dnd-danger: #c0392b;
+  --dnd-success: #27ae60;
+  --dnd-arcane: #8e44ad;
+  --dnd-info: #2980b9;
+
+  /* Keep Telegram fallbacks pointing to D&D tokens so old references work during migration */
+  --tg-theme-bg-color: var(--dnd-bg);
+  --tg-theme-text-color: var(--dnd-text);
+  --tg-theme-hint-color: var(--dnd-text-secondary);
+  --tg-theme-link-color: var(--dnd-gold);
+  --tg-theme-button-color: var(--dnd-gold);
+  --tg-theme-button-text-color: var(--dnd-bg);
+  --tg-theme-secondary-bg-color: var(--dnd-surface);
+}
+
+/* Light mode — activated via .light class on <html> */
+.light {
+  --dnd-bg: #f4e8c1;
+  --dnd-surface: #efe0b8;
+  --dnd-surface-elevated: #fff8e7;
+  --dnd-gold: #b8922e;
+  --dnd-gold-dim: #c9a84c;
+  --dnd-gold-glow: rgba(122, 92, 30, 0.1);
+  --dnd-parchment: #fff8e7;
+  --dnd-text: #3a2e1e;
+  --dnd-text-secondary: #8a7a5a;
+  --dnd-danger: #a93226;
+  --dnd-success: #1e8449;
+  --dnd-arcane: #7d3c98;
+  --dnd-info: #2471a3;
+
+  --tg-theme-bg-color: var(--dnd-bg);
+  --tg-theme-text-color: var(--dnd-text);
+  --tg-theme-hint-color: var(--dnd-text-secondary);
+  --tg-theme-link-color: var(--dnd-gold);
+  --tg-theme-button-color: var(--dnd-gold);
+  --tg-theme-button-text-color: var(--dnd-parchment);
+  --tg-theme-secondary-bg-color: var(--dnd-surface);
 }
 
 html,
@@ -31,20 +71,31 @@ body,
 
 /* Hide scrollbar while keeping scroll behaviour */
 .scrollbar-hide {
-  -ms-overflow-style: none; /* IE / Edge */
-  scrollbar-width: none;    /* Firefox */
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 .scrollbar-hide::-webkit-scrollbar {
-  display: none;            /* Chrome / Safari / Android WebView */
+  display: none;
 }
 
 body {
-  background-color: var(--tg-theme-bg-color);
-  color: var(--tg-theme-text-color);
+  background-color: var(--dnd-bg);
+  color: var(--dnd-text);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   margin: 0;
   padding: 0;
   min-height: 100vh;
+}
+
+/* ── Animations ── */
+
+/* Layout content fade-in */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.animate-fade-in {
+  animation: fadeIn 150ms ease forwards;
 }
 
 /* Spell detail accordion fade-in */
@@ -56,6 +107,53 @@ body {
   animation: spellFadeIn 150ms ease forwards;
 }
 
+/* Modal entry */
+@keyframes modalEnter {
+  from { opacity: 0; transform: scale(0.9); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.animate-modal-enter {
+  animation: modalEnter 150ms ease-out forwards;
+}
+
+/* HP critical pulse */
+@keyframes pulseDanger {
+  0%, 100% { box-shadow: 0 0 6px rgba(192, 57, 43, 0.3); }
+  50%      { box-shadow: 0 0 14px rgba(192, 57, 43, 0.6); }
+}
+.animate-pulse-danger {
+  animation: pulseDanger 2s ease-in-out infinite;
+}
+
+/* Critical roll gold pulse (plays 3 times then stops) */
+@keyframes pulseGold {
+  0%, 100% { box-shadow: 0 0 15px rgba(212, 168, 71, 0.3); }
+  50%      { box-shadow: 0 0 30px rgba(212, 168, 71, 0.6); }
+}
+.animate-pulse-gold {
+  animation: pulseGold 1s ease-in-out 3;
+}
+
+/* Inspiration shimmer */
+@keyframes shimmer {
+  0%, 100% { opacity: 0.6; filter: drop-shadow(0 0 3px var(--dnd-gold)); }
+  50%      { opacity: 1; filter: drop-shadow(0 0 8px var(--dnd-gold)); }
+}
+.animate-shimmer {
+  animation: shimmer 2s ease-in-out infinite;
+}
+
+/* Skeleton shimmer */
+@keyframes shimmerBg {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.animate-skeleton {
+  background: linear-gradient(90deg, var(--dnd-surface) 25%, var(--dnd-surface-elevated) 50%, var(--dnd-surface) 75%);
+  background-size: 200% 100%;
+  animation: shimmerBg 1.5s infinite;
+}
+
 /* Scrollbar styling */
 ::-webkit-scrollbar {
   width: 4px;
@@ -64,6 +162,6 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--tg-theme-hint-color);
+  background: var(--dnd-text-secondary);
   border-radius: 2px;
 }
