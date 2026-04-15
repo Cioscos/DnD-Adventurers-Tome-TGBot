@@ -1,4 +1,5 @@
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
+import ModalProvider from './components/ModalProvider'
 import CharacterSelect from './pages/CharacterSelect'
 import CharacterMain from './pages/CharacterMain'
 import HP from './pages/HP'
@@ -24,6 +25,7 @@ import Settings from './pages/Settings'
 export default function App() {
   return (
     <HashRouter>
+      <ModalProvider>
       <Routes>
         <Route path="/" element={<CharacterSelect />} />
         <Route path="/char/:id" element={<CharacterMain />} />
@@ -48,6 +50,7 @@ export default function App() {
         <Route path="/char/:id/settings" element={<Settings />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      </ModalProvider>
     </HashRouter>
   )
 }
