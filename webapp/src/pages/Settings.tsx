@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
 import Card from '@/components/Card'
+import DndButton from '@/components/DndButton'
 import { haptic } from '@/auth/telegram'
 import { useCharacterStore } from '@/store/characterStore'
 
@@ -60,8 +61,8 @@ export default function Settings() {
               onClick={() => updateMutation.mutate({ ...settings, spell_slots_mode: mode })}
               className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all
                 ${slotsMode === mode
-                  ? 'bg-[var(--tg-theme-button-color)] text-[var(--tg-theme-button-text-color)]'
-                  : 'bg-white/10'}`}
+                  ? 'bg-dnd-gold text-dnd-bg'
+                  : 'bg-dnd-surface'}`}
             >
               {t(`character.settings.mode_${mode}`)}
             </button>
@@ -72,12 +73,9 @@ export default function Settings() {
       <Card>
         <div className="flex items-center justify-between">
           <p className="font-medium">{t('character.settings.language')}</p>
-          <button
-            onClick={toggleLanguage}
-            className="px-4 py-2 rounded-xl bg-white/10 font-medium"
-          >
+          <DndButton variant="secondary" onClick={toggleLanguage}>
             {locale === 'it' ? '🇮🇹 Italiano' : '🇬🇧 English'}
-          </button>
+          </DndButton>
         </div>
       </Card>
 
@@ -85,7 +83,7 @@ export default function Settings() {
         <div className="flex items-center justify-between gap-3">
           <div className="flex-1">
             <p className="font-medium">🎯 {t('character.settings.party_active')}</p>
-            <p className="text-xs text-[var(--tg-theme-hint-color)] mt-0.5">
+            <p className="text-xs text-dnd-text-secondary mt-0.5">
               {t('character.settings.party_active_hint')}
             </p>
           </div>
