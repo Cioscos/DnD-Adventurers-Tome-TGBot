@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
 import Card from '@/components/Card'
+import ScrollArea from '@/components/ScrollArea'
 import RollResultModal, { type RollResult } from '@/components/RollResultModal'
 import { haptic } from '@/auth/telegram'
 
@@ -111,98 +112,100 @@ export default function Skills() {
   const passivePerception = 10 + perceptionBonus
 
   return (
-    <Layout title={t('character.skills.title')} backTo={`/char/${charId}`}>
+    <Layout title={t('character.skills.title')} backTo={`/char/${charId}`} group="skills" page="skills">
       <Card>
         <div className="flex justify-between items-center">
-          <p className="text-sm text-[var(--tg-theme-hint-color)]">
+          <p className="text-sm text-dnd-text-secondary">
             {t('character.skills.prof_bonus')}: <span className="font-bold text-white">+{pb}</span>
           </p>
-          <p className="text-sm text-[var(--tg-theme-hint-color)]">
+          <p className="text-sm text-dnd-text-secondary">
             {t('character.skills.passive_perception')}: <span className="font-bold text-white">{passivePerception}</span>
           </p>
         </div>
       </Card>
 
-      <div className="space-y-4">
-        {ABILITY_GROUPS.map((group) => {
-          const groupSkills = SKILLS.filter((s) => s.ability === group.ability)
-          if (groupSkills.length === 0) return null
+      <ScrollArea>
+        <div className="space-y-4">
+          {ABILITY_GROUPS.map((group) => {
+            const groupSkills = SKILLS.filter((s) => s.ability === group.ability)
+            if (groupSkills.length === 0) return null
 
-          return (
-            <div key={group.ability}>
-              {/* Section header */}
-              <div className="flex items-center gap-2 px-1 mb-1.5">
-                <span className="text-base leading-none">{group.emoji}</span>
-                <span className="text-xs font-semibold uppercase tracking-wider text-[var(--tg-theme-hint-color)]">
-                  {t(`character.stats.${group.ability}`)}
-                </span>
-                <div className="flex-1 h-px bg-white/10" />
+            return (
+              <div key={group.ability}>
+                {/* Section header */}
+                <div className="flex items-center gap-2 px-1 mb-1.5">
+                  <span className="text-base leading-none">{group.emoji}</span>
+                  <span className="text-xs font-semibold uppercase tracking-wider text-dnd-text-secondary">
+                    {t(`character.stats.${group.ability}`)}
+                  </span>
+                  <div className="flex-1 h-px bg-dnd-surface" />
+                </div>
+
+                <div className="space-y-1">
+                  {groupSkills.map((skill) => {
+                    const level = getLevel(skills[skill.key])
+                    const abilMod = abilityModifier(skill.ability)
+                    const bonus = abilMod + (level === 'expert' ? 2 * pb : level ? pb : 0)
+                    const isExpert = level === 'expert'
+                    const isProficient = level === true
+
+                    return (
+                      <div
+                        key={skill.key}
+                        className="flex items-center gap-2 px-3 py-2.5 rounded-xl
+                                   bg-dnd-surface"
+                      >
+                        {/* Proficiency toggle */}
+                        <button
+                          onClick={() => toggle(skill.key)}
+                          className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0
+                            ${isExpert
+                              ? 'bg-yellow-500 border-yellow-500'
+                              : isProficient
+                                ? 'bg-dnd-gold border-dnd-gold'
+                                : 'border-white/30'}`}
+                        >
+                          {isExpert && <span className="text-[10px] text-white font-bold leading-none">★</span>}
+                          {isProficient && <span className="text-[10px] text-white font-bold leading-none">✓</span>}
+                        </button>
+
+                        {/* Name */}
+                        <button
+                          onClick={() => toggle(skill.key)}
+                          className="flex-1 text-left text-sm font-medium active:opacity-70"
+                        >
+                          {t(`character.skills.${skill.key}`)}
+                        </button>
+
+                        {/* Bonus */}
+                        <span className={`text-sm font-bold w-8 text-right shrink-0 tabular-nums
+                          ${bonus >= 0 ? 'text-[#2ecc71]' : 'text-[var(--dnd-danger)]'}`}>
+                          {bonus >= 0 ? '+' : ''}{bonus}
+                        </span>
+
+                        {/* Roll button */}
+                        <button
+                          onClick={() => rollMutation.mutate(skill.key)}
+                          disabled={rollMutation.isPending}
+                          className="shrink-0 w-9 h-9 rounded-xl
+                                     bg-dnd-gold/15
+                                     flex items-center justify-center text-base
+                                     active:bg-dnd-gold/30
+                                     active:opacity-60 disabled:opacity-30
+                                     transition-colors"
+                          title={t('character.skills.roll')}
+                        >
+                          🎲
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
-
-              <div className="space-y-1">
-                {groupSkills.map((skill) => {
-                  const level = getLevel(skills[skill.key])
-                  const abilMod = abilityModifier(skill.ability)
-                  const bonus = abilMod + (level === 'expert' ? 2 * pb : level ? pb : 0)
-                  const isExpert = level === 'expert'
-                  const isProficient = level === true
-
-                  return (
-                    <div
-                      key={skill.key}
-                      className="flex items-center gap-2 px-3 py-2.5 rounded-xl
-                                 bg-[var(--tg-theme-secondary-bg-color)]"
-                    >
-                      {/* Proficiency toggle */}
-                      <button
-                        onClick={() => toggle(skill.key)}
-                        className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0
-                          ${isExpert
-                            ? 'bg-yellow-500 border-yellow-500'
-                            : isProficient
-                              ? 'bg-[var(--tg-theme-button-color)] border-[var(--tg-theme-button-color)]'
-                              : 'border-white/30'}`}
-                      >
-                        {isExpert && <span className="text-[10px] text-white font-bold leading-none">★</span>}
-                        {isProficient && <span className="text-[10px] text-white font-bold leading-none">✓</span>}
-                      </button>
-
-                      {/* Name */}
-                      <button
-                        onClick={() => toggle(skill.key)}
-                        className="flex-1 text-left text-sm font-medium active:opacity-70"
-                      >
-                        {t(`character.skills.${skill.key}`)}
-                      </button>
-
-                      {/* Bonus */}
-                      <span className={`text-sm font-bold w-8 text-right shrink-0 tabular-nums
-                        ${bonus >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                        {bonus >= 0 ? '+' : ''}{bonus}
-                      </span>
-
-                      {/* Roll button */}
-                      <button
-                        onClick={() => rollMutation.mutate(skill.key)}
-                        disabled={rollMutation.isPending}
-                        className="shrink-0 w-9 h-9 rounded-xl
-                                   bg-[var(--tg-theme-button-color)]/15
-                                   flex items-center justify-center text-base
-                                   active:bg-[var(--tg-theme-button-color)]/30
-                                   active:opacity-60 disabled:opacity-30
-                                   transition-colors"
-                        title={t('character.skills.roll')}
-                      >
-                        🎲
-                      </button>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          )
-        })}
-      </div>
+            )
+          })}
+        </div>
+      </ScrollArea>
 
       {rollResult && (
         <RollResultModal

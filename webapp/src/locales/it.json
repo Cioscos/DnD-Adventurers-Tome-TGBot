@@ -41,7 +41,15 @@
       "maps": "Mappe",
       "dice": "Dadi",
       "identity": "Identità",
-      "settings": "Impostazioni"
+      "settings": "Impostazioni",
+      "sections": {
+        "combat": "Combattimento",
+        "magic": "Magia",
+        "skills": "Abilità",
+        "equipment": "Equipaggiamento",
+        "character": "Personaggio",
+        "tools": "Strumenti"
+      }
     },
     "hp": {
       "title": "Punti Ferita",
@@ -251,6 +259,7 @@
       "level": "Livello {{level}}",
       "next_level": "Prossimo livello",
       "xp_to_next": "XP al prossimo livello",
+      "level_abbr": "Liv.",
       "level_up_available": "Livello disponibile! Vai nella pagina Classe per distribuire il livello.",
       "single_class_synced": "Il livello della classe viene aggiornato automaticamente con gli XP."
     },
@@ -419,6 +428,22 @@
       "custom_class": "Personalizzata",
       "custom_class_name": "Nome classe",
       "hit_die": "Dado vita"
+    }
+  },
+  "dnd": {
+    "classes": {
+      "barbarian": "Barbaro",
+      "bard": "Bardo",
+      "cleric": "Chierico",
+      "druid": "Druido",
+      "fighter": "Guerriero",
+      "rogue": "Ladro",
+      "wizard": "Mago",
+      "monk": "Monaco",
+      "paladin": "Paladino",
+      "ranger": "Ranger",
+      "sorcerer": "Stregone",
+      "warlock": "Warlock"
     }
   }
 }

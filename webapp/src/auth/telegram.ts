@@ -54,6 +54,8 @@ interface TelegramWebApp {
     onClick(callback: () => void): void
     offClick(callback: () => void): void
   }
+  onEvent(eventType: string, callback: () => void): void
+  offEvent(eventType: string, callback: () => void): void
   ready(): void
   expand(): void
   close(): void

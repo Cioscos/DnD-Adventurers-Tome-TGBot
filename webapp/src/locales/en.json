@@ -41,7 +41,15 @@
       "maps": "Maps",
       "dice": "Dice",
       "identity": "Identity",
-      "settings": "Settings"
+      "settings": "Settings",
+      "sections": {
+        "combat": "Combat",
+        "magic": "Magic",
+        "skills": "Skills",
+        "equipment": "Equipment",
+        "character": "Character",
+        "tools": "Tools"
+      }
     },
     "hp": {
       "title": "Hit Points",
@@ -251,6 +259,7 @@
       "level": "Level {{level}}",
       "next_level": "Next level",
       "xp_to_next": "XP to next level",
+      "level_abbr": "Lv.",
       "level_up_available": "Level up available! Go to the Class page to assign the level.",
       "single_class_synced": "Class level updates automatically with XP."
     },
@@ -419,6 +428,22 @@
       "custom_class": "Custom",
       "custom_class_name": "Class name",
       "hit_die": "Hit die"
+    }
+  },
+  "dnd": {
+    "classes": {
+      "barbarian": "Barbarian",
+      "bard": "Bard",
+      "cleric": "Cleric",
+      "druid": "Druid",
+      "fighter": "Fighter",
+      "rogue": "Rogue",
+      "wizard": "Wizard",
+      "monk": "Monk",
+      "paladin": "Paladin",
+      "ranger": "Ranger",
+      "sorcerer": "Sorcerer",
+      "warlock": "Warlock"
     }
   }
 }

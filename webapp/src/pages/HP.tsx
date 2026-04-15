@@ -2,31 +2,17 @@ import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { api, type DeathSaveRollResult } from '@/api/client'
+import { api, type DeathSaveRollResult, type ConcentrationSaveResult, type HitDiceSpendResult } from '@/api/client'
 import Layout from '@/components/Layout'
 import Card from '@/components/Card'
 import HPBar from '@/components/HPBar'
+import DndInput from '@/components/DndInput'
 import { haptic } from '@/auth/telegram'
+import HpOperationForm from '@/pages/hp/HpOperationForm'
+import DeathSaves from '@/pages/hp/DeathSaves'
+import HitDiceModal from '@/pages/hp/HitDiceModal'
 
 type HPOp = 'damage' | 'heal' | 'set_max' | 'set_current' | 'set_temp'
-
-type HitDiceSpendResult = {
-  rolls: number[]
-  con_bonus: number
-  healed: number
-  new_current_hp: number
-}
-
-type ConcentrationSaveResult = {
-  die: number
-  bonus: number
-  total: number
-  dc: number
-  success: boolean
-  lost_concentration: boolean
-  is_critical: boolean
-  is_fumble: boolean
-}
 
 export default function HP() {
   const { id } = useParams<{ id: string }>()
@@ -38,7 +24,6 @@ export default function HP() {
 
   // Short rest hit dice modal
   const [showShortRest, setShowShortRest] = useState(false)
-  const [hitDiceCounts, setHitDiceCounts] = useState<Record<number, number>>({})
   const [hitDiceResult, setHitDiceResult] = useState<HitDiceSpendResult | null>(null)
 
   // Death save roll result
@@ -129,29 +114,21 @@ export default function HP() {
   const isConcentrating = !!char.concentrating_spell_id
   const classes = char.classes ?? []
 
-  const ops: { key: HPOp; label: string; color: string }[] = [
-    { key: 'damage',      label: t('character.hp.damage'),      color: 'bg-red-500/80' },
-    { key: 'heal',        label: t('character.hp.heal'),         color: 'bg-green-500/80' },
-    { key: 'set_current', label: t('character.hp.set_current'),  color: 'bg-blue-500/80' },
-    { key: 'set_max',     label: t('character.hp.set_max'),      color: 'bg-orange-500/80' },
-    { key: 'set_temp',    label: t('character.hp.set_temp'),     color: 'bg-cyan-500/80' },
-  ]
-
   return (
-    <Layout title={t('character.hp.title')} backTo={`/char/${charId}`}>
+    <Layout title={t('character.hp.title')} backTo={`/char/${charId}`} group="combat" page="hp">
       {/* HP display */}
-      <Card>
+      <Card variant="elevated">
         <div className="flex justify-between items-start mb-3">
           <div>
             <p className="text-4xl font-bold">
               {char.current_hit_points}
-              <span className="text-xl text-[var(--tg-theme-hint-color)]">/{char.hit_points}</span>
+              <span className="text-xl text-dnd-text-secondary">/{char.hit_points}</span>
             </p>
             {char.temp_hp > 0 && (
-              <p className="text-sm text-blue-400">+{char.temp_hp} temporanei</p>
+              <p className="text-sm text-dnd-info">+{char.temp_hp} temporanei</p>
             )}
           </div>
-          <div className="text-right text-sm text-[var(--tg-theme-hint-color)]">
+          <div className="text-right text-sm text-dnd-text-secondary">
             <p>{t('character.hp.max')}: {char.hit_points}</p>
             {char.temp_hp > 0 && <p>{t('character.hp.temp')}: {char.temp_hp}</p>}
           </div>
@@ -159,21 +136,20 @@ export default function HP() {
         <HPBar current={char.current_hit_points} max={char.hit_points} temp={char.temp_hp} />
       </Card>
 
-      {/* Concentration save banner (shown when concentrating) */}
+      {/* Concentration save banner */}
       {isConcentrating && (
-        <Card>
-          <p className="text-sm text-purple-300 font-medium mb-2">
-            🔮 {t('character.hp.concentration_active')}
+        <Card variant="elevated">
+          <p className="text-sm text-[#a569bd] font-medium mb-2">
+            {'\uD83D\uDD2E'} {t('character.hp.concentration_active')}
           </p>
           <div className="flex gap-2 items-center">
-            <input
+            <DndInput
               type="number"
-              min="0"
+              min={0}
               value={concDamageInput}
-              onChange={(e) => setConcDamageInput(e.target.value)}
+              onChange={setConcDamageInput}
               placeholder={t('character.spells.conc_save_damage_placeholder')}
-              className="flex-1 bg-white/10 rounded-xl px-3 py-1.5 text-sm outline-none
-                         focus:ring-2 focus:ring-purple-500"
+              className="flex-1"
             />
             <button
               onClick={() => {
@@ -181,7 +157,7 @@ export default function HP() {
                 if (!isNaN(dmg) && dmg >= 0) concSaveMutation.mutate(dmg)
               }}
               disabled={concSaveMutation.isPending || !concDamageInput}
-              className="px-3 py-1.5 rounded-xl bg-purple-500/30 text-purple-300 text-sm font-medium
+              className="px-3 py-1.5 rounded-xl bg-dnd-arcane/20 text-[#a569bd] text-sm font-medium
                          disabled:opacity-30 active:opacity-70"
             >
               {concSaveMutation.isPending ? '...' : t('character.spells.conc_save_btn')}
@@ -190,220 +166,57 @@ export default function HP() {
         </Card>
       )}
 
-      {/* Op selector */}
-      <div className="w-full flex flex-wrap gap-1">
-        {ops.map((op) => (
-          <button
-            key={op.key}
-            onClick={() => setActiveOp(op.key)}
-            className={`px-3 py-1.5 rounded-xl text-sm font-medium transition-all
-              ${activeOp === op.key ? op.color + ' text-white' : 'bg-white/10'}`}
-          >
-            {op.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Number input */}
-      <Card>
-        <div className="flex flex-col gap-2">
-          <input
-            type="number"
-            min="0"
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleApply()}
-            placeholder="0"
-            className="w-full bg-white/10 rounded-xl px-3 py-3 text-xl font-bold text-center
-                       outline-none focus:ring-2 focus:ring-[var(--tg-theme-button-color)]"
-          />
-          <button
-            onClick={handleApply}
-            disabled={!value || hpMutation.isPending}
-            className="w-full py-3 rounded-xl bg-[var(--tg-theme-button-color)]
-                       text-[var(--tg-theme-button-text-color)] font-semibold text-lg
-                       disabled:opacity-40 active:opacity-80"
-          >
-            {hpMutation.isPending ? '...' : '✓'}
-          </button>
-        </div>
-      </Card>
-
-      {/* Quick heal / damage shortcuts */}
-      <div className="grid grid-cols-4 gap-2">
-        {[1, 5, 10, 20].map((n) => (
-          <button
-            key={n}
-            onClick={() => {
-              hpMutation.mutate({ op: activeOp, val: n })
-              haptic.light()
-            }}
-            className="py-2 rounded-xl bg-white/10 text-sm font-medium active:opacity-70"
-          >
-            {activeOp === 'damage' ? `-${n}` : activeOp === 'heal' ? `+${n}` : String(n)}
-          </button>
-        ))}
-      </div>
+      {/* HP operation form (op selector, input, quick buttons) */}
+      <HpOperationForm
+        activeOp={activeOp}
+        setActiveOp={setActiveOp}
+        value={value}
+        setValue={setValue}
+        onApply={handleApply}
+        isPending={hpMutation.isPending}
+        hpMutate={(args) => hpMutation.mutate(args)}
+      />
 
       {/* Rest buttons */}
       <div className="grid grid-cols-2 gap-2">
         <button
           onClick={() => setShowShortRest(true)}
           disabled={restMutation.isPending}
-          className="py-3 rounded-2xl bg-blue-500/20 text-blue-300 font-medium active:opacity-70"
+          className="py-3 rounded-2xl bg-dnd-info/20 text-[#5dade2] font-medium active:opacity-70"
         >
-          🌙 {t('character.hp.short_rest')}
+          {'\uD83C\uDF19'} {t('character.hp.short_rest')}
         </button>
         <button
           onClick={() => restMutation.mutate('long')}
           disabled={restMutation.isPending}
-          className="py-3 rounded-2xl bg-purple-500/20 text-purple-300 font-medium active:opacity-70"
+          className="py-3 rounded-2xl bg-dnd-arcane/20 text-[#a569bd] font-medium active:opacity-70"
         >
-          💤 {t('character.hp.long_rest')}
+          {'\uD83D\uDCA4'} {t('character.hp.long_rest')}
         </button>
       </div>
 
       {/* Death saves (shown when HP = 0) */}
       {isDying && (
-        <Card>
-          <h3 className="font-semibold mb-3">💀 {t('character.death_saves.title')}</h3>
-          <div className="grid grid-cols-2 gap-3 mb-4">
-            <div className="text-center">
-              <p className="text-sm text-[var(--tg-theme-hint-color)] mb-1">
-                {t('character.death_saves.successes')}
-              </p>
-              <div className="flex justify-center gap-2">
-                {[0, 1, 2].map((i) => (
-                  <div
-                    key={i}
-                    className={`w-6 h-6 rounded-full border-2 ${
-                      i < (ds.successes ?? 0)
-                        ? 'bg-green-500 border-green-500'
-                        : 'border-white/30'
-                    }`}
-                  />
-                ))}
-              </div>
-            </div>
-            <div className="text-center">
-              <p className="text-sm text-[var(--tg-theme-hint-color)] mb-1">
-                {t('character.death_saves.failures')}
-              </p>
-              <div className="flex justify-center gap-2">
-                {[0, 1, 2].map((i) => (
-                  <div
-                    key={i}
-                    className={`w-6 h-6 rounded-full border-2 ${
-                      i < (ds.failures ?? 0)
-                        ? 'bg-red-500 border-red-500'
-                        : 'border-white/30'
-                    }`}
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
-          <button
-            onClick={() => deathRollMutation.mutate()}
-            disabled={deathRollMutation.isPending}
-            className="w-full py-3 rounded-xl bg-yellow-500/20 text-yellow-300 font-bold text-base
-                       active:opacity-70 disabled:opacity-40 mb-2"
-          >
-            🎲 {t('character.death_saves.roll')}
-          </button>
-          <div className="grid grid-cols-3 gap-2">
-            <button
-              onClick={() => deathMutation.mutate('success')}
-              className="py-2 rounded-xl bg-green-500/20 text-green-300 text-sm font-medium"
-            >
-              ✓ {t('character.death_saves.success')}
-            </button>
-            <button
-              onClick={() => deathMutation.mutate('failure')}
-              className="py-2 rounded-xl bg-red-500/20 text-red-300 text-sm font-medium"
-            >
-              ✗ {t('character.death_saves.failure')}
-            </button>
-            <button
-              onClick={() => deathMutation.mutate('stabilize')}
-              className="py-2 rounded-xl bg-blue-500/20 text-blue-300 text-sm font-medium"
-            >
-              💊 {t('character.death_saves.stabilize')}
-            </button>
-          </div>
-          <button
-            onClick={() => deathMutation.mutate('reset')}
-            className="w-full mt-2 py-2 rounded-xl bg-white/10 text-sm"
-          >
-            {t('character.death_saves.reset')}
-          </button>
-        </Card>
+        <DeathSaves
+          deathSaves={ds}
+          onRoll={() => deathRollMutation.mutate()}
+          onAction={(action) => deathMutation.mutate(action)}
+          isRolling={deathRollMutation.isPending}
+        />
       )}
 
       {/* Short rest modal: choose hit dice to spend */}
       {showShortRest && (
-        <div className="fixed inset-0 bg-black/60 flex items-end z-50 p-4">
-          <Card className="w-full space-y-3">
-            <h3 className="font-semibold">🌙 {t('character.hp.short_rest')}</h3>
-            <p className="text-sm text-[var(--tg-theme-hint-color)]">
-              {t('character.hp.hit_dice_spend_hint')}
-            </p>
-
-            {classes.length === 0 && (
-              <p className="text-sm text-[var(--tg-theme-hint-color)]">{t('common.none')}</p>
-            )}
-
-            {classes.map((cls) => (
-              <div key={cls.id} className="flex items-center gap-3">
-                <span className="flex-1 text-sm">
-                  {cls.class_name} (d{cls.hit_die ?? 8})
-                </span>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setHitDiceCounts((c) => ({ ...c, [cls.id]: Math.max(0, (c[cls.id] ?? 0) - 1) }))}
-                    className="w-7 h-7 rounded-lg bg-white/10 font-bold active:opacity-70"
-                  >−</button>
-                  <span className="w-6 text-center font-bold">{hitDiceCounts[cls.id] ?? 0}</span>
-                  <button
-                    onClick={() => setHitDiceCounts((c) => ({ ...c, [cls.id]: (c[cls.id] ?? 0) + 1 }))}
-                    className="w-7 h-7 rounded-lg bg-white/10 font-bold active:opacity-70"
-                  >+</button>
-                  <button
-                    onClick={() => {
-                      const count = hitDiceCounts[cls.id] ?? 0
-                      if (count > 0) hitDiceMutation.mutate({ classId: cls.id, count })
-                    }}
-                    disabled={!hitDiceCounts[cls.id] || hitDiceMutation.isPending}
-                    className="px-3 py-1 rounded-lg bg-green-500/30 text-green-300 text-sm font-medium
-                               disabled:opacity-30 active:opacity-70"
-                  >
-                    🎲
-                  </button>
-                </div>
-              </div>
-            ))}
-
-            <div className="flex gap-2 pt-1">
-              <button
-                onClick={() => {
-                  restMutation.mutate('short')
-                  setShowShortRest(false)
-                  setHitDiceCounts({})
-                }}
-                disabled={restMutation.isPending}
-                className="flex-1 py-2.5 rounded-xl bg-blue-500/30 text-blue-300 font-medium disabled:opacity-40"
-              >
-                {t('character.hp.confirm_rest')}
-              </button>
-              <button
-                onClick={() => { setShowShortRest(false); setHitDiceCounts({}) }}
-                className="flex-1 py-2.5 rounded-xl bg-white/10"
-              >
-                {t('common.cancel')}
-              </button>
-            </div>
-          </Card>
-        </div>
+        <HitDiceModal
+          classes={classes}
+          onSpend={(classId, count) => hitDiceMutation.mutate({ classId, count })}
+          onConfirmRest={() => {
+            restMutation.mutate('short')
+            setShowShortRest(false)
+          }}
+          onClose={() => setShowShortRest(false)}
+          isPending={hitDiceMutation.isPending}
+        />
       )}
 
       {/* Hit dice result modal */}
@@ -413,12 +226,13 @@ export default function HP() {
           onClick={() => setHitDiceResult(null)}
         >
           <div
-            className="rounded-2xl p-5 w-full max-w-xs text-center space-y-3 bg-green-500/20 border border-green-500/40"
+            className="rounded-2xl p-5 w-full max-w-xs text-center space-y-3
+                       bg-dnd-surface-elevated border-2 border-dnd-success animate-modal-enter"
             onClick={(e) => e.stopPropagation()}
           >
-            <p className="text-sm text-[var(--tg-theme-hint-color)]">{t('character.hp.hit_dice_result')}</p>
+            <p className="text-sm text-dnd-text-secondary">{t('character.hp.hit_dice_result')}</p>
             <p className="text-4xl font-black text-green-400">+{hitDiceResult.healed}</p>
-            <p className="text-sm text-[var(--tg-theme-hint-color)]">
+            <p className="text-sm text-dnd-text-secondary">
               [{hitDiceResult.rolls.join(', ')}] +{hitDiceResult.con_bonus} (COS)
             </p>
             <p className="text-sm">
@@ -426,8 +240,7 @@ export default function HP() {
             </p>
             <button
               onClick={() => setHitDiceResult(null)}
-              className="w-full py-2.5 rounded-xl bg-[var(--tg-theme-button-color)]
-                         text-[var(--tg-theme-button-text-color)] font-semibold"
+              className="w-full py-2.5 rounded-xl bg-dnd-gold text-dnd-bg font-semibold"
             >
               OK
             </button>
@@ -443,15 +256,16 @@ export default function HP() {
         >
           <div
             className={`rounded-2xl p-5 w-full max-w-xs text-center space-y-3
+              bg-dnd-surface-elevated border-2 animate-modal-enter
               ${deathRollResult.outcome === 'nat20'
-                ? 'bg-yellow-500/20 border border-yellow-500/40'
+                ? 'border-dnd-gold'
                 : deathRollResult.outcome === 'success'
-                  ? 'bg-green-500/20 border border-green-500/40'
-                  : 'bg-red-500/20 border border-red-500/40'}`}
+                  ? 'border-dnd-success'
+                  : 'border-[var(--dnd-danger)]'}`}
             onClick={(e) => e.stopPropagation()}
           >
-            <p className="text-sm text-[var(--tg-theme-hint-color)]">
-              💀 {t('character.death_saves.roll_result')}
+            <p className="text-sm text-dnd-text-secondary">
+              {'\uD83D\uDC80'} {t('character.death_saves.roll_result')}
             </p>
             {deathRollResult.outcome === 'nat20' && (
               <p className="text-yellow-400 font-bold text-lg">{t('character.death_saves.nat20')}</p>
@@ -488,13 +302,12 @@ export default function HP() {
                 {t('character.death_saves.dead_3_failures')}
               </p>
             )}
-            <p className="text-xs text-[var(--tg-theme-hint-color)]">
+            <p className="text-xs text-dnd-text-secondary">
               {t('character.death_saves.successes')}: {deathRollResult.successes}/3 | {t('character.death_saves.failures')}: {deathRollResult.failures}/3
             </p>
             <button
               onClick={() => setDeathRollResult(null)}
-              className="w-full py-2 rounded-xl bg-[var(--tg-theme-button-color)]
-                         text-[var(--tg-theme-button-text-color)] font-semibold"
+              className="w-full py-2 rounded-xl bg-dnd-gold text-dnd-bg font-semibold"
             >
               OK
             </button>
@@ -510,18 +323,19 @@ export default function HP() {
         >
           <div
             className={`rounded-2xl p-5 w-full max-w-xs text-center space-y-3
-              ${concSaveResult.success ? 'bg-green-500/20 border border-green-500/40' : 'bg-red-500/20 border border-red-500/40'}`}
+              bg-dnd-surface-elevated border-2 animate-modal-enter
+              ${concSaveResult.success ? 'border-dnd-success' : 'border-[var(--dnd-danger)]'}`}
             onClick={(e) => e.stopPropagation()}
           >
-            <p className="text-sm text-[var(--tg-theme-hint-color)]">
-              🔮 {t('character.spells.concentration')} — DC {concSaveResult.dc}
+            <p className="text-sm text-dnd-text-secondary">
+              {'\uD83D\uDD2E'} {t('character.spells.concentration')} — DC {concSaveResult.dc}
             </p>
-            {concSaveResult.is_critical && <p className="text-yellow-400 font-bold">✨ CRITICO!</p>}
-            {concSaveResult.is_fumble && <p className="text-red-400 font-bold">💀 FUMBLE!</p>}
+            {concSaveResult.is_critical && <p className="text-yellow-400 font-bold">{'\u2728'} CRITICO!</p>}
+            {concSaveResult.is_fumble && <p className="text-red-400 font-bold">{'\uD83D\uDC80'} FUMBLE!</p>}
             <p className={`text-4xl font-black ${concSaveResult.success ? 'text-green-400' : 'text-red-400'}`}>
               {concSaveResult.total}
             </p>
-            <p className="text-sm text-[var(--tg-theme-hint-color)]">
+            <p className="text-sm text-dnd-text-secondary">
               d20 ({concSaveResult.die}) {concSaveResult.bonus >= 0 ? '+' : ''}{concSaveResult.bonus}
             </p>
             <p className={`font-bold ${concSaveResult.success ? 'text-green-400' : 'text-red-400'}`}>
@@ -532,8 +346,7 @@ export default function HP() {
             )}
             <button
               onClick={() => setConcSaveResult(null)}
-              className="w-full py-2 rounded-xl bg-[var(--tg-theme-button-color)]
-                         text-[var(--tg-theme-button-text-color)] font-semibold"
+              className="w-full py-2 rounded-xl bg-dnd-gold text-dnd-bg font-semibold"
             >
               OK
             </button>

@@ -14,10 +14,10 @@ const CONDITIONS = [
 ]
 
 const CONDITION_EMOJIS: Record<string, string> = {
-  blinded: '👁️', charmed: '💕', deafened: '🔇', frightened: '😱',
-  grappled: '🤝', incapacitated: '💫', invisible: '👻', paralyzed: '⚡',
-  petrified: '🗿', poisoned: '🤢', prone: '⬇️', restrained: '⛓️',
-  stunned: '😵', unconscious: '💤',
+  blinded: '\ud83d\udc41\ufe0f', charmed: '\ud83d\udc95', deafened: '\ud83d\udd07', frightened: '\ud83d\ude31',
+  grappled: '\ud83e\udd1d', incapacitated: '\ud83d\udcab', invisible: '\ud83d\udc7b', paralyzed: '\u26a1',
+  petrified: '\ud83d\uddff', poisoned: '\ud83e\udd22', prone: '\u2b07\ufe0f', restrained: '\u26d3\ufe0f',
+  stunned: '\ud83d\ude35', unconscious: '\ud83d\udca4',
 }
 
 export default function Conditions() {
@@ -71,10 +71,10 @@ export default function Conditions() {
   const activeCount = CONDITIONS.filter((c) => conditions[c]).length + (currentExhaustion > 0 ? 1 : 0)
 
   return (
-    <Layout title={t('character.conditions.title')} backTo={`/char/${charId}`}>
+    <Layout title={t('character.conditions.title')} backTo={`/char/${charId}`} group="character" page="conditions">
       {activeCount === 0 && (
         <Card>
-          <p className="text-center text-[var(--tg-theme-hint-color)]">
+          <p className="text-center text-dnd-text-secondary">
             {t('character.conditions.none_active')}
           </p>
         </Card>
@@ -83,8 +83,8 @@ export default function Conditions() {
       {/* Exhaustion */}
       <Card>
         <div className="flex items-center justify-between mb-2">
-          <span className="font-medium">🥵 {t('character.conditions.exhaustion_condition')}</span>
-          <span className={`text-lg font-bold ${currentExhaustion > 0 ? 'text-orange-400' : 'text-[var(--tg-theme-hint-color)]'}`}>
+          <span className="font-medium">{'\ud83e\udd75'} {t('character.conditions.exhaustion_condition')}</span>
+          <span className={`text-lg font-bold ${currentExhaustion > 0 ? 'text-orange-400' : 'text-dnd-text-secondary'}`}>
             {currentExhaustion}/6
           </span>
         </div>
@@ -96,7 +96,7 @@ export default function Conditions() {
               className={`flex-1 py-1.5 rounded-lg text-sm font-bold transition-all
                 ${(exhaustionLevel ?? currentExhaustion) === level
                   ? 'bg-orange-500 text-white'
-                  : 'bg-white/10 text-[var(--tg-theme-hint-color)]'}`}
+                  : 'bg-dnd-surface text-dnd-text-secondary'}`}
             >
               {level}
             </button>
@@ -114,8 +114,8 @@ export default function Conditions() {
               onClick={() => toggle(cond)}
               className={`flex items-center gap-2 px-3 py-3 rounded-xl text-left transition-all
                 ${active
-                  ? 'bg-red-500/30 border border-red-500/60 text-white'
-                  : 'bg-[var(--tg-theme-secondary-bg-color)] border border-transparent'}`}
+                  ? 'bg-[var(--dnd-danger)]/30 border border-[var(--dnd-danger)]/60 text-white'
+                  : 'bg-dnd-surface border border-transparent'}`}
             >
               <span className="text-xl">{CONDITION_EMOJIS[cond]}</span>
               <span className="text-sm font-medium leading-tight">

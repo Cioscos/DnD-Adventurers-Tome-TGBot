@@ -1,18 +1,27 @@
+import React from 'react'
+
 interface CardProps {
   children: React.ReactNode
   className?: string
+  variant?: 'default' | 'elevated'
   onClick?: (e: React.MouseEvent<HTMLDivElement>) => void
 }
 
-export default function Card({ children, className = '', onClick }: CardProps) {
-  const base =
-    'rounded-2xl p-4 transition-opacity active:opacity-70'
-  const bg = 'bg-[var(--tg-theme-secondary-bg-color)]'
+function CardInner({ children, className = '', variant = 'default', onClick }: CardProps) {
+  const base = 'rounded-2xl p-4 transition-all duration-150 active:opacity-70'
   const cursor = onClick ? 'cursor-pointer' : ''
 
+  const variantStyles =
+    variant === 'elevated'
+      ? 'bg-dnd-surface-elevated border border-dnd-gold-dim shadow-dnd-glow'
+      : 'bg-dnd-surface'
+
   return (
-    <div className={`${base} ${bg} ${cursor} ${className}`} onClick={onClick}>
+    <div className={`${base} ${variantStyles} ${cursor} ${className}`} onClick={onClick}>
       {children}
     </div>
   )
 }
+
+const Card = React.memo(CardInner)
+export default Card

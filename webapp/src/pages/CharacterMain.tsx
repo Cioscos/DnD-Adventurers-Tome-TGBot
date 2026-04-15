@@ -4,28 +4,77 @@ import { useTranslation } from 'react-i18next'
 import { api } from '@/api/client'
 import HPBar from '@/components/HPBar'
 import Card from '@/components/Card'
+import SectionHeader from '@/components/SectionHeader'
+import Skeleton from '@/components/Skeleton'
 import { haptic } from '@/auth/telegram'
+import {
+  Heart, Shield, ShieldAlert, Sparkles, Gem,
+  BarChart3, Target, Zap, Swords, Coins,
+  User, Scroll, Star, CircleDot, Dices,
+  NotebookPen, Map, BookOpen, ChevronLeft, Settings,
+} from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 
-const MENU_ITEMS = [
-  { key: 'hp',         emoji: '❤️',  path: 'hp' },
-  { key: 'ac',         emoji: '🛡️',  path: 'ac' },
-  { key: 'stats',      emoji: '💪',  path: 'stats' },
-  { key: 'skills',     emoji: '🎯',  path: 'skills' },
-  { key: 'saves',      emoji: '🎲',  path: 'saves' },
-  { key: 'spells',     emoji: '✨',  path: 'spells' },
-  { key: 'slots',      emoji: '🔮',  path: 'slots' },
-  { key: 'inventory',  emoji: '🎒',  path: 'inventory' },
-  { key: 'currency',   emoji: '💰',  path: 'currency' },
-  { key: 'abilities',  emoji: '⚡',  path: 'abilities' },
-  { key: 'class',      emoji: '📜',  path: 'class' },
-  { key: 'xp',         emoji: '⭐',  path: 'xp' },
-  { key: 'conditions', emoji: '🌀',  path: 'conditions' },
-  { key: 'dice',       emoji: '🎲',  path: 'dice' },
-  { key: 'notes',      emoji: '📝',  path: 'notes' },
-  { key: 'maps',       emoji: '🗺️',  path: 'maps' },
-  { key: 'history',    emoji: '📖',  path: 'history' },
-  { key: 'identity',   emoji: '👤',  path: 'identity' },
-  { key: 'settings',   emoji: '⚙️',  path: 'settings' },
+type MenuItem = {
+  key: string
+  icon: LucideIcon
+  path: string
+}
+
+type MenuSection = {
+  labelKey: string
+  items: MenuItem[]
+}
+
+const MENU_SECTIONS: MenuSection[] = [
+  {
+    labelKey: 'character.menu.sections.combat',
+    items: [
+      { key: 'hp',    icon: Heart,       path: 'hp' },
+      { key: 'ac',    icon: Shield,      path: 'ac' },
+      { key: 'saves', icon: ShieldAlert, path: 'saves' },
+    ],
+  },
+  {
+    labelKey: 'character.menu.sections.magic',
+    items: [
+      { key: 'spells', icon: Sparkles, path: 'spells' },
+      { key: 'slots',  icon: Gem,      path: 'slots' },
+    ],
+  },
+  {
+    labelKey: 'character.menu.sections.skills',
+    items: [
+      { key: 'stats',     icon: BarChart3, path: 'stats' },
+      { key: 'skills',    icon: Target,    path: 'skills' },
+      { key: 'abilities', icon: Zap,       path: 'abilities' },
+    ],
+  },
+  {
+    labelKey: 'character.menu.sections.equipment',
+    items: [
+      { key: 'inventory', icon: Swords, path: 'inventory' },
+      { key: 'currency',  icon: Coins,  path: 'currency' },
+    ],
+  },
+  {
+    labelKey: 'character.menu.sections.character',
+    items: [
+      { key: 'identity',   icon: User,      path: 'identity' },
+      { key: 'class',      icon: Scroll,    path: 'class' },
+      { key: 'xp',         icon: Star,      path: 'xp' },
+      { key: 'conditions', icon: CircleDot, path: 'conditions' },
+    ],
+  },
+  {
+    labelKey: 'character.menu.sections.tools',
+    items: [
+      { key: 'dice',    icon: Dices,       path: 'dice' },
+      { key: 'notes',   icon: NotebookPen, path: 'notes' },
+      { key: 'maps',    icon: Map,         path: 'maps' },
+      { key: 'history', icon: BookOpen,    path: 'history' },
+    ],
+  },
 ]
 
 export default function CharacterMain() {
@@ -51,8 +100,11 @@ export default function CharacterMain() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p className="text-[var(--tg-theme-hint-color)]">{t('common.loading')}</p>
+      <div className="min-h-screen p-4 space-y-4 pb-safe animate-fade-in">
+        <Skeleton.Line width="180px" height="24px" />
+        <Skeleton.Rect height="180px" />
+        <Skeleton.Rect height="60px" delay={100} />
+        <Skeleton.Rect height="200px" delay={200} />
       </div>
     )
   }
@@ -60,8 +112,8 @@ export default function CharacterMain() {
   if (isError || !char) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-4">
-        <p className="text-red-400">{t('common.error')}</p>
-        <button onClick={() => navigate('/')} className="underline">
+        <p className="text-[var(--dnd-danger)]">{t('common.error')}</p>
+        <button onClick={() => navigate('/')} className="underline text-dnd-gold">
           {t('common.back')}
         </button>
       </div>
@@ -73,90 +125,92 @@ export default function CharacterMain() {
     : 0
 
   return (
-    <div className="min-h-screen p-4 space-y-4 pb-safe">
+    <div className="min-h-screen p-4 space-y-4 pb-safe animate-fade-in">
       {/* Header bar */}
       <div className="flex items-center gap-2 pt-1">
         <button onClick={() => navigate('/')} className="p-1 active:opacity-60">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M15.41 16.59L10.83 12l4.58-4.59L14 6l-6 6 6 6z" />
-          </svg>
+          <ChevronLeft size={20} className="text-dnd-gold" />
         </button>
-        <h1 className="text-xl font-bold truncate flex-1">{char.name}</h1>
+        <h1 className="text-xl font-bold font-cinzel text-dnd-gold truncate flex-1">
+          {char.name}
+        </h1>
         <button
           onClick={() => inspirationMutation.mutate(!char.heroic_inspiration)}
           title={char.heroic_inspiration ? t('character.inspiration.tap_to_spend') : t('character.inspiration.tap_to_grant')}
-          className={`text-xl transition-opacity active:opacity-60 ${char.heroic_inspiration ? 'opacity-100' : 'opacity-25'}`}
+          className={`transition-opacity active:opacity-60 ${char.heroic_inspiration ? 'animate-shimmer' : 'opacity-25'}`}
         >
-          ✨
+          <Sparkles size={22} className="text-dnd-gold" />
+        </button>
+        <button
+          onClick={() => navigate(`/char/${charId}/settings`)}
+          className="p-1 active:opacity-60 transition-opacity"
+          aria-label="Settings"
+        >
+          <Settings size={20} className="text-dnd-gold" />
         </button>
         {char.is_party_active && (
-          <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/20 text-green-400">
+          <span className="text-xs px-2 py-0.5 rounded-full bg-dnd-success/20 text-[#2ecc71]">
             Party
           </span>
         )}
       </div>
 
-      {/* Quick stats card */}
-      <Card>
+      {/* Hero card */}
+      <Card variant="elevated">
         <div className="flex justify-between items-start mb-3">
           <div>
-            <p className="text-sm text-[var(--tg-theme-hint-color)]">{char.class_summary}</p>
+            <p className="text-sm text-dnd-text-secondary">{char.class_summary}</p>
             {char.race && (
-              <p className="text-xs text-[var(--tg-theme-hint-color)]">{char.race}</p>
+              <p className="text-xs text-dnd-text-secondary">{char.race}</p>
             )}
           </div>
           <div className="text-right">
-            <span className="text-2xl font-bold">{char.ac}</span>
-            <p className="text-xs text-[var(--tg-theme-hint-color)]">CA</p>
+            <span className="text-2xl font-black">{char.ac}</span>
+            <p className="text-xs text-dnd-gold-dim">CA</p>
           </div>
         </div>
 
-        {/* HP */}
         <div className="mb-1 flex items-center justify-between text-sm">
           <span>
             ❤️ {char.current_hit_points}/{char.hit_points}
             {char.temp_hp > 0 && (
-              <span className="text-blue-400 ml-1">(+{char.temp_hp} temp)</span>
+              <span className="text-dnd-info ml-1">(+{char.temp_hp} temp)</span>
             )}
           </span>
-          <span className="text-[var(--tg-theme-hint-color)]">{hpPct}%</span>
+          <span className="text-dnd-text-secondary">{hpPct}%</span>
         </div>
         <HPBar current={char.current_hit_points} max={char.hit_points} temp={char.temp_hp} />
 
-        {/* XP + Speed */}
-        <div className="flex gap-4 mt-3 text-sm text-[var(--tg-theme-hint-color)]">
+        <div className="flex gap-4 mt-3 text-sm text-dnd-text-secondary">
           <span>⭐ {char.experience_points} XP</span>
           <span>💨 {char.speed}ft</span>
         </div>
 
-        {/* Concentration spell */}
         {char.concentrating_spell_id && (() => {
           const spell = char.spells?.find(s => s.id === char.concentrating_spell_id)
           return (
             <div className="mt-2">
-              <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300">
+              <span className="text-xs px-2 py-0.5 rounded-full bg-dnd-arcane/20 text-[#a569bd]">
                 🔮 {spell?.name ?? t('character.spells.concentration')}
               </span>
             </div>
           )
         })()}
 
-        {/* Active passive abilities */}
         {char.abilities?.filter(a => a.is_passive).length > 0 && (
           <div className="flex flex-wrap gap-1 mt-2">
             {char.abilities.filter(a => a.is_passive).map(a => (
-              <span key={a.id} className="text-xs px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-300">
+              <span key={a.id} className="text-xs px-2 py-0.5 rounded-full bg-[var(--dnd-gold-glow)] text-dnd-gold">
                 ⚡ {a.name}
               </span>
             ))}
           </div>
         )}
 
-        {/* Active conditions */}
         {char.conditions && Object.entries(char.conditions).filter(([, v]) => v).length > 0 && (
           <div className="flex flex-wrap gap-1 mt-2">
             {Object.entries(char.conditions).filter(([, v]) => v).map(([key, val]) => (
-              <span key={key} className="text-xs px-2 py-0.5 rounded-full bg-red-500/20 text-red-300">
+              <span key={key} className="text-xs px-2 py-0.5 rounded-full bg-dnd-danger/20 text-[#e74c3c]">
                 🌀 {t(`character.conditions.${key}`)}
                 {typeof val === 'number' && val > 1 ? ` (${val})` : ''}
               </span>
@@ -165,17 +219,17 @@ export default function CharacterMain() {
         )}
       </Card>
 
-      {/* Ability scores row */}
+      {/* Ability scores */}
       {char.ability_scores.length > 0 && (
-        <Card className="!p-3">
+        <Card variant="elevated" className="!p-3">
           <div className="grid grid-cols-6 gap-1 text-center">
             {char.ability_scores.map((score) => (
-              <div key={score.name} className="flex flex-col items-center">
-                <span className="text-xs text-[var(--tg-theme-hint-color)] uppercase">
+              <div key={score.name} className="flex flex-col items-center bg-dnd-surface rounded-lg p-1 border border-dnd-gold-dim/30">
+                <span className="text-[0.55rem] text-dnd-gold-dim uppercase tracking-wide">
                   {score.name.slice(0, 3)}
                 </span>
-                <span className="text-lg font-bold leading-tight">{score.value}</span>
-                <span className="text-xs text-[var(--tg-theme-hint-color)]">
+                <span className="text-lg font-black leading-tight">{score.value}</span>
+                <span className="text-xs text-dnd-text-secondary">
                   {score.modifier >= 0 ? '+' : ''}{score.modifier}
                 </span>
               </div>
@@ -184,23 +238,35 @@ export default function CharacterMain() {
         </Card>
       )}
 
-      {/* Menu grid */}
-      <div className="grid grid-cols-3 gap-2">
-        {MENU_ITEMS.map((item) => (
-          <button
-            key={item.key}
-            onClick={() => navigate(`/char/${charId}/${item.path}`)}
-            className="flex flex-col items-center gap-1 p-3 rounded-2xl
-                       bg-[var(--tg-theme-secondary-bg-color)]
-                       active:opacity-70 transition-opacity"
-          >
-            <span className="text-2xl">{item.emoji}</span>
-            <span className="text-xs text-center leading-tight">
-              {t(`character.menu.${item.key}`)}
-            </span>
-          </button>
-        ))}
-      </div>
+      {/* Menu grid — grouped */}
+      {MENU_SECTIONS.map((section) => (
+        <div key={section.labelKey}>
+          <SectionHeader>{t(section.labelKey)}</SectionHeader>
+          <div className="grid grid-cols-3 gap-2">
+            {section.items.map((item) => {
+              const Icon = item.icon
+              return (
+                <button
+                  key={item.key}
+                  onClick={() => {
+                    haptic.light()
+                    navigate(`/char/${charId}/${item.path}`)
+                  }}
+                  className="flex flex-col items-center gap-1 p-3 rounded-2xl
+                             bg-dnd-surface border border-transparent
+                             active:border-dnd-gold-dim active:shadow-dnd-glow active:scale-95
+                             transition-all duration-150"
+                >
+                  <Icon size={24} className="text-dnd-gold" strokeWidth={2} />
+                  <span className="text-xs text-dnd-text-secondary text-center leading-tight">
+                    {t(`character.menu.${item.key}`)}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      ))}
     </div>
   )
 }

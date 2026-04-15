@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
 import Card from '@/components/Card'
+import DndButton from '@/components/DndButton'
+import ScrollArea from '@/components/ScrollArea'
 import { haptic } from '@/auth/telegram'
 import type { SpellSlot } from '@/types'
 
@@ -58,90 +60,94 @@ export default function SpellSlots() {
   const missingLevels = [1, 2, 3, 4, 5, 6, 7, 8, 9].filter((l) => !existingLevels.has(l))
 
   return (
-    <Layout title={t('character.slots.title')} backTo={`/char/${charId}`}>
+    <Layout title={t('character.slots.title')} backTo={`/char/${charId}`} group="magic" page="slots">
       {slots.length > 0 && (
-        <button
+        <DndButton
+          variant="secondary"
           onClick={() => resetAll.mutate()}
-          disabled={resetAll.isPending}
-          className="w-full py-3 rounded-2xl bg-blue-500/20 text-blue-300 font-medium active:opacity-70"
+          loading={resetAll.isPending}
+          className="w-full !bg-blue-500/20 !text-blue-300 !border-blue-500/30"
         >
-          🔄 {t('character.slots.reset_all')}
-        </button>
+          {t('character.slots.reset_all')}
+        </DndButton>
       )}
 
       {slots.length === 0 && (
         <Card>
-          <p className="text-center text-[var(--tg-theme-hint-color)]">{t('common.none')}</p>
+          <p className="text-center text-dnd-text-secondary">{t('common.none')}</p>
         </Card>
       )}
 
-      <div className="space-y-2">
-        {slots.map((slot) => (
-          <Card key={slot.id}>
-            <div className="flex items-center justify-between mb-2">
-              <span className="font-semibold">{t('character.slots.level', { level: slot.level })}</span>
-              <div className="flex gap-2 items-center">
-                <span className={`text-sm font-bold ${slot.available > 0 ? 'text-green-400' : 'text-[var(--tg-theme-hint-color)]'}`}>
-                  {slot.available}/{slot.total}
-                </span>
-                <button
-                  onClick={() => removeSlot.mutate(slot.id)}
-                  className="text-xs text-red-400 ml-2"
-                >✕</button>
+      <ScrollArea>
+        <div className="space-y-2">
+          {slots.map((slot) => (
+            <Card key={slot.id}>
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-semibold text-dnd-text">{t('character.slots.level', { level: slot.level })}</span>
+                <div className="flex gap-2 items-center">
+                  <span className={`text-sm font-bold ${slot.available > 0 ? 'text-[#2ecc71]' : 'text-dnd-text-secondary'}`}>
+                    {slot.available}/{slot.total}
+                  </span>
+                  <button
+                    onClick={() => removeSlot.mutate(slot.id)}
+                    className="text-xs text-[var(--dnd-danger)] ml-2"
+                  >&#x2715;</button>
+                </div>
               </div>
-            </div>
 
-            {/* Slot dots */}
-            <div className="flex gap-2 flex-wrap mb-2">
-              {Array.from({ length: slot.total }).map((_, i) => (
+              {/* Slot dots */}
+              <div className="flex gap-2 flex-wrap mb-2">
+                {Array.from({ length: slot.total }).map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => {
+                      const newUsed = i < slot.used ? i : i + 1
+                      updateSlot.mutate({ slotId: slot.id, used: newUsed > slot.total ? slot.total : newUsed })
+                      haptic.light()
+                    }}
+                    className={`w-8 h-8 rounded-full border-2 transition-all
+                      ${i < slot.used
+                        ? 'bg-dnd-arcane/40 border-dnd-arcane/60'
+                        : 'border-dnd-arcane bg-transparent'}`}
+                  />
+                ))}
+              </div>
+
+              {/* Edit total */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-dnd-text-secondary">{t('character.slots.total')}:</span>
                 <button
-                  key={i}
-                  onClick={() => {
-                    const newUsed = i < slot.used ? i : i + 1
-                    updateSlot.mutate({ slotId: slot.id, used: newUsed > slot.total ? slot.total : newUsed })
-                    haptic.light()
-                  }}
-                  className={`w-8 h-8 rounded-full border-2 transition-all
-                    ${i < slot.used
-                      ? 'bg-purple-500/40 border-purple-500/60'
-                      : 'border-purple-400 bg-transparent'}`}
-                />
+                  onClick={() => updateTotal.mutate({ slotId: slot.id, total: Math.max(1, slot.total - 1) })}
+                  className="w-6 h-6 rounded-lg bg-dnd-surface text-sm font-bold text-dnd-text"
+                >&#x2212;</button>
+                <span className="text-sm font-bold w-4 text-center text-dnd-text">{slot.total}</span>
+                <button
+                  onClick={() => updateTotal.mutate({ slotId: slot.id, total: slot.total + 1 })}
+                  className="w-6 h-6 rounded-lg bg-dnd-surface text-sm font-bold text-dnd-text"
+                >+</button>
+              </div>
+            </Card>
+          ))}
+        </div>
+
+        {missingLevels.length > 0 && (
+          <Card className="mt-3">
+            <p className="text-xs text-dnd-text-secondary mb-2">{t('character.slots.add_level')}</p>
+            <div className="flex flex-wrap gap-2">
+              {missingLevels.map((level) => (
+                <DndButton
+                  key={level}
+                  variant="secondary"
+                  onClick={() => addSlot.mutate(level)}
+                  className="!px-3 !py-1.5 !min-h-0 !text-sm !bg-dnd-arcane/20 !text-[#a569bd] !border-dnd-arcane/30"
+                >
+                  + Liv. {level}
+                </DndButton>
               ))}
             </div>
-
-            {/* Edit total */}
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-[var(--tg-theme-hint-color)]">{t('character.slots.total')}:</span>
-              <button
-                onClick={() => updateTotal.mutate({ slotId: slot.id, total: Math.max(1, slot.total - 1) })}
-                className="w-6 h-6 rounded-lg bg-white/10 text-sm font-bold"
-              >−</button>
-              <span className="text-sm font-bold w-4 text-center">{slot.total}</span>
-              <button
-                onClick={() => updateTotal.mutate({ slotId: slot.id, total: slot.total + 1 })}
-                className="w-6 h-6 rounded-lg bg-white/10 text-sm font-bold"
-              >+</button>
-            </div>
           </Card>
-        ))}
-      </div>
-
-      {missingLevels.length > 0 && (
-        <Card>
-          <p className="text-xs text-[var(--tg-theme-hint-color)] mb-2">{t('character.slots.add_level')}</p>
-          <div className="flex flex-wrap gap-2">
-            {missingLevels.map((level) => (
-              <button
-                key={level}
-                onClick={() => addSlot.mutate(level)}
-                className="px-3 py-1.5 rounded-xl bg-purple-500/20 text-purple-300 text-sm font-medium"
-              >
-                + Liv. {level}
-              </button>
-            ))}
-          </div>
-        </Card>
-      )}
+        )}
+      </ScrollArea>
     </Layout>
   )
 }
