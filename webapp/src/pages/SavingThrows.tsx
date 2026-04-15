@@ -59,9 +59,9 @@ export default function SavingThrows() {
   }
 
   return (
-    <Layout title={t('character.saves.title')} backTo={`/char/${charId}`}>
-      <Card>
-        <p className="text-sm text-[var(--tg-theme-hint-color)]">
+    <Layout title={t('character.saves.title')} backTo={`/char/${charId}`} group="combat" page="saves">
+      <Card variant="elevated">
+        <p className="text-sm text-dnd-text-secondary">
           {t('character.skills.prof_bonus')}: <span className="font-bold text-white">+{pb}</span>
         </p>
       </Card>
@@ -77,13 +77,13 @@ export default function SavingThrows() {
             <div
               key={ability}
               className="flex items-center gap-3 px-4 py-3 rounded-xl
-                         bg-[var(--tg-theme-secondary-bg-color)]"
+                         bg-dnd-surface"
             >
               {/* Proficiency toggle */}
               <button
                 onClick={() => toggle(ability)}
                 className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0
-                  ${isProficient ? 'bg-[var(--tg-theme-button-color)] border-[var(--tg-theme-button-color)]' : 'border-white/30'}`}
+                  ${isProficient ? 'bg-dnd-gold border-dnd-gold' : 'border-white/30'}`}
               >
                 {isProficient && <span className="text-xs text-white font-bold">✓</span>}
               </button>
@@ -97,7 +97,7 @@ export default function SavingThrows() {
               </button>
 
               {/* Bonus */}
-              <span className={`text-sm font-bold w-8 text-right ${total >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+              <span className={`text-sm font-bold w-8 text-right ${total >= 0 ? 'text-[#2ecc71]' : 'text-[var(--dnd-danger)]'}`}>
                 {total >= 0 ? '+' : ''}{total}
               </span>
 

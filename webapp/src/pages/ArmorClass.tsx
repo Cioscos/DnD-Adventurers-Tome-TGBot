@@ -47,12 +47,12 @@ export default function ArmorClass() {
   ]
 
   return (
-    <Layout title={t('character.ac.title')} backTo={`/char/${charId}`}>
-      <Card>
+    <Layout title={t('character.ac.title')} backTo={`/char/${charId}`} group="combat" page="ac">
+      <Card variant="elevated">
         <div className="text-center">
-          <p className="text-sm text-[var(--tg-theme-hint-color)] mb-1">{t('character.ac.total')}</p>
+          <p className="text-sm text-dnd-text-secondary mb-1">{t('character.ac.total')}</p>
           <p className="text-6xl font-bold">🛡️ {char.ac}</p>
-          <p className="text-sm text-[var(--tg-theme-hint-color)] mt-2">
+          <p className="text-sm text-dnd-text-secondary mt-2">
             {char.base_armor_class} + {char.shield_armor_class} + {char.magic_armor}
           </p>
         </div>
@@ -71,8 +71,8 @@ export default function ArmorClass() {
               value={f.val}
               onChange={(e) => f.set(e.target.value)}
               placeholder={String(f.cur)}
-              className="w-24 bg-white/10 rounded-xl px-3 py-2 text-xl font-bold text-center
-                         outline-none focus:ring-2 focus:ring-[var(--tg-theme-button-color)]"
+              className="w-24 bg-dnd-surface rounded-xl px-3 py-2 text-xl font-bold text-center
+                         outline-none focus:ring-2 focus:ring-dnd-gold"
             />
           </div>
         </Card>
@@ -81,8 +81,8 @@ export default function ArmorClass() {
       <button
         onClick={() => mutation.mutate()}
         disabled={mutation.isPending || (base === '' && shield === '' && magic === '')}
-        className="w-full py-3 rounded-2xl bg-[var(--tg-theme-button-color)]
-                   text-[var(--tg-theme-button-text-color)] font-semibold
+        className="w-full py-3 rounded-2xl bg-dnd-gold
+                   text-dnd-bg font-semibold
                    disabled:opacity-40 active:opacity-80"
       >
         {mutation.isPending ? '...' : t('common.save')}
