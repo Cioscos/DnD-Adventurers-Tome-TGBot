@@ -41,7 +41,15 @@
       "maps": "Maps",
       "dice": "Dice",
       "identity": "Identity",
-      "settings": "Settings"
+      "settings": "Settings",
+      "sections": {
+        "combat": "Combat",
+        "magic": "Magic",
+        "skills": "Skills",
+        "equipment": "Equipment",
+        "character": "Character",
+        "tools": "Tools"
+      }
     },
     "hp": {
       "title": "Hit Points",

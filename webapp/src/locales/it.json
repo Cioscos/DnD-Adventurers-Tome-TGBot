@@ -41,7 +41,15 @@
       "maps": "Mappe",
       "dice": "Dadi",
       "identity": "Identità",
-      "settings": "Impostazioni"
+      "settings": "Impostazioni",
+      "sections": {
+        "combat": "Combattimento",
+        "magic": "Magia",
+        "skills": "Abilità",
+        "equipment": "Equipaggiamento",
+        "character": "Personaggio",
+        "tools": "Strumenti"
+      }
     },
     "hp": {
       "title": "Punti Ferita",
