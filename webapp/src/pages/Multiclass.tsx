@@ -7,7 +7,7 @@ import Layout from '@/components/Layout'
 import Card from '@/components/Card'
 import DndButton from '@/components/DndButton'
 import { haptic } from '@/auth/telegram'
-import AddClassForm, { resolveClassName, type ClassForm } from '@/pages/multiclass/AddClassForm'
+import AddClassForm, { resolveClassName, PREDEFINED_CLASSES, CUSTOM_KEY, type ClassForm } from '@/pages/multiclass/AddClassForm'
 import ResourceManager from '@/pages/multiclass/ResourceManager'
 import type { CharacterClass } from '@/types'
 
@@ -25,7 +25,10 @@ export default function Multiclass() {
 
   const addClass = useMutation({
     mutationFn: (form: ClassForm) => {
-      const class_name = resolveClassName(form)
+      const rawKey = resolveClassName(form)
+      const class_name = (form.class_key !== CUSTOM_KEY && PREDEFINED_CLASSES[rawKey])
+        ? t(`dnd.classes.${rawKey}`)
+        : rawKey
       return api.classes.add(charId, {
         class_name,
         level: Number(form.level),

@@ -96,8 +96,8 @@ export default function Experience() {
         {nextThreshold && (
           <div className="mt-4">
             <div className="flex justify-between text-xs text-dnd-text-secondary mb-1">
-              <span>Liv. {level}</span>
-              <span>{xpToNext.toLocaleString()} XP al Liv. {level + 1}</span>
+              <span>{t('character.xp.level_abbr')} {level}</span>
+              <span>{xpToNext.toLocaleString()} XP {t('character.xp.level_abbr')} {level + 1}</span>
             </div>
             <div className="w-full bg-dnd-surface rounded-full h-2">
               <div
@@ -124,7 +124,7 @@ export default function Experience() {
           onClick={() => setSetMode(true)}
           className="flex-1"
         >
-          = Imposta
+          = {t('character.currency.mode_set')}
         </DndButton>
       </div>
 

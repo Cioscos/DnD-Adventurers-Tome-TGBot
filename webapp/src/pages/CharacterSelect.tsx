@@ -10,18 +10,18 @@ import Skeleton from '@/components/Skeleton'
 import { haptic, telegramConfirm } from '@/auth/telegram'
 
 const DND_CLASSES = [
-  { name: 'Barbaro',   hit_die: 12, spellcasting_ability: null },
-  { name: 'Bardo',     hit_die: 8,  spellcasting_ability: 'charisma' },
-  { name: 'Chierico',  hit_die: 8,  spellcasting_ability: 'wisdom' },
-  { name: 'Druido',    hit_die: 8,  spellcasting_ability: 'wisdom' },
-  { name: 'Guerriero', hit_die: 10, spellcasting_ability: null },
-  { name: 'Ladro',     hit_die: 8,  spellcasting_ability: null },
-  { name: 'Mago',      hit_die: 6,  spellcasting_ability: 'intelligence' },
-  { name: 'Monaco',    hit_die: 8,  spellcasting_ability: null },
-  { name: 'Paladino',  hit_die: 10, spellcasting_ability: 'charisma' },
-  { name: 'Ranger',    hit_die: 10, spellcasting_ability: 'wisdom' },
-  { name: 'Stregone',  hit_die: 6,  spellcasting_ability: 'charisma' },
-  { name: 'Warlock',   hit_die: 8,  spellcasting_ability: 'charisma' },
+  { key: 'barbarian', hit_die: 12, spellcasting_ability: null },
+  { key: 'bard',      hit_die: 8,  spellcasting_ability: 'charisma' },
+  { key: 'cleric',    hit_die: 8,  spellcasting_ability: 'wisdom' },
+  { key: 'druid',     hit_die: 8,  spellcasting_ability: 'wisdom' },
+  { key: 'fighter',   hit_die: 10, spellcasting_ability: null },
+  { key: 'rogue',     hit_die: 8,  spellcasting_ability: null },
+  { key: 'wizard',    hit_die: 6,  spellcasting_ability: 'intelligence' },
+  { key: 'monk',      hit_die: 8,  spellcasting_ability: null },
+  { key: 'paladin',   hit_die: 10, spellcasting_ability: 'charisma' },
+  { key: 'ranger',    hit_die: 10, spellcasting_ability: 'wisdom' },
+  { key: 'sorcerer',  hit_die: 6,  spellcasting_ability: 'charisma' },
+  { key: 'warlock',   hit_die: 8,  spellcasting_ability: 'charisma' },
 ] as const
 
 type SelectedClass = {
@@ -246,14 +246,14 @@ export default function CharacterSelect() {
                   <div className="grid grid-cols-3 gap-2 mb-3">
                     {DND_CLASSES.map((cls) => (
                       <button
-                        key={cls.name}
-                        onClick={() => handleCreate({ class_name: cls.name, hit_die: cls.hit_die, spellcasting_ability: cls.spellcasting_ability })}
+                        key={cls.key}
+                        onClick={() => handleCreate({ class_name: t(`dnd.classes.${cls.key}`), hit_die: cls.hit_die, spellcasting_ability: cls.spellcasting_ability })}
                         disabled={createMutation.isPending}
                         className="flex flex-col items-center py-2 px-1 rounded-xl
                                    bg-dnd-surface active:opacity-70 disabled:opacity-40
                                    text-center"
                       >
-                        <span className="text-sm font-semibold">{cls.name}</span>
+                        <span className="text-sm font-semibold">{t(`dnd.classes.${cls.key}`)}</span>
                         <span className="text-xs text-dnd-text-secondary">d{cls.hit_die}</span>
                       </button>
                     ))}

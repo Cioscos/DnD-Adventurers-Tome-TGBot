@@ -5,18 +5,18 @@ import DndInput from '@/components/DndInput'
 import DndButton from '@/components/DndButton'
 
 const PREDEFINED_CLASSES: Record<string, { hit_die: number; spellcasting_ability: string | null }> = {
-  Barbaro:   { hit_die: 12, spellcasting_ability: null },
-  Bardo:     { hit_die: 8,  spellcasting_ability: 'charisma' },
-  Chierico:  { hit_die: 8,  spellcasting_ability: 'wisdom' },
-  Druido:    { hit_die: 8,  spellcasting_ability: 'wisdom' },
-  Guerriero: { hit_die: 10, spellcasting_ability: null },
-  Ladro:     { hit_die: 8,  spellcasting_ability: null },
-  Mago:      { hit_die: 6,  spellcasting_ability: 'intelligence' },
-  Monaco:    { hit_die: 8,  spellcasting_ability: null },
-  Paladino:  { hit_die: 10, spellcasting_ability: 'charisma' },
-  Ranger:    { hit_die: 10, spellcasting_ability: 'wisdom' },
-  Stregone:  { hit_die: 6,  spellcasting_ability: 'charisma' },
-  Warlock:   { hit_die: 8,  spellcasting_ability: 'charisma' },
+  barbarian: { hit_die: 12, spellcasting_ability: null },
+  bard:      { hit_die: 8,  spellcasting_ability: 'charisma' },
+  cleric:    { hit_die: 8,  spellcasting_ability: 'wisdom' },
+  druid:     { hit_die: 8,  spellcasting_ability: 'wisdom' },
+  fighter:   { hit_die: 10, spellcasting_ability: null },
+  rogue:     { hit_die: 8,  spellcasting_ability: null },
+  wizard:    { hit_die: 6,  spellcasting_ability: 'intelligence' },
+  monk:      { hit_die: 8,  spellcasting_ability: null },
+  paladin:   { hit_die: 10, spellcasting_ability: 'charisma' },
+  ranger:    { hit_die: 10, spellcasting_ability: 'wisdom' },
+  sorcerer:  { hit_die: 6,  spellcasting_ability: 'charisma' },
+  warlock:   { hit_die: 8,  spellcasting_ability: 'charisma' },
 }
 
 const CUSTOM_KEY = '__custom__'
@@ -99,8 +99,8 @@ export default function AddClassForm({ onAdd, onCancel, isPending }: AddClassFor
           className="w-full bg-dnd-surface rounded-xl px-3 py-2 outline-none"
         >
           <option value="" disabled>{t('character.multiclass.class_name')}</option>
-          {Object.keys(PREDEFINED_CLASSES).map((name) => (
-            <option key={name} value={name}>{name}</option>
+          {Object.keys(PREDEFINED_CLASSES).map((key) => (
+            <option key={key} value={key}>{t(`dnd.classes.${key}`)}</option>
           ))}
           <option value={CUSTOM_KEY}>{t('character.multiclass.custom_class')}</option>
         </select>
