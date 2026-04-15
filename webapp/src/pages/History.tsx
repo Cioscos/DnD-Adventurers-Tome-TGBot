@@ -5,6 +5,8 @@ import { useTranslation } from 'react-i18next'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
 import Card from '@/components/Card'
+import DndButton from '@/components/DndButton'
+import ScrollArea from '@/components/ScrollArea'
 import { haptic } from '@/auth/telegram'
 
 export default function History() {
@@ -41,57 +43,63 @@ export default function History() {
   }
 
   return (
-    <Layout title={t('character.history.title')} backTo={`/char/${charId}`}>
+    <Layout title={t('character.history.title')} backTo={`/char/${charId}`} group="tools" page="history">
       {entries.length === 0 ? (
         <Card>
-          <p className="text-center text-[var(--tg-theme-hint-color)]">{t('character.history.empty')}</p>
+          <p className="text-center text-dnd-text-secondary">{t('character.history.empty')}</p>
         </Card>
       ) : (
         <>
-          <div className="space-y-2">
-            {[...entries].reverse().map((entry) => (
-              <div
-                key={entry.id}
-                className="flex gap-3 px-4 py-3 rounded-xl bg-[var(--tg-theme-secondary-bg-color)]"
-              >
-                <span className="text-xl shrink-0 mt-0.5">
-                  {EVENT_EMOJIS[entry.event_type] ?? '📌'}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm leading-snug">{entry.description}</p>
-                  <p className="text-xs text-[var(--tg-theme-hint-color)] mt-0.5">
-                    {formatDate(entry.timestamp)}
-                  </p>
+          <ScrollArea>
+            <div className="space-y-2">
+              {[...entries].reverse().map((entry) => (
+                <div
+                  key={entry.id}
+                  className="flex gap-3 px-4 py-3 rounded-xl bg-dnd-surface"
+                >
+                  <span className="text-xl shrink-0 mt-0.5">
+                    {EVENT_EMOJIS[entry.event_type] ?? '📌'}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm leading-snug">{entry.description}</p>
+                    <p className="text-xs text-dnd-text-secondary mt-0.5">
+                      {formatDate(entry.timestamp)}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          </ScrollArea>
 
           {confirmClear ? (
             <Card>
               <p className="text-sm text-center mb-3">{t('character.history.clear_confirm')}</p>
               <div className="flex gap-2">
-                <button
+                <DndButton
+                  variant="danger"
                   onClick={() => clearMutation.mutate()}
-                  className="flex-1 py-2 rounded-xl bg-red-500/80 text-white font-medium"
+                  loading={clearMutation.isPending}
+                  className="flex-1"
                 >
                   {t('common.confirm')}
-                </button>
-                <button
+                </DndButton>
+                <DndButton
+                  variant="secondary"
                   onClick={() => setConfirmClear(false)}
-                  className="flex-1 py-2 rounded-xl bg-white/10 font-medium"
+                  className="flex-1"
                 >
                   {t('common.cancel')}
-                </button>
+                </DndButton>
               </div>
             </Card>
           ) : (
-            <button
+            <DndButton
+              variant="danger"
               onClick={() => setConfirmClear(true)}
-              className="w-full py-3 rounded-2xl bg-red-500/20 text-red-400 font-medium"
+              className="w-full"
             >
               🗑️ {t('character.history.clear')}
-            </button>
+            </DndButton>
           )}
         </>
       )}

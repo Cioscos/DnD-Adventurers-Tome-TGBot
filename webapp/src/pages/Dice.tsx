@@ -5,6 +5,8 @@ import { useTranslation } from 'react-i18next'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
 import Card from '@/components/Card'
+import DndButton from '@/components/DndButton'
+import ScrollArea from '@/components/ScrollArea'
 import { haptic } from '@/auth/telegram'
 import type { DiceRollResult } from '@/types'
 
@@ -76,13 +78,13 @@ export default function Dice() {
   const modLabel = dexMod >= 0 ? `+${dexMod}` : String(dexMod)
 
   return (
-    <Layout title={t('character.dice.title')} backTo={`/char/${charId}`}>
+    <Layout title={t('character.dice.title')} backTo={`/char/${charId}`} group="tools" page="dice">
       {/* Initiative button */}
       <button
         onClick={() => initiativeMutation.mutate()}
         disabled={initiativeMutation.isPending || rollMutation.isPending}
         className="w-full py-3 rounded-2xl font-bold text-base
-                   bg-yellow-500/20 text-yellow-300 active:opacity-70
+                   bg-[var(--dnd-gold-glow)] text-dnd-gold active:opacity-70
                    disabled:opacity-40 transition-opacity"
       >
         ⚔️ {t('character.dice.initiative')} (d20 {modLabel})
@@ -90,12 +92,12 @@ export default function Dice() {
 
       {/* Dice count stepper */}
       <Card>
-        <p className="text-sm text-[var(--tg-theme-hint-color)] mb-3">{t('character.dice.count')}</p>
+        <p className="text-sm text-dnd-text-secondary mb-3">{t('character.dice.count')}</p>
         <div className="flex items-center justify-between gap-3">
           <button
             onClick={() => setCount((c) => Math.max(1, c - 1))}
             disabled={count <= 1}
-            className="w-12 h-12 rounded-2xl bg-[var(--tg-theme-secondary-bg-color)]
+            className="w-12 h-12 rounded-2xl bg-dnd-surface
                        font-bold text-2xl active:opacity-70 transition-opacity
                        disabled:opacity-30 flex items-center justify-center"
             aria-label="Diminuisci"
@@ -106,7 +108,7 @@ export default function Dice() {
           <button
             onClick={() => setCount((c) => Math.min(10, c + 1))}
             disabled={count >= 10}
-            className="w-12 h-12 rounded-2xl bg-[var(--tg-theme-secondary-bg-color)]
+            className="w-12 h-12 rounded-2xl bg-dnd-surface
                        font-bold text-2xl active:opacity-70 transition-opacity
                        disabled:opacity-30 flex items-center justify-center"
             aria-label="Aumenta"
@@ -123,7 +125,7 @@ export default function Dice() {
             key={die}
             onClick={() => handleRoll(die)}
             disabled={rollMutation.isPending || initiativeMutation.isPending}
-            className="py-5 rounded-2xl bg-[var(--tg-theme-secondary-bg-color)]
+            className="py-5 rounded-2xl bg-dnd-surface
                        font-bold text-lg active:opacity-70 transition-opacity
                        disabled:opacity-40"
           >
@@ -133,7 +135,7 @@ export default function Dice() {
         <button
           onClick={() => handleRoll('d100')}
           disabled={rollMutation.isPending || initiativeMutation.isPending}
-          className="col-span-2 py-5 rounded-2xl bg-[var(--tg-theme-secondary-bg-color)]
+          className="col-span-2 py-5 rounded-2xl bg-dnd-surface
                      font-bold text-lg active:opacity-70 transition-opacity
                      disabled:opacity-40"
         >
@@ -144,9 +146,9 @@ export default function Dice() {
       {/* Initiative result */}
       {initiativeResult && (
         <Card className="text-center">
-          <p className="text-sm text-[var(--tg-theme-hint-color)] mb-1">⚔️ {t('character.dice.initiative')}</p>
+          <p className="text-sm text-dnd-text-secondary mb-1">⚔️ {t('character.dice.initiative')}</p>
           <p className="text-5xl font-bold mb-1">{initiativeResult.total}</p>
-          <p className="text-sm text-[var(--tg-theme-hint-color)]">
+          <p className="text-sm text-dnd-text-secondary">
             d20 ({initiativeResult.roll}) {initiativeResult.dexMod >= 0 ? '+' : ''}{initiativeResult.dexMod}
           </p>
         </Card>
@@ -155,12 +157,12 @@ export default function Dice() {
       {/* Last dice result */}
       {lastResult && (
         <Card className="text-center">
-          <p className="text-sm text-[var(--tg-theme-hint-color)] mb-1">
+          <p className="text-sm text-dnd-text-secondary mb-1">
             {count > 1 ? `${count}${lastResult.notation}` : lastResult.notation}
           </p>
           <p className="text-5xl font-bold mb-1">{lastResult.total}</p>
           {lastResult.rolls.length > 1 && (
-            <p className="text-sm text-[var(--tg-theme-hint-color)]">
+            <p className="text-sm text-dnd-text-secondary">
               [{lastResult.rolls.join(' + ')}]
             </p>
           )}
@@ -169,7 +171,7 @@ export default function Dice() {
               haptic.light()
               api.dice.postToChat(charId, lastResult).catch(() => {})
             }}
-            className="mt-3 px-4 py-2 rounded-xl bg-blue-500/20 text-blue-300 text-sm font-medium"
+            className="mt-3 px-4 py-2 rounded-xl bg-dnd-info/20 text-[#5dade2] text-sm font-medium"
           >
             📤 {t('character.dice.send_to_chat')}
           </button>
@@ -180,31 +182,33 @@ export default function Dice() {
       {history.length > 0 && (
         <div>
           <div className="flex justify-between items-center mb-2">
-            <h3 className="font-semibold text-sm text-[var(--tg-theme-hint-color)]">
+            <h3 className="font-semibold text-sm text-dnd-text-secondary">
               {t('character.dice.history')}
             </h3>
             <button
               onClick={() => setShowClearConfirm(true)}
-              className="text-xs text-red-400 active:opacity-70"
+              className="text-xs text-[var(--dnd-danger)] active:opacity-70"
             >
               {t('character.dice.clear')}
             </button>
           </div>
-          <div className="space-y-1">
-            {history.slice(0, 10).map((entry, i) => (
-              <Card key={i} className="!p-2 flex justify-between items-center gap-2">
-                <div className="flex items-baseline gap-1.5 min-w-0">
-                  <span className="text-sm text-[var(--tg-theme-hint-color)] shrink-0">{entry.notation}</span>
-                  {entry.rolls.length > 1 && (
-                    <span className="text-xs text-[var(--tg-theme-hint-color)] truncate">
-                      [{entry.rolls.join('+')}]
-                    </span>
-                  )}
-                </div>
-                <span className="font-bold shrink-0">{entry.total}</span>
-              </Card>
-            ))}
-          </div>
+          <ScrollArea>
+            <div className="space-y-1">
+              {history.slice(0, 10).map((entry, i) => (
+                <Card key={i} className="!p-2 flex justify-between items-center gap-2">
+                  <div className="flex items-baseline gap-1.5 min-w-0">
+                    <span className="text-sm text-dnd-text-secondary shrink-0">{entry.notation}</span>
+                    {entry.rolls.length > 1 && (
+                      <span className="text-xs text-dnd-text-secondary truncate">
+                        [{entry.rolls.join('+')}]
+                      </span>
+                    )}
+                  </div>
+                  <span className="font-bold shrink-0">{entry.total}</span>
+                </Card>
+              ))}
+            </div>
+          </ScrollArea>
         </div>
       )}
 
@@ -216,19 +220,21 @@ export default function Dice() {
               {t('character.dice.clear_confirm')}
             </p>
             <div className="flex gap-2">
-              <button
+              <DndButton
+                variant="danger"
                 onClick={() => clearHistoryMutation.mutate()}
-                disabled={clearHistoryMutation.isPending}
-                className="flex-1 py-2 rounded-xl bg-red-500/80 text-white font-medium"
+                loading={clearHistoryMutation.isPending}
+                className="flex-1"
               >
                 {t('common.confirm')}
-              </button>
-              <button
+              </DndButton>
+              <DndButton
+                variant="secondary"
                 onClick={() => setShowClearConfirm(false)}
-                className="flex-1 py-2 rounded-xl bg-white/10 font-medium"
+                className="flex-1"
               >
                 {t('common.cancel')}
-              </button>
+              </DndButton>
             </div>
           </Card>
         </div>
