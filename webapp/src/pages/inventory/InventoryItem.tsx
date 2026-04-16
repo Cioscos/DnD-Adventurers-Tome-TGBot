@@ -98,17 +98,17 @@ function InventoryItemInner({
           <div className="flex items-center gap-2 flex-wrap">
             <span className="font-medium text-sm">{item.name}</span>
             {item.is_equipped && (
-              <span className="text-xs px-1.5 py-0.5 rounded-full bg-dnd-success/20 text-[#2ecc71] shrink-0">
+              <span className="text-xs px-1.5 py-0.5 rounded-full bg-dnd-success/20 text-dnd-success-text shrink-0">
                 {t('character.inventory.equipped')}
               </span>
             )}
             {item.is_equipped && item.item_type === 'armor' && meta?.ac_value != null && (
-              <span className="text-xs px-1.5 py-0.5 rounded-full bg-blue-500/20 text-blue-400 shrink-0">
+              <span className="text-xs px-1.5 py-0.5 rounded-full bg-dnd-info/20 text-dnd-info-text shrink-0">
                 CA {String(meta.ac_value)}
               </span>
             )}
             {item.is_equipped && item.item_type === 'shield' && meta?.ac_bonus != null && (
-              <span className="text-xs px-1.5 py-0.5 rounded-full bg-blue-500/20 text-blue-400 shrink-0">
+              <span className="text-xs px-1.5 py-0.5 rounded-full bg-dnd-info/20 text-dnd-info-text shrink-0">
                 +{String(meta.ac_bonus)} CA
               </span>
             )}
@@ -138,12 +138,12 @@ function InventoryItemInner({
             <span className="text-xs text-dnd-text-secondary flex-1">{t('character.inventory.quantity')}</span>
             <button
               onClick={() => onQuantityChange(-1)}
-              className="w-7 h-7 rounded-lg bg-dnd-surface font-bold active:opacity-70"
+              className="w-10 h-10 rounded-xl bg-dnd-surface font-bold text-lg active:opacity-70"
             >&minus;</button>
             <span className="w-6 text-center font-bold">{item.quantity}</span>
             <button
               onClick={() => onQuantityChange(1)}
-              className="w-7 h-7 rounded-lg bg-dnd-surface font-bold active:opacity-70"
+              className="w-10 h-10 rounded-xl bg-dnd-surface font-bold text-lg active:opacity-70"
             >+</button>
           </div>
 
@@ -157,7 +157,7 @@ function InventoryItemInner({
                 className={`flex-1 !text-sm ${
                   item.is_equipped
                     ? '!bg-orange-500/20 !text-orange-300 !border-orange-500/30'
-                    : '!bg-dnd-success/20 !text-[#2ecc71] !border-dnd-success/30'
+                    : '!bg-dnd-success/20 !text-dnd-success-text !border-dnd-success/30'
                 }`}
               >
                 {item.is_equipped ? `\u21A9 ${t('character.inventory.unequip')}` : `\u2694 ${t('character.inventory.equip')}`}
@@ -176,7 +176,7 @@ function InventoryItemInner({
             <DndButton
               variant="secondary"
               onClick={onEdit}
-              className="!px-4 !text-sm !bg-blue-500/20 !text-blue-400 !border-blue-500/30"
+              className="!px-4 !text-sm !bg-dnd-info/20 !text-dnd-info-text !border-dnd-info/30"
             >
               {t('common.edit')}
             </DndButton>

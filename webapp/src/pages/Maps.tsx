@@ -7,6 +7,7 @@ import Layout from '@/components/Layout'
 import Card from '@/components/Card'
 import DndButton from '@/components/DndButton'
 import { haptic } from '@/auth/telegram'
+import { X } from 'lucide-react'
 import MapUploadForm from '@/pages/maps/MapUploadForm'
 import MapZoneGroup from '@/pages/maps/MapZoneGroup'
 import type { MapEntry } from '@/types'
@@ -130,13 +131,13 @@ export default function Maps() {
           className="fixed inset-0 bg-black/90 z-50 flex flex-col"
           onClick={() => setOverlayMap(null)}
         >
-          <div className="flex justify-end p-4 shrink-0">
+          <div className="flex justify-end p-4 pt-safe shrink-0">
             <button
-              onClick={() => setOverlayMap(null)}
-              className="text-white text-lg w-9 h-9 flex items-center justify-center
-                         rounded-full bg-white/20"
+              onClick={(e) => { e.stopPropagation(); setOverlayMap(null) }}
+              className="w-11 h-11 flex items-center justify-center
+                         rounded-full bg-white/20 border border-white/40 backdrop-blur-sm"
             >
-              ✕
+              <X size={22} className="text-white" />
             </button>
           </div>
           <div

@@ -152,8 +152,8 @@ export default function Abilities() {
                   <span
                     className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-md border
                       ${ab.is_passive
-                        ? 'bg-blue-500/20 text-blue-400 border-blue-500/30'
-                        : 'bg-amber-500/20 text-amber-400 border-amber-500/30'
+                        ? 'bg-dnd-info/20 text-dnd-info-text border-dnd-info/30'
+                        : 'bg-dnd-highlight/15 text-dnd-highlight border-dnd-highlight/25'
                       }`}
                   >
                     {ab.is_passive ? t('character.abilities.passive') : t('character.abilities.active')}
@@ -204,7 +204,7 @@ export default function Abilities() {
                       <button
                         onClick={() => usesMutation.mutate({ abilityId: ab.id, uses: Math.min(ab.max_uses!, (ab.uses ?? 0) + 1) })}
                         disabled={(ab.uses ?? 0) >= (ab.max_uses ?? 0) || usesMutation.isPending}
-                        className="w-10 h-10 rounded-xl bg-dnd-success/20 text-[#2ecc71] font-bold text-lg
+                        className="w-10 h-10 rounded-xl bg-dnd-success/20 text-dnd-success-text font-bold text-lg
                                    flex items-center justify-center active:opacity-70 disabled:opacity-30"
                       >+</button>
                     </div>

@@ -139,19 +139,19 @@ export default function Identity() {
 
       <div className="grid grid-cols-2 gap-2">
         <Card>
-          <DndInput label={t('character.identity.race')} value={draft.race} onChange={set('race')} placeholder="\u2014" />
+          <DndInput label={t('character.identity.race')} value={draft.race} onChange={set('race')} placeholder={t('character.identity.placeholder_race')} />
         </Card>
         <Card>
-          <DndInput label={t('character.identity.gender')} value={draft.gender} onChange={set('gender')} placeholder="\u2014" />
+          <DndInput label={t('character.identity.gender')} value={draft.gender} onChange={set('gender')} placeholder={t('character.identity.placeholder_gender')} />
         </Card>
       </div>
 
       <div className="grid grid-cols-2 gap-2">
         <Card>
-          <DndInput label={t('character.identity.background')} value={draft.background} onChange={set('background')} placeholder="\u2014" />
+          <DndInput label={t('character.identity.background')} value={draft.background} onChange={set('background')} placeholder={t('character.identity.placeholder_background')} />
         </Card>
         <Card>
-          <DndInput label={t('character.identity.alignment')} value={draft.alignment} onChange={set('alignment')} placeholder="\u2014" />
+          <DndInput label={t('character.identity.alignment')} value={draft.alignment} onChange={set('alignment')} placeholder={t('character.identity.placeholder_alignment')} />
         </Card>
       </div>
 
@@ -167,7 +167,7 @@ export default function Identity() {
       ].map(({ key, label }) => (
         <Card key={key}>
           <p className="block text-[11px] uppercase tracking-wider mb-1 font-medium text-dnd-gold-dim">{label}</p>
-          <textarea value={draft[key] as string} onChange={setTA(key)} rows={2} placeholder="\u2014" className={taClass} />
+          <textarea value={draft[key] as string} onChange={setTA(key)} rows={2} placeholder={t(`character.identity.placeholder_${key}`)} className={taClass} />
         </Card>
       ))}
 

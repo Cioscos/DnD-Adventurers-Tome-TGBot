@@ -61,7 +61,7 @@ export default function DeathSaves({ deathSaves, onRoll, onAction, isRolling }: 
       <div className="grid grid-cols-3 gap-2">
         <button
           onClick={() => onAction('success')}
-          className="py-2 rounded-xl bg-dnd-success/20 text-[#2ecc71] text-sm font-medium"
+          className="py-2 rounded-xl bg-dnd-success/20 text-dnd-success-text text-sm font-medium"
         >
           {'\u2713'} {t('character.death_saves.success')}
         </button>
@@ -73,7 +73,7 @@ export default function DeathSaves({ deathSaves, onRoll, onAction, isRolling }: 
         </button>
         <button
           onClick={() => onAction('stabilize')}
-          className="py-2 rounded-xl bg-dnd-info/20 text-[#5dade2] text-sm font-medium"
+          className="py-2 rounded-xl bg-dnd-info/20 text-dnd-info-text text-sm font-medium"
         >
           {'\uD83D\uDC8A'} {t('character.death_saves.stabilize')}
         </button>

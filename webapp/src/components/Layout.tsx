@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { ChevronLeft } from 'lucide-react'
 import { useSwipeNavigation, getGroupInfo } from '@/hooks/useSwipeNavigation'
 
@@ -12,6 +13,7 @@ interface LayoutProps {
 
 export default function Layout({ title, children, backTo, group, page }: LayoutProps) {
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const swipe = useSwipeNavigation(group, page)
   const info = getGroupInfo(group, page)
 
@@ -38,18 +40,36 @@ export default function Layout({ title, children, backTo, group, page }: LayoutP
             {title}
           </h1>
         </div>
-        {info && (
-          <div className="flex justify-center gap-1.5 mt-2">
-            {Array.from({ length: info.total }).map((_, i) => (
-              <div
-                key={i}
-                className={`w-2 h-2 rounded-full transition-colors ${
-                  i === info.index ? 'bg-dnd-gold' : 'bg-dnd-gold-dim/40'
-                }`}
-              />
-            ))}
-          </div>
-        )}
+        {info && (() => {
+          const prevKey = info.index > 0 ? info.pages[info.index - 1] : null
+          const currKey = info.pages[info.index]
+          const nextKey = info.index < info.total - 1 ? info.pages[info.index + 1] : null
+          return (
+            <div className="flex items-center justify-center gap-1.5 mt-2 text-xs overflow-x-auto scrollbar-hide">
+              {prevKey && (
+                <>
+                  <span className="text-dnd-text-secondary opacity-70 whitespace-nowrap"
+                        style={{ filter: 'blur(0.5px)' }}>
+                    {t(`character.menu.${prevKey}`)}
+                  </span>
+                  <span className="text-dnd-gold-dim/50 shrink-0">&gt;</span>
+                </>
+              )}
+              <span className="text-dnd-gold font-semibold whitespace-nowrap">
+                {t(`character.menu.${currKey}`)}
+              </span>
+              {nextKey && (
+                <>
+                  <span className="text-dnd-gold-dim/50 shrink-0">&gt;</span>
+                  <span className="text-dnd-text-secondary opacity-70 whitespace-nowrap"
+                        style={{ filter: 'blur(0.5px)' }}>
+                    {t(`character.menu.${nextKey}`)}
+                  </span>
+                </>
+              )}
+            </div>
+          )
+        })()}
       </header>
 
       <main

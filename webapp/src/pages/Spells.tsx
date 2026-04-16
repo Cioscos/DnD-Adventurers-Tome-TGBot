@@ -210,7 +210,7 @@ export default function Spells() {
       {concentratingId && (
         <Card variant="elevated">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[#a569bd] text-sm font-medium">{t('character.spells.concentration')}</span>
+            <span className="text-dnd-arcane-text text-sm font-medium">{t('character.spells.concentration')}</span>
             <button
               onClick={() => concentrationMutation.mutate(null)}
               className="text-xs text-[var(--dnd-danger)]"
@@ -236,7 +236,7 @@ export default function Spells() {
                 }
               }}
               disabled={concSaveMutation.isPending || !concDamage}
-              className="!bg-dnd-arcane/30 !text-[#a569bd] !border-dnd-arcane/30"
+              className="!bg-dnd-arcane/30 !text-dnd-arcane-text !border-dnd-arcane/30"
             >
               {concSaveMutation.isPending ? '...' : t('character.spells.conc_save_btn')}
             </DndButton>
@@ -260,13 +260,13 @@ export default function Spells() {
             </p>
             {concSaveResult.is_critical && <p className="text-[var(--dnd-gold)] font-bold">CRITICO!</p>}
             {concSaveResult.is_fumble && <p className="text-[var(--dnd-danger)] font-bold">FUMBLE!</p>}
-            <p className={`text-4xl font-black ${concSaveResult.success ? 'text-[#2ecc71]' : 'text-[var(--dnd-danger)]'}`}>
+            <p className={`text-4xl font-black ${concSaveResult.success ? 'text-dnd-success-text' : 'text-[var(--dnd-danger)]'}`}>
               {concSaveResult.total}
             </p>
             <p className="text-sm text-dnd-text-secondary">
               d20 ({concSaveResult.die}) {concSaveResult.bonus >= 0 ? '+' : ''}{concSaveResult.bonus}
             </p>
-            <p className={`font-bold ${concSaveResult.success ? 'text-[#2ecc71]' : 'text-[var(--dnd-danger)]'}`}>
+            <p className={`font-bold ${concSaveResult.success ? 'text-dnd-success-text' : 'text-[var(--dnd-danger)]'}`}>
               {concSaveResult.success ? t('character.spells.conc_save_success') : t('character.spells.conc_save_fail')}
             </p>
             {concSaveResult.lost_concentration && (
@@ -299,34 +299,30 @@ export default function Spells() {
                 </p>
                 {slot && slot.total > 0 && (
                   <div className="flex items-center gap-2">
-                    <div className="flex gap-1 items-center flex-wrap">
+                    <span className="text-xs text-dnd-text-secondary tabular-nums">
+                      {slot.used}/{slot.total}
+                    </span>
+                    <div className="flex gap-1.5 items-center flex-wrap">
                       {Array.from({ length: slot.total }).map((_, i) => (
-                        <span
+                        <button
                           key={i}
-                          className={`w-3 h-3 rounded-full border-2 inline-block
-                            ${i < slot.available
-                              ? 'bg-dnd-gold border-transparent'
-                              : 'bg-transparent border-dnd-text-secondary opacity-30'
-                            }`}
+                          disabled={useSlotMutation.isPending}
+                          onClick={() => {
+                            const newUsed = i < slot.used ? i : i + 1
+                            useSlotMutation.mutate({
+                              slotId: slot.id,
+                              newUsed: Math.min(newUsed, slot.total),
+                            })
+                          }}
+                          className={`w-7 h-7 rounded-full border-2 transition-all active:scale-90
+                            ${i < slot.used
+                              ? 'bg-dnd-gold border-dnd-gold/60'
+                              : 'bg-transparent border-dnd-text-secondary/30'
+                            }
+                            disabled:opacity-40`}
                         />
                       ))}
                     </div>
-                    <button
-                      disabled={slot.used === 0 || useSlotMutation.isPending}
-                      onClick={() => useSlotMutation.mutate({ slotId: slot.id, newUsed: slot.used - 1 })}
-                      className="w-8 h-8 rounded-lg bg-dnd-surface text-lg font-bold leading-none
-                                 flex items-center justify-center active:opacity-60 disabled:opacity-25 text-dnd-text"
-                    >
-                      &#x2212;
-                    </button>
-                    <button
-                      disabled={slot.available === 0 || useSlotMutation.isPending}
-                      onClick={() => useSlotMutation.mutate({ slotId: slot.id, newUsed: slot.used + 1 })}
-                      className="w-8 h-8 rounded-lg bg-dnd-gold/80 text-dnd-bg text-lg font-bold leading-none
-                                 flex items-center justify-center active:opacity-60 disabled:opacity-25"
-                    >
-                      +
-                    </button>
                   </div>
                 )}
               </div>

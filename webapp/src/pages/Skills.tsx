@@ -179,7 +179,7 @@ export default function Skills() {
 
                         {/* Bonus */}
                         <span className={`text-sm font-bold w-8 text-right shrink-0 tabular-nums
-                          ${bonus >= 0 ? 'text-[#2ecc71]' : 'text-[var(--dnd-danger)]'}`}>
+                          ${bonus >= 0 ? 'text-dnd-success-text' : 'text-[var(--dnd-danger)]'}`}>
                           {bonus >= 0 ? '+' : ''}{bonus}
                         </span>
 
