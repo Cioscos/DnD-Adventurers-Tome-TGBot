@@ -149,7 +149,7 @@ export default function CharacterMain() {
           <Settings size={20} className="text-dnd-gold" />
         </button>
         {char.is_party_active && (
-          <span className="text-xs px-2 py-0.5 rounded-full bg-dnd-success/20 text-[#2ecc71]">
+          <span className="text-xs px-2 py-0.5 rounded-full bg-dnd-success/20 text-dnd-success-text">
             Party
           </span>
         )}
@@ -190,7 +190,7 @@ export default function CharacterMain() {
           const spell = char.spells?.find(s => s.id === char.concentrating_spell_id)
           return (
             <div className="mt-2">
-              <span className="text-xs px-2 py-0.5 rounded-full bg-dnd-arcane/20 text-[#a569bd]">
+              <span className="text-xs px-2 py-0.5 rounded-full bg-dnd-arcane/20 text-dnd-arcane-text">
                 🔮 {spell?.name ?? t('character.spells.concentration')}
               </span>
             </div>
@@ -210,7 +210,7 @@ export default function CharacterMain() {
         {char.conditions && Object.entries(char.conditions).filter(([, v]) => v).length > 0 && (
           <div className="flex flex-wrap gap-1 mt-2">
             {Object.entries(char.conditions).filter(([, v]) => v).map(([key, val]) => (
-              <span key={key} className="text-xs px-2 py-0.5 rounded-full bg-dnd-danger/20 text-[#e74c3c]">
+              <span key={key} className="text-xs px-2 py-0.5 rounded-full bg-dnd-danger/20 text-[var(--dnd-danger)]">
                 🌀 {t(`character.conditions.${key}`)}
                 {typeof val === 'number' && val > 1 ? ` (${val})` : ''}
               </span>
@@ -225,7 +225,7 @@ export default function CharacterMain() {
           <div className="grid grid-cols-6 gap-1 text-center">
             {char.ability_scores.map((score) => (
               <div key={score.name} className="flex flex-col items-center bg-dnd-surface rounded-lg p-1 border border-dnd-gold-dim/30">
-                <span className="text-[0.55rem] text-dnd-gold-dim uppercase tracking-wide">
+                <span className="text-[0.6rem] text-dnd-gold-dim uppercase tracking-wide">
                   {score.name.slice(0, 3)}
                 </span>
                 <span className="text-lg font-black leading-tight">{score.value}</span>

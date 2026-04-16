@@ -97,7 +97,7 @@ export default function SavingThrows() {
               </button>
 
               {/* Bonus */}
-              <span className={`text-sm font-bold w-8 text-right ${total >= 0 ? 'text-[#2ecc71]' : 'text-[var(--dnd-danger)]'}`}>
+              <span className={`text-sm font-bold w-8 text-right ${total >= 0 ? 'text-dnd-success-text' : 'text-[var(--dnd-danger)]'}`}>
                 {total >= 0 ? '+' : ''}{total}
               </span>
 

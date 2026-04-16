@@ -54,7 +54,7 @@ export default function HitDiceModal({
                   if (count > 0) onSpend(cls.id, count)
                 }}
                 disabled={!hitDiceCounts[cls.id] || isPending}
-                className="px-3 py-1 rounded-lg bg-dnd-success/30 text-[#2ecc71] text-sm font-medium
+                className="px-3 py-1 rounded-lg bg-dnd-success/30 text-dnd-success-text text-sm font-medium
                            disabled:opacity-30 active:opacity-70"
               >
                 {'\uD83C\uDFB2'}
@@ -69,7 +69,7 @@ export default function HitDiceModal({
               onConfirmRest()
             }}
             disabled={isPending}
-            className="flex-1 py-2.5 rounded-xl bg-dnd-info/30 text-[#5dade2] font-medium disabled:opacity-40"
+            className="flex-1 py-2.5 rounded-xl bg-dnd-info/30 text-dnd-info-text font-medium disabled:opacity-40"
           >
             {t('character.hp.confirm_rest')}
           </button>

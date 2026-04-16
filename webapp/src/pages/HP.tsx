@@ -139,7 +139,7 @@ export default function HP() {
       {/* Concentration save banner */}
       {isConcentrating && (
         <Card variant="elevated">
-          <p className="text-sm text-[#a569bd] font-medium mb-2">
+          <p className="text-sm text-dnd-arcane-text font-medium mb-2">
             {'\uD83D\uDD2E'} {t('character.hp.concentration_active')}
           </p>
           <div className="flex gap-2 items-center">
@@ -157,7 +157,7 @@ export default function HP() {
                 if (!isNaN(dmg) && dmg >= 0) concSaveMutation.mutate(dmg)
               }}
               disabled={concSaveMutation.isPending || !concDamageInput}
-              className="px-3 py-1.5 rounded-xl bg-dnd-arcane/20 text-[#a569bd] text-sm font-medium
+              className="px-3 py-1.5 rounded-xl bg-dnd-arcane/20 text-dnd-arcane-text text-sm font-medium
                          disabled:opacity-30 active:opacity-70"
             >
               {concSaveMutation.isPending ? '...' : t('character.spells.conc_save_btn')}
@@ -182,14 +182,14 @@ export default function HP() {
         <button
           onClick={() => setShowShortRest(true)}
           disabled={restMutation.isPending}
-          className="py-3 rounded-2xl bg-dnd-info/20 text-[#5dade2] font-medium active:opacity-70"
+          className="py-3 rounded-2xl bg-dnd-info/20 text-dnd-info-text font-medium active:opacity-70"
         >
           {'\uD83C\uDF19'} {t('character.hp.short_rest')}
         </button>
         <button
           onClick={() => restMutation.mutate('long')}
           disabled={restMutation.isPending}
-          className="py-3 rounded-2xl bg-dnd-arcane/20 text-[#a569bd] font-medium active:opacity-70"
+          className="py-3 rounded-2xl bg-dnd-arcane/20 text-dnd-arcane-text font-medium active:opacity-70"
         >
           {'\uD83D\uDCA4'} {t('character.hp.long_rest')}
         </button>
@@ -268,13 +268,13 @@ export default function HP() {
               {'\uD83D\uDC80'} {t('character.death_saves.roll_result')}
             </p>
             {deathRollResult.outcome === 'nat20' && (
-              <p className="text-yellow-400 font-bold text-lg">{t('character.death_saves.nat20')}</p>
+              <p className="text-dnd-highlight font-bold text-lg">{t('character.death_saves.nat20')}</p>
             )}
             {deathRollResult.outcome === 'nat1' && (
               <p className="text-red-400 font-bold text-lg">{t('character.death_saves.nat1')}</p>
             )}
             <p className={`text-5xl font-black ${
-              deathRollResult.outcome === 'nat20' ? 'text-yellow-400'
+              deathRollResult.outcome === 'nat20' ? 'text-dnd-highlight'
                 : deathRollResult.outcome === 'success' ? 'text-green-400'
                   : 'text-red-400'
             }`}>
@@ -288,7 +288,7 @@ export default function HP() {
                 ? t('character.death_saves.success') : t('character.death_saves.failure')}
             </p>
             {deathRollResult.revived && (
-              <p className="text-yellow-300 text-sm font-medium">
+              <p className="text-dnd-highlight text-sm font-medium">
                 {t('character.death_saves.revived')}
               </p>
             )}
@@ -330,7 +330,7 @@ export default function HP() {
             <p className="text-sm text-dnd-text-secondary">
               {'\uD83D\uDD2E'} {t('character.spells.concentration')} — DC {concSaveResult.dc}
             </p>
-            {concSaveResult.is_critical && <p className="text-yellow-400 font-bold">{'\u2728'} CRITICO!</p>}
+            {concSaveResult.is_critical && <p className="text-dnd-highlight font-bold">{'\u2728'} CRITICO!</p>}
             {concSaveResult.is_fumble && <p className="text-red-400 font-bold">{'\uD83D\uDC80'} FUMBLE!</p>}
             <p className={`text-4xl font-black ${concSaveResult.success ? 'text-green-400' : 'text-red-400'}`}>
               {concSaveResult.total}

@@ -171,7 +171,7 @@ export default function Dice() {
               haptic.light()
               api.dice.postToChat(charId, lastResult).catch(() => {})
             }}
-            className="mt-3 px-4 py-2 rounded-xl bg-dnd-info/20 text-[#5dade2] text-sm font-medium"
+            className="mt-3 px-4 py-2 rounded-xl bg-dnd-info/20 text-dnd-info-text text-sm font-medium"
           >
             📤 {t('character.dice.send_to_chat')}
           </button>

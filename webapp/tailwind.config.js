@@ -29,6 +29,12 @@ export default {
           success: 'var(--dnd-success)',
           arcane: 'var(--dnd-arcane)',
           info: 'var(--dnd-info)',
+          highlight: 'var(--dnd-highlight)',
+          'highlight-muted': 'var(--dnd-highlight-muted)',
+          'success-text': 'var(--dnd-success-text)',
+          'arcane-text': 'var(--dnd-arcane-text)',
+          'info-text': 'var(--dnd-info-text)',
+          'chip-bg': 'var(--dnd-chip-bg)',
         },
       },
       fontFamily: {

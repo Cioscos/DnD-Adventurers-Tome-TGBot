@@ -230,7 +230,15 @@
       "resistances": "Resistances",
       "immunities": "Immunities",
       "vulnerabilities": "Vulnerabilities",
-      "damage_type_placeholder": "e.g. fire"
+      "damage_type_placeholder": "e.g. fire",
+      "placeholder_race": "e.g. Elf, Dwarf...",
+      "placeholder_gender": "e.g. Male, Female...",
+      "placeholder_background": "e.g. Soldier, Noble...",
+      "placeholder_alignment": "e.g. Lawful Good...",
+      "placeholder_personality_traits": "Describe your traits...",
+      "placeholder_ideals": "Describe your ideals...",
+      "placeholder_bonds": "Describe your bonds...",
+      "placeholder_flaws": "Describe your flaws..."
     },
     "inspiration": {
       "title": "Heroic Inspiration",
@@ -250,7 +258,8 @@
       "mode_add": "Add/Remove",
       "convert_from": "From",
       "convert_to": "To",
-      "convert_amount": "Amount"
+      "convert_amount": "Amount",
+      "swap": "Swap"
     },
     "xp": {
       "title": "Experience",

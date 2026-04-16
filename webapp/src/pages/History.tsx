@@ -7,6 +7,7 @@ import Layout from '@/components/Layout'
 import Card from '@/components/Card'
 import DndButton from '@/components/DndButton'
 import ScrollArea from '@/components/ScrollArea'
+import Skeleton from '@/components/Skeleton'
 import { haptic } from '@/auth/telegram'
 
 export default function History() {
@@ -16,7 +17,7 @@ export default function History() {
   const qc = useQueryClient()
   const [confirmClear, setConfirmClear] = useState(false)
 
-  const { data: entries = [] } = useQuery({
+  const { data: entries = [], isLoading } = useQuery({
     queryKey: ['history', charId],
     queryFn: () => api.history.get(charId),
   })
@@ -44,7 +45,19 @@ export default function History() {
 
   return (
     <Layout title={t('character.history.title')} backTo={`/char/${charId}`} group="tools" page="history">
-      {entries.length === 0 ? (
+      {isLoading ? (
+        <div className="space-y-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="flex gap-3 px-4 py-3 rounded-xl bg-dnd-surface">
+              <Skeleton.Circle width="28px" delay={i * 80} />
+              <div className="flex-1 space-y-2">
+                <Skeleton.Line width="80%" height="14px" delay={i * 80} />
+                <Skeleton.Line width="40%" height="10px" delay={i * 80 + 50} />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : entries.length === 0 ? (
         <Card>
           <p className="text-center text-dnd-text-secondary">{t('character.history.empty')}</p>
         </Card>

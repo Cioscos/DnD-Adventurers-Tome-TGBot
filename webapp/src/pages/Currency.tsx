@@ -8,6 +8,7 @@ import Card from '@/components/Card'
 import DndInput from '@/components/DndInput'
 import DndButton from '@/components/DndButton'
 import { haptic } from '@/auth/telegram'
+import { ArrowLeftRight } from 'lucide-react'
 
 const COINS = [
   { key: 'platinum', emoji: '\u2B1C', ratio: 100 },
@@ -41,6 +42,10 @@ export default function Currency() {
   const [convertTarget, setConvertTarget] = useState<CoinKey>('silver')
   const [convertAmount, setConvertAmount] = useState('')
 
+  const currencyFingerprint = char?.currency
+    ? `${char.currency.platinum}-${char.currency.gold}-${char.currency.electrum}-${char.currency.silver}-${char.currency.copper}`
+    : null
+
   useEffect(() => {
     if (char?.currency && mode === 'set') {
       setDraft({
@@ -51,12 +56,12 @@ export default function Currency() {
         copper: String(char.currency.copper),
       })
     }
-  }, [char?.currency?.id, mode])
+  }, [currencyFingerprint, mode])
 
   // When switching to 'add' mode, reset drafts to 0
   useEffect(() => {
     if (mode === 'add') {
-      setDraft({ platinum: '0', gold: '0', electrum: '0', silver: '0', copper: '0' })
+      setDraft({ platinum: '', gold: '', electrum: '', silver: '', copper: '' })
     } else if (char?.currency) {
       setDraft({
         platinum: String(char.currency.platinum),
@@ -86,7 +91,7 @@ export default function Currency() {
         old ? { ...old, currency: updated } : old
       )
       if (mode === 'add') {
-        setDraft({ platinum: '0', gold: '0', electrum: '0', silver: '0', copper: '0' })
+        setDraft({ platinum: '', gold: '', electrum: '', silver: '', copper: '' })
       }
       haptic.success()
     },
@@ -129,7 +134,7 @@ export default function Currency() {
     <Layout title={t('character.currency.title')} backTo={`/char/${charId}`} group="equipment" page="currency">
       <Card variant="elevated">
         <p className="text-sm text-dnd-text-secondary mb-1">{t('character.currency.total_gold')}</p>
-        <p className="text-3xl font-bold text-yellow-400">{'\uD83D\uDFE1'} {totalGold}</p>
+        <p className="text-3xl font-bold text-dnd-highlight">{'\uD83D\uDFE1'} {totalGold}</p>
       </Card>
 
       {/* Mode toggle */}
@@ -168,6 +173,7 @@ export default function Currency() {
                 min={mode === 'set' ? 0 : undefined}
                 value={draft[key]}
                 onChange={(v) => setDraft((d) => ({ ...d, [key]: v }))}
+                placeholder="0"
                 className="w-28"
               />
             </div>
@@ -193,59 +199,75 @@ export default function Currency() {
       </DndButton>
 
       {showConvert && (
-        <Card className="space-y-3">
-          <div className="flex gap-2">
-            <div className="flex-1">
-              <label className="block text-[11px] uppercase tracking-wider mb-1 font-medium text-dnd-gold-dim">
-                {t('character.currency.convert_from')}
-              </label>
-              <select
-                value={convertSource}
-                onChange={(e) => setConvertSource(e.target.value as CoinKey)}
-                className="w-full bg-dnd-surface rounded-xl px-2 py-3 min-h-[48px] outline-none text-sm text-dnd-text
-                           border border-transparent focus:border-dnd-gold-dim"
+        <div
+          className="fixed inset-0 bg-black/60 flex items-end z-50 p-4"
+          onClick={() => setShowConvert(false)}
+        >
+          <Card className="w-full space-y-3" onClick={(e) => e.stopPropagation()}>
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <label className="block text-[11px] uppercase tracking-wider mb-1 font-medium text-dnd-gold-dim">
+                  {t('character.currency.convert_from')}
+                </label>
+                <select
+                  value={convertSource}
+                  onChange={(e) => setConvertSource(e.target.value as CoinKey)}
+                  className="w-full bg-dnd-surface rounded-xl px-2 py-3 min-h-[48px] outline-none text-sm text-dnd-text
+                             border border-transparent focus:border-dnd-gold-dim"
+                >
+                  {COINS.map(({ key }) => (
+                    <option key={key} value={key}>{t(`character.currency.${key}`)}</option>
+                  ))}
+                </select>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const tmp = convertSource
+                  setConvertSource(convertTarget)
+                  setConvertTarget(tmp)
+                }}
+                className="flex items-end pb-3 text-dnd-gold active:opacity-60 transition-opacity"
+                aria-label={t('character.currency.swap')}
               >
-                {COINS.map(({ key }) => (
-                  <option key={key} value={key}>{t(`character.currency.${key}`)}</option>
-                ))}
-              </select>
+                <ArrowLeftRight size={18} />
+              </button>
+              <div className="flex-1">
+                <label className="block text-[11px] uppercase tracking-wider mb-1 font-medium text-dnd-gold-dim">
+                  {t('character.currency.convert_to')}
+                </label>
+                <select
+                  value={convertTarget}
+                  onChange={(e) => setConvertTarget(e.target.value as CoinKey)}
+                  className="w-full bg-dnd-surface rounded-xl px-2 py-3 min-h-[48px] outline-none text-sm text-dnd-text
+                             border border-transparent focus:border-dnd-gold-dim"
+                >
+                  {COINS.map(({ key }) => (
+                    <option key={key} value={key}>{t(`character.currency.${key}`)}</option>
+                  ))}
+                </select>
+              </div>
             </div>
-            <div className="flex items-end pb-3 text-dnd-text-secondary">{'\u2192'}</div>
-            <div className="flex-1">
-              <label className="block text-[11px] uppercase tracking-wider mb-1 font-medium text-dnd-gold-dim">
-                {t('character.currency.convert_to')}
-              </label>
-              <select
-                value={convertTarget}
-                onChange={(e) => setConvertTarget(e.target.value as CoinKey)}
-                className="w-full bg-dnd-surface rounded-xl px-2 py-3 min-h-[48px] outline-none text-sm text-dnd-text
-                           border border-transparent focus:border-dnd-gold-dim"
-              >
-                {COINS.map(({ key }) => (
-                  <option key={key} value={key}>{t(`character.currency.${key}`)}</option>
-                ))}
-              </select>
-            </div>
-          </div>
 
-          <DndInput
-            label={t('character.currency.convert_amount')}
-            type="number"
-            min={1}
-            value={convertAmount}
-            onChange={setConvertAmount}
-            placeholder="0"
-          />
+            <DndInput
+              label={t('character.currency.convert_amount')}
+              type="number"
+              min={1}
+              value={convertAmount}
+              onChange={setConvertAmount}
+              placeholder="0"
+            />
 
-          <DndButton
-            onClick={() => convertMutation.mutate()}
-            disabled={!convertAmount || convertSource === convertTarget}
-            loading={convertMutation.isPending}
-            className="w-full"
-          >
-            {t('character.currency.convert')}
-          </DndButton>
-        </Card>
+            <DndButton
+              onClick={() => convertMutation.mutate()}
+              disabled={!convertAmount || convertSource === convertTarget}
+              loading={convertMutation.isPending}
+              className="w-full"
+            >
+              {t('character.currency.convert')}
+            </DndButton>
+          </Card>
+        </div>
       )}
     </Layout>
   )

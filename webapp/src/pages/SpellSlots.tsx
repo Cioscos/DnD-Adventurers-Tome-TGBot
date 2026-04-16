@@ -66,7 +66,7 @@ export default function SpellSlots() {
           variant="secondary"
           onClick={() => resetAll.mutate()}
           loading={resetAll.isPending}
-          className="w-full !bg-blue-500/20 !text-blue-300 !border-blue-500/30"
+          className="w-full !bg-dnd-info/20 !text-dnd-info-text !border-dnd-info/30"
         >
           {t('character.slots.reset_all')}
         </DndButton>
@@ -85,7 +85,7 @@ export default function SpellSlots() {
               <div className="flex items-center justify-between mb-2">
                 <span className="font-semibold text-dnd-text">{t('character.slots.level', { level: slot.level })}</span>
                 <div className="flex gap-2 items-center">
-                  <span className={`text-sm font-bold ${slot.available > 0 ? 'text-[#2ecc71]' : 'text-dnd-text-secondary'}`}>
+                  <span className={`text-sm font-bold ${slot.available > 0 ? 'text-dnd-success-text' : 'text-dnd-text-secondary'}`}>
                     {slot.available}/{slot.total}
                   </span>
                   <button
@@ -118,12 +118,12 @@ export default function SpellSlots() {
                 <span className="text-xs text-dnd-text-secondary">{t('character.slots.total')}:</span>
                 <button
                   onClick={() => updateTotal.mutate({ slotId: slot.id, total: Math.max(1, slot.total - 1) })}
-                  className="w-6 h-6 rounded-lg bg-dnd-surface text-sm font-bold text-dnd-text"
+                  className="w-8 h-8 rounded-lg bg-dnd-surface text-sm font-bold text-dnd-text flex items-center justify-center"
                 >&#x2212;</button>
                 <span className="text-sm font-bold w-4 text-center text-dnd-text">{slot.total}</span>
                 <button
                   onClick={() => updateTotal.mutate({ slotId: slot.id, total: slot.total + 1 })}
-                  className="w-6 h-6 rounded-lg bg-dnd-surface text-sm font-bold text-dnd-text"
+                  className="w-8 h-8 rounded-lg bg-dnd-surface text-sm font-bold text-dnd-text flex items-center justify-center"
                 >+</button>
               </div>
             </Card>
@@ -139,7 +139,7 @@ export default function SpellSlots() {
                   key={level}
                   variant="secondary"
                   onClick={() => addSlot.mutate(level)}
-                  className="!px-3 !py-1.5 !min-h-0 !text-sm !bg-dnd-arcane/20 !text-[#a569bd] !border-dnd-arcane/30"
+                  className="!px-3 !py-1.5 !min-h-0 !text-sm !bg-dnd-arcane/20 !text-dnd-arcane-text !border-dnd-arcane/30"
                 >
                   + Liv. {level}
                 </DndButton>

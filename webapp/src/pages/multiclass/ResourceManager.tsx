@@ -60,7 +60,7 @@ export default function ResourceManager({
               <button
                 onClick={() => onUseResource(classId, res.id, Math.min(res.total, res.current + 1))}
                 disabled={res.current >= res.total}
-                className="w-6 h-6 rounded bg-dnd-success/20 text-[#2ecc71] font-bold disabled:opacity-30"
+                className="w-6 h-6 rounded bg-dnd-success/20 text-dnd-success-text font-bold disabled:opacity-30"
               >+</button>
               <button
                 onClick={() => onDeleteResource(classId, res.id)}

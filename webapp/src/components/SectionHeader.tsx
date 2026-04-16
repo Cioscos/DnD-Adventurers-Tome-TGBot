@@ -7,7 +7,7 @@ interface SectionHeaderProps {
 function SectionHeaderInner({ children }: SectionHeaderProps) {
   return (
     <div className="flex items-center gap-2 mt-4 mb-2">
-      <span className="text-[0.65rem] font-cinzel font-bold text-dnd-gold-dim uppercase tracking-widest whitespace-nowrap">
+      <span className="text-xs font-cinzel font-bold text-dnd-gold-dim uppercase tracking-widest whitespace-nowrap">
         {children}
       </span>
       <div className="flex-1 h-px bg-gradient-to-r from-dnd-gold-dim to-transparent" />

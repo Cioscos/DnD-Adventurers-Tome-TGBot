@@ -154,7 +154,7 @@ export default function CharacterSelect() {
                   <div className="flex items-center gap-2">
                     <span className="font-semibold truncate">{char.name}</span>
                     {char.is_party_active && (
-                      <span className="text-xs px-1.5 py-0.5 rounded-full bg-dnd-success/20 text-[#2ecc71]">
+                      <span className="text-xs px-1.5 py-0.5 rounded-full bg-dnd-success/20 text-dnd-success-text">
                         Party
                       </span>
                     )}

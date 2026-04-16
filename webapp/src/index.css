@@ -17,6 +17,12 @@
   --dnd-success: #27ae60;
   --dnd-arcane: #8e44ad;
   --dnd-info: #2980b9;
+  --dnd-highlight: #facc15;
+  --dnd-highlight-muted: #d97706;
+  --dnd-success-text: #2ecc71;
+  --dnd-arcane-text: #a569bd;
+  --dnd-info-text: #5dade2;
+  --dnd-chip-bg: rgba(0, 0, 0, 0.2);
 
   /* Keep Telegram fallbacks pointing to D&D tokens so old references work during migration */
   --tg-theme-bg-color: var(--dnd-bg);
@@ -43,6 +49,12 @@
   --dnd-success: #1e8449;
   --dnd-arcane: #7d3c98;
   --dnd-info: #2471a3;
+  --dnd-highlight: #92700a;
+  --dnd-highlight-muted: #8a5a04;
+  --dnd-success-text: #1a7a3a;
+  --dnd-arcane-text: #6a2d84;
+  --dnd-info-text: #1f5f8b;
+  --dnd-chip-bg: rgba(0, 0, 0, 0.06);
 
   --tg-theme-bg-color: var(--dnd-bg);
   --tg-theme-text-color: var(--dnd-text);

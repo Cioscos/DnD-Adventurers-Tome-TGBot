@@ -230,7 +230,15 @@
       "resistances": "Resistenze",
       "immunities": "Immunità",
       "vulnerabilities": "Vulnerabilità",
-      "damage_type_placeholder": "es. fuoco"
+      "damage_type_placeholder": "es. fuoco",
+      "placeholder_race": "es. Elfo, Nano...",
+      "placeholder_gender": "es. Maschio, Femmina...",
+      "placeholder_background": "es. Soldato, Nobile...",
+      "placeholder_alignment": "es. Legale Buono...",
+      "placeholder_personality_traits": "Descrivi i tuoi tratti...",
+      "placeholder_ideals": "Descrivi i tuoi ideali...",
+      "placeholder_bonds": "Descrivi i tuoi legami...",
+      "placeholder_flaws": "Descrivi i tuoi difetti..."
     },
     "inspiration": {
       "title": "Ispirazione Eroica",
@@ -250,7 +258,8 @@
       "mode_add": "Aggiungi/Rimuovi",
       "convert_from": "Da",
       "convert_to": "A",
-      "convert_amount": "Quantità"
+      "convert_amount": "Quantità",
+      "swap": "Scambia"
     },
     "xp": {
       "title": "Esperienza",

@@ -64,7 +64,7 @@ export default function AbilityScores() {
                   setEditing(score.name)
                   setEditValue(String(score.value))
                 }}
-                className="text-xs text-[var(--tg-theme-link-color)]"
+                className="text-xs text-dnd-gold px-2 py-1 -mr-2 rounded-lg active:opacity-60"
               >
                 {t('common.edit')}
               </button>
@@ -88,7 +88,7 @@ export default function AbilityScores() {
                 />
                 <button
                   onClick={() => handleSave(score.name)}
-                  className="text-[#2ecc71] font-bold"
+                  className="text-dnd-success-text font-bold"
                 >
                   ✓
                 </button>
