@@ -1,0 +1,1 @@
+import{j as r}from"./index-COce0oXH.js";import{S as o}from"./Surface-hHr9M10t.js";function m({variant:t="default",...a}){const e=t==="elevated"?"elevated":"flat";return r.jsx(o,{variant:e,...a})}export{m as C};
