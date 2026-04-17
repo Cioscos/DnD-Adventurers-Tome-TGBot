@@ -18,8 +18,10 @@
   "character": {
     "select": {
       "title": "Your characters",
+      "subtitle": "Choose a hero for your adventure",
       "new": "New character",
       "empty": "No characters yet. Create one!",
+      "party": "Party",
       "delete_confirm": "Delete {{name}}? This action is irreversible."
     },
     "menu": {
@@ -433,9 +435,10 @@
     "create": {
       "step_name": "New Character",
       "step_class": "Choose Initial Class",
-      "skip_class": "Skip (add later)",
+      "skip_class": "Continue without a class",
       "custom_class": "Custom",
       "custom_class_name": "Class name",
+      "name_placeholder": "Your hero's name",
       "hit_die": "Hit die"
     }
   },

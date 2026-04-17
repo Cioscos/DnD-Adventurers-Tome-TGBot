@@ -18,8 +18,10 @@
   "character": {
     "select": {
       "title": "I tuoi personaggi",
+      "subtitle": "Scegli un eroe per la tua avventura",
       "new": "Nuovo personaggio",
       "empty": "Nessun personaggio. Creane uno!",
+      "party": "Party",
       "delete_confirm": "Eliminare {{name}}? L'azione è irreversibile."
     },
     "menu": {
@@ -433,9 +435,10 @@
     "create": {
       "step_name": "Nuovo personaggio",
       "step_class": "Scegli classe iniziale",
-      "skip_class": "Salta (aggiungi dopo)",
+      "skip_class": "Procedi senza classe",
       "custom_class": "Personalizzata",
       "custom_class_name": "Nome classe",
+      "name_placeholder": "Il nome del tuo eroe",
       "hit_die": "Dado vita"
     }
   },
