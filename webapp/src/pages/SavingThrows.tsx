@@ -2,13 +2,27 @@ import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { m } from 'framer-motion'
+import { Dice1, Check, ShieldAlert } from 'lucide-react'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
-import Card from '@/components/Card'
+import Surface from '@/components/ui/Surface'
+import StatPill from '@/components/ui/StatPill'
+import Reveal from '@/components/ui/Reveal'
 import RollResultModal, { type RollResult } from '@/components/RollResultModal'
 import { haptic } from '@/auth/telegram'
+import { stagger } from '@/styles/motion'
 
-const ABILITIES = ['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma']
+const ABILITIES = ['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'] as const
+
+const ABILITY_TONE: Record<string, 'crimson' | 'emerald' | 'amber' | 'cobalt' | 'arcane' | 'gold'> = {
+  strength: 'crimson',
+  dexterity: 'emerald',
+  constitution: 'amber',
+  intelligence: 'cobalt',
+  wisdom: 'arcane',
+  charisma: 'gold',
+}
 
 function profBonus(level: number) {
   return Math.floor((level - 1) / 4) + 2
@@ -60,60 +74,78 @@ export default function SavingThrows() {
 
   return (
     <Layout title={t('character.saves.title')} backTo={`/char/${charId}`} group="combat" page="saves">
-      <Card variant="elevated">
-        <p className="text-sm text-dnd-text-secondary">
-          {t('character.skills.prof_bonus')}: <span className="font-bold text-white">+{pb}</span>
-        </p>
-      </Card>
+      <Surface variant="elevated" className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-dnd-gold">
+          <ShieldAlert size={16} />
+          <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim">
+            {t('character.skills.prof_bonus')}
+          </p>
+        </div>
+        <StatPill tone="gold" value={`+${pb}`} />
+      </Surface>
 
-      <div className="space-y-1">
+      <Reveal.Stagger stagger={stagger.list} className="grid grid-cols-2 gap-2">
         {ABILITIES.map((ability) => {
           const isProficient = saves[ability] ?? false
           const score = char.ability_scores.find((s) => s.name === ability)
           const abilMod = score?.modifier ?? 0
           const total = abilMod + (isProficient ? pb : 0)
+          const tone = ABILITY_TONE[ability]
 
           return (
-            <div
-              key={ability}
-              className="flex items-center gap-3 px-4 py-3 rounded-xl
-                         bg-dnd-surface"
-            >
-              {/* Proficiency toggle */}
-              <button
-                onClick={() => toggle(ability)}
-                className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0
-                  ${isProficient ? 'bg-dnd-gold border-dnd-gold' : 'border-white/30'}`}
-              >
-                {isProficient && <span className="text-xs text-white font-bold">✓</span>}
-              </button>
-
-              {/* Name */}
-              <button
-                onClick={() => toggle(ability)}
-                className="flex-1 text-left font-medium active:opacity-70"
-              >
-                {t(`character.stats.${ability}`)}
-              </button>
-
-              {/* Bonus */}
-              <span className={`text-sm font-bold w-8 text-right ${total >= 0 ? 'text-dnd-success-text' : 'text-[var(--dnd-danger)]'}`}>
-                {total >= 0 ? '+' : ''}{total}
-              </span>
-
-              {/* Roll button */}
-              <button
+            <Reveal.Item key={ability}>
+              <Surface
+                variant={isProficient ? 'elevated' : 'flat'}
+                interactive
                 onClick={() => rollMutation.mutate(ability)}
-                disabled={rollMutation.isPending}
-                className="text-lg leading-none shrink-0 active:opacity-60 disabled:opacity-30"
-                title={t('character.saves.roll')}
+                className={`relative !p-3 text-center
+                  ${isProficient ? 'border-dnd-gold/50 shadow-halo-gold' : ''}`}
               >
-                🎲
-              </button>
-            </div>
+                {/* Proficiency star toggle — separate touch target ≥44x44 */}
+                <m.button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    toggle(ability)
+                  }}
+                  className={`absolute top-1.5 left-1.5 w-11 h-11 flex items-center justify-center rounded-full
+                    ${isProficient
+                      ? 'text-dnd-gold-bright'
+                      : 'text-dnd-text-faint'}`}
+                  whileTap={{ scale: 0.85 }}
+                  aria-label="Proficiency"
+                >
+                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center
+                    ${isProficient
+                      ? 'bg-dnd-gold border-dnd-gold-bright shadow-[0_0_6px_var(--dnd-gold-glow)]'
+                      : 'border-dnd-border'}`}>
+                    {isProficient && <Check size={12} className="text-dnd-ink" strokeWidth={3} />}
+                  </div>
+                </m.button>
+
+                {/* Roll hint icon (top-right) */}
+                <Dice1 size={14} className="absolute top-3 right-3 text-dnd-text-faint opacity-60" />
+
+                <p className="text-[10px] font-cinzel uppercase tracking-[0.25em] text-dnd-text-muted mt-3">
+                  {t(`character.stats.${ability}`)}
+                </p>
+                <p className={`text-4xl font-display font-black leading-none mt-1.5 mb-1 ${
+                  tone === 'crimson' ? 'text-[var(--dnd-crimson-bright)]'
+                  : tone === 'emerald' ? 'text-[var(--dnd-emerald-bright)]'
+                  : tone === 'amber' ? 'text-[var(--dnd-amber)]'
+                  : tone === 'cobalt' ? 'text-[var(--dnd-cobalt-bright)]'
+                  : tone === 'arcane' ? 'text-dnd-arcane-bright'
+                  : 'text-dnd-gold-bright'
+                }`}>
+                  {total >= 0 ? '+' : ''}{total}
+                </p>
+                <p className="text-[10px] text-dnd-text-faint font-mono">
+                  {abilMod >= 0 ? '+' : ''}{abilMod}{isProficient ? ` +${pb}` : ''}
+                </p>
+              </Surface>
+            </Reveal.Item>
           )
         })}
-      </div>
+      </Reveal.Stagger>
 
       {rollResult && (
         <RollResultModal
