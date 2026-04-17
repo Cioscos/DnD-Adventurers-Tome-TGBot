@@ -3,66 +3,149 @@
 @tailwind utilities;
 
 :root {
-  /* D&D "Pergamena & Oro" design tokens — Dark mode (default) */
-  --dnd-bg: #1a1614;
-  --dnd-surface: #2a2320;
-  --dnd-surface-elevated: #352d28;
-  --dnd-gold: #d4a847;
-  --dnd-gold-dim: #8b7335;
-  --dnd-gold-glow: rgba(212, 168, 71, 0.15);
-  --dnd-parchment: #f4e8c1;
-  --dnd-text: #e8e0d4;
-  --dnd-text-secondary: #9a8e7f;
-  --dnd-danger: #c0392b;
-  --dnd-success: #27ae60;
-  --dnd-arcane: #8e44ad;
-  --dnd-info: #2980b9;
-  --dnd-highlight: #facc15;
-  --dnd-highlight-muted: #d97706;
-  --dnd-success-text: #2ecc71;
-  --dnd-arcane-text: #a569bd;
-  --dnd-info-text: #5dade2;
-  --dnd-chip-bg: rgba(0, 0, 0, 0.2);
+  /* ── Illuminated Manuscript Noir — Dark mode (default) ── */
+  --dnd-ink: #0d0a08;
+  --dnd-bg: #1a1512;
+  --dnd-surface: #241d18;
+  --dnd-surface-raised: #2f261f;
+  --dnd-surface-lifted: #3b3026;
+  --dnd-surface-elevated: var(--dnd-surface-raised); /* legacy alias */
+  --dnd-border: #4a3d30;
+  --dnd-border-strong: #6b5841;
 
-  /* Keep Telegram fallbacks pointing to D&D tokens so old references work during migration */
+  /* Gold ink — metallic, multi-stop for gradient shine */
+  --dnd-gold: #d4a847;
+  --dnd-gold-bright: #f0c970;
+  --dnd-gold-dim: #8b7335;
+  --dnd-gold-deep: #5a4820;
+  --dnd-gold-glow: rgba(240, 201, 112, 0.22);
+
+  /* Text tones (warm parchment) */
+  --dnd-parchment: #f4e8c1;
+  --dnd-text: #ebdfbf;
+  --dnd-text-muted: #b5a482;
+  --dnd-text-faint: #857761;
+  --dnd-text-secondary: var(--dnd-text-muted); /* legacy alias */
+
+  /* Semantic (richer, with deep + bright variants) */
+  --dnd-crimson: #b33a3a;
+  --dnd-crimson-bright: #e85050;
+  --dnd-crimson-deep: #7a1f1f;
+  --dnd-danger: var(--dnd-crimson); /* legacy alias */
+  --dnd-emerald: #3fa66a;
+  --dnd-emerald-bright: #6fd195;
+  --dnd-emerald-deep: #1f6b3f;
+  --dnd-success: var(--dnd-emerald); /* legacy alias */
+  --dnd-success-text: var(--dnd-emerald-bright); /* legacy alias */
+  --dnd-arcane: #9b59b6;
+  --dnd-arcane-bright: #c589e8;
+  --dnd-arcane-deep: #4a2858;
+  --dnd-arcane-text: var(--dnd-arcane-bright); /* legacy alias */
+  --dnd-cobalt: #3a7ca5;
+  --dnd-cobalt-bright: #6fa8cf;
+  --dnd-info: var(--dnd-cobalt); /* legacy alias */
+  --dnd-info-text: var(--dnd-cobalt-bright); /* legacy alias */
+  --dnd-amber: #e8a547;
+  --dnd-highlight: var(--dnd-amber); /* legacy alias */
+  --dnd-highlight-muted: #d97706; /* legacy alias */
+
+  /* Shadow composition color (warm brown-ink, not pure black) */
+  --dnd-shadow-color: 26, 16, 8;
+  --dnd-shadow-arcane: 80, 30, 120;
+  --dnd-shadow-crimson: 90, 15, 15;
+
+  /* Chip + overlay */
+  --dnd-chip-bg: rgba(240, 201, 112, 0.08);
+  --dnd-chip-border: rgba(240, 201, 112, 0.18);
+  --dnd-overlay: rgba(13, 10, 8, 0.82);
+
+  /* ── Shadow / halo system ── */
+  --shadow-1: 0 1px 2px rgba(var(--dnd-shadow-color), 0.25);
+  --shadow-2: 0 2px 4px rgba(var(--dnd-shadow-color), 0.30), 0 1px 2px rgba(var(--dnd-shadow-color), 0.20);
+  --shadow-3: 0 6px 14px rgba(var(--dnd-shadow-color), 0.35), 0 2px 4px rgba(var(--dnd-shadow-color), 0.20);
+  --shadow-4: 0 14px 28px rgba(var(--dnd-shadow-color), 0.40), 0 6px 10px rgba(var(--dnd-shadow-color), 0.25);
+  --shadow-5: 0 24px 48px rgba(var(--dnd-shadow-color), 0.45), 0 10px 20px rgba(var(--dnd-shadow-color), 0.30);
+  --shadow-engrave: inset 0 1px 0 rgba(255, 220, 140, 0.25), inset 0 -1px 2px rgba(0, 0, 0, 0.35);
+  --halo-gold: 0 0 0 2px rgba(212, 168, 71, 0.35), 0 0 18px var(--dnd-gold-glow);
+  --halo-arcane: 0 0 0 2px rgba(155, 89, 182, 0.35), 0 0 22px rgba(155, 89, 182, 0.25);
+  --halo-danger: 0 0 0 2px rgba(179, 58, 58, 0.35), 0 0 14px rgba(179, 58, 58, 0.25);
+
+  /* ── Gradient tokens ── */
+  --gradient-parchment: linear-gradient(160deg, var(--dnd-surface-raised) 0%, var(--dnd-surface) 60%, var(--dnd-surface-raised) 100%);
+  --gradient-hero-halo: radial-gradient(ellipse 80% 60% at 50% 0%, var(--dnd-gold-glow) 0%, transparent 70%);
+  --gradient-gold: linear-gradient(170deg, var(--dnd-gold-bright) 0%, var(--dnd-gold) 50%, var(--dnd-gold-deep) 100%);
+  --gradient-arcane-mist: radial-gradient(circle at 30% 20%, rgba(197, 137, 232, 0.18) 0%, transparent 60%), linear-gradient(135deg, var(--dnd-surface) 0%, var(--dnd-arcane-deep) 100%);
+  --gradient-ember: linear-gradient(90deg, var(--dnd-crimson-deep) 0%, var(--dnd-crimson) 50%, var(--dnd-crimson-bright) 100%);
+  --gradient-flourish: linear-gradient(90deg, transparent 0%, var(--dnd-gold-dim) 20%, var(--dnd-gold) 50%, var(--dnd-gold-dim) 80%, transparent 100%);
+
+  /* Grain overlay (inline SVG turbulence noise) */
+  --grain-overlay: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch' seed='5'/><feColorMatrix values='0 0 0 0 0.08 0 0 0 0 0.06 0 0 0 0 0.04 0 0 0 0.9 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+
+  /* Telegram fallback bindings */
   --tg-theme-bg-color: var(--dnd-bg);
   --tg-theme-text-color: var(--dnd-text);
-  --tg-theme-hint-color: var(--dnd-text-secondary);
+  --tg-theme-hint-color: var(--dnd-text-muted);
   --tg-theme-link-color: var(--dnd-gold);
   --tg-theme-button-color: var(--dnd-gold);
-  --tg-theme-button-text-color: var(--dnd-bg);
+  --tg-theme-button-text-color: var(--dnd-ink);
   --tg-theme-secondary-bg-color: var(--dnd-surface);
+
+  /* Telegram viewport height fallback */
+  --tg-vh: 100vh;
 }
 
-/* Light mode — activated via .light class on <html> */
+/* ── Light mode — aged parchment ── */
 .light {
-  --dnd-bg: #f4e8c1;
-  --dnd-surface: #efe0b8;
-  --dnd-surface-elevated: #fff8e7;
-  --dnd-gold: #b8922e;
-  --dnd-gold-dim: #c9a84c;
-  --dnd-gold-glow: rgba(122, 92, 30, 0.1);
-  --dnd-parchment: #fff8e7;
-  --dnd-text: #3a2e1e;
-  --dnd-text-secondary: #8a7a5a;
-  --dnd-danger: #a93226;
-  --dnd-success: #1e8449;
-  --dnd-arcane: #7d3c98;
-  --dnd-info: #2471a3;
-  --dnd-highlight: #92700a;
-  --dnd-highlight-muted: #8a5a04;
-  --dnd-success-text: #1a7a3a;
-  --dnd-arcane-text: #6a2d84;
-  --dnd-info-text: #1f5f8b;
-  --dnd-chip-bg: rgba(0, 0, 0, 0.06);
+  --dnd-ink: #f9efcf;
+  --dnd-bg: #f2e4b9;
+  --dnd-surface: #ead8a0;
+  --dnd-surface-raised: #e0cb8c;
+  --dnd-surface-lifted: #fff9e3;
+  --dnd-surface-elevated: var(--dnd-surface-raised);
+  --dnd-border: #c9a85e;
+  --dnd-border-strong: #8a6f2c;
 
-  --tg-theme-bg-color: var(--dnd-bg);
-  --tg-theme-text-color: var(--dnd-text);
-  --tg-theme-hint-color: var(--dnd-text-secondary);
-  --tg-theme-link-color: var(--dnd-gold);
-  --tg-theme-button-color: var(--dnd-gold);
+  --dnd-gold: #8a6a1e;
+  --dnd-gold-bright: #b38824;
+  --dnd-gold-dim: #b89a52;
+  --dnd-gold-deep: #5a4412;
+  --dnd-gold-glow: rgba(138, 106, 30, 0.18);
+
+  --dnd-parchment: #fff9e3;
+  --dnd-text: #2e2410;
+  --dnd-text-muted: #6b583a;
+  --dnd-text-faint: #9b8660;
+  --dnd-text-secondary: var(--dnd-text-muted);
+
+  --dnd-crimson: #9b2b2b;
+  --dnd-crimson-bright: #c03a3a;
+  --dnd-crimson-deep: #5a1515;
+  --dnd-danger: var(--dnd-crimson);
+  --dnd-emerald: #1f7a42;
+  --dnd-emerald-bright: #2e9a55;
+  --dnd-emerald-deep: #0e4f26;
+  --dnd-success: var(--dnd-emerald);
+  --dnd-success-text: var(--dnd-emerald-bright);
+  --dnd-arcane: #6e3a8a;
+  --dnd-arcane-bright: #9458b8;
+  --dnd-arcane-deep: #3f1e55;
+  --dnd-arcane-text: var(--dnd-arcane-bright);
+  --dnd-cobalt: #1f5f8b;
+  --dnd-cobalt-bright: #4088b8;
+  --dnd-info: var(--dnd-cobalt);
+  --dnd-info-text: var(--dnd-cobalt-bright);
+  --dnd-amber: #b8741c;
+  --dnd-highlight: var(--dnd-amber);
+
+  --dnd-shadow-color: 110, 80, 30;
+  --dnd-shadow-arcane: 80, 30, 100;
+  --dnd-shadow-crimson: 90, 25, 25;
+
+  --dnd-chip-bg: rgba(138, 106, 30, 0.10);
+  --dnd-chip-border: rgba(138, 106, 30, 0.25);
+  --dnd-overlay: rgba(46, 36, 16, 0.55);
+
   --tg-theme-button-text-color: var(--dnd-parchment);
-  --tg-theme-secondary-bg-color: var(--dnd-surface);
 }
 
 html,
@@ -73,107 +156,196 @@ body,
   max-width: 100vw;
 }
 
-/* Safe area inset utilities (iPhone X+, Android edge-to-edge) */
+/* Safe-area insets */
 .pb-safe { padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px)); }
 .pt-safe { padding-top: calc(0.75rem + env(safe-area-inset-top, 0px)); }
 .px-safe {
   padding-left: env(safe-area-inset-left, 0px);
   padding-right: env(safe-area-inset-right, 0px);
 }
+.pb-safe-lg { padding-bottom: calc(2rem + env(safe-area-inset-bottom, 0px)); }
 
-/* Hide scrollbar while keeping scroll behaviour */
 .scrollbar-hide {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
-.scrollbar-hide::-webkit-scrollbar {
-  display: none;
-}
+.scrollbar-hide::-webkit-scrollbar { display: none; }
 
 body {
   background-color: var(--dnd-bg);
   color: var(--dnd-text);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: 'Fraunces', Georgia, serif;
+  font-feature-settings: 'ss01', 'ss02';
   margin: 0;
   padding: 0;
   min-height: 100vh;
+  position: relative;
+  transition: background-color 200ms ease, color 200ms ease;
+}
+
+/* Grain overlay — fixed, subtle (0.035 dark / 0.09 light) */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: var(--grain-overlay);
+  opacity: 0.035;
+  mix-blend-mode: overlay;
+  pointer-events: none;
+  z-index: 0;
+}
+.light body::before {
+  opacity: 0.09;
+  mix-blend-mode: multiply;
+}
+
+/* Ambient halo (two radial spots) */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(circle at 20% 10%, var(--dnd-gold-glow) 0%, transparent 40%),
+    radial-gradient(circle at 85% 85%, rgba(155, 89, 182, 0.06) 0%, transparent 45%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+#root {
+  position: relative;
+  z-index: 1;
+}
+
+/* Text selection */
+::selection {
+  background: var(--dnd-gold-glow);
+  color: var(--dnd-text);
+}
+
+/* Focus-visible halo */
+*:focus-visible {
+  outline: none;
+  box-shadow: var(--halo-gold);
+  border-radius: 8px;
 }
 
 /* ── Animations ── */
 
-/* Layout content fade-in */
 @keyframes fadeIn {
   from { opacity: 0; }
   to   { opacity: 1; }
 }
-.animate-fade-in {
-  animation: fadeIn 150ms ease forwards;
-}
+.animate-fade-in { animation: fadeIn 150ms ease forwards; }
 
-/* Spell detail accordion fade-in */
 @keyframes spellFadeIn {
   from { opacity: 0; transform: translateY(-4px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-.spell-detail-enter {
-  animation: spellFadeIn 150ms ease forwards;
-}
+.spell-detail-enter { animation: spellFadeIn 150ms ease forwards; }
 
-/* Modal entry */
 @keyframes modalEnter {
   from { opacity: 0; transform: scale(0.9); }
   to   { opacity: 1; transform: scale(1); }
 }
-.animate-modal-enter {
-  animation: modalEnter 150ms ease-out forwards;
-}
+.animate-modal-enter { animation: modalEnter 150ms ease-out forwards; }
 
-/* HP critical pulse */
 @keyframes pulseDanger {
   0%, 100% { box-shadow: 0 0 6px rgba(192, 57, 43, 0.3); }
   50%      { box-shadow: 0 0 14px rgba(192, 57, 43, 0.6); }
 }
-.animate-pulse-danger {
-  animation: pulseDanger 2s ease-in-out infinite;
-}
+.animate-pulse-danger { animation: pulseDanger 2s ease-in-out infinite; }
 
-/* Critical roll gold pulse (plays 3 times then stops) */
 @keyframes pulseGold {
   0%, 100% { box-shadow: 0 0 15px rgba(212, 168, 71, 0.3); }
   50%      { box-shadow: 0 0 30px rgba(212, 168, 71, 0.6); }
 }
-.animate-pulse-gold {
-  animation: pulseGold 1s ease-in-out 3;
-}
+.animate-pulse-gold { animation: pulseGold 1s ease-in-out 3; }
 
-/* Inspiration shimmer */
 @keyframes shimmer {
   0%, 100% { opacity: 0.6; filter: drop-shadow(0 0 3px var(--dnd-gold)); }
-  50%      { opacity: 1; filter: drop-shadow(0 0 8px var(--dnd-gold)); }
+  50%      { opacity: 1;   filter: drop-shadow(0 0 8px var(--dnd-gold)); }
 }
-.animate-shimmer {
-  animation: shimmer 2s ease-in-out infinite;
-}
+.animate-shimmer { animation: shimmer 2s ease-in-out infinite; }
 
-/* Skeleton shimmer */
 @keyframes shimmerBg {
   0%   { background-position: 200% 0; }
   100% { background-position: -200% 0; }
 }
 .animate-skeleton {
-  background: linear-gradient(90deg, var(--dnd-surface) 25%, var(--dnd-surface-elevated) 50%, var(--dnd-surface) 75%);
+  background: linear-gradient(90deg, var(--dnd-surface) 25%, var(--dnd-surface-raised) 50%, var(--dnd-surface) 75%);
   background-size: 200% 100%;
   animation: shimmerBg 1.5s infinite;
 }
 
-/* Scrollbar styling */
-::-webkit-scrollbar {
-  width: 4px;
+@keyframes goldShimmer {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
-::-webkit-scrollbar-track {
-  background: transparent;
+.animate-gold-shimmer {
+  background: linear-gradient(90deg, var(--dnd-gold-dim) 0%, var(--dnd-gold-bright) 50%, var(--dnd-gold-dim) 100%);
+  background-size: 200% 100%;
+  animation: goldShimmer 3s ease-in-out infinite;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
+
+/* Ornament line (decorative section divider) */
+.ornament-line {
+  position: relative;
+  flex: 1;
+  height: 1px;
+  background: var(--gradient-flourish);
+}
+.ornament-line::before,
+.ornament-line::after {
+  content: '◈';
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 8px;
+  color: var(--dnd-gold-dim);
+}
+.ornament-line::before { left: 0; }
+.ornament-line::after  { right: 0; }
+
+/* Surface grain overlay for elevated cards */
+.surface-parchment {
+  position: relative;
+  isolation: isolate;
+}
+.surface-parchment::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: var(--grain-overlay);
+  opacity: 0.06;
+  mix-blend-mode: overlay;
+  pointer-events: none;
+  border-radius: inherit;
+  z-index: 0;
+}
+.surface-parchment > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
-  background: var(--dnd-text-secondary);
+  background: var(--dnd-text-muted);
   border-radius: 2px;
+}
+
+/* Reduced-motion: honor user preference */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .animate-fade-in { animation: fadeIn 0.01ms forwards; }
 }

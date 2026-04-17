@@ -33,6 +33,7 @@ interface TelegramWebApp {
   themeParams: Record<string, string>
   isExpanded: boolean
   viewportHeight: number
+  viewportStableHeight?: number
   MainButton: {
     text: string
     color: string
@@ -144,6 +145,9 @@ export function telegramConfirm(
 /** Haptic feedback helpers. */
 export const haptic = {
   light: () => twa?.HapticFeedback.impactOccurred('light'),
+  medium: () => twa?.HapticFeedback.impactOccurred('medium'),
+  heavy: () => twa?.HapticFeedback.impactOccurred('heavy'),
+  selection: () => twa?.HapticFeedback.selectionChanged(),
   success: () => twa?.HapticFeedback.notificationOccurred('success'),
   error: () => twa?.HapticFeedback.notificationOccurred('error'),
   warning: () => twa?.HapticFeedback.notificationOccurred('warning'),

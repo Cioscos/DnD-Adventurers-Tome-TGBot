@@ -1,4 +1,4 @@
-import React from 'react'
+import Surface, { type SurfaceVariant } from './ui/Surface'
 
 interface CardProps {
   children: React.ReactNode
@@ -7,21 +7,7 @@ interface CardProps {
   onClick?: (e: React.MouseEvent<HTMLDivElement>) => void
 }
 
-function CardInner({ children, className = '', variant = 'default', onClick }: CardProps) {
-  const base = 'rounded-2xl p-4 transition-all duration-150 active:opacity-70'
-  const cursor = onClick ? 'cursor-pointer' : ''
-
-  const variantStyles =
-    variant === 'elevated'
-      ? 'bg-dnd-surface-elevated border border-dnd-gold-dim shadow-dnd-glow'
-      : 'bg-dnd-surface'
-
-  return (
-    <div className={`${base} ${variantStyles} ${cursor} ${className}`} onClick={onClick}>
-      {children}
-    </div>
-  )
+export default function Card({ variant = 'default', ...rest }: CardProps) {
+  const mapped: SurfaceVariant = variant === 'elevated' ? 'elevated' : 'flat'
+  return <Surface variant={mapped} {...rest} />
 }
-
-const Card = React.memo(CardInner)
-export default Card

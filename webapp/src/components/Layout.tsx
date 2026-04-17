@@ -1,7 +1,9 @@
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { ChevronLeft } from 'lucide-react'
+import { m } from 'framer-motion'
 import { useSwipeNavigation, getGroupInfo } from '@/hooks/useSwipeNavigation'
+import { spring } from '@/styles/motion'
 
 interface LayoutProps {
   title: string
@@ -24,19 +26,26 @@ export default function Layout({ title, children, backTo, group, page }: LayoutP
 
   return (
     <div className="min-h-screen w-full flex flex-col bg-dnd-bg">
-      <header
+      <m.header
         className="sticky top-0 z-10 flex flex-col px-4 py-3 pt-safe
-                    bg-dnd-surface-elevated border-b border-dnd-gold-dim/30"
+                    bg-dnd-surface-raised/95 backdrop-blur-sm
+                    border-b border-dnd-gold-dim/40 shadow-parchment-md"
+        initial={{ y: -20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={spring.drift}
       >
         <div className="flex items-center gap-3">
-          <button
+          <m.button
             onClick={handleBack}
-            className="p-1 rounded-lg active:opacity-60 transition-opacity"
+            className="w-9 h-9 flex items-center justify-center rounded-full bg-dnd-surface border border-dnd-gold-dim/30"
             aria-label="Indietro"
+            whileTap={{ scale: 0.9 }}
+            whileHover={{ boxShadow: 'var(--halo-gold)' }}
           >
-            <ChevronLeft size={20} className="text-dnd-gold" />
-          </button>
-          <h1 className="text-lg font-bold font-cinzel text-dnd-gold truncate flex-1">
+            <ChevronLeft size={20} className="text-dnd-gold-bright" />
+          </m.button>
+          <h1 className="text-lg font-bold font-display text-dnd-gold-bright truncate flex-1"
+              style={{ textShadow: '0 1px 4px var(--dnd-gold-glow)' }}>
             {title}
           </h1>
         </div>
@@ -45,23 +54,23 @@ export default function Layout({ title, children, backTo, group, page }: LayoutP
           const currKey = info.pages[info.index]
           const nextKey = info.index < info.total - 1 ? info.pages[info.index + 1] : null
           return (
-            <div className="flex items-center justify-center gap-1.5 mt-2 text-xs overflow-x-auto scrollbar-hide">
+            <div className="flex items-center justify-center gap-1.5 mt-2 text-xs overflow-x-auto scrollbar-hide font-body">
               {prevKey && (
                 <>
-                  <span className="text-dnd-text-secondary opacity-70 whitespace-nowrap"
+                  <span className="text-dnd-text-muted opacity-70 whitespace-nowrap"
                         style={{ filter: 'blur(0.5px)' }}>
                     {t(`character.menu.${prevKey}`)}
                   </span>
-                  <span className="text-dnd-gold-dim/50 shrink-0">&gt;</span>
+                  <span className="text-dnd-gold-dim/50 shrink-0">◈</span>
                 </>
               )}
-              <span className="text-dnd-gold font-semibold whitespace-nowrap">
+              <span className="text-dnd-gold-bright font-semibold whitespace-nowrap">
                 {t(`character.menu.${currKey}`)}
               </span>
               {nextKey && (
                 <>
-                  <span className="text-dnd-gold-dim/50 shrink-0">&gt;</span>
-                  <span className="text-dnd-text-secondary opacity-70 whitespace-nowrap"
+                  <span className="text-dnd-gold-dim/50 shrink-0">◈</span>
+                  <span className="text-dnd-text-muted opacity-70 whitespace-nowrap"
                         style={{ filter: 'blur(0.5px)' }}>
                     {t(`character.menu.${nextKey}`)}
                   </span>
@@ -70,7 +79,7 @@ export default function Layout({ title, children, backTo, group, page }: LayoutP
             </div>
           )
         })()}
-      </header>
+      </m.header>
 
       <main
         ref={swipe.contentRef}
