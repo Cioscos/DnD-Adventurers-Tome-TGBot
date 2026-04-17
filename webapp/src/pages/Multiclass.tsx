@@ -2,10 +2,14 @@ import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { m } from 'framer-motion'
+import { Plus, Minus, X, Swords, Scroll } from 'lucide-react'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
-import Card from '@/components/Card'
-import DndButton from '@/components/DndButton'
+import Surface from '@/components/ui/Surface'
+import Button from '@/components/ui/Button'
+import StatPill from '@/components/ui/StatPill'
+import { FlourishDivider } from '@/components/ui/Ornament'
 import { haptic } from '@/auth/telegram'
 import AddClassForm, { resolveClassName, PREDEFINED_CLASSES, CUSTOM_KEY, type ClassForm } from '@/pages/multiclass/AddClassForm'
 import ResourceManager from '@/pages/multiclass/ResourceManager'
@@ -83,65 +87,138 @@ export default function Multiclass() {
   if (!char) return null
 
   const classes: CharacterClass[] = char.classes ?? []
+  const totalLevel = classes.reduce((s, c) => s + c.level, 0)
 
   return (
     <Layout title={t('character.multiclass.title')} backTo={`/char/${charId}`} group="character" page="class">
-      <DndButton onClick={() => setShowAddClass(true)} className="w-full">
-        + {t('character.multiclass.add_class')}
-      </DndButton>
-
-      {classes.length === 0 && (
-        <Card>
-          <p className="text-center text-dnd-text-secondary">{t('common.none')}</p>
-        </Card>
+      {/* Total level hero (only if has classes) */}
+      {classes.length > 0 && (
+        <Surface variant="tome" ornamented className="text-center">
+          <p className="text-[10px] font-cinzel uppercase tracking-[0.3em] text-dnd-gold-dim mb-1">
+            {t('character.multiclass.total_level', { defaultValue: 'Livello totale' })}
+          </p>
+          <p className="text-5xl font-display font-black text-dnd-gold-bright"
+             style={{ textShadow: '0 2px 8px var(--dnd-gold-glow)' }}>
+            {totalLevel}
+          </p>
+        </Surface>
       )}
 
-      {classes.map((cls) => (
-        <Card key={cls.id}>
-          <div className="flex items-start justify-between mb-2">
-            <div>
-              <span className="font-semibold text-lg">{cls.class_name}</span>
-              {cls.subclass && (
-                <span className="text-sm text-dnd-text-secondary ml-2">({cls.subclass})</span>
-              )}
-              {cls.hit_die && (
-                <p className="text-xs text-dnd-text-secondary">d{cls.hit_die}{cls.spellcasting_ability ? ` \u00b7 ${cls.spellcasting_ability}` : ''}</p>
-              )}
-            </div>
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => updateLevel.mutate({ classId: cls.id, level: cls.level - 1 })}
-                disabled={cls.level <= 1}
-                className="w-7 h-7 rounded-lg bg-dnd-surface font-bold disabled:opacity-30"
-              >&minus;</button>
-              <span className="w-8 text-center font-bold">Lv {cls.level}</span>
-              <button
-                onClick={() => updateLevel.mutate({ classId: cls.id, level: cls.level + 1 })}
-                disabled={cls.level >= 20}
-                className="w-7 h-7 rounded-lg bg-dnd-surface font-bold disabled:opacity-30"
-              >+</button>
-              <button
-                onClick={() => removeClass.mutate(cls.id)}
-                className="text-xs text-[var(--dnd-danger)] ml-2"
-              >&#x2715;</button>
-            </div>
-          </div>
+      <Button
+        variant="primary"
+        size="lg"
+        fullWidth
+        onClick={() => setShowAddClass(true)}
+        icon={<Plus size={18} />}
+        haptic="medium"
+      >
+        {t('character.multiclass.add_class')}
+      </Button>
 
-          <ResourceManager
-            classId={cls.id}
-            resources={cls.resources}
-            onUseResource={(classId, resId, current) =>
-              useResource.mutate({ classId, resId, current })
-            }
-            onDeleteResource={(classId, resId) =>
-              deleteResource.mutate({ classId, resId })
-            }
-            onAddResource={(classId, payload) =>
-              addResource.mutate({ classId, payload })
-            }
-            addPending={addResource.isPending}
-          />
-        </Card>
+      {classes.length === 0 && (
+        <Surface variant="flat" className="text-center py-8">
+          <Swords className="mx-auto text-dnd-text-faint mb-2" size={32} />
+          <p className="text-dnd-text-muted font-body italic">{t('common.none')}</p>
+        </Surface>
+      )}
+
+      {classes.map((cls, idx) => (
+        <m.div
+          key={cls.id}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: idx * 0.05 }}
+        >
+          <Surface variant="elevated" ornamented>
+            {/* Class banner */}
+            <div className="mb-3">
+              <div className="flex items-start gap-2 mb-1">
+                <Scroll size={16} className="text-dnd-gold shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <div className="flex items-baseline gap-2 flex-wrap">
+                    <span className="font-display font-bold text-lg text-dnd-gold-bright">{cls.class_name}</span>
+                    {cls.subclass && (
+                      <span className="text-sm text-dnd-text-muted italic font-body">({cls.subclass})</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 mt-1 flex-wrap">
+                    {cls.hit_die && <StatPill tone="gold" size="sm" value={`d${cls.hit_die}`} />}
+                    {cls.spellcasting_ability && (
+                      <StatPill tone="arcane" size="sm" value={cls.spellcasting_ability} />
+                    )}
+                  </div>
+                </div>
+                <m.button
+                  onClick={() => removeClass.mutate(cls.id)}
+                  className="w-7 h-7 rounded-lg text-[var(--dnd-crimson-bright)] flex items-center justify-center hover:bg-[var(--dnd-crimson)]/10 shrink-0"
+                  whileTap={{ scale: 0.9 }}
+                  aria-label="Remove"
+                >
+                  <X size={14} />
+                </m.button>
+              </div>
+              <div className="text-dnd-gold-dim my-2">
+                <FlourishDivider />
+              </div>
+
+              {/* Level pip tracker (1-20) + controls */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <p className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-gold-dim flex-1">
+                    {t('character.multiclass.level', { defaultValue: 'Livello' })}
+                  </p>
+                  <m.button
+                    onClick={() => updateLevel.mutate({ classId: cls.id, level: cls.level - 1 })}
+                    disabled={cls.level <= 1}
+                    className="w-8 h-8 rounded-lg bg-dnd-surface border border-dnd-border flex items-center justify-center text-dnd-gold disabled:opacity-30"
+                    whileTap={{ scale: 0.9 }}
+                  >
+                    <Minus size={14} />
+                  </m.button>
+                  <span className="w-10 text-center font-display font-black text-xl text-dnd-gold-bright">{cls.level}</span>
+                  <m.button
+                    onClick={() => updateLevel.mutate({ classId: cls.id, level: cls.level + 1 })}
+                    disabled={cls.level >= 20}
+                    className="w-8 h-8 rounded-lg bg-dnd-surface border border-dnd-border flex items-center justify-center text-dnd-gold disabled:opacity-30"
+                    whileTap={{ scale: 0.9 }}
+                  >
+                    <Plus size={14} />
+                  </m.button>
+                </div>
+                {/* 20 pip level track */}
+                <div className="flex gap-0.5">
+                  {Array.from({ length: 20 }).map((_, i) => {
+                    const filled = i < cls.level
+                    return (
+                      <div
+                        key={i}
+                        className={`flex-1 h-1.5 rounded-full transition-colors
+                          ${filled
+                            ? 'bg-gradient-to-r from-dnd-gold-dim to-dnd-gold-bright shadow-[0_0_3px_var(--dnd-gold-glow)]'
+                            : 'bg-dnd-ink/50 border border-dnd-border'}`}
+                      />
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+
+            <ResourceManager
+              classId={cls.id}
+              resources={cls.resources}
+              onUseResource={(classId, resId, current) =>
+                useResource.mutate({ classId, resId, current })
+              }
+              onDeleteResource={(classId, resId) =>
+                deleteResource.mutate({ classId, resId })
+              }
+              onAddResource={(classId, payload) =>
+                addResource.mutate({ classId, payload })
+              }
+              addPending={addResource.isPending}
+            />
+          </Surface>
+        </m.div>
       ))}
 
       {showAddClass && (
