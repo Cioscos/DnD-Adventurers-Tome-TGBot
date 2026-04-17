@@ -2,9 +2,13 @@ import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { m } from 'framer-motion'
+import { Dices, Star, Check, Eye } from 'lucide-react'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
-import Card from '@/components/Card'
+import Surface from '@/components/ui/Surface'
+import SectionDivider from '@/components/ui/SectionDivider'
+import StatPill from '@/components/ui/StatPill'
 import ScrollArea from '@/components/ScrollArea'
 import RollResultModal, { type RollResult } from '@/components/RollResultModal'
 import { haptic } from '@/auth/telegram'
@@ -30,13 +34,7 @@ const SKILLS: { key: string; ability: string }[] = [
   { key: 'survival',       ability: 'wisdom' },
 ]
 
-const ABILITY_GROUPS: { ability: string; emoji: string }[] = [
-  { ability: 'strength',     emoji: '💪' },
-  { ability: 'dexterity',    emoji: '🤸' },
-  { ability: 'intelligence', emoji: '🧠' },
-  { ability: 'wisdom',       emoji: '🦉' },
-  { ability: 'charisma',     emoji: '✨' },
-]
+const ABILITY_GROUPS: string[] = ['strength', 'dexterity', 'intelligence', 'wisdom', 'charisma']
 
 type ProfLevel = false | true | 'expert'
 
@@ -105,7 +103,6 @@ export default function Skills() {
     mutation.mutate({ ...skills, [key]: next })
   }
 
-  // passive perception
   const perceptionMod = abilityModifier('wisdom')
   const perceptionLevel = getLevel(skills['perception'])
   const perceptionBonus = perceptionMod + (perceptionLevel === 'expert' ? 2 * pb : perceptionLevel ? pb : 0)
@@ -113,91 +110,103 @@ export default function Skills() {
 
   return (
     <Layout title={t('character.skills.title')} backTo={`/char/${charId}`} group="skills" page="skills">
-      <Card>
-        <div className="flex justify-between items-center">
-          <p className="text-sm text-dnd-text-secondary">
-            {t('character.skills.prof_bonus')}: <span className="font-bold text-white">+{pb}</span>
+      <Surface variant="elevated" className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <p className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-gold-dim">
+            {t('character.skills.prof_bonus')}
           </p>
-          <p className="text-sm text-dnd-text-secondary">
-            {t('character.skills.passive_perception')}: <span className="font-bold text-white">{passivePerception}</span>
-          </p>
+          <StatPill tone="gold" size="sm" value={`+${pb}`} />
         </div>
-      </Card>
+        <div className="flex items-center gap-2">
+          <Eye size={14} className="text-dnd-arcane-bright" />
+          <p className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-gold-dim">
+            {t('character.skills.passive_perception')}
+          </p>
+          <StatPill tone="arcane" size="sm" value={passivePerception} />
+        </div>
+      </Surface>
 
       <ScrollArea>
         <div className="space-y-4">
-          {ABILITY_GROUPS.map((group) => {
-            const groupSkills = SKILLS.filter((s) => s.ability === group.ability)
+          {ABILITY_GROUPS.map((ability) => {
+            const groupSkills = SKILLS.filter((s) => s.ability === ability)
             if (groupSkills.length === 0) return null
 
             return (
-              <div key={group.ability}>
-                {/* Section header */}
-                <div className="flex items-center gap-2 px-1 mb-1.5">
-                  <span className="text-base leading-none">{group.emoji}</span>
-                  <span className="text-xs font-semibold uppercase tracking-wider text-dnd-text-secondary">
-                    {t(`character.stats.${group.ability}`)}
-                  </span>
-                  <div className="flex-1 h-px bg-dnd-surface" />
-                </div>
+              <div key={ability}>
+                <SectionDivider>
+                  {t(`character.stats.${ability}`)}
+                </SectionDivider>
 
-                <div className="space-y-1">
-                  {groupSkills.map((skill) => {
+                <div className="space-y-1.5">
+                  {groupSkills.map((skill, idx) => {
                     const level = getLevel(skills[skill.key])
                     const abilMod = abilityModifier(skill.ability)
                     const bonus = abilMod + (level === 'expert' ? 2 * pb : level ? pb : 0)
                     const isExpert = level === 'expert'
                     const isProficient = level === true
+                    const hasMark = isExpert || isProficient
 
                     return (
-                      <div
+                      <m.div
                         key={skill.key}
-                        className="flex items-center gap-2 px-3 py-2.5 rounded-xl
-                                   bg-dnd-surface"
+                        initial={{ opacity: 0, x: -4 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: idx * 0.02, duration: 0.18 }}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-xl border transition-colors
+                          ${isExpert
+                            ? 'bg-gradient-to-r from-[var(--dnd-arcane-deep)]/30 to-[var(--dnd-gold-deep)]/20 border-dnd-arcane/40'
+                            : isProficient
+                              ? 'bg-dnd-surface-raised border-dnd-gold/30'
+                              : 'bg-dnd-surface border-dnd-border'}`}
                       >
                         {/* Proficiency toggle */}
-                        <button
+                        <m.button
                           onClick={() => toggle(skill.key)}
-                          className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0
-                            ${isExpert
-                              ? 'bg-yellow-500 border-yellow-500'
-                              : isProficient
-                                ? 'bg-dnd-gold border-dnd-gold'
-                                : 'border-white/30'}`}
+                          className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
+                          whileTap={{ scale: 0.85 }}
+                          aria-label="Proficiency"
                         >
-                          {isExpert && <span className="text-[10px] text-white font-bold leading-none">★</span>}
-                          {isProficient && <span className="text-[10px] text-white font-bold leading-none">✓</span>}
-                        </button>
+                          {isExpert ? (
+                            <div className="relative w-5 h-5 rounded-full bg-gradient-to-br from-dnd-arcane-bright to-dnd-gold-bright border-2 border-dnd-gold-bright flex items-center justify-center shadow-[0_0_6px_var(--dnd-gold-glow)]">
+                              <Star size={10} className="text-dnd-ink" fill="currentColor" strokeWidth={1} />
+                            </div>
+                          ) : isProficient ? (
+                            <div className="w-5 h-5 rounded-full bg-dnd-gold border-2 border-dnd-gold-bright flex items-center justify-center shadow-[0_0_4px_var(--dnd-gold-glow)]">
+                              <Check size={11} className="text-dnd-ink" strokeWidth={3} />
+                            </div>
+                          ) : (
+                            <div className="w-5 h-5 rounded-full border-2 border-dnd-border" />
+                          )}
+                        </m.button>
 
                         {/* Name */}
                         <button
                           onClick={() => toggle(skill.key)}
-                          className="flex-1 text-left text-sm font-medium active:opacity-70"
+                          className="flex-1 text-left text-sm font-body font-medium"
                         >
                           {t(`character.skills.${skill.key}`)}
                         </button>
 
                         {/* Bonus */}
-                        <span className={`text-sm font-bold w-8 text-right shrink-0 tabular-nums
-                          ${bonus >= 0 ? 'text-dnd-success-text' : 'text-[var(--dnd-danger)]'}`}>
+                        <span className={`text-sm font-mono font-bold w-10 text-right shrink-0 tabular-nums
+                          ${hasMark
+                            ? 'text-dnd-gold-bright'
+                            : bonus >= 0 ? 'text-dnd-text' : 'text-[var(--dnd-crimson-bright)]'}`}>
                           {bonus >= 0 ? '+' : ''}{bonus}
                         </span>
 
-                        {/* Roll button */}
-                        <button
+                        {/* Roll */}
+                        <m.button
                           onClick={() => rollMutation.mutate(skill.key)}
                           disabled={rollMutation.isPending}
-                          className="shrink-0 w-9 h-9 rounded-xl
-                                     bg-dnd-gold/15
-                                     flex items-center justify-center text-base
-                                     active:bg-dnd-gold/30
-                                     active:opacity-60 disabled:opacity-30
-                                     transition-colors"
-                          title={t('character.skills.roll')}
+                          className="shrink-0 w-9 h-9 rounded-xl bg-dnd-chip-bg border border-dnd-gold-dim/40 flex items-center justify-center text-dnd-gold disabled:opacity-30"
+                          whileTap={{ scale: 0.88 }}
+                          aria-label={t('character.skills.roll')}
                         >
-                          🎲
-                        </button>
-                      </div>
+                          <Dices size={15} />
+                        </m.button>
+                      </m.div>
                     )
                   })}
                 </div>
