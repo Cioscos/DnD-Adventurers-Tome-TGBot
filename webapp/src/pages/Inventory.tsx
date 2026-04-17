@@ -2,13 +2,18 @@ import { useState, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { m, AnimatePresence } from 'framer-motion'
+import { Plus, Backpack, Weight } from 'lucide-react'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
-import Card from '@/components/Card'
-import DndButton from '@/components/DndButton'
+import Surface from '@/components/ui/Surface'
+import Button from '@/components/ui/Button'
+import StatPill from '@/components/ui/StatPill'
+import Sheet from '@/components/ui/Sheet'
 import ScrollArea from '@/components/ScrollArea'
 import WeaponAttackModal, { type WeaponAttackResult } from '@/components/WeaponAttackModal'
 import { haptic } from '@/auth/telegram'
+import { spring } from '@/styles/motion'
 import InventoryItem from '@/pages/inventory/InventoryItem'
 import ItemForm from '@/pages/inventory/ItemForm'
 import { buildItemMetadata, type ItemFormData } from '@/pages/inventory/itemMetadata'
@@ -30,8 +35,6 @@ export default function Inventory() {
     queryKey: ['character', charId],
     queryFn: () => api.characters.get(charId),
   })
-
-  // --- Mutations ---
 
   const addMutation = useMutation({
     mutationFn: (form: ItemFormData) =>
@@ -103,8 +106,6 @@ export default function Inventory() {
     onError: () => haptic.error(),
   })
 
-  // --- Callbacks ---
-
   const handleFormSubmit = useCallback((data: ItemFormData) => {
     if (editingItem) {
       updateMutation.mutate({ itemId: editingItem.id, form: data })
@@ -123,57 +124,91 @@ export default function Inventory() {
     setShowAdd(true)
   }, [])
 
-  // --- Derived ---
-
   if (!char) return null
 
   const items: Item[] = char.items ?? []
+  // Sort: equipped first, then alphabetical
+  const sortedItems = [...items].sort((a, b) => {
+    if (a.is_equipped !== b.is_equipped) return a.is_equipped ? -1 : 1
+    return a.name.localeCompare(b.name)
+  })
   const totalWeight = items.reduce((sum, i) => sum + i.weight * i.quantity, 0)
+  const capacityPct = char.carry_capacity > 0 ? Math.min(100, (totalWeight / char.carry_capacity) * 100) : 0
+  const overload = totalWeight > char.carry_capacity
 
   return (
     <Layout title={t('character.inventory.title')} backTo={`/char/${charId}`} group="equipment" page="inventory">
-      <div className="flex gap-2 items-center">
-        <DndButton
+      {/* Add button + carry capacity */}
+      <div className="flex gap-2 items-end">
+        <Button
+          variant="primary"
+          size="md"
+          fullWidth
           onClick={() => setShowAdd(true)}
-          className="flex-1"
+          icon={<Plus size={18} />}
+          haptic="medium"
         >
-          + {t('character.inventory.add')}
-        </DndButton>
-        <Card className="!py-2 !px-3">
-          <p className="text-xs text-dnd-text-secondary">{t('character.inventory.carry', {
-            enc: totalWeight.toFixed(1),
-            cap: char.carry_capacity,
-          })}</p>
-        </Card>
+          {t('character.inventory.add')}
+        </Button>
       </div>
 
+      {/* Carry capacity gauge */}
+      <Surface variant="elevated" className="!py-2.5">
+        <div className="flex items-center gap-2 mb-1.5">
+          <Weight size={13} className="text-dnd-gold-dim" />
+          <p className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-gold-dim flex-1">
+            {t('character.inventory.carry_short', { defaultValue: 'Carico' })}
+          </p>
+          <StatPill
+            tone={overload ? 'crimson' : capacityPct > 70 ? 'amber' : 'default'}
+            size="sm"
+            value={`${totalWeight.toFixed(1)}/${char.carry_capacity}`}
+          />
+        </div>
+        <div className="h-1.5 rounded-full bg-dnd-ink/60 overflow-hidden">
+          <m.div
+            className={`h-full rounded-full ${
+              overload
+                ? 'bg-gradient-ember'
+                : capacityPct > 70
+                  ? 'bg-gradient-to-r from-dnd-amber to-dnd-gold-bright'
+                  : 'bg-gradient-to-r from-dnd-emerald-deep to-dnd-emerald-bright'
+            }`}
+            initial={false}
+            animate={{ width: `${capacityPct}%` }}
+            transition={spring.drift}
+          />
+        </div>
+      </Surface>
+
       {items.length === 0 && (
-        <Card>
-          <p className="text-center text-dnd-text-secondary">{t('common.none')}</p>
-        </Card>
+        <Surface variant="flat" className="text-center py-8">
+          <Backpack className="mx-auto text-dnd-text-faint mb-2" size={32} />
+          <p className="text-dnd-text-muted font-body italic">{t('common.none')}</p>
+        </Surface>
       )}
 
       <ScrollArea>
         <div className="space-y-2">
-          {items.map((item) => (
-            <InventoryItem
-              key={item.id}
-              item={item}
-              isExpanded={expanded === item.id}
-              onToggle={() => setExpanded(expanded === item.id ? null : item.id)}
-              onEquipToggle={() => toggleEquip.mutate({ itemId: item.id, equipped: !item.is_equipped })}
-              onQuantityChange={(delta) => updateQty.mutate({ itemId: item.id, quantity: item.quantity + delta })}
-              onAttack={() => attackMutation.mutate(item.id)}
-              onEdit={() => handleEdit(item)}
-              onDelete={() => setDeleteTarget(item.id)}
-              equipPending={toggleEquip.isPending}
-              attackPending={attackMutation.isPending}
-            />
+          {sortedItems.map((item) => (
+            <m.div key={item.id} layout transition={spring.drift}>
+              <InventoryItem
+                item={item}
+                isExpanded={expanded === item.id}
+                onToggle={() => setExpanded(expanded === item.id ? null : item.id)}
+                onEquipToggle={() => toggleEquip.mutate({ itemId: item.id, equipped: !item.is_equipped })}
+                onQuantityChange={(delta) => updateQty.mutate({ itemId: item.id, quantity: item.quantity + delta })}
+                onAttack={() => attackMutation.mutate(item.id)}
+                onEdit={() => handleEdit(item)}
+                onDelete={() => setDeleteTarget(item.id)}
+                equipPending={toggleEquip.isPending}
+                attackPending={attackMutation.isPending}
+              />
+            </m.div>
           ))}
         </div>
       </ScrollArea>
 
-      {/* Add/Edit item form modal */}
       {showAdd && (
         <ItemForm
           initialData={editingItem}
@@ -187,34 +222,37 @@ export default function Inventory() {
         <WeaponAttackModal result={attackResult} onClose={() => setAttackResult(null)} />
       )}
 
-      {deleteTarget !== null && (
-        <div className="fixed inset-0 bg-black/60 flex items-end z-50 p-4">
-          <Card variant="elevated" className="w-full space-y-3">
-            <p className="text-sm text-center text-dnd-text">
-              {t('character.select.delete_confirm', {
-                name: items.find((i) => i.id === deleteTarget)?.name ?? '',
-              })}
-            </p>
-            <div className="flex gap-2">
-              <DndButton
-                variant="danger"
-                onClick={() => deleteMutation.mutate(deleteTarget)}
-                loading={deleteMutation.isPending}
-                className="flex-1"
-              >
-                {t('common.delete')}
-              </DndButton>
-              <DndButton
-                variant="secondary"
-                onClick={() => setDeleteTarget(null)}
-                className="flex-1"
-              >
-                {t('common.cancel')}
-              </DndButton>
-            </div>
-          </Card>
+      {/* Delete confirmation as Sheet */}
+      <Sheet
+        open={deleteTarget !== null}
+        onClose={() => setDeleteTarget(null)}
+        centered
+        title={t('common.confirm')}
+      >
+        <div className="p-5 space-y-3">
+          <p className="text-sm text-center text-dnd-text font-body">
+            {t('character.select.delete_confirm', {
+              name: items.find((i) => i.id === deleteTarget)?.name ?? '',
+            })}
+          </p>
+          <div className="flex gap-2">
+            <Button
+              variant="danger"
+              fullWidth
+              onClick={() => deleteTarget !== null && deleteMutation.mutate(deleteTarget)}
+              loading={deleteMutation.isPending}
+              haptic="error"
+            >
+              {t('common.delete')}
+            </Button>
+            <Button variant="secondary" fullWidth onClick={() => setDeleteTarget(null)}>
+              {t('common.cancel')}
+            </Button>
+          </div>
         </div>
-      )}
+      </Sheet>
+
+      <AnimatePresence />
     </Layout>
   )
 }
