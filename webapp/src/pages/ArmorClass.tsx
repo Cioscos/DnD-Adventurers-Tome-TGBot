@@ -2,16 +2,25 @@ import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { m } from 'framer-motion'
+import { Save } from 'lucide-react'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
-import Card from '@/components/Card'
+import Surface from '@/components/ui/Surface'
+import Input from '@/components/ui/Input'
+import Button from '@/components/ui/Button'
+import { ShieldEmblem } from '@/components/ui/Ornament'
 import { haptic } from '@/auth/telegram'
+import { spring } from '@/styles/motion'
+import { useReducedMotion } from '@/hooks/useReducedMotion'
 
 export default function ArmorClass() {
   const { id } = useParams<{ id: string }>()
   const charId = Number(id)
   const { t } = useTranslation()
   const qc = useQueryClient()
+  const reduceMotion = useReducedMotion()
+
   const [base, setBase] = useState('')
   const [shield, setShield] = useState('')
   const [magic, setMagic] = useState('')
@@ -48,45 +57,85 @@ export default function ArmorClass() {
 
   return (
     <Layout title={t('character.ac.title')} backTo={`/char/${charId}`} group="combat" page="ac">
-      <Card variant="elevated">
-        <div className="text-center">
-          <p className="text-sm text-dnd-text-secondary mb-1">{t('character.ac.total')}</p>
-          <p className="text-6xl font-bold">🛡️ {char.ac}</p>
-          <p className="text-sm text-dnd-text-secondary mt-2">
+      {/* Hero AC */}
+      <Surface variant="tome" ornamented className="relative overflow-hidden">
+        <div className="flex flex-col items-center py-4">
+          <p className="text-[10px] font-cinzel uppercase tracking-[0.3em] text-dnd-gold-dim mb-2">
+            {t('character.ac.total')}
+          </p>
+
+          <div className="relative flex items-center justify-center">
+            <m.div
+              animate={reduceMotion ? {} : { rotate: [-2, 2, -1, 1, 0] }}
+              transition={reduceMotion ? undefined : { duration: 6, repeat: Infinity, ease: 'easeInOut' }}
+              className="drop-shadow-[0_8px_24px_var(--dnd-gold-glow)]"
+            >
+              <ShieldEmblem size={200} />
+            </m.div>
+            <m.span
+              key={char.ac}
+              initial={{ scale: 0.6, opacity: 0 }}
+              animate={{ scale: [0.6, 1.15, 1], opacity: 1 }}
+              transition={spring.elastic}
+              className="absolute font-display font-black text-dnd-gold-bright leading-none"
+              style={{
+                fontSize: '4rem',
+                textShadow: '0 2px 8px var(--dnd-gold-glow), 0 0 2px rgba(0,0,0,0.6)',
+              }}
+            >
+              {char.ac}
+            </m.span>
+          </div>
+
+          <p className="text-sm text-dnd-text-muted font-mono mt-3">
             {char.base_armor_class} + {char.shield_armor_class} + {char.magic_armor}
           </p>
+          <p className="text-[10px] text-dnd-text-faint font-cinzel uppercase tracking-wider mt-0.5">
+            base · shield · magic
+          </p>
         </div>
-      </Card>
+      </Surface>
 
-      {fields.map((f) => (
-        <Card key={f.key}>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-medium">{f.label}</p>
-              <p className="text-2xl font-bold mt-1">{f.cur}</p>
+      {/* Component editors */}
+      {fields.map((f, idx) => (
+        <m.div
+          key={f.key}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ ...spring.drift, delay: 0.1 + idx * 0.05 }}
+        >
+          <Surface variant="elevated">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="font-cinzel text-xs uppercase tracking-widest text-dnd-gold-dim">{f.label}</p>
+                <p className="text-3xl font-display font-black text-dnd-gold-bright mt-0.5">{f.cur}</p>
+              </div>
+              <Input
+                type="number"
+                min={0}
+                value={f.val}
+                onChange={f.set}
+                placeholder={String(f.cur)}
+                inputMode="numeric"
+                className="w-28 [&_input]:text-xl [&_input]:font-display [&_input]:font-bold [&_input]:text-center"
+              />
             </div>
-            <input
-              type="number"
-              min="0"
-              value={f.val}
-              onChange={(e) => f.set(e.target.value)}
-              placeholder={String(f.cur)}
-              className="w-24 bg-dnd-surface rounded-xl px-3 py-2 text-xl font-bold text-center
-                         outline-none focus:ring-2 focus:ring-dnd-gold"
-            />
-          </div>
-        </Card>
+          </Surface>
+        </m.div>
       ))}
 
-      <button
+      <Button
+        variant="primary"
+        size="lg"
+        fullWidth
         onClick={() => mutation.mutate()}
         disabled={mutation.isPending || (base === '' && shield === '' && magic === '')}
-        className="w-full py-3 rounded-2xl bg-dnd-gold
-                   text-dnd-bg font-semibold
-                   disabled:opacity-40 active:opacity-80"
+        loading={mutation.isPending}
+        icon={<Save size={18} />}
+        haptic="success"
       >
-        {mutation.isPending ? '...' : t('common.save')}
-      </button>
+        {t('common.save')}
+      </Button>
     </Layout>
   )
 }
