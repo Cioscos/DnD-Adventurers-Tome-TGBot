@@ -4,7 +4,7 @@
  */
 export function CornerFlourish({
   rotation = 0,
-  size = 18,
+  size = 14,
   className = '',
 }: {
   rotation?: 0 | 90 | 180 | 270
@@ -38,10 +38,10 @@ export function CornerFlourish({
 export function CornerFlourishes({ color = 'text-dnd-gold-dim' }: { color?: string }) {
   return (
     <div className={`absolute inset-0 ${color} pointer-events-none`}>
-      <div className="absolute top-1.5 left-1.5"><CornerFlourish rotation={0} /></div>
-      <div className="absolute top-1.5 right-1.5"><CornerFlourish rotation={90} /></div>
-      <div className="absolute bottom-1.5 right-1.5"><CornerFlourish rotation={180} /></div>
-      <div className="absolute bottom-1.5 left-1.5"><CornerFlourish rotation={270} /></div>
+      <div className="absolute top-1 left-1"><CornerFlourish rotation={0} /></div>
+      <div className="absolute top-1 right-1"><CornerFlourish rotation={90} /></div>
+      <div className="absolute bottom-1 right-1"><CornerFlourish rotation={180} /></div>
+      <div className="absolute bottom-1 left-1"><CornerFlourish rotation={270} /></div>
     </div>
   )
 }

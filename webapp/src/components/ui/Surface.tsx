@@ -63,7 +63,7 @@ function SurfaceInner({
   const content = (
     <>
       {ornamented && <CornerFlourishes />}
-      <div className={ornamented ? 'relative z-[1]' : 'contents'}>{children}</div>
+      <div className={ornamented ? 'relative z-[1] pt-3 px-2 pb-2' : 'contents'}>{children}</div>
     </>
   )
 

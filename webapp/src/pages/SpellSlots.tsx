@@ -179,8 +179,9 @@ export default function SpellSlots() {
               <m.button
                 key={level}
                 onClick={() => addSlot.mutate(level)}
-                className="px-3 py-1.5 rounded-lg bg-gradient-arcane-mist border border-dnd-arcane/50
-                           text-dnd-arcane-bright font-cinzel text-xs uppercase tracking-wider"
+                className="px-3 py-1.5 rounded-lg bg-dnd-surface border border-dnd-arcane/60
+                           text-dnd-arcane-bright font-cinzel text-xs uppercase tracking-wider
+                           hover:border-dnd-arcane hover:shadow-halo-arcane transition-[border-color,box-shadow] duration-200"
                 whileTap={{ scale: 0.92 }}
               >
                 + {t('character.slots.level', { level })}

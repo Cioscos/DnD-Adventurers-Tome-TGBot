@@ -25,9 +25,12 @@ export default function Layout({ title, children, backTo, group, page }: LayoutP
   }
 
   return (
-    <div className="min-h-screen w-full flex flex-col bg-dnd-bg">
+    <div
+      className="w-full flex flex-col bg-dnd-bg"
+      style={{ height: 'var(--tg-vh, 100vh)' }}
+    >
       <m.header
-        className="sticky top-0 z-10 flex flex-col px-4 py-3 pt-safe
+        className="shrink-0 z-10 flex flex-col px-4 py-3 pt-safe
                     bg-dnd-surface-raised/95 backdrop-blur-sm
                     border-b border-dnd-gold-dim/40 shadow-parchment-md"
         initial={{ y: -20, opacity: 0 }}
@@ -83,7 +86,7 @@ export default function Layout({ title, children, backTo, group, page }: LayoutP
 
       <main
         ref={swipe.contentRef}
-        className="flex-1 min-w-0 p-4 space-y-3 pb-safe animate-fade-in"
+        className="flex-1 min-w-0 overflow-y-auto p-4 space-y-3 pb-safe animate-fade-in"
         onTouchStart={swipe.onTouchStart}
         onTouchMove={swipe.onTouchMove}
         onTouchEnd={swipe.onTouchEnd}

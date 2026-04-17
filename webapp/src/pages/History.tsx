@@ -6,6 +6,7 @@ import { m } from 'framer-motion'
 import {
   Heart, Moon, Shield, Swords, Gem, Sparkles, Backpack,
   Coins, Zap, Skull, CircleDot, Pin, Trash2, BookOpen,
+  Target, ShieldAlert, FlaskConical, Dices,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { api } from '@/api/client'
@@ -18,18 +19,23 @@ import Skeleton from '@/components/ui/Skeleton'
 import { haptic } from '@/auth/telegram'
 
 const EVENT_META: Record<string, { icon: LucideIcon; tone: string }> = {
-  hp_change:         { icon: Heart,      tone: 'text-[var(--dnd-crimson-bright)] bg-[var(--dnd-crimson)]/15 border-dnd-crimson/40' },
-  rest:              { icon: Moon,       tone: 'text-[var(--dnd-cobalt-bright)] bg-[var(--dnd-cobalt)]/15 border-dnd-cobalt/40' },
-  ac_change:         { icon: Shield,     tone: 'text-dnd-gold-bright bg-dnd-chip-bg border-dnd-gold/40' },
-  level_change:      { icon: Swords,     tone: 'text-[var(--dnd-amber)] bg-[var(--dnd-amber)]/15 border-dnd-amber/40' },
-  spell_slot_change: { icon: Gem,        tone: 'text-dnd-arcane-bright bg-[var(--dnd-arcane)]/15 border-dnd-arcane/40' },
-  spell_change:      { icon: Sparkles,   tone: 'text-dnd-arcane-bright bg-[var(--dnd-arcane)]/15 border-dnd-arcane/40' },
-  bag_change:        { icon: Backpack,   tone: 'text-dnd-gold-bright bg-dnd-chip-bg border-dnd-gold/40' },
-  currency_change:   { icon: Coins,      tone: 'text-[var(--dnd-amber)] bg-[var(--dnd-amber)]/15 border-dnd-amber/40' },
-  ability_change:    { icon: Zap,        tone: 'text-[var(--dnd-amber)] bg-[var(--dnd-amber)]/15 border-dnd-amber/40' },
-  death_save:        { icon: Skull,      tone: 'text-[var(--dnd-crimson-bright)] bg-[var(--dnd-crimson)]/15 border-dnd-crimson/40' },
-  condition_change:  { icon: CircleDot,  tone: 'text-[var(--dnd-crimson-bright)] bg-[var(--dnd-crimson)]/15 border-dnd-crimson/40' },
-  other:             { icon: Pin,        tone: 'text-dnd-text-muted bg-dnd-surface border-dnd-border' },
+  hp_change:          { icon: Heart,        tone: 'text-[var(--dnd-crimson-bright)] bg-dnd-surface-raised border-[var(--dnd-crimson)]' },
+  rest:               { icon: Moon,         tone: 'text-[var(--dnd-cobalt-bright)] bg-dnd-surface-raised border-[var(--dnd-cobalt)]' },
+  ac_change:          { icon: Shield,       tone: 'text-dnd-gold-bright bg-dnd-surface-raised border-dnd-gold' },
+  level_change:       { icon: Swords,       tone: 'text-[var(--dnd-amber)] bg-dnd-surface-raised border-[var(--dnd-amber)]' },
+  spell_slot_change:  { icon: Gem,          tone: 'text-dnd-arcane-bright bg-dnd-surface-raised border-[var(--dnd-arcane)]' },
+  spell_change:       { icon: Sparkles,     tone: 'text-dnd-arcane-bright bg-dnd-surface-raised border-[var(--dnd-arcane)]' },
+  bag_change:         { icon: Backpack,     tone: 'text-dnd-gold-bright bg-dnd-surface-raised border-dnd-gold' },
+  currency_change:    { icon: Coins,        tone: 'text-[var(--dnd-amber)] bg-dnd-surface-raised border-[var(--dnd-amber)]' },
+  ability_change:     { icon: Zap,          tone: 'text-[var(--dnd-amber)] bg-dnd-surface-raised border-[var(--dnd-amber)]' },
+  death_save:         { icon: Skull,        tone: 'text-[var(--dnd-crimson-bright)] bg-dnd-surface-raised border-[var(--dnd-crimson)]' },
+  condition_change:   { icon: CircleDot,    tone: 'text-[var(--dnd-crimson-bright)] bg-dnd-surface-raised border-[var(--dnd-crimson)]' },
+  attack_roll:        { icon: Swords,       tone: 'text-[var(--dnd-crimson-bright)] bg-dnd-surface-raised border-[var(--dnd-crimson)]' },
+  skill_roll:         { icon: Target,       tone: 'text-[var(--dnd-cobalt-bright)] bg-dnd-surface-raised border-[var(--dnd-cobalt)]' },
+  saving_throw:       { icon: ShieldAlert,  tone: 'text-[var(--dnd-cobalt-bright)] bg-dnd-surface-raised border-[var(--dnd-cobalt)]' },
+  concentration_save: { icon: FlaskConical, tone: 'text-dnd-arcane-bright bg-dnd-surface-raised border-[var(--dnd-arcane)]' },
+  hit_dice:           { icon: Dices,        tone: 'text-[var(--dnd-emerald-bright)] bg-dnd-surface-raised border-[var(--dnd-emerald)]' },
+  other:              { icon: Pin,          tone: 'text-dnd-text-muted bg-dnd-surface-raised border-dnd-border' },
 }
 
 export default function History() {
@@ -81,10 +87,21 @@ export default function History() {
         <>
           <ScrollArea>
             <div className="relative">
-              {/* Vertical timeline line */}
+              {/* Vertical timeline line — gold gradient + glow + inner highlight */}
               <div
-                className="absolute left-6 top-2 bottom-2 w-px"
-                style={{ background: 'var(--gradient-flourish)' }}
+                className="absolute left-[23px] top-2 bottom-2 w-1 rounded-full"
+                style={{
+                  background:
+                    'linear-gradient(to bottom, transparent 0%, var(--dnd-gold-deep) 6%, var(--dnd-gold) 25%, var(--dnd-gold-bright) 50%, var(--dnd-gold) 75%, var(--dnd-gold-deep) 94%, transparent 100%)',
+                  boxShadow: '0 0 6px var(--dnd-gold-glow), 0 0 12px rgba(212,175,55,0.35)',
+                }}
+              />
+              <div
+                className="absolute left-[24.5px] top-2 bottom-2 w-px opacity-80"
+                style={{
+                  background:
+                    'linear-gradient(to bottom, transparent 0%, rgba(255,240,200,0.7) 30%, rgba(255,240,200,0.9) 50%, rgba(255,240,200,0.7) 70%, transparent 100%)',
+                }}
               />
               <div className="space-y-3">
                 {[...entries].reverse().map((entry, idx) => {

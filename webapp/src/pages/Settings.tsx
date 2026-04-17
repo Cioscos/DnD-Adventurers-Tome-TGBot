@@ -2,7 +2,7 @@ import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
-import { Settings2, Languages, Users, Sparkles, Gem } from 'lucide-react'
+import { Settings2, Languages, Users, Sparkles, Gem, Dices } from 'lucide-react'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
@@ -10,6 +10,7 @@ import Button from '@/components/ui/Button'
 import SectionDivider from '@/components/ui/SectionDivider'
 import { haptic } from '@/auth/telegram'
 import { useCharacterStore } from '@/store/characterStore'
+import { useDiceSettings } from '@/store/diceSettings'
 import { spring } from '@/styles/motion'
 
 export default function Settings() {
@@ -18,6 +19,8 @@ export default function Settings() {
   const { t, i18n } = useTranslation()
   const qc = useQueryClient()
   const { locale, setLocale } = useCharacterStore()
+  const animate3d = useDiceSettings((s) => s.animate3d)
+  const setAnimate3d = useDiceSettings((s) => s.setAnimate3d)
 
   const { data: char } = useQuery({
     queryKey: ['character', charId],
@@ -128,6 +131,39 @@ export default function Settings() {
             <m.span
               className="absolute top-0.5 w-5 h-5 rounded-full bg-dnd-parchment shadow-parchment-md"
               animate={{ x: char.is_party_active ? 24 : 2 }}
+              transition={spring.snappy}
+            />
+          </m.button>
+        </div>
+      </Surface>
+
+      <Surface variant="elevated">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex-1 flex items-start gap-2">
+            <Dices size={16} className="text-dnd-gold-bright shrink-0 mt-0.5" />
+            <div>
+              <p className="font-display font-bold text-dnd-gold-bright">
+                {t('character.settings.dice_3d')}
+              </p>
+              <p className="text-xs text-dnd-text-muted mt-0.5 font-body italic">
+                {t('character.settings.dice_3d_hint')}
+              </p>
+            </div>
+          </div>
+          <m.button
+            onClick={() => {
+              setAnimate3d(!animate3d)
+              haptic.light()
+            }}
+            className={`relative w-12 h-7 rounded-full transition-colors shrink-0 border
+              ${animate3d
+                ? 'bg-gradient-to-r from-dnd-gold-dim to-dnd-gold-bright border-dnd-gold-bright shadow-[0_0_8px_rgba(212,170,90,0.4)]'
+                : 'bg-dnd-surface border-dnd-border'}`}
+            whileTap={{ scale: 0.92 }}
+          >
+            <m.span
+              className="absolute top-0.5 w-5 h-5 rounded-full bg-dnd-parchment shadow-parchment-md"
+              animate={{ x: animate3d ? 24 : 2 }}
               transition={spring.snappy}
             />
           </m.button>

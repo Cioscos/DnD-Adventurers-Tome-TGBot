@@ -430,7 +430,9 @@
       "carry_capacity": "Mostra capacità di carico",
       "language": "Lingua",
       "party_active": "Attivo nel Party",
-      "party_active_hint": "Solo un personaggio può essere attivo nel Party alla volta"
+      "party_active_hint": "Solo un personaggio può essere attivo nel Party alla volta",
+      "dice_3d": "Animazione dadi 3D",
+      "dice_3d_hint": "Mostra un'animazione 3D dei dadi durante i lanci. Disattiva per risultati immediati."
     },
     "create": {
       "step_name": "Nuovo personaggio",

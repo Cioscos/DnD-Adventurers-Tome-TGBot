@@ -7,6 +7,19 @@ export default defineConfig(({ command }) => ({
   build: {
     outDir: '../docs/app',
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (
+            id.includes('node_modules/three/') ||
+            id.includes('node_modules/@react-three/') ||
+            id.includes('node_modules/cannon-es/')
+          ) {
+            return 'dice-scene'
+          }
+        },
+      },
+    },
   },
   plugins: [react()],
   resolve: {

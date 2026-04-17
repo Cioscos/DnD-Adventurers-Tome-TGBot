@@ -164,10 +164,13 @@ export default function CharacterMain() {
     : []
 
   return (
-    <div className="min-h-screen pb-safe pt-safe">
+    <div
+      className="w-full flex flex-col"
+      style={{ height: 'var(--tg-vh, 100vh)' }}
+    >
       {/* Header bar */}
       <m.header
-        className="sticky top-0 z-20 flex items-center gap-2 px-4 py-3 pt-safe
+        className="shrink-0 z-20 flex items-center gap-2 px-4 py-3 pt-safe
                    bg-dnd-surface-raised/95 backdrop-blur-sm border-b border-dnd-gold-dim/40 shadow-parchment-md"
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
@@ -211,7 +214,7 @@ export default function CharacterMain() {
         </m.button>
       </m.header>
 
-      <div className="p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-safe">
         {/* Hero card with shared layoutId from CharacterSelect */}
         <Surface
           variant="tome"
@@ -250,7 +253,7 @@ export default function CharacterMain() {
           </div>
 
           {/* HP row */}
-          <div className="mt-4">
+          <div className="mt-4 pr-24">
             <div className="flex items-center justify-between text-sm mb-1.5">
               <span className="inline-flex items-center gap-1.5 font-mono">
                 <Heart size={14} className="text-[var(--dnd-crimson-bright)]" />

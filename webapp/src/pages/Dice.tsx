@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -15,6 +15,9 @@ import ScrollArea from '@/components/ScrollArea'
 import { haptic } from '@/auth/telegram'
 import { spring } from '@/styles/motion'
 import type { DiceRollResult } from '@/types'
+import { useDiceAnimation } from '@/dice/useDiceAnimation'
+import { schedulePreloadDiceScene } from '@/dice/preload'
+import type { DiceKind } from '@/dice/types'
 
 const DICE = [4, 6, 8, 10, 12, 20, 100] as const
 type DieSide = typeof DICE[number]
@@ -25,6 +28,8 @@ type InitiativeResult = {
   total: number
 }
 
+const toDiceKind = (side: DieSide): DiceKind => `d${side}` as DiceKind
+
 export default function Dice() {
   const { id } = useParams<{ id: string }>()
   const charId = Number(id)
@@ -34,7 +39,11 @@ export default function Dice() {
   const [lastResult, setLastResult] = useState<DiceRollResult | null>(null)
   const [initiativeResult, setInitiativeResult] = useState<InitiativeResult | null>(null)
   const [showClearConfirm, setShowClearConfirm] = useState(false)
-  const [tumbling, setTumbling] = useState<DieSide | null>(null)
+  const dice = useDiceAnimation()
+
+  useEffect(() => {
+    schedulePreloadDiceScene()
+  }, [])
 
   const { data: char } = useQuery({
     queryKey: ['character', charId],
@@ -47,8 +56,10 @@ export default function Dice() {
   })
 
   const rollMutation = useMutation({
-    mutationFn: ({ die }: { die: string }) => api.dice.roll(charId, count, die),
-    onSuccess: (result) => {
+    mutationFn: ({ die, kind }: { die: string; kind: DiceKind }) =>
+      api.dice.roll(charId, count, die).then((result) => ({ result, kind })),
+    onSuccess: async ({ result, kind }) => {
+      await dice.play({ groups: [{ kind, results: result.rolls }] })
       setLastResult(result)
       setInitiativeResult(null)
       qc.invalidateQueries({ queryKey: ['dice-history', charId] })
@@ -59,9 +70,10 @@ export default function Dice() {
 
   const initiativeMutation = useMutation({
     mutationFn: () => api.dice.roll(charId, 1, 'd20'),
-    onSuccess: (result) => {
+    onSuccess: async (result) => {
       const dexScore = char?.ability_scores.find((s) => s.name === 'dexterity')
       const dexMod = dexScore?.modifier ?? 0
+      await dice.play({ groups: [{ kind: 'd20', results: result.rolls }] })
       setInitiativeResult({ roll: result.total, dexMod, total: result.total + dexMod })
       setLastResult(null)
       qc.invalidateQueries({ queryKey: ['dice-history', charId] })
@@ -81,9 +93,7 @@ export default function Dice() {
   })
 
   const handleRoll = (die: DieSide) => {
-    setTumbling(die)
-    setTimeout(() => setTumbling(null), 400)
-    rollMutation.mutate({ die: `d${die}` })
+    rollMutation.mutate({ die: `d${die}`, kind: toDiceKind(die) })
   }
 
   const dexMod = char?.ability_scores.find((s) => s.name === 'dexterity')?.modifier ?? 0
@@ -152,8 +162,6 @@ export default function Dice() {
               disabled={rollMutation.isPending || initiativeMutation.isPending}
               className="aspect-square rounded-2xl bg-dnd-surface-raised border border-dnd-border hover:border-dnd-gold/60 hover:shadow-halo-gold transition-[box-shadow,border-color] duration-200 flex items-center justify-center disabled:opacity-40 text-dnd-gold-bright"
               whileTap={{ scale: 0.92 }}
-              animate={tumbling === die ? { rotate: [0, 90, 180, 270, 360] } : {}}
-              transition={{ duration: 0.4 }}
             >
               <DiceIcon sides={die} size={42} />
             </m.button>
@@ -163,8 +171,6 @@ export default function Dice() {
             disabled={rollMutation.isPending || initiativeMutation.isPending}
             className="col-span-2 rounded-2xl bg-dnd-surface-raised border border-dnd-border hover:border-dnd-gold/60 hover:shadow-halo-gold transition-[box-shadow,border-color] duration-200 flex items-center justify-center gap-2 py-3 disabled:opacity-40 text-dnd-gold-bright"
             whileTap={{ scale: 0.95 }}
-            animate={tumbling === 100 ? { rotate: [0, 360] } : {}}
-            transition={{ duration: 0.4 }}
           >
             <DiceIcon sides={100} size={34} />
             <span className="font-cinzel font-bold">d100</span>

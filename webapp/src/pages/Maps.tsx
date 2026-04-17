@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -124,58 +125,64 @@ export default function Maps() {
         ))
       )}
 
-      {/* Full-screen overlay */}
-      <AnimatePresence>
-        {overlayMap && (
-          <m.div
-            className="fixed inset-0 z-50 flex flex-col"
-            style={{ background: 'rgba(0, 0, 0, 0.92)', backdropFilter: 'blur(4px)' }}
-            onClick={() => setOverlayMap(null)}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
-            <div className="flex justify-end p-4 pt-safe shrink-0">
-              <m.button
-                onClick={(e) => { e.stopPropagation(); setOverlayMap(null) }}
-                className="w-11 h-11 flex items-center justify-center rounded-full bg-white/15 border border-white/30 backdrop-blur-sm"
-                whileTap={{ scale: 0.9 }}
-              >
-                <X size={22} className="text-white" />
-              </m.button>
-            </div>
-            <div
-              className="flex-1 flex items-center justify-center p-4 overflow-auto"
-              onClick={(e) => e.stopPropagation()}
+      {/* Full-screen overlay — portaled to body to escape Layout stacking context */}
+      {createPortal(
+        <AnimatePresence>
+          {overlayMap && (
+            <m.div
+              className="fixed inset-0 z-[9999] flex flex-col"
+              style={{ background: 'rgba(5, 5, 8, 0.98)' }}
+              onClick={() => setOverlayMap(null)}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
             >
-              {overlayMap.file_type === 'photo' ? (
-                <m.img
-                  src={api.maps.fileUrl(charId, overlayMap.id)}
-                  alt={overlayMap.zone_name}
-                  className="max-w-full max-h-full rounded-xl object-contain shadow-parchment-2xl"
-                  initial={{ scale: 0.95, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ duration: 0.3 }}
-                />
-              ) : (
-                <div className="text-center text-white space-y-4">
-                  <FileText size={80} className="mx-auto text-dnd-gold-bright" />
-                  <p className="text-sm opacity-70 font-body">{overlayMap.zone_name}</p>
-                  <a
-                    href={api.maps.fileUrl(charId, overlayMap.id)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-block px-4 py-2 rounded-xl bg-gradient-gold text-dnd-ink text-sm font-cinzel uppercase tracking-wider shadow-engrave"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {t('character.maps.open_file')}
-                  </a>
-                </div>
-              )}
-            </div>
-          </m.div>
-        )}
-      </AnimatePresence>
+              <div className="flex justify-end p-4 pt-safe shrink-0 relative z-10">
+                <m.button
+                  onClick={(e) => { e.stopPropagation(); setOverlayMap(null) }}
+                  className="w-12 h-12 flex items-center justify-center rounded-full
+                             bg-gradient-gold text-dnd-ink border-2 border-dnd-gold-bright
+                             shadow-[0_0_20px_var(--dnd-gold-glow)]"
+                  whileTap={{ scale: 0.9 }}
+                  aria-label="Close"
+                >
+                  <X size={24} strokeWidth={3} />
+                </m.button>
+              </div>
+              <div
+                className="flex-1 flex items-center justify-center p-4 overflow-auto"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {overlayMap.file_type === 'photo' ? (
+                  <m.img
+                    src={api.maps.fileUrl(charId, overlayMap.id)}
+                    alt={overlayMap.zone_name}
+                    className="max-w-full max-h-full rounded-xl object-contain shadow-parchment-2xl"
+                    initial={{ scale: 0.95, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ duration: 0.3 }}
+                  />
+                ) : (
+                  <div className="text-center text-white space-y-4">
+                    <FileText size={80} className="mx-auto text-dnd-gold-bright" />
+                    <p className="text-sm opacity-70 font-body">{overlayMap.zone_name}</p>
+                    <a
+                      href={api.maps.fileUrl(charId, overlayMap.id)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-block px-4 py-2 rounded-xl bg-gradient-gold text-dnd-ink text-sm font-cinzel uppercase tracking-wider shadow-engrave"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {t('character.maps.open_file')}
+                    </a>
+                  </div>
+                )}
+              </div>
+            </m.div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
 
       {/* Delete single file confirm */}
       <Sheet

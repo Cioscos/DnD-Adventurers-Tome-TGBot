@@ -3,12 +3,13 @@ import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
-import { Dice1, Check, ShieldAlert } from 'lucide-react'
+import { Check, ShieldAlert } from 'lucide-react'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
 import StatPill from '@/components/ui/StatPill'
 import Reveal from '@/components/ui/Reveal'
+import DiceIcon from '@/components/ui/DiceIcon'
 import RollResultModal, { type RollResult } from '@/components/RollResultModal'
 import { haptic } from '@/auth/telegram'
 import { stagger } from '@/styles/motion'
@@ -101,31 +102,28 @@ export default function SavingThrows() {
                 className={`relative !p-3 text-center
                   ${isProficient ? 'border-dnd-gold/50 shadow-halo-gold' : ''}`}
               >
-                {/* Proficiency star toggle — separate touch target ≥44x44 */}
-                <m.button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    toggle(ability)
-                  }}
-                  className={`absolute top-1.5 left-1.5 w-11 h-11 flex items-center justify-center rounded-full
-                    ${isProficient
-                      ? 'text-dnd-gold-bright'
-                      : 'text-dnd-text-faint'}`}
-                  whileTap={{ scale: 0.85 }}
-                  aria-label="Proficiency"
-                >
-                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center
-                    ${isProficient
-                      ? 'bg-dnd-gold border-dnd-gold-bright shadow-[0_0_6px_var(--dnd-gold-glow)]'
-                      : 'border-dnd-border'}`}>
-                    {isProficient && <Check size={12} className="text-dnd-ink" strokeWidth={3} />}
-                  </div>
-                </m.button>
+                {/* Top row: proficiency toggle (left) + dice hint (right) */}
+                <div className="flex items-center justify-between -mx-1 -mt-1 mb-2">
+                  <m.button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      toggle(ability)
+                    }}
+                    className="w-10 h-10 flex items-center justify-center rounded-full"
+                    whileTap={{ scale: 0.85 }}
+                    aria-label="Proficiency"
+                  >
+                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors
+                      ${isProficient
+                        ? 'bg-dnd-gold border-dnd-gold-bright shadow-[0_0_6px_var(--dnd-gold-glow)]'
+                        : 'border-dnd-border'}`}>
+                      {isProficient && <Check size={12} className="text-dnd-ink" strokeWidth={3} />}
+                    </div>
+                  </m.button>
+                  <DiceIcon sides={20} size={28} className="text-dnd-gold/80 mr-0.5" />
+                </div>
 
-                {/* Roll hint icon (top-right) */}
-                <Dice1 size={14} className="absolute top-3 right-3 text-dnd-text-faint opacity-60" />
-
-                <p className="text-[10px] font-cinzel uppercase tracking-[0.25em] text-dnd-text-muted mt-3">
+                <p className="text-[10px] font-cinzel uppercase tracking-[0.25em] text-dnd-text-muted">
                   {t(`character.stats.${ability}`)}
                 </p>
                 <p className={`text-4xl font-display font-black leading-none mt-1.5 mb-1 ${

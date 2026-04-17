@@ -178,17 +178,17 @@ export default function Identity() {
         {t('character.identity.personality', { defaultValue: 'Personalità' })}
       </SectionDivider>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-3">
         {personalitySections.map(({ key, label }) => (
-          <Surface key={key} variant="parchment" className="!p-4 relative">
-            <span className="absolute -top-2 left-4 px-2 bg-dnd-surface-raised text-[10px] font-cinzel uppercase tracking-widest text-dnd-gold-dim">
-              "{label}"
+          <Surface key={key} variant="parchment" className="!pt-5 !px-4 !pb-4 relative">
+            <span className="absolute -top-2.5 left-4 px-2 bg-dnd-surface-raised text-[10px] font-cinzel uppercase tracking-widest text-dnd-gold-dim rounded">
+              {label}
             </span>
             <Input
               variant="textarea"
               value={draft[key] as string}
               onChange={set(key)}
-              rows={2}
+              rows={3}
               placeholder={t(`character.identity.placeholder_${key}`)}
               className="[&_textarea]:!border-transparent [&_textarea]:!bg-transparent [&_textarea]:italic"
             />
