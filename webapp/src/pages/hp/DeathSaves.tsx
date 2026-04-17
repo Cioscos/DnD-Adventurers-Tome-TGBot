@@ -1,5 +1,9 @@
 import { useTranslation } from 'react-i18next'
-import Card from '@/components/Card'
+import { m } from 'framer-motion'
+import { Dice1, Check, X, Heart, Skull } from 'lucide-react'
+import Surface from '@/components/ui/Surface'
+import Button from '@/components/ui/Button'
+import { spring } from '@/styles/motion'
 
 interface DeathSavesProps {
   deathSaves: { successes: number; failures: number; stable: boolean }
@@ -12,78 +16,109 @@ export default function DeathSaves({ deathSaves, onRoll, onAction, isRolling }: 
   const { t } = useTranslation()
 
   return (
-    <Card variant="elevated">
-      <h3 className="font-semibold mb-3">{'\uD83D\uDC80'} {t('character.death_saves.title')}</h3>
-      <div className="grid grid-cols-2 gap-3 mb-4">
+    <Surface variant="ember" ornamented className="space-y-3">
+      <div className="flex items-center gap-2">
+        <Skull size={18} className="text-[var(--dnd-crimson-bright)]" />
+        <h3 className="font-display font-bold text-dnd-gold-bright text-base">
+          {t('character.death_saves.title')}
+        </h3>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
         <div className="text-center">
-          <p className="text-sm text-dnd-text-secondary mb-1">
+          <p className="text-[10px] text-dnd-text-muted mb-2 font-cinzel uppercase tracking-widest">
             {t('character.death_saves.successes')}
           </p>
           <div className="flex justify-center gap-2">
-            {[0, 1, 2].map((i) => (
-              <div
-                key={i}
-                className={`w-6 h-6 rounded-full border-2 ${
-                  i < (deathSaves.successes ?? 0)
-                    ? 'bg-dnd-success border-dnd-success'
-                    : 'border-white/30'
-                }`}
-              />
-            ))}
+            {[0, 1, 2].map((i) => {
+              const filled = i < (deathSaves.successes ?? 0)
+              return (
+                <m.div
+                  key={i}
+                  className={`w-7 h-7 rounded-full border-2 flex items-center justify-center
+                    ${filled
+                      ? 'bg-dnd-emerald border-dnd-emerald-bright shadow-[0_0_8px_rgba(63,166,106,0.5)]'
+                      : 'border-dnd-border'}`}
+                  animate={filled ? { scale: [0.7, 1.15, 1] } : { scale: 1 }}
+                  transition={spring.elastic}
+                >
+                  {filled && <Check size={14} className="text-dnd-ink" strokeWidth={3} />}
+                </m.div>
+              )
+            })}
           </div>
         </div>
         <div className="text-center">
-          <p className="text-sm text-dnd-text-secondary mb-1">
+          <p className="text-[10px] text-dnd-text-muted mb-2 font-cinzel uppercase tracking-widest">
             {t('character.death_saves.failures')}
           </p>
           <div className="flex justify-center gap-2">
-            {[0, 1, 2].map((i) => (
-              <div
-                key={i}
-                className={`w-6 h-6 rounded-full border-2 ${
-                  i < (deathSaves.failures ?? 0)
-                    ? 'bg-[var(--dnd-danger)] border-[var(--dnd-danger)]'
-                    : 'border-white/30'
-                }`}
-              />
-            ))}
+            {[0, 1, 2].map((i) => {
+              const filled = i < (deathSaves.failures ?? 0)
+              return (
+                <m.div
+                  key={i}
+                  className={`w-7 h-7 rounded-full border-2 flex items-center justify-center
+                    ${filled
+                      ? 'bg-dnd-crimson border-[var(--dnd-crimson-bright)] shadow-[0_0_8px_rgba(179,58,58,0.5)]'
+                      : 'border-dnd-border'}`}
+                  animate={filled ? { scale: [0.7, 1.15, 1] } : { scale: 1 }}
+                  transition={spring.elastic}
+                >
+                  {filled && <X size={14} className="text-white" strokeWidth={3} />}
+                </m.div>
+              )
+            })}
           </div>
         </div>
       </div>
-      <button
+
+      <Button
+        variant="primary"
+        size="lg"
+        fullWidth
         onClick={onRoll}
         disabled={isRolling}
-        className="w-full py-3 rounded-xl bg-[var(--dnd-gold-glow)] text-dnd-gold font-bold text-base
-                   active:opacity-70 disabled:opacity-40 mb-2"
+        loading={isRolling}
+        icon={<Dice1 size={18} />}
+        haptic="medium"
       >
-        {'\uD83C\uDFB2'} {t('character.death_saves.roll')}
-      </button>
+        {t('character.death_saves.roll')}
+      </Button>
+
       <div className="grid grid-cols-3 gap-2">
-        <button
+        <Button
+          variant="secondary"
+          size="sm"
           onClick={() => onAction('success')}
-          className="py-2 rounded-xl bg-dnd-success/20 text-dnd-success-text text-sm font-medium"
+          icon={<Check size={14} />}
+          className="!bg-[var(--dnd-emerald)]/15 !border-dnd-emerald/40 !text-[var(--dnd-emerald-bright)]"
         >
-          {'\u2713'} {t('character.death_saves.success')}
-        </button>
-        <button
+          {t('character.death_saves.success')}
+        </Button>
+        <Button
+          variant="secondary"
+          size="sm"
           onClick={() => onAction('failure')}
-          className="py-2 rounded-xl bg-[var(--dnd-danger)]/20 text-[var(--dnd-danger)] text-sm font-medium"
+          icon={<X size={14} />}
+          className="!bg-[var(--dnd-crimson)]/15 !border-dnd-crimson/40 !text-[var(--dnd-crimson-bright)]"
         >
-          {'\u2717'} {t('character.death_saves.failure')}
-        </button>
-        <button
+          {t('character.death_saves.failure')}
+        </Button>
+        <Button
+          variant="secondary"
+          size="sm"
           onClick={() => onAction('stabilize')}
-          className="py-2 rounded-xl bg-dnd-info/20 text-dnd-info-text text-sm font-medium"
+          icon={<Heart size={14} />}
+          className="!bg-[var(--dnd-cobalt)]/15 !border-dnd-cobalt/40 !text-[var(--dnd-cobalt-bright)]"
         >
-          {'\uD83D\uDC8A'} {t('character.death_saves.stabilize')}
-        </button>
+          {t('character.death_saves.stabilize')}
+        </Button>
       </div>
-      <button
-        onClick={() => onAction('reset')}
-        className="w-full mt-2 py-2 rounded-xl bg-dnd-surface text-sm"
-      >
+
+      <Button variant="ghost" size="sm" fullWidth onClick={() => onAction('reset')}>
         {t('character.death_saves.reset')}
-      </button>
-    </Card>
+      </Button>
+    </Surface>
   )
 }

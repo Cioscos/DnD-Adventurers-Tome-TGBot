@@ -2,23 +2,34 @@ import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { m } from 'framer-motion'
+import { ArrowLeftRight, Coins, Save, RefreshCw } from 'lucide-react'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
-import Card from '@/components/Card'
-import DndInput from '@/components/DndInput'
-import DndButton from '@/components/DndButton'
+import Surface from '@/components/ui/Surface'
+import Input from '@/components/ui/Input'
+import Button from '@/components/ui/Button'
+import Sheet from '@/components/ui/Sheet'
 import { haptic } from '@/auth/telegram'
-import { ArrowLeftRight } from 'lucide-react'
+import { spring } from '@/styles/motion'
 
 const COINS = [
-  { key: 'platinum', emoji: '\u2B1C', ratio: 100 },
-  { key: 'gold',     emoji: '\uD83D\uDFE1', ratio: 10 },
-  { key: 'electrum', emoji: '\uD83D\uDD35', ratio: 5 },
-  { key: 'silver',   emoji: '\u26AA', ratio: 1 },
-  { key: 'copper',   emoji: '\uD83D\uDFE4', ratio: 0.1 },
+  { key: 'platinum', color: 'from-slate-200 via-slate-400 to-slate-500', label: 'PP' },
+  { key: 'gold',     color: 'from-yellow-300 via-amber-500 to-yellow-700', label: 'GP' },
+  { key: 'electrum', color: 'from-emerald-200 via-cyan-400 to-emerald-600', label: 'EP' },
+  { key: 'silver',   color: 'from-zinc-200 via-zinc-400 to-zinc-500', label: 'SP' },
+  { key: 'copper',   color: 'from-orange-300 via-orange-600 to-amber-900', label: 'CP' },
 ] as const
 
 type CoinKey = typeof COINS[number]['key']
+
+function CoinTile({ colorClass, label }: { colorClass: string; label: string }) {
+  return (
+    <div className={`w-11 h-11 rounded-full bg-gradient-to-br ${colorClass} border-2 border-dnd-gold-deep/60 flex items-center justify-center font-cinzel font-black text-[10px] shadow-parchment-md text-dnd-ink`}>
+      {label}
+    </div>
+  )
+}
 
 export default function Currency() {
   const { id } = useParams<{ id: string }>()
@@ -36,7 +47,6 @@ export default function Currency() {
     platinum: '', gold: '', electrum: '', silver: '', copper: '',
   })
 
-  // Conversion state
   const [showConvert, setShowConvert] = useState(false)
   const [convertSource, setConvertSource] = useState<CoinKey>('gold')
   const [convertTarget, setConvertTarget] = useState<CoinKey>('silver')
@@ -56,9 +66,9 @@ export default function Currency() {
         copper: String(char.currency.copper),
       })
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currencyFingerprint, mode])
 
-  // When switching to 'add' mode, reset drafts to 0
   useEffect(() => {
     if (mode === 'add') {
       setDraft({ platinum: '', gold: '', electrum: '', silver: '', copper: '' })
@@ -71,6 +81,7 @@ export default function Currency() {
         copper: String(char.currency.copper),
       })
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode])
 
   const mutation = useMutation({
@@ -106,6 +117,7 @@ export default function Currency() {
         old ? { ...old, currency: updated } : old
       )
       setConvertAmount('')
+      setShowConvert(false)
       haptic.success()
     },
     onError: () => haptic.error(),
@@ -132,143 +144,170 @@ export default function Currency() {
 
   return (
     <Layout title={t('character.currency.title')} backTo={`/char/${charId}`} group="equipment" page="currency">
-      <Card variant="elevated">
-        <p className="text-sm text-dnd-text-secondary mb-1">{t('character.currency.total_gold')}</p>
-        <p className="text-3xl font-bold text-dnd-highlight">{'\uD83D\uDFE1'} {totalGold}</p>
-      </Card>
+      {/* Total gold hero */}
+      <Surface variant="tome" ornamented className="text-center">
+        <p className="text-[10px] font-cinzel uppercase tracking-[0.3em] text-dnd-gold-dim mb-1">
+          {t('character.currency.total_gold')}
+        </p>
+        <div className="flex items-center justify-center gap-3">
+          <Coins size={32} className="text-dnd-gold-bright drop-shadow-[0_0_8px_var(--dnd-gold-glow)]" />
+          <m.span
+            key={totalGold}
+            initial={{ scale: 0.85, opacity: 0.5 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={spring.elastic}
+            className="text-4xl font-display font-black text-dnd-gold-bright"
+            style={{ textShadow: '0 2px 8px var(--dnd-gold-glow)' }}
+          >
+            {totalGold}
+          </m.span>
+        </div>
+      </Surface>
 
       {/* Mode toggle */}
-      <div className="flex gap-1 rounded-xl bg-dnd-surface p-1">
-        <DndButton
-          variant={mode === 'set' ? 'primary' : 'secondary'}
-          onClick={() => setMode('set')}
-          className="flex-1 !rounded-lg"
-        >
-          {t('character.currency.mode_set')}
-        </DndButton>
-        <DndButton
-          variant={mode === 'add' ? 'primary' : 'secondary'}
-          onClick={() => setMode('add')}
-          className="flex-1 !rounded-lg"
-        >
-          {t('character.currency.mode_add')}
-        </DndButton>
-      </div>
+      <Surface variant="flat" className="!p-1.5">
+        <div className="grid grid-cols-2 gap-1">
+          {(['set', 'add'] as const).map((m) => (
+            <button
+              key={m}
+              onClick={() => setMode(m)}
+              className={`min-h-[40px] rounded-lg font-cinzel text-xs uppercase tracking-widest transition-colors
+                ${mode === m
+                  ? 'bg-gradient-gold text-dnd-ink shadow-engrave'
+                  : 'bg-transparent text-dnd-text-muted'}`}
+            >
+              {t(`character.currency.mode_${m}`)}
+            </button>
+          ))}
+        </div>
+      </Surface>
 
+      {/* Coin rows */}
       <div className="space-y-2">
-        {COINS.map(({ key, emoji }) => (
-          <Card key={key}>
+        {COINS.map(({ key, color, label }) => (
+          <Surface key={key} variant="elevated">
             <div className="flex items-center gap-3">
-              <span className="text-2xl">{emoji}</span>
+              <CoinTile colorClass={color} label={label} />
               <div className="flex-1">
-                <span className="font-medium">{t(`character.currency.${key}`)}</span>
+                <span className="font-display font-bold text-dnd-gold-bright">{t(`character.currency.${key}`)}</span>
                 {mode === 'add' && currentCoins && (
-                  <span className="text-xs text-dnd-text-secondary ml-2">
+                  <span className="text-xs text-dnd-text-faint ml-2 font-mono">
                     ({currentCoins[key]})
                   </span>
                 )}
               </div>
-              <DndInput
+              <Input
                 type="number"
                 min={mode === 'set' ? 0 : undefined}
                 value={draft[key]}
                 onChange={(v) => setDraft((d) => ({ ...d, [key]: v }))}
                 placeholder="0"
-                className="w-28"
+                inputMode="numeric"
+                className="w-24 [&_input]:text-center [&_input]:font-mono [&_input]:font-bold"
               />
             </div>
-          </Card>
+          </Surface>
         ))}
       </div>
 
-      <DndButton
+      <Button
+        variant="primary"
+        size="lg"
+        fullWidth
         onClick={() => mutation.mutate()}
         loading={mutation.isPending}
-        className="w-full"
+        icon={<Save size={18} />}
+        haptic="success"
       >
         {t('common.save')}
-      </DndButton>
+      </Button>
 
-      {/* Convert section */}
-      <DndButton
-        variant="secondary"
-        onClick={() => setShowConvert(!showConvert)}
-        className="w-full"
+      <Button
+        variant="arcane"
+        size="md"
+        fullWidth
+        onClick={() => setShowConvert(true)}
+        icon={<RefreshCw size={16} />}
       >
-        {'\uD83D\uDD04'} {t('character.currency.convert')}
-      </DndButton>
+        {t('character.currency.convert')}
+      </Button>
 
-      {showConvert && (
-        <div
-          className="fixed inset-0 bg-black/60 flex items-end z-50 p-4"
-          onClick={() => setShowConvert(false)}
-        >
-          <Card className="w-full space-y-3" onClick={(e) => e.stopPropagation()}>
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <label className="block text-[11px] uppercase tracking-wider mb-1 font-medium text-dnd-gold-dim">
-                  {t('character.currency.convert_from')}
-                </label>
-                <select
-                  value={convertSource}
-                  onChange={(e) => setConvertSource(e.target.value as CoinKey)}
-                  className="w-full bg-dnd-surface rounded-xl px-2 py-3 min-h-[48px] outline-none text-sm text-dnd-text
-                             border border-transparent focus:border-dnd-gold-dim"
-                >
-                  {COINS.map(({ key }) => (
-                    <option key={key} value={key}>{t(`character.currency.${key}`)}</option>
-                  ))}
-                </select>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  const tmp = convertSource
-                  setConvertSource(convertTarget)
-                  setConvertTarget(tmp)
-                }}
-                className="flex items-end pb-3 text-dnd-gold active:opacity-60 transition-opacity"
-                aria-label={t('character.currency.swap')}
+      {/* Convert Sheet */}
+      <Sheet open={showConvert} onClose={() => setShowConvert(false)} title={t('character.currency.convert')}>
+        <div className="p-5 space-y-3">
+          <div className="flex gap-2 items-center">
+            <div className="flex-1">
+              <label className="block text-[10px] uppercase tracking-widest mb-1.5 font-cinzel text-dnd-gold-dim">
+                {t('character.currency.convert_from')}
+              </label>
+              <select
+                value={convertSource}
+                onChange={(e) => setConvertSource(e.target.value as CoinKey)}
+                className="w-full px-3 py-2.5 min-h-[48px] rounded-lg bg-dnd-surface text-dnd-text
+                           border-b-2 border-dnd-border outline-none font-body text-sm"
               >
-                <ArrowLeftRight size={18} />
-              </button>
-              <div className="flex-1">
-                <label className="block text-[11px] uppercase tracking-wider mb-1 font-medium text-dnd-gold-dim">
-                  {t('character.currency.convert_to')}
-                </label>
-                <select
-                  value={convertTarget}
-                  onChange={(e) => setConvertTarget(e.target.value as CoinKey)}
-                  className="w-full bg-dnd-surface rounded-xl px-2 py-3 min-h-[48px] outline-none text-sm text-dnd-text
-                             border border-transparent focus:border-dnd-gold-dim"
-                >
-                  {COINS.map(({ key }) => (
-                    <option key={key} value={key}>{t(`character.currency.${key}`)}</option>
-                  ))}
-                </select>
-              </div>
+                {COINS.map(({ key }) => (
+                  <option key={key} value={key}>{t(`character.currency.${key}`)}</option>
+                ))}
+              </select>
             </div>
+            <m.button
+              type="button"
+              onClick={() => {
+                const tmp = convertSource
+                setConvertSource(convertTarget)
+                setConvertTarget(tmp)
+              }}
+              className="self-end mb-1 w-10 h-10 rounded-full bg-dnd-surface-raised border border-dnd-gold-dim/40 flex items-center justify-center text-dnd-gold-bright"
+              whileTap={{ scale: 0.9, rotate: 180 }}
+              aria-label={t('character.currency.swap')}
+            >
+              <ArrowLeftRight size={16} />
+            </m.button>
+            <div className="flex-1">
+              <label className="block text-[10px] uppercase tracking-widest mb-1.5 font-cinzel text-dnd-gold-dim">
+                {t('character.currency.convert_to')}
+              </label>
+              <select
+                value={convertTarget}
+                onChange={(e) => setConvertTarget(e.target.value as CoinKey)}
+                className="w-full px-3 py-2.5 min-h-[48px] rounded-lg bg-dnd-surface text-dnd-text
+                           border-b-2 border-dnd-border outline-none font-body text-sm"
+              >
+                {COINS.map(({ key }) => (
+                  <option key={key} value={key}>{t(`character.currency.${key}`)}</option>
+                ))}
+              </select>
+            </div>
+          </div>
 
-            <DndInput
-              label={t('character.currency.convert_amount')}
-              type="number"
-              min={1}
-              value={convertAmount}
-              onChange={setConvertAmount}
-              placeholder="0"
-            />
+          <Input
+            label={t('character.currency.convert_amount')}
+            type="number"
+            min={1}
+            value={convertAmount}
+            onChange={setConvertAmount}
+            placeholder="0"
+            inputMode="numeric"
+          />
 
-            <DndButton
+          <div className="flex gap-2 pt-1">
+            <Button
+              variant="primary"
+              fullWidth
               onClick={() => convertMutation.mutate()}
               disabled={!convertAmount || convertSource === convertTarget}
               loading={convertMutation.isPending}
-              className="w-full"
+              haptic="success"
             >
               {t('character.currency.convert')}
-            </DndButton>
-          </Card>
+            </Button>
+            <Button variant="secondary" fullWidth onClick={() => setShowConvert(false)}>
+              {t('common.cancel')}
+            </Button>
+          </div>
         </div>
-      )}
+      </Sheet>
     </Layout>
   )
 }

@@ -2,10 +2,13 @@ import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { m } from 'framer-motion'
+import { Plus, Mic, NotebookPen } from 'lucide-react'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
-import Card from '@/components/Card'
-import DndButton from '@/components/DndButton'
+import Surface from '@/components/ui/Surface'
+import Button from '@/components/ui/Button'
+import Sheet from '@/components/ui/Sheet'
 import ScrollArea from '@/components/ScrollArea'
 import { haptic } from '@/auth/telegram'
 import VoiceRecorder from '@/pages/notes/VoiceRecorder'
@@ -90,7 +93,6 @@ export default function Notes() {
     voiceUploadMutation.mutate({ blob, title })
   }
 
-  // Voice recording mode
   if (mode === 'record') {
     return (
       <Layout title={t('character.notes.record_voice')} backTo={undefined} group="tools" page="notes">
@@ -103,7 +105,6 @@ export default function Notes() {
     )
   }
 
-  // Add / Edit text note mode
   if (mode === 'add' || mode === 'edit') {
     const isEdit = mode === 'edit'
     return (
@@ -129,79 +130,97 @@ export default function Notes() {
   return (
     <Layout title={t('character.notes.title')} backTo={`/char/${charId}`} group="tools" page="notes">
       <div className="flex gap-2">
-        <DndButton
+        <Button
+          variant="primary"
+          size="md"
+          fullWidth
           onClick={() => {
             setEditNote(null)
             setMode('add')
           }}
-          className="flex-1"
+          icon={<Plus size={16} />}
+          haptic="medium"
         >
-          + {t('character.notes.new')}
-        </DndButton>
-        <DndButton
-          variant="danger"
+          {t('character.notes.new')}
+        </Button>
+        <Button
+          variant="arcane"
+          size="md"
           onClick={() => setMode('record')}
-          className="!px-4"
-        >
-          🎤
-        </DndButton>
+          icon={<Mic size={16} />}
+          haptic="medium"
+          aria-label={t('character.notes.record_voice')}
+        />
       </div>
 
       {notes.length === 0 && (
-        <Card>
-          <p className="text-center text-dnd-text-secondary">{t('common.none')}</p>
-        </Card>
+        <Surface variant="flat" className="text-center py-8">
+          <NotebookPen className="mx-auto text-dnd-text-faint mb-2" size={32} />
+          <p className="text-dnd-text-muted font-body italic">{t('common.none')}</p>
+        </Surface>
       )}
 
       <ScrollArea>
         <div className="space-y-2">
-          {textNotes.map((note) => (
-            <NoteItem
+          {textNotes.map((note, idx) => (
+            <m.div
               key={note.title}
-              note={note}
-              onEdit={startEdit}
-              onDelete={(title) => setDeleteTarget(title)}
-              voiceUrl={(filename) => api.notes.voiceUrl(charId, filename)}
-            />
+              initial={{ opacity: 0, rotate: idx % 2 === 0 ? -0.6 : 0.6, y: 8 }}
+              animate={{ opacity: 1, rotate: idx % 2 === 0 ? -0.5 : 0.5, y: 0 }}
+              transition={{ delay: idx * 0.03, duration: 0.25 }}
+            >
+              <NoteItem
+                note={note}
+                onEdit={startEdit}
+                onDelete={(title) => setDeleteTarget(title)}
+                voiceUrl={(filename) => api.notes.voiceUrl(charId, filename)}
+              />
+            </m.div>
           ))}
 
-          {voiceNotes.map((note) => (
-            <NoteItem
+          {voiceNotes.map((note, idx) => (
+            <m.div
               key={note.title}
-              note={note}
-              onDelete={(title) => setDeleteTarget(title)}
-              voiceUrl={(filename) => api.notes.voiceUrl(charId, filename)}
-            />
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: (textNotes.length + idx) * 0.03 }}
+            >
+              <NoteItem
+                note={note}
+                onDelete={(title) => setDeleteTarget(title)}
+                voiceUrl={(filename) => api.notes.voiceUrl(charId, filename)}
+              />
+            </m.div>
           ))}
         </div>
       </ScrollArea>
 
-      {deleteTarget && (
-        <div className="fixed inset-0 bg-black/60 flex items-end z-50 p-4">
-          <Card className="w-full">
-            <p className="text-sm text-center mb-3">
-              {t('character.notes.delete_confirm', { title: deleteTarget })}
-            </p>
-            <div className="flex gap-2">
-              <DndButton
-                variant="danger"
-                onClick={() => deleteMutation.mutate(deleteTarget)}
-                loading={deleteMutation.isPending}
-                className="flex-1"
-              >
-                {t('common.delete')}
-              </DndButton>
-              <DndButton
-                variant="secondary"
-                onClick={() => setDeleteTarget(null)}
-                className="flex-1"
-              >
-                {t('common.cancel')}
-              </DndButton>
-            </div>
-          </Card>
+      <Sheet
+        open={deleteTarget !== null}
+        onClose={() => setDeleteTarget(null)}
+        centered
+        title={t('common.confirm')}
+      >
+        <div className="p-5 space-y-3">
+          <p className="text-sm text-center text-dnd-text font-body">
+            {deleteTarget && t('character.notes.delete_confirm', { title: deleteTarget })}
+          </p>
+          <div className="flex gap-2">
+            <Button
+              variant="danger"
+              fullWidth
+              onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget)}
+              loading={deleteMutation.isPending}
+              haptic="error"
+            >
+              {t('common.delete')}
+            </Button>
+            <Button variant="secondary" fullWidth onClick={() => setDeleteTarget(null)}>
+              {t('common.cancel')}
+            </Button>
+          </div>
         </div>
-      )}
+      </Sheet>
     </Layout>
   )
 }

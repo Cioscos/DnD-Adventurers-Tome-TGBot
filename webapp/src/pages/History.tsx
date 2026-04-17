@@ -2,13 +2,41 @@ import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { m } from 'framer-motion'
+import {
+  Heart, Moon, Shield, Swords, Gem, Sparkles, Backpack,
+  Coins, Zap, Skull, CircleDot, Pin, Trash2, BookOpen,
+  Target, ShieldAlert, FlaskConical, Dices,
+} from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
-import Card from '@/components/Card'
-import DndButton from '@/components/DndButton'
+import Surface from '@/components/ui/Surface'
+import Button from '@/components/ui/Button'
+import Sheet from '@/components/ui/Sheet'
 import ScrollArea from '@/components/ScrollArea'
-import Skeleton from '@/components/Skeleton'
+import Skeleton from '@/components/ui/Skeleton'
 import { haptic } from '@/auth/telegram'
+
+const EVENT_META: Record<string, { icon: LucideIcon; tone: string }> = {
+  hp_change:          { icon: Heart,        tone: 'text-[var(--dnd-crimson-bright)] bg-dnd-surface-raised border-[var(--dnd-crimson)]' },
+  rest:               { icon: Moon,         tone: 'text-[var(--dnd-cobalt-bright)] bg-dnd-surface-raised border-[var(--dnd-cobalt)]' },
+  ac_change:          { icon: Shield,       tone: 'text-dnd-gold-bright bg-dnd-surface-raised border-dnd-gold' },
+  level_change:       { icon: Swords,       tone: 'text-[var(--dnd-amber)] bg-dnd-surface-raised border-[var(--dnd-amber)]' },
+  spell_slot_change:  { icon: Gem,          tone: 'text-dnd-arcane-bright bg-dnd-surface-raised border-[var(--dnd-arcane)]' },
+  spell_change:       { icon: Sparkles,     tone: 'text-dnd-arcane-bright bg-dnd-surface-raised border-[var(--dnd-arcane)]' },
+  bag_change:         { icon: Backpack,     tone: 'text-dnd-gold-bright bg-dnd-surface-raised border-dnd-gold' },
+  currency_change:    { icon: Coins,        tone: 'text-[var(--dnd-amber)] bg-dnd-surface-raised border-[var(--dnd-amber)]' },
+  ability_change:     { icon: Zap,          tone: 'text-[var(--dnd-amber)] bg-dnd-surface-raised border-[var(--dnd-amber)]' },
+  death_save:         { icon: Skull,        tone: 'text-[var(--dnd-crimson-bright)] bg-dnd-surface-raised border-[var(--dnd-crimson)]' },
+  condition_change:   { icon: CircleDot,    tone: 'text-[var(--dnd-crimson-bright)] bg-dnd-surface-raised border-[var(--dnd-crimson)]' },
+  attack_roll:        { icon: Swords,       tone: 'text-[var(--dnd-crimson-bright)] bg-dnd-surface-raised border-[var(--dnd-crimson)]' },
+  skill_roll:         { icon: Target,       tone: 'text-[var(--dnd-cobalt-bright)] bg-dnd-surface-raised border-[var(--dnd-cobalt)]' },
+  saving_throw:       { icon: ShieldAlert,  tone: 'text-[var(--dnd-cobalt-bright)] bg-dnd-surface-raised border-[var(--dnd-cobalt)]' },
+  concentration_save: { icon: FlaskConical, tone: 'text-dnd-arcane-bright bg-dnd-surface-raised border-[var(--dnd-arcane)]' },
+  hit_dice:           { icon: Dices,        tone: 'text-[var(--dnd-emerald-bright)] bg-dnd-surface-raised border-[var(--dnd-emerald)]' },
+  other:              { icon: Pin,          tone: 'text-dnd-text-muted bg-dnd-surface-raised border-dnd-border' },
+}
 
 export default function History() {
   const { id } = useParams<{ id: string }>()
@@ -36,20 +64,13 @@ export default function History() {
     return d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
   }
 
-  const EVENT_EMOJIS: Record<string, string> = {
-    hp_change: '❤️', rest: '😴', ac_change: '🛡️', level_change: '⚔️',
-    spell_slot_change: '🔮', spell_change: '✨', bag_change: '🎒',
-    currency_change: '💰', ability_change: '⚡', death_save: '💀',
-    condition_change: '🌀', other: '📌',
-  }
-
   return (
     <Layout title={t('character.history.title')} backTo={`/char/${charId}`} group="tools" page="history">
       {isLoading ? (
         <div className="space-y-2">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="flex gap-3 px-4 py-3 rounded-xl bg-dnd-surface">
-              <Skeleton.Circle width="28px" delay={i * 80} />
+            <div key={i} className="flex gap-3 px-4 py-3 rounded-xl bg-dnd-surface border border-dnd-border">
+              <Skeleton.Circle width="32px" delay={i * 80} />
               <div className="flex-1 space-y-2">
                 <Skeleton.Line width="80%" height="14px" delay={i * 80} />
                 <Skeleton.Line width="40%" height="10px" delay={i * 80 + 50} />
@@ -58,64 +79,100 @@ export default function History() {
           ))}
         </div>
       ) : entries.length === 0 ? (
-        <Card>
-          <p className="text-center text-dnd-text-secondary">{t('character.history.empty')}</p>
-        </Card>
+        <Surface variant="flat" className="text-center py-8">
+          <BookOpen className="mx-auto text-dnd-text-faint mb-2" size={32} />
+          <p className="text-dnd-text-muted font-body italic">{t('character.history.empty')}</p>
+        </Surface>
       ) : (
         <>
           <ScrollArea>
-            <div className="space-y-2">
-              {[...entries].reverse().map((entry) => (
-                <div
-                  key={entry.id}
-                  className="flex gap-3 px-4 py-3 rounded-xl bg-dnd-surface"
-                >
-                  <span className="text-xl shrink-0 mt-0.5">
-                    {EVENT_EMOJIS[entry.event_type] ?? '📌'}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm leading-snug">{entry.description}</p>
-                    <p className="text-xs text-dnd-text-secondary mt-0.5">
-                      {formatDate(entry.timestamp)}
-                    </p>
-                  </div>
-                </div>
-              ))}
+            <div className="relative">
+              {/* Vertical timeline line — gold gradient + glow + inner highlight */}
+              <div
+                className="absolute left-[23px] top-2 bottom-2 w-1 rounded-full"
+                style={{
+                  background:
+                    'linear-gradient(to bottom, transparent 0%, var(--dnd-gold-deep) 6%, var(--dnd-gold) 25%, var(--dnd-gold-bright) 50%, var(--dnd-gold) 75%, var(--dnd-gold-deep) 94%, transparent 100%)',
+                  boxShadow: '0 0 6px var(--dnd-gold-glow), 0 0 12px rgba(212,175,55,0.35)',
+                }}
+              />
+              <div
+                className="absolute left-[24.5px] top-2 bottom-2 w-px opacity-80"
+                style={{
+                  background:
+                    'linear-gradient(to bottom, transparent 0%, rgba(255,240,200,0.7) 30%, rgba(255,240,200,0.9) 50%, rgba(255,240,200,0.7) 70%, transparent 100%)',
+                }}
+              />
+              <div className="space-y-3">
+                {[...entries].reverse().map((entry, idx) => {
+                  const meta = EVENT_META[entry.event_type] ?? EVENT_META.other
+                  const Icon = meta.icon
+                  return (
+                    <m.div
+                      key={entry.id}
+                      className="relative flex gap-3 items-start"
+                      initial={{ opacity: 0, x: -8 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: idx * 0.03 }}
+                    >
+                      {/* Icon pill (on the timeline) */}
+                      <div className={`w-12 h-12 rounded-full flex items-center justify-center border-2 ${meta.tone} shadow-parchment-md shrink-0 z-10 relative`}>
+                        <Icon size={18} />
+                      </div>
+                      {/* Content */}
+                      <div className="flex-1 min-w-0 pt-1">
+                        <p className="text-sm leading-snug font-body text-dnd-text">
+                          {entry.description}
+                        </p>
+                        <p className="text-[10px] text-dnd-text-faint font-mono mt-0.5">
+                          {formatDate(entry.timestamp)}
+                        </p>
+                      </div>
+                    </m.div>
+                  )
+                })}
+              </div>
             </div>
           </ScrollArea>
 
-          {confirmClear ? (
-            <Card>
-              <p className="text-sm text-center mb-3">{t('character.history.clear_confirm')}</p>
-              <div className="flex gap-2">
-                <DndButton
-                  variant="danger"
-                  onClick={() => clearMutation.mutate()}
-                  loading={clearMutation.isPending}
-                  className="flex-1"
-                >
-                  {t('common.confirm')}
-                </DndButton>
-                <DndButton
-                  variant="secondary"
-                  onClick={() => setConfirmClear(false)}
-                  className="flex-1"
-                >
-                  {t('common.cancel')}
-                </DndButton>
-              </div>
-            </Card>
-          ) : (
-            <DndButton
-              variant="danger"
-              onClick={() => setConfirmClear(true)}
-              className="w-full"
-            >
-              🗑️ {t('character.history.clear')}
-            </DndButton>
-          )}
+          <Button
+            variant="danger"
+            size="md"
+            fullWidth
+            onClick={() => setConfirmClear(true)}
+            icon={<Trash2 size={14} />}
+          >
+            {t('character.history.clear')}
+          </Button>
         </>
       )}
+
+      <Sheet
+        open={confirmClear}
+        onClose={() => setConfirmClear(false)}
+        centered
+        title={t('character.history.clear')}
+      >
+        <div className="p-5 space-y-3">
+          <p className="text-sm text-center text-dnd-text font-body">
+            {t('character.history.clear_confirm')}
+          </p>
+          <div className="flex gap-2">
+            <Button
+              variant="danger"
+              fullWidth
+              onClick={() => clearMutation.mutate()}
+              loading={clearMutation.isPending}
+              haptic="error"
+            >
+              {t('common.confirm')}
+            </Button>
+            <Button variant="secondary" fullWidth onClick={() => setConfirmClear(false)}>
+              {t('common.cancel')}
+            </Button>
+          </div>
+        </div>
+      </Sheet>
     </Layout>
   )
 }

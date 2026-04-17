@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react'
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
 import ModalProvider from './components/ModalProvider'
+import DiceAnimationProvider from './dice/DiceAnimationProvider'
 import Skeleton from './components/Skeleton'
 
 // Lazy-loaded pages
@@ -41,8 +42,9 @@ export default function App() {
   return (
     <HashRouter>
       <ModalProvider>
-        <Suspense fallback={<PageFallback />}>
-          <Routes>
+        <DiceAnimationProvider>
+          <Suspense fallback={<PageFallback />}>
+            <Routes>
             <Route path="/" element={<CharacterSelect />} />
             <Route path="/char/:id" element={<CharacterMain />} />
             <Route path="/char/:id/hp" element={<HP />} />
@@ -66,7 +68,8 @@ export default function App() {
             <Route path="/char/:id/settings" element={<Settings />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
-        </Suspense>
+          </Suspense>
+        </DiceAnimationProvider>
       </ModalProvider>
     </HashRouter>
   )

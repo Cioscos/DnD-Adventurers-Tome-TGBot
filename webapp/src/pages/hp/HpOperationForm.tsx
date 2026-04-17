@@ -1,7 +1,10 @@
 import { useTranslation } from 'react-i18next'
-import Card from '@/components/Card'
-import DndInput from '@/components/DndInput'
-import DndButton from '@/components/DndButton'
+import { m } from 'framer-motion'
+import { Minus, Plus, Target, Maximize2, Sparkles, Check } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
+import Surface from '@/components/ui/Surface'
+import Button from '@/components/ui/Button'
+import Input from '@/components/ui/Input'
 import { haptic } from '@/auth/telegram'
 
 type HPOp = 'damage' | 'heal' | 'set_max' | 'set_current' | 'set_temp'
@@ -16,12 +19,12 @@ interface HpOperationFormProps {
   hpMutate: (args: { op: HPOp; val: number }) => void
 }
 
-const ops: { key: HPOp; label_key: string; color: string }[] = [
-  { key: 'damage',      label_key: 'character.hp.damage',      color: 'bg-red-500/80' },
-  { key: 'heal',        label_key: 'character.hp.heal',         color: 'bg-green-500/80' },
-  { key: 'set_current', label_key: 'character.hp.set_current',  color: 'bg-blue-500/80' },
-  { key: 'set_max',     label_key: 'character.hp.set_max',      color: 'bg-orange-500/80' },
-  { key: 'set_temp',    label_key: 'character.hp.set_temp',     color: 'bg-cyan-500/80' },
+const ops: { key: HPOp; label_key: string; icon: LucideIcon; toneClass: string }[] = [
+  { key: 'damage',      label_key: 'character.hp.damage',      icon: Minus,      toneClass: '!bg-gradient-ember !text-white !border-transparent shadow-halo-danger' },
+  { key: 'heal',        label_key: 'character.hp.heal',        icon: Plus,       toneClass: '!bg-[var(--dnd-emerald)]/25 !text-[var(--dnd-emerald-bright)] !border-dnd-emerald/60' },
+  { key: 'set_current', label_key: 'character.hp.set_current', icon: Target,     toneClass: '!bg-[var(--dnd-cobalt)]/20 !text-[var(--dnd-cobalt-bright)] !border-dnd-cobalt/60' },
+  { key: 'set_max',     label_key: 'character.hp.set_max',     icon: Maximize2,  toneClass: '!bg-[var(--dnd-amber)]/20 !text-[var(--dnd-amber)] !border-dnd-amber/60' },
+  { key: 'set_temp',    label_key: 'character.hp.set_temp',    icon: Sparkles,   toneClass: '!bg-[var(--dnd-arcane)]/20 !text-dnd-arcane-bright !border-dnd-arcane/60' },
 ]
 
 export default function HpOperationForm({
@@ -37,55 +40,74 @@ export default function HpOperationForm({
 
   return (
     <>
-      {/* Op selector */}
-      <div className="w-full flex flex-wrap gap-1">
-        {ops.map((op) => (
-          <button
-            key={op.key}
-            onClick={() => setActiveOp(op.key)}
-            className={`px-3 py-1.5 rounded-xl text-sm font-medium transition-all
-              ${activeOp === op.key ? op.color + ' text-white' : 'bg-dnd-surface'}`}
-          >
-            {t(op.label_key)}
-          </button>
-        ))}
-      </div>
+      {/* Op selector — segmented control */}
+      <Surface variant="flat" className="!p-1.5">
+        <div className="grid grid-cols-5 gap-1">
+          {ops.map((op) => {
+            const Icon = op.icon
+            const isActive = activeOp === op.key
+            return (
+              <m.button
+                key={op.key}
+                onClick={() => { setActiveOp(op.key); haptic.selection() }}
+                className={`flex flex-col items-center gap-0.5 py-2 px-1 rounded-xl font-cinzel text-[9px] uppercase tracking-wider border
+                  ${isActive
+                    ? op.toneClass
+                    : 'bg-transparent text-dnd-text-muted border-transparent'}`}
+                whileTap={{ scale: 0.95 }}
+              >
+                <Icon size={16} strokeWidth={2.2} />
+                <span className="leading-tight">{t(op.label_key)}</span>
+              </m.button>
+            )
+          })}
+        </div>
+      </Surface>
 
-      {/* Number input */}
-      <Card>
-        <div className="flex flex-col gap-2">
-          <DndInput
+      {/* Number input + apply */}
+      <Surface variant="elevated">
+        <div className="flex flex-col gap-3">
+          <Input
             type="number"
             min={0}
             value={value}
             onChange={setValue}
             placeholder="0"
-            className="text-xl font-bold text-center"
+            inputMode="numeric"
+            onCommit={onApply}
+            className="[&_input]:text-3xl [&_input]:font-display [&_input]:font-bold [&_input]:text-center [&_input]:min-h-[60px]"
           />
-          <DndButton
+          <Button
+            variant="primary"
+            size="lg"
+            fullWidth
             onClick={onApply}
             disabled={!value || isPending}
             loading={isPending}
-            className="w-full text-lg"
+            icon={<Check size={20} />}
+            haptic="medium"
           >
-            {'\u2713'}
-          </DndButton>
+            {t('common.confirm')}
+          </Button>
         </div>
-      </Card>
+      </Surface>
 
-      {/* Quick heal / damage shortcuts */}
+      {/* Quick shortcuts — at least 52px min-height */}
       <div className="grid grid-cols-4 gap-2">
         {[1, 5, 10, 20].map((n) => (
-          <button
+          <m.button
             key={n}
             onClick={() => {
               hpMutate({ op: activeOp, val: n })
               haptic.light()
             }}
-            className="py-2 rounded-xl bg-dnd-surface text-sm font-medium active:opacity-70"
+            className="min-h-[52px] rounded-2xl bg-dnd-surface border border-dnd-border
+                       text-dnd-gold-bright font-mono font-bold text-base
+                       hover:border-dnd-gold/70 transition-colors"
+            whileTap={{ scale: 0.94 }}
           >
-            {activeOp === 'damage' ? `-${n}` : activeOp === 'heal' ? `+${n}` : String(n)}
-          </button>
+            {activeOp === 'damage' ? `−${n}` : activeOp === 'heal' ? `+${n}` : `${n}`}
+          </m.button>
         ))}
       </div>
     </>

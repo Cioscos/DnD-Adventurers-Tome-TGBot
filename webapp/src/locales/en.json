@@ -18,8 +18,10 @@
   "character": {
     "select": {
       "title": "Your characters",
+      "subtitle": "Choose a hero for your adventure",
       "new": "New character",
       "empty": "No characters yet. Create one!",
+      "party": "Party",
       "delete_confirm": "Delete {{name}}? This action is irreversible."
     },
     "menu": {
@@ -428,14 +430,17 @@
       "carry_capacity": "Show carry capacity",
       "language": "Language",
       "party_active": "Active in Party",
-      "party_active_hint": "Only one character can be active in Party at a time"
+      "party_active_hint": "Only one character can be active in Party at a time",
+      "dice_3d": "3D dice animation",
+      "dice_3d_hint": "Show a 3D dice animation during rolls. Disable for instant results."
     },
     "create": {
       "step_name": "New Character",
       "step_class": "Choose Initial Class",
-      "skip_class": "Skip (add later)",
+      "skip_class": "Continue without a class",
       "custom_class": "Custom",
       "custom_class_name": "Class name",
+      "name_placeholder": "Your hero's name",
       "hit_die": "Hit die"
     }
   },

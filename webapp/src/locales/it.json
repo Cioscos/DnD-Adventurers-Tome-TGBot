@@ -18,8 +18,10 @@
   "character": {
     "select": {
       "title": "I tuoi personaggi",
+      "subtitle": "Scegli un eroe per la tua avventura",
       "new": "Nuovo personaggio",
       "empty": "Nessun personaggio. Creane uno!",
+      "party": "Party",
       "delete_confirm": "Eliminare {{name}}? L'azione è irreversibile."
     },
     "menu": {
@@ -428,14 +430,17 @@
       "carry_capacity": "Mostra capacità di carico",
       "language": "Lingua",
       "party_active": "Attivo nel Party",
-      "party_active_hint": "Solo un personaggio può essere attivo nel Party alla volta"
+      "party_active_hint": "Solo un personaggio può essere attivo nel Party alla volta",
+      "dice_3d": "Animazione dadi 3D",
+      "dice_3d_hint": "Mostra un'animazione 3D dei dadi durante i lanci. Disattiva per risultati immediati."
     },
     "create": {
       "step_name": "Nuovo personaggio",
       "step_class": "Scegli classe iniziale",
-      "skip_class": "Salta (aggiungi dopo)",
+      "skip_class": "Procedi senza classe",
       "custom_class": "Personalizzata",
       "custom_class_name": "Nome classe",
+      "name_placeholder": "Il nome del tuo eroe",
       "hit_die": "Dado vita"
     }
   },

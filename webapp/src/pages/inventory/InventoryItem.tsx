@@ -1,6 +1,7 @@
 import React from 'react'
 import { useTranslation } from 'react-i18next'
-import DndButton from '@/components/DndButton'
+import { Swords, ArrowLeftRight, Pencil, Trash2, Target } from 'lucide-react'
+import Button from '@/components/ui/Button'
 import { TYPE_ICON } from './itemMetadata'
 import type { Item } from '@/types'
 
@@ -150,43 +151,50 @@ function InventoryItemInner({
           {/* Action buttons */}
           <div className="flex flex-wrap gap-2 pt-1">
             {canEquip && (
-              <DndButton
+              <Button
                 variant="secondary"
+                size="sm"
                 onClick={onEquipToggle}
                 disabled={equipPending}
-                className={`flex-1 !text-sm ${
+                icon={item.is_equipped ? <ArrowLeftRight size={14} /> : <Swords size={14} />}
+                className={`flex-1 ${
                   item.is_equipped
-                    ? '!bg-orange-500/20 !text-orange-300 !border-orange-500/30'
-                    : '!bg-dnd-success/20 !text-dnd-success-text !border-dnd-success/30'
+                    ? '!text-[var(--dnd-amber)] !border-[var(--dnd-amber)]/50'
+                    : '!text-[var(--dnd-emerald-bright)] !border-[var(--dnd-emerald)]/50'
                 }`}
               >
-                {item.is_equipped ? `\u21A9 ${t('character.inventory.unequip')}` : `\u2694 ${t('character.inventory.equip')}`}
-              </DndButton>
+                {item.is_equipped ? t('character.inventory.unequip') : t('character.inventory.equip')}
+              </Button>
             )}
             {item.item_type === 'weapon' && (
-              <DndButton
+              <Button
                 variant="secondary"
+                size="sm"
                 onClick={onAttack}
                 disabled={attackPending}
-                className="flex-1 !text-sm !bg-orange-500/20 !text-orange-300 !border-orange-500/30"
+                icon={<Target size={14} />}
+                className="flex-1 !text-[var(--dnd-crimson-bright)] !border-[var(--dnd-crimson)]/50"
               >
-                \uD83C\uDFB2 {t('character.inventory.attack')}
-              </DndButton>
+                {t('character.inventory.attack')}
+              </Button>
             )}
-            <DndButton
+            <Button
               variant="secondary"
+              size="sm"
               onClick={onEdit}
-              className="!px-4 !text-sm !bg-dnd-info/20 !text-dnd-info-text !border-dnd-info/30"
+              icon={<Pencil size={14} />}
+              className="!text-[var(--dnd-cobalt-bright)] !border-[var(--dnd-cobalt)]/50"
             >
               {t('common.edit')}
-            </DndButton>
-            <DndButton
+            </Button>
+            <Button
               variant="danger"
+              size="sm"
               onClick={onDelete}
-              className="!px-4 !text-sm"
+              icon={<Trash2 size={14} />}
             >
               {t('common.delete')}
-            </DndButton>
+            </Button>
           </div>
         </div>
       )}
