@@ -2,12 +2,16 @@ import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { m } from 'framer-motion'
+import { Sparkles, Star, Check } from 'lucide-react'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
-import Card from '@/components/Card'
-import DndInput from '@/components/DndInput'
-import DndButton from '@/components/DndButton'
+import Surface from '@/components/ui/Surface'
+import Input from '@/components/ui/Input'
+import Button from '@/components/ui/Button'
+import StatPill from '@/components/ui/StatPill'
 import { haptic } from '@/auth/telegram'
+import { spring } from '@/styles/motion'
 
 const XP_THRESHOLDS = [0, 300, 900, 2700, 6500, 14000, 23000, 34000, 48000, 64000, 85000, 100000, 120000, 140000, 165000, 195000, 225000, 265000, 305000, 355000]
 
@@ -70,95 +74,132 @@ export default function Experience() {
 
   return (
     <Layout title={t('character.xp.title')} backTo={`/char/${charId}`} group="character" page="xp">
-      {/* Level-up notification for multiclass characters */}
+      {/* Level-up notification */}
       {levelUpAvailable && (
-        <div className="rounded-2xl bg-[var(--dnd-gold-glow)] border border-dnd-gold-dim/40 px-4 py-3 text-sm text-dnd-gold">
+        <m.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={spring.elastic}
+          className="rounded-2xl bg-gradient-gold border border-dnd-gold text-dnd-ink px-4 py-3 text-sm font-cinzel uppercase tracking-wider flex items-center gap-2 shadow-parchment-lg"
+        >
+          <Sparkles size={16} className="animate-shimmer" />
           {t('character.xp.level_up_available')}
-        </div>
+        </m.div>
       )}
 
-      {/* Info for single-class characters */}
       {isSingleClass && (
-        <p className="text-xs text-dnd-text-secondary text-center px-2">
+        <p className="text-xs text-dnd-text-muted text-center italic font-body">
           {t('character.xp.single_class_synced')}
         </p>
       )}
 
-      <Card variant="elevated">
-        <div className="text-center">
-          <p className="text-sm text-dnd-text-secondary mb-1">
-            {t('character.xp.level', { level })}
-          </p>
-          <p className="text-5xl font-bold text-dnd-gold">{xp.toLocaleString()}</p>
-          <p className="text-sm text-dnd-text-secondary mt-1">{t('character.xp.current')}</p>
+      {/* Hero level + XP */}
+      <Surface variant="tome" ornamented className="text-center relative overflow-hidden">
+        <p className="text-[10px] font-cinzel uppercase tracking-[0.3em] text-dnd-gold-dim mb-1">
+          {t('character.xp.level_abbr')}
+        </p>
+        <m.p
+          key={level}
+          className="text-7xl font-display font-black text-dnd-gold-bright leading-none"
+          style={{ textShadow: '0 3px 12px var(--dnd-gold-glow)' }}
+          initial={{ scale: 0.6, opacity: 0 }}
+          animate={{ scale: [0.6, 1.1, 1], opacity: 1 }}
+          transition={spring.elastic}
+        >
+          {level}
+        </m.p>
+
+        <div className="flex items-center justify-center gap-2 mt-3">
+          <Star size={14} className="text-[var(--dnd-amber)]" />
+          <p className="text-2xl font-display font-bold text-dnd-text font-mono">{xp.toLocaleString()}</p>
+          <span className="text-xs font-cinzel uppercase tracking-wider text-dnd-text-muted">XP</span>
         </div>
 
         {nextThreshold && (
           <div className="mt-4">
-            <div className="flex justify-between text-xs text-dnd-text-secondary mb-1">
-              <span>{t('character.xp.level_abbr')} {level}</span>
-              <span>{xpToNext.toLocaleString()} XP {t('character.xp.level_abbr')} {level + 1}</span>
+            <div className="flex items-center justify-between mb-1.5">
+              <StatPill tone="gold" size="sm" value={`${level}`} label="Lv" />
+              <StatPill tone="default" size="sm" value={`${xpToNext.toLocaleString()} XP → ${level + 1}`} />
             </div>
-            <div className="w-full bg-dnd-surface rounded-full h-2">
-              <div
-                className="bg-dnd-gold h-2 rounded-full transition-all"
-                style={{ width: `${progress}%` }}
+            {/* XP progress bar */}
+            <div className="h-3 rounded-full bg-dnd-ink/60 overflow-hidden border border-dnd-border relative">
+              <m.div
+                className="h-full rounded-full bg-gradient-gold shadow-[inset_0_1px_0_rgba(255,220,140,0.3)]"
+                initial={false}
+                animate={{ width: `${progress}%` }}
+                transition={spring.drift}
               />
+              {/* Threshold ticks at 25/50/75% */}
+              {[25, 50, 75].map((mark) => (
+                <div
+                  key={mark}
+                  className="absolute top-0 bottom-0 w-px bg-dnd-gold-dim/40"
+                  style={{ left: `${mark}%` }}
+                />
+              ))}
             </div>
-            <p className="text-xs text-right text-dnd-text-secondary mt-1">{progress}%</p>
+            <p className="text-[10px] text-dnd-text-faint font-mono mt-1 text-right">{progress}%</p>
           </div>
         )}
-      </Card>
+      </Surface>
 
       {/* Mode toggle */}
-      <div className="flex gap-2">
-        <DndButton
-          variant={!setMode ? 'primary' : 'secondary'}
-          onClick={() => setSetMode(false)}
-          className="flex-1"
-        >
-          + {t('character.xp.add')}
-        </DndButton>
-        <DndButton
-          variant={setMode ? 'primary' : 'secondary'}
-          onClick={() => setSetMode(true)}
-          className="flex-1"
-        >
-          = {t('character.currency.mode_set')}
-        </DndButton>
-      </div>
+      <Surface variant="flat" className="!p-1.5">
+        <div className="grid grid-cols-2 gap-1">
+          {(['add', 'set'] as const).map((m) => {
+            const isActive = setMode ? m === 'set' : m === 'add'
+            return (
+              <button
+                key={m}
+                onClick={() => setSetMode(m === 'set')}
+                className={`min-h-[40px] rounded-lg font-cinzel text-xs uppercase tracking-widest transition-colors
+                  ${isActive
+                    ? 'bg-gradient-gold text-dnd-ink shadow-engrave'
+                    : 'bg-transparent text-dnd-text-muted'}`}
+              >
+                {m === 'add' ? `+ ${t('character.xp.add')}` : `= ${t('character.currency.mode_set')}`}
+              </button>
+            )
+          })}
+        </div>
+      </Surface>
 
-      <Card>
-        <div className="flex gap-3">
-          <DndInput
+      <Surface variant="elevated">
+        <div className="flex gap-3 items-end">
+          <Input
             type="number"
             min={0}
             value={addValue}
             onChange={setAddValue}
             placeholder="XP"
+            inputMode="numeric"
+            onCommit={handleApply}
             className="flex-1"
           />
-          <DndButton
+          <Button
+            variant="primary"
+            size="md"
             onClick={handleApply}
             disabled={!addValue}
             loading={mutation.isPending}
-            className="px-5"
-          >
-            &#x2713;
-          </DndButton>
+            icon={<Check size={16} />}
+            haptic="success"
+          />
         </div>
-      </Card>
+      </Surface>
 
       <div className="grid grid-cols-4 gap-2">
         {quickAmounts.map((n) => (
-          <DndButton
+          <m.button
             key={n}
-            variant="secondary"
             onClick={() => mutation.mutate({ add: n })}
-            className="py-2"
+            className="min-h-[48px] rounded-xl bg-dnd-surface border border-dnd-border
+                       hover:border-dnd-gold/60 transition-colors
+                       font-mono font-bold text-dnd-gold-bright"
+            whileTap={{ scale: 0.93 }}
           >
             +{n}
-          </DndButton>
+          </m.button>
         ))}
       </div>
     </Layout>
