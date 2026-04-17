@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import Card from '@/components/Card'
+import { m } from 'framer-motion'
+import { Moon, Dice1, Minus, Plus } from 'lucide-react'
+import Sheet from '@/components/ui/Sheet'
+import Button from '@/components/ui/Button'
 import type { CharacterClass } from '@/types'
 
 interface HitDiceModalProps {
@@ -22,65 +25,76 @@ export default function HitDiceModal({
   const [hitDiceCounts, setHitDiceCounts] = useState<Record<number, number>>({})
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-end z-50 p-4">
-      <Card className="w-full space-y-3">
-        <h3 className="font-semibold">{'\uD83C\uDF19'} {t('character.hp.short_rest')}</h3>
-        <p className="text-sm text-dnd-text-secondary">
-          {t('character.hp.hit_dice_spend_hint')}
-        </p>
+    <Sheet open onClose={onClose} title={t('character.hp.short_rest')}>
+      <div className="p-5 space-y-4">
+        <div className="flex items-center gap-2 text-dnd-cobalt-bright">
+          <Moon size={18} />
+          <p className="text-sm text-dnd-text-muted font-body italic">
+            {t('character.hp.hit_dice_spend_hint')}
+          </p>
+        </div>
 
         {classes.length === 0 && (
-          <p className="text-sm text-dnd-text-secondary">{t('common.none')}</p>
+          <p className="text-sm text-dnd-text-muted text-center py-4 font-body italic">{t('common.none')}</p>
         )}
 
-        {classes.map((cls) => (
-          <div key={cls.id} className="flex items-center gap-3">
-            <span className="flex-1 text-sm">
-              {cls.class_name} (d{cls.hit_die ?? 8})
-            </span>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setHitDiceCounts((c) => ({ ...c, [cls.id]: Math.max(0, (c[cls.id] ?? 0) - 1) }))}
-                className="w-7 h-7 rounded-lg bg-dnd-surface font-bold active:opacity-70"
-              >{'\u2212'}</button>
-              <span className="w-6 text-center font-bold">{hitDiceCounts[cls.id] ?? 0}</span>
-              <button
-                onClick={() => setHitDiceCounts((c) => ({ ...c, [cls.id]: (c[cls.id] ?? 0) + 1 }))}
-                className="w-7 h-7 rounded-lg bg-dnd-surface font-bold active:opacity-70"
-              >+</button>
-              <button
-                onClick={() => {
-                  const count = hitDiceCounts[cls.id] ?? 0
-                  if (count > 0) onSpend(cls.id, count)
-                }}
-                disabled={!hitDiceCounts[cls.id] || isPending}
-                className="px-3 py-1 rounded-lg bg-dnd-success/30 text-dnd-success-text text-sm font-medium
-                           disabled:opacity-30 active:opacity-70"
-              >
-                {'\uD83C\uDFB2'}
-              </button>
-            </div>
-          </div>
-        ))}
+        <div className="space-y-3">
+          {classes.map((cls) => {
+            const count = hitDiceCounts[cls.id] ?? 0
+            return (
+              <div key={cls.id} className="flex items-center gap-3 p-2 rounded-xl bg-dnd-surface border border-dnd-border">
+                <div className="flex-1 min-w-0">
+                  <p className="font-display font-bold text-sm text-dnd-gold-bright truncate">{cls.class_name}</p>
+                  <p className="text-[11px] text-dnd-text-faint font-mono">d{cls.hit_die ?? 8}</p>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <m.button
+                    onClick={() => setHitDiceCounts((c) => ({ ...c, [cls.id]: Math.max(0, (c[cls.id] ?? 0) - 1) }))}
+                    className="w-8 h-8 rounded-lg bg-dnd-surface-raised border border-dnd-border flex items-center justify-center text-dnd-gold"
+                    whileTap={{ scale: 0.9 }}
+                  >
+                    <Minus size={14} />
+                  </m.button>
+                  <span className="w-6 text-center font-mono font-bold text-dnd-gold-bright">{count}</span>
+                  <m.button
+                    onClick={() => setHitDiceCounts((c) => ({ ...c, [cls.id]: (c[cls.id] ?? 0) + 1 }))}
+                    className="w-8 h-8 rounded-lg bg-dnd-surface-raised border border-dnd-border flex items-center justify-center text-dnd-gold"
+                    whileTap={{ scale: 0.9 }}
+                  >
+                    <Plus size={14} />
+                  </m.button>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => { if (count > 0) onSpend(cls.id, count) }}
+                    disabled={!count || isPending}
+                    loading={isPending}
+                    icon={<Dice1 size={14} />}
+                    haptic="success"
+                  >
+                    <span className="sr-only">Roll</span>
+                  </Button>
+                </div>
+              </div>
+            )
+          })}
+        </div>
 
         <div className="flex gap-2 pt-1">
-          <button
-            onClick={() => {
-              onConfirmRest()
-            }}
+          <Button
+            variant="arcane"
+            fullWidth
+            onClick={onConfirmRest}
             disabled={isPending}
-            className="flex-1 py-2.5 rounded-xl bg-dnd-info/30 text-dnd-info-text font-medium disabled:opacity-40"
+            icon={<Moon size={16} />}
           >
             {t('character.hp.confirm_rest')}
-          </button>
-          <button
-            onClick={onClose}
-            className="flex-1 py-2.5 rounded-xl bg-dnd-surface"
-          >
+          </Button>
+          <Button variant="secondary" fullWidth onClick={onClose}>
             {t('common.cancel')}
-          </button>
+          </Button>
         </div>
-      </Card>
-    </div>
+      </div>
+    </Sheet>
   )
 }
