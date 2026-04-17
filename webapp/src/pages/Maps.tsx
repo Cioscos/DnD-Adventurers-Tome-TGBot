@@ -2,12 +2,14 @@ import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { m, AnimatePresence } from 'framer-motion'
+import { X, Plus, Map as MapIcon, FileText } from 'lucide-react'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
-import Card from '@/components/Card'
-import DndButton from '@/components/DndButton'
+import Surface from '@/components/ui/Surface'
+import Button from '@/components/ui/Button'
+import Sheet from '@/components/ui/Sheet'
 import { haptic } from '@/auth/telegram'
-import { X } from 'lucide-react'
 import MapUploadForm from '@/pages/maps/MapUploadForm'
 import MapZoneGroup from '@/pages/maps/MapZoneGroup'
 import type { MapEntry } from '@/types'
@@ -18,14 +20,9 @@ export default function Maps() {
   const { t } = useTranslation()
   const qc = useQueryClient()
 
-  // Overlay
   const [overlayMap, setOverlayMap] = useState<MapEntry | null>(null)
-
-  // Delete targets
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; zone: string } | null>(null)
   const [deleteZoneTarget, setDeleteZoneTarget] = useState<string | null>(null)
-
-  // Upload form
   const [showUpload, setShowUpload] = useState(false)
   const [uploadInitialZone, setUploadInitialZone] = useState('')
 
@@ -80,18 +77,20 @@ export default function Maps() {
 
   return (
     <Layout title={t('character.maps.title')} backTo={`/char/${charId}`} group="tools" page="maps">
-      {/* Add map button */}
-      <DndButton
+      <Button
+        variant="primary"
+        size="lg"
+        fullWidth
         onClick={() => {
           setUploadInitialZone('')
           setShowUpload(!showUpload)
         }}
-        className="w-full"
+        icon={<Plus size={18} />}
+        haptic="medium"
       >
-        + {t('character.maps.add_map')}
-      </DndButton>
+        {t('character.maps.add_map')}
+      </Button>
 
-      {/* Upload form */}
       {showUpload && (
         <MapUploadForm
           charId={charId}
@@ -105,11 +104,11 @@ export default function Maps() {
         />
       )}
 
-      {/* Zone list */}
       {maps.length === 0 && !showUpload ? (
-        <Card>
-          <p className="text-center text-dnd-text-secondary">{t('common.none')}</p>
-        </Card>
+        <Surface variant="flat" className="text-center py-8">
+          <MapIcon className="mx-auto text-dnd-text-faint mb-2" size={32} />
+          <p className="text-dnd-text-muted font-body italic">{t('common.none')}</p>
+        </Surface>
       ) : (
         Object.entries(zones).map(([zone, zoneMaps]) => (
           <MapZoneGroup
@@ -126,105 +125,113 @@ export default function Maps() {
       )}
 
       {/* Full-screen overlay */}
-      {overlayMap && (
-        <div
-          className="fixed inset-0 bg-black/90 z-50 flex flex-col"
-          onClick={() => setOverlayMap(null)}
-        >
-          <div className="flex justify-end p-4 pt-safe shrink-0">
-            <button
-              onClick={(e) => { e.stopPropagation(); setOverlayMap(null) }}
-              className="w-11 h-11 flex items-center justify-center
-                         rounded-full bg-white/20 border border-white/40 backdrop-blur-sm"
-            >
-              <X size={22} className="text-white" />
-            </button>
-          </div>
-          <div
-            className="flex-1 flex items-center justify-center p-4 overflow-auto"
-            onClick={(e) => e.stopPropagation()}
+      <AnimatePresence>
+        {overlayMap && (
+          <m.div
+            className="fixed inset-0 z-50 flex flex-col"
+            style={{ background: 'rgba(0, 0, 0, 0.92)', backdropFilter: 'blur(4px)' }}
+            onClick={() => setOverlayMap(null)}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
           >
-            {overlayMap.file_type === 'photo' ? (
-              <img
-                src={api.maps.fileUrl(charId, overlayMap.id)}
-                alt={overlayMap.zone_name}
-                className="max-w-full max-h-full rounded-xl object-contain"
-              />
-            ) : (
-              <div className="text-center text-white space-y-4">
-                <div className="text-6xl">📄</div>
-                <p className="text-sm opacity-70">{overlayMap.zone_name}</p>
-                <a
-                  href={api.maps.fileUrl(charId, overlayMap.id)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-block px-4 py-2 rounded-xl
-                             bg-dnd-gold text-dnd-bg text-sm font-medium"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {t('character.maps.open_file')}
-                </a>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+            <div className="flex justify-end p-4 pt-safe shrink-0">
+              <m.button
+                onClick={(e) => { e.stopPropagation(); setOverlayMap(null) }}
+                className="w-11 h-11 flex items-center justify-center rounded-full bg-white/15 border border-white/30 backdrop-blur-sm"
+                whileTap={{ scale: 0.9 }}
+              >
+                <X size={22} className="text-white" />
+              </m.button>
+            </div>
+            <div
+              className="flex-1 flex items-center justify-center p-4 overflow-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {overlayMap.file_type === 'photo' ? (
+                <m.img
+                  src={api.maps.fileUrl(charId, overlayMap.id)}
+                  alt={overlayMap.zone_name}
+                  className="max-w-full max-h-full rounded-xl object-contain shadow-parchment-2xl"
+                  initial={{ scale: 0.95, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ duration: 0.3 }}
+                />
+              ) : (
+                <div className="text-center text-white space-y-4">
+                  <FileText size={80} className="mx-auto text-dnd-gold-bright" />
+                  <p className="text-sm opacity-70 font-body">{overlayMap.zone_name}</p>
+                  <a
+                    href={api.maps.fileUrl(charId, overlayMap.id)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-block px-4 py-2 rounded-xl bg-gradient-gold text-dnd-ink text-sm font-cinzel uppercase tracking-wider shadow-engrave"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {t('character.maps.open_file')}
+                  </a>
+                </div>
+              )}
+            </div>
+          </m.div>
+        )}
+      </AnimatePresence>
 
       {/* Delete single file confirm */}
-      {deleteTarget !== null && (
-        <div className="fixed inset-0 bg-black/60 flex items-end z-50 p-4">
-          <Card className="w-full">
-            <p className="text-sm text-center mb-3">
-              {t('character.maps.delete_file_confirm', { zone: deleteTarget.zone })}
-            </p>
-            <div className="flex gap-2">
-              <DndButton
-                variant="danger"
-                onClick={() => deleteMutation.mutate(deleteTarget.id)}
-                loading={deleteMutation.isPending}
-                className="flex-1"
-              >
-                {t('common.delete')}
-              </DndButton>
-              <DndButton
-                variant="secondary"
-                onClick={() => setDeleteTarget(null)}
-                className="flex-1"
-              >
-                {t('common.cancel')}
-              </DndButton>
-            </div>
-          </Card>
+      <Sheet
+        open={deleteTarget !== null}
+        onClose={() => setDeleteTarget(null)}
+        centered
+        title={t('common.confirm')}
+      >
+        <div className="p-5 space-y-3">
+          <p className="text-sm text-center text-dnd-text font-body">
+            {deleteTarget && t('character.maps.delete_file_confirm', { zone: deleteTarget.zone })}
+          </p>
+          <div className="flex gap-2">
+            <Button
+              variant="danger"
+              fullWidth
+              onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+              loading={deleteMutation.isPending}
+              haptic="error"
+            >
+              {t('common.delete')}
+            </Button>
+            <Button variant="secondary" fullWidth onClick={() => setDeleteTarget(null)}>
+              {t('common.cancel')}
+            </Button>
+          </div>
         </div>
-      )}
+      </Sheet>
 
       {/* Delete entire zone confirm */}
-      {deleteZoneTarget !== null && (
-        <div className="fixed inset-0 bg-black/60 flex items-end z-50 p-4">
-          <Card className="w-full">
-            <p className="text-sm text-center mb-3">
-              {t('character.maps.delete_zone_confirm', { zone: deleteZoneTarget })}
-            </p>
-            <div className="flex gap-2">
-              <DndButton
-                variant="danger"
-                onClick={() => deleteZoneMutation.mutate(deleteZoneTarget)}
-                loading={deleteZoneMutation.isPending}
-                className="flex-1"
-              >
-                {t('common.delete')}
-              </DndButton>
-              <DndButton
-                variant="secondary"
-                onClick={() => setDeleteZoneTarget(null)}
-                className="flex-1"
-              >
-                {t('common.cancel')}
-              </DndButton>
-            </div>
-          </Card>
+      <Sheet
+        open={deleteZoneTarget !== null}
+        onClose={() => setDeleteZoneTarget(null)}
+        centered
+        title={t('common.confirm')}
+      >
+        <div className="p-5 space-y-3">
+          <p className="text-sm text-center text-dnd-text font-body">
+            {deleteZoneTarget && t('character.maps.delete_zone_confirm', { zone: deleteZoneTarget })}
+          </p>
+          <div className="flex gap-2">
+            <Button
+              variant="danger"
+              fullWidth
+              onClick={() => deleteZoneTarget && deleteZoneMutation.mutate(deleteZoneTarget)}
+              loading={deleteZoneMutation.isPending}
+              haptic="error"
+            >
+              {t('common.delete')}
+            </Button>
+            <Button variant="secondary" fullWidth onClick={() => setDeleteZoneTarget(null)}>
+              {t('common.cancel')}
+            </Button>
+          </div>
         </div>
-      )}
+      </Sheet>
     </Layout>
   )
 }
