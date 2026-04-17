@@ -2,13 +2,17 @@ import { useState, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { m, AnimatePresence } from 'framer-motion'
+import { FlaskConical, Ban, Sparkles, Gem } from 'lucide-react'
 import { api, type ConcentrationSaveResult } from '@/api/client'
 import Layout from '@/components/Layout'
-import Card from '@/components/Card'
-import DndButton from '@/components/DndButton'
-import DndInput from '@/components/DndInput'
+import Surface from '@/components/ui/Surface'
+import Button from '@/components/ui/Button'
+import Input from '@/components/ui/Input'
 import ScrollArea from '@/components/ScrollArea'
+import { CornerFlourishes } from '@/components/ui/Ornament'
 import { haptic } from '@/auth/telegram'
+import { spring } from '@/styles/motion'
 import SpellFilter from '@/pages/spells/SpellFilter'
 import SpellItem from '@/pages/spells/SpellItem'
 import SpellForm, { type SpellFormData } from '@/pages/spells/SpellForm'
@@ -33,8 +37,6 @@ export default function Spells() {
     queryKey: ['character', charId],
     queryFn: () => api.characters.get(charId),
   })
-
-  // --- Mutations ---
 
   const addMutation = useMutation({
     mutationFn: (data: SpellFormData) =>
@@ -148,8 +150,6 @@ export default function Spells() {
     },
   })
 
-  // --- Callbacks ---
-
   const handleFormSubmit = useCallback((data: SpellFormData) => {
     if (editingSpell) {
       updateMutation.mutate({ spellId: editingSpell.id, data })
@@ -174,8 +174,6 @@ export default function Spells() {
     }
   }, [castingSpell, castMutation])
 
-  // --- Derived data ---
-
   if (!char) return null
 
   const spells: Spell[] = char.spells ?? []
@@ -192,6 +190,7 @@ export default function Spells() {
 
   const sortedLevels = Object.keys(byLevel).map(Number).sort((a, b) => a - b)
   const concentratingId = char.concentrating_spell_id
+  const concentratingSpell = concentratingId ? spells.find(s => s.id === concentratingId) : null
 
   const availableSlotsFor = (spellLevel: number) =>
     spellSlots
@@ -208,26 +207,38 @@ export default function Spells() {
 
       {/* Concentration panel */}
       {concentratingId && (
-        <Card variant="elevated">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-dnd-arcane-text text-sm font-medium">{t('character.spells.concentration')}</span>
-            <button
+        <Surface variant="arcane" ornamented>
+          <div className="flex items-center justify-between mb-2.5">
+            <div className="flex items-center gap-2">
+              <FlaskConical size={16} className="text-dnd-arcane-bright" />
+              <div>
+                <p className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-arcane-bright">
+                  {t('character.spells.concentration')}
+                </p>
+                {concentratingSpell && (
+                  <p className="text-sm font-display font-bold text-dnd-text">{concentratingSpell.name}</p>
+                )}
+              </div>
+            </div>
+            <Button
+              variant="danger"
+              size="sm"
               onClick={() => concentrationMutation.mutate(null)}
-              className="text-xs text-[var(--dnd-danger)]"
+              icon={<Ban size={12} />}
             >
               {t('character.spells.stop_concentration')}
-            </button>
+            </Button>
           </div>
-          <div className="flex gap-2 items-center">
-            <DndInput
+          <div className="flex gap-2 items-end">
+            <Input
               value={concDamage}
               onChange={setConcDamage}
               placeholder={t('character.spells.conc_save_damage_placeholder')}
               inputMode="numeric"
               className="flex-1"
             />
-            <DndButton
-              variant="secondary"
+            <Button
+              variant="arcane"
               onClick={() => {
                 const dmg = parseInt(concDamage, 10)
                 if (!isNaN(dmg) && dmg >= 0) {
@@ -236,97 +247,120 @@ export default function Spells() {
                 }
               }}
               disabled={concSaveMutation.isPending || !concDamage}
-              className="!bg-dnd-arcane/30 !text-dnd-arcane-text !border-dnd-arcane/30"
+              loading={concSaveMutation.isPending}
+              haptic="warning"
             >
-              {concSaveMutation.isPending ? '...' : t('character.spells.conc_save_btn')}
-            </DndButton>
+              {t('character.spells.conc_save_btn')}
+            </Button>
           </div>
-        </Card>
+        </Surface>
       )}
 
-      {/* Concentration save result modal */}
-      {concSaveResult && (
-        <div
-          className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
-          onClick={() => setConcSaveResult(null)}
-        >
-          <div
-            className={`rounded-2xl bg-dnd-surface-elevated p-5 w-full max-w-xs text-center space-y-3 border-2
-              ${concSaveResult.success ? 'border-dnd-success' : 'border-[var(--dnd-danger)]'}`}
-            onClick={(e) => e.stopPropagation()}
+      {/* Concentration save result */}
+      <AnimatePresence>
+        {concSaveResult && (
+          <m.div
+            className="fixed inset-0 flex items-center justify-center z-50 p-4"
+            style={{ background: 'var(--dnd-overlay)', backdropFilter: 'blur(6px)' }}
+            onClick={() => setConcSaveResult(null)}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
           >
-            <p className="text-sm text-dnd-text-secondary">
-              {t('character.spells.concentration')} — DC {concSaveResult.dc}
-            </p>
-            {concSaveResult.is_critical && <p className="text-[var(--dnd-gold)] font-bold">CRITICO!</p>}
-            {concSaveResult.is_fumble && <p className="text-[var(--dnd-danger)] font-bold">FUMBLE!</p>}
-            <p className={`text-4xl font-black ${concSaveResult.success ? 'text-dnd-success-text' : 'text-[var(--dnd-danger)]'}`}>
-              {concSaveResult.total}
-            </p>
-            <p className="text-sm text-dnd-text-secondary">
-              d20 ({concSaveResult.die}) {concSaveResult.bonus >= 0 ? '+' : ''}{concSaveResult.bonus}
-            </p>
-            <p className={`font-bold ${concSaveResult.success ? 'text-dnd-success-text' : 'text-[var(--dnd-danger)]'}`}>
-              {concSaveResult.success ? t('character.spells.conc_save_success') : t('character.spells.conc_save_fail')}
-            </p>
-            {concSaveResult.lost_concentration && (
-              <p className="text-xs text-[var(--dnd-danger)]">{t('character.spells.conc_lost')}</p>
-            )}
-            <DndButton onClick={() => setConcSaveResult(null)} className="w-full">
-              OK
-            </DndButton>
-          </div>
-        </div>
-      )}
+            <m.div
+              className={`relative rounded-3xl p-6 pt-8 w-full max-w-xs text-center space-y-3
+                bg-gradient-parchment surface-parchment border-2 shadow-parchment-2xl
+                ${concSaveResult.success ? 'border-dnd-emerald' : 'border-[var(--dnd-crimson)]'}`}
+              initial={{ opacity: 0, scale: 0.85 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.92 }}
+              transition={spring.elastic}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="text-dnd-gold-dim"><CornerFlourishes /></div>
+              <p className="text-sm text-dnd-text-muted font-cinzel uppercase tracking-widest">
+                🔮 {t('character.spells.concentration')} — DC {concSaveResult.dc}
+              </p>
+              {concSaveResult.is_critical && <p className="text-dnd-gold-bright font-bold font-cinzel">✦ CRITICO!</p>}
+              {concSaveResult.is_fumble && <p className="text-[var(--dnd-crimson-bright)] font-bold font-cinzel">💀 FUMBLE!</p>}
+              <m.p
+                initial={{ scale: 0.4 }}
+                animate={{ scale: 1 }}
+                transition={{ ...spring.elastic, delay: 0.1 }}
+                className={`text-5xl font-black font-display ${concSaveResult.success ? 'text-[var(--dnd-emerald-bright)]' : 'text-[var(--dnd-crimson-bright)]'}`}
+              >
+                {concSaveResult.total}
+              </m.p>
+              <p className="text-xs text-dnd-text-muted font-mono">
+                d20 ({concSaveResult.die}) {concSaveResult.bonus >= 0 ? '+' : ''}{concSaveResult.bonus}
+              </p>
+              <p className={`font-bold font-cinzel uppercase tracking-wider ${concSaveResult.success ? 'text-[var(--dnd-emerald-bright)]' : 'text-[var(--dnd-crimson-bright)]'}`}>
+                {concSaveResult.success ? t('character.spells.conc_save_success') : t('character.spells.conc_save_fail')}
+              </p>
+              {concSaveResult.lost_concentration && (
+                <p className="text-[10px] text-[var(--dnd-crimson-bright)] font-body italic">{t('character.spells.conc_lost')}</p>
+              )}
+              <Button variant="primary" fullWidth onClick={() => setConcSaveResult(null)}>OK</Button>
+            </m.div>
+          </m.div>
+        )}
+      </AnimatePresence>
 
       {spells.length === 0 && !showAdd && (
-        <Card>
-          <p className="text-center text-dnd-text-secondary">{t('common.none')}</p>
-        </Card>
+        <Surface variant="flat" className="text-center py-8">
+          <Sparkles className="mx-auto text-dnd-text-faint mb-2" size={32} />
+          <p className="text-dnd-text-muted font-body italic">{t('common.none')}</p>
+        </Surface>
       )}
 
       <ScrollArea>
         {sortedLevels.map((level) => {
           const slot = level > 0 ? spellSlots.find((s) => s.level === level) : undefined
           return (
-            <div key={level} className="mb-3">
+            <div key={level} className="mb-4">
               <div
-                className="sticky z-[5] -mx-4 px-5 py-1.5 flex items-center gap-2 bg-dnd-bg"
-                style={{ top: '53px' }}
+                className="sticky z-[5] -mx-4 px-5 py-2 flex items-center gap-2 bg-dnd-bg/95 backdrop-blur-sm border-b border-dnd-border/40"
+                style={{ top: '68px' }}
               >
-                <p className="text-sm font-semibold text-dnd-text-secondary flex-1">
+                <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim flex-1">
                   {level === 0 ? t('character.spells.cantrip') : `${t('character.spells.level')} ${level}`}
                 </p>
                 {slot && slot.total > 0 && (
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-dnd-text-secondary tabular-nums">
+                    <span className="text-[10px] text-dnd-text-faint font-mono tabular-nums">
                       {slot.used}/{slot.total}
                     </span>
-                    <div className="flex gap-1.5 items-center flex-wrap">
-                      {Array.from({ length: slot.total }).map((_, i) => (
-                        <button
-                          key={i}
-                          disabled={useSlotMutation.isPending}
-                          onClick={() => {
-                            const newUsed = i < slot.used ? i : i + 1
-                            useSlotMutation.mutate({
-                              slotId: slot.id,
-                              newUsed: Math.min(newUsed, slot.total),
-                            })
-                          }}
-                          className={`w-7 h-7 rounded-full border-2 transition-all active:scale-90
-                            ${i < slot.used
-                              ? 'bg-dnd-gold border-dnd-gold/60'
-                              : 'bg-transparent border-dnd-text-secondary/30'
-                            }
-                            disabled:opacity-40`}
-                        />
-                      ))}
+                    <div className="flex gap-1 items-center flex-wrap">
+                      {Array.from({ length: slot.total }).map((_, i) => {
+                        const isUsed = i < slot.used
+                        return (
+                          <m.button
+                            key={i}
+                            disabled={useSlotMutation.isPending}
+                            onClick={() => {
+                              const newUsed = i < slot.used ? i : i + 1
+                              useSlotMutation.mutate({
+                                slotId: slot.id,
+                                newUsed: Math.min(newUsed, slot.total),
+                              })
+                            }}
+                            className={`w-6 h-6 rounded-full flex items-center justify-center
+                              ${isUsed
+                                ? 'bg-dnd-gold-dim border border-dnd-gold-dim/50'
+                                : 'bg-gradient-to-br from-dnd-arcane to-dnd-arcane-deep border border-dnd-arcane-bright shadow-[0_0_6px_rgba(197,137,232,0.5)]'}
+                              disabled:opacity-40`}
+                            whileTap={{ scale: 0.85 }}
+                            aria-label={`Slot ${i+1} ${isUsed ? 'used' : 'available'}`}
+                          >
+                            {!isUsed && <Gem size={10} className="text-white" />}
+                          </m.button>
+                        )
+                      })}
                     </div>
                   </div>
                 )}
               </div>
-              <div className="space-y-1">
+              <div className="space-y-1.5 mt-2">
                 {byLevel[level].map((spell) => (
                   <SpellItem
                     key={spell.id}
@@ -350,7 +384,6 @@ export default function Spells() {
         })}
       </ScrollArea>
 
-      {/* Cast spell slot picker modal */}
       {castingSpell && (
         <CastSpellModal
           spell={castingSpell}
@@ -361,7 +394,6 @@ export default function Spells() {
         />
       )}
 
-      {/* Add/Edit spell form modal */}
       {showAdd && (
         <SpellForm
           initialData={editingSpell}
@@ -370,6 +402,7 @@ export default function Spells() {
           isPending={addMutation.isPending || updateMutation.isPending}
         />
       )}
+
     </Layout>
   )
 }
