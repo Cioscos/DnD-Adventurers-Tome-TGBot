@@ -102,7 +102,6 @@ export interface CharacterSummary {
   ac: number
   total_level: number
   class_summary: string
-  is_party_active: boolean
   heroic_inspiration: boolean
   experience_points: number
 }

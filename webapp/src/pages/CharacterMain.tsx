@@ -241,15 +241,6 @@ export default function CharacterMain() {
             {char.race && (
               <p className="text-xs text-dnd-text-faint font-body">{char.race}</p>
             )}
-            {char.is_party_active && (
-              <div className="mt-2">
-                <StatPill
-                  tone="emerald"
-                  size="sm"
-                  value={t('character.select.party', { defaultValue: 'Party' })}
-                />
-              </div>
-            )}
           </div>
 
           {/* HP row */}

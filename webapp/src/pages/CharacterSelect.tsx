@@ -11,7 +11,6 @@ import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import FancyHeader from '@/components/ui/FancyHeader'
-import StatPill from '@/components/ui/StatPill'
 import Reveal from '@/components/ui/Reveal'
 import Skeleton from '@/components/ui/Skeleton'
 import { WaxSeal } from '@/components/ui/Ornament'
@@ -195,13 +194,6 @@ export default function CharacterSelect() {
                         <h2 className="font-display font-bold text-lg text-dnd-gold-bright truncate">
                           {char.name}
                         </h2>
-                        {char.is_party_active && (
-                          <StatPill
-                            tone="emerald"
-                            size="sm"
-                            value={t('character.select.party', { defaultValue: 'Party' })}
-                          />
-                        )}
                         {char.heroic_inspiration && (
                           <Sparkles
                             size={16}
