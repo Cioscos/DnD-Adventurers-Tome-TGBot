@@ -11,8 +11,8 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from bot.api.client import dnd_client
-from bot.api.introspection import (
+from bot.dnd5e.client import dnd_client
+from bot.dnd5e.introspection import (
     INTROSPECTION_QUERY,
     parse_introspection,
     resolve_type,

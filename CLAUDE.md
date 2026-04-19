@@ -118,38 +118,34 @@ No test suite or linter is configured.
 
 ## Architecture Overview
 
-Three-component system:
+Four-package system:
 
-1. **Telegram Bot** (`bot/`) — handles `/start`, `/wiki`, `/party`, `/party_stop`. Character management has moved to the Mini App. Entry point: `bot/main.py`.
-2. **FastAPI Backend** (`api/`) — REST API for all character CRUD, shared SQLite DB with the bot. Runs on the same machine (Raspberry Pi), exposed via Cloudflare Tunnel.
+1. **Telegram Bot** (`bot/`) — pure D&D 5e wiki navigator over the public GraphQL API. Handles `/start`, `/about`, `/stop`. Does not touch the SQLite DB. Entry point: `bot/main.py`.
+2. **FastAPI Backend** (`api/`) — REST API for all character CRUD and game sessions. Owns the SQLite DB lifecycle (create + migrate in `lifespan`). Runs on the Raspberry Pi, exposed via Cloudflare Tunnel.
 3. **React Mini App** (`webapp/`) — Telegram Mini App (WebApp) for full character sheet management. Builds to `docs/app/`, served by GitHub Pages.
+4. **Shared core** (`core/`) — SQLAlchemy models/engine, static D&D data tables, and helpers used by both `api/` and the bot's deploy scripts. No Telegram- or FastAPI-specific code here.
 
 ### Bot commands
-- `/start` — private chat; shows welcome message with wiki inline button (Mini App opened via BotFather menu button)
-- `/wiki` — private chat; inline navigation over D&D 5e GraphQL API
-- `/party`, `/party_stop` — group chat; live party status message
-- `web_app_data` — legacy handler kept for compatibility; dice results now sent via `POST /characters/{id}/dice/post-to-chat` API endpoint instead of `sendData()`
+- `/start` — private chat; welcome message with an inline button into the wiki (Mini App is opened via the BotFather menu button)
+- `/about` — private chat; bot info + website link
+- `/stop` — no-op response (kept for UX symmetry when users type it mid-interaction)
+- Wiki navigation — inline `CallbackQueryHandler` over `NavAction` payloads; no `/wiki` command, the user enters via the `/start` button
 
 ### Mini App URL
 `https://cioscos.github.io/DnD-Adventurers-Tome-TGBot/app/` (HashRouter, built to `docs/app/`)
 
 ## Navigation Model
 
-Two frozen dataclasses drive callback state via PTB's `arbitrary_callback_data` (LRU cache):
+Wiki navigation uses PTB's `arbitrary_callback_data` with a single frozen dataclass `NavAction` (`bot/models/state.py`). The whole object is kept in an in-process LRU cache; Telegram only sees the UUID.
 
-| Dataclass | File | Used for |
-|---|---|---|
-| `NavAction` | `bot/models/state.py` | Wiki navigation callbacks |
-| `PartyAction` | `bot/models/party_state.py` | Party session callbacks |
-
-**Handler registration order in `main.py`**: Party `CallbackQueryHandler` first, then Wiki `CallbackQueryHandler`. Wiki handler pattern: `lambda d: not isinstance(d, PartyAction)`.
+The only callback handler is `bot.handlers.wiki.navigation_callback` — see `bot/main.py`.
 
 ## Key Patterns
 
 ### Adding a New Wiki Category
 
 1. Add a `MenuCategory(type_name, label, emoji)` to `MENU_CATEGORIES` in `bot/schema/registry.py`.
-2. Optionally add a `_format_<type>()` function in `bot/handlers/navigation.py` and register it in `_FORMATTERS`. Without one, the generic formatter applies.
+2. Optionally add a `_format_<type>()` function in `bot/handlers/wiki_formatters.py` and register it in `_FORMATTERS`. Without one, the generic formatter applies.
 
 ### Adding a New API Endpoint
 
@@ -171,15 +167,15 @@ Two frozen dataclasses drive callback state via PTB's `arbitrary_callback_data` 
 
 ### Bot
 - **Async only** — use the python-telegram-bot v20+ async API throughout.
-- **GraphQL queries** — always generated dynamically via `bot/api/query_builder.py`; never hardcode query strings.
-- **HTTP client** — use the `DnDClient` singleton from `bot/api/client.py` (`httpx.AsyncClient`).
-- **Database sessions** — always `async with get_session() as session:` from `bot/db/engine.py`; never instantiate a session directly.
-- **MarkdownV2 escaping** — use `_esc()` from `navigation.py` for wiki output. Condition description strings in YAML are **pre-escaped** — do not pass them through `_esc()` again.
+- **GraphQL queries** — always generated dynamically via `bot/dnd5e/query_builder.py`; never hardcode query strings.
+- **HTTP client** — use the `DnDClient` singleton from `bot/dnd5e/client.py` (`httpx.AsyncClient`).
+- **No direct DB access** — the bot does not open SQLite sessions. If you need character data in a future bot feature, go through the API rather than importing from `core/db/`.
+- **MarkdownV2 escaping** — use `_esc()` from `bot/handlers/wiki_formatters.py` for wiki output.
 - **Plain text surfaces** — inline keyboard button labels and `callback_query.answer()` toast messages are **plain text only**.
 - **i18n** — call `lang = get_lang(update)` at the top of every handler. Use `translator.t("key", lang=lang)` for all strings; never hardcode text. Default language is `"it"`.
 - **Logging** — use `logging` module; never `print()`.
 - **Type hints** — required on all function signatures.
-- **Chat-type guards** — `/start` is private-chat only; `/party`/`/party_stop` are group-only.
+- **Chat-type guards** — `/start` is private-chat only.
 
 ### API
 - **Auth** — every endpoint uses `Depends(get_current_user)` from `api/auth.py`. Never trust user-supplied IDs; always filter by the authenticated `user_id`.
@@ -195,9 +191,9 @@ Two frozen dataclasses drive callback state via PTB's `arbitrary_callback_data` 
 
 ## Persistence
 
-- **Character DB**: SQLite at `data/dnd_bot.db` (override via `DB_PATH`). Shared between bot and API. Schema migrations run idempotently via `ALTER TABLE` in `_migrate_schema()` in `bot/db/engine.py`. **Both the bot and the API run migrations on startup** (bot via `bot/main.py`, API via the `lifespan` hook in `api/main.py`). Always add new columns to `_MIGRATIONS` in `bot/db/engine.py` — never rely solely on `create_all`.
+- **Character DB**: SQLite at `data/dnd_bot.db` (override via `DB_PATH`). Owned by the API. Schema migrations run idempotently via `ALTER TABLE` in `_migrate_schema()` in `core/db/engine.py` and are triggered from the API's `lifespan` hook (`api/main.py`). Always add new columns to `_MIGRATIONS` in `core/db/engine.py` — never rely solely on `create_all`. The Telegram bot does not open a DB connection.
 - **Map files**: Uploaded via the webapp are stored locally at `data/maps/{char_id}/{uuid}.{ext}` (up to 10 MB, image/PDF formats). The `Map` model stores the path in `local_file_path`; Telegram-sourced maps use `file_id` instead. The `data/maps/` directory is created automatically on first upload.
-- **Bot state**: `data/persistence.pkl` — stores `user_data` and callback LRU cache across restarts.
+- **Bot state**: `data/persistence.pkl` — stores `user_data` and the `arbitrary_callback_data` LRU cache across restarts.
 
 ## Notable API Endpoints
 

@@ -14,7 +14,7 @@ from sqlalchemy.orm import selectinload
 
 from api.auth import get_current_user
 from api.database import get_db
-from bot.db.models import Character, CharacterHistory
+from core.db.models import Character, CharacterHistory
 from api.schemas.character import CharacterFull
 from api.schemas.common import (
     DeathSaveRollResult,
@@ -56,7 +56,7 @@ def _add_history(session, char_id: int, event_type: str, description: str) -> No
 async def _get_owned_full(
     char_id: int, user_id: int, session: AsyncSession
 ) -> Character:
-    from bot.db.models import CharacterClass
+    from core.db.models import CharacterClass
     result = await session.execute(
         select(Character)
         .options(

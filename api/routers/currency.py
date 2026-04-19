@@ -11,7 +11,7 @@ from sqlalchemy.orm import selectinload
 
 from api.auth import get_current_user
 from api.database import get_db
-from bot.db.models import Character, CharacterClass, Currency
+from core.db.models import Character, CharacterClass, Currency
 from api.schemas.character import CharacterFull
 from api.schemas.common import CurrencyConvert, CurrencyRead, CurrencyUpdate
 

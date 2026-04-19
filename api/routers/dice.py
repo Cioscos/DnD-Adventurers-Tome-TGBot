@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.auth import get_current_user
 from api.database import get_db
-from bot.db.models import Character
+from core.db.models import Character
 from api.schemas.common import DiceRollRequest, DiceRollResult
 
 logger = logging.getLogger(__name__)

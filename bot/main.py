@@ -1,10 +1,12 @@
-"""Entry point for the D&D 5e Telegram Bot.
+"""Entry point for the D&D 5e Telegram wiki bot.
 
 Loads configuration from ``.env``, builds the ``Application`` with
 ``arbitrary_callback_data`` enabled, initialises the
 :class:`~bot.schema.registry.SchemaRegistry` via introspection,
-initialises the SQLite database, registers all handlers, and starts
-long-polling.
+registers handlers, and starts long-polling.
+
+The bot does not touch the SQLite database; character persistence is
+owned by the FastAPI backend (``api/``).
 """
 
 from __future__ import annotations
@@ -28,17 +30,13 @@ from telegram.ext import (
     CallbackQueryHandler,
     CommandHandler,
     ContextTypes,
-    MessageHandler,
     PicklePersistence,
     PersistenceInput,
-    filters,
 )
 from telegram.warnings import PTBUserWarning
 
-from bot.db.engine import init_db
-from bot.handlers.navigation import navigation_callback
 from bot.handlers.start import about_command, start_command
-from bot.handlers.webapp import handle_web_app_data
+from bot.handlers.wiki import navigation_callback
 from bot.schema.registry import registry
 from bot.utils.i18n import get_lang, translator
 
@@ -127,9 +125,8 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> N
 async def post_init(application: Application) -> None:
     """Called after the Application has been fully initialised."""
     await registry.initialize()
-    await init_db()
     asyncio.create_task(translator.start_watcher())
-    logger.info("Database initialised; i18n watcher started.")
+    logger.info("Schema registry initialised; i18n watcher started.")
 
 
 async def post_shutdown(application: Application) -> None:
@@ -183,11 +180,6 @@ def main() -> None:
     application.add_handler(CommandHandler("start", start_command))
     application.add_handler(CommandHandler("about", about_command))
     application.add_handler(CommandHandler("stop", stop_command))
-
-    # Mini App: receive data sent via Telegram.WebApp.sendData() (reply keyboard button only)
-    application.add_handler(
-        MessageHandler(filters.StatusUpdate.WEB_APP_DATA, handle_web_app_data)
-    )
 
     # Wiki callback-query handler
     application.add_handler(CallbackQueryHandler(navigation_callback))

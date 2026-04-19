@@ -22,7 +22,7 @@ from sqlalchemy.orm import selectinload
 
 from api.auth import DEV_USER_ID, get_current_user, verify_init_data
 from api.database import get_db
-from bot.db.models import Character, CharacterClass
+from core.db.models import Character, CharacterClass
 
 router = APIRouter(prefix="/characters", tags=["notes"])
 

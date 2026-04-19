@@ -14,7 +14,7 @@ from typing import AsyncGenerator
 from sqlalchemy import event, inspect as sa_inspect, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from bot.db.models import Base
+from core.db.models import Base
 
 logger = logging.getLogger(__name__)
 

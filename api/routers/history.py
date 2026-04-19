@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.auth import get_current_user
 from api.database import get_db
-from bot.db.models import Character, CharacterHistory
+from core.db.models import Character, CharacterHistory
 from api.schemas.common import HistoryEntryRead
 
 router = APIRouter(prefix="/characters", tags=["history"])

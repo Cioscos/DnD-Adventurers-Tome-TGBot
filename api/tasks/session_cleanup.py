@@ -13,7 +13,7 @@ from datetime import datetime, timedelta
 from sqlalchemy import select
 
 from api.database import AsyncSessionLocal
-from bot.db.models import GameSession, SessionStatus
+from core.db.models import GameSession, SessionStatus
 
 logger = logging.getLogger(__name__)
 
