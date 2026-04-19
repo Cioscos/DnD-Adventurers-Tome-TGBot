@@ -10,6 +10,7 @@ Run with:
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 from contextlib import asynccontextmanager
@@ -33,10 +34,12 @@ from api.routers import (
     items,
     maps,
     notes,
+    sessions,
     spell_slots,
     spells,
     stats,
 )
+from api.tasks.session_cleanup import run_session_cleanup
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -52,7 +55,16 @@ async def lifespan(_app: FastAPI):
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
         await conn.run_sync(_migrate_schema)
-    yield
+
+    cleanup_task = asyncio.create_task(run_session_cleanup())
+    try:
+        yield
+    finally:
+        cleanup_task.cancel()
+        try:
+            await cleanup_task
+        except asyncio.CancelledError:
+            pass
 
 
 # ---------------------------------------------------------------------------
@@ -105,3 +117,4 @@ app.include_router(notes.router)
 app.include_router(maps.router)
 app.include_router(dice.router)
 app.include_router(history.router)
+app.include_router(sessions.router)
