@@ -164,6 +164,10 @@ export default function SessionRoom() {
       haptic.success()
       navigate('/session')
     },
+    onError: (err) => {
+      console.error('leave session failed', err)
+      haptic.error()
+    },
   })
 
   const closeMutation = useMutation({
@@ -173,6 +177,10 @@ export default function SessionRoom() {
       qc.invalidateQueries({ queryKey: ['session-me'] })
       haptic.warning()
       navigate('/session')
+    },
+    onError: (err) => {
+      console.error('close session failed', err)
+      haptic.error()
     },
   })
 
