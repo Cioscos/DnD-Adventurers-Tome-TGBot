@@ -11,7 +11,7 @@ from sqlalchemy.orm import selectinload
 
 from api.auth import get_current_user
 from api.database import get_db
-from bot.db.models import Character, CharacterClass, ClassResource
+from core.db.models import Character, CharacterClass, ClassResource
 from api.schemas.character import CharacterFull
 from api.schemas.common import (
     CharacterClassCreate,
@@ -21,7 +21,7 @@ from api.schemas.common import (
     ClassResourceRead,
     ClassResourceUpdate,
 )
-from bot.data.classes import (
+from core.data.classes import (
     CLASS_HIT_DIE,
     CLASS_SPELLCASTING,
     get_resources_for_class,

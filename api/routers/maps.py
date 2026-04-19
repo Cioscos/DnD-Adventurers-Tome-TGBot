@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.auth import DEV_USER_ID, get_current_user, verify_init_data
 from api.database import get_db
-from bot.db.models import Character, Map
+from core.db.models import Character, Map
 from api.schemas.common import MapRead
 
 router = APIRouter(prefix="/characters", tags=["maps"])

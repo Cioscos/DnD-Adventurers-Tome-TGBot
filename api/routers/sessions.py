@@ -27,7 +27,7 @@ from api.schemas.session import (
     SessionMessageCreate,
     SessionMessageRead,
 )
-from bot.db.models import (
+from core.db.models import (
     Character,
     GameSession,
     SessionMessage,
@@ -35,7 +35,7 @@ from bot.db.models import (
     SessionRole,
     SessionStatus,
 )
-from bot.utils.session_code import generate_session_code
+from core.utils.session_code import generate_session_code
 
 logger = logging.getLogger(__name__)
 

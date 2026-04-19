@@ -13,7 +13,7 @@ from sqlalchemy.orm import selectinload
 
 from api.auth import get_current_user
 from api.database import get_db
-from bot.db.models import (
+from core.db.models import (
     AbilityScore,
     ABILITY_NAMES,
     Character,
@@ -22,8 +22,8 @@ from bot.db.models import (
     ClassResource,
     Currency,
 )
-from bot.data.xp_thresholds import xp_to_level
-from bot.data.classes import get_resources_for_class, update_resources_for_level
+from core.data.xp_thresholds import xp_to_level
+from core.data.classes import get_resources_for_class, update_resources_for_level
 from api.schemas.character import (
     CharacterCreate,
     CharacterFull,
@@ -79,7 +79,7 @@ def _full_load():
     """Return selectinload options for a fully-populated character."""
     return [
         selectinload(Character.classes).selectinload(
-            __import__("bot.db.models", fromlist=["CharacterClass"]).CharacterClass.resources
+            __import__("core.db.models", fromlist=["CharacterClass"]).CharacterClass.resources
         ),
         selectinload(Character.ability_scores),
         selectinload(Character.spells),

@@ -13,9 +13,9 @@ from dataclasses import dataclass
 from typing import Callable, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from bot.db.models import Character
+    from core.db.models import Character
 
-from bot.db.models import RestorationType
+from core.db.models import RestorationType
 
 # ---------------------------------------------------------------------------
 # Predefined D&D 5e classes (Italian names)
