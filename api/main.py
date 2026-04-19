@@ -100,6 +100,16 @@ app.add_middleware(
 async def health() -> dict:
     return {"status": "ok"}
 
+
+from typing import Annotated
+from fastapi import Depends
+from api.auth import get_current_user
+
+
+@app.get("/auth/me", tags=["meta"])
+async def auth_me(user_id: Annotated[int, Depends(get_current_user)]) -> dict:
+    return {"user_id": user_id}
+
 # ---------------------------------------------------------------------------
 # Register all routers
 # ---------------------------------------------------------------------------

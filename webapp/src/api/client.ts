@@ -12,10 +12,13 @@ import type {
   CharacterSummary,
   Currency,
   DiceRollResult,
+  GameSession,
+  GameSessionLive,
   HistoryEntry,
   Item,
   MapEntry,
   Note,
+  SessionMessage,
   Spell,
   SpellSlot,
 } from '@/types'
@@ -127,6 +130,8 @@ async function requestFormData<T>(
 // ---------------------------------------------------------------------------
 
 export const api = {
+  me: () => request<{ user_id: number }>('/auth/me'),
+
   characters: {
     list: () => request<CharacterSummary[]>('/characters'),
     get: (id: number) => request<CharacterFull>(`/characters/${id}`),
@@ -448,6 +453,38 @@ export const api = {
     get: (charId: number) => request<HistoryEntry[]>(`/characters/${charId}/history`),
     clear: (charId: number) =>
       request<void>(`/characters/${charId}/history`, { method: 'DELETE' }),
+  },
+
+  // ---------------------------------------------------------------------------
+  // Sessions (invite-code live game sessions)
+  // ---------------------------------------------------------------------------
+  sessions: {
+    me: () => request<GameSession | null>('/sessions/me'),
+    create: (title?: string) =>
+      request<GameSession>('/sessions', {
+        method: 'POST',
+        body: JSON.stringify({ title: title ?? null }),
+      }),
+    join: (code: string, characterId: number) =>
+      request<GameSession>('/sessions/join', {
+        method: 'POST',
+        body: JSON.stringify({ code, character_id: characterId }),
+      }),
+    get: (id: number) => request<GameSession>(`/sessions/${id}`),
+    live: (id: number) => request<GameSessionLive>(`/sessions/${id}/live`),
+    leave: (id: number) =>
+      request<void>(`/sessions/${id}/leave`, { method: 'POST' }),
+    close: (id: number) =>
+      request<void>(`/sessions/${id}/close`, { method: 'POST' }),
+    messages: (id: number, afterId = 0) =>
+      request<SessionMessage[]>(
+        `/sessions/${id}/messages${afterId > 0 ? `?after_id=${afterId}` : ''}`,
+      ),
+    sendMessage: (id: number, body: string) =>
+      request<SessionMessage>(`/sessions/${id}/messages`, {
+        method: 'POST',
+        body: JSON.stringify({ body }),
+      }),
   },
 }
 

@@ -26,6 +26,9 @@ const Maps = lazy(() => import('./pages/Maps'))
 const Dice = lazy(() => import('./pages/Dice'))
 const Identity = lazy(() => import('./pages/Identity'))
 const Settings = lazy(() => import('./pages/Settings'))
+const Session = lazy(() => import('./pages/Session'))
+const SessionJoin = lazy(() => import('./pages/SessionJoin'))
+const SessionRoom = lazy(() => import('./pages/SessionRoom'))
 
 function PageFallback() {
   return (
@@ -66,6 +69,9 @@ export default function App() {
             <Route path="/char/:id/dice" element={<Dice />} />
             <Route path="/char/:id/identity" element={<Identity />} />
             <Route path="/char/:id/settings" element={<Settings />} />
+            <Route path="/session" element={<Session />} />
+            <Route path="/session/join" element={<SessionJoin />} />
+            <Route path="/session/:id" element={<SessionRoom />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
           </Suspense>

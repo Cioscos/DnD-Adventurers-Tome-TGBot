@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m, AnimatePresence } from 'framer-motion'
-import { Plus, Trash2, Sparkles, Shield, Heart, ArrowLeft, Pencil } from 'lucide-react'
+import { Plus, Trash2, Sparkles, Shield, Heart, ArrowLeft, Pencil, Swords } from 'lucide-react'
 import { api } from '@/api/client'
 import type { CharacterSummary } from '@/types'
 import HPGauge from '@/components/ui/HPGauge'
@@ -157,6 +157,17 @@ export default function CharacterSelect() {
             size="xl"
           />
         </div>
+
+        {/* Session CTA (always available — GM does not need a character) */}
+        <Button
+          variant="secondary"
+          size="md"
+          fullWidth
+          icon={<Swords size={16} />}
+          onClick={() => navigate('/session')}
+        >
+          {t('session.title')}
+        </Button>
 
         {/* Character roster */}
         {characters.length === 0 ? (
