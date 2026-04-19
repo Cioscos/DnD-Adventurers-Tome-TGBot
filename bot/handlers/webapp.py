@@ -9,7 +9,7 @@ This ONLY works when the Mini App was opened via a reply keyboard button
 
 Currently handled payload types:
     - ``dice_roll``: Post the dice result as a plain-text message in the chat.
-    - ``character_updated``: (future) Trigger a party message refresh.
+    - ``character_updated``: acknowledge notification (no-op).
 """
 
 from __future__ import annotations
@@ -55,8 +55,6 @@ async def handle_web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE
         await update.effective_message.reply_text(text, parse_mode="Markdown")
 
     elif payload_type == "character_updated":
-        # Future: refresh the party message when the character HP changes
-        # from the Mini App while a party session is active.
         char_id = payload.get("char_id")
         logger.info("Character %s updated via Mini App", char_id)
 

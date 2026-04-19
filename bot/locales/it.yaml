@@ -14,7 +14,7 @@ nav:
 
 start:
   welcome: "🎲 *Benvenuto nel Bot D&D 5e\\!*\n\nScegli cosa vuoi fare:"
-  group_only: "⚠️ Le funzionalità *Wiki D&D* e *Gestore Personaggio* sono disponibili solo nella chat privata con il bot\\.\n\nUsa /party e /party\\_stop per le funzionalità di gruppo\\."
+  group_only: "⚠️ Le funzionalità del bot sono disponibili solo nella chat privata con il bot\\."
   menu_wiki: "📖 Wiki D&D"
   menu_character: "⚔️ Il mio personaggio"
   character_shortcut: "Usa il pulsante qui sotto per aprire la scheda del personaggio:"
@@ -599,11 +599,7 @@ character:
     spell_mgmt_label: "Gestione incantesimi: {label}"
     spell_mgmt_by_level: "Per livello ✅"
     spell_mgmt_direct: "Selezione diretta ✅"
-    party_active_label: "Attivo nel Party: {label}"
-    party_yes: "Sì ✅"
-    party_no: "No ❌"
     btn_spell_mgmt: "✨ Gestione Magie: {label}"
-    btn_party_active: "🎯 Attivo nel Party: {label}"
     updated: "Impostazione aggiornata\\."
 
   skills:
@@ -827,45 +823,6 @@ character:
   passive:
     perception_label: "Percezione Passiva"
     investigation_label: "Investigazione Passiva"
-
-# ---------------------------------------------------------------------------
-# Party feature
-# ---------------------------------------------------------------------------
-party:
-  group_only: "⚠️ Il comando /party funziona solo all'interno di un gruppo Telegram\\."
-  stop_group_only: "⚠️ Il comando /party\\_stop funziona solo all'interno di un gruppo Telegram\\."
-  already_active: "⚠️ *Sessione party già attiva\\.*\nUsa /party\\_stop per terminarla prima di avviarne una nuova\\."
-  no_members: "⚠️ *Nessun membro del gruppo ha un personaggio attivo nel party\\.*\n\nPer attivare il tuo personaggio vai nel gestore personaggi \\(⚙️ Impostazioni → 🎯 Attivo nel Party\\)\\."
-  mode_title: "🎯 *Avvia Sessione Party*\n\nScegli la modalità di visualizzazione:\n\n🌐 *Pubblica* — La lista dei personaggi sarà visibile nel gruppo\\.\n🔒 *Privata* — Solo il master riceverà la lista in privato\\."
-  btn_public: "🌐 Pubblica"
-  btn_private: "🔒 Privata"
-  private_waiting: "🔒 *Modalità Privata*\n\nIl master della sessione deve premere il pulsante qui sotto per ricevere in privato lo stato del party\\.\n\n⚠️ Assicurati di aver avviato una chat privata con il bot prima di premere\\."
-  btn_reveal: "📋 Ricevi la lista in privato"
-  reveal_sent: "✅ Lista party inviata in privato\\!"
-  reveal_error_private: "⚠️ Non riesco ad inviarti un messaggio privato\\. Avvia prima una chat con il bot scrivendo /start in privato\\."
-  reveal_error_generic: "❌ Errore nell'invio del messaggio privato\\."
-  reveal_error_user: "Errore: utente non identificato\\."
-  session_not_found: "⚠️ Sessione party non trovata o scaduta\\."
-  session_expired_toast: "⚠️ La sessione party è scaduta\\."
-  send_error: "❌ Errore nell'invio del messaggio party\\."
-  no_session: "ℹ️ Nessuna sessione party attiva in questo gruppo\\."
-  stop_completed: "✅ Sessione party terminata\\."
-  stop_message: "🛑 *Sessione party terminata\\.*"
-  msg_title: "🎯 *Sessione Party — {group_title}*"
-  msg_expires: "⏳ Scade tra: {remaining}"
-  msg_no_active: "_Nessun personaggio attivo nel party\\._"
-  msg_separator: "─────────────────"
-  msg_char_name: "⚔️ *{name}*{user_label}"
-  msg_char_class: "🎭 {classes}"
-  msg_char_hp: "❤️ HP: {current}/{max} {bar}"
-  msg_char_ac: "🛡️ CA: {ac}"
-  msg_char_death_state: "{state}"
-  msg_char_conditions: "⚠️ {conditions}"
-  msg_char_last_roll: "🎲 {roll}"
-  time_expired: "scaduta"
-  time_format: "{hours}h {minutes}m"
-  time_unknown: "N/D"
-  user_label: " \\(@{username}\\)"
 
 # ---------------------------------------------------------------------------
 # Wiki (D&D 5e API)
