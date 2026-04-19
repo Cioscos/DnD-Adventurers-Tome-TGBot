@@ -37,10 +37,8 @@ from telegram.warnings import PTBUserWarning
 
 from bot.db.engine import init_db
 from bot.handlers.navigation import navigation_callback
-from bot.handlers.party import party_callback_handler, party_command, party_stop_command, track_group_member
 from bot.handlers.start import about_command, start_command
 from bot.handlers.webapp import handle_web_app_data
-from bot.models.party_state import PartyAction
 from bot.schema.registry import registry
 from bot.utils.i18n import get_lang, translator
 
@@ -185,41 +183,14 @@ def main() -> None:
     application.add_handler(CommandHandler("start", start_command))
     application.add_handler(CommandHandler("about", about_command))
     application.add_handler(CommandHandler("stop", stop_command))
-    application.add_handler(CommandHandler("party", party_command))
-    application.add_handler(CommandHandler("party_stop", party_stop_command))
-
-    # Group member tracking — fires for any text OR command in a group.
-    # Using (TEXT | COMMAND) instead of (TEXT & ~COMMAND) ensures users are
-    # tracked even in groups where Telegram Privacy Mode is on (bot only
-    # receives commands in those groups, not plain text).
-    application.add_handler(
-        MessageHandler(
-            filters.ChatType.GROUPS & (filters.TEXT | filters.COMMAND),
-            track_group_member,
-        ),
-        group=1,
-    )
 
     # Mini App: receive data sent via Telegram.WebApp.sendData() (reply keyboard button only)
     application.add_handler(
         MessageHandler(filters.StatusUpdate.WEB_APP_DATA, handle_web_app_data)
     )
 
-    # Party callback-query handler (PartyAction inline buttons)
-    application.add_handler(
-        CallbackQueryHandler(
-            party_callback_handler,
-            pattern=lambda d: isinstance(d, PartyAction),
-        )
-    )
-
-    # Wiki callback-query handler (catches all NavAction inline-button presses)
-    application.add_handler(
-        CallbackQueryHandler(
-            navigation_callback,
-            pattern=lambda d: not isinstance(d, PartyAction),
-        )
-    )
+    # Wiki callback-query handler
+    application.add_handler(CallbackQueryHandler(navigation_callback))
 
     # Global error handler — logs exceptions and notifies the developer
     application.add_error_handler(error_handler)

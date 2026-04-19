@@ -13,7 +13,7 @@ nav:
 
 start:
   welcome: "🎲 *Welcome to the D&D 5e Bot\\!*\n\nWhat would you like to do?"
-  group_only: "⚠️ The *D&D Wiki* and *Character Manager* features are only available in private chat with the bot\\.\n\nUse /party and /party\\_stop for group features\\."
+  group_only: "⚠️ The bot features are only available in private chat with the bot\\."
   menu_wiki: "📖 D&D Wiki"
   menu_character: "⚔️ My Character"
   character_shortcut: "Use the button below to open your character sheet:"
@@ -599,11 +599,7 @@ character:
     spell_mgmt_label: "Spell management: {label}"
     spell_mgmt_by_level: "By level ✅"
     spell_mgmt_direct: "Direct selection ✅"
-    party_active_label: "Active in Party: {label}"
-    party_yes: "Yes ✅"
-    party_no: "No ❌"
     btn_spell_mgmt: "✨ Spell Mgmt: {label}"
-    btn_party_active: "🎯 Active in Party: {label}"
     updated: "Setting updated\\."
 
   skills:
@@ -827,45 +823,6 @@ character:
   passive:
     perception_label: "Passive Perception"
     investigation_label: "Passive Investigation"
-
-# ---------------------------------------------------------------------------
-# Party feature
-# ---------------------------------------------------------------------------
-party:
-  group_only: "⚠️ The /party command only works inside a Telegram group\\."
-  stop_group_only: "⚠️ The /party\\_stop command only works inside a Telegram group\\."
-  already_active: "⚠️ *Party session already active\\.*\nUse /party\\_stop to end it before starting a new one\\."
-  no_members: "⚠️ *No group members have an active character in the party\\.*\n\nTo activate your character go to the character manager \\(⚙️ Settings → 🎯 Active in Party\\)\\."
-  mode_title: "🎯 *Start Party Session*\n\nChoose the display mode:\n\n🌐 *Public* — The character list will be visible in the group\\.\n🔒 *Private* — Only the master will receive the list privately\\."
-  btn_public: "🌐 Public"
-  btn_private: "🔒 Private"
-  private_waiting: "🔒 *Private Mode*\n\nThe session master must press the button below to receive the party status privately\\.\n\n⚠️ Make sure you have started a private chat with the bot before pressing\\."
-  btn_reveal: "📋 Receive list privately"
-  reveal_sent: "✅ Party list sent privately\\!"
-  reveal_error_private: "⚠️ I cannot send you a private message\\. Please start a chat with the bot by sending /start in private first\\."
-  reveal_error_generic: "❌ Error sending private message\\."
-  reveal_error_user: "Error: user not identified\\."
-  session_not_found: "⚠️ Party session not found or expired\\."
-  session_expired_toast: "⚠️ The party session has expired\\."
-  send_error: "❌ Error sending the party message\\."
-  no_session: "ℹ️ No active party session in this group\\."
-  stop_completed: "✅ Party session ended\\."
-  stop_message: "🛑 *Party session ended\\.*"
-  msg_title: "🎯 *Party Session — {group_title}*"
-  msg_expires: "⏳ Expires in: {remaining}"
-  msg_no_active: "_No active characters in the party\\._"
-  msg_separator: "─────────────────"
-  msg_char_name: "⚔️ *{name}*{user_label}"
-  msg_char_class: "🎭 {classes}"
-  msg_char_hp: "❤️ HP: {current}/{max} {bar}"
-  msg_char_ac: "🛡️ AC: {ac}"
-  msg_char_death_state: "{state}"
-  msg_char_conditions: "⚠️ {conditions}"
-  msg_char_last_roll: "🎲 {roll}"
-  time_expired: "expired"
-  time_format: "{hours}h {minutes}m"
-  time_unknown: "N/A"
-  user_label: " \\(@{username}\\)"
 
 # ---------------------------------------------------------------------------
 # Wiki (D&D 5e API)

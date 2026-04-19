@@ -102,7 +102,6 @@ export interface CharacterSummary {
   ac: number
   total_level: number
   class_summary: string
-  is_party_active: boolean
   heroic_inspiration: boolean
   experience_points: number
 }
@@ -163,4 +162,55 @@ export interface Note {
   title: string
   body: string
   is_voice: boolean
+}
+
+export type SessionRole = 'game_master' | 'player'
+export type SessionStatus = 'active' | 'closed'
+
+export interface SessionParticipant {
+  user_id: number
+  role: SessionRole
+  character_id?: number | null
+  display_name?: string | null
+  joined_at: string
+}
+
+export interface GameSession {
+  id: number
+  code: string
+  gm_user_id: number
+  status: SessionStatus
+  title?: string | null
+  created_at: string
+  last_activity_at: string
+  closed_at?: string | null
+  participants: SessionParticipant[]
+}
+
+export interface CharacterLiveSnapshot {
+  id: number
+  name: string
+  race?: string | null
+  class_summary: string
+  total_level: number
+  hit_points: number
+  current_hit_points: number
+  temp_hp: number
+  ac: number
+  conditions?: Record<string, unknown>
+  death_saves?: Record<string, unknown>
+  heroic_inspiration: boolean
+  last_roll?: DiceRollResult | null
+}
+
+export interface GameSessionLive extends GameSession {
+  live_characters: CharacterLiveSnapshot[]
+}
+
+export interface SessionMessage {
+  id: number
+  user_id: number
+  role: SessionRole
+  body: string
+  sent_at: string
 }

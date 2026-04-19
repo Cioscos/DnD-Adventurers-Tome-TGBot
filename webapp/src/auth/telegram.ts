@@ -135,11 +135,24 @@ export function telegramConfirm(
   message: string,
   callback: (confirmed: boolean) => void
 ): void {
-  if (twa) {
-    twa.showConfirm(message, callback)
-  } else {
-    callback(window.confirm(message))
+  // Read WebApp dynamically: Telegram may inject it AFTER module init
+  // (e.g. when the Mini App is opened via a reply keyboard button).
+  const webApp =
+    typeof window !== 'undefined' ? window.Telegram?.WebApp : undefined
+
+  if (webApp && typeof webApp.showConfirm === 'function') {
+    try {
+      webApp.showConfirm(message, (confirmed) => {
+        // Some Telegram clients invoke the callback with `undefined` when the
+        // user dismisses via the back gesture — treat as "not confirmed".
+        callback(!!confirmed)
+      })
+      return
+    } catch {
+      // Fall through to window.confirm if the native dialog errors out.
+    }
   }
+  callback(window.confirm(message))
 }
 
 /** Haptic feedback helpers. */

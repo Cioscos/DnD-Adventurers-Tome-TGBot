@@ -21,7 +21,6 @@
       "subtitle": "Choose a hero for your adventure",
       "new": "New character",
       "empty": "No characters yet. Create one!",
-      "party": "Party",
       "delete_confirm": "Delete {{name}}? This action is irreversible."
     },
     "menu": {
@@ -429,8 +428,6 @@
       "mode_manual": "Manual",
       "carry_capacity": "Show carry capacity",
       "language": "Language",
-      "party_active": "Active in Party",
-      "party_active_hint": "Only one character can be active in Party at a time",
       "dice_3d": "3D dice animation",
       "dice_3d_hint": "Show a 3D dice animation during rolls. Disable for instant results."
     },
@@ -459,5 +456,40 @@
       "sorcerer": "Sorcerer",
       "warlock": "Warlock"
     }
+  },
+  "session": {
+    "title": "Game session",
+    "landing_subtitle": "Play in real time with your party",
+    "create_gm": "Create as Game Master",
+    "create_gm_hint": "Get an invite code to share with your players",
+    "join_player": "Join as Player",
+    "join_player_hint": "Pick a character and use the code you were given",
+    "no_characters_hint": "No characters — you can only join as Game Master",
+    "active_session_banner": "Session already active",
+    "resume": "Resume session",
+    "role_game_master": "Game Master",
+    "role_player": "Player",
+    "game_master": "Game Master",
+    "players": "Players",
+    "you": "You",
+    "code_label": "Access code",
+    "code_placeholder": "ABCDEF",
+    "select_character": "Pick your character",
+    "single_char_auto": "You'll play as {{name}}",
+    "join_button": "Join",
+    "create_button": "Create session",
+    "room_title": "Session {{code}}",
+    "chat": "Chat",
+    "chat_empty": "No messages yet. Be the first!",
+    "message_placeholder": "Write a message…",
+    "send": "Send",
+    "leave": "Leave session",
+    "close": "Close session",
+    "confirm_leave": "Leave the session?",
+    "confirm_close": "Close the session for everyone? This cannot be undone.",
+    "closed_notice": "This session has been closed",
+    "not_found": "Session not found",
+    "error_invalid_code": "The code must be 6 characters long",
+    "error_pick_character": "Pick a character to play with"
   }
 }

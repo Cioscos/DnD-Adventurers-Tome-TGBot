@@ -30,7 +30,6 @@ class CharacterSummary(BaseModel):
     ac: int
     total_level: int
     class_summary: str
-    is_party_active: bool = False
     heroic_inspiration: bool = False
     experience_points: int = 0
 
@@ -71,7 +70,6 @@ class CharacterFull(BaseModel):
     # Meta
     experience_points: int = 0
     heroic_inspiration: bool = False
-    is_party_active: bool = False
     spell_slots_mode: str = "manual"
     concentrating_spell_id: Optional[int] = None
 
@@ -117,7 +115,6 @@ class CharacterUpdate(BaseModel):
     languages: Optional[list[str]] = None
     general_proficiencies: Optional[list[str]] = None
     damage_modifiers: Optional[dict[str, Any]] = None
-    is_party_active: Optional[bool] = None
     spell_slots_mode: Optional[str] = None
     settings: Optional[dict[str, Any]] = None
 

@@ -2,6 +2,20 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Environment rule — NEVER run `uv sync` from WSL
+
+The repository lives on a Windows drive (`C:\Users\Claudio\PycharmProjects\dnd_bot_revamped`). The user runs Python commands from **Windows** (PowerShell / native `uv`), so the `.venv` must be created by the Windows `uv`. If you run `uv sync` from inside WSL, the resulting `.venv` contains Linux-only symlinks (e.g. `lib64`) that Windows `uv` cannot remove or reuse — the next `uv run` from Windows fails with:
+
+```
+error: failed to remove file `...\.venv\lib64`: Accesso negato. (os error 5)
+```
+
+**Rules for Claude Code running inside WSL:**
+
+- Do **NOT** run `uv sync`, `uv run`, `uv venv`, or any command that creates/modifies `.venv` (includes `uv run python ...`, `uv run pytest`, `uv run uvicorn ...`).
+- For Python verification, ask the user to run the command in their Windows shell instead — or use an ephemeral throwaway path (e.g. `UV_PROJECT_ENVIRONMENT=/tmp/venv uv sync`) that never touches the repo's `.venv`.
+- If `.venv` already got corrupted from a WSL sync, tell the user to clean it with `wsl rm -rf .venv` (or `Remove-Item -Recurse -Force .venv` in PowerShell) and re-run `uv sync` from Windows.
+
 ## Running the Bot
 
 ```bash

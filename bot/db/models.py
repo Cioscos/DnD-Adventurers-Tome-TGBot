@@ -49,9 +49,14 @@ class FileType(str, PyEnum):
     DOCUMENT = "document"
 
 
-class PartyMode(str, PyEnum):
-    PUBLIC = "public"
-    PRIVATE = "private"
+class SessionRole(str, PyEnum):
+    GAME_MASTER = "game_master"
+    PLAYER = "player"
+
+
+class SessionStatus(str, PyEnum):
+    ACTIVE = "active"
+    CLOSED = "closed"
 
 
 # ---------------------------------------------------------------------------
@@ -96,9 +101,6 @@ class Character(Base):
     rolls_history: Mapped[Optional[list]] = mapped_column(JSON, default=list)
     notes: Mapped[Optional[dict]] = mapped_column(JSON, default=dict)
     settings: Mapped[Optional[dict]] = mapped_column(JSON, default=dict)
-
-    # Party feature: whether this character is the user's active party character
-    is_party_active: Mapped[bool] = mapped_column(Boolean, default=False)
 
     # Active conditions (JSON dict: condition_slug → bool or int for exhaustion)
     conditions: Mapped[Optional[dict]] = mapped_column(JSON, default=dict)
@@ -483,25 +485,6 @@ class Map(Base):
 
 
 # ---------------------------------------------------------------------------
-# GroupMember (party feature — tracks who has written in each group)
-# ---------------------------------------------------------------------------
-
-class GroupMember(Base):
-    """Records every Telegram user that has ever sent a message in a group."""
-
-    __tablename__ = "group_members"
-    __table_args__ = (UniqueConstraint("group_id", "user_id"),)
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    group_id: Mapped[int] = mapped_column(BigInteger, nullable=False, index=True)
-    user_id: Mapped[int] = mapped_column(BigInteger, nullable=False, index=True)
-
-
-# ---------------------------------------------------------------------------
-# PartySession (party feature — one active session per group)
-# ---------------------------------------------------------------------------
-
-# ---------------------------------------------------------------------------
 # CharacterHistory (audit log of character changes)
 # ---------------------------------------------------------------------------
 
@@ -519,18 +502,68 @@ class CharacterHistory(Base):
     description: Mapped[str] = mapped_column(Text, nullable=False)
 
 
-class PartySession(Base):
-    """An active party tracking session for a Telegram group."""
+# ---------------------------------------------------------------------------
+# Game session (invite-code based, managed by the webapp)
+# ---------------------------------------------------------------------------
 
-    __tablename__ = "party_sessions"
+class GameSession(Base):
+    """A live game session hosted by a Game Master with invite-code access."""
+
+    __tablename__ = "game_sessions"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    # One session per group at a time
-    group_id: Mapped[int] = mapped_column(BigInteger, nullable=False, unique=True, index=True)
-    group_title: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
-    mode: Mapped[str] = mapped_column(Enum(PartyMode), default=PartyMode.PUBLIC)
-    # Where the live party message lives (group_id for public, master's user_id for private)
-    message_chat_id: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
-    message_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
-    started_at: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
-    expires_at: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    code: Mapped[str] = mapped_column(String(6), unique=True, index=True, nullable=False)
+    gm_user_id: Mapped[int] = mapped_column(BigInteger, nullable=False, index=True)
+    status: Mapped[str] = mapped_column(
+        Enum(SessionStatus), default=SessionStatus.ACTIVE, index=True, nullable=False
+    )
+    title: Mapped[Optional[str]] = mapped_column(String(120), nullable=True)
+    created_at: Mapped[str] = mapped_column(String(50), nullable=False)
+    last_activity_at: Mapped[str] = mapped_column(String(50), nullable=False)
+    closed_at: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+
+    participants: Mapped[List["SessionParticipant"]] = relationship(
+        back_populates="session", cascade="all, delete-orphan"
+    )
+    messages: Mapped[List["SessionMessage"]] = relationship(
+        back_populates="session", cascade="all, delete-orphan"
+    )
+
+
+class SessionParticipant(Base):
+    """A participant in a game session — either the GM or a Player with a PG."""
+
+    __tablename__ = "session_participants"
+    __table_args__ = (UniqueConstraint("session_id", "user_id"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    session_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("game_sessions.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    user_id: Mapped[int] = mapped_column(BigInteger, nullable=False, index=True)
+    role: Mapped[str] = mapped_column(Enum(SessionRole), nullable=False)
+    character_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("characters.id", ondelete="SET NULL"), nullable=True
+    )
+    display_name: Mapped[Optional[str]] = mapped_column(String(120), nullable=True)
+    joined_at: Mapped[str] = mapped_column(String(50), nullable=False)
+
+    session: Mapped["GameSession"] = relationship(back_populates="participants")
+    character: Mapped[Optional["Character"]] = relationship()
+
+
+class SessionMessage(Base):
+    """A chat message exchanged inside a game session."""
+
+    __tablename__ = "session_messages"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    session_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("game_sessions.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    user_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    role: Mapped[str] = mapped_column(Enum(SessionRole), nullable=False)
+    body: Mapped[str] = mapped_column(String(1000), nullable=False)
+    sent_at: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+
+    session: Mapped["GameSession"] = relationship(back_populates="messages")
