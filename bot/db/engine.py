@@ -89,10 +89,22 @@ _MIGRATIONS: list[tuple[str, str, str, str | None]] = [
     ("maps", "local_file_path", "VARCHAR(500)", None),
 ]
 
+# Tables to drop if they exist (legacy feature cleanup)
+_DROP_TABLES: list[str] = [
+    "party_sessions",
+    "group_members",
+]
+
+# Columns to drop if they exist: (table, column)
+_DROP_COLUMNS: list[tuple[str, str]] = [
+    ("characters", "is_party_active"),
+]
+
 
 def _migrate_schema(connection) -> None:
-    """Add missing columns to existing tables (idempotent)."""
+    """Add missing columns, drop legacy columns/tables (idempotent)."""
     inspector = sa_inspect(connection)
+    existing_tables = set(inspector.get_table_names())
     column_cache: dict[str, set[str]] = {}
 
     for table, column, col_type, default in _MIGRATIONS:
@@ -111,6 +123,29 @@ def _migrate_schema(connection) -> None:
             logger.info("Migrating: %s", ddl)
             connection.execute(text(ddl))
             column_cache[table].add(column)
+
+    for table, column in _DROP_COLUMNS:
+        if table not in existing_tables:
+            continue
+        cols = column_cache.get(table)
+        if cols is None:
+            cols = {c["name"] for c in inspector.get_columns(table)}
+            column_cache[table] = cols
+        if column in cols:
+            ddl = f"ALTER TABLE {table} DROP COLUMN {column}"
+            logger.info("Migrating: %s", ddl)
+            try:
+                connection.execute(text(ddl))
+                cols.discard(column)
+            except Exception as exc:
+                # SQLite < 3.35 does not support DROP COLUMN.
+                logger.warning("DROP COLUMN failed for %s.%s: %s", table, column, exc)
+
+    for table in _DROP_TABLES:
+        if table in existing_tables:
+            logger.info("Dropping legacy table: %s", table)
+            connection.execute(text(f"DROP TABLE IF EXISTS {table}"))
+            existing_tables.discard(table)
 
 
 async def init_db() -> None:
