@@ -110,19 +110,22 @@ export default function Settings() {
             </div>
           </div>
           <m.button
+            type="button"
+            role="switch"
+            aria-checked={animate3d}
             onClick={() => {
               setAnimate3d(!animate3d)
               haptic.light()
             }}
-            className={`relative w-12 h-7 rounded-full transition-colors shrink-0 border
+            className={`relative w-12 h-7 rounded-full transition-colors shrink-0 border flex items-center p-0.5
               ${animate3d
                 ? 'bg-gradient-to-r from-dnd-gold-dim to-dnd-gold-bright border-dnd-gold-bright shadow-[0_0_8px_rgba(212,170,90,0.4)]'
                 : 'bg-dnd-surface border-dnd-border'}`}
             whileTap={{ scale: 0.92 }}
           >
             <m.span
-              className="absolute top-0.5 w-5 h-5 rounded-full bg-dnd-parchment shadow-parchment-md"
-              animate={{ x: animate3d ? 24 : 2 }}
+              className="block w-5 h-5 rounded-full bg-dnd-parchment shadow-parchment-md"
+              animate={{ x: animate3d ? 22 : 0 }}
               transition={spring.snappy}
             />
           </m.button>
