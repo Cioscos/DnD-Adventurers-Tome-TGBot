@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
 import {
   EyeOff, Heart, VolumeX, Ghost, Link2, Cloud, Eye, Zap, Mountain,
-  FlaskConical, ArrowDown, Lock, Sparkle, Moon, Flame,
+  FlaskConical, ArrowDown, Lock, Sparkle, Moon, Flame, Info,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { api } from '@/api/client'
@@ -13,6 +13,7 @@ import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
 import { haptic } from '@/auth/telegram'
 import { spring, stagger } from '@/styles/motion'
+import ConditionDetailModal from '@/pages/conditions/ConditionDetailModal'
 
 const CONDITIONS: { key: string; icon: LucideIcon }[] = [
   { key: 'blinded',       icon: EyeOff },
@@ -37,6 +38,7 @@ export default function Conditions() {
   const { t } = useTranslation()
   const qc = useQueryClient()
   const [exhaustionLevel, setExhaustionLevel] = useState<number | null>(null)
+  const [detailKey, setDetailKey] = useState<string | null>(null)
 
   const { data: char } = useQuery({
     queryKey: ['character', charId],
@@ -100,6 +102,14 @@ export default function Conditions() {
             <span className="font-cinzel uppercase tracking-widest text-xs text-dnd-gold-dim">
               {t('character.conditions.exhaustion_condition')}
             </span>
+            <button
+              type="button"
+              aria-label={t('character.conditions.detail_aria')}
+              onClick={() => setDetailKey('exhaustion')}
+              className="text-dnd-text-muted hover:text-dnd-gold-bright transition-colors"
+            >
+              <Info size={14} />
+            </button>
           </div>
           <span className={`text-lg font-display font-black
             ${currentExhaustion > 0 ? 'text-[var(--dnd-amber)]' : 'text-dnd-text-faint'}`}>
@@ -144,29 +154,49 @@ export default function Conditions() {
           const Icon = cond.icon
           const active = !!conditions[cond.key]
           return (
-            <m.button
+            <m.div
               key={cond.key}
-              onClick={() => toggle(cond.key)}
               variants={{
                 initial: { opacity: 0, y: 8 },
                 animate: { opacity: 1, y: 0 },
               }}
-              className={`flex items-center gap-2 px-3 py-3 rounded-xl border text-left transition-colors
+              className={`flex items-center rounded-xl border transition-colors
                 ${active
                   ? 'bg-gradient-to-br from-[var(--dnd-crimson-deep)]/40 to-[var(--dnd-crimson)]/20 border-dnd-crimson/60 shadow-halo-danger text-dnd-text'
                   : 'bg-dnd-surface border-dnd-border text-dnd-text-muted'}`}
-              whileTap={{ scale: 0.95 }}
               animate={active ? { x: [-2, 2, -1, 1, 0] } : {}}
               transition={{ duration: 0.25 }}
             >
-              <Icon size={18} className={active ? 'text-[var(--dnd-crimson-bright)]' : 'text-dnd-text-faint'} />
-              <span className="text-sm font-body leading-tight">
-                {t(`character.conditions.${cond.key}`)}
-              </span>
-            </m.button>
+              <m.button
+                type="button"
+                onClick={() => toggle(cond.key)}
+                whileTap={{ scale: 0.95 }}
+                className="flex-1 flex items-center gap-2 px-3 py-3 text-left"
+              >
+                <Icon size={18} className={active ? 'text-[var(--dnd-crimson-bright)]' : 'text-dnd-text-faint'} />
+                <span className="text-sm font-body leading-tight">
+                  {t(`character.conditions.${cond.key}`)}
+                </span>
+              </m.button>
+              <button
+                type="button"
+                aria-label={t('character.conditions.detail_aria')}
+                onClick={() => setDetailKey(cond.key)}
+                className="shrink-0 p-3 text-dnd-text-muted hover:text-dnd-gold-bright transition-colors"
+              >
+                <Info size={16} />
+              </button>
+            </m.div>
           )
         })}
       </m.div>
+      {detailKey !== null && (
+        <ConditionDetailModal
+          condKey={detailKey}
+          exhaustionLevel={currentExhaustion}
+          onClose={() => setDetailKey(null)}
+        />
+      )}
     </Layout>
   )
 }
