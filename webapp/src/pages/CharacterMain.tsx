@@ -19,6 +19,7 @@ import Skeleton from '@/components/ui/Skeleton'
 import { ShieldEmblem } from '@/components/ui/Ornament'
 import { haptic } from '@/auth/telegram'
 import { spring, stagger } from '@/styles/motion'
+import { formatCondition } from '@/lib/conditions'
 
 type MenuItem = {
   key: string
@@ -316,7 +317,7 @@ export default function CharacterMain() {
                 <StatPill
                   key={key}
                   icon={<CircleDot size={10} />}
-                  value={`${t(`character.conditions.${key}`)}${typeof val === 'number' && val > 1 ? ` (${val})` : ''}`}
+                  value={formatCondition(key, val, t)}
                   tone="crimson"
                   size="sm"
                 />
