@@ -565,5 +565,11 @@ class SessionMessage(Base):
     role: Mapped[str] = mapped_column(Enum(SessionRole), nullable=False)
     body: Mapped[str] = mapped_column(String(1000), nullable=False)
     sent_at: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    recipient_user_id: Mapped[Optional[int]] = mapped_column(
+        BigInteger, nullable=True, index=True
+    )
+    sender_display_name: Mapped[Optional[str]] = mapped_column(
+        String(120), nullable=True
+    )
 
     session: Mapped["GameSession"] = relationship(back_populates="messages")

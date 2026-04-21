@@ -87,6 +87,9 @@ _MIGRATIONS: list[tuple[str, str, str, str | None]] = [
     ("spells", "damage_type", "VARCHAR(100)", None),
     # Map local file upload support
     ("maps", "local_file_path", "VARCHAR(500)", None),
+    # Session whisper support
+    ("session_messages", "recipient_user_id", "BIGINT", None),
+    ("session_messages", "sender_display_name", "VARCHAR(120)", None),
 ]
 
 # Tables to drop if they exist (legacy feature cleanup)
@@ -123,6 +126,15 @@ def _migrate_schema(connection) -> None:
             logger.info("Migrating: %s", ddl)
             connection.execute(text(ddl))
             column_cache[table].add(column)
+
+    # Ad-hoc index for whisper filter queries
+    try:
+        connection.execute(text(
+            "CREATE INDEX IF NOT EXISTS ix_session_messages_recipient "
+            "ON session_messages(recipient_user_id)"
+        ))
+    except Exception as exc:
+        logger.warning("CREATE INDEX failed for session_messages.recipient_user_id: %s", exc)
 
     for table, column in _DROP_COLUMNS:
         if table not in existing_tables:
