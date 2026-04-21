@@ -214,7 +214,7 @@
       "unconscious": "Privo di Sensi",
       "detail_aria": "Mostra dettagli condizione",
       "desc": {
-        "blinded": "Un personaggio cecato non può vedere e fallisce automaticamente ogni prova di caratteristica che richiede la vista. I tiri per colpire contro di lui hanno vantaggio, i suoi hanno svantaggio.",
+        "blinded": "Un personaggio accecato non può vedere e fallisce automaticamente ogni prova di caratteristica che richiede la vista. I tiri per colpire contro di lui hanno vantaggio, i suoi hanno svantaggio.",
         "charmed": "Un personaggio affascinato non può attaccare chi lo affascina né prenderlo come bersaglio di capacità dannose o effetti magici. Chi lo affascina ha vantaggio nelle prove di caratteristica sociali.",
         "deafened": "Un personaggio assordato non può sentire e fallisce automaticamente ogni prova di caratteristica che richiede l'udito.",
         "exhaustion": "L'affaticamento si misura in sei livelli progressivi. Ogni livello aggiunge un effetto cumulativo ai precedenti.",
