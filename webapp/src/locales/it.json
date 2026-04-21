@@ -211,7 +211,33 @@
       "prone": "Prono",
       "restrained": "Trattenuto",
       "stunned": "Stordito",
-      "unconscious": "Privo di Sensi"
+      "unconscious": "Privo di Sensi",
+      "detail_aria": "Mostra dettagli condizione",
+      "desc": {
+        "blinded": "Un personaggio cecato non può vedere e fallisce automaticamente ogni prova di caratteristica che richiede la vista. I tiri per colpire contro di lui hanno vantaggio, i suoi hanno svantaggio.",
+        "charmed": "Un personaggio affascinato non può attaccare chi lo affascina né prenderlo come bersaglio di capacità dannose o effetti magici. Chi lo affascina ha vantaggio nelle prove di caratteristica sociali.",
+        "deafened": "Un personaggio assordato non può sentire e fallisce automaticamente ogni prova di caratteristica che richiede l'udito.",
+        "exhaustion": "L'affaticamento si misura in sei livelli progressivi. Ogni livello aggiunge un effetto cumulativo ai precedenti.",
+        "exhaustion_levels": [
+          "Livello 1: Svantaggio alle prove di caratteristica.",
+          "Livello 2: Velocità dimezzata.",
+          "Livello 3: Svantaggio ai tiri per colpire e ai tiri salvezza.",
+          "Livello 4: Punti ferita massimi dimezzati.",
+          "Livello 5: Velocità ridotta a 0.",
+          "Livello 6: Morte."
+        ],
+        "frightened": "Un personaggio spaventato ha svantaggio alle prove di caratteristica e ai tiri per colpire finché la fonte della paura è entro linea di vista. Non può muoversi volontariamente più vicino alla fonte.",
+        "grappled": "Un personaggio afferrato ha velocità ridotta a 0 e non può beneficiare di bonus alla velocità. La condizione termina se chi lo afferra viene incapacitato, o se un effetto lo rimuove dalla portata di chi lo afferra.",
+        "incapacitated": "Un personaggio incapacitato non può eseguire azioni né reazioni.",
+        "invisible": "Un personaggio invisibile non può essere visto senza l'aiuto di magia o sensi speciali. È considerato fortemente occultato. I tiri per colpire contro di lui hanno svantaggio, i suoi hanno vantaggio.",
+        "paralyzed": "Un personaggio paralizzato è incapacitato e non può muoversi o parlare. Fallisce automaticamente i tiri salvezza di Forza e Destrezza. I tiri per colpire contro di lui hanno vantaggio; ogni colpo in mischia entro 1,5 metri è un critico.",
+        "petrified": "Un personaggio pietrificato è trasformato, assieme a ciò che indossa o trasporta di non magico, in materia solida inanimata. È incapacitato e non può muoversi o parlare. Ha resistenza a tutti i danni e immunità a veleno e malattie. Il suo peso aumenta di dieci volte.",
+        "poisoned": "Un personaggio avvelenato ha svantaggio ai tiri per colpire e alle prove di caratteristica.",
+        "prone": "Un personaggio prono può muoversi solo strisciando, a meno che non si rialzi. Ha svantaggio ai tiri per colpire. I tiri per colpire contro di lui hanno vantaggio entro 1,5 metri, svantaggio oltre.",
+        "restrained": "Un personaggio trattenuto ha velocità 0 e non può beneficiare di bonus alla velocità. I tiri per colpire contro di lui hanno vantaggio, i suoi hanno svantaggio. Ha svantaggio ai tiri salvezza di Destrezza.",
+        "stunned": "Un personaggio stordito è incapacitato, non può muoversi e parla a malapena. Fallisce automaticamente i tiri salvezza di Forza e Destrezza. I tiri per colpire contro di lui hanno vantaggio.",
+        "unconscious": "Un personaggio privo di sensi è incapacitato, non può muoversi né parlare, ignora l'ambiente. Lascia cadere ciò che tiene e cade prono. Fallisce automaticamente i tiri salvezza di Forza e Destrezza. I tiri per colpire contro di lui hanno vantaggio; ogni colpo in mischia entro 1,5 metri è un critico."
+      }
     },
     "identity": {
       "title": "Identità",
