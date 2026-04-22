@@ -22,8 +22,7 @@ import Skeleton from '@/components/ui/Skeleton'
 import { ShieldEmblem } from '@/components/ui/Ornament'
 import { haptic } from '@/auth/telegram'
 import { spring, stagger } from '@/styles/motion'
-import { formatCondition } from '@/lib/conditions'
-import { CONDITION_ICONS } from '@/lib/conditions'
+import { formatCondition, CONDITION_ICONS } from '@/lib/conditions'
 import ConditionDetailModal from '@/pages/conditions/ConditionDetailModal'
 import PassiveAbilityDetailModal from '@/pages/abilities/PassiveAbilityDetailModal'
 import type { Ability } from '@/types'
@@ -319,7 +318,7 @@ export default function CharacterMain() {
 
           {/* Active conditions — icon-only, tap apre ConditionDetailModal */}
           {activeConditions.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 mt-2 overflow-x-auto scrollbar-hide max-h-14">
+            <div className="flex flex-wrap gap-1.5 mt-2 overflow-x-auto scrollbar-hide max-h-14 pr-16">
               {activeConditions.map(([key, val]) => {
                 const Icon = CONDITION_ICONS[key] ?? CircleDot
                 return (
