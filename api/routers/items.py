@@ -19,18 +19,9 @@ from core.db.models import Character, CharacterClass, CharacterHistory, Item
 from api.schemas.character import CharacterFull
 from api.schemas.item import ItemCreate, ItemRead, ItemUpdate, WeaponAttackResult
 from core.game.stats import effective_ability_score
+from api.routers._helpers import effective_con_mod
 
 router = APIRouter(prefix="/characters", tags=["items"])
-
-
-def _snapshot_effective_con_mod(char) -> int:
-    """Compute current effective CON modifier from base CON + equipped items."""
-    con_row = next((a for a in char.ability_scores if a.name == "constitution"), None)
-    if con_row is None:
-        return 0
-    eq_items = [i for i in char.items if i.is_equipped]
-    effective, _ = effective_ability_score("constitution", con_row.value, eq_items)
-    return (effective - 10) // 2
 
 
 def _apply_hp_delta(char, delta_hp: int) -> None:
@@ -163,7 +154,7 @@ async def update_item(
         raise HTTPException(status_code=404, detail="Item not found")
 
     # Snapshot CON modifier BEFORE any item changes
-    old_con_mod = _snapshot_effective_con_mod(char)
+    old_con_mod = effective_con_mod(char)
 
     data = body.model_dump(exclude_unset=True)
     if "item_metadata" in data:
@@ -196,7 +187,7 @@ async def update_item(
     # Auto-recompute HP when CON modifier changes due to equip/unequip
     settings = char.settings or {}
     if settings.get("hp_auto_calc", True):
-        new_con_mod = _snapshot_effective_con_mod(char)
+        new_con_mod = effective_con_mod(char)
         delta = new_con_mod - old_con_mod
         if delta != 0:
             _apply_hp_delta(char, delta * char.total_level)

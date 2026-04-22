@@ -14,6 +14,7 @@ from api.database import get_db
 from core.db.models import AbilityScore, Character
 from api.schemas.character import CharacterFull
 from api.schemas.common import AbilityScoreUpdate
+from api.routers._helpers import effective_con_mod
 from pydantic import BaseModel
 from typing import Optional
 
@@ -63,6 +64,14 @@ async def update_ability_score(
     if not 1 <= body.value <= 30:
         raise HTTPException(status_code=400, detail="Ability score must be between 1 and 30")
 
+    is_constitution = ability_name.lower() == "constitution"
+    settings = char.settings or {}
+    auto_calc = settings.get("hp_auto_calc", True)
+
+    old_con_mod = 0
+    if is_constitution and auto_calc:
+        old_con_mod = effective_con_mod(char)
+
     result = await session.execute(
         select(AbilityScore).where(
             AbilityScore.character_id == char_id,
@@ -79,6 +88,17 @@ async def update_ability_score(
     # Recalculate carry capacity if STR changed
     if ability_name.lower() == "strength":
         char.recalculate_carry_capacity()
+
+    # CON change hook: retroactively adjust max HP and current HP
+    if is_constitution and auto_calc:
+        new_con_mod = effective_con_mod(char)
+        delta = new_con_mod - old_con_mod
+        if delta != 0:
+            char.hit_points = max(0, char.hit_points + delta * char.total_level)
+            char.current_hit_points = max(
+                0,
+                min(char.current_hit_points + delta * char.total_level, char.hit_points),
+            )
 
     return char
 
