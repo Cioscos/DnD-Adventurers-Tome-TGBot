@@ -24,6 +24,10 @@ def hp_bucket(char: Character) -> HpBucket:
         return "dead"
     current = int(char.current_hit_points or 0)
     if current <= 0:
+        # A stabilized character (3 successful death saves) is down but no
+        # longer actively dying — communicate that as badly_wounded.
+        if bool(death_saves.get("stable")):
+            return "badly_wounded"
         return "dying"
     total = int(char.hit_points or 0)
     if total <= 0:
