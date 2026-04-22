@@ -1,9 +1,0 @@
-import{r as l,j as e}from"./dice-scene-p5UVFQIN.js";import{e as p,A as y,m as c,s as h}from"./index-CnMysZgf.js";function v({open:o,onClose:s,children:m,title:n,dismissible:a=!0,centered:r=!1,className:f=""}){const d=p(),x=l.useRef(null);l.useEffect(()=>{if(!o)return;const t=document.body.style.overflow;return document.body.style.overflow="hidden",()=>{document.body.style.overflow=t}},[o]);const u=(t,i)=>{(i.offset.y>120||i.velocity.y>800)&&a&&s()};return e.jsx(y,{children:o&&e.jsx(c.div,{className:"fixed inset-0 z-50 flex items-end md:items-center justify-center",style:{background:"var(--dnd-overlay)",backdropFilter:"blur(6px)"},initial:{opacity:0},animate:{opacity:1},exit:{opacity:0},transition:{duration:.2},onClick:a?s:void 0,children:e.jsxs(c.div,{ref:x,className:`
-              relative w-full bg-gradient-parchment surface-parchment
-              border-t border-dnd-border-strong md:border
-              rounded-t-3xl md:rounded-3xl md:max-w-md
-              shadow-parchment-2xl
-              max-h-[85vh] overflow-hidden
-              ${r?"md:self-center":""}
-              ${f}
-            `,initial:r?{opacity:0,scale:.96}:{y:"100%"},animate:r?{opacity:1,scale:1}:{y:0},exit:r?{opacity:0,scale:.98}:{y:"100%"},transition:h.swipe,drag:a&&!r?"y":!1,dragConstraints:{top:0,bottom:0},dragElastic:{top:0,bottom:.4},dragControls:d,dragListener:!1,onDragEnd:u,onClick:t=>t.stopPropagation(),children:[e.jsx("div",{className:"flex justify-center py-2 cursor-grab active:cursor-grabbing md:hidden touch-none",onPointerDown:t=>d.start(t),children:e.jsx("div",{className:"w-10 h-1 rounded-full bg-dnd-gold-dim/50"})}),n&&e.jsx("div",{className:"px-5 pb-3 border-b border-dnd-border/50",children:e.jsx("h2",{className:"font-display text-xl font-bold text-dnd-gold-bright text-center",children:n})}),e.jsx("div",{className:"overflow-y-auto overscroll-contain pb-safe-lg",style:{maxHeight:"calc(85vh - 60px)"},children:m})]})})})}export{v as S};
