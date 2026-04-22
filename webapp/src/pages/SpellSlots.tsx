@@ -9,7 +9,7 @@ import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
 import Reveal from '@/components/ui/Reveal'
 import { haptic } from '@/auth/telegram'
-import { spring, stagger } from '@/styles/motion'
+import { stagger } from '@/styles/motion'
 import type { SpellSlot } from '@/types'
 
 export default function SpellSlots() {
@@ -115,29 +115,36 @@ export default function SpellSlots() {
 
               {/* Slot gems */}
               <div className="flex gap-2 flex-wrap mb-3">
-                {Array.from({ length: slot.total }).map((_, i) => {
-                  const isUsed = i < slot.used
-                  return (
-                    <m.button
-                      key={i}
-                      onClick={() => {
-                        const newUsed = i < slot.used ? i : i + 1
-                        updateSlot.mutate({ slotId: slot.id, used: newUsed > slot.total ? slot.total : newUsed })
+                {Array.from({ length: slot.total }).map((_, i) => (
+                  <m.button
+                    key={i}
+                    type="button"
+                    onClick={() => {
+                      if (i < slot.used) {
                         haptic.light()
-                      }}
-                      className={`w-10 h-10 rounded-full flex items-center justify-center
-                        ${isUsed
-                          ? 'bg-dnd-surface border-2 border-dashed border-dnd-gold-dim/50'
-                          : 'bg-gradient-to-br from-dnd-arcane-bright to-dnd-arcane-deep border-2 border-dnd-arcane-bright shadow-[0_0_12px_rgba(197,137,232,0.6)]'}`}
-                      animate={isUsed ? { scale: 1 } : { scale: [1.15, 1] }}
-                      transition={spring.elastic}
-                      whileTap={{ scale: 0.85 }}
-                      aria-label={`Slot ${i + 1} ${isUsed ? 'used' : 'available'}`}
-                    >
-                      {!isUsed && <Gem size={16} className="text-white drop-shadow" />}
-                    </m.button>
-                  )
-                })}
+                        updateSlot.mutate({ slotId: slot.id, used: Math.max(0, slot.used - 1) })
+                      } else {
+                        haptic.medium()
+                        updateSlot.mutate({ slotId: slot.id, used: Math.min(slot.total, slot.used + 1) })
+                      }
+                    }}
+                    whileTap={{ scale: 0.9 }}
+                    aria-label={t('character.slots.gem_aria', {
+                      level: slot.level,
+                      index: i + 1,
+                      total: slot.total,
+                      state: i < slot.used
+                        ? t('character.slots.state_used')
+                        : t('character.slots.state_available'),
+                    })}
+                    aria-pressed={i < slot.used}
+                    className={`w-7 h-7 rounded-full border-2 transition-all ${
+                      i < slot.used
+                        ? 'bg-gradient-to-br from-dnd-gold-deep to-dnd-gold-bright border-dnd-gold-bright shadow-[0_0_10px_rgba(244,208,111,0.5)]'
+                        : 'bg-transparent border-dnd-gold-dim/60 hover:border-dnd-gold-bright'
+                    }`}
+                  />
+                ))}
               </div>
 
               {/* Total editor */}
