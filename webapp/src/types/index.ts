@@ -143,6 +143,7 @@ export interface CharacterFull extends CharacterSummary {
   encumbrance: number
   spell_slots_mode: string
   concentrating_spell_id?: number
+  hp_gained?: number
   rolls_history?: DiceRollResult[]
   notes?: Record<string, string>
   settings?: Record<string, unknown>
