@@ -3,34 +3,20 @@ import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
-import {
-  EyeOff, Heart, VolumeX, Ghost, Link2, Cloud, Eye, Zap, Mountain,
-  FlaskConical, ArrowDown, Lock, Sparkle, Moon, Flame, Info,
-} from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
+import { Flame, Info } from 'lucide-react'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
 import { haptic } from '@/auth/telegram'
 import { spring, stagger } from '@/styles/motion'
 import ConditionDetailModal from '@/pages/conditions/ConditionDetailModal'
+import { CONDITION_ICONS } from '@/lib/conditions'
 
-const CONDITIONS: { key: string; icon: LucideIcon }[] = [
-  { key: 'blinded',       icon: EyeOff },
-  { key: 'charmed',       icon: Heart },
-  { key: 'deafened',      icon: VolumeX },
-  { key: 'frightened',    icon: Ghost },
-  { key: 'grappled',      icon: Link2 },
-  { key: 'incapacitated', icon: Cloud },
-  { key: 'invisible',     icon: Eye },
-  { key: 'paralyzed',     icon: Zap },
-  { key: 'petrified',     icon: Mountain },
-  { key: 'poisoned',      icon: FlaskConical },
-  { key: 'prone',         icon: ArrowDown },
-  { key: 'restrained',    icon: Lock },
-  { key: 'stunned',       icon: Sparkle },
-  { key: 'unconscious',   icon: Moon },
-]
+const CONDITION_KEYS = [
+  'blinded', 'charmed', 'deafened', 'frightened', 'grappled',
+  'incapacitated', 'invisible', 'paralyzed', 'petrified', 'poisoned',
+  'prone', 'restrained', 'stunned', 'unconscious',
+] as const
 
 export default function Conditions() {
   const { id } = useParams<{ id: string }>()
@@ -82,7 +68,7 @@ export default function Conditions() {
     mutation.mutate({ ...conditions, exhaustion: level })
   }
 
-  const activeCount = CONDITIONS.filter((c) => conditions[c.key]).length + (currentExhaustion > 0 ? 1 : 0)
+  const activeCount = CONDITION_KEYS.filter((k) => conditions[k]).length + (currentExhaustion > 0 ? 1 : 0)
 
   return (
     <Layout title={t('character.conditions.title')} backTo={`/char/${charId}`} group="character" page="conditions">
@@ -138,6 +124,32 @@ export default function Conditions() {
             )
           })}
         </div>
+        {/* Inline level descriptions — current highlighted, others grey */}
+        {(() => {
+          const levels = t('character.conditions.desc.exhaustion_levels', {
+            returnObjects: true,
+          }) as string[]
+          return (
+            <div className="mt-4 space-y-1 text-sm">
+              {levels.map((desc, idx) => {
+                const lvl = idx + 1
+                const isCurrent = lvl === currentExhaustion
+                return (
+                  <div
+                    key={lvl}
+                    className={
+                      isCurrent
+                        ? 'px-3 py-2 rounded-md border-l-2 border-dnd-gold bg-dnd-gold/10 text-dnd-gold-bright'
+                        : 'px-3 py-1.5 text-dnd-text-faint opacity-60'
+                    }
+                  >
+                    {desc}
+                  </div>
+                )
+              })}
+            </div>
+          )
+        })()}
       </Surface>
 
       {/* Condition grid */}
@@ -150,12 +162,12 @@ export default function Conditions() {
           animate: { transition: { staggerChildren: stagger.listTight } },
         }}
       >
-        {CONDITIONS.map((cond) => {
-          const Icon = cond.icon
-          const active = !!conditions[cond.key]
+        {CONDITION_KEYS.map((key) => {
+          const Icon = CONDITION_ICONS[key]
+          const active = !!conditions[key]
           return (
             <m.div
-              key={cond.key}
+              key={key}
               variants={{
                 initial: { opacity: 0, y: 8 },
                 animate: { opacity: 1, y: 0 },
@@ -169,19 +181,19 @@ export default function Conditions() {
             >
               <m.button
                 type="button"
-                onClick={() => toggle(cond.key)}
+                onClick={() => toggle(key)}
                 whileTap={{ scale: 0.95 }}
                 className="flex-1 flex items-center gap-2 px-3 py-3 text-left"
               >
                 <Icon size={18} className={active ? 'text-[var(--dnd-crimson-bright)]' : 'text-dnd-text-faint'} />
                 <span className="text-sm font-body leading-tight">
-                  {t(`character.conditions.${cond.key}`)}
+                  {t(`character.conditions.${key}`)}
                 </span>
               </m.button>
               <button
                 type="button"
                 aria-label={t('character.conditions.detail_aria')}
-                onClick={() => setDetailKey(cond.key)}
+                onClick={() => setDetailKey(key)}
                 className="shrink-0 p-3 text-dnd-text-muted hover:text-dnd-gold-bright transition-colors"
               >
                 <Info size={16} />
