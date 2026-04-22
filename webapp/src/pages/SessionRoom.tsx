@@ -239,21 +239,34 @@ export default function SessionRoom() {
 
   return (
     <Layout title={t('session.room_title', { code: live.code })} backTo="/session">
-      <Surface variant="sigil" ornamented>
-        <div className="text-center">
-          <p className="text-xs uppercase tracking-widest text-dnd-gold-dim font-cinzel">
-            {t('session.code_label')}
-          </p>
-          <p className="font-display font-bold text-3xl text-dnd-gold-bright tracking-[0.3em] mt-1">
-            {live.code}
-          </p>
-          {live.title && (
-            <p className="text-sm text-dnd-text-muted font-body italic mt-1">
-              {live.title}
+      {amGm ? (
+        <Surface variant="sigil" ornamented>
+          <div className="text-center">
+            <p className="text-xs uppercase tracking-widest text-dnd-gold-dim font-cinzel">
+              {t('session.code_label')}
             </p>
-          )}
-        </div>
-      </Surface>
+            <p className="font-display font-bold text-3xl text-dnd-gold-bright tracking-[0.3em] mt-1">
+              {live.code}
+            </p>
+            {live.title && (
+              <p className="text-sm text-dnd-text-muted font-body italic mt-1">
+                {live.title}
+              </p>
+            )}
+          </div>
+        </Surface>
+      ) : (
+        <Surface variant="sigil" ornamented>
+          <div className="text-center">
+            <p className="text-xs uppercase tracking-widest text-dnd-gold-dim font-cinzel">
+              {t('session.role_player')}
+            </p>
+            <p className="font-display font-bold text-xl text-dnd-gold-bright mt-1">
+              {live.title || t('session.active_session_banner')}
+            </p>
+          </div>
+        </Surface>
+      )}
 
       <SectionDivider>
         {t('session.players')}
