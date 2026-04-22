@@ -232,57 +232,62 @@ export default function CharacterMain() {
           layoutId={`char-hero-${charId}`}
           className="relative overflow-hidden"
         >
-          {/* AC shield behind number */}
-          <div className="absolute right-3 top-3 opacity-90 pointer-events-none">
-            <ShieldEmblem size={90} />
-            <span className="absolute inset-0 flex flex-col items-center justify-center pb-1">
-              <span className="text-2xl font-display font-black text-dnd-gold-bright leading-none"
-                    style={{ textShadow: '0 1px 3px rgba(0,0,0,0.6)' }}>
-                {char.ac}
-              </span>
-              <span className="text-[9px] font-cinzel uppercase tracking-widest text-dnd-gold-dim leading-none mt-0.5">
-                {t('character.ac.short', { defaultValue: 'CA' })}
-              </span>
-            </span>
-          </div>
-
-          <div className="pr-24">
+          <div>
             <p className="text-sm text-dnd-text-muted font-body italic mb-0.5">{char.class_summary}</p>
             {char.race && (
               <p className="text-xs text-dnd-text-faint font-body">{char.race}</p>
             )}
           </div>
 
-          {/* HP row */}
-          <div className="mt-4 pr-24">
-            <div className="flex items-center justify-between text-sm mb-1.5">
-              <span className="inline-flex items-center gap-1.5 font-mono">
-                <Heart size={14} className="text-[var(--dnd-crimson-bright)]" />
-                <span className="text-dnd-text font-bold">
-                  {char.current_hit_points}/{char.hit_points}
-                </span>
-                {char.temp_hp > 0 && (
-                  <span className="text-[var(--dnd-cobalt-bright)]">(+{char.temp_hp} temp)</span>
-                )}
-              </span>
-              <span className="text-dnd-text-faint font-mono text-xs">{hpPct}%</span>
-            </div>
-            <HPGauge
-              current={char.current_hit_points}
-              max={char.hit_points}
-              temp={char.temp_hp}
-              size="md"
-              segmented
-            />
-          </div>
+          {/* Bars column on the left (HP + XP stacked) — AC shield on the right,
+              vertically centered between them via flex items-center. */}
+          <div className="mt-4 flex items-center gap-3">
+            <div className="flex-1 min-w-0">
+              {/* HP row */}
+              <div>
+                <div className="flex items-center justify-between text-sm mb-1.5">
+                  <span className="inline-flex items-center gap-1.5 font-mono">
+                    <Heart size={14} className="text-[var(--dnd-crimson-bright)]" />
+                    <span className="text-dnd-text font-bold">
+                      {char.current_hit_points}/{char.hit_points}
+                    </span>
+                    {char.temp_hp > 0 && (
+                      <span className="text-[var(--dnd-cobalt-bright)]">(+{char.temp_hp} temp)</span>
+                    )}
+                  </span>
+                  <span className="text-dnd-text-faint font-mono text-xs">{hpPct}%</span>
+                </div>
+                <HPGauge
+                  current={char.current_hit_points}
+                  max={char.hit_points}
+                  temp={char.temp_hp}
+                  size="md"
+                  segmented
+                />
+              </div>
 
-          {/* XP bar — replaces the old XP pill and Speed pill */}
-          <HeroXPBar
-            currentXP={char.experience_points}
-            totalClassLevel={char.total_level}
-            onLevelUpReady={() => navigate(`/char/${charId}/xp`)}
-            className="pr-24"
-          />
+              {/* XP bar — stesso flex-1 → stessa larghezza della HP bar */}
+              <HeroXPBar
+                currentXP={char.experience_points}
+                totalClassLevel={char.total_level}
+                onLevelUpReady={() => navigate(`/char/${charId}/xp`)}
+              />
+            </div>
+
+            {/* AC shield — right-aligned con i bar, centrato verticalmente fra HP e XP */}
+            <div className="shrink-0 relative opacity-90 pointer-events-none">
+              <ShieldEmblem size={90} />
+              <span className="absolute inset-0 flex flex-col items-center justify-center pb-1">
+                <span className="text-2xl font-display font-black text-dnd-gold-bright leading-none"
+                      style={{ textShadow: '0 1px 3px rgba(0,0,0,0.6)' }}>
+                  {char.ac}
+                </span>
+                <span className="text-[9px] font-cinzel uppercase tracking-widest text-dnd-gold-dim leading-none mt-0.5">
+                  {t('character.ac.short', { defaultValue: 'CA' })}
+                </span>
+              </span>
+            </div>
+          </div>
 
           {/* Concentration banner */}
           {char.concentrating_spell_id && (() => {
