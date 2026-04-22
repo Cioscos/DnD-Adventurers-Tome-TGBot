@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel
 
@@ -12,11 +12,55 @@ from pydantic import BaseModel
 # AbilityScore
 # ---------------------------------------------------------------------------
 
+class AppliedModifierRead(BaseModel):
+    """A single equipped-item modifier applied to an ability score."""
+    source: str
+    ability: str
+    kind: str  # "absolute" | "relative"
+    value: int
+    item_id: int
+    model_config = {"from_attributes": True}
+
+
+def _resolve_ability_effective(ability_obj: Any, equipped_items: list[Any]) -> dict:
+    """Build response payload for a single AbilityScore given equipped items.
+
+    Imports stats lazily to avoid circular imports.
+    """
+    from core.game.stats import effective_ability_score
+
+    base_value = ability_obj.value
+    effective, applied = effective_ability_score(
+        ability_obj.name,
+        base_value,
+        equipped_items,
+    )
+    return {
+        "id": ability_obj.id,
+        "name": ability_obj.name,
+        "value": effective,
+        "base_value": base_value,
+        "modifier": (effective - 10) // 2,
+        "modifiers_applied": [
+            {
+                "source": m.source,
+                "ability": m.ability,
+                "kind": m.kind,
+                "value": m.value,
+                "item_id": m.item_id,
+            }
+            for m in applied
+        ],
+    }
+
+
 class AbilityScoreRead(BaseModel):
     id: int
     name: str
-    value: int
-    modifier: int
+    value: int           # effective value (after equipped-item modifiers)
+    base_value: int      # raw value stored on AbilityScore row
+    modifier: int        # derived from effective value
+    modifiers_applied: list[AppliedModifierRead] = []
 
     model_config = {"from_attributes": True}
 

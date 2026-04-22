@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 
 from api.schemas.common import (
     AbilityRead,
@@ -95,6 +95,39 @@ class CharacterFull(BaseModel):
     currency: Optional[CurrencyRead] = None
     abilities: list[AbilityRead] = []
     maps: list[MapRead] = []
+
+    @model_validator(mode="before")
+    @classmethod
+    def _resolve_abilities(cls, data: Any) -> Any:
+        """Resolve each AbilityScore to include effective value + modifiers_applied."""
+        from api.schemas.common import _resolve_ability_effective
+
+        if isinstance(data, dict):
+            # Already a dict — don't re-resolve
+            return data
+
+        # ORM path: mutate a shallow dict representation
+        if not hasattr(data, "ability_scores"):
+            return data
+        equipped = [i for i in getattr(data, "items", []) if i.is_equipped]
+        raw_abilities = list(data.ability_scores)
+        resolved = [_resolve_ability_effective(a, equipped) for a in raw_abilities]
+
+        # Pydantic v2: build a dict from ORM attributes, then override ability_scores
+        as_dict: dict[str, Any] = {}
+        for k in dir(data):
+            if k.startswith("_"):
+                continue
+            try:
+                v = getattr(data, k)
+            except Exception:
+                continue
+            # Skip methods
+            if callable(v):
+                continue
+            as_dict[k] = v
+        as_dict["ability_scores"] = resolved
+        return as_dict
 
     model_config = {"from_attributes": True}
 
