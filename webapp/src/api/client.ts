@@ -228,6 +228,12 @@ export const api = {
       request<DeathSaveRollResult>(`/characters/${id}/death_saves/roll`, {
         method: 'POST',
       }),
+
+    // HP recalc
+    recalcHp: (id: number) =>
+      request<CharacterFull>(`/characters/${id}/hp/recalc`, {
+        method: 'POST',
+      }),
   },
 
   // ---------------------------------------------------------------------------

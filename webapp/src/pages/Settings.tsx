@@ -1,13 +1,15 @@
+import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
-import { Settings2, Languages, Sparkles, Gem, Dices } from 'lucide-react'
+import { Settings2, Languages, Sparkles, Gem, Dices, RefreshCw } from 'lucide-react'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
 import SectionDivider from '@/components/ui/SectionDivider'
+import Sheet from '@/components/ui/Sheet'
 import { haptic } from '@/auth/telegram'
 import { useCharacterStore } from '@/store/characterStore'
 import { useDiceSettings } from '@/store/diceSettings'
@@ -34,6 +36,17 @@ export default function Settings() {
       qc.setQueryData(['character', charId], updated)
       haptic.success()
     },
+  })
+
+  const [showRecalcConfirm, setShowRecalcConfirm] = useState(false)
+
+  const recalcMutation = useMutation({
+    mutationFn: () => api.characters.recalcHp(charId),
+    onSuccess: (updated) => {
+      qc.setQueryData(['character', charId], updated)
+      haptic.success()
+    },
+    onError: () => haptic.error(),
   })
 
   if (!char) return null
@@ -131,6 +144,71 @@ export default function Settings() {
           </m.button>
         </div>
       </Surface>
+
+      <SectionDivider icon={<RefreshCw size={11} />} align="center">
+        {t('character.settings.hp.title')}
+      </SectionDivider>
+
+      <Surface variant="elevated">
+        <div className="space-y-3">
+          <label className="flex items-center justify-between gap-3 cursor-pointer">
+            <div>
+              <p className="font-display font-bold text-dnd-gold-bright">
+                {t('character.settings.hp.auto_calc_toggle')}
+              </p>
+              <p className="text-xs text-dnd-text-muted mt-0.5 font-body italic">
+                {t('character.settings.hp.auto_calc_hint')}
+              </p>
+            </div>
+            <input
+              type="checkbox"
+              checked={(settings.hp_auto_calc as boolean | undefined) !== false}
+              onChange={(e) => {
+                updateMutation.mutate({ ...settings, hp_auto_calc: e.target.checked })
+              }}
+              className="w-5 h-5 shrink-0"
+            />
+          </label>
+
+          <button
+            type="button"
+            onClick={() => setShowRecalcConfirm(true)}
+            className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-dnd-surface border border-[var(--dnd-crimson-bright)]/40 text-[var(--dnd-crimson-bright)] text-sm font-body"
+          >
+            <RefreshCw size={14} />
+            {t('character.settings.hp.recalc')}
+          </button>
+        </div>
+      </Surface>
+
+      <Sheet
+        open={showRecalcConfirm}
+        onClose={() => setShowRecalcConfirm(false)}
+        title={t('character.settings.hp.recalc_confirm_title')}
+      >
+        <div className="space-y-4 p-5">
+          <p className="text-sm font-body">{t('character.settings.hp.recalc_confirm_body')}</p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setShowRecalcConfirm(false)}
+              className="flex-1 px-3 py-2 rounded-xl bg-dnd-surface border border-dnd-border text-sm font-body"
+            >
+              {t('common.cancel')}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                recalcMutation.mutate()
+                setShowRecalcConfirm(false)
+              }}
+              className="flex-1 px-3 py-2 rounded-xl bg-[var(--dnd-crimson-bright)] text-white text-sm font-bold font-display"
+            >
+              {t('common.confirm')}
+            </button>
+          </div>
+        </div>
+      </Sheet>
     </Layout>
   )
 }
