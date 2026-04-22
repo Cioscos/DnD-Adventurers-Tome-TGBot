@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import DndInput from '@/components/DndInput'
 import DndButton from '@/components/DndButton'
+import AbilityModifiersEditor from './AbilityModifiersEditor'
 import {
   ITEM_TYPES,
   DAMAGE_TYPES,
@@ -242,6 +243,12 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
             onChange={(v) => setForm((f) => ({ ...f, tool_type: v }))}
           />
         )}
+
+        {/* === ABILITY MODIFIERS (all types) === */}
+        <AbilityModifiersEditor
+          modifiers={form.ability_modifiers ?? []}
+          onChange={(next) => setForm((f) => ({ ...f, ability_modifiers: next }))}
+        />
 
         {/* Quantity & Weight */}
         <div className="flex gap-2">

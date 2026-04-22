@@ -1,10 +1,36 @@
 /** TypeScript types mirroring the FastAPI Pydantic schemas. */
 
+export type AbilityName =
+  | 'strength'
+  | 'dexterity'
+  | 'constitution'
+  | 'intelligence'
+  | 'wisdom'
+  | 'charisma'
+
+export type AbilityModifierKind = 'absolute' | 'relative'
+
+export interface AbilityModifier {
+  ability: AbilityName
+  kind: AbilityModifierKind
+  value: number
+}
+
+export interface AppliedModifier {
+  source: string
+  ability: AbilityName
+  kind: AbilityModifierKind
+  value: number
+  item_id: number
+}
+
 export interface AbilityScore {
   id: number
-  name: string
+  name: AbilityName | string
   value: number
+  base_value?: number
   modifier: number
+  modifiers_applied?: AppliedModifier[]
 }
 
 export interface ClassResource {
