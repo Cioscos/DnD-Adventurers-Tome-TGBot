@@ -47,3 +47,6 @@ api/__pycache__/
 
 # Claude Code local settings
 .claude/settings.local.json
+
+# Superpowers brainstorming sessions
+.superpowers/
