@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -7,10 +8,12 @@ import {
   BarChart3, Target, Zap, Swords, Coins,
   User, Scroll, Star, CircleDot, Dices,
   NotebookPen, Map, BookOpen, ChevronLeft, Settings, FlaskConical,
+  Footprints,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { api } from '@/api/client'
 import HPGauge from '@/components/ui/HPGauge'
+import HeroXPBar from '@/components/ui/HeroXPBar'
 import Surface from '@/components/ui/Surface'
 import SectionDivider from '@/components/ui/SectionDivider'
 import StatPill from '@/components/ui/StatPill'
@@ -20,6 +23,10 @@ import { ShieldEmblem } from '@/components/ui/Ornament'
 import { haptic } from '@/auth/telegram'
 import { spring, stagger } from '@/styles/motion'
 import { formatCondition } from '@/lib/conditions'
+import { CONDITION_ICONS } from '@/lib/conditions'
+import ConditionDetailModal from '@/pages/conditions/ConditionDetailModal'
+import PassiveAbilityDetailModal from '@/pages/abilities/PassiveAbilityDetailModal'
+import type { Ability } from '@/types'
 
 type MenuItem = {
   key: string
@@ -118,6 +125,9 @@ export default function CharacterMain() {
   const navigate = useNavigate()
   const { t } = useTranslation()
   const qc = useQueryClient()
+
+  const [detailCondKey, setDetailCondKey] = useState<string | null>(null)
+  const [detailAbility, setDetailAbility] = useState<Ability | null>(null)
 
   const { data: char, isLoading, isError } = useQuery({
     queryKey: ['character', charId],
@@ -267,22 +277,12 @@ export default function CharacterMain() {
             />
           </div>
 
-          {/* Meta row */}
-          <div className="flex flex-wrap gap-2 mt-3">
-            <StatPill
-              icon={<Star size={12} />}
-              label="XP"
-              value={char.experience_points}
-              tone="amber"
-              size="sm"
-            />
-            <StatPill
-              label={t('character.identity.speed', { defaultValue: 'Speed' })}
-              value={`${char.speed}ft`}
-              tone="default"
-              size="sm"
-            />
-          </div>
+          {/* XP bar — replaces the old XP pill and Speed pill */}
+          <HeroXPBar
+            currentXP={char.experience_points}
+            totalClassLevel={char.total_level}
+            onLevelUpReady={() => navigate(`/char/${charId}/xp`)}
+          />
 
           {/* Concentration banner */}
           {char.concentrating_spell_id && (() => {
@@ -301,29 +301,53 @@ export default function CharacterMain() {
             )
           })()}
 
-          {/* Passive abilities */}
+          {/* Passive abilities — chip invariate, tap apre modale descrizione */}
           {passiveAbilities.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mt-3 overflow-x-auto scrollbar-hide max-h-14">
               {passiveAbilities.map(a => (
-                <StatPill key={a.id} icon={<Zap size={10} />} value={a.name} tone="gold" size="sm" />
-              ))}
-            </div>
-          )}
-
-          {/* Active conditions */}
-          {activeConditions.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 mt-2 overflow-x-auto scrollbar-hide max-h-14">
-              {activeConditions.map(([key, val]) => (
                 <StatPill
-                  key={key}
-                  icon={<CircleDot size={10} />}
-                  value={formatCondition(key, val, t)}
-                  tone="crimson"
+                  key={a.id}
+                  icon={<Zap size={10} />}
+                  value={a.name}
+                  tone="gold"
                   size="sm"
+                  onClick={() => setDetailAbility(a)}
                 />
               ))}
             </div>
           )}
+
+          {/* Active conditions — icon-only, tap apre ConditionDetailModal */}
+          {activeConditions.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-2 overflow-x-auto scrollbar-hide max-h-14">
+              {activeConditions.map(([key, val]) => {
+                const Icon = CONDITION_ICONS[key] ?? CircleDot
+                return (
+                  <StatPill
+                    key={key}
+                    icon={<Icon size={14} />}
+                    value={formatCondition(key, val, t)}
+                    tone="crimson"
+                    size="sm"
+                    iconOnly
+                    onClick={() => setDetailCondKey(key)}
+                  />
+                )
+              })}
+            </div>
+          )}
+
+          {/* Velocità — icon-only floating bottom-right, tap rivela valore */}
+          <StatPill
+            icon={<Footprints size={14} />}
+            value={`${char.speed} ft`}
+            tone="emerald"
+            size="sm"
+            iconOnly
+            revealOnTap
+            aria-label={`${t('character.identity.speed', { defaultValue: 'Speed' })}: ${char.speed} ft`}
+            className="absolute bottom-3 right-3"
+          />
         </Surface>
 
         {/* Ability scores */}
@@ -341,21 +365,29 @@ export default function CharacterMain() {
               {char.ability_scores.map((score) => {
                 const key = score.name.toLowerCase()
                 const colorCls = ABILITY_COLORS[key] ?? ABILITY_COLORS.charisma
+                const modStr = `${score.modifier >= 0 ? '+' : ''}${score.modifier}`
                 return (
-                  <m.div
+                  <m.button
                     key={score.name}
-                    className={`flex flex-col items-center rounded-lg p-1.5 border bg-gradient-to-b ${colorCls}`}
+                    type="button"
+                    onClick={() => {
+                      haptic.light()
+                      navigate(`/char/${charId}/stats`)
+                    }}
+                    aria-label={`${score.name}: ${score.value}, mod ${modStr}`}
+                    className={`flex flex-col items-center rounded-lg p-1.5 border bg-gradient-to-b cursor-pointer hover:border-dnd-gold transition-colors ${colorCls}`}
                     variants={{ initial: { opacity: 0, y: 8 }, animate: { opacity: 1, y: 0 } }}
                     transition={spring.snappy}
+                    whileTap={{ scale: 0.95 }}
                   >
                     <span className="text-[9px] font-cinzel uppercase tracking-widest opacity-80">
                       {score.name.slice(0, 3)}
                     </span>
                     <span className="text-xl font-display font-black leading-none mt-0.5">{score.value}</span>
                     <span className="text-[11px] font-mono font-bold mt-0.5 px-1.5 py-0.5 rounded-full bg-black/25">
-                      {score.modifier >= 0 ? '+' : ''}{score.modifier}
+                      {modStr}
                     </span>
-                  </m.div>
+                  </m.button>
                 )
               })}
             </m.div>
@@ -404,6 +436,25 @@ export default function CharacterMain() {
           )
         })}
       </div>
+
+      {/* Modals */}
+      {detailCondKey !== null && (
+        <ConditionDetailModal
+          condKey={detailCondKey}
+          exhaustionLevel={
+            typeof (char.conditions as Record<string, unknown>)?.['exhaustion'] === 'number'
+              ? ((char.conditions as Record<string, unknown>)['exhaustion'] as number)
+              : 0
+          }
+          onClose={() => setDetailCondKey(null)}
+        />
+      )}
+      {detailAbility !== null && (
+        <PassiveAbilityDetailModal
+          ability={detailAbility}
+          onClose={() => setDetailAbility(null)}
+        />
+      )}
     </div>
   )
 }
