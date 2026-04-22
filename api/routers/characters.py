@@ -27,6 +27,7 @@ from core.db.models import (
 )
 from core.data.xp_thresholds import xp_to_level
 from core.data.classes import get_resources_for_class, update_resources_for_level
+from core.game.stats import hit_points_for_level
 from api.schemas.character import (
     CharacterCreate,
     CharacterFull,
@@ -320,18 +321,24 @@ async def update_xp(
     body: XPUpdate,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
-) -> Character:
+) -> CharacterFull:
     char = await _get_owned(char_id, user_id, session, full=True)
     if body.set is not None:
         char.experience_points = max(0, body.set)
     elif body.add is not None:
         char.experience_points = max(0, (char.experience_points or 0) + body.add)
 
+    settings = char.settings or {}
+    auto_calc = settings.get("hp_auto_calc", True)
+
+    total_hp_gained = 0
+
     # For single-class characters, keep class level in sync with XP-derived level.
     if len(char.classes) == 1:
         cls = char.classes[0]
+        old_level = cls.level
         new_level = xp_to_level(char.experience_points)
-        if new_level != cls.level:
+        if new_level != old_level:
             cls.level = new_level
             update_resources_for_level(cls.class_name, new_level, list(cls.resources), char)
             existing_names = {r.name for r in cls.resources}
@@ -339,7 +346,23 @@ async def update_xp(
                 if res_data["name"] not in existing_names:
                     session.add(ClassResource(class_id=cls.id, **res_data))
 
-    return char
+            if auto_calc and cls.hit_die and new_level > old_level:
+                con_row = next(
+                    (a for a in char.ability_scores if a.name == "constitution"), None
+                )
+                con_mod = (con_row.value - 10) // 2 if con_row else 0
+                for lvl in range(old_level + 1, new_level + 1):
+                    # level 1 was handled at character creation; always use level 2+ formula
+                    total_hp_gained += hit_points_for_level(cls.hit_die, con_mod, max(2, lvl))
+
+    if total_hp_gained > 0:
+        char.hit_points += total_hp_gained
+        char.current_hit_points += total_hp_gained
+
+    result = CharacterFull.model_validate(char)
+    if total_hp_gained > 0:
+        result.hp_gained = total_hp_gained
+    return result
 
 
 # ---------------------------------------------------------------------------

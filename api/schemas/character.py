@@ -73,6 +73,9 @@ class CharacterFull(BaseModel):
     spell_slots_mode: str = "manual"
     concentrating_spell_id: Optional[int] = None
 
+    # Populated only by PATCH /xp when a level-up occurs
+    hp_gained: Optional[int] = None
+
     # JSON fields
     rolls_history: Optional[list] = None
     notes: Optional[dict[str, Any]] = None
