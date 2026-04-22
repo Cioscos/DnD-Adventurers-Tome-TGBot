@@ -134,6 +134,18 @@
       "proficient": "Proficient",
       "roll": "Roll dice"
     },
+    "ability": {
+      "strength_short": "STR",
+      "dexterity_short": "DEX",
+      "constitution_short": "CON",
+      "intelligence_short": "INT",
+      "wisdom_short": "WIS",
+      "charisma_short": "CHA",
+      "breakdown": {
+        "base": "Base",
+        "effective": "Effective"
+      }
+    },
     "spells": {
       "title": "Spells",
       "search": "Search spells...",
@@ -171,7 +183,22 @@
       "chip_duration": "DURATION",
       "chip_damage": "DAMAGE",
       "chip_attack_save": "ATK / SAVE",
-      "chip_higher_level": "HIGHER LVL"
+      "chip_higher_level": "HIGHER LVL",
+      "roll_damage": {
+        "title": "Damage roll: {{name}}",
+        "button": "Roll damage",
+        "casting_level": "Casting level",
+        "decrease_level": "Decrease level",
+        "increase_level": "Increase level",
+        "extra_dice": "Extra dice",
+        "extra_dice_placeholder": "e.g. 2d6",
+        "critical": "Critical (doubles dice)",
+        "roll_button": "Roll",
+        "full_damage": "Full",
+        "half_damage": "Half",
+        "close": "Close",
+        "reroll": "Roll again"
+      }
     },
     "slots": {
       "title": "Spell Slots",
@@ -180,7 +207,10 @@
       "total": "Total",
       "available": "Available",
       "reset_all": "Reset all",
-      "add_level": "Add slot level"
+      "add_level": "Add slot level",
+      "gem_aria": "Level {{level}} slot {{index}}/{{total}} {{state}}",
+      "state_used": "used",
+      "state_available": "available"
     },
     "dice": {
       "title": "Roll Dice",
@@ -298,6 +328,7 @@
       "level_abbr": "Lv.",
       "level_up_available": "Level up available! Go to the Class page to assign the level.",
       "single_class_synced": "Class level updates automatically with XP.",
+      "hp_gained_toast": "+{{hp}} HP",
       "bar": {
         "level_label": "LVL {{level}}",
         "progress": "{{current}} / {{threshold}}",
@@ -397,6 +428,21 @@
         "dmg_psychic": "Psychic",
         "dmg_thunder": "Thunder",
         "dmg_other": "Other"
+      },
+      "item": {
+        "modifiers": {
+          "title": "Ability modifiers",
+          "add": "Add modifier",
+          "empty": "No modifiers",
+          "ability": "Ability",
+          "kind_label": "Kind",
+          "kind": {
+            "absolute": "=",
+            "relative": "±"
+          },
+          "value": "Value",
+          "remove": "Remove modifier"
+        }
       },
       "attack": "Attack",
       "equip": "Equip",
