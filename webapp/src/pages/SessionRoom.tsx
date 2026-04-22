@@ -253,6 +253,12 @@ export default function SessionRoom() {
     return map
   }, [live])
 
+  const senderLabel = (m: SessionMessage): string => {
+    if (m.sender_display_name === '__GM__' || (m.role === 'game_master' && !m.sender_display_name))
+      return t('session.game_master')
+    return m.sender_display_name ?? t('session.unknown_sender')
+  }
+
   const amGm = !!live && live.gm_user_id === myUserId
 
   if (isLoading) {
@@ -381,7 +387,7 @@ export default function SessionRoom() {
                 >
                   {!mine && (
                     <p className="text-[10px] uppercase tracking-wider opacity-70 mb-0.5 font-cinzel">
-                      {m.role === 'game_master' ? t('session.game_master') : `#${m.user_id}`}
+                      {senderLabel(m)}
                     </p>
                   )}
                   <p className="whitespace-pre-wrap break-words">{m.body}</p>
