@@ -297,7 +297,13 @@
       "xp_to_next": "XP al prossimo livello",
       "level_abbr": "Liv.",
       "level_up_available": "Livello disponibile! Vai nella pagina Classe per distribuire il livello.",
-      "single_class_synced": "Il livello della classe viene aggiornato automaticamente con gli XP."
+      "single_class_synced": "Il livello della classe viene aggiornato automaticamente con gli XP.",
+      "bar": {
+        "level_label": "LIV {{level}}",
+        "progress": "{{current}} / {{threshold}}",
+        "level_up": "LEVEL UP",
+        "max": "MAX"
+      }
     },
     "notes": {
       "title": "Note",
@@ -425,7 +431,10 @@
       "description_label": "Descrizione",
       "max_uses_label": "Usi massimi",
       "restoration_label": "Ripristino",
-      "edit": "Modifica"
+      "edit": "Modifica",
+      "detail": {
+        "no_description": "Nessuna descrizione disponibile"
+      }
     },
     "multiclass": {
       "title": "Classe",
@@ -481,6 +490,11 @@
       "ranger": "Ranger",
       "sorcerer": "Stregone",
       "warlock": "Warlock"
+    }
+  },
+  "layout": {
+    "nav": {
+      "go_to": "Vai a {{page}}"
     }
   },
   "session": {

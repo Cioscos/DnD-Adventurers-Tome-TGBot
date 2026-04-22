@@ -1,9 +1,10 @@
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { ChevronLeft } from 'lucide-react'
 import { m } from 'framer-motion'
 import { useSwipeNavigation, getGroupInfo } from '@/hooks/useSwipeNavigation'
 import { spring } from '@/styles/motion'
+import { haptic } from '@/auth/telegram'
 
 interface LayoutProps {
   title: string
@@ -18,6 +19,7 @@ export default function Layout({ title, children, backTo, group, page }: LayoutP
   const { t } = useTranslation()
   const swipe = useSwipeNavigation(group, page)
   const info = getGroupInfo(group, page)
+  const { id } = useParams<{ id: string }>()
 
   const handleBack = () => {
     if (backTo) navigate(backTo)
@@ -56,14 +58,34 @@ export default function Layout({ title, children, backTo, group, page }: LayoutP
           const prevKey = info.index > 0 ? info.pages[info.index - 1] : null
           const currKey = info.pages[info.index]
           const nextKey = info.index < info.total - 1 ? info.pages[info.index + 1] : null
+
+          const goToPrev = () => {
+            if (prevKey && id) {
+              haptic.light()
+              navigate(`/char/${id}/${prevKey}`, { replace: true })
+            }
+          }
+          const goToNext = () => {
+            if (nextKey && id) {
+              haptic.light()
+              navigate(`/char/${id}/${nextKey}`, { replace: true })
+            }
+          }
+
           return (
             <div className="flex items-center justify-center gap-1.5 mt-2 text-xs overflow-x-auto scrollbar-hide font-body">
               {prevKey && (
                 <>
-                  <span className="text-dnd-text-muted opacity-70 whitespace-nowrap"
-                        style={{ filter: 'blur(0.5px)' }}>
+                  <m.button
+                    type="button"
+                    onClick={goToPrev}
+                    whileTap={{ scale: 0.95 }}
+                    aria-label={t('layout.nav.go_to', { page: t(`character.menu.${prevKey}`) })}
+                    className="text-dnd-text-muted opacity-70 whitespace-nowrap px-1.5 py-0.5 rounded hover:filter-none hover:text-dnd-gold-bright hover:opacity-100 transition-colors"
+                    style={{ filter: 'blur(0.5px)' }}
+                  >
                     {t(`character.menu.${prevKey}`)}
-                  </span>
+                  </m.button>
                   <span className="text-dnd-gold-dim/50 shrink-0">◈</span>
                 </>
               )}
@@ -73,10 +95,16 @@ export default function Layout({ title, children, backTo, group, page }: LayoutP
               {nextKey && (
                 <>
                   <span className="text-dnd-gold-dim/50 shrink-0">◈</span>
-                  <span className="text-dnd-text-muted opacity-70 whitespace-nowrap"
-                        style={{ filter: 'blur(0.5px)' }}>
+                  <m.button
+                    type="button"
+                    onClick={goToNext}
+                    whileTap={{ scale: 0.95 }}
+                    aria-label={t('layout.nav.go_to', { page: t(`character.menu.${nextKey}`) })}
+                    className="text-dnd-text-muted opacity-70 whitespace-nowrap px-1.5 py-0.5 rounded hover:filter-none hover:text-dnd-gold-bright hover:opacity-100 transition-colors"
+                    style={{ filter: 'blur(0.5px)' }}
+                  >
                     {t(`character.menu.${nextKey}`)}
-                  </span>
+                  </m.button>
                 </>
               )}
             </div>

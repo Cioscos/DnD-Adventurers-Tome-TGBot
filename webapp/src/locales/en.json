@@ -297,7 +297,13 @@
       "xp_to_next": "XP to next level",
       "level_abbr": "Lv.",
       "level_up_available": "Level up available! Go to the Class page to assign the level.",
-      "single_class_synced": "Class level updates automatically with XP."
+      "single_class_synced": "Class level updates automatically with XP.",
+      "bar": {
+        "level_label": "LVL {{level}}",
+        "progress": "{{current}} / {{threshold}}",
+        "level_up": "LEVEL UP",
+        "max": "MAX"
+      }
     },
     "notes": {
       "title": "Notes",
@@ -425,7 +431,10 @@
       "description_label": "Description",
       "max_uses_label": "Max uses",
       "restoration_label": "Restoration",
-      "edit": "Edit"
+      "edit": "Edit",
+      "detail": {
+        "no_description": "No description available"
+      }
     },
     "multiclass": {
       "title": "Class",
@@ -481,6 +490,11 @@
       "ranger": "Ranger",
       "sorcerer": "Sorcerer",
       "warlock": "Warlock"
+    }
+  },
+  "layout": {
+    "nav": {
+      "go_to": "Go to {{page}}"
     }
   },
   "session": {

@@ -49,12 +49,6 @@ export default function ArmorClass() {
 
   if (!char) return null
 
-  const fields = [
-    { key: 'base',   label: t('character.ac.base'),   val: base,   set: setBase,   cur: char.base_armor_class },
-    { key: 'shield', label: t('character.ac.shield'), val: shield, set: setShield, cur: char.shield_armor_class },
-    { key: 'magic',  label: t('character.ac.magic'),  val: magic,  set: setMagic,  cur: char.magic_armor },
-  ]
-
   return (
     <Layout title={t('character.ac.title')} backTo={`/char/${charId}`} group="combat" page="ac">
       {/* Hero AC */}
@@ -96,33 +90,77 @@ export default function ArmorClass() {
         </div>
       </Surface>
 
-      {/* Component editors */}
-      {fields.map((f, idx) => (
-        <m.div
-          key={f.key}
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ ...spring.drift, delay: 0.1 + idx * 0.05 }}
-        >
-          <Surface variant="elevated">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="font-cinzel text-xs uppercase tracking-widest text-dnd-gold-dim">{f.label}</p>
-                <p className="text-3xl font-display font-black text-dnd-gold-bright mt-0.5">{f.cur}</p>
-              </div>
-              <Input
-                type="number"
-                min={0}
-                value={f.val}
-                onChange={f.set}
-                placeholder={String(f.cur)}
-                inputMode="numeric"
-                className="w-28 [&_input]:text-xl [&_input]:font-display [&_input]:font-bold [&_input]:text-center"
-              />
+      {/* Base full-width */}
+      <m.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ ...spring.drift, delay: 0.10 }}
+      >
+        <Surface variant="elevated">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="font-cinzel text-xs uppercase tracking-widest text-dnd-gold-dim">
+                {t('character.ac.base')}
+              </p>
+              <p className="text-4xl font-display font-black text-dnd-gold-bright mt-0.5">
+                {char.base_armor_class}
+              </p>
             </div>
-          </Surface>
-        </m.div>
-      ))}
+            <Input
+              type="number"
+              min={0}
+              value={base}
+              onChange={setBase}
+              placeholder={String(char.base_armor_class)}
+              inputMode="numeric"
+              className="w-32 [&_input]:text-xl [&_input]:font-display [&_input]:font-bold [&_input]:text-center"
+            />
+          </div>
+        </Surface>
+      </m.div>
+
+      {/* Scudo + Magia affiancati in grid 2 colonne */}
+      <m.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ ...spring.drift, delay: 0.15 }}
+        className="grid grid-cols-2 gap-2"
+      >
+        <Surface variant="elevated">
+          <p className="font-cinzel text-[10px] uppercase tracking-widest text-dnd-gold-dim">
+            {t('character.ac.shield')}
+          </p>
+          <p className="text-2xl font-display font-black text-dnd-gold-bright mt-0.5">
+            {char.shield_armor_class}
+          </p>
+          <Input
+            type="number"
+            min={0}
+            value={shield}
+            onChange={setShield}
+            placeholder={String(char.shield_armor_class)}
+            inputMode="numeric"
+            className="mt-2 w-full [&_input]:text-base [&_input]:font-display [&_input]:font-bold [&_input]:text-center"
+          />
+        </Surface>
+        <Surface variant="elevated">
+          <p className="font-cinzel text-[10px] uppercase tracking-widest text-dnd-gold-dim">
+            {t('character.ac.magic')}
+          </p>
+          <p className="text-2xl font-display font-black text-dnd-gold-bright mt-0.5">
+            {char.magic_armor}
+          </p>
+          <Input
+            type="number"
+            min={0}
+            value={magic}
+            onChange={setMagic}
+            placeholder={String(char.magic_armor)}
+            inputMode="numeric"
+            className="mt-2 w-full [&_input]:text-base [&_input]:font-display [&_input]:font-bold [&_input]:text-center"
+          />
+        </Surface>
+      </m.div>
 
       <Button
         variant="primary"
