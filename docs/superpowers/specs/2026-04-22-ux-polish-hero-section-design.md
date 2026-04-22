@@ -66,18 +66,24 @@ Il reveal usa la transizione di framer-motion esistente; width animato, niente p
 
 File: `webapp/src/components/ui/HeroXPBar.tsx`.
 
-Props: `{ currentXP: number, level: number, nextLevelThreshold: number | null, onLevelUpReady: () => void, className?: string }`.
+Props: `{ currentXP: number, totalClassLevel: number, onLevelUpReady: () => void, className?: string }`.
+
+Il componente calcola internamente:
+- `xpLevel = levelFromXp(currentXP)` — il livello "dovuto" secondo XP (importato da `lib/xpThresholds.ts`).
+- `prevThreshold = XP_THRESHOLDS[xpLevel - 1] ?? 0` — soglia del livello corrente.
+- `nextThreshold = XP_THRESHOLDS[xpLevel] ?? null` — soglia del prossimo livello (`null` se liv 20).
+- `levelUpReady = xpLevel > totalClassLevel` — il personaggio ha accumulato XP sufficienti ma non ha ancora consumato il level-up (applicabile soprattutto in multiclasse; per single-class il backend tiene `total_level` sincronizzato e questo è sempre `false`).
+- `progressPct = nextThreshold ? Math.round(((currentXP - prevThreshold) / (nextThreshold - prevThreshold)) * 100) : 100`.
 
 Render:
 - Riga label superiore:
-  - Sinistra: `★ LIV {level}` in oro (usa `t('character.xp.bar.level_label', { level })`).
-  - Destra: se `nextLevelThreshold !== null && currentXP >= nextLevelThreshold` → `<button>` con testo `t('character.xp.bar.level_up')` (shimmer animation via classe Tailwind esistente `animate-shimmer`, gradiente oro chiaro, corner rounding `md`). `onClick={onLevelUpReady}` + `haptic.medium()`. Altrimenti: `<span>` mono con `t('character.xp.bar.progress', { current: currentXP, threshold: nextLevelThreshold })` (usando `.toLocaleString()` lato formatter).
-  - Se `nextLevelThreshold === null` (liv 20): mostra `MAX` in grigio.
+  - Sinistra: `★ LIV {xpLevel}` in oro (usa `t('character.xp.bar.level_label', { level: xpLevel })`).
+  - Destra: se `levelUpReady` → `<button>` con testo `t('character.xp.bar.level_up')` (shimmer via classe Tailwind esistente `animate-shimmer`, gradiente oro chiaro, corner rounding `md`). `onClick={onLevelUpReady}` + `haptic.medium()`. Altrimenti: `<span>` mono con `t('character.xp.bar.progress', { current: currentXP.toLocaleString(), threshold: nextThreshold?.toLocaleString() ?? t('character.xp.bar.max') })`.
 - Barra progresso:
   - `height: 6px`, background `#2a2a2a` (usa var CSS esistente), rounded-full.
-  - Foreground: gradiente `from-dnd-gold-deep to-dnd-gold-bright`, width `min(100, (currentXP / nextLevelThreshold) * 100)%`. Se `threshold === null`: width 100% stile "MAX".
-  - Stato level-up-ready: width 100%, glow intensificato (`box-shadow: 0 0 8px var(--dnd-gold-glow)`).
-- A11y: wrapper con `role="progressbar"`, `aria-valuemin={0}`, `aria-valuemax={nextLevelThreshold ?? currentXP}`, `aria-valuenow={currentXP}`, `aria-label`.
+  - Foreground: gradiente `from-dnd-gold-deep to-dnd-gold-bright`, width `{progressPct}%`. Se `nextThreshold === null`: width 100% stile "MAX".
+  - Stato `levelUpReady`: width 100%, glow intensificato (`box-shadow: 0 0 8px var(--dnd-gold-glow)`).
+- A11y: wrapper con `role="progressbar"`, `aria-valuemin={0}`, `aria-valuemax={nextThreshold ?? currentXP}`, `aria-valuenow={currentXP}`, `aria-label`.
 
 #### 1.3 `PassiveAbilityDetailModal` (nuovo)
 
@@ -97,11 +103,11 @@ Tipo `Ability` importato dai type esistenti del client.
 File: `webapp/src/lib/xpThresholds.ts`.
 
 Esporta:
-- `XP_THRESHOLDS: readonly number[]` — array di 21 elementi (indice 0 non usato, 1-20 soglie D&D 5e come attualmente in `Experience.tsx`).
-- `getXPThresholdForLevel(level: number): number | null` — ritorna `XP_THRESHOLDS[level]` se level 1-19, `null` per level >= 20.
-- `getNextLevelThreshold(currentLevel: number): number | null` — wrapper di comodo.
+- `XP_THRESHOLDS: readonly number[]` — array di 20 elementi (identico a quello attualmente in `Experience.tsx`: indice `i` = soglia richiesta per raggiungere livello `i + 1`; indice `0` è soglia livello 1 = 0).
+- `levelFromXp(xp: number): number` — derivazione del livello attuale dagli XP (capped a 20). Stessa logica di `Experience.tsx:18-25`, spostata qui.
+- `getNextLevelThreshold(currentLevel: number): number | null` — ritorna `XP_THRESHOLDS[currentLevel] ?? null` (null se già a liv 20).
 
-`Experience.tsx` viene aggiornato per importare da qui invece di avere l'array hardcoded locale.
+`Experience.tsx` viene aggiornato per importare da qui e rimuove le sue versioni locali di `XP_THRESHOLDS` e `levelFromXp`.
 
 #### 1.5 `lib/conditions.ts` — estensione
 
@@ -117,11 +123,11 @@ Ordine finale degli elementi nell'hero card:
 
 1. **Header** (invariato): nome + class_summary + race (colonna sinistra) / `ShieldEmblem` CA (top-right, `absolute`).
 2. **HP row** (invariato): `Heart` icon + `current/max` + tempHP, `HPGauge` sotto.
-3. **HeroXPBar** (nuovo): sostituisce la meta row XP pill. Level derivato da `char.level` (o equivalente — verificare in implementazione). `onLevelUpReady` → `navigate(\`/char/${charId}/xp\`)`.
+3. **HeroXPBar** (nuovo): sostituisce la meta row XP pill. Props: `currentXP={char.experience_points}`, `totalClassLevel={char.total_level}`, `onLevelUpReady={() => { haptic.medium(); navigate(\`/char/${charId}/xp\`) }}`. Il componente deriva internamente il livello e lo stato `levelUpReady` come descritto in 1.2.
 4. **Concentration banner** (invariato, condizionale): quando `char.concentrating_spell_id` è set.
 5. **Abilità passive chips** (comportamento invariato visivamente, aggiunto onClick): `<StatPill icon={<Zap/>} value={a.name} tone="gold" size="sm" onClick={() => setDetailAbility(a)} />`. Stato locale `useState<Ability|null>(detailAbility)`. Modale `PassiveAbilityDetailModal` renderizzato in coda condizionale.
 6. **Condizioni chip icon-only** (riscritte): `<StatPill icon={<ConditionIcon/>} value={formatCondition(key, val, t)} tone="crimson" size="sm" iconOnly onClick={() => setDetailCondKey(key)} />`. Icona da `CONDITION_ICONS[key]`. Stato locale `useState<string|null>(detailCondKey)`. Modale `ConditionDetailModal` (esistente) renderizzato in coda condizionale.
-7. **Velocità chip icon-only** (nuovo, floating): `<StatPill icon={<Footprints/>} value={\`${char.speed} ft\`} tone="emerald" size="sm" iconOnly revealOnTap className="absolute bottom-3 right-3" />`. `Surface` ha `position: relative` (confermare in implementazione, l'attuale shield CA è già `absolute right-3 top-3` quindi la Surface ha già `relative`).
+7. **Velocità chip icon-only** (nuovo, floating): `<StatPill icon={<Footprints/>} value={\`${char.speed} ft\`} tone="emerald" size="sm" iconOnly revealOnTap className="absolute bottom-3 right-3" />`. La `Surface` dell'hero ha già `className="relative overflow-hidden"` (verificato in `CharacterMain.tsx`), quindi il positioning funziona senza modifiche alla card.
 
 **Meta row XP+Speed attuale** (righe 271-285): rimossa completamente.
 
@@ -300,8 +306,10 @@ Nessuna chiave nuova per spossatezza (riuso `character.conditions.desc.exhaustio
 
 ### 8. Edge cases
 
-- **Level 20**: `nextLevelThreshold = null` → `HeroXPBar` mostra `MAX` invece di numeri, niente pulsante LEVEL UP, barra al 100% statica.
-- **XP oltre più soglie**: pulsante LEVEL UP appare lo stesso; il flow vero di level-up (Gruppo F/G) gestirà il multi-level.
+- **Level 20** (`xpLevel === 20`, `nextThreshold === null`): `HeroXPBar` mostra `MAX` invece di numeri, niente pulsante LEVEL UP, barra al 100% statica.
+- **XP oltre più soglie** (es. xp = 10000 con totalClassLevel = 3 → xpLevel = 5): `levelUpReady === true`, pulsante LEVEL UP appare. Il flow vero (Gruppo F/G) gestirà il multi-level un livello alla volta.
+- **Single-class character**: `total_level` è tenuto sincronizzato con `xpLevel` dal backend → `levelUpReady` sempre `false`. Il pulsante non appare mai. Coerente con il comportamento auto-level esistente.
+- **Multiclass character con XP pendente** (es. Cleric 3 / Fighter 2, total_level = 5, xp = 14000 → xpLevel = 6, levelUpReady = true): pulsante LEVEL UP visibile; click naviga a `/xp` dove Gruppo F/G gestirà la scelta classe.
 - **Velocità 0** (paralizzato / spossatezza liv 5): reveal mostra `0 ft`. Nessun visual cue speciale (fuori scope).
 - **Abilità senza description**: modale mostra nome + "Nessuna descrizione disponibile".
 - **Conditions array vuoto**: riga non renderizza (invariato).
@@ -333,7 +341,8 @@ Non introduce dipendenze bloccanti su altri gruppi — si può mergare standalon
 - [ ] Tap su un chip condizione apre `ConditionDetailModal` con la condizione corretta.
 - [ ] Tap su un chip abilità passiva apre il nuovo modale con nome e descrizione (o fallback "nessuna descrizione").
 - [ ] Tap su una cella caratteristica naviga a `/stats`.
-- [ ] `HeroXPBar` mostra barra + LIV + numeri `current/threshold`, sostituito da pulsante LEVEL UP quando XP ≥ soglia.
+- [ ] `HeroXPBar` mostra barra + LIV + numeri `current/threshold`. Mostra pulsante LEVEL UP (al posto dei numeri) quando `levelFromXp(xp) > char.total_level` (tipicamente solo in multiclasse con XP pendenti; single-class non lo mostra mai perché sincronizzato).
+- [ ] A livello 20: mostra `MAX` invece di numeri, nessun pulsante LEVEL UP.
 - [ ] Click sul pulsante LEVEL UP naviga a `/xp`.
 - [ ] Breadcrumb prev/next nelle pagine figlie cliccabili, ciascuno naviga alla sibling corrispondente, feedback haptic al tap.
 - [ ] `/conditions`: selettore 0-6 invariato, sotto 6 descrizioni inline, corrente evidenziata con bordo/sfondo oro, altre grigio.
