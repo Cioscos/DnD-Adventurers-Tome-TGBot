@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useMutation } from '@tanstack/react-query'
 import { m } from 'framer-motion'
@@ -24,6 +24,15 @@ export default function SpellDamageSheet({
   const [extraDice, setExtraDice] = useState('')
   const [isCritical, setIsCritical] = useState(false)
   const [result, setResult] = useState<RollDamageResult | null>(null)
+
+  useEffect(() => {
+    if (spell) {
+      setCastingLevel(spell.level)
+      setExtraDice('')
+      setIsCritical(false)
+      setResult(null)
+    }
+  }, [spell?.id])
 
   const mutation = useMutation({
     mutationFn: (body: RollDamageRequest) => {
