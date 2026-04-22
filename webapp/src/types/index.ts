@@ -187,20 +187,25 @@ export interface GameSession {
   participants: SessionParticipant[]
 }
 
+export type HpBucket = 'healthy' | 'lightly_wounded' | 'badly_wounded' | 'dying' | 'dead'
+export type ArmorCategory = 'unarmored' | 'light' | 'medium' | 'heavy'
+
 export interface CharacterLiveSnapshot {
   id: number
   name: string
   race?: string | null
   class_summary: string
   total_level: number
-  hit_points: number
-  current_hit_points: number
-  temp_hp: number
-  ac: number
-  conditions?: Record<string, unknown>
-  death_saves?: Record<string, unknown>
+  hit_points: number | null
+  current_hit_points: number | null
+  temp_hp: number | null
+  ac: number | null
+  conditions?: Record<string, unknown> | null
+  death_saves?: Record<string, unknown> | null
   heroic_inspiration: boolean
   last_roll?: DiceRollResult | null
+  hp_bucket: HpBucket | null
+  armor_category: ArmorCategory | null
 }
 
 export interface GameSessionLive extends GameSession {
@@ -213,4 +218,6 @@ export interface SessionMessage {
   role: SessionRole
   body: string
   sent_at: string
+  recipient_user_id?: number | null
+  sender_display_name?: string | null
 }
