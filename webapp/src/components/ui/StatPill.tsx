@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { m } from 'framer-motion'
 
 interface StatPillProps {
@@ -8,6 +8,18 @@ interface StatPillProps {
   tone?: 'default' | 'gold' | 'arcane' | 'crimson' | 'emerald' | 'cobalt' | 'amber'
   size?: 'sm' | 'md'
   onClick?: () => void
+  /**
+   * Hide `label` and `value`, show only `icon`.
+   * When true, the component becomes focusable (button) with an aria-label.
+   */
+  iconOnly?: boolean
+  /**
+   * When `iconOnly` is true, tapping reveals the value inline for `revealDurationMs`
+   * then returns to icon-only. Tapping again while revealed resets the timer.
+   */
+  revealOnTap?: boolean
+  revealDurationMs?: number
+  'aria-label'?: string
   className?: string
 }
 
@@ -38,21 +50,51 @@ function StatPillInner({
   tone = 'default',
   size = 'md',
   onClick,
+  iconOnly = false,
+  revealOnTap = false,
+  revealDurationMs = 2000,
+  'aria-label': ariaLabelProp,
   className = '',
 }: StatPillProps) {
+  const [revealed, setRevealed] = useState(false)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current)
+    }
+  }, [])
+
+  const handleClick = () => {
+    if (iconOnly && revealOnTap) {
+      setRevealed(true)
+      if (timerRef.current) clearTimeout(timerRef.current)
+      timerRef.current = setTimeout(() => setRevealed(false), revealDurationMs)
+    }
+    onClick?.()
+  }
+
+  const isInteractive = !!onClick || (iconOnly && revealOnTap)
+  const showValue = !iconOnly || revealed
+  const showLabel = !iconOnly && !!label
   const padding = size === 'sm' ? 'px-2 py-1 text-[11px]' : 'px-2.5 py-1 text-xs'
-  const cls = `inline-flex items-center gap-1.5 rounded-full border font-medium font-body ${padding} ${toneClasses(tone)} ${onClick ? 'cursor-pointer' : ''} ${className}`
-  const Component: React.ElementType = onClick ? m.button : m.span
+  const cls = `inline-flex items-center gap-1.5 rounded-full border font-medium font-body ${padding} ${toneClasses(tone)} ${isInteractive ? 'cursor-pointer' : ''} ${className}`
+  const Component: React.ElementType = isInteractive ? m.button : m.span
+
+  const resolvedAriaLabel =
+    ariaLabelProp ??
+    (iconOnly && typeof value === 'string' ? value : undefined)
 
   return (
     <Component
       className={cls}
-      onClick={onClick}
-      whileTap={onClick ? { scale: 0.95 } : undefined}
+      onClick={isInteractive ? handleClick : undefined}
+      whileTap={isInteractive ? { scale: 0.95 } : undefined}
+      aria-label={resolvedAriaLabel}
     >
       {icon && <span className="shrink-0">{icon}</span>}
-      {label && <span className="opacity-70">{label}</span>}
-      <span className="font-mono font-bold">{value}</span>
+      {showLabel && <span className="opacity-70">{label}</span>}
+      {showValue && <span className="font-mono font-bold">{value}</span>}
     </Component>
   )
 }
