@@ -27,6 +27,7 @@ from core.data.classes import (
     get_resources_for_class,
     update_resources_for_level,
 )
+from core.game.stats import hit_points_for_level
 
 router = APIRouter(prefix="/characters", tags=["classes"])
 
@@ -88,6 +89,9 @@ async def add_class(
         if spellcasting_ability is None:
             spellcasting_ability = CLASS_SPELLCASTING.get(body.class_name)
 
+    # Capture before adding the new class — used for auto-HP bootstrap below.
+    is_first_class = len(char.classes) == 0
+
     cls = CharacterClass(
         character_id=char_id,
         class_name=body.class_name,
@@ -102,6 +106,16 @@ async def add_class(
     # Auto-create class resources for predefined classes.
     for res_data in get_resources_for_class(body.class_name, body.level, char):
         session.add(ClassResource(class_id=cls.id, **res_data))
+
+    # Auto-HP bootstrap: only if this is the FIRST class and HP are still 0.
+    settings = char.settings or {}
+    auto_calc = settings.get("hp_auto_calc", True)
+    if is_first_class and char.hit_points == 0 and auto_calc and hit_die:
+        con_row = next((a for a in char.ability_scores if a.name == "constitution"), None)
+        con_mod = (con_row.value - 10) // 2 if con_row else 0
+        hp = hit_points_for_level(hit_die, con_mod, 1)
+        char.hit_points = hp
+        char.current_hit_points = hp
 
     session.expire(char)
     return await _get_owned_full(char_id, user_id, session)
