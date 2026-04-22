@@ -17,6 +17,7 @@ import SpellFilter from '@/pages/spells/SpellFilter'
 import SpellItem from '@/pages/spells/SpellItem'
 import SpellForm, { type SpellFormData } from '@/pages/spells/SpellForm'
 import CastSpellModal from '@/pages/spells/CastSpellModal'
+import SpellDamageSheet from '@/pages/spells/SpellDamageSheet'
 import type { Spell, SpellSlot } from '@/types'
 
 export default function Spells() {
@@ -30,6 +31,7 @@ export default function Spells() {
   const [editingSpell, setEditingSpell] = useState<Spell | null>(null)
   const [expanded, setExpanded] = useState<number | null>(null)
   const [castingSpell, setCastingSpell] = useState<Spell | null>(null)
+  const [rollDamageSpell, setRollDamageSpell] = useState<Spell | null>(null)
   const [concDamage, setConcDamage] = useState('')
   const [concSaveResult, setConcSaveResult] = useState<ConcentrationSaveResult | null>(null)
 
@@ -376,6 +378,7 @@ export default function Spells() {
                     onRemove={() => removeMutation.mutate(spell.id)}
                     concentratingSpellId={concentratingId ?? null}
                     castCantripPending={castCantrip.isPending}
+                    onRollDamage={setRollDamageSpell}
                   />
                 ))}
               </div>
@@ -402,6 +405,12 @@ export default function Spells() {
           isPending={addMutation.isPending || updateMutation.isPending}
         />
       )}
+
+      <SpellDamageSheet
+        charId={charId}
+        spell={rollDamageSpell}
+        onClose={() => setRollDamageSpell(null)}
+      />
 
     </Layout>
   )

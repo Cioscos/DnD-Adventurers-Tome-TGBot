@@ -2,7 +2,7 @@ import React from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Clock, Crosshair, FlaskConical, Timer,
-  Swords, Shield, Pencil, Trash2, Sparkles, Ban,
+  Swords, Shield, Pencil, Trash2, Sparkles, Ban, Dices,
 } from 'lucide-react'
 import type { Spell } from '@/types'
 
@@ -17,6 +17,7 @@ interface SpellItemProps {
   onRemove: () => void
   concentratingSpellId: number | null
   castCantripPending: boolean
+  onRollDamage?: (spell: Spell) => void
 }
 
 function SpellItemInner({
@@ -30,6 +31,7 @@ function SpellItemInner({
   onRemove,
   concentratingSpellId,
   castCantripPending,
+  onRollDamage,
 }: SpellItemProps) {
   const { t } = useTranslation()
   const isConcentrating = concentratingSpellId === spell.id
@@ -154,6 +156,16 @@ function SpellItemInner({
                 {isConcentrating
                   ? t('character.spells.stop_concentration')
                   : t('character.spells.concentration')}
+              </button>
+            )}
+            {isExpanded && spell.damage_dice && onRollDamage && (
+              <button
+                type="button"
+                onClick={() => onRollDamage(spell)}
+                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md bg-dnd-surface border border-dnd-gold-dim/30 text-xs hover:border-dnd-gold transition-colors"
+              >
+                <Dices size={14} className="text-dnd-gold-bright" />
+                {t('character.spells.roll_damage.button')}
               </button>
             )}
             <button

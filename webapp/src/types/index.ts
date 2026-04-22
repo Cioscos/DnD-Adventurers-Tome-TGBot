@@ -247,3 +247,19 @@ export interface SessionMessage {
   recipient_user_id?: number | null
   sender_display_name?: string | null
 }
+
+export interface RollDamageRequest {
+  casting_level?: number
+  extra_dice?: string
+  is_critical?: boolean
+}
+
+export interface RollDamageResult {
+  rolls: number[]
+  total: number
+  half_damage: number
+  damage_type: string | null
+  breakdown: string
+  casting_level: number
+  is_critical: boolean
+}
