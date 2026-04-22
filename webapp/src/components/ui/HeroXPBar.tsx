@@ -42,14 +42,7 @@ export default function HeroXPBar({
   )
 
   return (
-    <div
-      className={`mt-3 ${className}`}
-      role="progressbar"
-      aria-valuemin={0}
-      aria-valuemax={nextThreshold ?? currentXP}
-      aria-valuenow={currentXP}
-      aria-label={t('character.xp.bar.level_label', { level: xpLevel })}
-    >
+    <div className={`mt-3 ${className}`}>
       <div className="flex items-center justify-between gap-2 mb-1.5 text-xs">
         <span className="inline-flex items-center gap-1 text-dnd-gold-bright font-cinzel font-bold">
           <Star size={12} />
@@ -69,7 +62,18 @@ export default function HeroXPBar({
           <span className="font-mono text-dnd-gold">{rightLabel}</span>
         )}
       </div>
-      <div className="h-1.5 bg-dnd-surface border border-dnd-border rounded-full overflow-hidden">
+      <div
+        className="h-1.5 bg-dnd-surface border border-dnd-border rounded-full overflow-hidden"
+        {...(nextThreshold !== null
+          ? {
+              role: 'progressbar' as const,
+              'aria-valuemin': 0,
+              'aria-valuemax': nextThreshold,
+              'aria-valuenow': currentXP,
+              'aria-label': t('character.xp.bar.level_label', { level: xpLevel }),
+            }
+          : { 'aria-label': t('character.xp.bar.max') })}
+      >
         <m.div
           className="h-full bg-gradient-to-r from-dnd-gold-deep to-dnd-gold-bright"
           style={{
