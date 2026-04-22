@@ -19,11 +19,14 @@ from api.schemas.character import CharacterFull
 from api.schemas.common import RollResult
 from api.schemas.spell import (
     ConcentrationUpdate,
+    RollDamageRequest,
+    RollDamageResult,
     SpellCreate,
     SpellRead,
     SpellUpdate,
     SpellUseRequest,
 )
+from api.routers.items import _roll_dice, _DICE_RE
 
 
 class ConcentrationSaveRequest(BaseModel):
@@ -246,4 +249,100 @@ async def concentration_save(
         dc=dc,
         success=success,
         lost_concentration=lost_concentration,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Spell damage roll
+# ---------------------------------------------------------------------------
+
+@router.post(
+    "/{char_id}/spells/{spell_id}/roll_damage",
+    response_model=RollDamageResult,
+)
+async def roll_spell_damage(
+    char_id: int,
+    spell_id: int,
+    body: RollDamageRequest,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> RollDamageResult:
+    char = await _get_owned_full(char_id, user_id, session)
+    spell = next((s for s in char.spells if s.id == spell_id), None)
+    if spell is None:
+        raise HTTPException(status_code=404, detail="Spell not found")
+    if not spell.damage_dice:
+        raise HTTPException(status_code=400, detail="Spell has no damage_dice")
+
+    casting_level = body.casting_level if body.casting_level is not None else spell.level
+    if casting_level < spell.level:
+        raise HTTPException(
+            status_code=400,
+            detail=f"casting_level {casting_level} < spell.level {spell.level}",
+        )
+    if casting_level > 9:
+        raise HTTPException(status_code=400, detail="casting_level must be <= 9")
+
+    # Parse spell.damage_dice using shared regex
+    m = _DICE_RE.match(spell.damage_dice.strip())
+    if not m:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid spell.damage_dice format: {spell.damage_dice!r}",
+        )
+    base_count = int(m.group(1))
+    sides = int(m.group(2))
+    base_bonus = int(m.group(3)) if m.group(3) else 0
+
+    # Apply critical (double dice count, not the flat bonus)
+    dice_count = base_count * 2 if body.is_critical else base_count
+    main_rolls = [random.randint(1, sides) for _ in range(dice_count)]
+
+    # Optional extra_dice
+    extra_rolls: list[int] = []
+    extra_bonus = 0
+    extra_sides = 0
+    if body.extra_dice:
+        em = _DICE_RE.match(body.extra_dice)
+        if em:
+            e_count = int(em.group(1))
+            extra_sides = int(em.group(2))
+            extra_bonus = int(em.group(3)) if em.group(3) else 0
+            extra_dice_count = e_count * 2 if body.is_critical else e_count
+            extra_rolls = [random.randint(1, extra_sides) for _ in range(extra_dice_count)]
+
+    total = sum(main_rolls) + sum(extra_rolls) + base_bonus + extra_bonus
+    half_damage = (total + 1) // 2  # round up half damage (D&D 5e)
+
+    breakdown_parts = [f"{dice_count}d{sides}={main_rolls}"]
+    if extra_rolls:
+        breakdown_parts.append(f"+{len(extra_rolls)}d{extra_sides}={extra_rolls}")
+    if base_bonus:
+        breakdown_parts.append(f"{'+' if base_bonus >= 0 else ''}{base_bonus}")
+    if extra_bonus:
+        breakdown_parts.append(f"{'+' if extra_bonus >= 0 else ''}{extra_bonus}")
+    breakdown = " ".join(breakdown_parts) + f" = {total}"
+
+    # Append to rolls_history if character supports it
+    history_entry = {
+        "type": "spell_damage",
+        "spell_name": spell.name,
+        "rolls": main_rolls + extra_rolls,
+        "total": total,
+        "damage_type": spell.damage_type,
+        "casting_level": casting_level,
+        "is_critical": body.is_critical,
+    }
+    if hasattr(char, "rolls_history") and isinstance(char.rolls_history, list):
+        char.rolls_history.append(history_entry)
+        await session.commit()
+
+    return RollDamageResult(
+        rolls=main_rolls + extra_rolls,
+        total=total,
+        half_damage=half_damage,
+        damage_type=spell.damage_type,
+        breakdown=breakdown,
+        casting_level=casting_level,
+        is_critical=body.is_critical,
     )
