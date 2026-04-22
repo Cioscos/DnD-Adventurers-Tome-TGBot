@@ -516,6 +516,25 @@
     "closed_notice": "La sessione è stata chiusa",
     "not_found": "Sessione non trovata",
     "error_invalid_code": "Il codice deve contenere 6 caratteri",
-    "error_pick_character": "Scegli un personaggio con cui partecipare"
+    "error_pick_character": "Scegli un personaggio con cui partecipare",
+    "unknown_sender": "Sconosciuto",
+    "hp_bucket": {
+      "healthy": "In salute",
+      "lightly_wounded": "Lievemente ferito",
+      "badly_wounded": "Gravemente ferito",
+      "dying": "Morente",
+      "dead": "Morto"
+    },
+    "armor_category": {
+      "unarmored": "Senza armatura",
+      "light": "Armatura leggera",
+      "medium": "Armatura media",
+      "heavy": "Armatura pesante"
+    },
+    "whisper": {
+      "to_gm": "Sussurra al GM",
+      "broadcast": "Tutti",
+      "recipient_prefix": "→ {{name}}"
+    }
   }
 }
