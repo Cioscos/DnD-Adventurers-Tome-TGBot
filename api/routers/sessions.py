@@ -36,6 +36,7 @@ from core.db.models import (
     SessionStatus,
 )
 from core.utils.session_code import generate_session_code
+from core.utils.session_view import hp_bucket, armor_category
 
 logger = logging.getLogger(__name__)
 
@@ -116,24 +117,31 @@ def _touch(session: GameSession) -> None:
 
 async def _load_live_characters(
     char_ids: list[int], db: AsyncSession
-) -> list[CharacterLiveSnapshot]:
+) -> dict[int, dict]:
+    """Return raw snapshot dicts keyed by character id.
+
+    Full (un-redacted) data is returned here; redaction happens per viewer
+    in get_session_live.
+    """
     if not char_ids:
-        return []
+        return {}
     result = await db.execute(
         select(Character)
-        .options(selectinload(Character.classes))
+        .options(
+            selectinload(Character.classes),
+            selectinload(Character.items),
+        )
         .where(Character.id.in_(char_ids))
     )
-    snapshots: list[CharacterLiveSnapshot] = []
+    out: dict[int, dict] = {}
     for char in result.scalars().all():
         last_roll = None
         history = char.rolls_history or []
-        if history:
-            last = history[-1]
-            if isinstance(last, dict):
-                last_roll = last
-        snapshots.append(CharacterLiveSnapshot(
+        if history and isinstance(history[-1], dict):
+            last_roll = history[-1]
+        out[char.id] = dict(
             id=char.id,
+            user_id=char.user_id,
             name=char.name,
             race=char.race,
             class_summary=char.class_summary,
@@ -146,8 +154,10 @@ async def _load_live_characters(
             death_saves=char.death_saves or {},
             heroic_inspiration=bool(char.heroic_inspiration),
             last_roll=last_roll,
-        ))
-    return snapshots
+            hp_bucket=hp_bucket(char),
+            armor_category=armor_category(char),
+        )
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -265,10 +275,55 @@ async def get_session_live(
 ) -> GameSessionLiveRead:
     session = await _load_session(session_id, db)
     _assert_participant(session, user_id)
+
     char_ids = [p.character_id for p in session.participants if p.character_id is not None]
-    snapshots = await _load_live_characters(char_ids, db)
+    raw_map = await _load_live_characters(char_ids, db)
+    viewer_is_gm = (user_id == session.gm_user_id)
+
+    snapshots: list[CharacterLiveSnapshot] = []
+    for raw in raw_map.values():
+        owner_id = raw["user_id"]
+        full = viewer_is_gm or (owner_id == user_id)
+        if full:
+            snapshots.append(CharacterLiveSnapshot(
+                id=raw["id"],
+                name=raw["name"],
+                race=raw["race"],
+                class_summary=raw["class_summary"],
+                total_level=raw["total_level"],
+                hit_points=raw["hit_points"],
+                current_hit_points=raw["current_hit_points"],
+                temp_hp=raw["temp_hp"],
+                ac=raw["ac"],
+                conditions=raw["conditions"],
+                death_saves=raw["death_saves"],
+                heroic_inspiration=raw["heroic_inspiration"],
+                last_roll=raw["last_roll"],
+                hp_bucket=raw["hp_bucket"],
+                armor_category=raw["armor_category"],
+            ))
+        else:
+            snapshots.append(CharacterLiveSnapshot(
+                id=raw["id"],
+                name=raw["name"],
+                race=raw["race"],
+                class_summary=raw["class_summary"],
+                total_level=raw["total_level"],
+                hit_points=None,
+                current_hit_points=None,
+                temp_hp=None,
+                ac=None,
+                conditions=raw["conditions"],
+                death_saves=None,
+                heroic_inspiration=raw["heroic_inspiration"],
+                last_roll=raw["last_roll"],
+                hp_bucket=raw["hp_bucket"],
+                armor_category=raw["armor_category"],
+            ))
+
     if session.status == SessionStatus.ACTIVE:
         _touch(session)
+
     return GameSessionLiveRead(
         id=session.id,
         code=session.code,
