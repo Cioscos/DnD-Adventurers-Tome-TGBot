@@ -12,7 +12,7 @@ from datetime import datetime
 from typing import Annotated, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -36,6 +36,7 @@ from core.db.models import (
     SessionStatus,
 )
 from core.utils.session_code import generate_session_code
+from core.utils.session_view import hp_bucket, armor_category
 
 logger = logging.getLogger(__name__)
 
@@ -116,24 +117,31 @@ def _touch(session: GameSession) -> None:
 
 async def _load_live_characters(
     char_ids: list[int], db: AsyncSession
-) -> list[CharacterLiveSnapshot]:
+) -> dict[int, dict]:
+    """Return raw snapshot dicts keyed by character id.
+
+    Full (un-redacted) data is returned here; redaction happens per viewer
+    in get_session_live.
+    """
     if not char_ids:
-        return []
+        return {}
     result = await db.execute(
         select(Character)
-        .options(selectinload(Character.classes))
+        .options(
+            selectinload(Character.classes),
+            selectinload(Character.items),
+        )
         .where(Character.id.in_(char_ids))
     )
-    snapshots: list[CharacterLiveSnapshot] = []
+    out: dict[int, dict] = {}
     for char in result.scalars().all():
         last_roll = None
         history = char.rolls_history or []
-        if history:
-            last = history[-1]
-            if isinstance(last, dict):
-                last_roll = last
-        snapshots.append(CharacterLiveSnapshot(
+        if history and isinstance(history[-1], dict):
+            last_roll = history[-1]
+        out[char.id] = dict(
             id=char.id,
+            user_id=char.user_id,
             name=char.name,
             race=char.race,
             class_summary=char.class_summary,
@@ -146,8 +154,10 @@ async def _load_live_characters(
             death_saves=char.death_saves or {},
             heroic_inspiration=bool(char.heroic_inspiration),
             last_roll=last_roll,
-        ))
-    return snapshots
+            hp_bucket=hp_bucket(char),
+            armor_category=armor_category(char),
+        )
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -265,10 +275,55 @@ async def get_session_live(
 ) -> GameSessionLiveRead:
     session = await _load_session(session_id, db)
     _assert_participant(session, user_id)
+
     char_ids = [p.character_id for p in session.participants if p.character_id is not None]
-    snapshots = await _load_live_characters(char_ids, db)
+    raw_map = await _load_live_characters(char_ids, db)
+    viewer_is_gm = (user_id == session.gm_user_id)
+
+    snapshots: list[CharacterLiveSnapshot] = []
+    for raw in raw_map.values():
+        owner_id = raw["user_id"]
+        full = viewer_is_gm or (owner_id == user_id)
+        if full:
+            snapshots.append(CharacterLiveSnapshot(
+                id=raw["id"],
+                name=raw["name"],
+                race=raw["race"],
+                class_summary=raw["class_summary"],
+                total_level=raw["total_level"],
+                hit_points=raw["hit_points"],
+                current_hit_points=raw["current_hit_points"],
+                temp_hp=raw["temp_hp"],
+                ac=raw["ac"],
+                conditions=raw["conditions"],
+                death_saves=raw["death_saves"],
+                heroic_inspiration=raw["heroic_inspiration"],
+                last_roll=raw["last_roll"],
+                hp_bucket=raw["hp_bucket"],
+                armor_category=raw["armor_category"],
+            ))
+        else:
+            snapshots.append(CharacterLiveSnapshot(
+                id=raw["id"],
+                name=raw["name"],
+                race=raw["race"],
+                class_summary=raw["class_summary"],
+                total_level=raw["total_level"],
+                hit_points=None,
+                current_hit_points=None,
+                temp_hp=None,
+                ac=None,
+                conditions=raw["conditions"],
+                death_saves=None,
+                heroic_inspiration=raw["heroic_inspiration"],
+                last_roll=raw["last_roll"],
+                hp_bucket=raw["hp_bucket"],
+                armor_category=raw["armor_category"],
+            ))
+
     if session.status == SessionStatus.ACTIVE:
         _touch(session)
+
     return GameSessionLiveRead(
         id=session.id,
         code=session.code,
@@ -341,7 +396,17 @@ async def list_messages(
 ) -> list[SessionMessage]:
     session = await _load_session(session_id, db)
     _assert_participant(session, user_id)
-    stmt = select(SessionMessage).where(SessionMessage.session_id == session_id)
+    stmt = (
+        select(SessionMessage)
+        .where(SessionMessage.session_id == session_id)
+        .where(
+            or_(
+                SessionMessage.recipient_user_id.is_(None),
+                SessionMessage.recipient_user_id == user_id,
+                SessionMessage.user_id == user_id,
+            )
+        )
+    )
     if after_id > 0:
         stmt = stmt.where(SessionMessage.id > after_id)
     stmt = stmt.order_by(SessionMessage.id.asc()).limit(limit)
@@ -361,15 +426,33 @@ async def post_message(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> SessionMessage:
     session = await _load_session(session_id, db)
-    participant = _assert_participant(session, user_id)
+    sender = _assert_participant(session, user_id)
     if session.status != SessionStatus.ACTIVE:
         raise HTTPException(status_code=status.HTTP_410_GONE, detail="Session is closed")
+
+    recipient_id: Optional[int] = body.recipient_user_id
+    if recipient_id is not None:
+        recipient = next((p for p in session.participants if p.user_id == recipient_id), None)
+        if recipient is None:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Recipient not in session")
+        if recipient_id == user_id:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot whisper to yourself")
+        if sender.role != SessionRole.GAME_MASTER and recipient.role != SessionRole.GAME_MASTER:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Whispers are GM-only")
+
+    if sender.role == SessionRole.GAME_MASTER:
+        sender_display_name = "__GM__"
+    else:
+        sender_display_name = sender.display_name or f"#{user_id}"
+
     msg = SessionMessage(
         session_id=session_id,
         user_id=user_id,
-        role=participant.role,
+        role=sender.role,
         body=body.body.strip(),
         sent_at=_now(),
+        recipient_user_id=recipient_id,
+        sender_display_name=sender_display_name,
     )
     db.add(msg)
     _touch(session)

@@ -516,6 +516,25 @@
     "closed_notice": "This session has been closed",
     "not_found": "Session not found",
     "error_invalid_code": "The code must be 6 characters long",
-    "error_pick_character": "Pick a character to play with"
+    "error_pick_character": "Pick a character to play with",
+    "unknown_sender": "Unknown",
+    "hp_bucket": {
+      "healthy": "Healthy",
+      "lightly_wounded": "Lightly wounded",
+      "badly_wounded": "Badly wounded",
+      "dying": "Dying",
+      "dead": "Dead"
+    },
+    "armor_category": {
+      "unarmored": "Unarmored",
+      "light": "Light armor",
+      "medium": "Medium armor",
+      "heavy": "Heavy armor"
+    },
+    "whisper": {
+      "to_gm": "Whisper to GM",
+      "broadcast": "Everyone",
+      "recipient_prefix": "→ {{name}}"
+    }
   }
 }

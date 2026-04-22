@@ -21,6 +21,9 @@ from core.db.models import (
     CharacterHistory,
     ClassResource,
     Currency,
+    GameSession,
+    SessionParticipant,
+    SessionStatus,
 )
 from core.data.xp_thresholds import xp_to_level
 from core.data.classes import get_resources_for_class, update_resources_for_level
@@ -199,6 +202,25 @@ async def delete_character(
     session: Annotated[AsyncSession, Depends(get_db)],
 ) -> None:
     char = await _get_owned(char_id, user_id, session)
+
+    # Auto-leave any active session where this character is pinned as a player.
+    # GM participants have character_id=None so they're never matched here.
+    participant_q = (
+        select(SessionParticipant)
+        .join(GameSession, GameSession.id == SessionParticipant.session_id)
+        .where(
+            SessionParticipant.user_id == user_id,
+            SessionParticipant.character_id == char.id,
+            GameSession.status == SessionStatus.ACTIVE,
+        )
+    )
+    participant = (await session.execute(participant_q)).scalar_one_or_none()
+    if participant is not None:
+        game_session = await session.get(GameSession, participant.session_id)
+        await session.delete(participant)
+        if game_session is not None:
+            game_session.last_activity_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M")
+
     await session.delete(char)
 
 

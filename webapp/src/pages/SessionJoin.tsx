@@ -31,6 +31,8 @@ export default function SessionJoin() {
 
   const effectiveCharId = selectedCharId ?? autoChar?.id ?? null
 
+  const canJoin = code.trim().length === 6 && effectiveCharId !== null
+
   const joinMutation = useMutation({
     mutationFn: () => {
       if (!effectiveCharId) throw new Error('no-char')
@@ -53,14 +55,7 @@ export default function SessionJoin() {
 
   const submit = () => {
     setError(null)
-    if (code.trim().length !== 6) {
-      setError(t('session.error_invalid_code'))
-      return
-    }
-    if (!effectiveCharId) {
-      setError(t('session.error_pick_character'))
-      return
-    }
+    if (!canJoin) return  // UI already prevents this via disabled button
     joinMutation.mutate()
   }
 
@@ -129,6 +124,7 @@ export default function SessionJoin() {
         variant="primary"
         size="lg"
         fullWidth
+        disabled={!canJoin || joinMutation.isPending}
         loading={joinMutation.isPending}
         onClick={submit}
       >

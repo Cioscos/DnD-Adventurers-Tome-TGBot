@@ -480,10 +480,13 @@ export const api = {
       request<SessionMessage[]>(
         `/sessions/${id}/messages${afterId > 0 ? `?after_id=${afterId}` : ''}`,
       ),
-    sendMessage: (id: number, body: string) =>
+    sendMessage: (id: number, body: string, recipientUserId?: number | null) =>
       request<SessionMessage>(`/sessions/${id}/messages`, {
         method: 'POST',
-        body: JSON.stringify({ body }),
+        body: JSON.stringify({
+          body,
+          recipient_user_id: recipientUserId ?? null,
+        }),
       }),
   },
 }
