@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import type { TFunction } from 'i18next'
 import { Crown, Heart, LogOut, Send, Shield, Sparkles, User, XOctagon, Dices } from 'lucide-react'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
@@ -11,15 +12,16 @@ import SectionDivider from '@/components/ui/SectionDivider'
 import { api } from '@/api/client'
 import type { CharacterLiveSnapshot, SessionMessage, SessionParticipant } from '@/types'
 import { haptic, telegramConfirm } from '@/auth/telegram'
+import { formatCondition } from '@/lib/conditions'
 
-function conditionLabels(conditions?: Record<string, unknown>): string[] {
+function conditionLabels(
+  conditions: Record<string, unknown> | null | undefined,
+  t: TFunction,
+): string[] {
   if (!conditions) return []
   return Object.entries(conditions)
     .filter(([, v]) => Boolean(v))
-    .map(([k, v]) => {
-      if (typeof v === 'number' && v > 0) return `${k} ${v}`
-      return k
-    })
+    .map(([key, val]) => formatCondition(key, val, t))
 }
 
 function ParticipantRow({
@@ -27,74 +29,135 @@ function ParticipantRow({
   snapshot,
   isGm,
   isMe,
+  isOwn,
+  onOwnClick,
+  t,
 }: {
   participant: SessionParticipant
   snapshot?: CharacterLiveSnapshot
   isGm: boolean
   isMe: boolean
+  isOwn: boolean
+  onOwnClick: (charId: number) => void
+  t: TFunction
 }) {
-  const { t } = useTranslation()
-  const roleIcon = isGm ? <Crown size={14} className="text-dnd-gold-bright" /> : <User size={14} className="text-dnd-text-muted" />
-  const hpPct = snapshot && snapshot.hit_points > 0
-    ? Math.max(0, Math.min(100, Math.round((snapshot.current_hit_points / snapshot.hit_points) * 100)))
+  const roleIcon = isGm
+    ? <Crown size={14} className="text-dnd-gold-bright" />
+    : <User size={14} className="text-dnd-text-muted" />
+
+  const redacted = !!snapshot && snapshot.hit_points === null
+  const hpPct = snapshot && !redacted && (snapshot.hit_points ?? 0) > 0
+    ? Math.max(0, Math.min(100, Math.round(
+        ((snapshot.current_hit_points ?? 0) / (snapshot.hit_points ?? 1)) * 100
+      )))
     : 0
-  const conds = conditionLabels(snapshot?.conditions)
+  const conds = conditionLabels(snapshot?.conditions, t)
+
+  const bucketColorClass: Record<string, string> = {
+    healthy:          'bg-[var(--dnd-emerald-bright)]',
+    lightly_wounded:  'bg-dnd-gold-bright',
+    badly_wounded:    'bg-[var(--dnd-amber)]',
+    dying:            'bg-[var(--dnd-crimson-bright)]',
+    dead:             'bg-black',
+  }
+
+  const handleClick = () => {
+    if (isOwn && snapshot) onOwnClick(snapshot.id)
+  }
+
+  const Wrapper: any = isOwn ? 'button' : 'div'
+  const wrapperProps = isOwn
+    ? { type: 'button', onClick: handleClick, className: 'w-full text-left cursor-pointer' }
+    : {}
 
   return (
-    <div className={`rounded-lg border p-3 ${isMe ? 'border-dnd-gold bg-dnd-surface-raised' : 'border-dnd-border bg-dnd-surface'}`}>
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 min-w-0">
-          {roleIcon}
-          <p className="font-display font-bold text-dnd-gold-bright truncate">
-            {isGm ? t('session.game_master') : (snapshot?.name ?? participant.display_name ?? `#${participant.user_id}`)}
-          </p>
-          {isMe && (
-            <span className="text-[10px] uppercase tracking-wider text-dnd-text-muted font-cinzel">
-              {t('session.you')}
-            </span>
+    <Wrapper {...wrapperProps}>
+      <div className={`rounded-lg border p-3 transition-colors
+        ${isMe ? 'border-dnd-gold bg-dnd-surface-raised' : 'border-dnd-border bg-dnd-surface'}
+        ${isOwn ? 'hover:border-dnd-gold-bright' : ''}`}>
+
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            {roleIcon}
+            <p className="font-display font-bold text-dnd-gold-bright truncate">
+              {isGm ? t('session.game_master') : (snapshot?.name ?? participant.display_name ?? `#${participant.user_id}`)}
+            </p>
+            {isMe && (
+              <span className="text-[10px] uppercase tracking-wider text-dnd-text-muted font-cinzel">
+                {t('session.you')}
+              </span>
+            )}
+          </div>
+          {snapshot?.heroic_inspiration && (
+            <Sparkles size={14} className="text-dnd-amber animate-shimmer shrink-0" />
           )}
         </div>
-        {snapshot?.heroic_inspiration && (
-          <Sparkles size={14} className="text-dnd-amber animate-shimmer shrink-0" />
+
+        {snapshot && (
+          <>
+            <p className="text-xs text-dnd-text-muted font-body italic mt-0.5">
+              {snapshot.class_summary || '—'}
+            </p>
+
+            {redacted ? (
+              <>
+                <div className="mt-2 flex items-center justify-between text-xs font-cinzel">
+                  <div className="flex items-center gap-1.5">
+                    <Heart size={12} className="text-[var(--dnd-crimson-bright)]" />
+                    <span className="uppercase tracking-wider">
+                      {snapshot.hp_bucket
+                        ? t(`session.hp_bucket.${snapshot.hp_bucket}`)
+                        : t('session.hp_bucket.healthy')}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Shield size={12} className="text-dnd-gold-bright" />
+                    <span className="uppercase tracking-wider">
+                      {t(`session.armor_category.${snapshot.armor_category ?? 'unarmored'}`)}
+                    </span>
+                  </div>
+                </div>
+                <div className="mt-1.5 h-1.5 w-full rounded-full bg-dnd-surface overflow-hidden">
+                  <div className={`h-full ${bucketColorClass[snapshot.hp_bucket ?? 'healthy']}`} style={{ width: '100%' }} />
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="mt-2 grid grid-cols-2 gap-2 text-xs font-mono">
+                  <div className="flex items-center gap-1.5">
+                    <Heart size={12} className="text-[var(--dnd-crimson-bright)]" />
+                    <span>{snapshot.current_hit_points}/{snapshot.hit_points}</span>
+                    {(snapshot.temp_hp ?? 0) > 0 && <span className="text-dnd-arcane-bright">+{snapshot.temp_hp}</span>}
+                  </div>
+                  <div className="flex items-center gap-1.5 justify-end">
+                    <Shield size={12} className="text-dnd-gold-bright" />
+                    <span>{snapshot.ac}</span>
+                  </div>
+                </div>
+                <div className="mt-1.5 h-1.5 w-full rounded-full bg-dnd-surface overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-[var(--dnd-crimson)] via-[var(--dnd-amber)] to-[var(--dnd-emerald-bright)]"
+                    style={{ width: `${hpPct}%` }}
+                  />
+                </div>
+              </>
+            )}
+
+            {conds.length > 0 && (
+              <p className="mt-2 text-[11px] text-[var(--dnd-amber)] font-body">
+                ⚠ {conds.join(', ')}
+              </p>
+            )}
+            {snapshot.last_roll && (
+              <div className="mt-1 text-[11px] text-dnd-text-muted flex items-center gap-1">
+                <Dices size={11} />
+                <span>{snapshot.last_roll.notation} → {snapshot.last_roll.total}</span>
+              </div>
+            )}
+          </>
         )}
       </div>
-
-      {snapshot && (
-        <>
-          <p className="text-xs text-dnd-text-muted font-body italic mt-0.5">
-            {snapshot.class_summary || '—'}
-          </p>
-          <div className="mt-2 grid grid-cols-2 gap-2 text-xs font-mono">
-            <div className="flex items-center gap-1.5">
-              <Heart size={12} className="text-[var(--dnd-crimson-bright)]" />
-              <span>{snapshot.current_hit_points}/{snapshot.hit_points}</span>
-              {snapshot.temp_hp > 0 && <span className="text-dnd-arcane-bright">+{snapshot.temp_hp}</span>}
-            </div>
-            <div className="flex items-center gap-1.5 justify-end">
-              <Shield size={12} className="text-dnd-gold-bright" />
-              <span>{snapshot.ac}</span>
-            </div>
-          </div>
-          <div className="mt-1.5 h-1.5 w-full rounded-full bg-dnd-surface overflow-hidden">
-            <div
-              className="h-full bg-gradient-to-r from-[var(--dnd-crimson)] via-[var(--dnd-amber)] to-[var(--dnd-emerald-bright)]"
-              style={{ width: `${hpPct}%` }}
-            />
-          </div>
-          {conds.length > 0 && (
-            <p className="mt-2 text-[11px] text-[var(--dnd-amber)] font-body">
-              ⚠ {conds.join(', ')}
-            </p>
-          )}
-          {snapshot.last_roll && (
-            <div className="mt-1 text-[11px] text-dnd-text-muted flex items-center gap-1">
-              <Dices size={11} />
-              <span>{snapshot.last_roll.notation} → {snapshot.last_roll.total}</span>
-            </div>
-          )}
-        </>
-      )}
-    </div>
+    </Wrapper>
   )
 }
 
@@ -273,15 +336,23 @@ export default function SessionRoom() {
       </SectionDivider>
 
       <div className="space-y-2">
-        {live.participants.map((p) => (
-          <ParticipantRow
-            key={`${p.user_id}-${p.joined_at}`}
-            participant={p}
-            snapshot={p.character_id ? snapshotsById.get(p.character_id) : undefined}
-            isGm={p.role === 'game_master'}
-            isMe={p.user_id === myUserId}
-          />
-        ))}
+        {live.participants.map((p) => {
+          const isMe = p.user_id === myUserId
+          const snap = p.character_id ? snapshotsById.get(p.character_id) : undefined
+          const isOwn = isMe && !!snap && snap.hit_points !== null
+          return (
+            <ParticipantRow
+              key={`${p.user_id}-${p.joined_at}`}
+              participant={p}
+              snapshot={snap}
+              isGm={p.role === 'game_master'}
+              isMe={isMe}
+              isOwn={isOwn}
+              onOwnClick={(cid) => navigate(`/char/${cid}`)}
+              t={t}
+            />
+          )
+        })}
       </div>
 
       <SectionDivider>
