@@ -281,6 +281,7 @@ export default function CharacterMain() {
             currentXP={char.experience_points}
             totalClassLevel={char.total_level}
             onLevelUpReady={() => navigate(`/char/${charId}/xp`)}
+            className="pr-24"
           />
 
           {/* Concentration banner */}

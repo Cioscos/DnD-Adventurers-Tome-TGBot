@@ -25,6 +25,7 @@ export default function Conditions() {
   const qc = useQueryClient()
   const [exhaustionLevel, setExhaustionLevel] = useState<number | null>(null)
   const [detailKey, setDetailKey] = useState<string | null>(null)
+  const [showExhaustionDetails, setShowExhaustionDetails] = useState(false)
 
   const { data: char } = useQuery({
     queryKey: ['character', charId],
@@ -91,8 +92,13 @@ export default function Conditions() {
             <button
               type="button"
               aria-label={t('character.conditions.detail_aria')}
-              onClick={() => setDetailKey('exhaustion')}
-              className="text-dnd-text-muted hover:text-dnd-gold-bright transition-colors"
+              aria-expanded={showExhaustionDetails}
+              onClick={() => setShowExhaustionDetails((v) => !v)}
+              className={`transition-colors ${
+                showExhaustionDetails
+                  ? 'text-dnd-gold-bright'
+                  : 'text-dnd-text-muted hover:text-dnd-gold-bright'
+              }`}
             >
               <Info size={14} />
             </button>
@@ -124,29 +130,35 @@ export default function Conditions() {
             )
           })}
         </div>
-        {/* Inline level descriptions — current highlighted, others grey */}
-        {(() => {
+        {/* Exhaustion details — intro + 6 level descriptions, toggled by Info button */}
+        {showExhaustionDetails && (() => {
+          const intro = t('character.conditions.desc.exhaustion') as string
           const levels = t('character.conditions.desc.exhaustion_levels', {
             returnObjects: true,
           }) as string[]
           return (
-            <div className="mt-4 space-y-1 text-sm">
-              {levels.map((desc, idx) => {
-                const lvl = idx + 1
-                const isCurrent = lvl === currentExhaustion
-                return (
-                  <div
-                    key={lvl}
-                    className={
-                      isCurrent
-                        ? 'px-3 py-2 rounded-md border-l-2 border-dnd-gold bg-dnd-gold/10 text-dnd-gold-bright'
-                        : 'px-3 py-1.5 text-dnd-text-faint opacity-60'
-                    }
-                  >
-                    {desc}
-                  </div>
-                )
-              })}
+            <div className="mt-4 space-y-2">
+              <p className="text-sm text-dnd-text font-body leading-relaxed">
+                {intro}
+              </p>
+              <div className="space-y-1 text-sm">
+                {levels.map((desc, idx) => {
+                  const lvl = idx + 1
+                  const isCurrent = lvl === currentExhaustion
+                  return (
+                    <div
+                      key={lvl}
+                      className={
+                        isCurrent
+                          ? 'px-3 py-2 rounded-md border-l-2 border-dnd-gold bg-dnd-gold/10 text-dnd-gold-bright'
+                          : 'px-3 py-1.5 text-dnd-text-faint opacity-60'
+                      }
+                    >
+                      {desc}
+                    </div>
+                  )
+                })}
+              </div>
             </div>
           )
         })()}
