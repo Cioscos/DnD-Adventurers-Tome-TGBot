@@ -116,6 +116,7 @@ async def add_class(
         hp = hit_points_for_level(hit_die, con_mod, 1)
         char.hit_points = hp
         char.current_hit_points = hp
+        await session.flush()
 
     session.expire(char)
     return await _get_owned_full(char_id, user_id, session)
