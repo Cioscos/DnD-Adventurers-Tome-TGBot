@@ -12,7 +12,7 @@ from datetime import datetime
 from typing import Annotated, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -396,7 +396,17 @@ async def list_messages(
 ) -> list[SessionMessage]:
     session = await _load_session(session_id, db)
     _assert_participant(session, user_id)
-    stmt = select(SessionMessage).where(SessionMessage.session_id == session_id)
+    stmt = (
+        select(SessionMessage)
+        .where(SessionMessage.session_id == session_id)
+        .where(
+            or_(
+                SessionMessage.recipient_user_id.is_(None),
+                SessionMessage.recipient_user_id == user_id,
+                SessionMessage.user_id == user_id,
+            )
+        )
+    )
     if after_id > 0:
         stmt = stmt.where(SessionMessage.id > after_id)
     stmt = stmt.order_by(SessionMessage.id.asc()).limit(limit)
