@@ -416,15 +416,33 @@ async def post_message(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> SessionMessage:
     session = await _load_session(session_id, db)
-    participant = _assert_participant(session, user_id)
+    sender = _assert_participant(session, user_id)
     if session.status != SessionStatus.ACTIVE:
         raise HTTPException(status_code=status.HTTP_410_GONE, detail="Session is closed")
+
+    recipient_id: Optional[int] = body.recipient_user_id
+    if recipient_id is not None:
+        recipient = next((p for p in session.participants if p.user_id == recipient_id), None)
+        if recipient is None:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Recipient not in session")
+        if recipient_id == user_id:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot whisper to yourself")
+        if sender.role != SessionRole.GAME_MASTER and recipient.role != SessionRole.GAME_MASTER:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Whispers are GM-only")
+
+    if sender.role == SessionRole.GAME_MASTER:
+        sender_display_name = "__GM__"
+    else:
+        sender_display_name = sender.display_name or f"#{user_id}"
+
     msg = SessionMessage(
         session_id=session_id,
         user_id=user_id,
-        role=participant.role,
+        role=sender.role,
         body=body.body.strip(),
         sent_at=_now(),
+        recipient_user_id=recipient_id,
+        sender_display_name=sender_display_name,
     )
     db.add(msg)
     _touch(session)
