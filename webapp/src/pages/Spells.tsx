@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m, AnimatePresence } from 'framer-motion'
-import { FlaskConical, Ban, Sparkles, Gem } from 'lucide-react'
+import { FlaskConical, Ban, Sparkles, ChevronRight } from 'lucide-react'
 import { api, type ConcentrationSaveResult } from '@/api/client'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
@@ -34,6 +34,16 @@ export default function Spells() {
   const [rollDamageSpell, setRollDamageSpell] = useState<Spell | null>(null)
   const [concDamage, setConcDamage] = useState('')
   const [concSaveResult, setConcSaveResult] = useState<ConcentrationSaveResult | null>(null)
+  const [collapsedLevels, setCollapsedLevels] = useState<Set<number>>(new Set())
+
+  const toggleLevel = (level: number) => {
+    setCollapsedLevels((prev) => {
+      const next = new Set(prev)
+      if (next.has(level)) next.delete(level)
+      else next.add(level)
+      return next
+    })
+  }
 
   const { data: char } = useQuery({
     queryKey: ['character', charId],
@@ -320,68 +330,96 @@ export default function Spells() {
           const slot = level > 0 ? spellSlots.find((s) => s.level === level) : undefined
           return (
             <div key={level} className="mb-4">
-              <div
-                className="sticky z-[5] -mx-4 px-5 py-2 flex items-center gap-2 bg-dnd-bg/95 backdrop-blur-sm border-b border-dnd-border/40"
+              <m.button
+                type="button"
+                onClick={() => toggleLevel(level)}
+                className="sticky z-[5] -mx-4 w-[calc(100%+2rem)] px-5 py-2 flex items-center gap-2 bg-dnd-bg/95 backdrop-blur-sm border-b border-dnd-border/40 text-left"
                 style={{ top: '68px' }}
+                aria-expanded={!collapsedLevels.has(level)}
               >
-                <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim flex-1">
-                  {level === 0 ? t('character.spells.cantrip') : `${t('character.spells.level')} ${level}`}
-                </p>
+                <ChevronRight
+                  size={14}
+                  className={`text-dnd-gold-bright transition-transform ${!collapsedLevels.has(level) ? 'rotate-90' : ''}`}
+                />
+                <span className="font-cinzel uppercase tracking-widest text-xs text-dnd-gold-bright flex-1">
+                  {level === 0 ? t('character.spells.cantrip_label') : t('character.spells.level_label', { level })}
+                </span>
+                <span className="text-[10px] text-dnd-text-muted font-mono">
+                  · {t('character.spells.count', { count: byLevel[level].length })}
+                </span>
                 {slot && slot.total > 0 && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] text-dnd-text-faint font-mono tabular-nums">
+                  <>
+                    <span className="ml-2 text-[10px] text-dnd-text-faint font-mono tabular-nums">
                       {slot.used}/{slot.total}
                     </span>
-                    <div className="flex gap-1 items-center flex-wrap">
-                      {Array.from({ length: slot.total }).map((_, i) => {
-                        const isUsed = i < slot.used
-                        return (
-                          <m.button
-                            key={i}
-                            disabled={useSlotMutation.isPending}
-                            onClick={() => {
-                              const newUsed = i < slot.used ? i : i + 1
-                              useSlotMutation.mutate({
-                                slotId: slot.id,
-                                newUsed: Math.min(newUsed, slot.total),
-                              })
-                            }}
-                            className={`w-6 h-6 rounded-full flex items-center justify-center
-                              ${isUsed
-                                ? 'bg-dnd-gold-dim border border-dnd-gold-dim/50'
-                                : 'bg-gradient-to-br from-dnd-arcane to-dnd-arcane-deep border border-dnd-arcane-bright shadow-[0_0_6px_rgba(197,137,232,0.5)]'}
-                              disabled:opacity-40`}
-                            whileTap={{ scale: 0.85 }}
-                            aria-label={`Slot ${i+1} ${isUsed ? 'used' : 'available'}`}
-                          >
-                            {!isUsed && <Gem size={10} className="text-white" />}
-                          </m.button>
-                        )
-                      })}
+                    <div className="flex gap-1 items-center" onClick={(e) => e.stopPropagation()}>
+                      {Array.from({ length: slot.total }).map((_, i) => (
+                        <m.button
+                          key={i}
+                          type="button"
+                          disabled={useSlotMutation.isPending}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            if (i < slot.used) {
+                              haptic.light()
+                              useSlotMutation.mutate({ slotId: slot.id, newUsed: Math.max(0, slot.used - 1) })
+                            } else {
+                              haptic.medium()
+                              useSlotMutation.mutate({ slotId: slot.id, newUsed: Math.min(slot.total, slot.used + 1) })
+                            }
+                          }}
+                          className={`w-6 h-6 rounded-full border-2 transition-all disabled:opacity-40 ${
+                            i < slot.used
+                              ? 'bg-gradient-to-br from-dnd-gold-deep to-dnd-gold-bright border-dnd-gold-bright shadow-[0_0_8px_rgba(244,208,111,0.5)]'
+                              : 'bg-transparent border-dnd-gold-dim/60 hover:border-dnd-gold-bright'
+                          }`}
+                          whileTap={{ scale: 0.85 }}
+                          aria-label={t('character.slots.gem_aria', {
+                            level: slot.level,
+                            index: i + 1,
+                            total: slot.total,
+                            state: i < slot.used
+                              ? t('character.slots.state_used')
+                              : t('character.slots.state_available'),
+                          })}
+                          aria-pressed={i < slot.used}
+                        />
+                      ))}
                     </div>
-                  </div>
+                  </>
                 )}
-              </div>
-              <div className="space-y-1.5 mt-2">
-                {byLevel[level].map((spell) => (
-                  <SpellItem
-                    key={spell.id}
-                    spell={spell}
-                    isExpanded={expanded === spell.id}
-                    onToggle={() => setExpanded(expanded === spell.id ? null : spell.id)}
-                    onCast={() => setCastingSpell(spell)}
-                    onCastCantrip={() => castCantrip.mutate(spell)}
-                    onConcentrationToggle={() =>
-                      concentrationMutation.mutate(concentratingId === spell.id ? null : spell.id)
-                    }
-                    onEdit={() => handleEditSpell(spell)}
-                    onRemove={() => removeMutation.mutate(spell.id)}
-                    concentratingSpellId={concentratingId ?? null}
-                    castCantripPending={castCantrip.isPending}
-                    onRollDamage={setRollDamageSpell}
-                  />
-                ))}
-              </div>
+              </m.button>
+              <AnimatePresence>
+                {!collapsedLevels.has(level) && (
+                  <m.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="space-y-1.5 mt-2">
+                      {byLevel[level].map((spell) => (
+                        <SpellItem
+                          key={spell.id}
+                          spell={spell}
+                          isExpanded={expanded === spell.id}
+                          onToggle={() => setExpanded(expanded === spell.id ? null : spell.id)}
+                          onCast={() => setCastingSpell(spell)}
+                          onCastCantrip={() => castCantrip.mutate(spell)}
+                          onConcentrationToggle={() =>
+                            concentrationMutation.mutate(concentratingId === spell.id ? null : spell.id)
+                          }
+                          onEdit={() => handleEditSpell(spell)}
+                          onRemove={() => removeMutation.mutate(spell.id)}
+                          concentratingSpellId={concentratingId ?? null}
+                          castCantripPending={castCantrip.isPending}
+                          onRollDamage={setRollDamageSpell}
+                        />
+                      ))}
+                    </div>
+                  </m.div>
+                )}
+              </AnimatePresence>
             </div>
           )
         })}
