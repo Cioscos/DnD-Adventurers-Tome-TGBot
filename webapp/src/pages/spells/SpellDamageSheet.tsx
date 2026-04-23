@@ -7,6 +7,12 @@ import { api } from '@/api/client'
 import type { Spell, RollDamageRequest, RollDamageResult } from '@/types'
 import Sheet from '@/components/ui/Sheet'
 import { haptic } from '@/auth/telegram'
+import { useDiceAnimation } from '@/dice/useDiceAnimation'
+import type { DiceKind } from '@/dice/types'
+
+const ALLOWED_DICE_KINDS: DiceKind[] = ['d4', 'd6', 'd8', 'd10', 'd12', 'd20', 'd100']
+const isAllowedDiceKind = (k: string | null | undefined): k is DiceKind =>
+  typeof k === 'string' && (ALLOWED_DICE_KINDS as string[]).includes(k)
 
 interface SpellDamageSheetProps {
   charId: number
@@ -34,12 +40,21 @@ export default function SpellDamageSheet({
     }
   }, [spell?.id])
 
+  const dice = useDiceAnimation()
+
   const mutation = useMutation({
     mutationFn: (body: RollDamageRequest) => {
       if (!spell) throw new Error('no spell')
       return api.spells.rollDamage(charId, spell.id, body)
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
+      if (isAllowedDiceKind(data.main_kind)) {
+        const groups = [{ kind: data.main_kind, results: data.main_rolls }]
+        if (isAllowedDiceKind(data.extra_kind) && data.extra_rolls.length > 0) {
+          groups.push({ kind: data.extra_kind, results: data.extra_rolls })
+        }
+        await dice.play({ groups, interGroupMs: 150 })
+      }
       haptic.success()
       setResult(data)
     },

@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react'
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
 import ModalProvider from './components/ModalProvider'
 import DiceAnimationProvider from './dice/DiceAnimationProvider'
+import DiceOverlay from './components/DiceOverlay'
 import Skeleton from './components/Skeleton'
 
 // Lazy-loaded pages
@@ -75,6 +76,7 @@ export default function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
           </Suspense>
+          <DiceOverlay />
         </DiceAnimationProvider>
       </ModalProvider>
     </HashRouter>

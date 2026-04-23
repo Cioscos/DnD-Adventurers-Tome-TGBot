@@ -13,6 +13,7 @@ import DiceIcon from '@/components/ui/DiceIcon'
 import RollResultModal, { type RollResult } from '@/components/RollResultModal'
 import { haptic } from '@/auth/telegram'
 import { stagger } from '@/styles/motion'
+import { useDiceAnimation } from '@/dice/useDiceAnimation'
 
 const ABILITIES = ['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'] as const
 
@@ -34,6 +35,7 @@ export default function SavingThrows() {
   const charId = Number(id)
   const { t } = useTranslation()
   const qc = useQueryClient()
+  const dice = useDiceAnimation()
   const [rollResult, setRollResult] = useState<{ result: RollResult; title: string } | null>(null)
 
   const { data: char } = useQuery({
@@ -53,7 +55,8 @@ export default function SavingThrows() {
 
   const rollMutation = useMutation({
     mutationFn: (ability: string) => api.characters.rollSavingThrow(charId, ability),
-    onSuccess: (result, ability) => {
+    onSuccess: async (result, ability) => {
+      await dice.play({ groups: [{ kind: 'd20', results: [result.die] }] })
       setRollResult({
         result,
         title: `${t('character.saves.title')} — ${t(`character.stats.${ability}`)}`,

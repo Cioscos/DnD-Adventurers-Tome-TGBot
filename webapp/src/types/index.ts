@@ -276,4 +276,8 @@ export interface RollDamageResult {
   breakdown: string
   casting_level: number
   is_critical: boolean
+  main_kind: string
+  main_rolls: number[]
+  extra_kind: string | null
+  extra_rolls: number[]
 }

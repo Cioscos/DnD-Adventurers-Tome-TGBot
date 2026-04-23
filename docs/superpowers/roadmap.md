@@ -2,7 +2,7 @@
 
 **Sorgente originale:** `istruzioni.md` (radice del repo, gitignorato).
 **Ultima revisione:** 2026-04-23.
-**Stato globale:** Gruppi A, B, F, G completati e mergeati; C, D, E, H pending.
+**Stato globale:** Gruppi A, B, C, D, F, G completati e mergeati; E, H pending.
 
 Questo documento è la mappa maestra dei sottoprogetti. Ogni gruppo è un ciclo indipendente `brainstorming → spec → plan → implementazione → PR`. Lo scope, le dipendenze e l'ordine consigliato sono sotto.
 
@@ -14,8 +14,8 @@ Questo documento è la mappa maestra dei sottoprogetti. Ogni gruppo è un ciclo 
 |---|---|---|---|---|
 | A | UX polish hero section | §5 integrale + §1.1 (solo XP bar) | ✅ Done (PR #67 merged → main) | `feat/ux-polish-hero-section` |
 | B | Meccaniche personaggio | §1.1 (meno XP bar) + §1.2 | ✅ Done (PR #68 merged → main) | `feat/character-mechanics-gruppo-b` |
-| C | Rework concentrazione | §1.4 + §1.5 | ⬜ Pending | — |
-| D | Widget dadi overlay | §1.3 + §1.6 | ⬜ Pending | — |
+| C | Rework concentrazione | §1.4 + §1.5 | ✅ Done (PR #72 merged → main) | `feat/concentration-gruppo-c` |
+| D | Widget dadi overlay | §1.3 + §1.6 | ✅ Done (PR #XX merged → main) | `feat/dice-overlay-gruppo-d` |
 | E | Privacy identità | §1.7 + §4 | 🟡 Parziale (base già fatto pre-roadmap) | — |
 | F | XP + Level-up button | §1.8 | ✅ Done (PR #69 merged → main) | `feat/xp-level-up-gruppo-f` |
 | G | Multiclasse | §2 (tutto) | ✅ Done (PR #70 merged → main) | `feat/multiclass-gruppo-g` |
@@ -96,7 +96,7 @@ Questo documento è la mappa maestra dei sottoprogetti. Ogni gruppo è un ciclo 
 
 ---
 
-## Gruppo C — Rework concentrazione ⬜
+## Gruppo C — Rework concentrazione ✅
 
 **Sezioni coperte:** `§1.4 Menù Punti Ferita` + `§1.5 Menù Incantesimi` (parte concentrazione).
 
@@ -281,7 +281,7 @@ Questo documento è la mappa maestra dei sottoprogetti. Ogni gruppo è un ciclo 
 Fondazioni → feature grosse → integrazioni:
 
 ```
-✅ A → ✅ B → ✅ F → ✅ G → C → D → E completion → H
+✅ A → ✅ B → ✅ F → ✅ G → ✅ C → ✅ D → E completion → H
 ```
 
 **Razionale:**

@@ -10,6 +10,7 @@ import type {
   Ability,
   CharacterFull,
   CharacterSummary,
+  ConcentrationSaveResult,
   Currency,
   DiceRollResult,
   GameSession,

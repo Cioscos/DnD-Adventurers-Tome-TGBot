@@ -12,6 +12,7 @@ import StatPill from '@/components/ui/StatPill'
 import ScrollArea from '@/components/ScrollArea'
 import RollResultModal, { type RollResult } from '@/components/RollResultModal'
 import { haptic } from '@/auth/telegram'
+import { useDiceAnimation } from '@/dice/useDiceAnimation'
 
 const SKILLS: { key: string; ability: string }[] = [
   { key: 'acrobatics',     ability: 'dexterity' },
@@ -59,6 +60,7 @@ export default function Skills() {
   const charId = Number(id)
   const { t } = useTranslation()
   const qc = useQueryClient()
+  const dice = useDiceAnimation()
   const [rollResult, setRollResult] = useState<{ result: RollResult; title: string } | null>(null)
 
   const { data: char } = useQuery({
@@ -78,7 +80,8 @@ export default function Skills() {
 
   const rollMutation = useMutation({
     mutationFn: (skillName: string) => api.characters.rollSkill(charId, skillName),
-    onSuccess: (result, skillName) => {
+    onSuccess: async (result, skillName) => {
+      await dice.play({ groups: [{ kind: 'd20', results: [result.die] }] })
       setRollResult({
         result,
         title: t(`character.skills.${skillName}`),
