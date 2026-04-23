@@ -15,7 +15,7 @@ Questo documento è la mappa maestra dei sottoprogetti. Ogni gruppo è un ciclo 
 | A | UX polish hero section | §5 integrale + §1.1 (solo XP bar) | ✅ Done (PR #67 merged → main) | `feat/ux-polish-hero-section` |
 | B | Meccaniche personaggio | §1.1 (meno XP bar) + §1.2 | ✅ Done (PR #68 merged → main) | `feat/character-mechanics-gruppo-b` |
 | C | Rework concentrazione | §1.4 + §1.5 | ✅ Done (PR #72 merged → main) | `feat/concentration-gruppo-c` |
-| D | Widget dadi overlay | §1.3 + §1.6 | ✅ Done (PR #XX merged → main) | `feat/dice-overlay-gruppo-d` |
+| D | Widget dadi overlay | §1.3 + §1.6 | ✅ Done (PR #73 merged → main) | `feat/dice-overlay-gruppo-d` |
 | E | Privacy identità | §1.7 + §4 | 🟡 Parziale (base già fatto pre-roadmap) | — |
 | F | XP + Level-up button | §1.8 | ✅ Done (PR #69 merged → main) | `feat/xp-level-up-gruppo-f` |
 | G | Multiclasse | §2 (tutto) | ✅ Done (PR #70 merged → main) | `feat/multiclass-gruppo-g` |
