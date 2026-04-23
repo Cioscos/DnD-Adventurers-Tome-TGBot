@@ -60,6 +60,9 @@ def roll_concentration_save(
     """
     dc = max(10, damage // 2)
 
+    # Raw CON modifier (equipped-item bonuses intentionally ignored here to
+    # preserve the pre-existing /concentration/save behavior). Swap to
+    # effective_con_mod(char) if item bonuses should apply.
     con_score = next((s for s in char.ability_scores if s.name == "constitution"), None)
     con_mod = con_score.modifier if con_score else 0
 
