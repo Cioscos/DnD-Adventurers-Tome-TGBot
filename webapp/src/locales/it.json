@@ -307,7 +307,8 @@
       "placeholder_personality_traits": "Descrivi i tuoi tratti...",
       "placeholder_ideals": "Descrivi i tuoi ideali...",
       "placeholder_bonds": "Descrivi i tuoi legami...",
-      "placeholder_flaws": "Descrivi i tuoi difetti..."
+      "placeholder_flaws": "Descrivi i tuoi difetti...",
+      "private_badge": "Info private"
     },
     "inspiration": {
       "title": "Ispirazione Eroica",
@@ -558,6 +559,11 @@
         "recalc": "Ricalcola HP dalla formula",
         "recalc_confirm_title": "Ricalcola HP",
         "recalc_confirm_body": "Questa azione ricalcolerà gli HP massimi del personaggio in base alle classi, ai livelli e al modificatore di Costituzione attuali. Continuare?"
+      },
+      "privacy": {
+        "title": "Privacy",
+        "show_private_label": "Mostra info private a GM e altri player",
+        "show_private_hint": "Se attivo, personalità, ideali, legami, difetti e background saranno visibili durante la sessione di gioco."
       }
     },
     "create": {
@@ -643,6 +649,16 @@
       "to_gm": "Sussurra al GM",
       "broadcast": "Tutti",
       "recipient_prefix": "→ {{name}}"
+    },
+    "identity": {
+      "title": "Identità",
+      "fisicita": "Fisicità",
+      "cultura": "Cultura",
+      "personalita": "Personalità",
+      "private_hidden": "Info private nascoste",
+      "no_data": "Nessuna informazione disponibile",
+      "loading": "Caricamento…",
+      "error": "Errore nel caricamento"
     }
   }
 }
