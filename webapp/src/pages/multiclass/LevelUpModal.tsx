@@ -100,7 +100,7 @@ export default function LevelUpModal({ char, xpLevel, onClose }: LevelUpModalPro
           </div>
 
           {/* Preview unlocks */}
-          <Surface variant="flat" className="space-y-4 p-4">
+          <Surface variant="flat" className="space-y-5 p-5">
             <p className="text-[10px] font-cinzel uppercase tracking-[0.3em] text-dnd-gold-dim text-center">
               {t('character.multiclass.level_up.preview_next_levels')}
             </p>
@@ -109,7 +109,7 @@ export default function LevelUpModal({ char, xpLevel, onClose }: LevelUpModalPro
                 {t('character.multiclass.level_up.progression_missing')}
               </p>
             ) : (
-              nextLevels.map((targetLevel) => {
+              nextLevels.map((targetLevel, idx) => {
                 const curr = entriesForClass[targetLevel - 1]
                 const prev = entriesForClass[targetLevel - 2] ?? null
                 const pbChanged = prev && curr.proficiency_bonus !== prev.proficiency_bonus
@@ -124,15 +124,25 @@ export default function LevelUpModal({ char, xpLevel, onClose }: LevelUpModalPro
                   })
                 }
                 return (
-                  <div key={targetLevel} className="flex gap-3 items-start">
-                    <div className="w-10 text-center">
-                      <p className="text-xs text-dnd-gold-dim font-cinzel">Liv</p>
-                      <p className="font-display font-black text-2xl text-dnd-gold-bright leading-none">
+                  <div
+                    key={targetLevel}
+                    className={`flex gap-4 items-start ${idx > 0 ? 'pt-4 border-t border-dnd-border/50' : ''}`}
+                  >
+                    {/* Level badge */}
+                    <div className="flex-shrink-0 w-14 h-14 rounded-xl bg-gradient-gold flex flex-col items-center justify-center shadow-engrave">
+                      <span className="text-[9px] font-cinzel uppercase tracking-widest text-dnd-ink/70 leading-none">
+                        Liv
+                      </span>
+                      <span className="font-display font-black text-2xl text-dnd-ink leading-none mt-0.5">
                         {targetLevel}
-                      </p>
+                      </span>
                     </div>
-                    <div className="flex-1 space-y-1">
-                      <p className="text-sm text-dnd-text font-body">{curr.features || '—'}</p>
+
+                    {/* Unlocks */}
+                    <div className="flex-1 min-w-0 space-y-2 pt-1">
+                      <p className="text-sm text-dnd-text font-body leading-relaxed break-words">
+                        {curr.features || '—'}
+                      </p>
                       {pbChanged && (
                         <p className="text-xs text-dnd-gold font-mono">
                           {t('character.multiclass.level_up.proficiency_change', {
