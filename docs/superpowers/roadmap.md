@@ -2,7 +2,7 @@
 
 **Sorgente originale:** `istruzioni.md` (radice del repo, gitignorato).
 **Ultima revisione:** 2026-04-23.
-**Stato globale:** Gruppo A completato e mergeato; Gruppo B in fase di verifica manuale; C-H pending.
+**Stato globale:** Gruppi A e B completati e mergeati; C-H pending.
 
 Questo documento è la mappa maestra dei sottoprogetti. Ogni gruppo è un ciclo indipendente `brainstorming → spec → plan → implementazione → PR`. Lo scope, le dipendenze e l'ordine consigliato sono sotto.
 
@@ -13,7 +13,7 @@ Questo documento è la mappa maestra dei sottoprogetti. Ogni gruppo è un ciclo 
 | # | Gruppo | Sezioni `istruzioni.md` | Status | Branch |
 |---|---|---|---|---|
 | A | UX polish hero section | §5 integrale + §1.1 (solo XP bar) | ✅ Done (PR #67 merged → main) | `feat/ux-polish-hero-section` |
-| B | Meccaniche personaggio | §1.1 (meno XP bar) + §1.2 | 🟡 In-progress (verifica manuale) | `feat/character-mechanics-gruppo-b` |
+| B | Meccaniche personaggio | §1.1 (meno XP bar) + §1.2 | ✅ Done (PR #68 merged → main) | `feat/character-mechanics-gruppo-b` |
 | C | Rework concentrazione | §1.4 + §1.5 | ⬜ Pending | — |
 | D | Widget dadi overlay | §1.3 + §1.6 | ⬜ Pending | — |
 | E | Privacy identità | §1.7 + §4 | 🟡 Parziale (base già fatto pre-roadmap) | — |
@@ -58,7 +58,7 @@ Questo documento è la mappa maestra dei sottoprogetti. Ogni gruppo è un ciclo 
 
 ---
 
-## Gruppo B — Meccaniche personaggio 🟡
+## Gruppo B — Meccaniche personaggio ✅
 
 **Sezioni coperte:** `§1.1 Meccaniche di Gioco` (meno XP bar già fatto in A) + `§1.2 Slot Incantesimi`.
 
@@ -91,10 +91,8 @@ Questo documento è la mappa maestra dei sottoprogetti. Ogni gruppo è un ciclo 
 
 **Dipendenze:** nessuna sulla parte implementata. Gruppo F estenderà il bottone LEVEL UP (già presente in HeroXPBar dal Gruppo A) per collegarlo al vero flow level-up. Gruppo G estenderà il level-up flow con la modale multiclasse — il backend di B è già pronto per questo (`total_base_hp` accetta multiclasse).
 
-**Stato pending:**
-- Verifica manuale end-to-end in corso dall'utente.
-- Bug fix già applicati durante verifica: `c54d0b3` (auto-HP persistence), `9f628fd` (accessory type), `171bc53` (Spells page collapsible).
-- Dopo verifica OK: `npm run build:prod` → commit → push → PR.
+**Stato:** ✅ Mergeato in main via PR #68 (merge commit `f7b73b6`).
+- Bug fix applicati durante verifica: `c54d0b3` (auto-HP persistence), `9f628fd` (accessory type), `171bc53` (Spells page collapsible).
 
 ---
 
@@ -283,7 +281,7 @@ Questo documento è la mappa maestra dei sottoprogetti. Ogni gruppo è un ciclo 
 Fondazioni → feature grosse → integrazioni:
 
 ```
-✅ A → 🟡 B (in corso) → F → G (richiede F + dati classi) → C → D → E completion → H
+✅ A → ✅ B → F → G (richiede F + dati classi) → C → D → E completion → H
 ```
 
 **Razionale:**
