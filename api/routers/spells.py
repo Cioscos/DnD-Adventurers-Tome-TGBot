@@ -291,6 +291,9 @@ async def roll_spell_damage(
         char.rolls_history.append(history_entry)
         await session.commit()
 
+    main_kind = f"d{sides}"
+    extra_kind = f"d{extra_sides}" if extra_rolls else None
+
     return RollDamageResult(
         rolls=main_rolls + extra_rolls,
         total=total,
@@ -298,5 +301,9 @@ async def roll_spell_damage(
         damage_type=spell.damage_type,
         breakdown=breakdown,
         casting_level=casting_level,
-        is_critical=body.is_critical,
+        is_critical=bool(body.is_critical),
+        main_kind=main_kind,
+        main_rolls=main_rolls,
+        extra_kind=extra_kind,
+        extra_rolls=extra_rolls,
     )

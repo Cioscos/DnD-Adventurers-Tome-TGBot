@@ -119,4 +119,9 @@ class RollDamageResult(BaseModel):
     breakdown: str
     casting_level: int
     is_critical: bool
+    # --- new fields for 3D animation ---
+    main_kind: str           # e.g. "d6"
+    main_rolls: list[int]    # only main dice (not extras)
+    extra_kind: str | None = None   # "d4" or None
+    extra_rolls: list[int] = []     # [] if no extra_dice
     model_config = {"from_attributes": True}
