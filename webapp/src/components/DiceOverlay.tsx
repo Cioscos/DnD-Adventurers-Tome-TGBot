@@ -174,6 +174,7 @@ export default function DiceOverlay() {
   const toggleOpen = useCallback(() => {
     haptic.light()
     setOpen((o) => !o)
+    setPool({})
   }, [])
 
   if (!visible) return null
@@ -280,8 +281,8 @@ export default function DiceOverlay() {
         <m.button
           type="button"
           onClick={dismissResults}
-          className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[55]
-                     max-w-xs w-[calc(100%-2rem)]
+          className="fixed bottom-24 left-4 right-4 mx-auto z-[55]
+                     max-w-xs
                      rounded-2xl bg-dnd-surface-raised/95 backdrop-blur-md
                      border border-dnd-gold-dim shadow-parchment-xl
                      px-4 py-3 text-left"
@@ -318,8 +319,8 @@ export default function DiceOverlay() {
           type="button"
           role="alert"
           onClick={dismissError}
-          className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[55]
-                     max-w-xs w-[calc(100%-2rem)]
+          className="fixed bottom-24 left-4 right-4 mx-auto z-[55]
+                     max-w-xs
                      rounded-2xl bg-dnd-surface-raised/95 backdrop-blur-md
                      border border-dnd-crimson shadow-parchment-xl
                      px-4 py-3 text-center font-body text-sm text-dnd-crimson-bright"
