@@ -528,7 +528,8 @@
         "cancel": "Annulla",
         "error_server": "Errore nel server, riprova.",
         "new_tag": "NUOVA",
-        "remove_new": "Rimuovi"
+        "remove_new": "Rimuovi",
+        "classes_label": "Classi del personaggio"
       }
     },
     "settings": {

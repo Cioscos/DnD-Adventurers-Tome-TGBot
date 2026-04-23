@@ -528,7 +528,8 @@
         "cancel": "Cancel",
         "error_server": "Server error, try again.",
         "new_tag": "NEW",
-        "remove_new": "Remove"
+        "remove_new": "Remove",
+        "classes_label": "Character classes"
       }
     },
     "settings": {

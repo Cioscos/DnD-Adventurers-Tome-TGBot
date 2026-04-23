@@ -180,7 +180,7 @@ export default function EditClassesModal({ char, targetLevel, onClose }: Props) 
         animate={{ y: 0, opacity: 1 }}
         className="w-full max-w-xl max-h-[90vh] overflow-y-auto"
       >
-        <Surface variant="tome" ornamented className="space-y-5 p-5">
+        <Surface variant="tome" ornamented className="space-y-6 p-6">
           <div className="text-center">
             <h2 className="font-display text-2xl font-black text-dnd-gold-bright uppercase tracking-widest">
               {t('character.multiclass.edit.title')}
@@ -208,6 +208,9 @@ export default function EditClassesModal({ char, targetLevel, onClose }: Props) 
 
           {/* Entries */}
           <div className="space-y-3">
+            <p className="text-[10px] font-cinzel uppercase tracking-[0.3em] text-dnd-gold-dim text-center">
+              {t('character.multiclass.edit.classes_label')}
+            </p>
             {entries.map((e) => (
               <Surface key={e.tempId} variant="elevated" className="flex items-center gap-4 !py-3 !px-4">
                 <div className="flex-1 min-w-0">
@@ -324,8 +327,8 @@ export default function EditClassesModal({ char, targetLevel, onClose }: Props) 
             </Surface>
           )}
 
-          {/* Footer */}
-          <div className="grid grid-cols-2 gap-3">
+          {/* Footer — visually separated */}
+          <div className="pt-5 border-t border-dnd-border/50 grid grid-cols-2 gap-3">
             <Button variant="ghost" size="md" fullWidth onClick={onClose}>
               {t('character.multiclass.edit.cancel')}
             </Button>
