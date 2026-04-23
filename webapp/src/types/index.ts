@@ -299,3 +299,30 @@ export interface RollDamageResult {
   extra_kind: string | null
   extra_rolls: number[]
 }
+
+export interface SessionFeedItem {
+  type: 'message' | 'event'
+  timestamp: string
+
+  // message
+  message_id?: number | null
+  user_id?: number | null
+  display_name?: string | null
+  role?: string | null
+  body?: string | null
+  recipient_user_id?: number | null
+
+  // event
+  event_id?: number | null
+  character_id?: number | null
+  character_name?: string | null
+  owner_user_id?: number | null
+  event_type?: string | null
+  description?: string | null
+  op?: string | null
+}
+
+export interface SessionFeedResponse {
+  items: SessionFeedItem[]
+  has_more: boolean
+}
