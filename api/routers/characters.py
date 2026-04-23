@@ -67,15 +67,22 @@ _SKILL_ABILITY: dict[str, str] = {
 
 
 def _now() -> str:
-    return datetime.utcnow().strftime("%Y-%m-%d %H:%M")
+    return datetime.utcnow().isoformat(timespec="seconds")
 
 
-def _add_history(session, char_id: int, event_type: str, description: str) -> None:
+def _add_history(
+    session,
+    char_id: int,
+    event_type: str,
+    description: str,
+    meta: dict | None = None,
+) -> None:
     session.add(CharacterHistory(
         character_id=char_id,
         timestamp=_now(),
         event_type=event_type,
         description=description,
+        meta=meta,
     ))
 
 
@@ -220,7 +227,7 @@ async def delete_character(
         game_session = await session.get(GameSession, participant.session_id)
         await session.delete(participant)
         if game_session is not None:
-            game_session.last_activity_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M")
+            game_session.last_activity_at = _now()
 
     await session.delete(char)
 

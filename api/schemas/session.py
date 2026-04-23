@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -112,3 +112,32 @@ class IdentityView(BaseModel):
     bonds: Optional[str] = None
     flaws: Optional[str] = None
     show_private: bool = False
+
+
+class SessionFeedItem(BaseModel):
+    """Single item in the mixed chat+history feed."""
+
+    type: Literal["message", "event"]
+    timestamp: str
+
+    # message-only
+    message_id: Optional[int] = None
+    user_id: Optional[int] = None
+    display_name: Optional[str] = None
+    role: Optional[str] = None
+    body: Optional[str] = None
+    recipient_user_id: Optional[int] = None
+
+    # event-only
+    event_id: Optional[int] = None
+    character_id: Optional[int] = None
+    character_name: Optional[str] = None
+    owner_user_id: Optional[int] = None
+    event_type: Optional[str] = None
+    description: Optional[str] = None
+    op: Optional[str] = None
+
+
+class SessionFeedResponse(BaseModel):
+    items: list[SessionFeedItem]
+    has_more: bool = False

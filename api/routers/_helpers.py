@@ -40,7 +40,7 @@ def _append_concentration_history(
     )
     session.add(CharacterHistory(
         character_id=char_id,
-        timestamp=datetime.utcnow().strftime("%Y-%m-%d %H:%M"),
+        timestamp=datetime.utcnow().isoformat(timespec="seconds"),
         event_type="concentration_save",
         description=desc,
     ))

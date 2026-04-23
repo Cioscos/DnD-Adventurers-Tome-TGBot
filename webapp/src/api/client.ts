@@ -22,6 +22,7 @@ import type {
   ParticipantIdentity,
   RollDamageRequest,
   RollDamageResult,
+  SessionFeedResponse,
   SessionMessage,
   Spell,
   SpellSlot,
@@ -503,6 +504,19 @@ export const api = {
       request<ParticipantIdentity>(
         `/sessions/${encodeURIComponent(code)}/participants/${userId}/identity`
       ),
+    getFeed: (
+      code: string,
+      opts?: { since?: string; before?: string; limit?: number }
+    ) => {
+      const params = new URLSearchParams()
+      if (opts?.since) params.set('since', opts.since)
+      if (opts?.before) params.set('before', opts.before)
+      if (opts?.limit) params.set('limit', String(opts.limit))
+      const q = params.toString()
+      return request<SessionFeedResponse>(
+        `/sessions/${encodeURIComponent(code)}/feed${q ? `?${q}` : ''}`
+      )
+    },
   },
 }
 

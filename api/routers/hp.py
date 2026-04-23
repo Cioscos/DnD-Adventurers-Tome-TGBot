@@ -44,15 +44,22 @@ router = APIRouter(prefix="/characters", tags=["hp"])
 
 
 def _now() -> str:
-    return datetime.utcnow().strftime("%Y-%m-%d %H:%M")
+    return datetime.utcnow().isoformat(timespec="seconds")
 
 
-def _add_history(session, char_id: int, event_type: str, description: str) -> None:
+def _add_history(
+    session,
+    char_id: int,
+    event_type: str,
+    description: str,
+    meta: dict | None = None,
+) -> None:
     session.add(CharacterHistory(
         character_id=char_id,
         timestamp=_now(),
         event_type=event_type,
         description=description,
+        meta=meta,
     ))
 
 
@@ -108,7 +115,8 @@ async def update_hp(
         old = char.current_hit_points
         char.current_hit_points = max(0, char.current_hit_points - amount)
         _add_history(session, char.id, "hp_change",
-                     f"Danni: -{body.value} HP ({old} → {char.current_hit_points})")
+                     f"Danni: -{body.value} HP ({old} → {char.current_hit_points})",
+                     meta={"op": "DAMAGE"})
 
         # Auto concentration save — only if still conscious and concentrating
         if (
@@ -121,7 +129,8 @@ async def update_hp(
         old = char.current_hit_points
         char.current_hit_points = min(char.hit_points, char.current_hit_points + body.value)
         _add_history(session, char.id, "hp_change",
-                     f"Cura: +{body.value} HP ({old} → {char.current_hit_points})")
+                     f"Cura: +{body.value} HP ({old} → {char.current_hit_points})",
+                     meta={"op": "HEAL"})
 
     elif body.op == HPOp.SET_MAX:
         old = char.hit_points
@@ -129,13 +138,15 @@ async def update_hp(
         # Clamp current to new max
         char.current_hit_points = min(char.current_hit_points, char.hit_points)
         _add_history(session, char.id, "hp_change",
-                     f"HP max impostati: {old} → {char.hit_points}")
+                     f"HP max impostati: {old} → {char.hit_points}",
+                     meta={"op": "SET_MAX"})
 
     elif body.op == HPOp.SET_CURRENT:
         old = char.current_hit_points
         char.current_hit_points = max(0, min(char.hit_points, body.value))
         _add_history(session, char.id, "hp_change",
-                     f"HP correnti impostati: {old} → {char.current_hit_points}")
+                     f"HP correnti impostati: {old} → {char.current_hit_points}",
+                     meta={"op": "SET_CURRENT"})
 
     elif body.op == HPOp.SET_TEMP:
         char.temp_hp = max(0, body.value)
@@ -399,7 +410,8 @@ async def recalc_hp(
         char.current_hit_points = min(char.current_hit_points, new_max)
 
     _add_history(session, char.id, "hp_change",
-                 f"HP ricalcolati da formula: {old_max} → {new_max}")
+                 f"HP ricalcolati da formula: {old_max} → {new_max}",
+                 meta={"op": "SET_MAX"})
 
     await session.commit()
     await session.refresh(char)

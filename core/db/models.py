@@ -500,6 +500,7 @@ class CharacterHistory(Base):
     timestamp: Mapped[str] = mapped_column(String(20), nullable=False)
     event_type: Mapped[str] = mapped_column(String(50), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
+    meta: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
 
 
 # ---------------------------------------------------------------------------

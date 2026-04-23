@@ -2,7 +2,7 @@
 
 **Sorgente originale:** `istruzioni.md` (radice del repo, gitignorato).
 **Ultima revisione:** 2026-04-23.
-**Stato globale:** Gruppi A, B, C, D, E, F, G completati e mergeati; H pending.
+**Stato globale:** Gruppi A, B, C, D, E, F, G, H completati e mergeati.
 
 Questo documento è la mappa maestra dei sottoprogetti. Ogni gruppo è un ciclo indipendente `brainstorming → spec → plan → implementazione → PR`. Lo scope, le dipendenze e l'ordine consigliato sono sotto.
 
@@ -19,7 +19,7 @@ Questo documento è la mappa maestra dei sottoprogetti. Ogni gruppo è un ciclo 
 | E | Privacy identità | §1.7 + §4 | ✅ Done (PR #74 merged → main) | `feat/privacy-identity-gruppo-e` |
 | F | XP + Level-up button | §1.8 | ✅ Done (PR #69 merged → main) | `feat/xp-level-up-gruppo-f` |
 | G | Multiclasse | §2 (tutto) | ✅ Done (PR #70 merged → main) | `feat/multiclass-gruppo-g` |
-| H | Chat/cronologia integrata | §3 | ⬜ Pending | — |
+| H | Chat/cronologia integrata | §3 | ✅ Done (PR #XX merged → main) | `feat/chat-history-gruppo-h` |
 
 ---
 
@@ -281,7 +281,7 @@ Questo documento è la mappa maestra dei sottoprogetti. Ogni gruppo è un ciclo 
 Fondazioni → feature grosse → integrazioni:
 
 ```
-✅ A → ✅ B → ✅ F → ✅ G → ✅ C → ✅ D → ✅ E → H
+✅ A → ✅ B → ✅ F → ✅ G → ✅ C → ✅ D → ✅ E → ✅ H
 ```
 
 **Razionale:**

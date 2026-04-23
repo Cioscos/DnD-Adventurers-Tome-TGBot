@@ -24,12 +24,15 @@ from api.schemas.session import (
     GameSessionRead,
     IdentityView,
     SessionCreateRequest,
+    SessionFeedItem,
+    SessionFeedResponse,
     SessionJoinRequest,
     SessionMessageCreate,
     SessionMessageRead,
 )
 from core.db.models import (
     Character,
+    CharacterHistory,
     GameSession,
     SessionMessage,
     SessionParticipant,
@@ -45,6 +48,53 @@ router = APIRouter(prefix="/sessions", tags=["sessions"])
 
 
 _MAX_CODE_RETRIES = 10
+
+
+_SESSION_FEED_EVENT_TYPES: set[str] = {
+    "hp_change",
+    "rest",
+    "skill_roll",
+    "saving_throw",
+    "attack_roll",
+    "death_save",
+    "condition_change",
+    "concentration_save",
+    "hit_dice",
+}
+
+
+def _redact_event_description(
+    event: CharacterHistory,
+    character_name: str,
+    viewer_user_id: int,
+    owner_user_id: int,
+    is_gm: bool,
+) -> str:
+    # Owner or GM → raw description.
+    if viewer_user_id == owner_user_id or is_gm:
+        return event.description
+
+    # Only hp_change is redacted.
+    if event.event_type != "hp_change":
+        return event.description
+
+    meta = event.meta or {}
+    op = str(meta.get("op") or "").upper()
+
+    if op == "HEAL":
+        return f"{character_name} si è curato"
+    if op in ("SET_CURRENT", "SET_MAX", "SET_TEMP"):
+        return f"{character_name} ha modificato i PF"
+    if op == "DAMAGE":
+        return event.description
+
+    # Legacy fallback (meta missing): best-effort sniff on description.
+    desc_lower = event.description.lower()
+    if "cura" in desc_lower or "heal" in desc_lower:
+        return f"{character_name} si è curato"
+    if "danni" in desc_lower or "danno" in desc_lower or "damage" in desc_lower:
+        return event.description
+    return f"{character_name} ha modificato i PF"
 
 
 def _now() -> str:
@@ -526,3 +576,131 @@ async def get_participant_identity(
         flaws=(personality.get("flaws") or None) if show_private else None,
         show_private=show_private,
     )
+
+
+@router.get(
+    "/{code}/feed",
+    response_model=SessionFeedResponse,
+)
+async def get_session_feed(
+    code: str,
+    caller_user_id: Annotated[int, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    since: Annotated[Optional[str], Query()] = None,
+    before: Annotated[Optional[str], Query()] = None,
+    limit: Annotated[int, Query(ge=1, le=500)] = 100,
+) -> SessionFeedResponse:
+    if since is not None and before is not None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Use either 'since' or 'before', not both",
+        )
+
+    session = await _load_session_by_code(code, db)
+    _assert_participant(session, caller_user_id)
+
+    is_gm = session.gm_user_id == caller_user_id
+    session_start = session.created_at
+
+    char_ids: list[int] = []
+    char_meta: dict[int, tuple[int, str]] = {}
+    for p in session.participants:
+        if p.character_id is not None:
+            char_ids.append(p.character_id)
+
+    if char_ids:
+        result = await db.execute(
+            select(Character.id, Character.user_id, Character.name).where(
+                Character.id.in_(char_ids)
+            )
+        )
+        for cid, owner, name in result.all():
+            char_meta[cid] = (owner, name)
+
+    # Messages
+    msg_stmt = select(SessionMessage).where(
+        SessionMessage.session_id == session.id,
+        SessionMessage.sent_at >= session_start,
+    )
+    if since:
+        msg_stmt = msg_stmt.where(SessionMessage.sent_at > since)
+    if before:
+        msg_stmt = msg_stmt.where(SessionMessage.sent_at < before)
+    msg_stmt = msg_stmt.order_by(SessionMessage.sent_at.asc(), SessionMessage.id.asc())
+    msg_result = await db.execute(msg_stmt)
+    messages = list(msg_result.scalars().all())
+
+    # Events
+    events: list[CharacterHistory] = []
+    if char_ids:
+        ev_stmt = select(CharacterHistory).where(
+            CharacterHistory.character_id.in_(char_ids),
+            CharacterHistory.timestamp >= session_start,
+            CharacterHistory.event_type.in_(_SESSION_FEED_EVENT_TYPES),
+        )
+        if since:
+            ev_stmt = ev_stmt.where(CharacterHistory.timestamp > since)
+        if before:
+            ev_stmt = ev_stmt.where(CharacterHistory.timestamp < before)
+        ev_stmt = ev_stmt.order_by(CharacterHistory.timestamp.asc(), CharacterHistory.id.asc())
+        ev_result = await db.execute(ev_stmt)
+        events = list(ev_result.scalars().all())
+
+    items: list[SessionFeedItem] = []
+
+    for m in messages:
+        if m.recipient_user_id is not None:
+            if not (
+                caller_user_id == m.user_id
+                or caller_user_id == m.recipient_user_id
+                or is_gm
+            ):
+                continue
+        sender_role = "game_master" if m.user_id == session.gm_user_id else "player"
+        items.append(SessionFeedItem(
+            type="message",
+            timestamp=m.sent_at,
+            message_id=m.id,
+            user_id=m.user_id,
+            display_name=m.sender_display_name,
+            role=sender_role,
+            body=m.body,
+            recipient_user_id=m.recipient_user_id,
+        ))
+
+    for e in events:
+        owner_id, char_name = char_meta.get(e.character_id, (None, f"#{e.character_id}"))
+        if owner_id is None:
+            continue
+        redacted = _redact_event_description(e, char_name, caller_user_id, owner_id, is_gm)
+        meta_op = None
+        if e.meta and isinstance(e.meta, dict):
+            op_val = e.meta.get("op")
+            if isinstance(op_val, str):
+                meta_op = op_val
+        items.append(SessionFeedItem(
+            type="event",
+            timestamp=e.timestamp,
+            event_id=e.id,
+            character_id=e.character_id,
+            character_name=char_name,
+            owner_user_id=owner_id,
+            event_type=e.event_type,
+            description=redacted,
+            op=meta_op,
+        ))
+
+    def _sort_key(it: SessionFeedItem):
+        sec = it.message_id if it.type == "message" else (it.event_id or 0)
+        return (it.timestamp, 0 if it.type == "message" else 1, sec or 0)
+
+    items.sort(key=_sort_key)
+
+    has_more = len(items) > limit
+    if has_more:
+        if since is not None:
+            items = items[:limit]      # earliest-N for since cursor
+        else:
+            items = items[-limit:]     # latest-N for before or no-param
+
+    return SessionFeedResponse(items=items, has_more=has_more)
