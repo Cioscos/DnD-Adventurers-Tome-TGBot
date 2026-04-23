@@ -90,6 +90,7 @@ export default function Multiclass() {
   const classLevelSum = classes.reduce((s, c) => s + c.level, 0)
   const targetLevel = levelFromXp(char.experience_points ?? 0)
   const levelUpAvailable = classes.length > 0 && targetLevel > classLevelSum
+  const canAddClass = classes.length === 0 || levelUpAvailable
 
   return (
     <Layout title={t('character.multiclass.title')} backTo={`/char/${charId}`} group="character" page="class">
@@ -115,6 +116,8 @@ export default function Multiclass() {
           variant="primary"
           size="md"
           onClick={() => setShowAddClass(true)}
+          disabled={!canAddClass}
+          title={!canAddClass ? t('character.multiclass.add_class_requires_level') : undefined}
           icon={<Plus size={16} />}
           haptic="medium"
         >
@@ -212,6 +215,7 @@ export default function Multiclass() {
           onAdd={(form) => addClass.mutate(form)}
           onCancel={() => setShowAddClass(false)}
           isPending={addClass.isPending}
+          lockLevelTo={classes.length > 0 ? 1 : undefined}
         />
       )}
 

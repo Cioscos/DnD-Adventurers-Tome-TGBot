@@ -508,6 +508,7 @@
       "restore_resource": "Ripristina",
       "auto_resources_hint": "Le risorse standard saranno create automaticamente",
       "edit_classes": "Modifica classe",
+      "add_class_requires_level": "Guadagna un livello per aggiungere un'altra classe",
       "level_up": {
         "title": "Sali di livello",
         "subtitle": "Scegli la classe per il livello {{level}}",
