@@ -69,11 +69,13 @@ export default function DiceOverlay() {
       })
       setPool({})
       setOpen(false)
-      if (charId) qc.invalidateQueries({ queryKey: ['dice-history', charId] })
       haptic.medium()
       // Task 6 will show result overlay here
     },
     onError: () => haptic.error(),
+    onSettled: () => {
+      if (charId) qc.invalidateQueries({ queryKey: ['dice-history', charId] })
+    },
   })
 
   const entries = useMemo(
