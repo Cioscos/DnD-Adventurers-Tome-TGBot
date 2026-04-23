@@ -1,5 +1,6 @@
 """Shared helpers for router logic (avoid circular imports)."""
 import random
+from datetime import datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -39,6 +40,7 @@ def _append_concentration_history(
     )
     session.add(CharacterHistory(
         character_id=char_id,
+        timestamp=datetime.utcnow().strftime("%Y-%m-%d %H:%M"),
         event_type="concentration_save",
         description=desc,
     ))
