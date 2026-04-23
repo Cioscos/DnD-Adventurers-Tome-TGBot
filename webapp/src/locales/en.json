@@ -332,6 +332,8 @@
       "level_up_available": "Level up available! Go to the Class page to assign the level.",
       "single_class_synced": "Class level updates automatically with XP.",
       "hp_gained_toast": "+{{hp}} HP",
+      "level_up_cta": "LEVEL UP",
+      "level_up_to": "Jump to level {{level}}",
       "bar": {
         "level_label": "LVL {{level}}",
         "progress": "{{current}} / {{threshold}}",

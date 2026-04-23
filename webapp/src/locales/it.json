@@ -332,6 +332,8 @@
       "level_up_available": "Livello disponibile! Vai nella pagina Classe per distribuire il livello.",
       "single_class_synced": "Il livello della classe viene aggiornato automaticamente con gli XP.",
       "hp_gained_toast": "+{{hp}} HP",
+      "level_up_cta": "SALI DI LIVELLO",
+      "level_up_to": "Porta al livello {{level}}",
       "bar": {
         "level_label": "LIV {{level}}",
         "progress": "{{current}} / {{threshold}}",
