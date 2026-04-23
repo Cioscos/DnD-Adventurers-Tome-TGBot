@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
-import { User, Globe2, Feather, Save, Plus, X, Shield, Zap, Flame } from 'lucide-react'
+import { User, Globe2, Feather, Save, Plus, X, Shield, Zap, Flame, Lock } from 'lucide-react'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
@@ -154,15 +154,12 @@ export default function Identity() {
         {t('character.identity.physicality', { defaultValue: 'Fisicità' })}
       </SectionDivider>
 
-      <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
         <Surface variant="elevated" className="!p-3">
           <Input label={t('character.identity.race')} value={draft.race} onChange={set('race')} placeholder={t('character.identity.placeholder_race')} />
         </Surface>
         <Surface variant="elevated" className="!p-3">
           <Input label={t('character.identity.gender')} value={draft.gender} onChange={set('gender')} placeholder={t('character.identity.placeholder_gender')} />
-        </Surface>
-        <Surface variant="elevated" className="!p-3">
-          <Input label={t('character.identity.background')} value={draft.background} onChange={set('background')} placeholder={t('character.identity.placeholder_background')} />
         </Surface>
         <Surface variant="elevated" className="!p-3">
           <Input label={t('character.identity.alignment')} value={draft.alignment} onChange={set('alignment')} placeholder={t('character.identity.placeholder_alignment')} />
@@ -177,6 +174,27 @@ export default function Identity() {
       <SectionDivider icon={<Feather size={11} />} align="center">
         {t('character.identity.personality', { defaultValue: 'Personalità' })}
       </SectionDivider>
+
+      {/* Lock badge — immediately after SectionDivider */}
+      <div className="flex items-center justify-center gap-1 -mt-2 mb-3 text-dnd-gold-dim">
+        <Lock size={10} />
+        <span className="text-[10px] font-cinzel uppercase tracking-wider">
+          {t('character.identity.private_badge')}
+        </span>
+      </div>
+
+      {/* Background — first private item */}
+      <Surface variant="parchment" className="!pt-5 !px-4 !pb-4 relative mb-3">
+        <span className="absolute -top-2.5 left-4 px-2 bg-dnd-surface-raised text-[10px] font-cinzel uppercase tracking-widest text-dnd-gold-dim rounded">
+          {t('character.identity.background')}
+        </span>
+        <Input
+          value={draft.background}
+          onChange={set('background')}
+          placeholder={t('character.identity.placeholder_background')}
+          className="[&_input]:!border-transparent [&_input]:!bg-transparent"
+        />
+      </Surface>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-3">
         {personalitySections.map(({ key, label }) => (
