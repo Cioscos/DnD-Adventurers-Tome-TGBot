@@ -22,6 +22,7 @@ from api.schemas.session import (
     CharacterLiveSnapshot,
     GameSessionLiveRead,
     GameSessionRead,
+    IdentityView,
     SessionCreateRequest,
     SessionJoinRequest,
     SessionMessageCreate,
@@ -458,3 +459,70 @@ async def post_message(
     _touch(session)
     await db.flush()
     return msg
+
+
+@router.get(
+    "/{code}/participants/{user_id}/identity",
+    response_model=IdentityView,
+)
+async def get_participant_identity(
+    code: str,
+    user_id: int,
+    caller_user_id: Annotated[int, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> IdentityView:
+    session = await _load_session_by_code(code, db)
+    _assert_participant(session, caller_user_id)
+
+    target = next((p for p in session.participants if p.user_id == user_id), None)
+    if target is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Participant not found",
+        )
+    if target.character_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Participant has no character",
+        )
+
+    result = await db.execute(
+        select(Character).where(Character.id == target.character_id)
+    )
+    char = result.scalar_one_or_none()
+    if char is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Character not found",
+        )
+
+    settings_ = char.settings or {}
+    show_private = bool(settings_.get("show_private_identity")) or caller_user_id == user_id
+
+    def _join_list(val) -> Optional[str]:
+        if not val:
+            return None
+        if isinstance(val, list):
+            cleaned = [str(x).strip() for x in val if str(x).strip()]
+            return ", ".join(cleaned) if cleaned else None
+        return str(val) or None
+
+    personality = char.personality or {}
+
+    return IdentityView(
+        user_id=target.user_id,
+        character_id=char.id,
+        name=char.name,
+        race=char.race,
+        gender=char.gender,
+        alignment=char.alignment,
+        speed=char.speed,
+        languages=_join_list(char.languages),
+        general_proficiencies=_join_list(char.general_proficiencies),
+        background=char.background if show_private else None,
+        personality_traits=(personality.get("traits") or None) if show_private else None,
+        ideals=(personality.get("ideals") or None) if show_private else None,
+        bonds=(personality.get("bonds") or None) if show_private else None,
+        flaws=(personality.get("flaws") or None) if show_private else None,
+        show_private=show_private,
+    )

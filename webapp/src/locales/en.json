@@ -307,7 +307,8 @@
       "placeholder_personality_traits": "Describe your traits...",
       "placeholder_ideals": "Describe your ideals...",
       "placeholder_bonds": "Describe your bonds...",
-      "placeholder_flaws": "Describe your flaws..."
+      "placeholder_flaws": "Describe your flaws...",
+      "private_badge": "Private info"
     },
     "inspiration": {
       "title": "Heroic Inspiration",
@@ -558,6 +559,11 @@
         "recalc": "Recalculate HP from formula",
         "recalc_confirm_title": "Recalculate HP",
         "recalc_confirm_body": "This will recalculate the character's max HP based on current classes, levels, and Constitution modifier. Continue?"
+      },
+      "privacy": {
+        "title": "Privacy",
+        "show_private_label": "Show private info to GM and other players",
+        "show_private_hint": "If enabled, personality traits, ideals, bonds, flaws and background become visible during game sessions."
       }
     },
     "create": {
@@ -643,6 +649,16 @@
       "to_gm": "Whisper to GM",
       "broadcast": "Everyone",
       "recipient_prefix": "→ {{name}}"
+    },
+    "identity": {
+      "title": "Identity",
+      "fisicita": "Physicality",
+      "cultura": "Culture",
+      "personalita": "Personality",
+      "private_hidden": "Private info hidden",
+      "no_data": "No information available",
+      "loading": "Loading…",
+      "error": "Loading failed"
     }
   }
 }

@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
-import { Settings2, Languages, Sparkles, Gem, Dices, RefreshCw } from 'lucide-react'
+import { Settings2, Languages, Sparkles, Gem, Dices, RefreshCw, Eye } from 'lucide-react'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
@@ -179,6 +179,35 @@ export default function Settings() {
             {t('character.settings.hp.recalc')}
           </button>
         </div>
+      </Surface>
+
+      <SectionDivider icon={<Eye size={11} />} align="center">
+        {t('character.settings.privacy.title')}
+      </SectionDivider>
+
+      <Surface variant="elevated">
+        <label className="flex items-center justify-between gap-3 cursor-pointer">
+          <div className="min-w-0">
+            <p className="font-display font-bold text-dnd-gold-bright">
+              {t('character.settings.privacy.show_private_label')}
+            </p>
+            <p className="text-xs text-dnd-text-muted mt-0.5 font-body italic">
+              {t('character.settings.privacy.show_private_hint')}
+            </p>
+          </div>
+          <input
+            type="checkbox"
+            checked={(settings.show_private_identity as boolean | undefined) === true}
+            onChange={(e) =>
+              updateMutation.mutate({
+                ...settings,
+                show_private_identity: e.target.checked,
+              })
+            }
+            className="w-5 h-5 shrink-0"
+            aria-label={t('character.settings.privacy.show_private_label')}
+          />
+        </label>
       </Surface>
 
       <Sheet

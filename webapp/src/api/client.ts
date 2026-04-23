@@ -19,6 +19,7 @@ import type {
   Item,
   MapEntry,
   Note,
+  ParticipantIdentity,
   RollDamageRequest,
   RollDamageResult,
   SessionMessage,
@@ -498,6 +499,10 @@ export const api = {
           recipient_user_id: recipientUserId ?? null,
         }),
       }),
+    getParticipantIdentity: (code: string, userId: number) =>
+      request<ParticipantIdentity>(
+        `/sessions/${encodeURIComponent(code)}/participants/${userId}/identity`
+      ),
   },
 }
 

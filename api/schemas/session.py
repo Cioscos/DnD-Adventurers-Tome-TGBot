@@ -85,3 +85,30 @@ class GameSessionRead(BaseModel):
 
 class GameSessionLiveRead(GameSessionRead):
     live_characters: list[CharacterLiveSnapshot] = []
+
+
+class IdentityView(BaseModel):
+    """Public + optionally private identity fields for a session participant.
+
+    Private fields (background, personality_traits, ideals, bonds, flaws)
+    are populated only when the target has enabled `show_private_identity`
+    or when the caller is the target themselves.
+    """
+
+    user_id: int
+    character_id: int
+    # public (always populated)
+    name: str
+    race: Optional[str] = None
+    gender: Optional[str] = None
+    alignment: Optional[str] = None
+    speed: Optional[int] = None
+    languages: Optional[str] = None  # comma-joined for display
+    general_proficiencies: Optional[str] = None  # comma-joined for display
+    # private (null if target has show_private_identity = False)
+    background: Optional[str] = None
+    personality_traits: Optional[str] = None
+    ideals: Optional[str] = None
+    bonds: Optional[str] = None
+    flaws: Optional[str] = None
+    show_private: bool = False
