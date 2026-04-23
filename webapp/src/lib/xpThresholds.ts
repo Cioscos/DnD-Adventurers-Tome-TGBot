@@ -25,3 +25,20 @@ export function levelFromXp(xp: number): number {
 export function getNextLevelThreshold(currentLevel: number): number | null {
   return XP_THRESHOLDS[currentLevel] ?? null
 }
+
+/**
+ * Quick-XP button amounts, proportional to XP remaining until the next level.
+ *
+ * Formula: 2% / 7% / 20% / 50% of `xpToNext`, rounded to multiples of 10,
+ * with a minimum of 5 XP per button; adjacent duplicates after rounding are
+ * removed so bottom-range progressions (e.g. xpToNext=50) collapse gracefully.
+ *
+ * Returns an empty array if `xpToNext <= 0` (character is at max level).
+ */
+export function quickXpAmounts(xpToNext: number): number[] {
+  if (xpToNext <= 0) return []
+  const PCTS = [0.02, 0.07, 0.20, 0.50] as const
+  const MIN_AMOUNT = 5
+  const raw = PCTS.map((p) => Math.max(MIN_AMOUNT, Math.round((p * xpToNext) / 10) * 10))
+  return raw.filter((v, i) => i === 0 || v !== raw[i - 1])
+}
