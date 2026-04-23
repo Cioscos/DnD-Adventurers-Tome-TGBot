@@ -54,10 +54,13 @@ export default function DiceOverlay() {
   const [errorVisible, setErrorVisible] = useState(false)
 
   const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const longPressFiredRef = useRef(false)
 
   useEffect(() => {
     return () => {
       if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current)
+      if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current)
     }
   }, [])
 
@@ -136,6 +139,38 @@ export default function DiceOverlay() {
     setPool((p) => ({ ...p, [kind]: (p[kind] ?? 0) + 1 }))
   }, [])
 
+  const clearKind = useCallback((kind: DiceKind) => {
+    haptic.medium()
+    setPool((p) => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { [kind]: _removed, ...rest } = p
+      return rest
+    })
+  }, [])
+
+  const handlePointerDown = useCallback((kind: DiceKind) => {
+    longPressFiredRef.current = false
+    longPressTimerRef.current = setTimeout(() => {
+      longPressFiredRef.current = true
+      clearKind(kind)
+    }, 500)
+  }, [clearKind])
+
+  const handlePointerUpOrLeave = useCallback(() => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current)
+      longPressTimerRef.current = null
+    }
+  }, [])
+
+  const handleKindClick = useCallback((kind: DiceKind) => {
+    if (longPressFiredRef.current) {
+      longPressFiredRef.current = false
+      return
+    }
+    increment(kind)
+  }, [increment])
+
   const toggleOpen = useCallback(() => {
     haptic.light()
     setOpen((o) => !o)
@@ -162,7 +197,11 @@ export default function DiceOverlay() {
                 <m.button
                   key={kind}
                   type="button"
-                  onClick={() => increment(kind)}
+                  onClick={() => handleKindClick(kind)}
+                  onPointerDown={() => handlePointerDown(kind)}
+                  onPointerUp={handlePointerUpOrLeave}
+                  onPointerLeave={handlePointerUpOrLeave}
+                  onPointerCancel={handlePointerUpOrLeave}
                   disabled={isRolling}
                   className="relative w-12 h-12 rounded-2xl bg-dnd-surface-raised border border-dnd-border
                              flex items-center justify-center text-dnd-gold-bright
