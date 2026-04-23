@@ -4,13 +4,11 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m, AnimatePresence } from 'framer-motion'
 import { FlaskConical, Ban, Sparkles, ChevronRight } from 'lucide-react'
-import { api, type ConcentrationSaveResult } from '@/api/client'
+import { api } from '@/api/client'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
-import Input from '@/components/ui/Input'
 import ScrollArea from '@/components/ScrollArea'
-import { CornerFlourishes } from '@/components/ui/Ornament'
 import { haptic } from '@/auth/telegram'
 import { spring } from '@/styles/motion'
 import SpellFilter from '@/pages/spells/SpellFilter'
@@ -32,8 +30,6 @@ export default function Spells() {
   const [expanded, setExpanded] = useState<number | null>(null)
   const [castingSpell, setCastingSpell] = useState<Spell | null>(null)
   const [rollDamageSpell, setRollDamageSpell] = useState<Spell | null>(null)
-  const [concDamage, setConcDamage] = useState('')
-  const [concSaveResult, setConcSaveResult] = useState<ConcentrationSaveResult | null>(null)
   const [collapsedLevels, setCollapsedLevels] = useState<Set<number>>(new Set())
 
   const toggleLevel = (level: number) => {
@@ -137,18 +133,6 @@ export default function Spells() {
     },
   })
 
-  const concSaveMutation = useMutation({
-    mutationFn: (damage: number) => api.spells.concentrationSave(charId, damage),
-    onSuccess: (result) => {
-      setConcSaveResult(result)
-      if (result.lost_concentration) {
-        qc.invalidateQueries({ queryKey: ['character', charId] })
-      }
-      haptic.success()
-    },
-    onError: () => haptic.error(),
-  })
-
   const castCantrip = useMutation({
     mutationFn: async (spell: Spell) => {
       if (spell.is_concentration) {
@@ -217,19 +201,19 @@ export default function Spells() {
         onAddClick={() => setShowAdd(true)}
       />
 
-      {/* Concentration panel */}
-      {concentratingId && (
-        <Surface variant="arcane" ornamented>
-          <div className="flex items-center justify-between mb-2.5">
-            <div className="flex items-center gap-2">
-              <FlaskConical size={16} className="text-dnd-arcane-bright" />
-              <div>
+      {/* Concentration panel — active spell + description. TS auto on /hp DAMAGE. */}
+      {concentratingId && concentratingSpell && (
+        <Surface variant="arcane" ornamented className="space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 min-w-0">
+              <FlaskConical size={16} className="text-dnd-arcane-bright shrink-0" />
+              <div className="min-w-0">
                 <p className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-arcane-bright">
                   {t('character.spells.concentration')}
                 </p>
-                {concentratingSpell && (
-                  <p className="text-sm font-display font-bold text-dnd-text">{concentratingSpell.name}</p>
-                )}
+                <p className="text-base font-display font-bold text-dnd-gold-bright truncate">
+                  {concentratingSpell.name}
+                </p>
               </div>
             </div>
             <Button
@@ -237,86 +221,18 @@ export default function Spells() {
               size="sm"
               onClick={() => concentrationMutation.mutate(null)}
               icon={<Ban size={12} />}
+              haptic="warning"
             >
               {t('character.spells.stop_concentration')}
             </Button>
           </div>
-          <div className="flex gap-2 items-end">
-            <Input
-              value={concDamage}
-              onChange={setConcDamage}
-              placeholder={t('character.spells.conc_save_damage_placeholder')}
-              inputMode="numeric"
-              className="flex-1"
-            />
-            <Button
-              variant="arcane"
-              onClick={() => {
-                const dmg = parseInt(concDamage, 10)
-                if (!isNaN(dmg) && dmg >= 0) {
-                  concSaveMutation.mutate(dmg)
-                  setConcDamage('')
-                }
-              }}
-              disabled={concSaveMutation.isPending || !concDamage}
-              loading={concSaveMutation.isPending}
-              haptic="warning"
-            >
-              {t('character.spells.conc_save_btn')}
-            </Button>
-          </div>
+          {concentratingSpell.description && (
+            <p className="text-sm text-dnd-text font-body leading-relaxed break-words">
+              {concentratingSpell.description}
+            </p>
+          )}
         </Surface>
       )}
-
-      {/* Concentration save result */}
-      <AnimatePresence>
-        {concSaveResult && (
-          <m.div
-            className="fixed inset-0 flex items-center justify-center z-50 p-4"
-            style={{ background: 'var(--dnd-overlay)', backdropFilter: 'blur(6px)' }}
-            onClick={() => setConcSaveResult(null)}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
-            <m.div
-              className={`relative rounded-3xl p-6 pt-8 w-full max-w-xs text-center space-y-3
-                bg-gradient-parchment surface-parchment border-2 shadow-parchment-2xl
-                ${concSaveResult.success ? 'border-dnd-emerald' : 'border-[var(--dnd-crimson)]'}`}
-              initial={{ opacity: 0, scale: 0.85 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.92 }}
-              transition={spring.elastic}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="text-dnd-gold-dim"><CornerFlourishes /></div>
-              <p className="text-sm text-dnd-text-muted font-cinzel uppercase tracking-widest">
-                🔮 {t('character.spells.concentration')} — DC {concSaveResult.dc}
-              </p>
-              {concSaveResult.is_critical && <p className="text-dnd-gold-bright font-bold font-cinzel">✦ CRITICO!</p>}
-              {concSaveResult.is_fumble && <p className="text-[var(--dnd-crimson-bright)] font-bold font-cinzel">💀 FUMBLE!</p>}
-              <m.p
-                initial={{ scale: 0.4 }}
-                animate={{ scale: 1 }}
-                transition={{ ...spring.elastic, delay: 0.1 }}
-                className={`text-5xl font-black font-display ${concSaveResult.success ? 'text-[var(--dnd-emerald-bright)]' : 'text-[var(--dnd-crimson-bright)]'}`}
-              >
-                {concSaveResult.total}
-              </m.p>
-              <p className="text-xs text-dnd-text-muted font-mono">
-                d20 ({concSaveResult.die}) {concSaveResult.bonus >= 0 ? '+' : ''}{concSaveResult.bonus}
-              </p>
-              <p className={`font-bold font-cinzel uppercase tracking-wider ${concSaveResult.success ? 'text-[var(--dnd-emerald-bright)]' : 'text-[var(--dnd-crimson-bright)]'}`}>
-                {concSaveResult.success ? t('character.spells.conc_save_success') : t('character.spells.conc_save_fail')}
-              </p>
-              {concSaveResult.lost_concentration && (
-                <p className="text-[10px] text-[var(--dnd-crimson-bright)] font-body italic">{t('character.spells.conc_lost')}</p>
-              )}
-              <Button variant="primary" fullWidth onClick={() => setConcSaveResult(null)}>OK</Button>
-            </m.div>
-          </m.div>
-        )}
-      </AnimatePresence>
 
       {spells.length === 0 && !showAdd && (
         <Surface variant="flat" className="text-center py-8">
