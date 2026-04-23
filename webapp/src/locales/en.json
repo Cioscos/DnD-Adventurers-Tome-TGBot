@@ -226,6 +226,14 @@
       "initiative_result": "Initiative: d20 ({{roll}}) {{mod}} = {{total}}",
       "count": "Number of dice"
     },
+    "dice_overlay": {
+      "open": "Open dice tray",
+      "close": "Close dice tray",
+      "roll": "Roll",
+      "roll_failed": "Roll failed",
+      "clear_kind": "Clear",
+      "rolling": "Rolling…"
+    },
     "conditions": {
       "title": "Conditions",
       "exhaustion": "Exhaustion (level {{level}})",

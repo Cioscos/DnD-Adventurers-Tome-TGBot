@@ -226,6 +226,14 @@
       "initiative_result": "Iniziativa: d20 ({{roll}}) {{mod}} = {{total}}",
       "count": "Numero di dadi"
     },
+    "dice_overlay": {
+      "open": "Apri lanciatore dadi",
+      "close": "Chiudi lanciatore",
+      "roll": "Lancia",
+      "roll_failed": "Errore durante il lancio",
+      "clear_kind": "Resetta",
+      "rolling": "Sto lanciando…"
+    },
     "conditions": {
       "title": "Condizioni",
       "exhaustion": "Spossatezza (livello {{level}})",
