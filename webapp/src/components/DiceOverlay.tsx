@@ -15,6 +15,7 @@ const KINDS: DiceKind[] = ['d4', 'd6', 'd8', 'd10', 'd12', 'd20', 'd100']
 const SIDES_FOR = {
   d4: 4, d6: 6, d8: 8, d10: 10, d12: 12, d20: 20, d100: 100,
 } as const satisfies Record<DiceKind, number>
+const TOAST_DISMISS_MS = 3000
 
 type DicePool = Partial<Record<DiceKind, number>>
 
@@ -65,7 +66,7 @@ export default function DiceOverlay() {
     setResultVisible(true)
     setErrorVisible(false)
     if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current)
-    dismissTimerRef.current = setTimeout(() => setResultVisible(false), 3000)
+    dismissTimerRef.current = setTimeout(() => setResultVisible(false), TOAST_DISMISS_MS)
   }, [])
 
   const dismissResults = useCallback(() => {
@@ -77,7 +78,12 @@ export default function DiceOverlay() {
     setErrorVisible(true)
     setResultVisible(false)
     if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current)
-    dismissTimerRef.current = setTimeout(() => setErrorVisible(false), 3000)
+    dismissTimerRef.current = setTimeout(() => setErrorVisible(false), TOAST_DISMISS_MS)
+  }, [])
+
+  const dismissError = useCallback(() => {
+    if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current)
+    setErrorVisible(false)
   }, [])
 
   const dice = useDiceAnimation()
@@ -229,7 +235,7 @@ export default function DiceOverlay() {
     </div>
 
     {/* Result overlay bottom-center */}
-    <AnimatePresence>
+    <AnimatePresence onExitComplete={() => setResults(null)}>
       {resultVisible && results && results.length > 0 && (
         <m.button
           type="button"
@@ -268,8 +274,10 @@ export default function DiceOverlay() {
     {/* Error toast bottom-center */}
     <AnimatePresence>
       {errorVisible && (
-        <m.div
+        <m.button
+          type="button"
           role="alert"
+          onClick={dismissError}
           className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[55]
                      max-w-xs w-[calc(100%-2rem)]
                      rounded-2xl bg-dnd-surface-raised/95 backdrop-blur-md
@@ -281,7 +289,7 @@ export default function DiceOverlay() {
           transition={{ type: 'spring', stiffness: 320, damping: 26 }}
         >
           {t('character.dice_overlay.roll_failed')}
-        </m.div>
+        </m.button>
       )}
     </AnimatePresence>
     </>
