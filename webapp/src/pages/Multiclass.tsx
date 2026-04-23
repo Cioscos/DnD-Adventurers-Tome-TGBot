@@ -83,7 +83,10 @@ export default function Multiclass() {
       )}
 
       {levelUpAvailable && (
-        <LevelUpBanner onOpen={() => setShowLevelUpModal(true)} />
+        <LevelUpBanner
+          onOpen={() => setShowLevelUpModal(true)}
+          labelKey="character.xp.level_up_available_short"
+        />
       )}
 
       <Button

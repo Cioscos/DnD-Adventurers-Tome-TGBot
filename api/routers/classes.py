@@ -152,8 +152,13 @@ async def distribute_class_levels(
 
     target_sum = xp_to_level(char.experience_points or 0)
     new_sum = sum(entry.level for entry in body.classes)
-    if new_sum != target_sum:
-        raise HTTPException(status_code=400, detail="sum_mismatch")
+    # Allow sum <= target (multi-pending level-up applies +1 per commit and
+    # reopens the modal for remaining levels). Reject only sum > target,
+    # which would exceed the character's XP-derived level cap.
+    if new_sum > target_sum:
+        raise HTTPException(status_code=400, detail="sum_exceeds_target")
+    if new_sum < 1:
+        raise HTTPException(status_code=400, detail="sum_too_low")
 
     # Map id -> new_level for O(1) lookup
     new_levels = {entry.class_id: entry.level for entry in body.classes}

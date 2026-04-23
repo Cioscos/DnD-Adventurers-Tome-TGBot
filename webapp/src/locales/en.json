@@ -330,6 +330,7 @@
       "xp_to_next": "XP to next level",
       "level_abbr": "Lv.",
       "level_up_available": "Level up available! Go to the Class page to assign the level.",
+      "level_up_available_short": "Level up available! Tap to pick a class",
       "single_class_synced": "Class level updates automatically with XP.",
       "hp_gained_toast": "+{{hp}} HP",
       "level_up_cta": "LEVEL UP",
