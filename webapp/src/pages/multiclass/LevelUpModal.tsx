@@ -88,7 +88,7 @@ export default function LevelUpModal({ char, xpLevel, onClose }: LevelUpModalPro
         animate={{ y: 0, opacity: 1 }}
         className="w-full max-w-xl max-h-[90vh] overflow-y-auto"
       >
-        <Surface variant="tome" ornamented className="space-y-5 p-5">
+        <Surface variant="tome" ornamented className="space-y-6 p-6">
           {/* Header */}
           <div className="text-center">
             <h2 className="font-display text-2xl font-black text-dnd-gold-bright uppercase tracking-widest">
@@ -164,45 +164,54 @@ export default function LevelUpModal({ char, xpLevel, onClose }: LevelUpModalPro
           </Surface>
 
           {/* Class selector */}
-          <div className="flex gap-3 flex-wrap">
-            {classes.map((cls) => {
-              const active = cls.id === selectedClassId
-              return (
-                <button
-                  key={cls.id}
-                  type="button"
-                  onClick={() => setSelectedClassId(cls.id)}
-                  className={`min-h-[44px] px-3 rounded-xl font-cinzel text-xs uppercase tracking-widest flex-1 min-w-[100px] transition-colors
-                    ${active
-                      ? 'bg-gradient-gold text-dnd-ink shadow-engrave border border-dnd-gold'
-                      : 'bg-dnd-surface text-dnd-text border border-dnd-border hover:border-dnd-gold/60'}`}
-                >
-                  {cls.class_name}
-                  <span className="ml-1 opacity-70 font-mono">{cls.level}</span>
-                </button>
-              )
-            })}
+          <div className="space-y-3">
+            <p className="text-[10px] font-cinzel uppercase tracking-[0.3em] text-dnd-gold-dim text-center">
+              {t('character.multiclass.level_up.choose_class')}
+            </p>
+            <div className="flex gap-3 flex-wrap">
+              {classes.map((cls) => {
+                const active = cls.id === selectedClassId
+                return (
+                  <button
+                    key={cls.id}
+                    type="button"
+                    onClick={() => setSelectedClassId(cls.id)}
+                    className={`min-h-[52px] px-4 py-2 rounded-xl font-cinzel text-xs uppercase tracking-widest flex-1 min-w-[120px] transition-all
+                      ${active
+                        ? 'bg-gradient-gold text-dnd-ink shadow-engrave border-2 border-dnd-gold scale-[1.02]'
+                        : 'bg-dnd-surface text-dnd-text border border-dnd-border hover:border-dnd-gold/60'}`}
+                  >
+                    <span className="block">{cls.class_name}</span>
+                    <span className="block text-[10px] opacity-70 font-mono mt-0.5">
+                      Liv {cls.level}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
           </div>
 
-          {/* Confirm */}
-          <Button
-            variant="primary"
-            size="lg"
-            fullWidth
-            onClick={() => {
-              if (selectedAtMax) {
-                toast.info(t('character.multiclass.level_up.at_max_toast'))
-                return
-              }
-              distribute.mutate()
-            }}
-            disabled={selectedAtMax}
-            loading={distribute.isPending}
-            icon={<ChevronsUp size={18} />}
-            haptic="medium"
-          >
-            {t('character.multiclass.level_up.confirm')}
-          </Button>
+          {/* Confirm — visually separated footer */}
+          <div className="pt-5 border-t border-dnd-border/50">
+            <Button
+              variant="primary"
+              size="lg"
+              fullWidth
+              onClick={() => {
+                if (selectedAtMax) {
+                  toast.info(t('character.multiclass.level_up.at_max_toast'))
+                  return
+                }
+                distribute.mutate()
+              }}
+              disabled={selectedAtMax}
+              loading={distribute.isPending}
+              icon={<ChevronsUp size={18} />}
+              haptic="medium"
+            >
+              {t('character.multiclass.level_up.confirm')}
+            </Button>
+          </div>
         </Surface>
       </m.div>
     </div>

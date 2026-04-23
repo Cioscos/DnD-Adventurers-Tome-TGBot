@@ -512,6 +512,7 @@
         "title": "Sali di livello",
         "subtitle": "Scegli la classe per il livello {{level}}",
         "preview_next_levels": "Prossimi sblocchi",
+        "choose_class": "Scegli la classe",
         "proficiency_change": "Bonus competenza: +{{from}} → +{{to}}",
         "new_spell_slot": "Nuovo slot di {{level}}° livello",
         "confirm": "Conferma",

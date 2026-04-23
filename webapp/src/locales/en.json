@@ -512,6 +512,7 @@
         "title": "Level up",
         "subtitle": "Pick a class for level {{level}}",
         "preview_next_levels": "Next unlocks",
+        "choose_class": "Choose class",
         "proficiency_change": "Proficiency: +{{from}} → +{{to}}",
         "new_spell_slot": "New {{level}}th level spell slot",
         "confirm": "Confirm",
