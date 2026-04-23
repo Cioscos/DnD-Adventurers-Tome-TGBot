@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
-import { Check, Plus, Trash2 } from 'lucide-react'
+import { Check, Plus, Trash2, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { api } from '@/api/client'
 import Surface from '@/components/ui/Surface'
@@ -206,8 +206,8 @@ export default function EditClassesModal({ char, targetLevel, onClose }: Props) 
             </p>
           </div>
 
-          {/* Entries */}
-          <div className="space-y-3">
+          {/* Entries + add class (grouped section) */}
+          <div className="space-y-4">
             <p className="text-[10px] font-cinzel uppercase tracking-[0.3em] text-dnd-gold-dim text-center">
               {t('character.multiclass.edit.classes_label')}
             </p>
@@ -248,84 +248,21 @@ export default function EditClassesModal({ char, targetLevel, onClose }: Props) 
                 )}
               </Surface>
             ))}
-          </div>
 
-          {/* Add class sub-form */}
-          {!showPicker ? (
-            <Button
-              variant="secondary"
-              size="md"
-              fullWidth
-              icon={<Plus size={16} />}
-              onClick={() => setShowPicker(true)}
-              haptic="light"
-            >
-              {t('character.multiclass.add_class')}
-            </Button>
-          ) : (
-            <Surface variant="flat" className="space-y-3 p-4">
-              <select
-                value={pickerKey}
-                onChange={(ev) => setPickerKey(ev.target.value)}
-                className="w-full bg-dnd-surface rounded-xl px-3 py-2 min-h-[44px] outline-none"
+            {/* Add class trigger (inside classes section, separated by pt-2) */}
+            <div className="pt-2">
+              <Button
+                variant="secondary"
+                size="md"
+                fullWidth
+                icon={<Plus size={16} />}
+                onClick={() => setShowPicker(true)}
+                haptic="light"
               >
-                <option value="" disabled>
-                  {t('character.multiclass.class_name')}
-                </option>
-                {classPickerKeys.map((k) => (
-                  <option key={k} value={k}>
-                    {t(`dnd.classes.${k}`)}
-                  </option>
-                ))}
-                <option value={CUSTOM_KEY}>{t('character.multiclass.custom_class')}</option>
-              </select>
-
-              {pickerKey === CUSTOM_KEY && (
-                <input
-                  type="text"
-                  value={pickerCustomName}
-                  onChange={(ev) => setPickerCustomName(ev.target.value)}
-                  placeholder={t('character.multiclass.custom_class_name')}
-                  className="w-full bg-dnd-surface rounded-xl px-3 py-2 min-h-[44px] outline-none"
-                />
-              )}
-
-              <input
-                type="text"
-                value={pickerSubclass}
-                onChange={(ev) => setPickerSubclass(ev.target.value)}
-                placeholder={t('character.multiclass.subclass')}
-                className="w-full bg-dnd-surface rounded-xl px-3 py-2 min-h-[44px] outline-none"
-              />
-
-              <div className="grid grid-cols-2 gap-3">
-                <Button
-                  variant="ghost"
-                  size="md"
-                  fullWidth
-                  onClick={() => {
-                    setShowPicker(false)
-                    setPickerKey('')
-                    setPickerCustomName('')
-                    setPickerSubclass('')
-                  }}
-                >
-                  {t('character.multiclass.edit.cancel')}
-                </Button>
-                <Button
-                  variant="primary"
-                  size="md"
-                  fullWidth
-                  disabled={!pickerKey || (pickerKey === CUSTOM_KEY && !pickerCustomName.trim())}
-                  onClick={addPickedClass}
-                  icon={<Check size={16} />}
-                  haptic="light"
-                >
-                  {t('common.add')}
-                </Button>
-              </div>
-            </Surface>
-          )}
+                {t('character.multiclass.add_class')}
+              </Button>
+            </div>
+          </div>
 
           {/* Footer — visually separated */}
           <div className="pt-5 border-t border-dnd-border/50 grid grid-cols-2 gap-3">
@@ -347,6 +284,101 @@ export default function EditClassesModal({ char, targetLevel, onClose }: Props) 
           </div>
         </Surface>
       </m.div>
+
+      {/* Nested picker overlay — higher z-index sits above the edit modal */}
+      {showPicker && (
+        <div
+          className="fixed inset-0 bg-black/75 z-[60] flex items-end sm:items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+          onClick={(ev) => {
+            if (ev.target === ev.currentTarget) {
+              setShowPicker(false)
+              setPickerKey('')
+              setPickerCustomName('')
+              setPickerSubclass('')
+            }
+          }}
+        >
+          <m.div
+            initial={{ y: 40, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            className="w-full max-w-md max-h-[90vh] overflow-y-auto"
+          >
+            <Surface variant="arcane" ornamented className="space-y-5 p-6">
+              <div className="text-center">
+                <h3 className="font-display text-xl font-black text-dnd-gold-bright uppercase tracking-widest">
+                  {t('character.multiclass.add_class')}
+                </h3>
+              </div>
+
+              <div className="space-y-3">
+                <select
+                  value={pickerKey}
+                  onChange={(ev) => setPickerKey(ev.target.value)}
+                  className="w-full bg-dnd-surface rounded-xl px-3 py-2 min-h-[44px] outline-none"
+                >
+                  <option value="" disabled>
+                    {t('character.multiclass.class_name')}
+                  </option>
+                  {classPickerKeys.map((k) => (
+                    <option key={k} value={k}>
+                      {t(`dnd.classes.${k}`)}
+                    </option>
+                  ))}
+                  <option value={CUSTOM_KEY}>{t('character.multiclass.custom_class')}</option>
+                </select>
+
+                {pickerKey === CUSTOM_KEY && (
+                  <input
+                    type="text"
+                    value={pickerCustomName}
+                    onChange={(ev) => setPickerCustomName(ev.target.value)}
+                    placeholder={t('character.multiclass.custom_class_name')}
+                    className="w-full bg-dnd-surface rounded-xl px-3 py-2 min-h-[44px] outline-none"
+                  />
+                )}
+
+                <input
+                  type="text"
+                  value={pickerSubclass}
+                  onChange={(ev) => setPickerSubclass(ev.target.value)}
+                  placeholder={t('character.multiclass.subclass')}
+                  className="w-full bg-dnd-surface rounded-xl px-3 py-2 min-h-[44px] outline-none"
+                />
+              </div>
+
+              <div className="pt-4 border-t border-dnd-border/50 grid grid-cols-2 gap-3">
+                <Button
+                  variant="danger"
+                  size="md"
+                  fullWidth
+                  icon={<X size={16} />}
+                  onClick={() => {
+                    setShowPicker(false)
+                    setPickerKey('')
+                    setPickerCustomName('')
+                    setPickerSubclass('')
+                  }}
+                >
+                  {t('character.multiclass.edit.cancel')}
+                </Button>
+                <Button
+                  variant="arcane"
+                  size="md"
+                  fullWidth
+                  disabled={!pickerKey || (pickerKey === CUSTOM_KEY && !pickerCustomName.trim())}
+                  onClick={addPickedClass}
+                  icon={<Plus size={16} />}
+                  haptic="light"
+                >
+                  {t('common.add')}
+                </Button>
+              </div>
+            </Surface>
+          </m.div>
+        </div>
+      )}
     </div>
   )
 }
