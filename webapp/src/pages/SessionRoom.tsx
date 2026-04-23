@@ -1,19 +1,20 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
-import { Crown, Heart, LogOut, Lock, Send, Shield, Sparkles, User, XOctagon, Dices } from 'lucide-react'
+import { Crown, Heart, LogOut, Shield, Sparkles, User, XOctagon, Dices } from 'lucide-react'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
 import Skeleton from '@/components/ui/Skeleton'
 import SectionDivider from '@/components/ui/SectionDivider'
 import { api } from '@/api/client'
-import type { CharacterLiveSnapshot, SessionMessage, SessionParticipant } from '@/types'
+import type { CharacterLiveSnapshot, SessionParticipant } from '@/types'
 import { haptic, telegramConfirm } from '@/auth/telegram'
 import { formatCondition } from '@/lib/conditions'
 import ParticipantIdentitySheet from '@/pages/session/ParticipantIdentitySheet'
+import SessionFeed from '@/pages/session/SessionFeed'
 
 function conditionLabels(
   conditions: Record<string, unknown> | null | undefined,
@@ -175,12 +176,7 @@ export default function SessionRoom() {
   const navigate = useNavigate()
   const { t } = useTranslation()
   const qc = useQueryClient()
-  const [chatInput, setChatInput] = useState('')
-  const [whisperTo, setWhisperTo] = useState<number | null>(null)
   const [identityTarget, setIdentityTarget] = useState<SessionParticipant | null>(null)
-  const [lastSeenMsgId, setLastSeenMsgId] = useState(0)
-  const [chatCache, setChatCache] = useState<SessionMessage[]>([])
-  const scrollerRef = useRef<HTMLDivElement | null>(null)
 
   const { data: meInfo } = useQuery({
     queryKey: ['auth-me'],
@@ -197,42 +193,6 @@ export default function SessionRoom() {
       return d && d.status === 'active' ? 2500 : false
     },
     enabled: Number.isFinite(sessionId),
-  })
-
-  const { data: msgDelta } = useQuery({
-    queryKey: ['session-messages', sessionId, lastSeenMsgId],
-    queryFn: () => api.sessions.messages(sessionId, lastSeenMsgId),
-    refetchInterval: live?.status === 'active' ? 2000 : false,
-    enabled: Number.isFinite(sessionId),
-  })
-
-  useEffect(() => {
-    if (msgDelta && msgDelta.length > 0) {
-      setChatCache((prev) => [...prev, ...msgDelta])
-      const last = msgDelta[msgDelta.length - 1]
-      setLastSeenMsgId(last.id)
-    }
-  }, [msgDelta])
-
-  useEffect(() => {
-    scrollerRef.current?.scrollTo({ top: scrollerRef.current.scrollHeight, behavior: 'smooth' })
-  }, [chatCache.length])
-
-  useEffect(() => {
-    if (whisperTo === null) return
-    const stillPresent = live?.participants.some((p) => p.user_id === whisperTo)
-    if (!stillPresent) setWhisperTo(null)
-  }, [live, whisperTo])
-
-  const sendMutation = useMutation({
-    mutationFn: (body: string) => api.sessions.sendMessage(sessionId, body, whisperTo),
-    onSuccess: (msg) => {
-      setChatCache((prev) => [...prev, msg])
-      setLastSeenMsgId(msg.id)
-      setChatInput('')
-      haptic.light()
-    },
-    onError: () => haptic.error(),
   })
 
   const leaveMutation = useMutation({
@@ -269,16 +229,6 @@ export default function SessionRoom() {
     return map
   }, [live])
 
-  const senderLabel = (m: SessionMessage): string => {
-    if (m.sender_display_name === '__GM__' || (m.role === 'game_master' && !m.sender_display_name))
-      return t('session.game_master')
-    return m.sender_display_name ?? t('session.unknown_sender')
-  }
-
-  const playerParticipants = useMemo(
-    () => live?.participants.filter((p) => p.role !== 'game_master') ?? [],
-    [live],
-  )
   const gmUserId = live?.gm_user_id ?? null
 
   const amGm = !!live && live.gm_user_id === myUserId
@@ -385,113 +335,17 @@ export default function SessionRoom() {
       </div>
 
       <SectionDivider>
-        {t('session.chat')}
+        {t('session.chat_and_history')}
       </SectionDivider>
 
-      <Surface variant="elevated">
-        <div
-          ref={scrollerRef}
-          className="space-y-2 max-h-[260px] overflow-y-auto pr-1"
-        >
-          {chatCache.length === 0 ? (
-            <p className="text-xs text-dnd-text-faint font-body italic text-center py-4">
-              {t('session.chat_empty')}
-            </p>
-          ) : (
-            chatCache.map((m) => {
-              const mine = m.user_id === myUserId
-              const isWhisper = !!m.recipient_user_id
-              const recipientName = isWhisper
-                ? (live.participants.find((p) => p.user_id === m.recipient_user_id)?.display_name
-                   ?? (m.recipient_user_id === live.gm_user_id ? t('session.game_master') : `#${m.recipient_user_id}`))
-                : null
-              return (
-                <div
-                  key={m.id}
-                  className={`max-w-[80%] rounded-lg px-3 py-2 text-sm font-body
-                    ${isWhisper
-                      ? 'bg-[var(--dnd-amber)]/15 border border-[var(--dnd-amber)]/40 italic'
-                      : mine
-                        ? 'ml-auto bg-gradient-gold text-dnd-ink'
-                        : 'bg-dnd-surface border border-dnd-border text-dnd-text'}
-                    ${mine && isWhisper ? 'ml-auto' : ''}`}
-                >
-                  {(!mine || isWhisper) && (
-                    <p className="text-[10px] uppercase tracking-wider opacity-70 mb-0.5 font-cinzel flex items-center gap-1">
-                      {isWhisper && <Lock size={10} />}
-                      {mine ? t('session.you') : senderLabel(m)}
-                      {isWhisper && recipientName && (
-                        <span className="text-[var(--dnd-amber)]">
-                          {' '}{t('session.whisper.recipient_prefix', { name: recipientName })}
-                        </span>
-                      )}
-                    </p>
-                  )}
-                  <p className="whitespace-pre-wrap break-words">{m.body}</p>
-                </div>
-              )
-            })
-          )}
-        </div>
-
-        {amGm ? (
-          <div className="flex items-center gap-2 mb-2">
-            <Lock size={12} className="text-dnd-gold-dim shrink-0" />
-            <select
-              value={whisperTo ?? ''}
-              onChange={(e) => setWhisperTo(e.target.value === '' ? null : Number(e.target.value))}
-              className="flex-1 px-2 py-1 rounded bg-dnd-surface border border-dnd-border text-dnd-text font-body text-sm"
-            >
-              <option value="">{t('session.whisper.broadcast')}</option>
-              {playerParticipants.map((p) => (
-                <option key={p.user_id} value={p.user_id}>
-                  {p.display_name ?? `#${p.user_id}`}
-                </option>
-              ))}
-            </select>
-          </div>
-        ) : (
-          <div className="mb-2">
-            <button
-              type="button"
-              onClick={() => setWhisperTo(whisperTo === null ? gmUserId : null)}
-              disabled={gmUserId === null}
-              className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-cinzel uppercase tracking-wider transition-colors
-                ${whisperTo !== null
-                  ? 'bg-[var(--dnd-amber)]/30 text-[var(--dnd-amber)] border border-[var(--dnd-amber)]/60'
-                  : 'bg-dnd-surface text-dnd-text-muted border border-dnd-border hover:text-dnd-gold-bright'}`}
-            >
-              <Lock size={12} />
-              {t('session.whisper.to_gm')}
-            </button>
-          </div>
-        )}
-        <div className="mt-3 flex items-center gap-2">
-          <input
-            type="text"
-            value={chatInput}
-            onChange={(e) => setChatInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && chatInput.trim().length > 0) {
-                sendMutation.mutate(chatInput.trim())
-              }
-            }}
-            placeholder={t('session.message_placeholder')}
-            maxLength={1000}
-            className="flex-1 px-3 py-2 min-h-[44px] rounded-lg bg-dnd-surface border border-dnd-border
-                       text-dnd-text outline-none focus:border-dnd-gold transition-colors font-body"
-          />
-          <Button
-            size="sm"
-            onClick={() => chatInput.trim() && sendMutation.mutate(chatInput.trim())}
-            disabled={chatInput.trim().length === 0 || sendMutation.isPending}
-            icon={<Send size={14} />}
-            aria-label={t('session.send')}
-          >
-            <span className="sr-only">{t('session.send')}</span>
-          </Button>
-        </div>
-      </Surface>
+      <SessionFeed
+        code={live.code}
+        sessionId={live.id}
+        amGm={amGm}
+        gmUserId={gmUserId}
+        myUserId={myUserId}
+        participants={live.participants}
+      />
 
       <Button
         variant="danger"
