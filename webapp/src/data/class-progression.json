@@ -1,0 +1,2826 @@
+{
+  "Barbaro": [
+    {
+      "features": "Rage, Unarmored Defense",
+      "proficiency_bonus": 2,
+      "spell_slots": null
+    },
+    {
+      "features": "Reckless Attack, Danger Sense",
+      "proficiency_bonus": 2,
+      "spell_slots": null
+    },
+    {
+      "features": "Primal Path",
+      "proficiency_bonus": 2,
+      "spell_slots": null
+    },
+    {
+      "features": "Ability Score Improvement",
+      "proficiency_bonus": 2,
+      "spell_slots": null
+    },
+    {
+      "features": "Extra Attack, Fast Movement",
+      "proficiency_bonus": 3,
+      "spell_slots": null
+    },
+    {
+      "features": "Path feature",
+      "proficiency_bonus": 3,
+      "spell_slots": null
+    },
+    {
+      "features": "Feral Instinct",
+      "proficiency_bonus": 3,
+      "spell_slots": null
+    },
+    {
+      "features": "Ability Score Improvement",
+      "proficiency_bonus": 3,
+      "spell_slots": null
+    },
+    {
+      "features": "Brutal Critical (1 dado)",
+      "proficiency_bonus": 4,
+      "spell_slots": null
+    },
+    {
+      "features": "Path feature",
+      "proficiency_bonus": 4,
+      "spell_slots": null
+    },
+    {
+      "features": "Relentless Rage",
+      "proficiency_bonus": 4,
+      "spell_slots": null
+    },
+    {
+      "features": "Ability Score Improvement",
+      "proficiency_bonus": 4,
+      "spell_slots": null
+    },
+    {
+      "features": "Brutal Critical (2 dadi)",
+      "proficiency_bonus": 5,
+      "spell_slots": null
+    },
+    {
+      "features": "Path feature",
+      "proficiency_bonus": 5,
+      "spell_slots": null
+    },
+    {
+      "features": "Persistent Rage",
+      "proficiency_bonus": 5,
+      "spell_slots": null
+    },
+    {
+      "features": "Ability Score Improvement",
+      "proficiency_bonus": 5,
+      "spell_slots": null
+    },
+    {
+      "features": "Brutal Critical (3 dadi)",
+      "proficiency_bonus": 6,
+      "spell_slots": null
+    },
+    {
+      "features": "Indomitable Might",
+      "proficiency_bonus": 6,
+      "spell_slots": null
+    },
+    {
+      "features": "Ability Score Improvement",
+      "proficiency_bonus": 6,
+      "spell_slots": null
+    },
+    {
+      "features": "Primal Champion",
+      "proficiency_bonus": 6,
+      "spell_slots": null
+    }
+  ],
+  "Bardo": [
+    {
+      "features": "Spellcasting, Bardic Inspiration (d6)",
+      "proficiency_bonus": 2,
+      "spell_slots": [
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Jack of All Trades, Song of Rest (d6)",
+      "proficiency_bonus": 2,
+      "spell_slots": [
+        3,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Bard College, Expertise",
+      "proficiency_bonus": 2,
+      "spell_slots": [
+        4,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Ability Score Improvement",
+      "proficiency_bonus": 2,
+      "spell_slots": [
+        4,
+        3,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Bardic Inspiration (d8), Font of Inspiration",
+      "proficiency_bonus": 3,
+      "spell_slots": [
+        4,
+        3,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Countercharm, Bard College feature",
+      "proficiency_bonus": 3,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "—",
+      "proficiency_bonus": 3,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Ability Score Improvement",
+      "proficiency_bonus": 3,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Song of Rest (d8)",
+      "proficiency_bonus": 4,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        1,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Bardic Inspiration (d10), Expertise, Magical Secrets",
+      "proficiency_bonus": 4,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        2,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "—",
+      "proficiency_bonus": 4,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        2,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Ability Score Improvement",
+      "proficiency_bonus": 4,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        2,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Song of Rest (d10)",
+      "proficiency_bonus": 5,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        2,
+        1,
+        1,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Magical Secrets, Bard College feature",
+      "proficiency_bonus": 5,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        2,
+        1,
+        1,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Bardic Inspiration (d12)",
+      "proficiency_bonus": 5,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        2,
+        1,
+        1,
+        1,
+        0
+      ]
+    },
+    {
+      "features": "Ability Score Improvement",
+      "proficiency_bonus": 5,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        2,
+        1,
+        1,
+        1,
+        0
+      ]
+    },
+    {
+      "features": "Song of Rest (d12)",
+      "proficiency_bonus": 6,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        2,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "features": "Magical Secrets",
+      "proficiency_bonus": 6,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        3,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "features": "Ability Score Improvement",
+      "proficiency_bonus": 6,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        3,
+        2,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "features": "Superior Inspiration",
+      "proficiency_bonus": 6,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        3,
+        2,
+        2,
+        1,
+        1
+      ]
+    }
+  ],
+  "Chierico": [
+    {
+      "features": "Spellcasting, Divine Domain",
+      "proficiency_bonus": 2,
+      "spell_slots": [
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Channel Divinity (1/riposo), Divine Domain feature",
+      "proficiency_bonus": 2,
+      "spell_slots": [
+        3,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "—",
+      "proficiency_bonus": 2,
+      "spell_slots": [
+        4,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Ability Score Improvement",
+      "proficiency_bonus": 2,
+      "spell_slots": [
+        4,
+        3,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Destroy Undead (CR 1/2)",
+      "proficiency_bonus": 3,
+      "spell_slots": [
+        4,
+        3,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Channel Divinity (2/riposo), Divine Domain feature",
+      "proficiency_bonus": 3,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "—",
+      "proficiency_bonus": 3,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "ASI, Destroy Undead (CR 1), Divine Domain feature",
+      "proficiency_bonus": 3,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "—",
+      "proficiency_bonus": 4,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        1,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Divine Intervention",
+      "proficiency_bonus": 4,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        2,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Destroy Undead (CR 2)",
+      "proficiency_bonus": 4,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        2,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Ability Score Improvement",
+      "proficiency_bonus": 4,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        2,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "—",
+      "proficiency_bonus": 5,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        2,
+        1,
+        1,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Destroy Undead (CR 3)",
+      "proficiency_bonus": 5,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        2,
+        1,
+        1,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "—",
+      "proficiency_bonus": 5,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        2,
+        1,
+        1,
+        1,
+        0
+      ]
+    },
+    {
+      "features": "Ability Score Improvement",
+      "proficiency_bonus": 5,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        2,
+        1,
+        1,
+        1,
+        0
+      ]
+    },
+    {
+      "features": "Destroy Undead (CR 4), Divine Domain feature",
+      "proficiency_bonus": 6,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        2,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "features": "Channel Divinity (3/riposo)",
+      "proficiency_bonus": 6,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        3,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "features": "Ability Score Improvement",
+      "proficiency_bonus": 6,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        3,
+        2,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "features": "Divine Intervention improvement",
+      "proficiency_bonus": 6,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        3,
+        2,
+        2,
+        1,
+        1
+      ]
+    }
+  ],
+  "Druido": [
+    {
+      "features": "Druidic, Spellcasting",
+      "proficiency_bonus": 2,
+      "spell_slots": [
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Wild Shape, Druid Circle",
+      "proficiency_bonus": 2,
+      "spell_slots": [
+        3,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "—",
+      "proficiency_bonus": 2,
+      "spell_slots": [
+        4,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Wild Shape improvement, ASI",
+      "proficiency_bonus": 2,
+      "spell_slots": [
+        4,
+        3,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "—",
+      "proficiency_bonus": 3,
+      "spell_slots": [
+        4,
+        3,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Druid Circle feature",
+      "proficiency_bonus": 3,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "—",
+      "proficiency_bonus": 3,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Wild Shape improvement, ASI",
+      "proficiency_bonus": 3,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "—",
+      "proficiency_bonus": 4,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        1,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Druid Circle feature",
+      "proficiency_bonus": 4,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        2,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "—",
+      "proficiency_bonus": 4,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        2,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Ability Score Improvement",
+      "proficiency_bonus": 4,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        2,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "—",
+      "proficiency_bonus": 5,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        2,
+        1,
+        1,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Druid Circle feature",
+      "proficiency_bonus": 5,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        2,
+        1,
+        1,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "—",
+      "proficiency_bonus": 5,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        2,
+        1,
+        1,
+        1,
+        0
+      ]
+    },
+    {
+      "features": "Ability Score Improvement",
+      "proficiency_bonus": 5,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        2,
+        1,
+        1,
+        1,
+        0
+      ]
+    },
+    {
+      "features": "—",
+      "proficiency_bonus": 6,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        2,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "features": "Timeless Body, Beast Spells",
+      "proficiency_bonus": 6,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        3,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "features": "Ability Score Improvement",
+      "proficiency_bonus": 6,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        3,
+        2,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "features": "Archdruid",
+      "proficiency_bonus": 6,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        3,
+        2,
+        2,
+        1,
+        1
+      ]
+    }
+  ],
+  "Guerriero": [
+    {
+      "features": "Fighting Style, Second Wind",
+      "proficiency_bonus": 2,
+      "spell_slots": null
+    },
+    {
+      "features": "Action Surge (1 uso)",
+      "proficiency_bonus": 2,
+      "spell_slots": null
+    },
+    {
+      "features": "Martial Archetype",
+      "proficiency_bonus": 2,
+      "spell_slots": null
+    },
+    {
+      "features": "Ability Score Improvement",
+      "proficiency_bonus": 2,
+      "spell_slots": null
+    },
+    {
+      "features": "Extra Attack",
+      "proficiency_bonus": 3,
+      "spell_slots": null
+    },
+    {
+      "features": "Ability Score Improvement",
+      "proficiency_bonus": 3,
+      "spell_slots": null
+    },
+    {
+      "features": "Martial Archetype feature",
+      "proficiency_bonus": 3,
+      "spell_slots": null
+    },
+    {
+      "features": "Ability Score Improvement",
+      "proficiency_bonus": 3,
+      "spell_slots": null
+    },
+    {
+      "features": "Indomitable (1 uso)",
+      "proficiency_bonus": 4,
+      "spell_slots": null
+    },
+    {
+      "features": "Martial Archetype feature",
+      "proficiency_bonus": 4,
+      "spell_slots": null
+    },
+    {
+      "features": "Extra Attack (2)",
+      "proficiency_bonus": 4,
+      "spell_slots": null
+    },
+    {
+      "features": "Ability Score Improvement",
+      "proficiency_bonus": 4,
+      "spell_slots": null
+    },
+    {
+      "features": "Indomitable (2 usi)",
+      "proficiency_bonus": 5,
+      "spell_slots": null
+    },
+    {
+      "features": "Ability Score Improvement",
+      "proficiency_bonus": 5,
+      "spell_slots": null
+    },
+    {
+      "features": "Martial Archetype feature",
+      "proficiency_bonus": 5,
+      "spell_slots": null
+    },
+    {
+      "features": "Ability Score Improvement",
+      "proficiency_bonus": 5,
+      "spell_slots": null
+    },
+    {
+      "features": "Action Surge (2 usi), Indomitable (3 usi)",
+      "proficiency_bonus": 6,
+      "spell_slots": null
+    },
+    {
+      "features": "Martial Archetype feature",
+      "proficiency_bonus": 6,
+      "spell_slots": null
+    },
+    {
+      "features": "Ability Score Improvement",
+      "proficiency_bonus": 6,
+      "spell_slots": null
+    },
+    {
+      "features": "Extra Attack (3)",
+      "proficiency_bonus": 6,
+      "spell_slots": null
+    }
+  ],
+  "Monaco": [
+    {
+      "features": "Unarmored Defense, Martial Arts",
+      "proficiency_bonus": 2,
+      "spell_slots": null
+    },
+    {
+      "features": "Ki, Unarmored Movement",
+      "proficiency_bonus": 2,
+      "spell_slots": null
+    },
+    {
+      "features": "Monastic Tradition, Deflect Missiles",
+      "proficiency_bonus": 2,
+      "spell_slots": null
+    },
+    {
+      "features": "Ability Score Improvement, Slow Fall",
+      "proficiency_bonus": 2,
+      "spell_slots": null
+    },
+    {
+      "features": "Extra Attack, Stunning Strike",
+      "proficiency_bonus": 3,
+      "spell_slots": null
+    },
+    {
+      "features": "Ki-Empowered Strikes, Monastic Tradition feature",
+      "proficiency_bonus": 3,
+      "spell_slots": null
+    },
+    {
+      "features": "Evasion, Stillness of Mind",
+      "proficiency_bonus": 3,
+      "spell_slots": null
+    },
+    {
+      "features": "Ability Score Improvement",
+      "proficiency_bonus": 3,
+      "spell_slots": null
+    },
+    {
+      "features": "Unarmored Movement improvement",
+      "proficiency_bonus": 4,
+      "spell_slots": null
+    },
+    {
+      "features": "Purity of Body",
+      "proficiency_bonus": 4,
+      "spell_slots": null
+    },
+    {
+      "features": "Monastic Tradition feature",
+      "proficiency_bonus": 4,
+      "spell_slots": null
+    },
+    {
+      "features": "Ability Score Improvement",
+      "proficiency_bonus": 4,
+      "spell_slots": null
+    },
+    {
+      "features": "Tongue of the Sun and Moon",
+      "proficiency_bonus": 5,
+      "spell_slots": null
+    },
+    {
+      "features": "Diamond Soul",
+      "proficiency_bonus": 5,
+      "spell_slots": null
+    },
+    {
+      "features": "Timeless Body",
+      "proficiency_bonus": 5,
+      "spell_slots": null
+    },
+    {
+      "features": "Ability Score Improvement",
+      "proficiency_bonus": 5,
+      "spell_slots": null
+    },
+    {
+      "features": "Monastic Tradition feature",
+      "proficiency_bonus": 6,
+      "spell_slots": null
+    },
+    {
+      "features": "Empty Body",
+      "proficiency_bonus": 6,
+      "spell_slots": null
+    },
+    {
+      "features": "Ability Score Improvement",
+      "proficiency_bonus": 6,
+      "spell_slots": null
+    },
+    {
+      "features": "Perfect Self",
+      "proficiency_bonus": 6,
+      "spell_slots": null
+    }
+  ],
+  "Paladino": [
+    {
+      "features": "Divine Sense, Lay on Hands",
+      "proficiency_bonus": 2,
+      "spell_slots": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Fighting Style, Spellcasting, Divine Smite",
+      "proficiency_bonus": 2,
+      "spell_slots": [
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Divine Health, Sacred Oath",
+      "proficiency_bonus": 2,
+      "spell_slots": [
+        3,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Ability Score Improvement",
+      "proficiency_bonus": 2,
+      "spell_slots": [
+        3,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Extra Attack",
+      "proficiency_bonus": 3,
+      "spell_slots": [
+        4,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Aura of Protection",
+      "proficiency_bonus": 3,
+      "spell_slots": [
+        4,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Sacred Oath feature",
+      "proficiency_bonus": 3,
+      "spell_slots": [
+        4,
+        3,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Ability Score Improvement",
+      "proficiency_bonus": 3,
+      "spell_slots": [
+        4,
+        3,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "—",
+      "proficiency_bonus": 4,
+      "spell_slots": [
+        4,
+        3,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Aura of Courage",
+      "proficiency_bonus": 4,
+      "spell_slots": [
+        4,
+        3,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Improved Divine Smite",
+      "proficiency_bonus": 4,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Ability Score Improvement",
+      "proficiency_bonus": 4,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "—",
+      "proficiency_bonus": 5,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Cleansing Touch",
+      "proficiency_bonus": 5,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Sacred Oath feature",
+      "proficiency_bonus": 5,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Ability Score Improvement",
+      "proficiency_bonus": 5,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "—",
+      "proficiency_bonus": 6,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        1,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Aura improvements",
+      "proficiency_bonus": 6,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        1,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Ability Score Improvement",
+      "proficiency_bonus": 6,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        2,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Sacred Oath feature",
+      "proficiency_bonus": 6,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        2,
+        0,
+        0,
+        0,
+        0
+      ]
+    }
+  ],
+  "Ranger": [
+    {
+      "features": "Favored Enemy, Natural Explorer",
+      "proficiency_bonus": 2,
+      "spell_slots": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Fighting Style, Spellcasting",
+      "proficiency_bonus": 2,
+      "spell_slots": [
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Ranger Archetype, Primeval Awareness",
+      "proficiency_bonus": 2,
+      "spell_slots": [
+        3,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Ability Score Improvement",
+      "proficiency_bonus": 2,
+      "spell_slots": [
+        3,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Extra Attack",
+      "proficiency_bonus": 3,
+      "spell_slots": [
+        4,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Favored Enemy & Natural Explorer improvements",
+      "proficiency_bonus": 3,
+      "spell_slots": [
+        4,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Ranger Archetype feature",
+      "proficiency_bonus": 3,
+      "spell_slots": [
+        4,
+        3,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Ability Score Improvement, Land's Stride",
+      "proficiency_bonus": 3,
+      "spell_slots": [
+        4,
+        3,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "—",
+      "proficiency_bonus": 4,
+      "spell_slots": [
+        4,
+        3,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Natural Explorer improvement, Hide in Plain Sight",
+      "proficiency_bonus": 4,
+      "spell_slots": [
+        4,
+        3,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Ranger Archetype feature",
+      "proficiency_bonus": 4,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Ability Score Improvement",
+      "proficiency_bonus": 4,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "—",
+      "proficiency_bonus": 5,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Favored Enemy improvement, Vanish",
+      "proficiency_bonus": 5,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Ranger Archetype feature",
+      "proficiency_bonus": 5,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Ability Score Improvement",
+      "proficiency_bonus": 5,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "—",
+      "proficiency_bonus": 6,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        1,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Feral Senses",
+      "proficiency_bonus": 6,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        1,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Ability Score Improvement",
+      "proficiency_bonus": 6,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        2,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Foe Slayer",
+      "proficiency_bonus": 6,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        2,
+        0,
+        0,
+        0,
+        0
+      ]
+    }
+  ],
+  "Ladro": [
+    {
+      "features": "Expertise, Sneak Attack, Thieves' Cant",
+      "proficiency_bonus": 2,
+      "spell_slots": null
+    },
+    {
+      "features": "Cunning Action",
+      "proficiency_bonus": 2,
+      "spell_slots": null
+    },
+    {
+      "features": "Roguish Archetype",
+      "proficiency_bonus": 2,
+      "spell_slots": null
+    },
+    {
+      "features": "Ability Score Improvement",
+      "proficiency_bonus": 2,
+      "spell_slots": null
+    },
+    {
+      "features": "Uncanny Dodge",
+      "proficiency_bonus": 3,
+      "spell_slots": null
+    },
+    {
+      "features": "Expertise",
+      "proficiency_bonus": 3,
+      "spell_slots": null
+    },
+    {
+      "features": "Evasion",
+      "proficiency_bonus": 3,
+      "spell_slots": null
+    },
+    {
+      "features": "Ability Score Improvement",
+      "proficiency_bonus": 3,
+      "spell_slots": null
+    },
+    {
+      "features": "Roguish Archetype feature",
+      "proficiency_bonus": 4,
+      "spell_slots": null
+    },
+    {
+      "features": "Ability Score Improvement",
+      "proficiency_bonus": 4,
+      "spell_slots": null
+    },
+    {
+      "features": "Reliable Talent",
+      "proficiency_bonus": 4,
+      "spell_slots": null
+    },
+    {
+      "features": "Ability Score Improvement",
+      "proficiency_bonus": 4,
+      "spell_slots": null
+    },
+    {
+      "features": "Roguish Archetype feature",
+      "proficiency_bonus": 5,
+      "spell_slots": null
+    },
+    {
+      "features": "Blindsense",
+      "proficiency_bonus": 5,
+      "spell_slots": null
+    },
+    {
+      "features": "Slippery Mind",
+      "proficiency_bonus": 5,
+      "spell_slots": null
+    },
+    {
+      "features": "Ability Score Improvement",
+      "proficiency_bonus": 5,
+      "spell_slots": null
+    },
+    {
+      "features": "Roguish Archetype feature",
+      "proficiency_bonus": 6,
+      "spell_slots": null
+    },
+    {
+      "features": "Elusive",
+      "proficiency_bonus": 6,
+      "spell_slots": null
+    },
+    {
+      "features": "Ability Score Improvement",
+      "proficiency_bonus": 6,
+      "spell_slots": null
+    },
+    {
+      "features": "Stroke of Luck",
+      "proficiency_bonus": 6,
+      "spell_slots": null
+    }
+  ],
+  "Stregone": [
+    {
+      "features": "Spellcasting, Sorcerous Origin",
+      "proficiency_bonus": 2,
+      "spell_slots": [
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Font of Magic",
+      "proficiency_bonus": 2,
+      "spell_slots": [
+        3,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Metamagic",
+      "proficiency_bonus": 2,
+      "spell_slots": [
+        4,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Ability Score Improvement",
+      "proficiency_bonus": 2,
+      "spell_slots": [
+        4,
+        3,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "—",
+      "proficiency_bonus": 3,
+      "spell_slots": [
+        4,
+        3,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Sorcerous Origin feature",
+      "proficiency_bonus": 3,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "—",
+      "proficiency_bonus": 3,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Ability Score Improvement",
+      "proficiency_bonus": 3,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "—",
+      "proficiency_bonus": 4,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        1,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Metamagic",
+      "proficiency_bonus": 4,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        2,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "—",
+      "proficiency_bonus": 4,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        2,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Ability Score Improvement",
+      "proficiency_bonus": 4,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        2,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "—",
+      "proficiency_bonus": 5,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        2,
+        1,
+        1,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Sorcerous Origin feature",
+      "proficiency_bonus": 5,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        2,
+        1,
+        1,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "—",
+      "proficiency_bonus": 5,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        2,
+        1,
+        1,
+        1,
+        0
+      ]
+    },
+    {
+      "features": "Ability Score Improvement",
+      "proficiency_bonus": 5,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        2,
+        1,
+        1,
+        1,
+        0
+      ]
+    },
+    {
+      "features": "Metamagic",
+      "proficiency_bonus": 6,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        2,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "features": "Sorcerous Origin feature",
+      "proficiency_bonus": 6,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        3,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "features": "Ability Score Improvement",
+      "proficiency_bonus": 6,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        3,
+        2,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "features": "Sorcerous Restoration",
+      "proficiency_bonus": 6,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        3,
+        2,
+        2,
+        1,
+        1
+      ]
+    }
+  ],
+  "Warlock": [
+    {
+      "features": "Otherworldly Patron, Pact Magic",
+      "proficiency_bonus": 2,
+      "spell_slots": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Eldritch Invocations",
+      "proficiency_bonus": 2,
+      "spell_slots": [
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Pact Boon",
+      "proficiency_bonus": 2,
+      "spell_slots": [
+        0,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Ability Score Improvement",
+      "proficiency_bonus": 2,
+      "spell_slots": [
+        0,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "—",
+      "proficiency_bonus": 3,
+      "spell_slots": [
+        0,
+        0,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Otherworldly Patron feature",
+      "proficiency_bonus": 3,
+      "spell_slots": [
+        0,
+        0,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "—",
+      "proficiency_bonus": 3,
+      "spell_slots": [
+        0,
+        0,
+        0,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Ability Score Improvement",
+      "proficiency_bonus": 3,
+      "spell_slots": [
+        0,
+        0,
+        0,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "—",
+      "proficiency_bonus": 4,
+      "spell_slots": [
+        0,
+        0,
+        0,
+        0,
+        2,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Otherworldly Patron feature",
+      "proficiency_bonus": 4,
+      "spell_slots": [
+        0,
+        0,
+        0,
+        0,
+        2,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Mystic Arcanum (6° livello)",
+      "proficiency_bonus": 4,
+      "spell_slots": [
+        0,
+        0,
+        0,
+        0,
+        3,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Ability Score Improvement",
+      "proficiency_bonus": 4,
+      "spell_slots": [
+        0,
+        0,
+        0,
+        0,
+        3,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Mystic Arcanum (7° livello)",
+      "proficiency_bonus": 5,
+      "spell_slots": [
+        0,
+        0,
+        0,
+        0,
+        3,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Otherworldly Patron feature",
+      "proficiency_bonus": 5,
+      "spell_slots": [
+        0,
+        0,
+        0,
+        0,
+        3,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Mystic Arcanum (8° livello)",
+      "proficiency_bonus": 5,
+      "spell_slots": [
+        0,
+        0,
+        0,
+        0,
+        3,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Ability Score Improvement",
+      "proficiency_bonus": 5,
+      "spell_slots": [
+        0,
+        0,
+        0,
+        0,
+        3,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Mystic Arcanum (9° livello)",
+      "proficiency_bonus": 6,
+      "spell_slots": [
+        0,
+        0,
+        0,
+        0,
+        4,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "—",
+      "proficiency_bonus": 6,
+      "spell_slots": [
+        0,
+        0,
+        0,
+        0,
+        4,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Ability Score Improvement",
+      "proficiency_bonus": 6,
+      "spell_slots": [
+        0,
+        0,
+        0,
+        0,
+        4,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Eldritch Master",
+      "proficiency_bonus": 6,
+      "spell_slots": [
+        0,
+        0,
+        0,
+        0,
+        4,
+        0,
+        0,
+        0,
+        0
+      ]
+    }
+  ],
+  "Mago": [
+    {
+      "features": "Spellcasting, Arcane Recovery",
+      "proficiency_bonus": 2,
+      "spell_slots": [
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Arcane Tradition",
+      "proficiency_bonus": 2,
+      "spell_slots": [
+        3,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "—",
+      "proficiency_bonus": 2,
+      "spell_slots": [
+        4,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Ability Score Improvement",
+      "proficiency_bonus": 2,
+      "spell_slots": [
+        4,
+        3,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "—",
+      "proficiency_bonus": 3,
+      "spell_slots": [
+        4,
+        3,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Arcane Tradition feature",
+      "proficiency_bonus": 3,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "—",
+      "proficiency_bonus": 3,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Ability Score Improvement",
+      "proficiency_bonus": 3,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "—",
+      "proficiency_bonus": 4,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        1,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Arcane Tradition feature",
+      "proficiency_bonus": 4,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        2,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "—",
+      "proficiency_bonus": 4,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        2,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Ability Score Improvement",
+      "proficiency_bonus": 4,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        2,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "—",
+      "proficiency_bonus": 5,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        2,
+        1,
+        1,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "Arcane Tradition feature",
+      "proficiency_bonus": 5,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        2,
+        1,
+        1,
+        0,
+        0
+      ]
+    },
+    {
+      "features": "—",
+      "proficiency_bonus": 5,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        2,
+        1,
+        1,
+        1,
+        0
+      ]
+    },
+    {
+      "features": "Ability Score Improvement",
+      "proficiency_bonus": 5,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        2,
+        1,
+        1,
+        1,
+        0
+      ]
+    },
+    {
+      "features": "—",
+      "proficiency_bonus": 6,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        2,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "features": "Spell Mastery",
+      "proficiency_bonus": 6,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        3,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "features": "Ability Score Improvement",
+      "proficiency_bonus": 6,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        3,
+        2,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "features": "Signature Spell",
+      "proficiency_bonus": 6,
+      "spell_slots": [
+        4,
+        3,
+        3,
+        3,
+        3,
+        2,
+        2,
+        1,
+        1
+      ]
+    }
+  ]
+}
