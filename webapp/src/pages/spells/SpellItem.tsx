@@ -152,7 +152,7 @@ function SpellItemInner({
                               : 'bg-dnd-arcane/20 text-dnd-arcane-text border-dnd-arcane/30'
                             }`}
               >
-                <Ban size={12} />
+                {isConcentrating ? <Ban size={12} /> : <FlaskConical size={12} />}
                 {isConcentrating
                   ? t('character.spells.stop_concentration')
                   : t('character.spells.concentration')}
