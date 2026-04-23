@@ -204,7 +204,8 @@ export default function DiceOverlay() {
                   onPointerCancel={handlePointerUpOrLeave}
                   disabled={isRolling}
                   className="relative w-12 h-12 rounded-2xl bg-dnd-surface-raised border border-dnd-border
-                             flex items-center justify-center text-dnd-gold-bright
+                             flex items-center justify-center text-dnd-gold-bright select-none
+                             touch-manipulation [-webkit-touch-callout:none]
                              hover:border-dnd-gold/60 hover:shadow-halo-gold transition-[box-shadow,border-color]
                              disabled:opacity-40"
                   whileTap={{ scale: 0.9 }}
