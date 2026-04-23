@@ -13,6 +13,7 @@ import { api } from '@/api/client'
 import type { CharacterLiveSnapshot, SessionMessage, SessionParticipant } from '@/types'
 import { haptic, telegramConfirm } from '@/auth/telegram'
 import { formatCondition } from '@/lib/conditions'
+import ParticipantIdentitySheet from '@/pages/session/ParticipantIdentitySheet'
 
 function conditionLabels(
   conditions: Record<string, unknown> | null | undefined,
@@ -31,6 +32,7 @@ function ParticipantRow({
   isMe,
   isOwn,
   onOwnClick,
+  onOtherClick,
   t,
 }: {
   participant: SessionParticipant
@@ -39,6 +41,7 @@ function ParticipantRow({
   isMe: boolean
   isOwn: boolean
   onOwnClick: (charId: number) => void
+  onOtherClick: (participant: SessionParticipant) => void
   t: TFunction
 }) {
   const roleIcon = isGm
@@ -62,11 +65,16 @@ function ParticipantRow({
   }
 
   const handleClick = () => {
-    if (isOwn && snapshot) onOwnClick(snapshot.id)
+    if (isOwn && snapshot) {
+      onOwnClick(snapshot.id)
+    } else if (!isGm && !isMe && participant.character_id) {
+      onOtherClick(participant)
+    }
   }
 
-  const Wrapper: any = isOwn ? 'button' : 'div'
-  const wrapperProps = isOwn
+  const isClickable = isOwn || (!isGm && !isMe && !!participant.character_id)
+  const Wrapper: any = isClickable ? 'button' : 'div'
+  const wrapperProps = isClickable
     ? { type: 'button', onClick: handleClick, className: 'w-full text-left cursor-pointer' }
     : {}
 
@@ -74,7 +82,7 @@ function ParticipantRow({
     <Wrapper {...wrapperProps}>
       <div className={`rounded-lg border p-3 transition-colors
         ${isMe ? 'border-dnd-gold bg-dnd-surface-raised' : 'border-dnd-border bg-dnd-surface'}
-        ${isOwn ? 'hover:border-dnd-gold-bright' : ''}`}>
+        ${isClickable ? 'hover:border-dnd-gold-bright' : ''}`}>
 
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
@@ -169,6 +177,7 @@ export default function SessionRoom() {
   const qc = useQueryClient()
   const [chatInput, setChatInput] = useState('')
   const [whisperTo, setWhisperTo] = useState<number | null>(null)
+  const [identityTarget, setIdentityTarget] = useState<SessionParticipant | null>(null)
   const [lastSeenMsgId, setLastSeenMsgId] = useState(0)
   const [chatCache, setChatCache] = useState<SessionMessage[]>([])
   const scrollerRef = useRef<HTMLDivElement | null>(null)
@@ -368,6 +377,7 @@ export default function SessionRoom() {
               isMe={isMe}
               isOwn={isOwn}
               onOwnClick={(cid) => navigate(`/char/${cid}`)}
+              onOtherClick={(target) => setIdentityTarget(target)}
               t={t}
             />
           )
@@ -492,6 +502,12 @@ export default function SessionRoom() {
       >
         {amGm ? t('session.close') : t('session.leave')}
       </Button>
+
+      <ParticipantIdentitySheet
+        code={live.code}
+        target={identityTarget}
+        onClose={() => setIdentityTarget(null)}
+      />
     </Layout>
   )
 }
