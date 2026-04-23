@@ -36,7 +36,7 @@ _DICE_RE = re.compile(r"^(\d+)d(\d+)([+-]\d+)?$", re.IGNORECASE)
 
 
 def _now() -> str:
-    return datetime.utcnow().strftime("%Y-%m-%d %H:%M")
+    return datetime.utcnow().isoformat(timespec="seconds")
 
 
 def _add_history(session, char_id: int, event_type: str, description: str) -> None:

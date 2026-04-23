@@ -37,7 +37,7 @@ router = APIRouter(prefix="/characters", tags=["spells"])
 
 
 def _now() -> str:
-    return datetime.utcnow().strftime("%Y-%m-%d %H:%M")
+    return datetime.utcnow().isoformat(timespec="seconds")
 
 
 def _add_history(session, char_id: int, event_type: str, description: str) -> None:

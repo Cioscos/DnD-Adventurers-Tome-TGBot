@@ -698,6 +698,9 @@ async def get_session_feed(
 
     has_more = len(items) > limit
     if has_more:
-        items = items[-limit:]
+        if since is not None:
+            items = items[:limit]      # earliest-N for since cursor
+        else:
+            items = items[-limit:]     # latest-N for before or no-param
 
     return SessionFeedResponse(items=items, has_more=has_more)

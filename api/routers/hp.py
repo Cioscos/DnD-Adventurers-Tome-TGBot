@@ -44,7 +44,7 @@ router = APIRouter(prefix="/characters", tags=["hp"])
 
 
 def _now() -> str:
-    return datetime.utcnow().strftime("%Y-%m-%d %H:%M")
+    return datetime.utcnow().isoformat(timespec="seconds")
 
 
 def _add_history(
