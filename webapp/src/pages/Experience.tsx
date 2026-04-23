@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
-import { Sparkles, Star, Check } from 'lucide-react'
+import { Sparkles, Star, Check, ChevronsUp } from 'lucide-react'
 import { toast } from 'sonner'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
@@ -13,7 +13,7 @@ import Button from '@/components/ui/Button'
 import StatPill from '@/components/ui/StatPill'
 import { haptic } from '@/auth/telegram'
 import { spring } from '@/styles/motion'
-import { XP_THRESHOLDS, levelFromXp } from '@/lib/xpThresholds'
+import { XP_THRESHOLDS, levelFromXp, quickXpAmounts } from '@/lib/xpThresholds'
 
 export default function Experience() {
   const { id } = useParams<{ id: string }>()
@@ -60,6 +60,8 @@ export default function Experience() {
   const isSingleClass = (char.classes ?? []).length === 1
   const isMulticlass = (char.classes ?? []).length > 1
   const levelUpAvailable = isMulticlass && level > totalClassLevel
+  const isMaxLevel = level >= 20
+  const quickAmounts = quickXpAmounts(xpToNext)
 
   const handleApply = () => {
     const n = parseInt(addValue, 10)
@@ -67,7 +69,10 @@ export default function Experience() {
     mutation.mutate(setMode ? { set: n } : { add: n })
   }
 
-  const quickAmounts = [50, 100, 200, 500]
+  const handleLevelUp = () => {
+    if (nextThreshold === null) return
+    mutation.mutate({ set: nextThreshold })
+  }
 
   return (
     <Layout title={t('character.xp.title')} backTo={`/char/${charId}`} group="character" page="xp">
@@ -185,20 +190,44 @@ export default function Experience() {
         </div>
       </Surface>
 
-      <div className="grid grid-cols-4 gap-2">
-        {quickAmounts.map((n) => (
-          <m.button
-            key={n}
-            onClick={() => mutation.mutate({ add: n })}
-            className="min-h-[48px] rounded-xl bg-dnd-surface border border-dnd-border
-                       hover:border-dnd-gold/60 transition-colors
-                       font-mono font-bold text-dnd-gold-bright"
-            whileTap={{ scale: 0.93 }}
+      {!isMaxLevel && (
+        <>
+          <Button
+            variant="primary"
+            size="lg"
+            fullWidth
+            onClick={handleLevelUp}
+            loading={mutation.isPending}
+            icon={<ChevronsUp size={18} />}
+            haptic="medium"
+            aria-label={t('character.xp.level_up_to', { level: level + 1 })}
           >
-            +{n}
-          </m.button>
-        ))}
-      </div>
+            <span className="font-cinzel tracking-widest uppercase">
+              {t('character.xp.level_up_cta')}
+            </span>
+          </Button>
+
+          <div
+            className="grid gap-2"
+            style={{ gridTemplateColumns: `repeat(${quickAmounts.length}, minmax(0, 1fr))` }}
+          >
+            {quickAmounts.map((n) => (
+              <m.button
+                key={n}
+                onClick={() => mutation.mutate({ add: n })}
+                disabled={mutation.isPending}
+                className="min-h-[48px] rounded-xl bg-dnd-surface border border-dnd-border
+                           hover:border-dnd-gold/60 transition-colors
+                           font-mono font-bold text-dnd-gold-bright
+                           disabled:opacity-40 disabled:pointer-events-none"
+                whileTap={{ scale: 0.93 }}
+              >
+                +{n}
+              </m.button>
+            ))}
+          </div>
+        </>
+      )}
     </Layout>
   )
 }
