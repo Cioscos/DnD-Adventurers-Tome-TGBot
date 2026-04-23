@@ -4,11 +4,11 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m, AnimatePresence } from 'framer-motion'
 import { Moon, Sparkles, FlaskConical, Heart } from 'lucide-react'
+import { toast } from 'sonner'
 import { api, type DeathSaveRollResult, type ConcentrationSaveResult, type HitDiceSpendResult } from '@/api/client'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
 import HPGauge from '@/components/ui/HPGauge'
-import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
 import StatPill from '@/components/ui/StatPill'
 import { CornerFlourishes } from '@/components/ui/Ornament'
@@ -31,7 +31,6 @@ export default function HP() {
   const [showShortRest, setShowShortRest] = useState(false)
   const [hitDiceResult, setHitDiceResult] = useState<HitDiceSpendResult | null>(null)
   const [deathRollResult, setDeathRollResult] = useState<DeathSaveRollResult | null>(null)
-  const [concDamageInput, setConcDamageInput] = useState('')
   const [concSaveResult, setConcSaveResult] = useState<ConcentrationSaveResult | null>(null)
 
   const { data: char } = useQuery({
@@ -46,6 +45,13 @@ export default function HP() {
       qc.setQueryData(['character', charId], updated)
       setValue('')
       haptic.success()
+      const conc = updated.concentration_save
+      if (conc) {
+        setConcSaveResult(conc)
+        if (conc.lost_concentration) {
+          toast.warning(t('character.hp.concentration_lost'), { duration: 4000 })
+        }
+      }
     },
     onError: () => haptic.error(),
   })
@@ -84,19 +90,6 @@ export default function HP() {
     onSuccess: (result) => {
       setHitDiceResult(result)
       qc.invalidateQueries({ queryKey: ['character', charId] })
-      haptic.success()
-    },
-    onError: () => haptic.error(),
-  })
-
-  const concSaveMutation = useMutation({
-    mutationFn: (damage: number) => api.spells.concentrationSave(charId, damage),
-    onSuccess: (result) => {
-      setConcSaveResult(result)
-      if (result.lost_concentration) {
-        qc.invalidateQueries({ queryKey: ['character', charId] })
-      }
-      setConcDamageInput('')
       haptic.success()
     },
     onError: () => haptic.error(),
@@ -169,38 +162,14 @@ export default function HP() {
         <HPGauge current={char.current_hit_points} max={char.hit_points} temp={char.temp_hp} size="lg" segmented />
       </Surface>
 
-      {/* Concentration banner */}
+      {/* Concentration banner — passive indicator (auto-TS triggered by DAMAGE) */}
       {isConcentrating && (
         <Surface variant="arcane">
-          <div className="flex items-center gap-2 mb-2">
+          <div className="flex items-center gap-2">
             <FlaskConical size={16} className="text-dnd-arcane-bright" />
             <p className="text-sm font-cinzel uppercase tracking-wider text-dnd-arcane-bright">
               {t('character.hp.concentration_active')}
             </p>
-          </div>
-          <div className="flex gap-2 items-end">
-            <Input
-              type="number"
-              min={0}
-              value={concDamageInput}
-              onChange={setConcDamageInput}
-              placeholder={t('character.spells.conc_save_damage_placeholder')}
-              inputMode="numeric"
-              className="flex-1"
-            />
-            <Button
-              variant="arcane"
-              size="md"
-              onClick={() => {
-                const dmg = parseInt(concDamageInput, 10)
-                if (!isNaN(dmg) && dmg >= 0) concSaveMutation.mutate(dmg)
-              }}
-              disabled={concSaveMutation.isPending || !concDamageInput}
-              loading={concSaveMutation.isPending}
-              haptic="warning"
-            >
-              {t('character.spells.conc_save_btn')}
-            </Button>
           </div>
         </Surface>
       )}
