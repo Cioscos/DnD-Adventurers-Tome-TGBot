@@ -3,9 +3,12 @@ import { useLocation, matchPath } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { m, AnimatePresence } from 'framer-motion'
 import { Dices } from 'lucide-react'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import DiceIcon from '@/components/ui/DiceIcon'
 import { useCharacterStore } from '@/store/characterStore'
 import { haptic } from '@/auth/telegram'
+import { api } from '@/api/client'
+import { useDiceAnimation } from '@/dice/useDiceAnimation'
 import type { DiceKind } from '@/dice/types'
 
 const KINDS: DiceKind[] = ['d4', 'd6', 'd8', 'd10', 'd12', 'd20', 'd100']
@@ -39,9 +42,51 @@ function useOverlayVisibility(): { visible: boolean; charId: number | null } {
 
 export default function DiceOverlay() {
   const { t } = useTranslation()
-  const { visible } = useOverlayVisibility()
+  const { visible, charId } = useOverlayVisibility()
   const [open, setOpen] = useState(false)
   const [pool, setPool] = useState<DicePool>({})
+
+  const dice = useDiceAnimation()
+  const qc = useQueryClient()
+
+  type RollGroup = { kind: DiceKind; notation: string; rolls: number[]; total: number }
+
+  const rollMutation = useMutation({
+    mutationFn: async (entries: Array<[DiceKind, number]>) => {
+      if (!charId) throw new Error('no charId')
+      const responses = await Promise.all(
+        entries.map(([kind, count]) => api.dice.roll(charId, count, kind))
+      )
+      return entries.map(([kind], i) => {
+        const r = responses[i]
+        return { kind, notation: r.notation, rolls: r.rolls, total: r.total } as RollGroup
+      })
+    },
+    onSuccess: async (groups) => {
+      await dice.play({
+        groups: groups.map((g) => ({ kind: g.kind, results: g.rolls })),
+        interGroupMs: 150,
+      })
+      setPool({})
+      setOpen(false)
+      if (charId) qc.invalidateQueries({ queryKey: ['dice-history', charId] })
+      haptic.medium()
+      // Task 6 will show result overlay here
+    },
+    onError: () => haptic.error(),
+  })
+
+  const entries = useMemo(
+    () => (Object.entries(pool) as Array<[DiceKind, number]>).filter(([, n]) => n > 0),
+    [pool]
+  )
+  const poolTotal = entries.reduce((s, [, n]) => s + n, 0)
+  const isRolling = rollMutation.isPending
+
+  const handleRoll = useCallback(() => {
+    if (!entries.length || isRolling || !charId) return
+    rollMutation.mutate(entries)
+  }, [entries, isRolling, charId, rollMutation])
 
   const increment = useCallback((kind: DiceKind) => {
     haptic.light()
@@ -74,9 +119,11 @@ export default function DiceOverlay() {
                   key={kind}
                   type="button"
                   onClick={() => increment(kind)}
+                  disabled={isRolling}
                   className="relative w-12 h-12 rounded-2xl bg-dnd-surface-raised border border-dnd-border
                              flex items-center justify-center text-dnd-gold-bright
-                             hover:border-dnd-gold/60 hover:shadow-halo-gold transition-[box-shadow,border-color]"
+                             hover:border-dnd-gold/60 hover:shadow-halo-gold transition-[box-shadow,border-color]
+                             disabled:opacity-40"
                   whileTap={{ scale: 0.9 }}
                   initial={{ opacity: 0, x: 10 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -96,6 +143,31 @@ export default function DiceOverlay() {
               )
             })}
           </m.div>
+        )}
+      </AnimatePresence>
+
+      {/* Lancia button — appears to the left of the FAB when pool is not empty */}
+      <AnimatePresence>
+        {poolTotal > 0 && (
+          <m.button
+            type="button"
+            onClick={handleRoll}
+            disabled={isRolling}
+            className="absolute right-full top-0 mr-2 h-14 px-5 rounded-2xl
+                       bg-gradient-to-r from-dnd-gold-deep to-dnd-gold-bright
+                       border border-dnd-gold-dim shadow-halo-gold
+                       flex items-center justify-center gap-2 text-dnd-ink
+                       font-cinzel uppercase tracking-wider font-bold text-sm
+                       disabled:opacity-60 whitespace-nowrap"
+            initial={{ opacity: 0, x: 10, scale: 0.9 }}
+            animate={{ opacity: 1, x: 0, scale: 1 }}
+            exit={{ opacity: 0, x: 10, scale: 0.9 }}
+            whileTap={{ scale: 0.95 }}
+            transition={{ type: 'spring', stiffness: 320, damping: 24 }}
+          >
+            <Dices size={18} />
+            {isRolling ? t('character.dice_overlay.rolling') : t('character.dice_overlay.roll')}
+          </m.button>
         )}
       </AnimatePresence>
 
