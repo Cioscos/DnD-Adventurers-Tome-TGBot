@@ -125,47 +125,6 @@ async def add_class(
     return await _get_owned_full(char_id, user_id, session)
 
 
-@router.patch("/{char_id}/classes/{class_id}", response_model=CharacterFull)
-async def update_class(
-    char_id: int,
-    class_id: int,
-    body: CharacterClassUpdate,
-    user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
-) -> Character:
-    char = await _get_owned_full(char_id, user_id, session)
-    cls = await _get_class(class_id, char_id, session)
-    old_level = cls.level
-    for field, value in body.model_dump(exclude_unset=True).items():
-        setattr(cls, field, value)
-
-    # When level changes, sync resources for predefined classes.
-    if body.level is not None and body.level != old_level:
-        new_level = cls.level  # already updated by setattr
-        update_resources_for_level(cls.class_name, new_level, list(cls.resources), char)
-        existing_names = {r.name for r in cls.resources}
-        for res_data in get_resources_for_class(cls.class_name, new_level, char):
-            if res_data["name"] not in existing_names:
-                session.add(ClassResource(class_id=cls.id, **res_data))
-
-    return char
-
-
-@router.delete("/{char_id}/classes/{class_id}", response_model=CharacterFull)
-async def remove_class(
-    char_id: int,
-    class_id: int,
-    user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
-) -> Character:
-    char = await _get_owned_full(char_id, user_id, session)
-    cls = await _get_class(class_id, char_id, session)
-    await session.delete(cls)
-    await session.flush()
-    session.expire(char)
-    return await _get_owned_full(char_id, user_id, session)
-
-
 @router.patch("/{char_id}/classes/distribute", response_model=CharacterFull)
 async def distribute_class_levels(
     char_id: int,
@@ -237,6 +196,49 @@ async def distribute_class_levels(
     if hp_gained > 0:
         result.hp_gained = hp_gained
     return result
+
+
+# Note: keep static paths (e.g. /classes/distribute) declared BEFORE this
+# parametric {class_id} route — FastAPI matches in declaration order.
+@router.patch("/{char_id}/classes/{class_id}", response_model=CharacterFull)
+async def update_class(
+    char_id: int,
+    class_id: int,
+    body: CharacterClassUpdate,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> Character:
+    char = await _get_owned_full(char_id, user_id, session)
+    cls = await _get_class(class_id, char_id, session)
+    old_level = cls.level
+    for field, value in body.model_dump(exclude_unset=True).items():
+        setattr(cls, field, value)
+
+    # When level changes, sync resources for predefined classes.
+    if body.level is not None and body.level != old_level:
+        new_level = cls.level  # already updated by setattr
+        update_resources_for_level(cls.class_name, new_level, list(cls.resources), char)
+        existing_names = {r.name for r in cls.resources}
+        for res_data in get_resources_for_class(cls.class_name, new_level, char):
+            if res_data["name"] not in existing_names:
+                session.add(ClassResource(class_id=cls.id, **res_data))
+
+    return char
+
+
+@router.delete("/{char_id}/classes/{class_id}", response_model=CharacterFull)
+async def remove_class(
+    char_id: int,
+    class_id: int,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> Character:
+    char = await _get_owned_full(char_id, user_id, session)
+    cls = await _get_class(class_id, char_id, session)
+    await session.delete(cls)
+    await session.flush()
+    session.expire(char)
+    return await _get_owned_full(char_id, user_id, session)
 
 
 # ---------------------------------------------------------------------------
