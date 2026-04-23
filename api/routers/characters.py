@@ -70,12 +70,19 @@ def _now() -> str:
     return datetime.utcnow().strftime("%Y-%m-%d %H:%M")
 
 
-def _add_history(session, char_id: int, event_type: str, description: str) -> None:
+def _add_history(
+    session,
+    char_id: int,
+    event_type: str,
+    description: str,
+    meta: dict | None = None,
+) -> None:
     session.add(CharacterHistory(
         character_id=char_id,
         timestamp=_now(),
         event_type=event_type,
         description=description,
+        meta=meta,
     ))
 
 
