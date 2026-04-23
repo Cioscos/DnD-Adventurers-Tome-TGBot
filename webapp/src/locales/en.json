@@ -68,7 +68,8 @@
       "hit_dice_result": "Hit dice spent",
       "new_hp": "New HP",
       "confirm_rest": "Confirm rest",
-      "concentration_active": "Concentrating — make a saving throw?"
+      "concentration_active": "Concentrating",
+      "concentration_lost": "Concentration lost!"
     },
     "death_saves": {
       "title": "Death Saves",

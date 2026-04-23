@@ -64,16 +64,7 @@ export type DeathSaveRollResult = {
   current_hp: number
 }
 
-export type ConcentrationSaveResult = {
-  die: number
-  bonus: number
-  total: number
-  dc: number
-  success: boolean
-  lost_concentration: boolean
-  is_critical: boolean
-  is_fumble: boolean
-}
+export type { ConcentrationSaveResult } from '@/types'
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000'
 

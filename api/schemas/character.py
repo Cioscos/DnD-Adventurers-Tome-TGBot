@@ -10,6 +10,7 @@ from api.schemas.common import (
     AbilityRead,
     AbilityScoreRead,
     CharacterClassRead,
+    ConcentrationSaveResult,
     CurrencyRead,
     MapRead,
 )
@@ -75,6 +76,9 @@ class CharacterFull(BaseModel):
 
     # Populated only by PATCH /xp when a level-up occurs
     hp_gained: Optional[int] = None
+
+    # Populated only by POST /hp when op=DAMAGE on a concentrating character
+    concentration_save: Optional[ConcentrationSaveResult] = None
 
     # JSON fields
     rolls_history: Optional[list] = None

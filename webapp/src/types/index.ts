@@ -132,6 +132,18 @@ export interface CharacterSummary {
   experience_points: number
 }
 
+export interface ConcentrationSaveResult {
+  die: number
+  bonus: number
+  total: number
+  description?: string
+  dc: number
+  success: boolean
+  lost_concentration: boolean
+  is_critical: boolean
+  is_fumble: boolean
+}
+
 export interface CharacterFull extends CharacterSummary {
   background?: string
   alignment?: string
@@ -144,6 +156,7 @@ export interface CharacterFull extends CharacterSummary {
   spell_slots_mode: string
   concentrating_spell_id?: number
   hp_gained?: number
+  concentration_save?: ConcentrationSaveResult | null
   rolls_history?: DiceRollResult[]
   notes?: Record<string, string>
   settings?: Record<string, unknown>
