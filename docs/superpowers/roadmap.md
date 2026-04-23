@@ -2,7 +2,7 @@
 
 **Sorgente originale:** `istruzioni.md` (radice del repo, gitignorato).
 **Ultima revisione:** 2026-04-23.
-**Stato globale:** Gruppi A e B completati e mergeati; C-H pending.
+**Stato globale:** Gruppi A, B, F, G completati e mergeati; C, D, E, H pending.
 
 Questo documento è la mappa maestra dei sottoprogetti. Ogni gruppo è un ciclo indipendente `brainstorming → spec → plan → implementazione → PR`. Lo scope, le dipendenze e l'ordine consigliato sono sotto.
 
@@ -17,8 +17,8 @@ Questo documento è la mappa maestra dei sottoprogetti. Ogni gruppo è un ciclo 
 | C | Rework concentrazione | §1.4 + §1.5 | ⬜ Pending | — |
 | D | Widget dadi overlay | §1.3 + §1.6 | ⬜ Pending | — |
 | E | Privacy identità | §1.7 + §4 | 🟡 Parziale (base già fatto pre-roadmap) | — |
-| F | XP + Level-up button | §1.8 | ⬜ Pending | — |
-| G | Multiclasse | §2 (tutto) | ⬜ Pending | — |
+| F | XP + Level-up button | §1.8 | ✅ Done (PR #69 merged → main) | `feat/xp-level-up-gruppo-f` |
+| G | Multiclasse | §2 (tutto) | ✅ Done (PR #70 merged → main) | `feat/multiclass-gruppo-g` |
 | H | Chat/cronologia integrata | §3 | ⬜ Pending | — |
 
 ---
@@ -182,7 +182,7 @@ Questo documento è la mappa maestra dei sottoprogetti. Ogni gruppo è un ciclo 
 
 ---
 
-## Gruppo F — XP + Level-up button ⬜
+## Gruppo F — XP + Level-up button ✅
 
 **Sezioni coperte:** `§1.8 Esperienza e Level Up`.
 
@@ -206,7 +206,7 @@ Questo documento è la mappa maestra dei sottoprogetti. Ogni gruppo è un ciclo 
 
 ---
 
-## Gruppo G — Multiclasse ⬜
+## Gruppo G — Multiclasse ✅
 
 **Sezioni coperte:** `§2 Funzionalità Multiclasse` (entrambe le sottosezioni).
 
@@ -281,7 +281,7 @@ Questo documento è la mappa maestra dei sottoprogetti. Ogni gruppo è un ciclo 
 Fondazioni → feature grosse → integrazioni:
 
 ```
-✅ A → ✅ B → F → G (richiede F + dati classi) → C → D → E completion → H
+✅ A → ✅ B → ✅ F → ✅ G → C → D → E completion → H
 ```
 
 **Razionale:**
