@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -87,7 +87,7 @@ export default function Multiclass() {
   if (!char) return null
 
   const classes: CharacterClass[] = char.classes ?? []
-  const classLevelSum = useMemo(() => classes.reduce((s, c) => s + c.level, 0), [classes])
+  const classLevelSum = classes.reduce((s, c) => s + c.level, 0)
   const targetLevel = levelFromXp(char.experience_points ?? 0)
   const levelUpAvailable = classes.length > 0 && targetLevel > classLevelSum
 
