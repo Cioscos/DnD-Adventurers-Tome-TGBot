@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
-import { Plus, Minus, X, Swords, Scroll } from 'lucide-react'
+import { Plus, X, Swords, Scroll, Edit3 } from 'lucide-react'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
@@ -11,8 +11,12 @@ import Button from '@/components/ui/Button'
 import StatPill from '@/components/ui/StatPill'
 import { FlourishDivider } from '@/components/ui/Ornament'
 import { haptic } from '@/auth/telegram'
+import { levelFromXp } from '@/lib/xpThresholds'
 import AddClassForm, { resolveClassName, PREDEFINED_CLASSES, CUSTOM_KEY, type ClassForm } from '@/pages/multiclass/AddClassForm'
 import ResourceManager from '@/pages/multiclass/ResourceManager'
+import LevelUpBanner from '@/pages/multiclass/LevelUpBanner'
+import LevelUpModal from '@/pages/multiclass/LevelUpModal'
+import EditClassesModal from '@/pages/multiclass/EditClassesModal'
 import type { CharacterClass } from '@/types'
 
 export default function Multiclass() {
@@ -21,6 +25,8 @@ export default function Multiclass() {
   const { t } = useTranslation()
   const qc = useQueryClient()
   const [showAddClass, setShowAddClass] = useState(false)
+  const [showLevelUpModal, setShowLevelUpModal] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
 
   const { data: char } = useQuery({
     queryKey: ['character', charId],
@@ -47,12 +53,6 @@ export default function Multiclass() {
       haptic.success()
     },
     onError: () => haptic.error(),
-  })
-
-  const updateLevel = useMutation({
-    mutationFn: ({ classId, level }: { classId: number; level: number }) =>
-      api.classes.update(charId, classId, { level: Math.max(1, level) }),
-    onSuccess: (updated) => qc.setQueryData(['character', charId], updated),
   })
 
   const removeClass = useMutation({
@@ -87,7 +87,9 @@ export default function Multiclass() {
   if (!char) return null
 
   const classes: CharacterClass[] = char.classes ?? []
-  const totalLevel = classes.reduce((s, c) => s + c.level, 0)
+  const classLevelSum = useMemo(() => classes.reduce((s, c) => s + c.level, 0), [classes])
+  const targetLevel = levelFromXp(char.experience_points ?? 0)
+  const levelUpAvailable = classes.length > 0 && targetLevel > classLevelSum
 
   return (
     <Layout title={t('character.multiclass.title')} backTo={`/char/${charId}`} group="character" page="class">
@@ -99,21 +101,36 @@ export default function Multiclass() {
           </p>
           <p className="text-5xl font-display font-black text-dnd-gold-bright"
              style={{ textShadow: '0 2px 8px var(--dnd-gold-glow)' }}>
-            {totalLevel}
+            {targetLevel}
           </p>
         </Surface>
       )}
 
-      <Button
-        variant="primary"
-        size="lg"
-        fullWidth
-        onClick={() => setShowAddClass(true)}
-        icon={<Plus size={18} />}
-        haptic="medium"
-      >
-        {t('character.multiclass.add_class')}
-      </Button>
+      {levelUpAvailable && (
+        <LevelUpBanner onOpen={() => setShowLevelUpModal(true)} />
+      )}
+
+      <div className="grid grid-cols-2 gap-2">
+        <Button
+          variant="primary"
+          size="md"
+          onClick={() => setShowAddClass(true)}
+          icon={<Plus size={16} />}
+          haptic="medium"
+        >
+          {t('character.multiclass.add_class')}
+        </Button>
+        <Button
+          variant="secondary"
+          size="md"
+          onClick={() => setShowEditModal(true)}
+          disabled={classes.length < 2}
+          icon={<Edit3 size={16} />}
+          haptic="medium"
+        >
+          {t('character.multiclass.edit_classes')}
+        </Button>
+      </div>
 
       {classes.length === 0 && (
         <Surface variant="flat" className="text-center py-8">
@@ -161,45 +178,14 @@ export default function Multiclass() {
                 <FlourishDivider />
               </div>
 
-              {/* Level pip tracker (1-20) + controls */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <p className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-gold-dim flex-1">
-                    {t('character.multiclass.level', { defaultValue: 'Livello' })}
-                  </p>
-                  <m.button
-                    onClick={() => updateLevel.mutate({ classId: cls.id, level: cls.level - 1 })}
-                    disabled={cls.level <= 1}
-                    className="w-8 h-8 rounded-lg bg-dnd-surface border border-dnd-border flex items-center justify-center text-dnd-gold disabled:opacity-30"
-                    whileTap={{ scale: 0.9 }}
-                  >
-                    <Minus size={14} />
-                  </m.button>
-                  <span className="w-10 text-center font-display font-black text-xl text-dnd-gold-bright">{cls.level}</span>
-                  <m.button
-                    onClick={() => updateLevel.mutate({ classId: cls.id, level: cls.level + 1 })}
-                    disabled={cls.level >= 20}
-                    className="w-8 h-8 rounded-lg bg-dnd-surface border border-dnd-border flex items-center justify-center text-dnd-gold disabled:opacity-30"
-                    whileTap={{ scale: 0.9 }}
-                  >
-                    <Plus size={14} />
-                  </m.button>
-                </div>
-                {/* 20 pip level track */}
-                <div className="flex gap-0.5">
-                  {Array.from({ length: 20 }).map((_, i) => {
-                    const filled = i < cls.level
-                    return (
-                      <div
-                        key={i}
-                        className={`flex-1 h-1.5 rounded-full transition-colors
-                          ${filled
-                            ? 'bg-gradient-to-r from-dnd-gold-dim to-dnd-gold-bright shadow-[0_0_3px_var(--dnd-gold-glow)]'
-                            : 'bg-dnd-ink/50 border border-dnd-border'}`}
-                      />
-                    )
-                  })}
-                </div>
+              {/* Level display (read-only; change via modals) */}
+              <div className="flex items-center gap-2">
+                <p className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-gold-dim flex-1">
+                  {t('character.multiclass.level')}
+                </p>
+                <span className="font-display font-black text-2xl text-dnd-gold-bright">
+                  {cls.level}
+                </span>
               </div>
             </div>
 
@@ -226,6 +212,22 @@ export default function Multiclass() {
           onAdd={(form) => addClass.mutate(form)}
           onCancel={() => setShowAddClass(false)}
           isPending={addClass.isPending}
+        />
+      )}
+
+      {showLevelUpModal && (
+        <LevelUpModal
+          char={char}
+          xpLevel={targetLevel}
+          onClose={() => setShowLevelUpModal(false)}
+        />
+      )}
+
+      {showEditModal && (
+        <EditClassesModal
+          char={char}
+          targetLevel={targetLevel}
+          onClose={() => setShowEditModal(false)}
         />
       )}
     </Layout>
