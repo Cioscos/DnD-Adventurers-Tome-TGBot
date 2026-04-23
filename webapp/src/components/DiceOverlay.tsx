@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, matchPath } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { m, AnimatePresence } from 'framer-motion'
@@ -17,6 +17,8 @@ const SIDES_FOR = {
 } as const satisfies Record<DiceKind, number>
 
 type DicePool = Partial<Record<DiceKind, number>>
+
+type RollGroup = { kind: DiceKind; notation: string; rolls: number[]; total: number }
 
 function useOverlayVisibility(): { visible: boolean; charId: number | null } {
   const location = useLocation()
@@ -46,10 +48,40 @@ export default function DiceOverlay() {
   const [open, setOpen] = useState(false)
   const [pool, setPool] = useState<DicePool>({})
 
+  const [results, setResults] = useState<RollGroup[] | null>(null)
+  const [resultVisible, setResultVisible] = useState(false)
+  const [errorVisible, setErrorVisible] = useState(false)
+
+  const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current)
+    }
+  }, [])
+
+  const showResults = useCallback((groups: RollGroup[]) => {
+    setResults(groups)
+    setResultVisible(true)
+    setErrorVisible(false)
+    if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current)
+    dismissTimerRef.current = setTimeout(() => setResultVisible(false), 3000)
+  }, [])
+
+  const dismissResults = useCallback(() => {
+    if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current)
+    setResultVisible(false)
+  }, [])
+
+  const showError = useCallback(() => {
+    setErrorVisible(true)
+    setResultVisible(false)
+    if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current)
+    dismissTimerRef.current = setTimeout(() => setErrorVisible(false), 3000)
+  }, [])
+
   const dice = useDiceAnimation()
   const qc = useQueryClient()
-
-  type RollGroup = { kind: DiceKind; notation: string; rolls: number[]; total: number }
 
   const rollMutation = useMutation({
     mutationFn: async (entries: Array<[DiceKind, number]>) => {
@@ -70,9 +102,12 @@ export default function DiceOverlay() {
       setPool({})
       setOpen(false)
       haptic.medium()
-      // Task 6 will show result overlay here
+      showResults(groups)
     },
-    onError: () => haptic.error(),
+    onError: () => {
+      haptic.error()
+      showError()
+    },
     onSettled: () => {
       if (charId) qc.invalidateQueries({ queryKey: ['dice-history', charId] })
     },
@@ -103,6 +138,7 @@ export default function DiceOverlay() {
   if (!visible) return null
 
   return (
+    <>
     <div className="fixed bottom-4 right-4 z-[55]">
       {/* Sidebar kind buttons — appears above the FAB */}
       <AnimatePresence>
@@ -191,5 +227,63 @@ export default function DiceOverlay() {
         <Dices size={26} />
       </m.button>
     </div>
+
+    {/* Result overlay bottom-center */}
+    <AnimatePresence>
+      {resultVisible && results && results.length > 0 && (
+        <m.button
+          type="button"
+          onClick={dismissResults}
+          className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[55]
+                     max-w-xs w-[calc(100%-2rem)]
+                     rounded-2xl bg-dnd-surface-raised/95 backdrop-blur-md
+                     border border-dnd-gold-dim shadow-parchment-xl
+                     px-4 py-3 text-left"
+          initial={{ opacity: 0, y: 20, scale: 0.9 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 10, scale: 0.95 }}
+          transition={{ type: 'spring', stiffness: 320, damping: 26 }}
+        >
+          <div className="space-y-1">
+            {results.map((g, i) => (
+              <div key={i} className="flex items-baseline justify-between gap-2 font-mono text-sm">
+                <span className="text-dnd-gold-dim">
+                  {g.notation}
+                  {g.rolls.length > 1 && (
+                    <span className="text-dnd-text-faint text-xs ml-1">
+                      [{g.rolls.join('+')}]
+                    </span>
+                  )}
+                </span>
+                <span className="font-display font-black text-dnd-gold-bright text-lg">
+                  {g.total}
+                </span>
+              </div>
+            ))}
+          </div>
+        </m.button>
+      )}
+    </AnimatePresence>
+
+    {/* Error toast bottom-center */}
+    <AnimatePresence>
+      {errorVisible && (
+        <m.div
+          role="alert"
+          className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[55]
+                     max-w-xs w-[calc(100%-2rem)]
+                     rounded-2xl bg-dnd-surface-raised/95 backdrop-blur-md
+                     border border-dnd-crimson shadow-parchment-xl
+                     px-4 py-3 text-center font-body text-sm text-dnd-crimson-bright"
+          initial={{ opacity: 0, y: 20, scale: 0.9 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 10, scale: 0.95 }}
+          transition={{ type: 'spring', stiffness: 320, damping: 26 }}
+        >
+          {t('character.dice_overlay.roll_failed')}
+        </m.div>
+      )}
+    </AnimatePresence>
+    </>
   )
 }
