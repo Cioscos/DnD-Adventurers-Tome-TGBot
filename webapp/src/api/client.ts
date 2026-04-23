@@ -254,6 +254,11 @@ export const api = {
       request<CharacterFull>(`/characters/${charId}/classes/${classId}`, {
         method: 'DELETE',
       }),
+    distribute: (charId: number, classes: { class_id: number; level: number }[]) =>
+      request<CharacterFull>(`/characters/${charId}/classes/distribute`, {
+        method: 'PATCH',
+        body: JSON.stringify({ classes }),
+      }),
     addResource: (charId: number, classId: number, data: Record<string, unknown>) =>
       request<unknown>(`/characters/${charId}/classes/${classId}/resources`, {
         method: 'POST',

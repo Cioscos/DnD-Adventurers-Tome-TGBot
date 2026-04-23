@@ -330,6 +330,7 @@
       "xp_to_next": "XP al prossimo livello",
       "level_abbr": "Liv.",
       "level_up_available": "Livello disponibile! Vai nella pagina Classe per distribuire il livello.",
+      "level_up_available_short": "Livello disponibile! Clicca per scegliere classe",
       "single_class_synced": "Il livello della classe viene aggiornato automaticamente con gli XP.",
       "hp_gained_toast": "+{{hp}} HP",
       "level_up_cta": "SALI DI LIVELLO",
@@ -506,7 +507,31 @@
       "restoration": "Ripristino",
       "use_resource": "Usa",
       "restore_resource": "Ripristina",
-      "auto_resources_hint": "Le risorse standard saranno create automaticamente"
+      "auto_resources_hint": "Le risorse standard saranno create automaticamente",
+      "edit_classes": "Modifica classe",
+      "level_up": {
+        "title": "Sali di livello",
+        "subtitle": "Scegli la classe per il livello {{level}}",
+        "preview_next_levels": "Prossimi sblocchi",
+        "choose_class": "Scegli la classe",
+        "proficiency_change": "Bonus competenza: +{{from}} → +{{to}}",
+        "new_spell_slot": "Nuovo slot di {{level}}° livello",
+        "confirm": "Conferma",
+        "at_max_toast": "Classe al livello massimo",
+        "progression_missing": "Dati progressione non disponibili"
+      },
+      "edit": {
+        "title": "Modifica classe",
+        "hint": "La somma dei livelli deve essere {{target}}",
+        "sum_label": "Somma livelli",
+        "sum_display": "{{current}} / {{target}}",
+        "confirm": "Conferma",
+        "cancel": "Annulla",
+        "error_server": "Errore nel server, riprova.",
+        "new_tag": "NUOVA",
+        "remove_new": "Rimuovi",
+        "classes_label": "Classi del personaggio"
+      }
     },
     "settings": {
       "title": "Impostazioni",

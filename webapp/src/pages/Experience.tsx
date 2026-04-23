@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
-import { Sparkles, Star, Check, ChevronsUp } from 'lucide-react'
+import { Star, Check, ChevronsUp } from 'lucide-react'
 import { toast } from 'sonner'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
@@ -14,6 +14,8 @@ import StatPill from '@/components/ui/StatPill'
 import { haptic } from '@/auth/telegram'
 import { spring } from '@/styles/motion'
 import { XP_THRESHOLDS, levelFromXp, quickXpAmounts } from '@/lib/xpThresholds'
+import LevelUpBanner from '@/pages/multiclass/LevelUpBanner'
+import LevelUpModal from '@/pages/multiclass/LevelUpModal'
 
 export default function Experience() {
   const { id } = useParams<{ id: string }>()
@@ -22,6 +24,7 @@ export default function Experience() {
   const qc = useQueryClient()
   const [addValue, setAddValue] = useState('')
   const [setMode, setSetMode] = useState(false)
+  const [showLevelUpModal, setShowLevelUpModal] = useState(false)
 
   const { data: char } = useQuery({
     queryKey: ['character', charId],
@@ -76,17 +79,9 @@ export default function Experience() {
 
   return (
     <Layout title={t('character.xp.title')} backTo={`/char/${charId}`} group="character" page="xp">
-      {/* Level-up notification */}
+      {/* Level-up notification — clickable for multiclass */}
       {levelUpAvailable && (
-        <m.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={spring.elastic}
-          className="rounded-2xl bg-gradient-gold border border-dnd-gold text-dnd-ink px-4 py-3 text-sm font-cinzel uppercase tracking-wider flex items-center gap-2 shadow-parchment-lg"
-        >
-          <Sparkles size={16} className="animate-shimmer" />
-          {t('character.xp.level_up_available')}
-        </m.div>
+        <LevelUpBanner onOpen={() => setShowLevelUpModal(true)} />
       )}
 
       {isSingleClass && (
@@ -227,6 +222,13 @@ export default function Experience() {
             ))}
           </div>
         </>
+      )}
+      {showLevelUpModal && (
+        <LevelUpModal
+          char={char}
+          xpLevel={level}
+          onClose={() => setShowLevelUpModal(false)}
+        />
       )}
     </Layout>
   )

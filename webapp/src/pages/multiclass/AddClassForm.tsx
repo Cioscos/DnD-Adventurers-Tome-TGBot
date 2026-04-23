@@ -50,11 +50,14 @@ interface AddClassFormProps {
   onAdd: (form: ClassForm) => void
   onCancel: () => void
   isPending: boolean
+  lockLevelTo?: number
 }
 
-export default function AddClassForm({ onAdd, onCancel, isPending }: AddClassFormProps) {
+export default function AddClassForm({ onAdd, onCancel, isPending, lockLevelTo }: AddClassFormProps) {
   const { t } = useTranslation()
-  const [classForm, setClassForm] = useState<ClassForm>(emptyClass)
+  const [classForm, setClassForm] = useState<ClassForm>(() =>
+    lockLevelTo != null ? { ...emptyClass, level: String(lockLevelTo) } : emptyClass
+  )
 
   const isPredefined = classForm.class_key !== '' && classForm.class_key !== CUSTOM_KEY
   const predefinedAttrs = isPredefined ? PREDEFINED_CLASSES[classForm.class_key] : null
@@ -115,16 +118,18 @@ export default function AddClassForm({ onAdd, onCancel, isPending }: AddClassFor
         )}
 
         <div className="flex gap-2">
-          <div className="flex-1">
-            <DndInput
-              label={t('character.multiclass.level')}
-              type="number"
-              min={1}
-              max={20}
-              value={classForm.level}
-              onChange={(v) => setClassForm((f) => ({ ...f, level: v }))}
-            />
-          </div>
+          {lockLevelTo == null && (
+            <div className="flex-1">
+              <DndInput
+                label={t('character.multiclass.level')}
+                type="number"
+                min={1}
+                max={20}
+                value={classForm.level}
+                onChange={(v) => setClassForm((f) => ({ ...f, level: v }))}
+              />
+            </div>
+          )}
           <div className="flex-1">
             <p className="block text-[11px] uppercase tracking-wider mb-1 font-medium text-dnd-gold-dim">
               {t('character.multiclass.hit_die')}

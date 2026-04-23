@@ -17,6 +17,7 @@ from api.schemas.common import (
     CharacterClassCreate,
     CharacterClassRead,
     CharacterClassUpdate,
+    ClassDistribute,
     ClassResourceCreate,
     ClassResourceRead,
     ClassResourceUpdate,
@@ -27,7 +28,9 @@ from core.data.classes import (
     get_resources_for_class,
     update_resources_for_level,
 )
-from core.game.stats import hit_points_for_level
+from core.data.xp_thresholds import xp_to_level
+from core.game.stats import hit_points_for_level, total_base_hp
+from api.routers._helpers import effective_con_mod
 
 router = APIRouter(prefix="/characters", tags=["classes"])
 
@@ -122,6 +125,86 @@ async def add_class(
     return await _get_owned_full(char_id, user_id, session)
 
 
+@router.patch("/{char_id}/classes/distribute", response_model=CharacterFull)
+async def distribute_class_levels(
+    char_id: int,
+    body: ClassDistribute,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> CharacterFull:
+    """Atomically redistribute class levels.
+
+    Validates that:
+    1. Every entry's `class_id` belongs to the character.
+    2. The body covers every existing class (no missing nor extra ids).
+    3. `sum(level)` equals `xp_to_level(char.experience_points)`.
+
+    On success, updates each class's level, syncs predefined class
+    resources (grow or shrink via `update_resources_for_level`),
+    and recalculates HP proportionally if `settings.hp_auto_calc` is true.
+    """
+    char = await _get_owned_full(char_id, user_id, session)
+
+    existing_ids = {cls.id for cls in char.classes}
+    body_ids = {entry.class_id for entry in body.classes}
+    if existing_ids != body_ids:
+        raise HTTPException(status_code=400, detail="classes_mismatch")
+
+    target_sum = xp_to_level(char.experience_points or 0)
+    new_sum = sum(entry.level for entry in body.classes)
+    # Allow sum <= target (multi-pending level-up applies +1 per commit and
+    # reopens the modal for remaining levels). Reject only sum > target,
+    # which would exceed the character's XP-derived level cap.
+    if new_sum > target_sum:
+        raise HTTPException(status_code=400, detail="sum_exceeds_target")
+    if new_sum < 1:
+        raise HTTPException(status_code=400, detail="sum_too_low")
+
+    # Map id -> new_level for O(1) lookup
+    new_levels = {entry.class_id: entry.level for entry in body.classes}
+
+    # Snapshot old total HP for ratio scaling
+    old_total_hp = char.hit_points or 0
+    old_current_hp = char.current_hit_points or 0
+
+    # Apply level changes + resource sync
+    for cls in char.classes:
+        new_level = new_levels[cls.id]
+        if new_level == cls.level:
+            continue
+        cls.level = new_level
+        update_resources_for_level(
+            cls.class_name, new_level, list(cls.resources), char
+        )
+        existing_names = {r.name for r in cls.resources}
+        for res_data in get_resources_for_class(cls.class_name, new_level, char):
+            if res_data["name"] not in existing_names:
+                session.add(ClassResource(class_id=cls.id, **res_data))
+
+    # HP recalc (respecting hp_auto_calc); populate hp_gained for toast parity with PATCH /xp
+    settings = char.settings or {}
+    hp_gained = 0
+    if settings.get("hp_auto_calc", True):
+        con_mod = effective_con_mod(char)
+        new_total_hp = total_base_hp(char.classes, con_mod)
+        if old_total_hp > 0:
+            ratio = old_current_hp / old_total_hp
+            new_current = round(ratio * new_total_hp)
+        else:
+            new_current = old_current_hp
+        hp_gained = max(0, new_total_hp - old_total_hp)
+        char.hit_points = new_total_hp
+        char.current_hit_points = max(0, min(new_current, new_total_hp))
+
+    await session.flush()
+    result = CharacterFull.model_validate(char)
+    if hp_gained > 0:
+        result.hp_gained = hp_gained
+    return result
+
+
+# Note: keep static paths (e.g. /classes/distribute) declared BEFORE this
+# parametric {class_id} route — FastAPI matches in declaration order.
 @router.patch("/{char_id}/classes/{class_id}", response_model=CharacterFull)
 async def update_class(
     char_id: int,

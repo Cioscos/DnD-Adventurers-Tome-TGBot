@@ -330,6 +330,7 @@
       "xp_to_next": "XP to next level",
       "level_abbr": "Lv.",
       "level_up_available": "Level up available! Go to the Class page to assign the level.",
+      "level_up_available_short": "Level up available! Tap to pick a class",
       "single_class_synced": "Class level updates automatically with XP.",
       "hp_gained_toast": "+{{hp}} HP",
       "level_up_cta": "LEVEL UP",
@@ -506,7 +507,31 @@
       "restoration": "Restoration",
       "use_resource": "Use",
       "restore_resource": "Restore",
-      "auto_resources_hint": "Standard resources will be created automatically"
+      "auto_resources_hint": "Standard resources will be created automatically",
+      "edit_classes": "Edit classes",
+      "level_up": {
+        "title": "Level up",
+        "subtitle": "Pick a class for level {{level}}",
+        "preview_next_levels": "Next unlocks",
+        "choose_class": "Choose class",
+        "proficiency_change": "Proficiency: +{{from}} → +{{to}}",
+        "new_spell_slot": "New {{level}}th level spell slot",
+        "confirm": "Confirm",
+        "at_max_toast": "Class at max level",
+        "progression_missing": "Progression data unavailable"
+      },
+      "edit": {
+        "title": "Edit classes",
+        "hint": "Level sum must be {{target}}",
+        "sum_label": "Level sum",
+        "sum_display": "{{current}} / {{target}}",
+        "confirm": "Confirm",
+        "cancel": "Cancel",
+        "error_server": "Server error, try again.",
+        "new_tag": "NEW",
+        "remove_new": "Remove",
+        "classes_label": "Character classes"
+      }
     },
     "settings": {
       "title": "Settings",
