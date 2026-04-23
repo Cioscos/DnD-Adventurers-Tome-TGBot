@@ -5,7 +5,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Any, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 # ---------------------------------------------------------------------------
@@ -129,6 +129,21 @@ class CharacterClassUpdate(BaseModel):
     subclass: Optional[str] = None
     spellcasting_ability: Optional[str] = None
     hit_die: Optional[int] = None
+
+
+class ClassLevelEntry(BaseModel):
+    """One (class_id, level) pair for the distribute endpoint."""
+    class_id: int
+    level: int = Field(ge=1, le=20)
+
+
+class ClassDistribute(BaseModel):
+    """Atomic redistribution of class levels for a character.
+
+    The body must cover every existing class on the character; the sum of
+    `level` values must equal the character's XP-derived total level.
+    """
+    classes: list[ClassLevelEntry]
 
 
 # ---------------------------------------------------------------------------
