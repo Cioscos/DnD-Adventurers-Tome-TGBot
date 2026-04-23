@@ -16,7 +16,7 @@ Questo documento è la mappa maestra dei sottoprogetti. Ogni gruppo è un ciclo 
 | B | Meccaniche personaggio | §1.1 (meno XP bar) + §1.2 | ✅ Done (PR #68 merged → main) | `feat/character-mechanics-gruppo-b` |
 | C | Rework concentrazione | §1.4 + §1.5 | ✅ Done (PR #72 merged → main) | `feat/concentration-gruppo-c` |
 | D | Widget dadi overlay | §1.3 + §1.6 | ✅ Done (PR #73 merged → main) | `feat/dice-overlay-gruppo-d` |
-| E | Privacy identità | §1.7 + §4 | ✅ Done (PR #XX merged → main) | `feat/privacy-identity-gruppo-e` |
+| E | Privacy identità | §1.7 + §4 | ✅ Done (PR #74 merged → main) | `feat/privacy-identity-gruppo-e` |
 | F | XP + Level-up button | §1.8 | ✅ Done (PR #69 merged → main) | `feat/xp-level-up-gruppo-f` |
 | G | Multiclasse | §2 (tutto) | ✅ Done (PR #70 merged → main) | `feat/multiclass-gruppo-g` |
 | H | Chat/cronologia integrata | §3 | ⬜ Pending | — |
