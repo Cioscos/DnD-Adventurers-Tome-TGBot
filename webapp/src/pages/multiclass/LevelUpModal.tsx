@@ -86,9 +86,9 @@ export default function LevelUpModal({ char, xpLevel, onClose }: LevelUpModalPro
       <m.div
         initial={{ y: 40, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        className="w-full max-w-lg max-h-[90vh] overflow-y-auto"
+        className="w-full max-w-xl max-h-[90vh] overflow-y-auto"
       >
-        <Surface variant="tome" ornamented className="space-y-4">
+        <Surface variant="tome" ornamented className="space-y-5 p-5">
           {/* Header */}
           <div className="text-center">
             <h2 className="font-display text-2xl font-black text-dnd-gold-bright uppercase tracking-widest">
@@ -100,7 +100,7 @@ export default function LevelUpModal({ char, xpLevel, onClose }: LevelUpModalPro
           </div>
 
           {/* Preview unlocks */}
-          <Surface variant="flat" className="space-y-3">
+          <Surface variant="flat" className="space-y-4 p-4">
             <p className="text-[10px] font-cinzel uppercase tracking-[0.3em] text-dnd-gold-dim text-center">
               {t('character.multiclass.level_up.preview_next_levels')}
             </p>
@@ -154,7 +154,7 @@ export default function LevelUpModal({ char, xpLevel, onClose }: LevelUpModalPro
           </Surface>
 
           {/* Class selector */}
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex gap-3 flex-wrap">
             {classes.map((cls) => {
               const active = cls.id === selectedClassId
               return (

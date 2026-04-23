@@ -71,6 +71,12 @@ export default function EditClassesModal({ char, targetLevel, onClose }: Props) 
   const allLevelsValid = entries.every((e) => e.level >= 1 && e.level <= 20)
   const isValid = entries.length > 0 && allLevelsValid && currentSum === targetLevel
 
+  const isDirty = useMemo(() => {
+    const initial = new Map((char.classes ?? []).map((c) => [c.id, c.level]))
+    if (entries.some((e) => e.kind === 'new')) return true
+    return entries.some((e) => e.kind === 'existing' && initial.get(e.classId) !== e.level)
+  }, [entries, char.classes])
+
   const setEntryLevel = (tempId: string, raw: number) => {
     const clamped = Math.max(1, Math.min(20, Math.round(raw)))
     setEntries((es) => es.map((e) => (e.tempId === tempId ? { ...e, level: clamped } : e)))
@@ -172,9 +178,9 @@ export default function EditClassesModal({ char, targetLevel, onClose }: Props) 
       <m.div
         initial={{ y: 40, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        className="w-full max-w-lg max-h-[90vh] overflow-y-auto"
+        className="w-full max-w-xl max-h-[90vh] overflow-y-auto"
       >
-        <Surface variant="tome" ornamented className="space-y-4">
+        <Surface variant="tome" ornamented className="space-y-5 p-5">
           <div className="text-center">
             <h2 className="font-display text-2xl font-black text-dnd-gold-bright uppercase tracking-widest">
               {t('character.multiclass.edit.title')}
@@ -201,9 +207,9 @@ export default function EditClassesModal({ char, targetLevel, onClose }: Props) 
           </div>
 
           {/* Entries */}
-          <div className="space-y-2">
+          <div className="space-y-3">
             {entries.map((e) => (
-              <Surface key={e.tempId} variant="elevated" className="flex items-center gap-3 !py-2 !px-3">
+              <Surface key={e.tempId} variant="elevated" className="flex items-center gap-4 !py-3 !px-4">
                 <div className="flex-1 min-w-0">
                   <p className="font-display font-bold text-dnd-gold-bright truncate">
                     {e.className}
@@ -254,7 +260,7 @@ export default function EditClassesModal({ char, targetLevel, onClose }: Props) 
               {t('character.multiclass.add_class')}
             </Button>
           ) : (
-            <Surface variant="flat" className="space-y-2">
+            <Surface variant="flat" className="space-y-3 p-4">
               <select
                 value={pickerKey}
                 onChange={(ev) => setPickerKey(ev.target.value)}
@@ -289,7 +295,7 @@ export default function EditClassesModal({ char, targetLevel, onClose }: Props) 
                 className="w-full bg-dnd-surface rounded-xl px-3 py-2 min-h-[44px] outline-none"
               />
 
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-3">
                 <Button
                   variant="ghost"
                   size="md"
@@ -319,7 +325,7 @@ export default function EditClassesModal({ char, targetLevel, onClose }: Props) 
           )}
 
           {/* Footer */}
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-3">
             <Button variant="ghost" size="md" fullWidth onClick={onClose}>
               {t('character.multiclass.edit.cancel')}
             </Button>
@@ -327,7 +333,7 @@ export default function EditClassesModal({ char, targetLevel, onClose }: Props) 
               variant="primary"
               size="md"
               fullWidth
-              disabled={!isValid}
+              disabled={!isValid || !isDirty}
               loading={commit.isPending}
               icon={<Check size={16} />}
               haptic="success"
