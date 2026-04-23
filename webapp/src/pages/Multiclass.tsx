@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
-import { Plus, X, Swords, Scroll, Edit3 } from 'lucide-react'
+import { X, Swords, Scroll, Edit3 } from 'lucide-react'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
@@ -12,7 +12,6 @@ import StatPill from '@/components/ui/StatPill'
 import { FlourishDivider } from '@/components/ui/Ornament'
 import { haptic } from '@/auth/telegram'
 import { levelFromXp } from '@/lib/xpThresholds'
-import AddClassForm, { resolveClassName, PREDEFINED_CLASSES, CUSTOM_KEY, type ClassForm } from '@/pages/multiclass/AddClassForm'
 import ResourceManager from '@/pages/multiclass/ResourceManager'
 import LevelUpBanner from '@/pages/multiclass/LevelUpBanner'
 import LevelUpModal from '@/pages/multiclass/LevelUpModal'
@@ -24,35 +23,12 @@ export default function Multiclass() {
   const charId = Number(id)
   const { t } = useTranslation()
   const qc = useQueryClient()
-  const [showAddClass, setShowAddClass] = useState(false)
   const [showLevelUpModal, setShowLevelUpModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
 
   const { data: char } = useQuery({
     queryKey: ['character', charId],
     queryFn: () => api.characters.get(charId),
-  })
-
-  const addClass = useMutation({
-    mutationFn: (form: ClassForm) => {
-      const rawKey = resolveClassName(form)
-      const class_name = (form.class_key !== CUSTOM_KEY && PREDEFINED_CLASSES[rawKey])
-        ? t(`dnd.classes.${rawKey}`)
-        : rawKey
-      return api.classes.add(charId, {
-        class_name,
-        level: Number(form.level),
-        subclass: form.subclass.trim() || undefined,
-        hit_die: Number(form.hit_die) || 8,
-        spellcasting_ability: form.spellcasting_ability.trim() || undefined,
-      })
-    },
-    onSuccess: (updated) => {
-      qc.setQueryData(['character', charId], updated)
-      setShowAddClass(false)
-      haptic.success()
-    },
-    onError: () => haptic.error(),
   })
 
   const removeClass = useMutation({
@@ -90,7 +66,6 @@ export default function Multiclass() {
   const classLevelSum = classes.reduce((s, c) => s + c.level, 0)
   const targetLevel = levelFromXp(char.experience_points ?? 0)
   const levelUpAvailable = classes.length > 0 && targetLevel > classLevelSum
-  const canAddClass = classes.length === 0 || levelUpAvailable
 
   return (
     <Layout title={t('character.multiclass.title')} backTo={`/char/${charId}`} group="character" page="class">
@@ -111,29 +86,16 @@ export default function Multiclass() {
         <LevelUpBanner onOpen={() => setShowLevelUpModal(true)} />
       )}
 
-      <div className="grid grid-cols-2 gap-2">
-        <Button
-          variant="primary"
-          size="md"
-          onClick={() => setShowAddClass(true)}
-          disabled={!canAddClass}
-          title={!canAddClass ? t('character.multiclass.add_class_requires_level') : undefined}
-          icon={<Plus size={16} />}
-          haptic="medium"
-        >
-          {t('character.multiclass.add_class')}
-        </Button>
-        <Button
-          variant="secondary"
-          size="md"
-          onClick={() => setShowEditModal(true)}
-          disabled={classes.length < 2}
-          icon={<Edit3 size={16} />}
-          haptic="medium"
-        >
-          {t('character.multiclass.edit_classes')}
-        </Button>
-      </div>
+      <Button
+        variant="primary"
+        size="lg"
+        fullWidth
+        onClick={() => setShowEditModal(true)}
+        icon={<Edit3 size={18} />}
+        haptic="medium"
+      >
+        {t('character.multiclass.edit_classes')}
+      </Button>
 
       {classes.length === 0 && (
         <Surface variant="flat" className="text-center py-8">
@@ -209,15 +171,6 @@ export default function Multiclass() {
           </Surface>
         </m.div>
       ))}
-
-      {showAddClass && (
-        <AddClassForm
-          onAdd={(form) => addClass.mutate(form)}
-          onCancel={() => setShowAddClass(false)}
-          isPending={addClass.isPending}
-          lockLevelTo={classes.length > 0 ? 1 : undefined}
-        />
-      )}
 
       {showLevelUpModal && (
         <LevelUpModal
