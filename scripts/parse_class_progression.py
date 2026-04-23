@@ -55,7 +55,18 @@ def _parse_int_or_zero(s: str) -> int:
         return 0
 
 
-def _parse_class_table(rows: list[str]) -> list[dict]:
+def _parse_signed_int(s: str) -> int:
+    """Parse a signed integer like '+2' or '3'. Empty / placeholder -> 0. Malformed -> ValueError."""
+    s = s.strip().lstrip("+")
+    if s in ("", "—", "-"):
+        return 0
+    try:
+        return int(s)
+    except ValueError as exc:
+        raise ValueError(f"malformed signed int: {s!r}") from exc
+
+
+def _parse_class_table(class_name_en: str, rows: list[str]) -> list[dict]:
     """Parse one class's markdown table rows and return 20-level progression."""
     if len(rows) < 2:
         raise ValueError("table too short")
@@ -78,7 +89,11 @@ def _parse_class_table(rows: list[str]) -> list[dict]:
     # Warlock pact magic columns
     warlock_count_idx = next((i for i, h in enumerate(header) if h == "Slot"), None)
     warlock_level_idx = next((i for i, h in enumerate(header) if h == "Livello Slot"), None)
-    is_warlock = warlock_count_idx is not None and warlock_level_idx is not None
+    is_warlock = class_name_en == "Warlock"
+    if is_warlock and (warlock_count_idx is None or warlock_level_idx is None):
+        raise ValueError(f"Warlock table missing 'Slot' or 'Livello Slot' column: {header}")
+    if not is_warlock and (warlock_count_idx is not None or warlock_level_idx is not None):
+        raise ValueError(f"non-Warlock table {class_name_en!r} has pact-magic columns: {header}")
     has_casting = bool(slot_cols) or is_warlock
 
     progression: list[dict] = []
@@ -93,8 +108,7 @@ def _parse_class_table(rows: list[str]) -> list[dict]:
             continue
 
         features = cells[feat_idx] if feat_idx < len(cells) else "—"
-        pb_raw = cells[pb_idx].replace("+", "").strip() if pb_idx < len(cells) else "0"
-        pb = int(pb_raw) if pb_raw.isdigit() else 0
+        pb = _parse_signed_int(cells[pb_idx]) if pb_idx < len(cells) else 0
 
         if has_casting:
             spell_slots = [0] * 9
@@ -141,7 +155,7 @@ def main() -> None:
             continue
         name_it = EN_TO_IT[name_en]
         table_lines = [ln for ln in lines[1:] if ln.startswith("|")]
-        progression = _parse_class_table(table_lines)
+        progression = _parse_class_table(name_en, table_lines)
         if len(progression) != 20:
             raise SystemExit(
                 f"{name_en}: expected 20 levels, parsed {len(progression)}"
