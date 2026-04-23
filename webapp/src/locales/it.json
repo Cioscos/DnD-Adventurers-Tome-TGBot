@@ -68,7 +68,8 @@
       "hit_dice_result": "Dadi vita spesi",
       "new_hp": "Nuovi HP",
       "confirm_rest": "Conferma riposo",
-      "concentration_active": "In concentrazione — tiro salvezza?"
+      "concentration_active": "In concentrazione",
+      "concentration_lost": "Concentrazione persa!"
     },
     "death_saves": {
       "title": "Tiri vs Morte",
