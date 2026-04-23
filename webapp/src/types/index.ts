@@ -262,6 +262,24 @@ export interface SessionMessage {
   sender_display_name?: string | null
 }
 
+export interface ParticipantIdentity {
+  user_id: number
+  character_id: number
+  name: string
+  race: string | null
+  gender: string | null
+  alignment: string | null
+  speed: number | null
+  languages: string | null
+  general_proficiencies: string | null
+  background: string | null
+  personality_traits: string | null
+  ideals: string | null
+  bonds: string | null
+  flaws: string | null
+  show_private: boolean
+}
+
 export interface RollDamageRequest {
   casting_level?: number
   extra_dice?: string
