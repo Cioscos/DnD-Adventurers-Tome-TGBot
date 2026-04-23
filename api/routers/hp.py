@@ -25,7 +25,8 @@ from api.schemas.common import (
     RestRequest,
 )
 from core.game.stats import total_base_hp
-from api.routers._helpers import effective_con_mod
+from api.routers._helpers import effective_con_mod, roll_concentration_save
+from api.schemas.common import ConcentrationSaveResult
 
 
 class HitDiceSpendRequest(BaseModel):
@@ -91,8 +92,9 @@ async def update_hp(
     body: HPUpdate,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
-) -> Character:
+) -> CharacterFull:
     char = await _get_owned_full(char_id, user_id, session)
+    conc_result: ConcentrationSaveResult | None = None
 
     was_at_zero = char.current_hit_points == 0
 
@@ -107,6 +109,13 @@ async def update_hp(
         char.current_hit_points = max(0, char.current_hit_points - amount)
         _add_history(session, char.id, "hp_change",
                      f"Danni: -{body.value} HP ({old} → {char.current_hit_points})")
+
+        # Auto concentration save — only if still conscious and concentrating
+        if (
+            char.concentrating_spell_id is not None
+            and char.current_hit_points > 0
+        ):
+            conc_result = roll_concentration_save(char, body.value, session)
 
     elif body.op == HPOp.HEAL:
         old = char.current_hit_points
@@ -139,7 +148,10 @@ async def update_hp(
             _add_history(session, char.id, "death_save",
                          "Tiri salvezza morte azzerati (HP risaliti sopra 0)")
 
-    return char
+    result = CharacterFull.model_validate(char)
+    if conc_result is not None:
+        result.concentration_save = conc_result
+    return result
 
 
 # ---------------------------------------------------------------------------
