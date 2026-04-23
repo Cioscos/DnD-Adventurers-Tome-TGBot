@@ -1,10 +1,36 @@
 /** TypeScript types mirroring the FastAPI Pydantic schemas. */
 
+export type AbilityName =
+  | 'strength'
+  | 'dexterity'
+  | 'constitution'
+  | 'intelligence'
+  | 'wisdom'
+  | 'charisma'
+
+export type AbilityModifierKind = 'absolute' | 'relative'
+
+export interface AbilityModifier {
+  ability: AbilityName
+  kind: AbilityModifierKind
+  value: number
+}
+
+export interface AppliedModifier {
+  source: string
+  ability: AbilityName
+  kind: AbilityModifierKind
+  value: number
+  item_id: number
+}
+
 export interface AbilityScore {
   id: number
-  name: string
+  name: AbilityName | string
   value: number
+  base_value?: number
   modifier: number
+  modifiers_applied?: AppliedModifier[]
 }
 
 export interface ClassResource {
@@ -117,6 +143,7 @@ export interface CharacterFull extends CharacterSummary {
   encumbrance: number
   spell_slots_mode: string
   concentrating_spell_id?: number
+  hp_gained?: number
   rolls_history?: DiceRollResult[]
   notes?: Record<string, string>
   settings?: Record<string, unknown>
@@ -220,4 +247,20 @@ export interface SessionMessage {
   sent_at: string
   recipient_user_id?: number | null
   sender_display_name?: string | null
+}
+
+export interface RollDamageRequest {
+  casting_level?: number
+  extra_dice?: string
+  is_critical?: boolean
+}
+
+export interface RollDamageResult {
+  rolls: number[]
+  total: number
+  half_damage: number
+  damage_type: string | null
+  breakdown: string
+  casting_level: number
+  is_critical: boolean
 }

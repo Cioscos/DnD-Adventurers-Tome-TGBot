@@ -82,7 +82,7 @@ function InventoryItemInner({
   const { t } = useTranslation()
   const icon = TYPE_ICON[item.item_type] ?? '\uD83D\uDCE6'
   const meta = item.item_metadata as Record<string, unknown> | undefined
-  const canEquip = ['armor', 'shield', 'weapon'].includes(item.item_type)
+  const canEquip = ['armor', 'shield', 'weapon', 'accessory'].includes(item.item_type)
 
   return (
     <div

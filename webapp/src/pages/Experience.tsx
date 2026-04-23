@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
 import { Sparkles, Star, Check } from 'lucide-react'
+import { toast } from 'sonner'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
@@ -34,6 +35,12 @@ export default function Experience() {
       qc.setQueryData(['character', charId], updated)
       setAddValue('')
       haptic.success()
+      if (updated.hp_gained && updated.hp_gained > 0) {
+        toast.success(t('character.xp.hp_gained_toast', { hp: updated.hp_gained }), {
+          duration: 2000,
+          icon: '❤',
+        })
+      }
     },
     onError: () => haptic.error(),
   })

@@ -18,6 +18,8 @@ import type {
   Item,
   MapEntry,
   Note,
+  RollDamageRequest,
+  RollDamageResult,
   SessionMessage,
   Spell,
   SpellSlot,
@@ -226,6 +228,12 @@ export const api = {
       request<DeathSaveRollResult>(`/characters/${id}/death_saves/roll`, {
         method: 'POST',
       }),
+
+    // HP recalc
+    recalcHp: (id: number) =>
+      request<CharacterFull>(`/characters/${id}/hp/recalc`, {
+        method: 'POST',
+      }),
   },
 
   // ---------------------------------------------------------------------------
@@ -294,6 +302,11 @@ export const api = {
       request<ConcentrationSaveResult>(`/characters/${charId}/concentration/save`, {
         method: 'POST',
         body: JSON.stringify({ damage }),
+      }),
+    rollDamage: (charId: number, spellId: number, body: RollDamageRequest): Promise<RollDamageResult> =>
+      request<RollDamageResult>(`/characters/${charId}/spells/${spellId}/roll_damage`, {
+        method: 'POST',
+        body: JSON.stringify(body),
       }),
   },
 

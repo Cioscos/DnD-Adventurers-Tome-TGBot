@@ -134,11 +134,26 @@
       "proficient": "Competente",
       "roll": "Tira dado"
     },
+    "ability": {
+      "strength_short": "FOR",
+      "dexterity_short": "DES",
+      "constitution_short": "COS",
+      "intelligence_short": "INT",
+      "wisdom_short": "SAG",
+      "charisma_short": "CAR",
+      "breakdown": {
+        "base": "Base",
+        "effective": "Effettivo"
+      }
+    },
     "spells": {
       "title": "Incantesimi",
       "search": "Cerca incantesimo...",
       "level": "Livello",
       "cantrip": "Trucchetto",
+      "cantrip_label": "TRUCCHETTO",
+      "level_label": "LIVELLO {{level}}",
+      "count": "{{count}} incantesimi",
       "concentration": "Concentrazione",
       "ritual": "Rituale",
       "add": "Aggiungi incantesimo",
@@ -171,7 +186,22 @@
       "chip_duration": "DURATA",
       "chip_damage": "DANNO",
       "chip_attack_save": "ATT / TS",
-      "chip_higher_level": "LIV. SUP."
+      "chip_higher_level": "LIV. SUP.",
+      "roll_damage": {
+        "title": "Tiro danni: {{name}}",
+        "button": "Rolla danni",
+        "casting_level": "Livello di casting",
+        "decrease_level": "Diminuisci livello",
+        "increase_level": "Aumenta livello",
+        "extra_dice": "Dadi extra",
+        "extra_dice_placeholder": "es. 2d6",
+        "critical": "Critico (raddoppia i dadi)",
+        "roll_button": "Rolla",
+        "full_damage": "Pieno",
+        "half_damage": "Dimezzato",
+        "close": "Chiudi",
+        "reroll": "Nuovo tiro"
+      }
     },
     "slots": {
       "title": "Slot Incantesimo",
@@ -180,7 +210,10 @@
       "total": "Totale",
       "available": "Disponibili",
       "reset_all": "Ripristina tutti",
-      "add_level": "Aggiungi livello slot"
+      "add_level": "Aggiungi livello slot",
+      "gem_aria": "Livello {{level}} slot {{index}}/{{total}} {{state}}",
+      "state_used": "usato",
+      "state_available": "disponibile"
     },
     "dice": {
       "title": "Tira Dadi",
@@ -298,6 +331,7 @@
       "level_abbr": "Liv.",
       "level_up_available": "Livello disponibile! Vai nella pagina Classe per distribuire il livello.",
       "single_class_synced": "Il livello della classe viene aggiornato automaticamente con gli XP.",
+      "hp_gained_toast": "+{{hp}} HP",
       "bar": {
         "level_label": "LIV {{level}}",
         "progress": "{{current}} / {{threshold}}",
@@ -366,6 +400,7 @@
         "weapon": "Arma",
         "armor": "Armatura",
         "shield": "Scudo",
+        "accessory": "Accessorio",
         "consumable": "Consumabile",
         "tool": "Strumento",
         "potion": "Pozione",
@@ -397,6 +432,21 @@
         "dmg_psychic": "Psichico",
         "dmg_thunder": "Tuono",
         "dmg_other": "Altro"
+      },
+      "item": {
+        "modifiers": {
+          "title": "Modificatori caratteristiche",
+          "add": "Aggiungi modificatore",
+          "empty": "Nessun modificatore",
+          "ability": "Caratteristica",
+          "kind_label": "Tipo",
+          "kind": {
+            "absolute": "=",
+            "relative": "±"
+          },
+          "value": "Valore",
+          "remove": "Rimuovi modificatore"
+        }
       },
       "attack": "Attacca",
       "equip": "Equipaggia",
@@ -464,7 +514,15 @@
       "carry_capacity": "Mostra capacità di carico",
       "language": "Lingua",
       "dice_3d": "Animazione dadi 3D",
-      "dice_3d_hint": "Mostra un'animazione 3D dei dadi durante i lanci. Disattiva per risultati immediati."
+      "dice_3d_hint": "Mostra un'animazione 3D dei dadi durante i lanci. Disattiva per risultati immediati.",
+      "hp": {
+        "title": "Punti Ferita",
+        "auto_calc_toggle": "HP automatici",
+        "auto_calc_hint": "Calcola automaticamente gli HP massimi da livello di classe e modificatore Costituzione.",
+        "recalc": "Ricalcola HP dalla formula",
+        "recalc_confirm_title": "Ricalcola HP",
+        "recalc_confirm_body": "Questa azione ricalcolerà gli HP massimi del personaggio in base alle classi, ai livelli e al modificatore di Costituzione attuali. Continuare?"
+      }
     },
     "create": {
       "step_name": "Nuovo personaggio",

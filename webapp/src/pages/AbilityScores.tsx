@@ -143,6 +143,29 @@ export default function AbilityScores() {
                     </m.div>
                   )}
                 </AnimatePresence>
+
+                {score.modifiers_applied && score.modifiers_applied.length > 0 && (
+                  <div className="mt-2 pt-2 border-t border-dnd-border/50 space-y-1 text-[11px] font-body">
+                    <div className="flex items-center justify-between text-dnd-text-faint">
+                      <span>{t('character.ability.breakdown.base')}</span>
+                      <span className="font-mono">{score.base_value ?? score.value}</span>
+                    </div>
+                    {score.modifiers_applied.map((mod, idx) => (
+                      <div key={idx} className="flex items-center justify-between text-dnd-gold-dim">
+                        <span className="truncate flex-1">{mod.source}</span>
+                        <span className="font-mono shrink-0 ml-2">
+                          {mod.kind === 'relative'
+                            ? (mod.value >= 0 ? `+${mod.value}` : mod.value)
+                            : `=${mod.value}`}
+                        </span>
+                      </div>
+                    ))}
+                    <div className="flex items-center justify-between text-dnd-gold-bright font-bold">
+                      <span>{t('character.ability.breakdown.effective')}</span>
+                      <span className="font-mono">{score.value}</span>
+                    </div>
+                  </div>
+                )}
               </Surface>
             </Reveal.Item>
           )

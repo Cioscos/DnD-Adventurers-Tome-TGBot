@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import re
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
+
+_EXTRA_DICE_RE = re.compile(r"^(\d+)d(\d+)([+-]\d+)?$", re.IGNORECASE)
 
 
 class SpellRead(BaseModel):
@@ -88,3 +91,32 @@ class SpellSlotUpdate(BaseModel):
 
 class ConcentrationUpdate(BaseModel):
     spell_id: Optional[int] = None  # null to drop concentration
+
+
+class RollDamageRequest(BaseModel):
+    casting_level: int | None = None
+    extra_dice: str | None = None
+    is_critical: bool = False
+
+    @field_validator("extra_dice")
+    @classmethod
+    def validate_extra_dice(cls, v: str | None) -> str | None:
+        if v is None or v == "":
+            return None
+        if not _EXTRA_DICE_RE.match(v.strip()):
+            raise ValueError(
+                f"extra_dice must match '<count>d<sides>[+/-bonus]' "
+                f"(e.g. '2d6', '1d8+3'), got {v!r}"
+            )
+        return v.strip()
+
+
+class RollDamageResult(BaseModel):
+    rolls: list[int]
+    total: int
+    half_damage: int
+    damage_type: str | None
+    breakdown: str
+    casting_level: int
+    is_critical: bool
+    model_config = {"from_attributes": True}

@@ -1,6 +1,7 @@
 /** Pure logic — constants, form types, and metadata builder for inventory items. */
+import type { AbilityModifier } from '@/types'
 
-export const ITEM_TYPES = ['generic', 'weapon', 'armor', 'shield', 'consumable', 'tool'] as const
+export const ITEM_TYPES = ['generic', 'weapon', 'armor', 'shield', 'accessory', 'consumable', 'tool'] as const
 export type ItemType = typeof ITEM_TYPES[number]
 
 export const DAMAGE_TYPES = [
@@ -24,6 +25,7 @@ export const TYPE_ICON: Record<string, string> = {
   weapon: '\u2694\uFE0F',
   armor: '\uD83D\uDEE1\uFE0F',
   shield: '\uD83D\uDEE1\uFE0F',
+  accessory: '\uD83D\uDC8E',
   consumable: '\uD83E\uDDEA',
   tool: '\uD83D\uDD27',
   generic: '\uD83D\uDCE6',
@@ -55,6 +57,8 @@ export type ItemFormData = {
   effect: string
   // tool
   tool_type: string
+  // ability modifiers (all item types)
+  ability_modifiers?: AbilityModifier[]
 }
 
 export const emptyForm: ItemFormData = {
@@ -74,33 +78,47 @@ export const emptyForm: ItemFormData = {
   ac_bonus: '2',
   effect: '',
   tool_type: '',
+  ability_modifiers: [],
 }
 
 export function buildItemMetadata(form: ItemFormData): Record<string, unknown> | undefined {
+  let meta: Record<string, unknown> | undefined
   switch (form.item_type) {
     case 'weapon':
-      return {
+      meta = {
         damage_dice: form.damage_dice,
         damage_type: form.damage_type,
         weapon_type: form.weapon_type,
         properties: form.properties,
       }
+      break
     case 'armor':
-      return {
+      meta = {
         armor_type: form.armor_type,
         ac_value: Number(form.ac_value) || 10,
         stealth_disadvantage: form.stealth_disadvantage,
         strength_req: Number(form.strength_req) || 0,
       }
+      break
     case 'shield':
-      return { ac_bonus: Number(form.ac_bonus) || 2 }
+      meta = { ac_bonus: Number(form.ac_bonus) || 2 }
+      break
     case 'consumable':
-      return form.effect ? { effect: form.effect } : undefined
+      meta = form.effect ? { effect: form.effect } : undefined
+      break
     case 'tool':
-      return form.tool_type ? { tool_type: form.tool_type } : undefined
+      meta = form.tool_type ? { tool_type: form.tool_type } : undefined
+      break
     default:
-      return undefined
+      meta = undefined
   }
+
+  // Ability modifiers (all item types)
+  if (form.ability_modifiers && form.ability_modifiers.length > 0) {
+    meta = { ...(meta ?? {}), ability_modifiers: form.ability_modifiers }
+  }
+
+  return meta
 }
 
 export function isItemFormValid(form: ItemFormData): boolean {
@@ -113,6 +131,9 @@ export function isItemFormValid(form: ItemFormData): boolean {
 /** Build the form from an existing Item for editing. */
 export function itemToFormData(item: { name: string; item_type: string; quantity: number; weight: number; description?: string; item_metadata?: Record<string, unknown> }): ItemFormData {
   const meta = item.item_metadata ?? {}
+  const ability_modifiers = (
+    (item.item_metadata as Record<string, unknown> | undefined)?.ability_modifiers as AbilityModifier[] | undefined
+  ) ?? []
   return {
     name: item.name,
     item_type: (ITEM_TYPES as readonly string[]).includes(item.item_type) ? item.item_type as ItemType : 'generic',
@@ -130,5 +151,6 @@ export function itemToFormData(item: { name: string; item_type: string; quantity
     ac_bonus: String(meta.ac_bonus ?? '2'),
     effect: String(meta.effect ?? ''),
     tool_type: String(meta.tool_type ?? ''),
+    ability_modifiers,
   }
 }

@@ -8,6 +8,48 @@ from typing import Any, Optional
 from pydantic import BaseModel, field_validator
 
 
+_ALLOWED_ABILITIES = {
+    "strength", "dexterity", "constitution",
+    "intelligence", "wisdom", "charisma",
+}
+_ALLOWED_KINDS = {"absolute", "relative"}
+
+
+def _validate_ability_modifiers(mods: Any) -> list[dict]:
+    """Normalize and validate item_metadata.ability_modifiers array.
+
+    Raises ValueError with descriptive message on invalid entry.
+    """
+    if mods is None:
+        return []
+    if not isinstance(mods, list):
+        raise ValueError("ability_modifiers must be an array")
+    result: list[dict] = []
+    for i, m in enumerate(mods):
+        if not isinstance(m, dict):
+            raise ValueError(f"ability_modifiers[{i}] must be an object")
+        ability = m.get("ability")
+        kind = m.get("kind")
+        value = m.get("value")
+        if ability not in _ALLOWED_ABILITIES:
+            raise ValueError(
+                f"ability_modifiers[{i}].ability must be one of "
+                f"{sorted(_ALLOWED_ABILITIES)}, got {ability!r}"
+            )
+        if kind not in _ALLOWED_KINDS:
+            raise ValueError(
+                f"ability_modifiers[{i}].kind must be 'absolute' or "
+                f"'relative', got {kind!r}"
+            )
+        if not isinstance(value, int) or isinstance(value, bool):
+            raise ValueError(
+                f"ability_modifiers[{i}].value must be an integer, "
+                f"got {type(value).__name__}"
+            )
+        result.append({"ability": ability, "kind": kind, "value": value})
+    return result
+
+
 class ItemRead(BaseModel):
     id: int
     name: str
@@ -40,6 +82,13 @@ class ItemCreate(BaseModel):
     item_metadata: Optional[dict[str, Any]] = None
     is_equipped: bool = False
 
+    @field_validator("item_metadata", mode="after")
+    @classmethod
+    def validate_ability_mods(cls, v: Any) -> Any:
+        if isinstance(v, dict) and "ability_modifiers" in v:
+            v["ability_modifiers"] = _validate_ability_modifiers(v["ability_modifiers"])
+        return v
+
 
 class ItemUpdate(BaseModel):
     name: Optional[str] = None
@@ -49,6 +98,13 @@ class ItemUpdate(BaseModel):
     item_type: Optional[str] = None
     item_metadata: Optional[dict[str, Any]] = None
     is_equipped: Optional[bool] = None
+
+    @field_validator("item_metadata", mode="after")
+    @classmethod
+    def validate_ability_mods(cls, v: Any) -> Any:
+        if isinstance(v, dict) and "ability_modifiers" in v:
+            v["ability_modifiers"] = _validate_ability_modifiers(v["ability_modifiers"])
+        return v
 
 
 class WeaponAttackResult(BaseModel):

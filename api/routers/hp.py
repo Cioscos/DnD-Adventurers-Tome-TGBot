@@ -24,6 +24,8 @@ from api.schemas.common import (
     HPUpdate,
     RestRequest,
 )
+from core.game.stats import total_base_hp
+from api.routers._helpers import effective_con_mod
 
 
 class HitDiceSpendRequest(BaseModel):
@@ -352,3 +354,41 @@ async def roll_death_save(
         revived=revived,
         current_hp=char.current_hit_points,
     )
+
+
+# ---------------------------------------------------------------------------
+# HP recalculation from D&D 5e fixed formula
+# ---------------------------------------------------------------------------
+
+@router.post("/{char_id}/hp/recalc", response_model=CharacterFull)
+async def recalc_hp(
+    char_id: int,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> Character:
+    """Recalculate hit_points from D&D 5e fixed formula.
+
+    Computes total_base_hp using character's current classes (with first
+    class owning level 1), current CON mod (effective with equipped items),
+    then sets hit_points to that value. current_hit_points is clamped:
+    - If new_max > old_max: current += (new_max - old_max)
+    - If new_max < old_max: current = min(current, new_max)
+    """
+    char = await _get_owned_full(char_id, user_id, session)
+
+    con_mod = effective_con_mod(char)
+    new_max = total_base_hp(char.classes, con_mod)
+
+    old_max = char.hit_points
+    char.hit_points = new_max
+    if new_max > old_max:
+        char.current_hit_points = max(0, char.current_hit_points + (new_max - old_max))
+    else:
+        char.current_hit_points = min(char.current_hit_points, new_max)
+
+    _add_history(session, char.id, "hp_change",
+                 f"HP ricalcolati da formula: {old_max} → {new_max}")
+
+    await session.commit()
+    await session.refresh(char)
+    return CharacterFull.model_validate(char)
