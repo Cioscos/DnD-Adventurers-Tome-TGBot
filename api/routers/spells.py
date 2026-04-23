@@ -16,7 +16,7 @@ from api.auth import get_current_user
 from api.database import get_db
 from core.db.models import Character, CharacterClass, CharacterHistory, Spell, SpellSlot
 from api.schemas.character import CharacterFull
-from api.schemas.common import RollResult
+from api.schemas.common import ConcentrationSaveResult, RollResult
 from api.schemas.spell import (
     ConcentrationUpdate,
     RollDamageRequest,
@@ -193,12 +193,6 @@ async def update_concentration(
 # ---------------------------------------------------------------------------
 # Concentration saving throw
 # ---------------------------------------------------------------------------
-
-class ConcentrationSaveResult(RollResult):
-    dc: int
-    success: bool
-    lost_concentration: bool
-
 
 @router.post("/{char_id}/concentration/save", response_model=ConcentrationSaveResult)
 async def concentration_save(

@@ -299,6 +299,17 @@ class RollResult(BaseModel):
     description: str = ""
 
 
+class ConcentrationSaveResult(RollResult):
+    """Result of a concentration saving throw.
+
+    Extends RollResult with the DC rolled against, the binary outcome,
+    and whether the character lost concentration as a result.
+    """
+    dc: int
+    success: bool
+    lost_concentration: bool
+
+
 # ---------------------------------------------------------------------------
 # History
 # ---------------------------------------------------------------------------
