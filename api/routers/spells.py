@@ -16,7 +16,7 @@ from api.auth import get_current_user
 from api.database import get_db
 from core.db.models import Character, CharacterClass, CharacterHistory, Spell, SpellSlot
 from api.schemas.character import CharacterFull
-from api.schemas.common import ConcentrationSaveResult, RollResult
+from api.schemas.common import ConcentrationSaveResult
 from api.schemas.spell import (
     ConcentrationUpdate,
     RollDamageRequest,
