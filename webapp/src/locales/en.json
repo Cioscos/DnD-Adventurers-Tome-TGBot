@@ -506,7 +506,27 @@
       "restoration": "Restoration",
       "use_resource": "Use",
       "restore_resource": "Restore",
-      "auto_resources_hint": "Standard resources will be created automatically"
+      "auto_resources_hint": "Standard resources will be created automatically",
+      "edit_classes": "Edit classes",
+      "level_up": {
+        "title": "Level up",
+        "subtitle": "Pick a class for level {{level}}",
+        "preview_next_levels": "Next unlocks",
+        "proficiency_change": "Proficiency: +{{from}} → +{{to}}",
+        "new_spell_slot": "New {{level}}th level spell slot",
+        "confirm": "Confirm",
+        "at_max_toast": "Class at max level",
+        "progression_missing": "Progression data unavailable"
+      },
+      "edit": {
+        "title": "Edit classes",
+        "hint": "Level sum must be {{target}}",
+        "sum_label": "Level sum",
+        "sum_display": "{{current}} / {{target}}",
+        "confirm": "Confirm",
+        "cancel": "Cancel",
+        "error_server": "Server error, try again."
+      }
     },
     "settings": {
       "title": "Settings",

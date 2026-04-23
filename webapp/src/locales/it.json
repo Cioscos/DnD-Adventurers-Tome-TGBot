@@ -506,7 +506,27 @@
       "restoration": "Ripristino",
       "use_resource": "Usa",
       "restore_resource": "Ripristina",
-      "auto_resources_hint": "Le risorse standard saranno create automaticamente"
+      "auto_resources_hint": "Le risorse standard saranno create automaticamente",
+      "edit_classes": "Modifica classe",
+      "level_up": {
+        "title": "Sali di livello",
+        "subtitle": "Scegli la classe per il livello {{level}}",
+        "preview_next_levels": "Prossimi sblocchi",
+        "proficiency_change": "Bonus competenza: +{{from}} → +{{to}}",
+        "new_spell_slot": "Nuovo slot di {{level}}° livello",
+        "confirm": "Conferma",
+        "at_max_toast": "Classe al livello massimo",
+        "progression_missing": "Dati progressione non disponibili"
+      },
+      "edit": {
+        "title": "Modifica classe",
+        "hint": "La somma dei livelli deve essere {{target}}",
+        "sum_label": "Somma livelli",
+        "sum_display": "{{current}} / {{target}}",
+        "confirm": "Conferma",
+        "cancel": "Annulla",
+        "error_server": "Errore nel server, riprova."
+      }
     },
     "settings": {
       "title": "Impostazioni",
