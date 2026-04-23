@@ -397,6 +397,7 @@
         "weapon": "Weapon",
         "armor": "Armor",
         "shield": "Shield",
+        "accessory": "Accessory",
         "consumable": "Consumable",
         "tool": "Tool",
         "potion": "Potion",
