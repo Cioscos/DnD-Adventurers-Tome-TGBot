@@ -66,6 +66,7 @@ export default function DiceScene({ request, onMount }: Props) {
         shadow-camera-top={1.6}
         shadow-camera-bottom={-1.6}
       />
+      <pointLight position={[0, 5.5, 1.8]} intensity={0.8} distance={0} decay={2} color="#ffffff" />
       <ContactShadows
         position={[0, -0.88, 0]}
         opacity={0.55}
