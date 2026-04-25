@@ -315,6 +315,10 @@
       "tap_to_grant": "Tap to grant",
       "tap_to_spend": "Tap to spend"
     },
+    "inSession": {
+      "label": "In active session",
+      "cta": "Return to session"
+    },
     "currency": {
       "title": "Currency",
       "copper": "Copper",

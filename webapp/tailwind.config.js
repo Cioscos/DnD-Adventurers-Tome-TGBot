@@ -114,12 +114,17 @@ export default {
           '0%, 100%': { transform: 'rotate(-3deg)' },
           '50%': { transform: 'rotate(3deg)' },
         },
+        'glow-pulse': {
+          '0%, 100%': { boxShadow: '0 0 6px var(--dnd-gold-glow), 0 0 0 0 var(--dnd-gold-glow)' },
+          '50%':       { boxShadow: '0 0 18px var(--dnd-gold-glow), 0 0 4px 1px var(--dnd-gold-glow)' },
+        },
       },
       animation: {
         shake: 'shake 250ms ease-out',
         bob: 'bob 1.8s ease-in-out infinite',
         'ink-spread': 'ink-spread 320ms ease-out forwards',
         'sigil-rotate': 'sigil-rotate 5s ease-in-out infinite',
+        'glow-pulse': 'glow-pulse 1.6s ease-in-out infinite',
       },
     },
   },

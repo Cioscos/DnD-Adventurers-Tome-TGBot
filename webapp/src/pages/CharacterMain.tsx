@@ -25,6 +25,7 @@ import { spring, stagger } from '@/styles/motion'
 import { formatCondition, CONDITION_ICONS } from '@/lib/conditions'
 import ConditionDetailModal from '@/pages/conditions/ConditionDetailModal'
 import PassiveAbilityDetailModal from '@/pages/abilities/PassiveAbilityDetailModal'
+import InSessionBanner from '@/components/ui/InSessionBanner'
 import type { Ability } from '@/types'
 
 type MenuItem = {
@@ -157,7 +158,7 @@ export default function CharacterMain() {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-4">
         <p className="text-[var(--dnd-crimson-bright)] font-body">{t('common.error')}</p>
-        <button onClick={() => navigate('/')} className="underline text-dnd-gold font-cinzel">
+        <button onClick={() => navigate(-1)} className="underline text-dnd-gold font-cinzel">
           {t('common.back')}
         </button>
       </div>
@@ -187,7 +188,7 @@ export default function CharacterMain() {
         transition={spring.drift}
       >
         <m.button
-          onClick={() => navigate('/')}
+          onClick={() => navigate(-1)}
           className="w-9 h-9 flex items-center justify-center rounded-full bg-dnd-surface border border-dnd-gold-dim/30"
           whileTap={{ scale: 0.9 }}
           aria-label={t('common.back')}
@@ -223,6 +224,8 @@ export default function CharacterMain() {
           <Settings size={18} className="text-dnd-gold-bright" />
         </m.button>
       </m.header>
+
+      <InSessionBanner charId={charId} />
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-safe">
         {/* Hero card with shared layoutId from CharacterSelect */}

@@ -9,12 +9,13 @@ import { haptic } from '@/auth/telegram'
 interface LayoutProps {
   title: string
   children: React.ReactNode
+  /** @deprecated Kept for compatibility — Layout always uses history.back() now. */
   backTo?: string
   group?: string
   page?: string
 }
 
-export default function Layout({ title, children, backTo, group, page }: LayoutProps) {
+export default function Layout({ title, children, group, page }: LayoutProps) {
   const navigate = useNavigate()
   const { t } = useTranslation()
   const swipe = useSwipeNavigation(group, page)
@@ -22,8 +23,7 @@ export default function Layout({ title, children, backTo, group, page }: LayoutP
   const { id } = useParams<{ id: string }>()
 
   const handleBack = () => {
-    if (backTo) navigate(backTo)
-    else navigate(-1)
+    navigate(-1)
   }
 
   return (

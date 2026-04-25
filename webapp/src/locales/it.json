@@ -315,6 +315,10 @@
       "tap_to_grant": "Tocca per concedere",
       "tap_to_spend": "Tocca per usare"
     },
+    "inSession": {
+      "label": "Sei in sessione",
+      "cta": "Torna alla sessione"
+    },
     "currency": {
       "title": "Monete",
       "copper": "Rame",

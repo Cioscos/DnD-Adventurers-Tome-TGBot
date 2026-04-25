@@ -80,7 +80,11 @@ export default function CharacterSelect() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => api.characters.delete(id),
-    onSuccess: () => {
+    onSuccess: (_, id) => {
+      qc.setQueryData<CharacterSummary[]>(['characters'], (old) =>
+        old ? old.filter((c) => c.id !== id) : old
+      )
+      qc.removeQueries({ queryKey: ['character', id] })
       qc.invalidateQueries({ queryKey: ['characters'] })
       haptic.success()
     },

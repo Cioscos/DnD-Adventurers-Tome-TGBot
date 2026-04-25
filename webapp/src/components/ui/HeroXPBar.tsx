@@ -53,7 +53,7 @@ export default function HeroXPBar({
             type="button"
             onClick={handleLevelUp}
             whileTap={{ scale: 0.95 }}
-            className="inline-flex items-center gap-1 animate-shimmer bg-gradient-to-r from-dnd-gold-deep to-dnd-gold-bright text-black px-2.5 py-0.5 rounded-md text-[10px] font-bold tracking-widest uppercase"
+            className="inline-flex items-center gap-1 animate-shimmer animate-glow-pulse bg-gradient-to-r from-dnd-gold-deep to-dnd-gold-bright text-black px-2.5 py-0.5 rounded-md text-[10px] font-bold tracking-widest uppercase"
           >
             <ChevronsUp size={12} />
             {t('character.xp.bar.level_up')}

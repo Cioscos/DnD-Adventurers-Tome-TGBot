@@ -9,21 +9,18 @@ import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
 import Skeleton from '@/components/ui/Skeleton'
 import SectionDivider from '@/components/ui/SectionDivider'
+import ConditionBadge from '@/components/ui/ConditionBadge'
 import { api } from '@/api/client'
 import type { CharacterLiveSnapshot, SessionParticipant } from '@/types'
 import { haptic, telegramConfirm } from '@/auth/telegram'
-import { formatCondition } from '@/lib/conditions'
 import ParticipantIdentitySheet from '@/pages/session/ParticipantIdentitySheet'
 import SessionFeed from '@/pages/session/SessionFeed'
 
-function conditionLabels(
+function conditionEntries(
   conditions: Record<string, unknown> | null | undefined,
-  t: TFunction,
-): string[] {
+): Array<[string, unknown]> {
   if (!conditions) return []
-  return Object.entries(conditions)
-    .filter(([, v]) => Boolean(v))
-    .map(([key, val]) => formatCondition(key, val, t))
+  return Object.entries(conditions).filter(([, v]) => Boolean(v))
 }
 
 function ParticipantRow({
@@ -55,7 +52,7 @@ function ParticipantRow({
         ((snapshot.current_hit_points ?? 0) / (snapshot.hit_points ?? 1)) * 100
       )))
     : 0
-  const conds = conditionLabels(snapshot?.conditions, t)
+  const conds = conditionEntries(snapshot?.conditions)
 
   const bucketColorClass: Record<string, string> = {
     healthy:          'bg-[var(--dnd-emerald-bright)]',
@@ -74,13 +71,23 @@ function ParticipantRow({
   }
 
   const isClickable = isOwn || (!isGm && !isMe && !!participant.character_id)
-  const Wrapper: any = isClickable ? 'button' : 'div'
   const wrapperProps = isClickable
-    ? { type: 'button', onClick: handleClick, className: 'w-full text-left cursor-pointer' }
+    ? {
+        role: 'button' as const,
+        tabIndex: 0,
+        onClick: handleClick,
+        onKeyDown: (e: React.KeyboardEvent) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            handleClick()
+          }
+        },
+        className: 'w-full text-left cursor-pointer',
+      }
     : {}
 
   return (
-    <Wrapper {...wrapperProps}>
+    <div {...wrapperProps}>
       <div className={`rounded-lg border p-3 transition-colors
         ${isMe ? 'border-dnd-gold bg-dnd-surface-raised' : 'border-dnd-border bg-dnd-surface'}
         ${isClickable ? 'hover:border-dnd-gold-bright' : ''}`}>
@@ -153,9 +160,14 @@ function ParticipantRow({
             )}
 
             {conds.length > 0 && (
-              <p className="mt-2 text-[11px] text-[var(--dnd-amber)] font-body">
-                ⚠ {conds.join(', ')}
-              </p>
+              <div
+                className="mt-2 flex flex-wrap gap-1.5"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {conds.map(([key, val]) => (
+                  <ConditionBadge key={key} conditionKey={key} value={val} />
+                ))}
+              </div>
             )}
             {snapshot.last_roll && (
               <div className="mt-1 text-[11px] text-dnd-text-muted flex items-center gap-1">
@@ -166,7 +178,7 @@ function ParticipantRow({
           </>
         )}
       </div>
-    </Wrapper>
+    </div>
   )
 }
 
