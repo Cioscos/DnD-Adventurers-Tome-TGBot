@@ -24,6 +24,7 @@ function useOverlayVisibility(): { visible: boolean; charId: number | null } {
   return useMemo(() => {
     const path = location.pathname
     if (matchPath('/char/:id/dice', path)) return { visible: false, charId: null }
+    if (matchPath('/char/:id/settings', path)) return { visible: false, charId: null }
 
     const charAny = matchPath('/char/:id/*', path) ?? matchPath('/char/:id', path)
     if (charAny) {
