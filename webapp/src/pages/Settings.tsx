@@ -149,6 +149,8 @@ export default function Settings() {
           {(['auto', 'light', 'dark'] as const satisfies readonly ThemeMode[]).map((mode) => (
             <m.button
               key={mode}
+              type="button"
+              aria-pressed={themeMode === mode}
               onClick={() => {
                 setThemeMode(mode)
                 haptic.light()
