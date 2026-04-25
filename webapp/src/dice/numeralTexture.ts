@@ -45,7 +45,10 @@ function drawLabel(ctx: CanvasRenderingContext2D, label: string, ink: string, ou
   if (label === '6' || label === '9' || label === '66' || label === '99') {
     const dotSize = Math.round(px * 0.42)
     ctx.font = `900 ${dotSize}px "Cinzel", "Georgia", serif`
-    const dotY = cy + px * 0.55
+    // Pull the underline closer to the digit so it stays inside the canvas
+    // bounds at the largest font size (single-digit 6/9 at 275px previously
+    // rendered the underscore at y≈343 with bbox extending past 384).
+    const dotY = cy + px * 0.42
     ctx.lineWidth = Math.max(4, dotSize * 0.1)
     ctx.strokeText('_', cx, dotY)
     ctx.fillText('_', cx, dotY)
