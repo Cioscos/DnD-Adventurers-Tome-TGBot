@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -274,9 +274,16 @@ class DeathSaveRollResult(BaseModel):
 # Dice
 # ---------------------------------------------------------------------------
 
-class DiceRollRequest(BaseModel):
-    count: int = 1
-    die: str  # "d4" | "d6" | "d8" | "d10" | "d12" | "d20" | "d100"
+class DiceResultEntry(BaseModel):
+    kind: Literal["d4", "d6", "d8", "d10", "d12", "d20"]
+    value: int
+
+
+class DiceResultRequest(BaseModel):
+    rolls: list[DiceResultEntry] = Field(min_length=1, max_length=50)
+    label: str | None = Field(default=None, max_length=120)
+    modifier: int = 0
+    notation: str | None = Field(default=None, max_length=80)
 
 
 class DiceRollResult(BaseModel):
