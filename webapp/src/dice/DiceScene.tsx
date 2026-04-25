@@ -39,8 +39,8 @@ export default function DiceScene({ request, onMount }: Props) {
     <Canvas
       dpr={[1, 1.5]}
       gl={{ alpha: true, antialias: true }}
-      camera={{ position: [0, 2.2, 2.4], fov: 70, near: 0.1, far: 30 }}
-      onCreated={({ camera }) => camera.lookAt(0, -0.4, 0)}
+      camera={{ position: [0, 5.5, 1.8], fov: 42, near: 0.1, far: 30 }}
+      onCreated={({ camera }) => camera.lookAt(0, 0, 0)}
       shadows
       frameloop="demand"
       style={{
@@ -81,11 +81,6 @@ function CameraFit() {
   useEffect(() => {
     if (!(camera instanceof THREE.PerspectiveCamera)) return
     const aspect = size.width / Math.max(size.height, 1)
-    const targetHalfW = 1.15
-    const dist = Math.hypot(camera.position.x, camera.position.y, camera.position.z)
-    const halfH = targetHalfW / Math.max(aspect, 0.01)
-    const fovV = (2 * Math.atan(halfH / dist) * 180) / Math.PI
-    camera.fov = Math.min(Math.max(fovV, 42), 82)
     camera.aspect = aspect
     camera.updateProjectionMatrix()
   }, [camera, size.width, size.height])
