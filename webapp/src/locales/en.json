@@ -574,6 +574,13 @@
         "recalc_confirm_title": "Recalculate HP",
         "recalc_confirm_body": "This will recalculate the character's max HP based on current classes, levels, and Constitution modifier. Continue?"
       },
+      "theme": {
+        "title": "Theme",
+        "hint": "Auto follows the Telegram theme.",
+        "mode_auto": "Auto",
+        "mode_light": "Light",
+        "mode_dark": "Dark"
+      },
       "privacy": {
         "title": "Privacy",
         "show_private_label": "Show private info to GM and other players",
