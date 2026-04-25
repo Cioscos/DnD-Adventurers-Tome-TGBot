@@ -86,10 +86,10 @@ git add webapp/src/          # (and any other changed source files)
 git commit -m "feat: ..."
 ```
 
-`npm run build:prod` (`webapp/scripts/build-prod.sh`) does in one shot:
+`npm run build:prod` (`webapp/scripts/build-prod.mjs`) does in one shot:
 1. Switches `.env.local` to the production API URL (`https://api.cischi.dev`)
 2. Runs `tsc && vite build` (fails fast on TypeScript errors)
-3. Restores `.env.local` to `http://localhost:8000` (even on error, via `trap`)
+3. Restores `.env.local` to `http://localhost:8000` (even on error, via `try/finally`)
 4. Runs `git add docs/app/` so the build output is staged and ready
 
 Do **not** commit `.env.local` — it is gitignored.
