@@ -1,7 +1,9 @@
 import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
-import { Minus, Plus, Target, Maximize2, Sparkles, Check } from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
+import { Minus, Plus, Maximize2, Check } from 'lucide-react'
+import { GiArcheryTarget as Target, GiSparkles as Sparkles } from 'react-icons/gi'
+import type { ComponentType, SVGAttributes } from 'react'
+type IconCmp = ComponentType<SVGAttributes<SVGElement> & { size?: number | string }>
 import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
@@ -19,7 +21,7 @@ interface HpOperationFormProps {
   hpMutate: (args: { op: HPOp; val: number }) => void
 }
 
-const ops: { key: HPOp; label_key: string; icon: LucideIcon; toneClass: string }[] = [
+const ops: { key: HPOp; label_key: string; icon: IconCmp; toneClass: string }[] = [
   { key: 'damage',      label_key: 'character.hp.damage',      icon: Minus,      toneClass: '!bg-gradient-ember !text-white !border-transparent shadow-halo-danger' },
   { key: 'heal',        label_key: 'character.hp.heal',        icon: Plus,       toneClass: '!bg-[var(--dnd-emerald)]/25 !text-[var(--dnd-emerald-bright)] !border-dnd-emerald/60' },
   { key: 'set_current', label_key: 'character.hp.set_current', icon: Target,     toneClass: '!bg-[var(--dnd-cobalt)]/20 !text-[var(--dnd-cobalt-bright)] !border-dnd-cobalt/60' },

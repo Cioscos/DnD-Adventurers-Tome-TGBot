@@ -3,7 +3,11 @@ import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m, AnimatePresence } from 'framer-motion'
-import { Plus, Trash2, Sparkles, Shield, Heart, ArrowLeft, Pencil, Swords } from 'lucide-react'
+import { Plus, Trash2, ArrowLeft, Pencil } from 'lucide-react'
+import {
+  GiSparkles as Sparkles, GiCheckedShield as Shield, GiHeartPlus as Heart,
+  GiCrossedSwords as Swords,
+} from 'react-icons/gi'
 import { api } from '@/api/client'
 import type { CharacterSummary } from '@/types'
 import HPGauge from '@/components/ui/HPGauge'

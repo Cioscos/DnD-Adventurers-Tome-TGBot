@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { EyeOff, Lock, User, Globe2, Feather } from 'lucide-react'
+import { EyeOff, Lock, User, Globe2 } from 'lucide-react'
+import { GiFeather as Feather } from 'react-icons/gi'
 import { api } from '@/api/client'
 import Sheet from '@/components/ui/Sheet'
 import SectionDivider from '@/components/ui/SectionDivider'

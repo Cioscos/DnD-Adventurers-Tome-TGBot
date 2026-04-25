@@ -1,6 +1,7 @@
 import React from 'react'
 import { useTranslation } from 'react-i18next'
-import { Swords, ArrowLeftRight, Pencil, Trash2, Target } from 'lucide-react'
+import { ArrowLeftRight, Pencil, Trash2 } from 'lucide-react'
+import { GiCrossedSwords as Swords, GiArcheryTarget as Target } from 'react-icons/gi'
 import Button from '@/components/ui/Button'
 import { TYPE_ICON } from './itemMetadata'
 import type { Item } from '@/types'

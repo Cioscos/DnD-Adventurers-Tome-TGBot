@@ -3,7 +3,11 @@ import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
-import { User, Globe2, Feather, Save, Plus, X, Shield, Zap, Flame, Lock } from 'lucide-react'
+import { User, Globe2, Save, Plus, X, Lock } from 'lucide-react'
+import {
+  GiFeather as Feather, GiCheckedShield as Shield, GiLightningTrio as Zap,
+  GiFlame as Flame,
+} from 'react-icons/gi'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'

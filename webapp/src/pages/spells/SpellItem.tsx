@@ -1,9 +1,11 @@
 import React from 'react'
 import { useTranslation } from 'react-i18next'
+import { Clock, Timer, Pencil, Trash2, Ban } from 'lucide-react'
 import {
-  Clock, Crosshair, FlaskConical, Timer,
-  Swords, Shield, Pencil, Trash2, Sparkles, Ban, Dices,
-} from 'lucide-react'
+  GiCrosshair as Crosshair, GiPotionBall as FlaskConical,
+  GiCrossedSwords as Swords, GiCheckedShield as Shield,
+  GiSparkles as Sparkles, GiPerspectiveDiceSixFacesRandom as Dices,
+} from 'react-icons/gi'
 import type { Spell } from '@/types'
 
 interface SpellItemProps {

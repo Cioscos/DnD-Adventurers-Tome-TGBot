@@ -1,6 +1,6 @@
 import { m } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
-import { Sparkles } from 'lucide-react'
+import { GiSparkles as Sparkles } from 'react-icons/gi'
 import { spring } from '@/styles/motion'
 import { haptic } from '@/auth/telegram'
 

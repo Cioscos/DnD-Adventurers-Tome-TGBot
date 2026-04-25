@@ -1,6 +1,7 @@
 import { m } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
-import { Star, ChevronsUp } from 'lucide-react'
+import { ChevronsUp } from 'lucide-react'
+import { GiPolarStar as Star } from 'react-icons/gi'
 import { XP_THRESHOLDS, levelFromXp } from '@/lib/xpThresholds'
 import { haptic } from '@/auth/telegram'
 
