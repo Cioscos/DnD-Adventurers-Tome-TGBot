@@ -99,6 +99,7 @@ async def get_dice_history(
 ) -> list[DiceRollResult]:
     char = await _get_owned(char_id, user_id, session)
     history = list(char.rolls_history or [])
+    logger.info("dice/history GET: char=%s len=%s", char_id, len(history))
     return [
         DiceRollResult(
             notation=entry.get("notation", "?"),
