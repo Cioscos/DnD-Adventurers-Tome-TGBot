@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { LazyMotion, domAnimation } from 'framer-motion'
 import App from './App'
 import Toast from './components/ui/Toast'
+import { initTheme } from './theme/applyTheme'
 import './index.css'
 import './i18n'
 
@@ -11,15 +12,8 @@ import './i18n'
 window.Telegram?.WebApp?.ready()
 window.Telegram?.WebApp?.expand()
 
-// Theme detection: apply .light class if Telegram reports light mode
-function applyTheme() {
-  const scheme = window.Telegram?.WebApp?.colorScheme
-  document.documentElement.classList.toggle('light', scheme === 'light')
-}
-applyTheme()
-
-// Listen for live theme changes (user toggles dark/light in Telegram)
-window.Telegram?.WebApp?.onEvent?.('themeChanged', applyTheme)
+// Theme system: read user preference from store, follow Telegram in auto mode
+initTheme()
 
 // Sync --tg-vh with viewport stable height (updated when keyboard opens/closes)
 function syncViewportHeight() {

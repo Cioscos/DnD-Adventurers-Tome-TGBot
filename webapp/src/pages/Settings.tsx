@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
-import { Settings2, Languages, RefreshCw, Eye } from 'lucide-react'
+import { Settings2, Languages, RefreshCw, Eye, Sun } from 'lucide-react'
 import {
   GiSparkles as Sparkles, GiCutDiamond as Gem,
   GiPerspectiveDiceSixFacesRandom as Dices,
@@ -17,6 +17,7 @@ import Sheet from '@/components/ui/Sheet'
 import { haptic } from '@/auth/telegram'
 import { useCharacterStore } from '@/store/characterStore'
 import { useDiceSettings } from '@/store/diceSettings'
+import { useThemeSettings, type ThemeMode } from '@/store/themeSettings'
 import { BUNDLED_PACKS, type PackId } from '@/dice/packs/registry'
 import { loadManifest } from '@/dice/packs/loader'
 import { useDicePack } from '@/dice/packs/DicePackProvider'
@@ -32,6 +33,8 @@ export default function Settings() {
   const setAnimate3d = useDiceSettings((s) => s.setAnimate3d)
   const packId = useDiceSettings((s) => s.packId)
   const setPackId = useDiceSettings((s) => s.setPackId)
+  const themeMode = useThemeSettings((s) => s.mode)
+  const setThemeMode = useThemeSettings((s) => s.setMode)
   const { loading: packLoading, error: packError } = useDicePack()
 
   const { data: char } = useQuery({
@@ -127,6 +130,41 @@ export default function Settings() {
           <Button variant="secondary" size="sm" onClick={toggleLanguage}>
             {locale === 'it' ? '🇮🇹 Italiano' : '🇬🇧 English'}
           </Button>
+        </div>
+      </Surface>
+
+      <Surface variant="elevated">
+        <div className="flex items-start gap-3 mb-3">
+          <Sun size={16} className="text-dnd-gold-bright shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="font-display font-bold text-dnd-gold-bright">
+              {t('character.settings.theme.title')}
+            </p>
+            <p className="text-xs text-dnd-text-muted mt-0.5 font-body italic">
+              {t('character.settings.theme.hint')}
+            </p>
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          {(['auto', 'light', 'dark'] as const satisfies readonly ThemeMode[]).map((mode) => (
+            <m.button
+              key={mode}
+              type="button"
+              aria-pressed={themeMode === mode}
+              onClick={() => {
+                setThemeMode(mode)
+                haptic.light()
+              }}
+              className={`min-h-[44px] rounded-xl font-cinzel text-xs uppercase tracking-widest transition-colors
+                ${themeMode === mode
+                  ? 'bg-gradient-gold text-dnd-ink shadow-engrave'
+                  : 'bg-dnd-surface border border-dnd-border text-dnd-text-muted'}`}
+              whileTap={{ scale: 0.96 }}
+              transition={spring.press}
+            >
+              {t(`character.settings.theme.mode_${mode}`)}
+            </m.button>
+          ))}
         </div>
       </Surface>
 
