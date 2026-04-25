@@ -3,12 +3,10 @@ import { useLocation, matchPath } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { m, AnimatePresence } from 'framer-motion'
 import { Dices } from 'lucide-react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
 import DiceIcon from '@/components/ui/DiceIcon'
 import { useCharacterStore } from '@/store/characterStore'
 import { haptic } from '@/auth/telegram'
-import { api } from '@/api/client'
-import { useDiceAnimation } from '@/dice/useDiceAnimation'
+import { useRollAndPersist, type RollEntry, type RollGroup } from '@/dice/useRollAndPersist'
 import type { DiceKind } from '@/dice/types'
 
 const KINDS: DiceKind[] = ['d4', 'd6', 'd8', 'd10', 'd12', 'd20', 'd100']
@@ -18,8 +16,6 @@ const SIDES_FOR = {
 const TOAST_DISMISS_MS = 3000
 
 type DicePool = Partial<Record<DiceKind, number>>
-
-type RollGroup = { kind: DiceKind; notation: string; rolls: number[]; total: number }
 
 function useOverlayVisibility(): { visible: boolean; charId: number | null } {
   const location = useLocation()
@@ -89,50 +85,31 @@ export default function DiceOverlay() {
     setErrorVisible(false)
   }, [])
 
-  const dice = useDiceAnimation()
-  const qc = useQueryClient()
-
-  const rollMutation = useMutation({
-    mutationFn: async (entries: Array<[DiceKind, number]>) => {
-      if (!charId) throw new Error('no charId')
-      const responses = await Promise.all(
-        entries.map(([kind, count]) => api.dice.roll(charId, count, kind))
-      )
-      return entries.map(([kind], i) => {
-        const r = responses[i]
-        return { kind, notation: r.notation, rolls: r.rolls, total: r.total } as RollGroup
-      })
-    },
-    onSuccess: async (groups) => {
-      await dice.play({
-        groups: groups.map((g) => ({ kind: g.kind, results: g.rolls })),
-        interGroupMs: 150,
-      })
-      setPool({})
-      setOpen(false)
-      haptic.medium()
-      showResults(groups)
-    },
-    onError: () => {
-      haptic.error()
-      showError()
-    },
-    onSettled: () => {
-      if (charId) qc.invalidateQueries({ queryKey: ['dice-history', charId] })
-    },
-  })
+  const { roll, isPending } = useRollAndPersist(charId)
 
   const entries = useMemo(
     () => (Object.entries(pool) as Array<[DiceKind, number]>).filter(([, n]) => n > 0),
     [pool]
   )
   const poolTotal = entries.reduce((s, [, n]) => s + n, 0)
-  const isRolling = rollMutation.isPending
+  const isRolling = isPending
 
-  const handleRoll = useCallback(() => {
-    if (!entries.length || isRolling || !charId) return
-    rollMutation.mutate(entries)
-  }, [entries, isRolling, charId, rollMutation])
+  const handleRoll = useCallback(async () => {
+    if (!entries.length || isPending || !charId) return
+    try {
+      const rollEntries: RollEntry[] = entries.map(([kind, count]) => ({ kind, count }))
+      const groups = await roll(rollEntries, {
+        notation: rollEntries.map((e) => `${e.count}${e.kind}`).join(' + '),
+      })
+      setPool({})
+      setOpen(false)
+      haptic.medium()
+      showResults(groups)
+    } catch {
+      haptic.error()
+      showError()
+    }
+  }, [entries, isPending, charId, roll, showResults, showError])
 
   const increment = useCallback((kind: DiceKind) => {
     haptic.light()
