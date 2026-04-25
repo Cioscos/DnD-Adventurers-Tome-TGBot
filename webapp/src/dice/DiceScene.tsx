@@ -6,7 +6,7 @@ import * as CANNON from 'cannon-es'
 import type { DiceGroup, DiceKind } from './types'
 import { getDiceGeometry } from './geometries'
 import { getDiceMaterial, getNumeralMaterial } from './materials'
-import { createDiceWorld, type DiceWorld } from './physics/world'
+import { createDiceWorld, updateWalls, type DiceWorld } from './physics/world'
 import { spawnDiceBody, computeSpawnPositions } from './physics/spawner'
 import { quaternionForFace } from './physics/faceDetector'
 
@@ -98,9 +98,14 @@ function Orchestrator({ request, onMount }: Props) {
   const snapFromPosRef = useRef<THREE.Vector3[]>([])
   const snapToPosRef = useRef<THREE.Vector3[]>([])
   const [version, setVersion] = useState(0)
-  const { invalidate, camera } = useThree()
+  const { invalidate, camera, size } = useThree()
   const onMountRef = useRef(onMount)
   onMountRef.current = onMount
+
+  useEffect(() => {
+    if (!(camera instanceof THREE.PerspectiveCamera)) return
+    updateWalls(worldRef.current!, camera, size)
+  }, [camera, size.width, size.height])
 
   useEffect(() => {
     onMountRef.current?.()

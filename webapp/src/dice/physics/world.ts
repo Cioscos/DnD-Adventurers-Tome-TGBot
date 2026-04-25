@@ -1,5 +1,6 @@
 // webapp/src/dice/physics/world.ts
 import * as CANNON from 'cannon-es'
+import * as THREE from 'three'
 import { PHYSICS } from './constants'
 
 export interface DiceWorld {
@@ -73,4 +74,38 @@ export function disposeDiceWorld(dw: DiceWorld): void {
   while (dw.world.bodies.length) {
     dw.world.removeBody(dw.world.bodies[0])
   }
+}
+
+/**
+ * Riposiziona i 4 muri della box fisica così che coincidano con i bordi
+ * dello schermo proiettati sul piano floor (y = PHYSICS.floorY).
+ *
+ * Calcola intersezione tra i raggi camera→edge-screen e il piano floor,
+ * poi sposta i muri (mantenendo le orientazioni esistenti, [-X, +X, -Z, +Z]).
+ */
+export function updateWalls(dw: DiceWorld, camera: THREE.PerspectiveCamera, size: { width: number; height: number }): void {
+  if (dw.walls.length !== 4) return
+  const halfX = computeProjectedHalfExtent(camera, size, 'x')
+  const halfZ = computeProjectedHalfExtent(camera, size, 'z')
+  // walls order definita in createDiceWorld: [-X, +X, -Z, +Z]
+  dw.walls[0].position.set(-halfX, 0, 0)
+  dw.walls[1].position.set(halfX, 0, 0)
+  dw.walls[2].position.set(0, 0, -halfZ)
+  dw.walls[3].position.set(0, 0, halfZ)
+}
+
+function computeProjectedHalfExtent(
+  camera: THREE.PerspectiveCamera,
+  _size: { width: number; height: number },
+  axis: 'x' | 'z',
+): number {
+  // raycast da centro camera verso edge-NDC (±1 sull'asse target), interseca con piano floor
+  const ndcEdge = axis === 'x' ? new THREE.Vector3(1, 0, 0.5) : new THREE.Vector3(0, -1, 0.5)
+  const worldEdge = ndcEdge.clone().unproject(camera)
+  const dir = worldEdge.sub(camera.position).normalize()
+  // y = PHYSICS.floorY → t = (floorY - cam.y) / dir.y
+  const FLOOR = -0.9
+  const t = (FLOOR - camera.position.y) / dir.y
+  const hit = camera.position.clone().addScaledVector(dir, t)
+  return Math.abs(axis === 'x' ? hit.x : hit.z)
 }
