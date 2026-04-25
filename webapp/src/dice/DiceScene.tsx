@@ -3,7 +3,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { ContactShadows } from '@react-three/drei'
 import * as THREE from 'three'
 import * as CANNON from 'cannon-es'
-import type { DiceGroup, DiceKind, DetectedResult } from './types'
+import type { DiceGroup, DiceKind, DiceTint, DetectedResult } from './types'
 import { getDiceGeometry } from './geometries'
 import { getDiceMaterial, getNumeralMaterial } from './materials'
 import { createDiceWorld, updateWalls, type DiceWorld } from './physics/world'
@@ -15,7 +15,7 @@ import { getTintOverride } from './packs/manifest'
 
 export type SceneRequest = {
   id: number
-  group: DiceGroup
+  groups: DiceGroup[]
   onComplete: (results: DetectedResult[]) => void
 }
 
@@ -27,6 +27,8 @@ interface Entity {
   detectedValue: number | null
   retries: number
   kind: Exclude<DiceKind, 'd100'>
+  groupIndex: number
+  tint: DiceTint
 }
 
 const PLANE_GEOMETRY = new THREE.PlaneGeometry(1, 1)
@@ -123,23 +125,37 @@ function Orchestrator({ request, onMount }: Props) {
     for (const e of entitiesRef.current) world.removeBody(e.body)
     entitiesRef.current = []
 
-    const group = request.group
-    const kindBase: Exclude<DiceKind, 'd100'> = group.kind === 'd100' ? 'd10' : group.kind
-    const geomData = getDiceGeometry(kindBase)
+    // count total bodies across all groups (d100 = 2 d10 bodies)
+    const groupSpec = request.groups.map((g) => {
+      const kindBase: Exclude<DiceKind, 'd100'> = g.kind === 'd100' ? 'd10' : g.kind
+      const bodyCount = g.kind === 'd100' ? 2 : g.results?.length ?? g.count ?? 1
+      return { kindBase, bodyCount, tint: g.tint ?? 'normal' }
+    })
+    const totalBodies = groupSpec.reduce((s, g) => s + g.bodyCount, 0)
+    const positions = computeSpawnPositions(totalBodies)
 
-    // numero di body fisici da spawnare
-    const bodyCount = group.kind === 'd100' ? 2 : group.results?.length ?? group.count ?? 1
-
-    const positions = computeSpawnPositions(bodyCount)
     const entities: Entity[] = []
-    for (let i = 0; i < bodyCount; i++) {
-      const body = spawnDiceBody({
-        shape: geomData.shape,
-        material: worldRef.current!.diceMaterial,
-        position: positions[i],
-      })
-      world.addBody(body)
-      entities.push({ body, group: null, detectedValue: null, retries: 0, kind: kindBase })
+    let posIdx = 0
+    for (let gi = 0; gi < groupSpec.length; gi++) {
+      const { kindBase, bodyCount, tint } = groupSpec[gi]
+      const geomData = getDiceGeometry(kindBase)
+      for (let i = 0; i < bodyCount; i++) {
+        const body = spawnDiceBody({
+          shape: geomData.shape,
+          material: worldRef.current!.diceMaterial,
+          position: positions[posIdx++],
+        })
+        world.addBody(body)
+        entities.push({
+          body,
+          group: null,
+          detectedValue: null,
+          retries: 0,
+          kind: kindBase,
+          groupIndex: gi,
+          tint,
+        })
+      }
     }
     entitiesRef.current = entities
     phaseRef.current = 'simulating'
@@ -250,8 +266,8 @@ function Orchestrator({ request, onMount }: Props) {
       })
       if (elapsed > HOLD_MS) {
         phaseRef.current = 'idle'
-        const results: DetectedResult[] = entitiesRef.current.map((e, i) => ({
-          groupIndex: i,
+        const results: DetectedResult[] = entitiesRef.current.map((e) => ({
+          groupIndex: e.groupIndex,
           kind: e.kind,
           value: e.detectedValue ?? 1,
         }))
@@ -261,15 +277,14 @@ function Orchestrator({ request, onMount }: Props) {
   })
 
   const entities = entitiesRef.current
-  const tint = request?.group.tint ?? 'normal'
-  const override = pack ? getTintOverride(pack.manifest, tint) : undefined
   const skipNumerals = pack?.manifest.numerals === 'embedded'
 
   return (
     <>
       {entities.map((e, i) => {
         const geomData = getDiceGeometry(e.kind)
-        const baseMaterial = getDiceMaterial(tint, pack, e.kind)
+        const baseMaterial = getDiceMaterial(e.tint, pack, e.kind)
+        const override = pack ? getTintOverride(pack.manifest, e.tint) : undefined
         return (
           <group
             key={`${version}-${i}`}
@@ -285,7 +300,7 @@ function Orchestrator({ request, onMount }: Props) {
                   <mesh
                     key={ff.value}
                     geometry={PLANE_GEOMETRY}
-                    material={getNumeralMaterial(String(ff.value), tint, override)}
+                    material={getNumeralMaterial(String(ff.value), e.tint, override)}
                     position={ff.offsetPosition.toArray()}
                     quaternion={[ff.quaternion.x, ff.quaternion.y, ff.quaternion.z, ff.quaternion.w]}
                     scale={planeSize}

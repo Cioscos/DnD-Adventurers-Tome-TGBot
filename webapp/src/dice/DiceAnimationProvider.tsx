@@ -63,7 +63,7 @@ export default function DiceAnimationProvider({ children }: { children: ReactNod
       for (const group of req.groups) {
         const id = ++requestIdRef.current
         await new Promise<void>((resolve) => {
-          setSceneRequest({ id, group, onComplete: (_results) => resolve() })
+          setSceneRequest({ id, groups: [group], onComplete: (_results) => resolve() })
         })
         if (req.interGroupMs && req.interGroupMs > 0) {
           await new Promise((r) => setTimeout(r, req.interGroupMs))
@@ -81,10 +81,7 @@ export default function DiceAnimationProvider({ children }: { children: ReactNod
   const playAndCollect = useCallback(
     async (groups: PlayCollectGroup[]): Promise<DetectedResult[]> => {
       if (!shouldAnimate) return []
-      if (groups.length !== 1) {
-        throw new Error('playAndCollect: only single-group supported in MVP')
-      }
-      const g = groups[0]
+      if (groups.length === 0) return []
 
       setIsPlaying(true)
       setOverlayVisible(true)
@@ -92,10 +89,11 @@ export default function DiceAnimationProvider({ children }: { children: ReactNod
       await waitForScene()
 
       const id = ++requestIdRef.current
+      const sceneGroups = groups.map((g) => ({ kind: g.kind, tint: g.tint, count: g.count }))
       const results = await new Promise<DetectedResult[]>((resolve) => {
         setSceneRequest({
           id,
-          group: { kind: g.kind, tint: g.tint, count: g.count },
+          groups: sceneGroups,
           onComplete: (r) => resolve(r),
         })
       })

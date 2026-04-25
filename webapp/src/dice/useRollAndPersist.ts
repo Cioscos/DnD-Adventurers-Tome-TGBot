@@ -50,17 +50,15 @@ export function useRollAndPersist(charId: number | null) {
       let resultsPerEntry: number[][]
 
       if (useAnimation) {
-        resultsPerEntry = []
-        for (const entry of entries) {
-          const detected = await dice.playAndCollect([
-            {
-              kind: entry.kind,
-              tint: entry.tint,
-              count: entry.kind === 'd100' ? entry.count * 2 : entry.count,
-            },
-          ])
-          resultsPerEntry.push(detected.map((d) => d.value))
-        }
+        const playGroups = entries.map((e) => ({
+          kind: e.kind,
+          tint: e.tint,
+          count: e.kind === 'd100' ? e.count * 2 : e.count,
+        }))
+        const detected = await dice.playAndCollect(playGroups)
+        resultsPerEntry = entries.map((_e, gi) =>
+          detected.filter((d) => d.groupIndex === gi).map((d) => d.value),
+        )
       } else {
         resultsPerEntry = entries.map((e) => rollMany(e.kind, e.count).map((r) => r.value))
       }
