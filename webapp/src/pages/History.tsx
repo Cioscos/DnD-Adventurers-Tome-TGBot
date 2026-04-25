@@ -80,7 +80,7 @@ export default function History() {
                 }}
               />
               <div className="space-y-3">
-                {[...entries].reverse().map((entry, idx) => {
+                {entries.map((entry, idx) => {
                   const meta = EVENT_META[entry.event_type] ?? EVENT_META.other
                   const Icon = meta.icon
                   return (
