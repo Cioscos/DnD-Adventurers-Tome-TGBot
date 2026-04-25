@@ -19,11 +19,18 @@ export function createDiceWorld(): DiceWorld {
 
   const diceMaterial = new CANNON.Material('dice')
   const floorMaterial = new CANNON.Material('floor')
-  const contact = new CANNON.ContactMaterial(diceMaterial, floorMaterial, {
+  const floorContact = new CANNON.ContactMaterial(diceMaterial, floorMaterial, {
     friction: PHYSICS.diceFloorFriction,
     restitution: PHYSICS.diceFloorRestitution,
   })
-  world.addContactMaterial(contact)
+  world.addContactMaterial(floorContact)
+
+  const wallMaterial = new CANNON.Material('wall')
+  const wallContact = new CANNON.ContactMaterial(diceMaterial, wallMaterial, {
+    friction: 0.05,
+    restitution: PHYSICS.wallRestitution,
+  })
+  world.addContactMaterial(wallContact)
 
   const floor = new CANNON.Body({
     mass: 0,
@@ -42,12 +49,22 @@ export function createDiceWorld(): DiceWorld {
   ]
   const walls: CANNON.Body[] = []
   for (const def of wallDefs) {
-    const wall = new CANNON.Body({ mass: 0, shape: new CANNON.Plane(), material: floorMaterial })
+    const wall = new CANNON.Body({ mass: 0, shape: new CANNON.Plane(), material: wallMaterial })
     wall.quaternion.setFromAxisAngle(def.axis, def.angle)
     wall.position.copy(def.pos)
     world.addBody(wall)
     walls.push(wall)
   }
+
+  // soffitto invisibile (impedisce ai dadi di volare via verso l'alto)
+  const ceiling = new CANNON.Body({
+    mass: 0,
+    shape: new CANNON.Plane(),
+    material: floorMaterial,
+  })
+  ceiling.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), Math.PI / 2)
+  ceiling.position.set(0, PHYSICS.ceilingY, 0)
+  world.addBody(ceiling)
 
   return { world, diceMaterial, floorMaterial, walls }
 }

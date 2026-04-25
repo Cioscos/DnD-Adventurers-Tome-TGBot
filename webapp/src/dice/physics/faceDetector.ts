@@ -1,6 +1,7 @@
 // webapp/src/dice/physics/faceDetector.ts
 import * as THREE from 'three'
 
+/** Find which face value is currently pointing toward `worldTarget` for a body with given quaternion. */
 export function faceUp(
   faceNormals: Record<number, THREE.Vector3>,
   bodyQuat: THREE.Quaternion,
@@ -20,6 +21,10 @@ export function faceUp(
   return { value: bestValue, dot: bestDot }
 }
 
+/**
+ * Build the body quaternion that aligns `targetFace` normal to `worldTarget`.
+ * Default worldTarget is world +Y; pass a camera-facing direction to present the face to the camera.
+ */
 export function quaternionForFace(
   faceNormals: Record<number, THREE.Vector3>,
   targetFace: number,
