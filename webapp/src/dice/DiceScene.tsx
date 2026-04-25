@@ -10,6 +10,8 @@ import { createDiceWorld, updateWalls, type DiceWorld } from './physics/world'
 import { spawnDiceBody, computeSpawnPositions } from './physics/spawner'
 import { faceUp } from './physics/faceDetector'
 import { PHYSICS } from './physics/constants'
+import { useDicePack } from './packs/DicePackProvider'
+import { getTintOverride } from './packs/manifest'
 
 export type SceneRequest = {
   id: number
@@ -96,6 +98,7 @@ function Orchestrator({ request, onMount }: Props) {
   const phaseStartRef = useRef<number>(0)
   const [version, setVersion] = useState(0)
   const { invalidate, camera, size } = useThree()
+  const { pack } = useDicePack()
   const onMountRef = useRef(onMount)
   onMountRef.current = onMount
 
@@ -259,12 +262,14 @@ function Orchestrator({ request, onMount }: Props) {
 
   const entities = entitiesRef.current
   const tint = request?.group.tint ?? 'normal'
-  const baseMaterial = getDiceMaterial(tint)
+  const override = pack ? getTintOverride(pack.manifest, tint) : undefined
+  const skipNumerals = pack?.manifest.numerals === 'embedded'
 
   return (
     <>
       {entities.map((e, i) => {
         const geomData = getDiceGeometry(e.kind)
+        const baseMaterial = getDiceMaterial(tint, pack, e.kind)
         return (
           <group
             key={`${version}-${i}`}
@@ -273,19 +278,20 @@ function Orchestrator({ request, onMount }: Props) {
             }}
           >
             <mesh geometry={geomData.geometry} material={baseMaterial} castShadow receiveShadow />
-            {geomData.faceFrames.map((ff) => {
-              const planeSize = ff.inradius * 1.7
-              return (
-                <mesh
-                  key={ff.value}
-                  geometry={PLANE_GEOMETRY}
-                  material={getNumeralMaterial(String(ff.value), tint)}
-                  position={ff.offsetPosition.toArray()}
-                  quaternion={[ff.quaternion.x, ff.quaternion.y, ff.quaternion.z, ff.quaternion.w]}
-                  scale={planeSize}
-                />
-              )
-            })}
+            {!skipNumerals &&
+              geomData.faceFrames.map((ff) => {
+                const planeSize = ff.inradius * 1.7
+                return (
+                  <mesh
+                    key={ff.value}
+                    geometry={PLANE_GEOMETRY}
+                    material={getNumeralMaterial(String(ff.value), tint, override)}
+                    position={ff.offsetPosition.toArray()}
+                    quaternion={[ff.quaternion.x, ff.quaternion.y, ff.quaternion.z, ff.quaternion.w]}
+                    scale={planeSize}
+                  />
+                )
+              })}
           </group>
         )
       })}
