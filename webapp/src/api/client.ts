@@ -67,6 +67,18 @@ export type DeathSaveRollResult = {
   current_hp: number
 }
 
+export type DiceResultEntryBody = {
+  kind: 'd4' | 'd6' | 'd8' | 'd10' | 'd12' | 'd20'
+  value: number
+}
+
+export type DiceResultRequestBody = {
+  rolls: DiceResultEntryBody[]
+  label?: string | null
+  modifier?: number
+  notation?: string | null
+}
+
 export type { ConcentrationSaveResult } from '@/types'
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000'
@@ -442,15 +454,14 @@ export const api = {
   // Dice
   // ---------------------------------------------------------------------------
   dice: {
-    roll: (charId: number, count: number, die: string) =>
-      request<DiceRollResult>(`/characters/${charId}/dice/roll`, {
+    result: (charId: number, body: DiceResultRequestBody) =>
+      request<DiceRollResult>(`/characters/${charId}/dice/result`, {
         method: 'POST',
-        body: JSON.stringify({ count, die }),
+        body: JSON.stringify(body),
       }),
     history: (charId: number) => request<DiceRollResult[]>(`/characters/${charId}/dice/history`),
     clearHistory: (charId: number) =>
       request<void>(`/characters/${charId}/dice/history`, { method: 'DELETE' }),
-    /** Send a dice result to the user's private Telegram chat via the bot. */
     postToChat: (charId: number, result: { notation: string; rolls: number[]; total: number }) =>
       request<{ ok: boolean }>(`/characters/${charId}/dice/post-to-chat`, {
         method: 'POST',

@@ -10,7 +10,7 @@ import {
 } from 'react'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { useDiceSettings } from '@/store/diceSettings'
-import type { DiceAnimationApi, DicePlayRequest } from './types'
+import type { DiceAnimationApi, DicePlayRequest, PlayCollectGroup, DetectedResult } from './types'
 import type { SceneRequest } from './DiceScene'
 import { DicePackProvider } from './packs/DicePackProvider'
 
@@ -78,7 +78,41 @@ export default function DiceAnimationProvider({ children }: { children: ReactNod
     [shouldAnimate, waitForScene],
   )
 
-  const api = useMemo<DiceAnimationApi>(() => ({ play, isPlaying }), [play, isPlaying])
+  const playAndCollect = useCallback(
+    async (groups: PlayCollectGroup[]): Promise<DetectedResult[]> => {
+      if (!shouldAnimate) return []
+      if (groups.length !== 1) {
+        throw new Error('playAndCollect: only single-group supported in MVP')
+      }
+      const g = groups[0]
+
+      setIsPlaying(true)
+      setOverlayVisible(true)
+      setShouldMountScene(true)
+      await waitForScene()
+
+      const id = ++requestIdRef.current
+      const results = await new Promise<DetectedResult[]>((resolve) => {
+        setSceneRequest({
+          id,
+          group: { kind: g.kind, tint: g.tint, count: g.count },
+          onComplete: (r) => resolve(r),
+        })
+      })
+
+      setOverlayVisible(false)
+      await new Promise((r) => setTimeout(r, 180))
+      setSceneRequest(null)
+      setIsPlaying(false)
+      return results
+    },
+    [shouldAnimate, waitForScene],
+  )
+
+  const api = useMemo<DiceAnimationApi>(
+    () => ({ play, playAndCollect, isPlaying }),
+    [play, playAndCollect, isPlaying],
+  )
 
   return (
     <DicePackProvider>

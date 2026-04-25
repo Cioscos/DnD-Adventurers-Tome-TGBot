@@ -23,7 +23,14 @@ export interface DetectedResult {
   value: number
 }
 
+export interface PlayCollectGroup {
+  kind: DiceKind
+  tint?: DiceTint
+  count: number
+}
+
 export interface DiceAnimationApi {
   play: (req: DicePlayRequest) => Promise<void>
+  playAndCollect: (groups: PlayCollectGroup[]) => Promise<DetectedResult[]>
   isPlaying: boolean
 }
