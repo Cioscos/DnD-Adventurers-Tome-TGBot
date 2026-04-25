@@ -1,0 +1,25 @@
+{
+  "id": "hell_dice",
+  "name": "Hell Dice",
+  "author": "Cioscos",
+  "version": "1.0.0",
+  "numerals": "procedural",
+  "tints": {
+    "normal": { "ink": "#1a0a0a", "outline": "#ffd66b" },
+    "crit":   { "ink": "#fff5cc", "outline": "#fff5cc" },
+    "fumble": { "ink": "#ffaaaa", "outline": "#ffaaaa" }
+  },
+  "material": {
+    "metalness": 0.3,
+    "roughness": 0.55,
+    "envMapIntensity": 1.2
+  },
+  "dice": {
+    "d4":  { "albedo": "d4.albedo.png",  "normal": "d4.normal.png",  "roughness": "d4.roughness.png"  },
+    "d6":  { "albedo": "d6.albedo.png",  "normal": "d6.normal.png",  "roughness": "d6.roughness.png"  },
+    "d8":  { "albedo": "d8.albedo.png",  "normal": "d8.normal.png",  "roughness": "d8.roughness.png"  },
+    "d10": { "albedo": "d10.albedo.png", "normal": "d10.normal.png", "roughness": "d10.roughness.png" },
+    "d12": { "albedo": "d12.albedo.png", "normal": "d12.normal.png", "roughness": "d12.roughness.png" },
+    "d20": { "albedo": "d20.albedo.png", "normal": "d20.normal.png", "roughness": "d20.roughness.png" }
+  }
+}
