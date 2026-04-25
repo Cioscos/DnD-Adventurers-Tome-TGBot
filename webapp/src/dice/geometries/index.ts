@@ -100,35 +100,6 @@ function buildFaceNormals(t: DieTemplate): Record<number, THREE.Vector3> {
   return map
 }
 
-/**
- * Largest centered axis-aligned square that fits inside a convex polygon
- * (vertices in CCW or CW order, polygon must contain the origin).
- * Returns the half-side length.
- */
-function maxInscribedSquareHalfSide(face2D: Array<{ x: number; y: number }>): number {
-  let minH = Infinity
-  for (let i = 0; i < face2D.length; i++) {
-    const p1 = face2D[i]
-    const p2 = face2D[(i + 1) % face2D.length]
-    const dx = p2.x - p1.x
-    const dy = p2.y - p1.y
-    const a = -dy
-    const b = dx
-    const c = dy * p1.x - dx * p1.y
-    if (c === 0) continue
-    const insideSign = Math.sign(c)
-    for (const sx of [1, -1]) {
-      for (const sy of [1, -1]) {
-        const denom = a * sx + b * sy
-        if (denom * insideSign >= 0) continue
-        const h0 = -c / denom
-        if (h0 > 0 && h0 < minH) minH = h0
-      }
-    }
-  }
-  return Number.isFinite(minH) ? minH : 0
-}
-
 function buildFaceFrames(t: DieTemplate): FaceFrame[] {
   const frames: FaceFrame[] = []
   t.faces.forEach((face, idx) => {
@@ -163,24 +134,38 @@ function buildFaceFrames(t: DieTemplate): FaceFrame[] {
       if (d < minEdgeDist) minEdgeDist = d
     }
 
-    const offsetPosition = centroid.clone().add(normal.clone().multiplyScalar(0.002))
     const xAxis = new THREE.Vector3().crossVectors(up, normal).normalize()
     const basis = new THREE.Matrix4().makeBasis(xAxis, up, normal)
     const quaternion = new THREE.Quaternion().setFromRotationMatrix(basis)
 
     let halfW = 0
     let halfH = 0
-    const face2D: Array<{ x: number; y: number }> = []
+    let minPy = Infinity
+    let maxPy = -Infinity
+    let minPx = Infinity
+    let maxPx = -Infinity
     for (const vi of face) {
       const v = new THREE.Vector3(...t.vertices[vi])
       const rel = v.clone().sub(centroid)
       const px = rel.dot(xAxis)
       const py = rel.dot(up)
-      face2D.push({ x: px, y: py })
       if (Math.abs(px) > halfW) halfW = Math.abs(px)
       if (Math.abs(py) > halfH) halfH = Math.abs(py)
+      if (py < minPy) minPy = py
+      if (py > maxPy) maxPy = py
+      if (px < minPx) minPx = px
+      if (px > maxPx) maxPx = px
     }
-    const maxNumeralHalfSide = maxInscribedSquareHalfSide(face2D)
+    // Shift the numeral plane to the symmetric centre of the face along the
+    // up/right axes so asymmetric faces (kite on d10/d100) place the digit at
+    // the visual centre instead of biased toward the short vertex.
+    const symShiftY = (maxPy + minPy) / 2
+    const symShiftX = (maxPx + minPx) / 2
+    const offsetPosition = centroid
+      .clone()
+      .add(normal.clone().multiplyScalar(0.002))
+      .add(xAxis.clone().multiplyScalar(symShiftX))
+      .add(up.clone().multiplyScalar(symShiftY))
 
     frames.push({
       value: t.faceValues[idx],
@@ -190,7 +175,6 @@ function buildFaceFrames(t: DieTemplate): FaceFrame[] {
       inradius: minEdgeDist,
       halfWidth: halfW,
       halfHeight: halfH,
-      maxNumeralHalfSide,
       offsetPosition,
       quaternion,
     })
@@ -361,14 +345,6 @@ export interface FaceFrame {
   halfWidth: number
   /** Half-extent of face in local 2D frame along up axis. */
   halfHeight: number
-  /**
-   * Largest half-side of an axis-aligned square (centered on centroid) that
-   * stays inside the face polygon. Used to size the numeral quad so that its
-   * corners never poke through the face edge — important for non-square
-   * faces (kite / triangle) where `inradius` alone underestimates the
-   * constraint near narrow apexes.
-   */
-  maxNumeralHalfSide: number
   /** Slightly-offset world position in local die space to avoid z-fighting. */
   offsetPosition: THREE.Vector3
   /** Orientation that aligns a PlaneGeometry (+Z normal, +Y up) to this face. */

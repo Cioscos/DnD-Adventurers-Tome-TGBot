@@ -314,10 +314,7 @@ function Orchestrator({ request, onMount }: Props) {
             <mesh geometry={geomData.geometry} material={baseMaterial} castShadow receiveShadow />
             {!skipNumerals &&
               geomData.faceFrames.map((ff) => {
-                // inradius*1.7 is the heuristic for regular polygons; cap at the
-                // largest centered square that actually fits inside the face so
-                // numeral corners do not bleed past kite apexes / triangle vertices.
-                const planeSize = Math.min(ff.inradius * 1.7, ff.maxNumeralHalfSide * 2 * 0.95)
+                const planeSize = ff.inradius * 1.7
                 return (
                   <mesh
                     key={ff.value}
