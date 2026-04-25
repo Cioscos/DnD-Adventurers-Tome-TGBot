@@ -36,7 +36,10 @@ export function useRollAndPersist(charId: number | null) {
     mutationFn: (body: DiceResultRequestBody) =>
       charId ? api.dice.result(charId, body) : Promise.reject(new Error('no charId')),
     onSettled: () => {
-      if (charId) qc.invalidateQueries({ queryKey: ['dice-history', charId] })
+      if (charId) {
+        qc.invalidateQueries({ queryKey: ['dice-history', charId] })
+        qc.invalidateQueries({ queryKey: ['history', charId] })
+      }
     },
   })
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import os
+from datetime import datetime
 from typing import Annotated
 
 import httpx
@@ -15,7 +16,7 @@ from sqlalchemy.orm.attributes import flag_modified
 
 from api.auth import get_current_user
 from api.database import get_db
-from core.db.models import Character
+from core.db.models import Character, CharacterHistory
 from api.schemas.common import DiceResultEntry, DiceResultRequest, DiceRollResult
 
 logger = logging.getLogger(__name__)
@@ -82,6 +83,23 @@ async def post_dice_result(
     history.append({"notation": notation, "rolls": rolls, "total": total})
     char.rolls_history = history[-_MAX_HISTORY:]
     flag_modified(char, "rolls_history")
+
+    # Log to CharacterHistory (general events feed) so the roll appears in /history.
+    if len(rolls) > 1:
+        rolls_str = "+".join(str(r) for r in rolls)
+        description = f"🎲 {notation}: [{rolls_str}] = {total}"
+    else:
+        description = f"🎲 {notation}: {total}"
+    if body.label:
+        description = f"{body.label} — {description}"
+    session.add(CharacterHistory(
+        character_id=char_id,
+        timestamp=datetime.utcnow().isoformat(timespec="seconds"),
+        event_type="dice_roll",
+        description=description,
+        meta={"notation": notation, "rolls": rolls, "total": total, "modifier": body.modifier},
+    ))
+
     await session.flush()
     logger.info(
         "dice/result persisted: char=%s notation=%s total=%s history_len=%s",
