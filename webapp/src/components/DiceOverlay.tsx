@@ -14,6 +14,18 @@ const SIDES_FOR = {
   d4: 4, d6: 6, d8: 8, d10: 10, d12: 12, d20: 20, d100: 100,
 } as const satisfies Record<DiceKind, number>
 const TOAST_DISMISS_MS = 3000
+const MAX_INLINE_ROLLS = 8
+
+function formatRollList(rolls: number[]): string {
+  if (rolls.length <= MAX_INLINE_ROLLS) {
+    return `[${rolls.join('+')}]`
+  }
+  const visible = rolls.slice(0, MAX_INLINE_ROLLS).join('+')
+  const remaining = rolls.length - MAX_INLINE_ROLLS
+  const min = Math.min(...rolls)
+  const max = Math.max(...rolls)
+  return `[${visible}+… (+${remaining}, min ${min} · max ${max})]`
+}
 
 type DicePool = Partial<Record<DiceKind, number>>
 
@@ -260,7 +272,7 @@ export default function DiceOverlay() {
           type="button"
           onClick={dismissResults}
           className="fixed bottom-24 left-4 right-4 mx-auto z-[55]
-                     max-w-xs
+                     max-w-md
                      rounded-2xl bg-dnd-surface-raised/95 backdrop-blur-md
                      border border-dnd-gold-dim shadow-parchment-xl
                      px-4 py-3 text-left"
@@ -269,18 +281,21 @@ export default function DiceOverlay() {
           exit={{ opacity: 0, y: 10, scale: 0.95 }}
           transition={{ type: 'spring', stiffness: 320, damping: 26 }}
         >
-          <div className="space-y-1">
+          <div className="space-y-1.5 max-h-[40vh] overflow-y-auto">
             {results.map((g, i) => (
-              <div key={i} className="flex items-baseline justify-between gap-2 font-mono text-sm">
-                <span className="text-dnd-gold-dim">
-                  {g.notation}
+              <div
+                key={i}
+                className="flex items-baseline justify-between gap-2 font-mono text-sm"
+              >
+                <span className="text-dnd-gold-dim min-w-0 flex-1">
+                  <span className="font-semibold">{g.notation}</span>
                   {g.rolls.length > 1 && (
-                    <span className="text-dnd-text-faint text-xs ml-1">
-                      [{g.rolls.join('+')}]
+                    <span className="text-dnd-text-faint text-[11px] ml-1.5 break-words">
+                      {formatRollList(g.rolls)}
                     </span>
                   )}
                 </span>
-                <span className="font-display font-black text-dnd-gold-bright text-lg">
+                <span className="font-display font-black text-dnd-gold-bright text-lg shrink-0">
                   {g.total}
                 </span>
               </div>

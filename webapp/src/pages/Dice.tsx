@@ -30,6 +30,19 @@ type InitiativeResult = {
 
 const toDiceKind = (side: DieSide): DiceKind => `d${side}` as DiceKind
 
+const MAX_INLINE_ROLLS = 8
+
+function formatRollList(rolls: number[]): string {
+  if (rolls.length <= MAX_INLINE_ROLLS) {
+    return `[${rolls.join(' + ')}]`
+  }
+  const visible = rolls.slice(0, MAX_INLINE_ROLLS).join(' + ')
+  const remaining = rolls.length - MAX_INLINE_ROLLS
+  const min = Math.min(...rolls)
+  const max = Math.max(...rolls)
+  return `[${visible} +… (+${remaining}, min ${min} · max ${max})]`
+}
+
 export default function Dice() {
   const { id } = useParams<{ id: string }>()
   const charId = Number(id)
@@ -232,8 +245,8 @@ export default function Dice() {
                 {lastResult.total}
               </m.p>
               {lastResult.rolls.length > 1 && (
-                <p className="text-xs text-dnd-text-muted font-mono mt-1">
-                  [{lastResult.rolls.join(' + ')}]
+                <p className="text-xs text-dnd-text-muted font-mono mt-1 break-words px-2">
+                  {formatRollList(lastResult.rolls)}
                 </p>
               )}
               <Button
