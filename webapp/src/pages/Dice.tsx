@@ -15,7 +15,7 @@ import ScrollArea from '@/components/ScrollArea'
 import { haptic } from '@/auth/telegram'
 import { spring } from '@/styles/motion'
 import type { DiceRollResult } from '@/types'
-import { useDiceAnimation } from '@/dice/useDiceAnimation'
+import { useRollAndPersist } from '@/dice/useRollAndPersist'
 import { schedulePreloadDiceScene } from '@/dice/preload'
 import type { DiceKind } from '@/dice/types'
 
@@ -30,6 +30,19 @@ type InitiativeResult = {
 
 const toDiceKind = (side: DieSide): DiceKind => `d${side}` as DiceKind
 
+const MAX_INLINE_ROLLS = 8
+
+function formatRollList(rolls: number[]): string {
+  if (rolls.length <= MAX_INLINE_ROLLS) {
+    return `[${rolls.join(' + ')}]`
+  }
+  const visible = rolls.slice(0, MAX_INLINE_ROLLS).join(' + ')
+  const remaining = rolls.length - MAX_INLINE_ROLLS
+  const min = Math.min(...rolls)
+  const max = Math.max(...rolls)
+  return `[${visible} +… (+${remaining}, min ${min} · max ${max})]`
+}
+
 export default function Dice() {
   const { id } = useParams<{ id: string }>()
   const charId = Number(id)
@@ -39,7 +52,7 @@ export default function Dice() {
   const [lastResult, setLastResult] = useState<DiceRollResult | null>(null)
   const [initiativeResult, setInitiativeResult] = useState<InitiativeResult | null>(null)
   const [showClearConfirm, setShowClearConfirm] = useState(false)
-  const dice = useDiceAnimation()
+  const [initiativeRolling, setInitiativeRolling] = useState(false)
 
   useEffect(() => {
     schedulePreloadDiceScene()
@@ -55,32 +68,39 @@ export default function Dice() {
     queryFn: () => api.dice.history(charId),
   })
 
-  const rollMutation = useMutation({
-    mutationFn: ({ die, kind }: { die: string; kind: DiceKind }) =>
-      api.dice.roll(charId, count, die).then((result) => ({ result, kind })),
-    onSuccess: async ({ result, kind }) => {
-      await dice.play({ groups: [{ kind, results: result.rolls }] })
-      setLastResult(result)
-      setInitiativeResult(null)
-      qc.invalidateQueries({ queryKey: ['dice-history', charId] })
-      haptic.medium()
-    },
-    onError: () => haptic.error(),
-  })
+  const { roll, isPending: rollPending } = useRollAndPersist(charId)
 
-  const initiativeMutation = useMutation({
-    mutationFn: () => api.dice.roll(charId, 1, 'd20'),
-    onSuccess: async (result) => {
+  const handleRoll = async (die: DieSide) => {
+    const kind = toDiceKind(die)
+    try {
+      const groups = await roll([{ kind, count }])
+      if (groups.length > 0) {
+        const g = groups[0]
+        setLastResult({ notation: g.notation, rolls: g.rolls, total: g.total, modifier: 0 })
+      }
+      setInitiativeResult(null)
+      haptic.medium()
+    } catch {
+      haptic.error()
+    }
+  }
+
+  const handleInitiative = async () => {
+    setInitiativeRolling(true)
+    try {
+      const groups = await roll([{ kind: 'd20', count: 1 }])
       const dexScore = char?.ability_scores.find((s) => s.name === 'dexterity')
       const dexMod = dexScore?.modifier ?? 0
-      await dice.play({ groups: [{ kind: 'd20', results: result.rolls }] })
-      setInitiativeResult({ roll: result.total, dexMod, total: result.total + dexMod })
+      const rollVal = groups[0]?.total ?? 0
+      setInitiativeResult({ roll: rollVal, dexMod, total: rollVal + dexMod })
       setLastResult(null)
-      qc.invalidateQueries({ queryKey: ['dice-history', charId] })
       haptic.medium()
-    },
-    onError: () => haptic.error(),
-  })
+    } catch {
+      haptic.error()
+    } finally {
+      setInitiativeRolling(false)
+    }
+  }
 
   const clearHistoryMutation = useMutation({
     mutationFn: () => api.dice.clearHistory(charId),
@@ -92,10 +112,6 @@ export default function Dice() {
     onError: () => haptic.error(),
   })
 
-  const handleRoll = (die: DieSide) => {
-    rollMutation.mutate({ die: `d${die}`, kind: toDiceKind(die) })
-  }
-
   const dexMod = char?.ability_scores.find((s) => s.name === 'dexterity')?.modifier ?? 0
   const modLabel = dexMod >= 0 ? `+${dexMod}` : String(dexMod)
 
@@ -106,9 +122,9 @@ export default function Dice() {
         variant="arcane"
         size="lg"
         fullWidth
-        onClick={() => initiativeMutation.mutate()}
-        disabled={initiativeMutation.isPending || rollMutation.isPending}
-        loading={initiativeMutation.isPending}
+        onClick={() => handleInitiative()}
+        disabled={initiativeRolling || rollPending}
+        loading={initiativeRolling}
         icon={<Swords size={18} />}
         haptic="medium"
       >
@@ -159,7 +175,7 @@ export default function Dice() {
             <m.button
               key={die}
               onClick={() => handleRoll(die)}
-              disabled={rollMutation.isPending || initiativeMutation.isPending}
+              disabled={rollPending || initiativeRolling}
               className="aspect-square rounded-2xl bg-dnd-surface-raised border border-dnd-border hover:border-dnd-gold/60 hover:shadow-halo-gold transition-[box-shadow,border-color] duration-200 flex items-center justify-center disabled:opacity-40 text-dnd-gold-bright"
               whileTap={{ scale: 0.92 }}
             >
@@ -168,7 +184,7 @@ export default function Dice() {
           ))}
           <m.button
             onClick={() => handleRoll(100)}
-            disabled={rollMutation.isPending || initiativeMutation.isPending}
+            disabled={rollPending || initiativeRolling}
             className="col-span-2 rounded-2xl bg-dnd-surface-raised border border-dnd-border hover:border-dnd-gold/60 hover:shadow-halo-gold transition-[box-shadow,border-color] duration-200 flex items-center justify-center gap-2 py-3 disabled:opacity-40 text-dnd-gold-bright"
             whileTap={{ scale: 0.95 }}
           >
@@ -229,8 +245,8 @@ export default function Dice() {
                 {lastResult.total}
               </m.p>
               {lastResult.rolls.length > 1 && (
-                <p className="text-xs text-dnd-text-muted font-mono mt-1">
-                  [{lastResult.rolls.join(' + ')}]
+                <p className="text-xs text-dnd-text-muted font-mono mt-1 break-words px-2">
+                  {formatRollList(lastResult.rolls)}
                 </p>
               )}
               <Button

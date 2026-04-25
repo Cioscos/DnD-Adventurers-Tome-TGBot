@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 import os
-import random
+from datetime import datetime
 from typing import Annotated
 
 import httpx
@@ -12,18 +12,18 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm.attributes import flag_modified
 
 from api.auth import get_current_user
 from api.database import get_db
-from core.db.models import Character
-from api.schemas.common import DiceRollRequest, DiceRollResult
+from core.db.models import Character, CharacterHistory
+from api.schemas.common import DiceResultEntry, DiceResultRequest, DiceRollResult
 
 logger = logging.getLogger(__name__)
 _BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
 
 router = APIRouter(prefix="/characters", tags=["dice"])
 
-_VALID_DICE = {"d4": 4, "d6": 6, "d8": 8, "d10": 10, "d12": 12, "d20": 20, "d100": 100}
 _MAX_HISTORY = 50
 
 
@@ -39,28 +39,72 @@ async def _get_owned(char_id: int, user_id: int, session: AsyncSession) -> Chara
     return char
 
 
-@router.post("/{char_id}/dice/roll", response_model=DiceRollResult)
-async def roll_dice(
+_RANGES_PER_KIND = {
+    "d4": (1, 4),
+    "d6": (1, 6),
+    "d8": (1, 8),
+    "d10": (1, 10),
+    "d12": (1, 12),
+    "d20": (1, 20),
+}
+
+
+@router.post("/{char_id}/dice/result", response_model=DiceRollResult)
+async def post_dice_result(
     char_id: int,
-    body: DiceRollRequest,
+    body: DiceResultRequest,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
 ) -> DiceRollResult:
-    if body.die not in _VALID_DICE:
-        raise HTTPException(status_code=400, detail=f"Invalid die: {body.die}")
-    if not 1 <= body.count <= 20:
-        raise HTTPException(status_code=400, detail="count must be between 1 and 20")
+    # validate ranges
+    for entry in body.rolls:
+        lo, hi = _RANGES_PER_KIND[entry.kind]
+        if not (lo <= entry.value <= hi):
+            raise HTTPException(
+                status_code=400,
+                detail=f"value {entry.value} out of range for {entry.kind} ({lo}..{hi})",
+            )
 
-    sides = _VALID_DICE[body.die]
-    rolls = [random.randint(1, sides) for _ in range(body.count)]
-    total = sum(rolls)
-    notation = f"{body.count}{body.die}" if body.count > 1 else body.die
+    rolls = [e.value for e in body.rolls]
+    total = sum(rolls) + body.modifier
 
-    # Save to history (capped at _MAX_HISTORY entries)
+    # notation: prefer client-supplied, else infer
+    if body.notation:
+        notation = body.notation
+    else:
+        from collections import Counter
+        c = Counter(e.kind for e in body.rolls)
+        notation = " + ".join(f"{n}{k}" if n > 1 else k for k, n in c.items())
+        if body.modifier:
+            notation += f"{'+' if body.modifier > 0 else ''}{body.modifier}"
+
     char = await _get_owned(char_id, user_id, session)
     history = list(char.rolls_history or [])
     history.append({"notation": notation, "rolls": rolls, "total": total})
     char.rolls_history = history[-_MAX_HISTORY:]
+    flag_modified(char, "rolls_history")
+
+    # Log to CharacterHistory (general events feed) so the roll appears in /history.
+    if len(rolls) > 1:
+        rolls_str = "+".join(str(r) for r in rolls)
+        description = f"🎲 {notation}: [{rolls_str}] = {total}"
+    else:
+        description = f"🎲 {notation}: {total}"
+    if body.label:
+        description = f"{body.label} — {description}"
+    session.add(CharacterHistory(
+        character_id=char_id,
+        timestamp=datetime.utcnow().isoformat(timespec="seconds"),
+        event_type="dice_roll",
+        description=description,
+        meta={"notation": notation, "rolls": rolls, "total": total, "modifier": body.modifier},
+    ))
+
+    await session.flush()
+    logger.info(
+        "dice/result persisted: char=%s notation=%s total=%s history_len=%s",
+        char_id, notation, total, len(char.rolls_history or []),
+    )
 
     return DiceRollResult(notation=notation, rolls=rolls, total=total)
 
@@ -73,6 +117,7 @@ async def get_dice_history(
 ) -> list[DiceRollResult]:
     char = await _get_owned(char_id, user_id, session)
     history = list(char.rolls_history or [])
+    logger.info("dice/history GET: char=%s len=%s", char_id, len(history))
     return [
         DiceRollResult(
             notation=entry.get("notation", "?"),

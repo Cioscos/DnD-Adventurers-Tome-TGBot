@@ -3,12 +3,10 @@ import { useLocation, matchPath } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { m, AnimatePresence } from 'framer-motion'
 import { Dices } from 'lucide-react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
 import DiceIcon from '@/components/ui/DiceIcon'
 import { useCharacterStore } from '@/store/characterStore'
 import { haptic } from '@/auth/telegram'
-import { api } from '@/api/client'
-import { useDiceAnimation } from '@/dice/useDiceAnimation'
+import { useRollAndPersist, type RollEntry, type RollGroup } from '@/dice/useRollAndPersist'
 import type { DiceKind } from '@/dice/types'
 
 const KINDS: DiceKind[] = ['d4', 'd6', 'd8', 'd10', 'd12', 'd20', 'd100']
@@ -16,10 +14,20 @@ const SIDES_FOR = {
   d4: 4, d6: 6, d8: 8, d10: 10, d12: 12, d20: 20, d100: 100,
 } as const satisfies Record<DiceKind, number>
 const TOAST_DISMISS_MS = 3000
+const MAX_INLINE_ROLLS = 8
+
+function formatRollList(rolls: number[]): string {
+  if (rolls.length <= MAX_INLINE_ROLLS) {
+    return `[${rolls.join('+')}]`
+  }
+  const visible = rolls.slice(0, MAX_INLINE_ROLLS).join('+')
+  const remaining = rolls.length - MAX_INLINE_ROLLS
+  const min = Math.min(...rolls)
+  const max = Math.max(...rolls)
+  return `[${visible}+… (+${remaining}, min ${min} · max ${max})]`
+}
 
 type DicePool = Partial<Record<DiceKind, number>>
-
-type RollGroup = { kind: DiceKind; notation: string; rolls: number[]; total: number }
 
 function useOverlayVisibility(): { visible: boolean; charId: number | null } {
   const location = useLocation()
@@ -28,6 +36,7 @@ function useOverlayVisibility(): { visible: boolean; charId: number | null } {
   return useMemo(() => {
     const path = location.pathname
     if (matchPath('/char/:id/dice', path)) return { visible: false, charId: null }
+    if (matchPath('/char/:id/settings', path)) return { visible: false, charId: null }
 
     const charAny = matchPath('/char/:id/*', path) ?? matchPath('/char/:id', path)
     if (charAny) {
@@ -89,50 +98,31 @@ export default function DiceOverlay() {
     setErrorVisible(false)
   }, [])
 
-  const dice = useDiceAnimation()
-  const qc = useQueryClient()
-
-  const rollMutation = useMutation({
-    mutationFn: async (entries: Array<[DiceKind, number]>) => {
-      if (!charId) throw new Error('no charId')
-      const responses = await Promise.all(
-        entries.map(([kind, count]) => api.dice.roll(charId, count, kind))
-      )
-      return entries.map(([kind], i) => {
-        const r = responses[i]
-        return { kind, notation: r.notation, rolls: r.rolls, total: r.total } as RollGroup
-      })
-    },
-    onSuccess: async (groups) => {
-      await dice.play({
-        groups: groups.map((g) => ({ kind: g.kind, results: g.rolls })),
-        interGroupMs: 150,
-      })
-      setPool({})
-      setOpen(false)
-      haptic.medium()
-      showResults(groups)
-    },
-    onError: () => {
-      haptic.error()
-      showError()
-    },
-    onSettled: () => {
-      if (charId) qc.invalidateQueries({ queryKey: ['dice-history', charId] })
-    },
-  })
+  const { roll, isPending } = useRollAndPersist(charId)
 
   const entries = useMemo(
     () => (Object.entries(pool) as Array<[DiceKind, number]>).filter(([, n]) => n > 0),
     [pool]
   )
   const poolTotal = entries.reduce((s, [, n]) => s + n, 0)
-  const isRolling = rollMutation.isPending
+  const isRolling = isPending
 
-  const handleRoll = useCallback(() => {
-    if (!entries.length || isRolling || !charId) return
-    rollMutation.mutate(entries)
-  }, [entries, isRolling, charId, rollMutation])
+  const handleRoll = useCallback(async () => {
+    if (!entries.length || isPending || !charId) return
+    try {
+      const rollEntries: RollEntry[] = entries.map(([kind, count]) => ({ kind, count }))
+      const groups = await roll(rollEntries, {
+        notation: rollEntries.map((e) => `${e.count}${e.kind}`).join(' + '),
+      })
+      setPool({})
+      setOpen(false)
+      haptic.medium()
+      showResults(groups)
+    } catch {
+      haptic.error()
+      showError()
+    }
+  }, [entries, isPending, charId, roll, showResults, showError])
 
   const increment = useCallback((kind: DiceKind) => {
     haptic.light()
@@ -282,7 +272,7 @@ export default function DiceOverlay() {
           type="button"
           onClick={dismissResults}
           className="fixed bottom-24 left-4 right-4 mx-auto z-[55]
-                     max-w-xs
+                     max-w-md
                      rounded-2xl bg-dnd-surface-raised/95 backdrop-blur-md
                      border border-dnd-gold-dim shadow-parchment-xl
                      px-4 py-3 text-left"
@@ -291,18 +281,21 @@ export default function DiceOverlay() {
           exit={{ opacity: 0, y: 10, scale: 0.95 }}
           transition={{ type: 'spring', stiffness: 320, damping: 26 }}
         >
-          <div className="space-y-1">
+          <div className="space-y-1.5 max-h-[40vh] overflow-y-auto">
             {results.map((g, i) => (
-              <div key={i} className="flex items-baseline justify-between gap-2 font-mono text-sm">
-                <span className="text-dnd-gold-dim">
-                  {g.notation}
+              <div
+                key={i}
+                className="flex items-baseline justify-between gap-2 font-mono text-sm"
+              >
+                <span className="text-dnd-gold-dim min-w-0 flex-1">
+                  <span className="font-semibold">{g.notation}</span>
                   {g.rolls.length > 1 && (
-                    <span className="text-dnd-text-faint text-xs ml-1">
-                      [{g.rolls.join('+')}]
+                    <span className="text-dnd-text-faint text-[11px] ml-1.5 break-words">
+                      {formatRollList(g.rolls)}
                     </span>
                   )}
                 </span>
-                <span className="font-display font-black text-dnd-gold-bright text-lg">
+                <span className="font-display font-black text-dnd-gold-bright text-lg shrink-0">
                   {g.total}
                 </span>
               </div>

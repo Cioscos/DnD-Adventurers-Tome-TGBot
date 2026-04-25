@@ -1,27 +1,26 @@
 import * as THREE from 'three'
 import type { DiceTint } from './types'
 
+export interface NumeralColors {
+  ink?: string
+  outline?: string
+}
+
 const cache = new Map<string, THREE.CanvasTexture>()
 
 const SIZE = 384
 
-function inkColorFor(tint: DiceTint): string {
-  switch (tint) {
-    case 'crit':
-      return '#3a2400'
-    case 'fumble':
-      return '#f8e0d6'
-    case 'arcane':
-      return '#f0eaff'
-    case 'ember':
-      return '#2a1400'
-    case 'normal':
-    default:
-      return '#2a1d10'
-  }
+const NUMERAL_INK: Record<DiceTint, string> = {
+  normal: '#2a1d10',
+  crit: '#3a2400',
+  fumble: '#f8e0d6',
+  arcane: '#f0eaff',
+  ember: '#2a1400',
 }
 
-function drawLabel(ctx: CanvasRenderingContext2D, label: string, ink: string) {
+const DEFAULT_OUTLINE = 'rgba(0,0,0,0.65)'
+
+function drawLabel(ctx: CanvasRenderingContext2D, label: string, ink: string, outline: string) {
   ctx.clearRect(0, 0, SIZE, SIZE)
 
   ctx.textAlign = 'center'
@@ -36,7 +35,7 @@ function drawLabel(ctx: CanvasRenderingContext2D, label: string, ink: string) {
 
   ctx.lineJoin = 'round'
   ctx.miterLimit = 2
-  ctx.strokeStyle = 'rgba(0,0,0,0.65)'
+  ctx.strokeStyle = outline
   ctx.lineWidth = Math.max(6, px * 0.06)
   ctx.strokeText(label, cx, cy)
 
@@ -53,8 +52,14 @@ function drawLabel(ctx: CanvasRenderingContext2D, label: string, ink: string) {
   }
 }
 
-export function getNumeralTexture(label: string, tint: DiceTint = 'normal'): THREE.CanvasTexture {
-  const key = `${tint}:${label}`
+export function getNumeralTexture(
+  label: string,
+  tint: DiceTint = 'normal',
+  override?: NumeralColors,
+): THREE.CanvasTexture {
+  const ink = override?.ink ?? NUMERAL_INK[tint]
+  const outline = override?.outline ?? DEFAULT_OUTLINE
+  const key = `${tint}:${label}:${ink}:${outline}`
   const cached = cache.get(key)
   if (cached) return cached
 
@@ -63,7 +68,7 @@ export function getNumeralTexture(label: string, tint: DiceTint = 'normal'): THR
   canvas.height = SIZE
   const ctx = canvas.getContext('2d')
   if (!ctx) throw new Error('2d context unavailable')
-  drawLabel(ctx, label, inkColorFor(tint))
+  drawLabel(ctx, label, ink, outline)
 
   const tex = new THREE.CanvasTexture(canvas)
   tex.anisotropy = 4
@@ -73,7 +78,7 @@ export function getNumeralTexture(label: string, tint: DiceTint = 'normal'): THR
   if (typeof document !== 'undefined' && document.fonts?.ready) {
     document.fonts.ready
       .then(() => {
-        drawLabel(ctx, label, inkColorFor(tint))
+        drawLabel(ctx, label, ink, outline)
         tex.needsUpdate = true
       })
       .catch(() => {})

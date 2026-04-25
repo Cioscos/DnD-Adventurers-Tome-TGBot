@@ -10,8 +10,9 @@ import {
 } from 'react'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { useDiceSettings } from '@/store/diceSettings'
-import type { DiceAnimationApi, DicePlayRequest } from './types'
+import type { DiceAnimationApi, DicePlayRequest, PlayCollectGroup, DetectedResult } from './types'
 import type { SceneRequest } from './DiceScene'
+import { DicePackProvider } from './packs/DicePackProvider'
 
 const DiceScene = lazy(() => import('./DiceScene'))
 
@@ -62,7 +63,7 @@ export default function DiceAnimationProvider({ children }: { children: ReactNod
       for (const group of req.groups) {
         const id = ++requestIdRef.current
         await new Promise<void>((resolve) => {
-          setSceneRequest({ id, group, onComplete: resolve })
+          setSceneRequest({ id, groups: [group], onComplete: (_results) => resolve() })
         })
         if (req.interGroupMs && req.interGroupMs > 0) {
           await new Promise((r) => setTimeout(r, req.interGroupMs))
@@ -77,31 +78,65 @@ export default function DiceAnimationProvider({ children }: { children: ReactNod
     [shouldAnimate, waitForScene],
   )
 
-  const api = useMemo<DiceAnimationApi>(() => ({ play, isPlaying }), [play, isPlaying])
+  const playAndCollect = useCallback(
+    async (groups: PlayCollectGroup[]): Promise<DetectedResult[]> => {
+      if (!shouldAnimate) return []
+      if (groups.length === 0) return []
+
+      setIsPlaying(true)
+      setOverlayVisible(true)
+      setShouldMountScene(true)
+      await waitForScene()
+
+      const id = ++requestIdRef.current
+      const sceneGroups = groups.map((g) => ({ kind: g.kind, tint: g.tint, count: g.count }))
+      const results = await new Promise<DetectedResult[]>((resolve) => {
+        setSceneRequest({
+          id,
+          groups: sceneGroups,
+          onComplete: (r) => resolve(r),
+        })
+      })
+
+      setOverlayVisible(false)
+      await new Promise((r) => setTimeout(r, 180))
+      setSceneRequest(null)
+      setIsPlaying(false)
+      return results
+    },
+    [shouldAnimate, waitForScene],
+  )
+
+  const api = useMemo<DiceAnimationApi>(
+    () => ({ play, playAndCollect, isPlaying }),
+    [play, playAndCollect, isPlaying],
+  )
 
   return (
-    <DiceAnimationContext.Provider value={api}>
-      {children}
-      {shouldMountScene && (
-        <div
-          aria-hidden
-          className="fixed inset-0 z-[60]"
-          style={{
-            opacity: overlayVisible ? 1 : 0,
-            pointerEvents: 'none',
-            transition: 'opacity 180ms ease-out',
-            background: overlayVisible ? 'var(--dnd-overlay)' : 'transparent',
-            backdropFilter: overlayVisible ? 'blur(6px)' : 'none',
-            WebkitBackdropFilter: overlayVisible ? 'blur(6px)' : 'none',
-            willChange: 'opacity',
-          }}
-        >
-          <Suspense fallback={null}>
-            <DiceScene request={sceneRequest} onMount={handleSceneMount} />
-          </Suspense>
-        </div>
-      )}
-    </DiceAnimationContext.Provider>
+    <DicePackProvider>
+      <DiceAnimationContext.Provider value={api}>
+        {children}
+        {shouldMountScene && (
+          <div
+            aria-hidden
+            className="fixed inset-0 z-[60]"
+            style={{
+              opacity: overlayVisible ? 1 : 0,
+              pointerEvents: 'none',
+              transition: 'opacity 180ms ease-out',
+              background: overlayVisible ? 'var(--dnd-overlay)' : 'transparent',
+              backdropFilter: overlayVisible ? 'blur(6px)' : 'none',
+              WebkitBackdropFilter: overlayVisible ? 'blur(6px)' : 'none',
+              willChange: 'opacity',
+            }}
+          >
+            <Suspense fallback={null}>
+              <DiceScene request={sceneRequest} onMount={handleSceneMount} />
+            </Suspense>
+          </div>
+        )}
+      </DiceAnimationContext.Provider>
+    </DicePackProvider>
   )
 }
 

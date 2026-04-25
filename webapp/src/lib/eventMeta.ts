@@ -27,5 +27,6 @@ export const EVENT_META: Record<string, EventMeta> = {
   saving_throw:       { icon: ShieldAlert,  tone: 'text-[var(--dnd-cobalt-bright)] bg-dnd-surface-raised border-[var(--dnd-cobalt)]' },
   concentration_save: { icon: FlaskConical, tone: 'text-dnd-arcane-bright bg-dnd-surface-raised border-[var(--dnd-arcane)]' },
   hit_dice:           { icon: Dices,        tone: 'text-[var(--dnd-emerald-bright)] bg-dnd-surface-raised border-[var(--dnd-emerald)]' },
+  dice_roll:          { icon: Dices,        tone: 'text-dnd-gold-bright bg-dnd-surface-raised border-dnd-gold' },
   other:              { icon: Pin,          tone: 'text-dnd-text-muted bg-dnd-surface-raised border-dnd-border' },
 }
