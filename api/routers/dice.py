@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm.attributes import flag_modified
 
 from api.auth import get_current_user
 from api.database import get_db
@@ -80,6 +81,12 @@ async def post_dice_result(
     history = list(char.rolls_history or [])
     history.append({"notation": notation, "rolls": rolls, "total": total})
     char.rolls_history = history[-_MAX_HISTORY:]
+    flag_modified(char, "rolls_history")
+    await session.flush()
+    logger.info(
+        "dice/result persisted: char=%s notation=%s total=%s history_len=%s",
+        char_id, notation, total, len(char.rolls_history or []),
+    )
 
     return DiceRollResult(notation=notation, rolls=rolls, total=total)
 
