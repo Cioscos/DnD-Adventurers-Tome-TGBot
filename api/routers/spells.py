@@ -250,7 +250,20 @@ async def roll_spell_damage(
 
     # Apply critical (double dice count, not the flat bonus)
     dice_count = base_count * 2 if body.is_critical else base_count
-    main_rolls = [random.randint(1, sides) for _ in range(dice_count)]
+    if body.main_rolls is not None:
+        if len(body.main_rolls) != dice_count:
+            raise HTTPException(
+                status_code=400,
+                detail=f"main_rolls length {len(body.main_rolls)} != expected {dice_count}",
+            )
+        if any(v < 1 or v > sides for v in body.main_rolls):
+            raise HTTPException(
+                status_code=400,
+                detail=f"main_rolls values must be in [1, {sides}]",
+            )
+        main_rolls = list(body.main_rolls)
+    else:
+        main_rolls = [random.randint(1, sides) for _ in range(dice_count)]
 
     # Optional extra_dice
     extra_rolls: list[int] = []
@@ -263,7 +276,20 @@ async def roll_spell_damage(
             extra_sides = int(em.group(2))
             extra_bonus = int(em.group(3)) if em.group(3) else 0
             extra_dice_count = e_count * 2 if body.is_critical else e_count
-            extra_rolls = [random.randint(1, extra_sides) for _ in range(extra_dice_count)]
+            if body.extra_rolls is not None:
+                if len(body.extra_rolls) != extra_dice_count:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"extra_rolls length {len(body.extra_rolls)} != expected {extra_dice_count}",
+                    )
+                if any(v < 1 or v > extra_sides for v in body.extra_rolls):
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"extra_rolls values must be in [1, {extra_sides}]",
+                    )
+                extra_rolls = list(body.extra_rolls)
+            else:
+                extra_rolls = [random.randint(1, extra_sides) for _ in range(extra_dice_count)]
 
     total = sum(main_rolls) + sum(extra_rolls) + base_bonus + extra_bonus
     half_damage = (total + 1) // 2  # round up half damage (D&D 5e)

@@ -213,13 +213,15 @@ export const api = {
       }),
 
     // Roll endpoints
-    rollSkill: (id: number, skillName: string) =>
+    rollSkill: (id: number, skillName: string, die?: number) =>
       request<RollResult>(`/characters/${id}/skills/${encodeURIComponent(skillName)}/roll`, {
         method: 'POST',
+        body: die != null ? JSON.stringify({ die }) : undefined,
       }),
-    rollSavingThrow: (id: number, ability: string) =>
+    rollSavingThrow: (id: number, ability: string, die?: number) =>
       request<RollResult>(`/characters/${id}/saving_throws/${encodeURIComponent(ability)}/roll`, {
         method: 'POST',
+        body: die != null ? JSON.stringify({ die }) : undefined,
       }),
 
     // Hit dice spending
@@ -230,9 +232,10 @@ export const api = {
       }),
 
     // Death save roll
-    rollDeathSave: (id: number) =>
+    rollDeathSave: (id: number, die?: number) =>
       request<DeathSaveRollResult>(`/characters/${id}/death_saves/roll`, {
         method: 'POST',
+        body: die != null ? JSON.stringify({ die }) : undefined,
       }),
 
     // HP recalc

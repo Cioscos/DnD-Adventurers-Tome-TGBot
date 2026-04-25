@@ -97,6 +97,10 @@ class RollDamageRequest(BaseModel):
     casting_level: int | None = None
     extra_dice: str | None = None
     is_critical: bool = False
+    # Optional client-supplied face values from 3D physics. When present, the
+    # server validates count/range and uses them instead of random.randint.
+    main_rolls: list[int] | None = None
+    extra_rolls: list[int] | None = None
 
     @field_validator("extra_dice")
     @classmethod

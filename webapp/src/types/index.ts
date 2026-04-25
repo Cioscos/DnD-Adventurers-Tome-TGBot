@@ -284,6 +284,8 @@ export interface RollDamageRequest {
   casting_level?: number
   extra_dice?: string
   is_critical?: boolean
+  main_rolls?: number[]
+  extra_rolls?: number[]
 }
 
 export interface RollDamageResult {

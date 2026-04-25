@@ -16,6 +16,8 @@ import ScrollArea from '@/components/ScrollArea'
 import RollResultModal, { type RollResult } from '@/components/RollResultModal'
 import { haptic } from '@/auth/telegram'
 import { useDiceAnimation } from '@/dice/useDiceAnimation'
+import { useDiceSettings } from '@/store/diceSettings'
+import { useReducedMotion } from '@/hooks/useReducedMotion'
 
 const SKILLS: { key: string; ability: string }[] = [
   { key: 'acrobatics',     ability: 'dexterity' },
@@ -64,6 +66,8 @@ export default function Skills() {
   const { t } = useTranslation()
   const qc = useQueryClient()
   const dice = useDiceAnimation()
+  const animate3d = useDiceSettings((s) => s.animate3d)
+  const reducedMotion = useReducedMotion()
   const [rollResult, setRollResult] = useState<{ result: RollResult; title: string } | null>(null)
 
   const { data: char } = useQuery({
@@ -82,9 +86,17 @@ export default function Skills() {
   })
 
   const rollMutation = useMutation({
-    mutationFn: (skillName: string) => api.characters.rollSkill(charId, skillName),
-    onSuccess: async (result, skillName) => {
-      await dice.play({ groups: [{ kind: 'd20', results: [result.die] }] })
+    mutationFn: async (skillName: string) => {
+      const useAnimation = animate3d && !reducedMotion
+      let die: number | undefined
+      if (useAnimation) {
+        const detected = await dice.playAndCollect([{ kind: 'd20', count: 1 }])
+        die = detected[0]?.value
+      }
+      const result = await api.characters.rollSkill(charId, skillName, die)
+      return { result, skillName }
+    },
+    onSuccess: ({ result, skillName }) => {
       setRollResult({
         result,
         title: t(`character.skills.${skillName}`),

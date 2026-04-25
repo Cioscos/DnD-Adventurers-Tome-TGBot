@@ -12,11 +12,22 @@ import type { Spell, RollDamageRequest, RollDamageResult } from '@/types'
 import Sheet from '@/components/ui/Sheet'
 import { haptic } from '@/auth/telegram'
 import { useDiceAnimation } from '@/dice/useDiceAnimation'
+import { useDiceSettings } from '@/store/diceSettings'
+import { useReducedMotion } from '@/hooks/useReducedMotion'
 import type { DiceKind } from '@/dice/types'
 
 const ALLOWED_DICE_KINDS: DiceKind[] = ['d4', 'd6', 'd8', 'd10', 'd12', 'd20', 'd100']
 const isAllowedDiceKind = (k: string | null | undefined): k is DiceKind =>
   typeof k === 'string' && (ALLOWED_DICE_KINDS as string[]).includes(k)
+
+const DICE_RE = /^(\d+)d(\d+)([+-]\d+)?$/i
+
+function parseDice(notation: string | null | undefined): { count: number; sides: number } | null {
+  if (!notation) return null
+  const m = DICE_RE.exec(notation.trim())
+  if (!m) return null
+  return { count: parseInt(m[1], 10), sides: parseInt(m[2], 10) }
+}
 
 interface SpellDamageSheetProps {
   charId: number
@@ -45,20 +56,46 @@ export default function SpellDamageSheet({
   }, [spell?.id])
 
   const dice = useDiceAnimation()
+  const animate3d = useDiceSettings((s) => s.animate3d)
+  const reducedMotion = useReducedMotion()
 
   const mutation = useMutation({
-    mutationFn: (body: RollDamageRequest) => {
+    mutationFn: async (body: RollDamageRequest) => {
       if (!spell) throw new Error('no spell')
-      return api.spells.rollDamage(charId, spell.id, body)
-    },
-    onSuccess: async (data) => {
-      if (isAllowedDiceKind(data.main_kind)) {
-        const groups = [{ kind: data.main_kind, results: data.main_rolls }]
-        if (isAllowedDiceKind(data.extra_kind) && data.extra_rolls.length > 0) {
-          groups.push({ kind: data.extra_kind, results: data.extra_rolls })
+      const useAnimation = animate3d && !reducedMotion
+      let main_rolls: number[] | undefined
+      let extra_rolls: number[] | undefined
+
+      if (useAnimation) {
+        const main = parseDice(spell.damage_dice)
+        const extra = parseDice(body.extra_dice ?? null)
+        if (main && isAllowedDiceKind(`d${main.sides}`)) {
+          const mainCount = body.is_critical ? main.count * 2 : main.count
+          const groups: { kind: DiceKind; count: number }[] = [
+            { kind: `d${main.sides}` as DiceKind, count: mainCount },
+          ]
+          let extraCount = 0
+          if (extra && isAllowedDiceKind(`d${extra.sides}`)) {
+            extraCount = body.is_critical ? extra.count * 2 : extra.count
+            groups.push({ kind: `d${extra.sides}` as DiceKind, count: extraCount })
+          }
+          const detected = await dice.playAndCollect(groups)
+          main_rolls = detected.filter((d) => d.groupIndex === 0).map((d) => d.value)
+          if (extraCount > 0) {
+            extra_rolls = detected.filter((d) => d.groupIndex === 1).map((d) => d.value)
+          }
+          if (main_rolls.length !== mainCount) main_rolls = undefined
+          if (extra_rolls && extra_rolls.length !== extraCount) extra_rolls = undefined
         }
-        await dice.play({ groups, interGroupMs: 150 })
       }
+
+      return api.spells.rollDamage(charId, spell.id, {
+        ...body,
+        main_rolls,
+        extra_rolls,
+      })
+    },
+    onSuccess: (data) => {
       haptic.success()
       setResult(data)
     },

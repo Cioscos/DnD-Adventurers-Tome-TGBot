@@ -6,7 +6,7 @@ import random
 from datetime import datetime
 from typing import Annotated, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Body, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,6 +17,7 @@ from api.database import get_db
 from core.db.models import Character, CharacterHistory
 from api.schemas.character import CharacterFull
 from api.schemas.common import (
+    D20RollSubmission,
     DeathSaveRollResult,
     DeathSaveUpdate,
     DeathSaveAction,
@@ -324,11 +325,12 @@ async def roll_death_save(
     char_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
+    body: Annotated[D20RollSubmission | None, Body()] = None,
 ) -> DeathSaveRollResult:
     char = await _get_owned_full(char_id, user_id, session)
     ds = dict(char.death_saves or {"successes": 0, "failures": 0, "stable": False})
 
-    die = random.randint(1, 20)
+    die = body.die if body and body.die is not None else random.randint(1, 20)
     revived = False
 
     if die == 20:

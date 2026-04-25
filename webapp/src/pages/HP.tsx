@@ -21,6 +21,8 @@ import HpOperationForm from '@/pages/hp/HpOperationForm'
 import DeathSaves from '@/pages/hp/DeathSaves'
 import HitDiceModal from '@/pages/hp/HitDiceModal'
 import { useDiceAnimation } from '@/dice/useDiceAnimation'
+import { useDiceSettings } from '@/store/diceSettings'
+import { useReducedMotion } from '@/hooks/useReducedMotion'
 
 type HPOp = 'damage' | 'heal' | 'set_max' | 'set_current' | 'set_temp'
 
@@ -30,6 +32,8 @@ export default function HP() {
   const { t } = useTranslation()
   const qc = useQueryClient()
   const dice = useDiceAnimation()
+  const animate3d = useDiceSettings((s) => s.animate3d)
+  const reducedMotion = useReducedMotion()
   const [value, setValue] = useState('')
   const [activeOp, setActiveOp] = useState<HPOp>('damage')
 
@@ -80,9 +84,16 @@ export default function HP() {
   })
 
   const deathRollMutation = useMutation({
-    mutationFn: () => api.characters.rollDeathSave(charId),
-    onSuccess: async (result) => {
-      await dice.play({ groups: [{ kind: 'd20', results: [result.die] }] })
+    mutationFn: async () => {
+      const useAnimation = animate3d && !reducedMotion
+      let die: number | undefined
+      if (useAnimation) {
+        const detected = await dice.playAndCollect([{ kind: 'd20', count: 1 }])
+        die = detected[0]?.value
+      }
+      return api.characters.rollDeathSave(charId, die)
+    },
+    onSuccess: (result) => {
       setDeathRollResult(result)
       qc.invalidateQueries({ queryKey: ['character', charId] })
       haptic.success()

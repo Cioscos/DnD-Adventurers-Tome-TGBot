@@ -15,6 +15,8 @@ import RollResultModal, { type RollResult } from '@/components/RollResultModal'
 import { haptic } from '@/auth/telegram'
 import { stagger } from '@/styles/motion'
 import { useDiceAnimation } from '@/dice/useDiceAnimation'
+import { useDiceSettings } from '@/store/diceSettings'
+import { useReducedMotion } from '@/hooks/useReducedMotion'
 
 const ABILITIES = ['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'] as const
 
@@ -37,6 +39,8 @@ export default function SavingThrows() {
   const { t } = useTranslation()
   const qc = useQueryClient()
   const dice = useDiceAnimation()
+  const animate3d = useDiceSettings((s) => s.animate3d)
+  const reducedMotion = useReducedMotion()
   const [rollResult, setRollResult] = useState<{ result: RollResult; title: string } | null>(null)
 
   const { data: char } = useQuery({
@@ -55,9 +59,17 @@ export default function SavingThrows() {
   })
 
   const rollMutation = useMutation({
-    mutationFn: (ability: string) => api.characters.rollSavingThrow(charId, ability),
-    onSuccess: async (result, ability) => {
-      await dice.play({ groups: [{ kind: 'd20', results: [result.die] }] })
+    mutationFn: async (ability: string) => {
+      const useAnimation = animate3d && !reducedMotion
+      let die: number | undefined
+      if (useAnimation) {
+        const detected = await dice.playAndCollect([{ kind: 'd20', count: 1 }])
+        die = detected[0]?.value
+      }
+      const result = await api.characters.rollSavingThrow(charId, ability, die)
+      return { result, ability }
+    },
+    onSuccess: ({ result, ability }) => {
       setRollResult({
         result,
         title: `${t('character.saves.title')} — ${t(`character.stats.${ability}`)}`,

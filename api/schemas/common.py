@@ -306,6 +306,11 @@ class RollResult(BaseModel):
     description: str = ""
 
 
+class D20RollSubmission(BaseModel):
+    """Optional client-supplied d20 value (from 3D physics face detection)."""
+    die: Optional[int] = Field(default=None, ge=1, le=20)
+
+
 class ConcentrationSaveResult(RollResult):
     """Result of a concentration saving throw.
 

@@ -6,7 +6,7 @@ import random
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Body, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -39,7 +39,7 @@ from api.schemas.character import (
     SavingThrowsUpdate,
     XPUpdate,
 )
-from api.schemas.common import RollResult
+from api.schemas.common import D20RollSubmission, RollResult
 
 router = APIRouter(prefix="/characters", tags=["characters"])
 
@@ -382,6 +382,7 @@ async def roll_skill(
     skill_name: str,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
+    body: Annotated[D20RollSubmission | None, Body()] = None,
 ) -> RollResult:
     if skill_name not in _SKILL_ABILITY:
         raise HTTPException(status_code=400, detail=f"Unknown skill: {skill_name}")
@@ -401,7 +402,7 @@ async def roll_skill(
     else:
         bonus = ability_mod
 
-    die = random.randint(1, 20)
+    die = body.die if body and body.die is not None else random.randint(1, 20)
     total = die + bonus
     is_crit = die == 20
     is_fumble = die == 1
@@ -430,6 +431,7 @@ async def roll_saving_throw(
     ability: str,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
+    body: Annotated[D20RollSubmission | None, Body()] = None,
 ) -> RollResult:
     if ability not in ABILITY_NAMES:
         raise HTTPException(status_code=400, detail=f"Unknown ability: {ability}")
@@ -443,7 +445,7 @@ async def roll_saving_throw(
     pb = char.proficiency_bonus
     bonus = ability_mod + (pb if is_proficient else 0)
 
-    die = random.randint(1, 20)
+    die = body.die if body and body.die is not None else random.randint(1, 20)
     total = die + bonus
     is_crit = die == 20
     is_fumble = die == 1
