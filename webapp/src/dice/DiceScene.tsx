@@ -6,13 +6,9 @@ import * as CANNON from 'cannon-es'
 import type { DiceGroup, DiceKind } from './types'
 import { getDiceGeometry } from './geometries'
 import { getDiceMaterial, getNumeralMaterial } from './materials'
-import {
-  createDiceWorld,
-  spawnDiceBody,
-  computeSpawnPositions,
-  quaternionForFace,
-  type DiceWorld,
-} from './physics'
+import { createDiceWorld, type DiceWorld } from './physics/world'
+import { spawnDiceBody, computeSpawnPositions } from './physics/spawner'
+import { quaternionForFace } from './physics/faceDetector'
 
 export type SceneRequest = { id: number; group: DiceGroup; onComplete: () => void }
 
