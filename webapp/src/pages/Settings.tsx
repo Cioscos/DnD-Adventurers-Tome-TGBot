@@ -13,6 +13,8 @@ import Sheet from '@/components/ui/Sheet'
 import { haptic } from '@/auth/telegram'
 import { useCharacterStore } from '@/store/characterStore'
 import { useDiceSettings } from '@/store/diceSettings'
+import { BUNDLED_PACKS } from '@/dice/packs/registry'
+import { useDicePack } from '@/dice/packs/DicePackProvider'
 import { spring } from '@/styles/motion'
 
 export default function Settings() {
@@ -23,6 +25,9 @@ export default function Settings() {
   const { locale, setLocale } = useCharacterStore()
   const animate3d = useDiceSettings((s) => s.animate3d)
   const setAnimate3d = useDiceSettings((s) => s.setAnimate3d)
+  const packId = useDiceSettings((s) => s.packId)
+  const setPackId = useDiceSettings((s) => s.setPackId)
+  const { loading: packLoading, error: packError } = useDicePack()
 
   const { data: char } = useQuery({
     queryKey: ['character', charId],
@@ -142,6 +147,54 @@ export default function Settings() {
               className="block w-5 h-5 rounded-full bg-dnd-parchment shadow-parchment-md"
             />
           </m.button>
+        </div>
+      </Surface>
+
+      <Surface variant="elevated" className={animate3d ? '' : 'opacity-50 pointer-events-none'}>
+        <div className="space-y-2">
+          <div className="flex items-start gap-2">
+            <Dices size={16} className="text-dnd-gold-bright shrink-0 mt-0.5" />
+            <div>
+              <p className="font-display font-bold text-dnd-gold-bright">
+                {t('character.settings.dice.pack.title')}
+              </p>
+              <p className="text-xs text-dnd-text-muted mt-0.5 font-body italic">
+                {t('character.settings.dice.pack.description')}
+              </p>
+            </div>
+          </div>
+          {!animate3d && (
+            <p className="text-xs text-dnd-text-faint italic pl-6">
+              {t('character.settings.dice.pack.disabled_hint')}
+            </p>
+          )}
+          <div className="flex flex-col gap-1.5 pl-6 mt-2">
+            {BUNDLED_PACKS.map((id) => (
+              <label
+                key={id}
+                className="flex items-center gap-2 cursor-pointer text-sm font-body text-dnd-text"
+              >
+                <input
+                  type="radio"
+                  name="dice-pack"
+                  value={id}
+                  checked={packId === id}
+                  onChange={() => setPackId(id)}
+                  disabled={!animate3d}
+                  className="w-4 h-4"
+                />
+                <span className="capitalize">{id}</span>
+              </label>
+            ))}
+          </div>
+          {packLoading && (
+            <p className="text-xs text-dnd-text-faint pl-6">…</p>
+          )}
+          {packError && (
+            <p className="text-xs text-[var(--dnd-crimson-bright)] pl-6">
+              {t('character.settings.dice.pack.load_error')}
+            </p>
+          )}
         </div>
       </Surface>
 

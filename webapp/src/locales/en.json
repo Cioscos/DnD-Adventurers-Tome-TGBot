@@ -552,6 +552,16 @@
       "language": "Language",
       "dice_3d": "3D dice animation",
       "dice_3d_hint": "Show a 3D dice animation during rolls. Disable for instant results.",
+      "dice": {
+        "pack": {
+          "title": "Dice pack",
+          "description": "Select a texture pack for the 3D dice.",
+          "preview": "Preview",
+          "fallback_warning": "Selected pack is incomplete: some dice will use the default rendering.",
+          "disabled_hint": "Enable 3D animation to pick a pack.",
+          "load_error": "Failed to load pack, restored default."
+        }
+      },
       "hp": {
         "title": "Hit Points",
         "auto_calc_toggle": "Auto HP",
