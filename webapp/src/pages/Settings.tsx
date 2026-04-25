@@ -13,7 +13,8 @@ import Sheet from '@/components/ui/Sheet'
 import { haptic } from '@/auth/telegram'
 import { useCharacterStore } from '@/store/characterStore'
 import { useDiceSettings } from '@/store/diceSettings'
-import { BUNDLED_PACKS } from '@/dice/packs/registry'
+import { BUNDLED_PACKS, type PackId } from '@/dice/packs/registry'
+import { loadManifest } from '@/dice/packs/loader'
 import { useDicePack } from '@/dice/packs/DicePackProvider'
 import { spring } from '@/styles/motion'
 
@@ -32,6 +33,17 @@ export default function Settings() {
   const { data: char } = useQuery({
     queryKey: ['character', charId],
     queryFn: () => api.characters.get(charId),
+  })
+
+  const { data: packNames } = useQuery({
+    queryKey: ['pack-manifest-names'],
+    queryFn: async () => {
+      const entries = await Promise.all(
+        BUNDLED_PACKS.map(async (id) => [id, (await loadManifest(id)).name] as const),
+      )
+      return Object.fromEntries(entries) as Record<PackId, string>
+    },
+    staleTime: Infinity,
   })
 
   const updateMutation = useMutation({
@@ -183,7 +195,7 @@ export default function Settings() {
                   disabled={!animate3d}
                   className="w-4 h-4"
                 />
-                <span className="capitalize">{id}</span>
+                <span>{packNames?.[id] ?? id}</span>
               </label>
             ))}
           </div>
