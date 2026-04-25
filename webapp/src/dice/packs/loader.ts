@@ -69,6 +69,12 @@ async function loadPackInternal(id: PackId): Promise<LoadedPack> {
   return { manifest, maps }
 }
 
+export async function loadManifest(id: PackId): Promise<PackManifest> {
+  const res = await fetch(`/dice-packs/${id}/pack.json`)
+  if (!res.ok) throw new Error(`pack.json not found for ${id}`)
+  return PackManifestSchema.parse(await res.json())
+}
+
 export async function loadPack(id: PackId): Promise<LoadedPack> {
   const cached = cache.get(id)
   if (cached) return cached
