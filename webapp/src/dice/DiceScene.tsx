@@ -7,7 +7,7 @@ import type { DiceGroup, DiceKind, DiceTint, DetectedResult } from './types'
 import { getDiceGeometry } from './geometries'
 import { getDiceMaterial, getNumeralMaterial } from './materials'
 import { createDiceWorld, updateWalls, type DiceWorld } from './physics/world'
-import { spawnDiceBody, computeSpawnPositions } from './physics/spawner'
+import { spawnDiceBody, computeSpawnPositions, totalKineticActivity } from './physics/spawner'
 import { faceUp } from './physics/faceDetector'
 import { PHYSICS } from './physics/constants'
 import { useDicePack } from './packs/DicePackProvider'
@@ -98,6 +98,7 @@ function Orchestrator({ request, onMount }: Props) {
   const entitiesRef = useRef<Entity[]>([])
   const phaseRef = useRef<Phase>('idle')
   const phaseStartRef = useRef<number>(0)
+  const lowEnergyMsRef = useRef<number>(0)
   const [version, setVersion] = useState(0)
   const { invalidate, camera, size } = useThree()
   const { pack } = useDicePack()
@@ -144,6 +145,7 @@ function Orchestrator({ request, onMount }: Props) {
           shape: geomData.shape,
           material: worldRef.current!.diceMaterial,
           position: positions[posIdx++],
+          totalCount: totalBodies,
         })
         world.addBody(body)
         entities.push({
@@ -160,6 +162,7 @@ function Orchestrator({ request, onMount }: Props) {
     entitiesRef.current = entities
     phaseRef.current = 'simulating'
     phaseStartRef.current = performance.now()
+    lowEnergyMsRef.current = 0
     setVersion((v) => v + 1)
 
     let raf = 0
@@ -194,8 +197,24 @@ function Orchestrator({ request, onMount }: Props) {
         (e) => e.body.sleepState === CANNON.Body.SLEEPING,
       )
       const timedOut = elapsed > PHYSICS.simulationHardTimeoutMs
-      if (allSleeping || timedOut) {
-        if (timedOut) for (const e of entitiesRef.current) e.body.sleep()
+
+      // Force-sleep su attività cinetica bassa sostenuta.
+      // Soglia per body, scala con numero dadi (più dadi = soglia più tollerante).
+      const n = entitiesRef.current.length
+      const perBodyThreshold = n <= 3 ? 0.08 : n <= 8 ? 0.18 : 0.35
+      const totalThreshold = perBodyThreshold * n
+      const activity = totalKineticActivity(entitiesRef.current.map((e) => e.body))
+      if (activity < totalThreshold) {
+        lowEnergyMsRef.current += 1000 / 60
+      } else {
+        lowEnergyMsRef.current = 0
+      }
+      const lowEnergyTimeout = n <= 3 ? 600 : 350
+      const stalled = lowEnergyMsRef.current >= lowEnergyTimeout
+
+      if (allSleeping || timedOut || stalled) {
+        if (timedOut || stalled) for (const e of entitiesRef.current) e.body.sleep()
+        lowEnergyMsRef.current = 0
         phaseRef.current = 'reading'
         phaseStartRef.current = now
       }
