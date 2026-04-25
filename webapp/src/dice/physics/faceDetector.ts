@@ -21,20 +21,3 @@ export function faceUp(
   return { value: bestValue, dot: bestDot }
 }
 
-/**
- * Build the body quaternion that aligns `targetFace` normal to `worldTarget`.
- * Default worldTarget is world +Y; pass a camera-facing direction to present the face to the camera.
- */
-export function quaternionForFace(
-  faceNormals: Record<number, THREE.Vector3>,
-  targetFace: number,
-  currentQuat: THREE.Quaternion,
-  worldTarget: THREE.Vector3 = new THREE.Vector3(0, 1, 0),
-): THREE.Quaternion {
-  const targetNormal = faceNormals[targetFace]
-  if (!targetNormal) return currentQuat.clone()
-  const currentTargetWorld = targetNormal.clone().applyQuaternion(currentQuat).normalize()
-  const desired = worldTarget.clone().normalize()
-  const correction = new THREE.Quaternion().setFromUnitVectors(currentTargetWorld, desired)
-  return correction.multiply(currentQuat)
-}
