@@ -2,7 +2,11 @@ import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useMutation } from '@tanstack/react-query'
 import { m } from 'framer-motion'
-import { Dices, Minus, Plus, Swords, Shield } from 'lucide-react'
+import { Minus, Plus } from 'lucide-react'
+import {
+  GiPerspectiveDiceSixFacesRandom as Dices, GiCrossedSwords as Swords,
+  GiCheckedShield as Shield,
+} from 'react-icons/gi'
 import { api } from '@/api/client'
 import type { Spell, RollDamageRequest, RollDamageResult } from '@/types'
 import Sheet from '@/components/ui/Sheet'

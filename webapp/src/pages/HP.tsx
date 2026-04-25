@@ -3,7 +3,10 @@ import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m, AnimatePresence } from 'framer-motion'
-import { Moon, Sparkles, FlaskConical, Heart } from 'lucide-react'
+import {
+  GiNightSleep as Moon, GiSparkles as Sparkles, GiPotionBall as FlaskConical,
+  GiHeartPlus as Heart,
+} from 'react-icons/gi'
 import { toast } from 'sonner'
 import { api, type DeathSaveRollResult, type ConcentrationSaveResult, type HitDiceSpendResult } from '@/api/client'
 import Layout from '@/components/Layout'

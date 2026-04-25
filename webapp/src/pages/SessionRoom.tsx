@@ -3,7 +3,12 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
-import { Crown, Heart, LogOut, Shield, Sparkles, User, XOctagon, Dices } from 'lucide-react'
+import { LogOut, User } from 'lucide-react'
+import {
+  GiCrown as Crown, GiHeartPlus as Heart, GiCheckedShield as Shield,
+  GiSparkles as Sparkles, GiSkullCrossedBones as XOctagon,
+  GiPerspectiveDiceSixFacesRandom as Dices,
+} from 'react-icons/gi'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'

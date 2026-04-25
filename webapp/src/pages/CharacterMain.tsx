@@ -4,13 +4,16 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
 import {
-  Heart, Shield, ShieldAlert, Sparkles, Gem,
-  BarChart3, Target, Zap, Swords, Coins,
-  User, Scroll, Star, CircleDot, Dices,
-  NotebookPen, Map, BookOpen, ChevronLeft, Settings, FlaskConical,
-  Footprints,
+  BarChart3, User, CircleDot, ChevronLeft, Settings,
 } from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
+import {
+  GiHeartPlus, GiCheckedShield, GiShieldEchoes, GiSparkles, GiCutDiamond,
+  GiArcheryTarget, GiLightningTrio, GiCrossedSwords, GiTwoCoins,
+  GiScrollUnfurled, GiPolarStar, GiPerspectiveDiceSixFacesRandom,
+  GiQuillInk, GiTreasureMap, GiOpenBook, GiPotionBall, GiBootPrints,
+} from 'react-icons/gi'
+import type { ComponentType, SVGAttributes } from 'react'
+type IconCmp = ComponentType<SVGAttributes<SVGElement> & { size?: number | string }>
 import { api } from '@/api/client'
 import HPGauge from '@/components/ui/HPGauge'
 import HeroXPBar from '@/components/ui/HeroXPBar'
@@ -30,70 +33,70 @@ import type { Ability } from '@/types'
 
 type MenuItem = {
   key: string
-  icon: LucideIcon
+  icon: IconCmp
   path: string
   tone?: 'gold' | 'crimson' | 'arcane' | 'cobalt' | 'emerald' | 'amber'
 }
 
 type MenuSection = {
   labelKey: string
-  icon: LucideIcon
+  icon: IconCmp
   items: MenuItem[]
 }
 
 const MENU_SECTIONS: MenuSection[] = [
   {
     labelKey: 'character.menu.sections.combat',
-    icon: Swords,
+    icon: GiCrossedSwords,
     items: [
-      { key: 'hp',    icon: Heart,       path: 'hp',    tone: 'crimson' },
-      { key: 'ac',    icon: Shield,      path: 'ac',    tone: 'gold' },
-      { key: 'saves', icon: ShieldAlert, path: 'saves', tone: 'cobalt' },
+      { key: 'hp',    icon: GiHeartPlus,     path: 'hp',    tone: 'crimson' },
+      { key: 'ac',    icon: GiCheckedShield, path: 'ac',    tone: 'gold' },
+      { key: 'saves', icon: GiShieldEchoes,  path: 'saves', tone: 'cobalt' },
     ],
   },
   {
     labelKey: 'character.menu.sections.magic',
-    icon: Sparkles,
+    icon: GiSparkles,
     items: [
-      { key: 'spells', icon: Sparkles, path: 'spells', tone: 'arcane' },
-      { key: 'slots',  icon: Gem,      path: 'slots',  tone: 'arcane' },
+      { key: 'spells', icon: GiSparkles,  path: 'spells', tone: 'arcane' },
+      { key: 'slots',  icon: GiCutDiamond, path: 'slots',  tone: 'arcane' },
     ],
   },
   {
     labelKey: 'character.menu.sections.skills',
-    icon: Target,
+    icon: GiArcheryTarget,
     items: [
-      { key: 'stats',     icon: BarChart3, path: 'stats',     tone: 'gold' },
-      { key: 'skills',    icon: Target,    path: 'skills',    tone: 'cobalt' },
-      { key: 'abilities', icon: Zap,       path: 'abilities', tone: 'amber' },
+      { key: 'stats',     icon: BarChart3,        path: 'stats',     tone: 'gold' },
+      { key: 'skills',    icon: GiArcheryTarget,  path: 'skills',    tone: 'cobalt' },
+      { key: 'abilities', icon: GiLightningTrio,  path: 'abilities', tone: 'amber' },
     ],
   },
   {
     labelKey: 'character.menu.sections.equipment',
-    icon: Coins,
+    icon: GiTwoCoins,
     items: [
-      { key: 'inventory', icon: Swords, path: 'inventory', tone: 'gold' },
-      { key: 'currency',  icon: Coins,  path: 'currency',  tone: 'amber' },
+      { key: 'inventory', icon: GiCrossedSwords, path: 'inventory', tone: 'gold' },
+      { key: 'currency',  icon: GiTwoCoins,      path: 'currency',  tone: 'amber' },
     ],
   },
   {
     labelKey: 'character.menu.sections.character',
     icon: User,
     items: [
-      { key: 'identity',   icon: User,      path: 'identity',   tone: 'gold' },
-      { key: 'class',      icon: Scroll,    path: 'class',      tone: 'gold' },
-      { key: 'xp',         icon: Star,      path: 'xp',         tone: 'amber' },
-      { key: 'conditions', icon: CircleDot, path: 'conditions', tone: 'crimson' },
+      { key: 'identity',   icon: User,            path: 'identity',   tone: 'gold' },
+      { key: 'class',      icon: GiScrollUnfurled, path: 'class',     tone: 'gold' },
+      { key: 'xp',         icon: GiPolarStar,     path: 'xp',         tone: 'amber' },
+      { key: 'conditions', icon: CircleDot,       path: 'conditions', tone: 'crimson' },
     ],
   },
   {
     labelKey: 'character.menu.sections.tools',
-    icon: FlaskConical,
+    icon: GiPotionBall,
     items: [
-      { key: 'dice',    icon: Dices,       path: 'dice',    tone: 'gold' },
-      { key: 'notes',   icon: NotebookPen, path: 'notes',   tone: 'emerald' },
-      { key: 'maps',    icon: Map,         path: 'maps',    tone: 'cobalt' },
-      { key: 'history', icon: BookOpen,    path: 'history', tone: 'amber' },
+      { key: 'dice',    icon: GiPerspectiveDiceSixFacesRandom, path: 'dice',    tone: 'gold' },
+      { key: 'notes',   icon: GiQuillInk,                      path: 'notes',   tone: 'emerald' },
+      { key: 'maps',    icon: GiTreasureMap,                   path: 'maps',    tone: 'cobalt' },
+      { key: 'history', icon: GiOpenBook,                      path: 'history', tone: 'amber' },
     ],
   },
 ]
@@ -212,7 +215,7 @@ export default function CharacterMain() {
           whileTap={{ scale: 0.9 }}
           aria-label="Heroic Inspiration"
         >
-          <Sparkles size={18} className="text-dnd-gold" />
+          <GiSparkles size={18} className="text-dnd-gold" />
         </m.button>
 
         <m.button
@@ -250,7 +253,7 @@ export default function CharacterMain() {
               <div>
                 <div className="flex items-center justify-between text-sm mb-1.5">
                   <span className="inline-flex items-center gap-1.5 font-mono">
-                    <Heart size={14} className="text-[var(--dnd-crimson-bright)]" />
+                    <GiHeartPlus size={14} className="text-[var(--dnd-crimson-bright)]" />
                     <span className="text-dnd-text font-bold">
                       {char.current_hit_points}/{char.hit_points}
                     </span>
@@ -303,7 +306,7 @@ export default function CharacterMain() {
                            text-xs font-cinzel uppercase tracking-wider"
                 whileTap={{ scale: 0.98 }}
               >
-                <FlaskConical size={14} />
+                <GiPotionBall size={14} />
                 {spell?.name ?? t('character.spells.concentration')}
               </m.button>
             )
@@ -315,7 +318,7 @@ export default function CharacterMain() {
               {passiveAbilities.map(a => (
                 <StatPill
                   key={a.id}
-                  icon={<Zap size={10} />}
+                  icon={<GiLightningTrio size={10} />}
                   value={a.name}
                   tone="gold"
                   size="sm"
@@ -347,7 +350,7 @@ export default function CharacterMain() {
 
           {/* Velocità — icon-only floating bottom-right, tap rivela valore */}
           <StatPill
-            icon={<Footprints size={14} />}
+            icon={<GiBootPrints size={14} />}
             value={`${char.speed} ft`}
             tone="emerald"
             size="sm"

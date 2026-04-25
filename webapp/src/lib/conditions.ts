@@ -1,30 +1,31 @@
 import type { TFunction } from 'i18next'
 import {
-  EyeOff, Heart, VolumeX, Ghost, Link2, Cloud, Eye, Zap, Mountain,
-  FlaskConical, ArrowDown, Lock, Sparkle, Moon, Flame,
-} from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
+  GiBlindfold, GiHearts, GiSoundOff, GiGhost, GiManacles, GiCloudRing,
+  GiInvisible, GiLightningTrio, GiMountains, GiPoisonBottle, GiFalling,
+  GiHandcuffs, GiSparkles, GiNightSleep, GiFlame,
+} from 'react-icons/gi'
+import type { IconType } from 'react-icons'
 
 /**
  * Icon lookup for the 14 standard 5e conditions plus exhaustion.
  * Used by the hero section (icon-only chips) and the /conditions page (icon+label).
  */
-export const CONDITION_ICONS: Record<string, LucideIcon> = {
-  blinded:       EyeOff,
-  charmed:       Heart,
-  deafened:      VolumeX,
-  frightened:    Ghost,
-  grappled:      Link2,
-  incapacitated: Cloud,
-  invisible:     Eye,
-  paralyzed:     Zap,
-  petrified:     Mountain,
-  poisoned:      FlaskConical,
-  prone:         ArrowDown,
-  restrained:    Lock,
-  stunned:       Sparkle,
-  unconscious:   Moon,
-  exhaustion:    Flame,
+export const CONDITION_ICONS: Record<string, IconType> = {
+  blinded:       GiBlindfold,
+  charmed:       GiHearts,
+  deafened:      GiSoundOff,
+  frightened:    GiGhost,
+  grappled:      GiManacles,
+  incapacitated: GiCloudRing,
+  invisible:     GiInvisible,
+  paralyzed:     GiLightningTrio,
+  petrified:     GiMountains,
+  poisoned:      GiPoisonBottle,
+  prone:         GiFalling,
+  restrained:    GiHandcuffs,
+  stunned:       GiSparkles,
+  unconscious:   GiNightSleep,
+  exhaustion:    GiFlame,
 }
 
 /**

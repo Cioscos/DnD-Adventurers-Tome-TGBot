@@ -1,6 +1,10 @@
 import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
-import { Dice1, Check, X, Heart, Skull } from 'lucide-react'
+import { Check, X } from 'lucide-react'
+import {
+  GiDiceSixFacesOne as Dice1, GiHeartPlus as Heart,
+  GiSkullCrossedBones as Skull,
+} from 'react-icons/gi'
 import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
 import { spring } from '@/styles/motion'

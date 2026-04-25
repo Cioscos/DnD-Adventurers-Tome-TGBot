@@ -3,7 +3,10 @@ import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
-import { Dices, Star, Check, Eye } from 'lucide-react'
+import { Check, Eye } from 'lucide-react'
+import {
+  GiPerspectiveDiceSixFacesRandom as Dices, GiPolarStar as Star,
+} from 'react-icons/gi'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
