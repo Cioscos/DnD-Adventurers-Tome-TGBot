@@ -574,6 +574,13 @@
         "recalc_confirm_title": "Ricalcola HP",
         "recalc_confirm_body": "Questa azione ricalcolerà gli HP massimi del personaggio in base alle classi, ai livelli e al modificatore di Costituzione attuali. Continuare?"
       },
+      "theme": {
+        "title": "Tema",
+        "hint": "Auto segue il tema di Telegram.",
+        "mode_auto": "Auto",
+        "mode_light": "Chiaro",
+        "mode_dark": "Scuro"
+      },
       "privacy": {
         "title": "Privacy",
         "show_private_label": "Mostra info private a GM e altri player",
