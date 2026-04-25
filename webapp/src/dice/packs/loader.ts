@@ -33,7 +33,7 @@ async function loadTexture(url: string, srgb: boolean): Promise<THREE.Texture> {
 }
 
 async function loadKindMaps(packId: PackId, maps: DiceMaps): Promise<LoadedDiceMaps> {
-  const base = `/dice-packs/${packId}`
+  const base = `${import.meta.env.BASE_URL}dice-packs/${packId}`
   const albedo = await loadTexture(`${base}/${maps.albedo}`, true)
   const out: LoadedDiceMaps = { albedo }
   if (maps.normal) out.normal = await loadTexture(`${base}/${maps.normal}`, false)
@@ -44,7 +44,7 @@ async function loadKindMaps(packId: PackId, maps: DiceMaps): Promise<LoadedDiceM
 }
 
 async function loadPackInternal(id: PackId): Promise<LoadedPack> {
-  const manifestRes = await fetch(`/dice-packs/${id}/pack.json`)
+  const manifestRes = await fetch(`${import.meta.env.BASE_URL}dice-packs/${id}/pack.json`)
   if (!manifestRes.ok) throw new Error(`pack.json not found for ${id}`)
   const raw = await manifestRes.json()
   const manifest = PackManifestSchema.parse(raw)
@@ -70,7 +70,7 @@ async function loadPackInternal(id: PackId): Promise<LoadedPack> {
 }
 
 export async function loadManifest(id: PackId): Promise<PackManifest> {
-  const res = await fetch(`/dice-packs/${id}/pack.json`)
+  const res = await fetch(`${import.meta.env.BASE_URL}dice-packs/${id}/pack.json`)
   if (!res.ok) throw new Error(`pack.json not found for ${id}`)
   return PackManifestSchema.parse(await res.json())
 }
