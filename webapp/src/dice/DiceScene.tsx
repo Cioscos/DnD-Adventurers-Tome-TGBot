@@ -3,21 +3,27 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { ContactShadows } from '@react-three/drei'
 import * as THREE from 'three'
 import * as CANNON from 'cannon-es'
-import type { DiceGroup, DiceKind } from './types'
+import type { DiceGroup, DiceKind, DetectedResult } from './types'
 import { getDiceGeometry } from './geometries'
 import { getDiceMaterial, getNumeralMaterial } from './materials'
 import { createDiceWorld, updateWalls, type DiceWorld } from './physics/world'
 import { spawnDiceBody, computeSpawnPositions } from './physics/spawner'
-import { quaternionForFace } from './physics/faceDetector'
+import { faceUp } from './physics/faceDetector'
+import { PHYSICS } from './physics/constants'
 
-export type SceneRequest = { id: number; group: DiceGroup; onComplete: () => void }
+export type SceneRequest = {
+  id: number
+  group: DiceGroup
+  onComplete: (results: DetectedResult[]) => void
+}
 
-type Phase = 'idle' | 'simulating' | 'snapping' | 'holding'
+type Phase = 'idle' | 'simulating' | 'reading' | 'holding'
 
 interface Entity {
   body: CANNON.Body
   group: THREE.Group | null
-  targetFace: number
+  detectedValue: number | null
+  retries: number
   kind: Exclude<DiceKind, 'd100'>
 }
 
@@ -93,14 +99,15 @@ function Orchestrator({ request, onMount }: Props) {
   const entitiesRef = useRef<Entity[]>([])
   const phaseRef = useRef<Phase>('idle')
   const phaseStartRef = useRef<number>(0)
-  const snapFromRef = useRef<THREE.Quaternion[]>([])
-  const snapToRef = useRef<THREE.Quaternion[]>([])
-  const snapFromPosRef = useRef<THREE.Vector3[]>([])
-  const snapToPosRef = useRef<THREE.Vector3[]>([])
   const [version, setVersion] = useState(0)
   const { invalidate, camera, size } = useThree()
   const onMountRef = useRef(onMount)
   onMountRef.current = onMount
+
+  const onCompleteRef = useRef<((results: DetectedResult[]) => void) | undefined>(undefined)
+  useEffect(() => {
+    onCompleteRef.current = request?.onComplete
+  }, [request])
 
   useEffect(() => {
     if (!(camera instanceof THREE.PerspectiveCamera)) return
@@ -122,28 +129,19 @@ function Orchestrator({ request, onMount }: Props) {
     const kindBase: Exclude<DiceKind, 'd100'> = group.kind === 'd100' ? 'd10' : group.kind
     const geomData = getDiceGeometry(kindBase)
 
-    const bodyTargets: number[] = []
-    for (const result of group.results) {
-      if (group.kind === 'd100') {
-        const tens = Math.floor(result / 10)
-        const ones = result % 10
-        bodyTargets.push(tens === 0 ? 10 : tens)
-        bodyTargets.push(ones === 0 ? 10 : ones)
-      } else {
-        bodyTargets.push(result)
-      }
-    }
+    // numero di body fisici da spawnare
+    const bodyCount = group.kind === 'd100' ? 2 : group.results?.length ?? group.count ?? 1
 
-    const positions = computeSpawnPositions(bodyTargets.length)
+    const positions = computeSpawnPositions(bodyCount)
     const entities: Entity[] = []
-    for (let i = 0; i < bodyTargets.length; i++) {
+    for (let i = 0; i < bodyCount; i++) {
       const body = spawnDiceBody({
         shape: geomData.shape,
         material: worldRef.current!.diceMaterial,
         position: positions[i],
       })
       world.addBody(body)
-      entities.push({ body, group: null, targetFace: bodyTargets[i], kind: kindBase })
+      entities.push({ body, group: null, detectedValue: null, retries: 0, kind: kindBase })
     }
     entitiesRef.current = entities
     phaseRef.current = 'simulating'
@@ -178,73 +176,65 @@ function Orchestrator({ request, onMount }: Props) {
           )
         }
       }
-      const allSleeping = entitiesRef.current.every((e) => e.body.sleepState === CANNON.Body.SLEEPING)
-      if (allSleeping || elapsed > 2400) {
-        const LIFT_Y = 0.1
-        snapFromRef.current = entitiesRef.current.map(
-          (e) =>
-            new THREE.Quaternion(
-              e.body.quaternion.x,
-              e.body.quaternion.y,
-              e.body.quaternion.z,
-              e.body.quaternion.w,
-            ),
-        )
-        snapFromPosRef.current = entitiesRef.current.map(
-          (e) => new THREE.Vector3(e.body.position.x, e.body.position.y, e.body.position.z),
-        )
-        snapToPosRef.current = entitiesRef.current.map((e) => {
-          const x = THREE.MathUtils.clamp(e.body.position.x, -0.5, 0.5)
-          const z = THREE.MathUtils.clamp(e.body.position.z, -0.5, 0.5)
-          return new THREE.Vector3(x, LIFT_Y, z)
-        })
-        snapToRef.current = entitiesRef.current.map((e, i) => {
-          const geomData = getDiceGeometry(e.kind)
-          const toCamera = new THREE.Vector3()
-            .subVectors(camera.position, snapToPosRef.current[i])
-            .normalize()
-          return quaternionForFace(
-            geomData.faceNormals,
-            e.targetFace,
-            snapFromRef.current[i],
-            toCamera,
-          )
-        })
-        phaseRef.current = 'snapping'
+      const allSleeping = entitiesRef.current.every(
+        (e) => e.body.sleepState === CANNON.Body.SLEEPING,
+      )
+      const timedOut = elapsed > PHYSICS.simulationHardTimeoutMs
+      if (allSleeping || timedOut) {
+        if (timedOut) for (const e of entitiesRef.current) e.body.sleep()
+        phaseRef.current = 'reading'
         phaseStartRef.current = now
       }
-    } else if (phaseRef.current === 'snapping') {
-      const duration = 520
-      const t = Math.min(1, elapsed / duration)
-      const eased = 1 - Math.pow(1 - t, 3)
-      entitiesRef.current.forEach((e, i) => {
-        const q = new THREE.Quaternion().slerpQuaternions(
-          snapFromRef.current[i],
-          snapToRef.current[i],
-          eased,
+      return
+    }
+
+    if (phaseRef.current === 'reading') {
+      const COS_15 = Math.cos((15 * Math.PI) / 180)
+      const MAX_RETRIES = 2
+      let needRetry = false
+      for (const e of entitiesRef.current) {
+        if (e.detectedValue !== null) continue
+        const geomData = getDiceGeometry(e.kind)
+        const q = new THREE.Quaternion(
+          e.body.quaternion.x,
+          e.body.quaternion.y,
+          e.body.quaternion.z,
+          e.body.quaternion.w,
         )
-        const p = new THREE.Vector3().lerpVectors(
-          snapFromPosRef.current[i],
-          snapToPosRef.current[i],
-          eased,
-        )
-        e.body.quaternion.set(q.x, q.y, q.z, q.w)
-        e.body.position.set(p.x, p.y, p.z)
-        if (e.group) {
-          e.group.quaternion.copy(q)
-          e.group.position.copy(p)
+        const { value, dot } = faceUp(geomData.faceNormals, q)
+        if (dot < COS_15 && e.retries < MAX_RETRIES) {
+          // ambiguo: nudge + re-simulate
+          e.body.wakeUp()
+          e.body.applyImpulse(
+            new CANNON.Vec3((Math.random() - 0.5) * 0.4, -0.3, (Math.random() - 0.5) * 0.4),
+            new CANNON.Vec3(0, 0.1, 0),
+          )
+          e.body.angularVelocity.set(
+            (Math.random() - 0.5) * 4,
+            (Math.random() - 0.5) * 4,
+            (Math.random() - 0.5) * 4,
+          )
+          e.retries += 1
+          needRetry = true
+        } else {
+          e.detectedValue = value
         }
-      })
-      if (t >= 1) {
+      }
+      if (needRetry) {
+        phaseRef.current = 'simulating'
+        phaseStartRef.current = now
+      } else {
         phaseRef.current = 'holding'
         phaseStartRef.current = now
       }
-    } else if (phaseRef.current === 'holding') {
+      return
+    }
+
+    if (phaseRef.current === 'holding') {
       const HOLD_MS = 1500
       const LIFT_IN = 220
       const LIFT_OUT = 300
       const SCALE_BOOST = 0.22
-
       let progress: number
       if (elapsed < LIFT_IN) {
         const t = elapsed / LIFT_IN
@@ -255,16 +245,19 @@ function Orchestrator({ request, onMount }: Props) {
         const t = Math.min(1, (elapsed - (HOLD_MS - LIFT_OUT)) / LIFT_OUT)
         progress = 1 - (1 - Math.pow(1 - t, 2))
       }
-
       const scale = 1 + SCALE_BOOST * progress
       entitiesRef.current.forEach((e) => {
         if (!e.group) return
         e.group.scale.setScalar(scale)
       })
-
       if (elapsed > HOLD_MS) {
         phaseRef.current = 'idle'
-        request?.onComplete()
+        const results: DetectedResult[] = entitiesRef.current.map((e, i) => ({
+          groupIndex: i,
+          kind: e.kind,
+          value: e.detectedValue ?? 1,
+        }))
+        onCompleteRef.current?.(results)
       }
     }
   })

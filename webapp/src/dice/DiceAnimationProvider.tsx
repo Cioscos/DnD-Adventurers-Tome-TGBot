@@ -62,7 +62,7 @@ export default function DiceAnimationProvider({ children }: { children: ReactNod
       for (const group of req.groups) {
         const id = ++requestIdRef.current
         await new Promise<void>((resolve) => {
-          setSceneRequest({ id, group, onComplete: resolve })
+          setSceneRequest({ id, group, onComplete: (_results) => resolve() })
         })
         if (req.interGroupMs && req.interGroupMs > 0) {
           await new Promise((r) => setTimeout(r, req.interGroupMs))
