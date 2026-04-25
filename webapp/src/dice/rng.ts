@@ -35,15 +35,13 @@ export function rollMany(
   const out: { kind: Exclude<DiceKind, 'd100'>; value: number }[] = []
   for (let i = 0; i < count; i++) {
     if (kind === 'd100') {
-      out.push({ kind: 'd10', value: uniformInt(0, 9) })
-      out.push({ kind: 'd10', value: uniformInt(0, 9) })
+      // d10 faces are 1..10 (consistent with physics geometry); pairD100 maps
+      // value 10 → digit 0 in percentile.
+      out.push({ kind: 'd10', value: uniformInt(1, 10) })
+      out.push({ kind: 'd10', value: uniformInt(1, 10) })
     } else {
       const sides = SIDES[kind]
-      if (kind === 'd10') {
-        out.push({ kind, value: uniformInt(0, 9) })
-      } else {
-        out.push({ kind, value: uniformInt(1, sides) })
-      }
+      out.push({ kind, value: uniformInt(1, sides) })
     }
   }
   return out

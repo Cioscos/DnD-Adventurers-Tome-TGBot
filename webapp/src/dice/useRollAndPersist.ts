@@ -97,10 +97,13 @@ export function useRollAndPersist(charId: number | null) {
 }
 
 function pairD100(vals: number[]): number {
+  // Geometry d10 face values are 1..10. In percentile convention, "10" represents
+  // the digit 0 (e.g. tens=10 → 00 in percentile, ones=10 → 0 in percentile).
+  // Pair 00+0 represents 100.
   let total = 0
   for (let i = 0; i < vals.length; i += 2) {
-    const tens = vals[i]
-    const ones = vals[i + 1]
+    const tens = vals[i] % 10
+    const ones = vals[i + 1] % 10
     let v = tens * 10 + ones
     if (v === 0) v = 100
     total += v
