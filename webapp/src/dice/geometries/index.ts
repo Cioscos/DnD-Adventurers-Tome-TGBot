@@ -1,6 +1,16 @@
 import * as THREE from 'three'
 import * as CANNON from 'cannon-es'
 import type { DiceKind } from '../types'
+import { UV_LAYOUTS, cellForIndex, projectFaceUvs, type DiceUvKind } from './uvLayouts'
+
+const TRIS_PER_FACE: Record<DiceUvKind, number> = {
+  d4: 1,
+  d6: 2,
+  d8: 1,
+  d10: 2,
+  d12: 3,
+  d20: 1,
+}
 
 const PHI = (1 + Math.sqrt(5)) / 2
 const INV_PHI = 1 / PHI
@@ -351,6 +361,51 @@ export function getDiceGeometry(kind: DiceKind): DiceGeometryData {
     faceCount: template.faces.length,
     faceValues: [...template.faceValues],
   }
+
+  // Apply UV atlas coords. d100 reuses d10 geometry, so cache key 'd10' is used here.
+  const uvKind = key as DiceUvKind
+  const layout = UV_LAYOUTS[uvKind]
+  const trisPerFace = TRIS_PER_FACE[uvKind]
+  const { geometry, faceFrames } = data
+  const positionAttr = geometry.getAttribute('position') as THREE.BufferAttribute
+  const uvArray = new Float32Array(positionAttr.count * 2)
+
+  let triCursor = 0
+  for (let faceIdx = 0; faceIdx < faceFrames.length; faceIdx++) {
+    const ff = faceFrames[faceIdx]
+    const cell = cellForIndex(uvKind, faceIdx)
+
+    const xLocal = new THREE.Vector3().crossVectors(ff.normal, ff.up).normalize()
+    const yLocal = ff.up.clone().normalize()
+
+    for (let t = 0; t < trisPerFace; t++) {
+      for (let v = 0; v < 3; v++) {
+        const idx = triCursor + t * 3 + v
+        const pos = new THREE.Vector3(
+          positionAttr.getX(idx),
+          positionAttr.getY(idx),
+          positionAttr.getZ(idx),
+        )
+        const local = pos.clone().sub(ff.centroid)
+        const x2D = local.dot(xLocal)
+        const y2D = local.dot(yLocal)
+        const uvs = projectFaceUvs(
+          [{ x: x2D, y: y2D }],
+          cell,
+          layout,
+          ff.halfWidth,
+          ff.halfHeight,
+        )
+        uvArray[idx * 2] = uvs[0]
+        uvArray[idx * 2 + 1] = uvs[1]
+      }
+    }
+    triCursor += trisPerFace * 3
+  }
+
+  geometry.setAttribute('uv', new THREE.BufferAttribute(uvArray, 2))
+  geometry.computeTangents?.()
+
   cache.set(key, data)
   return data
 }
