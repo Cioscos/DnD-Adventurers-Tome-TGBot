@@ -12,6 +12,7 @@ import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { useDiceSettings } from '@/store/diceSettings'
 import type { DiceAnimationApi, DicePlayRequest } from './types'
 import type { SceneRequest } from './DiceScene'
+import { DicePackProvider } from './packs/DicePackProvider'
 
 const DiceScene = lazy(() => import('./DiceScene'))
 
@@ -80,28 +81,30 @@ export default function DiceAnimationProvider({ children }: { children: ReactNod
   const api = useMemo<DiceAnimationApi>(() => ({ play, isPlaying }), [play, isPlaying])
 
   return (
-    <DiceAnimationContext.Provider value={api}>
-      {children}
-      {shouldMountScene && (
-        <div
-          aria-hidden
-          className="fixed inset-0 z-[60]"
-          style={{
-            opacity: overlayVisible ? 1 : 0,
-            pointerEvents: 'none',
-            transition: 'opacity 180ms ease-out',
-            background: overlayVisible ? 'var(--dnd-overlay)' : 'transparent',
-            backdropFilter: overlayVisible ? 'blur(6px)' : 'none',
-            WebkitBackdropFilter: overlayVisible ? 'blur(6px)' : 'none',
-            willChange: 'opacity',
-          }}
-        >
-          <Suspense fallback={null}>
-            <DiceScene request={sceneRequest} onMount={handleSceneMount} />
-          </Suspense>
-        </div>
-      )}
-    </DiceAnimationContext.Provider>
+    <DicePackProvider>
+      <DiceAnimationContext.Provider value={api}>
+        {children}
+        {shouldMountScene && (
+          <div
+            aria-hidden
+            className="fixed inset-0 z-[60]"
+            style={{
+              opacity: overlayVisible ? 1 : 0,
+              pointerEvents: 'none',
+              transition: 'opacity 180ms ease-out',
+              background: overlayVisible ? 'var(--dnd-overlay)' : 'transparent',
+              backdropFilter: overlayVisible ? 'blur(6px)' : 'none',
+              WebkitBackdropFilter: overlayVisible ? 'blur(6px)' : 'none',
+              willChange: 'opacity',
+            }}
+          >
+            <Suspense fallback={null}>
+              <DiceScene request={sceneRequest} onMount={handleSceneMount} />
+            </Suspense>
+          </div>
+        )}
+      </DiceAnimationContext.Provider>
+    </DicePackProvider>
   )
 }
 
