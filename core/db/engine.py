@@ -140,6 +140,20 @@ def _migrate_schema(connection) -> None:
     except Exception as exc:
         logger.warning("CREATE INDEX failed for session_messages.recipient_user_id: %s", exc)
 
+    # Backfill gm_display_name for sessions created before the column existed.
+    # The WHERE clause makes this idempotent — only NULL/empty rows are touched.
+    if "game_sessions" in column_cache and "gm_display_name" in column_cache["game_sessions"]:
+        try:
+            result = connection.execute(text(
+                "UPDATE game_sessions "
+                "SET gm_display_name = '#' || gm_user_id "
+                "WHERE gm_display_name IS NULL OR gm_display_name = ''"
+            ))
+            if result.rowcount:
+                logger.info("Backfilled gm_display_name for %d session(s)", result.rowcount)
+        except Exception as exc:
+            logger.warning("Backfill gm_display_name failed: %s", exc)
+
     for table, column in _DROP_COLUMNS:
         if table not in existing_tables:
             continue
