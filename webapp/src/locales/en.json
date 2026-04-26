@@ -673,7 +673,27 @@
     "whisper": {
       "to_gm": "Whisper to GM",
       "broadcast": "Everyone",
-      "recipient_prefix": "→ {{name}}"
+      "recipient_prefix": "→ {{name}}",
+      "button": "Whisper to {{name}}",
+      "target_chip": "Whispering to {{name}}",
+      "cancel": "Cancel whisper"
+    },
+    "slow_mode": {
+      "cooldown": "Slow mode: wait {{seconds}}s…",
+      "toast": "Slow mode active: wait {{seconds}}s before sending again"
+    },
+    "chat_fullscreen_open": "Open fullscreen",
+    "chat_fullscreen_close": "Close fullscreen",
+    "detail": {
+      "stats_title": "Current status",
+      "ac_label": "AC",
+      "ac_hidden": "—",
+      "hp_label": "HP",
+      "hp_redacted": "Hidden",
+      "temp_hp_label": "Shield",
+      "conditions_label": "Conditions",
+      "no_conditions": "None",
+      "last_roll_label": "Last roll"
     },
     "identity": {
       "title": "Identity",

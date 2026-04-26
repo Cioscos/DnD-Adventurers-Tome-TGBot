@@ -83,12 +83,13 @@ export type { ConcentrationSaveResult } from '@/types'
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000'
 
-class ApiError extends Error {
+export class ApiError extends Error {
   constructor(
     public status: number,
-    public detail: string
+    public detail: unknown,
   ) {
-    super(`API ${status}: ${detail}`)
+    const detailStr = typeof detail === 'string' ? detail : JSON.stringify(detail)
+    super(`API ${status}: ${detailStr}`)
     this.name = 'ApiError'
   }
 }
@@ -533,5 +534,3 @@ export const api = {
     },
   },
 }
-
-export { ApiError }

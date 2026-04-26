@@ -46,7 +46,7 @@ export default function SessionJoin() {
     onError: (err) => {
       haptic.error()
       if (err instanceof ApiError) {
-        setError(err.detail)
+        setError(typeof err.detail === 'string' ? err.detail : t('common.error'))
       } else {
         setError(t('common.error'))
       }

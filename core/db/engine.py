@@ -90,6 +90,8 @@ _MIGRATIONS: list[tuple[str, str, str, str | None]] = [
     # Session whisper support
     ("session_messages", "recipient_user_id", "BIGINT", None),
     ("session_messages", "sender_display_name", "VARCHAR(120)", None),
+    # Session GM display name (Telegram first_name / @username / fallback)
+    ("game_sessions", "gm_display_name", "VARCHAR(120)", None),
     # Character history meta (for op tagging on hp_change, Gruppo H)
     ("character_history", "meta", "TEXT", None),
 ]

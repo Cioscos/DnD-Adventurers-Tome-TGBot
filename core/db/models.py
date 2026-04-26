@@ -519,6 +519,7 @@ class GameSession(Base):
         Enum(SessionStatus), default=SessionStatus.ACTIVE, index=True, nullable=False
     )
     title: Mapped[Optional[str]] = mapped_column(String(120), nullable=True)
+    gm_display_name: Mapped[Optional[str]] = mapped_column(String(120), nullable=True)
     created_at: Mapped[str] = mapped_column(String(50), nullable=False)
     last_activity_at: Mapped[str] = mapped_column(String(50), nullable=False)
     closed_at: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)

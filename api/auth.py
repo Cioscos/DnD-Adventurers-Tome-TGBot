@@ -16,9 +16,18 @@ import json
 import logging
 import os
 import time
+from dataclasses import dataclass
 from urllib.parse import parse_qsl, unquote
 
 from fastapi import Header, HTTPException, status
+
+
+@dataclass(frozen=True)
+class TelegramUser:
+    """Authenticated Telegram user extracted from initData."""
+    id: int
+    first_name: str | None = None
+    username: str | None = None
 
 logger = logging.getLogger(__name__)
 
@@ -38,8 +47,8 @@ def _compute_secret_key(bot_token: str) -> bytes:
     return hmac.new(b"WebAppData", bot_token.encode(), hashlib.sha256).digest()
 
 
-def verify_init_data(init_data: str, bot_token: str = _BOT_TOKEN) -> int:
-    """Verify *init_data* and return the authenticated Telegram user_id.
+def verify_init_data_full(init_data: str, bot_token: str = _BOT_TOKEN) -> TelegramUser:
+    """Verify *init_data* and return the authenticated Telegram user.
 
     Raises ``HTTPException(401)`` on any verification failure.
     """
@@ -103,6 +112,8 @@ def verify_init_data(init_data: str, bot_token: str = _BOT_TOKEN) -> int:
     try:
         user = json.loads(user_json)
         user_id = int(user["id"])
+        first_name = user.get("first_name") or None
+        username = user.get("username") or None
     except (json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:
         logger.warning("initData invalid 'user' field: %s", user_json)
         raise HTTPException(
@@ -110,15 +121,20 @@ def verify_init_data(init_data: str, bot_token: str = _BOT_TOKEN) -> int:
             detail="Invalid user field in initData",
         ) from exc
 
-    return user_id
+    return TelegramUser(id=user_id, first_name=first_name, username=username)
 
 
-def get_current_user(
+def verify_init_data(init_data: str, bot_token: str = _BOT_TOKEN) -> int:
+    """Backwards-compatible wrapper returning only the user_id."""
+    return verify_init_data_full(init_data, bot_token).id
+
+
+def get_current_telegram_user(
     x_telegram_init_data: str = Header("", alias="X-Telegram-Init-Data"),
-) -> int:
-    """FastAPI dependency that returns the verified Telegram user_id."""
+) -> TelegramUser:
+    """FastAPI dependency returning the full verified Telegram user."""
     if _DEV_USER_ID is not None:
-        return _DEV_USER_ID
+        return TelegramUser(id=_DEV_USER_ID, first_name="Dev User", username=None)
     if not x_telegram_init_data:
         logger.warning("Request missing X-Telegram-Init-Data header")
         raise HTTPException(
@@ -126,4 +142,11 @@ def get_current_user(
             detail="Missing X-Telegram-Init-Data header",
         )
     logger.debug("X-Telegram-Init-Data header length: %d", len(x_telegram_init_data))
-    return verify_init_data(x_telegram_init_data)
+    return verify_init_data_full(x_telegram_init_data)
+
+
+def get_current_user(
+    x_telegram_init_data: str = Header("", alias="X-Telegram-Init-Data"),
+) -> int:
+    """FastAPI dependency that returns the verified Telegram user_id."""
+    return get_current_telegram_user(x_telegram_init_data).id

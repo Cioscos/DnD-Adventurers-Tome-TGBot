@@ -73,6 +73,7 @@ class GameSessionRead(BaseModel):
     id: int
     code: str
     gm_user_id: int
+    gm_display_name: Optional[str] = None
     status: str
     title: Optional[str] = None
     created_at: str

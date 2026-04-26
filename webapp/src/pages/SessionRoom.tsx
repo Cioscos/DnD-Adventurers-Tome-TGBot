@@ -70,12 +70,12 @@ function ParticipantRow({
   const handleClick = () => {
     if (isOwn && snapshot) {
       onOwnClick(snapshot.id)
-    } else if (!isGm && !isMe && participant.character_id) {
+    } else if (!isMe) {
       onOtherClick(participant)
     }
   }
 
-  const isClickable = isOwn || (!isGm && !isMe && !!participant.character_id)
+  const isClickable = isOwn || !isMe
   const wrapperProps = isClickable
     ? {
         role: 'button' as const,
@@ -122,19 +122,13 @@ function ParticipantRow({
 
             {redacted ? (
               <>
-                <div className="mt-2 flex items-center justify-between text-xs font-cinzel">
+                <div className="mt-2 flex items-center text-xs font-cinzel">
                   <div className="flex items-center gap-1.5">
                     <Heart size={12} className="text-[var(--dnd-crimson-bright)]" />
                     <span className="uppercase tracking-wider">
                       {snapshot.hp_bucket
                         ? t(`session.hp_bucket.${snapshot.hp_bucket}`)
                         : t('session.hp_bucket.healthy')}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <Shield size={12} className="text-dnd-gold-bright" />
-                    <span className="uppercase tracking-wider">
-                      {t(`session.armor_category.${snapshot.armor_category ?? 'unarmored'}`)}
                     </span>
                   </div>
                 </div>
@@ -194,6 +188,7 @@ export default function SessionRoom() {
   const { t } = useTranslation()
   const qc = useQueryClient()
   const [identityTarget, setIdentityTarget] = useState<SessionParticipant | null>(null)
+  const [whisperTarget, setWhisperTarget] = useState<SessionParticipant | null>(null)
 
   const { data: meInfo } = useQuery({
     queryKey: ['auth-me'],
@@ -295,6 +290,11 @@ export default function SessionRoom() {
     })
   }
 
+  const sessionName =
+    live.gm_display_name?.trim() ||
+    live.title?.trim() ||
+    t('session.active_session_banner')
+
   return (
     <Layout title={t('session.room_title', { code: live.code })} backTo="/session">
       {amGm ? (
@@ -306,11 +306,9 @@ export default function SessionRoom() {
             <p className="font-display font-bold text-3xl text-dnd-gold-bright tracking-[0.3em] mt-1">
               {live.code}
             </p>
-            {live.title && (
-              <p className="text-sm text-dnd-text-muted font-body italic mt-1">
-                {live.title}
-              </p>
-            )}
+            <p className="text-sm text-dnd-text-muted font-body italic mt-1">
+              {sessionName}
+            </p>
           </div>
         </Surface>
       ) : (
@@ -320,7 +318,7 @@ export default function SessionRoom() {
               {t('session.role_player')}
             </p>
             <p className="font-display font-bold text-xl text-dnd-gold-bright mt-1">
-              {live.title || t('session.active_session_banner')}
+              {sessionName}
             </p>
           </div>
         </Surface>
@@ -358,10 +356,11 @@ export default function SessionRoom() {
       <SessionFeed
         code={live.code}
         sessionId={live.id}
-        amGm={amGm}
         gmUserId={gmUserId}
         myUserId={myUserId}
         participants={live.participants}
+        whisperTarget={whisperTarget}
+        onClearWhisperTarget={() => setWhisperTarget(null)}
       />
 
       <Button
@@ -377,7 +376,14 @@ export default function SessionRoom() {
       <ParticipantIdentitySheet
         code={live.code}
         target={identityTarget}
+        snapshot={
+          identityTarget?.character_id
+            ? snapshotsById.get(identityTarget.character_id)
+            : undefined
+        }
+        myUserId={myUserId}
         onClose={() => setIdentityTarget(null)}
+        onStartWhisper={(target) => setWhisperTarget(target)}
       />
     </Layout>
   )

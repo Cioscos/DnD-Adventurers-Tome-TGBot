@@ -1,22 +1,34 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Lock, Send, User as UserIcon } from 'lucide-react'
+import { Lock, Maximize2, Minimize2, Send, User as UserIcon } from 'lucide-react'
 import { GiCrown as Crown } from 'react-icons/gi'
-import { api } from '@/api/client'
+import { toast } from 'sonner'
+import { api, ApiError } from '@/api/client'
 import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
 import type { SessionFeedItem, SessionFeedResponse, SessionParticipant } from '@/types'
 import { haptic } from '@/auth/telegram'
 import { EVENT_META } from '@/lib/eventMeta'
 
+const SLOW_MODE_MS = 3000
+
+function extractRetryAfterMs(detail: unknown): number | null {
+  if (detail && typeof detail === 'object' && 'retry_after' in detail) {
+    const ra = (detail as { retry_after?: unknown }).retry_after
+    if (typeof ra === 'number' && ra > 0) return Math.ceil(ra * 1000)
+  }
+  return null
+}
+
 interface Props {
   code: string
   sessionId: number
-  amGm: boolean
   gmUserId: number | null
   myUserId: number
   participants: SessionParticipant[]
+  whisperTarget: SessionParticipant | null
+  onClearWhisperTarget: () => void
 }
 
 const POLL_MS = 3000
@@ -33,10 +45,11 @@ function itemKey(it: SessionFeedItem): string {
 export default function SessionFeed({
   code,
   sessionId,
-  amGm,
   gmUserId,
   myUserId,
   participants,
+  whisperTarget,
+  onClearWhisperTarget,
 }: Props) {
   const { t } = useTranslation()
   const qc = useQueryClient()
@@ -45,7 +58,10 @@ export default function SessionFeed({
   const [hasMoreBefore, setHasMoreBefore] = useState(false)
   const [loadingPrev, setLoadingPrev] = useState(false)
   const [chatInput, setChatInput] = useState('')
-  const [whisperTo, setWhisperTo] = useState<number | null>(null)
+  const [cooldownUntil, setCooldownUntil] = useState<number | null>(null)
+  const [, setNowTick] = useState(0)
+  const [fullscreen, setFullscreen] = useState(false)
+  const whisperTo = whisperTarget?.user_id ?? null
 
   const scrollerRef = useRef<HTMLDivElement | null>(null)
   const initialisedRef = useRef(false)
@@ -119,6 +135,8 @@ export default function SessionFeed({
       api.sessions.sendMessage(sessionId, body, whisperTo ?? undefined),
     onSuccess: () => {
       setChatInput('')
+      setCooldownUntil(Date.now() + SLOW_MODE_MS)
+      onClearWhisperTarget()
       haptic.success()
       qc.invalidateQueries({ queryKey: ['session-feed', code] })
       // Force immediate refetch so our message shows up without waiting.
@@ -133,8 +151,54 @@ export default function SessionFeed({
         } catch { /* noop */ }
       })()
     },
-    onError: () => haptic.error(),
+    onError: (err) => {
+      haptic.error()
+      if (err instanceof ApiError && err.status === 429) {
+        const retryMs = extractRetryAfterMs(err.detail) ?? SLOW_MODE_MS
+        setCooldownUntil(Date.now() + retryMs)
+        toast.warning(t('session.slow_mode.toast', { seconds: Math.ceil(retryMs / 1000) }))
+      }
+    },
   })
+
+  // Countdown ticker: re-render once per second while cooldown active.
+  useEffect(() => {
+    if (cooldownUntil === null) return
+    const remaining = cooldownUntil - Date.now()
+    if (remaining <= 0) {
+      setCooldownUntil(null)
+      return
+    }
+    const id = window.setInterval(() => {
+      if (Date.now() >= cooldownUntil) {
+        setCooldownUntil(null)
+      } else {
+        setNowTick((n) => n + 1)
+      }
+    }, 250)
+    return () => window.clearInterval(id)
+  }, [cooldownUntil])
+
+  const cooldownRemaining =
+    cooldownUntil !== null ? Math.max(0, Math.ceil((cooldownUntil - Date.now()) / 1000)) : 0
+  const onCooldown = cooldownRemaining > 0
+
+  // ESC closes fullscreen.
+  useEffect(() => {
+    if (!fullscreen) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setFullscreen(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [fullscreen])
+
+  // Telegram WebApp expand when entering fullscreen.
+  useEffect(() => {
+    if (!fullscreen) return
+    const tg = (window as { Telegram?: { WebApp?: { expand?: () => void } } }).Telegram?.WebApp
+    tg?.expand?.()
+  }, [fullscreen])
 
   const loadPrevious = async () => {
     if (!oldestTs || loadingPrev) return
@@ -150,11 +214,6 @@ export default function SessionFeed({
     }
   }
 
-  const playerParticipants = useMemo(
-    () => participants.filter((p) => p.role !== 'game_master'),
-    [participants],
-  )
-
   const senderLabel = (it: SessionFeedItem): string => {
     if (it.role === 'game_master') return t('session.game_master')
     return it.display_name ?? `#${it.user_id ?? ''}`
@@ -167,8 +226,26 @@ export default function SessionFeed({
     return p?.display_name ?? `#${rid}`
   }
 
+  const surfaceClass = fullscreen
+    ? 'fixed inset-0 z-50 !rounded-none flex flex-col bg-bg !p-3'
+    : 'relative'
+  const scrollerClass = fullscreen
+    ? 'space-y-2 flex-1 overflow-y-auto pr-1'
+    : 'space-y-2 max-h-[320px] overflow-y-auto pr-1'
+
   return (
-    <Surface variant="elevated">
+    <Surface variant="elevated" className={surfaceClass}>
+      <div className="flex items-center justify-end mb-1">
+        <button
+          type="button"
+          onClick={() => setFullscreen((v) => !v)}
+          aria-label={t(fullscreen ? 'session.chat_fullscreen_close' : 'session.chat_fullscreen_open')}
+          title={t(fullscreen ? 'session.chat_fullscreen_close' : 'session.chat_fullscreen_open')}
+          className="p-1.5 rounded text-dnd-gold-dim hover:text-dnd-gold-bright hover:bg-dnd-surface-raised transition-colors"
+        >
+          {fullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+        </button>
+      </div>
       {hasMoreBefore && (
         <div className="flex justify-center mb-2">
           <button
@@ -184,7 +261,7 @@ export default function SessionFeed({
 
       <div
         ref={scrollerRef}
-        className="space-y-2 max-h-[320px] overflow-y-auto pr-1"
+        className={scrollerClass}
       >
         {items.length === 0 ? (
           <p className="text-xs text-dnd-text-faint font-body italic text-center py-4">
@@ -202,7 +279,19 @@ export default function SessionFeed({
                   className="flex items-center justify-center gap-2 text-xs italic opacity-80 px-3 py-1.5"
                 >
                   <Icon size={12} className={iconColorClass} />
-                  <span className="font-body text-dnd-text-muted">{it.description}</span>
+                  <span className="font-body text-dnd-text-muted">
+                    {it.character_name ? (
+                      <>
+                        <span className="font-cinzel text-dnd-gold-dim not-italic">
+                          {it.character_name}
+                        </span>
+                        {' — '}
+                        {it.description}
+                      </>
+                    ) : (
+                      it.description
+                    )}
+                  </span>
                   <span className="font-mono text-[10px] text-dnd-text-faint">
                     {formatTime(it.timestamp)}
                   </span>
@@ -244,35 +333,26 @@ export default function SessionFeed({
         )}
       </div>
 
-      {amGm ? (
-        <div className="flex items-center gap-2 mt-3 mb-2">
-          <Lock size={12} className="text-dnd-gold-dim shrink-0" />
-          <select
-            value={whisperTo ?? ''}
-            onChange={(e) => setWhisperTo(e.target.value === '' ? null : Number(e.target.value))}
-            className="flex-1 px-2 py-1 rounded bg-dnd-surface border border-dnd-border text-dnd-text font-body text-sm"
-          >
-            <option value="">{t('session.whisper.broadcast')}</option>
-            {playerParticipants.map((p) => (
-              <option key={p.user_id} value={p.user_id}>
-                {p.display_name ?? `#${p.user_id}`}
-              </option>
-            ))}
-          </select>
-        </div>
-      ) : (
-        <div className="mt-3 mb-2">
+      {whisperTarget && (
+        <div className="mt-3 mb-2 flex items-center justify-between gap-2 rounded-full px-3 py-1.5 bg-[var(--dnd-amber)]/20 border border-[var(--dnd-amber)]/60">
+          <div className="flex items-center gap-2 min-w-0">
+            <Lock size={12} className="text-[var(--dnd-amber)] shrink-0" />
+            <span className="text-xs font-cinzel uppercase tracking-wider text-[var(--dnd-amber)] truncate">
+              {t('session.whisper.target_chip', {
+                name:
+                  whisperTarget.user_id === gmUserId
+                    ? t('session.game_master')
+                    : whisperTarget.display_name ?? `#${whisperTarget.user_id}`,
+              })}
+            </span>
+          </div>
           <button
             type="button"
-            onClick={() => setWhisperTo(whisperTo === null ? gmUserId : null)}
-            disabled={gmUserId === null}
-            className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-cinzel uppercase tracking-wider transition-colors
-              ${whisperTo !== null
-                ? 'bg-[var(--dnd-amber)]/30 text-[var(--dnd-amber)] border border-[var(--dnd-amber)]/60'
-                : 'bg-dnd-surface text-dnd-text-muted border border-dnd-border hover:text-dnd-gold-bright'}`}
+            onClick={onClearWhisperTarget}
+            aria-label={t('session.whisper.cancel')}
+            className="text-[var(--dnd-amber)] hover:text-dnd-gold-bright text-xs font-bold"
           >
-            <Lock size={12} />
-            {t('session.whisper.to_gm')}
+            ✕
           </button>
         </div>
       )}
@@ -283,21 +363,36 @@ export default function SessionFeed({
           value={chatInput}
           onChange={(e) => setChatInput(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === 'Enter' && chatInput.trim().length > 0) {
+            if (
+              e.key === 'Enter' &&
+              chatInput.trim().length > 0 &&
+              !onCooldown &&
+              !sendMutation.isPending
+            ) {
               sendMutation.mutate(chatInput.trim())
             }
           }}
-          placeholder={t('session.message_placeholder')}
-          className="flex-1 px-3 py-2 rounded bg-dnd-surface border border-dnd-border text-dnd-text font-body text-sm"
+          placeholder={
+            onCooldown
+              ? t('session.slow_mode.cooldown', { seconds: cooldownRemaining })
+              : t('session.message_placeholder')
+          }
+          disabled={onCooldown || sendMutation.isPending}
+          className="flex-1 px-3 py-2 rounded bg-dnd-surface border border-dnd-border text-dnd-text font-body text-sm disabled:opacity-50"
         />
         <Button
           variant="primary"
           size="sm"
-          onClick={() => chatInput.trim() && sendMutation.mutate(chatInput.trim())}
-          disabled={!chatInput.trim() || sendMutation.isPending}
+          onClick={() =>
+            chatInput.trim() &&
+            !onCooldown &&
+            !sendMutation.isPending &&
+            sendMutation.mutate(chatInput.trim())
+          }
+          disabled={!chatInput.trim() || sendMutation.isPending || onCooldown}
           icon={<Send size={14} />}
         >
-          {t('session.send')}
+          {onCooldown ? `${cooldownRemaining}s` : t('session.send')}
         </Button>
       </div>
     </Surface>
