@@ -219,6 +219,7 @@ export interface GameSession {
   id: number
   code: string
   gm_user_id: number
+  gm_display_name?: string | null
   status: SessionStatus
   title?: string | null
   created_at: string

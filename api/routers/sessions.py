@@ -16,7 +16,7 @@ from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from api.auth import get_current_user
+from api.auth import TelegramUser, get_current_telegram_user, get_current_user
 from api.database import get_db
 from api.schemas.session import (
     CharacterLiveSnapshot,
@@ -223,12 +223,27 @@ async def my_active_session(
     return await _find_active_session_for_user(user_id, db)
 
 
+def _compute_gm_display_name(tg_user: TelegramUser, custom_title: Optional[str]) -> str:
+    """Pick the best human-readable name for the GM/session.
+
+    Priority: explicit title → first_name → @username → fallback "#<user_id>".
+    """
+    if custom_title and custom_title.strip():
+        return custom_title.strip()[:120]
+    if tg_user.first_name:
+        return tg_user.first_name[:120]
+    if tg_user.username:
+        return f"@{tg_user.username}"[:120]
+    return f"#{tg_user.id}"
+
+
 @router.post("", response_model=GameSessionRead, status_code=status.HTTP_201_CREATED)
 async def create_session(
     body: SessionCreateRequest,
-    user_id: Annotated[int, Depends(get_current_user)],
+    tg_user: Annotated[TelegramUser, Depends(get_current_telegram_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> GameSession:
+    user_id = tg_user.id
     # Users can only be in one active session at a time (regardless of role)
     existing = await _find_active_session_for_user(user_id, db)
     if existing is not None:
@@ -239,11 +254,13 @@ async def create_session(
 
     code = await _generate_unique_code(db)
     now = _now()
+    gm_display_name = _compute_gm_display_name(tg_user, body.title)
     session = GameSession(
         code=code,
         gm_user_id=user_id,
         status=SessionStatus.ACTIVE,
         title=body.title,
+        gm_display_name=gm_display_name,
         created_at=now,
         last_activity_at=now,
     )
@@ -369,7 +386,7 @@ async def get_session_live(
                 heroic_inspiration=raw["heroic_inspiration"],
                 last_roll=raw["last_roll"],
                 hp_bucket=raw["hp_bucket"],
-                armor_category=raw["armor_category"],
+                armor_category=None,
             ))
 
     if session.status == SessionStatus.ACTIVE:
@@ -379,6 +396,7 @@ async def get_session_live(
         id=session.id,
         code=session.code,
         gm_user_id=session.gm_user_id,
+        gm_display_name=session.gm_display_name,
         status=session.status.value if hasattr(session.status, "value") else str(session.status),
         title=session.title,
         created_at=session.created_at,
@@ -465,6 +483,9 @@ async def list_messages(
     return list(result.scalars().all())
 
 
+_SLOW_MODE_SECONDS = 3.0
+
+
 @router.post(
     "/{session_id}/messages",
     response_model=SessionMessageRead,
@@ -488,8 +509,30 @@ async def post_message(
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Recipient not in session")
         if recipient_id == user_id:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot whisper to yourself")
-        if sender.role != SessionRole.GAME_MASTER and recipient.role != SessionRole.GAME_MASTER:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Whispers are GM-only")
+
+    # Slow mode anti-spam: same user must wait between messages in the same session.
+    last_msg = await db.scalar(
+        select(SessionMessage)
+        .where(SessionMessage.session_id == session_id)
+        .where(SessionMessage.user_id == user_id)
+        .order_by(SessionMessage.sent_at.desc())
+        .limit(1)
+    )
+    now_iso = _now()
+    if last_msg is not None:
+        try:
+            elapsed = (
+                datetime.fromisoformat(now_iso) - datetime.fromisoformat(last_msg.sent_at)
+            ).total_seconds()
+        except ValueError:
+            elapsed = _SLOW_MODE_SECONDS  # malformed timestamp → don't block
+        if elapsed < _SLOW_MODE_SECONDS:
+            retry_after = round(_SLOW_MODE_SECONDS - elapsed, 2)
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail={"code": "slow_mode", "retry_after": retry_after},
+                headers={"Retry-After": str(int(retry_after) + 1)},
+            )
 
     if sender.role == SessionRole.GAME_MASTER:
         sender_display_name = "__GM__"
@@ -501,7 +544,7 @@ async def post_message(
         user_id=user_id,
         role=sender.role,
         body=body.body.strip(),
-        sent_at=_now(),
+        sent_at=now_iso,
         recipient_user_id=recipient_id,
         sender_display_name=sender_display_name,
     )

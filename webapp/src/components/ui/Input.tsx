@@ -82,7 +82,8 @@ export default function Input({
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && variant !== 'textarea') {
-      onCommit?.(value)
+      // blur() will trigger handleBlur, which calls onCommit exactly once.
+      // Calling onCommit here as well caused duplicate submissions (e.g. heal applied twice).
       ;(e.target as HTMLElement).blur()
     }
   }

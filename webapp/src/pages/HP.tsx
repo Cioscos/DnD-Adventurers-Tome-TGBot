@@ -113,6 +113,7 @@ export default function HP() {
   })
 
   const handleApply = () => {
+    if (hpMutation.isPending) return
     const n = parseInt(value, 10)
     if (isNaN(n) || n <= 0) return
     hpMutation.mutate({ op: activeOp, val: n })

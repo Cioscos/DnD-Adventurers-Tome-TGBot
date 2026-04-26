@@ -47,14 +47,18 @@ export default function Session() {
   }
 
   if (active) {
+    const sessionName = active.gm_display_name?.trim() || active.title?.trim() || active.code
     return (
       <Layout title={t('session.title')} backTo="/">
         <Surface variant="sigil" ornamented>
           <FancyHeader
             title={t('session.active_session_banner')}
-            subtitle={active.code}
+            subtitle={sessionName}
           />
           <div className="mt-4 space-y-2">
+            <p className="text-center text-[11px] uppercase tracking-widest font-cinzel text-dnd-gold-dim">
+              {t('session.code_label')}: <span className="text-dnd-gold-bright">{active.code}</span>
+            </p>
             <p className="text-sm text-dnd-text-muted font-body text-center">
               {t(`session.role_${active.gm_user_id === active.participants.find(p => p.role === 'game_master')?.user_id ? 'game_master' : 'player'}`)}
             </p>

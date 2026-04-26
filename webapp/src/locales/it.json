@@ -673,7 +673,27 @@
     "whisper": {
       "to_gm": "Sussurra al GM",
       "broadcast": "Tutti",
-      "recipient_prefix": "→ {{name}}"
+      "recipient_prefix": "→ {{name}}",
+      "button": "Sussurra a {{name}}",
+      "target_chip": "Sussurro a {{name}}",
+      "cancel": "Annulla sussurro"
+    },
+    "slow_mode": {
+      "cooldown": "Slow mode: aspetta {{seconds}}s…",
+      "toast": "Slow mode attivo: aspetta {{seconds}}s prima di scrivere ancora"
+    },
+    "chat_fullscreen_open": "Apri a schermo intero",
+    "chat_fullscreen_close": "Chiudi schermo intero",
+    "detail": {
+      "stats_title": "Stato attuale",
+      "ac_label": "CA",
+      "ac_hidden": "—",
+      "hp_label": "PF",
+      "hp_redacted": "Nascosti",
+      "temp_hp_label": "Scudo",
+      "conditions_label": "Condizioni",
+      "no_conditions": "Nessuna",
+      "last_roll_label": "Ultimo tiro"
     },
     "identity": {
       "title": "Identità",
