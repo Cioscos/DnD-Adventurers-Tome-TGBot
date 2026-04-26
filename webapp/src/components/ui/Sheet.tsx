@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react'
 import { m, AnimatePresence, useDragControls, type PanInfo } from 'framer-motion'
+import { X } from 'lucide-react'
 import { spring } from '@/styles/motion'
 
 interface SheetProps {
@@ -86,12 +87,35 @@ export default function Sheet({
               <div className="w-10 h-1 rounded-full bg-dnd-gold-dim/50" />
             </div>
 
-            {title && (
-              <div className="px-5 pb-3 border-b border-dnd-border/50">
-                <h2 className="font-display text-xl font-bold text-dnd-gold-bright text-center">
+            {title ? (
+              <div className="relative px-5 pb-3 border-b border-dnd-border/50">
+                <h2 className="font-display text-xl font-bold text-dnd-gold-bright text-center pr-8">
                   {title}
                 </h2>
+                {dismissible && (
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    aria-label="Close"
+                    className="absolute top-0 right-3 p-1.5 rounded-full text-dnd-gold-dim hover:text-dnd-gold-bright hover:bg-dnd-surface-raised transition-colors"
+                  >
+                    <X size={18} />
+                  </button>
+                )}
               </div>
+            ) : (
+              dismissible && (
+                <div className="flex justify-end px-3 -mt-1">
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    aria-label="Close"
+                    className="p-1.5 rounded-full text-dnd-gold-dim hover:text-dnd-gold-bright hover:bg-dnd-surface-raised transition-colors"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+              )
             )}
 
             <div className="overflow-y-auto overscroll-contain pb-safe-lg"

@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Lock, Maximize2, Minimize2, Send, User as UserIcon } from 'lucide-react'
+import { Lock, Maximize2, Send, User as UserIcon, X } from 'lucide-react'
 import { GiCrown as Crown } from 'react-icons/gi'
 import { toast } from 'sonner'
 import { api, ApiError } from '@/api/client'
@@ -183,21 +184,25 @@ export default function SessionFeed({
     cooldownUntil !== null ? Math.max(0, Math.ceil((cooldownUntil - Date.now()) / 1000)) : 0
   const onCooldown = cooldownRemaining > 0
 
-  // ESC closes fullscreen.
+  // ESC closes fullscreen + body scroll lock + Telegram expand.
   useEffect(() => {
     if (!fullscreen) return
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setFullscreen(false)
     }
     window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [fullscreen])
-
-  // Telegram WebApp expand when entering fullscreen.
-  useEffect(() => {
-    if (!fullscreen) return
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
     const tg = (window as { Telegram?: { WebApp?: { expand?: () => void } } }).Telegram?.WebApp
     tg?.expand?.()
+    // Scroll feed to bottom after layout swap.
+    requestAnimationFrame(() => {
+      scrollerRef.current?.scrollTo({ top: scrollerRef.current.scrollHeight })
+    })
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      document.body.style.overflow = prevOverflow
+    }
   }, [fullscreen])
 
   const loadPrevious = async () => {
@@ -226,26 +231,12 @@ export default function SessionFeed({
     return p?.display_name ?? `#${rid}`
   }
 
-  const surfaceClass = fullscreen
-    ? 'fixed inset-0 z-50 !rounded-none flex flex-col bg-bg !p-3'
-    : 'relative'
   const scrollerClass = fullscreen
-    ? 'space-y-2 flex-1 overflow-y-auto pr-1'
+    ? 'space-y-2 flex-1 min-h-0 overflow-y-auto pr-1'
     : 'space-y-2 max-h-[320px] overflow-y-auto pr-1'
 
-  return (
-    <Surface variant="elevated" className={surfaceClass}>
-      <div className="flex items-center justify-end mb-1">
-        <button
-          type="button"
-          onClick={() => setFullscreen((v) => !v)}
-          aria-label={t(fullscreen ? 'session.chat_fullscreen_close' : 'session.chat_fullscreen_open')}
-          title={t(fullscreen ? 'session.chat_fullscreen_close' : 'session.chat_fullscreen_open')}
-          className="p-1.5 rounded text-dnd-gold-dim hover:text-dnd-gold-bright hover:bg-dnd-surface-raised transition-colors"
-        >
-          {fullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
-        </button>
-      </div>
+  const chatBody = (
+    <>
       {hasMoreBefore && (
         <div className="flex justify-center mb-2">
           <button
@@ -395,6 +386,48 @@ export default function SessionFeed({
           {onCooldown ? `${cooldownRemaining}s` : t('session.send')}
         </Button>
       </div>
+    </>
+  )
+
+  if (fullscreen) {
+    return createPortal(
+      <div className="fixed inset-0 z-[60] flex flex-col bg-bg">
+        <header className="flex items-center justify-between px-4 py-3 border-b border-dnd-border bg-dnd-surface-raised shrink-0">
+          <h2 className="font-display font-bold text-dnd-gold-bright text-base">
+            {t('session.chat_and_history')}
+          </h2>
+          <button
+            type="button"
+            onClick={() => setFullscreen(false)}
+            aria-label={t('session.chat_fullscreen_close')}
+            title={t('session.chat_fullscreen_close')}
+            className="p-2 rounded-full text-dnd-gold-dim hover:text-dnd-gold-bright hover:bg-dnd-surface transition-colors"
+          >
+            <X size={18} />
+          </button>
+        </header>
+        <div className="flex-1 min-h-0 flex flex-col p-3 gap-2">
+          {chatBody}
+        </div>
+      </div>,
+      document.body,
+    )
+  }
+
+  return (
+    <Surface variant="elevated" className="relative">
+      <div className="flex items-center justify-end mb-1">
+        <button
+          type="button"
+          onClick={() => setFullscreen(true)}
+          aria-label={t('session.chat_fullscreen_open')}
+          title={t('session.chat_fullscreen_open')}
+          className="p-1.5 rounded text-dnd-gold-dim hover:text-dnd-gold-bright hover:bg-dnd-surface-raised transition-colors"
+        >
+          <Maximize2 size={14} />
+        </button>
+      </div>
+      {chatBody}
     </Surface>
   )
 }
