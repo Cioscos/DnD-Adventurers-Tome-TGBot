@@ -391,8 +391,8 @@ export default function SessionFeed({
 
   if (fullscreen) {
     return createPortal(
-      <div className="fixed inset-0 z-[60] flex flex-col bg-bg">
-        <header className="flex items-center justify-between px-4 py-3 border-b border-dnd-border bg-dnd-surface-raised shrink-0">
+      <div className="fixed inset-0 z-[60] flex flex-col bg-dnd-bg">
+        <header className="flex items-center justify-between px-4 py-3 pt-safe border-b border-dnd-border bg-dnd-surface-raised shrink-0">
           <h2 className="font-display font-bold text-dnd-gold-bright text-base">
             {t('session.chat_and_history')}
           </h2>
@@ -406,7 +406,7 @@ export default function SessionFeed({
             <X size={18} />
           </button>
         </header>
-        <div className="flex-1 min-h-0 flex flex-col p-3 gap-2">
+        <div className="flex-1 min-h-0 flex flex-col p-3 pb-safe gap-2">
           {chatBody}
         </div>
       </div>,
