@@ -47,7 +47,8 @@ export default function Session() {
   }
 
   if (active) {
-    const sessionName = active.gm_display_name?.trim() || active.title?.trim() || active.code
+    const sessionName =
+      active.gm_display_name?.trim() || active.title?.trim() || `#${active.gm_user_id}`
     return (
       <Layout title={t('session.title')} backTo="/">
         <Surface variant="sigil" ornamented>
