@@ -129,6 +129,7 @@ async def add_item(
         item_type=body.item_type,
         item_metadata=metadata_str,
         is_equipped=body.is_equipped,
+        equipment_slot=body.equipment_slot,
     )
     session.add(item)
     await session.flush()
