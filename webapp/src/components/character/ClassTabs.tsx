@@ -1,4 +1,5 @@
 import { m } from 'framer-motion'
+import { useTranslation } from 'react-i18next'
 
 interface ClassEntry {
   class_name: string
@@ -12,6 +13,7 @@ interface Props {
 }
 
 export default function ClassTabs({ classes, selected, onSelect }: Props) {
+  const { t } = useTranslation()
   if (classes.length <= 1) return null
   return (
     <div role="tablist" className="flex gap-1 overflow-x-auto scrollbar-hide mb-2">
@@ -31,7 +33,7 @@ export default function ClassTabs({ classes, selected, onSelect }: Props) {
                 : 'bg-dnd-surface border-dnd-gold-dim/30 text-dnd-text-muted'
             }`}
           >
-            {c.class_name}
+            {t(`dnd.classes.${c.class_name}`, { defaultValue: c.class_name })}
             <span className="ml-1 opacity-70">L{c.level}</span>
           </m.button>
         )

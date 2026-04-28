@@ -8,18 +8,8 @@ import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
 import { toast } from 'sonner'
 import { haptic } from '@/auth/telegram'
-import classProgression from '@/data/class-progression.json'
+import { progressionRows } from '@/lib/classProgression'
 import type { CharacterFull, CharacterClass } from '@/types'
-
-type ProgressionEntry = {
-  features: string
-  proficiency_bonus: number
-  spell_slots: number[] | null
-}
-
-type ClassProgression = Record<string, ProgressionEntry[]>
-
-const PROGRESSION = classProgression as ClassProgression
 
 interface LevelUpModalProps {
   char: CharacterFull
@@ -74,7 +64,7 @@ export default function LevelUpModal({ char, xpLevel, onClose }: LevelUpModalPro
 
   if (!selectedClass) return null
 
-  const entriesForClass = PROGRESSION[selectedClass.class_name]
+  const entriesForClass = progressionRows(selectedClass.class_name)
 
   return (
     <div

@@ -6,7 +6,7 @@ import json
 import random
 import re
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
@@ -177,9 +177,10 @@ async def update_item(
 
     # Slot bookkeeping: when equipped with a slot, displace prior occupant atomically.
     # When unequipped, clear the slot so it never leaks.
+    displaced: Optional[Item] = None
     if "is_equipped" in data or "equipment_slot" in data:
         if item.is_equipped and item.equipment_slot is not None:
-            await swap_slot_occupant(session, char.id, item.id, item.equipment_slot)
+            displaced = await swap_slot_occupant(session, char.id, item.id, item.equipment_slot)
         if not item.is_equipped:
             item.equipment_slot = None
 
@@ -190,6 +191,13 @@ async def update_item(
             char.base_armor_class = item_meta.get("ac_value", 10) if item.is_equipped else 10
         elif item.item_type == "shield":
             char.shield_armor_class = item_meta.get("ac_bonus", 2) if item.is_equipped else 0
+
+        # If the swap displaced an armor or shield, reset its AC contribution.
+        if displaced is not None:
+            if displaced.item_type == "armor":
+                char.base_armor_class = 10
+            elif displaced.item_type == "shield":
+                char.shield_armor_class = 0
 
     # Auto-recompute HP when CON modifier changes due to equip/unequip
     settings = char.settings or {}

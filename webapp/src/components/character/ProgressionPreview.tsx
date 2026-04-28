@@ -2,16 +2,8 @@ import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
 import Surface from '@/components/ui/Surface'
-import progressionData from '@/data/class-progression.json'
+import { progressionRows } from '@/lib/classProgression'
 import ProgressionFullTableModal from './ProgressionFullTableModal'
-
-interface ProgressionRow {
-  features: string
-  proficiency_bonus: number
-  spell_slots: number[] | null
-}
-
-const PROGRESSION = progressionData as unknown as Record<string, ProgressionRow[]>
 
 interface Props {
   className: string
@@ -28,7 +20,7 @@ export default function ProgressionPreview({ className, currentLevel }: Props) {
   const { t } = useTranslation()
   const [showFull, setShowFull] = useState(false)
 
-  const rows = PROGRESSION[className]
+  const rows = progressionRows(className)
   const windowLevels = useMemo(
     () => computeWindow(currentLevel, rows?.length ?? 20),
     [currentLevel, rows?.length],

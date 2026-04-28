@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
@@ -49,6 +49,12 @@ export default function HeroScreen({ char }: Props) {
   const [detailCondKey, setDetailCondKey] = useState<string | null>(null)
   const [detailAbility, setDetailAbility] = useState<Ability | null>(null)
   const [selectedClass, setSelectedClass] = useState<string>(() => pickDefaultClass(char))
+
+  useEffect(() => {
+    if (!(char.classes ?? []).some((c) => c.class_name === selectedClass)) {
+      setSelectedClass(pickDefaultClass(char))
+    }
+  }, [char.classes, selectedClass])
 
   const hpPct = char.hit_points > 0
     ? Math.round((char.current_hit_points / char.hit_points) * 100)

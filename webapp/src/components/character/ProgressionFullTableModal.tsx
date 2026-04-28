@@ -2,15 +2,7 @@ import { useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { m, AnimatePresence } from 'framer-motion'
 import { X } from 'lucide-react'
-import progressionData from '@/data/class-progression.json'
-
-interface ProgressionRow {
-  features: string
-  proficiency_bonus: number
-  spell_slots: number[] | null
-}
-
-const PROGRESSION = progressionData as unknown as Record<string, ProgressionRow[]>
+import { progressionRows } from '@/lib/classProgression'
 
 interface Props {
   className: string
@@ -21,7 +13,7 @@ interface Props {
 export default function ProgressionFullTableModal({ className, currentLevel, onClose }: Props) {
   const { t } = useTranslation()
   const currentRowRef = useRef<HTMLTableRowElement>(null)
-  const rows = PROGRESSION[className] ?? []
+  const rows = progressionRows(className) ?? []
 
   useEffect(() => {
     currentRowRef.current?.scrollIntoView({ behavior: 'auto', block: 'center' })
