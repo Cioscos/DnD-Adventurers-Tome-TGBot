@@ -30,6 +30,7 @@ export default function Spells() {
   const [expanded, setExpanded] = useState<number | null>(null)
   const [castingSpell, setCastingSpell] = useState<Spell | null>(null)
   const [rollDamageSpell, setRollDamageSpell] = useState<Spell | null>(null)
+  const [pendingSlotLevel, setPendingSlotLevel] = useState<number | null>(null)
   const [collapsedLevels, setCollapsedLevels] = useState<Set<number>>(new Set())
 
   const toggleLevel = (level: number) => {
@@ -117,13 +118,10 @@ export default function Spells() {
       }
       return { updated, spell }
     },
-    onSuccess: ({ updated, spell }) => {
+    onSuccess: ({ updated }) => {
       qc.setQueryData(['character', charId], updated)
       setCastingSpell(null)
       haptic.success()
-      if (spell.damage_dice) {
-        setRollDamageSpell(spell)
-      }
     },
     onError: () => haptic.error(),
   })
@@ -139,18 +137,20 @@ export default function Spells() {
 
   const handleUseSpell = useCallback((spell: Spell) => {
     if (spell.level === 0) {
-      // Cantrip — no slot to consume
+      // Cantrip — no slot consumed; defer concentration toggle to the damage sheet when present.
+      if (spell.damage_dice) {
+        setPendingSlotLevel(0)
+        setRollDamageSpell(spell)
+        return
+      }
       if (spell.is_concentration) {
         concentrationMutation.mutate(spell.id)
-      }
-      if (spell.damage_dice) {
-        setRollDamageSpell(spell)
       } else {
         haptic.success()
       }
       return
     }
-    // Leveled spell — pick a slot first
+    // Leveled spell — pick a slot first.
     setCastingSpell(spell)
   }, [concentrationMutation])
 
@@ -173,9 +173,16 @@ export default function Spells() {
   }, [])
 
   const handleCastSlot = useCallback((slotLevel: number) => {
-    if (castingSpell) {
-      castMutation.mutate({ spell: castingSpell, slotLevel })
+    if (!castingSpell) return
+    if (castingSpell.damage_dice) {
+      // Defer slot consumption to the damage sheet's Roll button.
+      setPendingSlotLevel(slotLevel)
+      setRollDamageSpell(castingSpell)
+      setCastingSpell(null)
+      return
     }
+    // No damage to roll — consume slot immediately.
+    castMutation.mutate({ spell: castingSpell, slotLevel })
   }, [castingSpell, castMutation])
 
   if (!char) return null
@@ -369,7 +376,11 @@ export default function Spells() {
       <SpellDamageSheet
         charId={charId}
         spell={rollDamageSpell}
-        onClose={() => setRollDamageSpell(null)}
+        slotLevel={pendingSlotLevel}
+        onClose={() => {
+          setRollDamageSpell(null)
+          setPendingSlotLevel(null)
+        }}
       />
 
     </Layout>

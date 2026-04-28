@@ -199,7 +199,9 @@
         "full_damage": "Full",
         "half_damage": "Half",
         "close": "Close",
-        "reroll": "Roll again"
+        "reroll": "Roll again",
+        "no_slots_warning_title": "No slots available",
+        "no_slots_warning_body": "No level {{level}} slots remaining. You cannot recast this spell."
       }
     },
     "slots": {

@@ -199,7 +199,9 @@
         "full_damage": "Pieno",
         "half_damage": "Dimezzato",
         "close": "Chiudi",
-        "reroll": "Nuovo tiro"
+        "reroll": "Nuovo tiro",
+        "no_slots_warning_title": "Nessuno slot disponibile",
+        "no_slots_warning_body": "Non hai più slot di livello {{level}}. Non puoi rilanciare l'incantesimo."
       }
     },
     "slots": {
