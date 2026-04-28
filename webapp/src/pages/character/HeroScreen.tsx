@@ -120,11 +120,19 @@ export default function HeroScreen({ char }: Props) {
               />
             </m.button>
 
-            <HeroXPBar
-              currentXP={char.experience_points}
-              totalClassLevel={char.total_level}
-              onLevelUpReady={() => navigate(`/char/${char.id}/xp`)}
-            />
+            <m.button
+              type="button"
+              onClick={() => { haptic.light(); navigate(`/char/${char.id}/xp`) }}
+              whileTap={{ scale: 0.99 }}
+              className="w-full text-left mt-1"
+              aria-label={t('character.xp.title', { defaultValue: 'Experience' })}
+            >
+              <HeroXPBar
+                currentXP={char.experience_points}
+                totalClassLevel={char.total_level}
+                onLevelUpReady={() => navigate(`/char/${char.id}/xp`)}
+              />
+            </m.button>
           </div>
 
           <m.button

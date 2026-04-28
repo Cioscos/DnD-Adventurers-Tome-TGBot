@@ -1,5 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { m, useMotionValue, animate, useReducedMotion } from 'framer-motion'
+import { useEffect, useRef, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useCharacterStore, type CharacterScreen } from '@/store/characterStore'
 import SwiperDots from './SwiperDots'
@@ -10,55 +9,48 @@ interface Props {
   menu: ReactNode
 }
 
-const VELOCITY_THRESHOLD = 500
-const OFFSET_RATIO = 0.2
-
 export default function CharacterSwiper({ hero, equipment, menu }: Props) {
   const { t } = useTranslation()
   const activeScreen = useCharacterStore((s) => s.activeScreen)
   const setActiveScreen = useCharacterStore((s) => s.setActiveScreen)
-  const reduced = useReducedMotion()
 
-  const containerRef = useRef<HTMLDivElement>(null)
-  const [width, setWidth] = useState(0)
-  const x = useMotionValue(0)
+  const trackRef = useRef<HTMLDivElement>(null)
+  const panelRefs = useRef<Array<HTMLDivElement | null>>([null, null, null])
 
-  // Track viewport width
+  // Programmatic scroll when activeScreen changes (e.g. dot tap, character switch).
   useEffect(() => {
-    if (!containerRef.current) return
-    const ro = new ResizeObserver((entries) => {
-      const w = entries[0]?.contentRect.width ?? 0
-      setWidth(w)
-    })
-    ro.observe(containerRef.current)
-    return () => ro.disconnect()
-  }, [])
+    const track = trackRef.current
+    const target = panelRefs.current[activeScreen]
+    if (!track || !target) return
+    // Avoid feedback loop if we're already at the right offset.
+    if (Math.abs(track.scrollLeft - target.offsetLeft) < 4) return
+    track.scrollTo({ left: target.offsetLeft, behavior: 'smooth' })
+  }, [activeScreen])
 
-  // Sync x to active screen whenever activeScreen or width changes.
+  // Sync activeScreen from native scroll (drag/swipe).
   useEffect(() => {
-    if (width === 0) return
-    const target = -activeScreen * width
-    if (reduced) {
-      x.set(target)
-    } else {
-      animate(x, target, { type: 'spring', stiffness: 320, damping: 32 })
+    const track = trackRef.current
+    if (!track) return
+    let raf: number | null = null
+    const onScroll = () => {
+      if (raf !== null) return
+      raf = requestAnimationFrame(() => {
+        raf = null
+        const w = track.clientWidth
+        if (w === 0) return
+        const idx = Math.round(track.scrollLeft / w)
+        const clamped = Math.max(0, Math.min(2, idx)) as CharacterScreen
+        if (clamped !== activeScreen) {
+          setActiveScreen(clamped)
+        }
+      })
     }
-  }, [activeScreen, width, x, reduced])
-
-  const handleDragEnd = (
-    _e: unknown,
-    info: { offset: { x: number }; velocity: { x: number } },
-  ) => {
-    const offset = info.offset.x
-    const velocity = info.velocity.x
-    let next: CharacterScreen = activeScreen
-    if (velocity < -VELOCITY_THRESHOLD || offset < -width * OFFSET_RATIO) {
-      next = Math.min(2, activeScreen + 1) as CharacterScreen
-    } else if (velocity > VELOCITY_THRESHOLD || offset > width * OFFSET_RATIO) {
-      next = Math.max(0, activeScreen - 1) as CharacterScreen
+    track.addEventListener('scroll', onScroll, { passive: true })
+    return () => {
+      track.removeEventListener('scroll', onScroll)
+      if (raf !== null) cancelAnimationFrame(raf)
     }
-    setActiveScreen(next)
-  }
+  }, [activeScreen, setActiveScreen])
 
   const labels: [string, string, string] = [
     t('character.swiper.screen.hero', { defaultValue: 'Character' }),
@@ -66,21 +58,21 @@ export default function CharacterSwiper({ hero, equipment, menu }: Props) {
     t('character.swiper.screen.menu', { defaultValue: 'Menu' }),
   ]
 
+  const setPanelRef = (idx: number) => (el: HTMLDivElement | null) => {
+    panelRefs.current[idx] = el
+  }
+
   return (
-    <div ref={containerRef} className="relative flex-1 overflow-hidden touch-pan-y">
-      <m.div
-        className="flex h-full"
-        style={{ x, width: width * 3 }}
-        drag="x"
-        dragConstraints={{ left: -2 * width, right: 0 }}
-        dragElastic={0.2}
-        dragMomentum={false}
-        onDragEnd={handleDragEnd}
+    <div className="relative flex-1 min-h-0 flex">
+      <div
+        ref={trackRef}
+        className="flex-1 flex overflow-x-auto overflow-y-hidden snap-x snap-mandatory scroll-smooth scrollbar-hide"
+        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
-        <div style={{ width }} className="h-full overflow-y-auto">{hero}</div>
-        <div style={{ width }} className="h-full overflow-y-auto">{equipment}</div>
-        <div style={{ width }} className="h-full overflow-y-auto">{menu}</div>
-      </m.div>
+        <div ref={setPanelRef(0)} className="snap-center shrink-0 w-full h-full overflow-y-auto">{hero}</div>
+        <div ref={setPanelRef(1)} className="snap-center shrink-0 w-full h-full overflow-y-auto">{equipment}</div>
+        <div ref={setPanelRef(2)} className="snap-center shrink-0 w-full h-full overflow-y-auto">{menu}</div>
+      </div>
       <SwiperDots active={activeScreen} onSelect={setActiveScreen} labels={labels} />
     </div>
   )
