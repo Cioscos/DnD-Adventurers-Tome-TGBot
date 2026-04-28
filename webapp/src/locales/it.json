@@ -595,6 +595,49 @@
       "custom_class_name": "Nome classe",
       "name_placeholder": "Il nome del tuo eroe",
       "hit_die": "Dado vita"
+    },
+    "equipment": {
+      "equipment": "Equipaggiamento",
+      "slots": {
+        "head": "Testa",
+        "neck": "Collo",
+        "cloak": "Mantello",
+        "body": "Corpo",
+        "hands": "Mani",
+        "ring1": "Anello 1",
+        "ring2": "Anello 2",
+        "feet": "Piedi",
+        "main_hand": "Mano principale",
+        "off_hand": "Mano secondaria",
+        "ammunition": "Munizioni"
+      },
+      "actions": {
+        "details": "Dettagli",
+        "replace": "Sostituisci",
+        "unequip": "Rimuovi",
+        "equip": "Equipaggia"
+      },
+      "picker": {
+        "title": "Equipaggia",
+        "empty": "Nessun oggetto compatibile nell'inventario."
+      },
+      "summary": {
+        "spell_slots": "Slot incantesimi",
+        "encumbrance": "Carico"
+      },
+      "progression": {
+        "title": "Progressione",
+        "tap_full_table": "Tocca per tabella completa",
+        "no_data": "Dati di progressione non disponibili",
+        "current_level": "Livello attuale"
+      }
+    },
+    "swiper": {
+      "screen": {
+        "hero": "Personaggio",
+        "equipment": "Equipaggiamento",
+        "menu": "Menu"
+      }
     }
   },
   "dnd": {

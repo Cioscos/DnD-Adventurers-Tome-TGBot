@@ -595,6 +595,49 @@
       "custom_class_name": "Class name",
       "name_placeholder": "Your hero's name",
       "hit_die": "Hit die"
+    },
+    "equipment": {
+      "equipment": "Equipment",
+      "slots": {
+        "head": "Head",
+        "neck": "Neck",
+        "cloak": "Cloak",
+        "body": "Body",
+        "hands": "Hands",
+        "ring1": "Ring 1",
+        "ring2": "Ring 2",
+        "feet": "Feet",
+        "main_hand": "Main hand",
+        "off_hand": "Off hand",
+        "ammunition": "Ammunition"
+      },
+      "actions": {
+        "details": "Details",
+        "replace": "Replace",
+        "unequip": "Unequip",
+        "equip": "Equip"
+      },
+      "picker": {
+        "title": "Equip",
+        "empty": "No compatible items in inventory."
+      },
+      "summary": {
+        "spell_slots": "Spell slots",
+        "encumbrance": "Carry"
+      },
+      "progression": {
+        "title": "Progression",
+        "tap_full_table": "Tap for full table",
+        "no_data": "Progression data not available",
+        "current_level": "Current level"
+      }
+    },
+    "swiper": {
+      "screen": {
+        "hero": "Character",
+        "equipment": "Equipment",
+        "menu": "Menu"
+      }
     }
   },
   "dnd": {
