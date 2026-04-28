@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m, AnimatePresence } from 'framer-motion'
-import { Plus, Weight } from 'lucide-react'
+import { Plus, Weight, ChevronRight } from 'lucide-react'
 import { GiKnapsack as Backpack } from 'react-icons/gi'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
@@ -31,6 +31,16 @@ export default function Inventory() {
   const [deleteTarget, setDeleteTarget] = useState<number | null>(null)
   const [attackResult, setAttackResult] = useState<WeaponAttackResult | null>(null)
   const [expanded, setExpanded] = useState<number | null>(null)
+  const [collapsedTypes, setCollapsedTypes] = useState<Set<string>>(new Set())
+
+  const toggleType = (type: string) => {
+    setCollapsedTypes((prev) => {
+      const next = new Set(prev)
+      if (next.has(type)) next.delete(type)
+      else next.add(type)
+      return next
+    })
+  }
 
   const { data: char } = useQuery({
     queryKey: ['character', charId],
@@ -128,14 +138,24 @@ export default function Inventory() {
   if (!char) return null
 
   const items: Item[] = char.items ?? []
-  // Sort: equipped first, then alphabetical
-  const sortedItems = [...items].sort((a, b) => {
-    if (a.is_equipped !== b.is_equipped) return a.is_equipped ? -1 : 1
-    return a.name.localeCompare(b.name)
-  })
   const totalWeight = items.reduce((sum, i) => sum + i.weight * i.quantity, 0)
   const capacityPct = char.carry_capacity > 0 ? Math.min(100, (totalWeight / char.carry_capacity) * 100) : 0
   const overload = totalWeight > char.carry_capacity
+
+  const TYPE_ORDER: string[] = ['weapon', 'armor', 'shield', 'consumable', 'tool', 'accessory', 'gear', 'potion', 'scroll', 'generic', 'other']
+  const grouped = items.reduce<Record<string, Item[]>>((acc, item) => {
+    const key = TYPE_ORDER.includes(item.item_type) ? item.item_type : 'other'
+    if (!acc[key]) acc[key] = []
+    acc[key].push(item)
+    return acc
+  }, {})
+  for (const k of Object.keys(grouped)) {
+    grouped[k].sort((a, b) => {
+      if (a.is_equipped !== b.is_equipped) return a.is_equipped ? -1 : 1
+      return a.name.localeCompare(b.name)
+    })
+  }
+  const orderedTypes = TYPE_ORDER.filter((t) => grouped[t]?.length)
 
   return (
     <Layout title={t('character.inventory.title')} backTo={`/char/${charId}`} group="equipment" page="inventory">
@@ -153,9 +173,9 @@ export default function Inventory() {
         </Button>
       </div>
 
-      {/* Carry capacity gauge */}
-      <Surface variant="elevated" className="!py-2.5">
-        <div className="flex items-center gap-2 mb-1.5">
+      {/* Carry capacity badge (no bar) */}
+      <Surface variant="elevated" className="!py-2">
+        <div className="flex items-center gap-2">
           <Weight size={13} className="text-dnd-gold-dim" />
           <p className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-gold-dim flex-1">
             {t('character.inventory.carry_short', { defaultValue: 'Carico' })}
@@ -164,20 +184,6 @@ export default function Inventory() {
             tone={overload ? 'crimson' : capacityPct > 70 ? 'amber' : 'default'}
             size="sm"
             value={`${totalWeight.toFixed(1)}/${char.carry_capacity}`}
-          />
-        </div>
-        <div className="h-1.5 rounded-full bg-dnd-ink/60 overflow-hidden">
-          <m.div
-            className={`h-full rounded-full ${
-              overload
-                ? 'bg-gradient-ember'
-                : capacityPct > 70
-                  ? 'bg-gradient-to-r from-dnd-amber to-dnd-gold-bright'
-                  : 'bg-gradient-to-r from-dnd-emerald-deep to-dnd-emerald-bright'
-            }`}
-            initial={false}
-            animate={{ width: `${capacityPct}%` }}
-            transition={spring.drift}
           />
         </div>
       </Surface>
@@ -190,24 +196,61 @@ export default function Inventory() {
       )}
 
       <ScrollArea>
-        <div className="space-y-2">
-          {sortedItems.map((item) => (
-            <m.div key={item.id} layout transition={spring.drift}>
-              <InventoryItem
-                item={item}
-                isExpanded={expanded === item.id}
-                onToggle={() => setExpanded(expanded === item.id ? null : item.id)}
-                onEquipToggle={() => toggleEquip.mutate({ itemId: item.id, equipped: !item.is_equipped })}
-                onQuantityChange={(delta) => updateQty.mutate({ itemId: item.id, quantity: item.quantity + delta })}
-                onAttack={() => attackMutation.mutate(item.id)}
-                onEdit={() => handleEdit(item)}
-                onDelete={() => setDeleteTarget(item.id)}
-                equipPending={toggleEquip.isPending}
-                attackPending={attackMutation.isPending}
-              />
-            </m.div>
-          ))}
-        </div>
+        {orderedTypes.map((type) => {
+          const groupItems = grouped[type]
+          const isCollapsed = collapsedTypes.has(type)
+          return (
+            <div key={type} className="mb-4">
+              <m.button
+                type="button"
+                onClick={() => toggleType(type)}
+                className="sticky z-[5] -mx-4 w-[calc(100%+2rem)] px-5 py-2 flex items-center gap-2 bg-dnd-bg/95 backdrop-blur-sm border-b border-dnd-border/40 text-left"
+                style={{ top: '68px' }}
+                aria-expanded={!isCollapsed}
+              >
+                <ChevronRight
+                  size={14}
+                  className={`text-dnd-gold-bright transition-transform ${!isCollapsed ? 'rotate-90' : ''}`}
+                />
+                <span className="font-cinzel uppercase tracking-widest text-xs text-dnd-gold-bright flex-1">
+                  {t(`character.inventory.types.${type}`)}
+                </span>
+                <span className="text-[10px] text-dnd-text-muted font-mono">
+                  · {groupItems.length}
+                </span>
+              </m.button>
+              <AnimatePresence>
+                {!isCollapsed && (
+                  <m.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="space-y-2 mt-2">
+                      {groupItems.map((item) => (
+                        <m.div key={item.id} layout transition={spring.drift}>
+                          <InventoryItem
+                            item={item}
+                            isExpanded={expanded === item.id}
+                            onToggle={() => setExpanded(expanded === item.id ? null : item.id)}
+                            onEquipToggle={() => toggleEquip.mutate({ itemId: item.id, equipped: !item.is_equipped })}
+                            onQuantityChange={(delta) => updateQty.mutate({ itemId: item.id, quantity: item.quantity + delta })}
+                            onAttack={() => attackMutation.mutate(item.id)}
+                            onEdit={() => handleEdit(item)}
+                            onDelete={() => setDeleteTarget(item.id)}
+                            equipPending={toggleEquip.isPending}
+                            attackPending={attackMutation.isPending}
+                          />
+                        </m.div>
+                      ))}
+                    </div>
+                  </m.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )
+        })}
       </ScrollArea>
 
       {showAdd && (

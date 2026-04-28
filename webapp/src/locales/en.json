@@ -160,8 +160,6 @@
       "add": "Add spell",
       "forget": "Forget",
       "use": "Use",
-      "cast": "Cast",
-      "cast_cantrip": "Cast (no slot)",
       "cast_slot_title": "Choose slot level",
       "pin": "Pin",
       "edit": "Edit",
@@ -201,7 +199,9 @@
         "full_damage": "Full",
         "half_damage": "Half",
         "close": "Close",
-        "reroll": "Roll again"
+        "reroll": "Roll again",
+        "no_slots_warning_title": "No slots available",
+        "no_slots_warning_body": "No level {{level}} slots remaining. You cannot recast this spell."
       }
     },
     "slots": {
@@ -650,6 +650,12 @@
     "send": "Send",
     "leave": "Leave session",
     "close": "Close session",
+    "grant_item": {
+      "button": "Hand over item",
+      "recipients_label": "Recipients",
+      "confirm": "Deliver",
+      "no_players": "No players in this session"
+    },
     "confirm_leave": "Leave the session?",
     "confirm_close": "Close the session for everyone? This cannot be undone.",
     "closed_notice": "This session has been closed",

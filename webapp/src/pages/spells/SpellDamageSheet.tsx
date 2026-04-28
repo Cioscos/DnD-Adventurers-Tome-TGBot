@@ -1,14 +1,13 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { m } from 'framer-motion'
-import { Minus, Plus } from 'lucide-react'
 import {
   GiPerspectiveDiceSixFacesRandom as Dices, GiCrossedSwords as Swords,
   GiCheckedShield as Shield,
 } from 'react-icons/gi'
 import { api } from '@/api/client'
-import type { Spell, RollDamageRequest, RollDamageResult } from '@/types'
+import type { Spell, RollDamageRequest, RollDamageResult, CharacterFull } from '@/types'
 import Sheet from '@/components/ui/Sheet'
 import { haptic } from '@/auth/telegram'
 import { useDiceAnimation } from '@/dice/useDiceAnimation'
@@ -32,26 +31,31 @@ function parseDice(notation: string | null | undefined): { count: number; sides:
 interface SpellDamageSheetProps {
   charId: number
   spell: Spell | null
+  slotLevel: number | null
   onClose: () => void
 }
 
 export default function SpellDamageSheet({
   charId,
   spell,
+  slotLevel,
   onClose,
 }: SpellDamageSheetProps) {
   const { t } = useTranslation()
-  const [castingLevel, setCastingLevel] = useState(spell?.level ?? 1)
+  const qc = useQueryClient()
   const [extraDice, setExtraDice] = useState('')
   const [isCritical, setIsCritical] = useState(false)
   const [result, setResult] = useState<RollDamageResult | null>(null)
+  const [slotConsumed, setSlotConsumed] = useState(false)
+  const [showNoSlotWarning, setShowNoSlotWarning] = useState(false)
 
   useEffect(() => {
     if (spell) {
-      setCastingLevel(spell.level)
       setExtraDice('')
       setIsCritical(false)
       setResult(null)
+      setSlotConsumed(false)
+      setShowNoSlotWarning(false)
     }
   }, [spell?.id])
 
@@ -59,9 +63,27 @@ export default function SpellDamageSheet({
   const animate3d = useDiceSettings((s) => s.animate3d)
   const reducedMotion = useReducedMotion()
 
+  const effectiveCastingLevel = (slotLevel && slotLevel > 0) ? slotLevel : (spell?.level ?? 0)
+
   const mutation = useMutation({
     mutationFn: async (body: RollDamageRequest) => {
       if (!spell) throw new Error('no spell')
+
+      // Consume the spell slot only on the first successful roll for leveled spells.
+      if (slotLevel != null && slotLevel >= 1 && !slotConsumed) {
+        let updated: CharacterFull = await api.spells.use(charId, spell.id, slotLevel)
+        if (spell.is_concentration) {
+          updated = await api.spells.updateConcentration(charId, spell.id)
+        }
+        qc.setQueryData(['character', charId], updated)
+        setSlotConsumed(true)
+      } else if (slotLevel === 0 && spell.level === 0 && spell.is_concentration && !slotConsumed) {
+        // Cantrip with concentration: still flip concentration on first roll, no slot consumed.
+        const updated = await api.spells.updateConcentration(charId, spell.id)
+        qc.setQueryData(['character', charId], updated)
+        setSlotConsumed(true)
+      }
+
       const useAnimation = animate3d && !reducedMotion
       let main_rolls: number[] | undefined
       let extra_rolls: number[] | undefined
@@ -109,12 +131,11 @@ export default function SpellDamageSheet({
     spell.attack_save === null ||
     spell.attack_save === undefined ||
     spell.attack_save === ''
-  const maxLevel = 9
-  const minLevel = spell.level
+  const isCantrip = spell.level === 0
 
   const handleRoll = () => {
     mutation.mutate({
-      casting_level: castingLevel,
+      casting_level: effectiveCastingLevel,
       extra_dice: extraDice || undefined,
       is_critical: isCritical,
     })
@@ -124,7 +145,28 @@ export default function SpellDamageSheet({
     setResult(null)
     setExtraDice('')
     setIsCritical(false)
-    setCastingLevel(spell.level)
+  }
+
+  const handleReroll = () => {
+    if (slotLevel == null || slotLevel === 0) {
+      // Cantrip: no slot involved.
+      reset()
+      return
+    }
+    const character = qc.getQueryData<CharacterFull>(['character', charId])
+    const slot = character?.spell_slots?.find((s) => s.level === slotLevel)
+    const hasSlot = !!slot && slot.available > 0
+    if (hasSlot) {
+      // Allow the next roll to consume a fresh slot.
+      setSlotConsumed(false)
+      reset()
+    } else {
+      setShowNoSlotWarning(true)
+    }
+  }
+
+  const handleCloseNoSlotWarning = () => {
+    setShowNoSlotWarning(false)
   }
 
   const handleClose = () => {
@@ -140,32 +182,16 @@ export default function SpellDamageSheet({
     >
       {!result ? (
         <div className="space-y-4 p-1">
-          <div>
-            <label className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim">
-              {t('character.spells.roll_damage.casting_level')}
-            </label>
-            <div className="mt-1 flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setCastingLevel((v) => Math.max(minLevel, v - 1))}
-                className="w-8 h-8 rounded-md bg-dnd-surface border border-dnd-border"
-                aria-label={t('character.spells.roll_damage.decrease_level')}
-              >
-                <Minus size={14} className="mx-auto" />
-              </button>
-              <div className="flex-1 text-center font-display text-xl font-bold">
-                {castingLevel}
+          {!isCantrip && (
+            <div>
+              <label className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim">
+                {t('character.spells.roll_damage.casting_level')}
+              </label>
+              <div className="mt-1 text-center font-display text-xl font-bold">
+                {t('character.slots.level', { level: effectiveCastingLevel })}
               </div>
-              <button
-                type="button"
-                onClick={() => setCastingLevel((v) => Math.min(maxLevel, v + 1))}
-                className="w-8 h-8 rounded-md bg-dnd-surface border border-dnd-border"
-                aria-label={t('character.spells.roll_damage.increase_level')}
-              >
-                <Plus size={14} className="mx-auto" />
-              </button>
             </div>
-          </div>
+          )}
 
           <div>
             <label className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim">
@@ -240,7 +266,7 @@ export default function SpellDamageSheet({
           <div className="flex gap-2">
             <button
               type="button"
-              onClick={reset}
+              onClick={handleReroll}
               className="flex-1 px-3 py-2 rounded-md bg-dnd-surface border border-dnd-border text-sm"
             >
               {t('character.spells.roll_damage.reroll')}
@@ -249,6 +275,26 @@ export default function SpellDamageSheet({
               type="button"
               onClick={handleClose}
               className="flex-1 px-3 py-2 rounded-md bg-dnd-surface border border-dnd-border text-sm"
+            >
+              {t('character.spells.roll_damage.close')}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showNoSlotWarning && slotLevel != null && slotLevel >= 1 && (
+        <div className="fixed inset-0 bg-black/60 flex items-end justify-center z-[60] p-4">
+          <div className="w-full max-w-md rounded-2xl bg-dnd-surface-elevated p-4 space-y-3">
+            <h3 className="font-semibold font-cinzel text-dnd-gold">
+              {t('character.spells.roll_damage.no_slots_warning_title')}
+            </h3>
+            <p className="text-sm text-dnd-text-secondary">
+              {t('character.spells.roll_damage.no_slots_warning_body', { level: slotLevel })}
+            </p>
+            <button
+              type="button"
+              onClick={handleCloseNoSlotWarning}
+              className="w-full px-3 py-2 rounded-md bg-dnd-surface border border-dnd-border text-sm"
             >
               {t('character.spells.roll_damage.close')}
             </button>

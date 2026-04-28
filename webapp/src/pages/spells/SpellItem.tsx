@@ -4,7 +4,7 @@ import { Clock, Timer, Pencil, Trash2, Ban } from 'lucide-react'
 import {
   GiCrosshair as Crosshair, GiPotionBall as FlaskConical,
   GiCrossedSwords as Swords, GiCheckedShield as Shield,
-  GiSparkles as Sparkles, GiPerspectiveDiceSixFacesRandom as Dices,
+  GiSparkles as Sparkles,
 } from 'react-icons/gi'
 import type { Spell } from '@/types'
 
@@ -12,28 +12,24 @@ interface SpellItemProps {
   spell: Spell
   isExpanded: boolean
   onToggle: () => void
-  onCast: () => void
-  onCastCantrip: () => void
+  onUse: () => void
   onConcentrationToggle: () => void
   onEdit: () => void
   onRemove: () => void
   concentratingSpellId: number | null
-  castCantripPending: boolean
-  onRollDamage?: (spell: Spell) => void
+  usePending: boolean
 }
 
 function SpellItemInner({
   spell,
   isExpanded,
   onToggle,
-  onCast,
-  onCastCantrip,
+  onUse,
   onConcentrationToggle,
   onEdit,
   onRemove,
   concentratingSpellId,
-  castCantripPending,
-  onRollDamage,
+  usePending,
 }: SpellItemProps) {
   const { t } = useTranslation()
   const isConcentrating = concentratingSpellId === spell.id
@@ -121,28 +117,16 @@ function SpellItemInner({
 
           {/* Action buttons */}
           <div className="flex gap-2 flex-wrap border-t border-dnd-gold-dim/10 pt-2">
-            {spell.level === 0 ? (
-              <button
-                onClick={onCastCantrip}
-                disabled={castCantripPending}
-                className="flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg
-                           bg-dnd-success/20 text-dnd-success-text border border-dnd-success/30
-                           active:opacity-60 disabled:opacity-30"
-              >
-                <Sparkles size={12} />
-                {t('character.spells.cast_cantrip')}
-              </button>
-            ) : (
-              <button
-                onClick={onCast}
-                className="flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg
-                           bg-dnd-success/20 text-dnd-success-text border border-dnd-success/30
-                           active:opacity-60"
-              >
-                <Sparkles size={12} />
-                {t('character.spells.cast')}
-              </button>
-            )}
+            <button
+              onClick={onUse}
+              disabled={usePending}
+              className="flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg
+                         bg-dnd-success/20 text-dnd-success-text border border-dnd-success/30
+                         active:opacity-60 disabled:opacity-30"
+            >
+              <Sparkles size={12} />
+              {t('character.spells.use')}
+            </button>
 
             {spell.is_concentration && (
               <button
@@ -158,16 +142,6 @@ function SpellItemInner({
                 {isConcentrating
                   ? t('character.spells.stop_concentration')
                   : t('character.spells.concentration')}
-              </button>
-            )}
-            {isExpanded && spell.damage_dice && onRollDamage && (
-              <button
-                type="button"
-                onClick={() => onRollDamage(spell)}
-                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md bg-dnd-surface border border-dnd-gold-dim/30 text-xs hover:border-dnd-gold transition-colors"
-              >
-                <Dices size={14} className="text-dnd-gold-bright" />
-                {t('character.spells.roll_damage.button')}
               </button>
             )}
             <button

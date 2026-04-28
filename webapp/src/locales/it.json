@@ -160,8 +160,6 @@
       "add": "Aggiungi incantesimo",
       "forget": "Dimentica",
       "use": "Usa",
-      "cast": "Lancia",
-      "cast_cantrip": "Lancia (trucchetto)",
       "cast_slot_title": "Scegli slot",
       "pin": "Fissa",
       "edit": "Modifica",
@@ -201,7 +199,9 @@
         "full_damage": "Pieno",
         "half_damage": "Dimezzato",
         "close": "Chiudi",
-        "reroll": "Nuovo tiro"
+        "reroll": "Nuovo tiro",
+        "no_slots_warning_title": "Nessuno slot disponibile",
+        "no_slots_warning_body": "Non hai più slot di livello {{level}}. Non puoi rilanciare l'incantesimo."
       }
     },
     "slots": {
@@ -650,6 +650,12 @@
     "send": "Invia",
     "leave": "Esci dalla sessione",
     "close": "Chiudi sessione",
+    "grant_item": {
+      "button": "Consegna oggetto",
+      "recipients_label": "Destinatari",
+      "confirm": "Consegna",
+      "no_players": "Nessun giocatore in sessione"
+    },
     "confirm_leave": "Vuoi davvero uscire dalla sessione?",
     "confirm_close": "Chiudere la sessione per tutti? L'azione non è reversibile.",
     "closed_notice": "La sessione è stata chiusa",

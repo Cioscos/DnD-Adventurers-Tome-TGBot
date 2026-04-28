@@ -158,7 +158,7 @@ export default function Identity() {
         {t('character.identity.physicality', { defaultValue: 'Fisicità' })}
       </SectionDivider>
 
-      <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
         <Surface variant="elevated" className="!p-3">
           <Input label={t('character.identity.race')} value={draft.race} onChange={set('race')} placeholder={t('character.identity.placeholder_race')} />
         </Surface>
@@ -168,11 +168,10 @@ export default function Identity() {
         <Surface variant="elevated" className="!p-3">
           <Input label={t('character.identity.alignment')} value={draft.alignment} onChange={set('alignment')} placeholder={t('character.identity.placeholder_alignment')} />
         </Surface>
+        <Surface variant="elevated" className="!p-3">
+          <Input label={t('character.identity.speed')} type="number" min={0} value={draft.speed} onChange={set('speed')} inputMode="numeric" />
+        </Surface>
       </div>
-
-      <Surface variant="elevated" className="!p-3 md:max-w-xs">
-        <Input label={t('character.identity.speed')} type="number" min={0} value={draft.speed} onChange={set('speed')} inputMode="numeric" />
-      </Surface>
 
       {/* Personality section */}
       <SectionDivider icon={<Feather size={11} />} align="center">

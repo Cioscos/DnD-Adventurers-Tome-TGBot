@@ -30,6 +30,7 @@ export default function Spells() {
   const [expanded, setExpanded] = useState<number | null>(null)
   const [castingSpell, setCastingSpell] = useState<Spell | null>(null)
   const [rollDamageSpell, setRollDamageSpell] = useState<Spell | null>(null)
+  const [pendingSlotLevel, setPendingSlotLevel] = useState<number | null>(null)
   const [collapsedLevels, setCollapsedLevels] = useState<Set<number>>(new Set())
 
   const toggleLevel = (level: number) => {
@@ -112,11 +113,12 @@ export default function Spells() {
     mutationFn: async ({ spell, slotLevel }: { spell: Spell; slotLevel: number }) => {
       const updated = await api.spells.use(charId, spell.id, slotLevel)
       if (spell.is_concentration) {
-        return api.spells.updateConcentration(charId, spell.id)
+        const conc = await api.spells.updateConcentration(charId, spell.id)
+        return { updated: conc, spell }
       }
-      return updated
+      return { updated, spell }
     },
-    onSuccess: (updated) => {
+    onSuccess: ({ updated }) => {
       qc.setQueryData(['character', charId], updated)
       setCastingSpell(null)
       haptic.success()
@@ -133,18 +135,24 @@ export default function Spells() {
     },
   })
 
-  const castCantrip = useMutation({
-    mutationFn: async (spell: Spell) => {
-      if (spell.is_concentration) {
-        return api.spells.updateConcentration(charId, spell.id)
+  const handleUseSpell = useCallback((spell: Spell) => {
+    if (spell.level === 0) {
+      // Cantrip — no slot consumed; defer concentration toggle to the damage sheet when present.
+      if (spell.damage_dice) {
+        setPendingSlotLevel(0)
+        setRollDamageSpell(spell)
+        return
       }
-      return Promise.resolve(char!)
-    },
-    onSuccess: (updated) => {
-      qc.setQueryData(['character', charId], updated)
-      haptic.success()
-    },
-  })
+      if (spell.is_concentration) {
+        concentrationMutation.mutate(spell.id)
+      } else {
+        haptic.success()
+      }
+      return
+    }
+    // Leveled spell — pick a slot first.
+    setCastingSpell(spell)
+  }, [concentrationMutation])
 
   const handleFormSubmit = useCallback((data: SpellFormData) => {
     if (editingSpell) {
@@ -165,9 +173,16 @@ export default function Spells() {
   }, [])
 
   const handleCastSlot = useCallback((slotLevel: number) => {
-    if (castingSpell) {
-      castMutation.mutate({ spell: castingSpell, slotLevel })
+    if (!castingSpell) return
+    if (castingSpell.damage_dice) {
+      // Defer slot consumption to the damage sheet's Roll button.
+      setPendingSlotLevel(slotLevel)
+      setRollDamageSpell(castingSpell)
+      setCastingSpell(null)
+      return
     }
+    // No damage to roll — consume slot immediately.
+    castMutation.mutate({ spell: castingSpell, slotLevel })
   }, [castingSpell, castMutation])
 
   if (!char) return null
@@ -320,16 +335,14 @@ export default function Spells() {
                           spell={spell}
                           isExpanded={expanded === spell.id}
                           onToggle={() => setExpanded(expanded === spell.id ? null : spell.id)}
-                          onCast={() => setCastingSpell(spell)}
-                          onCastCantrip={() => castCantrip.mutate(spell)}
+                          onUse={() => handleUseSpell(spell)}
                           onConcentrationToggle={() =>
                             concentrationMutation.mutate(concentratingId === spell.id ? null : spell.id)
                           }
                           onEdit={() => handleEditSpell(spell)}
                           onRemove={() => removeMutation.mutate(spell.id)}
                           concentratingSpellId={concentratingId ?? null}
-                          castCantripPending={castCantrip.isPending}
-                          onRollDamage={setRollDamageSpell}
+                          usePending={castMutation.isPending || concentrationMutation.isPending}
                         />
                       ))}
                     </div>
@@ -363,7 +376,11 @@ export default function Spells() {
       <SpellDamageSheet
         charId={charId}
         spell={rollDamageSpell}
-        onClose={() => setRollDamageSpell(null)}
+        slotLevel={pendingSlotLevel}
+        onClose={() => {
+          setRollDamageSpell(null)
+          setPendingSlotLevel(null)
+        }}
       />
 
     </Layout>

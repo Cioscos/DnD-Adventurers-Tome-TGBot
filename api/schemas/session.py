@@ -6,6 +6,8 @@ from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, Field
 
+from api.schemas.item import ItemCreate
+
 
 class SessionCreateRequest(BaseModel):
     title: Optional[str] = Field(default=None, max_length=120)
@@ -142,3 +144,21 @@ class SessionFeedItem(BaseModel):
 class SessionFeedResponse(BaseModel):
     items: list[SessionFeedItem]
     has_more: bool = False
+
+
+class GMGrantItemRequest(BaseModel):
+    """GM action: grant an item to one or more session players."""
+
+    recipient_user_ids: list[int] = Field(min_length=1)
+    item: ItemCreate
+
+
+class GMGrantItemResult(BaseModel):
+    user_id: int
+    character_id: Optional[int] = None
+    item_id: Optional[int] = None
+    status: str  # "ok" | "not_a_player" | "no_character" | "character_not_found"
+
+
+class GMGrantItemResponse(BaseModel):
+    results: list[GMGrantItemResult]
