@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
-import { LogOut, User } from 'lucide-react'
+import { LogOut, User, Gift } from 'lucide-react'
 import {
   GiCrown as Crown, GiHeartPlus as Heart, GiCheckedShield as Shield,
   GiSparkles as Sparkles, GiSkullCrossedBones as XOctagon,
@@ -20,6 +20,7 @@ import type { CharacterLiveSnapshot, SessionParticipant } from '@/types'
 import { haptic, telegramConfirm } from '@/auth/telegram'
 import ParticipantIdentitySheet from '@/pages/session/ParticipantIdentitySheet'
 import SessionFeed from '@/pages/session/SessionFeed'
+import GrantItemModal from '@/pages/session/GrantItemModal'
 
 function conditionEntries(
   conditions: Record<string, unknown> | null | undefined,
@@ -189,6 +190,7 @@ export default function SessionRoom() {
   const qc = useQueryClient()
   const [identityTarget, setIdentityTarget] = useState<SessionParticipant | null>(null)
   const [whisperTarget, setWhisperTarget] = useState<SessionParticipant | null>(null)
+  const [showGrantItem, setShowGrantItem] = useState(false)
 
   const { data: meInfo } = useQuery({
     queryKey: ['auth-me'],
@@ -349,6 +351,18 @@ export default function SessionRoom() {
         })}
       </div>
 
+      {amGm && (
+        <Button
+          variant="secondary"
+          size="md"
+          fullWidth
+          icon={<Gift size={16} />}
+          onClick={() => setShowGrantItem(true)}
+        >
+          {t('session.grant_item.button', { defaultValue: 'Consegna oggetto' })}
+        </Button>
+      )}
+
       <SectionDivider>
         {t('session.chat_and_history')}
       </SectionDivider>
@@ -385,6 +399,15 @@ export default function SessionRoom() {
         onClose={() => setIdentityTarget(null)}
         onStartWhisper={(target) => setWhisperTarget(target)}
       />
+
+      {showGrantItem && amGm && (
+        <GrantItemModal
+          sessionId={live.id}
+          participants={live.participants}
+          gmUserId={gmUserId}
+          onClose={() => setShowGrantItem(false)}
+        />
+      )}
     </Layout>
   )
 }

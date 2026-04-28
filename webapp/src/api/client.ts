@@ -37,6 +37,27 @@ export type RollResult = {
   description?: string
 }
 
+export type GrantItemPayload = {
+  name: string
+  description?: string
+  weight: number
+  quantity: number
+  item_type: string
+  item_metadata?: Record<string, unknown> | null
+  is_equipped?: boolean
+}
+
+export type GMGrantItemResult = {
+  user_id: number
+  character_id: number | null
+  item_id: number | null
+  status: 'ok' | 'not_a_player' | 'no_character' | 'character_not_found'
+}
+
+export type GMGrantItemResponse = {
+  results: GMGrantItemResult[]
+}
+
 export type WeaponAttackResult = {
   weapon_name: string
   to_hit_die: number
@@ -532,5 +553,13 @@ export const api = {
         `/sessions/${encodeURIComponent(code)}/feed${q ? `?${q}` : ''}`
       )
     },
+    grantItem: (
+      sessionId: number,
+      payload: { recipient_user_ids: number[]; item: GrantItemPayload },
+    ) =>
+      request<GMGrantItemResponse>(`/sessions/${sessionId}/gm/grant_item`, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }),
   },
 }

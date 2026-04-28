@@ -112,14 +112,18 @@ export default function Spells() {
     mutationFn: async ({ spell, slotLevel }: { spell: Spell; slotLevel: number }) => {
       const updated = await api.spells.use(charId, spell.id, slotLevel)
       if (spell.is_concentration) {
-        return api.spells.updateConcentration(charId, spell.id)
+        const conc = await api.spells.updateConcentration(charId, spell.id)
+        return { updated: conc, spell }
       }
-      return updated
+      return { updated, spell }
     },
-    onSuccess: (updated) => {
+    onSuccess: ({ updated, spell }) => {
       qc.setQueryData(['character', charId], updated)
       setCastingSpell(null)
       haptic.success()
+      if (spell.damage_dice) {
+        setRollDamageSpell(spell)
+      }
     },
     onError: () => haptic.error(),
   })
@@ -133,18 +137,22 @@ export default function Spells() {
     },
   })
 
-  const castCantrip = useMutation({
-    mutationFn: async (spell: Spell) => {
+  const handleUseSpell = useCallback((spell: Spell) => {
+    if (spell.level === 0) {
+      // Cantrip — no slot to consume
       if (spell.is_concentration) {
-        return api.spells.updateConcentration(charId, spell.id)
+        concentrationMutation.mutate(spell.id)
       }
-      return Promise.resolve(char!)
-    },
-    onSuccess: (updated) => {
-      qc.setQueryData(['character', charId], updated)
-      haptic.success()
-    },
-  })
+      if (spell.damage_dice) {
+        setRollDamageSpell(spell)
+      } else {
+        haptic.success()
+      }
+      return
+    }
+    // Leveled spell — pick a slot first
+    setCastingSpell(spell)
+  }, [concentrationMutation])
 
   const handleFormSubmit = useCallback((data: SpellFormData) => {
     if (editingSpell) {
@@ -320,16 +328,14 @@ export default function Spells() {
                           spell={spell}
                           isExpanded={expanded === spell.id}
                           onToggle={() => setExpanded(expanded === spell.id ? null : spell.id)}
-                          onCast={() => setCastingSpell(spell)}
-                          onCastCantrip={() => castCantrip.mutate(spell)}
+                          onUse={() => handleUseSpell(spell)}
                           onConcentrationToggle={() =>
                             concentrationMutation.mutate(concentratingId === spell.id ? null : spell.id)
                           }
                           onEdit={() => handleEditSpell(spell)}
                           onRemove={() => removeMutation.mutate(spell.id)}
                           concentratingSpellId={concentratingId ?? null}
-                          castCantripPending={castCantrip.isPending}
-                          onRollDamage={setRollDamageSpell}
+                          usePending={castMutation.isPending || concentrationMutation.isPending}
                         />
                       ))}
                     </div>

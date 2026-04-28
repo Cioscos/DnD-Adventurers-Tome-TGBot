@@ -7,6 +7,7 @@ for HP/AC/conditions snapshots and `/messages` for the in-session chat.
 
 from __future__ import annotations
 
+import json
 import logging
 from datetime import datetime
 from typing import Annotated, Optional
@@ -22,6 +23,9 @@ from api.schemas.session import (
     CharacterLiveSnapshot,
     GameSessionLiveRead,
     GameSessionRead,
+    GMGrantItemRequest,
+    GMGrantItemResponse,
+    GMGrantItemResult,
     IdentityView,
     SessionCreateRequest,
     SessionFeedItem,
@@ -34,6 +38,7 @@ from core.db.models import (
     Character,
     CharacterHistory,
     GameSession,
+    Item,
     SessionMessage,
     SessionParticipant,
     SessionRole,
@@ -619,6 +624,107 @@ async def get_participant_identity(
         flaws=(personality.get("flaws") or None) if show_private else None,
         show_private=show_private,
     )
+
+
+@router.post(
+    "/{session_id}/gm/grant_item",
+    response_model=GMGrantItemResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def gm_grant_item(
+    session_id: int,
+    body: GMGrantItemRequest,
+    user_id: Annotated[int, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> GMGrantItemResponse:
+    """GM-only: deliver a freshly created item to one or more session players.
+
+    Creates the item in each recipient's inventory and posts a private whisper
+    in the session feed. Players without an associated character are skipped.
+    """
+    session_obj = await _load_session(session_id, db)
+    if user_id != session_obj.gm_user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the Game Master can grant items",
+        )
+    if session_obj.status != SessionStatus.ACTIVE:
+        raise HTTPException(status_code=status.HTTP_410_GONE, detail="Session is closed")
+
+    metadata_str = json.dumps(body.item.item_metadata) if body.item.item_metadata else None
+    now_iso = _now()
+    results: list[GMGrantItemResult] = []
+
+    for rid in body.recipient_user_ids:
+        participant = next((p for p in session_obj.participants if p.user_id == rid), None)
+        if participant is None or participant.role != SessionRole.PLAYER:
+            results.append(GMGrantItemResult(user_id=rid, status="not_a_player"))
+            continue
+        if participant.character_id is None:
+            results.append(GMGrantItemResult(user_id=rid, status="no_character"))
+            continue
+
+        char_res = await db.execute(
+            select(Character)
+            .options(selectinload(Character.items))
+            .where(Character.id == participant.character_id)
+        )
+        char = char_res.scalar_one_or_none()
+        if char is None:
+            results.append(GMGrantItemResult(user_id=rid, status="character_not_found"))
+            continue
+
+        granted_item_id: Optional[int] = None
+        merged = False
+        if body.item.item_type == "generic":
+            existing = next(
+                (it for it in char.items if it.item_type == "generic" and it.name == body.item.name),
+                None,
+            )
+            if existing is not None:
+                existing.quantity += body.item.quantity
+                granted_item_id = existing.id
+                merged = True
+
+        if not merged:
+            new_item = Item(
+                character_id=char.id,
+                name=body.item.name,
+                description=body.item.description,
+                weight=body.item.weight,
+                quantity=body.item.quantity,
+                item_type=body.item.item_type,
+                item_metadata=metadata_str,
+                is_equipped=body.item.is_equipped,
+            )
+            db.add(new_item)
+            await db.flush()
+            granted_item_id = new_item.id
+
+        char.recalculate_encumbrance()
+
+        whisper_body = f"Il GM ti ha consegnato: {body.item.name} (×{body.item.quantity})"
+        msg = SessionMessage(
+            session_id=session_obj.id,
+            user_id=user_id,
+            role=SessionRole.GAME_MASTER,
+            body=whisper_body,
+            sent_at=now_iso,
+            recipient_user_id=rid,
+            sender_display_name="__GM__",
+        )
+        db.add(msg)
+
+        results.append(GMGrantItemResult(
+            user_id=rid,
+            character_id=char.id,
+            item_id=granted_item_id,
+            status="ok",
+        ))
+
+    _touch(session_obj)
+    await db.flush()
+    return GMGrantItemResponse(results=results)
 
 
 @router.get(
