@@ -15,11 +15,12 @@ from sqlalchemy.orm import selectinload
 
 from api.auth import get_current_user
 from api.database import get_db
-from core.db.models import Character, CharacterClass, CharacterHistory, Item
+from core.db.models import Character, CharacterClass, CharacterHistory, EquipmentSlot, Item
 from api.schemas.character import CharacterFull
 from api.schemas.item import ItemCreate, ItemRead, ItemUpdate, WeaponAttackResult
 from core.game.stats import effective_ability_score
 from api.routers._helpers import effective_con_mod
+from api.services.equipment import slot_allowed_for_type, swap_slot_occupant
 
 router = APIRouter(prefix="/characters", tags=["items"])
 
@@ -160,30 +161,35 @@ async def update_item(
     data = body.model_dump(exclude_unset=True)
     if "item_metadata" in data:
         data["item_metadata"] = json.dumps(data["item_metadata"]) if data["item_metadata"] else None
+
+    # Validate slot/type compatibility using the (post-update) item_type.
+    new_type = data.get("item_type", item.item_type)
+    new_slot = data.get("equipment_slot", item.equipment_slot)
+    if new_slot is not None and not slot_allowed_for_type(new_type, new_slot):
+        raise HTTPException(
+            status_code=422,
+            detail=f"equipment_slot {new_slot.value!r} not allowed for item_type {new_type!r}",
+        )
+
+    # Apply the partial update.
     for field, value in data.items():
         setattr(item, field, value)
 
-    # Auto-update character AC when equipping/unequipping armor or shields
-    if "is_equipped" in data:
+    # Slot bookkeeping: when equipped with a slot, displace prior occupant atomically.
+    # When unequipped, clear the slot so it never leaks.
+    if "is_equipped" in data or "equipment_slot" in data:
+        if item.is_equipped and item.equipment_slot is not None:
+            await swap_slot_occupant(session, char.id, item.id, item.equipment_slot)
+        if not item.is_equipped:
+            item.equipment_slot = None
+
+    # Auto-update character AC when equipping/unequipping armor or shields.
+    if "is_equipped" in data or "equipment_slot" in data:
         item_meta = json.loads(item.item_metadata) if item.item_metadata else {}
         if item.item_type == "armor":
-            if item.is_equipped:
-                # Unequip any other armor first
-                for other in char.items:
-                    if other.id != item.id and other.item_type == "armor" and other.is_equipped:
-                        other.is_equipped = False
-                char.base_armor_class = item_meta.get("ac_value", 10)
-            else:
-                char.base_armor_class = 10
+            char.base_armor_class = item_meta.get("ac_value", 10) if item.is_equipped else 10
         elif item.item_type == "shield":
-            if item.is_equipped:
-                # Unequip any other shield first
-                for other in char.items:
-                    if other.id != item.id and other.item_type == "shield" and other.is_equipped:
-                        other.is_equipped = False
-                char.shield_armor_class = item_meta.get("ac_bonus", 2)
-            else:
-                char.shield_armor_class = 0
+            char.shield_armor_class = item_meta.get("ac_bonus", 2) if item.is_equipped else 0
 
     # Auto-recompute HP when CON modifier changes due to equip/unequip
     settings = char.settings or {}
