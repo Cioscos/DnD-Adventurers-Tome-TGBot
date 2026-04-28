@@ -1,7 +1,10 @@
 /** Pure logic — constants, form types, and metadata builder for inventory items. */
 import type { AbilityModifier } from '@/types'
 
-export const ITEM_TYPES = ['generic', 'weapon', 'armor', 'shield', 'accessory', 'consumable', 'tool'] as const
+export const ITEM_TYPES = [
+  'weapon', 'armor', 'shield', 'consumable', 'tool',
+  'accessory', 'gear', 'potion', 'scroll', 'generic', 'other',
+] as const
 export type ItemType = typeof ITEM_TYPES[number]
 
 export const DAMAGE_TYPES = [
@@ -104,6 +107,8 @@ export function buildItemMetadata(form: ItemFormData): Record<string, unknown> |
       meta = { ac_bonus: Number(form.ac_bonus) || 2 }
       break
     case 'consumable':
+    case 'potion':
+    case 'scroll':
       meta = form.effect ? { effect: form.effect } : undefined
       break
     case 'tool':

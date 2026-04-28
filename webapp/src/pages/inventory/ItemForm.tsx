@@ -219,7 +219,7 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
         )}
 
         {/* === CONSUMABLE fields === */}
-        {form.item_type === 'consumable' && (
+        {(form.item_type === 'consumable' || form.item_type === 'potion' || form.item_type === 'scroll') && (
           <div>
             <label className="block text-[11px] uppercase tracking-wider mb-1 font-medium text-dnd-gold-dim">
               {t('character.inventory.effect_label')}
