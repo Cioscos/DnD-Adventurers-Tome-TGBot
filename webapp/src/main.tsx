@@ -1,7 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { LazyMotion, domAnimation } from 'framer-motion'
+import { LazyMotion, domMax } from 'framer-motion'
 import App from './App'
 import Toast from './components/ui/Toast'
 import { initTheme } from './theme/applyTheme'
@@ -36,7 +36,7 @@ const queryClient = new QueryClient({
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <LazyMotion features={domAnimation} strict>
+    <LazyMotion features={domMax} strict>
       <QueryClientProvider client={queryClient}>
         <App />
         <Toast />
