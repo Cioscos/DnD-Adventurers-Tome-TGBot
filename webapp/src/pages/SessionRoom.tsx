@@ -247,6 +247,9 @@ export default function SessionRoom() {
 
   const amGm = !!live && live.gm_user_id === myUserId
 
+  const myCharId =
+    live?.participants.find((p) => p.user_id === myUserId)?.character_id ?? null
+
   if (isLoading) {
     return (
       <Layout title={t('session.title')} backTo="/session">
@@ -372,6 +375,7 @@ export default function SessionRoom() {
         sessionId={live.id}
         gmUserId={gmUserId}
         myUserId={myUserId}
+        myCharId={myCharId}
         participants={live.participants}
         whisperTarget={whisperTarget}
         onClearWhisperTarget={() => setWhisperTarget(null)}
