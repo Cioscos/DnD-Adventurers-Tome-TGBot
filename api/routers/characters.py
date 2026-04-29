@@ -388,6 +388,11 @@ async def roll_skill(
         raise HTTPException(status_code=400, detail=f"Unknown skill: {skill_name}")
     char = await _get_owned(char_id, user_id, session, full=True)
 
+    if body and body.with_inspiration:
+        if not char.heroic_inspiration:
+            raise HTTPException(status_code=409, detail="Ispirazione non disponibile")
+        char.heroic_inspiration = False
+
     ability_name = _SKILL_ABILITY[skill_name]
     score = next((s for s in char.ability_scores if s.name == ability_name), None)
     ability_mod = score.modifier if score else 0
@@ -407,9 +412,13 @@ async def roll_skill(
     is_crit = die == 20
     is_fumble = die == 1
 
-    _add_history(session, char.id, "skill_roll",
-                 f"Abilità {skill_name}: d20={die} {'+ ' if bonus >= 0 else ''}{bonus} = {total}"
-                 + (" (CRITICO)" if is_crit else " (FUMBLE)" if is_fumble else ""))
+    history_msg = (
+        f"Abilità {skill_name}: d20={die} {'+ ' if bonus >= 0 else ''}{bonus} = {total}"
+        + (" (CRITICO)" if is_crit else " (FUMBLE)" if is_fumble else "")
+    )
+    if body and body.with_inspiration:
+        history_msg = f"Reroll ispirazione — {history_msg}"
+    _add_history(session, char.id, "skill_roll", history_msg)
 
     return RollResult(
         die=die,
@@ -437,6 +446,11 @@ async def roll_saving_throw(
         raise HTTPException(status_code=400, detail=f"Unknown ability: {ability}")
     char = await _get_owned(char_id, user_id, session, full=True)
 
+    if body and body.with_inspiration:
+        if not char.heroic_inspiration:
+            raise HTTPException(status_code=409, detail="Ispirazione non disponibile")
+        char.heroic_inspiration = False
+
     score = next((s for s in char.ability_scores if s.name == ability), None)
     ability_mod = score.modifier if score else 0
 
@@ -450,9 +464,13 @@ async def roll_saving_throw(
     is_crit = die == 20
     is_fumble = die == 1
 
-    _add_history(session, char.id, "saving_throw",
-                 f"TS {ability}: d20={die} {'+ ' if bonus >= 0 else ''}{bonus} = {total}"
-                 + (" (CRITICO)" if is_crit else " (FUMBLE)" if is_fumble else ""))
+    history_msg = (
+        f"TS {ability}: d20={die} {'+ ' if bonus >= 0 else ''}{bonus} = {total}"
+        + (" (CRITICO)" if is_crit else " (FUMBLE)" if is_fumble else "")
+    )
+    if body and body.with_inspiration:
+        history_msg = f"Reroll ispirazione — {history_msg}"
+    _add_history(session, char.id, "saving_throw", history_msg)
 
     return RollResult(
         die=die,
