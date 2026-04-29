@@ -27,7 +27,7 @@ export default function SpellSlotsSummary({ slots }: Props) {
   if (cells.every((c) => c.total === 0)) return null
 
   return (
-    <Surface variant="tome" className="!p-2.5">
+    <Surface variant="tome" className="@container !p-2.5">
       <m.button
         type="button"
         onClick={() => {
@@ -41,11 +41,11 @@ export default function SpellSlotsSummary({ slots }: Props) {
         <div className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-gold-dim mb-1">
           {t('character.equipment.summary.spell_slots', { defaultValue: 'Spell slots' })}
         </div>
-        <div className="grid grid-cols-9 gap-1 text-center font-mono text-dnd-text">
+        <div className="grid grid-cols-9 gap-1 @max-[300px]:gap-0.5 text-center font-mono text-dnd-text">
           {cells.map((c) => (
             <div key={c.level} className="flex flex-col">
-              <span className="text-[9px] text-dnd-gold-dim">{c.level}</span>
-              <span className={c.total === 0 ? 'text-dnd-text-faint' : 'text-dnd-gold-bright font-bold'}>
+              <span className="text-[9px] @max-[300px]:text-[8px] text-dnd-gold-dim">{c.level}</span>
+              <span className={`@max-[300px]:text-[11px] ${c.total === 0 ? 'text-dnd-text-faint' : 'text-dnd-gold-bright font-bold'}`}>
                 {c.total}
               </span>
             </div>
