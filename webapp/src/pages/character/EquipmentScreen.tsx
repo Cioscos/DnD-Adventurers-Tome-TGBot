@@ -5,6 +5,7 @@ import EquipItemPicker from '@/components/character/EquipItemPicker'
 import SlotActionSheet from '@/components/character/SlotActionSheet'
 import EquipmentStatsFooter from '@/components/character/EquipmentStatsFooter'
 import Surface from '@/components/ui/Surface'
+import { silhouetteUrl } from '@/lib/silhouette'
 import type { CharacterFull, EquipmentSlot, Item } from '@/types'
 
 interface Props {
@@ -28,6 +29,8 @@ export default function EquipmentScreen({ char }: Props) {
     }
   }
 
+  const sUrl = silhouetteUrl(char)
+
   return (
     <div className="p-4 space-y-3 pb-safe">
       <Surface variant="elevated" className="!p-3 text-center">
@@ -36,7 +39,7 @@ export default function EquipmentScreen({ char }: Props) {
         </h2>
       </Surface>
 
-      <PaperDoll items={char.items ?? []} onSlotTap={handleSlotTap} />
+      <PaperDoll items={char.items ?? []} onSlotTap={handleSlotTap} silhouetteUrl={sUrl} />
 
       <EquipmentStatsFooter char={char} />
 
