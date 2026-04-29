@@ -8,6 +8,21 @@ const CANONICAL_CLASSES: ReadonlySet<string> = new Set([
   'paladin', 'ranger', 'rogue', 'sorcerer', 'warlock', 'wizard',
 ])
 
+const CLASS_SLUG_MAP: Record<string, string> = {
+  barbarian: 'barbarian', barbaro: 'barbarian',
+  bard: 'bard', bardo: 'bard',
+  cleric: 'cleric', chierico: 'cleric',
+  druid: 'druid', druido: 'druid',
+  fighter: 'fighter', guerriero: 'fighter',
+  monk: 'monk', monaco: 'monk',
+  paladin: 'paladin', paladino: 'paladin',
+  ranger: 'ranger',
+  rogue: 'rogue', ladro: 'rogue',
+  sorcerer: 'sorcerer', stregone: 'sorcerer',
+  warlock: 'warlock',
+  wizard: 'wizard', mago: 'wizard',
+}
+
 const RACE_SLUG_MAP: Record<string, string> = {
   human: 'human', umano: 'human', umana: 'human',
   elf: 'elf', elfo: 'elf', elfa: 'elf',
@@ -25,17 +40,22 @@ const GENDER_SLUG_MAP: Record<string, string> = {
   f: 'female', female: 'female', femmina: 'female', femminile: 'female',
 }
 
+function normalizeClassName(raw: string): string | null {
+  const key = raw.trim().toLowerCase()
+  return CLASS_SLUG_MAP[key] ?? (CANONICAL_CLASSES.has(key) ? key : null)
+}
+
 function pickPrimaryCanonicalClass(char: CharacterFull): string | null {
-  const canonical = (char.classes ?? []).filter((c) =>
-    CANONICAL_CLASSES.has(c.class_name),
-  )
+  const canonical = (char.classes ?? [])
+    .map((c) => ({ ...c, canonical: normalizeClassName(c.class_name) }))
+    .filter((c): c is typeof c & { canonical: string } => c.canonical !== null)
   if (canonical.length === 0) return null
-  // Highest level wins; tie-break alphabetic on class_name for determinism.
+  // Highest level wins; tie-break alphabetic on canonical slug for determinism.
   canonical.sort((a, b) => {
     if (b.level !== a.level) return b.level - a.level
-    return a.class_name.localeCompare(b.class_name)
+    return a.canonical.localeCompare(b.canonical)
   })
-  return canonical[0].class_name
+  return canonical[0].canonical
 }
 
 function slugFrom(map: Record<string, string>, raw: string | null | undefined): string | null {
