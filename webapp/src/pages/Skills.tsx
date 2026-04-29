@@ -7,7 +7,7 @@ import { Check, Eye } from 'lucide-react'
 import {
   GiPerspectiveDiceSixFacesRandom as Dices, GiPolarStar as Star,
 } from 'react-icons/gi'
-import { api } from '@/api/client'
+import { api, ApiError } from '@/api/client'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
 import SectionDivider from '@/components/ui/SectionDivider'
@@ -15,6 +15,7 @@ import StatPill from '@/components/ui/StatPill'
 import ScrollArea from '@/components/ScrollArea'
 import RollResultModal, { type RollResult } from '@/components/RollResultModal'
 import { haptic } from '@/auth/telegram'
+import { useToast } from '@/hooks/useToast'
 import { useDiceAnimation } from '@/dice/useDiceAnimation'
 import { useDiceSettings } from '@/store/diceSettings'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
@@ -68,7 +69,13 @@ export default function Skills() {
   const dice = useDiceAnimation()
   const animate3d = useDiceSettings((s) => s.animate3d)
   const reducedMotion = useReducedMotion()
-  const [rollResult, setRollResult] = useState<{ result: RollResult; title: string } | null>(null)
+  type RollState = {
+    result: RollResult
+    skillName: string
+    wasRerolled: boolean
+  }
+  const [rollState, setRollState] = useState<RollState | null>(null)
+  const toast = useToast()
 
   const { data: char } = useQuery({
     queryKey: ['character', charId],
@@ -97,13 +104,35 @@ export default function Skills() {
       return { result, skillName }
     },
     onSuccess: ({ result, skillName }) => {
-      setRollResult({
-        result,
-        title: t(`character.skills.${skillName}`),
-      })
+      setRollState({ result, skillName, wasRerolled: false })
       haptic.success()
     },
     onError: () => haptic.error(),
+  })
+
+  const rerollMutation = useMutation({
+    mutationFn: async (skillName: string) => {
+      const useAnimation = animate3d && !reducedMotion
+      let die: number | undefined
+      if (useAnimation) {
+        const detected = await dice.playAndCollect([{ kind: 'd20', count: 1 }])
+        die = detected[0]?.value
+      }
+      return api.characters.rollSkill(charId, skillName, die, true)
+    },
+    onSuccess: (result) => {
+      setRollState((prev) => prev && { ...prev, result, wasRerolled: true })
+      qc.invalidateQueries({ queryKey: ['character', charId] })
+      haptic.success()
+    },
+    onError: (err) => {
+      if (err instanceof ApiError && err.status === 409) {
+        toast.error(t('character.inspiration.unavailable_error'))
+        qc.invalidateQueries({ queryKey: ['character', charId] })
+      } else {
+        haptic.error()
+      }
+    },
   })
 
   if (!char) return null
@@ -234,11 +263,15 @@ export default function Skills() {
         </div>
       </ScrollArea>
 
-      {rollResult && (
+      {rollState && (
         <RollResultModal
-          result={rollResult.result}
-          title={rollResult.title}
-          onClose={() => setRollResult(null)}
+          result={rollState.result}
+          title={t(`character.skills.${rollState.skillName}`)}
+          inspirationAvailable={Boolean(char.heroic_inspiration)}
+          isRerolling={rerollMutation.isPending}
+          wasRerolled={rollState.wasRerolled}
+          onInspirationReroll={() => rerollMutation.mutate(rollState.skillName)}
+          onClose={() => setRollState(null)}
         />
       )}
     </Layout>
