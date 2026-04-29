@@ -70,7 +70,7 @@ export default function HeroScreen({ char }: Props) {
   const currentClassLevel = currentClassEntry?.level ?? 1
 
   return (
-    <div className="p-4 space-y-3 pb-safe">
+    <div className="@container p-4 space-y-3 pb-safe">
       <VitalsStrip char={char} />
       {/* Hero card */}
       <Surface
@@ -92,7 +92,7 @@ export default function HeroScreen({ char }: Props) {
           )}
         </m.button>
 
-        <div className="mt-4 flex items-center gap-3">
+        <div className="mt-4 flex items-center gap-3 @max-[300px]:flex-col @max-[300px]:items-stretch">
           <div className="flex-1 min-w-0">
             <m.button
               type="button"
@@ -211,7 +211,7 @@ export default function HeroScreen({ char }: Props) {
         {char.ability_scores.length > 0 && (
           <div className="mt-4 pt-3 border-t border-dnd-gold-dim/30">
             <m.div
-              className="grid grid-cols-6 gap-1.5 text-center"
+              className="grid grid-cols-6 @max-[300px]:grid-cols-3 gap-1.5 text-center"
               initial="initial"
               animate="animate"
               variants={{
