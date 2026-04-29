@@ -2,10 +2,11 @@ import { useState, useCallback, useEffect, useRef } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { useToast } from '@/hooks/useToast'
 import { m, AnimatePresence } from 'framer-motion'
 import { Plus, Weight, ChevronRight } from 'lucide-react'
 import { GiKnapsack as Backpack } from 'react-icons/gi'
-import { api } from '@/api/client'
+import { api, ApiError } from '@/api/client'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
@@ -37,7 +38,13 @@ export default function Inventory() {
   const [showAdd, setShowAdd] = useState(false)
   const [editingItem, setEditingItem] = useState<Item | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<number | null>(null)
-  const [attackResult, setAttackResult] = useState<WeaponAttackResult | null>(null)
+  type AttackState = {
+    result: WeaponAttackResult
+    itemId: number
+    wasRerolled: boolean
+  }
+  const [attackState, setAttackState] = useState<AttackState | null>(null)
+  const toast = useToast()
   const [expanded, setExpanded] = useState<number | null>(null)
   const [collapsedTypes, setCollapsedTypes] = useState<Set<string>>(new Set())
 
@@ -118,11 +125,28 @@ export default function Inventory() {
 
   const attackMutation = useMutation({
     mutationFn: (itemId: number) => api.items.attack(charId, itemId),
-    onSuccess: (result) => {
-      setAttackResult(result)
+    onSuccess: (result, itemId) => {
+      setAttackState({ result, itemId, wasRerolled: false })
       haptic.success()
     },
     onError: () => haptic.error(),
+  })
+
+  const attackRerollMutation = useMutation({
+    mutationFn: (itemId: number) => api.items.attack(charId, itemId, true),
+    onSuccess: (result) => {
+      setAttackState((prev) => prev && { ...prev, result, wasRerolled: true })
+      qc.invalidateQueries({ queryKey: ['character', charId] })
+      haptic.success()
+    },
+    onError: (err) => {
+      if (err instanceof ApiError && err.status === 409) {
+        toast.error(t('character.inspiration.unavailable_error'))
+        qc.invalidateQueries({ queryKey: ['character', charId] })
+      } else {
+        haptic.error()
+      }
+    },
   })
 
   const handleFormSubmit = useCallback((data: ItemFormData) => {
@@ -316,8 +340,15 @@ export default function Inventory() {
         />
       )}
 
-      {attackResult && (
-        <WeaponAttackModal result={attackResult} onClose={() => setAttackResult(null)} />
+      {attackState && (
+        <WeaponAttackModal
+          result={attackState.result}
+          inspirationAvailable={Boolean(char?.heroic_inspiration)}
+          isRerolling={attackRerollMutation.isPending}
+          wasRerolled={attackState.wasRerolled}
+          onInspirationReroll={() => attackRerollMutation.mutate(attackState.itemId)}
+          onClose={() => setAttackState(null)}
+        />
       )}
 
       {/* Delete confirmation as Sheet */}
