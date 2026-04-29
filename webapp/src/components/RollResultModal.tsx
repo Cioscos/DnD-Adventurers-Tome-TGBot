@@ -1,6 +1,8 @@
 import { m, AnimatePresence } from 'framer-motion'
+import { useTranslation } from 'react-i18next'
 import { spring } from '@/styles/motion'
 import { CornerFlourishes } from './ui/Ornament'
+import InspirationRerollButton from './InspirationRerollButton'
 
 export type RollResult = {
   die: number
@@ -15,9 +17,22 @@ type Props = {
   result: RollResult
   title: string
   onClose: () => void
+  inspirationAvailable?: boolean
+  isRerolling?: boolean
+  wasRerolled?: boolean
+  onInspirationReroll?: () => void
 }
 
-export default function RollResultModal({ result, title, onClose }: Props) {
+export default function RollResultModal({
+  result,
+  title,
+  onClose,
+  inspirationAvailable = false,
+  isRerolling = false,
+  wasRerolled = false,
+  onInspirationReroll,
+}: Props) {
+  const { t } = useTranslation()
   const { die, bonus, total, is_critical, is_fumble } = result
 
   const borderColor = is_critical
@@ -39,6 +54,8 @@ export default function RollResultModal({ result, title, onClose }: Props) {
       : 'text-dnd-text'
 
   const bonusStr = bonus >= 0 ? `+${bonus}` : `${bonus}`
+  const showInspirationButton =
+    inspirationAvailable && !wasRerolled && onInspirationReroll != null
 
   return (
     <AnimatePresence>
@@ -65,6 +82,12 @@ export default function RollResultModal({ result, title, onClose }: Props) {
           </div>
 
           <p className="text-sm text-dnd-text-muted font-cinzel uppercase tracking-widest">{title}</p>
+
+          {wasRerolled && (
+            <p className="text-[11px] text-dnd-arcane-bright font-cinzel uppercase tracking-wider">
+              {t('character.inspiration.reroll_badge')}
+            </p>
+          )}
 
           {is_critical && (
             <m.p
@@ -102,6 +125,14 @@ export default function RollResultModal({ result, title, onClose }: Props) {
 
           {result.description && (
             <p className="text-xs text-dnd-text-muted italic font-body">{result.description}</p>
+          )}
+
+          {showInspirationButton && (
+            <InspirationRerollButton
+              available
+              pending={isRerolling}
+              onClick={onInspirationReroll}
+            />
           )}
 
           <m.button
