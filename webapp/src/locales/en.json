@@ -753,6 +753,15 @@
       "no_data": "No information available",
       "loading": "Loading…",
       "error": "Loading failed"
+    },
+    "reward": {
+      "title": "You received an item!",
+      "cta_inventory": "View in inventory",
+      "cta_dismiss": "OK",
+      "item_not_found_toast": "Item is no longer in your inventory"
+    },
+    "feed": {
+      "grant_chip": "Tap to open in inventory"
     }
   }
 }

@@ -712,6 +712,9 @@ async def gm_grant_item(
             sent_at=now_iso,
             recipient_user_id=rid,
             sender_display_name="__GM__",
+            item_id=granted_item_id,
+            item_name=body.item.name,
+            item_quantity=body.item.quantity,
         )
         db.add(msg)
 
@@ -815,6 +818,9 @@ async def get_session_feed(
             role=sender_role,
             body=m.body,
             recipient_user_id=m.recipient_user_id,
+            item_id=m.item_id,
+            item_name=m.item_name,
+            item_quantity=m.item_quantity,
         ))
 
     for e in events:

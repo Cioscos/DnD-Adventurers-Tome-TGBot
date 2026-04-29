@@ -753,6 +753,15 @@
       "no_data": "Nessuna informazione disponibile",
       "loading": "Caricamento…",
       "error": "Errore nel caricamento"
+    },
+    "reward": {
+      "title": "Hai ricevuto un oggetto!",
+      "cta_inventory": "Vedi nell'inventario",
+      "cta_dismiss": "OK",
+      "item_not_found_toast": "Oggetto non più presente nel tuo inventario"
+    },
+    "feed": {
+      "grant_chip": "Tocca per aprire nell'inventario"
     }
   }
 }

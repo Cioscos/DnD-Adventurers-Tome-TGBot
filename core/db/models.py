@@ -594,5 +594,14 @@ class SessionMessage(Base):
     sender_display_name: Mapped[Optional[str]] = mapped_column(
         String(120), nullable=True
     )
+    item_id: Mapped[Optional[int]] = mapped_column(
+        BigInteger, nullable=True, index=False
+    )
+    item_name: Mapped[Optional[str]] = mapped_column(
+        String(120), nullable=True
+    )
+    item_quantity: Mapped[Optional[int]] = mapped_column(
+        Integer, nullable=True
+    )
 
     session: Mapped["GameSession"] = relationship(back_populates="messages")

@@ -131,6 +131,11 @@ class SessionFeedItem(BaseModel):
     body: Optional[str] = None
     recipient_user_id: Optional[int] = None
 
+    # message-only — GM grant payload
+    item_id: Optional[int] = None
+    item_name: Optional[str] = None
+    item_quantity: Optional[int] = None
+
     # event-only
     event_id: Optional[int] = None
     character_id: Optional[int] = None
