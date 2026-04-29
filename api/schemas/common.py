@@ -280,10 +280,11 @@ class DiceResultEntry(BaseModel):
 
 
 class DiceResultRequest(BaseModel):
-    rolls: list[DiceResultEntry] = Field(min_length=1, max_length=50)
+    rolls: list[DiceResultEntry] = Field(min_length=1, max_length=200)
     label: str | None = Field(default=None, max_length=120)
     modifier: int = 0
     notation: str | None = Field(default=None, max_length=80)
+    with_inspiration: bool = False
 
 
 class DiceRollResult(BaseModel):
@@ -309,6 +310,7 @@ class RollResult(BaseModel):
 class D20RollSubmission(BaseModel):
     """Optional client-supplied d20 value (from 3D physics face detection)."""
     die: Optional[int] = Field(default=None, ge=1, le=20)
+    with_inspiration: bool = False
 
 
 class ConcentrationSaveResult(RollResult):
