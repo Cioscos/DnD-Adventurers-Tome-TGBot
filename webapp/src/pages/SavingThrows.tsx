@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
 import { Check } from 'lucide-react'
 import { GiShieldEchoes as ShieldAlert } from 'react-icons/gi'
-import { api } from '@/api/client'
+import { api, ApiError } from '@/api/client'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
 import StatPill from '@/components/ui/StatPill'
@@ -33,6 +33,13 @@ function profBonus(level: number) {
   return Math.floor((level - 1) / 4) + 2
 }
 
+type RollState = {
+  result: RollResult
+  title: string
+  ability: string
+  wasRerolled: boolean
+}
+
 export default function SavingThrows() {
   const { id } = useParams<{ id: string }>()
   const charId = Number(id)
@@ -41,7 +48,7 @@ export default function SavingThrows() {
   const dice = useDiceAnimation()
   const animate3d = useDiceSettings((s) => s.animate3d)
   const reducedMotion = useReducedMotion()
-  const [rollResult, setRollResult] = useState<{ result: RollResult; title: string } | null>(null)
+  const [rollState, setRollState] = useState<RollState | null>(null)
 
   const { data: char } = useQuery({
     queryKey: ['character', charId],
@@ -70,13 +77,38 @@ export default function SavingThrows() {
       return { result, ability }
     },
     onSuccess: ({ result, ability }) => {
-      setRollResult({
+      setRollState({
         result,
+        ability,
         title: `${t('character.saves.title')} — ${t(`character.stats.${ability}`)}`,
+        wasRerolled: false,
       })
       haptic.success()
     },
     onError: () => haptic.error(),
+  })
+
+  const rerollMutation = useMutation({
+    mutationFn: async (ability: string) => {
+      const useAnimation = animate3d && !reducedMotion
+      let die: number | undefined
+      if (useAnimation) {
+        const detected = await dice.playAndCollect([{ kind: 'd20', count: 1 }])
+        die = detected[0]?.value
+      }
+      return api.characters.rollSavingThrow(charId, ability, die, true)
+    },
+    onSuccess: (result) => {
+      setRollState((prev) => prev && { ...prev, result, wasRerolled: true })
+      qc.invalidateQueries({ queryKey: ['character', charId] })
+      haptic.success()
+    },
+    onError: (err) => {
+      haptic.error()
+      if (err instanceof ApiError && err.status === 409) {
+        qc.invalidateQueries({ queryKey: ['character', charId] })
+      }
+    },
   })
 
   if (!char) return null
@@ -118,7 +150,6 @@ export default function SavingThrows() {
                 className={`relative !p-3 text-center
                   ${isProficient ? 'border-dnd-gold/50 shadow-halo-gold' : ''}`}
               >
-                {/* Top row: proficiency toggle (left) + dice hint (right) */}
                 <div className="flex items-center justify-between -mx-1 -mt-1 mb-2">
                   <m.button
                     onClick={(e) => {
@@ -161,11 +192,15 @@ export default function SavingThrows() {
         })}
       </Reveal.Stagger>
 
-      {rollResult && (
+      {rollState && (
         <RollResultModal
-          result={rollResult.result}
-          title={rollResult.title}
-          onClose={() => setRollResult(null)}
+          result={rollState.result}
+          title={rollState.title}
+          inspirationAvailable={Boolean(char.heroic_inspiration)}
+          isRerolling={rerollMutation.isPending}
+          wasRerolled={rollState.wasRerolled}
+          onInspirationReroll={() => rerollMutation.mutate(rollState.ability)}
+          onClose={() => setRollState(null)}
         />
       )}
     </Layout>
