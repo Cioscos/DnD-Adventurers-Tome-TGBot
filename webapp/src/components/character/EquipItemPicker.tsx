@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m, AnimatePresence } from 'framer-motion'
@@ -38,7 +39,7 @@ export default function EquipItemPicker({ charId, slot, items, onClose }: Props)
   const candidates = compatibleItems(items, slot)
   const slotLabel = t(`character.equipment.slots.${slot}`, { defaultValue: slot })
 
-  return (
+  return createPortal(
     <AnimatePresence>
       <m.div
         className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm"
@@ -92,6 +93,7 @@ export default function EquipItemPicker({ charId, slot, items, onClose }: Props)
           )}
         </m.div>
       </m.div>
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body,
   )
 }
