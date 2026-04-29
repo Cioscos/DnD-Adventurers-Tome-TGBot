@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -21,6 +21,8 @@ import { haptic, telegramConfirm } from '@/auth/telegram'
 import ParticipantIdentitySheet from '@/pages/session/ParticipantIdentitySheet'
 import SessionFeed from '@/pages/session/SessionFeed'
 import GrantItemModal from '@/pages/session/GrantItemModal'
+import { dequeue, peek, pruneOlderThan, type Reward } from '@/lib/rewardQueue'
+import RewardPopup from '@/components/session/RewardPopup'
 
 function conditionEntries(
   conditions: Record<string, unknown> | null | undefined,
@@ -191,6 +193,12 @@ export default function SessionRoom() {
   const [identityTarget, setIdentityTarget] = useState<SessionParticipant | null>(null)
   const [whisperTarget, setWhisperTarget] = useState<SessionParticipant | null>(null)
   const [showGrantItem, setShowGrantItem] = useState(false)
+  const [currentReward, setCurrentReward] = useState<Reward | null>(null)
+
+  useEffect(() => {
+    pruneOlderThan(24 * 60 * 60 * 1000)
+    setCurrentReward(peek())
+  }, [])
 
   const { data: meInfo } = useQuery({
     queryKey: ['auth-me'],
@@ -410,6 +418,25 @@ export default function SessionRoom() {
           participants={live.participants}
           gmUserId={gmUserId}
           onClose={() => setShowGrantItem(false)}
+        />
+      )}
+
+      {currentReward && (
+        <RewardPopup
+          reward={currentReward}
+          description={null}
+          onDismiss={() => {
+            dequeue()
+            setCurrentReward(peek())
+          }}
+          onGoToInventory={() => {
+            const r = currentReward
+            dequeue()
+            setCurrentReward(peek())
+            navigate(`/char/${r.char_id}/inventory`, {
+              state: { highlightItemId: r.item_id },
+            })
+          }}
         />
       )}
     </Layout>
