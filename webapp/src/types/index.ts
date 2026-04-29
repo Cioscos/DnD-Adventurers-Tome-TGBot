@@ -320,6 +320,10 @@ export interface SessionFeedItem {
   role?: string | null
   body?: string | null
   recipient_user_id?: number | null
+  // message — GM grant payload
+  item_id?: number | null
+  item_name?: string | null
+  item_quantity?: number | null
 
   // event
   event_id?: number | null
