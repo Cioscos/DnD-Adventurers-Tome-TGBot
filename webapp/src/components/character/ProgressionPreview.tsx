@@ -41,7 +41,7 @@ export default function ProgressionPreview({ className, currentLevel }: Props) {
 
   return (
     <>
-      <Surface variant="tome" className="!p-2.5">
+      <Surface variant="tome" className="@container !p-2.5">
         <div className="flex items-center justify-between mb-1.5">
           <div className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-gold-dim">
             {t('character.equipment.progression.title', { defaultValue: 'Progression' })}
@@ -62,7 +62,7 @@ export default function ProgressionPreview({ className, currentLevel }: Props) {
                 type="button"
                 onClick={() => setShowFull(true)}
                 whileTap={{ scale: 0.99 }}
-                className={`w-full grid grid-cols-[28px_36px_1fr] gap-2 items-center rounded-md px-1.5 py-1 text-left transition-colors ${
+                className={`w-full grid grid-cols-[28px_36px_1fr] @max-[300px]:grid-cols-[28px_1fr] gap-2 items-center rounded-md px-1.5 py-1 text-left transition-colors @max-[360px]:text-[10px] ${
                   isCurrent
                     ? 'bg-dnd-gold/15 border border-dnd-gold text-dnd-gold-bright'
                     : 'border border-transparent text-dnd-text-muted hover:bg-dnd-surface'
@@ -70,7 +70,7 @@ export default function ProgressionPreview({ className, currentLevel }: Props) {
                 aria-current={isCurrent ? 'true' : undefined}
               >
                 <span className="font-mono text-[11px] font-bold text-center">L{lv}</span>
-                <span className="font-mono text-[10px] text-center">+{row?.proficiency_bonus ?? '?'}</span>
+                <span className="font-mono text-[10px] text-center @max-[300px]:hidden">+{row?.proficiency_bonus ?? '?'}</span>
                 <span className="text-[11px] truncate">{row?.features ?? '—'}</span>
               </m.button>
             )
