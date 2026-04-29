@@ -12,6 +12,12 @@ interface Props {
 
 const VELOCITY_THRESHOLD = 500
 const OFFSET_RATIO = 0.25
+// Below this absolute pixel offset we treat the gesture as a tap and never
+// navigate, even if the finger-lift produces a high velocity spike. Without
+// this, clicks on inner buttons (e.g. ProgressionPreview rows) can fire
+// onDragEnd with offset≈0 and velocity > VELOCITY_THRESHOLD and accidentally
+// flip activeScreen.
+const TAP_OFFSET_THRESHOLD = 10
 
 export default function CharacterSwiper({ hero, equipment, menu }: Props) {
   const { t } = useTranslation()
@@ -56,15 +62,23 @@ export default function CharacterSwiper({ hero, equipment, menu }: Props) {
     const offset = info.offset.x
     const velocity = info.velocity.x
     let next: CharacterScreen = activeScreen
-    if (velocity < -VELOCITY_THRESHOLD || offset < -width * OFFSET_RATIO) {
-      next = Math.min(2, activeScreen + 1) as CharacterScreen
-    } else if (velocity > VELOCITY_THRESHOLD || offset > width * OFFSET_RATIO) {
-      next = Math.max(0, activeScreen - 1) as CharacterScreen
+    // Ignore taps: any gesture whose absolute horizontal offset never exceeded
+    // the tap threshold cannot trigger a screen change, regardless of velocity.
+    if (Math.abs(offset) >= TAP_OFFSET_THRESHOLD) {
+      const movedLeft = offset < -width * OFFSET_RATIO
+      const flickedLeft = velocity < -VELOCITY_THRESHOLD && offset < 0
+      const movedRight = offset > width * OFFSET_RATIO
+      const flickedRight = velocity > VELOCITY_THRESHOLD && offset > 0
+      if (movedLeft || flickedLeft) {
+        next = Math.min(2, activeScreen + 1) as CharacterScreen
+      } else if (movedRight || flickedRight) {
+        next = Math.max(0, activeScreen - 1) as CharacterScreen
+      }
     }
     if (next !== activeScreen) {
       setActiveScreen(next)
     } else {
-      // No screen change — animate back to current screen offset
+      // No screen change — animate back to current screen offset.
       const target = -activeScreen * width
       if (reduced) {
         x.set(target)

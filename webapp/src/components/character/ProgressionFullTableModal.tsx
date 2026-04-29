@@ -49,12 +49,12 @@ export default function ProgressionFullTableModal({ className, currentLevel, onC
             </button>
           </header>
           <div className="flex-1 overflow-y-auto">
-            <table className="w-full text-left text-[12px]">
+            <table className="w-full text-left text-[12px] table-fixed">
               <thead className="text-[10px] uppercase tracking-wider text-dnd-gold-dim sticky top-0 bg-dnd-surface-raised">
                 <tr>
-                  <th className="px-3 py-2 w-12">Lv</th>
-                  <th className="px-2 py-2 w-12">PB</th>
-                  <th className="px-3 py-2">Features</th>
+                  <th className="px-2 py-2 w-10">Lv</th>
+                  <th className="px-2 py-2 w-10">PB</th>
+                  <th className="px-2 py-2">Features</th>
                 </tr>
               </thead>
               <tbody>
@@ -71,9 +71,9 @@ export default function ProgressionFullTableModal({ className, currentLevel, onC
                           : 'text-dnd-text-muted border-t border-dnd-gold-dim/10'
                       }
                     >
-                      <td className="px-3 py-2 font-mono font-bold">L{lv}</td>
+                      <td className="px-2 py-2 font-mono font-bold">L{lv}</td>
                       <td className="px-2 py-2 font-mono">+{r.proficiency_bonus}</td>
-                      <td className="px-3 py-2">{r.features}</td>
+                      <td className="px-2 py-2 break-words">{r.features}</td>
                     </tr>
                   )
                 })}
