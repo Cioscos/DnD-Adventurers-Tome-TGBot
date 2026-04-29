@@ -421,7 +421,6 @@ export function getDiceGeometry(kind: DiceKind): DiceGeometryData {
   }
 
   geometry.setAttribute('uv', new THREE.BufferAttribute(uvArray, 2))
-  geometry.computeTangents?.()
 
   cache.set(key, data)
   return data
