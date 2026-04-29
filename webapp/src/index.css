@@ -154,6 +154,8 @@ body,
   width: 100%;
   overflow-x: hidden;
   max-width: 100vw;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 /* Safe-area insets */
