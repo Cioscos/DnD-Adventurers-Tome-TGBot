@@ -200,6 +200,10 @@ export default function SessionRoom() {
     setCurrentReward(peek())
   }, [])
 
+  const handleRewardEnqueued = () => {
+    setCurrentReward((cur) => cur ?? peek())
+  }
+
   const { data: meInfo } = useQuery({
     queryKey: ['auth-me'],
     queryFn: () => api.me(),
@@ -387,6 +391,7 @@ export default function SessionRoom() {
         participants={live.participants}
         whisperTarget={whisperTarget}
         onClearWhisperTarget={() => setWhisperTarget(null)}
+        onRewardEnqueued={handleRewardEnqueued}
       />
 
       <Button

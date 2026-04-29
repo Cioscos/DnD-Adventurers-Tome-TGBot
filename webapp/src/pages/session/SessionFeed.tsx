@@ -33,6 +33,7 @@ interface Props {
   participants: SessionParticipant[]
   whisperTarget: SessionParticipant | null
   onClearWhisperTarget: () => void
+  onRewardEnqueued?: () => void
 }
 
 const POLL_MS = 3000
@@ -55,6 +56,7 @@ export default function SessionFeed({
   participants,
   whisperTarget,
   onClearWhisperTarget,
+  onRewardEnqueued,
 }: Props) {
   const { t } = useTranslation()
   const qc = useQueryClient()
@@ -83,6 +85,7 @@ export default function SessionFeed({
       if (fresh.length === 0) return prev
 
       if (!opts.skipReward && myCharId !== null) {
+        let enqueuedAny = false
         for (const it of fresh) {
           if (
             it.type === 'message' &&
@@ -100,8 +103,10 @@ export default function SessionFeed({
               granted_at: it.timestamp,
             }
             enqueue(r)
+            enqueuedAny = true
           }
         }
+        if (enqueuedAny) onRewardEnqueued?.()
       }
 
       const next = [...prev, ...fresh]
@@ -262,8 +267,11 @@ export default function SessionFeed({
   const handleGrantClick = (it: SessionFeedItem) => {
     if (myCharId === null || it.item_id == null) return
     const cached = qc.getQueryData<CharacterFull>(['character', myCharId])
-    const stillThere = cached?.items?.some((x) => x.id === it.item_id)
-    if (!stillThere) {
+    // Only fail-fast when we have authoritative cached data showing the item is gone.
+    // If the character query has never been fetched (cold cache, e.g. user landed
+    // directly in SessionRoom), navigate optimistically — Inventory will silently
+    // clear highlight state if the item turns out to be missing.
+    if (cached?.items && !cached.items.some((x) => x.id === it.item_id)) {
       toast.warning(t('session.reward.item_not_found_toast'))
       haptic.error()
       return
