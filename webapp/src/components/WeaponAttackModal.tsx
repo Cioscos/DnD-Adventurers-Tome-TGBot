@@ -1,6 +1,8 @@
 import { m, AnimatePresence } from 'framer-motion'
+import { useTranslation } from 'react-i18next'
 import { spring } from '@/styles/motion'
 import { CornerFlourishes } from './ui/Ornament'
+import InspirationRerollButton from './InspirationRerollButton'
 
 export type WeaponAttackResult = {
   weapon_name: string
@@ -18,9 +20,21 @@ export type WeaponAttackResult = {
 type Props = {
   result: WeaponAttackResult
   onClose: () => void
+  inspirationAvailable?: boolean
+  isRerolling?: boolean
+  wasRerolled?: boolean
+  onInspirationReroll?: () => void | Promise<void>
 }
 
-export default function WeaponAttackModal({ result, onClose }: Props) {
+export default function WeaponAttackModal({
+  result,
+  onClose,
+  inspirationAvailable = false,
+  isRerolling = false,
+  wasRerolled = false,
+  onInspirationReroll,
+}: Props) {
+  const { t } = useTranslation()
   const {
     weapon_name, to_hit_die, to_hit_bonus, to_hit_total,
     is_critical, is_fumble, damage_dice, damage_rolls, damage_bonus, damage_total,
@@ -39,6 +53,9 @@ export default function WeaponAttackModal({ result, onClose }: Props) {
     : is_fumble
       ? 'animate-pulse-danger'
       : ''
+
+  const showInspirationButton =
+    inspirationAvailable && !wasRerolled && onInspirationReroll != null
 
   return (
     <AnimatePresence>
@@ -66,6 +83,11 @@ export default function WeaponAttackModal({ result, onClose }: Props) {
 
           <div className="text-center">
             <p className="text-sm text-dnd-text-muted font-cinzel uppercase tracking-widest">⚔️ {weapon_name}</p>
+            {wasRerolled && (
+              <p className="text-[11px] text-dnd-arcane-bright font-cinzel uppercase tracking-wider mt-1">
+                {t('character.inspiration.reroll_badge')}
+              </p>
+            )}
             {is_critical && <p className="text-dnd-gold-bright font-bold font-cinzel">✦ CRITICO!</p>}
             {is_fumble && <p className="text-[var(--dnd-crimson-bright)] font-bold font-cinzel">💀 FUMBLE!</p>}
           </div>
@@ -101,6 +123,14 @@ export default function WeaponAttackModal({ result, onClose }: Props) {
               </p>
               <p className="text-4xl font-black font-display mt-1 text-[var(--dnd-crimson-bright)]">{damage_total}</p>
             </m.div>
+          )}
+
+          {showInspirationButton && (
+            <InspirationRerollButton
+              available
+              pending={isRerolling}
+              onClick={onInspirationReroll}
+            />
           )}
 
           <m.button
