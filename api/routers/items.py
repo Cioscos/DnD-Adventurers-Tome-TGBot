@@ -8,7 +8,8 @@ import re
 from datetime import datetime
 from typing import Annotated, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Body, Depends, HTTPException, status
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -236,14 +237,24 @@ async def delete_item(
 # Weapon attack roll
 # ---------------------------------------------------------------------------
 
+class AttackSubmission(BaseModel):
+    """Optional payload for weapon attacks. Today only carries the inspiration flag."""
+    with_inspiration: bool = False
+
+
 @router.post("/{char_id}/items/{item_id}/attack", response_model=WeaponAttackResult)
 async def attack_with_weapon(
     char_id: int,
     item_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
+    body: Annotated[AttackSubmission | None, Body()] = None,
 ) -> WeaponAttackResult:
     char = await _get_owned_full(char_id, user_id, session)
+    if body and body.with_inspiration:
+        if not char.heroic_inspiration:
+            raise HTTPException(status_code=409, detail="Ispirazione non disponibile")
+        char.heroic_inspiration = False
     result = await session.execute(
         select(Item).where(Item.id == item_id, Item.character_id == char_id)
     )
@@ -305,6 +316,8 @@ async def attack_with_weapon(
         + (" (CRITICO!)" if is_critical else " (FUMBLE!)" if is_fumble else "")
         + f" | Danno: {'+'.join(str(r) for r in damage_rolls)}+{damage_bonus}={damage_total}"
     )
+    if body and body.with_inspiration:
+        result_str = f"Reroll ispirazione (to-hit) — {result_str}"
     _add_history(session, char.id, "attack_roll", result_str)
 
     return WeaponAttackResult(
