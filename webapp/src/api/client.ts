@@ -98,6 +98,7 @@ export type DiceResultRequestBody = {
   label?: string | null
   modifier?: number
   notation?: string | null
+  with_inspiration?: boolean
 }
 
 export type { ConcentrationSaveResult } from '@/types'
@@ -235,15 +236,31 @@ export const api = {
       }),
 
     // Roll endpoints
-    rollSkill: (id: number, skillName: string, die?: number) =>
+    rollSkill: (
+      id: number,
+      skillName: string,
+      die?: number,
+      withInspiration: boolean = false,
+    ) =>
       request<RollResult>(`/characters/${id}/skills/${encodeURIComponent(skillName)}/roll`, {
         method: 'POST',
-        body: die != null ? JSON.stringify({ die }) : undefined,
+        body:
+          die != null || withInspiration
+            ? JSON.stringify({ die, with_inspiration: withInspiration })
+            : undefined,
       }),
-    rollSavingThrow: (id: number, ability: string, die?: number) =>
+    rollSavingThrow: (
+      id: number,
+      ability: string,
+      die?: number,
+      withInspiration: boolean = false,
+    ) =>
       request<RollResult>(`/characters/${id}/saving_throws/${encodeURIComponent(ability)}/roll`, {
         method: 'POST',
-        body: die != null ? JSON.stringify({ die }) : undefined,
+        body:
+          die != null || withInspiration
+            ? JSON.stringify({ die, with_inspiration: withInspiration })
+            : undefined,
       }),
 
     // Hit dice spending
@@ -383,9 +400,12 @@ export const api = {
       }),
     remove: (charId: number, itemId: number) =>
       request<CharacterFull>(`/characters/${charId}/items/${itemId}`, { method: 'DELETE' }),
-    attack: (charId: number, itemId: number) =>
+    attack: (charId: number, itemId: number, withInspiration: boolean = false) =>
       request<WeaponAttackResult>(`/characters/${charId}/items/${itemId}/attack`, {
         method: 'POST',
+        body: withInspiration
+          ? JSON.stringify({ with_inspiration: true })
+          : undefined,
       }),
   },
 
