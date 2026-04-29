@@ -48,7 +48,7 @@ export default function EquipItemPicker({ charId, slot, items, onClose }: Props)
         onClick={onClose}
       >
         <m.div
-          className="w-full max-w-md max-h-[85vh] overflow-y-auto bg-dnd-surface-raised border border-dnd-gold rounded-t-2xl sm:rounded-2xl"
+          className="@container w-full max-w-md max-h-[85vh] overflow-y-auto bg-dnd-surface-raised border border-dnd-gold rounded-t-2xl sm:rounded-2xl"
           initial={{ y: 40, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 40, opacity: 0 }}
@@ -82,7 +82,7 @@ export default function EquipItemPicker({ charId, slot, items, onClose }: Props)
                     className="w-full text-left px-4 py-3 hover:bg-dnd-surface flex flex-col gap-0.5"
                   >
                     <span className="text-sm font-bold text-dnd-text">{it.name}</span>
-                    <span className="text-[11px] text-dnd-text-muted">
+                    <span className="text-[11px] @max-[300px]:text-[10px] text-dnd-text-muted break-words">
                       {it.item_type} · {it.weight} lb
                     </span>
                   </button>
