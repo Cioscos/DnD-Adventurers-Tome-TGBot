@@ -28,6 +28,11 @@ export default function CharacterSwiper({ hero, equipment, menu }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [width, setWidth] = useState(0)
   const x = useMotionValue(0)
+  // Marks the very first time we positioned the track for the current mount.
+  // Until that flips, we snap instantly so re-entering CharacterMain on a
+  // non-zero stored activeScreen lands directly on that page (no slide
+  // through pages 0/1 to reach page 2).
+  const initialAppliedRef = useRef(false)
 
   // Track container width via ResizeObserver
   useEffect(() => {
@@ -45,9 +50,13 @@ export default function CharacterSwiper({ hero, equipment, menu }: Props) {
   useEffect(() => {
     if (width === 0) return
     const target = -activeScreen * width
-    if (Math.abs(x.get() - target) < 1) return
-    if (reduced) {
+    if (Math.abs(x.get() - target) < 1) {
+      initialAppliedRef.current = true
+      return
+    }
+    if (!initialAppliedRef.current || reduced) {
       x.set(target)
+      initialAppliedRef.current = true
     } else {
       const controls = animate(x, target, {
         type: 'spring',
