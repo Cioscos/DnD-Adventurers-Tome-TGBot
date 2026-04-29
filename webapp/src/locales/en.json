@@ -232,7 +232,9 @@
       "roll": "Roll",
       "roll_failed": "Roll failed",
       "clear_kind": "Clear",
-      "rolling": "Rolling…"
+      "rolling": "Rolling…",
+      "result_title": "Result",
+      "pool_cap_reached": "Maximum dice limit reached"
     },
     "conditions": {
       "title": "Conditions",
@@ -313,7 +315,10 @@
     "inspiration": {
       "title": "Heroic Inspiration",
       "tap_to_grant": "Tap to grant",
-      "tap_to_spend": "Tap to spend"
+      "tap_to_spend": "Tap to spend",
+      "use_reroll": "Use Inspiration",
+      "reroll_badge": "↻ Inspiration reroll",
+      "unavailable_error": "Inspiration unavailable"
     },
     "inSession": {
       "label": "In active session",

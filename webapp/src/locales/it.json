@@ -232,7 +232,9 @@
       "roll": "Lancia",
       "roll_failed": "Errore durante il lancio",
       "clear_kind": "Resetta",
-      "rolling": "Sto lanciando…"
+      "rolling": "Sto lanciando…",
+      "result_title": "Risultato",
+      "pool_cap_reached": "Limite massimo dadi raggiunto"
     },
     "conditions": {
       "title": "Condizioni",
@@ -313,7 +315,10 @@
     "inspiration": {
       "title": "Ispirazione Eroica",
       "tap_to_grant": "Tocca per concedere",
-      "tap_to_spend": "Tocca per usare"
+      "tap_to_spend": "Tocca per usare",
+      "use_reroll": "Usa Ispirazione",
+      "reroll_badge": "↻ Reroll ispirazione",
+      "unavailable_error": "Ispirazione non disponibile"
     },
     "inSession": {
       "label": "Sei in sessione",
