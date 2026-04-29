@@ -59,7 +59,7 @@ export default function DiceOverlay() {
 
   const { data: char } = useQuery({
     queryKey: ['character', charId],
-    queryFn: () => (charId ? api.characters.get(charId) : Promise.reject()),
+    queryFn: () => api.characters.get(charId!),
     enabled: charId != null,
   })
 
