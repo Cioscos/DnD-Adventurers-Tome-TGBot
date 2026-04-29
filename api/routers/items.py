@@ -251,10 +251,6 @@ async def attack_with_weapon(
     body: Annotated[AttackSubmission | None, Body()] = None,
 ) -> WeaponAttackResult:
     char = await _get_owned_full(char_id, user_id, session)
-    if body and body.with_inspiration:
-        if not char.heroic_inspiration:
-            raise HTTPException(status_code=409, detail="Ispirazione non disponibile")
-        char.heroic_inspiration = False
     result = await session.execute(
         select(Item).where(Item.id == item_id, Item.character_id == char_id)
     )
@@ -263,6 +259,11 @@ async def attack_with_weapon(
         raise HTTPException(status_code=404, detail="Item not found")
     if item.item_type != "weapon":
         raise HTTPException(status_code=400, detail="Item is not a weapon")
+
+    if body and body.with_inspiration:
+        if not char.heroic_inspiration:
+            raise HTTPException(status_code=409, detail="Ispirazione non disponibile")
+        char.heroic_inspiration = False
 
     meta = json.loads(item.item_metadata) if item.item_metadata else {}
     damage_dice_str: str = meta.get("damage_dice", "1d4")
