@@ -51,6 +51,7 @@ export default {
           info: 'var(--dnd-cobalt)',
           cobalt: 'var(--dnd-cobalt)',
           'cobalt-bright': 'var(--dnd-cobalt-bright)',
+          'cobalt-deep': 'var(--dnd-cobalt-deep)',
           amber: 'var(--dnd-amber)',
           highlight: 'var(--dnd-amber)',
           'highlight-muted': 'var(--dnd-amber)',

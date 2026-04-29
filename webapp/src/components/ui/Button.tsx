@@ -31,7 +31,7 @@ function variantClasses(variant: ButtonVariant): string {
     case 'secondary':
       return 'bg-dnd-surface-raised text-dnd-text border border-dnd-gold-dim/30 hover:border-dnd-gold/70'
     case 'danger':
-      return 'bg-[var(--dnd-crimson)]/15 text-[var(--dnd-crimson-bright)] border border-[var(--dnd-crimson)]/40'
+      return 'bg-dnd-crimson/15 text-dnd-crimson-bright border border-dnd-crimson/40 hover:bg-dnd-crimson/25 hover:border-dnd-crimson/60'
     case 'arcane':
       return 'bg-gradient-to-r from-dnd-arcane-deep to-dnd-arcane text-white border border-dnd-arcane-bright/40 shadow-halo-arcane'
     case 'ghost':

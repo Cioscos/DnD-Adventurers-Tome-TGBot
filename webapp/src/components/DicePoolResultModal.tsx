@@ -1,9 +1,7 @@
 import { useCallback, useState } from 'react'
-import { m, AnimatePresence } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { spring } from '@/styles/motion'
-import { CornerFlourishes } from './ui/Ornament'
+import ResultDialog from './ui/ResultDialog'
 import InspirationRerollButton from './InspirationRerollButton'
 import { api, ApiError, type DiceResultRequestBody } from '@/api/client'
 import { useDiceAnimation } from '@/dice/useDiceAnimation'
@@ -102,89 +100,52 @@ export default function DicePoolResultModal({
   }, [rerollMutation])
 
   return (
-    <AnimatePresence>
-      <m.div
-        className="fixed inset-0 flex items-center justify-center z-50 p-4"
-        style={{ background: 'var(--dnd-overlay)', backdropFilter: 'blur(6px)' }}
-        onClick={onClose}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-      >
-        <m.div
-          className="relative rounded-3xl p-6 pt-8 w-full max-w-sm space-y-4
-                     bg-gradient-parchment surface-parchment border-2 border-dnd-gold-dim
-                     shadow-parchment-2xl"
-          onClick={(e) => e.stopPropagation()}
-          initial={{ opacity: 0, scale: 0.85, y: 30 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.92, y: 20 }}
-          transition={spring.elastic}
-        >
-          <div className="text-dnd-gold-dim">
-            <CornerFlourishes />
-          </div>
-
-          <div className="text-center">
-            <p className="text-sm text-dnd-text-muted font-cinzel uppercase tracking-widest">
-              {t('character.dice_overlay.result_title')}
-            </p>
-            {wasRerolled && (
-              <p className="text-[11px] text-dnd-arcane-bright font-cinzel uppercase tracking-wider mt-1">
-                {t('character.inspiration.reroll_badge')}
-              </p>
-            )}
-          </div>
-
-          <div className="space-y-2 max-h-[40vh] overflow-y-auto">
-            {results.map((g, i) => (
-              <div
-                key={i}
-                className="flex items-baseline justify-between gap-2 font-mono text-sm"
-              >
-                <span className="text-dnd-gold-dim min-w-0 flex-1">
-                  <span className="font-semibold">{g.notation}</span>
-                  {g.rolls.length > 1 && (
-                    <span className="text-dnd-text-faint text-[11px] ml-1.5 break-words">
-                      {formatRollList(g.rolls)}
-                    </span>
-                  )}
-                </span>
-                <span className="font-display font-black text-dnd-gold-bright text-lg shrink-0">
-                  {g.total}
-                </span>
-              </div>
-            ))}
-          </div>
-
-          {results.length > 1 && (
-            <p className="text-center text-dnd-text-muted text-xs font-body">
-              Totale:{' '}
-              <span className="font-display font-black text-dnd-gold-bright text-base">
-                {total}
-              </span>
-            </p>
-          )}
-
-          {showInspirationButton && (
-            <InspirationRerollButton
-              available
-              pending={rerollMutation.isPending}
-              onClick={handleReroll}
-            />
-          )}
-
-          <m.button
-            type="button"
-            onClick={onClose}
-            className="w-full py-2.5 rounded-xl bg-gradient-gold text-dnd-ink font-semibold
-                       min-h-[48px] shadow-engrave font-cinzel uppercase tracking-wider"
-            whileTap={{ scale: 0.97 }}
+    <ResultDialog
+      open
+      onClose={onClose}
+      accent="default"
+      size="md"
+      title={t('character.dice_overlay.result_title')}
+      subtitle={wasRerolled ? t('character.inspiration.reroll_badge') : undefined}
+      extraActions={
+        showInspirationButton ? (
+          <InspirationRerollButton
+            available
+            pending={rerollMutation.isPending}
+            onClick={handleReroll}
+          />
+        ) : undefined
+      }
+    >
+      <div className="space-y-2 max-h-[40vh] overflow-y-auto text-left">
+        {results.map((g, i) => (
+          <div
+            key={i}
+            className="flex items-baseline justify-between gap-2 font-mono text-sm"
           >
-            OK
-          </m.button>
-        </m.div>
-      </m.div>
-    </AnimatePresence>
+            <span className="text-dnd-gold-dim min-w-0 flex-1">
+              <span className="font-semibold">{g.notation}</span>
+              {g.rolls.length > 1 && (
+                <span className="text-dnd-text-faint text-[11px] ml-1.5 break-words">
+                  {formatRollList(g.rolls)}
+                </span>
+              )}
+            </span>
+            <span className="font-display font-black text-dnd-gold-bright text-lg shrink-0">
+              {g.total}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {results.length > 1 && (
+        <p className="text-dnd-text-muted text-xs font-body">
+          Totale:{' '}
+          <span className="font-display font-black text-dnd-gold-bright text-base">
+            {total}
+          </span>
+        </p>
+      )}
+    </ResultDialog>
   )
 }

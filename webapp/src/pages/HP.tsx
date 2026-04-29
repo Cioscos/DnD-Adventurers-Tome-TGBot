@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { m, AnimatePresence } from 'framer-motion'
+import { m } from 'framer-motion'
 import {
   GiNightSleep as Moon, GiSparkles as Sparkles, GiPotionBall as FlaskConical,
   GiHeartPlus as Heart,
@@ -14,12 +14,14 @@ import Surface from '@/components/ui/Surface'
 import HPGauge from '@/components/ui/HPGauge'
 import Button from '@/components/ui/Button'
 import StatPill from '@/components/ui/StatPill'
-import { CornerFlourishes } from '@/components/ui/Ornament'
 import { haptic } from '@/auth/telegram'
 import { spring } from '@/styles/motion'
 import HpOperationForm from '@/pages/hp/HpOperationForm'
 import DeathSaves from '@/pages/hp/DeathSaves'
 import HitDiceModal from '@/pages/hp/HitDiceModal'
+import HitDiceResultDialog from '@/pages/hp/HitDiceResultDialog'
+import DeathSaveResultDialog from '@/pages/hp/DeathSaveResultDialog'
+import ConcentrationSaveDialog from '@/pages/hp/ConcentrationSaveDialog'
 import { useDiceAnimation } from '@/dice/useDiceAnimation'
 import { useDiceSettings } from '@/store/diceSettings'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
@@ -132,12 +134,12 @@ export default function HP() {
     ? 'text-dnd-emerald-bright'
     : hpPct > 25
       ? 'text-dnd-gold-bright'
-      : 'text-[var(--dnd-crimson-bright)]'
-  const hpGlow = hpPct > 50
-    ? 'drop-shadow(0 0 18px rgba(111,209,149,0.35))'
+      : 'text-dnd-crimson-bright'
+  const hpGlowClass = hpPct > 50
+    ? 'hp-glow-emerald'
     : hpPct > 25
-      ? 'drop-shadow(0 0 18px rgba(240,201,112,0.5))'
-      : 'drop-shadow(0 0 22px rgba(232,80,80,0.6))'
+      ? 'hp-glow-gold'
+      : 'hp-glow-crimson'
 
   return (
     <Layout title={t('character.hp.title')} backTo={`/char/${charId}`} group="combat" page="hp">
@@ -146,7 +148,7 @@ export default function HP() {
         <div className="flex items-end justify-between gap-4 mb-3">
           <div>
             <p className="text-[10px] font-cinzel uppercase tracking-[0.25em] text-dnd-gold-dim mb-1">
-              <Heart size={10} className="inline mr-1 text-[var(--dnd-crimson-bright)]" />
+              <Heart size={10} className="inline mr-1 text-dnd-crimson-bright" />
               {t('character.hp.title')}
             </p>
             <m.p
@@ -154,8 +156,7 @@ export default function HP() {
               initial={{ scale: 0.85, opacity: 0.4 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={spring.elastic}
-              className={`font-display font-black leading-none ${hpColor}`}
-              style={{ fontSize: '5.5rem', filter: hpGlow }}
+              className={`font-display font-black leading-none text-[5.5rem] ${hpColor} ${hpGlowClass}`}
             >
               {char.current_hit_points}
             </m.p>
@@ -212,7 +213,7 @@ export default function HP() {
           onClick={() => setShowShortRest(true)}
           disabled={restMutation.isPending}
           icon={<Moon size={18} />}
-          className="!bg-gradient-to-br !from-[var(--dnd-cobalt-deep)]/40 !to-[var(--dnd-cobalt)]/30 !text-[var(--dnd-cobalt-bright)] !border-dnd-cobalt/50"
+          className="!bg-gradient-to-br !from-dnd-cobalt-deep/40 !to-dnd-cobalt/30 !text-dnd-cobalt-bright !border-dnd-cobalt/50"
           haptic="medium"
         >
           {t('character.hp.short_rest')}
@@ -255,179 +256,26 @@ export default function HP() {
         />
       )}
 
-      {/* Hit dice result */}
-      <AnimatePresence>
-        {hitDiceResult && (
-          <m.div
-            className="fixed inset-0 flex items-center justify-center z-50 p-4"
-            style={{ background: 'var(--dnd-overlay)', backdropFilter: 'blur(6px)' }}
-            onClick={() => setHitDiceResult(null)}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
-            <m.div
-              className="relative rounded-3xl p-6 pt-8 w-full max-w-xs text-center space-y-3
-                         bg-gradient-parchment surface-parchment border-2 border-dnd-emerald shadow-parchment-2xl"
-              initial={{ opacity: 0, scale: 0.85, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.92 }}
-              transition={spring.elastic}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="text-dnd-gold-dim"><CornerFlourishes /></div>
-              <p className="text-sm text-dnd-text-muted font-cinzel uppercase tracking-widest">
-                {t('character.hp.hit_dice_result')}
-              </p>
-              <m.p
-                initial={{ scale: 0.5 }}
-                animate={{ scale: 1 }}
-                transition={{ ...spring.elastic, delay: 0.1 }}
-                className="text-6xl font-black font-display text-[var(--dnd-emerald-bright)]"
-              >
-                +{hitDiceResult.healed}
-              </m.p>
-              <p className="text-xs text-dnd-text-muted font-mono">
-                [{hitDiceResult.rolls.join(', ')}] +{hitDiceResult.con_bonus} (COS)
-              </p>
-              <p className="text-sm font-body">
-                {t('character.hp.new_hp')}: <span className="font-bold font-mono text-dnd-gold-bright">{hitDiceResult.new_current_hp}</span>
-              </p>
-              <Button variant="primary" fullWidth onClick={() => setHitDiceResult(null)}>
-                OK
-              </Button>
-            </m.div>
-          </m.div>
-        )}
-      </AnimatePresence>
+      {hitDiceResult && (
+        <HitDiceResultDialog
+          result={hitDiceResult}
+          onClose={() => setHitDiceResult(null)}
+        />
+      )}
 
-      {/* Death save result */}
-      <AnimatePresence>
-        {deathRollResult && (
-          <m.div
-            className="fixed inset-0 flex items-center justify-center z-50 p-4"
-            style={{ background: 'var(--dnd-overlay)', backdropFilter: 'blur(6px)' }}
-            onClick={() => setDeathRollResult(null)}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
-            <m.div
-              className={`relative rounded-3xl p-6 pt-8 w-full max-w-xs text-center space-y-3
-                         bg-gradient-parchment surface-parchment border-2 shadow-parchment-2xl
-                         ${deathRollResult.outcome === 'nat20' ? 'border-dnd-gold animate-pulse-gold'
-                           : deathRollResult.outcome === 'success' ? 'border-dnd-emerald'
-                           : 'border-[var(--dnd-crimson)] animate-pulse-danger'}`}
-              initial={{ opacity: 0, scale: 0.85 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.92 }}
-              transition={spring.elastic}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="text-dnd-gold-dim"><CornerFlourishes /></div>
-              <p className="text-sm text-dnd-text-muted font-cinzel uppercase tracking-widest">
-                {t('character.death_saves.roll_result')}
-              </p>
-              {deathRollResult.outcome === 'nat20' && (
-                <p className="text-dnd-gold-bright font-bold font-cinzel">✦ {t('character.death_saves.nat20')}</p>
-              )}
-              {deathRollResult.outcome === 'nat1' && (
-                <p className="text-[var(--dnd-crimson-bright)] font-bold font-cinzel">💀 {t('character.death_saves.nat1')}</p>
-              )}
-              <m.p
-                initial={{ scale: 0, rotate: -180 }}
-                animate={{ scale: 1, rotate: 0 }}
-                transition={{ ...spring.elastic, delay: 0.1 }}
-                className={`text-7xl font-black font-display ${
-                  deathRollResult.outcome === 'nat20' ? 'text-dnd-gold-bright'
-                    : deathRollResult.outcome === 'success' ? 'text-[var(--dnd-emerald-bright)]'
-                      : 'text-[var(--dnd-crimson-bright)]'
-                }`}
-              >
-                {deathRollResult.die}
-              </m.p>
-              <p className={`font-bold font-cinzel uppercase tracking-wider ${
-                deathRollResult.outcome === 'success' || deathRollResult.outcome === 'nat20'
-                  ? 'text-[var(--dnd-emerald-bright)]' : 'text-[var(--dnd-crimson-bright)]'
-              }`}>
-                {deathRollResult.outcome === 'success' || deathRollResult.outcome === 'nat20'
-                  ? t('character.death_saves.success') : t('character.death_saves.failure')}
-              </p>
-              {deathRollResult.revived && (
-                <p className="text-dnd-gold-bright text-sm font-medium font-body italic">
-                  {t('character.death_saves.revived')}
-                </p>
-              )}
-              {deathRollResult.stable && !deathRollResult.revived && (
-                <p className="text-[var(--dnd-emerald-bright)] text-sm font-medium font-body italic">
-                  {t('character.death_saves.stable_3_successes')}
-                </p>
-              )}
-              {deathRollResult.failures >= 3 && (
-                <p className="text-[var(--dnd-crimson-bright)] text-sm font-medium font-body italic">
-                  {t('character.death_saves.dead_3_failures')}
-                </p>
-              )}
-              <p className="text-xs text-dnd-text-muted font-mono">
-                ✓ {deathRollResult.successes}/3 · ✗ {deathRollResult.failures}/3
-              </p>
-              <Button variant="primary" fullWidth onClick={() => setDeathRollResult(null)}>OK</Button>
-            </m.div>
-          </m.div>
-        )}
-      </AnimatePresence>
+      {deathRollResult && (
+        <DeathSaveResultDialog
+          result={deathRollResult}
+          onClose={() => setDeathRollResult(null)}
+        />
+      )}
 
-      {/* Concentration save result */}
-      <AnimatePresence>
-        {concSaveResult && (
-          <m.div
-            className="fixed inset-0 flex items-center justify-center z-50 p-4"
-            style={{ background: 'var(--dnd-overlay)', backdropFilter: 'blur(6px)' }}
-            onClick={() => setConcSaveResult(null)}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
-            <m.div
-              className={`relative rounded-3xl p-6 pt-8 w-full max-w-xs text-center space-y-3
-                         bg-gradient-parchment surface-parchment border-2 shadow-parchment-2xl
-                         ${concSaveResult.success ? 'border-dnd-emerald' : 'border-[var(--dnd-crimson)]'}`}
-              initial={{ opacity: 0, scale: 0.85 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.92 }}
-              transition={spring.elastic}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="text-dnd-gold-dim"><CornerFlourishes /></div>
-              <p className="text-sm text-dnd-text-muted font-cinzel uppercase tracking-widest">
-                🔮 {t('character.spells.concentration')} — DC {concSaveResult.dc}
-              </p>
-              {concSaveResult.is_critical && <p className="text-dnd-gold-bright font-bold font-cinzel">✦ CRITICO!</p>}
-              {concSaveResult.is_fumble && <p className="text-[var(--dnd-crimson-bright)] font-bold font-cinzel">💀 FUMBLE!</p>}
-              <m.p
-                initial={{ scale: 0.4 }}
-                animate={{ scale: 1 }}
-                transition={{ ...spring.elastic, delay: 0.1 }}
-                className={`text-5xl font-black font-display ${concSaveResult.success ? 'text-[var(--dnd-emerald-bright)]' : 'text-[var(--dnd-crimson-bright)]'}`}
-              >
-                {concSaveResult.total}
-              </m.p>
-              <p className="text-xs text-dnd-text-muted font-mono">
-                d20 ({concSaveResult.die}) {concSaveResult.bonus >= 0 ? '+' : ''}{concSaveResult.bonus}
-              </p>
-              <p className={`font-bold font-cinzel uppercase tracking-wider ${concSaveResult.success ? 'text-[var(--dnd-emerald-bright)]' : 'text-[var(--dnd-crimson-bright)]'}`}>
-                {concSaveResult.success ? t('character.spells.conc_save_success') : t('character.spells.conc_save_fail')}
-              </p>
-              {concSaveResult.lost_concentration && (
-                <p className="text-[10px] text-[var(--dnd-crimson-bright)] font-body italic">
-                  {t('character.spells.conc_lost')}
-                </p>
-              )}
-              <Button variant="primary" fullWidth onClick={() => setConcSaveResult(null)}>OK</Button>
-            </m.div>
-          </m.div>
-        )}
-      </AnimatePresence>
+      {concSaveResult && (
+        <ConcentrationSaveDialog
+          result={concSaveResult}
+          onClose={() => setConcSaveResult(null)}
+        />
+      )}
     </Layout>
   )
 }

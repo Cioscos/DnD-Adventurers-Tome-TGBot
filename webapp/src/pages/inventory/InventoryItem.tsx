@@ -1,56 +1,145 @@
 import React from 'react'
 import { useTranslation } from 'react-i18next'
-import { ArrowLeftRight, Pencil, Trash2 } from 'lucide-react'
-import { GiCrossedSwords as Swords, GiArcheryTarget as Target } from 'react-icons/gi'
-import Button from '@/components/ui/Button'
+import { Pencil, Trash2, ArrowLeftRight, Weight, Shield, AlertTriangle, Wrench } from 'lucide-react'
+import {
+  GiCrossedSwords as Swords,
+  GiArcheryTarget as Target,
+  GiPotionBall as FlaskConical,
+  GiBiceps as Biceps,
+  GiBackpack as Backpack,
+} from 'react-icons/gi'
 import { TYPE_ICON } from './itemMetadata'
 import type { Item } from '@/types'
 
-/* ---------- Metadata badge sub-component ---------- */
+/* ---------- Stat chip (matches SpellItem chip style) ---------- */
 
-function ItemMetaBadge({ item }: { item: Item }) {
+function Chip({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-1.5 bg-dnd-chip-bg rounded-lg px-2 py-1.5">
+      <span className="text-dnd-gold-dim shrink-0 inline-flex">{icon}</span>
+      <span className="text-xs font-medium text-dnd-text truncate">{children}</span>
+    </div>
+  )
+}
+
+/* ---------- Type-specific stat chips ---------- */
+
+function ItemStatChips({ item }: { item: Item }) {
   const { t } = useTranslation()
   const meta = item.item_metadata as Record<string, unknown> | undefined
-  if (!meta) return null
+  const chips: React.ReactNode[] = []
 
-  if (item.item_type === 'weapon') {
-    const dmgType = t(`character.inventory.damage_types.${meta.damage_type}`, { defaultValue: String(meta.damage_type ?? '') })
-    const wpnType = t(`character.inventory.weapon_type.${meta.weapon_type}`, { defaultValue: String(meta.weapon_type ?? '') })
-    const props = Array.isArray(meta.properties) && meta.properties.length > 0
-      ? meta.properties.map((p: unknown) => t(`character.inventory.weapon_properties.${p}`, { defaultValue: String(p) })).join(', ')
-      : null
-    return (
-      <div className="text-xs text-dnd-text-secondary mt-0.5 space-y-0.5">
-        <p>{meta.damage_dice as string} &middot; {dmgType} &middot; {wpnType}</p>
-        {props && <p>{props}</p>}
-      </div>
+  // Common: type
+  chips.push(
+    <Chip key="type" icon={<Backpack size={12} />}>
+      {t(`character.inventory.types.${item.item_type}`, { defaultValue: item.item_type })}
+    </Chip>
+  )
+
+  // Common: weight (only when > 0)
+  if (item.weight > 0) {
+    chips.push(
+      <Chip key="weight" icon={<Weight size={12} />}>
+        {item.weight} lb
+      </Chip>
     )
   }
 
-  if (item.item_type === 'armor') {
-    const armorType = t(`character.inventory.armor_type.${meta.armor_type}`, { defaultValue: String(meta.armor_type ?? '') })
-    return (
-      <div className="text-xs text-dnd-text-secondary mt-0.5 space-y-0.5">
-        <p>{armorType} &middot; CA {String(meta.ac_value ?? '?')}{meta.stealth_disadvantage ? ' \u00B7 \u26A0\uFE0F Furtivit\u00E0' : ''}{Number(meta.strength_req) > 0 ? ` \u00B7 FOR ${meta.strength_req}+` : ''}</p>
-      </div>
-    )
+  // Type-specific
+  if (meta) {
+    if (item.item_type === 'weapon') {
+      const dmgType = t(`character.inventory.damage_types.${meta.damage_type}`, { defaultValue: String(meta.damage_type ?? '') })
+      const wpnType = t(`character.inventory.weapon_type.${meta.weapon_type}`, { defaultValue: String(meta.weapon_type ?? '') })
+      chips.push(
+        <Chip key="dmg" icon={<Swords size={12} />}>
+          {String(meta.damage_dice ?? '')} {dmgType}
+        </Chip>
+      )
+      chips.push(
+        <Chip key="wpn" icon={<Target size={12} />}>
+          {wpnType}
+        </Chip>
+      )
+    } else if (item.item_type === 'armor') {
+      const armorType = t(`character.inventory.armor_type.${meta.armor_type}`, { defaultValue: String(meta.armor_type ?? '') })
+      chips.push(
+        <Chip key="armor" icon={<Shield size={12} />}>
+          {armorType} · CA {String(meta.ac_value ?? '?')}
+        </Chip>
+      )
+      if (meta.stealth_disadvantage) {
+        chips.push(
+          <Chip key="stealth" icon={<AlertTriangle size={12} />}>
+            {t('character.inventory.stealth_disadvantage', { defaultValue: 'Furtività svantaggio' })}
+          </Chip>
+        )
+      }
+      if (Number(meta.strength_req) > 0) {
+        chips.push(
+          <Chip key="strreq" icon={<Biceps size={12} />}>
+            FOR {String(meta.strength_req)}+
+          </Chip>
+        )
+      }
+    } else if (item.item_type === 'shield') {
+      chips.push(
+        <Chip key="shield" icon={<Shield size={12} />}>
+          +{String(meta.ac_bonus ?? 2)} CA
+        </Chip>
+      )
+    } else if (item.item_type === 'tool' && meta.tool_type) {
+      chips.push(
+        <Chip key="tool" icon={<Wrench size={12} />}>
+          {String(meta.tool_type)}
+        </Chip>
+      )
+    }
   }
 
-  if (item.item_type === 'shield') {
-    return (
-      <p className="text-xs text-dnd-text-secondary mt-0.5">+{String(meta.ac_bonus ?? 2)} CA</p>
-    )
-  }
+  return chips.length > 0 ? (
+    <div className="grid grid-cols-2 gap-1.5">{chips}</div>
+  ) : null
+}
 
-  if (item.item_type === 'consumable' && meta.effect) {
-    return <p className="text-xs text-dnd-text-secondary mt-0.5 line-clamp-2">{String(meta.effect)}</p>
-  }
+/* ---------- Weapon properties (separate row) ---------- */
 
-  if (item.item_type === 'tool' && meta.tool_type) {
-    return <p className="text-xs text-dnd-text-secondary mt-0.5">{String(meta.tool_type)}</p>
-  }
+function WeaponPropertyTags({ item }: { item: Item }) {
+  const { t } = useTranslation()
+  const meta = item.item_metadata as Record<string, unknown> | undefined
+  if (item.item_type !== 'weapon' || !meta) return null
+  const props = Array.isArray(meta.properties) ? meta.properties : []
+  if (props.length === 0) return null
 
-  return null
+  return (
+    <div className="flex flex-wrap gap-1">
+      {props.map((p, i) => (
+        <span
+          key={i}
+          className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-dnd-arcane/15 text-dnd-arcane-text border border-dnd-arcane/25"
+        >
+          {t(`character.inventory.weapon_properties.${p}`, { defaultValue: String(p) })}
+        </span>
+      ))}
+    </div>
+  )
+}
+
+/* ---------- Consumable / potion / scroll effect (paragraph callout) ---------- */
+
+function ItemEffectCallout({ item }: { item: Item }) {
+  const meta = item.item_metadata as Record<string, unknown> | undefined
+  if (!meta?.effect) return null
+  if (!['consumable', 'potion', 'scroll'].includes(item.item_type)) return null
+  return (
+    <div className="bg-dnd-highlight/10 border border-dnd-highlight/20 rounded-lg px-2 py-1.5">
+      <span className="text-[10px] uppercase tracking-wide text-dnd-highlight-muted block mb-0.5 inline-flex items-center gap-1">
+        <FlaskConical size={11} /> Effetto
+      </span>
+      <p className="text-xs text-dnd-highlight-muted leading-relaxed whitespace-pre-wrap">
+        {String(meta.effect)}
+      </p>
+    </div>
+  )
 }
 
 /* ---------- Main component ---------- */
@@ -81,16 +170,16 @@ function InventoryItemInner({
   attackPending,
 }: InventoryItemProps) {
   const { t } = useTranslation()
-  const icon = TYPE_ICON[item.item_type] ?? '\uD83D\uDCE6'
+  const icon = TYPE_ICON[item.item_type] ?? '📦'
   const meta = item.item_metadata as Record<string, unknown> | undefined
   const canEquip = ['armor', 'shield', 'weapon', 'accessory'].includes(item.item_type)
 
   return (
     <div
-      className={`rounded-2xl overflow-hidden bg-dnd-surface
-        ${item.is_equipped ? 'ring-1 ring-dnd-success/50' : ''}`}
+      className={`rounded-2xl bg-dnd-surface overflow-hidden border
+        ${item.is_equipped ? 'border-dnd-emerald/60' : 'border-transparent'}`}
     >
-      {/* Header row -- tap to expand */}
+      {/* Header row — tap to expand */}
       <button
         className="w-full flex items-center gap-2 px-4 py-3 text-left active:opacity-70"
         onClick={onToggle}
@@ -98,104 +187,117 @@ function InventoryItemInner({
         <span className="text-lg shrink-0">{icon}</span>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-medium text-sm">{item.name}</span>
+            <span className="font-medium text-sm text-dnd-text">{item.name}</span>
             {item.is_equipped && (
-              <span className="text-xs px-1.5 py-0.5 rounded-full bg-dnd-success/20 text-dnd-success-text shrink-0">
+              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-dnd-emerald/20 text-dnd-emerald-bright border border-dnd-emerald/30">
                 {t('character.inventory.equipped')}
               </span>
             )}
             {item.is_equipped && item.item_type === 'armor' && meta?.ac_value != null && (
-              <span className="text-xs px-1.5 py-0.5 rounded-full bg-dnd-info/20 text-dnd-info-text shrink-0">
+              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-dnd-info/20 text-dnd-info-text border border-dnd-info/30">
                 CA {String(meta.ac_value)}
               </span>
             )}
             {item.is_equipped && item.item_type === 'shield' && meta?.ac_bonus != null && (
-              <span className="text-xs px-1.5 py-0.5 rounded-full bg-dnd-info/20 text-dnd-info-text shrink-0">
+              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-dnd-info/20 text-dnd-info-text border border-dnd-info/30">
                 +{String(meta.ac_bonus)} CA
               </span>
             )}
           </div>
-          <p className="text-xs text-dnd-text-secondary mt-0.5">
+          <p className="text-xs text-dnd-text-muted mt-0.5">
             {t(`character.inventory.types.${item.item_type}`, { defaultValue: item.item_type })}
-            {item.weight > 0 && ` \u00B7 ${item.weight}lb`}
-            {` \u00B7 \u00D7${item.quantity}`}
+            {item.weight > 0 && ` · ${item.weight}lb`}
+            {` · ×${item.quantity}`}
           </p>
         </div>
-        <span className="text-dnd-text-secondary text-xs shrink-0">
-          {isExpanded ? '\u25B2' : '\u25BC'}
+        <span className="text-dnd-text-muted text-xs shrink-0 ml-1">
+          {isExpanded ? '˄' : '˅'}
         </span>
       </button>
 
       {/* Expanded detail panel */}
       {isExpanded && (
-        <div className="px-4 pb-4 space-y-3 border-t border-dnd-gold-dim/10 pt-3">
-          <ItemMetaBadge item={item} />
-
+        <div className="spell-detail-enter px-3 pt-3 pb-3 space-y-3 border-t border-dnd-gold-dim/10">
+          {/* Description with gold accent border */}
           {item.description && (
-            <p className="text-xs text-dnd-text-secondary whitespace-pre-wrap">{item.description}</p>
+            <p className="text-sm text-dnd-text whitespace-pre-wrap leading-relaxed border-l-2 border-dnd-gold-dim/40 pl-3">
+              {item.description}
+            </p>
           )}
 
-          {/* Quantity controls */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-dnd-text-secondary flex-1">{t('character.inventory.quantity')}</span>
+          {/* Stat chips */}
+          <ItemStatChips item={item} />
+
+          {/* Weapon properties tags */}
+          <WeaponPropertyTags item={item} />
+
+          {/* Effect callout (consumable / potion / scroll) */}
+          <ItemEffectCallout item={item} />
+
+          {/* Quantity stepper */}
+          <div className="flex items-center gap-2 bg-dnd-chip-bg rounded-lg px-2 py-1.5">
+            <span className="text-xs text-dnd-text-muted flex-1 font-medium">
+              {t('character.inventory.quantity')}
+            </span>
             <button
               onClick={() => onQuantityChange(-1)}
-              className="w-10 h-10 rounded-xl bg-dnd-surface font-bold text-lg active:opacity-70"
+              className="w-7 h-7 rounded-md bg-dnd-surface-raised border border-dnd-border text-dnd-gold font-bold active:opacity-60"
+              aria-label="-"
             >&minus;</button>
-            <span className="w-6 text-center font-bold">{item.quantity}</span>
+            <span className="w-6 text-center font-mono font-bold text-dnd-gold-bright">{item.quantity}</span>
             <button
               onClick={() => onQuantityChange(1)}
-              className="w-10 h-10 rounded-xl bg-dnd-surface font-bold text-lg active:opacity-70"
+              className="w-7 h-7 rounded-md bg-dnd-surface-raised border border-dnd-border text-dnd-gold font-bold active:opacity-60"
+              aria-label="+"
             >+</button>
           </div>
 
-          {/* Action buttons */}
-          <div className="flex flex-wrap gap-2 pt-1">
+          {/* Action buttons — same pattern as SpellItem */}
+          <div className="flex gap-2 flex-wrap border-t border-dnd-gold-dim/10 pt-2">
             {canEquip && (
-              <Button
-                variant="secondary"
-                size="sm"
+              <button
                 onClick={onEquipToggle}
                 disabled={equipPending}
-                icon={item.is_equipped ? <ArrowLeftRight size={14} /> : <Swords size={14} />}
-                className={`flex-1 ${
-                  item.is_equipped
-                    ? '!text-[var(--dnd-amber)] !border-[var(--dnd-amber)]/50'
-                    : '!text-[var(--dnd-emerald-bright)] !border-[var(--dnd-emerald)]/50'
-                }`}
+                className={`flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg border active:opacity-60 disabled:opacity-30
+                  ${item.is_equipped
+                    ? 'bg-dnd-amber/15 text-dnd-amber border-dnd-amber/30'
+                    : 'bg-dnd-emerald/20 text-dnd-emerald-bright border-dnd-emerald/30'
+                  }`}
               >
+                {item.is_equipped ? <ArrowLeftRight size={12} /> : <Swords size={12} />}
                 {item.is_equipped ? t('character.inventory.unequip') : t('character.inventory.equip')}
-              </Button>
+              </button>
             )}
             {item.item_type === 'weapon' && (
-              <Button
-                variant="secondary"
-                size="sm"
+              <button
                 onClick={onAttack}
                 disabled={attackPending}
-                icon={<Target size={14} />}
-                className="flex-1 !text-[var(--dnd-crimson-bright)] !border-[var(--dnd-crimson)]/50"
+                className="flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg
+                           bg-dnd-crimson/20 text-dnd-crimson-bright border border-dnd-crimson/30
+                           active:opacity-60 disabled:opacity-30"
               >
+                <Target size={12} />
                 {t('character.inventory.attack')}
-              </Button>
+              </button>
             )}
-            <Button
-              variant="secondary"
-              size="sm"
+            <button
               onClick={onEdit}
-              icon={<Pencil size={14} />}
-              className="!text-[var(--dnd-cobalt-bright)] !border-[var(--dnd-cobalt)]/50"
+              className="flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg
+                         bg-dnd-info/20 text-dnd-info-text border border-dnd-info/30
+                         active:opacity-60"
             >
+              <Pencil size={12} />
               {t('common.edit')}
-            </Button>
-            <Button
-              variant="danger"
-              size="sm"
+            </button>
+            <button
               onClick={onDelete}
-              icon={<Trash2 size={14} />}
+              className="flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg
+                         bg-dnd-crimson/15 text-dnd-crimson-bright border border-dnd-crimson/30
+                         active:opacity-60"
             >
+              <Trash2 size={12} />
               {t('common.delete')}
-            </Button>
+            </button>
           </div>
         </div>
       )}

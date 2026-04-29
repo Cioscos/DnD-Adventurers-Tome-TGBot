@@ -49,8 +49,7 @@ export default function Layout({ title, children, group, page }: LayoutProps) {
           >
             <ChevronLeft size={20} className="text-dnd-gold-bright" />
           </m.button>
-          <h1 className="text-lg font-bold font-display text-dnd-gold-bright truncate flex-1"
-              style={{ textShadow: '0 1px 4px var(--dnd-gold-glow)' }}>
+          <h1 className="text-lg font-bold font-display text-dnd-gold-bright truncate flex-1 title-glow">
             {title}
           </h1>
         </div>
