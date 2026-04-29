@@ -23,7 +23,7 @@ export default function PaperDoll({ items, onSlotTap }: Props) {
 
   return (
     <div
-      className="relative w-full mx-auto rounded-2xl overflow-hidden p-3"
+      className="@container relative w-full mx-auto rounded-2xl overflow-hidden p-3"
       style={{
         maxWidth: 420,
         background:
@@ -33,7 +33,7 @@ export default function PaperDoll({ items, onSlotTap }: Props) {
       role="region"
       aria-label={t('character.equipment.equipment', { defaultValue: 'Equipment' })}
     >
-      <div className="grid grid-cols-[56px_1fr_56px] gap-2 items-start">
+      <div className="grid grid-cols-[56px_1fr_56px] @max-[360px]:grid-cols-[48px_1fr_48px] gap-2 @max-[360px]:gap-1.5 items-start">
         {/* Left column */}
         <div className="flex flex-col gap-2">
           {LEFT_SLOTS.map((slot) => (
