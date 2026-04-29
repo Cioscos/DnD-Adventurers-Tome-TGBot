@@ -218,11 +218,11 @@ export default function Spells() {
 
       {/* Concentration panel — active spell + description. TS auto on /hp DAMAGE. */}
       {concentratingId && concentratingSpell && (
-        <Surface variant="arcane" ornamented className="space-y-3">
-          <div className="flex items-center justify-between gap-3">
+        <Surface variant="arcane" ornamented className="space-y-3 @container">
+          <div className="flex flex-col gap-3 @[22rem]:flex-row @[22rem]:items-center @[22rem]:justify-between">
             <div className="flex items-center gap-2 min-w-0">
               <FlaskConical size={16} className="text-dnd-arcane-bright shrink-0" />
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <p className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-arcane-bright">
                   {t('character.spells.concentration')}
                 </p>
@@ -237,6 +237,7 @@ export default function Spells() {
               onClick={() => concentrationMutation.mutate(null)}
               icon={<Ban size={12} />}
               haptic="warning"
+              className="shrink-0 whitespace-nowrap self-end @[22rem]:self-auto"
             >
               {t('character.spells.stop_concentration')}
             </Button>
