@@ -43,6 +43,7 @@
   --dnd-arcane-text: var(--dnd-arcane-bright); /* legacy alias */
   --dnd-cobalt: #3a7ca5;
   --dnd-cobalt-bright: #6fa8cf;
+  --dnd-cobalt-deep: #1e4060;
   --dnd-info: var(--dnd-cobalt); /* legacy alias */
   --dnd-info-text: var(--dnd-cobalt-bright); /* legacy alias */
   --dnd-amber: #e8a547;
@@ -132,6 +133,7 @@
   --dnd-arcane-text: var(--dnd-arcane-bright);
   --dnd-cobalt: #1f5f8b;
   --dnd-cobalt-bright: #4088b8;
+  --dnd-cobalt-deep: #0f3252;
   --dnd-info: var(--dnd-cobalt);
   --dnd-info-text: var(--dnd-cobalt-bright);
   --dnd-amber: #b8741c;
@@ -292,6 +294,16 @@ body::after {
   background-clip: text;
   color: transparent;
 }
+
+/* Title glow — page header h1 */
+.title-glow {
+  text-shadow: 0 1px 4px var(--dnd-gold-glow);
+}
+
+/* HP number glow — three intensities matching health threshold */
+.hp-glow-emerald { filter: drop-shadow(0 0 18px rgba(63, 166, 106, 0.35)); }
+.hp-glow-gold    { filter: drop-shadow(0 0 18px rgba(240, 201, 112, 0.50)); }
+.hp-glow-crimson { filter: drop-shadow(0 0 22px rgba(232, 80, 80, 0.60)); }
 
 /* Ornament line (decorative section divider) */
 .ornament-line {

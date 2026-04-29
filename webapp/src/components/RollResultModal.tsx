@@ -1,7 +1,7 @@
-import { m, AnimatePresence } from 'framer-motion'
+import { m } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import { spring } from '@/styles/motion'
-import { CornerFlourishes } from './ui/Ornament'
+import ResultDialog from './ui/ResultDialog'
 import InspirationRerollButton from './InspirationRerollButton'
 
 export type RollResult = {
@@ -35,22 +35,11 @@ export default function RollResultModal({
   const { t } = useTranslation()
   const { die, bonus, total, is_critical, is_fumble } = result
 
-  const borderColor = is_critical
-    ? 'border-dnd-gold'
-    : is_fumble
-      ? 'border-dnd-crimson'
-      : 'border-dnd-emerald'
-
-  const pulseClass = is_critical
-    ? 'animate-pulse-gold'
-    : is_fumble
-      ? 'animate-pulse-danger'
-      : ''
-
+  const accent = is_critical ? 'gold' : is_fumble ? 'crimson' : 'emerald'
   const dieColor = is_critical
     ? 'text-dnd-gold-bright'
     : is_fumble
-      ? 'text-[var(--dnd-crimson-bright)]'
+      ? 'text-dnd-crimson-bright'
       : 'text-dnd-text'
 
   const bonusStr = bonus >= 0 ? `+${bonus}` : `${bonus}`
@@ -58,93 +47,62 @@ export default function RollResultModal({
     inspirationAvailable && !wasRerolled && onInspirationReroll != null
 
   return (
-    <AnimatePresence>
-      <m.div
-        className="fixed inset-0 flex items-center justify-center z-50 p-4"
-        style={{ background: 'var(--dnd-overlay)', backdropFilter: 'blur(6px)' }}
-        onClick={onClose}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-      >
-        <m.div
-          className={`relative rounded-3xl p-6 pt-8 w-full max-w-xs text-center space-y-3
-                      bg-gradient-parchment surface-parchment border-2 ${borderColor} ${pulseClass}
-                      shadow-parchment-2xl`}
-          onClick={(e) => e.stopPropagation()}
-          initial={{ opacity: 0, scale: 0.8, y: 30 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.9, y: 20 }}
-          transition={spring.elastic}
+    <ResultDialog
+      open
+      onClose={onClose}
+      accent={accent}
+      pulse={is_critical || is_fumble}
+      size="sm"
+      title={title}
+      subtitle={wasRerolled ? t('character.inspiration.reroll_badge') : undefined}
+      extraActions={
+        showInspirationButton ? (
+          <InspirationRerollButton
+            available
+            pending={isRerolling}
+            onClick={onInspirationReroll}
+          />
+        ) : undefined
+      }
+    >
+      {is_critical && (
+        <m.p
+          className="text-dnd-gold-bright font-bold text-sm font-cinzel uppercase tracking-wider"
+          initial={{ scale: 0.5 }}
+          animate={{ scale: [0.5, 1.2, 1] }}
+          transition={{ duration: 0.5 }}
         >
-          <div className="text-dnd-gold-dim">
-            <CornerFlourishes />
-          </div>
+          ✦ CRITICO!
+        </m.p>
+      )}
+      {is_fumble && (
+        <m.p
+          className="text-dnd-crimson-bright font-bold text-sm font-cinzel uppercase tracking-wider"
+          initial={{ scale: 0.5 }}
+          animate={{ scale: [0.5, 1.2, 1] }}
+          transition={{ duration: 0.5 }}
+        >
+          💀 FUMBLE!
+        </m.p>
+      )}
 
-          <p className="text-sm text-dnd-text-muted font-cinzel uppercase tracking-widest">{title}</p>
-
-          {wasRerolled && (
-            <p className="text-[11px] text-dnd-arcane-bright font-cinzel uppercase tracking-wider">
-              {t('character.inspiration.reroll_badge')}
-            </p>
-          )}
-
-          {is_critical && (
-            <m.p
-              className="text-dnd-gold-bright font-bold text-sm font-cinzel uppercase tracking-wider"
-              initial={{ scale: 0.5 }}
-              animate={{ scale: [0.5, 1.2, 1] }}
-              transition={{ duration: 0.5 }}
-            >
-              ✦ CRITICO!
-            </m.p>
-          )}
-          {is_fumble && (
-            <m.p
-              className="text-[var(--dnd-crimson-bright)] font-bold text-sm font-cinzel uppercase tracking-wider"
-              initial={{ scale: 0.5 }}
-              animate={{ scale: [0.5, 1.2, 1] }}
-              transition={{ duration: 0.5 }}
-            >
-              💀 FUMBLE!
-            </m.p>
-          )}
-
-          <m.div
-            className={`text-7xl font-black font-display ${dieColor}`}
-            initial={{ scale: 0, rotate: -180 }}
-            animate={{ scale: 1, rotate: 0 }}
-            transition={{ ...spring.elastic, delay: 0.1 }}
-          >
-            {die}
-          </m.div>
-
-          <p className="text-dnd-text-muted text-sm font-body">
-            d20 ({die}) {bonusStr} = <span className="text-dnd-text font-bold text-lg font-mono">{total}</span>
-          </p>
-
-          {result.description && (
-            <p className="text-xs text-dnd-text-muted italic font-body">{result.description}</p>
-          )}
-
-          {showInspirationButton && (
-            <InspirationRerollButton
-              available
-              pending={isRerolling}
-              onClick={onInspirationReroll}
-            />
-          )}
-
-          <m.button
-            onClick={onClose}
-            className="w-full py-2.5 rounded-xl bg-gradient-gold text-dnd-ink font-semibold mt-2
-                       min-h-[48px] shadow-engrave font-cinzel uppercase tracking-wider"
-            whileTap={{ scale: 0.97 }}
-          >
-            OK
-          </m.button>
-        </m.div>
+      <m.div
+        className={`text-7xl font-black font-display ${dieColor}`}
+        initial={{ scale: 0, rotate: -180 }}
+        animate={{ scale: 1, rotate: 0 }}
+        transition={{ ...spring.elastic, delay: 0.1 }}
+      >
+        {die}
       </m.div>
-    </AnimatePresence>
+
+      <p className="text-dnd-text-muted text-sm font-body">
+        d20 ({die}) {bonusStr} ={' '}
+        <span className="text-dnd-text font-bold text-lg font-mono">{total}</span>
+      </p>
+
+      {result.description && (
+        <p className="text-xs text-dnd-text-muted italic font-body">{result.description}</p>
+      )}
+    </ResultDialog>
   )
 }
