@@ -26,8 +26,8 @@ export default function EquipmentStatsFooter({ char }: Props) {
   const overload = encumbrance > carryCap
 
   return (
-    <Surface variant="tome" className="mt-3 !px-3 !py-3">
-      <div className="grid grid-cols-3 divide-x divide-dnd-gold/20 text-center">
+    <Surface variant="tome" className="@container mt-3 !px-3 !py-3">
+      <div className="grid grid-cols-3 @max-[300px]:grid-cols-1 @max-[300px]:divide-x-0 @max-[300px]:divide-y @max-[300px]:gap-2 divide-x divide-dnd-gold/20 text-center">
         <div className="px-2 flex flex-col items-center gap-1">
           <div className="text-2xl font-display font-black text-dnd-gold-bright leading-none">
             {char.ac}
