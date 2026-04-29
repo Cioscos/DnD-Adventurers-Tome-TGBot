@@ -45,8 +45,8 @@ export default function CharacterSwiper({ hero, equipment, menu }: Props) {
     } else {
       const controls = animate(x, target, {
         type: 'spring',
-        stiffness: 400,
-        damping: 40,
+        stiffness: 360,
+        damping: 32,
       })
       return () => controls.stop()
     }
@@ -69,7 +69,7 @@ export default function CharacterSwiper({ hero, equipment, menu }: Props) {
       if (reduced) {
         x.set(target)
       } else {
-        animate(x, target, { type: 'spring', stiffness: 400, damping: 40 })
+        animate(x, target, { type: 'spring', stiffness: 360, damping: 32 })
       }
     }
   }
@@ -84,17 +84,16 @@ export default function CharacterSwiper({ hero, equipment, menu }: Props) {
     <div ref={containerRef} className="relative flex-1 min-h-0 overflow-hidden">
       <m.div
         className="flex h-full will-change-transform"
-        style={{ x, width: width * 3 }}
+        style={{ x, width: width * 3, touchAction: 'pan-y' }}
         drag={width > 0 ? 'x' : false}
         dragConstraints={{ left: -2 * width, right: 0 }}
         dragElastic={0.15}
-        dragMomentum={false}
         dragDirectionLock
         onDragEnd={handleDragEnd}
       >
-        <div style={{ width }} className="h-full overflow-y-auto shrink-0">{hero}</div>
-        <div style={{ width }} className="h-full overflow-y-auto shrink-0">{equipment}</div>
-        <div style={{ width }} className="h-full overflow-y-auto shrink-0">{menu}</div>
+        <div style={{ width, touchAction: 'pan-y' }} className="h-full overflow-y-auto shrink-0">{hero}</div>
+        <div style={{ width, touchAction: 'pan-y' }} className="h-full overflow-y-auto shrink-0">{equipment}</div>
+        <div style={{ width, touchAction: 'pan-y' }} className="h-full overflow-y-auto shrink-0">{menu}</div>
       </m.div>
       <SwiperDots active={activeScreen} onSelect={setActiveScreen} labels={labels} />
     </div>
