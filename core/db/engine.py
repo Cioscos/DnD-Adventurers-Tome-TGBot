@@ -96,6 +96,10 @@ _MIGRATIONS: list[tuple[str, str, str, str | None]] = [
     ("game_sessions", "gm_display_name", "VARCHAR(120)", None),
     # Character history meta (for op tagging on hp_change, Gruppo H)
     ("character_history", "meta", "TEXT", None),
+    # GM grant payload on session whispers
+    ("session_messages", "item_id", "BIGINT", None),
+    ("session_messages", "item_name", "VARCHAR(120)", None),
+    ("session_messages", "item_quantity", "INTEGER", None),
 ]
 
 # Tables to drop if they exist (legacy feature cleanup)
