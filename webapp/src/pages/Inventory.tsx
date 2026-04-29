@@ -1,5 +1,5 @@
-import { useState, useCallback } from 'react'
-import { useParams } from 'react-router-dom'
+import { useState, useCallback, useEffect, useRef } from 'react'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m, AnimatePresence } from 'framer-motion'
@@ -23,6 +23,14 @@ import type { Item } from '@/types'
 export default function Inventory() {
   const { id } = useParams<{ id: string }>()
   const charId = Number(id)
+  const location = useLocation()
+  const navigate = useNavigate()
+  const initialHighlight =
+    typeof (location.state as { highlightItemId?: unknown } | null)?.highlightItemId === 'number'
+      ? ((location.state as { highlightItemId: number }).highlightItemId)
+      : null
+  const [highlightId, setHighlightId] = useState<number | null>(initialHighlight)
+  const itemRefs = useRef<Record<number, HTMLDivElement | null>>({})
   const { t } = useTranslation()
   const qc = useQueryClient()
 
@@ -135,6 +143,46 @@ export default function Inventory() {
     setShowAdd(true)
   }, [])
 
+  useEffect(() => {
+    if (highlightId === null) return
+    if (!char) return // attendi che la character query carichi
+    const target = char.items?.find((i) => i.id === highlightId)
+    if (!target) {
+      setHighlightId(null)
+      navigate(location.pathname, { replace: true, state: null })
+      return
+    }
+
+    // Espandi l'item
+    setExpanded(highlightId)
+
+    // Sblocca il tipo collassato (se serve)
+    const TYPE_ORDER = ['weapon', 'armor', 'shield', 'consumable', 'tool', 'accessory', 'gear', 'potion', 'scroll', 'generic', 'other']
+    const typeKey = TYPE_ORDER.includes(target.item_type) ? target.item_type : 'other'
+    setCollapsedTypes((prev) => {
+      if (!prev.has(typeKey)) return prev
+      const next = new Set(prev)
+      next.delete(typeKey)
+      return next
+    })
+
+    // Scroll into view (dopo il prossimo frame, così il DOM ha avuto tempo di espandere)
+    const rafId = requestAnimationFrame(() => {
+      itemRefs.current[highlightId]?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+    })
+
+    // Fade dopo 3s e clear della state
+    const tid = window.setTimeout(() => {
+      setHighlightId(null)
+      navigate(location.pathname, { replace: true, state: null })
+    }, 3000)
+
+    return () => {
+      cancelAnimationFrame(rafId)
+      window.clearTimeout(tid)
+    }
+  }, [highlightId, char, navigate, location.pathname])
+
   if (!char) return null
 
   const items: Item[] = char.items ?? []
@@ -229,7 +277,13 @@ export default function Inventory() {
                   >
                     <div className="space-y-2 mt-2">
                       {groupItems.map((item) => (
-                        <m.div key={item.id} layout transition={spring.drift}>
+                        <m.div
+                          key={item.id}
+                          layout
+                          transition={spring.drift}
+                          ref={(el) => { itemRefs.current[item.id] = el }}
+                          className={highlightId === item.id ? 'animate-pulse-glow' : undefined}
+                        >
                           <InventoryItem
                             item={item}
                             isExpanded={expanded === item.id}
