@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { m, AnimatePresence } from 'framer-motion'
 import { X } from 'lucide-react'
@@ -19,10 +20,18 @@ export default function ProgressionFullTableModal({ className, currentLevel, onC
     currentRowRef.current?.scrollIntoView({ behavior: 'auto', block: 'center' })
   }, [])
 
-  return (
+  useEffect(() => {
+    const previous = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = previous
+    }
+  }, [])
+
+  return createPortal(
     <AnimatePresence>
       <m.div
-        className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm"
+        className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-3 sm:p-4"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -43,9 +52,9 @@ export default function ProgressionFullTableModal({ className, currentLevel, onC
               type="button"
               onClick={onClose}
               aria-label={t('common.close', { defaultValue: 'Close' })}
-              className="w-8 h-8 flex items-center justify-center rounded-full border border-dnd-gold-dim/40"
+              className="w-11 h-11 -mr-1 flex items-center justify-center rounded-full border border-dnd-gold-dim/40"
             >
-              <X size={16} className="text-dnd-gold" />
+              <X size={20} className="text-dnd-gold" />
             </button>
           </header>
           <div className="flex-1 overflow-y-auto">
@@ -82,6 +91,7 @@ export default function ProgressionFullTableModal({ className, currentLevel, onC
           </div>
         </m.div>
       </m.div>
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body,
   )
 }
