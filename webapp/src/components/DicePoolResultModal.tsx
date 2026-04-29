@@ -70,7 +70,6 @@ export default function DicePoolResultModal({
       const body: DiceResultRequestBody = {
         rolls: [{ kind: 'd20', value: dieValue }],
         notation: '1d20',
-        label: 'Reroll ispirazione',
         with_inspiration: true,
       }
       await api.dice.result(charId, body)
