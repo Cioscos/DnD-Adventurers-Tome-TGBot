@@ -79,6 +79,12 @@ async def post_dice_result(
             notation += f"{'+' if body.modifier > 0 else ''}{body.modifier}"
 
     char = await _get_owned(char_id, user_id, session)
+
+    if body.with_inspiration:
+        if not char.heroic_inspiration:
+            raise HTTPException(status_code=409, detail="Ispirazione non disponibile")
+        char.heroic_inspiration = False
+
     history = list(char.rolls_history or [])
     history.append({"notation": notation, "rolls": rolls, "total": total})
     char.rolls_history = history[-_MAX_HISTORY:]
@@ -92,6 +98,8 @@ async def post_dice_result(
         description = f"🎲 {notation}: {total}"
     if body.label:
         description = f"{body.label} — {description}"
+    if body.with_inspiration:
+        description = f"Reroll ispirazione — {description}"
     session.add(CharacterHistory(
         character_id=char_id,
         timestamp=datetime.utcnow().isoformat(timespec="seconds"),
