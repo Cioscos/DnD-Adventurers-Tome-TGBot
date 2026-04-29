@@ -20,7 +20,7 @@ type Props = {
   inspirationAvailable?: boolean
   isRerolling?: boolean
   wasRerolled?: boolean
-  onInspirationReroll?: () => void
+  onInspirationReroll?: () => void | Promise<void>
 }
 
 export default function RollResultModal({

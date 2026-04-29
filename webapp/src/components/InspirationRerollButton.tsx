@@ -5,7 +5,7 @@ import { GiPolarStar as Star } from 'react-icons/gi'
 type Props = {
   available: boolean
   pending?: boolean
-  onClick: () => void
+  onClick: () => void | Promise<void>
 }
 
 export default function InspirationRerollButton({ available, pending = false, onClick }: Props) {
