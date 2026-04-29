@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
 import { CircleDot } from 'lucide-react'
 import {
-  GiHeartPlus, GiLightningTrio, GiPotionBall, GiBootPrints,
+  GiHeartPlus, GiLightningTrio, GiPotionBall,
 } from 'react-icons/gi'
 import HPGauge from '@/components/ui/HPGauge'
 import HeroXPBar from '@/components/ui/HeroXPBar'
@@ -19,6 +19,7 @@ import PassiveAbilityDetailModal from '@/pages/abilities/PassiveAbilityDetailMod
 import SpellSlotsSummary from '@/components/character/SpellSlotsSummary'
 import ProgressionPreview from '@/components/character/ProgressionPreview'
 import ClassTabs from '@/components/character/ClassTabs'
+import VitalsStrip from '@/components/character/VitalsStrip'
 import type { Ability, CharacterFull } from '@/types'
 
 const ABILITY_COLORS: Record<string, string> = {
@@ -70,6 +71,7 @@ export default function HeroScreen({ char }: Props) {
 
   return (
     <div className="p-4 space-y-3 pb-safe">
+      <VitalsStrip char={char} />
       {/* Hero card */}
       <Surface
         variant="tome"
@@ -187,7 +189,7 @@ export default function HeroScreen({ char }: Props) {
         )}
 
         {activeConditions.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mt-2 overflow-x-auto scrollbar-hide max-h-14 pr-16">
+          <div className="flex flex-wrap gap-1.5 mt-2 overflow-x-auto scrollbar-hide max-h-14">
             {activeConditions.map(([key, val]) => {
               const Icon = CONDITION_ICONS[key] ?? CircleDot
               return (
@@ -204,17 +206,6 @@ export default function HeroScreen({ char }: Props) {
             })}
           </div>
         )}
-
-        <StatPill
-          icon={<GiBootPrints size={14} />}
-          value={`${char.speed} ft`}
-          tone="emerald"
-          size="sm"
-          iconOnly
-          revealOnTap
-          aria-label={`${t('character.identity.speed', { defaultValue: 'Speed' })}: ${char.speed} ft`}
-          className="absolute bottom-3 right-3"
-        />
 
         {/* Ability scores anchored at the bottom of the hero card */}
         {char.ability_scores.length > 0 && (
