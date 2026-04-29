@@ -15,7 +15,6 @@ import Sheet from '@/components/ui/Sheet'
 import ScrollArea from '@/components/ScrollArea'
 import WeaponAttackModal, { type WeaponAttackResult } from '@/components/WeaponAttackModal'
 import { haptic } from '@/auth/telegram'
-import { spring } from '@/styles/motion'
 import InventoryItem from '@/pages/inventory/InventoryItem'
 import ItemForm from '@/pages/inventory/ItemForm'
 import { buildItemMetadata, type ItemFormData } from '@/pages/inventory/itemMetadata'
@@ -304,7 +303,7 @@ export default function Inventory() {
                         <m.div
                           key={item.id}
                           layout
-                          transition={spring.drift}
+                          transition={{ duration: 0.18, ease: [0.25, 0.1, 0.25, 1] }}
                           ref={(el) => { itemRefs.current[item.id] = el }}
                           className={highlightId === item.id ? 'animate-pulse-glow' : undefined}
                         >
