@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "prebuild": "node scripts/generate-silhouette-manifest.mjs",
     "build": "tsc && vite build",
     "build:prod": "node scripts/build-prod.mjs",
     "preview": "vite preview",
