@@ -106,6 +106,11 @@ export interface SpellSlot {
   available: number
 }
 
+export type EquipmentSlot =
+  | 'head' | 'neck' | 'cloak' | 'body' | 'hands'
+  | 'ring1' | 'ring2' | 'feet'
+  | 'main_hand' | 'off_hand' | 'ammunition'
+
 export interface Item {
   id: number
   name: string
@@ -115,6 +120,7 @@ export interface Item {
   item_type: string
   item_metadata?: Record<string, unknown>
   is_equipped: boolean
+  equipment_slot?: EquipmentSlot | null
 }
 
 export interface CharacterSummary {

@@ -94,6 +94,8 @@ git commit -m "feat: ..."
 
 Do **not** commit `.env.local` — it is gitignored.
 
+> **Quirk**: the script restores `.env.local` to `http://localhost:8000`, but the local dev setup uses `http://127.0.0.1:8000` (different host literal — important for FastAPI bind on `127.0.0.1`). After every `build:prod`, manually rewrite the file back: `printf 'VITE_API_BASE_URL=http://127.0.0.1:8000\n' > webapp/.env.local`.
+
 Open a PR from your feature branch → merge → Pages redeploys automatically.
 
 ---
@@ -133,6 +135,27 @@ Four-package system:
 
 ### Mini App URL
 `https://cioscos.github.io/DnD-Adventurers-Tome-TGBot/app/` (HashRouter, built to `docs/app/`)
+
+## Character Menu (Mini App)
+
+The character hub at `/char/:id` is a **3-screen swipeable carousel** rendered by `<CharacterSwiper>` (`webapp/src/components/character/`):
+
+1. **HeroScreen** — info snapshot (name, class/race, AC, HP, XP, stats, conditions, passive abilities, spell slots summary, class progression preview)
+2. **EquipmentScreen** — Vitruvian paper-doll with 11 D&D 5e equipment slots (head, neck, cloak, body, hands, ring1, ring2, feet, main_hand, off_hand, ammunition)
+3. **MenuScreen** — sub-page navigation grid (Combat / Magic / Skills / Equipment / Character / Tools)
+
+`CharacterMain.tsx` is a thin wrapper: data fetch + Suspense + header + `<CharacterSwiper>`. The swiper uses framer-motion `drag="x"` on a `motion.div` track with `useMotionValue` for finger-1:1 tracking and snap-on-release. Requires `LazyMotion features={domMax}` (see Frontend conventions).
+
+### Equipment slot system
+
+- Backend: `EquipmentSlot` enum (`core/db/models.py`), `Item.equipment_slot` column, `EQUIPMENT_SLOT_COMPAT` mapping in `api/services/equipment.py` (item_type → allowed slots).
+- The `PATCH /characters/{id}/items/{item_id}` endpoint is slot-aware: when an item is equipped with a slot, `swap_slot_occupant()` atomically displaces any prior occupant (clearing its `is_equipped` and `equipment_slot`). The displaced item's AC contribution (armor base AC, shield bonus) is also reset.
+- Frontend mirror: `webapp/src/lib/equipmentSlots.ts` contains `ITEM_TYPE_TO_SLOTS` (must stay in sync with backend) plus per-slot lucide placeholder icons.
+- Items with `is_equipped=true, equipment_slot=NULL` are legacy data (created before the slot column existed). They don't render on the paper-doll; user re-equips them via the slot picker.
+
+### Class progression key bridge
+
+`webapp/src/data/class-progression.json` keys are Italian title-case (`Barbaro`, `Mago`, ...), but `CharacterClass.class_name` in the DB is the canonical English lowercase key (`barbarian`, `wizard`, ...). The bridge lives in `webapp/src/lib/classProgression.ts` — use `progressionRows(className)` instead of indexing the JSON directly. Both `<ProgressionPreview>` and the multiclass `LevelUpModal` go through this helper.
 
 ## Navigation Model
 
@@ -185,7 +208,8 @@ The only callback handler is `bot.handlers.wiki.navigation_callback` — see `bo
 ### Frontend
 - **Auth header** — every API call includes `X-Telegram-Init-Data` header (handled by `api/client.ts`).
 - **Routing** — `HashRouter` only; GitHub Pages cannot serve server-side routes.
-- **State** — TanStack Query for server data, Zustand for `activeCharId` and `locale`.
+- **State** — TanStack Query for server data, Zustand (`webapp/src/store/characterStore.ts`) for `activeCharId`, `activeScreen` (0|1|2), and `locale`. `setActiveCharId` resets `activeScreen` to 0 only when the id actually changes.
+- **framer-motion features** — `webapp/src/main.tsx` mounts `<LazyMotion features={domMax} strict>`. **`domMax` is required**: `domAnimation` is missing the drag/layout/reorder plugins, so any `m.div drag="x"` (used by `<CharacterSwiper>`) is a silent no-op without it. Use `m.*` lazy components (strict mode forbids `motion.*`).
 - **sendData** — do **not** use `window.Telegram.WebApp.sendData()`. It only works when the Mini App is opened via a reply keyboard button, which on Telegram Android does not provide `initData` (confirmed: `tgWebAppData` absent from hash, no native bridge events). Use the authenticated API endpoint `POST /characters/{id}/dice/post-to-chat` instead — the bot sends the message directly to the user's private chat via the Telegram Bot API.
 - **Multipart uploads** — use the `requestFormData<T>()` helper in `api/client.ts` (does not set `Content-Type`; browser sets it automatically with the correct boundary). Never use the regular `request()` helper for `FormData` payloads.
 

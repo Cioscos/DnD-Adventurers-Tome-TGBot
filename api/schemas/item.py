@@ -5,7 +5,10 @@ from __future__ import annotations
 import json
 from typing import Any, Optional
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, ValidationInfo, field_validator
+
+from core.db.models import EquipmentSlot
+from api.services.equipment import slot_allowed_for_type
 
 
 _ALLOWED_ABILITIES = {
@@ -59,6 +62,7 @@ class ItemRead(BaseModel):
     item_type: str = "generic"
     item_metadata: Optional[dict[str, Any]] = None
     is_equipped: bool = False
+    equipment_slot: Optional[EquipmentSlot] = None
 
     model_config = {"from_attributes": True}
 
@@ -81,12 +85,25 @@ class ItemCreate(BaseModel):
     item_type: str = "generic"
     item_metadata: Optional[dict[str, Any]] = None
     is_equipped: bool = False
+    equipment_slot: Optional[EquipmentSlot] = None
 
     @field_validator("item_metadata", mode="after")
     @classmethod
     def validate_ability_mods(cls, v: Any) -> Any:
         if isinstance(v, dict) and "ability_modifiers" in v:
             v["ability_modifiers"] = _validate_ability_modifiers(v["ability_modifiers"])
+        return v
+
+    @field_validator("equipment_slot", mode="after")
+    @classmethod
+    def validate_slot(cls, v: Optional[EquipmentSlot], info: ValidationInfo) -> Optional[EquipmentSlot]:
+        if v is None:
+            return v
+        item_type = info.data.get("item_type", "generic")
+        if not slot_allowed_for_type(item_type, v):
+            raise ValueError(
+                f"equipment_slot {v.value!r} is not allowed for item_type {item_type!r}"
+            )
         return v
 
 
@@ -98,6 +115,7 @@ class ItemUpdate(BaseModel):
     item_type: Optional[str] = None
     item_metadata: Optional[dict[str, Any]] = None
     is_equipped: Optional[bool] = None
+    equipment_slot: Optional[EquipmentSlot] = None
 
     @field_validator("item_metadata", mode="after")
     @classmethod

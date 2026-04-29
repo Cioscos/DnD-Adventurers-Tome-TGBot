@@ -254,9 +254,8 @@ export default function DiceOverlay() {
         className="w-14 h-14 rounded-full
                    bg-gradient-to-br from-dnd-gold-deep to-dnd-gold-bright
                    border border-dnd-gold-dim shadow-halo-gold
-                   flex items-center justify-center text-dnd-ink"
+                   flex items-center justify-center text-dnd-ink touch-manipulation"
         whileTap={{ scale: 0.9 }}
-        whileHover={{ scale: 1.05 }}
         initial={{ opacity: 0, scale: 0.6 }}
         animate={{ opacity: 1, scale: 1, rotate: open ? 45 : 0 }}
         transition={{ type: 'spring', stiffness: 260, damping: 22 }}

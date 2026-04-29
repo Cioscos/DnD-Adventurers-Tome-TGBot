@@ -41,6 +41,7 @@ files/
 webapp/node_modules/
 webapp/.env.local
 webapp/dist/
+webapp/src/data/silhouette-manifest.json
 
 # api
 api/__pycache__/

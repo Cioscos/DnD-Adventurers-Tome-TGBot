@@ -59,6 +59,20 @@ class SessionStatus(str, PyEnum):
     CLOSED = "closed"
 
 
+class EquipmentSlot(str, PyEnum):
+    HEAD = "head"
+    NECK = "neck"
+    CLOAK = "cloak"
+    BODY = "body"
+    HANDS = "hands"
+    RING1 = "ring1"
+    RING2 = "ring2"
+    FEET = "feet"
+    MAIN_HAND = "main_hand"
+    OFF_HAND = "off_hand"
+    AMMUNITION = "ammunition"
+
+
 # ---------------------------------------------------------------------------
 # Character (root entity)
 # ---------------------------------------------------------------------------
@@ -378,12 +392,19 @@ class Item(Base):
     description: Mapped[Optional[str]] = mapped_column(Text)
     weight: Mapped[float] = mapped_column(Float, default=0.0)
     quantity: Mapped[int] = mapped_column(Integer, default=1)
-    # Item typing: "generic" | "weapon" | "armor" | "shield" | "consumable" | "tool"
+    # Item typing: "generic" | "weapon" | "armor" | "shield" | "consumable"
+    #            | "tool" | "accessory" | "gear" | "potion" | "scroll" | "other"
     item_type: Mapped[str] = mapped_column(String(20), default="generic")
     # JSON blob for type-specific metadata (damage_dice, ac_value, etc.)
     item_metadata: Mapped[Optional[str]] = mapped_column(Text)
     # Whether the item is currently equipped (relevant for weapon/armor/shield)
     is_equipped: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Paper-doll slot assignment (None = not slotted)
+    equipment_slot: Mapped[Optional[EquipmentSlot]] = mapped_column(
+        Enum(EquipmentSlot, native_enum=False, length=20),
+        nullable=True,
+        default=None,
+    )
 
     character: Mapped["Character"] = relationship(back_populates="items")
 
