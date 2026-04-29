@@ -87,8 +87,8 @@ function InventoryItemInner({
 
   return (
     <div
-      className={`rounded-2xl overflow-hidden bg-dnd-surface
-        ${item.is_equipped ? 'ring-1 ring-dnd-success/50' : ''}`}
+      className={`rounded-2xl overflow-hidden bg-dnd-surface border
+        ${item.is_equipped ? 'border-dnd-emerald/60' : 'border-transparent'}`}
     >
       {/* Header row -- tap to expand */}
       <button
@@ -150,7 +150,7 @@ function InventoryItemInner({
           </div>
 
           {/* Action buttons */}
-          <div className="flex flex-wrap gap-2 pt-1">
+          <div className="grid grid-cols-2 gap-2 pt-1">
             {canEquip && (
               <Button
                 variant="secondary"
@@ -158,11 +158,11 @@ function InventoryItemInner({
                 onClick={onEquipToggle}
                 disabled={equipPending}
                 icon={item.is_equipped ? <ArrowLeftRight size={14} /> : <Swords size={14} />}
-                className={`flex-1 ${
+                className={
                   item.is_equipped
-                    ? '!text-[var(--dnd-amber)] !border-[var(--dnd-amber)]/50'
-                    : '!text-[var(--dnd-emerald-bright)] !border-[var(--dnd-emerald)]/50'
-                }`}
+                    ? '!text-dnd-amber !border-dnd-amber/50'
+                    : '!text-dnd-emerald-bright !border-dnd-emerald/50'
+                }
               >
                 {item.is_equipped ? t('character.inventory.unequip') : t('character.inventory.equip')}
               </Button>
@@ -174,7 +174,7 @@ function InventoryItemInner({
                 onClick={onAttack}
                 disabled={attackPending}
                 icon={<Target size={14} />}
-                className="flex-1 !text-[var(--dnd-crimson-bright)] !border-[var(--dnd-crimson)]/50"
+                className="!text-dnd-crimson-bright !border-dnd-crimson/50"
               >
                 {t('character.inventory.attack')}
               </Button>
@@ -184,7 +184,7 @@ function InventoryItemInner({
               size="sm"
               onClick={onEdit}
               icon={<Pencil size={14} />}
-              className="!text-[var(--dnd-cobalt-bright)] !border-[var(--dnd-cobalt)]/50"
+              className="!text-dnd-cobalt-bright !border-dnd-cobalt/50"
             >
               {t('common.edit')}
             </Button>
