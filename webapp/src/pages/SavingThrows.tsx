@@ -17,6 +17,7 @@ import { stagger } from '@/styles/motion'
 import { useDiceAnimation } from '@/dice/useDiceAnimation'
 import { useDiceSettings } from '@/store/diceSettings'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
+import { useToast } from '@/hooks/useToast'
 
 const ABILITIES = ['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'] as const
 
@@ -48,6 +49,7 @@ export default function SavingThrows() {
   const dice = useDiceAnimation()
   const animate3d = useDiceSettings((s) => s.animate3d)
   const reducedMotion = useReducedMotion()
+  const toast = useToast()
   const [rollState, setRollState] = useState<RollState | null>(null)
 
   const { data: char } = useQuery({
@@ -104,9 +106,11 @@ export default function SavingThrows() {
       haptic.success()
     },
     onError: (err) => {
-      haptic.error()
       if (err instanceof ApiError && err.status === 409) {
+        toast.error(t('character.inspiration.unavailable_error'))
         qc.invalidateQueries({ queryKey: ['character', charId] })
+      } else {
+        haptic.error()
       }
     },
   })
