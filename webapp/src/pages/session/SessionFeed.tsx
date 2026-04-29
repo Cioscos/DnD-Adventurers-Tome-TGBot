@@ -348,7 +348,7 @@ export default function SessionFeed({
         </div>
       )}
 
-      <div className="flex items-center gap-2">
+      <div className="mt-4 flex items-center gap-2">
         <input
           type="text"
           value={chatInput}
