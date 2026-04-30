@@ -79,6 +79,7 @@
       "failure": "Failure",
       "stabilize": "Stabilize",
       "reset": "Reset",
+      "manual_override": "Manual override",
       "roll": "Roll d20",
       "roll_result": "Death Save Roll",
       "nat20": "Natural 20! Revived!",
