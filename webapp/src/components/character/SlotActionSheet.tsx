@@ -30,48 +30,43 @@ export default function SlotActionSheet({ charId, slot, item, onClose, onReplace
   })
 
   const slotLabel = t(`character.equipment.slots.${slot}`, { defaultValue: slot })
+  const itemBtnCls =
+    'min-h-[48px] px-4 py-3 text-left text-sm hover:bg-dnd-surface focus-visible:outline-none focus-visible:bg-dnd-surface focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-dnd-gold transition-colors'
 
   return createPortal(
     <AnimatePresence>
       <m.div
-        className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 backdrop-blur-sm"
+        className="fixed inset-0 z-50 flex items-end justify-center backdrop-blur-sm"
+        style={{ background: 'var(--dnd-overlay)' }}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         onClick={onClose}
       >
         <m.div
-          className="w-full max-w-md bg-dnd-surface-raised border border-dnd-gold rounded-t-2xl pb-safe"
+          className="w-full max-w-md bg-dnd-surface-raised border border-dnd-gold-dim/50 rounded-t-2xl pb-safe"
           initial={{ y: 100 }}
           animate={{ y: 0 }}
           exit={{ y: 100 }}
           transition={{ type: 'spring', stiffness: 260, damping: 28 }}
           onClick={(e) => e.stopPropagation()}
         >
-          <header className="px-4 py-3 border-b border-dnd-gold-dim/40">
+          <header className="px-4 py-3 border-b border-dnd-border">
             <p className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-gold-dim">{slotLabel}</p>
             <h2 className="text-sm font-bold text-dnd-gold-bright">{item.name}</h2>
           </header>
           <div className="flex flex-col">
-            <button
-              type="button"
-              onClick={() => onDetails(item)}
-              className="px-4 py-3 text-left hover:bg-dnd-surface text-dnd-text"
-            >
+            <button type="button" onClick={() => onDetails(item)} className={`${itemBtnCls} text-dnd-text`}>
               {t('character.equipment.actions.details', { defaultValue: 'Details' })}
             </button>
-            <button
-              type="button"
-              onClick={onReplace}
-              className="px-4 py-3 text-left hover:bg-dnd-surface text-dnd-text"
-            >
+            <button type="button" onClick={onReplace} className={`${itemBtnCls} text-dnd-text`}>
               {t('character.equipment.actions.replace', { defaultValue: 'Replace' })}
             </button>
             <button
               type="button"
               onClick={() => unequip.mutate()}
               disabled={unequip.isPending}
-              className="px-4 py-3 text-left hover:bg-dnd-surface text-[var(--dnd-crimson-bright)]"
+              className={`${itemBtnCls} text-[var(--dnd-crimson-bright)] disabled:opacity-60`}
             >
               {t('character.equipment.actions.unequip', { defaultValue: 'Unequip' })}
             </button>

@@ -1,10 +1,14 @@
 import { useTranslation } from 'react-i18next'
 import { GiCheckedShield, GiCrossedSwords, GiWeight } from 'react-icons/gi'
-import Surface from '@/components/ui/Surface'
 import type { CharacterFull } from '@/types'
 
 interface Props {
   char: CharacterFull
+}
+
+function formatWeight(n: number): string {
+  if (Number.isInteger(n)) return String(n)
+  return n.toFixed(1).replace(/\.0$/, '')
 }
 
 export default function EquipmentStatsFooter({ char }: Props) {
@@ -25,39 +29,53 @@ export default function EquipmentStatsFooter({ char }: Props) {
   const carryCap = (char.ability_scores.find((s) => s.name.toLowerCase() === 'strength')?.value ?? 10) * 15
   const overload = encumbrance > carryCap
 
+  const carryColor = overload
+    ? 'text-[var(--dnd-amber)]'
+    : 'text-dnd-text-muted'
+
   return (
-    <Surface variant="tome" className="@container mt-3 !px-3 !py-3">
-      <div className="grid grid-cols-3 @max-[300px]:grid-cols-1 @max-[300px]:divide-x-0 @max-[300px]:divide-y @max-[300px]:gap-2 divide-x divide-dnd-gold/20 text-center">
-        <div className="px-2 flex flex-col items-center gap-1">
-          <div className="text-2xl font-display font-black text-dnd-gold-bright leading-none">
-            {char.ac}
-          </div>
-          <div className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-gold-dim">
-            {t('character.ac.short', { defaultValue: 'AC' })}
-          </div>
-          <GiCheckedShield size={12} className="text-dnd-gold/60" />
-        </div>
-
-        <div className="px-2 flex flex-col items-center gap-1">
-          <div className={`text-xl font-mono font-bold leading-none ${damage ? 'text-[var(--dnd-crimson-bright)]' : 'text-dnd-text-faint'}`}>
-            {damage ?? '—'}
-          </div>
-          <div className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-gold-dim">
-            {t('character.equipment.slots.main_hand', { defaultValue: 'Weapon' })}
-          </div>
-          <GiCrossedSwords size={12} className="text-[var(--dnd-crimson-bright)]/60" />
-        </div>
-
-        <div className="px-2 flex flex-col items-center gap-1">
-          <div className={`text-sm font-mono font-bold leading-none ${overload ? 'text-[var(--dnd-amber)]' : 'text-[var(--dnd-emerald-bright)]'}`}>
-            {`${encumbrance.toFixed(1)}/${carryCap}`}
-          </div>
-          <div className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-gold-dim">
-            {t('character.equipment.summary.encumbrance', { defaultValue: 'Carry' })}
-          </div>
-          <GiWeight size={12} className={overload ? 'text-[var(--dnd-amber)]/60' : 'text-[var(--dnd-emerald-bright)]/60'} />
-        </div>
+    <section
+      aria-label={t('character.equipment.equipment', { defaultValue: 'Equipment' })}
+      className="mt-3 flex flex-col items-center gap-3 px-2"
+    >
+      {/* AC — hero */}
+      <div className="flex flex-col items-center gap-1">
+        <span
+          aria-hidden="true"
+          className="font-mono font-black text-dnd-gold-bright leading-none"
+          style={{ fontSize: 'clamp(2.25rem, 9vw, 3rem)' }}
+        >
+          {char.ac}
+        </span>
+        <span className="flex items-center gap-1.5 text-[10px] font-cinzel uppercase tracking-[0.25em] text-dnd-gold-dim">
+          <GiCheckedShield size={11} aria-hidden="true" />
+          {t('character.ac.short', { defaultValue: 'AC' })}
+        </span>
       </div>
-    </Surface>
+
+      {/* Inline meta: weapon damage + carry */}
+      <div className="flex items-center gap-3 text-[11px] font-cinzel uppercase tracking-[0.18em]">
+        <span className="flex items-center gap-1.5 text-dnd-text-muted">
+          <GiCrossedSwords size={12} aria-hidden="true" className="text-[var(--dnd-crimson-bright)]/70" />
+          <span className="font-mono normal-case tracking-normal text-dnd-text">
+            {damage ?? '—'}
+          </span>
+        </span>
+
+        <span aria-hidden="true" className="text-dnd-gold-dim/60 select-none">◈</span>
+
+        <span className="flex items-center gap-1.5 text-dnd-text-muted">
+          <GiWeight
+            size={12}
+            aria-hidden="true"
+            className={overload ? 'text-[var(--dnd-amber)]/80' : 'text-dnd-text-faint'}
+          />
+          <span className={`font-mono normal-case tracking-normal ${carryColor}`}>
+            {`${formatWeight(encumbrance)}/${carryCap}`}
+            <span className="text-dnd-text-faint ml-0.5">lb</span>
+          </span>
+        </span>
+      </div>
+    </section>
   )
 }

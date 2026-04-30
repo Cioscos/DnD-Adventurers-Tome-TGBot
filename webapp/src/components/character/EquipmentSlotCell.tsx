@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { m } from 'framer-motion'
+import { m, useReducedMotion } from 'framer-motion'
 import { SLOT_PLACEHOLDER_ICON } from '@/lib/equipmentSlots'
 import { haptic } from '@/auth/telegram'
 import type { EquipmentSlot, Item } from '@/types'
@@ -13,39 +13,48 @@ interface Props {
 
 export default function EquipmentSlotCell({ slot, equipped, size = 'md', onTap }: Props) {
   const { t } = useTranslation()
+  const reduced = useReducedMotion()
   const PlaceholderIcon = SLOT_PLACEHOLDER_ICON[slot]
   const dim = size === 'lg' ? 56 : 46
   const slotLabel = t(`character.equipment.slots.${slot}`, { defaultValue: slot })
+  const initial = equipped?.name?.trim()?.[0]?.toUpperCase() ?? ''
 
   return (
     <m.button
       type="button"
       onClick={() => { haptic.light(); onTap(equipped) }}
-      whileTap={{ scale: 0.92 }}
+      whileTap={reduced ? undefined : { scale: 0.97 }}
       style={{
         width: dim,
         height: dim,
-        borderRadius: 6,
-        border: equipped
-          ? '2px solid var(--dnd-gold-bright, #d4af37)'
-          : '2px solid var(--dnd-gold-dim, #826635)',
+        borderRadius: 8,
+        borderWidth: equipped ? 2 : 1,
+        borderStyle: 'solid',
+        borderColor: equipped
+          ? 'var(--dnd-gold-bright)'
+          : 'var(--dnd-border)',
         background: equipped
-          ? 'rgba(212,175,55,0.18)'
-          : 'rgba(212,175,55,0.08)',
-        boxShadow: equipped ? '0 0 6px rgba(212,175,55,0.35)' : undefined,
+          ? 'rgba(240, 201, 112, 0.10)'
+          : 'transparent',
       }}
-      className="relative flex items-center justify-center"
+      className="relative flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dnd-gold focus-visible:ring-offset-2 focus-visible:ring-offset-dnd-bg"
       aria-label={equipped ? `${slotLabel}: ${equipped.name}` : `${slotLabel} ${t('character.equipment.picker.empty', { defaultValue: 'empty' })}`}
+      title={equipped ? equipped.name : slotLabel}
     >
       {equipped ? (
         <span
-          className="font-cinzel text-[10px] uppercase tracking-wider text-dnd-gold-bright text-center px-1 truncate"
-          style={{ maxWidth: dim - 4 }}
+          aria-hidden="true"
+          className="font-cinzel font-bold text-dnd-gold-bright leading-none"
+          style={{ fontSize: size === 'lg' ? 22 : 18 }}
         >
-          {equipped.name.slice(0, 3)}
+          {initial}
         </span>
       ) : (
-        <PlaceholderIcon size={dim * 0.45} className="text-dnd-gold-dim" />
+        <PlaceholderIcon
+          aria-hidden="true"
+          size={Math.round(dim * 0.42)}
+          className="text-dnd-text-faint"
+        />
       )}
     </m.button>
   )
