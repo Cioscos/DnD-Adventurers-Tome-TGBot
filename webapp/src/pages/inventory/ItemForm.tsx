@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import DndInput from '@/components/DndInput'
-import DndButton from '@/components/DndButton'
+import Sheet from '@/components/ui/Sheet'
+import Input from '@/components/ui/Input'
+import Button from '@/components/ui/Button'
 import AbilityModifiersEditor from './AbilityModifiersEditor'
 import {
   ITEM_TYPES,
@@ -24,6 +25,9 @@ interface ItemFormProps {
   onCancel: () => void
   isPending: boolean
 }
+
+const SELECT_CLS =
+  'w-full px-3 py-2.5 min-h-[48px] rounded-lg bg-dnd-surface text-dnd-text border-b-2 border-dnd-border outline-none font-body text-sm'
 
 export default function ItemForm({ initialData, onSubmit, onCancel, isPending }: ItemFormProps) {
   const { t } = useTranslation()
@@ -48,17 +52,14 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
   }
 
   return (
-    <div
-      className="fixed inset-0 bg-black/60 flex items-end z-50 p-4"
-      onFocusCapture={(e) => (e.target as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'nearest' })}
+    <Sheet
+      open
+      onClose={onCancel}
+      title={isEditing ? t('common.edit') : t('character.inventory.add')}
     >
-      <div className="w-full rounded-2xl bg-dnd-surface-elevated p-4 space-y-3 max-h-[90vh] overflow-y-auto">
-        <h3 className="font-semibold font-cinzel text-dnd-gold">
-          {isEditing ? t('common.edit') : t('character.inventory.add')}
-        </h3>
-
+      <div className="p-5 space-y-3">
         {/* Name */}
-        <DndInput
+        <Input
           label={t('character.inventory.item_name')}
           value={form.name}
           onChange={(v) => setForm((f) => ({ ...f, name: v }))}
@@ -67,14 +68,13 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
 
         {/* Type */}
         <div>
-          <label className="block text-[11px] uppercase tracking-wider mb-1 font-medium text-dnd-gold-dim">
+          <label className="block text-[11px] uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
             {t('character.inventory.item_type')}
           </label>
           <select
             value={form.item_type}
             onChange={(e) => setForm((f) => ({ ...f, item_type: e.target.value as ItemType }))}
-            className="w-full bg-dnd-surface rounded-xl px-3 py-3 min-h-[48px] outline-none text-dnd-text
-                       border border-transparent focus:border-dnd-gold-dim"
+            className={SELECT_CLS}
           >
             {ITEM_TYPES.map((type) => (
               <option key={type} value={type}>
@@ -87,7 +87,7 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
         {/* === WEAPON fields === */}
         {form.item_type === 'weapon' && (
           <>
-            <DndInput
+            <Input
               label={t('character.inventory.damage_dice_label')}
               value={form.damage_dice}
               onChange={(v) => setForm((f) => ({ ...f, damage_dice: v }))}
@@ -96,14 +96,13 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
             />
 
             <div>
-              <label className="block text-[11px] uppercase tracking-wider mb-1 font-medium text-dnd-gold-dim">
+              <label className="block text-[11px] uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
                 {t('character.inventory.damage_type_label')}
               </label>
               <select
                 value={form.damage_type}
                 onChange={(e) => setForm((f) => ({ ...f, damage_type: e.target.value }))}
-                className="w-full bg-dnd-surface rounded-xl px-3 py-3 min-h-[48px] outline-none text-dnd-text
-                           border border-transparent focus:border-dnd-gold-dim"
+                className={SELECT_CLS}
               >
                 {DAMAGE_TYPES.map((dt) => (
                   <option key={dt} value={dt}>
@@ -114,42 +113,45 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
             </div>
 
             <div>
-              <label className="block text-[11px] uppercase tracking-wider mb-1 font-medium text-dnd-gold-dim">
+              <label className="block text-[11px] uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
                 {t('character.inventory.weapon_type_label')}
               </label>
               <div className="flex gap-2">
                 {WEAPON_TYPES.map((wt) => (
-                  <DndButton
+                  <Button
                     key={wt}
                     variant={form.weapon_type === wt ? 'primary' : 'secondary'}
+                    size="sm"
+                    fullWidth
                     onClick={() => setForm((f) => ({ ...f, weapon_type: wt }))}
-                    className="flex-1"
                   >
                     {t(`character.inventory.weapon_type.${wt}`)}
-                  </DndButton>
+                  </Button>
                 ))}
               </div>
             </div>
 
             <div>
-              <label className="block text-[11px] uppercase tracking-wider mb-1 font-medium text-dnd-gold-dim">
+              <label className="block text-[11px] uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
                 {t('character.inventory.properties_label')}
               </label>
               <div className="flex flex-wrap gap-2">
-                {WEAPON_PROPERTIES.map((prop) => (
-                  <button
-                    key={prop}
-                    type="button"
-                    onClick={() => toggleProperty(prop)}
-                    className={`px-2 py-1 rounded-lg text-xs font-medium transition-colors ${
-                      form.properties.includes(prop)
-                        ? 'bg-dnd-gold text-dnd-bg'
-                        : 'bg-dnd-surface text-dnd-text'
-                    }`}
-                  >
-                    {form.properties.includes(prop) ? '\u2713 ' : ''}{t(`character.inventory.weapon_properties.${prop}`)}
-                  </button>
-                ))}
+                {WEAPON_PROPERTIES.map((prop) => {
+                  const active = form.properties.includes(prop)
+                  return (
+                    <button
+                      key={prop}
+                      type="button"
+                      onClick={() => toggleProperty(prop)}
+                      className={`min-h-[44px] px-3 py-2 rounded-lg text-xs font-medium transition-colors
+                        ${active
+                          ? 'bg-dnd-gold text-dnd-ink shadow-engrave'
+                          : 'bg-dnd-surface-raised text-dnd-text border border-dnd-border'}`}
+                    >
+                      {active ? '✓ ' : ''}{t(`character.inventory.weapon_properties.${prop}`)}
+                    </button>
+                  )
+                })}
               </div>
             </div>
           </>
@@ -159,25 +161,26 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
         {form.item_type === 'armor' && (
           <>
             <div>
-              <label className="block text-[11px] uppercase tracking-wider mb-1 font-medium text-dnd-gold-dim">
+              <label className="block text-[11px] uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
                 {t('character.inventory.armor_type_label')}
               </label>
               <div className="flex gap-2">
                 {ARMOR_TYPES.map((at) => (
-                  <DndButton
+                  <Button
                     key={at}
                     variant={form.armor_type === at ? 'primary' : 'secondary'}
+                    size="sm"
+                    fullWidth
                     onClick={() => setForm((f) => ({ ...f, armor_type: at }))}
-                    className="flex-1"
                   >
                     {t(`character.inventory.armor_type.${at}`)}
-                  </DndButton>
+                  </Button>
                 ))}
               </div>
             </div>
 
             <div className="flex gap-2">
-              <DndInput
+              <Input
                 className="flex-1"
                 label={t('character.inventory.ac_value_label')}
                 type="number"
@@ -185,7 +188,7 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
                 onChange={(v) => setForm((f) => ({ ...f, ac_value: v }))}
                 min={1}
               />
-              <DndInput
+              <Input
                 className="flex-1"
                 label={t('character.inventory.strength_req_label')}
                 type="number"
@@ -195,12 +198,12 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
               />
             </div>
 
-            <label className="flex items-center gap-2 cursor-pointer text-sm text-dnd-text">
+            <label className="flex items-center gap-2 cursor-pointer text-sm text-dnd-text font-body">
               <input
                 type="checkbox"
                 checked={form.stealth_disadvantage}
                 onChange={(e) => setForm((f) => ({ ...f, stealth_disadvantage: e.target.checked }))}
-                className="w-4 h-4 accent-dnd-gold"
+                className="w-5 h-5 accent-dnd-gold"
               />
               {t('character.inventory.stealth_disadvantage_label')}
             </label>
@@ -209,7 +212,7 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
 
         {/* === SHIELD fields === */}
         {form.item_type === 'shield' && (
-          <DndInput
+          <Input
             label={t('character.inventory.ac_bonus_label')}
             type="number"
             value={form.ac_bonus}
@@ -220,24 +223,18 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
 
         {/* === CONSUMABLE fields === */}
         {(form.item_type === 'consumable' || form.item_type === 'potion' || form.item_type === 'scroll') && (
-          <div>
-            <label className="block text-[11px] uppercase tracking-wider mb-1 font-medium text-dnd-gold-dim">
-              {t('character.inventory.effect_label')}
-            </label>
-            <textarea
-              value={form.effect}
-              onChange={(e) => setForm((f) => ({ ...f, effect: e.target.value }))}
-              rows={2}
-              className="w-full bg-dnd-surface rounded-xl px-3 py-2 outline-none resize-none text-dnd-text
-                         placeholder:text-dnd-text-secondary/50 border border-transparent
-                         focus:border-dnd-gold-dim"
-            />
-          </div>
+          <Input
+            variant="textarea"
+            label={t('character.inventory.effect_label')}
+            value={form.effect}
+            onChange={(v) => setForm((f) => ({ ...f, effect: v }))}
+            rows={2}
+          />
         )}
 
         {/* === TOOL fields === */}
         {form.item_type === 'tool' && (
-          <DndInput
+          <Input
             label={t('character.inventory.tool_type_label')}
             value={form.tool_type}
             onChange={(v) => setForm((f) => ({ ...f, tool_type: v }))}
@@ -252,7 +249,7 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
 
         {/* Quantity & Weight */}
         <div className="flex gap-2">
-          <DndInput
+          <Input
             className="flex-1"
             label={t('character.inventory.quantity')}
             type="number"
@@ -260,7 +257,7 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
             onChange={(v) => setForm((f) => ({ ...f, quantity: v }))}
             min={1}
           />
-          <DndInput
+          <Input
             className="flex-1"
             label={`${t('character.inventory.weight')} (lb)`}
             type="number"
@@ -271,39 +268,31 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
         </div>
 
         {/* Description */}
-        <div>
-          <label className="block text-[11px] uppercase tracking-wider mb-1 font-medium text-dnd-gold-dim">
-            {t('character.inventory.description')}
-          </label>
-          <textarea
-            value={form.description}
-            onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-            placeholder={t('character.inventory.description')}
-            rows={2}
-            className="w-full bg-dnd-surface rounded-xl px-3 py-2 outline-none resize-none text-dnd-text
-                       placeholder:text-dnd-text-secondary/50 border border-transparent
-                       focus:border-dnd-gold-dim"
-          />
-        </div>
+        <Input
+          variant="textarea"
+          label={t('character.inventory.description')}
+          value={form.description}
+          onChange={(v) => setForm((f) => ({ ...f, description: v }))}
+          placeholder={t('character.inventory.description')}
+          rows={2}
+        />
 
-        <div className="flex gap-2">
-          <DndButton
+        <div className="flex gap-2 pt-2">
+          <Button
+            variant="primary"
+            fullWidth
             onClick={() => onSubmit(form)}
             disabled={!isItemFormValid(form)}
             loading={isPending}
-            className="flex-1"
+            haptic="success"
           >
             {isEditing ? t('common.save') : t('common.add')}
-          </DndButton>
-          <DndButton
-            variant="secondary"
-            onClick={onCancel}
-            className="flex-1"
-          >
+          </Button>
+          <Button variant="secondary" fullWidth onClick={onCancel}>
             {t('common.cancel')}
-          </DndButton>
+          </Button>
         </div>
       </div>
-    </div>
+    </Sheet>
   )
 }

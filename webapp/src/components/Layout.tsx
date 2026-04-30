@@ -13,9 +13,11 @@ interface LayoutProps {
   backTo?: string
   group?: string
   page?: string
+  /** Hide native scrollbar on the scrolling main region. */
+  hideScrollbar?: boolean
 }
 
-export default function Layout({ title, children, group, page }: LayoutProps) {
+export default function Layout({ title, children, group, page, hideScrollbar = false }: LayoutProps) {
   const navigate = useNavigate()
   const { t } = useTranslation()
   const swipe = useSwipeNavigation(group, page)
@@ -113,7 +115,7 @@ export default function Layout({ title, children, group, page }: LayoutProps) {
 
       <main
         ref={swipe.contentRef}
-        className="flex-1 min-w-0 overflow-y-auto p-4 space-y-3 pb-safe animate-fade-in"
+        className={`flex-1 min-w-0 overflow-y-auto p-4 space-y-3 pb-safe animate-fade-in${hideScrollbar ? ' scrollbar-hide' : ''}`}
         onTouchStart={swipe.onTouchStart}
         onTouchMove={swipe.onTouchMove}
         onTouchEnd={swipe.onTouchEnd}

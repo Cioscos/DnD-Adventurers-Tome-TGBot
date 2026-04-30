@@ -210,7 +210,7 @@ export default function Skills() {
                         {/* Proficiency toggle */}
                         <m.button
                           onClick={() => toggle(skill.key)}
-                          className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
+                          className="w-11 h-11 rounded-full flex items-center justify-center shrink-0"
                           whileTap={{ scale: 0.85 }}
                           aria-label="Proficiency"
                         >

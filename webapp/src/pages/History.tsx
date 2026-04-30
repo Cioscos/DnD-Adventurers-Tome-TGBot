@@ -42,7 +42,7 @@ export default function History() {
   }
 
   return (
-    <Layout title={t('character.history.title')} backTo={`/char/${charId}`} group="tools" page="history">
+    <Layout title={t('character.history.title')} backTo={`/char/${charId}`} group="tools" page="history" hideScrollbar>
       {isLoading ? (
         <div className="space-y-2">
           {Array.from({ length: 4 }).map((_, i) => (
@@ -62,6 +62,25 @@ export default function History() {
         </Surface>
       ) : (
         <>
+          {/* Top-of-page action bar — clear button always reachable without scrolling. */}
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[11px] font-cinzel uppercase tracking-widest text-dnd-gold-dim">
+              {t('character.history.entries_count', {
+                count: entries.length,
+                defaultValue: '{{count}} voci',
+              })}
+            </span>
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={() => setConfirmClear(true)}
+              icon={<Trash2 size={12} />}
+              haptic="warning"
+            >
+              {t('character.history.clear')}
+            </Button>
+          </div>
+
           <ScrollArea>
             <div className="relative">
               {/* Vertical timeline line — gold gradient + glow + inner highlight */}
@@ -111,16 +130,6 @@ export default function History() {
               </div>
             </div>
           </ScrollArea>
-
-          <Button
-            variant="danger"
-            size="md"
-            fullWidth
-            onClick={() => setConfirmClear(true)}
-            icon={<Trash2 size={14} />}
-          >
-            {t('character.history.clear')}
-          </Button>
         </>
       )}
 

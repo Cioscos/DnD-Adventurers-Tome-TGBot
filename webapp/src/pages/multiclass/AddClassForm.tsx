@@ -159,14 +159,14 @@ export default function AddClassForm({ onAdd, onCancel, isPending, lockLevelTo }
             placeholder={t('character.multiclass.spellcasting')}
           />
         ) : (
-          <p className="text-sm text-dnd-text-secondary px-1">
+          <p className="text-sm text-dnd-text-muted px-1">
             {t('character.multiclass.spellcasting')}: {predefinedAttrs.spellcasting_ability ?? '\u2014'}
           </p>
         )}
 
         {/* Auto-resources hint for predefined classes */}
         {isPredefined && (
-          <p className="text-xs text-dnd-text-secondary italic px-1">
+          <p className="text-xs text-dnd-text-muted italic px-1">
             {t('character.multiclass.auto_resources_hint')}
           </p>
         )}

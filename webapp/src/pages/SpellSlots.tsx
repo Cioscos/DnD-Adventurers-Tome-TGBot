@@ -105,11 +105,11 @@ export default function SpellSlots() {
                   </span>
                   <m.button
                     onClick={() => removeSlot.mutate(slot.id)}
-                    className="w-7 h-7 rounded-lg text-[var(--dnd-crimson-bright)] flex items-center justify-center hover:bg-[var(--dnd-crimson)]/10"
+                    className="w-11 h-11 rounded-lg text-[var(--dnd-crimson-bright)] flex items-center justify-center hover:bg-[var(--dnd-crimson)]/10"
                     whileTap={{ scale: 0.9 }}
                     aria-label="Remove"
                   >
-                    <X size={14} />
+                    <X size={16} />
                   </m.button>
                 </div>
               </div>
@@ -155,18 +155,20 @@ export default function SpellSlots() {
                 </span>
                 <m.button
                   onClick={() => updateTotal.mutate({ slotId: slot.id, total: Math.max(1, slot.total - 1) })}
-                  className="w-8 h-8 rounded-lg bg-dnd-surface border border-dnd-border flex items-center justify-center text-dnd-gold"
+                  className="w-11 h-11 rounded-lg bg-dnd-surface border border-dnd-border flex items-center justify-center text-dnd-gold"
                   whileTap={{ scale: 0.9 }}
+                  aria-label={t('character.slots.decrement_total')}
                 >
-                  <Minus size={14} />
+                  <Minus size={16} />
                 </m.button>
-                <span className="w-6 text-center font-mono font-bold text-dnd-gold-bright">{slot.total}</span>
+                <span className="w-8 text-center font-mono font-bold text-dnd-gold-bright">{slot.total}</span>
                 <m.button
                   onClick={() => updateTotal.mutate({ slotId: slot.id, total: slot.total + 1 })}
-                  className="w-8 h-8 rounded-lg bg-dnd-surface border border-dnd-border flex items-center justify-center text-dnd-gold"
+                  className="w-11 h-11 rounded-lg bg-dnd-surface border border-dnd-border flex items-center justify-center text-dnd-gold"
                   whileTap={{ scale: 0.9 }}
+                  aria-label={t('character.slots.increment_total')}
                 >
-                  <Plus size={14} />
+                  <Plus size={16} />
                 </m.button>
               </div>
             </Surface>

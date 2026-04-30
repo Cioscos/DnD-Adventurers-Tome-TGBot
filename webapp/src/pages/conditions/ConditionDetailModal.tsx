@@ -1,7 +1,6 @@
-import { useEffect } from 'react'
-import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
-import DndButton from '@/components/DndButton'
+import Sheet from '@/components/ui/Sheet'
+import Button from '@/components/ui/Button'
 
 interface ConditionDetailModalProps {
   condKey: string
@@ -31,35 +30,9 @@ export default function ConditionDetailModal({
       }) as string[])
     : []
 
-  useEffect(() => {
-    const previous = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.body.style.overflow = previous
-    }
-  }, [])
-
-  return createPortal(
-    <div
-      className="fixed inset-0 bg-dnd-overlay flex items-end z-50 p-4"
-      onClick={onClose}
-      role="dialog"
-      aria-modal="true"
-    >
-      <div
-        className="w-full max-w-md mx-auto rounded-2xl bg-dnd-surface-elevated border border-dnd-gold-dim/40 p-4 space-y-3"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between">
-          <h3 className="font-semibold font-cinzel text-dnd-gold">{title}</h3>
-          <button
-            onClick={onClose}
-            aria-label={t('common.close')}
-            className="text-dnd-text-muted text-sm p-1"
-          >
-            &#x2715;
-          </button>
-        </div>
+  return (
+    <Sheet open onClose={onClose} title={title} centered>
+      <div className="p-5 space-y-3">
         <p className="text-sm text-dnd-text font-body leading-relaxed whitespace-pre-line">
           {description}
         </p>
@@ -76,11 +49,10 @@ export default function ConditionDetailModal({
             ))}
           </ol>
         )}
-        <DndButton variant="secondary" onClick={onClose} className="w-full">
+        <Button variant="secondary" fullWidth onClick={onClose}>
           {t('common.close')}
-        </DndButton>
+        </Button>
       </div>
-    </div>,
-    document.body,
+    </Sheet>
   )
 }

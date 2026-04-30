@@ -51,7 +51,7 @@ export default function HitDiceModal({
                 <div className="flex items-center gap-1.5">
                   <m.button
                     onClick={() => setHitDiceCounts((c) => ({ ...c, [cls.id]: Math.max(0, (c[cls.id] ?? 0) - 1) }))}
-                    className="w-8 h-8 rounded-lg bg-dnd-surface-raised border border-dnd-border flex items-center justify-center text-dnd-gold"
+                    className="w-11 h-11 rounded-lg bg-dnd-surface-raised border border-dnd-border flex items-center justify-center text-dnd-gold"
                     whileTap={{ scale: 0.9 }}
                   >
                     <Minus size={14} />
@@ -59,7 +59,7 @@ export default function HitDiceModal({
                   <span className="w-6 text-center font-mono font-bold text-dnd-gold-bright">{count}</span>
                   <m.button
                     onClick={() => setHitDiceCounts((c) => ({ ...c, [cls.id]: (c[cls.id] ?? 0) + 1 }))}
-                    className="w-8 h-8 rounded-lg bg-dnd-surface-raised border border-dnd-border flex items-center justify-center text-dnd-gold"
+                    className="w-11 h-11 rounded-lg bg-dnd-surface-raised border border-dnd-border flex items-center justify-center text-dnd-gold"
                     whileTap={{ scale: 0.9 }}
                   >
                     <Plus size={14} />

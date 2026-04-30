@@ -1,5 +1,9 @@
 import { m } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
+import {
+  GiPolarStar as Star, GiSkullCrossedBones as Skull,
+  GiCrossedSwords as Swords,
+} from 'react-icons/gi'
 import ResultDialog from './ui/ResultDialog'
 import InspirationRerollButton from './InspirationRerollButton'
 
@@ -58,7 +62,12 @@ export default function WeaponAttackModal({
       accent={accent}
       pulse={is_critical || is_fumble}
       size="md"
-      title={<>⚔️ {weapon_name}</>}
+      title={
+        <span className="inline-flex items-center justify-center gap-1.5">
+          <Swords size={14} className="text-dnd-gold-bright" />
+          {weapon_name}
+        </span>
+      }
       subtitle={wasRerolled ? t('character.inspiration.reroll_badge') : undefined}
       extraActions={
         showInspirationButton ? (
@@ -71,10 +80,14 @@ export default function WeaponAttackModal({
       }
     >
       {is_critical && (
-        <p className="text-dnd-gold-bright font-bold font-cinzel">✦ CRITICO!</p>
+        <p className="text-dnd-gold-bright font-bold font-cinzel flex items-center justify-center gap-1.5">
+          <Star size={14} fill="currentColor" /> CRITICO!
+        </p>
       )}
       {is_fumble && (
-        <p className="text-dnd-crimson-bright font-bold font-cinzel">💀 FUMBLE!</p>
+        <p className="text-dnd-crimson-bright font-bold font-cinzel flex items-center justify-center gap-1.5">
+          <Skull size={14} /> FUMBLE!
+        </p>
       )}
 
       <m.div

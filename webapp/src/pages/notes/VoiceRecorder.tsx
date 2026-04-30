@@ -157,7 +157,7 @@ export default function VoiceRecorder({ onRecordComplete, onCancel, isPending }:
                 setRecordedBlob(null)
                 setRecordingDuration(0)
               }}
-              className="text-xs text-dnd-text-secondary"
+              className="text-xs text-dnd-text-muted"
             >
               {t('character.notes.discard_recording')}
             </button>

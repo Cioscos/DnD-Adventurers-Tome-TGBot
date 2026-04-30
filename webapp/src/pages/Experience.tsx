@@ -150,7 +150,7 @@ export default function Experience() {
               <button
                 key={m}
                 onClick={() => setSetMode(m === 'set')}
-                className={`min-h-[40px] rounded-lg font-cinzel text-xs uppercase tracking-widest transition-colors
+                className={`min-h-[44px] rounded-lg font-cinzel text-xs uppercase tracking-widest transition-colors
                   ${isActive
                     ? 'bg-gradient-gold text-dnd-ink shadow-engrave'
                     : 'bg-transparent text-dnd-text-muted'}`}

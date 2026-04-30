@@ -43,7 +43,7 @@ function NoteItemInner({ note, onEdit, onDelete, voiceUrl }: NoteItemProps) {
             className="w-full"
           />
         ) : (
-          <p className="text-sm text-dnd-text-secondary">
+          <p className="text-sm text-dnd-text-muted">
             {t('character.notes.voice')}
           </p>
         )}
@@ -72,7 +72,7 @@ function NoteItemInner({ note, onEdit, onDelete, voiceUrl }: NoteItemProps) {
           </button>
         </div>
       </div>
-      <p className="text-sm text-dnd-text-secondary whitespace-pre-wrap line-clamp-3">
+      <p className="text-sm text-dnd-text-muted whitespace-pre-wrap line-clamp-3">
         {note.body}
       </p>
     </Card>

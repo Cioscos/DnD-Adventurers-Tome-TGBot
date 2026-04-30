@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -24,7 +24,7 @@ export default function Conditions() {
   const charId = Number(id)
   const { t } = useTranslation()
   const qc = useQueryClient()
-  const [exhaustionLevel, setExhaustionLevel] = useState<number | null>(null)
+  const [pendingExhaustion, setPendingExhaustion] = useState<number | null>(null)
   const [detailKey, setDetailKey] = useState<string | null>(null)
   const [showExhaustionDetails, setShowExhaustionDetails] = useState(false)
 
@@ -33,24 +33,18 @@ export default function Conditions() {
     queryFn: () => api.characters.get(charId),
   })
 
-  useEffect(() => {
-    if (char && exhaustionLevel === null) {
-      const conds = (char.conditions as Record<string, unknown>) ?? {}
-      if (typeof conds['exhaustion'] === 'number') {
-        setExhaustionLevel(conds['exhaustion'] as number)
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [char])
-
   const mutation = useMutation({
     mutationFn: (conditions: Record<string, unknown>) =>
       api.characters.updateConditions(charId, conditions),
     onSuccess: (updated) => {
       qc.setQueryData(['character', charId], updated)
+      setPendingExhaustion(null)
       haptic.light()
     },
-    onError: () => haptic.error(),
+    onError: () => {
+      setPendingExhaustion(null)
+      haptic.error()
+    },
   })
 
   if (!char) return null
@@ -66,7 +60,7 @@ export default function Conditions() {
   }
 
   const setExhaustion = (level: number) => {
-    setExhaustionLevel(level)
+    setPendingExhaustion(level)
     mutation.mutate({ ...conditions, exhaustion: level })
   }
 
@@ -111,13 +105,14 @@ export default function Conditions() {
         </div>
         <div className="flex gap-1.5">
           {[0, 1, 2, 3, 4, 5, 6].map((level) => {
-            const isActive = (exhaustionLevel ?? currentExhaustion) === level
-            const isFilled = level <= (exhaustionLevel ?? currentExhaustion)
+            const displayLevel = pendingExhaustion ?? currentExhaustion
+            const isActive = displayLevel === level
+            const isFilled = level <= displayLevel
             return (
               <m.button
                 key={level}
                 onClick={() => setExhaustion(level)}
-                className={`flex-1 min-h-[40px] rounded-lg font-cinzel font-black text-sm
+                className={`flex-1 min-h-[44px] rounded-lg font-cinzel font-black text-sm
                   ${isActive
                     ? 'bg-gradient-ember text-white shadow-parchment-md'
                     : isFilled
@@ -151,7 +146,7 @@ export default function Conditions() {
                       key={lvl}
                       className={
                         isCurrent
-                          ? 'px-3 py-2 rounded-md border-l-2 border-dnd-gold bg-dnd-gold/10 text-dnd-gold-bright'
+                          ? 'px-3 py-2 rounded-md border border-dnd-gold/50 bg-dnd-gold/10 text-dnd-gold-bright'
                           : 'px-3 py-1.5 text-dnd-text-faint opacity-60'
                       }
                     >

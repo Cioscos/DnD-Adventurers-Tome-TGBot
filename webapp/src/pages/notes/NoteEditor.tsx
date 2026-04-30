@@ -53,7 +53,7 @@ export default function NoteEditor({ initialNote, onSave, onCancel, isPending }:
           className="w-full bg-dnd-surface rounded-xl px-3 py-2 outline-none resize-none
                      border border-transparent focus:border-dnd-gold-dim
                      focus:shadow-[0_0_0_2px_var(--dnd-gold-glow)]
-                     placeholder:text-dnd-text-secondary/50"
+                     placeholder:text-dnd-text-muted/50"
         />
       </div>
       <div className="flex gap-2">

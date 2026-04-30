@@ -218,9 +218,9 @@ function InventoryItemInner({
       {/* Expanded detail panel */}
       {isExpanded && (
         <div className="spell-detail-enter px-3 pt-3 pb-3 space-y-3 border-t border-dnd-gold-dim/10">
-          {/* Description with gold accent border */}
+          {/* Description */}
           {item.description && (
-            <p className="text-sm text-dnd-text whitespace-pre-wrap leading-relaxed border-l-2 border-dnd-gold-dim/40 pl-3">
+            <p className="text-sm text-dnd-text whitespace-pre-wrap leading-relaxed italic">
               {item.description}
             </p>
           )}
@@ -241,13 +241,13 @@ function InventoryItemInner({
             </span>
             <button
               onClick={() => onQuantityChange(-1)}
-              className="w-7 h-7 rounded-md bg-dnd-surface-raised border border-dnd-border text-dnd-gold font-bold active:opacity-60"
+              className="w-11 h-11 rounded-md bg-dnd-surface-raised border border-dnd-border text-dnd-gold font-bold active:opacity-60"
               aria-label="-"
             >&minus;</button>
             <span className="w-6 text-center font-mono font-bold text-dnd-gold-bright">{item.quantity}</span>
             <button
               onClick={() => onQuantityChange(1)}
-              className="w-7 h-7 rounded-md bg-dnd-surface-raised border border-dnd-border text-dnd-gold font-bold active:opacity-60"
+              className="w-11 h-11 rounded-md bg-dnd-surface-raised border border-dnd-border text-dnd-gold font-bold active:opacity-60"
               aria-label="+"
             >+</button>
           </div>

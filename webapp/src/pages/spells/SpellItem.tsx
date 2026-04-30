@@ -53,14 +53,14 @@ function SpellItemInner({
           )}
           {spell.is_pinned && <span className="text-xs">&#x1F4CC;</span>}
         </div>
-        <span className="text-dnd-text-secondary text-xs ml-1">{isExpanded ? '\u02C4' : '\u02C5'}</span>
+        <span className="text-dnd-text-muted text-xs ml-1">{isExpanded ? '\u02C4' : '\u02C5'}</span>
       </button>
 
       {isExpanded && (
         <div className="spell-detail-enter px-3 pb-3 space-y-3 border-t border-dnd-gold-dim/10">
           {/* Description */}
           {spell.description && (
-            <p className="text-sm text-dnd-text mt-2 whitespace-pre-wrap leading-relaxed border-l-2 border-dnd-arcane/40 pl-3">
+            <p className="text-sm text-dnd-text mt-2 whitespace-pre-wrap leading-relaxed italic">
               {spell.description}
             </p>
           )}
