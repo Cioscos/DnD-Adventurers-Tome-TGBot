@@ -71,7 +71,7 @@ export default function CharacterMain() {
     >
       <m.header
         className="shrink-0 z-20 flex items-center gap-2 px-4 py-3 pt-safe
-                   bg-dnd-surface-raised/95 backdrop-blur-sm border-b border-dnd-gold-dim/40 shadow-parchment-md"
+                   bg-dnd-surface-raised border-b border-dnd-gold-dim/40 shadow-parchment-md"
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={spring.drift}

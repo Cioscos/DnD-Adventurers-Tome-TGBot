@@ -1,3 +1,5 @@
+import { useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import DndButton from '@/components/DndButton'
 
@@ -29,13 +31,23 @@ export default function ConditionDetailModal({
       }) as string[])
     : []
 
-  return (
+  useEffect(() => {
+    const previous = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = previous
+    }
+  }, [])
+
+  return createPortal(
     <div
-      className="fixed inset-0 bg-black/60 flex items-end z-50 p-4"
+      className="fixed inset-0 bg-dnd-overlay flex items-end z-50 p-4"
       onClick={onClose}
+      role="dialog"
+      aria-modal="true"
     >
       <div
-        className="w-full rounded-2xl bg-dnd-surface-elevated p-4 space-y-3"
+        className="w-full max-w-md mx-auto rounded-2xl bg-dnd-surface-elevated border border-dnd-gold-dim/40 p-4 space-y-3"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
@@ -43,7 +55,7 @@ export default function ConditionDetailModal({
           <button
             onClick={onClose}
             aria-label={t('common.close')}
-            className="text-dnd-text-secondary text-sm p-1"
+            className="text-dnd-text-muted text-sm p-1"
           >
             &#x2715;
           </button>
@@ -52,12 +64,13 @@ export default function ConditionDetailModal({
           {description}
         </p>
         {isExhaustion && levels.length > 0 && (
-          <ol className="space-y-1 text-sm font-body list-none pl-0">
+          <ol className="space-y-1.5 text-sm font-body list-none pl-0">
             {levels.map((line, i) => (
               <li
                 key={i}
-                className="pl-2 border-l-2 border-dnd-gold/40 text-dnd-text-muted"
+                className="rounded-md px-2 py-1 bg-dnd-gold/10 text-dnd-text-muted"
               >
+                <span className="font-mono font-bold text-dnd-gold-bright mr-2">L{i + 1}</span>
                 {line}
               </li>
             ))}
@@ -67,6 +80,7 @@ export default function ConditionDetailModal({
           {t('common.close')}
         </DndButton>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

@@ -260,8 +260,40 @@ The GitHub Actions workflow `.github/workflows/deploy-webapp.yml` runs a build c
 
 GitHub Secret `VITE_API_BASE_URL` must be kept in sync with the tunnel URL (`https://api.cischi.dev`) for CI builds.
 
+## Design Context
+
+Three files at the project root govern visual + strategic design decisions for the Mini App. Read them before any frontend or UX work in `webapp/`:
+
+- `PRODUCT.md` — strategic: register (`product`), users, brand personality (epica, leggibile, calma, tattile), anti-references, design principles. Read before any UX decision.
+- `DESIGN.md` — visual: tokens (Stitch-format frontmatter), palette, typography, elevation, components, do's and don'ts. Read before any frontend code change.
+- `DESIGN.json` — machine-readable sidecar (tonal ramps, motion springs, full component CSS). Consumed by `impeccable`'s live panel and design-aware tooling.
+
+When editing `webapp/`, honor the named rules in DESIGN.md by name: **Gold Leaf**, **Two Inks**, **Semantic Triad**, **Inscription**, **Tabular Numerics**, **No Gradient Text**, **Warm-Shadow**, **Halo-as-Signal**. Anti-references in PRODUCT.md (SaaS-cream, D&D Beyond neon-on-black, Roll20 chrome, gacha mobile, AI-slop) translate to explicit "Don'ts" in DESIGN.md — both must be respected.
+
+To regenerate either file after major design drift, run `$impeccable teach` (PRODUCT.md) or `$impeccable document` (DESIGN.md + DESIGN.json).
+
 # General rules
 
 1. Always ask for clarification if the user's request is ambiguous or incomplete. Never make assumptions about what they want.
 2. Always work on a feature branch, never directly on main.
 3. Use Context7 MCP server when it makes sense.
+
+## Accessibility scope (webapp)
+
+Screen reader / blind user accessibility is **not in scope** for this Mini App. The audience is sighted D&D players at the table. When auditing, critiquing, polishing, or hardening code under `webapp/`, **do not flag**:
+
+- aria-label values that omit the underlying numeric/text value
+- missing heading hierarchy (`<h1>`/`<h2>`/`<h3>` semantics)
+- decorative icons missing `aria-hidden`
+- missing alt text on decorative images
+- missing ARIA roles on custom elements
+- screen-reader tab/focus order
+- missing `aria-live` announcements
+
+Continue to flag the visual / motor accessibility issues that affect sighted users:
+
+- color contrast (impacts low-light session-mode readability)
+- touch targets <44×44 (motor accessibility)
+- text too small to read at arm's length
+- keyboard focus visibility (desktop users without mouse)
+- icon-only chips with no reveal/discovery affordance for sighted users

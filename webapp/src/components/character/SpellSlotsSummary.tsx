@@ -45,7 +45,7 @@ export default function SpellSlotsSummary({ slots }: Props) {
           {cells.map((c) => (
             <div key={c.level} className="flex flex-col">
               <span className="text-[9px] @max-[300px]:text-[8px] text-dnd-gold-dim">{c.level}</span>
-              <span className={`@max-[300px]:text-[11px] ${c.total === 0 ? 'text-dnd-text-faint' : 'text-dnd-gold-bright font-bold'}`}>
+              <span className={`@max-[300px]:text-[11px] ${c.total === 0 ? 'text-dnd-text-muted' : 'text-dnd-gold-bright font-bold'}`}>
                 {c.total}
               </span>
             </div>

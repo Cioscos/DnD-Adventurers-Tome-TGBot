@@ -37,24 +37,24 @@ function HPGaugeInner({ current, max, temp = 0, size = 'md', segmented = true, c
     <div
       className={`relative w-full ${height} rounded-full overflow-hidden bg-dnd-ink/60 border border-dnd-border/60 ${className}`}
     >
-      {/* Fill */}
+      {/* Fill — scaleX from left to avoid layout-property animation */}
       <m.div
-        className={`absolute left-0 top-0 h-full rounded-full ${pulse ? 'animate-pulse-danger' : ''}`}
+        className={`absolute left-0 top-0 h-full w-full rounded-full origin-left ${pulse ? 'animate-pulse-danger' : ''}`}
         style={{ background: gradient, boxShadow: glow }}
         initial={false}
-        animate={{ width: `${pct}%` }}
+        animate={{ scaleX: pct / 100 }}
         transition={spring.drift}
       />
 
       {/* Temp HP diagonal stripe overlay */}
       {temp > 0 && (
         <m.div
-          className="absolute left-0 top-0 h-full rounded-full opacity-70"
+          className="absolute left-0 top-0 h-full w-full rounded-full opacity-70 origin-left"
           style={{
             background: `repeating-linear-gradient(45deg, var(--dnd-cobalt) 0 4px, var(--dnd-cobalt-bright) 4px 8px)`,
           }}
           initial={false}
-          animate={{ width: `${tempPct}%` }}
+          animate={{ scaleX: tempPct / 100 }}
           transition={spring.drift}
         />
       )}
