@@ -78,11 +78,11 @@ export default function AbilityScores() {
                         setEditing(score.name)
                         setEditValue(String(score.value))
                       }}
-                      className="w-7 h-7 rounded-full bg-dnd-surface-raised border border-dnd-border flex items-center justify-center text-dnd-gold"
+                      className="w-11 h-11 rounded-full bg-dnd-surface-raised border border-dnd-border flex items-center justify-center text-dnd-gold"
                       whileTap={{ scale: 0.9 }}
                       aria-label={t('common.edit')}
                     >
-                      <Pencil size={12} />
+                      <Pencil size={14} />
                     </m.button>
                   )}
                 </div>
@@ -111,17 +111,19 @@ export default function AbilityScores() {
                       </div>
                       <m.button
                         onClick={() => handleSave(score.name)}
-                        className="w-10 h-10 rounded-lg bg-[var(--dnd-emerald)]/20 text-[var(--dnd-emerald-bright)] border border-dnd-emerald/40 flex items-center justify-center"
+                        className="w-11 h-11 rounded-lg bg-[var(--dnd-emerald)]/20 text-[var(--dnd-emerald-bright)] border border-dnd-emerald/40 flex items-center justify-center"
                         whileTap={{ scale: 0.9 }}
+                        aria-label={t('common.save')}
                       >
-                        <Check size={16} />
+                        <Check size={18} />
                       </m.button>
                       <m.button
                         onClick={() => setEditing(null)}
-                        className="w-10 h-10 rounded-lg bg-[var(--dnd-crimson)]/15 text-[var(--dnd-crimson-bright)] border border-[var(--dnd-crimson)]/40 flex items-center justify-center"
+                        className="w-11 h-11 rounded-lg bg-[var(--dnd-crimson)]/15 text-[var(--dnd-crimson-bright)] border border-[var(--dnd-crimson)]/40 flex items-center justify-center"
                         whileTap={{ scale: 0.9 }}
+                        aria-label={t('common.cancel')}
                       >
-                        <X size={16} />
+                        <X size={18} />
                       </m.button>
                     </m.div>
                   ) : (

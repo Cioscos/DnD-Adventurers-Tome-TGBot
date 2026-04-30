@@ -10,6 +10,13 @@ interface HeroXPBarProps {
   totalClassLevel: number
   onLevelUpReady: () => void
   className?: string
+  /**
+   * When true, suppresses the level-up halo (shimmer/glow).
+   * Set by the parent when another higher-priority halo is active
+   * on the same screen (e.g. low-HP pulse on HPGauge) to honor the
+   * Halo-as-Signal Rule (one halo per screen).
+   */
+  suppressHalo?: boolean
 }
 
 export default function HeroXPBar({
@@ -17,6 +24,7 @@ export default function HeroXPBar({
   totalClassLevel,
   onLevelUpReady,
   className = '',
+  suppressHalo = false,
 }: HeroXPBarProps) {
   const { t } = useTranslation()
 
@@ -54,7 +62,7 @@ export default function HeroXPBar({
             type="button"
             onClick={handleLevelUp}
             whileTap={{ scale: 0.95 }}
-            className="inline-flex items-center gap-1 animate-shimmer animate-glow-pulse bg-gradient-to-r from-dnd-gold-deep to-dnd-gold-bright text-black px-2.5 py-0.5 rounded-md text-[10px] font-bold tracking-widest uppercase"
+            className={`inline-flex items-center gap-1 min-h-[44px] px-3 rounded-md text-[10px] font-cinzel font-bold tracking-widest uppercase bg-dnd-gold text-dnd-ink border border-dnd-gold-bright ${suppressHalo ? '' : 'animate-glow-pulse'}`}
           >
             <ChevronsUp size={12} />
             {t('character.xp.bar.level_up')}
@@ -76,13 +84,13 @@ export default function HeroXPBar({
           : { 'aria-label': t('character.xp.bar.max') })}
       >
         <m.div
-          className="h-full bg-gradient-to-r from-dnd-gold-deep to-dnd-gold-bright"
+          className="h-full w-full origin-left bg-gradient-to-r from-dnd-gold-deep to-dnd-gold-bright"
           style={{
-            boxShadow: levelUpReady ? '0 0 8px var(--dnd-gold-glow)' : undefined,
+            boxShadow: levelUpReady && !suppressHalo ? '0 0 8px var(--dnd-gold-glow)' : undefined,
           }}
-          initial={{ width: 0 }}
-          animate={{ width: `${progressPct}%` }}
-          transition={{ duration: 0.6, ease: 'easeOut' }}
+          initial={{ scaleX: 0 }}
+          animate={{ scaleX: progressPct / 100 }}
+          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
         />
       </div>
     </div>

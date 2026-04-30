@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
-import DndButton from '@/components/DndButton'
+import Sheet from '@/components/ui/Sheet'
+import Button from '@/components/ui/Button'
 
 interface ConditionDetailModalProps {
   condKey: string
@@ -30,43 +31,28 @@ export default function ConditionDetailModal({
     : []
 
   return (
-    <div
-      className="fixed inset-0 bg-black/60 flex items-end z-50 p-4"
-      onClick={onClose}
-    >
-      <div
-        className="w-full rounded-2xl bg-dnd-surface-elevated p-4 space-y-3"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between">
-          <h3 className="font-semibold font-cinzel text-dnd-gold">{title}</h3>
-          <button
-            onClick={onClose}
-            aria-label={t('common.close')}
-            className="text-dnd-text-secondary text-sm p-1"
-          >
-            &#x2715;
-          </button>
-        </div>
+    <Sheet open onClose={onClose} title={title} centered>
+      <div className="p-5 space-y-3">
         <p className="text-sm text-dnd-text font-body leading-relaxed whitespace-pre-line">
           {description}
         </p>
         {isExhaustion && levels.length > 0 && (
-          <ol className="space-y-1 text-sm font-body list-none pl-0">
+          <ol className="space-y-1.5 text-sm font-body list-none pl-0">
             {levels.map((line, i) => (
               <li
                 key={i}
-                className="pl-2 border-l-2 border-dnd-gold/40 text-dnd-text-muted"
+                className="rounded-md px-2 py-1 bg-dnd-gold/10 text-dnd-text-muted"
               >
+                <span className="font-mono font-bold text-dnd-gold-bright mr-2">L{i + 1}</span>
                 {line}
               </li>
             ))}
           </ol>
         )}
-        <DndButton variant="secondary" onClick={onClose} className="w-full">
+        <Button variant="secondary" fullWidth onClick={onClose}>
           {t('common.close')}
-        </DndButton>
+        </Button>
       </div>
-    </div>
+    </Sheet>
   )
 }

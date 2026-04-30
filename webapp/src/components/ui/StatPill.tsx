@@ -19,6 +19,12 @@ interface StatPillProps {
    */
   revealOnTap?: boolean
   revealDurationMs?: number
+  /**
+   * Expand the touch area to a 44×44 minimum via a transparent pseudo-element,
+   * without affecting the visible pill height. Use on interactive chips that
+   * are otherwise smaller than the recommended motor-accessibility target.
+   */
+  expandHitArea?: boolean
   'aria-label'?: string
   className?: string
 }
@@ -53,6 +59,7 @@ function StatPillInner({
   iconOnly = false,
   revealOnTap = false,
   revealDurationMs = 2000,
+  expandHitArea = false,
   'aria-label': ariaLabelProp,
   className = '',
 }: StatPillProps) {
@@ -78,7 +85,10 @@ function StatPillInner({
   const showValue = !iconOnly || revealed
   const showLabel = !iconOnly && !!label
   const padding = size === 'sm' ? 'px-2 py-1 text-[11px]' : 'px-2.5 py-1 text-xs'
-  const cls = `inline-flex items-center gap-1.5 rounded-full border font-medium font-body ${padding} ${toneClasses(tone)} ${isInteractive ? 'cursor-pointer' : ''} ${className}`
+  const hitAreaCls = expandHitArea && isInteractive
+    ? "relative before:content-[''] before:absolute before:left-1/2 before:top-1/2 before:-translate-x-1/2 before:-translate-y-1/2 before:min-w-[44px] before:min-h-[44px] before:w-full before:h-full"
+    : ''
+  const cls = `inline-flex items-center gap-1.5 rounded-full border font-medium font-body ${padding} ${toneClasses(tone)} ${isInteractive ? 'cursor-pointer' : ''} ${hitAreaCls} ${className}`
   const Component: React.ElementType = isInteractive ? m.button : m.span
 
   const resolvedAriaLabel =

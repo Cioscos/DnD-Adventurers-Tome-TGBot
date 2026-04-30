@@ -213,7 +213,7 @@ export default function Abilities() {
                     >
                       <div className="px-3 pb-3 space-y-3 border-t border-dnd-gold-dim/15">
                         {ab.description ? (
-                          <p className="text-xs text-dnd-text mt-2.5 whitespace-pre-wrap leading-relaxed border-l-2 border-dnd-gold/50 pl-3 font-body">
+                          <p className="text-xs text-dnd-text mt-2.5 whitespace-pre-wrap leading-relaxed font-body italic">
                             {ab.description}
                           </p>
                         ) : (
@@ -232,7 +232,7 @@ export default function Abilities() {
                             <m.button
                               onClick={() => usesMutation.mutate({ abilityId: ab.id, uses: Math.max(0, current - 1) })}
                               disabled={current <= 0 || usesMutation.isPending}
-                              className="w-10 h-10 rounded-xl bg-[var(--dnd-crimson)]/15 text-[var(--dnd-crimson-bright)] border border-[var(--dnd-crimson)]/30 flex items-center justify-center disabled:opacity-30"
+                              className="w-11 h-11 rounded-xl bg-[var(--dnd-crimson)]/15 text-[var(--dnd-crimson-bright)] border border-[var(--dnd-crimson)]/30 flex items-center justify-center disabled:opacity-30"
                               whileTap={{ scale: 0.9 }}
                             >
                               <Minus size={16} />
@@ -246,7 +246,7 @@ export default function Abilities() {
                             <m.button
                               onClick={() => usesMutation.mutate({ abilityId: ab.id, uses: Math.min(ab.max_uses!, current + 1) })}
                               disabled={current >= (ab.max_uses ?? 0) || usesMutation.isPending}
-                              className="w-10 h-10 rounded-xl bg-[var(--dnd-emerald)]/15 text-[var(--dnd-emerald-bright)] border border-dnd-emerald/30 flex items-center justify-center disabled:opacity-30"
+                              className="w-11 h-11 rounded-xl bg-[var(--dnd-emerald)]/15 text-[var(--dnd-emerald-bright)] border border-dnd-emerald/30 flex items-center justify-center disabled:opacity-30"
                               whileTap={{ scale: 0.9 }}
                             >
                               <Plus size={16} />

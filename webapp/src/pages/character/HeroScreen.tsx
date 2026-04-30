@@ -23,12 +23,12 @@ import VitalsStrip from '@/components/character/VitalsStrip'
 import type { Ability, CharacterFull } from '@/types'
 
 const ABILITY_COLORS: Record<string, string> = {
-  strength: 'from-[var(--dnd-crimson-deep)]/30 to-transparent border-dnd-crimson/30 text-[var(--dnd-crimson-bright)]',
-  dexterity: 'from-[var(--dnd-emerald-deep)]/30 to-transparent border-dnd-emerald/30 text-[var(--dnd-emerald-bright)]',
-  constitution: 'from-[var(--dnd-amber)]/30 to-transparent border-dnd-amber/30 text-[var(--dnd-amber)]',
-  intelligence: 'from-[var(--dnd-cobalt-deep)]/30 to-transparent border-dnd-cobalt/30 text-[var(--dnd-cobalt-bright)]',
-  wisdom: 'from-[var(--dnd-arcane-deep)]/30 to-transparent border-dnd-arcane/30 text-[var(--dnd-arcane-bright)]',
-  charisma: 'from-[var(--dnd-gold-deep)]/40 to-transparent border-dnd-gold/30 text-dnd-gold-bright',
+  strength: 'bg-[rgba(122,31,31,0.18)] border-dnd-crimson/30 text-[var(--dnd-crimson-bright)]',
+  dexterity: 'bg-[rgba(31,107,63,0.18)] border-dnd-emerald/30 text-[var(--dnd-emerald-bright)]',
+  constitution: 'bg-[rgba(232,165,71,0.14)] border-dnd-amber/40 text-[var(--dnd-amber)]',
+  intelligence: 'bg-[rgba(30,64,96,0.20)] border-dnd-cobalt/30 text-[var(--dnd-cobalt-bright)]',
+  wisdom: 'bg-[rgba(74,40,88,0.20)] border-dnd-arcane/30 text-[var(--dnd-arcane-bright)]',
+  charisma: 'bg-[rgba(90,72,32,0.22)] border-dnd-gold/30 text-dnd-gold-bright',
 }
 
 interface Props {
@@ -88,7 +88,7 @@ export default function HeroScreen({ char }: Props) {
         >
           <p className="text-sm text-dnd-text-muted font-body italic mb-0.5">{char.class_summary}</p>
           {char.race && (
-            <p className="text-xs text-dnd-text-faint font-body">{char.race}</p>
+            <p className="text-xs text-dnd-text-muted font-body">{char.race}</p>
           )}
         </m.button>
 
@@ -111,7 +111,7 @@ export default function HeroScreen({ char }: Props) {
                     <span className="text-[var(--dnd-cobalt-bright)]">(+{char.temp_hp} temp)</span>
                   )}
                 </span>
-                <span className="text-dnd-text-faint font-mono text-xs">{hpPct}%</span>
+                <span className="text-dnd-text-muted font-mono text-xs">{hpPct}%</span>
               </div>
               <HPGauge
                 current={char.current_hit_points}
@@ -133,6 +133,7 @@ export default function HeroScreen({ char }: Props) {
                 currentXP={char.experience_points}
                 totalClassLevel={char.total_level}
                 onLevelUpReady={() => navigate(`/char/${char.id}/xp`)}
+                suppressHalo={hpPct > 0 && hpPct <= 25}
               />
             </m.button>
           </div>
@@ -147,7 +148,7 @@ export default function HeroScreen({ char }: Props) {
             <ShieldEmblem size={90} />
             <span className="absolute inset-0 flex flex-col items-center justify-center pb-1">
               <span className="text-2xl font-display font-black text-dnd-gold-bright leading-none"
-                    style={{ textShadow: '0 1px 3px rgba(0,0,0,0.6)' }}>
+                    style={{ textShadow: '0 1px 3px rgba(var(--dnd-shadow-color), 0.6)' }}>
                 {char.ac}
               </span>
               <span className="text-[9px] font-cinzel uppercase tracking-widest text-dnd-gold-dim leading-none mt-0.5">
@@ -162,13 +163,19 @@ export default function HeroScreen({ char }: Props) {
           return (
             <m.button
               onClick={() => navigate(`/char/${char.id}/spells`)}
-              className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl
-                         bg-gradient-arcane-mist border border-dnd-arcane/50 text-dnd-arcane-bright
-                         text-xs font-cinzel uppercase tracking-wider"
+              className="mt-3 w-full min-h-[44px] flex items-center justify-center gap-2 px-3 py-2 rounded-xl
+                         bg-gradient-arcane-mist border border-dnd-arcane/50 text-dnd-arcane-bright"
               whileTap={{ scale: 0.98 }}
             >
-              <GiPotionBall size={14} />
-              {spell?.name ?? t('character.spells.concentration')}
+              <GiPotionBall size={14} aria-hidden />
+              <span className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-arcane-bright/80">
+                {t('character.spells.concentration')}
+              </span>
+              {spell?.name && (
+                <span className="font-body italic text-sm text-dnd-arcane-bright">
+                  {spell.name}
+                </span>
+              )}
             </m.button>
           )
         })()}
@@ -182,6 +189,7 @@ export default function HeroScreen({ char }: Props) {
                 value={a.name}
                 tone="gold"
                 size="sm"
+                expandHitArea
                 onClick={() => setDetailAbility(a)}
               />
             ))}
@@ -199,7 +207,7 @@ export default function HeroScreen({ char }: Props) {
                   value={formatCondition(key, val, t)}
                   tone="crimson"
                   size="sm"
-                  iconOnly
+                  expandHitArea
                   onClick={() => setDetailCondKey(key)}
                 />
               )
@@ -229,7 +237,7 @@ export default function HeroScreen({ char }: Props) {
                     type="button"
                     onClick={() => { haptic.light(); navigate(`/char/${char.id}/stats`) }}
                     aria-label={`${score.name}: ${score.value}, mod ${modStr}`}
-                    className={`flex flex-col items-center rounded-lg p-1.5 border bg-gradient-to-b cursor-pointer hover:border-dnd-gold transition-colors ${colorCls}`}
+                    className={`flex flex-col items-center rounded-lg p-1.5 border cursor-pointer hover:border-dnd-gold transition-colors ${colorCls}`}
                     variants={{ initial: { opacity: 0, y: 8 }, animate: { opacity: 1, y: 0 } }}
                     transition={spring.snappy}
                     whileTap={{ scale: 0.95 }}
@@ -238,7 +246,7 @@ export default function HeroScreen({ char }: Props) {
                       {score.name.slice(0, 3)}
                     </span>
                     <span className="text-xl font-display font-black leading-none mt-0.5">{score.value}</span>
-                    <span className="text-[11px] font-mono font-bold mt-0.5 px-1.5 py-0.5 rounded-full bg-black/25">
+                    <span className="text-[11px] font-mono font-bold mt-0.5 px-1.5 py-0.5 rounded-full bg-[rgba(13,10,8,0.25)]">
                       {modStr}
                     </span>
                   </m.button>

@@ -1,5 +1,6 @@
 import { m } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
+import { GiPolarStar as Star, GiSkullCrossedBones as Skull } from 'react-icons/gi'
 import { spring } from '@/styles/motion'
 import ResultDialog from './ui/ResultDialog'
 import InspirationRerollButton from './InspirationRerollButton'
@@ -67,22 +68,22 @@ export default function RollResultModal({
     >
       {is_critical && (
         <m.p
-          className="text-dnd-gold-bright font-bold text-sm font-cinzel uppercase tracking-wider"
+          className="text-dnd-gold-bright font-bold text-sm font-cinzel uppercase tracking-wider flex items-center justify-center gap-1.5"
           initial={{ scale: 0.5 }}
           animate={{ scale: [0.5, 1.2, 1] }}
           transition={{ duration: 0.5 }}
         >
-          ✦ CRITICO!
+          <Star size={14} fill="currentColor" /> CRITICO!
         </m.p>
       )}
       {is_fumble && (
         <m.p
-          className="text-dnd-crimson-bright font-bold text-sm font-cinzel uppercase tracking-wider"
+          className="text-dnd-crimson-bright font-bold text-sm font-cinzel uppercase tracking-wider flex items-center justify-center gap-1.5"
           initial={{ scale: 0.5 }}
           animate={{ scale: [0.5, 1.2, 1] }}
           transition={{ duration: 0.5 }}
         >
-          💀 FUMBLE!
+          <Skull size={14} /> FUMBLE!
         </m.p>
       )}
 

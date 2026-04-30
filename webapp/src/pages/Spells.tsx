@@ -262,65 +262,57 @@ export default function Spells() {
           const slot = level > 0 ? spellSlots.find((s) => s.level === level) : undefined
           return (
             <div key={level} className="mb-4">
-              <m.button
-                type="button"
-                onClick={() => toggleLevel(level)}
-                className="sticky z-[5] -mx-4 w-[calc(100%+2rem)] px-5 py-2 flex items-center gap-2 bg-dnd-bg/95 backdrop-blur-sm border-b border-dnd-border/40 text-left"
-                style={{ top: '68px' }}
-                aria-expanded={!collapsedLevels.has(level)}
-              >
-                <ChevronRight
-                  size={14}
-                  className={`text-dnd-gold-bright transition-transform ${!collapsedLevels.has(level) ? 'rotate-90' : ''}`}
-                />
-                <span className="font-cinzel uppercase tracking-widest text-xs text-dnd-gold-bright flex-1">
-                  {level === 0 ? t('character.spells.cantrip_label') : t('character.spells.level_label', { level })}
-                </span>
-                <span className="text-[10px] text-dnd-text-muted font-mono">
-                  · {t('character.spells.count', { count: byLevel[level].length })}
-                </span>
+              <div className="sticky top-0 z-[5] -mx-4 w-[calc(100%+2rem)] px-5 py-2 flex items-center gap-2 bg-dnd-bg/95 backdrop-blur-sm border-b border-dnd-border/40">
+                <m.button
+                  type="button"
+                  onClick={() => toggleLevel(level)}
+                  className="flex items-center gap-2 flex-1 min-w-0 text-left"
+                  aria-expanded={!collapsedLevels.has(level)}
+                >
+                  <ChevronRight
+                    size={14}
+                    className={`text-dnd-gold-bright transition-transform ${!collapsedLevels.has(level) ? 'rotate-90' : ''}`}
+                  />
+                  <span className="font-cinzel uppercase tracking-widest text-xs text-dnd-gold-bright truncate">
+                    {level === 0 ? t('character.spells.cantrip_label') : t('character.spells.level_label', { level })}
+                  </span>
+                </m.button>
                 {slot && slot.total > 0 && (
-                  <>
-                    <span className="ml-2 text-[10px] text-dnd-text-faint font-mono tabular-nums">
-                      {slot.used}/{slot.total}
-                    </span>
-                    <div className="flex gap-1 items-center" onClick={(e) => e.stopPropagation()}>
-                      {Array.from({ length: slot.total }).map((_, i) => (
-                        <m.button
-                          key={i}
-                          type="button"
-                          disabled={useSlotMutation.isPending}
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            if (i < slot.used) {
-                              haptic.light()
-                              useSlotMutation.mutate({ slotId: slot.id, newUsed: Math.max(0, slot.used - 1) })
-                            } else {
-                              haptic.medium()
-                              useSlotMutation.mutate({ slotId: slot.id, newUsed: Math.min(slot.total, slot.used + 1) })
-                            }
-                          }}
-                          className={`w-6 h-6 rounded-full border-2 transition-all disabled:opacity-40 ${
-                            i < slot.used
-                              ? 'bg-gradient-to-br from-dnd-gold-deep to-dnd-gold-bright border-dnd-gold-bright shadow-[0_0_8px_rgba(244,208,111,0.5)]'
-                              : 'bg-transparent border-dnd-gold-dim/60 hover:border-dnd-gold-bright'
-                          }`}
-                          whileTap={{ scale: 0.85 }}
-                          aria-label={t('character.slots.gem_aria', {
-                            level: slot.level,
-                            index: i + 1,
-                            total: slot.total,
-                            state: i < slot.used
-                              ? t('character.slots.state_used')
-                              : t('character.slots.state_available'),
-                          })}
-                          aria-pressed={i < slot.used}
-                        />
-                      ))}
-                    </div>
-                  </>
+                  <div className="flex gap-1 items-center shrink-0">
+                    {Array.from({ length: slot.total }).map((_, i) => (
+                      <m.button
+                        key={i}
+                        type="button"
+                        disabled={useSlotMutation.isPending}
+                        onClick={() => {
+                          if (i < slot.used) {
+                            haptic.light()
+                            useSlotMutation.mutate({ slotId: slot.id, newUsed: Math.max(0, slot.used - 1) })
+                          } else {
+                            haptic.medium()
+                            useSlotMutation.mutate({ slotId: slot.id, newUsed: Math.min(slot.total, slot.used + 1) })
+                          }
+                        }}
+                        className={`w-7 h-7 rounded-full border-2 transition-all disabled:opacity-40 ${
+                          i < slot.used
+                            ? 'bg-gradient-to-br from-dnd-gold-deep to-dnd-gold-bright border-dnd-gold-bright shadow-[0_0_8px_rgba(244,208,111,0.5)]'
+                            : 'bg-transparent border-dnd-gold-dim/60 hover:border-dnd-gold-bright'
+                        }`}
+                        whileTap={{ scale: 0.85 }}
+                        aria-label={t('character.slots.gem_aria', {
+                          level: slot.level,
+                          index: i + 1,
+                          total: slot.total,
+                          state: i < slot.used
+                            ? t('character.slots.state_used')
+                            : t('character.slots.state_available'),
+                        })}
+                        aria-pressed={i < slot.used}
+                      />
+                    ))}
+                  </div>
                 )}
-              </m.button>
+              </div>
               <AnimatePresence>
                 {!collapsedLevels.has(level) && (
                   <m.div

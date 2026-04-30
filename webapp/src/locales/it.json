@@ -79,6 +79,7 @@
       "failure": "Fallimento",
       "stabilize": "Stabilizza",
       "reset": "Azzera",
+      "manual_override": "Modifica manuale",
       "roll": "Tira d20",
       "roll_result": "Tiro Salvezza Morte",
       "nat20": "Naturale 20! Rianimato!",

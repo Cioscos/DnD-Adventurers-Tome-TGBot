@@ -50,6 +50,23 @@
   --dnd-highlight: var(--dnd-amber); /* legacy alias */
   --dnd-highlight-muted: #d97706; /* legacy alias */
 
+  /* Coin metals — OKLCH, brand-tuned (warm parchment palette) */
+  --dnd-coin-platinum-bright: oklch(92% 0.018 265);
+  --dnd-coin-platinum: oklch(78% 0.022 265);
+  --dnd-coin-platinum-deep: oklch(58% 0.020 265);
+  --dnd-coin-gold-bright: oklch(86% 0.135 84);
+  --dnd-coin-gold: oklch(72% 0.145 78);
+  --dnd-coin-gold-deep: oklch(48% 0.110 70);
+  --dnd-coin-electrum-bright: oklch(88% 0.075 145);
+  --dnd-coin-electrum: oklch(74% 0.090 140);
+  --dnd-coin-electrum-deep: oklch(52% 0.080 135);
+  --dnd-coin-silver-bright: oklch(90% 0.005 80);
+  --dnd-coin-silver: oklch(75% 0.008 75);
+  --dnd-coin-silver-deep: oklch(55% 0.010 70);
+  --dnd-coin-copper-bright: oklch(78% 0.135 50);
+  --dnd-coin-copper: oklch(60% 0.140 45);
+  --dnd-coin-copper-deep: oklch(38% 0.110 40);
+
   /* Shadow composition color (warm brown-ink, not pure black) */
   --dnd-shadow-color: 26, 16, 8;
   --dnd-shadow-arcane: 80, 30, 120;
@@ -138,6 +155,23 @@
   --dnd-info-text: var(--dnd-cobalt-bright);
   --dnd-amber: #b8741c;
   --dnd-highlight: var(--dnd-amber);
+
+  /* Coin metals — light mode (more saturated for aged-parchment contrast) */
+  --dnd-coin-platinum-bright: oklch(82% 0.022 265);
+  --dnd-coin-platinum: oklch(66% 0.026 265);
+  --dnd-coin-platinum-deep: oklch(46% 0.024 265);
+  --dnd-coin-gold-bright: oklch(74% 0.130 78);
+  --dnd-coin-gold: oklch(58% 0.145 70);
+  --dnd-coin-gold-deep: oklch(38% 0.110 65);
+  --dnd-coin-electrum-bright: oklch(78% 0.080 145);
+  --dnd-coin-electrum: oklch(60% 0.095 140);
+  --dnd-coin-electrum-deep: oklch(42% 0.080 135);
+  --dnd-coin-silver-bright: oklch(80% 0.006 80);
+  --dnd-coin-silver: oklch(64% 0.010 75);
+  --dnd-coin-silver-deep: oklch(44% 0.012 70);
+  --dnd-coin-copper-bright: oklch(66% 0.135 50);
+  --dnd-coin-copper: oklch(50% 0.140 45);
+  --dnd-coin-copper-deep: oklch(32% 0.110 40);
 
   --dnd-shadow-color: 110, 80, 30;
   --dnd-shadow-arcane: 80, 30, 100;

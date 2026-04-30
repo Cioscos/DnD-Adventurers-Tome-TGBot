@@ -9,6 +9,7 @@ import {
 import { api } from '@/api/client'
 import type { Spell, RollDamageRequest, RollDamageResult, CharacterFull } from '@/types'
 import Sheet from '@/components/ui/Sheet'
+import Button from '@/components/ui/Button'
 import { haptic } from '@/auth/telegram'
 import { useDiceAnimation } from '@/dice/useDiceAnimation'
 import { useDiceSettings } from '@/store/diceSettings'
@@ -263,41 +264,31 @@ export default function SpellDamageSheet({
               </div>
             )}
           </div>
+          {showNoSlotWarning && slotLevel != null && slotLevel >= 1 && (
+            <div className="rounded-xl border border-dnd-crimson/40 bg-dnd-crimson/10 p-3 space-y-1.5">
+              <p className="font-cinzel text-xs uppercase tracking-widest text-dnd-crimson-bright">
+                {t('character.spells.roll_damage.no_slots_warning_title')}
+              </p>
+              <p className="text-sm text-dnd-text-muted font-body">
+                {t('character.spells.roll_damage.no_slots_warning_body', { level: slotLevel })}
+              </p>
+              <Button
+                variant="ghost"
+                size="sm"
+                fullWidth
+                onClick={handleCloseNoSlotWarning}
+              >
+                {t('character.spells.roll_damage.close')}
+              </Button>
+            </div>
+          )}
           <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={handleReroll}
-              className="flex-1 px-3 py-2 rounded-md bg-dnd-surface border border-dnd-border text-sm"
-            >
+            <Button variant="secondary" fullWidth onClick={handleReroll}>
               {t('character.spells.roll_damage.reroll')}
-            </button>
-            <button
-              type="button"
-              onClick={handleClose}
-              className="flex-1 px-3 py-2 rounded-md bg-dnd-surface border border-dnd-border text-sm"
-            >
+            </Button>
+            <Button variant="secondary" fullWidth onClick={handleClose}>
               {t('character.spells.roll_damage.close')}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {showNoSlotWarning && slotLevel != null && slotLevel >= 1 && (
-        <div className="fixed inset-0 bg-black/60 flex items-end justify-center z-[60] p-4">
-          <div className="w-full max-w-md rounded-2xl bg-dnd-surface-elevated p-4 space-y-3">
-            <h3 className="font-semibold font-cinzel text-dnd-gold">
-              {t('character.spells.roll_damage.no_slots_warning_title')}
-            </h3>
-            <p className="text-sm text-dnd-text-secondary">
-              {t('character.spells.roll_damage.no_slots_warning_body', { level: slotLevel })}
-            </p>
-            <button
-              type="button"
-              onClick={handleCloseNoSlotWarning}
-              className="w-full px-3 py-2 rounded-md bg-dnd-surface border border-dnd-border text-sm"
-            >
-              {t('character.spells.roll_damage.close')}
-            </button>
+            </Button>
           </div>
         </div>
       )}

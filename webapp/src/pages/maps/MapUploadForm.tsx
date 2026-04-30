@@ -95,7 +95,7 @@ export default function MapUploadForm({
                      file:bg-dnd-surface file:text-dnd-text"
         />
         {selectedFiles.length > 1 && (
-          <p className="text-xs text-dnd-text-secondary mt-1">
+          <p className="text-xs text-dnd-text-muted mt-1">
             {t('character.maps.files_selected', { count: selectedFiles.length })}
           </p>
         )}

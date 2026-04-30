@@ -19,6 +19,7 @@ export default function VitalsStrip({ char }: Props) {
         size="sm"
         iconOnly
         revealOnTap
+        expandHitArea
         aria-label={`${t('character.identity.speed', { defaultValue: 'Speed' })}: ${char.speed} ft`}
       />
     </div>

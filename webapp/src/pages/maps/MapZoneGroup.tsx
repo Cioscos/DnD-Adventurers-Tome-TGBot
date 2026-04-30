@@ -28,7 +28,7 @@ function MapZoneGroupInner({
     <div className="mb-4">
       {/* Zone header */}
       <div className="flex items-center justify-between px-1 mb-2">
-        <p className="text-sm font-semibold text-dnd-text-secondary">
+        <p className="text-sm font-semibold text-dnd-text-muted">
           {zoneName}
           <span className="ml-1.5 font-normal opacity-70">({maps.length})</span>
         </p>
@@ -65,7 +65,7 @@ function MapZoneGroupInner({
               />
             ) : (
               <div
-                className="w-full h-full flex flex-col items-center justify-center text-dnd-text-secondary"
+                className="w-full h-full flex flex-col items-center justify-center text-dnd-text-muted"
                 onClick={() => onPreview(m)}
               >
                 <span className="text-3xl">📄</span>

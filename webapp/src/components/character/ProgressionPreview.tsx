@@ -29,7 +29,7 @@ export default function ProgressionPreview({ className, currentLevel }: Props) {
   if (!rows) {
     return (
       <Surface variant="tome" className="!p-3">
-        <p className="text-xs text-dnd-text-faint italic">
+        <p className="text-xs text-dnd-text-muted italic">
           {t('character.equipment.progression.no_data', {
             className,
             defaultValue: `Progression data not available for ${className}`,
@@ -46,7 +46,7 @@ export default function ProgressionPreview({ className, currentLevel }: Props) {
           <div className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-gold-dim">
             {t('character.equipment.progression.title', { defaultValue: 'Progression' })}
           </div>
-          <div className="text-[9px] text-dnd-text-faint italic">
+          <div className="text-[10px] text-dnd-text-muted italic">
             {t('character.equipment.progression.tap_full_table', {
               defaultValue: 'Tap row for full table',
             })}
@@ -62,7 +62,7 @@ export default function ProgressionPreview({ className, currentLevel }: Props) {
                 type="button"
                 onClick={() => setShowFull(true)}
                 whileTap={{ scale: 0.99 }}
-                className={`w-full grid grid-cols-[28px_36px_1fr] @max-[300px]:grid-cols-[28px_1fr] gap-2 items-center rounded-md px-1.5 py-1 text-left transition-colors ${
+                className={`w-full min-h-[44px] grid grid-cols-[28px_36px_1fr] @max-[300px]:grid-cols-[28px_1fr] gap-2 items-center rounded-md px-1.5 py-1 text-left transition-colors ${
                   isCurrent
                     ? 'bg-dnd-gold/15 border border-dnd-gold text-dnd-gold-bright'
                     : 'border border-transparent text-dnd-text-muted hover:bg-dnd-surface'

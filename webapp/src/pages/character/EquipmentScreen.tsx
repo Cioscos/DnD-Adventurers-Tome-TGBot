@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Swords } from 'lucide-react'
 import PaperDoll from '@/components/character/PaperDoll'
 import EquipItemPicker from '@/components/character/EquipItemPicker'
 import SlotActionSheet from '@/components/character/SlotActionSheet'
 import EquipmentStatsFooter from '@/components/character/EquipmentStatsFooter'
-import Surface from '@/components/ui/Surface'
+import SectionDivider from '@/components/ui/SectionDivider'
 import { silhouetteUrl } from '@/lib/silhouette'
 import type { CharacterFull, EquipmentSlot, Item } from '@/types'
 
@@ -32,12 +33,10 @@ export default function EquipmentScreen({ char }: Props) {
   const sUrl = silhouetteUrl(char)
 
   return (
-    <div className="p-4 space-y-3 pb-safe">
-      <Surface variant="elevated" className="!p-3 text-center">
-        <h2 className="text-sm font-cinzel uppercase tracking-widest text-dnd-gold-bright">
-          {t('character.equipment.equipment', { defaultValue: 'Equipment' })}
-        </h2>
-      </Surface>
+    <div className="px-4 pt-2 pb-safe space-y-2">
+      <SectionDivider align="center" icon={<Swords size={12} aria-hidden="true" />}>
+        {t('character.equipment.equipment', { defaultValue: 'Equipment' })}
+      </SectionDivider>
 
       <PaperDoll items={char.items ?? []} onSlotTap={handleSlotTap} silhouetteUrl={sUrl} />
 
@@ -59,8 +58,6 @@ export default function EquipmentScreen({ char }: Props) {
           onClose={() => setSheet({ kind: 'closed' })}
           onReplace={() => setSheet({ kind: 'picker', slot: sheet.slot })}
           onDetails={(_item) => {
-            // Reuse existing item detail UX; for now, close. A future task
-            // can hook into Inventory's existing detail modal if/when needed.
             setSheet({ kind: 'closed' })
           }}
         />

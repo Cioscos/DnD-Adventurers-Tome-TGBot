@@ -60,8 +60,9 @@ export default function ArmorClass() {
 
           <div className="relative flex items-center justify-center">
             <m.div
-              animate={reduceMotion ? {} : { rotate: [-2, 2, -1, 1, 0] }}
-              transition={reduceMotion ? undefined : { duration: 6, repeat: Infinity, ease: 'easeInOut' }}
+              initial={reduceMotion ? false : { rotate: -3, opacity: 0.6 }}
+              animate={reduceMotion ? {} : { rotate: 0, opacity: 1 }}
+              transition={reduceMotion ? undefined : { duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
               className="drop-shadow-[0_8px_24px_var(--dnd-gold-glow)]"
             >
               <ShieldEmblem size={200} />

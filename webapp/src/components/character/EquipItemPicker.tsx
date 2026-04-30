@@ -42,20 +42,21 @@ export default function EquipItemPicker({ charId, slot, items, onClose }: Props)
   return createPortal(
     <AnimatePresence>
       <m.div
-        className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm"
+        className="fixed inset-0 z-50 flex items-end sm:items-center justify-center backdrop-blur-sm"
+        style={{ background: 'var(--dnd-overlay)' }}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         onClick={onClose}
       >
         <m.div
-          className="@container w-full max-w-md max-h-[85vh] overflow-y-auto bg-dnd-surface-raised border border-dnd-gold rounded-t-2xl sm:rounded-2xl"
+          className="@container w-full max-w-md max-h-[85vh] overflow-y-auto bg-dnd-surface-raised border border-dnd-gold-dim/50 rounded-t-2xl sm:rounded-2xl"
           initial={{ y: 40, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 40, opacity: 0 }}
           onClick={(e) => e.stopPropagation()}
         >
-          <header className="flex items-center justify-between px-4 py-3 border-b border-dnd-gold-dim/40">
+          <header className="flex items-center justify-between px-4 py-3 border-b border-dnd-border">
             <h2 className="text-sm font-cinzel uppercase tracking-widest text-dnd-gold-bright">
               {t('character.equipment.picker.title', { defaultValue: 'Equip' })} — {slotLabel}
             </h2>
@@ -63,9 +64,9 @@ export default function EquipItemPicker({ charId, slot, items, onClose }: Props)
               type="button"
               onClick={onClose}
               aria-label={t('common.close', { defaultValue: 'Close' })}
-              className="w-8 h-8 flex items-center justify-center rounded-full border border-dnd-gold-dim/40"
+              className="w-11 h-11 flex items-center justify-center rounded-full border border-dnd-border hover:border-dnd-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dnd-gold focus-visible:ring-offset-2 focus-visible:ring-offset-dnd-surface-raised transition-colors"
             >
-              <X size={16} className="text-dnd-gold" />
+              <X size={18} className="text-dnd-text-muted" />
             </button>
           </header>
           {candidates.length === 0 ? (
@@ -73,17 +74,17 @@ export default function EquipItemPicker({ charId, slot, items, onClose }: Props)
               {t('character.equipment.picker.empty', { defaultValue: 'No compatible items in inventory.' })}
             </p>
           ) : (
-            <ul className="divide-y divide-dnd-gold-dim/20">
+            <ul className="divide-y divide-dnd-border/60">
               {candidates.map((it) => (
                 <li key={it.id}>
                   <button
                     type="button"
                     onClick={() => equip.mutate(it.id)}
                     disabled={equip.isPending}
-                    className="w-full text-left px-4 py-3 hover:bg-dnd-surface flex flex-col gap-0.5"
+                    className="w-full text-left px-4 py-3 hover:bg-dnd-surface focus-visible:outline-none focus-visible:bg-dnd-surface focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-dnd-gold flex flex-col gap-0.5 disabled:opacity-60"
                   >
                     <span className="text-sm font-bold text-dnd-text">{it.name}</span>
-                    <span className="text-[11px] @max-[300px]:text-[10px] text-dnd-text-muted break-words">
+                    <span className="text-[11px] text-dnd-text-muted break-words">
                       {it.item_type} · {it.weight} lb
                     </span>
                   </button>

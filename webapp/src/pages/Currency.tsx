@@ -15,18 +15,25 @@ import { haptic } from '@/auth/telegram'
 import { spring } from '@/styles/motion'
 
 const COINS = [
-  { key: 'platinum', color: 'from-slate-200 via-slate-400 to-slate-500', label: 'PP' },
-  { key: 'gold',     color: 'from-yellow-300 via-amber-500 to-yellow-700', label: 'GP' },
-  { key: 'electrum', color: 'from-emerald-200 via-cyan-400 to-emerald-600', label: 'EP' },
-  { key: 'silver',   color: 'from-zinc-200 via-zinc-400 to-zinc-500', label: 'SP' },
-  { key: 'copper',   color: 'from-orange-300 via-orange-600 to-amber-900', label: 'CP' },
+  { key: 'platinum', metal: 'platinum', label: 'PP' },
+  { key: 'gold',     metal: 'gold',     label: 'GP' },
+  { key: 'electrum', metal: 'electrum', label: 'EP' },
+  { key: 'silver',   metal: 'silver',   label: 'SP' },
+  { key: 'copper',   metal: 'copper',   label: 'CP' },
 ] as const
 
 type CoinKey = typeof COINS[number]['key']
+type CoinMetal = typeof COINS[number]['metal']
 
-function CoinTile({ colorClass, label }: { colorClass: string; label: string }) {
+function CoinTile({ metal, label }: { metal: CoinMetal; label: string }) {
+  const style = {
+    background: `radial-gradient(circle at 32% 28%, var(--dnd-coin-${metal}-bright) 0%, var(--dnd-coin-${metal}) 55%, var(--dnd-coin-${metal}-deep) 100%)`,
+  }
   return (
-    <div className={`w-11 h-11 rounded-full bg-gradient-to-br ${colorClass} border-2 border-dnd-gold-deep/60 flex items-center justify-center font-cinzel font-black text-[10px] shadow-parchment-md text-dnd-ink`}>
+    <div
+      className="w-11 h-11 rounded-full border-2 border-dnd-gold-deep/60 flex items-center justify-center font-cinzel font-black text-[10px] shadow-parchment-md text-dnd-ink"
+      style={style}
+    >
       {label}
     </div>
   )
@@ -43,7 +50,7 @@ export default function Currency() {
     queryFn: () => api.characters.get(charId),
   })
 
-  const [mode, setMode] = useState<'set' | 'add'>('set')
+  const [mode, setMode] = useState<'set' | 'add'>('add')
   const [draft, setDraft] = useState<Record<CoinKey, string>>({
     platinum: '', gold: '', electrum: '', silver: '', copper: '',
   })
@@ -53,47 +60,21 @@ export default function Currency() {
   const [convertTarget, setConvertTarget] = useState<CoinKey>('silver')
   const [convertAmount, setConvertAmount] = useState('')
 
-  const currencyFingerprint = char?.currency
-    ? `${char.currency.platinum}-${char.currency.gold}-${char.currency.electrum}-${char.currency.silver}-${char.currency.copper}`
-    : null
-
+  // Reset draft on mode switch — never pre-fill, current values shown as placeholder.
   useEffect(() => {
-    if (char?.currency && mode === 'set') {
-      setDraft({
-        platinum: String(char.currency.platinum),
-        gold: String(char.currency.gold),
-        electrum: String(char.currency.electrum),
-        silver: String(char.currency.silver),
-        copper: String(char.currency.copper),
-      })
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currencyFingerprint, mode])
-
-  useEffect(() => {
-    if (mode === 'add') {
-      setDraft({ platinum: '', gold: '', electrum: '', silver: '', copper: '' })
-    } else if (char?.currency) {
-      setDraft({
-        platinum: String(char.currency.platinum),
-        gold: String(char.currency.gold),
-        electrum: String(char.currency.electrum),
-        silver: String(char.currency.silver),
-        copper: String(char.currency.copper),
-      })
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    setDraft({ platinum: '', gold: '', electrum: '', silver: '', copper: '' })
   }, [mode])
 
   const mutation = useMutation({
     mutationFn: () => {
       const data: Record<string, number> = {}
       for (const { key } of COINS) {
+        const current = char?.currency?.[key] ?? 0
         if (mode === 'add') {
-          const current = char?.currency?.[key] ?? 0
           data[key] = Math.max(0, current + (Number(draft[key]) || 0))
         } else {
-          data[key] = Number(draft[key]) || 0
+          // 'set' mode: empty input → keep current value (placeholder hint).
+          data[key] = draft[key] === '' ? current : Number(draft[key]) || 0
         }
       }
       return api.currency.update(charId, data)
@@ -102,9 +83,7 @@ export default function Currency() {
       qc.setQueryData(['character', charId], (old: typeof char) =>
         old ? { ...old, currency: updated } : old
       )
-      if (mode === 'add') {
-        setDraft({ platinum: '', gold: '', electrum: '', silver: '', copper: '' })
-      }
+      setDraft({ platinum: '', gold: '', electrum: '', silver: '', copper: '' })
       haptic.success()
     },
     onError: () => haptic.error(),
@@ -127,21 +106,19 @@ export default function Currency() {
   if (!char) return null
 
   const currentCoins = char.currency
-  const totalGold = mode === 'set'
-    ? (
-      (Number(draft.platinum) || 0) * 10 +
-      (Number(draft.gold) || 0) +
-      (Number(draft.electrum) || 0) * 0.5 +
-      (Number(draft.silver) || 0) * 0.1 +
-      (Number(draft.copper) || 0) * 0.01
-    ).toFixed(2)
-    : (
-      ((currentCoins?.platinum ?? 0) + (Number(draft.platinum) || 0)) * 10 +
-      ((currentCoins?.gold ?? 0) + (Number(draft.gold) || 0)) +
-      ((currentCoins?.electrum ?? 0) + (Number(draft.electrum) || 0)) * 0.5 +
-      ((currentCoins?.silver ?? 0) + (Number(draft.silver) || 0)) * 0.1 +
-      ((currentCoins?.copper ?? 0) + (Number(draft.copper) || 0)) * 0.01
-    ).toFixed(2)
+  // Live total preview: in 'set' mode use draft (0 if empty); in 'add' mode add draft to current.
+  const resolved = (key: CoinKey) => {
+    const drafted = Number(draft[key]) || 0
+    if (mode === 'set') return draft[key] === '' ? (currentCoins?.[key] ?? 0) : drafted
+    return (currentCoins?.[key] ?? 0) + drafted
+  }
+  const totalGold = (
+    resolved('platinum') * 10 +
+    resolved('gold') +
+    resolved('electrum') * 0.5 +
+    resolved('silver') * 0.1 +
+    resolved('copper') * 0.01
+  ).toFixed(2)
 
   return (
     <Layout title={t('character.currency.title')} backTo={`/char/${charId}`} group="equipment" page="currency">
@@ -172,7 +149,7 @@ export default function Currency() {
             <button
               key={m}
               onClick={() => setMode(m)}
-              className={`min-h-[40px] rounded-lg font-cinzel text-xs uppercase tracking-widest transition-colors
+              className={`min-h-[44px] rounded-lg font-cinzel text-xs uppercase tracking-widest transition-colors
                 ${mode === m
                   ? 'bg-gradient-gold text-dnd-ink shadow-engrave'
                   : 'bg-transparent text-dnd-text-muted'}`}
@@ -185,13 +162,13 @@ export default function Currency() {
 
       {/* Coin rows */}
       <div className="space-y-2">
-        {COINS.map(({ key, color, label }) => (
+        {COINS.map(({ key, metal, label }) => (
           <Surface key={key} variant="elevated">
             <div className="flex items-center gap-3">
-              <CoinTile colorClass={color} label={label} />
+              <CoinTile metal={metal} label={label} />
               <div className="flex-1">
                 <span className="font-display font-bold text-dnd-gold-bright">{t(`character.currency.${key}`)}</span>
-                {mode === 'add' && currentCoins && (
+                {currentCoins && (
                   <span className="text-xs text-dnd-text-faint ml-2 font-mono">
                     ({currentCoins[key]})
                   </span>
@@ -202,7 +179,7 @@ export default function Currency() {
                 min={mode === 'set' ? 0 : undefined}
                 value={draft[key]}
                 onChange={(v) => setDraft((d) => ({ ...d, [key]: v }))}
-                placeholder="0"
+                placeholder={String(currentCoins?.[key] ?? 0)}
                 inputMode="numeric"
                 className="w-24 [&_input]:text-center [&_input]:font-mono [&_input]:font-bold"
               />
@@ -259,7 +236,7 @@ export default function Currency() {
                 setConvertSource(convertTarget)
                 setConvertTarget(tmp)
               }}
-              className="self-end mb-1 w-10 h-10 rounded-full bg-dnd-surface-raised border border-dnd-gold-dim/40 flex items-center justify-center text-dnd-gold-bright"
+              className="self-end mb-1 w-11 h-11 rounded-full bg-dnd-surface-raised border border-dnd-gold-dim/40 flex items-center justify-center text-dnd-gold-bright"
               whileTap={{ scale: 0.9, rotate: 180 }}
               aria-label={t('character.currency.swap')}
             >

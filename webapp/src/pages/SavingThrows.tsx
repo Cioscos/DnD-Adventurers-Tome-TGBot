@@ -160,7 +160,7 @@ export default function SavingThrows() {
                       e.stopPropagation()
                       toggle(ability)
                     }}
-                    className="w-10 h-10 flex items-center justify-center rounded-full"
+                    className="w-11 h-11 flex items-center justify-center rounded-full"
                     whileTap={{ scale: 0.85 }}
                     aria-label="Proficiency"
                   >

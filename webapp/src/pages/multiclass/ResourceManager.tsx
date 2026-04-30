@@ -49,7 +49,7 @@ export default function ResourceManager({
           {resources.map((res) => (
             <div key={res.id} className="flex items-center gap-2 text-sm">
               <span className="flex-1">{res.name}</span>
-              <span className="text-dnd-text-secondary">
+              <span className="text-dnd-text-muted">
                 {res.current}/{res.total}
               </span>
               <button
