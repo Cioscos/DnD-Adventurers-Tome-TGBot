@@ -68,8 +68,8 @@ export default function AbilityScores() {
                 ornamented
                 className={`relative overflow-hidden bg-gradient-to-br ${theme}`}
               >
-                <div className="flex items-center justify-between gap-2 mb-2">
-                  <span className="min-w-0 truncate text-[11px] font-cinzel uppercase tracking-[0.2em] opacity-85">
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <span className="min-w-0 text-[11px] font-cinzel uppercase tracking-[0.15em] leading-tight opacity-85 break-words">
                     {t(`character.stats.${score.name}`, { defaultValue: score.name })}
                   </span>
                   {!isEditing && (
