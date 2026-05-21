@@ -31,6 +31,12 @@ function PipGroup({ label, count, tone, icon, urgent = false }: PipGroupProps) {
   const fillBorder = tone === 'emerald'
     ? 'border-dnd-emerald-bright'
     : 'border-[var(--dnd-crimson-bright)]'
+  const emptyBorder = tone === 'emerald'
+    ? 'border-[color:rgb(63_166_106_/_0.35)]'
+    : 'border-[color:rgb(179_58_58_/_0.35)]'
+  const labelColor = tone === 'emerald'
+    ? 'text-[color:rgb(63_166_106_/_0.85)]'
+    : 'text-[color:rgb(179_58_58_/_0.85)]'
   const glow = tone === 'emerald'
     ? 'shadow-[0_0_8px_rgba(63,166,106,0.5)]'
     : 'shadow-[0_0_8px_rgba(179,58,58,0.5)]'
@@ -41,7 +47,7 @@ function PipGroup({ label, count, tone, icon, urgent = false }: PipGroupProps) {
 
   return (
     <div className="flex flex-col items-center gap-2">
-      <p className="text-[10px] text-dnd-text-muted font-cinzel uppercase tracking-widest">
+      <p className={`text-[10px] font-cinzel uppercase tracking-widest ${labelColor}`}>
         {label}
       </p>
       <div className={`flex gap-2 ${urgent ? 'animate-pulse' : ''}`}>
@@ -53,7 +59,7 @@ function PipGroup({ label, count, tone, icon, urgent = false }: PipGroupProps) {
               className={`w-9 h-9 rounded-full border-2 flex items-center justify-center
                 ${filled
                   ? `${fillBg} ${fillBorder} ${urgent ? urgentGlow : glow}`
-                  : 'border-dnd-border'}`}
+                  : emptyBorder}`}
               animate={filled ? { scale: [0.7, 1.15, 1] } : { scale: 1 }}
               transition={spring.elastic}
             >
@@ -72,10 +78,10 @@ export default function DeathSaves({ deathSaves, onRoll, onAction, isRolling }: 
   const failures = deathSaves.failures ?? 0
 
   return (
-    <Surface variant="ember" ornamented className="flex flex-col gap-7">
+    <Surface variant="ember" ornamented className="flex flex-col gap-5">
       <div className="flex items-center gap-2">
         <Skull size={18} className="text-[var(--dnd-crimson-bright)]" />
-        <h3 className="font-display font-bold text-dnd-gold-bright text-base">
+        <h3 className="font-display font-bold text-[var(--dnd-crimson-bright)] text-base tracking-wide">
           {t('character.death_saves.title')}
         </h3>
       </div>
@@ -106,15 +112,27 @@ export default function DeathSaves({ deathSaves, onRoll, onAction, isRolling }: 
         loading={isRolling}
         icon={<Dice1 size={18} />}
         haptic="medium"
-        className="mt-3"
       >
         {t('character.death_saves.roll')}
       </Button>
 
-      <div className="flex flex-col gap-3 pt-5 border-t border-dnd-border/40">
-        <p className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-text-muted">
-          {t('character.death_saves.manual_override')}
-        </p>
+      <div className="flex flex-col gap-3 pt-4 border-t border-dnd-border/40">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-text-muted">
+            {t('character.death_saves.manual_override')}
+          </p>
+          <button
+            type="button"
+            onClick={() => onAction('reset')}
+            className="inline-flex items-center justify-center
+                       min-h-[32px] px-2 rounded
+                       text-[10px] font-cinzel uppercase tracking-widest
+                       text-dnd-text-muted hover:text-dnd-gold-bright
+                       transition-colors"
+          >
+            {t('character.death_saves.reset')}
+          </button>
+        </div>
         <div className="grid grid-cols-3 gap-2">
           <Button
             variant="secondary"
@@ -144,17 +162,6 @@ export default function DeathSaves({ deathSaves, onRoll, onAction, isRolling }: 
             {t('character.death_saves.stabilize')}
           </Button>
         </div>
-        <button
-          type="button"
-          onClick={() => onAction('reset')}
-          className="self-start inline-flex items-center justify-center
-                     min-h-[44px] px-3 mt-2 -ml-3
-                     text-[11px] font-cinzel uppercase tracking-widest
-                     text-dnd-text-muted hover:text-dnd-gold-bright
-                     transition-colors"
-        >
-          {t('character.death_saves.reset')}
-        </button>
       </div>
     </Surface>
   )
