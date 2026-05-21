@@ -112,6 +112,7 @@ export default function DeathSaves({ deathSaves, onRoll, onAction, isRolling }: 
         loading={isRolling}
         icon={<Dice1 size={18} />}
         haptic="medium"
+        className="mt-5"
       >
         {t('character.death_saves.roll')}
       </Button>
