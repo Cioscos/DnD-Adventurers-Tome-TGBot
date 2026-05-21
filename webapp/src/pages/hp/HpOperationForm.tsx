@@ -52,7 +52,7 @@ export default function HpOperationForm({
               <m.button
                 key={op.key}
                 onClick={() => { setActiveOp(op.key); haptic.selection() }}
-                className={`flex flex-col items-center gap-0.5 py-2 px-1 rounded-xl font-cinzel text-[9px] uppercase tracking-wider border
+                className={`flex flex-col items-center gap-0.5 py-2 px-1 rounded-xl font-cinzel text-[11px] uppercase tracking-tight border
                   ${isActive
                     ? op.toneClass
                     : 'bg-transparent text-dnd-text-muted border-transparent'}`}

@@ -13,6 +13,7 @@ import { useDiceSettings } from '@/store/diceSettings'
 import type { DiceAnimationApi, DicePlayRequest, PlayCollectGroup, DetectedResult } from './types'
 import type { SceneRequest } from './DiceScene'
 import { DicePackProvider } from './packs/DicePackProvider'
+import DiceErrorBoundary from './DiceErrorBoundary'
 
 const DiceScene = lazy(() => import('./DiceScene'))
 
@@ -35,11 +36,26 @@ export default function DiceAnimationProvider({ children }: { children: ReactNod
   const sceneReadyRef = useRef(false)
   const readyWaitersRef = useRef<Array<() => void>>([])
   const requestIdRef = useRef(0)
+  const pendingCompleteRef = useRef<((results: DetectedResult[]) => void) | null>(null)
 
   const handleSceneMount = useCallback(() => {
     sceneReadyRef.current = true
     for (const cb of readyWaitersRef.current) cb()
     readyWaitersRef.current = []
+  }, [])
+
+  const handleSceneError = useCallback(() => {
+    sceneReadyRef.current = true
+    for (const cb of readyWaitersRef.current) cb()
+    readyWaitersRef.current = []
+    if (pendingCompleteRef.current) {
+      pendingCompleteRef.current([])
+      pendingCompleteRef.current = null
+    }
+    setOverlayVisible(false)
+    setSceneRequest(null)
+    setIsPlaying(false)
+    setShouldMountScene(false)
   }, [])
 
   const waitForScene = useCallback(
@@ -63,7 +79,12 @@ export default function DiceAnimationProvider({ children }: { children: ReactNod
       for (const group of req.groups) {
         const id = ++requestIdRef.current
         await new Promise<void>((resolve) => {
-          setSceneRequest({ id, groups: [group], onComplete: (_results) => resolve() })
+          const done = (_results: DetectedResult[]) => {
+            pendingCompleteRef.current = null
+            resolve()
+          }
+          pendingCompleteRef.current = done
+          setSceneRequest({ id, groups: [group], onComplete: done })
         })
         if (req.interGroupMs && req.interGroupMs > 0) {
           await new Promise((r) => setTimeout(r, req.interGroupMs))
@@ -91,11 +112,12 @@ export default function DiceAnimationProvider({ children }: { children: ReactNod
       const id = ++requestIdRef.current
       const sceneGroups = groups.map((g) => ({ kind: g.kind, tint: g.tint, count: g.count }))
       const results = await new Promise<DetectedResult[]>((resolve) => {
-        setSceneRequest({
-          id,
-          groups: sceneGroups,
-          onComplete: (r) => resolve(r),
-        })
+        const done = (r: DetectedResult[]) => {
+          pendingCompleteRef.current = null
+          resolve(r)
+        }
+        pendingCompleteRef.current = done
+        setSceneRequest({ id, groups: sceneGroups, onComplete: done })
       })
 
       setOverlayVisible(false)
@@ -130,9 +152,11 @@ export default function DiceAnimationProvider({ children }: { children: ReactNod
               willChange: 'opacity',
             }}
           >
-            <Suspense fallback={null}>
-              <DiceScene request={sceneRequest} onMount={handleSceneMount} />
-            </Suspense>
+            <DiceErrorBoundary onError={handleSceneError}>
+              <Suspense fallback={null}>
+                <DiceScene request={sceneRequest} onMount={handleSceneMount} />
+              </Suspense>
+            </DiceErrorBoundary>
           </div>
         )}
       </DiceAnimationContext.Provider>
