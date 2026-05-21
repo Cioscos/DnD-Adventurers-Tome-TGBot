@@ -44,12 +44,12 @@ export default function Layout({ title, children, group, page, hideScrollbar = f
         <div className="flex items-center gap-3">
           <m.button
             onClick={handleBack}
-            className="w-9 h-9 flex items-center justify-center rounded-full bg-dnd-surface border border-dnd-gold-dim/30"
+            className="shrink-0 w-11 h-11 flex items-center justify-center rounded-full bg-dnd-surface border border-dnd-gold-dim/30"
             aria-label="Indietro"
             whileTap={{ scale: 0.9 }}
             whileHover={{ boxShadow: 'var(--halo-gold)' }}
           >
-            <ChevronLeft size={20} className="text-dnd-gold-bright" />
+            <ChevronLeft size={22} className="text-dnd-gold-bright" />
           </m.button>
           <h1 className="text-lg font-bold font-display text-dnd-gold-bright truncate flex-1 title-glow">
             {title}
@@ -82,7 +82,7 @@ export default function Layout({ title, children, group, page, hideScrollbar = f
                     onClick={goToPrev}
                     whileTap={{ scale: 0.95 }}
                     aria-label={t('layout.nav.go_to', { page: t(`character.menu.${prevKey}`) })}
-                    className="text-dnd-text-muted opacity-70 whitespace-nowrap px-1.5 py-0.5 rounded hover:filter-none hover:text-dnd-gold-bright hover:opacity-100 transition-colors"
+                    className="text-dnd-text-muted opacity-70 whitespace-nowrap px-2 py-1.5 min-h-[32px] rounded hover:filter-none hover:text-dnd-gold-bright hover:opacity-100 transition-colors"
                     style={{ filter: 'blur(0.5px)' }}
                   >
                     {t(`character.menu.${prevKey}`)}
@@ -101,7 +101,7 @@ export default function Layout({ title, children, group, page, hideScrollbar = f
                     onClick={goToNext}
                     whileTap={{ scale: 0.95 }}
                     aria-label={t('layout.nav.go_to', { page: t(`character.menu.${nextKey}`) })}
-                    className="text-dnd-text-muted opacity-70 whitespace-nowrap px-1.5 py-0.5 rounded hover:filter-none hover:text-dnd-gold-bright hover:opacity-100 transition-colors"
+                    className="text-dnd-text-muted opacity-70 whitespace-nowrap px-2 py-1.5 min-h-[32px] rounded hover:filter-none hover:text-dnd-gold-bright hover:opacity-100 transition-colors"
                     style={{ filter: 'blur(0.5px)' }}
                   >
                     {t(`character.menu.${nextKey}`)}
@@ -115,7 +115,7 @@ export default function Layout({ title, children, group, page, hideScrollbar = f
 
       <main
         ref={swipe.contentRef}
-        className={`flex-1 min-w-0 overflow-y-auto p-4 space-y-3 pb-safe animate-fade-in${hideScrollbar ? ' scrollbar-hide' : ''}`}
+        className={`flex-1 min-w-0 overflow-y-auto p-4 pt-4 pb-[max(env(safe-area-inset-bottom),5.5rem)] space-y-3 animate-fade-in${hideScrollbar ? ' scrollbar-hide' : ''}`}
         onTouchStart={swipe.onTouchStart}
         onTouchMove={swipe.onTouchMove}
         onTouchEnd={swipe.onTouchEnd}

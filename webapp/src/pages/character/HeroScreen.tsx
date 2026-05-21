@@ -151,7 +151,7 @@ export default function HeroScreen({ char }: Props) {
                     style={{ textShadow: '0 1px 3px rgba(var(--dnd-shadow-color), 0.6)' }}>
                 {char.ac}
               </span>
-              <span className="text-[9px] font-cinzel uppercase tracking-widest text-dnd-gold-dim leading-none mt-0.5">
+              <span className="text-[11px] font-cinzel uppercase tracking-wide text-dnd-gold-dim leading-none mt-0.5">
                 {t('character.ac.short', { defaultValue: 'CA' })}
               </span>
             </span>
@@ -242,7 +242,7 @@ export default function HeroScreen({ char }: Props) {
                     transition={spring.snappy}
                     whileTap={{ scale: 0.95 }}
                   >
-                    <span className="text-[9px] font-cinzel uppercase tracking-widest opacity-80">
+                    <span className="text-[11px] font-cinzel uppercase tracking-wider opacity-80">
                       {score.name.slice(0, 3)}
                     </span>
                     <span className="text-xl font-display font-black leading-none mt-0.5">{score.value}</span>

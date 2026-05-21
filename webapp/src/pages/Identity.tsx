@@ -187,7 +187,7 @@ export default function Identity() {
       </div>
 
       {/* Background — first private item */}
-      <Surface variant="parchment" className="!pt-5 !px-4 !pb-4 relative mb-3">
+      <Surface variant="parchment" className="!pt-5 !px-4 !pb-4 relative !mt-8 !mb-6">
         <span className="absolute -top-2.5 left-4 px-2 bg-dnd-surface-raised text-[10px] font-cinzel uppercase tracking-widest text-dnd-gold-dim rounded">
           {t('character.identity.background')}
         </span>
@@ -199,7 +199,7 @@ export default function Identity() {
         />
       </Surface>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 !mt-6">
         {personalitySections.map(({ key, label }) => (
           <Surface key={key} variant="parchment" className="!pt-5 !px-4 !pb-4 relative">
             <span className="absolute -top-2.5 left-4 px-2 bg-dnd-surface-raised text-[10px] font-cinzel uppercase tracking-widest text-dnd-gold-dim rounded">

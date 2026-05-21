@@ -120,7 +120,7 @@ export default function LevelUpModal({ char, xpLevel, onClose }: LevelUpModalPro
                   >
                     {/* Level badge */}
                     <div className="flex-shrink-0 w-14 h-14 rounded-xl bg-gradient-gold flex flex-col items-center justify-center shadow-engrave">
-                      <span className="text-[9px] font-cinzel uppercase tracking-widest text-dnd-ink/70 leading-none">
+                      <span className="text-[11px] font-cinzel uppercase tracking-wider text-dnd-ink/70 leading-none">
                         Liv
                       </span>
                       <span className="font-display font-black text-2xl text-dnd-ink leading-none mt-0.5">

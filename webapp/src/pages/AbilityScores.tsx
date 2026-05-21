@@ -68,8 +68,8 @@ export default function AbilityScores() {
                 ornamented
                 className={`relative overflow-hidden bg-gradient-to-br ${theme}`}
               >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] font-cinzel uppercase tracking-[0.25em] opacity-85">
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <span className="min-w-0 text-[11px] font-cinzel uppercase tracking-[0.15em] leading-tight opacity-85 break-words">
                     {t(`character.stats.${score.name}`, { defaultValue: score.name })}
                   </span>
                   {!isEditing && (
@@ -78,7 +78,7 @@ export default function AbilityScores() {
                         setEditing(score.name)
                         setEditValue(String(score.value))
                       }}
-                      className="w-11 h-11 rounded-full bg-dnd-surface-raised border border-dnd-border flex items-center justify-center text-dnd-gold"
+                      className="shrink-0 w-11 h-11 rounded-full bg-dnd-surface-raised border border-dnd-border flex items-center justify-center text-dnd-gold"
                       whileTap={{ scale: 0.9 }}
                       aria-label={t('common.edit')}
                     >
@@ -111,7 +111,7 @@ export default function AbilityScores() {
                       </div>
                       <m.button
                         onClick={() => handleSave(score.name)}
-                        className="w-11 h-11 rounded-lg bg-[var(--dnd-emerald)]/20 text-[var(--dnd-emerald-bright)] border border-dnd-emerald/40 flex items-center justify-center"
+                        className="shrink-0 w-11 h-11 rounded-lg bg-[var(--dnd-emerald)]/20 text-[var(--dnd-emerald-bright)] border border-dnd-emerald/40 flex items-center justify-center"
                         whileTap={{ scale: 0.9 }}
                         aria-label={t('common.save')}
                       >
@@ -119,7 +119,7 @@ export default function AbilityScores() {
                       </m.button>
                       <m.button
                         onClick={() => setEditing(null)}
-                        className="w-11 h-11 rounded-lg bg-[var(--dnd-crimson)]/15 text-[var(--dnd-crimson-bright)] border border-[var(--dnd-crimson)]/40 flex items-center justify-center"
+                        className="shrink-0 w-11 h-11 rounded-lg bg-[var(--dnd-crimson)]/15 text-[var(--dnd-crimson-bright)] border border-[var(--dnd-crimson)]/40 flex items-center justify-center"
                         whileTap={{ scale: 0.9 }}
                         aria-label={t('common.cancel')}
                       >
