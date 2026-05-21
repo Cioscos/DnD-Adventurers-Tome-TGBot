@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { m, AnimatePresence, useDragControls, type PanInfo } from 'framer-motion'
 import { X } from 'lucide-react'
 import { spring } from '@/styles/motion'
@@ -44,7 +45,7 @@ export default function Sheet({
     }
   }
 
-  return (
+  return createPortal(
     <AnimatePresence>
       {open && (
         <m.div
@@ -125,6 +126,7 @@ export default function Sheet({
           </m.div>
         </m.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body,
   )
 }
