@@ -187,7 +187,7 @@ export default function Identity() {
       </div>
 
       {/* Background — first private item */}
-      <Surface variant="parchment" className="!pt-5 !px-4 !pb-4 relative mb-3">
+      <Surface variant="parchment" className="!pt-5 !px-4 !pb-4 relative !mt-8 mb-3">
         <span className="absolute -top-2.5 left-4 px-2 bg-dnd-surface-raised text-[10px] font-cinzel uppercase tracking-widest text-dnd-gold-dim rounded">
           {t('character.identity.background')}
         </span>
