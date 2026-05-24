@@ -105,6 +105,8 @@ export default function Currency() {
 
   if (!char) return null
 
+  const settings = (char.settings as Record<string, unknown>) ?? {}
+  const hideElectrum = settings.hide_electrum === true
   const currentCoins = char.currency
   // Live total preview: in 'set' mode use draft (0 if empty); in 'add' mode add draft to current.
   const resolved = (key: CoinKey) => {
@@ -162,30 +164,46 @@ export default function Currency() {
 
       {/* Coin rows */}
       <div className="space-y-2">
-        {COINS.map(({ key, metal, label }) => (
-          <Surface key={key} variant="elevated">
-            <div className="flex items-center gap-3">
-              <CoinTile metal={metal} label={label} />
-              <div className="flex-1">
-                <span className="font-display font-bold text-dnd-gold-bright">{t(`character.currency.${key}`)}</span>
-                {currentCoins && (
-                  <span className="text-xs text-dnd-text-faint ml-2 font-mono">
-                    ({currentCoins[key]})
-                  </span>
-                )}
+        {COINS.map(({ key, metal, label }) => {
+          // Hide Electrum when the character has opted out via Settings.
+          if (key === 'electrum' && hideElectrum) return null
+          const draftNum = Number(draft[key]) || 0
+          const isNegativeAdd = mode === 'add' && draftNum < 0
+          return (
+            <Surface key={key} variant="elevated">
+              <div className="flex items-center gap-3">
+                <CoinTile metal={metal} label={label} />
+                <div className="flex-1 min-w-0">
+                  <p className="font-display font-bold text-dnd-gold-bright">
+                    {t(`character.currency.${key}`)}
+                  </p>
+                  {currentCoins && (
+                    <p className="text-[10px] text-dnd-text-faint mt-0.5 font-mono">
+                      {t('character.currency.current_value', { n: currentCoins[key] })}
+                    </p>
+                  )}
+                  {isNegativeAdd && (
+                    <p className="text-[10px] text-[var(--dnd-crimson-bright)] mt-0.5 font-body italic">
+                      {t('character.currency.remove_preview', {
+                        amount: Math.abs(draftNum),
+                        coin: label,
+                      })}
+                    </p>
+                  )}
+                </div>
+                <Input
+                  type="number"
+                  min={mode === 'set' ? 0 : undefined}
+                  value={draft[key]}
+                  onChange={(v) => setDraft((d) => ({ ...d, [key]: v }))}
+                  placeholder={mode === 'add' ? '+/-' : ''}
+                  inputMode="numeric"
+                  className="w-24 [&_input]:text-center [&_input]:font-mono [&_input]:font-bold"
+                />
               </div>
-              <Input
-                type="number"
-                min={mode === 'set' ? 0 : undefined}
-                value={draft[key]}
-                onChange={(v) => setDraft((d) => ({ ...d, [key]: v }))}
-                placeholder={String(currentCoins?.[key] ?? 0)}
-                inputMode="numeric"
-                className="w-24 [&_input]:text-center [&_input]:font-mono [&_input]:font-bold"
-              />
-            </div>
-          </Surface>
-        ))}
+            </Surface>
+          )
+        })}
       </div>
 
       <Button
