@@ -10,6 +10,7 @@ import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
 import ScrollArea from '@/components/ScrollArea'
+import EmptyState from '@/components/ui/EmptyState'
 import { haptic } from '@/auth/telegram'
 import SpellFilter from '@/pages/spells/SpellFilter'
 import SpellItem from '@/pages/spells/SpellItem'
@@ -32,6 +33,7 @@ export default function Spells() {
   const [rollDamageSpell, setRollDamageSpell] = useState<Spell | null>(null)
   const [pendingSlotLevel, setPendingSlotLevel] = useState<number | null>(null)
   const [collapsedLevels, setCollapsedLevels] = useState<Set<number>>(new Set())
+  const [concBannerExpanded, setConcBannerExpanded] = useState(false)
 
   const toggleLevel = (level: number) => {
     setCollapsedLevels((prev) => {
@@ -243,18 +245,34 @@ export default function Spells() {
             </Button>
           </div>
           {concentratingSpell.description && (
-            <p className="text-sm text-dnd-text font-body leading-relaxed break-words">
-              {concentratingSpell.description}
-            </p>
+            <div>
+              <p className={`text-sm text-dnd-text font-body leading-relaxed break-words ${concBannerExpanded ? '' : 'line-clamp-2'}`}>
+                {concentratingSpell.description}
+              </p>
+              {concentratingSpell.description.length > 120 && (
+                <button
+                  type="button"
+                  onClick={() => setConcBannerExpanded((v) => !v)}
+                  className="mt-1 text-[11px] font-cinzel uppercase tracking-widest text-dnd-arcane-bright hover:text-dnd-gold-bright"
+                >
+                  {concBannerExpanded ? t('character.spells.collapse') : t('character.spells.expand')}
+                </button>
+              )}
+            </div>
           )}
         </Surface>
       )}
 
       {spells.length === 0 && !showAdd && (
-        <Surface variant="flat" className="text-center py-8">
-          <Sparkles className="mx-auto text-dnd-text-faint mb-2" size={32} />
-          <p className="text-dnd-text-muted font-body italic">{t('common.none')}</p>
-        </Surface>
+        <EmptyState
+          icon={<Sparkles size={32} />}
+          title={t('common.none')}
+          hint={t('character.spells.empty_hint')}
+          action={{
+            label: t('character.spells.add'),
+            onClick: () => setShowAdd(true),
+          }}
+        />
       )}
 
       <ScrollArea>
@@ -293,7 +311,7 @@ export default function Spells() {
                             useSlotMutation.mutate({ slotId: slot.id, newUsed: Math.min(slot.total, slot.used + 1) })
                           }
                         }}
-                        className={`w-7 h-7 rounded-full border-2 transition-all disabled:opacity-40 ${
+                        className={`hit-44 w-7 h-7 rounded-full border-2 transition-all disabled:opacity-40 ${
                           i < slot.used
                             ? 'bg-gradient-to-br from-dnd-gold-deep to-dnd-gold-bright border-dnd-gold-bright shadow-[0_0_8px_rgba(244,208,111,0.5)]'
                             : 'bg-transparent border-dnd-gold-dim/60 hover:border-dnd-gold-bright'

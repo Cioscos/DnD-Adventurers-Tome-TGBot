@@ -7,12 +7,12 @@ import { Plus, Minus, Pencil, Trash2, RotateCcw, ChevronDown } from 'lucide-reac
 import { GiLightningTrio as Zap, GiSparkles as Sparkles } from 'react-icons/gi'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
-import Surface from '@/components/ui/Surface'
 import Sheet from '@/components/ui/Sheet'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import ScrollArea from '@/components/ScrollArea'
 import StatPill from '@/components/ui/StatPill'
+import EmptyState from '@/components/ui/EmptyState'
 import { haptic } from '@/auth/telegram'
 import { spring } from '@/styles/motion'
 import type { Ability } from '@/types'
@@ -141,10 +141,16 @@ export default function Abilities() {
       </Button>
 
       {abilities.length === 0 && (
-        <Surface variant="flat" className="text-center py-8">
-          <Zap className="mx-auto text-dnd-text-faint mb-2" size={32} />
-          <p className="text-dnd-text-muted font-body italic">{t('common.none')}</p>
-        </Surface>
+        <EmptyState
+          icon={<Zap size={32} />}
+          title={t('common.none')}
+          hint={t('character.abilities.empty_hint')}
+          action={{
+            label: t('character.abilities.add'),
+            onClick: openAdd,
+            icon: <Plus size={14} />,
+          }}
+        />
       )}
 
       <ScrollArea>
@@ -180,21 +186,19 @@ export default function Abilities() {
                       <StatPill tone="amber" size="sm" value={t('character.abilities.active')} />
                     )}
                     {hasUses && (
-                      <span className="flex items-center gap-0.5">
+                      <span className="flex items-center gap-1">
                         {Array.from({ length: Math.min(ab.max_uses!, 8) }).map((_, i) => (
                           <span
                             key={i}
-                            className={`w-1.5 h-1.5 rounded-full
+                            className={`w-2 h-2 rounded-full
                               ${i < current
                                 ? 'bg-dnd-gold-bright shadow-[0_0_3px_var(--dnd-gold-glow)]'
                                 : 'bg-dnd-gold-dim/40'}`}
                           />
                         ))}
-                        {ab.max_uses! > 8 && (
-                          <span className="text-[10px] text-dnd-text-faint font-mono ml-1">
-                            {current}/{ab.max_uses}
-                          </span>
-                        )}
+                        <span className="text-[10px] text-dnd-text-faint font-mono tabular-nums ml-1">
+                          {current}/{ab.max_uses}
+                        </span>
                       </span>
                     )}
                   </div>
@@ -223,7 +227,12 @@ export default function Abilities() {
                         {hasUses && (
                           <div className="flex items-center gap-1.5 text-[10px] text-dnd-text-muted font-cinzel uppercase tracking-widest">
                             <RotateCcw size={11} />
-                            {t(`character.abilities.restoration.${ab.restoration_type}`, { defaultValue: ab.restoration_type })}
+                            <span>
+                              {t('character.abilities.restoration_label')}:{' '}
+                              {t(`character.abilities.restoration_short.${ab.restoration_type}`, {
+                                defaultValue: t(`character.abilities.restoration.${ab.restoration_type}`, { defaultValue: ab.restoration_type }),
+                              })}
+                            </span>
                           </div>
                         )}
 
