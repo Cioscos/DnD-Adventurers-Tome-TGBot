@@ -262,15 +262,11 @@ GitHub Secret `VITE_API_BASE_URL` must be kept in sync with the tunnel URL (`htt
 
 ## Design Context
 
-Three files at the project root govern visual + strategic design decisions for the Mini App. Read them before any frontend or UX work in `webapp/`:
+`DESIGN.md` (visual tokens in Stitch-format frontmatter, palette, typography, elevation, components, do's and don'ts) and `DESIGN.json` (machine-readable sidecar — tonal ramps, motion springs, full component CSS consumed by `impeccable`'s live panel and design-aware tooling) at the project root govern visual design decisions for the Mini App. Read `DESIGN.md` before any frontend code change in `webapp/`.
 
-- `PRODUCT.md` — strategic: register (`product`), users, brand personality (epica, leggibile, calma, tattile), anti-references, design principles. Read before any UX decision.
-- `DESIGN.md` — visual: tokens (Stitch-format frontmatter), palette, typography, elevation, components, do's and don'ts. Read before any frontend code change.
-- `DESIGN.json` — machine-readable sidecar (tonal ramps, motion springs, full component CSS). Consumed by `impeccable`'s live panel and design-aware tooling.
+When editing `webapp/`, honor the named rules in DESIGN.md by name: **Gold Leaf**, **Two Inks**, **Semantic Triad**, **Inscription**, **Tabular Numerics**, **No Gradient Text**, **Warm-Shadow**, **Halo-as-Signal**.
 
-When editing `webapp/`, honor the named rules in DESIGN.md by name: **Gold Leaf**, **Two Inks**, **Semantic Triad**, **Inscription**, **Tabular Numerics**, **No Gradient Text**, **Warm-Shadow**, **Halo-as-Signal**. Anti-references in PRODUCT.md (SaaS-cream, D&D Beyond neon-on-black, Roll20 chrome, gacha mobile, AI-slop) translate to explicit "Don'ts" in DESIGN.md — both must be respected.
-
-To regenerate either file after major design drift, run `$impeccable teach` (PRODUCT.md) or `$impeccable document` (DESIGN.md + DESIGN.json).
+To regenerate after major design drift, run `$impeccable document` (DESIGN.md + DESIGN.json).
 
 # General rules
 
