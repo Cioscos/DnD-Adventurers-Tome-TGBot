@@ -3,11 +3,14 @@ import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
-import { Info } from 'lucide-react'
+import { Info, RotateCcw } from 'lucide-react'
 import { GiFlame as Flame } from 'react-icons/gi'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
+import Button from '@/components/ui/Button'
+import FilterChip from '@/components/ui/FilterChip'
+import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import { haptic } from '@/auth/telegram'
 import { spring, stagger } from '@/styles/motion'
 import ConditionDetailModal from '@/pages/conditions/ConditionDetailModal'
@@ -27,6 +30,8 @@ export default function Conditions() {
   const [pendingExhaustion, setPendingExhaustion] = useState<number | null>(null)
   const [detailKey, setDetailKey] = useState<string | null>(null)
   const [showExhaustionDetails, setShowExhaustionDetails] = useState(false)
+  const [filterActive, setFilterActive] = useState(false)
+  const [confirmResetOpen, setConfirmResetOpen] = useState(false)
 
   const { data: char } = useQuery({
     queryKey: ['character', charId],
@@ -65,10 +70,47 @@ export default function Conditions() {
   }
 
   const activeCount = CONDITION_KEYS.filter((k) => conditions[k]).length + (currentExhaustion > 0 ? 1 : 0)
+  const visibleConditions = filterActive
+    ? CONDITION_KEYS.filter((k) => conditions[k])
+    : CONDITION_KEYS
+
+  const resetAll = () => {
+    const cleared: Record<string, unknown> = { exhaustion: 0 }
+    for (const k of CONDITION_KEYS) cleared[k] = false
+    mutation.mutate(cleared)
+    setConfirmResetOpen(false)
+  }
 
   return (
     <Layout title={t('character.conditions.title')} backTo={`/char/${charId}`} group="character" page="conditions">
-      {activeCount === 0 && (
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <div className="flex items-center gap-2">
+          <FilterChip
+            label={t('character.conditions.filter_all')}
+            selected={!filterActive}
+            onToggle={() => setFilterActive(false)}
+          />
+          <FilterChip
+            label={t('character.conditions.filter_active')}
+            selected={filterActive}
+            onToggle={() => setFilterActive(true)}
+            count={activeCount}
+          />
+        </div>
+        {activeCount > 0 && (
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={<RotateCcw size={12} />}
+            haptic="warning"
+            onClick={() => setConfirmResetOpen(true)}
+          >
+            {t('character.conditions.reset_all')}
+          </Button>
+        )}
+      </div>
+
+      {activeCount === 0 && !filterActive && (
         <Surface variant="flat" className="text-center py-5">
           <p className="text-dnd-text-muted font-body italic">
             {t('character.conditions.none_active')}
@@ -162,7 +204,7 @@ export default function Conditions() {
 
       {/* Condition grid */}
       <m.div
-        className="grid grid-cols-2 gap-2"
+        className="grid grid-cols-2 md:grid-cols-3 gap-2"
         initial="initial"
         animate="animate"
         variants={{
@@ -170,7 +212,7 @@ export default function Conditions() {
           animate: { transition: { staggerChildren: stagger.listTight } },
         }}
       >
-        {CONDITION_KEYS.map((key) => {
+        {visibleConditions.map((key) => {
           const Icon = CONDITION_ICONS[key]
           const active = !!conditions[key]
           return (
@@ -217,6 +259,17 @@ export default function Conditions() {
           onClose={() => setDetailKey(null)}
         />
       )}
+
+      <ConfirmSheet
+        open={confirmResetOpen}
+        onClose={() => setConfirmResetOpen(false)}
+        title={t('character.conditions.reset_all')}
+        body={t('character.conditions.reset_all_confirm')}
+        confirmLabel={t('common.confirm')}
+        cancelLabel={t('common.cancel')}
+        confirmVariant="primary"
+        onConfirm={resetAll}
+      />
     </Layout>
   )
 }

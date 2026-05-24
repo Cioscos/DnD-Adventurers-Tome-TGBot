@@ -7,11 +7,12 @@ import { Plus, Mic } from 'lucide-react'
 import { GiQuillInk as NotebookPen } from 'react-icons/gi'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
-import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
 import Sheet from '@/components/ui/Sheet'
 import ScrollArea from '@/components/ScrollArea'
+import EmptyState from '@/components/ui/EmptyState'
 import { haptic } from '@/auth/telegram'
+import { useReducedMotion } from '@/hooks/useReducedMotion'
 import VoiceRecorder from '@/pages/notes/VoiceRecorder'
 import NoteEditor from '@/pages/notes/NoteEditor'
 import NoteItem from '@/pages/notes/NoteItem'
@@ -23,6 +24,7 @@ export default function Notes() {
   const charId = Number(id)
   const { t } = useTranslation()
   const qc = useQueryClient()
+  const reduceMotion = useReducedMotion()
   const [mode, setMode] = useState<Mode>('list')
   const [editNote, setEditNote] = useState<{ title: string; body: string } | null>(null)
   const [originalTitle, setOriginalTitle] = useState('')
@@ -145,7 +147,7 @@ export default function Notes() {
           {t('character.notes.new')}
         </Button>
         <Button
-          variant="arcane"
+          variant="secondary"
           size="md"
           onClick={() => setMode('record')}
           icon={<Mic size={16} />}
@@ -155,10 +157,19 @@ export default function Notes() {
       </div>
 
       {notes.length === 0 && (
-        <Surface variant="flat" className="text-center py-8">
-          <NotebookPen className="mx-auto text-dnd-text-faint mb-2" size={32} />
-          <p className="text-dnd-text-muted font-body italic">{t('common.none')}</p>
-        </Surface>
+        <EmptyState
+          icon={<NotebookPen size={32} />}
+          title={t('common.none')}
+          hint={t('character.notes.empty_hint')}
+          action={{
+            label: t('character.notes.new'),
+            onClick: () => {
+              setEditNote(null)
+              setMode('add')
+            },
+            icon: <Plus size={14} />,
+          }}
+        />
       )}
 
       <ScrollArea>
@@ -166,8 +177,16 @@ export default function Notes() {
           {textNotes.map((note, idx) => (
             <m.div
               key={note.title}
-              initial={{ opacity: 0, rotate: idx % 2 === 0 ? -0.6 : 0.6, y: 8 }}
-              animate={{ opacity: 1, rotate: idx % 2 === 0 ? -0.5 : 0.5, y: 0 }}
+              initial={{
+                opacity: 0,
+                rotate: reduceMotion ? 0 : (idx % 2 === 0 ? -0.3 : 0.3),
+                y: 8,
+              }}
+              animate={{
+                opacity: 1,
+                rotate: reduceMotion ? 0 : (idx % 2 === 0 ? -0.25 : 0.25),
+                y: 0,
+              }}
               transition={{ delay: idx * 0.03, duration: 0.25 }}
             >
               <NoteItem

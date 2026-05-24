@@ -7,18 +7,19 @@ import { Trash2 } from 'lucide-react'
 import { GiOpenBook as BookOpen } from 'react-icons/gi'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
-import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
 import Sheet from '@/components/ui/Sheet'
 import ScrollArea from '@/components/ScrollArea'
 import Skeleton from '@/components/ui/Skeleton'
+import EmptyState from '@/components/ui/EmptyState'
 import { haptic } from '@/auth/telegram'
 import { EVENT_META } from '@/lib/eventMeta'
+import { formatRelative } from '@/lib/relativeTime'
 
 export default function History() {
   const { id } = useParams<{ id: string }>()
   const charId = Number(id)
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const qc = useQueryClient()
   const [confirmClear, setConfirmClear] = useState(false)
 
@@ -36,10 +37,12 @@ export default function History() {
     },
   })
 
-  const formatDate = (iso: string) => {
-    const d = new Date(iso)
-    return d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
-  }
+  const locale = (i18n.language?.startsWith('en') ? 'en' : 'it') as 'it' | 'en'
+  const formatDate = (iso: string) => formatRelative(iso, {
+    locale,
+    todayLabel: t('common.date.today'),
+    yesterdayLabel: t('common.date.yesterday'),
+  })
 
   return (
     <Layout title={t('character.history.title')} backTo={`/char/${charId}`} group="tools" page="history" hideScrollbar>
@@ -56,10 +59,11 @@ export default function History() {
           ))}
         </div>
       ) : entries.length === 0 ? (
-        <Surface variant="flat" className="text-center py-8">
-          <BookOpen className="mx-auto text-dnd-text-faint mb-2" size={32} />
-          <p className="text-dnd-text-muted font-body italic">{t('character.history.empty')}</p>
-        </Surface>
+        <EmptyState
+          icon={<BookOpen size={32} />}
+          title={t('character.history.empty')}
+          hint={t('character.history.empty_hint')}
+        />
       ) : (
         <>
           {/* Top-of-page action bar — clear button always reachable without scrolling. */}
