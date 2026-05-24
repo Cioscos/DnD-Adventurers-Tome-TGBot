@@ -9,6 +9,7 @@ from pydantic import BaseModel, model_validator
 from api.schemas.common import (
     AbilityRead,
     AbilityScoreRead,
+    CharacterClassCreate,
     CharacterClassRead,
     ConcentrationSaveResult,
     CurrencyRead,
@@ -141,6 +142,10 @@ class CharacterFull(BaseModel):
 
 class CharacterCreate(BaseModel):
     name: str
+    # Optional initial class — when provided the character + first class are
+    # created atomically. Avoids the orphan-character risk of the previous
+    # two-step client flow (POST /characters then POST /classes).
+    initial_class: Optional[CharacterClassCreate] = None
 
 
 class CharacterUpdate(BaseModel):

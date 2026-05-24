@@ -40,6 +40,8 @@ from api.schemas.character import (
     XPUpdate,
 )
 from api.schemas.common import D20RollSubmission, RollResult
+from api.routers.classes import create_class_for_character
+from api.routers._helpers import prune_history
 
 router = APIRouter(prefix="/characters", tags=["characters"])
 
@@ -166,6 +168,17 @@ async def create_character(
         "classes", "ability_scores", "spells", "spell_slots",
         "items", "currency", "abilities", "maps",
     ])
+
+    # Optional atomic initial class. The whole request runs inside one
+    # transaction (api.database.get_db middleware) — any exception here
+    # rolls back the character + ability_scores + currency too.
+    if body.initial_class is not None:
+        await create_class_for_character(
+            char, body.initial_class, session, is_first_class=True,
+        )
+        await session.flush()
+        await session.refresh(char, attribute_names=["classes"])
+
     return char
 
 
@@ -286,9 +299,11 @@ async def update_conditions(
     char.conditions = current
 
     # Log changes to history
+    changed = False
     for cond, new_val in body.conditions.items():
         old_val = old_conditions.get(cond, False)
         if new_val != old_val:
+            changed = True
             if cond == "exhaustion":
                 _add_history(session, char.id, "condition_change",
                              f"Spossatezza: livello {old_val} → {new_val}")
@@ -298,6 +313,9 @@ async def update_conditions(
             else:
                 _add_history(session, char.id, "condition_change",
                              f"Condizione rimossa: {cond}")
+
+    if changed:
+        await prune_history(session, char)
 
     return char
 
@@ -419,6 +437,7 @@ async def roll_skill(
     if body and body.with_inspiration:
         history_msg = f"Reroll ispirazione — {history_msg}"
     _add_history(session, char.id, "skill_roll", history_msg)
+    await prune_history(session, char)
 
     return RollResult(
         die=die,
@@ -471,6 +490,7 @@ async def roll_saving_throw(
     if body and body.with_inspiration:
         history_msg = f"Reroll ispirazione — {history_msg}"
     _add_history(session, char.id, "saving_throw", history_msg)
+    await prune_history(session, char)
 
     return RollResult(
         die=die,

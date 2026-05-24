@@ -70,6 +70,62 @@ async def _get_class(class_id: int, char_id: int, session: AsyncSession) -> Char
     return cls
 
 
+async def create_class_for_character(
+    char: Character,
+    body: CharacterClassCreate,
+    session: AsyncSession,
+    *,
+    is_first_class: bool | None = None,
+) -> CharacterClass:
+    """Insert a CharacterClass + ClassResource rows + run the auto-HP bootstrap.
+
+    Shared between POST /characters (atomic create-with-initial-class) and
+    POST /characters/{id}/classes. The caller is responsible for committing
+    the surrounding transaction. Any exception raised here aborts the
+    surrounding transaction (auto-rollback in get_db middleware).
+
+    `is_first_class` lets the caller declare whether this is the first class
+    on the character; when None we compute it from char.classes (requires
+    that relationship to be loaded).
+    """
+    if is_first_class is None:
+        is_first_class = len(char.classes) == 0
+
+    hit_die = body.hit_die
+    spellcasting_ability = body.spellcasting_ability
+    if body.class_name in CLASS_HIT_DIE:
+        if hit_die is None:
+            hit_die = CLASS_HIT_DIE[body.class_name]
+        if spellcasting_ability is None:
+            spellcasting_ability = CLASS_SPELLCASTING.get(body.class_name)
+
+    cls = CharacterClass(
+        character_id=char.id,
+        class_name=body.class_name,
+        level=body.level,
+        subclass=body.subclass,
+        spellcasting_ability=spellcasting_ability,
+        hit_die=hit_die,
+    )
+    session.add(cls)
+    await session.flush()
+
+    for res_data in get_resources_for_class(body.class_name, body.level, char):
+        session.add(ClassResource(class_id=cls.id, **res_data))
+
+    settings = char.settings or {}
+    auto_calc = settings.get("hp_auto_calc", True)
+    if is_first_class and char.hit_points == 0 and auto_calc and hit_die:
+        con_row = next((a for a in char.ability_scores if a.name == "constitution"), None)
+        con_mod = (con_row.value - 10) // 2 if con_row else 0
+        hp = hit_points_for_level(hit_die, con_mod, 1)
+        char.hit_points = hp
+        char.current_hit_points = hp
+        await session.flush()
+
+    return cls
+
+
 # ---------------------------------------------------------------------------
 # Classes
 # ---------------------------------------------------------------------------
@@ -82,45 +138,7 @@ async def add_class(
     session: Annotated[AsyncSession, Depends(get_db)],
 ) -> Character:
     char = await _get_owned_full(char_id, user_id, session)
-
-    # Auto-fill hit_die and spellcasting_ability for predefined classes.
-    hit_die = body.hit_die
-    spellcasting_ability = body.spellcasting_ability
-    if body.class_name in CLASS_HIT_DIE:
-        if hit_die is None:
-            hit_die = CLASS_HIT_DIE[body.class_name]
-        if spellcasting_ability is None:
-            spellcasting_ability = CLASS_SPELLCASTING.get(body.class_name)
-
-    # Capture before adding the new class — used for auto-HP bootstrap below.
-    is_first_class = len(char.classes) == 0
-
-    cls = CharacterClass(
-        character_id=char_id,
-        class_name=body.class_name,
-        level=body.level,
-        subclass=body.subclass,
-        spellcasting_ability=spellcasting_ability,
-        hit_die=hit_die,
-    )
-    session.add(cls)
-    await session.flush()
-
-    # Auto-create class resources for predefined classes.
-    for res_data in get_resources_for_class(body.class_name, body.level, char):
-        session.add(ClassResource(class_id=cls.id, **res_data))
-
-    # Auto-HP bootstrap: only if this is the FIRST class and HP are still 0.
-    settings = char.settings or {}
-    auto_calc = settings.get("hp_auto_calc", True)
-    if is_first_class and char.hit_points == 0 and auto_calc and hit_die:
-        con_row = next((a for a in char.ability_scores if a.name == "constitution"), None)
-        con_mod = (con_row.value - 10) // 2 if con_row else 0
-        hp = hit_points_for_level(hit_die, con_mod, 1)
-        char.hit_points = hp
-        char.current_hit_points = hp
-        await session.flush()
-
+    await create_class_for_character(char, body, session)
     session.expire(char)
     return await _get_owned_full(char_id, user_id, session)
 

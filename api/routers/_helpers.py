@@ -1,12 +1,82 @@
 """Shared helpers for router logic (avoid circular imports)."""
+import logging
 import random
-from datetime import datetime
+from datetime import datetime, timedelta
 
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.schemas.common import ConcentrationSaveResult
 from core.db.models import Character, CharacterHistory
 from core.game.stats import effective_ability_score
+
+logger = logging.getLogger(__name__)
+
+
+def _settings_value(char: Character, key: str, default):
+    settings = (char.settings if isinstance(char.settings, dict) else None) or {}
+    return settings.get(key, default)
+
+
+async def prune_history(session: AsyncSession, char: Character) -> int:
+    """Trim a character's history per `settings.history_retention_*`.
+
+    Modes:
+      - "off" (default): no-op.
+      - "events": keep at most `history_retention_events` rows
+        (default 100), deleting the oldest by `timestamp`.
+      - "days": delete rows whose `timestamp` is older than
+        `history_retention_days` (default 30).
+
+    Returns the number of rows deleted (for logging/telemetry).
+    Best-effort: errors are swallowed and logged to avoid breaking the
+    primary action that triggered the prune.
+    """
+    mode = _settings_value(char, "history_retention_mode", "off")
+    if mode not in ("events", "days"):
+        return 0
+
+    try:
+        if mode == "events":
+            keep = int(_settings_value(char, "history_retention_events", 100) or 100)
+            keep = max(1, keep)
+            # IDs to keep: the most recent N
+            keep_subq = (
+                select(CharacterHistory.id)
+                .where(CharacterHistory.character_id == char.id)
+                .order_by(CharacterHistory.timestamp.desc())
+                .limit(keep)
+                .subquery()
+            )
+            # Only prune when there are more rows than the cap to avoid the
+            # cost of running the delete every insert on small histories.
+            count_q = select(func.count(CharacterHistory.id)).where(
+                CharacterHistory.character_id == char.id
+            )
+            total = (await session.execute(count_q)).scalar() or 0
+            if total <= keep:
+                return 0
+            result = await session.execute(
+                delete(CharacterHistory).where(
+                    CharacterHistory.character_id == char.id,
+                    ~CharacterHistory.id.in_(select(keep_subq.c.id)),
+                )
+            )
+            return result.rowcount or 0
+        else:  # "days"
+            days = int(_settings_value(char, "history_retention_days", 30) or 30)
+            days = max(1, days)
+            cutoff = (datetime.utcnow() - timedelta(days=days)).isoformat(timespec="seconds")
+            result = await session.execute(
+                delete(CharacterHistory).where(
+                    CharacterHistory.character_id == char.id,
+                    CharacterHistory.timestamp < cutoff,
+                )
+            )
+            return result.rowcount or 0
+    except Exception as exc:
+        logger.warning("prune_history failed for char %s: %s", char.id, exc)
+        return 0
 
 
 def effective_con_mod(char) -> int:

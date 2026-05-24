@@ -160,6 +160,21 @@ def _migrate_schema(connection) -> None:
         except Exception as exc:
             logger.warning("Backfill gm_display_name failed: %s", exc)
 
+    # Consolidate legacy item_type='other' rows to canonical 'generic'.
+    # Idempotent — once converged the WHERE clause matches no rows.
+    if "items" in column_cache and "item_type" in column_cache["items"]:
+        try:
+            result = connection.execute(text(
+                "UPDATE items SET item_type = 'generic' WHERE item_type = 'other'"
+            ))
+            if result.rowcount:
+                logger.info(
+                    "Consolidated %d items from item_type='other' -> 'generic'",
+                    result.rowcount,
+                )
+        except Exception as exc:
+            logger.warning("item_type 'other' -> 'generic' migration failed: %s", exc)
+
     for table, column in _DROP_COLUMNS:
         if table not in existing_tables:
             continue
