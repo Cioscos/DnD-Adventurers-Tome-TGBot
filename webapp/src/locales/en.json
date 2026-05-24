@@ -456,7 +456,8 @@
       "open_file": "Open file",
       "empty_title": "No maps",
       "empty_hint": "Upload a dungeon map or adventure PDF — always at your fingertips.",
-      "zoom_hint": "Pinch to zoom"
+      "zoom_hint": "Pinch to zoom",
+      "reorder_hint": "Drag to reorder"
     },
     "history": {
       "title": "History",

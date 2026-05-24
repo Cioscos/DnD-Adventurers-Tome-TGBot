@@ -89,6 +89,8 @@ _MIGRATIONS: list[tuple[str, str, str, str | None]] = [
     ("spells", "damage_type", "VARCHAR(100)", None),
     # Map local file upload support
     ("maps", "local_file_path", "VARCHAR(500)", None),
+    # Map drag-reorder (G1)
+    ("maps", "position", "INTEGER", "0"),
     # Session whisper support
     ("session_messages", "recipient_user_id", "BIGINT", None),
     ("session_messages", "sender_display_name", "VARCHAR(120)", None),

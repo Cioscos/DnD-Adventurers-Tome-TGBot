@@ -222,6 +222,7 @@ class MapRead(BaseModel):
     file_id: str
     file_type: str
     local_file_path: Optional[str] = None
+    position: int = 0
 
     model_config = {"from_attributes": True}
 

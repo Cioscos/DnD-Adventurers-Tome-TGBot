@@ -493,6 +493,11 @@ export const api = {
       fd.append('file', file)
       return requestFormData<MapEntry>(`/characters/${charId}/maps/upload`, fd)
     },
+    reorder: (charId: number, zoneName: string, order: number[]) =>
+      request<CharacterFull>(`/characters/${charId}/maps/reorder`, {
+        method: 'PATCH',
+        body: JSON.stringify({ zone_name: zoneName, order }),
+      }),
   },
 
   // ---------------------------------------------------------------------------

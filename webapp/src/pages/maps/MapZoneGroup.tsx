@@ -1,7 +1,9 @@
-import React from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/api/client'
-import type { MapEntry } from '@/types'
+import type { CharacterFull, MapEntry } from '@/types'
+import { haptic } from '@/auth/telegram'
 
 interface MapZoneGroupProps {
   charId: number
@@ -11,6 +13,12 @@ interface MapZoneGroupProps {
   onDeleteFile: (id: number, zone: string) => void
   onDeleteZone: (zone: string) => void
   onPreview: (map: MapEntry) => void
+}
+
+function sameIds(a: number[], b: number[]): boolean {
+  if (a.length !== b.length) return false
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false
+  return true
 }
 
 function MapZoneGroupInner({
@@ -23,10 +31,99 @@ function MapZoneGroupInner({
   onPreview,
 }: MapZoneGroupProps) {
   const { t } = useTranslation()
+  const qc = useQueryClient()
+
+  const serverIds = maps.map((m) => m.id)
+  const [localOrder, setLocalOrder] = useState<number[]>(serverIds)
+  const lastServerIdsRef = useRef<number[]>(serverIds)
+  const dragIdRef = useRef<number | null>(null)
+  const [draggingId, setDraggingId] = useState<number | null>(null)
+
+  useEffect(() => {
+    if (!sameIds(serverIds, lastServerIdsRef.current)) {
+      setLocalOrder(serverIds)
+      lastServerIdsRef.current = serverIds
+    }
+  }, [serverIds])
+
+  const byId = new Map(maps.map((m) => [m.id, m]))
+  const ordered: MapEntry[] = []
+  for (const id of localOrder) {
+    const m = byId.get(id)
+    if (m) ordered.push(m)
+  }
+
+  const reorderMutation = useMutation({
+    mutationFn: (order: number[]) => api.maps.reorder(charId, zoneName, order),
+    onMutate: async (order) => {
+      await qc.cancelQueries({ queryKey: ['character', charId] })
+      const previous = qc.getQueryData<CharacterFull>(['character', charId])
+      qc.setQueryData<CharacterFull>(['character', charId], (prev) => {
+        if (!prev) return prev
+        const otherMaps = (prev.maps ?? []).filter((m) => m.zone_name !== zoneName)
+        const zoneMaps = (prev.maps ?? []).filter((m) => m.zone_name === zoneName)
+        const zoneById = new Map(zoneMaps.map((m) => [m.id, m]))
+        const newZoneMaps: MapEntry[] = []
+        order.forEach((id, idx) => {
+          const m = zoneById.get(id)
+          if (m) newZoneMaps.push({ ...m, position: idx })
+        })
+        return { ...prev, maps: [...otherMaps, ...newZoneMaps] }
+      })
+      return { previous }
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.previous) qc.setQueryData(['character', charId], ctx.previous)
+      haptic.error()
+      qc.invalidateQueries({ queryKey: ['character', charId] })
+    },
+    onSuccess: (data) => {
+      qc.setQueryData(['character', charId], data)
+      haptic.light()
+    },
+  })
+
+  const handleDragStart = (id: number) => (e: React.DragEvent<HTMLDivElement>) => {
+    dragIdRef.current = id
+    setDraggingId(id)
+    try {
+      e.dataTransfer.effectAllowed = 'move'
+      e.dataTransfer.setData('text/plain', String(id))
+    } catch {
+      /* Safari quirks */
+    }
+  }
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+  }
+
+  const handleDrop = (targetId: number) => (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    const fromId = dragIdRef.current
+    dragIdRef.current = null
+    setDraggingId(null)
+    if (fromId === null || fromId === targetId) return
+    const next = [...localOrder]
+    const fromIdx = next.indexOf(fromId)
+    const toIdx = next.indexOf(targetId)
+    if (fromIdx < 0 || toIdx < 0) return
+    next.splice(fromIdx, 1)
+    next.splice(toIdx, 0, fromId)
+    setLocalOrder(next)
+    reorderMutation.mutate(next)
+  }
+
+  const handleDragEnd = () => {
+    dragIdRef.current = null
+    setDraggingId(null)
+  }
+
+  const isReorderable = maps.length >= 2
 
   return (
     <div className="mb-4">
-      {/* Zone header */}
       <div className="flex items-center justify-between px-1 mb-2">
         <p className="text-sm font-semibold text-dnd-text-muted">
           {zoneName}
@@ -48,35 +145,49 @@ function MapZoneGroupInner({
         </div>
       </div>
 
-      {/* Thumbnail grid */}
+      {isReorderable && (
+        <p className="px-1 mb-1.5 text-[10px] uppercase tracking-widest text-dnd-text-faint italic">
+          {t('character.maps.reorder_hint')}
+        </p>
+      )}
+
       <div className="grid grid-cols-3 gap-1.5">
-        {maps.map((m) => (
+        {ordered.map((m) => (
           <div
             key={m.id}
-            className="relative aspect-square rounded-xl overflow-hidden bg-dnd-surface cursor-pointer active:opacity-80"
+            draggable={isReorderable}
+            onDragStart={isReorderable ? handleDragStart(m.id) : undefined}
+            onDragOver={isReorderable ? handleDragOver : undefined}
+            onDrop={isReorderable ? handleDrop(m.id) : undefined}
+            onDragEnd={isReorderable ? handleDragEnd : undefined}
+            className={`relative aspect-square rounded-xl overflow-hidden bg-dnd-surface active:opacity-80 transition-opacity ${
+              isReorderable ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'
+            } ${draggingId === m.id ? 'opacity-40' : ''}`}
           >
             {m.file_type === 'photo' ? (
               <img
                 src={api.maps.fileUrl(charId, m.id)}
                 alt={zoneName}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover pointer-events-none"
                 loading="lazy"
-                onClick={() => onPreview(m)}
+                draggable={false}
               />
             ) : (
-              <div
-                className="w-full h-full flex flex-col items-center justify-center text-dnd-text-muted"
-                onClick={() => onPreview(m)}
-              >
+              <div className="w-full h-full flex flex-col items-center justify-center text-dnd-text-muted pointer-events-none">
                 <span className="text-3xl">📄</span>
                 <span className="text-xs mt-1 uppercase opacity-60">{m.file_type}</span>
               </div>
             )}
-            {/* Per-file delete button */}
+            {/* Click overlay (under delete button) — drag handlers live on the wrapper */}
+            <button
+              type="button"
+              onClick={() => onPreview(m)}
+              className="absolute inset-0 w-full h-full"
+              aria-label={zoneName}
+            />
             <button
               onClick={(e) => { e.stopPropagation(); onDeleteFile(m.id, zoneName) }}
-              className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 text-white
-                         text-xs flex items-center justify-center leading-none"
+              className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 text-white text-xs flex items-center justify-center leading-none z-10"
             >
               ✕
             </button>

@@ -78,6 +78,8 @@ export interface MapEntry {
   file_id: string
   file_type: string
   local_file_path?: string | null
+  position?: number
+  size_bytes?: number
 }
 
 export interface Spell {

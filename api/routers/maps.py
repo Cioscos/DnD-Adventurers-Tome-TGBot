@@ -8,15 +8,18 @@ from pathlib import Path
 from typing import Annotated
 
 import httpx
-from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Body, Depends, File, Form, Header, HTTPException, Query, UploadFile, status
 from fastapi.responses import FileResponse, StreamingResponse
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from api.auth import DEV_USER_ID, get_current_user, verify_init_data
 from api.database import get_db
-from core.db.models import Character, Map
+from api.schemas.character import CharacterFull
 from api.schemas.common import MapRead
+from core.db.models import Character, CharacterClass, Map
 
 router = APIRouter(prefix="/characters", tags=["maps"])
 
@@ -38,6 +41,34 @@ async def _get_owned(char_id: int, user_id: int, session: AsyncSession) -> Chara
     return char
 
 
+async def _get_owned_full(char_id: int, user_id: int, session: AsyncSession) -> Character:
+    result = await session.execute(
+        select(Character)
+        .options(
+            selectinload(Character.classes).selectinload(CharacterClass.resources),
+            selectinload(Character.ability_scores),
+            selectinload(Character.spells),
+            selectinload(Character.spell_slots),
+            selectinload(Character.items),
+            selectinload(Character.currency),
+            selectinload(Character.abilities),
+            selectinload(Character.maps),
+        )
+        .where(Character.id == char_id)
+    )
+    char = result.scalar_one_or_none()
+    if char is None:
+        raise HTTPException(status_code=404, detail="Character not found")
+    if char.user_id != user_id:
+        raise HTTPException(status_code=403, detail="Not your character")
+    return char
+
+
+class MapReorderBody(BaseModel):
+    zone_name: str = Field(min_length=1, max_length=200)
+    order: list[int] = Field(min_length=1)
+
+
 async def _get_map(map_id: int, char_id: int, session: AsyncSession) -> Map:
     result = await session.execute(
         select(Map).where(Map.id == map_id, Map.character_id == char_id)
@@ -56,7 +87,9 @@ async def list_maps(
 ) -> list[Map]:
     await _get_owned(char_id, user_id, session)
     result = await session.execute(
-        select(Map).where(Map.character_id == char_id).order_by(Map.zone_name)
+        select(Map)
+        .where(Map.character_id == char_id)
+        .order_by(Map.zone_name, Map.position, Map.id)
     )
     return list(result.scalars().all())
 
@@ -197,6 +230,38 @@ async def delete_map(
         if local_path.exists():
             local_path.unlink()
     await session.delete(map_row)
+
+
+@router.patch("/{char_id}/maps/reorder", response_model=CharacterFull)
+async def reorder_maps(
+    char_id: int,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+    payload: Annotated[MapReorderBody, Body(...)],
+) -> Character:
+    """Persist a new drag-reorder of maps inside a zone.
+
+    `order` must contain every map id belonging to (char_id, zone_name);
+    `position` is assigned by list index.
+    """
+    char = await _get_owned_full(char_id, user_id, session)
+    zone_name = payload.zone_name.strip()
+
+    zone_maps = [m for m in char.maps if m.zone_name == zone_name]
+    zone_ids = {m.id for m in zone_maps}
+
+    if set(payload.order) != zone_ids:
+        raise HTTPException(
+            status_code=400,
+            detail="order ids do not match the maps in this zone",
+        )
+
+    by_id = {m.id: m for m in zone_maps}
+    for idx, map_id in enumerate(payload.order):
+        by_id[map_id].position = idx
+
+    await session.flush()
+    return char
 
 
 @router.delete("/{char_id}/maps/zone/{zone_name}", status_code=204)

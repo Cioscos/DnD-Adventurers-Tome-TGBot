@@ -181,7 +181,9 @@ class Character(Base):
         back_populates="character", cascade="all, delete-orphan"
     )
     maps: Mapped[List["Map"]] = relationship(
-        back_populates="character", cascade="all, delete-orphan"
+        back_populates="character",
+        cascade="all, delete-orphan",
+        order_by="(Map.zone_name, Map.position, Map.id)",
     )
 
     @property
@@ -501,6 +503,7 @@ class Map(Base):
     file_id: Mapped[str] = mapped_column(String(500), nullable=False, default="")
     file_type: Mapped[str] = mapped_column(Enum(FileType), default=FileType.PHOTO)
     local_file_path: Mapped[str | None] = mapped_column(String(500), nullable=True, default=None)
+    position: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
 
     character: Mapped["Character"] = relationship(back_populates="maps")
 
