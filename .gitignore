@@ -51,3 +51,6 @@ api/__pycache__/
 
 # Superpowers brainstorming sessions
 .superpowers/
+
+# Webapp audit reports (local reference, regenerated per session)
+docs/webapp-audit/
