@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
-import { Minus, Plus, Maximize2, Check } from 'lucide-react'
-import { GiArcheryTarget as Target, GiSparkles as Sparkles } from 'react-icons/gi'
+import { Minus, Plus, Heart, HeartPulse, Check } from 'lucide-react'
+import { GiSparkles as Sparkles } from 'react-icons/gi'
 import type { ComponentType, SVGAttributes } from 'react'
 type IconCmp = ComponentType<SVGAttributes<SVGElement> & { size?: number | string }>
 import Surface from '@/components/ui/Surface'
@@ -21,12 +21,13 @@ interface HpOperationFormProps {
   hpMutate: (args: { op: HPOp; val: number }) => void
 }
 
-const ops: { key: HPOp; label_key: string; icon: IconCmp; toneClass: string }[] = [
-  { key: 'damage',      label_key: 'character.hp.damage',      icon: Minus,      toneClass: '!bg-gradient-ember !text-white !border-transparent shadow-halo-danger' },
-  { key: 'heal',        label_key: 'character.hp.heal',        icon: Plus,       toneClass: '!bg-[var(--dnd-emerald)]/25 !text-[var(--dnd-emerald-bright)] !border-dnd-emerald/60' },
-  { key: 'set_current', label_key: 'character.hp.set_current', icon: Target,     toneClass: '!bg-[var(--dnd-cobalt)]/20 !text-[var(--dnd-cobalt-bright)] !border-dnd-cobalt/60' },
-  { key: 'set_max',     label_key: 'character.hp.set_max',     icon: Maximize2,  toneClass: '!bg-[var(--dnd-amber)]/20 !text-[var(--dnd-amber)] !border-dnd-amber/60' },
-  { key: 'set_temp',    label_key: 'character.hp.set_temp',    icon: Sparkles,   toneClass: '!bg-[var(--dnd-arcane)]/20 !text-dnd-arcane-bright !border-dnd-arcane/60' },
+// Short labels fit the 5-column segmented control at 390px viewport.
+const ops: { key: HPOp; label_key: string; full_key: string; icon: IconCmp; toneClass: string }[] = [
+  { key: 'damage',      label_key: 'character.hp.damage_short',  full_key: 'character.hp.damage',      icon: Minus,       toneClass: '!bg-gradient-ember !text-white !border-transparent shadow-halo-danger' },
+  { key: 'heal',        label_key: 'character.hp.heal_short',    full_key: 'character.hp.heal',        icon: Plus,        toneClass: '!bg-[var(--dnd-emerald)]/25 !text-[var(--dnd-emerald-bright)] !border-dnd-emerald/60' },
+  { key: 'set_current', label_key: 'character.hp.current_short', full_key: 'character.hp.set_current', icon: Heart,       toneClass: '!bg-[var(--dnd-cobalt)]/20 !text-[var(--dnd-cobalt-bright)] !border-dnd-cobalt/60' },
+  { key: 'set_max',     label_key: 'character.hp.max_short',     full_key: 'character.hp.set_max',     icon: HeartPulse,  toneClass: '!bg-[var(--dnd-amber)]/20 !text-[var(--dnd-amber)] !border-dnd-amber/60' },
+  { key: 'set_temp',    label_key: 'character.hp.temp_short',    full_key: 'character.hp.set_temp',    icon: Sparkles,    toneClass: '!bg-[var(--dnd-arcane)]/20 !text-dnd-arcane-bright !border-dnd-arcane/60' },
 ]
 
 export default function HpOperationForm({
@@ -52,7 +53,8 @@ export default function HpOperationForm({
               <m.button
                 key={op.key}
                 onClick={() => { setActiveOp(op.key); haptic.selection() }}
-                className={`flex flex-col items-center gap-0.5 py-2 px-1 rounded-xl font-cinzel text-[11px] uppercase tracking-tight border
+                title={t(op.full_key)}
+                className={`flex flex-col items-center gap-0.5 py-2 px-1 rounded-xl font-cinzel text-[10px] uppercase tracking-tight border
                   ${isActive
                     ? op.toneClass
                     : 'bg-transparent text-dnd-text-muted border-transparent'}`}

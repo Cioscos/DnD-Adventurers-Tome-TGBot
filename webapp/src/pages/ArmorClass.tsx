@@ -49,6 +49,12 @@ export default function ArmorClass() {
 
   if (!char) return null
 
+  const isDirty = base !== '' || shield !== '' || magic !== ''
+  const previewBase = base !== '' ? Number(base) : char.base_armor_class
+  const previewShield = shield !== '' ? Number(shield) : char.shield_armor_class
+  const previewMagic = magic !== '' ? Number(magic) : char.magic_armor
+  const previewTotal = previewBase + previewShield + previewMagic
+
   return (
     <Layout title={t('character.ac.title')} backTo={`/char/${charId}`} group="combat" page="ac">
       {/* Hero AC */}
@@ -163,12 +169,23 @@ export default function ArmorClass() {
         </Surface>
       </m.div>
 
+      {isDirty && previewTotal !== char.ac && (
+        <m.div
+          initial={{ opacity: 0, y: 4 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-center justify-center gap-2 px-3 py-2 rounded-full bg-dnd-chip-bg border border-dnd-gold-dim/40 text-dnd-gold-bright text-xs font-cinzel uppercase tracking-widest mx-auto w-fit"
+        >
+          <span>{t('character.ac.new_total')}:</span>
+          <span className="font-mono font-bold tabular-nums text-base">{previewTotal}</span>
+        </m.div>
+      )}
+
       <Button
         variant="primary"
         size="lg"
         fullWidth
         onClick={() => mutation.mutate()}
-        disabled={mutation.isPending || (base === '' && shield === '' && magic === '')}
+        disabled={mutation.isPending || !isDirty}
         loading={mutation.isPending}
         icon={<Save size={18} />}
         haptic="success"

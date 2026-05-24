@@ -18,6 +18,7 @@ import { useDiceAnimation } from '@/dice/useDiceAnimation'
 import { useDiceSettings } from '@/store/diceSettings'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { useToast } from '@/hooks/useToast'
+import { profBonus } from '@/lib/dnd'
 
 const ABILITIES = ['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'] as const
 
@@ -28,10 +29,6 @@ const ABILITY_TONE: Record<string, 'crimson' | 'emerald' | 'amber' | 'cobalt' | 
   intelligence: 'cobalt',
   wisdom: 'arcane',
   charisma: 'gold',
-}
-
-function profBonus(level: number) {
-  return Math.floor((level - 1) / 4) + 2
 }
 
 type RollState = {
@@ -152,7 +149,7 @@ export default function SavingThrows() {
                 interactive
                 onClick={() => rollMutation.mutate(ability)}
                 className={`relative !p-3 text-center
-                  ${isProficient ? 'border-dnd-gold/50 shadow-halo-gold' : ''}`}
+                  ${isProficient ? 'border-l-4 border-dnd-gold-bright border-dnd-gold/50 shadow-halo-gold' : ''}`}
               >
                 <div className="flex items-center justify-between -mx-1 -mt-1 mb-2">
                   <m.button
@@ -174,10 +171,15 @@ export default function SavingThrows() {
                   <DiceIcon sides={20} size={28} className="text-dnd-gold/80 mr-0.5" />
                 </div>
 
-                <p className="text-[10px] font-cinzel uppercase tracking-[0.25em] text-dnd-text-muted">
-                  {t(`character.stats.${ability}`)}
+                <p
+                  className="text-[10px] font-cinzel uppercase tracking-[0.18em] text-dnd-text-muted"
+                  title={t(`character.stats.${ability}`)}
+                >
+                  {t(`character.ability.${ability}_short`, {
+                    defaultValue: t(`character.stats.${ability}`),
+                  })}
                 </p>
-                <p className={`text-4xl font-display font-black leading-none mt-1.5 mb-1 ${
+                <p className={`text-4xl font-display font-black leading-none mt-1.5 mb-0.5 tabular-nums ${
                   tone === 'crimson' ? 'text-[var(--dnd-crimson-bright)]'
                   : tone === 'emerald' ? 'text-[var(--dnd-emerald-bright)]'
                   : tone === 'amber' ? 'text-[var(--dnd-amber)]'
@@ -186,6 +188,9 @@ export default function SavingThrows() {
                   : 'text-dnd-gold-bright'
                 }`}>
                   {total >= 0 ? '+' : ''}{total}
+                </p>
+                <p className="text-[9px] font-cinzel uppercase tracking-widest text-dnd-gold-dim mb-1">
+                  {t('character.saves.ts_short')}
                 </p>
                 <p className="text-[10px] text-dnd-text-faint font-mono">
                   {abilMod >= 0 ? '+' : ''}{abilMod}{isProficient ? ` +${pb}` : ''}

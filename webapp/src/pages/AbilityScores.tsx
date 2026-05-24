@@ -69,8 +69,13 @@ export default function AbilityScores() {
                 className={`relative overflow-hidden bg-gradient-to-br ${theme}`}
               >
                 <div className="flex items-start justify-between gap-2 mb-2">
-                  <span className="min-w-0 text-[11px] font-cinzel uppercase tracking-[0.15em] leading-tight opacity-85 break-words">
-                    {t(`character.stats.${score.name}`, { defaultValue: score.name })}
+                  <span
+                    className="min-w-0 text-[11px] font-cinzel uppercase tracking-[0.15em] leading-tight opacity-85"
+                    title={t(`character.stats.${score.name}`, { defaultValue: score.name })}
+                  >
+                    {t(`character.ability.${score.name}_short`, {
+                      defaultValue: t(`character.stats.${score.name}`, { defaultValue: score.name }),
+                    })}
                   </span>
                   {!isEditing && (
                     <m.button
@@ -135,19 +140,27 @@ export default function AbilityScores() {
                       className="flex items-end gap-2"
                       transition={spring.snappy}
                     >
-                      <span className="text-5xl font-display font-black leading-none"
+                      <span className="text-5xl font-display font-black leading-none tabular-nums"
                             style={{ textShadow: '0 2px 6px rgba(0,0,0,0.6)' }}>
                         {score.value}
                       </span>
-                      <span className="text-base font-mono font-bold mb-1.5 px-2 py-0.5 rounded-full bg-black/25">
-                        {score.modifier >= 0 ? '+' : ''}{score.modifier}
-                      </span>
+                      <div className="flex flex-col items-center mb-1">
+                        <span className="text-[9px] font-cinzel uppercase tracking-widest opacity-60 leading-none">
+                          {t('character.ability.mod_label')}
+                        </span>
+                        <span className="text-base font-mono font-bold tabular-nums px-2 py-0.5 rounded-full bg-black/25 mt-0.5">
+                          {score.modifier >= 0 ? '+' : ''}{score.modifier}
+                        </span>
+                      </div>
                     </m.div>
                   )}
                 </AnimatePresence>
 
                 {score.modifiers_applied && score.modifiers_applied.length > 0 && (
                   <div className="mt-2 pt-2 border-t border-dnd-border/50 space-y-1 text-[11px] font-body">
+                    <p className="text-[9px] font-cinzel uppercase tracking-widest text-dnd-gold-dim mb-1">
+                      {t('character.ability.sources')}
+                    </p>
                     <div className="flex items-center justify-between text-dnd-text-faint">
                       <span>{t('character.ability.breakdown.base')}</span>
                       <span className="font-mono">{score.base_value ?? score.value}</span>

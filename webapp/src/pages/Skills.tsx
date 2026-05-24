@@ -19,6 +19,7 @@ import { useToast } from '@/hooks/useToast'
 import { useDiceAnimation } from '@/dice/useDiceAnimation'
 import { useDiceSettings } from '@/store/diceSettings'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
+import { profBonus } from '@/lib/dnd'
 
 const SKILLS: { key: string; ability: string }[] = [
   { key: 'acrobatics',     ability: 'dexterity' },
@@ -44,10 +45,6 @@ const SKILLS: { key: string; ability: string }[] = [
 const ABILITY_GROUPS: string[] = ['strength', 'dexterity', 'intelligence', 'wisdom', 'charisma']
 
 type ProfLevel = false | true | 'expert'
-
-function profBonus(level: number) {
-  return Math.floor((level - 1) / 4) + 2
-}
 
 function getLevel(val: unknown): ProfLevel {
   if (val === 'expert') return 'expert'
@@ -147,7 +144,7 @@ export default function Skills() {
   const toggle = (key: string) => {
     const current = getLevel(skills[key])
     const next = nextLevel(current)
-    mutation.mutate({ ...skills, [key]: next })
+    mutation.mutate({ [key]: next })
   }
 
   const perceptionMod = abilityModifier('wisdom')
@@ -247,11 +244,11 @@ export default function Skills() {
                         <m.button
                           onClick={() => rollMutation.mutate(skill.key)}
                           disabled={rollMutation.isPending}
-                          className="shrink-0 w-9 h-9 rounded-xl bg-dnd-chip-bg border border-dnd-gold-dim/40 flex items-center justify-center text-dnd-gold disabled:opacity-30"
+                          className="shrink-0 w-11 h-11 rounded-xl bg-dnd-chip-bg border border-dnd-gold-dim/40 flex items-center justify-center text-dnd-gold disabled:opacity-30"
                           whileTap={{ scale: 0.88 }}
                           aria-label={t('character.skills.roll')}
                         >
-                          <Dices size={15} />
+                          <Dices size={16} />
                         </m.button>
                       </m.div>
                     )
