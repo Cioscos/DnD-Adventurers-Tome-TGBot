@@ -91,6 +91,8 @@ _MIGRATIONS: list[tuple[str, str, str, str | None]] = [
     ("maps", "local_file_path", "VARCHAR(500)", None),
     # Map drag-reorder (G1)
     ("maps", "position", "INTEGER", "0"),
+    # Map size in bytes for inline PDF preview decision (G2)
+    ("maps", "size_bytes", "INTEGER", "0"),
     # Session whisper support
     ("session_messages", "recipient_user_id", "BIGINT", None),
     ("session_messages", "sender_display_name", "VARCHAR(120)", None),
@@ -161,6 +163,37 @@ def _migrate_schema(connection) -> None:
                 logger.info("Backfilled gm_display_name for %d session(s)", result.rowcount)
         except Exception as exc:
             logger.warning("Backfill gm_display_name failed: %s", exc)
+
+    # Backfill maps.size_bytes for files uploaded before the column existed.
+    # Idempotent: WHERE clause only matches rows that haven't been measured yet.
+    if (
+        "maps" in column_cache
+        and "size_bytes" in column_cache["maps"]
+        and "local_file_path" in column_cache["maps"]
+    ):
+        try:
+            rows = connection.execute(text(
+                "SELECT id, local_file_path FROM maps "
+                "WHERE local_file_path IS NOT NULL AND size_bytes = 0"
+            )).fetchall()
+            updated = 0
+            for row in rows:
+                local_path = row[1]
+                if not local_path:
+                    continue
+                try:
+                    size = os.path.getsize(local_path)
+                except OSError:
+                    continue
+                connection.execute(
+                    text("UPDATE maps SET size_bytes = :s WHERE id = :id"),
+                    {"s": size, "id": row[0]},
+                )
+                updated += 1
+            if updated:
+                logger.info("Backfilled size_bytes for %d map(s)", updated)
+        except Exception as exc:
+            logger.warning("Backfill maps.size_bytes failed: %s", exc)
 
     # Consolidate legacy item_type='other' rows to canonical 'generic'.
     # Idempotent — once converged the WHERE clause matches no rows.

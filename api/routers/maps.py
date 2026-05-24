@@ -209,6 +209,7 @@ async def upload_map(
         file_id="",
         file_type=file_type,
         local_file_path=str(file_path),
+        size_bytes=len(content),
     )
     session.add(map_row)
     await session.flush()

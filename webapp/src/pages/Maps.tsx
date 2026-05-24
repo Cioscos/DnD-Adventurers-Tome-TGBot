@@ -181,6 +181,15 @@ export default function Maps() {
                       alt={overlayMap.zone_name}
                     />
                   </Suspense>
+                ) : overlayMap.file_type === 'pdf' &&
+                  (overlayMap.size_bytes ?? 0) > 0 &&
+                  (overlayMap.size_bytes ?? 0) < 5 * 1024 * 1024 ? (
+                  <iframe
+                    src={api.maps.fileUrl(charId, overlayMap.id)}
+                    title={overlayMap.zone_name}
+                    className="w-full h-full rounded-xl bg-white"
+                    onClick={(e) => e.stopPropagation()}
+                  />
                 ) : (
                   <div className="text-center text-white space-y-4">
                     <FileText size={80} className="mx-auto text-dnd-gold-bright" />
