@@ -141,6 +141,7 @@
       "title": "Skills",
       "proficient": "Proficient",
       "expert": "Expert",
+      "picker_title": "Proficiency level",
       "prof_bonus": "Proficiency bonus",
       "passive_perception": "Passive Perception",
       "roll": "Roll dice",

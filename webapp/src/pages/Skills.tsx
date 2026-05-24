@@ -12,10 +12,12 @@ import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
 import SectionDivider from '@/components/ui/SectionDivider'
 import StatPill from '@/components/ui/StatPill'
+import Sheet from '@/components/ui/Sheet'
 import ScrollArea from '@/components/ScrollArea'
 import RollResultModal, { type RollResult } from '@/components/RollResultModal'
 import { haptic } from '@/auth/telegram'
 import { useToast } from '@/hooks/useToast'
+import { useLongPress } from '@/hooks/useLongPress'
 import { useDiceAnimation } from '@/dice/useDiceAnimation'
 import { useDiceSettings } from '@/store/diceSettings'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
@@ -58,6 +60,89 @@ function nextLevel(current: ProfLevel): ProfLevel {
   return false
 }
 
+interface SkillRowProps {
+  skillKey: string
+  label: string
+  level: ProfLevel
+  bonus: number
+  idx: number
+  rollPending: boolean
+  onTap: () => void
+  onLongPress: () => void
+  onRoll: () => void
+  rollAriaLabel: string
+}
+
+function SkillRow({
+  skillKey,
+  label,
+  level,
+  bonus,
+  idx,
+  rollPending,
+  onTap,
+  onLongPress,
+  onRoll,
+  rollAriaLabel,
+}: SkillRowProps) {
+  const longPress = useLongPress({ thresholdMs: 500, onClick: onTap, onLongPress })
+  const isExpert = level === 'expert'
+  const isProficient = level === true
+  const hasMark = isExpert || isProficient
+
+  return (
+    <m.div
+      key={skillKey}
+      initial={{ opacity: 0, x: -4 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: idx * 0.02, duration: 0.18 }}
+      className={`flex items-center gap-2 px-3 py-2 rounded-xl border transition-colors
+        ${isExpert
+          ? 'bg-gradient-to-r from-[var(--dnd-arcane-deep)]/30 to-[var(--dnd-gold-deep)]/20 border-dnd-arcane/40'
+          : isProficient
+            ? 'bg-dnd-surface-raised border-dnd-gold/30'
+            : 'bg-dnd-surface border-dnd-border'}`}
+    >
+      <div
+        {...longPress}
+        className="flex items-center gap-2 flex-1 min-w-0 select-none cursor-pointer"
+      >
+        <div className="w-11 h-11 rounded-full flex items-center justify-center shrink-0">
+          {isExpert ? (
+            <div className="relative w-5 h-5 rounded-full bg-gradient-to-br from-dnd-arcane-bright to-dnd-gold-bright border-2 border-dnd-gold-bright flex items-center justify-center shadow-[0_0_6px_var(--dnd-gold-glow)]">
+              <Star size={10} className="text-dnd-ink" fill="currentColor" strokeWidth={1} />
+            </div>
+          ) : isProficient ? (
+            <div className="w-5 h-5 rounded-full bg-dnd-gold border-2 border-dnd-gold-bright flex items-center justify-center shadow-[0_0_4px_var(--dnd-gold-glow)]">
+              <Check size={11} className="text-dnd-ink" strokeWidth={3} />
+            </div>
+          ) : (
+            <div className="w-5 h-5 rounded-full border-2 border-dnd-border" />
+          )}
+        </div>
+        <span className="flex-1 text-left text-sm font-body font-medium truncate">
+          {label}
+        </span>
+        <span className={`text-sm font-mono font-bold w-10 text-right shrink-0 tabular-nums
+          ${hasMark
+            ? 'text-dnd-gold-bright'
+            : bonus >= 0 ? 'text-dnd-text' : 'text-[var(--dnd-crimson-bright)]'}`}>
+          {bonus >= 0 ? '+' : ''}{bonus}
+        </span>
+      </div>
+      <m.button
+        onClick={onRoll}
+        disabled={rollPending}
+        className="shrink-0 w-11 h-11 rounded-xl bg-dnd-chip-bg border border-dnd-gold-dim/40 flex items-center justify-center text-dnd-gold disabled:opacity-30"
+        whileTap={{ scale: 0.88 }}
+        aria-label={rollAriaLabel}
+      >
+        <Dices size={16} />
+      </m.button>
+    </m.div>
+  )
+}
+
 export default function Skills() {
   const { id } = useParams<{ id: string }>()
   const charId = Number(id)
@@ -72,6 +157,7 @@ export default function Skills() {
     wasRerolled: boolean
   }
   const [rollState, setRollState] = useState<RollState | null>(null)
+  const [picker, setPicker] = useState<string | null>(null)
   const toast = useToast()
 
   const { data: char } = useQuery({
@@ -187,70 +273,24 @@ export default function Skills() {
                     const level = getLevel(skills[skill.key])
                     const abilMod = abilityModifier(skill.ability)
                     const bonus = abilMod + (level === 'expert' ? 2 * pb : level ? pb : 0)
-                    const isExpert = level === 'expert'
-                    const isProficient = level === true
-                    const hasMark = isExpert || isProficient
 
                     return (
-                      <m.div
+                      <SkillRow
                         key={skill.key}
-                        initial={{ opacity: 0, x: -4 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: idx * 0.02, duration: 0.18 }}
-                        className={`flex items-center gap-2 px-3 py-2 rounded-xl border transition-colors
-                          ${isExpert
-                            ? 'bg-gradient-to-r from-[var(--dnd-arcane-deep)]/30 to-[var(--dnd-gold-deep)]/20 border-dnd-arcane/40'
-                            : isProficient
-                              ? 'bg-dnd-surface-raised border-dnd-gold/30'
-                              : 'bg-dnd-surface border-dnd-border'}`}
-                      >
-                        {/* Proficiency toggle */}
-                        <m.button
-                          onClick={() => toggle(skill.key)}
-                          className="w-11 h-11 rounded-full flex items-center justify-center shrink-0"
-                          whileTap={{ scale: 0.85 }}
-                          aria-label="Proficiency"
-                        >
-                          {isExpert ? (
-                            <div className="relative w-5 h-5 rounded-full bg-gradient-to-br from-dnd-arcane-bright to-dnd-gold-bright border-2 border-dnd-gold-bright flex items-center justify-center shadow-[0_0_6px_var(--dnd-gold-glow)]">
-                              <Star size={10} className="text-dnd-ink" fill="currentColor" strokeWidth={1} />
-                            </div>
-                          ) : isProficient ? (
-                            <div className="w-5 h-5 rounded-full bg-dnd-gold border-2 border-dnd-gold-bright flex items-center justify-center shadow-[0_0_4px_var(--dnd-gold-glow)]">
-                              <Check size={11} className="text-dnd-ink" strokeWidth={3} />
-                            </div>
-                          ) : (
-                            <div className="w-5 h-5 rounded-full border-2 border-dnd-border" />
-                          )}
-                        </m.button>
-
-                        {/* Name */}
-                        <button
-                          onClick={() => toggle(skill.key)}
-                          className="flex-1 text-left text-sm font-body font-medium"
-                        >
-                          {t(`character.skills.${skill.key}`)}
-                        </button>
-
-                        {/* Bonus */}
-                        <span className={`text-sm font-mono font-bold w-10 text-right shrink-0 tabular-nums
-                          ${hasMark
-                            ? 'text-dnd-gold-bright'
-                            : bonus >= 0 ? 'text-dnd-text' : 'text-[var(--dnd-crimson-bright)]'}`}>
-                          {bonus >= 0 ? '+' : ''}{bonus}
-                        </span>
-
-                        {/* Roll */}
-                        <m.button
-                          onClick={() => rollMutation.mutate(skill.key)}
-                          disabled={rollMutation.isPending}
-                          className="shrink-0 w-11 h-11 rounded-xl bg-dnd-chip-bg border border-dnd-gold-dim/40 flex items-center justify-center text-dnd-gold disabled:opacity-30"
-                          whileTap={{ scale: 0.88 }}
-                          aria-label={t('character.skills.roll')}
-                        >
-                          <Dices size={16} />
-                        </m.button>
-                      </m.div>
+                        skillKey={skill.key}
+                        label={t(`character.skills.${skill.key}`)}
+                        level={level}
+                        bonus={bonus}
+                        idx={idx}
+                        rollPending={rollMutation.isPending}
+                        onTap={() => toggle(skill.key)}
+                        onLongPress={() => {
+                          haptic.medium()
+                          setPicker(skill.key)
+                        }}
+                        onRoll={() => rollMutation.mutate(skill.key)}
+                        rollAriaLabel={t('character.skills.roll')}
+                      />
                     )
                   })}
                 </div>
@@ -271,6 +311,40 @@ export default function Skills() {
           onClose={() => setRollState(null)}
         />
       )}
+
+      <Sheet
+        open={picker !== null}
+        onClose={() => setPicker(null)}
+        title={t('character.skills.picker_title')}
+      >
+        <div className="p-4 space-y-2">
+          {([
+            { value: false as ProfLevel, label: t('common.none') },
+            { value: true as ProfLevel, label: t('character.skills.proficient') },
+            { value: 'expert' as ProfLevel, label: t('character.skills.expert') },
+          ]).map(({ value, label }) => {
+            const isCurrent = picker !== null && getLevel(skills[picker]) === value
+            return (
+              <button
+                key={String(value)}
+                type="button"
+                onClick={() => {
+                  if (picker) mutation.mutate({ [picker]: value })
+                  setPicker(null)
+                }}
+                className={`w-full min-h-[44px] px-4 py-2.5 rounded-xl border text-sm font-body text-left transition-colors flex items-center justify-between ${
+                  isCurrent
+                    ? 'bg-dnd-gold/15 border-dnd-gold text-dnd-gold-bright'
+                    : 'bg-dnd-surface border-dnd-border text-dnd-text hover:bg-dnd-surface-raised'
+                }`}
+              >
+                <span>{label}</span>
+                {isCurrent && <Check size={14} className="text-dnd-gold-bright" />}
+              </button>
+            )
+          })}
+        </div>
+      </Sheet>
     </Layout>
   )
 }

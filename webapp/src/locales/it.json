@@ -141,6 +141,7 @@
       "title": "Abilità",
       "proficient": "Competente",
       "expert": "Esperto",
+      "picker_title": "Livello competenza",
       "prof_bonus": "Bonus competenza",
       "passive_perception": "Percezione Passiva",
       "roll": "Tira dado",
