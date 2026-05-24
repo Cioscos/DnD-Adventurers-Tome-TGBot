@@ -25,6 +25,14 @@
     "date": {
       "today": "Oggi",
       "yesterday": "Ieri"
+    },
+    "abilities": {
+      "strength": "Forza",
+      "dexterity": "Destrezza",
+      "constitution": "Costituzione",
+      "intelligence": "Intelligenza",
+      "wisdom": "Saggezza",
+      "charisma": "Carisma"
     }
   },
   "character": {
@@ -619,6 +627,7 @@
       "edit_classes": "Modifica classe",
       "remove_class_title": "Rimuovere la classe?",
       "remove_class_body": "Verranno rimosse anche le risorse legate a {{name}}.",
+      "empty_state_title": "Nessuna classe",
       "empty_cta": "Aggiungi la tua prima classe",
       "level_up": {
         "title": "Sali di livello",

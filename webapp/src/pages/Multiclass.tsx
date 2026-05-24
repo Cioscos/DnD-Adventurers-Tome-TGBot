@@ -1,15 +1,18 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
-import { X, Edit3 } from 'lucide-react'
+import { X, Edit3, Plus } from 'lucide-react'
 import { GiCrossedSwords as Swords, GiScrollUnfurled as Scroll } from 'react-icons/gi'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
 import StatPill from '@/components/ui/StatPill'
+import EmptyState from '@/components/ui/EmptyState'
+import ConfirmSheet from '@/components/ui/ConfirmSheet'
+import ClassTabs from '@/components/character/ClassTabs'
 import { FlourishDivider } from '@/components/ui/Ornament'
 import { haptic } from '@/auth/telegram'
 import { levelFromXp } from '@/lib/xpThresholds'
@@ -19,6 +22,10 @@ import LevelUpModal from '@/pages/multiclass/LevelUpModal'
 import EditClassesModal from '@/pages/multiclass/EditClassesModal'
 import type { CharacterClass } from '@/types'
 
+function classAnchorId(className: string): string {
+  return `class-${className.toLowerCase().replace(/[^a-z0-9_-]/g, '-')}`
+}
+
 export default function Multiclass() {
   const { id } = useParams<{ id: string }>()
   const charId = Number(id)
@@ -26,6 +33,8 @@ export default function Multiclass() {
   const qc = useQueryClient()
   const [showLevelUpModal, setShowLevelUpModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
+  const [removeTarget, setRemoveTarget] = useState<CharacterClass | null>(null)
+  const [activeTab, setActiveTab] = useState<string>('')
 
   const { data: char } = useQuery({
     queryKey: ['character', charId],
@@ -37,6 +46,7 @@ export default function Multiclass() {
     onSuccess: (updated) => {
       qc.setQueryData(['character', charId], updated)
       haptic.success()
+      setRemoveTarget(null)
     },
   })
 
@@ -61,12 +71,29 @@ export default function Multiclass() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['character', charId] }),
   })
 
+  const classes: CharacterClass[] = char?.classes ?? []
+
+  useEffect(() => {
+    if (classes.length === 0) {
+      if (activeTab !== '') setActiveTab('')
+      return
+    }
+    if (!classes.some((c) => c.class_name === activeTab)) {
+      setActiveTab(classes[0].class_name)
+    }
+  }, [classes, activeTab])
+
   if (!char) return null
 
-  const classes: CharacterClass[] = char.classes ?? []
   const classLevelSum = classes.reduce((s, c) => s + c.level, 0)
   const targetLevel = levelFromXp(char.experience_points ?? 0)
   const levelUpAvailable = classes.length > 0 && targetLevel > classLevelSum
+
+  const handleTabSelect = (className: string) => {
+    setActiveTab(className)
+    const el = document.getElementById(classAnchorId(className))
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
 
   return (
     <Layout title={t('character.multiclass.title')} backTo={`/char/${charId}`} group="character" page="class">
@@ -90,30 +117,47 @@ export default function Multiclass() {
         />
       )}
 
-      <Button
-        variant="primary"
-        size="lg"
-        fullWidth
-        onClick={() => setShowEditModal(true)}
-        icon={<Edit3 size={18} />}
-        haptic="medium"
-      >
-        {t('character.multiclass.edit_classes')}
-      </Button>
+      {classes.length > 0 && (
+        <Button
+          variant="primary"
+          size="lg"
+          fullWidth
+          onClick={() => setShowEditModal(true)}
+          icon={<Edit3 size={18} />}
+          haptic="medium"
+        >
+          {t('character.multiclass.manage_classes')}
+        </Button>
+      )}
 
       {classes.length === 0 && (
-        <Surface variant="flat" className="text-center py-8">
-          <Swords className="mx-auto text-dnd-text-faint mb-2" size={32} />
-          <p className="text-dnd-text-muted font-body italic">{t('common.none')}</p>
-        </Surface>
+        <EmptyState
+          icon={<Swords size={32} />}
+          title={t('character.multiclass.empty_state_title')}
+          action={{
+            label: t('character.multiclass.empty_cta'),
+            onClick: () => setShowEditModal(true),
+            icon: <Plus size={14} />,
+          }}
+        />
+      )}
+
+      {classes.length >= 2 && (
+        <ClassTabs
+          classes={classes}
+          selected={activeTab}
+          onSelect={handleTabSelect}
+        />
       )}
 
       {classes.map((cls, idx) => (
         <m.div
           key={cls.id}
+          id={classAnchorId(cls.class_name)}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: idx * 0.05 }}
+          className="scroll-mt-20"
         >
           <Surface variant="elevated" ornamented>
             {/* Class banner */}
@@ -130,12 +174,18 @@ export default function Multiclass() {
                   <div className="flex items-center gap-2 mt-1 flex-wrap">
                     {cls.hit_die && <StatPill tone="gold" size="sm" value={`d${cls.hit_die}`} />}
                     {cls.spellcasting_ability && (
-                      <StatPill tone="arcane" size="sm" value={cls.spellcasting_ability} />
+                      <StatPill
+                        tone="arcane"
+                        size="sm"
+                        value={t(`common.abilities.${cls.spellcasting_ability.toLowerCase()}`, {
+                          defaultValue: cls.spellcasting_ability,
+                        })}
+                      />
                     )}
                   </div>
                 </div>
                 <m.button
-                  onClick={() => removeClass.mutate(cls.id)}
+                  onClick={() => setRemoveTarget(cls)}
                   className="w-11 h-11 rounded-lg text-[var(--dnd-crimson-bright)] flex items-center justify-center hover:bg-[var(--dnd-crimson)]/10 shrink-0"
                   whileTap={{ scale: 0.9 }}
                   aria-label="Remove"
@@ -191,6 +241,23 @@ export default function Multiclass() {
           onClose={() => setShowEditModal(false)}
         />
       )}
+
+      <ConfirmSheet
+        open={removeTarget !== null}
+        onClose={() => setRemoveTarget(null)}
+        onConfirm={() => {
+          if (removeTarget) removeClass.mutate(removeTarget.id)
+        }}
+        title={t('character.multiclass.remove_class_title')}
+        body={
+          removeTarget
+            ? t('character.multiclass.remove_class_body', { name: removeTarget.class_name })
+            : ''
+        }
+        confirmLabel={t('common.delete')}
+        confirmVariant="danger"
+        loading={removeClass.isPending}
+      />
     </Layout>
   )
 }

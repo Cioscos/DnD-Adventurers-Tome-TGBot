@@ -25,6 +25,14 @@
     "date": {
       "today": "Today",
       "yesterday": "Yesterday"
+    },
+    "abilities": {
+      "strength": "Strength",
+      "dexterity": "Dexterity",
+      "constitution": "Constitution",
+      "intelligence": "Intelligence",
+      "wisdom": "Wisdom",
+      "charisma": "Charisma"
     }
   },
   "character": {
@@ -619,6 +627,7 @@
       "edit_classes": "Edit classes",
       "remove_class_title": "Remove this class?",
       "remove_class_body": "Resources linked to {{name}} will be removed too.",
+      "empty_state_title": "No classes",
       "empty_cta": "Add your first class",
       "level_up": {
         "title": "Level up",
