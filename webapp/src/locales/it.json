@@ -13,7 +13,19 @@
     "close": "Chiudi",
     "yes": "Sì",
     "no": "No",
-    "none": "Nessuno"
+    "none": "Nessuno",
+    "copy": "Copia",
+    "paste": "Incolla",
+    "copied": "Copiato",
+    "search": "Cerca",
+    "reset": "Reimposta",
+    "all": "Tutti",
+    "active": "Attivi",
+    "applica": "Applica",
+    "date": {
+      "today": "Oggi",
+      "yesterday": "Ieri"
+    }
   },
   "character": {
     "select": {
@@ -21,7 +33,10 @@
       "subtitle": "Scegli un eroe per la tua avventura",
       "new": "Nuovo personaggio",
       "empty": "Nessun personaggio. Creane uno!",
-      "delete_confirm": "Eliminare {{name}}? L'azione è irreversibile."
+      "delete_confirm": "Eliminare {{name}}? L'azione è irreversibile.",
+      "undo_delete": "Personaggio eliminato",
+      "delete_undo_action": "Annulla",
+      "skip_class_label": "Procedi senza classe"
     },
     "menu": {
       "hp": "Punti Ferita",
@@ -69,7 +84,12 @@
       "new_hp": "Nuovi HP",
       "confirm_rest": "Conferma riposo",
       "concentration_active": "In concentrazione",
-      "concentration_lost": "Concentrazione persa!"
+      "concentration_lost": "Concentrazione persa!",
+      "damage_short": "DANNI",
+      "heal_short": "CURA",
+      "current_short": "ATTUALI",
+      "max_short": "MASSIMO",
+      "temp_short": "TEMP"
     },
     "death_saves": {
       "title": "Tiri vs Morte",
@@ -103,7 +123,11 @@
       "base": "Base",
       "shield": "Scudo",
       "magic": "Magia",
-      "total": "Totale"
+      "total": "Totale",
+      "new_total": "Nuovo CA",
+      "from_equipment": "Calcolato da equipaggiamento",
+      "show_modifiers": "Modificatori",
+      "hide_modifiers": "Nascondi modificatori"
     },
     "skills": {
       "title": "Abilità",
@@ -129,12 +153,16 @@
       "religion": "Religione",
       "sleight_of_hand": "Destr. di Mano",
       "stealth": "Furtività",
-      "survival": "Sopravvivenza"
+      "survival": "Sopravvivenza",
+      "passive_perception_formula": "10 + bonus Percezione + modificatori passivi",
+      "empty_hint": "Tocca un'abilità per attivarne la competenza."
     },
     "saves": {
       "title": "Tiri Salvezza",
       "proficient": "Competente",
-      "roll": "Tira dado"
+      "roll": "Tira dado",
+      "ts_short": "TS",
+      "tap_to_roll": "Tocca per tirare"
     },
     "ability": {
       "strength_short": "FOR",
@@ -146,7 +174,9 @@
       "breakdown": {
         "base": "Base",
         "effective": "Effettivo"
-      }
+      },
+      "mod_label": "MOD",
+      "sources": "Sorgenti"
     },
     "spells": {
       "title": "Incantesimi",
@@ -203,7 +233,11 @@
         "reroll": "Nuovo tiro",
         "no_slots_warning_title": "Nessuno slot disponibile",
         "no_slots_warning_body": "Non hai più slot di livello {{level}}. Non puoi rilanciare l'incantesimo."
-      }
+      },
+      "empty_hint": "Tocca + Aggiungi per il tuo primo trucchetto.",
+      "concentration_break_warn": "Romperai la concentrazione su {{spell}}.",
+      "expand": "Espandi",
+      "collapse": "Comprimi"
     },
     "slots": {
       "title": "Slot Incantesimo",
@@ -215,17 +249,26 @@
       "add_level": "Aggiungi livello slot",
       "gem_aria": "Livello {{level}} slot {{index}}/{{total}} {{state}}",
       "state_used": "usato",
-      "state_available": "disponibile"
+      "state_available": "disponibile",
+      "auto_hint": "Modalità Auto: gli slot vengono dedotti da classi e livello. Passa a Manuale dalle Impostazioni per gestione manuale.",
+      "add_new_level": "Aggiungi nuovo livello",
+      "reset_confirm": "Ripristinare tutti gli slot incantesimo?",
+      "go_to_settings": "Vai a Impostazioni"
     },
     "dice": {
       "title": "Tira Dadi",
       "send_to_chat": "Invia al gruppo",
+      "send_to_bot": "Manda al bot",
       "history": "Cronologia",
       "clear": "Svuota cronologia",
+      "clear_history": "Cancella cronologia",
       "clear_confirm": "Svuotare tutta la cronologia dei lanci?",
       "initiative": "Tira Iniziativa",
       "initiative_result": "Iniziativa: d20 ({{roll}}) {{mod}} = {{total}}",
-      "count": "Numero di dadi"
+      "count": "Numero di dadi",
+      "show_all_rolls": "Mostra tutti i tiri",
+      "all_rolls_title": "Tutti i tiri",
+      "filter_by_die": "Filtra per dado"
     },
     "dice_overlay": {
       "open": "Apri lanciatore dadi",
@@ -256,7 +299,12 @@
       "prone": "Prono",
       "restrained": "Trattenuto",
       "stunned": "Stordito",
-      "unconscious": "Privo di Sensi",
+      "unconscious": "Inconscio",
+      "filter_all": "Tutte",
+      "filter_active": "Attive",
+      "reset_all": "Ripristina tutte",
+      "reset_all_confirm": "Azzerare tutte le condizioni e l'affaticamento?",
+      "empty_hint": "Tocca una condizione per attivarla.",
       "detail_aria": "Mostra dettagli condizione",
       "desc": {
         "blinded": "Un personaggio accecato non può vedere e fallisce automaticamente ogni prova di caratteristica che richiede la vista. I tiri per colpire contro di lui hanno vantaggio, i suoi hanno svantaggio.",
@@ -304,14 +352,20 @@
       "vulnerabilities": "Vulnerabilità",
       "damage_type_placeholder": "es. fuoco",
       "placeholder_race": "es. Elfo, Nano...",
-      "placeholder_gender": "es. Maschio, Femmina...",
+      "placeholder_gender": "es. M / F / Altro",
       "placeholder_background": "es. Soldato, Nobile...",
       "placeholder_alignment": "es. Legale Buono...",
       "placeholder_personality_traits": "Descrivi i tuoi tratti...",
       "placeholder_ideals": "Descrivi i tuoi ideali...",
       "placeholder_bonds": "Descrivi i tuoi legami...",
       "placeholder_flaws": "Descrivi i tuoi difetti...",
-      "private_badge": "Info private"
+      "private_badge": "Info private",
+      "language_placeholder": "Aggiungi lingua…",
+      "proficiency_placeholder": "Aggiungi competenza…",
+      "unsaved_changes": "Modifiche non salvate",
+      "save_now": "Salva ora",
+      "damage_already_in": "{{type}} è già in un'altra lista",
+      "damage_vuln_wins_hint": "Se uno stesso tipo appare in più liste, in D&D la vulnerabilità prevale."
     },
     "inspiration": {
       "title": "Ispirazione Eroica",
@@ -339,7 +393,11 @@
       "convert_from": "Da",
       "convert_to": "A",
       "convert_amount": "Quantità",
-      "swap": "Scambia"
+      "swap": "Scambia",
+      "current_value": "attuale: {{n}}",
+      "remove_preview": "Rimuoverai {{amount}} {{coin}}",
+      "show_electrum_label": "Mostra Electrum",
+      "show_electrum_hint": "Mostra le monete d'electrum (EP). Sono usate raramente in 5e."
     },
     "xp": {
       "title": "Esperienza",
@@ -360,7 +418,9 @@
         "progress": "{{current}} / {{threshold}}",
         "level_up": "LEVEL UP",
         "max": "MAX"
-      }
+      },
+      "legend": "Tu sei una leggenda",
+      "quick_to_next": "→ Soglia"
     },
     "notes": {
       "title": "Note",
@@ -374,7 +434,11 @@
       "recording": "Registrazione in corso...",
       "discard_recording": "Scarta e riregistra",
       "mic_denied": "Permesso microfono negato. Abilita l'accesso al microfono.",
-      "delete_confirm": "Eliminare \"{{title}}\"?"
+      "delete_confirm": "Eliminare \"{{title}}\"?",
+      "empty_hint": "Annota indizi, NPC e idee per la prossima sessione.",
+      "search_placeholder": "Cerca note…",
+      "sort_recent": "Recenti",
+      "sort_alpha": "Alfabetico"
     },
     "maps": {
       "title": "Mappe",
@@ -389,13 +453,22 @@
       "delete_zone": "Elimina zona",
       "delete_file_confirm": "Eliminare questo file da {{zone}}?",
       "delete_zone_confirm": "Eliminare tutta la zona {{zone}} con tutti i suoi file?",
-      "open_file": "Apri file"
+      "open_file": "Apri file",
+      "empty_title": "Nessuna mappa",
+      "empty_hint": "Carica una mappa o un PDF della tua avventura — sarà sempre a portata di mano.",
+      "zoom_hint": "Pizzica per zoomare"
     },
     "history": {
       "title": "Cronologia",
       "clear": "Svuota cronologia",
       "empty": "Nessun evento registrato",
-      "clear_confirm": "Svuotare tutta la cronologia?"
+      "empty_hint": "Le tue azioni e tiri appariranno qui.",
+      "clear_confirm": "Svuotare tutta la cronologia?",
+      "entries_count": "{{count}} voci",
+      "filter_all": "Tutti",
+      "export": "Esporta",
+      "export_csv": "CSV",
+      "export_json": "JSON"
     },
     "inventory": {
       "title": "Inventario",
@@ -404,6 +477,12 @@
       "weight": "Peso",
       "quantity": "Quantità",
       "carry": "{{enc}} / {{cap}} lb",
+      "carry_label": "Carico",
+      "search_placeholder": "Cerca oggetti…",
+      "filter_all": "Tutti",
+      "filter_equipped": "Equipaggiati",
+      "empty_hint": "Inizia ad equipaggiare il tuo personaggio. Aggiungi un'arma, un'armatura o un oggetto.",
+      "no_search_results": "Nessun risultato",
       "item_name": "Nome oggetto",
       "item_type": "Tipo",
       "description": "Descrizione",
@@ -507,6 +586,13 @@
       "edit": "Modifica",
       "detail": {
         "no_description": "Nessuna descrizione disponibile"
+      },
+      "empty_hint": "Tratti di classe (Rage, Action Surge), capacità razziali e ability ricaricabili.",
+      "bulk_reset_manual": "Reset manuali",
+      "restoration_short": {
+        "long_rest": "Long",
+        "short_rest": "Short",
+        "manual": "Manuale"
       }
     },
     "multiclass": {
@@ -528,7 +614,11 @@
       "use_resource": "Usa",
       "restore_resource": "Ripristina",
       "auto_resources_hint": "Le risorse standard saranno create automaticamente",
+      "manage_classes": "Gestisci classi",
       "edit_classes": "Modifica classe",
+      "remove_class_title": "Rimuovere la classe?",
+      "remove_class_body": "Verranno rimosse anche le risorse legate a {{name}}.",
+      "empty_cta": "Aggiungi la tua prima classe",
       "level_up": {
         "title": "Sali di livello",
         "subtitle": "Scegli la classe per il livello {{level}}",
@@ -556,8 +646,24 @@
     "settings": {
       "title": "Impostazioni",
       "spell_slots_mode": "Modalità slot incantesimi",
-      "mode_auto": "Automatica (da livello classe)",
-      "mode_manual": "Manuale",
+      "mode_auto": "AUTO",
+      "mode_manual": "MANUALE",
+      "mode_auto_hint": "Dedotto dalle classi e dal livello",
+      "mode_manual_hint": "Controllo manuale degli slot",
+      "manual_to_auto_warn_title": "Passare a Auto?",
+      "manual_to_auto_warn_body": "Gli slot manuali verranno sovrascritti dal calcolo automatico.",
+      "preferences": "Preferenze",
+      "currency_group": "Monete",
+      "currency_show_electrum": "Mostra Electrum",
+      "currency_show_electrum_hint": "Mostra le monete d'electrum nella pagina Monete.",
+      "history_group": "Cronologia",
+      "history_retention": "Conservazione cronologia",
+      "history_retention_hint": "Mantieni eventi recenti per non gonfiare la cronologia.",
+      "history_retention_off": "Disattiva",
+      "history_retention_events": "Ultimi {{n}} eventi",
+      "history_retention_days": "Ultimi {{n}} giorni",
+      "reset_settings": "Reimposta impostazioni",
+      "reset_settings_confirm": "Reimpostare tutte le preferenze del personaggio ai valori predefiniti?",
       "carry_capacity": "Mostra capacità di carico",
       "language": "Lingua",
       "dice_3d": "Animazione dadi 3D",
@@ -596,7 +702,7 @@
     "create": {
       "step_name": "Nuovo personaggio",
       "step_class": "Scegli classe iniziale",
-      "skip_class": "Procedi senza classe",
+      "skip_class": "Senza classe",
       "custom_class": "Personalizzata",
       "custom_class_name": "Nome classe",
       "name_placeholder": "Il nome del tuo eroe",
@@ -625,7 +731,8 @@
       },
       "picker": {
         "title": "Equipaggia",
-        "empty": "Nessun oggetto compatibile nell'inventario."
+        "empty": "Nessun oggetto compatibile nell'inventario.",
+        "go_to_inventory": "Vai all'inventario"
       },
       "summary": {
         "spell_slots": "Slot incantesimi",
@@ -699,6 +806,13 @@
     "send": "Invia",
     "leave": "Esci dalla sessione",
     "close": "Chiudi sessione",
+    "exit_confirm_title": "Uscire dalla sessione?",
+    "exit_confirm_body": "Potrai rientrare con lo stesso codice.",
+    "code_copied": "Codice copiato",
+    "code_paste": "Incolla codice",
+    "code_format_hint": "{{count}}/6 caratteri",
+    "uptime": "Sessione attiva da {{time}}",
+    "create_first_character": "Crea il tuo primo personaggio",
     "grant_item": {
       "button": "Consegna oggetto",
       "recipients_label": "Destinatari",

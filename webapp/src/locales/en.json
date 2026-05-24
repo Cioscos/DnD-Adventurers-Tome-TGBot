@@ -13,7 +13,19 @@
     "close": "Close",
     "yes": "Yes",
     "no": "No",
-    "none": "None"
+    "none": "None",
+    "copy": "Copy",
+    "paste": "Paste",
+    "copied": "Copied",
+    "search": "Search",
+    "reset": "Reset",
+    "all": "All",
+    "active": "Active",
+    "applica": "Apply",
+    "date": {
+      "today": "Today",
+      "yesterday": "Yesterday"
+    }
   },
   "character": {
     "select": {
@@ -21,7 +33,10 @@
       "subtitle": "Choose a hero for your adventure",
       "new": "New character",
       "empty": "No characters yet. Create one!",
-      "delete_confirm": "Delete {{name}}? This action is irreversible."
+      "delete_confirm": "Delete {{name}}? This action is irreversible.",
+      "undo_delete": "Character deleted",
+      "delete_undo_action": "Undo",
+      "skip_class_label": "Continue without class"
     },
     "menu": {
       "hp": "Hit Points",
@@ -69,7 +84,12 @@
       "new_hp": "New HP",
       "confirm_rest": "Confirm rest",
       "concentration_active": "Concentrating",
-      "concentration_lost": "Concentration lost!"
+      "concentration_lost": "Concentration lost!",
+      "damage_short": "DMG",
+      "heal_short": "HEAL",
+      "current_short": "CURR",
+      "max_short": "MAX",
+      "temp_short": "TEMP"
     },
     "death_saves": {
       "title": "Death Saves",
@@ -103,7 +123,11 @@
       "base": "Base",
       "shield": "Shield",
       "magic": "Magic",
-      "total": "Total"
+      "total": "Total",
+      "new_total": "New AC",
+      "from_equipment": "From equipment",
+      "show_modifiers": "Modifiers",
+      "hide_modifiers": "Hide modifiers"
     },
     "skills": {
       "title": "Skills",
@@ -129,12 +153,16 @@
       "religion": "Religion",
       "sleight_of_hand": "Sleight of Hand",
       "stealth": "Stealth",
-      "survival": "Survival"
+      "survival": "Survival",
+      "passive_perception_formula": "10 + Perception bonus + passive modifiers",
+      "empty_hint": "Tap a skill to toggle its proficiency."
     },
     "saves": {
       "title": "Saving Throws",
       "proficient": "Proficient",
-      "roll": "Roll dice"
+      "roll": "Roll dice",
+      "ts_short": "ST",
+      "tap_to_roll": "Tap to roll"
     },
     "ability": {
       "strength_short": "STR",
@@ -146,7 +174,9 @@
       "breakdown": {
         "base": "Base",
         "effective": "Effective"
-      }
+      },
+      "mod_label": "MOD",
+      "sources": "Sources"
     },
     "spells": {
       "title": "Spells",
@@ -203,7 +233,11 @@
         "reroll": "Roll again",
         "no_slots_warning_title": "No slots available",
         "no_slots_warning_body": "No level {{level}} slots remaining. You cannot recast this spell."
-      }
+      },
+      "empty_hint": "Tap + Add to learn your first cantrip.",
+      "concentration_break_warn": "You'll break concentration on {{spell}}.",
+      "expand": "Expand",
+      "collapse": "Collapse"
     },
     "slots": {
       "title": "Spell Slots",
@@ -215,17 +249,26 @@
       "add_level": "Add slot level",
       "gem_aria": "Level {{level}} slot {{index}}/{{total}} {{state}}",
       "state_used": "used",
-      "state_available": "available"
+      "state_available": "available",
+      "auto_hint": "Auto mode: slots are derived from classes and level. Switch to Manual in Settings for full control.",
+      "add_new_level": "Add new level",
+      "reset_confirm": "Reset all spell slots?",
+      "go_to_settings": "Go to Settings"
     },
     "dice": {
       "title": "Roll Dice",
       "send_to_chat": "Send to group",
+      "send_to_bot": "Send to bot",
       "history": "History",
       "clear": "Clear history",
+      "clear_history": "Clear history",
       "clear_confirm": "Clear all dice roll history?",
       "initiative": "Roll Initiative",
       "initiative_result": "Initiative: d20 ({{roll}}) {{mod}} = {{total}}",
-      "count": "Number of dice"
+      "count": "Number of dice",
+      "show_all_rolls": "Show all rolls",
+      "all_rolls_title": "All rolls",
+      "filter_by_die": "Filter by die"
     },
     "dice_overlay": {
       "open": "Open dice tray",
@@ -257,6 +300,11 @@
       "restrained": "Restrained",
       "stunned": "Stunned",
       "unconscious": "Unconscious",
+      "filter_all": "All",
+      "filter_active": "Active",
+      "reset_all": "Reset all",
+      "reset_all_confirm": "Reset every condition and exhaustion level?",
+      "empty_hint": "Tap a condition to activate it.",
       "detail_aria": "Show condition details",
       "desc": {
         "blinded": "A blinded creature can't see and automatically fails any ability check that requires sight. Attack rolls against the creature have advantage, and the creature's attack rolls have disadvantage.",
@@ -304,14 +352,20 @@
       "vulnerabilities": "Vulnerabilities",
       "damage_type_placeholder": "e.g. fire",
       "placeholder_race": "e.g. Elf, Dwarf...",
-      "placeholder_gender": "e.g. Male, Female...",
+      "placeholder_gender": "e.g. M / F / Other",
       "placeholder_background": "e.g. Soldier, Noble...",
       "placeholder_alignment": "e.g. Lawful Good...",
       "placeholder_personality_traits": "Describe your traits...",
       "placeholder_ideals": "Describe your ideals...",
       "placeholder_bonds": "Describe your bonds...",
       "placeholder_flaws": "Describe your flaws...",
-      "private_badge": "Private info"
+      "private_badge": "Private info",
+      "language_placeholder": "Add language…",
+      "proficiency_placeholder": "Add proficiency…",
+      "unsaved_changes": "Unsaved changes",
+      "save_now": "Save now",
+      "damage_already_in": "{{type}} is already in another list",
+      "damage_vuln_wins_hint": "If the same damage type appears in multiple lists, D&D says vulnerability wins."
     },
     "inspiration": {
       "title": "Heroic Inspiration",
@@ -339,7 +393,11 @@
       "convert_from": "From",
       "convert_to": "To",
       "convert_amount": "Amount",
-      "swap": "Swap"
+      "swap": "Swap",
+      "current_value": "current: {{n}}",
+      "remove_preview": "You'll remove {{amount}} {{coin}}",
+      "show_electrum_label": "Show Electrum",
+      "show_electrum_hint": "Show electrum (EP) coins. They are rarely used in 5e."
     },
     "xp": {
       "title": "Experience",
@@ -360,7 +418,9 @@
         "progress": "{{current}} / {{threshold}}",
         "level_up": "LEVEL UP",
         "max": "MAX"
-      }
+      },
+      "legend": "You are a legend",
+      "quick_to_next": "→ Next"
     },
     "notes": {
       "title": "Notes",
@@ -374,7 +434,11 @@
       "recording": "Recording...",
       "discard_recording": "Discard and re-record",
       "mic_denied": "Microphone permission denied. Please enable microphone access.",
-      "delete_confirm": "Delete \"{{title}}\"?"
+      "delete_confirm": "Delete \"{{title}}\"?",
+      "empty_hint": "Jot clues, NPCs, and ideas for your next session.",
+      "search_placeholder": "Search notes…",
+      "sort_recent": "Recent",
+      "sort_alpha": "Alphabetical"
     },
     "maps": {
       "title": "Maps",
@@ -389,13 +453,22 @@
       "delete_zone": "Delete zone",
       "delete_file_confirm": "Delete this file from {{zone}}?",
       "delete_zone_confirm": "Delete entire zone {{zone}} with all its files?",
-      "open_file": "Open file"
+      "open_file": "Open file",
+      "empty_title": "No maps",
+      "empty_hint": "Upload a dungeon map or adventure PDF — always at your fingertips.",
+      "zoom_hint": "Pinch to zoom"
     },
     "history": {
       "title": "History",
       "clear": "Clear history",
       "empty": "No events recorded",
-      "clear_confirm": "Clear all history?"
+      "empty_hint": "Your actions and rolls will appear here.",
+      "clear_confirm": "Clear all history?",
+      "entries_count": "{{count}} entries",
+      "filter_all": "All",
+      "export": "Export",
+      "export_csv": "CSV",
+      "export_json": "JSON"
     },
     "inventory": {
       "title": "Inventory",
@@ -404,6 +477,12 @@
       "weight": "Weight",
       "quantity": "Quantity",
       "carry": "{{enc}} / {{cap}} lb",
+      "carry_label": "Carry",
+      "search_placeholder": "Search items…",
+      "filter_all": "All",
+      "filter_equipped": "Equipped",
+      "empty_hint": "Equip your hero — add a weapon, armor, or item.",
+      "no_search_results": "No results",
       "item_name": "Item name",
       "item_type": "Type",
       "description": "Description",
@@ -507,6 +586,13 @@
       "edit": "Edit",
       "detail": {
         "no_description": "No description available"
+      },
+      "empty_hint": "Class traits (Rage, Action Surge), racial abilities, and rechargeable features.",
+      "bulk_reset_manual": "Reset manual",
+      "restoration_short": {
+        "long_rest": "Long",
+        "short_rest": "Short",
+        "manual": "Manual"
       }
     },
     "multiclass": {
@@ -528,7 +614,11 @@
       "use_resource": "Use",
       "restore_resource": "Restore",
       "auto_resources_hint": "Standard resources will be created automatically",
+      "manage_classes": "Manage classes",
       "edit_classes": "Edit classes",
+      "remove_class_title": "Remove this class?",
+      "remove_class_body": "Resources linked to {{name}} will be removed too.",
+      "empty_cta": "Add your first class",
       "level_up": {
         "title": "Level up",
         "subtitle": "Pick a class for level {{level}}",
@@ -556,8 +646,24 @@
     "settings": {
       "title": "Settings",
       "spell_slots_mode": "Spell slots mode",
-      "mode_auto": "Automatic (from class level)",
-      "mode_manual": "Manual",
+      "mode_auto": "AUTO",
+      "mode_manual": "MANUAL",
+      "mode_auto_hint": "Derived from classes and level",
+      "mode_manual_hint": "Manual slot control",
+      "manual_to_auto_warn_title": "Switch to Auto?",
+      "manual_to_auto_warn_body": "Manual slots will be overwritten by the automatic calculation.",
+      "preferences": "Preferences",
+      "currency_group": "Currency",
+      "currency_show_electrum": "Show Electrum",
+      "currency_show_electrum_hint": "Show electrum coins on the Currency page.",
+      "history_group": "History",
+      "history_retention": "History retention",
+      "history_retention_hint": "Keep recent events to avoid bloating history.",
+      "history_retention_off": "Off",
+      "history_retention_events": "Last {{n}} events",
+      "history_retention_days": "Last {{n}} days",
+      "reset_settings": "Reset settings",
+      "reset_settings_confirm": "Reset all preferences for this character to defaults?",
       "carry_capacity": "Show carry capacity",
       "language": "Language",
       "dice_3d": "3D dice animation",
@@ -596,7 +702,7 @@
     "create": {
       "step_name": "New Character",
       "step_class": "Choose Initial Class",
-      "skip_class": "Continue without a class",
+      "skip_class": "No class",
       "custom_class": "Custom",
       "custom_class_name": "Class name",
       "name_placeholder": "Your hero's name",
@@ -625,7 +731,8 @@
       },
       "picker": {
         "title": "Equip",
-        "empty": "No compatible items in inventory."
+        "empty": "No compatible items in inventory.",
+        "go_to_inventory": "Go to inventory"
       },
       "summary": {
         "spell_slots": "Spell slots",
@@ -699,6 +806,13 @@
     "send": "Send",
     "leave": "Leave session",
     "close": "Close session",
+    "exit_confirm_title": "Leave the session?",
+    "exit_confirm_body": "You can re-join with the same code.",
+    "code_copied": "Code copied",
+    "code_paste": "Paste code",
+    "code_format_hint": "{{count}}/6 chars",
+    "uptime": "Active for {{time}}",
+    "create_first_character": "Create your first character",
     "grant_item": {
       "button": "Hand over item",
       "recipients_label": "Recipients",
