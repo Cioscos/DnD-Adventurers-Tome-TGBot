@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, Suspense, lazy } from 'react'
 import { createPortal } from 'react-dom'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -8,13 +8,16 @@ import { X, Plus, FileText } from 'lucide-react'
 import { GiTreasureMap as MapIcon } from 'react-icons/gi'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
-import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
 import Sheet from '@/components/ui/Sheet'
+import EmptyState from '@/components/ui/EmptyState'
 import { haptic } from '@/auth/telegram'
 import MapUploadForm from '@/pages/maps/MapUploadForm'
 import MapZoneGroup from '@/pages/maps/MapZoneGroup'
 import type { MapEntry } from '@/types'
+
+// Lazy-load pinch-zoom — only inside the fullscreen photo overlay.
+const ZoomableImage = lazy(() => import('@/pages/maps/ZoomableImage'))
 
 export default function Maps() {
   const { id } = useParams<{ id: string }>()
@@ -81,7 +84,7 @@ export default function Maps() {
     <Layout title={t('character.maps.title')} backTo={`/char/${charId}`} group="tools" page="maps">
       <Button
         variant="primary"
-        size="lg"
+        size={maps.length > 0 ? 'md' : 'lg'}
         fullWidth
         onClick={() => {
           setUploadInitialZone('')
@@ -107,10 +110,16 @@ export default function Maps() {
       )}
 
       {maps.length === 0 && !showUpload ? (
-        <Surface variant="flat" className="text-center py-8">
-          <MapIcon className="mx-auto text-dnd-text-faint mb-2" size={32} />
-          <p className="text-dnd-text-muted font-body italic">{t('common.none')}</p>
-        </Surface>
+        <EmptyState
+          icon={<MapIcon size={32} />}
+          title={t('character.maps.empty_title')}
+          hint={t('character.maps.empty_hint')}
+          action={{
+            label: t('character.maps.add_map'),
+            onClick: () => setShowUpload(true),
+            icon: <Plus size={14} />,
+          }}
+        />
       ) : (
         Object.entries(zones).map(([zone, zoneMaps]) => (
           <MapZoneGroup
@@ -155,14 +164,23 @@ export default function Maps() {
                 onClick={(e) => e.stopPropagation()}
               >
                 {overlayMap.file_type === 'photo' ? (
-                  <m.img
-                    src={api.maps.fileUrl(charId, overlayMap.id)}
-                    alt={overlayMap.zone_name}
-                    className="max-w-full max-h-full rounded-xl object-contain shadow-parchment-2xl"
-                    initial={{ scale: 0.95, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ duration: 0.3 }}
-                  />
+                  <Suspense
+                    fallback={
+                      <m.img
+                        src={api.maps.fileUrl(charId, overlayMap.id)}
+                        alt={overlayMap.zone_name}
+                        className="max-w-full max-h-full rounded-xl object-contain shadow-parchment-2xl"
+                        initial={{ scale: 0.95, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{ duration: 0.3 }}
+                      />
+                    }
+                  >
+                    <ZoomableImage
+                      src={api.maps.fileUrl(charId, overlayMap.id)}
+                      alt={overlayMap.zone_name}
+                    />
+                  </Suspense>
                 ) : (
                   <div className="text-center text-white space-y-4">
                     <FileText size={80} className="mx-auto text-dnd-gold-bright" />

@@ -10,14 +10,16 @@ import { api, ApiError } from '@/api/client'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
-import StatPill from '@/components/ui/StatPill'
 import Sheet from '@/components/ui/Sheet'
 import ScrollArea from '@/components/ScrollArea'
+import EmptyState from '@/components/ui/EmptyState'
+import ProgressTriad from '@/components/ui/ProgressTriad'
 import WeaponAttackModal, { type WeaponAttackResult } from '@/components/WeaponAttackModal'
 import { haptic } from '@/auth/telegram'
 import InventoryItem from '@/pages/inventory/InventoryItem'
 import ItemForm from '@/pages/inventory/ItemForm'
 import { buildItemMetadata, type ItemFormData } from '@/pages/inventory/itemMetadata'
+import { getItemTypeIcon } from '@/lib/itemIcons'
 import type { Item } from '@/types'
 
 export default function Inventory() {
@@ -180,8 +182,8 @@ export default function Inventory() {
     setExpanded(highlightId)
 
     // Sblocca il tipo collassato (se serve)
-    const TYPE_ORDER = ['weapon', 'armor', 'shield', 'consumable', 'tool', 'accessory', 'gear', 'potion', 'scroll', 'generic', 'other']
-    const typeKey = TYPE_ORDER.includes(target.item_type) ? target.item_type : 'other'
+    const TYPE_ORDER = ['weapon', 'armor', 'shield', 'consumable', 'tool', 'accessory', 'gear', 'potion', 'scroll', 'generic']
+    const typeKey = TYPE_ORDER.includes(target.item_type) ? target.item_type : 'generic'
     setCollapsedTypes((prev) => {
       if (!prev.has(typeKey)) return prev
       const next = new Set(prev)
@@ -210,12 +212,10 @@ export default function Inventory() {
 
   const items: Item[] = char.items ?? []
   const totalWeight = items.reduce((sum, i) => sum + i.weight * i.quantity, 0)
-  const capacityPct = char.carry_capacity > 0 ? Math.min(100, (totalWeight / char.carry_capacity) * 100) : 0
-  const overload = totalWeight > char.carry_capacity
 
-  const TYPE_ORDER: string[] = ['weapon', 'armor', 'shield', 'consumable', 'tool', 'accessory', 'gear', 'potion', 'scroll', 'generic', 'other']
+  const TYPE_ORDER: string[] = ['weapon', 'armor', 'shield', 'consumable', 'tool', 'accessory', 'gear', 'potion', 'scroll', 'generic']
   const grouped = items.reduce<Record<string, Item[]>>((acc, item) => {
-    const key = TYPE_ORDER.includes(item.item_type) ? item.item_type : 'other'
+    const key = TYPE_ORDER.includes(item.item_type) ? item.item_type : 'generic'
     if (!acc[key]) acc[key] = []
     acc[key].push(item)
     return acc
@@ -244,32 +244,40 @@ export default function Inventory() {
         </Button>
       </div>
 
-      {/* Carry capacity badge (no bar) */}
+      {/* Carry capacity progress bar (Semantic Triad coloring) */}
       <Surface variant="elevated" className="!py-2">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 mb-1.5">
           <Weight size={13} className="text-dnd-gold-dim" />
           <p className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-gold-dim flex-1">
-            {t('character.inventory.carry_short', { defaultValue: 'Carico' })}
+            {t('character.inventory.carry_label')}
           </p>
-          <StatPill
-            tone={overload ? 'crimson' : capacityPct > 70 ? 'amber' : 'default'}
-            size="sm"
-            value={`${totalWeight.toFixed(1)}/${char.carry_capacity}`}
-          />
         </div>
+        <ProgressTriad
+          value={totalWeight}
+          max={char.carry_capacity}
+          display={`${totalWeight.toFixed(1)} / ${char.carry_capacity} lb`}
+          showNumeric
+        />
       </Surface>
 
       {items.length === 0 && (
-        <Surface variant="flat" className="text-center py-8">
-          <Backpack className="mx-auto text-dnd-text-faint mb-2" size={32} />
-          <p className="text-dnd-text-muted font-body italic">{t('common.none')}</p>
-        </Surface>
+        <EmptyState
+          icon={<Backpack size={32} />}
+          title={t('common.none')}
+          hint={t('character.inventory.empty_hint')}
+          action={{
+            label: t('character.inventory.add'),
+            onClick: () => setShowAdd(true),
+            icon: <Plus size={14} />,
+          }}
+        />
       )}
 
       <ScrollArea>
         {orderedTypes.map((type) => {
           const groupItems = grouped[type]
           const isCollapsed = collapsedTypes.has(type)
+          const TypeIcon = getItemTypeIcon(type)
           return (
             <div key={type} className="mb-4">
               <m.button
@@ -282,10 +290,11 @@ export default function Inventory() {
                   size={14}
                   className={`text-dnd-gold-bright transition-transform ${!isCollapsed ? 'rotate-90' : ''}`}
                 />
+                <TypeIcon size={14} className="text-dnd-gold/80 shrink-0" />
                 <span className="font-cinzel uppercase tracking-widest text-xs text-dnd-gold-bright flex-1">
                   {t(`character.inventory.types.${type}`)}
                 </span>
-                <span className="text-[10px] text-dnd-text-muted font-mono">
+                <span className="text-[10px] text-dnd-text-muted font-mono tabular-nums">
                   · {groupItems.length}
                 </span>
               </m.button>
