@@ -260,7 +260,7 @@ export default function Dice() {
                 icon={<Send size={14} />}
                 className="mt-3"
               >
-                {t('character.dice.send_to_chat')}
+                {t('character.dice.send_to_bot')}
               </Button>
             </Surface>
           </m.div>
@@ -274,14 +274,15 @@ export default function Dice() {
             <h3 className="font-cinzel text-[10px] uppercase tracking-widest text-dnd-gold-dim">
               {t('character.dice.history')}
             </h3>
-            <m.button
+            <Button
+              variant="danger"
+              size="sm"
               onClick={() => setShowClearConfirm(true)}
-              className="text-[10px] text-[var(--dnd-crimson-bright)] flex items-center gap-1 font-cinzel uppercase tracking-wider"
-              whileTap={{ scale: 0.95 }}
+              icon={<Trash2 size={12} />}
+              haptic="warning"
             >
-              <Trash2 size={11} />
-              {t('character.dice.clear')}
-            </m.button>
+              {t('character.dice.clear_history')}
+            </Button>
           </div>
           <ScrollArea>
             <div className="space-y-1">

@@ -14,7 +14,10 @@ import Button from '@/components/ui/Button'
 import StatPill from '@/components/ui/StatPill'
 import { haptic } from '@/auth/telegram'
 import { spring } from '@/styles/motion'
-import { XP_THRESHOLDS, levelFromXp, quickXpAmounts } from '@/lib/xpThresholds'
+import { XP_THRESHOLDS, levelFromXp } from '@/lib/xpThresholds'
+
+// Fixed quick-add amounts (audit P2: replace dynamic quickXpAmounts with stable values).
+const FIXED_QUICK_AMOUNTS = [10, 50, 100, 500] as const
 import LevelUpBanner from '@/pages/multiclass/LevelUpBanner'
 import LevelUpModal from '@/pages/multiclass/LevelUpModal'
 
@@ -65,7 +68,6 @@ export default function Experience() {
   const isMulticlass = (char.classes ?? []).length > 1
   const levelUpAvailable = isMulticlass && level > totalClassLevel
   const isMaxLevel = level >= 20
-  const quickAmounts = quickXpAmounts(xpToNext)
 
   const handleApply = () => {
     const n = parseInt(addValue, 10)
@@ -98,7 +100,7 @@ export default function Experience() {
         </p>
         <m.p
           key={level}
-          className="text-7xl font-display font-black text-dnd-gold-bright leading-none"
+          className="text-7xl font-display font-black text-dnd-gold-bright leading-none tabular-nums"
           style={{ textShadow: '0 3px 12px var(--dnd-gold-glow)' }}
           initial={{ scale: 0.6, opacity: 0 }}
           animate={{ scale: [0.6, 1.1, 1], opacity: 1 }}
@@ -109,9 +111,15 @@ export default function Experience() {
 
         <div className="flex items-center justify-center gap-2 mt-3">
           <Star size={14} className="text-[var(--dnd-amber)]" />
-          <p className="text-2xl font-display font-bold text-dnd-text font-mono">{xp.toLocaleString()}</p>
+          <p className="text-2xl font-display font-bold text-dnd-text font-mono tabular-nums">{xp.toLocaleString()}</p>
           <span className="text-xs font-cinzel uppercase tracking-wider text-dnd-text-muted">XP</span>
         </div>
+
+        {isMaxLevel && (
+          <p className="mt-3 text-sm font-display font-bold text-dnd-gold-bright">
+            ★ {t('character.xp.legend')} ★
+          </p>
+        )}
 
         {nextThreshold && (
           <div className="mt-4">
@@ -182,7 +190,9 @@ export default function Experience() {
             loading={mutation.isPending}
             icon={<Check size={16} />}
             haptic="success"
-          />
+          >
+            {t('common.applica')}
+          </Button>
         </div>
       </Surface>
 
@@ -203,24 +213,34 @@ export default function Experience() {
             </span>
           </Button>
 
-          <div
-            className="grid gap-2"
-            style={{ gridTemplateColumns: `repeat(${quickAmounts.length}, minmax(0, 1fr))` }}
-          >
-            {quickAmounts.map((n) => (
+          <div className="grid grid-cols-5 gap-2">
+            {FIXED_QUICK_AMOUNTS.map((n) => (
               <m.button
                 key={n}
                 onClick={() => mutation.mutate({ add: n })}
                 disabled={mutation.isPending}
                 className="min-h-[48px] rounded-xl bg-dnd-surface border border-dnd-border
                            hover:border-dnd-gold/60 transition-colors
-                           font-mono font-bold text-dnd-gold-bright
+                           font-mono font-bold text-dnd-gold-bright tabular-nums
                            disabled:opacity-40 disabled:pointer-events-none"
                 whileTap={{ scale: 0.93 }}
               >
                 +{n}
               </m.button>
             ))}
+            {xpToNext > 0 && (
+              <m.button
+                onClick={() => mutation.mutate({ add: xpToNext })}
+                disabled={mutation.isPending}
+                className="min-h-[48px] rounded-xl bg-dnd-chip-bg border border-dnd-gold/60
+                           text-dnd-gold-bright font-cinzel text-[10px] uppercase tracking-widest
+                           disabled:opacity-40 disabled:pointer-events-none"
+                whileTap={{ scale: 0.93 }}
+                aria-label={t('character.xp.quick_to_next')}
+              >
+                {t('character.xp.quick_to_next')}
+              </m.button>
+            )}
           </div>
         </>
       )}

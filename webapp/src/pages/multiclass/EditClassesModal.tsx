@@ -240,7 +240,7 @@ export default function EditClassesModal({ char, targetLevel, onClose }: Props) 
                   <button
                     type="button"
                     onClick={() => removeNewEntry(e.tempId)}
-                    className="w-9 h-9 rounded-lg text-[var(--dnd-crimson-bright)] flex items-center justify-center hover:bg-[var(--dnd-crimson)]/10"
+                    className="hit-44 w-9 h-9 rounded-lg text-[var(--dnd-crimson-bright)] flex items-center justify-center hover:bg-[var(--dnd-crimson)]/10"
                     aria-label={t('character.multiclass.edit.remove_new')}
                   >
                     <Trash2 size={14} />
