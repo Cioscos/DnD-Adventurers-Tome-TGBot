@@ -40,7 +40,10 @@ const POLL_MS = 3000
 
 function formatTime(iso: string) {
   const d = new Date(iso)
-  return d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
+  // Use the browser/i18n locale rather than hardcoding it-IT so EN users see
+  // English-formatted timestamps (audit cross-cutting fix).
+  const locale = typeof navigator !== 'undefined' ? navigator.language : undefined
+  return d.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })
 }
 
 function itemKey(it: SessionFeedItem): string {

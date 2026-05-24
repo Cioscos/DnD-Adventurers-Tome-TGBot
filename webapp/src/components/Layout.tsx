@@ -115,7 +115,7 @@ export default function Layout({ title, children, group, page, hideScrollbar = f
 
       <main
         ref={swipe.contentRef}
-        className={`flex-1 min-w-0 overflow-y-auto p-4 pt-4 pb-[max(env(safe-area-inset-bottom),5.5rem)] space-y-3 animate-fade-in${hideScrollbar ? ' scrollbar-hide' : ''}`}
+        className={`flex-1 min-w-0 overflow-y-auto p-4 pt-4 pb-[max(env(safe-area-inset-bottom),6rem)] space-y-3 animate-fade-in${hideScrollbar ? ' scrollbar-hide' : ''}`}
         onTouchStart={swipe.onTouchStart}
         onTouchMove={swipe.onTouchMove}
         onTouchEnd={swipe.onTouchEnd}
