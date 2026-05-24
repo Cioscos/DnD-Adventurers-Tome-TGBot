@@ -78,7 +78,7 @@ export default function CharacterMain() {
       >
         <m.button
           onClick={() => navigate(-1)}
-          className="w-9 h-9 flex items-center justify-center rounded-full bg-dnd-surface border border-dnd-gold-dim/30"
+          className="w-11 h-11 flex items-center justify-center rounded-full bg-dnd-surface border border-dnd-gold-dim/30"
           whileTap={{ scale: 0.9 }}
           aria-label={t('common.back')}
         >
@@ -95,9 +95,9 @@ export default function CharacterMain() {
           title={char.heroic_inspiration
             ? t('character.inspiration.tap_to_spend')
             : t('character.inspiration.tap_to_grant')}
-          className={`w-9 h-9 flex items-center justify-center rounded-full transition-all
+          className={`w-11 h-11 flex items-center justify-center rounded-full transition-all
             ${char.heroic_inspiration
-              ? 'bg-dnd-gold/15 border border-dnd-gold animate-shimmer'
+              ? 'bg-dnd-gold/15 border border-dnd-gold'
               : 'bg-transparent border border-dashed border-dnd-gold-dim/40 opacity-50'}`}
           whileTap={{ scale: 0.9 }}
           aria-label="Heroic Inspiration"
@@ -107,7 +107,7 @@ export default function CharacterMain() {
 
         <m.button
           onClick={() => navigate(`/char/${charId}/settings`)}
-          className="w-9 h-9 flex items-center justify-center rounded-full bg-dnd-surface border border-dnd-gold-dim/30"
+          className="w-11 h-11 flex items-center justify-center rounded-full bg-dnd-surface border border-dnd-gold-dim/30"
           whileTap={{ scale: 0.9 }}
           aria-label={t('character.menu.settings')}
         >

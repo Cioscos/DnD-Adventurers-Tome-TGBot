@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m, AnimatePresence } from 'framer-motion'
-import { Plus, Trash2, ArrowLeft, Pencil } from 'lucide-react'
+import { Plus, Trash2, ArrowLeft, Pencil, SkipForward } from 'lucide-react'
 import {
   GiSparkles as Sparkles, GiCheckedShield as Shield, GiHeartPlus as Heart,
   GiCrossedSwords as Swords,
@@ -252,7 +252,7 @@ export default function CharacterSelect() {
                         e.stopPropagation()
                         handleDelete(char)
                       }}
-                      className="p-2 rounded-lg text-[var(--dnd-crimson-bright)] shrink-0 hover:bg-[var(--dnd-crimson)]/10"
+                      className="w-11 h-11 flex items-center justify-center rounded-lg text-[var(--dnd-crimson-bright)] shrink-0 hover:bg-[var(--dnd-crimson)]/10"
                       aria-label="Elimina"
                       whileTap={{ scale: 0.9 }}
                     >
@@ -321,8 +321,9 @@ export default function CharacterSelect() {
                       <div className="flex items-center gap-2 mb-3">
                         <m.button
                           onClick={() => setStep('name')}
-                          className="w-8 h-8 rounded-full bg-dnd-surface border border-dnd-gold-dim/30 flex items-center justify-center text-dnd-gold"
+                          className="w-11 h-11 rounded-full bg-dnd-surface border border-dnd-gold-dim/30 flex items-center justify-center text-dnd-gold"
                           whileTap={{ scale: 0.9 }}
+                          aria-label={t('common.back')}
                         >
                           <ArrowLeft size={16} />
                         </m.button>
@@ -387,13 +388,13 @@ export default function CharacterSelect() {
                           </m.div>
 
                           <Button
-                            variant="ghost"
+                            variant="secondary"
                             fullWidth
                             onClick={() => handleCreate(null)}
                             disabled={createMutation.isPending}
-                            className="text-dnd-text-muted text-xs"
+                            icon={<SkipForward size={14} />}
                           >
-                            ◈ {t('character.create.skip_class')} ◈
+                            {t('character.create.skip_class')}
                           </Button>
                         </>
                       ) : (
