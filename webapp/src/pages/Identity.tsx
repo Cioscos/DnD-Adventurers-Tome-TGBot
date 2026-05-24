@@ -2,8 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { m } from 'framer-motion'
-import { User, Globe2, Save, Plus, X, Lock } from 'lucide-react'
+import { User, Globe2, Save, Lock } from 'lucide-react'
 import {
   GiFeather as Feather, GiCheckedShield as Shield, GiLightningTrio as Zap,
   GiFlame as Flame,
@@ -13,6 +12,7 @@ import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
+import ChipInput from '@/components/ui/ChipInput'
 import SectionDivider from '@/components/ui/SectionDivider'
 import { haptic } from '@/auth/telegram'
 
@@ -26,14 +26,20 @@ type Draft = {
   name: string; race: string; gender: string; background: string
   alignment: string; speed: string
   personality_traits: string; ideals: string; bonds: string; flaws: string
-  languages: string; general_proficiencies: string
+  languages: string[]; general_proficiencies: string[]
   damageModifiers: DamageModifiers
 }
 
-const DMG_TONES: Record<keyof DamageModifiers, { bg: string; text: string; border: string; icon: typeof Shield }> = {
-  resistances: { bg: 'bg-[var(--dnd-cobalt)]/15', text: 'text-[var(--dnd-cobalt-bright)]', border: 'border-dnd-cobalt/40', icon: Shield },
-  immunities: { bg: 'bg-[var(--dnd-gold)]/15', text: 'text-dnd-gold-bright', border: 'border-dnd-gold/40', icon: Zap },
-  vulnerabilities: { bg: 'bg-[var(--dnd-crimson)]/15', text: 'text-[var(--dnd-crimson-bright)]', border: 'border-dnd-crimson/40', icon: Flame },
+const DMG_TONES: Record<keyof DamageModifiers, { text: string; icon: typeof Shield }> = {
+  resistances: { text: 'text-[var(--dnd-cobalt-bright)]', icon: Shield },
+  immunities: { text: 'text-dnd-gold-bright', icon: Zap },
+  vulnerabilities: { text: 'text-[var(--dnd-crimson-bright)]', icon: Flame },
+}
+
+const DMG_KEYS: Array<keyof DamageModifiers> = ['resistances', 'immunities', 'vulnerabilities']
+
+function snapshot(d: Draft): string {
+  return JSON.stringify(d)
 }
 
 export default function Identity() {
@@ -42,7 +48,7 @@ export default function Identity() {
   const { t } = useTranslation()
   const qc = useQueryClient()
   const [draft, setDraft] = useState<Draft | null>(null)
-  const [dmgInputs, setDmgInputs] = useState({ resistances: '', immunities: '', vulnerabilities: '' })
+  const [pristine, setPristine] = useState<string>('')
 
   const { data: char } = useQuery({
     queryKey: ['character', charId],
@@ -53,7 +59,7 @@ export default function Identity() {
     if (char && !draft) {
       const personality = (char.personality as Record<string, string>) ?? {}
       const raw = (char.damage_modifiers as Record<string, string[]>) ?? {}
-      setDraft({
+      const initial: Draft = {
         name: char.name ?? '',
         race: char.race ?? '',
         gender: char.gender ?? '',
@@ -64,14 +70,16 @@ export default function Identity() {
         ideals: personality.ideals ?? '',
         bonds: personality.bonds ?? '',
         flaws: personality.flaws ?? '',
-        languages: (char.languages as string[] ?? []).join(', '),
-        general_proficiencies: (char.general_proficiencies as string[] ?? []).join(', '),
+        languages: (char.languages as string[]) ?? [],
+        general_proficiencies: (char.general_proficiencies as string[]) ?? [],
         damageModifiers: {
           resistances: raw.resistances ?? [],
           immunities: raw.immunities ?? [],
           vulnerabilities: raw.vulnerabilities ?? [],
         },
-      })
+      }
+      setDraft(initial)
+      setPristine(snapshot(initial))
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [char])
@@ -92,46 +100,39 @@ export default function Identity() {
           bonds: draft.bonds.trim(),
           flaws: draft.flaws.trim(),
         },
-        languages: draft.languages.split(',').map((s) => s.trim()).filter(Boolean),
-        general_proficiencies: draft.general_proficiencies.split(',').map((s) => s.trim()).filter(Boolean),
+        languages: draft.languages,
+        general_proficiencies: draft.general_proficiencies,
         damage_modifiers: draft.damageModifiers,
       })
     },
     onSuccess: (updated) => {
       qc.setQueryData(['character', charId], updated)
       haptic.success()
+      if (draft) setPristine(snapshot(draft))
     },
     onError: () => haptic.error(),
   })
 
   if (!char || !draft) return null
 
+  const dirty = snapshot(draft) !== pristine
+
   const set = (key: keyof Draft) => (v: string) =>
     setDraft((d) => d ? { ...d, [key]: v } : d)
 
-  const addDmgModifier = (type: keyof DamageModifiers) => {
-    const val = dmgInputs[type].trim()
-    if (!val) return
-    setDraft((d) => {
-      if (!d) return d
-      const current = d.damageModifiers[type]
-      if (current.includes(val)) return d
-      return { ...d, damageModifiers: { ...d.damageModifiers, [type]: [...current, val] } }
-    })
-    setDmgInputs((prev) => ({ ...prev, [type]: '' }))
-  }
+  const setDmg = (key: keyof DamageModifiers) => (next: string[]) =>
+    setDraft((d) => d ? { ...d, damageModifiers: { ...d.damageModifiers, [key]: next } } : d)
 
-  const removeDmgModifier = (type: keyof DamageModifiers, val: string) => {
-    setDraft((d) => {
-      if (!d) return d
-      return {
-        ...d,
-        damageModifiers: {
-          ...d.damageModifiers,
-          [type]: d.damageModifiers[type].filter((v) => v !== val),
-        },
+  const validateDmg = (key: keyof DamageModifiers) => (candidate: string): string | null => {
+    if (!draft) return null
+    const norm = candidate.trim().toLowerCase()
+    for (const other of DMG_KEYS) {
+      if (other === key) continue
+      if (draft.damageModifiers[other].some((v) => v.trim().toLowerCase() === norm)) {
+        return t('character.identity.damage_already_in', { type: t(`character.identity.${other}`) })
       }
-    })
+    }
+    return null
   }
 
   const personalitySections = [
@@ -143,6 +144,27 @@ export default function Identity() {
 
   return (
     <Layout title={t('character.identity.title')} backTo={`/char/${charId}`} group="character" page="identity">
+      {dirty && (
+        <Surface
+          variant="ember"
+          className="sticky top-2 z-20 flex items-center justify-between gap-3 !py-2.5 !px-3"
+        >
+          <span className="text-xs font-body text-dnd-text">
+            {t('character.identity.unsaved_changes')}
+          </span>
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => mutation.mutate()}
+            loading={mutation.isPending}
+            icon={<Save size={14} />}
+            haptic="success"
+          >
+            {t('character.identity.save_now')}
+          </Button>
+        </Surface>
+      )}
+
       {/* Hero name */}
       <Surface variant="tome" ornamented>
         <Input
@@ -153,7 +175,7 @@ export default function Identity() {
         />
       </Surface>
 
-      {/* Physicality section */}
+      {/* Physicality */}
       <SectionDivider icon={<User size={11} />} align="center">
         {t('character.identity.physicality', { defaultValue: 'Fisicità' })}
       </SectionDivider>
@@ -173,12 +195,11 @@ export default function Identity() {
         </Surface>
       </div>
 
-      {/* Personality section */}
+      {/* Personality */}
       <SectionDivider icon={<Feather size={11} />} align="center">
         {t('character.identity.personality', { defaultValue: 'Personalità' })}
       </SectionDivider>
 
-      {/* Lock badge — immediately after SectionDivider */}
       <div className="flex items-center justify-center gap-1 -mt-2 mb-3 text-dnd-gold-dim">
         <Lock size={10} />
         <span className="text-[10px] font-cinzel uppercase tracking-wider">
@@ -186,7 +207,6 @@ export default function Identity() {
         </span>
       </div>
 
-      {/* Background — first private item */}
       <Surface variant="parchment" className="!pt-5 !px-4 !pb-4 relative !mt-8 !mb-6">
         <span className="absolute -top-2.5 left-4 px-2 bg-dnd-surface-raised text-[10px] font-cinzel uppercase tracking-widest text-dnd-gold-dim rounded">
           {t('character.identity.background')}
@@ -223,19 +243,21 @@ export default function Identity() {
       </SectionDivider>
 
       <Surface variant="elevated">
-        <Input
-          label={`${t('character.identity.languages')} (separati da virgola)`}
-          value={draft.languages}
-          onChange={set('languages')}
+        <ChipInput
+          label={t('character.identity.languages')}
+          values={draft.languages}
+          onChange={(next) => setDraft((d) => d ? { ...d, languages: next } : d)}
           placeholder="Comune, Elfico..."
+          splitOnComma
         />
       </Surface>
       <Surface variant="elevated">
-        <Input
-          label={`${t('character.identity.proficiencies')} (separati da virgola)`}
-          value={draft.general_proficiencies}
-          onChange={set('general_proficiencies')}
+        <ChipInput
+          label={t('character.identity.proficiencies')}
+          values={draft.general_proficiencies}
+          onChange={(next) => setDraft((d) => d ? { ...d, general_proficiencies: next } : d)}
           placeholder="Armature leggere, Spade..."
+          splitOnComma
         />
       </Surface>
 
@@ -244,9 +266,13 @@ export default function Identity() {
         {t('character.identity.damage_modifiers')}
       </SectionDivider>
 
+      <p className="text-[10px] uppercase tracking-widest text-dnd-text-faint italic text-center -mt-2 mb-2">
+        {t('character.identity.damage_vuln_wins_hint')}
+      </p>
+
       <Surface variant="elevated">
         <div className="space-y-4">
-          {(Object.keys(DMG_TONES) as Array<keyof DamageModifiers>).map((key) => {
+          {DMG_KEYS.map((key) => {
             const tone = DMG_TONES[key]
             const ToneIcon = tone.icon
             return (
@@ -257,37 +283,14 @@ export default function Identity() {
                     {t(`character.identity.${key}`)}
                   </p>
                 </div>
-                <div className="flex flex-wrap gap-1.5 mb-2">
-                  {draft.damageModifiers[key].map((val) => (
-                    <m.span
-                      key={val}
-                      className={`inline-flex items-center gap-1 px-2 py-1 rounded-full border text-xs font-body ${tone.bg} ${tone.text} ${tone.border}`}
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.8 }}
-                    >
-                      {val}
-                      <m.button
-                        onClick={() => removeDmgModifier(key, val)}
-                        className="hover:opacity-60"
-                        whileTap={{ scale: 0.8 }}
-                        aria-label="Remove"
-                      >
-                        <X size={11} />
-                      </m.button>
-                    </m.span>
-                  ))}
-                </div>
-                <div className="flex gap-2 items-end">
-                  <Input
-                    value={dmgInputs[key]}
-                    onChange={(v) => setDmgInputs((prev) => ({ ...prev, [key]: v }))}
-                    placeholder={t('character.identity.damage_type_placeholder')}
-                    onCommit={() => addDmgModifier(key)}
-                    className="flex-1"
-                  />
-                  <Button variant="secondary" size="md" onClick={() => addDmgModifier(key)} icon={<Plus size={14} />} />
-                </div>
+                <ChipInput
+                  values={draft.damageModifiers[key]}
+                  onChange={setDmg(key)}
+                  validate={validateDmg(key)}
+                  placeholder={t('character.identity.damage_type_placeholder')}
+                  splitOnComma
+                  normalize={(raw) => raw.trim()}
+                />
               </div>
             )
           })}
@@ -300,6 +303,7 @@ export default function Identity() {
         fullWidth
         onClick={() => mutation.mutate()}
         loading={mutation.isPending}
+        disabled={!dirty}
         icon={<Save size={18} />}
         haptic="success"
       >
