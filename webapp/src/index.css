@@ -209,6 +209,25 @@ body,
 }
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 
+/* Motor-accessibility helper — expand a small interactive element's
+   hit area to a 44×44 minimum via an invisible ::before overlay,
+   without changing the visible chrome size. Apply to buttons,
+   gems, dots, chip-remove X, etc. that must stay small visually. */
+.hit-44 {
+  position: relative;
+}
+.hit-44::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  min-width: 44px;
+  min-height: 44px;
+  width: 100%;
+  height: 100%;
+}
+
 body {
   background-color: var(--dnd-bg);
   color: var(--dnd-text);
@@ -334,10 +353,11 @@ body::after {
   text-shadow: 0 1px 4px var(--dnd-gold-glow);
 }
 
-/* HP number glow — three intensities matching health threshold */
-.hp-glow-emerald { filter: drop-shadow(0 0 18px rgba(63, 166, 106, 0.35)); }
-.hp-glow-gold    { filter: drop-shadow(0 0 18px rgba(240, 201, 112, 0.50)); }
-.hp-glow-crimson { filter: drop-shadow(0 0 22px rgba(232, 80, 80, 0.60)); }
+/* HP number glow — three intensities matching health threshold.
+   Crimson softened to ~0.3 alpha to avoid overpowering the "/ max" label. */
+.hp-glow-emerald { filter: drop-shadow(0 0 16px rgba(63, 166, 106, 0.30)); }
+.hp-glow-gold    { filter: drop-shadow(0 0 16px rgba(240, 201, 112, 0.42)); }
+.hp-glow-crimson { filter: drop-shadow(0 0 18px rgba(232, 80, 80, 0.32)); }
 
 /* Ornament line (decorative section divider) */
 .ornament-line {
