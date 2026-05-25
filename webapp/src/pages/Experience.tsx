@@ -39,9 +39,17 @@ export default function Experience() {
     mutationFn: ({ add, set }: { add?: number; set?: number }) =>
       api.characters.updateXP(charId, { add, set }),
     onSuccess: (updated) => {
+      const oldLevel = char ? levelFromXp(char.experience_points) : 0
+      const newLevel = levelFromXp(updated.experience_points)
       qc.setQueryData(['character', charId], updated)
       setAddValue('')
       haptic.success()
+      if (newLevel > oldLevel) {
+        toast.success(t('character.xp.level_up_toast', { level: newLevel }), {
+          duration: 3500,
+          icon: '✨',
+        })
+      }
       if (updated.hp_gained && updated.hp_gained > 0) {
         toast.success(t('character.xp.hp_gained_toast', { hp: updated.hp_gained }), {
           duration: 2000,

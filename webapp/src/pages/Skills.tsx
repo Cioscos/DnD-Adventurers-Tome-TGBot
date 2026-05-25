@@ -274,6 +274,7 @@ export default function Skills() {
                     const abilMod = abilityModifier(skill.ability)
                     const bonus = abilMod + (level === 'expert' ? 2 * pb : level ? pb : 0)
 
+                    const isRollingThis = rollMutation.isPending && rollMutation.variables === skill.key
                     return (
                       <SkillRow
                         key={skill.key}
@@ -282,7 +283,7 @@ export default function Skills() {
                         level={level}
                         bonus={bonus}
                         idx={idx}
-                        rollPending={rollMutation.isPending}
+                        rollPending={isRollingThis}
                         onTap={() => toggle(skill.key)}
                         onLongPress={() => {
                           haptic.medium()

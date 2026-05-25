@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m, AnimatePresence } from 'framer-motion'
 import { Pencil, Check, X } from 'lucide-react'
+import { toast } from 'sonner'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
@@ -29,6 +30,10 @@ export default function AbilityScores() {
   const qc = useQueryClient()
   const [editing, setEditing] = useState<string | null>(null)
   const [editValue, setEditValue] = useState('')
+  // Synchronous guard against double-fire of handleSave (Input.onCommit + button.onClick
+  // can both fire when the user taps Salva — `updateMutation.isPending` isn't yet true
+  // at the second call, so we need a ref that flips immediately.
+  const savingRef = useRef(false)
 
   const { data: char } = useQuery({
     queryKey: ['character', charId],
@@ -38,17 +43,34 @@ export default function AbilityScores() {
   const updateMutation = useMutation({
     mutationFn: ({ ability, value }: { ability: string; value: number }) =>
       api.characters.updateAbilityScore(charId, ability, value),
-    onSuccess: (updated) => {
+    onSuccess: (updated, vars) => {
+      const oldHpMax = char?.hit_points ?? null
       qc.setQueryData(['character', charId], updated)
       setEditing(null)
       haptic.success()
+      if (vars.ability === 'constitution' && oldHpMax !== null && updated.hit_points !== oldHpMax) {
+        toast.success(t('character.stats.hp_recalc_toast', {
+          old: oldHpMax,
+          new: updated.hit_points,
+        }))
+      }
+      savingRef.current = false
     },
-    onError: () => haptic.error(),
+    onError: () => {
+      haptic.error()
+      savingRef.current = false
+    },
   })
 
   const handleSave = (ability: string) => {
+    if (savingRef.current || updateMutation.isPending) return
     const n = parseInt(editValue, 10)
     if (isNaN(n) || n < 1 || n > 30) return
+    if (char?.ability_scores.find((s) => s.name === ability)?.value === n) {
+      setEditing(null)
+      return
+    }
+    savingRef.current = true
     updateMutation.mutate({ ability, value: n })
   }
 

@@ -95,14 +95,22 @@ export default function CharacterMain() {
           title={char.heroic_inspiration
             ? t('character.inspiration.tap_to_spend')
             : t('character.inspiration.tap_to_grant')}
-          className={`w-11 h-11 flex items-center justify-center rounded-full transition-all
+          className={`relative w-11 h-11 flex items-center justify-center rounded-full transition-all
             ${char.heroic_inspiration
-              ? 'bg-dnd-gold/15 border border-dnd-gold'
+              ? 'bg-dnd-gold/15 border border-dnd-gold shadow-halo-gold'
               : 'bg-transparent border border-dashed border-dnd-gold-dim/40 opacity-50'}`}
           whileTap={{ scale: 0.9 }}
           aria-label="Heroic Inspiration"
         >
           <GiSparkles size={18} className="text-dnd-gold" />
+          <span
+            className={`absolute -bottom-1 left-1/2 -translate-x-1/2 text-[9px] font-cinzel font-bold uppercase tracking-wider px-1 leading-none ${
+              char.heroic_inspiration ? 'text-dnd-gold-bright' : 'text-dnd-text-faint'
+            }`}
+            aria-hidden="true"
+          >
+            {char.heroic_inspiration ? 'ON' : 'OFF'}
+          </span>
         </m.button>
 
         <m.button

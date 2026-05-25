@@ -88,6 +88,7 @@ export default function RollResultModal({
       )}
 
       <m.div
+        key={`die-${die}-${wasRerolled}`}
         className={`text-7xl font-black font-display ${dieColor}`}
         initial={{ scale: 0, rotate: -180 }}
         animate={{ scale: 1, rotate: 0 }}
@@ -96,7 +97,7 @@ export default function RollResultModal({
         {die}
       </m.div>
 
-      <p className="text-dnd-text-muted text-sm font-body">
+      <p key={`total-${total}-${wasRerolled}`} className="text-dnd-text-muted text-sm font-body">
         d20 ({die}) {bonusStr} ={' '}
         <span className="text-dnd-text font-bold text-lg font-mono">{total}</span>
       </p>

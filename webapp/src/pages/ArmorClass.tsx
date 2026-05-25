@@ -49,6 +49,13 @@ export default function ArmorClass() {
 
   if (!char) return null
 
+  const equippedBodyArmor = char.items?.find(
+    (i) => i.is_equipped && i.equipment_slot === 'body' && i.item_type === 'armor',
+  ) ?? null
+  const equippedShield = char.items?.find(
+    (i) => i.is_equipped && i.equipment_slot === 'off_hand' && i.item_type === 'shield',
+  ) ?? null
+
   const isDirty = base !== '' || shield !== '' || magic !== ''
   const previewBase = base !== '' ? Number(base) : char.base_armor_class
   const previewShield = shield !== '' ? Number(shield) : char.shield_armor_class
@@ -106,12 +113,24 @@ export default function ArmorClass() {
         <Surface variant="elevated">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="font-cinzel text-xs uppercase tracking-widest text-dnd-gold-dim">
-                {t('character.ac.base')}
-              </p>
+              <div className="flex items-center gap-2">
+                <p className="font-cinzel text-xs uppercase tracking-widest text-dnd-gold-dim">
+                  {t('character.ac.base')}
+                </p>
+                {equippedBodyArmor && (
+                  <span className="text-[9px] font-cinzel uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-dnd-gold/20 text-dnd-gold-bright border border-dnd-gold/50">
+                    {t('character.ac.auto_from_armor')}
+                  </span>
+                )}
+              </div>
               <p className="text-4xl font-display font-black text-dnd-gold-bright mt-0.5">
                 {char.base_armor_class}
               </p>
+              {equippedBodyArmor && (
+                <p className="text-[10px] text-dnd-text-faint font-body italic mt-1">
+                  {t('character.ac.auto_from_armor_hint', { name: equippedBodyArmor.name })}
+                </p>
+              )}
             </div>
             <Input
               type="number"
@@ -120,6 +139,7 @@ export default function ArmorClass() {
               onChange={setBase}
               placeholder={String(char.base_armor_class)}
               inputMode="numeric"
+              disabled={!!equippedBodyArmor}
               className="w-32 [&_input]:text-xl [&_input]:font-display [&_input]:font-bold [&_input]:text-center"
             />
           </div>
@@ -134,9 +154,16 @@ export default function ArmorClass() {
         className="grid grid-cols-2 gap-2"
       >
         <Surface variant="elevated">
-          <p className="font-cinzel text-[10px] uppercase tracking-widest text-dnd-gold-dim">
-            {t('character.ac.shield')}
-          </p>
+          <div className="flex items-center gap-1.5">
+            <p className="font-cinzel text-[10px] uppercase tracking-widest text-dnd-gold-dim">
+              {t('character.ac.shield')}
+            </p>
+            {equippedShield && (
+              <span className="text-[9px] font-cinzel uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-dnd-gold/20 text-dnd-gold-bright border border-dnd-gold/50">
+                {t('character.ac.auto_from_armor')}
+              </span>
+            )}
+          </div>
           <p className="text-2xl font-display font-black text-dnd-gold-bright mt-0.5">
             {char.shield_armor_class}
           </p>
@@ -147,6 +174,7 @@ export default function ArmorClass() {
             onChange={setShield}
             placeholder={String(char.shield_armor_class)}
             inputMode="numeric"
+            disabled={!!equippedShield}
             className="mt-2 w-full [&_input]:text-base [&_input]:font-display [&_input]:font-bold [&_input]:text-center"
           />
         </Surface>

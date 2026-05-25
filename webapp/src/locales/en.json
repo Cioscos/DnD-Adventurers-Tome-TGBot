@@ -44,7 +44,8 @@
       "delete_confirm": "Delete {{name}}? This action is irreversible.",
       "undo_delete": "Character deleted",
       "delete_undo_action": "Undo",
-      "skip_class_label": "Continue without class"
+      "skip_class_label": "Continue without class",
+      "unconscious_badge": "Unconscious"
     },
     "menu": {
       "hp": "Hit Points",
@@ -70,7 +71,7 @@
         "combat": "Combat",
         "magic": "Magic",
         "skills": "Skills",
-        "equipment": "Equipment",
+        "equipment": "Inventory & Coins",
         "character": "Character",
         "tools": "Tools"
       }
@@ -97,7 +98,14 @@
       "heal_short": "HEAL",
       "current_short": "CURR",
       "max_short": "MAX",
-      "temp_short": "TEMP"
+      "temp_short": "TEMP",
+      "long_rest_confirm_title": "Long rest",
+      "long_rest_confirm_body": "Are you sure? D&D 5e rules allow only one long rest every 24 hours.",
+      "long_rest_confirm_action": "Rest",
+      "quick_damage_undo": "{{n}} damage dealt",
+      "quick_heal_undo": "Healed {{n}} HP",
+      "quick_temp_undo": "Added {{n}} temp HP",
+      "quick_undo_action": "Undo"
     },
     "death_saves": {
       "title": "Death Saves",
@@ -124,7 +132,8 @@
       "intelligence": "Intelligence",
       "wisdom": "Wisdom",
       "charisma": "Charisma",
-      "modifier": "Modifier"
+      "modifier": "Modifier",
+      "hp_recalc_toast": "Max HP updated: {{old}} → {{new}}"
     },
     "ac": {
       "title": "Armor Class",
@@ -135,7 +144,9 @@
       "new_total": "New AC",
       "from_equipment": "From equipment",
       "show_modifiers": "Modifiers",
-      "hide_modifiers": "Hide modifiers"
+      "hide_modifiers": "Hide modifiers",
+      "auto_from_armor": "Auto",
+      "auto_from_armor_hint": "Base derived from equipped {{name}}."
     },
     "skills": {
       "title": "Skills",
@@ -420,6 +431,7 @@
       "level_up_available_short": "Level up available! Tap to pick a class",
       "single_class_synced": "Class level updates automatically with XP.",
       "hp_gained_toast": "+{{hp}} HP",
+      "level_up_toast": "You leveled up to {{level}}!",
       "level_up_cta": "LEVEL UP",
       "level_up_to": "Jump to level {{level}}",
       "bar": {
@@ -744,6 +756,10 @@
         "title": "Equip",
         "empty": "No compatible items in inventory.",
         "go_to_inventory": "Go to inventory"
+      },
+      "slot_picker": {
+        "title": "Choose slot",
+        "subtitle": "Which slot for {{name}}?"
       },
       "summary": {
         "spell_slots": "Spell slots",

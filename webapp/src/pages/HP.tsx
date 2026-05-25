@@ -14,6 +14,8 @@ import Surface from '@/components/ui/Surface'
 import HPGauge from '@/components/ui/HPGauge'
 import Button from '@/components/ui/Button'
 import StatPill from '@/components/ui/StatPill'
+import ConfirmSheet from '@/components/ui/ConfirmSheet'
+import { showUndoToast } from '@/components/ui/UndoToast'
 import { haptic } from '@/auth/telegram'
 import { spring } from '@/styles/motion'
 import HpOperationForm from '@/pages/hp/HpOperationForm'
@@ -40,6 +42,7 @@ export default function HP() {
   const [activeOp, setActiveOp] = useState<HPOp>('damage')
 
   const [showShortRest, setShowShortRest] = useState(false)
+  const [showLongRestConfirm, setShowLongRestConfirm] = useState(false)
   const [hitDiceResult, setHitDiceResult] = useState<HitDiceSpendResult | null>(null)
   const [deathRollResult, setDeathRollResult] = useState<DeathSaveRollResult | null>(null)
   const [concSaveResult, setConcSaveResult] = useState<ConcentrationSaveResult | null>(null)
@@ -119,6 +122,42 @@ export default function HP() {
     const n = parseInt(value, 10)
     if (isNaN(n) || n <= 0) return
     hpMutation.mutate({ op: activeOp, val: n })
+  }
+
+  const handleQuickApply = ({ op, val }: { op: HPOp; val: number }) => {
+    if (!char || hpMutation.isPending) return
+    const prev = {
+      current: char.current_hit_points,
+      max: char.hit_points,
+      temp: char.temp_hp ?? 0,
+    }
+    const undoMap: Record<HPOp, { op: HPOp; val: number; messageKey: string } | null> = {
+      damage:      { op: 'set_current', val: prev.current, messageKey: 'character.hp.quick_damage_undo' },
+      heal:        { op: 'set_current', val: prev.current, messageKey: 'character.hp.quick_heal_undo' },
+      set_current: { op: 'set_current', val: prev.current, messageKey: 'character.hp.quick_heal_undo' },
+      set_max:     { op: 'set_max',     val: prev.max,     messageKey: 'character.hp.quick_heal_undo' },
+      set_temp:    { op: 'set_temp',    val: prev.temp,    messageKey: 'character.hp.quick_temp_undo' },
+    }
+    hpMutation.mutate({ op, val }, {
+      onSuccess: (updated) => {
+        qc.setQueryData(['character', charId], updated)
+        const conc = updated.concentration_save
+        if (conc) {
+          setConcSaveResult(conc)
+          if (conc.lost_concentration) {
+            toast.warning(t('character.hp.concentration_lost'), { duration: 4000 })
+          }
+        }
+        haptic.success()
+        const undo = undoMap[op]
+        if (!undo) return
+        showUndoToast({
+          message: t(undo.messageKey, { n: val }),
+          actionLabel: t('character.hp.quick_undo_action'),
+          onUndo: () => hpMutation.mutate({ op: undo.op, val: undo.val }),
+        })
+      },
+    })
   }
 
   if (!char) return null
@@ -201,7 +240,7 @@ export default function HP() {
         setValue={setValue}
         onApply={handleApply}
         isPending={hpMutation.isPending}
-        hpMutate={(args) => hpMutation.mutate(args)}
+        hpMutate={handleQuickApply}
       />
 
       {/* Rest buttons */}
@@ -222,7 +261,7 @@ export default function HP() {
           variant="arcane"
           size="lg"
           fullWidth
-          onClick={() => restMutation.mutate('long')}
+          onClick={() => setShowLongRestConfirm(true)}
           disabled={restMutation.isPending}
           loading={restMutation.isPending}
           icon={<Sparkles size={18} />}
@@ -231,6 +270,20 @@ export default function HP() {
           {t('character.hp.long_rest')}
         </Button>
       </div>
+
+      <ConfirmSheet
+        open={showLongRestConfirm}
+        onClose={() => setShowLongRestConfirm(false)}
+        onConfirm={() => {
+          setShowLongRestConfirm(false)
+          restMutation.mutate('long')
+        }}
+        title={t('character.hp.long_rest_confirm_title')}
+        body={t('character.hp.long_rest_confirm_body')}
+        confirmLabel={t('character.hp.long_rest_confirm_action')}
+        confirmVariant="arcane"
+        loading={restMutation.isPending}
+      />
 
       {/* Death saves */}
       {isDying && (
