@@ -288,6 +288,9 @@ class DiceResultRequest(BaseModel):
     notation: str | None = Field(default=None, max_length=80)
     with_inspiration: bool = False
     source: Literal["manual", "weapon", "skill", "save", "spell", "init"] | None = None
+    # Optional client-supplied total override. Used by stat-rolls (4d6kh3) where the
+    # displayed total is the sum of the kept dice, not all rolls.
+    total: int | None = None
 
 
 class DiceRollResult(BaseModel):

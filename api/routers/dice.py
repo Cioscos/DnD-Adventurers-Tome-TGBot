@@ -66,7 +66,7 @@ async def post_dice_result(
             )
 
     rolls = [e.value for e in body.rolls]
-    total = sum(rolls) + body.modifier
+    total = body.total if body.total is not None else sum(rolls) + body.modifier
 
     # notation: prefer client-supplied, else infer
     if body.notation:
