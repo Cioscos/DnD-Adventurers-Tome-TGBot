@@ -409,6 +409,7 @@
       "gold": "Oro",
       "platinum": "Platino",
       "convert": "Converti",
+      "convert_preview": "{{amount}} {{source}} = {{result}} {{target}}",
       "total_gold": "Totale in oro",
       "mode_set": "Imposta",
       "mode_add": "Aggiungi/Rimuovi",

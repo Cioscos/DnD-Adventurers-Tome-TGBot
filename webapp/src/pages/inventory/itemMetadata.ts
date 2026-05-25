@@ -129,6 +129,11 @@ export function isItemFormValid(form: ItemFormData): boolean {
   if (!form.name.trim()) return false
   if (form.item_type === 'weapon' && !DAMAGE_DICE_RE.test(form.damage_dice.trim())) return false
   if (form.item_type === 'armor' && (Number(form.ac_value) < 1 || isNaN(Number(form.ac_value)))) return false
+  // Weight must be a non-negative number when provided. Empty/0 allowed for
+  // weightless items, but negative weight is never valid (would mess up the
+  // encumbrance computation on the equipment paper-doll).
+  if (form.weight !== '' && (isNaN(Number(form.weight)) || Number(form.weight) < 0)) return false
+  if (form.quantity !== '' && (isNaN(Number(form.quantity)) || Number(form.quantity) < 1)) return false
   return true
 }
 

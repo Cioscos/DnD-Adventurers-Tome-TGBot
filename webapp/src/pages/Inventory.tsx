@@ -282,7 +282,7 @@ export default function Inventory() {
         <ProgressTriad
           value={totalWeight}
           max={char.carry_capacity}
-          display={`${totalWeight.toFixed(1)} / ${char.carry_capacity} lb`}
+          display={`${Number.isInteger(totalWeight) ? totalWeight : totalWeight.toFixed(1).replace(/\.0$/, '')} / ${char.carry_capacity} lb`}
           showNumeric
         />
       </Surface>

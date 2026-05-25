@@ -409,6 +409,7 @@
       "gold": "Gold",
       "platinum": "Platinum",
       "convert": "Convert",
+      "convert_preview": "{{amount}} {{source}} = {{result}} {{target}}",
       "total_gold": "Total in gold",
       "mode_set": "Set",
       "mode_add": "Add/Remove",
