@@ -1,1 +1,0 @@
-import{c as r,p as i}from"./dice-scene-vKP0wyrV.js";const m=r()(i(t=>({system:"imperial",setSystem:s=>t({system:s})}),{name:"dnd-unit-settings"}));function c(t,s){if(s==="metric"){const n=t*.3048,e=Math.round(n*10)/10;return`${(Number.isInteger(e)?String(e):String(e.toFixed(1))).replace(/\.0$/,"")} m`}return`${t} ft`}export{c as f,m as u};

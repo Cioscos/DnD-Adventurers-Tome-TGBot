@@ -15,7 +15,7 @@ import Button from '@/components/ui/Button'
 import ChipInput from '@/components/ui/ChipInput'
 import SectionDivider from '@/components/ui/SectionDivider'
 import { haptic } from '@/auth/telegram'
-import { useUnitSettings, formatLength } from '@/store/unitSettings'
+import { useUnitSettings, formatLength, oppositeSystem } from '@/store/unitSettings'
 import languagesSrd from '@/data/languages-srd.json'
 
 const LANGUAGE_SUGGESTIONS = [...languagesSrd.common, ...languagesSrd.exotic]
@@ -210,7 +210,7 @@ export default function Identity() {
           />
           {Number(draft.speed) > 0 && (
             <p className="mt-1 text-[10px] font-mono text-dnd-text-faint tabular-nums">
-              ≈ {formatLength(Number(draft.speed) || 0, unitSystem)}
+              ≈ {formatLength(Number(draft.speed) || 0, oppositeSystem(unitSystem))}
             </p>
           )}
         </Surface>

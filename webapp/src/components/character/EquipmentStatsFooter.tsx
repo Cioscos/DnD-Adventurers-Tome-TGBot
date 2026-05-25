@@ -35,10 +35,6 @@ export default function EquipmentStatsFooter({ char }: Props) {
     defaultValue: 'Capacità = 15 × Forza ({{str}}) = {{cap}} lb',
   })
 
-  const carryColor = overload
-    ? 'text-[var(--dnd-amber)]'
-    : 'text-dnd-text-muted'
-
   return (
     <section
       aria-label={t('character.equipment.equipment', { defaultValue: 'Equipment' })}
@@ -59,11 +55,14 @@ export default function EquipmentStatsFooter({ char }: Props) {
         </span>
       </div>
 
-      {/* Inline meta: weapon damage + carry */}
-      <div className="flex items-center gap-3 text-[11px] font-cinzel uppercase tracking-[0.18em]">
-        <span className="flex items-center gap-1.5 text-dnd-text-muted">
-          <GiCrossedSwords size={12} aria-hidden="true" className="text-[var(--dnd-crimson-bright)]/70" />
-          <span className="font-mono normal-case tracking-normal text-dnd-text">
+      {/* Hairline divider — visually separates AC hero from inline meta below. */}
+      <div className="w-24 h-px bg-dnd-gold-dim/30" aria-hidden="true" />
+
+      {/* Inline meta: weapon damage + carry — sized up + de-muted so critical info reads */}
+      <div className="flex items-center gap-3 text-sm font-cinzel uppercase tracking-[0.18em]">
+        <span className="flex items-center gap-2 text-dnd-text">
+          <GiCrossedSwords size={14} aria-hidden="true" className="text-[var(--dnd-crimson-bright)]" />
+          <span className="font-mono normal-case tracking-normal text-dnd-text font-bold tabular-nums">
             {damage ?? '—'}
           </span>
         </span>
@@ -71,18 +70,18 @@ export default function EquipmentStatsFooter({ char }: Props) {
         <span aria-hidden="true" className="text-dnd-gold-dim/60 select-none">◈</span>
 
         <span
-          className="flex items-center gap-1.5 text-dnd-text-muted cursor-help"
+          className="flex items-center gap-2 cursor-help"
           title={carryFormula}
           aria-label={carryFormula}
         >
           <GiWeight
-            size={12}
+            size={14}
             aria-hidden="true"
-            className={overload ? 'text-[var(--dnd-amber)]/80' : 'text-dnd-text-faint'}
+            className={overload ? 'text-[var(--dnd-amber)]' : 'text-dnd-text-muted'}
           />
-          <span className={`font-mono normal-case tracking-normal ${carryColor}`}>
+          <span className={`font-mono normal-case tracking-normal font-bold tabular-nums ${overload ? 'text-[var(--dnd-amber)]' : 'text-dnd-text'}`}>
             {`${formatWeight(encumbrance)}/${carryCap}`}
-            <span className="text-dnd-text-faint ml-0.5">lb</span>
+            <span className="text-dnd-text-muted ml-0.5 font-normal">lb</span>
           </span>
         </span>
       </div>

@@ -74,9 +74,12 @@ export default function Conditions() {
   }
 
   const activeCount = CONDITION_KEYS.filter((k) => conditions[k]).length + (currentExhaustion > 0 ? 1 : 0)
+  const standardConditions = CONDITION_KEYS.filter(
+    (k) => !(QUICK_CONDITIONS as readonly string[]).includes(k),
+  )
   const visibleConditions = filterActive
-    ? CONDITION_KEYS.filter((k) => conditions[k])
-    : CONDITION_KEYS
+    ? standardConditions.filter((k) => conditions[k])
+    : standardConditions
 
   const resetAll = () => {
     const cleared: Record<string, unknown> = { exhaustion: 0 }

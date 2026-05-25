@@ -256,7 +256,7 @@ export default function Experience() {
             className="flex-1"
           />
           <Button
-            variant="primary"
+            variant={levelUpAvailable ? 'secondary' : 'primary'}
             size="md"
             onClick={handleApply}
             disabled={!addValue}

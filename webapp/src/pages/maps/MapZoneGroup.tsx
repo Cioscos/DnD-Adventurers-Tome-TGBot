@@ -160,7 +160,7 @@ function MapZoneGroupInner({
             onDragOver={isReorderable ? handleDragOver : undefined}
             onDrop={isReorderable ? handleDrop(m.id) : undefined}
             onDragEnd={isReorderable ? handleDragEnd : undefined}
-            className={`relative aspect-square rounded-xl overflow-hidden bg-dnd-surface active:opacity-80 transition-opacity ${
+            className={`relative aspect-square rounded-xl overflow-hidden bg-dnd-surface border border-dnd-gold-dim/40 shadow-parchment-md active:opacity-80 transition-all hover:border-dnd-gold/70 ${
               isReorderable ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'
             } ${draggingId === m.id ? 'opacity-40' : ''}`}
           >
