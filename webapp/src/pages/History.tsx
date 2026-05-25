@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
-import { Trash2 } from 'lucide-react'
+import { Trash2, Search, X } from 'lucide-react'
 import { GiOpenBook as BookOpen } from 'react-icons/gi'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
@@ -14,7 +14,7 @@ import Skeleton from '@/components/ui/Skeleton'
 import EmptyState from '@/components/ui/EmptyState'
 import { haptic } from '@/auth/telegram'
 import { EVENT_META } from '@/lib/eventMeta'
-import { formatRelative } from '@/lib/relativeTime'
+import { formatRelative, formatAbsolute } from '@/lib/relativeTime'
 
 export default function History() {
   const { id } = useParams<{ id: string }>()
@@ -27,6 +27,13 @@ export default function History() {
     queryKey: ['history', charId],
     queryFn: () => api.history.get(charId),
   })
+
+  const [search, setSearch] = useState('')
+  const filteredEntries = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return entries
+    return entries.filter((e) => e.description.toLowerCase().includes(q))
+  }, [entries, search])
 
   const clearMutation = useMutation({
     mutationFn: () => api.history.clear(charId),
@@ -70,7 +77,7 @@ export default function History() {
           <div className="flex items-center justify-between gap-2">
             <span className="text-[11px] font-cinzel uppercase tracking-widest text-dnd-gold-dim">
               {t('character.history.entries_count', {
-                count: entries.length,
+                count: search ? filteredEntries.length : entries.length,
                 defaultValue: '{{count}} voci',
               })}
             </span>
@@ -83,6 +90,31 @@ export default function History() {
             >
               {t('character.history.clear')}
             </Button>
+          </div>
+
+          {/* Search filter — client-side substring match on description. */}
+          <div className="relative">
+            <Search
+              size={14}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-dnd-text-faint pointer-events-none"
+            />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={t('character.history.search_placeholder', { defaultValue: 'Cerca nella cronologia...' })}
+              className="w-full min-h-[40px] pl-9 pr-9 py-2 rounded-xl bg-dnd-surface border border-dnd-border text-dnd-text text-sm font-body outline-none focus:border-dnd-gold/60"
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center text-dnd-text-faint hover:text-dnd-gold-bright"
+                aria-label={t('common.cancel')}
+              >
+                <X size={14} />
+              </button>
+            )}
           </div>
 
           <ScrollArea>
@@ -104,9 +136,15 @@ export default function History() {
                 }}
               />
               <div className="space-y-3">
-                {entries.map((entry, idx) => {
+                {filteredEntries.length === 0 && search && (
+                  <p className="ml-[60px] text-sm italic text-dnd-text-muted font-body py-4">
+                    {t('character.history.no_match', { defaultValue: 'Nessuna voce corrispondente.' })}
+                  </p>
+                )}
+                {filteredEntries.map((entry, idx) => {
                   const meta = EVENT_META[entry.event_type] ?? EVENT_META.other
                   const Icon = meta.icon
+                  const absoluteTime = formatAbsolute(entry.timestamp, locale)
                   return (
                     <m.div
                       key={entry.id}
@@ -124,7 +162,10 @@ export default function History() {
                         <p className="text-sm leading-snug font-body text-dnd-text">
                           {entry.description}
                         </p>
-                        <p className="text-[10px] text-dnd-text-faint font-mono mt-0.5">
+                        <p
+                          className="text-[10px] text-dnd-text-faint font-mono mt-0.5 cursor-help"
+                          title={absoluteTime}
+                        >
                           {formatDate(entry.timestamp)}
                         </p>
                       </div>

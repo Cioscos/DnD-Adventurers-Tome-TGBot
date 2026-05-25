@@ -1,0 +1,234 @@
+{
+  "_meta": {
+    "source": "D&D 5e SRD (Wizards of the Coast, CC-BY-4.0)",
+    "note": "Subset of the most-cast SRD spells, used by SpellForm auto-fill. Keys are normalized lowercase names; lookup also matches the Italian translation listed in `aliases`."
+  },
+  "fire bolt": {
+    "level": 0,
+    "casting_time": "1 azione",
+    "range_area": "36 m",
+    "components": "V, S",
+    "duration": "Istantanea",
+    "damage_dice": "1d10",
+    "damage_type": "fire",
+    "aliases": ["dardo infuocato"]
+  },
+  "ray of frost": {
+    "level": 0,
+    "casting_time": "1 azione",
+    "range_area": "18 m",
+    "components": "V, S",
+    "duration": "Istantanea",
+    "damage_dice": "1d8",
+    "damage_type": "cold",
+    "aliases": ["raggio di gelo"]
+  },
+  "sacred flame": {
+    "level": 0,
+    "casting_time": "1 azione",
+    "range_area": "18 m",
+    "components": "V, S",
+    "duration": "Istantanea",
+    "damage_dice": "1d8",
+    "damage_type": "radiant",
+    "aliases": ["fiamma sacra"]
+  },
+  "guidance": {
+    "level": 0,
+    "casting_time": "1 azione",
+    "range_area": "Contatto",
+    "components": "V, S",
+    "duration": "Concentrazione, fino a 1 minuto",
+    "is_concentration": true,
+    "aliases": ["guida"]
+  },
+  "light": {
+    "level": 0,
+    "casting_time": "1 azione",
+    "range_area": "Contatto",
+    "components": "V, M",
+    "duration": "1 ora",
+    "aliases": ["luce"]
+  },
+  "mage hand": {
+    "level": 0,
+    "casting_time": "1 azione",
+    "range_area": "9 m",
+    "components": "V, S",
+    "duration": "1 minuto",
+    "aliases": ["mano magica"]
+  },
+  "minor illusion": {
+    "level": 0,
+    "casting_time": "1 azione",
+    "range_area": "9 m",
+    "components": "S, M",
+    "duration": "1 minuto",
+    "aliases": ["illusione minore"]
+  },
+  "prestidigitation": {
+    "level": 0,
+    "casting_time": "1 azione",
+    "range_area": "3 m",
+    "components": "V, S",
+    "duration": "Fino a 1 ora",
+    "aliases": ["prestidigitazione"]
+  },
+  "bless": {
+    "level": 1,
+    "casting_time": "1 azione",
+    "range_area": "9 m",
+    "components": "V, S, M",
+    "duration": "Concentrazione, fino a 1 minuto",
+    "is_concentration": true,
+    "aliases": ["benedizione"]
+  },
+  "cure wounds": {
+    "level": 1,
+    "casting_time": "1 azione",
+    "range_area": "Contatto",
+    "components": "V, S",
+    "duration": "Istantanea",
+    "damage_dice": "1d8",
+    "aliases": ["cura ferite"]
+  },
+  "healing word": {
+    "level": 1,
+    "casting_time": "1 azione bonus",
+    "range_area": "18 m",
+    "components": "V",
+    "duration": "Istantanea",
+    "damage_dice": "1d4",
+    "aliases": ["parola curativa"]
+  },
+  "shield": {
+    "level": 1,
+    "casting_time": "1 reazione",
+    "range_area": "Personale",
+    "components": "V, S",
+    "duration": "1 round",
+    "aliases": ["scudo"]
+  },
+  "mage armor": {
+    "level": 1,
+    "casting_time": "1 azione",
+    "range_area": "Contatto",
+    "components": "V, S, M",
+    "duration": "8 ore",
+    "aliases": ["armatura magica"]
+  },
+  "magic missile": {
+    "level": 1,
+    "casting_time": "1 azione",
+    "range_area": "36 m",
+    "components": "V, S",
+    "duration": "Istantanea",
+    "damage_dice": "1d4+1",
+    "damage_type": "force",
+    "aliases": ["dardo incantato", "missile magico"]
+  },
+  "burning hands": {
+    "level": 1,
+    "casting_time": "1 azione",
+    "range_area": "Cono 4,5 m",
+    "components": "V, S",
+    "duration": "Istantanea",
+    "damage_dice": "3d6",
+    "damage_type": "fire",
+    "aliases": ["mani brucianti"]
+  },
+  "thunderwave": {
+    "level": 1,
+    "casting_time": "1 azione",
+    "range_area": "Cubo 4,5 m",
+    "components": "V, S",
+    "duration": "Istantanea",
+    "damage_dice": "2d8",
+    "damage_type": "thunder",
+    "aliases": ["onda tonante"]
+  },
+  "detect magic": {
+    "level": 1,
+    "casting_time": "1 azione",
+    "range_area": "Personale",
+    "components": "V, S",
+    "duration": "Concentrazione, fino a 10 minuti",
+    "is_concentration": true,
+    "is_ritual": true,
+    "aliases": ["individuazione del magico"]
+  },
+  "misty step": {
+    "level": 2,
+    "casting_time": "1 azione bonus",
+    "range_area": "Personale",
+    "components": "V",
+    "duration": "Istantanea",
+    "aliases": ["passo velato"]
+  },
+  "scorching ray": {
+    "level": 2,
+    "casting_time": "1 azione",
+    "range_area": "36 m",
+    "components": "V, S",
+    "duration": "Istantanea",
+    "damage_dice": "2d6",
+    "damage_type": "fire",
+    "aliases": ["raggio rovente"]
+  },
+  "hold person": {
+    "level": 2,
+    "casting_time": "1 azione",
+    "range_area": "18 m",
+    "components": "V, S, M",
+    "duration": "Concentrazione, fino a 1 minuto",
+    "is_concentration": true,
+    "aliases": ["bloccare persone"]
+  },
+  "spiritual weapon": {
+    "level": 2,
+    "casting_time": "1 azione bonus",
+    "range_area": "18 m",
+    "components": "V, S",
+    "duration": "1 minuto",
+    "damage_dice": "1d8",
+    "damage_type": "force",
+    "aliases": ["arma spirituale"]
+  },
+  "fireball": {
+    "level": 3,
+    "casting_time": "1 azione",
+    "range_area": "45 m, sfera 6 m",
+    "components": "V, S, M",
+    "duration": "Istantanea",
+    "damage_dice": "8d6",
+    "damage_type": "fire",
+    "aliases": ["palla di fuoco"]
+  },
+  "lightning bolt": {
+    "level": 3,
+    "casting_time": "1 azione",
+    "range_area": "Linea 30 m",
+    "components": "V, S, M",
+    "duration": "Istantanea",
+    "damage_dice": "8d6",
+    "damage_type": "lightning",
+    "aliases": ["fulmine"]
+  },
+  "counterspell": {
+    "level": 3,
+    "casting_time": "1 reazione",
+    "range_area": "18 m",
+    "components": "S",
+    "duration": "Istantanea",
+    "aliases": ["controincantesimo"]
+  },
+  "haste": {
+    "level": 3,
+    "casting_time": "1 azione",
+    "range_area": "9 m",
+    "components": "V, S, M",
+    "duration": "Concentrazione, fino a 1 minuto",
+    "is_concentration": true,
+    "aliases": ["velocità"]
+  }
+}

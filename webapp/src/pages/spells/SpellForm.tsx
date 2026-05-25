@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Sparkles } from 'lucide-react'
 import Sheet from '@/components/ui/Sheet'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
+import { lookupSrdSpell } from '@/lib/spellSrd'
 import type { Spell } from '@/types'
 
 export type SpellFormData = {
@@ -61,6 +63,26 @@ export default function SpellForm({ initialData, onSubmit, onCancel, isPending }
     onSubmit(form)
   }
 
+  // SRD auto-fill: when the user types a recognized spell name, propose to fill
+  // empty optional fields (range, components, duration, damage). We never overwrite
+  // a non-empty field the user has already touched.
+  const srdMatch = !isEditing ? lookupSrdSpell(form.name) : null
+  const applySrd = () => {
+    if (!srdMatch) return
+    setForm((f) => ({
+      ...f,
+      level: f.level === '0' && srdMatch.level !== 0 ? String(srdMatch.level) : f.level,
+      casting_time: f.casting_time.trim() || srdMatch.casting_time || '',
+      range_area: f.range_area.trim() || srdMatch.range_area || '',
+      components: f.components.trim() || srdMatch.components || '',
+      duration: f.duration.trim() || srdMatch.duration || '',
+      damage_dice: f.damage_dice.trim() || srdMatch.damage_dice || '',
+      damage_type: f.damage_type.trim() || srdMatch.damage_type || '',
+      is_concentration: f.is_concentration || !!srdMatch.is_concentration,
+      is_ritual: f.is_ritual || !!srdMatch.is_ritual,
+    }))
+  }
+
   return (
     <Sheet
       open
@@ -74,6 +96,21 @@ export default function SpellForm({ initialData, onSubmit, onCancel, isPending }
           onChange={(v) => setForm((f) => ({ ...f, name: v }))}
           placeholder={t('character.spells.name')}
         />
+
+        {srdMatch && (
+          <button
+            type="button"
+            onClick={applySrd}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-xl bg-dnd-arcane/15 border border-dnd-arcane/40 text-dnd-arcane-text text-xs font-body text-left hover:bg-dnd-arcane/25 transition-colors"
+          >
+            <Sparkles size={14} className="text-dnd-arcane-bright shrink-0" />
+            <span className="flex-1">
+              {t('character.spells.srd_autofill', {
+                defaultValue: 'Compila da SRD: livello, gittata, durata, componenti, danno (campi vuoti).',
+              })}
+            </span>
+          </button>
+        )}
 
         <div className="flex gap-2">
           <div className="flex-1">

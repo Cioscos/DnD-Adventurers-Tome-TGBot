@@ -243,21 +243,24 @@ export default function Skills() {
 
   return (
     <Layout title={t('character.skills.title')} backTo={`/char/${charId}`} group="skills" page="skills">
-      <Surface variant="elevated" className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <p className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-gold-dim">
-            {t('character.skills.prof_bonus')}
-          </p>
-          <StatPill tone="gold" size="sm" value={`+${pb}`} />
-        </div>
-        <div className="flex items-center gap-2">
-          <Eye size={14} className="text-dnd-arcane-bright" />
-          <p className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-gold-dim">
-            {t('character.skills.passive_perception')}
-          </p>
-          <StatPill tone="arcane" size="sm" value={passivePerception} />
-        </div>
-      </Surface>
+      {/* Sticky stats strip — prof bonus + passive perception stay visible on long scroll. */}
+      <div className="sticky top-0 z-10 -mx-4 px-4 pt-2 pb-2 bg-dnd-bg/95 backdrop-blur-sm">
+        <Surface variant="elevated" className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <p className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-gold-dim">
+              {t('character.skills.prof_bonus')}
+            </p>
+            <StatPill tone="gold" size="sm" value={`+${pb}`} />
+          </div>
+          <div className="flex items-center gap-2">
+            <Eye size={14} className="text-dnd-arcane-bright" />
+            <p className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-gold-dim">
+              {t('character.skills.passive_perception')}
+            </p>
+            <StatPill tone="arcane" size="sm" value={passivePerception} />
+          </div>
+        </Surface>
+      </div>
 
       <ScrollArea>
         <div className="space-y-4">

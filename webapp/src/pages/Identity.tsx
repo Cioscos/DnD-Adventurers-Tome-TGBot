@@ -15,6 +15,7 @@ import Button from '@/components/ui/Button'
 import ChipInput from '@/components/ui/ChipInput'
 import SectionDivider from '@/components/ui/SectionDivider'
 import { haptic } from '@/auth/telegram'
+import { useUnitSettings, formatLength } from '@/store/unitSettings'
 
 type DamageModifiers = {
   resistances: string[]
@@ -49,6 +50,7 @@ export default function Identity() {
   const qc = useQueryClient()
   const [draft, setDraft] = useState<Draft | null>(null)
   const [pristine, setPristine] = useState<string>('')
+  const unitSystem = useUnitSettings((s) => s.system)
 
   const { data: char } = useQuery({
     queryKey: ['character', charId],
@@ -191,7 +193,23 @@ export default function Identity() {
           <Input label={t('character.identity.alignment')} value={draft.alignment} onChange={set('alignment')} placeholder={t('character.identity.placeholder_alignment')} />
         </Surface>
         <Surface variant="elevated" className="!p-3">
-          <Input label={t('character.identity.speed')} type="number" min={0} value={draft.speed} onChange={set('speed')} inputMode="numeric" />
+          <Input
+            label={
+              unitSystem === 'metric'
+                ? t('character.identity.speed_metric', { defaultValue: 'Velocità (piedi)' })
+                : t('character.identity.speed')
+            }
+            type="number"
+            min={0}
+            value={draft.speed}
+            onChange={set('speed')}
+            inputMode="numeric"
+          />
+          {Number(draft.speed) > 0 && (
+            <p className="mt-1 text-[10px] font-mono text-dnd-text-faint tabular-nums">
+              ≈ {formatLength(Number(draft.speed) || 0, unitSystem)}
+            </p>
+          )}
         </Surface>
       </div>
 

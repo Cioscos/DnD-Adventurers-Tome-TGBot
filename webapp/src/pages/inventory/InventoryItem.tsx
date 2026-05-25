@@ -115,7 +115,7 @@ function WeaponPropertyTags({ item }: { item: Item }) {
       {props.map((p, i) => (
         <span
           key={i}
-          className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-dnd-arcane/15 text-dnd-arcane-text border border-dnd-arcane/25"
+          className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-dnd-chip-bg text-dnd-text-muted select-none pointer-events-none"
         >
           {t(`character.inventory.weapon_properties.${p}`, { defaultValue: String(p) })}
         </span>

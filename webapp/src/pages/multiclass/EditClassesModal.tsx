@@ -9,6 +9,7 @@ import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
 import { haptic } from '@/auth/telegram'
 import { PREDEFINED_CLASSES, CUSTOM_KEY } from '@/pages/multiclass/AddClassForm'
+import { diffResourceMaxes } from '@/lib/resourceDiff'
 import type { CharacterFull } from '@/types'
 
 type ExistingEntry = {
@@ -155,6 +156,20 @@ export default function EditClassesModal({ char, targetLevel, onClose }: Props) 
     },
     onSuccess: (updated) => {
       qc.setQueryData(['character', char.id], updated)
+      // Surface scaled class resources (Lay on Hands pool, Bardic Inspiration, ...)
+      // so the player notices the new ceiling instead of having to dig.
+      const diffs = diffResourceMaxes(char.classes ?? [], updated.classes ?? [])
+      for (const d of diffs) {
+        toast.success(
+          t('character.multiclass.resource_max_increased', {
+            name: d.name,
+            prev: d.prev,
+            next: d.next,
+            defaultValue: '{{name}}: massimo {{prev}} → {{next}}',
+          }),
+          { duration: 3500, icon: '⚡' },
+        )
+      }
       haptic.success()
       onClose()
     },
@@ -204,6 +219,19 @@ export default function EditClassesModal({ char, targetLevel, onClose }: Props) 
             <p className="font-display font-black text-3xl">
               {t('character.multiclass.edit.sum_display', { current: currentSum, target: targetLevel })}
             </p>
+            {!isValid && entries.length > 0 && (
+              <p className="mt-1.5 text-[11px] font-body italic opacity-90">
+                {currentSum < targetLevel
+                  ? t('character.multiclass.edit.helper_too_low', {
+                      n: targetLevel - currentSum,
+                      defaultValue: 'Aggiungi {{n}} livello/i — aumenta una classe o aggiungine una nuova.',
+                    })
+                  : t('character.multiclass.edit.helper_too_high', {
+                      n: currentSum - targetLevel,
+                      defaultValue: 'Riduci {{n}} livello/i — abbassa una classe per riequilibrare.',
+                    })}
+              </p>
+            )}
           </div>
 
           {/* Entries + add class (grouped section) */}

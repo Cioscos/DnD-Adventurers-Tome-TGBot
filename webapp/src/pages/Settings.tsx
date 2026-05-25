@@ -20,6 +20,7 @@ import { haptic } from '@/auth/telegram'
 import { useCharacterStore } from '@/store/characterStore'
 import { useDiceSettings } from '@/store/diceSettings'
 import { useThemeSettings, type ThemeMode } from '@/store/themeSettings'
+import { useUnitSettings, type UnitSystem } from '@/store/unitSettings'
 import { BUNDLED_PACKS, type PackId } from '@/dice/packs/registry'
 import { loadManifest } from '@/dice/packs/loader'
 import { useDicePack } from '@/dice/packs/DicePackProvider'
@@ -40,6 +41,8 @@ export default function Settings() {
   const setPackId = useDiceSettings((s) => s.setPackId)
   const themeMode = useThemeSettings((s) => s.mode)
   const setThemeMode = useThemeSettings((s) => s.setMode)
+  const unitSystem = useUnitSettings((s) => s.system)
+  const setUnitSystem = useUnitSettings((s) => s.setSystem)
   const { loading: packLoading, error: packError } = useDicePack()
 
   const { data: char } = useQuery({
@@ -212,6 +215,46 @@ export default function Settings() {
           checked={animate3d}
           onChange={setAnimate3d}
         />
+      </Surface>
+
+      {/* Measurement unit system — affects length displays (speed, ranges). */}
+      <Surface variant="elevated">
+        <div className="flex items-start gap-3 mb-3">
+          <Settings2 size={16} className="text-dnd-gold-bright shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="font-display font-bold text-dnd-gold-bright">
+              {t('character.settings.unit_system', { defaultValue: 'Sistema di misura' })}
+            </p>
+            <p className="text-xs text-dnd-text-muted mt-0.5 font-body italic">
+              {t('character.settings.unit_system_hint', {
+                defaultValue: 'Mostra le distanze in piedi o metri (5 ft = 1,5 m).',
+              })}
+            </p>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          {(['imperial', 'metric'] as const satisfies readonly UnitSystem[]).map((mode) => (
+            <m.button
+              key={mode}
+              type="button"
+              aria-pressed={unitSystem === mode}
+              onClick={() => {
+                setUnitSystem(mode)
+                haptic.light()
+              }}
+              className={`min-h-[44px] rounded-xl font-cinzel text-xs uppercase tracking-widest transition-colors
+                ${unitSystem === mode
+                  ? 'bg-gradient-gold text-dnd-ink shadow-engrave'
+                  : 'bg-dnd-surface border border-dnd-border text-dnd-text-muted'}`}
+              whileTap={{ scale: 0.96 }}
+              transition={spring.press}
+            >
+              {mode === 'imperial'
+                ? t('character.settings.unit_imperial', { defaultValue: 'Piedi (ft)' })
+                : t('character.settings.unit_metric', { defaultValue: 'Metri (m)' })}
+            </m.button>
+          ))}
+        </div>
       </Surface>
 
       <Surface variant="elevated" className={animate3d ? '' : 'opacity-50 pointer-events-none'}>
