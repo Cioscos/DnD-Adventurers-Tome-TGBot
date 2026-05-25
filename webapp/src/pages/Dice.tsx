@@ -44,6 +44,11 @@ function formatRollList(rolls: number[]): string {
   return `[${visible} +… (+${remaining}, min ${min} · max ${max})]`
 }
 
+type StatRollExtras = {
+  rolls: number[]
+  dropped: number
+}
+
 export default function Dice() {
   const { id } = useParams<{ id: string }>()
   const charId = Number(id)
@@ -51,6 +56,7 @@ export default function Dice() {
   const qc = useQueryClient()
   const [count, setCount] = useState(1)
   const [lastResult, setLastResult] = useState<DiceRollResult | null>(null)
+  const [statRollExtras, setStatRollExtras] = useState<StatRollExtras | null>(null)
   const [initiativeResult, setInitiativeResult] = useState<InitiativeResult | null>(null)
   const [showClearConfirm, setShowClearConfirm] = useState(false)
   const [initiativeRolling, setInitiativeRolling] = useState(false)
@@ -78,7 +84,44 @@ export default function Dice() {
       if (groups.length > 0) {
         const g = groups[0]
         setLastResult({ notation: g.notation, rolls: g.rolls, total: g.total, modifier: 0 })
+        setStatRollExtras(null)
       }
+      setInitiativeResult(null)
+      haptic.medium()
+    } catch {
+      haptic.error()
+    }
+  }
+
+  const handlePresetMulti = async (dieCount: number) => {
+    setCount(dieCount)
+    try {
+      const groups = await roll([{ kind: 'd6', count: dieCount }])
+      if (groups.length > 0) {
+        const g = groups[0]
+        setLastResult({ notation: g.notation, rolls: g.rolls, total: g.total, modifier: 0 })
+        setStatRollExtras(null)
+      }
+      setInitiativeResult(null)
+      haptic.medium()
+    } catch {
+      haptic.error()
+    }
+  }
+
+  // 4d6 drop-lowest stat-roll. Persists the underlying 4d6 in history; the
+  // drop is reflected only in the immediate UI total so the user sees stat-roll math.
+  const handleStatRoll = async () => {
+    setCount(4)
+    try {
+      const groups = await roll([{ kind: 'd6', count: 4 }])
+      if (groups.length === 0) return
+      const all = groups[0].rolls
+      const sorted = [...all].sort((a, b) => a - b)
+      const dropped = sorted[0]
+      const keptTotal = sorted.slice(1).reduce((s, v) => s + v, 0)
+      setLastResult({ notation: '4d6kh3', rolls: all, total: keptTotal, modifier: 0 })
+      setStatRollExtras({ rolls: all, dropped })
       setInitiativeResult(null)
       haptic.medium()
     } catch {
@@ -131,6 +174,35 @@ export default function Dice() {
       >
         {t('character.dice.initiative')} (d20 {modLabel})
       </Button>
+
+      {/* Common roll presets */}
+      <div className="grid grid-cols-3 gap-2">
+        <m.button
+          onClick={() => handlePresetMulti(2)}
+          disabled={rollPending || initiativeRolling}
+          className="min-h-[44px] rounded-xl bg-dnd-chip-bg border border-dnd-gold-dim/40 text-dnd-gold-bright font-cinzel text-xs uppercase tracking-widest disabled:opacity-40"
+          whileTap={{ scale: 0.93 }}
+        >
+          2d6
+        </m.button>
+        <m.button
+          onClick={() => handlePresetMulti(3)}
+          disabled={rollPending || initiativeRolling}
+          className="min-h-[44px] rounded-xl bg-dnd-chip-bg border border-dnd-gold-dim/40 text-dnd-gold-bright font-cinzel text-xs uppercase tracking-widest disabled:opacity-40"
+          whileTap={{ scale: 0.93 }}
+        >
+          3d6
+        </m.button>
+        <m.button
+          onClick={handleStatRoll}
+          disabled={rollPending || initiativeRolling}
+          className="min-h-[44px] rounded-xl bg-dnd-chip-bg border border-dnd-arcane/40 text-dnd-arcane-bright font-cinzel text-xs uppercase tracking-widest disabled:opacity-40"
+          whileTap={{ scale: 0.93 }}
+          title={t('character.dice.stat_roll_hint', { defaultValue: '4d6 scarta più basso (tiro caratteristica)' })}
+        >
+          4d6kh3
+        </m.button>
+      </div>
 
       {/* Dice count stepper */}
       <Surface variant="elevated">
@@ -245,11 +317,34 @@ export default function Dice() {
               >
                 {lastResult.total}
               </m.p>
-              {lastResult.rolls.length > 1 && (
+              {lastResult.rolls.length > 1 && !statRollExtras && (
                 <p className="text-xs text-dnd-text-muted font-mono mt-1 break-words px-2">
                   {formatRollList(lastResult.rolls)}
                 </p>
               )}
+              {statRollExtras && (() => {
+                // Render each die value; strike-through the one we dropped (first match only).
+                let strikeDone = false
+                return (
+                  <p className="text-xs text-dnd-text-muted font-mono mt-1 break-words px-2">
+                    [
+                    {statRollExtras.rolls.map((v, i) => {
+                      const shouldStrike = !strikeDone && v === statRollExtras.dropped
+                      if (shouldStrike) strikeDone = true
+                      return (
+                        <span key={i}>
+                          {i > 0 && ' + '}
+                          <span className={shouldStrike ? 'line-through text-dnd-text-faint' : ''}>{v}</span>
+                        </span>
+                      )
+                    })}
+                    {'] '}
+                    <span className="text-[10px] uppercase tracking-widest text-dnd-text-faint">
+                      {t('character.dice.dropped', { defaultValue: 'scarta' })} {statRollExtras.dropped}
+                    </span>
+                  </p>
+                )
+              })()}
               {isInsideTelegram() && (
                 <Button
                   variant="secondary"

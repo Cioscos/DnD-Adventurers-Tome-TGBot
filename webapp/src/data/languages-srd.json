@@ -1,0 +1,22 @@
+{
+  "common": [
+    "Comune",
+    "Nanico",
+    "Elfico",
+    "Gigante",
+    "Gnomesco",
+    "Goblin",
+    "Halfling",
+    "Orchesco"
+  ],
+  "exotic": [
+    "Abissale",
+    "Celestiale",
+    "Draconico",
+    "Infernale",
+    "Primordiale",
+    "Profondo",
+    "Silvano",
+    "Sottocomune"
+  ]
+}

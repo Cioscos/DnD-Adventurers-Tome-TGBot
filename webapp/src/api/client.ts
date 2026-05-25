@@ -156,6 +156,44 @@ async function requestFormData<T>(
   return res.json() as Promise<T>
 }
 
+// XHR-based upload — exposes upload.onprogress for percent UI. Fetch + ReadableStream
+// can't observe outbound progress in browsers, so we keep XMLHttpRequest here.
+function requestFormDataWithProgress<T>(
+  path: string,
+  formData: FormData,
+  onProgress: (pct: number) => void,
+): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const initData = getInitData()
+    const xhr = new XMLHttpRequest()
+    xhr.open('POST', `${BASE_URL}${path}`)
+    xhr.setRequestHeader('X-Telegram-Init-Data', initData)
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100))
+    }
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          resolve(JSON.parse(xhr.responseText) as T)
+        } catch {
+          reject(new ApiError(xhr.status, 'Invalid JSON response'))
+        }
+      } else {
+        let detail = xhr.statusText
+        try {
+          detail = (JSON.parse(xhr.responseText) as { detail?: string }).detail ?? detail
+        } catch {
+          /* keep statusText */
+        }
+        reject(new ApiError(xhr.status, detail))
+      }
+    }
+    xhr.onerror = () => reject(new ApiError(0, 'Network error'))
+    xhr.onabort = () => reject(new ApiError(0, 'Upload aborted'))
+    xhr.send(formData)
+  })
+}
+
 // ---------------------------------------------------------------------------
 // Characters
 // ---------------------------------------------------------------------------
@@ -492,6 +530,21 @@ export const api = {
       fd.append('zone_name', zoneName)
       fd.append('file', file)
       return requestFormData<MapEntry>(`/characters/${charId}/maps/upload`, fd)
+    },
+    uploadWithProgress: (
+      charId: number,
+      zoneName: string,
+      file: File,
+      onProgress: (pct: number) => void,
+    ) => {
+      const fd = new FormData()
+      fd.append('zone_name', zoneName)
+      fd.append('file', file)
+      return requestFormDataWithProgress<MapEntry>(
+        `/characters/${charId}/maps/upload`,
+        fd,
+        onProgress,
+      )
     },
     reorder: (charId: number, zoneName: string, order: number[]) =>
       request<CharacterFull>(`/characters/${charId}/maps/reorder`, {

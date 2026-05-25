@@ -16,6 +16,9 @@ import ChipInput from '@/components/ui/ChipInput'
 import SectionDivider from '@/components/ui/SectionDivider'
 import { haptic } from '@/auth/telegram'
 import { useUnitSettings, formatLength } from '@/store/unitSettings'
+import languagesSrd from '@/data/languages-srd.json'
+
+const LANGUAGE_SUGGESTIONS = [...languagesSrd.common, ...languagesSrd.exotic]
 
 type DamageModifiers = {
   resistances: string[]
@@ -274,6 +277,7 @@ export default function Identity() {
           onChange={(next) => setDraft((d) => d ? { ...d, languages: next } : d)}
           placeholder="Comune, Elfico..."
           splitOnComma
+          suggestions={LANGUAGE_SUGGESTIONS}
         />
       </Surface>
       <Surface variant="elevated">

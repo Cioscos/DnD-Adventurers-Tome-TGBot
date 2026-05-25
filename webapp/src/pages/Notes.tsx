@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
-import { Plus, Mic } from 'lucide-react'
+import { Plus, Mic, MicOff } from 'lucide-react'
 import { GiQuillInk as NotebookPen } from 'react-icons/gi'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
@@ -17,6 +17,10 @@ import VoiceRecorder from '@/pages/notes/VoiceRecorder'
 import NoteEditor from '@/pages/notes/NoteEditor'
 import NoteItem from '@/pages/notes/NoteItem'
 
+// "denied" → mic API exists but user/browser blocked. "missing" → no MediaRecorder
+// support at all (e.g. plain http on iOS). "ready" → we can attempt recording.
+type MicStatus = 'unknown' | 'ready' | 'denied' | 'missing'
+
 type Mode = 'list' | 'add' | 'edit' | 'record'
 
 export default function Notes() {
@@ -29,6 +33,30 @@ export default function Notes() {
   const [editNote, setEditNote] = useState<{ title: string; body: string } | null>(null)
   const [originalTitle, setOriginalTitle] = useState('')
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
+  const [micStatus, setMicStatus] = useState<MicStatus>('unknown')
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const hasApi = !!navigator.mediaDevices?.getUserMedia && typeof MediaRecorder !== 'undefined'
+    if (!hasApi) {
+      setMicStatus('missing')
+      return
+    }
+    // Probe permission non-invasively when supported. Falls back to 'ready' if
+    // the Permissions API doesn't know about microphone (Safari, in-app browsers).
+    const perms = navigator.permissions as Permissions | undefined
+    if (perms?.query) {
+      perms.query({ name: 'microphone' as PermissionName }).then(
+        (res) => {
+          setMicStatus(res.state === 'denied' ? 'denied' : 'ready')
+          res.onchange = () => setMicStatus(res.state === 'denied' ? 'denied' : 'ready')
+        },
+        () => setMicStatus('ready'),
+      )
+    } else {
+      setMicStatus('ready')
+    }
+  }, [])
 
   const { data: notes = [] } = useQuery({
     queryKey: ['notes', charId],
@@ -150,9 +178,17 @@ export default function Notes() {
           variant="secondary"
           size="md"
           onClick={() => setMode('record')}
-          icon={<Mic size={16} />}
+          disabled={micStatus === 'denied' || micStatus === 'missing'}
+          icon={micStatus === 'denied' || micStatus === 'missing' ? <MicOff size={16} /> : <Mic size={16} />}
           haptic="medium"
           aria-label={t('character.notes.record_voice')}
+          title={
+            micStatus === 'missing'
+              ? t('character.notes.mic_missing', { defaultValue: 'Microfono non disponibile su questo browser' })
+              : micStatus === 'denied'
+                ? t('character.notes.mic_denied_tooltip', { defaultValue: 'Permesso microfono negato. Abilitalo nelle impostazioni del browser.' })
+                : t('character.notes.record_voice')
+          }
         />
       </div>
 

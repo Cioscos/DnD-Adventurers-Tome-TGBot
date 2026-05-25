@@ -217,6 +217,7 @@
       "cast_slot_title": "Scegli slot",
       "pin": "Fissa",
       "edit": "Modifica",
+      "more_actions": "Altre azioni",
       "name": "Nome",
       "description": "Descrizione",
       "casting_time": "Tempo lancio",
@@ -293,7 +294,9 @@
       "count": "Numero di dadi",
       "show_all_rolls": "Mostra tutti i tiri",
       "all_rolls_title": "Tutti i tiri",
-      "filter_by_die": "Filtra per dado"
+      "filter_by_die": "Filtra per dado",
+      "stat_roll_hint": "4d6 scarta più basso (tiro caratteristica)",
+      "dropped": "scarta"
     },
     "dice_overlay": {
       "open": "Apri lanciatore dadi",
@@ -332,6 +335,7 @@
       "reset_all_confirm": "Azzerare tutte le condizioni e l'affaticamento?",
       "empty_hint": "Tocca una condizione per attivarla.",
       "detail_aria": "Mostra dettagli condizione",
+      "quickbar_label": "Rapide",
       "desc": {
         "blinded": "Un personaggio accecato non può vedere e fallisce automaticamente ogni prova di caratteristica che richiede la vista. I tiri per colpire contro di lui hanno vantaggio, i suoi hanno svantaggio.",
         "charmed": "Un personaggio affascinato non può attaccare chi lo affascina né prenderlo come bersaglio di capacità dannose o effetti magici. Chi lo affascina ha vantaggio nelle prove di caratteristica sociali.",
@@ -471,6 +475,8 @@
       "recording": "Registrazione in corso...",
       "discard_recording": "Scarta e riregistra",
       "mic_denied": "Permesso microfono negato. Abilita l'accesso al microfono.",
+      "mic_denied_tooltip": "Permesso microfono negato. Abilitalo nelle impostazioni del browser.",
+      "mic_missing": "Microfono non disponibile su questo browser",
       "delete_confirm": "Eliminare \"{{title}}\"?",
       "empty_hint": "Annota indizi, NPC e idee per la prossima sessione.",
       "search_placeholder": "Cerca note…",
@@ -495,7 +501,11 @@
       "empty_hint": "Carica una mappa o un PDF della tua avventura — sarà sempre a portata di mano.",
       "zoom_hint": "Pizzica per zoomare",
       "reorder_hint": "Trascina per riordinare",
-      "error_too_large": "{{name}} supera il limite di 10 MB"
+      "error_too_large": "{{name}} supera il limite di 10 MB",
+      "dropzone_primary": "Trascina i file qui o tocca per selezionarli",
+      "dropzone_accept": "PNG, JPG, PDF · max 10 MB",
+      "uploaded": "Caricato",
+      "upload_progress_count": "{{current}}/{{total}} · {{pct}}%"
     },
     "history": {
       "title": "Cronologia",

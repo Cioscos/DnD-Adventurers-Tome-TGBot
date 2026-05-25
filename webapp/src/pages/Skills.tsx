@@ -85,10 +85,20 @@ function SkillRow({
   onRoll,
   rollAriaLabel,
 }: SkillRowProps) {
-  const longPress = useLongPress({ thresholdMs: 500, onClick: onTap, onLongPress })
+  const [pressProgress, setPressProgress] = useState(0)
+  const longPress = useLongPress({
+    thresholdMs: 500,
+    onClick: onTap,
+    onLongPress,
+    onProgress: setPressProgress,
+  })
   const isExpert = level === 'expert'
   const isProficient = level === true
   const hasMark = isExpert || isProficient
+
+  // Circumference of an r=20 circle (the ring radius below).
+  const RING_CIRC = 2 * Math.PI * 20
+  const ringActive = pressProgress > 0 && pressProgress < 1
 
   return (
     <m.div
@@ -107,7 +117,28 @@ function SkillRow({
         {...longPress}
         className="flex items-center gap-2 flex-1 min-w-0 select-none cursor-pointer"
       >
-        <div className="w-11 h-11 rounded-full flex items-center justify-center shrink-0">
+        <div className="relative w-11 h-11 rounded-full flex items-center justify-center shrink-0">
+          {/* Halo-as-Signal progress ring during long-press hold */}
+          {ringActive && (
+            <svg
+              className="absolute inset-0 w-11 h-11 pointer-events-none"
+              viewBox="0 0 44 44"
+              aria-hidden="true"
+            >
+              <circle
+                cx="22"
+                cy="22"
+                r="20"
+                fill="none"
+                stroke="var(--dnd-gold-bright)"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeDasharray={`${pressProgress * RING_CIRC} ${RING_CIRC}`}
+                transform="rotate(-90 22 22)"
+                style={{ filter: 'drop-shadow(0 0 3px var(--dnd-gold-glow))' }}
+              />
+            </svg>
+          )}
           {isExpert ? (
             <div className="relative w-5 h-5 rounded-full bg-gradient-to-br from-dnd-arcane-bright to-dnd-gold-bright border-2 border-dnd-gold-bright flex items-center justify-center shadow-[0_0_6px_var(--dnd-gold-glow)]">
               <Star size={10} className="text-dnd-ink" fill="currentColor" strokeWidth={1} />
