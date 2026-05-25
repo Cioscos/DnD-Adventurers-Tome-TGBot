@@ -3,12 +3,10 @@ import { useTranslation } from 'react-i18next'
 import { ChevronsUp } from 'lucide-react'
 import { GiPolarStar as Star } from 'react-icons/gi'
 import { XP_THRESHOLDS, levelFromXp } from '@/lib/xpThresholds'
-import { haptic } from '@/auth/telegram'
 
 interface HeroXPBarProps {
   currentXP: number
   totalClassLevel: number
-  onLevelUpReady: () => void
   className?: string
   /**
    * When true, suppresses the level-up halo (shimmer/glow).
@@ -22,7 +20,6 @@ interface HeroXPBarProps {
 export default function HeroXPBar({
   currentXP,
   totalClassLevel,
-  onLevelUpReady,
   className = '',
   suppressHalo = false,
 }: HeroXPBarProps) {
@@ -35,11 +32,6 @@ export default function HeroXPBar({
   const progressPct = nextThreshold
     ? Math.min(100, Math.max(0, Math.round(((currentXP - prevThreshold) / (nextThreshold - prevThreshold)) * 100)))
     : 100
-
-  const handleLevelUp = () => {
-    haptic.medium()
-    onLevelUpReady()
-  }
 
   const rightLabel = levelUpReady ? null : (
     nextThreshold !== null
@@ -58,15 +50,12 @@ export default function HeroXPBar({
           {t('character.xp.bar.level_label', { level: xpLevel })}
         </span>
         {levelUpReady ? (
-          <m.button
-            type="button"
-            onClick={handleLevelUp}
-            whileTap={{ scale: 0.95 }}
+          <span
             className={`inline-flex items-center gap-1 min-h-[44px] px-3 rounded-md text-[10px] font-cinzel font-bold tracking-widest uppercase bg-dnd-gold text-dnd-ink border border-dnd-gold-bright ${suppressHalo ? '' : 'animate-glow-pulse'}`}
           >
             <ChevronsUp size={12} />
             {t('character.xp.bar.level_up')}
-          </m.button>
+          </span>
         ) : (
           <span className="font-mono text-dnd-gold">{rightLabel}</span>
         )}

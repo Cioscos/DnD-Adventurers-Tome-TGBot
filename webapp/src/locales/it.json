@@ -440,6 +440,7 @@
       "level_up_toast": "Sei salito al livello {{level}}!",
       "level_up_cta": "SALI DI LIVELLO",
       "level_up_to": "Porta al livello {{level}}",
+      "level_distributed_hint": "{{distributed}} distribuiti · {{pending}} da assegnare",
       "bar": {
         "level_label": "LIV {{level}}",
         "progress": "{{current}} / {{threshold}}",

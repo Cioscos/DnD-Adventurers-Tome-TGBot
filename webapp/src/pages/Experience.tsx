@@ -117,6 +117,15 @@ export default function Experience() {
           {level}
         </m.p>
 
+        {levelUpAvailable && (
+          <p className="mt-2 text-[10px] font-mono text-dnd-text-muted tabular-nums">
+            {t('character.xp.level_distributed_hint', {
+              distributed: totalClassLevel,
+              pending: level - totalClassLevel,
+            })}
+          </p>
+        )}
+
         <div className="flex items-center justify-center gap-2 mt-3">
           <Star size={14} className="text-[var(--dnd-amber)]" />
           <p className="text-2xl font-display font-bold text-dnd-text font-mono tabular-nums">{xp.toLocaleString()}</p>

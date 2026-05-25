@@ -138,7 +138,6 @@ export default function HeroScreen({ char }: Props) {
               <HeroXPBar
                 currentXP={char.experience_points}
                 totalClassLevel={char.total_level}
-                onLevelUpReady={() => navigate(`/char/${char.id}/xp`)}
                 suppressHalo={hpPct > 0 && hpPct <= 25}
               />
             </m.button>
