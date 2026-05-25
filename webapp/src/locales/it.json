@@ -261,7 +261,8 @@
       "empty_hint": "Tocca + Aggiungi per il tuo primo trucchetto.",
       "concentration_break_warn": "Romperai la concentrazione su {{spell}}.",
       "expand": "Espandi",
-      "collapse": "Comprimi"
+      "collapse": "Comprimi",
+      "srd_autofill": "Compila da SRD: livello, gittata, durata, componenti, danno (solo campi vuoti)."
     },
     "slots": {
       "title": "Slot Incantesimo",
@@ -313,6 +314,7 @@
       "charmed": "Affascinato",
       "deafened": "Assordato",
       "exhaustion_condition": "Spossatezza",
+      "exhaustion_caption": "Livelli (cumulativi)",
       "frightened": "Spaventato",
       "grappled": "Afferrato",
       "incapacitated": "Incapacitato",
@@ -364,6 +366,7 @@
       "background": "Background",
       "alignment": "Allineamento",
       "speed": "Velocità (piedi)",
+      "speed_metric": "Velocità (piedi → metri)",
       "personality": "Tratti caratteriali",
       "ideals": "Ideali",
       "bonds": "Legami",
@@ -449,7 +452,12 @@
       },
       "legend": "Tu sei una leggenda",
       "quick_to_next": "→ Soglia",
-      "quick_half_next": "+½ liv"
+      "quick_half_next": "+½ liv",
+      "encounter_label": "Incontro completato",
+      "encounter_easy": "Facile",
+      "encounter_medium": "Medio",
+      "encounter_hard": "Difficile",
+      "encounter_deadly": "Letale"
     },
     "notes": {
       "title": "Note",
@@ -499,7 +507,9 @@
       "filter_all": "Tutti",
       "export": "Esporta",
       "export_csv": "CSV",
-      "export_json": "JSON"
+      "export_json": "JSON",
+      "search_placeholder": "Cerca nella cronologia…",
+      "no_match": "Nessuna voce corrispondente."
     },
     "inventory": {
       "title": "Inventario",
@@ -662,11 +672,14 @@
         "at_max_toast": "Classe al livello massimo",
         "progression_missing": "Dati progressione non disponibili"
       },
+      "resource_max_increased": "{{name}}: massimo {{prev}} → {{next}}",
       "edit": {
         "title": "Modifica classe",
         "hint": "La somma dei livelli deve essere {{target}}",
         "sum_label": "Somma livelli",
         "sum_display": "{{current}} / {{target}}",
+        "helper_too_low": "Aggiungi {{n}} livello/i — aumenta una classe o aggiungine una nuova.",
+        "helper_too_high": "Riduci {{n}} livello/i — abbassa una classe per riequilibrare.",
         "confirm": "Conferma",
         "cancel": "Annulla",
         "error_server": "Errore nel server, riprova.",
@@ -685,6 +698,10 @@
       "manual_to_auto_warn_title": "Passare a Auto?",
       "manual_to_auto_warn_body": "Gli slot manuali verranno sovrascritti dal calcolo automatico.",
       "preferences": "Preferenze",
+      "unit_system": "Sistema di misura",
+      "unit_system_hint": "Mostra le distanze in piedi o metri (5 ft ≈ 1,5 m).",
+      "unit_imperial": "Piedi (ft)",
+      "unit_metric": "Metri (m)",
       "currency_group": "Monete",
       "currency_show_electrum": "Mostra Electrum",
       "currency_show_electrum_hint": "Mostra le monete d'electrum nella pagina Monete.",

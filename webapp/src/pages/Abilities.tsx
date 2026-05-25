@@ -20,6 +20,30 @@ import type { Ability } from '@/types'
 type AddForm = { name: string; description: string; max_uses: string; is_passive: boolean; restoration_type: string }
 const emptyForm: AddForm = { name: '', description: '', max_uses: '', is_passive: false, restoration_type: 'long_rest' }
 
+// Smart-default lookup: 5e ability names → expected restoration cadence.
+// User can always override via the select; this only sets the initial value
+// so common picks like "Action Surge" don't require an extra tap.
+const SHORT_REST_HINTS = [
+  'action surge', 'second wind', 'ki', 'ki points', 'channel divinity',
+  'wind rush', 'arcane recovery', 'martial arts', 'flurry of blows',
+  'patient defense', 'step of the wind', 'tide of chaos', 'wild shape',
+  'bardic inspiration', 'song of rest', 'fontana di magia',
+  'recupero magico', 'incanalare la divinità', 'azione impetuosa',
+  'secondo fiato', 'punti ki', 'forma selvatica', 'ispirazione bardica',
+] as const
+
+const MANUAL_HINTS = [
+  'lucky', 'fortuna', 'inspiration', 'ispirazione eroica', 'heroic inspiration',
+] as const
+
+function detectRestoration(name: string): string {
+  const lower = name.trim().toLowerCase()
+  if (!lower) return 'long_rest'
+  if (SHORT_REST_HINTS.some((h) => lower.includes(h))) return 'short_rest'
+  if (MANUAL_HINTS.some((h) => lower.includes(h))) return 'manual'
+  return 'long_rest'
+}
+
 function abilityToForm(ab: Ability): AddForm {
   return {
     name: ab.name,
@@ -303,7 +327,20 @@ export default function Abilities() {
           <Input
             label={t('character.abilities.name_label')}
             value={form.name}
-            onChange={(v) => setForm((f) => ({ ...f, name: v }))}
+            onChange={(v) =>
+              setForm((f) => {
+                // Smart-default the restoration only when adding (not editing existing)
+                // and only when the user has not deviated from the current default.
+                if (editingAbility) return { ...f, name: v }
+                const auto = detectRestoration(v)
+                const stillAtPriorAuto = f.restoration_type === detectRestoration(f.name)
+                return {
+                  ...f,
+                  name: v,
+                  restoration_type: stillAtPriorAuto ? auto : f.restoration_type,
+                }
+              })
+            }
             placeholder="Rage, Action Surge, ..."
             autoFocus
           />

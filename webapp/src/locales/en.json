@@ -261,7 +261,8 @@
       "empty_hint": "Tap + Add to learn your first cantrip.",
       "concentration_break_warn": "You'll break concentration on {{spell}}.",
       "expand": "Expand",
-      "collapse": "Collapse"
+      "collapse": "Collapse",
+      "srd_autofill": "Auto-fill from SRD: level, range, duration, components, damage (empty fields only)."
     },
     "slots": {
       "title": "Spell Slots",
@@ -313,6 +314,7 @@
       "charmed": "Charmed",
       "deafened": "Deafened",
       "exhaustion_condition": "Exhaustion",
+      "exhaustion_caption": "Levels (cumulative)",
       "frightened": "Frightened",
       "grappled": "Grappled",
       "incapacitated": "Incapacitated",
@@ -364,6 +366,7 @@
       "background": "Background",
       "alignment": "Alignment",
       "speed": "Speed (feet)",
+      "speed_metric": "Speed (feet → meters)",
       "personality": "Personality traits",
       "ideals": "Ideals",
       "bonds": "Bonds",
@@ -449,7 +452,12 @@
       },
       "legend": "You are a legend",
       "quick_to_next": "→ Next",
-      "quick_half_next": "+½ lvl"
+      "quick_half_next": "+½ lvl",
+      "encounter_label": "Encounter complete",
+      "encounter_easy": "Easy",
+      "encounter_medium": "Medium",
+      "encounter_hard": "Hard",
+      "encounter_deadly": "Deadly"
     },
     "notes": {
       "title": "Notes",
@@ -499,7 +507,9 @@
       "filter_all": "All",
       "export": "Export",
       "export_csv": "CSV",
-      "export_json": "JSON"
+      "export_json": "JSON",
+      "search_placeholder": "Search history…",
+      "no_match": "No matching entries."
     },
     "inventory": {
       "title": "Inventory",
@@ -662,11 +672,14 @@
         "at_max_toast": "Class at max level",
         "progression_missing": "Progression data unavailable"
       },
+      "resource_max_increased": "{{name}}: max {{prev}} → {{next}}",
       "edit": {
         "title": "Edit classes",
         "hint": "Level sum must be {{target}}",
         "sum_label": "Level sum",
         "sum_display": "{{current}} / {{target}}",
+        "helper_too_low": "Add {{n}} level(s) — increase a class or add a new one.",
+        "helper_too_high": "Reduce {{n}} level(s) — lower a class to rebalance.",
         "confirm": "Confirm",
         "cancel": "Cancel",
         "error_server": "Server error, try again.",
@@ -685,6 +698,10 @@
       "manual_to_auto_warn_title": "Switch to Auto?",
       "manual_to_auto_warn_body": "Manual slots will be overwritten by the automatic calculation.",
       "preferences": "Preferences",
+      "unit_system": "Unit system",
+      "unit_system_hint": "Show distances in feet or meters (5 ft ≈ 1.5 m).",
+      "unit_imperial": "Feet (ft)",
+      "unit_metric": "Meters (m)",
       "currency_group": "Currency",
       "currency_show_electrum": "Show Electrum",
       "currency_show_electrum_hint": "Show electrum coins on the Currency page.",

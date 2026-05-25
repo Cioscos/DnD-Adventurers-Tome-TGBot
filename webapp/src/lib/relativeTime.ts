@@ -32,18 +32,35 @@ export interface FormatRelativeOptions {
   now?: Date
 }
 
+/**
+ * Same-day → "Oggi HH:MM"
+ * Yesterday → "Ieri HH:MM"
+ * Same day-of-week within a week → "lunedì HH:MM"
+ * Past week → Intl.RelativeTimeFormat ("3 giorni fa", "2 settimane fa")
+ * Older → absolute date
+ */
 export function formatRelative(iso: string | Date, opts: FormatRelativeOptions): string {
   const date = iso instanceof Date ? iso : new Date(iso)
   const now = opts.now ?? new Date()
   const tag = LOCALE_TAGS[opts.locale] ?? opts.locale
   const time = `${pad(date.getHours())}:${pad(date.getMinutes())}`
-  const a = new Date(date)
-  const b = new Date(now)
 
-  if (isSameDay(a, b)) return `${opts.todayLabel} ${time}`
+  if (isSameDay(new Date(date), new Date(now))) return `${opts.todayLabel} ${time}`
 
   const days = diffInDays(new Date(now), new Date(date))
   if (days === 1) return `${opts.yesterdayLabel} ${time}`
+
+  // Use Intl.RelativeTimeFormat for the 2-30 day window to surface "X giorni fa".
+  if (days >= 2 && days <= 30) {
+    try {
+      const rtf = new Intl.RelativeTimeFormat(tag, { numeric: 'auto' })
+      if (days < 7) return rtf.format(-days, 'day')
+      const weeks = Math.round(days / 7)
+      return rtf.format(-weeks, 'week')
+    } catch {
+      // fall through to absolute date below
+    }
+  }
 
   const sameYear = date.getFullYear() === now.getFullYear()
   const dtfOpts: Intl.DateTimeFormatOptions = sameYear && opts.shortWhenSameYear !== false
@@ -54,6 +71,20 @@ export function formatRelative(iso: string | Date, opts: FormatRelativeOptions):
     return new Intl.DateTimeFormat(tag, dtfOpts).format(date)
   } catch {
     return date.toLocaleString(tag, dtfOpts)
+  }
+}
+
+/** Absolute date formatted for tooltip (e.g. "23/05/2026 14:32"). */
+export function formatAbsolute(iso: string | Date, locale: Locale = 'it'): string {
+  const date = iso instanceof Date ? iso : new Date(iso)
+  const tag = LOCALE_TAGS[locale] ?? locale
+  try {
+    return new Intl.DateTimeFormat(tag, {
+      day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    }).format(date)
+  } catch {
+    return date.toLocaleString(tag)
   }
 }
 

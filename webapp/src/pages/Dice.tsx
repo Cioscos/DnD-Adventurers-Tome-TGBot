@@ -13,7 +13,7 @@ import Sheet from '@/components/ui/Sheet'
 import DiceIcon from '@/components/ui/DiceIcon'
 import { DiceRunicWatermark } from '@/components/ui/Ornament'
 import ScrollArea from '@/components/ScrollArea'
-import { haptic } from '@/auth/telegram'
+import { haptic, isInsideTelegram } from '@/auth/telegram'
 import { spring } from '@/styles/motion'
 import type { DiceRollResult } from '@/types'
 import { useRollAndPersist } from '@/dice/useRollAndPersist'
@@ -171,7 +171,7 @@ export default function Dice() {
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <DiceRunicWatermark size={200} />
         </div>
-        <div className="relative grid grid-cols-4 gap-2">
+        <div className="relative grid grid-cols-3 sm:grid-cols-4 gap-2">
           {DICE.slice(0, 6).map((die) => (
             <m.button
               key={die}
@@ -186,7 +186,7 @@ export default function Dice() {
           <m.button
             onClick={() => handleRoll(100)}
             disabled={rollPending || initiativeRolling}
-            className="col-span-2 rounded-2xl bg-dnd-surface-raised border border-dnd-border hover:border-dnd-gold/60 hover:shadow-halo-gold transition-[box-shadow,border-color] duration-200 flex items-center justify-center gap-2 py-3 disabled:opacity-40 text-dnd-gold-bright"
+            className="col-span-3 sm:col-span-2 rounded-2xl bg-dnd-surface-raised border border-dnd-border hover:border-dnd-gold/60 hover:shadow-halo-gold transition-[box-shadow,border-color] duration-200 flex items-center justify-center gap-2 py-3 disabled:opacity-40 text-dnd-gold-bright"
             whileTap={{ scale: 0.95 }}
           >
             <DiceIcon sides={100} size={34} />
@@ -250,18 +250,21 @@ export default function Dice() {
                   {formatRollList(lastResult.rolls)}
                 </p>
               )}
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => {
-                  haptic.light()
-                  api.dice.postToChat(charId, lastResult).catch(() => {})
-                }}
-                icon={<Send size={14} />}
-                className="mt-3"
-              >
-                {t('character.dice.send_to_bot')}
-              </Button>
+              {isInsideTelegram() && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    haptic.light()
+                    api.dice.postToChat(charId, lastResult).catch(() => {})
+                  }}
+                  icon={<Send size={14} />}
+                  className="mt-3"
+                  title={t('character.dice.send_to_bot')}
+                >
+                  {t('character.dice.send_to_bot')}
+                </Button>
+              )}
             </Surface>
           </m.div>
         )}
