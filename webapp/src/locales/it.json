@@ -725,6 +725,7 @@
     "create": {
       "step_name": "Nuovo personaggio",
       "step_class": "Scegli classe iniziale",
+      "step_class_subtitle": "Per {{name}} · Passo 2/2",
       "skip_class": "Senza classe",
       "custom_class": "Personalizzata",
       "custom_class_name": "Nome classe",
@@ -765,6 +766,7 @@
         "spell_slots": "Slot incantesimi",
         "encumbrance": "Carico"
       },
+      "carry_formula": "Capacità di carico = 15 × Forza ({{str}}) = {{cap}} lb",
       "progression": {
         "title": "Progressione",
         "tap_full_table": "Tocca per tabella completa",

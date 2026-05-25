@@ -31,6 +31,12 @@ const ABILITY_COLORS: Record<string, string> = {
   charisma: 'bg-[rgba(90,72,32,0.22)] border-dnd-gold/30 text-dnd-gold-bright',
 }
 
+// Canonical D&D 5e ordering — STR/DEX/CON/INT/WIS/CHA — used wherever ability
+// scores are surfaced to players. Backend returns alphabetical (cha/con/...).
+const DND_ABILITY_ORDER = [
+  'strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma',
+]
+
 interface Props {
   char: CharacterFull
 }
@@ -227,23 +233,28 @@ export default function HeroScreen({ char }: Props) {
                 animate: { transition: { staggerChildren: 0.04, delayChildren: 0.1 } },
               }}
             >
-              {char.ability_scores.map((score) => {
+              {[...char.ability_scores]
+                .sort((a, b) => DND_ABILITY_ORDER.indexOf(a.name) - DND_ABILITY_ORDER.indexOf(b.name))
+                .map((score) => {
                 const key = score.name.toLowerCase()
                 const colorCls = ABILITY_COLORS[key] ?? ABILITY_COLORS.charisma
                 const modStr = `${score.modifier >= 0 ? '+' : ''}${score.modifier}`
+                const shortLabel = t(`character.ability.${score.name}_short`, {
+                  defaultValue: score.name.slice(0, 3).toUpperCase(),
+                })
                 return (
                   <m.button
                     key={score.name}
                     type="button"
                     onClick={() => { haptic.light(); navigate(`/char/${char.id}/stats`) }}
-                    aria-label={`${score.name}: ${score.value}, mod ${modStr}`}
+                    aria-label={`${shortLabel}: ${score.value}, mod ${modStr}`}
                     className={`flex flex-col items-center rounded-lg p-1.5 border cursor-pointer hover:border-dnd-gold transition-colors ${colorCls}`}
                     variants={{ initial: { opacity: 0, y: 8 }, animate: { opacity: 1, y: 0 } }}
                     transition={spring.snappy}
                     whileTap={{ scale: 0.95 }}
                   >
                     <span className="text-[11px] font-cinzel uppercase tracking-wider opacity-80">
-                      {score.name.slice(0, 3)}
+                      {shortLabel}
                     </span>
                     <span className="text-xl font-display font-black leading-none mt-0.5">{score.value}</span>
                     <span className="text-[11px] font-mono font-bold mt-0.5 px-1.5 py-0.5 rounded-full bg-[rgba(13,10,8,0.25)]">

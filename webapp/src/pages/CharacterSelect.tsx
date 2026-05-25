@@ -335,9 +335,17 @@ export default function CharacterSelect() {
                         >
                           <ArrowLeft size={16} />
                         </m.button>
-                        <p className="font-cinzel text-xs uppercase tracking-widest text-dnd-gold flex-1">
-                          {t('character.create.step_class')}
-                        </p>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-cinzel text-xs uppercase tracking-widest text-dnd-gold">
+                            {t('character.create.step_class')}
+                          </p>
+                          <p className="text-[10px] text-dnd-text-faint truncate font-body mt-0.5">
+                            {t('character.create.step_class_subtitle', {
+                              name: newName.trim() || '—',
+                              defaultValue: 'Per {{name}} · Passo 2/2',
+                            })}
+                          </p>
+                        </div>
                       </div>
 
                       {!showCustom ? (
@@ -377,33 +385,44 @@ export default function CharacterSelect() {
                                 <span className="text-[10px] text-dnd-text-faint font-mono mt-0.5">d{cls.hit_die}</span>
                               </m.button>
                             ))}
+                          </m.div>
+
+                          {/* Special options row — visually paired below the 3-col class grid. */}
+                          <div className="grid grid-cols-2 gap-2">
                             <m.button
                               onClick={() => setShowCustom(true)}
                               className="flex flex-col items-center justify-center py-2.5 px-1 rounded-xl
                                          bg-gradient-arcane-mist border border-dnd-arcane/30
                                          text-center"
-                              variants={{
-                                initial: { opacity: 0, scale: 0.9 },
-                                animate: { opacity: 1, scale: 1 },
-                              }}
+                              initial={{ opacity: 0, scale: 0.9 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              transition={{ delay: 0.1 }}
                               whileTap={{ scale: 0.93 }}
                             >
                               <Pencil size={14} className="text-dnd-arcane-bright mb-0.5" />
-                              <span className="text-[10px] text-dnd-arcane-bright font-cinzel uppercase tracking-wider">
+                              <span className="text-[13px] font-display font-bold text-dnd-arcane-bright">
                                 {t('character.create.custom_class')}
                               </span>
+                              <span className="text-[10px] text-dnd-text-faint font-mono mt-0.5">d?</span>
                             </m.button>
-                          </m.div>
-
-                          <Button
-                            variant="secondary"
-                            fullWidth
-                            onClick={() => handleCreate(null)}
-                            disabled={createMutation.isPending}
-                            icon={<SkipForward size={14} />}
-                          >
-                            {t('character.create.skip_class')}
-                          </Button>
+                            <m.button
+                              onClick={() => handleCreate(null)}
+                              disabled={createMutation.isPending}
+                              className="flex flex-col items-center justify-center py-2.5 px-1 rounded-xl
+                                         bg-dnd-surface border border-dnd-border
+                                         text-center disabled:opacity-40"
+                              initial={{ opacity: 0, scale: 0.9 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              transition={{ delay: 0.15 }}
+                              whileTap={{ scale: 0.93 }}
+                            >
+                              <SkipForward size={14} className="text-dnd-text-faint mb-0.5" />
+                              <span className="text-[13px] font-display font-bold text-dnd-text">
+                                {t('character.create.skip_class')}
+                              </span>
+                              <span className="text-[10px] text-dnd-text-faint font-mono mt-0.5">—</span>
+                            </m.button>
+                          </div>
                         </>
                       ) : (
                         <m.div

@@ -725,6 +725,7 @@
     "create": {
       "step_name": "New Character",
       "step_class": "Choose Initial Class",
+      "step_class_subtitle": "For {{name}} · Step 2/2",
       "skip_class": "No class",
       "custom_class": "Custom",
       "custom_class_name": "Class name",
@@ -765,6 +766,7 @@
         "spell_slots": "Spell slots",
         "encumbrance": "Carry"
       },
+      "carry_formula": "Carry capacity = 15 × Strength ({{str}}) = {{cap}} lb",
       "progression": {
         "title": "Progression",
         "tap_full_table": "Tap for full table",

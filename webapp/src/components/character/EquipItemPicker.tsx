@@ -1,8 +1,9 @@
 import { createPortal } from 'react-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { m, AnimatePresence } from 'framer-motion'
-import { X } from 'lucide-react'
+import { X, Package } from 'lucide-react'
 import { api } from '@/api/client'
 import { haptic } from '@/auth/telegram'
 import { ITEM_TYPE_TO_SLOTS } from '@/lib/equipmentSlots'
@@ -25,6 +26,7 @@ function compatibleItems(items: Item[], slot: EquipmentSlot): Item[] {
 export default function EquipItemPicker({ charId, slot, items, onClose }: Props) {
   const { t } = useTranslation()
   const qc = useQueryClient()
+  const navigate = useNavigate()
 
   const equip = useMutation({
     mutationFn: (itemId: number) =>
@@ -70,9 +72,19 @@ export default function EquipItemPicker({ charId, slot, items, onClose }: Props)
             </button>
           </header>
           {candidates.length === 0 ? (
-            <p className="p-6 text-center text-sm text-dnd-text-faint italic">
-              {t('character.equipment.picker.empty', { defaultValue: 'No compatible items in inventory.' })}
-            </p>
+            <div className="p-6 text-center space-y-3">
+              <p className="text-sm text-dnd-text-faint italic">
+                {t('character.equipment.picker.empty', { defaultValue: 'No compatible items in inventory.' })}
+              </p>
+              <button
+                type="button"
+                onClick={() => { onClose(); navigate(`/char/${charId}/inventory`) }}
+                className="inline-flex items-center gap-2 min-h-[44px] px-4 rounded-full bg-dnd-surface border border-dnd-gold-dim/60 hover:border-dnd-gold text-dnd-gold-bright font-cinzel text-[11px] uppercase tracking-widest transition-colors"
+              >
+                <Package size={14} aria-hidden="true" />
+                {t('character.equipment.picker.go_to_inventory', { defaultValue: 'Open inventory' })}
+              </button>
+            </div>
           ) : (
             <ul className="divide-y divide-dnd-border/60">
               {candidates.map((it) => (
