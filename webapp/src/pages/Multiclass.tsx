@@ -107,6 +107,14 @@ export default function Multiclass() {
              style={{ textShadow: '0 2px 8px var(--dnd-gold-glow)' }}>
             {targetLevel}
           </p>
+          {levelUpAvailable && (
+            <p className="mt-1 text-[10px] font-mono text-dnd-text-muted tabular-nums">
+              {t('character.xp.level_distributed_hint', {
+                distributed: classLevelSum,
+                pending: targetLevel - classLevelSum,
+              })}
+            </p>
+          )}
         </Surface>
       )}
 
