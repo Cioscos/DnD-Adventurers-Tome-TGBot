@@ -73,8 +73,9 @@ export default function SpellSlots() {
 
   return (
     <Layout title={t('character.slots.title')} backTo={`/char/${charId}`} group="magic" page="slots">
-      {/* Auto-mode info banner (Block 6: SpellSlots audit) */}
-      {slotsMode === 'auto' && slots.length > 0 && (
+      {/* Auto-mode info banner. Visible in both empty + populated state so the
+          user understands why manual controls are gone. */}
+      {slotsMode === 'auto' && (
         <Surface variant="arcane">
           <div className="flex items-start gap-2.5">
             <Sparkles size={16} className="text-dnd-arcane-bright shrink-0 mt-0.5" />
@@ -132,14 +133,16 @@ export default function SpellSlots() {
                   <span className={`text-sm font-mono font-bold tabular-nums ${slot.available > 0 ? 'text-[var(--dnd-emerald-bright)]' : 'text-dnd-text-faint'}`}>
                     {slot.available}/{slot.total}
                   </span>
-                  <m.button
-                    onClick={() => removeSlot.mutate(slot.id)}
-                    className="w-11 h-11 rounded-lg text-[var(--dnd-crimson-bright)] flex items-center justify-center hover:bg-[var(--dnd-crimson)]/10"
-                    whileTap={{ scale: 0.9 }}
-                    aria-label="Remove"
-                  >
-                    <X size={16} />
-                  </m.button>
+                  {slotsMode !== 'auto' && (
+                    <m.button
+                      onClick={() => removeSlot.mutate(slot.id)}
+                      className="w-11 h-11 rounded-lg text-[var(--dnd-crimson-bright)] flex items-center justify-center hover:bg-[var(--dnd-crimson)]/10"
+                      whileTap={{ scale: 0.9 }}
+                      aria-label="Remove"
+                    >
+                      <X size={16} />
+                    </m.button>
+                  )}
                 </div>
               </div>
 
@@ -177,35 +180,38 @@ export default function SpellSlots() {
                 ))}
               </div>
 
-              {/* Total editor */}
-              <div className="flex items-center gap-2 pt-2 border-t border-dnd-border/40">
-                <span className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-gold-dim flex-1">
-                  {t('character.slots.total')}
-                </span>
-                <m.button
-                  onClick={() => updateTotal.mutate({ slotId: slot.id, total: Math.max(1, slot.total - 1) })}
-                  className="w-11 h-11 rounded-lg bg-dnd-surface border border-dnd-border flex items-center justify-center text-dnd-gold"
-                  whileTap={{ scale: 0.9 }}
-                  aria-label={t('character.slots.decrement_total', { defaultValue: '-1' })}
-                >
-                  <Minus size={16} />
-                </m.button>
-                <span className="w-8 text-center font-mono font-bold text-dnd-gold-bright tabular-nums">{slot.total}</span>
-                <m.button
-                  onClick={() => updateTotal.mutate({ slotId: slot.id, total: slot.total + 1 })}
-                  className="w-11 h-11 rounded-lg bg-dnd-surface border border-dnd-border flex items-center justify-center text-dnd-gold"
-                  whileTap={{ scale: 0.9 }}
-                  aria-label={t('character.slots.increment_total', { defaultValue: '+1' })}
-                >
-                  <Plus size={16} />
-                </m.button>
-              </div>
+              {/* Total editor — hidden in Auto mode (totals are class-derived). */}
+              {slotsMode !== 'auto' && (
+                <div className="flex items-center gap-2 pt-2 border-t border-dnd-border/40">
+                  <span className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-gold-dim flex-1">
+                    {t('character.slots.total')}
+                  </span>
+                  <m.button
+                    onClick={() => updateTotal.mutate({ slotId: slot.id, total: Math.max(1, slot.total - 1) })}
+                    className="w-11 h-11 rounded-lg bg-dnd-surface border border-dnd-border flex items-center justify-center text-dnd-gold"
+                    whileTap={{ scale: 0.9 }}
+                    aria-label={t('character.slots.decrement_total', { defaultValue: '-1' })}
+                  >
+                    <Minus size={16} />
+                  </m.button>
+                  <span className="w-8 text-center font-mono font-bold text-dnd-gold-bright tabular-nums">{slot.total}</span>
+                  <m.button
+                    onClick={() => updateTotal.mutate({ slotId: slot.id, total: slot.total + 1 })}
+                    className="w-11 h-11 rounded-lg bg-dnd-surface border border-dnd-border flex items-center justify-center text-dnd-gold"
+                    whileTap={{ scale: 0.9 }}
+                    aria-label={t('character.slots.increment_total', { defaultValue: '+1' })}
+                  >
+                    <Plus size={16} />
+                  </m.button>
+                </div>
+              )}
             </Surface>
           </Reveal.Item>
         ))}
       </Reveal.Stagger>
 
-      {missingLevels.length > 0 && (
+      {/* Manual creation of slot levels — hidden in Auto mode. */}
+      {slotsMode !== 'auto' && missingLevels.length > 0 && (
         <Surface variant="flat" className="mt-3">
           <div className="flex items-center gap-2 mb-2">
             <Sparkles size={14} className="text-dnd-arcane-bright" />

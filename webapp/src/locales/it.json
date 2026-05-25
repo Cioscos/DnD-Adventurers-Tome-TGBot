@@ -612,8 +612,8 @@
       "empty_hint": "Tratti di classe (Rage, Action Surge), capacità razziali e ability ricaricabili.",
       "bulk_reset_manual": "Reset manuali",
       "restoration_short": {
-        "long_rest": "Long",
-        "short_rest": "Short",
+        "long_rest": "Lungo",
+        "short_rest": "Breve",
         "manual": "Manuale"
       }
     },
