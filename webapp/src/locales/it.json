@@ -44,7 +44,8 @@
       "delete_confirm": "Eliminare {{name}}? L'azione è irreversibile.",
       "undo_delete": "Personaggio eliminato",
       "delete_undo_action": "Annulla",
-      "skip_class_label": "Procedi senza classe"
+      "skip_class_label": "Procedi senza classe",
+      "unconscious_badge": "Incosciente"
     },
     "menu": {
       "hp": "Punti Ferita",
@@ -70,7 +71,7 @@
         "combat": "Combattimento",
         "magic": "Magia",
         "skills": "Abilità",
-        "equipment": "Equipaggiamento",
+        "equipment": "Inventario & Monete",
         "character": "Personaggio",
         "tools": "Strumenti"
       }
@@ -97,7 +98,14 @@
       "heal_short": "CURA",
       "current_short": "ATTUALI",
       "max_short": "MASSIMO",
-      "temp_short": "TEMP"
+      "temp_short": "TEMP",
+      "long_rest_confirm_title": "Riposo lungo",
+      "long_rest_confirm_body": "Sei sicuro? Le regole D&D 5e ammettono un solo riposo lungo ogni 24 ore.",
+      "long_rest_confirm_action": "Riposa",
+      "quick_damage_undo": "Inflitti {{n}} danni",
+      "quick_heal_undo": "Curati {{n}} HP",
+      "quick_temp_undo": "Aggiunti {{n}} HP temporanei",
+      "quick_undo_action": "Annulla"
     },
     "death_saves": {
       "title": "Tiri vs Morte",
@@ -124,24 +132,29 @@
       "intelligence": "Intelligenza",
       "wisdom": "Saggezza",
       "charisma": "Carisma",
-      "modifier": "Modificatore"
+      "modifier": "Modificatore",
+      "hp_recalc_toast": "HP massimi aggiornati: {{old}} → {{new}}"
     },
     "ac": {
       "title": "Classe Armatura",
       "base": "Base",
+      "base_help": "Base = 10 + bonus DES (con cap se armatura media/pesante) oppure valore CA dell'armatura equipaggiata.",
       "shield": "Scudo",
       "magic": "Magia",
       "total": "Totale",
       "new_total": "Nuovo CA",
       "from_equipment": "Calcolato da equipaggiamento",
       "show_modifiers": "Modificatori",
-      "hide_modifiers": "Nascondi modificatori"
+      "hide_modifiers": "Nascondi modificatori",
+      "auto_from_armor": "Auto",
+      "auto_from_armor_hint": "Base derivata da {{name}} equipaggiata."
     },
     "skills": {
       "title": "Abilità",
       "proficient": "Competente",
       "expert": "Esperto",
       "picker_title": "Livello competenza",
+      "breakdown": "Bonus attuale: {{total}} = {{abilMod}} {{ability}} {{prof}} comp",
       "prof_bonus": "Bonus competenza",
       "passive_perception": "Percezione Passiva",
       "roll": "Tira dado",
@@ -196,6 +209,7 @@
       "level_label": "LIVELLO {{level}}",
       "count": "{{count}} incantesimi",
       "concentration": "Concentrazione",
+      "concentration_active": "Concentrazione attiva",
       "ritual": "Rituale",
       "add": "Aggiungi incantesimo",
       "forget": "Dimentica",
@@ -216,6 +230,7 @@
       "conc_save_fail": "Concentrazione persa!",
       "damage": "Danno",
       "no_slots": "Nessuno slot disponibile",
+      "go_create_slot": "Crea slot livello {{level}}",
       "conc_lost": "La concentrazione è stata interrotta",
       "higher_level": "A livelli superiori",
       "attack_save": "Attacco / TS",
@@ -259,7 +274,7 @@
       "gem_aria": "Livello {{level}} slot {{index}}/{{total}} {{state}}",
       "state_used": "usato",
       "state_available": "disponibile",
-      "auto_hint": "Modalità Auto: gli slot vengono dedotti da classi e livello. Passa a Manuale dalle Impostazioni per gestione manuale.",
+      "auto_hint": "Modalità Auto (regole D&D 5e 2014): gli slot vengono dedotti da classi e livello. Passa a Manuale dalle Impostazioni per gestione personalizzata.",
       "add_new_level": "Aggiungi nuovo livello",
       "reset_confirm": "Ripristinare tutti gli slot incantesimo?",
       "go_to_settings": "Vai a Impostazioni"
@@ -369,6 +384,7 @@
       "placeholder_bonds": "Descrivi i tuoi legami...",
       "placeholder_flaws": "Descrivi i tuoi difetti...",
       "private_badge": "Info private",
+      "private_hint": "Background, ideali, legami, difetti — visibili solo al giocatore.",
       "language_placeholder": "Aggiungi lingua…",
       "proficiency_placeholder": "Aggiungi competenza…",
       "unsaved_changes": "Modifiche non salvate",
@@ -396,6 +412,7 @@
       "gold": "Oro",
       "platinum": "Platino",
       "convert": "Converti",
+      "convert_preview": "{{amount}} {{source}} = {{result}} {{target}}",
       "total_gold": "Totale in oro",
       "mode_set": "Imposta",
       "mode_add": "Aggiungi/Rimuovi",
@@ -420,6 +437,7 @@
       "level_up_available_short": "Livello disponibile! Clicca per scegliere classe",
       "single_class_synced": "Il livello della classe viene aggiornato automaticamente con gli XP.",
       "hp_gained_toast": "+{{hp}} HP",
+      "level_up_toast": "Sei salito al livello {{level}}!",
       "level_up_cta": "SALI DI LIVELLO",
       "level_up_to": "Porta al livello {{level}}",
       "bar": {
@@ -429,7 +447,8 @@
         "max": "MAX"
       },
       "legend": "Tu sei una leggenda",
-      "quick_to_next": "→ Soglia"
+      "quick_to_next": "→ Soglia",
+      "quick_half_next": "+½ liv"
     },
     "notes": {
       "title": "Note",
@@ -466,7 +485,8 @@
       "empty_title": "Nessuna mappa",
       "empty_hint": "Carica una mappa o un PDF della tua avventura — sarà sempre a portata di mano.",
       "zoom_hint": "Pizzica per zoomare",
-      "reorder_hint": "Trascina per riordinare"
+      "reorder_hint": "Trascina per riordinare",
+      "error_too_large": "{{name}} supera il limite di 10 MB"
     },
     "history": {
       "title": "Cronologia",
@@ -600,8 +620,8 @@
       "empty_hint": "Tratti di classe (Rage, Action Surge), capacità razziali e ability ricaricabili.",
       "bulk_reset_manual": "Reset manuali",
       "restoration_short": {
-        "long_rest": "Long",
-        "short_rest": "Short",
+        "long_rest": "Lungo",
+        "short_rest": "Breve",
         "manual": "Manuale"
       }
     },
@@ -713,6 +733,7 @@
     "create": {
       "step_name": "Nuovo personaggio",
       "step_class": "Scegli classe iniziale",
+      "step_class_subtitle": "Per {{name}} · Passo 2/2",
       "skip_class": "Senza classe",
       "custom_class": "Personalizzata",
       "custom_class_name": "Nome classe",
@@ -745,10 +766,15 @@
         "empty": "Nessun oggetto compatibile nell'inventario.",
         "go_to_inventory": "Vai all'inventario"
       },
+      "slot_picker": {
+        "title": "Scegli lo slot",
+        "subtitle": "In quale slot equipaggiare {{name}}?"
+      },
       "summary": {
         "spell_slots": "Slot incantesimi",
         "encumbrance": "Carico"
       },
+      "carry_formula": "Capacità di carico = 15 × Forza ({{str}}) = {{cap}} lb",
       "progression": {
         "title": "Progressione",
         "tap_full_table": "Tocca per tabella completa",

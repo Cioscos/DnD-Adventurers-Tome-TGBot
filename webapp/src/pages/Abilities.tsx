@@ -115,6 +115,16 @@ export default function Abilities() {
   }
 
   function submitForm() {
+    // Client-side validation: max_uses must be a non-negative integer when set.
+    // Pydantic validates on the backend too, but failing fast here gives the user
+    // an immediate signal instead of a generic API error.
+    if (form.max_uses !== '') {
+      const n = Number(form.max_uses)
+      if (!Number.isFinite(n) || n < 0 || !Number.isInteger(n)) {
+        haptic.error()
+        return
+      }
+    }
     if (editingAbility) {
       updateMutation.mutate()
     } else {

@@ -301,12 +301,19 @@ async def update_conditions(
     # Log changes to history
     changed = False
     for cond, new_val in body.conditions.items():
-        old_val = old_conditions.get(cond, False)
-        if new_val != old_val:
+        is_exhaustion = cond == "exhaustion"
+        default = 0 if is_exhaustion else False
+        old_val = old_conditions.get(cond, default)
+        if is_exhaustion:
+            old_val = int(old_val) if isinstance(old_val, (int, bool)) and old_val is not None else 0
+            new_val_display = int(new_val) if isinstance(new_val, (int, bool)) and new_val is not None else 0
+        else:
+            new_val_display = new_val
+        if new_val_display != old_val:
             changed = True
-            if cond == "exhaustion":
+            if is_exhaustion:
                 _add_history(session, char.id, "condition_change",
-                             f"Spossatezza: livello {old_val} → {new_val}")
+                             f"Spossatezza: livello {old_val} → {new_val_display}")
             elif new_val:
                 _add_history(session, char.id, "condition_change",
                              f"Condizione attivata: {cond}")

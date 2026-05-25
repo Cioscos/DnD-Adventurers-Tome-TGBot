@@ -26,8 +26,14 @@ export default function EquipmentStatsFooter({ char }: Props) {
     ?.filter((i) => i.is_equipped)
     .reduce((sum, i) => sum + (i.weight || 0) * (i.quantity || 1), 0) ?? 0
 
-  const carryCap = (char.ability_scores.find((s) => s.name.toLowerCase() === 'strength')?.value ?? 10) * 15
+  const strScore = char.ability_scores.find((s) => s.name.toLowerCase() === 'strength')?.value ?? 10
+  const carryCap = strScore * 15
   const overload = encumbrance > carryCap
+  const carryFormula = t('character.equipment.carry_formula', {
+    str: strScore,
+    cap: carryCap,
+    defaultValue: 'Capacità = 15 × Forza ({{str}}) = {{cap}} lb',
+  })
 
   const carryColor = overload
     ? 'text-[var(--dnd-amber)]'
@@ -64,7 +70,11 @@ export default function EquipmentStatsFooter({ char }: Props) {
 
         <span aria-hidden="true" className="text-dnd-gold-dim/60 select-none">◈</span>
 
-        <span className="flex items-center gap-1.5 text-dnd-text-muted">
+        <span
+          className="flex items-center gap-1.5 text-dnd-text-muted cursor-help"
+          title={carryFormula}
+          aria-label={carryFormula}
+        >
           <GiWeight
             size={12}
             aria-hidden="true"

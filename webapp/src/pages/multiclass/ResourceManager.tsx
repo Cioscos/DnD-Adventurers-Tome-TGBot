@@ -43,10 +43,11 @@ export default function ResourceManager({
 
   return (
     <>
-      {/* Existing resources */}
+      {/* Existing resources — skip 0/0 entries (typically locked class features
+          like Channel Divinity at lv1 Paladin that unlock at higher levels). */}
       {resources.length > 0 && (
         <div className="space-y-1 mb-2">
-          {resources.map((res) => (
+          {resources.filter((r) => r.total > 0).map((res) => (
             <div key={res.id} className="flex items-center gap-2 text-sm">
               <span className="flex-1">{res.name}</span>
               <span className="text-dnd-text-muted">

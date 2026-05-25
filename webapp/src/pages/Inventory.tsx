@@ -11,6 +11,8 @@ import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
 import Sheet from '@/components/ui/Sheet'
+import { slotsAllowedFor, SLOT_PLACEHOLDER_ICON } from '@/lib/equipmentSlots'
+import type { EquipmentSlot } from '@/types'
 import ScrollArea from '@/components/ScrollArea'
 import EmptyState from '@/components/ui/EmptyState'
 import ProgressTriad from '@/components/ui/ProgressTriad'
@@ -45,6 +47,7 @@ export default function Inventory() {
     wasRerolled: boolean
   }
   const [attackState, setAttackState] = useState<AttackState | null>(null)
+  const [slotPickerItem, setSlotPickerItem] = useState<Item | null>(null)
   const toast = useToast()
   const [expanded, setExpanded] = useState<number | null>(null)
   const [collapsedTypes, setCollapsedTypes] = useState<Set<string>>(new Set())
@@ -103,10 +106,34 @@ export default function Inventory() {
   })
 
   const toggleEquip = useMutation({
-    mutationFn: ({ itemId, equipped }: { itemId: number; equipped: boolean }) =>
-      api.items.update(charId, itemId, { is_equipped: equipped }),
-    onSuccess: (updated) => qc.setQueryData(['character', charId], updated),
+    mutationFn: ({ itemId, equipped, slot }: { itemId: number; equipped: boolean; slot?: EquipmentSlot }) =>
+      api.items.update(charId, itemId, slot
+        ? { is_equipped: equipped, equipment_slot: slot }
+        : { is_equipped: equipped }),
+    onSuccess: (updated) => {
+      qc.setQueryData(['character', charId], updated)
+      setSlotPickerItem(null)
+    },
   })
+
+  const handleEquipToggle = (item: Item) => {
+    if (item.is_equipped) {
+      toggleEquip.mutate({ itemId: item.id, equipped: false })
+      return
+    }
+    const allowedSlots = slotsAllowedFor(item.item_type)
+    if (allowedSlots.length > 1) {
+      setSlotPickerItem(item)
+      return
+    }
+    // Single allowed slot: auto-assign so AC bridge (ArmorClass.tsx) and
+    // PaperDoll can detect the item; backend does not auto-fill the slot.
+    toggleEquip.mutate({
+      itemId: item.id,
+      equipped: true,
+      slot: allowedSlots.length === 1 ? allowedSlots[0] : undefined,
+    })
+  }
 
   const updateQty = useMutation({
     mutationFn: ({ itemId, quantity }: { itemId: number; quantity: number }) =>
@@ -255,7 +282,7 @@ export default function Inventory() {
         <ProgressTriad
           value={totalWeight}
           max={char.carry_capacity}
-          display={`${totalWeight.toFixed(1)} / ${char.carry_capacity} lb`}
+          display={`${Number.isInteger(totalWeight) ? totalWeight : totalWeight.toFixed(1).replace(/\.0$/, '')} / ${char.carry_capacity} lb`}
           showNumeric
         />
       </Surface>
@@ -319,7 +346,7 @@ export default function Inventory() {
                             item={item}
                             isExpanded={expanded === item.id}
                             onToggle={() => setExpanded(expanded === item.id ? null : item.id)}
-                            onEquipToggle={() => toggleEquip.mutate({ itemId: item.id, equipped: !item.is_equipped })}
+                            onEquipToggle={() => handleEquipToggle(item)}
                             onQuantityChange={(delta) => updateQty.mutate({ itemId: item.id, quantity: item.quantity + delta })}
                             onAttack={() => attackMutation.mutate(item.id)}
                             onEdit={() => handleEdit(item)}
@@ -386,6 +413,44 @@ export default function Inventory() {
             </Button>
           </div>
         </div>
+      </Sheet>
+
+      {/* Slot picker for multi-slot equippable items */}
+      <Sheet
+        open={slotPickerItem !== null}
+        onClose={() => setSlotPickerItem(null)}
+        centered
+        title={t('character.equipment.slot_picker.title')}
+      >
+        {slotPickerItem && (
+          <div className="p-5 space-y-4">
+            <p className="text-sm text-center text-dnd-text-muted font-body">
+              {t('character.equipment.slot_picker.subtitle', { name: slotPickerItem.name })}
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {slotsAllowedFor(slotPickerItem.item_type).map((slot) => {
+                const Icon = SLOT_PLACEHOLDER_ICON[slot]
+                return (
+                  <m.button
+                    key={slot}
+                    onClick={() => toggleEquip.mutate({ itemId: slotPickerItem.id, equipped: true, slot })}
+                    disabled={toggleEquip.isPending}
+                    className="flex items-center gap-2 p-3 rounded-xl bg-dnd-surface border border-dnd-border hover:border-dnd-gold/60 disabled:opacity-50"
+                    whileTap={{ scale: 0.96 }}
+                  >
+                    <Icon size={20} className="text-dnd-gold shrink-0" />
+                    <span className="text-sm font-cinzel text-dnd-gold-bright">
+                      {t(`character.equipment.slots.${slot}`)}
+                    </span>
+                  </m.button>
+                )
+              })}
+            </div>
+            <Button variant="secondary" fullWidth onClick={() => setSlotPickerItem(null)}>
+              {t('common.cancel')}
+            </Button>
+          </div>
+        )}
       </Sheet>
 
       <AnimatePresence />

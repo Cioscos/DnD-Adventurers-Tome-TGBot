@@ -22,6 +22,15 @@ const COINS = [
   { key: 'copper',   metal: 'copper',   label: 'CP' },
 ] as const
 
+// D&D 5e standard rates expressed in gold-piece equivalents (1 GP = 1.0).
+const COIN_IN_GOLD: Record<string, number> = {
+  platinum: 10,
+  gold: 1,
+  electrum: 0.5,
+  silver: 0.1,
+  copper: 0.01,
+}
+
 type CoinKey = typeof COINS[number]['key']
 type CoinMetal = typeof COINS[number]['metal']
 
@@ -196,7 +205,7 @@ export default function Currency() {
                   min={mode === 'set' ? 0 : undefined}
                   value={draft[key]}
                   onChange={(v) => setDraft((d) => ({ ...d, [key]: v }))}
-                  placeholder={mode === 'add' ? '+/-' : ''}
+                  placeholder={mode === 'add' ? '+/-' : String(currentCoins?.[key] ?? 0)}
                   inputMode="numeric"
                   className="w-24 [&_input]:text-center [&_input]:font-mono [&_input]:font-bold"
                 />
@@ -286,6 +295,24 @@ export default function Currency() {
             placeholder="0"
             inputMode="numeric"
           />
+
+          {convertAmount !== '' && convertSource !== convertTarget && (() => {
+            const amountNum = Number(convertAmount) || 0
+            const inGold = amountNum * (COIN_IN_GOLD[convertSource] ?? 0)
+            const targetRate = COIN_IN_GOLD[convertTarget] ?? 1
+            const targetAmount = inGold / targetRate
+            return (
+              <p className="text-[11px] font-body text-dnd-text-faint text-center">
+                {t('character.currency.convert_preview', {
+                  amount: amountNum,
+                  source: t(`character.currency.${convertSource}`),
+                  result: Number.isInteger(targetAmount) ? targetAmount : targetAmount.toFixed(2),
+                  target: t(`character.currency.${convertTarget}`),
+                  defaultValue: '{{amount}} {{source}} = {{result}} {{target}}',
+                })}
+              </p>
+            )
+          })()}
 
           <div className="flex gap-2 pt-1">
             <Button

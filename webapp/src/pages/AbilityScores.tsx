@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m, AnimatePresence } from 'framer-motion'
 import { Pencil, Check, X } from 'lucide-react'
+import { toast } from 'sonner'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
@@ -22,6 +23,11 @@ const ABILITY_THEME: Record<string, string> = {
   charisma: 'from-[var(--dnd-gold-deep)]/40 via-dnd-surface to-dnd-surface border-dnd-gold/40 text-dnd-gold-bright',
 }
 
+// Canonical D&D 5e ordering — STR/DEX/CON/INT/WIS/CHA (mirror HeroScreen.tsx).
+const DND_ABILITY_ORDER = [
+  'strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma',
+]
+
 export default function AbilityScores() {
   const { id } = useParams<{ id: string }>()
   const charId = Number(id)
@@ -29,6 +35,10 @@ export default function AbilityScores() {
   const qc = useQueryClient()
   const [editing, setEditing] = useState<string | null>(null)
   const [editValue, setEditValue] = useState('')
+  // Synchronous guard against double-fire of handleSave (Input.onCommit + button.onClick
+  // can both fire when the user taps Salva — `updateMutation.isPending` isn't yet true
+  // at the second call, so we need a ref that flips immediately.
+  const savingRef = useRef(false)
 
   const { data: char } = useQuery({
     queryKey: ['character', charId],
@@ -38,17 +48,34 @@ export default function AbilityScores() {
   const updateMutation = useMutation({
     mutationFn: ({ ability, value }: { ability: string; value: number }) =>
       api.characters.updateAbilityScore(charId, ability, value),
-    onSuccess: (updated) => {
+    onSuccess: (updated, vars) => {
+      const oldHpMax = char?.hit_points ?? null
       qc.setQueryData(['character', charId], updated)
       setEditing(null)
       haptic.success()
+      if (vars.ability === 'constitution' && oldHpMax !== null && updated.hit_points !== oldHpMax) {
+        toast.success(t('character.stats.hp_recalc_toast', {
+          old: oldHpMax,
+          new: updated.hit_points,
+        }))
+      }
+      savingRef.current = false
     },
-    onError: () => haptic.error(),
+    onError: () => {
+      haptic.error()
+      savingRef.current = false
+    },
   })
 
   const handleSave = (ability: string) => {
+    if (savingRef.current || updateMutation.isPending) return
     const n = parseInt(editValue, 10)
     if (isNaN(n) || n < 1 || n > 30) return
+    if (char?.ability_scores.find((s) => s.name === ability)?.value === n) {
+      setEditing(null)
+      return
+    }
+    savingRef.current = true
     updateMutation.mutate({ ability, value: n })
   }
 
@@ -57,7 +84,9 @@ export default function AbilityScores() {
   return (
     <Layout title={t('character.stats.title')} backTo={`/char/${charId}`} group="skills" page="stats">
       <Reveal.Stagger stagger={stagger.list} className="grid grid-cols-2 gap-3">
-        {char.ability_scores.map((score: AbilityScore) => {
+        {[...char.ability_scores]
+          .sort((a, b) => DND_ABILITY_ORDER.indexOf(a.name) - DND_ABILITY_ORDER.indexOf(b.name))
+          .map((score: AbilityScore) => {
           const theme = ABILITY_THEME[score.name] ?? ABILITY_THEME.charisma
           const isEditing = editing === score.name
 
@@ -81,7 +110,10 @@ export default function AbilityScores() {
                     <m.button
                       onClick={() => {
                         setEditing(score.name)
-                        setEditValue(String(score.value))
+                        // Leave the input empty so the user types fresh — pre-fill encourages
+                        // accidental "Save" of the unchanged value. Current value is shown as
+                        // placeholder (see Input.placeholder below).
+                        setEditValue('')
                       }}
                       className="shrink-0 w-11 h-11 rounded-full bg-dnd-surface-raised border border-dnd-border flex items-center justify-center text-dnd-gold"
                       whileTap={{ scale: 0.9 }}
@@ -110,6 +142,7 @@ export default function AbilityScores() {
                           max={30}
                           inputMode="numeric"
                           autoFocus
+                          placeholder={String(score.value)}
                           onCommit={() => handleSave(score.name)}
                           className="[&_input]:text-2xl [&_input]:font-display [&_input]:font-black [&_input]:text-center [&_input]:min-h-[56px]"
                         />

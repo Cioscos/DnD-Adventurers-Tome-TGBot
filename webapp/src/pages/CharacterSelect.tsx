@@ -197,7 +197,9 @@ export default function CharacterSelect() {
           </m.div>
         ) : (
           <Reveal.Stagger stagger={stagger.list} className="space-y-3">
-            {characters.map((char) => (
+            {characters.map((char) => {
+              const isDown = char.current_hit_points === 0
+              return (
               <Reveal.Item key={char.id}>
                 <Surface
                   variant="tome"
@@ -205,7 +207,7 @@ export default function CharacterSelect() {
                   ornamented
                   layoutId={`char-hero-${char.id}`}
                   onClick={() => navigate(`/char/${char.id}`)}
-                  className="overflow-hidden"
+                  className={`overflow-hidden${isDown ? ' !border-[var(--dnd-crimson-bright)]/70 shadow-halo-danger' : ''}`}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0 space-y-1.5">
@@ -213,6 +215,11 @@ export default function CharacterSelect() {
                         <h2 className="font-display font-bold text-lg text-dnd-gold-bright truncate">
                           {char.name}
                         </h2>
+                        {isDown && (
+                          <span className="text-[10px] font-cinzel uppercase tracking-wider px-2 py-0.5 rounded-full bg-[var(--dnd-crimson)]/20 text-[var(--dnd-crimson-bright)] border border-[var(--dnd-crimson-bright)]/40 shrink-0">
+                            {t('character.select.unconscious_badge')}
+                          </span>
+                        )}
                         {char.heroic_inspiration && (
                           <Sparkles
                             size={16}
@@ -261,7 +268,8 @@ export default function CharacterSelect() {
                   </div>
                 </Surface>
               </Reveal.Item>
-            ))}
+              )
+            })}
           </Reveal.Stagger>
         )}
 
@@ -327,9 +335,17 @@ export default function CharacterSelect() {
                         >
                           <ArrowLeft size={16} />
                         </m.button>
-                        <p className="font-cinzel text-xs uppercase tracking-widest text-dnd-gold flex-1">
-                          {t('character.create.step_class')}
-                        </p>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-cinzel text-xs uppercase tracking-widest text-dnd-gold">
+                            {t('character.create.step_class')}
+                          </p>
+                          <p className="text-[10px] text-dnd-text-faint truncate font-body mt-0.5">
+                            {t('character.create.step_class_subtitle', {
+                              name: newName.trim() || '—',
+                              defaultValue: 'Per {{name}} · Passo 2/2',
+                            })}
+                          </p>
+                        </div>
                       </div>
 
                       {!showCustom ? (
@@ -369,33 +385,44 @@ export default function CharacterSelect() {
                                 <span className="text-[10px] text-dnd-text-faint font-mono mt-0.5">d{cls.hit_die}</span>
                               </m.button>
                             ))}
+                          </m.div>
+
+                          {/* Special options row — visually paired below the 3-col class grid. */}
+                          <div className="grid grid-cols-2 gap-2">
                             <m.button
                               onClick={() => setShowCustom(true)}
                               className="flex flex-col items-center justify-center py-2.5 px-1 rounded-xl
                                          bg-gradient-arcane-mist border border-dnd-arcane/30
                                          text-center"
-                              variants={{
-                                initial: { opacity: 0, scale: 0.9 },
-                                animate: { opacity: 1, scale: 1 },
-                              }}
+                              initial={{ opacity: 0, scale: 0.9 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              transition={{ delay: 0.1 }}
                               whileTap={{ scale: 0.93 }}
                             >
                               <Pencil size={14} className="text-dnd-arcane-bright mb-0.5" />
-                              <span className="text-[10px] text-dnd-arcane-bright font-cinzel uppercase tracking-wider">
+                              <span className="text-[13px] font-display font-bold text-dnd-arcane-bright">
                                 {t('character.create.custom_class')}
                               </span>
+                              <span className="text-[10px] text-dnd-text-faint font-mono mt-0.5">d?</span>
                             </m.button>
-                          </m.div>
-
-                          <Button
-                            variant="secondary"
-                            fullWidth
-                            onClick={() => handleCreate(null)}
-                            disabled={createMutation.isPending}
-                            icon={<SkipForward size={14} />}
-                          >
-                            {t('character.create.skip_class')}
-                          </Button>
+                            <m.button
+                              onClick={() => handleCreate(null)}
+                              disabled={createMutation.isPending}
+                              className="flex flex-col items-center justify-center py-2.5 px-1 rounded-xl
+                                         bg-dnd-surface border border-dnd-border
+                                         text-center disabled:opacity-40"
+                              initial={{ opacity: 0, scale: 0.9 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              transition={{ delay: 0.15 }}
+                              whileTap={{ scale: 0.93 }}
+                            >
+                              <SkipForward size={14} className="text-dnd-text-faint mb-0.5" />
+                              <span className="text-[13px] font-display font-bold text-dnd-text">
+                                {t('character.create.skip_class')}
+                              </span>
+                              <span className="text-[10px] text-dnd-text-faint font-mono mt-0.5">—</span>
+                            </m.button>
+                          </div>
                         </>
                       ) : (
                         <m.div

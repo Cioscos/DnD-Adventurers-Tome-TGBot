@@ -260,6 +260,12 @@ The GitHub Actions workflow `.github/workflows/deploy-webapp.yml` runs a build c
 
 GitHub Secret `VITE_API_BASE_URL` must be kept in sync with the tunnel URL (`https://api.cischi.dev`) for CI builds.
 
+## Webapp Knowledge Base
+
+`docs/webapp-audit/` contiene la knowledge base completa della Mini App: report dettagliato per ogni pagina/feature con flussi testati, findings (bug / UX / migliorie), screenshot ed endpoint API chiamati. Generata tramite audit Playwright end-to-end. **Leggere `docs/webapp-audit/00-index.md` prima di qualsiasi modifica significativa al frontend** — copre tutte le 23 route, modal, e workflow del personaggio.
+
+Il roll-up dei findings 🔴/🟠 (bug e regressioni) è in `docs/webapp-audit/known-issues.md`. Lo stato del personaggio fixture creato durante l'audit è documentato in `docs/webapp-audit/fixture-character.md`.
+
 ## Design Context
 
 `DESIGN.md` (visual tokens in Stitch-format frontmatter, palette, typography, elevation, components, do's and don'ts) and `DESIGN.json` (machine-readable sidecar — tonal ramps, motion springs, full component CSS consumed by `impeccable`'s live panel and design-aware tooling) at the project root govern visual design decisions for the Mini App. Read `DESIGN.md` before any frontend code change in `webapp/`.

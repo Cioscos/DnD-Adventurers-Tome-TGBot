@@ -12,7 +12,7 @@ interface Props {
 
 const LEFT_SLOTS: EquipmentSlot[] = ['head', 'neck', 'cloak', 'body']
 const RIGHT_SLOTS: EquipmentSlot[] = ['hands', 'ring1', 'ring2', 'feet']
-const BOTTOM_SLOTS: EquipmentSlot[] = ['main_hand', 'off_hand', 'ammunition']
+const BOTTOM_SLOTS: EquipmentSlot[] = ['ammunition', 'main_hand', 'off_hand']
 
 function findEquipped(items: Item[], slot: EquipmentSlot): Item | null {
   return items.find((i) => i.is_equipped && i.equipment_slot === slot) ?? null
