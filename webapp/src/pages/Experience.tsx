@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -13,9 +13,11 @@ import Surface from '@/components/ui/Surface'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
 import StatPill from '@/components/ui/StatPill'
+import AnimatedNumber from '@/components/ui/AnimatedNumber'
+import { CornerFlourish } from '@/components/ui/Ornament'
 import { haptic } from '@/auth/telegram'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
-import { spring } from '@/styles/motion'
+import { spring, ease } from '@/styles/motion'
 import { XP_THRESHOLDS, levelFromXp } from '@/lib/xpThresholds'
 import { diffResourceMaxes } from '@/lib/resourceDiff'
 
@@ -68,7 +70,14 @@ export default function Experience() {
   const [addValue, setAddValue] = useState('')
   const [setMode, setSetMode] = useState(false)
   const [showLevelUpModal, setShowLevelUpModal] = useState(false)
+  const [levelUpBurstKey, setLevelUpBurstKey] = useState(0)
   const reducedMotion = useReducedMotion()
+
+  useEffect(() => {
+    if (!levelUpBurstKey) return
+    const t = setTimeout(() => setLevelUpBurstKey(0), 2400)
+    return () => clearTimeout(t)
+  }, [levelUpBurstKey])
 
   const { data: char } = useQuery({
     queryKey: ['character', charId],
@@ -89,7 +98,10 @@ export default function Experience() {
           duration: 3500,
           icon: '✨',
         })
-        if (!reducedMotion) fireLevelUpConfetti()
+        if (!reducedMotion) {
+          fireLevelUpConfetti()
+          setLevelUpBurstKey((k) => k + 1)
+        }
       }
       if (updated.hp_gained && updated.hp_gained > 0) {
         toast.success(t('character.xp.hp_gained_toast', { hp: updated.hp_gained }), {
@@ -158,7 +170,35 @@ export default function Experience() {
       )}
 
       {/* Hero level + XP */}
-      <Surface variant="tome" ornamented className="text-center relative overflow-hidden">
+      <Surface
+        variant="tome"
+        ornamented
+        className={`text-center relative overflow-hidden ${levelUpBurstKey ? 'animate-pulse-gold' : ''}`}
+      >
+        {levelUpBurstKey > 0 && !reducedMotion && (
+          <div className="absolute inset-0 pointer-events-none z-[2] text-dnd-gold-bright">
+            {[
+              { pos: 'top-1 left-1', rot: 0 as const },
+              { pos: 'top-1 right-1', rot: 90 as const },
+              { pos: 'bottom-1 right-1', rot: 180 as const },
+              { pos: 'bottom-1 left-1', rot: 270 as const },
+            ].map((corner, i) => (
+              <m.div
+                key={`${levelUpBurstKey}-${i}`}
+                className={`absolute ${corner.pos}`}
+                initial={{ scale: 0, opacity: 0, rotate: -10 }}
+                animate={{ scale: [0, 1.4, 1], opacity: [0, 1, 0.85], rotate: 0 }}
+                transition={{
+                  duration: 0.62,
+                  delay: i * 0.07,
+                  ease: ease.inkSpread,
+                }}
+              >
+                <CornerFlourish rotation={corner.rot} size={18} />
+              </m.div>
+            ))}
+          </div>
+        )}
         <p className="text-[10px] font-cinzel uppercase tracking-[0.3em] text-dnd-gold-dim mb-1">
           {t('character.xp.level_abbr')}
         </p>
@@ -184,7 +224,12 @@ export default function Experience() {
 
         <div className="flex items-center justify-center gap-2 mt-3">
           <Star size={14} className="text-[var(--dnd-amber)]" />
-          <p className="text-2xl font-display font-bold text-dnd-text font-mono tabular-nums">{xp.toLocaleString()}</p>
+          <AnimatedNumber
+            value={xp}
+            className="text-2xl font-display font-bold text-dnd-text"
+            stiffness={120}
+            damping={26}
+          />
           <span className="text-xs font-cinzel uppercase tracking-wider text-dnd-text-muted">XP</span>
         </div>
 

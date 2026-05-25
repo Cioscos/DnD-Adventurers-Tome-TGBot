@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { m, useReducedMotion } from 'framer-motion'
 import { SLOT_PLACEHOLDER_ICON } from '@/lib/equipmentSlots'
@@ -11,6 +12,8 @@ interface Props {
   onTap: (equipped: Item | null) => void
 }
 
+const EQUIP_HALO_MS = 900
+
 export default function EquipmentSlotCell({ slot, equipped, size = 'md', onTap }: Props) {
   const { t } = useTranslation()
   const reduced = useReducedMotion()
@@ -19,11 +22,35 @@ export default function EquipmentSlotCell({ slot, equipped, size = 'md', onTap }
   const slotLabel = t(`character.equipment.slots.${slot}`, { defaultValue: slot })
   const initial = equipped?.name?.trim()?.[0]?.toUpperCase() ?? ''
 
+  const prevIdRef = useRef<number | null>(equipped?.id ?? null)
+  const [halo, setHalo] = useState(false)
+
+  useEffect(() => {
+    const next = equipped?.id ?? null
+    if (next != null && next !== prevIdRef.current) {
+      if (!reduced) {
+        setHalo(true)
+        const t = setTimeout(() => setHalo(false), EQUIP_HALO_MS)
+        prevIdRef.current = next
+        return () => clearTimeout(t)
+      }
+    }
+    prevIdRef.current = next
+  }, [equipped?.id, reduced])
+
   return (
     <m.button
       type="button"
       onClick={() => { haptic.light(); onTap(equipped) }}
       whileTap={reduced ? undefined : { scale: 0.97 }}
+      animate={halo ? {
+        boxShadow: [
+          '0 0 0 0 rgba(240, 201, 112, 0)',
+          '0 0 0 3px rgba(240, 201, 112, 0.55), 0 0 18px rgba(212, 168, 71, 0.55)',
+          '0 0 0 0 rgba(240, 201, 112, 0)',
+        ],
+      } : { boxShadow: '0 0 0 0 rgba(240, 201, 112, 0)' }}
+      transition={halo ? { duration: EQUIP_HALO_MS / 1000, ease: 'easeOut' } : { duration: 0 }}
       style={{
         width: dim,
         height: dim,
@@ -42,13 +69,14 @@ export default function EquipmentSlotCell({ slot, equipped, size = 'md', onTap }
       title={equipped ? equipped.name : slotLabel}
     >
       {equipped ? (
-        <span
+        <m.span
+          layoutId={`equip-icon-${equipped.id}`}
           aria-hidden="true"
           className="font-cinzel font-bold text-dnd-gold-bright leading-none"
           style={{ fontSize: size === 'lg' ? 22 : 18 }}
         >
           {initial}
-        </span>
+        </m.span>
       ) : (
         <PlaceholderIcon
           aria-hidden="true"
