@@ -23,6 +23,11 @@ const ABILITY_THEME: Record<string, string> = {
   charisma: 'from-[var(--dnd-gold-deep)]/40 via-dnd-surface to-dnd-surface border-dnd-gold/40 text-dnd-gold-bright',
 }
 
+// Canonical D&D 5e ordering — STR/DEX/CON/INT/WIS/CHA (mirror HeroScreen.tsx).
+const DND_ABILITY_ORDER = [
+  'strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma',
+]
+
 export default function AbilityScores() {
   const { id } = useParams<{ id: string }>()
   const charId = Number(id)
@@ -79,7 +84,9 @@ export default function AbilityScores() {
   return (
     <Layout title={t('character.stats.title')} backTo={`/char/${charId}`} group="skills" page="stats">
       <Reveal.Stagger stagger={stagger.list} className="grid grid-cols-2 gap-3">
-        {char.ability_scores.map((score: AbilityScore) => {
+        {[...char.ability_scores]
+          .sort((a, b) => DND_ABILITY_ORDER.indexOf(a.name) - DND_ABILITY_ORDER.indexOf(b.name))
+          .map((score: AbilityScore) => {
           const theme = ABILITY_THEME[score.name] ?? ABILITY_THEME.charisma
           const isEditing = editing === score.name
 
@@ -103,7 +110,10 @@ export default function AbilityScores() {
                     <m.button
                       onClick={() => {
                         setEditing(score.name)
-                        setEditValue(String(score.value))
+                        // Leave the input empty so the user types fresh — pre-fill encourages
+                        // accidental "Save" of the unchanged value. Current value is shown as
+                        // placeholder (see Input.placeholder below).
+                        setEditValue('')
                       }}
                       className="shrink-0 w-11 h-11 rounded-full bg-dnd-surface-raised border border-dnd-border flex items-center justify-center text-dnd-gold"
                       whileTap={{ scale: 0.9 }}
@@ -132,6 +142,7 @@ export default function AbilityScores() {
                           max={30}
                           inputMode="numeric"
                           autoFocus
+                          placeholder={String(score.value)}
                           onCommit={() => handleSave(score.name)}
                           className="[&_input]:text-2xl [&_input]:font-display [&_input]:font-black [&_input]:text-center [&_input]:min-h-[56px]"
                         />

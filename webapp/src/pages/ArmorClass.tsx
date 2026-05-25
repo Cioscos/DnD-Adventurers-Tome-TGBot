@@ -114,7 +114,12 @@ export default function ArmorClass() {
           <div className="flex items-center justify-between gap-3">
             <div>
               <div className="flex items-center gap-2">
-                <p className="font-cinzel text-xs uppercase tracking-widest text-dnd-gold-dim">
+                <p
+                  className="font-cinzel text-xs uppercase tracking-widest text-dnd-gold-dim cursor-help"
+                  title={t('character.ac.base_help', {
+                    defaultValue: 'Base = 10 + bonus DEX (con cap se armatura media/pesante) oppure valore armatura equipaggiata.',
+                  })}
+                >
                   {t('character.ac.base')}
                 </p>
                 {equippedBodyArmor && (

@@ -148,7 +148,7 @@ export default function SavingThrows() {
                 variant={isProficient ? 'elevated' : 'flat'}
                 interactive
                 onClick={() => rollMutation.mutate(ability)}
-                className={`relative !p-3 text-center
+                className={`relative !p-3 text-center cursor-pointer
                   ${isProficient ? 'border-l-4 border-dnd-gold-bright border-dnd-gold/50 shadow-halo-gold' : ''}`}
               >
                 <div className="flex items-center justify-between -mx-1 -mt-1 mb-2">

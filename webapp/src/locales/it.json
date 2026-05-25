@@ -138,6 +138,7 @@
     "ac": {
       "title": "Classe Armatura",
       "base": "Base",
+      "base_help": "Base = 10 + bonus DES (con cap se armatura media/pesante) oppure valore CA dell'armatura equipaggiata.",
       "shield": "Scudo",
       "magic": "Magia",
       "total": "Totale",

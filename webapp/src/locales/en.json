@@ -138,6 +138,7 @@
     "ac": {
       "title": "Armor Class",
       "base": "Base",
+      "base_help": "Base = 10 + DEX bonus (capped for medium/heavy armor) or the equipped armor's AC value.",
       "shield": "Shield",
       "magic": "Magic",
       "total": "Total",
