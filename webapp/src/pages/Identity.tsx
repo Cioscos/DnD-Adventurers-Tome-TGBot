@@ -200,11 +200,18 @@ export default function Identity() {
         {t('character.identity.personality', { defaultValue: 'Personalità' })}
       </SectionDivider>
 
-      <div className="flex items-center justify-center gap-1 -mt-2 mb-3 text-dnd-gold-dim">
-        <Lock size={10} />
-        <span className="text-[10px] font-cinzel uppercase tracking-wider">
-          {t('character.identity.private_badge')}
-        </span>
+      <div className="flex flex-col items-center gap-1 -mt-2 mb-3 text-dnd-gold-dim">
+        <div className="flex items-center gap-1">
+          <Lock size={10} />
+          <span className="text-[10px] font-cinzel uppercase tracking-wider">
+            {t('character.identity.private_badge')}
+          </span>
+        </div>
+        <p className="text-[10px] text-dnd-text-faint font-body italic max-w-[300px] text-center">
+          {t('character.identity.private_hint', {
+            defaultValue: 'Background, ideali, legami, difetti — visibili solo al giocatore.',
+          })}
+        </p>
       </div>
 
       <Surface variant="parchment" className="!pt-5 !px-4 !pb-4 relative !mt-8 !mb-6">

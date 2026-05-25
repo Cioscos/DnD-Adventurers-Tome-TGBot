@@ -384,6 +384,7 @@
       "placeholder_bonds": "Descrivi i tuoi legami...",
       "placeholder_flaws": "Descrivi i tuoi difetti...",
       "private_badge": "Info private",
+      "private_hint": "Background, ideali, legami, difetti — visibili solo al giocatore.",
       "language_placeholder": "Aggiungi lingua…",
       "proficiency_placeholder": "Aggiungi competenza…",
       "unsaved_changes": "Modifiche non salvate",
@@ -446,7 +447,8 @@
         "max": "MAX"
       },
       "legend": "Tu sei una leggenda",
-      "quick_to_next": "→ Soglia"
+      "quick_to_next": "→ Soglia",
+      "quick_half_next": "+½ liv"
     },
     "notes": {
       "title": "Note",

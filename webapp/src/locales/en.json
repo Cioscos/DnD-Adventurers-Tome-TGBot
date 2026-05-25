@@ -384,6 +384,7 @@
       "placeholder_bonds": "Describe your bonds...",
       "placeholder_flaws": "Describe your flaws...",
       "private_badge": "Private info",
+      "private_hint": "Background, ideals, bonds, flaws — visible to the player only.",
       "language_placeholder": "Add language…",
       "proficiency_placeholder": "Add proficiency…",
       "unsaved_changes": "Unsaved changes",
@@ -446,7 +447,8 @@
         "max": "MAX"
       },
       "legend": "You are a legend",
-      "quick_to_next": "→ Next"
+      "quick_to_next": "→ Next",
+      "quick_half_next": "+½ lvl"
     },
     "notes": {
       "title": "Notes",

@@ -238,15 +238,16 @@ export default function Experience() {
             ))}
             {xpToNext > 0 && (
               <m.button
-                onClick={() => mutation.mutate({ add: xpToNext })}
+                onClick={() => mutation.mutate({ add: Math.max(1, Math.floor(xpToNext / 2)) })}
                 disabled={mutation.isPending}
                 className="min-h-[48px] rounded-xl bg-dnd-chip-bg border border-dnd-gold/60
                            text-dnd-gold-bright font-cinzel text-[10px] uppercase tracking-widest
                            disabled:opacity-40 disabled:pointer-events-none"
                 whileTap={{ scale: 0.93 }}
-                aria-label={t('character.xp.quick_to_next')}
+                aria-label={t('character.xp.quick_half_next', { defaultValue: '+½ livello' })}
+                title={`+${Math.max(1, Math.floor(xpToNext / 2))} XP`}
               >
-                {t('character.xp.quick_to_next')}
+                {t('character.xp.quick_half_next', { defaultValue: '+½ liv' })}
               </m.button>
             )}
           </div>
