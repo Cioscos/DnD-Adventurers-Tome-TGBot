@@ -120,7 +120,10 @@ function SkillRow({
             <div className="w-5 h-5 rounded-full border-2 border-dnd-border" />
           )}
         </div>
-        <span className="flex-1 text-left text-sm font-body font-medium truncate">
+        <span
+          className="flex-1 text-left text-sm font-body font-medium truncate"
+          title={label}
+        >
           {label}
         </span>
         <span className={`text-sm font-mono font-bold w-10 text-right shrink-0 tabular-nums
@@ -319,6 +322,29 @@ export default function Skills() {
         title={t('character.skills.picker_title')}
       >
         <div className="p-4 space-y-2">
+          {picker !== null && (() => {
+            // Compute bonus breakdown for the currently-targeted skill so the user
+            // understands what each proficiency level will produce.
+            const skill = SKILLS.find((s) => s.key === picker)
+            if (!skill) return null
+            const abilMod = abilityModifier(skill.ability)
+            const lvl = getLevel(skills[picker])
+            const profMul = lvl === 'expert' ? 2 : lvl ? 1 : 0
+            const profPart = profMul * pb
+            const total = abilMod + profPart
+            const abilLabel = t(`character.ability.${skill.ability}_short`, { defaultValue: skill.ability })
+            return (
+              <p className="text-[11px] font-body text-dnd-text-faint mb-3">
+                {t('character.skills.breakdown', {
+                  total: `${total >= 0 ? '+' : ''}${total}`,
+                  abilMod: `${abilMod >= 0 ? '+' : ''}${abilMod}`,
+                  ability: abilLabel,
+                  prof: `${profMul === 0 ? '+0' : profMul === 1 ? `+${pb}` : `+${pb * 2}`}`,
+                  defaultValue: 'Bonus attuale: {{total}} = {{abilMod}} {{ability}} {{prof}} comp',
+                })}
+              </p>
+            )
+          })()}
           {([
             { value: false as ProfLevel, label: t('common.none') },
             { value: true as ProfLevel, label: t('character.skills.proficient') },

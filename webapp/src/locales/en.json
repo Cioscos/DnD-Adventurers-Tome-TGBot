@@ -154,6 +154,7 @@
       "proficient": "Proficient",
       "expert": "Expert",
       "picker_title": "Proficiency level",
+      "breakdown": "Current bonus: {{total}} = {{abilMod}} {{ability}} {{prof}} prof",
       "prof_bonus": "Proficiency bonus",
       "passive_perception": "Passive Perception",
       "roll": "Roll dice",
