@@ -485,7 +485,8 @@
       "empty_title": "No maps",
       "empty_hint": "Upload a dungeon map or adventure PDF — always at your fingertips.",
       "zoom_hint": "Pinch to zoom",
-      "reorder_hint": "Drag to reorder"
+      "reorder_hint": "Drag to reorder",
+      "error_too_large": "{{name}} exceeds the 10 MB limit"
     },
     "history": {
       "title": "History",

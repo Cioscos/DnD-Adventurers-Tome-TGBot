@@ -30,6 +30,18 @@ export default function MapUploadForm({
 
   const handleUpload = async () => {
     if (!zoneName.trim() || selectedFiles.length === 0) return
+    // Client-side pre-validation: backend caps file size at 10 MB; failing
+    // here gives an immediate, localized error instead of a 413 mid-upload.
+    const MAX_SIZE = 10 * 1024 * 1024
+    const tooLarge = selectedFiles.find((f) => f.size > MAX_SIZE)
+    if (tooLarge) {
+      setUploadError(t('character.maps.error_too_large', {
+        name: tooLarge.name,
+        defaultValue: '{{name}} supera il limite di 10 MB',
+      }))
+      haptic.error()
+      return
+    }
     setIsUploading(true)
     setUploadError(null)
     try {
