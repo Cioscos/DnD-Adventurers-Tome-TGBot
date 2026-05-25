@@ -220,47 +220,19 @@ export default function Spells() {
 
       {/* Concentration panel — active spell + description. TS auto on /hp DAMAGE. */}
       {concentratingId && concentratingSpell && (
-        <Surface variant="arcane" ornamented className="space-y-3 @container">
-          <div className="flex flex-col gap-3 @[22rem]:flex-row @[22rem]:items-center @[22rem]:justify-between">
-            <div className="flex items-center gap-2 min-w-0">
-              <FlaskConical size={16} className="text-dnd-arcane-bright shrink-0" />
-              <div className="min-w-0 flex-1">
-                <p className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-arcane-bright">
-                  {t('character.spells.concentration')}
-                </p>
-                <p className="text-base font-display font-bold text-dnd-gold-bright truncate">
-                  {concentratingSpell.name}
-                </p>
-              </div>
-            </div>
-            <Button
-              variant="danger"
-              size="sm"
-              onClick={() => concentrationMutation.mutate(null)}
-              icon={<Ban size={12} />}
-              haptic="warning"
-              className="shrink-0 whitespace-nowrap self-end @[22rem]:self-auto"
-            >
-              {t('character.spells.stop_concentration')}
-            </Button>
-          </div>
-          {concentratingSpell.description && (
-            <div>
-              <p className={`text-sm text-dnd-text font-body leading-relaxed break-words ${concBannerExpanded ? '' : 'line-clamp-2'}`}>
-                {concentratingSpell.description}
-              </p>
-              {concentratingSpell.description.length > 120 && (
-                <button
-                  type="button"
-                  onClick={() => setConcBannerExpanded((v) => !v)}
-                  className="mt-1 text-[11px] font-cinzel uppercase tracking-widest text-dnd-arcane-bright hover:text-dnd-gold-bright"
-                >
-                  {concBannerExpanded ? t('character.spells.collapse') : t('character.spells.expand')}
-                </button>
-              )}
-            </div>
-          )}
-        </Surface>
+        <ConcentrationPanel
+          name={concentratingSpell.name}
+          description={concentratingSpell.description}
+          concBannerExpanded={concBannerExpanded}
+          setConcBannerExpanded={setConcBannerExpanded}
+          onStop={() => concentrationMutation.mutate(null)}
+          labels={{
+            concentration: t('character.spells.concentration'),
+            stop: t('character.spells.stop_concentration'),
+            expand: t('character.spells.expand'),
+            collapse: t('character.spells.collapse'),
+          }}
+        />
       )}
 
       {spells.length === 0 && !showAdd && (
@@ -395,5 +367,88 @@ export default function Spells() {
       />
 
     </Layout>
+  )
+}
+
+interface ConcentrationPanelProps {
+  name: string
+  description: string | null | undefined
+  concBannerExpanded: boolean
+  setConcBannerExpanded: (updater: (v: boolean) => boolean) => void
+  onStop: () => void
+  labels: {
+    concentration: string
+    stop: string
+    expand: string
+    collapse: string
+  }
+}
+
+function ConcentrationPanel({
+  name,
+  description,
+  concBannerExpanded,
+  setConcBannerExpanded,
+  onStop,
+  labels,
+}: ConcentrationPanelProps) {
+  return (
+    <m.div
+      className="relative rounded-2xl"
+      animate={{
+        boxShadow: [
+          '0 0 0 2px rgba(155, 89, 182, 0.20), 0 0 14px rgba(155, 89, 182, 0.18)',
+          '0 0 0 2px rgba(155, 89, 182, 0.42), 0 0 28px rgba(155, 89, 182, 0.42)',
+          '0 0 0 2px rgba(155, 89, 182, 0.20), 0 0 14px rgba(155, 89, 182, 0.18)',
+        ],
+      }}
+      transition={{
+        duration: 2.8,
+        repeat: Infinity,
+        ease: 'easeInOut',
+      }}
+    >
+      <Surface variant="arcane" ornamented className="space-y-3 @container shadow-none">
+        <div className="flex flex-col gap-3 @[22rem]:flex-row @[22rem]:items-center @[22rem]:justify-between">
+          <div className="flex items-center gap-2 min-w-0">
+            <FlaskConical size={16} className="text-dnd-arcane-bright shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-arcane-bright">
+                {labels.concentration}
+              </p>
+              <p className="text-base font-display font-bold text-dnd-gold-bright truncate">
+                {name}
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="danger"
+            size="sm"
+            onClick={onStop}
+            icon={<Ban size={12} />}
+            haptic="warning"
+            className="shrink-0 whitespace-nowrap self-end @[22rem]:self-auto"
+          >
+            {labels.stop}
+          </Button>
+        </div>
+        {description && (
+          <div>
+            <p className={`text-sm text-dnd-text font-body leading-relaxed break-words ${concBannerExpanded ? '' : 'line-clamp-2'}`}>
+              {description}
+            </p>
+            {description.length > 120 && (
+              <button
+                type="button"
+                onClick={() => setConcBannerExpanded((v) => !v)}
+                className="mt-1 text-[11px] font-cinzel uppercase tracking-widest text-dnd-arcane-bright hover:text-dnd-gold-bright"
+              >
+                {concBannerExpanded ? labels.collapse : labels.expand}
+              </button>
+            )}
+          </div>
+        )}
+      </Surface>
+    </m.div>
   )
 }

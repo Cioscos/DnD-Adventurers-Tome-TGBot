@@ -87,21 +87,33 @@ export default function EquipItemPicker({ charId, slot, items, onClose }: Props)
             </div>
           ) : (
             <ul className="divide-y divide-dnd-border/60">
-              {candidates.map((it) => (
-                <li key={it.id}>
-                  <button
-                    type="button"
-                    onClick={() => equip.mutate(it.id)}
-                    disabled={equip.isPending}
-                    className="w-full text-left px-4 py-3 hover:bg-dnd-surface focus-visible:outline-none focus-visible:bg-dnd-surface focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-dnd-gold flex flex-col gap-0.5 disabled:opacity-60"
-                  >
-                    <span className="text-sm font-bold text-dnd-text">{it.name}</span>
-                    <span className="text-[11px] text-dnd-text-muted break-words">
-                      {it.item_type} · {it.weight} lb
-                    </span>
-                  </button>
-                </li>
-              ))}
+              {candidates.map((it) => {
+                const initial = it.name?.trim()?.[0]?.toUpperCase() ?? ''
+                return (
+                  <li key={it.id}>
+                    <button
+                      type="button"
+                      onClick={() => equip.mutate(it.id)}
+                      disabled={equip.isPending}
+                      className="w-full text-left px-4 py-3 hover:bg-dnd-surface focus-visible:outline-none focus-visible:bg-dnd-surface focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-dnd-gold flex items-center gap-3 disabled:opacity-60"
+                    >
+                      <m.span
+                        layoutId={`equip-icon-${it.id}`}
+                        className="shrink-0 w-9 h-9 rounded-md border border-dnd-gold-dim/60 bg-dnd-surface flex items-center justify-center font-cinzel font-bold text-base text-dnd-gold-bright"
+                        aria-hidden="true"
+                      >
+                        {initial}
+                      </m.span>
+                      <span className="flex flex-col gap-0.5 min-w-0 flex-1">
+                        <span className="text-sm font-bold text-dnd-text">{it.name}</span>
+                        <span className="text-[11px] text-dnd-text-muted break-words">
+                          {it.item_type} · {it.weight} lb
+                        </span>
+                      </span>
+                    </button>
+                  </li>
+                )
+              })}
             </ul>
           )}
         </m.div>

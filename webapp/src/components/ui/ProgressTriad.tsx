@@ -1,4 +1,6 @@
 import React from 'react'
+import { m } from 'framer-motion'
+import { spring } from '@/styles/motion'
 
 interface ProgressTriadProps {
   /** Current value. */
@@ -34,11 +36,20 @@ export default function ProgressTriad({
   const pctClamped = Math.max(0, Math.min(1.2, pct))
   const widthPct = Math.min(100, pctClamped * 100)
 
-  const color = pct >= crimsonAt
-    ? 'bg-[var(--dnd-crimson-bright)]'
-    : pct >= amberAt
-      ? 'bg-[var(--dnd-amber)]'
-      : 'bg-[var(--dnd-emerald-bright)]'
+  const isCrimson = pct >= crimsonAt
+  const isAmber = !isCrimson && pct >= amberAt
+
+  const colorCss = isCrimson
+    ? 'var(--dnd-crimson-bright)'
+    : isAmber
+      ? 'var(--dnd-amber)'
+      : 'var(--dnd-emerald-bright)'
+
+  const glowRgba = isCrimson
+    ? 'rgba(232, 80, 80, 0.5)'
+    : isAmber
+      ? 'rgba(232, 165, 71, 0.42)'
+      : 'rgba(111, 209, 149, 0.38)'
 
   const showNum = showNumeric ?? !!label
 
@@ -59,9 +70,16 @@ export default function ProgressTriad({
         </div>
       )}
       <div className="h-1.5 w-full rounded-full bg-dnd-surface overflow-hidden border border-dnd-border/60">
-        <div
-          className={`h-full ${color} transition-all duration-300`}
-          style={{ width: `${widthPct}%` }}
+        <m.div
+          className="h-full origin-left rounded-full"
+          style={{
+            background: colorCss,
+            boxShadow: `0 0 6px ${glowRgba}`,
+            width: '100%',
+          }}
+          initial={false}
+          animate={{ scaleX: widthPct / 100 }}
+          transition={spring.drift}
         />
       </div>
     </div>
