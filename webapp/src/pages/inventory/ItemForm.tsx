@@ -29,9 +29,12 @@ interface ItemFormProps {
 const SELECT_CLS =
   'w-full px-3 py-2.5 min-h-[48px] rounded-lg bg-dnd-surface text-dnd-text border-b-2 border-dnd-border outline-none font-body text-sm'
 
+type WizardStep = 'type' | 'base' | 'advanced'
+
 export default function ItemForm({ initialData, onSubmit, onCancel, isPending }: ItemFormProps) {
   const { t } = useTranslation()
   const [form, setForm] = useState<ItemFormData>(emptyForm)
+  const [step, setStep] = useState<WizardStep>('type')
   const isEditing = !!initialData
 
   useEffect(() => {
@@ -40,7 +43,11 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
     } else {
       setForm(emptyForm)
     }
+    setStep('type')
   }, [initialData])
+
+  const stepIdx = step === 'type' ? 1 : step === 'base' ? 2 : 3
+  const stepLabel = `${stepIdx}/3`
 
   const toggleProperty = (prop: string) => {
     setForm((f) => ({
@@ -51,13 +58,17 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
     }))
   }
 
+  const canAdvanceFromType = form.name.trim().length > 0
+
   return (
     <Sheet
       open
       onClose={onCancel}
-      title={isEditing ? t('common.edit') : t('character.inventory.add')}
+      title={`${isEditing ? t('common.edit') : t('character.inventory.add')} · ${stepLabel}`}
     >
       <div className="p-5 space-y-3">
+        {step === 'type' && (
+        <>
         {/* Name */}
         <Input
           label={t('character.inventory.item_name')}
@@ -84,6 +95,73 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
           </select>
         </div>
 
+        <div className="flex gap-2 pt-2">
+          <Button
+            variant="primary"
+            fullWidth
+            onClick={() => setStep('base')}
+            disabled={!canAdvanceFromType}
+            haptic="medium"
+          >
+            {t('common.next')}
+          </Button>
+          <Button variant="secondary" fullWidth onClick={onCancel}>
+            {t('common.cancel')}
+          </Button>
+        </div>
+        </>
+        )}
+
+        {step === 'base' && (
+        <>
+        {/* Quantity & Weight */}
+        <div className="flex gap-2">
+          <Input
+            className="flex-1"
+            label={t('character.inventory.quantity')}
+            type="number"
+            value={form.quantity}
+            onChange={(v) => setForm((f) => ({ ...f, quantity: v }))}
+            min={1}
+          />
+          <Input
+            className="flex-1"
+            label={`${t('character.inventory.weight')} (lb)`}
+            type="number"
+            value={form.weight}
+            onChange={(v) => setForm((f) => ({ ...f, weight: v }))}
+            min={0}
+          />
+        </div>
+
+        {/* Description */}
+        <Input
+          variant="textarea"
+          label={t('character.inventory.description')}
+          value={form.description}
+          onChange={(v) => setForm((f) => ({ ...f, description: v }))}
+          placeholder={t('character.inventory.description')}
+          rows={3}
+        />
+
+        <div className="flex gap-2 pt-2">
+          <Button variant="secondary" onClick={() => setStep('type')} className="px-4">
+            {t('common.back')}
+          </Button>
+          <Button
+            variant="primary"
+            fullWidth
+            onClick={() => setStep('advanced')}
+            haptic="medium"
+          >
+            {t('common.next')}
+          </Button>
+        </div>
+        </>
+        )}
+
+        {step === 'advanced' && (
+        <>
         {/* === WEAPON fields === */}
         {form.item_type === 'weapon' && (
           <>
@@ -247,37 +325,10 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
           onChange={(next) => setForm((f) => ({ ...f, ability_modifiers: next }))}
         />
 
-        {/* Quantity & Weight */}
-        <div className="flex gap-2">
-          <Input
-            className="flex-1"
-            label={t('character.inventory.quantity')}
-            type="number"
-            value={form.quantity}
-            onChange={(v) => setForm((f) => ({ ...f, quantity: v }))}
-            min={1}
-          />
-          <Input
-            className="flex-1"
-            label={`${t('character.inventory.weight')} (lb)`}
-            type="number"
-            value={form.weight}
-            onChange={(v) => setForm((f) => ({ ...f, weight: v }))}
-            min={0}
-          />
-        </div>
-
-        {/* Description */}
-        <Input
-          variant="textarea"
-          label={t('character.inventory.description')}
-          value={form.description}
-          onChange={(v) => setForm((f) => ({ ...f, description: v }))}
-          placeholder={t('character.inventory.description')}
-          rows={2}
-        />
-
         <div className="flex gap-2 pt-2">
+          <Button variant="secondary" onClick={() => setStep('base')} className="px-4">
+            {t('common.back')}
+          </Button>
           <Button
             variant="primary"
             fullWidth
@@ -288,10 +339,9 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
           >
             {isEditing ? t('common.save') : t('common.add')}
           </Button>
-          <Button variant="secondary" fullWidth onClick={onCancel}>
-            {t('common.cancel')}
-          </Button>
         </div>
+        </>
+        )}
       </div>
     </Sheet>
   )

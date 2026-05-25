@@ -1,21 +1,25 @@
 """Notes endpoints.
 
-Notes are stored as a JSON dict on the Character model:
-  {title: body_string, ...}
+Notes are stored as a JSON dict on the Character model. Two value shapes are
+supported for backward compatibility:
 
-Voice notes are stored with body = "[VOICE:{relative_path}]".
+  Legacy (string): {title: body_string, ...}
+  Current (dict):  {title: {body, created_at, updated_at?, tags?}, ...}
+
+Voice notes carry body = "[VOICE:{relative_path}]" in either shape.
 Audio files are saved under data/voice_notes/{char_id}/.
 """
 
 from __future__ import annotations
 
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, Query, UploadFile, status
 from fastapi.responses import FileResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -31,19 +35,40 @@ _ALLOWED_AUDIO_EXTS = {".webm", ".ogg", ".mp3", ".wav", ".m4a", ".aac"}
 _MAX_VOICE_SIZE = 5 * 1024 * 1024  # 5 MB
 
 
+def _now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _unpack(value) -> dict:
+    """Return a normalized record for a stored note value (legacy str or dict)."""
+    if isinstance(value, dict):
+        return {
+            "body": str(value.get("body", "")),
+            "created_at": value.get("created_at"),
+            "updated_at": value.get("updated_at"),
+            "tags": list(value.get("tags") or []),
+        }
+    return {"body": str(value or ""), "created_at": None, "updated_at": None, "tags": []}
+
+
 class NoteRead(BaseModel):
     title: str
     body: str
     is_voice: bool = False
+    created_at: str | None = None
+    updated_at: str | None = None
+    tags: list[str] = Field(default_factory=list)
 
 
 class NoteCreate(BaseModel):
     title: str
     body: str
+    tags: list[str] = Field(default_factory=list)
 
 
 class NoteUpdate(BaseModel):
     body: str
+    tags: list[str] | None = None
 
 
 async def _get_owned(char_id: int, user_id: int, session: AsyncSession) -> Character:
@@ -60,14 +85,20 @@ async def _get_owned(char_id: int, user_id: int, session: AsyncSession) -> Chara
 
 def _notes_list(char: Character) -> list[NoteRead]:
     notes = char.notes or {}
-    return [
-        NoteRead(
-            title=title,
-            body=body,
-            is_voice=isinstance(body, str) and body.startswith("[VOICE:"),
+    out: list[NoteRead] = []
+    for title, value in notes.items():
+        rec = _unpack(value)
+        out.append(
+            NoteRead(
+                title=title,
+                body=rec["body"],
+                is_voice=rec["body"].startswith("[VOICE:"),
+                created_at=rec["created_at"],
+                updated_at=rec["updated_at"],
+                tags=rec["tags"],
+            )
         )
-        for title, body in notes.items()
-    ]
+    return out
 
 
 @router.get("/{char_id}/notes", response_model=list[NoteRead])
@@ -91,7 +122,11 @@ async def add_note(
     notes = dict(char.notes or {})
     if body.title in notes:
         raise HTTPException(status_code=409, detail="A note with this title already exists")
-    notes[body.title] = body.body
+    notes[body.title] = {
+        "body": body.body,
+        "created_at": _now_iso(),
+        "tags": list(body.tags or []),
+    }
     char.notes = notes
     return _notes_list(char)
 
@@ -108,7 +143,13 @@ async def update_note(
     notes = dict(char.notes or {})
     if title not in notes:
         raise HTTPException(status_code=404, detail="Note not found")
-    notes[title] = body.body
+    existing = _unpack(notes[title])
+    notes[title] = {
+        "body": body.body,
+        "created_at": existing["created_at"],
+        "updated_at": _now_iso(),
+        "tags": list(body.tags) if body.tags is not None else existing["tags"],
+    }
     char.notes = notes
     return _notes_list(char)
 
@@ -124,10 +165,10 @@ async def delete_note(
     notes = dict(char.notes or {})
     if title not in notes:
         raise HTTPException(status_code=404, detail="Note not found")
-    body = notes[title]
+    body_str = _unpack(notes[title])["body"]
     # Clean up voice file if applicable
-    if isinstance(body, str) and body.startswith("[VOICE:") and body.endswith("]"):
-        file_path = Path(body[7:-1])
+    if body_str.startswith("[VOICE:") and body_str.endswith("]"):
+        file_path = Path(body_str[7:-1])
         if file_path.exists():
             file_path.unlink()
     del notes[title]
@@ -176,7 +217,11 @@ async def upload_voice_note(
     file_path.write_bytes(content)
 
     # Store reference in notes dict
-    notes[title] = f"[VOICE:{file_path}]"
+    notes[title] = {
+        "body": f"[VOICE:{file_path}]",
+        "created_at": _now_iso(),
+        "tags": [],
+    }
     char.notes = notes
     return _notes_list(char)
 

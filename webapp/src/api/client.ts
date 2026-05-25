@@ -205,10 +205,21 @@ export const api = {
   characters: {
     list: () => request<CharacterSummary[]>('/characters'),
     get: (id: number) => request<CharacterFull>(`/characters/${id}`),
-    create: (name: string) =>
+    create: (
+      name: string,
+      initialClass?: {
+        class_name: string
+        level?: number
+        hit_die?: number
+        spellcasting_ability?: string | null
+      } | null,
+    ) =>
       request<CharacterFull>('/characters', {
         method: 'POST',
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({
+          name,
+          ...(initialClass ? { initial_class: initialClass } : {}),
+        }),
       }),
     update: (id: number, data: Record<string, unknown>) =>
       request<CharacterFull>(`/characters/${id}`, {
@@ -489,15 +500,15 @@ export const api = {
   // ---------------------------------------------------------------------------
   notes: {
     list: (charId: number) => request<Note[]>(`/characters/${charId}/notes`),
-    add: (charId: number, title: string, body: string) =>
+    add: (charId: number, title: string, body: string, tags?: string[]) =>
       request<Note[]>(`/characters/${charId}/notes`, {
         method: 'POST',
-        body: JSON.stringify({ title, body }),
+        body: JSON.stringify({ title, body, tags: tags ?? [] }),
       }),
-    update: (charId: number, title: string, body: string) =>
+    update: (charId: number, title: string, body: string, tags?: string[]) =>
       request<Note[]>(`/characters/${charId}/notes/${encodeURIComponent(title)}`, {
         method: 'PATCH',
-        body: JSON.stringify({ body }),
+        body: JSON.stringify({ body, ...(tags !== undefined ? { tags } : {}) }),
       }),
     remove: (charId: number, title: string) =>
       request<Note[]>(`/characters/${charId}/notes/${encodeURIComponent(title)}`, {

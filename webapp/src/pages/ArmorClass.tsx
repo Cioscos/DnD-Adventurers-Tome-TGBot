@@ -104,67 +104,50 @@ export default function ArmorClass() {
         </div>
       </Surface>
 
-      {/* Base full-width */}
+      {/* Single-row 3-col: Base · Shield · Magic */}
       <m.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ ...spring.drift, delay: 0.10 }}
+        className="grid grid-cols-3 gap-2"
       >
         <Surface variant="elevated">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <div className="flex items-center gap-2">
-                <p
-                  className="font-cinzel text-xs uppercase tracking-widest text-dnd-gold-dim cursor-help"
-                  title={t('character.ac.base_help', {
-                    defaultValue: 'Base = 10 + bonus DEX (con cap se armatura media/pesante) oppure valore armatura equipaggiata.',
-                  })}
-                >
-                  {t('character.ac.base')}
-                </p>
-                {equippedBodyArmor && (
-                  <span className="text-[9px] font-cinzel uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-dnd-gold/20 text-dnd-gold-bright border border-dnd-gold/50">
-                    {t('character.ac.auto_from_armor')}
-                  </span>
-                )}
-              </div>
-              <p className="text-4xl font-display font-black text-dnd-gold-bright mt-0.5">
-                {char.base_armor_class}
-              </p>
-              {equippedBodyArmor && (
-                <p className="text-[10px] text-dnd-text-faint font-body italic mt-1">
-                  {t('character.ac.auto_from_armor_hint', { name: equippedBodyArmor.name })}
-                </p>
-              )}
-            </div>
-            <Input
-              type="number"
-              min={0}
-              value={base}
-              onChange={setBase}
-              placeholder={String(char.base_armor_class)}
-              inputMode="numeric"
-              disabled={!!equippedBodyArmor}
-              className="w-32 [&_input]:text-xl [&_input]:font-display [&_input]:font-bold [&_input]:text-center"
-            />
+          <div className="flex items-center gap-1 flex-wrap">
+            <p
+              className="font-cinzel text-[10px] uppercase tracking-widest text-dnd-gold-dim cursor-help"
+              title={t('character.ac.base_help', {
+                defaultValue: 'Base = 10 + bonus DEX (con cap se armatura media/pesante) oppure valore armatura equipaggiata.',
+              })}
+            >
+              {t('character.ac.base')}
+            </p>
+            {equippedBodyArmor && (
+              <span className="text-[8px] font-cinzel uppercase tracking-wider px-1 py-px rounded-full bg-dnd-gold/20 text-dnd-gold-bright border border-dnd-gold/50">
+                {t('character.ac.auto_from_armor')}
+              </span>
+            )}
           </div>
+          <p className="text-2xl font-display font-black text-dnd-gold-bright mt-0.5">
+            {char.base_armor_class}
+          </p>
+          <Input
+            type="number"
+            min={0}
+            value={base}
+            onChange={setBase}
+            placeholder={String(char.base_armor_class)}
+            inputMode="numeric"
+            disabled={!!equippedBodyArmor}
+            className="mt-2 w-full [&_input]:text-base [&_input]:font-display [&_input]:font-bold [&_input]:text-center"
+          />
         </Surface>
-      </m.div>
-
-      {/* Scudo + Magia affiancati in grid 2 colonne */}
-      <m.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ ...spring.drift, delay: 0.15 }}
-        className="grid grid-cols-2 gap-2"
-      >
         <Surface variant="elevated">
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1 flex-wrap">
             <p className="font-cinzel text-[10px] uppercase tracking-widest text-dnd-gold-dim">
               {t('character.ac.shield')}
             </p>
             {equippedShield && (
-              <span className="text-[9px] font-cinzel uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-dnd-gold/20 text-dnd-gold-bright border border-dnd-gold/50">
+              <span className="text-[8px] font-cinzel uppercase tracking-wider px-1 py-px rounded-full bg-dnd-gold/20 text-dnd-gold-bright border border-dnd-gold/50">
                 {t('character.ac.auto_from_armor')}
               </span>
             )}
@@ -201,6 +184,12 @@ export default function ArmorClass() {
           />
         </Surface>
       </m.div>
+
+      {equippedBodyArmor && (
+        <p className="text-[10px] text-dnd-text-faint font-body italic px-2 -mt-1">
+          {t('character.ac.auto_from_armor_hint', { name: equippedBodyArmor.name })}
+        </p>
+      )}
 
       {isDirty && previewTotal !== char.ac && (
         <m.div

@@ -21,13 +21,56 @@ import { useCharacterStore } from '@/store/characterStore'
 import { useDiceSettings } from '@/store/diceSettings'
 import { useThemeSettings, type ThemeMode } from '@/store/themeSettings'
 import { useUnitSettings, type UnitSystem } from '@/store/unitSettings'
-import { BUNDLED_PACKS, type PackId } from '@/dice/packs/registry'
+import { BUNDLED_PACKS, PACK_PREVIEW, type PackId } from '@/dice/packs/registry'
 import { loadManifest } from '@/dice/packs/loader'
 import { useDicePack } from '@/dice/packs/DicePackProvider'
 import { spring } from '@/styles/motion'
 
 type RetentionMode = 'off' | 'events' | 'days'
 const RETENTION_MODES: readonly RetentionMode[] = ['off', 'events', 'days'] as const
+
+function D20Thumb({ body, accent, active }: { body: string; accent: string; active: boolean }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="24"
+      height="24"
+      aria-hidden
+      className="shrink-0"
+      style={{
+        filter: active
+          ? 'drop-shadow(0 0 4px var(--dnd-gold-glow))'
+          : 'drop-shadow(0 1px 2px rgba(0,0,0,0.35))',
+      }}
+    >
+      <polygon
+        points="12,2 22,8 22,16 12,22 2,16 2,8"
+        fill={body}
+        stroke={accent}
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
+      <polygon
+        points="12,5 18,9 12,13 6,9"
+        fill="none"
+        stroke={accent}
+        strokeOpacity="0.55"
+        strokeWidth="0.8"
+      />
+      <text
+        x="12"
+        y="17.5"
+        textAnchor="middle"
+        fontSize="6"
+        fontWeight="700"
+        fill={accent}
+        fontFamily="Cinzel, serif"
+      >
+        20
+      </text>
+    </svg>
+  )
+}
 
 export default function Settings() {
   const { id } = useParams<{ id: string }>()
@@ -262,6 +305,7 @@ export default function Settings() {
           <div className="flex flex-col gap-1.5 pl-6 mt-2">
             {BUNDLED_PACKS.map((id) => {
               const selected = packId === id
+              const preview = PACK_PREVIEW[id]
               return (
                 <label
                   key={id}
@@ -285,6 +329,7 @@ export default function Settings() {
                   >
                     {selected && <span className="w-2 h-2 rounded-full bg-dnd-ink" />}
                   </span>
+                  <D20Thumb body={preview.body} accent={preview.accent} active={selected} />
                   <span>{packNames?.[id] ?? id}</span>
                 </label>
               )

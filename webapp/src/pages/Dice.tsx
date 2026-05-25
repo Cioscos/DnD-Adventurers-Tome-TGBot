@@ -15,6 +15,8 @@ import { DiceRunicWatermark } from '@/components/ui/Ornament'
 import ScrollArea from '@/components/ScrollArea'
 import { haptic, isInsideTelegram } from '@/auth/telegram'
 import { spring } from '@/styles/motion'
+import { formatRelative, formatAbsolute } from '@/lib/relativeTime'
+import { useCharacterStore } from '@/store/characterStore'
 import type { DiceRollResult } from '@/types'
 import { useRollAndPersist } from '@/dice/useRollAndPersist'
 import { schedulePreloadDiceScene } from '@/dice/preload'
@@ -54,6 +56,7 @@ export default function Dice() {
   const charId = Number(id)
   const { t } = useTranslation()
   const qc = useQueryClient()
+  const locale = useCharacterStore((s) => s.locale)
   const [count, setCount] = useState(1)
   const [lastResult, setLastResult] = useState<DiceRollResult | null>(null)
   const [statRollExtras, setStatRollExtras] = useState<StatRollExtras | null>(null)
@@ -384,25 +387,54 @@ export default function Dice() {
           </div>
           <ScrollArea>
             <div className="space-y-1">
-              {history.slice(0, 10).map((entry, i) => (
-                <m.div
-                  key={i}
-                  initial={{ opacity: 0, x: -8 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.03 }}
-                  className="flex justify-between items-center gap-2 px-3 py-2 rounded-xl bg-dnd-surface border border-dnd-border"
-                >
-                  <div className="flex items-baseline gap-1.5 min-w-0">
-                    <span className="text-xs text-dnd-gold-dim font-mono shrink-0">{entry.notation}</span>
-                    {entry.rolls.length > 1 && (
-                      <span className="text-[10px] text-dnd-text-faint font-mono truncate">
-                        [{entry.rolls.join('+')}]
-                      </span>
-                    )}
-                  </div>
-                  <span className="font-display font-black text-dnd-gold-bright text-lg shrink-0">{entry.total}</span>
-                </m.div>
-              ))}
+              {history.slice(0, 10).map((entry, i) => {
+                const ts = entry.timestamp
+                const rel = ts
+                  ? formatRelative(ts, {
+                      locale: locale === 'en' ? 'en' : 'it',
+                      todayLabel: locale === 'en' ? 'Today' : 'Oggi',
+                      yesterdayLabel: locale === 'en' ? 'Yesterday' : 'Ieri',
+                    })
+                  : null
+                const abs = ts ? formatAbsolute(ts, locale === 'en' ? 'en' : 'it') : null
+                const source = entry.source
+                const sourceLabel = source && source !== 'manual'
+                  ? t(`character.dice.source.${source}`, { defaultValue: source })
+                  : null
+                return (
+                  <m.div
+                    key={i}
+                    initial={{ opacity: 0, x: -8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.03 }}
+                    className="flex justify-between items-center gap-2 px-3 py-2 rounded-xl bg-dnd-surface border border-dnd-border"
+                    title={abs ?? undefined}
+                  >
+                    <div className="flex flex-col min-w-0 flex-1">
+                      <div className="flex items-baseline gap-1.5 min-w-0">
+                        <span className="text-xs text-dnd-gold-dim font-mono shrink-0">{entry.notation}</span>
+                        {entry.rolls.length > 1 && (
+                          <span className="text-[10px] text-dnd-text-faint font-mono truncate">
+                            [{entry.rolls.join('+')}]
+                          </span>
+                        )}
+                      </div>
+                      {(rel || sourceLabel || entry.label) && (
+                        <div className="flex items-center gap-1.5 text-[9px] text-dnd-text-faint italic mt-0.5">
+                          {sourceLabel && (
+                            <span className="font-cinzel uppercase tracking-wider px-1 py-px rounded bg-dnd-chip-bg text-dnd-gold-dim border border-dnd-border not-italic">
+                              {sourceLabel}
+                            </span>
+                          )}
+                          {entry.label && <span className="truncate">{entry.label}</span>}
+                          {rel && <span className="ml-auto shrink-0">{rel}</span>}
+                        </div>
+                      )}
+                    </div>
+                    <span className="font-display font-black text-dnd-gold-bright text-lg shrink-0">{entry.total}</span>
+                  </m.div>
+                )
+              })}
             </div>
           </ScrollArea>
         </div>

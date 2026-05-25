@@ -63,6 +63,7 @@ export default function Abilities() {
   const [form, setForm] = useState<AddForm>(emptyForm)
   const [expanded, setExpanded] = useState<number | null>(null)
   const [editingAbility, setEditingAbility] = useState<Ability | null>(null)
+  const [wizardStep, setWizardStep] = useState<'basics' | 'details'>('basics')
 
   const { data: char } = useQuery({
     queryKey: ['character', charId],
@@ -123,12 +124,14 @@ export default function Abilities() {
   function openAdd() {
     setEditingAbility(null)
     setForm(emptyForm)
+    setWizardStep('basics')
     setShowAdd(true)
   }
 
   function openEdit(ab: Ability) {
     setEditingAbility(ab)
     setForm(abilityToForm(ab))
+    setWizardStep('basics')
     setShowAdd(true)
   }
 
@@ -136,6 +139,7 @@ export default function Abilities() {
     setShowAdd(false)
     setEditingAbility(null)
     setForm(emptyForm)
+    setWizardStep('basics')
   }
 
   function submitForm() {
@@ -321,95 +325,127 @@ export default function Abilities() {
         </div>
       </ScrollArea>
 
-      {/* Add/Edit Sheet */}
-      <Sheet open={showAdd} onClose={closeForm} title={editingAbility ? t('character.abilities.edit') : t('character.abilities.add')}>
+      {/* Add/Edit Sheet — 2-step wizard */}
+      <Sheet
+        open={showAdd}
+        onClose={closeForm}
+        title={
+          (editingAbility ? t('character.abilities.edit') : t('character.abilities.add')) +
+          ` · ${wizardStep === 'basics' ? '1' : '2'}/2`
+        }
+      >
         <div className="p-5 space-y-3">
-          <Input
-            label={t('character.abilities.name_label')}
-            value={form.name}
-            onChange={(v) =>
-              setForm((f) => {
-                // Smart-default the restoration only when adding (not editing existing)
-                // and only when the user has not deviated from the current default.
-                if (editingAbility) return { ...f, name: v }
-                const auto = detectRestoration(v)
-                const stillAtPriorAuto = f.restoration_type === detectRestoration(f.name)
-                return {
-                  ...f,
-                  name: v,
-                  restoration_type: stillAtPriorAuto ? auto : f.restoration_type,
+          {wizardStep === 'basics' && (
+            <>
+              <Input
+                label={t('character.abilities.name_label')}
+                value={form.name}
+                onChange={(v) =>
+                  setForm((f) => {
+                    if (editingAbility) return { ...f, name: v }
+                    const auto = detectRestoration(v)
+                    const stillAtPriorAuto = f.restoration_type === detectRestoration(f.name)
+                    return {
+                      ...f,
+                      name: v,
+                      restoration_type: stillAtPriorAuto ? auto : f.restoration_type,
+                    }
+                  })
                 }
-              })
-            }
-            placeholder="Rage, Action Surge, ..."
-            autoFocus
-          />
-          <Input
-            variant="textarea"
-            label={t('character.abilities.description_label')}
-            value={form.description}
-            onChange={(v) => setForm((f) => ({ ...f, description: v }))}
-            rows={3}
-          />
-          <div className="grid grid-cols-2 gap-2">
-            <Input
-              label={t('character.abilities.max_uses_label')}
-              value={form.max_uses}
-              onChange={(v) => setForm((f) => ({ ...f, max_uses: v }))}
-              type="number"
-              min={0}
-              inputMode="numeric"
-              placeholder="—"
-            />
-            <div>
-              <label className="block text-[11px] uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
-                {t('character.abilities.restoration_label')}
-              </label>
-              <select
-                value={form.restoration_type}
-                onChange={(e) => setForm((f) => ({ ...f, restoration_type: e.target.value }))}
-                className="w-full px-3 py-2.5 min-h-[48px] rounded-lg bg-dnd-surface text-dnd-text
-                           border-b-2 border-dnd-border outline-none font-body text-sm"
+                placeholder="Rage, Action Surge, ..."
+                autoFocus
+              />
+              <m.label
+                className="flex items-center gap-3 p-3 rounded-xl bg-dnd-surface border border-dnd-border cursor-pointer"
+                whileTap={{ scale: 0.98 }}
+                transition={spring.press}
               >
-                <option value="long_rest">{t('character.abilities.restoration.long_rest')}</option>
-                <option value="short_rest">{t('character.abilities.restoration.short_rest')}</option>
-                <option value="manual">{t('character.abilities.restoration.manual')}</option>
-              </select>
-            </div>
-          </div>
+                <input
+                  type="checkbox"
+                  checked={form.is_passive}
+                  onChange={(e) => setForm((f) => ({ ...f, is_passive: e.target.checked }))}
+                  className="w-5 h-5 accent-[var(--dnd-gold)]"
+                />
+                <Sparkles size={14} className="text-dnd-gold-bright" />
+                <span className="text-sm font-cinzel uppercase tracking-wider text-dnd-gold-bright">
+                  {t('character.abilities.passive')}
+                </span>
+              </m.label>
+              <div className="flex gap-2 pt-2">
+                <Button
+                  variant="primary"
+                  fullWidth
+                  onClick={() => setWizardStep('details')}
+                  disabled={!form.name.trim()}
+                  haptic="medium"
+                >
+                  {t('common.next', { defaultValue: 'Avanti' })}
+                </Button>
+                <Button variant="secondary" fullWidth onClick={closeForm}>
+                  {t('common.cancel')}
+                </Button>
+              </div>
+            </>
+          )}
 
-          <m.label
-            className="flex items-center gap-3 p-3 rounded-xl bg-dnd-surface border border-dnd-border cursor-pointer"
-            whileTap={{ scale: 0.98 }}
-            transition={spring.press}
-          >
-            <input
-              type="checkbox"
-              checked={form.is_passive}
-              onChange={(e) => setForm((f) => ({ ...f, is_passive: e.target.checked }))}
-              className="w-5 h-5 accent-[var(--dnd-gold)]"
-            />
-            <Sparkles size={14} className="text-dnd-gold-bright" />
-            <span className="text-sm font-cinzel uppercase tracking-wider text-dnd-gold-bright">
-              {t('character.abilities.passive')}
-            </span>
-          </m.label>
-
-          <div className="flex gap-2 pt-2">
-            <Button
-              variant="primary"
-              fullWidth
-              onClick={submitForm}
-              disabled={!form.name.trim() || isPending}
-              loading={isPending}
-              haptic="success"
-            >
-              {editingAbility ? t('common.save') : t('common.add')}
-            </Button>
-            <Button variant="secondary" fullWidth onClick={closeForm}>
-              {t('common.cancel')}
-            </Button>
-          </div>
+          {wizardStep === 'details' && (
+            <>
+              <Input
+                variant="textarea"
+                label={t('character.abilities.description_label')}
+                value={form.description}
+                onChange={(v) => setForm((f) => ({ ...f, description: v }))}
+                rows={3}
+              />
+              {!form.is_passive && (
+                <div className="grid grid-cols-2 gap-2">
+                  <Input
+                    label={t('character.abilities.max_uses_label')}
+                    value={form.max_uses}
+                    onChange={(v) => setForm((f) => ({ ...f, max_uses: v }))}
+                    type="number"
+                    min={0}
+                    inputMode="numeric"
+                    placeholder="—"
+                  />
+                  <div>
+                    <label className="block text-[11px] uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
+                      {t('character.abilities.restoration_label')}
+                    </label>
+                    <select
+                      value={form.restoration_type}
+                      onChange={(e) => setForm((f) => ({ ...f, restoration_type: e.target.value }))}
+                      className="w-full px-3 py-2.5 min-h-[48px] rounded-lg bg-dnd-surface text-dnd-text
+                                 border-b-2 border-dnd-border outline-none font-body text-sm"
+                    >
+                      <option value="long_rest">{t('character.abilities.restoration.long_rest')}</option>
+                      <option value="short_rest">{t('character.abilities.restoration.short_rest')}</option>
+                      <option value="manual">{t('character.abilities.restoration.manual')}</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+              <div className="flex gap-2 pt-2">
+                <Button
+                  variant="secondary"
+                  onClick={() => setWizardStep('basics')}
+                  className="px-4"
+                >
+                  {t('common.back', { defaultValue: 'Indietro' })}
+                </Button>
+                <Button
+                  variant="primary"
+                  fullWidth
+                  onClick={submitForm}
+                  disabled={!form.name.trim() || isPending}
+                  loading={isPending}
+                  haptic="success"
+                >
+                  {editingAbility ? t('common.save') : t('common.add')}
+                </Button>
+              </div>
+            </>
+          )}
         </div>
       </Sheet>
     </Layout>

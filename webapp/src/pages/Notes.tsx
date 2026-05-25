@@ -30,7 +30,7 @@ export default function Notes() {
   const qc = useQueryClient()
   const reduceMotion = useReducedMotion()
   const [mode, setMode] = useState<Mode>('list')
-  const [editNote, setEditNote] = useState<{ title: string; body: string } | null>(null)
+  const [editNote, setEditNote] = useState<{ title: string; body: string; tags?: string[] } | null>(null)
   const [originalTitle, setOriginalTitle] = useState('')
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
   const [micStatus, setMicStatus] = useState<MicStatus>('unknown')
@@ -64,8 +64,8 @@ export default function Notes() {
   })
 
   const addMutation = useMutation({
-    mutationFn: ({ title, body }: { title: string; body: string }) =>
-      api.notes.add(charId, title, body),
+    mutationFn: ({ title, body, tags }: { title: string; body: string; tags: string[] }) =>
+      api.notes.add(charId, title, body, tags),
     onSuccess: (updated) => {
       qc.setQueryData(['notes', charId], updated)
       setMode('list')
@@ -75,8 +75,8 @@ export default function Notes() {
   })
 
   const updateMutation = useMutation({
-    mutationFn: ({ body }: { body: string }) =>
-      api.notes.update(charId, originalTitle, body),
+    mutationFn: ({ body, tags }: { body: string; tags: string[] }) =>
+      api.notes.update(charId, originalTitle, body, tags),
     onSuccess: (updated) => {
       qc.setQueryData(['notes', charId], updated)
       setMode('list')
@@ -106,17 +106,17 @@ export default function Notes() {
     onError: () => haptic.error(),
   })
 
-  const startEdit = (title: string, body: string) => {
+  const startEdit = (title: string, body: string, tags: string[]) => {
     setOriginalTitle(title)
-    setEditNote({ title, body })
+    setEditNote({ title, body, tags })
     setMode('edit')
   }
 
-  const handleEditorSave = (title: string, body: string) => {
+  const handleEditorSave = (title: string, body: string, tags: string[]) => {
     if (mode === 'edit') {
-      updateMutation.mutate({ body })
+      updateMutation.mutate({ body, tags })
     } else {
-      addMutation.mutate({ title, body })
+      addMutation.mutate({ title, body, tags })
     }
   }
 
@@ -136,25 +136,7 @@ export default function Notes() {
     )
   }
 
-  if (mode === 'add' || mode === 'edit') {
-    const isEdit = mode === 'edit'
-    return (
-      <Layout
-        title={isEdit ? t('common.edit') : t('character.notes.new')}
-        backTo={undefined}
-        group="tools"
-        page="notes"
-      >
-        <NoteEditor
-          initialNote={isEdit ? editNote : null}
-          onSave={handleEditorSave}
-          onCancel={() => setMode('list')}
-          isPending={isEdit ? updateMutation.isPending : addMutation.isPending}
-        />
-      </Layout>
-    )
-  }
-
+  const isEditorOpen = mode === 'add' || mode === 'edit'
   const textNotes = notes.filter((n) => !n.is_voice)
   const voiceNotes = notes.filter((n) => n.is_voice)
 
@@ -275,6 +257,21 @@ export default function Notes() {
               {t('common.cancel')}
             </Button>
           </div>
+        </div>
+      </Sheet>
+
+      <Sheet
+        open={isEditorOpen}
+        onClose={() => setMode('list')}
+        title={mode === 'edit' ? t('common.edit') : t('character.notes.new')}
+      >
+        <div className="p-4">
+          <NoteEditor
+            initialNote={mode === 'edit' ? editNote : null}
+            onSave={handleEditorSave}
+            onCancel={() => setMode('list')}
+            isPending={mode === 'edit' ? updateMutation.isPending : addMutation.isPending}
+          />
         </div>
       </Sheet>
     </Layout>

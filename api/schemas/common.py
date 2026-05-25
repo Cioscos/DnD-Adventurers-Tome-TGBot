@@ -287,6 +287,7 @@ class DiceResultRequest(BaseModel):
     modifier: int = 0
     notation: str | None = Field(default=None, max_length=80)
     with_inspiration: bool = False
+    source: Literal["manual", "weapon", "skill", "save", "spell", "init"] | None = None
 
 
 class DiceRollResult(BaseModel):
@@ -294,6 +295,9 @@ class DiceRollResult(BaseModel):
     rolls: list[int]
     total: int
     modifier: int = 0
+    timestamp: str | None = None
+    source: str | None = None
+    label: str | None = None
 
 
 # ---------------------------------------------------------------------------

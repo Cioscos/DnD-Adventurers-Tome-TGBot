@@ -1,6 +1,7 @@
 {
   "common": {
     "back": "Back",
+    "next": "Next",
     "save": "Save",
     "cancel": "Cancel",
     "delete": "Delete",
@@ -299,7 +300,15 @@
       "all_rolls_title": "All rolls",
       "filter_by_die": "Filter by die",
       "stat_roll_hint": "4d6 drop lowest (ability score roll)",
-      "dropped": "drop"
+      "dropped": "drop",
+      "source": {
+        "manual": "Manual",
+        "weapon": "Weapon",
+        "skill": "Skill",
+        "save": "Save",
+        "spell": "Spell",
+        "init": "Initiative"
+      }
     },
     "dice_overlay": {
       "open": "Open dice tray",
@@ -484,7 +493,11 @@
       "empty_hint": "Jot clues, NPCs, and ideas for your next session.",
       "search_placeholder": "Search notes…",
       "sort_recent": "Recent",
-      "sort_alpha": "Alphabetical"
+      "sort_alpha": "Alphabetical",
+      "tags_label": "Tags",
+      "tags_placeholder": "NPC, Lore, Quest…",
+      "created_prefix": "created",
+      "edited_prefix": "edited"
     },
     "maps": {
       "title": "Maps",

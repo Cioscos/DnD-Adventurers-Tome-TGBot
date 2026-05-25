@@ -86,7 +86,14 @@ async def post_dice_result(
         char.heroic_inspiration = False
 
     history = list(char.rolls_history or [])
-    history.append({"notation": notation, "rolls": rolls, "total": total})
+    history.append({
+        "notation": notation,
+        "rolls": rolls,
+        "total": total,
+        "timestamp": datetime.utcnow().isoformat(timespec="seconds"),
+        "source": body.source or "manual",
+        "label": body.label,
+    })
     char.rolls_history = history[-_MAX_HISTORY:]
     flag_modified(char, "rolls_history")
 
@@ -130,6 +137,9 @@ async def get_dice_history(
             notation=entry.get("notation", "?"),
             rolls=entry.get("rolls", []),
             total=entry.get("total", 0),
+            timestamp=entry.get("timestamp"),
+            source=entry.get("source"),
+            label=entry.get("label"),
         )
         for entry in reversed(history)  # most recent first
     ]

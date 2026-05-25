@@ -1,6 +1,7 @@
 {
   "common": {
     "back": "Indietro",
+    "next": "Avanti",
     "save": "Salva",
     "cancel": "Annulla",
     "delete": "Elimina",
@@ -299,7 +300,15 @@
       "all_rolls_title": "Tutti i tiri",
       "filter_by_die": "Filtra per dado",
       "stat_roll_hint": "4d6 scarta più basso (tiro caratteristica)",
-      "dropped": "scarta"
+      "dropped": "scarta",
+      "source": {
+        "manual": "Manuale",
+        "weapon": "Arma",
+        "skill": "Abilità",
+        "save": "TS",
+        "spell": "Incantesimo",
+        "init": "Iniziativa"
+      }
     },
     "dice_overlay": {
       "open": "Apri lanciatore dadi",
@@ -484,7 +493,11 @@
       "empty_hint": "Annota indizi, NPC e idee per la prossima sessione.",
       "search_placeholder": "Cerca note…",
       "sort_recent": "Recenti",
-      "sort_alpha": "Alfabetico"
+      "sort_alpha": "Alfabetico",
+      "tags_label": "Tag",
+      "tags_placeholder": "NPC, Lore, Quest…",
+      "created_prefix": "creata",
+      "edited_prefix": "modificata"
     },
     "maps": {
       "title": "Mappe",
