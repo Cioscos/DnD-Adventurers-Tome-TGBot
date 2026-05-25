@@ -112,19 +112,21 @@ export default function Dice() {
     }
   }
 
-  // 4d6 drop-lowest stat-roll. Persists the underlying 4d6 in history; the
-  // drop is reflected only in the immediate UI total so the user sees stat-roll math.
+  // 4d6 drop-lowest stat-roll. `keepHighest: 3` lets useRollAndPersist compute
+  // and persist the kept-top-3 sum (instead of the default sum-of-all). The
+  // dropped die stays in `rolls` for the strike-through display.
   const handleStatRoll = async () => {
     setCount(4)
     try {
-      const groups = await roll([{ kind: 'd6', count: 4 }])
+      const groups = await roll([{ kind: 'd6', count: 4 }], {
+        notation: '4d6kh3',
+        keepHighest: 3,
+      })
       if (groups.length === 0) return
-      const all = groups[0].rolls
-      const sorted = [...all].sort((a, b) => a - b)
-      const dropped = sorted[0]
-      const keptTotal = sorted.slice(1).reduce((s, v) => s + v, 0)
-      setLastResult({ notation: '4d6kh3', rolls: all, total: keptTotal, modifier: 0 })
-      setStatRollExtras({ rolls: all, dropped })
+      const g = groups[0]
+      const dropped = Math.min(...g.rolls)
+      setLastResult({ notation: g.notation, rolls: g.rolls, total: g.total, modifier: 0 })
+      setStatRollExtras({ rolls: g.rolls, dropped })
       setInitiativeResult(null)
       haptic.medium()
     } catch {
@@ -310,7 +312,7 @@ export default function Dice() {
           >
             <Surface variant="elevated" ornamented className="text-center">
               <p className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-gold-dim mb-1">
-                {count > 1 ? `${count}${lastResult.notation}` : lastResult.notation}
+                {lastResult.notation}
               </p>
               <m.p
                 className="text-6xl font-display font-black text-dnd-gold-bright"

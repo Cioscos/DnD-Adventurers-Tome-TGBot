@@ -17,6 +17,9 @@ export interface RollOpts {
   label?: string
   modifier?: number
   notation?: string
+  // Keep highest N of the rolled dice. The kept-top-N sum becomes the persisted
+  // and returned total; the dropped dice stay in `rolls` for display.
+  keepHighest?: number
 }
 
 export interface RollGroup {
@@ -69,8 +72,18 @@ export function useRollAndPersist(charId: number | null) {
       const bodyRolls: DiceResultRequestBody['rolls'] = []
       const groupResults: RollGroup[] = entries.map((e, i) => {
         const vals = resultsPerEntry[i]
-        const total = e.kind === 'd100' ? pairD100(vals) : vals.reduce((s, v) => s + v, 0)
-        const notation = `${e.count}${e.kind}`
+        let total: number
+        if (e.kind === 'd100') {
+          total = pairD100(vals)
+        } else if (opts.keepHighest && opts.keepHighest < vals.length) {
+          const sortedDesc = [...vals].sort((a, b) => b - a)
+          total = sortedDesc.slice(0, opts.keepHighest).reduce((s, v) => s + v, 0)
+        } else {
+          total = vals.reduce((s, v) => s + v, 0)
+        }
+        // opts.notation overrides only when there is a single entry (e.g. 4d6kh3
+        // stat-roll). For multi-entry rolls each group keeps its computed notation.
+        const notation = opts.notation && entries.length === 1 ? opts.notation : `${e.count}${e.kind}`
         if (e.kind === 'd100') {
           for (const v of vals) bodyRolls.push({ kind: 'd10', value: v })
         } else {
@@ -84,11 +97,18 @@ export function useRollAndPersist(charId: number | null) {
         return { kind: e.kind, notation, rolls: vals, total }
       })
 
+      // When keepHighest is in effect, send the kept-top-N sum as `total` so the
+      // backend persists it verbatim (the default server-side computation would
+      // include the dropped dice).
+      const bodyTotal =
+        opts.keepHighest && groupResults.length === 1 ? groupResults[0].total : undefined
+
       await persist.mutateAsync({
         rolls: bodyRolls,
         label: opts.label ?? null,
         modifier: opts.modifier ?? 0,
         notation: opts.notation ?? null,
+        total: bodyTotal ?? null,
       })
 
       return groupResults

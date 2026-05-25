@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -12,7 +12,6 @@ import Button from '@/components/ui/Button'
 import StatPill from '@/components/ui/StatPill'
 import EmptyState from '@/components/ui/EmptyState'
 import ConfirmSheet from '@/components/ui/ConfirmSheet'
-import ClassTabs from '@/components/character/ClassTabs'
 import { FlourishDivider } from '@/components/ui/Ornament'
 import { haptic } from '@/auth/telegram'
 import { levelFromXp } from '@/lib/xpThresholds'
@@ -22,10 +21,6 @@ import LevelUpModal from '@/pages/multiclass/LevelUpModal'
 import EditClassesModal from '@/pages/multiclass/EditClassesModal'
 import type { CharacterClass } from '@/types'
 
-function classAnchorId(className: string): string {
-  return `class-${className.toLowerCase().replace(/[^a-z0-9_-]/g, '-')}`
-}
-
 export default function Multiclass() {
   const { id } = useParams<{ id: string }>()
   const charId = Number(id)
@@ -34,7 +29,6 @@ export default function Multiclass() {
   const [showLevelUpModal, setShowLevelUpModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [removeTarget, setRemoveTarget] = useState<CharacterClass | null>(null)
-  const [activeTab, setActiveTab] = useState<string>('')
 
   const { data: char } = useQuery({
     queryKey: ['character', charId],
@@ -73,27 +67,11 @@ export default function Multiclass() {
 
   const classes: CharacterClass[] = char?.classes ?? []
 
-  useEffect(() => {
-    if (classes.length === 0) {
-      if (activeTab !== '') setActiveTab('')
-      return
-    }
-    if (!classes.some((c) => c.class_name === activeTab)) {
-      setActiveTab(classes[0].class_name)
-    }
-  }, [classes, activeTab])
-
   if (!char) return null
 
   const classLevelSum = classes.reduce((s, c) => s + c.level, 0)
   const targetLevel = levelFromXp(char.experience_points ?? 0)
   const levelUpAvailable = classes.length > 0 && targetLevel > classLevelSum
-
-  const handleTabSelect = (className: string) => {
-    setActiveTab(className)
-    const el = document.getElementById(classAnchorId(className))
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }
 
   return (
     <Layout title={t('character.multiclass.title')} backTo={`/char/${charId}`} group="character" page="class">
@@ -150,22 +128,12 @@ export default function Multiclass() {
         />
       )}
 
-      {classes.length >= 2 && (
-        <ClassTabs
-          classes={classes}
-          selected={activeTab}
-          onSelect={handleTabSelect}
-        />
-      )}
-
       {classes.map((cls, idx) => (
         <m.div
           key={cls.id}
-          id={classAnchorId(cls.class_name)}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: idx * 0.05 }}
-          className="scroll-mt-20"
         >
           <Surface variant="elevated" ornamented>
             {/* Class banner */}

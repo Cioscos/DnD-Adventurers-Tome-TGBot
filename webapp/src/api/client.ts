@@ -100,6 +100,7 @@ export type DiceResultRequestBody = {
   modifier?: number
   notation?: string | null
   with_inspiration?: boolean
+  total?: number | null
 }
 
 export type { ConcentrationSaveResult } from '@/types'
