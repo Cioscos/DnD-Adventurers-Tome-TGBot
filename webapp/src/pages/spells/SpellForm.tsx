@@ -181,25 +181,30 @@ export default function SpellForm({ initialData, onSubmit, onCancel, isPending }
           rows={4}
         />
 
-        <div className="flex gap-4">
-          <label className="flex items-center gap-2 text-sm text-dnd-text font-body cursor-pointer">
-            <input
-              type="checkbox"
-              checked={form.is_concentration}
-              onChange={(e) => setForm((f) => ({ ...f, is_concentration: e.target.checked }))}
-              className="w-5 h-5 accent-dnd-gold"
-            />
-            {t('character.spells.concentration')}
-          </label>
-          <label className="flex items-center gap-2 text-sm text-dnd-text font-body cursor-pointer">
-            <input
-              type="checkbox"
-              checked={form.is_ritual}
-              onChange={(e) => setForm((f) => ({ ...f, is_ritual: e.target.checked }))}
-              className="w-5 h-5 accent-dnd-gold"
-            />
-            {t('character.spells.ritual')}
-          </label>
+        <div className="space-y-1.5">
+          <div className="flex gap-4">
+            <label className="flex items-center gap-2 text-sm text-dnd-text font-body cursor-pointer">
+              <input
+                type="checkbox"
+                checked={form.is_concentration}
+                onChange={(e) => setForm((f) => ({ ...f, is_concentration: e.target.checked }))}
+                className="w-5 h-5 accent-dnd-gold"
+              />
+              {t('character.spells.concentration')}
+            </label>
+            <label className="flex items-center gap-2 text-sm text-dnd-text font-body cursor-pointer">
+              <input
+                type="checkbox"
+                checked={form.is_ritual}
+                onChange={(e) => setForm((f) => ({ ...f, is_ritual: e.target.checked }))}
+                className="w-5 h-5 accent-dnd-gold"
+              />
+              {t('character.spells.ritual')}
+            </label>
+          </div>
+          <p className="text-[11px] text-dnd-text-muted font-body italic leading-snug">
+            {t('character.spells.concentration_marker_help')}
+          </p>
         </div>
 
         <div className="flex gap-2 pt-2">

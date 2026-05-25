@@ -50,6 +50,21 @@ export default function Settings() {
     queryFn: () => api.characters.get(charId),
   })
 
+  // Read retention thresholds from settings (falling back to defaults) so the
+  // preview reflects the same caps used by the backend prune.
+  const charSettings = ((char as { settings?: Record<string, unknown> } | undefined)?.settings as
+    | Record<string, unknown>
+    | undefined) ?? {}
+  const retentionEventsParam = Math.max(1, Number(charSettings.history_retention_events ?? 100) || 100)
+  const retentionDaysParam = Math.max(1, Number(charSettings.history_retention_days ?? 30) || 30)
+
+  const { data: retentionPreview } = useQuery({
+    queryKey: ['history-retention-preview', charId, retentionEventsParam, retentionDaysParam],
+    queryFn: () => api.history.retentionPreview(charId, retentionEventsParam, retentionDaysParam),
+    enabled: !!char,
+    refetchOnWindowFocus: false,
+  })
+
   const { data: packNames } = useQuery({
     queryKey: ['pack-manifest-names'],
     queryFn: async () => {
@@ -120,37 +135,6 @@ export default function Settings() {
 
   return (
     <Layout title={t('character.settings.title')} backTo={`/char/${charId}`}>
-      <SectionDivider icon={<Gem size={11} />} align="center">
-        {t('character.settings.spell_slots_mode')}
-      </SectionDivider>
-
-      <Surface variant="elevated">
-        <div className="flex items-start gap-3 mb-3">
-          <Sparkles size={16} className="text-dnd-arcane-bright shrink-0 mt-0.5" />
-          <p className="text-xs text-dnd-text-muted font-body italic flex-1">
-            {slotsMode === 'auto'
-              ? t('character.settings.mode_auto_hint')
-              : t('character.settings.mode_manual_hint')}
-          </p>
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          {(['auto', 'manual'] as const).map((mode) => (
-            <m.button
-              key={mode}
-              onClick={() => applySlotMode(mode)}
-              className={`min-h-[44px] rounded-xl font-cinzel text-xs uppercase tracking-widest transition-colors
-                ${slotsMode === mode
-                  ? 'bg-gradient-gold text-dnd-ink shadow-engrave'
-                  : 'bg-dnd-surface border border-dnd-border text-dnd-text-muted'}`}
-              whileTap={{ scale: 0.96 }}
-              transition={spring.press}
-            >
-              {t(`character.settings.mode_${mode}`)}
-            </m.button>
-          ))}
-        </div>
-      </Surface>
-
       <SectionDivider icon={<Settings2 size={11} />} align="center">
         {t('character.settings.preferences')}
       </SectionDivider>
@@ -373,6 +357,46 @@ export default function Settings() {
             )
           })}
         </div>
+        {/* Retention purge preview — shows what each mode would delete now,
+            so users can decide before committing the change (U080). */}
+        {retentionPreview && retentionPreview.total > 0 && (
+          <div className="mt-3 space-y-1 text-[11px] text-dnd-text-muted font-body italic leading-snug">
+            <p>
+              {t('character.settings.history_retention_total', {
+                n: retentionPreview.total,
+                defaultValue: 'Cronologia attuale: {{n}} voci.',
+              })}
+            </p>
+            <p
+              className={
+                retentionPreview.would_purge_events > 0
+                  ? 'text-[var(--dnd-crimson-bright)]'
+                  : ''
+              }
+            >
+              {t('character.settings.history_retention_preview_events', {
+                n: retentionPreview.would_purge_events,
+                keep: retentionEvents,
+                defaultValue:
+                  'Ultimi {{keep}} eventi: perderai {{n}} voci più vecchie ora.',
+              })}
+            </p>
+            <p
+              className={
+                retentionPreview.would_purge_days > 0
+                  ? 'text-[var(--dnd-crimson-bright)]'
+                  : ''
+              }
+            >
+              {t('character.settings.history_retention_preview_days', {
+                n: retentionPreview.would_purge_days,
+                days: retentionDays,
+                defaultValue:
+                  'Ultimi {{days}} giorni: perderai {{n}} voci precedenti.',
+              })}
+            </p>
+          </div>
+        )}
       </Surface>
 
       <SectionDivider icon={<RefreshCw size={11} />} align="center">
@@ -411,6 +435,39 @@ export default function Settings() {
           label={t('character.settings.privacy.show_private_label')}
           hint={t('character.settings.privacy.show_private_hint')}
         />
+      </Surface>
+
+      {/* Advanced — spell slots mode (Auto/Manual). Less commonly toggled than
+          language/theme, so kept near the bottom per U082. */}
+      <SectionDivider icon={<Gem size={11} />} align="center">
+        {t('character.settings.spell_slots_mode')}
+      </SectionDivider>
+
+      <Surface variant="elevated">
+        <div className="flex items-start gap-3 mb-3">
+          <Sparkles size={16} className="text-dnd-arcane-bright shrink-0 mt-0.5" />
+          <p className="text-xs text-dnd-text-muted font-body italic flex-1">
+            {slotsMode === 'auto'
+              ? t('character.settings.mode_auto_hint')
+              : t('character.settings.mode_manual_hint')}
+          </p>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          {(['auto', 'manual'] as const).map((mode) => (
+            <m.button
+              key={mode}
+              onClick={() => applySlotMode(mode)}
+              className={`min-h-[44px] rounded-xl font-cinzel text-xs uppercase tracking-widest transition-colors
+                ${slotsMode === mode
+                  ? 'bg-gradient-gold text-dnd-ink shadow-engrave'
+                  : 'bg-dnd-surface border border-dnd-border text-dnd-text-muted'}`}
+              whileTap={{ scale: 0.96 }}
+              transition={spring.press}
+            >
+              {t(`character.settings.mode_${mode}`)}
+            </m.button>
+          ))}
+        </div>
       </Surface>
 
       {/* Reset all character settings */}

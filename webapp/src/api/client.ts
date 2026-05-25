@@ -16,6 +16,7 @@ import type {
   GameSession,
   GameSessionLive,
   HistoryEntry,
+  HistoryRetentionPreview,
   Item,
   MapEntry,
   Note,
@@ -579,6 +580,10 @@ export const api = {
     get: (charId: number) => request<HistoryEntry[]>(`/characters/${charId}/history`),
     clear: (charId: number) =>
       request<void>(`/characters/${charId}/history`, { method: 'DELETE' }),
+    retentionPreview: (charId: number, events: number, days: number) =>
+      request<HistoryRetentionPreview>(
+        `/characters/${charId}/history/retention-preview?events=${events}&days=${days}`,
+      ),
   },
 
   // ---------------------------------------------------------------------------

@@ -206,6 +206,14 @@ export interface HistoryEntry {
   description: string
 }
 
+export interface HistoryRetentionPreview {
+  total: number
+  events_keep: number
+  days_window: number
+  would_purge_events: number
+  would_purge_days: number
+}
+
 export interface Note {
   title: string
   body: string

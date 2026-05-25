@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Clock, Timer, Pencil, Trash2, Ban, MoreVertical } from 'lucide-react'
+import { Clock, Timer, Pencil, Trash2, Ban, MoreVertical, Info } from 'lucide-react'
 import {
   GiCrosshair as Crosshair, GiPotionBall as FlaskConical,
   GiCrossedSwords as Swords, GiCheckedShield as Shield,
@@ -132,6 +132,15 @@ function SpellItemInner({
             </div>
           )}
 
+          {/* Concentration workflow hint — clarifies that conc starts on cast,
+              and the toggle button is for manual control only. */}
+          {spell.is_concentration && (
+            <div className="flex items-start gap-1.5 text-[11px] text-dnd-text-muted font-body italic leading-snug">
+              <Info size={11} className="text-dnd-arcane-bright shrink-0 mt-0.5" />
+              <span>{t('character.spells.concentration_help')}</span>
+            </div>
+          )}
+
           {/* Action buttons */}
           <div className="flex gap-2 flex-wrap border-t border-dnd-gold-dim/10 pt-2">
             <button
@@ -148,8 +157,10 @@ function SpellItemInner({
             {spell.is_concentration && (
               <button
                 onClick={onConcentrationToggle}
+                title={t('character.spells.concentration_button_title')}
+                aria-label={t('character.spells.concentration_button_title')}
                 className={`flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg
-                            border active:opacity-60
+                            border active:opacity-60 cursor-help
                             ${isConcentrating
                               ? 'bg-[var(--dnd-danger)]/20 text-[var(--dnd-danger)] border-[var(--dnd-danger)]/30'
                               : 'bg-dnd-arcane/20 text-dnd-arcane-text border-dnd-arcane/30'
@@ -161,7 +172,7 @@ function SpellItemInner({
                   : t('character.spells.concentration')}
               </button>
             )}
-            <div ref={menuRef} className="relative ml-auto">
+            <div ref={menuRef} className="relative ml-auto flex items-center">
               <button
                 onClick={() => setMenuOpen((v) => !v)}
                 aria-haspopup="menu"

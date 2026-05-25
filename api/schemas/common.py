@@ -337,3 +337,16 @@ class HistoryEntryRead(BaseModel):
     description: str
 
     model_config = {"from_attributes": True}
+
+
+class HistoryRetentionPreview(BaseModel):
+    """Counts that would be purged under each retention mode.
+
+    Lets the Settings UI show users what they're about to lose before
+    they commit a retention mode change.
+    """
+    total: int
+    events_keep: int
+    days_window: int
+    would_purge_events: int
+    would_purge_days: int
