@@ -63,16 +63,17 @@ export default function CharacterSelect() {
 
   const createMutation = useMutation({
     mutationFn: async ({ name, cls }: { name: string; cls: SelectedClass | null }) => {
-      const char = await api.characters.create(name)
-      if (cls) {
-        await api.classes.add(char.id, {
-          class_name: cls.class_name,
-          level: 1,
-          hit_die: cls.hit_die,
-          spellcasting_ability: cls.spellcasting_ability ?? undefined,
-        })
-      }
-      return char
+      return api.characters.create(
+        name,
+        cls
+          ? {
+              class_name: cls.class_name,
+              level: 1,
+              hit_die: cls.hit_die,
+              spellcasting_ability: cls.spellcasting_ability ?? null,
+            }
+          : null,
+      )
     },
     onSuccess: (char) => {
       qc.invalidateQueries({ queryKey: ['characters'] })

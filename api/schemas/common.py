@@ -287,6 +287,7 @@ class DiceResultRequest(BaseModel):
     modifier: int = 0
     notation: str | None = Field(default=None, max_length=80)
     with_inspiration: bool = False
+    source: Literal["manual", "weapon", "skill", "save", "spell", "init"] | None = None
 
 
 class DiceRollResult(BaseModel):
@@ -294,6 +295,9 @@ class DiceRollResult(BaseModel):
     rolls: list[int]
     total: int
     modifier: int = 0
+    timestamp: str | None = None
+    source: str | None = None
+    label: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -337,3 +341,16 @@ class HistoryEntryRead(BaseModel):
     description: str
 
     model_config = {"from_attributes": True}
+
+
+class HistoryRetentionPreview(BaseModel):
+    """Counts that would be purged under each retention mode.
+
+    Lets the Settings UI show users what they're about to lose before
+    they commit a retention mode change.
+    """
+    total: int
+    events_keep: int
+    days_window: int
+    would_purge_events: int
+    would_purge_days: int

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -16,6 +16,119 @@ import { haptic } from '@/auth/telegram'
 import { stagger } from '@/styles/motion'
 import { toRoman } from '@/lib/roman'
 import type { SpellSlot } from '@/types'
+
+// Editable Total — inline numeric input + hold-to-accelerate ± buttons.
+// Lets users jump from 1 to 8 by typing or by holding the button instead of
+// 7 individual taps.
+interface TotalEditorProps {
+  slotId: number
+  total: number
+  label: string
+  decrementAria: string
+  incrementAria: string
+  onCommit: (next: number) => void
+}
+
+function TotalEditor({ total, label, decrementAria, incrementAria, onCommit }: TotalEditorProps) {
+  const [draft, setDraft] = useState<string>(String(total))
+  const [editing, setEditing] = useState(false)
+  const repeatRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const valueRef = useRef(total)
+
+  useEffect(() => {
+    valueRef.current = total
+    if (!editing) setDraft(String(total))
+  }, [total, editing])
+
+  useEffect(() => () => {
+    if (repeatRef.current) clearTimeout(repeatRef.current)
+  }, [])
+
+  const stopRepeat = useCallback(() => {
+    if (repeatRef.current) {
+      clearTimeout(repeatRef.current)
+      repeatRef.current = null
+    }
+  }, [])
+
+  const startRepeat = useCallback((delta: 1 | -1) => {
+    const apply = () => {
+      const next = Math.max(1, valueRef.current + delta)
+      if (next !== valueRef.current) {
+        valueRef.current = next
+        onCommit(next)
+      }
+    }
+    apply()
+    let delay = 380
+    const tick = () => {
+      apply()
+      delay = Math.max(60, delay - 35)
+      repeatRef.current = setTimeout(tick, delay)
+    }
+    repeatRef.current = setTimeout(tick, 380)
+  }, [onCommit])
+
+  const commitDraft = () => {
+    const parsed = parseInt(draft, 10)
+    if (Number.isFinite(parsed) && parsed >= 1 && parsed !== total) {
+      onCommit(parsed)
+    } else {
+      setDraft(String(total))
+    }
+    setEditing(false)
+  }
+
+  return (
+    <div className="flex items-center gap-2 pt-2 border-t border-dnd-border/40">
+      <span className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-gold-dim flex-1">
+        {label}
+      </span>
+      <m.button
+        onPointerDown={() => startRepeat(-1)}
+        onPointerUp={stopRepeat}
+        onPointerLeave={stopRepeat}
+        onPointerCancel={stopRepeat}
+        className="w-11 h-11 rounded-lg bg-dnd-surface border border-dnd-border flex items-center justify-center text-dnd-gold"
+        whileTap={{ scale: 0.9 }}
+        aria-label={decrementAria}
+        type="button"
+      >
+        <Minus size={16} />
+      </m.button>
+      <input
+        type="number"
+        min={1}
+        inputMode="numeric"
+        value={draft}
+        onFocus={() => setEditing(true)}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commitDraft}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault()
+            ;(e.target as HTMLInputElement).blur()
+          }
+        }}
+        className="w-14 h-9 text-center bg-dnd-surface border border-dnd-border rounded-lg
+                   font-mono font-bold text-dnd-gold-bright tabular-nums
+                   focus:border-dnd-gold/60 focus:outline-none"
+      />
+      <m.button
+        onPointerDown={() => startRepeat(1)}
+        onPointerUp={stopRepeat}
+        onPointerLeave={stopRepeat}
+        onPointerCancel={stopRepeat}
+        className="w-11 h-11 rounded-lg bg-dnd-surface border border-dnd-border flex items-center justify-center text-dnd-gold"
+        whileTap={{ scale: 0.9 }}
+        aria-label={incrementAria}
+        type="button"
+      >
+        <Plus size={16} />
+      </m.button>
+    </div>
+  )
+}
 
 export default function SpellSlots() {
   const { id } = useParams<{ id: string }>()
@@ -182,28 +295,14 @@ export default function SpellSlots() {
 
               {/* Total editor — hidden in Auto mode (totals are class-derived). */}
               {slotsMode !== 'auto' && (
-                <div className="flex items-center gap-2 pt-2 border-t border-dnd-border/40">
-                  <span className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-gold-dim flex-1">
-                    {t('character.slots.total')}
-                  </span>
-                  <m.button
-                    onClick={() => updateTotal.mutate({ slotId: slot.id, total: Math.max(1, slot.total - 1) })}
-                    className="w-11 h-11 rounded-lg bg-dnd-surface border border-dnd-border flex items-center justify-center text-dnd-gold"
-                    whileTap={{ scale: 0.9 }}
-                    aria-label={t('character.slots.decrement_total', { defaultValue: '-1' })}
-                  >
-                    <Minus size={16} />
-                  </m.button>
-                  <span className="w-8 text-center font-mono font-bold text-dnd-gold-bright tabular-nums">{slot.total}</span>
-                  <m.button
-                    onClick={() => updateTotal.mutate({ slotId: slot.id, total: slot.total + 1 })}
-                    className="w-11 h-11 rounded-lg bg-dnd-surface border border-dnd-border flex items-center justify-center text-dnd-gold"
-                    whileTap={{ scale: 0.9 }}
-                    aria-label={t('character.slots.increment_total', { defaultValue: '+1' })}
-                  >
-                    <Plus size={16} />
-                  </m.button>
-                </div>
+                <TotalEditor
+                  slotId={slot.id}
+                  total={slot.total}
+                  label={t('character.slots.total')}
+                  decrementAria={t('character.slots.decrement_total', { defaultValue: '-1' })}
+                  incrementAria={t('character.slots.increment_total', { defaultValue: '+1' })}
+                  onCommit={(next) => updateTotal.mutate({ slotId: slot.id, total: next })}
+                />
               )}
             </Surface>
           </Reveal.Item>

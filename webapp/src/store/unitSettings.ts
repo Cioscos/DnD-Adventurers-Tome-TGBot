@@ -32,3 +32,7 @@ export function formatLength(valueFeet: number, system: UnitSystem): string {
   }
   return `${valueFeet} ft`
 }
+
+export function oppositeSystem(system: UnitSystem): UnitSystem {
+  return system === 'imperial' ? 'metric' : 'imperial'
+}

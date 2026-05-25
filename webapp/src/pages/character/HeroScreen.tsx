@@ -186,7 +186,7 @@ export default function HeroScreen({ char }: Props) {
         })()}
 
         {passiveAbilities.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mt-3 overflow-x-auto scrollbar-hide max-h-14">
+          <div className="flex flex-wrap gap-2 mt-3 overflow-x-auto scrollbar-hide max-h-14">
             {passiveAbilities.map((a) => (
               <StatPill
                 key={a.id}
@@ -202,7 +202,7 @@ export default function HeroScreen({ char }: Props) {
         )}
 
         {activeConditions.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mt-2 overflow-x-auto scrollbar-hide max-h-14">
+          <div className="flex flex-wrap gap-2 mt-3 overflow-x-auto scrollbar-hide max-h-14">
             {activeConditions.map(([key, val]) => {
               const Icon = CONDITION_ICONS[key] ?? CircleDot
               return (

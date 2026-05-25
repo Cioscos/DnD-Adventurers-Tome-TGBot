@@ -43,10 +43,10 @@ export default function HpOperationForm({
 
   return (
     <>
-      {/* Op selector — segmented control */}
-      <Surface variant="flat" className="!p-1.5">
-        <div className="grid grid-cols-5 gap-1">
-          {ops.map((op) => {
+      {/* Op selector — segmented control, 2-row (3+2) so labels stay readable at 390px */}
+      <Surface variant="flat" className="!p-1.5 space-y-1">
+        <div className="grid grid-cols-3 gap-1">
+          {ops.slice(0, 3).map((op) => {
             const Icon = op.icon
             const isActive = activeOp === op.key
             return (
@@ -54,13 +54,34 @@ export default function HpOperationForm({
                 key={op.key}
                 onClick={() => { setActiveOp(op.key); haptic.selection() }}
                 title={t(op.full_key)}
-                className={`flex flex-col items-center gap-0.5 py-2 px-1 rounded-xl font-cinzel text-[10px] uppercase tracking-tight border
+                className={`flex flex-col items-center gap-0.5 py-2 px-1 rounded-xl font-cinzel text-[11px] uppercase tracking-tight border min-h-[52px]
                   ${isActive
                     ? op.toneClass
                     : 'bg-transparent text-dnd-text-muted border-transparent'}`}
                 whileTap={{ scale: 0.95 }}
               >
-                <Icon size={16} strokeWidth={2.2} />
+                <Icon size={18} strokeWidth={2.2} />
+                <span className="leading-tight">{t(op.label_key)}</span>
+              </m.button>
+            )
+          })}
+        </div>
+        <div className="grid grid-cols-2 gap-1">
+          {ops.slice(3).map((op) => {
+            const Icon = op.icon
+            const isActive = activeOp === op.key
+            return (
+              <m.button
+                key={op.key}
+                onClick={() => { setActiveOp(op.key); haptic.selection() }}
+                title={t(op.full_key)}
+                className={`flex flex-col items-center gap-0.5 py-2 px-1 rounded-xl font-cinzel text-[11px] uppercase tracking-tight border min-h-[52px]
+                  ${isActive
+                    ? op.toneClass
+                    : 'bg-transparent text-dnd-text-muted border-transparent'}`}
+                whileTap={{ scale: 0.95 }}
+              >
+                <Icon size={18} strokeWidth={2.2} />
                 <span className="leading-tight">{t(op.label_key)}</span>
               </m.button>
             )

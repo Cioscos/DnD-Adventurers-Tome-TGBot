@@ -305,12 +305,15 @@ export default function Inventory() {
           const groupItems = grouped[type]
           const isCollapsed = collapsedTypes.has(type)
           const TypeIcon = getItemTypeIcon(type)
+          // Compact header for 1-item sections — eliminates ~30% of the per-section
+          // vertical waste when inventory is sparse.
+          const isSingle = groupItems.length === 1
           return (
-            <div key={type} className="mb-4">
+            <div key={type} className={isSingle ? 'mb-2' : 'mb-4'}>
               <m.button
                 type="button"
                 onClick={() => toggleType(type)}
-                className="sticky top-0 z-[5] -mx-4 w-[calc(100%+2rem)] px-5 py-2 flex items-center gap-2 bg-dnd-bg/95 backdrop-blur-sm border-b border-dnd-border/40 text-left"
+                className={`sticky top-0 z-[5] -mx-4 w-[calc(100%+2rem)] px-5 flex items-center gap-2 bg-dnd-bg/95 backdrop-blur-sm border-b border-dnd-border/40 text-left ${isSingle ? 'py-1' : 'py-2'}`}
                 aria-expanded={!isCollapsed}
               >
                 <ChevronRight

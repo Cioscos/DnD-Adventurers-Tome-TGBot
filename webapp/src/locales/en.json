@@ -1,6 +1,7 @@
 {
   "common": {
     "back": "Back",
+    "next": "Next",
     "save": "Save",
     "cancel": "Cancel",
     "delete": "Delete",
@@ -210,6 +211,9 @@
       "count": "{{count}} spells",
       "concentration": "Concentration",
       "concentration_active": "Concentration active",
+      "concentration_help": "Concentration starts automatically when you cast the spell with \"Use\". Tap here only to activate or interrupt it manually.",
+      "concentration_button_title": "Toggle concentration manually",
+      "concentration_marker_help": "Tick if the spell requires concentration (C badge).",
       "ritual": "Ritual",
       "add": "Add spell",
       "forget": "Forget",
@@ -217,6 +221,7 @@
       "cast_slot_title": "Choose slot level",
       "pin": "Pin",
       "edit": "Edit",
+      "more_actions": "More actions",
       "name": "Name",
       "description": "Description",
       "casting_time": "Casting time",
@@ -293,7 +298,17 @@
       "count": "Number of dice",
       "show_all_rolls": "Show all rolls",
       "all_rolls_title": "All rolls",
-      "filter_by_die": "Filter by die"
+      "filter_by_die": "Filter by die",
+      "stat_roll_hint": "4d6 drop lowest (ability score roll)",
+      "dropped": "drop",
+      "source": {
+        "manual": "Manual",
+        "weapon": "Weapon",
+        "skill": "Skill",
+        "save": "Save",
+        "spell": "Spell",
+        "init": "Initiative"
+      }
     },
     "dice_overlay": {
       "open": "Open dice tray",
@@ -332,6 +347,7 @@
       "reset_all_confirm": "Reset every condition and exhaustion level?",
       "empty_hint": "Tap a condition to activate it.",
       "detail_aria": "Show condition details",
+      "quickbar_label": "Quick toggle",
       "desc": {
         "blinded": "A blinded creature can't see and automatically fails any ability check that requires sight. Attack rolls against the creature have advantage, and the creature's attack rolls have disadvantage.",
         "charmed": "A charmed creature can't attack the charmer or target the charmer with harmful abilities or magical effects. The charmer has advantage on any ability check to interact socially with the creature.",
@@ -471,11 +487,17 @@
       "recording": "Recording...",
       "discard_recording": "Discard and re-record",
       "mic_denied": "Microphone permission denied. Please enable microphone access.",
+      "mic_denied_tooltip": "Microphone permission denied. Enable it in your browser settings.",
+      "mic_missing": "Microphone not available in this browser",
       "delete_confirm": "Delete \"{{title}}\"?",
       "empty_hint": "Jot clues, NPCs, and ideas for your next session.",
       "search_placeholder": "Search notes…",
       "sort_recent": "Recent",
-      "sort_alpha": "Alphabetical"
+      "sort_alpha": "Alphabetical",
+      "tags_label": "Tags",
+      "tags_placeholder": "NPC, Lore, Quest…",
+      "created_prefix": "created",
+      "edited_prefix": "edited"
     },
     "maps": {
       "title": "Maps",
@@ -495,7 +517,11 @@
       "empty_hint": "Upload a dungeon map or adventure PDF — always at your fingertips.",
       "zoom_hint": "Pinch to zoom",
       "reorder_hint": "Drag to reorder",
-      "error_too_large": "{{name}} exceeds the 10 MB limit"
+      "error_too_large": "{{name}} exceeds the 10 MB limit",
+      "dropzone_primary": "Drop files here or tap to select",
+      "dropzone_accept": "PNG, JPG, PDF · max 10 MB",
+      "uploaded": "Uploaded",
+      "upload_progress_count": "{{current}}/{{total}} · {{pct}}%"
     },
     "history": {
       "title": "History",
@@ -711,6 +737,9 @@
       "history_retention_off": "Off",
       "history_retention_events": "Last {{n}} events",
       "history_retention_days": "Last {{n}} days",
+      "history_retention_total": "Current history: {{n}} entries.",
+      "history_retention_preview_events": "Last {{keep}} events: you'd lose {{n}} older entries now.",
+      "history_retention_preview_days": "Last {{days}} days: you'd lose {{n}} older entries.",
       "reset_settings": "Reset settings",
       "reset_settings_confirm": "Reset all preferences for this character to defaults?",
       "carry_capacity": "Show carry capacity",

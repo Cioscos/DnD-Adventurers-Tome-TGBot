@@ -1,4 +1,4 @@
-import React, { useState, useRef, type KeyboardEvent } from 'react'
+import React, { useState, useRef, useMemo, type KeyboardEvent } from 'react'
 import { X } from 'lucide-react'
 import { m } from 'framer-motion'
 
@@ -12,6 +12,8 @@ interface ChipInputProps {
   normalize?: (raw: string) => string
   /** Tokens of comma-pasted input → separate chips. */
   splitOnComma?: boolean
+  /** Optional dropdown of canonical values (e.g. SRD languages). Filtered by current input. */
+  suggestions?: string[]
   label?: React.ReactNode
   hint?: React.ReactNode
   className?: string
@@ -26,13 +28,26 @@ export default function ChipInput({
   validate,
   normalize = defaultNormalize,
   splitOnComma = true,
+  suggestions,
   label,
   hint,
   className = '',
 }: ChipInputProps) {
   const [input, setInput] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [showSuggestions, setShowSuggestions] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  const filteredSuggestions = useMemo(() => {
+    if (!suggestions || suggestions.length === 0) return []
+    const lc = values.map((v) => v.toLowerCase())
+    const inputLc = input.trim().toLowerCase()
+    const remaining = suggestions.filter((s) => !lc.includes(s.toLowerCase()))
+    if (!inputLc) return remaining.slice(0, 8)
+    return remaining
+      .filter((s) => s.toLowerCase().includes(inputLc))
+      .slice(0, 8)
+  }, [suggestions, values, input])
 
   const commit = (raw: string) => {
     const tokens = splitOnComma
@@ -118,15 +133,40 @@ export default function ChipInput({
           onChange={(e) => {
             setInput(e.target.value)
             if (error) setError(null)
+            if (suggestions) setShowSuggestions(true)
           }}
           onKeyDown={handleKey}
+          onFocus={() => suggestions && setShowSuggestions(true)}
           onBlur={() => {
+            // Delay so suggestion clicks register before the dropdown closes.
+            setTimeout(() => setShowSuggestions(false), 120)
             if (input.trim()) commit(input)
           }}
           placeholder={values.length === 0 ? placeholder : ''}
           className="flex-1 min-w-[80px] bg-transparent outline-none text-sm font-body text-dnd-text placeholder:text-dnd-text-faint py-1"
         />
       </div>
+      {showSuggestions && filteredSuggestions.length > 0 && (
+        <div className="mt-1 flex flex-wrap gap-1.5">
+          {filteredSuggestions.map((s) => (
+            <button
+              key={s}
+              type="button"
+              onMouseDown={(e) => {
+                // mousedown fires before blur, so the input keeps focus and the suggestion commits.
+                e.preventDefault()
+                commit(s)
+                inputRef.current?.focus()
+              }}
+              className="px-2 py-1 rounded-full text-[11px] font-body
+                         bg-dnd-chip-bg border border-dnd-gold-dim/30
+                         text-dnd-text-muted hover:text-dnd-gold-bright hover:border-dnd-gold/60"
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+      )}
       {error && (
         <p className="text-[11px] text-[var(--dnd-crimson-bright)] mt-1 font-body italic">{error}</p>
       )}

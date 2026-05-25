@@ -192,11 +192,16 @@ export interface DeathSaves {
   stable: boolean
 }
 
+export type DiceSource = 'manual' | 'weapon' | 'skill' | 'save' | 'spell' | 'init'
+
 export interface DiceRollResult {
   notation: string
   rolls: number[]
   total: number
   modifier?: number
+  timestamp?: string | null
+  source?: DiceSource | string | null
+  label?: string | null
 }
 
 export interface HistoryEntry {
@@ -206,10 +211,21 @@ export interface HistoryEntry {
   description: string
 }
 
+export interface HistoryRetentionPreview {
+  total: number
+  events_keep: number
+  days_window: number
+  would_purge_events: number
+  would_purge_days: number
+}
+
 export interface Note {
   title: string
   body: string
   is_voice: boolean
+  created_at?: string | null
+  updated_at?: string | null
+  tags?: string[]
 }
 
 export type SessionRole = 'game_master' | 'player'

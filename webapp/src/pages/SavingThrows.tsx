@@ -134,13 +134,20 @@ export default function SavingThrows() {
         <StatPill tone="gold" value={`+${pb}`} />
       </Surface>
 
-      <Reveal.Stagger stagger={stagger.list} className="grid grid-cols-2 gap-2">
+      <Reveal.Stagger stagger={stagger.list} className="flex flex-col gap-1.5">
         {ABILITIES.map((ability) => {
           const isProficient = saves[ability] ?? false
           const score = char.ability_scores.find((s) => s.name === ability)
           const abilMod = score?.modifier ?? 0
           const total = abilMod + (isProficient ? pb : 0)
           const tone = ABILITY_TONE[ability]
+          const toneClass =
+            tone === 'crimson' ? 'text-[var(--dnd-crimson-bright)]'
+            : tone === 'emerald' ? 'text-[var(--dnd-emerald-bright)]'
+            : tone === 'amber' ? 'text-[var(--dnd-amber)]'
+            : tone === 'cobalt' ? 'text-[var(--dnd-cobalt-bright)]'
+            : tone === 'arcane' ? 'text-dnd-arcane-bright'
+            : 'text-dnd-gold-bright'
 
           return (
             <Reveal.Item key={ability}>
@@ -148,16 +155,16 @@ export default function SavingThrows() {
                 variant={isProficient ? 'elevated' : 'flat'}
                 interactive
                 onClick={() => rollMutation.mutate(ability)}
-                className={`relative !p-3 text-center cursor-pointer
+                className={`relative !p-2 cursor-pointer
                   ${isProficient ? 'border-l-4 border-dnd-gold-bright border-dnd-gold/50 shadow-halo-gold' : ''}`}
               >
-                <div className="flex items-center justify-between -mx-1 -mt-1 mb-2">
+                <div className="flex items-center gap-3 min-h-[44px]">
                   <m.button
                     onClick={(e) => {
                       e.stopPropagation()
                       toggle(ability)
                     }}
-                    className="w-11 h-11 flex items-center justify-center rounded-full"
+                    className="w-11 h-11 flex items-center justify-center rounded-full shrink-0"
                     whileTap={{ scale: 0.85 }}
                     aria-label="Proficiency"
                   >
@@ -168,33 +175,25 @@ export default function SavingThrows() {
                       {isProficient && <Check size={12} className="text-dnd-ink" strokeWidth={3} />}
                     </div>
                   </m.button>
-                  <DiceIcon sides={20} size={28} className="text-dnd-gold/80 mr-0.5" />
-                </div>
 
-                <p
-                  className="text-[10px] font-cinzel uppercase tracking-[0.18em] text-dnd-text-muted"
-                  title={t(`character.stats.${ability}`)}
-                >
-                  {t(`character.ability.${ability}_short`, {
-                    defaultValue: t(`character.stats.${ability}`),
-                  })}
-                </p>
-                <p className={`text-4xl font-display font-black leading-none mt-1.5 mb-0.5 tabular-nums ${
-                  tone === 'crimson' ? 'text-[var(--dnd-crimson-bright)]'
-                  : tone === 'emerald' ? 'text-[var(--dnd-emerald-bright)]'
-                  : tone === 'amber' ? 'text-[var(--dnd-amber)]'
-                  : tone === 'cobalt' ? 'text-[var(--dnd-cobalt-bright)]'
-                  : tone === 'arcane' ? 'text-dnd-arcane-bright'
-                  : 'text-dnd-gold-bright'
-                }`}>
-                  {total >= 0 ? '+' : ''}{total}
-                </p>
-                <p className="text-[9px] font-cinzel uppercase tracking-widest text-dnd-gold-dim mb-1">
-                  {t('character.saves.ts_short')}
-                </p>
-                <p className="text-[10px] text-dnd-text-faint font-mono">
-                  {abilMod >= 0 ? '+' : ''}{abilMod}{isProficient ? ` +${pb}` : ''}
-                </p>
+                  <div className="flex-1 min-w-0">
+                    <p
+                      className="text-xs font-cinzel uppercase tracking-[0.18em] text-dnd-text leading-tight"
+                      title={t(`character.stats.${ability}`)}
+                    >
+                      {t(`character.stats.${ability}`)}
+                    </p>
+                    <p className="text-[10px] text-dnd-text-faint font-mono leading-tight mt-0.5">
+                      {abilMod >= 0 ? '+' : ''}{abilMod}
+                      {isProficient ? ` +${pb} ${t('character.saves.ts_short')}` : ''}
+                    </p>
+                  </div>
+
+                  <p className={`text-3xl font-display font-black leading-none tabular-nums ${toneClass}`}>
+                    {total >= 0 ? '+' : ''}{total}
+                  </p>
+                  <DiceIcon sides={20} size={24} className="text-dnd-gold/80 shrink-0" />
+                </div>
               </Surface>
             </Reveal.Item>
           )

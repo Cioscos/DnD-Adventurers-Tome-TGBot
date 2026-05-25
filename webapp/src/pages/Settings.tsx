@@ -21,13 +21,56 @@ import { useCharacterStore } from '@/store/characterStore'
 import { useDiceSettings } from '@/store/diceSettings'
 import { useThemeSettings, type ThemeMode } from '@/store/themeSettings'
 import { useUnitSettings, type UnitSystem } from '@/store/unitSettings'
-import { BUNDLED_PACKS, type PackId } from '@/dice/packs/registry'
+import { BUNDLED_PACKS, PACK_PREVIEW, type PackId } from '@/dice/packs/registry'
 import { loadManifest } from '@/dice/packs/loader'
 import { useDicePack } from '@/dice/packs/DicePackProvider'
 import { spring } from '@/styles/motion'
 
 type RetentionMode = 'off' | 'events' | 'days'
 const RETENTION_MODES: readonly RetentionMode[] = ['off', 'events', 'days'] as const
+
+function D20Thumb({ body, accent, active }: { body: string; accent: string; active: boolean }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="24"
+      height="24"
+      aria-hidden
+      className="shrink-0"
+      style={{
+        filter: active
+          ? 'drop-shadow(0 0 4px var(--dnd-gold-glow))'
+          : 'drop-shadow(0 1px 2px rgba(0,0,0,0.35))',
+      }}
+    >
+      <polygon
+        points="12,2 22,8 22,16 12,22 2,16 2,8"
+        fill={body}
+        stroke={accent}
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
+      <polygon
+        points="12,5 18,9 12,13 6,9"
+        fill="none"
+        stroke={accent}
+        strokeOpacity="0.55"
+        strokeWidth="0.8"
+      />
+      <text
+        x="12"
+        y="17.5"
+        textAnchor="middle"
+        fontSize="6"
+        fontWeight="700"
+        fill={accent}
+        fontFamily="Cinzel, serif"
+      >
+        20
+      </text>
+    </svg>
+  )
+}
 
 export default function Settings() {
   const { id } = useParams<{ id: string }>()
@@ -48,6 +91,21 @@ export default function Settings() {
   const { data: char } = useQuery({
     queryKey: ['character', charId],
     queryFn: () => api.characters.get(charId),
+  })
+
+  // Read retention thresholds from settings (falling back to defaults) so the
+  // preview reflects the same caps used by the backend prune.
+  const charSettings = ((char as { settings?: Record<string, unknown> } | undefined)?.settings as
+    | Record<string, unknown>
+    | undefined) ?? {}
+  const retentionEventsParam = Math.max(1, Number(charSettings.history_retention_events ?? 100) || 100)
+  const retentionDaysParam = Math.max(1, Number(charSettings.history_retention_days ?? 30) || 30)
+
+  const { data: retentionPreview } = useQuery({
+    queryKey: ['history-retention-preview', charId, retentionEventsParam, retentionDaysParam],
+    queryFn: () => api.history.retentionPreview(charId, retentionEventsParam, retentionDaysParam),
+    enabled: !!char,
+    refetchOnWindowFocus: false,
   })
 
   const { data: packNames } = useQuery({
@@ -120,37 +178,6 @@ export default function Settings() {
 
   return (
     <Layout title={t('character.settings.title')} backTo={`/char/${charId}`}>
-      <SectionDivider icon={<Gem size={11} />} align="center">
-        {t('character.settings.spell_slots_mode')}
-      </SectionDivider>
-
-      <Surface variant="elevated">
-        <div className="flex items-start gap-3 mb-3">
-          <Sparkles size={16} className="text-dnd-arcane-bright shrink-0 mt-0.5" />
-          <p className="text-xs text-dnd-text-muted font-body italic flex-1">
-            {slotsMode === 'auto'
-              ? t('character.settings.mode_auto_hint')
-              : t('character.settings.mode_manual_hint')}
-          </p>
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          {(['auto', 'manual'] as const).map((mode) => (
-            <m.button
-              key={mode}
-              onClick={() => applySlotMode(mode)}
-              className={`min-h-[44px] rounded-xl font-cinzel text-xs uppercase tracking-widest transition-colors
-                ${slotsMode === mode
-                  ? 'bg-gradient-gold text-dnd-ink shadow-engrave'
-                  : 'bg-dnd-surface border border-dnd-border text-dnd-text-muted'}`}
-              whileTap={{ scale: 0.96 }}
-              transition={spring.press}
-            >
-              {t(`character.settings.mode_${mode}`)}
-            </m.button>
-          ))}
-        </div>
-      </Surface>
-
       <SectionDivider icon={<Settings2 size={11} />} align="center">
         {t('character.settings.preferences')}
       </SectionDivider>
@@ -278,6 +305,7 @@ export default function Settings() {
           <div className="flex flex-col gap-1.5 pl-6 mt-2">
             {BUNDLED_PACKS.map((id) => {
               const selected = packId === id
+              const preview = PACK_PREVIEW[id]
               return (
                 <label
                   key={id}
@@ -301,6 +329,7 @@ export default function Settings() {
                   >
                     {selected && <span className="w-2 h-2 rounded-full bg-dnd-ink" />}
                   </span>
+                  <D20Thumb body={preview.body} accent={preview.accent} active={selected} />
                   <span>{packNames?.[id] ?? id}</span>
                 </label>
               )
@@ -373,6 +402,46 @@ export default function Settings() {
             )
           })}
         </div>
+        {/* Retention purge preview — shows what each mode would delete now,
+            so users can decide before committing the change (U080). */}
+        {retentionPreview && retentionPreview.total > 0 && (
+          <div className="mt-3 space-y-1 text-[11px] text-dnd-text-muted font-body italic leading-snug">
+            <p>
+              {t('character.settings.history_retention_total', {
+                n: retentionPreview.total,
+                defaultValue: 'Cronologia attuale: {{n}} voci.',
+              })}
+            </p>
+            <p
+              className={
+                retentionPreview.would_purge_events > 0
+                  ? 'text-[var(--dnd-crimson-bright)]'
+                  : ''
+              }
+            >
+              {t('character.settings.history_retention_preview_events', {
+                n: retentionPreview.would_purge_events,
+                keep: retentionEvents,
+                defaultValue:
+                  'Ultimi {{keep}} eventi: perderai {{n}} voci più vecchie ora.',
+              })}
+            </p>
+            <p
+              className={
+                retentionPreview.would_purge_days > 0
+                  ? 'text-[var(--dnd-crimson-bright)]'
+                  : ''
+              }
+            >
+              {t('character.settings.history_retention_preview_days', {
+                n: retentionPreview.would_purge_days,
+                days: retentionDays,
+                defaultValue:
+                  'Ultimi {{days}} giorni: perderai {{n}} voci precedenti.',
+              })}
+            </p>
+          </div>
+        )}
       </Surface>
 
       <SectionDivider icon={<RefreshCw size={11} />} align="center">
@@ -411,6 +480,39 @@ export default function Settings() {
           label={t('character.settings.privacy.show_private_label')}
           hint={t('character.settings.privacy.show_private_hint')}
         />
+      </Surface>
+
+      {/* Advanced — spell slots mode (Auto/Manual). Less commonly toggled than
+          language/theme, so kept near the bottom per U082. */}
+      <SectionDivider icon={<Gem size={11} />} align="center">
+        {t('character.settings.spell_slots_mode')}
+      </SectionDivider>
+
+      <Surface variant="elevated">
+        <div className="flex items-start gap-3 mb-3">
+          <Sparkles size={16} className="text-dnd-arcane-bright shrink-0 mt-0.5" />
+          <p className="text-xs text-dnd-text-muted font-body italic flex-1">
+            {slotsMode === 'auto'
+              ? t('character.settings.mode_auto_hint')
+              : t('character.settings.mode_manual_hint')}
+          </p>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          {(['auto', 'manual'] as const).map((mode) => (
+            <m.button
+              key={mode}
+              onClick={() => applySlotMode(mode)}
+              className={`min-h-[44px] rounded-xl font-cinzel text-xs uppercase tracking-widest transition-colors
+                ${slotsMode === mode
+                  ? 'bg-gradient-gold text-dnd-ink shadow-engrave'
+                  : 'bg-dnd-surface border border-dnd-border text-dnd-text-muted'}`}
+              whileTap={{ scale: 0.96 }}
+              transition={spring.press}
+            >
+              {t(`character.settings.mode_${mode}`)}
+            </m.button>
+          ))}
+        </div>
       </Surface>
 
       {/* Reset all character settings */}

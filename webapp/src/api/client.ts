@@ -16,6 +16,7 @@ import type {
   GameSession,
   GameSessionLive,
   HistoryEntry,
+  HistoryRetentionPreview,
   Item,
   MapEntry,
   Note,
@@ -156,6 +157,44 @@ async function requestFormData<T>(
   return res.json() as Promise<T>
 }
 
+// XHR-based upload — exposes upload.onprogress for percent UI. Fetch + ReadableStream
+// can't observe outbound progress in browsers, so we keep XMLHttpRequest here.
+function requestFormDataWithProgress<T>(
+  path: string,
+  formData: FormData,
+  onProgress: (pct: number) => void,
+): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const initData = getInitData()
+    const xhr = new XMLHttpRequest()
+    xhr.open('POST', `${BASE_URL}${path}`)
+    xhr.setRequestHeader('X-Telegram-Init-Data', initData)
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100))
+    }
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          resolve(JSON.parse(xhr.responseText) as T)
+        } catch {
+          reject(new ApiError(xhr.status, 'Invalid JSON response'))
+        }
+      } else {
+        let detail = xhr.statusText
+        try {
+          detail = (JSON.parse(xhr.responseText) as { detail?: string }).detail ?? detail
+        } catch {
+          /* keep statusText */
+        }
+        reject(new ApiError(xhr.status, detail))
+      }
+    }
+    xhr.onerror = () => reject(new ApiError(0, 'Network error'))
+    xhr.onabort = () => reject(new ApiError(0, 'Upload aborted'))
+    xhr.send(formData)
+  })
+}
+
 // ---------------------------------------------------------------------------
 // Characters
 // ---------------------------------------------------------------------------
@@ -166,10 +205,21 @@ export const api = {
   characters: {
     list: () => request<CharacterSummary[]>('/characters'),
     get: (id: number) => request<CharacterFull>(`/characters/${id}`),
-    create: (name: string) =>
+    create: (
+      name: string,
+      initialClass?: {
+        class_name: string
+        level?: number
+        hit_die?: number
+        spellcasting_ability?: string | null
+      } | null,
+    ) =>
       request<CharacterFull>('/characters', {
         method: 'POST',
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({
+          name,
+          ...(initialClass ? { initial_class: initialClass } : {}),
+        }),
       }),
     update: (id: number, data: Record<string, unknown>) =>
       request<CharacterFull>(`/characters/${id}`, {
@@ -450,15 +500,15 @@ export const api = {
   // ---------------------------------------------------------------------------
   notes: {
     list: (charId: number) => request<Note[]>(`/characters/${charId}/notes`),
-    add: (charId: number, title: string, body: string) =>
+    add: (charId: number, title: string, body: string, tags?: string[]) =>
       request<Note[]>(`/characters/${charId}/notes`, {
         method: 'POST',
-        body: JSON.stringify({ title, body }),
+        body: JSON.stringify({ title, body, tags: tags ?? [] }),
       }),
-    update: (charId: number, title: string, body: string) =>
+    update: (charId: number, title: string, body: string, tags?: string[]) =>
       request<Note[]>(`/characters/${charId}/notes/${encodeURIComponent(title)}`, {
         method: 'PATCH',
-        body: JSON.stringify({ body }),
+        body: JSON.stringify({ body, ...(tags !== undefined ? { tags } : {}) }),
       }),
     remove: (charId: number, title: string) =>
       request<Note[]>(`/characters/${charId}/notes/${encodeURIComponent(title)}`, {
@@ -493,6 +543,21 @@ export const api = {
       fd.append('file', file)
       return requestFormData<MapEntry>(`/characters/${charId}/maps/upload`, fd)
     },
+    uploadWithProgress: (
+      charId: number,
+      zoneName: string,
+      file: File,
+      onProgress: (pct: number) => void,
+    ) => {
+      const fd = new FormData()
+      fd.append('zone_name', zoneName)
+      fd.append('file', file)
+      return requestFormDataWithProgress<MapEntry>(
+        `/characters/${charId}/maps/upload`,
+        fd,
+        onProgress,
+      )
+    },
     reorder: (charId: number, zoneName: string, order: number[]) =>
       request<CharacterFull>(`/characters/${charId}/maps/reorder`, {
         method: 'PATCH',
@@ -526,6 +591,10 @@ export const api = {
     get: (charId: number) => request<HistoryEntry[]>(`/characters/${charId}/history`),
     clear: (charId: number) =>
       request<void>(`/characters/${charId}/history`, { method: 'DELETE' }),
+    retentionPreview: (charId: number, events: number, days: number) =>
+      request<HistoryRetentionPreview>(
+        `/characters/${charId}/history/retention-preview?events=${events}&days=${days}`,
+      ),
   },
 
   // ---------------------------------------------------------------------------

@@ -22,6 +22,10 @@ const CONDITION_KEYS = [
   'prone', 'restrained', 'stunned', 'unconscious',
 ] as const
 
+// Most-frequently toggled conditions at the table — kept visible at top so
+// players don't scroll past the standard list during combat.
+const QUICK_CONDITIONS = ['poisoned', 'prone', 'frightened', 'charmed'] as const
+
 export default function Conditions() {
   const { id } = useParams<{ id: string }>()
   const charId = Number(id)
@@ -70,9 +74,12 @@ export default function Conditions() {
   }
 
   const activeCount = CONDITION_KEYS.filter((k) => conditions[k]).length + (currentExhaustion > 0 ? 1 : 0)
+  const standardConditions = CONDITION_KEYS.filter(
+    (k) => !(QUICK_CONDITIONS as readonly string[]).includes(k),
+  )
   const visibleConditions = filterActive
-    ? CONDITION_KEYS.filter((k) => conditions[k])
-    : CONDITION_KEYS
+    ? standardConditions.filter((k) => conditions[k])
+    : standardConditions
 
   const resetAll = () => {
     const cleared: Record<string, unknown> = { exhaustion: 0 }
@@ -117,6 +124,37 @@ export default function Conditions() {
           </p>
         </Surface>
       )}
+
+      {/* Quick toggle bar — most-used conditions, always visible at top */}
+      <div>
+        <p className="text-[9px] font-cinzel uppercase tracking-[0.25em] text-dnd-gold-dim mb-1.5">
+          {t('character.conditions.quickbar_label', { defaultValue: 'Rapide' })}
+        </p>
+        <div className="grid grid-cols-4 gap-2">
+          {QUICK_CONDITIONS.map((key) => {
+            const Icon = CONDITION_ICONS[key]
+            const active = !!conditions[key]
+            return (
+              <m.button
+                key={key}
+                type="button"
+                onClick={() => toggle(key)}
+                whileTap={{ scale: 0.92 }}
+                className={`flex flex-col items-center justify-center gap-1 min-h-[60px] rounded-xl border transition-colors
+                  ${active
+                    ? 'bg-gradient-to-br from-[var(--dnd-crimson-deep)]/40 to-[var(--dnd-crimson)]/20 border-dnd-crimson/60 shadow-halo-danger'
+                    : 'bg-dnd-surface border-dnd-border'}`}
+                title={t(`character.conditions.${key}`)}
+              >
+                <Icon size={20} className={active ? 'text-[var(--dnd-crimson-bright)]' : 'text-dnd-text-faint'} />
+                <span className={`text-[10px] font-body leading-tight text-center px-1 ${active ? 'text-dnd-text' : 'text-dnd-text-muted'}`}>
+                  {t(`character.conditions.${key}`)}
+                </span>
+              </m.button>
+            )
+          })}
+        </div>
+      </div>
 
       {/* Exhaustion tracker — separated because levels are cumulative, not toggle. */}
       <Surface variant="elevated" ornamented>

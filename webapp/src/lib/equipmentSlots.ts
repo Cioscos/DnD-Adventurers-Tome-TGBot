@@ -2,14 +2,34 @@
  * Equipment slot constants and helpers for the paper-doll UI.
  * Mirrors backend `api/services/equipment.py` and must stay in sync.
  */
-import type { ComponentType, SVGAttributes } from 'react'
+import { createElement, type ComponentType, type SVGAttributes } from 'react'
 import {
-  Crown, Gem, Shirt, Shield, HandMetal, Circle, Footprints,
-  Sword, ShieldHalf, Feather,
+  Crown, Gem, Shirt, Shield, HandMetal, Circle, CircleDot, Footprints,
+  Sword, Feather,
 } from 'lucide-react'
 import type { EquipmentSlot } from '@/types'
 
 type IconCmp = ComponentType<SVGAttributes<SVGElement> & { size?: number | string }>
+
+/** Triangular cape/mantle outline — placeholder for the cloak slot. */
+const CloakIcon: IconCmp = ({ size = 24, ...props }) =>
+  createElement(
+    'svg',
+    {
+      ...props,
+      width: size,
+      height: size,
+      viewBox: '0 0 24 24',
+      fill: 'none',
+      stroke: 'currentColor',
+      strokeWidth: 2,
+      strokeLinecap: 'round',
+      strokeLinejoin: 'round',
+    },
+    createElement('path', { d: 'M9 3 h6' }),
+    createElement('path', { d: 'M9 3 L4 20 Q12 22 20 20 L15 3' }),
+    createElement('path', { d: 'M12 5 L12 21' }),
+  )
 
 export const ALL_SLOTS: EquipmentSlot[] = [
   'head', 'neck', 'cloak', 'body',
@@ -21,14 +41,14 @@ export const ALL_SLOTS: EquipmentSlot[] = [
 export const SLOT_PLACEHOLDER_ICON: Record<EquipmentSlot, IconCmp> = {
   head: Crown,
   neck: Gem,
-  cloak: Shirt,
-  body: Shield,
+  cloak: CloakIcon,
+  body: Shirt,
   hands: HandMetal,
   ring1: Circle,
-  ring2: Circle,
+  ring2: CircleDot,
   feet: Footprints,
   main_hand: Sword,
-  off_hand: ShieldHalf,
+  off_hand: Shield,
   ammunition: Feather,
 }
 

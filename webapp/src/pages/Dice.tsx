@@ -15,6 +15,8 @@ import { DiceRunicWatermark } from '@/components/ui/Ornament'
 import ScrollArea from '@/components/ScrollArea'
 import { haptic, isInsideTelegram } from '@/auth/telegram'
 import { spring } from '@/styles/motion'
+import { formatRelative, formatAbsolute } from '@/lib/relativeTime'
+import { useCharacterStore } from '@/store/characterStore'
 import type { DiceRollResult } from '@/types'
 import { useRollAndPersist } from '@/dice/useRollAndPersist'
 import { schedulePreloadDiceScene } from '@/dice/preload'
@@ -44,13 +46,20 @@ function formatRollList(rolls: number[]): string {
   return `[${visible} +… (+${remaining}, min ${min} · max ${max})]`
 }
 
+type StatRollExtras = {
+  rolls: number[]
+  dropped: number
+}
+
 export default function Dice() {
   const { id } = useParams<{ id: string }>()
   const charId = Number(id)
   const { t } = useTranslation()
   const qc = useQueryClient()
+  const locale = useCharacterStore((s) => s.locale)
   const [count, setCount] = useState(1)
   const [lastResult, setLastResult] = useState<DiceRollResult | null>(null)
+  const [statRollExtras, setStatRollExtras] = useState<StatRollExtras | null>(null)
   const [initiativeResult, setInitiativeResult] = useState<InitiativeResult | null>(null)
   const [showClearConfirm, setShowClearConfirm] = useState(false)
   const [initiativeRolling, setInitiativeRolling] = useState(false)
@@ -78,7 +87,44 @@ export default function Dice() {
       if (groups.length > 0) {
         const g = groups[0]
         setLastResult({ notation: g.notation, rolls: g.rolls, total: g.total, modifier: 0 })
+        setStatRollExtras(null)
       }
+      setInitiativeResult(null)
+      haptic.medium()
+    } catch {
+      haptic.error()
+    }
+  }
+
+  const handlePresetMulti = async (dieCount: number) => {
+    setCount(dieCount)
+    try {
+      const groups = await roll([{ kind: 'd6', count: dieCount }])
+      if (groups.length > 0) {
+        const g = groups[0]
+        setLastResult({ notation: g.notation, rolls: g.rolls, total: g.total, modifier: 0 })
+        setStatRollExtras(null)
+      }
+      setInitiativeResult(null)
+      haptic.medium()
+    } catch {
+      haptic.error()
+    }
+  }
+
+  // 4d6 drop-lowest stat-roll. Persists the underlying 4d6 in history; the
+  // drop is reflected only in the immediate UI total so the user sees stat-roll math.
+  const handleStatRoll = async () => {
+    setCount(4)
+    try {
+      const groups = await roll([{ kind: 'd6', count: 4 }])
+      if (groups.length === 0) return
+      const all = groups[0].rolls
+      const sorted = [...all].sort((a, b) => a - b)
+      const dropped = sorted[0]
+      const keptTotal = sorted.slice(1).reduce((s, v) => s + v, 0)
+      setLastResult({ notation: '4d6kh3', rolls: all, total: keptTotal, modifier: 0 })
+      setStatRollExtras({ rolls: all, dropped })
       setInitiativeResult(null)
       haptic.medium()
     } catch {
@@ -131,6 +177,35 @@ export default function Dice() {
       >
         {t('character.dice.initiative')} (d20 {modLabel})
       </Button>
+
+      {/* Common roll presets */}
+      <div className="grid grid-cols-3 gap-2">
+        <m.button
+          onClick={() => handlePresetMulti(2)}
+          disabled={rollPending || initiativeRolling}
+          className="min-h-[44px] rounded-xl bg-dnd-chip-bg border border-dnd-gold-dim/40 text-dnd-gold-bright font-cinzel text-xs uppercase tracking-widest disabled:opacity-40"
+          whileTap={{ scale: 0.93 }}
+        >
+          2d6
+        </m.button>
+        <m.button
+          onClick={() => handlePresetMulti(3)}
+          disabled={rollPending || initiativeRolling}
+          className="min-h-[44px] rounded-xl bg-dnd-chip-bg border border-dnd-gold-dim/40 text-dnd-gold-bright font-cinzel text-xs uppercase tracking-widest disabled:opacity-40"
+          whileTap={{ scale: 0.93 }}
+        >
+          3d6
+        </m.button>
+        <m.button
+          onClick={handleStatRoll}
+          disabled={rollPending || initiativeRolling}
+          className="min-h-[44px] rounded-xl bg-dnd-chip-bg border border-dnd-arcane/40 text-dnd-arcane-bright font-cinzel text-xs uppercase tracking-widest disabled:opacity-40"
+          whileTap={{ scale: 0.93 }}
+          title={t('character.dice.stat_roll_hint', { defaultValue: '4d6 scarta più basso (tiro caratteristica)' })}
+        >
+          4d6kh3
+        </m.button>
+      </div>
 
       {/* Dice count stepper */}
       <Surface variant="elevated">
@@ -245,11 +320,34 @@ export default function Dice() {
               >
                 {lastResult.total}
               </m.p>
-              {lastResult.rolls.length > 1 && (
+              {lastResult.rolls.length > 1 && !statRollExtras && (
                 <p className="text-xs text-dnd-text-muted font-mono mt-1 break-words px-2">
                   {formatRollList(lastResult.rolls)}
                 </p>
               )}
+              {statRollExtras && (() => {
+                // Render each die value; strike-through the one we dropped (first match only).
+                let strikeDone = false
+                return (
+                  <p className="text-xs text-dnd-text-muted font-mono mt-1 break-words px-2">
+                    [
+                    {statRollExtras.rolls.map((v, i) => {
+                      const shouldStrike = !strikeDone && v === statRollExtras.dropped
+                      if (shouldStrike) strikeDone = true
+                      return (
+                        <span key={i}>
+                          {i > 0 && ' + '}
+                          <span className={shouldStrike ? 'line-through text-dnd-text-faint' : ''}>{v}</span>
+                        </span>
+                      )
+                    })}
+                    {'] '}
+                    <span className="text-[10px] uppercase tracking-widest text-dnd-text-faint">
+                      {t('character.dice.dropped', { defaultValue: 'scarta' })} {statRollExtras.dropped}
+                    </span>
+                  </p>
+                )
+              })()}
               {isInsideTelegram() && (
                 <Button
                   variant="secondary"
@@ -289,25 +387,54 @@ export default function Dice() {
           </div>
           <ScrollArea>
             <div className="space-y-1">
-              {history.slice(0, 10).map((entry, i) => (
-                <m.div
-                  key={i}
-                  initial={{ opacity: 0, x: -8 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.03 }}
-                  className="flex justify-between items-center gap-2 px-3 py-2 rounded-xl bg-dnd-surface border border-dnd-border"
-                >
-                  <div className="flex items-baseline gap-1.5 min-w-0">
-                    <span className="text-xs text-dnd-gold-dim font-mono shrink-0">{entry.notation}</span>
-                    {entry.rolls.length > 1 && (
-                      <span className="text-[10px] text-dnd-text-faint font-mono truncate">
-                        [{entry.rolls.join('+')}]
-                      </span>
-                    )}
-                  </div>
-                  <span className="font-display font-black text-dnd-gold-bright text-lg shrink-0">{entry.total}</span>
-                </m.div>
-              ))}
+              {history.slice(0, 10).map((entry, i) => {
+                const ts = entry.timestamp
+                const rel = ts
+                  ? formatRelative(ts, {
+                      locale: locale === 'en' ? 'en' : 'it',
+                      todayLabel: locale === 'en' ? 'Today' : 'Oggi',
+                      yesterdayLabel: locale === 'en' ? 'Yesterday' : 'Ieri',
+                    })
+                  : null
+                const abs = ts ? formatAbsolute(ts, locale === 'en' ? 'en' : 'it') : null
+                const source = entry.source
+                const sourceLabel = source && source !== 'manual'
+                  ? t(`character.dice.source.${source}`, { defaultValue: source })
+                  : null
+                return (
+                  <m.div
+                    key={i}
+                    initial={{ opacity: 0, x: -8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.03 }}
+                    className="flex justify-between items-center gap-2 px-3 py-2 rounded-xl bg-dnd-surface border border-dnd-border"
+                    title={abs ?? undefined}
+                  >
+                    <div className="flex flex-col min-w-0 flex-1">
+                      <div className="flex items-baseline gap-1.5 min-w-0">
+                        <span className="text-xs text-dnd-gold-dim font-mono shrink-0">{entry.notation}</span>
+                        {entry.rolls.length > 1 && (
+                          <span className="text-[10px] text-dnd-text-faint font-mono truncate">
+                            [{entry.rolls.join('+')}]
+                          </span>
+                        )}
+                      </div>
+                      {(rel || sourceLabel || entry.label) && (
+                        <div className="flex items-center gap-1.5 text-[9px] text-dnd-text-faint italic mt-0.5">
+                          {sourceLabel && (
+                            <span className="font-cinzel uppercase tracking-wider px-1 py-px rounded bg-dnd-chip-bg text-dnd-gold-dim border border-dnd-border not-italic">
+                              {sourceLabel}
+                            </span>
+                          )}
+                          {entry.label && <span className="truncate">{entry.label}</span>}
+                          {rel && <span className="ml-auto shrink-0">{rel}</span>}
+                        </div>
+                      )}
+                    </div>
+                    <span className="font-display font-black text-dnd-gold-bright text-lg shrink-0">{entry.total}</span>
+                  </m.div>
+                )
+              })}
             </div>
           </ScrollArea>
         </div>

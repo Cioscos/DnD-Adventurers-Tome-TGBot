@@ -2,34 +2,43 @@ import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import DndInput from '@/components/DndInput'
 import DndButton from '@/components/DndButton'
+import ChipInput from '@/components/ui/ChipInput'
+
+const TAG_SUGGESTIONS_IT = ['Lore', 'NPC', 'Quest', 'Loot', 'Trama', 'Segreto']
+const TAG_SUGGESTIONS_EN = ['Lore', 'NPC', 'Quest', 'Loot', 'Plot', 'Secret']
 
 interface NoteEditorProps {
-  initialNote?: { title: string; body: string } | null
-  onSave: (title: string, body: string) => void
+  initialNote?: { title: string; body: string; tags?: string[] } | null
+  onSave: (title: string, body: string, tags: string[]) => void
   onCancel: () => void
   isPending: boolean
 }
 
 export default function NoteEditor({ initialNote, onSave, onCancel, isPending }: NoteEditorProps) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const isEdit = !!initialNote
 
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
+  const [tags, setTags] = useState<string[]>([])
 
   useEffect(() => {
     if (initialNote) {
       setTitle(initialNote.title)
       setBody(initialNote.body)
+      setTags(initialNote.tags ?? [])
     } else {
       setTitle('')
       setBody('')
+      setTags([])
     }
   }, [initialNote])
 
   const handleSave = () => {
-    onSave(title.trim(), body.trim())
+    onSave(title.trim(), body.trim(), tags)
   }
+
+  const tagSuggestions = i18n.language === 'en' ? TAG_SUGGESTIONS_EN : TAG_SUGGESTIONS_IT
 
   return (
     <div className="space-y-3">
@@ -56,6 +65,17 @@ export default function NoteEditor({ initialNote, onSave, onCancel, isPending }:
                      placeholder:text-dnd-text-muted/50"
         />
       </div>
+      <ChipInput
+        values={tags}
+        onChange={setTags}
+        suggestions={tagSuggestions}
+        label={
+          <span className="block text-[11px] uppercase tracking-wider mb-1 font-medium text-dnd-gold-dim">
+            {t('character.notes.tags_label', { defaultValue: 'Tag' })}
+          </span>
+        }
+        placeholder={t('character.notes.tags_placeholder', { defaultValue: 'NPC, Lore, Quest…' })}
+      />
       <div className="flex gap-2">
         <DndButton
           onClick={handleSave}

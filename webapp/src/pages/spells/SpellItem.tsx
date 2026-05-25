@@ -1,6 +1,6 @@
-import React from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Clock, Timer, Pencil, Trash2, Ban } from 'lucide-react'
+import { Clock, Timer, Pencil, Trash2, Ban, MoreVertical, Info } from 'lucide-react'
 import {
   GiCrosshair as Crosshair, GiPotionBall as FlaskConical,
   GiCrossedSwords as Swords, GiCheckedShield as Shield,
@@ -33,6 +33,23 @@ function SpellItemInner({
 }: SpellItemProps) {
   const { t } = useTranslation()
   const isConcentrating = concentratingSpellId === spell.id
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!menuOpen) return
+    const close = (e: Event) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', close)
+    document.addEventListener('touchstart', close)
+    return () => {
+      document.removeEventListener('mousedown', close)
+      document.removeEventListener('touchstart', close)
+    }
+  }, [menuOpen])
 
   return (
     <div
@@ -115,6 +132,15 @@ function SpellItemInner({
             </div>
           )}
 
+          {/* Concentration workflow hint — clarifies that conc starts on cast,
+              and the toggle button is for manual control only. */}
+          {spell.is_concentration && (
+            <div className="flex items-start gap-1.5 text-[11px] text-dnd-text-muted font-body italic leading-snug">
+              <Info size={11} className="text-dnd-arcane-bright shrink-0 mt-0.5" />
+              <span>{t('character.spells.concentration_help')}</span>
+            </div>
+          )}
+
           {/* Action buttons */}
           <div className="flex gap-2 flex-wrap border-t border-dnd-gold-dim/10 pt-2">
             <button
@@ -131,8 +157,10 @@ function SpellItemInner({
             {spell.is_concentration && (
               <button
                 onClick={onConcentrationToggle}
+                title={t('character.spells.concentration_button_title')}
+                aria-label={t('character.spells.concentration_button_title')}
                 className={`flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg
-                            border active:opacity-60
+                            border active:opacity-60 cursor-help
                             ${isConcentrating
                               ? 'bg-[var(--dnd-danger)]/20 text-[var(--dnd-danger)] border-[var(--dnd-danger)]/30'
                               : 'bg-dnd-arcane/20 text-dnd-arcane-text border-dnd-arcane/30'
@@ -144,24 +172,47 @@ function SpellItemInner({
                   : t('character.spells.concentration')}
               </button>
             )}
-            <button
-              onClick={onEdit}
-              className="flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg
-                         bg-dnd-info/20 text-dnd-info-text border border-dnd-info/30
-                         active:opacity-60"
-            >
-              <Pencil size={12} />
-              {t('character.spells.edit')}
-            </button>
-            <button
-              onClick={onRemove}
-              className="flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg
-                         bg-[var(--dnd-danger)]/15 text-[var(--dnd-danger)] border border-[var(--dnd-danger)]/30
-                         active:opacity-60"
-            >
-              <Trash2 size={12} />
-              {t('character.spells.forget')}
-            </button>
+            <div ref={menuRef} className="relative ml-auto flex items-center">
+              <button
+                onClick={() => setMenuOpen((v) => !v)}
+                aria-haspopup="menu"
+                aria-expanded={menuOpen}
+                className="flex items-center justify-center w-11 h-9 rounded-lg
+                           bg-dnd-surface-raised border border-dnd-border
+                           text-dnd-text-muted hover:text-dnd-gold-bright active:opacity-60"
+                title={t('character.spells.more_actions', { defaultValue: 'Altre azioni' })}
+              >
+                <MoreVertical size={14} />
+              </button>
+              {menuOpen && (
+                <div
+                  role="menu"
+                  className="absolute right-0 bottom-full mb-1 z-20 min-w-[160px]
+                             rounded-xl border border-dnd-gold-dim/40 bg-dnd-surface-raised
+                             shadow-parchment-md overflow-hidden"
+                >
+                  <button
+                    role="menuitem"
+                    onClick={() => { setMenuOpen(false); onEdit() }}
+                    className="w-full flex items-center gap-2 px-3 py-2.5 text-sm font-body text-dnd-text
+                               hover:bg-dnd-info/10 active:opacity-70 text-left"
+                  >
+                    <Pencil size={14} className="text-dnd-info-text" />
+                    {t('character.spells.edit')}
+                  </button>
+                  <button
+                    role="menuitem"
+                    onClick={() => { setMenuOpen(false); onRemove() }}
+                    className="w-full flex items-center gap-2 px-3 py-2.5 text-sm font-body
+                               text-[var(--dnd-danger)] border-t border-dnd-border
+                               hover:bg-[var(--dnd-danger)]/10 active:opacity-70 text-left"
+                  >
+                    <Trash2 size={14} />
+                    {t('character.spells.forget')}
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
