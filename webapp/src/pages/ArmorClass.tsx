@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
-import { Save } from 'lucide-react'
+import { RotateCcw, Save } from 'lucide-react'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
@@ -42,6 +42,17 @@ export default function ArmorClass() {
       setBase('')
       setShield('')
       setMagic('')
+      haptic.success()
+    },
+    onError: () => haptic.error(),
+  })
+
+  const resetOverrideMutation = useMutation({
+    mutationFn: () => api.characters.resetACOverride(charId),
+    onSuccess: (updated) => {
+      qc.setQueryData(['character', charId], updated)
+      setBase('')
+      setShield('')
       haptic.success()
     },
     onError: () => haptic.error(),
@@ -121,7 +132,11 @@ export default function ArmorClass() {
             >
               {t('character.ac.base')}
             </p>
-            {equippedBodyArmor && (
+            {char.base_armor_class_override ? (
+              <span className="text-[8px] font-cinzel uppercase tracking-wider px-1 py-px rounded-full bg-[var(--dnd-crimson-deep)]/30 text-[var(--dnd-crimson-bright)] border border-dnd-crimson/50">
+                {t('character.ac.manual_override')}
+              </span>
+            ) : equippedBodyArmor && (
               <span className="text-[8px] font-cinzel uppercase tracking-wider px-1 py-px rounded-full bg-dnd-gold/20 text-dnd-gold-bright border border-dnd-gold/50">
                 {t('character.ac.auto_from_armor')}
               </span>
@@ -137,7 +152,6 @@ export default function ArmorClass() {
             onChange={setBase}
             placeholder={String(char.base_armor_class)}
             inputMode="numeric"
-            disabled={!!equippedBodyArmor}
             className="mt-2 w-full [&_input]:text-base [&_input]:font-display [&_input]:font-bold [&_input]:text-center"
           />
         </Surface>
@@ -146,7 +160,11 @@ export default function ArmorClass() {
             <p className="font-cinzel text-[10px] uppercase tracking-widest text-dnd-gold-dim">
               {t('character.ac.shield')}
             </p>
-            {equippedShield && (
+            {char.shield_armor_class_override ? (
+              <span className="text-[8px] font-cinzel uppercase tracking-wider px-1 py-px rounded-full bg-[var(--dnd-crimson-deep)]/30 text-[var(--dnd-crimson-bright)] border border-dnd-crimson/50">
+                {t('character.ac.manual_override')}
+              </span>
+            ) : equippedShield && (
               <span className="text-[8px] font-cinzel uppercase tracking-wider px-1 py-px rounded-full bg-dnd-gold/20 text-dnd-gold-bright border border-dnd-gold/50">
                 {t('character.ac.auto_from_armor')}
               </span>
@@ -162,7 +180,6 @@ export default function ArmorClass() {
             onChange={setShield}
             placeholder={String(char.shield_armor_class)}
             inputMode="numeric"
-            disabled={!!equippedShield}
             className="mt-2 w-full [&_input]:text-base [&_input]:font-display [&_input]:font-bold [&_input]:text-center"
           />
         </Surface>
@@ -185,10 +202,28 @@ export default function ArmorClass() {
         </Surface>
       </m.div>
 
-      {equippedBodyArmor && (
+      {equippedBodyArmor && !char.base_armor_class_override && (
         <p className="text-[10px] text-dnd-text-faint font-body italic px-2 -mt-1">
           {t('character.ac.auto_from_armor_hint', { name: equippedBodyArmor.name })}
         </p>
+      )}
+
+      {(char.base_armor_class_override || char.shield_armor_class_override) && (
+        <div className="flex items-center justify-between gap-2 px-2 -mt-1">
+          <p className="text-[10px] text-[var(--dnd-crimson-bright)] font-body italic flex-1">
+            {t('character.ac.manual_override_hint')}
+          </p>
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={<RotateCcw size={12} />}
+            onClick={() => resetOverrideMutation.mutate()}
+            disabled={resetOverrideMutation.isPending}
+            haptic="warning"
+          >
+            {t('character.ac.reset_to_auto')}
+          </Button>
+        </div>
       )}
 
       {isDirty && previewTotal !== char.ac && (

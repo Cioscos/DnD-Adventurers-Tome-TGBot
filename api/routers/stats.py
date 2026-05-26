@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -113,8 +114,45 @@ async def update_ac(
     char = await _get_owned_full(char_id, user_id, session)
     if body.base is not None:
         char.base_armor_class = max(0, body.base)
+        char.base_armor_class_override = True
     if body.shield is not None:
         char.shield_armor_class = max(0, body.shield)
+        char.shield_armor_class_override = True
     if body.magic is not None:
         char.magic_armor = max(0, body.magic)
+    return char
+
+
+@router.post("/{char_id}/ac/reset-override", response_model=CharacterFull)
+async def reset_ac_override(
+    char_id: int,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> Character:
+    """Clear AC manual override flags and recompute Base/Shield from currently equipped items."""
+    char = await _get_owned_full(char_id, user_id, session)
+    char.base_armor_class_override = False
+    char.shield_armor_class_override = False
+
+    equipped_armor = next(
+        (i for i in (char.items or []) if i.is_equipped and i.equipment_slot == "body" and i.item_type == "armor"),
+        None,
+    )
+    equipped_shield = next(
+        (i for i in (char.items or []) if i.is_equipped and i.equipment_slot == "off_hand" and i.item_type == "shield"),
+        None,
+    )
+
+    if equipped_armor is not None:
+        meta = json.loads(equipped_armor.item_metadata) if equipped_armor.item_metadata else {}
+        char.base_armor_class = int(meta.get("ac_value", 10))
+    else:
+        char.base_armor_class = 10
+
+    if equipped_shield is not None:
+        meta = json.loads(equipped_shield.item_metadata) if equipped_shield.item_metadata else {}
+        char.shield_armor_class = int(meta.get("ac_bonus", 2))
+    else:
+        char.shield_armor_class = 0
+
     return char

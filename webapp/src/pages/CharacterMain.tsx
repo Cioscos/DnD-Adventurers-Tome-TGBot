@@ -89,13 +89,19 @@ export default function CharacterMain() {
             style={{ textShadow: '0 1px 4px var(--dnd-gold-glow)' }}>
           <span className="truncate">{char.name}</span>
           {char.concentrating_spell_id && (
-            <span
+            <m.button
+              type="button"
+              onClick={() => {
+                haptic.light()
+                navigate(`/char/${charId}/spells?focus=${char.concentrating_spell_id}`)
+              }}
+              whileTap={{ scale: 0.9 }}
               title={t('character.spells.concentration_active', { defaultValue: 'Concentrazione attiva' })}
               aria-label={t('character.spells.concentration_active', { defaultValue: 'Concentrazione attiva' })}
               className="shrink-0 inline-flex items-center justify-center w-6 h-6 rounded-full bg-[var(--dnd-arcane-deep)]/50 border border-dnd-arcane-bright text-dnd-arcane-bright font-cinzel font-black text-[10px] shadow-halo-arcane animate-pulse"
             >
               C
-            </span>
+            </m.button>
           )}
         </h1>
 

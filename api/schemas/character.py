@@ -58,6 +58,8 @@ class CharacterFull(BaseModel):
     base_armor_class: int
     shield_armor_class: int
     magic_armor: int
+    base_armor_class_override: bool = False
+    shield_armor_class_override: bool = False
     ac: int
 
     # Carry

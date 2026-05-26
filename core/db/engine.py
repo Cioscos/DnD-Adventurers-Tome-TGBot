@@ -104,6 +104,9 @@ _MIGRATIONS: list[tuple[str, str, str, str | None]] = [
     ("session_messages", "item_id", "BIGINT", None),
     ("session_messages", "item_name", "VARCHAR(120)", None),
     ("session_messages", "item_quantity", "INTEGER", None),
+    # AC manual override flags — preserve user-edited Base/Shield across equip/unequip
+    ("characters", "base_armor_class_override", "BOOLEAN", "0"),
+    ("characters", "shield_armor_class_override", "BOOLEAN", "0"),
 ]
 
 # Tables to drop if they exist (legacy feature cleanup)

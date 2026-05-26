@@ -258,6 +258,10 @@ export const api = {
         method: 'PATCH',
         body: JSON.stringify(data),
       }),
+    resetACOverride: (id: number) =>
+      request<CharacterFull>(`/characters/${id}/ac/reset-override`, {
+        method: 'POST',
+      }),
     updateSkills: (id: number, skills: Record<string, unknown>) =>
       request<CharacterFull>(`/characters/${id}/skills`, {
         method: 'PATCH',

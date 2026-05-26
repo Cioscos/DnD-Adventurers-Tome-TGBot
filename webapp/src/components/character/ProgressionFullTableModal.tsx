@@ -76,7 +76,7 @@ export default function ProgressionFullTableModal({ className, currentLevel, onC
                       ref={isCurrent ? currentRowRef : undefined}
                       className={
                         isCurrent
-                          ? 'bg-dnd-gold/15 text-dnd-gold-bright'
+                          ? 'bg-dnd-gold/15 text-dnd-gold-bright border-t border-dnd-gold/40'
                           : 'text-dnd-text-muted border-t border-dnd-gold-dim/10'
                       }
                     >
