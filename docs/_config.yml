@@ -20,3 +20,5 @@ exclude:
   - "*.gemspec"
   - node_modules/
   - superpowers/
+  - animation-opportunities.md
+  - webapp-audit/
