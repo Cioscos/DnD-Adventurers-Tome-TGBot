@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { m, AnimatePresence } from 'framer-motion'
+import { m } from 'framer-motion'
 import { Plus, Trash2, ArrowLeft, Pencil, SkipForward } from 'lucide-react'
 import {
   GiSparkles as Sparkles, GiCheckedShield as Shield, GiHeartPlus as Heart,
@@ -14,11 +14,13 @@ import HPGauge from '@/components/ui/HPGauge'
 import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
+import Sheet from '@/components/ui/Sheet'
 import FancyHeader from '@/components/ui/FancyHeader'
 import Reveal from '@/components/ui/Reveal'
 import Skeleton from '@/components/ui/Skeleton'
 import { WaxSeal } from '@/components/ui/Ornament'
 import { haptic, telegramConfirm } from '@/auth/telegram'
+import { useToast } from '@/hooks/useToast'
 import { spring, stagger } from '@/styles/motion'
 
 const DND_CLASSES = [
@@ -48,6 +50,7 @@ export default function CharacterSelect() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const qc = useQueryClient()
+  const toast = useToast()
 
   const [step, setStep] = useState<Step>('name')
   const [newName, setNewName] = useState('')
@@ -80,6 +83,9 @@ export default function CharacterSelect() {
       resetWizard()
       haptic.success()
       navigate(`/char/${char.id}`)
+    },
+    onError: () => {
+      toast.error(t('character.create.create_failed'))
     },
   })
 
@@ -274,236 +280,240 @@ export default function CharacterSelect() {
           </Reveal.Stagger>
         )}
 
-        {/* Creation wizard */}
-        <AnimatePresence mode="wait">
-          {creating ? (
+        {/* New character CTA — always visible, opens wizard Sheet. */}
+        <Button
+          variant="primary"
+          size="lg"
+          fullWidth
+          onClick={() => setCreating(true)}
+          icon={<Plus size={20} />}
+          haptic="medium"
+        >
+          {t('character.select.new')}
+        </Button>
+      </div>
+
+      {/* Creation wizard — modal Sheet so it floats above existing characters
+          instead of being pushed below the fold. */}
+      <Sheet
+        open={creating}
+        onClose={() => {
+          if (!createMutation.isPending) resetWizard()
+        }}
+        title={step === 'name' ? t('character.create.step_name') : t('character.create.step_class')}
+        dismissible={!createMutation.isPending}
+      >
+        <div className="p-5">
+          {step === 'name' ? (
             <m.div
-              key="wizard"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 20 }}
-              transition={spring.drift}
+              key="step-name"
+              initial={{ opacity: 0, x: -12 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.18 }}
             >
-              <Surface variant="elevated" ornamented className="mt-2">
-                <AnimatePresence mode="wait" initial={false}>
-                  {step === 'name' ? (
-                    <m.div
-                      key="step-name"
-                      initial={{ opacity: 0, x: -16 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -16 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      <p className="font-cinzel text-xs uppercase tracking-widest text-dnd-gold mb-3">
-                        {t('character.create.step_name')}
-                      </p>
-                      <Input
-                        value={newName}
-                        onChange={setNewName}
-                        placeholder={t('character.create.name_placeholder', { defaultValue: 'Il nome del tuo eroe' })}
-                        autoFocus
-                        onCommit={handleNameNext}
-                      />
-                      <div className="flex gap-2 mt-4">
-                        <Button
-                          variant="primary"
-                          fullWidth
-                          onClick={handleNameNext}
-                          disabled={!newName.trim()}
-                          haptic="medium"
-                        >
-                          {t('common.confirm')} →
-                        </Button>
-                        <Button variant="secondary" fullWidth onClick={resetWizard}>
-                          {t('common.cancel')}
-                        </Button>
-                      </div>
-                    </m.div>
-                  ) : (
-                    <m.div
-                      key="step-class"
-                      initial={{ opacity: 0, x: 16 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 16 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      <div className="flex items-center gap-2 mb-3">
-                        <m.button
-                          onClick={() => setStep('name')}
-                          className="w-11 h-11 rounded-full bg-dnd-surface border border-dnd-gold-dim/30 flex items-center justify-center text-dnd-gold"
-                          whileTap={{ scale: 0.9 }}
-                          aria-label={t('common.back')}
-                        >
-                          <ArrowLeft size={16} />
-                        </m.button>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-cinzel text-xs uppercase tracking-widest text-dnd-gold">
-                            {t('character.create.step_class')}
-                          </p>
-                          <p className="text-[10px] text-dnd-text-faint truncate font-body mt-0.5">
-                            {t('character.create.step_class_subtitle', {
-                              name: newName.trim() || '—',
-                              defaultValue: 'Per {{name}} · Passo 2/2',
-                            })}
-                          </p>
-                        </div>
-                      </div>
-
-                      {!showCustom ? (
-                        <>
-                          <m.div
-                            className="grid grid-cols-3 gap-2 mb-3"
-                            initial="initial"
-                            animate="animate"
-                            variants={{
-                              initial: {},
-                              animate: { transition: { staggerChildren: 0.03 } },
-                            }}
-                          >
-                            {DND_CLASSES.map((cls) => (
-                              <m.button
-                                key={cls.key}
-                                onClick={() => handleCreate({
-                                  class_name: t(`dnd.classes.${cls.key}`),
-                                  hit_die: cls.hit_die,
-                                  spellcasting_ability: cls.spellcasting_ability,
-                                })}
-                                disabled={createMutation.isPending}
-                                className="flex flex-col items-center py-2.5 px-1 rounded-xl
-                                           bg-dnd-surface border border-dnd-border
-                                           hover:border-dnd-gold/60 hover:shadow-halo-gold
-                                           transition-[box-shadow,border-color] duration-200
-                                           text-center disabled:opacity-40"
-                                variants={{
-                                  initial: { opacity: 0, scale: 0.9 },
-                                  animate: { opacity: 1, scale: 1 },
-                                }}
-                                whileTap={{ scale: 0.93 }}
-                              >
-                                <span className="text-[13px] font-display font-bold text-dnd-gold-bright">
-                                  {t(`dnd.classes.${cls.key}`)}
-                                </span>
-                                <span className="text-[10px] text-dnd-text-faint font-mono mt-0.5">d{cls.hit_die}</span>
-                              </m.button>
-                            ))}
-                          </m.div>
-
-                          {/* Special options row — visually paired below the 3-col class grid. */}
-                          <div className="grid grid-cols-2 gap-2">
-                            <m.button
-                              onClick={() => setShowCustom(true)}
-                              className="flex flex-col items-center justify-center py-2.5 px-1 rounded-xl
-                                         bg-gradient-arcane-mist border border-dnd-arcane/30
-                                         text-center"
-                              initial={{ opacity: 0, scale: 0.9 }}
-                              animate={{ opacity: 1, scale: 1 }}
-                              transition={{ delay: 0.1 }}
-                              whileTap={{ scale: 0.93 }}
-                            >
-                              <Pencil size={14} className="text-dnd-arcane-bright mb-0.5" />
-                              <span className="text-[13px] font-display font-bold text-dnd-arcane-bright">
-                                {t('character.create.custom_class')}
-                              </span>
-                              <span className="text-[10px] text-dnd-text-faint font-mono mt-0.5">d?</span>
-                            </m.button>
-                            <m.button
-                              onClick={() => handleCreate(null)}
-                              disabled={createMutation.isPending}
-                              className="flex flex-col items-center justify-center py-2.5 px-1 rounded-xl
-                                         bg-dnd-surface border border-dnd-border
-                                         text-center disabled:opacity-40"
-                              initial={{ opacity: 0, scale: 0.9 }}
-                              animate={{ opacity: 1, scale: 1 }}
-                              transition={{ delay: 0.15 }}
-                              whileTap={{ scale: 0.93 }}
-                            >
-                              <SkipForward size={14} className="text-dnd-text-faint mb-0.5" />
-                              <span className="text-[13px] font-display font-bold text-dnd-text">
-                                {t('character.create.skip_class')}
-                              </span>
-                              <span className="text-[10px] text-dnd-text-faint font-mono mt-0.5">—</span>
-                            </m.button>
-                          </div>
-                        </>
-                      ) : (
-                        <m.div
-                          initial={{ opacity: 0, y: 8 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.2 }}
-                        >
-                          <Input
-                            label={t('character.create.custom_class_name')}
-                            value={customName}
-                            onChange={setCustomName}
-                            placeholder="Artificer..."
-                            autoFocus
-                            onCommit={handleCustomCreate}
-                            className="mb-3"
-                          />
-
-                          <p className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-gold-dim mb-1.5">
-                            {t('character.create.hit_die')}
-                          </p>
-                          <div className="flex gap-2 mb-4">
-                            {[6, 8, 10, 12].map((d) => (
-                              <m.button
-                                key={d}
-                                onClick={() => setCustomHitDie(d)}
-                                className={`flex-1 py-2.5 rounded-xl font-cinzel font-bold text-sm transition-colors
-                                  ${customHitDie === d
-                                    ? 'bg-gradient-gold text-dnd-ink shadow-engrave'
-                                    : 'bg-dnd-surface text-dnd-text border border-dnd-border'}`}
-                                whileTap={{ scale: 0.95 }}
-                              >
-                                d{d}
-                              </m.button>
-                            ))}
-                          </div>
-
-                          <div className="flex gap-2">
-                            <Button
-                              variant="primary"
-                              fullWidth
-                              onClick={handleCustomCreate}
-                              disabled={!customName.trim() || createMutation.isPending}
-                              loading={createMutation.isPending}
-                              haptic="success"
-                            >
-                              {t('common.confirm')}
-                            </Button>
-                            <Button variant="secondary" fullWidth onClick={() => setShowCustom(false)}>
-                              {t('common.back')}
-                            </Button>
-                          </div>
-                        </m.div>
-                      )}
-                    </m.div>
-                  )}
-                </AnimatePresence>
-              </Surface>
+              <Input
+                value={newName}
+                onChange={setNewName}
+                placeholder={t('character.create.name_placeholder', { defaultValue: 'Il nome del tuo eroe' })}
+                autoFocus
+                onCommit={handleNameNext}
+              />
+              <div className="flex gap-2 mt-4">
+                <Button
+                  variant="primary"
+                  fullWidth
+                  onClick={handleNameNext}
+                  disabled={!newName.trim()}
+                  haptic="medium"
+                >
+                  {t('common.confirm')} →
+                </Button>
+                <Button variant="secondary" fullWidth onClick={resetWizard}>
+                  {t('common.cancel')}
+                </Button>
+              </div>
             </m.div>
           ) : (
             <m.div
-              key="create-button"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 10 }}
-              transition={spring.snappy}
+              key="step-class"
+              initial={{ opacity: 0, x: 12 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.18 }}
             >
-              <Button
-                variant="primary"
-                size="lg"
-                fullWidth
-                onClick={() => setCreating(true)}
-                icon={<Plus size={20} />}
-                haptic="medium"
-              >
-                {t('character.select.new')}
-              </Button>
+              <div className="flex items-center gap-2 mb-3">
+                <m.button
+                  onClick={() => setStep('name')}
+                  disabled={createMutation.isPending}
+                  className="w-11 h-11 rounded-full bg-dnd-surface border border-dnd-gold-dim/30 flex items-center justify-center text-dnd-gold disabled:opacity-40"
+                  whileTap={{ scale: 0.9 }}
+                  aria-label={t('common.back')}
+                >
+                  <ArrowLeft size={16} />
+                </m.button>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[11px] text-dnd-text-faint truncate font-body">
+                    {t('character.create.step_class_subtitle', {
+                      name: newName.trim() || '—',
+                      defaultValue: 'Per {{name}} · Passo 2/2',
+                    })}
+                  </p>
+                </div>
+              </div>
+
+              {!showCustom ? (
+                <>
+                  {/* Tap-to-create hint — replaces the missing "Next" button. */}
+                  <p className="text-[12px] text-dnd-gold-bright font-body italic text-center mb-3">
+                    {t('character.create.tap_class_hint', {
+                      name: newName.trim() || '—',
+                      defaultValue: 'Tocca una classe per creare {{name}}',
+                    })}
+                  </p>
+
+                  <div className="relative">
+                    <m.div
+                      className="grid grid-cols-3 gap-2 mb-3"
+                      initial="initial"
+                      animate="animate"
+                      variants={{
+                        initial: {},
+                        animate: { transition: { staggerChildren: 0.03 } },
+                      }}
+                    >
+                      {DND_CLASSES.map((cls) => (
+                        <m.button
+                          key={cls.key}
+                          onClick={() => handleCreate({
+                            class_name: t(`dnd.classes.${cls.key}`),
+                            hit_die: cls.hit_die,
+                            spellcasting_ability: cls.spellcasting_ability,
+                          })}
+                          disabled={createMutation.isPending}
+                          className="flex flex-col items-center py-2.5 px-1 rounded-xl
+                                     bg-dnd-surface border border-dnd-border
+                                     hover:border-dnd-gold/60 hover:shadow-halo-gold
+                                     transition-[box-shadow,border-color] duration-200
+                                     text-center disabled:opacity-40 disabled:pointer-events-none"
+                          variants={{
+                            initial: { opacity: 0, scale: 0.9 },
+                            animate: { opacity: 1, scale: 1 },
+                          }}
+                          whileTap={{ scale: 0.93 }}
+                        >
+                          <span className="text-[13px] font-display font-bold text-dnd-gold-bright">
+                            {t(`dnd.classes.${cls.key}`)}
+                          </span>
+                          <span className="text-[10px] text-dnd-text-faint font-mono mt-0.5">d{cls.hit_die}</span>
+                        </m.button>
+                      ))}
+                    </m.div>
+
+                    {/* Special options row — visually paired below the 3-col class grid. */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <m.button
+                        onClick={() => setShowCustom(true)}
+                        disabled={createMutation.isPending}
+                        className="flex flex-col items-center justify-center py-2.5 px-1 rounded-xl
+                                   bg-gradient-arcane-mist border border-dnd-arcane/30
+                                   text-center disabled:opacity-40 disabled:pointer-events-none"
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: 0.1 }}
+                        whileTap={{ scale: 0.93 }}
+                      >
+                        <Pencil size={14} className="text-dnd-arcane-bright mb-0.5" />
+                        <span className="text-[13px] font-display font-bold text-dnd-arcane-bright">
+                          {t('character.create.custom_class')}
+                        </span>
+                        <span className="text-[10px] text-dnd-text-faint font-mono mt-0.5">d?</span>
+                      </m.button>
+                      <m.button
+                        onClick={() => handleCreate(null)}
+                        disabled={createMutation.isPending}
+                        className="flex flex-col items-center justify-center py-2.5 px-1 rounded-xl
+                                   bg-dnd-surface border border-dnd-border
+                                   text-center disabled:opacity-40 disabled:pointer-events-none"
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: 0.15 }}
+                        whileTap={{ scale: 0.93 }}
+                      >
+                        <SkipForward size={14} className="text-dnd-text-faint mb-0.5" />
+                        <span className="text-[13px] font-display font-bold text-dnd-text">
+                          {t('character.create.skip_class')}
+                        </span>
+                        <span className="text-[10px] text-dnd-text-faint font-mono mt-0.5">—</span>
+                      </m.button>
+                    </div>
+
+                    {/* Pending overlay — dims the grid + shows spinner so the user
+                        knows the tap registered while the POST is in flight. */}
+                    {createMutation.isPending && (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-xl bg-dnd-surface/80 backdrop-blur-sm">
+                        <span className="w-6 h-6 border-2 border-dnd-gold/30 border-t-dnd-gold-bright rounded-full animate-spin" />
+                        <span className="text-[12px] font-cinzel uppercase tracking-widest text-dnd-gold">
+                          {t('character.create.creating')}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <m.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <Input
+                    label={t('character.create.custom_class_name')}
+                    value={customName}
+                    onChange={setCustomName}
+                    placeholder="Artificer..."
+                    autoFocus
+                    onCommit={handleCustomCreate}
+                    className="mb-3"
+                  />
+
+                  <p className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-gold-dim mb-1.5">
+                    {t('character.create.hit_die')}
+                  </p>
+                  <div className="flex gap-2 mb-4">
+                    {[6, 8, 10, 12].map((d) => (
+                      <m.button
+                        key={d}
+                        onClick={() => setCustomHitDie(d)}
+                        className={`flex-1 py-2.5 rounded-xl font-cinzel font-bold text-sm transition-colors
+                          ${customHitDie === d
+                            ? 'bg-gradient-gold text-dnd-ink shadow-engrave'
+                            : 'bg-dnd-surface text-dnd-text border border-dnd-border'}`}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        d{d}
+                      </m.button>
+                    ))}
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button
+                      variant="primary"
+                      fullWidth
+                      onClick={handleCustomCreate}
+                      disabled={!customName.trim() || createMutation.isPending}
+                      loading={createMutation.isPending}
+                      haptic="success"
+                    >
+                      {t('common.confirm')}
+                    </Button>
+                    <Button variant="secondary" fullWidth onClick={() => setShowCustom(false)} disabled={createMutation.isPending}>
+                      {t('common.back')}
+                    </Button>
+                  </div>
+                </m.div>
+              )}
             </m.div>
           )}
-        </AnimatePresence>
-      </div>
+        </div>
+      </Sheet>
     </div>
   )
 }
