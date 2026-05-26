@@ -1,5 +1,5 @@
-import { useState, useCallback } from 'react'
-import { useParams } from 'react-router-dom'
+import { useState, useCallback, useEffect, useRef } from 'react'
+import { useParams, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m, AnimatePresence } from 'framer-motion'
@@ -34,6 +34,9 @@ export default function Spells() {
   const [pendingSlotLevel, setPendingSlotLevel] = useState<number | null>(null)
   const [collapsedLevels, setCollapsedLevels] = useState<Set<number>>(new Set())
   const [concBannerExpanded, setConcBannerExpanded] = useState(false)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const spellRefs = useRef<Map<number, HTMLDivElement | null>>(new Map())
+  const focusHandled = useRef(false)
 
   const toggleLevel = (level: number) => {
     setCollapsedLevels((prev) => {
@@ -187,6 +190,30 @@ export default function Spells() {
     castMutation.mutate({ spell: castingSpell, slotLevel })
   }, [castingSpell, castMutation])
 
+  const focusParam = searchParams.get('focus')
+  const focusId = focusParam ? Number(focusParam) : null
+
+  useEffect(() => {
+    if (!char || focusId === null || focusHandled.current) return
+    const spell = (char.spells ?? []).find((s) => s.id === focusId)
+    if (!spell) return
+    focusHandled.current = true
+    setExpanded(focusId)
+    setCollapsedLevels((prev) => {
+      if (!prev.has(spell.level)) return prev
+      const next = new Set(prev)
+      next.delete(spell.level)
+      return next
+    })
+    requestAnimationFrame(() => {
+      const el = spellRefs.current.get(focusId)
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      const params = new URLSearchParams(searchParams)
+      params.delete('focus')
+      setSearchParams(params, { replace: true })
+    })
+  }, [char, focusId, searchParams, setSearchParams])
+
   if (!char) return null
 
   const spells: Spell[] = char.spells ?? []
@@ -313,20 +340,27 @@ export default function Spells() {
                   >
                     <div className="space-y-1.5 mt-2">
                       {byLevel[level].map((spell) => (
-                        <SpellItem
+                        <div
                           key={spell.id}
-                          spell={spell}
-                          isExpanded={expanded === spell.id}
-                          onToggle={() => setExpanded(expanded === spell.id ? null : spell.id)}
-                          onUse={() => handleUseSpell(spell)}
-                          onConcentrationToggle={() =>
-                            concentrationMutation.mutate(concentratingId === spell.id ? null : spell.id)
-                          }
-                          onEdit={() => handleEditSpell(spell)}
-                          onRemove={() => removeMutation.mutate(spell.id)}
-                          concentratingSpellId={concentratingId ?? null}
-                          usePending={castMutation.isPending || concentrationMutation.isPending}
-                        />
+                          ref={(el) => {
+                            if (el) spellRefs.current.set(spell.id, el)
+                            else spellRefs.current.delete(spell.id)
+                          }}
+                        >
+                          <SpellItem
+                            spell={spell}
+                            isExpanded={expanded === spell.id}
+                            onToggle={() => setExpanded(expanded === spell.id ? null : spell.id)}
+                            onUse={() => handleUseSpell(spell)}
+                            onConcentrationToggle={() =>
+                              concentrationMutation.mutate(concentratingId === spell.id ? null : spell.id)
+                            }
+                            onEdit={() => handleEditSpell(spell)}
+                            onRemove={() => removeMutation.mutate(spell.id)}
+                            concentratingSpellId={concentratingId ?? null}
+                            usePending={castMutation.isPending || concentrationMutation.isPending}
+                          />
+                        </div>
                       ))}
                     </div>
                   </m.div>

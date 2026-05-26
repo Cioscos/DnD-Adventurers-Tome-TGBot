@@ -82,7 +82,6 @@ export default function HeroScreen({ char }: Props) {
       <Surface
         variant="tome"
         ornamented
-        layoutId={`char-hero-${char.id}`}
         className="relative overflow-hidden"
       >
         <m.button
@@ -186,7 +185,7 @@ export default function HeroScreen({ char }: Props) {
         })()}
 
         {passiveAbilities.length > 0 && (
-          <div className="flex flex-wrap gap-2 mt-3 overflow-x-auto scrollbar-hide max-h-14">
+          <div className="flex flex-wrap gap-2 mt-3">
             {passiveAbilities.map((a) => (
               <StatPill
                 key={a.id}
@@ -202,7 +201,7 @@ export default function HeroScreen({ char }: Props) {
         )}
 
         {activeConditions.length > 0 && (
-          <div className="flex flex-wrap gap-2 mt-3 overflow-x-auto scrollbar-hide max-h-14">
+          <div className="flex flex-wrap gap-2 mt-3">
             {activeConditions.map(([key, val]) => {
               const Icon = CONDITION_ICONS[key] ?? CircleDot
               return (

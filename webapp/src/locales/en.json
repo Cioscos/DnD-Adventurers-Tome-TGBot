@@ -148,7 +148,10 @@
       "show_modifiers": "Modifiers",
       "hide_modifiers": "Hide modifiers",
       "auto_from_armor": "Auto",
-      "auto_from_armor_hint": "Base derived from equipped {{name}}."
+      "auto_from_armor_hint": "Base derived from equipped {{name}}.",
+      "manual_override": "Manual",
+      "reset_to_auto": "Reset to auto",
+      "manual_override_hint": "Manual values active: equipment changes will not override them."
     },
     "skills": {
       "title": "Skills",

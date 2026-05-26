@@ -229,13 +229,13 @@ export default function Conditions() {
                 ${active
                   ? 'bg-gradient-to-br from-[var(--dnd-crimson-deep)]/40 to-[var(--dnd-crimson)]/20 border-dnd-crimson/60 shadow-halo-danger text-dnd-text'
                   : 'bg-dnd-surface border-dnd-border text-dnd-text-muted'}`}
-              animate={active ? { x: [-2, 2, -1, 1, 0] } : {}}
-              transition={{ duration: 0.25 }}
             >
               <m.button
                 type="button"
                 onClick={() => toggle(key)}
                 whileTap={{ scale: 0.95 }}
+                animate={active ? { x: [-2, 2, -1, 1, 0] } : { x: 0 }}
+                transition={{ duration: 0.25 }}
                 className="flex-1 flex items-center gap-2 px-3 py-3 text-left"
               >
                 <Icon size={18} className={active ? 'text-[var(--dnd-crimson-bright)]' : 'text-dnd-text-faint'} />

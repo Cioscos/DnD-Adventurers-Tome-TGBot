@@ -148,7 +148,10 @@
       "show_modifiers": "Modificatori",
       "hide_modifiers": "Nascondi modificatori",
       "auto_from_armor": "Auto",
-      "auto_from_armor_hint": "Base derivata da {{name}} equipaggiata."
+      "auto_from_armor_hint": "Base derivata da {{name}} equipaggiata.",
+      "manual_override": "Manuale",
+      "reset_to_auto": "Ripristina auto",
+      "manual_override_hint": "Valori manuali attivi: non verranno sovrascritti al cambio di equipaggiamento."
     },
     "skills": {
       "title": "Abilità",

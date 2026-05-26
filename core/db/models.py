@@ -96,6 +96,9 @@ class Character(Base):
     base_armor_class: Mapped[int] = mapped_column(Integer, default=10)
     shield_armor_class: Mapped[int] = mapped_column(Integer, default=0)
     magic_armor: Mapped[int] = mapped_column(Integer, default=0)
+    # When True, equip/unequip events do NOT clobber the value — user manual override stays put.
+    base_armor_class_override: Mapped[bool] = mapped_column(Boolean, default=False)
+    shield_armor_class_override: Mapped[bool] = mapped_column(Boolean, default=False)
 
     # Encumbrance
     carry_capacity: Mapped[int] = mapped_column(Integer, default=150)

@@ -186,18 +186,19 @@ async def update_item(
             item.equipment_slot = None
 
     # Auto-update character AC when equipping/unequipping armor or shields.
+    # Skip when user has set a manual override on the corresponding component.
     if "is_equipped" in data or "equipment_slot" in data:
         item_meta = json.loads(item.item_metadata) if item.item_metadata else {}
-        if item.item_type == "armor":
+        if item.item_type == "armor" and not char.base_armor_class_override:
             char.base_armor_class = item_meta.get("ac_value", 10) if item.is_equipped else 10
-        elif item.item_type == "shield":
+        elif item.item_type == "shield" and not char.shield_armor_class_override:
             char.shield_armor_class = item_meta.get("ac_bonus", 2) if item.is_equipped else 0
 
         # If the swap displaced an armor or shield, reset its AC contribution.
         if displaced is not None:
-            if displaced.item_type == "armor":
+            if displaced.item_type == "armor" and not char.base_armor_class_override:
                 char.base_armor_class = 10
-            elif displaced.item_type == "shield":
+            elif displaced.item_type == "shield" and not char.shield_armor_class_override:
                 char.shield_armor_class = 0
 
     # Auto-recompute HP when CON modifier changes due to equip/unequip

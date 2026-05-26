@@ -4,6 +4,7 @@ import { Swords } from 'lucide-react'
 import PaperDoll from '@/components/character/PaperDoll'
 import EquipItemPicker from '@/components/character/EquipItemPicker'
 import SlotActionSheet from '@/components/character/SlotActionSheet'
+import ItemDetailsModal from '@/components/character/ItemDetailsModal'
 import EquipmentStatsFooter from '@/components/character/EquipmentStatsFooter'
 import SectionDivider from '@/components/ui/SectionDivider'
 import { silhouetteUrl } from '@/lib/silhouette'
@@ -17,6 +18,7 @@ type SheetState =
   | { kind: 'closed' }
   | { kind: 'picker'; slot: EquipmentSlot }
   | { kind: 'actions'; slot: EquipmentSlot; item: Item }
+  | { kind: 'details'; slot: EquipmentSlot; item: Item }
 
 export default function EquipmentScreen({ char }: Props) {
   const { t } = useTranslation()
@@ -57,9 +59,14 @@ export default function EquipmentScreen({ char }: Props) {
           item={sheet.item}
           onClose={() => setSheet({ kind: 'closed' })}
           onReplace={() => setSheet({ kind: 'picker', slot: sheet.slot })}
-          onDetails={(_item) => {
-            setSheet({ kind: 'closed' })
-          }}
+          onDetails={(item) => setSheet({ kind: 'details', slot: sheet.slot, item })}
+        />
+      )}
+      {sheet.kind === 'details' && (
+        <ItemDetailsModal
+          item={sheet.item}
+          slot={sheet.slot}
+          onClose={() => setSheet({ kind: 'closed' })}
         />
       )}
     </div>

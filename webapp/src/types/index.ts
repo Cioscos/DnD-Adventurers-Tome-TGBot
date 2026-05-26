@@ -159,6 +159,8 @@ export interface CharacterFull extends CharacterSummary {
   base_armor_class: number
   shield_armor_class: number
   magic_armor: number
+  base_armor_class_override: boolean
+  shield_armor_class_override: boolean
   carry_capacity: number
   encumbrance: number
   spell_slots_mode: string
