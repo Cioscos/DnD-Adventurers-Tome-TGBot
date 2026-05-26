@@ -40,7 +40,7 @@ from api.schemas.character import (
     XPUpdate,
 )
 from api.schemas.common import D20RollSubmission, RollResult
-from api.routers.classes import create_class_for_character
+from api.routers.classes import create_class_for_character, _get_owned_full
 from api.routers._helpers import prune_history
 
 router = APIRouter(prefix="/characters", tags=["characters"])
@@ -177,7 +177,16 @@ async def create_character(
             char, body.initial_class, session, is_first_class=True,
         )
         await session.flush()
-        await session.refresh(char, attribute_names=["classes"])
+        # Re-fetch with selectinload so `classes.resources` (and the other
+        # relations) are eagerly loaded for response serialization. A bare
+        # `session.refresh(char, attribute_names=["classes"])` leaves
+        # `cls.resources` unloaded and triggers MissingGreenlet during
+        # Pydantic serialization. We expunge the in-memory `char` first so
+        # the subsequent SELECT issues a fresh load (rather than returning
+        # the cached object with empty `classes`).
+        char_id = char.id
+        session.expunge(char)
+        return await _get_owned_full(char_id, user_id, session)
 
     return char
 

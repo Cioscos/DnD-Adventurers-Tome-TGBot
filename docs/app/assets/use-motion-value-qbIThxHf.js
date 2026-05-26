@@ -1,1 +1,0 @@
-import{r as t}from"./dice-scene-vKP0wyrV.js";import{aA as n,av as u,aC as r}from"./index-1J3wWiBp.js";function i(o){const e=n(()=>r(o)),{isStatic:s}=t.useContext(u);if(s){const[,a]=t.useState(o);t.useEffect(()=>e.on("change",a),[])}return e}export{i as u};
