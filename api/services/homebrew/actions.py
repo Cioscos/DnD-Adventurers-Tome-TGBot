@@ -223,6 +223,30 @@ async def execute_unequip(action, ctx, rfr, session, char, **kw):
     await session.flush()
 
 
+async def execute_damage_character(action, ctx, rfr, session, char, **kw):
+    amount = action["amount"]
+    if isinstance(amount, str):
+        amount = _roll(amount)
+    amount = int(amount)
+
+    # Absorb temp HP first (mirror hp.py:update_hp semantics)
+    if char.temp_hp > 0:
+        absorbed = min(char.temp_hp, amount)
+        char.temp_hp -= absorbed
+        amount -= absorbed
+
+    char.current_hit_points = max(0, char.current_hit_points - amount)
+    await session.flush()
+
+
+async def execute_heal_character(action, ctx, rfr, session, char, **kw):
+    amount = action["amount"]
+    if isinstance(amount, str):
+        amount = _roll(amount)
+    char.current_hit_points = min(char.hit_points, char.current_hit_points + int(amount))
+    await session.flush()
+
+
 # ---------------------------------------------------------------------------
 # Dispatcher
 # ---------------------------------------------------------------------------
@@ -241,6 +265,8 @@ _ASYNC_HANDLERS = {
     "set_property": execute_set_property,
     "inc_property": execute_inc_property,
     "unequip": execute_unequip,
+    "damage_character": execute_damage_character,
+    "heal_character": execute_heal_character,
 }
 
 

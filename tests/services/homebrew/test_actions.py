@@ -405,3 +405,54 @@ async def test_unequip_armor_respects_override(db_session):
     )
     await db_session.refresh(char)
     assert char.base_armor_class == 16
+
+
+# ---------------------------------------------------------------------------
+# Task 1.7 — damage_character + heal_character
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_damage_character_int_amount(db_session, char_with_item):
+    char, _ = char_with_item
+    char.hit_points = 20
+    char.current_hit_points = 15
+    rfr = RuleFiringResult(rule_id=1, rule_name="r")
+    ctx = ExecutionContext.new("homebrew_internal", {}, {}, {"id": char.id})
+
+    from api.services.homebrew.actions import execute_damage_character
+    await execute_damage_character(
+        {"action": "damage_character", "amount": 5}, ctx, rfr, db_session, char,
+    )
+    assert char.current_hit_points == 10
+
+
+@pytest.mark.asyncio
+async def test_damage_character_dice_amount(db_session, char_with_item, monkeypatch):
+    monkeypatch.setattr("api.services.homebrew.actions.random.randint", lambda lo, hi: 3)
+    char, _ = char_with_item
+    char.hit_points = 20
+    char.current_hit_points = 20
+    rfr = RuleFiringResult(rule_id=1, rule_name="r")
+    ctx = ExecutionContext.new("homebrew_internal", {}, {}, {"id": char.id})
+
+    from api.services.homebrew.actions import execute_damage_character
+    await execute_damage_character(
+        {"action": "damage_character", "amount": "1d4"}, ctx, rfr, db_session, char,
+    )
+    assert char.current_hit_points == 17  # 20 - 3
+
+
+@pytest.mark.asyncio
+async def test_heal_character_caps_at_max(db_session, char_with_item):
+    char, _ = char_with_item
+    char.hit_points = 20
+    char.current_hit_points = 18
+    rfr = RuleFiringResult(rule_id=1, rule_name="r")
+    ctx = ExecutionContext.new("homebrew_internal", {}, {}, {"id": char.id})
+
+    from api.services.homebrew.actions import execute_heal_character
+    await execute_heal_character(
+        {"action": "heal_character", "amount": 10}, ctx, rfr, db_session, char,
+    )
+    assert char.current_hit_points == 20  # capped at max
