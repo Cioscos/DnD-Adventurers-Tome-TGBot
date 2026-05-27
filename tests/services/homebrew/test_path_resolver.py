@@ -53,3 +53,37 @@ def test_resolve_unknown_event_field_raises():
     ctx = {"event": {"a": 1}, "subject": {}, "character": {}, "vars": {}}
     with pytest.raises(PathResolutionError):
         resolve_path("$event.b", ctx)
+
+
+def test_resolve_vars_dotted_form():
+    ctx = {"event": {}, "subject": {}, "character": {}, "vars": {"a": 1, "result": "D"}}
+    assert resolve_path("$vars.a", ctx) == 1
+    assert resolve_path("$vars.result", ctx) == "D"
+
+
+def test_resolve_unknown_vars_dotted_raises():
+    ctx = {"event": {}, "subject": {}, "character": {}, "vars": {"a": 1}}
+    with pytest.raises(PathResolutionError):
+        resolve_path("$vars.b", ctx)
+
+
+def test_resolve_unknown_character_field_raises():
+    ctx = {"event": {}, "subject": {}, "character": {"current_hit_points": 10}, "vars": {}}
+    with pytest.raises(PathResolutionError):
+        resolve_path("$character.banana", ctx)
+
+
+def test_resolve_subject_missing_property_item_raises():
+    ctx = {
+        "event": {}, "subject": {"_kind": "item", "metadata": {}}, "character": {}, "vars": {}
+    }
+    with pytest.raises(PathResolutionError):
+        resolve_path("$subject.quality", ctx)
+
+
+def test_resolve_subject_missing_property_character_raises():
+    ctx = {
+        "event": {}, "subject": {"_kind": "character", "id": 1}, "character": {}, "vars": {},
+    }
+    with pytest.raises(PathResolutionError):
+        resolve_path("$subject.banana", ctx)

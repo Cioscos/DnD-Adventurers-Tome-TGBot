@@ -6,7 +6,8 @@ Resolves dollar-prefixed paths into values, given an execution context:
 - $subject.X    → for items: ctx['subject']['metadata']['hb_X'] (falls back to top-level)
                   for character/ability: ctx['subject'][X]
 - $character.X  → ctx['character'][X]
-- $<var>        → ctx['vars'][<var>]
+- $<var>        → ctx['vars'][<var>]            (bare form)
+- $vars.<var>   → ctx['vars'][<var>]            (dotted form, equivalent)
 
 Literal values (non-strings, or strings not starting with $) are returned unchanged.
 """
@@ -64,5 +65,10 @@ def resolve_path(path: Any, ctx: dict) -> Any:
         if tail in subject:
             return subject[tail]
         raise PathResolutionError(f"Missing subject field: $subject.{tail}")
+    if head == "vars":
+        vars_ = ctx.get("vars") or {}
+        if tail not in vars_:
+            raise PathResolutionError(f"Missing var: $vars.{tail}")
+        return vars_[tail]
 
     raise PathResolutionError(f"Unknown path namespace: {path}")
