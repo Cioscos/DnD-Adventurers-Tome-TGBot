@@ -191,6 +191,12 @@ class Character(Base):
     homebrew_rules: Mapped[List["HomebrewRule"]] = relationship(
         back_populates="character", cascade="all, delete-orphan"
     )
+    homebrew_resources: Mapped[List["HomebrewResource"]] = relationship(
+        "HomebrewResource",
+        primaryjoin="HomebrewResource.character_id == Character.id",
+        cascade="all, delete-orphan",
+        viewonly=False,
+    )
 
     @property
     def ac(self) -> int:
@@ -644,3 +650,29 @@ class HomebrewRule(Base):
     updated_at: Mapped[str] = mapped_column(String(50), nullable=False)
 
     character: Mapped["Character"] = relationship(back_populates="homebrew_rules")
+    resources: Mapped[List["HomebrewResource"]] = relationship(
+        back_populates="rule", cascade="all, delete-orphan"
+    )
+
+
+class HomebrewResource(Base):
+    """Runtime resource owned by a homebrew rule (e.g. Luck Points)."""
+    __tablename__ = "homebrew_resources"
+    __table_args__ = (UniqueConstraint("character_id", "key"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    rule_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("homebrew_rules.id", ondelete="CASCADE"), nullable=False
+    )
+    character_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("characters.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    key: Mapped[str] = mapped_column(String(60), nullable=False)
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    current: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    max: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    restoration_type: Mapped[str] = mapped_column(
+        Enum(RestorationType), default=RestorationType.NONE, nullable=False
+    )
+
+    rule: Mapped["HomebrewRule"] = relationship(back_populates="resources")
