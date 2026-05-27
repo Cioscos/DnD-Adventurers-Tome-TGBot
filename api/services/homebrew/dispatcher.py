@@ -5,7 +5,7 @@ import json
 import logging
 from datetime import datetime
 
-from sqlalchemy import select
+from sqlalchemy import inspect, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.services.homebrew.dsl import RuleDSL
@@ -26,18 +26,6 @@ def _now() -> str:
 
 
 def _char_to_ctx_dict(char: Character) -> dict:
-    # `total_level` is a property that accesses the `classes` relationship; reading it
-    # eagerly would trigger a lazy load in async contexts. Use the loaded value if
-    # available, otherwise fall back to 0.
-    try:
-        from sqlalchemy import inspect as _inspect
-        state = _inspect(char)
-        if "classes" in state.unloaded:
-            total_level = 0
-        else:
-            total_level = char.total_level
-    except Exception:
-        total_level = 0
     return {
         "id": char.id,
         "name": char.name,
@@ -45,7 +33,7 @@ def _char_to_ctx_dict(char: Character) -> dict:
         "hit_points": char.hit_points,
         "temp_hp": char.temp_hp,
         "speed": char.speed,
-        "total_level": total_level,
+        "total_level": char.total_level,
     }
 
 
@@ -71,11 +59,21 @@ def _item_to_ctx_dict(item: Item) -> dict:
 async def _matching_items(
     session: AsyncSession, char: Character, filter_def: dict | None,
 ) -> list[Item]:
-    res = await session.execute(select(Item).where(Item.character_id == char.id))
-    items = list(res.scalars())
+    stmt = select(Item).where(Item.character_id == char.id)
     if filter_def and filter_def.get("item_types"):
-        items = [i for i in items if i.item_type in filter_def["item_types"]]
-    return items
+        stmt = stmt.where(Item.item_type.in_(filter_def["item_types"]))
+    res = await session.execute(stmt)
+    return list(res.scalars())
+
+
+def _passes_subject_filter(item: Item, filter_def: dict | None) -> bool:
+    """Check if a single item matches the rule's subject filter (item_types only in MVP)."""
+    if not filter_def:
+        return True
+    item_types = filter_def.get("item_types")
+    if item_types and item.item_type not in item_types:
+        return False
+    return True
 
 
 async def dispatch(
@@ -97,6 +95,10 @@ async def dispatch(
         logger.warning("Depth %d exceeded on event %s", depth, event_type)
         await session.flush()
         return []
+
+    # Preload classes so $character.total_level is accurate.
+    if "classes" in inspect(char).unloaded:
+        await session.refresh(char, attribute_names=["classes"])
 
     rules_res = await session.execute(
         select(HomebrewRule).where(
@@ -136,11 +138,14 @@ async def dispatch(
         if subject_def.get("type") == "item":
             item_id = payload.get("item_id")
             if item_id is not None:
-                items: list[Item] = []
-                res = await session.execute(select(Item).where(Item.id == item_id))
+                # Scope to this character — never let another character's item leak in.
+                res = await session.execute(
+                    select(Item).where(Item.id == item_id, Item.character_id == char.id)
+                )
                 obj = res.scalar_one_or_none()
-                if obj is not None:
-                    items = [obj]
+                if obj is None or not _passes_subject_filter(obj, subject_def.get("filter")):
+                    continue
+                items: list[Item] = [obj]
             else:
                 items = await _matching_items(session, char, subject_def.get("filter"))
             subjects = [_item_to_ctx_dict(i) for i in items]
