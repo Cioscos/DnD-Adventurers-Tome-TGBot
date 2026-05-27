@@ -15,6 +15,7 @@ from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm.attributes import flag_modified
 
 from api.services.homebrew.dsl import Filter, RuleDSL
 from api.services.homebrew.exceptions import ActionExecutionError
@@ -285,6 +286,30 @@ async def execute_restore_resource(action, ctx, rfr, session, char, **kw):
 
 
 # ---------------------------------------------------------------------------
+# Custom conditions (Task 1.9)
+# ---------------------------------------------------------------------------
+
+
+async def execute_apply_condition(action, ctx, rfr, session, char, **kw):
+    conditions = dict(char.conditions or {})
+    conditions[action["key"]] = {
+        "rule_id": rfr.rule_id,
+        "params": action.get("params") or {},
+    }
+    char.conditions = conditions
+    flag_modified(char, "conditions")
+    await session.flush()
+
+
+async def execute_remove_condition(action, ctx, rfr, session, char, **kw):
+    conditions = dict(char.conditions or {})
+    conditions.pop(action["key"], None)
+    char.conditions = conditions
+    flag_modified(char, "conditions")
+    await session.flush()
+
+
+# ---------------------------------------------------------------------------
 # Dispatcher
 # ---------------------------------------------------------------------------
 
@@ -306,6 +331,8 @@ _ASYNC_HANDLERS = {
     "heal_character": execute_heal_character,
     "change_resource": execute_change_resource,
     "restore_resource": execute_restore_resource,
+    "apply_condition": execute_apply_condition,
+    "remove_condition": execute_remove_condition,
 }
 
 

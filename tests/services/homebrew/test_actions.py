@@ -600,3 +600,78 @@ async def test_restore_resource_dice_capped(db_session, monkeypatch):
     # monkeypatched randint returns 6 → "1d6+1" = 6+1 = 7
     # current + 7 = 3 + 7 = 10 → capped at max 7
     assert res.current == 7
+
+
+# ---------------------------------------------------------------------------
+# Task 1.9 — apply_condition + remove_condition
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_apply_condition_writes_to_character_conditions(db_session):
+    char = Character(user_id=1, name="T", conditions={})
+    db_session.add(char)
+    await db_session.flush()
+    ctx = ExecutionContext.new("turn_started", {}, {}, {"id": char.id})
+    rfr = RuleFiringResult(rule_id=99, rule_name="Bleeding")
+
+    from api.services.homebrew.actions import execute_apply_condition
+    await execute_apply_condition(
+        {"action": "apply_condition", "key": "custom:bleeding", "params": {"die": "1d4"}},
+        ctx, rfr, db_session, char,
+    )
+    assert "custom:bleeding" in char.conditions
+    assert char.conditions["custom:bleeding"]["rule_id"] == 99
+    assert char.conditions["custom:bleeding"]["params"] == {"die": "1d4"}
+
+
+@pytest.mark.asyncio
+async def test_apply_condition_without_params_defaults_to_empty(db_session):
+    char = Character(user_id=1, name="T", conditions={})
+    db_session.add(char)
+    await db_session.flush()
+    ctx = ExecutionContext.new("manual", {}, {}, {"id": char.id})
+    rfr = RuleFiringResult(rule_id=7, rule_name="Test")
+
+    from api.services.homebrew.actions import execute_apply_condition
+    await execute_apply_condition(
+        {"action": "apply_condition", "key": "custom:tense"},
+        ctx, rfr, db_session, char,
+    )
+    assert char.conditions["custom:tense"]["params"] == {}
+
+
+@pytest.mark.asyncio
+async def test_remove_condition_clears_key(db_session):
+    char = Character(
+        user_id=1, name="T",
+        conditions={"custom:bleeding": {"rule_id": 99, "params": {}}},
+    )
+    db_session.add(char)
+    await db_session.flush()
+    ctx = ExecutionContext.new("manual", {}, {}, {"id": char.id})
+    rfr = RuleFiringResult(rule_id=99, rule_name="x")
+
+    from api.services.homebrew.actions import execute_remove_condition
+    await execute_remove_condition(
+        {"action": "remove_condition", "key": "custom:bleeding"},
+        ctx, rfr, db_session, char,
+    )
+    assert "custom:bleeding" not in char.conditions
+
+
+@pytest.mark.asyncio
+async def test_remove_condition_noop_when_absent(db_session):
+    char = Character(user_id=1, name="T", conditions={})
+    db_session.add(char)
+    await db_session.flush()
+    ctx = ExecutionContext.new("manual", {}, {}, {"id": char.id})
+    rfr = RuleFiringResult(rule_id=1, rule_name="r")
+
+    from api.services.homebrew.actions import execute_remove_condition
+    await execute_remove_condition(
+        {"action": "remove_condition", "key": "custom:not_there"},
+        ctx, rfr, db_session, char,
+    )
+    # No exception raised, no change.
+    assert char.conditions == {}
