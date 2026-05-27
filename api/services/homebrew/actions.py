@@ -97,12 +97,38 @@ def execute_if(action, ctx, rfr, session, char, **kw):
         execute_action(sub_action, ctx, rfr, session, char, **kw)
 
 
-# Placeholder — populated in subsequent tasks.
+_PLACEHOLDER_RE = re.compile(r"\$[\w.]+")
+
+
+def _format_message(template: str, ctx: ExecutionContext) -> str:
+    """Substitute $path placeholders in a message template."""
+    def _replace(m):
+        path = m.group(0)
+        try:
+            v = resolve_path(path, ctx.to_dict())
+            return str(v)
+        except Exception:
+            return path  # leave as-is if unresolvable
+    return _PLACEHOLDER_RE.sub(_replace, template)
+
+
+def execute_notify(action, ctx, rfr, session, char, **kw):
+    msg = _format_message(action["message"], ctx)
+    rfr.add_notification(Notification(severity=action["severity"], message=msg))
+
+
+def execute_add_history(action, ctx, rfr, session, char, **kw):
+    msg = _format_message(action["description"], ctx)
+    rfr.add_history_entry(msg, meta=action.get("meta"))
+
+
 _ACTION_HANDLERS = {
     "roll_dice": execute_roll_dice,
     "lookup_table": execute_lookup_table,
     "match": execute_match,
     "if": execute_if,
+    "notify": execute_notify,
+    "add_history": execute_add_history,
 }
 
 

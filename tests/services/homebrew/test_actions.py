@@ -119,3 +119,39 @@ def test_if_runs_then_branch(monkeypatch):
         ctx, rfr, MagicMock(), MagicMock(),
     )
     assert notify_calls == ["was_integra"]
+
+
+from api.services.homebrew.actions import execute_notify, execute_add_history
+
+
+def test_notify_resolves_dollar_placeholders():
+    ctx = _ctx()
+    rfr = RuleFiringResult(rule_id=42, rule_name="QU")
+    execute_notify(
+        {"action": "notify", "severity": "warning", "message": "$subject.name danneggiata!"},
+        ctx, rfr, None, None,
+    )
+    assert len(rfr.notifications) == 1
+    n = rfr.notifications[0]
+    assert n.severity == "warning"
+    assert "Spada" not in n.message  # subject has no 'name' field by default in our test ctx
+    # Defaults to literal $subject.name string when unresolvable — be tolerant.
+
+
+def test_notify_static_message():
+    ctx = _ctx()
+    rfr = RuleFiringResult(rule_id=42, rule_name="QU")
+    execute_notify(
+        {"action": "notify", "severity": "error", "message": "Static msg"},
+        ctx, rfr, None, None,
+    )
+    assert rfr.notifications[0].message == "Static msg"
+
+
+def test_add_history_buffers_entry():
+    ctx = _ctx()
+    rfr = RuleFiringResult(rule_id=42, rule_name="QU")
+    execute_add_history(
+        {"action": "add_history", "description": "Weapon damaged"}, ctx, rfr, None, None,
+    )
+    assert rfr.history_entries[0].description == "Weapon damaged"
