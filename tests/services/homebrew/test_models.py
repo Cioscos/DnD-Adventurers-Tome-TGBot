@@ -1,7 +1,6 @@
 """Smoke tests on HomebrewRule / HomebrewResource ORM models."""
 from __future__ import annotations
 
-import json
 from datetime import datetime
 
 import pytest
