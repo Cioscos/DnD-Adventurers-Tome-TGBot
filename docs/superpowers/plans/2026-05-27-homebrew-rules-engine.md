@@ -14,6 +14,55 @@
 
 ---
 
+## Implementation log
+
+### Phase 0 — completata 2026-05-28
+
+8 commit sul branch (`c8333d6` chore + 7 feat/test commit). 43/43 test verdi (`pytest tests/services/homebrew/`).
+
+```
+d512cd4 feat(homebrew): add top-level RuleDSL with EventType, Subject, Table, PassiveModifier, Trigger
+96504b1 feat(homebrew): add 16 action Pydantic schemas + parse_action() registry
+3601924 feat(homebrew): add Filter and Property Pydantic schemas
+e41fcc9 test(homebrew): verify homebrew tables + indexes after init_db (idempotent)
+15f280a fix(homebrew): add index on HomebrewResource.rule_id + tighten test exception type
+f8a9836 feat(homebrew): add HomebrewResource model with unique (char, key) constraint
+b9fe189 fix(homebrew): remove unused json import in test_models
+a9a35f7 feat(homebrew): add HomebrewRule SQLAlchemy model
+c8333d6 chore: add pytest + pytest-asyncio as dev deps for homebrew TDD
+```
+
+#### Deviazioni dal piano originale (importanti per chi riprende)
+
+**Task 0.3 — ridotta rispetto al piano.** Il piano originale chiedeva di aggiungere `text("CREATE TABLE IF NOT EXISTS ...")` entry alla lista `_MIGRATIONS` in `core/db/engine.py`. **Sbagliato**: quella lista è tipata `list[tuple[str, str, str, str | None]]` e gestisce solo `ALTER TABLE ADD COLUMN`. Le nuove tabelle sono create automaticamente da `Base.metadata.create_all` perché i modelli SQLAlchemy esistono (Tasks 0.1+0.2). Quindi:
+- `_MIGRATIONS` NON modificato
+- Aggiunto solo un comment in `engine.py` immediatamente prima della lista, per chiarire la convenzione ai futuri sviluppatori
+- Aggiunto test `tests/services/homebrew/test_migrations.py` che verifica le tabelle + 3 indici esistano dopo `init_db()`, e che `_migrate_schema` sia idempotente
+
+**Task 0.5 — estesa.** Quattro action accettano `$var` references oltre a int/dice notation:
+- `ActionDamageCharacter.amount`
+- `ActionHealCharacter.amount`
+- `ActionChangeResource.delta`
+- `ActionRestoreResource.amount`
+
+Necessario per il template **Sanguinamento** di Phase 3, che fa:
+```json
+{"action": "roll_dice", "notation": "1d4", "store_as": "blood"},
+{"action": "damage_character", "amount": "$blood"}
+```
+
+I validator di Pydantic accettano string che iniziano con `$` come literal pass-through; l'engine risolve a runtime tramite il path resolver. Questo SEMPLIFICA l'implementazione di Phase 3 (non serve estendere le action più tardi).
+
+#### Dev deps aggiunte
+
+`pyproject.toml` ha ora un `[dependency-groups]` `dev` con `pytest>=8.0` + `pytest-asyncio>=0.24` (commit `c8333d6`). Aggiunto anche `[tool.pytest.ini_options]` con `asyncio_mode = "auto"` e `testpaths = ["tests"]`. Funziona da Windows (`uv sync`) e da WSL con override (`UV_PROJECT_ENVIRONMENT=/tmp/venv-homebrew uv sync --group dev`).
+
+#### Stato esecuzione
+
+Phase 0 ✅ · Phase 1-7 pending.
+
+---
+
 ## Sequenza fasi (milestone)
 
 | # | Fase | Output spedibile | Tasks |
