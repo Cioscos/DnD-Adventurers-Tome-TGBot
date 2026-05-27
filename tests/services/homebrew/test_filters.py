@@ -55,3 +55,36 @@ def test_evaluate_filters_short_circuits_false():
         Filter(path="$subject", op=FilterOp.HAS_PROPERTY, value="quality"),
     ]
     assert evaluate_filters(filters, _BASE_CTX) is False
+
+
+def test_lt_with_none_lhs_returns_false():
+    f = Filter(path="$vars.a", op=FilterOp.LT, value=5)
+    ctx = {**_BASE_CTX, "vars": {"a": None}}
+    assert evaluate_filter(f, ctx) is False
+
+
+def test_gte_with_none_lhs_returns_false():
+    f = Filter(path="$vars.a", op=FilterOp.GTE, value=0)
+    ctx = {**_BASE_CTX, "vars": {"a": None}}
+    assert evaluate_filter(f, ctx) is False
+
+
+def test_in_with_string_rhs_returns_false():
+    # Guard against substring matching footgun
+    f = Filter(path="$vars.a", op=FilterOp.IN, value="abc")
+    ctx = {**_BASE_CTX, "vars": {"a": "a"}}
+    assert evaluate_filter(f, ctx) is False
+
+
+def test_in_with_non_iterable_rhs_returns_false():
+    f = Filter(path="$vars.a", op=FilterOp.IN, value=42)
+    ctx = {**_BASE_CTX, "vars": {"a": 42}}
+    assert evaluate_filter(f, ctx) is False
+
+
+def test_has_property_returns_false_when_metadata_is_str():
+    # Defensive guard: metadata should be a dict, but if somehow it's still a JSON string,
+    # HAS_PROPERTY must not silently substring-match.
+    f = Filter(path="$subject", op=FilterOp.HAS_PROPERTY, value="quality")
+    ctx = {**_BASE_CTX, "subject": {"_kind": "item", "metadata": '{"hb_quality":"x"}'}}
+    assert evaluate_filter(f, ctx) is False

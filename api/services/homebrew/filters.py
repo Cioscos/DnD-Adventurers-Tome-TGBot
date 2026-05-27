@@ -16,11 +16,18 @@ def evaluate_filter(f: Filter, ctx: dict) -> bool:
             return False
         if target.get("_kind") == "item":
             md = target.get("metadata") or {}
+            if not isinstance(md, dict):
+                return False
             return f"hb_{f.value}" in md
         return f.value in target
 
     lhs = resolve_path(f.path, ctx)
     rhs = f.value
+
+    # Ordered comparisons crash on None LHS; treat as False instead.
+    if f.op in (FilterOp.LT, FilterOp.LTE, FilterOp.GT, FilterOp.GTE):
+        if lhs is None:
+            return False
 
     if f.op == FilterOp.EQ:
         return lhs == rhs
@@ -35,7 +42,8 @@ def evaluate_filter(f: Filter, ctx: dict) -> bool:
     if f.op == FilterOp.GTE:
         return lhs >= rhs
     if f.op == FilterOp.IN:
-        if not isinstance(rhs, Iterable):
+        # Reject strings explicitly: `lhs in "abc"` is substring matching, a footgun.
+        if isinstance(rhs, str) or not isinstance(rhs, Iterable):
             return False
         return lhs in rhs
     raise ValueError(f"Unhandled filter op: {f.op}")
