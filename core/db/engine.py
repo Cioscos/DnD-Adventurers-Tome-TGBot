@@ -36,6 +36,9 @@ def _set_sqlite_pragma(dbapi_connection, _connection_record) -> None:
 # Schema migration helpers
 # ---------------------------------------------------------------------------
 
+# NOTE: ALTER TABLE ADD COLUMN only. New tables are auto-created by
+# Base.metadata.create_all from the ORM models — no entry here is needed.
+
 # Columns to ensure on existing tables: (table, column, DDL type, default)
 _MIGRATIONS: list[tuple[str, str, str, str | None]] = [
     # Spell extended properties
