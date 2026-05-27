@@ -28,6 +28,9 @@ class RuleEngine:
         ctx: ExecutionContext,
         session: AsyncSession,
         char: Character,
+        *,
+        depth: int = 0,
+        stack: tuple[int, ...] = (),
     ) -> Optional[RuleFiringResult]:
         # Parse the rule DSL once (fail fast if invalid).
         try:
@@ -46,7 +49,10 @@ class RuleEngine:
 
         for effect in trigger.get("effects", []):
             try:
-                await execute_action(effect, ctx, rfr, session, char, rule=rule_dsl)
+                await execute_action(
+                    effect, ctx, rfr, session, char,
+                    rule=rule_dsl, _depth=depth, _stack=stack,
+                )
             except ActionExecutionError as e:
                 rfr.errors.append(str(e))
                 logger.warning(

@@ -236,8 +236,29 @@ async def execute_damage_character(action, ctx, rfr, session, char, **kw):
         char.temp_hp -= absorbed
         amount -= absorbed
 
+    before = char.current_hit_points
     char.current_hit_points = max(0, char.current_hit_points - amount)
     await session.flush()
+
+    # Re-emit events with depth+1; existing stack + this rule's id.
+    # Late import to avoid circular dependency (dispatcher → engine → actions).
+    from api.services.homebrew.dispatcher import dispatch
+    depth = kw.get("_depth", 0) + 1
+    base_stack = kw.get("_stack", ())
+    stack = base_stack + (rfr.rule_id,) if rfr.rule_id else base_stack
+    await dispatch(
+        session, char, "damage_taken",
+        {"amount": amount, "was_critical_hit": False,
+         "current_hp_before": before,
+         "current_hp_after": char.current_hit_points},
+        depth=depth, triggered_rule_stack=stack,
+    )
+    if before > 0 and char.current_hit_points == 0:
+        await dispatch(
+            session, char, "dropped_to_zero",
+            {"damage_amount": amount, "from_critical": False},
+            depth=depth, triggered_rule_stack=stack,
+        )
 
 
 async def execute_heal_character(action, ctx, rfr, session, char, **kw):

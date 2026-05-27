@@ -133,6 +133,7 @@ async def dispatch(
 
         triggers = rule.dsl.get("triggers", [])
         subject_def = rule.dsl.get("subject", {})
+        new_stack = triggered_rule_stack + (rule.id,)
 
         # Determine target subjects for THIS rule.
         if subject_def.get("type") == "item":
@@ -163,7 +164,10 @@ async def dispatch(
                     character=_char_to_ctx_dict(char),
                 )
                 try:
-                    rfr = await engine.execute_trigger(rule, trigger, ctx, session, char)
+                    rfr = await engine.execute_trigger(
+                        rule, trigger, ctx, session, char,
+                        depth=depth, stack=new_stack,
+                    )
                 except DSLValidationError as e:
                     session.add(CharacterHistory(
                         character_id=char.id, timestamp=_now(),

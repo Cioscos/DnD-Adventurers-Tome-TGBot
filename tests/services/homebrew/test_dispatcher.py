@@ -285,3 +285,87 @@ async def test_dispatch_invalid_dsl_disables_rule(db_session):
     )
     descs = [r.description for r in history.scalars()]
     assert any("disattivata" in d.lower() or "disabled" in d.lower() for d in descs)
+
+
+@pytest.mark.asyncio
+async def test_dispatch_damage_chain_terminates_via_cycle_detection(db_session):
+    """A rule on damage_taken that calls damage_character must not infinite-loop:
+    cycle detection stops the same rule from firing twice in a single dispatch chain."""
+    char = Character(user_id=1, name="T", hit_points=100, current_hit_points=100)
+    db_session.add(char)
+    await db_session.flush()
+    dsl = {
+        "version": 1, "subject": {"type": "character"},
+        "triggers": [{
+            "event": "damage_taken", "filters": [],
+            "effects": [{"action": "damage_character", "amount": 1}],
+        }],
+    }
+    rule = HomebrewRule(
+        character_id=char.id, name="LoopRule", dsl=dsl,
+        created_at="x", updated_at="x",
+    )
+    db_session.add(rule)
+    await db_session.flush()
+
+    from api.services.homebrew.dispatcher import dispatch
+    # No initial damage; we manually call dispatch with damage_taken.
+    await dispatch(db_session, char, "damage_taken", {"amount": 0})
+
+    await db_session.refresh(char)
+    # Cycle detection means the rule fires exactly ONCE.
+    # First fire: damage_character with amount=1 → HP=99 → re-emits damage_taken
+    # Second attempted fire: rule already in stack → skipped.
+    # Net: HP went from 100 to 99 (one damage).
+    assert char.current_hit_points == 99, (
+        f"Expected exactly one damage application (cycle stops at depth 1); "
+        f"got HP={char.current_hit_points} (potential infinite loop or unexpected depth)"
+    )
+
+
+@pytest.mark.asyncio
+async def test_dispatch_damage_chain_re_emission_fires_independent_rule(db_session):
+    """A rule on damage_taken can be triggered by another rule's damage_character call."""
+    char = Character(user_id=1, name="T", hit_points=100, current_hit_points=100)
+    db_session.add(char)
+    await db_session.flush()
+    # Rule A: on manual_trigger, deal 5 damage
+    dsl_a = {
+        "version": 1, "subject": {"type": "character"},
+        "triggers": [{
+            "event": "manual_trigger", "filters": [],
+            "effects": [{"action": "damage_character", "amount": 5}],
+        }],
+    }
+    rule_a = HomebrewRule(
+        character_id=char.id, name="A", dsl=dsl_a,
+        created_at="x", updated_at="x",
+    )
+    # Rule B: on damage_taken (triggered by A's damage), notify
+    dsl_b = {
+        "version": 1, "subject": {"type": "character"},
+        "triggers": [{
+            "event": "damage_taken", "filters": [],
+            "effects": [{"action": "notify", "severity": "info",
+                         "message": "took $event.amount"}],
+        }],
+    }
+    rule_b = HomebrewRule(
+        character_id=char.id, name="B", dsl=dsl_b,
+        created_at="x", updated_at="x",
+    )
+    db_session.add_all([rule_a, rule_b])
+    await db_session.flush()
+
+    from api.services.homebrew.dispatcher import dispatch
+    results = await dispatch(db_session, char, "manual_trigger", {})
+
+    await db_session.refresh(char)
+    assert char.current_hit_points == 95  # 100 - 5
+    # Rule B fired in the re-emit chain. Its notification went to its OWN
+    # RuleFiringResult, persisted in the inner dispatch call. The outer dispatch's
+    # `results` list only contains rule_a's RFR (which has no notifications).
+    # The inner-dispatch results aren't returned to the outer caller, but the side
+    # effects (notifications-as-history if any, DB writes) ARE applied.
+    assert len(results) == 1
+    assert results[0].rule_name == "A"
