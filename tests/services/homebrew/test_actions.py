@@ -456,3 +456,147 @@ async def test_heal_character_caps_at_max(db_session, char_with_item):
         {"action": "heal_character", "amount": 10}, ctx, rfr, db_session, char,
     )
     assert char.current_hit_points == 20  # capped at max
+
+
+# ---------------------------------------------------------------------------
+# Task 1.8 — change_resource + restore_resource
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_change_resource_decrement(db_session):
+    from core.db.models import HomebrewRule, HomebrewResource
+    char = Character(user_id=1, name="Test")
+    db_session.add(char)
+    await db_session.flush()
+    rule = HomebrewRule(
+        character_id=char.id, name="r", enabled=True,
+        dsl={"version": 1, "subject": {"type": "character"}, "triggers": []},
+        created_at="2026-05-27T00:00:00", updated_at="2026-05-27T00:00:00",
+    )
+    db_session.add(rule)
+    await db_session.flush()
+    res = HomebrewResource(
+        rule_id=rule.id, character_id=char.id, key="luck",
+        name="Luck", current=3, max=3,
+    )
+    db_session.add(res)
+    await db_session.flush()
+
+    ctx = ExecutionContext.new("manual", {}, {}, {"id": char.id})
+    rfr = RuleFiringResult(rule_id=rule.id, rule_name="r")
+    from api.services.homebrew.actions import execute_change_resource
+    await execute_change_resource(
+        {"action": "change_resource", "key": "luck", "delta": -1},
+        ctx, rfr, db_session, char,
+    )
+    await db_session.refresh(res)
+    assert res.current == 2
+
+
+@pytest.mark.asyncio
+async def test_change_resource_clamps_to_zero(db_session):
+    from core.db.models import HomebrewRule, HomebrewResource
+    char = Character(user_id=1, name="T")
+    db_session.add(char)
+    await db_session.flush()
+    rule = HomebrewRule(
+        character_id=char.id, name="r", enabled=True,
+        dsl={"version": 1, "subject": {"type": "character"}, "triggers": []},
+        created_at="x", updated_at="x",
+    )
+    db_session.add(rule)
+    await db_session.flush()
+    res = HomebrewResource(
+        rule_id=rule.id, character_id=char.id, key="charges",
+        name="Charges", current=2, max=5,
+    )
+    db_session.add(res)
+    await db_session.flush()
+
+    ctx = ExecutionContext.new("manual", {}, {}, {"id": char.id})
+    rfr = RuleFiringResult(rule_id=rule.id, rule_name="r")
+    from api.services.homebrew.actions import execute_change_resource
+    await execute_change_resource(
+        {"action": "change_resource", "key": "charges", "delta": -10},
+        ctx, rfr, db_session, char,
+    )
+    await db_session.refresh(res)
+    assert res.current == 0  # clamped
+
+
+@pytest.mark.asyncio
+async def test_change_resource_clamps_to_max(db_session):
+    from core.db.models import HomebrewRule, HomebrewResource
+    char = Character(user_id=1, name="T")
+    db_session.add(char); await db_session.flush()
+    rule = HomebrewRule(
+        character_id=char.id, name="r", enabled=True,
+        dsl={"version": 1, "subject": {"type": "character"}, "triggers": []},
+        created_at="x", updated_at="x",
+    )
+    db_session.add(rule); await db_session.flush()
+    res = HomebrewResource(rule_id=rule.id, character_id=char.id, key="charges",
+                           name="Charges", current=4, max=5)
+    db_session.add(res); await db_session.flush()
+
+    ctx = ExecutionContext.new("manual", {}, {}, {"id": char.id})
+    rfr = RuleFiringResult(rule_id=rule.id, rule_name="r")
+    from api.services.homebrew.actions import execute_change_resource
+    await execute_change_resource(
+        {"action": "change_resource", "key": "charges", "delta": 10},
+        ctx, rfr, db_session, char,
+    )
+    await db_session.refresh(res)
+    assert res.current == 5  # capped at max
+
+
+@pytest.mark.asyncio
+async def test_restore_resource_to_max(db_session):
+    from core.db.models import HomebrewRule, HomebrewResource
+    char = Character(user_id=1, name="T")
+    db_session.add(char); await db_session.flush()
+    rule = HomebrewRule(character_id=char.id, name="r", enabled=True,
+                       dsl={"version": 1, "subject": {"type": "character"}, "triggers": []},
+                       created_at="x", updated_at="x")
+    db_session.add(rule); await db_session.flush()
+    res = HomebrewResource(rule_id=rule.id, character_id=char.id, key="charges",
+                           name="Charges", current=0, max=7)
+    db_session.add(res); await db_session.flush()
+
+    ctx = ExecutionContext.new("manual", {}, {}, {"id": char.id})
+    rfr = RuleFiringResult(rule_id=rule.id, rule_name="r")
+    from api.services.homebrew.actions import execute_restore_resource
+    await execute_restore_resource(
+        {"action": "restore_resource", "key": "charges", "amount": "max"},
+        ctx, rfr, db_session, char,
+    )
+    await db_session.refresh(res)
+    assert res.current == 7
+
+
+@pytest.mark.asyncio
+async def test_restore_resource_dice_capped(db_session, monkeypatch):
+    from core.db.models import HomebrewRule, HomebrewResource
+    monkeypatch.setattr("api.services.homebrew.actions.random.randint", lambda lo, hi: 6)
+    char = Character(user_id=1, name="T")
+    db_session.add(char); await db_session.flush()
+    rule = HomebrewRule(character_id=char.id, name="r", enabled=True,
+                       dsl={"version": 1, "subject": {"type": "character"}, "triggers": []},
+                       created_at="x", updated_at="x")
+    db_session.add(rule); await db_session.flush()
+    res = HomebrewResource(rule_id=rule.id, character_id=char.id, key="charges",
+                           name="Charges", current=3, max=7)
+    db_session.add(res); await db_session.flush()
+
+    ctx = ExecutionContext.new("manual", {}, {}, {"id": char.id})
+    rfr = RuleFiringResult(rule_id=rule.id, rule_name="r")
+    from api.services.homebrew.actions import execute_restore_resource
+    await execute_restore_resource(
+        {"action": "restore_resource", "key": "charges", "amount": "1d6+1"},
+        ctx, rfr, db_session, char,
+    )
+    await db_session.refresh(res)
+    # monkeypatched randint returns 6 → "1d6+1" = 6+1 = 7
+    # current + 7 = 3 + 7 = 10 → capped at max 7
+    assert res.current == 7

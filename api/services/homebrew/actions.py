@@ -21,7 +21,7 @@ from api.services.homebrew.exceptions import ActionExecutionError
 from api.services.homebrew.filters import evaluate_filter
 from api.services.homebrew.path_resolver import resolve_path
 from api.services.homebrew.types import ExecutionContext, Notification, RuleFiringResult
-from core.db.models import Character, Item
+from core.db.models import Character, HomebrewResource, Item
 
 
 _DICE_RE = re.compile(r"^(\d+)d(\d+)([+-]\d+)?$", re.IGNORECASE)
@@ -247,6 +247,43 @@ async def execute_heal_character(action, ctx, rfr, session, char, **kw):
     await session.flush()
 
 
+async def _load_resource(session: AsyncSession, char_id: int, key: str) -> HomebrewResource:
+    res = await session.execute(
+        select(HomebrewResource).where(
+            HomebrewResource.character_id == char_id,
+            HomebrewResource.key == key,
+        )
+    )
+    obj = res.scalar_one_or_none()
+    if obj is None:
+        raise ActionExecutionError(f"Resource '{key}' not found for character")
+    return obj
+
+
+async def execute_change_resource(action, ctx, rfr, session, char, **kw):
+    delta = action["delta"]
+    if isinstance(delta, str):
+        delta = _roll(delta)
+    resource = await _load_resource(session, char.id, action["key"])
+    new = resource.current + int(delta)
+    new = max(0, min(resource.max, new))
+    resource.current = new
+    await session.flush()
+
+
+async def execute_restore_resource(action, ctx, rfr, session, char, **kw):
+    amount = action["amount"]
+    resource = await _load_resource(session, char.id, action["key"])
+    if amount == "max":
+        resource.current = resource.max
+        await session.flush()
+        return
+    if isinstance(amount, str):
+        amount = _roll(amount)
+    resource.current = min(resource.max, resource.current + int(amount))
+    await session.flush()
+
+
 # ---------------------------------------------------------------------------
 # Dispatcher
 # ---------------------------------------------------------------------------
@@ -267,6 +304,8 @@ _ASYNC_HANDLERS = {
     "unequip": execute_unequip,
     "damage_character": execute_damage_character,
     "heal_character": execute_heal_character,
+    "change_resource": execute_change_resource,
+    "restore_resource": execute_restore_resource,
 }
 
 
