@@ -662,7 +662,7 @@ class HomebrewResource(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     rule_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("homebrew_rules.id", ondelete="CASCADE"), nullable=False
+        Integer, ForeignKey("homebrew_rules.id", ondelete="CASCADE"), index=True, nullable=False
     )
     character_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("characters.id", ondelete="CASCADE"), index=True, nullable=False

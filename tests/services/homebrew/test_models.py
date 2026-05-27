@@ -5,6 +5,7 @@ from datetime import datetime
 
 import pytest
 import pytest_asyncio
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -81,5 +82,5 @@ async def test_homebrew_resource_unique_per_character(session):
         key="luck_points", name="Duplicate", current=0, max=1,
     )
     session.add(duplicate)
-    with pytest.raises(Exception):
+    with pytest.raises(IntegrityError):
         await session.flush()
