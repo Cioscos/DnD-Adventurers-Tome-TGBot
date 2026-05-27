@@ -675,3 +675,120 @@ async def test_remove_condition_noop_when_absent(db_session):
     )
     # No exception raised, no change.
     assert char.conditions == {}
+
+
+# ---------------------------------------------------------------------------
+# Task 1.10 — apply_modifier_once
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_apply_modifier_once_hp_max_static_int(db_session):
+    char = Character(user_id=1, name="T", hit_points=10, current_hit_points=10)
+    db_session.add(char)
+    await db_session.flush()
+    ctx = ExecutionContext.new("manual", {}, {}, {"id": char.id})
+    rfr = RuleFiringResult(rule_id=1, rule_name="r")
+
+    from api.services.homebrew.actions import execute_apply_modifier_once
+    await execute_apply_modifier_once(
+        {"action": "apply_modifier_once", "target": "character.hit_points_max",
+         "delta": 5, "label": "+5 HP"},
+        ctx, rfr, db_session, char,
+    )
+    assert char.hit_points == 15
+
+
+@pytest.mark.asyncio
+async def test_apply_modifier_once_clamps_current_to_new_max_when_lower(db_session):
+    # If new max < current, current should clamp down.
+    char = Character(user_id=1, name="T", hit_points=20, current_hit_points=20)
+    db_session.add(char)
+    await db_session.flush()
+    ctx = ExecutionContext.new("manual", {}, {}, {"id": char.id})
+    rfr = RuleFiringResult(rule_id=1, rule_name="r")
+
+    from api.services.homebrew.actions import execute_apply_modifier_once
+    await execute_apply_modifier_once(
+        {"action": "apply_modifier_once", "target": "character.hit_points_max",
+         "delta": -5, "label": "-5 HP"},
+        ctx, rfr, db_session, char,
+    )
+    assert char.hit_points == 15
+    assert char.current_hit_points == 15  # clamped down
+
+
+@pytest.mark.asyncio
+async def test_apply_modifier_once_level_expression(db_session):
+    from core.db.models import CharacterClass
+    char = Character(user_id=1, name="T", hit_points=10, current_hit_points=10)
+    db_session.add(char)
+    await db_session.flush()
+    cls = CharacterClass(character_id=char.id, class_name="fighter", level=4)
+    db_session.add(cls)
+    await db_session.flush()
+    await db_session.refresh(char, attribute_names=["classes"])
+    ctx = ExecutionContext.new("manual", {}, {}, {"id": char.id})
+    rfr = RuleFiringResult(rule_id=1, rule_name="Robusto")
+
+    from api.services.homebrew.actions import execute_apply_modifier_once
+    await execute_apply_modifier_once(
+        {"action": "apply_modifier_once", "target": "character.hit_points_max",
+         "delta": "2*level", "label": "Robusto +2/lvl"},
+        ctx, rfr, db_session, char,
+    )
+    assert char.hit_points == 18  # 10 + 2*4
+
+
+@pytest.mark.asyncio
+async def test_apply_modifier_once_speed_target(db_session):
+    char = Character(user_id=1, name="T", speed=30)
+    db_session.add(char)
+    await db_session.flush()
+    ctx = ExecutionContext.new("manual", {}, {}, {"id": char.id})
+    rfr = RuleFiringResult(rule_id=1, rule_name="r")
+
+    from api.services.homebrew.actions import execute_apply_modifier_once
+    await execute_apply_modifier_once(
+        {"action": "apply_modifier_once", "target": "character.speed",
+         "delta": 5, "label": "Fleet +5"},
+        ctx, rfr, db_session, char,
+    )
+    assert char.speed == 35
+
+
+@pytest.mark.asyncio
+async def test_apply_modifier_once_unsupported_target_raises(db_session):
+    char = Character(user_id=1, name="T")
+    db_session.add(char)
+    await db_session.flush()
+    ctx = ExecutionContext.new("manual", {}, {}, {"id": char.id})
+    rfr = RuleFiringResult(rule_id=1, rule_name="r")
+
+    from api.services.homebrew.actions import execute_apply_modifier_once
+    from api.services.homebrew.exceptions import ActionExecutionError
+    with pytest.raises(ActionExecutionError, match="not supported"):
+        await execute_apply_modifier_once(
+            {"action": "apply_modifier_once", "target": "character.ac",
+             "delta": 1, "label": "Magic shield"},
+            ctx, rfr, db_session, char,
+        )
+
+
+@pytest.mark.asyncio
+async def test_apply_modifier_once_appends_history(db_session):
+    char = Character(user_id=1, name="T", hit_points=10, current_hit_points=10)
+    db_session.add(char)
+    await db_session.flush()
+    ctx = ExecutionContext.new("manual", {}, {}, {"id": char.id})
+    rfr = RuleFiringResult(rule_id=1, rule_name="r")
+
+    from api.services.homebrew.actions import execute_apply_modifier_once
+    await execute_apply_modifier_once(
+        {"action": "apply_modifier_once", "target": "character.hit_points_max",
+         "delta": 3, "label": "Lucky"},
+        ctx, rfr, db_session, char,
+    )
+    assert len(rfr.history_entries) == 1
+    desc = rfr.history_entries[0].description
+    assert "Lucky" in desc and "+3" in desc

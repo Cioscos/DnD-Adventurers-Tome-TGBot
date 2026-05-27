@@ -310,6 +310,48 @@ async def execute_remove_condition(action, ctx, rfr, session, char, **kw):
 
 
 # ---------------------------------------------------------------------------
+# Retroactive permanent modifiers (Task 1.10)
+# ---------------------------------------------------------------------------
+
+
+def _eval_delta(delta, char) -> int:
+    if isinstance(delta, int):
+        return delta
+    if isinstance(delta, str):
+        # Support "N*level" syntax — extract N
+        s = delta.strip().lower()
+        if s.endswith("*level"):
+            try:
+                n = int(s[:-len("*level")].strip())
+            except ValueError:
+                raise ActionExecutionError(f"Invalid expression: {delta}")
+            return n * char.total_level
+        # Otherwise treat as dice notation
+        return _roll(delta)
+    raise ActionExecutionError(f"Unsupported delta type: {type(delta)}")
+
+
+async def execute_apply_modifier_once(action, ctx, rfr, session, char, **kw):
+    target = action["target"]
+    delta = _eval_delta(action["delta"], char)
+    label = action["label"]
+
+    if target == "character.hit_points_max":
+        char.hit_points = max(0, char.hit_points + delta)
+        # Clamp current HP to new max
+        char.current_hit_points = min(char.current_hit_points, char.hit_points)
+    elif target == "character.speed":
+        char.speed = max(0, char.speed + delta)
+    else:
+        raise ActionExecutionError(
+            f"apply_modifier_once target '{target}' not supported (MVP: hit_points_max, speed)"
+        )
+
+    rfr.add_history_entry(f"{label}: {target} {'+' if delta >= 0 else ''}{delta}")
+    await session.flush()
+
+
+# ---------------------------------------------------------------------------
 # Dispatcher
 # ---------------------------------------------------------------------------
 
@@ -333,6 +375,7 @@ _ASYNC_HANDLERS = {
     "restore_resource": execute_restore_resource,
     "apply_condition": execute_apply_condition,
     "remove_condition": execute_remove_condition,
+    "apply_modifier_once": execute_apply_modifier_once,
 }
 
 
