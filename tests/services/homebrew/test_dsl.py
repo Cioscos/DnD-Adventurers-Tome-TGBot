@@ -152,3 +152,142 @@ def test_parse_action_dispatches_by_discriminator():
 def test_parse_action_unknown_rejected():
     with pytest.raises(ValueError):
         parse_action({"action": "do_evil"})
+
+
+from api.services.homebrew.dsl import (
+    Subject, SubjectFilter, Table, PassiveModifier, Trigger, EventType, RuleDSL,
+)
+
+
+_QU_DSL = {
+    "version": 1,
+    "subject": {"type": "item", "filter": {"item_types": ["weapon", "armor", "shield"]}},
+    "properties": [
+        {"key": "quality", "type": "enum",
+         "values": ["pessima", "ordinaria", "buona", "straordinaria"],
+         "default": "ordinaria",
+         "label_i18n": {"it": "Qualità", "en": "Quality"}},
+        {"key": "damage_state", "type": "enum",
+         "values": ["integra", "danneggiata", "distrutta"],
+         "default": "integra",
+         "label_i18n": {"it": "Stato", "en": "State"}},
+    ],
+    "tables": [
+        {"id": "tabella_usura", "row_axis": "quality", "col_axis": "d20_result",
+         "col_bins": [[1,1],[2,3],[4,9],[10,15],[16,20]],
+         "cells": {
+             "pessima":      ["X","X","D","D","S"],
+             "ordinaria":    ["X","D","D","S","S"],
+             "buona":        ["D","D","S","S","S"],
+             "straordinaria":["D","S","S","S","S"],
+         }}
+    ],
+    "passive_modifiers": [],
+    "triggers": [
+        {"event": "attack_rolled",
+         "filters": [
+             {"path": "$event.is_fumble", "op": "eq", "value": True},
+             {"path": "$subject", "op": "has_property", "value": "quality"},
+         ],
+         "effects": [
+             {"action": "roll_dice", "notation": "1d20", "store_as": "wear_roll"},
+             {"action": "notify", "severity": "warning", "message": "Test"},
+         ]},
+    ],
+}
+
+
+def test_rule_dsl_qualita_usura_validates():
+    rule = RuleDSL.model_validate(_QU_DSL)
+    assert rule.version == 1
+    assert rule.subject.type == "item"
+    assert len(rule.properties) == 2
+    assert len(rule.tables) == 1
+    assert len(rule.triggers) == 1
+
+
+def test_rule_dsl_unknown_event_rejected():
+    bad = {**_QU_DSL, "triggers": [{"event": "lunch_time", "filters": [], "effects": []}]}
+    with pytest.raises(ValidationError):
+        RuleDSL.model_validate(bad)
+
+
+def test_rule_dsl_table_cells_match_row_axis_values():
+    bad = {**_QU_DSL}
+    bad["tables"] = [{"id": "t1", "row_axis": "quality", "col_axis": "d20_result",
+                     "col_bins": [[1,5],[6,10]],
+                     "cells": {"unknown_quality_value": ["X", "S"]}}]
+    # NB: this validates cell-length-vs-bins, not row-axis-matching to property values
+    # (that's an engine-layer concern). Cell length is verified.
+    rule = RuleDSL.model_validate(bad)
+    assert "unknown_quality_value" in rule.tables[0].cells
+
+
+def test_rule_dsl_table_cells_length_must_match_bins():
+    bad = {**_QU_DSL}
+    bad["tables"] = [{"id": "t1", "row_axis": "quality", "col_axis": "d20_result",
+                     "col_bins": [[1,5],[6,10],[11,20]],
+                     "cells": {"pessima": ["X", "S"]}}]  # only 2 cells, expected 3
+    with pytest.raises(ValidationError):
+        RuleDSL.model_validate(bad)
+
+
+def test_rule_dsl_version_must_be_one():
+    bad = {**_QU_DSL, "version": 99}
+    with pytest.raises(ValidationError):
+        RuleDSL.model_validate(bad)
+
+
+def test_passive_modifier_target_path():
+    pm = PassiveModifier(
+        when={"path": "$subject.is_equipped", "op": "eq", "value": True},
+        target="character.ac", value=1,
+        label_i18n={"it": "Scudo +1", "en": "Shield +1"},
+    )
+    assert pm.target == "character.ac"
+
+
+def test_passive_modifier_invalid_target_rejected():
+    with pytest.raises(ValidationError):
+        PassiveModifier(
+            when={"path": "$subject.is_equipped", "op": "eq", "value": True},
+            target="character.foobar", value=1,
+            label_i18n={"it": "x", "en": "y"},
+        )
+
+
+def test_rule_must_have_trigger_or_passive():
+    bad = {
+        "version": 1,
+        "subject": {"type": "character"},
+        "properties": [], "tables": [],
+        "passive_modifiers": [], "triggers": [],
+    }
+    with pytest.raises(ValidationError):
+        RuleDSL.model_validate(bad)
+
+
+def test_rule_with_only_passive_modifier_is_valid():
+    rule = RuleDSL.model_validate({
+        "version": 1,
+        "subject": {"type": "item", "filter": {"item_types": ["shield"]}},
+        "passive_modifiers": [{
+            "when": {"path": "$subject.is_equipped", "op": "eq", "value": True},
+            "target": "character.ac", "value": 1,
+            "label_i18n": {"it": "+1 AC scudo", "en": "+1 AC shield"},
+        }],
+        "triggers": [],
+    })
+    assert len(rule.passive_modifiers) == 1
+
+
+def test_trigger_effects_validated_recursively():
+    bad = {
+        **_QU_DSL,
+        "triggers": [{
+            "event": "attack_rolled", "filters": [],
+            "effects": [{"action": "unknown_action_xyz"}],
+        }],
+    }
+    with pytest.raises(ValidationError):
+        RuleDSL.model_validate(bad)

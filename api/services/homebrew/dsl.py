@@ -295,3 +295,132 @@ def parse_action(raw: dict) -> Action:
     if name not in _ACTION_REGISTRY:
         raise ValueError(f"Unknown action: '{name}' (allowed: {sorted(_ACTION_REGISTRY)})")
     return _ACTION_REGISTRY[name].model_validate(raw)
+
+
+class EventType(str, Enum):
+    """Auto-fired and manual trigger events."""
+    # Auto-fired
+    ATTACK_ROLLED = "attack_rolled"
+    DAMAGE_TAKEN = "damage_taken"
+    DROPPED_TO_ZERO = "dropped_to_zero"
+    HP_HEALED = "hp_healed"
+    LONG_REST_TAKEN = "long_rest_taken"
+    SHORT_REST_TAKEN = "short_rest_taken"
+    SPELL_CAST = "spell_cast"
+    ABILITY_USED = "ability_used"
+    ITEM_EQUIPPED = "item_equipped"
+    ITEM_UNEQUIPPED = "item_unequipped"
+    LEVEL_UP = "level_up"
+    RESOURCE_CHANGED = "resource_changed"
+    RESOURCE_DEPLETED = "resource_depleted"
+    # Manual
+    TURN_STARTED = "turn_started"
+    MANUAL_TRIGGER = "manual_trigger"
+
+
+class SubjectFilter(BaseModel):
+    """Optional filter criteria for the subject of a rule."""
+    model_config = ConfigDict(extra="forbid")
+    item_types: Optional[list[str]] = None
+    name_contains: Optional[str] = None
+
+
+SubjectType = Literal["item", "character", "ability"]
+
+
+class Subject(BaseModel):
+    """Identifies what a rule applies to (items, characters, abilities)."""
+    model_config = ConfigDict(extra="forbid")
+    type: SubjectType
+    filter: Optional[SubjectFilter] = None
+
+
+class Table(BaseModel):
+    """A lookup table for cross-referencing two axes."""
+    model_config = ConfigDict(extra="forbid")
+    id: str
+    row_axis: str
+    col_axis: str
+    col_bins: list[list[int]]
+    cells: dict[str, list[str]]
+
+    @model_validator(mode="after")
+    def _cells_match_bins(self) -> "Table":
+        if not all(len(row) == len(self.col_bins) for row in self.cells.values()):
+            raise ValueError(
+                f"cells row length must match col_bins ({len(self.col_bins)} cols)"
+            )
+        return self
+
+    @model_validator(mode="after")
+    def _bins_well_formed(self) -> "Table":
+        for b in self.col_bins:
+            if len(b) != 2 or b[0] > b[1]:
+                raise ValueError(f"col_bins entries must be [lo, hi] with lo<=hi: {b}")
+        return self
+
+
+_PASSIVE_TARGET_RE = re.compile(
+    r"^character\.(ac|hit_points_max|speed|skill\.[a-z_]+|saving_throw\.[a-z]+)$"
+)
+
+
+class PassiveModifier(BaseModel):
+    """A passive effect that applies automatically when a condition is met."""
+    model_config = ConfigDict(extra="forbid")
+    when: Filter
+    target: str
+    value: int | str  # int or dice notation (for future random deltas; MVP only int)
+    label_i18n: dict[str, str]
+
+    @field_validator("target")
+    @classmethod
+    def _target_supported(cls, v: str) -> str:
+        if not _PASSIVE_TARGET_RE.match(v):
+            raise ValueError(
+                f"Target '{v}' not supported. Allowed: character.ac, character.hit_points_max, "
+                f"character.speed, character.skill.<slug>, character.saving_throw.<slug>"
+            )
+        return v
+
+    @field_validator("label_i18n")
+    @classmethod
+    def _label_languages(cls, v: dict[str, str]) -> dict[str, str]:
+        missing = {"it", "en"} - set(v.keys())
+        if missing:
+            raise ValueError(f"label_i18n missing languages: {missing}")
+        return v
+
+
+class Trigger(BaseModel):
+    """An event-driven trigger with filters and effects."""
+    model_config = ConfigDict(extra="forbid")
+    event: EventType
+    filters: list[Filter] = Field(default_factory=list)
+    effects: list[dict] = Field(default_factory=list)  # validated recursively at parse
+
+    @field_validator("effects")
+    @classmethod
+    def _validate_each_effect(cls, v: list[dict]) -> list[dict]:
+        # Validate every action — raise if any is malformed.
+        for eff in v:
+            parse_action(eff)
+        return v
+
+
+class RuleDSL(BaseModel):
+    """Top-level rule definition. Version-pinned (MVP = 1)."""
+    model_config = ConfigDict(extra="forbid")
+
+    version: Literal[1]
+    subject: Subject
+    properties: list[Property] = Field(default_factory=list)
+    tables: list[Table] = Field(default_factory=list)
+    passive_modifiers: list[PassiveModifier] = Field(default_factory=list)
+    triggers: list[Trigger] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _has_at_least_one_behavior(self) -> "RuleDSL":
+        if not self.triggers and not self.passive_modifiers:
+            raise ValueError("Rule must declare at least one trigger or passive_modifier")
+        return self
