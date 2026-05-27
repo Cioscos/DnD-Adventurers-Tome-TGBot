@@ -77,3 +77,221 @@ class Property(BaseModel):
             if self.default not in self.values:
                 raise ValueError(f"default '{self.default}' must be in values {self.values}")
         return self
+
+
+_DICE_RE = re.compile(r"^(\d+)d(\d+)([+-]\d+)?$", re.IGNORECASE)
+
+
+def _validate_dice_notation(v: str) -> str:
+    if not _DICE_RE.match(v.strip()):
+        raise ValueError(f"Invalid dice notation: '{v}' (expected NdM or NdM+K)")
+    return v
+
+
+# Type alias used inside actions for amount/delta fields.
+IntOrDice = int | str
+
+
+class _ActionBase(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+
+class ActionRollDice(_ActionBase):
+    action: Literal["roll_dice"]
+    notation: str
+    store_as: str
+
+    @field_validator("notation")
+    @classmethod
+    def _notation_format(cls, v: str) -> str:
+        return _validate_dice_notation(v)
+
+
+class ActionLookupTable(_ActionBase):
+    action: Literal["lookup_table"]
+    table: str
+    row: str
+    col: str
+    store_as: str
+
+
+class ActionMatch(_ActionBase):
+    action: Literal["match"]
+    value: str
+    cases: dict[str, list[dict]]  # validated recursively at engine layer
+
+    @model_validator(mode="after")
+    def _has_cases(self) -> "ActionMatch":
+        if not self.cases:
+            raise ValueError("match requires at least one case")
+        return self
+
+
+class ActionIf(_ActionBase):
+    action: Literal["if"]
+    cond: Filter
+    then: list[dict] = Field(default_factory=list)
+    else_: list[dict] = Field(default_factory=list, alias="else")
+
+
+class ActionSetProperty(_ActionBase):
+    action: Literal["set_property"]
+    target: Literal["subject", "character"]
+    key: str
+    value: Any
+
+    @field_validator("key")
+    @classmethod
+    def _key_format(cls, v: str) -> str:
+        return _validate_key(v)
+
+
+class ActionIncProperty(_ActionBase):
+    action: Literal["inc_property"]
+    target: Literal["subject", "character"]
+    key: str
+    delta: IntOrDice
+
+    @field_validator("delta")
+    @classmethod
+    def _delta_format(cls, v):
+        if isinstance(v, str):
+            return _validate_dice_notation(v)
+        return v
+
+    @field_validator("key")
+    @classmethod
+    def _key_format(cls, v: str) -> str:
+        return _validate_key(v)
+
+
+class ActionUnequip(_ActionBase):
+    action: Literal["unequip"]
+    target: Literal["subject"] = "subject"
+
+
+class ActionDamageCharacter(_ActionBase):
+    action: Literal["damage_character"]
+    amount: IntOrDice
+    type: Optional[str] = None
+    was_critical: bool = False
+
+    @field_validator("amount")
+    @classmethod
+    def _amount_format(cls, v):
+        if isinstance(v, str):
+            # Accept dice notation OR a path reference ($var) — engine resolves at runtime.
+            if v.startswith("$"):
+                return v
+            return _validate_dice_notation(v)
+        return v
+
+
+class ActionHealCharacter(_ActionBase):
+    action: Literal["heal_character"]
+    amount: IntOrDice
+
+    @field_validator("amount")
+    @classmethod
+    def _amount_format(cls, v):
+        if isinstance(v, str):
+            if v.startswith("$"):
+                return v
+            return _validate_dice_notation(v)
+        return v
+
+
+class ActionChangeResource(_ActionBase):
+    action: Literal["change_resource"]
+    key: str
+    delta: IntOrDice
+
+    @field_validator("delta")
+    @classmethod
+    def _delta_format(cls, v):
+        if isinstance(v, str):
+            if v.startswith("$"):
+                return v
+            return _validate_dice_notation(v)
+        return v
+
+
+class ActionRestoreResource(_ActionBase):
+    action: Literal["restore_resource"]
+    key: str
+    amount: IntOrDice | Literal["max"]
+
+    @field_validator("amount")
+    @classmethod
+    def _amount_format(cls, v):
+        if isinstance(v, str) and v != "max" and not v.startswith("$"):
+            return _validate_dice_notation(v)
+        return v
+
+
+class ActionApplyCondition(_ActionBase):
+    action: Literal["apply_condition"]
+    key: str
+    params: Optional[dict] = None
+
+
+class ActionRemoveCondition(_ActionBase):
+    action: Literal["remove_condition"]
+    key: str
+
+
+class ActionApplyModifierOnce(_ActionBase):
+    action: Literal["apply_modifier_once"]
+    target: str  # e.g. "character.hit_points_max"
+    delta: IntOrDice | str  # accepts "2*level" syntax — evaluated at runtime
+    label: str = Field(..., min_length=1, max_length=200)
+
+
+class ActionNotify(_ActionBase):
+    action: Literal["notify"]
+    severity: Literal["info", "warning", "error", "success"]
+    message: str = Field(..., min_length=1, max_length=500)
+
+
+class ActionAddHistory(_ActionBase):
+    action: Literal["add_history"]
+    description: str = Field(..., min_length=1, max_length=500)
+    meta: Optional[dict] = None
+
+
+Action = (
+    ActionRollDice | ActionLookupTable | ActionMatch | ActionIf
+    | ActionSetProperty | ActionIncProperty | ActionUnequip
+    | ActionDamageCharacter | ActionHealCharacter
+    | ActionChangeResource | ActionRestoreResource
+    | ActionApplyCondition | ActionRemoveCondition | ActionApplyModifierOnce
+    | ActionNotify | ActionAddHistory
+)
+
+
+_ACTION_REGISTRY: dict[str, type[_ActionBase]] = {
+    "roll_dice": ActionRollDice,
+    "lookup_table": ActionLookupTable,
+    "match": ActionMatch,
+    "if": ActionIf,
+    "set_property": ActionSetProperty,
+    "inc_property": ActionIncProperty,
+    "unequip": ActionUnequip,
+    "damage_character": ActionDamageCharacter,
+    "heal_character": ActionHealCharacter,
+    "change_resource": ActionChangeResource,
+    "restore_resource": ActionRestoreResource,
+    "apply_condition": ActionApplyCondition,
+    "remove_condition": ActionRemoveCondition,
+    "apply_modifier_once": ActionApplyModifierOnce,
+    "notify": ActionNotify,
+    "add_history": ActionAddHistory,
+}
+
+
+def parse_action(raw: dict) -> Action:
+    """Discriminator parser. Raises ValueError on unknown action."""
+    name = raw.get("action")
+    if name not in _ACTION_REGISTRY:
+        raise ValueError(f"Unknown action: '{name}' (allowed: {sorted(_ACTION_REGISTRY)})")
+    return _ACTION_REGISTRY[name].model_validate(raw)
