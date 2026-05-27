@@ -369,3 +369,39 @@ async def test_dispatch_damage_chain_re_emission_fires_independent_rule(db_sessi
     # effects (notifications-as-history if any, DB writes) ARE applied.
     assert len(results) == 1
     assert results[0].rule_name == "A"
+
+
+@pytest.mark.asyncio
+async def test_dispatch_heal_chain_re_emits_hp_healed(db_session):
+    """A rule on hp_healed must be triggered when another rule's heal_character runs."""
+    char = Character(user_id=1, name="T", hit_points=100, current_hit_points=10)
+    db_session.add(char)
+    await db_session.flush()
+    dsl_a = {
+        "version": 1, "subject": {"type": "character"},
+        "triggers": [{
+            "event": "manual_trigger", "filters": [],
+            "effects": [{"action": "heal_character", "amount": 5}],
+        }],
+    }
+    rule_a = HomebrewRule(character_id=char.id, name="A", dsl=dsl_a,
+                         created_at="x", updated_at="x")
+    dsl_b = {
+        "version": 1, "subject": {"type": "character"},
+        "triggers": [{
+            "event": "hp_healed", "filters": [],
+            "effects": [{"action": "notify", "severity": "info", "message": "healed $event.amount"}],
+        }],
+    }
+    rule_b = HomebrewRule(character_id=char.id, name="B", dsl=dsl_b,
+                         created_at="x", updated_at="x")
+    db_session.add_all([rule_a, rule_b])
+    await db_session.flush()
+
+    from api.services.homebrew.dispatcher import dispatch
+    results = await dispatch(db_session, char, "manual_trigger", {})
+    await db_session.refresh(char)
+    assert char.current_hit_points == 15  # 10 + 5
+    # rule_a's RFR returned, rule_b fired in the inner dispatch chain
+    assert len(results) == 1
+    assert results[0].rule_name == "A"

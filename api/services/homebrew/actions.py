@@ -265,8 +265,31 @@ async def execute_heal_character(action, ctx, rfr, session, char, **kw):
     amount = action["amount"]
     if isinstance(amount, str):
         amount = _roll(amount)
-    char.current_hit_points = min(char.hit_points, char.current_hit_points + int(amount))
+    amount = int(amount)
+    before = char.current_hit_points
+    char.current_hit_points = min(char.hit_points, char.current_hit_points + amount)
+    actual = char.current_hit_points - before
+
+    # D&D 5e rule: HP above 0 resets death saves (per CLAUDE.md "HEAL/SET_CURRENT
+    # automatically clears death saves when HP crosses from 0 to positive").
+    if before == 0 and char.current_hit_points > 0:
+        char.death_save_successes = 0
+        char.death_save_failures = 0
+
     await session.flush()
+
+    # Re-emit hp_healed (mirror damage_character's depth/stack threading).
+    from api.services.homebrew.dispatcher import dispatch
+    depth = kw.get("_depth", 0) + 1
+    base_stack = kw.get("_stack", ())
+    stack = base_stack + (rfr.rule_id,) if rfr.rule_id else base_stack
+    await dispatch(
+        session, char, "hp_healed",
+        {"amount": actual,
+         "current_hp_before": before,
+         "current_hp_after": char.current_hit_points},
+        depth=depth, triggered_rule_stack=stack,
+    )
 
 
 async def _load_resource(session: AsyncSession, char_id: int, key: str) -> HomebrewResource:

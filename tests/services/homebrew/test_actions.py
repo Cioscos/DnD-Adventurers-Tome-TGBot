@@ -458,6 +458,44 @@ async def test_heal_character_caps_at_max(db_session, char_with_item):
     assert char.current_hit_points == 20  # capped at max
 
 
+@pytest.mark.asyncio
+async def test_heal_character_resets_death_saves_on_revive(db_session, char_with_item):
+    char, _ = char_with_item
+    char.hit_points = 20
+    char.current_hit_points = 0
+    char.death_save_successes = 1
+    char.death_save_failures = 2
+    rfr = RuleFiringResult(rule_id=1, rule_name="r")
+    ctx = ExecutionContext.new("homebrew_internal", {}, {}, {"id": char.id})
+
+    from api.services.homebrew.actions import execute_heal_character
+    await execute_heal_character(
+        {"action": "heal_character", "amount": 5}, ctx, rfr, db_session, char,
+    )
+    assert char.current_hit_points == 5
+    assert char.death_save_successes == 0
+    assert char.death_save_failures == 0
+
+
+@pytest.mark.asyncio
+async def test_heal_character_keeps_death_saves_when_already_positive(db_session, char_with_item):
+    char, _ = char_with_item
+    char.hit_points = 20
+    char.current_hit_points = 3  # already above 0
+    char.death_save_successes = 1
+    char.death_save_failures = 2
+    rfr = RuleFiringResult(rule_id=1, rule_name="r")
+    ctx = ExecutionContext.new("homebrew_internal", {}, {}, {"id": char.id})
+
+    from api.services.homebrew.actions import execute_heal_character
+    await execute_heal_character(
+        {"action": "heal_character", "amount": 5}, ctx, rfr, db_session, char,
+    )
+    # Death saves preserved — heal did not cross the 0→positive threshold.
+    assert char.death_save_successes == 1
+    assert char.death_save_failures == 2
+
+
 # ---------------------------------------------------------------------------
 # Task 1.8 — change_resource + restore_resource
 # ---------------------------------------------------------------------------

@@ -85,7 +85,12 @@ async def dispatch(
     depth: int = 0,
     triggered_rule_stack: tuple[int, ...] = (),
 ) -> list[RuleFiringResult]:
-    """Fire all enabled homebrew rules matching the event for this character."""
+    """Fire all enabled homebrew rules matching the event for this character.
+
+    Flushes mutations to the session before returning, but does NOT commit.
+    The caller (router) is responsible for `await session.commit()` after
+    `dispatch` returns successfully. On exception, the caller should roll back.
+    """
     if depth > MAX_DEPTH:
         session.add(CharacterHistory(
             character_id=char.id, timestamp=_now(),
