@@ -217,6 +217,7 @@ async def test_set_property_on_item(db_session, char_with_item):
     await db_session.refresh(item)
     md = json.loads(item.item_metadata)
     assert md["hb_damage_state"] == "distrutta"
+    assert ctx.subject["metadata"]["hb_damage_state"] == "distrutta"
 
 
 @pytest.mark.asyncio
@@ -235,3 +236,172 @@ async def test_unequip_subject_item(db_session, char_with_item):
     await db_session.refresh(item)
     assert item.is_equipped is False
     assert item.equipment_slot is None
+
+
+@pytest.mark.asyncio
+async def test_inc_property_int_delta_on_item(db_session, char_with_item):
+    char, item = char_with_item
+    md = json.loads(item.item_metadata)
+    md["hb_uses"] = 2
+    item.item_metadata = json.dumps(md)
+    await db_session.flush()
+
+    ctx = ExecutionContext.new(
+        event_type="manual", event_payload={},
+        subject={"_kind": "item", "_id": item.id, "metadata": json.loads(item.item_metadata)},
+        character={"id": char.id},
+    )
+    rfr = RuleFiringResult(rule_id=1, rule_name="r")
+    await execute_inc_property(
+        {"action": "inc_property", "target": "subject", "key": "uses", "delta": 3},
+        ctx, rfr, db_session, char,
+    )
+    await db_session.refresh(item)
+    md = json.loads(item.item_metadata)
+    assert md["hb_uses"] == 5
+    assert ctx.subject["metadata"]["hb_uses"] == 5
+
+
+@pytest.mark.asyncio
+async def test_inc_property_creates_from_zero_when_absent(db_session, char_with_item):
+    char, item = char_with_item
+    ctx = ExecutionContext.new(
+        event_type="manual", event_payload={},
+        subject={"_kind": "item", "_id": item.id, "metadata": json.loads(item.item_metadata)},
+        character={"id": char.id},
+    )
+    rfr = RuleFiringResult(rule_id=1, rule_name="r")
+    await execute_inc_property(
+        {"action": "inc_property", "target": "subject", "key": "uses", "delta": 1},
+        ctx, rfr, db_session, char,
+    )
+    await db_session.refresh(item)
+    md = json.loads(item.item_metadata)
+    assert md["hb_uses"] == 1
+
+
+@pytest.mark.asyncio
+async def test_inc_property_dice_delta(db_session, char_with_item, monkeypatch):
+    monkeypatch.setattr("api.services.homebrew.actions.random.randint", lambda lo, hi: 3)
+    char, item = char_with_item
+    ctx = ExecutionContext.new(
+        event_type="manual", event_payload={},
+        subject={"_kind": "item", "_id": item.id, "metadata": json.loads(item.item_metadata)},
+        character={"id": char.id},
+    )
+    rfr = RuleFiringResult(rule_id=1, rule_name="r")
+    await execute_inc_property(
+        {"action": "inc_property", "target": "subject", "key": "uses", "delta": "1d4"},
+        ctx, rfr, db_session, char,
+    )
+    await db_session.refresh(item)
+    md = json.loads(item.item_metadata)
+    assert md["hb_uses"] == 3
+
+
+@pytest.mark.asyncio
+async def test_inc_property_non_numeric_raises(db_session, char_with_item):
+    char, item = char_with_item
+    ctx = ExecutionContext.new(
+        event_type="manual", event_payload={},
+        subject={"_kind": "item", "_id": item.id, "metadata": json.loads(item.item_metadata)},
+        character={"id": char.id},
+    )
+    rfr = RuleFiringResult(rule_id=1, rule_name="r")
+    from api.services.homebrew.exceptions import ActionExecutionError
+    with pytest.raises(ActionExecutionError, match="not numeric"):
+        await execute_inc_property(
+            {"action": "inc_property", "target": "subject", "key": "quality", "delta": 1},
+            ctx, rfr, db_session, char,
+        )
+
+
+@pytest.mark.asyncio
+async def test_set_property_target_character(db_session, char_with_item):
+    char, _ = char_with_item
+    ctx = ExecutionContext.new(
+        event_type="manual", event_payload={},
+        subject={}, character={"id": char.id},
+    )
+    rfr = RuleFiringResult(rule_id=1, rule_name="r")
+    await execute_set_property(
+        {"action": "set_property", "target": "character",
+         "key": "blessed", "value": True},
+        ctx, rfr, db_session, char,
+    )
+    await db_session.refresh(char)
+    assert char.settings["homebrew_fields"]["blessed"] is True
+
+
+@pytest.mark.asyncio
+async def test_inc_property_target_character(db_session, char_with_item):
+    char, _ = char_with_item
+    char.settings = {"homebrew_fields": {"luck_used": 0}}
+    await db_session.flush()
+    ctx = ExecutionContext.new(
+        event_type="manual", event_payload={},
+        subject={}, character={"id": char.id},
+    )
+    rfr = RuleFiringResult(rule_id=1, rule_name="r")
+    await execute_inc_property(
+        {"action": "inc_property", "target": "character", "key": "luck_used", "delta": 2},
+        ctx, rfr, db_session, char,
+    )
+    await db_session.refresh(char)
+    assert char.settings["homebrew_fields"]["luck_used"] == 2
+
+
+@pytest.mark.asyncio
+async def test_unequip_armor_resets_base_ac(db_session):
+    char = Character(user_id=1, name="Tank", base_armor_class=16,
+                     base_armor_class_override=False)
+    db_session.add(char)
+    await db_session.flush()
+    armor = Item(
+        character_id=char.id, name="Mail", item_type="armor",
+        item_metadata=json.dumps({"ac_value": 16}),
+        is_equipped=True,
+    )
+    db_session.add(armor)
+    await db_session.flush()
+
+    ctx = ExecutionContext.new(
+        event_type="dropped_to_zero", event_payload={},
+        subject={"_kind": "item", "_id": armor.id, "metadata": json.loads(armor.item_metadata)},
+        character={"id": char.id},
+    )
+    rfr = RuleFiringResult(rule_id=1, rule_name="r")
+    await execute_unequip(
+        {"action": "unequip", "target": "subject"}, ctx, rfr, db_session, char,
+    )
+    await db_session.refresh(char)
+    await db_session.refresh(armor)
+    assert armor.is_equipped is False
+    assert char.base_armor_class == 10
+
+
+@pytest.mark.asyncio
+async def test_unequip_armor_respects_override(db_session):
+    char = Character(user_id=1, name="Tank", base_armor_class=16,
+                     base_armor_class_override=True)
+    db_session.add(char)
+    await db_session.flush()
+    armor = Item(
+        character_id=char.id, name="Mail", item_type="armor",
+        item_metadata=json.dumps({"ac_value": 16}),
+        is_equipped=True,
+    )
+    db_session.add(armor)
+    await db_session.flush()
+
+    ctx = ExecutionContext.new(
+        event_type="manual", event_payload={},
+        subject={"_kind": "item", "_id": armor.id, "metadata": json.loads(armor.item_metadata)},
+        character={"id": char.id},
+    )
+    rfr = RuleFiringResult(rule_id=1, rule_name="r")
+    await execute_unequip(
+        {"action": "unequip", "target": "subject"}, ctx, rfr, db_session, char,
+    )
+    await db_session.refresh(char)
+    assert char.base_armor_class == 16

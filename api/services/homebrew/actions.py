@@ -182,13 +182,25 @@ async def execute_inc_property(action, ctx, rfr, session, char, **kw):
     if target == "subject" and ctx.subject.get("_kind") == "item":
         item = await _load_item(session, ctx.subject["_id"])
         md = _json.loads(item.item_metadata or "{}")
-        md[f"hb_{key}"] = int(md.get(f"hb_{key}", 0)) + delta
+        current = md.get(f"hb_{key}", 0)
+        try:
+            md[f"hb_{key}"] = int(current) + delta
+        except (TypeError, ValueError):
+            raise ActionExecutionError(
+                f"inc_property '{key}' not numeric (current value: {current!r})"
+            )
         item.item_metadata = _json.dumps(md)
         ctx.subject["metadata"] = md
     elif target == "character":
         settings = dict(char.settings or {})
         homebrew = dict(settings.get("homebrew_fields", {}))
-        homebrew[key] = int(homebrew.get(key, 0)) + delta
+        current = homebrew.get(key, 0)
+        try:
+            homebrew[key] = int(current) + delta
+        except (TypeError, ValueError):
+            raise ActionExecutionError(
+                f"inc_property '{key}' not numeric (current value: {current!r})"
+            )
         settings["homebrew_fields"] = homebrew
         char.settings = settings
     else:
@@ -204,6 +216,10 @@ async def execute_unequip(action, ctx, rfr, session, char, **kw):
     item = await _load_item(session, subject["_id"])
     item.is_equipped = False
     item.equipment_slot = None
+    if item.item_type == "armor" and not char.base_armor_class_override:
+        char.base_armor_class = 10
+    elif item.item_type == "shield" and not char.shield_armor_class_override:
+        char.shield_armor_class = 0
     await session.flush()
 
 
