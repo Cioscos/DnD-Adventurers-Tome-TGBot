@@ -188,6 +188,9 @@ class Character(Base):
         cascade="all, delete-orphan",
         order_by="(Map.zone_name, Map.position, Map.id)",
     )
+    homebrew_rules: Mapped[List["HomebrewRule"]] = relationship(
+        back_populates="character", cascade="all, delete-orphan"
+    )
 
     @property
     def ac(self) -> int:
@@ -612,3 +615,32 @@ class SessionMessage(Base):
     )
 
     session: Mapped["GameSession"] = relationship(back_populates="messages")
+
+
+# ---------------------------------------------------------------------------
+# Homebrew rules engine
+# ---------------------------------------------------------------------------
+
+class HomebrewRule(Base):
+    """A user-authored homebrew rule attached to a character.
+
+    The DSL field stores the full rule definition (subject, properties, tables,
+    passive_modifiers, triggers) as a JSON document. See spec
+    `docs/superpowers/specs/2026-05-27-homebrew-rules-engine-design.md`.
+    """
+    __tablename__ = "homebrew_rules"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    character_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("characters.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    dsl: Mapped[dict] = mapped_column(JSON, nullable=False)
+    version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    template_id: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    created_at: Mapped[str] = mapped_column(String(50), nullable=False)
+    updated_at: Mapped[str] = mapped_column(String(50), nullable=False)
+
+    character: Mapped["Character"] = relationship(back_populates="homebrew_rules")
