@@ -1,8 +1,14 @@
 """Action execution unit tests. random.randint is seeded for determinism."""
+import json
 import random
 import pytest
+import pytest_asyncio
 from unittest.mock import MagicMock
 
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+from sqlalchemy.orm import sessionmaker
+
+from core.db.models import Base, Character, Item
 from api.services.homebrew.dsl import RuleDSL
 from api.services.homebrew.types import ExecutionContext, RuleFiringResult
 from api.services.homebrew.actions import (
@@ -79,18 +85,19 @@ def test_lookup_table_col_bin_mapping():
     assert ctx.vars["result"] == "Z"
 
 
-def test_match_executes_branch(monkeypatch):
+@pytest.mark.asyncio
+async def test_match_executes_branch(monkeypatch):
     ctx = _ctx()
     ctx.set_var("result", "D")
     rfr = RuleFiringResult(rule_id=1, rule_name="r")
     notify_calls = []
 
-    def fake_execute_action(action, ctx, rfr, session, char, **kw):
+    async def fake_execute_action(action, ctx, rfr, session, char, **kw):
         if action["action"] == "notify":
             notify_calls.append(action["message"])
 
     monkeypatch.setattr("api.services.homebrew.actions.execute_action", fake_execute_action)
-    execute_match(
+    await execute_match(
         {"action": "match", "value": "$result",
          "cases": {
              "X": [{"action": "notify", "severity": "error", "message": "destroyed"}],
@@ -102,16 +109,17 @@ def test_match_executes_branch(monkeypatch):
     assert notify_calls == ["damaged"]
 
 
-def test_if_runs_then_branch(monkeypatch):
+@pytest.mark.asyncio
+async def test_if_runs_then_branch(monkeypatch):
     ctx = _ctx()
     rfr = RuleFiringResult(rule_id=1, rule_name="r")
     notify_calls = []
 
-    def fake_execute_action(action, ctx, rfr, session, char, **kw):
+    async def fake_execute_action(action, ctx, rfr, session, char, **kw):
         notify_calls.append(action.get("message"))
 
     monkeypatch.setattr("api.services.homebrew.actions.execute_action", fake_execute_action)
-    execute_if(
+    await execute_if(
         {"action": "if",
          "cond": {"path": "$subject.damage_state", "op": "eq", "value": "integra"},
          "then": [{"action": "notify", "severity": "info", "message": "was_integra"}],
@@ -155,3 +163,75 @@ def test_add_history_buffers_entry():
         {"action": "add_history", "description": "Weapon damaged"}, ctx, rfr, None, None,
     )
     assert rfr.history_entries[0].description == "Weapon damaged"
+
+
+# ---------------------------------------------------------------------------
+# Task 1.6 — async handlers backed by the DB
+# ---------------------------------------------------------------------------
+
+from api.services.homebrew.actions import (
+    execute_set_property, execute_inc_property, execute_unequip,
+)
+
+
+@pytest_asyncio.fixture
+async def db_session():
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    SessionMaker = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    async with SessionMaker() as s:
+        yield s
+
+
+@pytest_asyncio.fixture
+async def char_with_item(db_session):
+    char = Character(user_id=1, name="Test")
+    db_session.add(char)
+    await db_session.flush()
+    item = Item(
+        character_id=char.id, name="Spada lunga", item_type="weapon",
+        item_metadata=json.dumps({"hb_quality": "pessima", "hb_damage_state": "integra"}),
+        is_equipped=True,
+    )
+    db_session.add(item)
+    await db_session.flush()
+    return char, item
+
+
+@pytest.mark.asyncio
+async def test_set_property_on_item(db_session, char_with_item):
+    char, item = char_with_item
+    ctx = ExecutionContext.new(
+        event_type="attack_rolled", event_payload={},
+        subject={"_kind": "item", "_id": item.id,
+                 "metadata": json.loads(item.item_metadata)},
+        character={"id": char.id},
+    )
+    rfr = RuleFiringResult(rule_id=1, rule_name="r")
+    await execute_set_property(
+        {"action": "set_property", "target": "subject",
+         "key": "damage_state", "value": "distrutta"},
+        ctx, rfr, db_session, char,
+    )
+    await db_session.refresh(item)
+    md = json.loads(item.item_metadata)
+    assert md["hb_damage_state"] == "distrutta"
+
+
+@pytest.mark.asyncio
+async def test_unequip_subject_item(db_session, char_with_item):
+    char, item = char_with_item
+    ctx = ExecutionContext.new(
+        event_type="attack_rolled", event_payload={},
+        subject={"_kind": "item", "_id": item.id,
+                 "metadata": json.loads(item.item_metadata)},
+        character={"id": char.id},
+    )
+    rfr = RuleFiringResult(rule_id=1, rule_name="r")
+    await execute_unequip(
+        {"action": "unequip", "target": "subject"}, ctx, rfr, db_session, char,
+    )
+    await db_session.refresh(item)
+    assert item.is_equipped is False
+    assert item.equipment_slot is None

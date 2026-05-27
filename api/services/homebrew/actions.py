@@ -1,13 +1,19 @@
 """Action implementations. Each function follows signature:
 
     def execute_<action>(payload, ctx, rfr, session, char, **kwargs) -> None
+
+Some handlers (the DB-mutating ones) are async; the rest are sync.
+`execute_action` is async and dispatches to either kind transparently.
 """
 from __future__ import annotations
 
+import asyncio
+import json as _json
 import random
 import re
 from typing import Any
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.services.homebrew.dsl import Filter, RuleDSL
@@ -15,6 +21,7 @@ from api.services.homebrew.exceptions import ActionExecutionError
 from api.services.homebrew.filters import evaluate_filter
 from api.services.homebrew.path_resolver import resolve_path
 from api.services.homebrew.types import ExecutionContext, Notification, RuleFiringResult
+from core.db.models import Character, Item
 
 
 _DICE_RE = re.compile(r"^(\d+)d(\d+)([+-]\d+)?$", re.IGNORECASE)
@@ -78,23 +85,23 @@ def execute_lookup_table(action, ctx, rfr, session, char, *, rule: RuleDSL, **kw
     ctx.set_var(action["store_as"], row[col_index])
 
 
-def execute_match(action, ctx, rfr, session, char, **kw):
+async def execute_match(action, ctx, rfr, session, char, **kw):
     val = _resolve_or_value(action["value"], ctx)
     branch = action["cases"].get(str(val))
     if branch is None:
         return  # no matching case = no-op
     for sub_action in branch:
-        execute_action(sub_action, ctx, rfr, session, char, **kw)
+        await execute_action(sub_action, ctx, rfr, session, char, **kw)
 
 
-def execute_if(action, ctx, rfr, session, char, **kw):
+async def execute_if(action, ctx, rfr, session, char, **kw):
     cond = Filter.model_validate(action["cond"])
     if evaluate_filter(cond, ctx.to_dict()):
         branch = action.get("then", [])
     else:
         branch = action.get("else", [])
     for sub_action in branch:
-        execute_action(sub_action, ctx, rfr, session, char, **kw)
+        await execute_action(sub_action, ctx, rfr, session, char, **kw)
 
 
 _PLACEHOLDER_RE = re.compile(r"\$[\w.]+")
@@ -122,6 +129,88 @@ def execute_add_history(action, ctx, rfr, session, char, **kw):
     rfr.add_history_entry(msg, meta=action.get("meta"))
 
 
+# ---------------------------------------------------------------------------
+# Async DB-mutating handlers (Task 1.6)
+# ---------------------------------------------------------------------------
+
+async def _load_item(session: AsyncSession, item_id: int) -> Item:
+    res = await session.execute(select(Item).where(Item.id == item_id))
+    item = res.scalar_one_or_none()
+    if item is None:
+        raise ActionExecutionError(f"Item {item_id} not found")
+    return item
+
+
+async def execute_set_property(action, ctx, rfr, session, char, **kw):
+    target = action["target"]
+    key = action["key"]
+    value = action["value"]
+
+    if target == "subject":
+        subject = ctx.subject
+        if subject.get("_kind") == "item":
+            item = await _load_item(session, subject["_id"])
+            md = _json.loads(item.item_metadata or "{}")
+            md[f"hb_{key}"] = value
+            item.item_metadata = _json.dumps(md)
+            # Mirror in ctx so later steps see the new value.
+            subject["metadata"] = md
+        else:
+            raise ActionExecutionError(
+                f"set_property on subject kind '{subject.get('_kind')}' not supported in MVP"
+            )
+    elif target == "character":
+        # Custom fields go into character.settings JSON (no schema change).
+        settings = dict(char.settings or {})
+        homebrew = dict(settings.get("homebrew_fields", {}))
+        homebrew[key] = value
+        settings["homebrew_fields"] = homebrew
+        char.settings = settings
+    else:
+        raise ActionExecutionError(f"set_property target '{target}' not supported")
+
+    await session.flush()
+
+
+async def execute_inc_property(action, ctx, rfr, session, char, **kw):
+    delta = action["delta"]
+    if isinstance(delta, str):
+        delta = _roll(delta)
+
+    target = action["target"]
+    key = action["key"]
+    if target == "subject" and ctx.subject.get("_kind") == "item":
+        item = await _load_item(session, ctx.subject["_id"])
+        md = _json.loads(item.item_metadata or "{}")
+        md[f"hb_{key}"] = int(md.get(f"hb_{key}", 0)) + delta
+        item.item_metadata = _json.dumps(md)
+        ctx.subject["metadata"] = md
+    elif target == "character":
+        settings = dict(char.settings or {})
+        homebrew = dict(settings.get("homebrew_fields", {}))
+        homebrew[key] = int(homebrew.get(key, 0)) + delta
+        settings["homebrew_fields"] = homebrew
+        char.settings = settings
+    else:
+        raise ActionExecutionError(f"inc_property target '{target}' not supported")
+
+    await session.flush()
+
+
+async def execute_unequip(action, ctx, rfr, session, char, **kw):
+    subject = ctx.subject
+    if subject.get("_kind") != "item":
+        raise ActionExecutionError("unequip requires subject=item")
+    item = await _load_item(session, subject["_id"])
+    item.is_equipped = False
+    item.equipment_slot = None
+    await session.flush()
+
+
+# ---------------------------------------------------------------------------
+# Dispatcher
+# ---------------------------------------------------------------------------
+
 _ACTION_HANDLERS = {
     "roll_dice": execute_roll_dice,
     "lookup_table": execute_lookup_table,
@@ -131,10 +220,23 @@ _ACTION_HANDLERS = {
     "add_history": execute_add_history,
 }
 
+# Async DB-mutating handlers — must be awaited.
+_ASYNC_HANDLERS = {
+    "set_property": execute_set_property,
+    "inc_property": execute_inc_property,
+    "unequip": execute_unequip,
+}
 
-def execute_action(action, ctx, rfr, session, char, **kw):
-    """Dispatch a single action by its 'action' field."""
-    handler = _ACTION_HANDLERS.get(action["action"])
-    if handler is None:
-        raise ActionExecutionError(f"No handler for action: {action['action']}")
-    handler(action, ctx, rfr, session, char, **kw)
+
+async def execute_action(action, ctx, rfr, session, char, **kw):
+    """Dispatch a single action. Handles both sync and async handlers."""
+    name = action["action"]
+    if name in _ASYNC_HANDLERS:
+        await _ASYNC_HANDLERS[name](action, ctx, rfr, session, char, **kw)
+        return
+    if name in _ACTION_HANDLERS:
+        result = _ACTION_HANDLERS[name](action, ctx, rfr, session, char, **kw)
+        if asyncio.iscoroutine(result):
+            await result
+        return
+    raise ActionExecutionError(f"No handler for action: {name}")
