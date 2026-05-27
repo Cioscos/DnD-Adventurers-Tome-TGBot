@@ -57,9 +57,83 @@ I validator di Pydantic accettano string che iniziano con `$` come literal pass-
 
 `pyproject.toml` ha ora un `[dependency-groups]` `dev` con `pytest>=8.0` + `pytest-asyncio>=0.24` (commit `c8333d6`). Aggiunto anche `[tool.pytest.ini_options]` con `asyncio_mode = "auto"` e `testpaths = ["tests"]`. Funziona da Windows (`uv sync`) e da WSL con override (`UV_PROJECT_ENVIRONMENT=/tmp/venv-homebrew uv sync --group dev`).
 
+### Phase 1 — completata 2026-05-28
+
+20 commit sul branch (15 task × 1 commit + 5 fix commit dopo code review). **137/137 test verdi** (`pytest tests/services/homebrew/`).
+
+```
+a477cfb fix(homebrew): heal_character symmetry — re-emit hp_healed + reset death saves
+ac59922 feat(homebrew): re-emit damage_taken from damage_character + recursion safety
+29f583f test(homebrew): add Quality & Wear full-flow integration test
+98dd668 feat(homebrew): add get_passive_modifiers helper for derived stats
+a33fa2a fix(homebrew): dispatcher scopes item to char + filter + preloads classes
+93fb9db feat(homebrew): add dispatcher with depth limit + cycle detection
+f9d03d5 feat(homebrew): add RuleEngine.execute_trigger with filter eval + effect loop
+bd8461c feat(homebrew): add apply_modifier_once (hp_max/speed, N*level expr)
+9e2fb25 feat(homebrew): add apply_condition + remove_condition (custom:* prefix)
+de7f7b6 feat(homebrew): add change_resource + restore_resource (clamps to [0, max])
+133f4e9 feat(homebrew): add damage_character + heal_character (with temp HP handling)
+496470b fix(homebrew): unequip resets AC + harden inc_property + cover gaps
+98f0a9b feat(homebrew): add set_property, inc_property, unequip (async, persist to DB)
+18c5bb1 feat(homebrew): add notify + add_history actions with $placeholder resolution
+4ade18c feat(homebrew): add 4 control/data actions (roll_dice, lookup_table, match, if)
+107cfe5 feat(homebrew): add ExecutionContext + RuleFiringResult + exceptions
+d9fdada fix(homebrew): harden filter evaluator (None LHS, str IN-rhs, str metadata)
+ee8e2c8 feat(homebrew): add filter evaluator (8 operators + AND combinator)
+00b1f91 fix(homebrew): support $vars.X dotted form + add missing negative-path tests
+07fb6cf feat(homebrew): add path resolver ($event/$subject/$character/$<var>)
+```
+
+#### Moduli prodotti (`api/services/homebrew/`)
+
+| File | Responsabilità |
+|------|----------------|
+| `path_resolver.py` | Risolve `$event.X` / `$subject.X` / `$character.X` / `$<var>` / `$vars.X`. Item subjects fanno hb_-prefix lookup in `metadata` con fallback al top-level. |
+| `filters.py` | 8 operatori (`eq/neq/lt/lte/gt/gte/in/has_property`) + `evaluate_filters` (AND short-circuit). Hardened contro `None` LHS, string `rhs` in `IN`, metadata non-dict. |
+| `types.py` | `ExecutionContext`, `RuleFiringResult`, `Notification`, `HistoryEntry`, `Severity` literal. |
+| `exceptions.py` | `HomebrewError` base + `DepthExceeded`, `CycleDetected`, `DSLValidationError`, `ActionExecutionError`. |
+| `actions.py` | 16 handler (4 sync: roll_dice/lookup_table/match/if/notify/add_history; 10 async DB-touching). Dispatch dual-table (`_ACTION_HANDLERS` + `_ASYNC_HANDLERS`). $placeholder resolution in messaggi. |
+| `engine.py` | `RuleEngine.execute_trigger(rule, trigger, ctx, ..., *, depth, stack)` — parse DSL, eval filters, loop effects con error capture, propaga `_depth`/`_stack` per recursion safety. |
+| `dispatcher.py` | `dispatch(session, char, event_type, payload, *, depth, triggered_rule_stack)` — entry point. `MAX_DEPTH=8` con bail+history-log, cycle detection via stack, materializzazione subjects (scope to `char.id`, filter su `item_types`), preload `char.classes`, persist `history_entries` in `CharacterHistory`. **Flush sì, commit no** — caller owns transaction. |
+| `passive.py` | `get_passive_modifiers(session, char, target_path) → int`. Per Phase 6 (AC/HP/Speed/Skill/Save breakdown). |
+
+#### Deviazioni dal piano originale (importanti per Phase 2+)
+
+**Task 1.1 — esteso `$vars.X` dotted form.** Il piano aggiungeva solo bare `$<var>`, ma i test di Task 1.2 usano `Filter(path="$vars.a", ...)`. Resolver accetta entrambe le forme (bare + dotted), test di copertura aggiunto.
+
+**Task 1.2 — filter evaluator hardened.** Tre footgun runtime corretti rispetto al piano:
+- `LT/LTE/GT/GTE` con LHS `None` → ritorna `False` invece di crashare con `TypeError`.
+- `IN` con `rhs` di tipo `str` → ritorna `False` (no substring matching).
+- `HAS_PROPERTY` su item con `metadata` non-dict (JSON string non parsato) → ritorna `False`.
+
+**Task 1.6 — `unequip` resetta AC contribution.** Pattern dal canonical PATCH endpoint (`api/routers/items.py:188-202`): armor → `char.base_armor_class = 10` (se non override), shield → `char.shield_armor_class = 0` (se non override). Senza questo fix la regola homebrew lasciava AC stale.
+
+**Task 1.6 — `inc_property` raise chiaro su valore non numerico.** `int("pessima")` → `ActionExecutionError("inc_property 'X' not numeric (current value: 'pessima')")` invece del bare `ValueError`.
+
+**Task 1.6 — `await session.flush()` in ogni handler async.** Non nel piano, ma necessario perché i test usano `await db_session.refresh(item)` direttamente. Inevitabile per asincronia. Reviewer ha endorsed: low risk su SQLite, refactor consolidato a Task 2.x quando router chiama dispatch. Persistito in tutti i 10 async handler.
+
+**Task 1.12 — `dispatch` scopa item a `char.id` E applica subject filter su payload.item_id.** Critical bug fix dopo review: senza questo, una regola scoped a `item_types=["weapon"]` poteva sparare su un'armor (e in cross-character scenario una regola di char A poteva vedere un item di char B). Test di copertura aggiunti per entrambi gli scenari.
+
+**Task 1.12 — `dispatch` preloada `char.classes` se unloaded.** `Character.total_level` è una property su `self.classes` (relationship). In async SQLAlchemy accederla senza preload crasha con `MissingGreenlet`. Il piano aveva un fallback a 0 silenzioso → reviewer ha richiesto fix per evitare filtri `$character.total_level >= 5` che si valutano come `False` silenziosamente.
+
+**Phase 1 polish (post-final-review).** `execute_heal_character`:
+- Riemette `hp_healed` (simmetria con `damage_character`) tramite `dispatch` con threading depth/stack.
+- Reset di `death_save_successes`/`death_save_failures` quando HP attraversa la soglia 0→positivo (regola D&D 5e per CLAUDE.md).
+
+#### Issues residui (non bloccanti, da affrontare in Phase 2+)
+
+- `datetime.utcnow()` deprecato in Py 3.12+ — pattern del codebase (`api/routers/*.py`), defer a refactor repo-wide.
+- `_DICE_RE` duplicato tra `dsl.py` e `actions.py` (byte-identical) — cosmetic.
+- `RuleDSL.model_validate` duplicato in `engine.py` (già fatto in `dispatcher.py`) — defense-in-depth, defer.
+- `passive.py` non gestisce dice notation in `value` (treated as static 0, deferred).
+- No `conftest.py` sotto `tests/services/homebrew/` — `db_session` fixture duplicata in 4 test file (~150 LOC duplication). Defer a cleanup task.
+- Test coverage gap: temp HP absorption non testata in damage_character.
+
 #### Stato esecuzione
 
-Phase 0 ✅ · Phase 1-7 pending.
+Phase 0 ✅ · Phase 1 ✅ · Phase 2-7 pending.
+
+**Pronto per Phase 2**: dispatcher pronto a essere chiamato da router. Contract: `await dispatch(session, char, event_type, payload)` poi `await session.commit()` (caller-owned). Template `Qualità & Usura` non ancora hardcoded (Task 2.1).
 
 ---
 
