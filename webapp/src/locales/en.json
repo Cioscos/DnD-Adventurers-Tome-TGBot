@@ -1008,6 +1008,10 @@
     "disabled_state": "Disabled",
     "no_rules_yet": "No rules yet. Install a template to get started.",
     "load_error": "Couldn't load rules. Try again later.",
+    "manual_trigger": "Trigger now",
+    "manual_trigger_no_effect": "Manual trigger · no rule reacted",
+    "delete_title": "Delete rule",
+    "delete_confirm": "Are you sure you want to delete \"{{name}}\"? This action is irreversible.",
     "editor": {
       "new_title": "New rule",
       "edit_title": "Edit rule",

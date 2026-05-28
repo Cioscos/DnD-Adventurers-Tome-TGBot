@@ -1,8 +1,9 @@
+import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
-import { Plus, CheckCircle2, BookOpenCheck } from 'lucide-react'
+import { Plus, CheckCircle2, BookOpenCheck, Zap, Trash2, Loader2 } from 'lucide-react'
 import { GiScrollUnfurled, GiPotionBall, GiCauldron } from 'react-icons/gi'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
@@ -12,6 +13,12 @@ import SwitchToggle from '@/components/ui/SwitchToggle'
 import SectionDivider from '@/components/ui/SectionDivider'
 import Skeleton from '@/components/Skeleton'
 import Reveal from '@/components/ui/Reveal'
+import ConfirmSheet from '@/components/ui/ConfirmSheet'
+import {
+  showHomebrewNotifications,
+  type NotificationLike,
+} from '@/components/homebrew/HomebrewNotification'
+import { useToast } from '@/hooks/useToast'
 import { haptic } from '@/auth/telegram'
 import { spring, stagger } from '@/styles/motion'
 import type { HomebrewRule, TemplateRead } from '@/lib/homebrew/types'
@@ -21,9 +28,26 @@ interface RuleCardProps {
   dimmed?: boolean
   onToggle: (enabled: boolean) => void
   onClick: () => void
+  onManualTrigger?: () => void
+  onDelete: () => void
+  isFiring?: boolean
+  isDeleting?: boolean
+  manualTriggerLabel: string
+  deleteLabel: string
 }
 
-function RuleCard({ rule, dimmed = false, onToggle, onClick }: RuleCardProps) {
+function RuleCard({
+  rule,
+  dimmed = false,
+  onToggle,
+  onClick,
+  onManualTrigger,
+  onDelete,
+  isFiring = false,
+  isDeleting = false,
+  manualTriggerLabel,
+  deleteLabel,
+}: RuleCardProps) {
   return (
     <m.div
       onClick={onClick}
@@ -47,8 +71,53 @@ function RuleCard({ rule, dimmed = false, onToggle, onClick }: RuleCardProps) {
           </p>
         )}
       </div>
-      <div onClick={(e) => e.stopPropagation()} className="shrink-0">
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="shrink-0 flex items-center gap-1"
+      >
         <SwitchToggle checked={rule.enabled} onChange={onToggle} />
+        {onManualTrigger && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              onManualTrigger()
+            }}
+            disabled={isFiring}
+            title={manualTriggerLabel}
+            aria-label={manualTriggerLabel}
+            className="w-11 h-11 flex items-center justify-center rounded-xl
+                       text-dnd-gold-bright hover:bg-dnd-gold-bright/10
+                       active:bg-dnd-gold-bright/20 transition-colors
+                       disabled:opacity-50 disabled:cursor-wait"
+          >
+            {isFiring ? (
+              <Loader2 size={18} className="animate-spin" />
+            ) : (
+              <Zap size={18} />
+            )}
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            onDelete()
+          }}
+          disabled={isDeleting}
+          title={deleteLabel}
+          aria-label={deleteLabel}
+          className="w-11 h-11 flex items-center justify-center rounded-xl
+                     text-dnd-text-muted hover:text-dnd-crimson hover:bg-dnd-crimson/10
+                     active:bg-dnd-crimson/20 transition-colors
+                     disabled:opacity-50 disabled:cursor-wait"
+        >
+          {isDeleting ? (
+            <Loader2 size={18} className="animate-spin" />
+          ) : (
+            <Trash2 size={18} />
+          )}
+        </button>
       </div>
     </m.div>
   )
@@ -113,6 +182,8 @@ export default function Homebrew() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const qc = useQueryClient()
+  const toast = useToast()
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null)
 
   const { data: rules, error: rulesError } = useQuery({
     queryKey: ['homebrew-rules', charId],
@@ -153,6 +224,38 @@ export default function Homebrew() {
       haptic.error()
     },
     onSettled: () => qc.invalidateQueries({ queryKey: ['homebrew-rules', charId] }),
+  })
+
+  // Manual trigger — same `{notifications: [...]}` shape as turn-start, so the
+  // global MutationCache handler (keyed on `homebrew_notifications`) skips it.
+  // We surface notifications by hand; empty list → neutral info toast so the
+  // tap is always acknowledged. The Phase 3 dispatcher fires ALL enabled rules
+  // with a `manual_trigger`, not just the one whose card was tapped — the
+  // response's `rule_id` is informative only.
+  const manualTriggerMut = useMutation({
+    mutationFn: (ruleId: number) => api.homebrew.manualTrigger(charId, ruleId),
+    onSuccess: (resp) => {
+      qc.invalidateQueries({ queryKey: ['character', charId] })
+      qc.invalidateQueries({ queryKey: ['homebrew-resources', charId] })
+      const list = resp?.notifications
+      if (Array.isArray(list) && list.length > 0) {
+        showHomebrewNotifications(list as NotificationLike[])
+      } else {
+        toast.info(t('homebrew.manual_trigger_no_effect'))
+      }
+      haptic.success()
+    },
+    onError: () => haptic.error(),
+  })
+
+  const deleteMut = useMutation({
+    mutationFn: (ruleId: number) => api.homebrew.deleteRule(charId, ruleId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['homebrew-rules', charId] })
+      setConfirmDeleteId(null)
+      haptic.success()
+    },
+    onError: () => haptic.error(),
   })
 
   if (rulesError || templatesError) {
@@ -225,15 +328,31 @@ export default function Homebrew() {
           </Surface>
         ) : (
           <Reveal.Stagger stagger={stagger.listTight} delay={0.05} className="space-y-2 mt-3">
-            {active.map((r) => (
-              <Reveal.Item key={r.id}>
-                <RuleCard
-                  rule={r}
-                  onToggle={(enabled) => toggleMut.mutate({ ruleId: r.id, enabled })}
-                  onClick={() => navigate(`/char/${charId}/homebrew/${r.id}`)}
-                />
-              </Reveal.Item>
-            ))}
+            {active.map((r) => {
+              const hasManualTrigger = (r.dsl.triggers ?? []).some(
+                (tr) => tr.event === 'manual_trigger',
+              )
+              const showManual = r.enabled && hasManualTrigger
+              return (
+                <Reveal.Item key={r.id}>
+                  <RuleCard
+                    rule={r}
+                    onToggle={(enabled) => toggleMut.mutate({ ruleId: r.id, enabled })}
+                    onClick={() => navigate(`/char/${charId}/homebrew/${r.id}`)}
+                    onManualTrigger={
+                      showManual ? () => manualTriggerMut.mutate(r.id) : undefined
+                    }
+                    onDelete={() => setConfirmDeleteId(r.id)}
+                    isFiring={
+                      manualTriggerMut.isPending && manualTriggerMut.variables === r.id
+                    }
+                    isDeleting={deleteMut.isPending && deleteMut.variables === r.id}
+                    manualTriggerLabel={t('homebrew.manual_trigger')}
+                    deleteLabel={t('common.delete')}
+                  />
+                </Reveal.Item>
+              )
+            })}
           </Reveal.Stagger>
         )}
       </m.section>
@@ -261,6 +380,10 @@ export default function Homebrew() {
                   dimmed
                   onToggle={(enabled) => toggleMut.mutate({ ruleId: r.id, enabled })}
                   onClick={() => navigate(`/char/${charId}/homebrew/${r.id}`)}
+                  onDelete={() => setConfirmDeleteId(r.id)}
+                  isDeleting={deleteMut.isPending && deleteMut.variables === r.id}
+                  manualTriggerLabel={t('homebrew.manual_trigger')}
+                  deleteLabel={t('common.delete')}
                 />
               </Reveal.Item>
             ))}
@@ -291,6 +414,20 @@ export default function Homebrew() {
           ))}
         </Reveal.Stagger>
       </m.section>
+
+      <ConfirmSheet
+        open={confirmDeleteId !== null}
+        onClose={() => setConfirmDeleteId(null)}
+        title={t('homebrew.delete_title')}
+        body={t('homebrew.delete_confirm', {
+          name: rules.find((r) => r.id === confirmDeleteId)?.name ?? '',
+        })}
+        confirmLabel={t('common.delete')}
+        cancelLabel={t('common.cancel')}
+        confirmVariant="danger"
+        loading={deleteMut.isPending}
+        onConfirm={() => confirmDeleteId !== null && deleteMut.mutate(confirmDeleteId)}
+      />
     </Layout>
   )
 }
