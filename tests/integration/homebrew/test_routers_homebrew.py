@@ -48,3 +48,30 @@ async def test_list_rules_unknown_char_returns_404(client):
 async def test_get_rule_unknown_returns_404(client, char_id):
     r = await client.get(f"/characters/{char_id}/homebrew/rules/99999")
     assert r.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_list_rules_other_user_char_returns_403(client, test_session_factory):
+    """A character owned by a DIFFERENT user must return 403, not leak its data."""
+    from core.db.models import Character
+    async with test_session_factory() as s:
+        other = Character(user_id=9999, name="Someone Else")
+        s.add(other)
+        await s.commit()
+        await s.refresh(other)
+        other_id = other.id
+    r = await client.get(f"/characters/{other_id}/homebrew/rules")
+    assert r.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_get_rule_other_user_char_returns_403(client, test_session_factory):
+    from core.db.models import Character
+    async with test_session_factory() as s:
+        other = Character(user_id=9999, name="Someone Else")
+        s.add(other)
+        await s.commit()
+        await s.refresh(other)
+        other_id = other.id
+    r = await client.get(f"/characters/{other_id}/homebrew/rules/1")
+    assert r.status_code == 403

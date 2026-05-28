@@ -56,6 +56,7 @@ async def _get_owned_rule(
 # ─── Templates ──────────────────────────────────────────────────────────────
 
 
+# Templates are a public read-only catalogue — no auth required.
 @router.get("/homebrew/templates", response_model=list[TemplateRead])
 async def list_templates() -> list[dict]:
     return [
