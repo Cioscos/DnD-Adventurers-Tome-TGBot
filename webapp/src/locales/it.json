@@ -1057,6 +1057,22 @@
         "values_empty": "Aggiungi almeno un valore",
         "label_required": "Compila entrambe le etichette"
       }
+    },
+    "tables": {
+      "empty": "Nessuna tabella ancora. Le tabelle ti permettono di mappare un risultato di un tiro (es. 1-5, 6-10, 11-20) a uno degli stati di una caratteristica (es. 'scarsa', 'normale', 'eccellente').",
+      "need_enum": "Aggiungi prima una caratteristica di tipo 'elenco' per creare tabelle.",
+      "add_button": "Aggiungi tabella",
+      "id_label": "Identificatore tabella",
+      "id_placeholder": "es. attack_to_quality_delta",
+      "row_axis_label": "Riga (collegata a)",
+      "row_axis_placeholder": "Scegli una caratteristica",
+      "col_axis_label": "Colonna (variabile)",
+      "col_axis_placeholder": "es. damage_total, attack_roll",
+      "col_bin_lo": "Da",
+      "col_bin_hi": "A",
+      "add_column": "+ colonna",
+      "cell_placeholder": "azioni separate da virgola",
+      "delete_confirm": "Eliminare la tabella '{{name}}'?"
     }
   }
 }

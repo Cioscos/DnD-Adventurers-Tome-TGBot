@@ -1057,6 +1057,22 @@
         "values_empty": "Add at least one value",
         "label_required": "Fill in both labels"
       }
+    },
+    "tables": {
+      "empty": "No tables yet. Tables let you map a roll result (e.g. 1-5, 6-10, 11-20) onto one of the states of a property (e.g. 'poor', 'normal', 'excellent').",
+      "need_enum": "Add an 'enum' property first to create tables.",
+      "add_button": "Add table",
+      "id_label": "Table identifier",
+      "id_placeholder": "e.g. attack_to_quality_delta",
+      "row_axis_label": "Row (bound to)",
+      "row_axis_placeholder": "Pick a property",
+      "col_axis_label": "Column (variable)",
+      "col_axis_placeholder": "e.g. damage_total, attack_roll",
+      "col_bin_lo": "From",
+      "col_bin_hi": "To",
+      "add_column": "+ column",
+      "cell_placeholder": "comma-separated actions",
+      "delete_confirm": "Delete table '{{name}}'?"
     }
   }
 }

@@ -155,6 +155,7 @@ export default function RuleEditor() {
         <CollapsiblePanel title={t('homebrew.editor.sections.tables')} defaultOpen={false}>
           <TablesSection
             tables={dsl.tables ?? []}
+            properties={dsl.properties ?? []}
             onChange={(tables) => setDsl((prev) => ({ ...prev, tables }))}
           />
         </CollapsiblePanel>
