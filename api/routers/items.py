@@ -324,7 +324,7 @@ async def attack_with_weapon(
     _add_history(session, char.id, "attack_roll", result_str)
 
     # Emit homebrew event so installed rules (e.g. Qualità & Usura) can react.
-    await dispatch(
+    firing_results = await dispatch(
         session, char, "attack_rolled",
         {
             "item_id": item.id,
@@ -335,6 +335,13 @@ async def attack_with_weapon(
             "damage_total": damage_total,
         },
     )
+    notifications = [
+        {
+            "severity": n.severity, "message": n.message,
+            "rule_id": n.rule_id, "rule_name": n.rule_name,
+        }
+        for rfr in firing_results for n in rfr.notifications
+    ]
 
     return WeaponAttackResult(
         weapon_name=item.name,
@@ -347,4 +354,5 @@ async def attack_with_weapon(
         damage_rolls=damage_rolls,
         damage_bonus=damage_bonus if not is_fumble else 0,
         damage_total=damage_total,
+        homebrew_notifications=notifications,
     )

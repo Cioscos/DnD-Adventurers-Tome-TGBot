@@ -190,3 +190,65 @@ async def test_hp_endpoint_backwards_compatible_without_was_critical_hit_field(
         json={"op": "damage", "value": 3},
     )
     assert r.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_critical_hit_returns_homebrew_notifications(
+    client, char_id, test_session_factory, monkeypatch,
+):
+    """Critical hit on Q&U armor → HP response includes homebrew_notifications."""
+    from core.db.models import Item, Character
+
+    async with test_session_factory() as s:
+        char = (await s.execute(select(Character).where(Character.id == char_id))).scalar_one()
+        char.hit_points = 20
+        char.current_hit_points = 20
+        await s.commit()
+
+    async with test_session_factory() as s:
+        armor = Item(
+            character_id=char_id, name="Cotta", item_type="armor",
+            item_metadata=json.dumps({"hb_quality": "ordinaria", "hb_damage_state": "integra"}),
+            is_equipped=True,
+        )
+        s.add(armor)
+        await s.commit()
+        await s.refresh(armor)
+        armor_id = armor.id
+
+    await client.post(f"/characters/{char_id}/homebrew/templates/quality_wear/install")
+
+    _patch_random(monkeypatch, 2)
+
+    r = await client.patch(
+        f"/characters/{char_id}/hp",
+        json={"op": "damage", "value": 5, "was_critical_hit": True},
+    )
+    assert r.status_code == 200
+    body = r.json()
+    notifs = body.get("homebrew_notifications")
+    assert notifs is not None
+    assert len(notifs) >= 1
+    assert any("danneggiata" in n["message"].lower() for n in notifs)
+
+
+@pytest.mark.asyncio
+async def test_hp_no_rule_returns_no_notifications_field(
+    client, char_id, test_session_factory,
+):
+    """Endpoint should NOT set homebrew_notifications when no rule fires."""
+    from core.db.models import Character
+    async with test_session_factory() as s:
+        char = (await s.execute(select(Character).where(Character.id == char_id))).scalar_one()
+        char.hit_points = 20
+        char.current_hit_points = 20
+        await s.commit()
+
+    r = await client.patch(
+        f"/characters/{char_id}/hp",
+        json={"op": "damage", "value": 3},
+    )
+    assert r.status_code == 200
+    body = r.json()
+    # The field is Optional[list]; either omitted or null.
+    assert body.get("homebrew_notifications") is None

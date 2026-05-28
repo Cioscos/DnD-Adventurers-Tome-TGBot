@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from typing import Any, Optional
 
-from pydantic import BaseModel, ValidationInfo, field_validator
+from pydantic import BaseModel, Field, ValidationInfo, field_validator
 
 from core.db.models import EquipmentSlot
 from api.services.equipment import slot_allowed_for_type
@@ -136,3 +136,4 @@ class WeaponAttackResult(BaseModel):
     damage_rolls: list[int]
     damage_bonus: int
     damage_total: int
+    homebrew_notifications: list[dict] = Field(default_factory=list)

@@ -31,6 +31,14 @@ from api.routers._helpers import effective_con_mod, roll_concentration_save
 from api.schemas.common import ConcentrationSaveResult
 
 
+def _collect_notifications(firing_results) -> list[dict]:
+    return [
+        {"severity": n.severity, "message": n.message,
+         "rule_id": n.rule_id, "rule_name": n.rule_name}
+        for rfr in firing_results for n in rfr.notifications
+    ]
+
+
 class HitDiceSpendRequest(BaseModel):
     class_id: int
     count: int
@@ -104,6 +112,7 @@ async def update_hp(
 ) -> CharacterFull:
     char = await _get_owned_full(char_id, user_id, session)
     conc_result: ConcentrationSaveResult | None = None
+    notifications: list[dict] = []
 
     was_at_zero = char.current_hit_points == 0
 
@@ -128,7 +137,7 @@ async def update_hp(
             conc_result = roll_concentration_save(char, body.value, session)
 
         # Emit homebrew events: damage_taken (always) + dropped_to_zero (when HP crossed 0)
-        await dispatch(
+        firing = await dispatch(
             session, char, "damage_taken",
             {
                 "amount": body.value,
@@ -137,14 +146,16 @@ async def update_hp(
                 "current_hp_after": char.current_hit_points,
             },
         )
+        notifications.extend(_collect_notifications(firing))
         if old > 0 and char.current_hit_points == 0:
-            await dispatch(
+            firing = await dispatch(
                 session, char, "dropped_to_zero",
                 {
                     "damage_amount": body.value,
                     "from_critical": body.was_critical_hit,
                 },
             )
+            notifications.extend(_collect_notifications(firing))
 
     elif body.op == HPOp.HEAL:
         old = char.current_hit_points
@@ -152,7 +163,7 @@ async def update_hp(
         _add_history(session, char.id, "hp_change",
                      f"Cura: +{body.value} HP ({old} → {char.current_hit_points})",
                      meta={"op": "HEAL"})
-        await dispatch(
+        firing = await dispatch(
             session, char, "hp_healed",
             {
                 "amount": body.value,
@@ -160,6 +171,7 @@ async def update_hp(
                 "current_hp_after": char.current_hit_points,
             },
         )
+        notifications.extend(_collect_notifications(firing))
 
     elif body.op == HPOp.SET_MAX:
         old = char.hit_points
@@ -191,6 +203,8 @@ async def update_hp(
     result = CharacterFull.model_validate(char)
     if conc_result is not None:
         result.concentration_save = conc_result
+    if notifications:
+        result.homebrew_notifications = notifications
     return result
 
 

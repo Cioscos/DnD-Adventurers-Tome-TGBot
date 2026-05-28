@@ -83,6 +83,9 @@ class CharacterFull(BaseModel):
     # Populated only by POST /hp when op=DAMAGE on a concentrating character
     concentration_save: Optional[ConcentrationSaveResult] = None
 
+    # Populated only by endpoints that fire homebrew rules (POST /hp, POST /attack, etc.).
+    homebrew_notifications: Optional[list[dict]] = None
+
     # JSON fields
     rolls_history: Optional[list] = None
     notes: Optional[dict[str, Any]] = None

@@ -129,3 +129,66 @@ async def test_attack_with_no_rule_installed_still_works(
         weapon = (await s.execute(select(Item).where(Item.id == weapon_id))).scalar_one()
         md = json.loads(weapon.item_metadata)
     assert "hb_damage_state" not in md
+
+
+@pytest.mark.asyncio
+async def test_attack_fumble_returns_homebrew_notifications(
+    client, char_id, test_session_factory, monkeypatch,
+):
+    """Fumble on Q&U-equipped weapon → WeaponAttackResult.homebrew_notifications populated."""
+    from core.db.models import Item
+
+    async with test_session_factory() as s:
+        weapon = Item(
+            character_id=char_id, name="Spada", item_type="weapon", quantity=1,
+            item_metadata=json.dumps({
+                "damage_dice": "1d8", "weapon_type": "melee",
+                "hb_quality": "pessima", "hb_damage_state": "integra",
+            }),
+            is_equipped=True,
+        )
+        s.add(weapon)
+        await s.commit()
+        await s.refresh(weapon)
+        weapon_id = weapon.id
+
+    await client.post(f"/characters/{char_id}/homebrew/templates/quality_wear/install")
+
+    import random as _random
+    rolls = iter([1, 7])
+    monkeypatch.setattr(_random, "randint", lambda lo, hi: next(rolls, 10))
+
+    r = await client.post(f"/characters/{char_id}/items/{weapon_id}/attack")
+    assert r.status_code == 200
+    body = r.json()
+    notifications = body.get("homebrew_notifications", [])
+    assert len(notifications) >= 1
+    assert any("danneggiata" in n["message"].lower() for n in notifications)
+    n = notifications[0]
+    assert n["severity"] in {"info", "warning", "error", "success"}
+    assert n["rule_id"] is not None
+    assert n["rule_name"] == "Qualità & Usura"
+
+
+@pytest.mark.asyncio
+async def test_attack_with_no_rule_returns_empty_notifications(
+    client, char_id, test_session_factory, monkeypatch,
+):
+    from core.db.models import Item
+    async with test_session_factory() as s:
+        weapon = Item(
+            character_id=char_id, name="Spada", item_type="weapon", quantity=1,
+            item_metadata=json.dumps({"damage_dice": "1d8"}),
+            is_equipped=True,
+        )
+        s.add(weapon)
+        await s.commit()
+        await s.refresh(weapon)
+        weapon_id = weapon.id
+
+    import random as _random
+    monkeypatch.setattr(_random, "randint", lambda lo, hi: 15)
+
+    r = await client.post(f"/characters/{char_id}/items/{weapon_id}/attack")
+    assert r.status_code == 200
+    assert r.json()["homebrew_notifications"] == []
