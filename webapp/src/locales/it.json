@@ -1001,6 +1001,12 @@
       },
       "section_tbd": "Sezione in costruzione",
       "save_pending": "Salva"
+    },
+    "identity": {
+      "name_label": "Nome",
+      "name_placeholder": "es. Sanguinamento",
+      "description_label": "Descrizione",
+      "description_placeholder": "Cosa fa questa regola in una frase"
     }
   }
 }

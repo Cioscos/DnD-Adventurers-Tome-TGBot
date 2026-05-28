@@ -1001,6 +1001,12 @@
       },
       "section_tbd": "Section under construction",
       "save_pending": "Save"
+    },
+    "identity": {
+      "name_label": "Name",
+      "name_placeholder": "e.g. Bleeding",
+      "description_label": "Description",
+      "description_placeholder": "What this rule does in a sentence"
     }
   }
 }
