@@ -522,7 +522,7 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(body),
       }),
-    updateRule: (charId: number, ruleId: number, body: Partial<HomebrewRuleUpdate>) =>
+    updateRule: (charId: number, ruleId: number, body: HomebrewRuleUpdate) =>
       request<HomebrewRule>(`/characters/${charId}/homebrew/rules/${ruleId}`, {
         method: 'PATCH',
         body: JSON.stringify(body),
