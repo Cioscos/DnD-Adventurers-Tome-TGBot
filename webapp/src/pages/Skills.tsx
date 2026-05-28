@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, Fragment } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -22,6 +22,7 @@ import { useDiceAnimation } from '@/dice/useDiceAnimation'
 import { useDiceSettings } from '@/store/diceSettings'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { profBonus } from '@/lib/dnd'
+import HomebrewBreakdownRow from '@/components/homebrew/HomebrewBreakdownRow'
 
 const SKILLS: { key: string; ability: string }[] = [
   { key: 'acrobatics',     ability: 'dexterity' },
@@ -313,22 +314,27 @@ export default function Skills() {
 
                     const isRollingThis = rollMutation.isPending && rollMutation.variables === skill.key
                     return (
-                      <SkillRow
-                        key={skill.key}
-                        skillKey={skill.key}
-                        label={t(`character.skills.${skill.key}`)}
-                        level={level}
-                        bonus={bonus}
-                        idx={idx}
-                        rollPending={isRollingThis}
-                        onTap={() => toggle(skill.key)}
-                        onLongPress={() => {
-                          haptic.medium()
-                          setPicker(skill.key)
-                        }}
-                        onRoll={() => rollMutation.mutate(skill.key)}
-                        rollAriaLabel={t('character.skills.roll')}
-                      />
+                      <Fragment key={skill.key}>
+                        <SkillRow
+                          skillKey={skill.key}
+                          label={t(`character.skills.${skill.key}`)}
+                          level={level}
+                          bonus={bonus}
+                          idx={idx}
+                          rollPending={isRollingThis}
+                          onTap={() => toggle(skill.key)}
+                          onLongPress={() => {
+                            haptic.medium()
+                            setPicker(skill.key)
+                          }}
+                          onRoll={() => rollMutation.mutate(skill.key)}
+                          rollAriaLabel={t('character.skills.roll')}
+                        />
+                        <HomebrewBreakdownRow
+                          value={char.skills_homebrew_modifiers?.[skill.key] ?? 0}
+                          label={t('character.skills.homebrew_label')}
+                        />
+                      </Fragment>
                     )
                   })}
                 </div>

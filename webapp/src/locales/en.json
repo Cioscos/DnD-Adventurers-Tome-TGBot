@@ -183,7 +183,8 @@
       "stealth": "Stealth",
       "survival": "Survival",
       "passive_perception_formula": "10 + Perception bonus + passive modifiers",
-      "empty_hint": "Tap a skill to toggle its proficiency."
+      "empty_hint": "Tap a skill to toggle its proficiency.",
+      "homebrew_label": "Homebrew Bonus"
     },
     "saves": {
       "title": "Saving Throws",

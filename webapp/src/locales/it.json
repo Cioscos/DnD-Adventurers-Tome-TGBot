@@ -183,7 +183,8 @@
       "stealth": "Furtività",
       "survival": "Sopravvivenza",
       "passive_perception_formula": "10 + bonus Percezione + modificatori passivi",
-      "empty_hint": "Tocca un'abilità per attivarne la competenza."
+      "empty_hint": "Tocca un'abilità per attivarne la competenza.",
+      "homebrew_label": "Bonus Homebrew"
     },
     "saves": {
       "title": "Tiri Salvezza",
