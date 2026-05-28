@@ -1,5 +1,4 @@
 """Templates are hardcoded immutable DSL documents."""
-import pytest
 from api.services.homebrew.dsl import RuleDSL
 from api.services.homebrew.templates import TEMPLATES, get_template
 
@@ -22,3 +21,7 @@ def test_quality_wear_has_three_triggers():
 def test_list_templates_returns_at_least_one():
     assert len(TEMPLATES) >= 1
     assert any(t["id"] == "quality_wear" for t in TEMPLATES)
+
+
+def test_get_template_unknown_returns_none():
+    assert get_template("does_not_exist") is None
