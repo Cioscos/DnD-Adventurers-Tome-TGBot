@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, Field, model_validator
 
 from api.schemas.common import (
     AbilityRead,
@@ -17,6 +17,15 @@ from api.schemas.common import (
 )
 from api.schemas.item import ItemRead
 from api.schemas.spell import SpellRead, SpellSlotRead
+
+
+class AcBreakdown(BaseModel):
+    """AC component breakdown: base, shield, magic, and homebrew modifiers."""
+
+    base: int
+    shield: int
+    magic: int
+    homebrew: int
 
 
 class CharacterSummary(BaseModel):
@@ -61,6 +70,13 @@ class CharacterFull(BaseModel):
     base_armor_class_override: bool = False
     shield_armor_class_override: bool = False
     ac: int
+
+    # Homebrew passive-modifier breakdown (populated by router after model_validate)
+    ac_breakdown: Optional[AcBreakdown] = None
+    hp_max_homebrew_modifier: int = 0
+    speed_homebrew_modifier: int = 0
+    skills_homebrew_modifiers: dict[str, int] = Field(default_factory=dict)
+    saves_homebrew_modifiers: dict[str, int] = Field(default_factory=dict)
 
     # Carry
     carry_capacity: int
