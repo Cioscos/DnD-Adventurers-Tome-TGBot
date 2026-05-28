@@ -203,13 +203,96 @@ b2adf67 feat(homebrew): add Qualità & Usura template (3 triggers, full wear tab
 - `datetime.utcnow()` deprecato in Py 3.12+ — 55 warnings in test output, pattern pervasivo nel codebase (`api/routers/*.py`). Cleanup repo-wide differito.
 - `HomebrewResourceRead/Update` schemas esistono ma nessun endpoint `/resources` wired — forward-declared per Phase 3 (Task 3.6 — Resource management endpoints).
 
+### Phase 3 — completata 2026-05-28
+
+13 commit sul branch (1 cleanup + 11 task + 1 fix dopo code review). **246/246 test verdi** (`pytest tests/services/homebrew/ tests/integration/homebrew/ tests/e2e/homebrew/`). Baseline: 178 (fine Phase 2) → 246 (+68 test).
+
+```
+56a1882 test(homebrew): e2e tests for Bleeding, Enchanted Weapon, Luck Points templates
+a3ccc2b feat(homebrew): add Luck Points template (custom resource + restore on long rest)
+3f068aa feat(homebrew): add Enchanted Weapon +1d6 template
+da7230d feat(homebrew): add Bleeding template + verify/extend runtime $var support
+73f183d feat(homebrew): turn_started + manual_trigger endpoints
+54e2e72 feat(homebrew): resource endpoints + resource_changed/depleted events + DSL ResourceDef
+9e2cd88 feat(homebrew): emit level_up event from classes router
+70abe6d feat(homebrew): emit item_equipped / item_unequipped events
+90585b7 feat(homebrew): emit ability_used event
+ad4e51d fix(homebrew): align spell_cast notifications field with CharacterFull contract
+7136e91 feat(homebrew): emit spell_cast event from spell_slots.update_spell_slot
+bd3b641 feat(homebrew): emit long_rest_taken / short_rest_taken events
+cd2adfc refactor(homebrew): hoist random-roll patch helper to integration conftest
+```
+
+#### Moduli prodotti / modificati
+
+| File | Stato | Responsabilità |
+|------|-------|----------------|
+| `api/services/homebrew/dsl.py` | modificato | Aggiunto `ResourceDef` model + `RuleDSL.resources` list. `ActionIncProperty.delta` ora accetta `$var` pass-through (allinea agli altri 4 handler) |
+| `api/services/homebrew/actions.py` | modificato | Nuovo helper `_resolve_amount(value, ctx, *, field)` — risolve int / dice notation / `$var`. Applicato a 5 handler: damage_character / heal_character / change_resource / inc_property / restore_resource. `restore_resource` continua a short-circuitare il literal `"max"` |
+| `api/services/homebrew/dispatcher.py` | modificato | `_char_to_ctx_dict` ora include `"conditions": dict(char.conditions or {})` — necessario per il filter `$character.conditions has_property custom:bleeding` di Bleeding |
+| `api/services/homebrew/templates.py` | esteso | +3 template: `bleeding` (Sanguinamento), `enchanted_weapon` (Arma incantata +1d6), `luck_points` (Punti Fortuna) |
+| `api/routers/homebrew.py` | esteso | Nuovo helper `_materialize_resources` chiamato da `install_template` + `create_rule`. 4 nuovi endpoint: `GET/PATCH /resources`, `POST /turn-start`, `POST /manual-trigger/{rule_id}`. 409 pre-check su `UNIQUE(character_id, key)` |
+| `api/routers/hp.py` | modificato | `rest` emette `long_rest_taken` / `short_rest_taken` + popola `homebrew_notifications` su `CharacterFull` |
+| `api/routers/spell_slots.py` | modificato | `update_spell_slot` emette `spell_cast` solo quando `used` aumenta + popola notifications |
+| `api/routers/abilities.py` | modificato | `update_ability` emette `ability_used` solo quando `uses` decresce (None-guarded per passive abilities con `uses=None`) |
+| `api/routers/items.py` | modificato | `update_item` cattura `was_equipped`, emette `item_equipped`/`item_unequipped` solo su transizione `body.is_equipped != was_equipped`. Item displaced da slot-swap NON dispatch (scope esplicito) |
+| `api/routers/classes.py` | modificato | `update_class` emette `level_up` solo su `body.level > old_level` (deviazione semantica dal plan literal — vedi sotto). Refresh `classes` prima di leggere `char.total_level` |
+| `api/schemas/homebrew.py` | esteso | `HomebrewResourceRead.homebrew_notifications: Optional[list[dict]] = None`. `HomebrewResourceUpdate.current: int` senza `ge=0` (clamping server-side) |
+| `api/schemas/spell.py` | modificato | `SpellSlotRead.homebrew_notifications: Optional[list[dict]] = None` (allinea contratto Phase 2) |
+| `api/schemas/common.py` | modificato | `AbilityRead.homebrew_notifications: Optional[list[dict]] = None` |
+
+#### Test prodotti
+
+| Dir/file | Test (delta) | Note |
+|----------|--------------|------|
+| `tests/services/homebrew/test_dsl.py` | +7 | `ResourceDef` validation (positive/negative max/restoration_type) + `ActionIncProperty.delta` con `$var` |
+| `tests/services/homebrew/test_actions.py` | +10 | Happy + missing-var path per ciascuno dei 5 handler `_resolve_amount` |
+| `tests/services/homebrew/test_filters.py` | +2 | `HAS_PROPERTY` su `$character.conditions` dict |
+| `tests/services/homebrew/test_path_resolver.py` | +1 | `$character.conditions` risolve al dict |
+| `tests/services/homebrew/test_templates.py` | +4 | DSL validation per Bleeding + Enchanted + Luck Points + check `get_template()` returns dict |
+| `tests/integration/homebrew/conftest.py` | helper | Nuova fixture `patch_random_roll(value\|sequence, fallback=10)` + helper `notify_rule` hoistato (4° call site) |
+| `tests/integration/homebrew/test_integration_lifecycle.py` | rinominato (era `test_integration_rest.py`) + 8 test | long_rest / short_rest / spell_cast / ability_used / item_equipped/unequipped — positive + negative |
+| `tests/integration/homebrew/test_integration_levelup.py` | +4 | level_up positive + apply_modifier_once HP +2 + unchanged + decrease (regression lock sulla scelta semantica) |
+| `tests/integration/homebrew/test_routers_homebrew.py` | +23 | Resources (list/patch/clamp/404/403/409) + turn-start + manual-trigger (404/403/409) |
+| `tests/e2e/homebrew/test_template_bleeding.py` | +2 | Lifecycle: install → set condition → turn-start → HP drop. Negative: no condition → no damage |
+| `tests/e2e/homebrew/test_template_enchanted_weapon.py` | +2 | Lifecycle: install + weapon enchanted → attack → fire notification. Negative: not enchanted → no fire |
+| `tests/e2e/homebrew/test_template_luck_points.py` | +1 | Full lifecycle: install → resource current=3 → manual-trigger → 2 → long rest → 3 |
+
+#### Deviazioni dal piano originale
+
+**Task 3.5 — `level_up` ristretto a `new_level > old_level`.** Il plan literal dispatcha `level_up` su qualsiasi cambio di livello (anche decremento). Cambio semantico per evitare che effetti come `apply_modifier_once character.hit_points_max +2 "Robusto"` si applichino su un level-down (granterebbe HP per un decremento, non ha senso). Documentato inline in `classes.py` + regression test `test_level_decrease_does_not_fire_level_up`. Un futuro evento `level_down` può essere aggiunto simmetricamente se serve.
+
+**Task 3.10 — filter `manual_trigger` del Luck Points omesso (MVP).** Il plan literal aveva `filters: [{"path": "$event.rule_id", "op": "eq", "value": "$character.id"}]` con commento `# placeholder` (confronto rule_id vs character_id, semanticamente sbagliato). Soluzione MVP: omettere il filter. Conseguenza: se l'utente installa due regole con trigger `manual_trigger`, entrambe sparano su un singolo POST /manual-trigger/{rule_id}. Trade-off accettabile per MVP (tipicamente solo Luck Points usa `manual_trigger`). Fix principled deferito: risolvere `$event.rule_id` a literal al momento dell'install, o aggiungere un filtro implicito nel dispatcher.
+
+**Task 3.8 — Audit ha trovato bug reali, non solo conferme.** Il log di Phase 0 "deviazioni" affermava che i validator accettano `$var` pass-through e "l'engine risolve a runtime". Verifica: i validator OK, ma i runtime handler chiamavano `_roll(amount)` direttamente sulla stringa `$var`, raisando `Invalid dice notation`. Fix: helper centralizzato `_resolve_amount` applicato a 5 handler. Inoltre `_char_to_ctx_dict` NON includeva `conditions` — fix simile. Audit 3 (filter `has_property` su dict character.conditions) era invece già OK.
+
+**Task 3.6 — `update_rule` NON materializza/de-materializza resources.** PATCH di una regola che aggiunge/rimuove `resources` nel DSL non tocca le `HomebrewResource` esistenti. Scope MVP — l'utente deve disinstallare/reinstallare per ottenere risorse aggiornate. Documentato nel commit message.
+
+**Task 3.2 — fix di follow-up `ad4e51d`.** Prima implementazione usava `SpellSlotRead.homebrew_notifications: list[dict] = Field(default_factory=list)` (sempre presente, anche vuoto). Code review ha segnalato divergenza dal contratto Phase 2 (`CharacterFull` usa `Optional[list[dict]] = None`). Allineato. Stesso pattern poi applicato a `AbilityRead` (Task 3.3) e `HomebrewResourceRead` (Task 3.6).
+
+**Task 3.4 — refresh-before-validate pattern**. `swap_slot_occupant` triggera autoflush durante `CharacterFull.model_validate(char)` perché `_resolve_abilities` itera `dir(data)` con `getattr` exception-swallowing → colonne expired vengono silentemente droppate. Fix: `await session.flush(); await session.refresh(char, attribute_names=["items"])` prima del `model_validate`. Pattern replicato su `classes.py` (Task 3.5). Mantenuto unconditional per parity, anche se aggiunge un DB roundtrip su PATCH no-op.
+
+**Prelim task — random-roll helper hoistato.** Carry-over da Phase 2 (residual issue). `patch_random_roll(value | sequence, fallback=10)` in `tests/integration/homebrew/conftest.py`, ri-esportato dal conftest e2e. Patcha `random.randint` sul module object condiviso da `api/routers/items.py` e `api/services/homebrew/actions.py` — un singolo monkeypatch copre entrambi i caller.
+
+#### Issues residui (non bloccanti, da affrontare in Phase 4+)
+
+- **`PATCH /conditions` ha un bug `_resolve_abilities`**: il `model_validator(mode="before")` itera `dir(data)` e fa `getattr` con exception swallow, droppando colonne non-loaded dal dict serializzato. Risposta torna 422 "Field required" su `id, name, shield_armor_class, magic_armor` quando il char fixture non ha quei campi caricati. L'e2e Bleeding bypassa scrivendo `char.conditions` direttamente via test session. **Phase 4+ ticket**: fixare l'endpoint con `refresh(char, attribute_names=["..."])` prima del model_validate, o sostituire `_resolve_abilities` con una soluzione più robusta (es: relationship esplicita preloaded).
+- **`WeaponAttackResult.homebrew_notifications` resta `list[dict] = Field(default_factory=list)`**: ultimo schema con il vecchio contratto Phase 2. Code-reviewer di Phase 3 ha suggerito allineamento a `Optional[list[dict]] = None` come piccolo follow-up "before users land on production". Banale (one-liner schema + adattare 1-2 test asserzioni). Phase 4+ ticket.
+- **`manual_trigger` fires ALL enabled rules con quel trigger**: scope-by-rule_id da implementare via DSL filter resolution at install time o filtro implicito dispatcher. Documentato in commit `a3ccc2b` (Luck Points) + spec del manual-trigger endpoint.
+- **`_resolve_amount` accetta valori risolti non scalari** (list/dict da `$var`) → `int(...)` raisa TypeError catturato → `ActionExecutionError`. Funziona, ma defensive isinstance upfront sarebbe più pulito.
+- **`apply_modifier_once` usa `_eval_delta` separato** (supporta `"N*level"` ma NON `$var`). Asimmetria intenzionale; documentare se mai un template futuro vorrà `$var` in un modifier permanente.
+- **Unconditional `flush + refresh` in classes.py / items.py update**: 1 DB roundtrip extra per ogni PATCH anche quando nessun evento dispatcha. Perf overhead minimo su SQLite; sconsigliato ottimizzare prematuramente.
+- **`SET_CURRENT` HP op continua a NON emettere `hp_healed`** (carry-over Phase 2). Gap intenzionale (set_current è admin override, non heal vero). Da rivedere se un futuro trigger reagisce a `hp_healed`.
+- **`datetime.utcnow()` deprecation** continua: 80+ warnings nel test output. Repo-wide cleanup deferito.
+- **`HomebrewResource` race su 409 pre-check**: sotto load concorrente la finestra SELECT-then-INSERT può produrre IntegrityError invece di 409 pulito. Accettabile su SQLite single-writer; warrant savepoint retry su Postgres.
+
 #### Stato esecuzione
 
-Phase 0 ✅ · Phase 1 ✅ · Phase 2 ✅ · Phase 3-7 pending.
+Phase 0 ✅ · Phase 1 ✅ · Phase 2 ✅ · Phase 3 ✅ · Phase 4-7 pending.
 
-**Milestone Phase 2 raggiunta**: Qualità & Usura funziona end-to-end via HTTP. Test `test_quality_wear_complete_lifecycle` verifica installazione template + nat-1 → danneggiata → secondo nat-1 → distrutta + unequipped, tutto via `httpx.AsyncClient`.
+**Milestone Phase 3 raggiunta**: tutti i 13 eventi auto-fired + 2 eventi manual sono wired in 5 router. 4 template installabili end-to-end via HTTP. Tutte le 4 lifecycle e2e (Quality & Wear, Bleeding, Enchanted Weapon, Luck Points) verde.
 
-**Pronto per Phase 3**: dispatcher wired in items+hp routers. Eventi mancanti da wirare: `long_rest_taken`/`short_rest_taken` (hp.py:rest), `spell_cast` (spell_slots.py), `ability_used` (abilities.py), `item_equipped`/`item_unequipped` (items.py PATCH), `level_up` (classes.py), `resource_changed`/`resource_depleted` (Task 3.6 — nuovo router), `turn_started`/`manual_trigger` (Task 3.7 — manual endpoints). Plus 3 template hardcoded: Sanguinamento, Arma incantata, Punti Fortuna.
+**Pronto per Phase 4**: backend completo dal punto di vista del MVP. Manca solo il frontend (editor regole, libreria template, display integrato in Inventory/Conditions/Abilities/HP/AC/Skills/Saves). Phase 4 introdurrà `webapp/src/api/client.ts` helpers + nuove pagine `/char/:id/homebrew` + i18n keys. La Phase 4 deve consumare i contratti Phase 2/3 — controllare la coerenza `homebrew_notifications: Optional[list[dict]]` su tutti gli endpoint (e fixare `WeaponAttackResult` come prima azione di Phase 4 se non altrimenti).
 
 ---
 
