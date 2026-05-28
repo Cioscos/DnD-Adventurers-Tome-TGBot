@@ -1000,7 +1000,14 @@
         "triggers": "Trigger ed effetti"
       },
       "section_tbd": "Sezione in costruzione",
-      "save_pending": "Salva"
+      "save_pending": "Salva",
+      "save_success": "Regola salvata",
+      "save_error_title": "Errore di salvataggio",
+      "save_error_generic": "Si è verificato un errore. Riprova.",
+      "validation": {
+        "name_required": "Inserisci un nome per la regola",
+        "no_behavior": "La regola deve avere almeno un trigger o un modificatore passivo"
+      }
     },
     "identity": {
       "name_label": "Nome",

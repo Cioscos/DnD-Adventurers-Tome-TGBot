@@ -1000,7 +1000,14 @@
         "triggers": "Triggers and effects"
       },
       "section_tbd": "Section under construction",
-      "save_pending": "Save"
+      "save_pending": "Save",
+      "save_success": "Rule saved",
+      "save_error_title": "Save error",
+      "save_error_generic": "Something went wrong. Please retry.",
+      "validation": {
+        "name_required": "Please enter a name for the rule",
+        "no_behavior": "The rule must declare at least one trigger or passive modifier"
+      }
     },
     "identity": {
       "name_label": "Name",

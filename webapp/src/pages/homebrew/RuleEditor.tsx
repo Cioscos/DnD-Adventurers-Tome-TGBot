@@ -1,19 +1,41 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { useParams } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useNavigate, useParams } from 'react-router-dom'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { ChevronDown } from 'lucide-react'
-import { api } from '@/api/client'
+import { api, ApiError } from '@/api/client'
 import Layout from '@/components/Layout'
 import Button from '@/components/ui/Button'
 import Skeleton from '@/components/Skeleton'
-import type { RuleDSL } from '@/lib/homebrew/types'
+import { useToast } from '@/hooks/useToast'
+import type { HomebrewRule, RuleDSL } from '@/lib/homebrew/types'
 import IdentitySection from './sections/IdentitySection'
 import SubjectSection from './sections/SubjectSection'
 import PropertiesSection from './sections/PropertiesSection'
 import TablesSection from './sections/TablesSection'
 import PassiveModifiersSection from './sections/PassiveModifiersSection'
 import TriggersSection from './sections/TriggersSection'
+
+// -----------------------------------------------------------------------------
+// Pydantic 422 detail can be a plain string ("Rule must declare at least one
+// trigger or passive_modifier") or a list of `{ loc, msg, type }` items from
+// the framework's RequestValidationError. Format both pragmatically.
+// -----------------------------------------------------------------------------
+function formatPydanticError(detail: unknown): string | null {
+  if (typeof detail === 'string') return detail
+  if (Array.isArray(detail) && detail.length > 0) {
+    return detail
+      .map((d: unknown) => {
+        const item = d as { loc?: unknown[]; msg?: string }
+        const loc = Array.isArray(item.loc) ? item.loc.slice(1).join('.') : ''
+        const msg = item.msg ?? ''
+        return loc ? `${loc}: ${msg}` : msg
+      })
+      .filter(Boolean)
+      .join('; ')
+  }
+  return null
+}
 
 // -----------------------------------------------------------------------------
 // Empty DSL skeleton — declared at module scope so it isn't re-created on every
@@ -77,6 +99,9 @@ export default function RuleEditor() {
   const charId = Number(id)
   const isNew = !ruleId || ruleId === 'new'
   const { t } = useTranslation()
+  const navigate = useNavigate()
+  const toast = useToast()
+  const queryClient = useQueryClient()
 
   const { data: rule, isLoading } = useQuery({
     queryKey: ['homebrew-rule', charId, ruleId],
@@ -105,10 +130,88 @@ export default function RuleEditor() {
     hasHydratedRef.current = false
   }, [ruleId])
 
+  // ---------------------------------------------------------------------------
+  // Mutations — create (POST) or update (PATCH). Both go through the same
+  // success path: invalidate caches, success toast, navigate back to the list.
+  // ---------------------------------------------------------------------------
+  const onMutationSuccess = (_data: HomebrewRule) => {
+    queryClient.invalidateQueries({ queryKey: ['homebrew-rules', charId] })
+    if (!isNew && ruleId) {
+      queryClient.invalidateQueries({ queryKey: ['homebrew-rule', charId, ruleId] })
+    }
+    toast.success(t('homebrew.editor.save_success'))
+    navigate(`/char/${charId}/homebrew`)
+  }
+
+  const onMutationError = (err: unknown) => {
+    if (err instanceof ApiError && err.status === 422) {
+      const formatted = formatPydanticError(err.detail)
+      toast.error(t('homebrew.editor.save_error_title'), {
+        description: formatted ?? t('homebrew.editor.save_error_generic'),
+      })
+      return
+    }
+    const description =
+      err instanceof ApiError && typeof err.detail === 'string' ? err.detail : undefined
+    toast.error(t('homebrew.editor.save_error_title'), {
+      description: description ?? t('homebrew.editor.save_error_generic'),
+    })
+  }
+
+  const createMut = useMutation({
+    mutationFn: () =>
+      api.homebrew.createRule(charId, {
+        name: name.trim(),
+        description: description.trim() || null,
+        dsl,
+        enabled: true,
+      }),
+    onSuccess: onMutationSuccess,
+    onError: onMutationError,
+  })
+
+  const updateMut = useMutation({
+    mutationFn: () =>
+      api.homebrew.updateRule(charId, Number(ruleId), {
+        name: name.trim(),
+        description: description.trim() || null,
+        dsl,
+      }),
+    onSuccess: onMutationSuccess,
+    onError: onMutationError,
+  })
+
+  const isSaving = createMut.isPending || updateMut.isPending
+
+  // Cheap client-side gate — backend's Pydantic is the source of truth for
+  // nested validation (subject, properties, tables, etc.).
+  const validateBeforeSave = (): string | null => {
+    if (!name.trim()) return t('homebrew.editor.validation.name_required')
+    const triggerCount = dsl.triggers?.length ?? 0
+    const modifierCount = dsl.passive_modifiers?.length ?? 0
+    if (triggerCount === 0 && modifierCount === 0) {
+      return t('homebrew.editor.validation.no_behavior')
+    }
+    return null
+  }
+
   const handleSave = () => {
-    // Task 4.12 will wire create/update mutation + validation here.
-    // eslint-disable-next-line no-console
-    console.log('[RuleEditor] save (placeholder)', { isNew, charId, name, description, dsl })
+    if (isSaving) return
+    const validationError = validateBeforeSave()
+    if (validationError) {
+      toast.error(validationError)
+      return
+    }
+    if (isNew) {
+      createMut.mutate()
+    } else {
+      updateMut.mutate()
+    }
+  }
+
+  const handleCancel = () => {
+    if (isSaving) return
+    navigate(-1)
   }
 
   const title = isNew ? t('homebrew.editor.new_title') : (name || t('homebrew.editor.edit_title'))
@@ -175,9 +278,25 @@ export default function RuleEditor() {
           />
         </CollapsiblePanel>
 
-        <Button variant="primary" fullWidth onClick={handleSave} haptic="success">
-          {t('common.save')}
-        </Button>
+        <div className="flex gap-2 pt-2">
+          <Button
+            variant="secondary"
+            fullWidth
+            onClick={handleCancel}
+            disabled={isSaving}
+          >
+            {t('common.cancel')}
+          </Button>
+          <Button
+            variant="primary"
+            fullWidth
+            onClick={handleSave}
+            loading={isSaving}
+            haptic="success"
+          >
+            {t('common.save')}
+          </Button>
+        </div>
       </div>
     </Layout>
   )
