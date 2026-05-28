@@ -68,6 +68,7 @@
       "dice": "Dice",
       "identity": "Identity",
       "settings": "Settings",
+      "homebrew": "Homebrew Rules",
       "sections": {
         "combat": "Combat",
         "magic": "Magic",

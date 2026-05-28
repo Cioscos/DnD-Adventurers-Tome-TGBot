@@ -8,7 +8,7 @@ import {
   GiHeartPlus, GiCheckedShield, GiShieldEchoes, GiSparkles, GiCutDiamond,
   GiArcheryTarget, GiLightningTrio, GiCrossedSwords, GiTwoCoins,
   GiScrollUnfurled, GiPolarStar, GiPerspectiveDiceSixFacesRandom,
-  GiQuillInk, GiTreasureMap, GiOpenBook, GiPotionBall,
+  GiQuillInk, GiTreasureMap, GiOpenBook, GiPotionBall, GiCauldron,
 } from 'react-icons/gi'
 import type { ComponentType, SVGAttributes } from 'react'
 import SectionDivider from '@/components/ui/SectionDivider'
@@ -80,10 +80,11 @@ const MENU_SECTIONS: MenuSection[] = [
     labelKey: 'character.menu.sections.tools',
     icon: GiPotionBall,
     items: [
-      { key: 'dice',    icon: GiPerspectiveDiceSixFacesRandom, path: 'dice',    tone: 'gold' },
-      { key: 'notes',   icon: GiQuillInk,                      path: 'notes',   tone: 'emerald' },
-      { key: 'maps',    icon: GiTreasureMap,                   path: 'maps',    tone: 'cobalt' },
-      { key: 'history', icon: GiOpenBook,                      path: 'history', tone: 'amber' },
+      { key: 'dice',     icon: GiPerspectiveDiceSixFacesRandom, path: 'dice',     tone: 'gold' },
+      { key: 'notes',    icon: GiQuillInk,                      path: 'notes',    tone: 'emerald' },
+      { key: 'maps',     icon: GiTreasureMap,                   path: 'maps',     tone: 'cobalt' },
+      { key: 'history',  icon: GiOpenBook,                      path: 'history',  tone: 'amber' },
+      { key: 'homebrew', icon: GiCauldron,                    path: 'homebrew', tone: 'arcane' },
     ],
   },
 ]
