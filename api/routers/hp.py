@@ -29,6 +29,7 @@ from api.schemas.common import (
 from core.game.stats import total_base_hp
 from api.routers._helpers import collect_homebrew_notifications, effective_con_mod, roll_concentration_save
 from api.schemas.common import ConcentrationSaveResult
+from api.services.character_response import build_character_response
 
 
 class HitDiceSpendRequest(BaseModel):
@@ -192,7 +193,7 @@ async def update_hp(
             _add_history(session, char.id, "death_save",
                          "Tiri salvezza morte azzerati (HP risaliti sopra 0)")
 
-    result = CharacterFull.model_validate(char)
+    result = await build_character_response(session, char)
     if conc_result is not None:
         result.concentration_save = conc_result
     if notifications:
@@ -263,7 +264,7 @@ async def rest(
     else:
         raise HTTPException(status_code=400, detail="rest_type must be 'long' or 'short'")
 
-    result = CharacterFull.model_validate(char)
+    result = await build_character_response(session, char)
     if notifications:
         result.homebrew_notifications = notifications
     return result
@@ -326,7 +327,7 @@ async def update_death_saves(
     body: DeathSaveUpdate,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
-) -> Character:
+) -> CharacterFull:
     char = await _get_owned_full(char_id, user_id, session)
     ds = dict(char.death_saves or {"successes": 0, "failures": 0, "stable": False})
 
@@ -357,7 +358,7 @@ async def update_death_saves(
         pass
 
     char.death_saves = ds
-    return char
+    return await build_character_response(session, char)
 
 
 # ---------------------------------------------------------------------------
@@ -434,7 +435,7 @@ async def recalc_hp(
     char_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
-) -> Character:
+) -> CharacterFull:
     """Recalculate hit_points from D&D 5e fixed formula.
 
     Computes total_base_hp using character's current classes (with first
@@ -461,4 +462,4 @@ async def recalc_hp(
 
     await session.commit()
     await session.refresh(char)
-    return CharacterFull.model_validate(char)
+    return await build_character_response(session, char)

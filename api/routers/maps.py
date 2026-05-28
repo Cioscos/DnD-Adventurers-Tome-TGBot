@@ -19,6 +19,7 @@ from api.auth import DEV_USER_ID, get_current_user, verify_init_data
 from api.database import get_db
 from api.schemas.character import CharacterFull
 from api.schemas.common import MapRead
+from api.services.character_response import build_character_response
 from core.db.models import Character, CharacterClass, Map
 
 router = APIRouter(prefix="/characters", tags=["maps"])
@@ -239,7 +240,7 @@ async def reorder_maps(
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
     payload: Annotated[MapReorderBody, Body(...)],
-) -> Character:
+) -> CharacterFull:
     """Persist a new drag-reorder of maps inside a zone.
 
     `order` must contain every map id belonging to (char_id, zone_name);
@@ -262,7 +263,7 @@ async def reorder_maps(
         by_id[map_id].position = idx
 
     await session.flush()
-    return char
+    return await build_character_response(session, char)
 
 
 @router.delete("/{char_id}/maps/zone/{zone_name}", status_code=204)

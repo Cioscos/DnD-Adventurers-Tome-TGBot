@@ -13,6 +13,7 @@ from api.auth import get_current_user
 from api.database import get_db
 from api.routers._helpers import collect_homebrew_notifications
 from api.services.homebrew.dispatcher import dispatch
+from api.services.character_response import build_character_response
 from core.db.models import Character, CharacterClass, SpellSlot
 from api.schemas.character import CharacterFull
 from api.schemas.spell import SpellSlotCreate, SpellSlotRead, SpellSlotUpdate
@@ -121,8 +122,8 @@ async def reset_spell_slots(
     char_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
-) -> Character:
+) -> CharacterFull:
     char = await _get_owned_full(char_id, user_id, session)
     for slot in char.spell_slots:
         slot.used = 0
-    return char
+    return await build_character_response(session, char)

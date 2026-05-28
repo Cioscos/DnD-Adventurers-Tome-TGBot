@@ -23,6 +23,7 @@ from core.game.stats import effective_ability_score
 from api.routers._helpers import collect_homebrew_notifications, effective_con_mod
 from api.services.equipment import slot_allowed_for_type, swap_slot_occupant
 from api.services.homebrew.dispatcher import dispatch
+from api.services.character_response import build_character_response
 
 router = APIRouter(prefix="/characters", tags=["items"])
 
@@ -102,7 +103,7 @@ async def add_item(
     body: ItemCreate,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
-) -> Character:
+) -> CharacterFull:
     char = await _get_owned_full(char_id, user_id, session)
 
     # Deduplication for generic items: merge quantity if same name exists
@@ -120,7 +121,7 @@ async def add_item(
             await session.flush()
             char.recalculate_encumbrance()
             await session.refresh(char, attribute_names=["items"])
-            return char
+            return await build_character_response(session, char)
 
     metadata_str = json.dumps(body.item_metadata) if body.item_metadata else None
     item = Item(
@@ -138,7 +139,7 @@ async def add_item(
     await session.flush()
     char.recalculate_encumbrance()
     await session.refresh(char, attribute_names=["items"])
-    return char
+    return await build_character_response(session, char)
 
 
 @router.patch("/{char_id}/items/{item_id}", response_model=CharacterFull)
@@ -244,7 +245,7 @@ async def update_item(
         )
         notifications = collect_homebrew_notifications(firing)
 
-    response = CharacterFull.model_validate(char)
+    response = await build_character_response(session, char)
     if notifications:
         response.homebrew_notifications = notifications
     return response
@@ -256,7 +257,7 @@ async def delete_item(
     item_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
-) -> Character:
+) -> CharacterFull:
     char = await _get_owned_full(char_id, user_id, session)
     result = await session.execute(
         select(Item).where(Item.id == item_id, Item.character_id == char_id)
@@ -268,7 +269,7 @@ async def delete_item(
     await session.flush()
     char.recalculate_encumbrance()
     await session.refresh(char, attribute_names=["items"])
-    return char
+    return await build_character_response(session, char)
 
 
 # ---------------------------------------------------------------------------

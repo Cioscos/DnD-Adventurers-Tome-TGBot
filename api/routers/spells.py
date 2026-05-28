@@ -28,6 +28,7 @@ from api.schemas.spell import (
 )
 from api.routers.items import _roll_dice, _DICE_RE
 from api.routers._helpers import roll_concentration_save
+from api.services.character_response import build_character_response
 
 
 class ConcentrationSaveRequest(BaseModel):
@@ -151,7 +152,7 @@ async def use_spell(
     body: SpellUseRequest,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
-) -> Character:
+) -> CharacterFull:
     char = await _get_owned_full(char_id, user_id, session)
 
     # Verify the spell belongs to this character
@@ -176,7 +177,7 @@ async def use_spell(
     if spell.is_concentration:
         char.concentrating_spell_id = spell_id
 
-    return char
+    return await build_character_response(session, char)
 
 
 @router.patch("/{char_id}/concentration", response_model=CharacterFull)
@@ -185,10 +186,10 @@ async def update_concentration(
     body: ConcentrationUpdate,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
-) -> Character:
+) -> CharacterFull:
     char = await _get_owned_full(char_id, user_id, session)
     char.concentrating_spell_id = body.spell_id
-    return char
+    return await build_character_response(session, char)
 
 
 # ---------------------------------------------------------------------------
