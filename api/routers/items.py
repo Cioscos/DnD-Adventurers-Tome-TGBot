@@ -148,7 +148,7 @@ async def update_item(
     body: ItemUpdate,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
-) -> Character:
+) -> CharacterFull:
     char = await _get_owned_full(char_id, user_id, session)
     result = await session.execute(
         select(Item).where(Item.id == item_id, Item.character_id == char_id)
@@ -159,6 +159,10 @@ async def update_item(
 
     # Snapshot CON modifier BEFORE any item changes
     old_con_mod = effective_con_mod(char)
+
+    # Snapshot equipped state for the homebrew event below. Captured BEFORE the
+    # setattr loop so we can detect a True→False / False→True transition.
+    was_equipped = item.is_equipped
 
     data = body.model_dump(exclude_unset=True)
     if "item_metadata" in data:
@@ -211,7 +215,39 @@ async def update_item(
             _apply_hp_delta(char, delta * char.total_level)
 
     char.recalculate_encumbrance()
-    return char
+    # Flush + refresh so the post-update Character (and items) are visible to
+    # both dispatch (which inspects subjects) and the response builder. The
+    # earlier swap_slot_occupant() can autoflush + expire `char` attributes,
+    # which would otherwise break `CharacterFull.model_validate(char)` below.
+    await session.flush()
+    await session.refresh(char, attribute_names=["items"])
+
+    # Emit item_equipped / item_unequipped events for installed homebrew rules.
+    # SCOPE: only the explicitly-patched item — the displaced occupant (from
+    # swap_slot_occupant) is NOT dispatched on, even though its `is_equipped`
+    # was flipped to False as a side-effect. This keeps the event surface
+    # 1-to-1 with the user's PATCH intent; if rules need to react to slot-swap
+    # displacement, that's a separate event for a future iteration.
+    notifications: list[dict] = []
+    if body.is_equipped is not None and body.is_equipped != was_equipped:
+        event_type = "item_equipped" if body.is_equipped else "item_unequipped"
+        slot_value = item.equipment_slot.value if item.equipment_slot is not None else None
+        firing = await dispatch(
+            session, char, event_type,
+            {
+                "item_id": item.id,
+                "item_type": item.item_type,
+                "slot": slot_value,
+                "was_equipped": was_equipped,
+                "is_equipped": item.is_equipped,
+            },
+        )
+        notifications = collect_homebrew_notifications(firing)
+
+    response = CharacterFull.model_validate(char)
+    if notifications:
+        response.homebrew_notifications = notifications
+    return response
 
 
 @router.delete("/{char_id}/items/{item_id}", response_model=CharacterFull)

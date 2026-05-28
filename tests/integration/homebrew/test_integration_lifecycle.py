@@ -4,6 +4,7 @@ Currently covers:
   - long_rest_taken / short_rest_taken (hp.py rest endpoint)
   - spell_cast (spell_slots.py PATCH endpoint)
   - ability_used (abilities.py PATCH endpoint)
+  - item_equipped / item_unequipped (items.py PATCH endpoint)
 """
 from __future__ import annotations
 
@@ -255,6 +256,138 @@ async def test_ability_used_no_event_when_uses_unchanged(client, char_id):
     r = await client.patch(
         f"/characters/{char_id}/abilities/{ability_id}",
         json={"uses": 3},
+    )
+    assert r.status_code == 200, r.text
+    assert r.json().get("homebrew_notifications") is None
+
+
+# ---------------------------------------------------------------------------
+# item_equipped / item_unequipped (items.update_item)
+# ---------------------------------------------------------------------------
+
+async def _create_item(
+    client,
+    char_id: int,
+    *,
+    name: str = "Spada lunga",
+    item_type: str = "weapon",
+    is_equipped: bool = False,
+    equipment_slot: str | None = None,
+    item_metadata: dict | None = None,
+) -> int:
+    payload: dict = {
+        "name": name,
+        "item_type": item_type,
+        "quantity": 1,
+        "is_equipped": is_equipped,
+    }
+    if equipment_slot is not None:
+        payload["equipment_slot"] = equipment_slot
+    if item_metadata is not None:
+        payload["item_metadata"] = item_metadata
+    r = await client.post(f"/characters/{char_id}/items", json=payload)
+    assert r.status_code == 201, r.text
+    items = r.json()["items"]
+    # The newly added item is the one with our name + matching is_equipped.
+    created = next(i for i in items if i["name"] == name)
+    return created["id"]
+
+
+@pytest.mark.asyncio
+async def test_item_equipped_fires_event(client, char_id):
+    """PATCH item is_equipped False→True → item_equipped rule fires and notifies."""
+    r = await client.post(
+        f"/characters/{char_id}/homebrew/rules",
+        json=_notify_rule("item_equipped", "Equipped!", name="Item Equipped Notice"),
+    )
+    assert r.status_code == 201
+
+    item_id = await _create_item(client, char_id, name="Spada lunga", is_equipped=False)
+
+    r = await client.patch(
+        f"/characters/{char_id}/items/{item_id}",
+        json={"is_equipped": True, "equipment_slot": "main_hand"},
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    # Verify mutation actually applied
+    patched = next(i for i in body["items"] if i["id"] == item_id)
+    assert patched["is_equipped"] is True
+    assert patched["equipment_slot"] == "main_hand"
+
+    notifs = body.get("homebrew_notifications") or []
+    assert any("Equipped!" in n["message"] for n in notifs), notifs
+    n = next(n for n in notifs if "Equipped!" in n["message"])
+    assert n["severity"] == "info"
+    assert n["rule_id"] is not None
+    assert n["rule_name"] == "Item Equipped Notice"
+
+
+@pytest.mark.asyncio
+async def test_item_unequipped_fires_event(client, char_id):
+    """PATCH item is_equipped True→False → item_unequipped rule fires and notifies."""
+    r = await client.post(
+        f"/characters/{char_id}/homebrew/rules",
+        json=_notify_rule("item_unequipped", "Unequipped!", name="Item Unequipped Notice"),
+    )
+    assert r.status_code == 201
+
+    item_id = await _create_item(
+        client, char_id, name="Spada lunga",
+        is_equipped=True, equipment_slot="main_hand",
+    )
+
+    r = await client.patch(
+        f"/characters/{char_id}/items/{item_id}",
+        json={"is_equipped": False},
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    patched = next(i for i in body["items"] if i["id"] == item_id)
+    assert patched["is_equipped"] is False
+    # Unequipping clears the slot.
+    assert patched["equipment_slot"] is None
+
+    notifs = body.get("homebrew_notifications") or []
+    assert any("Unequipped!" in n["message"] for n in notifs), notifs
+    n = next(n for n in notifs if "Unequipped!" in n["message"])
+    assert n["severity"] == "info"
+    assert n["rule_id"] is not None
+    assert n["rule_name"] == "Item Unequipped Notice"
+
+
+@pytest.mark.asyncio
+async def test_no_event_when_is_equipped_unchanged(client, char_id):
+    """PATCH that doesn't flip is_equipped (no-op or other-field) must NOT fire."""
+    # Install both rules so we'd catch a false positive from either direction.
+    r = await client.post(
+        f"/characters/{char_id}/homebrew/rules",
+        json=_notify_rule("item_equipped", "Should not fire (equip)!", name="Equip NoFire"),
+    )
+    assert r.status_code == 201
+    r = await client.post(
+        f"/characters/{char_id}/homebrew/rules",
+        json=_notify_rule("item_unequipped", "Should not fire (unequip)!", name="Unequip NoFire"),
+    )
+    assert r.status_code == 201
+
+    item_id = await _create_item(
+        client, char_id, name="Spada lunga",
+        is_equipped=True, equipment_slot="main_hand",
+    )
+
+    # 1) Same-value PATCH on is_equipped (True → True) must not fire either event.
+    r = await client.patch(
+        f"/characters/{char_id}/items/{item_id}",
+        json={"is_equipped": True},
+    )
+    assert r.status_code == 200, r.text
+    assert r.json().get("homebrew_notifications") is None
+
+    # 2) PATCH that doesn't touch is_equipped at all (e.g. rename) must not fire.
+    r = await client.patch(
+        f"/characters/{char_id}/items/{item_id}",
+        json={"name": "Spada lunga +1"},
     )
     assert r.status_code == 200, r.text
     assert r.json().get("homebrew_notifications") is None
