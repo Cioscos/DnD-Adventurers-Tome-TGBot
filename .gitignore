@@ -55,5 +55,7 @@ api/__pycache__/
 # Webapp audit reports (local reference, regenerated per session)
 docs/webapp-audit/
 
-# Homebrew audit backup (transient baseline for diffing, regenerated per run)
-docs/homebrew-audit/.previous.md
+# Homebrew audit reports, FE audit, and planning/spec docs (local reference, not versioned)
+docs/homebrew-audit/
+docs/homebrew-fe-audit/
+docs/superpowers/
