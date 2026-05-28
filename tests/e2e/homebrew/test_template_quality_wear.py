@@ -7,16 +7,9 @@ import pytest
 from sqlalchemy import select
 
 
-def _patch_rolls(monkeypatch, rolls: list[int], fallback: int = 10):
-    """Patch random.randint to return values from `rolls` in order, fallback after."""
-    import random as _random
-    it = iter(rolls)
-    monkeypatch.setattr(_random, "randint", lambda lo, hi: next(it, fallback))
-
-
 @pytest.mark.asyncio
 async def test_quality_wear_complete_lifecycle(
-    client, char_id, test_session_factory, monkeypatch,
+    client, char_id, test_session_factory, patch_random_roll,
 ):
     """End-to-end milestone: install template → quality=pessima → 1st fumble damages → 2nd destroys + unequips."""
     from core.db.models import Item
@@ -54,7 +47,7 @@ async def test_quality_wear_complete_lifecycle(
 
     # ─── Act 1: nat-1 attack → first damage (integra → danneggiata)
     # wear_roll=4 → col [4,9] → "D" for quality=pessima; damage_state is "integra" → else branch → "danneggiata"
-    _patch_rolls(monkeypatch, [1, 4])
+    patch_random_roll([1, 4])
 
     r1 = await client.post(f"/characters/{char_id}/items/{weapon_id}/attack")
     assert r1.status_code == 200
@@ -75,7 +68,7 @@ async def test_quality_wear_complete_lifecycle(
     # ─── Act 2: another nat-1 → second damage (danneggiata → distrutta + unequip)
     # wear_roll=5 → col [4,9] → "D" again. Since damage_state is "danneggiata", IF branch fires:
     #   distrutta + unequip + notify error.
-    _patch_rolls(monkeypatch, [1, 5])
+    patch_random_roll([1, 5])
 
     r2 = await client.post(f"/characters/{char_id}/items/{weapon_id}/attack")
     assert r2.status_code == 200

@@ -7,14 +7,9 @@ import pytest
 from sqlalchemy import select
 
 
-def _patch_random(monkeypatch, value: int):
-    import random as _random
-    monkeypatch.setattr(_random, "randint", lambda lo, hi: value)
-
-
 @pytest.mark.asyncio
 async def test_critical_hit_with_quality_armor_marks_damaged(
-    client, char_id, test_session_factory, monkeypatch,
+    client, char_id, test_session_factory, patch_random_roll,
 ):
     """Damage with was_critical_hit=True on equipped armor → Q&U marks it danneggiata."""
     from core.db.models import Item, Character
@@ -41,7 +36,7 @@ async def test_critical_hit_with_quality_armor_marks_damaged(
     await client.post(f"/characters/{char_id}/homebrew/templates/quality_wear/install")
 
     # wear_roll = 2 → col [2,3] → D for quality=ordinaria; armor.damage_state goes integra → danneggiata.
-    _patch_random(monkeypatch, 2)
+    patch_random_roll(2)
 
     r = await client.patch(
         f"/characters/{char_id}/hp",
@@ -57,7 +52,7 @@ async def test_critical_hit_with_quality_armor_marks_damaged(
 
 @pytest.mark.asyncio
 async def test_non_critical_damage_does_not_trigger_quality_wear(
-    client, char_id, test_session_factory, monkeypatch,
+    client, char_id, test_session_factory, patch_random_roll,
 ):
     """Damage with was_critical_hit=False on equipped armor → metadata untouched."""
     from core.db.models import Item, Character
@@ -80,7 +75,7 @@ async def test_non_critical_damage_does_not_trigger_quality_wear(
 
     await client.post(f"/characters/{char_id}/homebrew/templates/quality_wear/install")
 
-    _patch_random(monkeypatch, 2)
+    patch_random_roll(2)
 
     r = await client.patch(
         f"/characters/{char_id}/hp",
@@ -96,7 +91,7 @@ async def test_non_critical_damage_does_not_trigger_quality_wear(
 
 @pytest.mark.asyncio
 async def test_dropped_to_zero_with_quality_armor_marks_damaged(
-    client, char_id, test_session_factory, monkeypatch,
+    client, char_id, test_session_factory, patch_random_roll,
 ):
     """HP dropped from positive to 0 on equipped armor → dropped_to_zero event fires Q&U."""
     from core.db.models import Item, Character
@@ -119,7 +114,7 @@ async def test_dropped_to_zero_with_quality_armor_marks_damaged(
 
     await client.post(f"/characters/{char_id}/homebrew/templates/quality_wear/install")
 
-    _patch_random(monkeypatch, 2)
+    patch_random_roll(2)
 
     # was_critical_hit=False but damage drops to 0 → dropped_to_zero trigger fires (Q&U)
     r = await client.patch(
@@ -136,7 +131,7 @@ async def test_dropped_to_zero_with_quality_armor_marks_damaged(
 
 @pytest.mark.asyncio
 async def test_heal_does_not_trigger_quality_wear(
-    client, char_id, test_session_factory, monkeypatch,
+    client, char_id, test_session_factory, patch_random_roll,
 ):
     """Heal event fires hp_healed but Q&U doesn't subscribe to it → armor untouched."""
     from core.db.models import Item, Character
@@ -159,7 +154,7 @@ async def test_heal_does_not_trigger_quality_wear(
 
     await client.post(f"/characters/{char_id}/homebrew/templates/quality_wear/install")
 
-    _patch_random(monkeypatch, 2)
+    patch_random_roll(2)
 
     r = await client.patch(
         f"/characters/{char_id}/hp",
@@ -194,7 +189,7 @@ async def test_hp_endpoint_backwards_compatible_without_was_critical_hit_field(
 
 @pytest.mark.asyncio
 async def test_critical_hit_returns_homebrew_notifications(
-    client, char_id, test_session_factory, monkeypatch,
+    client, char_id, test_session_factory, patch_random_roll,
 ):
     """Critical hit on Q&U armor → HP response includes homebrew_notifications."""
     from core.db.models import Item, Character
@@ -219,7 +214,7 @@ async def test_critical_hit_returns_homebrew_notifications(
     inst = await client.post(f"/characters/{char_id}/homebrew/templates/quality_wear/install")
     assert inst.status_code == 201
 
-    _patch_random(monkeypatch, 2)
+    patch_random_roll(2)
 
     r = await client.patch(
         f"/characters/{char_id}/hp",

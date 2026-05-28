@@ -5,6 +5,8 @@ overridden so the test doesn't depend on env vars or production DB.
 """
 from __future__ import annotations
 
+from typing import Sequence, Union
+
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
@@ -63,3 +65,34 @@ async def char_id(test_session_factory) -> int:
         await session.commit()
         await session.refresh(char)
         return char.id
+
+
+@pytest.fixture
+def patch_random_roll(monkeypatch):
+    """Patch ``random.randint`` on the shared module object for deterministic rolls.
+
+    Both ``api/routers/items.py`` and ``api/services/homebrew/actions.py`` do
+    ``import random``, so they reference the same module object — patching the
+    module's ``randint`` attribute covers both call sites with a single patch.
+
+    Returns a callable with two forms:
+
+    - ``patch_random_roll(value)`` where ``value`` is an ``int``: every call to
+      ``random.randint`` returns ``value`` (constant).
+    - ``patch_random_roll(rolls, fallback=10)`` where ``rolls`` is a sequence of
+      ``int``: each call consumes the next value from the iterator; once the
+      sequence is exhausted, ``fallback`` is returned for all subsequent calls.
+
+    Calling the returned callable more than once within a single test resets the
+    patch (replaces the previous lambda) — useful for staged scenarios.
+    """
+    def _patch(rolls: Union[int, Sequence[int]], fallback: int = 10) -> None:
+        import random as _random
+        if isinstance(rolls, int):
+            value = rolls
+            monkeypatch.setattr(_random, "randint", lambda lo, hi: value)
+        else:
+            it = iter(rolls)
+            monkeypatch.setattr(_random, "randint", lambda lo, hi: next(it, fallback))
+
+    return _patch

@@ -9,7 +9,7 @@ from sqlalchemy import select
 
 @pytest.mark.asyncio
 async def test_attack_fumble_with_quality_wear_marks_weapon_damaged(
-    client, char_id, test_session_factory, monkeypatch,
+    client, char_id, test_session_factory, patch_random_roll,
 ):
     """Nat-1 attack on a quality=pessima weapon → hb_damage_state becomes 'danneggiata'.
 
@@ -38,14 +38,10 @@ async def test_attack_fumble_with_quality_wear_marks_weapon_damaged(
     r = await client.post(f"/characters/{char_id}/homebrew/templates/quality_wear/install")
     assert r.status_code == 201
 
-    # Force deterministic rolls via a shared iterator on the global random module.
-    # Both items.py and actions.py do `import random` so they share the same module
-    # object; patching either module's .randint attribute patches the same function.
-    # Call order: [1] to-hit die (nat-1 → fumble), [7] wear_roll ([4,9] bin → "D").
+    # Force deterministic rolls. Call order:
+    #   [1] to-hit die (nat-1 → fumble), [7] wear_roll ([4,9] bin → "D").
     # "D" + damage_state=integra (not already "danneggiata") → else branch → "danneggiata".
-    import random as _random
-    rolls = iter([1, 7])
-    monkeypatch.setattr(_random, "randint", lambda lo, hi: next(rolls, 10))
+    patch_random_roll([1, 7])
 
     # Trigger attack
     r = await client.post(f"/characters/{char_id}/items/{weapon_id}/attack")
@@ -63,7 +59,7 @@ async def test_attack_fumble_with_quality_wear_marks_weapon_damaged(
 
 @pytest.mark.asyncio
 async def test_attack_normal_roll_does_not_mark_weapon(
-    client, char_id, test_session_factory, monkeypatch,
+    client, char_id, test_session_factory, patch_random_roll,
 ):
     """Normal hit (no fumble) → no wear applied."""
     from core.db.models import Item
@@ -86,10 +82,7 @@ async def test_attack_normal_roll_does_not_mark_weapon(
     assert r.status_code == 201
 
     # to-hit_die=15 (no fumble), other rolls don't matter.
-    # Patch the shared `random` module (items.py and actions.py both `import random`,
-    # so they reference the same module object).
-    import random as _random
-    monkeypatch.setattr(_random, "randint", lambda lo, hi: 15)
+    patch_random_roll(15)
 
     r = await client.post(f"/characters/{char_id}/items/{weapon_id}/attack")
     assert r.status_code == 200
@@ -103,7 +96,7 @@ async def test_attack_normal_roll_does_not_mark_weapon(
 
 @pytest.mark.asyncio
 async def test_attack_with_no_rule_installed_still_works(
-    client, char_id, test_session_factory, monkeypatch,
+    client, char_id, test_session_factory, patch_random_roll,
 ):
     """Sanity: dispatcher should be a no-op when no rules are installed."""
     from core.db.models import Item
@@ -119,8 +112,7 @@ async def test_attack_with_no_rule_installed_still_works(
         await s.refresh(weapon)
         weapon_id = weapon.id
 
-    import random as _random
-    monkeypatch.setattr(_random, "randint", lambda lo, hi: 1)
+    patch_random_roll(1)
 
     r = await client.post(f"/characters/{char_id}/items/{weapon_id}/attack")
     assert r.status_code == 200
@@ -133,7 +125,7 @@ async def test_attack_with_no_rule_installed_still_works(
 
 @pytest.mark.asyncio
 async def test_attack_fumble_returns_homebrew_notifications(
-    client, char_id, test_session_factory, monkeypatch,
+    client, char_id, test_session_factory, patch_random_roll,
 ):
     """Fumble on Q&U-equipped weapon → WeaponAttackResult.homebrew_notifications populated."""
     from core.db.models import Item
@@ -155,9 +147,7 @@ async def test_attack_fumble_returns_homebrew_notifications(
     inst = await client.post(f"/characters/{char_id}/homebrew/templates/quality_wear/install")
     assert inst.status_code == 201
 
-    import random as _random
-    rolls = iter([1, 7])
-    monkeypatch.setattr(_random, "randint", lambda lo, hi: next(rolls, 10))
+    patch_random_roll([1, 7])
 
     r = await client.post(f"/characters/{char_id}/items/{weapon_id}/attack")
     assert r.status_code == 200
@@ -173,7 +163,7 @@ async def test_attack_fumble_returns_homebrew_notifications(
 
 @pytest.mark.asyncio
 async def test_attack_with_no_rule_returns_empty_notifications(
-    client, char_id, test_session_factory, monkeypatch,
+    client, char_id, test_session_factory, patch_random_roll,
 ):
     from core.db.models import Item
     async with test_session_factory() as s:
@@ -187,8 +177,7 @@ async def test_attack_with_no_rule_returns_empty_notifications(
         await s.refresh(weapon)
         weapon_id = weapon.id
 
-    import random as _random
-    monkeypatch.setattr(_random, "randint", lambda lo, hi: 15)
+    patch_random_roll(15)
 
     r = await client.post(f"/characters/{char_id}/items/{weapon_id}/attack")
     assert r.status_code == 200
