@@ -127,3 +127,53 @@ export function writeRollup(): void {
   const filePath = path.join(AUDIT_DIR, "known-issues.md");
   fs.writeFileSync(filePath, lines.join("\n"), "utf-8");
 }
+
+/**
+ * Backup the previous run's rollup before overwriting it.
+ * If `known-issues.md` exists, copy it to `.previous.md`.
+ * No-op if known-issues.md doesn't exist yet (first run).
+ */
+export function backupPreviousRollup(): void {
+  const rollupPath = path.join(AUDIT_DIR, "known-issues.md");
+  const backupPath = path.join(AUDIT_DIR, ".previous.md");
+
+  if (fs.existsSync(rollupPath)) {
+    fs.copyFileSync(rollupPath, backupPath);
+  }
+}
+
+/**
+ * Return the count of findings with severity 🔴 or 🟠 (critical findings).
+ */
+export function getCriticalCount(): number {
+  return _findings.filter((f) => f.severity === "🔴" || f.severity === "🟠")
+    .length;
+}
+
+/**
+ * Parse the previous rollup (`.previous.md`) to extract the critical count
+ * from the Conteggi table. Returns null if the file doesn't exist or parsing fails.
+ * Defensive: wraps in try/catch and returns null on any error.
+ */
+export function previousCriticalCount(): number | null {
+  const backupPath = path.join(AUDIT_DIR, ".previous.md");
+
+  if (!fs.existsSync(backupPath)) {
+    return null;
+  }
+
+  try {
+    const content = fs.readFileSync(backupPath, "utf-8");
+
+    // Parse the Conteggi table for 🔴 and 🟠 counts
+    const redMatch = content.match(/\|\s*🔴\s*\|\s*(\d+)\s*\|/);
+    const orangeMatch = content.match(/\|\s*🟠\s*\|\s*(\d+)\s*\|/);
+
+    const redCount = redMatch ? parseInt(redMatch[1], 10) : 0;
+    const orangeCount = orangeMatch ? parseInt(orangeMatch[1], 10) : 0;
+
+    return redCount + orangeCount;
+  } catch (err) {
+    return null;
+  }
+}

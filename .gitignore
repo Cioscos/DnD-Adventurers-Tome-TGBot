@@ -54,3 +54,6 @@ api/__pycache__/
 
 # Webapp audit reports (local reference, regenerated per session)
 docs/webapp-audit/
+
+# Homebrew audit backup (transient baseline for diffing, regenerated per run)
+docs/homebrew-audit/.previous.md
