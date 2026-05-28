@@ -1007,6 +1007,26 @@
       "name_placeholder": "e.g. Bleeding",
       "description_label": "Description",
       "description_placeholder": "What this rule does in a sentence"
+    },
+    "subject": {
+      "types": {
+        "item": "Items",
+        "character": "Character",
+        "ability": "Special abilities"
+      },
+      "item_types": {
+        "weapon": "Weapon",
+        "armor": "Armor",
+        "shield": "Shield",
+        "accessory": "Accessory",
+        "gear": "Gear",
+        "consumable": "Consumable",
+        "generic": "Generic"
+      },
+      "item_types_label": "Only these item types",
+      "item_types_helper": "Leave empty to apply to any item",
+      "name_contains_label": "Only if the name contains",
+      "name_contains_placeholder": "e.g. magic, iron"
     }
   }
 }

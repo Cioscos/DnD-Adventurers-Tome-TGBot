@@ -1007,6 +1007,26 @@
       "name_placeholder": "es. Sanguinamento",
       "description_label": "Descrizione",
       "description_placeholder": "Cosa fa questa regola in una frase"
+    },
+    "subject": {
+      "types": {
+        "item": "Oggetti",
+        "character": "Personaggio",
+        "ability": "Capacità speciali"
+      },
+      "item_types": {
+        "weapon": "Arma",
+        "armor": "Armatura",
+        "shield": "Scudo",
+        "accessory": "Accessorio",
+        "gear": "Equipaggiamento",
+        "consumable": "Consumabile",
+        "generic": "Generico"
+      },
+      "item_types_label": "Solo questi tipi di oggetto",
+      "item_types_helper": "Lascia vuoto per applicare a qualsiasi oggetto",
+      "name_contains_label": "Solo se il nome contiene",
+      "name_contains_placeholder": "es. magico, ferro"
     }
   }
 }
