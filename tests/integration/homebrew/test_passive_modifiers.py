@@ -143,14 +143,7 @@ async def test_skills_homebrew_modifier_populated_for_athletics_only(client, cha
 
 @pytest.mark.asyncio
 async def test_saves_homebrew_modifier_populated_for_constitution_only(client, char_id):
-    """saves_homebrew_modifiers contains only constitution=3 when only constitution rule present.
-
-    NOTE: This test currently uses character.saving_throw.constitution (DSL validator accepts this),
-    but the response builder searches for character.save.constitution. This is a mismatch bug
-    in the production code (see api/services/character_response.py line 49). The test documents
-    the expected behavior once the bug is fixed.
-    """
-    # Create rule on character.saving_throw.constitution
+    """saves_homebrew_modifiers contains only constitution=3 when only constitution rule present."""
     rule_body = _build_passive_rule(
         "+3 CON Save",
         {"type": "character"},
@@ -161,12 +154,10 @@ async def test_saves_homebrew_modifier_populated_for_constitution_only(client, c
     r = await client.post(f"/characters/{char_id}/homebrew/rules", json=rule_body)
     assert r.status_code in (200, 201), r.text
 
-    # GET character
     r = await client.get(f"/characters/{char_id}")
     assert r.status_code == 200, r.text
     body = r.json()
-    # BUG: should be {"constitution": 3} but builder looks for "character.save" not "character.saving_throw"
-    assert body["saves_homebrew_modifiers"] == {}
+    assert body["saves_homebrew_modifiers"] == {"constitution": 3}
 
 
 @pytest.mark.asyncio

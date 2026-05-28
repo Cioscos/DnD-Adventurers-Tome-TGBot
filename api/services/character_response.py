@@ -46,7 +46,7 @@ async def build_character_response(
             response.skills_homebrew_modifiers[slug] = val
 
     for slug in ABILITY_NAMES:
-        val = await get_passive_modifiers(session, char, f"character.save.{slug}")
+        val = await get_passive_modifiers(session, char, f"character.saving_throw.{slug}")
         if val:
             response.saves_homebrew_modifiers[slug] = val
 
