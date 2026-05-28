@@ -1,0 +1,120 @@
+"""Hardcoded homebrew rule templates. Installed via POST /templates/{id}/install."""
+from __future__ import annotations
+
+from typing import Optional
+
+
+_WEAR_EFFECTS_PER_QUALITY = {
+    "X": [
+        {"action": "set_property", "target": "subject",
+         "key": "damage_state", "value": "distrutta"},
+        {"action": "unequip", "target": "subject"},
+        {"action": "notify", "severity": "error",
+         "message": "💥 $subject.name distrutta!"},
+        {"action": "add_history", "description": "$subject.name distrutta (Qualità & Usura)"},
+    ],
+    "D": [
+        {"action": "if",
+         "cond": {"path": "$subject.damage_state", "op": "eq", "value": "danneggiata"},
+         "then": [
+             {"action": "set_property", "target": "subject",
+              "key": "damage_state", "value": "distrutta"},
+             {"action": "unequip", "target": "subject"},
+             {"action": "notify", "severity": "error",
+              "message": "💥 $subject.name distrutta (era già danneggiata)!"},
+         ],
+         "else": [
+             {"action": "set_property", "target": "subject",
+              "key": "damage_state", "value": "danneggiata"},
+             {"action": "notify", "severity": "warning",
+              "message": "⚠️ $subject.name danneggiata!"},
+         ]},
+        {"action": "add_history", "description": "$subject.name (Qualità & Usura) — risultato D"},
+    ],
+    "S": [],
+}
+
+
+def _wear_effects() -> list[dict]:
+    return [
+        {"action": "roll_dice", "notation": "1d20", "store_as": "wear_roll"},
+        {"action": "lookup_table", "table": "tabella_usura",
+         "row": "$subject.quality", "col": "$wear_roll", "store_as": "wear_result"},
+        {"action": "match", "value": "$wear_result", "cases": _WEAR_EFFECTS_PER_QUALITY},
+    ]
+
+
+_QUALITY_WEAR_DSL = {
+    "version": 1,
+    "subject": {"type": "item", "filter": {"item_types": ["weapon", "armor", "shield"]}},
+    "properties": [
+        {"key": "quality", "type": "enum",
+         "values": ["pessima", "ordinaria", "buona", "straordinaria"],
+         "default": "ordinaria",
+         "label_i18n": {"it": "Qualità", "en": "Quality"},
+         "value_labels_i18n": {
+             "pessima":       {"it": "Pessima", "en": "Poor"},
+             "ordinaria":     {"it": "Ordinaria", "en": "Common"},
+             "buona":         {"it": "Buona", "en": "Good"},
+             "straordinaria": {"it": "Straordinaria", "en": "Masterwork"},
+         }},
+        {"key": "damage_state", "type": "enum",
+         "values": ["integra", "danneggiata", "distrutta"],
+         "default": "integra",
+         "label_i18n": {"it": "Stato", "en": "State"},
+         "value_labels_i18n": {
+             "integra":     {"it": "Integro",     "en": "Pristine"},
+             "danneggiata": {"it": "Danneggiato", "en": "Damaged"},
+             "distrutta":   {"it": "Distrutto",   "en": "Broken"},
+         }},
+    ],
+    "tables": [{
+        "id": "tabella_usura",
+        "row_axis": "quality", "col_axis": "d20_result",
+        "col_bins": [[1, 1], [2, 3], [4, 9], [10, 15], [16, 20]],
+        "cells": {
+            "pessima":       ["X", "X", "D", "D", "S"],
+            "ordinaria":     ["X", "D", "D", "S", "S"],
+            "buona":         ["D", "D", "S", "S", "S"],
+            "straordinaria": ["D", "S", "S", "S", "S"],
+        },
+    }],
+    "passive_modifiers": [],
+    "triggers": [
+        {"event": "attack_rolled",
+         "filters": [
+             {"path": "$event.is_fumble", "op": "eq", "value": True},
+             {"path": "$subject", "op": "has_property", "value": "quality"},
+         ],
+         "effects": _wear_effects()},
+        {"event": "damage_taken",
+         "filters": [
+             {"path": "$event.was_critical_hit", "op": "eq", "value": True},
+             {"path": "$subject", "op": "has_property", "value": "quality"},
+             {"path": "$subject.is_equipped", "op": "eq", "value": True},
+         ],
+         "effects": _wear_effects()},
+        {"event": "dropped_to_zero",
+         "filters": [
+             {"path": "$subject", "op": "has_property", "value": "quality"},
+             {"path": "$subject.is_equipped", "op": "eq", "value": True},
+         ],
+         "effects": _wear_effects()},
+    ],
+}
+
+
+TEMPLATES = [
+    {
+        "id": "quality_wear",
+        "name": "Qualità & Usura",
+        "description": "House rule per armi e armature — possono danneggiarsi o rompersi al fumble (nat-1 attacco), al critico subito e quando porti a 0 PF.",
+        "icon": "⚒️",
+        "dsl": _QUALITY_WEAR_DSL,
+    },
+    # Altri template arrivano in Phase 3
+]
+
+
+def get_template(template_id: str) -> Optional[dict]:
+    return next((t for t in TEMPLATES if t["id"] == template_id), None)
