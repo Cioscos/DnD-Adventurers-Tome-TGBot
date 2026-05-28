@@ -34,6 +34,9 @@ def _char_to_ctx_dict(char: Character) -> dict:
         "temp_hp": char.temp_hp,
         "speed": char.speed,
         "total_level": char.total_level,
+        # Conditions dict (JSON column) — keys queryable via $character.conditions
+        # with `has_property` filter (e.g. custom homebrew conditions like "custom:bleeding").
+        "conditions": dict(char.conditions or {}),
     }
 
 

@@ -87,3 +87,11 @@ def test_resolve_subject_missing_property_character_raises():
     }
     with pytest.raises(PathResolutionError):
         resolve_path("$subject.banana", ctx)
+
+
+# Task 3.8 — `$character.conditions` exposes the conditions dict (used by
+# `has_property` filter for custom homebrew conditions such as "custom:bleeding").
+def test_resolve_character_conditions_returns_dict():
+    conds = {"custom:bleeding": {"rule_id": 99, "params": {}}}
+    ctx = {"event": {}, "subject": {}, "character": {"conditions": conds}, "vars": {}}
+    assert resolve_path("$character.conditions", ctx) is conds

@@ -104,6 +104,28 @@ _QUALITY_WEAR_DSL = {
 }
 
 
+_BLEEDING_DSL = {
+    "version": 1,
+    "subject": {"type": "character"},
+    "properties": [],
+    "tables": [],
+    "passive_modifiers": [],
+    "triggers": [
+        {"event": "turn_started",
+         "filters": [
+             {"path": "$character.conditions", "op": "has_property", "value": "custom:bleeding"},
+         ],
+         "effects": [
+             {"action": "roll_dice", "notation": "1d4", "store_as": "blood"},
+             {"action": "damage_character", "amount": "$blood"},
+             {"action": "notify", "severity": "warning",
+              "message": "🩸 Sanguinamento: subisci $blood danni"},
+             {"action": "add_history", "description": "Sanguinamento: $blood danni"},
+         ]},
+    ],
+}
+
+
 TEMPLATES = [
     {
         "id": "quality_wear",
@@ -111,6 +133,13 @@ TEMPLATES = [
         "description": "House rule per armi e armature — possono danneggiarsi o rompersi al fumble (nat-1 attacco), al critico subito e quando porti a 0 PF.",
         "icon": "⚒️",
         "dsl": _QUALITY_WEAR_DSL,
+    },
+    {
+        "id": "bleeding",
+        "name": "Sanguinamento",
+        "description": "Condizione: subisci 1d4 danni a ogni turno fino alla rimozione.",
+        "icon": "🩸",
+        "dsl": _BLEEDING_DSL,
     },
     # Altri template arrivano in Phase 3
 ]

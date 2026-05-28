@@ -173,10 +173,32 @@ async def execute_set_property(action, ctx, rfr, session, char, **kw):
     await session.flush()
 
 
+def _resolve_amount(amount, ctx: ExecutionContext, *, field: str):
+    """Resolve an amount/delta that may be int, dice notation, or a `$var` path.
+
+    Raises ActionExecutionError if the value cannot be coerced to an integer
+    (e.g. missing `$var` in ctx, non-numeric resolved value).
+    """
+    if isinstance(amount, str):
+        if amount.startswith("$"):
+            try:
+                amount = resolve_path(amount, ctx.to_dict())
+            except Exception as e:
+                raise ActionExecutionError(
+                    f"{field}: could not resolve '{amount}' ({e})"
+                )
+        else:
+            amount = _roll(amount)
+    try:
+        return int(amount)
+    except (TypeError, ValueError):
+        raise ActionExecutionError(
+            f"{field}: resolved value not numeric (got {amount!r})"
+        )
+
+
 async def execute_inc_property(action, ctx, rfr, session, char, **kw):
-    delta = action["delta"]
-    if isinstance(delta, str):
-        delta = _roll(delta)
+    delta = _resolve_amount(action["delta"], ctx, field="inc_property.delta")
 
     target = action["target"]
     key = action["key"]
@@ -225,10 +247,7 @@ async def execute_unequip(action, ctx, rfr, session, char, **kw):
 
 
 async def execute_damage_character(action, ctx, rfr, session, char, **kw):
-    amount = action["amount"]
-    if isinstance(amount, str):
-        amount = _roll(amount)
-    amount = int(amount)
+    amount = _resolve_amount(action["amount"], ctx, field="damage_character.amount")
 
     # Absorb temp HP first (mirror hp.py:update_hp semantics)
     if char.temp_hp > 0:
@@ -262,10 +281,7 @@ async def execute_damage_character(action, ctx, rfr, session, char, **kw):
 
 
 async def execute_heal_character(action, ctx, rfr, session, char, **kw):
-    amount = action["amount"]
-    if isinstance(amount, str):
-        amount = _roll(amount)
-    amount = int(amount)
+    amount = _resolve_amount(action["amount"], ctx, field="heal_character.amount")
     before = char.current_hit_points
     char.current_hit_points = min(char.hit_points, char.current_hit_points + amount)
     actual = char.current_hit_points - before
@@ -306,11 +322,9 @@ async def _load_resource(session: AsyncSession, char_id: int, key: str) -> Homeb
 
 
 async def execute_change_resource(action, ctx, rfr, session, char, **kw):
-    delta = action["delta"]
-    if isinstance(delta, str):
-        delta = _roll(delta)
+    delta = _resolve_amount(action["delta"], ctx, field="change_resource.delta")
     resource = await _load_resource(session, char.id, action["key"])
-    new = resource.current + int(delta)
+    new = resource.current + delta
     new = max(0, min(resource.max, new))
     resource.current = new
     await session.flush()
@@ -323,9 +337,8 @@ async def execute_restore_resource(action, ctx, rfr, session, char, **kw):
         resource.current = resource.max
         await session.flush()
         return
-    if isinstance(amount, str):
-        amount = _roll(amount)
-    resource.current = min(resource.max, resource.current + int(amount))
+    amount = _resolve_amount(amount, ctx, field="restore_resource.amount")
+    resource.current = min(resource.max, resource.current + amount)
     await session.flush()
 
 

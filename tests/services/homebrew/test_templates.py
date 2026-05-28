@@ -25,3 +25,33 @@ def test_list_templates_returns_at_least_one():
 
 def test_get_template_unknown_returns_none():
     assert get_template("does_not_exist") is None
+
+
+# Task 3.8 — Bleeding template
+def test_bleeding_template_exists():
+    t = get_template("bleeding")
+    assert t is not None
+    assert t["name"] == "Sanguinamento"
+    RuleDSL.model_validate(t["dsl"])
+
+
+def test_bleeding_template_has_turn_started_trigger():
+    t = get_template("bleeding")
+    triggers = t["dsl"]["triggers"]
+    assert len(triggers) == 1
+    assert triggers[0]["event"] == "turn_started"
+    # Filter checks `$character.conditions` has `custom:bleeding`
+    filt = triggers[0]["filters"][0]
+    assert filt["path"] == "$character.conditions"
+    assert filt["op"] == "has_property"
+    assert filt["value"] == "custom:bleeding"
+
+
+def test_bleeding_template_uses_dollar_var_runtime():
+    t = get_template("bleeding")
+    effects = t["dsl"]["triggers"][0]["effects"]
+    # First effect rolls 1d4 → store_as "blood"; second damages with $blood.
+    assert effects[0]["action"] == "roll_dice"
+    assert effects[0]["store_as"] == "blood"
+    assert effects[1]["action"] == "damage_character"
+    assert effects[1]["amount"] == "$blood"

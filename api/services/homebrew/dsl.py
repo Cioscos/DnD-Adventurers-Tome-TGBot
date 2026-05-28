@@ -156,6 +156,9 @@ class ActionIncProperty(_ActionBase):
     @classmethod
     def _delta_format(cls, v):
         if isinstance(v, str):
+            # Accept dice notation OR a $var reference resolved at runtime.
+            if v.startswith("$"):
+                return v
             return _validate_dice_notation(v)
         return v
 

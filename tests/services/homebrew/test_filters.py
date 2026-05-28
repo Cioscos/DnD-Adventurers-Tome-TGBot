@@ -88,3 +88,17 @@ def test_has_property_returns_false_when_metadata_is_str():
     f = Filter(path="$subject", op=FilterOp.HAS_PROPERTY, value="quality")
     ctx = {**_BASE_CTX, "subject": {"_kind": "item", "metadata": '{"hb_quality":"x"}'}}
     assert evaluate_filter(f, ctx) is False
+
+
+# Task 3.8 — HAS_PROPERTY on `$character.conditions` (dict without `_kind`).
+# Used by the Bleeding template to check `custom:bleeding ∈ conditions`.
+def test_has_property_on_character_conditions_true():
+    f = Filter(path="$character.conditions", op=FilterOp.HAS_PROPERTY, value="custom:bleeding")
+    ctx = {**_BASE_CTX, "character": {"conditions": {"custom:bleeding": {"rule_id": 1}}}}
+    assert evaluate_filter(f, ctx) is True
+
+
+def test_has_property_on_character_conditions_false_when_absent():
+    f = Filter(path="$character.conditions", op=FilterOp.HAS_PROPERTY, value="custom:bleeding")
+    ctx = {**_BASE_CTX, "character": {"conditions": {}}}
+    assert evaluate_filter(f, ctx) is False
