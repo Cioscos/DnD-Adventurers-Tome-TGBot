@@ -1,4 +1,6 @@
 """Integration tests on the homebrew router via httpx AsyncClient."""
+import json
+
 import pytest
 
 
@@ -75,9 +77,6 @@ async def test_get_rule_other_user_char_returns_403(client, test_session_factory
         other_id = other.id
     r = await client.get(f"/characters/{other_id}/homebrew/rules/1")
     assert r.status_code == 403
-
-
-import json
 
 
 @pytest.mark.asyncio
