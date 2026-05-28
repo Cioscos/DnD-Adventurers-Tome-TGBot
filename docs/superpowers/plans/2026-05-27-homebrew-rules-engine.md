@@ -569,6 +569,75 @@ Phase 0 ✅ · Phase 1 ✅ · Phase 2 ✅ · Phase 3 ✅ · Phase 4 ✅ · Phase
 
 **Pronto per Phase 7**: Playwright matrix + audit-loop integration. ~70 e2e Playwright test che generano `docs/homebrew-audit/known-issues.md` in formato `/audit-loop`-compatibile. Coverage: event-coverage, action-coverage, templates, filters, passive-modifiers, error-cases, state-transitions.
 
+### Phase 7 — completata 2026-05-28
+
+13 commit sul branch (1 config+fixture · 1 reporter framework · 7 suite di test · 1 fix backend regressione · 1 review-polish · 1 aggregator/exit-gate+index · 1 CI+baseline). 11/11 task Phase 7 (7.1 → 7.11). **Suite Playwright homebrew verde: 63/63 test, 0 findings 🔴/🟠 al primo run** (`cd webapp && HB_API_URL=… npm run test:homebrew:audit` → reporter `OK: 0 critical findings.` → exit 0). **Suite backend invariata: 256/256 test verdi** dopo il fix `build_character_response`. Eseguita da WSL contro un'API isolata (venv effimera `/tmp/venv-homebrew`, `DB_PATH` throwaway, porta 8001 per non collidere col dev-stack su 8000).
+
+```
+ffdd2ef ci(homebrew-audit): workflow_dispatch trigger + generated audit baseline (0 critical, 63 green)
+2cd0008 feat(homebrew-audit): baseline backup + exit-code gate on critical findings + index
+3b0a656 test(homebrew-audit): state transition e2e coverage (Q&U damage_state + bleeding HP cap)
+2c9d85e test(homebrew-audit): error case e2e tests (malformed DSL, disabled, no-match, cycle detection, 404)
+4c2f774 test(homebrew-audit): 8 filter operator e2e tests
+8dcc35f test(homebrew-audit): 5 passive modifier e2e tests
+d2d0671 test(homebrew-audit): 4 template lifecycle e2e tests
+8ebd201 test(homebrew-audit): 16 action coverage e2e tests
+08ad6bb test(homebrew-audit): assertFired guard + parametric field name (review polish)
+10c5b57 fix(api): flush session before serializing CharacterFull
+84a18f5 test(homebrew-audit): 15 event coverage e2e tests
+0651e99 feat(homebrew-audit): findings recorder + audit Playwright reporter
+99fd05a feat(homebrew-audit): Playwright config + fixture helper for homebrew audit suite
+```
+
+#### Moduli prodotti / modificati
+
+| File | Stato | Responsabilità |
+|------|-------|----------------|
+| `webapp/playwright.homebrew.config.ts` | nuovo | Config Playwright dedicata (NON sovrascrive il default inesistente). `testDir` sui test homebrew, `workers:1` + `fullyParallel:false` (SQLite single-file → no lock contention + ordine findings deterministico), reporter default `list`, niente browser project (suite API-only). |
+| `webapp/tests/e2e-playwright/homebrew/fixtures.ts` | nuovo | `HomebrewFixture`: `apiRequest` (APIRequestContext, header `X-Telegram-Init-Data` + `baseURL` da `HB_API_URL ?? 127.0.0.1:8000`), `charId` (char fresco creato+cancellato per test), `installTemplate`, `resetCharacter` (cancella tutte le rule del char). Asserzioni `expect(resp.ok())` in setup per fallire forte. |
+| `webapp/tests/e2e-playwright/homebrew/findings.ts` | nuovo | Recorder findings + writer Markdown. `AUDIT_DIR` ancorato alla **root del repo** via `import.meta.url` (la suite gira con cwd=`webapp/`). `recordFinding` (counter per-area), `writeAreaReport`/`writeRollup` (single source `renderFinding`, hard-break a due spazi), `backupPreviousRollup`, `getCriticalCount`, `previousCriticalCount`. |
+| `webapp/tests/e2e-playwright/homebrew/audit-reporter.ts` | nuovo | Playwright `Reporter`. `onTestEnd` → `recordFinding` (severità da status; skip retry non-finali). `onEnd` → backup `.previous.md` → scrive 7 area report + rollup → log diff `previous→current` → **gate**: ritorna `{status:"failed"}` (+`process.exitCode=1`) se ci sono 🔴/🟠. |
+| `webapp/tests/e2e-playwright/homebrew/01-event-coverage.spec.ts` | nuovo | 15 test (un EventType ciascuno) via endpoint reali; asserisce `homebrew_notifications` (o `notifications` per turn-start/manual-trigger). |
+| `…/02-action-coverage.spec.ts` | nuovo | 16 test (le 16 azioni reali del DSL) via `manual_trigger` + verifica stato finale via GET (metadata item, HP, conditions, resources, history). |
+| `…/03-templates.spec.ts` | nuovo | 4 template lifecycle (luck_points/bleeding deterministici; enchanted_weapon a loop di attacchi; quality_wear invariant-based). |
+| `…/04-passive-modifiers.spec.ts` | nuovo | 6 test: AC (shield equip) + AC=0 (shield unequip, gate del filtro `when`) + HP max + Speed + Skill stealth + Save wisdom. |
+| `…/05-filters.spec.ts` | nuovo | 8 test (eq/neq/lt/lte/gt/gte/in/has_property); ogni operatore provato in entrambi i versi (HIT-/MISS-) in un solo trigger. |
+| `…/06-error-cases.spec.ts` | nuovo | 9 test: DSL malformato→422, regola disabilitata, evento sbagliato, filtro no-match, **cycle detection** (HP 50→48), subject mismatch, missing subject, accumulo multi-rule, resource→404. |
+| `…/07-state-transitions.spec.ts` | nuovo | 5 test: transizioni damage_state Q&U (integra→danneggiata, danneggiata→distrutta, integra→distrutta via X+unequip, distrutta terminale) via regole `manual_trigger` deterministiche + cap HP Sanguinamento a 0. |
+| `api/services/character_response.py` | **modificato (fix)** | `await session.flush()` all'inizio di `build_character_response` (vedi sotto). |
+| `.github/workflows/homebrew-audit.yml` | nuovo | `workflow_dispatch`: setup-uv + node 20, `uv sync`, `npm ci`, avvia API (DEV_USER_ID + DB throwaway) + wait `/health` + `npm run test:homebrew:audit`, upload `docs/homebrew-audit/` come artifact. |
+| `docs/homebrew-audit/00-index.md` | nuovo | Indice statico (IT) della suite + comando di rigenerazione + tabella link aree + legenda severità. |
+| `docs/homebrew-audit/{known-issues,01..07}.md` | nuovo (autogen) | Report canonici committati: roll-up 0/0 critici + 63 🟢, area report per zona. |
+| `.gitignore` | modificato | `+docs/homebrew-audit/.previous.md` (backup transiente per diff run-to-run). |
+
+#### Bug reale trovato dall'audit (e fixato) — `fix(api)` 10c5b57
+
+`PATCH /characters/{id}/hp` con `op:"set_max"`/`op:"set_current"` ritornava **HTTP 500** (`greenlet_spawn has not been called`). Root cause: `build_character_response` chiama `CharacterFull.model_validate(char)` mentre la session è *dirty* (HP mutato non flushato); l'accesso sincrono agli attributi in pydantic innesca un **autoflush sincrono** → eccezione async SQLAlchemy → transazione in rollback → 500. I rami `DAMAGE`/`HEAD`/`HEAL` non lo manifestavano solo perché `dispatch()` faceva un `await session.flush()` prima. **Regressione introdotta in Phase 6** quando `build_character_response` ha sostituito `CharacterFull.model_validate` su 26 endpoint; affliggeva latentemente anche death-saves/skills/saving-throws PATCH. Fix centrale: `await session.flush()` come prima istruzione di `build_character_response` → 256/256 backend verdi, set_max/set_current → 200. Esempio canonico di audit che cattura un bug funzionale reale.
+
+#### Deviazioni dal piano originale
+
+- **Task 7.6 — suite API-only (no DOM)**. La nota originale chiedeva una DOM assertion su `HomebrewBreakdownRow`. Decisione utente (AskUserQuestion): **Solo API** — coerente con la config API-only (nessun browser project), deterministico, niente Vite+chromium+mock initData in CI. Il render DOM era già smoke-verificato live in Phase 6. 7.6 ha quindi 6 test API (i 5 target + il gate negativo AC), non un layer browser.
+- **63 test, non ~70**. Conteggio reale: 15+16+4+6+8+9+5. Il piano stimava ~70; le aree hanno il numero naturale di casi (16 azioni reali, 8 operatori, ecc.).
+- **Le 16 azioni reali ≠ lista del prompt**. Il kickoff elencava azioni fittizie (`emit_event`, `modify_hp`, `set_var`…). Le 16 azioni effettive del DSL (`_ACTION_REGISTRY`): `roll_dice, lookup_table, match, if, set_property, inc_property, unequip, damage_character, heal_character, change_resource, restore_resource, apply_condition, remove_condition, apply_modifier_once, notify, add_history`. 7.4 testa queste.
+- **Determinismo via HTTP** (i test pytest forzano i dadi con `monkeypatch`; via HTTP no): luck_points/bleeding sono deterministici; enchanted_weapon esegue fino a 6 attacchi e asserisce ≥1 notifica fuoco (P(tutti fumble)<1.6e-8); quality_wear è invariant-based (pipeline esegue + stato resta enum valido); le transizioni di stato (7.9) usano regole `manual_trigger` deterministiche che **replicano i branch D/X del template** con `hb_damage_state` iniziale impostato via `item_metadata`.
+- **Depth limit `MAX_DEPTH=8` non triggerabile via HTTP**. Il cycle detection (skip per `rule.id` già nello stack) ferma la ricorsione single-rule a depth 1; una chain di ≥9 regole distinte per raggiungere depth 9 esplode combinatorialmente. 7.8 testa il cycle detection (osservabile: HP 50→48) e documenta che il backstop depth-limit è coperto dallo unit test backend `test_dispatcher.py::test_dispatch_depth_exceeded_returns_empty_and_logs` (inietta `depth=9` direttamente).
+- **Exit gate via `onEnd` return**. `process.exitCode=1` da dentro un reporter è sovrascritto da `process.exit()` di Playwright; il meccanismo autoritativo è `onEnd` che ritorna `{status:"failed"}` (mantenuto `process.exitCode` come belt-and-suspenders). Inoltre `onTestEnd` ignora i retry non-finali (robusto se la CI abilita `retries`).
+- **Exit gate su QUALSIASI 🔴/🟠 corrente** (non diff vs baseline). Il piano diceva "nuovi findings", ma il suo stesso snippet gata su tutti i critici; dato l'obiettivo "0 critici" e la fragilità del parsing markdown, il gate è su `getCriticalCount()>0`; `.previous.md` resta come aiuto al diff manuale.
+
+#### Issues residui / osservazioni 🟡 (non bloccanti)
+
+- **Q&U: D-branch su item già `distrutta` regredisce a `danneggiata`**. Il branch `if damage_state=="danneggiata" then distrutta else danneggiata` applicato a un item distrutta prende l'`else` → torna `danneggiata`. Raggiungibile via `attack_rolled`/fumble (il filtro non controlla `is_equipped`). 7.9 asserisce la terminalità sotto il path di **distruzione (X)** (idempotente); il quirk del D-branch su distrutta è un edge del DSL del template, non del motore. Candidato a un `if damage_state != "distrutta"` guard nel template.
+- **N+1 query in `build_character_response`** (carry-over Phase 6, TODO inline). 54 SELECT/response. La suite a `workers:1` non l'ha stressato (63 test < 30s totali). Da batchare prima del production hardening.
+- **Passive modifier negativo non gestito** dal componente (`+{value}` literal) — MVP solo int positivi.
+- **Sanguinamento UX gap** (carry-over Phase 5): manca affordance per APPLICARE `custom:bleeding` la prima volta.
+- **Nit Phase 5 residui** (PropertyBadge null-guard, useMemo, double-haptic) — non toccati.
+
+#### Stato esecuzione
+
+Phase 0 ✅ · Phase 1 ✅ · Phase 2 ✅ · Phase 3 ✅ · Phase 4 ✅ · Phase 5 ✅ · Phase 6 ✅ · Phase 7 ✅.
+
+**Milestone Phase 7 raggiunta — piano completo (77 task).** ~63 e2e Playwright generano `docs/homebrew-audit/known-issues.md` in formato `/audit-loop`-compatibile, gating automatico su 🔴/🟠. Coverage: 15 eventi, 16 azioni, 4 template, 6 passive modifier, 8 filtri, 9 casi d'errore, 5 transizioni di stato. 0 findings critici al primo run; 1 bug funzionale reale (HP set_max/set_current 500) trovato e fixato. Workflow CI `workflow_dispatch` pronto. Branch `feat/homebrew-rules-engine` pronto per PR. **`npm run build:prod` NON eseguito**: Phase 7 non tocca `webapp/src/` (i test vivono in `webapp/tests/`), quindi `docs/app/` resta invariato.
+
 ---
 
 ## Sequenza fasi (milestone)
