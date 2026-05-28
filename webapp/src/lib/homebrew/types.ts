@@ -296,7 +296,6 @@ export interface HomebrewRuleUpdate {
   description?: string | null
   enabled?: boolean
   dsl?: RuleDSL
-  template_id?: string | null
 }
 
 // ---------------------------------------------------------------------------
@@ -312,6 +311,7 @@ export interface HomebrewResource {
   current: number
   max: number
   restoration_type: RestorationType
+  homebrew_notifications?: Array<Record<string, unknown>> | null
 }
 
 export interface TemplateRead {
