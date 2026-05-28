@@ -67,6 +67,33 @@ async def char_id(test_session_factory) -> int:
         return char.id
 
 
+def notify_rule(event: str, message: str, name: str = "Test Lifecycle Rule") -> dict:
+    """Build a HomebrewRule create body with a single notify trigger on `event`.
+
+    Shared across integration tests for lifecycle events (long_rest_taken,
+    short_rest_taken, spell_cast, ability_used, item_equipped/unequipped,
+    level_up, ...). Importable as a plain function — keep it side-effect-free.
+    """
+    return {
+        "name": name,
+        "description": "Integration test rule",
+        "enabled": True,
+        "dsl": {
+            "version": 1,
+            "subject": {"type": "character"},
+            "triggers": [
+                {
+                    "event": event,
+                    "filters": [],
+                    "effects": [
+                        {"action": "notify", "severity": "info", "message": message}
+                    ],
+                }
+            ],
+        },
+    }
+
+
 @pytest.fixture
 def patch_random_roll(monkeypatch):
     """Patch ``random.randint`` on the shared module object for deterministic rolls.

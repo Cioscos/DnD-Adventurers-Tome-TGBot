@@ -10,27 +10,7 @@ from __future__ import annotations
 
 import pytest
 
-
-def _notify_rule(event: str, message: str, name: str = "Test Lifecycle Rule") -> dict:
-    """Build a HomebrewRule create body with a single notify trigger on `event`."""
-    return {
-        "name": name,
-        "description": "Integration test rule",
-        "enabled": True,
-        "dsl": {
-            "version": 1,
-            "subject": {"type": "character"},
-            "triggers": [
-                {
-                    "event": event,
-                    "filters": [],
-                    "effects": [
-                        {"action": "notify", "severity": "info", "message": message}
-                    ],
-                }
-            ],
-        },
-    }
+from tests.integration.homebrew.conftest import notify_rule as _notify_rule
 
 
 @pytest.mark.asyncio
