@@ -130,7 +130,7 @@ export default function PassiveModifiersSection({ mods, onChange }: PassiveModif
                     <button
                       type="button"
                       onClick={() => openEdit(index)}
-                      className="p-1.5 rounded-lg text-dnd-gold-dim hover:text-dnd-gold-bright hover:bg-dnd-surface transition-colors"
+                      className="w-11 h-11 inline-flex items-center justify-center rounded-lg text-dnd-gold-dim hover:text-dnd-gold-bright hover:bg-dnd-surface transition-colors"
                       aria-label="Edit"
                     >
                       <Pencil size={16} />
@@ -138,7 +138,7 @@ export default function PassiveModifiersSection({ mods, onChange }: PassiveModif
                     <button
                       type="button"
                       onClick={() => setConfirmDeleteIndex(index)}
-                      className="p-1.5 rounded-lg text-dnd-crimson hover:text-dnd-crimson-bright hover:bg-dnd-crimson/10 transition-colors"
+                      className="w-11 h-11 inline-flex items-center justify-center rounded-lg text-dnd-crimson hover:text-dnd-crimson-bright hover:bg-dnd-crimson/10 transition-colors"
                       aria-label="Delete"
                     >
                       <Trash2 size={16} />
