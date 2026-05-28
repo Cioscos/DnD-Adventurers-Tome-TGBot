@@ -12,20 +12,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.schemas.character import AcBreakdown, CharacterFull
 from api.services.homebrew.passive import get_passive_modifiers
+from core.data.skills import SKILL_ABILITY_MAP
 from core.db.models import ABILITY_NAMES, Character
-
-_SKILL_SLUGS = (
-    "acrobatics", "animal_handling", "arcana", "athletics", "deception",
-    "history", "insight", "intimidation", "investigation", "medicine",
-    "nature", "perception", "performance", "persuasion", "religion",
-    "sleight_of_hand", "stealth", "survival",
-)
 
 
 async def build_character_response(
     session: AsyncSession, char: Character,
 ) -> CharacterFull:
     """Build a CharacterFull response with homebrew breakdown populated."""
+    # TODO (perf): each get_passive_modifiers call issues 2 SELECTs (rules + items).
+    # At 27 calls/response this is 54 SELECTs. Batch by preloading rules+items once
+    # and exposing a sum_modifiers(rules, items, target_path) helper.
     response = CharacterFull.model_validate(char)
 
     hb_ac = await get_passive_modifiers(session, char, "character.ac")
@@ -43,7 +40,7 @@ async def build_character_response(
         session, char, "character.speed"
     )
 
-    for slug in _SKILL_SLUGS:
+    for slug in SKILL_ABILITY_MAP:
         val = await get_passive_modifiers(session, char, f"character.skill.{slug}")
         if val:
             response.skills_homebrew_modifiers[slug] = val
