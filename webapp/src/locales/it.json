@@ -191,7 +191,8 @@
       "proficient": "Competente",
       "roll": "Tira dado",
       "ts_short": "TS",
-      "tap_to_roll": "Tocca per tirare"
+      "tap_to_roll": "Tocca per tirare",
+      "homebrew_label": "Bonus Homebrew"
     },
     "ability": {
       "strength_short": "FOR",

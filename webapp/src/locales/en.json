@@ -191,7 +191,8 @@
       "proficient": "Proficient",
       "roll": "Roll dice",
       "ts_short": "ST",
-      "tap_to_roll": "Tap to roll"
+      "tap_to_roll": "Tap to roll",
+      "homebrew_label": "Homebrew Bonus"
     },
     "ability": {
       "strength_short": "STR",
