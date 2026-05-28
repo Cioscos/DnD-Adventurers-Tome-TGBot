@@ -355,6 +355,10 @@
       "custom_subtitle_rule_id": "Regola personalizzata · #{{id}}",
       "custom_remove_aria": "Rimuovi {{name}}",
       "custom_fallback": "Personalizzato · {{slug}}",
+      "turn_start": {
+        "label": "Inizio turno",
+        "no_effect": "Inizio turno · nessuna regola attiva"
+      },
       "desc": {
         "blinded": "Un personaggio accecato non può vedere e fallisce automaticamente ogni prova di caratteristica che richiede la vista. I tiri per colpire contro di lui hanno vantaggio, i suoi hanno svantaggio.",
         "charmed": "Un personaggio affascinato non può attaccare chi lo affascina né prenderlo come bersaglio di capacità dannose o effetti magici. Chi lo affascina ha vantaggio nelle prove di caratteristica sociali.",

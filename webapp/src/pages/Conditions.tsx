@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
-import { Info, RotateCcw } from 'lucide-react'
+import { Clock, Info, RotateCcw } from 'lucide-react'
 import { GiFlame as Flame } from 'react-icons/gi'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
@@ -16,6 +16,11 @@ import { spring, stagger } from '@/styles/motion'
 import ConditionDetailModal from '@/pages/conditions/ConditionDetailModal'
 import { CONDITION_ICONS } from '@/lib/conditions'
 import CustomConditionCard from '@/components/homebrew/CustomConditionCard'
+import {
+  showHomebrewNotifications,
+  type NotificationLike,
+} from '@/components/homebrew/HomebrewNotification'
+import { useToast } from '@/hooks/useToast'
 
 const CONDITION_KEYS = [
   'blinded', 'charmed', 'deafened', 'frightened', 'grappled',
@@ -28,6 +33,7 @@ export default function Conditions() {
   const charId = Number(id)
   const { t } = useTranslation()
   const qc = useQueryClient()
+  const toast = useToast()
   const [pendingExhaustion, setPendingExhaustion] = useState<number | null>(null)
   const [detailKey, setDetailKey] = useState<string | null>(null)
   const [showExhaustionDetails, setShowExhaustionDetails] = useState(false)
@@ -60,6 +66,30 @@ export default function Conditions() {
       setPendingExhaustion(null)
       haptic.error()
     },
+  })
+
+  // Manual "start of turn" signal — fires every enabled homebrew rule whose
+  // trigger matches `turn_started` (e.g. Bleeding ticks damage each turn).
+  // The response shape here is `{notifications: [...]}`, NOT
+  // `{homebrew_notifications: [...]}`, so the global MutationCache handler
+  // in main.tsx ignores it; we surface the array manually via
+  // `showHomebrewNotifications`. Empty list → neutral info toast so the
+  // tap is always acknowledged.
+  const turnStartMutation = useMutation({
+    mutationFn: () => api.homebrew.turnStart(charId),
+    onSuccess: (resp) => {
+      qc.invalidateQueries({ queryKey: ['character', charId] })
+      qc.invalidateQueries({ queryKey: ['homebrew-resources', charId] })
+
+      const list = resp?.notifications
+      if (Array.isArray(list) && list.length > 0) {
+        showHomebrewNotifications(list as NotificationLike[])
+      } else {
+        toast.info(t('character.conditions.turn_start.no_effect'))
+      }
+      haptic.success()
+    },
+    onError: () => haptic.error(),
   })
 
   if (!char) return null
@@ -120,6 +150,24 @@ export default function Conditions() {
 
   return (
     <Layout title={t('character.conditions.title')} backTo={`/char/${charId}`} group="character" page="conditions">
+      {/* Turn-start CTA — only visible when at least one homebrew-applied
+          `custom:*` condition is active, because that's the only situation
+          where a `turn_started` trigger can have an effect the player
+          notices on this page (e.g. Bleeding ticks damage each turn). */}
+      {customEntries.length > 0 && (
+        <Button
+          variant="primary"
+          size="lg"
+          fullWidth
+          onClick={() => turnStartMutation.mutate()}
+          icon={<Clock size={18} />}
+          loading={turnStartMutation.isPending}
+          haptic="medium"
+        >
+          {t('character.conditions.turn_start.label')}
+        </Button>
+      )}
+
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-2">
           <FilterChip
