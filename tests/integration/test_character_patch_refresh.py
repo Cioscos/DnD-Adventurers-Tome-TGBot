@@ -112,3 +112,60 @@ async def test_patch_conditions_exhaustion_logged_to_history(client):
     # All ability score relations should still be present (length == 6 from
     # POST /characters seed)
     assert len(body["ability_scores"]) == 6
+
+
+@pytest.mark.asyncio
+async def test_patch_xp_levelup_preserves_classes_resources_eager_load(client):
+    """PATCH /xp that bumps a single-class char from L1 → L2 must return a
+    response where ``classes[0].resources`` is fully serialized.
+
+    Failure mode that motivates the fix:
+    ``session.refresh(char, attribute_names=["classes", ...])`` re-runs each
+    relation's *default* loader strategy and discards the nested
+    ``selectinload(CharacterClass.resources)`` chain set up by ``_full_load()``.
+    Pydantic serialization of ``CharacterFull -> CharacterClassRead.resources``
+    (a ``list[ClassResourceRead]`` field) then triggers MissingGreenlet during
+    the lazy-load in sync context — which surfaces either as a 500, or, more
+    insidiously, as a silent empty list once the dict-resolver swallows it.
+
+    Regression contract: after a level-up, the response body MUST contain a
+    non-empty ``classes[0].resources`` (the level-2 abilities — e.g. for
+    "Guerriero" that's ``Secondo Vento`` available from L1, plus ``Action
+    Surge`` and ``Dadi Superiorità`` which become available at L2).
+    """
+    char_id = await _create_full_character(client)
+
+    # Add a starting class at level 1 (Guerriero has Secondo Vento at L1, then
+    # Action Surge + Dadi Superiorità appear at L2 — total >= 1 even at L1, so
+    # an empty list is the unambiguous signal of the lazy-load drop).
+    r = await client.post(
+        f"/characters/{char_id}/classes",
+        json={"class_name": "Guerriero", "level": 1, "hit_die": 10},
+    )
+    assert r.status_code == 201, r.text
+
+    # 300 XP = level 2 (xp_to_level threshold).
+    r = await client.patch(
+        f"/characters/{char_id}/xp",
+        json={"set": 300},
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+
+    # Sanity: the level bump actually applied.
+    assert len(body["classes"]) == 1
+    assert body["classes"][0]["level"] == 2
+
+    # The critical assertion: nested eager-load survived the refresh.
+    resources = body["classes"][0]["resources"]
+    assert isinstance(resources, list)
+    assert len(resources) >= 1, (
+        "classes[0].resources came back empty — nested selectinload was "
+        "stripped by session.refresh(attribute_names=[...]); fix is to "
+        "expunge + re-SELECT via _get_owned(full=True)."
+    )
+    # And at L2 there must be MORE resources than at L1 — proves the level-up
+    # actually added rows AND that they were serialized.
+    resource_names = {r["name"] for r in resources}
+    assert "Secondo Vento" in resource_names  # L1+ always present
+    assert "Action Surge" in resource_names   # newly available at L2
