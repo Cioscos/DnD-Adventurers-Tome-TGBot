@@ -82,10 +82,14 @@ async def test_attack_normal_roll_does_not_mark_weapon(
         await s.refresh(weapon)
         weapon_id = weapon.id
 
-    await client.post(f"/characters/{char_id}/homebrew/templates/quality_wear/install")
+    r = await client.post(f"/characters/{char_id}/homebrew/templates/quality_wear/install")
+    assert r.status_code == 201
 
-    # to-hit_die=15 (no fumble), other rolls don't matter
-    monkeypatch.setattr("api.routers.items.random.randint", lambda lo, hi: 15)
+    # to-hit_die=15 (no fumble), other rolls don't matter.
+    # Patch the shared `random` module (items.py and actions.py both `import random`,
+    # so they reference the same module object).
+    import random as _random
+    monkeypatch.setattr(_random, "randint", lambda lo, hi: 15)
 
     r = await client.post(f"/characters/{char_id}/items/{weapon_id}/attack")
     assert r.status_code == 200
@@ -115,7 +119,8 @@ async def test_attack_with_no_rule_installed_still_works(
         await s.refresh(weapon)
         weapon_id = weapon.id
 
-    monkeypatch.setattr("api.routers.items.random.randint", lambda lo, hi: 1)
+    import random as _random
+    monkeypatch.setattr(_random, "randint", lambda lo, hi: 1)
 
     r = await client.post(f"/characters/{char_id}/items/{weapon_id}/attack")
     assert r.status_code == 200
