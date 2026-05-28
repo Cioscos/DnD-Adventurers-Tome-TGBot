@@ -6,13 +6,16 @@ from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.auth import get_current_user
 from api.database import get_db
 from api.schemas.homebrew import (
+    HomebrewRuleCreate,
     HomebrewRuleRead,
+    HomebrewRuleUpdate,
     TemplateDetailRead,
     TemplateRead,
 )
@@ -186,3 +189,81 @@ async def delete_rule(
 ) -> None:
     rule = await _get_owned_rule(char_id, rule_id, user_id, session)
     await session.delete(rule)
+
+
+# ─── Write-side rule endpoints ───────────────────────────────────────────────
+
+
+class EnableBody(BaseModel):
+    enabled: bool
+
+
+@router.post(
+    "/characters/{char_id}/homebrew/rules",
+    response_model=HomebrewRuleRead,
+    status_code=201,
+)
+async def create_rule(
+    char_id: int,
+    body: HomebrewRuleCreate,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> HomebrewRule:
+    char = await _get_owned_char(char_id, user_id, session)
+    now = _now()
+    rule = HomebrewRule(
+        character_id=char.id,
+        name=body.name,
+        description=body.description,
+        enabled=body.enabled,
+        dsl=body.dsl,
+        version=1,
+        template_id=body.template_id,
+        created_at=now,
+        updated_at=now,
+    )
+    session.add(rule)
+    await session.flush()
+    if body.dsl.get("subject", {}).get("type") == "item":
+        await _materialize_property_defaults(session, char, rule)
+    return rule
+
+
+@router.patch(
+    "/characters/{char_id}/homebrew/rules/{rule_id}",
+    response_model=HomebrewRuleRead,
+)
+async def update_rule(
+    char_id: int, rule_id: int,
+    body: HomebrewRuleUpdate,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> HomebrewRule:
+    rule = await _get_owned_rule(char_id, rule_id, user_id, session)
+    if body.name is not None:
+        rule.name = body.name
+    if body.description is not None:
+        rule.description = body.description
+    if body.dsl is not None:
+        rule.dsl = body.dsl
+        rule.version += 1
+    if body.enabled is not None:
+        rule.enabled = body.enabled
+    rule.updated_at = _now()
+    return rule
+
+
+@router.post(
+    "/characters/{char_id}/homebrew/rules/{rule_id}/enable",
+    response_model=HomebrewRuleRead,
+)
+async def toggle_enabled(
+    char_id: int, rule_id: int,
+    body: EnableBody,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> HomebrewRule:
+    rule = await _get_owned_rule(char_id, rule_id, user_id, session)
+    rule.enabled = body.enabled
+    rule.updated_at = _now()
+    return rule

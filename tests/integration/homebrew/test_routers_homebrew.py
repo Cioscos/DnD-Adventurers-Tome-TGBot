@@ -170,3 +170,109 @@ async def test_delete_rule_returns_204(client, char_id):
 async def test_delete_rule_unknown_returns_404(client, char_id):
     r = await client.delete(f"/characters/{char_id}/homebrew/rules/99999")
     assert r.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_create_rule_from_scratch_returns_201(client, char_id):
+    body = {
+        "name": "My custom",
+        "description": "Test",
+        "dsl": {
+            "version": 1,
+            "subject": {"type": "character"},
+            "triggers": [{
+                "event": "manual_trigger", "filters": [],
+                "effects": [{"action": "notify", "severity": "info", "message": "hi"}],
+            }],
+        },
+        "enabled": True,
+    }
+    r = await client.post(f"/characters/{char_id}/homebrew/rules", json=body)
+    assert r.status_code == 201
+    payload = r.json()
+    assert payload["name"] == "My custom"
+    assert payload["version"] == 1
+    assert payload["template_id"] is None
+
+
+@pytest.mark.asyncio
+async def test_create_rule_invalid_dsl_returns_422(client, char_id):
+    body = {"name": "Bad", "dsl": {"version": 1}, "enabled": True}  # missing subject + triggers
+    r = await client.post(f"/characters/{char_id}/homebrew/rules", json=body)
+    assert r.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_create_rule_empty_name_returns_422(client, char_id):
+    body = {
+        "name": "",
+        "dsl": {
+            "version": 1,
+            "subject": {"type": "character"},
+            "triggers": [{"event": "manual_trigger", "filters": [], "effects": []}],
+        },
+        "enabled": True,
+    }
+    r = await client.post(f"/characters/{char_id}/homebrew/rules", json=body)
+    assert r.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_update_rule_changes_name_and_description(client, char_id):
+    r1 = await client.post(f"/characters/{char_id}/homebrew/templates/quality_wear/install")
+    rule_id = r1.json()["id"]
+    r2 = await client.patch(
+        f"/characters/{char_id}/homebrew/rules/{rule_id}",
+        json={"name": "Renamed", "description": "new"},
+    )
+    assert r2.status_code == 200
+    body = r2.json()
+    assert body["name"] == "Renamed"
+    assert body["description"] == "new"
+    # version should NOT bump when dsl is unchanged
+    assert body["version"] == 1
+
+
+@pytest.mark.asyncio
+async def test_update_rule_bumps_version_when_dsl_changes(client, char_id):
+    r1 = await client.post(f"/characters/{char_id}/homebrew/templates/quality_wear/install")
+    rule_id = r1.json()["id"]
+    new_dsl = {
+        "version": 1,
+        "subject": {"type": "character"},
+        "triggers": [{"event": "manual_trigger", "filters": [], "effects": []}],
+    }
+    r2 = await client.patch(
+        f"/characters/{char_id}/homebrew/rules/{rule_id}",
+        json={"dsl": new_dsl},
+    )
+    assert r2.status_code == 200
+    assert r2.json()["version"] == 2
+
+
+@pytest.mark.asyncio
+async def test_update_rule_invalid_dsl_returns_422(client, char_id):
+    r1 = await client.post(f"/characters/{char_id}/homebrew/templates/quality_wear/install")
+    rule_id = r1.json()["id"]
+    r2 = await client.patch(
+        f"/characters/{char_id}/homebrew/rules/{rule_id}",
+        json={"dsl": {"version": 99}},
+    )
+    assert r2.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_toggle_enabled_off_then_on(client, char_id):
+    r1 = await client.post(f"/characters/{char_id}/homebrew/templates/quality_wear/install")
+    rule_id = r1.json()["id"]
+    r2 = await client.post(
+        f"/characters/{char_id}/homebrew/rules/{rule_id}/enable",
+        json={"enabled": False},
+    )
+    assert r2.status_code == 200
+    assert r2.json()["enabled"] is False
+    r3 = await client.post(
+        f"/characters/{char_id}/homebrew/rules/{rule_id}/enable",
+        json={"enabled": True},
+    )
+    assert r3.json()["enabled"] is True
