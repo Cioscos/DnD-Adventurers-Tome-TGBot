@@ -10,6 +10,7 @@ import Surface from '@/components/ui/Surface'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
 import { ShieldEmblem } from '@/components/ui/Ornament'
+import HomebrewBreakdownRow from '@/components/homebrew/HomebrewBreakdownRow'
 import { haptic } from '@/auth/telegram'
 import { spring } from '@/styles/motion'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
@@ -113,6 +114,7 @@ export default function ArmorClass() {
             base · shield · magic
           </p>
         </div>
+        <HomebrewBreakdownRow value={char.ac_breakdown?.homebrew ?? 0} />
       </Surface>
 
       {/* Single-row 3-col: Base · Shield · Magic */}
