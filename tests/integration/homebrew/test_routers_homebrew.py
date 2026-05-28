@@ -546,3 +546,144 @@ async def test_patch_resource_wrong_owner_via_url_returns_403(client, test_sessi
         json={"current": 1},
     )
     assert r.status_code == 403
+
+
+# ─── Manual endpoints: turn-start + manual-trigger ───────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_turn_start_fires_turn_started_event(client, char_id):
+    """A rule with a `turn_started` trigger fires on POST /turn-start."""
+    body = {
+        "name": "Turn announcer",
+        "description": "Notifies on turn start",
+        "enabled": True,
+        "dsl": {
+            "version": 1,
+            "subject": {"type": "character"},
+            "triggers": [{
+                "event": "turn_started", "filters": [],
+                "effects": [{"action": "notify", "severity": "info", "message": "Your turn!"}],
+            }],
+        },
+    }
+    r1 = await client.post(f"/characters/{char_id}/homebrew/rules", json=body)
+    assert r1.status_code == 201
+
+    r2 = await client.post(f"/characters/{char_id}/homebrew/turn-start")
+    assert r2.status_code == 200
+    notes = r2.json()["notifications"]
+    assert any(n["message"] == "Your turn!" for n in notes)
+
+
+@pytest.mark.asyncio
+async def test_turn_start_no_rule_no_notifications(client, char_id):
+    """POST /turn-start with no rules returns empty notifications list."""
+    r = await client.post(f"/characters/{char_id}/homebrew/turn-start")
+    assert r.status_code == 200
+    assert r.json() == {"notifications": []}
+
+
+@pytest.mark.asyncio
+async def test_turn_start_wrong_owner_returns_403(client, test_session_factory):
+    """POST /turn-start for another user's character must return 403."""
+    from core.db.models import Character
+    async with test_session_factory() as s:
+        other = Character(user_id=9999, name="Other")
+        s.add(other)
+        await s.commit()
+        await s.refresh(other)
+        other_id = other.id
+    r = await client.post(f"/characters/{other_id}/homebrew/turn-start")
+    assert r.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_manual_trigger_fires_event(client, char_id):
+    """POST /manual-trigger/{rule_id} fires rules listening to manual_trigger."""
+    body = {
+        "name": "Manual rule",
+        "description": "Fires on manual_trigger",
+        "enabled": True,
+        "dsl": {
+            "version": 1,
+            "subject": {"type": "character"},
+            "triggers": [{
+                "event": "manual_trigger", "filters": [],
+                "effects": [{"action": "notify", "severity": "info", "message": "Manual fired"}],
+            }],
+        },
+    }
+    r1 = await client.post(f"/characters/{char_id}/homebrew/rules", json=body)
+    assert r1.status_code == 201
+    rule_id = r1.json()["id"]
+
+    r2 = await client.post(f"/characters/{char_id}/homebrew/manual-trigger/{rule_id}")
+    assert r2.status_code == 200
+    notes = r2.json()["notifications"]
+    assert any(n["message"] == "Manual fired" for n in notes)
+
+
+@pytest.mark.asyncio
+async def test_manual_trigger_disabled_rule_returns_409(client, char_id):
+    """POST /manual-trigger/{rule_id} on a disabled rule returns 409."""
+    body = {
+        "name": "Manual rule",
+        "description": "Fires on manual_trigger",
+        "enabled": True,
+        "dsl": {
+            "version": 1,
+            "subject": {"type": "character"},
+            "triggers": [{
+                "event": "manual_trigger", "filters": [],
+                "effects": [{"action": "notify", "severity": "info", "message": "should-not-fire"}],
+            }],
+        },
+    }
+    r1 = await client.post(f"/characters/{char_id}/homebrew/rules", json=body)
+    rule_id = r1.json()["id"]
+    # Toggle off
+    r2 = await client.post(
+        f"/characters/{char_id}/homebrew/rules/{rule_id}/enable",
+        json={"enabled": False},
+    )
+    assert r2.status_code == 200
+    r3 = await client.post(f"/characters/{char_id}/homebrew/manual-trigger/{rule_id}")
+    assert r3.status_code == 409
+
+
+@pytest.mark.asyncio
+async def test_manual_trigger_missing_rule_returns_404(client, char_id):
+    r = await client.post(f"/characters/{char_id}/homebrew/manual-trigger/99999")
+    assert r.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_manual_trigger_wrong_owner_returns_403(client, test_session_factory):
+    """POST /manual-trigger/{rule_id} on another user's character returns 403."""
+    from core.db.models import Character, HomebrewRule
+    async with test_session_factory() as s:
+        other = Character(user_id=9999, name="Other")
+        s.add(other)
+        await s.commit()
+        await s.refresh(other)
+        rule = HomebrewRule(
+            character_id=other.id, name="x", description=None, enabled=True,
+            dsl={
+                "version": 1,
+                "subject": {"type": "character"},
+                "triggers": [{"event": "manual_trigger", "filters": [], "effects": []}],
+            },
+            version=1, template_id=None,
+            created_at="2026-01-01T00:00:00", updated_at="2026-01-01T00:00:00",
+        )
+        s.add(rule)
+        await s.commit()
+        await s.refresh(rule)
+        other_id = other.id
+        other_rule_id = rule.id
+
+    r = await client.post(
+        f"/characters/{other_id}/homebrew/manual-trigger/{other_rule_id}"
+    )
+    assert r.status_code == 403

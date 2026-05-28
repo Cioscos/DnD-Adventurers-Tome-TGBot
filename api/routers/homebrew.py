@@ -393,3 +393,52 @@ async def patch_resource(
     if notifications:
         result.homebrew_notifications = notifications
     return result
+
+
+# ─── Manual trigger endpoints ───────────────────────────────────────────────
+
+
+@router.post(
+    "/characters/{char_id}/homebrew/turn-start",
+    status_code=200,
+)
+async def turn_start(
+    char_id: int,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> dict:
+    """Fire the `turn_started` event for the character.
+
+    Returns a flat list of notifications produced by all enabled rules whose
+    triggers match `turn_started`. Empty list if no matching rules exist.
+    """
+    char = await _get_owned_char(char_id, user_id, session)
+    firing = await dispatch(session, char, "turn_started", {})
+    return {"notifications": collect_homebrew_notifications(firing)}
+
+
+@router.post(
+    "/characters/{char_id}/homebrew/manual-trigger/{rule_id}",
+    status_code=200,
+)
+async def manual_trigger(
+    char_id: int, rule_id: int,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> dict:
+    """Fire the `manual_trigger` event for the character.
+
+    The dispatcher fires ALL enabled rules with a `manual_trigger` trigger.
+    The provided `rule_id` is passed in the event payload so a rule's DSL
+    can scope itself with a filter like
+    ``{"path": "$event.rule_id", "op": "eq", "value": <literal_id>}``.
+
+    Returns 404 if the rule is missing, 403 if it belongs to another user,
+    409 if the rule is disabled.
+    """
+    char = await _get_owned_char(char_id, user_id, session)
+    rule = await _get_owned_rule(char_id, rule_id, user_id, session)
+    if not rule.enabled:
+        raise HTTPException(409, "Rule is disabled")
+    firing = await dispatch(session, char, "manual_trigger", {"rule_id": rule_id})
+    return {"notifications": collect_homebrew_notifications(firing)}
