@@ -63,11 +63,17 @@ class HomebrewResourceRead(BaseModel):
     current: int
     max: int
     restoration_type: str
+    # Homebrew rule notifications surfaced when a resource_changed / resource_depleted
+    # event fires (PATCH /homebrew/resources/{id}). Omitted/None on list responses
+    # to match the canonical Phase 2 contract.
+    homebrew_notifications: Optional[list[dict]] = None
 
 
 class HomebrewResourceUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    current: int = Field(..., ge=0)
+    # No `ge=0` constraint — negative inputs are clamped to 0 by the router, matching
+    # the clamp-to-max behaviour for values above the resource's max.
+    current: int
 
 
 class TemplateRead(BaseModel):

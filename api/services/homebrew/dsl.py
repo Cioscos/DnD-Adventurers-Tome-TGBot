@@ -408,6 +408,23 @@ class Trigger(BaseModel):
         return v
 
 
+class ResourceDef(BaseModel):
+    """Declaration of a custom runtime resource (e.g. Luck Points).
+
+    Materialized into a HomebrewResource row at rule install/create time.
+    """
+    model_config = ConfigDict(extra="forbid")
+    key: str
+    name: str
+    max: int = Field(..., ge=0)
+    restoration_type: Literal["long_rest", "short_rest", "none"] = "none"
+
+    @field_validator("key")
+    @classmethod
+    def _key_format(cls, v: str) -> str:
+        return _validate_key(v)
+
+
 class RuleDSL(BaseModel):
     """Top-level rule definition. Version-pinned (MVP = 1)."""
     model_config = ConfigDict(extra="forbid")
@@ -418,6 +435,7 @@ class RuleDSL(BaseModel):
     tables: list[Table] = Field(default_factory=list)
     passive_modifiers: list[PassiveModifier] = Field(default_factory=list)
     triggers: list[Trigger] = Field(default_factory=list)
+    resources: list[ResourceDef] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def _has_at_least_one_behavior(self) -> "RuleDSL":

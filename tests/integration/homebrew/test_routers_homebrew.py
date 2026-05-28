@@ -276,3 +276,273 @@ async def test_toggle_enabled_off_then_on(client, char_id):
         json={"enabled": True},
     )
     assert r3.json()["enabled"] is True
+
+
+# ─── Homebrew resources: materialization on rule install/create ──────────────
+
+
+def _resource_rule_body(
+    *, name: str = "Luck Pool", key: str = "luck_points",
+    res_name: str = "Luck Points", max_value: int = 3,
+    restoration: str = "long_rest",
+    event: str = "resource_changed", message: str = "Luck changed",
+) -> dict:
+    """Build a create_rule body with one ResourceDef + a trigger on `event`."""
+    return {
+        "name": name,
+        "description": "Custom resource",
+        "enabled": True,
+        "dsl": {
+            "version": 1,
+            "subject": {"type": "character"},
+            "resources": [{
+                "key": key, "name": res_name, "max": max_value,
+                "restoration_type": restoration,
+            }],
+            "triggers": [{
+                "event": event, "filters": [],
+                "effects": [{"action": "notify", "severity": "info", "message": message}],
+            }],
+        },
+    }
+
+
+@pytest.mark.asyncio
+async def test_create_rule_materializes_resource(client, char_id):
+    r = await client.post(
+        f"/characters/{char_id}/homebrew/rules",
+        json=_resource_rule_body(),
+    )
+    assert r.status_code == 201
+    resources = (await client.get(f"/characters/{char_id}/homebrew/resources")).json()
+    assert len(resources) == 1
+    res = resources[0]
+    assert res["key"] == "luck_points"
+    assert res["name"] == "Luck Points"
+    assert res["current"] == 3
+    assert res["max"] == 3
+    assert res["restoration_type"] == "long_rest"
+
+
+@pytest.mark.asyncio
+async def test_create_rule_duplicate_resource_key_returns_409(client, char_id):
+    r1 = await client.post(
+        f"/characters/{char_id}/homebrew/rules",
+        json=_resource_rule_body(name="First"),
+    )
+    assert r1.status_code == 201
+    r2 = await client.post(
+        f"/characters/{char_id}/homebrew/rules",
+        json=_resource_rule_body(name="Second"),
+    )
+    assert r2.status_code == 409
+    assert "luck_points" in r2.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_create_rule_with_multiple_resources_in_same_dsl(client, char_id):
+    body = _resource_rule_body()
+    body["dsl"]["resources"].append(
+        {"key": "fate_points", "name": "Fate", "max": 2, "restoration_type": "short_rest"},
+    )
+    r = await client.post(f"/characters/{char_id}/homebrew/rules", json=body)
+    assert r.status_code == 201
+    resources = (await client.get(f"/characters/{char_id}/homebrew/resources")).json()
+    assert {r["key"] for r in resources} == {"luck_points", "fate_points"}
+
+
+@pytest.mark.asyncio
+async def test_install_template_without_resources_does_not_create_any(client, char_id):
+    # quality_wear has no resources — install should not create any HomebrewResource.
+    r = await client.post(f"/characters/{char_id}/homebrew/templates/quality_wear/install")
+    assert r.status_code == 201
+    resources = (await client.get(f"/characters/{char_id}/homebrew/resources")).json()
+    assert resources == []
+
+
+# ─── Homebrew resources: list + PATCH endpoints ──────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_list_resources_empty_initially(client, char_id):
+    r = await client.get(f"/characters/{char_id}/homebrew/resources")
+    assert r.status_code == 200
+    assert r.json() == []
+
+
+@pytest.mark.asyncio
+async def test_list_resources_other_user_char_returns_403(client, test_session_factory):
+    from core.db.models import Character
+    async with test_session_factory() as s:
+        other = Character(user_id=9999, name="Someone Else")
+        s.add(other)
+        await s.commit()
+        await s.refresh(other)
+        other_id = other.id
+    r = await client.get(f"/characters/{other_id}/homebrew/resources")
+    assert r.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_patch_resource_decrement_emits_resource_changed_notification(client, char_id):
+    await client.post(
+        f"/characters/{char_id}/homebrew/rules",
+        json=_resource_rule_body(message="Luck spent"),
+    )
+    resources = (await client.get(f"/characters/{char_id}/homebrew/resources")).json()
+    res_id = resources[0]["id"]
+
+    r = await client.patch(
+        f"/characters/{char_id}/homebrew/resources/{res_id}",
+        json={"current": 2},
+    )
+    assert r.status_code == 200
+    body = r.json()
+    assert body["current"] == 2
+    notes = body.get("homebrew_notifications") or []
+    assert any(n["message"] == "Luck spent" for n in notes)
+
+
+@pytest.mark.asyncio
+async def test_patch_resource_to_zero_fires_changed_and_depleted(client, char_id):
+    # Two rules: one listens to resource_changed, one to resource_depleted.
+    await client.post(
+        f"/characters/{char_id}/homebrew/rules",
+        json=_resource_rule_body(name="Listener A", message="changed-msg"),
+    )
+    body_b = {
+        "name": "Listener B",
+        "description": "Depleted listener",
+        "enabled": True,
+        "dsl": {
+            "version": 1,
+            "subject": {"type": "character"},
+            "triggers": [{
+                "event": "resource_depleted", "filters": [],
+                "effects": [{"action": "notify", "severity": "warning", "message": "depleted-msg"}],
+            }],
+        },
+    }
+    await client.post(f"/characters/{char_id}/homebrew/rules", json=body_b)
+    res_id = (await client.get(f"/characters/{char_id}/homebrew/resources")).json()[0]["id"]
+
+    r = await client.patch(
+        f"/characters/{char_id}/homebrew/resources/{res_id}",
+        json={"current": 0},
+    )
+    assert r.status_code == 200
+    messages = {n["message"] for n in (r.json().get("homebrew_notifications") or [])}
+    assert "changed-msg" in messages
+    assert "depleted-msg" in messages
+
+
+@pytest.mark.asyncio
+async def test_patch_resource_already_at_zero_does_not_fire_events(client, char_id):
+    # Create rule with max=0 → current=0; PATCH to 0 is a no-op (no events).
+    await client.post(
+        f"/characters/{char_id}/homebrew/rules",
+        json=_resource_rule_body(max_value=0, message="should-not-fire"),
+    )
+    res_id = (await client.get(f"/characters/{char_id}/homebrew/resources")).json()[0]["id"]
+    r = await client.patch(
+        f"/characters/{char_id}/homebrew/resources/{res_id}",
+        json={"current": 0},
+    )
+    assert r.status_code == 200
+    # No events fired → field stays None (Optional).
+    assert r.json().get("homebrew_notifications") in (None, [])
+
+
+@pytest.mark.asyncio
+async def test_patch_resource_clamps_above_max(client, char_id):
+    await client.post(
+        f"/characters/{char_id}/homebrew/rules",
+        json=_resource_rule_body(),
+    )
+    res_id = (await client.get(f"/characters/{char_id}/homebrew/resources")).json()[0]["id"]
+    r = await client.patch(
+        f"/characters/{char_id}/homebrew/resources/{res_id}",
+        json={"current": 999},
+    )
+    assert r.status_code == 200
+    # Max is 3, current starts at 3 → clamp to 3 → no change → no events.
+    assert r.json()["current"] == 3
+
+
+@pytest.mark.asyncio
+async def test_patch_resource_clamps_negative_to_zero(client, char_id):
+    await client.post(
+        f"/characters/{char_id}/homebrew/rules",
+        json=_resource_rule_body(message="m"),
+    )
+    res_id = (await client.get(f"/characters/{char_id}/homebrew/resources")).json()[0]["id"]
+    r = await client.patch(
+        f"/characters/{char_id}/homebrew/resources/{res_id}",
+        json={"current": -50},
+    )
+    assert r.status_code == 200
+    assert r.json()["current"] == 0
+
+
+@pytest.mark.asyncio
+async def test_patch_resource_unknown_id_returns_404(client, char_id):
+    r = await client.patch(
+        f"/characters/{char_id}/homebrew/resources/99999",
+        json={"current": 1},
+    )
+    assert r.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_patch_resource_other_user_resource_returns_404(client, test_session_factory, char_id):
+    """Even if a resource id exists, it must be unreachable from another character's URL."""
+    from core.db.models import Character, HomebrewResource, HomebrewRule
+    # Create another user with their own resource.
+    async with test_session_factory() as s:
+        other = Character(user_id=9999, name="Other")
+        s.add(other)
+        await s.commit()
+        await s.refresh(other)
+        # Other user's own rule + resource
+        rule = HomebrewRule(
+            character_id=other.id, name="x", description=None, enabled=True,
+            dsl={"version": 1, "subject": {"type": "character"},
+                 "triggers": [{"event": "manual_trigger", "filters": [], "effects": []}]},
+            version=1, template_id=None,
+            created_at="2026-01-01T00:00:00", updated_at="2026-01-01T00:00:00",
+        )
+        s.add(rule)
+        await s.commit()
+        await s.refresh(rule)
+        res = HomebrewResource(
+            rule_id=rule.id, character_id=other.id, key="luck_points",
+            name="Luck", current=3, max=3, restoration_type="long_rest",
+        )
+        s.add(res)
+        await s.commit()
+        await s.refresh(res)
+        other_resource_id = res.id
+
+    # Using our own char_id URL but pointing at the other char's resource → 404.
+    r = await client.patch(
+        f"/characters/{char_id}/homebrew/resources/{other_resource_id}",
+        json={"current": 1},
+    )
+    assert r.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_patch_resource_wrong_owner_via_url_returns_403(client, test_session_factory):
+    """PATCH where the URL's char_id is owned by another user must 403 at the char gate."""
+    from core.db.models import Character
+    async with test_session_factory() as s:
+        other = Character(user_id=9999, name="Other")
+        s.add(other)
+        await s.commit()
+        await s.refresh(other)
+        other_id = other.id
+    r = await client.patch(
+        f"/characters/{other_id}/homebrew/resources/1",
+        json={"current": 1},
+    )
+    assert r.status_code == 403

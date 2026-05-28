@@ -12,15 +12,19 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.auth import get_current_user
 from api.database import get_db
+from api.routers._helpers import collect_homebrew_notifications
 from api.schemas.homebrew import (
+    HomebrewResourceRead,
+    HomebrewResourceUpdate,
     HomebrewRuleCreate,
     HomebrewRuleRead,
     HomebrewRuleUpdate,
     TemplateDetailRead,
     TemplateRead,
 )
+from api.services.homebrew.dispatcher import dispatch
 from api.services.homebrew.templates import TEMPLATES, get_template
-from core.db.models import Character, HomebrewRule, Item
+from core.db.models import Character, HomebrewResource, HomebrewRule, Item
 
 router = APIRouter(tags=["homebrew"])
 
@@ -146,6 +150,46 @@ async def _materialize_property_defaults(
             item.item_metadata = _json.dumps(md)
 
 
+async def _materialize_resources(
+    session: AsyncSession, char: Character, rule: HomebrewRule,
+) -> None:
+    """Create one HomebrewResource row per ResourceDef declared in the DSL.
+
+    Pre-checks the UNIQUE(character_id, key) constraint by SELECTing the
+    character's existing resource keys and raises HTTP 409 on collision —
+    simpler and more diagnostic than relying on IntegrityError after the fact.
+
+    Scope: only called from install_template and create_rule. Editing a rule's
+    DSL via PATCH /homebrew/rules/{id} does NOT materialize / un-materialize
+    resources (deferred to a v2 concern).
+    """
+    resources = rule.dsl.get("resources") or []
+    if not resources:
+        return
+    new_keys = [r["key"] for r in resources]
+    existing_res = await session.execute(
+        select(HomebrewResource.key).where(
+            HomebrewResource.character_id == char.id,
+            HomebrewResource.key.in_(new_keys),
+        )
+    )
+    existing = set(existing_res.scalars())
+    for key in new_keys:
+        if key in existing:
+            raise HTTPException(409, f"Resource key '{key}' already exists for character")
+    for res_def in resources:
+        session.add(HomebrewResource(
+            rule_id=rule.id,
+            character_id=char.id,
+            key=res_def["key"],
+            name=res_def["name"],
+            current=res_def["max"],
+            max=res_def["max"],
+            restoration_type=res_def["restoration_type"],
+        ))
+    await session.flush()
+
+
 @router.post(
     "/characters/{char_id}/homebrew/templates/{template_id}/install",
     response_model=HomebrewRuleRead,
@@ -175,6 +219,7 @@ async def install_template(
     session.add(rule)
     await session.flush()
     await _materialize_property_defaults(session, char, rule)
+    await _materialize_resources(session, char, rule)
     return rule
 
 
@@ -226,6 +271,7 @@ async def create_rule(
     await session.flush()
     if body.dsl.get("subject", {}).get("type") == "item":
         await _materialize_property_defaults(session, char, rule)
+    await _materialize_resources(session, char, rule)
     return rule
 
 
@@ -267,3 +313,83 @@ async def toggle_enabled(
     rule.enabled = body.enabled
     rule.updated_at = _now()
     return rule
+
+
+# ─── Resource endpoints ─────────────────────────────────────────────────────
+
+
+@router.get(
+    "/characters/{char_id}/homebrew/resources",
+    response_model=list[HomebrewResourceRead],
+)
+async def list_resources(
+    char_id: int,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> list[HomebrewResource]:
+    char = await _get_owned_char(char_id, user_id, session)
+    res = await session.execute(
+        select(HomebrewResource)
+        .where(HomebrewResource.character_id == char.id)
+        .order_by(HomebrewResource.id.asc())
+    )
+    return list(res.scalars())
+
+
+@router.patch(
+    "/characters/{char_id}/homebrew/resources/{resource_id}",
+    response_model=HomebrewResourceRead,
+)
+async def patch_resource(
+    char_id: int, resource_id: int,
+    body: HomebrewResourceUpdate,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> HomebrewResourceRead:
+    """Update a homebrew resource's current value with clamp + event dispatch.
+
+    - Clamps `body.current` to [0, resource.max].
+    - Fires `resource_changed` only when `before != after` (no-op PATCH does
+      not emit any event — matches the spell_cast / item_equipped pattern).
+    - Fires `resource_depleted` additionally on the transition
+      `before > 0 and after == 0`.
+    """
+    char = await _get_owned_char(char_id, user_id, session)
+    res = await session.execute(
+        select(HomebrewResource).where(
+            HomebrewResource.id == resource_id,
+            HomebrewResource.character_id == char.id,
+        )
+    )
+    resource = res.scalar_one_or_none()
+    if resource is None:
+        raise HTTPException(404, "Resource not found")
+
+    before = resource.current
+    after = max(0, min(resource.max, body.current))
+    resource.current = after
+    await session.flush()
+
+    notifications: list[dict] = []
+    if before != after:
+        firing = await dispatch(
+            session, char, "resource_changed",
+            {
+                "key": resource.key,
+                "before": before,
+                "after": after,
+                "rule_id": resource.rule_id,
+            },
+        )
+        notifications.extend(collect_homebrew_notifications(firing))
+        if before > 0 and after == 0:
+            firing2 = await dispatch(
+                session, char, "resource_depleted",
+                {"key": resource.key, "rule_id": resource.rule_id},
+            )
+            notifications.extend(collect_homebrew_notifications(firing2))
+
+    result = HomebrewResourceRead.model_validate(resource)
+    if notifications:
+        result.homebrew_notifications = notifications
+    return result

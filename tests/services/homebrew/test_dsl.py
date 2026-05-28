@@ -156,7 +156,76 @@ def test_parse_action_unknown_rejected():
 
 from api.services.homebrew.dsl import (
     Subject, SubjectFilter, Table, PassiveModifier, Trigger, EventType, RuleDSL,
+    ResourceDef,
 )
+
+
+def test_resource_def_valid():
+    rd = ResourceDef(
+        key="luck_points", name="Luck Points", max=3, restoration_type="long_rest",
+    )
+    assert rd.key == "luck_points"
+    assert rd.max == 3
+    assert rd.restoration_type == "long_rest"
+
+
+def test_resource_def_defaults_restoration_to_none():
+    rd = ResourceDef(key="charges", name="Charges", max=5)
+    assert rd.restoration_type == "none"
+
+
+def test_resource_def_zero_max_allowed():
+    rd = ResourceDef(key="foo", name="Foo", max=0)
+    assert rd.max == 0
+
+
+def test_resource_def_negative_max_rejected():
+    with pytest.raises(ValidationError):
+        ResourceDef(key="foo", name="Foo", max=-1)
+
+
+def test_resource_def_invalid_key_rejected():
+    with pytest.raises(ValidationError):
+        ResourceDef(key="Bad Key!", name="Foo", max=3)
+
+
+def test_resource_def_unknown_restoration_type_rejected():
+    with pytest.raises(ValidationError):
+        ResourceDef(key="foo", name="Foo", max=3, restoration_type="every_turn")
+
+
+def test_resource_def_extra_field_rejected():
+    with pytest.raises(ValidationError):
+        ResourceDef(key="foo", name="Foo", max=3, extra_field="nope")
+
+
+def test_rule_dsl_with_resources_validates():
+    rule = RuleDSL.model_validate({
+        "version": 1,
+        "subject": {"type": "character"},
+        "resources": [
+            {"key": "luck_points", "name": "Luck Points", "max": 3,
+             "restoration_type": "long_rest"},
+        ],
+        "triggers": [{
+            "event": "manual_trigger", "filters": [],
+            "effects": [{"action": "change_resource", "key": "luck_points", "delta": -1}],
+        }],
+    })
+    assert len(rule.resources) == 1
+    assert rule.resources[0].key == "luck_points"
+
+
+def test_rule_dsl_resources_default_to_empty_list():
+    rule = RuleDSL.model_validate({
+        "version": 1,
+        "subject": {"type": "character"},
+        "triggers": [{
+            "event": "manual_trigger", "filters": [],
+            "effects": [{"action": "notify", "severity": "info", "message": "x"}],
+        }],
+    })
+    assert rule.resources == []
 
 
 _QU_DSL = {
