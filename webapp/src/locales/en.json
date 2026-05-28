@@ -972,5 +972,19 @@
     "feed": {
       "grant_chip": "Tap to open in inventory"
     }
+  },
+  "homebrew": {
+    "page_title": "Homebrew Rules",
+    "create_new": "New rule",
+    "sections": {
+      "active": "Active rules",
+      "disabled": "Disabled rules",
+      "library": "Ready-to-use recipes"
+    },
+    "install_template": "Install",
+    "installed_state": "Installed",
+    "enabled": "Active",
+    "disabled_state": "Disabled",
+    "no_rules_yet": "No rules yet. Install a template to get started."
   }
 }

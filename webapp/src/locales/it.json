@@ -972,5 +972,19 @@
     "feed": {
       "grant_chip": "Tocca per aprire nell'inventario"
     }
+  },
+  "homebrew": {
+    "page_title": "Regole Homebrew",
+    "create_new": "Nuova regola",
+    "sections": {
+      "active": "Regole attive",
+      "disabled": "Regole disattivate",
+      "library": "Ricette pronte all'uso"
+    },
+    "install_template": "Installa",
+    "installed_state": "Installato",
+    "enabled": "Attiva",
+    "disabled_state": "Disattivata",
+    "no_rules_yet": "Nessuna regola ancora. Installa un template per iniziare."
   }
 }
