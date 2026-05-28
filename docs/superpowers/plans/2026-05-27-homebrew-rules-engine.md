@@ -396,6 +396,92 @@ Phase 0 ✅ · Phase 1 ✅ · Phase 2 ✅ · Phase 3 ✅ · Phase 4 ✅ · Phase
 
 **Pronto per Phase 5**: display integration. Fix `_resolve_abilities` bug PRIMA di lavorare sulla pagina Conditions. Poi badge inventory per item con properties homebrew, custom condition rendering, custom resource UI, notification toast integration (le `homebrew_notifications` arrivano già sui PATCH endpoint da Phase 2/3 — basta consumarli nel frontend).
 
+### Phase 5 — completata 2026-05-28
+
+10 commit sul branch (2 pre-flight + 6 task Phase 5 + 1 chore build + 1 docs addendum). 7/7 task (Task 0 pre-flight risolto + Task 5.1 → 5.6). **tsc clean** dopo ogni task. **Smoke live Playwright MCP**: install Punti Fortuna → "Attiva ora" + "Elimina" appaiono sulla card → Abilities mostra CustomResourceCounter (3/3 → decrement → 2/3 + "Recupera" chip appare → restore → 3/3) → ConfirmSheet del delete con nome interpolato → install Sanguinamento → inject `custom:bleeding` via PATCH /conditions (200 OK, pre-flight fix verificato) → Conditions mostra sezione "Personalizzate" con card "Sanguinamento · #1" + bottone "Inizio turno" in cima.
+
+```
+2053dc9 feat(homebrew): manual-trigger + delete buttons on rule cards
+30f078f feat(homebrew): turn-start CTA on Conditions when custom conditions active
+5b1d05f feat(homebrew): render custom resource counters on Abilities page
+44b9d2c feat(homebrew): render custom condition cards on Conditions page
+6bf9108 feat(homebrew): global toast surface for homebrew_notifications
+5ba3af6 feat(homebrew): render PropertyBadge chips for items with hb_* metadata
+e5d7ba7 fix(api): use expunge+reSELECT to preserve nested eager-loads on PATCH char endpoints
+4e41cee fix(api): refresh char before model_validate to prevent _resolve_abilities column drop
+```
+
+#### Moduli prodotti / modificati
+
+| File | Stato | Responsabilità |
+|------|-------|----------------|
+| `api/routers/characters.py` | modificato | Pre-flight: estratto `_refresh_char_full(session, char_id, user_id)` helper (`flush + expunge_all + _get_owned(full=True)`) usato in 7 sites — sostituisce 7× duplicato `session.refresh(attribute_names=[...])` che strippava `selectinload(CharacterClass.resources)` chain |
+| `tests/integration/conftest.py` | nuovo (~55 LoC) | Fixture canoniche `test_session_factory` / `client` / `TEST_USER_ID` spostate qui (rimossi i duplicati da `tests/integration/homebrew/conftest.py`) |
+| `tests/integration/test_character_patch_refresh.py` | nuovo (~170 LoC) | 4 integration test: PATCH /conditions returns 200 + columns; PATCH /skills; PATCH /conditions exhaustion log; **PATCH /xp level-up preserva nested `classes[i].resources`** (regression critica trovata in review) |
+| `webapp/src/components/homebrew/PropertyBadge.tsx` | nuovo (~140 LoC) | Chip per `hb_*` keys su `item.item_metadata`. `tonePerValue()` exported pure helper + `BAD_VALUE_TOKENS` / `GOOD_VALUE_TOKENS` (IT+EN). Heuristica: `enum + key match /quality\|condition\|state/i` → tone danger (bad value) / success (good value); altrimenti neutral gold. 4 icon variants (Sparkles/Hash/Check/X) |
+| `webapp/src/pages/Inventory.tsx` | modificato | +`useQuery(['homebrew-rules', charId])`, +`propertyByKey: Map<string, Property>` da rules enabled, threading via `InventoryItem` props |
+| `webapp/src/pages/inventory/InventoryItem.tsx` | modificato | +`HomebrewPropertyChips` row dopo `ItemStatChips`. Silently drop `hb_*` keys senza Property attiva |
+| `webapp/src/components/homebrew/HomebrewNotification.tsx` | nuovo (~90 LoC) | `NotificationLike` type + `showHomebrewNotifications(list)` plain function. Severity→sonner mapping; `rule_name` as description; error duration 10s; single haptic per batch keyed to highest severity |
+| `webapp/src/main.tsx` | modificato | +`MutationCache.onSuccess` global handler. Defensive type guard (`typeof data === 'object'` then `'homebrew_notifications' in data`) survives `void`/`204`. Surfaces toasts automatically per ogni mutation che ritorna `homebrew_notifications` |
+| `webapp/src/components/homebrew/CustomConditionCard.tsx` | nuovo (~80 LoC) | Card per `char.conditions["custom:*"]`. Sparkles icon, title (rule name o fallback slug), subtitle "Regola personalizzata · #<id>", trash 44×44 |
+| `webapp/src/pages/Conditions.tsx` | modificato | +`useQuery(['homebrew-rules'])`, +`customEntries` filter, +`ruleNameById` map, +sezione "Personalizzate" sotto le 14 standard, +`removeCustom(key)` → `mutation.mutate({[key]: false})`, +`turnStartMutation` con bottone "Inizio turno" in cima quando `customEntries.length > 0`. `activeCount` include `customEntries.length`. Reset-All comment esplicita: custom keys NOT cleared (rule lifecycle owns them) |
+| `webapp/src/components/homebrew/CustomResourceCounter.tsx` | nuovo (~110 LoC) | Card per `HomebrewResource`. Crimson minus 44×44 + tabular-nums current/max + emerald plus 44×44 (parity con Abilities counter band). Restoration caption (long_rest/short_rest/none) e "Recupera" chip visibile solo se `current < max` |
+| `webapp/src/pages/Abilities.tsx` | modificato | +`useQuery(['homebrew-resources'])`, +`resourceMutation` con `setQueryData` splice (no full refetch), +sezione "Risorse personalizzate" sotto la ScrollArea esistente |
+| `webapp/src/pages/Homebrew.tsx` | modificato | `RuleCard` esteso: 44×44 "Attiva ora" (Zap, gold; visible if `r.enabled && r.dsl.triggers.some(t => t.event === 'manual_trigger')`) + 44×44 "Elimina" (Trash2, muted→crimson hover). +`manualTriggerMut` + `deleteMut` + `ConfirmSheet` danger gating delete con `rule.name` interpolato. Per-rule pending via `mut.variables === r.id`. e.stopPropagation() su entrambi i bottoni |
+| `webapp/src/locales/{it,en}.json` | esteso | +18 chiavi: `character.conditions.custom_*` (4), `character.conditions.turn_start.*` (2), `character.homebrew.resources.*` (8), `homebrew.{manual_trigger, manual_trigger_no_effect, delete_title, delete_confirm}` (4). EN proper translations |
+| `docs/app/` | rebuilt | `npm run build:prod` single batched build per addendum convention. Phase 5 chunks: `Conditions-BRVNDAo-.js`, `Inventory-kziFYm9w.js`, `Abilities-aUR7f8WD.js`, `Homebrew-BV68qMTc.js` + `index-7Cks7_2y.js` |
+
+#### Smoke verification (live)
+
+Playwright MCP, dev stack locale (API DEV_USER_ID bypass, frontend Vite 5173). Char id=1 (Dodria).
+
+| Step | Esito | Note |
+|------|-------|------|
+| GET `/#/char/1/homebrew` | ✅ render | Empty state, 4 template card pronte |
+| Click "Installa" su Punti Fortuna | ✅ 200 | Card appare attiva con switch ON, bottone "Attiva ora" (manual_trigger present), bottone "Elimina" |
+| GET `/#/char/1/abilities` | ✅ render | Sezione "Risorse personalizzate" sotto la lista vuota di abilities. Card "Punti Fortuna · Regola personalizzata · Recupera con riposo lungo · 3/3". Pulsante Aumenta disabled (current === max) |
+| Click Diminuisci | ✅ 200 | 3/3 → 2/3. Aumenta ora abilitato. Chip "Recupera" appare |
+| Click "Recupera" | ✅ 200 | 2/3 → 3/3. Chip "Recupera" si nasconde |
+| Click "Elimina" su rule card | ✅ render | ConfirmSheet "Elimina regola" con body "Sicuro di eliminare la regola "Punti Fortuna"? L'azione è irreversibile." + Elimina (danger) / Annulla |
+| Click "Elimina" (conferma) | ✅ 204 | Empty state Homebrew page ripristinato |
+| Install Sanguinamento | ✅ 200 | Card attiva (sanguinamento usa solo turn_started — niente "Attiva ora") |
+| `curl PATCH /conditions {"custom:bleeding": {rule_id:1, params:{}}}` | ✅ 200 | **Pre-flight `_resolve_abilities` fix verificato**: response 200 + full character body, no 422 |
+| GET `/#/char/1/conditions` | ✅ render | Bottone "Inizio turno" appare in cima (custom condition presente). Sezione "Personalizzate" con card "Sanguinamento · Regola personalizzata · #1" + Rimuovi 44×44 |
+
+Screenshot in `.playwright-mcp/phase5-smoke-conditions-custom.png` (locale al worktree, non committato).
+
+#### Deviazioni dal piano originale
+
+**Task 0 pre-flight scope expansion** (post-review). Il fix iniziale (`session.refresh(attribute_names=[...])` su 6 endpoint) sembrava completo, ma il code-reviewer ha trovato un **Critical**: `session.refresh(attribute_names=["classes", ...])` re-esegue il default loader strategy della relation, NON la `selectinload(CharacterClass.resources)` chain. Quindi `char.classes[i].resources` rimaneva unloaded → MissingGreenlet su pydantic serialization. Fix v2 (`e5d7ba7`): estratto `_refresh_char_full` helper che fa `flush + expunge_all + _get_owned(full=True)` — re-emette il SELECT completo. Test di regressione aggiunto (`test_patch_xp_levelup_preserves_classes_resources_eager_load`): PATCH /xp da L1→L2 su un Guerriero, asserisce `body["classes"][0]["resources"]` contiene `Action Surge` (L2 row). 246/246 → 250/250 test backend dopo Phase 5.
+
+**Task 5.4 — modal sostituito da toast (sonner)**. Plan literal: "modal sequenziale auto-close 5s tranne severity=error". Addendum Phase 4 raccomanda: "usare il Sheet/Toast esistente (sonner via @/hooks/useToast), non un nuovo overlay". Implementazione: severity error → toast con `duration: 10_000`; altre → default sonner. `ModalProvider.tsx` NON toccato. Hook globale via `MutationCache.onSuccess` in `main.tsx` (non in ModalProvider come da piano).
+
+**Task 5.4 — `notifications` vs `homebrew_notifications` asymmetry**. Endpoint `/homebrew/turn-start` e `/homebrew/manual-trigger/{id}` rispondono con `{notifications: [...]}` (top-level), gli altri endpoint integrati (HP/items/conditions/etc.) con `homebrew_notifications` nel body. Il global handler chiave su `homebrew_notifications` only — i due endpoint manuali devono wirare `showHomebrewNotifications(resp.notifications)` direttamente dal loro `onSuccess`. Task 5.5 e 5.6 fanno questo pattern (con info-toast fallback quando lista vuota, così il click sente acknowledged).
+
+**Task 5.2 — UX semantica di "rimozione" custom condition**. PATCH /conditions fa merge (`current.update(body.conditions)`), non può pop'are una key. Send `{[key]: false}` per marcare inactive; il filter `&& v && typeof v === 'object'` esclude i `false` dalla render. Solo il backend `remove_condition` action fa `pop()` vero. Trade-off accettato: leftover `false` entries nello stato (innocui per la UI).
+
+**Task 5.6 — `manual_trigger` scope-by-rule_id non risolto** (carry-over Phase 3). Il dispatcher fa fire-all-rules. Il bottone "Attiva ora" è trattato come fire-and-observe — il `rule_id` nel response è informativo, no spam protection. Documentato in commit message.
+
+**Task 5.6 — Delete button aggiunto opportunisticamente**. Phase 4 carry-over (l'API `deleteRule` esisteva, la UI no). Aggiunto in Task 5.6 dato che già si toccava la RuleCard.
+
+#### Issues residui (non bloccanti, da affrontare in Phase 6+)
+
+- **PropertyBadge nullish-value defensive guard** (Task 5.1 Nit). Se `value === null/undefined` (raro: rule disabled mid-game con leftover hb_* metadata), il chip renderizza letterale `"null"`/`"undefined"` per number/text. Guard con `if (value == null) return null` upfront.
+- **`useMemo` mancante su `ruleNameById` + `customEntries`** (Task 5.2 Nit). Ricalcolati ogni render. Cost trivial, consistente col resto di Conditions.tsx (non memoizza neanche `activeCount`).
+- **Double haptic su `manualTrigger` empty branch** (Task 5.6 Nit). `toast.info()` già triggera `haptic.warning()` internamente, poi `onSuccess` chiama `haptic.success()`. Imperceptible su mobile ma technically un double-pulse. Gate `haptic.success()` su `length > 0` branch per polish.
+- **Icon picker per HomebrewRule** (carry-over Phase 4). Non bloccante.
+- **Filter editing UI per `when` PassiveModifier** (carry-over Phase 4). Sentinel-only oggi.
+- **Sanguinamento template non auto-applica `custom:bleeding`**. Il template fires solo on `turn_started` filtered su `has_property custom:bleeding` — quindi serve un'altra rule (o un manual UI affordance) per APPLICARE bleeding la prima volta. Design intentional secondo l'autore del template, ma UX gap: come fa il DM ad applicare bleeding? Phase 6+ ticket.
+- **Stale React cache su delete diretto via curl/API** (carry-over Phase 4). In UI flow normale TanStack Query invalida correttamente.
+
+#### Stato esecuzione
+
+Phase 0 ✅ · Phase 1 ✅ · Phase 2 ✅ · Phase 3 ✅ · Phase 4 ✅ · Phase 5 ✅ · Phase 6-7 pending.
+
+**Milestone Phase 5 raggiunta**: display integration completa. Inventory mostra PropertyBadge chips, Conditions ha sezione custom + turn-start CTA, Abilities ha CustomResourceCounter, Homebrew page ha "Attiva ora" + Delete sulla RuleCard, le notifications fluttuano globalmente via MutationCache. Pre-flight bug `_resolve_abilities` definitivamente risolto con `expunge + reSELECT` pattern (250/250 test backend verdi). tsc clean su ogni commit, smoke Playwright MCP verde.
+
+**Pronto per Phase 6**: passive modifiers display (AC/HP/Speed/Skill/Save breakdown con homebrew). Le passive_modifiers DSL sono già definite (Phase 4 PassiveModifiersSection) e `api/services/homebrew/passive.py` espone `get_passive_modifiers()`. Phase 6 estende `CharacterFull` con `ac_breakdown`, `hp_max_homebrew_modifier`, `speed_homebrew_modifier`, `skills_homebrew_modifiers`, `saves_homebrew_modifiers` e popola questi nei response builder.
+
 ---
 
 ## Sequenza fasi (milestone)
