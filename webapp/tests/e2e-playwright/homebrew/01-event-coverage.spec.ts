@@ -34,10 +34,15 @@ function notifyRule(event: string, message: string, name: string) {
 }
 
 /** Assert that at least one notification contains the expected message. */
-function assertFired(notifs: any[] | undefined | null, msg: string) {
-  expect(Array.isArray(notifs), `homebrew_notifications must be an array, got: ${JSON.stringify(notifs)}`).toBeTruthy();
+function assertFired(
+  notifs: any[] | undefined | null,
+  msg: string,
+  field = "homebrew_notifications",
+) {
+  expect(Array.isArray(notifs), `${field} must be an array, got: ${JSON.stringify(notifs)}`).toBeTruthy();
+  if (!Array.isArray(notifs)) return; // type-narrow; the first expect already failed
   expect(
-    (notifs ?? []).some((n) => typeof n.message === "string" && n.message.includes(msg)),
+    notifs.some((n) => typeof n.message === "string" && n.message.includes(msg)),
     `Expected a notification containing "${msg}" but got: ${JSON.stringify(notifs)}`
   ).toBeTruthy();
 }
@@ -489,7 +494,7 @@ test.describe("01-event-coverage", () => {
     const body = await turnResp.json();
 
     // turn-start returns { notifications: [...] }
-    assertFired(body.notifications, ruleMsg);
+    assertFired(body.notifications, ruleMsg, "notifications");
   });
 
   // 15. manual_trigger
@@ -511,7 +516,7 @@ test.describe("01-event-coverage", () => {
     const body = await triggerResp.json();
 
     // manual-trigger returns { notifications: [...] }
-    assertFired(body.notifications, ruleMsg);
+    assertFired(body.notifications, ruleMsg, "notifications");
   });
 
 });
