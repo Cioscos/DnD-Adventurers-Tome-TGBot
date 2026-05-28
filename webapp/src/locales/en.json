@@ -358,6 +358,8 @@
       "custom_subtitle_rule_id": "Homebrew rule · #{{id}}",
       "custom_remove_aria": "Remove {{name}}",
       "custom_fallback": "Custom · {{slug}}",
+      "apply_custom_title": "Apply condition",
+      "apply_custom_aria": "Apply {{name}}",
       "turn_start": {
         "label": "Start of turn",
         "no_effect": "Start of turn · no rule triggered"
@@ -1009,6 +1011,9 @@
     "installed_state": "Installed",
     "enabled": "Active",
     "disabled_state": "Disabled",
+    "install_success": "Template installed",
+    "delete_success": "Rule deleted",
+    "from_template": "From template",
     "no_rules_yet": "No rules yet. Install a template to get started.",
     "load_error": "Couldn't load rules. Try again later.",
     "manual_trigger": "Trigger now",

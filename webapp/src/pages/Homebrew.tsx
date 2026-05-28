@@ -34,6 +34,7 @@ interface RuleCardProps {
   isDeleting?: boolean
   manualTriggerLabel: string
   deleteLabel: string
+  fromTemplateLabel: string
 }
 
 function RuleCard({
@@ -47,6 +48,7 @@ function RuleCard({
   isDeleting = false,
   manualTriggerLabel,
   deleteLabel,
+  fromTemplateLabel,
 }: RuleCardProps) {
   return (
     <m.div
@@ -64,7 +66,17 @@ function RuleCard({
         <GiScrollUnfurled size={20} />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="font-display font-bold text-dnd-text truncate">{rule.name}</p>
+        <div className="flex items-center gap-1.5 min-w-0">
+          <p className="font-display font-bold text-dnd-text truncate">{rule.name}</p>
+          {rule.template_id != null && (
+            <span className="shrink-0 inline-block px-1.5 py-0.5 rounded-lg
+                             bg-dnd-chip-bg border border-dnd-chip-border/60
+                             text-dnd-gold-bright font-cinzel uppercase
+                             text-[10px] tracking-[0.08em] leading-none">
+              {fromTemplateLabel}
+            </span>
+          )}
+        </div>
         {rule.description && (
           <p className="text-xs text-dnd-text-muted font-body italic line-clamp-2 mt-0.5">
             {rule.description}
@@ -199,6 +211,7 @@ export default function Homebrew() {
     onSuccess: () => {
       haptic.success()
       qc.invalidateQueries({ queryKey: ['homebrew-rules', charId] })
+      toast.success(t('homebrew.install_success'), { hapticFeedback: false })
     },
     onError: () => haptic.error(),
   })
@@ -254,6 +267,7 @@ export default function Homebrew() {
       qc.invalidateQueries({ queryKey: ['homebrew-rules', charId] })
       setConfirmDeleteId(null)
       haptic.success()
+      toast.success(t('homebrew.delete_success'), { hapticFeedback: false })
     },
     onError: () => haptic.error(),
   })
@@ -349,6 +363,7 @@ export default function Homebrew() {
                     isDeleting={deleteMut.isPending && deleteMut.variables === r.id}
                     manualTriggerLabel={t('homebrew.manual_trigger')}
                     deleteLabel={t('common.delete')}
+                    fromTemplateLabel={t('homebrew.from_template')}
                   />
                 </Reveal.Item>
               )
@@ -384,6 +399,7 @@ export default function Homebrew() {
                   isDeleting={deleteMut.isPending && deleteMut.variables === r.id}
                   manualTriggerLabel={t('homebrew.manual_trigger')}
                   deleteLabel={t('common.delete')}
+                  fromTemplateLabel={t('homebrew.from_template')}
                 />
               </Reveal.Item>
             ))}

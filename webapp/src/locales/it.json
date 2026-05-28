@@ -358,6 +358,8 @@
       "custom_subtitle_rule_id": "Regola personalizzata · #{{id}}",
       "custom_remove_aria": "Rimuovi {{name}}",
       "custom_fallback": "Personalizzato · {{slug}}",
+      "apply_custom_title": "Applica condizione",
+      "apply_custom_aria": "Applica {{name}}",
       "turn_start": {
         "label": "Inizio turno",
         "no_effect": "Inizio turno · nessuna regola attiva"
@@ -1009,6 +1011,9 @@
     "installed_state": "Installato",
     "enabled": "Attiva",
     "disabled_state": "Disattivata",
+    "install_success": "Template installato",
+    "delete_success": "Regola eliminata",
+    "from_template": "Da template",
     "no_rules_yet": "Nessuna regola ancora. Installa un template per iniziare.",
     "load_error": "Impossibile caricare le regole. Riprova più tardi.",
     "manual_trigger": "Attiva ora",

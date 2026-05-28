@@ -97,6 +97,27 @@ interface PropertyBadgeProps {
   value: unknown
   property: Property
   locale: 'it' | 'en'
+  /**
+   * When provided, the badge becomes interactive:
+   *  - boolean → toggles on tap
+   *  - enum    → cycles to the next value in `property.values` on tap
+   *  - number  → exposes −/+ steppers
+   *  - text    → stays read-only (out of scope)
+   * Without this prop the badge stays read-only (backwards compatible).
+   */
+  onSetProperty?: (key: string, value: unknown) => void
+  /** Disables the interactive controls while a mutation is in flight. */
+  disabled?: boolean
+}
+
+/** Next value in an enum's `values` ring (wraps around). */
+function nextEnumValue(property: Property, value: unknown): string | null {
+  const values = property.values
+  if (!values || values.length === 0) return null
+  const idx = values.indexOf(String(value))
+  // Unknown current value → start from the first option.
+  const nextIdx = idx === -1 ? 0 : (idx + 1) % values.length
+  return values[nextIdx]
 }
 
 function pickIcon(property: Property, value: unknown) {
@@ -114,6 +135,8 @@ export default function PropertyBadge({
   value,
   property,
   locale,
+  onSetProperty,
+  disabled = false,
 }: PropertyBadgeProps) {
   const { t } = useTranslation()
 
@@ -140,11 +163,15 @@ export default function PropertyBadge({
   const tone = tonePerValue(property, value)
   const icon = pickIcon(property, value)
 
-  return (
-    <div
-      className={`flex items-center gap-1.5 rounded-lg px-2 py-1.5 ${TONE_CLASSES[tone]}`}
-      title={`${label}: ${valueLabel}`}
-    >
+  // `text` is never editable here (out of scope); `enum` needs ≥1 candidate
+  // value to cycle through. Anything else with a handler is interactive.
+  const canEdit =
+    !!onSetProperty &&
+    property.type !== 'text' &&
+    (property.type !== 'enum' || (property.values?.length ?? 0) > 0)
+
+  const inner = (
+    <>
       <span className={`shrink-0 inline-flex ${TONE_ICON_CLASSES[tone]}`}>
         {icon}
       </span>
@@ -152,6 +179,77 @@ export default function PropertyBadge({
         <span className="opacity-75">{label}:</span>{' '}
         <span className="font-semibold">{valueLabel}</span>
       </span>
+    </>
+  )
+
+  // ---- Number: −/+ steppers (44×44 touch targets) ------------------------
+  if (canEdit && property.type === 'number') {
+    const num = Number(value) || 0
+    const step = (delta: number) => onSetProperty!(propertyKey, num + delta)
+    return (
+      <div
+        className={`flex items-center gap-1 rounded-lg pl-2 pr-1 py-0.5 ${TONE_CLASSES[tone]}`}
+        title={`${label}: ${valueLabel}`}
+      >
+        <span className={`shrink-0 inline-flex ${TONE_ICON_CLASSES[tone]}`}>
+          {icon}
+        </span>
+        <span className="text-xs font-medium truncate flex-1 min-w-0">
+          <span className="opacity-75">{label}:</span>{' '}
+          <span className="font-semibold tabular-nums">{valueLabel}</span>
+        </span>
+        <button
+          type="button"
+          onClick={() => step(-1)}
+          disabled={disabled}
+          className="w-11 h-11 -my-1.5 shrink-0 inline-flex items-center justify-center rounded-md text-current active:opacity-60 disabled:opacity-30"
+          aria-label="-"
+        >
+          &minus;
+        </button>
+        <button
+          type="button"
+          onClick={() => step(1)}
+          disabled={disabled}
+          className="w-11 h-11 -my-1.5 shrink-0 inline-flex items-center justify-center rounded-md text-current active:opacity-60 disabled:opacity-30"
+          aria-label="+"
+        >
+          +
+        </button>
+      </div>
+    )
+  }
+
+  // ---- Boolean / enum: whole badge is a tap target -----------------------
+  if (canEdit) {
+    const handleTap = () => {
+      if (property.type === 'boolean') {
+        onSetProperty!(propertyKey, !value)
+      } else {
+        const next = nextEnumValue(property, value)
+        if (next !== null) onSetProperty!(propertyKey, next)
+      }
+    }
+    return (
+      <button
+        type="button"
+        onClick={handleTap}
+        disabled={disabled}
+        className={`flex items-center gap-1.5 rounded-lg px-2 min-h-[44px] w-full text-left ${TONE_CLASSES[tone]} active:opacity-60 disabled:opacity-50`}
+        title={`${label}: ${valueLabel}`}
+      >
+        {inner}
+      </button>
+    )
+  }
+
+  // ---- Read-only (no handler, or text) -----------------------------------
+  return (
+    <div
+      className={`flex items-center gap-1.5 rounded-lg px-2 py-1.5 ${TONE_CLASSES[tone]}`}
+      title={`${label}: ${valueLabel}`}
+    >
+      {inner}
     </div>
   )
 }

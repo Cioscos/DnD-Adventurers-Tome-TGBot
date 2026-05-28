@@ -29,7 +29,7 @@ _WEAR_EFFECTS_PER_QUALITY = {
              {"action": "notify", "severity": "warning",
               "message": "⚠️ $subject.name danneggiata!"},
          ]},
-        {"action": "add_history", "description": "$subject.name (Qualità & Usura) — risultato D"},
+        {"action": "add_history", "description": "$subject.name (Qualità & Usura): risultato D"},
     ],
     "S": [],
 }
@@ -174,7 +174,7 @@ _LUCK_POINTS_DSL = {
          "effects": [
              {"action": "change_resource", "key": "luck_points", "delta": -1},
              {"action": "notify", "severity": "success",
-              "message": "🌟 Punto Fortuna usato — rilancia il tiro"},
+              "message": "🌟 Punto Fortuna usato: rilancia il tiro"},
              {"action": "add_history", "description": "Punto Fortuna speso"},
          ]},
     ],
@@ -185,7 +185,7 @@ TEMPLATES = [
     {
         "id": "quality_wear",
         "name": "Qualità & Usura",
-        "description": "House rule per armi e armature — possono danneggiarsi o rompersi al fumble (nat-1 attacco), al critico subito e quando porti a 0 PF.",
+        "description": "House rule per armi e armature: possono danneggiarsi o rompersi al fumble (nat-1 attacco), al critico subito e quando porti a 0 PF.",
         "icon": "⚒️",
         "dsl": _QUALITY_WEAR_DSL,
     },

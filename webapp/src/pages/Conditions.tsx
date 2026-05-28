@@ -3,9 +3,10 @@ import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
-import { Clock, Info, RotateCcw } from 'lucide-react'
+import { Clock, Info, Plus, RotateCcw } from 'lucide-react'
 import { GiFlame as Flame } from 'react-icons/gi'
 import { api } from '@/api/client'
+import type { Effect, HomebrewRule } from '@/lib/homebrew/types'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
@@ -27,6 +28,59 @@ const CONDITION_KEYS = [
   'incapacitated', 'invisible', 'paralyzed', 'petrified', 'poisoned',
   'prone', 'restrained', 'stunned', 'unconscious',
 ] as const
+
+// A custom condition that an *enabled* homebrew rule knows how to apply via an
+// `apply_condition` effect. `key` is the full `custom:<slug>` string the action
+// writes into `char.conditions`; `slug` is the bare suffix for fallback labels.
+interface AppliableCustom {
+  key: string
+  slug: string
+  ruleId: number
+  ruleName: string
+}
+
+// `apply_condition` effects can be buried inside `if`/`match` control-flow
+// effects, so walk every branch recursively. We only need the *static* set of
+// condition keys a rule could ever apply, so we visit all branches regardless
+// of the runtime condition/case that would actually fire.
+function collectApplyConditionKeys(effects: Effect[] | undefined, out: Set<string>): void {
+  for (const eff of effects ?? []) {
+    if (eff.action === 'apply_condition') {
+      out.add(eff.key)
+    } else if (eff.action === 'if') {
+      collectApplyConditionKeys(eff.then, out)
+      collectApplyConditionKeys(eff.else, out)
+    } else if (eff.action === 'match') {
+      for (const branch of Object.values(eff.cases)) {
+        collectApplyConditionKeys(branch, out)
+      }
+    }
+  }
+}
+
+// Derive the deduplicated list of custom conditions that the character's
+// *enabled* rules can apply. First rule that references a given `custom:<slug>`
+// key wins as the label source.
+function deriveAppliableCustoms(rules: HomebrewRule[] | undefined): AppliableCustom[] {
+  const byKey = new Map<string, AppliableCustom>()
+  for (const rule of rules ?? []) {
+    if (!rule.enabled) continue
+    const keys = new Set<string>()
+    for (const trigger of rule.dsl?.triggers ?? []) {
+      collectApplyConditionKeys(trigger.effects, keys)
+    }
+    for (const key of keys) {
+      if (!key.startsWith('custom:') || byKey.has(key)) continue
+      byKey.set(key, {
+        key,
+        slug: key.slice('custom:'.length),
+        ruleId: rule.id,
+        ruleName: rule.name,
+      })
+    }
+  }
+  return [...byKey.values()]
+}
 
 export default function Conditions() {
   const { id } = useParams<{ id: string }>()
@@ -110,6 +164,13 @@ export default function Conditions() {
   const ruleNameById = new Map<number, string>()
   for (const r of rules ?? []) ruleNameById.set(r.id, r.name)
 
+  // Custom conditions an enabled rule could apply but that aren't active yet.
+  // These get an "apply" affordance; once applied they migrate into
+  // `customEntries` above and render as a removable CustomConditionCard.
+  const appliableCustoms = deriveAppliableCustoms(rules).filter(
+    (c) => !conditions[c.key] || typeof conditions[c.key] !== 'object',
+  )
+
   const toggle = (key: string) => {
     const current = conditions[key] ?? false
     mutation.mutate({ ...conditions, [key]: !current })
@@ -126,6 +187,17 @@ export default function Conditions() {
   // rule's `remove_condition` action runs (which does a proper pop()).
   const removeCustom = (key: string) => {
     mutation.mutate({ [key]: false })
+  }
+
+  // Manually apply a custom condition known to an enabled rule. Mirrors the
+  // backend `execute_apply_condition` write shape ({rule_id, params}) so the
+  // resulting entry is indistinguishable from one the rule applied itself —
+  // CustomConditionCard renders it and the "start of turn" CTA can tick it.
+  const applyCustom = (c: AppliableCustom) => {
+    mutation.mutate({
+      ...conditions,
+      [c.key]: { rule_id: c.ruleId, params: {} },
+    })
   }
 
   const activeCount =
@@ -340,6 +412,39 @@ export default function Conditions() {
           )
         })}
       </m.div>
+
+      {/* Apply a custom condition that an enabled homebrew rule knows how to
+          set (e.g. start "Bleeding"). Only rendered when at least one enabled
+          rule has an `apply_condition` effect for a not-yet-active key — no
+          dead UI otherwise. */}
+      {appliableCustoms.length > 0 && (
+        <Surface variant="elevated">
+          <h3 className="font-cinzel uppercase tracking-widest text-xs text-dnd-gold-bright mb-3">
+            {t('character.conditions.apply_custom_title')}
+          </h3>
+          <div className="flex flex-wrap gap-2">
+            {appliableCustoms.map((c) => (
+              <m.button
+                key={c.key}
+                type="button"
+                onClick={() => applyCustom(c)}
+                disabled={mutation.isPending}
+                whileTap={{ scale: 0.95 }}
+                transition={spring.press}
+                aria-label={t('character.conditions.apply_custom_aria', { name: c.ruleName })}
+                className="inline-flex items-center gap-2 min-h-[44px] px-3 rounded-xl
+                           border border-dnd-crimson/40 bg-dnd-crimson/10
+                           text-dnd-crimson-bright font-body text-sm font-semibold
+                           hover:bg-dnd-crimson/15 transition-colors
+                           disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Plus size={16} className="shrink-0" />
+                <span className="truncate max-w-[12rem]">{c.ruleName}</span>
+              </m.button>
+            ))}
+          </div>
+        </Surface>
+      )}
 
       {/* Custom conditions applied by homebrew rules (`apply_condition`). */}
       {customEntries.length > 0 && (

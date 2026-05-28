@@ -270,7 +270,8 @@ export default function Skills() {
 
   const perceptionMod = abilityModifier('wisdom')
   const perceptionLevel = getLevel(skills['perception'])
-  const perceptionBonus = perceptionMod + (perceptionLevel === 'expert' ? 2 * pb : perceptionLevel ? pb : 0)
+  const perceptionHb = char.skills_homebrew_modifiers?.['perception'] ?? 0
+  const perceptionBonus = perceptionMod + (perceptionLevel === 'expert' ? 2 * pb : perceptionLevel ? pb : 0) + perceptionHb
   const passivePerception = 10 + perceptionBonus
 
   return (
@@ -310,7 +311,7 @@ export default function Skills() {
                   {groupSkills.map((skill, idx) => {
                     const level = getLevel(skills[skill.key])
                     const abilMod = abilityModifier(skill.ability)
-                    const bonus = abilMod + (level === 'expert' ? 2 * pb : level ? pb : 0)
+                    const bonus = abilMod + (level === 'expert' ? 2 * pb : level ? pb : 0) + (char.skills_homebrew_modifiers?.[skill.key] ?? 0)
 
                     const isRollingThis = rollMutation.isPending && rollMutation.variables === skill.key
                     return (
@@ -371,7 +372,8 @@ export default function Skills() {
             const lvl = getLevel(skills[picker])
             const profMul = lvl === 'expert' ? 2 : lvl ? 1 : 0
             const profPart = profMul * pb
-            const total = abilMod + profPart
+            const pickerHb = char.skills_homebrew_modifiers?.[picker] ?? 0
+            const total = abilMod + profPart + pickerHb
             const abilLabel = t(`character.ability.${skill.ability}_short`, { defaultValue: skill.ability })
             return (
               <p className="text-[11px] font-body text-dnd-text-faint mb-3">

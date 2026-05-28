@@ -167,7 +167,9 @@ export default function HP() {
   const isDying = char.current_hit_points === 0 && !ds.stable
   const isConcentrating = !!char.concentrating_spell_id
   const classes = char.classes ?? []
-  const hpPct = char.hit_points > 0 ? (char.current_hit_points / char.hit_points) * 100 : 0
+  const hbHp = char.hp_max_homebrew_modifier ?? 0
+  const hpMax = char.hit_points + hbHp
+  const hpPct = hpMax > 0 ? (char.current_hit_points / hpMax) * 100 : 0
 
   // Color scale for HP number
   const hpColor = hpPct > 50
@@ -201,7 +203,7 @@ export default function HP() {
               {char.current_hit_points}
             </m.p>
             <p className="text-lg text-dnd-text-muted font-mono">
-              / {char.hit_points}
+              / {hpMax}
             </p>
           </div>
           <div className="flex flex-col items-end gap-1.5 pb-2">
@@ -218,7 +220,7 @@ export default function HP() {
             </span>
           </div>
         </div>
-        <HPGauge current={char.current_hit_points} max={char.hit_points} temp={char.temp_hp} size="lg" segmented />
+        <HPGauge current={char.current_hit_points} max={hpMax} temp={char.temp_hp} size="lg" segmented />
         <HomebrewBreakdownRow value={char.hp_max_homebrew_modifier ?? 0} label={t('character.hp.homebrew_max_bonus_label')} />
       </Surface>
 
