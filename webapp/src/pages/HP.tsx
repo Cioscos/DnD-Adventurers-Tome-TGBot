@@ -27,6 +27,7 @@ import ConcentrationSaveDialog from '@/pages/hp/ConcentrationSaveDialog'
 import { useDiceAnimation } from '@/dice/useDiceAnimation'
 import { useDiceSettings } from '@/store/diceSettings'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
+import HomebrewBreakdownRow from '@/components/homebrew/HomebrewBreakdownRow'
 
 type HPOp = 'damage' | 'heal' | 'set_max' | 'set_current' | 'set_temp'
 
@@ -218,6 +219,7 @@ export default function HP() {
           </div>
         </div>
         <HPGauge current={char.current_hit_points} max={char.hit_points} temp={char.temp_hp} size="lg" segmented />
+        <HomebrewBreakdownRow value={char.hp_max_homebrew_modifier ?? 0} label={t('character.hp.homebrew_max_bonus_label')} />
       </Surface>
 
       {/* Concentration banner — passive indicator (auto-TS triggered by DAMAGE) */}

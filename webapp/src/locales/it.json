@@ -107,7 +107,8 @@
       "quick_damage_undo": "Inflitti {{n}} danni",
       "quick_heal_undo": "Curati {{n}} HP",
       "quick_temp_undo": "Aggiunti {{n}} HP temporanei",
-      "quick_undo_action": "Annulla"
+      "quick_undo_action": "Annulla",
+      "homebrew_max_bonus_label": "HP Max Homebrew"
     },
     "death_saves": {
       "title": "Tiri vs Morte",
