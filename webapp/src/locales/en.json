@@ -845,6 +845,18 @@
         "equipment": "Equipment",
         "menu": "Menu"
       }
+    },
+    "homebrew": {
+      "resources": {
+        "section_title": "Custom resources",
+        "subtitle": "Homebrew rule",
+        "restore": "Restore",
+        "restoration_caption_long_rest": "Restored on long rest",
+        "restoration_caption_short_rest": "Restored on short rest",
+        "restoration_caption_none": "Manual restore only",
+        "aria_decrement": "Decrement {{name}}",
+        "aria_increment": "Increment {{name}}"
+      }
     }
   },
   "dnd": {

@@ -845,6 +845,18 @@
         "equipment": "Equipaggiamento",
         "menu": "Menu"
       }
+    },
+    "homebrew": {
+      "resources": {
+        "section_title": "Risorse personalizzate",
+        "subtitle": "Regola personalizzata",
+        "restore": "Recupera",
+        "restoration_caption_long_rest": "Recupera con riposo lungo",
+        "restoration_caption_short_rest": "Recupera con riposo breve",
+        "restoration_caption_none": "Solo recupero manuale",
+        "aria_decrement": "Diminuisci {{name}}",
+        "aria_increment": "Aumenta {{name}}"
+      }
     }
   },
   "dnd": {
