@@ -22,6 +22,7 @@ from api.schemas.item import ItemCreate, ItemRead, ItemUpdate, WeaponAttackResul
 from core.game.stats import effective_ability_score
 from api.routers._helpers import effective_con_mod
 from api.services.equipment import slot_allowed_for_type, swap_slot_occupant
+from api.services.homebrew.dispatcher import dispatch
 
 router = APIRouter(prefix="/characters", tags=["items"])
 
@@ -321,6 +322,19 @@ async def attack_with_weapon(
     if body and body.with_inspiration:
         result_str = f"Reroll ispirazione (to-hit) — {result_str}"
     _add_history(session, char.id, "attack_roll", result_str)
+
+    # Emit homebrew event so installed rules (e.g. Qualità & Usura) can react.
+    await dispatch(
+        session, char, "attack_rolled",
+        {
+            "item_id": item.id,
+            "to_hit_die": to_hit_die,
+            "to_hit_total": to_hit_total,
+            "is_critical": is_critical,
+            "is_fumble": is_fumble,
+            "damage_total": damage_total,
+        },
+    )
 
     return WeaponAttackResult(
         weapon_name=item.name,
