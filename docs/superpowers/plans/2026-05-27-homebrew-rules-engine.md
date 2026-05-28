@@ -294,6 +294,108 @@ Phase 0 ✅ · Phase 1 ✅ · Phase 2 ✅ · Phase 3 ✅ · Phase 4-7 pending.
 
 **Pronto per Phase 4**: backend completo dal punto di vista del MVP. Manca solo il frontend (editor regole, libreria template, display integrato in Inventory/Conditions/Abilities/HP/AC/Skills/Saves). Phase 4 introdurrà `webapp/src/api/client.ts` helpers + nuove pagine `/char/:id/homebrew` + i18n keys. La Phase 4 deve consumare i contratti Phase 2/3 — controllare la coerenza `homebrew_notifications: Optional[list[dict]]` su tutti gli endpoint (e fixare `WeaponAttackResult` come prima azione di Phase 4 se non altrimenti).
 
+### Phase 4 — completata 2026-05-28
+
+19 commit sul branch (1 pre-flight + 13 task + 5 fix dopo code review). 14/14 task. **tsc clean** dopo ogni task. **Smoke live Playwright MCP**: install Bleeding → appare attiva → toggle off → si sposta in disabled → click apre editor con 6 sezioni.
+
+```
+53a1328 feat(homebrew): wire save+cancel in RuleEditor (with 422 error toast)
+fddae03 feat(homebrew): editor TriggersSection with plain-language event dropdown
+9a674ee feat(homebrew): EffectChainEditor with numbered cards + branch indentation + form modals
+c329b80 fix(homebrew): bump PassiveModifier edit/delete icon button targets to 44x44
+9ec2cd2 feat(homebrew): editor PassiveModifiersSection (target + delta + label)
+719ade3 feat(homebrew): editor TablesSection (HTML grid lookup table)
+61c77f3 fix(homebrew): i18n boolean labels in PropertyFormModal + PropertiesSection card
+15b1ea4 feat(homebrew): editor PropertiesSection with enum/number/bool/text + modal form
+b0b0bf5 feat(homebrew): editor SubjectSection (entity type + item filter chips)
+e2f482a feat(homebrew): editor IdentitySection (name + description)
+8f3b2da feat(homebrew): RuleEditor shell with 6 collapsible sections
+36eef10 fix(homebrew): cancel inflight queries before optimistic toggle + add error UI
+d3ef078 feat(homebrew): add Homebrew page with rule list + template library
+723902c refactor(homebrew): drop redundant Partial<> from updateRule body type
+1cc52a1 feat(homebrew): add api client helpers for homebrew CRUD + templates + resources
+2486ae9 refactor(homebrew): simplify i18n-dsl (pass locale to subjectWord, dedupe apply_modifier_once branches)
+d1fd53d fix(homebrew): align TS types with backend (drop template_id from RuleUpdate, add homebrew_notifications to Resource)
+d060156 feat(homebrew): TypeScript types + i18n-dsl plain-language mapping + locale keys
+15908dd fix(homebrew): align WeaponAttackResult.homebrew_notifications with Optional[list[dict]]=None convention
+```
+
+#### Moduli prodotti / modificati
+
+| File | Stato | Responsabilità |
+|------|-------|----------------|
+| `api/schemas/item.py` + `api/routers/items.py` | modificato | Pre-flight: `WeaponAttackResult.homebrew_notifications` allineato a `Optional[list[dict]] = None` (ora 5/5 schemi uniformi) |
+| `webapp/src/lib/homebrew/types.ts` | nuovo | TS mirror della Pydantic DSL: 15 EventType, 16 Effect actions in discriminated union, `Filter / Subject / Property / Table / PassiveModifier / ResourceDef / RuleDSL`, read/create/update schemi rule, `HomebrewResource`, `TemplateRead`, `TemplateDetailRead`, `NotificationRead` |
+| `webapp/src/lib/homebrew/i18n-dsl.ts` | nuovo | `eventLabel(event, filters, locale)` con varianti is_fumble / is_critical / was_critical_hit; `actionLabel(effect, locale)` exhaustive switch su 16 action; IT + EN proper translations + `never` exhaustiveness check |
+| `webapp/src/api/client.ts` | modificato | Nuovo blocco `api.homebrew.*` con 13 metodi: listRules/getRule/createRule/updateRule/deleteRule/toggleEnabled/listTemplates/getTemplate/installTemplate/listResources/patchResource/turnStart/manualTrigger |
+| `webapp/src/pages/Homebrew.tsx` | nuovo (~280 LoC) | Hub `/char/:id/homebrew`: 3 sezioni (regole attive con CTA "+ Nuova" / regole disattivate condizionale / libreria template 2-col grid). Optimistic toggle + cancelQueries + error UI ember Surface |
+| `webapp/src/pages/homebrew/RuleEditor.tsx` | nuovo (~303 LoC) | Shell `/new` e `/:ruleId`. Hydration via `hasHydratedRef` (sopravvive a refetch, reset su ruleId change). 6 CollapsiblePanel (native `<details>` + chevron). Save/Cancel con validazione client (name + at-least-one-behavior) + 422 detail parser (string o `[{loc,msg,type}]`) |
+| `webapp/src/pages/homebrew/sections/IdentitySection.tsx` | sostituito stub | Input name + textarea description (icon picker NON implementato — `HomebrewRule` schema non ha `icon` field; vedi carry-over) |
+| `webapp/src/pages/homebrew/sections/SubjectSection.tsx` | sostituito stub (~127 LoC) | 3-card radio item/character/ability + chip multi-select item_types (weapon/armor/shield/accessory/gear/consumable/generic) + name_contains optional. Empty arrays/strings stripped dal filter emesso |
+| `webapp/src/pages/homebrew/sections/PropertiesSection.tsx` + `PropertyFormModal.tsx` | sostituito stub + nuovo (~587 LoC totali) | Lista card + Sheet modal. Auto-snake-case key da label IT (override toggle). 4 type editors (enum/number/boolean/text). Validation: labels non-empty, key regex, enum non-empty + default-in-values |
+| `webapp/src/pages/homebrew/sections/TablesSection.tsx` | sostituito stub (~498 LoC) | HTML `<table>` grid editor. Row_axis dropdown filtrato a enum properties; rows derivate dai property values. Col_bin add/remove sincronizza ogni row's cells array. Switch row_axis resets cells. Empty state distinto per "no enum properties" vs "no tables yet" |
+| `webapp/src/pages/homebrew/sections/PassiveModifiersSection.tsx` + `PassiveModifierFormModal.tsx` | sostituito stub + nuovo (~507 LoC totali) | List + Sheet modal. 2-tier target picker (5 categorie + sub-picker skill/save). Numeric delta. Sentinel `when` filter `$character.id gt 0` per MVP (filter editing deferito). Dice notation pass-through nel display ma blocked nell'editing per ora |
+| `webapp/src/pages/homebrew/sections/TriggersSection.tsx` | sostituito stub (~332 LoC) | List trigger cards. Native `<select>` con 15 eventi via `eventLabel(ev, [], locale)`. Filter chips con `presetLabel()` per 4 forme note (fumble/critical/was_crit_hit/is_equipped). Picker scoped per evento. Dedup via `filtersEqual`. EffectChainEditor embedded con `tables` prop |
+| `webapp/src/pages/homebrew/sections/EffectChainEditor.tsx` + `EffectFormModal.tsx` | nuovo (407 + 815 LoC) | Recursive numbered-card editor. `if` → 2 sub-editors then/else; `match` → 1 sub-editor per case. Depth indent (`paddingLeft: depth * 16`). 4 icon buttons 44×44 (move up/down/edit/delete). Action picker (Sheet, 1/2-col grid) con 16 azioni. Form modal con `switch (action)` esaustivo (no `default` — TS verifica exhaustiveness); validation per action (DICE_REGEX, VAR_REGEX, MODIFIER_TARGET_REGEX); restore_resource.amount accetta literal "max" |
+| `webapp/src/App.tsx` | modificato | +3 routes: `/char/:id/homebrew`, `/char/:id/homebrew/new`, `/char/:id/homebrew/:ruleId`. +2 lazy imports |
+| `webapp/src/pages/character/MenuScreen.tsx` | modificato | Nuovo menu item `homebrew` in section "Tools": icon `GiCauldron`, tone `arcane`, path `homebrew` |
+| `webapp/src/locales/{it,en}.json` | esteso | Nuovo top-level `homebrew.*` (~150 chiavi totali). Sub-trees: `editor`, `identity`, `subject`, `properties`, `tables`, `passive`, `triggers`, `effects`, validation. EN proper translations |
+| `tests/integration/homebrew/test_integration_attack.py` + `tests/e2e/homebrew/test_template_enchanted_weapon.py` | adattato | Assertion `== []` → `.get("homebrew_notifications") is None` + `.get(..., [])` → `.get(...) or []` (pattern post-pre-flight) |
+
+#### Smoke verification (live)
+
+Playwright MCP, dev stack locale (API DEV_USER_ID bypass, frontend Vite 5173). Char id=1 (Dodria).
+
+| Step | Esito | Note |
+|------|-------|------|
+| GET `/#/char/1/homebrew` | ✅ render | Title "Regole Homebrew", empty state, 4 template card (Qualità & Usura, Sanguinamento, Arma incantata, Punti Fortuna) |
+| Click "Installa" su Sanguinamento | ✅ 200 | Card appare in "Regole attive · 1", switch ON. Template card cambia in "Installato" disabled |
+| Toggle off | ✅ 200 | Card si sposta in "Regole disattivate · 1", switch OFF. "Regole attive · 0" + empty state |
+| Click card disattivata | ✅ route OK | Naviga a `/#/char/1/homebrew/1`, RuleEditor con titolo "Sanguinamento", 6 sezioni collassabili (Tabelle (avanzato) default chiusa), Cancel + Salva footer |
+| Back button | ✅ history OK | Torna alla pagina lista preservando hash route |
+| DELETE rule via API (cleanup) | ✅ 204 | Necessario per stato pulito; in UI normale lo userà l'utente via "Modifica" + future Delete (PATCH per Toggle è già wired) |
+
+Screenshot in `.playwright-mcp/`: `homebrew-smoke-01-initial.png`, `02-after-install.png`, `03-toggled-off.png`, `04-editor.png` (locale al worktree, non committati).
+
+#### Deviazioni dal piano originale
+
+**Task 4.1 vs 4.2 ordine.** Il piano elenca 4.1 (API client) prima di 4.2 (types). Eseguito invertito (4.2 prima di 4.1) perché 4.1 importa `HomebrewRule`, `TemplateRead`, etc. da `@/lib/homebrew/types` — chicken-and-egg con build TS. Conseguenza zero: i due task sono indipendenti, l'ordine pratico era arbitrario.
+
+**Task 4.2 — Effect union allargata a 16 azioni (plan literal ne aveva 13).** Il plan stub `Effect` ometteva `unequip`, `apply_modifier_once`, `add_history`. Recuperate dal backend Pydantic `_ACTION_REGISTRY` (16 voci). `actionLabel()` ha exhaustiveness check via `never` assertion — TS errerà se un'azione manca.
+
+**Task 4.5 — icon picker omesso.** Plan stub chiedeva "picker di 12 emoji" per IdentitySection. `HomebrewRule` schema NON ha campo `icon` (lo ha solo `TemplateRead`). Aggiungere un icon picker richiederebbe migration backend + Pydantic field + serializer. Scelta MVP: skip. Carry-over Phase 5+ se UX team lo richiede.
+
+**Task 4.8 — `TablesSection` riceve `properties` prop.** Plan stub aveva `{ tables, onChange }` ma `row_axis` deve essere un key di un enum Property. Esteso a `{ tables, properties, onChange }`. `RuleEditor` passa `properties={dsl.properties ?? []}`. Cambio coordinato 2-file.
+
+**Task 4.9 — `when` filter del PassiveModifier hardcoded a sentinel.** Plan literal chiedeva "+ chip 'Solo se X'" per il filtro `when`. MVP: nuovi modifier nascono con `{path: '$character.id', op: 'gt', value: 0}` (sempre-vero — runtime ctx include sempre `character.id`). Conseguenza: il modifier si applica ogni volta che il rule subject matches. Filter editing UI deferita.
+
+**Task 4.9 — dice notation nel value omesso.** Plan literal accetta `value: int | str` (anche dice). MVP: solo integer (negative permesso). Helper text spiega vincolo. Modifier loaded con dice string display correttamente in card (formatValue), ma editing blocca con `value_invalid` (Number.isFinite(NaN) check). No silent overwrite.
+
+**Task 4.10 — preset filters limitati a 4 forme.** Plan dice "preset di filtri comuni accessibili da menu". MVP: 4 preset (`is_fumble`, `is_critical`, `was_critical_hit`, `is_equipped`) mappati per evento via `PRESETS_BY_EVENT`. Ad-hoc filter UI con `path/op/value` editor in-app NON implementata — solo display readonly `${path} ${op} ${value}` font-mono + remove. Editing ad-hoc filters deferito.
+
+**Task 4.11 — `EffectFormModal` 815 LoC.** Larger than 350-500 estimate. Tutti 16 action cases collocati nello stesso `switch` per leggibilità (vs estrarre 16 sub-component files). Switch è flat e cohesivo; estrazione obscura il match esaustivo.
+
+**Task 4.13 — Playwright MCP invece di test committato.** Plan originale: `webapp/tests/e2e-playwright/homebrew/smoke.spec.ts`. Playwright non era installato nel webapp (`package.json` non aveva la dep). User clarification: usa Playwright MCP per smoke live, niente file committato. Smoke eseguito (vedi tabella sopra). Conseguenza: nessuna copertura automatica CI — verifica manuale + tsc come unica copertura statica. Setup Playwright proper test framework rimane carry-over.
+
+#### Issues residui (non bloccanti, da affrontare in Phase 5+)
+
+- **`PATCH /conditions` bug `_resolve_abilities` persiste** (carry-over Phase 3). Il `model_validator(mode="before")` di `CharacterFull` itera `dir(data)` e fa `getattr` exception-swallow, droppando colonne non-loaded. Risposta 422. L'e2e Bleeding di Phase 3 bypassa via DB direct write. Phase 5 (display integration nelle pagine Conditions/Inventory/ecc.) sarà bloccato finché non fixato. Pattern di fix già usato in `items.py`/`classes.py` di Phase 3: `await session.flush(); await session.refresh(char, attribute_names=[...])` prima del `model_validate`. **Da fare PRIMA della Task 5.x che integra le condizioni custom.**
+- **Icon picker per HomebrewRule** (omesso da Task 4.5). Decidere: (a) aggiungere `icon` field allo schema + migrate, (b) usare prima emoji della description come display, (c) lasciare assente. Discutere con UX in Phase 5.
+- **Filter editing UI per `when` PassiveModifier + ad-hoc filters in TriggersSection** (omesso da Task 4.9 + 4.10). Sentinel-only oggi. Quando un template di Phase 5+ vorrà conditional modifiers, costruire un Filter editor (path picker + op dropdown + value input) condiviso da `PassiveModifierFormModal` + `TriggersSection`.
+- **Dice notation editor per PassiveModifier.value** (omesso da Task 4.9). Quando un template vorrà un modifier che varia con un tiro (raro), aggiungere un toggle "Valore variabile (dado)" che switcha l'input a free-form text con regex dice validation.
+- **`manual_trigger` fires ALL enabled rules con quel trigger** (carry-over Phase 3). Quando l'editor introdurrà `manual_trigger` come scelta evento (e.g. per Punti Fortuna), il dispatch comportament dovrà essere risolto: aggiungere filter implicito `$event.rule_id eq <this_rule>` resolved at install time, o cambiare il dispatcher per filtrare per rule_id quando l'evento è `manual_trigger`.
+- **Stale React cache su delete diretto via API.** Non un bug del codice — confermato durante smoke quando ho usato `curl DELETE` per pulizia. In UI normale, `api.homebrew.deleteRule` non è ancora cablato (nessun Delete button sulla card). Phase 5 deve aggiungere il bottone Delete sulla regola in Homebrew.tsx (mutation con `invalidateQueries`).
+- **Playwright proper test framework**. Nessuna copertura automatica end-to-end committata. Phase 7 del plan parla di "Playwright matrix + audit-loop" — installare `@playwright/test` + config + matrix tests come parte di quella fase.
+- **TableCard local input state non re-syncs su prop change** (Task 4.8 minor). `ColBinHeader.lo/hi` initialized from props ma non aggiornato se il parent corregge `hi` su `lo > hi`. Acceptable: parent correction è rara, blur risolve. UX nit only.
+
+#### Stato esecuzione
+
+Phase 0 ✅ · Phase 1 ✅ · Phase 2 ✅ · Phase 3 ✅ · Phase 4 ✅ · Phase 5-7 pending.
+
+**Milestone Phase 4 raggiunta**: editor regole + libreria template + 6 section editor + EffectChainEditor + RuleEditor save/cancel — funzionale end-to-end verificato via Playwright MCP smoke. Backend contract uniforme dopo pre-flight WeaponAttackResult. tsc clean su ogni commit.
+
+**Pronto per Phase 5**: display integration. Fix `_resolve_abilities` bug PRIMA di lavorare sulla pagina Conditions. Poi badge inventory per item con properties homebrew, custom condition rendering, custom resource UI, notification toast integration (le `homebrew_notifications` arrivano già sui PATCH endpoint da Phase 2/3 — basta consumarli nel frontend).
+
 ---
 
 ## Sequenza fasi (milestone)
