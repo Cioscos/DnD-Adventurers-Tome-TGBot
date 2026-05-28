@@ -987,6 +987,20 @@
     "enabled": "Active",
     "disabled_state": "Disabled",
     "no_rules_yet": "No rules yet. Install a template to get started.",
-    "load_error": "Couldn't load rules. Try again later."
+    "load_error": "Couldn't load rules. Try again later.",
+    "editor": {
+      "new_title": "New rule",
+      "edit_title": "Edit rule",
+      "sections": {
+        "identity": "Identity",
+        "subject": "Applies to",
+        "properties": "Properties",
+        "tables": "Tables (advanced)",
+        "passive_modifiers": "Passive modifiers",
+        "triggers": "Triggers and effects"
+      },
+      "section_tbd": "Section under construction",
+      "save_pending": "Save"
+    }
   }
 }

@@ -987,6 +987,20 @@
     "enabled": "Attiva",
     "disabled_state": "Disattivata",
     "no_rules_yet": "Nessuna regola ancora. Installa un template per iniziare.",
-    "load_error": "Impossibile caricare le regole. Riprova più tardi."
+    "load_error": "Impossibile caricare le regole. Riprova più tardi.",
+    "editor": {
+      "new_title": "Nuova regola",
+      "edit_title": "Modifica regola",
+      "sections": {
+        "identity": "Identità",
+        "subject": "A cosa si applica",
+        "properties": "Caratteristiche",
+        "tables": "Tabelle (avanzato)",
+        "passive_modifiers": "Modificatori passivi",
+        "triggers": "Trigger ed effetti"
+      },
+      "section_tbd": "Sezione in costruzione",
+      "save_pending": "Salva"
+    }
   }
 }
