@@ -152,10 +152,12 @@ export function actionLabel(effect: Effect, locale: Locale): string {
         ? "🤔 Se la condizione è vera..."
         : "🤔 If the condition is true..."
 
-    case "set_property":
+    case "set_property": {
+      const subject = subjectWord(effect.target, locale)
       return isIt
-        ? `📝 Imposta "${effect.key}" di ${subjectWord(effect.target, "it")} a "${String(effect.value)}"`
-        : `📝 Set "${effect.key}" of ${subjectWord(effect.target, "en")} to "${String(effect.value)}"`
+        ? `📝 Imposta "${effect.key}" di ${subject} a "${String(effect.value)}"`
+        : `📝 Set "${effect.key}" of ${subject} to "${String(effect.value)}"`
+    }
 
     case "inc_property":
       return isIt
@@ -197,9 +199,7 @@ export function actionLabel(effect: Effect, locale: Locale): string {
 
     case "apply_modifier_once": {
       const sign = signOf(effect.delta)
-      return isIt
-        ? `⭐ ${effect.label} (${effect.target} ${sign}${effect.delta})`
-        : `⭐ ${effect.label} (${effect.target} ${sign}${effect.delta})`
+      return `⭐ ${effect.label} (${effect.target} ${sign}${effect.delta})`
     }
 
     case "notify":
