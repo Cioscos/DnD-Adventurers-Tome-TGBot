@@ -1,10 +1,15 @@
-"""Integration tests for long_rest_taken / short_rest_taken events."""
+"""Integration tests for lifecycle events fired by character routers.
+
+Currently covers:
+  - long_rest_taken / short_rest_taken (hp.py rest endpoint)
+  - spell_cast (spell_slots.py PATCH endpoint)
+"""
 from __future__ import annotations
 
 import pytest
 
 
-def _notify_rule(event: str, message: str, name: str = "Test Rest Rule") -> dict:
+def _notify_rule(event: str, message: str, name: str = "Test Lifecycle Rule") -> dict:
     """Build a HomebrewRule create body with a single notify trigger on `event`."""
     return {
         "name": name,
@@ -91,3 +96,73 @@ async def test_long_rest_does_not_fire_short_rest_rule(client, char_id):
     assert r.status_code == 200
     body = r.json()
     assert body.get("homebrew_notifications") is None
+
+
+# ---------------------------------------------------------------------------
+# spell_cast (spell_slots.update_spell_slot)
+# ---------------------------------------------------------------------------
+
+async def _create_spell_slot(client, char_id: int, level: int = 1, total: int = 3, used: int = 0) -> int:
+    r = await client.post(
+        f"/characters/{char_id}/spell_slots",
+        json={"level": level, "total": total, "used": used},
+    )
+    assert r.status_code == 201, r.text
+    return r.json()["id"]
+
+
+@pytest.mark.asyncio
+async def test_spell_cast_fires_event(client, char_id):
+    """PATCH spell_slot with incremented `used` → spell_cast rule fires and notifies."""
+    r = await client.post(
+        f"/characters/{char_id}/homebrew/rules",
+        json=_notify_rule("spell_cast", "Spell consumed!", name="Spell Cast Notice"),
+    )
+    assert r.status_code == 201
+
+    slot_id = await _create_spell_slot(client, char_id, level=1, total=3, used=0)
+
+    r = await client.patch(
+        f"/characters/{char_id}/spell_slots/{slot_id}",
+        json={"used": 1},
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["used"] == 1
+    assert body["available"] == 2
+
+    notifs = body.get("homebrew_notifications") or []
+    assert any("Spell consumed!" in n["message"] for n in notifs), notifs
+    n = next(n for n in notifs if "Spell consumed!" in n["message"])
+    assert n["severity"] == "info"
+    assert n["rule_id"] is not None
+    assert n["rule_name"] == "Spell Cast Notice"
+
+
+@pytest.mark.asyncio
+async def test_spell_cast_no_event_when_used_unchanged(client, char_id):
+    """PATCH that doesn't increment `used` (no-op or refund) must NOT fire spell_cast."""
+    r = await client.post(
+        f"/characters/{char_id}/homebrew/rules",
+        json=_notify_rule("spell_cast", "Should not fire!", name="Should Not Fire"),
+    )
+    assert r.status_code == 201
+
+    # Start with `used=2` so we can test both no-op and refund paths.
+    slot_id = await _create_spell_slot(client, char_id, level=1, total=3, used=2)
+
+    # No-op PATCH: only update `total`, leave `used` alone.
+    r = await client.patch(
+        f"/characters/{char_id}/spell_slots/{slot_id}",
+        json={"total": 4},
+    )
+    assert r.status_code == 200, r.text
+    assert r.json().get("homebrew_notifications") == []
+
+    # Refund: decrement `used` from 2 → 1. spell_cast must not fire.
+    r = await client.patch(
+        f"/characters/{char_id}/spell_slots/{slot_id}",
+        json={"used": 1},
+    )
+    assert r.status_code == 200, r.text
+    assert r.json().get("homebrew_notifications") == []

@@ -11,6 +11,8 @@ from sqlalchemy.orm import selectinload
 
 from api.auth import get_current_user
 from api.database import get_db
+from api.routers._helpers import collect_homebrew_notifications
+from api.services.homebrew.dispatcher import dispatch
 from core.db.models import Character, CharacterClass, SpellSlot
 from api.schemas.character import CharacterFull
 from api.schemas.spell import SpellSlotCreate, SpellSlotRead, SpellSlotUpdate
@@ -62,17 +64,43 @@ async def update_spell_slot(
     body: SpellSlotUpdate,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
-) -> SpellSlot:
-    await _get_owned_full(char_id, user_id, session)
+) -> SpellSlotRead:
+    char = await _get_owned_full(char_id, user_id, session)
     result = await session.execute(
         select(SpellSlot).where(SpellSlot.id == slot_id, SpellSlot.character_id == char_id)
     )
     slot = result.scalar_one_or_none()
     if slot is None:
         raise HTTPException(status_code=404, detail="Slot not found")
+
+    old_used = slot.used
     for field, value in body.model_dump(exclude_unset=True).items():
         setattr(slot, field, value)
-    return slot
+    await session.flush()
+
+    notifications: list[dict] = []
+    # Only dispatch when `used` actually incremented — a refund (used decreased)
+    # or no-op PATCH (e.g. updating only `total`) should not fire spell_cast.
+    if slot.used > old_used:
+        firing = await dispatch(
+            session,
+            char,
+            "spell_cast",
+            {
+                "slot_level": slot.level,
+                "slots_remaining": max(0, slot.total - slot.used),
+            },
+        )
+        notifications = collect_homebrew_notifications(firing)
+
+    return SpellSlotRead(
+        id=slot.id,
+        level=slot.level,
+        total=slot.total,
+        used=slot.used,
+        available=slot.available,
+        homebrew_notifications=notifications,
+    )
 
 
 @router.delete("/{char_id}/spell_slots/{slot_id}", status_code=204)
