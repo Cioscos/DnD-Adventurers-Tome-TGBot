@@ -1,0 +1,57 @@
+name: Homebrew Audit
+
+# Manual-trigger only: runs the Playwright homebrew-engine audit suite against a
+# throwaway SQLite-backed API on the runner, regenerates docs/homebrew-audit/, and
+# fails if any 🔴/🟠 (critical) finding is recorded. Reports are uploaded as an artifact.
+on:
+  workflow_dispatch:
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: webapp/package-lock.json
+
+      - name: Install Python deps
+        run: uv sync
+
+      - name: Install webapp deps
+        working-directory: webapp
+        run: npm ci
+
+      - name: Run homebrew audit (start API + audit suite)
+        working-directory: webapp
+        env:
+          # DEV_USER_ID activates the API's auth bypass (no Telegram initData needed).
+          DEV_USER_ID: "1"
+          # Throwaway DB so the audit never touches a real database.
+          DB_PATH: /tmp/homebrew-audit-ci.db
+          # Fixtures default to 127.0.0.1:8000 when HB_API_URL is unset.
+        run: |
+          set -euo pipefail
+          # Start the API in the background (uv-managed venv on the Linux runner).
+          (cd .. && DEV_USER_ID="$DEV_USER_ID" DB_PATH="$DB_PATH" \
+            uv run uvicorn api.main:app --host 127.0.0.1 --port 8000 &)
+          # Wait for /health (up to ~60s).
+          for i in $(seq 1 60); do
+            curl -fsS http://127.0.0.1:8000/health >/dev/null 2>&1 && { echo "API ready after ${i}s"; break; }
+            [ "$i" = 60 ] && { echo "API failed to start"; exit 1; }
+            sleep 1
+          done
+          # Run the audit suite (the reporter returns a failed status / exit 1 on any 🔴/🟠).
+          npm run test:homebrew:audit
+
+      - name: Upload audit reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: homebrew-audit
+          path: docs/homebrew-audit/
