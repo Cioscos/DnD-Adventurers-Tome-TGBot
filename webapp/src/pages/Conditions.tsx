@@ -15,6 +15,7 @@ import { haptic } from '@/auth/telegram'
 import { spring, stagger } from '@/styles/motion'
 import ConditionDetailModal from '@/pages/conditions/ConditionDetailModal'
 import { CONDITION_ICONS } from '@/lib/conditions'
+import CustomConditionCard from '@/components/homebrew/CustomConditionCard'
 
 const CONDITION_KEYS = [
   'blinded', 'charmed', 'deafened', 'frightened', 'grappled',
@@ -38,6 +39,15 @@ export default function Conditions() {
     queryFn: () => api.characters.get(charId),
   })
 
+  // Active homebrew rules — used to resolve a friendly name for each
+  // `custom:<slug>` condition entry written by the `apply_condition` action.
+  // Shared cache key keeps invalidation in lock-step with Inventory.tsx and
+  // Homebrew.tsx.
+  const { data: rules } = useQuery({
+    queryKey: ['homebrew-rules', charId],
+    queryFn: () => api.homebrew.listRules(charId),
+  })
+
   const mutation = useMutation({
     mutationFn: (conditions: Record<string, unknown>) =>
       api.characters.updateConditions(charId, conditions),
@@ -59,6 +69,17 @@ export default function Conditions() {
     ? (conditions['exhaustion'] as number)
     : 0
 
+  // `custom:<slug>` entries are written by the homebrew `apply_condition`
+  // action as `{rule_id, params}` objects. We surface only the truthy object
+  // entries; a `false` shadow value (left behind after manual removal) is
+  // filtered out so the section disappears once the user clears it.
+  const customEntries = Object.entries(conditions).filter(
+    ([k, v]) => k.startsWith('custom:') && v && typeof v === 'object',
+  )
+
+  const ruleNameById = new Map<number, string>()
+  for (const r of rules ?? []) ruleNameById.set(r.id, r.name)
+
   const toggle = (key: string) => {
     const current = conditions[key] ?? false
     mutation.mutate({ ...conditions, [key]: !current })
@@ -69,11 +90,27 @@ export default function Conditions() {
     mutation.mutate({ ...conditions, exhaustion: level })
   }
 
-  const activeCount = CONDITION_KEYS.filter((k) => conditions[k]).length + (currentExhaustion > 0 ? 1 : 0)
+  // PATCH /conditions merges, it cannot pop a key. Sending `false` marks the
+  // custom condition inactive; the card filters by truthy so the entry stops
+  // rendering. The leftover `false` shadow is cleaned up next time the source
+  // rule's `remove_condition` action runs (which does a proper pop()).
+  const removeCustom = (key: string) => {
+    mutation.mutate({ [key]: false })
+  }
+
+  const activeCount =
+    CONDITION_KEYS.filter((k) => conditions[k]).length +
+    (currentExhaustion > 0 ? 1 : 0) +
+    customEntries.length
   const visibleConditions = filterActive
     ? CONDITION_KEYS.filter((k) => conditions[k])
     : CONDITION_KEYS
 
+  // Reset-All only clears the 14 standard conditions + exhaustion. Custom
+  // `custom:*` entries are intentionally left untouched here because their
+  // lifecycle is governed by the homebrew rule that applied them — only the
+  // rule (via `remove_condition`) or the per-card trash button should clear
+  // them.
   const resetAll = () => {
     const cleared: Record<string, unknown> = { exhaustion: 0 }
     for (const k of CONDITION_KEYS) cleared[k] = false
@@ -255,6 +292,36 @@ export default function Conditions() {
           )
         })}
       </m.div>
+
+      {/* Custom conditions applied by homebrew rules (`apply_condition`). */}
+      {customEntries.length > 0 && (
+        <Surface variant="elevated">
+          <h3 className="font-cinzel uppercase tracking-widest text-xs text-dnd-gold-bright mb-3">
+            {t('character.conditions.custom_section_title')}
+          </h3>
+          <div className="space-y-2">
+            {customEntries.map(([key, value]) => {
+              const ruleId =
+                value && typeof value === 'object' && 'rule_id' in value
+                  ? (value as { rule_id?: number }).rule_id
+                  : undefined
+              const ruleName =
+                ruleId !== undefined ? ruleNameById.get(ruleId) : undefined
+              return (
+                <CustomConditionCard
+                  key={key}
+                  conditionKey={key}
+                  value={value}
+                  ruleName={ruleName}
+                  onRemove={() => removeCustom(key)}
+                  isPending={mutation.isPending}
+                />
+              )
+            })}
+          </div>
+        </Surface>
+      )}
+
       {detailKey !== null && (
         <ConditionDetailModal
           condKey={detailKey}
