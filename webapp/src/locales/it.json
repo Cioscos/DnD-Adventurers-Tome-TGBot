@@ -1102,6 +1102,23 @@
         "target_required": "Scegli cosa modificare"
       }
     },
+    "triggers": {
+      "empty": "Nessun trigger ancora. I trigger reagiscono a eventi del gioco (es. quando tiri 1 attaccando, quando salgi di livello) eseguendo una sequenza di passi.",
+      "add_button": "Aggiungi trigger",
+      "event_label": "Evento",
+      "filters_label": "Filtri (opzionali)",
+      "add_filter": "Aggiungi filtro",
+      "no_presets": "Nessun filtro preset per questo evento",
+      "delete_confirm": "Eliminare questo trigger?",
+      "preset_filters": {
+        "fumble": "Solo se tiro 1 (fumble)",
+        "critical": "Solo se tiro 20 (critico)",
+        "was_crit_hit": "Solo se colpo critico subito",
+        "is_equipped": "Solo se equipaggiato"
+      },
+      "filter_picker_title": "Quale filtro?",
+      "ad_hoc_filter_label": "Filtro personalizzato"
+    },
     "effects": {
       "empty": "Nessun passo. Premi \"Aggiungi passo\" per descrivere cosa fa il trigger.",
       "add_step": "Aggiungi passo",

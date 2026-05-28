@@ -1102,6 +1102,23 @@
         "target_required": "Pick what to modify"
       }
     },
+    "triggers": {
+      "empty": "No triggers yet. Triggers react to game events (e.g. when you roll a 1 on attack, when you level up) by running a sequence of steps.",
+      "add_button": "Add trigger",
+      "event_label": "Event",
+      "filters_label": "Filters (optional)",
+      "add_filter": "Add filter",
+      "no_presets": "No preset filters for this event",
+      "delete_confirm": "Delete this trigger?",
+      "preset_filters": {
+        "fumble": "Only if nat-1 (fumble)",
+        "critical": "Only if nat-20 (critical)",
+        "was_crit_hit": "Only if was a critical hit",
+        "is_equipped": "Only if equipped"
+      },
+      "filter_picker_title": "Which filter?",
+      "ad_hoc_filter_label": "Custom filter"
+    },
     "effects": {
       "empty": "No steps yet. Press \"Add step\" to describe what the trigger does.",
       "add_step": "Add step",
