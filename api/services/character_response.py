@@ -20,6 +20,15 @@ async def build_character_response(
     session: AsyncSession, char: Character,
 ) -> CharacterFull:
     """Build a CharacterFull response with homebrew breakdown populated."""
+    # Flush any pending mutations on `char` BEFORE serializing. CharacterFull.model_validate
+    # reads ORM attributes synchronously; if the session is still dirty, that access can
+    # trigger an autoflush from inside pydantic (a sync context) and blow up with
+    # "greenlet_spawn has not been called" under async SQLAlchemy. Callers that mutate the
+    # character and then call us without a prior awaited flush (e.g. hp.py SET_MAX/SET_CURRENT,
+    # death-save and skill/save PATCH endpoints) would otherwise 500. Flushing here within the
+    # awaited context keeps serialization side-effect-free. No-op on read-only (clean) sessions.
+    await session.flush()
+
     # TODO (perf): each get_passive_modifiers call issues 2 SELECTs (rules + items).
     # At 27 calls/response this is 54 SELECTs. Batch by preloading rules+items once
     # and exposing a sum_modifiers(rules, items, target_path) helper.
