@@ -1012,6 +1012,9 @@
     "manual_trigger_no_effect": "Manual trigger · no rule reacted",
     "delete_title": "Delete rule",
     "delete_confirm": "Are you sure you want to delete \"{{name}}\"? This action is irreversible.",
+    "breakdown": {
+      "label": "Homebrew"
+    },
     "editor": {
       "new_title": "New rule",
       "edit_title": "Edit rule",

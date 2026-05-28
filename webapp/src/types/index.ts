@@ -152,6 +152,13 @@ export interface ConcentrationSaveResult {
   is_fumble: boolean
 }
 
+export interface AcBreakdown {
+  base: number
+  shield: number
+  magic: number
+  homebrew: number
+}
+
 export interface CharacterFull extends CharacterSummary {
   background?: string
   alignment?: string
@@ -161,6 +168,11 @@ export interface CharacterFull extends CharacterSummary {
   magic_armor: number
   base_armor_class_override: boolean
   shield_armor_class_override: boolean
+  ac_breakdown?: AcBreakdown | null
+  hp_max_homebrew_modifier?: number
+  speed_homebrew_modifier?: number
+  skills_homebrew_modifiers?: Record<string, number>
+  saves_homebrew_modifiers?: Record<string, number>
   carry_capacity: number
   encumbrance: number
   spell_slots_mode: string

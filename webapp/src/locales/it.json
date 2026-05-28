@@ -1012,6 +1012,9 @@
     "manual_trigger_no_effect": "Attivazione manuale · nessuna regola ha reagito",
     "delete_title": "Elimina regola",
     "delete_confirm": "Sicuro di eliminare la regola \"{{name}}\"? L'azione è irreversibile.",
+    "breakdown": {
+      "label": "Homebrew"
+    },
     "editor": {
       "new_title": "Nuova regola",
       "edit_title": "Modifica regola",
