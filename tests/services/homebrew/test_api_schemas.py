@@ -2,8 +2,7 @@
 import pytest
 from pydantic import ValidationError
 from api.schemas.homebrew import (
-    HomebrewRuleCreate, HomebrewRuleRead, HomebrewRuleUpdate,
-    HomebrewResourceRead, TemplateRead,
+    HomebrewRuleCreate, TemplateRead,
 )
 
 

@@ -5,6 +5,7 @@ from typing import Optional
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from api.services.homebrew.dsl import RuleDSL
+from api.services.homebrew.types import Severity
 
 
 class HomebrewRuleCreate(BaseModel):
@@ -25,7 +26,7 @@ class HomebrewRuleCreate(BaseModel):
 
 class HomebrewRuleUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    name: Optional[str] = None
+    name: Optional[str] = Field(default=None, min_length=1, max_length=100)
     description: Optional[str] = None
     dsl: Optional[dict] = None
     enabled: Optional[bool] = None
@@ -82,13 +83,14 @@ class TemplateDetailRead(TemplateRead):
 
 
 class NotificationRead(BaseModel):
-    severity: str
+    severity: Severity
     message: str
     rule_id: int | None = None
     rule_name: str | None = None
 
 
 class RuleFiringResultRead(BaseModel):
+    # history_entries are persisted server-side; not surfaced to clients.
     rule_id: int
     rule_name: str
     notifications: list[NotificationRead] = []
