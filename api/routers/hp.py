@@ -14,6 +14,7 @@ from sqlalchemy.orm import selectinload
 
 from api.auth import get_current_user
 from api.database import get_db
+from api.services.homebrew.dispatcher import dispatch
 from core.db.models import Character, CharacterHistory
 from api.schemas.character import CharacterFull
 from api.schemas.common import (
@@ -126,12 +127,39 @@ async def update_hp(
         ):
             conc_result = roll_concentration_save(char, body.value, session)
 
+        # Emit homebrew events: damage_taken (always) + dropped_to_zero (when HP crossed 0)
+        await dispatch(
+            session, char, "damage_taken",
+            {
+                "amount": body.value,
+                "was_critical_hit": body.was_critical_hit,
+                "current_hp_before": old,
+                "current_hp_after": char.current_hit_points,
+            },
+        )
+        if old > 0 and char.current_hit_points == 0:
+            await dispatch(
+                session, char, "dropped_to_zero",
+                {
+                    "damage_amount": body.value,
+                    "from_critical": body.was_critical_hit,
+                },
+            )
+
     elif body.op == HPOp.HEAL:
         old = char.current_hit_points
         char.current_hit_points = min(char.hit_points, char.current_hit_points + body.value)
         _add_history(session, char.id, "hp_change",
                      f"Cura: +{body.value} HP ({old} → {char.current_hit_points})",
                      meta={"op": "HEAL"})
+        await dispatch(
+            session, char, "hp_healed",
+            {
+                "amount": body.value,
+                "current_hp_before": old,
+                "current_hp_after": char.current_hit_points,
+            },
+        )
 
     elif body.op == HPOp.SET_MAX:
         old = char.hit_points

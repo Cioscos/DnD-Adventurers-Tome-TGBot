@@ -243,6 +243,7 @@ class HPOp(str, Enum):
 class HPUpdate(BaseModel):
     op: HPOp
     value: int
+    was_critical_hit: bool = False
 
 
 class RestRequest(BaseModel):
