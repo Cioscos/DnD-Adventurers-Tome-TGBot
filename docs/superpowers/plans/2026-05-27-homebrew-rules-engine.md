@@ -129,11 +129,87 @@ ee8e2c8 feat(homebrew): add filter evaluator (8 operators + AND combinator)
 - No `conftest.py` sotto `tests/services/homebrew/` — `db_session` fixture duplicata in 4 test file (~150 LOC duplication). Defer a cleanup task.
 - Test coverage gap: temp HP absorption non testata in damage_character.
 
+### Phase 2 — completata 2026-05-28
+
+15 commit sul branch (9 task × 1 commit + 6 fix/chore/refactor commit dopo code review). **178/178 test verdi** (`pytest tests/services/homebrew/ tests/integration/homebrew/ tests/e2e/homebrew/`).
+
+```
+c6d9c69 test(homebrew): e2e lifecycle test for Qualità & Usura via HTTP API
+7944fac refactor(homebrew): share collect_homebrew_notifications helper + harden tests
+451cd69 feat(homebrew): expose firing notifications in attack/HP responses
+c4df86b feat(homebrew): emit damage/dropped_to_zero/hp_healed events + was_critical_hit field
+7481ded chore(homebrew): standardize random monkeypatch across attack tests
+08be5f7 feat(homebrew): emit attack_rolled event from items.attack_with_weapon
+e896049 feat(homebrew): add create / update / toggle rule endpoints
+dc169cf chore(homebrew): hoist json import to top of integration test module
+9bdc52f feat(homebrew): install template endpoint + default property materialization
+edf3f3b fix(homebrew): cover 403 ownership boundary on rule list/get + document public templates
+bca14fb feat(homebrew): add homebrew router with templates + list rules endpoints
+64a60ce fix(homebrew): tighten Update name constraints + Notification severity literal
+601f38c feat(homebrew): add API-facing Pydantic schemas (rules, resources, templates)
+619abf3 fix(homebrew): drop unused pytest import + cover get_template None case
+b2adf67 feat(homebrew): add Qualità & Usura template (3 triggers, full wear table)
+```
+
+#### Moduli prodotti / modificati
+
+| File | Stato | Responsabilità |
+|------|-------|----------------|
+| `api/services/homebrew/templates.py` | nuovo | `_QUALITY_WEAR_DSL` hardcoded + `TEMPLATES` list + `get_template(id)` |
+| `api/schemas/homebrew.py` | nuovo | `HomebrewRule{Create,Update,Read}`, `HomebrewResource{Read,Update}`, `Template{Read,DetailRead}`, `NotificationRead` (typed con `Severity` literal), `RuleFiringResultRead` |
+| `api/routers/homebrew.py` | nuovo | 9 endpoint: list/get templates (public), list/get/create/update/delete/toggle rule, install template (con materialization defaults sui matching items) |
+| `api/routers/items.py` | modificato | `attack_with_weapon` ora emette `attack_rolled` event con payload `{item_id, to_hit_die, to_hit_total, is_critical, is_fumble, damage_total}` + popola `homebrew_notifications` nel response |
+| `api/routers/hp.py` | modificato | `update_hp` emette `damage_taken` (sempre su DAMAGE), `dropped_to_zero` (transition `old>0 → 0`), `hp_healed` (su HEAL). Accumula notifications in tutte e 3 le dispatch e le esponi su `CharacterFull.homebrew_notifications` (solo se non-empty) |
+| `api/routers/_helpers.py` | modificato | nuovo helper `collect_homebrew_notifications(firing_results) -> list[dict]` condiviso da items+hp |
+| `api/schemas/item.py` | modificato | `WeaponAttackResult.homebrew_notifications: list[dict] = Field(default_factory=list)` |
+| `api/schemas/character.py` | modificato | `CharacterFull.homebrew_notifications: Optional[list[dict]] = None` (popolato solo da endpoint che fanno dispatch) |
+| `api/schemas/common.py` | modificato | `HPUpdate.was_critical_hit: bool = False` (backward-compatible) |
+| `api/main.py` | modificato | registrato `homebrew.router` |
+
+#### Test prodotti
+
+| Dir/file | Test | Note |
+|----------|------|------|
+| `tests/services/homebrew/test_templates.py` | 4 | Template + DSL validation |
+| `tests/services/homebrew/test_api_schemas.py` | 3 | Validation Pydantic schemas |
+| `tests/integration/homebrew/conftest.py` | (fixtures) | `test_session_factory`, `client` con `dependency_overrides[get_db, get_current_user]`, `char_id` — niente env-var monkey patching |
+| `tests/integration/homebrew/test_routers_homebrew.py` | 21 | List/get/install/delete/create/update/toggle + 403 ownership tests |
+| `tests/integration/homebrew/test_integration_attack.py` | 5 | Fumble → damage, normal → no-op, no-rule sanity, notifications populated, no-rule notifications empty |
+| `tests/integration/homebrew/test_integration_hp.py` | 7 | Critical hit → wear, non-critical → no-op, dropped_to_zero → wear, heal → no-op, backward compat, notifications populated, no-rule no field |
+| `tests/e2e/homebrew/conftest.py` | (shim) | Re-export fixtures da `tests/integration/homebrew/conftest.py` |
+| `tests/e2e/homebrew/test_template_quality_wear.py` | 1 | Lifecycle completo via HTTP: install → set pessima → nat-1 → danneggiata → nat-1 → distrutta + unequip |
+
+#### Deviazioni dal piano originale
+
+**Task 2.3 — test_session_factory invece di env-var monkey-patching.** Il piano usava `monkeypatch.setenv("DB_PATH", ...)` ma `api.database.engine` è bound a `DB_PATH` a module-import time, quindi monkeypatch in fixture è troppo tardi. Soluzione: `app.dependency_overrides[get_db]` con un engine fresco per `tmp_path / "test.db"` + `app.dependency_overrides[get_current_user]` per bypassare auth.
+
+**Task 2.3 — aggiunti 2 test 403 ownership (non nel piano).** Reviewer ha richiesto coverage della boundary di sicurezza (`_get_owned_char` 404 vs 403). Test inseriscono Character di altro user_id e verificano 403 invece di leak.
+
+**Task 2.4 — `flag_modified` non necessario.** Il piano aveva un import inutilizzato di `flag_modified`. `Item.item_metadata` è una stringa (Text column), riassegnata via `_json.dumps(md)` — SQLAlchemy detect dirty automatically.
+
+**Task 2.6 — `random.randint` patched on module object.** Sia `api/routers/items.py` che `api/services/homebrew/actions.py` fanno `import random`, condividendo lo stesso module object. Per evitare iterator-clobber, i test patchano `random.randint` via `import random as _random; monkeypatch.setattr(_random, "randint", lambda lo, hi: next(rolls, fallback))` — questo copre entrambi i caller con un unico patch.
+
+**Task 2.7 — `was_critical_hit` accettato anche su SET_MAX/SET_CURRENT/SET_TEMP.** Default `False` + Pydantic accetta e ignora il campo nei branch che non fanno dispatch. Zero costo aggiuntivo, mantiene la schema uniforme.
+
+**Task 2.8 — `homebrew_notifications` tipato `list[dict]` invece di `list[NotificationRead]`.** Reviewer ha suggerito di usare il typed schema `NotificationRead` (definito in Task 2.2). Il piano specifica esplicitamente `list[dict]` per mantenere flessibilità wire-side. Decisione: rispettata la spec letterale del piano, defer della typed conversion a Phase 4 quando frontend tipi TypeScript la richiedono.
+
+**Task 2.8 — `_collect_notifications` hoisted to `api/routers/_helpers.py` come `collect_homebrew_notifications`.** Reviewer ha flagged duplicazione tra items.py e hp.py — refactorato in helper condiviso (commit `7944fac`).
+
+#### Issues residui (non bloccanti, da affrontare in Phase 3+)
+
+- `_patch_rolls`/`_patch_random` helper duplicato in 3 test file (attack, hp, e2e). Hoistare in `tests/integration/homebrew/conftest.py` ad inizio Phase 3.
+- `SET_CURRENT` HP op non emette `hp_healed` event — gap intenzionale (set_current è un admin override, non un heal vero). Se un futuro trigger reagisce a `hp_healed`, un SET_CURRENT a valore più alto verrà bypassato silenziosamente. Documenta o aggiungi dispatch in Phase 3 se necessario.
+- Nessun duplicate-template guard su install: installare due volte lo stesso template crea due rule rows. Niente UNIQUE constraint su `(character_id, template_id)`. Considerare 409 Conflict in Phase 3.
+- `datetime.utcnow()` deprecato in Py 3.12+ — 55 warnings in test output, pattern pervasivo nel codebase (`api/routers/*.py`). Cleanup repo-wide differito.
+- `HomebrewResourceRead/Update` schemas esistono ma nessun endpoint `/resources` wired — forward-declared per Phase 3 (Task 3.6 — Resource management endpoints).
+
 #### Stato esecuzione
 
-Phase 0 ✅ · Phase 1 ✅ · Phase 2-7 pending.
+Phase 0 ✅ · Phase 1 ✅ · Phase 2 ✅ · Phase 3-7 pending.
 
-**Pronto per Phase 2**: dispatcher pronto a essere chiamato da router. Contract: `await dispatch(session, char, event_type, payload)` poi `await session.commit()` (caller-owned). Template `Qualità & Usura` non ancora hardcoded (Task 2.1).
+**Milestone Phase 2 raggiunta**: Qualità & Usura funziona end-to-end via HTTP. Test `test_quality_wear_complete_lifecycle` verifica installazione template + nat-1 → danneggiata → secondo nat-1 → distrutta + unequipped, tutto via `httpx.AsyncClient`.
+
+**Pronto per Phase 3**: dispatcher wired in items+hp routers. Eventi mancanti da wirare: `long_rest_taken`/`short_rest_taken` (hp.py:rest), `spell_cast` (spell_slots.py), `ability_used` (abilities.py), `item_equipped`/`item_unequipped` (items.py PATCH), `level_up` (classes.py), `resource_changed`/`resource_depleted` (Task 3.6 — nuovo router), `turn_started`/`manual_trigger` (Task 3.7 — manual endpoints). Plus 3 template hardcoded: Sanguinamento, Arma incantata, Punti Fortuna.
 
 ---
 
