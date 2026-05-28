@@ -3,6 +3,7 @@
 Currently covers:
   - long_rest_taken / short_rest_taken (hp.py rest endpoint)
   - spell_cast (spell_slots.py PATCH endpoint)
+  - ability_used (abilities.py PATCH endpoint)
 """
 from __future__ import annotations
 
@@ -163,6 +164,97 @@ async def test_spell_cast_no_event_when_used_unchanged(client, char_id):
     r = await client.patch(
         f"/characters/{char_id}/spell_slots/{slot_id}",
         json={"used": 1},
+    )
+    assert r.status_code == 200, r.text
+    assert r.json().get("homebrew_notifications") is None
+
+
+# ---------------------------------------------------------------------------
+# ability_used (abilities.update_ability)
+# ---------------------------------------------------------------------------
+
+async def _create_ability(
+    client,
+    char_id: int,
+    name: str = "Second Wind",
+    max_uses: int = 1,
+    uses: int = 1,
+) -> int:
+    r = await client.post(
+        f"/characters/{char_id}/abilities",
+        json={
+            "name": name,
+            "description": "Test ability",
+            "max_uses": max_uses,
+            "uses": uses,
+            "is_active": True,
+            "restoration_type": "short_rest",
+        },
+    )
+    assert r.status_code == 201, r.text
+    return r.json()["id"]
+
+
+@pytest.mark.asyncio
+async def test_ability_used_fires_event(client, char_id):
+    """PATCH ability with decremented `uses` → ability_used rule fires and notifies."""
+    r = await client.post(
+        f"/characters/{char_id}/homebrew/rules",
+        json=_notify_rule("ability_used", "Ability spent!", name="Ability Used Notice"),
+    )
+    assert r.status_code == 201
+
+    ability_id = await _create_ability(client, char_id, max_uses=3, uses=3)
+
+    r = await client.patch(
+        f"/characters/{char_id}/abilities/{ability_id}",
+        json={"uses": 2},
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["uses"] == 2
+    assert body["max_uses"] == 3
+
+    notifs = body.get("homebrew_notifications") or []
+    assert any("Ability spent!" in n["message"] for n in notifs), notifs
+    n = next(n for n in notifs if "Ability spent!" in n["message"])
+    assert n["severity"] == "info"
+    assert n["rule_id"] is not None
+    assert n["rule_name"] == "Ability Used Notice"
+
+
+@pytest.mark.asyncio
+async def test_ability_used_no_event_when_uses_unchanged(client, char_id):
+    """PATCH that doesn't decrement `uses` (no-op, restore, or max-only) must NOT fire."""
+    r = await client.post(
+        f"/characters/{char_id}/homebrew/rules",
+        json=_notify_rule("ability_used", "Should not fire!", name="Should Not Fire"),
+    )
+    assert r.status_code == 201
+
+    # Start with uses=1 / max_uses=3 so we can test no-op, restore, and max-only.
+    ability_id = await _create_ability(client, char_id, max_uses=3, uses=1)
+
+    # 1) max-only PATCH: change max_uses, leave uses alone.
+    r = await client.patch(
+        f"/characters/{char_id}/abilities/{ability_id}",
+        json={"max_uses": 4},
+    )
+    assert r.status_code == 200, r.text
+    assert r.json().get("homebrew_notifications") is None
+
+    # 2) No-op PATCH on uses: set uses to its current value (1 → 1).
+    r = await client.patch(
+        f"/characters/{char_id}/abilities/{ability_id}",
+        json={"uses": 1},
+    )
+    assert r.status_code == 200, r.text
+    assert r.json().get("homebrew_notifications") is None
+
+    # 3) Restore: increment uses from 1 → 3 (e.g. after a rest). Must not fire.
+    r = await client.patch(
+        f"/characters/{char_id}/abilities/{ability_id}",
+        json={"uses": 3},
     )
     assert r.status_code == 200, r.text
     assert r.json().get("homebrew_notifications") is None

@@ -188,6 +188,10 @@ class AbilityRead(BaseModel):
     is_passive: bool = False
     is_active: bool = False
     restoration_type: str = "none"
+    # Homebrew rule notifications surfaced when an ability_used event fired
+    # (PATCH /abilities/{id} with a decremented `uses`). Omitted/None on
+    # POST/list responses to match CharacterFull's contract (Phase 2 pattern).
+    homebrew_notifications: Optional[list[dict]] = None
 
     model_config = {"from_attributes": True}
 
