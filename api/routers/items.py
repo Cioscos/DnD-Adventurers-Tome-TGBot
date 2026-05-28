@@ -384,5 +384,5 @@ async def attack_with_weapon(
         damage_rolls=damage_rolls,
         damage_bonus=damage_bonus if not is_fumble else 0,
         damage_total=damage_total,
-        homebrew_notifications=notifications,
+        homebrew_notifications=notifications if notifications else None,
     )

@@ -181,4 +181,4 @@ async def test_attack_with_no_rule_returns_empty_notifications(
 
     r = await client.post(f"/characters/{char_id}/items/{weapon_id}/attack")
     assert r.status_code == 200
-    assert r.json()["homebrew_notifications"] == []
+    assert r.json().get("homebrew_notifications") is None

@@ -110,5 +110,5 @@ async def test_enchanted_weapon_no_fire_when_not_enchanted(
 
     r = await client.post(f"/characters/{char_id}/items/{weapon_id}/attack")
     assert r.status_code == 200
-    notifs = r.json().get("homebrew_notifications", [])
+    notifs = r.json().get("homebrew_notifications") or []
     assert not any("fuoco" in n.get("message", "") for n in notifs)
