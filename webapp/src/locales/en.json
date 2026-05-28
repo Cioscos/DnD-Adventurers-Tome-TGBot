@@ -1027,6 +1027,36 @@
       "item_types_helper": "Leave empty to apply to any item",
       "name_contains_label": "Only if the name contains",
       "name_contains_placeholder": "e.g. magic, iron"
+    },
+    "properties": {
+      "empty": "No properties yet. Add a custom property to give items a value.",
+      "add_button": "Add property",
+      "type_badge": {
+        "enum": "list",
+        "number": "number",
+        "boolean": "yes/no",
+        "text": "text"
+      },
+      "default_label": "Default value",
+      "values_label": "Possible values",
+      "delete_confirm": "Delete property '{{name}}'? Items will lose this property.",
+      "modal": {
+        "title_new": "New property",
+        "title_edit": "Edit property",
+        "label_it": "Label (IT)",
+        "label_en": "Label (EN)",
+        "label_it_placeholder": "e.g. Qualità",
+        "label_en_placeholder": "e.g. Quality",
+        "key_label": "Key (auto)",
+        "key_override": "Override key",
+        "key_invalid": "Lowercase letters, digits and _ only (max 60 chars)",
+        "type_label": "Type",
+        "values_placeholder": "poor, normal, good, excellent",
+        "values_helper": "Separate values with commas or newlines",
+        "default_required": "Select a default value",
+        "values_empty": "Add at least one value",
+        "label_required": "Fill in both labels"
+      }
     }
   }
 }

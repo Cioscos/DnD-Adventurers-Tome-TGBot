@@ -1027,6 +1027,36 @@
       "item_types_helper": "Lascia vuoto per applicare a qualsiasi oggetto",
       "name_contains_label": "Solo se il nome contiene",
       "name_contains_placeholder": "es. magico, ferro"
+    },
+    "properties": {
+      "empty": "Nessuna caratteristica ancora. Aggiungi una proprietà personalizzata per dare un valore agli oggetti.",
+      "add_button": "Aggiungi caratteristica",
+      "type_badge": {
+        "enum": "elenco",
+        "number": "numero",
+        "boolean": "sì/no",
+        "text": "testo"
+      },
+      "default_label": "Valore di default",
+      "values_label": "Valori possibili",
+      "delete_confirm": "Eliminare la caratteristica '{{name}}'? Gli oggetti perderanno questa proprietà.",
+      "modal": {
+        "title_new": "Nuova caratteristica",
+        "title_edit": "Modifica caratteristica",
+        "label_it": "Etichetta (IT)",
+        "label_en": "Etichetta (EN)",
+        "label_it_placeholder": "es. Qualità",
+        "label_en_placeholder": "e.g. Quality",
+        "key_label": "Chiave (auto)",
+        "key_override": "Modifica chiave",
+        "key_invalid": "Solo lettere minuscole, numeri e _ (max 60 caratteri)",
+        "type_label": "Tipo",
+        "values_placeholder": "scarsa, normale, buona, eccellente",
+        "values_helper": "Separa i valori con virgole o a-capo",
+        "default_required": "Seleziona un valore di default",
+        "values_empty": "Aggiungi almeno un valore",
+        "label_required": "Compila entrambe le etichette"
+      }
     }
   }
 }
