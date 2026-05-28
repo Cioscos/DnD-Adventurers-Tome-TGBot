@@ -7,6 +7,15 @@
 
 import { getInitData } from '@/auth/telegram'
 import type {
+  HomebrewResource,
+  HomebrewRule,
+  HomebrewRuleCreate,
+  HomebrewRuleUpdate,
+  NotificationRead,
+  TemplateDetailRead,
+  TemplateRead,
+} from '@/lib/homebrew/types'
+import type {
   Ability,
   CharacterFull,
   CharacterSummary,
@@ -498,6 +507,63 @@ export const api = {
       }),
     remove: (charId: number, abilityId: number) =>
       request<void>(`/characters/${charId}/abilities/${abilityId}`, { method: 'DELETE' }),
+  },
+
+  // ---------------------------------------------------------------------------
+  // Homebrew (rules CRUD + templates + resources + dispatch)
+  // ---------------------------------------------------------------------------
+  homebrew: {
+    listRules: (charId: number) =>
+      request<HomebrewRule[]>(`/characters/${charId}/homebrew/rules`),
+    getRule: (charId: number, ruleId: number) =>
+      request<HomebrewRule>(`/characters/${charId}/homebrew/rules/${ruleId}`),
+    createRule: (charId: number, body: HomebrewRuleCreate) =>
+      request<HomebrewRule>(`/characters/${charId}/homebrew/rules`, {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+    updateRule: (charId: number, ruleId: number, body: Partial<HomebrewRuleUpdate>) =>
+      request<HomebrewRule>(`/characters/${charId}/homebrew/rules/${ruleId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(body),
+      }),
+    deleteRule: (charId: number, ruleId: number) =>
+      request<void>(`/characters/${charId}/homebrew/rules/${ruleId}`, {
+        method: 'DELETE',
+      }),
+    toggleEnabled: (charId: number, ruleId: number, enabled: boolean) =>
+      request<HomebrewRule>(`/characters/${charId}/homebrew/rules/${ruleId}/enable`, {
+        method: 'POST',
+        body: JSON.stringify({ enabled }),
+      }),
+    listTemplates: () => request<TemplateRead[]>('/homebrew/templates'),
+    getTemplate: (id: string) =>
+      request<TemplateDetailRead>(`/homebrew/templates/${id}`),
+    installTemplate: (charId: number, templateId: string) =>
+      request<HomebrewRule>(
+        `/characters/${charId}/homebrew/templates/${templateId}/install`,
+        { method: 'POST' },
+      ),
+    listResources: (charId: number) =>
+      request<HomebrewResource[]>(`/characters/${charId}/homebrew/resources`),
+    patchResource: (charId: number, resourceId: number, current: number) =>
+      request<HomebrewResource>(
+        `/characters/${charId}/homebrew/resources/${resourceId}`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({ current }),
+        },
+      ),
+    turnStart: (charId: number) =>
+      request<{ notifications: NotificationRead[] }>(
+        `/characters/${charId}/homebrew/turn-start`,
+        { method: 'POST' },
+      ),
+    manualTrigger: (charId: number, ruleId: number) =>
+      request<{ notifications: NotificationRead[] }>(
+        `/characters/${charId}/homebrew/manual-trigger/${ruleId}`,
+        { method: 'POST' },
+      ),
   },
 
   // ---------------------------------------------------------------------------
