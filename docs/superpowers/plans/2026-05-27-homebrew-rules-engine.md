@@ -482,6 +482,93 @@ Phase 0 ✅ · Phase 1 ✅ · Phase 2 ✅ · Phase 3 ✅ · Phase 4 ✅ · Phase
 
 **Pronto per Phase 6**: passive modifiers display (AC/HP/Speed/Skill/Save breakdown con homebrew). Le passive_modifiers DSL sono già definite (Phase 4 PassiveModifiersSection) e `api/services/homebrew/passive.py` espone `get_passive_modifiers()`. Phase 6 estende `CharacterFull` con `ac_breakdown`, `hp_max_homebrew_modifier`, `speed_homebrew_modifier`, `skills_homebrew_modifiers`, `saves_homebrew_modifiers` e popola questi nei response builder.
 
+### Phase 6 — completata 2026-05-28
+
+11 commit sul branch (1 schema + 1 wiring + 1 dedup refactor + 1 test + 1 fix saves path + 1 component + 4 page integrations + 1 chore build + 1 docs addendum). 6/6 task Phase 6 (6.1 → 6.6). **tsc clean** dopo ogni commit. **Suite backend verde**: 246/246 test homebrew (256/256 tot — 6 nuovi integration test passive). **Smoke live Playwright MCP**: regola `+1 AC Scudo` (item subject, passive_modifier su `character.ac`) → HomebrewBreakdownRow "Homebrew · +1" appare nella tome surface dell'AC hero (sotto `10 + 2 + 0 · base · shield · magic`) → unequip scudo via PATCH `/items/{id}` → reload pagina → row sparisce (`value === 0` → `null`) → re-equip → row riappare. Verificate anche pagine HP (`HP Max Homebrew · +5` sotto HPGauge), Skills (`Bonus Homebrew · +2` solo sotto Atletica, per-row), Saves (`Bonus Homebrew · +3` solo sotto Costituzione, per-save).
+
+```
+b720118 chore(webapp): rebuild docs/app/ with Phase 6 Homebrew passive modifiers
+45fc60e feat(homebrew): render per-save homebrew modifier on SavingThrows page
+9cc970c feat(homebrew): render per-skill homebrew modifier on Skills page
+13b1baf feat(homebrew): render homebrew HP max modifier on HP page
+12d5e01 feat(homebrew): render homebrew breakdown row on ArmorClass page
+cac6d36 feat(homebrew): HomebrewBreakdownRow component + types extension
+bdc1fcc fix(homebrew): align saves path to character.saving_throw (matches DSL regex)
+622e7c5 test(homebrew): integration test for passive modifier breakdown fields
+5fac6bb refactor(homebrew): dedupe skill slugs via SKILL_ABILITY_MAP + perf TODO on response builder
+5f23b6d feat(homebrew): populate ac_breakdown + skill/save/hp/speed homebrew modifiers in responses
+c6639ac feat(homebrew): extend CharacterFull with ac_breakdown + homebrew modifier fields
+```
+
+#### Moduli prodotti / modificati
+
+| File | Stato | Responsabilità |
+|------|-------|----------------|
+| `api/schemas/character.py` | modificato | +`AcBreakdown(BaseModel)` (base/shield/magic/homebrew int) +5 nuovi field su `CharacterFull` (`ac_breakdown: Optional[AcBreakdown]`, `hp_max_homebrew_modifier: int=0`, `speed_homebrew_modifier: int=0`, `skills_homebrew_modifiers: dict[str,int] = Field(default_factory=dict)`, `saves_homebrew_modifiers: dict[str,int] = Field(default_factory=dict)`). `_resolve_abilities` model_validator intatto |
+| `api/services/character_response.py` | nuovo (~55 LoC) | `build_character_response(session, char) -> CharacterFull` canonical builder. Importa `SKILL_ABILITY_MAP` da `core.data.skills` (no duplicate) + `ABILITY_NAMES` da `core.db.models`. Itera 18 skill slugs + 6 saving throw slugs; `if val:` filter esclude 0 dai dict. **Perf TODO inline**: 27 chiamate × 2 SELECT = 54 SELECT per response — batched preload deferred |
+| `api/routers/{characters,classes,hp,items,maps,spell_slots,spells,stats}.py` | modificati | 8 router files, **26 endpoint wired**. Pattern A (`return char` + `response_model=CharacterFull`) → `return await build_character_response(session, char)`. Pattern B (`result = CharacterFull.model_validate(char); result.foo = X; return result`) → builder replaces `model_validate`. Post-build assignments preservati (`concentration_save`, `homebrew_notifications`, `hp_gained`). Zero `CharacterFull.model_validate(...)` residui nei router (solo 2 comment-only hits in items.py:222 e classes.py:253) |
+| `tests/integration/homebrew/test_passive_modifiers.py` | nuovo (~150 LoC) | 6 integration test via httpx AsyncClient: AC homebrew con shield equipped, AC homebrew=0 con shield unequipped, HP max +5, Athletics +2 (assert dict esatto `{"athletics": 2}`), Constitution save +3 (con path corretto `character.saving_throw.<slug>`), Speed +5. Helper `_build_passive_rule(name, subject, target, value, when)` + sentinel tautologico `_ALWAYS_TRUE_CHAR = {"path": "$character.id", "op": "gt", "value": 0}` |
+| `webapp/src/components/homebrew/HomebrewBreakdownRow.tsx` | nuovo (~27 LoC) | Componente statico (no animation). Props `{value: number, label?: string}`. Ritorna `null` se `value === 0`. Stile DESIGN-compliant: **Inscription** (font-cinzel uppercase tracking-[0.3em]), **Tabular Numerics** (`font-mono tabular-nums`), **Gold Leaf** (`dnd-gold-dim` label, `dnd-gold-bright` value), Sparkles icon 14px |
+| `webapp/src/types/index.ts` | modificato | +`AcBreakdown` interface (4 number) + 5 new optional fields su `CharacterFull` (ac_breakdown, hp_max_homebrew_modifier, speed_homebrew_modifier, skills_homebrew_modifiers, saves_homebrew_modifiers). `?:` per backward compat con cached responses pre-Phase 6 |
+| `webapp/src/pages/ArmorClass.tsx` | modificato | HomebrewBreakdownRow dentro tome surface, dopo "base · shield · magic" label. Default label (`homebrew.breakdown.label = "Homebrew"`) |
+| `webapp/src/pages/HP.tsx` | modificato | HomebrewBreakdownRow dentro tome surface, dopo HPGauge. Label override `character.hp.homebrew_max_bonus_label = "HP Max Homebrew"` per disambiguazione |
+| `webapp/src/pages/Skills.tsx` | modificato | `Fragment key={skill.key}` wrappa SkillRow + HomebrewBreakdownRow per-skill. Label `character.skills.homebrew_label = "Bonus Homebrew"`. Key migrato da SkillRow a Fragment (evita duplicate-key warning) |
+| `webapp/src/pages/SavingThrows.tsx` | modificato | `Fragment key={ability}` wrappa Reveal.Item + HomebrewBreakdownRow OUTSIDE Reveal.Item (per non interferire con stagger animation). Label `character.saves.homebrew_label = "Bonus Homebrew"` |
+| `webapp/src/locales/{it,en}.json` | esteso | +4 chiavi i18n: `homebrew.breakdown.label`, `character.hp.homebrew_max_bonus_label`, `character.skills.homebrew_label`, `character.saves.homebrew_label`. Italian/English parity |
+| `docs/app/` | rebuilt | `npm run build:prod` single batched build per addendum convention. Phase 6 chunks: `ArmorClass-BnhsS6Tk.js`, `HP-rT0NTj8Z.js`, `SavingThrows-*`, `Skills-*` + `index-DsDSa4LE.js` |
+
+#### Smoke verification (live)
+
+Playwright MCP, dev stack locale (API DEV_USER_ID bypass, frontend Vite 5173). Char id=1 (Dodria, fixture Phase 5 con scudo già equipaggiato).
+
+| Step | Esito | Note |
+|------|-------|------|
+| POST `/characters/1/homebrew/rules` (`+1 AC Scudo`, item subject) | ✅ 201 | rule id=2 |
+| GET `/characters/1` | ✅ ac=12, breakdown={base:10, shield:2, magic:0, homebrew:1} | backend popolato correttamente |
+| GET `/#/char/1/ac` | ✅ render | Tome surface mostra "10 + 2 + 0 · base · shield · magic" sopra + "Homebrew · +1" (Sparkles icon + cinzel label + tabular-nums valore) |
+| PATCH `/items/2 {is_equipped:false}` | ✅ 200 | ac=10, breakdown={base:10, shield:0, magic:0, homebrew:0} |
+| Reload `/#/char/1/ac` | ✅ render | Homebrew row SPARITO (component returns null su value===0) |
+| Re-equip scudo via PATCH | ✅ 200 | breakdown.homebrew → 1 |
+| Reload AC | ✅ render | Row riappare correttamente |
+| POST 3 regole tautologiche character (`+5 HP_max`, `+2 athletics`, `+3 saving_throw.constitution`) | ✅ 201×3 | id=3,4,5 |
+| GET `/#/char/1/hp` | ✅ render | Sotto HPGauge: "HP Max Homebrew · +5" |
+| GET `/#/char/1/skills` | ✅ render | "Bonus Homebrew · +2" SOLO sotto SkillRow di Atletica (DOM query: 1 match). Altre 17 skills senza row (filter automatico via `null` return) |
+| GET `/#/char/1/saves` | ✅ render | "Bonus Homebrew · +3" SOLO sotto save di Costituzione (DOM query: 1 match). Altre 5 saves senza row |
+
+Screenshot in `.playwright-mcp/phase6-smoke-ac-homebrew.png` e `phase6-smoke-saves-homebrew.png` (locale al worktree, non committati).
+
+#### Deviazioni dal piano originale
+
+**Task 6.2 — helper centralizzato vs in-place wiring**. Plan literal (line 6361-6381) suggeriva inline `get_passive_modifiers(...)` call nei singoli router. Implementazione: estratto `build_character_response(session, char)` in `api/services/character_response.py` per evitare drift su 26 endpoint. Pattern A (`return char`) → `return await build_character_response(...)`; Pattern B (`result = CharacterFull.model_validate(char); result.foo = X`) → builder come prima riga, post-assign preservato. Trade-off: 1 nuovo file vs duplicate logica × 26 — file vince.
+
+**Task 6.2 — `char.ac` raw vs override**. Plan literal (line 6370-6371) lasciava la design choice aperta. Decisione: tenere `char.ac` raw (`base + shield + magic`), esporre `ac_breakdown.homebrew` come campo informativo separato. Meno breaking changes per i client che leggono `ac` direttamente (es. bot, mini-app summary). Il giocatore D&D somma mentalmente il bonus al display.
+
+**Task 6.2 — perf carry-over**. 27 chiamate a `get_passive_modifiers` × 2 SELECT/call = 54 SELECT per character response. Code-reviewer ha flaggato come Important. Decisione: TODO inline + deferred. Un futuro `build_character_response` v2 può preload rules+items una volta e iterare sync con `sum_modifiers(rules, items, target_path)` → 2 SELECT totali. Non implementato ora per scope MVP.
+
+**Task 6.3 — bug discovery via TDD**. Test `test_saves_homebrew_modifier_populated_for_constitution_only` ha esposto mismatch tra DSL regex (accetta `character.saving_throw.<slug>`) e builder loop (cercava `character.save.<slug>`). Fix con `bdc1fcc`: 1 char in `character_response.py:49` (`save` → `saving_throw`). Test assertion aggiornata da `{}` (broken) a `{"constitution": 3}` (working). Esempio di TDD che cattura bug architetturale.
+
+**Task 6.4 — duplicate i18n labels per Skills/Saves**. Code-reviewer ha notato che `character.skills.homebrew_label` e `character.saves.homebrew_label` mappano entrambi a "Bonus Homebrew" (stessa stringa). Mantenuto come 2 chiavi separate per future flexibility (es. label più specifico per saves se cambia design). Trade-off accettato come Minor non-blocker.
+
+**Task 6.5 — Fragment key migration in Skills/Saves**. Quando si wrappa il return di `groupSkills.map()` / `ABILITIES.map()` con un Fragment per aggiungere HomebrewBreakdownRow, il `key={...}` DEVE essere migrato dall'elemento interno (SkillRow / Reveal.Item) al Fragment esterno. Altrimenti React warning su duplicate keys. Verificato in spec review.
+
+#### Issues residui (non bloccanti, da affrontare in Phase 7+)
+
+- **N+1 query batching deferred** (Task 6.2 carry-over). 54 SELECT per character response. TODO comment in `api/services/character_response.py`. Performance acceptable per MVP single-user dev; benchmark prima di production hardening.
+- **Source attribution tooltip mancante** (Task 6.4 carry-over). Plan literal (line 6436) suggeriva tooltip che lista i nomi delle regole sorgenti. `get_passive_modifiers` ritorna solo `int` totale — manca data shape per attribuzione. Per esporre i source rules servirebbe estendere il helper a `list[tuple[Rule, int]]` o un secondo endpoint diagnostico. Deferred.
+- **Negative passive modifier handling**. Il componente renderizza `+{value}` literal — se `value` fosse negativo (es. `-1`) apparirebbe `+-1`. MVP passive_modifiers sono int positivi (DSL `value: int | str`). Se in futuro si aggiungono modificatori negativi (penalità), il componente deve gestire il segno: `{value >= 0 ? '+' : ''}{value}`.
+- **HP max + homebrew non sommato nel display hero**. La hero HP card mostra `current_hit_points / hit_points` (base). Il bonus `hp_max_homebrew_modifier` appare come row sotto, ma il numero hero NON è effettivo. Stesso pattern per AC. Se il giocatore vuole "true effective max", deve sommare mentalmente. Trade-off design: meno breaking changes per i client. Reversibile in futuro.
+- **Smoke rules residui nel dev DB** (Dodria, rule id=2,3,4,5). Non blocking; il dev può eliminarli via UI Homebrew page.
+- **Phase 5 nit residui** (PropertyBadge null-guard, useMemo missing, double-haptic empty branch). Non toccati in Phase 6, ancora aperti.
+- **Sanguinamento UX gap** (Phase 5 carry-over). Manca affordance per APPLICARE bleeding la prima volta. Non-blocking.
+
+#### Stato esecuzione
+
+Phase 0 ✅ · Phase 1 ✅ · Phase 2 ✅ · Phase 3 ✅ · Phase 4 ✅ · Phase 5 ✅ · Phase 6 ✅ · Phase 7 pending.
+
+**Milestone Phase 6 raggiunta**: passive modifiers visibili end-to-end. `CharacterFull` espone `ac_breakdown`, `hp_max_homebrew_modifier`, `speed_homebrew_modifier`, `skills_homebrew_modifiers`, `saves_homebrew_modifiers`. 26 endpoint wired via `build_character_response` helper canonico. `HomebrewBreakdownRow` integrato in AC/HP/Skills/Saves con render condizionale (null su 0). Smoke Playwright verde per equip/unequip + per-skill/per-save filtering. 256/256 test backend verdi (250 baseline + 6 nuovi integration). tsc clean. docs/app/ rebuilt.
+
+**Pronto per Phase 7**: Playwright matrix + audit-loop integration. ~70 e2e Playwright test che generano `docs/homebrew-audit/known-issues.md` in formato `/audit-loop`-compatibile. Coverage: event-coverage, action-coverage, templates, filters, passive-modifiers, error-cases, state-transitions.
+
 ---
 
 ## Sequenza fasi (milestone)
