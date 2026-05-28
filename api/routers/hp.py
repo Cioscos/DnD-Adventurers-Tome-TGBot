@@ -210,8 +210,9 @@ async def rest(
     body: RestRequest,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
-) -> Character:
+) -> CharacterFull:
     char = await _get_owned_full(char_id, user_id, session)
+    notifications: list[dict] = []
 
     if body.rest_type == "long":
         char.current_hit_points = char.hit_points
@@ -234,6 +235,9 @@ async def rest(
         char.death_saves = {"successes": 0, "failures": 0, "stable": False}
         _add_history(session, char.id, "rest", "Riposo lungo completato")
 
+        firing = await dispatch(session, char, "long_rest_taken", {})
+        notifications.extend(collect_homebrew_notifications(firing))
+
     elif body.rest_type == "short":
         # Break concentration
         char.concentrating_spell_id = None
@@ -253,10 +257,16 @@ async def rest(
                     res.current = res.total
         _add_history(session, char.id, "rest",
                      f"Riposo breve completato (HP recuperati: {healed})")
+
+        firing = await dispatch(session, char, "short_rest_taken", {})
+        notifications.extend(collect_homebrew_notifications(firing))
     else:
         raise HTTPException(status_code=400, detail="rest_type must be 'long' or 'short'")
 
-    return char
+    result = CharacterFull.model_validate(char)
+    if notifications:
+        result.homebrew_notifications = notifications
+    return result
 
 
 # ---------------------------------------------------------------------------
