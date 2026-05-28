@@ -13,12 +13,12 @@ export interface PropertiesSectionProps {
 
 /**
  * Render the "default" value of a property as a human-readable string.
- * Numbers and strings stringify directly; booleans become Sì/No; otherwise
- * the rendering falls back to JSON.stringify for safety.
+ * Numbers and strings stringify directly; otherwise the rendering falls
+ * back to JSON.stringify for safety. Boolean defaults are handled at the
+ * call site so they can use the i18n `common.yes` / `common.no` keys.
  */
 function formatDefault(prop: Property): string {
   const v = prop.default
-  if (prop.type === 'boolean') return v ? 'Sì' : 'No'
   if (typeof v === 'string') return v
   if (typeof v === 'number') return String(v)
   return JSON.stringify(v)
@@ -105,7 +105,13 @@ export default function PropertiesSection({ properties, onChange }: PropertiesSe
                       <span>·</span>
                       <span>
                         {t('homebrew.properties.default_label')}:{' '}
-                        <span className="text-dnd-text">{formatDefault(prop)}</span>
+                        <span className="text-dnd-text">
+                          {prop.type === 'boolean'
+                            ? prop.default
+                              ? t('common.yes')
+                              : t('common.no')
+                            : formatDefault(prop)}
+                        </span>
                       </span>
                     </div>
                     {prop.type === 'enum' && prop.values && prop.values.length > 0 && (

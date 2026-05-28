@@ -369,12 +369,12 @@ export default function PropertyFormModal({
             </label>
             <div className="flex gap-1.5">
               <FilterChip
-                label="Sì"
+                label={t('common.yes')}
                 selected={draft.defaultValue === true}
                 onToggle={() => setDefaultValue(true)}
               />
               <FilterChip
-                label="No"
+                label={t('common.no')}
                 selected={draft.defaultValue === false}
                 onToggle={() => setDefaultValue(false)}
               />
