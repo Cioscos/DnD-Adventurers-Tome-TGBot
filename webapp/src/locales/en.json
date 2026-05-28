@@ -1073,6 +1073,34 @@
       "add_column": "+ column",
       "cell_placeholder": "comma-separated actions",
       "delete_confirm": "Delete table '{{name}}'?"
+    },
+    "passive": {
+      "empty": "No passive modifiers yet. Modifiers are bonuses or maluses that apply automatically when a condition is true (e.g. +1 to AC when equipping magical armor).",
+      "add_button": "Add modifier",
+      "delete_confirm": "Delete modifier '{{name}}'?",
+      "target_labels": {
+        "ac": "AC",
+        "hp_max": "Max HP",
+        "speed": "Speed",
+        "skill": "Skill",
+        "save": "Saving throw"
+      },
+      "modal": {
+        "title_new": "New modifier",
+        "title_edit": "Edit modifier",
+        "label_it": "Label (IT)",
+        "label_en": "Label (EN)",
+        "label_it_placeholder": "es. Armatura magica",
+        "label_en_placeholder": "e.g. Magic armor",
+        "target_label": "What it modifies",
+        "skill_sub_label": "Which skill",
+        "save_sub_label": "Which saving throw",
+        "value_label": "Bonus / malus",
+        "value_helper": "Fixed numeric value only for now (positive or negative)",
+        "value_invalid": "Enter a whole number",
+        "label_required": "Fill in both labels",
+        "target_required": "Pick what to modify"
+      }
     }
   }
 }

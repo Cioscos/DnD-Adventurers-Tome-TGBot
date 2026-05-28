@@ -1073,6 +1073,34 @@
       "add_column": "+ colonna",
       "cell_placeholder": "azioni separate da virgola",
       "delete_confirm": "Eliminare la tabella '{{name}}'?"
+    },
+    "passive": {
+      "empty": "Nessun modificatore passivo. I modificatori sono bonus o malus che si applicano automaticamente quando una condizione è vera (es. +1 alla CA quando si equipaggia un'armatura magica).",
+      "add_button": "Aggiungi modificatore",
+      "delete_confirm": "Eliminare il modificatore '{{name}}'?",
+      "target_labels": {
+        "ac": "CA",
+        "hp_max": "PF Massimi",
+        "speed": "Velocità",
+        "skill": "Abilità",
+        "save": "Tiro salvezza"
+      },
+      "modal": {
+        "title_new": "Nuovo modificatore",
+        "title_edit": "Modifica modificatore",
+        "label_it": "Etichetta (IT)",
+        "label_en": "Etichetta (EN)",
+        "label_it_placeholder": "es. Armatura magica",
+        "label_en_placeholder": "e.g. Magic armor",
+        "target_label": "Cosa modifica",
+        "skill_sub_label": "Quale abilità",
+        "save_sub_label": "Quale tiro salvezza",
+        "value_label": "Bonus / malus",
+        "value_helper": "Per ora supportato solo valore numerico fisso (positivo o negativo)",
+        "value_invalid": "Inserisci un numero intero",
+        "label_required": "Compila entrambe le etichette",
+        "target_required": "Scegli cosa modificare"
+      }
     }
   }
 }
