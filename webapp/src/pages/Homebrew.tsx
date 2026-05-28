@@ -64,7 +64,7 @@ interface TemplateCardProps {
 
 function TemplateCard({ template, installed, installing, onInstall, t }: TemplateCardProps) {
   const surfaceClasses = installed
-    ? 'bg-[var(--dnd-emerald)]/5 border-dashed border-[var(--dnd-emerald)]/40'
+    ? 'bg-dnd-emerald/5 border-dashed border-dnd-emerald/40'
     : 'bg-dnd-gold-bright/5 border-dashed border-dnd-gold-bright/30'
 
   return (
@@ -114,11 +114,11 @@ export default function Homebrew() {
   const navigate = useNavigate()
   const qc = useQueryClient()
 
-  const { data: rules } = useQuery({
+  const { data: rules, error: rulesError } = useQuery({
     queryKey: ['homebrew-rules', charId],
     queryFn: () => api.homebrew.listRules(charId),
   })
-  const { data: templates } = useQuery({
+  const { data: templates, error: templatesError } = useQuery({
     queryKey: ['homebrew-templates'],
     queryFn: () => api.homebrew.listTemplates(),
   })
@@ -135,7 +135,9 @@ export default function Homebrew() {
   const toggleMut = useMutation({
     mutationFn: ({ ruleId, enabled }: { ruleId: number; enabled: boolean }) =>
       api.homebrew.toggleEnabled(charId, ruleId, enabled),
-    onMutate: ({ ruleId, enabled }) => {
+    onMutate: async ({ ruleId, enabled }) => {
+      // cancel in-flight refetches so they can't clobber the optimistic write
+      await qc.cancelQueries({ queryKey: ['homebrew-rules', charId] })
       // optimistic update keeps the switch flicker-free
       const previous = qc.getQueryData<HomebrewRule[]>(['homebrew-rules', charId])
       if (previous) {
@@ -152,6 +154,18 @@ export default function Homebrew() {
     },
     onSettled: () => qc.invalidateQueries({ queryKey: ['homebrew-rules', charId] }),
   })
+
+  if (rulesError || templatesError) {
+    return (
+      <Layout title={t('homebrew.page_title')}>
+        <div className="p-4">
+          <Surface variant="ember">
+            <p className="text-sm font-body text-dnd-text">{t('homebrew.load_error')}</p>
+          </Surface>
+        </div>
+      </Layout>
+    )
+  }
 
   if (!rules || !templates) {
     return (

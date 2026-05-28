@@ -986,6 +986,7 @@
     "installed_state": "Installed",
     "enabled": "Active",
     "disabled_state": "Disabled",
-    "no_rules_yet": "No rules yet. Install a template to get started."
+    "no_rules_yet": "No rules yet. Install a template to get started.",
+    "load_error": "Couldn't load rules. Try again later."
   }
 }
