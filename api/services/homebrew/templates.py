@@ -152,6 +152,35 @@ _ENCHANTED_WEAPON_DSL = {
 }
 
 
+_LUCK_POINTS_DSL = {
+    "version": 1,
+    "subject": {"type": "character"},
+    "properties": [],
+    "tables": [],
+    "passive_modifiers": [],
+    "resources": [
+        {"key": "luck_points", "name": "Punti Fortuna",
+         "max": 3, "restoration_type": "long_rest"},
+    ],
+    "triggers": [
+        {"event": "long_rest_taken", "filters": [],
+         "effects": [
+             {"action": "restore_resource", "key": "luck_points", "amount": "max"},
+             {"action": "notify", "severity": "info",
+              "message": "🌟 Punti Fortuna ripristinati"},
+         ]},
+        {"event": "manual_trigger",
+         "filters": [],
+         "effects": [
+             {"action": "change_resource", "key": "luck_points", "delta": -1},
+             {"action": "notify", "severity": "success",
+              "message": "🌟 Punto Fortuna usato — rilancia il tiro"},
+             {"action": "add_history", "description": "Punto Fortuna speso"},
+         ]},
+    ],
+}
+
+
 TEMPLATES = [
     {
         "id": "quality_wear",
@@ -173,6 +202,13 @@ TEMPLATES = [
         "description": "Le armi marcate 'incantate' infliggono +1d6 danni da fuoco aggiuntivi a ogni colpo a segno.",
         "icon": "⚔️",
         "dsl": _ENCHANTED_WEAPON_DSL,
+    },
+    {
+        "id": "luck_points",
+        "name": "Punti Fortuna",
+        "description": "Risorsa custom: 3 punti, recupera con riposo lungo. Usa un punto per ottenere un effetto narrativo positivo.",
+        "icon": "🌟",
+        "dsl": _LUCK_POINTS_DSL,
     },
     # Altri template arrivano in Phase 3
 ]

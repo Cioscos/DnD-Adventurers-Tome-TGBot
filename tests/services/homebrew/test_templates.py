@@ -70,3 +70,19 @@ def test_enchanted_weapon_template_validates():
     assert rule.properties[0].type == "boolean"
     assert len(rule.triggers) == 1
     assert rule.triggers[0].event == EventType.ATTACK_ROLLED
+
+
+# Task 3.10 — Luck Points template (custom resource + restore on long rest)
+def test_luck_points_template_validates():
+    template = get_template("luck_points")
+    assert template is not None
+    rule = RuleDSL.model_validate(template["dsl"])
+    assert rule.subject.type == "character"
+    assert len(rule.resources) == 1
+    assert rule.resources[0].key == "luck_points"
+    assert rule.resources[0].max == 3
+    assert rule.resources[0].restoration_type == "long_rest"
+    assert len(rule.triggers) == 2
+    events = {t.event for t in rule.triggers}
+    assert EventType.LONG_REST_TAKEN in events
+    assert EventType.MANUAL_TRIGGER in events
