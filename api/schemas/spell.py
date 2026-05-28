@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from typing import Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, field_validator
 
 _EXTRA_DICE_RE = re.compile(r"^(\d+)d(\d+)([+-]\d+)?$", re.IGNORECASE)
 
@@ -75,9 +75,9 @@ class SpellSlotRead(BaseModel):
     used: int
     available: int
     # Homebrew rule notifications surfaced when a spell_cast event fired
-    # (PATCH /spell_slots/{id} with an incremented `used`). Default empty so
-    # POST/list responses stay backward-compatible.
-    homebrew_notifications: list[dict] = Field(default_factory=list)
+    # (PATCH /spell_slots/{id} with an incremented `used`). Omitted/None on
+    # POST/list responses to match CharacterFull's contract (Phase 2 pattern).
+    homebrew_notifications: Optional[list[dict]] = None
 
     model_config = {"from_attributes": True}
 

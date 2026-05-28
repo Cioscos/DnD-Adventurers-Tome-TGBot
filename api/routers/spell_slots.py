@@ -93,14 +93,10 @@ async def update_spell_slot(
         )
         notifications = collect_homebrew_notifications(firing)
 
-    return SpellSlotRead(
-        id=slot.id,
-        level=slot.level,
-        total=slot.total,
-        used=slot.used,
-        available=slot.available,
-        homebrew_notifications=notifications,
-    )
+    result = SpellSlotRead.model_validate(slot)
+    if notifications:
+        result.homebrew_notifications = notifications
+    return result
 
 
 @router.delete("/{char_id}/spell_slots/{slot_id}", status_code=204)

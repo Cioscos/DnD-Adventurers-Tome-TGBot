@@ -157,7 +157,7 @@ async def test_spell_cast_no_event_when_used_unchanged(client, char_id):
         json={"total": 4},
     )
     assert r.status_code == 200, r.text
-    assert r.json().get("homebrew_notifications") == []
+    assert r.json().get("homebrew_notifications") is None
 
     # Refund: decrement `used` from 2 → 1. spell_cast must not fire.
     r = await client.patch(
@@ -165,4 +165,4 @@ async def test_spell_cast_no_event_when_used_unchanged(client, char_id):
         json={"used": 1},
     )
     assert r.status_code == 200, r.text
-    assert r.json().get("homebrew_notifications") == []
+    assert r.json().get("homebrew_notifications") is None
