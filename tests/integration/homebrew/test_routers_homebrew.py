@@ -75,3 +75,99 @@ async def test_get_rule_other_user_char_returns_403(client, test_session_factory
         other_id = other.id
     r = await client.get(f"/characters/{other_id}/homebrew/rules/1")
     assert r.status_code == 403
+
+
+import json
+
+
+@pytest.mark.asyncio
+async def test_install_template_creates_rule_and_returns_201(client, char_id):
+    r = await client.post(f"/characters/{char_id}/homebrew/templates/quality_wear/install")
+    assert r.status_code == 201
+    body = r.json()
+    assert body["name"] == "Qualità & Usura"
+    assert body["template_id"] == "quality_wear"
+    assert body["enabled"] is True
+    # The rule is now listed
+    rules = (await client.get(f"/characters/{char_id}/homebrew/rules")).json()
+    assert len(rules) == 1
+
+
+@pytest.mark.asyncio
+async def test_install_template_unknown_returns_404(client, char_id):
+    r = await client.post(f"/characters/{char_id}/homebrew/templates/does_not_exist/install")
+    assert r.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_install_template_materializes_defaults_on_matching_items(
+    client, char_id, test_session_factory,
+):
+    from core.db.models import Item
+    # Pre-create a weapon AND a non-matching item BEFORE install
+    async with test_session_factory() as s:
+        weapon = Item(character_id=char_id, name="Spada lunga", item_type="weapon", quantity=1)
+        gear = Item(character_id=char_id, name="Zaino", item_type="gear", quantity=1)
+        s.add_all([weapon, gear])
+        await s.commit()
+        await s.refresh(weapon)
+        await s.refresh(gear)
+        weapon_id = weapon.id
+        gear_id = gear.id
+
+    r = await client.post(f"/characters/{char_id}/homebrew/templates/quality_wear/install")
+    assert r.status_code == 201
+
+    # Check via a fresh session — weapon must have hb_quality + hb_damage_state, gear must NOT
+    async with test_session_factory() as s:
+        from sqlalchemy import select
+        weapon = (await s.execute(select(Item).where(Item.id == weapon_id))).scalar_one()
+        gear = (await s.execute(select(Item).where(Item.id == gear_id))).scalar_one()
+        wmd = json.loads(weapon.item_metadata or "{}")
+        gmd = json.loads(gear.item_metadata or "{}")
+    assert wmd.get("hb_quality") == "ordinaria"
+    assert wmd.get("hb_damage_state") == "integra"
+    assert "hb_quality" not in gmd
+    assert "hb_damage_state" not in gmd
+
+
+@pytest.mark.asyncio
+async def test_install_template_does_not_overwrite_existing_metadata(
+    client, char_id, test_session_factory,
+):
+    from core.db.models import Item
+    # Item has hb_quality already set
+    async with test_session_factory() as s:
+        weapon = Item(
+            character_id=char_id, name="Spada", item_type="weapon", quantity=1,
+            item_metadata=json.dumps({"hb_quality": "pessima"}),
+        )
+        s.add(weapon)
+        await s.commit()
+        await s.refresh(weapon)
+        weapon_id = weapon.id
+
+    await client.post(f"/characters/{char_id}/homebrew/templates/quality_wear/install")
+
+    async with test_session_factory() as s:
+        from sqlalchemy import select
+        weapon = (await s.execute(select(Item).where(Item.id == weapon_id))).scalar_one()
+        md = json.loads(weapon.item_metadata)
+    assert md["hb_quality"] == "pessima"  # untouched
+    assert md["hb_damage_state"] == "integra"  # added
+
+
+@pytest.mark.asyncio
+async def test_delete_rule_returns_204(client, char_id):
+    r1 = await client.post(f"/characters/{char_id}/homebrew/templates/quality_wear/install")
+    rule_id = r1.json()["id"]
+    r2 = await client.delete(f"/characters/{char_id}/homebrew/rules/{rule_id}")
+    assert r2.status_code == 204
+    rules = (await client.get(f"/characters/{char_id}/homebrew/rules")).json()
+    assert rules == []
+
+
+@pytest.mark.asyncio
+async def test_delete_rule_unknown_returns_404(client, char_id):
+    r = await client.delete(f"/characters/{char_id}/homebrew/rules/99999")
+    assert r.status_code == 404
