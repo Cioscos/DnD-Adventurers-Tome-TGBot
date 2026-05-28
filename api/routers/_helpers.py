@@ -169,3 +169,17 @@ def roll_concentration_save(
         success=success,
         lost_concentration=lost_concentration,
     )
+
+
+def collect_homebrew_notifications(firing_results) -> list[dict]:
+    """Flatten a list of RuleFiringResult into the dict shape exposed by responses."""
+    return [
+        {
+            "severity": n.severity,
+            "message": n.message,
+            "rule_id": n.rule_id,
+            "rule_name": n.rule_name,
+        }
+        for rfr in firing_results
+        for n in rfr.notifications
+    ]

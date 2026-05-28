@@ -216,7 +216,8 @@ async def test_critical_hit_returns_homebrew_notifications(
         await s.refresh(armor)
         armor_id = armor.id
 
-    await client.post(f"/characters/{char_id}/homebrew/templates/quality_wear/install")
+    inst = await client.post(f"/characters/{char_id}/homebrew/templates/quality_wear/install")
+    assert inst.status_code == 201
 
     _patch_random(monkeypatch, 2)
 
@@ -230,6 +231,10 @@ async def test_critical_hit_returns_homebrew_notifications(
     assert notifs is not None
     assert len(notifs) >= 1
     assert any("danneggiata" in n["message"].lower() for n in notifs)
+    n = notifs[0]
+    assert n["severity"] in {"info", "warning", "error", "success"}
+    assert n["rule_id"] is not None
+    assert n["rule_name"] == "Qualità & Usura"
 
 
 @pytest.mark.asyncio

@@ -20,7 +20,7 @@ from core.db.models import Character, CharacterClass, CharacterHistory, Equipmen
 from api.schemas.character import CharacterFull
 from api.schemas.item import ItemCreate, ItemRead, ItemUpdate, WeaponAttackResult
 from core.game.stats import effective_ability_score
-from api.routers._helpers import effective_con_mod
+from api.routers._helpers import collect_homebrew_notifications, effective_con_mod
 from api.services.equipment import slot_allowed_for_type, swap_slot_occupant
 from api.services.homebrew.dispatcher import dispatch
 
@@ -335,13 +335,7 @@ async def attack_with_weapon(
             "damage_total": damage_total,
         },
     )
-    notifications = [
-        {
-            "severity": n.severity, "message": n.message,
-            "rule_id": n.rule_id, "rule_name": n.rule_name,
-        }
-        for rfr in firing_results for n in rfr.notifications
-    ]
+    notifications = collect_homebrew_notifications(firing_results)
 
     return WeaponAttackResult(
         weapon_name=item.name,

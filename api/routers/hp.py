@@ -27,16 +27,8 @@ from api.schemas.common import (
     RestRequest,
 )
 from core.game.stats import total_base_hp
-from api.routers._helpers import effective_con_mod, roll_concentration_save
+from api.routers._helpers import collect_homebrew_notifications, effective_con_mod, roll_concentration_save
 from api.schemas.common import ConcentrationSaveResult
-
-
-def _collect_notifications(firing_results) -> list[dict]:
-    return [
-        {"severity": n.severity, "message": n.message,
-         "rule_id": n.rule_id, "rule_name": n.rule_name}
-        for rfr in firing_results for n in rfr.notifications
-    ]
 
 
 class HitDiceSpendRequest(BaseModel):
@@ -146,7 +138,7 @@ async def update_hp(
                 "current_hp_after": char.current_hit_points,
             },
         )
-        notifications.extend(_collect_notifications(firing))
+        notifications.extend(collect_homebrew_notifications(firing))
         if old > 0 and char.current_hit_points == 0:
             firing = await dispatch(
                 session, char, "dropped_to_zero",
@@ -155,7 +147,7 @@ async def update_hp(
                     "from_critical": body.was_critical_hit,
                 },
             )
-            notifications.extend(_collect_notifications(firing))
+            notifications.extend(collect_homebrew_notifications(firing))
 
     elif body.op == HPOp.HEAL:
         old = char.current_hit_points
@@ -171,7 +163,7 @@ async def update_hp(
                 "current_hp_after": char.current_hit_points,
             },
         )
-        notifications.extend(_collect_notifications(firing))
+        notifications.extend(collect_homebrew_notifications(firing))
 
     elif body.op == HPOp.SET_MAX:
         old = char.hit_points

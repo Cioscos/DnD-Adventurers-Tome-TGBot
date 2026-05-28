@@ -152,7 +152,8 @@ async def test_attack_fumble_returns_homebrew_notifications(
         await s.refresh(weapon)
         weapon_id = weapon.id
 
-    await client.post(f"/characters/{char_id}/homebrew/templates/quality_wear/install")
+    inst = await client.post(f"/characters/{char_id}/homebrew/templates/quality_wear/install")
+    assert inst.status_code == 201
 
     import random as _random
     rolls = iter([1, 7])
