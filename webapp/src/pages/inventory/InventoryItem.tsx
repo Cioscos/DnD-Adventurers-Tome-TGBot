@@ -10,6 +10,8 @@ import {
 } from 'react-icons/gi'
 import { TYPE_ICON } from './itemMetadata'
 import type { Item } from '@/types'
+import type { Property } from '@/lib/homebrew/types'
+import PropertyBadge from '@/components/homebrew/PropertyBadge'
 
 /* ---------- Stat chip (matches SpellItem chip style) ---------- */
 
@@ -142,6 +144,44 @@ function ItemEffectCallout({ item }: { item: Item }) {
   )
 }
 
+/* ---------- Homebrew property chips ---------- */
+
+function HomebrewPropertyChips({
+  item,
+  propertyByKey,
+  locale,
+}: {
+  item: Item
+  propertyByKey: Map<string, Property>
+  locale: 'it' | 'en'
+}) {
+  const meta = item.item_metadata as Record<string, unknown> | undefined
+  if (!meta) return null
+  const entries: Array<[string, unknown, Property]> = []
+  for (const [metaKey, value] of Object.entries(meta)) {
+    if (!metaKey.startsWith('hb_')) continue
+    const propKey = metaKey.slice(3)
+    const property = propertyByKey.get(propKey)
+    // Drop orphaned hb_* keys — rule was deleted or disabled.
+    if (!property) continue
+    entries.push([propKey, value, property])
+  }
+  if (entries.length === 0) return null
+  return (
+    <div className="grid grid-cols-2 gap-1.5">
+      {entries.map(([key, value, property]) => (
+        <PropertyBadge
+          key={key}
+          propertyKey={key}
+          value={value}
+          property={property}
+          locale={locale}
+        />
+      ))}
+    </div>
+  )
+}
+
 /* ---------- Main component ---------- */
 
 interface InventoryItemProps {
@@ -155,6 +195,8 @@ interface InventoryItemProps {
   onDelete: () => void
   equipPending: boolean
   attackPending: boolean
+  propertyByKey: Map<string, Property>
+  locale: 'it' | 'en'
 }
 
 function InventoryItemInner({
@@ -168,6 +210,8 @@ function InventoryItemInner({
   onDelete,
   equipPending,
   attackPending,
+  propertyByKey,
+  locale,
 }: InventoryItemProps) {
   const { t } = useTranslation()
   const icon = TYPE_ICON[item.item_type] ?? '📦'
@@ -227,6 +271,9 @@ function InventoryItemInner({
 
           {/* Stat chips */}
           <ItemStatChips item={item} />
+
+          {/* Homebrew property chips (hb_* metadata, resolved against active rules) */}
+          <HomebrewPropertyChips item={item} propertyByKey={propertyByKey} locale={locale} />
 
           {/* Weapon properties tags */}
           <WeaponPropertyTags item={item} />

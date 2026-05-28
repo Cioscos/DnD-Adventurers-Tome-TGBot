@@ -1,7 +1,8 @@
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import type { Property } from '@/lib/homebrew/types'
 import { useToast } from '@/hooks/useToast'
 import { m, AnimatePresence } from 'framer-motion'
 import { Plus, Weight, ChevronRight } from 'lucide-react'
@@ -35,8 +36,9 @@ export default function Inventory() {
       : null
   const [highlightId, setHighlightId] = useState<number | null>(initialHighlight)
   const itemRefs = useRef<Record<number, HTMLDivElement | null>>({})
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const qc = useQueryClient()
+  const locale: 'it' | 'en' = i18n.language?.startsWith('en') ? 'en' : 'it'
 
   const [showAdd, setShowAdd] = useState(false)
   const [editingItem, setEditingItem] = useState<Item | null>(null)
@@ -65,6 +67,25 @@ export default function Inventory() {
     queryKey: ['character', charId],
     queryFn: () => api.characters.get(charId),
   })
+
+  // Active homebrew rules contribute Property defs that decorate items via
+  // hb_<key> metadata. Last-wins on duplicate keys across multiple rules —
+  // the inventory chip is purely informational, so the most recently loaded
+  // definition wins without ambiguity.
+  const { data: rules } = useQuery({
+    queryKey: ['homebrew-rules', charId],
+    queryFn: () => api.homebrew.listRules(charId),
+  })
+  const propertyByKey = useMemo(() => {
+    const map = new Map<string, Property>()
+    for (const rule of rules ?? []) {
+      if (!rule.enabled) continue
+      for (const prop of rule.dsl.properties ?? []) {
+        map.set(prop.key, prop)
+      }
+    }
+    return map
+  }, [rules])
 
   const addMutation = useMutation({
     mutationFn: (form: ItemFormData) =>
@@ -356,6 +377,8 @@ export default function Inventory() {
                             onDelete={() => setDeleteTarget(item.id)}
                             equipPending={toggleEquip.isPending}
                             attackPending={attackMutation.isPending}
+                            propertyByKey={propertyByKey}
+                            locale={locale}
                           />
                         </m.div>
                       ))}
