@@ -218,6 +218,16 @@ async def update_character(
     char = await _get_owned(char_id, user_id, session, full=True)
     for field, value in body.model_dump(exclude_unset=True).items():
         setattr(char, field, value)
+    # Flush + refresh so CharacterFull serialization sees a non-expired row.
+    # Without this, autoflush during response_model validation can expire char
+    # columns; `_resolve_abilities` then swallows the resulting lazy-load
+    # exception via `try/except: continue`, silently dropping required fields
+    # and returning 422. Same pattern as items.py and classes.py.
+    await session.flush()
+    await session.refresh(char, attribute_names=[
+        "classes", "ability_scores", "spells", "spell_slots",
+        "items", "currency", "abilities", "maps",
+    ])
     return char
 
 
@@ -269,6 +279,12 @@ async def update_skills(
     current = dict(char.skills or {})
     current.update(body.skills)
     char.skills = current
+    # See update_character() for why flush + refresh is required here.
+    await session.flush()
+    await session.refresh(char, attribute_names=[
+        "classes", "ability_scores", "spells", "spell_slots",
+        "items", "currency", "abilities", "maps",
+    ])
     return char
 
 
@@ -287,6 +303,12 @@ async def update_saving_throws(
     current = dict(char.saving_throws or {})
     current.update(body.saving_throws)
     char.saving_throws = current
+    # See update_character() for why flush + refresh is required here.
+    await session.flush()
+    await session.refresh(char, attribute_names=[
+        "classes", "ability_scores", "spells", "spell_slots",
+        "items", "currency", "abilities", "maps",
+    ])
     return char
 
 
@@ -333,6 +355,15 @@ async def update_conditions(
     if changed:
         await prune_history(session, char)
 
+    # See update_character() for why flush + refresh is required here. The
+    # CharacterHistory side-effect rows added above are exactly the kind of
+    # mutation that triggers autoflush → column expiration during response
+    # serialization.
+    await session.flush()
+    await session.refresh(char, attribute_names=[
+        "classes", "ability_scores", "spells", "spell_slots",
+        "items", "currency", "abilities", "maps",
+    ])
     return char
 
 
@@ -349,6 +380,12 @@ async def update_inspiration(
 ) -> Character:
     char = await _get_owned(char_id, user_id, session, full=True)
     char.heroic_inspiration = body.heroic_inspiration
+    # See update_character() for why flush + refresh is required here.
+    await session.flush()
+    await session.refresh(char, attribute_names=[
+        "classes", "ability_scores", "spells", "spell_slots",
+        "items", "currency", "abilities", "maps",
+    ])
     return char
 
 
@@ -399,6 +436,15 @@ async def update_xp(
     if total_hp_gained > 0:
         char.hit_points += total_hp_gained
         char.current_hit_points += total_hp_gained
+
+    # Flush pending mutations (new ClassResource rows, level / HP updates) and
+    # refresh char so model_validate sees non-expired columns. See
+    # update_character() for the full rationale.
+    await session.flush()
+    await session.refresh(char, attribute_names=[
+        "classes", "ability_scores", "spells", "spell_slots",
+        "items", "currency", "abilities", "maps",
+    ])
 
     result = CharacterFull.model_validate(char)
     if total_hp_gained > 0:
