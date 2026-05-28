@@ -126,6 +126,32 @@ _BLEEDING_DSL = {
 }
 
 
+_ENCHANTED_WEAPON_DSL = {
+    "version": 1,
+    "subject": {"type": "item", "filter": {"item_types": ["weapon"]}},
+    "properties": [
+        {"key": "enchanted", "type": "boolean", "default": False,
+         "label_i18n": {"it": "Incantata", "en": "Enchanted"}},
+    ],
+    "tables": [],
+    "passive_modifiers": [],
+    "triggers": [
+        {"event": "attack_rolled",
+         "filters": [
+             {"path": "$event.is_fumble", "op": "eq", "value": False},
+             {"path": "$subject.enchanted", "op": "eq", "value": True},
+         ],
+         "effects": [
+             {"action": "roll_dice", "notation": "1d6", "store_as": "fire"},
+             {"action": "notify", "severity": "info",
+              "message": "🔥 +$fire danni da fuoco!"},
+             {"action": "add_history",
+              "description": "Arma incantata: +$fire fuoco extra"},
+         ]},
+    ],
+}
+
+
 TEMPLATES = [
     {
         "id": "quality_wear",
@@ -140,6 +166,13 @@ TEMPLATES = [
         "description": "Condizione: subisci 1d4 danni a ogni turno fino alla rimozione.",
         "icon": "🩸",
         "dsl": _BLEEDING_DSL,
+    },
+    {
+        "id": "enchanted_weapon",
+        "name": "Arma incantata +1d6",
+        "description": "Le armi marcate 'incantate' infliggono +1d6 danni da fuoco aggiuntivi a ogni colpo a segno.",
+        "icon": "⚔️",
+        "dsl": _ENCHANTED_WEAPON_DSL,
     },
     # Altri template arrivano in Phase 3
 ]

@@ -1,5 +1,5 @@
 """Templates are hardcoded immutable DSL documents."""
-from api.services.homebrew.dsl import RuleDSL
+from api.services.homebrew.dsl import EventType, RuleDSL
 from api.services.homebrew.templates import TEMPLATES, get_template
 
 
@@ -55,3 +55,18 @@ def test_bleeding_template_uses_dollar_var_runtime():
     assert effects[0]["store_as"] == "blood"
     assert effects[1]["action"] == "damage_character"
     assert effects[1]["amount"] == "$blood"
+
+
+# Task 3.9 — Enchanted Weapon +1d6 template
+def test_enchanted_weapon_template_validates():
+    template = get_template("enchanted_weapon")
+    assert template is not None
+    assert template["id"] == "enchanted_weapon"
+    rule = RuleDSL.model_validate(template["dsl"])
+    assert rule.subject.type == "item"
+    assert rule.subject.filter.item_types == ["weapon"]
+    assert len(rule.properties) == 1
+    assert rule.properties[0].key == "enchanted"
+    assert rule.properties[0].type == "boolean"
+    assert len(rule.triggers) == 1
+    assert rule.triggers[0].event == EventType.ATTACK_ROLLED
