@@ -90,11 +90,28 @@ curl -s -o /dev/null -w "%{http_code}" http://localhost:5173/
 
 Non procedere finché entrambi non rispondono `200`/`3xx`.
 
-## Passo 3 — Prepara la cartella di report
+## Passo 3 — Prepara la cartella di sessione
 
-Crea `reports/<YYYYMMDD-HHMM>-<viewport>/` dentro questa skill (per `both` usa il suffisso
-`both`). Dentro, una sottocartella `screens/`. Tutti gli screenshot vanno lì con nomi
-parlanti: `<area>-<step>-<viewport>.png` (es. `hp-damage-applied-mobile.png`).
+Tutta la sessione di test (report + screenshot) vive in **un'unica cartella di sessione**
+dentro questa skill, nominata con data e ora **human-readable**:
+
+```
+reports/<YYYY-MM-DD_HH-MM>-<viewport>/
+```
+
+Esempio: `reports/2026-05-29_19-07-mobile/` (per `both` usa il suffisso `both`:
+`reports/2026-05-29_19-07-both/`). Genera il timestamp una sola volta a inizio run e
+riusalo per tutta la sessione — non ricalcolarlo a ogni screenshot, altrimenti gli artefatti
+finiscono in cartelle diverse. Ricavalo con:
+
+```bash
+date '+%Y-%m-%d_%H-%M'
+```
+
+Dentro la cartella di sessione crea una sottocartella `screens/`. Tutti gli screenshot vanno
+lì con nomi parlanti: `<area>-<step>-<viewport>.png` (es. `hp-damage-applied-mobile.png`).
+Il `report.md` (Passo 5) va nella radice della stessa cartella di sessione. Nessun artefatto
+deve essere scritto fuori da questa cartella.
 
 ## Passo 4 — Esegui la matrice di test
 
@@ -261,7 +278,8 @@ screen-reader/ARIA/gerarchia heading/alt/focus-order.
 
 ## Passo 5 — Genera il report
 
-Scrivi `reports/<timestamp>-<viewport>/report.md`. **Solo segnalazioni, nessun fix.**
+Scrivi `report.md` nella radice della cartella di sessione creata al Passo 3
+(`reports/<YYYY-MM-DD_HH-MM>-<viewport>/report.md`). **Solo segnalazioni, nessun fix.**
 Severità: 🔴 bug funzionale/crash · 🟠 regressione visiva o layout rotto · 🟡 nit
 UX/mobile/contrast (opzionale) · 🟢 ok.
 
