@@ -31,13 +31,22 @@ export default function Sheet({
   const dragControls = useDragControls()
   const sheetRef = useRef<HTMLDivElement>(null)
 
-  // Prevent body scroll when open
+  // Prevent body scroll + close on Escape when open
   useEffect(() => {
     if (!open) return
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
-    return () => { document.body.style.overflow = prev }
-  }, [open])
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && dismissible) onClose()
+    }
+    document.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      document.body.style.overflow = prev
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [open, dismissible, onClose])
 
   const handleDragEnd = (_: unknown, info: PanInfo) => {
     if (info.offset.y > 120 || info.velocity.y > 800) {

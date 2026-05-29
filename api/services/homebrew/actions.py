@@ -106,18 +106,31 @@ async def execute_if(action, ctx, rfr, session, char, **kw):
 
 
 _PLACEHOLDER_RE = re.compile(r"\$[\w.]+")
+_BRACE_PLACEHOLDER_RE = re.compile(r"\{([\w.]+)\}")
 
 
 def _format_message(template: str, ctx: ExecutionContext) -> str:
-    """Substitute $path placeholders in a message template."""
-    def _replace(m):
+    """Substitute $path and {var}/{vars.x} placeholders in a message template."""
+    data = ctx.to_dict()
+
+    def _replace_dollar(m):
         path = m.group(0)
         try:
-            v = resolve_path(path, ctx.to_dict())
+            v = resolve_path(path, data)
             return str(v)
         except Exception:
             return path  # leave as-is if unresolvable
-    return _PLACEHOLDER_RE.sub(_replace, template)
+
+    def _replace_brace(m):
+        name = m.group(1)
+        try:
+            v = resolve_path("$" + name, data)
+            return str(v)
+        except Exception:
+            return m.group(0)  # leave {...} as-is if unresolvable
+
+    result = _PLACEHOLDER_RE.sub(_replace_dollar, template)
+    return _BRACE_PLACEHOLDER_RE.sub(_replace_brace, result)
 
 
 def execute_notify(action, ctx, rfr, session, char, **kw):

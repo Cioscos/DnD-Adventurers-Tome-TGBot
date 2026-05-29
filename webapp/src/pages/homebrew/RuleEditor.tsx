@@ -125,10 +125,20 @@ export default function RuleEditor() {
     }
   }, [rule])
 
-  // Reset hydration flag when navigating between rules
+  // Reset hydration flag when navigating between rules. When the new route is
+  // the "create" form, also clear any draft left over from a previously edited
+  // rule — React Router reuses the same component instance (no key), so local
+  // state would otherwise leak across the navigation. For an existing rule we
+  // only clear the flag here; the hydration effect (which runs on [rule]) then
+  // re-populates the form once the query resolves.
   useEffect(() => {
     hasHydratedRef.current = false
-  }, [ruleId])
+    if (isNew) {
+      setDsl(emptyDsl())
+      setName('')
+      setDescription('')
+    }
+  }, [ruleId, isNew])
 
   // ---------------------------------------------------------------------------
   // Mutations — create (POST) or update (PATCH). Both go through the same
