@@ -363,7 +363,8 @@
       "apply_custom_aria": "Apply {{name}}",
       "turn_start": {
         "label": "Start of turn",
-        "no_effect": "Start of turn · no rule triggered"
+        "no_effect": "Start of turn · no rule triggered",
+        "error": "Turn start failed. Please try again."
       },
       "desc": {
         "blinded": "A blinded creature can't see and automatically fails any ability check that requires sight. Attack rolls against the creature have advantage, and the creature's attack rolls have disadvantage.",
@@ -1250,6 +1251,9 @@
         "message": "Message",
         "description": "Description"
       }
+    },
+    "errors": {
+      "action_failed": "Action failed. Please try again."
     }
   }
 }

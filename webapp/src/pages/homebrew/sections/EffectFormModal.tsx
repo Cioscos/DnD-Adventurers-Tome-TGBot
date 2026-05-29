@@ -723,6 +723,15 @@ function ConditionNameInput({
   )
 }
 
+/** Coerce a raw compare-value string to boolean / number / string for the DSL. */
+function coerceCompareValue(raw: string): boolean | number | string {
+  const trimmed = raw.trim()
+  if (trimmed === 'true') return true
+  if (trimmed === 'false') return false
+  if (trimmed !== '' && Number.isFinite(Number(trimmed))) return Number(trimmed)
+  return raw
+}
+
 function FilterEditor({
   cond,
   onChange,
@@ -759,7 +768,7 @@ function FilterEditor({
       <Input
         label={t('homebrew.effects.fields.cond_value')}
         value={String(cond.value ?? '')}
-        onChange={(v) => onChange({ ...cond, value: v })}
+        onChange={(v) => onChange({ ...cond, value: coerceCompareValue(v) })}
         placeholder="..."
       />
     </>

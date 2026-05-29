@@ -42,7 +42,16 @@ class RuleEngine:
         # Parse the trigger to access filters as Filter objects.
         trigger_obj = Trigger.model_validate(trigger)
 
-        if not evaluate_filters(trigger_obj.filters, ctx.to_dict()):
+        # Guard filter evaluation: a malformed filter must never cause HTTP 500.
+        try:
+            filters_match = evaluate_filters(trigger_obj.filters, ctx.to_dict())
+        except Exception as e:
+            logger.warning(
+                "Rule %d filter evaluation error, treating as no-match: %s", rule.id, e,
+            )
+            return None
+
+        if not filters_match:
             return None
 
         rfr = RuleFiringResult(rule_id=rule.id, rule_name=rule.name)
@@ -53,10 +62,21 @@ class RuleEngine:
                     effect, ctx, rfr, session, char,
                     rule=rule_dsl, _depth=depth, _stack=stack,
                 )
+            except DSLValidationError:
+                # DSLValidationError must propagate so the dispatcher can
+                # disable the rule; do NOT swallow it here.
+                raise
             except ActionExecutionError as e:
                 rfr.errors.append(str(e))
                 logger.warning(
                     "Rule %d effect %s failed: %s", rule.id, effect.get("action"), e,
+                )
+                # continue with remaining effects
+            except Exception as e:
+                rfr.errors.append(str(e))
+                logger.warning(
+                    "Rule %d effect %s raised unexpected error: %s",
+                    rule.id, effect.get("action"), e,
                 )
                 # continue with remaining effects
         return rfr

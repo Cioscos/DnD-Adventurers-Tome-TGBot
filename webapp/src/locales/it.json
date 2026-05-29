@@ -363,7 +363,8 @@
       "apply_custom_aria": "Applica {{name}}",
       "turn_start": {
         "label": "Inizio turno",
-        "no_effect": "Inizio turno · nessuna regola attiva"
+        "no_effect": "Inizio turno · nessuna regola attiva",
+        "error": "Errore durante l'inizio turno. Riprova."
       },
       "desc": {
         "blinded": "Un personaggio accecato non può vedere e fallisce automaticamente ogni prova di caratteristica che richiede la vista. I tiri per colpire contro di lui hanno vantaggio, i suoi hanno svantaggio.",
@@ -1250,6 +1251,9 @@
         "message": "Messaggio",
         "description": "Descrizione"
       }
+    },
+    "errors": {
+      "action_failed": "Operazione non riuscita. Riprova."
     }
   }
 }

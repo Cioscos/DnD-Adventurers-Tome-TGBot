@@ -143,7 +143,10 @@ export default function Conditions() {
       }
       haptic.success()
     },
-    onError: () => haptic.error(),
+    onError: () => {
+      haptic.error()
+      toast.error(t('character.conditions.turn_start.error'), { hapticFeedback: false })
+    },
   })
 
   if (!char) return null

@@ -296,7 +296,11 @@ async def execute_damage_character(action, ctx, rfr, session, char, **kw):
 async def execute_heal_character(action, ctx, rfr, session, char, **kw):
     amount = _resolve_amount(action["amount"], ctx, field="heal_character.amount")
     before = char.current_hit_points
-    char.current_hit_points = min(char.hit_points, char.current_hit_points + amount)
+    # Use effective max HP (base + passive homebrew modifier) as the heal cap.
+    from api.services.homebrew.passive import get_passive_modifiers
+    hb_hp_bonus = await get_passive_modifiers(session, char, "character.hit_points_max")
+    effective_max = char.hit_points + hb_hp_bonus
+    char.current_hit_points = min(effective_max, char.current_hit_points + amount)
     actual = char.current_hit_points - before
 
     # D&D 5e rule: HP above 0 resets death saves (per CLAUDE.md "HEAL/SET_CURRENT

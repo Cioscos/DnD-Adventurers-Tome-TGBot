@@ -213,7 +213,10 @@ export default function Homebrew() {
       qc.invalidateQueries({ queryKey: ['homebrew-rules', charId] })
       toast.success(t('homebrew.install_success'), { hapticFeedback: false })
     },
-    onError: () => haptic.error(),
+    onError: () => {
+      haptic.error()
+      toast.error(t('homebrew.errors.action_failed'), { hapticFeedback: false })
+    },
   })
 
   const toggleMut = useMutation({
@@ -235,6 +238,7 @@ export default function Homebrew() {
     onError: (_err, _vars, ctx) => {
       if (ctx?.previous) qc.setQueryData(['homebrew-rules', charId], ctx.previous)
       haptic.error()
+      toast.error(t('homebrew.errors.action_failed'), { hapticFeedback: false })
     },
     onSettled: () => qc.invalidateQueries({ queryKey: ['homebrew-rules', charId] }),
   })
@@ -258,7 +262,10 @@ export default function Homebrew() {
       }
       haptic.success()
     },
-    onError: () => haptic.error(),
+    onError: () => {
+      haptic.error()
+      toast.error(t('homebrew.errors.action_failed'), { hapticFeedback: false })
+    },
   })
 
   const deleteMut = useMutation({
@@ -269,7 +276,10 @@ export default function Homebrew() {
       haptic.success()
       toast.success(t('homebrew.delete_success'), { hapticFeedback: false })
     },
-    onError: () => haptic.error(),
+    onError: () => {
+      haptic.error()
+      toast.error(t('homebrew.errors.action_failed'), { hapticFeedback: false })
+    },
   })
 
   if (rulesError || templatesError) {

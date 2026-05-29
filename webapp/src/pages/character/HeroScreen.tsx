@@ -63,8 +63,11 @@ export default function HeroScreen({ char }: Props) {
     }
   }, [char.classes, selectedClass])
 
-  const hpPct = char.hit_points > 0
-    ? Math.round((char.current_hit_points / char.hit_points) * 100)
+  const hpMax = char.hit_points + (char.hp_max_homebrew_modifier ?? 0)
+  const acTotal = char.ac + (char.ac_breakdown?.homebrew ?? 0)
+
+  const hpPct = hpMax > 0
+    ? Math.round((char.current_hit_points / hpMax) * 100)
     : 0
 
   const passiveAbilities = char.abilities?.filter((a) => a.is_passive) ?? []
@@ -110,7 +113,7 @@ export default function HeroScreen({ char }: Props) {
                 <span className="inline-flex items-center gap-1.5 font-mono">
                   <GiHeartPlus size={14} className="text-[var(--dnd-crimson-bright)]" />
                   <span className="text-dnd-text font-bold">
-                    {char.current_hit_points}/{char.hit_points}
+                    {char.current_hit_points}/{hpMax}
                   </span>
                   {char.temp_hp > 0 && (
                     <span className="text-[var(--dnd-cobalt-bright)]">(+{char.temp_hp} temp)</span>
@@ -120,7 +123,7 @@ export default function HeroScreen({ char }: Props) {
               </div>
               <HPGauge
                 current={char.current_hit_points}
-                max={char.hit_points}
+                max={hpMax}
                 temp={char.temp_hp}
                 size="md"
                 segmented
@@ -153,7 +156,7 @@ export default function HeroScreen({ char }: Props) {
             <span className="absolute inset-0 flex flex-col items-center justify-center pb-1">
               <span className="text-2xl font-display font-black text-dnd-gold-bright leading-none"
                     style={{ textShadow: '0 1px 3px rgba(var(--dnd-shadow-color), 0.6)' }}>
-                {char.ac}
+                {acTotal}
               </span>
               <span className="text-[11px] font-cinzel uppercase tracking-wide text-dnd-gold-dim leading-none mt-0.5">
                 {t('character.ac.short', { defaultValue: 'CA' })}

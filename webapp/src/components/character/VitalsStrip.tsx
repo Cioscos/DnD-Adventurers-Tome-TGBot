@@ -11,7 +11,8 @@ interface Props {
 export default function VitalsStrip({ char }: Props) {
   const { t } = useTranslation()
   const unitSystem = useUnitSettings((s) => s.system)
-  const speedLabel = formatLength(char.speed ?? 30, unitSystem)
+  const speedTotal = (char.speed ?? 30) + (char.speed_homebrew_modifier ?? 0)
+  const speedLabel = formatLength(speedTotal, unitSystem)
 
   return (
     <div className="@container flex justify-center">
