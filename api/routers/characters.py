@@ -185,15 +185,18 @@ async def create_character(
     session: Annotated[AsyncSession, Depends(get_db)],
 ) -> CharacterFull:
     char = Character(user_id=user_id, name=body.name, hit_points=0, current_hit_points=0)
+    # Populate ability scores + currency via the relationships (not raw
+    # character_id FKs) so the in-memory collections are loaded before the
+    # flush. This lets create_class_for_character read char.ability_scores
+    # for the CON/HP bootstrap without triggering a lazy-load in the async
+    # (sync-attribute) context — which would raise MissingGreenlet. The
+    # cascade="all, delete-orphan" on both relationships persists them.
+    char.ability_scores = [
+        AbilityScore(name=ability, value=10) for ability in ABILITY_NAMES
+    ]
+    char.currency = Currency()
     session.add(char)
-    await session.flush()  # assign id
-
-    # Initialize ability scores at 10
-    for ability in ABILITY_NAMES:
-        session.add(AbilityScore(character_id=char.id, name=ability, value=10))
-
-    # Initialize currency row
-    session.add(Currency(character_id=char.id))
+    await session.flush()  # assign id (cascades ability_scores + currency)
 
     # Optional atomic initial class. The whole request runs inside one
     # transaction (api.database.get_db middleware) — any exception here
