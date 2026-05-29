@@ -43,6 +43,7 @@ from api.schemas.common import D20RollSubmission, RollResult
 from api.routers.classes import create_class_for_character
 from api.routers._helpers import prune_history
 from api.services.character_response import build_character_response
+from api.services.spell_slots import recalc_spell_slots
 
 router = APIRouter(prefix="/characters", tags=["characters"])
 
@@ -210,6 +211,8 @@ async def create_character(
     # are eagerly loaded for response serialization. See _refresh_char_full for
     # the full rationale.
     char = await _refresh_char_full(session, char.id, user_id)
+    # Seed spell slots for a caster initial class (automatic mode is the default).
+    await recalc_spell_slots(session, char)
     return await build_character_response(session, char)
 
 
@@ -245,6 +248,9 @@ async def update_character(
     # AND nested eager-loads (classes.resources) survive. See
     # _refresh_char_full() for the full rationale.
     char = await _refresh_char_full(session, char_id, user_id)
+    # Re-derive spell slots when automatic mode is active (e.g. the user just
+    # switched manual → automatic, or edited a class through this endpoint).
+    await recalc_spell_slots(session, char)
     return await build_character_response(session, char)
 
 
@@ -445,6 +451,10 @@ async def update_xp(
     # default loader for `classes` and drop the nested `resources` eager-load,
     # leaving the new ClassResource rows invisible in the response body.
     fresh = await _refresh_char_full(session, char_id, user_id)
+
+    # Single-class level may have changed above; re-derive spell slots when
+    # automatic mode is active so the XP-driven level-up grows the slots.
+    await recalc_spell_slots(session, fresh)
 
     result = await build_character_response(session, fresh)
     if total_hp_gained > 0:

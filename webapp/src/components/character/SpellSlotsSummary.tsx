@@ -16,8 +16,11 @@ export default function SpellSlotsSummary({ slots }: Props) {
 
   if (!slots || slots.length === 0) return null
 
-  // Build a fixed 9-column display (level 1..9)
-  const byLevel = new Map<number, number>(slots.map((s) => [s.level, s.total]))
+  // Build a fixed 9-column display (level 1..9). Sum across rows per level so a
+  // Warlock multiclass (separate regular + pact rows at the same spell level)
+  // shows the combined castable count — the two pools are interchangeable.
+  const byLevel = new Map<number, number>()
+  for (const s of slots) byLevel.set(s.level, (byLevel.get(s.level) ?? 0) + s.total)
   const cells = [1, 2, 3, 4, 5, 6, 7, 8, 9].map((lv) => ({
     level: lv,
     total: byLevel.get(lv) ?? 0,

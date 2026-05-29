@@ -33,6 +33,7 @@ from core.game.stats import hit_points_for_level, total_base_hp
 from api.routers._helpers import collect_homebrew_notifications, effective_con_mod
 from api.services.homebrew.dispatcher import dispatch
 from api.services.character_response import build_character_response
+from api.services.spell_slots import recalc_spell_slots
 
 router = APIRouter(prefix="/characters", tags=["classes"])
 
@@ -143,6 +144,7 @@ async def add_class(
     await create_class_for_character(char, body, session)
     session.expire(char)
     char = await _get_owned_full(char_id, user_id, session)
+    await recalc_spell_slots(session, char)
     return await build_character_response(session, char)
 
 
@@ -218,6 +220,7 @@ async def distribute_class_levels(
         char.current_hit_points = max(0, min(new_current, new_total_hp))
 
     await session.flush()
+    await recalc_spell_slots(session, char)
     result = await build_character_response(session, char)
     if hp_gained > 0:
         result.hp_gained = hp_gained
@@ -278,6 +281,7 @@ async def update_class(
         )
         notifications = collect_homebrew_notifications(firing)
 
+    await recalc_spell_slots(session, char)
     response = await build_character_response(session, char)
     if notifications:
         response.homebrew_notifications = notifications
@@ -297,6 +301,7 @@ async def remove_class(
     await session.flush()
     session.expire(char)
     char = await _get_owned_full(char_id, user_id, session)
+    await recalc_spell_slots(session, char)
     return await build_character_response(session, char)
 
 

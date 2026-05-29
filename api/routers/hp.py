@@ -242,6 +242,10 @@ async def rest(
     elif body.rest_type == "short":
         # Break concentration
         char.concentrating_spell_id = None
+        # Warlock Pact Magic slots recover on a short rest (unlike regular slots).
+        for slot in char.spell_slots:
+            if slot.is_pact:
+                slot.used = 0
         healed = 0
         if body.hit_dice_used and body.hit_dice_used > 0:
             # Simple roll: average hit die value * count (frontend handles the roll display)

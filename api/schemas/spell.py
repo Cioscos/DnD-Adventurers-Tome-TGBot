@@ -74,6 +74,7 @@ class SpellSlotRead(BaseModel):
     total: int
     used: int
     available: int
+    is_pact: bool = False
     # Homebrew rule notifications surfaced when a spell_cast event fired
     # (PATCH /spell_slots/{id} with an incremented `used`). Omitted/None on
     # POST/list responses to match CharacterFull's contract (Phase 2 pattern).
@@ -86,6 +87,7 @@ class SpellSlotCreate(BaseModel):
     level: int
     total: int
     used: int = 0
+    is_pact: bool = False
 
 
 class SpellSlotUpdate(BaseModel):

@@ -362,7 +362,10 @@ class Spell(Base):
 
 class SpellSlot(Base):
     __tablename__ = "spell_slots"
-    __table_args__ = (UniqueConstraint("character_id", "level"),)
+    # is_pact is part of the unique key so a Warlock multiclass can hold both a
+    # regular pool and a Pact Magic pool at the same spell level (RAW: the two
+    # pools are separate, with different recovery — pact recovers on a short rest).
+    __table_args__ = (UniqueConstraint("character_id", "level", "is_pact"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     character_id: Mapped[int] = mapped_column(
@@ -371,6 +374,8 @@ class SpellSlot(Base):
     level: Mapped[int] = mapped_column(Integer, nullable=False)
     total: Mapped[int] = mapped_column(Integer, default=0)
     used: Mapped[int] = mapped_column(Integer, default=0)
+    # True = Warlock Pact Magic slot (separate pool, short-rest recovery).
+    is_pact: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     character: Mapped["Character"] = relationship(back_populates="spell_slots")
 
