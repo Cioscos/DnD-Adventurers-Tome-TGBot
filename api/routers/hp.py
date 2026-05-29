@@ -15,6 +15,7 @@ from sqlalchemy.orm import selectinload
 from api.auth import get_current_user
 from api.database import get_db
 from api.services.homebrew.dispatcher import dispatch
+from api.services.homebrew.passive import get_passive_modifiers
 from core.db.models import Character, CharacterHistory
 from api.schemas.character import CharacterFull
 from api.schemas.common import (
@@ -152,7 +153,10 @@ async def update_hp(
 
     elif body.op == HPOp.HEAL:
         old = char.current_hit_points
-        char.current_hit_points = min(char.hit_points, char.current_hit_points + body.value)
+        # Use effective max HP (base + passive homebrew modifier) as the heal cap.
+        hb_hp_bonus = await get_passive_modifiers(session, char, "character.hit_points_max")
+        effective_max = char.hit_points + hb_hp_bonus
+        char.current_hit_points = min(effective_max, char.current_hit_points + body.value)
         _add_history(session, char.id, "hp_change",
                      f"Cura: +{body.value} HP ({old} → {char.current_hit_points})",
                      meta={"op": "HEAL"})
@@ -216,7 +220,9 @@ async def rest(
     notifications: list[dict] = []
 
     if body.rest_type == "long":
-        char.current_hit_points = char.hit_points
+        # Restore to effective max HP (base + passive homebrew modifier).
+        hb_hp_bonus = await get_passive_modifiers(session, char, "character.hit_points_max")
+        char.current_hit_points = char.hit_points + hb_hp_bonus
         char.temp_hp = 0
         # Break concentration
         char.concentrating_spell_id = None
@@ -250,7 +256,9 @@ async def rest(
         if body.hit_dice_used and body.hit_dice_used > 0:
             # Simple roll: average hit die value * count (frontend handles the roll display)
             healed = body.hit_dice_used
-            char.current_hit_points = min(char.hit_points, char.current_hit_points + healed)
+            # Use effective max HP (base + passive homebrew modifier) as the heal cap.
+            hb_hp_bonus_short = await get_passive_modifiers(session, char, "character.hit_points_max")
+            char.current_hit_points = min(char.hit_points + hb_hp_bonus_short, char.current_hit_points + healed)
         # Restore short-rest abilities
         for ability in char.abilities:
             if ability.restoration_type == "short_rest" and ability.max_uses is not None:

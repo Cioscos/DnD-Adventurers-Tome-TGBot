@@ -150,44 +150,140 @@ async def _materialize_property_defaults(
             item.item_metadata = _json.dumps(md)
 
 
+def _collect_referenced_resource_keys(dsl: dict) -> set[str]:
+    """Walk every trigger → effects list (and nested if/match branches) and
+    collect the resource keys referenced by ``change_resource`` and
+    ``restore_resource`` actions.
+
+    The traversal is purely structural — it does not validate the DSL; unknown
+    action types are silently ignored so the function stays forward-compatible.
+    """
+    keys: set[str] = set()
+
+    def _scan_effects(effects: list) -> None:
+        for action in effects:
+            if not isinstance(action, dict):
+                continue
+            action_type = action.get("action")
+            if action_type in ("change_resource", "restore_resource"):
+                key = action.get("key")
+                if key and isinstance(key, str):
+                    keys.add(key)
+            # Recurse into `if` branches.
+            elif action_type == "if":
+                _scan_effects(action.get("then") or [])
+                _scan_effects(action.get("else") or [])
+            # Recurse into every `match` case list.
+            elif action_type == "match":
+                for case_effects in (action.get("cases") or {}).values():
+                    if isinstance(case_effects, list):
+                        _scan_effects(case_effects)
+
+    for trigger in dsl.get("triggers") or []:
+        if isinstance(trigger, dict):
+            _scan_effects(trigger.get("effects") or [])
+
+    return keys
+
+
 async def _materialize_resources(
     session: AsyncSession, char: Character, rule: HomebrewRule,
 ) -> None:
-    """Create one HomebrewResource row per ResourceDef declared in the DSL.
+    """Create HomebrewResource rows for a rule, covering two sources:
 
-    Pre-checks the UNIQUE(character_id, key) constraint by SELECTing the
-    character's existing resource keys and raises HTTP 409 on collision —
-    simpler and more diagnostic than relying on IntegrityError after the fact.
+    1. **Explicit ResourceDefs** — declared in ``dsl["resources"]``.
+       Raises HTTP 409 if a key already exists for this character (same
+       behaviour as before, keeps the error loud so the author knows about the
+       collision).
 
-    Scope: only called from install_template and create_rule. Editing a rule's
-    DSL via PATCH /homebrew/rules/{id} does NOT materialize / un-materialize
-    resources (deferred to a v2 concern).
+    2. **Inferred keys** — resource keys referenced by ``change_resource`` /
+       ``restore_resource`` actions anywhere in the trigger graph but NOT
+       covered by an explicit ResourceDef.  For these we create a minimal
+       placeholder row (max=1, current=1, restoration_type="none") so that the
+       runtime action has something to operate on.  If the key already exists
+       (from a previous rule or a prior call) we silently skip it — no 409,
+       because the existing state belongs to the player and must not be
+       overwritten.
+
+    Idempotent: safe to call multiple times (update_rule calls it after every
+    DSL change).  Rows are only ever ADDED, never removed — removing rows would
+    lose the player's current resource value, which is unacceptable.
     """
-    resources = rule.dsl.get("resources") or []
-    if not resources:
-        return
-    new_keys = [r["key"] for r in resources]
-    existing_res = await session.execute(
-        select(HomebrewResource.key).where(
-            HomebrewResource.character_id == char.id,
-            HomebrewResource.key.in_(new_keys),
+    dsl = rule.dsl
+
+    # ── 1. Explicit ResourceDefs ─────────────────────────────────────────────
+    explicit_defs: list[dict] = dsl.get("resources") or []
+    explicit_keys: set[str] = {r["key"] for r in explicit_defs}
+
+    if explicit_keys:
+        existing_res = await session.execute(
+            select(HomebrewResource.key, HomebrewResource.rule_id).where(
+                HomebrewResource.character_id == char.id,
+                HomebrewResource.key.in_(list(explicit_keys)),
+            )
         )
-    )
-    existing = set(existing_res.scalars())
-    for key in new_keys:
-        if key in existing:
-            raise HTTPException(409, f"Resource key '{key}' already exists for character")
-    for res_def in resources:
-        session.add(HomebrewResource(
-            rule_id=rule.id,
-            character_id=char.id,
-            key=res_def["key"],
-            name=res_def["name"],
-            current=res_def["max"],
-            max=res_def["max"],
-            restoration_type=res_def["restoration_type"],
-        ))
-    await session.flush()
+        # Map key → rule_id for existing rows.
+        existing_explicit: dict[str, int] = {row[0]: row[1] for row in existing_res}
+        for key in explicit_keys:
+            if key in existing_explicit:
+                # 409 only when the collision is with a *different* rule.
+                # If the key is already owned by this rule (idempotent re-call),
+                # skip silently.  If it belongs to another rule it is a real
+                # collision and we keep the loud error.
+                if existing_explicit[key] != rule.id:
+                    raise HTTPException(409, f"Resource key '{key}' already exists for character")
+                # else: already materialised by a previous call — skip.
+        for res_def in explicit_defs:
+            key = res_def["key"]
+            if key in existing_explicit:
+                # Already exists (owned by this rule) — nothing to insert.
+                continue
+            session.add(HomebrewResource(
+                rule_id=rule.id,
+                character_id=char.id,
+                key=key,
+                name=res_def["name"],
+                current=res_def["max"],
+                max=res_def["max"],
+                restoration_type=res_def["restoration_type"],
+            ))
+
+    # ── 2. Inferred keys from change_resource / restore_resource actions ─────
+    referenced_keys = _collect_referenced_resource_keys(dsl)
+    # Only process keys not already handled as explicit ResourceDefs.
+    inferred_keys = referenced_keys - explicit_keys
+
+    if inferred_keys:
+        existing_res2 = await session.execute(
+            select(HomebrewResource.key).where(
+                HomebrewResource.character_id == char.id,
+                HomebrewResource.key.in_(list(inferred_keys)),
+            )
+        )
+        already_exist: set[str] = set(existing_res2.scalars())
+        for key in inferred_keys:
+            if key in already_exist:
+                # Skip silently — the row may belong to a different rule or
+                # have been created by a previous call.  We NEVER overwrite
+                # existing player state.
+                continue
+            # Build a human-readable name from the snake_case key.
+            display_name = key.replace("_", " ").title()
+            session.add(HomebrewResource(
+                rule_id=rule.id,
+                character_id=char.id,
+                key=key,
+                name=display_name,
+                # Default max=1 keeps the placeholder meaningful without
+                # granting the player an unreasonable amount of a resource
+                # they have not explicitly configured.
+                current=1,
+                max=1,
+                restoration_type="none",
+            ))
+
+    if explicit_keys or inferred_keys:
+        await session.flush()
 
 
 @router.post(
@@ -286,16 +382,25 @@ async def update_rule(
     session: Annotated[AsyncSession, Depends(get_db)],
 ) -> HomebrewRule:
     rule = await _get_owned_rule(char_id, rule_id, user_id, session)
+    char = await _get_owned_char(char_id, user_id, session)
     if body.name is not None:
         rule.name = body.name
     if body.description is not None:
         rule.description = body.description
-    if body.dsl is not None:
+    dsl_changed = body.dsl is not None
+    if dsl_changed:
         rule.dsl = body.dsl
         rule.version += 1
     if body.enabled is not None:
         rule.enabled = body.enabled
     rule.updated_at = _now()
+    # Sync resources whenever the DSL changes.  _materialize_resources is
+    # idempotent: it only adds missing rows and never removes existing ones.
+    # We intentionally do NOT delete resources that are no longer referenced
+    # after a DSL edit, because the player may already have a non-zero current
+    # value on that resource and wiping it would be a silent data-loss.
+    if dsl_changed:
+        await _materialize_resources(session, char, rule)
     return rule
 
 

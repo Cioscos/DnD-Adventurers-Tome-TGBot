@@ -363,7 +363,8 @@
       "apply_custom_aria": "Applica {{name}}",
       "turn_start": {
         "label": "Inizio turno",
-        "no_effect": "Inizio turno · nessuna regola attiva"
+        "no_effect": "Inizio turno · nessuna regola attiva",
+        "error": "Errore durante l'inizio turno. Riprova."
       },
       "desc": {
         "blinded": "Un personaggio accecato non può vedere e fallisce automaticamente ogni prova di caratteristica che richiede la vista. I tiri per colpire contro di lui hanno vantaggio, i suoi hanno svantaggio.",
@@ -1160,7 +1161,16 @@
         "is_equipped": "Solo se equipaggiato"
       },
       "filter_picker_title": "Quale filtro?",
-      "ad_hoc_filter_label": "Filtro personalizzato"
+      "ad_hoc_filter_label": "Filtro personalizzato",
+      "custom_condition_label": "Condizione attiva",
+      "object_property_label": "Proprietà oggetto",
+      "condition_key_field": "es. Veleno",
+      "property_key_field": "es. sacra",
+      "op_eq": "è uguale a",
+      "op_neq": "è diverso da",
+      "value_yes": "Sì",
+      "value_no": "No",
+      "custom_condition_chip": "Condizione: {{name}} attiva"
     },
     "effects": {
       "empty": "Nessun passo. Premi \"Aggiungi passo\" per descrivere cosa fa il trigger.",
@@ -1213,21 +1223,24 @@
         "target_character": "Il personaggio",
         "property_key": "Chiave caratteristica",
         "set_value": "Valore",
-        "delta": "Variazione (numero o dado)",
-        "amount": "Quantità (numero, dado o \"max\")",
-        "amount_simple": "Quantità",
+        "delta": "Variazione (numero, dado o $variabile)",
+        "amount": "Quantità (numero, dado, $variabile o \"max\")",
+        "amount_simple": "Quantità (numero, dado o $variabile)",
         "damage_type": "Tipo di danno",
         "damage_type_placeholder": "es. fire, necrotic",
         "was_critical": "È stato un colpo critico",
         "resource_key": "Chiave risorsa",
         "condition_key": "Chiave condizione",
+        "condition_name": "Nome condizione",
+        "condition_name_placeholder": "es. Veleno",
+        "condition_key_hint": "Diventa:",
         "params_json": "Parametri (JSON, opzionale)",
         "params_json_invalid": "JSON non valido",
         "modifier_target": "Cosa modifica (target)",
         "modifier_target_invalid": "Target non valido (es. character.ac)",
         "modifier_label": "Etichetta visibile",
         "required": "Campo obbligatorio",
-        "amount_invalid": "Inserisci un numero o una notazione dadi",
+        "amount_invalid": "Inserisci un numero, una notazione dadi o $variabile",
         "severity": "Importanza",
         "severity_options": {
           "info": "Info",
@@ -1238,6 +1251,9 @@
         "message": "Messaggio",
         "description": "Descrizione"
       }
+    },
+    "errors": {
+      "action_failed": "Operazione non riuscita. Riprova."
     }
   }
 }

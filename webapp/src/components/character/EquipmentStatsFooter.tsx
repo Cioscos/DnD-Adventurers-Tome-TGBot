@@ -26,6 +26,8 @@ export default function EquipmentStatsFooter({ char }: Props) {
     ?.filter((i) => i.is_equipped)
     .reduce((sum, i) => sum + (i.weight || 0) * (i.quantity || 1), 0) ?? 0
 
+  const acTotal = char.ac + (char.ac_breakdown?.homebrew ?? 0)
+
   const strScore = char.ability_scores.find((s) => s.name.toLowerCase() === 'strength')?.value ?? 10
   const carryCap = strScore * 15
   const overload = encumbrance > carryCap
@@ -47,7 +49,7 @@ export default function EquipmentStatsFooter({ char }: Props) {
           className="font-mono font-black text-dnd-gold-bright leading-none"
           style={{ fontSize: 'clamp(2.25rem, 9vw, 3rem)' }}
         >
-          {char.ac}
+          {acTotal}
         </span>
         <span className="flex items-center gap-1.5 text-[10px] font-cinzel uppercase tracking-[0.25em] text-dnd-gold-dim">
           <GiCheckedShield size={11} aria-hidden="true" />

@@ -20,6 +20,11 @@ import type {
 
 const DICE_REGEX = /^(\d+)d(\d+)([+-]\d+)?$/
 const VAR_REGEX = /^[a-zA-Z_][a-zA-Z0-9_]{0,59}$/
+// Variable reference accepted by the backend `_resolve_amount`
+// (api/services/homebrew/actions.py): `$name` or `$vars.name`. The bare form
+// without `$` is intentionally rejected — the backend would read it as dice
+// notation instead.
+const VAR_PATH = /^\$(vars\.)?[A-Za-z_][A-Za-z0-9_]*$/
 // Mirrors api/services/homebrew/dsl.py modifier target regex used in
 // PassiveModifierFormModal.
 const MODIFIER_TARGET_REGEX =
@@ -92,6 +97,7 @@ function isAmountValid(raw: string, allowMax: boolean): boolean {
   const v = raw.trim()
   if (v === '') return false
   if (allowMax && v === 'max') return true
+  if (VAR_PATH.test(v)) return true
   if (DICE_REGEX.test(v)) return true
   const n = Number(v)
   return Number.isFinite(n)
@@ -100,9 +106,42 @@ function isAmountValid(raw: string, allowMax: boolean): boolean {
 function coerceAmount(raw: string, allowMax: boolean): number | string {
   const v = raw.trim()
   if (allowMax && v === 'max') return 'max'
+  // Variable references (`$name` / `$vars.name`) pass through verbatim — they
+  // must NOT be funneled into Number().
+  if (VAR_PATH.test(v)) return v
   if (DICE_REGEX.test(v)) return v
   const n = Number(v)
   return Number.isFinite(n) ? n : v
+}
+
+/**
+ * Normalize a free-text condition name into the canonical `custom:<slug>` key
+ * the backend writes into `char.conditions` and the Conditions page filters on
+ * (`key.startsWith('custom:')`). Strips accents, lowercases, collapses any
+ * run of non-alphanumerics into a single `-`, and trims leading/trailing `-`.
+ * A `custom:` prefix already typed by the user is honored (no double prefix).
+ * Returns `''` when the name slugs to nothing (caller treats as invalid).
+ */
+function conditionKey(rawName: string): string {
+  let name = rawName.trim()
+  if (name.toLowerCase().startsWith('custom:')) {
+    name = name.slice('custom:'.length)
+  }
+  const slug = name
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+  return slug ? `custom:${slug}` : ''
+}
+
+/**
+ * Strip the `custom:` prefix from a stored key so the editable name field
+ * shows the friendly slug (e.g. `custom:veleno` -> `veleno`).
+ */
+function conditionDisplayName(key: string): string {
+  return key.startsWith('custom:') ? key.slice('custom:'.length) : key
 }
 
 // ---------------------------------------------------------------------------
@@ -213,7 +252,9 @@ export default function EffectFormModal({
         break
       case 'apply_condition':
       case 'remove_condition':
-        if (!e.key.trim()) errs.key = t('homebrew.effects.fields.required')
+        // `e.key` is already normalized to `custom:<slug>` on input; an empty
+        // result means the name slugged to nothing.
+        if (!conditionKey(e.key)) errs.key = t('homebrew.effects.fields.required')
         break
       case 'apply_modifier_once':
         if (!MODIFIER_TARGET_REGEX.test(e.target.trim())) {
@@ -514,11 +555,9 @@ function EffectFormBody({ draft, update, tables, errors }: BodyProps) {
     case 'apply_condition':
       return (
         <>
-          <Input
-            label={t('homebrew.effects.fields.condition_key')}
+          <ConditionNameInput
             value={draft.key}
-            onChange={(v) => update<typeof draft>({ key: v })}
-            placeholder="poisoned"
+            onChange={(key) => update<typeof draft>({ key })}
             error={errors.key}
           />
           <ParamsJsonInput
@@ -530,11 +569,9 @@ function EffectFormBody({ draft, update, tables, errors }: BodyProps) {
 
     case 'remove_condition':
       return (
-        <Input
-          label={t('homebrew.effects.fields.condition_key')}
+        <ConditionNameInput
           value={draft.key}
-          onChange={(v) => update<typeof draft>({ key: v })}
-          placeholder="poisoned"
+          onChange={(key) => update<typeof draft>({ key })}
           error={errors.key}
         />
       )
@@ -642,6 +679,59 @@ function TargetRadio({
   )
 }
 
+/**
+ * Free-text "condition name" field that derives and stores a canonical
+ * `custom:<slug>` key. The user types a friendly name (e.g. "Veleno"); the
+ * normalized key is written upward via `onChange` and shown read-only as a
+ * hint so the player sees exactly what lands in `char.conditions`.
+ */
+function ConditionNameInput({
+  value,
+  onChange,
+  error,
+}: {
+  value: string
+  onChange: (key: string) => void
+  error?: string
+}) {
+  const { t } = useTranslation()
+  // Local text mirrors the friendly name; seeded once from the stored key so
+  // intermediate keystrokes (trailing spaces, accents) aren't clobbered by the
+  // slugified round-trip.
+  const [name, setName] = useState(() => conditionDisplayName(value))
+  const derived = conditionKey(name)
+
+  return (
+    <div className="space-y-1.5">
+      <Input
+        label={t('homebrew.effects.fields.condition_name')}
+        value={name}
+        onChange={(v) => {
+          setName(v)
+          onChange(conditionKey(v))
+        }}
+        placeholder={t('homebrew.effects.fields.condition_name_placeholder')}
+        error={error}
+      />
+      {derived && (
+        <p className="text-[11px] font-body text-dnd-text-muted">
+          {t('homebrew.effects.fields.condition_key_hint')}{' '}
+          <span className="font-mono text-dnd-gold-dim">{derived}</span>
+        </p>
+      )}
+    </div>
+  )
+}
+
+/** Coerce a raw compare-value string to boolean / number / string for the DSL. */
+function coerceCompareValue(raw: string): boolean | number | string {
+  const trimmed = raw.trim()
+  if (trimmed === 'true') return true
+  if (trimmed === 'false') return false
+  if (trimmed !== '' && Number.isFinite(Number(trimmed))) return Number(trimmed)
+  return raw
+}
+
 function FilterEditor({
   cond,
   onChange,
@@ -678,7 +768,7 @@ function FilterEditor({
       <Input
         label={t('homebrew.effects.fields.cond_value')}
         value={String(cond.value ?? '')}
-        onChange={(v) => onChange({ ...cond, value: v })}
+        onChange={(v) => onChange({ ...cond, value: coerceCompareValue(v) })}
         placeholder="..."
       />
     </>

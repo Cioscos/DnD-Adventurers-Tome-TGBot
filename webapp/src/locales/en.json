@@ -363,7 +363,8 @@
       "apply_custom_aria": "Apply {{name}}",
       "turn_start": {
         "label": "Start of turn",
-        "no_effect": "Start of turn · no rule triggered"
+        "no_effect": "Start of turn · no rule triggered",
+        "error": "Turn start failed. Please try again."
       },
       "desc": {
         "blinded": "A blinded creature can't see and automatically fails any ability check that requires sight. Attack rolls against the creature have advantage, and the creature's attack rolls have disadvantage.",
@@ -1160,7 +1161,16 @@
         "is_equipped": "Only if equipped"
       },
       "filter_picker_title": "Which filter?",
-      "ad_hoc_filter_label": "Custom filter"
+      "ad_hoc_filter_label": "Custom filter",
+      "custom_condition_label": "Active condition",
+      "object_property_label": "Object property",
+      "condition_key_field": "e.g. Poison",
+      "property_key_field": "e.g. holy",
+      "op_eq": "equals",
+      "op_neq": "not equal to",
+      "value_yes": "Yes",
+      "value_no": "No",
+      "custom_condition_chip": "Condition: {{name}} active"
     },
     "effects": {
       "empty": "No steps yet. Press \"Add step\" to describe what the trigger does.",
@@ -1213,21 +1223,24 @@
         "target_character": "The character",
         "property_key": "Property key",
         "set_value": "Value",
-        "delta": "Delta (number or dice)",
-        "amount": "Amount (number, dice or \"max\")",
-        "amount_simple": "Amount",
+        "delta": "Delta (number, dice or $variable)",
+        "amount": "Amount (number, dice, $variable or \"max\")",
+        "amount_simple": "Amount (number, dice or $variable)",
         "damage_type": "Damage type",
         "damage_type_placeholder": "e.g. fire, necrotic",
         "was_critical": "Was a critical hit",
         "resource_key": "Resource key",
         "condition_key": "Condition key",
+        "condition_name": "Condition name",
+        "condition_name_placeholder": "e.g. Poison",
+        "condition_key_hint": "Becomes:",
         "params_json": "Params (JSON, optional)",
         "params_json_invalid": "Invalid JSON",
         "modifier_target": "What it modifies (target)",
         "modifier_target_invalid": "Invalid target (e.g. character.ac)",
         "modifier_label": "Visible label",
         "required": "Required field",
-        "amount_invalid": "Enter a number or dice notation",
+        "amount_invalid": "Enter a number, dice notation or $variable",
         "severity": "Severity",
         "severity_options": {
           "info": "Info",
@@ -1238,6 +1251,9 @@
         "message": "Message",
         "description": "Description"
       }
+    },
+    "errors": {
+      "action_failed": "Action failed. Please try again."
     }
   }
 }

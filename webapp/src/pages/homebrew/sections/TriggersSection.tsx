@@ -6,7 +6,7 @@ import Button from '@/components/ui/Button'
 import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import Sheet from '@/components/ui/Sheet'
 import { eventLabel, type Locale } from '@/lib/homebrew/i18n-dsl'
-import type { EventType, Filter, Table, Trigger } from '@/lib/homebrew/types'
+import type { EventType, Filter, FilterOp, Table, Trigger } from '@/lib/homebrew/types'
 import EffectChainEditor from './EffectChainEditor'
 
 export interface TriggersSectionProps {
@@ -51,10 +51,89 @@ const PRESETS_BY_EVENT: Partial<Record<EventType, Filter[]>> = {
 }
 
 /**
+ * Events whose dispatched subject is an item. These get the "object property"
+ * custom-filter form (`$subject.<key>`). All other events get the "active
+ * condition" form (`$character.conditions has_property custom:<slug>`).
+ *
+ * Source of truth: dispatcher resolves item subjects for these events.
+ */
+const ITEM_SUBJECT_EVENTS: ReadonlySet<EventType> = new Set<EventType>([
+  'attack_rolled',
+  'damage_taken',
+  'item_equipped',
+  'item_unequipped',
+])
+
+function eventHasItemSubject(event: EventType): boolean {
+  return ITEM_SUBJECT_EVENTS.has(event)
+}
+
+/**
+ * Normalize a free-text condition name into the canonical `custom:<slug>` key
+ * the dispatcher exposes in `$character.conditions`. Mirrors `conditionKey`
+ * in EffectFormModal: strips accents, lowercases, non-alphanumerics → `-`,
+ * trims leading/trailing `-`. Returns `''` when the name slugs to nothing.
+ */
+function conditionKeyValue(rawName: string): string {
+  let name = rawName.trim()
+  if (name.toLowerCase().startsWith('custom:')) {
+    name = name.slice('custom:'.length)
+  }
+  const slug = name
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+  return slug ? `custom:${slug}` : ''
+}
+
+/** Slugify a free-text property key into `[a-z0-9_]` for `$subject.<key>`. */
+function propertyKeySlug(raw: string): string {
+  return raw
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+}
+
+/** Human-friendly capitalization of a slug fragment for chip labels. */
+function titleizeSlug(slug: string): string {
+  const cleaned = slug.replace(/[-_]+/g, ' ').trim()
+  return cleaned ? cleaned.charAt(0).toUpperCase() + cleaned.slice(1) : cleaned
+}
+
+/**
  * Plain-language label for a known preset filter. Returns null for ad-hoc
  * filters — the caller falls back to the raw `${path} ${op} ${value}` form.
  */
 function presetLabel(filter: Filter, t: TFunction): string | null {
+  if (filter.op === 'has_property' && filter.path === '$character.conditions') {
+    const raw = String(filter.value ?? '')
+    const slug = raw.startsWith('custom:') ? raw.slice('custom:'.length) : raw
+    return t('homebrew.triggers.custom_condition_chip', {
+      name: titleizeSlug(slug),
+    })
+  }
+  if (
+    (filter.op === 'eq' || filter.op === 'neq') &&
+    typeof filter.path === 'string' &&
+    filter.path.startsWith('$subject.')
+  ) {
+    const key = filter.path.slice('$subject.'.length)
+    // Skip the known is_equipped preset — handled below for its dedicated label.
+    if (key !== 'is_equipped') {
+      const propLabel = titleizeSlug(key)
+      let valueLabel: string
+      if (filter.value === true) valueLabel = t('homebrew.triggers.value_yes')
+      else if (filter.value === false) valueLabel = t('homebrew.triggers.value_no')
+      else valueLabel = String(filter.value)
+      const opLabel = filter.op === 'neq' ? '≠' : '='
+      return `${propLabel} ${opLabel} ${valueLabel}`
+    }
+  }
   if (filter.op !== 'eq') return null
   if (filter.path === '$event.is_fumble' && filter.value === true) {
     return t('homebrew.triggers.preset_filters.fumble')
@@ -295,20 +374,60 @@ function FilterPicker({
   const available = presets.filter(
     (preset) => !existing.some((f) => filtersEqual(f, preset)),
   )
+  const isItemEvent = event ? eventHasItemSubject(event) : false
+
+  // Custom-condition form (non-item events)
+  const [conditionName, setConditionName] = useState('')
+  // Object-property form (item events)
+  const [propKey, setPropKey] = useState('')
+  const [propOp, setPropOp] = useState<Extract<FilterOp, 'eq' | 'neq'>>('eq')
+  const [propValueBool, setPropValueBool] = useState(true)
+
+  const resetForms = () => {
+    setConditionName('')
+    setPropKey('')
+    setPropOp('eq')
+    setPropValueBool(true)
+  }
+
+  const handleClose = () => {
+    resetForms()
+    onClose()
+  }
+
+  const conditionValue = conditionKeyValue(conditionName)
+  const propSlug = propertyKeySlug(propKey)
+
+  const submitCondition = () => {
+    if (!conditionValue) return
+    onPick({
+      path: '$character.conditions',
+      op: 'has_property',
+      value: conditionValue,
+    })
+    resetForms()
+  }
+
+  const submitProperty = () => {
+    if (!propSlug) return
+    onPick({
+      path: `$subject.${propSlug}`,
+      op: propOp,
+      value: propValueBool,
+    })
+    resetForms()
+  }
 
   return (
     <Sheet
       open={open}
-      onClose={onClose}
+      onClose={handleClose}
       title={t('homebrew.triggers.filter_picker_title')}
       centered
     >
-      <div className="p-5 space-y-2">
-        {available.length === 0 ? (
-          <p className="px-2 py-3 text-center text-xs font-body italic text-dnd-text-muted">
-            {t('homebrew.triggers.no_presets')}
-          </p>
-        ) : (
+      <div className="p-5 space-y-5">
+        {/* Preset shortcuts */}
+        {available.length > 0 && (
           <ul className="space-y-2">
             {available.map((preset, i) => {
               const label = presetLabel(preset, t) ?? preset.path
@@ -325,6 +444,105 @@ function FilterPicker({
               )
             })}
           </ul>
+        )}
+
+        {/* Custom filter builder */}
+        {isItemEvent ? (
+          <div className="space-y-2.5">
+            <div className="text-[11px] uppercase tracking-wider font-cinzel font-bold text-dnd-gold-dim">
+              {t('homebrew.triggers.object_property_label')}
+            </div>
+            <input
+              type="text"
+              value={propKey}
+              onChange={(e) => setPropKey(e.target.value)}
+              placeholder={t('homebrew.triggers.property_key_field')}
+              className="w-full px-3 py-2.5 min-h-[48px] rounded-lg bg-dnd-surface text-dnd-text border-b-2 border-dnd-border outline-none focus:border-dnd-gold/70 font-body"
+            />
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setPropOp('eq')}
+                className={`flex-1 min-h-[44px] px-3 rounded-lg border text-sm font-body transition-colors ${
+                  propOp === 'eq'
+                    ? 'bg-dnd-chip-bg border-dnd-gold/60 text-dnd-gold-bright'
+                    : 'bg-dnd-surface border-dnd-border text-dnd-text-muted'
+                }`}
+              >
+                {t('homebrew.triggers.op_eq')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setPropOp('neq')}
+                className={`flex-1 min-h-[44px] px-3 rounded-lg border text-sm font-body transition-colors ${
+                  propOp === 'neq'
+                    ? 'bg-dnd-chip-bg border-dnd-gold/60 text-dnd-gold-bright'
+                    : 'bg-dnd-surface border-dnd-border text-dnd-text-muted'
+                }`}
+              >
+                {t('homebrew.triggers.op_neq')}
+              </button>
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setPropValueBool(true)}
+                className={`flex-1 min-h-[44px] px-3 rounded-full border text-sm font-body transition-colors ${
+                  propValueBool
+                    ? 'bg-dnd-chip-bg border-dnd-gold/60 text-dnd-gold-bright'
+                    : 'bg-dnd-surface border-dnd-border text-dnd-text-muted'
+                }`}
+              >
+                {t('homebrew.triggers.value_yes')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setPropValueBool(false)}
+                className={`flex-1 min-h-[44px] px-3 rounded-full border text-sm font-body transition-colors ${
+                  !propValueBool
+                    ? 'bg-dnd-chip-bg border-dnd-gold/60 text-dnd-gold-bright'
+                    : 'bg-dnd-surface border-dnd-border text-dnd-text-muted'
+                }`}
+              >
+                {t('homebrew.triggers.value_no')}
+              </button>
+            </div>
+            <Button
+              variant="primary"
+              size="sm"
+              disabled={!propSlug}
+              onClick={submitProperty}
+            >
+              {t('homebrew.triggers.add_filter')}
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-2.5">
+            <div className="text-[11px] uppercase tracking-wider font-cinzel font-bold text-dnd-gold-dim">
+              {t('homebrew.triggers.custom_condition_label')}
+            </div>
+            <input
+              type="text"
+              value={conditionName}
+              onChange={(e) => setConditionName(e.target.value)}
+              placeholder={t('homebrew.triggers.condition_key_field')}
+              className="w-full px-3 py-2.5 min-h-[48px] rounded-lg bg-dnd-surface text-dnd-text border-b-2 border-dnd-border outline-none focus:border-dnd-gold/70 font-body"
+            />
+            <Button
+              variant="primary"
+              size="sm"
+              disabled={!conditionValue}
+              onClick={submitCondition}
+            >
+              {t('homebrew.triggers.add_filter')}
+            </Button>
+          </div>
+        )}
+
+        {available.length === 0 && !isItemEvent && conditionName === '' && (
+          <p className="px-2 pt-1 text-center text-xs font-body italic text-dnd-text-muted">
+            {t('homebrew.triggers.no_presets')}
+          </p>
         )}
       </div>
     </Sheet>

@@ -63,18 +63,25 @@ async def _matching_items(
     session: AsyncSession, char: Character, filter_def: dict | None,
 ) -> list[Item]:
     stmt = select(Item).where(Item.character_id == char.id)
-    if filter_def and filter_def.get("item_types"):
-        stmt = stmt.where(Item.item_type.in_(filter_def["item_types"]))
+    if filter_def:
+        if filter_def.get("item_types"):
+            stmt = stmt.where(Item.item_type.in_(filter_def["item_types"]))
+        name_contains = filter_def.get("name_contains")
+        if name_contains:
+            stmt = stmt.where(Item.name.ilike(f"%{name_contains}%"))
     res = await session.execute(stmt)
     return list(res.scalars())
 
 
 def _passes_subject_filter(item: Item, filter_def: dict | None) -> bool:
-    """Check if a single item matches the rule's subject filter (item_types only in MVP)."""
+    """Check if a single item matches the rule's subject filter."""
     if not filter_def:
         return True
     item_types = filter_def.get("item_types")
     if item_types and item.item_type not in item_types:
+        return False
+    name_contains = filter_def.get("name_contains")
+    if name_contains and name_contains.lower() not in (item.name or "").lower():
         return False
     return True
 
