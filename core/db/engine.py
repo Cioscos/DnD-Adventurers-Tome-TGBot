@@ -146,6 +146,14 @@ def _rebuild_spell_slots_for_pact(connection) -> None:
         return  # already migrated
 
     logger.info("Rebuilding spell_slots to add is_pact + UNIQUE(character_id, level, is_pact)")
+    # Crash-safety: a prior run may have created spell_slots_new and then been
+    # interrupted before the DROP/RENAME (process kill, deploy mid-migration,
+    # power loss), leaving an orphan table. Without this, every subsequent
+    # startup hits "table spell_slots_new already exists" and the API enters a
+    # systemd crash loop. spell_slots is still intact here (we only reach this
+    # point when is_pact is absent, i.e. the rename never happened), so the
+    # orphan is a stale partial copy and is safe to discard.
+    connection.execute(text("DROP TABLE IF EXISTS spell_slots_new"))
     connection.execute(text(
         "CREATE TABLE spell_slots_new ("
         " id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,"
@@ -158,9 +166,17 @@ def _rebuild_spell_slots_for_pact(connection) -> None:
         " FOREIGN KEY(character_id) REFERENCES characters(id) ON DELETE CASCADE"
         ")"
     ))
+    # Only carry over rows whose character still exists. spell_slots_new has
+    # FOREIGN KEY(character_id) REFERENCES characters(id); with FK enforcement
+    # on (the app sets PRAGMA foreign_keys=ON per connection, and it cannot be
+    # toggled inside this transaction) a dangling row — left behind when a
+    # character was deleted while FK enforcement was off — makes this INSERT
+    # fail with "FOREIGN KEY constraint failed", aborting startup. Such rows are
+    # unusable orphans (their owning character is gone), so we drop them here.
     connection.execute(text(
         "INSERT INTO spell_slots_new (id, character_id, level, total, used, is_pact) "
-        "SELECT id, character_id, level, total, used, 0 FROM spell_slots"
+        "SELECT id, character_id, level, total, used, 0 FROM spell_slots "
+        "WHERE character_id IN (SELECT id FROM characters)"
     ))
     connection.execute(text("DROP TABLE spell_slots"))
     connection.execute(text("ALTER TABLE spell_slots_new RENAME TO spell_slots"))
