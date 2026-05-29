@@ -106,6 +106,8 @@ export interface SpellSlot {
   total: number
   used: number
   available: number
+  /** True = Warlock Pact Magic slot (separate pool, recovers on a short rest). */
+  is_pact: boolean
 }
 
 export type EquipmentSlot =

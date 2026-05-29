@@ -290,7 +290,8 @@
       "auto_hint": "Auto mode (D&D 5e 2014 rules): slots are derived from classes and level. Switch to Manual in Settings for custom control.",
       "add_new_level": "Add new level",
       "reset_confirm": "Reset all spell slots?",
-      "go_to_settings": "Go to Settings"
+      "go_to_settings": "Go to Settings",
+      "pact_badge": "Pact"
     },
     "dice": {
       "title": "Roll Dice",

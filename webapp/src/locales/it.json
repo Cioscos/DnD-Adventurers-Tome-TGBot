@@ -290,7 +290,8 @@
       "auto_hint": "Modalità Auto (regole D&D 5e 2014): gli slot vengono dedotti da classi e livello. Passa a Manuale dalle Impostazioni per gestione personalizzata.",
       "add_new_level": "Aggiungi nuovo livello",
       "reset_confirm": "Ripristinare tutti gli slot incantesimo?",
-      "go_to_settings": "Vai a Impostazioni"
+      "go_to_settings": "Vai a Impostazioni",
+      "pact_badge": "Patto"
     },
     "dice": {
       "title": "Tira Dadi",

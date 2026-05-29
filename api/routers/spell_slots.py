@@ -52,7 +52,13 @@ async def add_spell_slot(
     session: Annotated[AsyncSession, Depends(get_db)],
 ) -> SpellSlot:
     await _get_owned_full(char_id, user_id, session)
-    slot = SpellSlot(character_id=char_id, level=body.level, total=body.total, used=body.used)
+    slot = SpellSlot(
+        character_id=char_id,
+        level=body.level,
+        total=body.total,
+        used=body.used,
+        is_pact=body.is_pact,
+    )
     session.add(slot)
     await session.flush()
     return slot
