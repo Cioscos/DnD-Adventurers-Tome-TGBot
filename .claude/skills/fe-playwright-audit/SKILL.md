@@ -35,6 +35,16 @@ altri agenti. **Non esegue fix.**
    (file sospetto + fix proposto + screenshot).
 4. **Mai `uv`/`uv sync`/`uv run` da WSL** (vedi `CLAUDE.md`): corrompe la `.venv` Windows.
    Se serve l'API e non è avviata, chiedila all'utente da PowerShell. `npm`/`npx` da WSL OK.
+5. **Interazione incrementale, mai azioni concatenate alla cieca.** Non inviare mai al MCP
+   una sequenza tipo "inserisci valore + clicca Salva" in un colpo solo. Ogni azione è
+   atomica: prima **aspetti che il FE abbia finito di renderizzare** (`browser_wait_for`),
+   POI agisci su un singolo controllo, POI **verifichi il risultato** (via
+   `browser_evaluate`/JS + `browser_snapshot` + screenshot) PRIMA di passare all'azione
+   successiva. Questo è ciò che permette di osservare animazioni, toast e validazione degli
+   input — comportamenti che spariscono o vengono saltati se input e submit avvengono
+   insieme. Vale per ogni form: digiti il valore → guardi cosa succede (errori di
+   validazione, stato del bottone, feedback inline) → solo allora premi Salva → guardi il
+   toast/animazione di conferma.
 
 ## Passo 0 — Parsing input
 
@@ -94,12 +104,46 @@ Apri `references/flows.md` e segui le aree comprese nello scope. Regole di esecu
   Fra i due giri fai `browser_resize` e ricarica la pagina.
 - Imposta la viewport con `browser_resize` (desktop `1440×900`, mobile `390×844`) **prima**
   di iniziare ogni giro.
+- **Passata "schermo molto piccolo" (stress responsive).** Oltre ai giri standard, ripeti
+  almeno le schermate/i flussi più densi (HeroScreen, equipaggiamento, modali di level-up,
+  form con molti campi) a una viewport **molto stretta**: `320×568` (small phone) e, come
+  caso limite, `280×600` (es. fold richiuso / device piccolissimi). Scopo: capire se i
+  componenti si adattano davvero o se servono modifiche mirate. Distingui sempre nel report
+  fra **(a)** un componente che si rompe a larghezze ragionevoli (≥320px) — finding reale da
+  fixare — e **(b)** un degrado solo a larghezze estreme/irrealistiche (<300px) — comportamento
+  al limite, da segnalare come 🟡 informativo, non bloccante. Annota la larghezza esatta a cui
+  il layout inizia a cedere (breakpoint di rottura).
 - **Fixture via UI**: se lo scope è "tutti i flussi", il primo passo è creare il personaggio
   di test **attraverso l'interfaccia** (flusso `character-create` in flows.md) — la creazione
   è essa stessa un test, e il char creato alimenta tutti i flussi successivi. Se lo scope è
   un singolo flusso, usa un char_id esistente passato dall'utente, oppure creane uno minimale
   via UI per avere su cosa lavorare.
 - Gli URL usano HashRouter: `http://localhost:5173/#/<route>` (es. `#/char/12/hp`).
+- **Stress di contenuto (dati estremi).** Lo stress di viewport non basta: i layout cedono
+  anche per contenuto. Almeno una volta per le schermate dense, popola/scegli dati al limite:
+  nome personaggio molto lungo (e con caratteri accentati/emoji), lista incantesimi piena,
+  molte condizioni attive insieme, statistiche a 3 cifre, HP 0/negativi, inventario lungo
+  vs vuoto. Cerca troncamenti senza ellissi, a-capo brutti, overflow, card deformate. È il
+  complemento della passata "schermo molto piccolo".
+- **Copertura degli stati (empty / loading / error / popolato).** Per ogni area testa
+  deliberatamente più stati, non solo quello "felice": stato **vuoto** (inventario/incantesimi
+  senza dati → c'è un empty-state curato o un buco?), stato di **caricamento** (lo skeleton
+  appare e poi sparisce davvero?), stato di **errore** (cosa mostra la UI se l'API fallisce a
+  metà flusso — simulalo con `browser_network_request`/route abort o con un id inesistente —
+  messaggio d'errore leggibile? retry? schermata bianca?), e stato **popolato**. Empty-state
+  mancanti/brutti e errori non gestiti sono findings reali.
+- **i18n (it/en).** Ripeti almeno le schermate dense cambiando lingua (it ↔ en). Le stringhe
+  inglesi/italiane hanno lunghezze diverse: cerca overflow, troncamenti, a-capo o bottoni che
+  cambiano dimensione solo in una delle due lingue, e chiavi i18n non tradotte (testo grezzo
+  tipo `char.hp.title`). La lingua si forza da `localStorage`/store locale (`locale` nello
+  Zustand store) via `browser_evaluate`, poi ricarica.
+- **Routing e pulsante indietro.** Verifica la navigazione, non solo le singole pagine:
+  deep-link diretto a una route profonda (es. apri `#/char/:id/spells` da URL pulito →
+  carica senza crash?), **back del browser**/`browser_navigate_back` e il **BackButton di
+  Telegram** (`window.Telegram.WebApp.BackButton`) — tornano allo stato/scroll giusto o
+  perdono lo stato del carousel/modale? Chiudere un modale col back non deve uscire dalla
+  pagina; aprire un modale dovrebbe poter essere chiuso col back. Segnala route che vanno in
+  404/schermata bianca, redirect inattesi, e history "intrappolata".
 
 ### Ciclo per ogni pagina/stato (ripetilo ad ogni passo della matrice)
 
@@ -109,9 +153,32 @@ Apri `references/flows.md` e segui le aree comprese nello scope. Regole di esecu
 3. **Analizza lo screenshot** (sezione sotto) e annota i findings.
 4. `browser_console_messages` → ogni errore JS è un finding 🔴.
 5. `browser_network_requests` → ogni chiamata API fallita (4xx/5xx non attesa) è 🔴.
-6. Esegui le interazioni previste dal flusso (click, type, fill, drag per il carousel,
-   apri/chiudi modali) e ripeti screenshot+analisi sugli stati risultanti (es. dopo aver
-   applicato danno, dopo aver lanciato un incantesimo, con un modale aperto).
+6. Esegui le interazioni previste dal flusso **una alla volta, in modo incrementale**
+   (mai input + submit nello stesso colpo — vedi principio 5). Per ogni form/azione segui
+   questo sotto-ciclo:
+   1. **Digita/seleziona un solo valore** (`browser_type`, `browser_select_option`, ecc.).
+      NON cliccare ancora Salva/Conferma.
+   2. **Verifica lo stato intermedio**: `browser_evaluate` per leggere via JS il valore del
+      campo, eventuali messaggi di errore di validazione (`.error`, `aria-invalid`,
+      `[role=alert]`, testo helper), e lo stato `disabled` del bottone di submit; poi
+      `browser_snapshot` + screenshot. Annota come reagisce la validazione (input invalido →
+      errore mostrato? bottone disabilitato? bordo rosso? messaggio corretto?).
+   3. **Solo ora** esegui il submit (`browser_click` su Salva/Conferma).
+   4. **Cattura il feedback post-submit**: il toast spesso è effimero — usa
+      `browser_wait_for` sul testo del toast e scatta lo screenshot **mentre è visibile**,
+      poi un secondo screenshot dopo che è sparito per verificare la transizione di uscita.
+      Verifica via JS che lo stato sia stato persistito (valore aggiornato, modale chiuso).
+   Copri esplicitamente i **casi di validazione**: valore vuoto, fuori range, formato
+   sbagliato — ognuno è uno step a sé con la sua verifica. Lo stesso pattern vale per
+   drag del carousel, apertura/chiusura modali e ogni interazione con feedback animato.
+7. **Robustezza dell'interazione.** Dopo le azioni che modificano dati, verifica due cose:
+   - **Persistenza al reload**: ricarica la pagina (`browser_navigate` allo stesso URL o
+     reload) e controlla via JS/screenshot che il valore sia davvero persistito lato API,
+     non solo aggiornato in modo ottimistico nella UI (round-trip reale).
+   - **Race condition / doppio submit**: clicca il bottone di submit due volte in rapida
+     successione (o spamma un'azione) e osserva se compaiono toast duplicati, chiamate API
+     doppie (`browser_network_requests`), stati incoerenti o crash. Il bottone dovrebbe
+     disabilitarsi/debounce durante l'invio.
 
 ## Analisi visiva (il cuore della skill)
 
@@ -134,6 +201,58 @@ Per ogni screenshot full-page, ispeziona davvero l'immagine e cerca:
 
 Poi incrocia con `references/design-checklist.md` (Gold Leaf, Two Inks, Semantic Triad,
 Inscription, Tabular Numerics, No Gradient Text, Warm-Shadow, Halo-as-Signal).
+
+### Analisi delle animazioni e transizioni
+
+Le animazioni si valutano solo se le **catturi durante l'esecuzione**, non a regime — per
+questo l'interazione incrementale (principio 5) è indispensabile: agisci, poi scatta subito
+mentre la transizione è in corso. Per ogni interazione con feedback animato (toast, modali
+con framer-motion, transizioni del carousel, slot incantesimi, barre HP/XP, chip di stato):
+
+- **Cattura il movimento**: dopo aver innescato l'azione, scatta uno screenshot *durante* la
+  transizione (subito dopo il click) e uno a transizione conclusa. Per i toast effimeri,
+  cattura sia l'entrata (toast visibile) sia l'uscita.
+- **Cerca bug di rendering evidenti**: flash/flicker iniziale, elemento che "salta" alla
+  posizione finale senza interpolare (animazione no-op — sintomo classico del `domAnimation`
+  al posto di `domMax`, vedi `CLAUDE.md`/`main.tsx`), scatti o stutter, layout shift mentre
+  l'elemento entra/esce, doppio render, elemento che resta a metà transizione, z-index che
+  fa apparire l'animazione dietro altri elementi, transizione che parte da uno stato visivo
+  sbagliato.
+- **Toast**: appare e scompare con la sua animazione? non copre UI critica mentre è visibile?
+  l'uscita è fluida o sparisce di colpo? si accavallano se ne lanci più d'uno?
+- **Modali/carousel**: l'apertura/chiusura e lo snap del drag sono fluidi e finiscono nello
+  stato corretto, senza overshoot rotto o rimbalzi anomali?
+- **Verifica tecnica**: usa `browser_evaluate` per leggere classi/`style`/`transform` durante
+  la transizione e capire se l'animazione è davvero applicata; controlla `browser_console_messages`
+  per warning di framer-motion. Un'animazione che non parte affatto è un finding 🟠 (o 🔴 se
+  rompe l'usabilità).
+
+### Comportamento a schermo molto piccolo (adattività al limite)
+
+Restringendo progressivamente la viewport (vedi la passata di stress nel Passo 4), osserva
+come reagiscono i componenti e **identifica il breakpoint di rottura** — la larghezza esatta
+oltre la quale il layout cede. Riduci a step (`browser_resize` a 360 → 320 → 300 → 280px) e
+fra uno step e l'altro scatta screenshot full-page + `browser_snapshot`. Cerca:
+
+- **Overflow orizzontale**: comparsa di scroll-x, card/righe più larghe del viewport, numeri
+  o chip che spingono fuori il contenitore (usa `browser_evaluate` per leggere
+  `document.documentElement.scrollWidth > clientWidth`).
+- **Reflow vs rottura**: il contenuto va a capo in modo ordinato (grid che collassa a 1
+  colonna, label sopra al campo) oppure si accavalla/tronca/sovrappone? La paper-doll
+  dell'equipaggiamento e le statistiche affiancate sono i punti più fragili.
+- **Touch target che si rimpiccioliscono** sotto i 44×44 quando lo spazio si riduce.
+- **Testo che diventa illeggibile** o numeri tabellari che perdono l'allineamento.
+- **Modali**: continuano a starci dentro la larghezza, o i bottoni di azione escono/si
+  impilano male?
+
+**Classifica sempre il giudizio**, perché è la domanda dell'utente:
+
+- Rottura a larghezze **realistiche per il pubblico** (≥320px, device Telegram comuni) →
+  finding reale 🟠: il componente va modificato (proponi la fix: grid responsive, `min-width`
+  da rimuovere, `flex-wrap`, `clamp()` sul font, ecc.).
+- Degrado solo a larghezze **estreme/irrealistiche** (<300px) → 🟡 informativo: è un
+  comportamento al limite, non bloccante; segnala il breakpoint ma chiarisci che non
+  richiede intervento prioritario.
 
 **Scope accessibilità** (da `CLAUDE.md`): SEGNALA contrasto colore, touch target <44×44,
 testo troppo piccolo da leggere a distanza di braccio, focus da tastiera non visibile
