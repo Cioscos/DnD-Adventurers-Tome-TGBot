@@ -188,6 +188,15 @@ class Character(Base):
         cascade="all, delete-orphan",
         order_by="(Map.zone_name, Map.position, Map.id)",
     )
+    homebrew_rules: Mapped[List["HomebrewRule"]] = relationship(
+        back_populates="character", cascade="all, delete-orphan"
+    )
+    homebrew_resources: Mapped[List["HomebrewResource"]] = relationship(
+        "HomebrewResource",
+        primaryjoin="HomebrewResource.character_id == Character.id",
+        cascade="all, delete-orphan",
+        viewonly=False,
+    )
 
     @property
     def ac(self) -> int:
@@ -353,7 +362,10 @@ class Spell(Base):
 
 class SpellSlot(Base):
     __tablename__ = "spell_slots"
-    __table_args__ = (UniqueConstraint("character_id", "level"),)
+    # is_pact is part of the unique key so a Warlock multiclass can hold both a
+    # regular pool and a Pact Magic pool at the same spell level (RAW: the two
+    # pools are separate, with different recovery — pact recovers on a short rest).
+    __table_args__ = (UniqueConstraint("character_id", "level", "is_pact"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     character_id: Mapped[int] = mapped_column(
@@ -362,6 +374,8 @@ class SpellSlot(Base):
     level: Mapped[int] = mapped_column(Integer, nullable=False)
     total: Mapped[int] = mapped_column(Integer, default=0)
     used: Mapped[int] = mapped_column(Integer, default=0)
+    # True = Warlock Pact Magic slot (separate pool, short-rest recovery).
+    is_pact: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     character: Mapped["Character"] = relationship(back_populates="spell_slots")
 
@@ -612,3 +626,58 @@ class SessionMessage(Base):
     )
 
     session: Mapped["GameSession"] = relationship(back_populates="messages")
+
+
+# ---------------------------------------------------------------------------
+# Homebrew rules engine
+# ---------------------------------------------------------------------------
+
+class HomebrewRule(Base):
+    """A user-authored homebrew rule attached to a character.
+
+    The DSL field stores the full rule definition (subject, properties, tables,
+    passive_modifiers, triggers) as a JSON document. See spec
+    `docs/superpowers/specs/2026-05-27-homebrew-rules-engine-design.md`.
+    """
+    __tablename__ = "homebrew_rules"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    character_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("characters.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    dsl: Mapped[dict] = mapped_column(JSON, nullable=False)
+    version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    template_id: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    created_at: Mapped[str] = mapped_column(String(50), nullable=False)
+    updated_at: Mapped[str] = mapped_column(String(50), nullable=False)
+
+    character: Mapped["Character"] = relationship(back_populates="homebrew_rules")
+    resources: Mapped[List["HomebrewResource"]] = relationship(
+        back_populates="rule", cascade="all, delete-orphan"
+    )
+
+
+class HomebrewResource(Base):
+    """Runtime resource owned by a homebrew rule (e.g. Luck Points)."""
+    __tablename__ = "homebrew_resources"
+    __table_args__ = (UniqueConstraint("character_id", "key"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    rule_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("homebrew_rules.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    character_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("characters.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    key: Mapped[str] = mapped_column(String(60), nullable=False)
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    current: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    max: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    restoration_type: Mapped[str] = mapped_column(
+        Enum(RestorationType), default=RestorationType.NONE, nullable=False
+    )
+
+    rule: Mapped["HomebrewRule"] = relationship(back_populates="resources")

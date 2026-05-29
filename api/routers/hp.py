@@ -14,6 +14,7 @@ from sqlalchemy.orm import selectinload
 
 from api.auth import get_current_user
 from api.database import get_db
+from api.services.homebrew.dispatcher import dispatch
 from core.db.models import Character, CharacterHistory
 from api.schemas.character import CharacterFull
 from api.schemas.common import (
@@ -26,8 +27,9 @@ from api.schemas.common import (
     RestRequest,
 )
 from core.game.stats import total_base_hp
-from api.routers._helpers import effective_con_mod, roll_concentration_save
+from api.routers._helpers import collect_homebrew_notifications, effective_con_mod, roll_concentration_save
 from api.schemas.common import ConcentrationSaveResult
+from api.services.character_response import build_character_response
 
 
 class HitDiceSpendRequest(BaseModel):
@@ -103,6 +105,7 @@ async def update_hp(
 ) -> CharacterFull:
     char = await _get_owned_full(char_id, user_id, session)
     conc_result: ConcentrationSaveResult | None = None
+    notifications: list[dict] = []
 
     was_at_zero = char.current_hit_points == 0
 
@@ -126,12 +129,42 @@ async def update_hp(
         ):
             conc_result = roll_concentration_save(char, body.value, session)
 
+        # Emit homebrew events: damage_taken (always) + dropped_to_zero (when HP crossed 0)
+        firing = await dispatch(
+            session, char, "damage_taken",
+            {
+                "amount": body.value,
+                "was_critical_hit": body.was_critical_hit,
+                "current_hp_before": old,
+                "current_hp_after": char.current_hit_points,
+            },
+        )
+        notifications.extend(collect_homebrew_notifications(firing))
+        if old > 0 and char.current_hit_points == 0:
+            firing = await dispatch(
+                session, char, "dropped_to_zero",
+                {
+                    "damage_amount": body.value,
+                    "from_critical": body.was_critical_hit,
+                },
+            )
+            notifications.extend(collect_homebrew_notifications(firing))
+
     elif body.op == HPOp.HEAL:
         old = char.current_hit_points
         char.current_hit_points = min(char.hit_points, char.current_hit_points + body.value)
         _add_history(session, char.id, "hp_change",
                      f"Cura: +{body.value} HP ({old} → {char.current_hit_points})",
                      meta={"op": "HEAL"})
+        firing = await dispatch(
+            session, char, "hp_healed",
+            {
+                "amount": body.value,
+                "current_hp_before": old,
+                "current_hp_after": char.current_hit_points,
+            },
+        )
+        notifications.extend(collect_homebrew_notifications(firing))
 
     elif body.op == HPOp.SET_MAX:
         old = char.hit_points
@@ -160,9 +193,11 @@ async def update_hp(
             _add_history(session, char.id, "death_save",
                          "Tiri salvezza morte azzerati (HP risaliti sopra 0)")
 
-    result = CharacterFull.model_validate(char)
+    result = await build_character_response(session, char)
     if conc_result is not None:
         result.concentration_save = conc_result
+    if notifications:
+        result.homebrew_notifications = notifications
     return result
 
 
@@ -176,8 +211,9 @@ async def rest(
     body: RestRequest,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
-) -> Character:
+) -> CharacterFull:
     char = await _get_owned_full(char_id, user_id, session)
+    notifications: list[dict] = []
 
     if body.rest_type == "long":
         char.current_hit_points = char.hit_points
@@ -200,9 +236,16 @@ async def rest(
         char.death_saves = {"successes": 0, "failures": 0, "stable": False}
         _add_history(session, char.id, "rest", "Riposo lungo completato")
 
+        firing = await dispatch(session, char, "long_rest_taken", {})
+        notifications.extend(collect_homebrew_notifications(firing))
+
     elif body.rest_type == "short":
         # Break concentration
         char.concentrating_spell_id = None
+        # Warlock Pact Magic slots recover on a short rest (unlike regular slots).
+        for slot in char.spell_slots:
+            if slot.is_pact:
+                slot.used = 0
         healed = 0
         if body.hit_dice_used and body.hit_dice_used > 0:
             # Simple roll: average hit die value * count (frontend handles the roll display)
@@ -219,10 +262,16 @@ async def rest(
                     res.current = res.total
         _add_history(session, char.id, "rest",
                      f"Riposo breve completato (HP recuperati: {healed})")
+
+        firing = await dispatch(session, char, "short_rest_taken", {})
+        notifications.extend(collect_homebrew_notifications(firing))
     else:
         raise HTTPException(status_code=400, detail="rest_type must be 'long' or 'short'")
 
-    return char
+    result = await build_character_response(session, char)
+    if notifications:
+        result.homebrew_notifications = notifications
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -282,7 +331,7 @@ async def update_death_saves(
     body: DeathSaveUpdate,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
-) -> Character:
+) -> CharacterFull:
     char = await _get_owned_full(char_id, user_id, session)
     ds = dict(char.death_saves or {"successes": 0, "failures": 0, "stable": False})
 
@@ -313,7 +362,7 @@ async def update_death_saves(
         pass
 
     char.death_saves = ds
-    return char
+    return await build_character_response(session, char)
 
 
 # ---------------------------------------------------------------------------
@@ -390,7 +439,7 @@ async def recalc_hp(
     char_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
-) -> Character:
+) -> CharacterFull:
     """Recalculate hit_points from D&D 5e fixed formula.
 
     Computes total_base_hp using character's current classes (with first
@@ -417,4 +466,4 @@ async def recalc_hp(
 
     await session.commit()
     await session.refresh(char)
-    return CharacterFull.model_validate(char)
+    return await build_character_response(session, char)

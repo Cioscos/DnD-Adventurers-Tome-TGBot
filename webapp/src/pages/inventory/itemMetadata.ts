@@ -125,6 +125,22 @@ export function buildItemMetadata(form: ItemFormData): Record<string, unknown> |
   return meta
 }
 
+/**
+ * Build the full `item_metadata` object for a homebrew-property PATCH.
+ *
+ * The backend `PATCH /characters/{id}/items/{item_id}` REPLACES the whole
+ * `item_metadata` column (it does `setattr(item, "item_metadata", json.dumps(...))`),
+ * so we must always send the complete merged object — never a partial. We spread
+ * the item's current metadata and override the single `hb_<key>` entry.
+ */
+export function buildHomebrewMetadataPatch(
+  current: Record<string, unknown> | undefined,
+  propKey: string,
+  value: unknown,
+): Record<string, unknown> {
+  return { ...(current ?? {}), [`hb_${propKey}`]: value }
+}
+
 export function isItemFormValid(form: ItemFormData): boolean {
   if (!form.name.trim()) return false
   if (form.item_type === 'weapon' && !DAMAGE_DICE_RE.test(form.damage_dice.trim())) return false

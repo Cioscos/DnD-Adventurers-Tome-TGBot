@@ -11,6 +11,8 @@ from sqlalchemy.orm import selectinload
 
 from api.auth import get_current_user
 from api.database import get_db
+from api.routers._helpers import collect_homebrew_notifications
+from api.services.homebrew.dispatcher import dispatch
 from core.db.models import Ability, Character, CharacterClass
 from api.schemas.character import CharacterFull
 from api.schemas.common import AbilityCreate, AbilityRead, AbilityUpdate
@@ -72,17 +74,46 @@ async def update_ability(
     body: AbilityUpdate,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
-) -> Ability:
-    await _get_owned_full(char_id, user_id, session)
+) -> AbilityRead:
+    char = await _get_owned_full(char_id, user_id, session)
     result = await session.execute(
         select(Ability).where(Ability.id == ability_id, Ability.character_id == char_id)
     )
     ability = result.scalar_one_or_none()
     if ability is None:
         raise HTTPException(status_code=404, detail="Ability not found")
+
+    old_uses = ability.uses
     for field, value in body.model_dump(exclude_unset=True).items():
         setattr(ability, field, value)
-    return ability
+    await session.flush()
+
+    notifications: list[dict] = []
+    # Only dispatch when `uses` actually decreased — incrementing or restoring
+    # `uses` (e.g. after a rest) is not "using" the ability and must not fire
+    # ability_used. None-aware comparison: skip if either side is None.
+    if (
+        old_uses is not None
+        and ability.uses is not None
+        and ability.uses < old_uses
+    ):
+        firing = await dispatch(
+            session,
+            char,
+            "ability_used",
+            {
+                "ability_id": ability.id,
+                "ability_name": ability.name,
+                "uses_remaining": ability.uses,
+                "max_uses": ability.max_uses,
+            },
+        )
+        notifications = collect_homebrew_notifications(firing)
+
+    response = AbilityRead.model_validate(ability)
+    if notifications:
+        response.homebrew_notifications = notifications
+    return response
 
 
 @router.delete("/{char_id}/abilities/{ability_id}", status_code=204)

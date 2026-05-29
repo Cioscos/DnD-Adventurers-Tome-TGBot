@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, Fragment } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -19,6 +19,7 @@ import { useDiceSettings } from '@/store/diceSettings'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { useToast } from '@/hooks/useToast'
 import { profBonus } from '@/lib/dnd'
+import HomebrewBreakdownRow from '@/components/homebrew/HomebrewBreakdownRow'
 
 const ABILITIES = ['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'] as const
 
@@ -139,7 +140,7 @@ export default function SavingThrows() {
           const isProficient = saves[ability] ?? false
           const score = char.ability_scores.find((s) => s.name === ability)
           const abilMod = score?.modifier ?? 0
-          const total = abilMod + (isProficient ? pb : 0)
+          const total = abilMod + (isProficient ? pb : 0) + (char.saves_homebrew_modifiers?.[ability] ?? 0)
           const tone = ABILITY_TONE[ability]
           const toneClass =
             tone === 'crimson' ? 'text-[var(--dnd-crimson-bright)]'
@@ -150,52 +151,58 @@ export default function SavingThrows() {
             : 'text-dnd-gold-bright'
 
           return (
-            <Reveal.Item key={ability}>
-              <Surface
-                variant={isProficient ? 'elevated' : 'flat'}
-                interactive
-                onClick={() => rollMutation.mutate(ability)}
-                className={`relative !p-2 cursor-pointer
-                  ${isProficient ? 'border-l-4 border-dnd-gold-bright border-dnd-gold/50 shadow-halo-gold' : ''}`}
-              >
-                <div className="flex items-center gap-3 min-h-[44px]">
-                  <m.button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      toggle(ability)
-                    }}
-                    className="w-11 h-11 flex items-center justify-center rounded-full shrink-0"
-                    whileTap={{ scale: 0.85 }}
-                    aria-label="Proficiency"
-                  >
-                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors
-                      ${isProficient
-                        ? 'bg-dnd-gold border-dnd-gold-bright shadow-[0_0_6px_var(--dnd-gold-glow)]'
-                        : 'border-dnd-border'}`}>
-                      {isProficient && <Check size={12} className="text-dnd-ink" strokeWidth={3} />}
-                    </div>
-                  </m.button>
-
-                  <div className="flex-1 min-w-0">
-                    <p
-                      className="text-xs font-cinzel uppercase tracking-[0.18em] text-dnd-text leading-tight"
-                      title={t(`character.stats.${ability}`)}
+            <Fragment key={ability}>
+              <Reveal.Item>
+                <Surface
+                  variant={isProficient ? 'elevated' : 'flat'}
+                  interactive
+                  onClick={() => rollMutation.mutate(ability)}
+                  className={`relative !p-2 cursor-pointer
+                    ${isProficient ? 'border-l-4 border-dnd-gold-bright border-dnd-gold/50 shadow-halo-gold' : ''}`}
+                >
+                  <div className="flex items-center gap-3 min-h-[44px]">
+                    <m.button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        toggle(ability)
+                      }}
+                      className="w-11 h-11 flex items-center justify-center rounded-full shrink-0"
+                      whileTap={{ scale: 0.85 }}
+                      aria-label="Proficiency"
                     >
-                      {t(`character.stats.${ability}`)}
-                    </p>
-                    <p className="text-[10px] text-dnd-text-faint font-mono leading-tight mt-0.5">
-                      {abilMod >= 0 ? '+' : ''}{abilMod}
-                      {isProficient ? ` +${pb} ${t('character.saves.ts_short')}` : ''}
-                    </p>
-                  </div>
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors
+                        ${isProficient
+                          ? 'bg-dnd-gold border-dnd-gold-bright shadow-[0_0_6px_var(--dnd-gold-glow)]'
+                          : 'border-dnd-border'}`}>
+                        {isProficient && <Check size={12} className="text-dnd-ink" strokeWidth={3} />}
+                      </div>
+                    </m.button>
 
-                  <p className={`text-3xl font-display font-black leading-none tabular-nums ${toneClass}`}>
-                    {total >= 0 ? '+' : ''}{total}
-                  </p>
-                  <DiceIcon sides={20} size={24} className="text-dnd-gold/80 shrink-0" />
-                </div>
-              </Surface>
-            </Reveal.Item>
+                    <div className="flex-1 min-w-0">
+                      <p
+                        className="text-xs font-cinzel uppercase tracking-[0.18em] text-dnd-text leading-tight"
+                        title={t(`character.stats.${ability}`)}
+                      >
+                        {t(`character.stats.${ability}`)}
+                      </p>
+                      <p className="text-[10px] text-dnd-text-faint font-mono leading-tight mt-0.5">
+                        {abilMod >= 0 ? '+' : ''}{abilMod}
+                        {isProficient ? ` +${pb} ${t('character.saves.ts_short')}` : ''}
+                      </p>
+                    </div>
+
+                    <p className={`text-3xl font-display font-black leading-none tabular-nums ${toneClass}`}>
+                      {total >= 0 ? '+' : ''}{total}
+                    </p>
+                    <DiceIcon sides={20} size={24} className="text-dnd-gold/80 shrink-0" />
+                  </div>
+                </Surface>
+              </Reveal.Item>
+              <HomebrewBreakdownRow
+                value={char.saves_homebrew_modifiers?.[ability] ?? 0}
+                label={t('character.saves.homebrew_label')}
+              />
+            </Fragment>
           )
         })}
       </Reveal.Stagger>

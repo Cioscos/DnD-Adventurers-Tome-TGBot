@@ -36,6 +36,9 @@ def _set_sqlite_pragma(dbapi_connection, _connection_record) -> None:
 # Schema migration helpers
 # ---------------------------------------------------------------------------
 
+# NOTE: ALTER TABLE ADD COLUMN only. New tables are auto-created by
+# Base.metadata.create_all from the ORM models — no entry here is needed.
+
 # Columns to ensure on existing tables: (table, column, DDL type, default)
 _MIGRATIONS: list[tuple[str, str, str, str | None]] = [
     # Spell extended properties
@@ -121,8 +124,52 @@ _DROP_COLUMNS: list[tuple[str, str]] = [
 ]
 
 
+def _rebuild_spell_slots_for_pact(connection) -> None:
+    """Add ``is_pact`` to spell_slots and widen its UNIQUE key (idempotent).
+
+    The original table carried ``UNIQUE(character_id, level)``, which is part
+    of the CREATE TABLE statement — SQLite cannot drop it via ALTER TABLE, so
+    a full table rebuild is required to relax it to
+    ``UNIQUE(character_id, level, is_pact)``. Detected by the absence of the
+    ``is_pact`` column; once rebuilt the function is a no-op. Fresh databases
+    get the new shape directly from ``create_all`` and skip this entirely.
+
+    No other table references spell_slots, so dropping it is safe even with
+    foreign-key enforcement on (PRAGMA toggles are no-ops inside a transaction
+    anyway).
+    """
+    inspector = sa_inspect(connection)
+    if "spell_slots" not in inspector.get_table_names():
+        return  # create_all will build it fresh with the new schema
+    cols = {c["name"] for c in inspector.get_columns("spell_slots")}
+    if "is_pact" in cols:
+        return  # already migrated
+
+    logger.info("Rebuilding spell_slots to add is_pact + UNIQUE(character_id, level, is_pact)")
+    connection.execute(text(
+        "CREATE TABLE spell_slots_new ("
+        " id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,"
+        " character_id INTEGER NOT NULL,"
+        " level INTEGER NOT NULL,"
+        " total INTEGER NOT NULL DEFAULT 0,"
+        " used INTEGER NOT NULL DEFAULT 0,"
+        " is_pact BOOLEAN NOT NULL DEFAULT 0,"
+        " UNIQUE (character_id, level, is_pact),"
+        " FOREIGN KEY(character_id) REFERENCES characters(id) ON DELETE CASCADE"
+        ")"
+    ))
+    connection.execute(text(
+        "INSERT INTO spell_slots_new (id, character_id, level, total, used, is_pact) "
+        "SELECT id, character_id, level, total, used, 0 FROM spell_slots"
+    ))
+    connection.execute(text("DROP TABLE spell_slots"))
+    connection.execute(text("ALTER TABLE spell_slots_new RENAME TO spell_slots"))
+
+
 def _migrate_schema(connection) -> None:
     """Add missing columns, drop legacy columns/tables (idempotent)."""
+    _rebuild_spell_slots_for_pact(connection)
+
     inspector = sa_inspect(connection)
     existing_tables = set(inspector.get_table_names())
     column_cache: dict[str, set[str]] = {}

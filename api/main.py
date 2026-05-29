@@ -30,6 +30,7 @@ from api.routers import (
     currency,
     dice,
     history,
+    homebrew,
     hp,
     items,
     maps,
@@ -128,3 +129,4 @@ app.include_router(maps.router)
 app.include_router(dice.router)
 app.include_router(history.router)
 app.include_router(sessions.router)
+app.include_router(homebrew.router)

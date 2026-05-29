@@ -54,3 +54,12 @@ api/__pycache__/
 
 # Webapp audit reports (local reference, regenerated per session)
 docs/webapp-audit/
+
+# Homebrew audit reports, FE audit, recipes, and planning/spec docs (local reference, not versioned)
+docs/homebrew-audit/
+docs/homebrew-fe-audit/
+docs/homebrew-recipes.md
+docs/superpowers/
+
+# Playwright MCP session artifacts (snapshots, console logs)
+.playwright-mcp/

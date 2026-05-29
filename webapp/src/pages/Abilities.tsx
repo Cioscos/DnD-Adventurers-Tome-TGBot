@@ -10,12 +10,15 @@ import Layout from '@/components/Layout'
 import Sheet from '@/components/ui/Sheet'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
+import Surface from '@/components/ui/Surface'
 import ScrollArea from '@/components/ScrollArea'
 import StatPill from '@/components/ui/StatPill'
 import EmptyState from '@/components/ui/EmptyState'
+import CustomResourceCounter from '@/components/homebrew/CustomResourceCounter'
 import { haptic } from '@/auth/telegram'
 import { spring } from '@/styles/motion'
 import type { Ability } from '@/types'
+import type { HomebrewResource } from '@/lib/homebrew/types'
 
 type AddForm = { name: string; description: string; max_uses: string; is_passive: boolean; restoration_type: string }
 const emptyForm: AddForm = { name: '', description: '', max_uses: '', is_passive: false, restoration_type: 'long_rest' }
@@ -68,6 +71,27 @@ export default function Abilities() {
   const { data: char } = useQuery({
     queryKey: ['character', charId],
     queryFn: () => api.characters.get(charId),
+  })
+
+  // Homebrew resources spawned by ResourceDef entries in installed rules.
+  // Cache key is shared across the app (e.g. Conditions page may surface the
+  // same resources for "depleted" CTAs later) so we don't refetch redundantly.
+  const { data: resources } = useQuery({
+    queryKey: ['homebrew-resources', charId],
+    queryFn: () => api.homebrew.listResources(charId),
+  })
+
+  // +/- and restore all funnel through PATCH /resources/{id} (server clamps).
+  // Optimistic-ish: we splice the returned row into the cached list rather
+  // than invalidating, so the counter updates without a flicker.
+  const resourceMutation = useMutation({
+    mutationFn: ({ resourceId, current }: { resourceId: number; current: number }) =>
+      api.homebrew.patchResource(charId, resourceId, current),
+    onSuccess: (updated) => {
+      qc.setQueryData<HomebrewResource[]>(['homebrew-resources', charId], (prev) =>
+        (prev ?? []).map((r) => (r.id === updated.id ? updated : r)),
+      )
+    },
   })
 
   const addMutation = useMutation({
@@ -324,6 +348,38 @@ export default function Abilities() {
           })}
         </div>
       </ScrollArea>
+
+      {resources && resources.length > 0 && (
+        <Surface variant="elevated" className="mt-3">
+          <h3 className="font-cinzel uppercase tracking-widest text-xs text-dnd-gold-bright mb-3">
+            {t('character.homebrew.resources.section_title')}
+          </h3>
+          <div className="space-y-2">
+            {resources.map((r) => (
+              <CustomResourceCounter
+                key={r.id}
+                resource={r}
+                onDecrement={() =>
+                  resourceMutation.mutate({
+                    resourceId: r.id,
+                    current: Math.max(0, r.current - 1),
+                  })
+                }
+                onIncrement={() =>
+                  resourceMutation.mutate({
+                    resourceId: r.id,
+                    current: Math.min(r.max, r.current + 1),
+                  })
+                }
+                onRestore={() =>
+                  resourceMutation.mutate({ resourceId: r.id, current: r.max })
+                }
+                isPending={resourceMutation.isPending}
+              />
+            ))}
+          </div>
+        </Surface>
+      )}
 
       {/* Add/Edit Sheet — 2-step wizard */}
       <Sheet

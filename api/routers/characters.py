@@ -40,8 +40,10 @@ from api.schemas.character import (
     XPUpdate,
 )
 from api.schemas.common import D20RollSubmission, RollResult
-from api.routers.classes import create_class_for_character, _get_owned_full
+from api.routers.classes import create_class_for_character
 from api.routers._helpers import prune_history
+from api.services.character_response import build_character_response
+from api.services.spell_slots import recalc_spell_slots
 
 router = APIRouter(prefix="/characters", tags=["characters"])
 
@@ -124,6 +126,37 @@ async def _get_owned(
     return char
 
 
+async def _refresh_char_full(
+    session: AsyncSession, char_id: int, user_id: int
+) -> Character:
+    """Flush pending mutations, then re-SELECT a fully-loaded character.
+
+    Use this in PATCH endpoints that mutate ``char.*`` and return
+    ``CharacterFull`` via FastAPI's ``response_model``. A bare
+    ``session.refresh(char, attribute_names=[...])`` is insufficient: it
+    re-runs each relation's *default* loader strategy (lazy="select") and
+    strips the nested ``selectinload`` chains set up by ``_full_load()`` —
+    notably ``classes.resources``. Pydantic serialization of the nested
+    ``CharacterClassRead.resources`` list field then either triggers
+    ``MissingGreenlet`` (lazy-load in sync context) or silently returns an
+    empty list — in either case, newly-added ``ClassResource`` rows from the
+    same transaction never appear in the response body.
+
+    The reliable fix is to ``session.expunge_all()`` (autoflush may have
+    pulled related objects into the identity map; ``expunge(char)`` alone
+    isn't enough) and then re-issue the full eager-load query. This matches
+    the pattern already used by ``create_character`` after the
+    ``initial_class`` branch.
+
+    Caller pattern: replace ``await session.refresh(char, attribute_names=[
+    "classes", ...]); return char`` with ``return await _refresh_char_full(
+    session, char.id, user_id)``.
+    """
+    await session.flush()
+    session.expunge_all()
+    return await _get_owned(char_id, user_id, session, full=True)
+
+
 # ---------------------------------------------------------------------------
 # List
 # ---------------------------------------------------------------------------
@@ -151,23 +184,20 @@ async def create_character(
     body: CharacterCreate,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
-) -> Character:
+) -> CharacterFull:
     char = Character(user_id=user_id, name=body.name, hit_points=0, current_hit_points=0)
+    # Populate ability scores + currency via the relationships (not raw
+    # character_id FKs) so the in-memory collections are loaded before the
+    # flush. This lets create_class_for_character read char.ability_scores
+    # for the CON/HP bootstrap without triggering a lazy-load in the async
+    # (sync-attribute) context — which would raise MissingGreenlet. The
+    # cascade="all, delete-orphan" on both relationships persists them.
+    char.ability_scores = [
+        AbilityScore(name=ability, value=10) for ability in ABILITY_NAMES
+    ]
+    char.currency = Currency()
     session.add(char)
-    await session.flush()  # assign id
-
-    # Initialize ability scores at 10
-    for ability in ABILITY_NAMES:
-        session.add(AbilityScore(character_id=char.id, name=ability, value=10))
-
-    # Initialize currency row
-    session.add(Currency(character_id=char.id))
-
-    await session.flush()
-    await session.refresh(char, attribute_names=[
-        "classes", "ability_scores", "spells", "spell_slots",
-        "items", "currency", "abilities", "maps",
-    ])
+    await session.flush()  # assign id (cascades ability_scores + currency)
 
     # Optional atomic initial class. The whole request runs inside one
     # transaction (api.database.get_db middleware) — any exception here
@@ -176,19 +206,14 @@ async def create_character(
         await create_class_for_character(
             char, body.initial_class, session, is_first_class=True,
         )
-        await session.flush()
-        # Re-fetch with selectinload so `classes.resources` (and the other
-        # relations) are eagerly loaded for response serialization. A bare
-        # `session.refresh(char, attribute_names=["classes"])` leaves
-        # `cls.resources` unloaded and triggers MissingGreenlet during
-        # Pydantic serialization. We expunge the in-memory `char` first so
-        # the subsequent SELECT issues a fresh load (rather than returning
-        # the cached object with empty `classes`).
-        char_id = char.id
-        session.expunge(char)
-        return await _get_owned_full(char_id, user_id, session)
 
-    return char
+    # Re-fetch with selectinload so all relations (notably `classes.resources`)
+    # are eagerly loaded for response serialization. See _refresh_char_full for
+    # the full rationale.
+    char = await _refresh_char_full(session, char.id, user_id)
+    # Seed spell slots for a caster initial class (automatic mode is the default).
+    await recalc_spell_slots(session, char)
+    return await build_character_response(session, char)
 
 
 # ---------------------------------------------------------------------------
@@ -200,8 +225,9 @@ async def get_character(
     char_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
-) -> Character:
-    return await _get_owned(char_id, user_id, session, full=True)
+) -> CharacterFull:
+    char = await _get_owned(char_id, user_id, session, full=True)
+    return await build_character_response(session, char)
 
 
 # ---------------------------------------------------------------------------
@@ -214,11 +240,18 @@ async def update_character(
     body: CharacterUpdate,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
-) -> Character:
+) -> CharacterFull:
     char = await _get_owned(char_id, user_id, session, full=True)
     for field, value in body.model_dump(exclude_unset=True).items():
         setattr(char, field, value)
-    return char
+    # Flush + re-SELECT so CharacterFull serialization sees a non-expired row
+    # AND nested eager-loads (classes.resources) survive. See
+    # _refresh_char_full() for the full rationale.
+    char = await _refresh_char_full(session, char_id, user_id)
+    # Re-derive spell slots when automatic mode is active (e.g. the user just
+    # switched manual → automatic, or edited a class through this endpoint).
+    await recalc_spell_slots(session, char)
+    return await build_character_response(session, char)
 
 
 # ---------------------------------------------------------------------------
@@ -264,12 +297,14 @@ async def update_skills(
     body: SkillsUpdate,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
-) -> Character:
+) -> CharacterFull:
     char = await _get_owned(char_id, user_id, session, full=True)
     current = dict(char.skills or {})
     current.update(body.skills)
     char.skills = current
-    return char
+    # See _refresh_char_full() for why expunge + re-SELECT is required here.
+    char = await _refresh_char_full(session, char_id, user_id)
+    return await build_character_response(session, char)
 
 
 # ---------------------------------------------------------------------------
@@ -282,12 +317,14 @@ async def update_saving_throws(
     body: SavingThrowsUpdate,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
-) -> Character:
+) -> CharacterFull:
     char = await _get_owned(char_id, user_id, session, full=True)
     current = dict(char.saving_throws or {})
     current.update(body.saving_throws)
     char.saving_throws = current
-    return char
+    # See _refresh_char_full() for why expunge + re-SELECT is required here.
+    char = await _refresh_char_full(session, char_id, user_id)
+    return await build_character_response(session, char)
 
 
 # ---------------------------------------------------------------------------
@@ -300,7 +337,7 @@ async def update_conditions(
     body: ConditionsUpdate,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
-) -> Character:
+) -> CharacterFull:
     char = await _get_owned(char_id, user_id, session, full=True)
     old_conditions = dict(char.conditions or {})
     current = dict(old_conditions)
@@ -333,7 +370,12 @@ async def update_conditions(
     if changed:
         await prune_history(session, char)
 
-    return char
+    # See _refresh_char_full() for why expunge + re-SELECT is required here.
+    # The CharacterHistory side-effect rows added above are exactly the kind
+    # of mutation that triggers autoflush → column expiration during response
+    # serialization.
+    char = await _refresh_char_full(session, char_id, user_id)
+    return await build_character_response(session, char)
 
 
 # ---------------------------------------------------------------------------
@@ -346,10 +388,12 @@ async def update_inspiration(
     body: InspirationUpdate,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
-) -> Character:
+) -> CharacterFull:
     char = await _get_owned(char_id, user_id, session, full=True)
     char.heroic_inspiration = body.heroic_inspiration
-    return char
+    # See _refresh_char_full() for why expunge + re-SELECT is required here.
+    char = await _refresh_char_full(session, char_id, user_id)
+    return await build_character_response(session, char)
 
 
 # ---------------------------------------------------------------------------
@@ -400,7 +444,19 @@ async def update_xp(
         char.hit_points += total_hp_gained
         char.current_hit_points += total_hp_gained
 
-    result = CharacterFull.model_validate(char)
+    # Re-SELECT so model_validate sees non-expired columns AND the freshly
+    # inserted ClassResource rows are loaded via the nested selectinload
+    # chain. See _refresh_char_full() for the full rationale — a bare
+    # session.refresh(attribute_names=["classes", ...]) would re-run the
+    # default loader for `classes` and drop the nested `resources` eager-load,
+    # leaving the new ClassResource rows invisible in the response body.
+    fresh = await _refresh_char_full(session, char_id, user_id)
+
+    # Single-class level may have changed above; re-derive spell slots when
+    # automatic mode is active so the XP-driven level-up grows the slots.
+    await recalc_spell_slots(session, fresh)
+
+    result = await build_character_response(session, fresh)
     if total_hp_gained > 0:
         result.hp_gained = total_hp_gained
     return result

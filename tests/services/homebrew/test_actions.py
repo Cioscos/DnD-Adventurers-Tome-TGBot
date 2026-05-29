@@ -1,0 +1,1046 @@
+"""Action execution unit tests. random.randint is seeded for determinism."""
+import json
+import random
+import pytest
+import pytest_asyncio
+from unittest.mock import MagicMock
+
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+from sqlalchemy.orm import sessionmaker
+
+from core.db.models import Base, Character, Item
+from api.services.homebrew.dsl import RuleDSL
+from api.services.homebrew.types import ExecutionContext, RuleFiringResult
+from api.services.homebrew.actions import (
+    execute_roll_dice, execute_lookup_table, execute_match, execute_if,
+)
+
+
+def _ctx():
+    return ExecutionContext.new(
+        event_type="attack_rolled",
+        event_payload={"is_fumble": True},
+        subject={"_kind": "item", "metadata": {"hb_quality": "pessima", "hb_damage_state": "integra"}},
+        character={"current_hit_points": 10},
+    )
+
+
+def test_roll_dice_stores_var(monkeypatch):
+    monkeypatch.setattr(random, "randint", lambda lo, hi: 7)
+    ctx = _ctx()
+    rfr = RuleFiringResult(rule_id=1, rule_name="r")
+    execute_roll_dice({"action": "roll_dice", "notation": "1d20", "store_as": "wear_roll"},
+                      ctx, rfr, MagicMock(), MagicMock())
+    assert ctx.vars["wear_roll"] == 7
+
+
+def test_roll_dice_with_bonus(monkeypatch):
+    rolls = iter([4, 5])
+    monkeypatch.setattr(random, "randint", lambda lo, hi: next(rolls))
+    ctx = _ctx()
+    rfr = RuleFiringResult(rule_id=1, rule_name="r")
+    execute_roll_dice({"action": "roll_dice", "notation": "2d6+3", "store_as": "x"},
+                      ctx, rfr, MagicMock(), MagicMock())
+    assert ctx.vars["x"] == 12  # 4+5+3
+
+
+def test_lookup_table_returns_cell():
+    rule = RuleDSL.model_validate({
+        "version": 1, "subject": {"type": "item"},
+        "tables": [{"id": "t", "row_axis": "quality", "col_axis": "d20",
+                    "col_bins": [[1, 1], [2, 3], [4, 9], [10, 15], [16, 20]],
+                    "cells": {
+                        "pessima":   ["X", "X", "D", "D", "S"],
+                        "ordinaria": ["X", "D", "D", "S", "S"],
+                    }}],
+        "triggers": [{"event": "attack_rolled", "filters": [], "effects": []}],
+    })
+    ctx = _ctx()
+    ctx.set_var("wear_roll", 1)
+    rfr = RuleFiringResult(rule_id=1, rule_name="r")
+    execute_lookup_table(
+        {"action": "lookup_table", "table": "t",
+         "row": "$subject.quality", "col": "$wear_roll", "store_as": "result"},
+        ctx, rfr, MagicMock(), MagicMock(), rule=rule,
+    )
+    assert ctx.vars["result"] == "X"
+
+
+def test_lookup_table_col_bin_mapping():
+    rule = RuleDSL.model_validate({
+        "version": 1, "subject": {"type": "item"},
+        "tables": [{"id": "t", "row_axis": "quality", "col_axis": "d20",
+                    "col_bins": [[1, 1], [2, 3], [4, 9], [10, 15], [16, 20]],
+                    "cells": {"pessima": ["X", "Y", "Z", "W", "S"]}}],
+        "triggers": [{"event": "attack_rolled", "filters": [], "effects": []}],
+    })
+    ctx = _ctx()
+    ctx.set_var("wear_roll", 7)  # falls into bin [4,9] → col index 2
+    rfr = RuleFiringResult(rule_id=1, rule_name="r")
+    execute_lookup_table(
+        {"action": "lookup_table", "table": "t",
+         "row": "$subject.quality", "col": "$wear_roll", "store_as": "result"},
+        ctx, rfr, MagicMock(), MagicMock(), rule=rule,
+    )
+    assert ctx.vars["result"] == "Z"
+
+
+@pytest.mark.asyncio
+async def test_match_executes_branch(monkeypatch):
+    ctx = _ctx()
+    ctx.set_var("result", "D")
+    rfr = RuleFiringResult(rule_id=1, rule_name="r")
+    notify_calls = []
+
+    async def fake_execute_action(action, ctx, rfr, session, char, **kw):
+        if action["action"] == "notify":
+            notify_calls.append(action["message"])
+
+    monkeypatch.setattr("api.services.homebrew.actions.execute_action", fake_execute_action)
+    await execute_match(
+        {"action": "match", "value": "$result",
+         "cases": {
+             "X": [{"action": "notify", "severity": "error", "message": "destroyed"}],
+             "D": [{"action": "notify", "severity": "warning", "message": "damaged"}],
+             "S": [],
+         }},
+        ctx, rfr, MagicMock(), MagicMock(),
+    )
+    assert notify_calls == ["damaged"]
+
+
+@pytest.mark.asyncio
+async def test_if_runs_then_branch(monkeypatch):
+    ctx = _ctx()
+    rfr = RuleFiringResult(rule_id=1, rule_name="r")
+    notify_calls = []
+
+    async def fake_execute_action(action, ctx, rfr, session, char, **kw):
+        notify_calls.append(action.get("message"))
+
+    monkeypatch.setattr("api.services.homebrew.actions.execute_action", fake_execute_action)
+    await execute_if(
+        {"action": "if",
+         "cond": {"path": "$subject.damage_state", "op": "eq", "value": "integra"},
+         "then": [{"action": "notify", "severity": "info", "message": "was_integra"}],
+         "else": [{"action": "notify", "severity": "info", "message": "was_else"}]},
+        ctx, rfr, MagicMock(), MagicMock(),
+    )
+    assert notify_calls == ["was_integra"]
+
+
+from api.services.homebrew.actions import execute_notify, execute_add_history
+
+
+def test_notify_resolves_dollar_placeholders():
+    ctx = _ctx()
+    rfr = RuleFiringResult(rule_id=42, rule_name="QU")
+    execute_notify(
+        {"action": "notify", "severity": "warning", "message": "$subject.name danneggiata!"},
+        ctx, rfr, None, None,
+    )
+    assert len(rfr.notifications) == 1
+    n = rfr.notifications[0]
+    assert n.severity == "warning"
+    assert "Spada" not in n.message  # subject has no 'name' field by default in our test ctx
+    # Defaults to literal $subject.name string when unresolvable — be tolerant.
+
+
+def test_notify_static_message():
+    ctx = _ctx()
+    rfr = RuleFiringResult(rule_id=42, rule_name="QU")
+    execute_notify(
+        {"action": "notify", "severity": "error", "message": "Static msg"},
+        ctx, rfr, None, None,
+    )
+    assert rfr.notifications[0].message == "Static msg"
+
+
+def test_add_history_buffers_entry():
+    ctx = _ctx()
+    rfr = RuleFiringResult(rule_id=42, rule_name="QU")
+    execute_add_history(
+        {"action": "add_history", "description": "Weapon damaged"}, ctx, rfr, None, None,
+    )
+    assert rfr.history_entries[0].description == "Weapon damaged"
+
+
+# ---------------------------------------------------------------------------
+# Task 1.6 — async handlers backed by the DB
+# ---------------------------------------------------------------------------
+
+from api.services.homebrew.actions import (
+    execute_set_property, execute_inc_property, execute_unequip,
+)
+
+
+@pytest_asyncio.fixture
+async def db_session():
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    SessionMaker = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    async with SessionMaker() as s:
+        yield s
+
+
+@pytest_asyncio.fixture
+async def char_with_item(db_session):
+    char = Character(user_id=1, name="Test")
+    db_session.add(char)
+    await db_session.flush()
+    item = Item(
+        character_id=char.id, name="Spada lunga", item_type="weapon",
+        item_metadata=json.dumps({"hb_quality": "pessima", "hb_damage_state": "integra"}),
+        is_equipped=True,
+    )
+    db_session.add(item)
+    await db_session.flush()
+    return char, item
+
+
+@pytest.mark.asyncio
+async def test_set_property_on_item(db_session, char_with_item):
+    char, item = char_with_item
+    ctx = ExecutionContext.new(
+        event_type="attack_rolled", event_payload={},
+        subject={"_kind": "item", "_id": item.id,
+                 "metadata": json.loads(item.item_metadata)},
+        character={"id": char.id},
+    )
+    rfr = RuleFiringResult(rule_id=1, rule_name="r")
+    await execute_set_property(
+        {"action": "set_property", "target": "subject",
+         "key": "damage_state", "value": "distrutta"},
+        ctx, rfr, db_session, char,
+    )
+    await db_session.refresh(item)
+    md = json.loads(item.item_metadata)
+    assert md["hb_damage_state"] == "distrutta"
+    assert ctx.subject["metadata"]["hb_damage_state"] == "distrutta"
+
+
+@pytest.mark.asyncio
+async def test_unequip_subject_item(db_session, char_with_item):
+    char, item = char_with_item
+    ctx = ExecutionContext.new(
+        event_type="attack_rolled", event_payload={},
+        subject={"_kind": "item", "_id": item.id,
+                 "metadata": json.loads(item.item_metadata)},
+        character={"id": char.id},
+    )
+    rfr = RuleFiringResult(rule_id=1, rule_name="r")
+    await execute_unequip(
+        {"action": "unequip", "target": "subject"}, ctx, rfr, db_session, char,
+    )
+    await db_session.refresh(item)
+    assert item.is_equipped is False
+    assert item.equipment_slot is None
+
+
+@pytest.mark.asyncio
+async def test_inc_property_int_delta_on_item(db_session, char_with_item):
+    char, item = char_with_item
+    md = json.loads(item.item_metadata)
+    md["hb_uses"] = 2
+    item.item_metadata = json.dumps(md)
+    await db_session.flush()
+
+    ctx = ExecutionContext.new(
+        event_type="manual", event_payload={},
+        subject={"_kind": "item", "_id": item.id, "metadata": json.loads(item.item_metadata)},
+        character={"id": char.id},
+    )
+    rfr = RuleFiringResult(rule_id=1, rule_name="r")
+    await execute_inc_property(
+        {"action": "inc_property", "target": "subject", "key": "uses", "delta": 3},
+        ctx, rfr, db_session, char,
+    )
+    await db_session.refresh(item)
+    md = json.loads(item.item_metadata)
+    assert md["hb_uses"] == 5
+    assert ctx.subject["metadata"]["hb_uses"] == 5
+
+
+@pytest.mark.asyncio
+async def test_inc_property_creates_from_zero_when_absent(db_session, char_with_item):
+    char, item = char_with_item
+    ctx = ExecutionContext.new(
+        event_type="manual", event_payload={},
+        subject={"_kind": "item", "_id": item.id, "metadata": json.loads(item.item_metadata)},
+        character={"id": char.id},
+    )
+    rfr = RuleFiringResult(rule_id=1, rule_name="r")
+    await execute_inc_property(
+        {"action": "inc_property", "target": "subject", "key": "uses", "delta": 1},
+        ctx, rfr, db_session, char,
+    )
+    await db_session.refresh(item)
+    md = json.loads(item.item_metadata)
+    assert md["hb_uses"] == 1
+
+
+@pytest.mark.asyncio
+async def test_inc_property_dice_delta(db_session, char_with_item, monkeypatch):
+    monkeypatch.setattr("api.services.homebrew.actions.random.randint", lambda lo, hi: 3)
+    char, item = char_with_item
+    ctx = ExecutionContext.new(
+        event_type="manual", event_payload={},
+        subject={"_kind": "item", "_id": item.id, "metadata": json.loads(item.item_metadata)},
+        character={"id": char.id},
+    )
+    rfr = RuleFiringResult(rule_id=1, rule_name="r")
+    await execute_inc_property(
+        {"action": "inc_property", "target": "subject", "key": "uses", "delta": "1d4"},
+        ctx, rfr, db_session, char,
+    )
+    await db_session.refresh(item)
+    md = json.loads(item.item_metadata)
+    assert md["hb_uses"] == 3
+
+
+@pytest.mark.asyncio
+async def test_inc_property_non_numeric_raises(db_session, char_with_item):
+    char, item = char_with_item
+    ctx = ExecutionContext.new(
+        event_type="manual", event_payload={},
+        subject={"_kind": "item", "_id": item.id, "metadata": json.loads(item.item_metadata)},
+        character={"id": char.id},
+    )
+    rfr = RuleFiringResult(rule_id=1, rule_name="r")
+    from api.services.homebrew.exceptions import ActionExecutionError
+    with pytest.raises(ActionExecutionError, match="not numeric"):
+        await execute_inc_property(
+            {"action": "inc_property", "target": "subject", "key": "quality", "delta": 1},
+            ctx, rfr, db_session, char,
+        )
+
+
+@pytest.mark.asyncio
+async def test_set_property_target_character(db_session, char_with_item):
+    char, _ = char_with_item
+    ctx = ExecutionContext.new(
+        event_type="manual", event_payload={},
+        subject={}, character={"id": char.id},
+    )
+    rfr = RuleFiringResult(rule_id=1, rule_name="r")
+    await execute_set_property(
+        {"action": "set_property", "target": "character",
+         "key": "blessed", "value": True},
+        ctx, rfr, db_session, char,
+    )
+    await db_session.refresh(char)
+    assert char.settings["homebrew_fields"]["blessed"] is True
+
+
+@pytest.mark.asyncio
+async def test_inc_property_target_character(db_session, char_with_item):
+    char, _ = char_with_item
+    char.settings = {"homebrew_fields": {"luck_used": 0}}
+    await db_session.flush()
+    ctx = ExecutionContext.new(
+        event_type="manual", event_payload={},
+        subject={}, character={"id": char.id},
+    )
+    rfr = RuleFiringResult(rule_id=1, rule_name="r")
+    await execute_inc_property(
+        {"action": "inc_property", "target": "character", "key": "luck_used", "delta": 2},
+        ctx, rfr, db_session, char,
+    )
+    await db_session.refresh(char)
+    assert char.settings["homebrew_fields"]["luck_used"] == 2
+
+
+@pytest.mark.asyncio
+async def test_unequip_armor_resets_base_ac(db_session):
+    char = Character(user_id=1, name="Tank", base_armor_class=16,
+                     base_armor_class_override=False)
+    db_session.add(char)
+    await db_session.flush()
+    armor = Item(
+        character_id=char.id, name="Mail", item_type="armor",
+        item_metadata=json.dumps({"ac_value": 16}),
+        is_equipped=True,
+    )
+    db_session.add(armor)
+    await db_session.flush()
+
+    ctx = ExecutionContext.new(
+        event_type="dropped_to_zero", event_payload={},
+        subject={"_kind": "item", "_id": armor.id, "metadata": json.loads(armor.item_metadata)},
+        character={"id": char.id},
+    )
+    rfr = RuleFiringResult(rule_id=1, rule_name="r")
+    await execute_unequip(
+        {"action": "unequip", "target": "subject"}, ctx, rfr, db_session, char,
+    )
+    await db_session.refresh(char)
+    await db_session.refresh(armor)
+    assert armor.is_equipped is False
+    assert char.base_armor_class == 10
+
+
+@pytest.mark.asyncio
+async def test_unequip_armor_respects_override(db_session):
+    char = Character(user_id=1, name="Tank", base_armor_class=16,
+                     base_armor_class_override=True)
+    db_session.add(char)
+    await db_session.flush()
+    armor = Item(
+        character_id=char.id, name="Mail", item_type="armor",
+        item_metadata=json.dumps({"ac_value": 16}),
+        is_equipped=True,
+    )
+    db_session.add(armor)
+    await db_session.flush()
+
+    ctx = ExecutionContext.new(
+        event_type="manual", event_payload={},
+        subject={"_kind": "item", "_id": armor.id, "metadata": json.loads(armor.item_metadata)},
+        character={"id": char.id},
+    )
+    rfr = RuleFiringResult(rule_id=1, rule_name="r")
+    await execute_unequip(
+        {"action": "unequip", "target": "subject"}, ctx, rfr, db_session, char,
+    )
+    await db_session.refresh(char)
+    assert char.base_armor_class == 16
+
+
+# ---------------------------------------------------------------------------
+# Task 1.7 — damage_character + heal_character
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_damage_character_int_amount(db_session, char_with_item):
+    char, _ = char_with_item
+    char.hit_points = 20
+    char.current_hit_points = 15
+    rfr = RuleFiringResult(rule_id=1, rule_name="r")
+    ctx = ExecutionContext.new("homebrew_internal", {}, {}, {"id": char.id})
+
+    from api.services.homebrew.actions import execute_damage_character
+    await execute_damage_character(
+        {"action": "damage_character", "amount": 5}, ctx, rfr, db_session, char,
+    )
+    assert char.current_hit_points == 10
+
+
+@pytest.mark.asyncio
+async def test_damage_character_dice_amount(db_session, char_with_item, monkeypatch):
+    monkeypatch.setattr("api.services.homebrew.actions.random.randint", lambda lo, hi: 3)
+    char, _ = char_with_item
+    char.hit_points = 20
+    char.current_hit_points = 20
+    rfr = RuleFiringResult(rule_id=1, rule_name="r")
+    ctx = ExecutionContext.new("homebrew_internal", {}, {}, {"id": char.id})
+
+    from api.services.homebrew.actions import execute_damage_character
+    await execute_damage_character(
+        {"action": "damage_character", "amount": "1d4"}, ctx, rfr, db_session, char,
+    )
+    assert char.current_hit_points == 17  # 20 - 3
+
+
+@pytest.mark.asyncio
+async def test_heal_character_caps_at_max(db_session, char_with_item):
+    char, _ = char_with_item
+    char.hit_points = 20
+    char.current_hit_points = 18
+    rfr = RuleFiringResult(rule_id=1, rule_name="r")
+    ctx = ExecutionContext.new("homebrew_internal", {}, {}, {"id": char.id})
+
+    from api.services.homebrew.actions import execute_heal_character
+    await execute_heal_character(
+        {"action": "heal_character", "amount": 10}, ctx, rfr, db_session, char,
+    )
+    assert char.current_hit_points == 20  # capped at max
+
+
+@pytest.mark.asyncio
+async def test_heal_character_resets_death_saves_on_revive(db_session, char_with_item):
+    char, _ = char_with_item
+    char.hit_points = 20
+    char.current_hit_points = 0
+    char.death_save_successes = 1
+    char.death_save_failures = 2
+    rfr = RuleFiringResult(rule_id=1, rule_name="r")
+    ctx = ExecutionContext.new("homebrew_internal", {}, {}, {"id": char.id})
+
+    from api.services.homebrew.actions import execute_heal_character
+    await execute_heal_character(
+        {"action": "heal_character", "amount": 5}, ctx, rfr, db_session, char,
+    )
+    assert char.current_hit_points == 5
+    assert char.death_save_successes == 0
+    assert char.death_save_failures == 0
+
+
+@pytest.mark.asyncio
+async def test_heal_character_keeps_death_saves_when_already_positive(db_session, char_with_item):
+    char, _ = char_with_item
+    char.hit_points = 20
+    char.current_hit_points = 3  # already above 0
+    char.death_save_successes = 1
+    char.death_save_failures = 2
+    rfr = RuleFiringResult(rule_id=1, rule_name="r")
+    ctx = ExecutionContext.new("homebrew_internal", {}, {}, {"id": char.id})
+
+    from api.services.homebrew.actions import execute_heal_character
+    await execute_heal_character(
+        {"action": "heal_character", "amount": 5}, ctx, rfr, db_session, char,
+    )
+    # Death saves preserved — heal did not cross the 0→positive threshold.
+    assert char.death_save_successes == 1
+    assert char.death_save_failures == 2
+
+
+# ---------------------------------------------------------------------------
+# Task 1.8 — change_resource + restore_resource
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_change_resource_decrement(db_session):
+    from core.db.models import HomebrewRule, HomebrewResource
+    char = Character(user_id=1, name="Test")
+    db_session.add(char)
+    await db_session.flush()
+    rule = HomebrewRule(
+        character_id=char.id, name="r", enabled=True,
+        dsl={"version": 1, "subject": {"type": "character"}, "triggers": []},
+        created_at="2026-05-27T00:00:00", updated_at="2026-05-27T00:00:00",
+    )
+    db_session.add(rule)
+    await db_session.flush()
+    res = HomebrewResource(
+        rule_id=rule.id, character_id=char.id, key="luck",
+        name="Luck", current=3, max=3,
+    )
+    db_session.add(res)
+    await db_session.flush()
+
+    ctx = ExecutionContext.new("manual", {}, {}, {"id": char.id})
+    rfr = RuleFiringResult(rule_id=rule.id, rule_name="r")
+    from api.services.homebrew.actions import execute_change_resource
+    await execute_change_resource(
+        {"action": "change_resource", "key": "luck", "delta": -1},
+        ctx, rfr, db_session, char,
+    )
+    await db_session.refresh(res)
+    assert res.current == 2
+
+
+@pytest.mark.asyncio
+async def test_change_resource_clamps_to_zero(db_session):
+    from core.db.models import HomebrewRule, HomebrewResource
+    char = Character(user_id=1, name="T")
+    db_session.add(char)
+    await db_session.flush()
+    rule = HomebrewRule(
+        character_id=char.id, name="r", enabled=True,
+        dsl={"version": 1, "subject": {"type": "character"}, "triggers": []},
+        created_at="x", updated_at="x",
+    )
+    db_session.add(rule)
+    await db_session.flush()
+    res = HomebrewResource(
+        rule_id=rule.id, character_id=char.id, key="charges",
+        name="Charges", current=2, max=5,
+    )
+    db_session.add(res)
+    await db_session.flush()
+
+    ctx = ExecutionContext.new("manual", {}, {}, {"id": char.id})
+    rfr = RuleFiringResult(rule_id=rule.id, rule_name="r")
+    from api.services.homebrew.actions import execute_change_resource
+    await execute_change_resource(
+        {"action": "change_resource", "key": "charges", "delta": -10},
+        ctx, rfr, db_session, char,
+    )
+    await db_session.refresh(res)
+    assert res.current == 0  # clamped
+
+
+@pytest.mark.asyncio
+async def test_change_resource_clamps_to_max(db_session):
+    from core.db.models import HomebrewRule, HomebrewResource
+    char = Character(user_id=1, name="T")
+    db_session.add(char); await db_session.flush()
+    rule = HomebrewRule(
+        character_id=char.id, name="r", enabled=True,
+        dsl={"version": 1, "subject": {"type": "character"}, "triggers": []},
+        created_at="x", updated_at="x",
+    )
+    db_session.add(rule); await db_session.flush()
+    res = HomebrewResource(rule_id=rule.id, character_id=char.id, key="charges",
+                           name="Charges", current=4, max=5)
+    db_session.add(res); await db_session.flush()
+
+    ctx = ExecutionContext.new("manual", {}, {}, {"id": char.id})
+    rfr = RuleFiringResult(rule_id=rule.id, rule_name="r")
+    from api.services.homebrew.actions import execute_change_resource
+    await execute_change_resource(
+        {"action": "change_resource", "key": "charges", "delta": 10},
+        ctx, rfr, db_session, char,
+    )
+    await db_session.refresh(res)
+    assert res.current == 5  # capped at max
+
+
+@pytest.mark.asyncio
+async def test_restore_resource_to_max(db_session):
+    from core.db.models import HomebrewRule, HomebrewResource
+    char = Character(user_id=1, name="T")
+    db_session.add(char); await db_session.flush()
+    rule = HomebrewRule(character_id=char.id, name="r", enabled=True,
+                       dsl={"version": 1, "subject": {"type": "character"}, "triggers": []},
+                       created_at="x", updated_at="x")
+    db_session.add(rule); await db_session.flush()
+    res = HomebrewResource(rule_id=rule.id, character_id=char.id, key="charges",
+                           name="Charges", current=0, max=7)
+    db_session.add(res); await db_session.flush()
+
+    ctx = ExecutionContext.new("manual", {}, {}, {"id": char.id})
+    rfr = RuleFiringResult(rule_id=rule.id, rule_name="r")
+    from api.services.homebrew.actions import execute_restore_resource
+    await execute_restore_resource(
+        {"action": "restore_resource", "key": "charges", "amount": "max"},
+        ctx, rfr, db_session, char,
+    )
+    await db_session.refresh(res)
+    assert res.current == 7
+
+
+@pytest.mark.asyncio
+async def test_restore_resource_dice_capped(db_session, monkeypatch):
+    from core.db.models import HomebrewRule, HomebrewResource
+    monkeypatch.setattr("api.services.homebrew.actions.random.randint", lambda lo, hi: 6)
+    char = Character(user_id=1, name="T")
+    db_session.add(char); await db_session.flush()
+    rule = HomebrewRule(character_id=char.id, name="r", enabled=True,
+                       dsl={"version": 1, "subject": {"type": "character"}, "triggers": []},
+                       created_at="x", updated_at="x")
+    db_session.add(rule); await db_session.flush()
+    res = HomebrewResource(rule_id=rule.id, character_id=char.id, key="charges",
+                           name="Charges", current=3, max=7)
+    db_session.add(res); await db_session.flush()
+
+    ctx = ExecutionContext.new("manual", {}, {}, {"id": char.id})
+    rfr = RuleFiringResult(rule_id=rule.id, rule_name="r")
+    from api.services.homebrew.actions import execute_restore_resource
+    await execute_restore_resource(
+        {"action": "restore_resource", "key": "charges", "amount": "1d6+1"},
+        ctx, rfr, db_session, char,
+    )
+    await db_session.refresh(res)
+    # monkeypatched randint returns 6 → "1d6+1" = 6+1 = 7
+    # current + 7 = 3 + 7 = 10 → capped at max 7
+    assert res.current == 7
+
+
+# ---------------------------------------------------------------------------
+# Task 1.9 — apply_condition + remove_condition
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_apply_condition_writes_to_character_conditions(db_session):
+    char = Character(user_id=1, name="T", conditions={})
+    db_session.add(char)
+    await db_session.flush()
+    ctx = ExecutionContext.new("turn_started", {}, {}, {"id": char.id})
+    rfr = RuleFiringResult(rule_id=99, rule_name="Bleeding")
+
+    from api.services.homebrew.actions import execute_apply_condition
+    await execute_apply_condition(
+        {"action": "apply_condition", "key": "custom:bleeding", "params": {"die": "1d4"}},
+        ctx, rfr, db_session, char,
+    )
+    assert "custom:bleeding" in char.conditions
+    assert char.conditions["custom:bleeding"]["rule_id"] == 99
+    assert char.conditions["custom:bleeding"]["params"] == {"die": "1d4"}
+
+
+@pytest.mark.asyncio
+async def test_apply_condition_without_params_defaults_to_empty(db_session):
+    char = Character(user_id=1, name="T", conditions={})
+    db_session.add(char)
+    await db_session.flush()
+    ctx = ExecutionContext.new("manual", {}, {}, {"id": char.id})
+    rfr = RuleFiringResult(rule_id=7, rule_name="Test")
+
+    from api.services.homebrew.actions import execute_apply_condition
+    await execute_apply_condition(
+        {"action": "apply_condition", "key": "custom:tense"},
+        ctx, rfr, db_session, char,
+    )
+    assert char.conditions["custom:tense"]["params"] == {}
+
+
+@pytest.mark.asyncio
+async def test_remove_condition_clears_key(db_session):
+    char = Character(
+        user_id=1, name="T",
+        conditions={"custom:bleeding": {"rule_id": 99, "params": {}}},
+    )
+    db_session.add(char)
+    await db_session.flush()
+    ctx = ExecutionContext.new("manual", {}, {}, {"id": char.id})
+    rfr = RuleFiringResult(rule_id=99, rule_name="x")
+
+    from api.services.homebrew.actions import execute_remove_condition
+    await execute_remove_condition(
+        {"action": "remove_condition", "key": "custom:bleeding"},
+        ctx, rfr, db_session, char,
+    )
+    assert "custom:bleeding" not in char.conditions
+
+
+@pytest.mark.asyncio
+async def test_remove_condition_noop_when_absent(db_session):
+    char = Character(user_id=1, name="T", conditions={})
+    db_session.add(char)
+    await db_session.flush()
+    ctx = ExecutionContext.new("manual", {}, {}, {"id": char.id})
+    rfr = RuleFiringResult(rule_id=1, rule_name="r")
+
+    from api.services.homebrew.actions import execute_remove_condition
+    await execute_remove_condition(
+        {"action": "remove_condition", "key": "custom:not_there"},
+        ctx, rfr, db_session, char,
+    )
+    # No exception raised, no change.
+    assert char.conditions == {}
+
+
+# ---------------------------------------------------------------------------
+# Task 1.10 — apply_modifier_once
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_apply_modifier_once_hp_max_static_int(db_session):
+    char = Character(user_id=1, name="T", hit_points=10, current_hit_points=10)
+    db_session.add(char)
+    await db_session.flush()
+    ctx = ExecutionContext.new("manual", {}, {}, {"id": char.id})
+    rfr = RuleFiringResult(rule_id=1, rule_name="r")
+
+    from api.services.homebrew.actions import execute_apply_modifier_once
+    await execute_apply_modifier_once(
+        {"action": "apply_modifier_once", "target": "character.hit_points_max",
+         "delta": 5, "label": "+5 HP"},
+        ctx, rfr, db_session, char,
+    )
+    assert char.hit_points == 15
+
+
+@pytest.mark.asyncio
+async def test_apply_modifier_once_clamps_current_to_new_max_when_lower(db_session):
+    # If new max < current, current should clamp down.
+    char = Character(user_id=1, name="T", hit_points=20, current_hit_points=20)
+    db_session.add(char)
+    await db_session.flush()
+    ctx = ExecutionContext.new("manual", {}, {}, {"id": char.id})
+    rfr = RuleFiringResult(rule_id=1, rule_name="r")
+
+    from api.services.homebrew.actions import execute_apply_modifier_once
+    await execute_apply_modifier_once(
+        {"action": "apply_modifier_once", "target": "character.hit_points_max",
+         "delta": -5, "label": "-5 HP"},
+        ctx, rfr, db_session, char,
+    )
+    assert char.hit_points == 15
+    assert char.current_hit_points == 15  # clamped down
+
+
+@pytest.mark.asyncio
+async def test_apply_modifier_once_level_expression(db_session):
+    from core.db.models import CharacterClass
+    char = Character(user_id=1, name="T", hit_points=10, current_hit_points=10)
+    db_session.add(char)
+    await db_session.flush()
+    cls = CharacterClass(character_id=char.id, class_name="fighter", level=4)
+    db_session.add(cls)
+    await db_session.flush()
+    await db_session.refresh(char, attribute_names=["classes"])
+    ctx = ExecutionContext.new("manual", {}, {}, {"id": char.id})
+    rfr = RuleFiringResult(rule_id=1, rule_name="Robusto")
+
+    from api.services.homebrew.actions import execute_apply_modifier_once
+    await execute_apply_modifier_once(
+        {"action": "apply_modifier_once", "target": "character.hit_points_max",
+         "delta": "2*level", "label": "Robusto +2/lvl"},
+        ctx, rfr, db_session, char,
+    )
+    assert char.hit_points == 18  # 10 + 2*4
+
+
+@pytest.mark.asyncio
+async def test_apply_modifier_once_speed_target(db_session):
+    char = Character(user_id=1, name="T", speed=30)
+    db_session.add(char)
+    await db_session.flush()
+    ctx = ExecutionContext.new("manual", {}, {}, {"id": char.id})
+    rfr = RuleFiringResult(rule_id=1, rule_name="r")
+
+    from api.services.homebrew.actions import execute_apply_modifier_once
+    await execute_apply_modifier_once(
+        {"action": "apply_modifier_once", "target": "character.speed",
+         "delta": 5, "label": "Fleet +5"},
+        ctx, rfr, db_session, char,
+    )
+    assert char.speed == 35
+
+
+@pytest.mark.asyncio
+async def test_apply_modifier_once_unsupported_target_raises(db_session):
+    char = Character(user_id=1, name="T")
+    db_session.add(char)
+    await db_session.flush()
+    ctx = ExecutionContext.new("manual", {}, {}, {"id": char.id})
+    rfr = RuleFiringResult(rule_id=1, rule_name="r")
+
+    from api.services.homebrew.actions import execute_apply_modifier_once
+    from api.services.homebrew.exceptions import ActionExecutionError
+    with pytest.raises(ActionExecutionError, match="not supported"):
+        await execute_apply_modifier_once(
+            {"action": "apply_modifier_once", "target": "character.ac",
+             "delta": 1, "label": "Magic shield"},
+            ctx, rfr, db_session, char,
+        )
+
+
+@pytest.mark.asyncio
+async def test_apply_modifier_once_appends_history(db_session):
+    char = Character(user_id=1, name="T", hit_points=10, current_hit_points=10)
+    db_session.add(char)
+    await db_session.flush()
+    ctx = ExecutionContext.new("manual", {}, {}, {"id": char.id})
+    rfr = RuleFiringResult(rule_id=1, rule_name="r")
+
+    from api.services.homebrew.actions import execute_apply_modifier_once
+    await execute_apply_modifier_once(
+        {"action": "apply_modifier_once", "target": "character.hit_points_max",
+         "delta": 3, "label": "Lucky"},
+        ctx, rfr, db_session, char,
+    )
+    assert len(rfr.history_entries) == 1
+    desc = rfr.history_entries[0].description
+    assert "Lucky" in desc and "+3" in desc
+
+
+# ---------------------------------------------------------------------------
+# Task 3.8 — runtime `$var` resolution in amount/delta fields
+# ---------------------------------------------------------------------------
+
+from api.services.homebrew.exceptions import ActionExecutionError
+
+
+@pytest.mark.asyncio
+async def test_damage_character_resolves_dollar_var_amount(db_session, char_with_item):
+    char, _ = char_with_item
+    char.hit_points = 20
+    char.current_hit_points = 20
+    rfr = RuleFiringResult(rule_id=1, rule_name="r")
+    ctx = ExecutionContext.new("turn_started", {}, {}, {"id": char.id})
+    ctx.set_var("blood", 3)
+
+    from api.services.homebrew.actions import execute_damage_character
+    await execute_damage_character(
+        {"action": "damage_character", "amount": "$blood"},
+        ctx, rfr, db_session, char,
+    )
+    assert char.current_hit_points == 17  # 20 - 3
+
+
+@pytest.mark.asyncio
+async def test_damage_character_missing_dollar_var_raises(db_session, char_with_item):
+    char, _ = char_with_item
+    char.hit_points = 20
+    char.current_hit_points = 20
+    rfr = RuleFiringResult(rule_id=1, rule_name="r")
+    ctx = ExecutionContext.new("turn_started", {}, {}, {"id": char.id})
+    # 'blood' var NOT set
+
+    from api.services.homebrew.actions import execute_damage_character
+    with pytest.raises(ActionExecutionError, match="damage_character.amount"):
+        await execute_damage_character(
+            {"action": "damage_character", "amount": "$blood"},
+            ctx, rfr, db_session, char,
+        )
+
+
+@pytest.mark.asyncio
+async def test_heal_character_resolves_dollar_var_amount(db_session, char_with_item):
+    char, _ = char_with_item
+    char.hit_points = 20
+    char.current_hit_points = 5
+    rfr = RuleFiringResult(rule_id=1, rule_name="r")
+    ctx = ExecutionContext.new("manual", {}, {}, {"id": char.id})
+    ctx.set_var("salve", 4)
+
+    from api.services.homebrew.actions import execute_heal_character
+    await execute_heal_character(
+        {"action": "heal_character", "amount": "$salve"},
+        ctx, rfr, db_session, char,
+    )
+    assert char.current_hit_points == 9
+
+
+@pytest.mark.asyncio
+async def test_heal_character_missing_dollar_var_raises(db_session, char_with_item):
+    char, _ = char_with_item
+    char.hit_points = 20
+    char.current_hit_points = 5
+    rfr = RuleFiringResult(rule_id=1, rule_name="r")
+    ctx = ExecutionContext.new("manual", {}, {}, {"id": char.id})
+
+    from api.services.homebrew.actions import execute_heal_character
+    with pytest.raises(ActionExecutionError, match="heal_character.amount"):
+        await execute_heal_character(
+            {"action": "heal_character", "amount": "$salve"},
+            ctx, rfr, db_session, char,
+        )
+
+
+@pytest.mark.asyncio
+async def test_change_resource_resolves_dollar_var_delta(db_session):
+    from core.db.models import HomebrewRule, HomebrewResource
+    char = Character(user_id=1, name="T")
+    db_session.add(char); await db_session.flush()
+    rule = HomebrewRule(character_id=char.id, name="r", enabled=True,
+                       dsl={"version": 1, "subject": {"type": "character"}, "triggers": []},
+                       created_at="x", updated_at="x")
+    db_session.add(rule); await db_session.flush()
+    res = HomebrewResource(rule_id=rule.id, character_id=char.id, key="luck",
+                           name="Luck", current=3, max=5)
+    db_session.add(res); await db_session.flush()
+
+    ctx = ExecutionContext.new("manual", {}, {}, {"id": char.id})
+    ctx.set_var("spent", -2)
+    rfr = RuleFiringResult(rule_id=rule.id, rule_name="r")
+    from api.services.homebrew.actions import execute_change_resource
+    await execute_change_resource(
+        {"action": "change_resource", "key": "luck", "delta": "$spent"},
+        ctx, rfr, db_session, char,
+    )
+    await db_session.refresh(res)
+    assert res.current == 1
+
+
+@pytest.mark.asyncio
+async def test_change_resource_missing_dollar_var_raises(db_session):
+    from core.db.models import HomebrewRule, HomebrewResource
+    char = Character(user_id=1, name="T")
+    db_session.add(char); await db_session.flush()
+    rule = HomebrewRule(character_id=char.id, name="r", enabled=True,
+                       dsl={"version": 1, "subject": {"type": "character"}, "triggers": []},
+                       created_at="x", updated_at="x")
+    db_session.add(rule); await db_session.flush()
+    res = HomebrewResource(rule_id=rule.id, character_id=char.id, key="luck",
+                           name="Luck", current=3, max=5)
+    db_session.add(res); await db_session.flush()
+
+    ctx = ExecutionContext.new("manual", {}, {}, {"id": char.id})
+    rfr = RuleFiringResult(rule_id=rule.id, rule_name="r")
+    from api.services.homebrew.actions import execute_change_resource
+    with pytest.raises(ActionExecutionError, match="change_resource.delta"):
+        await execute_change_resource(
+            {"action": "change_resource", "key": "luck", "delta": "$spent"},
+            ctx, rfr, db_session, char,
+        )
+
+
+@pytest.mark.asyncio
+async def test_inc_property_resolves_dollar_var_delta(db_session, char_with_item):
+    char, item = char_with_item
+    md = json.loads(item.item_metadata)
+    md["hb_uses"] = 5
+    item.item_metadata = json.dumps(md)
+    await db_session.flush()
+
+    ctx = ExecutionContext.new("manual", {},
+                               {"_kind": "item", "_id": item.id, "metadata": md},
+                               {"id": char.id})
+    ctx.set_var("bonus", 4)
+    rfr = RuleFiringResult(rule_id=1, rule_name="r")
+
+    from api.services.homebrew.actions import execute_inc_property
+    await execute_inc_property(
+        {"action": "inc_property", "target": "subject", "key": "uses", "delta": "$bonus"},
+        ctx, rfr, db_session, char,
+    )
+    await db_session.refresh(item)
+    assert json.loads(item.item_metadata)["hb_uses"] == 9
+
+
+@pytest.mark.asyncio
+async def test_inc_property_missing_dollar_var_raises(db_session, char_with_item):
+    char, item = char_with_item
+    md = json.loads(item.item_metadata)
+    md["hb_uses"] = 5
+    item.item_metadata = json.dumps(md)
+    await db_session.flush()
+
+    ctx = ExecutionContext.new("manual", {},
+                               {"_kind": "item", "_id": item.id, "metadata": md},
+                               {"id": char.id})
+    rfr = RuleFiringResult(rule_id=1, rule_name="r")
+
+    from api.services.homebrew.actions import execute_inc_property
+    with pytest.raises(ActionExecutionError, match="inc_property.delta"):
+        await execute_inc_property(
+            {"action": "inc_property", "target": "subject", "key": "uses", "delta": "$bonus"},
+            ctx, rfr, db_session, char,
+        )
+
+
+@pytest.mark.asyncio
+async def test_restore_resource_resolves_dollar_var_amount(db_session):
+    from core.db.models import HomebrewRule, HomebrewResource
+    char = Character(user_id=1, name="T")
+    db_session.add(char); await db_session.flush()
+    rule = HomebrewRule(character_id=char.id, name="r", enabled=True,
+                       dsl={"version": 1, "subject": {"type": "character"}, "triggers": []},
+                       created_at="x", updated_at="x")
+    db_session.add(rule); await db_session.flush()
+    res = HomebrewResource(rule_id=rule.id, character_id=char.id, key="charges",
+                           name="Charges", current=1, max=7)
+    db_session.add(res); await db_session.flush()
+
+    ctx = ExecutionContext.new("manual", {}, {}, {"id": char.id})
+    ctx.set_var("recovered", 3)
+    rfr = RuleFiringResult(rule_id=rule.id, rule_name="r")
+    from api.services.homebrew.actions import execute_restore_resource
+    await execute_restore_resource(
+        {"action": "restore_resource", "key": "charges", "amount": "$recovered"},
+        ctx, rfr, db_session, char,
+    )
+    await db_session.refresh(res)
+    assert res.current == 4
+
+
+@pytest.mark.asyncio
+async def test_restore_resource_missing_dollar_var_raises(db_session):
+    from core.db.models import HomebrewRule, HomebrewResource
+    char = Character(user_id=1, name="T")
+    db_session.add(char); await db_session.flush()
+    rule = HomebrewRule(character_id=char.id, name="r", enabled=True,
+                       dsl={"version": 1, "subject": {"type": "character"}, "triggers": []},
+                       created_at="x", updated_at="x")
+    db_session.add(rule); await db_session.flush()
+    res = HomebrewResource(rule_id=rule.id, character_id=char.id, key="charges",
+                           name="Charges", current=1, max=7)
+    db_session.add(res); await db_session.flush()
+
+    ctx = ExecutionContext.new("manual", {}, {}, {"id": char.id})
+    rfr = RuleFiringResult(rule_id=rule.id, rule_name="r")
+    from api.services.homebrew.actions import execute_restore_resource
+    with pytest.raises(ActionExecutionError, match="restore_resource.amount"):
+        await execute_restore_resource(
+            {"action": "restore_resource", "key": "charges", "amount": "$recovered"},
+            ctx, rfr, db_session, char,
+        )

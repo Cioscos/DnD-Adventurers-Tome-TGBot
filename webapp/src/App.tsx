@@ -30,6 +30,8 @@ const Settings = lazy(() => import('./pages/Settings'))
 const Session = lazy(() => import('./pages/Session'))
 const SessionJoin = lazy(() => import('./pages/SessionJoin'))
 const SessionRoom = lazy(() => import('./pages/SessionRoom'))
+const Homebrew = lazy(() => import('./pages/Homebrew'))
+const RuleEditor = lazy(() => import('./pages/homebrew/RuleEditor'))
 
 function PageFallback() {
   return (
@@ -70,6 +72,9 @@ export default function App() {
             <Route path="/char/:id/dice" element={<Dice />} />
             <Route path="/char/:id/identity" element={<Identity />} />
             <Route path="/char/:id/settings" element={<Settings />} />
+            <Route path="/char/:id/homebrew" element={<Homebrew />} />
+            <Route path="/char/:id/homebrew/new" element={<RuleEditor />} />
+            <Route path="/char/:id/homebrew/:ruleId" element={<RuleEditor />} />
             <Route path="/session" element={<Session />} />
             <Route path="/session/join" element={<SessionJoin />} />
             <Route path="/session/:id" element={<SessionRoom />} />

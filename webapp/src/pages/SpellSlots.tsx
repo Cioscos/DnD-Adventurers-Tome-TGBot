@@ -179,8 +179,11 @@ export default function SpellSlots() {
 
   if (!char) return null
 
-  const slots: SpellSlot[] = [...(char.spell_slots ?? [])].sort((a, b) => a.level - b.level)
-  const existingLevels = new Set(slots.map((s) => s.level))
+  const slots: SpellSlot[] = [...(char.spell_slots ?? [])].sort(
+    (a, b) => a.level - b.level || Number(a.is_pact) - Number(b.is_pact),
+  )
+  // Manual "add level" affordance targets the regular pool only.
+  const existingLevels = new Set(slots.filter((s) => !s.is_pact).map((s) => s.level))
   const missingLevels = [1, 2, 3, 4, 5, 6, 7, 8, 9].filter((l) => !existingLevels.has(l))
   const slotsMode = ((char.settings as Record<string, unknown> | undefined)?.spell_slots_mode as string | undefined) ?? 'auto'
 
@@ -241,6 +244,11 @@ export default function SpellSlots() {
                   <span className="font-display font-bold text-dnd-gold-bright">
                     {t('character.slots.level', { level: slot.level })}
                   </span>
+                  {slot.is_pact && (
+                    <span className="px-1.5 py-0.5 rounded-full border border-dnd-arcane/60 bg-dnd-arcane-mist/30 text-dnd-arcane-bright font-cinzel text-[9px] uppercase tracking-widest">
+                      {t('character.slots.pact_badge')}
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   <span className={`text-sm font-mono font-bold tabular-nums ${slot.available > 0 ? 'text-[var(--dnd-emerald-bright)]' : 'text-dnd-text-faint'}`}>

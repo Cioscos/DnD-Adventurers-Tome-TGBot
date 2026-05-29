@@ -68,6 +68,7 @@
       "dice": "Dice",
       "identity": "Identity",
       "settings": "Settings",
+      "homebrew": "Homebrew Rules",
       "sections": {
         "combat": "Combat",
         "magic": "Magic",
@@ -106,7 +107,8 @@
       "quick_damage_undo": "{{n}} damage dealt",
       "quick_heal_undo": "Healed {{n}} HP",
       "quick_temp_undo": "Added {{n}} temp HP",
-      "quick_undo_action": "Undo"
+      "quick_undo_action": "Undo",
+      "homebrew_max_bonus_label": "Homebrew HP Max"
     },
     "death_saves": {
       "title": "Death Saves",
@@ -181,14 +183,16 @@
       "stealth": "Stealth",
       "survival": "Survival",
       "passive_perception_formula": "10 + Perception bonus + passive modifiers",
-      "empty_hint": "Tap a skill to toggle its proficiency."
+      "empty_hint": "Tap a skill to toggle its proficiency.",
+      "homebrew_label": "Homebrew Bonus"
     },
     "saves": {
       "title": "Saving Throws",
       "proficient": "Proficient",
       "roll": "Roll dice",
       "ts_short": "ST",
-      "tap_to_roll": "Tap to roll"
+      "tap_to_roll": "Tap to roll",
+      "homebrew_label": "Homebrew Bonus"
     },
     "ability": {
       "strength_short": "STR",
@@ -286,7 +290,8 @@
       "auto_hint": "Auto mode (D&D 5e 2014 rules): slots are derived from classes and level. Switch to Manual in Settings for custom control.",
       "add_new_level": "Add new level",
       "reset_confirm": "Reset all spell slots?",
-      "go_to_settings": "Go to Settings"
+      "go_to_settings": "Go to Settings",
+      "pact_badge": "Pact"
     },
     "dice": {
       "title": "Roll Dice",
@@ -350,6 +355,16 @@
       "reset_all_confirm": "Reset every condition and exhaustion level?",
       "empty_hint": "Tap a condition to activate it.",
       "detail_aria": "Show condition details",
+      "custom_section_title": "Custom",
+      "custom_subtitle_rule_id": "Homebrew rule · #{{id}}",
+      "custom_remove_aria": "Remove {{name}}",
+      "custom_fallback": "Custom · {{slug}}",
+      "apply_custom_title": "Apply condition",
+      "apply_custom_aria": "Apply {{name}}",
+      "turn_start": {
+        "label": "Start of turn",
+        "no_effect": "Start of turn · no rule triggered"
+      },
       "desc": {
         "blinded": "A blinded creature can't see and automatically fails any ability check that requires sight. Attack rolls against the creature have advantage, and the creature's attack rolls have disadvantage.",
         "charmed": "A charmed creature can't attack the charmer or target the charmer with harmful abilities or magical effects. The charmer has advantage on any ability check to interact socially with the creature.",
@@ -840,6 +855,18 @@
         "equipment": "Equipment",
         "menu": "Menu"
       }
+    },
+    "homebrew": {
+      "resources": {
+        "section_title": "Custom resources",
+        "subtitle": "Homebrew rule",
+        "restore": "Restore",
+        "restoration_caption_long_rest": "Restored on long rest",
+        "restoration_caption_short_rest": "Restored on short rest",
+        "restoration_caption_none": "Manual restore only",
+        "aria_decrement": "Decrement {{name}}",
+        "aria_increment": "Increment {{name}}"
+      }
     }
   },
   "dnd": {
@@ -971,6 +998,246 @@
     },
     "feed": {
       "grant_chip": "Tap to open in inventory"
+    }
+  },
+  "homebrew": {
+    "page_title": "Homebrew Rules",
+    "create_new": "New rule",
+    "sections": {
+      "active": "Active rules",
+      "disabled": "Disabled rules",
+      "library": "Ready-to-use recipes"
+    },
+    "install_template": "Install",
+    "installed_state": "Installed",
+    "enabled": "Active",
+    "disabled_state": "Disabled",
+    "install_success": "Template installed",
+    "delete_success": "Rule deleted",
+    "from_template": "From template",
+    "no_rules_yet": "No rules yet. Install a template to get started.",
+    "load_error": "Couldn't load rules. Try again later.",
+    "manual_trigger": "Trigger now",
+    "manual_trigger_no_effect": "Manual trigger · no rule reacted",
+    "delete_title": "Delete rule",
+    "delete_confirm": "Are you sure you want to delete \"{{name}}\"? This action is irreversible.",
+    "breakdown": {
+      "label": "Homebrew"
+    },
+    "editor": {
+      "new_title": "New rule",
+      "edit_title": "Edit rule",
+      "sections": {
+        "identity": "Identity",
+        "subject": "Applies to",
+        "properties": "Properties",
+        "tables": "Tables (advanced)",
+        "passive_modifiers": "Passive modifiers",
+        "triggers": "Triggers and effects"
+      },
+      "section_tbd": "Section under construction",
+      "save_pending": "Save",
+      "save_success": "Rule saved",
+      "save_error_title": "Save error",
+      "save_error_generic": "Something went wrong. Please retry.",
+      "validation": {
+        "name_required": "Please enter a name for the rule",
+        "no_behavior": "The rule must declare at least one trigger or passive modifier"
+      }
+    },
+    "identity": {
+      "name_label": "Name",
+      "name_placeholder": "e.g. Bleeding",
+      "description_label": "Description",
+      "description_placeholder": "What this rule does in a sentence"
+    },
+    "subject": {
+      "types": {
+        "item": "Items",
+        "character": "Character",
+        "ability": "Special abilities"
+      },
+      "item_types": {
+        "weapon": "Weapon",
+        "armor": "Armor",
+        "shield": "Shield",
+        "accessory": "Accessory",
+        "gear": "Gear",
+        "consumable": "Consumable",
+        "generic": "Generic"
+      },
+      "item_types_label": "Only these item types",
+      "item_types_helper": "Leave empty to apply to any item",
+      "name_contains_label": "Only if the name contains",
+      "name_contains_placeholder": "e.g. magic, iron"
+    },
+    "properties": {
+      "empty": "No properties yet. Add a custom property to give items a value.",
+      "add_button": "Add property",
+      "type_badge": {
+        "enum": "list",
+        "number": "number",
+        "boolean": "yes/no",
+        "text": "text"
+      },
+      "default_label": "Default value",
+      "values_label": "Possible values",
+      "delete_confirm": "Delete property '{{name}}'? Items will lose this property.",
+      "modal": {
+        "title_new": "New property",
+        "title_edit": "Edit property",
+        "label_it": "Label (IT)",
+        "label_en": "Label (EN)",
+        "label_it_placeholder": "e.g. Qualità",
+        "label_en_placeholder": "e.g. Quality",
+        "key_label": "Key (auto)",
+        "key_override": "Override key",
+        "key_invalid": "Lowercase letters, digits and _ only (max 60 chars)",
+        "type_label": "Type",
+        "values_placeholder": "poor, normal, good, excellent",
+        "values_helper": "Separate values with commas or newlines",
+        "default_required": "Select a default value",
+        "values_empty": "Add at least one value",
+        "label_required": "Fill in both labels"
+      }
+    },
+    "tables": {
+      "empty": "No tables yet. Tables let you map a roll result (e.g. 1-5, 6-10, 11-20) onto one of the states of a property (e.g. 'poor', 'normal', 'excellent').",
+      "need_enum": "Add an 'enum' property first to create tables.",
+      "add_button": "Add table",
+      "id_label": "Table identifier",
+      "id_placeholder": "e.g. attack_to_quality_delta",
+      "row_axis_label": "Row (bound to)",
+      "row_axis_placeholder": "Pick a property",
+      "col_axis_label": "Column (variable)",
+      "col_axis_placeholder": "e.g. damage_total, attack_roll",
+      "col_bin_lo": "From",
+      "col_bin_hi": "To",
+      "add_column": "+ column",
+      "cell_placeholder": "comma-separated actions",
+      "delete_confirm": "Delete table '{{name}}'?"
+    },
+    "passive": {
+      "empty": "No passive modifiers yet. Modifiers are bonuses or maluses that apply automatically when a condition is true (e.g. +1 to AC when equipping magical armor).",
+      "add_button": "Add modifier",
+      "delete_confirm": "Delete modifier '{{name}}'?",
+      "target_labels": {
+        "ac": "AC",
+        "hp_max": "Max HP",
+        "speed": "Speed",
+        "skill": "Skill",
+        "save": "Saving throw"
+      },
+      "modal": {
+        "title_new": "New modifier",
+        "title_edit": "Edit modifier",
+        "label_it": "Label (IT)",
+        "label_en": "Label (EN)",
+        "label_it_placeholder": "es. Armatura magica",
+        "label_en_placeholder": "e.g. Magic armor",
+        "target_label": "What it modifies",
+        "skill_sub_label": "Which skill",
+        "save_sub_label": "Which saving throw",
+        "value_label": "Bonus / malus",
+        "value_helper": "Fixed numeric value only for now (positive or negative)",
+        "value_invalid": "Enter a whole number",
+        "label_required": "Fill in both labels",
+        "target_required": "Pick what to modify"
+      }
+    },
+    "triggers": {
+      "empty": "No triggers yet. Triggers react to game events (e.g. when you roll a 1 on attack, when you level up) by running a sequence of steps.",
+      "add_button": "Add trigger",
+      "event_label": "Event",
+      "filters_label": "Filters (optional)",
+      "add_filter": "Add filter",
+      "no_presets": "No preset filters for this event",
+      "delete_confirm": "Delete this trigger?",
+      "preset_filters": {
+        "fumble": "Only if nat-1 (fumble)",
+        "critical": "Only if nat-20 (critical)",
+        "was_crit_hit": "Only if was a critical hit",
+        "is_equipped": "Only if equipped"
+      },
+      "filter_picker_title": "Which filter?",
+      "ad_hoc_filter_label": "Custom filter"
+    },
+    "effects": {
+      "empty": "No steps yet. Press \"Add step\" to describe what the trigger does.",
+      "add_step": "Add step",
+      "add_case": "Add case",
+      "case_key_placeholder": "e.g. poor, excellent",
+      "case_key_required": "Enter a name for the case",
+      "case_key_duplicate": "Case already exists",
+      "branch_then": "Then",
+      "branch_else": "Otherwise",
+      "delete_confirm": "Delete this step?",
+      "action_picker_title": "Which kind of step?",
+      "modal_title_new": "New step",
+      "modal_title_edit": "Edit step",
+      "actions": {
+        "roll_dice": "🎲 Roll a die",
+        "lookup_table": "📊 Look up table",
+        "match": "🔀 Case (multi-branch)",
+        "if": "🤔 Condition",
+        "set_property": "📝 Set property",
+        "inc_property": "➕ Increment property",
+        "unequip": "🧺 Remove from equipment",
+        "damage_character": "💢 Damage character",
+        "heal_character": "❤️ Heal character",
+        "change_resource": "🔄 Change resource",
+        "restore_resource": "♻️ Restore resource",
+        "apply_condition": "🔸 Apply condition",
+        "remove_condition": "🔹 Remove condition",
+        "apply_modifier_once": "⭐ Apply modifier once",
+        "notify": "💬 Notify",
+        "add_history": "📜 Add to history"
+      },
+      "fields": {
+        "notation": "Dice notation",
+        "notation_invalid": "Invalid notation (e.g. 1d6, 2d8+3)",
+        "store_as": "Variable name",
+        "store_as_invalid": "Letters, digits and _ only (max 60)",
+        "table": "Table",
+        "table_required": "Pick a table",
+        "row": "Row (variable)",
+        "col": "Column (variable)",
+        "match_value": "Value to compare",
+        "no_cases_yet": "No cases yet.",
+        "case_chip": "Case",
+        "cond_path": "Value path",
+        "cond_op": "Operator",
+        "cond_value": "Comparison value",
+        "target_subject_or_character": "Target",
+        "target_subject": "The item",
+        "target_character": "The character",
+        "property_key": "Property key",
+        "set_value": "Value",
+        "delta": "Delta (number or dice)",
+        "amount": "Amount (number, dice or \"max\")",
+        "amount_simple": "Amount",
+        "damage_type": "Damage type",
+        "damage_type_placeholder": "e.g. fire, necrotic",
+        "was_critical": "Was a critical hit",
+        "resource_key": "Resource key",
+        "condition_key": "Condition key",
+        "params_json": "Params (JSON, optional)",
+        "params_json_invalid": "Invalid JSON",
+        "modifier_target": "What it modifies (target)",
+        "modifier_target_invalid": "Invalid target (e.g. character.ac)",
+        "modifier_label": "Visible label",
+        "required": "Required field",
+        "amount_invalid": "Enter a number or dice notation",
+        "severity": "Severity",
+        "severity_options": {
+          "info": "Info",
+          "warning": "Warning",
+          "error": "Error",
+          "success": "Success"
+        },
+        "message": "Message",
+        "description": "Description"
+      }
     }
   }
 }

@@ -68,6 +68,7 @@
       "dice": "Dadi",
       "identity": "Identità",
       "settings": "Impostazioni",
+      "homebrew": "Regole Homebrew",
       "sections": {
         "combat": "Combattimento",
         "magic": "Magia",
@@ -106,7 +107,8 @@
       "quick_damage_undo": "Inflitti {{n}} danni",
       "quick_heal_undo": "Curati {{n}} HP",
       "quick_temp_undo": "Aggiunti {{n}} HP temporanei",
-      "quick_undo_action": "Annulla"
+      "quick_undo_action": "Annulla",
+      "homebrew_max_bonus_label": "HP Max Homebrew"
     },
     "death_saves": {
       "title": "Tiri vs Morte",
@@ -181,14 +183,16 @@
       "stealth": "Furtività",
       "survival": "Sopravvivenza",
       "passive_perception_formula": "10 + bonus Percezione + modificatori passivi",
-      "empty_hint": "Tocca un'abilità per attivarne la competenza."
+      "empty_hint": "Tocca un'abilità per attivarne la competenza.",
+      "homebrew_label": "Bonus Homebrew"
     },
     "saves": {
       "title": "Tiri Salvezza",
       "proficient": "Competente",
       "roll": "Tira dado",
       "ts_short": "TS",
-      "tap_to_roll": "Tocca per tirare"
+      "tap_to_roll": "Tocca per tirare",
+      "homebrew_label": "Bonus Homebrew"
     },
     "ability": {
       "strength_short": "FOR",
@@ -286,7 +290,8 @@
       "auto_hint": "Modalità Auto (regole D&D 5e 2014): gli slot vengono dedotti da classi e livello. Passa a Manuale dalle Impostazioni per gestione personalizzata.",
       "add_new_level": "Aggiungi nuovo livello",
       "reset_confirm": "Ripristinare tutti gli slot incantesimo?",
-      "go_to_settings": "Vai a Impostazioni"
+      "go_to_settings": "Vai a Impostazioni",
+      "pact_badge": "Patto"
     },
     "dice": {
       "title": "Tira Dadi",
@@ -350,6 +355,16 @@
       "reset_all_confirm": "Azzerare tutte le condizioni e l'affaticamento?",
       "empty_hint": "Tocca una condizione per attivarla.",
       "detail_aria": "Mostra dettagli condizione",
+      "custom_section_title": "Personalizzate",
+      "custom_subtitle_rule_id": "Regola personalizzata · #{{id}}",
+      "custom_remove_aria": "Rimuovi {{name}}",
+      "custom_fallback": "Personalizzato · {{slug}}",
+      "apply_custom_title": "Applica condizione",
+      "apply_custom_aria": "Applica {{name}}",
+      "turn_start": {
+        "label": "Inizio turno",
+        "no_effect": "Inizio turno · nessuna regola attiva"
+      },
       "desc": {
         "blinded": "Un personaggio accecato non può vedere e fallisce automaticamente ogni prova di caratteristica che richiede la vista. I tiri per colpire contro di lui hanno vantaggio, i suoi hanno svantaggio.",
         "charmed": "Un personaggio affascinato non può attaccare chi lo affascina né prenderlo come bersaglio di capacità dannose o effetti magici. Chi lo affascina ha vantaggio nelle prove di caratteristica sociali.",
@@ -840,6 +855,18 @@
         "equipment": "Equipaggiamento",
         "menu": "Menu"
       }
+    },
+    "homebrew": {
+      "resources": {
+        "section_title": "Risorse personalizzate",
+        "subtitle": "Regola personalizzata",
+        "restore": "Recupera",
+        "restoration_caption_long_rest": "Recupera con riposo lungo",
+        "restoration_caption_short_rest": "Recupera con riposo breve",
+        "restoration_caption_none": "Solo recupero manuale",
+        "aria_decrement": "Diminuisci {{name}}",
+        "aria_increment": "Aumenta {{name}}"
+      }
     }
   },
   "dnd": {
@@ -971,6 +998,246 @@
     },
     "feed": {
       "grant_chip": "Tocca per aprire nell'inventario"
+    }
+  },
+  "homebrew": {
+    "page_title": "Regole Homebrew",
+    "create_new": "Nuova regola",
+    "sections": {
+      "active": "Regole attive",
+      "disabled": "Regole disattivate",
+      "library": "Ricette pronte all'uso"
+    },
+    "install_template": "Installa",
+    "installed_state": "Installato",
+    "enabled": "Attiva",
+    "disabled_state": "Disattivata",
+    "install_success": "Template installato",
+    "delete_success": "Regola eliminata",
+    "from_template": "Da template",
+    "no_rules_yet": "Nessuna regola ancora. Installa un template per iniziare.",
+    "load_error": "Impossibile caricare le regole. Riprova più tardi.",
+    "manual_trigger": "Attiva ora",
+    "manual_trigger_no_effect": "Attivazione manuale · nessuna regola ha reagito",
+    "delete_title": "Elimina regola",
+    "delete_confirm": "Sicuro di eliminare la regola \"{{name}}\"? L'azione è irreversibile.",
+    "breakdown": {
+      "label": "Homebrew"
+    },
+    "editor": {
+      "new_title": "Nuova regola",
+      "edit_title": "Modifica regola",
+      "sections": {
+        "identity": "Identità",
+        "subject": "A cosa si applica",
+        "properties": "Caratteristiche",
+        "tables": "Tabelle (avanzato)",
+        "passive_modifiers": "Modificatori passivi",
+        "triggers": "Trigger ed effetti"
+      },
+      "section_tbd": "Sezione in costruzione",
+      "save_pending": "Salva",
+      "save_success": "Regola salvata",
+      "save_error_title": "Errore di salvataggio",
+      "save_error_generic": "Si è verificato un errore. Riprova.",
+      "validation": {
+        "name_required": "Inserisci un nome per la regola",
+        "no_behavior": "La regola deve avere almeno un trigger o un modificatore passivo"
+      }
+    },
+    "identity": {
+      "name_label": "Nome",
+      "name_placeholder": "es. Sanguinamento",
+      "description_label": "Descrizione",
+      "description_placeholder": "Cosa fa questa regola in una frase"
+    },
+    "subject": {
+      "types": {
+        "item": "Oggetti",
+        "character": "Personaggio",
+        "ability": "Capacità speciali"
+      },
+      "item_types": {
+        "weapon": "Arma",
+        "armor": "Armatura",
+        "shield": "Scudo",
+        "accessory": "Accessorio",
+        "gear": "Equipaggiamento",
+        "consumable": "Consumabile",
+        "generic": "Generico"
+      },
+      "item_types_label": "Solo questi tipi di oggetto",
+      "item_types_helper": "Lascia vuoto per applicare a qualsiasi oggetto",
+      "name_contains_label": "Solo se il nome contiene",
+      "name_contains_placeholder": "es. magico, ferro"
+    },
+    "properties": {
+      "empty": "Nessuna caratteristica ancora. Aggiungi una proprietà personalizzata per dare un valore agli oggetti.",
+      "add_button": "Aggiungi caratteristica",
+      "type_badge": {
+        "enum": "elenco",
+        "number": "numero",
+        "boolean": "sì/no",
+        "text": "testo"
+      },
+      "default_label": "Valore di default",
+      "values_label": "Valori possibili",
+      "delete_confirm": "Eliminare la caratteristica '{{name}}'? Gli oggetti perderanno questa proprietà.",
+      "modal": {
+        "title_new": "Nuova caratteristica",
+        "title_edit": "Modifica caratteristica",
+        "label_it": "Etichetta (IT)",
+        "label_en": "Etichetta (EN)",
+        "label_it_placeholder": "es. Qualità",
+        "label_en_placeholder": "e.g. Quality",
+        "key_label": "Chiave (auto)",
+        "key_override": "Modifica chiave",
+        "key_invalid": "Solo lettere minuscole, numeri e _ (max 60 caratteri)",
+        "type_label": "Tipo",
+        "values_placeholder": "scarsa, normale, buona, eccellente",
+        "values_helper": "Separa i valori con virgole o a-capo",
+        "default_required": "Seleziona un valore di default",
+        "values_empty": "Aggiungi almeno un valore",
+        "label_required": "Compila entrambe le etichette"
+      }
+    },
+    "tables": {
+      "empty": "Nessuna tabella ancora. Le tabelle ti permettono di mappare un risultato di un tiro (es. 1-5, 6-10, 11-20) a uno degli stati di una caratteristica (es. 'scarsa', 'normale', 'eccellente').",
+      "need_enum": "Aggiungi prima una caratteristica di tipo 'elenco' per creare tabelle.",
+      "add_button": "Aggiungi tabella",
+      "id_label": "Identificatore tabella",
+      "id_placeholder": "es. attack_to_quality_delta",
+      "row_axis_label": "Riga (collegata a)",
+      "row_axis_placeholder": "Scegli una caratteristica",
+      "col_axis_label": "Colonna (variabile)",
+      "col_axis_placeholder": "es. damage_total, attack_roll",
+      "col_bin_lo": "Da",
+      "col_bin_hi": "A",
+      "add_column": "+ colonna",
+      "cell_placeholder": "azioni separate da virgola",
+      "delete_confirm": "Eliminare la tabella '{{name}}'?"
+    },
+    "passive": {
+      "empty": "Nessun modificatore passivo. I modificatori sono bonus o malus che si applicano automaticamente quando una condizione è vera (es. +1 alla CA quando si equipaggia un'armatura magica).",
+      "add_button": "Aggiungi modificatore",
+      "delete_confirm": "Eliminare il modificatore '{{name}}'?",
+      "target_labels": {
+        "ac": "CA",
+        "hp_max": "PF Massimi",
+        "speed": "Velocità",
+        "skill": "Abilità",
+        "save": "Tiro salvezza"
+      },
+      "modal": {
+        "title_new": "Nuovo modificatore",
+        "title_edit": "Modifica modificatore",
+        "label_it": "Etichetta (IT)",
+        "label_en": "Etichetta (EN)",
+        "label_it_placeholder": "es. Armatura magica",
+        "label_en_placeholder": "e.g. Magic armor",
+        "target_label": "Cosa modifica",
+        "skill_sub_label": "Quale abilità",
+        "save_sub_label": "Quale tiro salvezza",
+        "value_label": "Bonus / malus",
+        "value_helper": "Per ora supportato solo valore numerico fisso (positivo o negativo)",
+        "value_invalid": "Inserisci un numero intero",
+        "label_required": "Compila entrambe le etichette",
+        "target_required": "Scegli cosa modificare"
+      }
+    },
+    "triggers": {
+      "empty": "Nessun trigger ancora. I trigger reagiscono a eventi del gioco (es. quando tiri 1 attaccando, quando salgi di livello) eseguendo una sequenza di passi.",
+      "add_button": "Aggiungi trigger",
+      "event_label": "Evento",
+      "filters_label": "Filtri (opzionali)",
+      "add_filter": "Aggiungi filtro",
+      "no_presets": "Nessun filtro preset per questo evento",
+      "delete_confirm": "Eliminare questo trigger?",
+      "preset_filters": {
+        "fumble": "Solo se tiro 1 (fumble)",
+        "critical": "Solo se tiro 20 (critico)",
+        "was_crit_hit": "Solo se colpo critico subito",
+        "is_equipped": "Solo se equipaggiato"
+      },
+      "filter_picker_title": "Quale filtro?",
+      "ad_hoc_filter_label": "Filtro personalizzato"
+    },
+    "effects": {
+      "empty": "Nessun passo. Premi \"Aggiungi passo\" per descrivere cosa fa il trigger.",
+      "add_step": "Aggiungi passo",
+      "add_case": "Aggiungi caso",
+      "case_key_placeholder": "es. scarsa, ottima",
+      "case_key_required": "Inserisci un nome per il caso",
+      "case_key_duplicate": "Caso già esistente",
+      "branch_then": "Allora",
+      "branch_else": "Altrimenti",
+      "delete_confirm": "Eliminare questo passo?",
+      "action_picker_title": "Quale tipo di passo?",
+      "modal_title_new": "Nuovo passo",
+      "modal_title_edit": "Modifica passo",
+      "actions": {
+        "roll_dice": "🎲 Tira un dado",
+        "lookup_table": "📊 Guarda in tabella",
+        "match": "🔀 Caso (multi-branch)",
+        "if": "🤔 Condizione",
+        "set_property": "📝 Imposta caratteristica",
+        "inc_property": "➕ Incrementa caratteristica",
+        "unequip": "🧺 Rimuovi dall'equipaggiamento",
+        "damage_character": "💢 Danno al personaggio",
+        "heal_character": "❤️ Cura al personaggio",
+        "change_resource": "🔄 Modifica risorsa",
+        "restore_resource": "♻️ Ripristina risorsa",
+        "apply_condition": "🔸 Applica condizione",
+        "remove_condition": "🔹 Rimuovi condizione",
+        "apply_modifier_once": "⭐ Applica modificatore",
+        "notify": "💬 Notifica",
+        "add_history": "📜 Annota nello storico"
+      },
+      "fields": {
+        "notation": "Notazione dadi",
+        "notation_invalid": "Notazione non valida (es. 1d6, 2d8+3)",
+        "store_as": "Nome della variabile",
+        "store_as_invalid": "Solo lettere, numeri e _ (max 60)",
+        "table": "Tabella",
+        "table_required": "Scegli una tabella",
+        "row": "Riga (variabile)",
+        "col": "Colonna (variabile)",
+        "match_value": "Valore da confrontare",
+        "no_cases_yet": "Nessun caso ancora.",
+        "case_chip": "Caso",
+        "cond_path": "Percorso del valore",
+        "cond_op": "Operatore",
+        "cond_value": "Valore di confronto",
+        "target_subject_or_character": "Bersaglio",
+        "target_subject": "L'oggetto",
+        "target_character": "Il personaggio",
+        "property_key": "Chiave caratteristica",
+        "set_value": "Valore",
+        "delta": "Variazione (numero o dado)",
+        "amount": "Quantità (numero, dado o \"max\")",
+        "amount_simple": "Quantità",
+        "damage_type": "Tipo di danno",
+        "damage_type_placeholder": "es. fire, necrotic",
+        "was_critical": "È stato un colpo critico",
+        "resource_key": "Chiave risorsa",
+        "condition_key": "Chiave condizione",
+        "params_json": "Parametri (JSON, opzionale)",
+        "params_json_invalid": "JSON non valido",
+        "modifier_target": "Cosa modifica (target)",
+        "modifier_target_invalid": "Target non valido (es. character.ac)",
+        "modifier_label": "Etichetta visibile",
+        "required": "Campo obbligatorio",
+        "amount_invalid": "Inserisci un numero o una notazione dadi",
+        "severity": "Importanza",
+        "severity_options": {
+          "info": "Info",
+          "warning": "Attenzione",
+          "error": "Errore",
+          "success": "Successo"
+        },
+        "message": "Messaggio",
+        "description": "Descrizione"
+      }
     }
   }
 }

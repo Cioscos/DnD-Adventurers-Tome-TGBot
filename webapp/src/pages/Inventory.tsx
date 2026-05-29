@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -18,9 +18,9 @@ import EmptyState from '@/components/ui/EmptyState'
 import ProgressTriad from '@/components/ui/ProgressTriad'
 import WeaponAttackModal, { type WeaponAttackResult } from '@/components/WeaponAttackModal'
 import { haptic } from '@/auth/telegram'
-import InventoryItem from '@/pages/inventory/InventoryItem'
+import InventoryItem, { type ItemProperty } from '@/pages/inventory/InventoryItem'
 import ItemForm from '@/pages/inventory/ItemForm'
-import { buildItemMetadata, type ItemFormData } from '@/pages/inventory/itemMetadata'
+import { buildItemMetadata, buildHomebrewMetadataPatch, type ItemFormData } from '@/pages/inventory/itemMetadata'
 import { getItemTypeIcon } from '@/lib/itemIcons'
 import type { Item } from '@/types'
 
@@ -35,8 +35,9 @@ export default function Inventory() {
       : null
   const [highlightId, setHighlightId] = useState<number | null>(initialHighlight)
   const itemRefs = useRef<Record<number, HTMLDivElement | null>>({})
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const qc = useQueryClient()
+  const locale: 'it' | 'en' = i18n.language?.startsWith('en') ? 'en' : 'it'
 
   const [showAdd, setShowAdd] = useState(false)
   const [editingItem, setEditingItem] = useState<Item | null>(null)
@@ -65,6 +66,30 @@ export default function Inventory() {
     queryKey: ['character', charId],
     queryFn: () => api.characters.get(charId),
   })
+
+  // Active homebrew rules contribute Property defs that decorate items via
+  // hb_<key> metadata. Last-wins on duplicate keys across multiple rules —
+  // the inventory chip is purely informational, so the most recently loaded
+  // definition wins without ambiguity.
+  const { data: rules } = useQuery({
+    queryKey: ['homebrew-rules', charId],
+    queryFn: () => api.homebrew.listRules(charId),
+  })
+  const propertyByKey = useMemo(() => {
+    const map = new Map<string, ItemProperty>()
+    for (const rule of rules ?? []) {
+      if (!rule.enabled) continue
+      // Only item-subject rules contribute hb_<key> item metadata. Capture the
+      // subject's item_types filter (null = applies to every item type) so the
+      // chip renderer can scope properties to the right items.
+      if (rule.dsl.subject?.type !== 'item') continue
+      const itemTypes = rule.dsl.subject.filter?.item_types ?? null
+      for (const prop of rule.dsl.properties ?? []) {
+        map.set(prop.key, { property: prop, itemTypes })
+      }
+    }
+    return map
+  }, [rules])
 
   const addMutation = useMutation({
     mutationFn: (form: ItemFormData) =>
@@ -140,6 +165,38 @@ export default function Inventory() {
       api.items.update(charId, itemId, { quantity: Math.max(0, quantity) }),
     onSuccess: (updated) => qc.setQueryData(['character', charId], updated),
   })
+
+  // Edit a single homebrew property (hb_<key>) on an item. The backend PATCH
+  // REPLACES item_metadata wholesale, so we always send the full merged object
+  // (current metadata spread + the one hb_<key> override).
+  const setPropertyMutation = useMutation({
+    mutationFn: ({
+      itemId,
+      metadata,
+    }: {
+      itemId: number
+      metadata: Record<string, unknown>
+    }) => api.items.update(charId, itemId, { item_metadata: metadata }),
+    onSuccess: (updated) => {
+      qc.setQueryData(['character', charId], updated)
+      haptic.success()
+    },
+    onError: () => haptic.error(),
+  })
+
+  const handleSetProperty = useCallback(
+    (itemId: number, key: string, value: unknown) => {
+      const cached = qc.getQueryData<typeof char>(['character', charId])
+      const target = cached?.items?.find((i) => i.id === itemId)
+      const metadata = buildHomebrewMetadataPatch(
+        target?.item_metadata as Record<string, unknown> | undefined,
+        key,
+        value,
+      )
+      setPropertyMutation.mutate({ itemId, metadata })
+    },
+    [qc, charId, setPropertyMutation],
+  )
 
   const deleteMutation = useMutation({
     mutationFn: (itemId: number) => api.items.remove(charId, itemId),
@@ -356,6 +413,10 @@ export default function Inventory() {
                             onDelete={() => setDeleteTarget(item.id)}
                             equipPending={toggleEquip.isPending}
                             attackPending={attackMutation.isPending}
+                            propertyByKey={propertyByKey}
+                            locale={locale}
+                            onSetProperty={handleSetProperty}
+                            setPropertyPending={setPropertyMutation.isPending}
                           />
                         </m.div>
                       ))}

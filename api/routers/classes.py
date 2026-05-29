@@ -30,7 +30,10 @@ from core.data.classes import (
 )
 from core.data.xp_thresholds import xp_to_level
 from core.game.stats import hit_points_for_level, total_base_hp
-from api.routers._helpers import effective_con_mod
+from api.routers._helpers import collect_homebrew_notifications, effective_con_mod
+from api.services.homebrew.dispatcher import dispatch
+from api.services.character_response import build_character_response
+from api.services.spell_slots import recalc_spell_slots
 
 router = APIRouter(prefix="/characters", tags=["classes"])
 
@@ -136,11 +139,13 @@ async def add_class(
     body: CharacterClassCreate,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
-) -> Character:
+) -> CharacterFull:
     char = await _get_owned_full(char_id, user_id, session)
     await create_class_for_character(char, body, session)
     session.expire(char)
-    return await _get_owned_full(char_id, user_id, session)
+    char = await _get_owned_full(char_id, user_id, session)
+    await recalc_spell_slots(session, char)
+    return await build_character_response(session, char)
 
 
 @router.patch("/{char_id}/classes/distribute", response_model=CharacterFull)
@@ -215,7 +220,8 @@ async def distribute_class_levels(
         char.current_hit_points = max(0, min(new_current, new_total_hp))
 
     await session.flush()
-    result = CharacterFull.model_validate(char)
+    await recalc_spell_slots(session, char)
+    result = await build_character_response(session, char)
     if hp_gained > 0:
         result.hp_gained = hp_gained
     return result
@@ -230,7 +236,7 @@ async def update_class(
     body: CharacterClassUpdate,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
-) -> Character:
+) -> CharacterFull:
     char = await _get_owned_full(char_id, user_id, session)
     cls = await _get_class(class_id, char_id, session)
     old_level = cls.level
@@ -246,7 +252,40 @@ async def update_class(
             if res_data["name"] not in existing_names:
                 session.add(ClassResource(class_id=cls.id, **res_data))
 
-    return char
+    # Flush pending setattr mutations before any relationship traversal —
+    # `CharacterFull.model_validate(char)` (and dispatch's `total_level`
+    # access via `_char_to_ctx_dict`) would otherwise trip SQLAlchemy
+    # autoflush during attribute access (sync context → "greenlet_spawn
+    # has not been called").
+    await session.flush()
+    await session.refresh(char, attribute_names=["classes"])
+
+    # Emit level_up event for installed homebrew rules.
+    # DEVIATION FROM PLAN LITERAL: plan says `if new_level != old_level`, which
+    # would fire on level decreases too. We restrict to actual UP transitions
+    # (`> old_level`) since the canonical effect — apply_modifier_once granting
+    # +HP per level — is asymmetric and meaningless on level-down. A future
+    # `level_down` event can be added if rules need to react to demotions.
+    notifications: list[dict] = []
+    if body.level is not None and body.level > old_level:
+        firing = await dispatch(
+            session,
+            char,
+            "level_up",
+            {
+                "class_name": cls.class_name,
+                "new_level": cls.level,
+                "old_level": old_level,
+                "total_level_new": char.total_level,
+            },
+        )
+        notifications = collect_homebrew_notifications(firing)
+
+    await recalc_spell_slots(session, char)
+    response = await build_character_response(session, char)
+    if notifications:
+        response.homebrew_notifications = notifications
+    return response
 
 
 @router.delete("/{char_id}/classes/{class_id}", response_model=CharacterFull)
@@ -255,13 +294,15 @@ async def remove_class(
     class_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
-) -> Character:
+) -> CharacterFull:
     char = await _get_owned_full(char_id, user_id, session)
     cls = await _get_class(class_id, char_id, session)
     await session.delete(cls)
     await session.flush()
     session.expire(char)
-    return await _get_owned_full(char_id, user_id, session)
+    char = await _get_owned_full(char_id, user_id, session)
+    await recalc_spell_slots(session, char)
+    return await build_character_response(session, char)
 
 
 # ---------------------------------------------------------------------------

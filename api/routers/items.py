@@ -20,8 +20,10 @@ from core.db.models import Character, CharacterClass, CharacterHistory, Equipmen
 from api.schemas.character import CharacterFull
 from api.schemas.item import ItemCreate, ItemRead, ItemUpdate, WeaponAttackResult
 from core.game.stats import effective_ability_score
-from api.routers._helpers import effective_con_mod
+from api.routers._helpers import collect_homebrew_notifications, effective_con_mod
 from api.services.equipment import slot_allowed_for_type, swap_slot_occupant
+from api.services.homebrew.dispatcher import dispatch
+from api.services.character_response import build_character_response
 
 router = APIRouter(prefix="/characters", tags=["items"])
 
@@ -101,7 +103,7 @@ async def add_item(
     body: ItemCreate,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
-) -> Character:
+) -> CharacterFull:
     char = await _get_owned_full(char_id, user_id, session)
 
     # Deduplication for generic items: merge quantity if same name exists
@@ -119,7 +121,7 @@ async def add_item(
             await session.flush()
             char.recalculate_encumbrance()
             await session.refresh(char, attribute_names=["items"])
-            return char
+            return await build_character_response(session, char)
 
     metadata_str = json.dumps(body.item_metadata) if body.item_metadata else None
     item = Item(
@@ -137,7 +139,7 @@ async def add_item(
     await session.flush()
     char.recalculate_encumbrance()
     await session.refresh(char, attribute_names=["items"])
-    return char
+    return await build_character_response(session, char)
 
 
 @router.patch("/{char_id}/items/{item_id}", response_model=CharacterFull)
@@ -147,7 +149,7 @@ async def update_item(
     body: ItemUpdate,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
-) -> Character:
+) -> CharacterFull:
     char = await _get_owned_full(char_id, user_id, session)
     result = await session.execute(
         select(Item).where(Item.id == item_id, Item.character_id == char_id)
@@ -158,6 +160,10 @@ async def update_item(
 
     # Snapshot CON modifier BEFORE any item changes
     old_con_mod = effective_con_mod(char)
+
+    # Snapshot equipped state for the homebrew event below. Captured BEFORE the
+    # setattr loop so we can detect a True→False / False→True transition.
+    was_equipped = item.is_equipped
 
     data = body.model_dump(exclude_unset=True)
     if "item_metadata" in data:
@@ -210,7 +216,39 @@ async def update_item(
             _apply_hp_delta(char, delta * char.total_level)
 
     char.recalculate_encumbrance()
-    return char
+    # Flush + refresh so the post-update Character (and items) are visible to
+    # both dispatch (which inspects subjects) and the response builder. The
+    # earlier swap_slot_occupant() can autoflush + expire `char` attributes,
+    # which would otherwise break `CharacterFull.model_validate(char)` below.
+    await session.flush()
+    await session.refresh(char, attribute_names=["items"])
+
+    # Emit item_equipped / item_unequipped events for installed homebrew rules.
+    # SCOPE: only the explicitly-patched item — the displaced occupant (from
+    # swap_slot_occupant) is NOT dispatched on, even though its `is_equipped`
+    # was flipped to False as a side-effect. This keeps the event surface
+    # 1-to-1 with the user's PATCH intent; if rules need to react to slot-swap
+    # displacement, that's a separate event for a future iteration.
+    notifications: list[dict] = []
+    if body.is_equipped is not None and body.is_equipped != was_equipped:
+        event_type = "item_equipped" if body.is_equipped else "item_unequipped"
+        slot_value = item.equipment_slot.value if item.equipment_slot is not None else None
+        firing = await dispatch(
+            session, char, event_type,
+            {
+                "item_id": item.id,
+                "item_type": item.item_type,
+                "slot": slot_value,
+                "was_equipped": was_equipped,
+                "is_equipped": item.is_equipped,
+            },
+        )
+        notifications = collect_homebrew_notifications(firing)
+
+    response = await build_character_response(session, char)
+    if notifications:
+        response.homebrew_notifications = notifications
+    return response
 
 
 @router.delete("/{char_id}/items/{item_id}", response_model=CharacterFull)
@@ -219,7 +257,7 @@ async def delete_item(
     item_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
-) -> Character:
+) -> CharacterFull:
     char = await _get_owned_full(char_id, user_id, session)
     result = await session.execute(
         select(Item).where(Item.id == item_id, Item.character_id == char_id)
@@ -231,7 +269,7 @@ async def delete_item(
     await session.flush()
     char.recalculate_encumbrance()
     await session.refresh(char, attribute_names=["items"])
-    return char
+    return await build_character_response(session, char)
 
 
 # ---------------------------------------------------------------------------
@@ -322,6 +360,20 @@ async def attack_with_weapon(
         result_str = f"Reroll ispirazione (to-hit) — {result_str}"
     _add_history(session, char.id, "attack_roll", result_str)
 
+    # Emit homebrew event so installed rules (e.g. Qualità & Usura) can react.
+    firing_results = await dispatch(
+        session, char, "attack_rolled",
+        {
+            "item_id": item.id,
+            "to_hit_die": to_hit_die,
+            "to_hit_total": to_hit_total,
+            "is_critical": is_critical,
+            "is_fumble": is_fumble,
+            "damage_total": damage_total,
+        },
+    )
+    notifications = collect_homebrew_notifications(firing_results)
+
     return WeaponAttackResult(
         weapon_name=item.name,
         to_hit_die=to_hit_die,
@@ -333,4 +385,5 @@ async def attack_with_weapon(
         damage_rolls=damage_rolls,
         damage_bonus=damage_bonus if not is_fumble else 0,
         damage_total=damage_total,
+        homebrew_notifications=notifications if notifications else None,
     )

@@ -10,6 +10,17 @@ import {
 } from 'react-icons/gi'
 import { TYPE_ICON } from './itemMetadata'
 import type { Item } from '@/types'
+import type { Property } from '@/lib/homebrew/types'
+import PropertyBadge from '@/components/homebrew/PropertyBadge'
+
+/**
+ * A homebrew Property resolved from an active rule, paired with the item types
+ * the rule applies to (`null` = no `item_types` filter → applies to every item).
+ */
+export type ItemProperty = {
+  property: Property
+  itemTypes: string[] | null
+}
 
 /* ---------- Stat chip (matches SpellItem chip style) ---------- */
 
@@ -142,6 +153,54 @@ function ItemEffectCallout({ item }: { item: Item }) {
   )
 }
 
+/* ---------- Homebrew property chips ---------- */
+
+function HomebrewPropertyChips({
+  item,
+  propertyByKey,
+  locale,
+  onSetProperty,
+  pending,
+}: {
+  item: Item
+  propertyByKey: Map<string, ItemProperty>
+  locale: 'it' | 'en'
+  onSetProperty: (itemId: number, key: string, value: unknown) => void
+  pending: boolean
+}) {
+  const meta = item.item_metadata as Record<string, unknown> | undefined
+
+  // Iterate over EVERY active property whose rule applies to this item type —
+  // not just keys already present in item_metadata. Properties without a stored
+  // metadata value fall back to their `default`, so e.g. `enchanted` (default
+  // false) and `quality` (default "ordinaria") are editable on a pristine item.
+  const entries: Array<[string, unknown, Property]> = []
+  for (const { property, itemTypes } of propertyByKey.values()) {
+    // Respect the rule's subject `item_types` filter (null = all items).
+    if (itemTypes && !itemTypes.includes(item.item_type)) continue
+    const stored = meta?.[`hb_${property.key}`]
+    const value = stored !== undefined ? stored : property.default
+    entries.push([property.key, value, property])
+  }
+  if (entries.length === 0) return null
+
+  return (
+    <div className="grid grid-cols-2 gap-1.5">
+      {entries.map(([key, value, property]) => (
+        <PropertyBadge
+          key={key}
+          propertyKey={key}
+          value={value}
+          property={property}
+          locale={locale}
+          onSetProperty={(k, v) => onSetProperty(item.id, k, v)}
+          disabled={pending}
+        />
+      ))}
+    </div>
+  )
+}
+
 /* ---------- Main component ---------- */
 
 interface InventoryItemProps {
@@ -155,6 +214,10 @@ interface InventoryItemProps {
   onDelete: () => void
   equipPending: boolean
   attackPending: boolean
+  propertyByKey: Map<string, ItemProperty>
+  locale: 'it' | 'en'
+  onSetProperty: (itemId: number, key: string, value: unknown) => void
+  setPropertyPending: boolean
 }
 
 function InventoryItemInner({
@@ -168,6 +231,10 @@ function InventoryItemInner({
   onDelete,
   equipPending,
   attackPending,
+  propertyByKey,
+  locale,
+  onSetProperty,
+  setPropertyPending,
 }: InventoryItemProps) {
   const { t } = useTranslation()
   const icon = TYPE_ICON[item.item_type] ?? '📦'
@@ -227,6 +294,15 @@ function InventoryItemInner({
 
           {/* Stat chips */}
           <ItemStatChips item={item} />
+
+          {/* Homebrew property chips — editable, resolved against active rules */}
+          <HomebrewPropertyChips
+            item={item}
+            propertyByKey={propertyByKey}
+            locale={locale}
+            onSetProperty={onSetProperty}
+            pending={setPropertyPending}
+          />
 
           {/* Weapon properties tags */}
           <WeaponPropertyTags item={item} />

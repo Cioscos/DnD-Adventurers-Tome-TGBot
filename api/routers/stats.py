@@ -16,6 +16,7 @@ from core.db.models import AbilityScore, Character
 from api.schemas.character import CharacterFull
 from api.schemas.common import AbilityScoreUpdate
 from api.routers._helpers import effective_con_mod
+from api.services.character_response import build_character_response
 from pydantic import BaseModel
 from typing import Optional
 
@@ -59,7 +60,7 @@ async def update_ability_score(
     body: AbilityScoreUpdate,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
-) -> Character:
+) -> CharacterFull:
     char = await _get_owned_full(char_id, user_id, session)
 
     if not 1 <= body.value <= 30:
@@ -101,7 +102,7 @@ async def update_ability_score(
                 min(char.current_hit_points + delta * char.total_level, char.hit_points),
             )
 
-    return char
+    return await build_character_response(session, char)
 
 
 @router.patch("/{char_id}/ac", response_model=CharacterFull)
@@ -110,7 +111,7 @@ async def update_ac(
     body: ACUpdate,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
-) -> Character:
+) -> CharacterFull:
     char = await _get_owned_full(char_id, user_id, session)
     if body.base is not None:
         char.base_armor_class = max(0, body.base)
@@ -120,7 +121,7 @@ async def update_ac(
         char.shield_armor_class_override = True
     if body.magic is not None:
         char.magic_armor = max(0, body.magic)
-    return char
+    return await build_character_response(session, char)
 
 
 @router.post("/{char_id}/ac/reset-override", response_model=CharacterFull)
@@ -128,7 +129,7 @@ async def reset_ac_override(
     char_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
-) -> Character:
+) -> CharacterFull:
     """Clear AC manual override flags and recompute Base/Shield from currently equipped items."""
     char = await _get_owned_full(char_id, user_id, session)
     char.base_armor_class_override = False
@@ -155,4 +156,4 @@ async def reset_ac_override(
     else:
         char.shield_armor_class = 0
 
-    return char
+    return await build_character_response(session, char)

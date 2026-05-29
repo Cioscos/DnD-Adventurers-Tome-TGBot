@@ -136,3 +136,4 @@ class WeaponAttackResult(BaseModel):
     damage_rolls: list[int]
     damage_bonus: int
     damage_total: int
+    homebrew_notifications: Optional[list[dict]] = None

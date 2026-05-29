@@ -10,6 +10,7 @@ import Surface from '@/components/ui/Surface'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
 import { ShieldEmblem } from '@/components/ui/Ornament'
+import HomebrewBreakdownRow from '@/components/homebrew/HomebrewBreakdownRow'
 import { haptic } from '@/auth/telegram'
 import { spring } from '@/styles/motion'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
@@ -68,10 +69,12 @@ export default function ArmorClass() {
   ) ?? null
 
   const isDirty = base !== '' || shield !== '' || magic !== ''
+  const hbAc = char.ac_breakdown?.homebrew ?? 0
+  const acTotal = char.ac + hbAc
   const previewBase = base !== '' ? Number(base) : char.base_armor_class
   const previewShield = shield !== '' ? Number(shield) : char.shield_armor_class
   const previewMagic = magic !== '' ? Number(magic) : char.magic_armor
-  const previewTotal = previewBase + previewShield + previewMagic
+  const previewTotal = previewBase + previewShield + previewMagic + hbAc
 
   return (
     <Layout title={t('character.ac.title')} backTo={`/char/${charId}`} group="combat" page="ac">
@@ -92,7 +95,7 @@ export default function ArmorClass() {
               <ShieldEmblem size={200} />
             </m.div>
             <m.span
-              key={char.ac}
+              key={acTotal}
               initial={{ scale: 0.6, opacity: 0 }}
               animate={{ scale: [0.6, 1.15, 1], opacity: 1 }}
               transition={spring.elastic}
@@ -102,7 +105,7 @@ export default function ArmorClass() {
                 textShadow: '0 2px 8px var(--dnd-gold-glow), 0 0 2px rgba(0,0,0,0.6)',
               }}
             >
-              {char.ac}
+              {acTotal}
             </m.span>
           </div>
 
@@ -113,6 +116,7 @@ export default function ArmorClass() {
             base · shield · magic
           </p>
         </div>
+        <HomebrewBreakdownRow value={char.ac_breakdown?.homebrew ?? 0} />
       </Surface>
 
       {/* Single-row 3-col: Base · Shield · Magic */}
@@ -226,7 +230,7 @@ export default function ArmorClass() {
         </div>
       )}
 
-      {isDirty && previewTotal !== char.ac && (
+      {isDirty && previewTotal !== acTotal && (
         <m.div
           initial={{ opacity: 0, y: 4 }}
           animate={{ opacity: 1, y: 0 }}
