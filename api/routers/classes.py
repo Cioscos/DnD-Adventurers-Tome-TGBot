@@ -62,6 +62,22 @@ async def _get_owned_full(char_id: int, user_id: int, session: AsyncSession) -> 
     return char
 
 
+async def _refresh_char_full(char_id: int, user_id: int, session: AsyncSession) -> Character:
+    """Flush pending mutations, then re-SELECT a fully-loaded character.
+
+    Mirror of ``api.routers.characters._refresh_char_full`` (duplicated here to
+    avoid a circular import: characters.py already imports from classes.py).
+    A bare in-memory ``char`` whose ``classes.resources`` collection was loaded
+    by an earlier ``selectinload`` will NOT contain ``ClassResource`` rows added
+    in the same transaction — serializing it drops them (finding #6). ``expire``
+    alone is insufficient (autoflush may pull related objects into the identity
+    map), so we ``expunge_all()`` and re-issue the full eager-load query.
+    """
+    await session.flush()
+    session.expunge_all()
+    return await _get_owned_full(char_id, user_id, session)
+
+
 async def _get_class(class_id: int, char_id: int, session: AsyncSession) -> CharacterClass:
     result = await session.execute(
         select(CharacterClass)
@@ -231,7 +247,10 @@ async def distribute_class_levels(
         char.hit_points = new_total_hp
         char.current_hit_points = max(0, min(new_current, new_total_hp))
 
-    await session.flush()
+    # Re-fetch so newly-inserted ClassResource rows (e.g. Punti Ki on a fresh
+    # Monaco level) appear in the response — otherwise the FE multiclass card
+    # misses them until a reload (finding #6).
+    char = await _refresh_char_full(char_id, user_id, session)
     await recalc_spell_slots(session, char)
     result = await build_character_response(session, char)
     if hp_gained > 0:
