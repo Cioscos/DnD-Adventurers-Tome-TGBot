@@ -13,7 +13,7 @@ const WEBAPP_DIR = resolve(__dirname, '..');
 const REPO_ROOT = resolve(WEBAPP_DIR, '..');
 const ENV_FILE = resolve(WEBAPP_DIR, '.env.local');
 const PROD_URL = 'https://api.cischi.dev';
-const DEV_URL = 'http://localhost:8000';
+const DEV_URL = 'http://127.0.0.1:8000';
 
 function writeEnv(url) {
   writeFileSync(ENV_FILE, `VITE_API_BASE_URL=${url}\n`);

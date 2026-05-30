@@ -32,7 +32,7 @@ const RACE_SLUG_MAP: Record<string, string> = {
   half_orc: 'half_orc', mezzorco: 'half_orc', 'half-orc': 'half_orc',
   gnome: 'gnome', gnomo: 'gnome', gnoma: 'gnome',
   tiefling: 'tiefling',
-  dragonborn: 'dragonborn', dracoide: 'dragonborn',
+  dragonborn: 'dragonborn', dracoide: 'dragonborn', tabaxi: 'tabaxi'
 }
 
 const GENDER_SLUG_MAP: Record<string, string> = {

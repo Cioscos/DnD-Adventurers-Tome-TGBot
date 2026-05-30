@@ -89,12 +89,12 @@ git commit -m "feat: ..."
 `npm run build:prod` (`webapp/scripts/build-prod.mjs`) does in one shot:
 1. Switches `.env.local` to the production API URL (`https://api.cischi.dev`)
 2. Runs `tsc && vite build` (fails fast on TypeScript errors)
-3. Restores `.env.local` to `http://localhost:8000` (even on error, via `try/finally`)
+3. Restores `.env.local` to `http://127.0.0.1:8000` (even on error, via `try/finally`)
 4. Runs `git add docs/app/` so the build output is staged and ready
 
 Do **not** commit `.env.local` — it is gitignored.
 
-> **Quirk**: the script restores `.env.local` to `http://localhost:8000`, but the local dev setup uses `http://127.0.0.1:8000` (different host literal — important for FastAPI bind on `127.0.0.1`). After every `build:prod`, manually rewrite the file back: `printf 'VITE_API_BASE_URL=http://127.0.0.1:8000\n' > webapp/.env.local`.
+The script restores `.env.local` to `http://127.0.0.1:8000` (the host literal the local dev setup expects — important for FastAPI bind on `127.0.0.1`), so no manual rewrite is needed after `build:prod`.
 
 Open a PR from your feature branch → merge → Pages redeploys automatically.
 
