@@ -2,6 +2,7 @@ import React from 'react'
 import { m, AnimatePresence } from 'framer-motion'
 import { spring } from '@/styles/motion'
 import { CornerFlourishes } from './Ornament'
+import { useRegisterOverlay } from '@/store/overlayStore'
 
 export type DialogAccent = 'default' | 'gold' | 'crimson' | 'emerald' | 'arcane' | 'cobalt'
 export type DialogSize = 'sm' | 'md'
@@ -49,6 +50,8 @@ export default function ResultDialog({
   hideOkButton = false,
   okLabel = 'OK',
 }: ResultDialogProps) {
+  useRegisterOverlay(open)
+
   const pulseClass = pulse
     ? accent === 'gold'
       ? 'animate-pulse-gold'

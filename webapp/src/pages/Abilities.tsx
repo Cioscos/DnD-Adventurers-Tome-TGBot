@@ -408,7 +408,7 @@ export default function Abilities() {
                     }
                   })
                 }
-                placeholder="Rage, Action Surge, ..."
+                placeholder={t('character.abilities.name_placeholder')}
                 autoFocus
               />
               <m.label

@@ -66,8 +66,11 @@ export type ItemFormData = {
 export const emptyForm: ItemFormData = {
   name: '',
   item_type: 'generic',
-  quantity: '1',
-  weight: '0',
+  // Left empty so the field shows a placeholder hint, not a pre-filled value
+  // (project convention: never pre-fill inputs). The submit logic applies the
+  // sensible defaults — quantity → 1, weight → 0 — when left blank.
+  quantity: '',
+  weight: '',
   description: '',
   damage_dice: '1d6',
   damage_type: 'dmg_slashing',

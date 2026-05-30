@@ -52,6 +52,26 @@ CLASS_SPELLCASTING: dict[str, str | None] = {
     "Warlock":   "charisma",
 }
 
+# Saving throw proficiencies granted by the *starting* class (D&D 5e PHB).
+# Each class grants proficiency in exactly two ability saving throws. These are
+# seeded ONLY by the first (starting) class at character creation; multiclassing
+# does NOT grant additional saving throw proficiencies (PHB multiclass rules).
+# Ability slugs match core.db.models.ABILITY_NAMES (full English lowercase).
+CLASS_SAVING_THROWS: dict[str, tuple[str, str]] = {
+    "Barbaro":   ("strength", "constitution"),
+    "Bardo":     ("dexterity", "charisma"),
+    "Chierico":  ("wisdom", "charisma"),
+    "Druido":    ("intelligence", "wisdom"),
+    "Guerriero": ("strength", "constitution"),
+    "Ladro":     ("dexterity", "intelligence"),
+    "Mago":      ("intelligence", "wisdom"),
+    "Monaco":    ("strength", "dexterity"),
+    "Paladino":  ("wisdom", "charisma"),
+    "Ranger":    ("strength", "dexterity"),
+    "Stregone":  ("constitution", "charisma"),
+    "Warlock":   ("wisdom", "charisma"),
+}
+
 # Hit die per class
 CLASS_HIT_DIE: dict[str, int] = {
     "Barbaro":   12,
@@ -252,6 +272,20 @@ def get_resources_for_class(
             "note": cfg.note,
         })
     return result
+
+
+def get_saving_throw_proficiencies(class_name: str) -> dict[str, bool]:
+    """Return the saving throw proficiencies granted by a starting class.
+
+    Returns a dict mapping ability slug → True for the two saves the class
+    grants. Empty dict for unknown/custom classes (no proficiencies seeded).
+    Only the starting (first) class should call this — multiclassing does not
+    grant saving throw proficiencies in D&D 5e.
+    """
+    abilities = CLASS_SAVING_THROWS.get(class_name)
+    if not abilities:
+        return {}
+    return {ability: True for ability in abilities}
 
 
 def update_resources_for_level(

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { m, AnimatePresence } from 'framer-motion'
 import { X } from 'lucide-react'
 import { TYPE_ICON } from '@/pages/inventory/itemMetadata'
+import { useRegisterOverlay } from '@/store/overlayStore'
 import type { EquipmentSlot, Item } from '@/types'
 
 interface Props {
@@ -29,6 +30,7 @@ function MetadataField({ label, value }: { label: string; value: string | number
 
 export default function ItemDetailsModal({ item, slot, onClose }: Props) {
   const { t } = useTranslation()
+  useRegisterOverlay(true)
 
   const slotLabel = t(`character.equipment.slots.${slot}`, { defaultValue: slot })
   const typeLabel = t(`character.inventory.types.${item.item_type}`, { defaultValue: item.item_type })

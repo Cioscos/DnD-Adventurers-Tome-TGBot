@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import Card from '@/components/Card'
 import DndInput from '@/components/DndInput'
 import DndButton from '@/components/DndButton'
+import { useRegisterOverlay } from '@/store/overlayStore'
 
 const PREDEFINED_CLASSES: Record<string, { hit_die: number; spellcasting_ability: string | null }> = {
   barbarian: { hit_die: 12, spellcasting_ability: null },
@@ -55,6 +56,7 @@ interface AddClassFormProps {
 
 export default function AddClassForm({ onAdd, onCancel, isPending, lockLevelTo }: AddClassFormProps) {
   const { t } = useTranslation()
+  useRegisterOverlay(true)
   const [classForm, setClassForm] = useState<ClassForm>(() =>
     lockLevelTo != null ? { ...emptyClass, level: String(lockLevelTo) } : emptyClass
   )

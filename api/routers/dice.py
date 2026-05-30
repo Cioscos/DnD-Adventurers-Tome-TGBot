@@ -104,9 +104,9 @@ async def post_dice_result(
     else:
         description = f"🎲 {notation}: {total}"
     if body.label:
-        description = f"{body.label} — {description}"
+        description = f"{body.label}: {description}"
     if body.with_inspiration:
-        description = f"Reroll ispirazione — {description}"
+        description = f"Reroll ispirazione: {description}"
     session.add(CharacterHistory(
         character_id=char_id,
         timestamp=datetime.utcnow().isoformat(timespec="seconds"),

@@ -14,6 +14,7 @@ import EmptyState from '@/components/ui/EmptyState'
 import { haptic } from '@/auth/telegram'
 import MapUploadForm from '@/pages/maps/MapUploadForm'
 import MapZoneGroup from '@/pages/maps/MapZoneGroup'
+import { useRegisterOverlay } from '@/store/overlayStore'
 import type { MapEntry } from '@/types'
 
 // Lazy-load pinch-zoom — only inside the fullscreen photo overlay.
@@ -30,6 +31,10 @@ export default function Maps() {
   const [deleteZoneTarget, setDeleteZoneTarget] = useState<string | null>(null)
   const [showUpload, setShowUpload] = useState(false)
   const [uploadInitialZone, setUploadInitialZone] = useState('')
+
+  // Hide the dice FAB while the full-screen map viewer is open (custom overlay,
+  // not a Sheet/ResultDialog).
+  useRegisterOverlay(overlayMap !== null)
 
   const { data: char } = useQuery({
     queryKey: ['character', charId],

@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { m, AnimatePresence } from 'framer-motion'
 import { api } from '@/api/client'
 import { haptic } from '@/auth/telegram'
+import { useRegisterOverlay } from '@/store/overlayStore'
 import type { EquipmentSlot, Item, CharacterFull } from '@/types'
 
 interface Props {
@@ -18,6 +19,7 @@ interface Props {
 export default function SlotActionSheet({ charId, slot, item, onClose, onReplace, onDetails }: Props) {
   const { t } = useTranslation()
   const qc = useQueryClient()
+  useRegisterOverlay(true)
 
   const unequip = useMutation({
     mutationFn: () =>

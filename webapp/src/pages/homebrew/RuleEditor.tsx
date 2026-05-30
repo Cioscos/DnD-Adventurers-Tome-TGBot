@@ -8,6 +8,7 @@ import Layout from '@/components/Layout'
 import Button from '@/components/ui/Button'
 import Skeleton from '@/components/Skeleton'
 import { useToast } from '@/hooks/useToast'
+import { haptic } from '@/auth/telegram'
 import type { HomebrewRule, RuleDSL } from '@/lib/homebrew/types'
 import IdentitySection from './sections/IdentitySection'
 import SubjectSection from './sections/SubjectSection'
@@ -112,6 +113,8 @@ export default function RuleEditor() {
   const [dsl, setDsl] = useState<RuleDSL>(emptyDsl)
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
+  const [nameError, setNameError] = useState<string | undefined>(undefined)
+  const nameInputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null)
 
   // Hydrate local state on first successful fetch only — guard against
   // refetches clobbering in-progress user edits.
@@ -133,6 +136,7 @@ export default function RuleEditor() {
   // re-populates the form once the query resolves.
   useEffect(() => {
     hasHydratedRef.current = false
+    setNameError(undefined)
     if (isNew) {
       setDsl(emptyDsl())
       setName('')
@@ -193,23 +197,25 @@ export default function RuleEditor() {
 
   const isSaving = createMut.isPending || updateMut.isPending
 
-  // Cheap client-side gate — backend's Pydantic is the source of truth for
-  // nested validation (subject, properties, tables, etc.).
-  const validateBeforeSave = (): string | null => {
-    if (!name.trim()) return t('homebrew.editor.validation.name_required')
+  const handleSave = () => {
+    if (isSaving) return
+    // Name is required — surface the error inline on the field (crimson +
+    // shake), scroll it into view and focus it. The identity panel may be
+    // scrolled off-screen when the user taps Save at the bottom of the form.
+    if (!name.trim()) {
+      setNameError(t('homebrew.editor.validation.name_required'))
+      haptic.error()
+      nameInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      nameInputRef.current?.focus()
+      return
+    }
+    // Behaviour gate — backend's Pydantic is the source of truth for nested
+    // validation (subject, properties, tables, etc.); this is a cheap pre-check.
     const triggerCount = dsl.triggers?.length ?? 0
     const modifierCount = dsl.passive_modifiers?.length ?? 0
     if (triggerCount === 0 && modifierCount === 0) {
-      return t('homebrew.editor.validation.no_behavior')
-    }
-    return null
-  }
-
-  const handleSave = () => {
-    if (isSaving) return
-    const validationError = validateBeforeSave()
-    if (validationError) {
-      toast.error(validationError)
+      toast.error(t('homebrew.editor.validation.no_behavior'))
+      haptic.error()
       return
     }
     if (isNew) {
@@ -244,9 +250,12 @@ export default function RuleEditor() {
           <IdentitySection
             name={name}
             description={description}
+            nameError={nameError}
+            nameInputRef={nameInputRef}
             onChange={(n, d) => {
               setName(n)
               setDescription(d)
+              if (nameError && n.trim()) setNameError(undefined)
             }}
           />
         </CollapsiblePanel>

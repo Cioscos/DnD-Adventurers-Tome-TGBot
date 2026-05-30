@@ -168,7 +168,7 @@ export default function Dice() {
     <Layout title={t('character.dice.title')} backTo={`/char/${charId}`} group="tools" page="dice">
       {/* Initiative button */}
       <Button
-        variant="arcane"
+        variant="secondary"
         size="lg"
         fullWidth
         onClick={() => handleInitiative()}
@@ -201,7 +201,7 @@ export default function Dice() {
         <m.button
           onClick={handleStatRoll}
           disabled={rollPending || initiativeRolling}
-          className="min-h-[44px] rounded-xl bg-dnd-chip-bg border border-dnd-arcane/40 text-dnd-arcane-bright font-cinzel text-xs uppercase tracking-widest disabled:opacity-40"
+          className="min-h-[44px] rounded-xl bg-dnd-chip-bg border border-dnd-gold-dim/40 text-dnd-gold-bright font-cinzel text-xs uppercase tracking-widest disabled:opacity-40"
           whileTap={{ scale: 0.93 }}
           title={t('character.dice.stat_roll_hint', { defaultValue: '4d6 scarta più basso (tiro caratteristica)' })}
         >
@@ -281,8 +281,8 @@ export default function Dice() {
             exit={{ opacity: 0, y: -10 }}
             transition={spring.elastic}
           >
-            <Surface variant="arcane" ornamented className="text-center">
-              <p className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-arcane-bright mb-1 flex items-center justify-center gap-1.5">
+            <Surface variant="elevated" ornamented className="text-center">
+              <p className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-gold-dim mb-1 flex items-center justify-center gap-1.5">
                 <Swords size={12} /> {t('character.dice.initiative')}
               </p>
               <m.p

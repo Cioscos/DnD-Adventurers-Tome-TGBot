@@ -7,6 +7,7 @@ import { GiPerspectiveDiceSixFacesRandom as Dices } from 'react-icons/gi'
 import DiceIcon from '@/components/ui/DiceIcon'
 import DicePoolResultModal from '@/components/DicePoolResultModal'
 import { useCharacterStore } from '@/store/characterStore'
+import { useAnyOverlayOpen } from '@/store/overlayStore'
 import { haptic } from '@/auth/telegram'
 import { api } from '@/api/client'
 import { useRollAndPersist, type RollEntry, type RollGroup } from '@/dice/useRollAndPersist'
@@ -47,6 +48,9 @@ function useOverlayVisibility(): { visible: boolean; charId: number | null } {
 export default function DiceOverlay() {
   const { t } = useTranslation()
   const { visible, charId } = useOverlayVisibility()
+  // Hide the launcher whenever a modal/sheet/dialog is open so it never floats
+  // above the backdrop and steals taps from modal buttons (finding #3).
+  const anyOverlayOpen = useAnyOverlayOpen()
   const [open, setOpen] = useState(false)
   const [pool, setPool] = useState<DicePool>({})
 
@@ -157,7 +161,8 @@ export default function DiceOverlay() {
 
   return (
     <>
-      <div className="fixed bottom-4 right-4 z-[55]">
+      {!anyOverlayOpen && (
+      <div className="fixed bottom-4 right-4 z-40">
         <AnimatePresence>
           {open && (
             <m.div
@@ -246,6 +251,7 @@ export default function DiceOverlay() {
           <Dices size={26} />
         </m.button>
       </div>
+      )}
 
       {results && results.length > 0 && charId != null && (
         <DicePoolResultModal

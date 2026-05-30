@@ -1,6 +1,7 @@
 import React from 'react'
 import { useTranslation } from 'react-i18next'
 import Card from '@/components/Card'
+import { renderInlineMarkdown } from '@/lib/inlineMarkdown'
 import { formatRelative, formatAbsolute } from '@/lib/relativeTime'
 import { useCharacterStore } from '@/store/characterStore'
 import type { Note } from '@/types'
@@ -109,7 +110,7 @@ function NoteItemInner({ note, onEdit, onDelete, voiceUrl }: NoteItemProps) {
         </div>
       )}
       <p className="text-sm text-dnd-text-muted whitespace-pre-wrap line-clamp-3">
-        {note.body}
+        {renderInlineMarkdown(note.body)}
       </p>
       {relLabel && (
         <p

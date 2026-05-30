@@ -23,15 +23,6 @@ import HomebrewBreakdownRow from '@/components/homebrew/HomebrewBreakdownRow'
 
 const ABILITIES = ['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'] as const
 
-const ABILITY_TONE: Record<string, 'crimson' | 'emerald' | 'amber' | 'cobalt' | 'arcane' | 'gold'> = {
-  strength: 'crimson',
-  dexterity: 'emerald',
-  constitution: 'amber',
-  intelligence: 'cobalt',
-  wisdom: 'arcane',
-  charisma: 'gold',
-}
-
 type RollState = {
   result: RollResult
   title: string
@@ -80,7 +71,7 @@ export default function SavingThrows() {
       setRollState({
         result,
         ability,
-        title: `${t('character.saves.title')} — ${t(`character.stats.${ability}`)}`,
+        title: `${t('character.saves.title')}: ${t(`character.stats.${ability}`)}`,
         wasRerolled: false,
       })
       haptic.success()
@@ -141,14 +132,6 @@ export default function SavingThrows() {
           const score = char.ability_scores.find((s) => s.name === ability)
           const abilMod = score?.modifier ?? 0
           const total = abilMod + (isProficient ? pb : 0) + (char.saves_homebrew_modifiers?.[ability] ?? 0)
-          const tone = ABILITY_TONE[ability]
-          const toneClass =
-            tone === 'crimson' ? 'text-[var(--dnd-crimson-bright)]'
-            : tone === 'emerald' ? 'text-[var(--dnd-emerald-bright)]'
-            : tone === 'amber' ? 'text-[var(--dnd-amber)]'
-            : tone === 'cobalt' ? 'text-[var(--dnd-cobalt-bright)]'
-            : tone === 'arcane' ? 'text-dnd-arcane-bright'
-            : 'text-dnd-gold-bright'
 
           return (
             <Fragment key={ability}>
@@ -191,7 +174,7 @@ export default function SavingThrows() {
                       </p>
                     </div>
 
-                    <p className={`text-3xl font-display font-black leading-none tabular-nums ${toneClass}`}>
+                    <p className="text-3xl font-mono font-bold leading-none tabular-nums text-dnd-text">
                       {total >= 0 ? '+' : ''}{total}
                     </p>
                     <DiceIcon sides={20} size={24} className="text-dnd-gold/80 shrink-0" />

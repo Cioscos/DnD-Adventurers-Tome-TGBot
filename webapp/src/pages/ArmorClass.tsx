@@ -113,7 +113,7 @@ export default function ArmorClass() {
             {char.base_armor_class} + {char.shield_armor_class} + {char.magic_armor}
           </p>
           <p className="text-[10px] text-dnd-text-faint font-cinzel uppercase tracking-wider mt-0.5">
-            base · shield · magic
+            {t('character.ac.legend')}
           </p>
         </div>
         <HomebrewBreakdownRow value={char.ac_breakdown?.homebrew ?? 0} />

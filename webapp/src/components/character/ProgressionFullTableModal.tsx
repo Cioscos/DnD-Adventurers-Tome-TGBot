@@ -3,7 +3,8 @@ import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { m, AnimatePresence } from 'framer-motion'
 import { X } from 'lucide-react'
-import { progressionRows } from '@/lib/classProgression'
+import { progressionRows, localizeFeatures } from '@/lib/classProgression'
+import { useRegisterOverlay } from '@/store/overlayStore'
 
 interface Props {
   className: string
@@ -12,9 +13,11 @@ interface Props {
 }
 
 export default function ProgressionFullTableModal({ className, currentLevel, onClose }: Props) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const currentRowRef = useRef<HTMLTableRowElement>(null)
   const rows = progressionRows(className) ?? []
+
+  useRegisterOverlay(true)
 
   useEffect(() => {
     currentRowRef.current?.scrollIntoView({ behavior: 'auto', block: 'center' })
@@ -46,7 +49,7 @@ export default function ProgressionFullTableModal({ className, currentLevel, onC
         >
           <header className="flex-shrink-0 flex items-center justify-between px-4 py-3 bg-dnd-surface-raised border-b border-dnd-gold-dim/40">
             <h2 className="text-sm font-cinzel uppercase tracking-widest text-dnd-gold-bright">
-              {className} — {t('character.equipment.progression.title', { defaultValue: 'Progression' })}
+              {className}: {t('character.equipment.progression.title', { defaultValue: 'Progression' })}
             </h2>
             <button
               type="button"
@@ -82,7 +85,7 @@ export default function ProgressionFullTableModal({ className, currentLevel, onC
                     >
                       <td className="px-2 py-2 font-mono font-bold">L{lv}</td>
                       <td className="px-2 py-2 font-mono">+{r.proficiency_bonus}</td>
-                      <td className="px-2 py-2 break-words">{r.features}</td>
+                      <td className="px-2 py-2 break-words">{localizeFeatures(r.features, i18n.language)}</td>
                     </tr>
                   )
                 })}

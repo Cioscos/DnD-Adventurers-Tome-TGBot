@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useCallback, type ReactNode } from 'react'
 import { m, AnimatePresence, useDragControls, type PanInfo } from 'framer-motion'
 import { spring } from '@/styles/motion'
+import { useRegisterOverlay } from '@/store/overlayStore'
 
 interface ModalOptions {
   content: ReactNode
@@ -83,6 +84,8 @@ function ModalShell({
 
 export default function ModalProvider({ children }: { children: ReactNode }) {
   const [stack, setStack] = useState<ModalOptions[]>([])
+
+  useRegisterOverlay(stack.length > 0)
 
   const openModal = useCallback((options: ModalOptions) => {
     document.body.style.overflow = 'hidden'

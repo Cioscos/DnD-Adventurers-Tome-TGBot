@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
 import {
-  GiNightSleep as Moon, GiSparkles as Sparkles, GiPotionBall as FlaskConical,
+  GiNightSleep as Moon, GiCampfire as Campfire, GiPotionBall as FlaskConical,
   GiHeartPlus as Heart,
 } from 'react-icons/gi'
 import { toast } from 'sonner'
@@ -250,25 +250,24 @@ export default function HP() {
       {/* Rest buttons */}
       <div className="grid grid-cols-2 gap-2">
         <Button
-          variant="arcane"
+          variant="secondary"
           size="lg"
           fullWidth
           onClick={() => setShowShortRest(true)}
           disabled={restMutation.isPending}
-          icon={<Moon size={18} />}
-          className="!bg-gradient-to-br !from-dnd-cobalt-deep/40 !to-dnd-cobalt/30 !text-dnd-cobalt-bright !border-dnd-cobalt/50"
+          icon={<Campfire size={18} />}
           haptic="medium"
         >
           {t('character.hp.short_rest')}
         </Button>
         <Button
-          variant="arcane"
+          variant="secondary"
           size="lg"
           fullWidth
           onClick={() => setShowLongRestConfirm(true)}
           disabled={restMutation.isPending}
           loading={restMutation.isPending}
-          icon={<Sparkles size={18} />}
+          icon={<Moon size={18} />}
           haptic="success"
         >
           {t('character.hp.long_rest')}
@@ -285,7 +284,7 @@ export default function HP() {
         title={t('character.hp.long_rest_confirm_title')}
         body={t('character.hp.long_rest_confirm_body')}
         confirmLabel={t('character.hp.long_rest_confirm_action')}
-        confirmVariant="arcane"
+        confirmVariant="primary"
         loading={restMutation.isPending}
       />
 

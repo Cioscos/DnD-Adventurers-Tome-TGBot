@@ -8,7 +8,10 @@ import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
 import { toast } from 'sonner'
 import { haptic } from '@/auth/telegram'
-import { progressionRows } from '@/lib/classProgression'
+import { progressionRows, localizeFeatures } from '@/lib/classProgression'
+import { useRegisterOverlay } from '@/store/overlayStore'
+import { fireLevelUpConfetti } from '@/lib/celebrate'
+import { useReducedMotion } from '@/hooks/useReducedMotion'
 import type { CharacterFull, CharacterClass } from '@/types'
 
 interface LevelUpModalProps {
@@ -18,8 +21,10 @@ interface LevelUpModalProps {
 }
 
 export default function LevelUpModal({ char, xpLevel, onClose }: LevelUpModalProps) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const qc = useQueryClient()
+  const reducedMotion = useReducedMotion()
+  useRegisterOverlay(true)
   const classes: CharacterClass[] = char.classes ?? []
   const [selectedClassId, setSelectedClassId] = useState<number>(classes[0]?.id ?? 0)
 
@@ -41,6 +46,15 @@ export default function LevelUpModal({ char, xpLevel, onClose }: LevelUpModalPro
     onSuccess: (updated) => {
       qc.setQueryData(['character', char.id], updated)
       haptic.success()
+      // Celebratory beat for the class level-up. The modal closes on success,
+      // so a panel pulse wouldn't be seen — fire the screen confetti + toast
+      // (the same call-out as the XP page). Reduced-motion: toast + icon only.
+      const newTotal = classes.reduce((sum, c) => sum + c.level, 0) + 1
+      toast.success(t('character.xp.level_up_toast', { level: newTotal }), {
+        duration: 3500,
+        icon: '✨',
+      })
+      if (!reducedMotion) fireLevelUpConfetti()
       if ((updated as any).hp_gained && (updated as any).hp_gained > 0) {
         toast.success(t('character.xp.hp_gained_toast', { hp: (updated as any).hp_gained }), {
           duration: 2000,
@@ -131,7 +145,7 @@ export default function LevelUpModal({ char, xpLevel, onClose }: LevelUpModalPro
                     {/* Unlocks */}
                     <div className="flex-1 min-w-0 space-y-2 pt-1">
                       <p className="text-sm text-dnd-text font-body leading-relaxed break-words">
-                        {curr.features || '—'}
+                        {curr.features ? localizeFeatures(curr.features, i18n.language) : '—'}
                       </p>
                       {pbChanged && (
                         <p className="text-xs text-dnd-gold font-mono">

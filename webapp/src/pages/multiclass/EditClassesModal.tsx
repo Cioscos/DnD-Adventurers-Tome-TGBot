@@ -10,6 +10,7 @@ import Button from '@/components/ui/Button'
 import { haptic } from '@/auth/telegram'
 import { PREDEFINED_CLASSES, CUSTOM_KEY } from '@/pages/multiclass/AddClassForm'
 import { diffResourceMaxes } from '@/lib/resourceDiff'
+import { useRegisterOverlay } from '@/store/overlayStore'
 import type { CharacterFull } from '@/types'
 
 type ExistingEntry = {
@@ -48,6 +49,7 @@ function makeTempId(): string {
 export default function EditClassesModal({ char, targetLevel, onClose }: Props) {
   const { t } = useTranslation()
   const qc = useQueryClient()
+  useRegisterOverlay(true)
 
   const [entries, setEntries] = useState<Entry[]>(() =>
     (char.classes ?? []).map((c) => ({
@@ -224,11 +226,11 @@ export default function EditClassesModal({ char, targetLevel, onClose }: Props) 
                 {currentSum < targetLevel
                   ? t('character.multiclass.edit.helper_too_low', {
                       n: targetLevel - currentSum,
-                      defaultValue: 'Aggiungi {{n}} livello/i — aumenta una classe o aggiungine una nuova.',
+                      defaultValue: 'Aggiungi {{n}} livello/i: aumenta una classe o aggiungine una nuova.',
                     })
                   : t('character.multiclass.edit.helper_too_high', {
                       n: currentSum - targetLevel,
-                      defaultValue: 'Riduci {{n}} livello/i — abbassa una classe per riequilibrare.',
+                      defaultValue: 'Riduci {{n}} livello/i: abbassa una classe per riequilibrare.',
                     })}
               </p>
             )}
