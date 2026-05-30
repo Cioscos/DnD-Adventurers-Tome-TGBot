@@ -357,7 +357,7 @@ async def attack_with_weapon(
         + f" | Danno: {'+'.join(str(r) for r in damage_rolls)}+{damage_bonus}={damage_total}"
     )
     if body and body.with_inspiration:
-        result_str = f"Reroll ispirazione (to-hit) — {result_str}"
+        result_str = f"Reroll ispirazione (to-hit): {result_str}"
     _add_history(session, char.id, "attack_roll", result_str)
 
     # Emit homebrew event so installed rules (e.g. Qualità & Usura) can react.

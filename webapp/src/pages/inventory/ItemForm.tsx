@@ -123,6 +123,7 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
             value={form.quantity}
             onChange={(v) => setForm((f) => ({ ...f, quantity: v }))}
             min={1}
+            placeholder="1"
           />
           <Input
             className="flex-1"
@@ -131,6 +132,7 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
             value={form.weight}
             onChange={(v) => setForm((f) => ({ ...f, weight: v }))}
             min={0}
+            placeholder="0"
           />
         </div>
 

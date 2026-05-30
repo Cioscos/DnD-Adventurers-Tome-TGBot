@@ -83,7 +83,7 @@ export default function HitDiceModal({
 
         <div className="flex gap-2 pt-1">
           <Button
-            variant="arcane"
+            variant="primary"
             fullWidth
             onClick={onConfirmRest}
             disabled={isPending}

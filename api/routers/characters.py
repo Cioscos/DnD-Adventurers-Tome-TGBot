@@ -27,6 +27,7 @@ from core.db.models import (
 )
 from core.data.xp_thresholds import xp_to_level
 from core.data.classes import get_resources_for_class, update_resources_for_level
+from core.data.labels import ability_label, condition_label, skill_label
 from core.game.stats import hit_points_for_level
 from api.schemas.character import (
     CharacterCreate,
@@ -362,10 +363,10 @@ async def update_conditions(
                              f"Spossatezza: livello {old_val} → {new_val_display}")
             elif new_val:
                 _add_history(session, char.id, "condition_change",
-                             f"Condizione attivata: {cond}")
+                             f"Condizione attivata: {condition_label(cond)}")
             else:
                 _add_history(session, char.id, "condition_change",
-                             f"Condizione rimossa: {cond}")
+                             f"Condizione rimossa: {condition_label(cond)}")
 
     if changed:
         await prune_history(session, char)
@@ -503,11 +504,11 @@ async def roll_skill(
     is_fumble = die == 1
 
     history_msg = (
-        f"Abilità {skill_name}: d20={die} {'+ ' if bonus >= 0 else ''}{bonus} = {total}"
+        f"Abilità {skill_label(skill_name)}: d20={die} {'+ ' if bonus >= 0 else ''}{bonus} = {total}"
         + (" (CRITICO)" if is_crit else " (FUMBLE)" if is_fumble else "")
     )
     if body and body.with_inspiration:
-        history_msg = f"Reroll ispirazione — {history_msg}"
+        history_msg = f"Reroll ispirazione: {history_msg}"
     _add_history(session, char.id, "skill_roll", history_msg)
     await prune_history(session, char)
 
@@ -556,11 +557,11 @@ async def roll_saving_throw(
     is_fumble = die == 1
 
     history_msg = (
-        f"TS {ability}: d20={die} {'+ ' if bonus >= 0 else ''}{bonus} = {total}"
+        f"TS {ability_label(ability)}: d20={die} {'+ ' if bonus >= 0 else ''}{bonus} = {total}"
         + (" (CRITICO)" if is_crit else " (FUMBLE)" if is_fumble else "")
     )
     if body and body.with_inspiration:
-        history_msg = f"Reroll ispirazione — {history_msg}"
+        history_msg = f"Reroll ispirazione: {history_msg}"
     _add_history(session, char.id, "saving_throw", history_msg)
     await prune_history(session, char)
 

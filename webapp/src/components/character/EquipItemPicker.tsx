@@ -7,6 +7,7 @@ import { X, Package } from 'lucide-react'
 import { api } from '@/api/client'
 import { haptic } from '@/auth/telegram'
 import { ITEM_TYPE_TO_SLOTS } from '@/lib/equipmentSlots'
+import { useRegisterOverlay } from '@/store/overlayStore'
 import type { EquipmentSlot, Item, CharacterFull } from '@/types'
 
 interface Props {
@@ -27,6 +28,7 @@ export default function EquipItemPicker({ charId, slot, items, onClose }: Props)
   const { t } = useTranslation()
   const qc = useQueryClient()
   const navigate = useNavigate()
+  useRegisterOverlay(true)
 
   const equip = useMutation({
     mutationFn: (itemId: number) =>
@@ -60,7 +62,7 @@ export default function EquipItemPicker({ charId, slot, items, onClose }: Props)
         >
           <header className="flex items-center justify-between px-4 py-3 border-b border-dnd-border">
             <h2 className="text-sm font-cinzel uppercase tracking-widest text-dnd-gold-bright">
-              {t('character.equipment.picker.title', { defaultValue: 'Equip' })} — {slotLabel}
+              {t('character.equipment.picker.title', { defaultValue: 'Equip' })}: {slotLabel}
             </h2>
             <button
               type="button"

@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { m, AnimatePresence } from 'framer-motion'
 
 type InputVariant = 'default' | 'inline' | 'textarea'
@@ -22,6 +22,7 @@ interface InputProps {
   rows?: number
   autoFocus?: boolean
   onCommit?: (value: string) => void
+  inputRef?: React.Ref<HTMLInputElement | HTMLTextAreaElement>
 }
 
 export default function Input({
@@ -43,11 +44,33 @@ export default function Input({
   rows = 3,
   autoFocus,
   onCommit,
+  inputRef,
 }: InputProps) {
   const [focused, setFocused] = useState(false)
   const [localError, setLocalError] = useState('')
   const [shake, setShake] = useState(0)
-  const ref = useRef<HTMLInputElement | HTMLTextAreaElement>(null)
+  const ref = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null)
+
+  // Merge the internal ref with an optional forwarded ref so callers can
+  // scroll/focus the field (e.g. RuleEditor scrolling to the name field on a
+  // failed save).
+  const setRefs = useCallback(
+    (node: HTMLInputElement | HTMLTextAreaElement | null) => {
+      ref.current = node
+      if (typeof inputRef === 'function') inputRef(node)
+      else if (inputRef) (inputRef as React.MutableRefObject<typeof node>).current = node
+    },
+    [inputRef],
+  )
+
+  // Shake once when an externally-controlled error transitions to truthy —
+  // matches the DESIGN error pattern (crimson + one shake) for validation
+  // surfaced on submit, not just on numeric blur.
+  const prevErrorRef = useRef(error)
+  useEffect(() => {
+    if (error && !prevErrorRef.current) setShake((s) => s + 1)
+    prevErrorRef.current = error
+  }, [error])
 
   const displayError = error || localError
 
@@ -123,7 +146,7 @@ export default function Input({
 
         {isTextarea ? (
           <textarea
-            ref={ref as React.RefObject<HTMLTextAreaElement>}
+            ref={setRefs as React.Ref<HTMLTextAreaElement>}
             value={value}
             onChange={handleChange}
             onFocus={() => setFocused(true)}
@@ -140,7 +163,7 @@ export default function Input({
           />
         ) : (
           <input
-            ref={ref as React.RefObject<HTMLInputElement>}
+            ref={setRefs as React.Ref<HTMLInputElement>}
             type={inputMode === 'numeric' ? 'text' : type}
             inputMode={inputMode}
             value={value}

@@ -26,6 +26,7 @@ from core.data.classes import (
     CLASS_HIT_DIE,
     CLASS_SPELLCASTING,
     get_resources_for_class,
+    get_saving_throw_proficiencies,
     update_resources_for_level,
 )
 from core.data.xp_thresholds import xp_to_level
@@ -115,6 +116,17 @@ async def create_class_for_character(
 
     for res_data in get_resources_for_class(body.class_name, body.level, char):
         session.add(ClassResource(class_id=cls.id, **res_data))
+
+    # Seed saving throw proficiencies from the *starting* class only (D&D 5e:
+    # multiclassing does not grant additional save proficiencies). We only fill
+    # in saves not already present so we never clobber user-set proficiencies.
+    if is_first_class:
+        class_saves = get_saving_throw_proficiencies(body.class_name)
+        if class_saves:
+            current_saves = dict(char.saving_throws or {})
+            for ability, proficient in class_saves.items():
+                current_saves.setdefault(ability, proficient)
+            char.saving_throws = current_saves
 
     settings = char.settings or {}
     auto_calc = settings.get("hp_auto_calc", True)

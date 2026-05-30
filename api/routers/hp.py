@@ -397,14 +397,14 @@ async def roll_death_save(
         revived = True
         outcome = "nat20"
         _add_history(session, char.id, "death_save",
-                     f"Tiro morte d20={die} — Naturale 20! Rianimato con 1 HP")
+                     f"Tiro morte d20={die}: Naturale 20! Rianimato con 1 HP")
 
     elif die == 1:
         # Natural 1: counts as 2 failures
         ds["failures"] = min(3, ds.get("failures", 0) + 2)
         outcome = "nat1"
         _add_history(session, char.id, "death_save",
-                     f"Tiro morte d20={die} — Naturale 1! 2 fallimenti ({ds['failures']}/3)")
+                     f"Tiro morte d20={die}: Naturale 1! 2 fallimenti ({ds['failures']}/3)")
 
     elif die >= 10:
         # 10+: 1 success
@@ -413,17 +413,17 @@ async def roll_death_save(
         if ds["successes"] >= 3:
             ds["stable"] = True
             _add_history(session, char.id, "death_save",
-                         f"Tiro morte d20={die} — Successo! Stabilizzato (3/3)")
+                         f"Tiro morte d20={die}: Successo! Stabilizzato (3/3)")
         else:
             _add_history(session, char.id, "death_save",
-                         f"Tiro morte d20={die} — Successo ({ds['successes']}/3)")
+                         f"Tiro morte d20={die}: Successo ({ds['successes']}/3)")
 
     else:
         # 2-9: 1 failure
         ds["failures"] = min(3, ds.get("failures", 0) + 1)
         outcome = "failure"
         _add_history(session, char.id, "death_save",
-                     f"Tiro morte d20={die} — Fallimento ({ds['failures']}/3)")
+                     f"Tiro morte d20={die}: Fallimento ({ds['failures']}/3)")
 
     char.death_saves = ds
 

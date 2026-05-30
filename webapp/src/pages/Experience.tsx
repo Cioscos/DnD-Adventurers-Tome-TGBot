@@ -6,7 +6,7 @@ import { m } from 'framer-motion'
 import { Check, ChevronsUp } from 'lucide-react'
 import { GiPolarStar as Star } from 'react-icons/gi'
 import { toast } from 'sonner'
-import confetti from 'canvas-confetti'
+import { fireLevelUpConfetti } from '@/lib/celebrate'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
@@ -22,13 +22,6 @@ import { XP_THRESHOLDS, levelFromXp } from '@/lib/xpThresholds'
 import { diffResourceMaxes } from '@/lib/resourceDiff'
 
 // Two-burst gold/arcane confetti from bottom corners. Respect reduced-motion.
-function fireLevelUpConfetti() {
-  const palette = ['#f4d06f', '#d4a64a', '#a78bfa', '#fff6c2']
-  const base = { spread: 60, startVelocity: 45, ticks: 200, gravity: 0.8, colors: palette, zIndex: 9999 } as const
-  confetti({ ...base, particleCount: 70, angle: 60, origin: { x: 0.05, y: 0.9 } })
-  confetti({ ...base, particleCount: 70, angle: 120, origin: { x: 0.95, y: 0.9 } })
-}
-
 // Fixed quick-add amounts (audit P2: replace dynamic quickXpAmounts with stable values).
 const FIXED_QUICK_AMOUNTS = [10, 50, 100, 500] as const
 

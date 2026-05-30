@@ -14,15 +14,6 @@ import { haptic } from '@/auth/telegram'
 import { spring, stagger } from '@/styles/motion'
 import type { AbilityScore } from '@/types'
 
-const ABILITY_THEME: Record<string, string> = {
-  strength: 'from-[var(--dnd-crimson-deep)]/40 via-dnd-surface to-dnd-surface border-dnd-crimson/40 text-[var(--dnd-crimson-bright)]',
-  dexterity: 'from-[var(--dnd-emerald-deep)]/40 via-dnd-surface to-dnd-surface border-dnd-emerald/40 text-[var(--dnd-emerald-bright)]',
-  constitution: 'from-[var(--dnd-amber)]/20 via-dnd-surface to-dnd-surface border-dnd-amber/40 text-[var(--dnd-amber)]',
-  intelligence: 'from-[var(--dnd-cobalt)]/20 via-dnd-surface to-dnd-surface border-dnd-cobalt/40 text-[var(--dnd-cobalt-bright)]',
-  wisdom: 'from-[var(--dnd-arcane-deep)]/40 via-dnd-surface to-dnd-surface border-dnd-arcane/40 text-dnd-arcane-bright',
-  charisma: 'from-[var(--dnd-gold-deep)]/40 via-dnd-surface to-dnd-surface border-dnd-gold/40 text-dnd-gold-bright',
-}
-
 // Canonical D&D 5e ordering — STR/DEX/CON/INT/WIS/CHA (mirror HeroScreen.tsx).
 const DND_ABILITY_ORDER = [
   'strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma',
@@ -87,7 +78,6 @@ export default function AbilityScores() {
         {[...char.ability_scores]
           .sort((a, b) => DND_ABILITY_ORDER.indexOf(a.name) - DND_ABILITY_ORDER.indexOf(b.name))
           .map((score: AbilityScore) => {
-          const theme = ABILITY_THEME[score.name] ?? ABILITY_THEME.charisma
           const isEditing = editing === score.name
 
           return (
@@ -95,7 +85,7 @@ export default function AbilityScores() {
               <Surface
                 variant="elevated"
                 ornamented
-                className={`relative overflow-hidden bg-gradient-to-br ${theme}`}
+                className="relative overflow-hidden"
               >
                 <div className="flex items-start justify-between gap-2 mb-2">
                   <span
@@ -144,7 +134,7 @@ export default function AbilityScores() {
                           autoFocus
                           placeholder={String(score.value)}
                           onCommit={() => handleSave(score.name)}
-                          className="[&_input]:text-2xl [&_input]:font-display [&_input]:font-black [&_input]:text-center [&_input]:min-h-[56px]"
+                          className="[&_input]:text-2xl [&_input]:font-mono [&_input]:font-bold [&_input]:tabular-nums [&_input]:text-center [&_input]:min-h-[56px]"
                         />
                       </div>
                       <m.button
@@ -173,7 +163,7 @@ export default function AbilityScores() {
                       className="flex items-end gap-2"
                       transition={spring.snappy}
                     >
-                      <span className="text-5xl font-display font-black leading-none tabular-nums"
+                      <span className="text-4xl font-mono font-bold leading-none tabular-nums text-dnd-text"
                             style={{ textShadow: '0 2px 6px rgba(0,0,0,0.6)' }}>
                         {score.value}
                       </span>

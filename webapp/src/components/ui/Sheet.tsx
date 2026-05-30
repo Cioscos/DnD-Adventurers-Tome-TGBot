@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { m, AnimatePresence, useDragControls, type PanInfo } from 'framer-motion'
 import { X } from 'lucide-react'
 import { spring } from '@/styles/motion'
+import { useRegisterOverlay } from '@/store/overlayStore'
 
 interface SheetProps {
   open: boolean
@@ -30,6 +31,8 @@ export default function Sheet({
 }: SheetProps) {
   const dragControls = useDragControls()
   const sheetRef = useRef<HTMLDivElement>(null)
+
+  useRegisterOverlay(open)
 
   // Prevent body scroll + close on Escape when open
   useEffect(() => {

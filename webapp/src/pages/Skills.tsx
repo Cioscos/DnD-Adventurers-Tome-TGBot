@@ -222,7 +222,10 @@ export default function Skills() {
       return { result, skillName }
     },
     onSuccess: ({ result, skillName }) => {
-      setRollState({ result, skillName, wasRerolled: false })
+      // The backend returns the raw skill key (e.g. "athletics") as the roll
+      // description; it's redundant with the localized modal title and would
+      // surface an untranslated EN key, so drop it.
+      setRollState({ result: { ...result, description: undefined }, skillName, wasRerolled: false })
       haptic.success()
     },
     onError: () => haptic.error(),
@@ -239,7 +242,7 @@ export default function Skills() {
       return api.characters.rollSkill(charId, skillName, die, true)
     },
     onSuccess: (result) => {
-      setRollState((prev) => prev && { ...prev, result, wasRerolled: true })
+      setRollState((prev) => prev && { ...prev, result: { ...result, description: undefined }, wasRerolled: true })
       qc.invalidateQueries({ queryKey: ['character', charId] })
       haptic.success()
     },

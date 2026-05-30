@@ -24,7 +24,7 @@ export default function ConcentrationSaveDialog({ result, onClose }: Props) {
       accent={accent}
       pulse={pulse}
       size="sm"
-      title={<>🔮 {t('character.spells.concentration')} — DC {dc}</>}
+      title={<>🔮 {t('character.spells.concentration')}: DC {dc}</>}
     >
       {is_critical && (
         <p className="text-dnd-gold-bright font-bold font-cinzel">✦ CRITICO!</p>

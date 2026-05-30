@@ -5,6 +5,8 @@ export interface IdentitySectionProps {
   name: string
   description: string
   onChange: (name: string, description: string) => void
+  nameError?: string
+  nameInputRef?: React.Ref<HTMLInputElement | HTMLTextAreaElement>
 }
 
 /**
@@ -16,7 +18,7 @@ export interface IdentitySectionProps {
  * `icon` field in the schema (only TemplateRead does). Omitted intentionally —
  * adding storage for it is out of scope for this task.
  */
-export default function IdentitySection({ name, description, onChange }: IdentitySectionProps) {
+export default function IdentitySection({ name, description, onChange, nameError, nameInputRef }: IdentitySectionProps) {
   const { t } = useTranslation()
 
   const setName = (v: string) => onChange(v, description)
@@ -29,6 +31,8 @@ export default function IdentitySection({ name, description, onChange }: Identit
         value={name}
         onChange={setName}
         placeholder={t('homebrew.identity.name_placeholder')}
+        error={nameError}
+        inputRef={nameInputRef}
       />
       <Input
         variant="textarea"

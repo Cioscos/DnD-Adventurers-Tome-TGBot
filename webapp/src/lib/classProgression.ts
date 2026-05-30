@@ -45,3 +45,39 @@ export function progressionKey(className: string): string {
 export function progressionRows(className: string): ProgressionRow[] | undefined {
   return PROGRESSION[progressionKey(className)]
 }
+
+/**
+ * Italian labels for the most common, cross-class progression features. The
+ * `features` strings in class-progression.json are authored in English; this
+ * maps the recurring tokens the player sees most often (especially in the
+ * HeroScreen progression preview) to their canonical Italian D&D 5e names.
+ * Unmapped tokens fall back to English so we never show a wrong translation.
+ * Keys are matched on the base token, ignoring any trailing " (qualifier)".
+ */
+const FEATURE_LABELS_IT: Record<string, string> = {
+  Spellcasting: 'Incantesimi',
+  'Ability Score Improvement': 'Aumento dei Punteggi di Caratteristica',
+  ASI: 'Aumento Caratteristica',
+  'Arcane Recovery': 'Recupero Arcano',
+  'Arcane Tradition': 'Tradizione Arcana',
+  'Arcane Tradition feature': 'privilegio di Tradizione Arcana',
+}
+
+/**
+ * Localize a comma-separated `features` string. For non-Italian locales the
+ * string is returned unchanged. Each comma-separated segment is translated
+ * independently; a trailing " (qualifier)" (e.g. "(2 usi)") is preserved.
+ */
+export function localizeFeatures(features: string, locale: string): string {
+  if (!locale.startsWith('it')) return features
+  return features
+    .split(', ')
+    .map((segment) => {
+      const match = segment.match(/^(.*?)(\s*\(.*\))?$/)
+      const base = (match?.[1] ?? segment).trim()
+      const suffix = match?.[2] ?? ''
+      const translated = FEATURE_LABELS_IT[base]
+      return translated ? `${translated}${suffix}` : segment
+    })
+    .join(', ')
+}

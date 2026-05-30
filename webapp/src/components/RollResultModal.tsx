@@ -36,7 +36,10 @@ export default function RollResultModal({
   const { t } = useTranslation()
   const { die, bonus, total, is_critical, is_fumble } = result
 
-  const accent = is_critical ? 'gold' : is_fumble ? 'crimson' : 'emerald'
+  // Neutral rolls get the default (gold) frame; emerald/crimson are reserved
+  // for nat-20/nat-1 so the accent stays semantic (Semantic Triad), not
+  // decorative on an ordinary result.
+  const accent = is_critical ? 'gold' : is_fumble ? 'crimson' : 'default'
   const dieColor = is_critical
     ? 'text-dnd-gold-bright'
     : is_fumble

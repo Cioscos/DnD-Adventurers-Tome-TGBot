@@ -105,7 +105,7 @@ def _append_concentration_history(
     outcome = "SUCCESSO" if success else "FALLIMENTO"
     desc = (
         f"TS Concentrazione (danno {damage}, DC {dc}): "
-        f"d20={die}+{con_mod}={total} — {outcome}"
+        f"d20={die}+{con_mod}={total}: {outcome}"
         + (" → concentrazione persa" if lost_concentration else "")
     )
     session.add(CharacterHistory(

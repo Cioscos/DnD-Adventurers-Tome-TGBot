@@ -22,15 +22,6 @@ import ClassTabs from '@/components/character/ClassTabs'
 import VitalsStrip from '@/components/character/VitalsStrip'
 import type { Ability, CharacterFull } from '@/types'
 
-const ABILITY_COLORS: Record<string, string> = {
-  strength: 'bg-[rgba(122,31,31,0.18)] border-dnd-crimson/30 text-[var(--dnd-crimson-bright)]',
-  dexterity: 'bg-[rgba(31,107,63,0.18)] border-dnd-emerald/30 text-[var(--dnd-emerald-bright)]',
-  constitution: 'bg-[rgba(232,165,71,0.14)] border-dnd-amber/40 text-[var(--dnd-amber)]',
-  intelligence: 'bg-[rgba(30,64,96,0.20)] border-dnd-cobalt/30 text-[var(--dnd-cobalt-bright)]',
-  wisdom: 'bg-[rgba(74,40,88,0.20)] border-dnd-arcane/30 text-[var(--dnd-arcane-bright)]',
-  charisma: 'bg-[rgba(90,72,32,0.22)] border-dnd-gold/30 text-dnd-gold-bright',
-}
-
 // Canonical D&D 5e ordering — STR/DEX/CON/INT/WIS/CHA — used wherever ability
 // scores are surfaced to players. Backend returns alphabetical (cha/con/...).
 const DND_ABILITY_ORDER = [
@@ -237,8 +228,6 @@ export default function HeroScreen({ char }: Props) {
               {[...char.ability_scores]
                 .sort((a, b) => DND_ABILITY_ORDER.indexOf(a.name) - DND_ABILITY_ORDER.indexOf(b.name))
                 .map((score) => {
-                const key = score.name.toLowerCase()
-                const colorCls = ABILITY_COLORS[key] ?? ABILITY_COLORS.charisma
                 const modStr = `${score.modifier >= 0 ? '+' : ''}${score.modifier}`
                 const shortLabel = t(`character.ability.${score.name}_short`, {
                   defaultValue: score.name.slice(0, 3).toUpperCase(),
@@ -249,7 +238,7 @@ export default function HeroScreen({ char }: Props) {
                     type="button"
                     onClick={() => { haptic.light(); navigate(`/char/${char.id}/stats`) }}
                     aria-label={`${shortLabel}: ${score.value}, mod ${modStr}`}
-                    className={`flex flex-col items-center rounded-lg p-1.5 border cursor-pointer hover:border-dnd-gold transition-colors ${colorCls}`}
+                    className="flex flex-col items-center rounded-lg p-1.5 border bg-dnd-surface-raised border-dnd-border text-dnd-text cursor-pointer hover:border-dnd-gold transition-colors"
                     variants={{ initial: { opacity: 0, y: 8 }, animate: { opacity: 1, y: 0 } }}
                     transition={spring.snappy}
                     whileTap={{ scale: 0.95 }}
@@ -257,7 +246,7 @@ export default function HeroScreen({ char }: Props) {
                     <span className="text-[11px] font-cinzel uppercase tracking-wider opacity-80">
                       {shortLabel}
                     </span>
-                    <span className="text-xl font-display font-black leading-none mt-0.5">{score.value}</span>
+                    <span className="text-xl font-mono font-bold tabular-nums leading-none mt-0.5">{score.value}</span>
                     <span className="text-[11px] font-mono font-bold mt-0.5 px-1.5 py-0.5 rounded-full bg-[rgba(13,10,8,0.25)]">
                       {modStr}
                     </span>

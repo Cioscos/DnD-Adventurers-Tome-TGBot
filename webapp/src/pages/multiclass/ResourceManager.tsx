@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import Card from '@/components/Card'
 import DndInput from '@/components/DndInput'
 import DndButton from '@/components/DndButton'
+import { useRegisterOverlay } from '@/store/overlayStore'
 import type { ClassResource } from '@/types'
 
 type ResForm = { name: string; total: string; current: string; restoration_type: string }
@@ -29,6 +30,7 @@ export default function ResourceManager({
   const { t } = useTranslation()
   const [showForm, setShowForm] = useState(false)
   const [resForm, setResForm] = useState<ResForm>(emptyRes)
+  useRegisterOverlay(showForm)
 
   const handleAdd = () => {
     onAddResource(classId, {

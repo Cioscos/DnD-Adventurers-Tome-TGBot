@@ -414,15 +414,15 @@ export default function CharacterSelect() {
                         onClick={() => setShowCustom(true)}
                         disabled={createMutation.isPending}
                         className="flex flex-col items-center justify-center py-2.5 px-1 rounded-xl
-                                   bg-gradient-arcane-mist border border-dnd-arcane/30
+                                   bg-dnd-surface-raised border border-dnd-gold-dim/40
                                    text-center disabled:opacity-40 disabled:pointer-events-none"
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ delay: 0.1 }}
                         whileTap={{ scale: 0.93 }}
                       >
-                        <Pencil size={14} className="text-dnd-arcane-bright mb-0.5" />
-                        <span className="text-[13px] font-display font-bold text-dnd-arcane-bright">
+                        <Pencil size={14} className="text-dnd-gold-dim mb-0.5" />
+                        <span className="text-[13px] font-display font-bold text-dnd-text">
                           {t('character.create.custom_class')}
                         </span>
                         <span className="text-[10px] text-dnd-text-faint font-mono mt-0.5">d?</span>

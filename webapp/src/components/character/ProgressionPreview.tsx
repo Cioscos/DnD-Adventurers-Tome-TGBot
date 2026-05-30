@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
 import Surface from '@/components/ui/Surface'
-import { progressionRows } from '@/lib/classProgression'
+import { progressionRows, localizeFeatures } from '@/lib/classProgression'
 import ProgressionFullTableModal from './ProgressionFullTableModal'
 
 interface Props {
@@ -17,7 +17,7 @@ function computeWindow(currentLevel: number, max: number): number[] {
 }
 
 export default function ProgressionPreview({ className, currentLevel }: Props) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const [showFull, setShowFull] = useState(false)
 
   const rows = progressionRows(className)
@@ -71,7 +71,7 @@ export default function ProgressionPreview({ className, currentLevel }: Props) {
               >
                 <span className="font-mono text-[11px] @max-[360px]:text-[10px] font-bold text-center">L{lv}</span>
                 <span className="font-mono text-[10px] text-center @max-[300px]:hidden">+{row?.proficiency_bonus ?? '?'}</span>
-                <span className="text-[11px] @max-[360px]:text-[10px] truncate">{row?.features ?? '—'}</span>
+                <span className="text-[11px] @max-[360px]:text-[10px] truncate">{row?.features ? localizeFeatures(row.features, i18n.language) : '—'}</span>
               </m.button>
             )
           })}
