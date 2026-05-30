@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -41,6 +41,11 @@ export default function HP() {
   const reducedMotion = useReducedMotion()
   const [value, setValue] = useState('')
   const [activeOp, setActiveOp] = useState<HPOp>('damage')
+  // Synchronous guard against double-fire of handleApply (Input.onCommit on blur +
+  // button.onClick both fire when the user taps Conferma — `hpMutation.isPending` isn't
+  // yet true at the second call, so a ref that flips immediately is needed). Mirrors
+  // AbilityScores.tsx. Without it every Conferma sent 2 identical PATCH /hp (finding #1).
+  const savingRef = useRef(false)
 
   const [showShortRest, setShowShortRest] = useState(false)
   const [showLongRestConfirm, setShowLongRestConfirm] = useState(false)
@@ -67,8 +72,12 @@ export default function HP() {
           toast.warning(t('character.hp.concentration_lost'), { duration: 4000 })
         }
       }
+      savingRef.current = false
     },
-    onError: () => haptic.error(),
+    onError: () => {
+      haptic.error()
+      savingRef.current = false
+    },
   })
 
   const restMutation = useMutation({
@@ -119,9 +128,10 @@ export default function HP() {
   })
 
   const handleApply = () => {
-    if (hpMutation.isPending) return
+    if (savingRef.current || hpMutation.isPending) return
     const n = parseInt(value, 10)
     if (isNaN(n) || n <= 0) return
+    savingRef.current = true
     hpMutation.mutate({ op: activeOp, val: n })
   }
 
