@@ -163,4 +163,4 @@ Branch: `fix/audit-funzionale-2026-05-30`. Ordine di lavorazione: #1, #3, #6, #2
 - [x] #2 — Guard sincrono anti doppio-submit XP (`Experience.tsx`)
 - [x] #5 — Freccia Indietro: cablare il prop `backTo` in `Layout.tsx`
 - [x] #7 — Toast close button tematizzato in tema scuro
-- [ ] #4 — Hero "LIV/LEVEL UP" con 0 classi (cosmetico)
+- [x] #4 — Hero "LIV/LEVEL UP" con 0 classi (cosmetico)
