@@ -29,6 +29,7 @@ export default function Toast() {
           boxShadow: 'var(--shadow-4)',
         },
         className: 'font-body',
+        classNames: { closeButton: 'dnd-toast-close' },
       }}
     />,
     document.body,
