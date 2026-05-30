@@ -10,7 +10,9 @@ import { haptic } from '@/auth/telegram'
 interface LayoutProps {
   title: string
   children: React.ReactNode
-  /** @deprecated Kept for compatibility — Layout always uses history.back() now. */
+  /** Logical parent route to return to (typically the character hub `/char/:id`).
+   * When set, the back arrow navigates there directly instead of walking the
+   * browser history one step at a time. Falls back to history.back() if absent. */
   backTo?: string
   group?: string
   page?: string
@@ -18,7 +20,7 @@ interface LayoutProps {
   hideScrollbar?: boolean
 }
 
-export default function Layout({ title, children, group, page, hideScrollbar = false }: LayoutProps) {
+export default function Layout({ title, children, backTo, group, page, hideScrollbar = false }: LayoutProps) {
   const navigate = useNavigate()
   const { t } = useTranslation()
   const swipe = useSwipeNavigation(group, page)
@@ -31,8 +33,12 @@ export default function Layout({ title, children, group, page, hideScrollbar = f
   const [tablistCollapsed, setTablistCollapsed] = useState(false)
   const lastScrollTopRef = useRef(0)
 
+  // Finding #5: prefer the declared logical parent (e.g. the character hub) over
+  // history.back(), so a single tap from a deep page returns to /char/:id instead
+  // of unwinding the navigation stack one cross-link at a time.
   const handleBack = () => {
-    navigate(-1)
+    if (backTo) navigate(backTo)
+    else navigate(-1)
   }
 
   const handleMainScroll = (e: React.UIEvent<HTMLElement>) => {
