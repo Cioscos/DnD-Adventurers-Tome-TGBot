@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -65,6 +65,10 @@ export default function Experience() {
   const [showLevelUpModal, setShowLevelUpModal] = useState(false)
   const [levelUpBurstKey, setLevelUpBurstKey] = useState(0)
   const reducedMotion = useReducedMotion()
+  // Synchronous guard against double-fire of handleApply (Input.onCommit on blur +
+  // button.onClick both fire when the user taps Applica — `mutation.isPending` isn't
+  // yet true at the second call). Mirrors AbilityScores.tsx / HP.tsx (finding #2).
+  const savingRef = useRef(false)
 
   useEffect(() => {
     if (!levelUpBurstKey) return
@@ -117,8 +121,12 @@ export default function Experience() {
           )
         }
       }
+      savingRef.current = false
     },
-    onError: () => haptic.error(),
+    onError: () => {
+      haptic.error()
+      savingRef.current = false
+    },
   })
 
   if (!char) return null
@@ -139,8 +147,10 @@ export default function Experience() {
   const isMaxLevel = level >= 20
 
   const handleApply = () => {
+    if (savingRef.current || mutation.isPending) return
     const n = parseInt(addValue, 10)
     if (isNaN(n)) return
+    savingRef.current = true
     mutation.mutate(setMode ? { set: n } : { add: n })
   }
 
