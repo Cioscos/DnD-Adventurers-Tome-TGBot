@@ -116,7 +116,14 @@ Pi user: `cioscospi` | Project path: `/home/cioscospi/Programs/dnd_bot_revamped`
 Persistent named tunnel `dnd-api` → exposed at **`https://api.cischi.dev`**
 One-time setup script: `deploy/setup-cloudflare-tunnel.sh`
 
-No test suite or linter is configured.
+## Testing & Linting
+
+A partial test suite **and** a frontend linter are configured. Coverage is currently focused on the **homebrew rules engine**, not the whole app — treat green tests as a safety net for that area, not full-app assurance.
+
+- **Backend (pytest)** — configured in `pyproject.toml` (`[tool.pytest.ini_options]`: `asyncio_mode = "auto"`, `testpaths = ["tests"]`; deps `pytest`, `pytest-asyncio`). Tests live under `tests/` (`integration/`, `e2e/`, `services/`), mostly covering the homebrew engine. **Run from Windows only** — never `uv` from WSL (see the rule at the top): `uv run pytest` (or e.g. `uv run pytest tests/integration -q`).
+- **Frontend E2E (Playwright)** — `webapp/playwright.homebrew.config.ts` + specs in `webapp/tests/e2e-playwright/homebrew/`. Runnable from WSL or Windows: `cd webapp && npm run test:homebrew:audit` (alias for `playwright test --config=playwright.homebrew.config.ts` with a custom audit reporter), or `npx playwright test -c playwright.homebrew.config.ts`.
+- **Frontend lint (ESLint)** — `cd webapp && npm run lint` (`eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0`).
+- No backend linter/formatter (ruff/black/mypy) is configured.
 
 ## Architecture Overview
 
