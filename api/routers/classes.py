@@ -309,10 +309,34 @@ async def remove_class(
 ) -> CharacterFull:
     char = await _get_owned_full(char_id, user_id, session)
     cls = await _get_class(class_id, char_id, session)
+
+    # Snapshot HP before the delete so we can scale current HP proportionally,
+    # mirroring PATCH /classes/distribute.
+    old_total_hp = char.hit_points or 0
+    old_current_hp = char.current_hit_points or 0
+
     await session.delete(cls)
     await session.flush()
     session.expire(char)
     char = await _get_owned_full(char_id, user_id, session)
+
+    # Removing a class lowers total_level → recalc max HP from the remaining
+    # classes (finding #3: previously only spell slots were recalculated, leaving
+    # "ghost" HP). Mirror the distribute block: ratio-scale current HP. With no
+    # classes left, total_base_hp returns 0 → HP 0/0.
+    settings = char.settings or {}
+    if settings.get("hp_auto_calc", True):
+        con_mod = effective_con_mod(char)
+        new_total_hp = total_base_hp(char.classes, con_mod)
+        if old_total_hp > 0:
+            ratio = old_current_hp / old_total_hp
+            new_current = round(ratio * new_total_hp)
+        else:
+            new_current = old_current_hp
+        char.hit_points = new_total_hp
+        char.current_hit_points = max(0, min(new_current, new_total_hp))
+        await session.flush()
+
     await recalc_spell_slots(session, char)
     return await build_character_response(session, char)
 

@@ -158,7 +158,7 @@ I 3 più gravi: #1 (HP), #3 (remove classe HP), #2 (XP). I fix vanno affidati ad
 Branch: `fix/audit-funzionale-2026-05-30`. Ordine di lavorazione: #1, #3, #6, #2, #5, #7, #4.
 
 - [x] #1 — Guard sincrono anti doppio-submit HP (`savingRef` in `HP.tsx`)
-- [ ] #3 — Remove classe: ricalcolo HP in `remove_class`
+- [x] #3 — Remove classe: ricalcolo HP in `remove_class`
 - [ ] #6 — `distribute`: `_refresh_char_full` per serializzare le risorse nuove
 - [ ] #2 — Guard sincrono anti doppio-submit XP (`Experience.tsx`)
 - [ ] #5 — Freccia Indietro: cablare il prop `backTo` in `Layout.tsx`
