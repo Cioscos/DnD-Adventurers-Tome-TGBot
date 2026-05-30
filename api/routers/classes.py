@@ -62,6 +62,22 @@ async def _get_owned_full(char_id: int, user_id: int, session: AsyncSession) -> 
     return char
 
 
+async def _refresh_char_full(char_id: int, user_id: int, session: AsyncSession) -> Character:
+    """Flush pending mutations, then re-SELECT a fully-loaded character.
+
+    Mirror of ``api.routers.characters._refresh_char_full`` (duplicated here to
+    avoid a circular import: characters.py already imports from classes.py).
+    A bare in-memory ``char`` whose ``classes.resources`` collection was loaded
+    by an earlier ``selectinload`` will NOT contain ``ClassResource`` rows added
+    in the same transaction — serializing it drops them (finding #6). ``expire``
+    alone is insufficient (autoflush may pull related objects into the identity
+    map), so we ``expunge_all()`` and re-issue the full eager-load query.
+    """
+    await session.flush()
+    session.expunge_all()
+    return await _get_owned_full(char_id, user_id, session)
+
+
 async def _get_class(class_id: int, char_id: int, session: AsyncSession) -> CharacterClass:
     result = await session.execute(
         select(CharacterClass)
@@ -231,7 +247,10 @@ async def distribute_class_levels(
         char.hit_points = new_total_hp
         char.current_hit_points = max(0, min(new_current, new_total_hp))
 
-    await session.flush()
+    # Re-fetch so newly-inserted ClassResource rows (e.g. Punti Ki on a fresh
+    # Monaco level) appear in the response — otherwise the FE multiclass card
+    # misses them until a reload (finding #6).
+    char = await _refresh_char_full(char_id, user_id, session)
     await recalc_spell_slots(session, char)
     result = await build_character_response(session, char)
     if hp_gained > 0:
@@ -309,10 +328,34 @@ async def remove_class(
 ) -> CharacterFull:
     char = await _get_owned_full(char_id, user_id, session)
     cls = await _get_class(class_id, char_id, session)
+
+    # Snapshot HP before the delete so we can scale current HP proportionally,
+    # mirroring PATCH /classes/distribute.
+    old_total_hp = char.hit_points or 0
+    old_current_hp = char.current_hit_points or 0
+
     await session.delete(cls)
     await session.flush()
     session.expire(char)
     char = await _get_owned_full(char_id, user_id, session)
+
+    # Removing a class lowers total_level → recalc max HP from the remaining
+    # classes (finding #3: previously only spell slots were recalculated, leaving
+    # "ghost" HP). Mirror the distribute block: ratio-scale current HP. With no
+    # classes left, total_base_hp returns 0 → HP 0/0.
+    settings = char.settings or {}
+    if settings.get("hp_auto_calc", True):
+        con_mod = effective_con_mod(char)
+        new_total_hp = total_base_hp(char.classes, con_mod)
+        if old_total_hp > 0:
+            ratio = old_current_hp / old_total_hp
+            new_current = round(ratio * new_total_hp)
+        else:
+            new_current = old_current_hp
+        char.hit_points = new_total_hp
+        char.current_hit_points = max(0, min(new_current, new_total_hp))
+        await session.flush()
+
     await recalc_spell_slots(session, char)
     return await build_character_response(session, char)
 

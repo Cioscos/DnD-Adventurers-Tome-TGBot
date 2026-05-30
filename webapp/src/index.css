@@ -429,3 +429,19 @@ body::after {
   border: 1px solid var(--dnd-gold-bright, #d4af37);
   border-radius: 1rem;
 }
+
+/* Sonner toast close button (finding #7) — sonner's default uses its internal
+   --gray vars, rendering a white circle that clashes with the dark parchment
+   surface. Theme it to the manuscript palette (Two Inks: warm-brown ink only,
+   no gold/semantic). The vars are theme-scoped (.light overrides) so this
+   adapts to both themes. Class + double-attribute selector outranks sonner. */
+[data-sonner-toast] [data-close-button].dnd-toast-close {
+  background: var(--dnd-surface);
+  border-color: var(--dnd-border-strong);
+  color: var(--dnd-text);
+}
+[data-sonner-toast] [data-close-button].dnd-toast-close:hover {
+  background: var(--dnd-surface-lifted);
+  border-color: var(--dnd-border-strong);
+  color: var(--dnd-text);
+}
