@@ -8,6 +8,8 @@ import SpellSlotsSkeleton from './SpellSlotsSkeleton'
 import AbilityScoresSkeleton from './AbilityScoresSkeleton'
 import SkillsSkeleton from './SkillsSkeleton'
 import AbilitiesSkeleton from './AbilitiesSkeleton'
+import InventorySkeleton from './InventorySkeleton'
+import CurrencySkeleton from './CurrencySkeleton'
 
 /** Generic page skeleton — used when a page has no bespoke skeleton yet. */
 export function GenericPageSkeleton() {
@@ -33,6 +35,9 @@ const REGISTRY: Record<string, ComponentType> = {
   stats: AbilityScoresSkeleton,
   skills: SkillsSkeleton,
   abilities: AbilitiesSkeleton,
+  // equipment
+  inventory: InventorySkeleton,
+  currency: CurrencySkeleton,
 }
 
 /** Returns the skeleton component for a page key, or the generic fallback. */

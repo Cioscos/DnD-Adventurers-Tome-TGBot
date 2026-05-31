@@ -13,6 +13,7 @@ import Button from '@/components/ui/Button'
 import Sheet from '@/components/ui/Sheet'
 import { haptic } from '@/auth/telegram'
 import { spring } from '@/styles/motion'
+import CurrencySkeleton from '@/components/skeletons/CurrencySkeleton'
 
 const COINS = [
   { key: 'platinum', metal: 'platinum', label: 'PP' },
@@ -112,7 +113,13 @@ export default function Currency() {
     onError: () => haptic.error(),
   })
 
-  if (!char) return null
+  if (!char) {
+    return (
+      <Layout title={t('character.currency.title')} backTo={`/char/${charId}`} group="equipment" page="currency">
+        <CurrencySkeleton />
+      </Layout>
+    )
+  }
 
   const settings = (char.settings as Record<string, unknown>) ?? {}
   const hideElectrum = settings.hide_electrum === true
