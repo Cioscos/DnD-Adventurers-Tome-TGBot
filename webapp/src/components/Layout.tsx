@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { ChevronLeft } from 'lucide-react'
 import { m, AnimatePresence } from 'framer-motion'
 import { useSwipeNavigation, getGroupInfo } from '@/hooks/useSwipeNavigation'
+import { pageSkeleton } from '@/components/skeletons/pageSkeletons'
 import { spring } from '@/styles/motion'
 import { haptic } from '@/auth/telegram'
 
@@ -26,6 +27,13 @@ export default function Layout({ title, children, backTo, group, page, hideScrol
   const swipe = useSwipeNavigation(group, page)
   const info = getGroupInfo(group, page)
   const { id } = useParams<{ id: string }>()
+
+  // Ghost skeleton: the skeleton of the page the swipe is heading toward, so the
+  // area behind the outgoing page is never blank during the drag.
+  const ghostKey = info && swipe.ghostDir !== 0
+    ? info.pages[info.index + swipe.ghostDir]
+    : undefined
+  const GhostSkeleton = pageSkeleton(ghostKey)
 
   // Tablist collapse: hide the breadcrumb row once the user scrolls past a small
   // threshold; show it again once they scroll back up. Keeps mobile real estate
@@ -152,16 +160,29 @@ export default function Layout({ title, children, backTo, group, page, hideScrol
         })()}
       </m.header>
 
-      <main
-        ref={swipe.contentRef}
-        className={`flex-1 min-w-0 overflow-y-auto p-4 pt-4 pb-[max(env(safe-area-inset-bottom),6rem)] space-y-3 animate-fade-in${hideScrollbar ? ' scrollbar-hide' : ''}`}
-        onTouchStart={swipe.onTouchStart}
-        onTouchMove={swipe.onTouchMove}
-        onTouchEnd={swipe.onTouchEnd}
-        onScroll={handleMainScroll}
-      >
-        {children}
-      </main>
+      <div className="relative flex-1 min-w-0 overflow-hidden">
+        <main
+          ref={swipe.contentRef}
+          className={`absolute inset-0 overflow-y-auto p-4 pt-4 pb-[max(env(safe-area-inset-bottom),6rem)] space-y-3 animate-fade-in${hideScrollbar ? ' scrollbar-hide' : ''}`}
+          onTouchStart={swipe.onTouchStart}
+          onTouchMove={swipe.onTouchMove}
+          onTouchEnd={swipe.onTouchEnd}
+          onScroll={handleMainScroll}
+        >
+          {children}
+        </main>
+
+        {/* Ghost layer: skeleton of the incoming page, only while swiping. */}
+        {info && swipe.ghostDir !== 0 && (
+          <div
+            ref={swipe.ghostRef}
+            aria-hidden
+            className="absolute inset-0 overflow-hidden p-4 pt-4 pointer-events-none"
+          >
+            <GhostSkeleton />
+          </div>
+        )}
+      </div>
     </div>
   )
 }

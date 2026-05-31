@@ -1,4 +1,4 @@
-import { useRef, useCallback } from 'react'
+import { useRef, useCallback, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useModal } from '@/components/ModalProvider'
 import { haptic } from '@/auth/telegram'
@@ -27,6 +27,8 @@ export function useSwipeNavigation(group?: string, page?: string) {
   const { isModalOpen } = useModal()
   const touchRef = useRef({ startX: 0, startY: 0, swiping: false, locked: false })
   const contentRef = useRef<HTMLDivElement>(null)
+  const ghostRef = useRef<HTMLDivElement>(null)
+  const [ghostDir, setGhostDir] = useState<-1 | 0 | 1>(0)
 
   const info = getGroupInfo(group, page)
 
@@ -63,13 +65,24 @@ export function useSwipeNavigation(group?: string, page?: string) {
     }
 
     if (contentRef.current) {
-      // Rubber-band at edges
       const atEdge = (deltaX > 0 && info.index === 0) || (deltaX < 0 && info.index === info.total - 1)
       const translate = atEdge ? deltaX * 0.3 : deltaX
       contentRef.current.style.transform = `translateX(${translate}px)`
       contentRef.current.style.transition = 'none'
+
+      // Ghost direction: dragging right (deltaX>0) reveals the PREVIOUS page on
+      // the left; dragging left reveals the NEXT page on the right. None at edge.
+      const dir: -1 | 0 | 1 = atEdge ? 0 : deltaX > 0 ? -1 : 1
+      if (dir !== ghostDir) setGhostDir(dir)
+
+      if (ghostRef.current && dir !== 0) {
+        // Ghost sits just off-screen on the incoming side and slides in with the finger.
+        const base = dir === -1 ? '-100%' : '100%'
+        ghostRef.current.style.transform = `translateX(calc(${base} + ${translate}px))`
+        ghostRef.current.style.transition = 'none'
+      }
     }
-  }, [isModalOpen, info])
+  }, [isModalOpen, info, ghostDir])
 
   const onTouchEnd = useCallback(() => {
     if (!info || !touchRef.current.swiping) {
@@ -79,6 +92,7 @@ export function useSwipeNavigation(group?: string, page?: string) {
       }
       touchRef.current.swiping = false
       touchRef.current.locked = false
+      setGhostDir(0)
       return
     }
 
@@ -91,6 +105,12 @@ export function useSwipeNavigation(group?: string, page?: string) {
       contentRef.current.style.transform = ''
     }
 
+    if (ghostRef.current) {
+      ghostRef.current.style.transition = 'transform 150ms ease'
+      ghostRef.current.style.transform = ''
+    }
+    setGhostDir(0)
+
     if (Math.abs(deltaX) > 80) {
       const direction = deltaX > 0 ? -1 : 1
       const nextIndex = info.index + direction
@@ -102,10 +122,12 @@ export function useSwipeNavigation(group?: string, page?: string) {
 
     touchRef.current.swiping = false
     touchRef.current.locked = false
-  }, [info, navigate, id])
+  }, [info, navigate, id, setGhostDir])
 
   return {
     contentRef,
+    ghostRef,
+    ghostDir,
     onTouchStart,
     onTouchMove,
     onTouchEnd,
