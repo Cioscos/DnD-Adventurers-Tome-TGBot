@@ -1,5 +1,8 @@
 import type { ComponentType } from 'react'
 import Skeleton from '@/components/ui/Skeleton'
+import ArmorClassSkeleton from './ArmorClassSkeleton'
+import HPSkeleton from './HPSkeleton'
+import SavingThrowsSkeleton from './SavingThrowsSkeleton'
 
 /** Generic page skeleton — used when a page has no bespoke skeleton yet. */
 export function GenericPageSkeleton() {
@@ -14,7 +17,10 @@ export function GenericPageSkeleton() {
 
 /** Map of sub-page key (see PAGE_GROUPS in useSwipeNavigation) → skeleton. */
 const REGISTRY: Record<string, ComponentType> = {
-  // filled in as bespoke skeletons are added
+  // combat
+  hp: HPSkeleton,
+  ac: ArmorClassSkeleton,
+  saves: SavingThrowsSkeleton,
 }
 
 /** Returns the skeleton component for a page key, or the generic fallback. */

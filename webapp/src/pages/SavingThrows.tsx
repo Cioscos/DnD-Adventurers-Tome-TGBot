@@ -20,6 +20,7 @@ import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { useToast } from '@/hooks/useToast'
 import { profBonus } from '@/lib/dnd'
 import HomebrewBreakdownRow from '@/components/homebrew/HomebrewBreakdownRow'
+import SavingThrowsSkeleton from '@/components/skeletons/SavingThrowsSkeleton'
 
 const ABILITIES = ['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'] as const
 
@@ -104,7 +105,13 @@ export default function SavingThrows() {
     },
   })
 
-  if (!char) return null
+  if (!char) {
+    return (
+      <Layout title={t('character.saves.title')} backTo={`/char/${charId}`} group="combat" page="saves">
+        <SavingThrowsSkeleton />
+      </Layout>
+    )
+  }
 
   const saves: Record<string, boolean> = (char.saving_throws as Record<string, boolean>) ?? {}
   const pb = profBonus(char.total_level || 1)

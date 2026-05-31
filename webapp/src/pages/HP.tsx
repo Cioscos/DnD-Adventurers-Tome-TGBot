@@ -28,6 +28,7 @@ import { useDiceAnimation } from '@/dice/useDiceAnimation'
 import { useDiceSettings } from '@/store/diceSettings'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import HomebrewBreakdownRow from '@/components/homebrew/HomebrewBreakdownRow'
+import HPSkeleton from '@/components/skeletons/HPSkeleton'
 
 type HPOp = 'damage' | 'heal' | 'set_max' | 'set_current' | 'set_temp'
 
@@ -171,7 +172,13 @@ export default function HP() {
     })
   }
 
-  if (!char) return null
+  if (!char) {
+    return (
+      <Layout title={t('character.hp.title')} backTo={`/char/${charId}`} group="combat" page="hp">
+        <HPSkeleton />
+      </Layout>
+    )
+  }
 
   const ds = char.death_saves ?? { successes: 0, failures: 0, stable: false }
   const isDying = char.current_hit_points === 0 && !ds.stable
