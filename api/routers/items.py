@@ -20,6 +20,7 @@ from core.db.models import Character, CharacterClass, CharacterHistory, Equipmen
 from api.schemas.character import CharacterFull
 from api.schemas.item import ItemCreate, ItemRead, ItemUpdate, WeaponAttackResult
 from core.game.stats import effective_ability_score
+from core.game.attacks import unarmed_strike_profile
 from api.routers._helpers import collect_homebrew_notifications, effective_con_mod
 from api.services.equipment import slot_allowed_for_type, swap_slot_occupant
 from api.services.homebrew.dispatcher import dispatch
@@ -376,6 +377,99 @@ async def attack_with_weapon(
 
     return WeaponAttackResult(
         weapon_name=item.name,
+        to_hit_die=to_hit_die,
+        to_hit_bonus=to_hit_bonus,
+        to_hit_total=to_hit_total,
+        is_critical=is_critical,
+        is_fumble=is_fumble,
+        damage_dice=damage_dice_str,
+        damage_rolls=damage_rolls,
+        damage_bonus=damage_bonus if not is_fumble else 0,
+        damage_total=damage_total,
+        homebrew_notifications=notifications if notifications else None,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Unarmed strike
+# ---------------------------------------------------------------------------
+
+@router.post("/{char_id}/attack/unarmed", response_model=WeaponAttackResult)
+async def attack_unarmed(
+    char_id: int,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+    body: Annotated[AttackSubmission | None, Body()] = None,
+) -> WeaponAttackResult:
+    """Unarmed strike: 1+STR bludgeoning; Monk uses best of STR/DEX + Martial Arts die."""
+    char = await _get_owned_full(char_id, user_id, session)
+
+    if body and body.with_inspiration:
+        if not char.heroic_inspiration:
+            raise HTTPException(status_code=409, detail="Ispirazione non disponibile")
+        char.heroic_inspiration = False
+
+    def _mod(ability: str) -> int:
+        sc = next((s for s in char.ability_scores if s.name == ability), None)
+        return sc.modifier if sc else 0
+
+    str_mod = _mod("strength")
+    dex_mod = _mod("dexterity")
+    monk_level = next(
+        (c.level for c in char.classes if c.class_name.lower() == "monaco"), 0
+    )
+
+    ability_mod, damage_dice_str = unarmed_strike_profile(str_mod, dex_mod, monk_level)
+    pb = char.proficiency_bonus
+
+    to_hit_die = random.randint(1, 20)
+    to_hit_bonus = ability_mod + pb
+    to_hit_total = to_hit_die + to_hit_bonus
+    is_critical = to_hit_die == 20
+    is_fumble = to_hit_die == 1
+
+    if damage_dice_str == "1":
+        damage_rolls = [1]
+        dice_bonus = 0
+    else:
+        damage_rolls, dice_bonus = _roll_dice(damage_dice_str)
+        if is_critical:
+            extra_rolls, _ = _roll_dice(damage_dice_str)
+            damage_rolls = damage_rolls + extra_rolls
+
+    if is_fumble:
+        damage_rolls = [0]
+        damage_bonus = 0
+        damage_total = 0
+    else:
+        damage_bonus = ability_mod + dice_bonus
+        damage_total = max(0, sum(damage_rolls) + damage_bonus)
+
+    weapon_name = "Attacco a mano libera"
+    result_str = (
+        f"Attacco {weapon_name}: colpire d20={to_hit_die}+{to_hit_bonus}={to_hit_total}"
+        + (" (CRITICO!)" if is_critical else " (FUMBLE!)" if is_fumble else "")
+        + f" | Danno: {'+'.join(str(r) for r in damage_rolls)}+{damage_bonus}={damage_total}"
+    )
+    if body and body.with_inspiration:
+        result_str = f"Reroll ispirazione (to-hit): {result_str}"
+    _add_history(session, char.id, "attack_roll", result_str)
+
+    firing_results = await dispatch(
+        session, char, "attack_rolled",
+        {
+            "item_id": None,
+            "to_hit_die": to_hit_die,
+            "to_hit_total": to_hit_total,
+            "is_critical": is_critical,
+            "is_fumble": is_fumble,
+            "damage_total": damage_total,
+        },
+    )
+    notifications = collect_homebrew_notifications(firing_results)
+
+    return WeaponAttackResult(
+        weapon_name=weapon_name,
         to_hit_die=to_hit_die,
         to_hit_bonus=to_hit_bonus,
         to_hit_total=to_hit_total,
