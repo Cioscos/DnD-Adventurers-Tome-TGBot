@@ -136,7 +136,10 @@
       "wisdom": "Wisdom",
       "charisma": "Charisma",
       "modifier": "Modifier",
-      "hp_recalc_toast": "Max HP updated: {{old}} → {{new}}"
+      "hp_recalc_toast": "Max HP updated: {{old}} → {{new}}",
+      "edit_title": "Edit {{ability}}",
+      "decrease": "Decrease",
+      "increase": "Increase"
     },
     "ac": {
       "title": "Armor Class",
