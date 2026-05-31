@@ -1,19 +1,19 @@
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { m, AnimatePresence } from 'framer-motion'
-import { Pencil, Check, X } from 'lucide-react'
+import { m } from 'framer-motion'
+import { Pencil } from 'lucide-react'
 import { toast } from 'sonner'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
-import Input from '@/components/ui/Input'
 import Reveal from '@/components/ui/Reveal'
 import { haptic } from '@/auth/telegram'
 import { spring, stagger } from '@/styles/motion'
 import type { AbilityScore } from '@/types'
 import AbilityScoresSkeleton from '@/components/skeletons/AbilityScoresSkeleton'
+import AbilityScoreEditModal from '@/components/character/AbilityScoreEditModal'
 
 // Canonical D&D 5e ordering — STR/DEX/CON/INT/WIS/CHA (mirror HeroScreen.tsx).
 const DND_ABILITY_ORDER = [
@@ -26,11 +26,6 @@ export default function AbilityScores() {
   const { t } = useTranslation()
   const qc = useQueryClient()
   const [editing, setEditing] = useState<string | null>(null)
-  const [editValue, setEditValue] = useState('')
-  // Synchronous guard against double-fire of handleSave (Input.onCommit + button.onClick
-  // can both fire when the user taps Salva — `updateMutation.isPending` isn't yet true
-  // at the second call, so we need a ref that flips immediately.
-  const savingRef = useRef(false)
 
   const { data: char } = useQuery({
     queryKey: ['character', charId],
@@ -51,24 +46,20 @@ export default function AbilityScores() {
           new: updated.hit_points,
         }))
       }
-      savingRef.current = false
     },
     onError: () => {
       haptic.error()
-      savingRef.current = false
     },
   })
 
-  const handleSave = (ability: string) => {
-    if (savingRef.current || updateMutation.isPending) return
-    const n = parseInt(editValue, 10)
-    if (isNaN(n) || n < 1 || n > 30) return
-    if (char?.ability_scores.find((s) => s.name === ability)?.value === n) {
+  const handleSave = (ability: string, value: number) => {
+    if (updateMutation.isPending) return
+    if (value < 1 || value > 30) return
+    if (char?.ability_scores.find((s) => s.name === ability)?.value === value) {
       setEditing(null)
       return
     }
-    savingRef.current = true
-    updateMutation.mutate({ ability, value: n })
+    updateMutation.mutate({ ability, value })
   }
 
   if (!char) {
@@ -85,8 +76,6 @@ export default function AbilityScores() {
         {[...char.ability_scores]
           .sort((a, b) => DND_ABILITY_ORDER.indexOf(a.name) - DND_ABILITY_ORDER.indexOf(b.name))
           .map((score: AbilityScore) => {
-          const isEditing = editing === score.name
-
           return (
             <Reveal.Item key={score.name}>
               <Surface
@@ -103,88 +92,35 @@ export default function AbilityScores() {
                       defaultValue: t(`character.stats.${score.name}`, { defaultValue: score.name }),
                     })}
                   </span>
-                  {!isEditing && (
-                    <m.button
-                      onClick={() => {
-                        setEditing(score.name)
-                        // Leave the input empty so the user types fresh — pre-fill encourages
-                        // accidental "Save" of the unchanged value. Current value is shown as
-                        // placeholder (see Input.placeholder below).
-                        setEditValue('')
-                      }}
-                      className="shrink-0 w-11 h-11 rounded-full bg-dnd-surface-raised border border-dnd-border flex items-center justify-center text-dnd-gold"
-                      whileTap={{ scale: 0.9 }}
-                      aria-label={t('common.edit')}
-                    >
-                      <Pencil size={14} />
-                    </m.button>
-                  )}
+                  <m.button
+                    onClick={() => setEditing(score.name)}
+                    className="shrink-0 w-11 h-11 rounded-full bg-dnd-surface-raised border border-dnd-border flex items-center justify-center text-dnd-gold"
+                    whileTap={{ scale: 0.9 }}
+                    aria-label={t('common.edit')}
+                  >
+                    <Pencil size={14} />
+                  </m.button>
                 </div>
 
-                <AnimatePresence mode="wait" initial={false}>
-                  {isEditing ? (
-                    <m.div
-                      key="edit"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      className="flex gap-1.5 items-center"
-                    >
-                      <div className="flex-1">
-                        <Input
-                          value={editValue}
-                          onChange={setEditValue}
-                          type="number"
-                          min={1}
-                          max={30}
-                          inputMode="numeric"
-                          autoFocus
-                          placeholder={String(score.value)}
-                          onCommit={() => handleSave(score.name)}
-                          className="[&_input]:text-2xl [&_input]:font-mono [&_input]:font-bold [&_input]:tabular-nums [&_input]:text-center [&_input]:min-h-[56px]"
-                        />
-                      </div>
-                      <m.button
-                        onClick={() => handleSave(score.name)}
-                        className="shrink-0 w-11 h-11 rounded-lg bg-[var(--dnd-emerald)]/20 text-[var(--dnd-emerald-bright)] border border-dnd-emerald/40 flex items-center justify-center"
-                        whileTap={{ scale: 0.9 }}
-                        aria-label={t('common.save')}
-                      >
-                        <Check size={18} />
-                      </m.button>
-                      <m.button
-                        onClick={() => setEditing(null)}
-                        className="shrink-0 w-11 h-11 rounded-lg bg-[var(--dnd-crimson)]/15 text-[var(--dnd-crimson-bright)] border border-[var(--dnd-crimson)]/40 flex items-center justify-center"
-                        whileTap={{ scale: 0.9 }}
-                        aria-label={t('common.cancel')}
-                      >
-                        <X size={18} />
-                      </m.button>
-                    </m.div>
-                  ) : (
-                    <m.div
-                      key="view"
-                      initial={{ opacity: 0, y: 4 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -4 }}
-                      className="flex items-end gap-2"
-                      transition={spring.snappy}
-                    >
-                      <span className="text-4xl font-mono font-bold leading-none tabular-nums text-dnd-text"
-                            style={{ textShadow: '0 2px 6px rgba(0,0,0,0.6)' }}>
-                        {score.value}
-                      </span>
-                      <div className="flex flex-col items-center mb-1">
-                        <span className="text-[9px] font-cinzel uppercase tracking-widest opacity-60 leading-none">
-                          {t('character.ability.mod_label')}
-                        </span>
-                        <span className="text-base font-mono font-bold tabular-nums px-2 py-0.5 rounded-full bg-black/25 mt-0.5">
-                          {score.modifier >= 0 ? '+' : ''}{score.modifier}
-                        </span>
-                      </div>
-                    </m.div>
-                  )}
-                </AnimatePresence>
+                <m.div
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex items-end gap-2"
+                  transition={spring.snappy}
+                >
+                  <span className="text-4xl font-mono font-bold leading-none tabular-nums text-dnd-text"
+                        style={{ textShadow: '0 2px 6px rgba(0,0,0,0.6)' }}>
+                    {score.value}
+                  </span>
+                  <div className="flex flex-col items-center mb-1">
+                    <span className="text-[9px] font-cinzel uppercase tracking-widest opacity-60 leading-none">
+                      {t('character.ability.mod_label')}
+                    </span>
+                    <span className="text-base font-mono font-bold tabular-nums px-2 py-0.5 rounded-full bg-black/25 mt-0.5">
+                      {score.modifier >= 0 ? '+' : ''}{score.modifier}
+                    </span>
+                  </div>
+                </m.div>
 
                 {score.modifiers_applied && score.modifiers_applied.length > 0 && (
                   <div className="mt-2 pt-2 border-t border-dnd-border/50 space-y-1 text-[11px] font-body">
@@ -216,6 +152,20 @@ export default function AbilityScores() {
           )
         })}
       </Reveal.Stagger>
+
+      {(() => {
+        const score = editing ? char.ability_scores.find((s) => s.name === editing) : undefined
+        return (
+          <AbilityScoreEditModal
+            open={editing !== null && score !== undefined}
+            label={score ? t(`character.stats.${score.name}`, { defaultValue: score.name }) : ''}
+            currentValue={score?.value ?? 0}
+            saving={updateMutation.isPending}
+            onClose={() => setEditing(null)}
+            onSave={(value) => { if (score) handleSave(score.name, value) }}
+          />
+        )
+      })()}
     </Layout>
   )
 }

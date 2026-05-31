@@ -136,7 +136,10 @@
       "wisdom": "Saggezza",
       "charisma": "Carisma",
       "modifier": "Modificatore",
-      "hp_recalc_toast": "HP massimi aggiornati: {{old}} → {{new}}"
+      "hp_recalc_toast": "HP massimi aggiornati: {{old}} → {{new}}",
+      "edit_title": "Modifica {{ability}}",
+      "decrease": "Diminuisci",
+      "increase": "Aumenta"
     },
     "ac": {
       "title": "Classe Armatura",
