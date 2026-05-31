@@ -428,9 +428,11 @@ async def attack_unarmed(
     is_critical = to_hit_die == 20
     is_fumble = to_hit_die == 1
 
+    dice_bonus = 0
     if damage_dice_str == "1":
+        # Flat-1 unarmed damage (non-Monk): no dice component, so a crit does
+        # NOT double it (D&D 5e: crit doubles dice, not the flat 1 + mod).
         damage_rolls = [1]
-        dice_bonus = 0
     else:
         damage_rolls, dice_bonus = _roll_dice(damage_dice_str)
         if is_critical:
