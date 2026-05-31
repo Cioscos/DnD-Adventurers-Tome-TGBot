@@ -694,6 +694,7 @@
       "spellcasting": "Abilità da incantatore",
       "resources": "Risorse di classe",
       "add_resource": "Aggiungi risorsa",
+      "remove_resource": "Rimuovi risorsa",
       "resource_name": "Nome risorsa",
       "resource_total": "Totale",
       "resource_current": "Attuali",

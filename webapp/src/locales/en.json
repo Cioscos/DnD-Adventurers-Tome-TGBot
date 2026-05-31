@@ -694,6 +694,7 @@
       "spellcasting": "Spellcasting ability",
       "resources": "Class resources",
       "add_resource": "Add resource",
+      "remove_resource": "Remove resource",
       "resource_name": "Resource name",
       "resource_total": "Total",
       "resource_current": "Current",

@@ -48,27 +48,37 @@ export default function ResourceManager({
       {/* Existing resources — skip 0/0 entries (typically locked class features
           like Channel Divinity at lv1 Paladin that unlock at higher levels). */}
       {resources.length > 0 && (
-        <div className="space-y-1 mb-2">
+        <div className="space-y-3 mb-3">
           {resources.filter((r) => r.total > 0).map((res) => (
-            <div key={res.id} className="flex items-center gap-2 text-sm">
-              <span className="flex-1">{res.name}</span>
-              <span className="text-dnd-text-muted">
-                {res.current}/{res.total}
-              </span>
-              <button
-                onClick={() => onUseResource(classId, res.id, Math.max(0, res.current - 1))}
-                disabled={res.current <= 0}
-                className="w-6 h-6 rounded bg-[var(--dnd-danger)]/20 text-[var(--dnd-danger)] font-bold disabled:opacity-30"
-              >-</button>
-              <button
-                onClick={() => onUseResource(classId, res.id, Math.min(res.total, res.current + 1))}
-                disabled={res.current >= res.total}
-                className="w-6 h-6 rounded bg-dnd-success/20 text-dnd-success-text font-bold disabled:opacity-30"
-              >+</button>
-              <button
-                onClick={() => onDeleteResource(classId, res.id)}
-                className="text-xs text-[var(--dnd-danger)] ml-1"
-              >&#x2715;</button>
+            <div key={res.id} className="space-y-1">
+              {/* Stepper row: name · current/total · −/+ da 44px ben distanziati */}
+              <div className="flex items-center gap-3 text-sm">
+                <span className="flex-1 min-w-0 truncate">{res.name}</span>
+                <button
+                  onClick={() => onUseResource(classId, res.id, Math.max(0, res.current - 1))}
+                  disabled={res.current <= 0}
+                  aria-label={t('character.multiclass.use_resource')}
+                  className="w-11 h-11 shrink-0 rounded-lg bg-[var(--dnd-danger)]/20 text-[var(--dnd-danger)] text-xl font-bold leading-none disabled:opacity-30"
+                >-</button>
+                <span className="font-mono tabular-nums text-base min-w-[44px] text-center">
+                  {res.current}/{res.total}
+                </span>
+                <button
+                  onClick={() => onUseResource(classId, res.id, Math.min(res.total, res.current + 1))}
+                  disabled={res.current >= res.total}
+                  aria-label={t('character.multiclass.restore_resource')}
+                  className="w-11 h-11 shrink-0 rounded-lg bg-dnd-success/20 text-dnd-success-text text-xl font-bold leading-none disabled:opacity-30"
+                >+</button>
+              </div>
+              {/* Destructive action on its own row, no longer adjacent to + */}
+              <div className="flex justify-end">
+                <button
+                  onClick={() => onDeleteResource(classId, res.id)}
+                  className="inline-flex items-center min-h-[44px] px-2 text-xs text-[var(--dnd-danger)] opacity-70"
+                >
+                  {t('character.multiclass.remove_resource')}
+                </button>
+              </div>
             </div>
           ))}
         </div>

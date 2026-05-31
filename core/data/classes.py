@@ -297,7 +297,7 @@ def update_resources_for_level(
     """Update existing ClassResource ORM objects in-place after a level change.
 
     - Recalculates total for each resource using the new level formula.
-    - Caps current to the new total (does not reset current).
+    - On increase, raises current by the gained amount (capped at new total); on decrease, caps current to the new total.
     - Resources newly becoming available are NOT auto-added here (handled in multiclass.py).
     """
     configs = CLASS_RESOURCES.get(class_name, [])
@@ -313,6 +313,19 @@ def update_resources_for_level(
         new_total = cfg.formula(new_level)
         if new_total <= 0:
             new_total = 0
+        if new_total == 99:
+            # _BARBARO_FURIE sentinel: "unlimited" rages at level 20 — not a
+            # countable pool. Set the sentinel total but don't inflate current.
+            resource.total = new_total
+            continue
+        old_total = resource.total
+        delta = new_total - old_total
         resource.total = new_total
-        if resource.current > new_total:
+        if delta > 0:
+            # Level-up grants capacity: already-spent uses stay spent, but the
+            # newly gained points are immediately available (D&D 5e — rest
+            # restores expended uses, leveling adds the new max as usable).
+            resource.current = min(new_total, resource.current + delta)
+        elif resource.current > new_total:
+            # Level decreased / formula shrank: cap current to the new max.
             resource.current = new_total
