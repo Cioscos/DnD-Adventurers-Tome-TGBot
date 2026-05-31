@@ -16,6 +16,7 @@ import MapUploadForm from '@/pages/maps/MapUploadForm'
 import MapZoneGroup from '@/pages/maps/MapZoneGroup'
 import { useRegisterOverlay } from '@/store/overlayStore'
 import type { MapEntry } from '@/types'
+import MapsSkeleton from '@/components/skeletons/MapsSkeleton'
 
 // Lazy-load pinch-zoom — only inside the fullscreen photo overlay.
 const ZoomableImage = lazy(() => import('@/pages/maps/ZoomableImage'))
@@ -73,7 +74,13 @@ export default function Maps() {
     setUploadInitialZone('')
   }
 
-  if (!char) return null
+  if (!char) {
+    return (
+      <Layout title={t('character.maps.title')} backTo={`/char/${charId}`} group="tools" page="maps">
+        <MapsSkeleton />
+      </Layout>
+    )
+  }
 
   const maps = char.maps ?? []
 

@@ -14,6 +14,10 @@ import IdentitySkeleton from './IdentitySkeleton'
 import MulticlassSkeleton from './MulticlassSkeleton'
 import ExperienceSkeleton from './ExperienceSkeleton'
 import ConditionsSkeleton from './ConditionsSkeleton'
+import DiceSkeleton from './DiceSkeleton'
+import NotesSkeleton from './NotesSkeleton'
+import MapsSkeleton from './MapsSkeleton'
+import HistorySkeleton from './HistorySkeleton'
 
 /** Generic page skeleton — used when a page has no bespoke skeleton yet. */
 export function GenericPageSkeleton() {
@@ -47,6 +51,11 @@ const REGISTRY: Record<string, ComponentType> = {
   class: MulticlassSkeleton,
   xp: ExperienceSkeleton,
   conditions: ConditionsSkeleton,
+  // tools
+  dice: DiceSkeleton,
+  notes: NotesSkeleton,
+  maps: MapsSkeleton,
+  history: HistorySkeleton,
 }
 
 /** Returns the skeleton component for a page key, or the generic fallback. */
