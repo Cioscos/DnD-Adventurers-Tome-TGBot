@@ -20,10 +20,11 @@ interface NoteItemProps {
   note: Note
   onEdit?: (title: string, body: string, tags: string[]) => void
   onDelete: (title: string) => void
+  onView?: (note: Note) => void
   voiceUrl?: (filename: string) => string
 }
 
-function NoteItemInner({ note, onEdit, onDelete, voiceUrl }: NoteItemProps) {
+function NoteItemInner({ note, onEdit, onDelete, onView, voiceUrl }: NoteItemProps) {
   const { t } = useTranslation()
   const locale = useCharacterStore((s) => s.locale)
   const stamp = note.updated_at ?? note.created_at ?? null
@@ -77,20 +78,23 @@ function NoteItemInner({ note, onEdit, onDelete, voiceUrl }: NoteItemProps) {
   }
 
   return (
-    <Card>
+    <Card
+      onClick={onView ? () => onView(note) : undefined}
+      className={onView ? 'cursor-pointer' : undefined}
+    >
       <div className="flex items-start justify-between gap-2 mb-1">
         <h3 className="font-semibold font-cinzel text-dnd-gold">{note.title}</h3>
         <div className="flex gap-2 shrink-0">
           {onEdit && (
             <button
-              onClick={() => onEdit(note.title, note.body, note.tags ?? [])}
+              onClick={(e) => { e.stopPropagation(); onEdit(note.title, note.body, note.tags ?? []) }}
               className="text-xs text-dnd-gold-dim"
             >
               {t('common.edit')}
             </button>
           )}
           <button
-            onClick={() => onDelete(note.title)}
+            onClick={(e) => { e.stopPropagation(); onDelete(note.title) }}
             className="text-xs text-[var(--dnd-danger)]"
           >
             {t('common.delete')}

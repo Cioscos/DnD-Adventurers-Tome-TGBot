@@ -16,7 +16,9 @@ import { useReducedMotion } from '@/hooks/useReducedMotion'
 import VoiceRecorder from '@/pages/notes/VoiceRecorder'
 import NoteEditor from '@/pages/notes/NoteEditor'
 import NoteItem from '@/pages/notes/NoteItem'
+import NoteViewModal from '@/pages/notes/NoteViewModal'
 import NotesSkeleton from '@/components/skeletons/NotesSkeleton'
+import type { Note } from '@/types'
 
 // "denied" → mic API exists but user/browser blocked. "missing" → no MediaRecorder
 // support at all (e.g. plain http on iOS). "ready" → we can attempt recording.
@@ -34,6 +36,7 @@ export default function Notes() {
   const [editNote, setEditNote] = useState<{ title: string; body: string; tags?: string[] } | null>(null)
   const [originalTitle, setOriginalTitle] = useState('')
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
+  const [viewNote, setViewNote] = useState<Note | null>(null)
   const [micStatus, setMicStatus] = useState<MicStatus>('unknown')
 
   useEffect(() => {
@@ -214,6 +217,7 @@ export default function Notes() {
                 note={note}
                 onEdit={startEdit}
                 onDelete={(title) => setDeleteTarget(title)}
+                onView={(n) => setViewNote(n)}
                 voiceUrl={(filename) => api.notes.voiceUrl(charId, filename)}
               />
             </m.div>
@@ -277,6 +281,13 @@ export default function Notes() {
           />
         </div>
       </Sheet>
+
+      <NoteViewModal
+        note={viewNote}
+        onClose={() => setViewNote(null)}
+        onEdit={(title, body, tags) => { setViewNote(null); startEdit(title, body, tags) }}
+        onDelete={(title) => { setViewNote(null); setDeleteTarget(title) }}
+      />
     </Layout>
   )
 }
