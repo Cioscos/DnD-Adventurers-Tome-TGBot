@@ -1,5 +1,5 @@
 import Skeleton from '@/components/ui/Skeleton'
-import { RowListSkeleton } from './SavingThrowsSkeleton'
+import RowListSkeleton from './RowListSkeleton'
 
 export default function ConditionsSkeleton() {
   return (

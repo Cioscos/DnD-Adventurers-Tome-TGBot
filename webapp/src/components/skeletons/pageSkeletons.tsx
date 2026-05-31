@@ -31,6 +31,10 @@ export function GenericPageSkeleton() {
 }
 
 /** Map of sub-page key (see PAGE_GROUPS in useSwipeNavigation) → skeleton. */
+// NOTE: dice / notes / history are registered here for the swipe-ghost transition
+// (a later task reads this registry). Their pages have no `!char` loading gate
+// (or render their own inline skeleton), so they are intentionally NOT wired to a
+// page loading branch — they are not forgotten work.
 const REGISTRY: Record<string, ComponentType> = {
   // combat
   hp: HPSkeleton,
