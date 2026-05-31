@@ -77,6 +77,8 @@ export function useSwipeNavigation(group?: string, page?: string) {
         contentRef.current.style.transform = ''
         contentRef.current.style.transition = ''
       }
+      touchRef.current.swiping = false
+      touchRef.current.locked = false
       return
     }
 
