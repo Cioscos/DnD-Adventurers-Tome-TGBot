@@ -54,6 +54,7 @@ const ENCOUNTER_XP: Record<number, { easy: number; medium: number; hard: number;
 const ENCOUNTER_KEYS = ['easy', 'medium', 'hard', 'deadly'] as const
 import LevelUpBanner from '@/pages/multiclass/LevelUpBanner'
 import LevelUpModal from '@/pages/multiclass/LevelUpModal'
+import ExperienceSkeleton from '@/components/skeletons/ExperienceSkeleton'
 
 export default function Experience() {
   const { id } = useParams<{ id: string }>()
@@ -129,7 +130,13 @@ export default function Experience() {
     },
   })
 
-  if (!char) return null
+  if (!char) {
+    return (
+      <Layout title={t('character.xp.title')} backTo={`/char/${charId}`} group="character" page="xp">
+        <ExperienceSkeleton />
+      </Layout>
+    )
+  }
 
   const xp = char.experience_points
   const level = levelFromXp(xp)

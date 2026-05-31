@@ -17,6 +17,7 @@ import SectionDivider from '@/components/ui/SectionDivider'
 import { haptic } from '@/auth/telegram'
 import { useUnitSettings, formatLength, oppositeSystem } from '@/store/unitSettings'
 import languagesSrd from '@/data/languages-srd.json'
+import IdentitySkeleton from '@/components/skeletons/IdentitySkeleton'
 
 const LANGUAGE_SUGGESTIONS = [...languagesSrd.common, ...languagesSrd.exotic]
 
@@ -118,7 +119,13 @@ export default function Identity() {
     onError: () => haptic.error(),
   })
 
-  if (!char || !draft) return null
+  if (!char || !draft) {
+    return (
+      <Layout title={t('character.identity.title')} backTo={`/char/${charId}`} group="character" page="identity">
+        <IdentitySkeleton />
+      </Layout>
+    )
+  }
 
   const dirty = snapshot(draft) !== pristine
 

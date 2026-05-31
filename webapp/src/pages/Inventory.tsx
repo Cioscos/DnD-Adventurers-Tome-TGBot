@@ -23,6 +23,7 @@ import ItemForm from '@/pages/inventory/ItemForm'
 import { buildItemMetadata, buildHomebrewMetadataPatch, type ItemFormData } from '@/pages/inventory/itemMetadata'
 import { getItemTypeIcon } from '@/lib/itemIcons'
 import type { Item } from '@/types'
+import InventorySkeleton from '@/components/skeletons/InventorySkeleton'
 
 export default function Inventory() {
   const { id } = useParams<{ id: string }>()
@@ -292,7 +293,13 @@ export default function Inventory() {
     }
   }, [highlightId, char, navigate, location.pathname])
 
-  if (!char) return null
+  if (!char) {
+    return (
+      <Layout title={t('character.inventory.title')} backTo={`/char/${charId}`} group="equipment" page="inventory">
+        <InventorySkeleton />
+      </Layout>
+    )
+  }
 
   const items: Item[] = char.items ?? []
   const totalWeight = items.reduce((sum, i) => sum + i.weight * i.quantity, 0)

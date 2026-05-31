@@ -19,6 +19,7 @@ import { haptic } from '@/auth/telegram'
 import { spring } from '@/styles/motion'
 import type { Ability } from '@/types'
 import type { HomebrewResource } from '@/lib/homebrew/types'
+import AbilitiesSkeleton from '@/components/skeletons/AbilitiesSkeleton'
 
 type AddForm = { name: string; description: string; max_uses: string; is_passive: boolean; restoration_type: string }
 const emptyForm: AddForm = { name: '', description: '', max_uses: '', is_passive: false, restoration_type: 'long_rest' }
@@ -184,7 +185,13 @@ export default function Abilities() {
     }
   }
 
-  if (!char) return null
+  if (!char) {
+    return (
+      <Layout title={t('character.abilities.title')} backTo={`/char/${charId}`} group="skills" page="abilities">
+        <AbilitiesSkeleton />
+      </Layout>
+    )
+  }
 
   const abilities: Ability[] = char.abilities ?? []
   const isPending = addMutation.isPending || updateMutation.isPending

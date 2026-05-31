@@ -13,6 +13,7 @@ import Reveal from '@/components/ui/Reveal'
 import { haptic } from '@/auth/telegram'
 import { spring, stagger } from '@/styles/motion'
 import type { AbilityScore } from '@/types'
+import AbilityScoresSkeleton from '@/components/skeletons/AbilityScoresSkeleton'
 
 // Canonical D&D 5e ordering — STR/DEX/CON/INT/WIS/CHA (mirror HeroScreen.tsx).
 const DND_ABILITY_ORDER = [
@@ -70,7 +71,13 @@ export default function AbilityScores() {
     updateMutation.mutate({ ability, value: n })
   }
 
-  if (!char) return null
+  if (!char) {
+    return (
+      <Layout title={t('character.stats.title')} backTo={`/char/${charId}`} group="skills" page="stats">
+        <AbilityScoresSkeleton />
+      </Layout>
+    )
+  }
 
   return (
     <Layout title={t('character.stats.title')} backTo={`/char/${charId}`} group="skills" page="stats">

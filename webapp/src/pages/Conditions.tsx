@@ -22,6 +22,7 @@ import {
   type NotificationLike,
 } from '@/components/homebrew/HomebrewNotification'
 import { useToast } from '@/hooks/useToast'
+import ConditionsSkeleton from '@/components/skeletons/ConditionsSkeleton'
 
 const CONDITION_KEYS = [
   'blinded', 'charmed', 'deafened', 'frightened', 'grappled',
@@ -149,7 +150,13 @@ export default function Conditions() {
     },
   })
 
-  if (!char) return null
+  if (!char) {
+    return (
+      <Layout title={t('character.conditions.title')} backTo={`/char/${charId}`} group="character" page="conditions">
+        <ConditionsSkeleton />
+      </Layout>
+    )
+  }
 
   const conditions: Record<string, unknown> = (char.conditions as Record<string, unknown>) ?? {}
   const currentExhaustion = typeof conditions['exhaustion'] === 'number'

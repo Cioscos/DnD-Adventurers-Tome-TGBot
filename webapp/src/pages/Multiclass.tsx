@@ -20,6 +20,7 @@ import LevelUpBanner from '@/pages/multiclass/LevelUpBanner'
 import LevelUpModal from '@/pages/multiclass/LevelUpModal'
 import EditClassesModal from '@/pages/multiclass/EditClassesModal'
 import type { CharacterClass } from '@/types'
+import MulticlassSkeleton from '@/components/skeletons/MulticlassSkeleton'
 
 export default function Multiclass() {
   const { id } = useParams<{ id: string }>()
@@ -67,7 +68,13 @@ export default function Multiclass() {
 
   const classes: CharacterClass[] = char?.classes ?? []
 
-  if (!char) return null
+  if (!char) {
+    return (
+      <Layout title={t('character.multiclass.title')} backTo={`/char/${charId}`} group="character" page="class">
+        <MulticlassSkeleton />
+      </Layout>
+    )
+  }
 
   const classLevelSum = classes.reduce((s, c) => s + c.level, 0)
   const targetLevel = levelFromXp(char.experience_points ?? 0)
