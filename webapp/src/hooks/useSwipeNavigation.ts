@@ -25,7 +25,7 @@ export function useSwipeNavigation(group?: string, page?: string) {
   const navigate = useNavigate()
   const { id } = useParams<{ id: string }>()
   const { isModalOpen } = useModal()
-  const touchRef = useRef({ startX: 0, startY: 0, swiping: false })
+  const touchRef = useRef({ startX: 0, startY: 0, swiping: false, locked: false })
   const contentRef = useRef<HTMLDivElement>(null)
 
   const info = getGroupInfo(group, page)
@@ -33,7 +33,7 @@ export function useSwipeNavigation(group?: string, page?: string) {
   const onTouchStart = useCallback((e: React.TouchEvent) => {
     if (isModalOpen || !info) return
     const touch = e.touches[0]
-    touchRef.current = { startX: touch.clientX, startY: touch.clientY, swiping: false }
+    touchRef.current = { startX: touch.clientX, startY: touch.clientY, swiping: false, locked: false }
   }, [isModalOpen, info])
 
   const onTouchMove = useCallback((e: React.TouchEvent) => {
@@ -42,9 +42,20 @@ export function useSwipeNavigation(group?: string, page?: string) {
     const deltaX = touch.clientX - touchRef.current.startX
     const deltaY = touch.clientY - touchRef.current.startY
 
-    // Only engage if horizontal intent dominates
+    // Once a gesture is recognized as vertical scroll, lock OUT horizontal swipe
+    // for the rest of this touch so a mid-scroll horizontal drift can't hijack it.
+    if (touchRef.current.locked) return
+
+    // Only engage if horizontal intent clearly dominates.
     if (!touchRef.current.swiping) {
-      if (Math.abs(deltaX) > Math.abs(deltaY) * 1.5 && Math.abs(deltaX) > 10) {
+      const ax = Math.abs(deltaX)
+      const ay = Math.abs(deltaY)
+      if (ay > ax && ay > 8) {
+        // Vertical intent → lock and let the list scroll.
+        touchRef.current.locked = true
+        return
+      }
+      if (ax > ay * 2 && ax > 16) {
         touchRef.current.swiping = true
       } else {
         return
@@ -88,6 +99,7 @@ export function useSwipeNavigation(group?: string, page?: string) {
     }
 
     touchRef.current.swiping = false
+    touchRef.current.locked = false
   }, [info, navigate, id])
 
   return {
