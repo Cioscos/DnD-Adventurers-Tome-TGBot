@@ -35,6 +35,7 @@ export function useLongPress({ onLongPress, onClick, thresholdMs = 500, onProgre
   const triggeredRef = useRef(false)
   const movedRef = useRef(false)
   const startRef = useRef({ x: 0, y: 0 })
+  const pressingRef = useRef(false)
 
   const clearTimers = useCallback(() => {
     if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null }
@@ -42,6 +43,7 @@ export function useLongPress({ onLongPress, onClick, thresholdMs = 500, onProgre
   }, [])
 
   const start = useCallback((e: AnyPressEvent) => {
+    pressingRef.current = true
     triggeredRef.current = false
     movedRef.current = false
     startRef.current = eventXY(e)
@@ -70,12 +72,13 @@ export function useLongPress({ onLongPress, onClick, thresholdMs = 500, onProgre
   }, [onLongPress, thresholdMs, onProgress, clearTimers])
 
   const cancel = useCallback(() => {
+    pressingRef.current = false
     clearTimers()
     if (onProgress) onProgress(0)
   }, [clearTimers, onProgress])
 
   const move = useCallback((e: AnyPressEvent) => {
-    if (movedRef.current) return
+    if (!pressingRef.current || movedRef.current) return
     const { x, y } = eventXY(e)
     if (Math.abs(x - startRef.current.x) > MOVE_CANCEL_PX ||
         Math.abs(y - startRef.current.y) > MOVE_CANCEL_PX) {
@@ -89,6 +92,9 @@ export function useLongPress({ onLongPress, onClick, thresholdMs = 500, onProgre
     if (!triggeredRef.current && !movedRef.current && onClick) onClick()
   }, [cancel, onClick])
 
+  // Register BOTH Pointer and Touch move handlers: some Telegram in-app webviews
+  // deliver only Touch events, others only Pointer. The pressingRef + movedRef
+  // guards make the duplicate delivery a harmless single-cancel.
   return {
     onPointerDown: start,
     onPointerMove: move,
