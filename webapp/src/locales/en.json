@@ -54,6 +54,7 @@
       "stats": "Ability Scores",
       "skills": "Skills",
       "saves": "Saving Throws",
+      "actions": "Actions",
       "spells": "Spells",
       "slots": "Spell Slots",
       "inventory": "Inventory",
@@ -197,6 +198,14 @@
       "ts_short": "ST",
       "tap_to_roll": "Tap to roll",
       "homebrew_label": "Homebrew Bonus"
+    },
+    "actions": {
+      "title": "Actions",
+      "unarmed": "Unarmed Strike",
+      "unarmed_desc": "Strike without weapons (1 + mod, bludgeoning)",
+      "weapons_section": "Equipped weapons",
+      "no_weapons": "No weapon equipped",
+      "attack": "Attack"
     },
     "ability": {
       "strength_short": "STR",

@@ -18,6 +18,7 @@ import DiceSkeleton from './DiceSkeleton'
 import NotesSkeleton from './NotesSkeleton'
 import MapsSkeleton from './MapsSkeleton'
 import HistorySkeleton from './HistorySkeleton'
+import ActionsSkeleton from './ActionsSkeleton'
 
 /** Generic page skeleton — used when a page has no bespoke skeleton yet. */
 export function GenericPageSkeleton() {
@@ -40,6 +41,7 @@ const REGISTRY: Record<string, ComponentType> = {
   hp: HPSkeleton,
   ac: ArmorClassSkeleton,
   saves: SavingThrowsSkeleton,
+  actions: ActionsSkeleton,
   // magic
   spells: SpellsSkeleton,
   slots: SpellSlotsSkeleton,
