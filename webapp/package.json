@@ -9,7 +9,7 @@
     "build": "tsc && vite build",
     "build:prod": "node scripts/build-prod.mjs",
     "preview": "vite preview",
-    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "lint": "eslint . --report-unused-disable-directives --max-warnings 0",
     "test:homebrew:audit": "playwright test --config=playwright.homebrew.config.ts --reporter=./tests/e2e-playwright/homebrew/audit-reporter.ts"
   },
   "dependencies": {

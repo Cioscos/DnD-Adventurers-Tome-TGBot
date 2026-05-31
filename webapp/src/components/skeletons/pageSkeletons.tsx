@@ -1,5 +1,5 @@
 import type { ComponentType } from 'react'
-import Skeleton from '@/components/ui/Skeleton'
+import GenericPageSkeleton from './GenericPageSkeleton'
 import ArmorClassSkeleton from './ArmorClassSkeleton'
 import HPSkeleton from './HPSkeleton'
 import SavingThrowsSkeleton from './SavingThrowsSkeleton'
@@ -19,17 +19,6 @@ import NotesSkeleton from './NotesSkeleton'
 import MapsSkeleton from './MapsSkeleton'
 import HistorySkeleton from './HistorySkeleton'
 import ActionsSkeleton from './ActionsSkeleton'
-
-/** Generic page skeleton — used when a page has no bespoke skeleton yet. */
-export function GenericPageSkeleton() {
-  return (
-    <div className="space-y-3" aria-hidden>
-      <Skeleton.Rect height="160px" />
-      <Skeleton.Rect height="80px" delay={80} />
-      <Skeleton.Rect height="80px" delay={160} />
-    </div>
-  )
-}
 
 /** Map of sub-page key (see PAGE_GROUPS in useSwipeNavigation) → skeleton. */
 // NOTE: dice / notes / history are registered here for the swipe-ghost transition

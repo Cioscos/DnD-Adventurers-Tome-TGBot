@@ -50,15 +50,17 @@ export default function SpellDamageSheet({
   const [slotConsumed, setSlotConsumed] = useState(false)
   const [showNoSlotWarning, setShowNoSlotWarning] = useState(false)
 
+  // Reset the form whenever a different spell is opened (identity tracked by id).
+  const spellId = spell?.id
   useEffect(() => {
-    if (spell) {
+    if (spellId != null) {
       setExtraDice('')
       setIsCritical(false)
       setResult(null)
       setSlotConsumed(false)
       setShowNoSlotWarning(false)
     }
-  }, [spell?.id])
+  }, [spellId])
 
   const dice = useDiceAnimation()
   const animate3d = useDiceSettings((s) => s.animate3d)

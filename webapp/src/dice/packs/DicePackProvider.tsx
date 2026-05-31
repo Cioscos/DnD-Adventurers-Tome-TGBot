@@ -1,19 +1,8 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { useDiceSettings } from '@/store/diceSettings'
 import { loadPackWithFallback, disposePack, type LoadedPack } from './loader'
 import { isBundledPack, type PackId } from './registry'
-
-interface PackContext {
-  pack: LoadedPack | null
-  loading: boolean
-  error: string | null
-}
-
-const Ctx = createContext<PackContext>({ pack: null, loading: false, error: null })
-
-export function useDicePack(): PackContext {
-  return useContext(Ctx)
-}
+import { DicePackCtx } from './dicePackContext'
 
 export function DicePackProvider({ children }: { children: ReactNode }) {
   const packIdRaw = useDiceSettings((s) => s.packId)
@@ -52,5 +41,5 @@ export function DicePackProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [packId, setPackId])
 
-  return <Ctx.Provider value={{ pack, loading, error }}>{children}</Ctx.Provider>
+  return <DicePackCtx.Provider value={{ pack, loading, error }}>{children}</DicePackCtx.Provider>
 }
