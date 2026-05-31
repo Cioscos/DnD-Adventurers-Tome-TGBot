@@ -13,11 +13,10 @@ interface Props {
 
 export default function NoteViewModal({ note, onClose, onEdit, onDelete }: Props) {
   const { t } = useTranslation()
-  if (!note) return null
-  const tags = note.tags ?? []
+  const tags = note?.tags ?? []
 
   return (
-    <Sheet open={note !== null} onClose={onClose} title={note.title}>
+    <Sheet open={note !== null} onClose={onClose} title={note?.title ?? ''}>
       <div className="p-5 space-y-4">
         {tags.length > 0 && (
           <div className="flex flex-wrap gap-1">
@@ -33,14 +32,14 @@ export default function NoteViewModal({ note, onClose, onEdit, onDelete }: Props
         )}
 
         <div className="text-sm text-dnd-text whitespace-pre-wrap leading-relaxed">
-          {renderInlineMarkdown(note.body)}
+          {note ? renderInlineMarkdown(note.body) : null}
         </div>
 
         <div className="flex gap-2 pt-1">
-          <Button variant="secondary" fullWidth onClick={() => onEdit(note.title, note.body, note.tags ?? [])}>
+          <Button variant="secondary" fullWidth onClick={() => note && onEdit(note.title, note.body, tags)}>
             {t('common.edit')}
           </Button>
-          <Button variant="danger" fullWidth onClick={() => onDelete(note.title)}>
+          <Button variant="danger" fullWidth onClick={() => note && onDelete(note.title)}>
             {t('common.delete')}
           </Button>
           <Button fullWidth onClick={onClose}>
