@@ -54,6 +54,7 @@
       "stats": "Caratteristiche",
       "skills": "Abilità",
       "saves": "Tiri Salvezza",
+      "actions": "Azioni",
       "spells": "Incantesimi",
       "slots": "Slot Incantesimi",
       "inventory": "Inventario",
@@ -197,6 +198,14 @@
       "ts_short": "TS",
       "tap_to_roll": "Tocca per tirare",
       "homebrew_label": "Bonus Homebrew"
+    },
+    "actions": {
+      "title": "Azioni",
+      "unarmed": "Attacco a mano libera",
+      "unarmed_desc": "Colpo senza armi (1 + mod, contundente)",
+      "weapons_section": "Armi equipaggiate",
+      "no_weapons": "Nessun'arma equipaggiata",
+      "attack": "Attacca"
     },
     "ability": {
       "strength_short": "FOR",

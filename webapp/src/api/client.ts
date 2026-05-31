@@ -471,6 +471,13 @@ export const api = {
           ? JSON.stringify({ with_inspiration: true })
           : undefined,
       }),
+    attackUnarmed: (charId: number, withInspiration: boolean = false) =>
+      request<WeaponAttackResult>(`/characters/${charId}/attack/unarmed`, {
+        method: 'POST',
+        body: withInspiration
+          ? JSON.stringify({ with_inspiration: true })
+          : undefined,
+      }),
   },
 
   // ---------------------------------------------------------------------------

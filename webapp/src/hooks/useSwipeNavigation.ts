@@ -4,7 +4,7 @@ import { useModal } from '@/components/ModalProvider'
 import { haptic } from '@/auth/telegram'
 
 const PAGE_GROUPS: Record<string, string[]> = {
-  combat: ['hp', 'ac', 'saves'],
+  combat: ['hp', 'ac', 'saves', 'actions'],
   magic: ['spells', 'slots'],
   skills: ['stats', 'skills', 'abilities'],
   equipment: ['inventory', 'currency'],
