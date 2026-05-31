@@ -16,6 +16,7 @@ import { haptic } from '@/auth/telegram'
 import { stagger } from '@/styles/motion'
 import { toRoman } from '@/lib/roman'
 import type { SpellSlot } from '@/types'
+import SpellSlotsSkeleton from '@/components/skeletons/SpellSlotsSkeleton'
 
 // Editable Total — inline numeric input + hold-to-accelerate ± buttons.
 // Lets users jump from 1 to 8 by typing or by holding the button instead of
@@ -177,7 +178,13 @@ export default function SpellSlots() {
     },
   })
 
-  if (!char) return null
+  if (!char) {
+    return (
+      <Layout title={t('character.slots.title')} backTo={`/char/${charId}`} group="magic" page="slots">
+        <SpellSlotsSkeleton />
+      </Layout>
+    )
+  }
 
   const slots: SpellSlot[] = [...(char.spell_slots ?? [])].sort(
     (a, b) => a.level - b.level || Number(a.is_pact) - Number(b.is_pact),

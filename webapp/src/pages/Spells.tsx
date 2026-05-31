@@ -18,6 +18,7 @@ import SpellForm, { type SpellFormData } from '@/pages/spells/SpellForm'
 import CastSpellModal from '@/pages/spells/CastSpellModal'
 import SpellDamageSheet from '@/pages/spells/SpellDamageSheet'
 import type { Spell, SpellSlot } from '@/types'
+import SpellsSkeleton from '@/components/skeletons/SpellsSkeleton'
 
 export default function Spells() {
   const { id } = useParams<{ id: string }>()
@@ -214,7 +215,13 @@ export default function Spells() {
     })
   }, [char, focusId, searchParams, setSearchParams])
 
-  if (!char) return null
+  if (!char) {
+    return (
+      <Layout title={t('character.spells.title')} backTo={`/char/${charId}`} group="magic" page="spells">
+        <SpellsSkeleton />
+      </Layout>
+    )
+  }
 
   const spells: Spell[] = char.spells ?? []
   const spellSlots: SpellSlot[] = char.spell_slots ?? []
