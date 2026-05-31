@@ -16,6 +16,7 @@ import { useReducedMotion } from '@/hooks/useReducedMotion'
 import VoiceRecorder from '@/pages/notes/VoiceRecorder'
 import NoteEditor from '@/pages/notes/NoteEditor'
 import NoteItem from '@/pages/notes/NoteItem'
+import NotesSkeleton from '@/components/skeletons/NotesSkeleton'
 
 // "denied" → mic API exists but user/browser blocked. "missing" → no MediaRecorder
 // support at all (e.g. plain http on iOS). "ready" → we can attempt recording.
@@ -58,7 +59,7 @@ export default function Notes() {
     }
   }, [])
 
-  const { data: notes = [] } = useQuery({
+  const { data: notes = [], isLoading } = useQuery({
     queryKey: ['notes', charId],
     queryFn: () => api.notes.list(charId),
   })
@@ -174,7 +175,7 @@ export default function Notes() {
         />
       </div>
 
-      {notes.length === 0 && (
+      {!isLoading && notes.length === 0 && (
         <EmptyState
           icon={<NotebookPen size={32} />}
           title={t('common.none')}
@@ -189,6 +190,8 @@ export default function Notes() {
           }}
         />
       )}
+
+      {isLoading && <NotesSkeleton />}
 
       <ScrollArea>
         <div className="space-y-2">
