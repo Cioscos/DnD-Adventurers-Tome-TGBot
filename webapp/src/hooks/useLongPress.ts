@@ -2,7 +2,7 @@ import { useRef, useCallback } from 'react'
 
 interface UseLongPressOpts {
   onLongPress: () => void
-  /** Short click handler. Fires if pointer released before threshold. */
+  /** Short click handler. Fires if pointer released before threshold AND without moving. */
   onClick?: () => void
   /** Hold duration in ms. */
   thresholdMs?: number
@@ -11,20 +11,40 @@ interface UseLongPressOpts {
   onProgress?: (p: number) => void
 }
 
+/** Pixels of movement after press-down that cancel the tap/long-press (treat as scroll). */
+const MOVE_CANCEL_PX = 10
+
+type AnyPressEvent =
+  | React.PointerEvent
+  | React.TouchEvent
+
+function eventXY(e: AnyPressEvent): { x: number; y: number } {
+  if ('touches' in e && e.touches.length > 0) {
+    return { x: e.touches[0].clientX, y: e.touches[0].clientY }
+  }
+  const pe = e as React.PointerEvent
+  return { x: pe.clientX, y: pe.clientY }
+}
+
 /** Returns event handlers for a long-press detector that distinguishes
- *  short tap from sustained press. Works for touch and mouse. */
+ *  short tap from sustained press, and cancels both if the finger moves
+ *  (so scrolling never registers as a tap). Works for touch and mouse. */
 export function useLongPress({ onLongPress, onClick, thresholdMs = 500, onProgress }: UseLongPressOpts) {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const triggeredRef = useRef(false)
+  const movedRef = useRef(false)
+  const startRef = useRef({ x: 0, y: 0 })
 
   const clearTimers = useCallback(() => {
     if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null }
     if (pollRef.current) { clearTimeout(pollRef.current); pollRef.current = null }
   }, [])
 
-  const start = useCallback(() => {
+  const start = useCallback((e: AnyPressEvent) => {
     triggeredRef.current = false
+    movedRef.current = false
+    startRef.current = eventXY(e)
     clearTimers()
     if (onProgress) {
       onProgress(0)
@@ -54,17 +74,29 @@ export function useLongPress({ onLongPress, onClick, thresholdMs = 500, onProgre
     if (onProgress) onProgress(0)
   }, [clearTimers, onProgress])
 
+  const move = useCallback((e: AnyPressEvent) => {
+    if (movedRef.current) return
+    const { x, y } = eventXY(e)
+    if (Math.abs(x - startRef.current.x) > MOVE_CANCEL_PX ||
+        Math.abs(y - startRef.current.y) > MOVE_CANCEL_PX) {
+      movedRef.current = true
+      cancel() // moving → not a tap, not a long-press
+    }
+  }, [cancel])
+
   const end = useCallback(() => {
     cancel()
-    if (!triggeredRef.current && onClick) onClick()
+    if (!triggeredRef.current && !movedRef.current && onClick) onClick()
   }, [cancel, onClick])
 
   return {
     onPointerDown: start,
+    onPointerMove: move,
     onPointerUp: end,
     onPointerLeave: cancel,
     onPointerCancel: cancel,
     onTouchStart: start,
+    onTouchMove: move,
     onTouchEnd: end,
     onTouchCancel: cancel,
   }
