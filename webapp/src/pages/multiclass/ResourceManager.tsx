@@ -60,7 +60,7 @@ export default function ResourceManager({
                   aria-label={t('character.multiclass.use_resource')}
                   className="w-11 h-11 shrink-0 rounded-lg bg-[var(--dnd-danger)]/20 text-[var(--dnd-danger)] text-xl font-bold leading-none disabled:opacity-30"
                 >-</button>
-                <span className="font-mono tabular-nums text-base min-w-[42px] text-center">
+                <span className="font-mono tabular-nums text-base min-w-[44px] text-center">
                   {res.current}/{res.total}
                 </span>
                 <button
@@ -74,7 +74,7 @@ export default function ResourceManager({
               <div className="flex justify-end">
                 <button
                   onClick={() => onDeleteResource(classId, res.id)}
-                  className="text-xs text-[var(--dnd-danger)] opacity-70 px-1 py-0.5"
+                  className="inline-flex items-center min-h-[44px] px-2 text-xs text-[var(--dnd-danger)] opacity-70"
                 >
                   {t('character.multiclass.remove_resource')}
                 </button>
