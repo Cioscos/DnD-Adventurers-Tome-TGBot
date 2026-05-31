@@ -32,7 +32,8 @@ export default function AbilityScoreEditModal({
   }, [open, currentValue])
 
   const clamp = (n: number) => Math.max(MIN, Math.min(MAX, n))
-  const mod = Math.floor((value - 10) / 2)
+  const displayValue = Number.isFinite(value) ? value : currentValue
+  const mod = Math.floor((displayValue - 10) / 2)
   const inRange = Number.isFinite(value) && value >= MIN && value <= MAX
   const canSave = inRange && value !== currentValue && !saving
 
@@ -52,7 +53,7 @@ export default function AbilityScoreEditModal({
 
           <div className="flex flex-col items-center min-w-[96px]">
             <span className="text-5xl font-mono font-bold tabular-nums text-dnd-text leading-none">
-              {Number.isFinite(value) ? value : currentValue}
+              {displayValue}
             </span>
             <span className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim mt-1">
               {t('character.ability.mod_label')} {mod >= 0 ? `+${mod}` : mod}
