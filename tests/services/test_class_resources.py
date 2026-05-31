@@ -55,3 +55,21 @@ def test_no_negative_total_below_availability():
     update_resources_for_level("Monaco", 1, [res])
     assert res.total == 0
     assert res.current == 0
+
+
+def test_barbarian_unlimited_rage_sentinel_does_not_inflate_current():
+    # _BARBARO_FURIE[19] == 99 (unlimited). Leveling 19 -> 20 must NOT raise
+    # current by the (absurd) delta; total becomes the sentinel, current stays.
+    res = SimpleNamespace(name="Furia", current=3, total=6)
+    update_resources_for_level("Barbaro", 20, [res])
+    assert res.total == 99
+    assert res.current == 3
+
+
+def test_cha_based_resource_is_left_untouched():
+    # Bardo's Ispirazione Bardica is cha_based=True -> the function must skip it
+    # entirely (no total/current recalculation from the level formula).
+    res = SimpleNamespace(name="Ispirazione Bardica", current=2, total=3)
+    update_resources_for_level("Bardo", 10, [res])
+    assert res.total == 3
+    assert res.current == 2

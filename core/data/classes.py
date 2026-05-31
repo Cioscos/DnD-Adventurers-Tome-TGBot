@@ -313,6 +313,11 @@ def update_resources_for_level(
         new_total = cfg.formula(new_level)
         if new_total <= 0:
             new_total = 0
+        if new_total == 99:
+            # _BARBARO_FURIE sentinel: "unlimited" rages at level 20 — not a
+            # countable pool. Set the sentinel total but don't inflate current.
+            resource.total = new_total
+            continue
         old_total = resource.total
         delta = new_total - old_total
         resource.total = new_total
