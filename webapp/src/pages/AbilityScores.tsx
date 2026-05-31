@@ -76,7 +76,6 @@ export default function AbilityScores() {
         {[...char.ability_scores]
           .sort((a, b) => DND_ABILITY_ORDER.indexOf(a.name) - DND_ABILITY_ORDER.indexOf(b.name))
           .map((score: AbilityScore) => {
-
           return (
             <Reveal.Item key={score.name}>
               <Surface
@@ -104,10 +103,8 @@ export default function AbilityScores() {
                 </div>
 
                 <m.div
-                  key="view"
                   initial={{ opacity: 0, y: 4 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -4 }}
                   className="flex items-end gap-2"
                   transition={spring.snappy}
                 >
@@ -156,17 +153,16 @@ export default function AbilityScores() {
         })}
       </Reveal.Stagger>
 
-      {editing && (() => {
-        const score = char.ability_scores.find((s) => s.name === editing)
-        if (!score) return null
+      {(() => {
+        const score = editing ? char.ability_scores.find((s) => s.name === editing) : undefined
         return (
           <AbilityScoreEditModal
-            open={!!editing}
-            label={t(`character.stats.${score.name}`, { defaultValue: score.name })}
-            currentValue={score.value}
+            open={editing !== null && score !== undefined}
+            label={score ? t(`character.stats.${score.name}`, { defaultValue: score.name }) : ''}
+            currentValue={score?.value ?? 0}
             saving={updateMutation.isPending}
             onClose={() => setEditing(null)}
-            onSave={(value) => handleSave(score.name, value)}
+            onSave={(value) => { if (score) handleSave(score.name, value) }}
           />
         )
       })()}
