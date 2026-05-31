@@ -57,7 +57,7 @@ const TARGET_REGEX =
  * Compose the final DSL target string from category + sub-key.
  * Returns null when a sub-key is required but missing.
  */
-export function composeTarget(category: TargetCategory, sub: string): string | null {
+function composeTarget(category: TargetCategory, sub: string): string | null {
   switch (category) {
     case 'ac':
       return 'character.ac'
@@ -76,7 +76,7 @@ export function composeTarget(category: TargetCategory, sub: string): string | n
  * Reverse of composeTarget — split a DSL target back into category + sub.
  * Used to seed the modal draft when editing.
  */
-export function decomposeTarget(target: string): { category: TargetCategory; sub: string } {
+function decomposeTarget(target: string): { category: TargetCategory; sub: string } {
   if (target === 'character.ac') return { category: 'ac', sub: '' }
   if (target === 'character.hit_points_max') return { category: 'hp_max', sub: '' }
   if (target === 'character.speed') return { category: 'speed', sub: '' }
@@ -96,7 +96,7 @@ export function decomposeTarget(target: string): { category: TargetCategory; sub
  * evaluates `when` as an additional constraint. A sentinel always-true means
  * "match the rule's subject scope, nothing more".
  */
-export function defaultWhenFilter(): Filter {
+function defaultWhenFilter(): Filter {
   return { path: '$character.id', op: 'gt', value: 0 }
 }
 

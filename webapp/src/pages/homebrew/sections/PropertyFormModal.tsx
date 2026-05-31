@@ -18,7 +18,7 @@ const PROPERTY_TYPES: readonly PropertyType[] = ['enum', 'number', 'boolean', 't
  * - Trims any leading non-letter so the regex `^[a-z][a-z0-9_]{0,59}$` holds.
  * - Truncates to 60 chars (backend max length).
  */
-export function deriveKey(label: string): string {
+function deriveKey(label: string): string {
   return label
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '')

@@ -25,7 +25,7 @@ export default function LevelUpModal({ char, xpLevel, onClose }: LevelUpModalPro
   const qc = useQueryClient()
   const reducedMotion = useReducedMotion()
   useRegisterOverlay(true)
-  const classes: CharacterClass[] = char.classes ?? []
+  const classes = useMemo<CharacterClass[]>(() => char.classes ?? [], [char.classes])
   const [selectedClassId, setSelectedClassId] = useState<number>(classes[0]?.id ?? 0)
 
   const selectedClass = useMemo(
@@ -55,8 +55,8 @@ export default function LevelUpModal({ char, xpLevel, onClose }: LevelUpModalPro
         icon: '✨',
       })
       if (!reducedMotion) fireLevelUpConfetti()
-      if ((updated as any).hp_gained && (updated as any).hp_gained > 0) {
-        toast.success(t('character.xp.hp_gained_toast', { hp: (updated as any).hp_gained }), {
+      if (updated.hp_gained && updated.hp_gained > 0) {
+        toast.success(t('character.xp.hp_gained_toast', { hp: updated.hp_gained }), {
           duration: 2000,
           icon: '❤',
         })

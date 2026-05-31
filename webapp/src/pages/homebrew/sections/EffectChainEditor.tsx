@@ -6,7 +6,8 @@ import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import Sheet from '@/components/ui/Sheet'
 import { actionLabel, type Locale } from '@/lib/homebrew/i18n-dsl'
 import type { Effect, EffectAction, Table } from '@/lib/homebrew/types'
-import EffectFormModal, { defaultEffect } from './EffectFormModal'
+import EffectFormModal from './EffectFormModal'
+import { defaultEffect } from './effectForm.utils'
 
 const ACTION_TYPES: readonly EffectAction[] = [
   'roll_dice',

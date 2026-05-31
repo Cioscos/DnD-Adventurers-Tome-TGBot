@@ -173,7 +173,7 @@ export function previousCriticalCount(): number | null {
     const orangeCount = orangeMatch ? parseInt(orangeMatch[1], 10) : 0;
 
     return redCount + orangeCount;
-  } catch (err) {
+  } catch {
     return null;
   }
 }

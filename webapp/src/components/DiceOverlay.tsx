@@ -122,7 +122,6 @@ export default function DiceOverlay() {
   const clearKind = useCallback((kind: DiceKind) => {
     haptic.medium()
     setPool((p) => {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { [kind]: _removed, ...rest } = p
       return rest
     })

@@ -1,26 +1,8 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from 'react'
+import { useState, useCallback, type ReactNode } from 'react'
 import { m, AnimatePresence, useDragControls, type PanInfo } from 'framer-motion'
 import { spring } from '@/styles/motion'
 import { useRegisterOverlay } from '@/store/overlayStore'
-
-interface ModalOptions {
-  content: ReactNode
-  dismissible?: boolean
-}
-
-interface ModalContextValue {
-  openModal: (options: ModalOptions) => void
-  closeModal: () => void
-  isModalOpen: boolean
-}
-
-const ModalContext = createContext<ModalContextValue | null>(null)
-
-export function useModal() {
-  const ctx = useContext(ModalContext)
-  if (!ctx) throw new Error('useModal must be used within ModalProvider')
-  return ctx
-}
+import { ModalContext, type ModalOptions } from './modalContext'
 
 function ModalShell({
   options,

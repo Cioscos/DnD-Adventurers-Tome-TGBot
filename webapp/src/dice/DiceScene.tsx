@@ -10,7 +10,7 @@ import { createDiceWorld, updateWalls, type DiceWorld } from './physics/world'
 import { spawnDiceBody, computeSpawnPositions, totalKineticActivity } from './physics/spawner'
 import { faceUp } from './physics/faceDetector'
 import { PHYSICS } from './physics/constants'
-import { useDicePack } from './packs/DicePackProvider'
+import { useDicePack } from './packs/dicePackContext'
 import { getTintOverride } from './packs/manifest'
 
 export type SceneRequest = {
@@ -114,7 +114,7 @@ function Orchestrator({ request, onMount }: Props) {
   useEffect(() => {
     if (!(camera instanceof THREE.PerspectiveCamera)) return
     updateWalls(worldRef.current!, camera, size)
-  }, [camera, size.width, size.height])
+  }, [camera, size])
 
   useEffect(() => {
     onMountRef.current?.()

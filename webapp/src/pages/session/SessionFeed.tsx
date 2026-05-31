@@ -121,6 +121,11 @@ export default function SessionFeed({
     })
   }
 
+  // Keep the polling effect (keyed only on `code`) decoupled from the
+  // ever-recreated mergeIncoming closure: read the latest via ref.
+  const mergeIncomingRef = useRef(mergeIncoming)
+  mergeIncomingRef.current = mergeIncoming
+
   // Initial fetch + incremental polling via since cursor
   useEffect(() => {
     let cancelled = false
@@ -154,7 +159,7 @@ export default function SessionFeed({
           since ? { since, limit: 100 } : { limit: 100 },
         )
         if (cancelled) return
-        mergeIncoming(res.items)
+        mergeIncomingRef.current(res.items)
       } catch {
         /* next tick retries */
       }

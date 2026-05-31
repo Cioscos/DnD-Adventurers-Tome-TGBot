@@ -356,7 +356,6 @@ test.describe("03-templates", () => {
     const createItemBody = await createItemResp.json();
     const wearWeapon = (createItemBody.items as any[]).find((i: any) => i.name === "WearBlade");
     expect(wearWeapon, "WearBlade not found in items after creation").toBeTruthy();
-    const weaponId = wearWeapon.id;
 
     // ─── Install quality_wear template
     const installResp = await apiRequest.post(

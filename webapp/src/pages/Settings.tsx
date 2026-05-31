@@ -23,7 +23,7 @@ import { useThemeSettings, type ThemeMode } from '@/store/themeSettings'
 import { useUnitSettings, type UnitSystem } from '@/store/unitSettings'
 import { BUNDLED_PACKS, PACK_PREVIEW, type PackId } from '@/dice/packs/registry'
 import { loadManifest } from '@/dice/packs/loader'
-import { useDicePack } from '@/dice/packs/DicePackProvider'
+import { useDicePack } from '@/dice/packs/dicePackContext'
 import { spring } from '@/styles/motion'
 
 type RetentionMode = 'off' | 'events' | 'days'

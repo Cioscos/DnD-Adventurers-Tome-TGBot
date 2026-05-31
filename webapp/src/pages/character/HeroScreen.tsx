@@ -52,7 +52,7 @@ export default function HeroScreen({ char }: Props) {
     if (!(char.classes ?? []).some((c) => c.class_name === selectedClass)) {
       setSelectedClass(pickDefaultClass(char))
     }
-  }, [char.classes, selectedClass])
+  }, [char, selectedClass])
 
   const hpMax = char.hit_points + (char.hp_max_homebrew_modifier ?? 0)
   const acTotal = char.ac + (char.ac_breakdown?.homebrew ?? 0)

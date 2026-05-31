@@ -1,6 +1,6 @@
 import { useRef, useCallback, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { useModal } from '@/components/ModalProvider'
+import { useModal } from '@/components/modalContext'
 import { haptic } from '@/auth/telegram'
 
 const PAGE_GROUPS: Record<string, string[]> = {
