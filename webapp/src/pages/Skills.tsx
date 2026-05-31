@@ -23,6 +23,7 @@ import { useDiceSettings } from '@/store/diceSettings'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { profBonus } from '@/lib/dnd'
 import HomebrewBreakdownRow from '@/components/homebrew/HomebrewBreakdownRow'
+import SkillsSkeleton from '@/components/skeletons/SkillsSkeleton'
 
 const SKILLS: { key: string; ability: string }[] = [
   { key: 'acrobatics',     ability: 'dexterity' },
@@ -256,7 +257,13 @@ export default function Skills() {
     },
   })
 
-  if (!char) return null
+  if (!char) {
+    return (
+      <Layout title={t('character.skills.title')} backTo={`/char/${charId}`} group="skills" page="skills">
+        <SkillsSkeleton />
+      </Layout>
+    )
+  }
 
   const skills: Record<string, unknown> = (char.skills as Record<string, unknown>) ?? {}
   const pb = profBonus(char.total_level || 1)

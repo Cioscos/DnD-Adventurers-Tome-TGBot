@@ -5,6 +5,9 @@ import HPSkeleton from './HPSkeleton'
 import SavingThrowsSkeleton from './SavingThrowsSkeleton'
 import SpellsSkeleton from './SpellsSkeleton'
 import SpellSlotsSkeleton from './SpellSlotsSkeleton'
+import AbilityScoresSkeleton from './AbilityScoresSkeleton'
+import SkillsSkeleton from './SkillsSkeleton'
+import AbilitiesSkeleton from './AbilitiesSkeleton'
 
 /** Generic page skeleton — used when a page has no bespoke skeleton yet. */
 export function GenericPageSkeleton() {
@@ -26,6 +29,10 @@ const REGISTRY: Record<string, ComponentType> = {
   // magic
   spells: SpellsSkeleton,
   slots: SpellSlotsSkeleton,
+  // skills
+  stats: AbilityScoresSkeleton,
+  skills: SkillsSkeleton,
+  abilities: AbilitiesSkeleton,
 }
 
 /** Returns the skeleton component for a page key, or the generic fallback. */
