@@ -6,6 +6,7 @@ import { m } from 'framer-motion'
 import { GiFist, GiCrossedSwords } from 'react-icons/gi'
 import { Target } from 'lucide-react'
 import { api, ApiError } from '@/api/client'
+import { unarmedDamageDice } from '@/lib/unarmedStrike'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
 import SectionDivider from '@/components/ui/SectionDivider'
@@ -78,6 +79,7 @@ export default function Actions() {
   }
 
   const weapons = (char.items ?? []).filter((i) => i.item_type === 'weapon' && i.is_equipped)
+  const unarmedDamage = unarmedDamageDice(char.classes)
 
   return (
     <Layout title={t('character.actions.title')} backTo={`/char/${charId}`} group="combat" page="actions">
@@ -86,7 +88,7 @@ export default function Actions() {
           <GiFist size={28} className="text-dnd-gold-bright shrink-0" />
           <div className="flex-1 min-w-0">
             <p className="font-cinzel text-dnd-gold">{t('character.actions.unarmed')}</p>
-            <p className="text-xs text-dnd-text-muted">{t('character.actions.unarmed_desc')}</p>
+            <p className="text-xs text-dnd-text-muted">{t('character.actions.unarmed_desc', { damage: unarmedDamage })}</p>
           </div>
           <m.button
             onClick={() => unarmedAttack.mutate()}
