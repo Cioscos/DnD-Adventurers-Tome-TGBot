@@ -57,7 +57,14 @@ export default function Multiclass() {
   const useResource = useMutation({
     mutationFn: ({ classId, resId, current }: { classId: number; resId: number; current: number }) =>
       api.classes.updateResource(charId, classId, resId, { current }),
-    onSuccess: (updated) => qc.setQueryData(['character', charId], updated as typeof char),
+    // The PATCH .../resources/{id} endpoint returns a bare ClassResource, NOT a
+    // CharacterFull — writing it into the shared ['character', charId] query would
+    // wipe `classes`, `hit_points`, etc. and break every page. Invalidate instead
+    // (same pattern as addResource/deleteResource).
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['character', charId] })
+      haptic.success()
+    },
   })
 
   const deleteResource = useMutation({
