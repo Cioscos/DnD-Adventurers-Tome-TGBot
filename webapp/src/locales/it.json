@@ -158,7 +158,13 @@
       "auto_from_armor_hint": "Base derivata da {{name}} equipaggiata.",
       "manual_override": "Manuale",
       "reset_to_auto": "Ripristina auto",
-      "manual_override_hint": "Valori manuali attivi: non verranno sovrascritti al cambio di equipaggiamento."
+      "manual_override_hint": "Valori manuali attivi: non verranno sovrascritti al cambio di equipaggiamento.",
+      "unarmored_title": "Difesa senza armatura",
+      "unarmored_hint": "CA = 10 + mod DES + mod della caratteristica scelta (Monaco: Saggezza, Barbaro: Costituzione).",
+      "unarmored_off": "Nessuna",
+      "unarmored_badge": "Senza armatura",
+      "unarmored_formula": "CA {{value}}",
+      "unarmored_active_hint": "La Base si aggiorna con le caratteristiche; non indossare armatura del corpo."
     },
     "skills": {
       "title": "Abilità",
@@ -202,7 +208,7 @@
     "actions": {
       "title": "Azioni",
       "unarmed": "Attacco a mano libera",
-      "unarmed_desc": "Colpo senza armi (1 + mod, contundente)",
+      "unarmed_desc": "Colpo senza armi ({{damage}} + mod, contundente)",
       "weapons_section": "Armi equipaggiate",
       "no_weapons": "Nessun'arma equipaggiata",
       "attack": "Attacca"
@@ -256,6 +262,7 @@
       "damage": "Danno",
       "no_slots": "Nessuno slot disponibile",
       "go_create_slot": "Crea slot livello {{level}}",
+      "create_slot_switches_manual": "Passato alla gestione manuale degli slot incantesimo.",
       "conc_lost": "La concentrazione è stata interrotta",
       "higher_level": "A livelli superiori",
       "attack_save": "Attacco / TS",
@@ -301,6 +308,7 @@
       "state_used": "usato",
       "state_available": "disponibile",
       "auto_hint": "Modalità Auto (regole D&D 5e 2014): gli slot vengono dedotti da classi e livello. Passa a Manuale dalle Impostazioni per gestione personalizzata.",
+      "manual_empty_hint": "Nessuno slot. Aggiungine uno con i pulsanti \"+ Livello N\" qui sotto.",
       "add_new_level": "Aggiungi nuovo livello",
       "reset_confirm": "Ripristinare tutti gli slot incantesimo?",
       "go_to_settings": "Vai a Impostazioni",
@@ -698,6 +706,9 @@
       "title": "Classe",
       "add_class": "Aggiungi classe",
       "class_name": "Nome classe",
+      "prereq_warning": "Requisiti di multiclasse non soddisfatti",
+      "prereq_or": "o",
+      "prereq_can_proceed": "Puoi comunque procedere (regole homebrew).",
       "custom_class": "Personalizzata",
       "custom_class_name": "Nome personalizzato",
       "level": "Livello",
