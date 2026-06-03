@@ -170,6 +170,7 @@ export interface CharacterFull extends CharacterSummary {
   magic_armor: number
   base_armor_class_override: boolean
   shield_armor_class_override: boolean
+  unarmored_defense_ability?: 'wisdom' | 'constitution' | null
   ac_breakdown?: AcBreakdown | null
   hp_max_homebrew_modifier?: number
   speed_homebrew_modifier?: number

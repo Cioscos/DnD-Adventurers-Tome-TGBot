@@ -110,6 +110,8 @@ _MIGRATIONS: list[tuple[str, str, str, str | None]] = [
     # AC manual override flags — preserve user-edited Base/Shield across equip/unequip
     ("characters", "base_armor_class_override", "BOOLEAN", "0"),
     ("characters", "shield_armor_class_override", "BOOLEAN", "0"),
+    # Unarmored Defense — second ability ('wisdom'/'constitution'); NULL = disabled
+    ("characters", "unarmored_defense_ability", "VARCHAR(20)", None),
 ]
 
 # Tables to drop if they exist (legacy feature cleanup)

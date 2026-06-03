@@ -69,6 +69,8 @@ class CharacterFull(BaseModel):
     magic_armor: int
     base_armor_class_override: bool = False
     shield_armor_class_override: bool = False
+    # Unarmored Defense second ability ('wisdom'/'constitution'); None = disabled.
+    unarmored_defense_ability: Optional[str] = None
     ac: int
 
     # Homebrew passive-modifier breakdown (populated by router after model_validate)

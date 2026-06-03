@@ -55,6 +55,19 @@ def hit_points_for_level(hit_die: int, con_mod: int, level: int) -> int:
     return max(1, raw)
 
 
+def ability_modifier(score: int) -> int:
+    """D&D 5e ability modifier: ``(score - 10) // 2`` (floor division)."""
+    return (score - 10) // 2
+
+
+def unarmored_defense_ac(dex_mod: int, second_mod: int) -> int:
+    """Unarmored Defense base AC: ``10 + DEX mod + second ability mod``.
+
+    Second ability is Wisdom (Monk) or Constitution (Barbarian).
+    """
+    return 10 + dex_mod + second_mod
+
+
 def total_base_hp(
     classes: "Iterable[_ClassLike]",
     con_mod: int,

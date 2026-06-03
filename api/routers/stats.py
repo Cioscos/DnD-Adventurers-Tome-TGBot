@@ -13,6 +13,7 @@ from sqlalchemy.orm import selectinload
 from api.auth import get_current_user
 from api.database import get_db
 from core.db.models import AbilityScore, Character
+from core.game.stats import ability_modifier, unarmored_defense_ac
 from api.schemas.character import CharacterFull
 from api.schemas.common import AbilityScoreUpdate
 from api.routers._helpers import effective_con_mod
@@ -22,11 +23,47 @@ from typing import Optional
 
 router = APIRouter(prefix="/characters", tags=["stats"])
 
+# Abilities allowed as the Unarmored Defense second stat (DEX is always the first).
+_UNARMORED_SECOND_ABILITIES = ("wisdom", "constitution")
+
 
 class ACUpdate(BaseModel):
     base: Optional[int] = None
     shield: Optional[int] = None
     magic: Optional[int] = None
+
+
+class UnarmoredDefenseUpdate(BaseModel):
+    # 'wisdom' (Monk) or 'constitution' (Barbarian) to enable; null to disable.
+    ability: Optional[str] = None
+
+
+def _ability_mod(char: Character, name: str) -> int:
+    score = next((s for s in char.ability_scores if s.name == name), None)
+    return ability_modifier(score.value) if score else 0
+
+
+def _base_ac_from_equipment(char: Character) -> int:
+    """Base AC derived from the equipped body armor (or 10 when unarmored)."""
+    equipped_armor = next(
+        (i for i in (char.items or [])
+         if i.is_equipped and i.equipment_slot == "body" and i.item_type == "armor"),
+        None,
+    )
+    if equipped_armor is not None:
+        meta = json.loads(equipped_armor.item_metadata) if equipped_armor.item_metadata else {}
+        return int(meta.get("ac_value", 10))
+    return 10
+
+
+def _recompute_unarmored_base(char: Character) -> None:
+    """Sync base_armor_class to 10 + DEX + second-ability mod (Unarmored Defense)."""
+    if not char.unarmored_defense_ability:
+        return
+    char.base_armor_class = unarmored_defense_ac(
+        _ability_mod(char, "dexterity"),
+        _ability_mod(char, char.unarmored_defense_ability),
+    )
 
 
 async def _get_owned_full(char_id: int, user_id: int, session: AsyncSession) -> Character:
@@ -91,6 +128,12 @@ async def update_ability_score(
     if ability_name.lower() == "strength":
         char.recalculate_carry_capacity()
 
+    # Unarmored Defense keeps base AC in sync with DEX and the chosen second ability.
+    if char.unarmored_defense_ability and ability_name.lower() in (
+        "dexterity", char.unarmored_defense_ability,
+    ):
+        _recompute_unarmored_base(char)
+
     # CON change hook: retroactively adjust max HP and current HP
     if is_constitution and auto_calc:
         new_con_mod = effective_con_mod(char)
@@ -135,25 +178,53 @@ async def reset_ac_override(
     char.base_armor_class_override = False
     char.shield_armor_class_override = False
 
-    equipped_armor = next(
-        (i for i in (char.items or []) if i.is_equipped and i.equipment_slot == "body" and i.item_type == "armor"),
-        None,
-    )
     equipped_shield = next(
         (i for i in (char.items or []) if i.is_equipped and i.equipment_slot == "off_hand" and i.item_type == "shield"),
         None,
     )
 
-    if equipped_armor is not None:
-        meta = json.loads(equipped_armor.item_metadata) if equipped_armor.item_metadata else {}
-        char.base_armor_class = int(meta.get("ac_value", 10))
+    # Unarmored Defense (when active) owns the base AC; otherwise derive from armor.
+    if char.unarmored_defense_ability:
+        _recompute_unarmored_base(char)
     else:
-        char.base_armor_class = 10
+        char.base_armor_class = _base_ac_from_equipment(char)
 
     if equipped_shield is not None:
         meta = json.loads(equipped_shield.item_metadata) if equipped_shield.item_metadata else {}
         char.shield_armor_class = int(meta.get("ac_bonus", 2))
     else:
         char.shield_armor_class = 0
+
+    return await build_character_response(session, char)
+
+
+@router.post("/{char_id}/ac/unarmored-defense", response_model=CharacterFull)
+async def set_unarmored_defense(
+    char_id: int,
+    body: UnarmoredDefenseUpdate,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> CharacterFull:
+    """Enable/disable Unarmored Defense.
+
+    Enable ('wisdom'/'constitution'): base AC becomes 10 + DEX + that ability's mod and
+    stays in sync with ability changes; the manual base override is cleared (mutually
+    exclusive). Disable (null): base AC reverts to the equipped armor (or 10).
+    """
+    char = await _get_owned_full(char_id, user_id, session)
+    ability = body.ability.lower() if body.ability else None
+
+    if ability is not None and ability not in _UNARMORED_SECOND_ABILITIES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"ability must be one of {_UNARMORED_SECOND_ABILITIES} or null",
+        )
+
+    char.unarmored_defense_ability = ability
+    if ability is not None:
+        char.base_armor_class_override = False
+        _recompute_unarmored_base(char)
+    else:
+        char.base_armor_class = _base_ac_from_equipment(char)
 
     return await build_character_response(session, char)

@@ -60,6 +60,17 @@ export default function ArmorClass() {
     onError: () => haptic.error(),
   })
 
+  const unarmoredMutation = useMutation({
+    mutationFn: (ability: 'wisdom' | 'constitution' | null) =>
+      api.characters.setUnarmoredDefense(charId, ability),
+    onSuccess: (updated) => {
+      qc.setQueryData(['character', charId], updated)
+      setBase('')
+      haptic.success()
+    },
+    onError: () => haptic.error(),
+  })
+
   if (!char) {
     return (
       <Layout title={t('character.ac.title')} backTo={`/char/${charId}`} group="combat" page="ac">
@@ -74,6 +85,15 @@ export default function ArmorClass() {
   const equippedShield = char.items?.find(
     (i) => i.is_equipped && i.equipment_slot === 'off_hand' && i.item_type === 'shield',
   ) ?? null
+
+  const unarmoredAbility = char.unarmored_defense_ability ?? null
+  const unarmoredActive = unarmoredAbility !== null
+  const abilityMod = (name: string) => {
+    const v = char.ability_scores?.find((a) => a.name === name)?.value ?? 10
+    return Math.floor((v - 10) / 2)
+  }
+  const unarmoredPreview = (ability: 'wisdom' | 'constitution') =>
+    10 + abilityMod('dexterity') + abilityMod(ability)
 
   const isDirty = base !== '' || shield !== '' || magic !== ''
   const hbAc = char.ac_breakdown?.homebrew ?? 0
@@ -143,7 +163,11 @@ export default function ArmorClass() {
             >
               {t('character.ac.base')}
             </p>
-            {char.base_armor_class_override ? (
+            {unarmoredActive ? (
+              <span className="text-[8px] font-cinzel uppercase tracking-wider px-1 py-px rounded-full bg-dnd-gold/20 text-dnd-gold-bright border border-dnd-gold/50">
+                {t('character.ac.unarmored_badge')}
+              </span>
+            ) : char.base_armor_class_override ? (
               <span className="text-[8px] font-cinzel uppercase tracking-wider px-1 py-px rounded-full bg-[var(--dnd-crimson-deep)]/30 text-[var(--dnd-crimson-bright)] border border-dnd-crimson/50">
                 {t('character.ac.manual_override')}
               </span>
@@ -163,6 +187,7 @@ export default function ArmorClass() {
             onChange={setBase}
             placeholder={String(char.base_armor_class)}
             inputMode="numeric"
+            disabled={unarmoredActive}
             className="mt-2 w-full [&_input]:text-base [&_input]:font-display [&_input]:font-bold [&_input]:text-center"
           />
         </Surface>
@@ -236,6 +261,52 @@ export default function ArmorClass() {
           </Button>
         </div>
       )}
+
+      {/* Unarmored Defense (Monk: WIS, Barbarian: CON) */}
+      <Surface variant="elevated" className="space-y-2.5">
+        <p className="font-cinzel text-[10px] uppercase tracking-widest text-dnd-gold-dim">
+          {t('character.ac.unarmored_title')}
+        </p>
+        <p className="text-[11px] text-dnd-text-muted font-body">
+          {t('character.ac.unarmored_hint')}
+        </p>
+        <div className="grid grid-cols-3 gap-2">
+          {([
+            { key: null, label: t('character.ac.unarmored_off') },
+            { key: 'wisdom' as const, label: t('character.ability.wisdom_short'), preview: unarmoredPreview('wisdom') },
+            { key: 'constitution' as const, label: t('character.ability.constitution_short'), preview: unarmoredPreview('constitution') },
+          ]).map((opt) => {
+            const active = unarmoredAbility === opt.key
+            return (
+              <m.button
+                key={String(opt.key)}
+                type="button"
+                onClick={() => unarmoredMutation.mutate(opt.key)}
+                disabled={unarmoredMutation.isPending}
+                whileTap={{ scale: 0.96 }}
+                className={`min-h-[44px] rounded-lg px-2 py-1.5 font-cinzel text-[11px] uppercase tracking-wider border transition-colors disabled:opacity-50 ${
+                  active
+                    ? 'bg-dnd-gold/20 text-dnd-gold-bright border-dnd-gold'
+                    : 'bg-dnd-surface text-dnd-text-muted border-dnd-border hover:border-dnd-gold/60'
+                }`}
+                aria-pressed={active}
+              >
+                <span className="block">{opt.label}</span>
+                {opt.preview !== undefined && (
+                  <span className="block text-[10px] font-mono tabular-nums mt-0.5 opacity-80">
+                    {t('character.ac.unarmored_formula', { value: opt.preview })}
+                  </span>
+                )}
+              </m.button>
+            )
+          })}
+        </div>
+        {unarmoredActive && (
+          <p className="text-[10px] text-dnd-text-faint font-body italic">
+            {t('character.ac.unarmored_active_hint')}
+          </p>
+        )}
+      </Surface>
 
       {isDirty && previewTotal !== acTotal && (
         <m.div
