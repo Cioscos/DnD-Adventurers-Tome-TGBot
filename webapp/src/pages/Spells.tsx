@@ -12,6 +12,7 @@ import Button from '@/components/ui/Button'
 import ScrollArea from '@/components/ScrollArea'
 import EmptyState from '@/components/ui/EmptyState'
 import { haptic } from '@/auth/telegram'
+import { toast } from 'sonner'
 import SpellFilter from '@/pages/spells/SpellFilter'
 import SpellItem from '@/pages/spells/SpellItem'
 import SpellForm, { type SpellFormData } from '@/pages/spells/SpellForm'
@@ -139,6 +140,33 @@ export default function Spells() {
       qc.invalidateQueries({ queryKey: ['character', charId] })
       haptic.success()
     },
+  })
+
+  // "Create slot" from the cast modal when no slot is available. In Auto mode the
+  // page offers no slot controls, so we switch the character to Manual first (with a
+  // notice) and then materialise the slot — turning the old dead-end into a working
+  // flow. The cast modal stays open so the freshly-created slot becomes selectable.
+  const createSlotMutation = useMutation({
+    mutationFn: async (level: number) => {
+      const mode = ((char?.settings as Record<string, unknown> | undefined)?.spell_slots_mode as string | undefined) ?? 'auto'
+      if (mode === 'auto') {
+        await api.characters.update(charId, {
+          settings: { ...(char?.settings ?? {}), spell_slots_mode: 'manual' },
+        })
+      }
+      const existing = (char?.spell_slots ?? []).find((s) => s.level === level)
+      if (existing) {
+        return api.spellSlots.update(charId, existing.id, { total: existing.total + 1 })
+      }
+      return api.spellSlots.add(charId, level, 1)
+    },
+    onSuccess: () => {
+      const mode = ((char?.settings as Record<string, unknown> | undefined)?.spell_slots_mode as string | undefined) ?? 'auto'
+      qc.invalidateQueries({ queryKey: ['character', charId] })
+      if (mode === 'auto') toast.info(t('character.spells.create_slot_switches_manual'))
+      haptic.success()
+    },
+    onError: () => haptic.error(),
   })
 
   const handleUseSpell = useCallback((spell: Spell) => {
@@ -383,8 +411,10 @@ export default function Spells() {
           spell={castingSpell}
           availableSlots={availableSlotsFor(castingSpell.level)}
           onCast={handleCastSlot}
+          onCreateSlot={(level) => createSlotMutation.mutate(level)}
           onCancel={() => setCastingSpell(null)}
           isPending={castMutation.isPending}
+          isCreatingSlot={createSlotMutation.isPending}
         />
       )}
 

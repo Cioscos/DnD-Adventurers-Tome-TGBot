@@ -1,4 +1,3 @@
-import { useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Sparkles } from 'lucide-react'
 import Sheet from '@/components/ui/Sheet'
@@ -9,20 +8,22 @@ interface CastSpellModalProps {
   spell: Spell
   availableSlots: SpellSlot[]
   onCast: (slotLevel: number) => void
+  onCreateSlot: (level: number) => void
   onCancel: () => void
   isPending: boolean
+  isCreatingSlot: boolean
 }
 
 export default function CastSpellModal({
   spell,
   availableSlots,
   onCast,
+  onCreateSlot,
   onCancel,
   isPending,
+  isCreatingSlot,
 }: CastSpellModalProps) {
   const { t } = useTranslation()
-  const navigate = useNavigate()
-  const { id } = useParams<{ id: string }>()
 
   return (
     <Sheet open onClose={onCancel} title={t('character.spells.cast_slot_title')}>
@@ -38,7 +39,9 @@ export default function CastSpellModal({
                 variant="secondary"
                 fullWidth
                 icon={<Sparkles size={14} />}
-                onClick={() => { onCancel(); navigate(`/char/${id}/slots`) }}
+                onClick={() => onCreateSlot(spell.level)}
+                disabled={isCreatingSlot}
+                loading={isCreatingSlot}
               >
                 {t('character.spells.go_create_slot', {
                   level: spell.level,
