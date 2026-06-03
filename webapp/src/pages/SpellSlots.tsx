@@ -234,7 +234,7 @@ export default function SpellSlots() {
         <EmptyState
           icon={<Gem size={32} />}
           title={t('common.none')}
-          hint={t('character.slots.auto_hint')}
+          hint={slotsMode === 'auto' ? t('character.slots.auto_hint') : t('character.slots.manual_empty_hint')}
         />
       )}
 
