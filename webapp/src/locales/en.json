@@ -158,7 +158,13 @@
       "auto_from_armor_hint": "Base derived from equipped {{name}}.",
       "manual_override": "Manual",
       "reset_to_auto": "Reset to auto",
-      "manual_override_hint": "Manual values active: equipment changes will not override them."
+      "manual_override_hint": "Manual values active: equipment changes will not override them.",
+      "unarmored_title": "Unarmored Defense",
+      "unarmored_hint": "AC = 10 + DEX mod + the chosen ability's mod (Monk: Wisdom, Barbarian: Constitution).",
+      "unarmored_off": "Off",
+      "unarmored_badge": "Unarmored",
+      "unarmored_formula": "AC {{value}}",
+      "unarmored_active_hint": "Base updates with ability scores; do not wear body armor."
     },
     "skills": {
       "title": "Skills",
@@ -202,7 +208,7 @@
     "actions": {
       "title": "Actions",
       "unarmed": "Unarmed Strike",
-      "unarmed_desc": "Strike without weapons (1 + mod, bludgeoning)",
+      "unarmed_desc": "Strike without weapons ({{damage}} + mod, bludgeoning)",
       "weapons_section": "Equipped weapons",
       "no_weapons": "No weapon equipped",
       "attack": "Attack"
@@ -256,6 +262,7 @@
       "damage": "Damage",
       "no_slots": "No slots available",
       "go_create_slot": "Create level {{level}} slot",
+      "create_slot_switches_manual": "Switched to manual spell slot management.",
       "conc_lost": "Concentration has been broken",
       "higher_level": "At higher levels",
       "attack_save": "Attack / Save",
@@ -301,6 +308,7 @@
       "state_used": "used",
       "state_available": "available",
       "auto_hint": "Auto mode (D&D 5e 2014 rules): slots are derived from classes and level. Switch to Manual in Settings for custom control.",
+      "manual_empty_hint": "No slots yet. Add one with the \"+ Level N\" buttons below.",
       "add_new_level": "Add new level",
       "reset_confirm": "Reset all spell slots?",
       "go_to_settings": "Go to Settings",
@@ -698,6 +706,9 @@
       "title": "Class",
       "add_class": "Add class",
       "class_name": "Class name",
+      "prereq_warning": "Multiclass prerequisites not met",
+      "prereq_or": "or",
+      "prereq_can_proceed": "You can proceed anyway (homebrew).",
       "custom_class": "Custom",
       "custom_class_name": "Custom name",
       "level": "Level",

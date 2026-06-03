@@ -26,6 +26,10 @@ export default function LevelUpModal({ char, xpLevel, onClose }: LevelUpModalPro
   const reducedMotion = useReducedMotion()
   useRegisterOverlay(true)
   const classes = useMemo<CharacterClass[]>(() => char.classes ?? [], [char.classes])
+  // For multiclass characters the single-class progression table's proficiency
+  // bonus is NOT the character's real PB (which scales with total level), so we
+  // hide that misleading row when more than one class is present.
+  const isMulticlass = classes.length > 1
   const [selectedClassId, setSelectedClassId] = useState<number>(classes[0]?.id ?? 0)
 
   const selectedClass = useMemo(
@@ -116,7 +120,7 @@ export default function LevelUpModal({ char, xpLevel, onClose }: LevelUpModalPro
               nextLevels.map((targetLevel, idx) => {
                 const curr = entriesForClass[targetLevel - 1]
                 const prev = entriesForClass[targetLevel - 2] ?? null
-                const pbChanged = prev && curr.proficiency_bonus !== prev.proficiency_bonus
+                const pbChanged = !isMulticlass && prev && curr.proficiency_bonus !== prev.proficiency_bonus
                 const newSlotLevels: number[] = []
                 if (curr.spell_slots && prev?.spell_slots) {
                   curr.spell_slots.forEach((count, i) => {

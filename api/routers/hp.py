@@ -240,6 +240,17 @@ async def rest(
                     res.current = res.total
         # Reset death saves
         char.death_saves = {"successes": 0, "failures": 0, "stable": False}
+        # A long rest reduces Exhaustion by 1 level (PHB p.186). Keep the value an
+        # int (never False/None) to avoid the F04 history-serializer bug.
+        conditions = dict(char.conditions or {})
+        old_exh = conditions.get("exhaustion", 0)
+        old_exh = int(old_exh) if isinstance(old_exh, (int, bool)) and old_exh is not None else 0
+        if old_exh > 0:
+            new_exh = old_exh - 1
+            conditions["exhaustion"] = new_exh
+            char.conditions = conditions
+            _add_history(session, char.id, "condition_change",
+                         f"Spossatezza: livello {old_exh} → {new_exh} (riposo lungo)")
         _add_history(session, char.id, "rest", "Riposo lungo completato")
 
         firing = await dispatch(session, char, "long_rest_taken", {})

@@ -2,13 +2,14 @@ import { useMemo, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
-import { Check, Plus, Trash2, X } from 'lucide-react'
+import { AlertTriangle, Check, Plus, Trash2, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { api } from '@/api/client'
 import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
 import { haptic } from '@/auth/telegram'
 import { PREDEFINED_CLASSES, CUSTOM_KEY } from '@/pages/multiclass/addClass.utils'
+import { unmetPrereqGroups, type AbilityKey } from '@/data/multiclassPrereqs'
 import { diffResourceMaxes } from '@/lib/resourceDiff'
 import { useRegisterOverlay } from '@/store/overlayStore'
 import type { CharacterFull } from '@/types'
@@ -182,6 +183,14 @@ export default function EditClassesModal({ char, targetLevel, onClose }: Props) 
   })
 
   const classPickerKeys = Object.keys(PREDEFINED_CLASSES)
+
+  // Non-blocking multiclass prerequisite advisory for the currently picked class.
+  const pickerUnmet = useMemo(() => {
+    if (!pickerKey || pickerKey === CUSTOM_KEY) return []
+    const scoreOf = (ability: AbilityKey) =>
+      (char.ability_scores ?? []).find((s) => s.name === ability)?.value ?? 0
+    return unmetPrereqGroups(pickerKey, scoreOf)
+  }, [pickerKey, char.ability_scores])
 
   return (
     <div
@@ -376,6 +385,30 @@ export default function EditClassesModal({ char, targetLevel, onClose }: Props) 
                   placeholder={t('character.multiclass.subclass')}
                   className="w-full bg-dnd-surface rounded-xl px-3 py-2 min-h-[44px] outline-none"
                 />
+
+                {pickerUnmet.length > 0 && (
+                  <Surface variant="elevated" className="!p-3 border border-dnd-amber/50 space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle size={14} className="text-dnd-amber shrink-0" />
+                      <p className="text-[11px] font-cinzel uppercase tracking-widest text-dnd-amber">
+                        {t('character.multiclass.prereq_warning')}
+                      </p>
+                    </div>
+                    <ul className="text-xs text-dnd-text-muted font-body space-y-0.5">
+                      {pickerUnmet.map((g, i) => (
+                        <li key={i}>
+                          {g.abilities
+                            .map((a) => t(`character.ability.${a}_short`))
+                            .join(` ${t('character.multiclass.prereq_or')} `)}{' '}
+                          ≥ {g.min}
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="text-[10px] text-dnd-text-faint font-body italic">
+                      {t('character.multiclass.prereq_can_proceed')}
+                    </p>
+                  </Surface>
+                )}
               </div>
 
               <div className="pt-4 border-t border-dnd-border/50 grid grid-cols-2 gap-3">

@@ -34,6 +34,8 @@ const SHORT_REST_HINTS = [
   'bardic inspiration', 'song of rest', 'fontana di magia',
   'recupero magico', 'incanalare la divinità', 'azione impetuosa',
   'secondo fiato', 'punti ki', 'forma selvatica', 'ispirazione bardica',
+  'stunning strike', 'colpo stordente', 'deflect missiles', 'deviare proiettili',
+  'difesa attenta', 'passo del vento',
 ] as const
 
 const MANUAL_HINTS = [

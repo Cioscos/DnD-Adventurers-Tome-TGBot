@@ -99,6 +99,9 @@ class Character(Base):
     # When True, equip/unequip events do NOT clobber the value — user manual override stays put.
     base_armor_class_override: Mapped[bool] = mapped_column(Boolean, default=False)
     shield_armor_class_override: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Unarmored Defense: when set ('wisdom' for Monk, 'constitution' for Barbarian), the
+    # base AC is kept in sync as 10 + DEX mod + this ability's mod. NULL = disabled.
+    unarmored_defense_ability: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
 
     # Encumbrance
     carry_capacity: Mapped[int] = mapped_column(Integer, default=150)

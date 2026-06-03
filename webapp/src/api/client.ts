@@ -271,6 +271,11 @@ export const api = {
       request<CharacterFull>(`/characters/${id}/ac/reset-override`, {
         method: 'POST',
       }),
+    setUnarmoredDefense: (id: number, ability: 'wisdom' | 'constitution' | null) =>
+      request<CharacterFull>(`/characters/${id}/ac/unarmored-defense`, {
+        method: 'POST',
+        body: JSON.stringify({ ability }),
+      }),
     updateSkills: (id: number, skills: Record<string, unknown>) =>
       request<CharacterFull>(`/characters/${id}/skills`, {
         method: 'PATCH',

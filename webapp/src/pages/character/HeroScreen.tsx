@@ -272,6 +272,7 @@ export default function HeroScreen({ char }: Props) {
           <ProgressionPreview
             className={selectedClass}
             currentLevel={currentClassLevel}
+            isMulticlass={char.classes.length > 1}
           />
         </div>
       )}
