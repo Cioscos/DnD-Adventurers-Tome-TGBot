@@ -8,6 +8,12 @@ import ProgressionFullTableModal from './ProgressionFullTableModal'
 interface Props {
   className: string
   currentLevel: number
+  /**
+   * When the character has more than one class, the single-class table's
+   * proficiency bonus is NOT the character's real PB (which scales with total
+   * level). Hide that column to avoid misleading a multiclass player.
+   */
+  isMulticlass?: boolean
 }
 
 function computeWindow(currentLevel: number, max: number): number[] {
@@ -16,7 +22,7 @@ function computeWindow(currentLevel: number, max: number): number[] {
   return [0, 1, 2, 3, 4].map((i) => start + i).filter((lv) => lv <= max)
 }
 
-export default function ProgressionPreview({ className, currentLevel }: Props) {
+export default function ProgressionPreview({ className, currentLevel, isMulticlass = false }: Props) {
   const { t, i18n } = useTranslation()
   const [showFull, setShowFull] = useState(false)
 
@@ -62,7 +68,11 @@ export default function ProgressionPreview({ className, currentLevel }: Props) {
                 type="button"
                 onClick={() => setShowFull(true)}
                 whileTap={{ scale: 0.99 }}
-                className={`w-full min-h-[44px] grid grid-cols-[28px_36px_1fr] @max-[300px]:grid-cols-[28px_1fr] gap-2 items-center rounded-md px-1.5 py-1 text-left transition-colors ${
+                className={`w-full min-h-[44px] grid ${
+                  isMulticlass
+                    ? 'grid-cols-[28px_1fr]'
+                    : 'grid-cols-[28px_36px_1fr] @max-[300px]:grid-cols-[28px_1fr]'
+                } gap-2 items-center rounded-md px-1.5 py-1 text-left transition-colors ${
                   isCurrent
                     ? 'bg-dnd-gold/15 border border-dnd-gold text-dnd-gold-bright'
                     : 'border border-transparent text-dnd-text-muted hover:bg-dnd-surface'
@@ -70,7 +80,9 @@ export default function ProgressionPreview({ className, currentLevel }: Props) {
                 aria-current={isCurrent ? 'true' : undefined}
               >
                 <span className="font-mono text-[11px] @max-[360px]:text-[10px] font-bold text-center">L{lv}</span>
-                <span className="font-mono text-[10px] text-center @max-[300px]:hidden">+{row?.proficiency_bonus ?? '?'}</span>
+                {!isMulticlass && (
+                  <span className="font-mono text-[10px] text-center @max-[300px]:hidden">+{row?.proficiency_bonus ?? '?'}</span>
+                )}
                 <span className="text-[11px] @max-[360px]:text-[10px] truncate">{row?.features ? localizeFeatures(row.features, i18n.language) : '—'}</span>
               </m.button>
             )
