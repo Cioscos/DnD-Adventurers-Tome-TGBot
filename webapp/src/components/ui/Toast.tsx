@@ -15,7 +15,9 @@ export default function Toast() {
       position="top-center"
       offset={24}
       mobileOffset={24}
-      visibleToasts={3}
+      expand
+      visibleToasts={5}
+      gap={8}
       closeButton
       richColors={false}
       style={{ zIndex: 9999 }}
