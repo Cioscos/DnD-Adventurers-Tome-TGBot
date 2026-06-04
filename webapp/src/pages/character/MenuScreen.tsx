@@ -9,7 +9,7 @@ import {
   GiArcheryTarget, GiLightningTrio, GiCrossedSwords, GiTwoCoins,
   GiScrollUnfurled, GiPolarStar, GiPerspectiveDiceSixFacesRandom,
   GiQuillInk, GiTreasureMap, GiOpenBook, GiPotionBall, GiCauldron,
-  GiFist,
+  GiFist, GiKnapsack,
 } from 'react-icons/gi'
 import type { ComponentType, SVGAttributes } from 'react'
 import SectionDivider from '@/components/ui/SectionDivider'
@@ -64,7 +64,7 @@ const MENU_SECTIONS: MenuSection[] = [
     labelKey: 'character.menu.sections.equipment',
     icon: GiTwoCoins,
     items: [
-      { key: 'inventory', icon: GiCrossedSwords, path: 'inventory', tone: 'gold' },
+      { key: 'inventory', icon: GiKnapsack,      path: 'inventory', tone: 'gold' },
       { key: 'currency',  icon: GiTwoCoins,      path: 'currency',  tone: 'amber' },
     ],
   },
