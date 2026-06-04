@@ -65,3 +65,40 @@ export function formatLength(valueFeet: number, system: UnitSystem): string {
 export function oppositeSystem(system: UnitSystem): UnitSystem {
   return system === 'imperial' ? 'metric' : 'imperial'
 }
+
+/**
+ * D&D metric weight: we use the clean tabletop factor 1 lb = 0.5 kg (so a STR×15
+ * capacity halves to STR×7.5 kg), mirroring the deliberate clean-factor choice
+ * for length (1 ft = 0.3 m). The DB always stores weight in canonical pounds;
+ * these helpers only convert at display/input boundaries.
+ */
+const LB_TO_KG = 0.5
+
+/** Unit suffix to show next to a weight value/input for the given system. */
+export function weightUnitLabel(system: UnitSystem): 'lb' | 'kg' {
+  return system === 'metric' ? 'kg' : 'lb'
+}
+
+/** Canonical pounds → numeric value to show in the chosen unit (metric: 1 decimal). */
+export function lbToDisplay(valueLb: number, system: UnitSystem): number {
+  if (system === 'metric') return Math.round(valueLb * LB_TO_KG * 10) / 10
+  return valueLb
+}
+
+/** Value entered in the chosen unit → canonical pounds (caller rounds as needed). */
+export function displayToLb(displayValue: number, system: UnitSystem): number {
+  if (system === 'metric') return displayValue / LB_TO_KG
+  return displayValue
+}
+
+/** Number-only display string (no unit), trailing ".0" stripped. */
+export function formatWeightValue(valueLb: number, system: UnitSystem): string {
+  const v = lbToDisplay(valueLb, system)
+  const display = Number.isInteger(v) ? String(v) : v.toFixed(1)
+  return display.replace(/\.0$/, '')
+}
+
+/** Full weight string with unit, e.g. "225 lb" / "112.5 kg". */
+export function formatWeight(valueLb: number, system: UnitSystem): string {
+  return `${formatWeightValue(valueLb, system)} ${weightUnitLabel(system)}`
+}
