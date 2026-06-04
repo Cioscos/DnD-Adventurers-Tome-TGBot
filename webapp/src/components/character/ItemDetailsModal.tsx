@@ -5,6 +5,7 @@ import { X } from 'lucide-react'
 import { TYPE_ICON } from '@/pages/inventory/itemMetadata'
 import { useRegisterOverlay } from '@/store/overlayStore'
 import type { EquipmentSlot, Item } from '@/types'
+import { useUnitSettings, formatWeight } from '@/store/unitSettings'
 
 interface Props {
   item: Item
@@ -30,6 +31,7 @@ function MetadataField({ label, value }: { label: string; value: string | number
 
 export default function ItemDetailsModal({ item, slot, onClose }: Props) {
   const { t } = useTranslation()
+  const system = useUnitSettings((s) => s.system)
   useRegisterOverlay(true)
 
   const slotLabel = t(`character.equipment.slots.${slot}`, { defaultValue: slot })
@@ -95,7 +97,7 @@ export default function ItemDetailsModal({ item, slot, onClose }: Props) {
               />
               <MetadataField
                 label={t('character.inventory.weight', { defaultValue: 'Peso' })}
-                value={`${item.weight} lb`}
+                value={formatWeight(item.weight, system)}
               />
 
               {item.item_type === 'weapon' && (

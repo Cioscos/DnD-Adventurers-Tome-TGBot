@@ -12,6 +12,7 @@ import { TYPE_ICON } from './itemMetadata'
 import type { Item } from '@/types'
 import type { Property } from '@/lib/homebrew/types'
 import PropertyBadge from '@/components/homebrew/PropertyBadge'
+import { useUnitSettings, formatWeight } from '@/store/unitSettings'
 
 /**
  * A homebrew Property resolved from an active rule, paired with the item types
@@ -37,6 +38,7 @@ function Chip({ icon, children }: { icon: React.ReactNode; children: React.React
 
 function ItemStatChips({ item }: { item: Item }) {
   const { t } = useTranslation()
+  const system = useUnitSettings((s) => s.system)
   const meta = item.item_metadata as Record<string, unknown> | undefined
   const chips: React.ReactNode[] = []
 
@@ -51,7 +53,7 @@ function ItemStatChips({ item }: { item: Item }) {
   if (item.weight > 0) {
     chips.push(
       <Chip key="weight" icon={<Weight size={12} />}>
-        {item.weight} lb
+        {formatWeight(item.weight, system)}
       </Chip>
     )
   }
@@ -237,6 +239,7 @@ function InventoryItemInner({
   setPropertyPending,
 }: InventoryItemProps) {
   const { t } = useTranslation()
+  const system = useUnitSettings((s) => s.system)
   const icon = TYPE_ICON[item.item_type] ?? '📦'
   const meta = item.item_metadata as Record<string, unknown> | undefined
   const canEquip = ['armor', 'shield', 'weapon', 'accessory'].includes(item.item_type)
@@ -273,7 +276,7 @@ function InventoryItemInner({
           </div>
           <p className="text-xs text-dnd-text-muted mt-0.5">
             {t(`character.inventory.types.${item.item_type}`, { defaultValue: item.item_type })}
-            {item.weight > 0 && ` · ${item.weight}lb`}
+            {item.weight > 0 && ` · ${formatWeight(item.weight, system)}`}
             {` · ×${item.quantity}`}
           </p>
         </div>

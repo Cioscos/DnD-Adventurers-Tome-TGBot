@@ -9,6 +9,7 @@ import { haptic } from '@/auth/telegram'
 import { ITEM_TYPE_TO_SLOTS } from '@/lib/equipmentSlots'
 import { useRegisterOverlay } from '@/store/overlayStore'
 import type { EquipmentSlot, Item, CharacterFull } from '@/types'
+import { useUnitSettings, formatWeight } from '@/store/unitSettings'
 
 interface Props {
   charId: number
@@ -29,6 +30,7 @@ export default function EquipItemPicker({ charId, slot, items, onClose }: Props)
   const qc = useQueryClient()
   const navigate = useNavigate()
   useRegisterOverlay(true)
+  const system = useUnitSettings((s) => s.system)
 
   const equip = useMutation({
     mutationFn: (itemId: number) =>
@@ -109,7 +111,7 @@ export default function EquipItemPicker({ charId, slot, items, onClose }: Props)
                       <span className="flex flex-col gap-0.5 min-w-0 flex-1">
                         <span className="text-sm font-bold text-dnd-text">{it.name}</span>
                         <span className="text-[11px] text-dnd-text-muted break-words">
-                          {it.item_type} · {it.weight} lb
+                          {it.item_type} · {formatWeight(it.weight, system)}
                         </span>
                       </span>
                     </button>
