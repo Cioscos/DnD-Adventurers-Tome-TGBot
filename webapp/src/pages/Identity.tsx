@@ -15,7 +15,7 @@ import Button from '@/components/ui/Button'
 import ChipInput from '@/components/ui/ChipInput'
 import SectionDivider from '@/components/ui/SectionDivider'
 import { haptic } from '@/auth/telegram'
-import { useUnitSettings, formatLength, oppositeSystem } from '@/store/unitSettings'
+import { useUnitSettings, formatLength, oppositeSystem, feetToDisplay, displayToFeet, unitLabel } from '@/store/unitSettings'
 import languagesSrd from '@/data/languages-srd.json'
 import IdentitySkeleton from '@/components/skeletons/IdentitySkeleton'
 
@@ -71,7 +71,7 @@ export default function Identity() {
         gender: char.gender ?? '',
         background: char.background ?? '',
         alignment: char.alignment ?? '',
-        speed: String(char.speed ?? 30),
+        speed: String(feetToDisplay(char.speed ?? 30, unitSystem)),
         personality_traits: personality.traits ?? '',
         ideals: personality.ideals ?? '',
         bonds: personality.bonds ?? '',
@@ -99,7 +99,7 @@ export default function Identity() {
         gender: draft.gender.trim() || null,
         background: draft.background.trim() || null,
         alignment: draft.alignment.trim() || null,
-        speed: Number(draft.speed) || 30,
+        speed: displayToFeet(Number(draft.speed) || 0, unitSystem) || 30,
         personality: {
           traits: draft.personality_traits.trim(),
           ideals: draft.ideals.trim(),
@@ -204,20 +204,21 @@ export default function Identity() {
         </Surface>
         <Surface variant="elevated" className="!p-3">
           <Input
-            label={
-              unitSystem === 'metric'
-                ? t('character.identity.speed_metric', { defaultValue: 'Velocità (piedi)' })
-                : t('character.identity.speed')
-            }
+            label={t('character.identity.speed')}
             type="number"
             min={0}
             value={draft.speed}
             onChange={set('speed')}
-            inputMode="numeric"
+            inputMode="decimal"
+            trailingAction={
+              <span className="text-dnd-text-muted text-sm font-cinzel pr-1">
+                {unitLabel(unitSystem)}
+              </span>
+            }
           />
           {Number(draft.speed) > 0 && (
             <p className="mt-1 text-[10px] font-mono text-dnd-text-faint tabular-nums">
-              ≈ {formatLength(Number(draft.speed) || 0, oppositeSystem(unitSystem))}
+              ≈ {formatLength(displayToFeet(Number(draft.speed) || 0, unitSystem), oppositeSystem(unitSystem))}
             </p>
           )}
         </Surface>

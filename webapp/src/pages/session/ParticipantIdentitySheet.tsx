@@ -13,6 +13,7 @@ import SectionDivider from '@/components/ui/SectionDivider'
 import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
 import ConditionBadge from '@/components/ui/ConditionBadge'
+import { useUnitSettings, formatLength } from '@/store/unitSettings'
 import type { CharacterLiveSnapshot, ParticipantIdentity, SessionParticipant } from '@/types'
 
 interface Props {
@@ -69,6 +70,7 @@ export default function ParticipantIdentitySheet({
   onStartWhisper,
 }: Props) {
   const { t } = useTranslation()
+  const unitSystem = useUnitSettings((s) => s.system)
 
   const hasCharacter = !!target?.character_id
   const { data, isLoading, isError } = useQuery<ParticipantIdentity>({
@@ -227,7 +229,7 @@ export default function ParticipantIdentitySheet({
               <FieldRow label={t('character.identity.race')} value={data.race} />
               <FieldRow label={t('character.identity.gender')} value={data.gender} />
               <FieldRow label={t('character.identity.alignment')} value={data.alignment} />
-              <FieldRow label={t('character.identity.speed')} value={data.speed !== null ? `${data.speed} ft` : null} />
+              <FieldRow label={t('character.identity.speed')} value={data.speed !== null ? formatLength(data.speed, unitSystem) : null} />
             </Surface>
 
             {/* Public — Cultura */}
