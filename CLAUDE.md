@@ -286,6 +286,7 @@ To regenerate after major design drift, run `$impeccable document` (DESIGN.md + 
 1. Always ask for clarification if the user's request is ambiguous or incomplete. Never make assumptions about what they want.
 2. Always work on a feature branch, never directly on main.
 3. Use Context7 MCP server when it makes sense.
+4. Brainstorming/spec docs from the superpowers skills live under `docs/superpowers/` (and `.superpowers/`), both gitignored. They are **local working material — do not commit them by default**. Commit explicitly with `git add -f` only when the user asks for in-repo traceability.
 
 ## Accessibility scope (webapp)
 
