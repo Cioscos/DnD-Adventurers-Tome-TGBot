@@ -271,6 +271,15 @@ export const api = {
       request<CharacterFull>(`/characters/${id}/ac/reset-override`, {
         method: 'POST',
       }),
+    updateCarryCapacity: (id: number, data: { value: number }) =>
+      request<CharacterFull>(`/characters/${id}/carry-capacity`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+    resetCarryCapacityOverride: (id: number) =>
+      request<CharacterFull>(`/characters/${id}/carry-capacity/reset-override`, {
+        method: 'POST',
+      }),
     setUnarmoredDefense: (id: number, ability: 'wisdom' | 'constitution' | null) =>
       request<CharacterFull>(`/characters/${id}/ac/unarmored-defense`, {
         method: 'POST',
