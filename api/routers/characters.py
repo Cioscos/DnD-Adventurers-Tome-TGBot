@@ -197,6 +197,12 @@ async def create_character(
         AbilityScore(name=ability, value=10) for ability in ABILITY_NAMES
     ]
     char.currency = Currency()
+    # Apply optional identity in the SAME transaction (atomic create). Same
+    # field→column mapping as update_character; set before flush so it lands
+    # in the initial INSERT.
+    if body.identity is not None:
+        for field, value in body.identity.model_dump(exclude_unset=True).items():
+            setattr(char, field, value)
     session.add(char)
     await session.flush()  # assign id (cascades ability_scores + currency)
 
