@@ -82,6 +82,7 @@ class CharacterFull(BaseModel):
 
     # Carry
     carry_capacity: int
+    carry_capacity_override: bool = False
     encumbrance: float
 
     # Computed

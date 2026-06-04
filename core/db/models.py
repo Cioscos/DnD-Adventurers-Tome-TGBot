@@ -106,6 +106,9 @@ class Character(Base):
     # Encumbrance
     carry_capacity: Mapped[int] = mapped_column(Integer, default=150)
     encumbrance: Mapped[float] = mapped_column(Float, default=0.0)
+    # When True, Strength changes do NOT recompute carry_capacity — the user's
+    # manual override stays put (mirrors base_armor_class_override).
+    carry_capacity_override: Mapped[bool] = mapped_column(Boolean, default=False)
 
     # Spell slots
     spell_slots_mode: Mapped[str] = mapped_column(
@@ -238,6 +241,8 @@ class Character(Base):
         self.encumbrance = sum(i.weight * i.quantity for i in self.items)
 
     def recalculate_carry_capacity(self) -> None:
+        if self.carry_capacity_override:
+            return
         strength_score = next(
             (s.value for s in self.ability_scores if s.name == "strength"), 10
         )

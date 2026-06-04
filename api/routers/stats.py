@@ -33,6 +33,10 @@ class ACUpdate(BaseModel):
     magic: Optional[int] = None
 
 
+class CarryCapacityUpdate(BaseModel):
+    value: int
+
+
 class UnarmoredDefenseUpdate(BaseModel):
     # 'wisdom' (Monk) or 'constitution' (Barbarian) to enable; null to disable.
     ability: Optional[str] = None
@@ -195,6 +199,33 @@ async def reset_ac_override(
     else:
         char.shield_armor_class = 0
 
+    return await build_character_response(session, char)
+
+
+@router.patch("/{char_id}/carry-capacity", response_model=CharacterFull)
+async def update_carry_capacity(
+    char_id: int,
+    body: CarryCapacityUpdate,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> CharacterFull:
+    """Set a manual carry capacity and lock it against Strength recomputation."""
+    char = await _get_owned_full(char_id, user_id, session)
+    char.carry_capacity = max(0, body.value)
+    char.carry_capacity_override = True
+    return await build_character_response(session, char)
+
+
+@router.post("/{char_id}/carry-capacity/reset-override", response_model=CharacterFull)
+async def reset_carry_capacity_override(
+    char_id: int,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> CharacterFull:
+    """Clear the manual override and recompute carry capacity from Strength (STR x 15)."""
+    char = await _get_owned_full(char_id, user_id, session)
+    char.carry_capacity_override = False
+    char.recalculate_carry_capacity()
     return await build_character_response(session, char)
 
 

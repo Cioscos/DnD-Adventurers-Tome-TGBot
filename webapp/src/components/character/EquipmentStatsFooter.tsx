@@ -1,18 +1,15 @@
 import { useTranslation } from 'react-i18next'
 import { GiCheckedShield, GiCrossedSwords, GiWeight } from 'react-icons/gi'
 import type { CharacterFull } from '@/types'
+import { useUnitSettings, formatWeight, formatWeightValue, weightUnitLabel } from '@/store/unitSettings'
 
 interface Props {
   char: CharacterFull
 }
 
-function formatWeight(n: number): string {
-  if (Number.isInteger(n)) return String(n)
-  return n.toFixed(1).replace(/\.0$/, '')
-}
-
 export default function EquipmentStatsFooter({ char }: Props) {
   const { t } = useTranslation()
+  const system = useUnitSettings((s) => s.system)
 
   const mainHand = char.items?.find(
     (i) => i.is_equipped && i.equipment_slot === 'main_hand',
@@ -28,14 +25,23 @@ export default function EquipmentStatsFooter({ char }: Props) {
 
   const acTotal = char.ac + (char.ac_breakdown?.homebrew ?? 0)
 
-  const strScore = char.ability_scores.find((s) => s.name.toLowerCase() === 'strength')?.value ?? 10
-  const carryCap = strScore * 15
+  // Carry capacity is canonical lb on the character; the local STR×15 recompute
+  // was removed so a manual override (char.carry_capacity_override) is honored here too.
+  const carryCap = char.carry_capacity
   const overload = encumbrance > carryCap
-  const carryFormula = t('character.equipment.carry_formula', {
-    str: strScore,
-    cap: carryCap,
-    defaultValue: 'Capacità = 15 × Forza ({{str}}) = {{cap}} lb',
-  })
+
+  const strScore = char.ability_scores.find((s) => s.name.toLowerCase() === 'strength')?.value ?? 10
+  const carryFormula = char.carry_capacity_override
+    ? t('character.equipment.carry_override_tooltip', {
+        cap: formatWeight(carryCap, system),
+        defaultValue: 'Carry capacity (manual override): {{cap}}',
+      })
+    : t('character.equipment.carry_formula', {
+        str: strScore,
+        factor: system === 'metric' ? '7.5' : '15',
+        cap: formatWeight(carryCap, system),
+        defaultValue: 'Carry capacity = {{factor}} × Strength ({{str}}) = {{cap}}',
+      })
 
   return (
     <section
@@ -82,8 +88,8 @@ export default function EquipmentStatsFooter({ char }: Props) {
             className={overload ? 'text-[var(--dnd-amber)]' : 'text-dnd-text-muted'}
           />
           <span className={`font-mono normal-case tracking-normal font-bold tabular-nums ${overload ? 'text-[var(--dnd-amber)]' : 'text-dnd-text'}`}>
-            {`${formatWeight(encumbrance)}/${carryCap}`}
-            <span className="text-dnd-text-muted ml-0.5 font-normal">lb</span>
+            {`${formatWeightValue(encumbrance, system)}/${formatWeightValue(carryCap, system)}`}
+            <span className="text-dnd-text-muted ml-0.5 font-normal">{weightUnitLabel(system)}</span>
           </span>
         </span>
       </div>

@@ -177,6 +177,7 @@ export interface CharacterFull extends CharacterSummary {
   skills_homebrew_modifiers?: Record<string, number>
   saves_homebrew_modifiers?: Record<string, number>
   carry_capacity: number
+  carry_capacity_override: boolean
   encumbrance: number
   spell_slots_mode: string
   concentrating_spell_id?: number
