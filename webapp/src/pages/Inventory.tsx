@@ -405,7 +405,7 @@ export default function Inventory() {
                   Math.max(0, Math.round(displayToLb(Number(capDraft) || 0, system))),
                 )
               }
-              disabled={updateCapMutation.isPending}
+              disabled={updateCapMutation.isPending || !(Number(capDraft) > 0)}
               haptic="success"
             >
               {t('common.save')}
