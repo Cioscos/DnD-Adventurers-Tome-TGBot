@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { useToast } from '@/hooks/useToast'
 import { m, AnimatePresence } from 'framer-motion'
-import { Plus, Weight, ChevronRight } from 'lucide-react'
+import { Plus, Weight, ChevronRight, Pencil, RotateCcw } from 'lucide-react'
 import { GiKnapsack as Backpack } from 'react-icons/gi'
 import { api, ApiError } from '@/api/client'
 import Layout from '@/components/Layout'
@@ -16,6 +16,8 @@ import type { EquipmentSlot } from '@/types'
 import ScrollArea from '@/components/ScrollArea'
 import EmptyState from '@/components/ui/EmptyState'
 import ProgressTriad from '@/components/ui/ProgressTriad'
+import Input from '@/components/ui/Input'
+import { useUnitSettings, displayToLb, lbToDisplay, formatWeight, formatWeightValue, weightUnitLabel } from '@/store/unitSettings'
 import WeaponAttackModal, { type WeaponAttackResult } from '@/components/WeaponAttackModal'
 import { haptic } from '@/auth/telegram'
 import InventoryItem, { type ItemProperty } from '@/pages/inventory/InventoryItem'
@@ -53,6 +55,9 @@ export default function Inventory() {
   const toast = useToast()
   const [expanded, setExpanded] = useState<number | null>(null)
   const [collapsedTypes, setCollapsedTypes] = useState<Set<string>>(new Set())
+  const system = useUnitSettings((s) => s.system)
+  const [editingCap, setEditingCap] = useState(false)
+  const [capDraft, setCapDraft] = useState('')
 
   const toggleType = (type: string) => {
     setCollapsedTypes((prev) => {
@@ -165,6 +170,25 @@ export default function Inventory() {
     mutationFn: ({ itemId, quantity }: { itemId: number; quantity: number }) =>
       api.items.update(charId, itemId, { quantity: Math.max(0, quantity) }),
     onSuccess: (updated) => qc.setQueryData(['character', charId], updated),
+  })
+
+  const updateCapMutation = useMutation({
+    mutationFn: (value: number) => api.characters.updateCarryCapacity(charId, { value }),
+    onSuccess: (updated) => {
+      qc.setQueryData(['character', charId], updated)
+      setEditingCap(false)
+      haptic.success()
+    },
+    onError: () => haptic.error(),
+  })
+
+  const resetCapMutation = useMutation({
+    mutationFn: () => api.characters.resetCarryCapacityOverride(charId),
+    onSuccess: (updated) => {
+      qc.setQueryData(['character', charId], updated)
+      haptic.success()
+    },
+    onError: () => haptic.error(),
   })
 
   // Edit a single homebrew property (hb_<key>) on an item. The backend PATCH
@@ -335,20 +359,96 @@ export default function Inventory() {
         </Button>
       </div>
 
-      {/* Carry capacity progress bar (Semantic Triad coloring) */}
+      {/* Carry capacity progress bar (Semantic Triad coloring) + manual override */}
       <Surface variant="elevated" className="!py-2">
         <div className="flex items-center gap-2 mb-1.5">
           <Weight size={13} className="text-dnd-gold-dim" />
           <p className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-gold-dim flex-1">
             {t('character.inventory.carry_label')}
           </p>
+          {!editingCap && (
+            <button
+              type="button"
+              title={t('character.inventory.carry_edit')}
+              onClick={() => {
+                setCapDraft(String(lbToDisplay(char.carry_capacity, system)))
+                setEditingCap(true)
+                haptic.light()
+              }}
+              className="min-h-[44px] min-w-[44px] -my-2 -mr-2 flex items-center justify-center text-dnd-gold-dim active:opacity-70"
+            >
+              <Pencil size={14} />
+            </button>
+          )}
         </div>
-        <ProgressTriad
-          value={totalWeight}
-          max={char.carry_capacity}
-          display={`${Number.isInteger(totalWeight) ? totalWeight : totalWeight.toFixed(1).replace(/\.0$/, '')} / ${char.carry_capacity} lb`}
-          showNumeric
-        />
+
+        {editingCap ? (
+          <div className="flex items-end gap-2">
+            <Input
+              className="flex-1"
+              type="number"
+              min={0}
+              value={capDraft}
+              onChange={setCapDraft}
+              inputMode="decimal"
+              trailingAction={
+                <span className="text-dnd-text-muted text-sm font-cinzel pr-1">
+                  {weightUnitLabel(system)}
+                </span>
+              }
+            />
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() =>
+                updateCapMutation.mutate(
+                  Math.max(0, Math.round(displayToLb(Number(capDraft) || 0, system))),
+                )
+              }
+              disabled={updateCapMutation.isPending}
+              haptic="success"
+            >
+              {t('common.save')}
+            </Button>
+            <Button variant="secondary" size="sm" onClick={() => setEditingCap(false)}>
+              {t('common.cancel')}
+            </Button>
+          </div>
+        ) : (
+          <ProgressTriad
+            value={totalWeight}
+            max={char.carry_capacity}
+            display={`${formatWeightValue(totalWeight, system)} / ${formatWeight(char.carry_capacity, system)}`}
+            showNumeric
+          />
+        )}
+
+        {char.carry_capacity_override ? (
+          <div className="flex items-center justify-between gap-2 mt-1.5">
+            <p className="text-[10px] text-[var(--dnd-crimson-bright)] font-body italic flex-1">
+              {t('character.inventory.carry_override_hint')}
+            </p>
+            <Button
+              variant="ghost"
+              size="sm"
+              icon={<RotateCcw size={12} />}
+              onClick={() => resetCapMutation.mutate()}
+              disabled={resetCapMutation.isPending}
+              haptic="warning"
+            >
+              {t('character.inventory.carry_reset_to_auto')}
+            </Button>
+          </div>
+        ) : (
+          <p className="text-[10px] text-dnd-text-faint font-body italic mt-1.5">
+            {t('character.equipment.carry_formula', {
+              str: char.ability_scores.find((s) => s.name.toLowerCase() === 'strength')?.value ?? 10,
+              factor: system === 'metric' ? '7.5' : '15',
+              cap: formatWeight(char.carry_capacity, system),
+              defaultValue: 'Carry capacity = {{factor}} × Strength ({{str}}) = {{cap}}',
+            })}
+          </p>
+        )}
       </Surface>
 
       {items.length === 0 && (
