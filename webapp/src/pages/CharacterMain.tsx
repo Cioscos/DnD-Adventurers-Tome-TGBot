@@ -57,7 +57,7 @@ export default function CharacterMain() {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-4">
         <p className="text-[var(--dnd-crimson-bright)] font-body">{t('common.error')}</p>
-        <button onClick={() => navigate(-1)} className="underline text-dnd-gold font-cinzel">
+        <button onClick={() => navigate('/')} className="underline text-dnd-gold font-cinzel">
           {t('common.back')}
         </button>
       </div>
@@ -77,7 +77,7 @@ export default function CharacterMain() {
         transition={spring.drift}
       >
         <m.button
-          onClick={() => navigate(-1)}
+          onClick={() => navigate('/')}
           className="w-11 h-11 flex items-center justify-center rounded-full bg-dnd-surface border border-dnd-gold-dim/30"
           whileTap={{ scale: 0.9 }}
           aria-label={t('common.back')}
