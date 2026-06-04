@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import Sheet from '@/components/ui/Sheet'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
+import WizardFooter from '@/components/ui/WizardFooter'
 import AbilityModifiersEditor from './AbilityModifiersEditor'
 import {
   ITEM_TYPES,
@@ -102,20 +103,15 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
           </select>
         </div>
 
-        <div className="flex gap-2 pt-2">
-          <Button
-            variant="primary"
-            fullWidth
-            onClick={() => setStep('base')}
-            disabled={!canAdvanceFromType}
-            haptic="medium"
-          >
-            {t('common.next')}
-          </Button>
-          <Button variant="secondary" fullWidth onClick={onCancel}>
-            {t('common.cancel')}
-          </Button>
-        </div>
+        <WizardFooter
+          className="pt-2"
+          secondaryLabel={t('common.cancel')}
+          onSecondary={onCancel}
+          primaryLabel={t('common.next')}
+          onPrimary={() => setStep('base')}
+          primaryDisabled={!canAdvanceFromType}
+          primaryHaptic="medium"
+        />
         </>
         )}
 
@@ -159,19 +155,14 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
           rows={3}
         />
 
-        <div className="flex gap-2 pt-2">
-          <Button variant="secondary" onClick={() => setStep('type')} className="px-4">
-            {t('common.back')}
-          </Button>
-          <Button
-            variant="primary"
-            fullWidth
-            onClick={() => setStep('advanced')}
-            haptic="medium"
-          >
-            {t('common.next')}
-          </Button>
-        </div>
+        <WizardFooter
+          className="pt-2"
+          secondaryLabel={t('common.back')}
+          onSecondary={() => setStep('type')}
+          primaryLabel={t('common.next')}
+          onPrimary={() => setStep('advanced')}
+          primaryHaptic="medium"
+        />
         </>
         )}
 
@@ -340,26 +331,21 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
           onChange={(next) => setForm((f) => ({ ...f, ability_modifiers: next }))}
         />
 
-        <div className="flex gap-2 pt-2">
-          <Button variant="secondary" onClick={() => setStep('base')} className="px-4">
-            {t('common.back')}
-          </Button>
-          <Button
-            variant="primary"
-            fullWidth
-            onClick={() =>
-              onSubmit({
-                ...form,
-                weight: String(displayToLb(Number(form.weight) || 0, system)),
-              })
-            }
-            disabled={!isItemFormValid(form)}
-            loading={isPending}
-            haptic="success"
-          >
-            {isEditing ? t('common.save') : t('common.add')}
-          </Button>
-        </div>
+        <WizardFooter
+          className="pt-2"
+          secondaryLabel={t('common.back')}
+          onSecondary={() => setStep('base')}
+          primaryLabel={isEditing ? t('common.save') : t('common.add')}
+          onPrimary={() =>
+            onSubmit({
+              ...form,
+              weight: String(displayToLb(Number(form.weight) || 0, system)),
+            })
+          }
+          primaryDisabled={!isItemFormValid(form)}
+          primaryLoading={isPending}
+          primaryHaptic="success"
+        />
         </>
         )}
       </div>
