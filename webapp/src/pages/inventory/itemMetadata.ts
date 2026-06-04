@@ -24,6 +24,44 @@ export const WEAPON_TYPES = ['melee', 'ranged'] as const
 
 export const DAMAGE_DICE_RE = /^\d+d\d+([+-]\d+)?$/
 
+/** Tagli di dado standard per le armi 5e (usati dai chip del builder). */
+export const DIE_SIZES = [4, 6, 8, 10, 12] as const
+
+export interface ParsedDamageDice {
+  count: number
+  die: number
+  mod: number
+  /** True quando il dado parsato non è tra i DIE_SIZES standard (es. d20 homebrew). */
+  unknownDie: boolean
+}
+
+/**
+ * Parsa una notazione "NdX", "NdX+K" o "NdX-K" nei suoi componenti.
+ * Su input vuoto o non parsabile ritorna il default 1d6 (mod 0).
+ */
+export function parseDamageDice(value: string): ParsedDamageDice {
+  const m = value.trim().match(/^(\d+)d(\d+)([+-]\d+)?$/i)
+  if (!m) {
+    return { count: 1, die: 6, mod: 0, unknownDie: false }
+  }
+  const count = Math.max(1, parseInt(m[1], 10))
+  const die = parseInt(m[2], 10)
+  const mod = m[3] ? parseInt(m[3], 10) : 0
+  const unknownDie = !(DIE_SIZES as readonly number[]).includes(die)
+  return { count, die, mod, unknownDie }
+}
+
+/**
+ * Compone la notazione canonica. Omette il "+0" quando il modificatore è nullo.
+ * `mod` negativo include già il segno '-'.
+ */
+export function serializeDamageDice(count: number, die: number, mod: number): string {
+  const base = `${Math.max(1, count)}d${die}`
+  if (mod > 0) return `${base}+${mod}`
+  if (mod < 0) return `${base}${mod}`
+  return base
+}
+
 export const TYPE_ICON: Record<string, string> = {
   weapon: '\u2694\uFE0F',
   armor: '\uD83D\uDEE1\uFE0F',
