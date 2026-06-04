@@ -18,6 +18,7 @@ import {
   type ItemType,
 } from './itemMetadata'
 import type { Item } from '@/types'
+import { useUnitSettings, lbToDisplay, displayToLb, weightUnitLabel, formatWeight, oppositeSystem } from '@/store/unitSettings'
 
 interface ItemFormProps {
   initialData?: Item | null
@@ -33,18 +34,24 @@ type WizardStep = 'type' | 'base' | 'advanced'
 
 export default function ItemForm({ initialData, onSubmit, onCancel, isPending }: ItemFormProps) {
   const { t } = useTranslation()
+  const system = useUnitSettings((s) => s.system)
   const [form, setForm] = useState<ItemFormData>(emptyForm)
   const [step, setStep] = useState<WizardStep>('type')
   const isEditing = !!initialData
 
   useEffect(() => {
     if (initialData) {
-      setForm(itemToFormData(initialData))
+      const fd = itemToFormData(initialData)
+      // itemToFormData returns weight in canonical lb; show it in the active unit.
+      setForm({
+        ...fd,
+        weight: fd.weight === '' ? '' : String(lbToDisplay(Number(fd.weight) || 0, system)),
+      })
     } else {
       setForm(emptyForm)
     }
     setStep('type')
-  }, [initialData])
+  }, [initialData, system])
 
   const stepIdx = step === 'type' ? 1 : step === 'base' ? 2 : 3
   const stepLabel = `${stepIdx}/3`
@@ -127,14 +134,20 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
           />
           <Input
             className="flex-1"
-            label={`${t('character.inventory.weight')} (lb)`}
+            label={`${t('character.inventory.weight')} (${weightUnitLabel(system)})`}
             type="number"
             value={form.weight}
             onChange={(v) => setForm((f) => ({ ...f, weight: v }))}
             min={0}
             placeholder="0"
+            inputMode="decimal"
           />
         </div>
+        {Number(form.weight) > 0 && (
+          <p className="-mt-1 text-[10px] font-mono text-dnd-text-faint tabular-nums">
+            ≈ {formatWeight(displayToLb(Number(form.weight) || 0, system), oppositeSystem(system))}
+          </p>
+        )}
 
         {/* Description */}
         <Input
@@ -334,7 +347,12 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
           <Button
             variant="primary"
             fullWidth
-            onClick={() => onSubmit(form)}
+            onClick={() =>
+              onSubmit({
+                ...form,
+                weight: String(displayToLb(Number(form.weight) || 0, system)),
+              })
+            }
             disabled={!isItemFormValid(form)}
             loading={isPending}
             haptic="success"
