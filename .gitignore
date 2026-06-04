@@ -64,5 +64,5 @@ docs/superpowers/
 # Playwright MCP session artifacts (snapshots, console logs)
 .playwright-mcp/
 
-# fe-playwright-audit skill — generated reports + screenshots (regenerated per run)
-.claude/skills/fe-playwright-audit/reports/
+# Skill-generated reports + screenshots (regenerated per run, never versioned)
+.claude/skills/*/reports/
