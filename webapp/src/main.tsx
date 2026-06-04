@@ -26,7 +26,13 @@ function syncViewportHeight() {
   document.documentElement.style.setProperty('--tg-vh', `${h}px`)
 }
 syncViewportHeight()
-window.Telegram?.WebApp?.onEvent?.('viewportChanged', syncViewportHeight)
+// Update --tg-vh only on the STABLE frame. During the minimize→restore
+// animation Telegram fires viewportChanged repeatedly with transient heights;
+// applying each one makes the root container (height: var(--tg-vh)) thrash → flicker.
+window.Telegram?.WebApp?.onEvent?.('viewportChanged', (e?: { isStateStable?: boolean }) => {
+  if (e && e.isStateStable === false) return
+  syncViewportHeight()
+})
 window.addEventListener('resize', syncViewportHeight)
 
 const queryClient = new QueryClient({
