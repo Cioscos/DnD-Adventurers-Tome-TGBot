@@ -826,15 +826,19 @@
     "create": {
       "step_name": "Nuovo personaggio",
       "step_class": "Scegli classe iniziale",
-      "step_class_subtitle": "Per {{name}} · Passo 2/2",
-      "tap_class_hint": "Tocca una classe per creare {{name}}",
+      "step_class_subtitle": "Per {{name}} · Passo 2/3",
+      "tap_class_hint": "Tocca per scegliere la classe di {{name}}",
       "creating": "Creazione in corso…",
       "create_failed": "Creazione non riuscita. Riprova.",
       "skip_class": "Senza classe",
       "custom_class": "Personalizzata",
       "custom_class_name": "Nome classe",
       "name_placeholder": "Il nome del tuo eroe",
-      "hit_die": "Dado vita"
+      "hit_die": "Dado vita",
+      "step_identity": "Identità",
+      "identity_skip": "Salta — compili dopo",
+      "identity_optional_hint": "Tutto opzionale: puoi saltare e completare dopo.",
+      "create_cta": "Crea"
     },
     "equipment": {
       "equipment": "Equipaggiamento",

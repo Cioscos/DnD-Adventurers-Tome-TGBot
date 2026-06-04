@@ -164,12 +164,26 @@ class CharacterFull(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class CharacterIdentityCreate(BaseModel):
+    """Optional identity fields captured during the creation wizard.
+    Mirrors the columns already handled by CharacterUpdate; all optional."""
+
+    race: Optional[str] = None
+    gender: Optional[str] = None
+    alignment: Optional[str] = None
+    background: Optional[str] = None
+    languages: Optional[list[str]] = None
+    personality: Optional[dict[str, Any]] = None  # { "traits": "..." }
+
+
 class CharacterCreate(BaseModel):
     name: str
     # Optional initial class — when provided the character + first class are
     # created atomically. Avoids the orphan-character risk of the previous
     # two-step client flow (POST /characters then POST /classes).
     initial_class: Optional[CharacterClassCreate] = None
+    # Optional identity — applied in the same transaction (see create_character).
+    identity: Optional[CharacterIdentityCreate] = None
 
 
 class CharacterUpdate(BaseModel):

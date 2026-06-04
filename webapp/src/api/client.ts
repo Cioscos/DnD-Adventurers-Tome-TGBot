@@ -223,12 +223,21 @@ export const api = {
         hit_die?: number
         spellcasting_ability?: string | null
       } | null,
+      identity?: {
+        race?: string
+        gender?: string
+        alignment?: string
+        background?: string
+        languages?: string[]
+        personality?: { traits: string }
+      } | null,
     ) =>
       request<CharacterFull>('/characters', {
         method: 'POST',
         body: JSON.stringify({
           name,
           ...(initialClass ? { initial_class: initialClass } : {}),
+          ...(identity ? { identity } : {}),
         }),
       }),
     update: (id: number, data: Record<string, unknown>) =>

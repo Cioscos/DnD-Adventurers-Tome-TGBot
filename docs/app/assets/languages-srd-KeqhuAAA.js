@@ -1,0 +1,1 @@
+const o=["Comune","Nanico","Elfico","Gigante","Gnomesco","Goblin","Halfling","Orchesco"],n=["Abissale","Celestiale","Draconico","Infernale","Primordiale","Profondo","Silvano","Sottocomune"],e={common:o,exotic:n};export{e as l};

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
-import { Plus, Trash2, ArrowLeft, Pencil, SkipForward } from 'lucide-react'
+import { Plus, Trash2, Pencil, SkipForward } from 'lucide-react'
 import {
   GiSparkles as Sparkles, GiCheckedShield as Shield, GiHeartPlus as Heart,
   GiCrossedSwords as Swords,
@@ -14,7 +14,9 @@ import HPGauge from '@/components/ui/HPGauge'
 import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
+import ChipInput from '@/components/ui/ChipInput'
 import Sheet from '@/components/ui/Sheet'
+import WizardFooter from '@/components/ui/WizardFooter'
 import FancyHeader from '@/components/ui/FancyHeader'
 import Reveal from '@/components/ui/Reveal'
 import Skeleton from '@/components/ui/Skeleton'
@@ -22,6 +24,9 @@ import { WaxSeal } from '@/components/ui/Ornament'
 import { haptic, telegramConfirm } from '@/auth/telegram'
 import { useToast } from '@/hooks/useToast'
 import { spring, stagger } from '@/styles/motion'
+import languagesSrd from '@/data/languages-srd.json'
+
+const LANGUAGE_SUGGESTIONS = [...languagesSrd.common, ...languagesSrd.exotic]
 
 const DND_CLASSES = [
   { key: 'barbarian', hit_die: 12, spellcasting_ability: null },
@@ -44,7 +49,16 @@ type SelectedClass = {
   spellcasting_ability: string | null
 }
 
-type Step = 'name' | 'class'
+type IdentityPayload = {
+  race?: string
+  gender?: string
+  alignment?: string
+  background?: string
+  languages?: string[]
+  personality?: { traits: string }
+}
+
+type Step = 'name' | 'class' | 'identity'
 
 export default function CharacterSelect() {
   const { t } = useTranslation()
@@ -52,12 +66,23 @@ export default function CharacterSelect() {
   const qc = useQueryClient()
   const toast = useToast()
 
+  const [creating, setCreating] = useState(false)
   const [step, setStep] = useState<Step>('name')
   const [newName, setNewName] = useState('')
-  const [creating, setCreating] = useState(false)
+
+  // Class: undefined = nessuna scelta ancora; null = "salta classe"; oggetto = scelta.
+  const [selectedClass, setSelectedClass] = useState<SelectedClass | null | undefined>(undefined)
   const [showCustom, setShowCustom] = useState(false)
   const [customName, setCustomName] = useState('')
   const [customHitDie, setCustomHitDie] = useState<number>(8)
+
+  // Identità (tutti opzionali).
+  const [race, setRace] = useState('')
+  const [gender, setGender] = useState('')
+  const [alignment, setAlignment] = useState('')
+  const [background, setBackground] = useState('')
+  const [languages, setLanguages] = useState<string[]>([])
+  const [personalityTraits, setPersonalityTraits] = useState('')
 
   const { data: characters = [], isLoading, isError, refetch } = useQuery({
     queryKey: ['characters'],
@@ -65,7 +90,7 @@ export default function CharacterSelect() {
   })
 
   const createMutation = useMutation({
-    mutationFn: async ({ name, cls }: { name: string; cls: SelectedClass | null }) => {
+    mutationFn: async ({ name, cls, identity }: { name: string; cls: SelectedClass | null; identity: IdentityPayload | null }) => {
       return api.characters.create(
         name,
         cls
@@ -76,6 +101,7 @@ export default function CharacterSelect() {
               spellcasting_ability: cls.spellcasting_ability ?? null,
             }
           : null,
+        identity,
       )
     },
     onSuccess: (char) => {
@@ -105,9 +131,16 @@ export default function CharacterSelect() {
     setCreating(false)
     setStep('name')
     setNewName('')
+    setSelectedClass(undefined)
     setShowCustom(false)
     setCustomName('')
     setCustomHitDie(8)
+    setRace('')
+    setGender('')
+    setAlignment('')
+    setBackground('')
+    setLanguages([])
+    setPersonalityTraits('')
   }
 
   const handleNameNext = () => {
@@ -115,13 +148,25 @@ export default function CharacterSelect() {
     setStep('class')
   }
 
-  const handleCreate = (cls: SelectedClass | null) => {
-    createMutation.mutate({ name: newName.trim(), cls })
+  const handleCustomSelect = () => {
+    if (!customName.trim()) return
+    setSelectedClass({ class_name: customName.trim(), hit_die: customHitDie, spellcasting_ability: null })
+    setShowCustom(false)
   }
 
-  const handleCustomCreate = () => {
-    if (!customName.trim()) return
-    handleCreate({ class_name: customName.trim(), hit_die: customHitDie, spellcasting_ability: null })
+  const buildIdentityPayload = (): IdentityPayload | null => {
+    const p: IdentityPayload = {}
+    if (race.trim()) p.race = race.trim()
+    if (gender.trim()) p.gender = gender.trim()
+    if (alignment.trim()) p.alignment = alignment.trim()
+    if (background.trim()) p.background = background.trim()
+    if (languages.length) p.languages = languages
+    if (personalityTraits.trim()) p.personality = { traits: personalityTraits.trim() }
+    return Object.keys(p).length ? p : null
+  }
+
+  const handleCreate = (identity: IdentityPayload | null) => {
+    createMutation.mutate({ name: newName.trim(), cls: selectedClass ?? null, identity })
   }
 
   const handleDelete = (char: CharacterSummary) => {
@@ -132,6 +177,14 @@ export default function CharacterSelect() {
       }
     )
   }
+
+  // Helpers selezione classe (evidenziazione).
+  const isBuiltinSelected = (key: string) =>
+    selectedClass != null && selectedClass.class_name === t(`dnd.classes.${key}`)
+  const isSkipSelected = selectedClass === null
+  const isCustomSelected =
+    selectedClass != null &&
+    !DND_CLASSES.some((c) => t(`dnd.classes.${c.key}`) === selectedClass.class_name)
 
   if (isLoading) {
     return (
@@ -293,18 +346,23 @@ export default function CharacterSelect() {
         </Button>
       </div>
 
-      {/* Creation wizard — modal Sheet so it floats above existing characters
-          instead of being pushed below the fold. */}
+      {/* Creation wizard — modal Sheet. Flusso: Nome → Classe → Identità → Crea. */}
       <Sheet
         open={creating}
         onClose={() => {
           if (!createMutation.isPending) resetWizard()
         }}
-        title={step === 'name' ? t('character.create.step_name') : t('character.create.step_class')}
+        title={
+          step === 'name'
+            ? t('character.create.step_name')
+            : step === 'class'
+            ? t('character.create.step_class')
+            : t('character.create.step_identity')
+        }
         dismissible={!createMutation.isPending}
       >
         <div className="p-5">
-          {step === 'name' ? (
+          {step === 'name' && (
             <m.div
               key="step-name"
               initial={{ opacity: 0, x: -12 }}
@@ -318,145 +376,125 @@ export default function CharacterSelect() {
                 autoFocus
                 onCommit={handleNameNext}
               />
-              <div className="flex gap-2 mt-4">
-                <Button
-                  variant="primary"
-                  fullWidth
-                  onClick={handleNameNext}
-                  disabled={!newName.trim()}
-                  haptic="medium"
-                >
-                  {t('common.confirm')} →
-                </Button>
-                <Button variant="secondary" fullWidth onClick={resetWizard}>
-                  {t('common.cancel')}
-                </Button>
-              </div>
+              <WizardFooter
+                className="mt-4"
+                secondaryLabel={t('common.cancel')}
+                onSecondary={resetWizard}
+                primaryLabel={`${t('common.next')} →`}
+                onPrimary={handleNameNext}
+                primaryDisabled={!newName.trim()}
+                primaryHaptic="medium"
+              />
             </m.div>
-          ) : (
+          )}
+
+          {step === 'class' && (
             <m.div
               key="step-class"
               initial={{ opacity: 0, x: 12 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.18 }}
             >
-              <div className="flex items-center gap-2 mb-3">
-                <m.button
-                  onClick={() => setStep('name')}
-                  disabled={createMutation.isPending}
-                  className="w-11 h-11 rounded-full bg-dnd-surface border border-dnd-gold-dim/30 flex items-center justify-center text-dnd-gold disabled:opacity-40"
-                  whileTap={{ scale: 0.9 }}
-                  aria-label={t('common.back')}
-                >
-                  <ArrowLeft size={16} />
-                </m.button>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[11px] text-dnd-text-faint truncate font-body">
-                    {t('character.create.step_class_subtitle', {
-                      name: newName.trim() || '—',
-                      defaultValue: 'Per {{name}} · Passo 2/2',
-                    })}
-                  </p>
-                </div>
-              </div>
+              <p className="text-[11px] text-dnd-text-faint truncate font-body mb-3">
+                {t('character.create.step_class_subtitle', {
+                  name: newName.trim() || '—',
+                  defaultValue: 'Per {{name}} · Passo 2/3',
+                })}
+              </p>
 
               {!showCustom ? (
                 <>
-                  {/* Tap-to-create hint — replaces the missing "Next" button. */}
                   <p className="text-[12px] text-dnd-gold-bright font-body italic text-center mb-3">
                     {t('character.create.tap_class_hint', {
                       name: newName.trim() || '—',
-                      defaultValue: 'Tocca una classe per creare {{name}}',
+                      defaultValue: 'Tocca per scegliere la classe di {{name}}',
                     })}
                   </p>
 
-                  <div className="relative">
-                    <m.div
-                      className="grid grid-cols-3 gap-2 mb-3"
-                      initial="initial"
-                      animate="animate"
-                      variants={{
-                        initial: {},
-                        animate: { transition: { staggerChildren: 0.03 } },
-                      }}
+                  <m.div
+                    className="grid grid-cols-3 gap-2 mb-3"
+                    initial="initial"
+                    animate="animate"
+                    variants={{
+                      initial: {},
+                      animate: { transition: { staggerChildren: 0.03 } },
+                    }}
+                  >
+                    {DND_CLASSES.map((cls) => (
+                      <m.button
+                        key={cls.key}
+                        onClick={() => setSelectedClass({
+                          class_name: t(`dnd.classes.${cls.key}`),
+                          hit_die: cls.hit_die,
+                          spellcasting_ability: cls.spellcasting_ability,
+                        })}
+                        className={`flex flex-col items-center py-2.5 px-1 rounded-xl
+                                   bg-dnd-surface border transition-[box-shadow,border-color] duration-200
+                                   text-center
+                                   ${isBuiltinSelected(cls.key)
+                                     ? '!border-dnd-gold shadow-halo-gold'
+                                     : 'border-dnd-border hover:border-dnd-gold/60 hover:shadow-halo-gold'}`}
+                        variants={{
+                          initial: { opacity: 0, scale: 0.9 },
+                          animate: { opacity: 1, scale: 1 },
+                        }}
+                        whileTap={{ scale: 0.93 }}
+                      >
+                        <span className="text-[13px] font-display font-bold text-dnd-gold-bright">
+                          {t(`dnd.classes.${cls.key}`)}
+                        </span>
+                        <span className="text-[10px] text-dnd-text-faint font-mono mt-0.5">d{cls.hit_die}</span>
+                      </m.button>
+                    ))}
+                  </m.div>
+
+                  {/* Special options row */}
+                  <div className="grid grid-cols-2 gap-2 mb-1">
+                    <m.button
+                      onClick={() => setShowCustom(true)}
+                      className={`flex flex-col items-center justify-center py-2.5 px-1 rounded-xl
+                                 bg-dnd-surface-raised border text-center
+                                 ${isCustomSelected ? '!border-dnd-gold shadow-halo-gold' : 'border-dnd-gold-dim/40'}`}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 0.1 }}
+                      whileTap={{ scale: 0.93 }}
                     >
-                      {DND_CLASSES.map((cls) => (
-                        <m.button
-                          key={cls.key}
-                          onClick={() => handleCreate({
-                            class_name: t(`dnd.classes.${cls.key}`),
-                            hit_die: cls.hit_die,
-                            spellcasting_ability: cls.spellcasting_ability,
-                          })}
-                          disabled={createMutation.isPending}
-                          className="flex flex-col items-center py-2.5 px-1 rounded-xl
-                                     bg-dnd-surface border border-dnd-border
-                                     hover:border-dnd-gold/60 hover:shadow-halo-gold
-                                     transition-[box-shadow,border-color] duration-200
-                                     text-center disabled:opacity-40 disabled:pointer-events-none"
-                          variants={{
-                            initial: { opacity: 0, scale: 0.9 },
-                            animate: { opacity: 1, scale: 1 },
-                          }}
-                          whileTap={{ scale: 0.93 }}
-                        >
-                          <span className="text-[13px] font-display font-bold text-dnd-gold-bright">
-                            {t(`dnd.classes.${cls.key}`)}
-                          </span>
-                          <span className="text-[10px] text-dnd-text-faint font-mono mt-0.5">d{cls.hit_die}</span>
-                        </m.button>
-                      ))}
-                    </m.div>
-
-                    {/* Special options row — visually paired below the 3-col class grid. */}
-                    <div className="grid grid-cols-2 gap-2">
-                      <m.button
-                        onClick={() => setShowCustom(true)}
-                        disabled={createMutation.isPending}
-                        className="flex flex-col items-center justify-center py-2.5 px-1 rounded-xl
-                                   bg-dnd-surface-raised border border-dnd-gold-dim/40
-                                   text-center disabled:opacity-40 disabled:pointer-events-none"
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: 0.1 }}
-                        whileTap={{ scale: 0.93 }}
-                      >
-                        <Pencil size={14} className="text-dnd-gold-dim mb-0.5" />
-                        <span className="text-[13px] font-display font-bold text-dnd-text">
-                          {t('character.create.custom_class')}
-                        </span>
-                        <span className="text-[10px] text-dnd-text-faint font-mono mt-0.5">d?</span>
-                      </m.button>
-                      <m.button
-                        onClick={() => handleCreate(null)}
-                        disabled={createMutation.isPending}
-                        className="flex flex-col items-center justify-center py-2.5 px-1 rounded-xl
-                                   bg-dnd-surface border border-dnd-border
-                                   text-center disabled:opacity-40 disabled:pointer-events-none"
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: 0.15 }}
-                        whileTap={{ scale: 0.93 }}
-                      >
-                        <SkipForward size={14} className="text-dnd-text-faint mb-0.5" />
-                        <span className="text-[13px] font-display font-bold text-dnd-text">
-                          {t('character.create.skip_class')}
-                        </span>
-                        <span className="text-[10px] text-dnd-text-faint font-mono mt-0.5">—</span>
-                      </m.button>
-                    </div>
-
-                    {/* Pending overlay — dims the grid + shows spinner so the user
-                        knows the tap registered while the POST is in flight. */}
-                    {createMutation.isPending && (
-                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-xl bg-dnd-surface/80 backdrop-blur-sm">
-                        <span className="w-6 h-6 border-2 border-dnd-gold/30 border-t-dnd-gold-bright rounded-full animate-spin" />
-                        <span className="text-[12px] font-cinzel uppercase tracking-widest text-dnd-gold">
-                          {t('character.create.creating')}
-                        </span>
-                      </div>
-                    )}
+                      <Pencil size={14} className="text-dnd-gold-dim mb-0.5" />
+                      <span className="text-[13px] font-display font-bold text-dnd-text">
+                        {isCustomSelected && selectedClass ? selectedClass.class_name : t('character.create.custom_class')}
+                      </span>
+                      <span className="text-[10px] text-dnd-text-faint font-mono mt-0.5">
+                        {isCustomSelected && selectedClass ? `d${selectedClass.hit_die}` : 'd?'}
+                      </span>
+                    </m.button>
+                    <m.button
+                      onClick={() => setSelectedClass(null)}
+                      className={`flex flex-col items-center justify-center py-2.5 px-1 rounded-xl
+                                 bg-dnd-surface border text-center
+                                 ${isSkipSelected ? '!border-dnd-gold shadow-halo-gold' : 'border-dnd-border'}`}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 0.15 }}
+                      whileTap={{ scale: 0.93 }}
+                    >
+                      <SkipForward size={14} className="text-dnd-text-faint mb-0.5" />
+                      <span className="text-[13px] font-display font-bold text-dnd-text">
+                        {t('character.create.skip_class')}
+                      </span>
+                      <span className="text-[10px] text-dnd-text-faint font-mono mt-0.5">—</span>
+                    </m.button>
                   </div>
+
+                  <WizardFooter
+                    className="mt-4"
+                    secondaryLabel={t('common.back')}
+                    onSecondary={() => setStep('name')}
+                    primaryLabel={`${t('common.next')} →`}
+                    onPrimary={() => setStep('identity')}
+                    primaryDisabled={selectedClass === undefined}
+                    primaryHaptic="medium"
+                  />
                 </>
               ) : (
                 <m.div
@@ -470,7 +508,7 @@ export default function CharacterSelect() {
                     onChange={setCustomName}
                     placeholder="Artificer..."
                     autoFocus
-                    onCommit={handleCustomCreate}
+                    onCommit={handleCustomSelect}
                     className="mb-3"
                   />
 
@@ -493,23 +531,92 @@ export default function CharacterSelect() {
                     ))}
                   </div>
 
-                  <div className="flex gap-2">
-                    <Button
-                      variant="primary"
-                      fullWidth
-                      onClick={handleCustomCreate}
-                      disabled={!customName.trim() || createMutation.isPending}
-                      loading={createMutation.isPending}
-                      haptic="success"
-                    >
-                      {t('common.confirm')}
-                    </Button>
-                    <Button variant="secondary" fullWidth onClick={() => setShowCustom(false)} disabled={createMutation.isPending}>
-                      {t('common.back')}
-                    </Button>
-                  </div>
+                  <WizardFooter
+                    secondaryLabel={t('common.back')}
+                    onSecondary={() => setShowCustom(false)}
+                    primaryLabel={t('common.confirm')}
+                    onPrimary={handleCustomSelect}
+                    primaryDisabled={!customName.trim()}
+                    primaryHaptic="medium"
+                  />
                 </m.div>
               )}
+            </m.div>
+          )}
+
+          {step === 'identity' && (
+            <m.div
+              key="step-identity"
+              initial={{ opacity: 0, x: 12 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.18 }}
+            >
+              <div className="flex justify-end mb-1">
+                <button
+                  onClick={() => handleCreate(null)}
+                  disabled={createMutation.isPending}
+                  className="text-[12px] text-dnd-gold-dim hover:text-dnd-gold-bright font-body underline underline-offset-2 disabled:opacity-40"
+                >
+                  {t('character.create.identity_skip')}
+                </button>
+              </div>
+              <p className="text-[11px] text-dnd-text-faint font-body italic text-center mb-3">
+                {t('character.create.identity_optional_hint')}
+              </p>
+
+              <div className="space-y-3">
+                <Input
+                  label={t('character.identity.race')}
+                  value={race}
+                  onChange={setRace}
+                  placeholder={t('character.identity.placeholder_race')}
+                />
+                <Input
+                  label={t('character.identity.gender')}
+                  value={gender}
+                  onChange={setGender}
+                  placeholder={t('character.identity.placeholder_gender')}
+                />
+                <Input
+                  label={t('character.identity.alignment')}
+                  value={alignment}
+                  onChange={setAlignment}
+                  placeholder={t('character.identity.placeholder_alignment')}
+                />
+                <Input
+                  label={t('character.identity.background')}
+                  value={background}
+                  onChange={setBackground}
+                  placeholder={t('character.identity.placeholder_background')}
+                />
+                <ChipInput
+                  label={t('character.identity.languages')}
+                  values={languages}
+                  onChange={setLanguages}
+                  placeholder={t('character.identity.language_placeholder')}
+                  splitOnComma
+                  suggestions={LANGUAGE_SUGGESTIONS}
+                />
+                <Input
+                  variant="textarea"
+                  label={t('character.identity.personality')}
+                  value={personalityTraits}
+                  onChange={setPersonalityTraits}
+                  rows={3}
+                  placeholder={t('character.identity.placeholder_personality_traits')}
+                />
+              </div>
+
+              <WizardFooter
+                className="mt-4"
+                secondaryLabel={t('common.back')}
+                onSecondary={() => setStep('class')}
+                primaryLabel={t('character.create.create_cta')}
+                onPrimary={() => handleCreate(buildIdentityPayload())}
+                primaryDisabled={createMutation.isPending}
+                primaryLoading={createMutation.isPending}
+                primaryHaptic="success"
+              />
             </m.div>
           )}
         </div>
