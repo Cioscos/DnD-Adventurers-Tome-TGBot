@@ -254,7 +254,7 @@ export default function Settings() {
             </p>
             <p className="text-xs text-dnd-text-muted mt-0.5 font-body italic">
               {t('character.settings.unit_system_hint', {
-                defaultValue: 'Mostra le distanze in piedi o metri (5 ft = 1,5 m).',
+                defaultValue: 'Distanze in piedi/metri e pesi in libbre/chili (5 ft ≈ 1,5 m · 1 lb = 0,5 kg).',
               })}
             </p>
           </div>
@@ -277,8 +277,8 @@ export default function Settings() {
               transition={spring.press}
             >
               {mode === 'imperial'
-                ? t('character.settings.unit_imperial', { defaultValue: 'Piedi (ft)' })
-                : t('character.settings.unit_metric', { defaultValue: 'Metri (m)' })}
+                ? t('character.settings.unit_imperial', { defaultValue: 'Piedi & libbre' })
+                : t('character.settings.unit_metric', { defaultValue: 'Metri & chili' })}
             </m.button>
           ))}
         </div>
