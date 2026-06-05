@@ -11,8 +11,9 @@ import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
 import Sheet from '@/components/ui/Sheet'
-import { slotsAllowedFor, SLOT_PLACEHOLDER_ICON } from '@/lib/equipmentSlots'
+import { slotsAllowedFor, SLOT_PLACEHOLDER_ICON, handsConflict } from '@/lib/equipmentSlots'
 import type { EquipmentSlot } from '@/types'
+import HandsConflictDialog from '@/components/character/HandsConflictDialog'
 import ScrollArea from '@/components/ScrollArea'
 import EmptyState from '@/components/ui/EmptyState'
 import ProgressTriad from '@/components/ui/ProgressTriad'
@@ -52,6 +53,7 @@ export default function Inventory() {
   }
   const [attackState, setAttackState] = useState<AttackState | null>(null)
   const [slotPickerItem, setSlotPickerItem] = useState<Item | null>(null)
+  const [equipConflict, setEquipConflict] = useState<{ item: Item; slot: EquipmentSlot; removedItem: Item } | null>(null)
   const toast = useToast()
   const [expanded, setExpanded] = useState<number | null>(null)
   const [collapsedTypes, setCollapsedTypes] = useState<Set<string>>(new Set())
@@ -141,15 +143,30 @@ export default function Inventory() {
   })
 
   const toggleEquip = useMutation({
-    mutationFn: ({ itemId, equipped, slot }: { itemId: number; equipped: boolean; slot?: EquipmentSlot }) =>
-      api.items.update(charId, itemId, slot
+    mutationFn: async ({ itemId, equipped, slot, removeId }: { itemId: number; equipped: boolean; slot?: EquipmentSlot; removeId?: number }) => {
+      if (removeId != null) {
+        await api.items.update(charId, removeId, { is_equipped: false, equipment_slot: null })
+      }
+      return api.items.update(charId, itemId, slot
         ? { is_equipped: equipped, equipment_slot: slot }
-        : { is_equipped: equipped }),
+        : { is_equipped: equipped })
+    },
     onSuccess: (updated) => {
       qc.setQueryData(['character', charId], updated)
       setSlotPickerItem(null)
+      setEquipConflict(null)
     },
   })
+
+  const doEquip = (item: Item, slot: EquipmentSlot) => {
+    const c = handsConflict(char?.items ?? [], item, slot)
+    if (c) {
+      setEquipConflict({ item, slot, removedItem: c })
+      setSlotPickerItem(null)
+      return
+    }
+    toggleEquip.mutate({ itemId: item.id, equipped: true, slot })
+  }
 
   const handleEquipToggle = (item: Item) => {
     if (item.is_equipped) {
@@ -157,17 +174,16 @@ export default function Inventory() {
       return
     }
     const allowedSlots = slotsAllowedFor(item.item_type)
+    if (allowedSlots.length === 1) {
+      doEquip(item, allowedSlots[0])
+      return
+    }
     if (allowedSlots.length > 1) {
       setSlotPickerItem(item)
       return
     }
-    // Single allowed slot: auto-assign so AC bridge (ArmorClass.tsx) and
-    // PaperDoll can detect the item; backend does not auto-fill the slot.
-    toggleEquip.mutate({
-      itemId: item.id,
-      equipped: true,
-      slot: allowedSlots.length === 1 ? allowedSlots[0] : undefined,
-    })
+    // No known slot: equip without slot assignment
+    toggleEquip.mutate({ itemId: item.id, equipped: true })
   }
 
   const updateQty = useMutation({
@@ -638,7 +654,7 @@ export default function Inventory() {
                 return (
                   <m.button
                     key={slot}
-                    onClick={() => toggleEquip.mutate({ itemId: slotPickerItem.id, equipped: true, slot })}
+                    onClick={() => doEquip(slotPickerItem, slot)}
                     disabled={toggleEquip.isPending}
                     className="flex items-center gap-2 p-3 rounded-xl bg-dnd-surface border border-dnd-border hover:border-dnd-gold/60 disabled:opacity-50"
                     whileTap={{ scale: 0.96 }}
@@ -657,6 +673,23 @@ export default function Inventory() {
           </div>
         )}
       </Sheet>
+
+      {equipConflict && (
+        <HandsConflictDialog
+          newItem={equipConflict.item}
+          removedItem={equipConflict.removedItem}
+          pending={toggleEquip.isPending}
+          onCancel={() => setEquipConflict(null)}
+          onConfirm={() =>
+            toggleEquip.mutate({
+              itemId: equipConflict.item.id,
+              equipped: true,
+              slot: equipConflict.slot,
+              removeId: equipConflict.removedItem.id,
+            })
+          }
+        />
+      )}
 
       <AnimatePresence />
     </Layout>
