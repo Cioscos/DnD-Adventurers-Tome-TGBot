@@ -5,6 +5,7 @@ import { m } from 'framer-motion'
 import { ChevronsUp } from 'lucide-react'
 import { api } from '@/api/client'
 import Surface from '@/components/ui/Surface'
+import { CornerFlourishes } from '@/components/ui/Ornament'
 import Button from '@/components/ui/Button'
 import { toast } from 'sonner'
 import { haptic } from '@/auth/telegram'
@@ -97,6 +98,7 @@ export default function LevelUpModal({ char, xpLevel, onClose }: LevelUpModalPro
         className="w-full max-w-xl max-h-[90vh] overflow-y-auto"
       >
         <Surface variant="tome" ornamented className="space-y-6 p-6">
+          <div className="text-dnd-gold-dim pointer-events-none"><CornerFlourishes /></div>
           {/* Header */}
           <div className="text-center">
             <h2 className="font-display text-2xl font-black text-dnd-gold-bright uppercase tracking-widest">
