@@ -36,6 +36,7 @@ from api.routers import (
     maps,
     notes,
     sessions,
+    silhouette,
     spell_slots,
     spells,
     stats,
@@ -126,6 +127,7 @@ app.include_router(currency.router)
 app.include_router(abilities.router)
 app.include_router(notes.router)
 app.include_router(maps.router)
+app.include_router(silhouette.router)
 app.include_router(dice.router)
 app.include_router(history.router)
 app.include_router(sessions.router)
