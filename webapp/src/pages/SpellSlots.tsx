@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
-import { Minus, Plus, RotateCcw, X, Settings as SettingsIcon } from 'lucide-react'
+import { Minus, Plus, RotateCcw, X } from 'lucide-react'
 import { GiCutDiamond as Gem, GiSparkles as Sparkles } from 'react-icons/gi'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
@@ -17,6 +17,7 @@ import { stagger } from '@/styles/motion'
 import { toRoman } from '@/lib/roman'
 import type { SpellSlot } from '@/types'
 import SpellSlotsSkeleton from '@/components/skeletons/SpellSlotsSkeleton'
+import AutoModeBanner from '@/components/character/AutoModeBanner'
 
 // Editable Total — inline numeric input + hold-to-accelerate ± buttons.
 // Lets users jump from 1 to 8 by typing or by holding the button instead of
@@ -196,25 +197,9 @@ export default function SpellSlots() {
 
   return (
     <Layout title={t('character.slots.title')} backTo={`/char/${charId}`} group="magic" page="slots">
-      {/* Auto-mode info banner. Visible in both empty + populated state so the
-          user understands why manual controls are gone. */}
+      {/* Banner Auto-mode — collassabile, ricorda lo stato (localStorage). */}
       {slotsMode === 'auto' && (
-        <Surface variant="arcane">
-          <div className="flex items-start gap-2.5">
-            <Sparkles size={16} className="text-dnd-arcane-bright shrink-0 mt-0.5" />
-            <p className="text-xs text-dnd-text font-body flex-1">
-              {t('character.slots.auto_hint')}
-            </p>
-            <button
-              type="button"
-              onClick={() => navigate(`/char/${charId}/settings`)}
-              className="shrink-0 inline-flex items-center gap-1 min-h-[44px] px-3 rounded-full bg-dnd-surface border border-dnd-arcane/40 text-dnd-arcane-bright font-cinzel text-[10px] uppercase tracking-widest"
-            >
-              <SettingsIcon size={11} />
-              {t('character.slots.go_to_settings')}
-            </button>
-          </div>
-        </Surface>
+        <AutoModeBanner onGoToSettings={() => navigate(`/char/${charId}/settings`)} />
       )}
 
       {slots.length > 0 && (

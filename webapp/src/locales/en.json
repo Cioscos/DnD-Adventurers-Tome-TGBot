@@ -308,6 +308,7 @@
       "state_used": "used",
       "state_available": "available",
       "auto_hint": "Auto mode (D&D 5e 2014 rules): slots are derived from classes and level. Switch to Manual in Settings for custom control.",
+      "auto_label": "Auto Mode",
       "manual_empty_hint": "No slots yet. Add one with the \"+ Level N\" buttons below.",
       "add_new_level": "Add new level",
       "reset_confirm": "Reset all spell slots?",
