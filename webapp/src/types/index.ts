@@ -191,6 +191,7 @@ export interface CharacterFull extends CharacterSummary {
   skills?: Record<string, unknown>
   saving_throws?: Record<string, boolean>
   death_saves?: DeathSaves
+  is_dead?: boolean
   personality?: Record<string, string>
   languages?: string[]
   general_proficiencies?: string[]
