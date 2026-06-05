@@ -2,7 +2,7 @@ import { useState, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { m } from 'framer-motion'
+import { AnimatePresence, m } from 'framer-motion'
 import {
   GiNightSleep as Moon, GiCampfire as Campfire, GiPotionBall as FlaskConical,
   GiHeartPlus as Heart,
@@ -202,44 +202,85 @@ export default function HP() {
 
   return (
     <Layout title={t('character.hp.title')} backTo={`/char/${charId}`} group="combat" page="hp">
-      {/* HP hero */}
-      <Surface variant="tome" ornamented className="relative">
-        <div className="flex items-end justify-between gap-4 mb-3">
-          <div>
-            <p className="text-[10px] font-cinzel uppercase tracking-[0.25em] text-dnd-gold-dim mb-1">
-              <Heart size={10} className="inline mr-1 text-dnd-crimson-bright" />
-              {t('character.hp.title')}
-            </p>
-            <m.p
-              key={char.current_hit_points}
-              initial={{ scale: 0.85, opacity: 0.4 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={spring.elastic}
-              className={`font-display font-black leading-none text-[5.5rem] ${hpColor} ${hpGlowClass}`}
-            >
-              {char.current_hit_points}
-            </m.p>
-            <p className="text-lg text-dnd-text-muted font-mono">
-              / {hpMax}
-            </p>
-          </div>
-          <div className="flex flex-col items-end gap-1.5 pb-2">
-            {char.temp_hp > 0 && (
-              <StatPill
-                tone="cobalt"
-                size="sm"
-                value={`+${char.temp_hp}`}
-                label={t('character.hp.temp')}
-              />
+      {/* First section: alive → hero PF centrato | dying → tiri salvezza | dead → seam (futura epica) */}
+      {(() => {
+        // SEAM: il backend non espone ancora la morte definitiva. La futura epica
+        // "Morte & stato Morto" calcolerà isDead dal personaggio e attiverà il ramo 'dead'.
+        const isDead: boolean = false
+        const section: 'alive' | 'dying' | 'dead' = isDead ? 'dead' : isDying ? 'dying' : 'alive'
+        return (
+          <AnimatePresence mode="wait" initial={false}>
+            {section === 'alive' && (
+              <m.div
+                key="hp-alive"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                <Surface variant="tome" ornamented className="relative text-center">
+                  <p className="text-[10px] font-cinzel uppercase tracking-[0.25em] text-dnd-gold-dim mb-2">
+                    <Heart size={10} className="inline mr-1 text-dnd-crimson-bright" />
+                    {t('character.hp.title')}
+                  </p>
+                  <div className="flex items-end justify-center gap-1.5">
+                    <m.span
+                      key={char.current_hit_points}
+                      initial={{ scale: 0.85, opacity: 0.4 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      transition={spring.elastic}
+                      className={`font-display font-black leading-none text-[5rem] ${hpColor} ${hpGlowClass}`}
+                    >
+                      {char.current_hit_points}
+                    </m.span>
+                    <span className="mb-3 text-xl font-mono text-dnd-text-muted">/{hpMax}</span>
+                  </div>
+                  <div className="mt-2 flex items-center justify-center gap-2">
+                    {char.temp_hp > 0 && (
+                      <StatPill
+                        tone="cobalt"
+                        size="sm"
+                        value={`+${char.temp_hp}`}
+                        label={t('character.hp.temp')}
+                      />
+                    )}
+                    <span className="rounded-full bg-[rgba(13,10,8,0.25)] px-2 py-0.5 text-xs font-mono text-dnd-text-faint">
+                      {Math.round(hpPct)}%
+                    </span>
+                  </div>
+                  <div className="mt-3">
+                    <HPGauge current={char.current_hit_points} max={hpMax} temp={char.temp_hp} size="lg" segmented />
+                  </div>
+                  <HomebrewBreakdownRow value={char.hp_max_homebrew_modifier ?? 0} label={t('character.hp.homebrew_max_bonus_label')} />
+                </Surface>
+              </m.div>
             )}
-            <span className="text-xs font-mono text-dnd-text-faint">
-              {Math.round(hpPct)}%
-            </span>
-          </div>
-        </div>
-        <HPGauge current={char.current_hit_points} max={hpMax} temp={char.temp_hp} size="lg" segmented />
-        <HomebrewBreakdownRow value={char.hp_max_homebrew_modifier ?? 0} label={t('character.hp.homebrew_max_bonus_label')} />
-      </Surface>
+
+            {section === 'dying' && (
+              <m.div
+                key="hp-dying"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="space-y-2"
+              >
+                <p className="text-center text-sm font-mono text-dnd-crimson-bright">
+                  0 / {hpMax}
+                </p>
+                <DeathSaves
+                  deathSaves={ds}
+                  onRoll={() => deathRollMutation.mutate()}
+                  onAction={(action) => deathMutation.mutate(action)}
+                  isRolling={deathRollMutation.isPending}
+                />
+              </m.div>
+            )}
+
+            {/* section === 'dead' → TODO(epica Morte): UI stato morto. Non raggiunto finché isDead === false. */}
+          </AnimatePresence>
+        )
+      })()}
 
       {/* Concentration banner — passive indicator (auto-TS triggered by DAMAGE) */}
       {isConcentrating && (
@@ -304,16 +345,6 @@ export default function HP() {
         confirmVariant="primary"
         loading={restMutation.isPending}
       />
-
-      {/* Death saves */}
-      {isDying && (
-        <DeathSaves
-          deathSaves={ds}
-          onRoll={() => deathRollMutation.mutate()}
-          onAction={(action) => deathMutation.mutate(action)}
-          isRolling={deathRollMutation.isPending}
-        />
-      )}
 
       {/* Hit dice modal */}
       {showShortRest && (
