@@ -58,6 +58,8 @@ export default function Inventory() {
   const system = useUnitSettings((s) => s.system)
   const [editingCap, setEditingCap] = useState(false)
   const [capDraft, setCapDraft] = useState('')
+  const [scrolled, setScrolled] = useState(false)
+  const topSentinelRef = useRef<HTMLDivElement>(null)
 
   const toggleType = (type: string) => {
     setCollapsedTypes((prev) => {
@@ -72,6 +74,8 @@ export default function Inventory() {
     queryKey: ['character', charId],
     queryFn: () => api.characters.get(charId),
   })
+
+  const hasItems = (char?.items?.length ?? 0) > 0
 
   // Active homebrew rules contribute Property defs that decorate items via
   // hb_<key> metadata. Last-wins on duplicate keys across multiple rules —
@@ -317,6 +321,23 @@ export default function Inventory() {
     }
   }, [highlightId, char, navigate, location.pathname])
 
+  // Pill flottante: quando la sentinella in cima esce dalla viewport (scroll),
+  // il pulsante "Aggiungi" si comprime in pill in alto a destra. Stesso pattern
+  // sentinella + IntersectionObserver usato da ScrollArea.
+  useEffect(() => {
+    const el = topSentinelRef.current
+    if (!el) {
+      setScrolled(false)
+      return
+    }
+    const io = new IntersectionObserver(
+      ([entry]) => setScrolled(!entry.isIntersecting),
+      { threshold: 0 },
+    )
+    io.observe(el)
+    return () => io.disconnect()
+  }, [hasItems])
+
   if (!char) {
     return (
       <Layout title={t('character.inventory.title')} backTo={`/char/${charId}`} group="equipment" page="inventory">
@@ -345,19 +366,32 @@ export default function Inventory() {
 
   return (
     <Layout title={t('character.inventory.title')} backTo={`/char/${charId}`} group="equipment" page="inventory">
-      {/* Add button + carry capacity */}
-      <div className="flex gap-2 items-end">
-        <Button
-          variant="primary"
-          size="md"
-          fullWidth
-          onClick={() => setShowAdd(true)}
-          icon={<Plus size={18} />}
-          haptic="medium"
-        >
-          {t('character.inventory.add')}
-        </Button>
-      </div>
+      {/* Add button — barra sticky che si comprime in pill flottante su scroll.
+          Nascosta del tutto se non ci sono oggetti (l'empty-state ha già la sua CTA). */}
+      {hasItems && (
+        <>
+          <div className="sticky top-2 z-20 flex pointer-events-none">
+            <m.div
+              layout
+              transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
+              className={scrolled ? 'ml-auto pointer-events-auto' : 'w-full pointer-events-auto'}
+            >
+              <Button
+                variant="primary"
+                size="md"
+                fullWidth={!scrolled}
+                onClick={() => setShowAdd(true)}
+                icon={<Plus size={18} />}
+                haptic="medium"
+                className={scrolled ? '!rounded-full shadow-halo-gold' : ''}
+              >
+                {scrolled ? t('character.inventory.add_short') : t('character.inventory.add')}
+              </Button>
+            </m.div>
+          </div>
+          <div ref={topSentinelRef} className="h-px" aria-hidden />
+        </>
+      )}
 
       {/* Carry capacity progress bar (Semantic Triad coloring) + manual override */}
       <Surface variant="elevated" className="!py-2">
@@ -488,7 +522,7 @@ export default function Inventory() {
                 <span className="font-cinzel uppercase tracking-widest text-xs text-dnd-gold-bright flex-1">
                   {t(`character.inventory.types.${type}`)}
                 </span>
-                <span className="text-[10px] text-dnd-text-muted font-mono tabular-nums">
+                <span className={`text-[10px] text-dnd-text-muted font-mono tabular-nums ${scrolled ? 'mr-24' : ''}`}>
                   · {groupItems.length}
                 </span>
               </m.button>

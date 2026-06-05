@@ -4,6 +4,8 @@ import Sheet from '@/components/ui/Sheet'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
 import WizardFooter from '@/components/ui/WizardFooter'
+import DamageDiceBuilder from './DamageDiceBuilder'
+import { getItemTypeIcon } from '@/lib/itemIcons'
 import AbilityModifiersEditor from './AbilityModifiersEditor'
 import {
   ITEM_TYPES,
@@ -11,12 +13,10 @@ import {
   WEAPON_PROPERTIES,
   ARMOR_TYPES,
   WEAPON_TYPES,
-  DAMAGE_DICE_RE,
   emptyForm,
   isItemFormValid,
   itemToFormData,
   type ItemFormData,
-  type ItemType,
 } from './itemMetadata'
 import type { Item } from '@/types'
 import { useUnitSettings, lbToDisplay, displayToLb, weightUnitLabel, formatWeight, oppositeSystem } from '@/store/unitSettings'
@@ -85,22 +85,33 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
           placeholder={t('character.inventory.item_name')}
         />
 
-        {/* Type */}
+        {/* Type — griglia chip a selezione singola */}
         <div>
           <label className="block text-[11px] uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
             {t('character.inventory.item_type')}
           </label>
-          <select
-            value={form.item_type}
-            onChange={(e) => setForm((f) => ({ ...f, item_type: e.target.value as ItemType }))}
-            className={SELECT_CLS}
-          >
-            {ITEM_TYPES.map((type) => (
-              <option key={type} value={type}>
-                {t(`character.inventory.types.${type}`)}
-              </option>
-            ))}
-          </select>
+          <div className="grid grid-cols-2 gap-2">
+            {ITEM_TYPES.map((type) => {
+              const Icon = getItemTypeIcon(type)
+              const active = form.item_type === type
+              return (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => setForm((f) => ({ ...f, item_type: type }))}
+                  className={`min-h-[46px] flex items-center gap-2 px-3 rounded-xl text-sm font-medium transition-colors
+                    ${active
+                      ? 'bg-dnd-gold text-dnd-ink shadow-halo-gold'
+                      : 'bg-dnd-surface-raised text-dnd-text border border-dnd-border'}`}
+                >
+                  <Icon size={18} className="shrink-0" />
+                  <span className="text-left leading-tight">
+                    {t(`character.inventory.types.${type}`)}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
         </div>
 
         <WizardFooter
@@ -171,12 +182,9 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
         {/* === WEAPON fields === */}
         {form.item_type === 'weapon' && (
           <>
-            <Input
-              label={t('character.inventory.damage_dice_label')}
+            <DamageDiceBuilder
               value={form.damage_dice}
               onChange={(v) => setForm((f) => ({ ...f, damage_dice: v }))}
-              placeholder="1d8"
-              error={!DAMAGE_DICE_RE.test(form.damage_dice.trim()) && form.damage_dice ? t('character.inventory.damage_dice_label') : undefined}
             />
 
             <div>
