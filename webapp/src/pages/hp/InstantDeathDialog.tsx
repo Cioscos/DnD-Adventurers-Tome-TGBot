@@ -24,14 +24,11 @@ export default function InstantDeathDialog({ open, onClose }: Props) {
       <m.div
         initial={{ scale: 0, rotate: -180 }}
         animate={{ scale: 1, rotate: 0 }}
-        transition={{ ...spring.elastic, delay: 0.1 }}
+        transition={{ ...spring.swipe, delay: 0.1 }}
         className="text-[var(--dnd-crimson-bright)]"
       >
         <Skull size={64} />
       </m.div>
-      <p className="font-bold font-cinzel uppercase tracking-wider text-[var(--dnd-crimson-bright)]">
-        {t('character.death_saves.instant_death_title')}
-      </p>
       <p className="text-sm font-body italic text-dnd-text-muted">
         {t('character.death_saves.instant_death_body')}
       </p>

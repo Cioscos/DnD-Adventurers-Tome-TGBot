@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { GiSkullCrossedBones as Skull } from 'react-icons/gi'
-import { GiHeartPlus as Heart } from 'react-icons/gi'
+import { GiSkullCrossedBones as Skull, GiHeartPlus as Heart } from 'react-icons/gi'
 import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
 import ConfirmSheet from '@/components/ui/ConfirmSheet'
