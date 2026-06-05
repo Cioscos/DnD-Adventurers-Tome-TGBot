@@ -12,6 +12,7 @@ import Sheet from '@/components/ui/Sheet'
 import Button from '@/components/ui/Button'
 import { api } from '@/api/client'
 import { haptic } from '@/auth/telegram'
+import { useToast } from '@/hooks/useToast'
 import { silhouetteUrl } from '@/lib/silhouette'
 import type { CharacterFull, EquipmentSlot, Item } from '@/types'
 
@@ -30,18 +31,19 @@ export default function EquipmentScreen({ char }: Props) {
   const [sheet, setSheet] = useState<SheetState>({ kind: 'closed' })
 
   const qc = useQueryClient()
+  const toast = useToast()
   const fileRef = useRef<HTMLInputElement>(null)
   const [silMenu, setSilMenu] = useState(false)
 
   const uploadSil = useMutation({
     mutationFn: (file: File) => api.silhouette.upload(char.id, file),
     onSuccess: (updated) => { qc.setQueryData(['character', char.id], updated); haptic.success(); setSilMenu(false) },
-    onError: () => haptic.error(),
+    onError: () => { haptic.error(); toast.error(t('character.equipment.silhouette.error')) },
   })
   const removeSil = useMutation({
     mutationFn: () => api.silhouette.remove(char.id),
     onSuccess: (updated) => { qc.setQueryData(['character', char.id], updated); haptic.success(); setSilMenu(false) },
-    onError: () => haptic.error(),
+    onError: () => { haptic.error(); toast.error(t('character.equipment.silhouette.error')) },
   })
 
   const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -66,7 +68,7 @@ export default function EquipmentScreen({ char }: Props) {
         {t('character.equipment.equipment', { defaultValue: 'Equipment' })}
       </SectionDivider>
 
-      <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onFile} />
+      <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif" className="hidden" onChange={onFile} />
 
       <PaperDoll
         items={char.items ?? []}
