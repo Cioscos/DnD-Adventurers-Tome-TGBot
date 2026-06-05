@@ -33,6 +33,7 @@ async def build_character_response(
     # At 27 calls/response this is 54 SELECTs. Batch by preloading rules+items once
     # and exposing a sum_modifiers(rules, items, target_path) helper.
     response = CharacterFull.model_validate(char)
+    response.has_custom_silhouette = bool(getattr(char, "silhouette_path", None))
 
     hb_ac = await get_passive_modifiers(session, char, "character.ac")
     response.ac_breakdown = AcBreakdown(

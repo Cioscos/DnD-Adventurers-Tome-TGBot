@@ -120,6 +120,9 @@ class Character(Base):
         Integer, ForeignKey("spells.id", ondelete="SET NULL"), nullable=True
     )
 
+    # Custom paper-doll silhouette (E4)
+    silhouette_path: Mapped[Optional[str]] = mapped_column(String(500), nullable=True, default=None)
+
     # Flexible JSON fields
     rolls_history: Mapped[Optional[list]] = mapped_column(JSON, default=list)
     notes: Mapped[Optional[dict]] = mapped_column(JSON, default=dict)

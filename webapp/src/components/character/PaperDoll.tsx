@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { type ReactNode, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ALL_SLOTS } from '@/lib/equipmentSlots'
+import { ALL_SLOTS, isTwoHanded } from '@/lib/equipmentSlots'
 import EquipmentSlotCell from './EquipmentSlotCell'
 import type { EquipmentSlot, Item } from '@/types'
 
@@ -8,6 +8,8 @@ interface Props {
   items: Item[]
   onSlotTap: (slot: EquipmentSlot, equipped: Item | null) => void
   silhouetteUrl?: string | null
+  /** Affordance opzionale resa centro-alto sopra la silhouette (upload/menu). */
+  silhouetteAction?: ReactNode
 }
 
 const LEFT_SLOTS: EquipmentSlot[] = ['head', 'neck', 'cloak', 'body']
@@ -18,12 +20,17 @@ function findEquipped(items: Item[], slot: EquipmentSlot): Item | null {
   return items.find((i) => i.is_equipped && i.equipment_slot === slot) ?? null
 }
 
-export default function PaperDoll({ items, onSlotTap, silhouetteUrl }: Props) {
+export default function PaperDoll({ items, onSlotTap, silhouetteUrl, silhouetteAction }: Props) {
   const { t } = useTranslation()
   const [imgFailed, setImgFailed] = useState(false)
   void ALL_SLOTS
 
   const showImage = !!silhouetteUrl && !imgFailed
+
+  const mainHandItem = findEquipped(items, 'main_hand')
+  const offHandItem = findEquipped(items, 'off_hand')
+  const hideOffHand = isTwoHanded(mainHandItem) && offHandItem === null
+  const bottomSlots = BOTTOM_SLOTS.filter((s) => !(s === 'off_hand' && hideOffHand))
 
   return (
     <div
@@ -49,7 +56,10 @@ export default function PaperDoll({ items, onSlotTap, silhouetteUrl }: Props) {
         </div>
 
         {/* Vitruvian silhouette OR class+race+gender PNG */}
-        <div className="flex items-center justify-center min-h-[280px]">
+        <div className="flex flex-col items-center justify-center gap-1.5 min-h-[280px]">
+          {silhouetteAction && (
+            <div className="shrink-0">{silhouetteAction}</div>
+          )}
           {showImage ? (
             <img
               src={silhouetteUrl as string}
@@ -119,7 +129,7 @@ export default function PaperDoll({ items, onSlotTap, silhouetteUrl }: Props) {
 
       {/* Bottom weapon row */}
       <div className="mt-3 flex justify-center gap-3 @max-[340px]:gap-2">
-        {BOTTOM_SLOTS.map((slot) => (
+        {bottomSlots.map((slot) => (
           <EquipmentSlotCell
             key={slot}
             slot={slot}

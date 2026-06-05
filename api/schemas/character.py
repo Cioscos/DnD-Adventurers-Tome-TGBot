@@ -105,6 +105,8 @@ class CharacterFull(BaseModel):
     # Populated only by endpoints that fire homebrew rules (POST /hp, POST /attack, etc.).
     homebrew_notifications: Optional[list[dict]] = None
 
+    has_custom_silhouette: bool = False
+
     # JSON fields
     rolls_history: Optional[list] = None
     notes: Optional[dict[str, Any]] = None

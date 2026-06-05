@@ -667,6 +667,21 @@ export const api = {
   },
 
   // ---------------------------------------------------------------------------
+  // Silhouette
+  // ---------------------------------------------------------------------------
+  silhouette: {
+    fileUrl: (charId: number) =>
+      `${BASE_URL}/characters/${charId}/silhouette/file?init_data=${encodeURIComponent(getInitData())}`,
+    upload: (charId: number, file: File) => {
+      const fd = new FormData()
+      fd.append('file', file)
+      return requestFormData<CharacterFull>(`/characters/${charId}/silhouette`, fd)
+    },
+    remove: (charId: number) =>
+      request<CharacterFull>(`/characters/${charId}/silhouette`, { method: 'DELETE' }),
+  },
+
+  // ---------------------------------------------------------------------------
   // Dice
   // ---------------------------------------------------------------------------
   dice: {

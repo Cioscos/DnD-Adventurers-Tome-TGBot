@@ -846,6 +846,23 @@
     },
     "equipment": {
       "equipment": "Equipment",
+      "hands_conflict": {
+        "title": "Hands occupied",
+        "body": "Equipping {{newItem}} will remove {{removedItem}} — a two-handed weapon occupies both hands.",
+        "confirm": "Continue"
+      },
+      "silhouette": {
+        "upload": "Upload silhouette",
+        "change": "Change image",
+        "remove": "Remove (reset to default)",
+        "uploading": "Uploading…",
+        "error": "Upload failed"
+      },
+      "filters": {
+        "weapon_type": "Weapon type",
+        "damage": "Damage",
+        "properties": "Properties"
+      },
       "slots": {
         "head": "Head",
         "neck": "Neck",

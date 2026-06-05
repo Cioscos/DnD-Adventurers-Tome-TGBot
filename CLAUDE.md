@@ -224,6 +224,7 @@ The only callback handler is `bot.handlers.wiki.navigation_callback` — see `bo
 
 - **Character DB**: SQLite at `data/dnd_bot.db` (override via `DB_PATH`). Owned by the API. Schema migrations run idempotently via `ALTER TABLE` in `_migrate_schema()` in `core/db/engine.py` and are triggered from the API's `lifespan` hook (`api/main.py`). Always add new columns to `_MIGRATIONS` in `core/db/engine.py` — never rely solely on `create_all`. The Telegram bot does not open a DB connection.
 - **Map files**: Uploaded via the webapp are stored locally at `data/maps/{char_id}/{uuid}.{ext}` (up to 10 MB, image/PDF formats). The `Map` model stores the path in `local_file_path`; Telegram-sourced maps use `file_id` instead. The `data/maps/` directory is created automatically on first upload.
+- **Silhouette files**: Custom paper-doll silhouettes uploaded via the webapp are stored at `data/silhouettes/{char_id}/{uuid}.{ext}` (images only — png/jpg/webp/gif, ≤10 MB, no conversion). The `Character.silhouette_path` column stores the path (one per character; replaced on re-upload); `CharacterFull.has_custom_silhouette` exposes its presence. Served via `GET /characters/{id}/silhouette/file` (auth via `init_data` query param for `<img>`, mirroring maps). Resolution priority in the webapp: custom → class/race/gender manifest → SVG fallback.
 - **Bot state**: `data/persistence.pkl` — stores `user_data` and the `arbitrary_callback_data` LRU cache across restarts.
 
 ## Notable API Endpoints

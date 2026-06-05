@@ -114,6 +114,8 @@ _MIGRATIONS: list[tuple[str, str, str, str | None]] = [
     ("characters", "carry_capacity_override", "BOOLEAN", "0"),
     # Unarmored Defense — second ability ('wisdom'/'constitution'); NULL = disabled
     ("characters", "unarmored_defense_ability", "VARCHAR(20)", None),
+    # Custom paper-doll silhouette (E4)
+    ("characters", "silhouette_path", "VARCHAR(500)", None),
 ]
 
 # Tables to drop if they exist (legacy feature cleanup)
