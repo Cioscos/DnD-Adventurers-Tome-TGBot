@@ -62,6 +62,7 @@ class CharacterFull(BaseModel):
     hit_points: int
     current_hit_points: int
     temp_hp: int = 0
+    is_dead: bool = False
 
     # AC components (for display and editing)
     base_armor_class: int
