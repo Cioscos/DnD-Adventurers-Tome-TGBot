@@ -20,27 +20,29 @@ export default function DeadState({ cause, onRevive, reviving }: DeadStateProps)
     : 'character.death_saves.cause_massive_damage'
 
   return (
-    <Surface variant="ember" ornamented className="flex flex-col items-center gap-4 text-center">
-      <Skull size={56} className="text-[var(--dnd-crimson-bright)]" />
-      <div className="flex flex-col gap-1">
-        <h3 className="font-display font-black text-[var(--dnd-crimson-bright)] text-2xl uppercase tracking-[0.15em]">
-          {t('character.death_saves.dead_title')}
-        </h3>
-        <p className="text-sm font-body text-dnd-text-muted">
-          {t(causeKey)}
-        </p>
+    <Surface variant="ember" ornamented>
+      <div className="flex flex-col items-center gap-4 text-center">
+        <Skull size={56} className="text-[var(--dnd-crimson-bright)]" />
+        <div className="flex flex-col gap-1">
+          <h3 className="font-display font-black text-[var(--dnd-crimson-bright)] text-2xl uppercase tracking-[0.15em]">
+            {t('character.death_saves.dead_title')}
+          </h3>
+          <p className="text-sm font-body text-dnd-text-muted">
+            {t(causeKey)}
+          </p>
+        </div>
+        <Button
+          variant="primary"
+          size="lg"
+          fullWidth
+          onClick={() => setConfirmOpen(true)}
+          loading={reviving}
+          icon={<Heart size={18} />}
+          haptic="success"
+        >
+          {t('character.death_saves.revive')}
+        </Button>
       </div>
-      <Button
-        variant="primary"
-        size="lg"
-        fullWidth
-        onClick={() => setConfirmOpen(true)}
-        loading={reviving}
-        icon={<Heart size={18} />}
-        haptic="success"
-      >
-        {t('character.death_saves.revive')}
-      </Button>
 
       <ConfirmSheet
         open={confirmOpen}

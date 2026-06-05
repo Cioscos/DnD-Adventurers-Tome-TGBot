@@ -25,7 +25,7 @@ export default function InstantDeathDialog({ open, onClose }: Props) {
         initial={{ scale: 0, rotate: -180 }}
         animate={{ scale: 1, rotate: 0 }}
         transition={{ ...spring.swipe, delay: 0.1 }}
-        className="text-[var(--dnd-crimson-bright)]"
+        className="flex justify-center text-[var(--dnd-crimson-bright)]"
       >
         <Skull size={64} />
       </m.div>
