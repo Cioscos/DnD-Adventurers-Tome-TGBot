@@ -39,7 +39,7 @@ export default function AbilityScoreCard({ score, expanded, onToggle, onEdit }: 
         {/* 3-col header: spacer | name (centered) | pencil — name can never collide with the pencil. */}
         <div className="grid grid-cols-[40px_1fr_40px] items-center">
           <span aria-hidden />
-          <span className="min-w-0 text-center text-[11px] font-cinzel uppercase tracking-[0.08em] leading-tight text-dnd-text opacity-90">
+          <span className="min-w-0 break-words text-center text-[11px] font-cinzel uppercase tracking-[0.08em] leading-tight text-dnd-text opacity-90">
             {fullName}
           </span>
           <m.button
