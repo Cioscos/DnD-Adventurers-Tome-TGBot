@@ -308,6 +308,7 @@
       "state_used": "usato",
       "state_available": "disponibile",
       "auto_hint": "Modalità Auto (regole D&D 5e 2014): gli slot vengono dedotti da classi e livello. Passa a Manuale dalle Impostazioni per gestione personalizzata.",
+      "auto_label": "Modalità Auto",
       "manual_empty_hint": "Nessuno slot. Aggiungine uno con i pulsanti \"+ Livello N\" qui sotto.",
       "add_new_level": "Aggiungi nuovo livello",
       "reset_confirm": "Ripristinare tutti gli slot incantesimo?",
