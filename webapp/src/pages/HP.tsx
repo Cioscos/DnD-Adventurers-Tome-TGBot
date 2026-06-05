@@ -23,6 +23,9 @@ import DeathSaves from '@/pages/hp/DeathSaves'
 import HitDiceModal from '@/pages/hp/HitDiceModal'
 import HitDiceResultDialog from '@/pages/hp/HitDiceResultDialog'
 import DeathSaveResultDialog from '@/pages/hp/DeathSaveResultDialog'
+import DeadState from '@/pages/hp/DeadState'
+import InstantDeathDialog from '@/pages/hp/InstantDeathDialog'
+import type { CharacterFull } from '@/types'
 import ConcentrationSaveDialog from '@/pages/hp/ConcentrationSaveDialog'
 import { useDiceAnimation } from '@/dice/useDiceAnimation'
 import { useDiceSettings } from '@/store/diceSettings'
@@ -42,6 +45,8 @@ export default function HP() {
   const reducedMotion = useReducedMotion()
   const [value, setValue] = useState('')
   const [activeOp, setActiveOp] = useState<HPOp>('damage')
+  const [crit, setCrit] = useState(false)
+  const [instantDeathOpen, setInstantDeathOpen] = useState(false)
   // Synchronous guard against double-fire of handleApply (Input.onCommit on blur +
   // button.onClick both fire when the user taps Conferma — `hpMutation.isPending` isn't
   // yet true at the second call, so a ref that flips immediately is needed). Mirrors
@@ -59,13 +64,32 @@ export default function HP() {
     queryFn: () => api.characters.get(charId),
   })
 
+  const reviveMutation = useMutation({
+    mutationFn: () => api.characters.revive(charId),
+    onSuccess: (updated) => {
+      qc.setQueryData(['character', charId], updated)
+      haptic.success()
+    },
+    onError: () => haptic.error(),
+  })
+
+  // Morte istantanea = morto per danno massiccio (failures < 3). Il caso
+  // "3 fallimenti da danno a 0" mostra direttamente la schermata DeadState.
+  const maybeShowInstantDeath = (updated: CharacterFull) => {
+    if (updated.is_dead && (updated.death_saves?.failures ?? 0) < 3) {
+      setInstantDeathOpen(true)
+    }
+  }
+
   const hpMutation = useMutation({
-    mutationFn: ({ op, val }: { op: HPOp; val: number }) =>
-      api.characters.updateHp(charId, op, val),
+    mutationFn: ({ op, val, wasCritical }: { op: HPOp; val: number; wasCritical?: boolean }) =>
+      api.characters.updateHp(charId, op, val, wasCritical ?? false),
     onSuccess: (updated) => {
       qc.setQueryData(['character', charId], updated)
       setValue('')
+      setCrit(false)
       haptic.success()
+      maybeShowInstantDeath(updated)
       const conc = updated.concentration_save
       if (conc) {
         setConcSaveResult(conc)
@@ -133,7 +157,8 @@ export default function HP() {
     const n = parseInt(value, 10)
     if (isNaN(n) || n <= 0) return
     savingRef.current = true
-    hpMutation.mutate({ op: activeOp, val: n })
+    const wasCritical = activeOp === 'damage' && char?.current_hit_points === 0 && crit
+    hpMutation.mutate({ op: activeOp, val: n, wasCritical })
   }
 
   const handleQuickApply = ({ op, val }: { op: HPOp; val: number }) => {
@@ -150,9 +175,12 @@ export default function HP() {
       set_max:     { op: 'set_max',     val: prev.max,     messageKey: 'character.hp.quick_heal_undo' },
       set_temp:    { op: 'set_temp',    val: prev.temp,    messageKey: 'character.hp.quick_temp_undo' },
     }
-    hpMutation.mutate({ op, val }, {
+    const wasCritical = op === 'damage' && char.current_hit_points === 0 && crit
+    hpMutation.mutate({ op, val, wasCritical }, {
       onSuccess: (updated) => {
         qc.setQueryData(['character', charId], updated)
+        setCrit(false)
+        maybeShowInstantDeath(updated)
         const conc = updated.concentration_save
         if (conc) {
           setConcSaveResult(conc)
@@ -181,7 +209,10 @@ export default function HP() {
   }
 
   const ds = char.death_saves ?? { successes: 0, failures: 0, stable: false }
-  const isDying = char.current_hit_points === 0 && !ds.stable
+  const isDead = char.is_dead ?? false
+  const deathCause: 'death_saves' | 'massive_damage' = (ds.failures ?? 0) >= 3 ? 'death_saves' : 'massive_damage'
+  const atZero = char.current_hit_points === 0
+  const isDying = atZero && !ds.stable && !isDead
   const isConcentrating = !!char.concentrating_spell_id
   const classes = char.classes ?? []
   const hbHp = char.hp_max_homebrew_modifier ?? 0
@@ -204,9 +235,6 @@ export default function HP() {
     <Layout title={t('character.hp.title')} backTo={`/char/${charId}`} group="combat" page="hp">
       {/* First section: alive → hero PF centrato | dying → tiri salvezza | dead → seam (futura epica) */}
       {(() => {
-        // SEAM: il backend non espone ancora la morte definitiva. La futura epica
-        // "Morte & stato Morto" calcolerà isDead dal personaggio e attiverà il ramo 'dead'.
-        const isDead: boolean = false
         const section: 'alive' | 'dying' | 'dead' = isDead ? 'dead' : isDying ? 'dying' : 'alive'
         return (
           <AnimatePresence mode="wait" initial={false}>
@@ -277,13 +305,27 @@ export default function HP() {
               </m.div>
             )}
 
-            {/* section === 'dead' → TODO(epica Morte): UI stato morto. Non raggiunto finché isDead === false. */}
+            {section === 'dead' && (
+              <m.div
+                key="hp-dead"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                <DeadState
+                  cause={deathCause}
+                  onRevive={() => reviveMutation.mutate()}
+                  reviving={reviveMutation.isPending}
+                />
+              </m.div>
+            )}
           </AnimatePresence>
         )
       })()}
 
       {/* Concentration banner — passive indicator (auto-TS triggered by DAMAGE) */}
-      {isConcentrating && (
+      {!isDead && isConcentrating && (
         <Surface variant="arcane">
           <div className="flex items-center gap-2">
             <FlaskConical size={16} className="text-dnd-arcane-bright" />
@@ -294,18 +336,24 @@ export default function HP() {
         </Surface>
       )}
 
-      {/* Operation form */}
-      <HpOperationForm
-        activeOp={activeOp}
-        setActiveOp={setActiveOp}
-        value={value}
-        setValue={setValue}
-        onApply={handleApply}
-        isPending={hpMutation.isPending}
-        hpMutate={handleQuickApply}
-      />
+      {/* Operation form — nascosto da morto (operazioni PF inerti) */}
+      {!isDead && (
+        <HpOperationForm
+          activeOp={activeOp}
+          setActiveOp={setActiveOp}
+          value={value}
+          setValue={setValue}
+          onApply={handleApply}
+          isPending={hpMutation.isPending}
+          hpMutate={handleQuickApply}
+          atZero={atZero}
+          crit={crit}
+          setCrit={setCrit}
+        />
+      )}
 
-      {/* Rest buttons */}
+      {/* Rest buttons — nascosti da morto */}
+      {!isDead && (
       <div className="grid grid-cols-2 gap-2">
         <Button
           variant="secondary"
@@ -331,6 +379,7 @@ export default function HP() {
           {t('character.hp.long_rest')}
         </Button>
       </div>
+      )}
 
       <ConfirmSheet
         open={showLongRestConfirm}
@@ -380,6 +429,7 @@ export default function HP() {
           onClose={() => setConcSaveResult(null)}
         />
       )}
+      <InstantDeathDialog open={instantDeathOpen} onClose={() => setInstantDeathOpen(false)} />
     </Layout>
   )
 }

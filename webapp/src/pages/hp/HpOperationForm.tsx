@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
 import { Minus, Plus, Heart, HeartPulse, Check } from 'lucide-react'
+import { GiSkullCrossedBones as Skull } from 'react-icons/gi'
 import { GiSparkles as Sparkles } from 'react-icons/gi'
 import type { ComponentType, SVGAttributes } from 'react'
 type IconCmp = ComponentType<SVGAttributes<SVGElement> & { size?: number | string }>
@@ -19,6 +20,9 @@ interface HpOperationFormProps {
   onApply: () => void
   isPending: boolean
   hpMutate: (args: { op: HPOp; val: number }) => void
+  atZero: boolean
+  crit: boolean
+  setCrit: (c: boolean) => void
 }
 
 // Short labels fit the 5-column segmented control at 390px viewport.
@@ -38,6 +42,9 @@ export default function HpOperationForm({
   onApply,
   isPending,
   hpMutate,
+  atZero,
+  crit,
+  setCrit,
 }: HpOperationFormProps) {
   const { t } = useTranslation()
 
@@ -102,6 +109,20 @@ export default function HpOperationForm({
             onCommit={onApply}
             className="[&_input]:text-3xl [&_input]:font-display [&_input]:font-bold [&_input]:text-center [&_input]:min-h-[60px]"
           />
+          {activeOp === 'damage' && atZero && (
+            <button
+              type="button"
+              onClick={() => { setCrit(!crit); haptic.selection() }}
+              aria-pressed={crit}
+              className={`flex items-center justify-center gap-2 min-h-[44px] rounded-xl border font-cinzel text-xs uppercase tracking-wider transition-colors
+                ${crit
+                  ? '!bg-gradient-ember !text-white !border-transparent'
+                  : 'bg-transparent text-dnd-text-muted border-dnd-border'}`}
+            >
+              <Skull size={16} />
+              {t('character.hp.critical_hit')}
+            </button>
+          )}
           <Button
             variant="primary"
             size="lg"
