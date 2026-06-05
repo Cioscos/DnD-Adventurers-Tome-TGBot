@@ -577,6 +577,7 @@
     },
     "inventory": {
       "title": "Inventory",
+      "weight_badge_aria": "Inventory, weight {{n}}",
       "add": "Add item",
       "equipped": "Equipped",
       "weight": "Weight",

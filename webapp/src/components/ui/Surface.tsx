@@ -1,7 +1,6 @@
 import React from 'react'
 import { m } from 'framer-motion'
 import { spring } from '@/styles/motion'
-import { CornerFlourishes } from './Ornament'
 
 export type SurfaceVariant = 'flat' | 'elevated' | 'arcane' | 'ember' | 'sigil' | 'tome' | 'parchment'
 
@@ -61,10 +60,7 @@ function SurfaceInner({
   const cls = `${base} ${variantStyles(variant)} ${interactiveClass} ${className}`
 
   const content = (
-    <>
-      {ornamented && <CornerFlourishes />}
-      <div className={ornamented ? 'relative z-[1] pt-3 px-2 pb-2' : 'contents'}>{children}</div>
-    </>
+    <div className={ornamented ? 'relative z-[1] pt-3 px-2 pb-2' : 'contents'}>{children}</div>
   )
 
   if (asMotion || layoutId) {

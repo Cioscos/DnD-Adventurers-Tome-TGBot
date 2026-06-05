@@ -6,6 +6,7 @@ import { AlertTriangle, Check, Plus, Trash2, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { api } from '@/api/client'
 import Surface from '@/components/ui/Surface'
+import { CornerFlourishes } from '@/components/ui/Ornament'
 import Button from '@/components/ui/Button'
 import { haptic } from '@/auth/telegram'
 import { PREDEFINED_CLASSES, CUSTOM_KEY } from '@/pages/multiclass/addClass.utils'
@@ -207,6 +208,7 @@ export default function EditClassesModal({ char, targetLevel, onClose }: Props) 
         className="w-full max-w-xl max-h-[90vh] overflow-y-auto"
       >
         <Surface variant="tome" ornamented className="space-y-6 p-6">
+          <div className="text-dnd-gold-dim pointer-events-none"><CornerFlourishes /></div>
           <div className="text-center">
             <h2 className="font-display text-2xl font-black text-dnd-gold-bright uppercase tracking-widest">
               {t('character.multiclass.edit.title')}
@@ -345,6 +347,7 @@ export default function EditClassesModal({ char, targetLevel, onClose }: Props) 
             className="w-full max-w-md max-h-[90vh] overflow-y-auto"
           >
             <Surface variant="arcane" ornamented className="space-y-5 p-6">
+              <div className="text-dnd-gold-dim pointer-events-none"><CornerFlourishes /></div>
               <div className="text-center">
                 <h3 className="font-display text-xl font-black text-dnd-gold-bright uppercase tracking-widest">
                   {t('character.multiclass.add_class')}
