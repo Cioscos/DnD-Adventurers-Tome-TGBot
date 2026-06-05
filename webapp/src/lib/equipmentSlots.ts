@@ -7,7 +7,7 @@ import {
   Crown, Gem, Shirt, Shield, HandMetal, Circle, CircleDot, Footprints,
   Sword, Feather,
 } from 'lucide-react'
-import type { EquipmentSlot } from '@/types'
+import type { EquipmentSlot, Item } from '@/types'
 
 type IconCmp = ComponentType<SVGAttributes<SVGElement> & { size?: number | string }>
 
@@ -67,4 +67,32 @@ export function slotsAllowedFor(itemType: string): EquipmentSlot[] {
 
 export function isSlotAllowed(itemType: string, slot: EquipmentSlot): boolean {
   return slotsAllowedFor(itemType).includes(slot)
+}
+
+const TWO_HANDED = 'prop_two_handed'
+
+function equippedInSlot(items: Item[], slot: EquipmentSlot): Item | null {
+  return items.find((i) => i.is_equipped && i.equipment_slot === slot) ?? null
+}
+
+/** True se l'item è un'arma con la proprietà "a due mani". */
+export function isTwoHanded(item: Item | null | undefined): boolean {
+  if (!item || item.item_type !== 'weapon') return false
+  const props = (item.item_metadata as { properties?: unknown } | undefined)?.properties
+  return Array.isArray(props) && props.includes(TWO_HANDED)
+}
+
+/**
+ * Ritorna l'item equipaggiato che andrebbe rimosso per equipaggiare `item`
+ * in `slot` (conflitto arma a due mani ⇄ mano secondaria), o null se nessun conflitto.
+ */
+export function handsConflict(items: Item[], item: Item, slot: EquipmentSlot): Item | null {
+  if (slot === 'off_hand') {
+    const main = equippedInSlot(items, 'main_hand')
+    return isTwoHanded(main) ? main : null
+  }
+  if (slot === 'main_hand' && isTwoHanded(item)) {
+    return equippedInSlot(items, 'off_hand')
+  }
+  return null
 }
