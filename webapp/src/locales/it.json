@@ -97,6 +97,7 @@
       "confirm_rest": "Conferma riposo",
       "concentration_active": "In concentrazione",
       "concentration_lost": "Concentrazione persa!",
+      "critical_hit": "Colpo critico",
       "damage_short": "DANNI",
       "heal_short": "CURA",
       "current_short": "ATTUALI",
@@ -126,7 +127,15 @@
       "nat1": "Naturale 1! Doppio fallimento!",
       "revived": "Torni cosciente con 1 HP!",
       "stable_3_successes": "Stabilizzato! (3 successi)",
-      "dead_3_failures": "3 fallimenti... il personaggio è morto."
+      "dead_3_failures": "3 fallimenti... il personaggio è morto.",
+      "dead_title": "Morto",
+      "cause_death_saves": "Caduto: 3 fallimenti ai tiri salvezza",
+      "cause_massive_damage": "Caduto: danno massiccio",
+      "revive": "Riporta in vita",
+      "revive_confirm_title": "Riportare in vita?",
+      "revive_confirm_body": "Il personaggio tornerà con 1 PF e i tiri salvezza azzerati.",
+      "instant_death_title": "Morte istantanea",
+      "instant_death_body": "Danno massiccio: il personaggio è morto sul colpo."
     },
     "stats": {
       "title": "Caratteristiche",
