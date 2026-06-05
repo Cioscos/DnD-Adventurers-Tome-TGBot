@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
@@ -6,10 +7,11 @@ import { m, AnimatePresence } from 'framer-motion'
 import { X, Package } from 'lucide-react'
 import { api } from '@/api/client'
 import { haptic } from '@/auth/telegram'
-import { ITEM_TYPE_TO_SLOTS } from '@/lib/equipmentSlots'
+import { ITEM_TYPE_TO_SLOTS, handsConflict } from '@/lib/equipmentSlots'
 import { useRegisterOverlay } from '@/store/overlayStore'
 import type { EquipmentSlot, Item, CharacterFull } from '@/types'
 import { useUnitSettings, formatWeight } from '@/store/unitSettings'
+import HandsConflictDialog from './HandsConflictDialog'
 
 interface Props {
   charId: number
@@ -32,15 +34,31 @@ export default function EquipItemPicker({ charId, slot, items, onClose }: Props)
   useRegisterOverlay(true)
   const system = useUnitSettings((s) => s.system)
 
+  const [conflict, setConflict] = useState<{ newItem: Item; removedItem: Item } | null>(null)
+
   const equip = useMutation({
-    mutationFn: (itemId: number) =>
-      api.items.update(charId, itemId, { is_equipped: true, equipment_slot: slot }),
+    mutationFn: async ({ itemId, removeId }: { itemId: number; removeId?: number }) => {
+      if (removeId != null) {
+        await api.items.update(charId, removeId, { is_equipped: false, equipment_slot: null })
+      }
+      return api.items.update(charId, itemId, { is_equipped: true, equipment_slot: slot })
+    },
     onSuccess: (updated: CharacterFull) => {
       qc.setQueryData(['character', charId], updated)
       haptic.light()
+      setConflict(null)
       onClose()
     },
   })
+
+  const handlePick = (it: Item) => {
+    const c = handsConflict(items, it, slot)
+    if (c) {
+      setConflict({ newItem: it, removedItem: c })
+      return
+    }
+    equip.mutate({ itemId: it.id })
+  }
 
   const candidates = compatibleItems(items, slot)
   const slotLabel = t(`character.equipment.slots.${slot}`, { defaultValue: slot })
@@ -97,7 +115,7 @@ export default function EquipItemPicker({ charId, slot, items, onClose }: Props)
                   <li key={it.id}>
                     <button
                       type="button"
-                      onClick={() => equip.mutate(it.id)}
+                      onClick={() => handlePick(it)}
                       disabled={equip.isPending}
                       className="w-full text-left px-4 py-3 hover:bg-dnd-surface focus-visible:outline-none focus-visible:bg-dnd-surface focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-dnd-gold flex items-center gap-3 disabled:opacity-60"
                     >
@@ -122,6 +140,15 @@ export default function EquipItemPicker({ charId, slot, items, onClose }: Props)
           )}
         </m.div>
       </m.div>
+      {conflict && (
+        <HandsConflictDialog
+          newItem={conflict.newItem}
+          removedItem={conflict.removedItem}
+          pending={equip.isPending}
+          onCancel={() => setConflict(null)}
+          onConfirm={() => equip.mutate({ itemId: conflict.newItem.id, removeId: conflict.removedItem.id })}
+        />
+      )}
     </AnimatePresence>,
     document.body,
   )
