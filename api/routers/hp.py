@@ -123,6 +123,34 @@ async def update_hp(
                      f"Danni: -{body.value} HP ({old} → {char.current_hit_points})",
                      meta={"op": "DAMAGE"})
 
+        # --- Morte & tiri salvezza (D&D 5e RAW) ---
+        if char.current_hit_points == 0 and amount > 0 and not char.is_dead:
+            hb_max_bonus = await get_passive_modifiers(session, char, "character.hit_points_max")
+            effective_max = char.hit_points + hb_max_bonus
+            # sforamento = danno oltre quello che porta a 0
+            overflow = (amount - old) if old > 0 else amount
+            ds = dict(char.death_saves or {"successes": 0, "failures": 0, "stable": False})
+            if overflow >= effective_max:
+                char.is_dead = True
+                _add_history(session, char.id, "death_save", "Morte istantanea (danno massiccio)")
+            elif old == 0:
+                # danno subìto già a 0 PF -> fallimenti (2 se colpo critico)
+                inc = 2 if body.was_critical_hit else 1
+                ds["failures"] = min(3, ds.get("failures", 0) + inc)
+                ds["stable"] = False
+                if ds["failures"] >= 3:
+                    char.is_dead = True
+                    _add_history(session, char.id, "death_save", "Morto — 3 fallimenti (danno a 0 PF)")
+                else:
+                    _add_history(session, char.id, "death_save",
+                                 f"Danno a 0 PF: +{inc} fallimento ({ds['failures']}/3)")
+                char.death_saves = ds
+            # old>0 ridotto a 0 senza sforamento massiccio -> privo di sensi/morente (0 fallimenti)
+
+        # Privo di sensi (0 PF) => fine concentrazione (RAW)
+        if char.current_hit_points == 0:
+            char.concentrating_spell_id = None
+
         # Auto concentration save — only if still conscious and concentrating
         if (
             char.concentrating_spell_id is not None
