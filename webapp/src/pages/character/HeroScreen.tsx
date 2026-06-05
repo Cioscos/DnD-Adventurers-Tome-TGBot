@@ -19,7 +19,6 @@ import PassiveAbilityDetailModal from '@/pages/abilities/PassiveAbilityDetailMod
 import SpellSlotsSummary from '@/components/character/SpellSlotsSummary'
 import ProgressionPreview from '@/components/character/ProgressionPreview'
 import ClassTabs from '@/components/character/ClassTabs'
-import VitalsStrip from '@/components/character/VitalsStrip'
 import type { Ability, CharacterFull } from '@/types'
 
 // Canonical D&D 5e ordering — STR/DEX/CON/INT/WIS/CHA — used wherever ability
@@ -71,7 +70,6 @@ export default function HeroScreen({ char }: Props) {
 
   return (
     <div className="@container p-4 space-y-3 pb-safe">
-      <VitalsStrip char={char} />
       {/* Hero card */}
       <Surface
         variant="tome"

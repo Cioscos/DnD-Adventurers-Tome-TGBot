@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
-import { GiCheckedShield, GiCrossedSwords, GiWeight } from 'react-icons/gi'
+import { GiBootPrints, GiCheckedShield, GiCrossedSwords, GiWeight } from 'react-icons/gi'
 import type { CharacterFull } from '@/types'
-import { useUnitSettings, formatWeight, formatWeightValue, weightUnitLabel } from '@/store/unitSettings'
+import { useUnitSettings, formatLength, formatWeight, formatWeightValue, weightUnitLabel } from '@/store/unitSettings'
 
 interface Props {
   char: CharacterFull
@@ -29,6 +29,8 @@ export default function EquipmentStatsFooter({ char }: Props) {
   // was removed so a manual override (char.carry_capacity_override) is honored here too.
   const carryCap = char.carry_capacity
   const overload = encumbrance > carryCap
+
+  const speedTotal = (char.speed ?? 30) + (char.speed_homebrew_modifier ?? 0)
 
   const strScore = char.ability_scores.find((s) => s.name.toLowerCase() === 'strength')?.value ?? 10
   const carryFormula = char.carry_capacity_override
@@ -67,7 +69,7 @@ export default function EquipmentStatsFooter({ char }: Props) {
       <div className="w-24 h-px bg-dnd-gold-dim/30" aria-hidden="true" />
 
       {/* Inline meta: weapon damage + carry — sized up + de-muted so critical info reads */}
-      <div className="flex items-center gap-3 text-sm font-cinzel uppercase tracking-[0.18em]">
+      <div className="flex flex-wrap items-center justify-center gap-3 text-sm font-cinzel uppercase tracking-[0.18em]">
         <span className="flex items-center gap-2 text-dnd-text">
           <GiCrossedSwords size={14} aria-hidden="true" className="text-[var(--dnd-crimson-bright)]" />
           <span className="font-mono normal-case tracking-normal text-dnd-text font-bold tabular-nums">
@@ -90,6 +92,18 @@ export default function EquipmentStatsFooter({ char }: Props) {
           <span className={`font-mono normal-case tracking-normal font-bold tabular-nums ${overload ? 'text-[var(--dnd-amber)]' : 'text-dnd-text'}`}>
             {`${formatWeightValue(encumbrance, system)}/${formatWeightValue(carryCap, system)}`}
             <span className="text-dnd-text-muted ml-0.5 font-normal">{weightUnitLabel(system)}</span>
+          </span>
+        </span>
+
+        <span aria-hidden="true" className="text-dnd-gold-dim/60 select-none">◈</span>
+
+        <span
+          className="flex items-center gap-2 text-dnd-text"
+          title={`${t('character.identity.speed', { defaultValue: 'Speed' })}: ${formatLength(speedTotal, system)}`}
+        >
+          <GiBootPrints size={14} aria-hidden="true" className="text-[var(--dnd-emerald-bright)]" />
+          <span className="font-mono normal-case tracking-normal text-dnd-text font-bold tabular-nums">
+            {formatLength(speedTotal, system)}
           </span>
         </span>
       </div>
