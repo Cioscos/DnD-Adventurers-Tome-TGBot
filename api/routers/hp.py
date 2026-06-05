@@ -537,3 +537,24 @@ async def recalc_hp(
     await session.commit()
     await session.refresh(char)
     return await build_character_response(session, char)
+
+
+# ---------------------------------------------------------------------------
+# Revive (manual revival — represents off-app revival magic)
+# ---------------------------------------------------------------------------
+
+@router.post("/{char_id}/revive", response_model=CharacterFull)
+async def revive(
+    char_id: int,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> CharacterFull:
+    """Bring a dead character back with 1 HP. No-op if not dead (idempotent)."""
+    char = await _get_owned_full(char_id, user_id, session)
+    if char.is_dead:
+        char.is_dead = False
+        char.current_hit_points = 1
+        char.death_saves = {"successes": 0, "failures": 0, "stable": False}
+        char.concentrating_spell_id = None
+        _add_history(session, char.id, "death_save", "Riportato in vita (1 PF)")
+    return await build_character_response(session, char)
