@@ -56,9 +56,9 @@ export default function PaperDoll({ items, onSlotTap, silhouetteUrl, silhouetteA
         </div>
 
         {/* Vitruvian silhouette OR class+race+gender PNG */}
-        <div className="relative flex items-center justify-center min-h-[280px]">
+        <div className="flex flex-col items-center justify-center gap-1.5 min-h-[280px]">
           {silhouetteAction && (
-            <div className="absolute top-1 left-1/2 -translate-x-1/2 z-10">{silhouetteAction}</div>
+            <div className="shrink-0">{silhouetteAction}</div>
           )}
           {showImage ? (
             <img
