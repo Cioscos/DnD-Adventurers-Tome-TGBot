@@ -105,6 +105,9 @@ async def update_hp(
     session: Annotated[AsyncSession, Depends(get_db)],
 ) -> CharacterFull:
     char = await _get_owned_full(char_id, user_id, session)
+    # Da morto ogni operazione PF è inerte (solo /revive riporta in vita).
+    if char.is_dead:
+        return await build_character_response(session, char)
     conc_result: ConcentrationSaveResult | None = None
     notifications: list[dict] = []
 
@@ -245,6 +248,9 @@ async def rest(
     session: Annotated[AsyncSession, Depends(get_db)],
 ) -> CharacterFull:
     char = await _get_owned_full(char_id, user_id, session)
+    # Un riposo non rianima un personaggio morto.
+    if char.is_dead:
+        return await build_character_response(session, char)
     notifications: list[dict] = []
 
     if body.rest_type == "long":
@@ -380,6 +386,8 @@ async def update_death_saves(
     session: Annotated[AsyncSession, Depends(get_db)],
 ) -> CharacterFull:
     char = await _get_owned_full(char_id, user_id, session)
+    if char.is_dead:
+        return await build_character_response(session, char)
     ds = dict(char.death_saves or {"successes": 0, "failures": 0, "stable": False})
 
     if body.action == DeathSaveAction.SUCCESS:
@@ -395,6 +403,9 @@ async def update_death_saves(
         ds["failures"] = min(3, ds.get("failures", 0) + 1)
         _add_history(session, char.id, "death_save",
                      f"Tiro morte: fallimento ({ds['failures']}/3)")
+        if ds["failures"] >= 3:
+            char.is_dead = True
+            _add_history(session, char.id, "death_save", "Morto — 3 fallimenti")
 
     elif body.action == DeathSaveAction.STABILIZE:
         ds["stable"] = True
@@ -424,6 +435,14 @@ async def roll_death_save(
     body: Annotated[D20RollSubmission | None, Body()] = None,
 ) -> DeathSaveRollResult:
     char = await _get_owned_full(char_id, user_id, session)
+    if char.is_dead:
+        return DeathSaveRollResult(
+            die=0, outcome="failure",
+            successes=(char.death_saves or {}).get("successes", 0),
+            failures=(char.death_saves or {}).get("failures", 0),
+            stable=(char.death_saves or {}).get("stable", False),
+            revived=False, current_hp=char.current_hit_points,
+        )
     ds = dict(char.death_saves or {"successes": 0, "failures": 0, "stable": False})
 
     die = body.die if body and body.die is not None else random.randint(1, 20)
@@ -465,6 +484,10 @@ async def roll_death_save(
                      f"Tiro morte d20={die}: Fallimento ({ds['failures']}/3)")
 
     char.death_saves = ds
+
+    if ds.get("failures", 0) >= 3:
+        char.is_dead = True
+        _add_history(session, char.id, "death_save", "Morto — 3 fallimenti")
 
     return DeathSaveRollResult(
         die=die,
