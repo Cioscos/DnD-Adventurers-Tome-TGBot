@@ -577,6 +577,7 @@
     },
     "inventory": {
       "title": "Inventario",
+      "weight_badge_aria": "Inventario, peso {{n}}",
       "add": "Aggiungi oggetto",
       "equipped": "Equipaggiato",
       "weight": "Peso",

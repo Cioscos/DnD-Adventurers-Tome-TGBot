@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
 import { CircleDot } from 'lucide-react'
 import {
-  GiHeartPlus, GiLightningTrio, GiPotionBall,
+  GiHeartPlus, GiKnapsack, GiLightningTrio, GiPotionBall,
 } from 'react-icons/gi'
 import HPGauge from '@/components/ui/HPGauge'
 import HeroXPBar from '@/components/ui/HeroXPBar'
@@ -20,6 +20,7 @@ import SpellSlotsSummary from '@/components/character/SpellSlotsSummary'
 import ProgressionPreview from '@/components/character/ProgressionPreview'
 import ClassTabs from '@/components/character/ClassTabs'
 import type { Ability, CharacterFull } from '@/types'
+import { useUnitSettings, formatWeightValue, weightUnitLabel } from '@/store/unitSettings'
 
 // Canonical D&D 5e ordering — STR/DEX/CON/INT/WIS/CHA — used wherever ability
 // scores are surfaced to players. Backend returns alphabetical (cha/con/...).
@@ -55,6 +56,9 @@ export default function HeroScreen({ char }: Props) {
 
   const hpMax = char.hit_points + (char.hp_max_homebrew_modifier ?? 0)
   const acTotal = char.ac + (char.ac_breakdown?.homebrew ?? 0)
+  const unitSystem = useUnitSettings((s) => s.system)
+  const weightLabel = formatWeightValue(char.encumbrance, unitSystem)
+  const overloaded = char.encumbrance > char.carry_capacity
 
   const hpPct = hpMax > 0
     ? Math.round((char.current_hit_points / hpMax) * 100)
@@ -80,13 +84,33 @@ export default function HeroScreen({ char }: Props) {
           type="button"
           onClick={() => { haptic.light(); navigate(`/char/${char.id}/identity`) }}
           whileTap={{ scale: 0.99 }}
-          className="block w-full text-left"
+          className="block w-full text-left pr-14"
           aria-label={t('character.identity.title', { defaultValue: 'Identity' })}
         >
           <p className="text-sm text-dnd-text-muted font-body italic mb-0.5">{char.class_summary}</p>
           {char.race && (
             <p className="text-xs text-dnd-text-muted font-body">{char.race}</p>
           )}
+        </m.button>
+
+        <m.button
+          type="button"
+          onClick={() => { haptic.light(); navigate(`/char/${char.id}/inventory`) }}
+          whileTap={{ scale: 0.95 }}
+          aria-label={t('character.inventory.weight_badge_aria', { n: weightLabel })}
+          className={`absolute top-1 right-1 z-[3] flex flex-col items-center justify-center gap-0.5 min-w-[44px] min-h-[44px] px-2 py-1 rounded-xl bg-dnd-bg ${overloaded ? 'border border-[var(--dnd-amber)]' : 'border border-dnd-gold-dim'}`}
+        >
+          <GiKnapsack
+            size={20}
+            aria-hidden="true"
+            className={overloaded ? 'text-[var(--dnd-amber)]' : 'text-dnd-gold-bright'}
+          />
+          <span className={`text-[11px] font-mono font-bold tabular-nums leading-none ${overloaded ? 'text-[var(--dnd-amber)]' : 'text-dnd-text'}`}>
+            {weightLabel}
+          </span>
+          <span className="text-[10px] font-mono text-dnd-text-muted leading-none">
+            {weightUnitLabel(unitSystem)}
+          </span>
         </m.button>
 
         <div className="mt-4 flex items-center gap-3 @max-[300px]:flex-col @max-[300px]:items-stretch">
