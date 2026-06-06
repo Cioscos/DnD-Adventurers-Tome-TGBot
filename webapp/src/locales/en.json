@@ -688,6 +688,39 @@
         "prop_loading": "Loading",
         "prop_reach": "Reach",
         "prop_special": "Special"
+      },
+      "use": "Use",
+      "subtype_label": "Category",
+      "subtypes": {
+        "potion": "Potion",
+        "scroll": "Scroll",
+        "food": "Food",
+        "other": "Other"
+      },
+      "effects": {
+        "title": "Effects",
+        "empty": "No effects. Add one to make it usable.",
+        "add": "Add effect",
+        "kind_label": "Effect type",
+        "amount_label": "Heal amount",
+        "condition_label": "Condition",
+        "kinds": {
+          "heal": "Heal",
+          "add_condition": "Add condition",
+          "remove_condition": "Remove condition"
+        }
+      },
+      "use_confirm": {
+        "title": "Use this item?",
+        "heal": "Heal {{amount}}",
+        "add": "Adds {{cond}}",
+        "remove": "Removes {{cond}}",
+        "qty": "−1 quantity"
+      },
+      "use_result": {
+        "healed": "+{{hp}} HP",
+        "added": "{{cond}} applied",
+        "removed": "{{cond}} removed"
       }
     },
     "abilities": {

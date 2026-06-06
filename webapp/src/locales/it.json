@@ -688,6 +688,39 @@
         "prop_loading": "Ricarica",
         "prop_reach": "Lunga gittata",
         "prop_special": "Speciale"
+      },
+      "use": "Usa",
+      "subtype_label": "Categoria",
+      "subtypes": {
+        "potion": "Pozione",
+        "scroll": "Pergamena",
+        "food": "Cibo",
+        "other": "Altro"
+      },
+      "effects": {
+        "title": "Effetti",
+        "empty": "Nessun effetto. Aggiungine uno per renderlo usabile.",
+        "add": "Aggiungi effetto",
+        "kind_label": "Tipo effetto",
+        "amount_label": "Quantità cura",
+        "condition_label": "Condizione",
+        "kinds": {
+          "heal": "Cura",
+          "add_condition": "Aggiungi condizione",
+          "remove_condition": "Rimuovi condizione"
+        }
+      },
+      "use_confirm": {
+        "title": "Usare questo oggetto?",
+        "heal": "Cura {{amount}}",
+        "add": "Aggiunge {{cond}}",
+        "remove": "Rimuove {{cond}}",
+        "qty": "−1 quantità"
+      },
+      "use_result": {
+        "healed": "+{{hp}} PF",
+        "added": "{{cond}} applicata",
+        "removed": "{{cond}} rimossa"
       }
     },
     "abilities": {
