@@ -122,8 +122,11 @@ export default function CharacterSelect() {
         old ? old.filter((c) => c.id !== id) : old
       )
       qc.removeQueries({ queryKey: ['character', id] })
-      qc.invalidateQueries({ queryKey: ['characters'] })
       haptic.success()
+    },
+    onError: () => {
+      haptic.error()
+      toast.error(t('character.select.delete_failed'))
     },
   })
 
