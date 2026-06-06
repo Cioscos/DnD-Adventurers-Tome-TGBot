@@ -46,7 +46,8 @@
       "undo_delete": "Character deleted",
       "delete_undo_action": "Undo",
       "skip_class_label": "Continue without class",
-      "unconscious_badge": "Unconscious"
+      "unconscious_badge": "Unconscious",
+      "delete_failed": "Delete failed. Please try again."
     },
     "menu": {
       "hp": "Hit Points",

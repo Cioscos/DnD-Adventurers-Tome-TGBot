@@ -46,7 +46,8 @@
       "undo_delete": "Personaggio eliminato",
       "delete_undo_action": "Annulla",
       "skip_class_label": "Procedi senza classe",
-      "unconscious_badge": "Incosciente"
+      "unconscious_badge": "Incosciente",
+      "delete_failed": "Eliminazione non riuscita. Riprova."
     },
     "menu": {
       "hp": "Punti Ferita",
