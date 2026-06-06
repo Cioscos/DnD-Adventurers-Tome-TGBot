@@ -167,19 +167,19 @@ export default function VoiceRecorder({ onRecordComplete, onCancel, isPending }:
 
       <div className="flex gap-2">
         <DndButton
+          variant="secondary"
+          onClick={handleCancel}
+          className="flex-1"
+        >
+          {t('common.cancel')}
+        </DndButton>
+        <DndButton
           onClick={handleSave}
           disabled={!voiceTitle.trim() || !recordedBlob || isPending}
           loading={isPending}
           className="flex-1"
         >
           {t('common.save')}
-        </DndButton>
-        <DndButton
-          variant="secondary"
-          onClick={handleCancel}
-          className="flex-1"
-        >
-          {t('common.cancel')}
         </DndButton>
       </div>
     </div>

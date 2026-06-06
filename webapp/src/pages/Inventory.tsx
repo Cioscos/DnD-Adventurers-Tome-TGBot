@@ -447,6 +447,9 @@ export default function Inventory() {
                 </span>
               }
             />
+            <Button variant="secondary" size="sm" onClick={() => setEditingCap(false)}>
+              {t('common.cancel')}
+            </Button>
             <Button
               variant="primary"
               size="sm"
@@ -459,9 +462,6 @@ export default function Inventory() {
               haptic="success"
             >
               {t('common.save')}
-            </Button>
-            <Button variant="secondary" size="sm" onClick={() => setEditingCap(false)}>
-              {t('common.cancel')}
             </Button>
           </div>
         ) : (

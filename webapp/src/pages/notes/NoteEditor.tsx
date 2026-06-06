@@ -78,19 +78,19 @@ export default function NoteEditor({ initialNote, onSave, onCancel, isPending }:
       />
       <div className="flex gap-2">
         <DndButton
+          variant="secondary"
+          onClick={onCancel}
+          className="flex-1"
+        >
+          {t('common.cancel')}
+        </DndButton>
+        <DndButton
           onClick={handleSave}
           disabled={isPending || (!isEdit && !title.trim())}
           loading={isPending}
           className="flex-1"
         >
           {t('common.save')}
-        </DndButton>
-        <DndButton
-          variant="secondary"
-          onClick={onCancel}
-          className="flex-1"
-        >
-          {t('common.cancel')}
         </DndButton>
       </div>
     </div>

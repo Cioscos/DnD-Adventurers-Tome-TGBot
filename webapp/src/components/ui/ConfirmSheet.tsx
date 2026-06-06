@@ -37,7 +37,11 @@ export default function ConfirmSheet({
             {body}
           </div>
         )}
+        {/* Annulla a sinistra, conferma a destra (convenzione: l'azione di conferma sta sempre a destra). */}
         <div className="flex gap-2">
+          <Button variant="secondary" fullWidth onClick={onClose}>
+            {cancelLabel ?? 'Annulla'}
+          </Button>
           <Button
             variant={confirmVariant}
             fullWidth
@@ -46,9 +50,6 @@ export default function ConfirmSheet({
             onClick={onConfirm}
           >
             {confirmLabel}
-          </Button>
-          <Button variant="secondary" fullWidth onClick={onClose}>
-            {cancelLabel ?? 'Annulla'}
           </Button>
         </div>
       </div>
