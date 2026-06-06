@@ -362,3 +362,15 @@ class HistoryRetentionPreview(BaseModel):
     days_window: int
     would_purge_events: int
     would_purge_days: int
+
+
+# ---------------------------------------------------------------------------
+# Consumable use result
+# ---------------------------------------------------------------------------
+
+class ConsumableUseResult(BaseModel):
+    """Summary of what a single `POST .../items/{id}/use` applied."""
+    heal_rolls: list[int] = []
+    total_healed: int = 0
+    conditions_added: list[str] = []
+    conditions_removed: list[str] = []
