@@ -212,10 +212,12 @@ interface InventoryItemProps {
   onEquipToggle: () => void
   onQuantityChange: (delta: number) => void
   onAttack: () => void
+  onUse: () => void
   onEdit: () => void
   onDelete: () => void
   equipPending: boolean
   attackPending: boolean
+  usePending: boolean
   propertyByKey: Map<string, ItemProperty>
   locale: 'it' | 'en'
   onSetProperty: (itemId: number, key: string, value: unknown) => void
@@ -229,10 +231,12 @@ function InventoryItemInner({
   onEquipToggle,
   onQuantityChange,
   onAttack,
+  onUse,
   onEdit,
   onDelete,
   equipPending,
   attackPending,
+  usePending,
   propertyByKey,
   locale,
   onSetProperty,
@@ -243,6 +247,8 @@ function InventoryItemInner({
   const icon = TYPE_ICON[item.item_type] ?? '📦'
   const meta = item.item_metadata as Record<string, unknown> | undefined
   const canEquip = ['armor', 'shield', 'weapon', 'accessory'].includes(item.item_type)
+  const effects = Array.isArray(meta?.effects) ? (meta.effects as unknown[]) : []
+  const canUse = item.item_type === 'consumable' && effects.length > 0
 
   return (
     <div
@@ -357,6 +363,18 @@ function InventoryItemInner({
               >
                 <Target size={12} />
                 {t('character.inventory.attack')}
+              </button>
+            )}
+            {canUse && (
+              <button
+                onClick={onUse}
+                disabled={usePending || item.quantity <= 0}
+                className="flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg
+                           bg-dnd-emerald/20 text-dnd-emerald-bright border border-dnd-emerald/30
+                           active:opacity-60 disabled:opacity-30"
+              >
+                <FlaskConical size={12} />
+                {t('character.inventory.use')}
               </button>
             )}
             <button
