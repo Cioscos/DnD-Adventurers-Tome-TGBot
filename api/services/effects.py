@@ -60,3 +60,38 @@ async def apply_heal(session: AsyncSession, char: Character, amount: int) -> dic
             _add_history(session, char.id, "death_save",
                          "Tiri salvezza morte azzerati (HP risaliti sopra 0)")
     return {"old": old, "new": char.current_hit_points, "healed": healed, "firing": firing}
+
+
+async def apply_conditions(session: AsyncSession, char: Character,
+                           changes: dict[str, bool | int]) -> dict:
+    """Set/clear conditions on `char` (merging into the existing dict). Logs one
+    history row per actual change. `exhaustion` is treated as an integer level;
+    all other conditions are booleans. Returns {"changed": bool}.
+    """
+    old_conditions = dict(char.conditions or {})
+    current = dict(old_conditions)
+    current.update(changes)
+    char.conditions = current
+
+    changed = False
+    for cond, new_val in changes.items():
+        is_exhaustion = cond == "exhaustion"
+        default = 0 if is_exhaustion else False
+        old_val = old_conditions.get(cond, default)
+        if is_exhaustion:
+            old_val = int(old_val) if isinstance(old_val, (int, bool)) and old_val is not None else 0
+            new_disp = int(new_val) if isinstance(new_val, (int, bool)) and new_val is not None else 0
+        else:
+            new_disp = new_val
+        if new_disp != old_val:
+            changed = True
+            if is_exhaustion:
+                _add_history(session, char.id, "condition_change",
+                             f"Spossatezza: livello {old_val} → {new_disp}")
+            elif new_val:
+                _add_history(session, char.id, "condition_change",
+                             f"Condizione attivata: {condition_label(cond)}")
+            else:
+                _add_history(session, char.id, "condition_change",
+                             f"Condizione rimossa: {condition_label(cond)}")
+    return {"changed": changed}
