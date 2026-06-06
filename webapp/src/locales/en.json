@@ -1354,5 +1354,16 @@
     "errors": {
       "action_failed": "Action failed. Please try again."
     }
+  },
+  "changelog": {
+    "title": "Release notes",
+    "current": "Current",
+    "view": "View release notes",
+    "empty": "No release notes available",
+    "sections": {
+      "added": "New features",
+      "improved": "Improvements",
+      "fixed": "Fixes"
+    }
   }
 }

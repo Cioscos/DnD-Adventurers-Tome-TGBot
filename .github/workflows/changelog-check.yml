@@ -1,0 +1,44 @@
+name: Changelog check
+
+# Guard che rende DETERMINISTICO il versioning: ogni PR verso main deve aggiornare
+# changelog.json (voce in testa) con un numero coerente con `ultimo_tag + label`,
+# e package.json/pyproject.toml devono combaciare. Read-only: non scrive nel repo.
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine release label
+        id: label
+        env:
+          LABELS: ${{ toJson(github.event.pull_request.labels.*.name) }}
+        run: |
+          kinds=$(echo "$LABELS" | jq -r '.[] | select(startswith("release:")) | sub("release:"; "")')
+          count=$(printf '%s\n' "$kinds" | grep -c . || true)
+          if [ "$count" -ne 1 ]; then
+            echo "::error::La PR deve avere esattamente una label release:major|minor|patch (trovate: '${kinds//$'\n'/, }')."
+            exit 1
+          fi
+          echo "kind=$kinds" >> "$GITHUB_OUTPUT"
+
+      - name: Latest released tag
+        id: tag
+        run: |
+          tag=$(git tag --list 'v*' --sort=-v:refname | head -n1)
+          echo "tag=${tag:-v0.0.0}" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Validate changelog & versions
+        run: node .github/scripts/changelog.mjs check "${{ steps.tag.outputs.tag }}" "${{ steps.label.outputs.kind }}"

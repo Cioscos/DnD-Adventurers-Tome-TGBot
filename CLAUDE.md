@@ -268,6 +268,22 @@ The GitHub Actions workflow `.github/workflows/deploy-webapp.yml` runs a build c
 
 GitHub Secret `VITE_API_BASE_URL` must be kept in sync with the tunnel URL (`https://api.cischi.dev`) for CI builds.
 
+## Changelog & Release (MANDATORY per ogni sviluppo)
+
+L'app espone le **note di versione** in-app: la home (`CharacterSelect`) mostra `v<version>` cliccabile → pagina `/changelog` (`webapp/src/pages/Changelog.tsx`). L'unica **fonte di verità** è `webapp/src/data/changelog.json` (voce più recente in `entries[0]`, ogni categoria bilingue `it`/`en`). Il helper `webapp/src/lib/version.ts` espone `currentVersion()` / `changelog`.
+
+Versioning **SemVer guidato da label PR** (`release:major|minor|patch`). Due workflow in `.github/workflows/`:
+- `changelog-check.yml` (su PR → main): **fallisce** se manca la label, se la voce in testa non vale `ultimo_tag + label`, se la data non è `YYYY-MM-DD`, se la voce è vuota, o se `package.json`/`pyproject.toml` non combaciano. Logica in `.github/scripts/changelog.mjs` (`check`). Caso bootstrap: senza tag preesistenti la versione seed è accettata così com'è.
+- `release-on-merge.yml` (al merge in main): crea **tag `v<version>` + GitHub Release** dal corpo di `entries[0]` (`changelog.mjs notes`). Solo tag/release, niente push su `main` → compatibile con la branch protection. Idempotente.
+
+**Checklist quando completi uno sviluppo, PRIMA di aprire la PR:**
+1. Decidi il bump (`major`/`minor`/`patch`) rispetto all'ultimo tag rilasciato.
+2. Aggiungi una nuova voce in testa a `entries` in `changelog.json`: `version` (nuovo numero), `date` (oggi, `YYYY-MM-DD`), e `added`/`improved`/`fixed` con testi **it + en**.
+3. Allinea `webapp/package.json` → `version` e `pyproject.toml` → `version` allo stesso numero.
+4. Applica alla PR la label `release:<kind>` corrispondente (le 3 label vanno create una volta nelle impostazioni del repo).
+
+Lo script è testabile in locale (non tocca `.venv`): `node .github/scripts/changelog.mjs check <ultimoTag> <kind>`.
+
 ## Webapp Knowledge Base
 
 `docs/webapp-audit/` contiene la knowledge base completa della Mini App: report dettagliato per ogni pagina/feature con flussi testati, findings (bug / UX / migliorie), screenshot ed endpoint API chiamati. Generata tramite audit Playwright end-to-end. **Leggere `docs/webapp-audit/00-index.md` prima di qualsiasi modifica significativa al frontend** — copre tutte le 23 route, modal, e workflow del personaggio.

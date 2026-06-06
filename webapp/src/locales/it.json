@@ -1354,5 +1354,16 @@
     "errors": {
       "action_failed": "Operazione non riuscita. Riprova."
     }
+  },
+  "changelog": {
+    "title": "Note di versione",
+    "current": "Attuale",
+    "view": "Vedi le note di versione",
+    "empty": "Nessuna nota di versione disponibile",
+    "sections": {
+      "added": "Nuove funzionalità",
+      "improved": "Migliorie",
+      "fixed": "Correzioni"
+    }
   }
 }

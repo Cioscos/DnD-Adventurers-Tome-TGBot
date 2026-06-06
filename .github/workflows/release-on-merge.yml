@@ -1,0 +1,54 @@
+name: Release on merge
+
+# Al merge di una PR verso main crea il tag git v<version> + la GitHub Release con il
+# corpo derivato dalla voce in cima a changelog.json. Crea SOLO tag/release (non tocca
+# il branch protetto main). Idempotente: se il tag esiste già, non fa nulla.
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Read version
+        id: v
+        run: echo "version=$(node .github/scripts/changelog.mjs version)" >> "$GITHUB_OUTPUT"
+
+      - name: Check if tag already exists
+        id: exists
+        run: |
+          if git rev-parse "v${{ steps.v.outputs.version }}" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "Tag v${{ steps.v.outputs.version }} già presente: skip."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Generate release notes
+        if: steps.exists.outputs.exists == 'false'
+        run: node .github/scripts/changelog.mjs notes > RELEASE_NOTES.md
+
+      - name: Create tag & GitHub Release
+        if: steps.exists.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "v${{ steps.v.outputs.version }}" \
+            --title "v${{ steps.v.outputs.version }}" \
+            --notes-file RELEASE_NOTES.md \
+            --target "${{ github.event.pull_request.merge_commit_sha }}"

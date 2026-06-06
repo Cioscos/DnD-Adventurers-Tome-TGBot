@@ -1,0 +1,33 @@
+{
+  "entries": [
+    {
+      "version": "2.0.0",
+      "date": "2026-06-07",
+      "title": { "it": "Il Tomo rilegato", "en": "The Bound Tome" },
+      "added": {
+        "it": [
+          "Note di versione in-app: consulta la versione corrente e lo storico delle modifiche dalla home.",
+          "Stato Morte e Morto: morte istantanea, tiri salvezza contro morte, danno a 0 PF che accumula fallimenti e ripristino in vita.",
+          "Effetti attivi dei consumabili: oggetti con sottotipo, guarigione e applicazione di condizioni tramite il pulsante Usa."
+        ],
+        "en": [
+          "In-app release notes: read the current version and the history of changes from the home screen.",
+          "Death and Dead state: instant death, death saving throws, damage at 0 HP accruing failures, and revive.",
+          "Active consumable effects: items with subtype, healing, and condition application via the Use button."
+        ]
+      },
+      "improved": {
+        "it": [
+          "Icone dei consumabili in base al sottotipo e dettaglio degli effetti nella scheda oggetto."
+        ],
+        "en": [
+          "Subtype-aware consumable icons and effect details in the item sheet."
+        ]
+      },
+      "fixed": {
+        "it": [],
+        "en": []
+      }
+    }
+  ]
+}
