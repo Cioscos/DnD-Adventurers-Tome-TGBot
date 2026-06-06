@@ -58,6 +58,15 @@ async def lifespan(_app: FastAPI):
         await conn.run_sync(Base.metadata.create_all)
         await conn.run_sync(_migrate_schema)
 
+    # Data backfill: legacy potion/scroll items -> consumable + subtype.
+    from sqlalchemy.ext.asyncio import AsyncSession
+    from core.db.migrations_data import backfill_consumable_types
+    try:
+        async with AsyncSession(engine) as _s:
+            await backfill_consumable_types(_s)
+    except Exception as exc:  # non-fatal: never block startup on a data backfill
+        logger.warning("backfill_consumable_types failed (non-fatal): %s", exc)
+
     cleanup_task = asyncio.create_task(run_session_cleanup())
     try:
         yield

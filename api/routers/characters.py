@@ -27,7 +27,7 @@ from core.db.models import (
 )
 from core.data.xp_thresholds import xp_to_level
 from core.data.classes import get_resources_for_class, update_resources_for_level
-from core.data.labels import ability_label, condition_label, skill_label
+from core.data.labels import ability_label, skill_label
 from core.game.stats import hit_points_for_level
 from api.schemas.character import (
     CharacterCreate,
@@ -44,6 +44,7 @@ from api.schemas.common import D20RollSubmission, RollResult
 from api.routers.classes import create_class_for_character
 from api.routers._helpers import prune_history
 from api.services.character_response import build_character_response
+from api.services.effects import apply_conditions
 from api.services.spell_slots import recalc_spell_slots
 
 router = APIRouter(prefix="/characters", tags=["characters"])
@@ -346,35 +347,8 @@ async def update_conditions(
     session: Annotated[AsyncSession, Depends(get_db)],
 ) -> CharacterFull:
     char = await _get_owned(char_id, user_id, session, full=True)
-    old_conditions = dict(char.conditions or {})
-    current = dict(old_conditions)
-    current.update(body.conditions)
-    char.conditions = current
-
-    # Log changes to history
-    changed = False
-    for cond, new_val in body.conditions.items():
-        is_exhaustion = cond == "exhaustion"
-        default = 0 if is_exhaustion else False
-        old_val = old_conditions.get(cond, default)
-        if is_exhaustion:
-            old_val = int(old_val) if isinstance(old_val, (int, bool)) and old_val is not None else 0
-            new_val_display = int(new_val) if isinstance(new_val, (int, bool)) and new_val is not None else 0
-        else:
-            new_val_display = new_val
-        if new_val_display != old_val:
-            changed = True
-            if is_exhaustion:
-                _add_history(session, char.id, "condition_change",
-                             f"Spossatezza: livello {old_val} → {new_val_display}")
-            elif new_val:
-                _add_history(session, char.id, "condition_change",
-                             f"Condizione attivata: {condition_label(cond)}")
-            else:
-                _add_history(session, char.id, "condition_change",
-                             f"Condizione rimossa: {condition_label(cond)}")
-
-    if changed:
+    result = await apply_conditions(session, char, body.conditions)
+    if result["changed"]:
         await prune_history(session, char)
 
     # See _refresh_char_full() for why expunge + re-SELECT is required here.

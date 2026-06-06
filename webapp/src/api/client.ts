@@ -505,6 +505,10 @@ export const api = {
           ? JSON.stringify({ with_inspiration: true })
           : undefined,
       }),
+    use: (charId: number, itemId: number) =>
+      request<CharacterFull>(`/characters/${charId}/items/${itemId}/use`, {
+        method: 'POST',
+      }),
   },
 
   // ---------------------------------------------------------------------------

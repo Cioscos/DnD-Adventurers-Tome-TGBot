@@ -154,6 +154,13 @@ export interface ConcentrationSaveResult {
   is_fumble: boolean
 }
 
+export interface ConsumableUse {
+  heal_rolls: number[]
+  total_healed: number
+  conditions_added: string[]
+  conditions_removed: string[]
+}
+
 export interface AcBreakdown {
   base: number
   shield: number
@@ -201,6 +208,7 @@ export interface CharacterFull extends CharacterSummary {
   spells: Spell[]
   spell_slots: SpellSlot[]
   items: Item[]
+  consumable_use?: ConsumableUse | null
   currency?: Currency
   abilities: Ability[]
   maps: MapEntry[]

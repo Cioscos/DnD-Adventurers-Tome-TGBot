@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from typing import Any, Optional
 
 from pydantic import BaseModel, ValidationInfo, field_validator
@@ -16,6 +17,15 @@ _ALLOWED_ABILITIES = {
     "intelligence", "wisdom", "charisma",
 }
 _ALLOWED_KINDS = {"absolute", "relative"}
+
+_ALLOWED_EFFECT_KINDS = {"heal", "add_condition", "remove_condition"}
+_ALLOWED_CONDITIONS = {
+    "blinded", "charmed", "deafened", "frightened", "grappled",
+    "incapacitated", "invisible", "paralyzed", "petrified", "poisoned",
+    "prone", "restrained", "stunned", "unconscious",
+}
+_ALLOWED_SUBTYPES = {"potion", "scroll", "food", "other"}
+_HEAL_AMOUNT_RE = re.compile(r"^(\d+d\d+([+-]\d+)?|\d+)$", re.IGNORECASE)
 
 
 def _validate_ability_modifiers(mods: Any) -> list[dict]:
@@ -50,6 +60,38 @@ def _validate_ability_modifiers(mods: Any) -> list[dict]:
                 f"got {type(value).__name__}"
             )
         result.append({"ability": ability, "kind": kind, "value": value})
+    return result
+
+
+def _validate_effects(effects: Any) -> list[dict]:
+    """Normalize and validate item_metadata.effects. Raises ValueError on bad data."""
+    if effects is None:
+        return []
+    if not isinstance(effects, list):
+        raise ValueError("effects must be an array")
+    result: list[dict] = []
+    for i, e in enumerate(effects):
+        if not isinstance(e, dict):
+            raise ValueError(f"effects[{i}] must be an object")
+        kind = e.get("kind")
+        if kind not in _ALLOWED_EFFECT_KINDS:
+            raise ValueError(
+                f"effects[{i}].kind must be one of {sorted(_ALLOWED_EFFECT_KINDS)}, got {kind!r}"
+            )
+        if kind == "heal":
+            amount = str(e.get("amount", "")).strip()
+            if not _HEAL_AMOUNT_RE.match(amount):
+                raise ValueError(
+                    f"effects[{i}].amount must be dice notation or an integer, got {amount!r}"
+                )
+            result.append({"kind": "heal", "amount": amount})
+        else:  # add_condition / remove_condition
+            cond = e.get("condition")
+            if cond not in _ALLOWED_CONDITIONS:
+                raise ValueError(
+                    f"effects[{i}].condition must be one of {sorted(_ALLOWED_CONDITIONS)}, got {cond!r}"
+                )
+            result.append({"kind": kind, "condition": cond})
     return result
 
 
@@ -89,9 +131,16 @@ class ItemCreate(BaseModel):
 
     @field_validator("item_metadata", mode="after")
     @classmethod
-    def validate_ability_mods(cls, v: Any) -> Any:
-        if isinstance(v, dict) and "ability_modifiers" in v:
-            v["ability_modifiers"] = _validate_ability_modifiers(v["ability_modifiers"])
+    def validate_metadata(cls, v: Any) -> Any:
+        if isinstance(v, dict):
+            if "ability_modifiers" in v:
+                v["ability_modifiers"] = _validate_ability_modifiers(v["ability_modifiers"])
+            if "effects" in v:
+                v["effects"] = _validate_effects(v["effects"])
+            if "subtype" in v and v["subtype"] not in _ALLOWED_SUBTYPES:
+                raise ValueError(
+                    f"subtype must be one of {sorted(_ALLOWED_SUBTYPES)}, got {v['subtype']!r}"
+                )
         return v
 
     @field_validator("equipment_slot", mode="after")
@@ -119,9 +168,16 @@ class ItemUpdate(BaseModel):
 
     @field_validator("item_metadata", mode="after")
     @classmethod
-    def validate_ability_mods(cls, v: Any) -> Any:
-        if isinstance(v, dict) and "ability_modifiers" in v:
-            v["ability_modifiers"] = _validate_ability_modifiers(v["ability_modifiers"])
+    def validate_metadata(cls, v: Any) -> Any:
+        if isinstance(v, dict):
+            if "ability_modifiers" in v:
+                v["ability_modifiers"] = _validate_ability_modifiers(v["ability_modifiers"])
+            if "effects" in v:
+                v["effects"] = _validate_effects(v["effects"])
+            if "subtype" in v and v["subtype"] not in _ALLOWED_SUBTYPES:
+                raise ValueError(
+                    f"subtype must be one of {sorted(_ALLOWED_SUBTYPES)}, got {v['subtype']!r}"
+                )
         return v
 
 

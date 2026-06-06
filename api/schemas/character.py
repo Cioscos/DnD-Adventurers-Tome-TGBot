@@ -12,6 +12,7 @@ from api.schemas.common import (
     CharacterClassCreate,
     CharacterClassRead,
     ConcentrationSaveResult,
+    ConsumableUseResult,
     CurrencyRead,
     MapRead,
 )
@@ -105,6 +106,9 @@ class CharacterFull(BaseModel):
 
     # Populated only by endpoints that fire homebrew rules (POST /hp, POST /attack, etc.).
     homebrew_notifications: Optional[list[dict]] = None
+
+    # Populated only by POST /items/{id}/use (consumable use result).
+    consumable_use: Optional[ConsumableUseResult] = None
 
     has_custom_silhouette: bool = False
 

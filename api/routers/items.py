@@ -25,6 +25,8 @@ from api.routers._helpers import collect_homebrew_notifications, effective_con_m
 from api.services.equipment import slot_allowed_for_type, swap_slot_occupant
 from api.services.homebrew.dispatcher import dispatch
 from api.services.character_response import build_character_response
+from api.services.effects import apply_heal, apply_conditions
+from api.schemas.common import ConsumableUseResult
 
 router = APIRouter(prefix="/characters", tags=["items"])
 
@@ -273,6 +275,91 @@ async def delete_item(
     char.recalculate_encumbrance()
     await session.refresh(char, attribute_names=["items"])
     return await build_character_response(session, char)
+
+
+# ---------------------------------------------------------------------------
+# Use consumable
+# ---------------------------------------------------------------------------
+
+@router.post("/{char_id}/items/{item_id}/use", response_model=CharacterFull)
+async def use_consumable(
+    char_id: int,
+    item_id: int,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> CharacterFull:
+    char = await _get_owned_full(char_id, user_id, session)
+    # Da morto ogni uso di consumabile è inerte (coerente con /hp).
+    if char.is_dead:
+        return await build_character_response(session, char)
+
+    result = await session.execute(
+        select(Item).where(Item.id == item_id, Item.character_id == char_id)
+    )
+    item = result.scalar_one_or_none()
+    if item is None:
+        raise HTTPException(status_code=404, detail="Item not found")
+    if item.item_type != "consumable":
+        raise HTTPException(status_code=400, detail="Item is not a consumable")
+
+    meta = json.loads(item.item_metadata) if item.item_metadata else {}
+    effects = meta.get("effects") or []
+    if not effects:
+        raise HTTPException(status_code=400, detail="Consumable has no usable effects")
+    if item.quantity <= 0:
+        raise HTTPException(status_code=409, detail="No quantity left")
+
+    heal_rolls: list[int] = []
+    total_healed = 0
+    cond_changes: dict[str, bool] = {}
+    notifications: list[dict] = []
+
+    for eff in effects:
+        kind = eff.get("kind")
+        if kind == "heal":
+            amount_str = str(eff.get("amount", "0")).strip()
+            if _DICE_RE.match(amount_str):
+                rolls, bonus = _roll_dice(amount_str)
+                amount = max(0, sum(rolls) + bonus)
+                heal_rolls.extend(rolls)
+            else:
+                try:
+                    amount = max(0, int(amount_str))
+                except ValueError:
+                    amount = 0
+                heal_rolls.append(amount)
+            heal_result = await apply_heal(session, char, amount)
+            total_healed += heal_result["healed"]
+            notifications.extend(collect_homebrew_notifications(heal_result["firing"]))
+        elif kind == "add_condition":
+            slug = eff.get("condition")
+            if slug:
+                cond_changes[slug] = True
+        elif kind == "remove_condition":
+            slug = eff.get("condition")
+            if slug:
+                cond_changes[slug] = False
+
+    conditions_added = sorted(s for s, v in cond_changes.items() if v)
+    conditions_removed = sorted(s for s, v in cond_changes.items() if not v)
+    if cond_changes:
+        await apply_conditions(session, char, cond_changes)
+
+    item.quantity = max(0, item.quantity - 1)
+    _add_history(session, char.id, "item_used", f"Usato: {item.name}")
+
+    await session.flush()
+    await session.refresh(char, attribute_names=["items"])
+    response = await build_character_response(session, char)
+    response.consumable_use = ConsumableUseResult(
+        heal_rolls=heal_rolls,
+        total_healed=total_healed,
+        conditions_added=conditions_added,
+        conditions_removed=conditions_removed,
+    )
+    if notifications:
+        response.homebrew_notifications = notifications
+    return response
 
 
 # ---------------------------------------------------------------------------

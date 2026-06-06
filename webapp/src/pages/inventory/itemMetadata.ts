@@ -3,9 +3,38 @@ import type { AbilityModifier } from '@/types'
 
 export const ITEM_TYPES = [
   'weapon', 'armor', 'shield', 'consumable', 'tool',
-  'accessory', 'gear', 'potion', 'scroll', 'generic',
+  'accessory', 'gear', 'generic',
 ] as const
 export type ItemType = typeof ITEM_TYPES[number]
+
+export const CONSUMABLE_SUBTYPES = ['potion', 'scroll', 'food', 'other'] as const
+export type ConsumableSubtype = typeof CONSUMABLE_SUBTYPES[number]
+
+export const EFFECT_KINDS = ['heal', 'add_condition', 'remove_condition'] as const
+export type EffectKind = typeof EFFECT_KINDS[number]
+
+export const CONDITION_SLUGS = [
+  'blinded', 'charmed', 'deafened', 'frightened', 'grappled',
+  'incapacitated', 'invisible', 'paralyzed', 'petrified', 'poisoned',
+  'prone', 'restrained', 'stunned', 'unconscious',
+] as const
+
+export type ItemEffect =
+  | { kind: 'heal'; amount: string }
+  | { kind: 'add_condition'; condition: string }
+  | { kind: 'remove_condition'; condition: string }
+
+/** Heal amount: dice notation (NdX[+/-K]) OR a plain integer. */
+export const HEAL_AMOUNT_RE = /^(\d+d\d+([+-]\d+)?|\d+)$/i
+
+export function isEffectValid(e: ItemEffect): boolean {
+  if (e.kind === 'heal') return HEAL_AMOUNT_RE.test(e.amount.trim())
+  return !!e.condition
+}
+
+export function areEffectsValid(effects: ItemEffect[]): boolean {
+  return effects.every(isEffectValid)
+}
 
 export const DAMAGE_TYPES = [
   'dmg_slashing', 'dmg_piercing', 'dmg_bludgeoning',
@@ -75,6 +104,14 @@ export const TYPE_ICON: Record<string, string> = {
   gear: '\uD83C\uDF92',
 }
 
+/** Emoji for a consumable based on its subtype (falls back to the consumable icon). */
+export function consumableEmoji(subtype: string | undefined): string {
+  if (subtype === 'potion') return TYPE_ICON.potion
+  if (subtype === 'scroll') return TYPE_ICON.scroll
+  if (subtype === 'food') return '\uD83C\uDF56' // meat on bone
+  return TYPE_ICON.consumable
+}
+
 export type ItemFormData = {
   name: string
   item_type: ItemType
@@ -95,6 +132,8 @@ export type ItemFormData = {
   ac_bonus: string
   // consumable
   effect: string
+  subtype: string
+  effects: ItemEffect[]
   // tool
   tool_type: string
   // ability modifiers (all item types)
@@ -120,6 +159,8 @@ export const emptyForm: ItemFormData = {
   strength_req: '0',
   ac_bonus: '2',
   effect: '',
+  subtype: 'other',
+  effects: [],
   tool_type: '',
   ability_modifiers: [],
 }
@@ -146,11 +187,13 @@ export function buildItemMetadata(form: ItemFormData): Record<string, unknown> |
     case 'shield':
       meta = { ac_bonus: Number(form.ac_bonus) || 2 }
       break
-    case 'consumable':
-    case 'potion':
-    case 'scroll':
-      meta = form.effect ? { effect: form.effect } : undefined
+    case 'consumable': {
+      const m: Record<string, unknown> = { subtype: form.subtype }
+      if (form.effect) m.effect = form.effect
+      if (form.effects && form.effects.length > 0) m.effects = form.effects
+      meta = m
       break
+    }
     case 'tool':
       meta = form.tool_type ? { tool_type: form.tool_type } : undefined
       break
@@ -191,6 +234,7 @@ export function isItemFormValid(form: ItemFormData): boolean {
   // encumbrance computation on the equipment paper-doll).
   if (form.weight !== '' && (isNaN(Number(form.weight)) || Number(form.weight) < 0)) return false
   if (form.quantity !== '' && (isNaN(Number(form.quantity)) || Number(form.quantity) < 1)) return false
+  if (form.item_type === 'consumable' && !areEffectsValid(form.effects ?? [])) return false
   return true
 }
 
@@ -202,7 +246,9 @@ export function itemToFormData(item: { name: string; item_type: string; quantity
   ) ?? []
   return {
     name: item.name,
-    item_type: (ITEM_TYPES as readonly string[]).includes(item.item_type) ? item.item_type as ItemType : 'generic',
+    item_type: (ITEM_TYPES as readonly string[]).includes(item.item_type)
+      ? (item.item_type as ItemType)
+      : (item.item_type === 'potion' || item.item_type === 'scroll' ? 'consumable' : 'generic'),
     quantity: String(item.quantity),
     weight: String(item.weight),
     description: item.description ?? '',
@@ -216,6 +262,10 @@ export function itemToFormData(item: { name: string; item_type: string; quantity
     strength_req: String(meta.strength_req ?? '0'),
     ac_bonus: String(meta.ac_bonus ?? '2'),
     effect: String(meta.effect ?? ''),
+    subtype: typeof meta.subtype === 'string'
+      ? meta.subtype
+      : (item.item_type === 'potion' || item.item_type === 'scroll' ? item.item_type : 'other'),
+    effects: Array.isArray(meta.effects) ? (meta.effects as ItemEffect[]) : [],
     tool_type: String(meta.tool_type ?? ''),
     ability_modifiers,
   }

@@ -23,7 +23,8 @@ import WeaponAttackModal, { type WeaponAttackResult } from '@/components/WeaponA
 import { haptic } from '@/auth/telegram'
 import InventoryItem, { type ItemProperty } from '@/pages/inventory/InventoryItem'
 import ItemForm from '@/pages/inventory/ItemForm'
-import { buildItemMetadata, buildHomebrewMetadataPatch, type ItemFormData } from '@/pages/inventory/itemMetadata'
+import { buildItemMetadata, buildHomebrewMetadataPatch, type ItemFormData, type ItemEffect } from '@/pages/inventory/itemMetadata'
+import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import { getItemTypeIcon } from '@/lib/itemIcons'
 import type { Item } from '@/types'
 import InventorySkeleton from '@/components/skeletons/InventorySkeleton'
@@ -46,6 +47,7 @@ export default function Inventory() {
   const [showAdd, setShowAdd] = useState(false)
   const [editingItem, setEditingItem] = useState<Item | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<number | null>(null)
+  const [useTarget, setUseTarget] = useState<Item | null>(null)
   type AttackState = {
     result: WeaponAttackResult
     itemId: number
@@ -278,6 +280,37 @@ export default function Inventory() {
       }
     },
   })
+
+  const consumeMutation = useMutation({
+    mutationFn: (itemId: number) => api.items.use(charId, itemId),
+    onSuccess: (updated) => {
+      qc.setQueryData(['character', charId], updated)
+      setUseTarget(null)
+      const cu = updated.consumable_use
+      if (cu) {
+        const parts: string[] = []
+        if (cu.total_healed > 0) parts.push(t('character.inventory.use_result.healed', { hp: cu.total_healed }))
+        for (const c of cu.conditions_removed) parts.push(t('character.inventory.use_result.removed', { cond: t(`character.conditions.${c}`, { defaultValue: c }) }))
+        for (const c of cu.conditions_added) parts.push(t('character.inventory.use_result.added', { cond: t(`character.conditions.${c}`, { defaultValue: c }) }))
+        if (parts.length > 0) toast.success(parts.join(' · '))
+      }
+      haptic.success()
+    },
+    onError: () => haptic.error(),
+  })
+
+  const summarizeEffects = (item: Item): string => {
+    const effects = (item.item_metadata?.effects as ItemEffect[] | undefined) ?? []
+    const parts = effects.map((e) => {
+      if (e.kind === 'heal') return t('character.inventory.use_confirm.heal', { amount: e.amount })
+      const cond = t(`character.conditions.${e.condition}`, { defaultValue: e.condition })
+      return e.kind === 'add_condition'
+        ? t('character.inventory.use_confirm.add', { cond })
+        : t('character.inventory.use_confirm.remove', { cond })
+    })
+    parts.push(t('character.inventory.use_confirm.qty'))
+    return parts.join(' · ')
+  }
 
   const handleFormSubmit = useCallback((data: ItemFormData) => {
     if (editingItem) {
@@ -566,10 +599,12 @@ export default function Inventory() {
                             onEquipToggle={() => handleEquipToggle(item)}
                             onQuantityChange={(delta) => updateQty.mutate({ itemId: item.id, quantity: item.quantity + delta })}
                             onAttack={() => attackMutation.mutate(item.id)}
+                            onUse={() => setUseTarget(item)}
                             onEdit={() => handleEdit(item)}
                             onDelete={() => setDeleteTarget(item.id)}
                             equipPending={toggleEquip.isPending}
                             attackPending={attackMutation.isPending}
+                            usePending={consumeMutation.isPending}
                             propertyByKey={propertyByKey}
                             locale={locale}
                             onSetProperty={handleSetProperty}
@@ -635,6 +670,17 @@ export default function Inventory() {
           </div>
         </div>
       </Sheet>
+
+      <ConfirmSheet
+        open={useTarget !== null}
+        onClose={() => setUseTarget(null)}
+        onConfirm={() => useTarget && consumeMutation.mutate(useTarget.id)}
+        title={t('character.inventory.use_confirm.title')}
+        body={useTarget ? summarizeEffects(useTarget) : undefined}
+        confirmLabel={t('character.inventory.use')}
+        confirmVariant="primary"
+        loading={consumeMutation.isPending}
+      />
 
       {/* Slot picker for multi-slot equippable items */}
       <Sheet
