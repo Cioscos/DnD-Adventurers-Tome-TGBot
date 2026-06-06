@@ -8,7 +8,7 @@ import {
   GiBiceps as Biceps,
   GiBackpack as Backpack,
 } from 'react-icons/gi'
-import { TYPE_ICON } from './itemMetadata'
+import { TYPE_ICON, consumableEmoji } from './itemMetadata'
 import type { Item } from '@/types'
 import type { Property } from '@/lib/homebrew/types'
 import PropertyBadge from '@/components/homebrew/PropertyBadge'
@@ -244,8 +244,10 @@ function InventoryItemInner({
 }: InventoryItemProps) {
   const { t } = useTranslation()
   const system = useUnitSettings((s) => s.system)
-  const icon = TYPE_ICON[item.item_type] ?? '📦'
   const meta = item.item_metadata as Record<string, unknown> | undefined
+  const icon = item.item_type === 'consumable'
+    ? consumableEmoji(meta?.subtype as string | undefined)
+    : (TYPE_ICON[item.item_type] ?? '📦')
   const canEquip = ['armor', 'shield', 'weapon', 'accessory'].includes(item.item_type)
   const effects = Array.isArray(meta?.effects) ? (meta.effects as unknown[]) : []
   const canUse = item.item_type === 'consumable' && effects.length > 0

@@ -41,6 +41,7 @@ export default function ItemDetailsModal({ item, slot, onClose }: Props) {
   const meta = item.item_metadata ?? {}
   const properties = Array.isArray(meta.properties) ? meta.properties as string[] : []
   const abilityMods = Array.isArray(meta.ability_modifiers) ? meta.ability_modifiers as Array<{ ability: string; value: number }> : []
+  const effects = Array.isArray(meta.effects) ? (meta.effects as Array<Record<string, string>>) : []
 
   return createPortal(
     <AnimatePresence>
@@ -208,6 +209,26 @@ export default function ItemDetailsModal({ item, slot, onClose }: Props) {
                       {m.value >= 0 ? '+' : ''}{m.value}
                     </span>
                   ))}
+                </div>
+              </div>
+            )}
+
+            {effects.length > 0 && (
+              <div>
+                <p className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-gold-dim mb-1.5">
+                  {t('character.inventory.effects.title', { defaultValue: 'Effetti' })}
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {effects.map((e, i) => {
+                    const label = e.kind === 'heal'
+                      ? t('character.inventory.use_confirm.heal', { amount: e.amount, defaultValue: `Cura ${e.amount}` })
+                      : t(`character.conditions.${e.condition}`, { defaultValue: e.condition })
+                    return (
+                      <span key={i} className="px-2 py-0.5 rounded-full bg-dnd-emerald/15 border border-dnd-emerald/40 text-[11px] font-body text-dnd-emerald-bright">
+                        {label}
+                      </span>
+                    )
+                  })}
                 </div>
               </div>
             )}
