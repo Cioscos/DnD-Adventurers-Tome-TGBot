@@ -146,6 +146,10 @@ class Character(Base):
     # Death saving throws (JSON: {"successes": 0, "failures": 0, "stable": false})
     death_saves: Mapped[Optional[dict]] = mapped_column(JSON, default=dict)
 
+    # Permanent death state — set by death rules (massive damage / 3 failures),
+    # cleared only by POST /revive. Never reset by heal/rest/auto-reset.
+    is_dead: Mapped[bool] = mapped_column(Boolean, default=False)
+
     # Temporary hit points (separate pool, absorb damage before regular HP)
     temp_hp: Mapped[int] = mapped_column(Integer, default=0)
 

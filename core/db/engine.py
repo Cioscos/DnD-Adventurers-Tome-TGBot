@@ -73,6 +73,8 @@ _MIGRATIONS: list[tuple[str, str, str, str | None]] = [
     ("characters", "experience_points", "INTEGER", "0"),
     # Death saving throws
     ("characters", "death_saves", "TEXT", None),
+    # Permanent death state (Morte & stato Morto epic)
+    ("characters", "is_dead", "BOOLEAN", "0"),
     # Temporary hit points
     ("characters", "temp_hp", "INTEGER", "0"),
     # Movement speed

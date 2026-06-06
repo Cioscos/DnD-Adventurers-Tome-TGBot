@@ -208,6 +208,9 @@ export default function SpellForm({ initialData, onSubmit, onCancel, isPending }
         </div>
 
         <div className="flex gap-2 pt-2">
+          <Button variant="secondary" fullWidth onClick={onCancel}>
+            {t('common.cancel')}
+          </Button>
           <Button
             variant="primary"
             fullWidth
@@ -217,9 +220,6 @@ export default function SpellForm({ initialData, onSubmit, onCancel, isPending }
             haptic="success"
           >
             {isEditing ? t('common.save') : t('common.add')}
-          </Button>
-          <Button variant="secondary" fullWidth onClick={onCancel}>
-            {t('common.cancel')}
           </Button>
         </div>
       </div>

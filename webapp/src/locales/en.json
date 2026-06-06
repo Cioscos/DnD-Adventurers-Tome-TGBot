@@ -97,6 +97,7 @@
       "confirm_rest": "Confirm rest",
       "concentration_active": "Concentrating",
       "concentration_lost": "Concentration lost!",
+      "critical_hit": "Critical hit",
       "damage_short": "DMG",
       "heal_short": "HEAL",
       "current_short": "CURR",
@@ -126,7 +127,15 @@
       "nat1": "Natural 1! Double failure!",
       "revived": "You regain consciousness with 1 HP!",
       "stable_3_successes": "Stabilized! (3 successes)",
-      "dead_3_failures": "3 failures... the character is dead."
+      "dead_3_failures": "3 failures... the character is dead.",
+      "dead_title": "Dead",
+      "cause_death_saves": "Fell: 3 failed death saves",
+      "cause_massive_damage": "Fell: massive damage",
+      "revive": "Bring back to life",
+      "revive_confirm_title": "Revive?",
+      "revive_confirm_body": "The character returns with 1 HP and death saves reset.",
+      "instant_death_title": "Instant death",
+      "instant_death_body": "Massive damage: the character died instantly."
     },
     "stats": {
       "title": "Ability Scores",

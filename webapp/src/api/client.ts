@@ -249,10 +249,14 @@ export const api = {
       request<void>(`/characters/${id}`, { method: 'DELETE' }),
 
     // HP
-    updateHp: (id: number, op: string, value: number) =>
+    updateHp: (id: number, op: string, value: number, wasCritical = false) =>
       request<CharacterFull>(`/characters/${id}/hp`, {
         method: 'PATCH',
-        body: JSON.stringify({ op, value }),
+        body: JSON.stringify({ op, value, was_critical_hit: wasCritical }),
+      }),
+    revive: (id: number) =>
+      request<CharacterFull>(`/characters/${id}/revive`, {
+        method: 'POST',
       }),
     rest: (id: number, restType: 'long' | 'short', hitDiceUsed?: number) =>
       request<CharacterFull>(`/characters/${id}/rest`, {

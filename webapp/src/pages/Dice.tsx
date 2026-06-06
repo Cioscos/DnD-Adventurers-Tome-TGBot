@@ -454,6 +454,9 @@ export default function Dice() {
             {t('character.dice.clear_confirm')}
           </p>
           <div className="flex gap-2">
+            <Button variant="secondary" fullWidth onClick={() => setShowClearConfirm(false)}>
+              {t('common.cancel')}
+            </Button>
             <Button
               variant="danger"
               fullWidth
@@ -462,9 +465,6 @@ export default function Dice() {
               haptic="error"
             >
               {t('common.confirm')}
-            </Button>
-            <Button variant="secondary" fullWidth onClick={() => setShowClearConfirm(false)}>
-              {t('common.cancel')}
             </Button>
           </div>
         </div>

@@ -392,11 +392,11 @@ export default function PropertyFormModal({
         )}
 
         <div className="flex gap-2 pt-2">
-          <Button variant="primary" fullWidth haptic="success" onClick={handleSave}>
-            {t('common.save')}
-          </Button>
           <Button variant="secondary" fullWidth onClick={onClose}>
             {t('common.cancel')}
+          </Button>
+          <Button variant="primary" fullWidth haptic="success" onClick={handleSave}>
+            {t('common.save')}
           </Button>
         </div>
       </div>
