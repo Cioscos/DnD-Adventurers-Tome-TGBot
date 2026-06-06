@@ -14,6 +14,7 @@ from sqlalchemy.orm import selectinload
 
 from api.auth import get_current_user
 from api.database import get_db
+from api.services.effects import apply_heal
 from api.services.homebrew.dispatcher import dispatch
 from api.services.homebrew.passive import get_passive_modifiers
 from core.db.models import Character, CharacterHistory
@@ -183,23 +184,11 @@ async def update_hp(
             notifications.extend(collect_homebrew_notifications(firing))
 
     elif body.op == HPOp.HEAL:
-        old = char.current_hit_points
-        # Use effective max HP (base + passive homebrew modifier) as the heal cap.
-        hb_hp_bonus = await get_passive_modifiers(session, char, "character.hit_points_max")
-        effective_max = char.hit_points + hb_hp_bonus
-        char.current_hit_points = min(effective_max, char.current_hit_points + body.value)
-        _add_history(session, char.id, "hp_change",
-                     f"Cura: +{body.value} HP ({old} → {char.current_hit_points})",
-                     meta={"op": "HEAL"})
-        firing = await dispatch(
-            session, char, "hp_healed",
-            {
-                "amount": body.value,
-                "current_hp_before": old,
-                "current_hp_after": char.current_hit_points,
-            },
-        )
-        notifications.extend(collect_homebrew_notifications(firing))
+        # Shared applier (see api/services/effects.py). The bottom-of-function
+        # death-save reset block stays as an idempotent no-op: apply_heal already
+        # zeroed the saves, so its guard finds nothing to reset and won't double-log.
+        result = await apply_heal(session, char, body.value)
+        notifications.extend(collect_homebrew_notifications(result["firing"]))
 
     elif body.op == HPOp.SET_MAX:
         old = char.hit_points
