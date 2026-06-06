@@ -7,12 +7,14 @@ import WizardFooter from '@/components/ui/WizardFooter'
 import DamageDiceBuilder from './DamageDiceBuilder'
 import { getItemTypeIcon } from '@/lib/itemIcons'
 import AbilityModifiersEditor from './AbilityModifiersEditor'
+import EffectsEditor from './EffectsEditor'
 import {
   ITEM_TYPES,
   DAMAGE_TYPES,
   WEAPON_PROPERTIES,
   ARMOR_TYPES,
   WEAPON_TYPES,
+  CONSUMABLE_SUBTYPES,
   emptyForm,
   isItemFormValid,
   itemToFormData,
@@ -91,15 +93,17 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
             {t('character.inventory.item_type')}
           </label>
           <div className="grid grid-cols-2 gap-2">
-            {ITEM_TYPES.map((type) => {
+            {ITEM_TYPES.map((type, idx) => {
               const Icon = getItemTypeIcon(type)
               const active = form.item_type === type
+              const lastSpan =
+                idx === ITEM_TYPES.length - 1 && ITEM_TYPES.length % 2 === 1 ? 'col-span-2' : ''
               return (
                 <button
                   key={type}
                   type="button"
                   onClick={() => setForm((f) => ({ ...f, item_type: type }))}
-                  className={`min-h-[46px] flex items-center gap-2 px-3 rounded-xl text-sm font-medium transition-colors
+                  className={`min-h-[46px] flex items-center gap-2 px-3 rounded-xl text-sm font-medium transition-colors ${lastSpan}
                     ${active
                       ? 'bg-dnd-gold text-dnd-ink shadow-halo-gold'
                       : 'bg-dnd-surface-raised text-dnd-text border border-dnd-border'}`}
@@ -314,14 +318,51 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
         )}
 
         {/* === CONSUMABLE fields === */}
-        {(form.item_type === 'consumable' || form.item_type === 'potion' || form.item_type === 'scroll') && (
-          <Input
-            variant="textarea"
-            label={t('character.inventory.effect_label')}
-            value={form.effect}
-            onChange={(v) => setForm((f) => ({ ...f, effect: v }))}
-            rows={2}
-          />
+        {form.item_type === 'consumable' && (
+          <>
+            <div>
+              <label className="block text-[11px] uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
+                {t('character.inventory.subtype_label')}
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {CONSUMABLE_SUBTYPES.map((st, idx) => {
+                  const active = form.subtype === st
+                  // Chip-grid rule: in a 2-col grid with an odd count, the last
+                  // chip spans both columns so there's no orphan gap.
+                  const lastSpan =
+                    idx === CONSUMABLE_SUBTYPES.length - 1 && CONSUMABLE_SUBTYPES.length % 2 === 1
+                      ? 'col-span-2'
+                      : ''
+                  return (
+                    <button
+                      key={st}
+                      type="button"
+                      onClick={() => setForm((f) => ({ ...f, subtype: st }))}
+                      className={`min-h-[44px] px-3 rounded-xl text-sm font-medium transition-colors ${lastSpan}
+                        ${active
+                          ? 'bg-dnd-gold text-dnd-ink shadow-halo-gold'
+                          : 'bg-dnd-surface-raised text-dnd-text border border-dnd-border'}`}
+                    >
+                      {t(`character.inventory.subtypes.${st}`)}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            <EffectsEditor
+              effects={form.effects ?? []}
+              onChange={(next) => setForm((f) => ({ ...f, effects: next }))}
+            />
+
+            <Input
+              variant="textarea"
+              label={t('character.inventory.effect_label')}
+              value={form.effect}
+              onChange={(v) => setForm((f) => ({ ...f, effect: v }))}
+              rows={2}
+            />
+          </>
         )}
 
         {/* === TOOL fields === */}
