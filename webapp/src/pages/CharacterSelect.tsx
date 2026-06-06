@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
-import { Plus, Trash2, Pencil, SkipForward } from 'lucide-react'
+import { Plus, Trash2, Pencil, SkipForward, ScrollText } from 'lucide-react'
 import {
   GiSparkles as Sparkles, GiCheckedShield as Shield, GiHeartPlus as Heart,
   GiCrossedSwords as Swords,
@@ -25,6 +25,7 @@ import { haptic, telegramConfirm } from '@/auth/telegram'
 import { useToast } from '@/hooks/useToast'
 import { spring, stagger } from '@/styles/motion'
 import languagesSrd from '@/data/languages-srd.json'
+import { currentVersion } from '@/lib/version'
 
 const LANGUAGE_SUGGESTIONS = [...languagesSrd.common, ...languagesSrd.exotic]
 
@@ -347,6 +348,19 @@ export default function CharacterSelect() {
         >
           {t('character.select.new')}
         </Button>
+
+        {/* Version footer — opens the in-app changelog / release notes. */}
+        <div className="pt-2 flex justify-center">
+          <button
+            type="button"
+            onClick={() => { haptic.light(); navigate('/changelog') }}
+            className="min-h-[44px] px-3 inline-flex items-center gap-1.5 text-dnd-text-faint hover:text-dnd-gold-bright transition-colors"
+            aria-label={t('changelog.view')}
+          >
+            <ScrollText size={13} className="shrink-0" />
+            <span className="font-mono tabular-nums text-xs">v{currentVersion()}</span>
+          </button>
+        </div>
       </div>
 
       {/* Creation wizard — modal Sheet. Flusso: Nome → Classe → Identità → Crea. */}
