@@ -163,7 +163,7 @@ export default function Layout({ title, children, backTo, group, page, hideScrol
       <div className="relative flex-1 min-w-0 overflow-hidden">
         <main
           ref={swipe.contentRef}
-          className={`absolute inset-0 overflow-y-auto p-4 pt-4 pb-[max(env(safe-area-inset-bottom),6rem)] space-y-3 animate-fade-in${hideScrollbar ? ' scrollbar-hide' : ''}`}
+          className={`absolute inset-0 overflow-y-auto overflow-x-hidden overscroll-x-contain p-4 pt-4 pb-[max(env(safe-area-inset-bottom),6rem)] space-y-3 animate-fade-in${hideScrollbar ? ' scrollbar-hide' : ''}`}
           onTouchStart={swipe.onTouchStart}
           onTouchMove={swipe.onTouchMove}
           onTouchEnd={swipe.onTouchEnd}
