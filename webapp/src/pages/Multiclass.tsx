@@ -15,7 +15,6 @@ import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import { FlourishDivider } from '@/components/ui/Ornament'
 import { haptic } from '@/auth/telegram'
 import { levelFromXp } from '@/lib/xpThresholds'
-import ResourceManager from '@/pages/multiclass/ResourceManager'
 import LevelUpBanner from '@/pages/multiclass/LevelUpBanner'
 import LevelUpModal from '@/pages/multiclass/LevelUpModal'
 import EditClassesModal from '@/pages/multiclass/EditClassesModal'
@@ -43,34 +42,6 @@ export default function Multiclass() {
       haptic.success()
       setRemoveTarget(null)
     },
-  })
-
-  const addResource = useMutation({
-    mutationFn: ({ classId, payload }: { classId: number; payload: { name: string; total: number; current: number; restoration_type: string } }) =>
-      api.classes.addResource(charId, classId, payload),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['character', charId] })
-      haptic.success()
-    },
-  })
-
-  const useResource = useMutation({
-    mutationFn: ({ classId, resId, current }: { classId: number; resId: number; current: number }) =>
-      api.classes.updateResource(charId, classId, resId, { current }),
-    // The PATCH .../resources/{id} endpoint returns a bare ClassResource, NOT a
-    // CharacterFull — writing it into the shared ['character', charId] query would
-    // wipe `classes`, `hit_points`, etc. and break every page. Invalidate instead
-    // (same pattern as addResource/deleteResource).
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['character', charId] })
-      haptic.success()
-    },
-  })
-
-  const deleteResource = useMutation({
-    mutationFn: ({ classId, resId }: { classId: number; resId: number }) =>
-      api.classes.deleteResource(charId, classId, resId),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['character', charId] }),
   })
 
   const classes: CharacterClass[] = char?.classes ?? []
@@ -197,21 +168,6 @@ export default function Multiclass() {
                 </span>
               </div>
             </div>
-
-            <ResourceManager
-              classId={cls.id}
-              resources={cls.resources}
-              onUseResource={(classId, resId, current) =>
-                useResource.mutate({ classId, resId, current })
-              }
-              onDeleteResource={(classId, resId) =>
-                deleteResource.mutate({ classId, resId })
-              }
-              onAddResource={(classId, payload) =>
-                addResource.mutate({ classId, payload })
-              }
-              addPending={addResource.isPending}
-            />
           </Surface>
         </m.div>
       ))}
