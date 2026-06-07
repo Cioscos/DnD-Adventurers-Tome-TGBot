@@ -34,6 +34,11 @@ interface TelegramWebApp {
   isExpanded: boolean
   viewportHeight: number
   viewportStableHeight?: number
+  // Fullscreen mode + safe areas (Bot API 8.0+). Optional: absent on older clients.
+  isFullscreen?: boolean
+  safeAreaInset?: { top: number; bottom: number; left: number; right: number }
+  contentSafeAreaInset?: { top: number; bottom: number; left: number; right: number }
+  setHeaderColor?(color: string): void
   MainButton: {
     text: string
     color: string
