@@ -7,6 +7,12 @@ export const ITEM_TYPES = [
 ] as const
 export type ItemType = typeof ITEM_TYPES[number]
 
+/** Tipi a quantità singola (sempre 1): non mostrano il selettore quantità. */
+export const SINGLE_QTY_TYPES = ['weapon', 'armor', 'shield'] as const
+export function hasSingleQuantity(itemType: string): boolean {
+  return (SINGLE_QTY_TYPES as readonly string[]).includes(itemType)
+}
+
 export const CONSUMABLE_SUBTYPES = ['potion', 'scroll', 'food', 'other'] as const
 export type ConsumableSubtype = typeof CONSUMABLE_SUBTYPES[number]
 

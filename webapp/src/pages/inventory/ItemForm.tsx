@@ -15,6 +15,7 @@ import {
   ARMOR_TYPES,
   WEAPON_TYPES,
   CONSUMABLE_SUBTYPES,
+  hasSingleQuantity,
   emptyForm,
   isItemFormValid,
   itemToFormData,
@@ -67,6 +68,8 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
         : [...f.properties, prop],
     }))
   }
+
+  const hidesQuantity = hasSingleQuantity(form.item_type)
 
   const canAdvanceFromType = form.name.trim().length > 0
 
@@ -134,15 +137,17 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
         <>
         {/* Quantity & Weight */}
         <div className="flex gap-2">
-          <Input
-            className="flex-1"
-            label={t('character.inventory.quantity')}
-            type="number"
-            value={form.quantity}
-            onChange={(v) => setForm((f) => ({ ...f, quantity: v }))}
-            min={1}
-            placeholder="1"
-          />
+          {!hidesQuantity && (
+            <Input
+              className="flex-1"
+              label={t('character.inventory.quantity')}
+              type="number"
+              value={form.quantity}
+              onChange={(v) => setForm((f) => ({ ...f, quantity: v }))}
+              min={1}
+              placeholder="1"
+            />
+          )}
           <Input
             className="flex-1"
             label={`${t('character.inventory.weight')} (${weightUnitLabel(system)})`}
@@ -389,6 +394,7 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
             onSubmit({
               ...form,
               weight: String(displayToLb(Number(form.weight) || 0, system)),
+              quantity: hidesQuantity ? '1' : form.quantity,
             })
           }
           primaryDisabled={!isItemFormValid(form)}
