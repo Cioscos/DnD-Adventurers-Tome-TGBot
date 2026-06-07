@@ -70,37 +70,6 @@ class AbilityScoreUpdate(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# ClassResource
-# ---------------------------------------------------------------------------
-
-class ClassResourceRead(BaseModel):
-    id: int
-    name: str
-    current: int
-    total: int
-    restoration_type: str
-    note: Optional[str] = None
-
-    model_config = {"from_attributes": True}
-
-
-class ClassResourceCreate(BaseModel):
-    name: str
-    current: int = 0
-    total: int
-    restoration_type: str = "none"
-    note: Optional[str] = None
-
-
-class ClassResourceUpdate(BaseModel):
-    name: Optional[str] = None
-    current: Optional[int] = None
-    total: Optional[int] = None
-    restoration_type: Optional[str] = None
-    note: Optional[str] = None
-
-
-# ---------------------------------------------------------------------------
 # CharacterClass
 # ---------------------------------------------------------------------------
 
@@ -111,7 +80,6 @@ class CharacterClassRead(BaseModel):
     subclass: Optional[str] = None
     spellcasting_ability: Optional[str] = None
     hit_die: Optional[int] = None
-    resources: list[ClassResourceRead] = []
 
     model_config = {"from_attributes": True}
 
@@ -188,6 +156,9 @@ class AbilityRead(BaseModel):
     is_passive: bool = False
     is_active: bool = False
     restoration_type: str = "none"
+    source_class_id: Optional[int] = None
+    is_class_feature: bool = False
+    feature_key: Optional[str] = None
     # Homebrew rule notifications surfaced when an ability_used event fired
     # (PATCH /abilities/{id} with a decremented `uses`). Omitted/None on
     # POST/list responses to match CharacterFull's contract (Phase 2 pattern).

@@ -28,6 +28,7 @@ class TelegramUser:
     id: int
     first_name: str | None = None
     username: str | None = None
+    language_code: str | None = None
 
 logger = logging.getLogger(__name__)
 
@@ -114,6 +115,7 @@ def verify_init_data_full(init_data: str, bot_token: str = _BOT_TOKEN) -> Telegr
         user_id = int(user["id"])
         first_name = user.get("first_name") or None
         username = user.get("username") or None
+        language_code = user.get("language_code") or None
     except (json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:
         logger.warning("initData invalid 'user' field: %s", user_json)
         raise HTTPException(
@@ -121,7 +123,9 @@ def verify_init_data_full(init_data: str, bot_token: str = _BOT_TOKEN) -> Telegr
             detail="Invalid user field in initData",
         ) from exc
 
-    return TelegramUser(id=user_id, first_name=first_name, username=username)
+    return TelegramUser(
+        id=user_id, first_name=first_name, username=username, language_code=language_code
+    )
 
 
 def verify_init_data(init_data: str, bot_token: str = _BOT_TOKEN) -> int:
@@ -150,3 +154,17 @@ def get_current_user(
 ) -> int:
     """FastAPI dependency that returns the verified Telegram user_id."""
     return get_current_telegram_user(x_telegram_init_data).id
+
+
+def _normalize_lang(code: str | None) -> str:
+    """Mappa un language_code Telegram a una lingua supportata ('it'|'en')."""
+    if code and code.lower().startswith("en"):
+        return "en"
+    return "it"  # default app
+
+
+def get_current_lang(
+    x_telegram_init_data: str = Header("", alias="X-Telegram-Init-Data"),
+) -> str:
+    """FastAPI dependency che ritorna la lingua del richiedente ('it'|'en')."""
+    return _normalize_lang(get_current_telegram_user(x_telegram_init_data).language_code)
