@@ -521,14 +521,7 @@
         "level_up": "LEVEL UP",
         "max": "MAX"
       },
-      "legend": "Tu sei una leggenda",
-      "quick_to_next": "→ Soglia",
-      "quick_half_next": "+½ liv",
-      "encounter_label": "Incontro completato",
-      "encounter_easy": "Facile",
-      "encounter_medium": "Medio",
-      "encounter_hard": "Difficile",
-      "encounter_deadly": "Letale"
+      "legend": "Tu sei una leggenda"
     },
     "notes": {
       "title": "Note",

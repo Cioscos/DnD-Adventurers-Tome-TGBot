@@ -521,14 +521,7 @@
         "level_up": "LEVEL UP",
         "max": "MAX"
       },
-      "legend": "You are a legend",
-      "quick_to_next": "→ Next",
-      "quick_half_next": "+½ lvl",
-      "encounter_label": "Encounter complete",
-      "encounter_easy": "Easy",
-      "encounter_medium": "Medium",
-      "encounter_hard": "Hard",
-      "encounter_deadly": "Deadly"
+      "legend": "You are a legend"
     },
     "notes": {
       "title": "Notes",

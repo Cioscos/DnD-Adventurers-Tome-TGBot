@@ -20,41 +20,20 @@ import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { spring, ease } from '@/styles/motion'
 import { XP_THRESHOLDS, levelFromXp } from '@/lib/xpThresholds'
 import { diffResourceMaxes } from '@/lib/resourceDiff'
-
-// Two-burst gold/arcane confetti from bottom corners. Respect reduced-motion.
-// Fixed quick-add amounts (audit P2: replace dynamic quickXpAmounts with stable values).
-const FIXED_QUICK_AMOUNTS = [10, 50, 100, 500] as const
-
-// D&D 5e DMG p.82 — per-character XP threshold by encounter difficulty (level 1-20).
-// We award the *Medium* threshold per character on Medium, etc. Players usually log
-// the XP for the *party*; this preset is a per-character estimate to make quick-logging
-// a typical 4-PC encounter trivial.
-const ENCOUNTER_XP: Record<number, { easy: number; medium: number; hard: number; deadly: number }> = {
-  1:  { easy: 25,    medium: 50,    hard: 75,    deadly: 100 },
-  2:  { easy: 50,    medium: 100,   hard: 150,   deadly: 200 },
-  3:  { easy: 75,    medium: 150,   hard: 225,   deadly: 400 },
-  4:  { easy: 125,   medium: 250,   hard: 375,   deadly: 500 },
-  5:  { easy: 250,   medium: 500,   hard: 750,   deadly: 1100 },
-  6:  { easy: 300,   medium: 600,   hard: 900,   deadly: 1400 },
-  7:  { easy: 350,   medium: 750,   hard: 1100,  deadly: 1700 },
-  8:  { easy: 450,   medium: 900,   hard: 1400,  deadly: 2100 },
-  9:  { easy: 550,   medium: 1100,  hard: 1600,  deadly: 2400 },
-  10: { easy: 600,   medium: 1200,  hard: 1900,  deadly: 2800 },
-  11: { easy: 800,   medium: 1600,  hard: 2400,  deadly: 3600 },
-  12: { easy: 1000,  medium: 2000,  hard: 3000,  deadly: 4500 },
-  13: { easy: 1100,  medium: 2200,  hard: 3400,  deadly: 5100 },
-  14: { easy: 1250,  medium: 2500,  hard: 3800,  deadly: 5700 },
-  15: { easy: 1400,  medium: 2800,  hard: 4300,  deadly: 6400 },
-  16: { easy: 1600,  medium: 3200,  hard: 4800,  deadly: 7200 },
-  17: { easy: 2000,  medium: 3900,  hard: 5900,  deadly: 8800 },
-  18: { easy: 2100,  medium: 4200,  hard: 6300,  deadly: 9500 },
-  19: { easy: 2400,  medium: 4900,  hard: 7300,  deadly: 10900 },
-  20: { easy: 2800,  medium: 5700,  hard: 8500,  deadly: 12700 },
-}
-const ENCOUNTER_KEYS = ['easy', 'medium', 'hard', 'deadly'] as const
+import ProgressionPreview from '@/components/character/ProgressionPreview'
+import ClassTabs from '@/components/character/ClassTabs'
 import LevelUpBanner from '@/pages/multiclass/LevelUpBanner'
 import LevelUpModal from '@/pages/multiclass/LevelUpModal'
 import ExperienceSkeleton from '@/components/skeletons/ExperienceSkeleton'
+import type { CharacterFull } from '@/types'
+
+function pickDefaultClass(char: CharacterFull): string {
+  const classes = char.classes ?? []
+  if (classes.length === 0) return ''
+  if (classes.length === 1) return classes[0].class_name
+  // Multi-class fallback: alphabetic. (No reliable history field on CharacterFull.)
+  return [...classes].sort((a, b) => a.class_name.localeCompare(b.class_name))[0].class_name
+}
 
 export default function Experience() {
   const { id } = useParams<{ id: string }>()
@@ -65,6 +44,7 @@ export default function Experience() {
   const [setMode, setSetMode] = useState(false)
   const [showLevelUpModal, setShowLevelUpModal] = useState(false)
   const [levelUpBurstKey, setLevelUpBurstKey] = useState(0)
+  const [selectedClassOverride, setSelectedClassOverride] = useState<string | null>(null)
   const reducedMotion = useReducedMotion()
   // Synchronous guard against double-fire of handleApply (Input.onCommit on blur +
   // button.onClick both fire when the user taps Applica — `mutation.isPending` isn't
@@ -152,6 +132,16 @@ export default function Experience() {
   const isMulticlass = (char.classes ?? []).length > 1
   const levelUpAvailable = isMulticlass && level > totalClassLevel
   const isMaxLevel = level >= 20
+
+  // Derived (never '' when char exists): use the user's tab override when it still
+  // points at a current class, otherwise fall back to the default. Auto-recovers when
+  // the selected class is removed (multiclass edit) without needing an effect.
+  const selectedClass =
+    selectedClassOverride && char.classes?.some((c) => c.class_name === selectedClassOverride)
+      ? selectedClassOverride
+      : pickDefaultClass(char)
+  const currentClassEntry = char.classes?.find((c) => c.class_name === selectedClass)
+  const currentClassLevel = currentClassEntry?.level ?? 1
 
   const handleApply = () => {
     if (savingRef.current || mutation.isPending) return
@@ -325,87 +315,30 @@ export default function Experience() {
       </Surface>
 
       {!isMaxLevel && (
-        <>
-          <Button
-            variant="primary"
-            size="lg"
-            fullWidth
-            onClick={handleLevelUp}
-            loading={mutation.isPending}
-            icon={<ChevronsUp size={18} />}
-            haptic="medium"
-            aria-label={t('character.xp.level_up_to', { level: level + 1 })}
-          >
-            <span className="font-cinzel tracking-widest uppercase">
-              {t('character.xp.level_up_cta')}
-            </span>
-          </Button>
-
-          {/* Encounter presets — per-character XP by difficulty (D&D 5e DMG). */}
-          <div>
-            <p className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-gold-dim mb-1.5">
-              {t('character.xp.encounter_label', { defaultValue: 'Incontro completato' })}
-            </p>
-            <div className="grid grid-cols-4 gap-2">
-              {ENCOUNTER_KEYS.map((diff) => {
-                const lookup = ENCOUNTER_XP[Math.max(1, Math.min(20, level))] ?? ENCOUNTER_XP[20]
-                const amount = lookup[diff]
-                return (
-                  <m.button
-                    key={diff}
-                    onClick={() => mutation.mutate({ add: amount })}
-                    disabled={mutation.isPending}
-                    className="min-h-[48px] rounded-xl bg-dnd-surface border border-dnd-border
-                               hover:border-dnd-gold/60 transition-colors
-                               flex flex-col items-center justify-center gap-0.5
-                               disabled:opacity-40 disabled:pointer-events-none"
-                    whileTap={{ scale: 0.93 }}
-                    aria-label={t(`character.xp.encounter_${diff}`, { defaultValue: diff })}
-                  >
-                    <span className="text-[10px] font-cinzel uppercase tracking-wider text-dnd-text-muted">
-                      {t(`character.xp.encounter_${diff}`, { defaultValue: diff })}
-                    </span>
-                    <span className="text-[11px] font-mono font-bold text-dnd-gold-bright tabular-nums">
-                      +{amount}
-                    </span>
-                  </m.button>
-                )
-              })}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-5 gap-2">
-            {FIXED_QUICK_AMOUNTS.map((n) => (
-              <m.button
-                key={n}
-                onClick={() => mutation.mutate({ add: n })}
-                disabled={mutation.isPending}
-                className="min-h-[48px] rounded-xl bg-dnd-surface border border-dnd-border
-                           hover:border-dnd-gold/60 transition-colors
-                           font-mono font-bold text-dnd-gold-bright tabular-nums
-                           disabled:opacity-40 disabled:pointer-events-none"
-                whileTap={{ scale: 0.93 }}
-              >
-                +{n}
-              </m.button>
-            ))}
-            {xpToNext > 0 && (
-              <m.button
-                onClick={() => mutation.mutate({ add: Math.max(1, Math.floor(xpToNext / 2)) })}
-                disabled={mutation.isPending}
-                className="min-h-[48px] rounded-xl bg-dnd-chip-bg border border-dnd-gold/60
-                           text-dnd-gold-bright font-cinzel text-[10px] uppercase tracking-widest
-                           disabled:opacity-40 disabled:pointer-events-none"
-                whileTap={{ scale: 0.93 }}
-                aria-label={t('character.xp.quick_half_next', { defaultValue: '+½ livello' })}
-                title={`+${Math.max(1, Math.floor(xpToNext / 2))} ${t('character.xp.label')}`}
-              >
-                {t('character.xp.quick_half_next', { defaultValue: '+½ liv' })}
-              </m.button>
-            )}
-          </div>
-        </>
+        <Button
+          variant="primary"
+          size="lg"
+          fullWidth
+          onClick={handleLevelUp}
+          loading={mutation.isPending}
+          icon={<ChevronsUp size={18} />}
+          haptic="medium"
+          aria-label={t('character.xp.level_up_to', { level: level + 1 })}
+        >
+          <span className="font-cinzel tracking-widest uppercase">
+            {t('character.xp.level_up_cta')}
+          </span>
+        </Button>
       )}
+
+      {/* Class progression table */}
+      {char.classes && char.classes.length > 0 && (
+        <div>
+          <ClassTabs classes={char.classes} selected={selectedClass} onSelect={setSelectedClassOverride} />
+          <ProgressionPreview className={selectedClass} currentLevel={currentClassLevel} isMulticlass={isMulticlass} />
+        </div>
+      )}
+
       {showLevelUpModal && (
         <LevelUpModal
           char={char}
