@@ -277,9 +277,9 @@ class CharacterClass(Base):
     hit_die: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
 
     character: Mapped["Character"] = relationship(back_populates="classes")
-    resources: Mapped[List["ClassResource"]] = relationship(
-        back_populates="character_class", cascade="all, delete-orphan"
-    )
+    # NB: le ex-"risorse di classe" (Furia, Punti Ki, …) sono state assorbite in
+    # Ability (is_class_feature=True, source_class_id=questa classe). La tabella
+    # class_resources è stata ritirata; non esiste più alcuna relazione qui.
 
 
 # ---------------------------------------------------------------------------
@@ -287,37 +287,6 @@ class CharacterClass(Base):
 # ---------------------------------------------------------------------------
 
 ABILITY_NAMES = ("strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma")
-
-
-# ---------------------------------------------------------------------------
-# ClassResource (class-specific resource like Ki points, Rage uses, etc.)
-# ---------------------------------------------------------------------------
-
-class ClassResource(Base):
-    """A class-specific resource (Ki points, Rage uses, etc.) linked to a CharacterClass."""
-    __tablename__ = "class_resources"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    class_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("character_classes.id", ondelete="CASCADE"), nullable=False
-    )
-    name: Mapped[str] = mapped_column(String(100), nullable=False)
-    current: Mapped[int] = mapped_column(Integer, default=0)
-    total: Mapped[int] = mapped_column(Integer, default=0)
-    restoration_type: Mapped[str] = mapped_column(
-        Enum(RestorationType), default=RestorationType.NONE
-    )
-    note: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-
-    character_class: Mapped["CharacterClass"] = relationship(back_populates="resources")
-
-    def use(self) -> None:
-        if self.current <= 0:
-            raise ValueError(f"Nessuna risorsa disponibile: '{self.name}'.")
-        self.current -= 1
-
-    def restore_all(self) -> None:
-        self.current = self.total
 
 
 class AbilityScore(Base):
@@ -506,6 +475,15 @@ class Ability(Base):
     restoration_type: Mapped[str] = mapped_column(
         Enum(RestorationType), default=RestorationType.NONE
     )
+    # Provenienza: feature auto-generata da una classe (Furia, Punti Ki, …).
+    # source_class_id lega l'abilità alla CharacterClass che la genera; feature_key
+    # è la chiave stabile di catalogo (es. "barbarian.rage") usata dal re-sync al
+    # level-up. Entrambi NULL + is_class_feature False per le abilità manuali.
+    source_class_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("character_classes.id", ondelete="CASCADE"), nullable=True
+    )
+    is_class_feature: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    feature_key: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
 
     character: Mapped["Character"] = relationship(back_populates="abilities")
 

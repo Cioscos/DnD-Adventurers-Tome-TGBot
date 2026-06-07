@@ -118,6 +118,10 @@ _MIGRATIONS: list[tuple[str, str, str, str | None]] = [
     ("characters", "unarmored_defense_ability", "VARCHAR(20)", None),
     # Custom paper-doll silhouette (E4)
     ("characters", "silhouette_path", "VARCHAR(500)", None),
+    # Risorse di classe assorbite in Ability (refactor risorse → abilità)
+    ("abilities", "source_class_id", "INTEGER REFERENCES character_classes(id) ON DELETE CASCADE", None),
+    ("abilities", "is_class_feature", "BOOLEAN", "0"),
+    ("abilities", "feature_key", "VARCHAR(100)", None),
 ]
 
 # Tables to drop if they exist (legacy feature cleanup)
@@ -308,12 +312,75 @@ def _migrate_schema(connection) -> None:
             existing_tables.discard(table)
 
 
+def _migrate_class_resources_to_abilities(connection) -> None:
+    """Converte le righe ``class_resources`` legacy in Ability, poi droppa la tabella.
+
+    Idempotente: se ``class_resources`` non esiste più (già migrata / DB nuovo) è
+    un no-op. Il match contro il catalogo ``CLASS_RESOURCES`` (per
+    ``(class_name, resource_name)``) marca la riga come feature di classe
+    (``is_class_feature=1`` + ``feature_key`` + ``source_class_id`` + descrizione
+    italiana di catalogo); le righe senza match diventano abilità manuali.
+    ``restoration_type`` è copiato verbatim (stessa rappresentazione enum).
+    """
+    inspector = sa_inspect(connection)
+    if "class_resources" not in inspector.get_table_names():
+        return
+
+    from core.data.classes import CLASS_RESOURCES
+
+    # (class_name, resource_name) -> (feature_key, description_it)
+    lookup: dict[tuple[str, str], tuple[str, str]] = {}
+    for class_name, configs in CLASS_RESOURCES.items():
+        for cfg in configs:
+            lookup[(class_name, cfg.name)] = (cfg.key, cfg.description.get("it") or "")
+
+    rows = connection.execute(text(
+        "SELECT cr.name, cr.current, cr.total, cr.restoration_type, cr.note,"
+        "       cc.id AS class_id, cc.character_id, cc.class_name "
+        "FROM class_resources cr "
+        "JOIN character_classes cc ON cc.id = cr.class_id"
+    )).fetchall()
+
+    migrated = 0
+    for row in rows:
+        name, current, total, restoration_type, note, class_id, character_id, class_name = row
+        matched = lookup.get((class_name, name))
+        if matched is not None:
+            feature_key, desc = matched
+            connection.execute(text(
+                "INSERT INTO abilities "
+                "(character_id, name, description, max_uses, uses, is_passive, is_active,"
+                " restoration_type, source_class_id, is_class_feature, feature_key) "
+                "VALUES (:cid, :name, :desc, :max_uses, :uses, 0, 1, :rt, :scid, 1, :fk)"
+            ), {
+                "cid": character_id, "name": name, "desc": desc,
+                "max_uses": total, "uses": current, "rt": restoration_type,
+                "scid": class_id, "fk": feature_key,
+            })
+        else:
+            connection.execute(text(
+                "INSERT INTO abilities "
+                "(character_id, name, description, max_uses, uses, is_passive, is_active,"
+                " restoration_type, source_class_id, is_class_feature, feature_key) "
+                "VALUES (:cid, :name, :desc, :max_uses, :uses, 0, 1, :rt, NULL, 0, NULL)"
+            ), {
+                "cid": character_id, "name": name, "desc": note,
+                "max_uses": total, "uses": current, "rt": restoration_type,
+            })
+        migrated += 1
+
+    connection.execute(text("DROP TABLE class_resources"))
+    if migrated:
+        logger.info("Migrate %d class_resources -> abilities; dropped class_resources", migrated)
+
+
 async def init_db() -> None:
-    """Create all tables and run schema migrations."""
+    """Create all tables and run schema + data migrations."""
     os.makedirs(os.path.dirname(_DB_PATH), exist_ok=True)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
         await conn.run_sync(_migrate_schema)
+        await conn.run_sync(_migrate_class_resources_to_abilities)
 
 
 @asynccontextmanager
