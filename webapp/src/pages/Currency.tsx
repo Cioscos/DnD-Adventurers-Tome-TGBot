@@ -121,6 +121,8 @@ export default function Currency() {
     )
   }
 
+  const isDirty = Object.values(draft).some((v) => v !== '')
+
   const settings = (char.settings as Record<string, unknown>) ?? {}
   const hideElectrum = settings.hide_electrum === true
   const currentCoins = char.currency
@@ -140,6 +142,27 @@ export default function Currency() {
 
   return (
     <Layout title={t('character.currency.title')} backTo={`/char/${charId}`} group="equipment" page="currency">
+      {isDirty && (
+        <Surface
+          variant="ember"
+          className="sticky top-2 z-20 flex items-center justify-between gap-3 !py-2.5 !px-3"
+        >
+          <span className="text-xs font-body text-dnd-text">
+            {t('character.identity.unsaved_changes')}
+          </span>
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => mutation.mutate()}
+            loading={mutation.isPending}
+            icon={<Save size={14} />}
+            haptic="success"
+          >
+            {t('character.identity.save_now')}
+          </Button>
+        </Surface>
+      )}
+
       {/* Total gold hero */}
       <Surface variant="tome" ornamented className="text-center">
         <p className="text-[10px] font-cinzel uppercase tracking-[0.3em] text-dnd-gold-dim mb-1">
@@ -227,6 +250,7 @@ export default function Currency() {
         size="lg"
         fullWidth
         onClick={() => mutation.mutate()}
+        disabled={mutation.isPending || !isDirty}
         loading={mutation.isPending}
         icon={<Save size={18} />}
         haptic="success"

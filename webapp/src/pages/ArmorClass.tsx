@@ -105,6 +105,27 @@ export default function ArmorClass() {
 
   return (
     <Layout title={t('character.ac.title')} backTo={`/char/${charId}`} group="combat" page="ac">
+      {isDirty && (
+        <Surface
+          variant="ember"
+          className="sticky top-2 z-20 flex items-center justify-between gap-3 !py-2.5 !px-3"
+        >
+          <span className="text-xs font-body text-dnd-text">
+            {t('character.identity.unsaved_changes')}
+          </span>
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => mutation.mutate()}
+            loading={mutation.isPending}
+            icon={<Save size={14} />}
+            haptic="success"
+          >
+            {t('character.identity.save_now')}
+          </Button>
+        </Surface>
+      )}
+
       {/* Hero AC */}
       <Surface variant="tome" ornamented className="relative overflow-hidden">
         <div className="flex flex-col items-center py-4">
