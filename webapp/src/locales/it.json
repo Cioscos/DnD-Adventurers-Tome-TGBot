@@ -103,7 +103,7 @@
       "heal_short": "CURA",
       "current_short": "ATTUALI",
       "max_short": "MASSIMO",
-      "temp_short": "TEMP",
+      "temp_short": "Temporanei",
       "long_rest_confirm_title": "Riposo lungo",
       "long_rest_confirm_body": "Sei sicuro? Le regole D&D 5e ammettono un solo riposo lungo ogni 24 ore.",
       "long_rest_confirm_action": "Riposa",
@@ -211,7 +211,7 @@
       "title": "Tiri Salvezza",
       "proficient": "Competente",
       "roll": "Tira dado",
-      "ts_short": "TS",
+      "ts_short": "Tiro Salvezza",
       "tap_to_roll": "Tocca per tirare",
       "homebrew_label": "Bonus Homebrew"
     },
@@ -234,7 +234,7 @@
         "base": "Base",
         "effective": "Effettivo"
       },
-      "mod_label": "MOD",
+      "mod_label": "Modificatore",
       "sources": "Sorgenti"
     },
     "spells": {
@@ -276,13 +276,15 @@
       "conc_lost": "La concentrazione è stata interrotta",
       "higher_level": "A livelli superiori",
       "attack_save": "Attacco / TS",
+      "badge_concentration": "Concentrazione",
+      "badge_ritual": "Rituale",
       "chip_casting_time": "LANCIO",
       "chip_range": "GITTATA",
-      "chip_components": "COMP.",
+      "chip_components": "Componenti",
       "chip_duration": "DURATA",
       "chip_damage": "DANNO",
-      "chip_attack_save": "ATT / TS",
-      "chip_higher_level": "LIV. SUP.",
+      "chip_attack_save": "Attacco / Tiro Salvezza",
+      "chip_higher_level": "Livelli Superiori",
       "roll_damage": {
         "title": "Tiro danni: {{name}}",
         "button": "Rolla danni",
@@ -466,7 +468,10 @@
       "tap_to_spend": "Tocca per usare",
       "use_reroll": "Usa Ispirazione",
       "reroll_badge": "↻ Reroll ispirazione",
-      "unavailable_error": "Ispirazione non disponibile"
+      "unavailable_error": "Ispirazione non disponibile",
+      "on": "Attiva",
+      "off": "Disattiva",
+      "aria": "Ispirazione eroica"
     },
     "inSession": {
       "label": "Sei in sessione",
@@ -476,7 +481,7 @@
       "title": "Monete",
       "copper": "Rame",
       "silver": "Argento",
-      "electrum": "Elettro",
+      "electrum": "Electrum",
       "gold": "Oro",
       "platinum": "Platino",
       "convert": "Converti",
@@ -500,7 +505,8 @@
       "level": "Livello {{level}}",
       "next_level": "Prossimo livello",
       "xp_to_next": "XP al prossimo livello",
-      "level_abbr": "Liv.",
+      "level_abbr": "Livello",
+      "label": "Esperienza",
       "level_up_available": "Livello disponibile! Vai nella pagina Classe per distribuire il livello.",
       "level_up_available_short": "Livello disponibile! Clicca per scegliere classe",
       "single_class_synced": "Il livello della classe viene aggiornato automaticamente con gli XP.",
@@ -946,7 +952,11 @@
         "title": "Progressione",
         "tap_full_table": "Tocca per tabella completa",
         "no_data": "Dati di progressione non disponibili",
-        "current_level": "Livello attuale"
+        "current_level": "Livello attuale",
+        "features_header": "Caratteristiche",
+        "level_header": "Livello",
+        "pb_header": "Bonus Competenza",
+        "level_cell": "Liv. {{n}}"
       }
     },
     "swiper": {
@@ -1071,9 +1081,9 @@
     "chat_fullscreen_close": "Chiudi schermo intero",
     "detail": {
       "stats_title": "Stato attuale",
-      "ac_label": "CA",
+      "ac_label": "Classe Armatura",
       "ac_hidden": "—",
-      "hp_label": "PF",
+      "hp_label": "Punti Ferita",
       "hp_redacted": "Nascosti",
       "temp_hp_label": "Scudo",
       "conditions_label": "Condizioni",

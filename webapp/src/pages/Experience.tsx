@@ -240,7 +240,7 @@ export default function Experience() {
             stiffness={120}
             damping={26}
           />
-          <span className="text-xs font-cinzel uppercase tracking-wider text-dnd-text-muted">XP</span>
+          <span className="text-xs font-cinzel uppercase tracking-wider text-dnd-text-muted">{t('character.xp.label')}</span>
         </div>
 
         {isMaxLevel && (
@@ -252,8 +252,8 @@ export default function Experience() {
         {nextThreshold && (
           <div className="mt-4">
             <div className="flex items-center justify-between mb-1.5">
-              <StatPill tone="gold" size="sm" value={`${level}`} label="Lv" />
-              <StatPill tone="default" size="sm" value={`${xpToNext.toLocaleString()} XP → ${level + 1}`} />
+              <StatPill tone="gold" size="sm" value={`${level}`} label={t('character.xp.level_abbr')} />
+              <StatPill tone="default" size="sm" value={`${xpToNext.toLocaleString()} ${t('character.xp.label')} → ${level + 1}`} />
             </div>
             {/* XP progress bar */}
             <div className="h-3 rounded-full bg-dnd-ink/60 overflow-hidden border border-dnd-border relative">
@@ -305,7 +305,7 @@ export default function Experience() {
             min={0}
             value={addValue}
             onChange={setAddValue}
-            placeholder="XP"
+            placeholder={t('character.xp.label')}
             inputMode="numeric"
             onCommit={handleApply}
             className="flex-1"
@@ -398,7 +398,7 @@ export default function Experience() {
                            disabled:opacity-40 disabled:pointer-events-none"
                 whileTap={{ scale: 0.93 }}
                 aria-label={t('character.xp.quick_half_next', { defaultValue: '+½ livello' })}
-                title={`+${Math.max(1, Math.floor(xpToNext / 2))} XP`}
+                title={`+${Math.max(1, Math.floor(xpToNext / 2))} ${t('character.xp.label')}`}
               >
                 {t('character.xp.quick_half_next', { defaultValue: '+½ liv' })}
               </m.button>

@@ -115,7 +115,7 @@ export default function CharacterMain() {
               ? 'bg-dnd-gold/20 border border-dnd-gold shadow-halo-gold'
               : 'bg-dnd-surface border border-dnd-gold-dim/60'}`}
           whileTap={{ scale: 0.9 }}
-          aria-label={`Heroic Inspiration: ${char.heroic_inspiration ? 'ON' : 'OFF'}`}
+          aria-label={t('character.inspiration.aria')}
         >
           <GiSparkles
             size={16}
@@ -126,7 +126,7 @@ export default function CharacterMain() {
               char.heroic_inspiration ? 'text-dnd-gold-bright' : 'text-dnd-text-muted'
             }`}
           >
-            {char.heroic_inspiration ? 'ON' : 'OFF'}
+            {char.heroic_inspiration ? t('character.inspiration.on') : t('character.inspiration.off')}
           </span>
         </m.button>
 

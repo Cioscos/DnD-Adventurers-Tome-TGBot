@@ -202,7 +202,7 @@ export default function Currency() {
                     <p className="text-[10px] text-[var(--dnd-crimson-bright)] mt-0.5 font-body italic">
                       {t('character.currency.remove_preview', {
                         amount: Math.abs(draftNum),
-                        coin: label,
+                        coin: t(`character.currency.${key}`),
                       })}
                     </p>
                   )}
