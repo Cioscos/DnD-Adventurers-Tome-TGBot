@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { ChevronLeft } from 'lucide-react'
@@ -40,6 +40,21 @@ export default function Layout({ title, children, backTo, group, page, hideScrol
   // free when the on-screen keyboard or long content is in play.
   const [tablistCollapsed, setTablistCollapsed] = useState(false)
   const lastScrollTopRef = useRef(0)
+
+  // Breadcrumb auto-scroll: when the current page changes, scroll the strip so
+  // the highlighted item is centered in the scrollable container.
+  const crumbScrollRef = useRef<HTMLDivElement>(null)
+  const activeCrumbRef = useRef<HTMLSpanElement>(null)
+
+  useEffect(() => {
+    const c = crumbScrollRef.current
+    const a = activeCrumbRef.current
+    if (!c || !a) return
+    const cRect = c.getBoundingClientRect()
+    const aRect = a.getBoundingClientRect()
+    const delta = (aRect.left - cRect.left) - (c.clientWidth - a.offsetWidth) / 2
+    c.scrollBy({ left: delta, behavior: 'smooth' })
+  }, [page, group])
 
   // Finding #5: prefer the declared logical parent (e.g. the character hub) over
   // history.back(), so a single tap from a deep page returns to /char/:id instead
@@ -108,14 +123,14 @@ export default function Layout({ title, children, backTo, group, page, hideScrol
                   transition={{ duration: 0.18, ease: [0.25, 0.1, 0.25, 1] }}
                   className="overflow-hidden"
                 >
-                  <div className="flex items-center overflow-x-auto scrollbar-hide touch-pan-x text-xs font-body whitespace-nowrap px-1">
+                  <div ref={crumbScrollRef} className="flex items-center overflow-x-auto scrollbar-hide touch-pan-x text-xs font-body whitespace-nowrap px-1">
                     {info.pages.map((pageKey, i) => (
                       <span key={pageKey} className="flex items-center shrink-0">
                         {i > 0 && (
                           <span className="text-dnd-gold-dim/50 shrink-0 px-1">◈</span>
                         )}
                         {i === info.index ? (
-                          <span className="text-dnd-gold-bright font-semibold whitespace-nowrap px-2 py-1.5">
+                          <span ref={activeCrumbRef} className="text-dnd-gold-bright font-semibold whitespace-nowrap px-2 py-1.5">
                             {t(`character.menu.${pageKey}`)}
                           </span>
                         ) : (

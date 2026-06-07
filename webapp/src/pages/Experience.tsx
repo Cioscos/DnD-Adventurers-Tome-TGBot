@@ -241,8 +241,7 @@ export default function Experience() {
 
         {nextThreshold && (
           <div className="mt-4">
-            <div className="flex items-center justify-between mb-1.5">
-              <StatPill tone="gold" size="sm" value={`${level}`} label={t('character.xp.level_abbr')} />
+            <div className="flex items-center justify-end mb-1.5">
               <StatPill tone="default" size="sm" value={`${xpToNext.toLocaleString()} ${t('character.xp.label')} → ${level + 1}`} />
             </div>
             {/* XP progress bar */}
