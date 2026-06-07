@@ -103,7 +103,7 @@
       "heal_short": "HEAL",
       "current_short": "CURR",
       "max_short": "MAX",
-      "temp_short": "TEMP",
+      "temp_short": "Temporary",
       "long_rest_confirm_title": "Long rest",
       "long_rest_confirm_body": "Are you sure? D&D 5e rules allow only one long rest every 24 hours.",
       "long_rest_confirm_action": "Rest",
@@ -211,7 +211,7 @@
       "title": "Saving Throws",
       "proficient": "Proficient",
       "roll": "Roll dice",
-      "ts_short": "ST",
+      "ts_short": "Saving Throw",
       "tap_to_roll": "Tap to roll",
       "homebrew_label": "Homebrew Bonus"
     },
@@ -234,7 +234,7 @@
         "base": "Base",
         "effective": "Effective"
       },
-      "mod_label": "MOD",
+      "mod_label": "Modifier",
       "sources": "Sources"
     },
     "spells": {
@@ -276,13 +276,15 @@
       "conc_lost": "Concentration has been broken",
       "higher_level": "At higher levels",
       "attack_save": "Attack / Save",
+      "badge_concentration": "Concentration",
+      "badge_ritual": "Ritual",
       "chip_casting_time": "CAST",
       "chip_range": "RANGE",
-      "chip_components": "COMP.",
+      "chip_components": "Components",
       "chip_duration": "DURATION",
       "chip_damage": "DAMAGE",
-      "chip_attack_save": "ATK / SAVE",
-      "chip_higher_level": "HIGHER LVL",
+      "chip_attack_save": "Attack / Save",
+      "chip_higher_level": "Higher Levels",
       "roll_damage": {
         "title": "Damage roll: {{name}}",
         "button": "Roll damage",
@@ -466,7 +468,10 @@
       "tap_to_spend": "Tap to spend",
       "use_reroll": "Use Inspiration",
       "reroll_badge": "↻ Inspiration reroll",
-      "unavailable_error": "Inspiration unavailable"
+      "unavailable_error": "Inspiration unavailable",
+      "on": "On",
+      "off": "Off",
+      "aria": "Heroic Inspiration"
     },
     "inSession": {
       "label": "In active session",
@@ -500,7 +505,8 @@
       "level": "Level {{level}}",
       "next_level": "Next level",
       "xp_to_next": "XP to next level",
-      "level_abbr": "Lv.",
+      "level_abbr": "Level",
+      "label": "Experience",
       "level_up_available": "Level up available! Go to the Class page to assign the level.",
       "level_up_available_short": "Level up available! Tap to pick a class",
       "single_class_synced": "Class level updates automatically with XP.",
@@ -515,14 +521,7 @@
         "level_up": "LEVEL UP",
         "max": "MAX"
       },
-      "legend": "You are a legend",
-      "quick_to_next": "→ Next",
-      "quick_half_next": "+½ lvl",
-      "encounter_label": "Encounter complete",
-      "encounter_easy": "Easy",
-      "encounter_medium": "Medium",
-      "encounter_hard": "Hard",
-      "encounter_deadly": "Deadly"
+      "legend": "You are a legend"
     },
     "notes": {
       "title": "Notes",
@@ -946,7 +945,11 @@
         "title": "Progression",
         "tap_full_table": "Tap for full table",
         "no_data": "Progression data not available",
-        "current_level": "Current level"
+        "current_level": "Current level",
+        "features_header": "Features",
+        "level_header": "Level",
+        "pb_header": "Proficiency Bonus",
+        "level_cell": "Lv. {{n}}"
       }
     },
     "swiper": {
@@ -1071,9 +1074,9 @@
     "chat_fullscreen_close": "Close fullscreen",
     "detail": {
       "stats_title": "Current status",
-      "ac_label": "AC",
+      "ac_label": "Armor Class",
       "ac_hidden": "—",
-      "hp_label": "HP",
+      "hp_label": "Hit Points",
       "hp_redacted": "Hidden",
       "temp_hp_label": "Shield",
       "conditions_label": "Conditions",

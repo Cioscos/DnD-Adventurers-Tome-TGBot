@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
@@ -17,8 +17,6 @@ import { formatCondition, CONDITION_ICONS } from '@/lib/conditions'
 import ConditionDetailModal from '@/pages/conditions/ConditionDetailModal'
 import PassiveAbilityDetailModal from '@/pages/abilities/PassiveAbilityDetailModal'
 import SpellSlotsSummary from '@/components/character/SpellSlotsSummary'
-import ProgressionPreview from '@/components/character/ProgressionPreview'
-import ClassTabs from '@/components/character/ClassTabs'
 import type { Ability, CharacterFull } from '@/types'
 import { useUnitSettings, formatWeightValue, weightUnitLabel } from '@/store/unitSettings'
 
@@ -32,27 +30,12 @@ interface Props {
   char: CharacterFull
 }
 
-function pickDefaultClass(char: CharacterFull): string {
-  const classes = char.classes ?? []
-  if (classes.length === 0) return ''
-  if (classes.length === 1) return classes[0].class_name
-  // Multi-class fallback: alphabetic. (No reliable history field on CharacterFull.)
-  return [...classes].sort((a, b) => a.class_name.localeCompare(b.class_name))[0].class_name
-}
-
 export default function HeroScreen({ char }: Props) {
   const navigate = useNavigate()
   const { t } = useTranslation()
 
   const [detailCondKey, setDetailCondKey] = useState<string | null>(null)
   const [detailAbility, setDetailAbility] = useState<Ability | null>(null)
-  const [selectedClass, setSelectedClass] = useState<string>(() => pickDefaultClass(char))
-
-  useEffect(() => {
-    if (!(char.classes ?? []).some((c) => c.class_name === selectedClass)) {
-      setSelectedClass(pickDefaultClass(char))
-    }
-  }, [char, selectedClass])
 
   const hpMax = char.hit_points + (char.hp_max_homebrew_modifier ?? 0)
   const acTotal = char.ac + (char.ac_breakdown?.homebrew ?? 0)
@@ -68,9 +51,6 @@ export default function HeroScreen({ char }: Props) {
   const activeConditions = char.conditions
     ? Object.entries(char.conditions).filter(([, v]) => v)
     : []
-
-  const currentClassEntry = char.classes?.find((c) => c.class_name === selectedClass)
-  const currentClassLevel = currentClassEntry?.level ?? 1
 
   return (
     <div className="@container p-4 space-y-3 pb-safe">
@@ -282,22 +262,6 @@ export default function HeroScreen({ char }: Props) {
 
       {/* Spell slots summary */}
       {char.spell_slots && <SpellSlotsSummary slots={char.spell_slots} />}
-
-      {/* Class progression preview */}
-      {char.classes && char.classes.length > 0 && (
-        <div>
-          <ClassTabs
-            classes={char.classes}
-            selected={selectedClass}
-            onSelect={setSelectedClass}
-          />
-          <ProgressionPreview
-            className={selectedClass}
-            currentLevel={currentClassLevel}
-            isMulticlass={char.classes.length > 1}
-          />
-        </div>
-      )}
 
       {/* Modals */}
       {detailCondKey !== null && (

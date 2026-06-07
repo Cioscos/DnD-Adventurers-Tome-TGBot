@@ -12,7 +12,11 @@ interface UseLongPressOpts {
 }
 
 /** Pixels of movement after press-down that cancel the tap/long-press (treat as scroll). */
-const MOVE_CANCEL_PX = 10
+const MOVE_CANCEL_PX = 12
+
+/** Milliseconds before the progress ring starts filling (so a quick scroll touch never
+ *  visibly starts the ring). Progress is rescaled so it still reaches 1 at thresholdMs. */
+const RING_DELAY_MS = 120
 
 type AnyPressEvent =
   | React.PointerEvent
@@ -43,6 +47,10 @@ export function useLongPress({ onLongPress, onClick, thresholdMs = 500, onProgre
   }, [])
 
   const start = useCallback((e: AnyPressEvent) => {
+    // Gesture already tracked (devices fire both pointer+touch families for one physical
+    // touch) — ignore the duplicate so we don't reset movedRef/startRef mid-gesture and
+    // mis-register a scroll as a tap.
+    if (pressingRef.current) return
     pressingRef.current = true
     triggeredRef.current = false
     movedRef.current = false
@@ -53,9 +61,13 @@ export function useLongPress({ onLongPress, onClick, thresholdMs = 500, onProgre
       const startTs = Date.now()
       const tick = () => {
         const elapsed = Date.now() - startTs
-        const p = Math.min(elapsed / thresholdMs, 1)
+        // Delay the ring: stay at 0 for the first RING_DELAY_MS, then rescale
+        // so the ring still completes exactly when elapsed == thresholdMs.
+        const p = elapsed <= RING_DELAY_MS
+          ? 0
+          : Math.min((elapsed - RING_DELAY_MS) / Math.max(1, thresholdMs - RING_DELAY_MS), 1)
         onProgress(p)
-        if (p >= 1) {
+        if (elapsed >= thresholdMs) {
           triggeredRef.current = true
           onLongPress()
           return

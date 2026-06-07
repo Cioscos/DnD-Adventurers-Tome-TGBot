@@ -63,10 +63,10 @@ function SpellItemInner({
         <span className="flex-1 font-medium text-sm text-dnd-text">{spell.name}</span>
         <div className="flex gap-1 shrink-0 items-center">
           {spell.is_concentration && (
-            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-dnd-arcane/20 text-dnd-arcane-text border border-dnd-arcane/30">C</span>
+            <span title={t('character.spells.badge_concentration')} className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-dnd-arcane/20 text-dnd-arcane-text border border-dnd-arcane/30">C</span>
           )}
           {spell.is_ritual && (
-            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-dnd-info/20 text-dnd-info-text border border-dnd-info/30">R</span>
+            <span title={t('character.spells.badge_ritual')} className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-dnd-info/20 text-dnd-info-text border border-dnd-info/30">R</span>
           )}
           {spell.is_pinned && <span className="text-xs">&#x1F4CC;</span>}
         </div>

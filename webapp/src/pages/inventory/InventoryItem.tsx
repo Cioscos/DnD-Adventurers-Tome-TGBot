@@ -8,7 +8,7 @@ import {
   GiBiceps as Biceps,
   GiBackpack as Backpack,
 } from 'react-icons/gi'
-import { TYPE_ICON, consumableEmoji } from './itemMetadata'
+import { TYPE_ICON, consumableEmoji, hasSingleQuantity } from './itemMetadata'
 import type { Item } from '@/types'
 import type { Property } from '@/lib/homebrew/types'
 import PropertyBadge from '@/components/homebrew/PropertyBadge'
@@ -285,7 +285,7 @@ function InventoryItemInner({
           <p className="text-xs text-dnd-text-muted mt-0.5">
             {t(`character.inventory.types.${item.item_type}`, { defaultValue: item.item_type })}
             {item.weight > 0 && ` · ${formatWeight(item.weight, system)}`}
-            {` · ×${item.quantity}`}
+            {!hasSingleQuantity(item.item_type) && ` · ×${item.quantity}`}
           </p>
         </div>
         <span className="text-dnd-text-muted text-xs shrink-0 ml-1">
@@ -321,23 +321,25 @@ function InventoryItemInner({
           {/* Effect callout (consumable / potion / scroll) */}
           <ItemEffectCallout item={item} />
 
-          {/* Quantity stepper */}
-          <div className="flex items-center gap-2 bg-dnd-chip-bg rounded-lg px-2 py-1.5">
-            <span className="text-xs text-dnd-text-muted flex-1 font-medium">
-              {t('character.inventory.quantity')}
-            </span>
-            <button
-              onClick={() => onQuantityChange(-1)}
-              className="w-11 h-11 rounded-md bg-dnd-surface-raised border border-dnd-border text-dnd-gold font-bold active:opacity-60"
-              aria-label="-"
-            >&minus;</button>
-            <span className="w-6 text-center font-mono font-bold text-dnd-gold-bright">{item.quantity}</span>
-            <button
-              onClick={() => onQuantityChange(1)}
-              className="w-11 h-11 rounded-md bg-dnd-surface-raised border border-dnd-border text-dnd-gold font-bold active:opacity-60"
-              aria-label="+"
-            >+</button>
-          </div>
+          {/* Quantity stepper — hidden for single-equip items (weapon, armor, shield) */}
+          {!hasSingleQuantity(item.item_type) && (
+            <div className="flex items-center gap-2 bg-dnd-chip-bg rounded-lg px-2 py-1.5">
+              <span className="text-xs text-dnd-text-muted flex-1 font-medium">
+                {t('character.inventory.quantity')}
+              </span>
+              <button
+                onClick={() => onQuantityChange(-1)}
+                className="w-11 h-11 rounded-md bg-dnd-surface-raised border border-dnd-border text-dnd-gold font-bold active:opacity-60"
+                aria-label="-"
+              >&minus;</button>
+              <span className="w-6 text-center font-mono font-bold text-dnd-gold-bright">{item.quantity}</span>
+              <button
+                onClick={() => onQuantityChange(1)}
+                className="w-11 h-11 rounded-md bg-dnd-surface-raised border border-dnd-border text-dnd-gold font-bold active:opacity-60"
+                aria-label="+"
+              >+</button>
+            </div>
+          )}
 
           {/* Action buttons — same pattern as SpellItem */}
           <div className="flex gap-2 flex-wrap border-t border-dnd-gold-dim/10 pt-2">

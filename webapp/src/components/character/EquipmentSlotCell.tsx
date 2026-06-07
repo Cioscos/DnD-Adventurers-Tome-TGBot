@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { m, useReducedMotion } from 'framer-motion'
-import { SLOT_PLACEHOLDER_ICON } from '@/lib/equipmentSlots'
+import { SLOT_PLACEHOLDER_ICON, equippedItemIcon } from '@/lib/equipmentSlots'
 import { haptic } from '@/auth/telegram'
 import type { EquipmentSlot, Item } from '@/types'
 
@@ -21,6 +21,7 @@ export default function EquipmentSlotCell({ slot, equipped, size = 'md', onTap }
   const dim = size === 'lg' ? 56 : 46
   const slotLabel = t(`character.equipment.slots.${slot}`, { defaultValue: slot })
   const initial = equipped?.name?.trim()?.[0]?.toUpperCase() ?? ''
+  const Icon = equipped ? equippedItemIcon(equipped, slot) : null
 
   const prevIdRef = useRef<number | null>(equipped?.id ?? null)
   const [halo, setHalo] = useState(false)
@@ -72,10 +73,11 @@ export default function EquipmentSlotCell({ slot, equipped, size = 'md', onTap }
         <m.span
           layoutId={`equip-icon-${equipped.id}`}
           aria-hidden="true"
-          className="font-cinzel font-bold text-dnd-gold-bright leading-none"
-          style={{ fontSize: size === 'lg' ? 22 : 18 }}
+          className="text-dnd-gold-bright leading-none flex items-center justify-center"
         >
-          {initial}
+          {Icon
+            ? <Icon size={size === 'lg' ? 22 : 18} />
+            : <span className="font-cinzel font-bold" style={{ fontSize: size === 'lg' ? 22 : 18 }}>{initial}</span>}
         </m.span>
       ) : (
         <PlaceholderIcon
