@@ -1,6 +1,47 @@
 {
   "entries": [
     {
+      "version": "2.2.0",
+      "date": "2026-06-07",
+      "title": { "it": "Rifiniture", "en": "Refinements" },
+      "added": {
+        "it": [
+          "Gli oggetti equipaggiati sul paper-doll mostrano un'icona per tipo (arma, armatura, scudo, accessorio) al posto dell'iniziale del nome.",
+          "Le breadcrumb mostrano l'intero percorso del gruppo: tocca una voce per saltare a quella pagina e scorri il percorso con il dito.",
+          "La tabella di progressione di classe è ora nella pagina Esperienza."
+        ],
+        "en": [
+          "Equipped items on the paper-doll now show a type icon (weapon, armor, shield, accessory) instead of the name's initial.",
+          "Breadcrumbs show the whole group path: tap an entry to jump to that page and drag the path with your finger.",
+          "The class progression table now lives on the Experience page."
+        ]
+      },
+      "improved": {
+        "it": [
+          "Nomi delle abilità allineati al manuale di D&D 5e e termini abbreviati scritti per esteso in tutta l'app.",
+          "Salvataggio condizionale su Classe Armatura e Valute: il pulsante Salva appare solo quando modifichi un valore.",
+          "Il selettore della quantità è nascosto per armi, armature e scudi.",
+          "L'anello di competenza del menu Skills parte con un breve ritardo per evitare attivazioni durante lo scorrimento."
+        ],
+        "en": [
+          "Skill names aligned with the D&D 5e manual and abbreviated terms spelled out across the app.",
+          "Conditional save on Armor Class and Currency: the Save button appears only when you change a value.",
+          "The quantity selector is hidden for weapons, armor, and shields.",
+          "The Skills proficiency ring starts after a short delay to avoid activations while scrolling."
+        ]
+      },
+      "fixed": {
+        "it": [
+          "Il pulsante per aggiungere un oggetto non copre più la quantità nell'intestazione di categoria.",
+          "Ridotte le selezioni accidentali di competenze mentre si scorre il menu Skills."
+        ],
+        "en": [
+          "The add-item button no longer covers the count in the category header.",
+          "Reduced accidental proficiency selections while scrolling the Skills menu."
+        ]
+      }
+    },
+    {
       "version": "2.1.0",
       "date": "2026-06-07",
       "title": { "it": "Schermo intero", "en": "Full Screen" },
