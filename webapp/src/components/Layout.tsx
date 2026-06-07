@@ -90,20 +90,10 @@ export default function Layout({ title, children, backTo, group, page, hideScrol
           </h1>
         </div>
         {info && (() => {
-          const prevKey = info.index > 0 ? info.pages[info.index - 1] : null
-          const currKey = info.pages[info.index]
-          const nextKey = info.index < info.total - 1 ? info.pages[info.index + 1] : null
-
-          const goToPrev = () => {
-            if (prevKey && id) {
+          const goToPage = (pageKey: string) => {
+            if (id) {
               haptic.light()
-              navigate(`/char/${id}/${prevKey}`, { replace: true })
-            }
-          }
-          const goToNext = () => {
-            if (nextKey && id) {
-              haptic.light()
-              navigate(`/char/${id}/${nextKey}`, { replace: true })
+              navigate(`/char/${id}/${pageKey}`, { replace: true })
             }
           }
 
@@ -118,40 +108,30 @@ export default function Layout({ title, children, backTo, group, page, hideScrol
                   transition={{ duration: 0.18, ease: [0.25, 0.1, 0.25, 1] }}
                   className="overflow-hidden"
                 >
-                  <div className="flex items-center justify-center gap-1.5 text-xs overflow-x-auto scrollbar-hide font-body">
-                    {prevKey && (
-                      <>
-                        <m.button
-                          type="button"
-                          onClick={goToPrev}
-                          whileTap={{ scale: 0.95 }}
-                          aria-label={t('layout.nav.go_to', { page: t(`character.menu.${prevKey}`) })}
-                          className="text-dnd-text-muted opacity-70 whitespace-nowrap px-2 py-1.5 min-h-[32px] rounded hover:filter-none hover:text-dnd-gold-bright hover:opacity-100 transition-colors"
-                          style={{ filter: 'blur(0.5px)' }}
-                        >
-                          {t(`character.menu.${prevKey}`)}
-                        </m.button>
-                        <span className="text-dnd-gold-dim/50 shrink-0">◈</span>
-                      </>
-                    )}
-                    <span className="text-dnd-gold-bright font-semibold whitespace-nowrap">
-                      {t(`character.menu.${currKey}`)}
-                    </span>
-                    {nextKey && (
-                      <>
-                        <span className="text-dnd-gold-dim/50 shrink-0">◈</span>
-                        <m.button
-                          type="button"
-                          onClick={goToNext}
-                          whileTap={{ scale: 0.95 }}
-                          aria-label={t('layout.nav.go_to', { page: t(`character.menu.${nextKey}`) })}
-                          className="text-dnd-text-muted opacity-70 whitespace-nowrap px-2 py-1.5 min-h-[32px] rounded hover:filter-none hover:text-dnd-gold-bright hover:opacity-100 transition-colors"
-                          style={{ filter: 'blur(0.5px)' }}
-                        >
-                          {t(`character.menu.${nextKey}`)}
-                        </m.button>
-                      </>
-                    )}
+                  <div className="flex items-center overflow-x-auto scrollbar-hide touch-pan-x text-xs font-body whitespace-nowrap px-1">
+                    {info.pages.map((pageKey, i) => (
+                      <span key={pageKey} className="flex items-center shrink-0">
+                        {i > 0 && (
+                          <span className="text-dnd-gold-dim/50 shrink-0 px-1">◈</span>
+                        )}
+                        {i === info.index ? (
+                          <span className="text-dnd-gold-bright font-semibold whitespace-nowrap px-2 py-1.5">
+                            {t(`character.menu.${pageKey}`)}
+                          </span>
+                        ) : (
+                          <m.button
+                            type="button"
+                            onClick={() => goToPage(pageKey)}
+                            whileTap={{ scale: 0.95 }}
+                            aria-label={t('layout.nav.go_to', { page: t(`character.menu.${pageKey}`) })}
+                            className="text-dnd-text-muted opacity-70 whitespace-nowrap px-2 py-1.5 min-h-[32px] rounded hover:filter-none hover:text-dnd-gold-bright hover:opacity-100 transition-colors"
+                            style={{ filter: 'blur(0.5px)' }}
+                          >
+                            {t(`character.menu.${pageKey}`)}
+                          </m.button>
+                        )}
+                      </span>
+                    ))}
                   </div>
                 </m.div>
               )}
