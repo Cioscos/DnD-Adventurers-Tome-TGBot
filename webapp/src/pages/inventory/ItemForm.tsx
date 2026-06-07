@@ -394,7 +394,7 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
             onSubmit({
               ...form,
               weight: String(displayToLb(Number(form.weight) || 0, system)),
-              quantity: hidesQuantity ? '1' : form.quantity,
+              quantity: hidesQuantity && !isEditing ? '1' : form.quantity,
             })
           }
           primaryDisabled={!isItemFormValid(form)}

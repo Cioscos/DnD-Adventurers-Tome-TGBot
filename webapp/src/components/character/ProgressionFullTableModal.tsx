@@ -64,7 +64,7 @@ export default function ProgressionFullTableModal({ className, currentLevel, onC
             <table className="w-full text-left text-[12px] table-fixed">
               <thead className="text-[10px] uppercase tracking-wider text-dnd-gold-dim sticky top-0 bg-dnd-surface-raised">
                 <tr>
-                  <th className="px-2 py-2 w-10 break-words">{t('character.equipment.progression.level_header')}</th>
+                  <th className="px-2 py-2 w-14 break-words">{t('character.equipment.progression.level_header')}</th>
                   <th className="px-2 py-2 w-16 break-words">{t('character.equipment.progression.pb_header')}</th>
                   <th className="px-2 py-2 break-words">{t('character.equipment.progression.features_header')}</th>
                 </tr>
@@ -83,7 +83,7 @@ export default function ProgressionFullTableModal({ className, currentLevel, onC
                           : 'text-dnd-text-muted border-t border-dnd-gold-dim/10'
                       }
                     >
-                      <td className="px-2 py-2 font-mono font-bold">{t('character.equipment.progression.level_cell', { n: lv })}</td>
+                      <td className="px-2 py-2 w-14 font-mono font-bold break-words whitespace-normal">{t('character.equipment.progression.level_cell', { n: lv })}</td>
                       <td className="px-2 py-2 font-mono">+{r.proficiency_bonus}</td>
                       <td className="px-2 py-2 break-words">{localizeFeatures(r.features, i18n.language)}</td>
                     </tr>

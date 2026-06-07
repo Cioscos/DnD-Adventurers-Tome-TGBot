@@ -65,7 +65,7 @@ export function useLongPress({ onLongPress, onClick, thresholdMs = 500, onProgre
         // so the ring still completes exactly when elapsed == thresholdMs.
         const p = elapsed <= RING_DELAY_MS
           ? 0
-          : Math.min((elapsed - RING_DELAY_MS) / (thresholdMs - RING_DELAY_MS), 1)
+          : Math.min((elapsed - RING_DELAY_MS) / Math.max(1, thresholdMs - RING_DELAY_MS), 1)
         onProgress(p)
         if (elapsed >= thresholdMs) {
           triggeredRef.current = true
