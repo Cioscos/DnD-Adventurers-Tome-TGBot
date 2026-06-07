@@ -1,8 +1,14 @@
 name: Changelog check
 
-# Guard che rende DETERMINISTICO il versioning: ogni PR verso main deve aggiornare
-# changelog.json (voce in testa) con un numero coerente con `ultimo_tag + label`,
-# e package.json/pyproject.toml devono combaciare. Read-only: non scrive nel repo.
+# Guard che rende DETERMINISTICO il versioning: una PR verso main che pubblica una
+# release (label release:major|minor|patch) deve aggiornare changelog.json (voce in
+# testa) con un numero coerente con `ultimo_tag + label`, e package.json/pyproject.toml
+# devono combaciare. Read-only: non scrive nel repo.
+#
+# Senza label release:* la PR NON è considerata una release: il check emette solo un
+# warning e salta la validazione (niente fail → niente email di notifica). La label
+# viene tipicamente aggiunta subito dopo l'apertura della PR: l'evento `labeled`
+# rilancia il check con enforcement pieno.
 
 on:
   pull_request:
@@ -24,6 +30,14 @@ jobs:
         run: |
           kinds=$(echo "$LABELS" | jq -r '.[] | select(startswith("release:")) | sub("release:"; "")')
           count=$(printf '%s\n' "$kinds" | grep -c . || true)
+          if [ "$count" -eq 0 ]; then
+            # Nessuna label release:* ⇒ la PR non pubblica una release. Non è un errore:
+            # solo un warning (niente fail → niente email). La validazione viene saltata;
+            # appena viene aggiunta la label, l'evento `labeled` rilancia con enforcement pieno.
+            echo "::warning::Nessuna label release:major|minor|patch sulla PR — validazione changelog saltata. Aggiungi la label per pubblicare una release."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           if [ "$count" -ne 1 ]; then
             echo "::error::La PR deve avere esattamente una label release:major|minor|patch (trovate: '${kinds//$'\n'/, }')."
             exit 1
@@ -41,4 +55,5 @@ jobs:
           node-version: 20
 
       - name: Validate changelog & versions
+        if: steps.label.outputs.skip != 'true'
         run: node .github/scripts/changelog.mjs check "${{ steps.tag.outputs.tag }}" "${{ steps.label.outputs.kind }}"
