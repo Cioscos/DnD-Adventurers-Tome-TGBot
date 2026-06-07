@@ -1,6 +1,27 @@
 {
   "entries": [
     {
+      "version": "2.1.0",
+      "date": "2026-06-07",
+      "title": { "it": "Schermo intero", "en": "Full Screen" },
+      "added": {
+        "it": [
+          "Supporto alla modalità a schermo intero di Telegram: l'app rileva automaticamente la modalità e adatta l'interfaccia in modo che i controlli nativi di Telegram non coprano più l'intestazione delle pagine."
+        ],
+        "en": [
+          "Telegram fullscreen mode support: the app automatically detects the mode and shifts the interface so Telegram's native controls no longer cover the page headers."
+        ]
+      },
+      "improved": {
+        "it": [],
+        "en": []
+      },
+      "fixed": {
+        "it": [],
+        "en": []
+      }
+    },
+    {
       "version": "2.0.0",
       "date": "2026-06-07",
       "title": { "it": "Il Tomo rilegato", "en": "The Bound Tome" },

@@ -110,6 +110,19 @@
 
   /* Telegram viewport height fallback */
   --tg-vh: 100vh;
+
+  /* Telegram safe-area insets (Bot API 8.0+), populated by main.tsx.
+     --tg-safe-*    = device safe area (notch / status bar)
+     --tg-content-* = band occupied by Telegram's floating controls in fullscreen.
+     Default 0px so they exist outside Telegram / on older clients. */
+  --tg-safe-top: 0px;
+  --tg-safe-bottom: 0px;
+  --tg-safe-left: 0px;
+  --tg-safe-right: 0px;
+  --tg-content-top: 0px;
+  --tg-content-bottom: 0px;
+  --tg-content-left: 0px;
+  --tg-content-right: 0px;
 }
 
 /* ── Light mode — aged parchment ── */
@@ -194,14 +207,17 @@ body,
   text-size-adjust: 100%;
 }
 
-/* Safe-area insets */
-.pb-safe { padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px)); }
-.pt-safe { padding-top: calc(0.75rem + env(safe-area-inset-top, 0px)); }
+/* Safe-area insets.
+   max(env(), tg-safe + tg-content) keeps behavior identical outside Telegram
+   and in non-fullscreen (insets ≈ 0), while in Telegram fullscreen it clears
+   the floating native controls that env() alone does not account for. */
+.pb-safe { padding-bottom: calc(1rem + max(env(safe-area-inset-bottom, 0px), var(--tg-safe-bottom, 0px) + var(--tg-content-bottom, 0px))); }
+.pt-safe { padding-top: calc(0.75rem + max(env(safe-area-inset-top, 0px), var(--tg-safe-top, 0px) + var(--tg-content-top, 0px))); }
 .px-safe {
-  padding-left: env(safe-area-inset-left, 0px);
-  padding-right: env(safe-area-inset-right, 0px);
+  padding-left: max(env(safe-area-inset-left, 0px), var(--tg-safe-left, 0px) + var(--tg-content-left, 0px));
+  padding-right: max(env(safe-area-inset-right, 0px), var(--tg-safe-right, 0px) + var(--tg-content-right, 0px));
 }
-.pb-safe-lg { padding-bottom: calc(2rem + env(safe-area-inset-bottom, 0px)); }
+.pb-safe-lg { padding-bottom: calc(2rem + max(env(safe-area-inset-bottom, 0px), var(--tg-safe-bottom, 0px) + var(--tg-content-bottom, 0px))); }
 
 .scrollbar-hide {
   -ms-overflow-style: none;
