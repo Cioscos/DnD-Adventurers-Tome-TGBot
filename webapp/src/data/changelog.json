@@ -1,6 +1,27 @@
 {
   "entries": [
     {
+      "version": "2.2.1",
+      "date": "2026-06-08",
+      "title": { "it": "Correzioni", "en": "Fixes" },
+      "added": {
+        "it": [],
+        "en": []
+      },
+      "improved": {
+        "it": [],
+        "en": []
+      },
+      "fixed": {
+        "it": [
+          "Menu Skills: scorrere o trascinare il dito sulla lista non attiva più per errore una competenza al rilascio del dito."
+        ],
+        "en": [
+          "Skills menu: scrolling or dragging your finger over the list no longer toggles a proficiency by mistake when you lift your finger."
+        ]
+      }
+    },
+    {
       "version": "2.2.0",
       "date": "2026-06-07",
       "title": { "it": "Rifiniture", "en": "Refinements" },

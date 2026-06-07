@@ -100,8 +100,14 @@ export function useLongPress({ onLongPress, onClick, thresholdMs = 500, onProgre
   }, [cancel])
 
   const end = useCallback(() => {
+    // Only fire onClick if the press is STILL active at release. Any prior cancel()
+    // (move-threshold, pointerleave, pointercancel, touchcancel) clears pressingRef —
+    // so a scroll/drag that the browser aborted mid-gesture (e.g. pointercancel fired
+    // before the 12px move threshold, then a stray touchend) no longer toggles. Also
+    // makes the dual pointer+touch delivery a harmless single onClick (no double-fire).
+    const wasActive = pressingRef.current
     cancel()
-    if (!triggeredRef.current && !movedRef.current && onClick) onClick()
+    if (wasActive && !triggeredRef.current && !movedRef.current && onClick) onClick()
   }, [cancel, onClick])
 
   // Register BOTH Pointer and Touch move handlers: some Telegram in-app webviews
