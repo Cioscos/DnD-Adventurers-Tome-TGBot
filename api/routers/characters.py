@@ -11,7 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from api.auth import get_current_user
+from api.auth import get_current_user, get_current_lang
 from api.database import get_db
 from core.db.models import (
     AbilityScore,
@@ -19,15 +19,14 @@ from core.db.models import (
     Character,
     CharacterClass,
     CharacterHistory,
-    ClassResource,
     Currency,
     GameSession,
     SessionParticipant,
     SessionStatus,
 )
 from core.data.xp_thresholds import xp_to_level
-from core.data.classes import get_resources_for_class, update_resources_for_level
 from core.data.labels import ability_label, skill_label
+from api.services.class_features import sync_class_feature_abilities
 from core.game.stats import hit_points_for_level
 from api.schemas.character import (
     CharacterCreate,
@@ -95,9 +94,7 @@ def _add_history(
 def _full_load():
     """Return selectinload options for a fully-populated character."""
     return [
-        selectinload(Character.classes).selectinload(
-            __import__("core.db.models", fromlist=["CharacterClass"]).CharacterClass.resources
-        ),
+        selectinload(Character.classes),
         selectinload(Character.ability_scores),
         selectinload(Character.spells),
         selectinload(Character.spell_slots),
@@ -186,6 +183,7 @@ async def create_character(
     body: CharacterCreate,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
+    lang: Annotated[str, Depends(get_current_lang)],
 ) -> CharacterFull:
     char = Character(user_id=user_id, name=body.name, hit_points=0, current_hit_points=0)
     # Populate ability scores + currency via the relationships (not raw
@@ -198,6 +196,10 @@ async def create_character(
         AbilityScore(name=ability, value=10) for ability in ABILITY_NAMES
     ]
     char.currency = Currency()
+    # Inizializza la collection abilities in memoria così che il sync delle
+    # feature di classe (in create_class_for_character) non tenti un lazy-load
+    # in contesto async (MissingGreenlet). Mirror di ability_scores/currency.
+    char.abilities = []
     # Apply optional identity in the SAME transaction (atomic create). Same
     # field→column mapping as update_character; set before flush so it lands
     # in the initial INSERT.
@@ -212,12 +214,11 @@ async def create_character(
     # rolls back the character + ability_scores + currency too.
     if body.initial_class is not None:
         await create_class_for_character(
-            char, body.initial_class, session, is_first_class=True,
+            char, body.initial_class, session, is_first_class=True, lang=lang,
         )
 
-    # Re-fetch with selectinload so all relations (notably `classes.resources`)
-    # are eagerly loaded for response serialization. See _refresh_char_full for
-    # the full rationale.
+    # Re-fetch with selectinload so all relations are eagerly loaded for
+    # response serialization. See _refresh_char_full for the full rationale.
     char = await _refresh_char_full(session, char.id, user_id)
     # Seed spell slots for a caster initial class (automatic mode is the default).
     await recalc_spell_slots(session, char)
@@ -387,6 +388,7 @@ async def update_xp(
     body: XPUpdate,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
+    lang: Annotated[str, Depends(get_current_lang)],
 ) -> CharacterFull:
     char = await _get_owned(char_id, user_id, session, full=True)
     if body.set is not None:
@@ -406,11 +408,7 @@ async def update_xp(
         new_level = xp_to_level(char.experience_points)
         if new_level != old_level:
             cls.level = new_level
-            update_resources_for_level(cls.class_name, new_level, list(cls.resources), char)
-            existing_names = {r.name for r in cls.resources}
-            for res_data in get_resources_for_class(cls.class_name, new_level, char):
-                if res_data["name"] not in existing_names:
-                    session.add(ClassResource(class_id=cls.id, **res_data))
+            await sync_class_feature_abilities(session, char, cls, lang=lang)
 
             if auto_calc and cls.hit_die and new_level > old_level:
                 con_row = next(
@@ -426,11 +424,8 @@ async def update_xp(
         char.current_hit_points += total_hp_gained
 
     # Re-SELECT so model_validate sees non-expired columns AND the freshly
-    # inserted ClassResource rows are loaded via the nested selectinload
-    # chain. See _refresh_char_full() for the full rationale — a bare
-    # session.refresh(attribute_names=["classes", ...]) would re-run the
-    # default loader for `classes` and drop the nested `resources` eager-load,
-    # leaving the new ClassResource rows invisible in the response body.
+    # generated class-feature Ability rows are loaded via selectinload. See
+    # _refresh_char_full() for the full rationale.
     fresh = await _refresh_char_full(session, char_id, user_id)
 
     # Single-class level may have changed above; re-derive spell slots when

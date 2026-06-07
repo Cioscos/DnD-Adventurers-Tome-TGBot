@@ -75,7 +75,7 @@ async def _get_owned_full(
     result = await session.execute(
         select(Character)
         .options(
-            selectinload(Character.classes).selectinload(CharacterClass.resources),
+            selectinload(Character.classes),
             selectinload(Character.ability_scores),
             selectinload(Character.spells),
             selectinload(Character.spell_slots),
@@ -252,15 +252,11 @@ async def rest(
         # Reset all spell slots
         for slot in char.spell_slots:
             slot.used = 0
-        # Restore long-rest AND short-rest abilities (long rest includes short rest benefits)
+        # Restore long-rest AND short-rest abilities (long rest includes short rest
+        # benefits). Le ex-risorse di classe sono ora Ability e rientrano qui.
         for ability in char.abilities:
             if ability.restoration_type in ("long_rest", "short_rest") and ability.max_uses is not None:
                 ability.uses = ability.max_uses
-        # Restore long-rest AND short-rest class resources
-        for cls in char.classes:
-            for res in cls.resources:
-                if res.restoration_type in ("long_rest", "short_rest"):
-                    res.current = res.total
         # Reset death saves
         char.death_saves = {"successes": 0, "failures": 0, "stable": False}
         # A long rest reduces Exhaustion by 1 level (PHB p.186). Keep the value an
@@ -293,15 +289,10 @@ async def rest(
             # Use effective max HP (base + passive homebrew modifier) as the heal cap.
             hb_hp_bonus_short = await get_passive_modifiers(session, char, "character.hit_points_max")
             char.current_hit_points = min(char.hit_points + hb_hp_bonus_short, char.current_hit_points + healed)
-        # Restore short-rest abilities
+        # Restore short-rest abilities (le ex-risorse di classe sono ora Ability).
         for ability in char.abilities:
             if ability.restoration_type == "short_rest" and ability.max_uses is not None:
                 ability.uses = ability.max_uses
-        # Restore short-rest class resources
-        for cls in char.classes:
-            for res in cls.resources:
-                if res.restoration_type == "short_rest":
-                    res.current = res.total
         _add_history(session, char.id, "rest",
                      f"Riposo breve completato (HP recuperati: {healed})")
 

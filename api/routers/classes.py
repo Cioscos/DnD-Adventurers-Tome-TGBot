@@ -9,26 +9,22 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from api.auth import get_current_user
+from api.auth import get_current_user, get_current_lang
 from api.database import get_db
-from core.db.models import Character, CharacterClass, ClassResource
+from core.db.models import Character, CharacterClass
 from api.schemas.character import CharacterFull
 from api.schemas.common import (
     CharacterClassCreate,
     CharacterClassRead,
     CharacterClassUpdate,
     ClassDistribute,
-    ClassResourceCreate,
-    ClassResourceRead,
-    ClassResourceUpdate,
 )
 from core.data.classes import (
     CLASS_HIT_DIE,
     CLASS_SPELLCASTING,
-    get_resources_for_class,
     get_saving_throw_proficiencies,
-    update_resources_for_level,
 )
+from api.services.class_features import sync_class_feature_abilities
 from core.data.xp_thresholds import xp_to_level
 from core.game.stats import hit_points_for_level, total_base_hp
 from api.routers._helpers import collect_homebrew_notifications, effective_con_mod
@@ -43,7 +39,7 @@ async def _get_owned_full(char_id: int, user_id: int, session: AsyncSession) -> 
     result = await session.execute(
         select(Character)
         .options(
-            selectinload(Character.classes).selectinload(CharacterClass.resources),
+            selectinload(Character.classes),
             selectinload(Character.ability_scores),
             selectinload(Character.spells),
             selectinload(Character.spell_slots),
@@ -81,7 +77,6 @@ async def _refresh_char_full(char_id: int, user_id: int, session: AsyncSession) 
 async def _get_class(class_id: int, char_id: int, session: AsyncSession) -> CharacterClass:
     result = await session.execute(
         select(CharacterClass)
-        .options(selectinload(CharacterClass.resources))
         .where(CharacterClass.id == class_id, CharacterClass.character_id == char_id)
     )
     cls = result.scalar_one_or_none()
@@ -96,8 +91,9 @@ async def create_class_for_character(
     session: AsyncSession,
     *,
     is_first_class: bool | None = None,
+    lang: str = "it",
 ) -> CharacterClass:
-    """Insert a CharacterClass + ClassResource rows + run the auto-HP bootstrap.
+    """Insert a CharacterClass + class-feature Ability rows + run the auto-HP bootstrap.
 
     Shared between POST /characters (atomic create-with-initial-class) and
     POST /characters/{id}/classes. The caller is responsible for committing
@@ -130,8 +126,13 @@ async def create_class_for_character(
     session.add(cls)
     await session.flush()
 
-    for res_data in get_resources_for_class(body.class_name, body.level, char):
-        session.add(ClassResource(class_id=cls.id, **res_data))
+    # char.abilities deve essere caricato per il sync (selectinload in _get_owned_full).
+    if getattr(char, "abilities", None) is None:
+        char.abilities = []
+    # cls deve essere visibile in char.classes per coerenza del sync.
+    if cls not in char.classes:
+        char.classes.append(cls)
+    await sync_class_feature_abilities(session, char, cls, lang=lang)
 
     # Seed saving throw proficiencies from the *starting* class only (D&D 5e:
     # multiclassing does not grant additional save proficiencies). We only fill
@@ -167,9 +168,10 @@ async def add_class(
     body: CharacterClassCreate,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
+    lang: Annotated[str, Depends(get_current_lang)],
 ) -> CharacterFull:
     char = await _get_owned_full(char_id, user_id, session)
-    await create_class_for_character(char, body, session)
+    await create_class_for_character(char, body, session, lang=lang)
     session.expire(char)
     char = await _get_owned_full(char_id, user_id, session)
     await recalc_spell_slots(session, char)
@@ -182,6 +184,7 @@ async def distribute_class_levels(
     body: ClassDistribute,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
+    lang: Annotated[str, Depends(get_current_lang)],
 ) -> CharacterFull:
     """Atomically redistribute class levels.
 
@@ -190,8 +193,8 @@ async def distribute_class_levels(
     2. The body covers every existing class (no missing nor extra ids).
     3. `sum(level)` equals `xp_to_level(char.experience_points)`.
 
-    On success, updates each class's level, syncs predefined class
-    resources (grow or shrink via `update_resources_for_level`),
+    On success, updates each class's level, syncs predefined class-feature
+    abilities (grow or shrink via `sync_class_feature_abilities`),
     and recalculates HP proportionally if `settings.hp_auto_calc` is true.
     """
     char = await _get_owned_full(char_id, user_id, session)
@@ -224,13 +227,7 @@ async def distribute_class_levels(
         if new_level == cls.level:
             continue
         cls.level = new_level
-        update_resources_for_level(
-            cls.class_name, new_level, list(cls.resources), char
-        )
-        existing_names = {r.name for r in cls.resources}
-        for res_data in get_resources_for_class(cls.class_name, new_level, char):
-            if res_data["name"] not in existing_names:
-                session.add(ClassResource(class_id=cls.id, **res_data))
+        await sync_class_feature_abilities(session, char, cls, lang=lang)
 
     # HP recalc (respecting hp_auto_calc); populate hp_gained for toast parity with PATCH /xp
     settings = char.settings or {}
@@ -267,21 +264,21 @@ async def update_class(
     body: CharacterClassUpdate,
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
+    lang: Annotated[str, Depends(get_current_lang)],
 ) -> CharacterFull:
     char = await _get_owned_full(char_id, user_id, session)
-    cls = await _get_class(class_id, char_id, session)
+    # Usa la stessa istanza tracciata in char.classes (così le nuove Ability
+    # puntano al source_class_id corretto e il sync vede le esistenti).
+    cls = next((c for c in char.classes if c.id == class_id), None)
+    if cls is None:
+        raise HTTPException(status_code=404, detail="Class not found")
     old_level = cls.level
     for field, value in body.model_dump(exclude_unset=True).items():
         setattr(cls, field, value)
 
-    # When level changes, sync resources for predefined classes.
+    # When level changes, sync class-feature abilities for predefined classes.
     if body.level is not None and body.level != old_level:
-        new_level = cls.level  # already updated by setattr
-        update_resources_for_level(cls.class_name, new_level, list(cls.resources), char)
-        existing_names = {r.name for r in cls.resources}
-        for res_data in get_resources_for_class(cls.class_name, new_level, char):
-            if res_data["name"] not in existing_names:
-                session.add(ClassResource(class_id=cls.id, **res_data))
+        await sync_class_feature_abilities(session, char, cls, lang=lang)
 
     # Flush pending setattr mutations before any relationship traversal —
     # `CharacterFull.model_validate(char)` (and dispatch's `total_level`
@@ -358,84 +355,3 @@ async def remove_class(
 
     await recalc_spell_slots(session, char)
     return await build_character_response(session, char)
-
-
-# ---------------------------------------------------------------------------
-# Class Resources
-# ---------------------------------------------------------------------------
-
-@router.post(
-    "/{char_id}/classes/{class_id}/resources",
-    response_model=ClassResourceRead,
-    status_code=201,
-)
-async def add_resource(
-    char_id: int,
-    class_id: int,
-    body: ClassResourceCreate,
-    user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
-) -> ClassResource:
-    # Ownership check
-    await _get_owned_full(char_id, user_id, session)
-    await _get_class(class_id, char_id, session)
-    res = ClassResource(
-        class_id=class_id,
-        name=body.name,
-        current=body.current,
-        total=body.total,
-        restoration_type=body.restoration_type,
-        note=body.note,
-    )
-    session.add(res)
-    await session.flush()
-    return res
-
-
-@router.patch(
-    "/{char_id}/classes/{class_id}/resources/{res_id}",
-    response_model=ClassResourceRead,
-)
-async def update_resource(
-    char_id: int,
-    class_id: int,
-    res_id: int,
-    body: ClassResourceUpdate,
-    user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
-) -> ClassResource:
-    await _get_owned_full(char_id, user_id, session)
-    result = await session.execute(
-        select(ClassResource).where(
-            ClassResource.id == res_id, ClassResource.class_id == class_id
-        )
-    )
-    res = result.scalar_one_or_none()
-    if res is None:
-        raise HTTPException(status_code=404, detail="Resource not found")
-    for field, value in body.model_dump(exclude_unset=True).items():
-        setattr(res, field, value)
-    return res
-
-
-@router.delete(
-    "/{char_id}/classes/{class_id}/resources/{res_id}",
-    status_code=status.HTTP_204_NO_CONTENT,
-)
-async def delete_resource(
-    char_id: int,
-    class_id: int,
-    res_id: int,
-    user_id: Annotated[int, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
-) -> None:
-    await _get_owned_full(char_id, user_id, session)
-    result = await session.execute(
-        select(ClassResource).where(
-            ClassResource.id == res_id, ClassResource.class_id == class_id
-        )
-    )
-    res = result.scalar_one_or_none()
-    if res is None:
-        raise HTTPException(status_code=404, detail="Resource not found")
-    await session.delete(res)
