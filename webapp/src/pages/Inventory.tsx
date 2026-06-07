@@ -560,7 +560,7 @@ export default function Inventory() {
               <m.button
                 type="button"
                 onClick={() => toggleType(type)}
-                className={`sticky -top-4 z-[5] -mx-4 w-[calc(100%+2rem)] px-5 flex items-center gap-2 bg-dnd-bg/95 backdrop-blur-sm border-b border-dnd-border/40 text-left ${isSingle ? 'py-1' : 'py-2'}`}
+                className={`sticky -top-4 z-[5] -mx-4 w-[calc(100%+2rem)] px-5 flex items-center gap-2 bg-dnd-bg/95 backdrop-blur-sm border-b border-dnd-border/40 text-left ${isSingle ? 'py-1' : 'py-2'} ${scrolled ? 'pr-24' : ''}`}
                 aria-expanded={!isCollapsed}
               >
                 <ChevronRight
@@ -571,7 +571,7 @@ export default function Inventory() {
                 <span className="font-cinzel uppercase tracking-widest text-xs text-dnd-gold-bright flex-1">
                   {t(`character.inventory.types.${type}`)}
                 </span>
-                <span className={`text-[10px] text-dnd-text-muted font-mono tabular-nums ${scrolled ? 'mr-24' : ''}`}>
+                <span className="text-[10px] text-dnd-text-muted font-mono tabular-nums">
                   · {groupItems.length}
                 </span>
               </m.button>
