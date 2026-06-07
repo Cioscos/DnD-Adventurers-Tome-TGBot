@@ -4,7 +4,7 @@
  */
 import { createElement, type ComponentType, type SVGAttributes } from 'react'
 import {
-  Crown, Gem, Shirt, Shield, HandMetal, Circle, CircleDot, Footprints,
+  Crown, Gem, Shirt, Shield, ShieldHalf, HandMetal, Circle, CircleDot, Footprints,
   Sword, Feather,
 } from 'lucide-react'
 import type { EquipmentSlot, Item } from '@/types'
@@ -29,6 +29,31 @@ const CloakIcon: IconCmp = ({ size = 24, ...props }) =>
     createElement('path', { d: 'M9 3 h6' }),
     createElement('path', { d: 'M9 3 L4 20 Q12 22 20 20 L15 3' }),
     createElement('path', { d: 'M12 5 L12 21' }),
+  )
+
+/** Simple bow-and-arrow outline — used for ranged weapons. */
+const BowIcon: IconCmp = ({ size = 24, ...props }) =>
+  createElement(
+    'svg',
+    {
+      ...props,
+      width: size,
+      height: size,
+      viewBox: '0 0 24 24',
+      fill: 'none',
+      stroke: 'currentColor',
+      strokeWidth: 2,
+      strokeLinecap: 'round',
+      strokeLinejoin: 'round',
+    },
+    // bow arc
+    createElement('path', { d: 'M5 19 Q5 5 19 5' }),
+    // bowstring
+    createElement('line', { x1: '5', y1: '19', x2: '19', y2: '5' }),
+    // arrow shaft
+    createElement('line', { x1: '8', y1: '16', x2: '17', y2: '7' }),
+    // arrowhead
+    createElement('polyline', { points: '13,7 17,7 17,11' }),
   )
 
 export const ALL_SLOTS: EquipmentSlot[] = [
@@ -80,6 +105,34 @@ export function isTwoHanded(item: Item | null | undefined): boolean {
   if (!item || item.item_type !== 'weapon') return false
   const props = (item.item_metadata as { properties?: unknown } | undefined)?.properties
   return Array.isArray(props) && props.includes(TWO_HANDED)
+}
+
+/**
+ * Icona rappresentativa di un oggetto EQUIPAGGIATO, risolta per sottotipo.
+ * Cascata: arma (weapon_type) -> armatura (armor_type) -> scudo -> slot -> null.
+ * Ritorna null se nessuna icona si applica (il chiamante usa l'iniziale come fallback finale).
+ */
+export function equippedItemIcon(
+  item: { item_type?: string; item_metadata?: Record<string, unknown> | null },
+  slot: EquipmentSlot,
+): IconCmp | null {
+  const meta = item.item_metadata ?? {}
+  // Icona per il paper-doll, risolta per sottotipo (distinta da TYPE_ICON dell'inventario).
+  switch (item.item_type) {
+    case 'weapon':
+      return meta.weapon_type === 'ranged' ? BowIcon : Sword
+    case 'armor': {
+      const at = typeof meta.armor_type === 'string' ? meta.armor_type : 'light'
+      if (at === 'heavy') return Shield
+      if (at === 'medium') return ShieldHalf
+      return Shirt // light
+    }
+    case 'shield':
+      return Shield
+    // accessory / gear / unknown -> icona dello slot (posizione corporea)
+    default:
+      return SLOT_PLACEHOLDER_ICON[slot] ?? null
+  }
 }
 
 /**
