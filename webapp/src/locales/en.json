@@ -37,6 +37,20 @@
     }
   },
   "character": {
+    "hero": {
+      "stats_section": "Statistics",
+      "initiative": "Initiative",
+      "initiative_short": "INIT",
+      "prof_bonus_short": "PROF",
+      "passive_perception_short": "PERC",
+      "speed_short": "SPD",
+      "proficient_label_one": "proficient",
+      "proficient_label_other": "proficient",
+      "expert_label_one": "expert",
+      "expert_label_other": "expert",
+      "none_m": "None",
+      "none_f": "None"
+    },
     "select": {
       "title": "Your characters",
       "subtitle": "Choose a hero for your adventure",
