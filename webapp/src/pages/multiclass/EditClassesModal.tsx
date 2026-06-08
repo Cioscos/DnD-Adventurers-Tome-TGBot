@@ -82,9 +82,21 @@ export default function EditClassesModal({ char, targetLevel, onClose }: Props) 
     return entries.some((e) => e.kind === 'existing' && initial.get(e.classId) !== e.level)
   }, [entries, char.classes])
 
-  const setEntryLevel = (tempId: string, raw: number) => {
-    const clamped = Math.max(1, Math.min(20, Math.round(raw)))
-    setEntries((es) => es.map((e) => (e.tempId === tempId ? { ...e, level: clamped } : e)))
+  // Accetta la stringa grezza così il campo può essere svuotato durante la
+  // modifica: un campo vuoto diventa NaN (renderizzato vuoto) invece di saltare
+  // a 1. currentSum/allLevelsValid trattano già i livelli non-finiti come invalidi.
+  const setEntryLevel = (tempId: string, raw: string) => {
+    const next = raw === '' ? NaN : Math.max(1, Math.min(20, Math.round(Number(raw))))
+    setEntries((es) => es.map((e) => (e.tempId === tempId ? { ...e, level: next } : e)))
+  }
+
+  // Su blur, se il campo è rimasto vuoto/invalido ripristina il minimo valido.
+  const normalizeEntryLevel = (tempId: string) => {
+    setEntries((es) =>
+      es.map((e) =>
+        e.tempId === tempId && !Number.isFinite(e.level) ? { ...e, level: 1 } : e,
+      ),
+    )
   }
 
   const removeNewEntry = (tempId: string) => {
@@ -272,8 +284,9 @@ export default function EditClassesModal({ char, targetLevel, onClose }: Props) 
                   inputMode="numeric"
                   min={1}
                   max={20}
-                  value={e.level}
-                  onChange={(ev) => setEntryLevel(e.tempId, Number(ev.target.value))}
+                  value={Number.isFinite(e.level) ? e.level : ''}
+                  onChange={(ev) => setEntryLevel(e.tempId, ev.target.value)}
+                  onBlur={() => normalizeEntryLevel(e.tempId)}
                   className="w-20 min-h-[44px] rounded-lg bg-dnd-surface border border-dnd-border text-dnd-gold-bright font-mono text-center"
                   aria-label={`${e.className} level`}
                 />

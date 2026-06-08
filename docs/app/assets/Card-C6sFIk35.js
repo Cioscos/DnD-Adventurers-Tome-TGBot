@@ -1,1 +1,0 @@
-import{j as r}from"./dice-scene-C0T4zW9u.js";import{S as o}from"./Surface-Cd9Hd2fO.js";function m({variant:t="default",...a}){const e=t==="elevated"?"elevated":"flat";return r.jsx(o,{variant:e,...a})}export{m as C};
