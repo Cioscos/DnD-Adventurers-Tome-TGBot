@@ -1,6 +1,21 @@
 {
   "entries": [
     {
+      "version": "2.4.2",
+      "date": "2026-06-08",
+      "title": { "it": "Indicatori di pagina del carosello", "en": "Carousel page indicators" },
+      "added": { "it": [], "en": [] },
+      "improved": { "it": [], "en": [] },
+      "fixed": {
+        "it": [
+          "Ripristinati i pallini indicatori di pagina nel carosello principale del personaggio, che in modalità a schermo intero di Telegram (o con la barra dei gesti del dispositivo) finivano nascosti in fondo allo schermo."
+        ],
+        "en": [
+          "Restored the page indicator dots on the character's main carousel, which in Telegram fullscreen mode (or with the device's gesture bar) ended up hidden at the bottom of the screen."
+        ]
+      }
+    },
+    {
       "version": "2.4.1",
       "date": "2026-06-08",
       "title": { "it": "Scroll della lista personaggi", "en": "Character list scrolling" },
