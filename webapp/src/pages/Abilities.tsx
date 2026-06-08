@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m, AnimatePresence } from 'framer-motion'
-import { Plus, Minus, Pencil, Trash2, RotateCcw, ChevronDown } from 'lucide-react'
+import { Plus, Minus, Pencil, Trash2, RotateCcw, ChevronDown, FilterX } from 'lucide-react'
 import { GiLightningTrio as Zap, GiSparkles as Sparkles } from 'react-icons/gi'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
@@ -13,6 +13,8 @@ import Input from '@/components/ui/Input'
 import Surface from '@/components/ui/Surface'
 import ScrollArea from '@/components/ScrollArea'
 import StatPill from '@/components/ui/StatPill'
+import FilterChip from '@/components/ui/FilterChip'
+import FilterRow from '@/components/ui/FilterRow'
 import EmptyState from '@/components/ui/EmptyState'
 import CustomResourceCounter from '@/components/homebrew/CustomResourceCounter'
 import { haptic } from '@/auth/telegram'
@@ -78,6 +80,38 @@ export default function Abilities() {
   // cambiare solo la descrizione, via PATCH { description }).
   const [descFeature, setDescFeature] = useState<Ability | null>(null)
   const [descDraft, setDescDraft] = useState('')
+  // Filtri a chips: multi-selezione: unione fra chip della stessa dimensione,
+  // intersezione fra dimensioni diverse (set vuoto = nessun vincolo).
+  const [classFilter, setClassFilter] = useState<Set<number>>(() => new Set())
+  const [typeFilter, setTypeFilter] = useState<Set<'passive' | 'active'>>(() => new Set())
+  const [restFilter, setRestFilter] = useState<Set<string>>(() => new Set())
+
+  const toggleClass = (id: number) =>
+    setClassFilter((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  const toggleType = (key: 'passive' | 'active') =>
+    setTypeFilter((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  const toggleRest = (key: string) =>
+    setRestFilter((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  const clearFilters = () => {
+    setClassFilter(new Set())
+    setTypeFilter(new Set())
+    setRestFilter(new Set())
+  }
 
   const { data: char } = useQuery({
     queryKey: ['character', charId],
@@ -228,8 +262,42 @@ export default function Abilities() {
   const classNameById = new Map<number, string>(
     (char.classes ?? []).map((c) => [c.id, c.class_name]),
   )
-  const classFeatures = abilities.filter((a) => a.is_class_feature)
-  const manualAbilities = abilities.filter((a) => !a.is_class_feature)
+
+  // Opzioni di filtro derivate dai dati (niente hardcoded). Una dimensione si
+  // mostra solo con >= 2 valori distinti: filtrare su un'unica opzione è inutile.
+  const classOptions = Array.from(
+    abilities.reduce((acc, a) => {
+      if (a.source_class_id != null) acc.set(a.source_class_id, (acc.get(a.source_class_id) ?? 0) + 1)
+      return acc
+    }, new Map<number, number>()),
+  ).map(([id, count]) => ({ id, name: classNameById.get(id) ?? String(id), count }))
+
+  const typeOptions = (['passive', 'active'] as const)
+    .map((key) => ({ key, count: abilities.filter((a) => (a.is_passive ? 'passive' : 'active') === key).length }))
+    .filter((o) => o.count > 0)
+
+  // Il tipo di recupero è significativo solo per le abilità con usi limitati.
+  const restOptions = (['long_rest', 'short_rest', 'manual'] as const)
+    .map((key) => ({ key, count: abilities.filter((a) => a.max_uses != null && a.restoration_type === key).length }))
+    .filter((o) => o.count > 0)
+
+  const showClassRow = classOptions.length >= 2
+  const showTypeRow = typeOptions.length >= 2
+  const showRestRow = restOptions.length >= 2
+  const showFilterBar = showClassRow || showTypeRow || showRestRow
+  const hasActiveFilter = classFilter.size > 0 || typeFilter.size > 0 || restFilter.size > 0
+
+  const matchesFilters = (a: Ability): boolean => {
+    if (classFilter.size > 0 && !(a.source_class_id != null && classFilter.has(a.source_class_id))) return false
+    if (typeFilter.size > 0 && !typeFilter.has(a.is_passive ? 'passive' : 'active')) return false
+    if (restFilter.size > 0 && !(a.max_uses != null && restFilter.has(a.restoration_type))) return false
+    return true
+  }
+
+  const filtered = abilities.filter(matchesFilters)
+  const classFeatures = filtered.filter((a) => a.is_class_feature)
+  const manualAbilities = filtered.filter((a) => !a.is_class_feature)
+  const noFilterResults = hasActiveFilter && filtered.length === 0
 
   function renderAbility(ab: Ability) {
     const isOpen = expanded === ab.id
@@ -424,25 +492,97 @@ export default function Abilities() {
         />
       )}
 
-      <ScrollArea>
-        <div className="space-y-4">
-          {classFeatures.length > 0 && (
-            <section className="space-y-2">
-              <h3 className="font-cinzel uppercase tracking-widest text-xs text-dnd-gold-bright px-1">
-                {t('character.abilities.class_features_section')}
-              </h3>
-              {classFeatures.map(renderAbility)}
-            </section>
+      {showFilterBar && (
+        <div className="space-y-2">
+          {showClassRow && (
+            <FilterRow label={t('character.abilities.filters.class')}>
+              {classOptions.map((o) => (
+                <FilterChip
+                  key={o.id}
+                  tone="gold"
+                  label={o.name}
+                  count={o.count}
+                  selected={classFilter.has(o.id)}
+                  onToggle={() => toggleClass(o.id)}
+                />
+              ))}
+            </FilterRow>
           )}
-          {manualAbilities.length > 0 && (
-            <section className="space-y-2">
-              <h3 className="font-cinzel uppercase tracking-widest text-xs text-dnd-gold-bright px-1">
-                {t('character.abilities.custom_section')}
-              </h3>
-              {manualAbilities.map(renderAbility)}
-            </section>
+          {showTypeRow && (
+            <FilterRow label={t('character.abilities.filters.type')}>
+              {typeOptions.map((o) => (
+                <FilterChip
+                  key={o.key}
+                  tone="arcane"
+                  label={t(`character.abilities.${o.key}`)}
+                  count={o.count}
+                  selected={typeFilter.has(o.key)}
+                  onToggle={() => toggleType(o.key)}
+                />
+              ))}
+            </FilterRow>
+          )}
+          {showRestRow && (
+            <FilterRow label={t('character.abilities.filters.restoration')}>
+              {restOptions.map((o) => (
+                <FilterChip
+                  key={o.key}
+                  tone="neutral"
+                  label={t(`character.abilities.restoration.${o.key}`)}
+                  count={o.count}
+                  selected={restFilter.has(o.key)}
+                  onToggle={() => toggleRest(o.key)}
+                />
+              ))}
+            </FilterRow>
+          )}
+          {hasActiveFilter && (
+            <div className="flex justify-end">
+              <Button
+                variant="ghost"
+                size="sm"
+                icon={<FilterX size={12} />}
+                haptic="light"
+                onClick={clearFilters}
+              >
+                {t('character.abilities.filters.clear')}
+              </Button>
+            </div>
           )}
         </div>
+      )}
+
+      <ScrollArea>
+        {noFilterResults ? (
+          <EmptyState
+            icon={<Zap size={32} />}
+            title={t('character.abilities.filters.no_results')}
+            action={{
+              label: t('character.abilities.filters.clear'),
+              onClick: clearFilters,
+              icon: <FilterX size={14} />,
+            }}
+          />
+        ) : (
+          <div className="space-y-4">
+            {classFeatures.length > 0 && (
+              <section className="space-y-2">
+                <h3 className="font-cinzel uppercase tracking-widest text-xs text-dnd-gold-bright px-1">
+                  {t('character.abilities.class_features_section')}
+                </h3>
+                {classFeatures.map(renderAbility)}
+              </section>
+            )}
+            {manualAbilities.length > 0 && (
+              <section className="space-y-2">
+                <h3 className="font-cinzel uppercase tracking-widest text-xs text-dnd-gold-bright px-1">
+                  {t('character.abilities.custom_section')}
+                </h3>
+                {manualAbilities.map(renderAbility)}
+              </section>
+            )}
+          </div>
+        )}
       </ScrollArea>
 
       {resources && resources.length > 0 && (

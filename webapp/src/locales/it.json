@@ -316,7 +316,14 @@
       "concentration_break_warn": "Romperai la concentrazione su {{spell}}.",
       "expand": "Espandi",
       "collapse": "Comprimi",
-      "srd_autofill": "Compila da SRD: livello, gittata, durata, componenti, danno (solo campi vuoti)."
+      "srd_autofill": "Compila da SRD: livello, gittata, durata, componenti, danno (solo campi vuoti).",
+      "filters": {
+        "level": "Livello",
+        "property": "Proprietà",
+        "level_n": "Liv. {{level}}",
+        "clear": "Azzera filtri",
+        "no_results": "Nessun incantesimo corrisponde ai filtri"
+      }
     },
     "slots": {
       "title": "Slot Incantesimo",
@@ -764,7 +771,14 @@
       "class_features_section": "Abilità di classe",
       "custom_section": "Abilità personalizzate",
       "class_feature_locked": "Gestita automaticamente dalla classe: puoi consumarne gli usi e modificarne la descrizione.",
-      "edit_description": "Modifica descrizione"
+      "edit_description": "Modifica descrizione",
+      "filters": {
+        "class": "Classe",
+        "type": "Tipo",
+        "restoration": "Ripristino",
+        "clear": "Azzera filtri",
+        "no_results": "Nessuna abilità corrisponde ai filtri"
+      }
     },
     "multiclass": {
       "title": "Classe",

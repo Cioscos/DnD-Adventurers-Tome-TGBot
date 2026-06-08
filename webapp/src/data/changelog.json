@@ -1,6 +1,30 @@
 {
   "entries": [
     {
+      "version": "2.5.0",
+      "date": "2026-06-08",
+      "title": { "it": "Filtri nelle abilità speciali", "en": "Filters in special abilities" },
+      "added": {
+        "it": [
+          "Nelle Abilità speciali è ora disponibile una barra di filtri a chips sopra l'elenco: puoi filtrare le abilità per classe di provenienza, per tipo (passiva/attiva) e per tipo di recupero (riposo lungo, riposo breve, manuale). Si possono selezionare più filtri insieme.",
+          "Anche negli Incantesimi è ora disponibile una barra di filtri a chips: puoi filtrare per livello e per proprietà (concentrazione, rituale), con selezione multipla."
+        ],
+        "en": [
+          "Special abilities now have a chip filter bar above the list: you can filter abilities by source class, by type (passive/active) and by recovery type (long rest, short rest, manual). Multiple filters can be active at the same time.",
+          "Spells now have a chip filter bar too: you can filter by level and by property (concentration, ritual), with multiple selections."
+        ]
+      },
+      "improved": { "it": [], "en": [] },
+      "fixed": {
+        "it": [
+          "Nelle note di versione il titolo di una versione lungo ora va a capo su più righe invece di essere troncato con i puntini di sospensione."
+        ],
+        "en": [
+          "In the release notes a long version title now wraps onto multiple lines instead of being cut off with an ellipsis."
+        ]
+      }
+    },
+    {
       "version": "2.4.3",
       "date": "2026-06-08",
       "title": { "it": "Modifica livello classe più fluida", "en": "Smoother class level editing" },
