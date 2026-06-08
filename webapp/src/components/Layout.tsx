@@ -35,11 +35,21 @@ export default function Layout({ title, children, backTo, group, page, hideScrol
     : undefined
   const GhostSkeleton = pageSkeleton(ghostKey)
 
-  // Tablist collapse: hide the breadcrumb row once the user scrolls past a small
-  // threshold; show it again once they scroll back up. Keeps mobile real estate
-  // free when the on-screen keyboard or long content is in play.
+  // Tablist collapse: hide the breadcrumb row when the user scrolls down, reveal
+  // it when they scroll back up. Keeps mobile real estate free when the on-screen
+  // keyboard or long content is in play.
+  //
+  // Stability matters here: collapsing shrinks the header, which grows <main> and
+  // fires more scroll events — a naive per-event delta toggle oscillates, making
+  // the breadcrumb animation flicker ("vibrate"). We harden it with (1) one
+  // update per animation frame, (2) accumulated directional travel instead of
+  // per-event delta, and (3) a short lock after each toggle so the resize-induced
+  // scroll events can't flip the state back.
   const [tablistCollapsed, setTablistCollapsed] = useState(false)
   const lastScrollTopRef = useRef(0)
+  const accumRef = useRef(0)        // accumulated travel in the current direction
+  const rafPendingRef = useRef(false)
+  const lockUntilRef = useRef(0)    // ignore toggles until this timestamp (ms)
 
   // Breadcrumb auto-scroll: when the current page changes, scroll the strip so
   // the highlighted item is centered in the scrollable container.
@@ -65,16 +75,44 @@ export default function Layout({ title, children, backTo, group, page, hideScrol
   }
 
   const handleMainScroll = (e: React.UIEvent<HTMLElement>) => {
+    // Capture scrollTop now: e.currentTarget is no longer valid inside the rAF.
     const top = e.currentTarget.scrollTop
-    const prev = lastScrollTopRef.current
-    const delta = top - prev
-    lastScrollTopRef.current = top
-    if (top < 16) {
-      if (tablistCollapsed) setTablistCollapsed(false)
-      return
-    }
-    if (delta > 6 && !tablistCollapsed) setTablistCollapsed(true)
-    else if (delta < -6 && tablistCollapsed) setTablistCollapsed(false)
+    if (rafPendingRef.current) return
+    rafPendingRef.current = true
+    requestAnimationFrame(() => {
+      rafPendingRef.current = false
+      const delta = top - lastScrollTopRef.current
+      lastScrollTopRef.current = top
+
+      // Near the top: always reveal, and reset the accumulator.
+      if (top < 16) {
+        accumRef.current = 0
+        setTablistCollapsed((c) => (c ? false : c))
+        return
+      }
+      // Respect the post-toggle lock so the header-resize scroll burst can't
+      // flip the state back (the source of the flicker).
+      if (Date.now() < lockUntilRef.current) return
+
+      // Accumulate directional travel; reset when direction flips.
+      if (Math.sign(delta) !== Math.sign(accumRef.current)) accumRef.current = 0
+      accumRef.current += delta
+
+      const TRAVEL = 24 // px of continuous travel before toggling
+      if (accumRef.current > TRAVEL) {
+        accumRef.current = 0
+        setTablistCollapsed((c) => {
+          if (!c) lockUntilRef.current = Date.now() + 220
+          return true
+        })
+      } else if (accumRef.current < -TRAVEL) {
+        accumRef.current = 0
+        setTablistCollapsed((c) => {
+          if (c) lockUntilRef.current = Date.now() + 220
+          return false
+        })
+      }
+    })
   }
 
   return (
@@ -158,7 +196,7 @@ export default function Layout({ title, children, backTo, group, page, hideScrol
       <div className="relative flex-1 min-w-0 overflow-hidden">
         <main
           ref={swipe.contentRef}
-          className={`absolute inset-0 overflow-y-auto overflow-x-hidden overscroll-x-contain p-4 pt-4 pb-[max(env(safe-area-inset-bottom),var(--tg-content-bottom,0px),6rem)] space-y-3 animate-fade-in${hideScrollbar ? ' scrollbar-hide' : ''}`}
+          className={`absolute inset-0 overflow-y-auto overflow-x-hidden overscroll-contain p-4 pt-4 pb-[max(env(safe-area-inset-bottom),var(--tg-content-bottom,0px),6rem)] space-y-3 animate-fade-in${hideScrollbar ? ' scrollbar-hide' : ''}`}
           onTouchStart={swipe.onTouchStart}
           onTouchMove={swipe.onTouchMove}
           onTouchEnd={swipe.onTouchEnd}
