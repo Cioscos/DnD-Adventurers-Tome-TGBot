@@ -316,7 +316,14 @@
       "concentration_break_warn": "You'll break concentration on {{spell}}.",
       "expand": "Expand",
       "collapse": "Collapse",
-      "srd_autofill": "Auto-fill from SRD: level, range, duration, components, damage (empty fields only)."
+      "srd_autofill": "Auto-fill from SRD: level, range, duration, components, damage (empty fields only).",
+      "filters": {
+        "level": "Level",
+        "property": "Properties",
+        "level_n": "Lv {{level}}",
+        "clear": "Clear filters",
+        "no_results": "No spells match the filters"
+      }
     },
     "slots": {
       "title": "Spell Slots",
@@ -764,7 +771,14 @@
       "class_features_section": "Class features",
       "custom_section": "Custom abilities",
       "class_feature_locked": "Managed automatically by the class: you can spend its uses and edit its description.",
-      "edit_description": "Edit description"
+      "edit_description": "Edit description",
+      "filters": {
+        "class": "Class",
+        "type": "Type",
+        "restoration": "Recovery",
+        "clear": "Clear filters",
+        "no_results": "No abilities match the filters"
+      }
     },
     "multiclass": {
       "title": "Class",

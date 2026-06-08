@@ -49,7 +49,7 @@ function EntryCard({ entry, isCurrent, defaultOpen }: { entry: ChangelogEntry; i
             )}
           </div>
           {title && (
-            <p className="mt-0.5 font-display text-dnd-text truncate">{title}</p>
+            <p className="mt-0.5 font-display text-dnd-text break-words">{title}</p>
           )}
           <p className="mt-0.5 text-xs font-mono tabular-nums text-dnd-text-faint">{entry.date}</p>
         </div>

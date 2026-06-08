@@ -3,7 +3,7 @@ import { useParams, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m, AnimatePresence } from 'framer-motion'
-import { Ban, ChevronRight } from 'lucide-react'
+import { Ban, ChevronRight, FilterX } from 'lucide-react'
 import { GiPotionBall as FlaskConical, GiSparkles as Sparkles } from 'react-icons/gi'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
@@ -11,6 +11,8 @@ import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
 import ScrollArea from '@/components/ScrollArea'
 import EmptyState from '@/components/ui/EmptyState'
+import FilterChip from '@/components/ui/FilterChip'
+import FilterRow from '@/components/ui/FilterRow'
 import { haptic } from '@/auth/telegram'
 import { toast } from 'sonner'
 import SpellFilter from '@/pages/spells/SpellFilter'
@@ -40,6 +42,11 @@ export default function Spells() {
   const spellRefs = useRef<Map<number, HTMLDivElement | null>>(new Map())
   const focusHandled = useRef(false)
 
+  // Filtri a chips (come nelle Abilità speciali): multi-selezione, unione fra
+  // chip della stessa dimensione, intersezione fra dimensioni diverse.
+  const [levelFilter, setLevelFilter] = useState<Set<number>>(() => new Set())
+  const [propFilter, setPropFilter] = useState<Set<'concentration' | 'ritual'>>(() => new Set())
+
   const toggleLevel = (level: number) => {
     setCollapsedLevels((prev) => {
       const next = new Set(prev)
@@ -47,6 +54,24 @@ export default function Spells() {
       else next.add(level)
       return next
     })
+  }
+  const toggleLevelFilter = (level: number) =>
+    setLevelFilter((prev) => {
+      const next = new Set(prev)
+      if (next.has(level)) next.delete(level)
+      else next.add(level)
+      return next
+    })
+  const toggleProp = (key: 'concentration' | 'ritual') =>
+    setPropFilter((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  const clearSpellFilters = () => {
+    setLevelFilter(new Set())
+    setPropFilter(new Set())
   }
 
   const { data: char } = useQuery({
@@ -253,9 +278,42 @@ export default function Spells() {
 
   const spells: Spell[] = char.spells ?? []
   const spellSlots: SpellSlot[] = char.spell_slots ?? []
-  const filtered = search
-    ? spells.filter((s) => s.name.toLowerCase().includes(search.toLowerCase()))
-    : spells
+
+  // Opzioni di filtro derivate dall'intero set di incantesimi (indipendenti dalla
+  // ricerca, così le chip restano stabili). Una dimensione si mostra solo se utile.
+  const levelOptions = Array.from(
+    spells.reduce((acc, s) => acc.set(s.level, (acc.get(s.level) ?? 0) + 1), new Map<number, number>()),
+  )
+    .map(([level, count]) => ({ level, count }))
+    .sort((a, b) => a.level - b.level)
+
+  const propOptions = (['concentration', 'ritual'] as const)
+    .map((key) => ({
+      key,
+      count: spells.filter((s) => (key === 'concentration' ? s.is_concentration : s.is_ritual)).length,
+    }))
+    // una proprietà si mostra solo se discrimina davvero (presente ma non in tutti)
+    .filter((o) => o.count > 0 && o.count < spells.length)
+
+  const showLevelRow = levelOptions.length >= 2
+  const showPropRow = propOptions.length >= 1
+  const showFilterBar = showLevelRow || showPropRow
+  const hasActiveChipFilter = levelFilter.size > 0 || propFilter.size > 0
+
+  const matchesChips = (s: Spell): boolean => {
+    if (levelFilter.size > 0 && !levelFilter.has(s.level)) return false
+    if (propFilter.size > 0) {
+      const matchesProp =
+        (propFilter.has('concentration') && s.is_concentration) ||
+        (propFilter.has('ritual') && s.is_ritual)
+      if (!matchesProp) return false
+    }
+    return true
+  }
+
+  const filtered = spells
+    .filter((s) => (search ? s.name.toLowerCase().includes(search.toLowerCase()) : true))
+    .filter(matchesChips)
 
   const byLevel = filtered.reduce<Record<number, Spell[]>>((acc, s) => {
     if (!acc[s.level]) acc[s.level] = []
@@ -264,6 +322,7 @@ export default function Spells() {
   }, {})
 
   const sortedLevels = Object.keys(byLevel).map(Number).sort((a, b) => a - b)
+  const noResults = spells.length > 0 && filtered.length === 0
   const concentratingId = char.concentrating_spell_id
   const concentratingSpell = concentratingId ? spells.find(s => s.id === concentratingId) : null
 
@@ -309,7 +368,64 @@ export default function Spells() {
         />
       )}
 
+      {showFilterBar && (
+        <div className="space-y-2">
+          {showLevelRow && (
+            <FilterRow label={t('character.spells.filters.level')}>
+              {levelOptions.map((o) => (
+                <FilterChip
+                  key={o.level}
+                  tone="gold"
+                  label={o.level === 0 ? t('character.spells.cantrip') : t('character.spells.filters.level_n', { level: o.level })}
+                  count={o.count}
+                  selected={levelFilter.has(o.level)}
+                  onToggle={() => toggleLevelFilter(o.level)}
+                />
+              ))}
+            </FilterRow>
+          )}
+          {showPropRow && (
+            <FilterRow label={t('character.spells.filters.property')}>
+              {propOptions.map((o) => (
+                <FilterChip
+                  key={o.key}
+                  tone="arcane"
+                  label={t(`character.spells.${o.key}`)}
+                  count={o.count}
+                  selected={propFilter.has(o.key)}
+                  onToggle={() => toggleProp(o.key)}
+                />
+              ))}
+            </FilterRow>
+          )}
+          {hasActiveChipFilter && (
+            <div className="flex justify-end">
+              <Button
+                variant="ghost"
+                size="sm"
+                icon={<FilterX size={12} />}
+                haptic="light"
+                onClick={clearSpellFilters}
+              >
+                {t('character.spells.filters.clear')}
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+
       <ScrollArea>
+        {noResults && (
+          <EmptyState
+            icon={<Sparkles size={32} />}
+            title={t('character.spells.filters.no_results')}
+            action={
+              hasActiveChipFilter
+                ? { label: t('character.spells.filters.clear'), onClick: clearSpellFilters, icon: <FilterX size={14} /> }
+                : undefined
+            }
+          />
+        )}
         {sortedLevels.map((level) => {
           const slot = level > 0 ? spellSlots.find((s) => s.level === level) : undefined
           return (
