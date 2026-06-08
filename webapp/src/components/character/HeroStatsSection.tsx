@@ -78,30 +78,26 @@ export default function HeroStatsSection({ char }: Props) {
   const cells = [
     {
       key: 'init',
-      short: t('character.hero.initiative_short'),
+      label: t('character.hero.initiative'),
       value: sign(dexMod),
-      aria: t('character.hero.initiative'),
       path: 'stats',
     },
     {
       key: 'pb',
-      short: t('character.hero.prof_bonus_short'),
+      label: t('character.skills.prof_bonus'),
       value: sign(pb),
-      aria: t('character.skills.prof_bonus'),
       path: 'class',
     },
     {
       key: 'pp',
-      short: t('character.hero.passive_perception_short'),
+      label: t('character.skills.passive_perception'),
       value: String(passivePerception),
-      aria: t('character.skills.passive_perception'),
       path: 'skills',
     },
     {
       key: 'speed',
-      short: t('character.hero.speed_short'),
+      label: t('character.identity.speed'),
       value: speedLabel,
-      aria: t('character.identity.speed'),
       path: 'identity',
     },
   ]
@@ -112,23 +108,24 @@ export default function HeroStatsSection({ char }: Props) {
         {t('character.hero.stats_section')}
       </SectionDivider>
 
-      {/* Combat-number cells — mirror the ability-score grid look in the hero card. */}
-      <div className="grid grid-cols-4 @max-[300px]:grid-cols-2 gap-1.5 text-center">
+      {/* Combat-number cells — 2×2 grid, full names above, mono value below. */}
+      <div className="grid grid-cols-2 gap-1.5">
         {cells.map((c) => (
           <m.button
             key={c.key}
             type="button"
             onClick={() => go(c.path)}
-            aria-label={`${c.aria}: ${c.value}`}
-            className="flex flex-col items-center justify-center min-h-[56px] rounded-lg p-1.5 border
+            aria-label={`${c.label}: ${c.value}`}
+            className="flex flex-col items-center justify-center min-h-[68px] rounded-lg p-2 border
                        bg-dnd-surface-raised border-dnd-border text-dnd-text
                        hover:border-dnd-gold transition-colors"
             whileTap={{ scale: 0.95 }}
           >
-            <span className="text-[11px] font-cinzel uppercase tracking-wider opacity-80">
-              {c.short}
+            <span className="flex items-center justify-center text-center min-h-[2.2em] px-0.5
+                             text-[11px] font-cinzel uppercase tracking-wide leading-tight opacity-80">
+              {c.label}
             </span>
-            <span className="text-xl font-mono font-bold tabular-nums leading-none mt-0.5">
+            <span className="text-2xl font-mono font-bold tabular-nums leading-none mt-1">
               {c.value}
             </span>
           </m.button>
