@@ -213,7 +213,11 @@ export default function CharacterSelect() {
   }
 
   return (
-    <div className="min-h-screen p-4 pt-safe pb-safe relative">
+    <div className="w-full overflow-hidden" style={{ height: 'var(--tg-vh, 100vh)' }}>
+      {/* Own scroll container: the home page no longer relies on document/body
+          scroll (broken under the global overscroll-behavior + Telegram
+          disableVerticalSwipes), it scrolls inside here like every Layout page. */}
+      <div className="h-full overflow-y-auto overflow-x-hidden overscroll-contain p-4 pt-safe pb-safe relative">
       {/* Hero halo behind title */}
       <div
         className="absolute top-0 left-0 right-0 h-60 pointer-events-none"
@@ -361,6 +365,7 @@ export default function CharacterSelect() {
             <span className="font-mono tabular-nums text-xs">v{currentVersion()}</span>
           </button>
         </div>
+      </div>
       </div>
 
       {/* Creation wizard — modal Sheet. Flusso: Nome → Classe → Identità → Crea. */}
