@@ -288,6 +288,32 @@ def _migrate_schema(connection) -> None:
         except Exception as exc:
             logger.warning("item_type 'other' -> 'generic' migration failed: %s", exc)
 
+    # Heal rows poisoned with the raw value 'manual' written before
+    # RestorationType had a MANUAL member (PR #148). SQLAlchemy persists enum
+    # *names* ('MANUAL'), but the pre-fix Enum pass-through (validate_strings is
+    # False by default) stored the raw value 'manual'. On read SQLAlchemy can no
+    # longer map 'manual' back to the enum and raises LookupError, which 500s
+    # every load of the owning character — bricking it. Adding MANUAL to the
+    # enum fixes new writes but NOT these already-stored rows, so normalize them
+    # to the enum name here. Idempotent: once converged the WHERE matches no rows.
+    for _tbl in ("abilities", "homebrew_resources"):
+        if _tbl not in existing_tables:
+            continue
+        try:
+            result = connection.execute(text(
+                f"UPDATE {_tbl} SET restoration_type = 'MANUAL' "
+                "WHERE restoration_type = 'manual'"
+            ))
+            if result.rowcount:
+                logger.info(
+                    "Healed %d %s row(s) with invalid restoration_type='manual'",
+                    result.rowcount, _tbl,
+                )
+        except Exception as exc:
+            logger.warning(
+                "restoration_type 'manual' heal failed for %s: %s", _tbl, exc
+            )
+
     for table, column in _DROP_COLUMNS:
         if table not in existing_tables:
             continue

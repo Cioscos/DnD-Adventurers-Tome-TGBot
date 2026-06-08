@@ -1,6 +1,21 @@
 {
   "entries": [
     {
+      "version": "2.5.2",
+      "date": "2026-06-08",
+      "title": { "it": "Recupero schede bloccate da abilità manuali", "en": "Recovery of sheets blocked by manual abilities" },
+      "added": { "it": [], "en": [] },
+      "improved": { "it": [], "en": [] },
+      "fixed": {
+        "it": [
+          "Le schede dei personaggi che erano già diventate impossibili da aprire dopo aver creato un'abilità con ripristino \"manuale\" (prima della correzione precedente) ora si riaprono correttamente: i dati salvati in modo errato vengono sistemati automaticamente."
+        ],
+        "en": [
+          "Character sheets that had already become impossible to open after creating an ability with \"manual\" restoration (before the previous fix) now open correctly again: the incorrectly stored data is repaired automatically."
+        ]
+      }
+    },
+    {
       "version": "2.5.1",
       "date": "2026-06-08",
       "title": { "it": "Correzione ripristino manuale abilità", "en": "Manual ability restoration fix" },
