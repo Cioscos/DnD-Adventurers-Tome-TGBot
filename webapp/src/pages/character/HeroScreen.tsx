@@ -17,6 +17,7 @@ import { formatCondition, CONDITION_ICONS } from '@/lib/conditions'
 import ConditionDetailModal from '@/pages/conditions/ConditionDetailModal'
 import PassiveAbilityDetailModal from '@/pages/abilities/PassiveAbilityDetailModal'
 import SpellSlotsSummary from '@/components/character/SpellSlotsSummary'
+import HeroStatsSection from '@/components/character/HeroStatsSection'
 import type { Ability, CharacterFull } from '@/types'
 import { useUnitSettings, formatWeightValue, weightUnitLabel } from '@/store/unitSettings'
 
@@ -262,6 +263,9 @@ export default function HeroScreen({ char }: Props) {
 
       {/* Spell slots summary */}
       {char.spell_slots && <SpellSlotsSummary slots={char.spell_slots} />}
+
+      {/* Summary shortcuts — fills the area left empty after progression/vitals moved out */}
+      <HeroStatsSection char={char} />
 
       {/* Modals */}
       {detailCondKey !== null && (
