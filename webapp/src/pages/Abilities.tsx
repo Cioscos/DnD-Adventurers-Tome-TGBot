@@ -24,6 +24,10 @@ import AbilitiesSkeleton from '@/components/skeletons/AbilitiesSkeleton'
 type AddForm = { name: string; description: string; max_uses: string; is_passive: boolean; restoration_type: string }
 const emptyForm: AddForm = { name: '', description: '', max_uses: '', is_passive: false, restoration_type: 'long_rest' }
 
+// Sopra questa soglia gli usi si gestiscono con lo stepper numerico invece dei
+// pallini (es. Imposizione delle Mani = 5×livello, Punti Ki/Stregoneria alti).
+const PIP_THRESHOLD = 10
+
 // Smart-default lookup: 5e ability names → expected restoration cadence.
 // User can always override via the select; this only sets the initial value
 // so common picks like "Action Surge" don't require an extra tap.
@@ -70,6 +74,10 @@ export default function Abilities() {
   const [expanded, setExpanded] = useState<number | null>(null)
   const [editingAbility, setEditingAbility] = useState<Ability | null>(null)
   const [wizardStep, setWizardStep] = useState<'basics' | 'details'>('basics')
+  // Editor descrizione-only per le feature di classe (struttura bloccata: si può
+  // cambiare solo la descrizione, via PATCH { description }).
+  const [descFeature, setDescFeature] = useState<Ability | null>(null)
+  const [descDraft, setDescDraft] = useState('')
 
   const { data: char } = useQuery({
     queryKey: ['character', charId],
@@ -148,6 +156,19 @@ export default function Abilities() {
     },
   })
 
+  // Solo la descrizione: consentito anche sulle feature di classe (il backend
+  // blocca nome/max/restoration con 409, ma accetta description).
+  const descriptionMutation = useMutation({
+    mutationFn: ({ abilityId, description }: { abilityId: number; description: string }) =>
+      api.abilities.update(charId, abilityId, { description }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['character', charId] })
+      setDescFeature(null)
+      haptic.success()
+    },
+    onError: () => haptic.error(),
+  })
+
   function openAdd() {
     setEditingAbility(null)
     setForm(emptyForm)
@@ -160,6 +181,11 @@ export default function Abilities() {
     setForm(abilityToForm(ab))
     setWizardStep('basics')
     setShowAdd(true)
+  }
+
+  function openDescEdit(ab: Ability) {
+    setDescFeature(ab)
+    setDescDraft(ab.description ?? '')
   }
 
   function closeForm() {
@@ -198,6 +224,180 @@ export default function Abilities() {
   const abilities: Ability[] = char.abilities ?? []
   const isPending = addMutation.isPending || updateMutation.isPending
 
+  // Mappa classId -> nome classe, per il badge sulle feature auto-generate.
+  const classNameById = new Map<number, string>(
+    (char.classes ?? []).map((c) => [c.id, c.class_name]),
+  )
+  const classFeatures = abilities.filter((a) => a.is_class_feature)
+  const manualAbilities = abilities.filter((a) => !a.is_class_feature)
+
+  function renderAbility(ab: Ability) {
+    const isOpen = expanded === ab.id
+    const hasUses = ab.max_uses != null
+    const max = ab.max_uses ?? 0
+    const current = ab.uses ?? 0
+    const usedCount = max - current            // pallini "accesi" = usati (come gli slot)
+    const isDepleted = hasUses && current === 0
+    const usePips = hasUses && max <= PIP_THRESHOLD
+    const className = ab.source_class_id != null ? classNameById.get(ab.source_class_id) : undefined
+
+    return (
+      <m.div
+        key={ab.id}
+        layout
+        className={`rounded-2xl border overflow-hidden transition-colors
+          ${ab.is_passive
+            ? 'bg-dnd-surface-raised border-dnd-gold-dim/30'
+            : 'bg-gradient-parchment border-dnd-border'}
+          ${isDepleted ? 'opacity-60' : ''}`}
+      >
+        <m.button
+          className="w-full flex items-center gap-2 px-3 py-3 text-left"
+          onClick={() => setExpanded(isOpen ? null : ab.id)}
+          whileTap={{ scale: 0.995 }}
+        >
+          <span className="flex-1 min-w-0 font-display font-bold text-sm text-dnd-gold-bright truncate">
+            {ab.name}
+          </span>
+          <div className="flex gap-1.5 items-center shrink-0">
+            {className && (
+              <StatPill tone="cobalt" size="sm" value={className} />
+            )}
+            {ab.is_passive ? (
+              <StatPill tone="cobalt" size="sm" value={t('character.abilities.passive')} />
+            ) : (
+              <StatPill tone="amber" size="sm" value={t('character.abilities.active')} />
+            )}
+            {hasUses && (
+              <span className="text-[10px] text-dnd-text-faint font-mono tabular-nums">
+                {current}/{max}
+              </span>
+            )}
+          </div>
+          <m.div animate={{ rotate: isOpen ? 180 : 0 }} transition={{ duration: 0.2 }}>
+            <ChevronDown size={14} className="text-dnd-text-faint" />
+          </m.div>
+        </m.button>
+
+        <AnimatePresence initial={false}>
+          {isOpen && (
+            <m.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.22 }}
+            >
+              <div className="px-3 pb-3 space-y-3 border-t border-dnd-gold-dim/15">
+                {ab.description ? (
+                  <p className="text-xs text-dnd-text mt-2.5 whitespace-pre-wrap leading-relaxed font-body italic">
+                    {ab.description}
+                  </p>
+                ) : (
+                  <p className="text-xs text-dnd-text-faint/60 mt-2 italic font-body">—</p>
+                )}
+
+                {hasUses && (
+                  <div className="flex items-center gap-1.5 text-[10px] text-dnd-text-muted font-cinzel uppercase tracking-widest">
+                    <RotateCcw size={11} />
+                    <span>
+                      {t('character.abilities.restoration_label')}:{' '}
+                      {t(`character.abilities.restoration_short.${ab.restoration_type}`, {
+                        defaultValue: t(`character.abilities.restoration.${ab.restoration_type}`, { defaultValue: ab.restoration_type }),
+                      })}
+                    </span>
+                  </div>
+                )}
+
+                {/* Usi ≤ soglia → pallini interattivi (acceso = usato, come gli slot) */}
+                {usePips && (
+                  <div className="flex gap-2 flex-wrap rounded-xl bg-dnd-surface border border-dnd-border p-2.5">
+                    {Array.from({ length: max }).map((_, i) => {
+                      const isUsed = i < usedCount
+                      return (
+                        <m.button
+                          key={i}
+                          onClick={() =>
+                            usesMutation.mutate({
+                              abilityId: ab.id,
+                              uses: isUsed ? current + 1 : current - 1,
+                            })
+                          }
+                          disabled={usesMutation.isPending}
+                          whileTap={{ scale: 0.85 }}
+                          aria-pressed={isUsed}
+                          className={`w-7 h-7 rounded-full border-2 transition-all disabled:opacity-50 ${
+                            isUsed
+                              ? 'bg-gradient-to-br from-dnd-gold-deep to-dnd-gold-bright border-dnd-gold-bright shadow-[0_0_10px_rgba(244,208,111,0.5)]'
+                              : 'bg-transparent border-dnd-gold-dim/60 hover:border-dnd-gold-bright'
+                          }`}
+                        />
+                      )
+                    })}
+                  </div>
+                )}
+
+                {/* Usi > soglia → stepper numerico */}
+                {hasUses && !usePips && (
+                  <div className="flex items-center gap-3 rounded-xl bg-dnd-surface border border-dnd-border p-2">
+                    <m.button
+                      onClick={() => usesMutation.mutate({ abilityId: ab.id, uses: Math.max(0, current - 1) })}
+                      disabled={current <= 0 || usesMutation.isPending}
+                      className="w-11 h-11 rounded-xl bg-[var(--dnd-crimson)]/15 text-[var(--dnd-crimson-bright)] border border-[var(--dnd-crimson)]/30 flex items-center justify-center disabled:opacity-30"
+                      whileTap={{ scale: 0.9 }}
+                    >
+                      <Minus size={16} />
+                    </m.button>
+                    <div className="flex-1 text-center">
+                      <p className="text-lg font-display font-black text-dnd-gold-bright">
+                        <span className="font-mono">{current}</span>
+                        <span className="text-sm text-dnd-text-muted"> / {max}</span>
+                      </p>
+                    </div>
+                    <m.button
+                      onClick={() => usesMutation.mutate({ abilityId: ab.id, uses: Math.min(max, current + 1) })}
+                      disabled={current >= max || usesMutation.isPending}
+                      className="w-11 h-11 rounded-xl bg-[var(--dnd-emerald)]/15 text-[var(--dnd-emerald-bright)] border border-dnd-emerald/30 flex items-center justify-center disabled:opacity-30"
+                      whileTap={{ scale: 0.9 }}
+                    >
+                      <Plus size={16} />
+                    </m.button>
+                  </div>
+                )}
+
+                {/* Le feature di classe hanno struttura bloccata: niente modifica/elimina */}
+                {ab.is_class_feature ? (
+                  <div className="pt-1 border-t border-dnd-gold-dim/15 space-y-2">
+                    <p className="text-[10px] text-dnd-text-faint/70 italic font-body">
+                      {t('character.abilities.class_feature_locked')}
+                    </p>
+                    <Button variant="secondary" size="sm" onClick={() => openDescEdit(ab)} icon={<Pencil size={12} />}>
+                      {t('character.abilities.edit_description')}
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2 pt-1 border-t border-dnd-gold-dim/15">
+                    <Button variant="secondary" size="sm" onClick={() => openEdit(ab)} icon={<Pencil size={12} />}>
+                      {t('character.abilities.edit')}
+                    </Button>
+                    <Button
+                      variant="danger"
+                      size="sm"
+                      onClick={() => deleteMutation.mutate(ab.id)}
+                      disabled={deleteMutation.isPending}
+                      icon={<Trash2 size={12} />}
+                    >
+                      {t('common.delete')}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </m.div>
+          )}
+        </AnimatePresence>
+      </m.div>
+    )
+  }
+
   return (
     <Layout title={t('character.abilities.title')} backTo={`/char/${charId}`} group="skills" page="abilities">
       <Button
@@ -225,136 +425,23 @@ export default function Abilities() {
       )}
 
       <ScrollArea>
-        <div className="space-y-2">
-          {abilities.map((ab) => {
-            const isOpen = expanded === ab.id
-            const hasUses = ab.max_uses != null
-            const current = ab.uses ?? 0
-            const isDepleted = hasUses && current === 0
-
-            return (
-              <m.div
-                key={ab.id}
-                layout
-                className={`rounded-2xl border overflow-hidden transition-colors
-                  ${ab.is_passive
-                    ? 'bg-dnd-surface-raised border-dnd-gold-dim/30'
-                    : 'bg-gradient-parchment border-dnd-border'}
-                  ${isDepleted ? 'opacity-60' : ''}`}
-              >
-                <m.button
-                  className="w-full flex items-center gap-2 px-3 py-3 text-left"
-                  onClick={() => setExpanded(isOpen ? null : ab.id)}
-                  whileTap={{ scale: 0.995 }}
-                >
-                  <span className="flex-1 font-display font-bold text-sm text-dnd-gold-bright">
-                    {ab.name}
-                  </span>
-                  <div className="flex gap-1.5 items-center shrink-0">
-                    {ab.is_passive ? (
-                      <StatPill tone="cobalt" size="sm" value={t('character.abilities.passive')} />
-                    ) : (
-                      <StatPill tone="amber" size="sm" value={t('character.abilities.active')} />
-                    )}
-                    {hasUses && (
-                      <span className="flex items-center gap-1">
-                        {Array.from({ length: Math.min(ab.max_uses!, 8) }).map((_, i) => (
-                          <span
-                            key={i}
-                            className={`w-2 h-2 rounded-full
-                              ${i < current
-                                ? 'bg-dnd-gold-bright shadow-[0_0_3px_var(--dnd-gold-glow)]'
-                                : 'bg-dnd-gold-dim/40'}`}
-                          />
-                        ))}
-                        <span className="text-[10px] text-dnd-text-faint font-mono tabular-nums ml-1">
-                          {current}/{ab.max_uses}
-                        </span>
-                      </span>
-                    )}
-                  </div>
-                  <m.div animate={{ rotate: isOpen ? 180 : 0 }} transition={{ duration: 0.2 }}>
-                    <ChevronDown size={14} className="text-dnd-text-faint" />
-                  </m.div>
-                </m.button>
-
-                <AnimatePresence initial={false}>
-                  {isOpen && (
-                    <m.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: 'auto', opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.22 }}
-                    >
-                      <div className="px-3 pb-3 space-y-3 border-t border-dnd-gold-dim/15">
-                        {ab.description ? (
-                          <p className="text-xs text-dnd-text mt-2.5 whitespace-pre-wrap leading-relaxed font-body italic">
-                            {ab.description}
-                          </p>
-                        ) : (
-                          <p className="text-xs text-dnd-text-faint/60 mt-2 italic font-body">—</p>
-                        )}
-
-                        {hasUses && (
-                          <div className="flex items-center gap-1.5 text-[10px] text-dnd-text-muted font-cinzel uppercase tracking-widest">
-                            <RotateCcw size={11} />
-                            <span>
-                              {t('character.abilities.restoration_label')}:{' '}
-                              {t(`character.abilities.restoration_short.${ab.restoration_type}`, {
-                                defaultValue: t(`character.abilities.restoration.${ab.restoration_type}`, { defaultValue: ab.restoration_type }),
-                              })}
-                            </span>
-                          </div>
-                        )}
-
-                        {hasUses && (
-                          <div className="flex items-center gap-3 rounded-xl bg-dnd-surface border border-dnd-border p-2">
-                            <m.button
-                              onClick={() => usesMutation.mutate({ abilityId: ab.id, uses: Math.max(0, current - 1) })}
-                              disabled={current <= 0 || usesMutation.isPending}
-                              className="w-11 h-11 rounded-xl bg-[var(--dnd-crimson)]/15 text-[var(--dnd-crimson-bright)] border border-[var(--dnd-crimson)]/30 flex items-center justify-center disabled:opacity-30"
-                              whileTap={{ scale: 0.9 }}
-                            >
-                              <Minus size={16} />
-                            </m.button>
-                            <div className="flex-1 text-center">
-                              <p className="text-lg font-display font-black text-dnd-gold-bright">
-                                <span className="font-mono">{current}</span>
-                                <span className="text-sm text-dnd-text-muted"> / {ab.max_uses}</span>
-                              </p>
-                            </div>
-                            <m.button
-                              onClick={() => usesMutation.mutate({ abilityId: ab.id, uses: Math.min(ab.max_uses!, current + 1) })}
-                              disabled={current >= (ab.max_uses ?? 0) || usesMutation.isPending}
-                              className="w-11 h-11 rounded-xl bg-[var(--dnd-emerald)]/15 text-[var(--dnd-emerald-bright)] border border-dnd-emerald/30 flex items-center justify-center disabled:opacity-30"
-                              whileTap={{ scale: 0.9 }}
-                            >
-                              <Plus size={16} />
-                            </m.button>
-                          </div>
-                        )}
-
-                        <div className="flex gap-2 pt-1 border-t border-dnd-gold-dim/15">
-                          <Button variant="secondary" size="sm" onClick={() => openEdit(ab)} icon={<Pencil size={12} />}>
-                            {t('character.abilities.edit')}
-                          </Button>
-                          <Button
-                            variant="danger"
-                            size="sm"
-                            onClick={() => deleteMutation.mutate(ab.id)}
-                            disabled={deleteMutation.isPending}
-                            icon={<Trash2 size={12} />}
-                          >
-                            {t('common.delete')}
-                          </Button>
-                        </div>
-                      </div>
-                    </m.div>
-                  )}
-                </AnimatePresence>
-              </m.div>
-            )
-          })}
+        <div className="space-y-4">
+          {classFeatures.length > 0 && (
+            <section className="space-y-2">
+              <h3 className="font-cinzel uppercase tracking-widest text-xs text-dnd-gold-bright px-1">
+                {t('character.abilities.class_features_section')}
+              </h3>
+              {classFeatures.map(renderAbility)}
+            </section>
+          )}
+          {manualAbilities.length > 0 && (
+            <section className="space-y-2">
+              <h3 className="font-cinzel uppercase tracking-widest text-xs text-dnd-gold-bright px-1">
+                {t('character.abilities.custom_section')}
+              </h3>
+              {manualAbilities.map(renderAbility)}
+            </section>
+          )}
         </div>
       </ScrollArea>
 
@@ -389,6 +476,40 @@ export default function Abilities() {
           </div>
         </Surface>
       )}
+
+      {/* Description-only editor for class features (struttura bloccata) */}
+      <Sheet
+        open={descFeature != null}
+        onClose={() => setDescFeature(null)}
+        title={descFeature ? `${t('character.abilities.edit_description')} · ${descFeature.name}` : t('character.abilities.edit_description')}
+      >
+        <div className="p-5 space-y-3">
+          <Input
+            variant="textarea"
+            label={t('character.abilities.description_label')}
+            value={descDraft}
+            onChange={setDescDraft}
+            rows={5}
+            autoFocus
+          />
+          <div className="flex gap-2 pt-2">
+            <Button variant="secondary" onClick={() => setDescFeature(null)} className="px-4">
+              {t('common.cancel')}
+            </Button>
+            <Button
+              variant="primary"
+              fullWidth
+              onClick={() =>
+                descFeature && descriptionMutation.mutate({ abilityId: descFeature.id, description: descDraft.trim() })
+              }
+              loading={descriptionMutation.isPending}
+              haptic="success"
+            >
+              {t('common.save')}
+            </Button>
+          </div>
+        </div>
+      </Sheet>
 
       {/* Add/Edit Sheet — 2-step wizard */}
       <Sheet

@@ -1,6 +1,30 @@
 {
   "entries": [
     {
+      "version": "2.3.0",
+      "date": "2026-06-08",
+      "title": { "it": "Risorse → Abilità", "en": "Resources → Abilities" },
+      "added": {
+        "it": [
+          "Le risorse di classe (Furia, Punti Ki, Imposizione delle Mani…) ora vivono tra le Abilità Speciali, con descrizione e usi a pallini."
+        ],
+        "en": [
+          "Class resources (Rage, Ki Points, Lay on Hands…) now live among Special Abilities, with a description and pip-based uses."
+        ]
+      },
+      "improved": {
+        "it": [
+          "Gli usi delle abilità si segnano coi pallini come gli slot incantesimo; oltre 10 usi compare uno stepper numerico.",
+          "Le abilità di classe sono calcolate e aggiornate automaticamente al cambio di livello e si ripristinano col riposo."
+        ],
+        "en": [
+          "Ability uses are tracked with pips like spell slots; above 10 uses a numeric stepper is shown.",
+          "Class abilities are calculated and updated automatically on level change and recover with rest."
+        ]
+      },
+      "fixed": { "it": [], "en": [] }
+    },
+    {
       "version": "2.2.1",
       "date": "2026-06-08",
       "title": { "it": "Correzioni", "en": "Fixes" },

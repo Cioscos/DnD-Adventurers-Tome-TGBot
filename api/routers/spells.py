@@ -54,7 +54,7 @@ async def _get_owned_full(char_id: int, user_id: int, session: AsyncSession) -> 
     result = await session.execute(
         select(Character)
         .options(
-            selectinload(Character.classes).selectinload(CharacterClass.resources),
+            selectinload(Character.classes),
             selectinload(Character.ability_scores),
             selectinload(Character.spells),
             selectinload(Character.spell_slots),

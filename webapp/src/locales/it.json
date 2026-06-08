@@ -750,7 +750,11 @@
         "long_rest": "Lungo",
         "short_rest": "Breve",
         "manual": "Manuale"
-      }
+      },
+      "class_features_section": "Abilità di classe",
+      "custom_section": "Abilità personalizzate",
+      "class_feature_locked": "Gestita automaticamente dalla classe: puoi consumarne gli usi e modificarne la descrizione.",
+      "edit_description": "Modifica descrizione"
     },
     "multiclass": {
       "title": "Classe",
@@ -765,16 +769,7 @@
       "subclass": "Sottoclasse",
       "hit_die": "Dado vita",
       "spellcasting": "Abilità da incantatore",
-      "resources": "Risorse di classe",
-      "add_resource": "Aggiungi risorsa",
-      "remove_resource": "Rimuovi risorsa",
-      "resource_name": "Nome risorsa",
-      "resource_total": "Totale",
-      "resource_current": "Attuali",
-      "restoration": "Ripristino",
-      "use_resource": "Usa",
-      "restore_resource": "Ripristina",
-      "auto_resources_hint": "Le risorse standard saranno create automaticamente",
+      "auto_resources_hint": "Le abilità di classe saranno create automaticamente",
       "manage_classes": "Gestisci classi",
       "edit_classes": "Modifica classe",
       "remove_class_title": "Rimuovere la classe?",

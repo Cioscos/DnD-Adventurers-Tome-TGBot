@@ -398,20 +398,6 @@ export const api = {
         method: 'PATCH',
         body: JSON.stringify({ classes }),
       }),
-    addResource: (charId: number, classId: number, data: Record<string, unknown>) =>
-      request<unknown>(`/characters/${charId}/classes/${classId}/resources`, {
-        method: 'POST',
-        body: JSON.stringify(data),
-      }),
-    updateResource: (charId: number, classId: number, resId: number, data: Record<string, unknown>) =>
-      request<unknown>(`/characters/${charId}/classes/${classId}/resources/${resId}`, {
-        method: 'PATCH',
-        body: JSON.stringify(data),
-      }),
-    deleteResource: (charId: number, classId: number, resId: number) =>
-      request<void>(`/characters/${charId}/classes/${classId}/resources/${resId}`, {
-        method: 'DELETE',
-      }),
   },
 
   // ---------------------------------------------------------------------------

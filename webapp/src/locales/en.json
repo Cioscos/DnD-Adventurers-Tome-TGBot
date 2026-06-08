@@ -750,7 +750,11 @@
         "long_rest": "Long",
         "short_rest": "Short",
         "manual": "Manual"
-      }
+      },
+      "class_features_section": "Class features",
+      "custom_section": "Custom abilities",
+      "class_feature_locked": "Managed automatically by the class: you can spend its uses and edit its description.",
+      "edit_description": "Edit description"
     },
     "multiclass": {
       "title": "Class",
@@ -765,16 +769,7 @@
       "subclass": "Subclass",
       "hit_die": "Hit die",
       "spellcasting": "Spellcasting ability",
-      "resources": "Class resources",
-      "add_resource": "Add resource",
-      "remove_resource": "Remove resource",
-      "resource_name": "Resource name",
-      "resource_total": "Total",
-      "resource_current": "Current",
-      "restoration": "Restoration",
-      "use_resource": "Use",
-      "restore_resource": "Restore",
-      "auto_resources_hint": "Standard resources will be created automatically",
+      "auto_resources_hint": "Class features will be created automatically",
       "manage_classes": "Manage classes",
       "edit_classes": "Edit classes",
       "remove_class_title": "Remove this class?",

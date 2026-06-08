@@ -10,7 +10,7 @@ import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from api.auth import get_current_user
+from api.auth import get_current_user, get_current_lang
 from api.database import get_db
 from api.main import app
 from core.db.models import Base
@@ -43,8 +43,12 @@ async def client(test_session_factory):
     def _override_get_user():
         return TEST_USER_ID
 
+    def _override_get_lang():
+        return "it"
+
     app.dependency_overrides[get_db] = _override_get_db
     app.dependency_overrides[get_current_user] = _override_get_user
+    app.dependency_overrides[get_current_lang] = _override_get_lang
     try:
         async with AsyncClient(
             transport=ASGITransport(app=app), base_url="http://test",

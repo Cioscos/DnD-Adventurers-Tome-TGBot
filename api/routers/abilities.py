@@ -24,7 +24,7 @@ async def _get_owned_full(char_id: int, user_id: int, session: AsyncSession) -> 
     result = await session.execute(
         select(Character)
         .options(
-            selectinload(Character.classes).selectinload(CharacterClass.resources),
+            selectinload(Character.classes),
             selectinload(Character.ability_scores),
             selectinload(Character.spells),
             selectinload(Character.spell_slots),
@@ -83,6 +83,18 @@ async def update_ability(
     if ability is None:
         raise HTTPException(status_code=404, detail="Ability not found")
 
+    # Le feature di classe (auto-generate) hanno struttura protetta: si possono
+    # cambiare solo `uses` e `description`. Nome/max_uses/restoration_type/tipo
+    # sono governati dall'auto-calcolo e ri-sincronizzati al level-up.
+    if ability.is_class_feature:
+        edited = set(body.model_dump(exclude_unset=True).keys())
+        forbidden = edited - {"uses", "description"}
+        if forbidden:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="class_feature_structure_locked",
+            )
+
     old_uses = ability.uses
     for field, value in body.model_dump(exclude_unset=True).items():
         setattr(ability, field, value)
@@ -130,4 +142,9 @@ async def delete_ability(
     ability = result.scalar_one_or_none()
     if ability is None:
         raise HTTPException(status_code=404, detail="Ability not found")
+    if ability.is_class_feature:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="class_feature_cannot_be_deleted",
+        )
     await session.delete(ability)

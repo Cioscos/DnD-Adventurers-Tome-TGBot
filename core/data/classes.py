@@ -4,7 +4,7 @@ This module provides:
 - DND_CLASSES: list of Italian-named D&D 5e classes for guided selection
 - ResourceConfig: dataclass describing a class resource with a level-scaling formula
 - CLASS_RESOURCES: dict mapping class name to its list of ResourceConfig
-- get_resources_for_class(): instantiate resource dicts for a given class/level/character
+- get_class_feature_specs(): build class-feature spec dicts for a given class/level/character
 """
 
 from __future__ import annotations
@@ -95,20 +95,24 @@ CLASS_HIT_DIE: dict[str, int] = {
 
 @dataclass
 class ResourceConfig:
-    """Describes a class-specific resource with a level-based formula.
+    """Descrive una feature di classe con formula a livello.
 
     Attributes:
-        name: Display name of the resource (Italian).
-        formula: Callable (level: int) -> int returning the max uses at that level.
-            Returns 0 when the resource is not yet available.
-        restoration_type: When this resource recharges.
-        note: Optional explanatory note shown in the UI.
-        cha_based: If True, the formula uses the character's Charisma modifier
-            instead of level. The formula is ignored; CHA mod is used directly.
+        key: Identificatore stabile di catalogo (es. "monk.ki"). Usato dal
+            re-sync al level-up per ritrovare l'Ability corrispondente.
+        name: Nome visualizzato (italiano).
+        formula: Callable (level:int)->int che ritorna il max usi a quel livello.
+            Ritorna 0 quando la feature non è ancora disponibile.
+        restoration_type: Quando la feature si ricarica.
+        description: Descrizione regolistica bilingue, chiavi "it"/"en".
+        note: Nota opzionale legacy (mantenuta per compatibilità; non più usata).
+        cha_based: Se True il max = modificatore di Carisma (formula ignorata).
     """
+    key: str
     name: str
     formula: Callable[[int], int]
     restoration_type: RestorationType
+    description: dict[str, str]
     note: Optional[str] = None
     cha_based: bool = False
 
@@ -135,97 +139,167 @@ def _lookup(table: list[int], level: int) -> int:
 CLASS_RESOURCES: dict[str, list[ResourceConfig]] = {
     "Barbaro": [
         ResourceConfig(
+            key="barbarian.rage",
             name="Furia",
             formula=lambda lv: _lookup(_BARBARO_FURIE, lv),
             restoration_type=RestorationType.LONG_REST,
+            description={
+                "it": "Come azione bonus entri in Furia: vantaggio alle prove e ai TS di Forza, bonus ai danni con armi da mischia basate sulla Forza e resistenza a danni contundenti, perforanti e taglienti. Dura 1 minuto.",
+                "en": "As a bonus action you enter a Rage: advantage on Strength checks and saves, bonus damage on Strength-based melee weapon attacks, and resistance to bludgeoning, piercing and slashing damage. Lasts 1 minute.",
+            },
         ),
     ],
     "Bardo": [
         ResourceConfig(
+            key="bard.bardic_inspiration",
             name="Ispirazione Bardica",
-            formula=lambda lv: lv,  # overridden by cha_based=True
+            formula=lambda lv: lv,  # ignorata: cha_based=True
             restoration_type=RestorationType.SHORT_REST,
             cha_based=True,
+            description={
+                "it": "Come azione bonus concedi a una creatura un dado Ispirazione Bardica; entro 10 minuti può aggiungerlo a una prova di caratteristica, tiro per colpire o tiro salvezza.",
+                "en": "As a bonus action, grant a creature a Bardic Inspiration die; within 10 minutes they can add it to one ability check, attack roll, or saving throw.",
+            },
         ),
     ],
     "Chierico": [
         ResourceConfig(
+            key="cleric.channel_divinity",
             name="Incanalare la Divinità",
             formula=lambda lv: _lookup(_CHIERICO_CD, lv),
             restoration_type=RestorationType.SHORT_REST,
+            description={
+                "it": "Incanali l'energia divina per alimentare effetti magici, come Scacciare Non Morti, oltre alle opzioni concesse dal tuo dominio divino.",
+                "en": "You channel divine energy to fuel magical effects such as Turn Undead, plus the options granted by your divine domain.",
+            },
         ),
     ],
     "Druido": [
         ResourceConfig(
+            key="druid.wild_shape",
             name="Forma Selvatica",
             formula=lambda lv: 2 if lv >= 2 else 0,
             restoration_type=RestorationType.SHORT_REST,
+            description={
+                "it": "Come azione puoi trasformarti magicamente in una bestia che hai già visto, entro i limiti di grado di sfida e capacità di movimento previsti dal tuo livello.",
+                "en": "As an action you can magically assume the shape of a beast you have seen before, within the challenge-rating and movement limits set by your level.",
+            },
         ),
     ],
     "Guerriero": [
         ResourceConfig(
+            key="fighter.superiority_dice",
             name="Dadi Superiorità",
             formula=lambda lv: _lookup(_GUERRIERO_DS, lv),
             restoration_type=RestorationType.SHORT_REST,
             note="⚠️ I Dadi Superiorità sono inclusi per semplicità. Sono disponibili solo per il Battle Master.",
+            description={
+                "it": "Riserva di dadi che alimenta le manovre da combattimento del Maestro di Guerra. ⚠️ Inclusi per semplicità: disponibili solo per la sottoclasse Battle Master.",
+                "en": "A pool of dice that powers the Battle Master's combat maneuvers. ⚠️ Included for convenience: only available to the Battle Master subclass.",
+            },
         ),
         ResourceConfig(
-            name="Action Surge",
+            key="fighter.action_surge",
+            name="Azione Impetuosa",
             formula=lambda lv: _lookup(_GUERRIERO_AS, lv),
             restoration_type=RestorationType.SHORT_REST,
+            description={
+                "it": "Nel tuo turno puoi compiere un'azione aggiuntiva oltre a quella normale (e all'eventuale azione bonus).",
+                "en": "On your turn you can take one additional action on top of your regular action (and any bonus action).",
+            },
         ),
         ResourceConfig(
+            key="fighter.second_wind",
             name="Secondo Vento",
             formula=lambda lv: 1,
             restoration_type=RestorationType.SHORT_REST,
+            description={
+                "it": "Come azione bonus recuperi punti ferita pari a 1d10 + il tuo livello da guerriero.",
+                "en": "As a bonus action you regain hit points equal to 1d10 + your fighter level.",
+            },
         ),
         ResourceConfig(
+            key="fighter.indomitable",
             name="Indomabile",
             formula=lambda lv: _lookup(_GUERRIERO_IN, lv),
             restoration_type=RestorationType.LONG_REST,
+            description={
+                "it": "Puoi ripetere un tiro salvezza che hai appena fallito; devi usare il nuovo risultato.",
+                "en": "You can reroll a saving throw you just failed; you must use the new roll.",
+            },
         ),
     ],
     "Monaco": [
         ResourceConfig(
+            key="monk.ki",
             name="Punti Ki",
             formula=lambda lv: lv if lv >= 2 else 0,
             restoration_type=RestorationType.SHORT_REST,
+            description={
+                "it": "Energia mistica che alimenta le tue tecniche da monaco: Raffica di Colpi, Difesa Attenta, Passo del Vento e altre capacità.",
+                "en": "Mystical energy that fuels your monk techniques: Flurry of Blows, Patient Defense, Step of the Wind, and other features.",
+            },
         ),
     ],
     "Paladino": [
         ResourceConfig(
+            key="paladin.lay_on_hands",
             name="Imposizione delle Mani",
             formula=lambda lv: 5 * lv,
             restoration_type=RestorationType.LONG_REST,
             note="Pool di PF curabili (non usi singoli).",
+            description={
+                "it": "Riserva di punti cura pari a 5 × il tuo livello da paladino. Con un'azione puoi toccare una creatura e spendere punti per curarla, o spenderne 5 per neutralizzare una malattia o un veleno.",
+                "en": "A pool of healing points equal to 5 × your paladin level. As an action you can touch a creature and spend points to heal it, or spend 5 to cure a disease or neutralize a poison.",
+            },
         ),
         ResourceConfig(
+            key="paladin.channel_divinity",
             name="Incanalare la Divinità",
             formula=lambda lv: _lookup(_PALADINO_CD, lv),
             restoration_type=RestorationType.SHORT_REST,
+            description={
+                "it": "Incanali energia divina per alimentare gli effetti concessi dal tuo Giuramento Sacro.",
+                "en": "You channel divine energy to fuel the effects granted by your Sacred Oath.",
+            },
         ),
     ],
     "Stregone": [
         ResourceConfig(
+            key="sorcerer.sorcery_points",
             name="Punti Stregoneria",
             formula=lambda lv: lv if lv >= 2 else 0,
             restoration_type=RestorationType.LONG_REST,
+            description={
+                "it": "Carburante della Metamagia: puoi convertire punti in slot incantesimo (e viceversa) e applicare effetti metamagici ai tuoi incantesimi.",
+                "en": "Fuel for Metamagic: you can convert points into spell slots (and vice versa) and apply metamagic effects to your spells.",
+            },
         ),
     ],
     "Warlock": [
         ResourceConfig(
+            key="warlock.pact_slots",
             name="Slot Patto",
             formula=lambda lv: _lookup(_WARLOCK_PATTO, lv),
             restoration_type=RestorationType.SHORT_REST,
             note="Gli Slot Patto si recuperano con il riposo breve, a differenza degli altri caster.",
+            description={
+                "it": "I tuoi slot incantesimo della Magia del Patto: sempre dello stesso livello (il più alto disponibile) e recuperati con un riposo breve, a differenza degli altri incantatori.",
+                "en": "Your Pact Magic spell slots: all of the same (highest available) level and recovered on a short rest, unlike other casters.",
+            },
         ),
     ],
     "Mago": [
         ResourceConfig(
+            key="wizard.arcane_recovery",
             name="Recupero Arcano",
             formula=lambda lv: 1,
             restoration_type=RestorationType.LONG_REST,
             note="Permette di recuperare slot incantesimo durante un riposo breve (una volta per riposo lungo).",
+            description={
+                "it": "Una volta al giorno, durante un riposo breve, recuperi slot incantesimo spesi con livelli combinati fino a metà del tuo livello da mago (arrotondato per eccesso).",
+                "en": "Once per day, during a short rest, you recover expended spell slots with a combined level up to half your wizard level (rounded up).",
+            },
         ),
     ],
     # Ranger and Ladro have no base class resources
@@ -238,18 +312,20 @@ CLASS_RESOURCES: dict[str, list[ResourceConfig]] = {
 # Helper: build resource dicts for DB insertion
 # ---------------------------------------------------------------------------
 
-def get_resources_for_class(
+def get_class_feature_specs(
     class_name: str,
     level: int,
     char: Optional["Character"] = None,
+    lang: str = "it",
 ) -> list[dict]:
-    """Return a list of resource init dicts for the given class and level.
+    """Ritorna le spec delle feature di classe disponibili a un dato livello.
 
-    Each dict has keys: name, current, total, restoration_type, note.
-    Resources with total == 0 (not yet available at this level) are excluded.
+    Ogni dict: {key, name, description, max_uses, restoration_type, cha_based}.
+    Le feature con max_uses == 0 (non ancora disponibili) sono escluse.
+    `lang` seleziona la lingua della description (fallback "it").
     """
     configs = CLASS_RESOURCES.get(class_name, [])
-    result = []
+    result: list[dict] = []
     for cfg in configs:
         if cfg.cha_based and char is not None:
             cha_score = next(
@@ -257,19 +333,20 @@ def get_resources_for_class(
             )
             total = max(1, (cha_score - 10) // 2)
         elif cfg.cha_based:
-            total = 3  # sensible default if character not yet available
+            total = 3  # default sensato se il personaggio non è disponibile
         else:
             total = cfg.formula(level)
 
         if total <= 0:
-            continue  # not available at this level
+            continue
 
         result.append({
+            "key": cfg.key,
             "name": cfg.name,
-            "current": total,
-            "total": total,
+            "description": cfg.description.get(lang) or cfg.description.get("it"),
+            "max_uses": total,
             "restoration_type": cfg.restoration_type,
-            "note": cfg.note,
+            "cha_based": cfg.cha_based,
         })
     return result
 
@@ -288,44 +365,3 @@ def get_saving_throw_proficiencies(class_name: str) -> dict[str, bool]:
     return {ability: True for ability in abilities}
 
 
-def update_resources_for_level(
-    class_name: str,
-    new_level: int,
-    existing_resources: list,  # list of ClassResource ORM objects
-    char: Optional["Character"] = None,
-) -> None:
-    """Update existing ClassResource ORM objects in-place after a level change.
-
-    - Recalculates total for each resource using the new level formula.
-    - On increase, raises current by the gained amount (capped at new total); on decrease, caps current to the new total.
-    - Resources newly becoming available are NOT auto-added here (handled in multiclass.py).
-    """
-    configs = CLASS_RESOURCES.get(class_name, [])
-    config_by_name = {cfg.name: cfg for cfg in configs}
-
-    for resource in existing_resources:
-        cfg = config_by_name.get(resource.name)
-        if cfg is None:
-            continue
-        if cfg.cha_based:
-            # Don't recalculate CHA-based resources on level change
-            continue
-        new_total = cfg.formula(new_level)
-        if new_total <= 0:
-            new_total = 0
-        if new_total == 99:
-            # _BARBARO_FURIE sentinel: "unlimited" rages at level 20 — not a
-            # countable pool. Set the sentinel total but don't inflate current.
-            resource.total = new_total
-            continue
-        old_total = resource.total
-        delta = new_total - old_total
-        resource.total = new_total
-        if delta > 0:
-            # Level-up grants capacity: already-spent uses stay spent, but the
-            # newly gained points are immediately available (D&D 5e — rest
-            # restores expended uses, leveling adds the new max as usable).
-            resource.current = min(new_total, resource.current + delta)
-        elif resource.current > new_total:
-            # Level decreased / formula shrank: cap current to the new max.
-            resource.current = new_total

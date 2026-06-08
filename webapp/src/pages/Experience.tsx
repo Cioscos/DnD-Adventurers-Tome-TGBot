@@ -89,7 +89,7 @@ export default function Experience() {
       }
       // Resource pools that auto-scaled with the class level-up.
       if (char) {
-        const diffs = diffResourceMaxes(char.classes ?? [], updated.classes ?? [])
+        const diffs = diffResourceMaxes(char.abilities ?? [], updated.abilities ?? [])
         for (const d of diffs) {
           toast.success(
             t('character.multiclass.resource_max_increased', {

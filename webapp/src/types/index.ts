@@ -33,15 +33,6 @@ export interface AbilityScore {
   modifiers_applied?: AppliedModifier[]
 }
 
-export interface ClassResource {
-  id: number
-  name: string
-  current: number
-  total: number
-  restoration_type: string
-  note?: string
-}
-
 export interface CharacterClass {
   id: number
   class_name: string
@@ -49,7 +40,6 @@ export interface CharacterClass {
   subclass?: string
   spellcasting_ability?: string
   hit_die?: number
-  resources: ClassResource[]
 }
 
 export interface Currency {
@@ -70,6 +60,10 @@ export interface Ability {
   is_passive: boolean
   is_active: boolean
   restoration_type: string
+  /** Feature auto-generata da una classe: link alla classe e chiave di catalogo. */
+  source_class_id?: number | null
+  is_class_feature: boolean
+  feature_key?: string | null
 }
 
 export interface MapEntry {
