@@ -1,6 +1,25 @@
 {
   "entries": [
     {
+      "version": "2.3.1",
+      "date": "2026-06-08",
+      "title": { "it": "Barra superiore più stabile", "en": "Steadier top bar" },
+      "added": { "it": [], "en": [] },
+      "improved": { "it": [], "en": [] },
+      "fixed": {
+        "it": [
+          "Le briciole di pane (breadcrumb) non «vibrano» più scomparendo e riapparendo durante lo scorrimento.",
+          "In modalità schermo intero i pulsanti della barra superiore restano sempre sotto i controlli di Telegram, anche quando le briciole sono nascoste.",
+          "La barra superiore non si solleva più insieme alla pagina quando il contenuto non è scorrevole."
+        ],
+        "en": [
+          "The breadcrumb no longer «vibrates», flickering in and out while you scroll.",
+          "In fullscreen mode the top-bar buttons always stay below Telegram's controls, even when the breadcrumb is hidden.",
+          "The top bar no longer lifts together with the page when the content isn't scrollable."
+        ]
+      }
+    },
+    {
       "version": "2.3.0",
       "date": "2026-06-08",
       "title": { "it": "Risorse → Abilità", "en": "Resources → Abilities" },

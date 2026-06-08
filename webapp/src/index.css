@@ -205,6 +205,12 @@ body,
   max-width: 100vw;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+  /* Kill the document-level rubber-band/overscroll chaining. Without this, an
+     overscroll inside the page bubbles up and bounces the whole document — which
+     visually lifts the (non-fixed) top bar, in fullscreen sliding its buttons
+     under Telegram's floating controls. Only disables bounce/chaining, NOT
+     legitimate scrolling, so the body-scrolling home page still scrolls. */
+  overscroll-behavior: none;
 }
 
 /* Safe-area insets.
@@ -251,7 +257,11 @@ body {
   font-feature-settings: 'ss01', 'ss02';
   margin: 0;
   padding: 0;
-  min-height: 100vh;
+  /* Track the real Telegram viewport, not 100vh. On fixed-height routes
+     (root = var(--tg-vh)) 100vh can exceed --tg-vh, giving the body a few px of
+     scroll range that lets the top bar drift up. var(--tg-vh) removes that range
+     while still acting as a floor for the body-scrolling home page. */
+  min-height: var(--tg-vh, 100vh);
   position: relative;
   transition: background-color 200ms ease, color 200ms ease;
 }
