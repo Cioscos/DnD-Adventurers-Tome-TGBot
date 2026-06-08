@@ -420,7 +420,7 @@ class ResourceDef(BaseModel):
     key: str
     name: str
     max: int = Field(..., ge=0)
-    restoration_type: Literal["long_rest", "short_rest", "none"] = "none"
+    restoration_type: Literal["long_rest", "short_rest", "none", "manual"] = "none"
 
     @field_validator("key")
     @classmethod

@@ -42,6 +42,7 @@ class RestorationType(str, PyEnum):
     LONG_REST = "long_rest"
     SHORT_REST = "short_rest"
     NONE = "none"
+    MANUAL = "manual"
 
 
 class FileType(str, PyEnum):
