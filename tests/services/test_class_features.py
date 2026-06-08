@@ -20,15 +20,16 @@ async def session():
 
 
 async def _make_monk(session: AsyncSession, level: int) -> tuple[Character, CharacterClass]:
+    # Imposta TUTTE le relazioni prima del primo flush così restano in memoria
+    # (caricate) e non scatenano un lazy-load in contesto async — stesso pattern
+    # di api/routers/characters.create_character.
     char = Character(user_id=1, name="Mo")
-    session.add(char)
-    await session.flush()
-    char.ability_scores = [AbilityScore(character_id=char.id, name="charisma", value=10)]
-    cls = CharacterClass(character_id=char.id, class_name="Monaco", level=level)
-    session.add(cls)
-    await session.flush()
-    char.classes = [cls]
+    char.ability_scores = [AbilityScore(name="charisma", value=10)]
     char.abilities = []
+    cls = CharacterClass(class_name="Monaco", level=level)
+    char.classes = [cls]
+    session.add(char)
+    await session.flush()  # assegna char.id/cls.id, cascata ability_scores
     return char, cls
 
 
@@ -41,7 +42,7 @@ async def test_creates_ki_ability_at_level_2(session):
     assert ki.source_class_id == cls.id
     assert ki.max_uses == 2 and ki.uses == 2
     assert ki.is_active is True and ki.is_passive is False
-    assert ki.description and "Ki" in ki.description
+    assert ki.description and "monaco" in ki.description.lower()
 
 
 async def test_levelup_grows_max_and_keeps_spent(session):

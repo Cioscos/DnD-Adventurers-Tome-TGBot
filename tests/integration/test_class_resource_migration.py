@@ -62,7 +62,7 @@ def test_migration_converts_and_drops(tmp_path):
     assert "class_resources" not in tables  # droppata
     ki = by_name["Punti Ki"]
     assert ki[1] == 5 and ki[2] == 2 and ki[3] == 1 and ki[4] == "monk.ki" and ki[5] == 10
-    assert ki[6] and "Ki" in ki[6]  # descrizione di catalogo (it)
+    assert ki[6] and "monaco" in ki[6].lower()  # descrizione di catalogo (it)
     custom = by_name["Risorsa Custom"]
     assert custom[3] == 0 and custom[4] is None and custom[5] is None  # manuale
     assert custom[6] == "mia nota"  # note legacy -> description
