@@ -5,7 +5,24 @@ from __future__ import annotations
 from enum import Enum
 from typing import Any, Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+from core.db.models import RestorationType
+
+# Valid restoration_type values, derived from the enum so the schema can never
+# drift from the DB column. Accepting an unknown string here would silently
+# corrupt the Enum(RestorationType) column (SQLAlchemy passes unrecognized
+# strings straight through with validate_strings=False) and brick the character
+# on the next read — see the heal migration in core/db/engine.py.
+_ALLOWED_RESTORATION = frozenset(e.value for e in RestorationType)
+
+
+def _validate_restoration_type(value: Optional[str]) -> Optional[str]:
+    if value is not None and value not in _ALLOWED_RESTORATION:
+        raise ValueError(
+            f"restoration_type must be one of {sorted(_ALLOWED_RESTORATION)}"
+        )
+    return value
 
 
 # ---------------------------------------------------------------------------
@@ -176,6 +193,8 @@ class AbilityCreate(BaseModel):
     is_active: bool = False
     restoration_type: str = "none"
 
+    _check_restoration = field_validator("restoration_type")(_validate_restoration_type)
+
 
 class AbilityUpdate(BaseModel):
     name: Optional[str] = None
@@ -185,6 +204,8 @@ class AbilityUpdate(BaseModel):
     is_passive: Optional[bool] = None
     is_active: Optional[bool] = None
     restoration_type: Optional[str] = None
+
+    _check_restoration = field_validator("restoration_type")(_validate_restoration_type)
 
 
 # ---------------------------------------------------------------------------
