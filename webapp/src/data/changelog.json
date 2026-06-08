@@ -1,6 +1,39 @@
 {
   "entries": [
     {
+      "version": "2.4.0",
+      "date": "2026-06-08",
+      "title": { "it": "Riepiloghi rapidi nella scheda eroe", "en": "Quick summaries on the hero screen" },
+      "added": {
+        "it": [
+          "Nuove statistiche riepilogative nella schermata principale del personaggio: Iniziativa, Bonus competenza, Percezione passiva e Velocità, ognuna con scorciatoia alla relativa pagina.",
+          "Riepilogo dei Tiri Salvezza competenti (con bonus) e delle Skill competenti, con scorciatoia alle rispettive pagine.",
+          "La scheda eroe ora segnala chiaramente lo stato «Morto» con un avviso che porta alla pagina dei Punti Ferita per la rianimazione."
+        ],
+        "en": [
+          "New summary stats on the character's main screen: Initiative, Proficiency Bonus, Passive Perception and Speed, each with a shortcut to its page.",
+          "Summary of proficient Saving Throws (with bonus) and proficient Skills, with shortcuts to their pages.",
+          "The hero screen now clearly flags the «Dead» state with a banner that links to the Hit Points page to revive."
+        ]
+      },
+      "improved": {
+        "it": [
+          "Il pulsante dei dadi diventa semitrasparente mentre scorri la pagina, così non copre il contenuto, e torna pieno appena ti fermi."
+        ],
+        "en": [
+          "The dice button dims while you scroll, so it stops covering content, and fades back as soon as you stop."
+        ]
+      },
+      "fixed": {
+        "it": [
+          "Nella scheda eroe il pulsante della borsa mantiene una distanza costante dallo scudo della Classe Armatura anche quando la razza del personaggio non è impostata."
+        ],
+        "en": [
+          "On the hero screen the bag button keeps a consistent distance from the Armor Class shield even when the character's race isn't set."
+        ]
+      }
+    },
+    {
       "version": "2.3.2",
       "date": "2026-06-08",
       "title": { "it": "Barra superiore: scorrimento veloce", "en": "Top bar: fast scroll" },
