@@ -1,6 +1,21 @@
 {
   "entries": [
     {
+      "version": "2.4.3",
+      "date": "2026-06-08",
+      "title": { "it": "Modifica livello classe più fluida", "en": "Smoother class level editing" },
+      "added": { "it": [], "en": [] },
+      "improved": { "it": [], "en": [] },
+      "fixed": {
+        "it": [
+          "Nella schermata \"Gestisci classi\" ora è possibile cancellare il livello di una classe e digitarne uno nuovo: prima il campo tornava automaticamente a 1 appena lo si svuotava, costringendo a digitare il numero e poi cancellare la cifra in eccesso."
+        ],
+        "en": [
+          "In the \"Manage classes\" screen you can now clear a class level and type a new one: previously the field snapped back to 1 as soon as it was emptied, forcing you to type the number and then delete the extra digit."
+        ]
+      }
+    },
+    {
       "version": "2.4.2",
       "date": "2026-06-08",
       "title": { "it": "Indicatori di pagina del carosello", "en": "Carousel page indicators" },
