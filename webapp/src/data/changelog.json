@@ -1,6 +1,21 @@
 {
   "entries": [
     {
+      "version": "2.5.1",
+      "date": "2026-06-08",
+      "title": { "it": "Correzione ripristino manuale abilità", "en": "Manual ability restoration fix" },
+      "added": { "it": [], "en": [] },
+      "improved": { "it": [], "en": [] },
+      "fixed": {
+        "it": [
+          "Corretto un bug per cui aggiungere un'abilità speciale con ripristino manuale impediva di aprire la scheda del personaggio a causa di un errore API. Il tipo di ripristino \"manuale\" ora è riconosciuto correttamente dal backend."
+        ],
+        "en": [
+          "Fixed a bug where adding a special ability with manual restoration prevented opening the character sheet due to an API error. The \"manual\" restoration type is now correctly recognised by the backend."
+        ]
+      }
+    },
+    {
       "version": "2.5.0",
       "date": "2026-06-08",
       "title": { "it": "Filtri nelle abilità speciali", "en": "Filters in special abilities" },
