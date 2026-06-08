@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
 import { CircleDot } from 'lucide-react'
 import {
-  GiHeartPlus, GiKnapsack, GiLightningTrio, GiPotionBall,
+  GiHeartPlus, GiKnapsack, GiLightningTrio, GiPotionBall, GiSkullCrossedBones,
 } from 'react-icons/gi'
 import HPGauge from '@/components/ui/HPGauge'
 import HeroXPBar from '@/components/ui/HeroXPBar'
@@ -93,6 +93,25 @@ export default function HeroScreen({ char }: Props) {
             {weightUnitLabel(unitSystem)}
           </span>
         </m.button>
+
+        {char.is_dead && (
+          <m.button
+            type="button"
+            onClick={() => { haptic.light(); navigate(`/char/${char.id}/hp`) }}
+            whileTap={{ scale: 0.98 }}
+            aria-label={t('character.death_saves.dead_title')}
+            className="mt-3 w-full min-h-[44px] flex items-center justify-center gap-2 px-3 py-2 rounded-xl
+                       bg-[rgba(179,58,58,0.12)] border border-dnd-crimson/50 text-[var(--dnd-crimson-bright)]"
+          >
+            <GiSkullCrossedBones size={16} aria-hidden />
+            <span className="text-[11px] font-cinzel uppercase tracking-widest font-bold">
+              {t('character.death_saves.dead_title')}
+            </span>
+            <span className="font-body italic text-sm">
+              {t('character.death_saves.revive')}
+            </span>
+          </m.button>
+        )}
 
         <div className="mt-4 flex items-center gap-3 @max-[300px]:flex-col @max-[300px]:items-stretch">
           <div className="flex-1 min-w-0">
