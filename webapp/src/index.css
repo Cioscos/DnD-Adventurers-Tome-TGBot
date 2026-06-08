@@ -224,6 +224,11 @@ body,
   padding-right: max(env(safe-area-inset-right, 0px), var(--tg-safe-right, 0px) + var(--tg-content-right, 0px));
 }
 .pb-safe-lg { padding-bottom: calc(2rem + max(env(safe-area-inset-bottom, 0px), var(--tg-safe-bottom, 0px) + var(--tg-content-bottom, 0px))); }
+/* Safe-area-aware absolute `bottom` offset (e.g. floating carousel dots). Same
+   max() term as .pb-safe so an element pinned to the bottom edge clears the
+   home indicator / Telegram fullscreen controls; falls back to 0.5rem (=bottom-2)
+   outside Telegram where the insets are 0. */
+.bottom-safe { bottom: calc(0.5rem + max(env(safe-area-inset-bottom, 0px), var(--tg-safe-bottom, 0px) + var(--tg-content-bottom, 0px))); }
 
 .scrollbar-hide {
   -ms-overflow-style: none;

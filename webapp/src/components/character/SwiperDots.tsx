@@ -12,7 +12,7 @@ export default function SwiperDots({ active, onSelect, labels }: Props) {
     <div
       role="tablist"
       aria-label="Character screens"
-      className="absolute bottom-2 left-0 right-0 z-30 flex justify-center gap-2 pointer-events-auto"
+      className="absolute bottom-safe left-0 right-0 z-30 flex justify-center gap-2 pointer-events-auto"
     >
       {[0, 1, 2].map((idx) => {
         const isActive = idx === active
