@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
 import { CircleDot } from 'lucide-react'
 import {
-  GiHeartPlus, GiKnapsack, GiLightningTrio, GiPotionBall,
+  GiHeartPlus, GiKnapsack, GiLightningTrio, GiPotionBall, GiSkullCrossedBones,
 } from 'react-icons/gi'
 import HPGauge from '@/components/ui/HPGauge'
 import HeroXPBar from '@/components/ui/HeroXPBar'
@@ -17,6 +17,7 @@ import { formatCondition, CONDITION_ICONS } from '@/lib/conditions'
 import ConditionDetailModal from '@/pages/conditions/ConditionDetailModal'
 import PassiveAbilityDetailModal from '@/pages/abilities/PassiveAbilityDetailModal'
 import SpellSlotsSummary from '@/components/character/SpellSlotsSummary'
+import HeroStatsSection from '@/components/character/HeroStatsSection'
 import type { Ability, CharacterFull } from '@/types'
 import { useUnitSettings, formatWeightValue, weightUnitLabel } from '@/store/unitSettings'
 
@@ -64,7 +65,9 @@ export default function HeroScreen({ char }: Props) {
           type="button"
           onClick={() => { haptic.light(); navigate(`/char/${char.id}/identity`) }}
           whileTap={{ scale: 0.99 }}
-          className="block w-full text-left pr-14"
+          /* Reserve the second (race) line's height even when no race is set, so the
+             AC shield row below stays clear of the absolutely-positioned bag button. */
+          className="block w-full text-left pr-14 min-h-[40px]"
           aria-label={t('character.identity.title', { defaultValue: 'Identity' })}
         >
           <p className="text-sm text-dnd-text-muted font-body italic mb-0.5">{char.class_summary}</p>
@@ -92,6 +95,25 @@ export default function HeroScreen({ char }: Props) {
             {weightUnitLabel(unitSystem)}
           </span>
         </m.button>
+
+        {char.is_dead && (
+          <m.button
+            type="button"
+            onClick={() => { haptic.light(); navigate(`/char/${char.id}/hp`) }}
+            whileTap={{ scale: 0.98 }}
+            aria-label={t('character.death_saves.dead_title')}
+            className="mt-3 w-full min-h-[44px] flex items-center justify-center gap-2 px-3 py-2 rounded-xl
+                       bg-[rgba(179,58,58,0.12)] border border-dnd-crimson/50 text-[var(--dnd-crimson-bright)]"
+          >
+            <GiSkullCrossedBones size={16} aria-hidden />
+            <span className="text-[11px] font-cinzel uppercase tracking-widest font-bold">
+              {t('character.death_saves.dead_title')}
+            </span>
+            <span className="font-body italic text-sm">
+              {t('character.death_saves.revive')}
+            </span>
+          </m.button>
+        )}
 
         <div className="mt-4 flex items-center gap-3 @max-[300px]:flex-col @max-[300px]:items-stretch">
           <div className="flex-1 min-w-0">
@@ -262,6 +284,9 @@ export default function HeroScreen({ char }: Props) {
 
       {/* Spell slots summary */}
       {char.spell_slots && <SpellSlotsSummary slots={char.spell_slots} />}
+
+      {/* Summary shortcuts — fills the area left empty after progression/vitals moved out */}
+      <HeroStatsSection char={char} />
 
       {/* Modals */}
       {detailCondKey !== null && (

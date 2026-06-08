@@ -53,6 +53,9 @@ export default function DiceOverlay() {
   const anyOverlayOpen = useAnyOverlayOpen()
   const [open, setOpen] = useState(false)
   const [pool, setPool] = useState<DicePool>({})
+  // Dim the launcher while the page is actively scrolling so it stops covering
+  // content the user is reading; it stays tappable and fades back when idle.
+  const [scrolling, setScrolling] = useState(false)
 
   const [results, setResults] = useState<RollGroup[] | null>(null)
   const [warningText, setWarningText] = useState<string | null>(null)
@@ -71,6 +74,23 @@ export default function DiceOverlay() {
     return () => {
       if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current)
       if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current)
+    }
+  }, [])
+
+  // Capture-phase listener catches scroll on any descendant scroll container
+  // (Layout's <main>, the character swiper screens, ...) since scroll doesn't
+  // bubble. Debounced so the launcher fades back ~600ms after scrolling stops.
+  useEffect(() => {
+    let idleTimer: ReturnType<typeof setTimeout> | null = null
+    const onScroll = () => {
+      setScrolling(true)
+      if (idleTimer) clearTimeout(idleTimer)
+      idleTimer = setTimeout(() => setScrolling(false), 600)
+    }
+    window.addEventListener('scroll', onScroll, true)
+    return () => {
+      window.removeEventListener('scroll', onScroll, true)
+      if (idleTimer) clearTimeout(idleTimer)
     }
   }, [])
 
@@ -244,7 +264,7 @@ export default function DiceOverlay() {
                      flex items-center justify-center text-dnd-ink touch-manipulation"
           whileTap={{ scale: 0.9 }}
           initial={{ opacity: 0, scale: 0.6 }}
-          animate={{ opacity: 1, scale: 1, rotate: open ? 45 : 0 }}
+          animate={{ opacity: scrolling && !open ? 0.35 : 1, scale: 1, rotate: open ? 45 : 0 }}
           transition={{ type: 'spring', stiffness: 260, damping: 22 }}
         >
           <Dices size={26} />
