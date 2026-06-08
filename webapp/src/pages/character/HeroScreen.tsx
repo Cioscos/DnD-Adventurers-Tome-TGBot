@@ -65,7 +65,9 @@ export default function HeroScreen({ char }: Props) {
           type="button"
           onClick={() => { haptic.light(); navigate(`/char/${char.id}/identity`) }}
           whileTap={{ scale: 0.99 }}
-          className="block w-full text-left pr-14"
+          /* Reserve the second (race) line's height even when no race is set, so the
+             AC shield row below stays clear of the absolutely-positioned bag button. */
+          className="block w-full text-left pr-14 min-h-[40px]"
           aria-label={t('character.identity.title', { defaultValue: 'Identity' })}
         >
           <p className="text-sm text-dnd-text-muted font-body italic mb-0.5">{char.class_summary}</p>
