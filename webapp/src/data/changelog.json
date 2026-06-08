@@ -1,6 +1,21 @@
 {
   "entries": [
     {
+      "version": "2.3.2",
+      "date": "2026-06-08",
+      "title": { "it": "Barra superiore: scorrimento veloce", "en": "Top bar: fast scroll" },
+      "added": { "it": [], "en": [] },
+      "improved": { "it": [], "en": [] },
+      "fixed": {
+        "it": [
+          "Uno scorrimento veloce non trascina più tutta l'app verso l'alto facendo finire la barra superiore sotto i controlli di Telegram (in schermo intero)."
+        ],
+        "en": [
+          "A fast scroll no longer drags the whole app upward, which had pushed the top bar under Telegram's controls (in fullscreen)."
+        ]
+      }
+    },
+    {
       "version": "2.3.1",
       "date": "2026-06-08",
       "title": { "it": "Barra superiore più stabile", "en": "Steadier top bar" },

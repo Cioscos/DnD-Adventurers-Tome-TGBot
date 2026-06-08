@@ -114,9 +114,9 @@ export default function CharacterSwiper({ hero, equipment, menu }: Props) {
         dragDirectionLock
         onDragEnd={handleDragEnd}
       >
-        <div style={{ width, touchAction: 'pan-y' }} className="h-full overflow-y-auto shrink-0">{hero}</div>
-        <div style={{ width, touchAction: 'pan-y' }} className="h-full overflow-y-auto shrink-0">{equipment}</div>
-        <div style={{ width, touchAction: 'pan-y' }} className="h-full overflow-y-auto shrink-0">{menu}</div>
+        <div style={{ width, touchAction: 'pan-y' }} className="h-full overflow-y-auto overscroll-contain shrink-0">{hero}</div>
+        <div style={{ width, touchAction: 'pan-y' }} className="h-full overflow-y-auto overscroll-contain shrink-0">{equipment}</div>
+        <div style={{ width, touchAction: 'pan-y' }} className="h-full overflow-y-auto overscroll-contain shrink-0">{menu}</div>
       </m.div>
       <SwiperDots active={activeScreen} onSelect={setActiveScreen} labels={labels} />
     </div>
