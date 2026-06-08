@@ -65,6 +65,12 @@ interface TelegramWebApp {
   ready(): void
   expand(): void
   close(): void
+  // Vertical-swipe gesture control (Bot API 7.7+). Optional: absent on older
+  // clients. Disabling stops Telegram from dragging the whole webview frame on a
+  // fast vertical scroll (which slides the top bar under the native controls).
+  disableVerticalSwipes?(): void
+  enableVerticalSwipes?(): void
+  isVerticalSwipesEnabled?: boolean
   sendData(data: string): void
   showAlert(message: string, callback?: () => void): void
   showConfirm(message: string, callback: (confirmed: boolean) => void): void

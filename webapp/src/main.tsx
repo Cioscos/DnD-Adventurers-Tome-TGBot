@@ -16,6 +16,15 @@ import './i18n'
 window.Telegram?.WebApp?.ready()
 window.Telegram?.WebApp?.expand()
 
+// Lock the app frame against Telegram's native vertical-swipe gesture (Bot API
+// 7.7+). Without this, a fast vertical scroll inside our own scroll containers
+// gets partially captured by Telegram and drags the whole webview up — in
+// fullscreen this slides the top bar underneath the floating native controls
+// (Close / chevron / ⋮), losing its safe-area padding. With it, only the inner
+// content scrolls and the header stays pinned. Closing is still possible via the
+// always-visible Close control. No-op on clients < Bot API 7.7.
+window.Telegram?.WebApp?.disableVerticalSwipes?.()
+
 // Theme system: read user preference from store, follow Telegram in auto mode
 initTheme()
 
