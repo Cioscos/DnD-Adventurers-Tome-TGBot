@@ -1,6 +1,21 @@
 {
   "entries": [
     {
+      "version": "2.4.1",
+      "date": "2026-06-08",
+      "title": { "it": "Scroll della lista personaggi", "en": "Character list scrolling" },
+      "added": { "it": [], "en": [] },
+      "improved": { "it": [], "en": [] },
+      "fixed": {
+        "it": [
+          "Ripristinato lo scorrimento nella schermata di selezione dei personaggi, che in alcuni casi non si riusciva più a scorrere."
+        ],
+        "en": [
+          "Restored scrolling on the character selection screen, which in some cases could no longer be scrolled."
+        ]
+      }
+    },
+    {
       "version": "2.4.0",
       "date": "2026-06-08",
       "title": { "it": "Riepiloghi rapidi nella scheda eroe", "en": "Quick summaries on the hero screen" },
