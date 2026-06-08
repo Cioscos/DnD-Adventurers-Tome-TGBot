@@ -1,41 +1,37 @@
-import type { CharacterClass, ClassResource } from '@/types'
+import type { Ability } from '@/types'
 
 export interface ResourceMaxDiff {
-  classId: number
-  resourceId: number
+  abilityId: number
   name: string
   prev: number
   next: number
 }
 
 /**
- * Compare class-resource maxes before vs after a class change so we can
- * surface scaled pools (e.g. Lay on Hands 5/5 → 5/10 at lv1→lv2 Paladin)
- * via a toast. Only positive deltas are returned; we don't toast on demotion
- * because a class level-down is a deliberate edit by the user.
+ * Compare class-feature ability maxes before vs after a class change so we can
+ * surface scaled pools (e.g. Lay on Hands 5/5 → 5/10 at lv1→lv2 Paladin) via a
+ * toast. Le risorse di classe ora sono Ability (is_class_feature). Only positive
+ * deltas are returned; we don't toast on demotion because a class level-down is
+ * a deliberate edit by the user.
  */
 export function diffResourceMaxes(
-  before: CharacterClass[],
-  after: CharacterClass[],
+  before: Ability[],
+  after: Ability[],
 ): ResourceMaxDiff[] {
   const out: ResourceMaxDiff[] = []
-  const beforeMap = new Map<number, ClassResource>()
-  for (const cls of before) {
-    for (const r of cls.resources ?? []) beforeMap.set(r.id, r)
-  }
-  for (const cls of after) {
-    for (const r of cls.resources ?? []) {
-      const prior = beforeMap.get(r.id)
-      if (!prior) continue
-      if (r.total > prior.total) {
-        out.push({
-          classId: cls.id,
-          resourceId: r.id,
-          name: r.name,
-          prev: prior.total,
-          next: r.total,
-        })
-      }
+  const beforeMap = new Map<number, Ability>()
+  for (const a of before) beforeMap.set(a.id, a)
+  for (const a of after) {
+    if (!a.is_class_feature) continue
+    const prior = beforeMap.get(a.id)
+    if (!prior || prior.max_uses == null || a.max_uses == null) continue
+    if (a.max_uses > prior.max_uses) {
+      out.push({
+        abilityId: a.id,
+        name: a.name,
+        prev: prior.max_uses,
+        next: a.max_uses,
+      })
     }
   }
   return out

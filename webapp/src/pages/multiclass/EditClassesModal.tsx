@@ -162,7 +162,7 @@ export default function EditClassesModal({ char, targetLevel, onClose }: Props) 
       qc.setQueryData(['character', char.id], updated)
       // Surface scaled class resources (Lay on Hands pool, Bardic Inspiration, ...)
       // so the player notices the new ceiling instead of having to dig.
-      const diffs = diffResourceMaxes(char.classes ?? [], updated.classes ?? [])
+      const diffs = diffResourceMaxes(char.abilities ?? [], updated.abilities ?? [])
       for (const d of diffs) {
         toast.success(
           t('character.multiclass.resource_max_increased', {
