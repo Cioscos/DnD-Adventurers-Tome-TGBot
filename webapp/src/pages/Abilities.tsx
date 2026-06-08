@@ -74,6 +74,10 @@ export default function Abilities() {
   const [expanded, setExpanded] = useState<number | null>(null)
   const [editingAbility, setEditingAbility] = useState<Ability | null>(null)
   const [wizardStep, setWizardStep] = useState<'basics' | 'details'>('basics')
+  // Editor descrizione-only per le feature di classe (struttura bloccata: si può
+  // cambiare solo la descrizione, via PATCH { description }).
+  const [descFeature, setDescFeature] = useState<Ability | null>(null)
+  const [descDraft, setDescDraft] = useState('')
 
   const { data: char } = useQuery({
     queryKey: ['character', charId],
@@ -152,6 +156,19 @@ export default function Abilities() {
     },
   })
 
+  // Solo la descrizione: consentito anche sulle feature di classe (il backend
+  // blocca nome/max/restoration con 409, ma accetta description).
+  const descriptionMutation = useMutation({
+    mutationFn: ({ abilityId, description }: { abilityId: number; description: string }) =>
+      api.abilities.update(charId, abilityId, { description }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['character', charId] })
+      setDescFeature(null)
+      haptic.success()
+    },
+    onError: () => haptic.error(),
+  })
+
   function openAdd() {
     setEditingAbility(null)
     setForm(emptyForm)
@@ -164,6 +181,11 @@ export default function Abilities() {
     setForm(abilityToForm(ab))
     setWizardStep('basics')
     setShowAdd(true)
+  }
+
+  function openDescEdit(ab: Ability) {
+    setDescFeature(ab)
+    setDescDraft(ab.description ?? '')
   }
 
   function closeForm() {
@@ -344,9 +366,14 @@ export default function Abilities() {
 
                 {/* Le feature di classe hanno struttura bloccata: niente modifica/elimina */}
                 {ab.is_class_feature ? (
-                  <p className="text-[10px] text-dnd-text-faint/70 italic font-body pt-1 border-t border-dnd-gold-dim/15">
-                    {t('character.abilities.class_feature_locked')}
-                  </p>
+                  <div className="pt-1 border-t border-dnd-gold-dim/15 space-y-2">
+                    <p className="text-[10px] text-dnd-text-faint/70 italic font-body">
+                      {t('character.abilities.class_feature_locked')}
+                    </p>
+                    <Button variant="secondary" size="sm" onClick={() => openDescEdit(ab)} icon={<Pencil size={12} />}>
+                      {t('character.abilities.edit_description')}
+                    </Button>
+                  </div>
                 ) : (
                   <div className="flex gap-2 pt-1 border-t border-dnd-gold-dim/15">
                     <Button variant="secondary" size="sm" onClick={() => openEdit(ab)} icon={<Pencil size={12} />}>
@@ -449,6 +476,40 @@ export default function Abilities() {
           </div>
         </Surface>
       )}
+
+      {/* Description-only editor for class features (struttura bloccata) */}
+      <Sheet
+        open={descFeature != null}
+        onClose={() => setDescFeature(null)}
+        title={descFeature ? `${t('character.abilities.edit_description')} · ${descFeature.name}` : t('character.abilities.edit_description')}
+      >
+        <div className="p-5 space-y-3">
+          <Input
+            variant="textarea"
+            label={t('character.abilities.description_label')}
+            value={descDraft}
+            onChange={setDescDraft}
+            rows={5}
+            autoFocus
+          />
+          <div className="flex gap-2 pt-2">
+            <Button variant="secondary" onClick={() => setDescFeature(null)} className="px-4">
+              {t('common.cancel')}
+            </Button>
+            <Button
+              variant="primary"
+              fullWidth
+              onClick={() =>
+                descFeature && descriptionMutation.mutate({ abilityId: descFeature.id, description: descDraft.trim() })
+              }
+              loading={descriptionMutation.isPending}
+              haptic="success"
+            >
+              {t('common.save')}
+            </Button>
+          </div>
+        </div>
+      </Sheet>
 
       {/* Add/Edit Sheet — 2-step wizard */}
       <Sheet

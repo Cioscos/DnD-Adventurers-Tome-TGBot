@@ -753,7 +753,8 @@
       },
       "class_features_section": "Class features",
       "custom_section": "Custom abilities",
-      "class_feature_locked": "Managed automatically by the class: you can spend its uses and edit its description."
+      "class_feature_locked": "Managed automatically by the class: you can spend its uses and edit its description.",
+      "edit_description": "Edit description"
     },
     "multiclass": {
       "title": "Class",

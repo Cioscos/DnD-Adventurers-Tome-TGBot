@@ -753,7 +753,8 @@
       },
       "class_features_section": "Abilità di classe",
       "custom_section": "Abilità personalizzate",
-      "class_feature_locked": "Gestita automaticamente dalla classe: puoi consumarne gli usi e modificarne la descrizione."
+      "class_feature_locked": "Gestita automaticamente dalla classe: puoi consumarne gli usi e modificarne la descrizione.",
+      "edit_description": "Modifica descrizione"
     },
     "multiclass": {
       "title": "Classe",
