@@ -134,6 +134,38 @@ def _ordered(combatants: list[Combatant]) -> list[Combatant]:
     return rows
 
 
+def _advance_turn(
+    enc: Encounter, combatants: list[Combatant], *, backward: bool = False
+) -> Optional[Combatant]:
+    """Move the turn pointer skipping dead combatants.
+
+    Forward wrap increments the round; backward wrap decrements it, but at
+    round 1 the move is a no-op (returns None, pointer untouched).
+    """
+    rows = _ordered(combatants)
+    if not rows or all(c.is_dead for c in rows):
+        return None
+    try:
+        idx = next(i for i, c in enumerate(rows) if c.id == enc.active_combatant_id)
+    except StopIteration:
+        idx = 0 if backward else -1
+    n = len(rows)
+    for step in range(1, n + 1):
+        pos = idx - step if backward else idx + step
+        cand = rows[pos % n]
+        if cand.is_dead:
+            continue
+        if backward and pos < 0:
+            if enc.round <= 1:
+                return None
+            enc.round -= 1
+        elif not backward and pos >= n:
+            enc.round += 1
+        enc.active_combatant_id = cand.id
+        return cand
+    return None
+
+
 def _system_feed_message(session: GameSession, body: str) -> SessionMessage:
     return SessionMessage(
         session_id=session.id,
@@ -343,3 +375,39 @@ async def start_encounter(
     if first is not None:
         await _notify_turn(enc, first)
     return build_encounter_block(enc, viewer_is_gm=True)
+
+
+async def _turn_endpoint(
+    session_id: int, user_id: int, db: AsyncSession, *, backward: bool
+) -> EncounterLive:
+    session = await _load_session(session_id, db)
+    _assert_participant(session, user_id)
+    _assert_gm(session, user_id)
+    _assert_session_active(session)
+    enc = await _require_open_encounter(session_id, db)
+    if enc.status != "active":
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Encounter not active")
+    moved = _advance_turn(enc, list(enc.combatants), backward=backward)
+    _touch(session)
+    await db.flush()
+    if moved is not None:
+        await _notify_turn(enc, moved)
+    return build_encounter_block(enc, viewer_is_gm=True)
+
+
+@router.post("/{session_id}/encounter/next-turn", response_model=EncounterLive)
+async def next_turn(
+    session_id: int,
+    user_id: Annotated[int, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> EncounterLive:
+    return await _turn_endpoint(session_id, user_id, db, backward=False)
+
+
+@router.post("/{session_id}/encounter/prev-turn", response_model=EncounterLive)
+async def prev_turn(
+    session_id: int,
+    user_id: Annotated[int, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> EncounterLive:
+    return await _turn_endpoint(session_id, user_id, db, backward=True)

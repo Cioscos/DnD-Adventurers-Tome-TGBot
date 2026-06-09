@@ -127,3 +127,69 @@ async def test_start_requires_gm(client, test_session_factory):
     as_user(PLAYER_ID)
     r = await client.post(f"/sessions/{sid}/encounter/start", json={})
     assert r.status_code == 403, r.text
+
+
+# ---------------------------------------------------------------------------
+# next-turn / prev-turn
+# ---------------------------------------------------------------------------
+
+async def _started(client, test_session_factory, monkeypatch) -> tuple[int, dict, list[dict]]:
+    captured = install_fake_telegram(monkeypatch)
+    sid, _ = await setup_full_encounter(client, test_session_factory)
+    r = await client.post(f"/sessions/{sid}/encounter/start", json={})
+    assert r.status_code == 200, r.text
+    captured.clear()   # scarta la notifica dello start
+    return sid, r.json(), captured
+
+
+async def test_next_turn_advances_and_wraps_round(client, test_session_factory, monkeypatch):
+    sid, enc, captured = await _started(client, test_session_factory, monkeypatch)
+    ids = [c["id"] for c in enc["combatants"]]    # [Eroe, Goblin 1, Goblin 2]
+
+    r = await client.post(f"/sessions/{sid}/encounter/next-turn")
+    assert r.json()["active_combatant_id"] == ids[1]
+    assert r.json()["round"] == 1
+    r = await client.post(f"/sessions/{sid}/encounter/next-turn")
+    assert r.json()["active_combatant_id"] == ids[2]
+    # wrap -> round 2, torna al PG -> notifica
+    r = await client.post(f"/sessions/{sid}/encounter/next-turn")
+    assert r.json()["active_combatant_id"] == ids[0]
+    assert r.json()["round"] == 2
+    assert len(captured) == 1 and captured[0]["json"]["chat_id"] == PLAYER_ID
+
+
+async def test_next_turn_skips_dead_monsters(client, test_session_factory, monkeypatch):
+    sid, enc, _ = await _started(client, test_session_factory, monkeypatch)
+    g1 = enc["combatants"][1]
+    r = await client.patch(
+        f"/sessions/{sid}/encounter/combatants/{g1['id']}", json={"is_dead": True},
+    )
+    assert r.status_code == 200, r.text
+    r = await client.post(f"/sessions/{sid}/encounter/next-turn")
+    # Goblin 1 morto saltato -> Goblin 2
+    assert r.json()["active_combatant_id"] == enc["combatants"][2]["id"]
+
+
+async def test_prev_turn_is_noop_at_round1_start(client, test_session_factory, monkeypatch):
+    sid, enc, _ = await _started(client, test_session_factory, monkeypatch)
+    r = await client.post(f"/sessions/{sid}/encounter/prev-turn")
+    assert r.status_code == 200, r.text
+    assert r.json()["active_combatant_id"] == enc["combatants"][0]["id"]
+    assert r.json()["round"] == 1
+
+
+async def test_prev_turn_wraps_back_decrementing_round(client, test_session_factory, monkeypatch):
+    sid, enc, _ = await _started(client, test_session_factory, monkeypatch)
+    ids = [c["id"] for c in enc["combatants"]]
+    for _ in range(3):                            # -> round 2, attivo Eroe
+        await client.post(f"/sessions/{sid}/encounter/next-turn")
+    r = await client.post(f"/sessions/{sid}/encounter/prev-turn")
+    assert r.json()["active_combatant_id"] == ids[2]
+    assert r.json()["round"] == 1
+
+
+async def test_turns_require_gm(client, test_session_factory, monkeypatch):
+    sid, _, _ = await _started(client, test_session_factory, monkeypatch)
+    as_user(PLAYER_ID)
+    assert (await client.post(f"/sessions/{sid}/encounter/next-turn")).status_code == 403
+    assert (await client.post(f"/sessions/{sid}/encounter/prev-turn")).status_code == 403
