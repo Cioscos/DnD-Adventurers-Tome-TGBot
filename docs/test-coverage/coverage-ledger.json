@@ -5,7 +5,7 @@
     "branch": "chore/blinda-test-batch-1",
     "date": "2026-06-09",
     "size": 8,
-    "focus": "lotto 3 — primo giro compat FE↔API + serializer centrale: POST /hp/recalc, PATCH/reset slot, PATCH item (CA end-to-end), build_character_response; FE sessionHelpers + useLongPress (regressione cancel-then-end) + HPGauge"
+    "focus": "lotto 4 — combattimento/magia ad alto rischio D&D 5e: POST spells/use (slot+concentrazione), roll_damage (crit raddoppia dadi, half round-up), concentration/save (DC=max(10,danno//2), nat20/nat1, perdita concentrazione), attacco arma (crit/fumble/finesse/ranged/ispirazione) + disarmato (flat-1 no-crit / dado arti marziali monaco), PATCH classes/distribute (validazioni + scaling HP a ratio); FE lib relativeTime + spellSrd"
   },
   "units": {
     "fe:lib/dnd.ts": {
@@ -173,6 +173,62 @@
       "tests": ["tests/integration/test_item_equip_ac.py"],
       "status": "be-pending",
       "note": "Giro CA end-to-end: equip armor → base = ac_value, unequip → 10; shield → shield = ac_bonus; displacement nello stesso slot resetta la CA dell'occupante sostituito; slot incompatibile col tipo = 422. Asserito via ac_breakdown/ac.",
+      "updated": "2026-06-09"
+    },
+    "be:routers/spells.py::POST /characters/{id}/spells/{spell_id}/use": {
+      "tests": ["tests/integration/test_spell_use.py"],
+      "apis": ["POST /characters/{id}/spells/{id}/use"],
+      "status": "be-pending",
+      "note": "Consumo slot (used+1, available=total-used) + attiva concentrazione se is_concentration (concentrating_spell_id=spell_id; None se non-conc). 400 senza slot al livello / slot esauriti; 404 spell ignota. Contratto = FE CharacterFull (spell_slots[].{used,available}, concentrating_spell_id).",
+      "updated": "2026-06-09"
+    },
+    "be:routers/spells.py::POST /characters/{id}/spells/{spell_id}/roll_damage": {
+      "tests": ["tests/integration/test_spell_roll_damage.py"],
+      "apis": ["POST /characters/{id}/spells/{id}/roll_damage"],
+      "status": "be-pending",
+      "note": "Danno deterministico via main_rolls/extra_rolls (no RNG): crit raddoppia il NUMERO di dadi (2N atteso), half_damage=(total+1)//2 round-up, bonus piatto in damage_dice sommato una volta, extra_dice additivo. 400: lunghezza/range main_rolls errati, casting_level<spell.level o >9, damage_dice assente. Contratto = FE RollDamageResult (main_kind/main_rolls/extra_kind/extra_rolls).",
+      "updated": "2026-06-09"
+    },
+    "be:routers/spells.py::POST /characters/{id}/concentration/save": {
+      "tests": ["tests/integration/test_concentration_save.py"],
+      "apis": ["POST /characters/{id}/concentration/save"],
+      "status": "be-pending",
+      "note": "Esercita _helpers.roll_concentration_save: DC=max(10, danno//2), nat20 successo / nat1 fallimento a prescindere dal DC, altrimenti die+CONmod>=DC (CON 10 → bonus 0, total=die). Fallimento mentre concentra → lost_concentration True + concentrating_spell_id azzerato (verificato via GET). Contratto = FE ConcentrationSaveResult (estende RollResult: die/bonus/total/is_critical/is_fumble + dc/success/lost_concentration).",
+      "updated": "2026-06-09"
+    },
+    "be:routers/items.py::POST /characters/{id}/items/{item_id}/attack": {
+      "tests": ["tests/integration/test_weapon_attack.py"],
+      "apis": ["POST /characters/{id}/items/{id}/attack"],
+      "status": "be-pending",
+      "note": "RNG pinnato (sequenza: d20 colpire poi dadi danno). to_hit_total=d20+mod+PB; nat20 crit raddoppia i dadi danno, nat1 fumble azzera (rolls[0], bonus 0, total 0); selezione mod: melee→STR, ranged→DEX, finesse→max(STR,DEX) (DEX bumpato via PATCH ability_scores). with_inspiration consuma il token (verificato via GET heroic_inspiration False); 409 se assente; non-arma 400; item ignoto 404. Contratto = FE WeaponAttackResult.",
+      "updated": "2026-06-09"
+    },
+    "be:routers/items.py::POST /characters/{id}/attack/unarmed": {
+      "tests": ["tests/integration/test_unarmed_attack.py"],
+      "apis": ["POST /characters/{id}/attack/unarmed"],
+      "status": "be-pending",
+      "note": "Mirror BE di core/game/attacks.py::unarmed_strike_profile (lib FE unarmedStrike testata a parte). Non-monaco: damage_dice '1', flat-1 NON raddoppiato dal crit. Monaco L5: dado arti marziali '1d6', mod=max(STR,DEX), crit raddoppia i dadi; PB L5=+3. with_inspiration consuma/409.",
+      "updated": "2026-06-09"
+    },
+    "be:routers/classes.py::PATCH /characters/{id}/classes/distribute": {
+      "tests": ["tests/integration/test_classes_distribute.py"],
+      "apis": ["PATCH /characters/{id}/classes/distribute"],
+      "status": "be-pending",
+      "note": "Ridistribuzione livelli atomica su MULTICLASSE (così PATCH /xp non auto-sincronizza il livello del monoclasse). Validazioni: body copre esattamente i class_id → 400 classes_mismatch; sum(level)>livello-da-XP → 400 sum_exceeds_target. Happy path G2+L1: HP da total_base_hp = 10+6+5=21, current scalato a ratio (full→21; 5/10→round(0.5·21)=10), hp_gained=11. Contratto = FE CharacterFull (classes[].level, hit_points, current_hit_points, hp_gained).",
+      "updated": "2026-06-09"
+    },
+    "fe:lib/relativeTime.ts": {
+      "tests": ["webapp/tests/unit/lib/relativeTime.test.ts"],
+      "apis": [],
+      "status": "fe-green",
+      "note": "formatRelative (oggi/ieri/Intl day-week 2-30gg/data assoluta), formatAbsolute, dayKey (YYYY-MM-DD zero-pad), dayHeader. Lib pura: rami locale-aware pinnati contro le stesse Intl API; now fisso per bucket deterministici; date costruite/lette in locale → TZ-independent; verificata la non-mutazione di now/date nel diff.",
+      "updated": "2026-06-09"
+    },
+    "fe:lib/spellSrd.ts": {
+      "tests": ["webapp/tests/unit/lib/spellSrd.test.ts"],
+      "apis": [],
+      "status": "fe-green",
+      "note": "lookupSrdSpell (chiave canonica + alias, case-insensitive, trim, null su vuoto/ignoto) + srdSpellNames (canoniche+alias, esclude chiavi _, ordinate). JSON spells-srd mockato (vi.mock hoisted) → testa la LOGICA di indicizzazione indipendente dai dati reali.",
       "updated": "2026-06-09"
     }
   }

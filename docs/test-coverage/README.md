@@ -20,16 +20,16 @@ Va **rilanciato** finché i residui arrivano a 0.
 
 ## Stato copertura
 
-> Aggiornato da `/blinda-test`. Ultimo lotto: **2026-06-09 (lotto 3)** (branch `chore/blinda-test-batch-1`).
-> Il grafo graphify è stato costruito su `webapp/src api core` (3811 KB `graph.json`); al lotto 3
-> `--update` è di nuovo un no-op: nessun sorgente in scope (`webapp/src api core`) è più recente di
-> `graph.json` (verificato con `find … -newer`), quindi il grafo è già attuale per le relazioni che servono.
+> Aggiornato da `/blinda-test`. Ultimo lotto: **2026-06-09 (lotto 4)** (branch `chore/blinda-test-batch-1`).
+> Il grafo graphify è stato costruito su `webapp/src api core` (3811 KB `graph.json`); anche al lotto 4
+> `--update` è un no-op: nessun sorgente in scope (`webapp/src api core`) è più recente di
+> `graph.json` (verificato con `find … -newer` → 0 file), quindi il grafo è già attuale per le relazioni che servono.
 > I "totali" sono inventario su filesystem; le "coperte" sono le unità mappate nel ledger.
 
 | Ambito | Totali (≈) | Coperte (ledger) | Residue (≈) |
 |---|---|---|---|
-| FE (components 92 · pages 75 · lib 20 · hooks 5 · store 5) | 197 | 11 | 186 |
-| BE (endpoint 102 · funzioni service 31 · model/enum 22) | 155 | 15 (+ motore homebrew, vedi nota) | ~140 |
+| FE (components 92 · pages 75 · lib 20 · hooks 5 · store 5) | 197 | 13 | 184 |
+| BE (endpoint 102 · funzioni service 31 · model/enum 22) | 155 | 21 (+ motore homebrew, vedi nota) | ~134 |
 
 > **Nota copertura BE pre-esistente:** oltre alle 5 unità mappate nel ledger, il repo aveva già
 > una suite consistente — l'intero **motore homebrew** (`tests/services/homebrew/*`,
@@ -80,6 +80,20 @@ Va **rilanciato** finché i residui arrivano a 0.
 - `services/character_response.py::build_character_response` → `tests/integration/test_character_response.py` (ac_breakdown + `ac=base+shield+magic`, default homebrew, risoluzione ability con modificatore item)
 - `routers/items.py::PATCH /characters/{id}/items/{item_id}` → `tests/integration/test_item_equip_ac.py` (equip/unequip armor+shield → CA, displacement resetta CA occupante, slot incompatibile 422)
 
+### Lotto 2026-06-09 #4 (8 unità, focus combattimento/magia ad alto rischio D&D 5e)
+
+**FE — Vitest, verdi (21 test, 2 file · suite totale 104 test / 13 file):**
+- `lib/relativeTime.ts` — `formatRelative` (oggi/ieri/`Intl` day‑week 2–30 gg/data assoluta same‑year vs altro anno), `formatAbsolute`, `dayKey` (YYYY‑MM‑DD zero‑pad), `dayHeader`. Rami locale‑aware pinnati contro le stesse `Intl` API; `now` fisso → bucket deterministici; date costruite/lette in locale → TZ‑independent; verificata la non‑mutazione di `now`/`date` nel diff.
+- `lib/spellSrd.ts` — `lookupSrdSpell` (chiave canonica + alias, case‑insensitive, `trim`, `null` su vuoto/ignoto, chiavi `_` ignorate) + `srdSpellNames` (ordinate, escluse le metadata). JSON `spells-srd` mockato con `vi.mock` hoisted → testa la **logica** di indicizzazione indipendente dai dati reali.
+
+**BE — pytest, `be-pending` (da eseguire su Windows):**
+- `routers/spells.py::POST …/spells/{id}/use` → `tests/integration/test_spell_use.py` (slot `used+1`/`available`, concentrazione attivata/None, 400 slot assente/esaurito, 404 spell)
+- `routers/spells.py::POST …/spells/{id}/roll_damage` → `tests/integration/test_spell_roll_damage.py` (RNG eliminato via `main_rolls`/`extra_rolls`: crit raddoppia il **numero** di dadi, `half_damage` round‑up, bonus piatto una volta, extra_dice, 400 lunghezza/range/casting_level/no‑damage)
+- `routers/spells.py::POST …/concentration/save` (→ `_helpers.roll_concentration_save`) → `tests/integration/test_concentration_save.py` (DC=`max(10, danno//2)`, nat20/nat1, `die+CONmod>=DC`, perdita concentrazione + clear verificato via GET)
+- `routers/items.py::POST …/items/{id}/attack` → `tests/integration/test_weapon_attack.py` (to‑hit `d20+mod+PB`, crit raddoppia danno, fumble azzera, melee/ranged/finesse, ispirazione consumo/409, 400 non‑arma, 404)
+- `routers/items.py::POST …/attack/unarmed` → `tests/integration/test_unarmed_attack.py` (flat‑1 non‑monaco NON raddoppiato dal crit; dado arti marziali monaco `1d6` a L5 + crit raddoppia; ispirazione 409)
+- `routers/classes.py::PATCH …/classes/distribute` → `tests/integration/test_classes_distribute.py` (multiclasse: `classes_mismatch`/`sum_exceeds_target` 400, scaling HP a ratio `10+6+5=21`, `hp_gained`)
+
 ## Finding compatibilità FE↔API
 
 Le unità FE di questo lotto sono **lib pure** (nessuna chiamata diretta `api.*`): la verifica di
@@ -115,14 +129,35 @@ Nota: `HPGauge` (candidato del residuo "componenti che chiamano l'API") si è ri
 — riceve `current/max/temp` via props, nessuna chiamata `api.*`. La query graphify lo aveva solo accostato al
 nodo `api` euristicamente. Testato come componente puro.
 
+**Lotto 4 — endpoint combattimento/magia.** Verificati i metodi `api.*` (`webapp/src/api/client.ts`) contro
+route + schemi Pydantic. Tutti **allineati** sui campi che il FE invia/legge; i contratti di risposta sono
+codificati come assert nei pytest:
+
+| Metodo FE (`client.ts`) | Endpoint BE | Esito |
+|---|---|---|
+| `api.spells.use` → `POST …/spells/{id}/use` `{slot_level}` → `CharacterFull` | `use_spell` / `SpellUseRequest` | ✅ allineato |
+| `api.spells.rollDamage` → `POST …/roll_damage` `RollDamageRequest` → `RollDamageResult` | `roll_spell_damage` | ✅ allineato (anche i campi 3D `main_kind`/`extra_kind`) |
+| `api.spells.concentrationSave` → `POST …/concentration/save` `{damage}` → `ConcentrationSaveResult` | `concentration_save` (estende `RollResult`) | ✅ allineato (`die/bonus/total/is_critical/is_fumble/dc/success/lost_concentration`) |
+| `api.items.attack` / `attackUnarmed` → `POST …/attack[/unarmed]` `{with_inspiration?}` → `WeaponAttackResult` | `attack_with_weapon` / `attack_unarmed` / `AttackSubmission` | ✅ allineato sui campi letti |
+| `api.classes.distribute` → `PATCH …/classes/distribute` `{classes:[{class_id,level}]}` → `CharacterFull` | `distribute_class_levels` / `ClassDistribute` (`level` `ge=1,le=20`) | ✅ allineato |
+
+🟠 **Gap di tipizzazione (non funzionale)** — `WeaponAttackResult` (definito sia in `client.ts` sia in
+`components/WeaponAttackModal.tsx`) **omette** il campo `homebrew_notifications` che il BE restituisce
+(opzionale) su `…/attack` e `…/attack/unarmed`. **Nessun impatto runtime**: gli attacchi passano da
+`useMutation` (verificato in `pages/Actions.tsx` e `pages/Inventory.tsx`) e l'interceptor globale
+`MutationCache.onSuccess` in `main.tsx` legge `homebrew_notifications` **dinamicamente** (`'…' in data`),
+non dal tipo statico — quindi le notifiche delle regole homebrew su attacco (es. "Qualità & Usura") vengono
+comunque mostrate. Consigliato (cleanup, non urgente) aggiungere `homebrew_notifications?: { … }[]` al tipo per
+allinearlo allo schema e renderlo introspezionabile.
+
 ## Prossimi residui per rischio (per il lotto successivo)
 
-1. `routers/spells.py::POST /characters/{id}/spells/{id}/use` — consumo slot da incantesimo (decremento + 409 senza slot)
-2. `routers/spells.py` — `roll_damage` (oracolo dadi, half/crit) + `concentration/save` (DC = max(10, danno//2), nat20/nat1)
-3. `services/spell_slots.py::recalc_spell_slots` è già coperto; resta `routers/classes.py::PATCH …/classes/distribute` (ridistribuzione livelli, scala HP, validazioni 400)
-4. `routers/items.py::POST …/items/{id}/attack` e `POST …/attack/unarmed` — tiri colpire/danno, crit/fumble, ispirazione 409
-5. FE: componenti/pagine che chiamano **davvero** `api.*` (es. `pages/Combat`, modali HP/AC/slot) → mock `api.*` + contract test sulla shape `CharacterFull`
-6. FE `lib/*` ancora scoperte: `roman.ts`, `relativeTime.ts`, `rewardQueue.ts`, `spellSrd.ts`, `eventMeta.ts`, `itemIcons.ts`, `celebrate.ts`, `silhouette.ts`
+1. FE: componenti/pagine che chiamano **davvero** `api.*` con mutation (es. `pages/Actions`, `pages/Combat`, `WeaponAttackModal`, modali HP/AC/slot) → mock `api.*` + contract test sulla shape della risposta + (per `WeaponAttackModal`) regressione sul gap `homebrew_notifications` sopra
+2. `services/character_response.py` — risoluzione `ability_scores` con più modificatori item (absolute vs relative), encumbrance, e i rami homebrew di `ac_breakdown`
+3. `routers/skills` / `routers/stats.py::PATCH …/ability_scores/{name}` — hook CON→HP, Unarmored Defense, carry capacity (regole 5e collaterali)
+4. `routers/dice.py` — tiro d20 generico + ispirazione 409 (parità con attacco)
+5. `core/db/models.py` — enum/property ad alto rischio (`proficiency_bonus`, `total_level`, `EquipmentSlot`, `is_dead`) come unit test puri
+6. FE `lib/*` ancora scoperte: `roman.ts`, `rewardQueue.ts`, `eventMeta.ts`, `itemIcons.ts`, `celebrate.ts`, `silhouette.ts`, `inlineMarkdown.tsx`
 
 ## File
 
