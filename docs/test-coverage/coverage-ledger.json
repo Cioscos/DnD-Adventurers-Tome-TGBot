@@ -233,8 +233,8 @@
     },
     "be:core/game/stats.py": {
       "tests": ["tests/services/test_stats.py"],
-      "status": "be-pending",
-      "note": "Matematica derivata D&D 5e PURA (no DB). ability_modifier (floor-div, 1→-5/3→-4), hit_points_for_level (L1=die+CON, L2+=die//2+1+CON, clamp min 1, ValueError su level<1/hit_die<=0), unarmored_defense_ac (10+DEX+2a), total_base_hp (id più basso possiede lo slot L1, resto formula 2+; ordinamento per id; CON per livello; 0 se vuoto), effective_ability_score (relativi sommati + assoluti come pavimento via max, combinazione, altri ability/valori non-int ignorati, JSON-string parse, ValueError ability ignota). Stub via SimpleNamespace.",
+      "status": "be-green",
+      "note": "VERIFICATO 31/31 su Windows (uv run pytest, 2026-06-09). Matematica derivata D&D 5e PURA (no DB). ability_modifier (floor-div, 1→-5/3→-4), hit_points_for_level (L1=die+CON, L2+=die//2+1+CON, clamp min 1, ValueError su level<1/hit_die<=0), unarmored_defense_ac (10+DEX+2a), total_base_hp (id più basso possiede lo slot L1, resto formula 2+; ordinamento per id; CON per livello; 0 se vuoto), effective_ability_score (relativi sommati + assoluti come pavimento via max, combinazione, altri ability/valori non-int ignorati, JSON-string parse, ValueError ability ignota). Stub via SimpleNamespace.",
       "updated": "2026-06-09"
     },
     "be:routers/stats.py::PATCH /characters/{id}/ability_scores/{ability_name}": {

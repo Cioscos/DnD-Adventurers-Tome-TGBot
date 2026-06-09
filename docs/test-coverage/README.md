@@ -112,6 +112,23 @@ e ri-verificata verde di non-regressione: **104 test / 13 file**.
 - `routers/characters.py::POST …/skills/{name}/roll` → `tests/integration/test_skill_roll.py` — d20 deterministico, `bonus = mod + 0/PB/2×PB(expert)`, crit/fumble, skill ignota 400, ispirazione 409/consumo
 - `routers/characters.py::POST …/saving_throws/{ability}/roll` → `tests/integration/test_saving_throw_roll.py` — `bonus = mod + (PB se proficient)` (Guerriero seedato STR/CON), ability ignota 400, crit/fumble, ispirazione 409/consumo
 
+## Bug BE smascherati eseguendo i pytest (2026-06-09)
+
+Primo `uv run pytest` su Windows dell'intera suite BE accumulata (mai eseguita prima per i lotti
+`be-pending`): **429 passati / 48 falliti**. I 48 rossi sono **2 bug reali del BE** (1 che cascata su ~46
+test), non 48 problemi distinti — i test erano corretti e hanno fatto il loro lavoro. `test_stats.py`
+(matematica pura D&D) **31/31 verde**. Entrambi i bug **corretti** in questo branch; i test bloccati
+restano `be-pending` finché un nuovo run su Windows non li conferma verdi.
+
+| # | Sev | Bug | Dove | Fix applicato |
+|---|---|---|---|---|
+| 1 | 🔴 | `POST /characters` con `initial_class` → 500 `MissingGreenlet` (lazy-load di `char.classes` in contesto async). Il wizard (`CharacterSelect.tsx`) invia `initial_class` ⇒ **creare un personaggio con classe iniziale è rotto**. Cascata su ~46 test (ogni fixture che crea il char con classe). | `api/routers/classes.py:133` (`if cls not in char.classes`), invocato da `characters.py::create_character` che non inizializzava la collection | `create_character`: aggiunto `char.classes = []` in memoria (mirror dell'esistente `char.abilities = []`) |
+| 2 | 🟠 | Swap armatura non aggiorna la CA base: equipaggiando un'armatura su uno slot già occupato, la CA base resta 10 invece dell'`ac_value` del nuovo pezzo (il reset dell'occupante spiazzato girava DOPO, clobberando il valore appena impostato). | `api/routers/items.py:200-213` (`update_item`) | Riordinato: reset CA dell'occupante spiazzato **prima** di applicare la CA del nuovo pezzo |
+
+> Nota: i fix sbloccano anche test `be-pending` di lotti precedenti che fallivano sulla stessa causa
+> (`test_hp_recalc`, `test_classes_distribute`, `test_unarmed_attack` monaco — bug #1; `test_item_equip_ac`
+> displacement — bug #2). Da riverificare al prossimo run pytest.
+
 ## Finding compatibilità FE↔API
 
 Le unità FE di questo lotto sono **lib pure** (nessuna chiamata diretta `api.*`): la verifica di
