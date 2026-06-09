@@ -608,6 +608,423 @@
       "status": "be-green",
       "note": "Copertura pre-esistente (lotto 3, file gia verde): delete slot 204. Solo mappata.",
       "updated": "2026-06-09"
+    },
+    "be:services/homebrew/actions.py::execute_action": {
+      "tests": [
+        "tests/services/homebrew/test_actions.py",
+        "tests/services/homebrew/test_dispatcher.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:services/homebrew/actions.py::execute_add_history": {
+      "tests": [
+        "tests/services/homebrew/test_actions.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:services/homebrew/actions.py::execute_apply_condition": {
+      "tests": [
+        "tests/services/homebrew/test_actions.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:services/homebrew/actions.py::execute_apply_modifier_once": {
+      "tests": [
+        "tests/services/homebrew/test_actions.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:services/homebrew/actions.py::execute_change_resource": {
+      "tests": [
+        "tests/services/homebrew/test_actions.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:services/homebrew/actions.py::execute_if": {
+      "tests": [
+        "tests/services/homebrew/test_actions.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:services/homebrew/actions.py::execute_inc_property": {
+      "tests": [
+        "tests/services/homebrew/test_actions.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:services/homebrew/actions.py::execute_lookup_table": {
+      "tests": [
+        "tests/services/homebrew/test_actions.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:services/homebrew/actions.py::execute_match": {
+      "tests": [
+        "tests/services/homebrew/test_actions.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:services/homebrew/actions.py::execute_notify": {
+      "tests": [
+        "tests/services/homebrew/test_actions.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:services/homebrew/actions.py::execute_remove_condition": {
+      "tests": [
+        "tests/services/homebrew/test_actions.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:services/homebrew/actions.py::execute_restore_resource": {
+      "tests": [
+        "tests/services/homebrew/test_actions.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:services/homebrew/actions.py::execute_roll_dice": {
+      "tests": [
+        "tests/services/homebrew/test_actions.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:services/homebrew/actions.py::execute_set_property": {
+      "tests": [
+        "tests/services/homebrew/test_actions.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:services/homebrew/actions.py::execute_unequip": {
+      "tests": [
+        "tests/services/homebrew/test_actions.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:services/homebrew/actions.py::execute_damage_character": {
+      "tests": [
+        "tests/services/homebrew/test_actions.py",
+        "tests/integration/homebrew/test_integration_hp.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:services/homebrew/actions.py::execute_heal_character": {
+      "tests": [
+        "tests/services/homebrew/test_actions.py",
+        "tests/integration/homebrew/test_integration_hp.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:services/homebrew/dispatcher.py::dispatch": {
+      "tests": [
+        "tests/services/homebrew/test_dispatcher.py",
+        "tests/integration/homebrew/test_integration_lifecycle.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:services/homebrew/dsl.py::parse_action": {
+      "tests": [
+        "tests/services/homebrew/test_dsl.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:services/homebrew/filters.py::evaluate_filter": {
+      "tests": [
+        "tests/services/homebrew/test_filters.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:services/homebrew/filters.py::evaluate_filters": {
+      "tests": [
+        "tests/services/homebrew/test_filters.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:services/homebrew/passive.py::get_passive_modifiers": {
+      "tests": [
+        "tests/services/homebrew/test_passive.py",
+        "tests/integration/homebrew/test_passive_modifiers.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:services/homebrew/path_resolver.py::resolve_path": {
+      "tests": [
+        "tests/services/homebrew/test_path_resolver.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:services/homebrew/templates.py::get_template": {
+      "tests": [
+        "tests/services/homebrew/test_templates.py",
+        "tests/integration/homebrew/test_routers_homebrew.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:services/effects.py::apply_heal": {
+      "tests": [
+        "tests/integration/test_hp_heal_regression.py",
+        "tests/integration/test_use_consumable.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:services/effects.py::apply_conditions": {
+      "tests": [
+        "tests/integration/test_conditions_regression.py",
+        "tests/integration/test_use_consumable.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:routers/homebrew.py::GET /homebrew/templates": {
+      "tests": [
+        "tests/integration/homebrew/test_routers_homebrew.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:routers/homebrew.py::GET /homebrew/templates/{template_id}": {
+      "tests": [
+        "tests/integration/homebrew/test_routers_homebrew.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:routers/homebrew.py::GET /characters/{id}/homebrew/resources": {
+      "tests": [
+        "tests/integration/homebrew/test_routers_homebrew.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:routers/homebrew.py::GET /characters/{id}/homebrew/rules": {
+      "tests": [
+        "tests/integration/homebrew/test_routers_homebrew.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:routers/homebrew.py::GET /characters/{id}/homebrew/rules/{rule_id}": {
+      "tests": [
+        "tests/integration/homebrew/test_routers_homebrew.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:routers/homebrew.py::POST /characters/{id}/homebrew/rules": {
+      "tests": [
+        "tests/integration/homebrew/test_routers_homebrew.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:routers/homebrew.py::PATCH /characters/{id}/homebrew/rules/{rule_id}": {
+      "tests": [
+        "tests/integration/homebrew/test_routers_homebrew.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:routers/homebrew.py::DELETE /characters/{id}/homebrew/rules/{rule_id}": {
+      "tests": [
+        "tests/integration/homebrew/test_routers_homebrew.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:routers/homebrew.py::PATCH /characters/{id}/homebrew/resources/{resource_id}": {
+      "tests": [
+        "tests/integration/homebrew/test_routers_homebrew.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:routers/homebrew.py::POST /characters/{id}/homebrew/manual-trigger/{rule_id}": {
+      "tests": [
+        "tests/integration/homebrew/test_routers_homebrew.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:routers/homebrew.py::POST /characters/{id}/homebrew/rules/{rule_id}/enable": {
+      "tests": [
+        "tests/integration/homebrew/test_routers_homebrew.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:routers/homebrew.py::POST /characters/{id}/homebrew/turn-start": {
+      "tests": [
+        "tests/integration/homebrew/test_routers_homebrew.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:routers/homebrew.py::POST /characters/{id}/homebrew/templates/{template_id}/install": {
+      "tests": [
+        "tests/integration/homebrew/test_routers_homebrew.py",
+        "tests/e2e/homebrew/test_template_quality_wear.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:routers/characters.py::POST /characters": {
+      "tests": [
+        "tests/integration/test_add_class.py",
+        "tests/integration/test_character_response.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:routers/characters.py::GET /characters/{id}": {
+      "tests": [
+        "tests/integration/test_character_response.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:routers/characters.py::PATCH /characters/{id}": {
+      "tests": [
+        "tests/integration/test_character_patch_refresh.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:routers/characters.py::PATCH /characters/{id}/conditions": {
+      "tests": [
+        "tests/integration/test_conditions_regression.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:routers/characters.py::PATCH /characters/{id}/inspiration": {
+      "tests": [
+        "tests/integration/test_dice_result.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:routers/characters.py::PATCH /characters/{id}/skills": {
+      "tests": [
+        "tests/integration/test_skill_roll.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:routers/abilities.py::GET /characters/{id}/abilities": {
+      "tests": [
+        "tests/integration/test_abilities_crud.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:routers/spells.py::GET /characters/{id}/spells": {
+      "tests": [
+        "tests/integration/test_spell_crud.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:routers/items.py::GET /characters/{id}/items": {
+      "tests": [
+        "tests/integration/test_consumable_migration.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:routers/items.py::POST /characters/{id}/items/{item_id}/use": {
+      "tests": [
+        "tests/integration/test_use_consumable.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:services/equipment.py::slot_allowed_for_type": {
+      "tests": [
+        "tests/services/test_slot_allowed.py"
+      ],
+      "status": "be-pending",
+      "updated": "2026-06-09"
+    },
+    "be:routers/currency.py::GET /characters/{id}/currency": {
+      "tests": [
+        "tests/integration/test_currency.py"
+      ],
+      "status": "be-pending",
+      "updated": "2026-06-09"
+    },
+    "be:routers/currency.py::PATCH /characters/{id}/currency": {
+      "tests": [
+        "tests/integration/test_currency.py"
+      ],
+      "status": "be-pending",
+      "updated": "2026-06-09"
+    },
+    "be:routers/currency.py::POST /characters/{id}/currency/convert": {
+      "tests": [
+        "tests/integration/test_currency.py"
+      ],
+      "status": "be-pending",
+      "updated": "2026-06-09"
+    },
+    "fe:lib/roman.ts": {
+      "tests": [
+        "webapp/tests/unit/lib/roman.test.ts"
+      ],
+      "status": "fe-green",
+      "updated": "2026-06-09",
+      "apis": []
+    },
+    "fe:lib/silhouette.ts": {
+      "tests": [
+        "webapp/tests/unit/lib/silhouette.test.ts"
+      ],
+      "status": "fe-green",
+      "updated": "2026-06-09",
+      "apis": []
+    },
+    "fe:store/unitSettings.ts": {
+      "tests": [
+        "webapp/tests/unit/store/unitSettings.test.ts"
+      ],
+      "status": "fe-green",
+      "updated": "2026-06-09",
+      "apis": []
+    },
+    "fe:pages/Currency.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/Currency.test.tsx"
+      ],
+      "status": "fe-green",
+      "updated": "2026-06-09",
+      "apis": [
+        "GET /characters/{id}",
+        "PATCH /characters/{id}/currency",
+        "POST /characters/{id}/currency/convert"
+      ]
     }
   }
 }

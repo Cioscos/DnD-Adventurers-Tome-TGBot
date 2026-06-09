@@ -20,28 +20,29 @@ Va **rilanciato** finché i residui arrivano a 0.
 
 ## Stato copertura
 
-> Aggiornato da `/blinda-test`. Ultimo lotto: **2026-06-09 (lotto 7)** (branch `chore/blinda-test-batch-1`).
-> Il grafo graphify resta su `webapp/src api core` (3468 nodi / 9200 archi). Al lotto 7 `--update`:
-> dal build del grafo (01:54) gli unici sorgenti in-scope cambiati erano i 2 router BE già noti
-> (`api/routers/characters.py`, `api/routers/items.py`, fix dei lotti precedenti). Un `--update`
-> precedente era rimasto a metà con un `.graphify_incremental.json` fuori scope (829 file: `bot/`,
-> `docs/app`, `.claude/`); è stato scartato. Provando a fondere i 2 file via `build_merge`, la **guardia
-> anti-collasso** di graphify ha rifiutato (il dedup fuzzy avrebbe portato 3468→2868 nodi), quindi
-> `graph.json` è rimasto **intatto e queryabile**: i 2 router cambiati sono comunque letti direttamente
-> come oracolo nella verifica compat. I "totali" sono inventario su filesystem; le "coperte" sono le
-> unità mappate nel ledger.
+> Aggiornato da `/blinda-test`. Ultimo lotto: **2026-06-09 (lotto 8)** (branch `chore/blinda-test-batch-1`).
+> Il grafo graphify resta su `webapp/src api core` (3468 nodi). Al lotto 8 `--update`: dal build del
+> grafo (01:54) `detect_incremental` ha segnalato **839 "nuovi" file fuori scope** (bundle minificati
+> `docs/app/assets/*.js`, `bot/`, `.claude/`, `deploy/`) perché mai entrati nel manifest scoped — fonderli
+> avrebbe **corrotto** il grafo con artefatti di build. Gli unici sorgenti **in-scope** cambiati erano i 2
+> router BE già noti (`api/routers/characters.py`, `api/routers/items.py`, fix di logica non strutturali).
+> Il merge è stato **saltato**, `graph.json` lasciato **intatto e queryabile**; i 2 router cambiati sono
+> letti direttamente come oracolo. I "totali" sono inventario su filesystem; le "coperte" sono le unità
+> mappate nel ledger.
 
-| Ambito | Totali (≈) | Coperte (ledger) | Residue (≈) |
+| Ambito | Totali | Coperte (ledger) | Residue |
 |---|---|---|---|
-| FE (components 92 · pages 75 · lib 20 · hooks 5 · store 5) | 197 | 18 | ~179 |
-| BE (endpoint 102 · funzioni service 31 · model/enum 22) | 155 | 45 (**tutte be-green** dopo il run `519 passed / 0 failed`; + motore homebrew, vedi nota) | ~110 |
+| FE (components 89 · pages 72 · lib 20 · hooks 5 · store 5 + coperte) | 197 | 22 | 175 |
+| BE (endpoint 102 · service 31 · core/game 2 · model/enum 22) | 157 | 99 (**tutte be-green** tranne 4 `be-pending` del lotto 8) | 58 |
 
-> **Nota copertura BE pre-esistente:** oltre alle unità mappate nel ledger, il repo aveva già
-> una suite consistente — l'intero **motore homebrew** (`tests/services/homebrew/*`,
-> `tests/integration/homebrew/*`, `tests/e2e/homebrew/*`) e varie regressioni
-> (`tests/integration/test_hp_heal_regression.py`, `test_conditions_regression.py`,
-> `test_use_consumable.py`, `test_carry_capacity_override.py`, ecc.). Non sono ancora enumerate
-> unità-per-unità nel ledger; lo saranno nei prossimi lotti per affinare il diff.
+> **Back-fill copertura BE pre-esistente (lotto 8):** il diff dei lotti 1-7 ignorava la suite pytest
+> **già presente** nel repo, che copriva molte unità "residue" → falsi negativi. Al lotto 8 sono state
+> **mappate nel ledger (be-green)** 49 unità coperte da test esistenti (suite a `519 passed / 0 failed`):
+> l'intero **motore homebrew** (24 funzioni in `tests/services/homebrew/*` + 13 endpoint router in
+> `tests/integration/homebrew/test_routers_homebrew.py`), `effects.apply_heal`/`apply_conditions`
+> (`test_hp_heal_regression.py`/`test_conditions_regression.py`/`test_use_consumable.py`) e il CRUD/GET
+> character (`POST/GET/PATCH /characters`, `PATCH …/conditions|inspiration|skills`, GET
+> abilities/items/spells). La copertura BE ledger è così salita da 45 → 99 senza generare test nuovi.
 
 ### Lotto 2026-06-09 (8 unità, focus logica D&D 5e ad alto rischio)
 
@@ -174,6 +175,37 @@ copriva **già** POST/DELETE slot (mai mappati): mappati come `be-green` invece 
 > `test_abilities_crud.py`, `test_item_crud.py`, DELETE in `test_spell_crud.py`) **passano** → portati a
 > `be-green`. Da 477/0 → 519/0 (+42 test), nessuna regressione. I 276 warning residui sono
 > `DeprecationWarning` benigni (`datetime.utcnow()`), non fallimenti. Ledger ora **0 be-pending**.
+
+### Lotto 2026-06-09 #8 (back-fill copertura pre-esistente + fetta verticale currency contract-verified)
+
+Run dominato dal **back-fill**: il diff dei lotti precedenti non considerava i pytest **già nel repo**,
+quindi decine di unità coperte risultavano "residue". Mappate **49 unità be-green** dai test esistenti
+(vedi nota in "Stato copertura") → copertura BE ledger 45 → 99 senza riscrivere nulla. In più, lotto di
+**8 nuove unità** ordinate per rischio, con una **fetta verticale** BE↔FE sulla valuta (oracolo D&D 5e
+delle conversioni monetarie + pagina FE che lo consuma, contratto codificato).
+
+**FE — Vitest, verdi (20 test, 4 file · suite totale 158 test / 22 file):**
+- `lib/roman.ts` — `toRoman` (1-9 → I-IX; fallback al numero fuori 1-9, es. livello 20). Puro.
+- `lib/silhouette.ts` — `silhouetteUrl`: fallback `class_race_gender → class_race → class_gender → class`,
+  mappatura nomi classe IT→EN (`Mago`→`wizard`), classe di livello più alto in multiclasse, `null` senza
+  classe canonica o senza entry nel manifest. Manifest mockato per testare la logica di risoluzione.
+- `store/unitSettings.ts` — store zustand (default `imperial`, `setSystem`) + helper di conversione su
+  **fattore griglia D&D** (5 ft = 1.5 m, 1 lb = 0.5 kg): `feetToDisplay`/`displayToFeet`/`formatLength`,
+  `lbToDisplay`/`displayToLb`/`formatWeight*`, round-trip puliti (30 ft ⇄ 9 m, 225 lb ⇄ 112.5 kg).
+- `pages/Currency.tsx` — skeleton in pending; **read contract** (totale oro dalla shape `CurrencyRead`);
+  **write contract** modalità `add` (PATCH current+delta per moneta) e `set` (monete non toccate restano al
+  valore corrente); **convert** posta `(source, target, amount)` all'endpoint. Mock api/router/i18n/
+  framer-motion + Sheet open-aware.
+
+**BE — pytest, `be-pending` (da eseguire su Windows):**
+- `services/equipment.py::slot_allowed_for_type` → `tests/services/test_slot_allowed.py` — mapping puro
+  `item_type`→slot D&D (arma=mani, armatura=corpo, scudo=off-hand, accessori=collo/mantello/anelli,
+  gear=testa/mani/piedi/munizioni); tipo ignoto → nessuno slot; ogni slot in `EQUIPMENT_SLOT_COMPAT` è un enum reale.
+- `routers/currency.py::GET …/currency` → `tests/integration/test_currency.py` — crea il wallet vuoto (tutti 0 + `id`).
+- `routers/currency.py::PATCH …/currency` → `test_currency.py` — set monete, campi non passati restano, clamp `max(0,·)` su negativi.
+- `routers/currency.py::POST …/currency/convert` → `test_currency.py` — **tassi ufficiali** (1 gp = 10 sp);
+  conversione "verso l'alto" restituisce il resto in copper senza distruggere valore (5 sp → 0 gp + 50 cp);
+  400 su fondi insufficienti / source==target / amount≤0 / moneta sconosciuta.
 
 ## Bug BE smascherati eseguendo i pytest (2026-06-09)
 
@@ -308,17 +340,41 @@ Campi **letti** dal FE confermati presenti sia nel tipo FE sia in `CharacterFull
 `death_saves`, `is_dead`, `concentrating_spell_id`, `hp_max_homebrew_modifier`. Le shape sono codificate come
 assert nei test FE (un drift le fa fallire).
 
+**Lotto 8 — pagina valuta + fetta verticale BE↔FE.** Verificati i metodi `api.currency.*` /
+`api.characters.get` invocati da `Currency.tsx` contro route + schemi Pydantic e i campi letti dalla
+risposta. Tutti **allineati**, nessun mismatch 🔴/🟠 — il contratto è codificato sia nel test FE
+(risposte mockate con la shape esatta di `CurrencyRead`) sia nei pytest BE della stessa fetta:
+
+| Metodo FE (`client.ts`) | Endpoint BE | Esito |
+|---|---|---|
+| `api.characters.get` → legge `char.currency.{copper,silver,electrum,gold,platinum}` | `get_character` → `CurrencyRead` (id + 5 monete) | ✅ allineato |
+| `api.currency.update` → `PATCH …/currency` `{platinum,gold,electrum,silver,copper}` (int) → `CurrencyRead` | `update_currency` / `CurrencyUpdate` (tutti opzionali, BE clampa `max(0,·)`) | ✅ allineato |
+| `api.currency.convert` → `POST …/currency/convert` `{source,target,amount}` → `CurrencyRead` | `convert_currency` / `CurrencyConvert` | ✅ allineato (400 su input invalido) |
+
+Le altre 3 unità FE del lotto (`lib/roman.ts`, `lib/silhouette.ts`, `store/unitSettings.ts`) sono **pure**
+(nessuna `api.*`); `silhouette.ts` mirrora i nomi-classe/razza/genere → slug, `unitSettings.ts` converte
+solo al confine di display/input (il DB resta in unità canoniche piedi/libbre).
+
 ## Prossimi residui per rischio (per il lotto successivo)
 
-1. **FE mutation pages restanti** (HP/ArmorClass chiusi nel lotto 7): pagine D&D ad alto rischio ancora scoperte —
-   `pages/SpellSlots.tsx` + `pages/Spells.tsx` (create/patch/delete slot e incantesimi, cast, concentrazione),
-   `pages/Multiclass.tsx` + `multiclass/LevelUpModal.tsx`/`EditClassesModal.tsx` (add/update/delete/distribute classi, level-up),
-   `pages/Abilities.tsx` (uses/ripristino), `pages/AbilityScores.tsx`/`SavingThrows.tsx`/`Skills.tsx`/`Conditions.tsx`/`Experience.tsx`.
-2. `core/db/models.py` — enum/property ad alto rischio (test puro, niente DB): `Character.proficiency_bonus`/`total_level`,
-   `SpellSlot.use_slot`/`available`, `is_dead`, enum `EquipmentSlot`/`RestorationType` (finora toccate solo indirettamente via endpoint).
-3. `routers/characters.py` — create/patch/delete top-level (parz. in `test_character_patch_refresh`); `routers/sessions.py` (sessioni di gioco) interamente scoperto.
-4. `services/equipment.py::slot_allowed_for_type`/`EQUIPMENT_SLOT_COMPAT` come unità mappata; `routers/maps.py` upload/serve.
-5. FE `lib/*` ancora scoperte (rischio basso): `roman.ts`, `rewardQueue.ts`, `eventMeta.ts`, `itemIcons.ts`, `celebrate.ts`, `silhouette.ts`, `inlineMarkdown.tsx`, `homebrew/i18n-dsl.ts`; FE hooks/store: `useSwipeNavigation`, `useToast`, `unitSettings`, `diceSettings`
+1. **`core/db/models.py` — model/enum (22, ora il blocco BE residuo in testa)**: test puri senza DB su
+   property/metodi ad alto rischio D&D — `Character.proficiency_bonus`/`total_level`, `SpellSlot.use_slot`/
+   `available`, `is_dead`, `Currency.convert`/`total_in_copper` (oracolo già esercitato dal lotto 8), e
+   **integrità degli enum** `EquipmentSlot`/`RestorationType`/`SpellSlotsMode`/`FileType`/`Session*` (vedi
+   `[[reference_sqlalchemy_enum_passthrough]]`: gli enum vanno verificati su membri/valori).
+2. **FE mutation pages restanti** (HP/ArmorClass/Currency chiusi): `pages/SpellSlots.tsx` + `pages/Spells.tsx`
+   (create/patch/delete slot e incantesimi, cast, concentrazione), `pages/Multiclass.tsx` +
+   `multiclass/LevelUpModal.tsx`/`EditClassesModal.tsx` (add/update/delete/distribute classi, level-up),
+   `pages/Abilities.tsx` (uses/ripristino), `pages/AbilityScores.tsx`/`SavingThrows.tsx`/`Skills.tsx`/
+   `Conditions.tsx`/`Experience.tsx`.
+3. **Router ancora scoperti**: `routers/sessions.py` (13 endpoint, sessioni di gioco) interamente; `routers/maps.py`
+   (6, upload/serve), `routers/notes.py` (6, incl. voice), `routers/history.py` (3), `routers/silhouette.py` (3),
+   `routers/dice.py` (history/post-to-chat); `routers/characters.py` list/delete/`saving_throws` bulk.
+4. FE `lib/*`/hooks/store residui (rischio basso): `rewardQueue.ts`, `eventMeta.ts`, `itemIcons.ts`,
+   `celebrate.ts`, `inlineMarkdown.tsx`, `homebrew/i18n-dsl.ts`; hooks `useSwipeNavigation`/`useToast`/
+   `useIntersection`/`useReducedMotion`; store `diceSettings`/`overlayStore`/`themeSettings`.
+5. FE componenti presentazionali ad alto valore (no API): `components/character/SpellSlotsSummary.tsx`,
+   `ProgressionPreview.tsx`, `components/ui/HeroXPBar.tsx`, `HPBar.tsx`, `pages/hp/DeathSaves.tsx`/`DeadState.tsx`.
 
 ## File
 
