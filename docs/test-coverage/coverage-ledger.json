@@ -5,7 +5,7 @@
     "branch": "chore/blinda-test-batch-1",
     "date": "2026-06-09",
     "size": 8,
-    "focus": "lotto 2 — endpoint HP/morte ad alto rischio (PATCH /hp, /death_saves, /revive, hit_dice) + swap slot CA + lib/store FE puri"
+    "focus": "lotto 3 — primo giro compat FE↔API + serializer centrale: POST /hp/recalc, PATCH/reset slot, PATCH item (CA end-to-end), build_character_response; FE sessionHelpers + useLongPress (regressione cancel-then-end) + HPGauge"
   },
   "units": {
     "fe:lib/dnd.ts": {
@@ -122,6 +122,57 @@
       "tests": ["tests/services/test_swap_slot_occupant.py"],
       "status": "be-pending",
       "note": "Displacement atomico paper-doll: sgombra solo item equipaggiato nello STESSO slot con id DIVERSO; ignora altro slot, sé stesso, item non equipaggiato. Restituisce displaced per reset CA.",
+      "updated": "2026-06-09"
+    },
+    "fe:lib/sessionHelpers.ts": {
+      "tests": ["webapp/tests/unit/lib/sessionHelpers.test.ts"],
+      "apis": ["GET /sessions/me", "GET /sessions/{id}"],
+      "status": "fe-green",
+      "note": "getMyRole (gm>player>none, guardie null) + formatUptime (Xm / Xh Ym, ISO o Date, clamp negativi). Contratto FE↔BE: legge gm_user_id/participants[].user_id/created_at = GameSessionRead (api/schemas/session.py) — allineato, codificato negli assert.",
+      "updated": "2026-06-09"
+    },
+    "fe:hooks/useLongPress.ts": {
+      "tests": ["webapp/tests/unit/hooks/useLongPress.test.ts"],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Tap vs long-press vs move-cancel (>12px); ramo onProgress (ring poll ~30Hz, fake Date). Regressione [[reference_uselongpress_cancel_then_end]] codificata: pointercancel pre-soglia + touchend stray NON ritocca onClick; doppia consegna pointer+touch = singolo onClick.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/ui/HPGauge.tsx": {
+      "tests": ["webapp/tests/unit/ui/HPGauge.test.tsx"],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Presentazionale puro (props current/max/temp). 10 celle segmentate, pulse-danger a ≤25%, no-crash con max=0, modalità non-segmentata, overlay temp. framer-motion mockato (m.* + useReducedMotion → niente matchMedia in jsdom).",
+      "updated": "2026-06-09"
+    },
+    "be:routers/hp.py::POST /characters/{id}/hp/recalc": {
+      "tests": ["tests/integration/test_hp_recalc.py"],
+      "status": "be-pending",
+      "note": "Ricalcolo max da formula total_base_hp(classes, effective_con_mod): max cala → current clampato giù; max sale → current += delta; nessuna classe → 0/0. Setup deterministico (d10 L1 CON10 → 10 HP letto dalla create). Contratto: ritorna CharacterFull con ac_breakdown.",
+      "updated": "2026-06-09"
+    },
+    "be:routers/spell_slots.py::PATCH /characters/{id}/spell_slots/{slot_id}": {
+      "tests": ["tests/integration/test_spell_slots.py"],
+      "status": "be-pending",
+      "note": "Cast (used↑) vs refund (used↓): spell_cast solo su incremento (niente regole → niente homebrew_notifications). PATCH total-only lascia used. Slot inesistente = 404. available = total-used. Contratto = FE SpellSlot (id/level/total/used/available/is_pact).",
+      "updated": "2026-06-09"
+    },
+    "be:routers/spell_slots.py::POST /characters/{id}/spell_slots/reset": {
+      "tests": ["tests/integration/test_spell_slots.py"],
+      "status": "be-pending",
+      "note": "Azzera used su tutti gli slot (parità riposo lungo) e ritorna CharacterFull; available risale a total.",
+      "updated": "2026-06-09"
+    },
+    "be:services/character_response.py::build_character_response": {
+      "tests": ["tests/integration/test_character_response.py"],
+      "status": "be-pending",
+      "note": "Serializer centrale (via GET /characters/{id} + POST /items). ac_breakdown {base,shield,magic,homebrew}, ac=base+shield+magic; default homebrew puliti (0 / mappe vuote); has_custom_silhouette=False; risoluzione ability_scores (base/value/modifier/modifiers_applied) con modificatore item equipaggiato che fluisce in _resolve_ability_effective.",
+      "updated": "2026-06-09"
+    },
+    "be:routers/items.py::PATCH /characters/{id}/items/{item_id}": {
+      "tests": ["tests/integration/test_item_equip_ac.py"],
+      "status": "be-pending",
+      "note": "Giro CA end-to-end: equip armor → base = ac_value, unequip → 10; shield → shield = ac_bonus; displacement nello stesso slot resetta la CA dell'occupante sostituito; slot incompatibile col tipo = 422. Asserito via ac_breakdown/ac.",
       "updated": "2026-06-09"
     }
   }

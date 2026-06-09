@@ -20,16 +20,16 @@ Va **rilanciato** finché i residui arrivano a 0.
 
 ## Stato copertura
 
-> Aggiornato da `/blinda-test`. Ultimo lotto: **2026-06-09 (lotto 2)** (branch `chore/blinda-test-batch-1`).
-> Il grafo graphify è stato costruito su `webapp/src api core` (3468 nodi, 9200 archi); al lotto 2
-> `--update` è stato un no-op (zero modifiche ai sorgenti dal build — i 797 "cambiati" segnalati erano
-> file fuori scope `.claude/.github/docs` che `detect_incremental` cammina sull'intero root).
+> Aggiornato da `/blinda-test`. Ultimo lotto: **2026-06-09 (lotto 3)** (branch `chore/blinda-test-batch-1`).
+> Il grafo graphify è stato costruito su `webapp/src api core` (3811 KB `graph.json`); al lotto 3
+> `--update` è di nuovo un no-op: nessun sorgente in scope (`webapp/src api core`) è più recente di
+> `graph.json` (verificato con `find … -newer`), quindi il grafo è già attuale per le relazioni che servono.
 > I "totali" sono inventario su filesystem; le "coperte" sono le unità mappate nel ledger.
 
 | Ambito | Totali (≈) | Coperte (ledger) | Residue (≈) |
 |---|---|---|---|
-| FE (components 92 · pages 75 · lib 20 · hooks 5 · store 5) | 197 | 8 | 189 |
-| BE (endpoint 102 · funzioni service 31 · model/enum 22) | 155 | 10 (+ motore homebrew, vedi nota) | ~145 |
+| FE (components 92 · pages 75 · lib 20 · hooks 5 · store 5) | 197 | 11 | 186 |
+| BE (endpoint 102 · funzioni service 31 · model/enum 22) | 155 | 15 (+ motore homebrew, vedi nota) | ~140 |
 
 > **Nota copertura BE pre-esistente:** oltre alle 5 unità mappate nel ledger, il repo aveva già
 > una suite consistente — l'intero **motore homebrew** (`tests/services/homebrew/*`,
@@ -66,6 +66,20 @@ Va **rilanciato** finché i residui arrivano a 0.
 - `routers/hp.py::POST /characters/{id}/hit_dice/spend` → `tests/integration/test_hit_dice_spend.py` (cura roll+CON clampata; 404 classe ignota; 400 count<1)
 - `services/equipment.py::swap_slot_occupant` → `tests/services/test_swap_slot_occupant.py` (displacement atomico, filtri slot/self/equipped)
 
+### Lotto 2026-06-09 #3 (8 unità, primo giro compat FE↔API HTTP + serializer centrale)
+
+**FE — Vitest, verdi (25 test, 3 file · suite totale 83 test / 11 file):**
+- `lib/sessionHelpers.ts` — `getMyRole` (gm > player > none, guardie su null) + `formatUptime` (Xm / Xh Ym, ISO o `Date`, clamp negativi). Contratto FE↔BE su `gm_user_id`/`participants[].user_id`/`created_at` codificato negli assert.
+- `hooks/useLongPress.ts` — tap vs long-press vs move-cancel (>12px) + ramo `onProgress` (ring poll ~30Hz, `Date` mockato). **Regressione** `[[reference_uselongpress_cancel_then_end]]` codificata: `pointercancel` pre-soglia + `touchend` stray non ritocca `onClick`; doppia consegna pointer+touch = singolo `onClick`.
+- `components/ui/HPGauge.tsx` — presentazionale puro: 10 celle segmentate, `pulse-danger` a ≤25%, no-crash con `max=0`, modalità non-segmentata, overlay temp. `framer-motion` mockato (`m.*` + `useReducedMotion` → niente `matchMedia` in jsdom).
+
+**BE — pytest, `be-pending` (da eseguire su Windows):**
+- `routers/hp.py::POST /characters/{id}/hp/recalc` → `tests/integration/test_hp_recalc.py` (formula `total_base_hp`; max↓ clampa current, max↑ somma delta, 0 classi → 0/0; shape `CharacterFull`)
+- `routers/spell_slots.py::PATCH /characters/{id}/spell_slots/{slot_id}` → `tests/integration/test_spell_slots.py` (cast `used↑`/refund `used↓`, total-only, 404, `available`)
+- `routers/spell_slots.py::POST /characters/{id}/spell_slots/reset` → `tests/integration/test_spell_slots.py` (azzera tutti gli `used`)
+- `services/character_response.py::build_character_response` → `tests/integration/test_character_response.py` (ac_breakdown + `ac=base+shield+magic`, default homebrew, risoluzione ability con modificatore item)
+- `routers/items.py::PATCH /characters/{id}/items/{item_id}` → `tests/integration/test_item_equip_ac.py` (equip/unequip armor+shield → CA, displacement resetta CA occupante, slot incompatibile 422)
+
 ## Finding compatibilità FE↔API
 
 Le unità FE di questo lotto sono **lib pure** (nessuna chiamata diretta `api.*`): la verifica di
@@ -83,17 +97,32 @@ mismatch 🔴/🟠. I contratti sono stati codificati come assert nei test (un d
 verificato: FE `Ability` ↔ BE `AbilityRead` (`api/schemas/common.py`) — i campi consumati da
 `diffResourceMaxes` (`id`/`name`/`max_uses`/`is_class_feature`) esistono tutti nel serializer ⇒ **allineato**,
 nessun mismatch 🔴/🟠. Il ramo `exhaustion`-come-`int` di `formatCondition` combacia con la scrittura
-intera fatta da `POST /rest` (`conditions["exhaustion"] = new_exh`). Il **primo giro di compat HTTP reale**
-(componenti che chiamano `api.*`) resta da fare — vedi residui.
+intera fatta da `POST /rest` (`conditions["exhaustion"] = new_exh`).
+
+**Lotto 3 — primo giro di compat FE↔API HTTP reale.** Verificati i metodi `api.*` (`webapp/src/api/client.ts`)
+che colpiscono gli endpoint di questo lotto contro route + schemi Pydantic. Tutti **allineati**, nessun
+mismatch 🔴/🟠; i contratti di risposta sono codificati come assert nei test (un drift dello schema fa fallire):
+
+| Metodo FE (`client.ts`) | Endpoint BE | Esito |
+|---|---|---|
+| `api.recalcHp` → `POST /characters/{id}/hp/recalc` (no body) → `CharacterFull` | `recalc_hp` | ✅ allineato |
+| `api.spellSlots.update` → `PATCH …/spell_slots/{id}` `{total?,used?}` → `SpellSlot` | `update_spell_slot` / `SpellSlotUpdate` → `SpellSlotRead` (`available`,`is_pact`) | ✅ allineato |
+| `api.spellSlots.resetAll` → `POST …/spell_slots/reset` → `CharacterFull` | `reset_spell_slots` | ✅ allineato |
+| `api.items.update` → `PATCH …/items/{id}` `Partial<Item>` → `CharacterFull` | `update_item` / `ItemUpdate` | ✅ allineato |
+| `getMyRole`/`formatUptime` ← `gm_user_id`/`participants[].user_id`/`created_at` | `GameSessionRead` (`api/schemas/session.py`) | ✅ allineato |
+
+Nota: `HPGauge` (candidato del residuo "componenti che chiamano l'API") si è rivelato **presentazionale puro**
+— riceve `current/max/temp` via props, nessuna chiamata `api.*`. La query graphify lo aveva solo accostato al
+nodo `api` euristicamente. Testato come componente puro.
 
 ## Prossimi residui per rischio (per il lotto successivo)
 
-1. `routers/hp.py::POST /hp/recalc` — ricalcolo HP da formula `total_base_hp` (clamp current su Δmax)
-2. `routers/spell_slots.py` — endpoint slot manuali (use/restore)
-3. `services/character_response.py::build_character_response` — serializer (CA, HP effettivi, slot): oracolo centrale
-4. `routers/items.py::PATCH /characters/{id}/items/{item_id}` — endpoint slot-aware che invoca `swap_slot_occupant` (giro end-to-end CA)
-5. FE: `lib/sessionHelpers.ts`, `hooks/useLongPress.ts`, e altre `lib/*` ancora scoperte
-6. **Componenti FE che chiamano davvero l'API** (HeroScreen, HPGauge, ecc.) → primo vero giro di compat FE↔API HTTP (mock `api.*` + contract test sulla shape della risposta BE)
+1. `routers/spells.py::POST /characters/{id}/spells/{id}/use` — consumo slot da incantesimo (decremento + 409 senza slot)
+2. `routers/spells.py` — `roll_damage` (oracolo dadi, half/crit) + `concentration/save` (DC = max(10, danno//2), nat20/nat1)
+3. `services/spell_slots.py::recalc_spell_slots` è già coperto; resta `routers/classes.py::PATCH …/classes/distribute` (ridistribuzione livelli, scala HP, validazioni 400)
+4. `routers/items.py::POST …/items/{id}/attack` e `POST …/attack/unarmed` — tiri colpire/danno, crit/fumble, ispirazione 409
+5. FE: componenti/pagine che chiamano **davvero** `api.*` (es. `pages/Combat`, modali HP/AC/slot) → mock `api.*` + contract test sulla shape `CharacterFull`
+6. FE `lib/*` ancora scoperte: `roman.ts`, `relativeTime.ts`, `rewardQueue.ts`, `spellSrd.ts`, `eventMeta.ts`, `itemIcons.ts`, `celebrate.ts`, `silhouette.ts`
 
 ## File
 
