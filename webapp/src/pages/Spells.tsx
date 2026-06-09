@@ -23,6 +23,8 @@ import SpellDamageSheet from '@/pages/spells/SpellDamageSheet'
 import type { Spell, SpellSlot } from '@/types'
 import SpellsSkeleton from '@/components/skeletons/SpellsSkeleton'
 
+type SpellProp = 'concentration' | 'ritual' | 'prepared'
+
 export default function Spells() {
   const { id } = useParams<{ id: string }>()
   const charId = Number(id)
@@ -45,7 +47,7 @@ export default function Spells() {
   // Filtri a chips (come nelle Abilità speciali): multi-selezione, unione fra
   // chip della stessa dimensione, intersezione fra dimensioni diverse.
   const [levelFilter, setLevelFilter] = useState<Set<number>>(() => new Set())
-  const [propFilter, setPropFilter] = useState<Set<'concentration' | 'ritual'>>(() => new Set())
+  const [propFilter, setPropFilter] = useState<Set<SpellProp>>(() => new Set())
 
   const toggleLevel = (level: number) => {
     setCollapsedLevels((prev) => {
@@ -62,7 +64,7 @@ export default function Spells() {
       else next.add(level)
       return next
     })
-  const toggleProp = (key: 'concentration' | 'ritual') =>
+  const toggleProp = (key: SpellProp) =>
     setPropFilter((prev) => {
       const next = new Set(prev)
       if (next.has(key)) next.delete(key)
@@ -140,6 +142,34 @@ export default function Spells() {
       haptic.success()
     },
   })
+
+  const spellcasting = char?.spellcasting ?? null
+
+  const preparedMutation = useMutation({
+    mutationFn: ({ spellId, prepared }: { spellId: number; prepared: boolean }) =>
+      api.spells.update(charId, spellId, { is_prepared: prepared }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['character', charId] })
+      haptic.light()
+    },
+    onError: (e) => {
+      haptic.error()
+      toast.error(e instanceof Error ? e.message : String(e))
+    },
+  })
+
+  const handlePreparedToggle = useCallback((spell: Spell) => {
+    const sc = spellcasting
+    if (!spell.is_prepared && sc?.has_preparing_class
+        && sc.prepared_count >= (sc.prepared_cap ?? 0)) {
+      haptic.warning()
+      toast.warning(t('character.spells.prepared_cap_reached', {
+        n: sc.prepared_count, cap: sc.prepared_cap ?? 0,
+      }))
+      return
+    }
+    preparedMutation.mutate({ spellId: spell.id, prepared: !spell.is_prepared })
+  }, [spellcasting, preparedMutation, t])
 
   const castMutation = useMutation({
     mutationFn: async ({ spell, slotLevel }: { spell: Spell; slotLevel: number }) => {
@@ -287,10 +317,16 @@ export default function Spells() {
     .map(([level, count]) => ({ level, count }))
     .sort((a, b) => a.level - b.level)
 
-  const propOptions = (['concentration', 'ritual'] as const)
+  const propKeys: SpellProp[] = ['concentration', 'ritual']
+  if (spellcasting?.has_preparing_class) propKeys.push('prepared')
+  const propOptions = propKeys
     .map((key) => ({
       key,
-      count: spells.filter((s) => (key === 'concentration' ? s.is_concentration : s.is_ritual)).length,
+      count: spells.filter((s) =>
+        key === 'concentration' ? s.is_concentration
+        : key === 'ritual' ? s.is_ritual
+        : s.is_prepared && s.level >= 1,
+      ).length,
     }))
     // una proprietà si mostra solo se discrimina davvero (presente ma non in tutti)
     .filter((o) => o.count > 0 && o.count < spells.length)
@@ -305,7 +341,8 @@ export default function Spells() {
     if (propFilter.size > 0) {
       const matchesProp =
         (propFilter.has('concentration') && s.is_concentration) ||
-        (propFilter.has('ritual') && s.is_ritual)
+        (propFilter.has('ritual') && s.is_ritual) ||
+        (propFilter.has('prepared') && s.is_prepared && s.level >= 1)
       if (!matchesProp) return false
     }
     return true
@@ -368,6 +405,23 @@ export default function Spells() {
         />
       )}
 
+      {/* Contatore di preparazione: etichetta in Cinzel, numeri mono tabulari
+          (Tabular Numerics). Rosso solo oltre il tetto (legacy grandfathered). */}
+      {spellcasting?.has_preparing_class && spells.length > 0 && (
+        <div className="flex items-center justify-end gap-1.5 px-1">
+          <span className="font-cinzel text-[11px] uppercase tracking-widest text-dnd-gold-dim">
+            {t('character.spells.prepared_counter')}
+          </span>
+          <span className={`font-mono text-xs tabular-nums ${
+            spellcasting.prepared_count > (spellcasting.prepared_cap ?? 0)
+              ? 'text-[var(--dnd-danger)]'
+              : 'text-dnd-text'
+          }`}>
+            {spellcasting.prepared_count}/{spellcasting.prepared_cap ?? 0}
+          </span>
+        </div>
+      )}
+
       {showFilterBar && (
         <div className="space-y-2">
           {showLevelRow && (
@@ -389,7 +443,7 @@ export default function Spells() {
               {propOptions.map((o) => (
                 <FilterChip
                   key={o.key}
-                  tone="arcane"
+                  tone={o.key === 'prepared' ? 'gold' : 'arcane'}
                   label={t(`character.spells.${o.key}`)}
                   count={o.count}
                   selected={propFilter.has(o.key)}
@@ -510,6 +564,9 @@ export default function Spells() {
                             onRemove={() => removeMutation.mutate(spell.id)}
                             concentratingSpellId={concentratingId ?? null}
                             usePending={castMutation.isPending || concentrationMutation.isPending}
+                            showPreparedToggle={!!spellcasting?.has_preparing_class && spell.level >= 1}
+                            onPreparedToggle={() => handlePreparedToggle(spell)}
+                            preparedPending={preparedMutation.isPending}
                           />
                         </div>
                       ))}
