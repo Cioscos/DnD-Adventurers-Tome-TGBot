@@ -33,7 +33,7 @@ Va **rilanciato** finché i residui arrivano a 0.
 | Ambito | Totali | Coperte (ledger) | Residue |
 |---|---|---|---|
 | FE (components 89 · pages 72 · lib 20 · hooks 5 · store 5 + coperte) | 197 | 22 | 175 |
-| BE (endpoint 102 · service 31 · core/game 2 · model/enum 22) | 157 | 99 (**tutte be-green** tranne 4 `be-pending` del lotto 8) | 58 |
+| BE (endpoint 102 · service 31 · core/game 2 · model/enum 22) | 157 | 99 (**tutte be-green** dopo il run `547 passed / 0 failed`) | 58 |
 
 > **Back-fill copertura BE pre-esistente (lotto 8):** il diff dei lotti 1-7 ignorava la suite pytest
 > **già presente** nel repo, che copriva molte unità "residue" → falsi negativi. Al lotto 8 sono state
@@ -206,6 +206,13 @@ delle conversioni monetarie + pagina FE che lo consuma, contratto codificato).
 - `routers/currency.py::POST …/currency/convert` → `test_currency.py` — **tassi ufficiali** (1 gp = 10 sp);
   conversione "verso l'alto" restituisce il resto in copper senza distruggere valore (5 sp → 0 gp + 50 cp);
   400 su fondi insufficienti / source==target / amount≤0 / moneta sconosciuta.
+
+> **Run di conferma BE (2026-06-09, Windows): `547 passed, 0 failed` in ~85s** (`uv run pytest`, log
+> `pytest-all-be.log`). I 2 file `be-pending` del lotto 8 — `test_slot_allowed.py` (19 test) e
+> `test_currency.py` (9 test) — **passano**: +28 test rispetto a 519/0, nessuna regressione, portati a
+> `be-green`. Ledger ora **0 be-pending** (22 fe-green + 98 be-green). I 283 warning residui sono
+> `DeprecationWarning` (`datetime.utcnow()`) e `ResourceWarning` ("Event loop is closed" in teardown
+> aiosqlite) benigni, non fallimenti.
 
 ## Bug BE smascherati eseguendo i pytest (2026-06-09)
 

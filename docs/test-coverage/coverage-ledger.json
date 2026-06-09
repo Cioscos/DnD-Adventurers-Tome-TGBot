@@ -966,28 +966,28 @@
       "tests": [
         "tests/services/test_slot_allowed.py"
       ],
-      "status": "be-pending",
+      "status": "be-green",
       "updated": "2026-06-09"
     },
     "be:routers/currency.py::GET /characters/{id}/currency": {
       "tests": [
         "tests/integration/test_currency.py"
       ],
-      "status": "be-pending",
+      "status": "be-green",
       "updated": "2026-06-09"
     },
     "be:routers/currency.py::PATCH /characters/{id}/currency": {
       "tests": [
         "tests/integration/test_currency.py"
       ],
-      "status": "be-pending",
+      "status": "be-green",
       "updated": "2026-06-09"
     },
     "be:routers/currency.py::POST /characters/{id}/currency/convert": {
       "tests": [
         "tests/integration/test_currency.py"
       ],
-      "status": "be-pending",
+      "status": "be-green",
       "updated": "2026-06-09"
     },
     "fe:lib/roman.ts": {
