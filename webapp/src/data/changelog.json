@@ -1,6 +1,23 @@
 {
   "entries": [
     {
+      "version": "2.5.3",
+      "date": "2026-06-09",
+      "title": { "it": "Correzioni emerse dalla blindatura con i test", "en": "Fixes surfaced by the test-hardening pass" },
+      "added": { "it": [], "en": [] },
+      "improved": { "it": [], "en": [] },
+      "fixed": {
+        "it": [
+          "Creare un personaggio assegnandogli subito una classe non genera più un errore del server: la creazione con classe iniziale ora va a buon fine.",
+          "Sostituire un'armatura con un'altra (o uno scudo con un altro) nello stesso slot ora conserva correttamente la Classe Armatura: prima in certi casi la CA del nuovo oggetto andava persa e tornava al valore base."
+        ],
+        "en": [
+          "Creating a character with an initial class assigned right away no longer triggers a server error: creation with an initial class now succeeds.",
+          "Swapping one armor for another (or one shield for another) in the same slot now keeps the Armor Class correct: previously the new item's AC could be lost and reset to the base value."
+        ]
+      }
+    },
+    {
       "version": "2.5.2",
       "date": "2026-06-08",
       "title": { "it": "Recupero schede bloccate da abilità manuali", "en": "Recovery of sheets blocked by manual abilities" },
