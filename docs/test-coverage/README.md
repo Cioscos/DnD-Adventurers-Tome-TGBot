@@ -34,7 +34,7 @@ Va **rilanciato** finché i residui arrivano a 0.
 | Ambito | Totali (≈) | Coperte (ledger) | Residue (≈) |
 |---|---|---|---|
 | FE (components 92 · pages 75 · lib 20 · hooks 5 · store 5) | 197 | 18 | ~179 |
-| BE (endpoint 102 · funzioni service 31 · model/enum 22) | 155 | 45 (32 be-green + 13 be-pending; + motore homebrew, vedi nota) | ~110 |
+| BE (endpoint 102 · funzioni service 31 · model/enum 22) | 155 | 45 (**tutte be-green** dopo il run `519 passed / 0 failed`; + motore homebrew, vedi nota) | ~110 |
 
 > **Nota copertura BE pre-esistente:** oltre alle unità mappate nel ledger, il repo aveva già
 > una suite consistente — l'intero **motore homebrew** (`tests/services/homebrew/*`,
@@ -168,6 +168,12 @@ copriva **già** POST/DELETE slot (mai mappati): mappati come `be-green` invece 
 
 > Mappata copertura BE **pre-esistente** in `test_spell_slots.py` (`be-green`, run 477/0): `POST …/spell_slots`
 > (create 201 + `available`) e `DELETE …/spell_slots/{id}` (204) — il lotto 3 aveva mappato solo PATCH/reset.
+
+> **Run di conferma BE (2026-06-09, Windows): `519 passed, 0 failed` in ~90s.** Eseguito `uv run pytest`
+> sull'intera suite dopo il lotto 7: tutti i `be-pending` accumulati (5 file del lotto 6 + 3 del lotto 7:
+> `test_abilities_crud.py`, `test_item_crud.py`, DELETE in `test_spell_crud.py`) **passano** → portati a
+> `be-green`. Da 477/0 → 519/0 (+42 test), nessuna regressione. I 276 warning residui sono
+> `DeprecationWarning` benigni (`datetime.utcnow()`), non fallimenti. Ledger ora **0 be-pending**.
 
 ## Bug BE smascherati eseguendo i pytest (2026-06-09)
 

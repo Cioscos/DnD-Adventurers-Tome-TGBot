@@ -5,7 +5,12 @@
     "date": "2026-06-09",
     "name": "lotto 7",
     "branch": "chore/blinda-test-batch-1",
-    "focus": "FE mutation pages (HP/ArmorClass) verdi + abilities/items/spells DELETE CRUD BE (be-pending) + mappate spell_slots POST/DELETE pre-esistenti"
+    "focus": "FE mutation pages (HP/ArmorClass) verdi + abilities/items/spells DELETE CRUD BE (be-pending) + mappate spell_slots POST/DELETE pre-esistenti",
+    "be_run": {
+      "date": "2026-06-09",
+      "result": "519 passed, 0 failed",
+      "note": "pytest completo su Windows: tutti i be-pending (lotto 6+7) confermati verdi"
+    }
   },
   "units": {
     "fe:lib/dnd.ts": {
@@ -439,7 +444,7 @@
       "tests": [
         "tests/integration/test_delete_class.py"
       ],
-      "status": "be-pending",
+      "status": "be-green",
       "note": "Rimozione classe con scaling HP a ratio (parità con distribute): da Guerriero L2+Ladro L1 (21 HP), DELETE Ladro → total_base_hp([G L2])=16, current pieno→16, danneggiato 7/21→round(7/21·16)=5/16. Ultima classe rimossa → total_base_hp([])=0 → 0/0. 404 class_id ignoto (_get_class). Contratto = CharacterFull (classes/hit_points/current_hit_points).",
       "updated": "2026-06-09"
     },
@@ -447,7 +452,7 @@
       "tests": [
         "tests/integration/test_dice_result.py"
       ],
-      "status": "be-pending",
+      "status": "be-green",
       "note": "Il server NON tira: valida i valori per range del dado (7 su d6 → 400), calcola total = override client (4d6kh3: 15, non 16) altrimenti sum+modifier, inferisce la notation (singolo dado+modifier '+3'/'-2', n>1 → '2d6') se non fornita. with_inspiration consuma il token (verificato via GET heroic_inspiration False) / 409 se assente. History: append (cap 50) + GET /dice/history (più recente prima, notation/total/source/label) + DELETE → 204 → []. Contratto = FE DiceResultRequestBody/DiceRollResult.",
       "updated": "2026-06-09"
     },
@@ -455,7 +460,7 @@
       "tests": [
         "tests/integration/test_ac_override.py"
       ],
-      "status": "be-pending",
+      "status": "be-green",
       "note": "Override manuale: base → base_armor_class + base_armor_class_override=True (clamp ≥0); shield → shield_armor_class + shield_armor_class_override=True; magic → magic_armor (NESSUN flag override). ac_breakdown.{base,shield,magic} e ac=base+shield+magic. Contratto = FE CharacterFull (api.characters.updateAC).",
       "updated": "2026-06-09"
     },
@@ -463,7 +468,7 @@
       "tests": [
         "tests/integration/test_ac_override.py"
       ],
-      "status": "be-pending",
+      "status": "be-green",
       "note": "Azzera i flag override base/shield e ricalcola da equip: senza armatura base→10, senza scudo shield→0; magic NON toccato (nessun flag, reset non lo legge). Contratto = FE CharacterFull (api.characters.resetACOverride).",
       "updated": "2026-06-09"
     },
@@ -471,7 +476,7 @@
       "tests": [
         "tests/integration/test_spell_crud.py"
       ],
-      "status": "be-pending",
+      "status": "be-green",
       "note": "Create da SpellCreate (solo name obbligatorio; level default 0 = trucchetto) → 201 SpellRead con default puliti (is_ritual/is_pinned False). Persistito (verificato via GET /spells). Contratto = FE SpellRead.",
       "updated": "2026-06-09"
     },
@@ -479,7 +484,7 @@
       "tests": [
         "tests/integration/test_spell_crud.py"
       ],
-      "status": "be-pending",
+      "status": "be-green",
       "note": "Update parziale exclude_unset: i campi omessi sopravvivono (PATCH {is_concentration,level} lascia name/is_ritual). 404 su spell ignota. Contratto = FE SpellRead.",
       "updated": "2026-06-09"
     },
@@ -487,7 +492,7 @@
       "tests": [
         "tests/integration/test_concentration_manual.py"
       ],
-      "status": "be-pending",
+      "status": "be-green",
       "note": "Set/clear manuale: concentrating_spell_id = body.spell_id; null o body vuoto (spell_id Optional default None) → azzera la concentrazione. Contratto = FE CharacterFull (concentrating_spell_id) / ConcentrationUpdate.",
       "updated": "2026-06-09"
     },
@@ -535,7 +540,7 @@
         "tests/integration/test_abilities_crud.py"
       ],
       "apis": [],
-      "status": "be-pending",
+      "status": "be-green",
       "note": "Create Ability (201): shape completa AbilityRead, default minimi (none/None), listata via GET.",
       "updated": "2026-06-09"
     },
@@ -545,7 +550,7 @@
         "tests/integration/test_ability_protection.py"
       ],
       "apis": [],
-      "status": "be-pending",
+      "status": "be-green",
       "note": "Update Ability (non-class-feature): uses giu=uso (dispatch ability_used, niente notifiche senza regole), uses su=ripristino, rinomina/max_uses liberi (no lock), 404. Il LOCK class_feature (409 su name/max_uses) e gia coperto da test_ability_protection.py (be-green).",
       "updated": "2026-06-09"
     },
@@ -555,7 +560,7 @@
         "tests/integration/test_ability_protection.py"
       ],
       "apis": [],
-      "status": "be-pending",
+      "status": "be-green",
       "note": "Delete Ability non-class-feature (204) + de-listata; 404 su id ignoto. Il blocco delete su class_feature (409) e in test_ability_protection.py (be-green).",
       "updated": "2026-06-09"
     },
@@ -564,7 +569,7 @@
         "tests/integration/test_item_crud.py"
       ],
       "apis": [],
-      "status": "be-pending",
+      "status": "be-green",
       "note": "Create item (201, ritorna CharacterFull): generico (dedup per nome -> merge quantity), arma con is_equipped+equipment_slot, slot incompatibile con item_type -> 422.",
       "updated": "2026-06-09"
     },
@@ -573,7 +578,7 @@
         "tests/integration/test_item_crud.py"
       ],
       "apis": [],
-      "status": "be-pending",
+      "status": "be-green",
       "note": "Delete item (200, CharacterFull senza l item) + 404 su id ignoto.",
       "updated": "2026-06-09"
     },
@@ -582,7 +587,7 @@
         "tests/integration/test_spell_crud.py"
       ],
       "apis": [],
-      "status": "be-pending",
+      "status": "be-green",
       "note": "Delete spell (204) + de-listato; 404 su id ignoto. Aggiunto in coda a test_spell_crud.py.",
       "updated": "2026-06-09"
     },
