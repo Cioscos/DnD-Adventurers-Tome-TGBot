@@ -5,7 +5,7 @@
     "branch": "chore/blinda-test-batch-1",
     "date": "2026-06-09",
     "size": 8,
-    "focus": "lotto 5 — progressione/attributi derivati & tiri d20 ad alto rischio D&D 5e (8 unità BE, tutte be-pending): core/game/stats.py (mod/HP-per-livello/total_base_hp/unarmored AC/effective score, puro), PATCH ability_scores (ripple CON→HP, STR→carico, DEX/2a→base CA, validazione 1-30), POST ac/unarmored-defense (Difesa Senza Armatura + clear override), PATCH xp (XP→livello monoclasse→HP, no-HP-loss in down, multiclasse no-auto-sync), POST classes (bootstrap HP 1a classe + save proficiency, 2a classe no-HP/no-save, default hit_die/spellcasting), PATCH classes/{id} (edit grezzo NO ripple HP + sync feature al level-up), POST skills/roll & saving_throws/roll (d20 deterministico: mod+PB/esperto 2xPB, crit/fumble, ispirazione 409/consumo)"
+    "focus": "lotto 6 — primo giro FE-mutation (compat FE↔API HTTP reale) + progressione/dadi/CA/incantesimi residui. FE (3, fe-green): WeaponAttackModal (presentazionale, gap 🟠 homebrew_notifications codificato), DicePoolResultModal (api.dice.result, ispirazione 409→toast), pages/Actions (api.items.attack/attackUnarmed, reroll with_inspiration). BE (7, be-pending): DELETE classes/{id} (scaling HP a ratio + last-class→0/0 + 404), POST dice/result (range 400, total override 4d6kh3, notation infer, ispirazione 409/consumo, history+clear), PATCH ac + POST ac/reset-override (override base/shield lock vs reset da equip, magic intatto), POST/PATCH spells (CRUD + exclude_unset + 404), PATCH concentration (set/clear/empty-body). + mappata copertura pre-esistente carry-capacity (be-green)."
   },
   "units": {
     "fe:lib/dnd.ts": {
@@ -284,6 +284,75 @@
       "apis": ["POST /characters/{id}/saving_throws/{ability}/roll"],
       "status": "be-green",
       "note": "d20 deterministico. bonus = mod abilità + (PB se proficient, else 0). Guerriero iniziale seedato proficient in STR/CON → ramo proficient esercitato senza setup; DEX non-proficient con mod (14→+2) prova il solo mod. ability ignota 400. nat20/nat1 flags. with_inspiration 409/consumo. Contratto = FE RollResult.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/WeaponAttackModal.tsx": {
+      "tests": ["webapp/tests/unit/components/WeaponAttackModal.test.tsx"],
+      "apis": ["POST /characters/{id}/items/{itemId}/attack", "POST /characters/{id}/attack/unarmed"],
+      "status": "fe-green",
+      "note": "Presentazionale (props WeaponAttackResult): colpo normale (emerald) / crit (gold+pulse+label '(critico)') / fumble (crimson, blocco danno NASCOSTO); bottone reroll ispirazione (mostrato solo se inspirationAvailable && !wasRerolled && handler, fired onClick) e sottotitolo badge a wasRerolled. framer-motion + ResultDialog + InspirationRerollButton mockati. Gap 🟠 CODIFICATO: il tipo FE WeaponAttackResult ha esattamente 10 campi e OMETTE homebrew_notifications (che il BE restituisce opzionale); render non rotto col campo extra a runtime (letto dinamicamente dall'interceptor MutationCache).",
+      "updated": "2026-06-09"
+    },
+    "fe:components/DicePoolResultModal.tsx": {
+      "tests": ["webapp/tests/unit/components/DicePoolResultModal.test.tsx"],
+      "apis": ["POST /characters/{id}/dice/result"],
+      "status": "fe-green",
+      "note": "Mutation reroll ispirazione → api.dice.result. Render gruppi (notation/total) + 'Totale:' su pool multi-gruppo; bottone reroll solo su pool d20 puro (1 gruppo, 1 d20). Click → body DiceResultRequestBody ESATTO {rolls:[{kind:'d20',value}], notation:'1d20', with_inspiration:true} (Math.random pinnato; animate3d=false → niente canvas 3D), onSuccess locka il bottone + badge; 409 → toast.error e bottone resta. Contratto FE↔BE: DiceResultRequestBody === DiceResultRequest.",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/Actions.tsx": {
+      "tests": ["webapp/tests/unit/pages/Actions.test.tsx"],
+      "apis": ["GET /characters/{id}", "POST /characters/{id}/items/{itemId}/attack", "POST /characters/{id}/attack/unarmed"],
+      "status": "fe-green",
+      "note": "Skeleton mentre la query è pending; lista SOLO armi equipaggiate (filtro item_type==='weapon' && is_equipped); attacco arma → api.items.attack(charId,itemId), disarmato → api.items.attackUnarmed(charId), reroll → terzo arg with_inspiration=true sullo stesso endpoint. Apre WeaponAttackModal (mockato) col WeaponAttackResult intero. Layout/Surface/SectionDivider/WeaponAttackModal/skeleton mockati; useParams pinnato a id=7.",
+      "updated": "2026-06-09"
+    },
+    "be:routers/classes.py::DELETE /characters/{id}/classes/{class_id}": {
+      "tests": ["tests/integration/test_delete_class.py"],
+      "status": "be-pending",
+      "note": "Rimozione classe con scaling HP a ratio (parità con distribute): da Guerriero L2+Ladro L1 (21 HP), DELETE Ladro → total_base_hp([G L2])=16, current pieno→16, danneggiato 7/21→round(7/21·16)=5/16. Ultima classe rimossa → total_base_hp([])=0 → 0/0. 404 class_id ignoto (_get_class). Contratto = CharacterFull (classes/hit_points/current_hit_points).",
+      "updated": "2026-06-09"
+    },
+    "be:routers/dice.py::POST /characters/{id}/dice/result": {
+      "tests": ["tests/integration/test_dice_result.py"],
+      "status": "be-pending",
+      "note": "Il server NON tira: valida i valori per range del dado (7 su d6 → 400), calcola total = override client (4d6kh3: 15, non 16) altrimenti sum+modifier, inferisce la notation (singolo dado+modifier '+3'/'-2', n>1 → '2d6') se non fornita. with_inspiration consuma il token (verificato via GET heroic_inspiration False) / 409 se assente. History: append (cap 50) + GET /dice/history (più recente prima, notation/total/source/label) + DELETE → 204 → []. Contratto = FE DiceResultRequestBody/DiceRollResult.",
+      "updated": "2026-06-09"
+    },
+    "be:routers/stats.py::PATCH /characters/{id}/ac": {
+      "tests": ["tests/integration/test_ac_override.py"],
+      "status": "be-pending",
+      "note": "Override manuale: base → base_armor_class + base_armor_class_override=True (clamp ≥0); shield → shield_armor_class + shield_armor_class_override=True; magic → magic_armor (NESSUN flag override). ac_breakdown.{base,shield,magic} e ac=base+shield+magic. Contratto = FE CharacterFull (api.characters.updateAC).",
+      "updated": "2026-06-09"
+    },
+    "be:routers/stats.py::POST /characters/{id}/ac/reset-override": {
+      "tests": ["tests/integration/test_ac_override.py"],
+      "status": "be-pending",
+      "note": "Azzera i flag override base/shield e ricalcola da equip: senza armatura base→10, senza scudo shield→0; magic NON toccato (nessun flag, reset non lo legge). Contratto = FE CharacterFull (api.characters.resetACOverride).",
+      "updated": "2026-06-09"
+    },
+    "be:routers/spells.py::POST /characters/{id}/spells": {
+      "tests": ["tests/integration/test_spell_crud.py"],
+      "status": "be-pending",
+      "note": "Create da SpellCreate (solo name obbligatorio; level default 0 = trucchetto) → 201 SpellRead con default puliti (is_ritual/is_pinned False). Persistito (verificato via GET /spells). Contratto = FE SpellRead.",
+      "updated": "2026-06-09"
+    },
+    "be:routers/spells.py::PATCH /characters/{id}/spells/{spell_id}": {
+      "tests": ["tests/integration/test_spell_crud.py"],
+      "status": "be-pending",
+      "note": "Update parziale exclude_unset: i campi omessi sopravvivono (PATCH {is_concentration,level} lascia name/is_ritual). 404 su spell ignota. Contratto = FE SpellRead.",
+      "updated": "2026-06-09"
+    },
+    "be:routers/spells.py::PATCH /characters/{id}/concentration": {
+      "tests": ["tests/integration/test_concentration_manual.py"],
+      "status": "be-pending",
+      "note": "Set/clear manuale: concentrating_spell_id = body.spell_id; null o body vuoto (spell_id Optional default None) → azzera la concentrazione. Contratto = FE CharacterFull (concentrating_spell_id) / ConcentrationUpdate.",
+      "updated": "2026-06-09"
+    },
+    "be:routers/stats.py::PATCH /characters/{id}/carry-capacity + POST .../reset-override": {
+      "tests": ["tests/integration/test_carry_capacity_override.py"],
+      "status": "be-green",
+      "note": "PRE-ESISTENTE (verde nel run 477/0 su Windows), mappato ora per affinare il diff: PATCH carry-capacity setta il valore e blocca l'override (STR non lo clobbera più), clamp ≥0; POST reset-override azzera il flag e ricalcola STR×15. Pattern speculare all'override CA.",
       "updated": "2026-06-09"
     }
   }

@@ -20,17 +20,19 @@ Va **rilanciato** finché i residui arrivano a 0.
 
 ## Stato copertura
 
-> Aggiornato da `/blinda-test`. Ultimo lotto: **2026-06-09 (lotto 5)** (branch `chore/blinda-test-batch-1`).
-> Il grafo graphify è stato costruito su `webapp/src api core` (3811 KB `graph.json`, 3468 nodi / 9200 archi);
-> anche al lotto 5 `--update` è un no-op: nessun sorgente in scope è più recente di `graph.json`
-> (`graph.json` è del 2026-06-09 01:54, il file sorgente più recente è del 2026-06-08 21:53), quindi il
-> grafo è già attuale per le relazioni che servono.
-> I "totali" sono inventario su filesystem; le "coperte" sono le unità mappate nel ledger.
+> Aggiornato da `/blinda-test`. Ultimo lotto: **2026-06-09 (lotto 6)** (branch `chore/blinda-test-batch-1`).
+> Il grafo graphify resta su `webapp/src api core` (3468 nodi / 9200 archi). Al lotto 6 `--update`
+> ha rilevato 829 "cambi" perché il manifest era andato fuori scope (scansione dell'intero root) — di
+> questi solo **2 in-scope** realmente cambiati (`api/routers/characters.py`, `api/routers/items.py`,
+> i fix BE già mappati), e tutti gli altri 827 erano fuori scope (`docs/app` bundle di build, `bot/`,
+> `.github/`, `deploy/`) ed esplicitamente esclusi dal comando. Il `--update` è quindi no-op per le
+> relazioni del grafo; il manifest è stato **ripulito** a 305 file in-scope così i prossimi run non
+> ri-segnalano i fantasmi. I "totali" sono inventario su filesystem; le "coperte" sono le unità mappate nel ledger.
 
 | Ambito | Totali (≈) | Coperte (ledger) | Residue (≈) |
 |---|---|---|---|
-| FE (components 92 · pages 75 · lib 20 · hooks 5 · store 5) | 197 | 13 | 184 |
-| BE (endpoint 102 · funzioni service 31 · model/enum 22) | 155 | 29 (+ motore homebrew, vedi nota) | ~126 |
+| FE (components 92 · pages 75 · lib 20 · hooks 5 · store 5) | 197 | 16 | 181 |
+| BE (endpoint 102 · funzioni service 31 · model/enum 22) | 155 | 37 (+ motore homebrew, vedi nota) | ~118 |
 
 > **Nota copertura BE pre-esistente:** oltre alle unità mappate nel ledger, il repo aveva già
 > una suite consistente — l'intero **motore homebrew** (`tests/services/homebrew/*`,
@@ -111,6 +113,28 @@ e ri-verificata verde di non-regressione: **104 test / 13 file**.
 - `routers/classes.py::PATCH …/classes/{id}` → `tests/integration/test_update_class.py` — edit grezzo level/subclass/hit_die **senza ripple HP** (`proficiency_bonus` sì), level-up **sincronizza feature** (Monaco→Punti Ki), 404
 - `routers/characters.py::POST …/skills/{name}/roll` → `tests/integration/test_skill_roll.py` — d20 deterministico, `bonus = mod + 0/PB/2×PB(expert)`, crit/fumble, skill ignota 400, ispirazione 409/consumo
 - `routers/characters.py::POST …/saving_throws/{ability}/roll` → `tests/integration/test_saving_throw_roll.py` — `bonus = mod + (PB se proficient)` (Guerriero seedato STR/CON), ability ignota 400, crit/fumble, ispirazione 409/consumo
+
+### Lotto 2026-06-09 #6 (10 unità: primo giro FE-mutation reale + progressione/dadi/CA/incantesimi residui)
+
+Primo lotto che testa **componenti/pagine FE che chiamano davvero `api.*` con mutation** (residuo
+prioritario #1): la verifica di compatibilità FE↔API passa da "lib pure che mirrorano contratti" a
+"endpoint HTTP realmente invocati dal FE". I residui ad alto rischio D&D ancora lato server (rimozione
+classe, dadi generici, override CA, CRUD incantesimi, concentrazione) chiusi in parallelo.
+
+**FE — Vitest, verdi (16 test, 3 file · suite totale 120 test / 16 file):**
+- `components/WeaponAttackModal.tsx` — presentazionale (props `WeaponAttackResult`): colpo normale (emerald) / **critico** (gold + pulse + label "(critico)") / **fumble** (crimson, **blocco danno nascosto**); bottone reroll ispirazione (solo se `inspirationAvailable && !wasRerolled && handler`) + badge a `wasRerolled`. **Gap 🟠 codificato**: il tipo FE ha esattamente 10 campi e **omette `homebrew_notifications`** (il render non si rompe col campo extra a runtime).
+- `components/DicePoolResultModal.tsx` — mutation reroll → **`api.dice.result`**; bottone solo su pool d20 puro; click → body `DiceResultRequestBody` **esatto** `{rolls:[{kind:'d20',value}], notation:'1d20', with_inspiration:true}` (`Math.random` pinnato, `animate3d=false` → niente canvas 3D), onSuccess locka il bottone, **409 → toast.error**.
+- `pages/Actions.tsx` — skeleton in pending; lista **solo armi equipaggiate**; `api.items.attack(charId,itemId)` / `attackUnarmed(charId)` / **reroll con `with_inspiration=true`** (terzo arg); apre `WeaponAttackModal` col result intero.
+
+**BE — pytest, `be-pending` (da eseguire su Windows):**
+- `routers/classes.py::DELETE …/classes/{id}` → `tests/integration/test_delete_class.py` — scaling HP a ratio (parità con `distribute`): 21→16 a HP pieno, `round(7/21·16)=5/16` danneggiato, ultima classe → 0/0, 404
+- `routers/dice.py::POST …/dice/result` → `tests/integration/test_dice_result.py` — il server **non tira**: range 400, `total` override (4d6kh3 = 15 non 16), notation inferita (`+3`/`-2`/`2d6`), ispirazione 409/consumo, history append + `GET`/`DELETE`
+- `routers/stats.py::PATCH …/ac` + `POST …/ac/reset-override` → `tests/integration/test_ac_override.py` — override `base`/`shield` lock (clamp ≥0) vs `magic` senza flag; reset ricalcola da equip (base→10/shield→0), `magic` intatto
+- `routers/spells.py::POST …/spells` + `PATCH …/spells/{id}` → `tests/integration/test_spell_crud.py` — create (solo `name`, default trucchetto) + `exclude_unset` partial + 404
+- `routers/spells.py::PATCH …/concentration` → `tests/integration/test_concentration_manual.py` — set/clear/empty-body di `concentrating_spell_id`
+
+> Mappata anche la copertura BE **pre-esistente** `tests/integration/test_carry_capacity_override.py`
+> (`be-green`, verde nel run 477/0) per affinare il diff — non rigenerata.
 
 ## Bug BE smascherati eseguendo i pytest (2026-06-09)
 
@@ -205,14 +229,35 @@ risposta sono codificate come assert nei pytest (un drift dello schema fa fallir
 Nota: `rollSkill`/`rollSavingThrow` con `die` assente serializzano `JSON.stringify({die: undefined, …})`
 che **scarta** la chiave `die` → `D20RollSubmission.die` resta `None` (RNG server-side). Coerente.
 
+**Lotto 6 — primo giro su componenti/pagine FE che chiamano DAVVERO `api.*` con mutation.** Non più
+solo lib pure: qui il FE invoca endpoint HTTP reali. Verificati i metodi `api.*` (`webapp/src/api/client.ts`)
+contro route + schemi Pydantic; i payload inviati e le shape lette sono codificati come assert (un drift fa fallire):
+
+| Metodo FE (`client.ts`) | Endpoint BE | Esito |
+|---|---|---|
+| `api.dice.result` → `POST …/dice/result` `DiceResultRequestBody` → `DiceRollResult` | `post_dice_result` / `DiceResultRequest` | ✅ allineato (`rolls[].{kind,value}`, `notation`, `with_inspiration`, `total?`) |
+| `api.items.attack` / `attackUnarmed` (`charId, itemId?, withInspiration=false`) → `WeaponAttackResult` | `attack_with_weapon` / `attack_unarmed` | ✅ allineato sui 10 campi letti |
+| `api.characters.get` → `CharacterFull` (`items[].{item_type,is_equipped}`, `classes`, `heroic_inspiration`) | `get_character` | ✅ allineato |
+
+🟠 **Gap di tipizzazione (ribadito, non funzionale)** — confermato e ora **codificato in un test**
+(`WeaponAttackModal.test.tsx`): `WeaponAttackResult` (in `client.ts` **e** in `WeaponAttackModal.tsx`)
+ha esattamente 10 campi e **omette `homebrew_notifications`** che il BE restituisce opzionale su
+`…/attack` e `…/attack/unarmed`. Nessun impatto runtime (l'interceptor `MutationCache.onSuccess` in
+`main.tsx` lo legge dinamicamente con `'…' in data`); il test asserisce sia l'assenza della chiave nel
+tipo sia che il render regge col campo extra. Cleanup consigliato (non urgente): aggiungere
+`homebrew_notifications?: { … }[]` al tipo.
+
+🟢 **`api.dice.result` — il FE omette `source`/`label`/`modifier`** dal body del reroll: `DiceResultRequest`
+li ha tutti con default (`source=None`, `modifier=0`), quindi il subset inviato dal `DicePoolResultModal`
+(`rolls`/`notation`/`with_inspiration`) è accettato e il `source` finisce a `"manual"`. Coerente, nessun mismatch.
+
 ## Prossimi residui per rischio (per il lotto successivo)
 
-1. FE: componenti/pagine che chiamano **davvero** `api.*` con mutation (es. `pages/Actions`, `pages/HP`, modali HP/AC/slot, `WeaponAttackModal`) → mock `api.*` + contract test sulla shape della risposta + (per `WeaponAttackModal`) regressione sul gap `homebrew_notifications`
-2. `routers/stats.py::PATCH …/ac` + `POST …/ac/reset-override` — override manuale CA + reset da equip (solo parzialmente sfiorati in `test_unarmored_defense`); `POST/PATCH …/carry-capacity[/reset-override]`
-3. `routers/classes.py::DELETE …/classes/{id}` — rimozione classe con scaling HP a ratio (parità con `distribute`); `routers/abilities.py` (CRUD Ability, protezione feature già in `test_ability_protection`)
-4. `routers/dice.py::POST …/dice/result` — tiro generico (4d6kh3, ispirazione) + history; `routers/spells.py::POST …/spells/{id}` create + `PATCH …/concentration`
-5. `core/db/models.py` — enum/property ad alto rischio (`EquipmentSlot`, `is_dead`, `RestorationType`) e proprietà già coperte indirettamente (`proficiency_bonus`/`total_level` toccate dal lotto 5 via endpoint)
-6. FE `lib/*` ancora scoperte (rischio basso): `roman.ts`, `rewardQueue.ts`, `eventMeta.ts`, `itemIcons.ts`, `celebrate.ts`, `silhouette.ts`, `inlineMarkdown.tsx`, `homebrew/i18n-dsl.ts`; FE hooks/store: `useSwipeNavigation`, `useToast`, `unitSettings`, `diceSettings`
+1. FE mutation rimaste (il filone aperto dal lotto 6): `pages/HP.tsx` (7 metodi `api.characters.*`: hp/rest/revive/deathSave/spendHitDice/updateDeathSaves), `pages/ArmorClass.tsx` (`updateAC`/`resetACOverride`/`setUnarmoredDefense`), modali slot/incantesimi. **Pagine grandi (HP 435 / AC 357 righe)** → mockare `api.*` + `Layout` + framer-motion, contract test sulla shape, attenzione a Suspense/useQuery.
+2. `routers/abilities.py` — CRUD Ability (`test_ability_protection.py` pre-esistente da mappare; manca create/update/delete `uses`/`max_uses` e ripristino); `routers/items.py` create/delete item + `equip` senza slot (legacy)
+3. `core/db/models.py` — enum/property ad alto rischio (`EquipmentSlot`, `is_dead`, `RestorationType`, `SpellSlot.use_slot`/`available`, `Character.proficiency_bonus`/`total_level` — toccate solo indirettamente via endpoint)
+4. `routers/spells.py::DELETE …/spells/{id}` (204) + `routers/spell_slots.py` create/delete slot; `routers/characters.py` create/patch/delete top-level (parz. in `test_character_patch_refresh`)
+5. FE `lib/*` ancora scoperte (rischio basso): `roman.ts`, `rewardQueue.ts`, `eventMeta.ts`, `itemIcons.ts`, `celebrate.ts`, `silhouette.ts`, `inlineMarkdown.tsx`, `homebrew/i18n-dsl.ts`; FE hooks/store: `useSwipeNavigation`, `useToast`, `unitSettings`, `diceSettings`
 
 ## File
 
