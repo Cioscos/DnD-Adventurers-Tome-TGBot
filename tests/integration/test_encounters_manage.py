@@ -90,3 +90,70 @@ async def test_patch_requires_gm(client, test_session_factory):
         f"/sessions/{sid}/encounter/combatants/{g1['id']}", json={"name": "Boss"},
     )
     assert r.status_code == 403, r.text
+
+
+# ---------------------------------------------------------------------------
+# DELETE + reorder
+# ---------------------------------------------------------------------------
+
+async def _started_full(client, test_session_factory, monkeypatch) -> tuple[int, dict]:
+    install_fake_telegram(monkeypatch)
+    sid, _ = await setup_full_encounter(client, test_session_factory)
+    r = await client.post(f"/sessions/{sid}/encounter/start", json={})
+    assert r.status_code == 200, r.text
+    return sid, r.json()
+
+
+async def test_delete_active_combatant_moves_pointer_without_round_bump(
+    client, test_session_factory, monkeypatch,
+):
+    sid, enc = await _started_full(client, test_session_factory, monkeypatch)
+    active_id = enc["active_combatant_id"]           # Eroe (primo)
+    next_id = enc["combatants"][1]["id"]             # Goblin 1
+    r = await client.delete(f"/sessions/{sid}/encounter/combatants/{active_id}")
+    assert r.status_code == 200, r.text
+    out = r.json()
+    assert out["active_combatant_id"] == next_id
+    assert out["round"] == 1                          # nessun bump
+    assert all(c["id"] != active_id for c in out["combatants"])
+
+
+async def test_delete_last_alive_clears_pointer(client, test_session_factory, monkeypatch):
+    sid, enc = await _started_full(client, test_session_factory, monkeypatch)
+    ids = [c["id"] for c in enc["combatants"]]
+    for cid in ids[1:]:
+        await client.patch(
+            f"/sessions/{sid}/encounter/combatants/{cid}", json={"is_dead": True},
+        )
+    r = await client.delete(f"/sessions/{sid}/encounter/combatants/{ids[0]}")
+    assert r.json()["active_combatant_id"] is None
+
+
+async def test_reorder_reassigns_sort_order(client, test_session_factory, monkeypatch):
+    sid, enc = await _started_full(client, test_session_factory, monkeypatch)
+    ids = [c["id"] for c in enc["combatants"]]
+    new_order = [ids[1], ids[0], ids[2]]
+    r = await client.post(
+        f"/sessions/{sid}/encounter/reorder", json={"combatant_ids": new_order},
+    )
+    assert r.status_code == 200, r.text
+    assert [c["id"] for c in r.json()["combatants"]] == new_order
+    assert [c["sort_order"] for c in r.json()["combatants"]] == [10, 20, 30]
+
+
+async def test_reorder_with_wrong_ids_is_422(client, test_session_factory, monkeypatch):
+    sid, enc = await _started_full(client, test_session_factory, monkeypatch)
+    ids = [c["id"] for c in enc["combatants"]]
+    r = await client.post(
+        f"/sessions/{sid}/encounter/reorder", json={"combatant_ids": ids[:-1]},
+    )
+    assert r.status_code == 422, r.text
+
+
+async def test_reorder_in_setup_is_409(client, test_session_factory):
+    sid, enc = await _full_setup(client, test_session_factory)
+    ids = [c["id"] for c in enc["combatants"]]
+    r = await client.post(
+        f"/sessions/{sid}/encounter/reorder", json={"combatant_ids": ids},
+    )
+    assert r.status_code == 409, r.text

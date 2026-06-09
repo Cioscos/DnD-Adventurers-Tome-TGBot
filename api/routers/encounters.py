@@ -469,3 +469,93 @@ async def patch_combatant(
     _touch(session)
     await db.flush()
     return build_encounter_block(enc, viewer_is_gm=True)
+
+
+def _move_pointer_off(enc: Encounter, combatants: list[Combatant], removed_id: int) -> None:
+    """Point `active_combatant_id` at the next alive combatant, skipping the
+    one being removed. No round change. None if nobody else is alive."""
+    rows = _ordered(combatants)
+    idx = next((i for i, c in enumerate(rows) if c.id == removed_id), 0)
+    n = len(rows)
+    for step in range(1, n + 1):
+        cand = rows[(idx + step) % n]
+        if cand.id == removed_id or cand.is_dead:
+            continue
+        enc.active_combatant_id = cand.id
+        return
+    enc.active_combatant_id = None
+
+
+@router.delete(
+    "/{session_id}/encounter/combatants/{combatant_id}",
+    response_model=EncounterLive,
+)
+async def delete_combatant(
+    session_id: int,
+    combatant_id: int,
+    user_id: Annotated[int, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> EncounterLive:
+    session = await _load_session(session_id, db)
+    _assert_participant(session, user_id)
+    _assert_gm(session, user_id)
+    _assert_session_active(session)
+    enc = await _require_open_encounter(session_id, db)
+    comb = next((c for c in enc.combatants if c.id == combatant_id), None)
+    if comb is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Combatant not found")
+    if enc.active_combatant_id == comb.id:
+        _move_pointer_off(enc, list(enc.combatants), comb.id)
+    await db.delete(comb)
+    _touch(session)
+    await db.flush()
+    await db.refresh(enc, attribute_names=["combatants"])
+    return build_encounter_block(enc, viewer_is_gm=True)
+
+
+@router.post("/{session_id}/encounter/reorder", response_model=EncounterLive)
+async def reorder_combatants(
+    session_id: int,
+    body: ReorderRequest,
+    user_id: Annotated[int, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> EncounterLive:
+    session = await _load_session(session_id, db)
+    _assert_participant(session, user_id)
+    _assert_gm(session, user_id)
+    _assert_session_active(session)
+    enc = await _require_open_encounter(session_id, db)
+    if enc.status != "active":
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Encounter not active")
+    current_ids = sorted(c.id for c in enc.combatants)
+    requested = body.combatant_ids
+    if sorted(requested) != current_ids or len(requested) != len(set(requested)):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="combatant_ids must match the encounter combatants exactly",
+        )
+    position = {cid: (i + 1) * 10 for i, cid in enumerate(requested)}
+    for c in enc.combatants:
+        c.sort_order = position[c.id]
+    _touch(session)
+    await db.flush()
+    return build_encounter_block(enc, viewer_is_gm=True)
+
+
+@router.post("/{session_id}/encounter/end", response_model=EncounterLive)
+async def end_encounter(
+    session_id: int,
+    user_id: Annotated[int, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> EncounterLive:
+    session = await _load_session(session_id, db)
+    _assert_participant(session, user_id)
+    _assert_gm(session, user_id)
+    _assert_session_active(session)
+    enc = await _require_open_encounter(session_id, db)
+    enc.status = "ended"
+    enc.ended_at = _now()
+    db.add(_system_feed_message(session, "🕊️ Combattimento terminato"))
+    _touch(session)
+    await db.flush()
+    return build_encounter_block(enc, viewer_is_gm=True)

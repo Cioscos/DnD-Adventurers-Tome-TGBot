@@ -193,3 +193,33 @@ async def test_turns_require_gm(client, test_session_factory, monkeypatch):
     as_user(PLAYER_ID)
     assert (await client.post(f"/sessions/{sid}/encounter/next-turn")).status_code == 403
     assert (await client.post(f"/sessions/{sid}/encounter/prev-turn")).status_code == 403
+
+
+# ---------------------------------------------------------------------------
+# end
+# ---------------------------------------------------------------------------
+
+async def test_end_closes_encounter_and_allows_new_one(client, test_session_factory, monkeypatch):
+    sid, _, _ = await _started(client, test_session_factory, monkeypatch)
+    r = await client.post(f"/sessions/{sid}/encounter/end")
+    assert r.status_code == 200, r.text
+    assert r.json()["status"] == "ended"
+    assert r.json()["ended_at"] is not None
+    # incontro chiuso -> se ne può aprire un altro
+    r2 = await client.post(f"/sessions/{sid}/encounter", json={"mode": "light"})
+    assert r2.status_code == 201, r2.text
+
+
+async def test_end_requires_gm(client, test_session_factory, monkeypatch):
+    sid, _, _ = await _started(client, test_session_factory, monkeypatch)
+    as_user(PLAYER_ID)
+    assert (await client.post(f"/sessions/{sid}/encounter/end")).status_code == 403
+
+
+async def test_start_and_end_post_feed_messages(client, test_session_factory, monkeypatch):
+    sid, _, _ = await _started(client, test_session_factory, monkeypatch)
+    await client.post(f"/sessions/{sid}/encounter/end")
+    r = await client.get(f"/sessions/{sid}/messages")
+    bodies = [m["body"] for m in r.json()]
+    assert "⚔️ Combattimento iniziato" in bodies
+    assert "🕊️ Combattimento terminato" in bodies
