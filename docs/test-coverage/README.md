@@ -20,19 +20,19 @@ Va **rilanciato** finché i residui arrivano a 0.
 
 ## Stato copertura
 
-> Aggiornato da `/blinda-test`. Ultimo lotto: **2026-06-09 (lotto 10)** (branch `chore/blinda-test-batch-1`).
-> Il grafo graphify resta su `webapp/src api core` (3468 nodi / 9200 edge). Al lotto 10 solo **2 file
-> in-scope** risultavano modificati dopo il build del grafo (`api/routers/characters.py`,
+> Aggiornato da `/blinda-test`. Ultimo lotto: **2026-06-09 (lotto 11)** (branch `chore/blinda-test-batch-1`).
+> Il grafo graphify resta su `webapp/src api core` (3468 nodi / 9200 edge). Al lotto 11 — come al 10 — solo
+> **2 file in-scope** risultavano modificati dopo il build del grafo (`api/routers/characters.py`,
 > `api/routers/items.py`) — entrambi **edit interni** dei bug-fix (init `char.classes=[]`; riordino reset CA),
 > **nessun endpoint/firma/schema nuovo** ⇒ la superficie API mappata è ancora accurata. `--update` avrebbe
 > riprodotto i falsi positivi "deleted" del mismatch manifest↔scope; merge **saltato**, `graph.json` lasciato
-> **intatto e queryabile** (replica delle decisioni dei lotti 8-9). I "totali" sono inventario su filesystem;
+> **intatto e queryabile** (replica delle decisioni dei lotti 8-10). I "totali" sono inventario su filesystem;
 > le "coperte" sono le unità mappate nel ledger.
 
 | Ambito | Totali | Coperte (ledger) | Residue |
 |---|---|---|---|
-| FE (components 89 · pages 72 · lib 20 · hooks 5 · store 5 + coperte) | 197 | 28 | 169 |
-| BE (endpoint 102 · service 31 · core/game 2 · model/enum 22) | 157 | 108 (**tutte be-green** dopo il run del lotto 10) | 49 |
+| FE (components 89 · pages 72 · lib 20 · hooks 5 · store 5 + coperte) | 197 | 32 | 165 |
+| BE (endpoint 102 · service 31 · core/game 2 · model/enum 22) | 157 | 113 (110 be-green + **3 be-pending** dal lotto 11) | 44 |
 
 > **Back-fill copertura BE pre-esistente (lotto 8):** il diff dei lotti 1-7 ignorava la suite pytest
 > **già presente** nel repo, che copriva molte unità "residue" → falsi negativi. Al lotto 8 sono state
@@ -464,15 +464,83 @@ campi opzionali). Le 4 pagine leggono `ability_scores[].{name,value,modifier}`, 
 `saves_homebrew_modifiers`/`skills_homebrew_modifiers`, `total_level`, `heroic_inspiration`, `conditions` — tutti
 presenti in `CharacterFull`.
 
+### Lotto 2026-06-09 #11 (9 unità: chiusura FE magia/abilità/multiclasse + dice/characters BE)
+
+Chiuse le **3 FE mutation pages più grandi ancora scoperte** (`Spells.tsx` 641 · `Abilities.tsx` 779 ·
+`Multiclass.tsx` 209) + la **modale di level-up multiclasse** (`LevelUpModal.tsx`): tutte invocano `api.*`
+con mutation reali (cast/concentrazione/CRUD incantesimi; usi/ripristino abilità + risorse homebrew;
+rimozione classe; **distribuzione livelli multiclasse**). In parallelo, chiusura dei buchi BE rimasti su
+`dice.py` e sulla collection character (list/delete).
+
+**FE — Vitest, verdi (34 test, 4 file · suite totale 234 test / 32 file):**
+- `pages/Spells.tsx` — skeleton; render incantesimi raggruppati + gemme-slot (`SpellSlotRead`); **cast leveled
+  non-danno con concentrazione** → `spells.use(id, spellId, slotLevel)` poi `updateConcentration`; **cast leveled
+  con danno** → defer alla `SpellDamageSheet` (slot **non** consumato, `data-slot` corretto); **cantrip con danno**
+  → damage sheet a slot 0; **cantrip concentrazione** → `updateConcentration` senza slot; gemma usata→`update{used-1}`
+  / disponibile→`update{used+1}` (clamp); toggle concentrazione da riga → `updateConcentration`; remove → `spells.remove`;
+  **add contract** → `spells.add` con payload trimmato (`level` numerico, vuoti→`undefined`, `is_pinned:false`);
+  **createSlot in auto** → `characters.update{settings.spell_slots_mode:'manual'}` poi `spellSlots.add(level,1)` + toast.
+- `pages/Abilities.tsx` — skeleton; raggruppamento class-features/custom; **add wizard 2-step** con
+  `detectRestoration` end-to-end ("Action Surge"→`short_rest`) → `abilities.add` (`is_active:!is_passive`, `uses==max_uses`);
+  **pallini ≤10**: pip acceso (usato)→`update{uses+1}` (ripristina) / spento→`update{uses-1}` (spende); delete custom →
+  `abilities.remove`; **feature di classe bloccata** → solo `update{description}` via sheet description-only; **risorse
+  homebrew** inc/dec/restore → `homebrew.patchResource` (clamp `max(0,·)`/`min(max,·)`).
+- `pages/Multiclass.tsx` — skeleton; livello totale da `levelFromXp` (lib reale, non mockata); banner level-up
+  solo se `targetLevel > Σlivelli` con classi presenti; card classe (nome/sottoclasse/`d{hit_die}`/livello); apri
+  "gestisci classi"; empty state; **rimozione classe** via `ConfirmSheet` → `classes.remove(charId, classId)`.
+- `pages/multiclass/LevelUpModal.tsx` — selettore per-classe (default = prima classe); **confirm** → `classes.distribute`
+  con **+1 alla classe selezionata, le altre invariate**; cambio selezione redirige il +1; toast level-up + **toast
+  `hp_gained`** quando >0 + confetti (non-reducedMotion) + `onClose`; **classe a livello 20 → confirm disabilitato**,
+  nessuna `distribute`. `classProgression` reale (bridge IT/EN).
+
+**BE — pytest (da eseguire su Windows):**
+- `routers/characters.py::GET /characters` → `tests/integration/test_characters_list_delete.py` (**be-pending**) —
+  lista `CharacterSummary` **solo del proprietario**, ordinata per id, shape completa, `total_level`/`class_summary`
+  riflettono la classe iniziale; esclude i personaggi di altri owner (inseriti via session factory).
+- `routers/characters.py::DELETE /characters/{id}` → `test_characters_list_delete.py` (**be-pending**) — 204 + GET
+  successiva 404, rimozione mirata dalla lista, 404 ignoto, **403 owner diverso**.
+- `routers/dice.py::POST …/dice/post-to-chat` → `tests/integration/test_dice_post_to_chat.py` (**be-pending**) —
+  ownership prima del token (404/403), **503 senza `BOT_TOKEN`**, happy-path con `httpx.AsyncClient` **monkeypatchato**
+  (asserisce `chat_id`=utente autenticato, `parse_mode=Markdown`, testo single `🎲 d20: *18*` vs multi `🎲 2d6: 3 + 5 = *8*`),
+  **502** se Telegram risponde non-2xx.
+
+> **Back-fill copertura BE pre-esistente:** `routers/dice.py::GET …/dice/history` e `DELETE …/dice/history` erano già
+> coperti da `tests/integration/test_dice_result.py` (`test_history_records_roll_then_clears`, verde nel run 547/0) ma
+> mai mappati → mappati ora come **be-green** senza rigenerare nulla.
+
+**Lotto 11 — compat FE↔API.** Verificati i metodi `api.*` (`webapp/src/api/client.ts`) invocati dalle 4 unità FE
+contro route + schemi Pydantic. Tutti **allineati**, nessun mismatch 🔴/🟠; i payload inviati e le shape lette sono
+codificati come assert (un drift fa fallire):
+
+| Metodo FE (`client.ts`) | Endpoint BE | Esito |
+|---|---|---|
+| `spells.add` → `POST …/spells` `Partial<Spell>` → `Spell` | `add_spell` / `SpellCreate` | ✅ allineato (payload trimmato, `level` numerico, `is_pinned:false`) |
+| `spells.use` → `POST …/spells/{id}/use` `{slot_level}` → `CharacterFull` | `use_spell` / `SpellUseRequest` | ✅ allineato |
+| `spells.updateConcentration` → `PATCH …/concentration` `{spell_id}` → `CharacterFull` | `update_concentration` / `ConcentrationUpdate` | ✅ allineato |
+| `spells.remove` → `DELETE …/spells/{id}` (204) | `delete_spell` | ✅ allineato |
+| `spellSlots.update`/`add` → `PATCH …/spell_slots/{id}` · `POST …/spell_slots` | `update_spell_slot` / `add_spell_slot` | ✅ allineato (riuso lotto 3/9) |
+| `characters.update` → `PATCH …/characters/{id}` `{settings}` → `CharacterFull` | `update_character` / `CharacterUpdate` | ✅ allineato (switch auto→manual) |
+| `abilities.add`/`update`/`remove` → `POST/PATCH/DELETE …/abilities[/{id}]` | `*_ability` / `AbilityCreate`·`AbilityUpdate` | ✅ allineato (`uses`/`description`-only/`max_uses`) |
+| `homebrew.listResources`/`patchResource` → `GET/PATCH …/homebrew/resources[/{id}]` `{current}` | `list_resources` / `patch_resource` | ✅ allineato |
+| `classes.remove` → `DELETE …/classes/{id}` → `CharacterFull` | `remove_class` | ✅ allineato (riuso lotto 6) |
+| `classes.distribute` → `PATCH …/classes/distribute` `{classes:[{class_id,level}]}` → `CharacterFull` (`hp_gained`) | `distribute_class_levels` / `ClassDistribute` | ✅ allineato (riuso lotto 4) |
+
+Note di contratto codificate: `LevelUpModal` invia un payload `distribute` che **incrementa di 1 solo la classe selezionata**
+(le altre col loro livello corrente) — l'oracolo dello scaling HP a ratio è già coperto BE (`test_classes_distribute.py`).
+`Spells.tsx` legge `settings.spell_slots_mode` (source-of-truth in `settings`, vedi `[[project_spell_slots_mode_source]]`);
+in **auto** la creazione slot dalla modale di cast passa prima da `characters.update` per portare il personaggio in manuale.
+`Abilities.tsx` consuma `Ability`/`AbilityRead` (`uses`/`max_uses`/`is_class_feature`/`source_class_id`) e le risorse
+homebrew (`HomebrewResource`: `id`/`current`/`max`) — tutti presenti nei serializer.
+
 ## Prossimi residui per rischio (per il lotto successivo)
 
 1. **FE mutation pages restanti** (HP/ArmorClass/Currency/SpellSlots/Experience/AbilityScores/SavingThrows/Skills/
-   Conditions chiusi): `pages/Spells.tsx` (641 righe — create/patch/delete incantesimi, cast, concentrazione, roll
-   danno), `pages/Abilities.tsx` (779 righe — uses/ripristino), `pages/Multiclass.tsx` + `multiclass/LevelUpModal.tsx`/
-   `EditClassesModal.tsx` (add/update/delete/distribute classi, level-up), `pages/Inventory.tsx`/`Identity.tsx`/`Settings.tsx`.
+   Conditions/**Spells/Abilities/Multiclass/LevelUpModal** chiusi): `pages/Inventory.tsx` (743 righe — CRUD item,
+   equip/slot, attacco), `multiclass/EditClassesModal.tsx` (add/update/distribute classi inline), `pages/Identity.tsx`
+   (351 — patch identità), `pages/Settings.tsx` (568 — preferenze, slot mode, silhouette upload).
 2. **Router ancora scoperti**: `routers/sessions.py` (13 endpoint, sessioni di gioco) interamente; `routers/maps.py`
-   (6, upload/serve), `routers/notes.py` (6, incl. voice), `routers/silhouette.py` (3),
-   `routers/dice.py` (history/post-to-chat); `routers/characters.py` list/delete.
+   (6, upload/serve), `routers/notes.py` (6, incl. voice), `routers/silhouette.py` (3). `routers/dice.py` e
+   `routers/characters.py` list/delete **chiusi al lotto 11**.
 3. FE `lib/*`/hooks/store residui (rischio basso): `rewardQueue.ts`, `eventMeta.ts`, `itemIcons.ts`,
    `celebrate.ts`, `inlineMarkdown.tsx`, `homebrew/i18n-dsl.ts`; hooks `useSwipeNavigation`/`useToast`/
    `useIntersection`/`useReducedMotion`; store `diceSettings`/`overlayStore`/`themeSettings`.
