@@ -200,17 +200,22 @@ async def update_item(
     if "is_equipped" in data or "equipment_slot" in data:
         item_meta = json.loads(item.item_metadata) if item.item_metadata else {}
         base_locked = char.base_armor_class_override or bool(char.unarmored_defense_ability)
-        if item.item_type == "armor" and not base_locked:
-            char.base_armor_class = item_meta.get("ac_value", 10) if item.is_equipped else 10
-        elif item.item_type == "shield" and not char.shield_armor_class_override:
-            char.shield_armor_class = item_meta.get("ac_bonus", 2) if item.is_equipped else 0
 
-        # If the swap displaced an armor or shield, reset its AC contribution.
+        # Neutralize the displaced occupant's AC contribution FIRST, then apply
+        # the newly-equipped item's. Order matters: on a same-slot armor/shield
+        # swap the displaced piece shares the new item's component (base/shield),
+        # so resetting it AFTER would clobber the value the new piece just set —
+        # leaving the character at base 10 / shield 0 (the new AC silently lost).
         if displaced is not None:
             if displaced.item_type == "armor" and not base_locked:
                 char.base_armor_class = 10
             elif displaced.item_type == "shield" and not char.shield_armor_class_override:
                 char.shield_armor_class = 0
+
+        if item.item_type == "armor" and not base_locked:
+            char.base_armor_class = item_meta.get("ac_value", 10) if item.is_equipped else 10
+        elif item.item_type == "shield" and not char.shield_armor_class_override:
+            char.shield_armor_class = item_meta.get("ac_bonus", 2) if item.is_equipped else 0
 
     # Auto-recompute HP when CON modifier changes due to equip/unequip
     settings = char.settings or {}

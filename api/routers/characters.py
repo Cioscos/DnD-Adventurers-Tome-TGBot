@@ -200,6 +200,11 @@ async def create_character(
     # feature di classe (in create_class_for_character) non tenti un lazy-load
     # in contesto async (MissingGreenlet). Mirror di ability_scores/currency.
     char.abilities = []
+    # Stesso motivo: create_class_for_character fa `if cls not in char.classes`.
+    # Su un char appena flushato (persistente) la collection classes non è
+    # caricata, quindi senza questa init l'accesso scatena un lazy-load async →
+    # MissingGreenlet (rompe POST /characters con initial_class).
+    char.classes = []
     # Apply optional identity in the SAME transaction (atomic create). Same
     # field→column mapping as update_character; set before flush so it lands
     # in the initial INSERT.

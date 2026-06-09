@@ -1,0 +1,2264 @@
+{
+  "version": 1,
+  "description": "Ledger di copertura test mantenuto dal comando locale /blinda-test. Mappa ogni unità testabile (FE/BE) ai test associati. Rigenerabile/aggiornabile ad ogni run del comando.",
+  "last_batch": {
+    "date": "2026-06-09",
+    "name": "lotto 22",
+    "branch": "chore/blinda-test-batch-1",
+    "focus": "Pagine hub/display/sessione: MenuScreen, Changelog, CharacterMain (fetch+swiper+ispirazione), Session (landing), SessionJoin (join), History (timeline+clear). 16 test Vitest verdi. Pagine giant (Inventory/Settings/SessionRoom/SessionFeed/Homebrew/EditClassesModal) + HeroScreen/Identity ai prossimi lotti.",
+    "be_run": {
+      "date": "2026-06-09",
+      "result": "n/a",
+      "note": "lotto FE-only: nessun pytest nuovo"
+    }
+  },
+  "units": {
+    "fe:lib/dnd.ts": {
+      "tests": [
+        "webapp/tests/unit/lib/dnd.test.ts"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "profBonus + mod: matematica D&D 5e condivisa (funzioni pure).",
+      "updated": "2026-06-09"
+    },
+    "fe:lib/xpThresholds.ts": {
+      "tests": [
+        "webapp/tests/unit/lib/xpThresholds.test.ts"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "levelFromXp / getNextLevelThreshold / quickXpAmounts (soglie XP SRD).",
+      "updated": "2026-06-09"
+    },
+    "fe:lib/classProgression.ts": {
+      "tests": [
+        "webapp/tests/unit/lib/classProgression.test.ts"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Bridge class_name EN → chiave JSON IT; contract test su class-progression.json.",
+      "updated": "2026-06-09"
+    },
+    "fe:lib/unarmedStrike.ts": {
+      "tests": [
+        "webapp/tests/unit/lib/unarmedStrike.test.ts"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Contract mirror di core/game/attacks.py::martial_arts_die (allineato).",
+      "updated": "2026-06-09"
+    },
+    "fe:lib/equipmentSlots.ts": {
+      "tests": [
+        "webapp/tests/unit/lib/equipmentSlots.test.ts"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Contract mirror di api/services/equipment.py::EQUIPMENT_SLOT_COMPAT (allineato) + isTwoHanded/handsConflict.",
+      "updated": "2026-06-09"
+    },
+    "be:routers/hp.py::POST /characters/{id}/death_saves/roll": {
+      "tests": [
+        "tests/integration/test_death_save_roll.py"
+      ],
+      "status": "be-green",
+      "note": "Regole D&D 5e: nat20 rianima a 1 HP, nat1 = 2 fallimenti, 10+ successo, 2-9 fallimento, 3 fallimenti = morto. Body die deterministico.",
+      "updated": "2026-06-09"
+    },
+    "be:routers/hp.py::POST /characters/{id}/rest": {
+      "tests": [
+        "tests/integration/test_rest.py"
+      ],
+      "status": "be-green",
+      "note": "Riposo lungo: HP a max + reset tiri morte. Riposo breve: cura solo per dadi vita (clampata). rest_type invalido = 400.",
+      "updated": "2026-06-09"
+    },
+    "be:services/spell_slots.py::recalc_spell_slots": {
+      "tests": [
+        "tests/services/test_recalc_spell_slots.py"
+      ],
+      "status": "be-green",
+      "note": "Ricalcolo automatico slot: crea/aggiorna, preserva used (clamp), droppa slot non più concessi, no-op in manual, pool pact warlock separato.",
+      "updated": "2026-06-09"
+    },
+    "be:core/game/attacks.py": {
+      "tests": [
+        "tests/services/test_attacks.py"
+      ],
+      "status": "be-green",
+      "note": "Pre-esistente. martial_arts_die + unarmed_strike_profile. Mappato per evitare ri-selezione.",
+      "updated": "2026-06-09"
+    },
+    "be:services/class_features.py::sync_class_feature_abilities": {
+      "tests": [
+        "tests/services/test_class_features.py"
+      ],
+      "status": "be-green",
+      "note": "Pre-esistente. Sync feature di classe in Ability. Mappato per evitare ri-selezione.",
+      "updated": "2026-06-09"
+    },
+    "fe:lib/conditions.ts": {
+      "tests": [
+        "webapp/tests/unit/lib/conditions.test.ts"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "CONDITION_ICONS (14 condizioni 5e + spossatezza) + formatCondition; ramo exhaustion-con-livello (int dal BE riposo) vs slug. Lib pura, nessuna chiamata api.*.",
+      "updated": "2026-06-09"
+    },
+    "fe:lib/resourceDiff.ts": {
+      "tests": [
+        "webapp/tests/unit/lib/resourceDiff.test.ts"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "diffResourceMaxes: delta max_uses positivi per Ability is_class_feature (toast scaling pool). Contratto FE Ability ↔ BE AbilityRead allineato per i campi consumati (id/name/max_uses/is_class_feature).",
+      "updated": "2026-06-09"
+    },
+    "fe:store/characterStore.ts": {
+      "tests": [
+        "webapp/tests/unit/store/characterStore.test.ts"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Zustand store UI: setActiveCharId azzera activeScreen solo al cambio id; setActiveScreen/setLocale; derivazione locale da getLanguageCode. Stato client puro.",
+      "updated": "2026-06-09"
+    },
+    "be:routers/hp.py::PATCH /characters/{id}/hp": {
+      "tests": [
+        "tests/integration/test_hp_update.py"
+      ],
+      "status": "be-green",
+      "note": "5 op HPOp + regole morte: temp HP assorbito prima, clamp a 0, danno-a-0 +1 fallimento (+2 critico), overflow massiccio = morte istantanea, HEAL>0 azzera tiri morte, set_max/set_current/set_temp clamp.",
+      "updated": "2026-06-09"
+    },
+    "be:routers/hp.py::PATCH /characters/{id}/death_saves": {
+      "tests": [
+        "tests/integration/test_death_saves_update.py"
+      ],
+      "status": "be-green",
+      "note": "Azioni manuali: SUCCESS x3 = stabile, FAILURE x3 = morto, STABILIZE = stabile + 1 HP, RESET azzera. Da morto endpoint inerte.",
+      "updated": "2026-06-09"
+    },
+    "be:routers/hp.py::POST /characters/{id}/revive": {
+      "tests": [
+        "tests/integration/test_death_saves_update.py"
+      ],
+      "status": "be-green",
+      "note": "Rianima morto a 1 HP + reset tiri morte + clear concentrazione; no-op idempotente se vivo (non forza 1 HP).",
+      "updated": "2026-06-09"
+    },
+    "be:routers/hp.py::POST /characters/{id}/hit_dice/spend": {
+      "tests": [
+        "tests/integration/test_hit_dice_spend.py"
+      ],
+      "status": "be-green",
+      "note": "Cura = roll + mod CON (min 1/dado) clampata al max; class_id ignoto = 404, count<1 = 400. Asserzioni robuste su rolls/con_bonus riportati (CON 10 = mod 0).",
+      "updated": "2026-06-09"
+    },
+    "be:services/equipment.py::swap_slot_occupant": {
+      "tests": [
+        "tests/services/test_swap_slot_occupant.py"
+      ],
+      "status": "be-green",
+      "note": "Displacement atomico paper-doll: sgombra solo item equipaggiato nello STESSO slot con id DIVERSO; ignora altro slot, sé stesso, item non equipaggiato. Restituisce displaced per reset CA.",
+      "updated": "2026-06-09"
+    },
+    "fe:lib/sessionHelpers.ts": {
+      "tests": [
+        "webapp/tests/unit/lib/sessionHelpers.test.ts"
+      ],
+      "apis": [
+        "GET /sessions/me",
+        "GET /sessions/{id}"
+      ],
+      "status": "fe-green",
+      "note": "getMyRole (gm>player>none, guardie null) + formatUptime (Xm / Xh Ym, ISO o Date, clamp negativi). Contratto FE↔BE: legge gm_user_id/participants[].user_id/created_at = GameSessionRead (api/schemas/session.py) — allineato, codificato negli assert.",
+      "updated": "2026-06-09"
+    },
+    "fe:hooks/useLongPress.ts": {
+      "tests": [
+        "webapp/tests/unit/hooks/useLongPress.test.ts"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Tap vs long-press vs move-cancel (>12px); ramo onProgress (ring poll ~30Hz, fake Date). Regressione [[reference_uselongpress_cancel_then_end]] codificata: pointercancel pre-soglia + touchend stray NON ritocca onClick; doppia consegna pointer+touch = singolo onClick.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/ui/HPGauge.tsx": {
+      "tests": [
+        "webapp/tests/unit/ui/HPGauge.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Presentazionale puro (props current/max/temp). 10 celle segmentate, pulse-danger a ≤25%, no-crash con max=0, modalità non-segmentata, overlay temp. framer-motion mockato (m.* + useReducedMotion → niente matchMedia in jsdom).",
+      "updated": "2026-06-09"
+    },
+    "be:routers/hp.py::POST /characters/{id}/hp/recalc": {
+      "tests": [
+        "tests/integration/test_hp_recalc.py"
+      ],
+      "status": "be-green",
+      "note": "Ricalcolo max da formula total_base_hp(classes, effective_con_mod): max cala → current clampato giù; max sale → current += delta; nessuna classe → 0/0. Setup deterministico (d10 L1 CON10 → 10 HP letto dalla create). Contratto: ritorna CharacterFull con ac_breakdown.",
+      "updated": "2026-06-09"
+    },
+    "be:routers/spell_slots.py::PATCH /characters/{id}/spell_slots/{slot_id}": {
+      "tests": [
+        "tests/integration/test_spell_slots.py"
+      ],
+      "status": "be-green",
+      "note": "Cast (used↑) vs refund (used↓): spell_cast solo su incremento (niente regole → niente homebrew_notifications). PATCH total-only lascia used. Slot inesistente = 404. available = total-used. Contratto = FE SpellSlot (id/level/total/used/available/is_pact).",
+      "updated": "2026-06-09"
+    },
+    "be:routers/spell_slots.py::POST /characters/{id}/spell_slots/reset": {
+      "tests": [
+        "tests/integration/test_spell_slots.py"
+      ],
+      "status": "be-green",
+      "note": "Azzera used su tutti gli slot (parità riposo lungo) e ritorna CharacterFull; available risale a total.",
+      "updated": "2026-06-09"
+    },
+    "be:services/character_response.py::build_character_response": {
+      "tests": [
+        "tests/integration/test_character_response.py"
+      ],
+      "status": "be-green",
+      "note": "Serializer centrale (via GET /characters/{id} + POST /items). ac_breakdown {base,shield,magic,homebrew}, ac=base+shield+magic; default homebrew puliti (0 / mappe vuote); has_custom_silhouette=False; risoluzione ability_scores (base/value/modifier/modifiers_applied) con modificatore item equipaggiato che fluisce in _resolve_ability_effective.",
+      "updated": "2026-06-09"
+    },
+    "be:routers/items.py::PATCH /characters/{id}/items/{item_id}": {
+      "tests": [
+        "tests/integration/test_item_equip_ac.py"
+      ],
+      "status": "be-green",
+      "note": "Giro CA end-to-end: equip armor → base = ac_value, unequip → 10; shield → shield = ac_bonus; displacement nello stesso slot resetta la CA dell'occupante sostituito; slot incompatibile col tipo = 422. Asserito via ac_breakdown/ac.",
+      "updated": "2026-06-09"
+    },
+    "be:routers/spells.py::POST /characters/{id}/spells/{spell_id}/use": {
+      "tests": [
+        "tests/integration/test_spell_use.py"
+      ],
+      "apis": [
+        "POST /characters/{id}/spells/{id}/use"
+      ],
+      "status": "be-green",
+      "note": "Consumo slot (used+1, available=total-used) + attiva concentrazione se is_concentration (concentrating_spell_id=spell_id; None se non-conc). 400 senza slot al livello / slot esauriti; 404 spell ignota. Contratto = FE CharacterFull (spell_slots[].{used,available}, concentrating_spell_id).",
+      "updated": "2026-06-09"
+    },
+    "be:routers/spells.py::POST /characters/{id}/spells/{spell_id}/roll_damage": {
+      "tests": [
+        "tests/integration/test_spell_roll_damage.py"
+      ],
+      "apis": [
+        "POST /characters/{id}/spells/{id}/roll_damage"
+      ],
+      "status": "be-green",
+      "note": "Danno deterministico via main_rolls/extra_rolls (no RNG): crit raddoppia il NUMERO di dadi (2N atteso), half_damage=(total+1)//2 round-up, bonus piatto in damage_dice sommato una volta, extra_dice additivo. 400: lunghezza/range main_rolls errati, casting_level<spell.level o >9, damage_dice assente. Contratto = FE RollDamageResult (main_kind/main_rolls/extra_kind/extra_rolls).",
+      "updated": "2026-06-09"
+    },
+    "be:routers/spells.py::POST /characters/{id}/concentration/save": {
+      "tests": [
+        "tests/integration/test_concentration_save.py"
+      ],
+      "apis": [
+        "POST /characters/{id}/concentration/save"
+      ],
+      "status": "be-green",
+      "note": "Esercita _helpers.roll_concentration_save: DC=max(10, danno//2), nat20 successo / nat1 fallimento a prescindere dal DC, altrimenti die+CONmod>=DC (CON 10 → bonus 0, total=die). Fallimento mentre concentra → lost_concentration True + concentrating_spell_id azzerato (verificato via GET). Contratto = FE ConcentrationSaveResult (estende RollResult: die/bonus/total/is_critical/is_fumble + dc/success/lost_concentration).",
+      "updated": "2026-06-09"
+    },
+    "be:routers/items.py::POST /characters/{id}/items/{item_id}/attack": {
+      "tests": [
+        "tests/integration/test_weapon_attack.py"
+      ],
+      "apis": [
+        "POST /characters/{id}/items/{id}/attack"
+      ],
+      "status": "be-green",
+      "note": "RNG pinnato (sequenza: d20 colpire poi dadi danno). to_hit_total=d20+mod+PB; nat20 crit raddoppia i dadi danno, nat1 fumble azzera (rolls[0], bonus 0, total 0); selezione mod: melee→STR, ranged→DEX, finesse→max(STR,DEX) (DEX bumpato via PATCH ability_scores). with_inspiration consuma il token (verificato via GET heroic_inspiration False); 409 se assente; non-arma 400; item ignoto 404. Contratto = FE WeaponAttackResult.",
+      "updated": "2026-06-09"
+    },
+    "be:routers/items.py::POST /characters/{id}/attack/unarmed": {
+      "tests": [
+        "tests/integration/test_unarmed_attack.py"
+      ],
+      "apis": [
+        "POST /characters/{id}/attack/unarmed"
+      ],
+      "status": "be-green",
+      "note": "Mirror BE di core/game/attacks.py::unarmed_strike_profile (lib FE unarmedStrike testata a parte). Non-monaco: damage_dice '1', flat-1 NON raddoppiato dal crit. Monaco L5: dado arti marziali '1d6', mod=max(STR,DEX), crit raddoppia i dadi; PB L5=+3. with_inspiration consuma/409.",
+      "updated": "2026-06-09"
+    },
+    "be:routers/classes.py::PATCH /characters/{id}/classes/distribute": {
+      "tests": [
+        "tests/integration/test_classes_distribute.py"
+      ],
+      "apis": [
+        "PATCH /characters/{id}/classes/distribute"
+      ],
+      "status": "be-green",
+      "note": "Ridistribuzione livelli atomica su MULTICLASSE (così PATCH /xp non auto-sincronizza il livello del monoclasse). Validazioni: body copre esattamente i class_id → 400 classes_mismatch; sum(level)>livello-da-XP → 400 sum_exceeds_target. Happy path G2+L1: HP da total_base_hp = 10+6+5=21, current scalato a ratio (full→21; 5/10→round(0.5·21)=10), hp_gained=11. Contratto = FE CharacterFull (classes[].level, hit_points, current_hit_points, hp_gained).",
+      "updated": "2026-06-09"
+    },
+    "fe:lib/relativeTime.ts": {
+      "tests": [
+        "webapp/tests/unit/lib/relativeTime.test.ts"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "formatRelative (oggi/ieri/Intl day-week 2-30gg/data assoluta), formatAbsolute, dayKey (YYYY-MM-DD zero-pad), dayHeader. Lib pura: rami locale-aware pinnati contro le stesse Intl API; now fisso per bucket deterministici; date costruite/lette in locale → TZ-independent; verificata la non-mutazione di now/date nel diff.",
+      "updated": "2026-06-09"
+    },
+    "fe:lib/spellSrd.ts": {
+      "tests": [
+        "webapp/tests/unit/lib/spellSrd.test.ts"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "lookupSrdSpell (chiave canonica + alias, case-insensitive, trim, null su vuoto/ignoto) + srdSpellNames (canoniche+alias, esclude chiavi _, ordinate). JSON spells-srd mockato (vi.mock hoisted) → testa la LOGICA di indicizzazione indipendente dai dati reali.",
+      "updated": "2026-06-09"
+    },
+    "be:core/game/stats.py": {
+      "tests": [
+        "tests/services/test_stats.py"
+      ],
+      "status": "be-green",
+      "note": "VERIFICATO 31/31 su Windows (uv run pytest, 2026-06-09). Matematica derivata D&D 5e PURA (no DB). ability_modifier (floor-div, 1→-5/3→-4), hit_points_for_level (L1=die+CON, L2+=die//2+1+CON, clamp min 1, ValueError su level<1/hit_die<=0), unarmored_defense_ac (10+DEX+2a), total_base_hp (id più basso possiede lo slot L1, resto formula 2+; ordinamento per id; CON per livello; 0 se vuoto), effective_ability_score (relativi sommati + assoluti come pavimento via max, combinazione, altri ability/valori non-int ignorati, JSON-string parse, ValueError ability ignota). Stub via SimpleNamespace.",
+      "updated": "2026-06-09"
+    },
+    "be:routers/stats.py::PATCH /characters/{id}/ability_scores/{ability_name}": {
+      "tests": [
+        "tests/integration/test_ability_scores.py"
+      ],
+      "apis": [
+        "PATCH /characters/{id}/ability_scores/{ability}"
+      ],
+      "status": "be-green",
+      "note": "Validazione 1-30 (else 400). CON↑/↓ ripple HP retroattivo: delta_con_mod * total_level su hit_points e current (simmetrico, hp_auto_calc default). STR cambia → recalculate_carry_capacity (STR*15). DEX/altra ability non-CON NON tocca HP. Contratto = FE CharacterFull (hit_points/current_hit_points/carry_capacity/ability_scores[].{value,modifier}).",
+      "updated": "2026-06-09"
+    },
+    "be:routers/stats.py::POST /characters/{id}/ac/unarmored-defense": {
+      "tests": [
+        "tests/integration/test_unarmored_defense.py"
+      ],
+      "apis": [
+        "POST /characters/{id}/ac/unarmored-defense"
+      ],
+      "status": "be-green",
+      "note": "Difesa Senza Armatura (Barbaro CON / Monaco SAG): abilita → base CA = 10+DEX+2a e resta in sync ai cambi DEX/2a (verificato via PATCH ability_scores), clear del base_armor_class_override (mutuamente esclusivi); disabilita (null) → base torna a 10 (nessuna armatura). 400 se ability ∉ {wisdom,constitution}. Asserito via ac_breakdown.base/ac/unarmored_defense_ability/base_armor_class_override. Esercita anche PATCH /ac per impostare l'override.",
+      "updated": "2026-06-09"
+    },
+    "be:routers/characters.py::PATCH /characters/{id}/xp": {
+      "tests": [
+        "tests/integration/test_xp_levelup.py"
+      ],
+      "apis": [
+        "PATCH /characters/{id}/xp"
+      ],
+      "status": "be-green",
+      "note": "set/add con clamp >=0. Monoclasse: livello tracciato da xp_to_level (300→L2, 900→L3), HP +hit_points_for_level(2+) per livello guadagnato (hp_gained popolato). Level-DOWN: livello sincronizzato ma HP NON ridotti (hp_gained None). Multiclasse: nessun auto-sync del livello (livelli invariati). Contratto = FE CharacterFull (experience_points/classes[].level/hit_points/current_hit_points/hp_gained).",
+      "updated": "2026-06-09"
+    },
+    "be:routers/classes.py::POST /characters/{id}/classes": {
+      "tests": [
+        "tests/integration/test_add_class.py"
+      ],
+      "apis": [
+        "POST /characters/{id}/classes"
+      ],
+      "status": "be-green",
+      "note": "1a classe su char a 0 HP → bootstrap HP (formula L1) + seed 2 save proficiency della classe iniziale (PHB). Classe SUCCESSIVA → HP invariato (ricalcolo solo via distribute/xp/edit-livello) e NESSUNA save proficiency aggiuntiva (regola multiclasse PHB). Classe predefinita (CLASS_HIT_DIE/CLASS_SPELLCASTING) → default hit_die/spellcasting_ability se omessi (Mago→6/intelligence). 404 char inesistente. Contratto = FE CharacterFull (classes[]/hit_points/saving_throws).",
+      "updated": "2026-06-09"
+    },
+    "be:routers/classes.py::PATCH /characters/{id}/classes/{class_id}": {
+      "tests": [
+        "tests/integration/test_update_class.py"
+      ],
+      "apis": [
+        "PATCH /characters/{id}/classes/{classId}"
+      ],
+      "status": "be-green",
+      "note": "Edit grezzo di classe (level/subclass/hit_die) SENZA ricalcolo HP (path manuale, a differenza di xp/distribute): level 1→5 lascia HP 10 ma proficiency_bonus→3. level-UP ri-sincronizza le feature di classe predefinite (Monaco L1→L2 crea Ability monk.ki max_uses=2). 404 class_id ignoto. Contratto = FE CharacterFull (classes[]/proficiency_bonus/abilities[].{feature_key,max_uses}).",
+      "updated": "2026-06-09"
+    },
+    "be:routers/characters.py::POST /characters/{id}/skills/{skill_name}/roll": {
+      "tests": [
+        "tests/integration/test_skill_roll.py"
+      ],
+      "apis": [
+        "POST /characters/{id}/skills/{skillName}/roll"
+      ],
+      "status": "be-green",
+      "note": "d20 deterministico (D20RollSubmission.die). bonus = mod abilità governante + (0 / PB se proficient / 2xPB se 'expert'); mod abilità incluso (STR 16→+3). nat20 is_critical, nat1 is_fumble. skill ignota 400. with_inspiration: 409 se assente, altrimenti consuma heroic_inspiration (verificato via GET). Contratto = FE RollResult (die/bonus/total/is_critical/is_fumble/description).",
+      "updated": "2026-06-09"
+    },
+    "be:routers/characters.py::POST /characters/{id}/saving_throws/{ability}/roll": {
+      "tests": [
+        "tests/integration/test_saving_throw_roll.py"
+      ],
+      "apis": [
+        "POST /characters/{id}/saving_throws/{ability}/roll"
+      ],
+      "status": "be-green",
+      "note": "d20 deterministico. bonus = mod abilità + (PB se proficient, else 0). Guerriero iniziale seedato proficient in STR/CON → ramo proficient esercitato senza setup; DEX non-proficient con mod (14→+2) prova il solo mod. ability ignota 400. nat20/nat1 flags. with_inspiration 409/consumo. Contratto = FE RollResult.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/WeaponAttackModal.tsx": {
+      "tests": [
+        "webapp/tests/unit/components/WeaponAttackModal.test.tsx"
+      ],
+      "apis": [
+        "POST /characters/{id}/items/{itemId}/attack",
+        "POST /characters/{id}/attack/unarmed"
+      ],
+      "status": "fe-green",
+      "note": "Presentazionale (props WeaponAttackResult): colpo normale (emerald) / crit (gold+pulse+label '(critico)') / fumble (crimson, blocco danno NASCOSTO); bottone reroll ispirazione (mostrato solo se inspirationAvailable && !wasRerolled && handler, fired onClick) e sottotitolo badge a wasRerolled. framer-motion + ResultDialog + InspirationRerollButton mockati. Gap 🟠 CODIFICATO: il tipo FE WeaponAttackResult ha esattamente 10 campi e OMETTE homebrew_notifications (che il BE restituisce opzionale); render non rotto col campo extra a runtime (letto dinamicamente dall'interceptor MutationCache).",
+      "updated": "2026-06-09"
+    },
+    "fe:components/DicePoolResultModal.tsx": {
+      "tests": [
+        "webapp/tests/unit/components/DicePoolResultModal.test.tsx"
+      ],
+      "apis": [
+        "POST /characters/{id}/dice/result"
+      ],
+      "status": "fe-green",
+      "note": "Mutation reroll ispirazione → api.dice.result. Render gruppi (notation/total) + 'Totale:' su pool multi-gruppo; bottone reroll solo su pool d20 puro (1 gruppo, 1 d20). Click → body DiceResultRequestBody ESATTO {rolls:[{kind:'d20',value}], notation:'1d20', with_inspiration:true} (Math.random pinnato; animate3d=false → niente canvas 3D), onSuccess locka il bottone + badge; 409 → toast.error e bottone resta. Contratto FE↔BE: DiceResultRequestBody === DiceResultRequest.",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/Actions.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/Actions.test.tsx"
+      ],
+      "apis": [
+        "GET /characters/{id}",
+        "POST /characters/{id}/items/{itemId}/attack",
+        "POST /characters/{id}/attack/unarmed"
+      ],
+      "status": "fe-green",
+      "note": "Skeleton mentre la query è pending; lista SOLO armi equipaggiate (filtro item_type==='weapon' && is_equipped); attacco arma → api.items.attack(charId,itemId), disarmato → api.items.attackUnarmed(charId), reroll → terzo arg with_inspiration=true sullo stesso endpoint. Apre WeaponAttackModal (mockato) col WeaponAttackResult intero. Layout/Surface/SectionDivider/WeaponAttackModal/skeleton mockati; useParams pinnato a id=7.",
+      "updated": "2026-06-09"
+    },
+    "be:routers/classes.py::DELETE /characters/{id}/classes/{class_id}": {
+      "tests": [
+        "tests/integration/test_delete_class.py"
+      ],
+      "status": "be-green",
+      "note": "Rimozione classe con scaling HP a ratio (parità con distribute): da Guerriero L2+Ladro L1 (21 HP), DELETE Ladro → total_base_hp([G L2])=16, current pieno→16, danneggiato 7/21→round(7/21·16)=5/16. Ultima classe rimossa → total_base_hp([])=0 → 0/0. 404 class_id ignoto (_get_class). Contratto = CharacterFull (classes/hit_points/current_hit_points).",
+      "updated": "2026-06-09"
+    },
+    "be:routers/dice.py::POST /characters/{id}/dice/result": {
+      "tests": [
+        "tests/integration/test_dice_result.py"
+      ],
+      "status": "be-green",
+      "note": "Il server NON tira: valida i valori per range del dado (7 su d6 → 400), calcola total = override client (4d6kh3: 15, non 16) altrimenti sum+modifier, inferisce la notation (singolo dado+modifier '+3'/'-2', n>1 → '2d6') se non fornita. with_inspiration consuma il token (verificato via GET heroic_inspiration False) / 409 se assente. History: append (cap 50) + GET /dice/history (più recente prima, notation/total/source/label) + DELETE → 204 → []. Contratto = FE DiceResultRequestBody/DiceRollResult.",
+      "updated": "2026-06-09"
+    },
+    "be:routers/stats.py::PATCH /characters/{id}/ac": {
+      "tests": [
+        "tests/integration/test_ac_override.py"
+      ],
+      "status": "be-green",
+      "note": "Override manuale: base → base_armor_class + base_armor_class_override=True (clamp ≥0); shield → shield_armor_class + shield_armor_class_override=True; magic → magic_armor (NESSUN flag override). ac_breakdown.{base,shield,magic} e ac=base+shield+magic. Contratto = FE CharacterFull (api.characters.updateAC).",
+      "updated": "2026-06-09"
+    },
+    "be:routers/stats.py::POST /characters/{id}/ac/reset-override": {
+      "tests": [
+        "tests/integration/test_ac_override.py"
+      ],
+      "status": "be-green",
+      "note": "Azzera i flag override base/shield e ricalcola da equip: senza armatura base→10, senza scudo shield→0; magic NON toccato (nessun flag, reset non lo legge). Contratto = FE CharacterFull (api.characters.resetACOverride).",
+      "updated": "2026-06-09"
+    },
+    "be:routers/spells.py::POST /characters/{id}/spells": {
+      "tests": [
+        "tests/integration/test_spell_crud.py"
+      ],
+      "status": "be-green",
+      "note": "Create da SpellCreate (solo name obbligatorio; level default 0 = trucchetto) → 201 SpellRead con default puliti (is_ritual/is_pinned False). Persistito (verificato via GET /spells). Contratto = FE SpellRead.",
+      "updated": "2026-06-09"
+    },
+    "be:routers/spells.py::PATCH /characters/{id}/spells/{spell_id}": {
+      "tests": [
+        "tests/integration/test_spell_crud.py"
+      ],
+      "status": "be-green",
+      "note": "Update parziale exclude_unset: i campi omessi sopravvivono (PATCH {is_concentration,level} lascia name/is_ritual). 404 su spell ignota. Contratto = FE SpellRead.",
+      "updated": "2026-06-09"
+    },
+    "be:routers/spells.py::PATCH /characters/{id}/concentration": {
+      "tests": [
+        "tests/integration/test_concentration_manual.py"
+      ],
+      "status": "be-green",
+      "note": "Set/clear manuale: concentrating_spell_id = body.spell_id; null o body vuoto (spell_id Optional default None) → azzera la concentrazione. Contratto = FE CharacterFull (concentrating_spell_id) / ConcentrationUpdate.",
+      "updated": "2026-06-09"
+    },
+    "be:routers/stats.py::PATCH /characters/{id}/carry-capacity + POST .../reset-override": {
+      "tests": [
+        "tests/integration/test_carry_capacity_override.py"
+      ],
+      "status": "be-green",
+      "note": "PRE-ESISTENTE (verde nel run 477/0 su Windows), mappato ora per affinare il diff: PATCH carry-capacity setta il valore e blocca l'override (STR non lo clobbera più), clamp ≥0; POST reset-override azzera il flag e ricalcola STR×15. Pattern speculare all'override CA.",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/HP.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/HP.test.tsx"
+      ],
+      "apis": [
+        "GET /characters/{id}",
+        "PATCH /characters/{id}/hp",
+        "POST /characters/{id}/rest",
+        "POST /characters/{id}/revive",
+        "PATCH /characters/{id}/death_saves",
+        "POST /characters/{id}/death_saves/roll",
+        "POST /characters/{id}/hit_dice/spend"
+      ],
+      "status": "fe-green",
+      "note": "Pagina mutation grande: skeleton, render PF=current/(hit_points+homebrew), handleApply (parse/guard/was_critical_hit a 0 HP+crit), quick-apply+undo, riposo corto (hit dice+rest) / lungo (ConfirmSheet), sezione morente (DeathSaves roll/action), morto (DeadState revive), dialog concentrazione + morte istantanea. Mock api/router/framer-motion/sottocomponenti.",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/ArmorClass.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/ArmorClass.test.tsx"
+      ],
+      "apis": [
+        "GET /characters/{id}",
+        "PATCH /characters/{id}/ac",
+        "POST /characters/{id}/ac/reset-override",
+        "POST /characters/{id}/ac/unarmored-defense"
+      ],
+      "status": "fe-green",
+      "note": "Pagina mutation: skeleton, CA totale=ac+homebrew + breakdown, save disabilitato finche non dirty, PATCH solo campi compilati (vuoti->undefined), preview live nuovo totale, reset override, Difesa Senza Armatura (wisdom/constitution/null), base input disabilitato quando unarmored attivo.",
+      "updated": "2026-06-09"
+    },
+    "be:routers/abilities.py::POST /characters/{id}/abilities": {
+      "tests": [
+        "tests/integration/test_abilities_crud.py"
+      ],
+      "apis": [],
+      "status": "be-green",
+      "note": "Create Ability (201): shape completa AbilityRead, default minimi (none/None), listata via GET.",
+      "updated": "2026-06-09"
+    },
+    "be:routers/abilities.py::PATCH /characters/{id}/abilities/{ability_id}": {
+      "tests": [
+        "tests/integration/test_abilities_crud.py",
+        "tests/integration/test_ability_protection.py"
+      ],
+      "apis": [],
+      "status": "be-green",
+      "note": "Update Ability (non-class-feature): uses giu=uso (dispatch ability_used, niente notifiche senza regole), uses su=ripristino, rinomina/max_uses liberi (no lock), 404. Il LOCK class_feature (409 su name/max_uses) e gia coperto da test_ability_protection.py (be-green).",
+      "updated": "2026-06-09"
+    },
+    "be:routers/abilities.py::DELETE /characters/{id}/abilities/{ability_id}": {
+      "tests": [
+        "tests/integration/test_abilities_crud.py",
+        "tests/integration/test_ability_protection.py"
+      ],
+      "apis": [],
+      "status": "be-green",
+      "note": "Delete Ability non-class-feature (204) + de-listata; 404 su id ignoto. Il blocco delete su class_feature (409) e in test_ability_protection.py (be-green).",
+      "updated": "2026-06-09"
+    },
+    "be:routers/items.py::POST /characters/{id}/items": {
+      "tests": [
+        "tests/integration/test_item_crud.py"
+      ],
+      "apis": [],
+      "status": "be-green",
+      "note": "Create item (201, ritorna CharacterFull): generico (dedup per nome -> merge quantity), arma con is_equipped+equipment_slot, slot incompatibile con item_type -> 422.",
+      "updated": "2026-06-09"
+    },
+    "be:routers/items.py::DELETE /characters/{id}/items/{item_id}": {
+      "tests": [
+        "tests/integration/test_item_crud.py"
+      ],
+      "apis": [],
+      "status": "be-green",
+      "note": "Delete item (200, CharacterFull senza l item) + 404 su id ignoto.",
+      "updated": "2026-06-09"
+    },
+    "be:routers/spells.py::DELETE /characters/{id}/spells/{spell_id}": {
+      "tests": [
+        "tests/integration/test_spell_crud.py"
+      ],
+      "apis": [],
+      "status": "be-green",
+      "note": "Delete spell (204) + de-listato; 404 su id ignoto. Aggiunto in coda a test_spell_crud.py.",
+      "updated": "2026-06-09"
+    },
+    "be:routers/spell_slots.py::POST /characters/{id}/spell_slots": {
+      "tests": [
+        "tests/integration/test_spell_slots.py"
+      ],
+      "apis": [],
+      "status": "be-green",
+      "note": "Copertura pre-esistente (lotto 3, file gia verde nel run 477/0): create slot 201 + available=total-used. Solo mappata.",
+      "updated": "2026-06-09"
+    },
+    "be:routers/spell_slots.py::DELETE /characters/{id}/spell_slots/{slot_id}": {
+      "tests": [
+        "tests/integration/test_spell_slots.py"
+      ],
+      "apis": [],
+      "status": "be-green",
+      "note": "Copertura pre-esistente (lotto 3, file gia verde): delete slot 204. Solo mappata.",
+      "updated": "2026-06-09"
+    },
+    "be:services/homebrew/actions.py::execute_action": {
+      "tests": [
+        "tests/services/homebrew/test_actions.py",
+        "tests/services/homebrew/test_dispatcher.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:services/homebrew/actions.py::execute_add_history": {
+      "tests": [
+        "tests/services/homebrew/test_actions.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:services/homebrew/actions.py::execute_apply_condition": {
+      "tests": [
+        "tests/services/homebrew/test_actions.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:services/homebrew/actions.py::execute_apply_modifier_once": {
+      "tests": [
+        "tests/services/homebrew/test_actions.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:services/homebrew/actions.py::execute_change_resource": {
+      "tests": [
+        "tests/services/homebrew/test_actions.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:services/homebrew/actions.py::execute_if": {
+      "tests": [
+        "tests/services/homebrew/test_actions.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:services/homebrew/actions.py::execute_inc_property": {
+      "tests": [
+        "tests/services/homebrew/test_actions.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:services/homebrew/actions.py::execute_lookup_table": {
+      "tests": [
+        "tests/services/homebrew/test_actions.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:services/homebrew/actions.py::execute_match": {
+      "tests": [
+        "tests/services/homebrew/test_actions.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:services/homebrew/actions.py::execute_notify": {
+      "tests": [
+        "tests/services/homebrew/test_actions.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:services/homebrew/actions.py::execute_remove_condition": {
+      "tests": [
+        "tests/services/homebrew/test_actions.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:services/homebrew/actions.py::execute_restore_resource": {
+      "tests": [
+        "tests/services/homebrew/test_actions.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:services/homebrew/actions.py::execute_roll_dice": {
+      "tests": [
+        "tests/services/homebrew/test_actions.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:services/homebrew/actions.py::execute_set_property": {
+      "tests": [
+        "tests/services/homebrew/test_actions.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:services/homebrew/actions.py::execute_unequip": {
+      "tests": [
+        "tests/services/homebrew/test_actions.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:services/homebrew/actions.py::execute_damage_character": {
+      "tests": [
+        "tests/services/homebrew/test_actions.py",
+        "tests/integration/homebrew/test_integration_hp.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:services/homebrew/actions.py::execute_heal_character": {
+      "tests": [
+        "tests/services/homebrew/test_actions.py",
+        "tests/integration/homebrew/test_integration_hp.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:services/homebrew/dispatcher.py::dispatch": {
+      "tests": [
+        "tests/services/homebrew/test_dispatcher.py",
+        "tests/integration/homebrew/test_integration_lifecycle.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:services/homebrew/dsl.py::parse_action": {
+      "tests": [
+        "tests/services/homebrew/test_dsl.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:services/homebrew/filters.py::evaluate_filter": {
+      "tests": [
+        "tests/services/homebrew/test_filters.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:services/homebrew/filters.py::evaluate_filters": {
+      "tests": [
+        "tests/services/homebrew/test_filters.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:services/homebrew/passive.py::get_passive_modifiers": {
+      "tests": [
+        "tests/services/homebrew/test_passive.py",
+        "tests/integration/homebrew/test_passive_modifiers.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:services/homebrew/path_resolver.py::resolve_path": {
+      "tests": [
+        "tests/services/homebrew/test_path_resolver.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:services/homebrew/templates.py::get_template": {
+      "tests": [
+        "tests/services/homebrew/test_templates.py",
+        "tests/integration/homebrew/test_routers_homebrew.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:services/effects.py::apply_heal": {
+      "tests": [
+        "tests/integration/test_hp_heal_regression.py",
+        "tests/integration/test_use_consumable.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:services/effects.py::apply_conditions": {
+      "tests": [
+        "tests/integration/test_conditions_regression.py",
+        "tests/integration/test_use_consumable.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:routers/homebrew.py::GET /homebrew/templates": {
+      "tests": [
+        "tests/integration/homebrew/test_routers_homebrew.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:routers/homebrew.py::GET /homebrew/templates/{template_id}": {
+      "tests": [
+        "tests/integration/homebrew/test_routers_homebrew.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:routers/homebrew.py::GET /characters/{id}/homebrew/resources": {
+      "tests": [
+        "tests/integration/homebrew/test_routers_homebrew.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:routers/homebrew.py::GET /characters/{id}/homebrew/rules": {
+      "tests": [
+        "tests/integration/homebrew/test_routers_homebrew.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:routers/homebrew.py::GET /characters/{id}/homebrew/rules/{rule_id}": {
+      "tests": [
+        "tests/integration/homebrew/test_routers_homebrew.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:routers/homebrew.py::POST /characters/{id}/homebrew/rules": {
+      "tests": [
+        "tests/integration/homebrew/test_routers_homebrew.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:routers/homebrew.py::PATCH /characters/{id}/homebrew/rules/{rule_id}": {
+      "tests": [
+        "tests/integration/homebrew/test_routers_homebrew.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:routers/homebrew.py::DELETE /characters/{id}/homebrew/rules/{rule_id}": {
+      "tests": [
+        "tests/integration/homebrew/test_routers_homebrew.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:routers/homebrew.py::PATCH /characters/{id}/homebrew/resources/{resource_id}": {
+      "tests": [
+        "tests/integration/homebrew/test_routers_homebrew.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:routers/homebrew.py::POST /characters/{id}/homebrew/manual-trigger/{rule_id}": {
+      "tests": [
+        "tests/integration/homebrew/test_routers_homebrew.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:routers/homebrew.py::POST /characters/{id}/homebrew/rules/{rule_id}/enable": {
+      "tests": [
+        "tests/integration/homebrew/test_routers_homebrew.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:routers/homebrew.py::POST /characters/{id}/homebrew/turn-start": {
+      "tests": [
+        "tests/integration/homebrew/test_routers_homebrew.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:routers/homebrew.py::POST /characters/{id}/homebrew/templates/{template_id}/install": {
+      "tests": [
+        "tests/integration/homebrew/test_routers_homebrew.py",
+        "tests/e2e/homebrew/test_template_quality_wear.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:routers/characters.py::POST /characters": {
+      "tests": [
+        "tests/integration/test_add_class.py",
+        "tests/integration/test_character_response.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:routers/characters.py::GET /characters/{id}": {
+      "tests": [
+        "tests/integration/test_character_response.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:routers/characters.py::PATCH /characters/{id}": {
+      "tests": [
+        "tests/integration/test_character_patch_refresh.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:routers/characters.py::PATCH /characters/{id}/conditions": {
+      "tests": [
+        "tests/integration/test_conditions_regression.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:routers/characters.py::PATCH /characters/{id}/inspiration": {
+      "tests": [
+        "tests/integration/test_dice_result.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:routers/characters.py::PATCH /characters/{id}/skills": {
+      "tests": [
+        "tests/integration/test_skill_roll.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:routers/abilities.py::GET /characters/{id}/abilities": {
+      "tests": [
+        "tests/integration/test_abilities_crud.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:routers/spells.py::GET /characters/{id}/spells": {
+      "tests": [
+        "tests/integration/test_spell_crud.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:routers/items.py::GET /characters/{id}/items": {
+      "tests": [
+        "tests/integration/test_consumable_migration.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:routers/items.py::POST /characters/{id}/items/{item_id}/use": {
+      "tests": [
+        "tests/integration/test_use_consumable.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:services/equipment.py::slot_allowed_for_type": {
+      "tests": [
+        "tests/services/test_slot_allowed.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:routers/currency.py::GET /characters/{id}/currency": {
+      "tests": [
+        "tests/integration/test_currency.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:routers/currency.py::PATCH /characters/{id}/currency": {
+      "tests": [
+        "tests/integration/test_currency.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:routers/currency.py::POST /characters/{id}/currency/convert": {
+      "tests": [
+        "tests/integration/test_currency.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "fe:lib/roman.ts": {
+      "tests": [
+        "webapp/tests/unit/lib/roman.test.ts"
+      ],
+      "status": "fe-green",
+      "updated": "2026-06-09",
+      "apis": []
+    },
+    "fe:lib/silhouette.ts": {
+      "tests": [
+        "webapp/tests/unit/lib/silhouette.test.ts"
+      ],
+      "status": "fe-green",
+      "updated": "2026-06-09",
+      "apis": []
+    },
+    "fe:store/unitSettings.ts": {
+      "tests": [
+        "webapp/tests/unit/store/unitSettings.test.ts"
+      ],
+      "status": "fe-green",
+      "updated": "2026-06-09",
+      "apis": []
+    },
+    "fe:pages/Currency.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/Currency.test.tsx"
+      ],
+      "status": "fe-green",
+      "updated": "2026-06-09",
+      "apis": [
+        "GET /characters/{id}",
+        "PATCH /characters/{id}/currency",
+        "POST /characters/{id}/currency/convert"
+      ]
+    },
+    "be:models.py::Character": {
+      "tests": [
+        "tests/services/test_models.py"
+      ],
+      "status": "be-green",
+      "note": "Property/metodi puri (transient, no DB): ac=base+shield+magic; total_level=Σ class.level (0 se vuoto); proficiency_bonus tabella 5e (0/1-4→2,5→3,9→4,13→5,17→6,20→6); class_summary (Nessuna classe / 'name lvl (subclass)' / join ' / '); recalculate_encumbrance=Σ weight*qty; recalculate_carry_capacity=STR*15 (default 10→150, rispetta override).",
+      "updated": "2026-06-09"
+    },
+    "be:models.py::SpellSlot": {
+      "tests": [
+        "tests/services/test_models.py"
+      ],
+      "status": "be-green",
+      "note": "available=max(0,total-used); use_slot incrementa e ValueError se esaurito; restore_slot decrementa con floor a 0; restore_all azzera used.",
+      "updated": "2026-06-09"
+    },
+    "be:models.py::Currency": {
+      "tests": [
+        "tests/services/test_models.py"
+      ],
+      "status": "be-green",
+      "note": "RATES ufficiali 5e (cp1/sp10/ep50/gp100/pp1000); total_in_copper somma pesata; convert verso il basso esatto, verso l'alto restituisce resto in copper value-preserving, fondi insufficienti → False senza mutazione.",
+      "updated": "2026-06-09"
+    },
+    "be:models.py::Ability": {
+      "tests": [
+        "tests/services/test_models.py"
+      ],
+      "status": "be-green",
+      "note": "use() decrementa uses, ValueError a 0, no-op se max_uses None (passiva); restore() resetta uses=max_uses, no-op senza max_uses.",
+      "updated": "2026-06-09"
+    },
+    "be:models.py::AbilityScore": {
+      "tests": [
+        "tests/services/test_models.py"
+      ],
+      "status": "be-green",
+      "note": "modifier=(value-10)//2 floor-division (1→-5, 7→-2, 10→0, 15→2, 16→3, 20→5, 30→10).",
+      "updated": "2026-06-09"
+    },
+    "be:models.py::enums": {
+      "tests": [
+        "tests/services/test_models.py"
+      ],
+      "status": "be-green",
+      "note": "Integrità membri+valori dei 6 enum (SpellSlotsMode/RestorationType/FileType/SessionRole/SessionStatus/EquipmentSlot) + str-mixin (membro==valore). Vedi [[reference_sqlalchemy_enum_passthrough]].",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/SpellSlots.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/SpellSlots.test.tsx"
+      ],
+      "apis": [
+        "GET /characters/{id}",
+        "PATCH /characters/{id}/spell_slots/{slot_id}",
+        "POST /characters/{id}/spell_slots",
+        "DELETE /characters/{id}/spell_slots/{slot_id}",
+        "POST /characters/{id}/spell_slots/reset"
+      ],
+      "status": "fe-green",
+      "note": "Skeleton in pending; render available/total + livello romano dalla shape SpellSlotRead; cast gemma libera → update{used+1} clamp total, click gemma usata → update{used-1} clamp 0; TotalEditor blur → update{total}; add livello mancante → add(level,total=1); remove → DELETE; reset-all via ConfirmSheet → resetAll→CharacterFull. Auto mode: AutoModeBanner + nessuna affordance manuale (no Remove/spinbutton/add-level). settings.spell_slots_mode source-of-truth (default 'auto'). Mock api/router/framer/Reveal-compound/ConfirmSheet/Button/AutoModeBanner; toRoman reale.",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/Experience.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/Experience.test.tsx"
+      ],
+      "apis": [
+        "GET /characters/{id}",
+        "PATCH /characters/{id}/xp"
+      ],
+      "status": "fe-green",
+      "note": "Skeleton in pending; level derivato da levelFromXp(experience_points) (900→3) + XP render; add mode → updateXP{add}, set mode (toggle) → updateXP{set}; CTA level-up → updateXP{set:XP_THRESHOLDS[level]=2700}; toast level-up quando newLevel>oldLevel; toast hp_gained quando response.hp_gained>0. savingRef guard anti-doppio-fire. Mock api/router/sonner/celebrate/framer/Input/Button/AnimatedNumber + sotto-componenti pesanti (ClassTabs/ProgressionPreview/LevelUpModal/StatPill/Ornament null); xpThresholds+resourceDiff reali.",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/AbilityScores.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/AbilityScores.test.tsx"
+      ],
+      "apis": [
+        "GET /characters/{id}",
+        "PATCH /characters/{id}/ability_scores/{name}"
+      ],
+      "status": "fe-green",
+      "note": "Skeleton in pending; render valore per ability (read contract). handleSave: guard 1..30 (fuori range → niente PATCH) + guard valore invariato (chiude, niente PATCH); save valido → updateAbilityScore(id,ability,value). CON che cambia hit_points → toast hp_recalc. Mock api/router/sonner/framer(+AnimatePresence)/Reveal + AbilityScoreCard(edit affordance)/AbilityScoreEditModal(3 save path)/Detail/Skeleton.",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/SavingThrows.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/SavingThrows.test.tsx"
+      ],
+      "apis": [
+        "GET /characters/{id}",
+        "PATCH /characters/{id}/saving_throws",
+        "POST /characters/{id}/saving_throws/{ability}/roll"
+      ],
+      "status": "fe-green",
+      "note": "Skeleton; PB pill + total per save = mod + (PB se proficient) + homebrew (STR proficient mod+2 → +4, contract). toggle proficiency (stopPropagation, off dal path roll) → updateSavingThrows merge {strength:false,...}. Roll su click Surface → rollSavingThrow(id,ability,undefined) (animate3d=false) → RollResultModal. Reroll ispirazione → rollSavingThrow(...,true); 409 → toast.error. Mock api(+ApiError)/dice/diceSettings/reducedMotion/useToast/RollResultModal/Surface(forward onClick).",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/Skills.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/Skills.test.tsx"
+      ],
+      "apis": [
+        "GET /characters/{id}",
+        "PATCH /characters/{id}/skills",
+        "POST /characters/{id}/skills/{skill_name}/roll"
+      ],
+      "status": "fe-green",
+      "note": "Skeleton; bonus skill = mod + (2xPB se expert / PB se prof / 0) + homebrew (athletics expert L5 → +9, contract doubling); passiva percezione 10+bonus. Tap cicla livello (expert→false) → updateSkills{[key]:next}. Long-press → picker Sheet → updateSkills{[key]:value}. Roll → rollSkill(id,key,undefined); reroll 409 → toast.error. useLongPress mockato (onClick=tap, onContextMenu=longpress; timing coperto da useLongPress.test.ts). Mock api(+ApiError)/dice/diceSettings/reducedMotion/useToast/Sheet/RollResultModal.",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/Conditions.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/Conditions.test.tsx"
+      ],
+      "apis": [
+        "GET /characters/{id}",
+        "PATCH /characters/{id}/conditions",
+        "POST /characters/{id}/homebrew/turn-start",
+        "GET /characters/{id}/homebrew/rules"
+      ],
+      "status": "fe-green",
+      "note": "Skeleton; toggle condizione standard → updateConditions merge {blinded:true}; setExhaustion(level) → {exhaustion:3}; reset-all (ConfirmSheet) → cleared {exhaustion:0 + 14 keys false}. deriveAppliableCustoms/collectApplyConditionKeys: regola enabled con apply_condition annidato in if → applyCustom → {custom:bleeding:{rule_id,params:{}}}; removeCustom → {custom:bleeding:false} (merge non poppa). turnStart: notifications>0 → showHomebrewNotifications; vuoto → toast.info. Mock api/homebrew/useToast/CONDITION_ICONS/HomebrewNotification + Button/FilterChip/ConfirmSheet/CustomConditionCard.",
+      "updated": "2026-06-09"
+    },
+    "be:routers/characters.py::PATCH /characters/{id}/saving_throws": {
+      "tests": [
+        "tests/integration/test_saving_throws_bulk.py"
+      ],
+      "apis": [
+        "PATCH /characters/{id}/saving_throws"
+      ],
+      "status": "be-green",
+      "note": "Bulk SavingThrowsUpdate (dict[str,bool]): MERGE su saving_throws esistenti (current.update), mai replace → chiavi non inviate preservate; flip a false; aggiunta nuova chiave mantiene STR/CON seedate dal Guerriero. Response CharacterFull (saving_throws dict letto dal FE). 404 char inesistente. Contract con FE api.characters.updateSavingThrows {saving_throws}.",
+      "updated": "2026-06-09"
+    },
+    "be:routers/history.py::GET /characters/{id}/history": {
+      "tests": [
+        "tests/integration/test_history.py"
+      ],
+      "apis": [
+        "GET /characters/{id}/history"
+      ],
+      "status": "be-green",
+      "note": "Ordina per timestamp desc (newest-first), shape HistoryEntryRead = {id,timestamp,event_type,description} (omette meta JSON). Ownership 404 (char assente) / 403 (altro owner). Righe seedate via test_session_factory.",
+      "updated": "2026-06-09"
+    },
+    "be:routers/history.py::GET /characters/{id}/history/retention-preview": {
+      "tests": [
+        "tests/integration/test_history.py"
+      ],
+      "apis": [
+        "GET /characters/{id}/history/retention-preview"
+      ],
+      "status": "be-green",
+      "note": "HistoryRetentionPreview: would_purge_events = max(0,total-events); would_purge_days = righe con timestamp < (utcnow-days) (confronto stringa ISO, timespec seconds). Query bounds: events ge1 le10000, days ge1 le3650 → 422 a 0.",
+      "updated": "2026-06-09"
+    },
+    "be:routers/history.py::DELETE /characters/{id}/history": {
+      "tests": [
+        "tests/integration/test_history.py"
+      ],
+      "apis": [
+        "DELETE /characters/{id}/history"
+      ],
+      "status": "be-green",
+      "note": "Wipe completo (204), GET successiva → []. Ownership 404 char inesistente.",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/Spells.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/Spells.test.tsx"
+      ],
+      "apis": [
+        "GET /characters/{id}",
+        "PATCH /characters/{id}",
+        "POST /characters/{id}/spells",
+        "PATCH /characters/{id}/spells/{id}",
+        "DELETE /characters/{id}/spells/{id}",
+        "POST /characters/{id}/spells/{id}/use",
+        "PATCH /characters/{id}/concentration",
+        "PATCH /characters/{id}/spell_slots/{id}",
+        "POST /characters/{id}/spell_slots"
+      ],
+      "status": "fe-green",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/Abilities.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/Abilities.test.tsx"
+      ],
+      "apis": [
+        "GET /characters/{id}",
+        "POST /characters/{id}/abilities",
+        "PATCH /characters/{id}/abilities/{id}",
+        "DELETE /characters/{id}/abilities/{id}",
+        "GET /characters/{id}/homebrew/resources",
+        "PATCH /characters/{id}/homebrew/resources/{id}"
+      ],
+      "status": "fe-green",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/Multiclass.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/Multiclass.test.tsx"
+      ],
+      "apis": [
+        "GET /characters/{id}",
+        "DELETE /characters/{id}/classes/{id}"
+      ],
+      "status": "fe-green",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/multiclass/LevelUpModal.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/LevelUpModal.test.tsx"
+      ],
+      "apis": [
+        "PATCH /characters/{id}/classes/distribute"
+      ],
+      "status": "fe-green",
+      "updated": "2026-06-09"
+    },
+    "be:routers/characters.py::GET /characters": {
+      "tests": [
+        "tests/integration/test_characters_list_delete.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:routers/characters.py::DELETE /characters/{id}": {
+      "tests": [
+        "tests/integration/test_characters_list_delete.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:routers/dice.py::POST /characters/{id}/dice/post-to-chat": {
+      "tests": [
+        "tests/integration/test_dice_post_to_chat.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:routers/dice.py::GET /characters/{id}/dice/history": {
+      "tests": [
+        "tests/integration/test_dice_result.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "be:routers/dice.py::DELETE /characters/{id}/dice/history": {
+      "tests": [
+        "tests/integration/test_dice_result.py"
+      ],
+      "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/hp/HpOperationForm.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/hp/HpOperationForm.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Form HP controllato: selettore 5 operazioni (damage/heal/set_current/set_max/set_temp), shortcut rapidi con segno op-dipendente (− damage / + heal), toggle colpo critico mostrato solo a 0 HP in damage (regola crit-while-dying), confirm disabilitato senza valore.",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/hp/DeathSaves.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/hp/DeathSaves.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Tracker tiri salvezza morte: pallini successi/fallimenti, roll (onRoll, disabled mentre rolling), override manuali reset/success/failure/stabilize → onAction, pulse \"urgent\" del gruppo fallimenti a failures>=2.",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/hp/InstantDeathDialog.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/hp/InstantDeathDialog.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Dialog morte istantanea (danno massiccio): null se !open; accent crimson + pulse quando open; forwarding onClose.",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/hp/HitDiceModal.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/hp/HitDiceModal.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Modal short rest/dadi vita: empty state senza classi, lista classi con d<hit_die>, stepper +/- (clamp >=0), roll disabilitato a 0 dadi → onSpend(classId,count), confirm-rest/cancel.",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/hp/DeathSaveResultDialog.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/hp/DeathSaveResultDialog.test.tsx"
+      ],
+      "apis": [
+        "POST /characters/{id}/death_saves/roll"
+      ],
+      "status": "fe-green",
+      "note": "Esito tiro morte: nat20→gold+pulse+revived, nat1+3 fallimenti→crimson+pulse+dead, success+3 successi→emerald+stable, failure→crimson. Contract con api/schemas/common.py::DeathSaveRollResult (die/outcome/successes/failures/stable/revived/current_hp).",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/hp/ConcentrationSaveDialog.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/hp/ConcentrationSaveDialog.test.tsx"
+      ],
+      "apis": [
+        "POST /characters/{id}/concentration/save"
+      ],
+      "status": "fe-green",
+      "note": "Esito tiro concentrazione: accent critico→gold/successo→emerald/fallimento→crimson, pulse su critico|fumble, banner CRITICO/FUMBLE, nota conc_lost, segno bonus. Contract con api/schemas/common.py::ConcentrationSaveResult (RollResult + dc/success/lost_concentration).",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/hp/HitDiceResultDialog.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/hp/HitDiceResultDialog.test.tsx"
+      ],
+      "apis": [
+        "POST /characters/{id}/hit_dice/spend"
+      ],
+      "status": "fe-green",
+      "note": "Esito spesa dadi vita: +healed, [rolls] +con_bonus (COS), new_current_hp. Contract con api/routers/hp.py::HitDiceSpendResult (rolls/con_bonus/healed/new_current_hp).",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/hp/DeadState.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/hp/DeadState.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Stato Morto: causa death_saves/massive_damage, revive dietro ConfirmSheet (onRevive solo su conferma, non su annulla). Vedi [[project_death_dead_state_epic]].",
+      "updated": "2026-06-09"
+    },
+    "fe:components/character/EquipmentSlotCell.tsx": {
+      "tests": [
+        "webapp/tests/unit/components/character/EquipmentSlotCell.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Cella slot paper-doll: placeholder + label \"empty\" se vuota, iniziale item se equip (con `equippedItemIcon`→null), aria-label \"slot: nome\", onTap(equipped|null).",
+      "updated": "2026-06-09"
+    },
+    "fe:components/character/PaperDoll.tsx": {
+      "tests": [
+        "webapp/tests/unit/components/character/PaperDoll.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Paper-doll 11 slot (left/right/bottom): findEquipped per slot, **off_hand nascosto** se main_hand a due mani e off_hand vuoto (`isTwoHanded`), img silhouette se URL / SVG fallback altrimenti, onSlotTap(slot,equipped), silhouetteAction.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/character/EquipmentStatsFooter.tsx": {
+      "tests": [
+        "webapp/tests/unit/components/character/EquipmentStatsFooter.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Stat derivate equip (logica D&D 5e): **CA totale = char.ac + ac_breakdown.homebrew**, danno arma da main_hand.item_metadata.damage_dice (— se assente), **ingombro = Σ(peso×qty) solo equipaggiati** vs carry_capacity (overload), **velocità = speed + speed_homebrew_modifier**.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/character/HandsConflictDialog.tsx": {
+      "tests": [
+        "webapp/tests/unit/components/character/HandsConflictDialog.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Dialog conflitto mani: body interpola newItem/removedItem, annulla→onCancel a sinistra / **conferma→onConfirm a destra** (vedi [[feedback_confirm_button_right]]), conferma disabilitata se pending.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/character/ItemDetailsModal.tsx": {
+      "tests": [
+        "webapp/tests/unit/components/character/ItemDetailsModal.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Modale dettagli item per tipo: weapon (damage_dice/type/category), armor (ac_value/stealth/strength_req), shield (ac_bonus +N), consumable (effect); sezioni properties/ability_modifiers (segno ±)/effects; chiusura via X/backdrop.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/character/SlotActionSheet.tsx": {
+      "tests": [
+        "webapp/tests/unit/components/character/SlotActionSheet.test.tsx"
+      ],
+      "apis": [
+        "PATCH /characters/{id}/items/{item_id}"
+      ],
+      "status": "fe-green",
+      "note": "Action sheet slot: Details→onDetails(item), Replace→onReplace, **Unequip→items.update(charId,itemId,{is_equipped:false,equipment_slot:null})** poi onClose, backdrop→onClose. Contract con api/schemas/item.py::ItemUpdate.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/character/EquipItemPicker.tsx": {
+      "tests": [
+        "webapp/tests/unit/components/character/EquipItemPicker.test.tsx"
+      ],
+      "apis": [
+        "PATCH /characters/{id}/items/{item_id}"
+      ],
+      "status": "fe-green",
+      "note": "Picker equip: filtra candidati per ITEM_TYPE_TO_SLOTS[slot]; pick senza conflitto→**update{is_equipped:true,equipment_slot:slot}** + onClose; conflitto mani (`handsConflict`)→HandsConflictDialog→conferma fa unequip vecchio + equip nuovo (2 update); empty state→navigate inventario; facet filter weapon_type (≥2 valori). Contract con ItemUpdate.",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/character/EquipmentScreen.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/character/EquipmentScreen.test.tsx"
+      ],
+      "apis": [
+        "POST /characters/{id}/silhouette",
+        "DELETE /characters/{id}/silhouette",
+        "GET /characters/{id}/silhouette/file"
+      ],
+      "status": "fe-green",
+      "note": "Orchestratore equip: state machine sheet (picker se slot vuoto / actions se equipaggiato → details|replace), PaperDoll + EquipmentStatsFooter, silhouette URL = fileUrl(id) se has_custom_silhouette altrimenti silhouetteUrl(char) (manifest).",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/inventory/DamageDiceBuilder.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/inventory/DamageDiceBuilder.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Builder dadi danno (combat): parse notazione→count/die/mod, steppers (clamp count 1..10 / mod -5..20), chip dado attivo, preview; ogni edit ri-serializza via serializeDamageDice (contract round-trip con itemMetadata reale).",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/inventory/AbilityModifiersEditor.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/inventory/AbilityModifiersEditor.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Editor modificatori caratteristica (lista controllata): empty hint, add→{strength,relative,0}, update ability/value via onChange, remove per indice.",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/inventory/EffectsEditor.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/inventory/EffectsEditor.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Editor effetti consumabile (heal/condizioni): empty hint, add→heal 2d4+2, change kind→defaultEffect (add_condition→poisoned), update amount/condition, remove. EFFECT_KINDS/CONDITION_SLUGS reali.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/character/ClassTabs.tsx": {
+      "tests": [
+        "webapp/tests/unit/components/character/ClassTabs.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Tab classi multiclasse: null se ≤1 classe, una tab per classe con livello, aria-selected sull'attiva, onSelect(class_name) al click.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/character/ProgressionPreview.tsx": {
+      "tests": [
+        "webapp/tests/unit/components/character/ProgressionPreview.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Preview progressione classe: no-data fallback se progressionRows null, finestra 5 righe centrata su currentLevel (computeWindow), aria-current sulla riga corrente, colonna PB nascosta se isMulticlass, tap riga→ProgressionFullTableModal. classProgression mockata.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/character/SpellSlotsSummary.tsx": {
+      "tests": [
+        "webapp/tests/unit/components/character/SpellSlotsSummary.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Riepilogo slot incantesimo 9-colonne: null se vuoto/tutti 0, **somma total per livello** (warlock multiclasse: 2 righe stesso livello→conteggio combinato), tap→navigate /char/:id/slots.",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/multiclass/LevelUpBanner.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/multiclass/LevelUpBanner.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Banner level-up: label da labelKey (default level_up_available), onOpen al click, labelKey custom.",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/multiclass/AddClassForm.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/multiclass/AddClassForm.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Form aggiunta classe (multiclasse): selezione predefinita auto-compila e blocca hit_die (fighter→d10), classe custom richiede nome prima dell'add (canAdd), submit→onAdd(ClassForm), cancel, lockLevelTo nasconde l'input livello (flusso level-up). addClass.utils reale.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/character/AbilityScoreDetail.tsx": {
+      "tests": [
+        "webapp/tests/unit/components/character/AbilityScoreDetail.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Breakdown caratteristica: base (base_value??value), righe modifiers_applied (relative ±/absolute =), valore effettivo.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/character/SwiperDots.tsx": {
+      "tests": [
+        "webapp/tests/unit/components/character/SwiperDots.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Pallini carosello 3 schermate: tablist, aria-selected sull'attivo, onSelect(idx) al tap, labels come aria-label.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/character/AbilityScoreCard.tsx": {
+      "tests": [
+        "webapp/tests/unit/components/character/AbilityScoreCard.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Card caratteristica: valore + modificatore con segno, matita→onEdit, toggle espansione (aria-expanded)→onToggle solo se ci sono bonus (modifiers_applied).",
+      "updated": "2026-06-09"
+    },
+    "fe:components/character/AutoModeBanner.tsx": {
+      "tests": [
+        "webapp/tests/unit/components/character/AutoModeBanner.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Banner auto-mode slot: aperto al primo accesso (localStorage assente), toggle persiste \"closed\", parte chiuso se stored \"closed\", onGoToSettings dalla scorciatoia.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/character/AbilityScoreEditModal.tsx": {
+      "tests": [
+        "webapp/tests/unit/components/character/AbilityScoreEditModal.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Modale edit caratteristica: seed da currentValue, **mod D&D 5e = floor((v-10)/2)**, steppers clamp 1..30, Save disabilitato finché value==currentValue→onSave(value), cancel→onClose.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/character/ProgressionFullTableModal.tsx": {
+      "tests": [
+        "webapp/tests/unit/components/character/ProgressionFullTableModal.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Tabella progressione completa (portal): una riga per livello con features, riga livello corrente evidenziata, chiusura via X/backdrop. classProgression mockata, scrollIntoView stubbato.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/character/CharacterSwiper.tsx": {
+      "tests": [
+        "webapp/tests/unit/components/character/CharacterSwiper.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Carosello 3 schermate (hero/equip/menu): render pannelli + SwiperDots→setActiveScreen; **handleDragEnd**: drag sx oltre soglia→schermata succ., dx→prec., tap (offset<10px)→nessun cambio anche con velocity spike. framer mockato con cattura onDragEnd, ResizeObserver stubbato.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/character/HeroStatsSection.tsx": {
+      "tests": [
+        "webapp/tests/unit/components/character/HeroStatsSection.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Stat derivate hero (logica D&D 5e): iniziativa=DEX mod, **PB=profBonus(total_level)** (lib reale), **percezione passiva=10+WIS+(prof?PB:0)+hb**, velocità=speed+homebrew, tiri salvezza competenti con bonus (mod+PB+hb), conteggio competenze prof/expert, navigate per cella.",
+      "updated": "2026-06-09"
+    },
+    "fe:lib/version.ts": {
+      "tests": [
+        "webapp/tests/unit/lib/version.test.ts"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Sistema changelog: currentVersion=changelog[0].version (SemVer), localizedLines it/en con fallback it, localizedTitle. Vedi [[project_changelog_system]].",
+      "updated": "2026-06-09"
+    },
+    "fe:lib/celebrate.ts": {
+      "tests": [
+        "webapp/tests/unit/lib/celebrate.test.ts"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "fireLevelUpConfetti: 2 burst confetti dagli angoli bassi (angle 60/120, origin 0.05/0.95). canvas-confetti mockato.",
+      "updated": "2026-06-09"
+    },
+    "fe:lib/eventMeta.ts": {
+      "tests": [
+        "webapp/tests/unit/lib/eventMeta.test.ts"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "EVENT_META: mappa tipi evento history→{icon,tone} con fallback \"other\".",
+      "updated": "2026-06-09"
+    },
+    "fe:lib/itemIcons.ts": {
+      "tests": [
+        "webapp/tests/unit/lib/itemIcons.test.ts"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "getItemTypeIcon: icona per tipo item, fallback GiSwapBag per ignoto/null/undefined.",
+      "updated": "2026-06-09"
+    },
+    "fe:lib/rewardQueue.ts": {
+      "tests": [
+        "webapp/tests/unit/lib/rewardQueue.test.ts"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Coda reward (sessionStorage): enqueue (dedup message_id), peek (non rimuove), dequeue FIFO, clear, pruneOlderThan (scarta vecchi).",
+      "updated": "2026-06-09"
+    },
+    "fe:store/diceSettings.ts": {
+      "tests": [
+        "webapp/tests/unit/store/diceSettings.test.ts"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Store dadi (zustand persist): default animate3d=true/packId=default, setter aggiornano stato.",
+      "updated": "2026-06-09"
+    },
+    "fe:store/overlayStore.ts": {
+      "tests": [
+        "webapp/tests/unit/store/overlayStore.test.ts"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Store overlay: acquire/release (clamp 0), useRegisterOverlay registra mentre open e rilascia su unmount; usato da Sheet/ResultDialog/picker per nascondere il dice launcher.",
+      "updated": "2026-06-09"
+    },
+    "fe:store/themeSettings.ts": {
+      "tests": [
+        "webapp/tests/unit/store/themeSettings.test.ts"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Store tema (zustand persist): default mode=auto, setMode (auto/dark/light).",
+      "updated": "2026-06-09"
+    },
+    "fe:components/ui/Button.tsx": {
+      "tests": [
+        "webapp/tests/unit/ui/Button.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Bottone: onClick, disabled/loading bloccano click (disabled attr), haptic per kind, haptic=\"none\" silenzioso.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/ui/Input.tsx": {
+      "tests": [
+        "webapp/tests/unit/ui/Input.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Input controllato: onChange(value), commit su blur/Enter (blur), errore range numerico (no commit), errore esterno.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/ui/Surface.tsx": {
+      "tests": [
+        "webapp/tests/unit/ui/Surface.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Surface: render children, classe per variant, onClick interattivo, variante motion (asMotion/layoutId).",
+      "updated": "2026-06-09"
+    },
+    "fe:components/ui/SwitchToggle.tsx": {
+      "tests": [
+        "webapp/tests/unit/ui/SwitchToggle.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Switch: role=switch + aria-checked, toggle→onChange(!checked), disabled blocca, tap su riga label/hint toggla.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/ui/FilterChip.tsx": {
+      "tests": [
+        "webapp/tests/unit/ui/FilterChip.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Chip filtro: aria-pressed=selected, onToggle al tap, badge count opzionale.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/ui/ConditionBadge.tsx": {
+      "tests": [
+        "webapp/tests/unit/ui/ConditionBadge.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Badge condizione: aria-label=formatCondition (con valore se graduata), icona condizione. conditions/Tooltip mockati.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/ui/EmptyState.tsx": {
+      "tests": [
+        "webapp/tests/unit/ui/EmptyState.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Empty state: titolo/hint, nessun CTA senza action, CTA action→onClick.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/ui/StatPill.tsx": {
+      "tests": [
+        "webapp/tests/unit/ui/StatPill.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "StatPill: span non-interattivo con label/value, button+onClick se interattivo, iconOnly+revealOnTap nasconde value fino al tap.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/ui/AnimatedNumber.tsx": {
+      "tests": [
+        "webapp/tests/unit/ui/AnimatedNumber.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Scrubber numerico: formattazione it-IT (grouping/precision) + prefix/suffix. framer ridotto a passthrough sincrono.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/ui/SectionDivider.tsx": {
+      "tests": [
+        "webapp/tests/unit/ui/SectionDivider.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Divider sezione: children, 1 flourish (left) / 2 flanking (center).",
+      "updated": "2026-06-09"
+    },
+    "fe:components/ui/FancyHeader.tsx": {
+      "tests": [
+        "webapp/tests/unit/ui/FancyHeader.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Header: titolo in h1, subtitle opzionale, 2 flourish se center / 0 se left.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/ui/SwipeIndicator.tsx": {
+      "tests": [
+        "webapp/tests/unit/ui/SwipeIndicator.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Indicatore swipe: nulla se direction null, chevron left-2 / right-2 per direzione.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/ui/Sheet.tsx": {
+      "tests": [
+        "webapp/tests/unit/ui/Sheet.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Bottom-sheet/dialog (portal): chiuso→nulla, open→titolo/children/close, close/backdrop/Escape→onClose, non-dismissible nasconde close. framer+overlayStore mockati.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/ui/ConfirmSheet.tsx": {
+      "tests": [
+        "webapp/tests/unit/ui/ConfirmSheet.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Conferma: titolo/body/azioni, cancel→onClose / confirm→onConfirm (confirm a destra), loading disabilita. Vedi [[feedback_confirm_button_right]].",
+      "updated": "2026-06-09"
+    },
+    "fe:components/ui/ResultDialog.tsx": {
+      "tests": [
+        "webapp/tests/unit/ui/ResultDialog.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Dialog esito: chiuso→nulla, open→titolo/children/OK, OK/backdrop→onClose, accent border (gold→border-dnd-gold) + pulse (animate-pulse-gold), hideOkButton.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/ui/Toast.tsx": {
+      "tests": [
+        "webapp/tests/unit/ui/Toast.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Monta il Toaster sonner (portal su body).",
+      "updated": "2026-06-09"
+    },
+    "fe:components/ui/UndoToast.tsx": {
+      "tests": [
+        "webapp/tests/unit/ui/UndoToast.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "showUndoToast: toast con message + azione undo (onClick→onUndo) + durata default 5s/custom. sonner mockato.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/ui/Tooltip.tsx": {
+      "tests": [
+        "webapp/tests/unit/ui/Tooltip.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Tooltip globale (portal): render trigger, toggle contenuto (role=tooltip) al click.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/ui/ChipInput.tsx": {
+      "tests": [
+        "webapp/tests/unit/ui/ChipInput.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Input a chip: render chip per value, remove→onChange filtrato, Enter committa, duplicato→errore+no change, Backspace su vuoto rimuove l'ultimo.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/ui/ProgressTriad.tsx": {
+      "tests": [
+        "webapp/tests/unit/ui/ProgressTriad.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Barra progresso Semantic Triad: display \"{value}/{max}\" o esplicito, colore emerald<amber<crimson per soglia (overload).",
+      "updated": "2026-06-09"
+    },
+    "fe:components/ui/HeroXPBar.tsx": {
+      "tests": [
+        "webapp/tests/unit/ui/HeroXPBar.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Barra XP: level-up prompt se xpLevel>totalClassLevel (levelFromXp reale), progressbar con aria-valuenow=currentXP, nessun level-up senza classi.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/ui/Flags.tsx": {
+      "tests": [
+        "webapp/tests/unit/ui/Flags.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "FlagIT/FlagEN: SVG inline, size prop.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/ui/DiceIcon.tsx": {
+      "tests": [
+        "webapp/tests/unit/ui/DiceIcon.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Icone dado: numero lati come testo (d20→20, d6→6, d100→%).",
+      "updated": "2026-06-09"
+    },
+    "fe:components/ui/Reveal.tsx": {
+      "tests": [
+        "webapp/tests/unit/ui/Reveal.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Reveal.Stagger/Item: render children (wrapper animazione).",
+      "updated": "2026-06-09"
+    },
+    "fe:components/ui/FilterRow.tsx": {
+      "tests": [
+        "webapp/tests/unit/ui/FilterRow.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Riga filtri: label dimensione + chip scrollabili (children).",
+      "updated": "2026-06-09"
+    },
+    "fe:components/ui/Ornament.tsx": {
+      "tests": [
+        "webapp/tests/unit/ui/Ornament.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Ornamenti SVG: CornerFlourish (1 svg), CornerFlourishes (4 angoli), FlourishDivider.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/ui/Skeleton.tsx": {
+      "tests": [
+        "webapp/tests/unit/ui/Skeleton.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Skeleton namespace: Line/Circle/Rect (animate-skeleton), Group renderizza i children.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/ui/WizardFooter.tsx": {
+      "tests": [
+        "webapp/tests/unit/ui/WizardFooter.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Footer wizard: secondario a sinistra/primario a destra, onSecondary/onPrimary, primario disabilitato se disabled|loading.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/ui/PageTransition.tsx": {
+      "tests": [
+        "webapp/tests/unit/ui/PageTransition.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Wrapper transizione route (AnimatePresence keyed su pathname): renderizza i children.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/ui/InSessionBanner.tsx": {
+      "tests": [
+        "webapp/tests/unit/components/InSessionBanner.test.tsx"
+      ],
+      "apis": [
+        "GET /sessions/me"
+      ],
+      "status": "fe-green",
+      "note": "Banner sessione attiva: nulla se no-session/non-active/non-membro, banner+navigate(/session/:id) se membro di sessione attiva. useQuery/useNavigate mockati.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/Card.tsx": {
+      "tests": [
+        "webapp/tests/unit/components/Card.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Card: mappa variant→Surface (flat/elevated), forward children+onClick.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/SectionHeader.tsx": {
+      "tests": [
+        "webapp/tests/unit/components/SectionHeader.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "SectionHeader: wrappa SectionDivider con i children.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/StubPage.tsx": {
+      "tests": [
+        "webapp/tests/unit/components/StubPage.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "StubPage: Layout(emoji+title)+Card, nota \"in costruzione\" default o description custom.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/ScrollArea.tsx": {
+      "tests": [
+        "webapp/tests/unit/components/ScrollArea.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "ScrollArea: render children, hint \"↓ scorri\" al primo accesso (localStorage), nascosto se già visto. IntersectionObserver stubbato.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/InspirationRerollButton.tsx": {
+      "tests": [
+        "webapp/tests/unit/components/InspirationRerollButton.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Reroll ispirazione: null se !available, render+onClick se available, disabled se pending.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/RollResultModal.tsx": {
+      "tests": [
+        "webapp/tests/unit/components/RollResultModal.test.tsx"
+      ],
+      "apis": [
+        "(consuma RollResult)"
+      ],
+      "status": "fe-green",
+      "note": "Modale tiro d20: accent default/gold(crit)/crimson(fumble)+pulse, \"d20 (die) ±bonus = total\", banner CRITICO/FUMBLE, badge reroll se wasRerolled, bottone ispirazione se available&&!wasRerolled. Contract con common.py::RollResult.",
+      "updated": "2026-06-09"
+    },
+    "fe:hooks/useIntersection.ts": {
+      "tests": [
+        "webapp/tests/unit/hooks/useIntersection.test.ts"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Hook intersezione: false→true alla prima intersezione, disconnect se once. IntersectionObserver stubbato.",
+      "updated": "2026-06-09"
+    },
+    "fe:hooks/useReducedMotion.ts": {
+      "tests": [
+        "webapp/tests/unit/hooks/useReducedMotion.test.ts"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Re-export framer useReducedMotion, coerce null→false.",
+      "updated": "2026-06-09"
+    },
+    "fe:hooks/useToast.ts": {
+      "tests": [
+        "webapp/tests/unit/hooks/useToast.test.ts"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Toast helper: success/error/default → sonner.* + haptic per kind, hapticFeedback:false silenzia. sonner/haptic mockati.",
+      "updated": "2026-06-09"
+    },
+    "fe:hooks/useSwipeNavigation.ts": {
+      "tests": [
+        "webapp/tests/unit/hooks/useSwipeNavigation.test.ts"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "getGroupInfo (pura): page→{index,total} o null; hook espone currentIndex/total per gruppo, fallback single-page.",
+      "updated": "2026-06-09"
+    },
+    "fe:lib/homebrew/i18n-dsl.ts": {
+      "tests": [
+        "webapp/tests/unit/lib/homebrew/i18nDsl.test.ts"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Label DSL homebrew: eventLabel (default it/en + varianti attack fumble/critical, damage was_crit_hit), actionLabel (heal/damage/condition/roll_dice).",
+      "updated": "2026-06-09"
+    },
+    "fe:lib/homebrew/types.ts": {
+      "tests": [
+        "webapp/tests/unit/lib/homebrew/types.test.ts"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Mirror tipi DSL homebrew (pure types): type-smoke su Effect/RuleDSL/Trigger + discriminatori. Source of truth: api/services/homebrew/dsl.py.",
+      "updated": "2026-06-09"
+    },
+    "fe:lib/inlineMarkdown.tsx": {
+      "tests": [
+        "webapp/tests/unit/lib/inlineMarkdown.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "renderInlineMarkdown: bold→strong/italic→em/code→code, input vuoto invariato, testo semplice passthrough.",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/conditions/ConditionDetailModal.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/conditions/ConditionDetailModal.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Modale dettaglio condizione: titolo+descrizione, scala livelli per exhaustion, close→onClose.",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/abilities/PassiveAbilityDetailModal.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/abilities/PassiveAbilityDetailModal.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Modale abilità passiva: nome+descrizione o fallback no_description, close→onClose.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/Layout.tsx": {
+      "tests": [
+        "webapp/tests/unit/components/Layout.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Layout pagina: titolo+children+back (backTo→navigate(backTo) / else navigate(-1)), breadcrumb da getGroupInfo (tap sibling→navigate(/char/:id/page,{replace})), nessun breadcrumb senza info. useSwipeNavigation/scrollBy stubbati.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/ModalProvider.tsx": {
+      "tests": [
+        "webapp/tests/unit/components/ModalProvider.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "ModalProvider: context openModal/closeModal, stack modali, isModalOpen riflette lo stack (consumer via useModal).",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/spells/CastSpellModal.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/spells/CastSpellModal.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Modale cast: bottoni slot→onCast(level), empty→prompt crea slot→onCreateSlot(spell.level), cancel.",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/spells/SpellFilter.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/spells/SpellFilter.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Filtro incantesimi: search→onSearchChange, add→onAddClick.",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/spells/SpellItem.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/spells/SpellItem.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Riga incantesimo: toggle, espanso→descrizione+use→onUse, concentrazione toggle solo se is_concentration, menu edit/forget→onEdit/onRemove.",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/spells/SpellForm.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/spells/SpellForm.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Form incantesimo: add (name-gated)→onSubmit, edit seed da initialData, SRD autofill se lookupSrdSpell match, cancel.",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/spells/SpellDamageSheet.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/spells/SpellDamageSheet.test.tsx"
+      ],
+      "apis": [
+        "POST /characters/{id}/spells/{spell_id}/roll_damage",
+        "POST /characters/{id}/spells/{spell_id}/use"
+      ],
+      "status": "fe-green",
+      "note": "Roll danno incantesimo: null senza spell, cantrip→rollDamage (no slot), leveled→**api.spells.use prima** (consuma slot) poi rollDamage, save→cella half_damage. Contract con RollDamageRequest/Result.",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/notes/NoteEditor.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/notes/NoteEditor.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Editor nota: add title-gated→onSave(title,body,tags) trimmati, edit nasconde title, cancel.",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/notes/NoteItem.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/notes/NoteItem.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Riga nota: testo (titolo/tag/inline-markdown body) con edit/delete/view callback; voice note→player audio da voiceUrl(filename).",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/notes/NoteViewModal.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/notes/NoteViewModal.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Modale vista nota: null se note null, titolo/tag/body inline-markdown, edit/delete/close→callback.",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/maps/ZoomableImage.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/maps/ZoomableImage.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Wrapper pinch-zoom: rende img con src/alt (react-zoom-pan-pinch mockato).",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/maps/MapZoneGroup.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/maps/MapZoneGroup.test.tsx"
+      ],
+      "apis": [
+        "PATCH /characters/{id}/maps/reorder"
+      ],
+      "status": "fe-green",
+      "note": "Gruppo zona mappe: nome+conteggio, add-more/delete-zone/delete-file/preview→callback, thumbnail photo. (drag-reorder→api.maps.reorder non testato).",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/maps/MapUploadForm.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/maps/MapUploadForm.test.tsx"
+      ],
+      "apis": [
+        "POST /characters/{id}/maps/upload"
+      ],
+      "status": "fe-green",
+      "note": "Form upload mappa: upload disabilitato senza zona+file, chip zona esistente compila zoneName, cancel.",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/character/MenuScreen.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/character/MenuScreen.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Griglia menu sotto-pagine (6 sezioni): render label/voci, tap→navigate(/char/:id/path).",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/Changelog.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/Changelog.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Changelog in-app: voce per release (v{version}+badge current+data), prima voce aperta di default con sezioni added/improved/fixed. Vedi [[project_changelog_system]].",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/CharacterMain.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/CharacterMain.test.tsx"
+      ],
+      "apis": [
+        "GET /characters/{id}",
+        "PATCH /characters/{id}/inspiration"
+      ],
+      "status": "fe-green",
+      "note": "Hub personaggio: skeleton in loading, nome+swiper a load, toggle ispirazione→updateInspiration, error state. Wrapper di CharacterSwiper.",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/Session.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/Session.test.tsx"
+      ],
+      "apis": [
+        "GET /sessions/me",
+        "POST /sessions",
+        "GET /characters"
+      ],
+      "status": "fe-green",
+      "note": "Landing sessione: resume se sessione attiva (navigate), create+join se assente, join disabilitato senza personaggi.",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/SessionJoin.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/SessionJoin.test.tsx"
+      ],
+      "apis": [
+        "GET /characters",
+        "POST /sessions/join"
+      ],
+      "status": "fe-green",
+      "note": "Join sessione: join disabilitato finché code(6)+char, codice uppercased, single-char auto-select → sessions.join(code,charId)→navigate.",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/History.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/History.test.tsx"
+      ],
+      "apis": [
+        "GET /characters/{id}/history",
+        "DELETE /characters/{id}/history"
+      ],
+      "status": "fe-green",
+      "note": "Cronologia: empty state, timeline voci (EVENT_META), clear via ConfirmSheet→history.clear, ricerca client-side.",
+      "updated": "2026-06-09"
+    }
+  }
+}
