@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Clock, Timer, Pencil, Trash2, Ban, MoreVertical, Info } from 'lucide-react'
+import { Clock, Timer, Pencil, Trash2, Ban, MoreVertical, Info, Bookmark, BookmarkCheck } from 'lucide-react'
 import {
   GiCrosshair as Crosshair, GiPotionBall as FlaskConical,
   GiCrossedSwords as Swords, GiCheckedShield as Shield,
@@ -18,6 +18,10 @@ interface SpellItemProps {
   onRemove: () => void
   concentratingSpellId: number | null
   usePending: boolean
+  /** True solo se il PG ha classi preparanti E spell.level >= 1. */
+  showPreparedToggle: boolean
+  onPreparedToggle: () => void
+  preparedPending: boolean
 }
 
 function SpellItemInner({
@@ -30,6 +34,9 @@ function SpellItemInner({
   onRemove,
   concentratingSpellId,
   usePending,
+  showPreparedToggle,
+  onPreparedToggle,
+  preparedPending,
 }: SpellItemProps) {
   const { t } = useTranslation()
   const isConcentrating = concentratingSpellId === spell.id
@@ -56,22 +63,43 @@ function SpellItemInner({
       className={`rounded-xl bg-dnd-surface overflow-hidden
         ${isConcentrating ? 'ring-1 ring-dnd-arcane' : ''}`}
     >
-      <button
-        className="w-full flex items-center gap-2 px-3 py-2.5 text-left"
-        onClick={onToggle}
-      >
-        <span className="flex-1 font-medium text-sm text-dnd-text">{spell.name}</span>
-        <div className="flex gap-1 shrink-0 items-center">
-          {spell.is_concentration && (
-            <span title={t('character.spells.badge_concentration')} className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-dnd-arcane/20 text-dnd-arcane-text border border-dnd-arcane/30">C</span>
-          )}
-          {spell.is_ritual && (
-            <span title={t('character.spells.badge_ritual')} className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-dnd-info/20 text-dnd-info-text border border-dnd-info/30">R</span>
-          )}
-          {spell.is_pinned && <span className="text-xs">&#x1F4CC;</span>}
-        </div>
-        <span className="text-dnd-text-muted text-xs ml-1">{isExpanded ? '\u02C4' : '\u02C5'}</span>
-      </button>
+      <div className={`w-full flex items-center gap-1 pr-3 ${showPreparedToggle ? 'pl-1' : 'pl-3'}`}>
+        {showPreparedToggle && (
+          <button
+            type="button"
+            onClick={onPreparedToggle}
+            disabled={preparedPending}
+            className="hit-44 shrink-0 flex items-center justify-center w-8 h-8 rounded-lg
+                       active:opacity-60 disabled:opacity-40"
+            aria-pressed={spell.is_prepared}
+            title={spell.is_prepared
+              ? t('character.spells.prepared')
+              : t('character.spells.not_prepared')}
+          >
+            {spell.is_prepared
+              ? <BookmarkCheck size={16} className="text-dnd-gold-bright" />
+              : <Bookmark size={16} className="text-dnd-text-muted/60" />}
+          </button>
+        )}
+        <button
+          className="flex-1 min-w-0 flex items-center gap-2 py-2.5 text-left"
+          onClick={onToggle}
+        >
+          <span className={`flex-1 min-w-0 truncate font-medium text-sm ${
+            showPreparedToggle && !spell.is_prepared ? 'text-dnd-text-muted' : 'text-dnd-text'
+          }`}>{spell.name}</span>
+          <div className="flex gap-1 shrink-0 items-center">
+            {spell.is_concentration && (
+              <span title={t('character.spells.badge_concentration')} className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-dnd-arcane/20 text-dnd-arcane-text border border-dnd-arcane/30">C</span>
+            )}
+            {spell.is_ritual && (
+              <span title={t('character.spells.badge_ritual')} className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-dnd-info/20 text-dnd-info-text border border-dnd-info/30">R</span>
+            )}
+            {spell.is_pinned && <span className="text-xs">&#x1F4CC;</span>}
+          </div>
+          <span className="text-dnd-text-muted text-xs ml-1">{isExpanded ? '\u02C4' : '\u02C5'}</span>
+        </button>
+      </div>
 
       {isExpanded && (
         <div className="spell-detail-enter px-3 pb-3 space-y-3 border-t border-dnd-gold-dim/10">
@@ -153,6 +181,23 @@ function SpellItemInner({
               <Sparkles size={12} />
               {t('character.spells.use')}
             </button>
+
+            {showPreparedToggle && (
+              <button
+                onClick={onPreparedToggle}
+                disabled={preparedPending}
+                className={`flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg
+                            border active:opacity-60 disabled:opacity-30
+                            ${spell.is_prepared
+                              ? 'bg-dnd-gold-bright/15 text-dnd-gold-bright border-dnd-gold-bright/40'
+                              : 'bg-dnd-surface-raised text-dnd-text-muted border-dnd-border'}`}
+              >
+                {spell.is_prepared ? <BookmarkCheck size={12} /> : <Bookmark size={12} />}
+                {spell.is_prepared
+                  ? t('character.spells.prepared')
+                  : t('character.spells.prepare')}
+              </button>
+            )}
 
             {spell.is_concentration && (
               <button
