@@ -3,9 +3,9 @@
   "description": "Ledger di copertura test mantenuto dal comando locale /blinda-test. Mappa ogni unità testabile (FE/BE) ai test associati. Rigenerabile/aggiornabile ad ogni run del comando.",
   "last_batch": {
     "date": "2026-06-09",
-    "name": "lotto 21",
+    "name": "lotto 22",
     "branch": "chore/blinda-test-batch-1",
-    "focus": "Sotto-componenti pagine spells (5) + notes (3) + maps (3): CastSpellModal/SpellFilter/SpellItem/SpellForm/SpellDamageSheet + NoteEditor/NoteItem/NoteViewModal + ZoomableImage/MapZoneGroup/MapUploadForm. 33 test Vitest verdi. VoiceRecorder (MediaRecorder) rimandato con DiceOverlay.",
+    "focus": "Pagine hub/display/sessione: MenuScreen, Changelog, CharacterMain (fetch+swiper+ispirazione), Session (landing), SessionJoin (join), History (timeline+clear). 16 test Vitest verdi. Pagine giant (Inventory/Settings/SessionRoom/SessionFeed/Homebrew/EditClassesModal) + HeroScreen/Identity ai prossimi lotti.",
     "be_run": {
       "date": "2026-06-09",
       "result": "n/a",
@@ -2191,6 +2191,73 @@
       ],
       "status": "fe-green",
       "note": "Form upload mappa: upload disabilitato senza zona+file, chip zona esistente compila zoneName, cancel.",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/character/MenuScreen.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/character/MenuScreen.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Griglia menu sotto-pagine (6 sezioni): render label/voci, tap→navigate(/char/:id/path).",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/Changelog.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/Changelog.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Changelog in-app: voce per release (v{version}+badge current+data), prima voce aperta di default con sezioni added/improved/fixed. Vedi [[project_changelog_system]].",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/CharacterMain.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/CharacterMain.test.tsx"
+      ],
+      "apis": [
+        "GET /characters/{id}",
+        "PATCH /characters/{id}/inspiration"
+      ],
+      "status": "fe-green",
+      "note": "Hub personaggio: skeleton in loading, nome+swiper a load, toggle ispirazione→updateInspiration, error state. Wrapper di CharacterSwiper.",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/Session.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/Session.test.tsx"
+      ],
+      "apis": [
+        "GET /sessions/me",
+        "POST /sessions",
+        "GET /characters"
+      ],
+      "status": "fe-green",
+      "note": "Landing sessione: resume se sessione attiva (navigate), create+join se assente, join disabilitato senza personaggi.",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/SessionJoin.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/SessionJoin.test.tsx"
+      ],
+      "apis": [
+        "GET /characters",
+        "POST /sessions/join"
+      ],
+      "status": "fe-green",
+      "note": "Join sessione: join disabilitato finché code(6)+char, codice uppercased, single-char auto-select → sessions.join(code,charId)→navigate.",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/History.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/History.test.tsx"
+      ],
+      "apis": [
+        "GET /characters/{id}/history",
+        "DELETE /characters/{id}/history"
+      ],
+      "status": "fe-green",
+      "note": "Cronologia: empty state, timeline voci (EVENT_META), clear via ConfirmSheet→history.clear, ricerca client-side.",
       "updated": "2026-06-09"
     }
   }

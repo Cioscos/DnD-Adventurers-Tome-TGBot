@@ -20,8 +20,8 @@ Va **rilanciato** finché i residui arrivano a 0.
 
 ## Stato copertura
 
-> Aggiornato da `/blinda-test`. Ultimo lotto: **2026-06-09 (lotto 21)** (branch `chore/blinda-test-batch-1`).
-> Il grafo graphify resta su `webapp/src api core` (3468 nodi / 9200 edge). Al lotto 21 — come ai lotti 8-20 — solo
+> Aggiornato da `/blinda-test`. Ultimo lotto: **2026-06-09 (lotto 22)** (branch `chore/blinda-test-batch-1`).
+> Il grafo graphify resta su `webapp/src api core` (3468 nodi / 9200 edge). Al lotto 22 — come ai lotti 8-21 — solo
 > **2 file in-scope** risultavano modificati dopo il build del grafo (`api/routers/characters.py`,
 > `api/routers/items.py`) — entrambi **edit interni** dei bug-fix (init `char.classes=[]`; riordino reset CA),
 > **nessun endpoint/firma/schema nuovo** ⇒ la superficie API mappata è ancora accurata. `--update` avrebbe
@@ -31,7 +31,7 @@ Va **rilanciato** finché i residui arrivano a 0.
 
 | Ambito | Totali | Coperte (ledger) | Residue |
 |---|---|---|---|
-| FE (components 89 · pages 72 · lib 20 · hooks 5 · store 5 + coperte) | 197 | 130 | 67 |
+| FE (components 89 · pages 72 · lib 20 · hooks 5 · store 5 + coperte) | 197 | 136 | 61 |
 | BE (endpoint 102 · service 31 · core/game 2 · model/enum 22) | 157 | 113 (**tutte be-green** dopo il run del lotto 11) | 44 |
 
 > **Back-fill copertura BE pre-esistente (lotto 8):** il diff dei lotti 1-7 ignorava la suite pytest
@@ -785,14 +785,28 @@ Lotto **FE-only**.
 > **Lotto FE-only** — nessun pytest nuovo. **Rimandati** (API browser complesse): `VoiceRecorder` (MediaRecorder/
 > getUserMedia) e `DiceOverlay` (dice-roll/visibilità) → slot dedicati.
 
+### Lotto 2026-06-09 #22 (6 unità: pagine hub / display / sessione)
+
+Primo giro sulle **pagine**: hub personaggio + display/form di sessione. Batch ridotto a 6 (le pagine sono l'area più
+pesante/API-driven; priorità all'affidabilità nel loop). Lotto **FE-only**.
+
+**FE — Vitest, verdi (16 test, 6 file · suite totale 585 test / 136 file):**
+- `pages/character/MenuScreen.tsx` — griglia 6 sezioni, tap→`navigate(/char/:id/path)`.
+- `pages/Changelog.tsx` — voce per release (`v{version}`+badge current+data), prima aperta con sezioni added/improved/fixed.
+- `pages/CharacterMain.tsx` — **skeleton/loaded/error**, nome+swiper, toggle ispirazione→`updateInspiration` (`GET …/{id}`).
+- `pages/Session.tsx` — resume se attiva / create+join se assente / join disabilitato senza personaggi (`GET /sessions/me`).
+- `pages/SessionJoin.tsx` — join gated su code(6)+char, codice uppercased, auto-select 1 char → `sessions.join`.
+- `pages/History.tsx` — empty state / timeline (`EVENT_META`) / clear via ConfirmSheet → `history.clear`.
+
+> **Lotto FE-only** — query mockate (api+useParams), pattern `renderWithProviders`. Nessun pytest nuovo.
+
 ## Prossimi residui per rischio (per il lotto successivo)
 
-1. **FE pagine-orchestratore restanti** (tutte le famiglie `components/*`/`hooks/*`/`lib/*`/`store/*` e i sotto-componenti
-   spells/notes/maps chiusi ai lotti 12-21): `pages/Inventory.tsx`/`inventory/ItemForm`/`InventoryItem`,
-   `multiclass/EditClassesModal.tsx`, `pages/Identity.tsx`, `pages/Settings.tsx`, `pages/Dice.tsx`,
-   `pages/Homebrew.tsx`+`homebrew/*` (RuleEditor+sections), `pages/Notes.tsx`/`Maps.tsx`, `pages/Session*.tsx`+`session/*`,
-   `pages/History.tsx`, `pages/CharacterSelect.tsx`/`CharacterMain.tsx`/`Changelog.tsx`, + `components/DiceOverlay.tsx`,
-   `pages/character/HeroScreen.tsx`/`MenuScreen.tsx`, `pages/notes/VoiceRecorder.tsx`.
+1. **FE pagine-orchestratore giant restanti** (hub/display/sessione-landing chiusi al lotto 22):
+   `pages/Inventory.tsx`/`inventory/ItemForm`/`InventoryItem`, `multiclass/EditClassesModal.tsx`, `pages/Identity.tsx`,
+   `pages/Settings.tsx`, `pages/Dice.tsx`, `pages/Homebrew.tsx`+`homebrew/*` (RuleEditor+sections), `pages/Notes.tsx`/
+   `Maps.tsx`, `pages/SessionRoom.tsx`+`session/*` (SessionFeed/GrantItemModal/ParticipantIdentitySheet),
+   `pages/CharacterSelect.tsx`, `pages/character/HeroScreen.tsx`, + `components/DiceOverlay.tsx`, `pages/notes/VoiceRecorder.tsx`.
    `pages/Inventory.tsx` (743 righe — CRUD item, equip/slot, attacco) + `pages/inventory/ItemForm.tsx`/`InventoryItem.tsx`,
    `multiclass/EditClassesModal.tsx` (add/update/distribute classi), `pages/Identity.tsx` (351 — patch identità),
    `pages/Settings.tsx` (568 — preferenze, slot mode, silhouette).
