@@ -3,9 +3,9 @@
   "description": "Ledger di copertura test mantenuto dal comando locale /blinda-test. Mappa ogni unità testabile (FE/BE) ai test associati. Rigenerabile/aggiornabile ad ogni run del comando.",
   "last_batch": {
     "date": "2026-06-09",
-    "name": "lotto 18",
+    "name": "lotto 19",
     "branch": "chore/blinda-test-batch-1",
-    "focus": "Overlay/feedback + presentazionali components/ui/* (12): Sheet/ConfirmSheet/ResultDialog/Toast/UndoToast/Tooltip/ChipInput/ProgressTriad/HeroXPBar/Flags/DiceIcon/Reveal. 38 test Vitest verdi. /loop FE-only batch 12.",
+    "focus": "Chiusura components/ui/* (ultimi 6) + 6 components/* top-level: FilterRow/Ornament/Skeleton/WizardFooter/PageTransition/InSessionBanner + Card/SectionHeader/StubPage/ScrollArea/InspirationRerollButton/RollResultModal. components/ui/ ora 30/30 coperto. 31 test Vitest verdi.",
     "be_run": {
       "date": "2026-06-09",
       "result": "n/a",
@@ -1874,6 +1874,118 @@
       "apis": [],
       "status": "fe-green",
       "note": "Reveal.Stagger/Item: render children (wrapper animazione).",
+      "updated": "2026-06-09"
+    },
+    "fe:components/ui/FilterRow.tsx": {
+      "tests": [
+        "webapp/tests/unit/ui/FilterRow.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Riga filtri: label dimensione + chip scrollabili (children).",
+      "updated": "2026-06-09"
+    },
+    "fe:components/ui/Ornament.tsx": {
+      "tests": [
+        "webapp/tests/unit/ui/Ornament.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Ornamenti SVG: CornerFlourish (1 svg), CornerFlourishes (4 angoli), FlourishDivider.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/ui/Skeleton.tsx": {
+      "tests": [
+        "webapp/tests/unit/ui/Skeleton.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Skeleton namespace: Line/Circle/Rect (animate-skeleton), Group renderizza i children.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/ui/WizardFooter.tsx": {
+      "tests": [
+        "webapp/tests/unit/ui/WizardFooter.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Footer wizard: secondario a sinistra/primario a destra, onSecondary/onPrimary, primario disabilitato se disabled|loading.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/ui/PageTransition.tsx": {
+      "tests": [
+        "webapp/tests/unit/ui/PageTransition.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Wrapper transizione route (AnimatePresence keyed su pathname): renderizza i children.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/ui/InSessionBanner.tsx": {
+      "tests": [
+        "webapp/tests/unit/components/InSessionBanner.test.tsx"
+      ],
+      "apis": [
+        "GET /sessions/me"
+      ],
+      "status": "fe-green",
+      "note": "Banner sessione attiva: nulla se no-session/non-active/non-membro, banner+navigate(/session/:id) se membro di sessione attiva. useQuery/useNavigate mockati.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/Card.tsx": {
+      "tests": [
+        "webapp/tests/unit/components/Card.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Card: mappa variant→Surface (flat/elevated), forward children+onClick.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/SectionHeader.tsx": {
+      "tests": [
+        "webapp/tests/unit/components/SectionHeader.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "SectionHeader: wrappa SectionDivider con i children.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/StubPage.tsx": {
+      "tests": [
+        "webapp/tests/unit/components/StubPage.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "StubPage: Layout(emoji+title)+Card, nota \"in costruzione\" default o description custom.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/ScrollArea.tsx": {
+      "tests": [
+        "webapp/tests/unit/components/ScrollArea.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "ScrollArea: render children, hint \"↓ scorri\" al primo accesso (localStorage), nascosto se già visto. IntersectionObserver stubbato.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/InspirationRerollButton.tsx": {
+      "tests": [
+        "webapp/tests/unit/components/InspirationRerollButton.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Reroll ispirazione: null se !available, render+onClick se available, disabled se pending.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/RollResultModal.tsx": {
+      "tests": [
+        "webapp/tests/unit/components/RollResultModal.test.tsx"
+      ],
+      "apis": [
+        "(consuma RollResult)"
+      ],
+      "status": "fe-green",
+      "note": "Modale tiro d20: accent default/gold(crit)/crimson(fumble)+pulse, \"d20 (die) ±bonus = total\", banner CRITICO/FUMBLE, badge reroll se wasRerolled, bottone ispirazione se available&&!wasRerolled. Contract con common.py::RollResult.",
       "updated": "2026-06-09"
     }
   }
