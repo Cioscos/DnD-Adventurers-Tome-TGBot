@@ -295,8 +295,53 @@ export interface CharacterLiveSnapshot {
   armor_category: ArmorCategory | null
 }
 
+export type EncounterMode = 'light' | 'full'
+export type EncounterStatus = 'setup' | 'active' | 'ended'
+
+export interface CombatantLive {
+  id: number
+  kind: 'pc' | 'monster'
+  character_id?: number | null
+  owner_user_id?: number | null
+  name: string
+  initiative: number | null
+  initiative_die: number | null
+  initiative_mod: number
+  sort_order: number | null
+  is_dead: boolean
+  conditions: Record<string, unknown>
+  current_hp: number | null
+  max_hp: number | null
+  ac: number | null
+  hp_bucket: HpBucket | null
+}
+
+export interface EncounterLive {
+  id: number
+  mode: EncounterMode
+  status: EncounterStatus
+  round: number
+  active_combatant_id: number | null
+  created_at: string
+  started_at: string | null
+  ended_at: string | null
+  combatants: CombatantLive[]
+}
+
+export interface CombatantPatch {
+  name?: string
+  initiative?: number
+  initiative_mod?: number
+  current_hp?: number
+  max_hp?: number
+  ac?: number
+  conditions?: Record<string, unknown>
+  is_dead?: boolean
+}
+
 export interface GameSessionLive extends GameSession {
   live_characters: CharacterLiveSnapshot[]
+  encounter?: EncounterLive | null
 }
 
 export interface SessionMessage {
