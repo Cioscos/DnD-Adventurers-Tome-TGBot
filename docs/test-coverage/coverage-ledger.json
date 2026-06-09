@@ -1100,6 +1100,102 @@
       "status": "fe-green",
       "note": "Skeleton in pending; level derivato da levelFromXp(experience_points) (900→3) + XP render; add mode → updateXP{add}, set mode (toggle) → updateXP{set}; CTA level-up → updateXP{set:XP_THRESHOLDS[level]=2700}; toast level-up quando newLevel>oldLevel; toast hp_gained quando response.hp_gained>0. savingRef guard anti-doppio-fire. Mock api/router/sonner/celebrate/framer/Input/Button/AnimatedNumber + sotto-componenti pesanti (ClassTabs/ProgressionPreview/LevelUpModal/StatPill/Ornament null); xpThresholds+resourceDiff reali.",
       "updated": "2026-06-09"
+    },
+    "fe:pages/AbilityScores.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/AbilityScores.test.tsx"
+      ],
+      "apis": [
+        "GET /characters/{id}",
+        "PATCH /characters/{id}/ability_scores/{name}"
+      ],
+      "status": "fe-green",
+      "note": "Skeleton in pending; render valore per ability (read contract). handleSave: guard 1..30 (fuori range → niente PATCH) + guard valore invariato (chiude, niente PATCH); save valido → updateAbilityScore(id,ability,value). CON che cambia hit_points → toast hp_recalc. Mock api/router/sonner/framer(+AnimatePresence)/Reveal + AbilityScoreCard(edit affordance)/AbilityScoreEditModal(3 save path)/Detail/Skeleton.",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/SavingThrows.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/SavingThrows.test.tsx"
+      ],
+      "apis": [
+        "GET /characters/{id}",
+        "PATCH /characters/{id}/saving_throws",
+        "POST /characters/{id}/saving_throws/{ability}/roll"
+      ],
+      "status": "fe-green",
+      "note": "Skeleton; PB pill + total per save = mod + (PB se proficient) + homebrew (STR proficient mod+2 → +4, contract). toggle proficiency (stopPropagation, off dal path roll) → updateSavingThrows merge {strength:false,...}. Roll su click Surface → rollSavingThrow(id,ability,undefined) (animate3d=false) → RollResultModal. Reroll ispirazione → rollSavingThrow(...,true); 409 → toast.error. Mock api(+ApiError)/dice/diceSettings/reducedMotion/useToast/RollResultModal/Surface(forward onClick).",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/Skills.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/Skills.test.tsx"
+      ],
+      "apis": [
+        "GET /characters/{id}",
+        "PATCH /characters/{id}/skills",
+        "POST /characters/{id}/skills/{skill_name}/roll"
+      ],
+      "status": "fe-green",
+      "note": "Skeleton; bonus skill = mod + (2xPB se expert / PB se prof / 0) + homebrew (athletics expert L5 → +9, contract doubling); passiva percezione 10+bonus. Tap cicla livello (expert→false) → updateSkills{[key]:next}. Long-press → picker Sheet → updateSkills{[key]:value}. Roll → rollSkill(id,key,undefined); reroll 409 → toast.error. useLongPress mockato (onClick=tap, onContextMenu=longpress; timing coperto da useLongPress.test.ts). Mock api(+ApiError)/dice/diceSettings/reducedMotion/useToast/Sheet/RollResultModal.",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/Conditions.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/Conditions.test.tsx"
+      ],
+      "apis": [
+        "GET /characters/{id}",
+        "PATCH /characters/{id}/conditions",
+        "POST /characters/{id}/homebrew/turn-start",
+        "GET /characters/{id}/homebrew/rules"
+      ],
+      "status": "fe-green",
+      "note": "Skeleton; toggle condizione standard → updateConditions merge {blinded:true}; setExhaustion(level) → {exhaustion:3}; reset-all (ConfirmSheet) → cleared {exhaustion:0 + 14 keys false}. deriveAppliableCustoms/collectApplyConditionKeys: regola enabled con apply_condition annidato in if → applyCustom → {custom:bleeding:{rule_id,params:{}}}; removeCustom → {custom:bleeding:false} (merge non poppa). turnStart: notifications>0 → showHomebrewNotifications; vuoto → toast.info. Mock api/homebrew/useToast/CONDITION_ICONS/HomebrewNotification + Button/FilterChip/ConfirmSheet/CustomConditionCard.",
+      "updated": "2026-06-09"
+    },
+    "be:routers/characters.py::PATCH /characters/{id}/saving_throws": {
+      "tests": [
+        "tests/integration/test_saving_throws_bulk.py"
+      ],
+      "apis": [
+        "PATCH /characters/{id}/saving_throws"
+      ],
+      "status": "be-pending",
+      "note": "Bulk SavingThrowsUpdate (dict[str,bool]): MERGE su saving_throws esistenti (current.update), mai replace → chiavi non inviate preservate; flip a false; aggiunta nuova chiave mantiene STR/CON seedate dal Guerriero. Response CharacterFull (saving_throws dict letto dal FE). 404 char inesistente. Contract con FE api.characters.updateSavingThrows {saving_throws}.",
+      "updated": "2026-06-09"
+    },
+    "be:routers/history.py::GET /characters/{id}/history": {
+      "tests": [
+        "tests/integration/test_history.py"
+      ],
+      "apis": [
+        "GET /characters/{id}/history"
+      ],
+      "status": "be-pending",
+      "note": "Ordina per timestamp desc (newest-first), shape HistoryEntryRead = {id,timestamp,event_type,description} (omette meta JSON). Ownership 404 (char assente) / 403 (altro owner). Righe seedate via test_session_factory.",
+      "updated": "2026-06-09"
+    },
+    "be:routers/history.py::GET /characters/{id}/history/retention-preview": {
+      "tests": [
+        "tests/integration/test_history.py"
+      ],
+      "apis": [
+        "GET /characters/{id}/history/retention-preview"
+      ],
+      "status": "be-pending",
+      "note": "HistoryRetentionPreview: would_purge_events = max(0,total-events); would_purge_days = righe con timestamp < (utcnow-days) (confronto stringa ISO, timespec seconds). Query bounds: events ge1 le10000, days ge1 le3650 → 422 a 0.",
+      "updated": "2026-06-09"
+    },
+    "be:routers/history.py::DELETE /characters/{id}/history": {
+      "tests": [
+        "tests/integration/test_history.py"
+      ],
+      "apis": [
+        "DELETE /characters/{id}/history"
+      ],
+      "status": "be-pending",
+      "note": "Wipe completo (204), GET successiva → []. Ownership 404 char inesistente.",
+      "updated": "2026-06-09"
     }
   }
 }

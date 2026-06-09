@@ -20,19 +20,19 @@ Va **rilanciato** finché i residui arrivano a 0.
 
 ## Stato copertura
 
-> Aggiornato da `/blinda-test`. Ultimo lotto: **2026-06-09 (lotto 9)** (branch `chore/blinda-test-batch-1`).
-> Il grafo graphify resta su `webapp/src api core` (3468 nodi). Al lotto 9 `--update`: `detect_incremental`
-> scoped sui 3 path in-scope ha riportato **0 file cambiati** dal build del grafo (01:54) — le 610 "deleted"
-> erano falsi positivi del mismatch manifest↔scope (scansionando un path alla volta, i file degli altri 2
-> path del manifest sembrano cancellati). Nessuna sorgente in-scope cambiata ⇒ eseguire `build_merge` con
-> quelle finte cancellazioni avrebbe **distrutto** il grafo. Merge **saltato**, `graph.json` lasciato
-> **intatto e queryabile** (replica della decisione del lotto 8). I "totali" sono inventario su filesystem;
+> Aggiornato da `/blinda-test`. Ultimo lotto: **2026-06-09 (lotto 10)** (branch `chore/blinda-test-batch-1`).
+> Il grafo graphify resta su `webapp/src api core` (3468 nodi / 9200 edge). Al lotto 10 solo **2 file
+> in-scope** risultavano modificati dopo il build del grafo (`api/routers/characters.py`,
+> `api/routers/items.py`) — entrambi **edit interni** dei bug-fix (init `char.classes=[]`; riordino reset CA),
+> **nessun endpoint/firma/schema nuovo** ⇒ la superficie API mappata è ancora accurata. `--update` avrebbe
+> riprodotto i falsi positivi "deleted" del mismatch manifest↔scope; merge **saltato**, `graph.json` lasciato
+> **intatto e queryabile** (replica delle decisioni dei lotti 8-9). I "totali" sono inventario su filesystem;
 > le "coperte" sono le unità mappate nel ledger.
 
 | Ambito | Totali | Coperte (ledger) | Residue |
 |---|---|---|---|
-| FE (components 89 · pages 72 · lib 20 · hooks 5 · store 5 + coperte) | 197 | 24 | 173 |
-| BE (endpoint 102 · service 31 · core/game 2 · model/enum 22) | 157 | 104 (**tutte be-green** dopo il run del lotto 9) | 53 |
+| FE (components 89 · pages 72 · lib 20 · hooks 5 · store 5 + coperte) | 197 | 28 | 169 |
+| BE (endpoint 102 · service 31 · core/game 2 · model/enum 22) | 157 | 108 (104 be-green + **4 be-pending** lotto 10) | 49 |
 
 > **Back-fill copertura BE pre-esistente (lotto 8):** il diff dei lotti 1-7 ignorava la suite pytest
 > **già presente** nel repo, che copriva molte unità "residue" → falsi negativi. Al lotto 8 sono state
@@ -404,16 +404,71 @@ Lette dal FE e confermate nello schema: `spell_slots[].{id,level,total,used,avai
 `experience_points`/`hp_gained`/`abilities` (`CharacterFull`). Le unità BE del lotto sono **pure** (nessuna `api.*`):
 sono l'oracolo D&D 5e sotto le derivate (mod/PB/HP/CA/slot/valuta) lette altrove.
 
+### Lotto 2026-06-09 #10 (8 unità: chiusura famiglia FE "stats/condizioni" + bulk saving_throws + router history)
+
+Chiuse le **4 FE mutation pages della famiglia stats/condizioni** ancora scoperte (AbilityScores/SavingThrows/
+Skills/Conditions): tutte invocano `api.*` con mutation reali, quindi la compat FE↔API passa dal contratto
+statico al payload HTTP effettivo. In parallelo, BE: l'unico endpoint bulk delle proficiency ancora scoperto
+(`PATCH /saving_throws`, legato alla compat di `SavingThrows.tsx`) + **chiusura completa di `routers/history.py`**
+(3 endpoint).
+
+**FE — Vitest, verdi (26 test, 4 file · suite totale 200 test / 28 file):**
+- `pages/AbilityScores.tsx` — skeleton; read contract sui valori; `handleSave` con **doppia guard** (fuori
+  1..30 → niente PATCH; valore invariato → chiude senza PATCH); save valido → `updateAbilityScore(id,ability,value)`;
+  **CON che cambia `hit_points` → toast hp_recalc**. Card/EditModal mockati per esporre le affordance.
+- `pages/SavingThrows.tsx` — skeleton; total = `mod + (PB se proficient) + homebrew` (STR proficient → +4,
+  contract); toggle proficiency con `stopPropagation` (fuori dal path roll) → `updateSavingThrows` **merge**;
+  roll su click Surface → `rollSavingThrow(id,ability,undefined)` (animate3d=false) → `RollResultModal`;
+  reroll ispirazione → `(...,true)`, **409 → toast.error**.
+- `pages/Skills.tsx` — skeleton; **expert doubling** `mod + 2×PB` (athletics expert L5 → +9) + passiva percezione;
+  tap cicla livello (`expert→false`) → `updateSkills{[key]:next}`; **long-press → picker Sheet** → `updateSkills{[key]:value}`;
+  roll → `rollSkill(id,key,undefined)`, reroll **409 → toast.error**. `useLongPress` mockato (onClick=tap/
+  onContextMenu=longpress; il timing è coperto da `[[reference_uselongpress_cancel_then_end]]` in `useLongPress.test.ts`).
+- `pages/Conditions.tsx` — skeleton; toggle standard → `updateConditions` merge; `setExhaustion` cumulativo;
+  **reset-all** (ConfirmSheet) → `{exhaustion:0 + 14 keys false}`; **`deriveAppliableCustoms`/`collectApplyConditionKeys`**
+  (walk ricorsivo su `if`/`match`): regola enabled con `apply_condition` annidato → `applyCustom` →
+  `{custom:bleeding:{rule_id,params:{}}}`; `removeCustom` → `{custom:bleeding:false}` (merge non poppa);
+  **turnStart** → `showHomebrewNotifications` se `notifications>0`, altrimenti `toast.info`.
+
+**BE — pytest, `be-pending` (da eseguire su Windows):**
+- `routers/characters.py::PATCH …/saving_throws` → `tests/integration/test_saving_throws_bulk.py` — bulk
+  `SavingThrowsUpdate` (`dict[str,bool]`): **MERGE** (`current.update`, mai replace) → chiavi non inviate
+  preservate, flip a false, aggiunta nuova chiave mantiene STR/CON seedate dal Guerriero; response `CharacterFull`; 404.
+- `routers/history.py::GET …/history` → `tests/integration/test_history.py` — ordine `timestamp` desc (newest-first),
+  shape `HistoryEntryRead` `{id,timestamp,event_type,description}` (**omette `meta`**); ownership 404 (assente) / 403 (altro owner).
+- `routers/history.py::GET …/history/retention-preview` → `test_history.py` — `would_purge_events = max(0,total-events)`;
+  `would_purge_days` = righe con `timestamp < utcnow-days` (confronto stringa ISO); query bounds `events`/`days` → 422 a 0.
+- `routers/history.py::DELETE …/history` → `test_history.py` — wipe completo (204), GET successiva → `[]`; 404 assente.
+
+**Lotto 10 — compat FE↔API.** Verificati i metodi `api.characters.*` / `api.homebrew.*` invocati dalle 4 pagine
+contro route + schemi Pydantic. Tutti **allineati**, nessun mismatch 🔴/🟠; i payload inviati e le shape lette
+sono codificati come assert (un drift fa fallire):
+
+| Metodo FE (`client.ts`) | Endpoint BE | Esito |
+|---|---|---|
+| `characters.updateAbilityScore` → `PATCH …/ability_scores/{name}` `{value}` → `CharacterFull` | `update_ability_score` / `AbilityScoreUpdate` | ✅ allineato |
+| `characters.updateSavingThrows` → `PATCH …/saving_throws` `{saving_throws}` → `CharacterFull` | `update_saving_throws` / `SavingThrowsUpdate` (`dict[str,bool]`) | ✅ allineato |
+| `characters.rollSavingThrow` → `POST …/saving_throws/{a}/roll` `{die?,with_inspiration}` o vuoto → `RollResult` | `roll_saving_throw` / `D20RollSubmission` | ✅ allineato |
+| `characters.updateSkills` → `PATCH …/skills` `{skills}` → `CharacterFull` | `update_skills` / `SkillsUpdate` | ✅ allineato |
+| `characters.rollSkill` → `POST …/skills/{k}/roll` `{die?,with_inspiration}` o vuoto → `RollResult` | `roll_skill` / `D20RollSubmission` | ✅ allineato |
+| `characters.updateConditions` → `PATCH …/conditions` `{conditions}` → `CharacterFull` | `update_conditions` / `ConditionsUpdate` | ✅ allineato |
+| `homebrew.turnStart` → `POST …/homebrew/turn-start` → `{notifications:[…]}` | `turn_start` (shape `notifications`, NON `homebrew_notifications`) | ✅ allineato (gestito manualmente nel FE) |
+
+Nota: `rollSkill`/`rollSavingThrow` con `die` assente e `with_inspiration=false` inviano **body `undefined`**
+(`die != null || withInspiration` falso) → il server tira lato suo. Coerente con `D20RollSubmission` (tutti i
+campi opzionali). Le 4 pagine leggono `ability_scores[].{name,value,modifier}`, `saving_throws`/`skills` (dict),
+`saves_homebrew_modifiers`/`skills_homebrew_modifiers`, `total_level`, `heroic_inspiration`, `conditions` — tutti
+presenti in `CharacterFull`.
+
 ## Prossimi residui per rischio (per il lotto successivo)
 
-1. **FE mutation pages restanti** (HP/ArmorClass/Currency/SpellSlots/Experience chiusi): `pages/Spells.tsx`
-   (641 righe — create/patch/delete incantesimi, cast, concentrazione, roll danno), `pages/Abilities.tsx`
-   (779 righe — uses/ripristino), `pages/Multiclass.tsx` + `multiclass/LevelUpModal.tsx`/`EditClassesModal.tsx`
-   (add/update/delete/distribute classi, level-up), `pages/AbilityScores.tsx`/`SavingThrows.tsx`/`Skills.tsx`/
-   `Conditions.tsx`.
+1. **FE mutation pages restanti** (HP/ArmorClass/Currency/SpellSlots/Experience/AbilityScores/SavingThrows/Skills/
+   Conditions chiusi): `pages/Spells.tsx` (641 righe — create/patch/delete incantesimi, cast, concentrazione, roll
+   danno), `pages/Abilities.tsx` (779 righe — uses/ripristino), `pages/Multiclass.tsx` + `multiclass/LevelUpModal.tsx`/
+   `EditClassesModal.tsx` (add/update/delete/distribute classi, level-up), `pages/Inventory.tsx`/`Identity.tsx`/`Settings.tsx`.
 2. **Router ancora scoperti**: `routers/sessions.py` (13 endpoint, sessioni di gioco) interamente; `routers/maps.py`
-   (6, upload/serve), `routers/notes.py` (6, incl. voice), `routers/history.py` (3), `routers/silhouette.py` (3),
-   `routers/dice.py` (history/post-to-chat); `routers/characters.py` list/delete/`saving_throws` bulk.
+   (6, upload/serve), `routers/notes.py` (6, incl. voice), `routers/silhouette.py` (3),
+   `routers/dice.py` (history/post-to-chat); `routers/characters.py` list/delete.
 3. FE `lib/*`/hooks/store residui (rischio basso): `rewardQueue.ts`, `eventMeta.ts`, `itemIcons.ts`,
    `celebrate.ts`, `inlineMarkdown.tsx`, `homebrew/i18n-dsl.ts`; hooks `useSwipeNavigation`/`useToast`/
    `useIntersection`/`useReducedMotion`; store `diceSettings`/`overlayStore`/`themeSettings`.
