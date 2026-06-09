@@ -259,3 +259,27 @@ async def roll_initiative(
     _touch(session)
     await db.flush()
     return build_encounter_block(enc, viewer_is_gm=is_gm)
+
+
+@router.post("/{session_id}/encounter/sync-pcs", response_model=EncounterLive)
+async def sync_pcs(
+    session_id: int,
+    user_id: Annotated[int, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> EncounterLive:
+    session = await _load_session(session_id, db)
+    _assert_participant(session, user_id)
+    _assert_gm(session, user_id)
+    _assert_session_active(session)
+    enc = await _require_open_encounter(session_id, db)
+    # next_order calcolato PRIMA di aggiungere (enc.combatants non vede i nuovi)
+    rows = _ordered(enc.combatants)
+    next_order = (rows[-1].sort_order + 10) if rows else 10
+    added = await _add_missing_pc_combatants(session, enc, db)
+    if enc.status == "active":
+        for j, comb in enumerate(added):
+            comb.sort_order = next_order + j * 10
+    _touch(session)
+    await db.flush()
+    await db.refresh(enc, attribute_names=["combatants"])
+    return build_encounter_block(enc, viewer_is_gm=True)

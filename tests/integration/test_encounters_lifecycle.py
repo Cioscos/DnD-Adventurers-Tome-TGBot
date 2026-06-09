@@ -163,3 +163,53 @@ async def test_gm_rolls_monster_without_die_gets_server_roll(client, test_sessio
     rolled = next(c for c in r2.json()["combatants"] if c["id"] == monster["id"])
     assert 1 <= rolled["initiative_die"] <= 20
     assert rolled["initiative"] == rolled["initiative_die"] + 2
+
+
+# ---------------------------------------------------------------------------
+# POST /sessions/{id}/encounter/sync-pcs
+# ---------------------------------------------------------------------------
+
+from core.db.models import AbilityScore, Character, SessionParticipant, SessionRole
+from tests.integration._encounter_helpers import NOW
+
+LATE_PLAYER_ID = 9012
+
+
+async def _join_late_player(test_session_factory, sid: int) -> int:
+    """Aggiunge un secondo player (DEX 12 -> +1) alla sessione già creata."""
+    async with test_session_factory() as s:
+        char = Character(user_id=LATE_PLAYER_ID, name="Ritardatario")
+        s.add(char)
+        await s.flush()
+        s.add(AbilityScore(character_id=char.id, name="dexterity", value=12))
+        s.add(SessionParticipant(
+            session_id=sid, user_id=LATE_PLAYER_ID, character_id=char.id,
+            role=SessionRole.PLAYER, display_name="Ritardatario", joined_at=NOW,
+        ))
+        await s.commit()
+        return char.id
+
+
+async def test_sync_pcs_adds_missing_and_is_idempotent(client, test_session_factory):
+    sid, _ = await seed_session(test_session_factory)
+    await _create_encounter(client, sid, "light")
+    late_char_id = await _join_late_player(test_session_factory, sid)
+
+    r = await client.post(f"/sessions/{sid}/encounter/sync-pcs")
+    assert r.status_code == 200, r.text
+    pcs = [c for c in r.json()["combatants"] if c["kind"] == "pc"]
+    assert len(pcs) == 2
+    late = next(c for c in pcs if c["character_id"] == late_char_id)
+    assert late["initiative_mod"] == 1
+
+    # Idempotente: secondo sync non duplica
+    r2 = await client.post(f"/sessions/{sid}/encounter/sync-pcs")
+    assert len([c for c in r2.json()["combatants"] if c["kind"] == "pc"]) == 2
+
+
+async def test_sync_pcs_requires_gm(client, test_session_factory):
+    sid, _ = await seed_session(test_session_factory)
+    await _create_encounter(client, sid, "light")
+    as_user(PLAYER_ID)
+    r = await client.post(f"/sessions/{sid}/encounter/sync-pcs")
+    assert r.status_code == 403, r.text
