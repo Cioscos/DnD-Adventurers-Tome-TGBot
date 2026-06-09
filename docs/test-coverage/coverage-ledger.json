@@ -5,7 +5,7 @@
     "branch": "chore/blinda-test-batch-1",
     "date": "2026-06-09",
     "size": 8,
-    "focus": "lotto 4 — combattimento/magia ad alto rischio D&D 5e: POST spells/use (slot+concentrazione), roll_damage (crit raddoppia dadi, half round-up), concentration/save (DC=max(10,danno//2), nat20/nat1, perdita concentrazione), attacco arma (crit/fumble/finesse/ranged/ispirazione) + disarmato (flat-1 no-crit / dado arti marziali monaco), PATCH classes/distribute (validazioni + scaling HP a ratio); FE lib relativeTime + spellSrd"
+    "focus": "lotto 5 — progressione/attributi derivati & tiri d20 ad alto rischio D&D 5e (8 unità BE, tutte be-pending): core/game/stats.py (mod/HP-per-livello/total_base_hp/unarmored AC/effective score, puro), PATCH ability_scores (ripple CON→HP, STR→carico, DEX/2a→base CA, validazione 1-30), POST ac/unarmored-defense (Difesa Senza Armatura + clear override), PATCH xp (XP→livello monoclasse→HP, no-HP-loss in down, multiclasse no-auto-sync), POST classes (bootstrap HP 1a classe + save proficiency, 2a classe no-HP/no-save, default hit_die/spellcasting), PATCH classes/{id} (edit grezzo NO ripple HP + sync feature al level-up), POST skills/roll & saving_throws/roll (d20 deterministico: mod+PB/esperto 2xPB, crit/fumble, ispirazione 409/consumo)"
   },
   "units": {
     "fe:lib/dnd.ts": {
@@ -229,6 +229,61 @@
       "apis": [],
       "status": "fe-green",
       "note": "lookupSrdSpell (chiave canonica + alias, case-insensitive, trim, null su vuoto/ignoto) + srdSpellNames (canoniche+alias, esclude chiavi _, ordinate). JSON spells-srd mockato (vi.mock hoisted) → testa la LOGICA di indicizzazione indipendente dai dati reali.",
+      "updated": "2026-06-09"
+    },
+    "be:core/game/stats.py": {
+      "tests": ["tests/services/test_stats.py"],
+      "status": "be-pending",
+      "note": "Matematica derivata D&D 5e PURA (no DB). ability_modifier (floor-div, 1→-5/3→-4), hit_points_for_level (L1=die+CON, L2+=die//2+1+CON, clamp min 1, ValueError su level<1/hit_die<=0), unarmored_defense_ac (10+DEX+2a), total_base_hp (id più basso possiede lo slot L1, resto formula 2+; ordinamento per id; CON per livello; 0 se vuoto), effective_ability_score (relativi sommati + assoluti come pavimento via max, combinazione, altri ability/valori non-int ignorati, JSON-string parse, ValueError ability ignota). Stub via SimpleNamespace.",
+      "updated": "2026-06-09"
+    },
+    "be:routers/stats.py::PATCH /characters/{id}/ability_scores/{ability_name}": {
+      "tests": ["tests/integration/test_ability_scores.py"],
+      "apis": ["PATCH /characters/{id}/ability_scores/{ability}"],
+      "status": "be-pending",
+      "note": "Validazione 1-30 (else 400). CON↑/↓ ripple HP retroattivo: delta_con_mod * total_level su hit_points e current (simmetrico, hp_auto_calc default). STR cambia → recalculate_carry_capacity (STR*15). DEX/altra ability non-CON NON tocca HP. Contratto = FE CharacterFull (hit_points/current_hit_points/carry_capacity/ability_scores[].{value,modifier}).",
+      "updated": "2026-06-09"
+    },
+    "be:routers/stats.py::POST /characters/{id}/ac/unarmored-defense": {
+      "tests": ["tests/integration/test_unarmored_defense.py"],
+      "apis": ["POST /characters/{id}/ac/unarmored-defense"],
+      "status": "be-pending",
+      "note": "Difesa Senza Armatura (Barbaro CON / Monaco SAG): abilita → base CA = 10+DEX+2a e resta in sync ai cambi DEX/2a (verificato via PATCH ability_scores), clear del base_armor_class_override (mutuamente esclusivi); disabilita (null) → base torna a 10 (nessuna armatura). 400 se ability ∉ {wisdom,constitution}. Asserito via ac_breakdown.base/ac/unarmored_defense_ability/base_armor_class_override. Esercita anche PATCH /ac per impostare l'override.",
+      "updated": "2026-06-09"
+    },
+    "be:routers/characters.py::PATCH /characters/{id}/xp": {
+      "tests": ["tests/integration/test_xp_levelup.py"],
+      "apis": ["PATCH /characters/{id}/xp"],
+      "status": "be-pending",
+      "note": "set/add con clamp >=0. Monoclasse: livello tracciato da xp_to_level (300→L2, 900→L3), HP +hit_points_for_level(2+) per livello guadagnato (hp_gained popolato). Level-DOWN: livello sincronizzato ma HP NON ridotti (hp_gained None). Multiclasse: nessun auto-sync del livello (livelli invariati). Contratto = FE CharacterFull (experience_points/classes[].level/hit_points/current_hit_points/hp_gained).",
+      "updated": "2026-06-09"
+    },
+    "be:routers/classes.py::POST /characters/{id}/classes": {
+      "tests": ["tests/integration/test_add_class.py"],
+      "apis": ["POST /characters/{id}/classes"],
+      "status": "be-pending",
+      "note": "1a classe su char a 0 HP → bootstrap HP (formula L1) + seed 2 save proficiency della classe iniziale (PHB). Classe SUCCESSIVA → HP invariato (ricalcolo solo via distribute/xp/edit-livello) e NESSUNA save proficiency aggiuntiva (regola multiclasse PHB). Classe predefinita (CLASS_HIT_DIE/CLASS_SPELLCASTING) → default hit_die/spellcasting_ability se omessi (Mago→6/intelligence). 404 char inesistente. Contratto = FE CharacterFull (classes[]/hit_points/saving_throws).",
+      "updated": "2026-06-09"
+    },
+    "be:routers/classes.py::PATCH /characters/{id}/classes/{class_id}": {
+      "tests": ["tests/integration/test_update_class.py"],
+      "apis": ["PATCH /characters/{id}/classes/{classId}"],
+      "status": "be-pending",
+      "note": "Edit grezzo di classe (level/subclass/hit_die) SENZA ricalcolo HP (path manuale, a differenza di xp/distribute): level 1→5 lascia HP 10 ma proficiency_bonus→3. level-UP ri-sincronizza le feature di classe predefinite (Monaco L1→L2 crea Ability monk.ki max_uses=2). 404 class_id ignoto. Contratto = FE CharacterFull (classes[]/proficiency_bonus/abilities[].{feature_key,max_uses}).",
+      "updated": "2026-06-09"
+    },
+    "be:routers/characters.py::POST /characters/{id}/skills/{skill_name}/roll": {
+      "tests": ["tests/integration/test_skill_roll.py"],
+      "apis": ["POST /characters/{id}/skills/{skillName}/roll"],
+      "status": "be-pending",
+      "note": "d20 deterministico (D20RollSubmission.die). bonus = mod abilità governante + (0 / PB se proficient / 2xPB se 'expert'); mod abilità incluso (STR 16→+3). nat20 is_critical, nat1 is_fumble. skill ignota 400. with_inspiration: 409 se assente, altrimenti consuma heroic_inspiration (verificato via GET). Contratto = FE RollResult (die/bonus/total/is_critical/is_fumble/description).",
+      "updated": "2026-06-09"
+    },
+    "be:routers/characters.py::POST /characters/{id}/saving_throws/{ability}/roll": {
+      "tests": ["tests/integration/test_saving_throw_roll.py"],
+      "apis": ["POST /characters/{id}/saving_throws/{ability}/roll"],
+      "status": "be-pending",
+      "note": "d20 deterministico. bonus = mod abilità + (PB se proficient, else 0). Guerriero iniziale seedato proficient in STR/CON → ramo proficient esercitato senza setup; DEX non-proficient con mod (14→+2) prova il solo mod. ability ignota 400. nat20/nat1 flags. with_inspiration 409/consumo. Contratto = FE RollResult.",
       "updated": "2026-06-09"
     }
   }

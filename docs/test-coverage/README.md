@@ -20,18 +20,19 @@ Va **rilanciato** finché i residui arrivano a 0.
 
 ## Stato copertura
 
-> Aggiornato da `/blinda-test`. Ultimo lotto: **2026-06-09 (lotto 4)** (branch `chore/blinda-test-batch-1`).
-> Il grafo graphify è stato costruito su `webapp/src api core` (3811 KB `graph.json`); anche al lotto 4
-> `--update` è un no-op: nessun sorgente in scope (`webapp/src api core`) è più recente di
-> `graph.json` (verificato con `find … -newer` → 0 file), quindi il grafo è già attuale per le relazioni che servono.
+> Aggiornato da `/blinda-test`. Ultimo lotto: **2026-06-09 (lotto 5)** (branch `chore/blinda-test-batch-1`).
+> Il grafo graphify è stato costruito su `webapp/src api core` (3811 KB `graph.json`, 3468 nodi / 9200 archi);
+> anche al lotto 5 `--update` è un no-op: nessun sorgente in scope è più recente di `graph.json`
+> (`graph.json` è del 2026-06-09 01:54, il file sorgente più recente è del 2026-06-08 21:53), quindi il
+> grafo è già attuale per le relazioni che servono.
 > I "totali" sono inventario su filesystem; le "coperte" sono le unità mappate nel ledger.
 
 | Ambito | Totali (≈) | Coperte (ledger) | Residue (≈) |
 |---|---|---|---|
 | FE (components 92 · pages 75 · lib 20 · hooks 5 · store 5) | 197 | 13 | 184 |
-| BE (endpoint 102 · funzioni service 31 · model/enum 22) | 155 | 21 (+ motore homebrew, vedi nota) | ~134 |
+| BE (endpoint 102 · funzioni service 31 · model/enum 22) | 155 | 29 (+ motore homebrew, vedi nota) | ~126 |
 
-> **Nota copertura BE pre-esistente:** oltre alle 5 unità mappate nel ledger, il repo aveva già
+> **Nota copertura BE pre-esistente:** oltre alle unità mappate nel ledger, il repo aveva già
 > una suite consistente — l'intero **motore homebrew** (`tests/services/homebrew/*`,
 > `tests/integration/homebrew/*`, `tests/e2e/homebrew/*`) e varie regressioni
 > (`tests/integration/test_hp_heal_regression.py`, `test_conditions_regression.py`,
@@ -94,6 +95,23 @@ Va **rilanciato** finché i residui arrivano a 0.
 - `routers/items.py::POST …/attack/unarmed` → `tests/integration/test_unarmed_attack.py` (flat‑1 non‑monaco NON raddoppiato dal crit; dado arti marziali monaco `1d6` a L5 + crit raddoppia; ispirazione 409)
 - `routers/classes.py::PATCH …/classes/distribute` → `tests/integration/test_classes_distribute.py` (multiclasse: `classes_mismatch`/`sum_exceeds_target` 400, scaling HP a ratio `10+6+5=21`, `hp_gained`)
 
+### Lotto 2026-06-09 #5 (8 unità BE, focus progressione/attributi derivati & tiri d20 ad alto rischio)
+
+Lotto **interamente BE** (`be-pending`): tutta la logica D&D 5e ancora scoperta era lato server (la
+matematica derivata di `core/game/stats.py` e i ripple attributi→HP/CA/carico, XP→livello, multiclasse,
+tiri d20). I residui FE rimasti sono ormai presentazionali/UI-state (rischio basso). Suite FE invariata
+e ri-verificata verde di non-regressione: **104 test / 13 file**.
+
+**BE — pytest, `be-pending` (da eseguire su Windows):**
+- `core/game/stats.py` (modulo PURO) → `tests/services/test_stats.py` — `ability_modifier` (floor-div, 1→-5), `hit_points_for_level` (L1=die+CON / L2+=die//2+1+CON, clamp 1, ValueError), `unarmored_defense_ac`, `total_base_hp` (id più basso possiede lo slot L1, ordinamento, CON per livello, vuoto→0), `effective_ability_score` (relativi sommati + assoluti come pavimento, JSON-string, ability/valori invalidi, `ValueError`)
+- `routers/stats.py::PATCH …/ability_scores/{name}` → `tests/integration/test_ability_scores.py` — validazione 1–30, **CON↑/↓ → ripple HP** `delta_mod*total_level` (simmetrico), **STR → carico** (×15), non-CON non tocca HP
+- `routers/stats.py::POST …/ac/unarmored-defense` → `tests/integration/test_unarmored_defense.py` — Difesa Senza Armatura `10+DEX+2a`, re-sync ai cambi DEX/2a, **clear del base override** (mutuo), disabilita→10, 400 ability invalida
+- `routers/characters.py::PATCH …/xp` → `tests/integration/test_xp_levelup.py` — `set`/`add` clamp ≥0, monoclasse XP→livello→**+HP** (`hp_gained`), level-down **non** toglie HP, multiclasse **no auto-sync**
+- `routers/classes.py::POST …/classes` → `tests/integration/test_add_class.py` — 1ª classe bootstrap HP + save proficiency; 2ª classe **no HP / no save** (regola multiclasse); default `hit_die`/`spellcasting` per classe predefinita; 404
+- `routers/classes.py::PATCH …/classes/{id}` → `tests/integration/test_update_class.py` — edit grezzo level/subclass/hit_die **senza ripple HP** (`proficiency_bonus` sì), level-up **sincronizza feature** (Monaco→Punti Ki), 404
+- `routers/characters.py::POST …/skills/{name}/roll` → `tests/integration/test_skill_roll.py` — d20 deterministico, `bonus = mod + 0/PB/2×PB(expert)`, crit/fumble, skill ignota 400, ispirazione 409/consumo
+- `routers/characters.py::POST …/saving_throws/{ability}/roll` → `tests/integration/test_saving_throw_roll.py` — `bonus = mod + (PB se proficient)` (Guerriero seedato STR/CON), ability ignota 400, crit/fumble, ispirazione 409/consumo
+
 ## Finding compatibilità FE↔API
 
 Le unità FE di questo lotto sono **lib pure** (nessuna chiamata diretta `api.*`): la verifica di
@@ -150,14 +168,30 @@ non dal tipo statico — quindi le notifiche delle regole homebrew su attacco (e
 comunque mostrate. Consigliato (cleanup, non urgente) aggiungere `homebrew_notifications?: { … }[]` al tipo per
 allinearlo allo schema e renderlo introspezionabile.
 
+**Lotto 5 — progressione/attributi & tiri d20.** Verificati i metodi `api.*` (`webapp/src/api/client.ts`)
+che colpiscono gli endpoint del lotto contro route + schemi Pydantic. Tutti **allineati**; le shape di
+risposta sono codificate come assert nei pytest (un drift dello schema fa fallire). `core/game/stats.py`
+è puro (nessuna `api.*`): il contratto verificato è che è il modulo-oracolo sotto HP/CA/mod letti dal FE.
+
+| Metodo FE (`client.ts`) | Endpoint BE | Esito |
+|---|---|---|
+| `api.stats.updateAbilityScore` → `PATCH …/ability_scores/{name}` `{value}` → `CharacterFull` | `update_ability_score` / `AbilityScoreUpdate` | ✅ allineato |
+| `api.stats.setUnarmoredDefense` → `POST …/ac/unarmored-defense` `{ability}` (`wisdom`/`constitution`/`null`) → `CharacterFull` | `set_unarmored_defense` / `UnarmoredDefenseUpdate` (valida ∈ {wisdom,constitution}/null) | ✅ allineato |
+| `api.stats.updateXP` → `PATCH …/xp` `{add?,set?}` → `CharacterFull` (`hp_gained`) | `update_xp` / `XPUpdate` | ✅ allineato |
+| `api.classes.add` / `update` → `POST/PATCH …/classes[/{id}]` → `CharacterFull` | `add_class` / `update_class` / `CharacterClassCreate`·`CharacterClassUpdate` | ✅ allineato |
+| `api.stats.rollSkill` / `rollSavingThrow` → `POST …/{skills\|saving_throws}/…/roll` `{die?,with_inspiration}` o vuoto → `RollResult` | `roll_skill` / `roll_saving_throw` / `D20RollSubmission` (`die` `ge=1,le=20`) | ✅ allineato (`die/bonus/total/is_critical/is_fumble/description`) |
+
+Nota: `rollSkill`/`rollSavingThrow` con `die` assente serializzano `JSON.stringify({die: undefined, …})`
+che **scarta** la chiave `die` → `D20RollSubmission.die` resta `None` (RNG server-side). Coerente.
+
 ## Prossimi residui per rischio (per il lotto successivo)
 
-1. FE: componenti/pagine che chiamano **davvero** `api.*` con mutation (es. `pages/Actions`, `pages/Combat`, `WeaponAttackModal`, modali HP/AC/slot) → mock `api.*` + contract test sulla shape della risposta + (per `WeaponAttackModal`) regressione sul gap `homebrew_notifications` sopra
-2. `services/character_response.py` — risoluzione `ability_scores` con più modificatori item (absolute vs relative), encumbrance, e i rami homebrew di `ac_breakdown`
-3. `routers/skills` / `routers/stats.py::PATCH …/ability_scores/{name}` — hook CON→HP, Unarmored Defense, carry capacity (regole 5e collaterali)
-4. `routers/dice.py` — tiro d20 generico + ispirazione 409 (parità con attacco)
-5. `core/db/models.py` — enum/property ad alto rischio (`proficiency_bonus`, `total_level`, `EquipmentSlot`, `is_dead`) come unit test puri
-6. FE `lib/*` ancora scoperte: `roman.ts`, `rewardQueue.ts`, `eventMeta.ts`, `itemIcons.ts`, `celebrate.ts`, `silhouette.ts`, `inlineMarkdown.tsx`
+1. FE: componenti/pagine che chiamano **davvero** `api.*` con mutation (es. `pages/Actions`, `pages/HP`, modali HP/AC/slot, `WeaponAttackModal`) → mock `api.*` + contract test sulla shape della risposta + (per `WeaponAttackModal`) regressione sul gap `homebrew_notifications`
+2. `routers/stats.py::PATCH …/ac` + `POST …/ac/reset-override` — override manuale CA + reset da equip (solo parzialmente sfiorati in `test_unarmored_defense`); `POST/PATCH …/carry-capacity[/reset-override]`
+3. `routers/classes.py::DELETE …/classes/{id}` — rimozione classe con scaling HP a ratio (parità con `distribute`); `routers/abilities.py` (CRUD Ability, protezione feature già in `test_ability_protection`)
+4. `routers/dice.py::POST …/dice/result` — tiro generico (4d6kh3, ispirazione) + history; `routers/spells.py::POST …/spells/{id}` create + `PATCH …/concentration`
+5. `core/db/models.py` — enum/property ad alto rischio (`EquipmentSlot`, `is_dead`, `RestorationType`) e proprietà già coperte indirettamente (`proficiency_bonus`/`total_level` toccate dal lotto 5 via endpoint)
+6. FE `lib/*` ancora scoperte (rischio basso): `roman.ts`, `rewardQueue.ts`, `eventMeta.ts`, `itemIcons.ts`, `celebrate.ts`, `silhouette.ts`, `inlineMarkdown.tsx`, `homebrew/i18n-dsl.ts`; FE hooks/store: `useSwipeNavigation`, `useToast`, `unitSettings`, `diceSettings`
 
 ## File
 
