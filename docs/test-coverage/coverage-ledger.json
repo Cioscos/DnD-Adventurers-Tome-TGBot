@@ -3,9 +3,9 @@
   "description": "Ledger di copertura test mantenuto dal comando locale /blinda-test. Mappa ogni unità testabile (FE/BE) ai test associati. Rigenerabile/aggiornabile ad ogni run del comando.",
   "last_batch": {
     "date": "2026-06-09",
-    "name": "lotto 15",
+    "name": "lotto 16",
     "branch": "chore/blinda-test-batch-1",
-    "focus": "Chiusura blocco components/character/* residui (8 unità): AbilityScoreDetail/Card/EditModal, AutoModeBanner, ProgressionFullTableModal, SwiperDots, CharacterSwiper (drag-to-navigate), HeroStatsSection (stat derivate D&D). 33 test Vitest verdi. /loop FE-only.",
+    "focus": "Utility pure lib/* + store/*: version (changelog), celebrate, eventMeta, itemIcons, rewardQueue + store diceSettings/overlayStore/themeSettings. 20 test Vitest verdi. /loop FE-only.",
     "be_run": {
       "date": "2026-06-09",
       "result": "n/a",
@@ -1586,6 +1586,78 @@
       "apis": [],
       "status": "fe-green",
       "note": "Stat derivate hero (logica D&D 5e): iniziativa=DEX mod, **PB=profBonus(total_level)** (lib reale), **percezione passiva=10+WIS+(prof?PB:0)+hb**, velocità=speed+homebrew, tiri salvezza competenti con bonus (mod+PB+hb), conteggio competenze prof/expert, navigate per cella.",
+      "updated": "2026-06-09"
+    },
+    "fe:lib/version.ts": {
+      "tests": [
+        "webapp/tests/unit/lib/version.test.ts"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Sistema changelog: currentVersion=changelog[0].version (SemVer), localizedLines it/en con fallback it, localizedTitle. Vedi [[project_changelog_system]].",
+      "updated": "2026-06-09"
+    },
+    "fe:lib/celebrate.ts": {
+      "tests": [
+        "webapp/tests/unit/lib/celebrate.test.ts"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "fireLevelUpConfetti: 2 burst confetti dagli angoli bassi (angle 60/120, origin 0.05/0.95). canvas-confetti mockato.",
+      "updated": "2026-06-09"
+    },
+    "fe:lib/eventMeta.ts": {
+      "tests": [
+        "webapp/tests/unit/lib/eventMeta.test.ts"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "EVENT_META: mappa tipi evento history→{icon,tone} con fallback \"other\".",
+      "updated": "2026-06-09"
+    },
+    "fe:lib/itemIcons.ts": {
+      "tests": [
+        "webapp/tests/unit/lib/itemIcons.test.ts"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "getItemTypeIcon: icona per tipo item, fallback GiSwapBag per ignoto/null/undefined.",
+      "updated": "2026-06-09"
+    },
+    "fe:lib/rewardQueue.ts": {
+      "tests": [
+        "webapp/tests/unit/lib/rewardQueue.test.ts"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Coda reward (sessionStorage): enqueue (dedup message_id), peek (non rimuove), dequeue FIFO, clear, pruneOlderThan (scarta vecchi).",
+      "updated": "2026-06-09"
+    },
+    "fe:store/diceSettings.ts": {
+      "tests": [
+        "webapp/tests/unit/store/diceSettings.test.ts"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Store dadi (zustand persist): default animate3d=true/packId=default, setter aggiornano stato.",
+      "updated": "2026-06-09"
+    },
+    "fe:store/overlayStore.ts": {
+      "tests": [
+        "webapp/tests/unit/store/overlayStore.test.ts"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Store overlay: acquire/release (clamp 0), useRegisterOverlay registra mentre open e rilascia su unmount; usato da Sheet/ResultDialog/picker per nascondere il dice launcher.",
+      "updated": "2026-06-09"
+    },
+    "fe:store/themeSettings.ts": {
+      "tests": [
+        "webapp/tests/unit/store/themeSettings.test.ts"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Store tema (zustand persist): default mode=auto, setMode (auto/dark/light).",
       "updated": "2026-06-09"
     }
   }

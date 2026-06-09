@@ -20,8 +20,8 @@ Va **rilanciato** finché i residui arrivano a 0.
 
 ## Stato copertura
 
-> Aggiornato da `/blinda-test`. Ultimo lotto: **2026-06-09 (lotto 15)** (branch `chore/blinda-test-batch-1`).
-> Il grafo graphify resta su `webapp/src api core` (3468 nodi / 9200 edge). Al lotto 15 — come ai lotti 8-14 — solo
+> Aggiornato da `/blinda-test`. Ultimo lotto: **2026-06-09 (lotto 16)** (branch `chore/blinda-test-batch-1`).
+> Il grafo graphify resta su `webapp/src api core` (3468 nodi / 9200 edge). Al lotto 16 — come ai lotti 8-15 — solo
 > **2 file in-scope** risultavano modificati dopo il build del grafo (`api/routers/characters.py`,
 > `api/routers/items.py`) — entrambi **edit interni** dei bug-fix (init `char.classes=[]`; riordino reset CA),
 > **nessun endpoint/firma/schema nuovo** ⇒ la superficie API mappata è ancora accurata. `--update` avrebbe
@@ -31,7 +31,7 @@ Va **rilanciato** finché i residui arrivano a 0.
 
 | Ambito | Totali | Coperte (ledger) | Residue |
 |---|---|---|---|
-| FE (components 89 · pages 72 · lib 20 · hooks 5 · store 5 + coperte) | 197 | 64 | 133 |
+| FE (components 89 · pages 72 · lib 20 · hooks 5 · store 5 + coperte) | 197 | 72 | 125 |
 | BE (endpoint 102 · service 31 · core/game 2 · model/enum 22) | 157 | 113 (**tutte be-green** dopo il run del lotto 11) | 44 |
 
 > **Back-fill copertura BE pre-esistente (lotto 8):** il diff dei lotti 1-7 ignorava la suite pytest
@@ -675,11 +675,31 @@ presentazionali/UI guidati da callback). Con questo, l'intera cartella `componen
 
 > **Lotto FE-only** — componenti senza chiamate `api.*` dirette; nessun pytest nuovo.
 
+### Lotto 2026-06-09 #16 (8 unità: utility pure `lib/*` + `store/*`)
+
+Lotto **FE-only** di utility pure, affidabili e foundational (incluso `version.ts`, fonte di verità del sistema
+changelog). La logica D&D 5e ad alto rischio è ormai coperta (lotti 1-15); i grandi residui restanti sono pagine
+CRUD/UX. Questo lotto chiude utilità a basso rischio ma trasversali.
+
+**FE — Vitest, verdi (20 test, 8 file · suite totale 394 test / 72 file):**
+- `lib/version.ts` — `currentVersion`=`changelog[0].version` (SemVer), `localizedLines` it/en con fallback it,
+  `localizedTitle`. Fonte di verità del changelog in-app.
+- `lib/celebrate.ts` — `fireLevelUpConfetti`: 2 burst confetti dagli angoli bassi (`canvas-confetti` mockato).
+- `lib/eventMeta.ts` — `EVENT_META`: tipi evento history→`{icon,tone}` con fallback `other`.
+- `lib/itemIcons.ts` — `getItemTypeIcon`: icona per tipo item, fallback `GiSwapBag` per ignoto/null/undefined.
+- `lib/rewardQueue.ts` — coda reward su `sessionStorage`: enqueue (dedup `message_id`), peek, dequeue FIFO, clear,
+  `pruneOlderThan`.
+- `store/diceSettings.ts` / `store/themeSettings.ts` — store zustand-persist: default + setter.
+- `store/overlayStore.ts` — `acquire`/`release` (clamp 0), `useRegisterOverlay` registra mentre open e rilascia su unmount.
+
+> **Lotto FE-only** — utility pure; nessun pytest nuovo.
+
 ## Prossimi residui per rischio (per il lotto successivo)
 
 1. **FE mutation pages restanti** (HP+`pages/hp/*`/ArmorClass/Currency/SpellSlots/Experience/AbilityScores/SavingThrows/
    Skills/Conditions/**Spells/Abilities/Multiclass/LevelUpModal** chiusi; **famiglia equip chiusa al lotto 13**;
-   **builder item + classe/progressione al lotto 14**; **`components/character/*` chiuso al lotto 15**):
+   **builder item + classe/progressione al lotto 14**; **`components/character/*` chiuso al lotto 15**;
+   **utility lib/store al lotto 16**):
    `pages/Inventory.tsx` (743 righe — CRUD item, equip/slot, attacco) + `pages/inventory/ItemForm.tsx`/`InventoryItem.tsx`,
    `multiclass/EditClassesModal.tsx` (add/update/distribute classi), `pages/Identity.tsx` (351 — patch identità),
    `pages/Settings.tsx` (568 — preferenze, slot mode, silhouette).
