@@ -20,8 +20,8 @@ Va **rilanciato** finché i residui arrivano a 0.
 
 ## Stato copertura
 
-> Aggiornato da `/blinda-test`. Ultimo lotto: **2026-06-09 (lotto 16)** (branch `chore/blinda-test-batch-1`).
-> Il grafo graphify resta su `webapp/src api core` (3468 nodi / 9200 edge). Al lotto 16 — come ai lotti 8-15 — solo
+> Aggiornato da `/blinda-test`. Ultimo lotto: **2026-06-09 (lotto 17)** (branch `chore/blinda-test-batch-1`).
+> Il grafo graphify resta su `webapp/src api core` (3468 nodi / 9200 edge). Al lotto 17 — come ai lotti 8-16 — solo
 > **2 file in-scope** risultavano modificati dopo il build del grafo (`api/routers/characters.py`,
 > `api/routers/items.py`) — entrambi **edit interni** dei bug-fix (init `char.classes=[]`; riordino reset CA),
 > **nessun endpoint/firma/schema nuovo** ⇒ la superficie API mappata è ancora accurata. `--update` avrebbe
@@ -31,7 +31,7 @@ Va **rilanciato** finché i residui arrivano a 0.
 
 | Ambito | Totali | Coperte (ledger) | Residue |
 |---|---|---|---|
-| FE (components 89 · pages 72 · lib 20 · hooks 5 · store 5 + coperte) | 197 | 72 | 125 |
+| FE (components 89 · pages 72 · lib 20 · hooks 5 · store 5 + coperte) | 197 | 84 | 113 |
 | BE (endpoint 102 · service 31 · core/game 2 · model/enum 22) | 157 | 113 (**tutte be-green** dopo il run del lotto 11) | 44 |
 
 > **Back-fill copertura BE pre-esistente (lotto 8):** il diff dei lotti 1-7 ignorava la suite pytest
@@ -694,12 +694,31 @@ CRUD/UX. Questo lotto chiude utilità a basso rischio ma trasversali.
 
 > **Lotto FE-only** — utility pure; nessun pytest nuovo.
 
+### Lotto 2026-06-09 #17 (12 unità: primitive UI comportamentali `components/ui/*`)
+
+**Batch size aumentata a 12** (su richiesta utente). Chiuse 12 primitive UI con comportamento reale. Lotto **FE-only**.
+
+**FE — Vitest, verdi (41 test, 12 file · suite totale 435 test / 84 file):**
+- `Button.tsx` — onClick, disabled/loading bloccano il click, haptic per kind, `haptic="none"` silenzioso.
+- `Input.tsx` — onChange(value), commit su blur, Enter→blur (commit), errore range numerico (no commit), errore esterno.
+- `Surface.tsx` — children, classe per variant, onClick interattivo, variante motion.
+- `SwitchToggle.tsx` — `role=switch`+`aria-checked`, toggle→`onChange(!checked)`, disabled blocca, tap riga label/hint.
+- `FilterChip.tsx` — `aria-pressed`, onToggle, badge count.
+- `ConditionBadge.tsx` — `aria-label`=`formatCondition` (con valore se graduata) + icona.
+- `EmptyState.tsx` — titolo/hint, CTA action→onClick.
+- `StatPill.tsx` — span/button interattivo, iconOnly+revealOnTap nasconde il valore fino al tap.
+- `AnimatedNumber.tsx` — formattazione it-IT (grouping/precision) + prefix/suffix (framer ridotto a passthrough sincrono).
+- `SectionDivider.tsx` / `FancyHeader.tsx` — flourish 1(left)/2(center), titolo h1.
+- `SwipeIndicator.tsx` — nulla se `direction` null, chevron `left-2`/`right-2`.
+
+> **Lotto FE-only** — primitive presentazionali/UI; nessun pytest nuovo.
+
 ## Prossimi residui per rischio (per il lotto successivo)
 
 1. **FE mutation pages restanti** (HP+`pages/hp/*`/ArmorClass/Currency/SpellSlots/Experience/AbilityScores/SavingThrows/
    Skills/Conditions/**Spells/Abilities/Multiclass/LevelUpModal** chiusi; **famiglia equip chiusa al lotto 13**;
    **builder item + classe/progressione al lotto 14**; **`components/character/*` chiuso al lotto 15**;
-   **utility lib/store al lotto 16**):
+   **utility lib/store al lotto 16**; **primitive `components/ui/*` comportamentali al lotto 17**):
    `pages/Inventory.tsx` (743 righe — CRUD item, equip/slot, attacco) + `pages/inventory/ItemForm.tsx`/`InventoryItem.tsx`,
    `multiclass/EditClassesModal.tsx` (add/update/distribute classi), `pages/Identity.tsx` (351 — patch identità),
    `pages/Settings.tsx` (568 — preferenze, slot mode, silhouette).

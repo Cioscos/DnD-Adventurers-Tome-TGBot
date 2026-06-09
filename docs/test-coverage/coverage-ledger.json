@@ -3,9 +3,9 @@
   "description": "Ledger di copertura test mantenuto dal comando locale /blinda-test. Mappa ogni unità testabile (FE/BE) ai test associati. Rigenerabile/aggiornabile ad ogni run del comando.",
   "last_batch": {
     "date": "2026-06-09",
-    "name": "lotto 16",
+    "name": "lotto 17",
     "branch": "chore/blinda-test-batch-1",
-    "focus": "Utility pure lib/* + store/*: version (changelog), celebrate, eventMeta, itemIcons, rewardQueue + store diceSettings/overlayStore/themeSettings. 20 test Vitest verdi. /loop FE-only.",
+    "focus": "Primitive UI comportamentali components/ui/* (12, batch size aumentata a 12): Button/Input/Surface/SwitchToggle/FilterChip/ConditionBadge/EmptyState/StatPill/AnimatedNumber/SectionDivider/FancyHeader/SwipeIndicator. 41 test Vitest verdi. /loop FE-only.",
     "be_run": {
       "date": "2026-06-09",
       "result": "n/a",
@@ -1658,6 +1658,114 @@
       "apis": [],
       "status": "fe-green",
       "note": "Store tema (zustand persist): default mode=auto, setMode (auto/dark/light).",
+      "updated": "2026-06-09"
+    },
+    "fe:components/ui/Button.tsx": {
+      "tests": [
+        "webapp/tests/unit/ui/Button.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Bottone: onClick, disabled/loading bloccano click (disabled attr), haptic per kind, haptic=\"none\" silenzioso.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/ui/Input.tsx": {
+      "tests": [
+        "webapp/tests/unit/ui/Input.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Input controllato: onChange(value), commit su blur/Enter (blur), errore range numerico (no commit), errore esterno.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/ui/Surface.tsx": {
+      "tests": [
+        "webapp/tests/unit/ui/Surface.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Surface: render children, classe per variant, onClick interattivo, variante motion (asMotion/layoutId).",
+      "updated": "2026-06-09"
+    },
+    "fe:components/ui/SwitchToggle.tsx": {
+      "tests": [
+        "webapp/tests/unit/ui/SwitchToggle.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Switch: role=switch + aria-checked, toggle→onChange(!checked), disabled blocca, tap su riga label/hint toggla.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/ui/FilterChip.tsx": {
+      "tests": [
+        "webapp/tests/unit/ui/FilterChip.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Chip filtro: aria-pressed=selected, onToggle al tap, badge count opzionale.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/ui/ConditionBadge.tsx": {
+      "tests": [
+        "webapp/tests/unit/ui/ConditionBadge.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Badge condizione: aria-label=formatCondition (con valore se graduata), icona condizione. conditions/Tooltip mockati.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/ui/EmptyState.tsx": {
+      "tests": [
+        "webapp/tests/unit/ui/EmptyState.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Empty state: titolo/hint, nessun CTA senza action, CTA action→onClick.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/ui/StatPill.tsx": {
+      "tests": [
+        "webapp/tests/unit/ui/StatPill.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "StatPill: span non-interattivo con label/value, button+onClick se interattivo, iconOnly+revealOnTap nasconde value fino al tap.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/ui/AnimatedNumber.tsx": {
+      "tests": [
+        "webapp/tests/unit/ui/AnimatedNumber.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Scrubber numerico: formattazione it-IT (grouping/precision) + prefix/suffix. framer ridotto a passthrough sincrono.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/ui/SectionDivider.tsx": {
+      "tests": [
+        "webapp/tests/unit/ui/SectionDivider.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Divider sezione: children, 1 flourish (left) / 2 flanking (center).",
+      "updated": "2026-06-09"
+    },
+    "fe:components/ui/FancyHeader.tsx": {
+      "tests": [
+        "webapp/tests/unit/ui/FancyHeader.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Header: titolo in h1, subtitle opzionale, 2 flourish se center / 0 se left.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/ui/SwipeIndicator.tsx": {
+      "tests": [
+        "webapp/tests/unit/ui/SwipeIndicator.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Indicatore swipe: nulla se direction null, chevron left-2 / right-2 per direzione.",
       "updated": "2026-06-09"
     }
   }
