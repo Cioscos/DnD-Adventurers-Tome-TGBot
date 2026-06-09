@@ -20,8 +20,8 @@ Va **rilanciato** finché i residui arrivano a 0.
 
 ## Stato copertura
 
-> Aggiornato da `/blinda-test`. Ultimo lotto: **2026-06-09 (lotto 12)** (branch `chore/blinda-test-batch-1`).
-> Il grafo graphify resta su `webapp/src api core` (3468 nodi / 9200 edge). Al lotto 12 — come ai lotti 8-11 — solo
+> Aggiornato da `/blinda-test`. Ultimo lotto: **2026-06-09 (lotto 13)** (branch `chore/blinda-test-batch-1`).
+> Il grafo graphify resta su `webapp/src api core` (3468 nodi / 9200 edge). Al lotto 13 — come ai lotti 8-12 — solo
 > **2 file in-scope** risultavano modificati dopo il build del grafo (`api/routers/characters.py`,
 > `api/routers/items.py`) — entrambi **edit interni** dei bug-fix (init `char.classes=[]`; riordino reset CA),
 > **nessun endpoint/firma/schema nuovo** ⇒ la superficie API mappata è ancora accurata. `--update` avrebbe
@@ -31,7 +31,7 @@ Va **rilanciato** finché i residui arrivano a 0.
 
 | Ambito | Totali | Coperte (ledger) | Residue |
 |---|---|---|---|
-| FE (components 89 · pages 72 · lib 20 · hooks 5 · store 5 + coperte) | 197 | 40 | 157 |
+| FE (components 89 · pages 72 · lib 20 · hooks 5 · store 5 + coperte) | 197 | 48 | 149 |
 | BE (endpoint 102 · service 31 · core/game 2 · model/enum 22) | 157 | 113 (**tutte be-green** dopo il run del lotto 11) | 44 |
 
 > **Back-fill copertura BE pre-esistente (lotto 8):** il diff dei lotti 1-7 ignorava la suite pytest
@@ -581,11 +581,53 @@ Tutte **allineate**, nessun mismatch 🔴/🟠:
 | `ConcentrationSaveResult` (die/bonus/total/description?/dc/success/lost_concentration/is_critical/is_fumble) | `common.py::ConcentrationSaveResult` (`RollResult` + dc/success/lost_concentration) | ✅ allineato |
 | `HitDiceSpendResult` (rolls/con_bonus/healed/new_current_hp) | `hp.py::HitDiceSpendResult` | ✅ allineato |
 
+### Lotto 2026-06-09 #13 (8 unità: chiusura famiglia FE equipaggiamento / paper-doll)
+
+Chiusa **l'intera famiglia FE dell'equipaggiamento** sotto `EquipmentScreen` — **l'area D&D critica documentata**
+(contributo CA, sistema slot, `swap_slot_occupant`, mirror `equipmentSlots.ts` già coperto al lotto 1). Lotto
+**FE-only**: 2 componenti chiamano `api.items.update` (equip/unequip slot-aware), 1 chiama `api.silhouette.*`.
+
+**FE — Vitest, verdi (34 test, 8 file · suite totale 305 test / 48 file):**
+- `pages/character/EquipmentScreen.tsx` — orchestratore: **state machine sheet** (tap slot vuoto→`EquipItemPicker`,
+  tap slot equipaggiato→`SlotActionSheet`→`details`|`replace`), render `PaperDoll` + `EquipmentStatsFooter`,
+  risoluzione silhouette (custom `fileUrl(id)` vs manifest `silhouetteUrl(char)`).
+- `components/character/PaperDoll.tsx` — 11 slot (left/right/bottom), `findEquipped` per slot, **off_hand nascosto**
+  quando il main_hand è a due mani e l'off_hand è vuoto (`isTwoHanded`), img silhouette vs SVG fallback, `onSlotTap`.
+- `components/character/EquipmentSlotCell.tsx` — cella slot: placeholder/iniziale item, aria-label "slot: nome",
+  `onTap(equipped|null)`.
+- `components/character/EquipmentStatsFooter.tsx` — **stat derivate (logica D&D 5e)**: CA totale = `char.ac +
+  ac_breakdown.homebrew`; danno arma da `main_hand.item_metadata.damage_dice` (— se assente); **ingombro = Σ(peso×qty)
+  solo equipaggiati** vs `carry_capacity` (overload); velocità = `speed + speed_homebrew_modifier`.
+- `components/character/HandsConflictDialog.tsx` — body interpola newItem/removedItem; annulla a sinistra, **conferma a
+  destra**; conferma disabilitata se pending.
+- `components/character/ItemDetailsModal.tsx` — dettagli per tipo (weapon/armor/shield/consumable) + properties /
+  ability_modifiers (segno ±) / effects; chiusura via X/backdrop.
+
+**FE contract-bearing (payload inviato = schema BE, un drift fa fallire):**
+- `components/character/SlotActionSheet.tsx` — Unequip → `items.update(charId, itemId, {is_equipped:false,
+  equipment_slot:null})` poi `onClose`; Details/Replace → callback. Contract con `api/schemas/item.py::ItemUpdate`.
+- `components/character/EquipItemPicker.tsx` — filtra candidati per `ITEM_TYPE_TO_SLOTS[slot]`; equip senza conflitto →
+  `update{is_equipped:true, equipment_slot:slot}` + `onClose`; **conflitto mani** (`handsConflict`) → `HandsConflictDialog`
+  → conferma fa **unequip vecchio + equip nuovo** (2 `update`); empty → `navigate` all'inventario; facet weapon_type
+  (≥2 valori) filtra la lista. Contract con `ItemUpdate`.
+
+> **Lotto FE-only** — nessun pytest nuovo. L'endpoint `PATCH …/items/{item_id}` (slot-aware, `swap_slot_occupant`) è già
+> coperto BE; qui si verifica il **contratto del payload** equip/unequip inviato dal FE.
+
+**Lotto 13 — compat FE↔API.** Verificati i payload `items.update` e i metodi `silhouette.*` contro le route + schemi.
+Tutti **allineati**, nessun mismatch 🔴/🟠:
+
+| Metodo FE (`client.ts`) | Endpoint BE | Esito |
+|---|---|---|
+| `items.update` → `PATCH …/items/{id}` `{is_equipped, equipment_slot}` → `CharacterFull` | `update_item` / `ItemUpdate` | ✅ allineato (`is_equipped:Optional[bool]`, `equipment_slot:Optional[EquipmentSlot]`) |
+| `silhouette.upload`/`remove`/`fileUrl` → `POST/DELETE …/silhouette` · `GET …/silhouette/file` | `silhouette` router | ✅ allineato |
+
 ## Prossimi residui per rischio (per il lotto successivo)
 
 1. **FE mutation pages restanti** (HP+`pages/hp/*`/ArmorClass/Currency/SpellSlots/Experience/AbilityScores/SavingThrows/
-   Skills/Conditions/**Spells/Abilities/Multiclass/LevelUpModal** chiusi): `pages/Inventory.tsx` (743 righe — CRUD item,
-   equip/slot, attacco), `multiclass/EditClassesModal.tsx` (add/update/distribute classi inline), `pages/Identity.tsx`
+   Skills/Conditions/**Spells/Abilities/Multiclass/LevelUpModal** chiusi; **famiglia equip chiusa al lotto 13**):
+   `pages/Inventory.tsx` (743 righe — CRUD item, equip/slot, attacco) + `pages/inventory/*` (ItemForm/InventoryItem/
+   builders), `multiclass/EditClassesModal.tsx`+`AddClassForm.tsx` (add/update/distribute classi), `pages/Identity.tsx`
    (351 — patch identità), `pages/Settings.tsx` (568 — preferenze, slot mode, silhouette upload).
 2. **Router ancora scoperti** (rischio D&D basso, ma flussi reali): `routers/sessions.py` (13 endpoint, sessioni di
    gioco) interamente; `routers/maps.py` (6, upload/serve), `routers/notes.py` (6, incl. voice), `routers/silhouette.py`

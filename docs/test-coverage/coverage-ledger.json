@@ -3,13 +3,13 @@
   "description": "Ledger di copertura test mantenuto dal comando locale /blinda-test. Mappa ogni unità testabile (FE/BE) ai test associati. Rigenerabile/aggiornabile ad ogni run del comando.",
   "last_batch": {
     "date": "2026-06-09",
-    "name": "lotto 12",
+    "name": "lotto 13",
     "branch": "chore/blinda-test-batch-1",
-    "focus": "Chiusura blocco FE pages/hp/* (8 unità) — HP/morte/death-save/hit-dice/concentrazione: massimo rischio D&D 5e FE rimanente. Solo FE (37 test Vitest verdi); nessun BE generato (residui BE ora periferici: maps/notes/sessions/silhouette + modelli ORM).",
+    "focus": "Chiusura famiglia FE equipaggiamento/paper-doll (8 unità): EquipmentScreen + PaperDoll/EquipmentSlotCell/EquipmentStatsFooter/SlotActionSheet/EquipItemPicker/HandsConflictDialog/ItemDetailsModal. Area D&D critica (CA/slot/swap_slot_occupant). 34 test Vitest verdi; nessun BE generato (FE-only).",
     "be_run": {
       "date": "2026-06-09",
       "result": "n/a",
-      "note": "lotto FE-only: nessun pytest nuovo da eseguire su Windows"
+      "note": "lotto FE-only: nessun pytest nuovo"
     }
   },
   "units": {
@@ -1362,6 +1362,86 @@
       "apis": [],
       "status": "fe-green",
       "note": "Stato Morto: causa death_saves/massive_damage, revive dietro ConfirmSheet (onRevive solo su conferma, non su annulla). Vedi [[project_death_dead_state_epic]].",
+      "updated": "2026-06-09"
+    },
+    "fe:components/character/EquipmentSlotCell.tsx": {
+      "tests": [
+        "webapp/tests/unit/components/character/EquipmentSlotCell.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Cella slot paper-doll: placeholder + label \"empty\" se vuota, iniziale item se equip (con `equippedItemIcon`→null), aria-label \"slot: nome\", onTap(equipped|null).",
+      "updated": "2026-06-09"
+    },
+    "fe:components/character/PaperDoll.tsx": {
+      "tests": [
+        "webapp/tests/unit/components/character/PaperDoll.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Paper-doll 11 slot (left/right/bottom): findEquipped per slot, **off_hand nascosto** se main_hand a due mani e off_hand vuoto (`isTwoHanded`), img silhouette se URL / SVG fallback altrimenti, onSlotTap(slot,equipped), silhouetteAction.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/character/EquipmentStatsFooter.tsx": {
+      "tests": [
+        "webapp/tests/unit/components/character/EquipmentStatsFooter.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Stat derivate equip (logica D&D 5e): **CA totale = char.ac + ac_breakdown.homebrew**, danno arma da main_hand.item_metadata.damage_dice (— se assente), **ingombro = Σ(peso×qty) solo equipaggiati** vs carry_capacity (overload), **velocità = speed + speed_homebrew_modifier**.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/character/HandsConflictDialog.tsx": {
+      "tests": [
+        "webapp/tests/unit/components/character/HandsConflictDialog.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Dialog conflitto mani: body interpola newItem/removedItem, annulla→onCancel a sinistra / **conferma→onConfirm a destra** (vedi [[feedback_confirm_button_right]]), conferma disabilitata se pending.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/character/ItemDetailsModal.tsx": {
+      "tests": [
+        "webapp/tests/unit/components/character/ItemDetailsModal.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Modale dettagli item per tipo: weapon (damage_dice/type/category), armor (ac_value/stealth/strength_req), shield (ac_bonus +N), consumable (effect); sezioni properties/ability_modifiers (segno ±)/effects; chiusura via X/backdrop.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/character/SlotActionSheet.tsx": {
+      "tests": [
+        "webapp/tests/unit/components/character/SlotActionSheet.test.tsx"
+      ],
+      "apis": [
+        "PATCH /characters/{id}/items/{item_id}"
+      ],
+      "status": "fe-green",
+      "note": "Action sheet slot: Details→onDetails(item), Replace→onReplace, **Unequip→items.update(charId,itemId,{is_equipped:false,equipment_slot:null})** poi onClose, backdrop→onClose. Contract con api/schemas/item.py::ItemUpdate.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/character/EquipItemPicker.tsx": {
+      "tests": [
+        "webapp/tests/unit/components/character/EquipItemPicker.test.tsx"
+      ],
+      "apis": [
+        "PATCH /characters/{id}/items/{item_id}"
+      ],
+      "status": "fe-green",
+      "note": "Picker equip: filtra candidati per ITEM_TYPE_TO_SLOTS[slot]; pick senza conflitto→**update{is_equipped:true,equipment_slot:slot}** + onClose; conflitto mani (`handsConflict`)→HandsConflictDialog→conferma fa unequip vecchio + equip nuovo (2 update); empty state→navigate inventario; facet filter weapon_type (≥2 valori). Contract con ItemUpdate.",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/character/EquipmentScreen.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/character/EquipmentScreen.test.tsx"
+      ],
+      "apis": [
+        "POST /characters/{id}/silhouette",
+        "DELETE /characters/{id}/silhouette",
+        "GET /characters/{id}/silhouette/file"
+      ],
+      "status": "fe-green",
+      "note": "Orchestratore equip: state machine sheet (picker se slot vuoto / actions se equipaggiato → details|replace), PaperDoll + EquipmentStatsFooter, silhouette URL = fileUrl(id) se has_custom_silhouette altrimenti silhouetteUrl(char) (manifest).",
       "updated": "2026-06-09"
     }
   }
