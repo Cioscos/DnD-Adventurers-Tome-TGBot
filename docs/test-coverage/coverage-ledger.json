@@ -3,9 +3,9 @@
   "description": "Ledger di copertura test mantenuto dal comando locale /blinda-test. Mappa ogni unità testabile (FE/BE) ai test associati. Rigenerabile/aggiornabile ad ogni run del comando.",
   "last_batch": {
     "date": "2026-06-09",
-    "name": "lotto 17",
+    "name": "lotto 18",
     "branch": "chore/blinda-test-batch-1",
-    "focus": "Primitive UI comportamentali components/ui/* (12, batch size aumentata a 12): Button/Input/Surface/SwitchToggle/FilterChip/ConditionBadge/EmptyState/StatPill/AnimatedNumber/SectionDivider/FancyHeader/SwipeIndicator. 41 test Vitest verdi. /loop FE-only.",
+    "focus": "Overlay/feedback + presentazionali components/ui/* (12): Sheet/ConfirmSheet/ResultDialog/Toast/UndoToast/Tooltip/ChipInput/ProgressTriad/HeroXPBar/Flags/DiceIcon/Reveal. 38 test Vitest verdi. /loop FE-only batch 12.",
     "be_run": {
       "date": "2026-06-09",
       "result": "n/a",
@@ -1766,6 +1766,114 @@
       "apis": [],
       "status": "fe-green",
       "note": "Indicatore swipe: nulla se direction null, chevron left-2 / right-2 per direzione.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/ui/Sheet.tsx": {
+      "tests": [
+        "webapp/tests/unit/ui/Sheet.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Bottom-sheet/dialog (portal): chiuso→nulla, open→titolo/children/close, close/backdrop/Escape→onClose, non-dismissible nasconde close. framer+overlayStore mockati.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/ui/ConfirmSheet.tsx": {
+      "tests": [
+        "webapp/tests/unit/ui/ConfirmSheet.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Conferma: titolo/body/azioni, cancel→onClose / confirm→onConfirm (confirm a destra), loading disabilita. Vedi [[feedback_confirm_button_right]].",
+      "updated": "2026-06-09"
+    },
+    "fe:components/ui/ResultDialog.tsx": {
+      "tests": [
+        "webapp/tests/unit/ui/ResultDialog.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Dialog esito: chiuso→nulla, open→titolo/children/OK, OK/backdrop→onClose, accent border (gold→border-dnd-gold) + pulse (animate-pulse-gold), hideOkButton.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/ui/Toast.tsx": {
+      "tests": [
+        "webapp/tests/unit/ui/Toast.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Monta il Toaster sonner (portal su body).",
+      "updated": "2026-06-09"
+    },
+    "fe:components/ui/UndoToast.tsx": {
+      "tests": [
+        "webapp/tests/unit/ui/UndoToast.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "showUndoToast: toast con message + azione undo (onClick→onUndo) + durata default 5s/custom. sonner mockato.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/ui/Tooltip.tsx": {
+      "tests": [
+        "webapp/tests/unit/ui/Tooltip.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Tooltip globale (portal): render trigger, toggle contenuto (role=tooltip) al click.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/ui/ChipInput.tsx": {
+      "tests": [
+        "webapp/tests/unit/ui/ChipInput.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Input a chip: render chip per value, remove→onChange filtrato, Enter committa, duplicato→errore+no change, Backspace su vuoto rimuove l'ultimo.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/ui/ProgressTriad.tsx": {
+      "tests": [
+        "webapp/tests/unit/ui/ProgressTriad.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Barra progresso Semantic Triad: display \"{value}/{max}\" o esplicito, colore emerald<amber<crimson per soglia (overload).",
+      "updated": "2026-06-09"
+    },
+    "fe:components/ui/HeroXPBar.tsx": {
+      "tests": [
+        "webapp/tests/unit/ui/HeroXPBar.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Barra XP: level-up prompt se xpLevel>totalClassLevel (levelFromXp reale), progressbar con aria-valuenow=currentXP, nessun level-up senza classi.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/ui/Flags.tsx": {
+      "tests": [
+        "webapp/tests/unit/ui/Flags.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "FlagIT/FlagEN: SVG inline, size prop.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/ui/DiceIcon.tsx": {
+      "tests": [
+        "webapp/tests/unit/ui/DiceIcon.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Icone dado: numero lati come testo (d20→20, d6→6, d100→%).",
+      "updated": "2026-06-09"
+    },
+    "fe:components/ui/Reveal.tsx": {
+      "tests": [
+        "webapp/tests/unit/ui/Reveal.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Reveal.Stagger/Item: render children (wrapper animazione).",
       "updated": "2026-06-09"
     }
   }

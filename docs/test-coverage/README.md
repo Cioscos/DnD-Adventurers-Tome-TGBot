@@ -20,8 +20,8 @@ Va **rilanciato** finché i residui arrivano a 0.
 
 ## Stato copertura
 
-> Aggiornato da `/blinda-test`. Ultimo lotto: **2026-06-09 (lotto 17)** (branch `chore/blinda-test-batch-1`).
-> Il grafo graphify resta su `webapp/src api core` (3468 nodi / 9200 edge). Al lotto 17 — come ai lotti 8-16 — solo
+> Aggiornato da `/blinda-test`. Ultimo lotto: **2026-06-09 (lotto 18)** (branch `chore/blinda-test-batch-1`).
+> Il grafo graphify resta su `webapp/src api core` (3468 nodi / 9200 edge). Al lotto 18 — come ai lotti 8-17 — solo
 > **2 file in-scope** risultavano modificati dopo il build del grafo (`api/routers/characters.py`,
 > `api/routers/items.py`) — entrambi **edit interni** dei bug-fix (init `char.classes=[]`; riordino reset CA),
 > **nessun endpoint/firma/schema nuovo** ⇒ la superficie API mappata è ancora accurata. `--update` avrebbe
@@ -31,7 +31,7 @@ Va **rilanciato** finché i residui arrivano a 0.
 
 | Ambito | Totali | Coperte (ledger) | Residue |
 |---|---|---|---|
-| FE (components 89 · pages 72 · lib 20 · hooks 5 · store 5 + coperte) | 197 | 84 | 113 |
+| FE (components 89 · pages 72 · lib 20 · hooks 5 · store 5 + coperte) | 197 | 96 | 101 |
 | BE (endpoint 102 · service 31 · core/game 2 · model/enum 22) | 157 | 113 (**tutte be-green** dopo il run del lotto 11) | 44 |
 
 > **Back-fill copertura BE pre-esistente (lotto 8):** il diff dei lotti 1-7 ignorava la suite pytest
@@ -713,12 +713,31 @@ CRUD/UX. Questo lotto chiude utilità a basso rischio ma trasversali.
 
 > **Lotto FE-only** — primitive presentazionali/UI; nessun pytest nuovo.
 
+### Lotto 2026-06-09 #18 (12 unità: overlay/feedback + presentazionali `components/ui/*`)
+
+Secondo giro `components/ui/*` (batch 12). Chiusi overlay/feedback (Sheet/ConfirmSheet/ResultDialog/Toast/UndoToast/
+Tooltip) + presentazionali (ChipInput/ProgressTriad/HeroXPBar/Flags/DiceIcon/Reveal). Lotto **FE-only**.
+
+**FE — Vitest, verdi (38 test, 12 file · suite totale 473 test / 96 file):**
+- `Sheet.tsx` — portal: open→titolo/children/close, close/backdrop/**Escape**→onClose, non-dismissible nasconde close.
+- `ConfirmSheet.tsx` — cancel→onClose / confirm→onConfirm (**confirm a destra**), loading disabilita.
+- `ResultDialog.tsx` — OK/backdrop→onClose, accent border + pulse class, hideOkButton.
+- `Toast.tsx` / `UndoToast.tsx` — monta Toaster sonner; `showUndoToast` con azione undo + durata.
+- `Tooltip.tsx` — toggle contenuto (role=tooltip) al click.
+- `ChipInput.tsx` — chip per value, remove→onChange, Enter committa, **duplicato→errore+no change**, Backspace rimuove l'ultimo.
+- `ProgressTriad.tsx` — colore **emerald<amber<crimson** per soglia (overload).
+- `HeroXPBar.tsx` — level-up se `xpLevel>totalClassLevel` (`levelFromXp` reale), progressbar `aria-valuenow`.
+- `Flags.tsx` / `DiceIcon.tsx` / `Reveal.tsx` — SVG bandiere, glifo dado (d100→%), wrapper Stagger/Item.
+
+> **Lotto FE-only** — primitive UI; nessun pytest nuovo. Restano 6 `components/ui/*` (FilterRow, InSessionBanner,
+> Ornament, PageTransition, Skeleton, WizardFooter) + le grandi pagine-mutation.
+
 ## Prossimi residui per rischio (per il lotto successivo)
 
 1. **FE mutation pages restanti** (HP+`pages/hp/*`/ArmorClass/Currency/SpellSlots/Experience/AbilityScores/SavingThrows/
    Skills/Conditions/**Spells/Abilities/Multiclass/LevelUpModal** chiusi; **famiglia equip chiusa al lotto 13**;
    **builder item + classe/progressione al lotto 14**; **`components/character/*` chiuso al lotto 15**;
-   **utility lib/store al lotto 16**; **primitive `components/ui/*` comportamentali al lotto 17**):
+   **utility lib/store al lotto 16**; **`components/ui/*` quasi tutto ai lotti 17-18**):
    `pages/Inventory.tsx` (743 righe — CRUD item, equip/slot, attacco) + `pages/inventory/ItemForm.tsx`/`InventoryItem.tsx`,
    `multiclass/EditClassesModal.tsx` (add/update/distribute classi), `pages/Identity.tsx` (351 — patch identità),
    `pages/Settings.tsx` (568 — preferenze, slot mode, silhouette).
