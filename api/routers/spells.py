@@ -30,6 +30,7 @@ from api.routers.items import _roll_dice, _DICE_RE
 from api.routers._helpers import roll_concentration_save
 from api.services.character_response import build_character_response
 from api.services.spellcasting import build_spellcasting_info
+from core.data.spellcasting import has_ritual_caster
 
 
 class ConcentrationSaveRequest(BaseModel):
@@ -187,15 +188,32 @@ async def use_spell(
     if spell is None:
         raise HTTPException(status_code=404, detail="Spell not found")
 
-    # Use the slot
-    slot = next(
-        (s for s in char.spell_slots if s.level == body.slot_level), None
-    )
-    if slot is None:
-        raise HTTPException(status_code=400, detail=f"No slot configured for level {body.slot_level}")
-    if slot.available == 0:
-        raise HTTPException(status_code=400, detail=f"No slots available at level {body.slot_level}")
-    slot.use_slot()
+    if body.as_ritual:
+        # Lancio rituale: +10 min, nessuno slot (PHB). Richiede il tag ritual
+        # e una classe con Ritual Casting; il vincolo "preparato" è solo un
+        # avviso FE (spec 2026-06-10).
+        if not spell.is_ritual:
+            raise HTTPException(status_code=400, detail="Spell is not a ritual")
+        if not has_ritual_caster(char.classes):
+            raise HTTPException(
+                status_code=400, detail="No class with Ritual Casting"
+            )
+        _add_history(
+            session, char_id, "spell_ritual_cast",
+            f"Lancio rituale: {spell.name}",
+        )
+    else:
+        if body.slot_level is None:
+            raise HTTPException(status_code=400, detail="slot_level is required")
+        # Use the slot
+        slot = next(
+            (s for s in char.spell_slots if s.level == body.slot_level), None
+        )
+        if slot is None:
+            raise HTTPException(status_code=400, detail=f"No slot configured for level {body.slot_level}")
+        if slot.available == 0:
+            raise HTTPException(status_code=400, detail=f"No slots available at level {body.slot_level}")
+        slot.use_slot()
 
     # Activate concentration if the spell requires it
     if spell.is_concentration:
