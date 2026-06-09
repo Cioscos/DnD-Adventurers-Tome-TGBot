@@ -29,6 +29,7 @@ from api.routers import (
     classes,
     currency,
     dice,
+    encounters,
     history,
     homebrew,
     hp,
@@ -140,4 +141,5 @@ app.include_router(silhouette.router)
 app.include_router(dice.router)
 app.include_router(history.router)
 app.include_router(sessions.router)
+app.include_router(encounters.router)
 app.include_router(homebrew.router)
