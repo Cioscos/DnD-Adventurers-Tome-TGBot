@@ -34,9 +34,11 @@ from api.schemas.session import (
     SessionMessageCreate,
     SessionMessageRead,
 )
+from api.services.encounter_view import build_encounter_block
 from core.db.models import (
     Character,
     CharacterHistory,
+    Encounter,
     GameSession,
     Item,
     SessionMessage,
@@ -397,6 +399,18 @@ async def get_session_live(
     if session.status == SessionStatus.ACTIVE:
         _touch(session)
 
+    enc_result = await db.execute(
+        select(Encounter)
+        .options(selectinload(Encounter.combatants))
+        .where(Encounter.session_id == session.id, Encounter.status != "ended")
+    )
+    open_encounter = enc_result.scalars().first()
+    encounter_block = (
+        build_encounter_block(open_encounter, viewer_is_gm=viewer_is_gm)
+        if open_encounter is not None
+        else None
+    )
+
     return GameSessionLiveRead(
         id=session.id,
         code=session.code,
@@ -418,6 +432,7 @@ async def get_session_live(
             for p in session.participants
         ],
         live_characters=snapshots,
+        encounter=encounter_block,
     )
 
 
