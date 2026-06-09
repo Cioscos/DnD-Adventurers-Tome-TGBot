@@ -3,9 +3,9 @@
   "description": "Ledger di copertura test mantenuto dal comando locale /blinda-test. Mappa ogni unità testabile (FE/BE) ai test associati. Rigenerabile/aggiornabile ad ogni run del comando.",
   "last_batch": {
     "date": "2026-06-09",
-    "name": "lotto 20",
+    "name": "lotto 21",
     "branch": "chore/blinda-test-batch-1",
-    "focus": "Infra FE: hooks (useIntersection/useReducedMotion/useToast/useSwipeNavigation→hooks 5/5) + lib (homebrew i18n-dsl/types + inlineMarkdown→lib 20/20) + 2 modali pagina (ConditionDetailModal/PassiveAbilityDetailModal) + Layout/ModalProvider. 11 unità, 32 test Vitest verdi. DiceOverlay rimandato (306 righe complesse).",
+    "focus": "Sotto-componenti pagine spells (5) + notes (3) + maps (3): CastSpellModal/SpellFilter/SpellItem/SpellForm/SpellDamageSheet + NoteEditor/NoteItem/NoteViewModal + ZoomableImage/MapZoneGroup/MapUploadForm. 33 test Vitest verdi. VoiceRecorder (MediaRecorder) rimandato con DiceOverlay.",
     "be_run": {
       "date": "2026-06-09",
       "result": "n/a",
@@ -2085,6 +2085,112 @@
       "apis": [],
       "status": "fe-green",
       "note": "ModalProvider: context openModal/closeModal, stack modali, isModalOpen riflette lo stack (consumer via useModal).",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/spells/CastSpellModal.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/spells/CastSpellModal.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Modale cast: bottoni slot→onCast(level), empty→prompt crea slot→onCreateSlot(spell.level), cancel.",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/spells/SpellFilter.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/spells/SpellFilter.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Filtro incantesimi: search→onSearchChange, add→onAddClick.",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/spells/SpellItem.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/spells/SpellItem.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Riga incantesimo: toggle, espanso→descrizione+use→onUse, concentrazione toggle solo se is_concentration, menu edit/forget→onEdit/onRemove.",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/spells/SpellForm.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/spells/SpellForm.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Form incantesimo: add (name-gated)→onSubmit, edit seed da initialData, SRD autofill se lookupSrdSpell match, cancel.",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/spells/SpellDamageSheet.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/spells/SpellDamageSheet.test.tsx"
+      ],
+      "apis": [
+        "POST /characters/{id}/spells/{spell_id}/roll_damage",
+        "POST /characters/{id}/spells/{spell_id}/use"
+      ],
+      "status": "fe-green",
+      "note": "Roll danno incantesimo: null senza spell, cantrip→rollDamage (no slot), leveled→**api.spells.use prima** (consuma slot) poi rollDamage, save→cella half_damage. Contract con RollDamageRequest/Result.",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/notes/NoteEditor.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/notes/NoteEditor.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Editor nota: add title-gated→onSave(title,body,tags) trimmati, edit nasconde title, cancel.",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/notes/NoteItem.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/notes/NoteItem.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Riga nota: testo (titolo/tag/inline-markdown body) con edit/delete/view callback; voice note→player audio da voiceUrl(filename).",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/notes/NoteViewModal.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/notes/NoteViewModal.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Modale vista nota: null se note null, titolo/tag/body inline-markdown, edit/delete/close→callback.",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/maps/ZoomableImage.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/maps/ZoomableImage.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Wrapper pinch-zoom: rende img con src/alt (react-zoom-pan-pinch mockato).",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/maps/MapZoneGroup.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/maps/MapZoneGroup.test.tsx"
+      ],
+      "apis": [
+        "PATCH /characters/{id}/maps/reorder"
+      ],
+      "status": "fe-green",
+      "note": "Gruppo zona mappe: nome+conteggio, add-more/delete-zone/delete-file/preview→callback, thumbnail photo. (drag-reorder→api.maps.reorder non testato).",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/maps/MapUploadForm.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/maps/MapUploadForm.test.tsx"
+      ],
+      "apis": [
+        "POST /characters/{id}/maps/upload"
+      ],
+      "status": "fe-green",
+      "note": "Form upload mappa: upload disabilitato senza zona+file, chip zona esistente compila zoneName, cancel.",
       "updated": "2026-06-09"
     }
   }
