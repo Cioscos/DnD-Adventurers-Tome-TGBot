@@ -145,6 +145,23 @@ def _system_feed_message(session: GameSession, body: str) -> SessionMessage:
     )
 
 
+async def _notify_turn(enc: Encounter, combatant: Combatant) -> None:
+    """Fire-and-forget 'your turn' ping to the PC owner's private chat."""
+    if combatant.kind != "pc" or not combatant.owner_user_id or not _BOT_TOKEN:
+        return
+    text = f"⚔️ Tocca a te! Round {enc.round} — {combatant.name}"
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.post(
+                f"https://api.telegram.org/bot{_BOT_TOKEN}/sendMessage",
+                json={"chat_id": combatant.owner_user_id, "text": text},
+            )
+        if not resp.is_success:
+            logger.warning("turn notification failed: %s %s", resp.status_code, resp.text)
+    except Exception as exc:  # noqa: BLE001 — il turno avanza comunque
+        logger.warning("turn notification error: %s", exc)
+
+
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
@@ -282,4 +299,47 @@ async def sync_pcs(
     _touch(session)
     await db.flush()
     await db.refresh(enc, attribute_names=["combatants"])
+    return build_encounter_block(enc, viewer_is_gm=True)
+
+
+@router.post("/{session_id}/encounter/start", response_model=EncounterLive)
+async def start_encounter(
+    session_id: int,
+    body: EncounterStartRequest,
+    user_id: Annotated[int, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> EncounterLive:
+    session = await _load_session(session_id, db)
+    _assert_participant(session, user_id)
+    _assert_gm(session, user_id)
+    _assert_session_active(session)
+    enc = await _require_open_encounter(session_id, db)
+    if enc.status != "setup":
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Encounter already started")
+    if not enc.combatants:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="No combatants")
+    missing = [c for c in enc.combatants if c.initiative is None]
+    if missing and not body.auto_roll_missing:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"code": "missing_initiative", "names": [c.name for c in missing]},
+        )
+    for c in missing:
+        c.initiative_die = random.randint(1, 20)
+        c.initiative = c.initiative_die + c.initiative_mod
+    ordered = sorted(
+        enc.combatants, key=lambda c: (-(c.initiative or 0), -c.initiative_mod, c.id),
+    )
+    for i, c in enumerate(ordered):
+        c.sort_order = (i + 1) * 10
+    enc.status = "active"
+    enc.round = 1
+    enc.started_at = _now()
+    first = next((c for c in ordered if not c.is_dead), None)
+    enc.active_combatant_id = first.id if first else None
+    db.add(_system_feed_message(session, "⚔️ Combattimento iniziato"))
+    _touch(session)
+    await db.flush()
+    if first is not None:
+        await _notify_turn(enc, first)
     return build_encounter_block(enc, viewer_is_gm=True)
