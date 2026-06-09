@@ -1030,7 +1030,7 @@
       "tests": [
         "tests/services/test_models.py"
       ],
-      "status": "be-pending",
+      "status": "be-green",
       "note": "Property/metodi puri (transient, no DB): ac=base+shield+magic; total_level=Σ class.level (0 se vuoto); proficiency_bonus tabella 5e (0/1-4→2,5→3,9→4,13→5,17→6,20→6); class_summary (Nessuna classe / 'name lvl (subclass)' / join ' / '); recalculate_encumbrance=Σ weight*qty; recalculate_carry_capacity=STR*15 (default 10→150, rispetta override).",
       "updated": "2026-06-09"
     },
@@ -1038,7 +1038,7 @@
       "tests": [
         "tests/services/test_models.py"
       ],
-      "status": "be-pending",
+      "status": "be-green",
       "note": "available=max(0,total-used); use_slot incrementa e ValueError se esaurito; restore_slot decrementa con floor a 0; restore_all azzera used.",
       "updated": "2026-06-09"
     },
@@ -1046,7 +1046,7 @@
       "tests": [
         "tests/services/test_models.py"
       ],
-      "status": "be-pending",
+      "status": "be-green",
       "note": "RATES ufficiali 5e (cp1/sp10/ep50/gp100/pp1000); total_in_copper somma pesata; convert verso il basso esatto, verso l'alto restituisce resto in copper value-preserving, fondi insufficienti → False senza mutazione.",
       "updated": "2026-06-09"
     },
@@ -1054,7 +1054,7 @@
       "tests": [
         "tests/services/test_models.py"
       ],
-      "status": "be-pending",
+      "status": "be-green",
       "note": "use() decrementa uses, ValueError a 0, no-op se max_uses None (passiva); restore() resetta uses=max_uses, no-op senza max_uses.",
       "updated": "2026-06-09"
     },
@@ -1062,7 +1062,7 @@
       "tests": [
         "tests/services/test_models.py"
       ],
-      "status": "be-pending",
+      "status": "be-green",
       "note": "modifier=(value-10)//2 floor-division (1→-5, 7→-2, 10→0, 15→2, 16→3, 20→5, 30→10).",
       "updated": "2026-06-09"
     },
@@ -1070,7 +1070,7 @@
       "tests": [
         "tests/services/test_models.py"
       ],
-      "status": "be-pending",
+      "status": "be-green",
       "note": "Integrità membri+valori dei 6 enum (SpellSlotsMode/RestorationType/FileType/SessionRole/SessionStatus/EquipmentSlot) + str-mixin (membro==valore). Vedi [[reference_sqlalchemy_enum_passthrough]].",
       "updated": "2026-06-09"
     },

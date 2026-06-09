@@ -32,7 +32,7 @@ Va **rilanciato** finché i residui arrivano a 0.
 | Ambito | Totali | Coperte (ledger) | Residue |
 |---|---|---|---|
 | FE (components 89 · pages 72 · lib 20 · hooks 5 · store 5 + coperte) | 197 | 24 | 173 |
-| BE (endpoint 102 · service 31 · core/game 2 · model/enum 22) | 157 | 104 (98 be-green + 6 be-pending lotto 9) | 53 |
+| BE (endpoint 102 · service 31 · core/game 2 · model/enum 22) | 157 | 104 (**tutte be-green** dopo il run del lotto 9) | 53 |
 
 > **Back-fill copertura BE pre-esistente (lotto 8):** il diff dei lotti 1-7 ignorava la suite pytest
 > **già presente** nel repo, che copriva molte unità "residue" → falsi negativi. Al lotto 8 sono state
@@ -378,7 +378,7 @@ Chiuso il residuo prioritario #1 — **l'intero `core/db/models.py`** (model/enu
   quando `newLevel>oldLevel`; **toast hp_gained** quando `response.hp_gained>0`. `xpThresholds`+`resourceDiff`
   reali; sotto-componenti pesanti (`ClassTabs`/`ProgressionPreview`/`LevelUpModal`/`StatPill`/`Ornament`) mockati.
 
-**BE — pytest `tests/services/test_models.py`, `be-pending` (da eseguire su Windows):**
+**BE — pytest `tests/services/test_models.py`, `be-green`** (eseguito su Windows 2026-06-09 — **tutti passati**):
 - `core/db/models.py::Character` — `ac`, `total_level`, `proficiency_bonus` (tabella 5e completa con boundary),
   `class_summary`, `recalculate_encumbrance`, `recalculate_carry_capacity` (STR×15, default 150, rispetta override).
 - `…::SpellSlot` — `available` clamp 0, `use_slot` (incr + `ValueError` se esaurito), `restore_slot` floor 0, `restore_all`.
