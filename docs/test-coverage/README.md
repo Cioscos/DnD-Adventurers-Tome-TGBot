@@ -20,20 +20,19 @@ Va **rilanciato** finché i residui arrivano a 0.
 
 ## Stato copertura
 
-> Aggiornato da `/blinda-test`. Ultimo lotto: **2026-06-09 (lotto 8)** (branch `chore/blinda-test-batch-1`).
-> Il grafo graphify resta su `webapp/src api core` (3468 nodi). Al lotto 8 `--update`: dal build del
-> grafo (01:54) `detect_incremental` ha segnalato **839 "nuovi" file fuori scope** (bundle minificati
-> `docs/app/assets/*.js`, `bot/`, `.claude/`, `deploy/`) perché mai entrati nel manifest scoped — fonderli
-> avrebbe **corrotto** il grafo con artefatti di build. Gli unici sorgenti **in-scope** cambiati erano i 2
-> router BE già noti (`api/routers/characters.py`, `api/routers/items.py`, fix di logica non strutturali).
-> Il merge è stato **saltato**, `graph.json` lasciato **intatto e queryabile**; i 2 router cambiati sono
-> letti direttamente come oracolo. I "totali" sono inventario su filesystem; le "coperte" sono le unità
-> mappate nel ledger.
+> Aggiornato da `/blinda-test`. Ultimo lotto: **2026-06-09 (lotto 9)** (branch `chore/blinda-test-batch-1`).
+> Il grafo graphify resta su `webapp/src api core` (3468 nodi). Al lotto 9 `--update`: `detect_incremental`
+> scoped sui 3 path in-scope ha riportato **0 file cambiati** dal build del grafo (01:54) — le 610 "deleted"
+> erano falsi positivi del mismatch manifest↔scope (scansionando un path alla volta, i file degli altri 2
+> path del manifest sembrano cancellati). Nessuna sorgente in-scope cambiata ⇒ eseguire `build_merge` con
+> quelle finte cancellazioni avrebbe **distrutto** il grafo. Merge **saltato**, `graph.json` lasciato
+> **intatto e queryabile** (replica della decisione del lotto 8). I "totali" sono inventario su filesystem;
+> le "coperte" sono le unità mappate nel ledger.
 
 | Ambito | Totali | Coperte (ledger) | Residue |
 |---|---|---|---|
-| FE (components 89 · pages 72 · lib 20 · hooks 5 · store 5 + coperte) | 197 | 22 | 175 |
-| BE (endpoint 102 · service 31 · core/game 2 · model/enum 22) | 157 | 99 (**tutte be-green** dopo il run `547 passed / 0 failed`) | 58 |
+| FE (components 89 · pages 72 · lib 20 · hooks 5 · store 5 + coperte) | 197 | 24 | 173 |
+| BE (endpoint 102 · service 31 · core/game 2 · model/enum 22) | 157 | 104 (98 be-green + 6 be-pending lotto 9) | 53 |
 
 > **Back-fill copertura BE pre-esistente (lotto 8):** il diff dei lotti 1-7 ignorava la suite pytest
 > **già presente** nel repo, che copriva molte unità "residue" → falsi negativi. Al lotto 8 sono state
@@ -362,25 +361,63 @@ Le altre 3 unità FE del lotto (`lib/roman.ts`, `lib/silhouette.ts`, `store/unit
 (nessuna `api.*`); `silhouette.ts` mirrora i nomi-classe/razza/genere → slug, `unitSettings.ts` converte
 solo al confine di display/input (il DB resta in unità canoniche piedi/libbre).
 
+### Lotto 2026-06-09 #9 (8 unità: chiusura blocco `core/db/models.py` + 2 FE mutation pages magia/progressione)
+
+Chiuso il residuo prioritario #1 — **l'intero `core/db/models.py`** (model/enum) — in un solo file pytest
+**puro** (transient, niente DB/async): la matematica D&D 5e che vive direttamente sui modelli. In parallelo,
+2 FE mutation pages alto-rischio ancora scoperte (slot incantesimi + esperienza/level-up).
+
+**FE — Vitest, verdi (16 test, 2 file · suite totale 174 test / 24 file):**
+- `pages/SpellSlots.tsx` — skeleton; render `available/total` + livello romano dalla shape `SpellSlotRead`;
+  cast gemma libera → `update{used+1}` (clamp `total`) / click gemma usata → `update{used-1}` (clamp 0);
+  `TotalEditor` blur → `update{total}`; add livello mancante → `add(level, total=1)`; remove → DELETE;
+  reset-all via `ConfirmSheet` → `resetAll`→`CharacterFull`. **Auto mode** (`settings.spell_slots_mode`,
+  default `'auto'`): `AutoModeBanner` + nessuna affordance manuale. `toRoman` reale, resto mockato.
+- `pages/Experience.tsx` — skeleton; livello da `levelFromXp(experience_points)` (900→3); add → `updateXP{add}`,
+  set (toggle) → `updateXP{set}`; CTA level-up → `updateXP{set: XP_THRESHOLDS[level]=2700}`; **toast level-up**
+  quando `newLevel>oldLevel`; **toast hp_gained** quando `response.hp_gained>0`. `xpThresholds`+`resourceDiff`
+  reali; sotto-componenti pesanti (`ClassTabs`/`ProgressionPreview`/`LevelUpModal`/`StatPill`/`Ornament`) mockati.
+
+**BE — pytest `tests/services/test_models.py`, `be-pending` (da eseguire su Windows):**
+- `core/db/models.py::Character` — `ac`, `total_level`, `proficiency_bonus` (tabella 5e completa con boundary),
+  `class_summary`, `recalculate_encumbrance`, `recalculate_carry_capacity` (STR×15, default 150, rispetta override).
+- `…::SpellSlot` — `available` clamp 0, `use_slot` (incr + `ValueError` se esaurito), `restore_slot` floor 0, `restore_all`.
+- `…::Currency` — `RATES` ufficiali, `total_in_copper`, `convert` (esatto / resto value-preserving / fondi insufficienti no-op).
+- `…::Ability` — `use` (decr / `ValueError` a 0 / no-op passiva), `restore` (reset a max / no-op senza max).
+- `…::AbilityScore` — `modifier` floor-division (1→-5 … 30→10).
+- `…::enums` — integrità membri+valori dei 6 enum + str-mixin (vedi `[[reference_sqlalchemy_enum_passthrough]]`).
+
+**Lotto 9 — compat FE↔API.** Verificati i metodi `api.spellSlots.*` / `api.characters.updateXP` invocati da
+`SpellSlots.tsx`/`Experience.tsx` contro route + schemi Pydantic. Tutti **allineati**, nessun mismatch 🔴/🟠;
+i payload inviati e le shape lette sono codificati come assert (un drift fa fallire):
+
+| Metodo FE (`client.ts`) | Endpoint BE | Esito |
+|---|---|---|
+| `spellSlots.add` → `POST …/spell_slots` `{level,total,used:0}` → `SpellSlotRead` | `add_spell_slot` / `SpellSlotCreate` | ✅ allineato |
+| `spellSlots.update` → `PATCH …/spell_slots/{id}` `{total?,used?}` → `SpellSlotRead` | `update_spell_slot` / `SpellSlotUpdate` | ✅ allineato |
+| `spellSlots.remove` → `DELETE …/spell_slots/{id}` (204) | `delete_spell_slot` | ✅ allineato |
+| `spellSlots.resetAll` → `POST …/spell_slots/reset` → `CharacterFull` | `reset_spell_slots` | ✅ allineato |
+| `characters.updateXP` → `PATCH …/xp` `{add?,set?}` → `CharacterFull` (`hp_gained`) | `update_xp` / `XPUpdate` | ✅ allineato |
+
+Lette dal FE e confermate nello schema: `spell_slots[].{id,level,total,used,available,is_pact}` (`SpellSlotRead`),
+`settings.spell_slots_mode` (source-of-truth in `settings`, vedi `[[project_spell_slots_mode_source]]`),
+`experience_points`/`hp_gained`/`abilities` (`CharacterFull`). Le unità BE del lotto sono **pure** (nessuna `api.*`):
+sono l'oracolo D&D 5e sotto le derivate (mod/PB/HP/CA/slot/valuta) lette altrove.
+
 ## Prossimi residui per rischio (per il lotto successivo)
 
-1. **`core/db/models.py` — model/enum (22, ora il blocco BE residuo in testa)**: test puri senza DB su
-   property/metodi ad alto rischio D&D — `Character.proficiency_bonus`/`total_level`, `SpellSlot.use_slot`/
-   `available`, `is_dead`, `Currency.convert`/`total_in_copper` (oracolo già esercitato dal lotto 8), e
-   **integrità degli enum** `EquipmentSlot`/`RestorationType`/`SpellSlotsMode`/`FileType`/`Session*` (vedi
-   `[[reference_sqlalchemy_enum_passthrough]]`: gli enum vanno verificati su membri/valori).
-2. **FE mutation pages restanti** (HP/ArmorClass/Currency chiusi): `pages/SpellSlots.tsx` + `pages/Spells.tsx`
-   (create/patch/delete slot e incantesimi, cast, concentrazione), `pages/Multiclass.tsx` +
-   `multiclass/LevelUpModal.tsx`/`EditClassesModal.tsx` (add/update/delete/distribute classi, level-up),
-   `pages/Abilities.tsx` (uses/ripristino), `pages/AbilityScores.tsx`/`SavingThrows.tsx`/`Skills.tsx`/
-   `Conditions.tsx`/`Experience.tsx`.
-3. **Router ancora scoperti**: `routers/sessions.py` (13 endpoint, sessioni di gioco) interamente; `routers/maps.py`
+1. **FE mutation pages restanti** (HP/ArmorClass/Currency/SpellSlots/Experience chiusi): `pages/Spells.tsx`
+   (641 righe — create/patch/delete incantesimi, cast, concentrazione, roll danno), `pages/Abilities.tsx`
+   (779 righe — uses/ripristino), `pages/Multiclass.tsx` + `multiclass/LevelUpModal.tsx`/`EditClassesModal.tsx`
+   (add/update/delete/distribute classi, level-up), `pages/AbilityScores.tsx`/`SavingThrows.tsx`/`Skills.tsx`/
+   `Conditions.tsx`.
+2. **Router ancora scoperti**: `routers/sessions.py` (13 endpoint, sessioni di gioco) interamente; `routers/maps.py`
    (6, upload/serve), `routers/notes.py` (6, incl. voice), `routers/history.py` (3), `routers/silhouette.py` (3),
    `routers/dice.py` (history/post-to-chat); `routers/characters.py` list/delete/`saving_throws` bulk.
-4. FE `lib/*`/hooks/store residui (rischio basso): `rewardQueue.ts`, `eventMeta.ts`, `itemIcons.ts`,
+3. FE `lib/*`/hooks/store residui (rischio basso): `rewardQueue.ts`, `eventMeta.ts`, `itemIcons.ts`,
    `celebrate.ts`, `inlineMarkdown.tsx`, `homebrew/i18n-dsl.ts`; hooks `useSwipeNavigation`/`useToast`/
    `useIntersection`/`useReducedMotion`; store `diceSettings`/`overlayStore`/`themeSettings`.
-5. FE componenti presentazionali ad alto valore (no API): `components/character/SpellSlotsSummary.tsx`,
+4. FE componenti presentazionali ad alto valore (no API): `components/character/SpellSlotsSummary.tsx`,
    `ProgressionPreview.tsx`, `components/ui/HeroXPBar.tsx`, `HPBar.tsx`, `pages/hp/DeathSaves.tsx`/`DeadState.tsx`.
 
 ## File

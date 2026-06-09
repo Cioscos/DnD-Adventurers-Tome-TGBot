@@ -1025,6 +1025,81 @@
         "PATCH /characters/{id}/currency",
         "POST /characters/{id}/currency/convert"
       ]
+    },
+    "be:models.py::Character": {
+      "tests": [
+        "tests/services/test_models.py"
+      ],
+      "status": "be-pending",
+      "note": "Property/metodi puri (transient, no DB): ac=base+shield+magic; total_level=Σ class.level (0 se vuoto); proficiency_bonus tabella 5e (0/1-4→2,5→3,9→4,13→5,17→6,20→6); class_summary (Nessuna classe / 'name lvl (subclass)' / join ' / '); recalculate_encumbrance=Σ weight*qty; recalculate_carry_capacity=STR*15 (default 10→150, rispetta override).",
+      "updated": "2026-06-09"
+    },
+    "be:models.py::SpellSlot": {
+      "tests": [
+        "tests/services/test_models.py"
+      ],
+      "status": "be-pending",
+      "note": "available=max(0,total-used); use_slot incrementa e ValueError se esaurito; restore_slot decrementa con floor a 0; restore_all azzera used.",
+      "updated": "2026-06-09"
+    },
+    "be:models.py::Currency": {
+      "tests": [
+        "tests/services/test_models.py"
+      ],
+      "status": "be-pending",
+      "note": "RATES ufficiali 5e (cp1/sp10/ep50/gp100/pp1000); total_in_copper somma pesata; convert verso il basso esatto, verso l'alto restituisce resto in copper value-preserving, fondi insufficienti → False senza mutazione.",
+      "updated": "2026-06-09"
+    },
+    "be:models.py::Ability": {
+      "tests": [
+        "tests/services/test_models.py"
+      ],
+      "status": "be-pending",
+      "note": "use() decrementa uses, ValueError a 0, no-op se max_uses None (passiva); restore() resetta uses=max_uses, no-op senza max_uses.",
+      "updated": "2026-06-09"
+    },
+    "be:models.py::AbilityScore": {
+      "tests": [
+        "tests/services/test_models.py"
+      ],
+      "status": "be-pending",
+      "note": "modifier=(value-10)//2 floor-division (1→-5, 7→-2, 10→0, 15→2, 16→3, 20→5, 30→10).",
+      "updated": "2026-06-09"
+    },
+    "be:models.py::enums": {
+      "tests": [
+        "tests/services/test_models.py"
+      ],
+      "status": "be-pending",
+      "note": "Integrità membri+valori dei 6 enum (SpellSlotsMode/RestorationType/FileType/SessionRole/SessionStatus/EquipmentSlot) + str-mixin (membro==valore). Vedi [[reference_sqlalchemy_enum_passthrough]].",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/SpellSlots.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/SpellSlots.test.tsx"
+      ],
+      "apis": [
+        "GET /characters/{id}",
+        "PATCH /characters/{id}/spell_slots/{slot_id}",
+        "POST /characters/{id}/spell_slots",
+        "DELETE /characters/{id}/spell_slots/{slot_id}",
+        "POST /characters/{id}/spell_slots/reset"
+      ],
+      "status": "fe-green",
+      "note": "Skeleton in pending; render available/total + livello romano dalla shape SpellSlotRead; cast gemma libera → update{used+1} clamp total, click gemma usata → update{used-1} clamp 0; TotalEditor blur → update{total}; add livello mancante → add(level,total=1); remove → DELETE; reset-all via ConfirmSheet → resetAll→CharacterFull. Auto mode: AutoModeBanner + nessuna affordance manuale (no Remove/spinbutton/add-level). settings.spell_slots_mode source-of-truth (default 'auto'). Mock api/router/framer/Reveal-compound/ConfirmSheet/Button/AutoModeBanner; toRoman reale.",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/Experience.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/Experience.test.tsx"
+      ],
+      "apis": [
+        "GET /characters/{id}",
+        "PATCH /characters/{id}/xp"
+      ],
+      "status": "fe-green",
+      "note": "Skeleton in pending; level derivato da levelFromXp(experience_points) (900→3) + XP render; add mode → updateXP{add}, set mode (toggle) → updateXP{set}; CTA level-up → updateXP{set:XP_THRESHOLDS[level]=2700}; toast level-up quando newLevel>oldLevel; toast hp_gained quando response.hp_gained>0. savingRef guard anti-doppio-fire. Mock api/router/sonner/celebrate/framer/Input/Button/AnimatedNumber + sotto-componenti pesanti (ClassTabs/ProgressionPreview/LevelUpModal/StatPill/Ornament null); xpThresholds+resourceDiff reali.",
+      "updated": "2026-06-09"
     }
   }
 }
