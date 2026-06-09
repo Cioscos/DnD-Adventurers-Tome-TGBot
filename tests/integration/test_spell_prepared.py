@@ -97,3 +97,63 @@ async def test_manual_cap_override(client):
     sc = (await _get(client, cid))["spellcasting"]
     assert sc["cap_mode"] == "manual"
     assert sc["prepared_cap"] == 10
+
+
+async def _prepare(client, cid: int, spell_id: int, prepared: bool = True):
+    return await client.patch(
+        f"/characters/{cid}/spells/{spell_id}",
+        json={"is_prepared": prepared},
+    )
+
+
+async def test_prepare_up_to_cap_then_400(client):
+    cid = await _cleric(client, level=2)  # cap = 2
+    ids = [await _add_spell(client, cid, name=f"S{i}", level=1) for i in range(3)]
+
+    assert (await _prepare(client, cid, ids[0])).status_code == 200
+    assert (await _prepare(client, cid, ids[1])).status_code == 200
+    r = await _prepare(client, cid, ids[2])
+    assert r.status_code == 400, r.text
+    assert "cap" in r.json()["detail"].lower()
+
+
+async def test_unprepare_always_allowed_even_over_cap(client):
+    cid = await _cleric(client, level=2)  # cap auto = 2
+    # Porta il PG oltre il tetto abbassando il cap manuale sotto il conteggio.
+    ids = [await _add_spell(client, cid, name=f"S{i}", level=1) for i in range(2)]
+    for sid in ids:
+        assert (await _prepare(client, cid, sid)).status_code == 200
+    r = await client.patch(f"/characters/{cid}", json={
+        "settings": {"prepared_cap_mode": "manual", "prepared_cap_value": 1},
+    })
+    assert r.status_code == 200, r.text
+    # Over-cap (2/1): spreparare è permesso, preparare no.
+    assert (await _prepare(client, cid, ids[0], prepared=False)).status_code == 200
+    sc = (await _get(client, cid))["spellcasting"]
+    assert sc["prepared_count"] == 1 and sc["prepared_cap"] == 1
+
+
+async def test_post_with_is_prepared_at_cap_is_400(client):
+    cid = await _cleric(client, level=1)  # cap = 1
+    sid = await _add_spell(client, cid, name="Uno", level=1)
+    assert (await _prepare(client, cid, sid)).status_code == 200
+    r = await client.post(
+        f"/characters/{cid}/spells",
+        json={"name": "Due", "level": 1, "is_prepared": True},
+    )
+    assert r.status_code == 400, r.text
+
+
+async def test_cantrip_toggle_skips_validation(client):
+    cid = await _cleric(client, level=1)  # cap = 1, già pieno
+    sid = await _add_spell(client, cid, name="Pieno", level=1)
+    assert (await _prepare(client, cid, sid)).status_code == 200
+    cantrip = await _add_spell(client, cid, name="Luce", level=0)
+    assert (await _prepare(client, cid, cantrip)).status_code == 200
+
+
+async def test_known_caster_toggle_has_no_cap(client):
+    cid = await _bard(client)
+    ids = [await _add_spell(client, cid, name=f"B{i}", level=1) for i in range(30)]
+    for sid in ids:
+        assert (await _prepare(client, cid, sid)).status_code == 200
