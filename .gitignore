@@ -49,6 +49,13 @@ api/__pycache__/
 # Claude Code local settings
 .claude/settings.local.json
 
+# Local-only Claude Code command + graphify navigation skill (never pushed)
+.claude/commands/
+.claude/skills/graphify-nav/
+
+# graphify knowledge graph output (regenerated, machine-local)
+graphify-out/
+
 # Superpowers brainstorming sessions
 .superpowers/
 

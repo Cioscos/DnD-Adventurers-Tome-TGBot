@@ -5,7 +5,7 @@
     "branch": "chore/blinda-test-batch-1",
     "date": "2026-06-09",
     "size": 8,
-    "focus": "logica D&D 5e ad alto rischio (death saves, riposo, slot incantesimi, calcoli core FE)"
+    "focus": "lotto 2 — endpoint HP/morte ad alto rischio (PATCH /hp, /death_saves, /revive, hit_dice) + swap slot CA + lib/store FE puri"
   },
   "units": {
     "fe:lib/dnd.ts": {
@@ -71,6 +71,57 @@
       "tests": ["tests/services/test_class_features.py"],
       "status": "be-green",
       "note": "Pre-esistente. Sync feature di classe in Ability. Mappato per evitare ri-selezione.",
+      "updated": "2026-06-09"
+    },
+    "fe:lib/conditions.ts": {
+      "tests": ["webapp/tests/unit/lib/conditions.test.ts"],
+      "apis": [],
+      "status": "fe-green",
+      "note": "CONDITION_ICONS (14 condizioni 5e + spossatezza) + formatCondition; ramo exhaustion-con-livello (int dal BE riposo) vs slug. Lib pura, nessuna chiamata api.*.",
+      "updated": "2026-06-09"
+    },
+    "fe:lib/resourceDiff.ts": {
+      "tests": ["webapp/tests/unit/lib/resourceDiff.test.ts"],
+      "apis": [],
+      "status": "fe-green",
+      "note": "diffResourceMaxes: delta max_uses positivi per Ability is_class_feature (toast scaling pool). Contratto FE Ability ↔ BE AbilityRead allineato per i campi consumati (id/name/max_uses/is_class_feature).",
+      "updated": "2026-06-09"
+    },
+    "fe:store/characterStore.ts": {
+      "tests": ["webapp/tests/unit/store/characterStore.test.ts"],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Zustand store UI: setActiveCharId azzera activeScreen solo al cambio id; setActiveScreen/setLocale; derivazione locale da getLanguageCode. Stato client puro.",
+      "updated": "2026-06-09"
+    },
+    "be:routers/hp.py::PATCH /characters/{id}/hp": {
+      "tests": ["tests/integration/test_hp_update.py"],
+      "status": "be-pending",
+      "note": "5 op HPOp + regole morte: temp HP assorbito prima, clamp a 0, danno-a-0 +1 fallimento (+2 critico), overflow massiccio = morte istantanea, HEAL>0 azzera tiri morte, set_max/set_current/set_temp clamp.",
+      "updated": "2026-06-09"
+    },
+    "be:routers/hp.py::PATCH /characters/{id}/death_saves": {
+      "tests": ["tests/integration/test_death_saves_update.py"],
+      "status": "be-pending",
+      "note": "Azioni manuali: SUCCESS x3 = stabile, FAILURE x3 = morto, STABILIZE = stabile + 1 HP, RESET azzera. Da morto endpoint inerte.",
+      "updated": "2026-06-09"
+    },
+    "be:routers/hp.py::POST /characters/{id}/revive": {
+      "tests": ["tests/integration/test_death_saves_update.py"],
+      "status": "be-pending",
+      "note": "Rianima morto a 1 HP + reset tiri morte + clear concentrazione; no-op idempotente se vivo (non forza 1 HP).",
+      "updated": "2026-06-09"
+    },
+    "be:routers/hp.py::POST /characters/{id}/hit_dice/spend": {
+      "tests": ["tests/integration/test_hit_dice_spend.py"],
+      "status": "be-pending",
+      "note": "Cura = roll + mod CON (min 1/dado) clampata al max; class_id ignoto = 404, count<1 = 400. Asserzioni robuste su rolls/con_bonus riportati (CON 10 = mod 0).",
+      "updated": "2026-06-09"
+    },
+    "be:services/equipment.py::swap_slot_occupant": {
+      "tests": ["tests/services/test_swap_slot_occupant.py"],
+      "status": "be-pending",
+      "note": "Displacement atomico paper-doll: sgombra solo item equipaggiato nello STESSO slot con id DIVERSO; ignora altro slot, sé stesso, item non equipaggiato. Restituisce displaced per reset CA.",
       "updated": "2026-06-09"
     }
   }
