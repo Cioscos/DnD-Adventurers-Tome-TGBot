@@ -411,3 +411,61 @@ async def prev_turn(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> EncounterLive:
     return await _turn_endpoint(session_id, user_id, db, backward=True)
+
+
+@router.patch(
+    "/{session_id}/encounter/combatants/{combatant_id}",
+    response_model=EncounterLive,
+)
+async def patch_combatant(
+    session_id: int,
+    combatant_id: int,
+    body: CombatantPatchRequest,
+    user_id: Annotated[int, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> EncounterLive:
+    session = await _load_session(session_id, db)
+    _assert_participant(session, user_id)
+    _assert_gm(session, user_id)
+    _assert_session_active(session)
+    enc = await _require_open_encounter(session_id, db)
+    comb = next((c for c in enc.combatants if c.id == combatant_id), None)
+    if comb is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Combatant not found")
+
+    touches_hp = (
+        body.current_hp is not None or body.max_hp is not None or body.ac is not None
+    )
+    if touches_hp and (enc.mode == "light" or comb.kind == "pc"):
+        # HP/CA dei mostri esistono solo in full; quelli dei PG vivono sulla scheda.
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="HP/AC fields not allowed here",
+        )
+
+    if body.name is not None:
+        comb.name = body.name
+    if body.initiative_mod is not None:
+        comb.initiative_mod = body.initiative_mod
+    if body.initiative is not None:
+        comb.initiative = body.initiative
+        comb.initiative_die = None       # valore manuale: nessuna faccia da mostrare
+    if body.ac is not None:
+        comb.ac = body.ac
+    if body.max_hp is not None:
+        comb.max_hp = body.max_hp
+        if comb.current_hp is None or comb.current_hp > body.max_hp:
+            comb.current_hp = body.max_hp
+    if body.current_hp is not None:
+        cap = comb.max_hp if comb.max_hp is not None else body.current_hp
+        comb.current_hp = max(0, min(body.current_hp, cap))
+        if comb.current_hp == 0 and comb.kind == "monster":
+            comb.is_dead = True
+    if body.conditions is not None:
+        comb.conditions = body.conditions
+    if body.is_dead is not None:        # override esplicito del GM, vince sull'auto
+        comb.is_dead = body.is_dead
+
+    _touch(session)
+    await db.flush()
+    return build_encounter_block(enc, viewer_is_gm=True)
