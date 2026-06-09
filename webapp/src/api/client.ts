@@ -421,10 +421,10 @@ export const api = {
       }),
     remove: (charId: number, spellId: number) =>
       request<void>(`/characters/${charId}/spells/${spellId}`, { method: 'DELETE' }),
-    use: (charId: number, spellId: number, slotLevel: number) =>
+    use: (charId: number, spellId: number, slotLevel: number | null, asRitual = false) =>
       request<CharacterFull>(`/characters/${charId}/spells/${spellId}/use`, {
         method: 'POST',
-        body: JSON.stringify({ slot_level: slotLevel }),
+        body: JSON.stringify({ slot_level: slotLevel, as_ritual: asRitual }),
       }),
     updateConcentration: (charId: number, spellId: number | null) =>
       request<CharacterFull>(`/characters/${charId}/concentration`, {
