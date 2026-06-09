@@ -1255,21 +1255,21 @@
       "tests": [
         "tests/integration/test_characters_list_delete.py"
       ],
-      "status": "be-pending",
+      "status": "be-green",
       "updated": "2026-06-09"
     },
     "be:routers/characters.py::DELETE /characters/{id}": {
       "tests": [
         "tests/integration/test_characters_list_delete.py"
       ],
-      "status": "be-pending",
+      "status": "be-green",
       "updated": "2026-06-09"
     },
     "be:routers/dice.py::POST /characters/{id}/dice/post-to-chat": {
       "tests": [
         "tests/integration/test_dice_post_to_chat.py"
       ],
-      "status": "be-pending",
+      "status": "be-green",
       "updated": "2026-06-09"
     },
     "be:routers/dice.py::GET /characters/{id}/dice/history": {

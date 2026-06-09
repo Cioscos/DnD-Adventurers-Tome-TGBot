@@ -32,7 +32,7 @@ Va **rilanciato** finché i residui arrivano a 0.
 | Ambito | Totali | Coperte (ledger) | Residue |
 |---|---|---|---|
 | FE (components 89 · pages 72 · lib 20 · hooks 5 · store 5 + coperte) | 197 | 32 | 165 |
-| BE (endpoint 102 · service 31 · core/game 2 · model/enum 22) | 157 | 113 (110 be-green + **3 be-pending** dal lotto 11) | 44 |
+| BE (endpoint 102 · service 31 · core/game 2 · model/enum 22) | 157 | 113 (**tutte be-green** dopo il run del lotto 11) | 44 |
 
 > **Back-fill copertura BE pre-esistente (lotto 8):** il diff dei lotti 1-7 ignorava la suite pytest
 > **già presente** nel repo, che copriva molte unità "residue" → falsi negativi. Al lotto 8 sono state
@@ -493,16 +493,21 @@ rimozione classe; **distribuzione livelli multiclasse**). In parallelo, chiusura
   `hp_gained`** quando >0 + confetti (non-reducedMotion) + `onClose`; **classe a livello 20 → confirm disabilitato**,
   nessuna `distribute`. `classProgression` reale (bridge IT/EN).
 
-**BE — pytest (da eseguire su Windows):**
-- `routers/characters.py::GET /characters` → `tests/integration/test_characters_list_delete.py` (**be-pending**) —
+**BE — pytest, `be-green`** (eseguiti su Windows 2026-06-09 — **tutti passati**):
+- `routers/characters.py::GET /characters` → `tests/integration/test_characters_list_delete.py` —
   lista `CharacterSummary` **solo del proprietario**, ordinata per id, shape completa, `total_level`/`class_summary`
   riflettono la classe iniziale; esclude i personaggi di altri owner (inseriti via session factory).
-- `routers/characters.py::DELETE /characters/{id}` → `test_characters_list_delete.py` (**be-pending**) — 204 + GET
+- `routers/characters.py::DELETE /characters/{id}` → `test_characters_list_delete.py` — 204 + GET
   successiva 404, rimozione mirata dalla lista, 404 ignoto, **403 owner diverso**.
-- `routers/dice.py::POST …/dice/post-to-chat` → `tests/integration/test_dice_post_to_chat.py` (**be-pending**) —
+- `routers/dice.py::POST …/dice/post-to-chat` → `tests/integration/test_dice_post_to_chat.py` —
   ownership prima del token (404/403), **503 senza `BOT_TOKEN`**, happy-path con `httpx.AsyncClient` **monkeypatchato**
   (asserisce `chat_id`=utente autenticato, `parse_mode=Markdown`, testo single `🎲 d20: *18*` vs multi `🎲 2d6: 3 + 5 = *8*`),
   **502** se Telegram risponde non-2xx.
+
+> **Run di conferma BE (2026-06-09, Windows): verde.** I 3 file `be-pending` del lotto 11
+> (`test_characters_list_delete.py`, `test_dice_post_to_chat.py`) sono stati eseguiti su Windows con
+> `uv run pytest` — **tutti passati**, nessuna regressione → portati a `be-green`. Ledger ora **0 be-pending**
+> (32 fe-green + 113 be-green).
 
 > **Back-fill copertura BE pre-esistente:** `routers/dice.py::GET …/dice/history` e `DELETE …/dice/history` erano già
 > coperti da `tests/integration/test_dice_result.py` (`test_history_records_roll_then_clears`, verde nel run 547/0) ma
