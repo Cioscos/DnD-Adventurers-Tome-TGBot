@@ -3,13 +3,13 @@
   "description": "Ledger di copertura test mantenuto dal comando locale /blinda-test. Mappa ogni unità testabile (FE/BE) ai test associati. Rigenerabile/aggiornabile ad ogni run del comando.",
   "last_batch": {
     "date": "2026-06-09",
-    "name": "lotto 7",
+    "name": "lotto 12",
     "branch": "chore/blinda-test-batch-1",
-    "focus": "FE mutation pages (HP/ArmorClass) verdi + abilities/items/spells DELETE CRUD BE (be-pending) + mappate spell_slots POST/DELETE pre-esistenti",
+    "focus": "Chiusura blocco FE pages/hp/* (8 unità) — HP/morte/death-save/hit-dice/concentrazione: massimo rischio D&D 5e FE rimanente. Solo FE (37 test Vitest verdi); nessun BE generato (residui BE ora periferici: maps/notes/sessions/silhouette + modelli ORM).",
     "be_run": {
       "date": "2026-06-09",
-      "result": "519 passed, 0 failed",
-      "note": "pytest completo su Windows: tutti i be-pending (lotto 6+7) confermati verdi"
+      "result": "n/a",
+      "note": "lotto FE-only: nessun pytest nuovo da eseguire su Windows"
     }
   },
   "units": {
@@ -1284,6 +1284,84 @@
         "tests/integration/test_dice_result.py"
       ],
       "status": "be-green",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/hp/HpOperationForm.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/hp/HpOperationForm.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Form HP controllato: selettore 5 operazioni (damage/heal/set_current/set_max/set_temp), shortcut rapidi con segno op-dipendente (− damage / + heal), toggle colpo critico mostrato solo a 0 HP in damage (regola crit-while-dying), confirm disabilitato senza valore.",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/hp/DeathSaves.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/hp/DeathSaves.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Tracker tiri salvezza morte: pallini successi/fallimenti, roll (onRoll, disabled mentre rolling), override manuali reset/success/failure/stabilize → onAction, pulse \"urgent\" del gruppo fallimenti a failures>=2.",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/hp/InstantDeathDialog.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/hp/InstantDeathDialog.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Dialog morte istantanea (danno massiccio): null se !open; accent crimson + pulse quando open; forwarding onClose.",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/hp/HitDiceModal.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/hp/HitDiceModal.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Modal short rest/dadi vita: empty state senza classi, lista classi con d<hit_die>, stepper +/- (clamp >=0), roll disabilitato a 0 dadi → onSpend(classId,count), confirm-rest/cancel.",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/hp/DeathSaveResultDialog.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/hp/DeathSaveResultDialog.test.tsx"
+      ],
+      "apis": [
+        "POST /characters/{id}/death_saves/roll"
+      ],
+      "status": "fe-green",
+      "note": "Esito tiro morte: nat20→gold+pulse+revived, nat1+3 fallimenti→crimson+pulse+dead, success+3 successi→emerald+stable, failure→crimson. Contract con api/schemas/common.py::DeathSaveRollResult (die/outcome/successes/failures/stable/revived/current_hp).",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/hp/ConcentrationSaveDialog.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/hp/ConcentrationSaveDialog.test.tsx"
+      ],
+      "apis": [
+        "POST /characters/{id}/concentration/save"
+      ],
+      "status": "fe-green",
+      "note": "Esito tiro concentrazione: accent critico→gold/successo→emerald/fallimento→crimson, pulse su critico|fumble, banner CRITICO/FUMBLE, nota conc_lost, segno bonus. Contract con api/schemas/common.py::ConcentrationSaveResult (RollResult + dc/success/lost_concentration).",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/hp/HitDiceResultDialog.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/hp/HitDiceResultDialog.test.tsx"
+      ],
+      "apis": [
+        "POST /characters/{id}/hit_dice/spend"
+      ],
+      "status": "fe-green",
+      "note": "Esito spesa dadi vita: +healed, [rolls] +con_bonus (COS), new_current_hp. Contract con api/routers/hp.py::HitDiceSpendResult (rolls/con_bonus/healed/new_current_hp).",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/hp/DeadState.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/hp/DeadState.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Stato Morto: causa death_saves/massive_damage, revive dietro ConfirmSheet (onRevive solo su conferma, non su annulla). Vedi [[project_death_dead_state_epic]].",
       "updated": "2026-06-09"
     }
   }

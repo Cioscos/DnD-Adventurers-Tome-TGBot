@@ -20,8 +20,8 @@ Va **rilanciato** finché i residui arrivano a 0.
 
 ## Stato copertura
 
-> Aggiornato da `/blinda-test`. Ultimo lotto: **2026-06-09 (lotto 11)** (branch `chore/blinda-test-batch-1`).
-> Il grafo graphify resta su `webapp/src api core` (3468 nodi / 9200 edge). Al lotto 11 — come al 10 — solo
+> Aggiornato da `/blinda-test`. Ultimo lotto: **2026-06-09 (lotto 12)** (branch `chore/blinda-test-batch-1`).
+> Il grafo graphify resta su `webapp/src api core` (3468 nodi / 9200 edge). Al lotto 12 — come ai lotti 8-11 — solo
 > **2 file in-scope** risultavano modificati dopo il build del grafo (`api/routers/characters.py`,
 > `api/routers/items.py`) — entrambi **edit interni** dei bug-fix (init `char.classes=[]`; riordino reset CA),
 > **nessun endpoint/firma/schema nuovo** ⇒ la superficie API mappata è ancora accurata. `--update` avrebbe
@@ -31,7 +31,7 @@ Va **rilanciato** finché i residui arrivano a 0.
 
 | Ambito | Totali | Coperte (ledger) | Residue |
 |---|---|---|---|
-| FE (components 89 · pages 72 · lib 20 · hooks 5 · store 5 + coperte) | 197 | 32 | 165 |
+| FE (components 89 · pages 72 · lib 20 · hooks 5 · store 5 + coperte) | 197 | 40 | 157 |
 | BE (endpoint 102 · service 31 · core/game 2 · model/enum 22) | 157 | 113 (**tutte be-green** dopo il run del lotto 11) | 44 |
 
 > **Back-fill copertura BE pre-esistente (lotto 8):** il diff dei lotti 1-7 ignorava la suite pytest
@@ -537,15 +537,60 @@ in **auto** la creazione slot dalla modale di cast passa prima da `characters.up
 `Abilities.tsx` consuma `Ability`/`AbilityRead` (`uses`/`max_uses`/`is_class_feature`/`source_class_id`) e le risorse
 homebrew (`HomebrewResource`: `id`/`current`/`max`) — tutti presenti nei serializer.
 
+### Lotto 2026-06-09 #12 (8 unità: chiusura blocco FE `pages/hp/*` — HP/morte/death-save/hit-dice/concentrazione)
+
+Chiuso **l'intero sotto-albero `pages/hp/*`** (8 componenti presentazionali sotto la pagina HP, già coperta al lotto 2):
+era il **massimo rischio D&D 5e FE rimanente** — è la UI di danno/cura, tiri salvezza morte, morte istantanea, riposo
+breve (dadi vita) e concentrazione. Lotto **FE-only**: nessun pytest nuovo (i residui BE sono ormai periferici, vedi sotto).
+
+**FE — Vitest, verdi (37 test, 8 file · suite totale 271 test / 40 file):**
+- `pages/hp/HpOperationForm.tsx` — form HP controllato (harness stateful): selettore 5 operazioni
+  (damage/heal/set_current/set_max/set_temp), shortcut rapidi con **segno op-dipendente** (− per damage, + per heal),
+  **toggle colpo critico mostrato solo a 0 HP in damage** (regola crit-while-dying, `aria-pressed` che alterna),
+  confirm disabilitato finché non si digita un valore.
+- `pages/hp/DeathSaves.tsx` — tracker tiri salvezza morte: titolo/etichette pallini, roll (`onRoll`, disabled mentre
+  rolling), override manuali reset/success/failure/stabilize → `onAction(action)`, **pulse "urgent"** del gruppo
+  fallimenti quando `failures>=2`.
+- `pages/hp/HitDiceModal.tsx` — modale riposo breve: empty state senza classi, lista classi con `d{hit_die}`,
+  stepper +/- (clamp `>=0`), **roll disabilitato a 0 dadi** → `onSpend(classId, count)`, confirm-rest/cancel.
+- `pages/hp/DeadState.tsx` — stato Morto: causa `death_saves`/`massive_damage`, **revive dietro `ConfirmSheet`**
+  (`onRevive` solo su conferma, **non** su annulla).
+- `pages/hp/InstantDeathDialog.tsx` — dialog morte istantanea (danno massiccio): `null` se `!open`; accent crimson +
+  pulse quando aperto; forwarding `onClose`.
+
+**FE contract-bearing (shape mockata = oracolo BE, un drift di schema fa fallire il test):**
+- `pages/hp/DeathSaveResultDialog.tsx` — esito tiro morte (`POST …/death_saves/roll`): nat20→gold+pulse+revived,
+  nat1+3 fallimenti→crimson+pulse+dead, success+3 successi→emerald+stable, failure→crimson. Contract con
+  `api/schemas/common.py::DeathSaveRollResult`.
+- `pages/hp/ConcentrationSaveDialog.tsx` — esito tiro concentrazione (`POST …/concentration/save`): accent
+  critico→gold/successo→emerald/fallimento→crimson, pulse su critico|fumble, banner CRITICO/FUMBLE, nota `conc_lost`,
+  segno bonus. Contract con `api/schemas/common.py::ConcentrationSaveResult` (RollResult + dc/success/lost_concentration).
+- `pages/hp/HitDiceResultDialog.tsx` — esito spesa dadi vita (`POST …/hit_dice/spend`): `+healed`,
+  `[rolls] +con_bonus (COS)`, `new_current_hp`. Contract con `api/routers/hp.py::HitDiceSpendResult`.
+
+> **Lotto FE-only** — i `pages/hp/*` non chiamano `api.*` direttamente (sono guidati dalle callback della pagina HP,
+> già testata al lotto 2). I 3 dialog di risultato **leggono** però le shape di risposta di 3 endpoint HP: i loro
+> fixture codificano il contratto campo-per-campo verso gli schemi BE. **Nessun pytest nuovo** generato.
+
+**Lotto 12 — compat FE↔API.** Verificate le 3 shape di risposta consumate dai dialog contro gli schemi Pydantic.
+Tutte **allineate**, nessun mismatch 🔴/🟠:
+
+| Shape FE (`@/api/client` / `@/types`) | Schema BE | Esito |
+|---|---|---|
+| `DeathSaveRollResult` (die/outcome/successes/failures/stable/revived/current_hp) | `common.py::DeathSaveRollResult` | ✅ allineato campo-per-campo |
+| `ConcentrationSaveResult` (die/bonus/total/description?/dc/success/lost_concentration/is_critical/is_fumble) | `common.py::ConcentrationSaveResult` (`RollResult` + dc/success/lost_concentration) | ✅ allineato |
+| `HitDiceSpendResult` (rolls/con_bonus/healed/new_current_hp) | `hp.py::HitDiceSpendResult` | ✅ allineato |
+
 ## Prossimi residui per rischio (per il lotto successivo)
 
-1. **FE mutation pages restanti** (HP/ArmorClass/Currency/SpellSlots/Experience/AbilityScores/SavingThrows/Skills/
-   Conditions/**Spells/Abilities/Multiclass/LevelUpModal** chiusi): `pages/Inventory.tsx` (743 righe — CRUD item,
+1. **FE mutation pages restanti** (HP+`pages/hp/*`/ArmorClass/Currency/SpellSlots/Experience/AbilityScores/SavingThrows/
+   Skills/Conditions/**Spells/Abilities/Multiclass/LevelUpModal** chiusi): `pages/Inventory.tsx` (743 righe — CRUD item,
    equip/slot, attacco), `multiclass/EditClassesModal.tsx` (add/update/distribute classi inline), `pages/Identity.tsx`
    (351 — patch identità), `pages/Settings.tsx` (568 — preferenze, slot mode, silhouette upload).
-2. **Router ancora scoperti**: `routers/sessions.py` (13 endpoint, sessioni di gioco) interamente; `routers/maps.py`
-   (6, upload/serve), `routers/notes.py` (6, incl. voice), `routers/silhouette.py` (3). `routers/dice.py` e
-   `routers/characters.py` list/delete **chiusi al lotto 11**.
+2. **Router ancora scoperti** (rischio D&D basso, ma flussi reali): `routers/sessions.py` (13 endpoint, sessioni di
+   gioco) interamente; `routers/maps.py` (6, upload/serve), `routers/notes.py` (6, incl. voice), `routers/silhouette.py`
+   (3); **modelli ORM** in `core/db/models.py` (Character/Item/Spell/Map/CharacterClass/… — gli enum sono già coperti).
+   `routers/dice.py` e `routers/characters.py` list/delete **chiusi al lotto 11**.
 3. FE `lib/*`/hooks/store residui (rischio basso): `rewardQueue.ts`, `eventMeta.ts`, `itemIcons.ts`,
    `celebrate.ts`, `inlineMarkdown.tsx`, `homebrew/i18n-dsl.ts`; hooks `useSwipeNavigation`/`useToast`/
    `useIntersection`/`useReducedMotion`; store `diceSettings`/`overlayStore`/`themeSettings`.
