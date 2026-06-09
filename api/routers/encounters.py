@@ -128,6 +128,12 @@ async def _add_missing_pc_combatants(
     return added
 
 
+def _ordered(combatants: list[Combatant]) -> list[Combatant]:
+    rows = [c for c in combatants if c.sort_order is not None]
+    rows.sort(key=lambda c: (c.sort_order, c.id))
+    return rows
+
+
 def _system_feed_message(session: GameSession, body: str) -> SessionMessage:
     return SessionMessage(
         session_id=session.id,
@@ -170,6 +176,49 @@ async def create_encounter(
     db.add(enc)
     await db.flush()
     await _add_missing_pc_combatants(session, enc, db)
+    _touch(session)
+    await db.flush()
+    await db.refresh(enc, attribute_names=["combatants"])
+    return build_encounter_block(enc, viewer_is_gm=True)
+
+
+@router.post(
+    "/{session_id}/encounter/combatants",
+    response_model=EncounterLive,
+    status_code=status.HTTP_201_CREATED,
+)
+async def add_combatants(
+    session_id: int,
+    body: CombatantAddRequest,
+    user_id: Annotated[int, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> EncounterLive:
+    session = await _load_session(session_id, db)
+    _assert_participant(session, user_id)
+    _assert_gm(session, user_id)
+    _assert_session_active(session)
+    enc = await _require_open_encounter(session_id, db)
+    if enc.mode == "light" and (body.max_hp is not None or body.ac is not None):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="HP/AC fields are not allowed in light mode",
+        )
+    rows = _ordered(enc.combatants)
+    next_order = (rows[-1].sort_order + 10) if rows else 10
+    for i in range(body.count):
+        name = body.name if body.count == 1 else f"{body.name} {i + 1}"
+        db.add(Combatant(
+            encounter_id=enc.id,
+            kind="monster",
+            name=name,
+            initiative_mod=body.initiative_mod,
+            max_hp=body.max_hp,
+            current_hp=body.max_hp,
+            ac=body.ac,
+            # Rinforzi a combattimento avviato: in coda all'ordine corrente.
+            sort_order=(next_order + i * 10) if enc.status == "active" else None,
+            created_at=_now(),
+        ))
     _touch(session)
     await db.flush()
     await db.refresh(enc, attribute_names=["combatants"])
