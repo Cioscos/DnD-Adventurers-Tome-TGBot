@@ -3,9 +3,9 @@
   "description": "Ledger di copertura test mantenuto dal comando locale /blinda-test. Mappa ogni unità testabile (FE/BE) ai test associati. Rigenerabile/aggiornabile ad ogni run del comando.",
   "last_batch": {
     "date": "2026-06-09",
-    "name": "lotto 14",
+    "name": "lotto 15",
     "branch": "chore/blinda-test-batch-1",
-    "focus": "Builder item (dati combattimento: DamageDiceBuilder/AbilityModifiersEditor/EffectsEditor) + famiglia classe/progressione (ClassTabs/ProgressionPreview/SpellSlotsSummary/LevelUpBanner/AddClassForm). 36 test Vitest verdi. Lotto FE-only (primo del /loop auto-ritmo).",
+    "focus": "Chiusura blocco components/character/* residui (8 unità): AbilityScoreDetail/Card/EditModal, AutoModeBanner, ProgressionFullTableModal, SwiperDots, CharacterSwiper (drag-to-navigate), HeroStatsSection (stat derivate D&D). 33 test Vitest verdi. /loop FE-only.",
     "be_run": {
       "date": "2026-06-09",
       "result": "n/a",
@@ -1514,6 +1514,78 @@
       "apis": [],
       "status": "fe-green",
       "note": "Form aggiunta classe (multiclasse): selezione predefinita auto-compila e blocca hit_die (fighter→d10), classe custom richiede nome prima dell'add (canAdd), submit→onAdd(ClassForm), cancel, lockLevelTo nasconde l'input livello (flusso level-up). addClass.utils reale.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/character/AbilityScoreDetail.tsx": {
+      "tests": [
+        "webapp/tests/unit/components/character/AbilityScoreDetail.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Breakdown caratteristica: base (base_value??value), righe modifiers_applied (relative ±/absolute =), valore effettivo.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/character/SwiperDots.tsx": {
+      "tests": [
+        "webapp/tests/unit/components/character/SwiperDots.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Pallini carosello 3 schermate: tablist, aria-selected sull'attivo, onSelect(idx) al tap, labels come aria-label.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/character/AbilityScoreCard.tsx": {
+      "tests": [
+        "webapp/tests/unit/components/character/AbilityScoreCard.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Card caratteristica: valore + modificatore con segno, matita→onEdit, toggle espansione (aria-expanded)→onToggle solo se ci sono bonus (modifiers_applied).",
+      "updated": "2026-06-09"
+    },
+    "fe:components/character/AutoModeBanner.tsx": {
+      "tests": [
+        "webapp/tests/unit/components/character/AutoModeBanner.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Banner auto-mode slot: aperto al primo accesso (localStorage assente), toggle persiste \"closed\", parte chiuso se stored \"closed\", onGoToSettings dalla scorciatoia.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/character/AbilityScoreEditModal.tsx": {
+      "tests": [
+        "webapp/tests/unit/components/character/AbilityScoreEditModal.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Modale edit caratteristica: seed da currentValue, **mod D&D 5e = floor((v-10)/2)**, steppers clamp 1..30, Save disabilitato finché value==currentValue→onSave(value), cancel→onClose.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/character/ProgressionFullTableModal.tsx": {
+      "tests": [
+        "webapp/tests/unit/components/character/ProgressionFullTableModal.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Tabella progressione completa (portal): una riga per livello con features, riga livello corrente evidenziata, chiusura via X/backdrop. classProgression mockata, scrollIntoView stubbato.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/character/CharacterSwiper.tsx": {
+      "tests": [
+        "webapp/tests/unit/components/character/CharacterSwiper.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Carosello 3 schermate (hero/equip/menu): render pannelli + SwiperDots→setActiveScreen; **handleDragEnd**: drag sx oltre soglia→schermata succ., dx→prec., tap (offset<10px)→nessun cambio anche con velocity spike. framer mockato con cattura onDragEnd, ResizeObserver stubbato.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/character/HeroStatsSection.tsx": {
+      "tests": [
+        "webapp/tests/unit/components/character/HeroStatsSection.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Stat derivate hero (logica D&D 5e): iniziativa=DEX mod, **PB=profBonus(total_level)** (lib reale), **percezione passiva=10+WIS+(prof?PB:0)+hb**, velocità=speed+homebrew, tiri salvezza competenti con bonus (mod+PB+hb), conteggio competenze prof/expert, navigate per cella.",
       "updated": "2026-06-09"
     }
   }
