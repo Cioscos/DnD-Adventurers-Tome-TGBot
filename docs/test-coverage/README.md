@@ -127,7 +127,11 @@ restano `be-pending` finché un nuovo run su Windows non li conferma verdi.
 
 > Nota: i fix sbloccano anche test `be-pending` di lotti precedenti che fallivano sulla stessa causa
 > (`test_hp_recalc`, `test_classes_distribute`, `test_unarmed_attack` monaco — bug #1; `test_item_equip_ac`
-> displacement — bug #2). Da riverificare al prossimo run pytest.
+> displacement — bug #2).
+>
+> **Re-run di conferma (2026-06-09, dopo i 2 fix): `477 passed, 0 failed`** (da 429/48 → 477/0, nessuna
+> regressione). Tutte le unità BE del ledger passano ⇒ portate da `be-pending` a `be-green`. I warning
+> residui (`ResourceWarning` / "Event loop is closed" in teardown aiosqlite) sono rumore benigno, non fallimenti.
 
 ## Finding compatibilità FE↔API
 
