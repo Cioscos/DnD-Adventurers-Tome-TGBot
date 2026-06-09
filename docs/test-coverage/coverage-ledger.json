@@ -1,0 +1,77 @@
+{
+  "version": 1,
+  "description": "Ledger di copertura test mantenuto dal comando locale /blinda-test. Mappa ogni unità testabile (FE/BE) ai test associati. Rigenerabile/aggiornabile ad ogni run del comando.",
+  "last_batch": {
+    "branch": "chore/blinda-test-batch-1",
+    "date": "2026-06-09",
+    "size": 8,
+    "focus": "logica D&D 5e ad alto rischio (death saves, riposo, slot incantesimi, calcoli core FE)"
+  },
+  "units": {
+    "fe:lib/dnd.ts": {
+      "tests": ["webapp/tests/unit/lib/dnd.test.ts"],
+      "apis": [],
+      "status": "fe-green",
+      "note": "profBonus + mod: matematica D&D 5e condivisa (funzioni pure).",
+      "updated": "2026-06-09"
+    },
+    "fe:lib/xpThresholds.ts": {
+      "tests": ["webapp/tests/unit/lib/xpThresholds.test.ts"],
+      "apis": [],
+      "status": "fe-green",
+      "note": "levelFromXp / getNextLevelThreshold / quickXpAmounts (soglie XP SRD).",
+      "updated": "2026-06-09"
+    },
+    "fe:lib/classProgression.ts": {
+      "tests": ["webapp/tests/unit/lib/classProgression.test.ts"],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Bridge class_name EN → chiave JSON IT; contract test su class-progression.json.",
+      "updated": "2026-06-09"
+    },
+    "fe:lib/unarmedStrike.ts": {
+      "tests": ["webapp/tests/unit/lib/unarmedStrike.test.ts"],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Contract mirror di core/game/attacks.py::martial_arts_die (allineato).",
+      "updated": "2026-06-09"
+    },
+    "fe:lib/equipmentSlots.ts": {
+      "tests": ["webapp/tests/unit/lib/equipmentSlots.test.ts"],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Contract mirror di api/services/equipment.py::EQUIPMENT_SLOT_COMPAT (allineato) + isTwoHanded/handsConflict.",
+      "updated": "2026-06-09"
+    },
+    "be:routers/hp.py::POST /characters/{id}/death_saves/roll": {
+      "tests": ["tests/integration/test_death_save_roll.py"],
+      "status": "be-pending",
+      "note": "Regole D&D 5e: nat20 rianima a 1 HP, nat1 = 2 fallimenti, 10+ successo, 2-9 fallimento, 3 fallimenti = morto. Body die deterministico.",
+      "updated": "2026-06-09"
+    },
+    "be:routers/hp.py::POST /characters/{id}/rest": {
+      "tests": ["tests/integration/test_rest.py"],
+      "status": "be-pending",
+      "note": "Riposo lungo: HP a max + reset tiri morte. Riposo breve: cura solo per dadi vita (clampata). rest_type invalido = 400.",
+      "updated": "2026-06-09"
+    },
+    "be:services/spell_slots.py::recalc_spell_slots": {
+      "tests": ["tests/services/test_recalc_spell_slots.py"],
+      "status": "be-pending",
+      "note": "Ricalcolo automatico slot: crea/aggiorna, preserva used (clamp), droppa slot non più concessi, no-op in manual, pool pact warlock separato.",
+      "updated": "2026-06-09"
+    },
+    "be:core/game/attacks.py": {
+      "tests": ["tests/services/test_attacks.py"],
+      "status": "be-green",
+      "note": "Pre-esistente. martial_arts_die + unarmed_strike_profile. Mappato per evitare ri-selezione.",
+      "updated": "2026-06-09"
+    },
+    "be:services/class_features.py::sync_class_feature_abilities": {
+      "tests": ["tests/services/test_class_features.py"],
+      "status": "be-green",
+      "note": "Pre-esistente. Sync feature di classe in Ability. Mappato per evitare ri-selezione.",
+      "updated": "2026-06-09"
+    }
+  }
+}
