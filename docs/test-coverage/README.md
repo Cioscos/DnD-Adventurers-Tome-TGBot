@@ -20,8 +20,8 @@ Va **rilanciato** finché i residui arrivano a 0.
 
 ## Stato copertura
 
-> Aggiornato da `/blinda-test`. Ultimo lotto: **2026-06-09 (lotto 13)** (branch `chore/blinda-test-batch-1`).
-> Il grafo graphify resta su `webapp/src api core` (3468 nodi / 9200 edge). Al lotto 13 — come ai lotti 8-12 — solo
+> Aggiornato da `/blinda-test`. Ultimo lotto: **2026-06-09 (lotto 14)** (branch `chore/blinda-test-batch-1`).
+> Il grafo graphify resta su `webapp/src api core` (3468 nodi / 9200 edge). Al lotto 14 — come ai lotti 8-13 — solo
 > **2 file in-scope** risultavano modificati dopo il build del grafo (`api/routers/characters.py`,
 > `api/routers/items.py`) — entrambi **edit interni** dei bug-fix (init `char.classes=[]`; riordino reset CA),
 > **nessun endpoint/firma/schema nuovo** ⇒ la superficie API mappata è ancora accurata. `--update` avrebbe
@@ -31,7 +31,7 @@ Va **rilanciato** finché i residui arrivano a 0.
 
 | Ambito | Totali | Coperte (ledger) | Residue |
 |---|---|---|---|
-| FE (components 89 · pages 72 · lib 20 · hooks 5 · store 5 + coperte) | 197 | 48 | 149 |
+| FE (components 89 · pages 72 · lib 20 · hooks 5 · store 5 + coperte) | 197 | 56 | 141 |
 | BE (endpoint 102 · service 31 · core/game 2 · model/enum 22) | 157 | 113 (**tutte be-green** dopo il run del lotto 11) | 44 |
 
 > **Back-fill copertura BE pre-esistente (lotto 8):** il diff dei lotti 1-7 ignorava la suite pytest
@@ -622,13 +622,40 @@ Tutti **allineati**, nessun mismatch 🔴/🟠:
 | `items.update` → `PATCH …/items/{id}` `{is_equipped, equipment_slot}` → `CharacterFull` | `update_item` / `ItemUpdate` | ✅ allineato (`is_equipped:Optional[bool]`, `equipment_slot:Optional[EquipmentSlot]`) |
 | `silhouette.upload`/`remove`/`fileUrl` → `POST/DELETE …/silhouette` · `GET …/silhouette/file` | `silhouette` router | ✅ allineato |
 
+### Lotto 2026-06-09 #14 (8 unità: builder item dati-combattimento + famiglia classe/progressione)
+
+Primo lotto del **`/loop` in auto-ritmo**. Chiusi i **3 builder dei metadati item** (dati di combattimento: dadi danno,
+modificatori caratteristica, effetti consumabile) + la **famiglia classe/progressione** (tab multiclasse, preview
+progressione, riepilogo slot, banner level-up, form aggiunta classe). Lotto **FE-only**.
+
+**FE — Vitest, verdi (36 test, 8 file · suite totale 341 test / 56 file):**
+- `pages/inventory/DamageDiceBuilder.tsx` — parse notazione→count/die/mod, steppers (clamp 1..10 / -5..20), chip dado
+  attivo, preview; **ogni edit ri-serializza via `serializeDamageDice`** (contract round-trip con `itemMetadata` reale).
+- `pages/inventory/AbilityModifiersEditor.tsx` — lista controllata: empty hint, add→`{strength,relative,0}`,
+  update ability/value, remove per indice.
+- `pages/inventory/EffectsEditor.tsx` — effetti heal/condizioni: add→heal `2d4+2`, change kind→`defaultEffect`
+  (`add_condition`→`poisoned`), update amount/condition, remove. `EFFECT_KINDS`/`CONDITION_SLUGS` reali.
+- `components/character/ClassTabs.tsx` — null se ≤1 classe, una tab per classe con livello, `aria-selected`, `onSelect`.
+- `components/character/ProgressionPreview.tsx` — no-data fallback, **finestra 5 righe centrata** (`computeWindow`),
+  `aria-current` sulla riga corrente, **colonna PB nascosta se `isMulticlass`** (PB reale ≠ tabella mono-classe),
+  tap→`ProgressionFullTableModal`.
+- `components/character/SpellSlotsSummary.tsx` — griglia 9 livelli: null se vuoto/tutti 0, **somma `total` per livello**
+  (warlock multiclasse: 2 righe stesso livello→conteggio combinato), tap→`navigate` agli slot.
+- `pages/multiclass/LevelUpBanner.tsx` — label da `labelKey` (default/custom), `onOpen` al click.
+- `pages/multiclass/AddClassForm.tsx` — **classe predefinita auto-compila e blocca `hit_die`** (fighter→d10), classe
+  custom richiede nome prima dell'add (`canAdd`), submit→`onAdd(ClassForm)`, `lockLevelTo` nasconde il livello (flusso
+  level-up). `addClass.utils` reale.
+
+> **Lotto FE-only** — componenti controllati/presentazionali guidati da callback; nessuna chiamata `api.*` diretta
+> (le mutation vivono nei genitori `ItemForm`/`Inventory`/`Multiclass`, ancora residui). Nessun pytest nuovo.
+
 ## Prossimi residui per rischio (per il lotto successivo)
 
 1. **FE mutation pages restanti** (HP+`pages/hp/*`/ArmorClass/Currency/SpellSlots/Experience/AbilityScores/SavingThrows/
-   Skills/Conditions/**Spells/Abilities/Multiclass/LevelUpModal** chiusi; **famiglia equip chiusa al lotto 13**):
-   `pages/Inventory.tsx` (743 righe — CRUD item, equip/slot, attacco) + `pages/inventory/*` (ItemForm/InventoryItem/
-   builders), `multiclass/EditClassesModal.tsx`+`AddClassForm.tsx` (add/update/distribute classi), `pages/Identity.tsx`
-   (351 — patch identità), `pages/Settings.tsx` (568 — preferenze, slot mode, silhouette upload).
+   Skills/Conditions/**Spells/Abilities/Multiclass/LevelUpModal** chiusi; **famiglia equip chiusa al lotto 13**;
+   **builder item + classe/progressione chiusi al lotto 14**): `pages/Inventory.tsx` (743 righe — CRUD item, equip/slot,
+   attacco) + `pages/inventory/ItemForm.tsx`/`InventoryItem.tsx`, `multiclass/EditClassesModal.tsx` (add/update/distribute
+   classi), `pages/Identity.tsx` (351 — patch identità), `pages/Settings.tsx` (568 — preferenze, slot mode, silhouette).
 2. **Router ancora scoperti** (rischio D&D basso, ma flussi reali): `routers/sessions.py` (13 endpoint, sessioni di
    gioco) interamente; `routers/maps.py` (6, upload/serve), `routers/notes.py` (6, incl. voice), `routers/silhouette.py`
    (3); **modelli ORM** in `core/db/models.py` (Character/Item/Spell/Map/CharacterClass/… — gli enum sono già coperti).

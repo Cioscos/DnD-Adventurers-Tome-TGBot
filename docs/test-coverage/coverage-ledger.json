@@ -3,9 +3,9 @@
   "description": "Ledger di copertura test mantenuto dal comando locale /blinda-test. Mappa ogni unità testabile (FE/BE) ai test associati. Rigenerabile/aggiornabile ad ogni run del comando.",
   "last_batch": {
     "date": "2026-06-09",
-    "name": "lotto 13",
+    "name": "lotto 14",
     "branch": "chore/blinda-test-batch-1",
-    "focus": "Chiusura famiglia FE equipaggiamento/paper-doll (8 unità): EquipmentScreen + PaperDoll/EquipmentSlotCell/EquipmentStatsFooter/SlotActionSheet/EquipItemPicker/HandsConflictDialog/ItemDetailsModal. Area D&D critica (CA/slot/swap_slot_occupant). 34 test Vitest verdi; nessun BE generato (FE-only).",
+    "focus": "Builder item (dati combattimento: DamageDiceBuilder/AbilityModifiersEditor/EffectsEditor) + famiglia classe/progressione (ClassTabs/ProgressionPreview/SpellSlotsSummary/LevelUpBanner/AddClassForm). 36 test Vitest verdi. Lotto FE-only (primo del /loop auto-ritmo).",
     "be_run": {
       "date": "2026-06-09",
       "result": "n/a",
@@ -1442,6 +1442,78 @@
       ],
       "status": "fe-green",
       "note": "Orchestratore equip: state machine sheet (picker se slot vuoto / actions se equipaggiato → details|replace), PaperDoll + EquipmentStatsFooter, silhouette URL = fileUrl(id) se has_custom_silhouette altrimenti silhouetteUrl(char) (manifest).",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/inventory/DamageDiceBuilder.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/inventory/DamageDiceBuilder.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Builder dadi danno (combat): parse notazione→count/die/mod, steppers (clamp count 1..10 / mod -5..20), chip dado attivo, preview; ogni edit ri-serializza via serializeDamageDice (contract round-trip con itemMetadata reale).",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/inventory/AbilityModifiersEditor.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/inventory/AbilityModifiersEditor.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Editor modificatori caratteristica (lista controllata): empty hint, add→{strength,relative,0}, update ability/value via onChange, remove per indice.",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/inventory/EffectsEditor.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/inventory/EffectsEditor.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Editor effetti consumabile (heal/condizioni): empty hint, add→heal 2d4+2, change kind→defaultEffect (add_condition→poisoned), update amount/condition, remove. EFFECT_KINDS/CONDITION_SLUGS reali.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/character/ClassTabs.tsx": {
+      "tests": [
+        "webapp/tests/unit/components/character/ClassTabs.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Tab classi multiclasse: null se ≤1 classe, una tab per classe con livello, aria-selected sull'attiva, onSelect(class_name) al click.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/character/ProgressionPreview.tsx": {
+      "tests": [
+        "webapp/tests/unit/components/character/ProgressionPreview.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Preview progressione classe: no-data fallback se progressionRows null, finestra 5 righe centrata su currentLevel (computeWindow), aria-current sulla riga corrente, colonna PB nascosta se isMulticlass, tap riga→ProgressionFullTableModal. classProgression mockata.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/character/SpellSlotsSummary.tsx": {
+      "tests": [
+        "webapp/tests/unit/components/character/SpellSlotsSummary.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Riepilogo slot incantesimo 9-colonne: null se vuoto/tutti 0, **somma total per livello** (warlock multiclasse: 2 righe stesso livello→conteggio combinato), tap→navigate /char/:id/slots.",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/multiclass/LevelUpBanner.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/multiclass/LevelUpBanner.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Banner level-up: label da labelKey (default level_up_available), onOpen al click, labelKey custom.",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/multiclass/AddClassForm.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/multiclass/AddClassForm.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Form aggiunta classe (multiclasse): selezione predefinita auto-compila e blocca hit_die (fighter→d10), classe custom richiede nome prima dell'add (canAdd), submit→onAdd(ClassForm), cancel, lockLevelTo nasconde l'input livello (flusso level-up). addClass.utils reale.",
       "updated": "2026-06-09"
     }
   }
