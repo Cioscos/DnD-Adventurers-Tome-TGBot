@@ -19,9 +19,12 @@ import type {
   Ability,
   CharacterFull,
   CharacterSummary,
+  CombatantPatch,
   ConcentrationSaveResult,
   Currency,
   DiceRollResult,
+  EncounterLive,
+  EncounterMode,
   GameSession,
   GameSessionLive,
   HistoryEntry,
@@ -765,5 +768,67 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(payload),
       }),
+    encounter: {
+      create: (sessionId: number, mode: EncounterMode) =>
+        request<EncounterLive>(`/sessions/${sessionId}/encounter`, {
+          method: 'POST',
+          body: JSON.stringify({ mode }),
+        }),
+      addCombatants: (
+        sessionId: number,
+        payload: {
+          name: string
+          count?: number
+          initiative_mod?: number
+          max_hp?: number
+          ac?: number
+        },
+      ) =>
+        request<EncounterLive>(`/sessions/${sessionId}/encounter/combatants`, {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        }),
+      rollInitiative: (sessionId: number, combatantId: number, die?: number) =>
+        request<EncounterLive>(
+          `/sessions/${sessionId}/encounter/combatants/${combatantId}/initiative`,
+          { method: 'POST', body: JSON.stringify({ die: die ?? null }) },
+        ),
+      patchCombatant: (sessionId: number, combatantId: number, patch: CombatantPatch) =>
+        request<EncounterLive>(
+          `/sessions/${sessionId}/encounter/combatants/${combatantId}`,
+          { method: 'PATCH', body: JSON.stringify(patch) },
+        ),
+      removeCombatant: (sessionId: number, combatantId: number) =>
+        request<EncounterLive>(
+          `/sessions/${sessionId}/encounter/combatants/${combatantId}`,
+          { method: 'DELETE' },
+        ),
+      syncPcs: (sessionId: number) =>
+        request<EncounterLive>(`/sessions/${sessionId}/encounter/sync-pcs`, {
+          method: 'POST',
+        }),
+      start: (sessionId: number, autoRollMissing = false) =>
+        request<EncounterLive>(`/sessions/${sessionId}/encounter/start`, {
+          method: 'POST',
+          body: JSON.stringify({ auto_roll_missing: autoRollMissing }),
+        }),
+      nextTurn: (sessionId: number) =>
+        request<EncounterLive>(`/sessions/${sessionId}/encounter/next-turn`, {
+          method: 'POST',
+        }),
+      prevTurn: (sessionId: number) =>
+        request<EncounterLive>(`/sessions/${sessionId}/encounter/prev-turn`, {
+          method: 'POST',
+        }),
+      reorder: (sessionId: number, combatantIds: number[]) =>
+        request<EncounterLive>(`/sessions/${sessionId}/encounter/reorder`, {
+          method: 'POST',
+          body: JSON.stringify({ combatant_ids: combatantIds }),
+        }),
+      end: (sessionId: number) =>
+        request<EncounterLive>(`/sessions/${sessionId}/encounter/end`, {
+          method: 'POST',
+        }),
+    },
   },
 }

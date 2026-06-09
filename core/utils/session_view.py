@@ -17,6 +17,22 @@ HpBucket = Literal["healthy", "lightly_wounded", "badly_wounded", "dying", "dead
 ArmorCategory = Literal["unarmored", "light", "medium", "heavy"]
 
 
+def hp_bucket_from_ratio(current: int | None, total: int | None) -> HpBucket:
+    """Bucket label from a raw current/total pair (monsters, no death saves)."""
+    cur = int(current or 0)
+    if cur <= 0:
+        return "dead"
+    tot = int(total or 0)
+    if tot <= 0:
+        return "healthy"
+    pct = (cur / tot) * 100
+    if pct >= 76:
+        return "healthy"
+    if pct >= 51:
+        return "lightly_wounded"
+    return "badly_wounded"
+
+
 def hp_bucket(char: Character) -> HpBucket:
     """Return the bucket label that summarises the character's HP."""
     death_saves = char.death_saves or {}
@@ -29,15 +45,7 @@ def hp_bucket(char: Character) -> HpBucket:
         if bool(death_saves.get("stable")):
             return "badly_wounded"
         return "dying"
-    total = int(char.hit_points or 0)
-    if total <= 0:
-        return "healthy"
-    pct = (current / total) * 100
-    if pct >= 76:
-        return "healthy"
-    if pct >= 51:
-        return "lightly_wounded"
-    return "badly_wounded"
+    return hp_bucket_from_ratio(current, char.hit_points)
 
 
 def armor_category(char: Character) -> ArmorCategory:

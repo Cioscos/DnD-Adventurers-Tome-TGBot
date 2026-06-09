@@ -6,6 +6,7 @@ from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, Field
 
+from api.schemas.encounter import EncounterLive
 from api.schemas.item import ItemCreate
 
 
@@ -88,6 +89,7 @@ class GameSessionRead(BaseModel):
 
 class GameSessionLiveRead(GameSessionRead):
     live_characters: list[CharacterLiveSnapshot] = []
+    encounter: Optional[EncounterLive] = None
 
 
 class IdentityView(BaseModel):

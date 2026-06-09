@@ -1,11 +1,48 @@
 {
   "entries": [
     {
+      "version": "2.6.0",
+      "date": "2026-06-10",
+      "title": {
+        "it": "Tracker di combattimento",
+        "en": "Combat tracker"
+      },
+      "added": {
+        "it": [
+          "Tracker di combattimento nelle sessioni: il GM apre un incontro (modalità Light o Completa), i giocatori tirano l'iniziativa con i dadi 3D e il GM guida turni e round.",
+          "In modalità Completa il GM gestisce PF, CA e condizioni dei mostri; i giocatori ne vedono lo stato a fasce di salute.",
+          "Notifica Telegram «Tocca a te!» quando inizia il turno del tuo personaggio."
+        ],
+        "en": [
+          "Combat tracker in sessions: the GM opens an encounter (Light or Full mode), players roll initiative with the 3D dice and the GM drives turns and rounds.",
+          "In Full mode the GM manages monsters' HP, AC and conditions; players see their state as health bands.",
+          "Telegram notification “Your turn!” when your character’s turn starts."
+        ]
+      },
+      "improved": {
+        "it": [],
+        "en": []
+      },
+      "fixed": {
+        "it": [],
+        "en": []
+      }
+    },
+    {
       "version": "2.5.3",
       "date": "2026-06-09",
-      "title": { "it": "Correzioni emerse dalla blindatura con i test", "en": "Fixes surfaced by the test-hardening pass" },
-      "added": { "it": [], "en": [] },
-      "improved": { "it": [], "en": [] },
+      "title": {
+        "it": "Correzioni emerse dalla blindatura con i test",
+        "en": "Fixes surfaced by the test-hardening pass"
+      },
+      "added": {
+        "it": [],
+        "en": []
+      },
+      "improved": {
+        "it": [],
+        "en": []
+      },
       "fixed": {
         "it": [
           "Creare un personaggio assegnandogli subito una classe non genera più un errore del server: la creazione con classe iniziale ora va a buon fine.",
@@ -20,9 +57,18 @@
     {
       "version": "2.5.2",
       "date": "2026-06-08",
-      "title": { "it": "Recupero schede bloccate da abilità manuali", "en": "Recovery of sheets blocked by manual abilities" },
-      "added": { "it": [], "en": [] },
-      "improved": { "it": [], "en": [] },
+      "title": {
+        "it": "Recupero schede bloccate da abilità manuali",
+        "en": "Recovery of sheets blocked by manual abilities"
+      },
+      "added": {
+        "it": [],
+        "en": []
+      },
+      "improved": {
+        "it": [],
+        "en": []
+      },
       "fixed": {
         "it": [
           "Le schede dei personaggi che erano già diventate impossibili da aprire dopo aver creato un'abilità con ripristino \"manuale\" (prima della correzione precedente) ora si riaprono correttamente: i dati salvati in modo errato vengono sistemati automaticamente."
@@ -35,9 +81,18 @@
     {
       "version": "2.5.1",
       "date": "2026-06-08",
-      "title": { "it": "Correzione ripristino manuale abilità", "en": "Manual ability restoration fix" },
-      "added": { "it": [], "en": [] },
-      "improved": { "it": [], "en": [] },
+      "title": {
+        "it": "Correzione ripristino manuale abilità",
+        "en": "Manual ability restoration fix"
+      },
+      "added": {
+        "it": [],
+        "en": []
+      },
+      "improved": {
+        "it": [],
+        "en": []
+      },
       "fixed": {
         "it": [
           "Corretto un bug per cui aggiungere un'abilità speciale con ripristino manuale impediva di aprire la scheda del personaggio a causa di un errore API. Il tipo di ripristino \"manuale\" ora è riconosciuto correttamente dal backend."
@@ -50,7 +105,10 @@
     {
       "version": "2.5.0",
       "date": "2026-06-08",
-      "title": { "it": "Filtri nelle abilità speciali", "en": "Filters in special abilities" },
+      "title": {
+        "it": "Filtri nelle abilità speciali",
+        "en": "Filters in special abilities"
+      },
       "added": {
         "it": [
           "Nelle Abilità speciali è ora disponibile una barra di filtri a chips sopra l'elenco: puoi filtrare le abilità per classe di provenienza, per tipo (passiva/attiva) e per tipo di recupero (riposo lungo, riposo breve, manuale). Si possono selezionare più filtri insieme.",
@@ -61,7 +119,10 @@
           "Spells now have a chip filter bar too: you can filter by level and by property (concentration, ritual), with multiple selections."
         ]
       },
-      "improved": { "it": [], "en": [] },
+      "improved": {
+        "it": [],
+        "en": []
+      },
       "fixed": {
         "it": [
           "Nelle note di versione il titolo di una versione lungo ora va a capo su più righe invece di essere troncato con i puntini di sospensione."
@@ -74,9 +135,18 @@
     {
       "version": "2.4.3",
       "date": "2026-06-08",
-      "title": { "it": "Modifica livello classe più fluida", "en": "Smoother class level editing" },
-      "added": { "it": [], "en": [] },
-      "improved": { "it": [], "en": [] },
+      "title": {
+        "it": "Modifica livello classe più fluida",
+        "en": "Smoother class level editing"
+      },
+      "added": {
+        "it": [],
+        "en": []
+      },
+      "improved": {
+        "it": [],
+        "en": []
+      },
       "fixed": {
         "it": [
           "Nella schermata \"Gestisci classi\" ora è possibile cancellare il livello di una classe e digitarne uno nuovo: prima il campo tornava automaticamente a 1 appena lo si svuotava, costringendo a digitare il numero e poi cancellare la cifra in eccesso."
@@ -89,9 +159,18 @@
     {
       "version": "2.4.2",
       "date": "2026-06-08",
-      "title": { "it": "Indicatori di pagina del carosello", "en": "Carousel page indicators" },
-      "added": { "it": [], "en": [] },
-      "improved": { "it": [], "en": [] },
+      "title": {
+        "it": "Indicatori di pagina del carosello",
+        "en": "Carousel page indicators"
+      },
+      "added": {
+        "it": [],
+        "en": []
+      },
+      "improved": {
+        "it": [],
+        "en": []
+      },
       "fixed": {
         "it": [
           "Ripristinati i pallini indicatori di pagina nel carosello principale del personaggio, che in modalità a schermo intero di Telegram (o con la barra dei gesti del dispositivo) finivano nascosti in fondo allo schermo."
@@ -104,9 +183,18 @@
     {
       "version": "2.4.1",
       "date": "2026-06-08",
-      "title": { "it": "Scroll della lista personaggi", "en": "Character list scrolling" },
-      "added": { "it": [], "en": [] },
-      "improved": { "it": [], "en": [] },
+      "title": {
+        "it": "Scroll della lista personaggi",
+        "en": "Character list scrolling"
+      },
+      "added": {
+        "it": [],
+        "en": []
+      },
+      "improved": {
+        "it": [],
+        "en": []
+      },
       "fixed": {
         "it": [
           "Ripristinato lo scorrimento nella schermata di selezione dei personaggi, che in alcuni casi non si riusciva più a scorrere."
@@ -119,7 +207,10 @@
     {
       "version": "2.4.0",
       "date": "2026-06-08",
-      "title": { "it": "Riepiloghi rapidi nella scheda eroe", "en": "Quick summaries on the hero screen" },
+      "title": {
+        "it": "Riepiloghi rapidi nella scheda eroe",
+        "en": "Quick summaries on the hero screen"
+      },
       "added": {
         "it": [
           "Nuove statistiche riepilogative nella schermata principale del personaggio: Iniziativa, Bonus competenza, Percezione passiva e Velocità, ognuna con scorciatoia alla relativa pagina.",
@@ -152,9 +243,18 @@
     {
       "version": "2.3.2",
       "date": "2026-06-08",
-      "title": { "it": "Barra superiore: scorrimento veloce", "en": "Top bar: fast scroll" },
-      "added": { "it": [], "en": [] },
-      "improved": { "it": [], "en": [] },
+      "title": {
+        "it": "Barra superiore: scorrimento veloce",
+        "en": "Top bar: fast scroll"
+      },
+      "added": {
+        "it": [],
+        "en": []
+      },
+      "improved": {
+        "it": [],
+        "en": []
+      },
       "fixed": {
         "it": [
           "Uno scorrimento veloce non trascina più tutta l'app verso l'alto facendo finire la barra superiore sotto i controlli di Telegram (in schermo intero)."
@@ -167,9 +267,18 @@
     {
       "version": "2.3.1",
       "date": "2026-06-08",
-      "title": { "it": "Barra superiore più stabile", "en": "Steadier top bar" },
-      "added": { "it": [], "en": [] },
-      "improved": { "it": [], "en": [] },
+      "title": {
+        "it": "Barra superiore più stabile",
+        "en": "Steadier top bar"
+      },
+      "added": {
+        "it": [],
+        "en": []
+      },
+      "improved": {
+        "it": [],
+        "en": []
+      },
       "fixed": {
         "it": [
           "Le briciole di pane (breadcrumb) non «vibrano» più scomparendo e riapparendo durante lo scorrimento.",
@@ -186,7 +295,10 @@
     {
       "version": "2.3.0",
       "date": "2026-06-08",
-      "title": { "it": "Risorse → Abilità", "en": "Resources → Abilities" },
+      "title": {
+        "it": "Risorse → Abilità",
+        "en": "Resources → Abilities"
+      },
       "added": {
         "it": [
           "Le risorse di classe (Furia, Punti Ki, Imposizione delle Mani…) ora vivono tra le Abilità Speciali, con descrizione e usi a pallini."
@@ -205,12 +317,18 @@
           "Class abilities are calculated and updated automatically on level change and recover with rest."
         ]
       },
-      "fixed": { "it": [], "en": [] }
+      "fixed": {
+        "it": [],
+        "en": []
+      }
     },
     {
       "version": "2.2.1",
       "date": "2026-06-08",
-      "title": { "it": "Correzioni", "en": "Fixes" },
+      "title": {
+        "it": "Correzioni",
+        "en": "Fixes"
+      },
       "added": {
         "it": [],
         "en": []
@@ -231,7 +349,10 @@
     {
       "version": "2.2.0",
       "date": "2026-06-07",
-      "title": { "it": "Rifiniture", "en": "Refinements" },
+      "title": {
+        "it": "Rifiniture",
+        "en": "Refinements"
+      },
       "added": {
         "it": [
           "Gli oggetti equipaggiati sul paper-doll mostrano un'icona per tipo (arma, armatura, scudo, accessorio) al posto dell'iniziale del nome.",
@@ -272,7 +393,10 @@
     {
       "version": "2.1.0",
       "date": "2026-06-07",
-      "title": { "it": "Schermo intero", "en": "Full Screen" },
+      "title": {
+        "it": "Schermo intero",
+        "en": "Full Screen"
+      },
       "added": {
         "it": [
           "Supporto alla modalità a schermo intero di Telegram: l'app rileva automaticamente la modalità e adatta l'interfaccia in modo che i controlli nativi di Telegram non coprano più l'intestazione delle pagine."
@@ -293,7 +417,10 @@
     {
       "version": "2.0.0",
       "date": "2026-06-07",
-      "title": { "it": "Il Tomo rilegato", "en": "The Bound Tome" },
+      "title": {
+        "it": "Il Tomo rilegato",
+        "en": "The Bound Tome"
+      },
       "added": {
         "it": [
           "Note di versione in-app: consulta la versione corrente e lo storico delle modifiche dalla home.",

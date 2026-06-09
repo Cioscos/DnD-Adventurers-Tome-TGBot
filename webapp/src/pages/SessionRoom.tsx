@@ -22,6 +22,7 @@ import { haptic, telegramConfirm } from '@/auth/telegram'
 import ParticipantIdentitySheet from '@/pages/session/ParticipantIdentitySheet'
 import SessionFeed from '@/pages/session/SessionFeed'
 import GrantItemModal from '@/pages/session/GrantItemModal'
+import CombatPanel from '@/pages/session/CombatPanel'
 import { dequeue, peek, pruneOlderThan, type Reward } from '@/lib/rewardQueue'
 import RewardPopup from '@/components/session/RewardPopup'
 
@@ -359,6 +360,13 @@ export default function SessionRoom() {
           </div>
         </Surface>
       )}
+
+      <CombatPanel
+        live={live}
+        sessionId={live.id}
+        amGm={amGm}
+        myUserId={myUserId}
+      />
 
       <SectionDivider>
         {t('session.players')}

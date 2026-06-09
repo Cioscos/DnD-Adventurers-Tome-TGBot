@@ -623,6 +623,77 @@ class SessionMessage(Base):
 
 
 # ---------------------------------------------------------------------------
+# Combat tracker (encounters inside game sessions)
+# ---------------------------------------------------------------------------
+
+class Encounter(Base):
+    """A combat encounter inside a game session.
+
+    ``mode``/``status`` are plain strings validated by Pydantic at the API
+    boundary (Literal) — NOT SQLAlchemy Enum, to avoid the known
+    write-accepts/read-crashes Enum pitfall.
+    At most one encounter with status != 'ended' per session (enforced in
+    the router, not by a DB constraint).
+    """
+
+    __tablename__ = "encounters"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    session_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("game_sessions.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    mode: Mapped[str] = mapped_column(String(10), nullable=False)  # light | full
+    status: Mapped[str] = mapped_column(
+        String(10), default="setup", index=True, nullable=False
+    )  # setup | active | ended
+    round: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    # No FK: avoids the encounters<->combatants circular dependency.
+    active_combatant_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    created_at: Mapped[str] = mapped_column(String(50), nullable=False)
+    started_at: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    ended_at: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+
+    combatants: Mapped[List["Combatant"]] = relationship(
+        back_populates="encounter", cascade="all, delete-orphan"
+    )
+
+
+class Combatant(Base):
+    """One row in an encounter's initiative order — a PC or a monster.
+
+    PC rows carry character_id/owner_user_id and never store HP/AC here
+    (the sheet is the source of truth). Monster HP/AC are populated only
+    in 'full' mode.
+    """
+
+    __tablename__ = "combatants"
+    __table_args__ = (UniqueConstraint("encounter_id", "character_id"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    encounter_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("encounters.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    kind: Mapped[str] = mapped_column(String(10), nullable=False)  # pc | monster
+    character_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("characters.id", ondelete="SET NULL"), nullable=True
+    )
+    owner_user_id: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    initiative: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    initiative_die: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    initiative_mod: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    max_hp: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    current_hp: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    ac: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    conditions: Mapped[Optional[dict]] = mapped_column(JSON, default=dict)
+    is_dead: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    sort_order: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    created_at: Mapped[str] = mapped_column(String(50), nullable=False)
+
+    encounter: Mapped["Encounter"] = relationship(back_populates="combatants")
+
+
+# ---------------------------------------------------------------------------
 # Homebrew rules engine
 # ---------------------------------------------------------------------------
 
