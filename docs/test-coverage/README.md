@@ -20,19 +20,21 @@ Va **rilanciato** finché i residui arrivano a 0.
 
 ## Stato copertura
 
-> Aggiornato da `/blinda-test`. Ultimo lotto: **2026-06-09 (lotto 6)** (branch `chore/blinda-test-batch-1`).
-> Il grafo graphify resta su `webapp/src api core` (3468 nodi / 9200 archi). Al lotto 6 `--update`
-> ha rilevato 829 "cambi" perché il manifest era andato fuori scope (scansione dell'intero root) — di
-> questi solo **2 in-scope** realmente cambiati (`api/routers/characters.py`, `api/routers/items.py`,
-> i fix BE già mappati), e tutti gli altri 827 erano fuori scope (`docs/app` bundle di build, `bot/`,
-> `.github/`, `deploy/`) ed esplicitamente esclusi dal comando. Il `--update` è quindi no-op per le
-> relazioni del grafo; il manifest è stato **ripulito** a 305 file in-scope così i prossimi run non
-> ri-segnalano i fantasmi. I "totali" sono inventario su filesystem; le "coperte" sono le unità mappate nel ledger.
+> Aggiornato da `/blinda-test`. Ultimo lotto: **2026-06-09 (lotto 7)** (branch `chore/blinda-test-batch-1`).
+> Il grafo graphify resta su `webapp/src api core` (3468 nodi / 9200 archi). Al lotto 7 `--update`:
+> dal build del grafo (01:54) gli unici sorgenti in-scope cambiati erano i 2 router BE già noti
+> (`api/routers/characters.py`, `api/routers/items.py`, fix dei lotti precedenti). Un `--update`
+> precedente era rimasto a metà con un `.graphify_incremental.json` fuori scope (829 file: `bot/`,
+> `docs/app`, `.claude/`); è stato scartato. Provando a fondere i 2 file via `build_merge`, la **guardia
+> anti-collasso** di graphify ha rifiutato (il dedup fuzzy avrebbe portato 3468→2868 nodi), quindi
+> `graph.json` è rimasto **intatto e queryabile**: i 2 router cambiati sono comunque letti direttamente
+> come oracolo nella verifica compat. I "totali" sono inventario su filesystem; le "coperte" sono le
+> unità mappate nel ledger.
 
 | Ambito | Totali (≈) | Coperte (ledger) | Residue (≈) |
 |---|---|---|---|
-| FE (components 92 · pages 75 · lib 20 · hooks 5 · store 5) | 197 | 16 | 181 |
-| BE (endpoint 102 · funzioni service 31 · model/enum 22) | 155 | 37 (+ motore homebrew, vedi nota) | ~118 |
+| FE (components 92 · pages 75 · lib 20 · hooks 5 · store 5) | 197 | 18 | ~179 |
+| BE (endpoint 102 · funzioni service 31 · model/enum 22) | 155 | 45 (32 be-green + 13 be-pending; + motore homebrew, vedi nota) | ~110 |
 
 > **Nota copertura BE pre-esistente:** oltre alle unità mappate nel ledger, il repo aveva già
 > una suite consistente — l'intero **motore homebrew** (`tests/services/homebrew/*`,
@@ -135,6 +137,37 @@ classe, dadi generici, override CA, CRUD incantesimi, concentrazione) chiusi in 
 
 > Mappata anche la copertura BE **pre-esistente** `tests/integration/test_carry_capacity_override.py`
 > (`be-green`, verde nel run 477/0) per affinare il diff — non rigenerata.
+
+### Lotto 2026-06-09 #7 (8 unità: chiusura FE mutation pages grandi + CRUD BE residui)
+
+Chiuso il residuo prioritario #1: le **due pagine mutation più grandi** (`HP.tsx` 435 righe /
+`ArmorClass.tsx` 357 righe), entrambe verdi e verificate. In parallelo, CRUD BE ancora scoperto
+(abilities free-form, items create/delete, spells delete). Scoperto che `test_spell_slots.py`
+copriva **già** POST/DELETE slot (mai mappati): mappati come `be-green` invece di rigenerarli.
+
+**FE — Vitest, verdi (18 test, 2 file · suite totale 138 test / 18 file):**
+- `pages/HP.tsx` — skeleton in pending; PF render `current`/`(hit_points + hp_max_homebrew_modifier)`;
+  `handleApply` parse + guard (NaN/≤0 → niente PATCH) + **`was_critical_hit` true solo a 0 HP con crit attivo**;
+  quick-apply `heal` + **undo toast**; **riposo corto** (`spendHitDice` poi `rest('short')` via HitDiceModal) /
+  **lungo** (`rest('long')` via ConfirmSheet); sezione **morente** (DeathSaves: `rollDeathSave(id, undefined)`
+  con reducedMotion, `updateDeathSaves(id, action)`); **morto** (DeadState → `revive`); **dialog concentrazione**
+  (+ toast warning su `lost_concentration`) e **morte istantanea** (`is_dead && failures<3`). Mock di
+  api/router/framer-motion/i18n + tutti i sottocomponenti `pages/hp/*`.
+- `pages/ArmorClass.tsx` — skeleton; CA totale `= ac + ac_breakdown.homebrew` + breakdown `base+shield+magic`;
+  Save **disabilitato finché non dirty**; PATCH `updateAC` con **solo i campi compilati** (vuoti → `undefined`);
+  **preview live** del nuovo totale; **reset override** (`resetACOverride`); **Difesa Senza Armatura**
+  (`setUnarmoredDefense` con `wisdom`/`constitution`/`null`); base input **disabilitato** quando unarmored attivo.
+
+**BE — pytest, `be-pending` (da eseguire su Windows):**
+- `routers/abilities.py::POST …/abilities` → `tests/integration/test_abilities_crud.py` — create 201, shape `AbilityRead`, default minimi, listata
+- `routers/abilities.py::PATCH …/abilities/{id}` → `test_abilities_crud.py` (+ `test_ability_protection.py` per il lock, già verde) — uses↓=uso (dispatch `ability_used`, niente notifiche senza regole), uses↑=ripristino, rinomina/max_uses liberi su non-class-feature, 404
+- `routers/abilities.py::DELETE …/abilities/{id}` → `test_abilities_crud.py` (+ `test_ability_protection.py`) — 204 + de-listata, 404
+- `routers/items.py::POST …/items` → `tests/integration/test_item_crud.py` — create 201 (CharacterFull), **dedup generico per nome** (merge quantity), arma con slot, **slot incompatibile → 422**
+- `routers/items.py::DELETE …/items/{id}` → `test_item_crud.py` — 200 (CharacterFull senza l'item), 404
+- `routers/spells.py::DELETE …/spells/{id}` → coda di `test_spell_crud.py` — 204 + de-listato, 404
+
+> Mappata copertura BE **pre-esistente** in `test_spell_slots.py` (`be-green`, run 477/0): `POST …/spell_slots`
+> (create 201 + `available`) e `DELETE …/spell_slots/{id}` (204) — il lotto 3 aveva mappato solo PATCH/reset.
 
 ## Bug BE smascherati eseguendo i pytest (2026-06-09)
 
@@ -251,12 +284,34 @@ tipo sia che il render regge col campo extra. Cleanup consigliato (non urgente):
 li ha tutti con default (`source=None`, `modifier=0`), quindi il subset inviato dal `DicePoolResultModal`
 (`rolls`/`notation`/`with_inspiration`) è accettato e il `source` finisce a `"manual"`. Coerente, nessun mismatch.
 
+**Lotto 7 — pagine mutation HP & CA.** Verificati i metodi `api.characters.*` (`webapp/src/api/client.ts`)
+invocati da `HP.tsx`/`ArmorClass.tsx` contro route + schemi Pydantic, e i campi letti dalla risposta contro
+il tipo FE (`webapp/src/types/index.ts`) e il serializer BE. Tutti **allineati**, nessun mismatch 🔴/🟠:
+
+| Metodo FE (`client.ts`) | Endpoint BE | Esito |
+|---|---|---|
+| `updateHp` → `PATCH …/hp` `{op, value, was_critical_hit}` → `CharacterFull` | `HpUpdate` (`was_critical_hit` default False) | ✅ allineato |
+| `rest` → `POST …/rest` `{rest_type, hit_dice_used}` | `RestRequest` (`hit_dice_used` opzionale) | ✅ allineato |
+| `revive` / `updateDeathSaves` / `rollDeathSave` / `spendHitDice` | `revive` / `death_saves` `{action}` / `death_saves/roll` `{die?}` / `hit_dice/spend` `{class_id, count}` | ✅ allineato |
+| `updateAC` → `PATCH …/ac` `{base?, shield?, magic?}` | `ACUpdate` | ✅ allineato |
+| `resetACOverride` / `setUnarmoredDefense` → `POST …/ac/reset-override` · `…/ac/unarmored-defense` `{ability}` | `reset_ac_override` / `set_unarmored_defense` (∈ wisdom/constitution/null) | ✅ allineato |
+
+Campi **letti** dal FE confermati presenti sia nel tipo FE sia in `CharacterFull` (BE): `concentration_save`
+(opzionale, `Optional[ConcentrationSaveResult]`, popolato solo dalla risposta di `PATCH /hp`),
+`base_armor_class_override`/`shield_armor_class_override`, `unarmored_defense_ability`, `ac_breakdown.homebrew`,
+`death_saves`, `is_dead`, `concentrating_spell_id`, `hp_max_homebrew_modifier`. Le shape sono codificate come
+assert nei test FE (un drift le fa fallire).
+
 ## Prossimi residui per rischio (per il lotto successivo)
 
-1. FE mutation rimaste (il filone aperto dal lotto 6): `pages/HP.tsx` (7 metodi `api.characters.*`: hp/rest/revive/deathSave/spendHitDice/updateDeathSaves), `pages/ArmorClass.tsx` (`updateAC`/`resetACOverride`/`setUnarmoredDefense`), modali slot/incantesimi. **Pagine grandi (HP 435 / AC 357 righe)** → mockare `api.*` + `Layout` + framer-motion, contract test sulla shape, attenzione a Suspense/useQuery.
-2. `routers/abilities.py` — CRUD Ability (`test_ability_protection.py` pre-esistente da mappare; manca create/update/delete `uses`/`max_uses` e ripristino); `routers/items.py` create/delete item + `equip` senza slot (legacy)
-3. `core/db/models.py` — enum/property ad alto rischio (`EquipmentSlot`, `is_dead`, `RestorationType`, `SpellSlot.use_slot`/`available`, `Character.proficiency_bonus`/`total_level` — toccate solo indirettamente via endpoint)
-4. `routers/spells.py::DELETE …/spells/{id}` (204) + `routers/spell_slots.py` create/delete slot; `routers/characters.py` create/patch/delete top-level (parz. in `test_character_patch_refresh`)
+1. **FE mutation pages restanti** (HP/ArmorClass chiusi nel lotto 7): pagine D&D ad alto rischio ancora scoperte —
+   `pages/SpellSlots.tsx` + `pages/Spells.tsx` (create/patch/delete slot e incantesimi, cast, concentrazione),
+   `pages/Multiclass.tsx` + `multiclass/LevelUpModal.tsx`/`EditClassesModal.tsx` (add/update/delete/distribute classi, level-up),
+   `pages/Abilities.tsx` (uses/ripristino), `pages/AbilityScores.tsx`/`SavingThrows.tsx`/`Skills.tsx`/`Conditions.tsx`/`Experience.tsx`.
+2. `core/db/models.py` — enum/property ad alto rischio (test puro, niente DB): `Character.proficiency_bonus`/`total_level`,
+   `SpellSlot.use_slot`/`available`, `is_dead`, enum `EquipmentSlot`/`RestorationType` (finora toccate solo indirettamente via endpoint).
+3. `routers/characters.py` — create/patch/delete top-level (parz. in `test_character_patch_refresh`); `routers/sessions.py` (sessioni di gioco) interamente scoperto.
+4. `services/equipment.py::slot_allowed_for_type`/`EQUIPMENT_SLOT_COMPAT` come unità mappata; `routers/maps.py` upload/serve.
 5. FE `lib/*` ancora scoperte (rischio basso): `roman.ts`, `rewardQueue.ts`, `eventMeta.ts`, `itemIcons.ts`, `celebrate.ts`, `silhouette.ts`, `inlineMarkdown.tsx`, `homebrew/i18n-dsl.ts`; FE hooks/store: `useSwipeNavigation`, `useToast`, `unitSettings`, `diceSettings`
 
 ## File

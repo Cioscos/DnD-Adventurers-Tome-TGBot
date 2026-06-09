@@ -2,357 +2,606 @@
   "version": 1,
   "description": "Ledger di copertura test mantenuto dal comando locale /blinda-test. Mappa ogni unità testabile (FE/BE) ai test associati. Rigenerabile/aggiornabile ad ogni run del comando.",
   "last_batch": {
-    "branch": "chore/blinda-test-batch-1",
     "date": "2026-06-09",
-    "size": 8,
-    "focus": "lotto 6 — primo giro FE-mutation (compat FE↔API HTTP reale) + progressione/dadi/CA/incantesimi residui. FE (3, fe-green): WeaponAttackModal (presentazionale, gap 🟠 homebrew_notifications codificato), DicePoolResultModal (api.dice.result, ispirazione 409→toast), pages/Actions (api.items.attack/attackUnarmed, reroll with_inspiration). BE (7, be-pending): DELETE classes/{id} (scaling HP a ratio + last-class→0/0 + 404), POST dice/result (range 400, total override 4d6kh3, notation infer, ispirazione 409/consumo, history+clear), PATCH ac + POST ac/reset-override (override base/shield lock vs reset da equip, magic intatto), POST/PATCH spells (CRUD + exclude_unset + 404), PATCH concentration (set/clear/empty-body). + mappata copertura pre-esistente carry-capacity (be-green)."
+    "name": "lotto 7",
+    "branch": "chore/blinda-test-batch-1",
+    "focus": "FE mutation pages (HP/ArmorClass) verdi + abilities/items/spells DELETE CRUD BE (be-pending) + mappate spell_slots POST/DELETE pre-esistenti"
   },
   "units": {
     "fe:lib/dnd.ts": {
-      "tests": ["webapp/tests/unit/lib/dnd.test.ts"],
+      "tests": [
+        "webapp/tests/unit/lib/dnd.test.ts"
+      ],
       "apis": [],
       "status": "fe-green",
       "note": "profBonus + mod: matematica D&D 5e condivisa (funzioni pure).",
       "updated": "2026-06-09"
     },
     "fe:lib/xpThresholds.ts": {
-      "tests": ["webapp/tests/unit/lib/xpThresholds.test.ts"],
+      "tests": [
+        "webapp/tests/unit/lib/xpThresholds.test.ts"
+      ],
       "apis": [],
       "status": "fe-green",
       "note": "levelFromXp / getNextLevelThreshold / quickXpAmounts (soglie XP SRD).",
       "updated": "2026-06-09"
     },
     "fe:lib/classProgression.ts": {
-      "tests": ["webapp/tests/unit/lib/classProgression.test.ts"],
+      "tests": [
+        "webapp/tests/unit/lib/classProgression.test.ts"
+      ],
       "apis": [],
       "status": "fe-green",
       "note": "Bridge class_name EN → chiave JSON IT; contract test su class-progression.json.",
       "updated": "2026-06-09"
     },
     "fe:lib/unarmedStrike.ts": {
-      "tests": ["webapp/tests/unit/lib/unarmedStrike.test.ts"],
+      "tests": [
+        "webapp/tests/unit/lib/unarmedStrike.test.ts"
+      ],
       "apis": [],
       "status": "fe-green",
       "note": "Contract mirror di core/game/attacks.py::martial_arts_die (allineato).",
       "updated": "2026-06-09"
     },
     "fe:lib/equipmentSlots.ts": {
-      "tests": ["webapp/tests/unit/lib/equipmentSlots.test.ts"],
+      "tests": [
+        "webapp/tests/unit/lib/equipmentSlots.test.ts"
+      ],
       "apis": [],
       "status": "fe-green",
       "note": "Contract mirror di api/services/equipment.py::EQUIPMENT_SLOT_COMPAT (allineato) + isTwoHanded/handsConflict.",
       "updated": "2026-06-09"
     },
     "be:routers/hp.py::POST /characters/{id}/death_saves/roll": {
-      "tests": ["tests/integration/test_death_save_roll.py"],
+      "tests": [
+        "tests/integration/test_death_save_roll.py"
+      ],
       "status": "be-green",
       "note": "Regole D&D 5e: nat20 rianima a 1 HP, nat1 = 2 fallimenti, 10+ successo, 2-9 fallimento, 3 fallimenti = morto. Body die deterministico.",
       "updated": "2026-06-09"
     },
     "be:routers/hp.py::POST /characters/{id}/rest": {
-      "tests": ["tests/integration/test_rest.py"],
+      "tests": [
+        "tests/integration/test_rest.py"
+      ],
       "status": "be-green",
       "note": "Riposo lungo: HP a max + reset tiri morte. Riposo breve: cura solo per dadi vita (clampata). rest_type invalido = 400.",
       "updated": "2026-06-09"
     },
     "be:services/spell_slots.py::recalc_spell_slots": {
-      "tests": ["tests/services/test_recalc_spell_slots.py"],
+      "tests": [
+        "tests/services/test_recalc_spell_slots.py"
+      ],
       "status": "be-green",
       "note": "Ricalcolo automatico slot: crea/aggiorna, preserva used (clamp), droppa slot non più concessi, no-op in manual, pool pact warlock separato.",
       "updated": "2026-06-09"
     },
     "be:core/game/attacks.py": {
-      "tests": ["tests/services/test_attacks.py"],
+      "tests": [
+        "tests/services/test_attacks.py"
+      ],
       "status": "be-green",
       "note": "Pre-esistente. martial_arts_die + unarmed_strike_profile. Mappato per evitare ri-selezione.",
       "updated": "2026-06-09"
     },
     "be:services/class_features.py::sync_class_feature_abilities": {
-      "tests": ["tests/services/test_class_features.py"],
+      "tests": [
+        "tests/services/test_class_features.py"
+      ],
       "status": "be-green",
       "note": "Pre-esistente. Sync feature di classe in Ability. Mappato per evitare ri-selezione.",
       "updated": "2026-06-09"
     },
     "fe:lib/conditions.ts": {
-      "tests": ["webapp/tests/unit/lib/conditions.test.ts"],
+      "tests": [
+        "webapp/tests/unit/lib/conditions.test.ts"
+      ],
       "apis": [],
       "status": "fe-green",
       "note": "CONDITION_ICONS (14 condizioni 5e + spossatezza) + formatCondition; ramo exhaustion-con-livello (int dal BE riposo) vs slug. Lib pura, nessuna chiamata api.*.",
       "updated": "2026-06-09"
     },
     "fe:lib/resourceDiff.ts": {
-      "tests": ["webapp/tests/unit/lib/resourceDiff.test.ts"],
+      "tests": [
+        "webapp/tests/unit/lib/resourceDiff.test.ts"
+      ],
       "apis": [],
       "status": "fe-green",
       "note": "diffResourceMaxes: delta max_uses positivi per Ability is_class_feature (toast scaling pool). Contratto FE Ability ↔ BE AbilityRead allineato per i campi consumati (id/name/max_uses/is_class_feature).",
       "updated": "2026-06-09"
     },
     "fe:store/characterStore.ts": {
-      "tests": ["webapp/tests/unit/store/characterStore.test.ts"],
+      "tests": [
+        "webapp/tests/unit/store/characterStore.test.ts"
+      ],
       "apis": [],
       "status": "fe-green",
       "note": "Zustand store UI: setActiveCharId azzera activeScreen solo al cambio id; setActiveScreen/setLocale; derivazione locale da getLanguageCode. Stato client puro.",
       "updated": "2026-06-09"
     },
     "be:routers/hp.py::PATCH /characters/{id}/hp": {
-      "tests": ["tests/integration/test_hp_update.py"],
+      "tests": [
+        "tests/integration/test_hp_update.py"
+      ],
       "status": "be-green",
       "note": "5 op HPOp + regole morte: temp HP assorbito prima, clamp a 0, danno-a-0 +1 fallimento (+2 critico), overflow massiccio = morte istantanea, HEAL>0 azzera tiri morte, set_max/set_current/set_temp clamp.",
       "updated": "2026-06-09"
     },
     "be:routers/hp.py::PATCH /characters/{id}/death_saves": {
-      "tests": ["tests/integration/test_death_saves_update.py"],
+      "tests": [
+        "tests/integration/test_death_saves_update.py"
+      ],
       "status": "be-green",
       "note": "Azioni manuali: SUCCESS x3 = stabile, FAILURE x3 = morto, STABILIZE = stabile + 1 HP, RESET azzera. Da morto endpoint inerte.",
       "updated": "2026-06-09"
     },
     "be:routers/hp.py::POST /characters/{id}/revive": {
-      "tests": ["tests/integration/test_death_saves_update.py"],
+      "tests": [
+        "tests/integration/test_death_saves_update.py"
+      ],
       "status": "be-green",
       "note": "Rianima morto a 1 HP + reset tiri morte + clear concentrazione; no-op idempotente se vivo (non forza 1 HP).",
       "updated": "2026-06-09"
     },
     "be:routers/hp.py::POST /characters/{id}/hit_dice/spend": {
-      "tests": ["tests/integration/test_hit_dice_spend.py"],
+      "tests": [
+        "tests/integration/test_hit_dice_spend.py"
+      ],
       "status": "be-green",
       "note": "Cura = roll + mod CON (min 1/dado) clampata al max; class_id ignoto = 404, count<1 = 400. Asserzioni robuste su rolls/con_bonus riportati (CON 10 = mod 0).",
       "updated": "2026-06-09"
     },
     "be:services/equipment.py::swap_slot_occupant": {
-      "tests": ["tests/services/test_swap_slot_occupant.py"],
+      "tests": [
+        "tests/services/test_swap_slot_occupant.py"
+      ],
       "status": "be-green",
       "note": "Displacement atomico paper-doll: sgombra solo item equipaggiato nello STESSO slot con id DIVERSO; ignora altro slot, sé stesso, item non equipaggiato. Restituisce displaced per reset CA.",
       "updated": "2026-06-09"
     },
     "fe:lib/sessionHelpers.ts": {
-      "tests": ["webapp/tests/unit/lib/sessionHelpers.test.ts"],
-      "apis": ["GET /sessions/me", "GET /sessions/{id}"],
+      "tests": [
+        "webapp/tests/unit/lib/sessionHelpers.test.ts"
+      ],
+      "apis": [
+        "GET /sessions/me",
+        "GET /sessions/{id}"
+      ],
       "status": "fe-green",
       "note": "getMyRole (gm>player>none, guardie null) + formatUptime (Xm / Xh Ym, ISO o Date, clamp negativi). Contratto FE↔BE: legge gm_user_id/participants[].user_id/created_at = GameSessionRead (api/schemas/session.py) — allineato, codificato negli assert.",
       "updated": "2026-06-09"
     },
     "fe:hooks/useLongPress.ts": {
-      "tests": ["webapp/tests/unit/hooks/useLongPress.test.ts"],
+      "tests": [
+        "webapp/tests/unit/hooks/useLongPress.test.ts"
+      ],
       "apis": [],
       "status": "fe-green",
       "note": "Tap vs long-press vs move-cancel (>12px); ramo onProgress (ring poll ~30Hz, fake Date). Regressione [[reference_uselongpress_cancel_then_end]] codificata: pointercancel pre-soglia + touchend stray NON ritocca onClick; doppia consegna pointer+touch = singolo onClick.",
       "updated": "2026-06-09"
     },
     "fe:components/ui/HPGauge.tsx": {
-      "tests": ["webapp/tests/unit/ui/HPGauge.test.tsx"],
+      "tests": [
+        "webapp/tests/unit/ui/HPGauge.test.tsx"
+      ],
       "apis": [],
       "status": "fe-green",
       "note": "Presentazionale puro (props current/max/temp). 10 celle segmentate, pulse-danger a ≤25%, no-crash con max=0, modalità non-segmentata, overlay temp. framer-motion mockato (m.* + useReducedMotion → niente matchMedia in jsdom).",
       "updated": "2026-06-09"
     },
     "be:routers/hp.py::POST /characters/{id}/hp/recalc": {
-      "tests": ["tests/integration/test_hp_recalc.py"],
+      "tests": [
+        "tests/integration/test_hp_recalc.py"
+      ],
       "status": "be-green",
       "note": "Ricalcolo max da formula total_base_hp(classes, effective_con_mod): max cala → current clampato giù; max sale → current += delta; nessuna classe → 0/0. Setup deterministico (d10 L1 CON10 → 10 HP letto dalla create). Contratto: ritorna CharacterFull con ac_breakdown.",
       "updated": "2026-06-09"
     },
     "be:routers/spell_slots.py::PATCH /characters/{id}/spell_slots/{slot_id}": {
-      "tests": ["tests/integration/test_spell_slots.py"],
+      "tests": [
+        "tests/integration/test_spell_slots.py"
+      ],
       "status": "be-green",
       "note": "Cast (used↑) vs refund (used↓): spell_cast solo su incremento (niente regole → niente homebrew_notifications). PATCH total-only lascia used. Slot inesistente = 404. available = total-used. Contratto = FE SpellSlot (id/level/total/used/available/is_pact).",
       "updated": "2026-06-09"
     },
     "be:routers/spell_slots.py::POST /characters/{id}/spell_slots/reset": {
-      "tests": ["tests/integration/test_spell_slots.py"],
+      "tests": [
+        "tests/integration/test_spell_slots.py"
+      ],
       "status": "be-green",
       "note": "Azzera used su tutti gli slot (parità riposo lungo) e ritorna CharacterFull; available risale a total.",
       "updated": "2026-06-09"
     },
     "be:services/character_response.py::build_character_response": {
-      "tests": ["tests/integration/test_character_response.py"],
+      "tests": [
+        "tests/integration/test_character_response.py"
+      ],
       "status": "be-green",
       "note": "Serializer centrale (via GET /characters/{id} + POST /items). ac_breakdown {base,shield,magic,homebrew}, ac=base+shield+magic; default homebrew puliti (0 / mappe vuote); has_custom_silhouette=False; risoluzione ability_scores (base/value/modifier/modifiers_applied) con modificatore item equipaggiato che fluisce in _resolve_ability_effective.",
       "updated": "2026-06-09"
     },
     "be:routers/items.py::PATCH /characters/{id}/items/{item_id}": {
-      "tests": ["tests/integration/test_item_equip_ac.py"],
+      "tests": [
+        "tests/integration/test_item_equip_ac.py"
+      ],
       "status": "be-green",
       "note": "Giro CA end-to-end: equip armor → base = ac_value, unequip → 10; shield → shield = ac_bonus; displacement nello stesso slot resetta la CA dell'occupante sostituito; slot incompatibile col tipo = 422. Asserito via ac_breakdown/ac.",
       "updated": "2026-06-09"
     },
     "be:routers/spells.py::POST /characters/{id}/spells/{spell_id}/use": {
-      "tests": ["tests/integration/test_spell_use.py"],
-      "apis": ["POST /characters/{id}/spells/{id}/use"],
+      "tests": [
+        "tests/integration/test_spell_use.py"
+      ],
+      "apis": [
+        "POST /characters/{id}/spells/{id}/use"
+      ],
       "status": "be-green",
       "note": "Consumo slot (used+1, available=total-used) + attiva concentrazione se is_concentration (concentrating_spell_id=spell_id; None se non-conc). 400 senza slot al livello / slot esauriti; 404 spell ignota. Contratto = FE CharacterFull (spell_slots[].{used,available}, concentrating_spell_id).",
       "updated": "2026-06-09"
     },
     "be:routers/spells.py::POST /characters/{id}/spells/{spell_id}/roll_damage": {
-      "tests": ["tests/integration/test_spell_roll_damage.py"],
-      "apis": ["POST /characters/{id}/spells/{id}/roll_damage"],
+      "tests": [
+        "tests/integration/test_spell_roll_damage.py"
+      ],
+      "apis": [
+        "POST /characters/{id}/spells/{id}/roll_damage"
+      ],
       "status": "be-green",
       "note": "Danno deterministico via main_rolls/extra_rolls (no RNG): crit raddoppia il NUMERO di dadi (2N atteso), half_damage=(total+1)//2 round-up, bonus piatto in damage_dice sommato una volta, extra_dice additivo. 400: lunghezza/range main_rolls errati, casting_level<spell.level o >9, damage_dice assente. Contratto = FE RollDamageResult (main_kind/main_rolls/extra_kind/extra_rolls).",
       "updated": "2026-06-09"
     },
     "be:routers/spells.py::POST /characters/{id}/concentration/save": {
-      "tests": ["tests/integration/test_concentration_save.py"],
-      "apis": ["POST /characters/{id}/concentration/save"],
+      "tests": [
+        "tests/integration/test_concentration_save.py"
+      ],
+      "apis": [
+        "POST /characters/{id}/concentration/save"
+      ],
       "status": "be-green",
       "note": "Esercita _helpers.roll_concentration_save: DC=max(10, danno//2), nat20 successo / nat1 fallimento a prescindere dal DC, altrimenti die+CONmod>=DC (CON 10 → bonus 0, total=die). Fallimento mentre concentra → lost_concentration True + concentrating_spell_id azzerato (verificato via GET). Contratto = FE ConcentrationSaveResult (estende RollResult: die/bonus/total/is_critical/is_fumble + dc/success/lost_concentration).",
       "updated": "2026-06-09"
     },
     "be:routers/items.py::POST /characters/{id}/items/{item_id}/attack": {
-      "tests": ["tests/integration/test_weapon_attack.py"],
-      "apis": ["POST /characters/{id}/items/{id}/attack"],
+      "tests": [
+        "tests/integration/test_weapon_attack.py"
+      ],
+      "apis": [
+        "POST /characters/{id}/items/{id}/attack"
+      ],
       "status": "be-green",
       "note": "RNG pinnato (sequenza: d20 colpire poi dadi danno). to_hit_total=d20+mod+PB; nat20 crit raddoppia i dadi danno, nat1 fumble azzera (rolls[0], bonus 0, total 0); selezione mod: melee→STR, ranged→DEX, finesse→max(STR,DEX) (DEX bumpato via PATCH ability_scores). with_inspiration consuma il token (verificato via GET heroic_inspiration False); 409 se assente; non-arma 400; item ignoto 404. Contratto = FE WeaponAttackResult.",
       "updated": "2026-06-09"
     },
     "be:routers/items.py::POST /characters/{id}/attack/unarmed": {
-      "tests": ["tests/integration/test_unarmed_attack.py"],
-      "apis": ["POST /characters/{id}/attack/unarmed"],
+      "tests": [
+        "tests/integration/test_unarmed_attack.py"
+      ],
+      "apis": [
+        "POST /characters/{id}/attack/unarmed"
+      ],
       "status": "be-green",
       "note": "Mirror BE di core/game/attacks.py::unarmed_strike_profile (lib FE unarmedStrike testata a parte). Non-monaco: damage_dice '1', flat-1 NON raddoppiato dal crit. Monaco L5: dado arti marziali '1d6', mod=max(STR,DEX), crit raddoppia i dadi; PB L5=+3. with_inspiration consuma/409.",
       "updated": "2026-06-09"
     },
     "be:routers/classes.py::PATCH /characters/{id}/classes/distribute": {
-      "tests": ["tests/integration/test_classes_distribute.py"],
-      "apis": ["PATCH /characters/{id}/classes/distribute"],
+      "tests": [
+        "tests/integration/test_classes_distribute.py"
+      ],
+      "apis": [
+        "PATCH /characters/{id}/classes/distribute"
+      ],
       "status": "be-green",
       "note": "Ridistribuzione livelli atomica su MULTICLASSE (così PATCH /xp non auto-sincronizza il livello del monoclasse). Validazioni: body copre esattamente i class_id → 400 classes_mismatch; sum(level)>livello-da-XP → 400 sum_exceeds_target. Happy path G2+L1: HP da total_base_hp = 10+6+5=21, current scalato a ratio (full→21; 5/10→round(0.5·21)=10), hp_gained=11. Contratto = FE CharacterFull (classes[].level, hit_points, current_hit_points, hp_gained).",
       "updated": "2026-06-09"
     },
     "fe:lib/relativeTime.ts": {
-      "tests": ["webapp/tests/unit/lib/relativeTime.test.ts"],
+      "tests": [
+        "webapp/tests/unit/lib/relativeTime.test.ts"
+      ],
       "apis": [],
       "status": "fe-green",
       "note": "formatRelative (oggi/ieri/Intl day-week 2-30gg/data assoluta), formatAbsolute, dayKey (YYYY-MM-DD zero-pad), dayHeader. Lib pura: rami locale-aware pinnati contro le stesse Intl API; now fisso per bucket deterministici; date costruite/lette in locale → TZ-independent; verificata la non-mutazione di now/date nel diff.",
       "updated": "2026-06-09"
     },
     "fe:lib/spellSrd.ts": {
-      "tests": ["webapp/tests/unit/lib/spellSrd.test.ts"],
+      "tests": [
+        "webapp/tests/unit/lib/spellSrd.test.ts"
+      ],
       "apis": [],
       "status": "fe-green",
       "note": "lookupSrdSpell (chiave canonica + alias, case-insensitive, trim, null su vuoto/ignoto) + srdSpellNames (canoniche+alias, esclude chiavi _, ordinate). JSON spells-srd mockato (vi.mock hoisted) → testa la LOGICA di indicizzazione indipendente dai dati reali.",
       "updated": "2026-06-09"
     },
     "be:core/game/stats.py": {
-      "tests": ["tests/services/test_stats.py"],
+      "tests": [
+        "tests/services/test_stats.py"
+      ],
       "status": "be-green",
       "note": "VERIFICATO 31/31 su Windows (uv run pytest, 2026-06-09). Matematica derivata D&D 5e PURA (no DB). ability_modifier (floor-div, 1→-5/3→-4), hit_points_for_level (L1=die+CON, L2+=die//2+1+CON, clamp min 1, ValueError su level<1/hit_die<=0), unarmored_defense_ac (10+DEX+2a), total_base_hp (id più basso possiede lo slot L1, resto formula 2+; ordinamento per id; CON per livello; 0 se vuoto), effective_ability_score (relativi sommati + assoluti come pavimento via max, combinazione, altri ability/valori non-int ignorati, JSON-string parse, ValueError ability ignota). Stub via SimpleNamespace.",
       "updated": "2026-06-09"
     },
     "be:routers/stats.py::PATCH /characters/{id}/ability_scores/{ability_name}": {
-      "tests": ["tests/integration/test_ability_scores.py"],
-      "apis": ["PATCH /characters/{id}/ability_scores/{ability}"],
+      "tests": [
+        "tests/integration/test_ability_scores.py"
+      ],
+      "apis": [
+        "PATCH /characters/{id}/ability_scores/{ability}"
+      ],
       "status": "be-green",
       "note": "Validazione 1-30 (else 400). CON↑/↓ ripple HP retroattivo: delta_con_mod * total_level su hit_points e current (simmetrico, hp_auto_calc default). STR cambia → recalculate_carry_capacity (STR*15). DEX/altra ability non-CON NON tocca HP. Contratto = FE CharacterFull (hit_points/current_hit_points/carry_capacity/ability_scores[].{value,modifier}).",
       "updated": "2026-06-09"
     },
     "be:routers/stats.py::POST /characters/{id}/ac/unarmored-defense": {
-      "tests": ["tests/integration/test_unarmored_defense.py"],
-      "apis": ["POST /characters/{id}/ac/unarmored-defense"],
+      "tests": [
+        "tests/integration/test_unarmored_defense.py"
+      ],
+      "apis": [
+        "POST /characters/{id}/ac/unarmored-defense"
+      ],
       "status": "be-green",
       "note": "Difesa Senza Armatura (Barbaro CON / Monaco SAG): abilita → base CA = 10+DEX+2a e resta in sync ai cambi DEX/2a (verificato via PATCH ability_scores), clear del base_armor_class_override (mutuamente esclusivi); disabilita (null) → base torna a 10 (nessuna armatura). 400 se ability ∉ {wisdom,constitution}. Asserito via ac_breakdown.base/ac/unarmored_defense_ability/base_armor_class_override. Esercita anche PATCH /ac per impostare l'override.",
       "updated": "2026-06-09"
     },
     "be:routers/characters.py::PATCH /characters/{id}/xp": {
-      "tests": ["tests/integration/test_xp_levelup.py"],
-      "apis": ["PATCH /characters/{id}/xp"],
+      "tests": [
+        "tests/integration/test_xp_levelup.py"
+      ],
+      "apis": [
+        "PATCH /characters/{id}/xp"
+      ],
       "status": "be-green",
       "note": "set/add con clamp >=0. Monoclasse: livello tracciato da xp_to_level (300→L2, 900→L3), HP +hit_points_for_level(2+) per livello guadagnato (hp_gained popolato). Level-DOWN: livello sincronizzato ma HP NON ridotti (hp_gained None). Multiclasse: nessun auto-sync del livello (livelli invariati). Contratto = FE CharacterFull (experience_points/classes[].level/hit_points/current_hit_points/hp_gained).",
       "updated": "2026-06-09"
     },
     "be:routers/classes.py::POST /characters/{id}/classes": {
-      "tests": ["tests/integration/test_add_class.py"],
-      "apis": ["POST /characters/{id}/classes"],
+      "tests": [
+        "tests/integration/test_add_class.py"
+      ],
+      "apis": [
+        "POST /characters/{id}/classes"
+      ],
       "status": "be-green",
       "note": "1a classe su char a 0 HP → bootstrap HP (formula L1) + seed 2 save proficiency della classe iniziale (PHB). Classe SUCCESSIVA → HP invariato (ricalcolo solo via distribute/xp/edit-livello) e NESSUNA save proficiency aggiuntiva (regola multiclasse PHB). Classe predefinita (CLASS_HIT_DIE/CLASS_SPELLCASTING) → default hit_die/spellcasting_ability se omessi (Mago→6/intelligence). 404 char inesistente. Contratto = FE CharacterFull (classes[]/hit_points/saving_throws).",
       "updated": "2026-06-09"
     },
     "be:routers/classes.py::PATCH /characters/{id}/classes/{class_id}": {
-      "tests": ["tests/integration/test_update_class.py"],
-      "apis": ["PATCH /characters/{id}/classes/{classId}"],
+      "tests": [
+        "tests/integration/test_update_class.py"
+      ],
+      "apis": [
+        "PATCH /characters/{id}/classes/{classId}"
+      ],
       "status": "be-green",
       "note": "Edit grezzo di classe (level/subclass/hit_die) SENZA ricalcolo HP (path manuale, a differenza di xp/distribute): level 1→5 lascia HP 10 ma proficiency_bonus→3. level-UP ri-sincronizza le feature di classe predefinite (Monaco L1→L2 crea Ability monk.ki max_uses=2). 404 class_id ignoto. Contratto = FE CharacterFull (classes[]/proficiency_bonus/abilities[].{feature_key,max_uses}).",
       "updated": "2026-06-09"
     },
     "be:routers/characters.py::POST /characters/{id}/skills/{skill_name}/roll": {
-      "tests": ["tests/integration/test_skill_roll.py"],
-      "apis": ["POST /characters/{id}/skills/{skillName}/roll"],
+      "tests": [
+        "tests/integration/test_skill_roll.py"
+      ],
+      "apis": [
+        "POST /characters/{id}/skills/{skillName}/roll"
+      ],
       "status": "be-green",
       "note": "d20 deterministico (D20RollSubmission.die). bonus = mod abilità governante + (0 / PB se proficient / 2xPB se 'expert'); mod abilità incluso (STR 16→+3). nat20 is_critical, nat1 is_fumble. skill ignota 400. with_inspiration: 409 se assente, altrimenti consuma heroic_inspiration (verificato via GET). Contratto = FE RollResult (die/bonus/total/is_critical/is_fumble/description).",
       "updated": "2026-06-09"
     },
     "be:routers/characters.py::POST /characters/{id}/saving_throws/{ability}/roll": {
-      "tests": ["tests/integration/test_saving_throw_roll.py"],
-      "apis": ["POST /characters/{id}/saving_throws/{ability}/roll"],
+      "tests": [
+        "tests/integration/test_saving_throw_roll.py"
+      ],
+      "apis": [
+        "POST /characters/{id}/saving_throws/{ability}/roll"
+      ],
       "status": "be-green",
       "note": "d20 deterministico. bonus = mod abilità + (PB se proficient, else 0). Guerriero iniziale seedato proficient in STR/CON → ramo proficient esercitato senza setup; DEX non-proficient con mod (14→+2) prova il solo mod. ability ignota 400. nat20/nat1 flags. with_inspiration 409/consumo. Contratto = FE RollResult.",
       "updated": "2026-06-09"
     },
     "fe:components/WeaponAttackModal.tsx": {
-      "tests": ["webapp/tests/unit/components/WeaponAttackModal.test.tsx"],
-      "apis": ["POST /characters/{id}/items/{itemId}/attack", "POST /characters/{id}/attack/unarmed"],
+      "tests": [
+        "webapp/tests/unit/components/WeaponAttackModal.test.tsx"
+      ],
+      "apis": [
+        "POST /characters/{id}/items/{itemId}/attack",
+        "POST /characters/{id}/attack/unarmed"
+      ],
       "status": "fe-green",
       "note": "Presentazionale (props WeaponAttackResult): colpo normale (emerald) / crit (gold+pulse+label '(critico)') / fumble (crimson, blocco danno NASCOSTO); bottone reroll ispirazione (mostrato solo se inspirationAvailable && !wasRerolled && handler, fired onClick) e sottotitolo badge a wasRerolled. framer-motion + ResultDialog + InspirationRerollButton mockati. Gap 🟠 CODIFICATO: il tipo FE WeaponAttackResult ha esattamente 10 campi e OMETTE homebrew_notifications (che il BE restituisce opzionale); render non rotto col campo extra a runtime (letto dinamicamente dall'interceptor MutationCache).",
       "updated": "2026-06-09"
     },
     "fe:components/DicePoolResultModal.tsx": {
-      "tests": ["webapp/tests/unit/components/DicePoolResultModal.test.tsx"],
-      "apis": ["POST /characters/{id}/dice/result"],
+      "tests": [
+        "webapp/tests/unit/components/DicePoolResultModal.test.tsx"
+      ],
+      "apis": [
+        "POST /characters/{id}/dice/result"
+      ],
       "status": "fe-green",
       "note": "Mutation reroll ispirazione → api.dice.result. Render gruppi (notation/total) + 'Totale:' su pool multi-gruppo; bottone reroll solo su pool d20 puro (1 gruppo, 1 d20). Click → body DiceResultRequestBody ESATTO {rolls:[{kind:'d20',value}], notation:'1d20', with_inspiration:true} (Math.random pinnato; animate3d=false → niente canvas 3D), onSuccess locka il bottone + badge; 409 → toast.error e bottone resta. Contratto FE↔BE: DiceResultRequestBody === DiceResultRequest.",
       "updated": "2026-06-09"
     },
     "fe:pages/Actions.tsx": {
-      "tests": ["webapp/tests/unit/pages/Actions.test.tsx"],
-      "apis": ["GET /characters/{id}", "POST /characters/{id}/items/{itemId}/attack", "POST /characters/{id}/attack/unarmed"],
+      "tests": [
+        "webapp/tests/unit/pages/Actions.test.tsx"
+      ],
+      "apis": [
+        "GET /characters/{id}",
+        "POST /characters/{id}/items/{itemId}/attack",
+        "POST /characters/{id}/attack/unarmed"
+      ],
       "status": "fe-green",
       "note": "Skeleton mentre la query è pending; lista SOLO armi equipaggiate (filtro item_type==='weapon' && is_equipped); attacco arma → api.items.attack(charId,itemId), disarmato → api.items.attackUnarmed(charId), reroll → terzo arg with_inspiration=true sullo stesso endpoint. Apre WeaponAttackModal (mockato) col WeaponAttackResult intero. Layout/Surface/SectionDivider/WeaponAttackModal/skeleton mockati; useParams pinnato a id=7.",
       "updated": "2026-06-09"
     },
     "be:routers/classes.py::DELETE /characters/{id}/classes/{class_id}": {
-      "tests": ["tests/integration/test_delete_class.py"],
+      "tests": [
+        "tests/integration/test_delete_class.py"
+      ],
       "status": "be-pending",
       "note": "Rimozione classe con scaling HP a ratio (parità con distribute): da Guerriero L2+Ladro L1 (21 HP), DELETE Ladro → total_base_hp([G L2])=16, current pieno→16, danneggiato 7/21→round(7/21·16)=5/16. Ultima classe rimossa → total_base_hp([])=0 → 0/0. 404 class_id ignoto (_get_class). Contratto = CharacterFull (classes/hit_points/current_hit_points).",
       "updated": "2026-06-09"
     },
     "be:routers/dice.py::POST /characters/{id}/dice/result": {
-      "tests": ["tests/integration/test_dice_result.py"],
+      "tests": [
+        "tests/integration/test_dice_result.py"
+      ],
       "status": "be-pending",
       "note": "Il server NON tira: valida i valori per range del dado (7 su d6 → 400), calcola total = override client (4d6kh3: 15, non 16) altrimenti sum+modifier, inferisce la notation (singolo dado+modifier '+3'/'-2', n>1 → '2d6') se non fornita. with_inspiration consuma il token (verificato via GET heroic_inspiration False) / 409 se assente. History: append (cap 50) + GET /dice/history (più recente prima, notation/total/source/label) + DELETE → 204 → []. Contratto = FE DiceResultRequestBody/DiceRollResult.",
       "updated": "2026-06-09"
     },
     "be:routers/stats.py::PATCH /characters/{id}/ac": {
-      "tests": ["tests/integration/test_ac_override.py"],
+      "tests": [
+        "tests/integration/test_ac_override.py"
+      ],
       "status": "be-pending",
       "note": "Override manuale: base → base_armor_class + base_armor_class_override=True (clamp ≥0); shield → shield_armor_class + shield_armor_class_override=True; magic → magic_armor (NESSUN flag override). ac_breakdown.{base,shield,magic} e ac=base+shield+magic. Contratto = FE CharacterFull (api.characters.updateAC).",
       "updated": "2026-06-09"
     },
     "be:routers/stats.py::POST /characters/{id}/ac/reset-override": {
-      "tests": ["tests/integration/test_ac_override.py"],
+      "tests": [
+        "tests/integration/test_ac_override.py"
+      ],
       "status": "be-pending",
       "note": "Azzera i flag override base/shield e ricalcola da equip: senza armatura base→10, senza scudo shield→0; magic NON toccato (nessun flag, reset non lo legge). Contratto = FE CharacterFull (api.characters.resetACOverride).",
       "updated": "2026-06-09"
     },
     "be:routers/spells.py::POST /characters/{id}/spells": {
-      "tests": ["tests/integration/test_spell_crud.py"],
+      "tests": [
+        "tests/integration/test_spell_crud.py"
+      ],
       "status": "be-pending",
       "note": "Create da SpellCreate (solo name obbligatorio; level default 0 = trucchetto) → 201 SpellRead con default puliti (is_ritual/is_pinned False). Persistito (verificato via GET /spells). Contratto = FE SpellRead.",
       "updated": "2026-06-09"
     },
     "be:routers/spells.py::PATCH /characters/{id}/spells/{spell_id}": {
-      "tests": ["tests/integration/test_spell_crud.py"],
+      "tests": [
+        "tests/integration/test_spell_crud.py"
+      ],
       "status": "be-pending",
       "note": "Update parziale exclude_unset: i campi omessi sopravvivono (PATCH {is_concentration,level} lascia name/is_ritual). 404 su spell ignota. Contratto = FE SpellRead.",
       "updated": "2026-06-09"
     },
     "be:routers/spells.py::PATCH /characters/{id}/concentration": {
-      "tests": ["tests/integration/test_concentration_manual.py"],
+      "tests": [
+        "tests/integration/test_concentration_manual.py"
+      ],
       "status": "be-pending",
       "note": "Set/clear manuale: concentrating_spell_id = body.spell_id; null o body vuoto (spell_id Optional default None) → azzera la concentrazione. Contratto = FE CharacterFull (concentrating_spell_id) / ConcentrationUpdate.",
       "updated": "2026-06-09"
     },
     "be:routers/stats.py::PATCH /characters/{id}/carry-capacity + POST .../reset-override": {
-      "tests": ["tests/integration/test_carry_capacity_override.py"],
+      "tests": [
+        "tests/integration/test_carry_capacity_override.py"
+      ],
       "status": "be-green",
       "note": "PRE-ESISTENTE (verde nel run 477/0 su Windows), mappato ora per affinare il diff: PATCH carry-capacity setta il valore e blocca l'override (STR non lo clobbera più), clamp ≥0; POST reset-override azzera il flag e ricalcola STR×15. Pattern speculare all'override CA.",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/HP.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/HP.test.tsx"
+      ],
+      "apis": [
+        "GET /characters/{id}",
+        "PATCH /characters/{id}/hp",
+        "POST /characters/{id}/rest",
+        "POST /characters/{id}/revive",
+        "PATCH /characters/{id}/death_saves",
+        "POST /characters/{id}/death_saves/roll",
+        "POST /characters/{id}/hit_dice/spend"
+      ],
+      "status": "fe-green",
+      "note": "Pagina mutation grande: skeleton, render PF=current/(hit_points+homebrew), handleApply (parse/guard/was_critical_hit a 0 HP+crit), quick-apply+undo, riposo corto (hit dice+rest) / lungo (ConfirmSheet), sezione morente (DeathSaves roll/action), morto (DeadState revive), dialog concentrazione + morte istantanea. Mock api/router/framer-motion/sottocomponenti.",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/ArmorClass.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/ArmorClass.test.tsx"
+      ],
+      "apis": [
+        "GET /characters/{id}",
+        "PATCH /characters/{id}/ac",
+        "POST /characters/{id}/ac/reset-override",
+        "POST /characters/{id}/ac/unarmored-defense"
+      ],
+      "status": "fe-green",
+      "note": "Pagina mutation: skeleton, CA totale=ac+homebrew + breakdown, save disabilitato finche non dirty, PATCH solo campi compilati (vuoti->undefined), preview live nuovo totale, reset override, Difesa Senza Armatura (wisdom/constitution/null), base input disabilitato quando unarmored attivo.",
+      "updated": "2026-06-09"
+    },
+    "be:routers/abilities.py::POST /characters/{id}/abilities": {
+      "tests": [
+        "tests/integration/test_abilities_crud.py"
+      ],
+      "apis": [],
+      "status": "be-pending",
+      "note": "Create Ability (201): shape completa AbilityRead, default minimi (none/None), listata via GET.",
+      "updated": "2026-06-09"
+    },
+    "be:routers/abilities.py::PATCH /characters/{id}/abilities/{ability_id}": {
+      "tests": [
+        "tests/integration/test_abilities_crud.py",
+        "tests/integration/test_ability_protection.py"
+      ],
+      "apis": [],
+      "status": "be-pending",
+      "note": "Update Ability (non-class-feature): uses giu=uso (dispatch ability_used, niente notifiche senza regole), uses su=ripristino, rinomina/max_uses liberi (no lock), 404. Il LOCK class_feature (409 su name/max_uses) e gia coperto da test_ability_protection.py (be-green).",
+      "updated": "2026-06-09"
+    },
+    "be:routers/abilities.py::DELETE /characters/{id}/abilities/{ability_id}": {
+      "tests": [
+        "tests/integration/test_abilities_crud.py",
+        "tests/integration/test_ability_protection.py"
+      ],
+      "apis": [],
+      "status": "be-pending",
+      "note": "Delete Ability non-class-feature (204) + de-listata; 404 su id ignoto. Il blocco delete su class_feature (409) e in test_ability_protection.py (be-green).",
+      "updated": "2026-06-09"
+    },
+    "be:routers/items.py::POST /characters/{id}/items": {
+      "tests": [
+        "tests/integration/test_item_crud.py"
+      ],
+      "apis": [],
+      "status": "be-pending",
+      "note": "Create item (201, ritorna CharacterFull): generico (dedup per nome -> merge quantity), arma con is_equipped+equipment_slot, slot incompatibile con item_type -> 422.",
+      "updated": "2026-06-09"
+    },
+    "be:routers/items.py::DELETE /characters/{id}/items/{item_id}": {
+      "tests": [
+        "tests/integration/test_item_crud.py"
+      ],
+      "apis": [],
+      "status": "be-pending",
+      "note": "Delete item (200, CharacterFull senza l item) + 404 su id ignoto.",
+      "updated": "2026-06-09"
+    },
+    "be:routers/spells.py::DELETE /characters/{id}/spells/{spell_id}": {
+      "tests": [
+        "tests/integration/test_spell_crud.py"
+      ],
+      "apis": [],
+      "status": "be-pending",
+      "note": "Delete spell (204) + de-listato; 404 su id ignoto. Aggiunto in coda a test_spell_crud.py.",
+      "updated": "2026-06-09"
+    },
+    "be:routers/spell_slots.py::POST /characters/{id}/spell_slots": {
+      "tests": [
+        "tests/integration/test_spell_slots.py"
+      ],
+      "apis": [],
+      "status": "be-green",
+      "note": "Copertura pre-esistente (lotto 3, file gia verde nel run 477/0): create slot 201 + available=total-used. Solo mappata.",
+      "updated": "2026-06-09"
+    },
+    "be:routers/spell_slots.py::DELETE /characters/{id}/spell_slots/{slot_id}": {
+      "tests": [
+        "tests/integration/test_spell_slots.py"
+      ],
+      "apis": [],
+      "status": "be-green",
+      "note": "Copertura pre-esistente (lotto 3, file gia verde): delete slot 204. Solo mappata.",
       "updated": "2026-06-09"
     }
   }

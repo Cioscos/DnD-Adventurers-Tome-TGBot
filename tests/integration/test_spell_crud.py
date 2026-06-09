@@ -87,3 +87,21 @@ async def test_patch_unknown_spell_is_404(client):
     cid = await _create_character(client)
     r = await client.patch(f"/characters/{cid}/spells/999999", json={"level": 1})
     assert r.status_code == 404, r.text
+
+
+async def test_delete_spell_returns_204_and_unlists_it(client):
+    cid = await _create_character(client)
+    rc = await client.post(f"/characters/{cid}/spells", json={"name": "Dardo Incantato", "level": 1})
+    spell_id = rc.json()["id"]
+
+    r = await client.delete(f"/characters/{cid}/spells/{spell_id}")
+    assert r.status_code == 204, r.text
+
+    rl = await client.get(f"/characters/{cid}/spells")
+    assert all(s["id"] != spell_id for s in rl.json())
+
+
+async def test_delete_unknown_spell_is_404(client):
+    cid = await _create_character(client)
+    r = await client.delete(f"/characters/{cid}/spells/999999")
+    assert r.status_code == 404, r.text
