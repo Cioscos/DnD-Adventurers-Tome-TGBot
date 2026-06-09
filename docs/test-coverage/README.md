@@ -20,8 +20,8 @@ Va **rilanciato** finché i residui arrivano a 0.
 
 ## Stato copertura
 
-> Aggiornato da `/blinda-test`. Ultimo lotto: **2026-06-09 (lotto 19)** (branch `chore/blinda-test-batch-1`).
-> Il grafo graphify resta su `webapp/src api core` (3468 nodi / 9200 edge). Al lotto 19 — come ai lotti 8-18 — solo
+> Aggiornato da `/blinda-test`. Ultimo lotto: **2026-06-09 (lotto 20)** (branch `chore/blinda-test-batch-1`).
+> Il grafo graphify resta su `webapp/src api core` (3468 nodi / 9200 edge). Al lotto 20 — come ai lotti 8-19 — solo
 > **2 file in-scope** risultavano modificati dopo il build del grafo (`api/routers/characters.py`,
 > `api/routers/items.py`) — entrambi **edit interni** dei bug-fix (init `char.classes=[]`; riordino reset CA),
 > **nessun endpoint/firma/schema nuovo** ⇒ la superficie API mappata è ancora accurata. `--update` avrebbe
@@ -31,7 +31,7 @@ Va **rilanciato** finché i residui arrivano a 0.
 
 | Ambito | Totali | Coperte (ledger) | Residue |
 |---|---|---|---|
-| FE (components 89 · pages 72 · lib 20 · hooks 5 · store 5 + coperte) | 197 | 108 | 89 |
+| FE (components 89 · pages 72 · lib 20 · hooks 5 · store 5 + coperte) | 197 | 119 | 78 |
 | BE (endpoint 102 · service 31 · core/game 2 · model/enum 22) | 157 | 113 (**tutte be-green** dopo il run del lotto 11) | 44 |
 
 > **Back-fill copertura BE pre-esistente (lotto 8):** il diff dei lotti 1-7 ignorava la suite pytest
@@ -751,12 +751,31 @@ Lotto **FE-only**.
 > **Lotto FE-only** — nessun pytest nuovo. Restano: 3 top-level grandi (Layout/ModalProvider/DiceOverlay), 4 hooks,
 > e le **pagine** (mutation/sessione/homebrew/note/mappe/dadi/inventario), più i modelli ORM BE.
 
+### Lotto 2026-06-09 #20 (11 unità: infra FE — hooks + lib + modali + Layout/ModalProvider)
+
+Chiusi: **hooks 5/5** (useIntersection/useReducedMotion/useToast/useSwipeNavigation + useLongPress già coperto),
+**lib 20/20** (homebrew `i18n-dsl`/`types` + `inlineMarkdown`), 2 modali pagina, e `Layout`/`ModalProvider`. Lotto
+**FE-only**. `DiceOverlay` (306 righe) rimandato a uno slot dedicato.
+
+**FE — Vitest, verdi (32 test, 11 file · suite totale 536 test / 119 file):**
+- `hooks/useIntersection.ts` (IntersectionObserver stubbato) · `useReducedMotion.ts` (null→false) ·
+  `useToast.ts` (sonner.* + haptic per kind) · `useSwipeNavigation.ts` (**`getGroupInfo` puro** + currentIndex/total).
+- `lib/homebrew/i18n-dsl.ts` — **eventLabel/actionLabel** (varianti attack fumble/critical, damage crit-hit) ·
+  `lib/homebrew/types.ts` (type-smoke DSL) · `lib/inlineMarkdown.tsx` (bold/italic/code → strong/em/code).
+- `pages/conditions/ConditionDetailModal.tsx` (scala exhaustion) · `pages/abilities/PassiveAbilityDetailModal.tsx`.
+- `components/Layout.tsx` — back (`backTo`/history), breadcrumb→`navigate` sibling · `components/ModalProvider.tsx`
+  (context openModal/closeModal/isModalOpen via stack).
+
+> **Lotto FE-only** — nessun pytest nuovo. Residui FE ormai concentrati sulle **pagine** (mutation/sessione/homebrew/
+> note/mappe/dadi/inventario/identity/settings) + `DiceOverlay`. Residui BE: router periferici + modelli ORM.
+
 ## Prossimi residui per rischio (per il lotto successivo)
 
-1. **FE mutation pages restanti** (HP+`pages/hp/*`/ArmorClass/Currency/SpellSlots/Experience/AbilityScores/SavingThrows/
-   Skills/Conditions/**Spells/Abilities/Multiclass/LevelUpModal** chiusi; **famiglia equip chiusa al lotto 13**;
-   **builder item + classe/progressione al lotto 14**; **`components/character/*` chiuso al lotto 15**;
-   **utility lib/store al lotto 16**; **`components/ui/*` 30/30 ai lotti 17-19**; **piccoli `components/*` al lotto 19**):
+1. **FE pagine restanti** (tutte le famiglie `components/*` + `hooks/*` + `lib/*` + `store/*` chiuse ai lotti 12-20):
+   `pages/Inventory.tsx`/`inventory/*`, `multiclass/EditClassesModal.tsx`, `pages/Identity.tsx`, `pages/Settings.tsx`,
+   `pages/Dice.tsx`, `pages/Homebrew.tsx`+`homebrew/*`, `pages/Notes.tsx`+`notes/*`, `pages/Maps.tsx`+`maps/*`,
+   `pages/Session*.tsx`+`session/*`, `pages/spells/*`, `pages/History.tsx`, `pages/CharacterSelect.tsx`,
+   `pages/CharacterMain.tsx`, `pages/Changelog.tsx`, + `components/DiceOverlay.tsx`.
    `pages/Inventory.tsx` (743 righe — CRUD item, equip/slot, attacco) + `pages/inventory/ItemForm.tsx`/`InventoryItem.tsx`,
    `multiclass/EditClassesModal.tsx` (add/update/distribute classi), `pages/Identity.tsx` (351 — patch identità),
    `pages/Settings.tsx` (568 — preferenze, slot mode, silhouette).

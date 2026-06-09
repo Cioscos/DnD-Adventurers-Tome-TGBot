@@ -3,9 +3,9 @@
   "description": "Ledger di copertura test mantenuto dal comando locale /blinda-test. Mappa ogni unità testabile (FE/BE) ai test associati. Rigenerabile/aggiornabile ad ogni run del comando.",
   "last_batch": {
     "date": "2026-06-09",
-    "name": "lotto 19",
+    "name": "lotto 20",
     "branch": "chore/blinda-test-batch-1",
-    "focus": "Chiusura components/ui/* (ultimi 6) + 6 components/* top-level: FilterRow/Ornament/Skeleton/WizardFooter/PageTransition/InSessionBanner + Card/SectionHeader/StubPage/ScrollArea/InspirationRerollButton/RollResultModal. components/ui/ ora 30/30 coperto. 31 test Vitest verdi.",
+    "focus": "Infra FE: hooks (useIntersection/useReducedMotion/useToast/useSwipeNavigation→hooks 5/5) + lib (homebrew i18n-dsl/types + inlineMarkdown→lib 20/20) + 2 modali pagina (ConditionDetailModal/PassiveAbilityDetailModal) + Layout/ModalProvider. 11 unità, 32 test Vitest verdi. DiceOverlay rimandato (306 righe complesse).",
     "be_run": {
       "date": "2026-06-09",
       "result": "n/a",
@@ -1986,6 +1986,105 @@
       ],
       "status": "fe-green",
       "note": "Modale tiro d20: accent default/gold(crit)/crimson(fumble)+pulse, \"d20 (die) ±bonus = total\", banner CRITICO/FUMBLE, badge reroll se wasRerolled, bottone ispirazione se available&&!wasRerolled. Contract con common.py::RollResult.",
+      "updated": "2026-06-09"
+    },
+    "fe:hooks/useIntersection.ts": {
+      "tests": [
+        "webapp/tests/unit/hooks/useIntersection.test.ts"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Hook intersezione: false→true alla prima intersezione, disconnect se once. IntersectionObserver stubbato.",
+      "updated": "2026-06-09"
+    },
+    "fe:hooks/useReducedMotion.ts": {
+      "tests": [
+        "webapp/tests/unit/hooks/useReducedMotion.test.ts"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Re-export framer useReducedMotion, coerce null→false.",
+      "updated": "2026-06-09"
+    },
+    "fe:hooks/useToast.ts": {
+      "tests": [
+        "webapp/tests/unit/hooks/useToast.test.ts"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Toast helper: success/error/default → sonner.* + haptic per kind, hapticFeedback:false silenzia. sonner/haptic mockati.",
+      "updated": "2026-06-09"
+    },
+    "fe:hooks/useSwipeNavigation.ts": {
+      "tests": [
+        "webapp/tests/unit/hooks/useSwipeNavigation.test.ts"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "getGroupInfo (pura): page→{index,total} o null; hook espone currentIndex/total per gruppo, fallback single-page.",
+      "updated": "2026-06-09"
+    },
+    "fe:lib/homebrew/i18n-dsl.ts": {
+      "tests": [
+        "webapp/tests/unit/lib/homebrew/i18nDsl.test.ts"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Label DSL homebrew: eventLabel (default it/en + varianti attack fumble/critical, damage was_crit_hit), actionLabel (heal/damage/condition/roll_dice).",
+      "updated": "2026-06-09"
+    },
+    "fe:lib/homebrew/types.ts": {
+      "tests": [
+        "webapp/tests/unit/lib/homebrew/types.test.ts"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Mirror tipi DSL homebrew (pure types): type-smoke su Effect/RuleDSL/Trigger + discriminatori. Source of truth: api/services/homebrew/dsl.py.",
+      "updated": "2026-06-09"
+    },
+    "fe:lib/inlineMarkdown.tsx": {
+      "tests": [
+        "webapp/tests/unit/lib/inlineMarkdown.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "renderInlineMarkdown: bold→strong/italic→em/code→code, input vuoto invariato, testo semplice passthrough.",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/conditions/ConditionDetailModal.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/conditions/ConditionDetailModal.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Modale dettaglio condizione: titolo+descrizione, scala livelli per exhaustion, close→onClose.",
+      "updated": "2026-06-09"
+    },
+    "fe:pages/abilities/PassiveAbilityDetailModal.tsx": {
+      "tests": [
+        "webapp/tests/unit/pages/abilities/PassiveAbilityDetailModal.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Modale abilità passiva: nome+descrizione o fallback no_description, close→onClose.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/Layout.tsx": {
+      "tests": [
+        "webapp/tests/unit/components/Layout.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "Layout pagina: titolo+children+back (backTo→navigate(backTo) / else navigate(-1)), breadcrumb da getGroupInfo (tap sibling→navigate(/char/:id/page,{replace})), nessun breadcrumb senza info. useSwipeNavigation/scrollBy stubbati.",
+      "updated": "2026-06-09"
+    },
+    "fe:components/ModalProvider.tsx": {
+      "tests": [
+        "webapp/tests/unit/components/ModalProvider.test.tsx"
+      ],
+      "apis": [],
+      "status": "fe-green",
+      "note": "ModalProvider: context openModal/closeModal, stack modali, isModalOpen riflette lo stack (consumer via useModal).",
       "updated": "2026-06-09"
     }
   }
