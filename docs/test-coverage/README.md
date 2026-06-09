@@ -32,7 +32,7 @@ Va **rilanciato** finché i residui arrivano a 0.
 | Ambito | Totali | Coperte (ledger) | Residue |
 |---|---|---|---|
 | FE (components 89 · pages 72 · lib 20 · hooks 5 · store 5 + coperte) | 197 | 28 | 169 |
-| BE (endpoint 102 · service 31 · core/game 2 · model/enum 22) | 157 | 108 (104 be-green + **4 be-pending** lotto 10) | 49 |
+| BE (endpoint 102 · service 31 · core/game 2 · model/enum 22) | 157 | 108 (**tutte be-green** dopo il run del lotto 10) | 49 |
 
 > **Back-fill copertura BE pre-esistente (lotto 8):** il diff dei lotti 1-7 ignorava la suite pytest
 > **già presente** nel repo, che copriva molte unità "residue" → falsi negativi. Al lotto 8 sono state
@@ -439,6 +439,10 @@ statico al payload HTTP effettivo. In parallelo, BE: l'unico endpoint bulk delle
 - `routers/history.py::GET …/history/retention-preview` → `test_history.py` — `would_purge_events = max(0,total-events)`;
   `would_purge_days` = righe con `timestamp < utcnow-days` (confronto stringa ISO); query bounds `events`/`days` → 422 a 0.
 - `routers/history.py::DELETE …/history` → `test_history.py` — wipe completo (204), GET successiva → `[]`; 404 assente.
+
+> **Run di conferma BE (2026-06-09, Windows): verde.** Eseguiti su Windows `test_saving_throws_bulk.py` (5 test)
+> e `test_history.py` (10 test) — **tutti passati**, nessuna regressione. I 4 `be-pending` del lotto 10 portati a
+> `be-green`. Ledger ora **0 be-pending** (28 fe-green + 108 be-green).
 
 **Lotto 10 — compat FE↔API.** Verificati i metodi `api.characters.*` / `api.homebrew.*` invocati dalle 4 pagine
 contro route + schemi Pydantic. Tutti **allineati**, nessun mismatch 🔴/🟠; i payload inviati e le shape lette

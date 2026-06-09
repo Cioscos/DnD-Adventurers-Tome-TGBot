@@ -1160,7 +1160,7 @@
       "apis": [
         "PATCH /characters/{id}/saving_throws"
       ],
-      "status": "be-pending",
+      "status": "be-green",
       "note": "Bulk SavingThrowsUpdate (dict[str,bool]): MERGE su saving_throws esistenti (current.update), mai replace → chiavi non inviate preservate; flip a false; aggiunta nuova chiave mantiene STR/CON seedate dal Guerriero. Response CharacterFull (saving_throws dict letto dal FE). 404 char inesistente. Contract con FE api.characters.updateSavingThrows {saving_throws}.",
       "updated": "2026-06-09"
     },
@@ -1171,7 +1171,7 @@
       "apis": [
         "GET /characters/{id}/history"
       ],
-      "status": "be-pending",
+      "status": "be-green",
       "note": "Ordina per timestamp desc (newest-first), shape HistoryEntryRead = {id,timestamp,event_type,description} (omette meta JSON). Ownership 404 (char assente) / 403 (altro owner). Righe seedate via test_session_factory.",
       "updated": "2026-06-09"
     },
@@ -1182,7 +1182,7 @@
       "apis": [
         "GET /characters/{id}/history/retention-preview"
       ],
-      "status": "be-pending",
+      "status": "be-green",
       "note": "HistoryRetentionPreview: would_purge_events = max(0,total-events); would_purge_days = righe con timestamp < (utcnow-days) (confronto stringa ISO, timespec seconds). Query bounds: events ge1 le10000, days ge1 le3650 → 422 a 0.",
       "updated": "2026-06-09"
     },
@@ -1193,7 +1193,7 @@
       "apis": [
         "DELETE /characters/{id}/history"
       ],
-      "status": "be-pending",
+      "status": "be-green",
       "note": "Wipe completo (204), GET successiva → []. Ownership 404 char inesistente.",
       "updated": "2026-06-09"
     }
