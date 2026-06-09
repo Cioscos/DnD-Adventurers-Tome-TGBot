@@ -97,3 +97,69 @@ async def test_add_monster_requires_gm(client, test_session_factory):
         f"/sessions/{sid}/encounter/combatants", json={"name": "Goblin"},
     )
     assert r.status_code == 403, r.text
+
+
+# ---------------------------------------------------------------------------
+# POST /sessions/{id}/encounter/combatants/{cid}/initiative
+# ---------------------------------------------------------------------------
+
+def _pc(enc: dict) -> dict:
+    return next(c for c in enc["combatants"] if c["kind"] == "pc")
+
+
+async def test_player_rolls_own_initiative_with_die(client, test_session_factory):
+    sid, _ = await seed_session(test_session_factory)   # DEX 16 -> mod +3
+    enc = await _create_encounter(client, sid, "light")
+    pc = _pc(enc)
+    as_user(PLAYER_ID)
+    r = await client.post(
+        f"/sessions/{sid}/encounter/combatants/{pc['id']}/initiative",
+        json={"die": 14},
+    )
+    assert r.status_code == 200, r.text
+    rolled = _pc(r.json())
+    assert rolled["initiative_die"] == 14
+    assert rolled["initiative"] == 17        # 14 + 3
+
+
+async def test_double_roll_is_409(client, test_session_factory):
+    sid, _ = await seed_session(test_session_factory)
+    enc = await _create_encounter(client, sid, "light")
+    pc = _pc(enc)
+    as_user(PLAYER_ID)
+    url = f"/sessions/{sid}/encounter/combatants/{pc['id']}/initiative"
+    assert (await client.post(url, json={"die": 14})).status_code == 200
+    r = await client.post(url, json={"die": 20})
+    assert r.status_code == 409, r.text
+
+
+async def test_player_cannot_roll_for_monster(client, test_session_factory):
+    sid, _ = await seed_session(test_session_factory)
+    await _create_encounter(client, sid, "light")
+    r = await client.post(
+        f"/sessions/{sid}/encounter/combatants", json={"name": "Goblin", "initiative_mod": 2},
+    )
+    monster = next(c for c in r.json()["combatants"] if c["kind"] == "monster")
+    as_user(PLAYER_ID)
+    r2 = await client.post(
+        f"/sessions/{sid}/encounter/combatants/{monster['id']}/initiative",
+        json={"die": 10},
+    )
+    assert r2.status_code == 403, r2.text
+
+
+async def test_gm_rolls_monster_without_die_gets_server_roll(client, test_session_factory):
+    sid, _ = await seed_session(test_session_factory)
+    await _create_encounter(client, sid, "light")
+    r = await client.post(
+        f"/sessions/{sid}/encounter/combatants", json={"name": "Goblin", "initiative_mod": 2},
+    )
+    monster = next(c for c in r.json()["combatants"] if c["kind"] == "monster")
+    r2 = await client.post(
+        f"/sessions/{sid}/encounter/combatants/{monster['id']}/initiative",
+        json={},
+    )
+    assert r2.status_code == 200, r2.text
+    rolled = next(c for c in r2.json()["combatants"] if c["id"] == monster["id"])
+    assert 1 <= rolled["initiative_die"] <= 20
+    assert rolled["initiative"] == rolled["initiative_die"] + 2

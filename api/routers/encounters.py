@@ -223,3 +223,39 @@ async def add_combatants(
     await db.flush()
     await db.refresh(enc, attribute_names=["combatants"])
     return build_encounter_block(enc, viewer_is_gm=True)
+
+
+@router.post(
+    "/{session_id}/encounter/combatants/{combatant_id}/initiative",
+    response_model=EncounterLive,
+)
+async def roll_initiative(
+    session_id: int,
+    combatant_id: int,
+    body: InitiativeRollRequest,
+    user_id: Annotated[int, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> EncounterLive:
+    session = await _load_session(session_id, db)
+    _assert_participant(session, user_id)
+    _assert_session_active(session)
+    enc = await _require_open_encounter(session_id, db)
+    comb = next((c for c in enc.combatants if c.id == combatant_id), None)
+    if comb is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Combatant not found")
+    is_gm = user_id == session.gm_user_id
+    if not is_gm and comb.owner_user_id != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Not your combatant",
+        )
+    if comb.initiative is not None:
+        # Anche per il GM: la correzione passa dal PATCH.
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="Initiative already rolled",
+        )
+    die = body.die if body.die is not None else random.randint(1, 20)
+    comb.initiative_die = die
+    comb.initiative = die + comb.initiative_mod
+    _touch(session)
+    await db.flush()
+    return build_encounter_block(enc, viewer_is_gm=is_gm)
