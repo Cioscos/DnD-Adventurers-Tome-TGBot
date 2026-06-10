@@ -30,11 +30,11 @@
       "fixed": {
         "it": [
           "Con due pannelli sovrapposti, il tasto Esc ora chiude solo quello in cima invece di entrambi.",
-          "Nella lista degli incantesimi le intestazioni di livello ora si fermano a filo del bordo superiore della pagina invece di lasciare uno spazio."
+          "Le barre fisse in alto (intestazioni di livello negli incantesimi, riepilogo competenza e percezione passiva nelle abilità) ora si fermano a filo del bordo superiore della pagina invece di lasciare uno spazio scoperto."
         ],
         "en": [
           "With two stacked sheets open, Esc now closes only the topmost one instead of both.",
-          "In the spell list, level headers now stick flush to the top edge of the page instead of leaving a gap."
+          "Top sticky bars (level headers in the spell list, proficiency and passive perception strip in skills) now stick flush to the top edge of the page instead of leaving an uncovered gap."
         ]
       }
     },
