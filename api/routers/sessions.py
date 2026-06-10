@@ -175,12 +175,19 @@ def _touch(session: GameSession) -> None:
 
 
 async def _load_live_characters(
-    char_ids: list[int], db: AsyncSession
+    char_ids: list[int],
+    db: AsyncSession,
+    joined_at_by_char: Optional[dict[int, str]] = None,
 ) -> dict[int, dict]:
     """Return raw snapshot dicts keyed by character id.
 
     Full (un-redacted) data is returned here; redaction happens per viewer
     in get_session_live.
+
+    ``joined_at_by_char`` maps character id → ISO timestamp of when its
+    participant joined the session: rolls older than that (or with no
+    timestamp at all) are hidden, so pre-session rolls never leak into the
+    session view. History is append-only, so checking the last entry suffices.
     """
     if not char_ids:
         return {}
@@ -198,6 +205,11 @@ async def _load_live_characters(
         history = char.rolls_history or []
         if history and isinstance(history[-1], dict):
             last_roll = history[-1]
+        if last_roll is not None and joined_at_by_char is not None:
+            joined = joined_at_by_char.get(char.id)
+            ts = last_roll.get("timestamp")
+            if joined and (not isinstance(ts, str) or ts < joined):
+                last_roll = None
         out[char.id] = dict(
             id=char.id,
             user_id=char.user_id,
@@ -353,7 +365,12 @@ async def get_session_live(
     _assert_participant(session, user_id)
 
     char_ids = [p.character_id for p in session.participants if p.character_id is not None]
-    raw_map = await _load_live_characters(char_ids, db)
+    joined_at_by_char = {
+        p.character_id: p.joined_at
+        for p in session.participants
+        if p.character_id is not None
+    }
+    raw_map = await _load_live_characters(char_ids, db, joined_at_by_char)
     viewer_is_gm = (user_id == session.gm_user_id)
 
     snapshots: list[CharacterLiveSnapshot] = []

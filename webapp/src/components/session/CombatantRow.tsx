@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { User } from 'lucide-react'
+import { PawPrint, User } from 'lucide-react'
 import {
   GiHeartPlus as Heart,
   GiCheckedShield as Shield,
@@ -94,6 +94,7 @@ export default function CombatantRow({
         ${isActive
           ? 'border-dnd-gold bg-dnd-surface-raised ring-2 ring-dnd-gold-bright/50 shadow-[0_0_12px_rgba(212,168,71,0.35)]'
           : 'border-dnd-border bg-dnd-surface'}
+        ${isPc ? 'border-l-4 border-l-dnd-gold-dim/70' : 'border-l-4 border-l-[var(--dnd-crimson)]'}
         ${clickable ? 'cursor-pointer hover:border-dnd-gold-bright' : ''}`}
     >
       <div className="flex items-center gap-3">
@@ -106,8 +107,10 @@ export default function CombatantRow({
           <div className="flex items-center gap-1.5">
             {c.is_dead ? (
               <Skull size={13} className="text-dnd-text-muted shrink-0" />
+            ) : isPc ? (
+              <User size={13} className="shrink-0 text-dnd-gold-bright" />
             ) : (
-              <User size={13} className={`shrink-0 ${isPc ? 'text-dnd-gold-bright' : 'text-dnd-text-muted'}`} />
+              <PawPrint size={13} className="shrink-0 text-[var(--dnd-crimson-bright)]" />
             )}
             <p className="font-display font-bold text-dnd-text break-words">
               {c.name}

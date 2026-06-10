@@ -156,11 +156,50 @@ async def test_prev_turn_wraps_back_decrementing_round(client, test_session_fact
     assert r.json()["round"] == 1
 
 
-async def test_turns_require_gm(client, test_session_factory, monkeypatch):
+async def test_next_turn_by_active_pc_owner_advances(client, test_session_factory, monkeypatch):
+    """Il giocatore termina il proprio turno: attivo Eroe (suo) -> avanza a Goblin 1."""
+    sid, enc, _ = await _started(client, test_session_factory, monkeypatch)
+    ids = [c["id"] for c in enc["combatants"]]    # [Eroe, Goblin 1, Goblin 2]
+    as_user(PLAYER_ID)
+    r = await client.post(f"/sessions/{sid}/encounter/next-turn")
+    assert r.status_code == 200, r.text
+    assert r.json()["active_combatant_id"] == ids[1]
+
+
+async def test_next_turn_by_player_when_not_active_is_403(client, test_session_factory, monkeypatch):
+    """Anti-race: il GM ha già avanzato (attivo Goblin 1) -> l'end-turn del player fallisce."""
+    sid, enc, _ = await _started(client, test_session_factory, monkeypatch)
+    ids = [c["id"] for c in enc["combatants"]]
+    r = await client.post(f"/sessions/{sid}/encounter/next-turn")   # GM: Eroe -> Goblin 1
+    assert r.json()["active_combatant_id"] == ids[1]
+    as_user(PLAYER_ID)
+    r = await client.post(f"/sessions/{sid}/encounter/next-turn")
+    assert r.status_code == 403, r.text
+    assert r.json()["detail"]["code"] == "not_your_turn"
+    # il puntatore non si è mosso
+    as_user(GM_ID)
+    r = await client.get(f"/sessions/{sid}/live")
+    assert r.json()["encounter"]["active_combatant_id"] == ids[1]
+
+
+async def test_prev_turn_requires_gm(client, test_session_factory, monkeypatch):
     sid, _, _ = await _started(client, test_session_factory, monkeypatch)
     as_user(PLAYER_ID)
-    assert (await client.post(f"/sessions/{sid}/encounter/next-turn")).status_code == 403
     assert (await client.post(f"/sessions/{sid}/encounter/prev-turn")).status_code == 403
+
+
+async def test_next_turn_player_response_is_redacted(client, test_session_factory, monkeypatch):
+    """La risposta al player (modalità full) non espone PF/CA esatti dei mostri."""
+    sid, _, _ = await _started(client, test_session_factory, monkeypatch)
+    as_user(PLAYER_ID)
+    r = await client.post(f"/sessions/{sid}/encounter/next-turn")
+    assert r.status_code == 200, r.text
+    monsters = [c for c in r.json()["combatants"] if c["kind"] == "monster"]
+    assert monsters and all(
+        c["current_hp"] is None and c["max_hp"] is None and c["ac"] is None
+        and c["hp_bucket"] is not None
+        for c in monsters
+    )
 
 
 # ---------------------------------------------------------------------------

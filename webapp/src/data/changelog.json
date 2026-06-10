@@ -1,6 +1,42 @@
 {
   "entries": [
     {
+      "version": "2.14.0",
+      "date": "2026-06-11",
+      "title": {
+        "it": "Sessione: turni dei giocatori e fix vari",
+        "en": "Session: player turns and assorted fixes"
+      },
+      "added": {
+        "it": [
+          "Combattimento: quando tocca al tuo personaggio compare il pulsante «Termina turno» — sei tu a chiudere il tuo turno, non più il GM.",
+          "Combattimento: se il GM avanza mentre è il turno di un personaggio giocante, l'app chiede conferma prima di saltarlo (utile se il giocatore è assente)."
+        ],
+        "en": [
+          "Combat: when it's your character's turn an “End turn” button appears — you end your own turn, no longer the GM.",
+          "Combat: if the GM advances while a player character's turn is active, the app asks for confirmation before skipping it (useful when the player is away)."
+        ]
+      },
+      "improved": {
+        "it": [
+          "Tracker del combattimento: mostri e personaggi ora si distinguono a colpo d'occhio — icona zampa e accento cremisi per i mostri, icona e accento dorati per i personaggi."
+        ],
+        "en": [
+          "Combat tracker: monsters and characters are now distinguishable at a glance — paw icon and crimson accent for monsters, golden icon and accent for characters."
+        ]
+      },
+      "fixed": {
+        "it": [
+          "Consegna oggetti: il GM ora vede «Hai consegnato a …» invece di «Il GM ti ha consegnato …» per le proprie consegne.",
+          "I tiri di dado effettuati prima di entrare in sessione non compaiono più nella riga del giocatore: in sessione si vedono solo i tiri fatti da quando si è entrati."
+        ],
+        "en": [
+          "Item handouts: the GM now sees “You handed …” instead of “The GM handed you …” for their own handouts.",
+          "Dice rolls made before joining a session no longer show up in the player's row: only rolls made since joining are shown in session."
+        ]
+      }
+    },
+    {
       "version": "2.13.4",
       "date": "2026-06-10",
       "title": {

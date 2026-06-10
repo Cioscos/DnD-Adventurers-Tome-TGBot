@@ -3,8 +3,9 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { GiCrossedSwords as Swords } from 'react-icons/gi'
-import { Plus, RefreshCw, Flag } from 'lucide-react'
+import { Plus, RefreshCw, Flag, ChevronRight } from 'lucide-react'
 import Button from '@/components/ui/Button'
+import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import SectionDivider from '@/components/ui/SectionDivider'
 import CombatantRow from '@/components/session/CombatantRow'
 import TurnBar from '@/components/session/TurnBar'
@@ -30,6 +31,7 @@ export default function CombatPanel({ live, sessionId, amGm, myUserId }: Props) 
   const [showCreate, setShowCreate] = useState(false)
   const [showAddMonster, setShowAddMonster] = useState(false)
   const [sheetTarget, setSheetTarget] = useState<CombatantLive | null>(null)
+  const [confirmSkip, setConfirmSkip] = useState(false)
 
   const snapshotsById = useMemo(() => {
     const map = new Map<number, GameSessionLive['live_characters'][number]>()
@@ -80,7 +82,17 @@ export default function CombatPanel({ live, sessionId, amGm, myUserId }: Props) 
         ? api.sessions.encounter.nextTurn(sessionId)
         : api.sessions.encounter.prevTurn(sessionId),
     onSuccess: () => { haptic.light(); invalidate() },
-    onError,
+    onError: (err: unknown, dir) => {
+      // Stale "end turn": the pointer already moved on (e.g. the GM skipped
+      // the player's turn first). Refresh instead of showing a hard error.
+      if (dir === 'next' && err instanceof ApiError && err.status === 403) {
+        haptic.warning()
+        toast.info(t('session.combat.turn_already_advanced'))
+        invalidate()
+        return
+      }
+      onError()
+    },
   })
 
   const syncMutation = useMutation({
@@ -121,6 +133,13 @@ export default function CombatPanel({ live, sessionId, amGm, myUserId }: Props) 
   )
   const activeCombatant =
     enc.combatants.find((c) => c.id === enc.active_combatant_id) ?? null
+  const isMyTurn =
+    enc.status === 'active' &&
+    activeCombatant?.kind === 'pc' &&
+    activeCombatant.owner_user_id === myUserId &&
+    !activeCombatant.is_dead
+  const activeIsLivingPc =
+    activeCombatant?.kind === 'pc' && !activeCombatant.is_dead
   const monstersAllDown =
     enc.combatants.some((c) => c.kind === 'monster') &&
     enc.combatants.filter((c) => c.kind === 'monster').every((c) => c.is_dead)
@@ -152,8 +171,23 @@ export default function CombatPanel({ live, sessionId, amGm, myUserId }: Props) 
           amGm={amGm}
           pending={turnMutation.isPending}
           onPrev={() => turnMutation.mutate('prev')}
-          onNext={() => turnMutation.mutate('next')}
+          onNext={() =>
+            activeIsLivingPc ? setConfirmSkip(true) : turnMutation.mutate('next')
+          }
         />
+      )}
+
+      {!amGm && isMyTurn && (
+        <Button
+          variant="primary"
+          size="md"
+          fullWidth
+          icon={<ChevronRight size={16} />}
+          disabled={turnMutation.isPending}
+          onClick={() => turnMutation.mutate('next')}
+        >
+          {t('session.combat.end_my_turn')}
+        </Button>
       )}
 
       {enc.status === 'setup' && !amGm && myCombatant && (
@@ -237,6 +271,19 @@ export default function CombatPanel({ live, sessionId, amGm, myUserId }: Props) 
           onClose={() => setSheetTarget(null)}
         />
       )}
+      <ConfirmSheet
+        open={confirmSkip}
+        onClose={() => setConfirmSkip(false)}
+        onConfirm={() => {
+          setConfirmSkip(false)
+          turnMutation.mutate('next')
+        }}
+        title={t('session.combat.skip_pc_confirm_title')}
+        body={t('session.combat.skip_pc_confirm_body', { name: activeCombatant?.name ?? '' })}
+        confirmLabel={t('session.combat.skip_pc_confirm_cta')}
+        cancelLabel={t('common.cancel')}
+        confirmVariant="primary"
+      />
     </>
   )
 }
