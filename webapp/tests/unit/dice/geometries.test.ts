@@ -173,3 +173,24 @@ describe('d10 trapezohedron', () => {
     }
   })
 })
+
+describe('d8 numeral orientation', () => {
+  it('keeps every digit upright when the polar axis is vertical', () => {
+    // Convenzione dei d8 reali: con l'asse polare (±Y) verticale tutte le
+    // cifre si leggono dritte — il loro up coincide con la proiezione di
+    // world-Y sul piano della faccia (verso l'apice +Y sulla piramide alta,
+    // via dall'apice −Y su quella bassa).
+    const data = getDiceGeometry('d8')
+    const worldY = new THREE.Vector3(0, 1, 0)
+    expect(data.faceFrames).toHaveLength(8)
+    for (const frame of data.faceFrames) {
+      const up3D = new THREE.Vector3(0, 1, 0).applyQuaternion(frame.quaternion)
+      const normal = new THREE.Vector3(0, 0, 1).applyQuaternion(frame.quaternion)
+      const expected = worldY
+        .clone()
+        .sub(normal.clone().multiplyScalar(worldY.dot(normal)))
+        .normalize()
+      expect(up3D.dot(expected)).toBeGreaterThan(0.999)
+    }
+  })
+})

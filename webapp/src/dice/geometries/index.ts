@@ -288,7 +288,13 @@ function buildFaceFrames(t: DieTemplate, kind: DiceUvKind): FaceFrame[] {
       // Convenzione d10 reali: top della cifra verso l'apice del proprio polo.
       const poleIdx = face.indexOf(face.includes(0) ? 0 : 1)
       up2D = norm2D({ x: verts2D[poleIdx].x - cheby.x, y: verts2D[poleIdx].y - cheby.y })
-    } else if (kind === 'd6') {
+    } else if (kind === 'd6' || kind === 'd8') {
+      // d8: la proiezione di world-Y sul piano di ogni faccia È già un asse
+      // di simmetria del triangolo (verso l'apice +Y sulle facce alte, via
+      // dall'apice −Y su quelle basse) = convenzione dei d8 reali. Lo snap
+      // generico qui degenera: i due vertici equatoriali pareggiano
+      // (c.y = 0.5) e la cifra finisce ruotata di ±60° a seconda
+      // dell'ordine dei vertici.
       up2D = { x: 0, y: 1 }
     } else {
       // Snap della proiezione di world-Y (= (0,1) in questo frame) alla
