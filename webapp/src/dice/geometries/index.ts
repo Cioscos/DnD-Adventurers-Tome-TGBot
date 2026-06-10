@@ -19,6 +19,28 @@ type V = [number, number, number]
 
 const TARGET_CIRCUMRADIUS = 0.38
 
+// Altezza dell'anello equatoriale che rende PLANARI le facce kite del
+// trapezoedro pentagonale (apici a y=±1, anello di raggio 1). Con altri valori
+// il 4° vertice di ogni kite esce dal piano della faccia: la ConvexPolyhedron
+// di cannon diventa invalida (contatti instabili) e il rigonfiamento taglia i
+// quad dei numerali.
+const D10_RING_Y =
+  (2 * Math.sin(Math.PI / 5) - Math.sin((2 * Math.PI) / 5)) /
+  (2 * Math.sin(Math.PI / 5) + Math.sin((2 * Math.PI) / 5))
+
+/** Distanza del quad numerale dal piano della faccia (anti z-fighting). */
+const NUMERAL_LIFT = 0.002
+
+/** Lato del quad numerale = fattore × raggio di Chebyshev della faccia. */
+const NUMERAL_SIZE_FACTOR: Record<DiceUvKind, number> = {
+  d4: 0.7, // cifre per-angolo (numerazione apex)
+  d6: 1.7,
+  d8: 1.5,
+  d10: 1.45,
+  d12: 1.6,
+  d20: 1.45,
+}
+
 function normalize(verts: V[], targetR: number = TARGET_CIRCUMRADIUS): V[] {
   const r = Math.max(...verts.map(([x, y, z]) => Math.hypot(x, y, z)))
   const k = targetR / r
@@ -50,6 +72,11 @@ interface DieTemplate {
   vertices: V[]
   faces: number[][]
   faceValues: number[]
+  /**
+   * Numerazione apex (d4): il valore letto appartiene al VERTICE rivolto in
+   * alto, non a una faccia. vertexValues[i] = valore del vertice i.
+   */
+  vertexValues?: number[]
 }
 
 function buildBufferGeometry(t: DieTemplate): THREE.BufferGeometry {
@@ -84,100 +111,198 @@ function buildCannonShape(t: DieTemplate): CANNON.ConvexPolyhedron {
   })
 }
 
+/** Normale planare (Newell) di una faccia con winding outward. */
+function polygonNormal(verts: THREE.Vector3[]): THREE.Vector3 {
+  const n = new THREE.Vector3()
+  for (let i = 0; i < verts.length; i++) {
+    const a = verts[i]
+    const b = verts[(i + 1) % verts.length]
+    n.x += (a.y - b.y) * (a.z + b.z)
+    n.y += (a.z - b.z) * (a.x + b.x)
+    n.z += (a.x - b.x) * (a.y + b.y)
+  }
+  return n.normalize()
+}
+
+interface FaceBasis {
+  centroid: THREE.Vector3
+  /** Vera normale del piano della faccia (NON la direzione del centroide: sul
+   *  kite del d10 differiscono di ~19° e l'inclinazione affonderebbe i numerali). */
+  normal: THREE.Vector3
+  xAxis: THREE.Vector3
+  yAxis: THREE.Vector3
+  /** Vertici della faccia nel frame (xAxis, yAxis), relativi al centroide. */
+  verts2D: Array<{ x: number; y: number }>
+}
+
+function buildFaceBasis(t: DieTemplate, face: number[]): FaceBasis {
+  const verts = face.map((vi) => new THREE.Vector3(...t.vertices[vi]))
+  const centroid = new THREE.Vector3()
+  for (const v of verts) centroid.add(v)
+  centroid.multiplyScalar(1 / verts.length)
+
+  const normal = polygonNormal(verts)
+
+  const worldY = new THREE.Vector3(0, 1, 0)
+  let yAxis = worldY.clone().sub(normal.clone().multiplyScalar(worldY.dot(normal)))
+  if (yAxis.lengthSq() < 0.01) {
+    const worldX = new THREE.Vector3(1, 0, 0)
+    yAxis = worldX.clone().sub(normal.clone().multiplyScalar(worldX.dot(normal)))
+  }
+  yAxis.normalize()
+  // Frame right-handed: guardando la faccia da fuori, xAxis punta a destra.
+  const xAxis = new THREE.Vector3().crossVectors(yAxis, normal).normalize()
+
+  const verts2D = verts.map((v) => {
+    const rel = v.clone().sub(centroid)
+    return { x: rel.dot(xAxis), y: rel.dot(yAxis) }
+  })
+  return { centroid, normal, xAxis, yAxis, verts2D }
+}
+
+interface Point2D {
+  x: number
+  y: number
+}
+
+function norm2D(p: Point2D): Point2D {
+  const l = Math.hypot(p.x, p.y) || 1
+  return { x: p.x / l, y: p.y / l }
+}
+
+/**
+ * Centro di Chebyshev (centro del massimo cerchio inscritto) di un poligono
+ * convesso 2D. Grid-search a raffinamento dal centroide: la funzione
+ * min-distanza-dai-lati è concava sul convesso, quindi la ricerca converge
+ * all'ottimo globale. Triangolo equilatero → incentro; quadrato/pentagono
+ * regolare → centro; kite (d10) → punto sull'asse di simmetria.
+ */
+function chebyshevCenter2D(pts: Point2D[]): { x: number; y: number; r: number } {
+  const n = pts.length
+  let cx = 0, cy = 0
+  for (const p of pts) { cx += p.x; cy += p.y }
+  cx /= n
+  cy /= n
+
+  // Rette dei lati con normale interna (positiva sul centroide).
+  const edges: Array<{ nx: number; ny: number; d: number }> = []
+  for (let i = 0; i < n; i++) {
+    const a = pts[i]
+    const b = pts[(i + 1) % n]
+    let nx = -(b.y - a.y)
+    let ny = b.x - a.x
+    const len = Math.hypot(nx, ny) || 1
+    nx /= len; ny /= len
+    let d = -(nx * a.x + ny * a.y)
+    if (nx * cx + ny * cy + d < 0) { nx = -nx; ny = -ny; d = -d }
+    edges.push({ nx, ny, d })
+  }
+  const clearance = (x: number, y: number) => {
+    let m = Infinity
+    for (const e of edges) m = Math.min(m, e.nx * x + e.ny * y + e.d)
+    return m
+  }
+
+  let bx = cx, by = cy, br = clearance(cx, cy)
+  let span = 0
+  for (const p of pts) span = Math.max(span, Math.hypot(p.x - cx, p.y - cy))
+  let step = span / 2
+  for (let round = 0; round < 6; round++) {
+    for (let i = -2; i <= 2; i++) {
+      for (let j = -2; j <= 2; j++) {
+        const x = bx + (i * step) / 2
+        const y = by + (j * step) / 2
+        const r = clearance(x, y)
+        if (r > br) { br = r; bx = x; by = y }
+      }
+    }
+    step /= 2
+  }
+  return { x: bx, y: by, r: br }
+}
+
 function buildFaceNormals(t: DieTemplate): Record<number, THREE.Vector3> {
   const map: Record<number, THREE.Vector3> = {}
+  if (t.vertexValues) {
+    // d4 apex: il risultato è il vertice in alto (a riposo dot = 1.0, mai
+    // ambiguo — un tetraedro fermo non ha alcuna FACCIA rivolta in su).
+    t.vertexValues.forEach((value, vi) => {
+      map[value] = new THREE.Vector3(...t.vertices[vi]).normalize()
+    })
+    return map
+  }
   t.faces.forEach((face, idx) => {
-    let cx = 0, cy = 0, cz = 0
-    for (const vi of face) {
-      cx += t.vertices[vi][0]
-      cy += t.vertices[vi][1]
-      cz += t.vertices[vi][2]
-    }
-    cx /= face.length; cy /= face.length; cz /= face.length
-    const m = Math.hypot(cx, cy, cz) || 1
-    map[t.faceValues[idx]] = new THREE.Vector3(cx / m, cy / m, cz / m)
+    map[t.faceValues[idx]] = buildFaceBasis(t, face).normal
   })
   return map
 }
 
-function buildFaceFrames(t: DieTemplate): FaceFrame[] {
+function buildFaceFrames(t: DieTemplate, kind: DiceUvKind): FaceFrame[] {
   const frames: FaceFrame[] = []
-  t.faces.forEach((face, idx) => {
-    let cx = 0, cy = 0, cz = 0
-    for (const vi of face) {
-      cx += t.vertices[vi][0]
-      cy += t.vertices[vi][1]
-      cz += t.vertices[vi][2]
-    }
-    cx /= face.length; cy /= face.length; cz /= face.length
-    const centroid = new THREE.Vector3(cx, cy, cz)
-    const normal = centroid.clone().normalize()
+  const sizeFactor = NUMERAL_SIZE_FACTOR[kind]
 
-    const worldY = new THREE.Vector3(0, 1, 0)
-    let up = worldY.clone().sub(normal.clone().multiplyScalar(worldY.dot(normal)))
-    if (up.lengthSq() < 0.01) {
-      const worldX = new THREE.Vector3(1, 0, 0)
-      up = worldX.clone().sub(normal.clone().multiplyScalar(worldX.dot(normal)))
-    }
-    up.normalize()
+  t.faces.forEach((face, faceIdx) => {
+    const { centroid, normal, xAxis, yAxis, verts2D } = buildFaceBasis(t, face)
+    const cheby = chebyshevCenter2D(verts2D)
 
-    let minEdgeDist = Infinity
-    for (let i = 0; i < face.length; i++) {
-      const a = new THREE.Vector3(...t.vertices[face[i]])
-      const b = new THREE.Vector3(...t.vertices[face[(i + 1) % face.length]])
-      const ab = b.clone().sub(a)
-      const lenSq = ab.lengthSq() || 1
-      const ac = centroid.clone().sub(a)
-      const proj = Math.min(1, Math.max(0, ab.dot(ac) / lenSq))
-      const closest = a.clone().add(ab.clone().multiplyScalar(proj))
-      const d = centroid.distanceTo(closest)
-      if (d < minEdgeDist) minEdgeDist = d
+    const to3D = (p: Point2D) =>
+      centroid
+        .clone()
+        .add(xAxis.clone().multiplyScalar(p.x))
+        .add(yAxis.clone().multiplyScalar(p.y))
+
+    const pushFrame = (value: number, center2D: Point2D, up2D: Point2D, size: number) => {
+      const up3D = xAxis
+        .clone()
+        .multiplyScalar(up2D.x)
+        .add(yAxis.clone().multiplyScalar(up2D.y))
+        .normalize()
+      const x3D = new THREE.Vector3().crossVectors(up3D, normal).normalize()
+      const basis = new THREE.Matrix4().makeBasis(x3D, up3D, normal)
+      frames.push({
+        value,
+        quaternion: new THREE.Quaternion().setFromRotationMatrix(basis),
+        offsetPosition: to3D(center2D).add(normal.clone().multiplyScalar(NUMERAL_LIFT)),
+        size,
+      })
     }
 
-    const xAxis = new THREE.Vector3().crossVectors(up, normal).normalize()
-    const basis = new THREE.Matrix4().makeBasis(xAxis, up, normal)
-    const quaternion = new THREE.Quaternion().setFromRotationMatrix(basis)
-
-    let halfW = 0
-    let halfH = 0
-    let minPy = Infinity
-    let maxPy = -Infinity
-    let minPx = Infinity
-    let maxPx = -Infinity
-    for (const vi of face) {
-      const v = new THREE.Vector3(...t.vertices[vi])
-      const rel = v.clone().sub(centroid)
-      const px = rel.dot(xAxis)
-      const py = rel.dot(up)
-      if (Math.abs(px) > halfW) halfW = Math.abs(px)
-      if (Math.abs(py) > halfH) halfH = Math.abs(py)
-      if (py < minPy) minPy = py
-      if (py > maxPy) maxPy = py
-      if (px < minPx) minPx = px
-      if (px > maxPx) maxPx = px
+    if (t.vertexValues) {
+      // d4 apex: 3 cifre per faccia, una per angolo, ciascuna col valore del
+      // vertice di quell'angolo e il top della cifra rivolto verso l'angolo
+      // (come i d4 reali: il risultato si legge in alto su tutte le facce).
+      face.forEach((vi, j) => {
+        const corner = verts2D[j]
+        const center2D = {
+          x: cheby.x + (corner.x - cheby.x) * 0.5,
+          y: cheby.y + (corner.y - cheby.y) * 0.5,
+        }
+        const up2D = norm2D({ x: corner.x - center2D.x, y: corner.y - center2D.y })
+        pushFrame(t.vertexValues![vi], center2D, up2D, sizeFactor * cheby.r)
+      })
+      return
     }
-    // Shift the numeral plane to the symmetric centre of the face along the
-    // up/right axes so asymmetric faces (kite on d10/d100) place the digit at
-    // the visual centre instead of biased toward the short vertex.
-    const symShiftY = (maxPy + minPy) / 2
-    const symShiftX = (maxPx + minPx) / 2
-    const offsetPosition = centroid
-      .clone()
-      .add(normal.clone().multiplyScalar(0.002))
-      .add(xAxis.clone().multiplyScalar(symShiftX))
-      .add(up.clone().multiplyScalar(symShiftY))
 
-    frames.push({
-      value: t.faceValues[idx],
-      centroid,
-      normal,
-      up,
-      inradius: minEdgeDist,
-      halfWidth: halfW,
-      halfHeight: halfH,
-      offsetPosition,
-      quaternion,
-    })
+    let up2D: Point2D
+    if (kind === 'd10') {
+      // Convenzione d10 reali: top della cifra verso l'apice del proprio polo.
+      const poleIdx = face.indexOf(face.includes(0) ? 0 : 1)
+      up2D = norm2D({ x: verts2D[poleIdx].x - cheby.x, y: verts2D[poleIdx].y - cheby.y })
+    } else if (kind === 'd6') {
+      up2D = { x: 0, y: 1 }
+    } else {
+      // Snap della proiezione di world-Y (= (0,1) in questo frame) alla
+      // direzione centro→vertice più vicina: cifra allineata alla geometria
+      // della faccia invece che ruotata di un angolo arbitrario.
+      let best: Point2D = { x: 0, y: 1 }
+      let bestDot = -Infinity
+      for (const v of verts2D) {
+        const c = norm2D({ x: v.x - cheby.x, y: v.y - cheby.y })
+        if (c.y > bestDot) { bestDot = c.y; best = c }
+      }
+      up2D = best
+    }
+    pushFrame(t.faceValues[faceIdx], { x: cheby.x, y: cheby.y }, up2D, sizeFactor * cheby.r)
   })
   return frames
 }
@@ -186,7 +311,7 @@ function applyWinding(verts: V[], faces: number[][]): number[][] {
   return faces.map((f) => ensureOutward(verts, f))
 }
 
-/** d4 — tetrahedron, 4 faces, values 1-4 */
+/** d4 — tetrahedron; numerazione apex: valori sui VERTICI (1-4) */
 function d4Template(): DieTemplate {
   const vertices = normalize([
     [1, 1, 1],
@@ -204,6 +329,7 @@ function d4Template(): DieTemplate {
     vertices,
     faces: applyWinding(vertices, rawFaces),
     faceValues: [1, 2, 3, 4],
+    vertexValues: [1, 2, 3, 4],
   }
 }
 
@@ -228,7 +354,7 @@ function d6Template(): DieTemplate {
   }
 }
 
-/** d8 — octahedron, 8 faces, values 1-8 */
+/** d8 — octahedron, 8 faces, opposite faces sum to 9 */
 function d8Template(): DieTemplate {
   const vertices = normalize([
     [1, 0, 0], [-1, 0, 0],
@@ -242,24 +368,24 @@ function d8Template(): DieTemplate {
   return {
     vertices,
     faces: applyWinding(vertices, rawFaces),
-    faceValues: [1, 2, 3, 4, 5, 6, 7, 8],
+    // Coppie antipodali (0,6),(1,7),(2,4),(3,5) → somma 9 come i d8 reali,
+    // con valori alti/bassi mescolati tra le due piramidi.
+    faceValues: [1, 7, 4, 6, 5, 3, 8, 2],
   }
 }
 
-/** d10 — pentagonal trapezohedron, 10 kite faces, values 1-10 */
+/** d10 — pentagonal trapezohedron (kite planari), opposite faces sum to 11 */
 function d10Template(): DieTemplate {
   const verts: V[] = []
   verts.push([0, 1, 0])        // 0: top apex
   verts.push([0, -1, 0])       // 1: bottom apex
-  const upperY = 0.15
-  const lowerY = -0.15
   for (let i = 0; i < 5; i++) {
     const a = (i / 5) * Math.PI * 2
-    verts.push([Math.cos(a), upperY, Math.sin(a)])
+    verts.push([Math.cos(a), D10_RING_Y, Math.sin(a)])
   }
   for (let i = 0; i < 5; i++) {
     const a = ((i + 0.5) / 5) * Math.PI * 2
-    verts.push([Math.cos(a), lowerY, Math.sin(a)])
+    verts.push([Math.cos(a), -D10_RING_Y, Math.sin(a)])
   }
   const vertices = normalize(verts)
   const rawFaces: number[][] = []
@@ -272,11 +398,14 @@ function d10Template(): DieTemplate {
   return {
     vertices,
     faces: applyWinding(vertices, rawFaces),
-    faceValues: Array.from({ length: 10 }, (_, i) => i + 1),
+    // Dispari intorno al polo superiore (alternati come i d10 reali), pari
+    // all'inferiore; la faccia top i è antipodale alla bottom (i+2)%5 →
+    // ogni coppia somma 11.
+    faceValues: [1, 7, 3, 9, 5, 2, 6, 10, 4, 8],
   }
 }
 
-/** d12 — dodecahedron, 12 pentagonal faces, values 1-12 */
+/** d12 — dodecahedron, 12 pentagonal faces, opposite faces sum to 13 */
 function d12Template(): DieTemplate {
   const vertices = normalize([
     [1, 1, 1], [1, 1, -1], [1, -1, 1], [1, -1, -1],
@@ -302,11 +431,13 @@ function d12Template(): DieTemplate {
   return {
     vertices,
     faces: applyWinding(vertices, rawFaces),
-    faceValues: Array.from({ length: 12 }, (_, i) => i + 1),
+    // Coppie antipodali (0,9),(1,10),(2,5),(3,11),(4,7),(6,8) → somma 13,
+    // con valori alti/bassi mescolati tra facce vicine.
+    faceValues: [1, 8, 3, 6, 11, 10, 4, 2, 9, 12, 5, 7],
   }
 }
 
-/** d20 — icosahedron, 20 triangular faces, values 1-20 */
+/** d20 — icosahedron, 20 triangular faces, opposite faces sum to 21 */
 function d20Template(): DieTemplate {
   const vertices = normalize([
     [0, 1, PHI], [0, 1, -PHI], [0, -1, PHI], [0, -1, -PHI],
@@ -322,7 +453,10 @@ function d20Template(): DieTemplate {
   return {
     vertices,
     faces: applyWinding(vertices, rawFaces),
-    faceValues: Array.from({ length: 20 }, (_, i) => i + 1),
+    // Le facce i e i+5 sono antipodali (per i∈0..4 e i∈10..14) → somma 21;
+    // valori alternati alti/bassi su calotte ed equatore (niente cluster
+    // 20-19-18 in stile spindown).
+    faceValues: [1, 13, 9, 5, 17, 20, 8, 12, 16, 4, 6, 14, 10, 19, 3, 15, 7, 11, 2, 18],
   }
 }
 
@@ -337,25 +471,20 @@ const TEMPLATES: Record<Exclude<DiceKind, 'd100'>, DieTemplate> = {
 
 export interface FaceFrame {
   value: number
-  centroid: THREE.Vector3
-  normal: THREE.Vector3
-  up: THREE.Vector3
-  inradius: number
-  /** Half-extent of face in local 2D frame along right axis. */
-  halfWidth: number
-  /** Half-extent of face in local 2D frame along up axis. */
-  halfHeight: number
-  /** Slightly-offset world position in local die space to avoid z-fighting. */
-  offsetPosition: THREE.Vector3
-  /** Orientation that aligns a PlaneGeometry (+Z normal, +Y up) to this face. */
+  /** Orientazione che allinea una PlaneGeometry (+Z normal, +Y up) al numerale. */
   quaternion: THREE.Quaternion
+  /** Centro del quad in spazio locale del dado, sollevato dalla faccia. */
+  offsetPosition: THREE.Vector3
+  /** Lato del quad (quadrato) del numerale. */
+  size: number
 }
 
 export interface DiceGeometryData {
   geometry: THREE.BufferGeometry
   shape: CANNON.ConvexPolyhedron
+  /** Direzioni di lettura keyed by valore (normali di faccia; vertici per il d4). */
   faceNormals: Record<number, THREE.Vector3>
-  /** Per-face frame data used to place numeral quads */
+  /** Frame dei quad numerali (3 per faccia sul d4, 1 altrove). */
   faceFrames: FaceFrame[]
   /** Number of faces */
   faceCount: number
@@ -370,57 +499,54 @@ export function getDiceGeometry(kind: DiceKind): DiceGeometryData {
   const cached = cache.get(key)
   if (cached) return cached
   const template = TEMPLATES[key as Exclude<DiceKind, 'd100'>]
+  const uvKind = key as DiceUvKind
   const data: DiceGeometryData = {
     geometry: buildBufferGeometry(template),
     shape: buildCannonShape(template),
     faceNormals: buildFaceNormals(template),
-    faceFrames: buildFaceFrames(template),
+    faceFrames: buildFaceFrames(template, uvKind),
     faceCount: template.faces.length,
     faceValues: [...template.faceValues],
   }
 
-  // Apply UV atlas coords. d100 reuses d10 geometry, so cache key 'd10' is used here.
-  const uvKind = key as DiceUvKind
+  // UV atlas per-faccia (d100 riusa la geometria d10 → cache key 'd10').
   const layout = UV_LAYOUTS[uvKind]
   const trisPerFace = TRIS_PER_FACE[uvKind]
-  const { geometry, faceFrames } = data
-  const positionAttr = geometry.getAttribute('position') as THREE.BufferAttribute
+  const positionAttr = data.geometry.getAttribute('position') as THREE.BufferAttribute
   const uvArray = new Float32Array(positionAttr.count * 2)
 
   let triCursor = 0
-  for (let faceIdx = 0; faceIdx < faceFrames.length; faceIdx++) {
-    const ff = faceFrames[faceIdx]
+  template.faces.forEach((face, faceIdx) => {
+    const { centroid, xAxis, yAxis, verts2D } = buildFaceBasis(template, face)
     const cell = cellForIndex(uvKind, faceIdx)
-
-    const xLocal = new THREE.Vector3().crossVectors(ff.normal, ff.up).normalize()
-    const yLocal = ff.up.clone().normalize()
-
-    for (let t = 0; t < trisPerFace; t++) {
-      for (let v = 0; v < 3; v++) {
-        const idx = triCursor + t * 3 + v
-        const pos = new THREE.Vector3(
-          positionAttr.getX(idx),
-          positionAttr.getY(idx),
-          positionAttr.getZ(idx),
-        )
-        const local = pos.clone().sub(ff.centroid)
-        const x2D = local.dot(xLocal)
-        const y2D = local.dot(yLocal)
-        const uvs = projectFaceUvs(
-          [{ x: x2D, y: y2D }],
-          cell,
-          layout,
-          ff.halfWidth,
-          ff.halfHeight,
-        )
-        uvArray[idx * 2] = uvs[0]
-        uvArray[idx * 2 + 1] = uvs[1]
-      }
+    let halfW = 0
+    let halfH = 0
+    for (const v of verts2D) {
+      if (Math.abs(v.x) > halfW) halfW = Math.abs(v.x)
+      if (Math.abs(v.y) > halfH) halfH = Math.abs(v.y)
+    }
+    for (let v = 0; v < trisPerFace * 3; v++) {
+      const idx = triCursor + v
+      const pos = new THREE.Vector3(
+        positionAttr.getX(idx),
+        positionAttr.getY(idx),
+        positionAttr.getZ(idx),
+      )
+      const rel = pos.sub(centroid)
+      const uvs = projectFaceUvs(
+        [{ x: rel.dot(xAxis), y: rel.dot(yAxis) }],
+        cell,
+        layout,
+        halfW,
+        halfH,
+      )
+      uvArray[idx * 2] = uvs[0]
+      uvArray[idx * 2 + 1] = uvs[1]
     }
     triCursor += trisPerFace * 3
-  }
+  })
 
-  geometry.setAttribute('uv', new THREE.BufferAttribute(uvArray, 2))
+  data.geometry.setAttribute('uv', new THREE.BufferAttribute(uvArray, 2))
 
   cache.set(key, data)
   return data

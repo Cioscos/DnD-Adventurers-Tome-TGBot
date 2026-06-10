@@ -6,7 +6,6 @@ export interface SpawnOptions {
   shape: CANNON.ConvexPolyhedron
   material: CANNON.Material
   position: CANNON.Vec3
-  scale?: number
   totalCount?: number
 }
 
@@ -15,7 +14,13 @@ export interface SleepTuning {
   sleepTimeLimit: number
 }
 
-const SIZE_BY_COUNT = (n: number) => (n <= 1 ? 0.75 : n <= 3 ? 0.65 : n <= 6 ? 0.55 : 0.48)
+export interface SpawnArena {
+  halfX: number
+  halfZ: number
+}
+
+/** Mezzo dado (circumradius 0.38) + margine dai muri. */
+const ARENA_MARGIN = 0.43
 
 const rand = (min: number, max: number) => Math.random() * (max - min) + min
 
@@ -24,9 +29,9 @@ const rand = (min: number, max: number) => Math.random() * (max - min) + min
  * Evita jitter prolungato quando molti body si toccano tra di loro.
  */
 export function sleepTuningForCount(count: number): SleepTuning {
-  if (count <= 3) return { sleepSpeedLimit: PHYSICS.sleepSpeedLimit, sleepTimeLimit: PHYSICS.sleepTimeLimit }
-  if (count <= 8) return { sleepSpeedLimit: 0.1, sleepTimeLimit: 0.45 }
-  return { sleepSpeedLimit: 0.2, sleepTimeLimit: 0.3 }
+  if (count <= 3) return { sleepSpeedLimit: PHYSICS.sleepSpeedLimit, sleepTimeLimit: 0.45 }
+  if (count <= 8) return { sleepSpeedLimit: 0.3, sleepTimeLimit: PHYSICS.sleepTimeLimit }
+  return { sleepSpeedLimit: 0.4, sleepTimeLimit: 0.3 }
 }
 
 export function spawnDiceBody(opts: SpawnOptions): CANNON.Body {
@@ -58,46 +63,33 @@ export function spawnDiceBody(opts: SpawnOptions): CANNON.Body {
 }
 
 /**
- * Layout spawn:
- *  - count <= 6: fila singola su X (come prima).
- *  - count > 6: griglia 2D xz + tier verticali su Y per evitare pile-up iniziale
- *    quando molti dadi spawnano insieme.
+ * Layout spawn: griglia colonne×righe (passo spawnStep > diametro dado) con
+ * tier verticali DISCENDENTI quando una griglia non basta. Nessuna coppia di
+ * dadi nasce mai a distanza < diametro (0.76) — la compenetrazione alla
+ * nascita era la causa principale degli incastri con 5-6 dadi.
  */
-export function computeSpawnPositions(count: number): CANNON.Vec3[] {
-  const positions: CANNON.Vec3[] = []
-  if (count <= 6) {
-    for (let i = 0; i < count; i++) {
-      const xOffset = (i - (count - 1) / 2) * PHYSICS.spawnXOffsetPerDie
-      const x = xOffset + rand(-PHYSICS.spawnXSpread, PHYSICS.spawnXSpread) * 0.3
-      const y = PHYSICS.spawnYBase + Math.random() * PHYSICS.spawnYJitter
-      const z = PHYSICS.spawnZ + (Math.random() - 0.5) * 0.1
-      positions.push(new CANNON.Vec3(x, y, z))
-    }
-    return positions
-  }
+export function computeSpawnPositions(count: number, arena?: SpawnArena): CANNON.Vec3[] {
+  const step = PHYSICS.spawnStep
+  const halfX = arena?.halfX ?? 1.0
+  // Colonne che stanno dentro i muri: (cols-1)/2*step ≤ halfX − margine.
+  const cols = Math.max(1, Math.min(3, Math.floor(((halfX - ARENA_MARGIN) * 2) / step) + 1))
+  const rowsPerTier = 3
+  const perTier = cols * rowsPerTier
 
-  // Griglia 2D + tier Y per N grandi
-  const cols = Math.min(6, Math.ceil(Math.sqrt(count)))
-  const rows = Math.ceil(count / cols)
-  const stepX = PHYSICS.spawnXOffsetPerDie
-  const stepZ = 0.35
-  const tierStep = 0.6
+  const positions: CANNON.Vec3[] = []
   for (let i = 0; i < count; i++) {
-    const col = i % cols
-    const row = Math.floor(i / cols)
-    const xOffset = (col - (cols - 1) / 2) * stepX
-    const zOffset = (row - (rows - 1) / 2) * stepZ
-    const tier = Math.floor(i / cols)
-    const x = xOffset + rand(-0.05, 0.05)
-    const y = PHYSICS.spawnYBase + tier * tierStep + rand(0, PHYSICS.spawnYJitter)
-    const z = PHYSICS.spawnZ + zOffset + rand(-0.05, 0.05)
-    positions.push(new CANNON.Vec3(x, y, z))
+    const tier = Math.floor(i / perTier)
+    const slot = i % perTier
+    const col = slot % cols
+    const row = Math.floor(slot / cols)
+    // jitter xz piccolo (±0.02): la varietà visiva la danno già velocità e
+    // rotazioni random; un jitter ampio rimangerebbe il margine anti-overlap.
+    const x = (col - (cols - 1) / 2) * step + rand(-0.02, 0.02)
+    const z = PHYSICS.spawnZ - row * step + rand(-0.02, 0.02)
+    const y = PHYSICS.spawnYBase - tier * PHYSICS.tierStepY + rand(0, PHYSICS.spawnYJitter)
+    positions.push(new CANNON.Vec3(x, Math.max(y, PHYSICS.floorY + 0.5), z))
   }
   return positions
-}
-
-export function diceScaleForCount(count: number): number {
-  return SIZE_BY_COUNT(count)
 }
 
 /**

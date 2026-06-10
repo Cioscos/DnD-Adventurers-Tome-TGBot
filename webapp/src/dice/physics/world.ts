@@ -8,6 +8,9 @@ export interface DiceWorld {
   diceMaterial: CANNON.Material
   floorMaterial: CANNON.Material
   walls: CANNON.Body[]
+  /** Semi-estensioni correnti dell'arena (aggiornate da updateWalls). */
+  halfX: number
+  halfZ: number
 }
 
 const WORLD_HALF = 1.0
@@ -17,6 +20,8 @@ export function createDiceWorld(): DiceWorld {
   world.allowSleep = true
   world.defaultContactMaterial.friction = PHYSICS.defaultFriction
   world.defaultContactMaterial.restitution = PHYSICS.defaultRestitution
+  ;(world.solver as CANNON.GSSolver).iterations = PHYSICS.solverIterations
+  ;(world.solver as CANNON.GSSolver).tolerance = PHYSICS.solverTolerance
 
   const diceMaterial = new CANNON.Material('dice')
   const floorMaterial = new CANNON.Material('floor')
@@ -28,7 +33,7 @@ export function createDiceWorld(): DiceWorld {
 
   const wallMaterial = new CANNON.Material('wall')
   const wallContact = new CANNON.ContactMaterial(diceMaterial, wallMaterial, {
-    friction: 0.05,
+    friction: PHYSICS.wallFriction,
     restitution: PHYSICS.wallRestitution,
   })
   world.addContactMaterial(wallContact)
@@ -67,7 +72,7 @@ export function createDiceWorld(): DiceWorld {
   ceiling.position.set(0, PHYSICS.ceilingY, 0)
   world.addBody(ceiling)
 
-  return { world, diceMaterial, floorMaterial, walls }
+  return { world, diceMaterial, floorMaterial, walls, halfX: WORLD_HALF, halfZ: WORLD_HALF }
 }
 
 export function disposeDiceWorld(dw: DiceWorld): void {
@@ -92,6 +97,8 @@ export function updateWalls(dw: DiceWorld, camera: THREE.PerspectiveCamera, size
   dw.walls[1].position.set(halfX, 0, 0)
   dw.walls[2].position.set(0, 0, -halfZ)
   dw.walls[3].position.set(0, 0, halfZ)
+  dw.halfX = halfX
+  dw.halfZ = halfZ
 }
 
 function computeProjectedHalfExtent(
@@ -104,8 +111,7 @@ function computeProjectedHalfExtent(
   const worldEdge = ndcEdge.clone().unproject(camera)
   const dir = worldEdge.sub(camera.position).normalize()
   // y = PHYSICS.floorY → t = (floorY - cam.y) / dir.y
-  const FLOOR = -0.9
-  const t = (FLOOR - camera.position.y) / dir.y
+  const t = (PHYSICS.floorY - camera.position.y) / dir.y
   const hit = camera.position.clone().addScaledVector(dir, t)
   return Math.abs(axis === 'x' ? hit.x : hit.z)
 }
