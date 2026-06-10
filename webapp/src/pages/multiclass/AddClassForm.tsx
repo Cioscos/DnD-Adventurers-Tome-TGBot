@@ -3,8 +3,10 @@ import { useTranslation } from 'react-i18next'
 import Card from '@/components/Card'
 import DndInput from '@/components/DndInput'
 import DndButton from '@/components/DndButton'
+import SelectSheet from '@/components/ui/SelectSheet'
+import ChipSelect from '@/components/ui/ChipSelect'
 import { useRegisterOverlay } from '@/store/overlayStore'
-import { PREDEFINED_CLASSES, CUSTOM_KEY, emptyClass, type ClassForm } from './addClass.utils'
+import { PREDEFINED_CLASSES, CUSTOM_KEY, classOptions, emptyClass, type ClassForm } from './addClass.utils'
 
 interface AddClassFormProps {
   onAdd: (form: ClassForm) => void
@@ -57,17 +59,13 @@ export default function AddClassForm({ onAdd, onCancel, isPending, lockLevelTo }
         <h3 className="font-semibold">{t('character.multiclass.add_class')}</h3>
 
         {/* Class selector */}
-        <select
+        <SelectSheet
+          title={t('character.multiclass.class_name')}
+          options={classOptions(t)}
           value={classForm.class_key}
-          onChange={(e) => handleClassKeyChange(e.target.value)}
-          className="w-full bg-dnd-surface rounded-xl px-3 py-2 outline-none"
-        >
-          <option value="" disabled>{t('character.multiclass.class_name')}</option>
-          {Object.keys(PREDEFINED_CLASSES).map((key) => (
-            <option key={key} value={key}>{t(`dnd.classes.${key}`)}</option>
-          ))}
-          <option value={CUSTOM_KEY}>{t('character.multiclass.custom_class')}</option>
-        </select>
+          onChange={handleClassKeyChange}
+          placeholder={t('character.multiclass.class_name')}
+        />
 
         {/* Custom class name input */}
         {classForm.class_key === CUSTOM_KEY && (
@@ -78,33 +76,24 @@ export default function AddClassForm({ onAdd, onCancel, isPending, lockLevelTo }
           />
         )}
 
-        <div className="flex gap-2">
-          {lockLevelTo == null && (
-            <div className="flex-1">
-              <DndInput
-                label={t('character.multiclass.level')}
-                type="number"
-                min={1}
-                max={20}
-                value={classForm.level}
-                onChange={(v) => setClassForm((f) => ({ ...f, level: v }))}
-              />
-            </div>
-          )}
-          <div className="flex-1">
-            <p className="block text-[11px] uppercase tracking-wider mb-1 font-medium text-dnd-gold-dim">
-              {t('character.multiclass.hit_die')}
-            </p>
-            <select
-              value={classForm.hit_die}
-              disabled={!!predefinedAttrs}
-              onChange={(e) => setClassForm((f) => ({ ...f, hit_die: e.target.value }))}
-              className="w-full bg-dnd-surface rounded-xl px-2 py-3 min-h-[48px] outline-none disabled:opacity-60"
-            >
-              {[6, 8, 10, 12].map((d) => <option key={d} value={d}>d{d}</option>)}
-            </select>
-          </div>
-        </div>
+        {lockLevelTo == null && (
+          <DndInput
+            label={t('character.multiclass.level')}
+            type="number"
+            min={1}
+            max={20}
+            value={classForm.level}
+            onChange={(v) => setClassForm((f) => ({ ...f, level: v }))}
+          />
+        )}
+        <ChipSelect
+          label={t('character.multiclass.hit_die')}
+          options={[6, 8, 10, 12].map((d) => ({ value: String(d), label: `d${d}` }))}
+          value={classForm.hit_die}
+          onChange={(v) => setClassForm((f) => ({ ...f, hit_die: v }))}
+          disabled={!!predefinedAttrs}
+          columns={4}
+        />
 
         <DndInput
           value={classForm.subclass}

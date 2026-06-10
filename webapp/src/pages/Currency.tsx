@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
-import { ArrowLeftRight, Save, RefreshCw } from 'lucide-react'
+import { ArrowUpDown, Save, RefreshCw } from 'lucide-react'
 import { GiTwoCoins as Coins } from 'react-icons/gi'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
@@ -11,6 +11,7 @@ import Surface from '@/components/ui/Surface'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
 import Sheet from '@/components/ui/Sheet'
+import ChipSelect from '@/components/ui/ChipSelect'
 import { haptic } from '@/auth/telegram'
 import { spring } from '@/styles/motion'
 import CurrencySkeleton from '@/components/skeletons/CurrencySkeleton'
@@ -271,50 +272,36 @@ export default function Currency() {
       {/* Convert Sheet */}
       <Sheet open={showConvert} onClose={() => setShowConvert(false)} title={t('character.currency.convert')}>
         <div className="p-5 space-y-3">
-          <div className="flex gap-2 items-center">
-            <div className="flex-1">
-              <label className="block text-[10px] uppercase tracking-widest mb-1.5 font-cinzel text-dnd-gold-dim">
-                {t('character.currency.convert_from')}
-              </label>
-              <select
-                value={convertSource}
-                onChange={(e) => setConvertSource(e.target.value as CoinKey)}
-                className="w-full px-3 py-2.5 min-h-[48px] rounded-lg bg-dnd-surface text-dnd-text
-                           border-b-2 border-dnd-border outline-none font-body text-sm"
+          <div className="space-y-2">
+            <ChipSelect
+              label={t('character.currency.convert_from')}
+              options={COINS.map(({ key, label }) => ({ value: key, label }))}
+              value={convertSource}
+              onChange={(v) => setConvertSource(v as CoinKey)}
+              columns={5}
+            />
+            <div className="flex justify-center">
+              <m.button
+                type="button"
+                onClick={() => {
+                  const tmp = convertSource
+                  setConvertSource(convertTarget)
+                  setConvertTarget(tmp)
+                }}
+                className="w-11 h-11 rounded-full bg-dnd-surface-raised border border-dnd-gold-dim/40 flex items-center justify-center text-dnd-gold-bright"
+                whileTap={{ scale: 0.9, rotate: 180 }}
+                aria-label={t('character.currency.swap')}
               >
-                {COINS.map(({ key }) => (
-                  <option key={key} value={key}>{t(`character.currency.${key}`)}</option>
-                ))}
-              </select>
+                <ArrowUpDown size={16} />
+              </m.button>
             </div>
-            <m.button
-              type="button"
-              onClick={() => {
-                const tmp = convertSource
-                setConvertSource(convertTarget)
-                setConvertTarget(tmp)
-              }}
-              className="self-end mb-1 w-11 h-11 rounded-full bg-dnd-surface-raised border border-dnd-gold-dim/40 flex items-center justify-center text-dnd-gold-bright"
-              whileTap={{ scale: 0.9, rotate: 180 }}
-              aria-label={t('character.currency.swap')}
-            >
-              <ArrowLeftRight size={16} />
-            </m.button>
-            <div className="flex-1">
-              <label className="block text-[10px] uppercase tracking-widest mb-1.5 font-cinzel text-dnd-gold-dim">
-                {t('character.currency.convert_to')}
-              </label>
-              <select
-                value={convertTarget}
-                onChange={(e) => setConvertTarget(e.target.value as CoinKey)}
-                className="w-full px-3 py-2.5 min-h-[48px] rounded-lg bg-dnd-surface text-dnd-text
-                           border-b-2 border-dnd-border outline-none font-body text-sm"
-              >
-                {COINS.map(({ key }) => (
-                  <option key={key} value={key}>{t(`character.currency.${key}`)}</option>
-                ))}
-              </select>
-            </div>
+            <ChipSelect
+              label={t('character.currency.convert_to')}
+              options={COINS.map(({ key, label }) => ({ value: key, label }))}
+              value={convertTarget}
+              onChange={(v) => setConvertTarget(v as CoinKey)}
+              columns={5}
+            />
           </div>
 
           <Input

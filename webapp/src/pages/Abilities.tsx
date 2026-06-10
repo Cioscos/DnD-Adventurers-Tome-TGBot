@@ -10,6 +10,7 @@ import Layout from '@/components/Layout'
 import Sheet from '@/components/ui/Sheet'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
+import ChipSelect from '@/components/ui/ChipSelect'
 import Surface from '@/components/ui/Surface'
 import ScrollArea from '@/components/ScrollArea'
 import StatPill from '@/components/ui/StatPill'
@@ -724,7 +725,7 @@ export default function Abilities() {
                 rows={3}
               />
               {!form.is_passive && (
-                <div className="grid grid-cols-2 gap-2">
+                <>
                   <Input
                     label={t('character.abilities.max_uses_label')}
                     value={form.max_uses}
@@ -734,22 +735,17 @@ export default function Abilities() {
                     inputMode="numeric"
                     placeholder="—"
                   />
-                  <div>
-                    <label className="block text-[11px] uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
-                      {t('character.abilities.restoration_label')}
-                    </label>
-                    <select
-                      value={form.restoration_type}
-                      onChange={(e) => setForm((f) => ({ ...f, restoration_type: e.target.value }))}
-                      className="w-full px-3 py-2.5 min-h-[48px] rounded-lg bg-dnd-surface text-dnd-text
-                                 border-b-2 border-dnd-border outline-none font-body text-sm"
-                    >
-                      <option value="long_rest">{t('character.abilities.restoration.long_rest')}</option>
-                      <option value="short_rest">{t('character.abilities.restoration.short_rest')}</option>
-                      <option value="manual">{t('character.abilities.restoration.manual')}</option>
-                    </select>
-                  </div>
-                </div>
+                  <ChipSelect
+                    label={t('character.abilities.restoration_label')}
+                    options={(['long_rest', 'short_rest', 'manual'] as const).map((r) => ({
+                      value: r,
+                      label: t(`character.abilities.restoration.${r}`),
+                    }))}
+                    value={form.restoration_type}
+                    onChange={(v) => setForm((f) => ({ ...f, restoration_type: v }))}
+                    columns={3}
+                  />
+                </>
               )}
               <div className="flex gap-2 pt-2">
                 <Button
