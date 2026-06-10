@@ -1,6 +1,26 @@
 {
   "entries": [
     {
+      "version": "2.11.0",
+      "date": "2026-06-10",
+      "title": {
+        "it": "Ricerca nel personaggio",
+        "en": "Character search"
+      },
+      "added": {
+        "it": [
+          "Nuova lente nell'intestazione della scheda: cerca tra incantesimi, oggetti dell'inventario, abilità speciali e note del personaggio, senza badare ad accenti o maiuscole.",
+          "Tocca un risultato per saltare alla pagina giusta — gli incantesimi si aprono già evidenziati nella lista."
+        ],
+        "en": [
+          "New magnifier in the sheet header: search across the character's spells, inventory items, special abilities and notes, ignoring accents and case.",
+          "Tap a result to jump to the right page — spells open already highlighted in the list."
+        ]
+      },
+      "improved": { "it": [], "en": [] },
+      "fixed": { "it": [], "en": [] }
+    },
+    {
       "version": "2.10.0",
       "date": "2026-06-10",
       "title": {
