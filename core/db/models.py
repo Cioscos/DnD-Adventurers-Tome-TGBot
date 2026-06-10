@@ -128,6 +128,8 @@ class Character(Base):
     rolls_history: Mapped[Optional[list]] = mapped_column(JSON, default=list)
     notes: Mapped[Optional[dict]] = mapped_column(JSON, default=dict)
     settings: Mapped[Optional[dict]] = mapped_column(JSON, default=dict)
+    # Contatori cumulativi dei tiri: {"d20": {"1": 3, "20": 2}, ...} (faccia → conteggio)
+    dice_stats: Mapped[Optional[dict]] = mapped_column(JSON, default=dict)
 
     # Active conditions (JSON dict: condition_slug → bool or int for exhaustion)
     conditions: Mapped[Optional[dict]] = mapped_column(JSON, default=dict)

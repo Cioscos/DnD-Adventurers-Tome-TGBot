@@ -16,6 +16,7 @@ from sqlalchemy.orm import selectinload
 
 from api.auth import get_current_user
 from api.database import get_db
+from api.services.dice_stats import record_dice
 from core.db.models import Character, CharacterClass, CharacterHistory, EquipmentSlot, Item
 from api.schemas.character import CharacterFull
 from api.schemas.item import ItemCreate, ItemRead, ItemUpdate, WeaponAttackResult
@@ -65,6 +66,22 @@ def _roll_dice(notation: str) -> tuple[list[int], int]:
     bonus = int(m.group(3)) if m.group(3) else 0
     rolls = [random.randint(1, sides) for _ in range(count)]
     return rolls, bonus
+
+
+def _record_attack_dice(
+    char: Character,
+    to_hit_die: int,
+    damage_dice_str: str,
+    damage_rolls: list[int],
+    is_fumble: bool,
+) -> None:
+    """Statistiche: d20 di to-hit + dadi danno (esclusi fumble e danno piatto '1')."""
+    recorded: list[tuple[str, int]] = [("d20", to_hit_die)]
+    m = _DICE_RE.match(damage_dice_str.strip()) if damage_dice_str else None
+    if not is_fumble and m:
+        sides = int(m.group(2))
+        recorded += [(f"d{sides}", v) for v in damage_rolls]
+    record_dice(char, recorded)
 
 
 async def _get_owned_full(char_id: int, user_id: int, session: AsyncSession) -> Character:
@@ -454,6 +471,7 @@ async def attack_with_weapon(
     if body and body.with_inspiration:
         result_str = f"Reroll ispirazione (to-hit): {result_str}"
     _add_history(session, char.id, "attack_roll", result_str)
+    _record_attack_dice(char, to_hit_die, damage_dice_str, damage_rolls, is_fumble)
 
     # Emit homebrew event so installed rules (e.g. Qualità & Usura) can react.
     firing_results = await dispatch(
@@ -550,6 +568,7 @@ async def attack_unarmed(
     if body and body.with_inspiration:
         result_str = f"Reroll ispirazione (to-hit): {result_str}"
     _add_history(session, char.id, "attack_roll", result_str)
+    _record_attack_dice(char, to_hit_die, damage_dice_str, damage_rolls, is_fumble)
 
     firing_results = await dispatch(
         session, char, "attack_rolled",

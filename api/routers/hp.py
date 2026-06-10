@@ -14,6 +14,7 @@ from sqlalchemy.orm import selectinload
 
 from api.auth import get_current_user
 from api.database import get_db
+from api.services.dice_stats import record_dice
 from api.services.effects import apply_heal
 from api.services.telegram_notify import notify_party_emergency
 from api.services.homebrew.dispatcher import dispatch
@@ -358,6 +359,7 @@ async def spend_hit_dice(
     _add_history(session, char.id, "hit_dice",
                  f"Dado vita {body.count}d{hit_die}+{con_mod}: "
                  f"tiri={rolls}, curati={actual_healed} HP ({old_hp} → {char.current_hit_points})")
+    record_dice(char, [(f"d{hit_die}", r) for r in rolls])
 
     return HitDiceSpendResult(
         rolls=rolls,
@@ -436,6 +438,7 @@ async def roll_death_save(
     ds = dict(char.death_saves or {"successes": 0, "failures": 0, "stable": False})
 
     die = body.die if body and body.die is not None else random.randint(1, 20)
+    record_dice(char, [("d20", die)])
     revived = False
 
     if die == 20:

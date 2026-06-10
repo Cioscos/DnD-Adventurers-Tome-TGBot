@@ -125,6 +125,8 @@ _MIGRATIONS: list[tuple[str, str, str, str | None]] = [
     # Incantesimi preparati — backfill legacy a 1 (preparato): nulla cambia per
     # i personaggi esistenti finché l'utente non gestisce la preparazione.
     ("spells", "is_prepared", "BOOLEAN", "1"),
+    # Statistiche cumulative dei tiri (contatori per faccia, per tipo di dado)
+    ("characters", "dice_stats", "JSON", None),
 ]
 
 # Tables to drop if they exist (legacy feature cleanup)

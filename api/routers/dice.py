@@ -15,6 +15,7 @@ from sqlalchemy.orm.attributes import flag_modified
 from api.auth import get_current_user
 from api.database import get_db
 from api.services import telegram_notify
+from api.services.dice_stats import record_dice
 from core.db.models import Character, CharacterHistory
 from api.schemas.common import DiceResultEntry, DiceResultRequest, DiceRollResult
 
@@ -94,6 +95,7 @@ async def post_dice_result(
     })
     char.rolls_history = history[-_MAX_HISTORY:]
     flag_modified(char, "rolls_history")
+    record_dice(char, [(e.kind, e.value) for e in body.rolls])
 
     # Log to CharacterHistory (general events feed) so the roll appears in /history.
     if len(rolls) > 1:
@@ -191,3 +193,25 @@ async def clear_dice_history(
 ) -> None:
     char = await _get_owned(char_id, user_id, session)
     char.rolls_history = []
+
+
+@router.get("/{char_id}/dice/stats")
+async def get_dice_stats(
+    char_id: int,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> dict:
+    """Contatori cumulativi raw {kind: {faccia: conteggio}}; il FE deriva il resto."""
+    char = await _get_owned(char_id, user_id, session)
+    return {"stats": char.dice_stats or {}}
+
+
+@router.delete("/{char_id}/dice/stats", status_code=204)
+async def reset_dice_stats(
+    char_id: int,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> None:
+    char = await _get_owned(char_id, user_id, session)
+    char.dice_stats = {}
+    flag_modified(char, "dice_stats")

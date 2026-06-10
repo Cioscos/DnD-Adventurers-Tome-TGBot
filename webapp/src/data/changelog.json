@@ -1,6 +1,28 @@
 {
   "entries": [
     {
+      "version": "2.10.0",
+      "date": "2026-06-10",
+      "title": {
+        "it": "Statistiche dei tiri",
+        "en": "Roll statistics"
+      },
+      "added": {
+        "it": [
+          "Nuova pagina «Statistiche dei tiri» raggiungibile dalla pagina Dadi: naturali 20 e naturali 1 in evidenza, totale dei tiri, e per ogni tipo di dado un istogramma per faccia con media e numero di lanci.",
+          "I contatori sono cumulativi e permanenti: si accumulano da ogni tiro — dadi manuali, prove di abilità, tiri salvezza, attacchi, danni degli incantesimi, dadi vita, tiri di morte e concentrazione — e non si azzerano con la cronologia.",
+          "Bottone «Azzera statistiche» con conferma, separato dallo svuotamento della cronologia."
+        ],
+        "en": [
+          "New “Roll statistics” page reachable from the Dice page: natural 20s and natural 1s up front, total roll count, and for each die type a per-face histogram with average and number of rolls.",
+          "Counters are cumulative and permanent: they accumulate from every roll — manual dice, skill checks, saving throws, attacks, spell damage, hit dice, death saves and concentration — and don't reset with the history.",
+          "“Reset statistics” button with confirmation, separate from clearing the history."
+        ]
+      },
+      "improved": { "it": [], "en": [] },
+      "fixed": { "it": [], "en": [] }
+    },
+    {
       "version": "2.9.0",
       "date": "2026-06-10",
       "title": {

@@ -29,6 +29,7 @@ from api.schemas.spell import (
 from api.routers.items import _roll_dice, _DICE_RE
 from api.routers._helpers import roll_concentration_save
 from api.services.character_response import build_character_response
+from api.services.dice_stats import record_dice
 from api.services.spellcasting import build_spellcasting_info
 from core.data.spellcasting import has_ritual_caster
 
@@ -345,6 +346,12 @@ async def roll_spell_damage(
     if extra_bonus:
         breakdown_parts.append(f"{'+' if extra_bonus >= 0 else ''}{extra_bonus}")
     breakdown = " ".join(breakdown_parts) + f" = {total}"
+
+    record_dice(
+        char,
+        [(f"d{sides}", v) for v in main_rolls]
+        + [(f"d{extra_sides}", v) for v in extra_rolls],
+    )
 
     # Append to rolls_history if character supports it
     history_entry = {

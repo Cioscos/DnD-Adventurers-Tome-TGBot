@@ -387,6 +387,20 @@
         "init": "Initiative"
       }
     },
+    "dice_stats": {
+      "title": "Roll statistics",
+      "empty_title": "No rolls recorded yet",
+      "empty_hint": "Roll some dice: the counters accumulate on their own.",
+      "nat20": "Natural 20s",
+      "nat1": "Natural 1s",
+      "total_rolls": "Total rolls",
+      "rolls_count": "{{count}} rolls",
+      "rolls_count_one": "{{count}} roll",
+      "average": "average",
+      "reset": "Reset statistics",
+      "reset_confirm_title": "Reset statistics?",
+      "reset_confirm_body": "All cumulative counters (including natural 20s and 1s) will go back to zero. The roll history is not affected."
+    },
     "dice_overlay": {
       "open": "Open dice tray",
       "close": "Close dice tray",

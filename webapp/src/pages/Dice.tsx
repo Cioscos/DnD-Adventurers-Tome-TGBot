@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m, AnimatePresence } from 'framer-motion'
-import { Send, Minus, Plus, Trash2 } from 'lucide-react'
+import { Send, Minus, Plus, Trash2, BarChart3 } from 'lucide-react'
 import { GiCrossedSwords as Swords } from 'react-icons/gi'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
@@ -369,6 +369,16 @@ export default function Dice() {
           </m.div>
         )}
       </AnimatePresence>
+
+      {/* Statistiche cumulative */}
+      <Link
+        to={`/char/${charId}/dice/stats`}
+        className="flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-dnd-surface border border-dnd-border text-dnd-gold font-cinzel text-[11px] uppercase tracking-widest"
+        onClick={() => haptic.light()}
+      >
+        <BarChart3 size={14} />
+        {t('character.dice_stats.title')}
+      </Link>
 
       {/* History */}
       {history.length > 0 && (

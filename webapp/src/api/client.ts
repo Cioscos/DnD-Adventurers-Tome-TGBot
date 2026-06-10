@@ -695,6 +695,12 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(result),
       }),
+    stats: (charId: number) =>
+      request<{ stats: Record<string, Record<string, number>> }>(
+        `/characters/${charId}/dice/stats`,
+      ),
+    resetStats: (charId: number) =>
+      request<void>(`/characters/${charId}/dice/stats`, { method: 'DELETE' }),
   },
 
   // ---------------------------------------------------------------------------

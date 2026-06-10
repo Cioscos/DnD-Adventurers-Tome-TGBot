@@ -26,6 +26,7 @@ const History = lazy(() => import('./pages/History'))
 const Notes = lazy(() => import('./pages/Notes'))
 const Maps = lazy(() => import('./pages/Maps'))
 const Dice = lazy(() => import('./pages/Dice'))
+const DiceStats = lazy(() => import('./pages/DiceStats'))
 const Identity = lazy(() => import('./pages/Identity'))
 const Settings = lazy(() => import('./pages/Settings'))
 const Session = lazy(() => import('./pages/Session'))
@@ -73,6 +74,7 @@ export default function App() {
             <Route path="/char/:id/notes" element={<Notes />} />
             <Route path="/char/:id/maps" element={<Maps />} />
             <Route path="/char/:id/dice" element={<Dice />} />
+            <Route path="/char/:id/dice/stats" element={<DiceStats />} />
             <Route path="/char/:id/identity" element={<Identity />} />
             <Route path="/char/:id/settings" element={<Settings />} />
             <Route path="/char/:id/homebrew" element={<Homebrew />} />
