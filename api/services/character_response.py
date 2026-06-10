@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.schemas.character import AcBreakdown, CharacterFull
 from api.services.homebrew.passive import get_passive_modifiers
+from api.services.spellcasting import build_spellcasting_info
 from core.data.skills import SKILL_ABILITY_MAP
 from core.db.models import ABILITY_NAMES, Character
 
@@ -34,6 +35,7 @@ async def build_character_response(
     # and exposing a sum_modifiers(rules, items, target_path) helper.
     response = CharacterFull.model_validate(char)
     response.has_custom_silhouette = bool(getattr(char, "silhouette_path", None))
+    response.spellcasting = build_spellcasting_info(char)
 
     hb_ac = await get_passive_modifiers(session, char, "character.ac")
     response.ac_breakdown = AcBreakdown(

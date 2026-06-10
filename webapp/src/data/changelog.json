@@ -1,6 +1,36 @@
 {
   "entries": [
     {
+      "version": "2.7.0",
+      "date": "2026-06-10",
+      "title": {
+        "it": "Incantesimi preparati e rituali",
+        "en": "Prepared spells and rituals"
+      },
+      "added": {
+        "it": [
+          "Incantesimi preparati: per le classi che preparano (Chierico, Druido, Paladino, Mago) ogni incantesimo ha un segnalibro «preparato» sulla lista, con contatore e tetto giornaliero calcolato da classe, livello e caratteristica.",
+          "Tetto di preparazione personalizzabile: nelle impostazioni del personaggio puoi passare da Auto a Manuale e impostare il valore che preferisci.",
+          "Lancio come rituale: gli incantesimi con il tag R si possono lanciare senza consumare slot (per le classi con Ritual Casting), anche a slot esauriti.",
+          "Lanciare un incantesimo non preparato chiede conferma; il Mago può ritualare dal libro anche i non preparati, come da regole."
+        ],
+        "en": [
+          "Prepared spells: for preparing classes (Cleric, Druid, Paladin, Wizard) each spell has a “prepared” bookmark on the list, with a counter and a daily cap computed from class, level and ability.",
+          "Customizable preparation cap: in the character settings you can switch from Auto to Manual and set the value you prefer.",
+          "Ritual casting: spells with the R tag can be cast without consuming a slot (for classes with Ritual Casting), even with no slots left.",
+          "Casting an unprepared spell asks for confirmation; the Wizard can ritual-cast unprepared spells from the spellbook, as per the rules."
+        ]
+      },
+      "improved": {
+        "it": [],
+        "en": []
+      },
+      "fixed": {
+        "it": [],
+        "en": []
+      }
+    },
+    {
       "version": "2.6.0",
       "date": "2026-06-10",
       "title": {

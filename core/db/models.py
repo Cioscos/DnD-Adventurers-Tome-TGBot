@@ -335,6 +335,10 @@ class Spell(Base):
     damage_dice: Mapped[Optional[str]] = mapped_column(String(100))
     damage_type: Mapped[Optional[str]] = mapped_column(String(100))
     is_pinned: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Preparazione (solo classi che preparano: Chierico/Druido/Paladino/Mago).
+    # Backfill legacy a True in _MIGRATIONS; i nuovi incantesimi nascono False
+    # (default in SpellCreate). Ignorata per i known caster.
+    is_prepared: Mapped[bool] = mapped_column(Boolean, default=False)
 
     character: Mapped["Character"] = relationship(
         back_populates="spells", foreign_keys=[character_id]

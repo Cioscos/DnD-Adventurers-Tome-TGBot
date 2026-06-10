@@ -92,6 +92,7 @@ export interface Spell {
   damage_dice?: string
   damage_type?: string
   is_pinned: boolean
+  is_prepared: boolean
 }
 
 export interface SpellSlot {
@@ -162,6 +163,16 @@ export interface AcBreakdown {
   homebrew: number
 }
 
+/** Blocco derivato dal BE: preparazione incantesimi + capacità rituali. */
+export interface SpellcastingInfo {
+  has_preparing_class: boolean
+  prepared_cap: number | null
+  prepared_count: number
+  cap_mode: 'auto' | 'manual'
+  has_ritual_caster: boolean
+  has_wizard: boolean
+}
+
 export interface CharacterFull extends CharacterSummary {
   background?: string
   alignment?: string
@@ -182,6 +193,7 @@ export interface CharacterFull extends CharacterSummary {
   has_custom_silhouette: boolean
   encumbrance: number
   spell_slots_mode: string
+  spellcasting?: SpellcastingInfo | null
   concentrating_spell_id?: number
   hp_gained?: number
   concentration_save?: ConcentrationSaveResult | null

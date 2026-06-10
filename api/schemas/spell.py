@@ -26,6 +26,7 @@ class SpellRead(BaseModel):
     damage_dice: Optional[str] = None
     damage_type: Optional[str] = None
     is_pinned: bool = False
+    is_prepared: bool = True
 
     model_config = {"from_attributes": True}
 
@@ -45,6 +46,7 @@ class SpellCreate(BaseModel):
     damage_dice: Optional[str] = None
     damage_type: Optional[str] = None
     is_pinned: bool = False
+    is_prepared: bool = False
 
 
 class SpellUpdate(BaseModel):
@@ -62,10 +64,14 @@ class SpellUpdate(BaseModel):
     damage_dice: Optional[str] = None
     damage_type: Optional[str] = None
     is_pinned: Optional[bool] = None
+    is_prepared: Optional[bool] = None
 
 
 class SpellUseRequest(BaseModel):
-    slot_level: int
+    # slot_level è obbligatorio per il lancio normale (validato nel router con
+    # 400, non 422, per coerenza con gli altri errori di dominio dell'endpoint).
+    slot_level: int | None = None
+    as_ritual: bool = False
 
 
 class SpellSlotRead(BaseModel):

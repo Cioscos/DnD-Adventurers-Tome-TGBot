@@ -33,6 +33,8 @@ interface SpellDamageSheetProps {
   charId: number
   spell: Spell | null
   slotLevel: number | null
+  /** Lancio rituale: nessuno slot consumato al Roll (spec 2026-06-10). */
+  asRitual?: boolean
   onClose: () => void
 }
 
@@ -40,6 +42,7 @@ export default function SpellDamageSheet({
   charId,
   spell,
   slotLevel,
+  asRitual = false,
   onClose,
 }: SpellDamageSheetProps) {
   const { t } = useTranslation()
@@ -72,8 +75,13 @@ export default function SpellDamageSheet({
     mutationFn: async (body: RollDamageRequest) => {
       if (!spell) throw new Error('no spell')
 
-      // Consume the spell slot only on the first successful roll for leveled spells.
-      if (slotLevel != null && slotLevel >= 1 && !slotConsumed) {
+      if (asRitual && !slotConsumed) {
+        // Rituale: nessuno slot, il BE registra il lancio e attiva la concentrazione.
+        const updated = await api.spells.use(charId, spell.id, null, true)
+        qc.setQueryData(['character', charId], updated)
+        setSlotConsumed(true)
+      } else if (slotLevel != null && slotLevel >= 1 && !slotConsumed) {
+        // Consume the spell slot only on the first successful roll for leveled spells.
         let updated: CharacterFull = await api.spells.use(charId, spell.id, slotLevel)
         if (spell.is_concentration) {
           updated = await api.spells.updateConcentration(charId, spell.id)
@@ -151,8 +159,8 @@ export default function SpellDamageSheet({
   }
 
   const handleReroll = () => {
-    if (slotLevel == null || slotLevel === 0) {
-      // Cantrip: no slot involved.
+    if (asRitual || slotLevel == null || slotLevel === 0) {
+      // Rituale o trucchetto: nessuno slot coinvolto.
       reset()
       return
     }

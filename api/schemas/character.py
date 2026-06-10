@@ -29,6 +29,17 @@ class AcBreakdown(BaseModel):
     homebrew: int
 
 
+class SpellcastingInfo(BaseModel):
+    """Blocco derivato: preparazione incantesimi + capacità rituali (spec 2026-06-10)."""
+
+    has_preparing_class: bool = False
+    prepared_cap: Optional[int] = None
+    prepared_count: int = 0
+    cap_mode: str = "auto"
+    has_ritual_caster: bool = False
+    has_wizard: bool = False
+
+
 class CharacterSummary(BaseModel):
     """Lightweight model returned in the character list."""
 
@@ -111,6 +122,9 @@ class CharacterFull(BaseModel):
     consumable_use: Optional[ConsumableUseResult] = None
 
     has_custom_silhouette: bool = False
+
+    # Preparazione incantesimi + rituali (popolato da build_character_response)
+    spellcasting: Optional[SpellcastingInfo] = None
 
     # JSON fields
     rolls_history: Optional[list] = None
