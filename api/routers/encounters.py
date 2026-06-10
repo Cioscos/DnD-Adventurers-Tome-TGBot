@@ -163,6 +163,30 @@ def _advance_turn(
     return None
 
 
+async def _notify_encounter_opened(
+    session: GameSession, gm_user_id: int, db: AsyncSession
+) -> None:
+    """Best-effort 'encounter opened' ping to every player of the session."""
+    players = [
+        p for p in session.participants
+        if p.role == SessionRole.PLAYER and p.user_id != gm_user_id
+    ]
+    char_ids = [p.character_id for p in players if p.character_id is not None]
+    chars_by_id: dict[int, Character] = {}
+    if char_ids:
+        res = await db.execute(select(Character).where(Character.id.in_(char_ids)))
+        chars_by_id = {c.id: c for c in res.scalars()}
+    url = telegram_notify.miniapp_url(f"/session/{session.id}")
+    for p in players:
+        rec_char = chars_by_id.get(p.character_id) if p.character_id else None
+        if not telegram_notify.notifications_enabled(rec_char, "encounter"):
+            continue
+        await telegram_notify.send_telegram_message(
+            p.user_id, "⚔️ Incontro iniziato — tira l'iniziativa!",
+            button=("Apri la sessione", url),
+        )
+
+
 def _system_feed_message(session: GameSession, body: str) -> SessionMessage:
     return SessionMessage(
         session_id=session.id,
@@ -220,6 +244,7 @@ async def create_encounter(
     _touch(session)
     await db.flush()
     await db.refresh(enc, attribute_names=["combatants"])
+    await _notify_encounter_opened(session, user_id, db)
     return build_encounter_block(enc, viewer_is_gm=True)
 
 

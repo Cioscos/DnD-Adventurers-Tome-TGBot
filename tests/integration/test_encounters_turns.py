@@ -75,10 +75,11 @@ async def test_start_orders_by_initiative_then_mod(client, test_session_factory,
     assert names == ["Eroe", "Goblin 1", "Goblin 2"]          # 17, 12, 6
     assert [c["sort_order"] for c in enc["combatants"]] == [10, 20, 30]
     assert enc["active_combatant_id"] == enc["combatants"][0]["id"]
-    # primo turno = PG -> notifica al proprietario
-    assert len(captured) == 1
-    assert captured[0]["json"]["chat_id"] == PLAYER_ID
-    assert "Round 1" in captured[0]["json"]["text"]
+    # primo turno = PG -> notifica al proprietario (oltre al ping 'incontro iniziato')
+    turn_pings = [c for c in captured if "Tocca a te" in c["json"]["text"]]
+    assert len(turn_pings) == 1
+    assert turn_pings[0]["json"]["chat_id"] == PLAYER_ID
+    assert "Round 1" in turn_pings[0]["json"]["text"]
 
 
 async def test_start_twice_is_409(client, test_session_factory, monkeypatch):
