@@ -401,6 +401,18 @@
       "reset_confirm_title": "Azzerare le statistiche?",
       "reset_confirm_body": "Tutti i contatori cumulativi (inclusi i naturali 20 e 1) torneranno a zero. La cronologia dei tiri non viene toccata."
     },
+    "search": {
+      "title": "Cerca",
+      "placeholder": "Incantesimi, oggetti, abilità, note…",
+      "hint": "Scrivi almeno 2 caratteri.",
+      "no_results": "Nessun risultato.",
+      "type_spell": "Incantesimi",
+      "type_item": "Oggetti",
+      "type_ability": "Abilità speciali",
+      "type_note": "Note",
+      "cantrip": "trucchetto",
+      "spell_level": "liv. {{level}}"
+    },
     "dice_overlay": {
       "open": "Apri lanciatore dadi",
       "close": "Chiudi lanciatore",

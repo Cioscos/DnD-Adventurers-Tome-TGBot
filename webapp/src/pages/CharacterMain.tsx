@@ -1,9 +1,9 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
-import { ChevronLeft, Settings } from 'lucide-react'
+import { ChevronLeft, Search, Settings } from 'lucide-react'
 import { GiSparkles } from 'react-icons/gi'
 import { api } from '@/api/client'
 import { spring } from '@/styles/motion'
@@ -12,6 +12,7 @@ import Skeleton from '@/components/ui/Skeleton'
 import InSessionBanner from '@/components/ui/InSessionBanner'
 import { useCharacterStore } from '@/store/characterStore'
 import CharacterSwiper from '@/components/character/CharacterSwiper'
+import SearchOverlay from '@/components/SearchOverlay'
 import HeroScreen from '@/pages/character/HeroScreen'
 import EquipmentScreen from '@/pages/character/EquipmentScreen'
 import MenuScreen from '@/pages/character/MenuScreen'
@@ -23,6 +24,7 @@ export default function CharacterMain() {
   const { t } = useTranslation()
   const qc = useQueryClient()
   const setActiveCharId = useCharacterStore((s) => s.setActiveCharId)
+  const [searchOpen, setSearchOpen] = useState(false)
 
   useEffect(() => {
     if (!Number.isNaN(charId)) setActiveCharId(charId)
@@ -106,6 +108,18 @@ export default function CharacterMain() {
         </h1>
 
         <m.button
+          onClick={() => {
+            haptic.light()
+            setSearchOpen(true)
+          }}
+          className="w-11 h-11 shrink-0 flex items-center justify-center rounded-full bg-dnd-surface border border-dnd-gold-dim/30"
+          whileTap={{ scale: 0.9 }}
+          aria-label={t('character.search.title')}
+        >
+          <Search size={18} className="text-dnd-gold-bright" />
+        </m.button>
+
+        <m.button
           onClick={() => inspirationMutation.mutate(!char.heroic_inspiration)}
           title={char.heroic_inspiration
             ? t('character.inspiration.tap_to_spend')
@@ -147,6 +161,8 @@ export default function CharacterMain() {
         equipment={<EquipmentScreen char={char} />}
         menu={<MenuScreen charId={charId} />}
       />
+
+      <SearchOverlay char={char} open={searchOpen} onClose={() => setSearchOpen(false)} />
     </div>
   )
 }
