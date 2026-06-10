@@ -14,7 +14,15 @@ interface SheetProps {
   /** If true, render as centered dialog instead of bottom sheet (desktop). */
   centered?: boolean
   className?: string
+  /** z-index class of the backdrop wrapper. Override (e.g. 'z-[60]') when
+   *  nesting a sheet above an already-open z-50 overlay. */
+  zClassName?: string
 }
+
+// Stack of currently-open sheets: with nested sheets (e.g. SelectSheet inside a
+// form Sheet) only the topmost one may react to Escape, otherwise a single
+// keypress would close the whole stack at once.
+const escapeStack: symbol[] = []
 
 /**
  * Modal bottom sheet (mobile) / centered dialog (desktop-md+).
@@ -28,24 +36,31 @@ export default function Sheet({
   dismissible = true,
   centered = false,
   className = '',
+  zClassName = 'z-50',
 }: SheetProps) {
   const dragControls = useDragControls()
   const sheetRef = useRef<HTMLDivElement>(null)
+  const stackToken = useRef(Symbol('sheet'))
 
   useRegisterOverlay(open)
 
   // Prevent body scroll + close on Escape when open
   useEffect(() => {
     if (!open) return
+    const token = stackToken.current
+    escapeStack.push(token)
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && dismissible) onClose()
+      const topmost = escapeStack[escapeStack.length - 1] === token
+      if (event.key === 'Escape' && dismissible && topmost) onClose()
     }
     document.addEventListener('keydown', handleKeyDown)
 
     return () => {
+      const i = escapeStack.indexOf(token)
+      if (i !== -1) escapeStack.splice(i, 1)
       document.body.style.overflow = prev
       document.removeEventListener('keydown', handleKeyDown)
     }
@@ -61,7 +76,7 @@ export default function Sheet({
     <AnimatePresence>
       {open && (
         <m.div
-          className="fixed inset-0 z-50 flex items-end md:items-center justify-center"
+          className={`fixed inset-0 ${zClassName} flex items-end md:items-center justify-center`}
           style={{ background: 'var(--dnd-overlay)', backdropFilter: 'blur(6px)' }}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}

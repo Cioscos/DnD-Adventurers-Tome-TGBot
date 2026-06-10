@@ -45,4 +45,30 @@ describe('DamageDiceBuilder', () => {
     render(<DamageDiceBuilder value="1d6" onChange={() => {}} />)
     expect(iconButtons()[0]).toBeDisabled() // count "−"
   })
+
+  it('clamps the count at the default maximum of 10 (increment disabled)', () => {
+    render(<DamageDiceBuilder value="10d6" onChange={() => {}} />)
+    expect(iconButtons()[1]).toBeDisabled() // count "+"
+  })
+
+  it('renders a custom die set (spell config with d20) without the unknown-die fallback', () => {
+    render(<DamageDiceBuilder value="1d20" onChange={() => {}} dieSizes={[4, 6, 8, 10, 12, 20]} />)
+    expect(screen.getAllByRole('button', { name: 'd20' })).toHaveLength(1)
+    expect(screen.getByRole('button', { name: 'd20' })).toHaveClass('bg-dnd-gold')
+  })
+
+  it('honors maxCount: 11th die reachable with maxCount=12, blocked at 12', async () => {
+    const onChange = vi.fn()
+    const { rerender } = render(<DamageDiceBuilder value="10d6" onChange={onChange} maxCount={12} />)
+    await userEvent.click(iconButtons()[1]) // count "+"
+    expect(onChange).toHaveBeenCalledWith('11d6')
+    rerender(<DamageDiceBuilder value="12d6" onChange={onChange} maxCount={12} />)
+    expect(iconButtons()[1]).toBeDisabled()
+  })
+
+  it('renders a custom label when provided', () => {
+    render(<DamageDiceBuilder value="1d6" onChange={() => {}} label="Dado custom" />)
+    expect(screen.getByText('Dado custom')).toBeInTheDocument()
+    expect(screen.queryByText('character.inventory.damage_dice_label')).not.toBeInTheDocument()
+  })
 })

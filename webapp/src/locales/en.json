@@ -34,7 +34,9 @@
       "intelligence": "Intelligence",
       "wisdom": "Wisdom",
       "charisma": "Charisma"
-    }
+    },
+    "select": "Select…",
+    "other": "Other…"
   },
   "character": {
     "hero": {
@@ -333,7 +335,13 @@
         "level_n": "Lv {{level}}",
         "clear": "Clear filters",
         "no_results": "No spells match the filters"
-      }
+      },
+      "deals_damage": "Deals damage",
+      "damage_dice_label": "Damage dice",
+      "damage_type_label": "Damage type",
+      "material_detail_label": "Material component",
+      "material_detail_placeholder": "e.g. a pinch of sand",
+      "components_help": "V verbal, S somatic, M material"
     },
     "slots": {
       "title": "Spell Slots",

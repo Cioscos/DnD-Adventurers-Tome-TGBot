@@ -34,7 +34,9 @@
       "intelligence": "Intelligenza",
       "wisdom": "Saggezza",
       "charisma": "Carisma"
-    }
+    },
+    "select": "Seleziona…",
+    "other": "Altro…"
   },
   "character": {
     "hero": {
@@ -333,7 +335,13 @@
         "level_n": "Liv. {{level}}",
         "clear": "Azzera filtri",
         "no_results": "Nessun incantesimo corrisponde ai filtri"
-      }
+      },
+      "deals_damage": "Infligge danno",
+      "damage_dice_label": "Dado del danno",
+      "damage_type_label": "Tipo di danno",
+      "material_detail_label": "Componente materiale",
+      "material_detail_placeholder": "es. un pizzico di sabbia",
+      "components_help": "V verbale, S somatica, M materiale"
     },
     "slots": {
       "title": "Slot Incantesimo",
