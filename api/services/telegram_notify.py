@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 import os
+import uuid
 from typing import Optional
 
 import httpx
@@ -25,6 +26,8 @@ _MINIAPP_BASE_URL = os.environ.get(
     "MINIAPP_BASE_URL",
     "https://cioscos.github.io/DnD-Adventurers-Tome-TGBot/app/",
 )
+# Cache di getMe — lo username serve solo per i deep link t.me/<bot>?startapp=…
+_BOT_USERNAME: Optional[str] = None
 
 
 def bot_token_configured() -> bool:
@@ -79,6 +82,72 @@ async def send_telegram_message(
     except Exception as exc:  # noqa: BLE001 — best-effort, il gioco prosegue
         logger.warning("Telegram sendMessage error: %s", exc)
         return False
+
+
+async def get_bot_username() -> Optional[str]:
+    """Username del bot via getMe (cache module-level). None se non disponibile."""
+    global _BOT_USERNAME
+    if _BOT_USERNAME:
+        return _BOT_USERNAME
+    if not _BOT_TOKEN:
+        return None
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.post(f"https://api.telegram.org/bot{_BOT_TOKEN}/getMe")
+        if resp.is_success:
+            _BOT_USERNAME = resp.json().get("result", {}).get("username")
+        else:
+            logger.warning("getMe failed: %s %s", resp.status_code, resp.text)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("getMe error: %s", exc)
+    return _BOT_USERNAME
+
+
+async def save_prepared_message(
+    user_id: int,
+    *,
+    title: str,
+    text: str,
+    parse_mode: str | None = None,
+    button: tuple[str, str] | None = None,
+) -> Optional[str]:
+    """savePreparedInlineMessage (Bot API 8.0): prepara un messaggio che la
+    Mini App condivide col picker nativo via Telegram.WebApp.shareMessage(id).
+    Ritorna l'id preparato, o None su errore (mai solleva)."""
+    if not _BOT_TOKEN:
+        return None
+    content: dict = {"message_text": text}
+    if parse_mode:
+        content["parse_mode"] = parse_mode
+    result: dict = {
+        "type": "article",
+        "id": uuid.uuid4().hex,
+        "title": title,
+        "input_message_content": content,
+    }
+    if button is not None:
+        label, url = button
+        result["reply_markup"] = {"inline_keyboard": [[{"text": label, "url": url}]]}
+    payload = {
+        "user_id": user_id,
+        "result": result,
+        "allow_user_chats": True,
+        "allow_group_chats": True,
+    }
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.post(
+                f"https://api.telegram.org/bot{_BOT_TOKEN}/savePreparedInlineMessage",
+                json=payload,
+            )
+        if not resp.is_success:
+            logger.warning(
+                "savePreparedInlineMessage failed: %s %s", resp.status_code, resp.text)
+            return None
+        return resp.json().get("result", {}).get("id")
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("savePreparedInlineMessage error: %s", exc)
+        return None
 
 
 async def notify_party_emergency(db: AsyncSession, char: Character, text: str) -> None:

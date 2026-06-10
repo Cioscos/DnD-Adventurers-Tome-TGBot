@@ -17,6 +17,11 @@ class FakeResponse:
     def is_success(self) -> bool:
         return 200 <= self.status_code < 300
 
+    def json(self) -> dict:
+        """Risposta generica buona per getMe (username) e
+        savePreparedInlineMessage (id)."""
+        return {"ok": self.is_success, "result": {"id": "prep-1", "username": "testbot"}}
+
 
 def install_fake_telegram(monkeypatch, *, status_code: int = 200) -> list[dict]:
     """No HTTP reale: cattura i payload sendMessage come {'url':…, 'json':…}."""
@@ -37,6 +42,7 @@ def install_fake_telegram(monkeypatch, *, status_code: int = 200) -> list[dict]:
             return FakeResponse(status_code)
 
     monkeypatch.setattr(tn, "_BOT_TOKEN", "fake-token")
+    monkeypatch.setattr(tn, "_BOT_USERNAME", None, raising=False)
     monkeypatch.setattr(tn.httpx, "AsyncClient", _FakeClient)
     return captured
 
