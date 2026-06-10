@@ -1,6 +1,6 @@
 import React from 'react'
 import { useTranslation } from 'react-i18next'
-import { Pencil, Trash2, ArrowLeftRight, Weight, Shield, AlertTriangle, Wrench } from 'lucide-react'
+import { Pencil, Trash2, ArrowLeftRight, Weight, Shield, AlertTriangle, Wrench, Share2 } from 'lucide-react'
 import {
   GiCrossedSwords as Swords,
   GiArcheryTarget as Target,
@@ -215,6 +215,8 @@ interface InventoryItemProps {
   onUse: () => void
   onEdit: () => void
   onDelete: () => void
+  /** Presente solo quando il client supporta shareMessage (Bot API 8.0+). */
+  onShare?: () => void
   equipPending: boolean
   attackPending: boolean
   usePending: boolean
@@ -234,6 +236,7 @@ function InventoryItemInner({
   onUse,
   onEdit,
   onDelete,
+  onShare,
   equipPending,
   attackPending,
   usePending,
@@ -379,6 +382,17 @@ function InventoryItemInner({
               >
                 <FlaskConical size={12} />
                 {t('character.inventory.use')}
+              </button>
+            )}
+            {onShare && (
+              <button
+                onClick={onShare}
+                className="flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg
+                           bg-dnd-surface text-dnd-gold border border-dnd-gold-dim/40
+                           active:opacity-60"
+              >
+                <Share2 size={12} />
+                {t('share.action')}
               </button>
             )}
             <button

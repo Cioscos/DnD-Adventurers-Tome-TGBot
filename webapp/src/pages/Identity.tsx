@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { User, Globe2, Save, Lock } from 'lucide-react'
+import { User, Globe2, Save, Lock, Share2 } from 'lucide-react'
 import {
   GiFeather as Feather, GiCheckedShield as Shield, GiLightningTrio as Zap,
   GiFlame as Flame,
@@ -14,7 +14,8 @@ import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
 import ChipInput from '@/components/ui/ChipInput'
 import SectionDivider from '@/components/ui/SectionDivider'
-import { haptic } from '@/auth/telegram'
+import { canShareMessage, haptic } from '@/auth/telegram'
+import { useShareMessage } from '@/hooks/useShareMessage'
 import { useUnitSettings, formatLength, oppositeSystem, feetToDisplay, displayToFeet, unitLabel } from '@/store/unitSettings'
 import languagesSrd from '@/data/languages-srd.json'
 import { DAMAGE_TYPES } from '@/pages/inventory/itemMetadata'
@@ -99,6 +100,8 @@ export default function Identity() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [char])
+
+  const shareCard = useShareMessage(() => api.share.card(charId))
 
   const mutation = useMutation({
     mutationFn: () => {
@@ -357,6 +360,20 @@ export default function Identity() {
       >
         {t('common.save')}
       </Button>
+
+      {canShareMessage() && (
+        <Button
+          variant="secondary"
+          size="lg"
+          fullWidth
+          onClick={() => shareCard.mutate()}
+          loading={shareCard.isPending}
+          icon={<Share2 size={18} />}
+          haptic="light"
+        >
+          {t('share.card')}
+        </Button>
+      )}
     </Layout>
   )
 }

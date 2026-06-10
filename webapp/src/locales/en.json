@@ -38,6 +38,12 @@
     "select": "Select…",
     "other": "Other…"
   },
+  "share": {
+    "action": "Share",
+    "card": "Share to group",
+    "invite": "Share invite",
+    "error": "Sharing failed. Try again."
+  },
   "character": {
     "hero": {
       "stats_section": "Statistics",

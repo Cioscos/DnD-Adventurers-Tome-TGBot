@@ -1,9 +1,11 @@
-import { lazy, Suspense } from 'react'
-import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { lazy, Suspense, useEffect } from 'react'
+import { HashRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import ModalProvider from './components/ModalProvider'
 import DiceAnimationProvider from './dice/DiceAnimationProvider'
 import DiceOverlay from './components/DiceOverlay'
 import Skeleton from './components/Skeleton'
+import { getStartParam } from './auth/telegram'
+import { parseStartParam } from './lib/startParam'
 
 // Lazy-loaded pages
 const CharacterSelect = lazy(() => import('./pages/CharacterSelect'))
@@ -36,6 +38,23 @@ const Homebrew = lazy(() => import('./pages/Homebrew'))
 const RuleEditor = lazy(() => import('./pages/homebrew/RuleEditor'))
 const Changelog = lazy(() => import('./pages/Changelog'))
 
+/** Deep link esterni (t.me/<bot>?startapp=…): reindirizza una sola volta per
+ *  sessione, così il back non continua a rimbalzare sulla destinazione. */
+function StartParamRedirect() {
+  const navigate = useNavigate()
+  useEffect(() => {
+    const action = parseStartParam(getStartParam())
+    if (!action) return
+    const guard = `start_param_handled:${action.kind}:${action.code}`
+    if (sessionStorage.getItem(guard)) return
+    sessionStorage.setItem(guard, '1')
+    if (action.kind === 'join') {
+      navigate(`/session/join?code=${action.code}`, { replace: true })
+    }
+  }, [navigate])
+  return null
+}
+
 function PageFallback() {
   return (
     <div className="min-h-screen p-4 space-y-3">
@@ -52,6 +71,7 @@ export default function App() {
     <HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <ModalProvider>
         <DiceAnimationProvider>
+          <StartParamRedirect />
           <Suspense fallback={<PageFallback />}>
             <Routes>
             <Route path="/" element={<CharacterSelect />} />

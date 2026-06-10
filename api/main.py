@@ -37,6 +37,7 @@ from api.routers import (
     maps,
     notes,
     sessions,
+    share,
     silhouette,
     spell_slots,
     spells,
@@ -142,4 +143,5 @@ app.include_router(dice.router)
 app.include_router(history.router)
 app.include_router(sessions.router)
 app.include_router(encounters.router)
+app.include_router(share.router)
 app.include_router(homebrew.router)

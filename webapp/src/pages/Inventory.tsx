@@ -20,7 +20,8 @@ import ProgressTriad from '@/components/ui/ProgressTriad'
 import Input from '@/components/ui/Input'
 import { useUnitSettings, displayToLb, lbToDisplay, formatWeight, formatWeightValue, weightUnitLabel } from '@/store/unitSettings'
 import WeaponAttackModal, { type WeaponAttackResult } from '@/components/WeaponAttackModal'
-import { haptic } from '@/auth/telegram'
+import { canShareMessage, haptic } from '@/auth/telegram'
+import { useShareMessage } from '@/hooks/useShareMessage'
 import InventoryItem, { type ItemProperty } from '@/pages/inventory/InventoryItem'
 import ItemForm from '@/pages/inventory/ItemForm'
 import { buildItemMetadata, buildHomebrewMetadataPatch, type ItemFormData, type ItemEffect } from '@/pages/inventory/itemMetadata'
@@ -254,6 +255,8 @@ export default function Inventory() {
     },
     onError: () => haptic.error(),
   })
+
+  const shareItem = useShareMessage((itemId: number) => api.share.item(charId, itemId))
 
   const attackMutation = useMutation({
     mutationFn: (itemId: number) => api.items.attack(charId, itemId),
@@ -602,6 +605,7 @@ export default function Inventory() {
                             onUse={() => setUseTarget(item)}
                             onEdit={() => handleEdit(item)}
                             onDelete={() => setDeleteTarget(item.id)}
+                            onShare={canShareMessage() ? () => shareItem.mutate(item.id) : undefined}
                             equipPending={toggleEquip.isPending}
                             attackPending={attackMutation.isPending}
                             usePending={consumeMutation.isPending}

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Hash, Users, ClipboardCheck, Check } from 'lucide-react'
@@ -15,7 +15,10 @@ export default function SessionJoin() {
   const navigate = useNavigate()
   const { t } = useTranslation()
   const qc = useQueryClient()
-  const [code, setCode] = useState('')
+  // Prefill dal deep link d'invito (t.me/<bot>?startapp=join_<CODE>): qui il
+  // valore arriva da un gesto esplicito dell'utente, non è un default arbitrario.
+  const [searchParams] = useSearchParams()
+  const [code, setCode] = useState((searchParams.get('code') ?? '').toUpperCase())
   const [selectedCharId, setSelectedCharId] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
 
