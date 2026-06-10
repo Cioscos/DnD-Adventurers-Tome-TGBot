@@ -535,7 +535,10 @@ export default function Spells() {
           const slot = level > 0 ? spellSlots.find((s) => s.level === level) : undefined
           return (
             <div key={level} className="mb-4">
-              <div className="sticky top-0 z-[5] -mx-4 w-[calc(100%+2rem)] px-5 py-2 flex items-center gap-2 bg-dnd-bg/95 backdrop-blur-sm border-b border-dnd-border/40">
+              {/* -top-4 compensa il p-4 del contenitore di scroll del Layout
+                  (stesso pattern di Inventory): con top-0 l'header si fermava
+                  16px sotto il bordo visivo della pagina. */}
+              <div className="sticky -top-4 z-[5] -mx-4 w-[calc(100%+2rem)] px-5 py-2 flex items-center gap-2 bg-dnd-bg/95 backdrop-blur-sm border-b border-dnd-border/40">
                 <m.button
                   type="button"
                   onClick={() => toggleLevel(level)}
