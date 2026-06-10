@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
-import { LogOut, User, Gift, Copy } from 'lucide-react'
+import { LogOut, User, Gift, Copy, Share2 } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   GiCrown as Crown, GiHeartPlus as Heart, GiCheckedShield as Shield,
@@ -18,7 +18,8 @@ import SectionDivider from '@/components/ui/SectionDivider'
 import ConditionBadge from '@/components/ui/ConditionBadge'
 import { api } from '@/api/client'
 import type { CharacterLiveSnapshot, SessionParticipant } from '@/types'
-import { haptic, telegramConfirm } from '@/auth/telegram'
+import { canShareMessage, haptic, telegramConfirm } from '@/auth/telegram'
+import { useShareMessage } from '@/hooks/useShareMessage'
 import ParticipantIdentitySheet from '@/pages/session/ParticipantIdentitySheet'
 import SessionFeed from '@/pages/session/SessionFeed'
 import GrantItemModal from '@/pages/session/GrantItemModal'
@@ -261,6 +262,8 @@ export default function SessionRoom() {
 
   const amGm = !!live && live.gm_user_id === myUserId
 
+  const shareInvite = useShareMessage(() => api.share.invite(sessionId))
+
   const myCharId =
     live?.participants.find((p) => p.user_id === myUserId)?.character_id ?? null
 
@@ -342,6 +345,17 @@ export default function SessionRoom() {
               >
                 <Copy size={16} />
               </button>
+              {canShareMessage() && (
+                <button
+                  type="button"
+                  onClick={() => { haptic.light(); shareInvite.mutate() }}
+                  disabled={shareInvite.isPending}
+                  className="w-11 h-11 inline-flex items-center justify-center rounded-full bg-dnd-chip-bg border border-dnd-gold-dim/40 text-dnd-gold-bright hover:border-dnd-gold/70 disabled:opacity-50"
+                  aria-label={t('share.invite')}
+                >
+                  <Share2 size={16} />
+                </button>
+              )}
             </div>
             <p className="text-sm text-dnd-text-muted font-body italic mt-1">
               {sessionName}

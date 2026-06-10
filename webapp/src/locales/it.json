@@ -38,6 +38,12 @@
     "select": "Seleziona…",
     "other": "Altro…"
   },
+  "share": {
+    "action": "Condividi",
+    "card": "Condividi nel gruppo",
+    "invite": "Condividi l'invito",
+    "error": "Condivisione non riuscita. Riprova."
+  },
   "character": {
     "hero": {
       "stats_section": "Statistiche",

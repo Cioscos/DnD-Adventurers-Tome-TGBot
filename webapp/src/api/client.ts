@@ -704,6 +704,21 @@ export const api = {
   },
 
   // ---------------------------------------------------------------------------
+  // Share (prepared messages → Telegram.WebApp.shareMessage)
+  // ---------------------------------------------------------------------------
+  share: {
+    card: (charId: number) =>
+      request<{ prepared_message_id: string }>(
+        `/characters/${charId}/share/card`, { method: 'POST' }),
+    item: (charId: number, itemId: number) =>
+      request<{ prepared_message_id: string }>(
+        `/characters/${charId}/share/items/${itemId}`, { method: 'POST' }),
+    invite: (sessionId: number) =>
+      request<{ prepared_message_id: string }>(
+        `/sessions/${sessionId}/share/invite`, { method: 'POST' }),
+  },
+
+  // ---------------------------------------------------------------------------
   // History
   // ---------------------------------------------------------------------------
   history: {

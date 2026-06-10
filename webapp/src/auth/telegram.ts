@@ -28,6 +28,8 @@ interface TelegramWebApp {
     }
     auth_date: number
     hash: string
+    /** Parametro startapp dei deep link t.me/<bot>?startapp=… */
+    start_param?: string
   }
   colorScheme: 'light' | 'dark'
   themeParams: Record<string, string>
@@ -74,6 +76,8 @@ interface TelegramWebApp {
   sendData(data: string): void
   showAlert(message: string, callback?: () => void): void
   showConfirm(message: string, callback: (confirmed: boolean) => void): void
+  /** Condivide un messaggio preparato (Bot API 8.0+) via picker nativo. */
+  shareMessage?(msgId: string, callback?: (sent: boolean) => void): void
   showPopup(params: object, callback?: (id: string) => void): void
   HapticFeedback: {
     impactOccurred(style: 'light' | 'medium' | 'heavy' | 'rigid' | 'soft'): void
@@ -164,6 +168,35 @@ export function telegramConfirm(
     }
   }
   callback(window.confirm(message))
+}
+
+/** Parametro startapp dei deep link (t.me/<bot>?startapp=…), se presente. */
+export function getStartParam(): string | null {
+  const webApp = typeof window !== 'undefined' ? window.Telegram?.WebApp : undefined
+  return webApp?.initDataUnsafe?.start_param ?? twa?.initDataUnsafe?.start_param ?? null
+}
+
+/** Il client supporta la condivisione dei messaggi preparati (Bot API 8.0+)? */
+export function canShareMessage(): boolean {
+  const webApp = typeof window !== 'undefined' ? window.Telegram?.WebApp : undefined
+  return !!webApp && typeof webApp.shareMessage === 'function'
+}
+
+/** Apre il picker nativo per condividere un messaggio preparato.
+ *  Risolve a true se l'utente lo ha effettivamente inviato. */
+export function shareTelegramMessage(msgId: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    const webApp = typeof window !== 'undefined' ? window.Telegram?.WebApp : undefined
+    if (!webApp || typeof webApp.shareMessage !== 'function') {
+      resolve(false)
+      return
+    }
+    try {
+      webApp.shareMessage(msgId, (sent) => resolve(!!sent))
+    } catch {
+      resolve(false)
+    }
+  })
 }
 
 /** Haptic feedback helpers. */
