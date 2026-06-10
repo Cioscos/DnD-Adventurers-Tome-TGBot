@@ -1,6 +1,24 @@
 {
   "entries": [
     {
+      "version": "2.13.4",
+      "date": "2026-06-10",
+      "title": {
+        "it": "Strumenti dev: test sessioni multi-utente",
+        "en": "Dev tools: multi-user session testing"
+      },
+      "added": {
+        "it": [
+          "Modalità sviluppo: aprendo l'app con ?dev_user=<id> il tab impersona un secondo utente (badge «DEV #id»), così le sessioni di gioco si possono testare in locale con GM e giocatore in due finestre. Nessun effetto in produzione."
+        ],
+        "en": [
+          "Development mode: opening the app with ?dev_user=<id> makes the tab impersonate a second user (“DEV #id” badge), so game sessions can be tested locally with GM and player in two windows. No effect in production."
+        ]
+      },
+      "improved": { "it": [], "en": [] },
+      "fixed": { "it": [], "en": [] }
+    },
+    {
       "version": "2.13.3",
       "date": "2026-06-10",
       "title": {
