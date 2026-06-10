@@ -8,11 +8,9 @@ Spec: docs/superpowers/specs/2026-06-09-combat-tracker-design.md
 from __future__ import annotations
 
 import logging
-import os
 import random
 from typing import Annotated, Optional
 
-import httpx
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -30,6 +28,7 @@ from api.schemas.encounter import (
     InitiativeRollRequest,
     ReorderRequest,
 )
+from api.services import telegram_notify
 from api.services.encounter_view import build_encounter_block
 from core.db.models import (
     Character,
@@ -45,8 +44,6 @@ from core.game.stats import effective_ability_score
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/sessions", tags=["encounters"])
-
-_BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
 
 
 # ---------------------------------------------------------------------------
@@ -179,19 +176,14 @@ def _system_feed_message(session: GameSession, body: str) -> SessionMessage:
 
 async def _notify_turn(enc: Encounter, combatant: Combatant) -> None:
     """Fire-and-forget 'your turn' ping to the PC owner's private chat."""
-    if combatant.kind != "pc" or not combatant.owner_user_id or not _BOT_TOKEN:
+    if combatant.kind != "pc" or not combatant.owner_user_id:
         return
-    text = f"⚔️ Tocca a te! Round {enc.round} — {combatant.name}"
-    try:
-        async with httpx.AsyncClient(timeout=10) as client:
-            resp = await client.post(
-                f"https://api.telegram.org/bot{_BOT_TOKEN}/sendMessage",
-                json={"chat_id": combatant.owner_user_id, "text": text},
-            )
-        if not resp.is_success:
-            logger.warning("turn notification failed: %s %s", resp.status_code, resp.text)
-    except Exception as exc:  # noqa: BLE001 — il turno avanza comunque
-        logger.warning("turn notification error: %s", exc)
+    await telegram_notify.send_telegram_message(
+        combatant.owner_user_id,
+        f"⚔️ Tocca a te! Round {enc.round} — {combatant.name}",
+        button=("Apri la sessione",
+                telegram_notify.miniapp_url(f"/session/{enc.session_id}")),
+    )
 
 
 # ---------------------------------------------------------------------------
