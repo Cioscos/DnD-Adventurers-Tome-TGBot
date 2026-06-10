@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
-import { Settings2, Languages, RefreshCw, Eye, Sun, History, Coins, Trash2 } from 'lucide-react'
+import { Settings2, Languages, RefreshCw, Eye, Sun, History, Coins, Trash2, BookmarkCheck } from 'lucide-react'
 import {
   GiSparkles as Sparkles, GiCutDiamond as Gem,
   GiPerspectiveDiceSixFacesRandom as Dices,
@@ -131,6 +131,8 @@ export default function Settings() {
   const [showRecalcConfirm, setShowRecalcConfirm] = useState(false)
   const [showSlotModeConfirm, setShowSlotModeConfirm] = useState(false)
   const [showResetConfirm, setShowResetConfirm] = useState(false)
+  // Tetto preparazione manuale: input mai precompilato (placeholder only).
+  const [prepCapInput, setPrepCapInput] = useState('')
 
   const recalcMutation = useMutation({
     mutationFn: () => api.characters.recalcHp(charId),
@@ -145,6 +147,8 @@ export default function Settings() {
 
   const settings = (char.settings as Record<string, unknown>) ?? {}
   const slotsMode = (settings.spell_slots_mode as string) ?? 'auto'
+  const spellcasting = char.spellcasting ?? null
+  const prepCapMode = (settings.prepared_cap_mode as string) ?? 'auto'
   const hpAutoCalc = (settings.hp_auto_calc as boolean | undefined) !== false
   const showPrivateIdentity = (settings.show_private_identity as boolean | undefined) === true
   const hideElectrum = (settings.hide_electrum as boolean | undefined) === true
@@ -514,6 +518,72 @@ export default function Settings() {
           ))}
         </div>
       </Surface>
+
+      {/* Tetto preparazione incantesimi: solo per PG con classi preparanti. */}
+      {spellcasting?.has_preparing_class && (
+        <>
+          <SectionDivider icon={<BookmarkCheck size={11} />} align="center">
+            {t('character.settings.prepared_cap')}
+          </SectionDivider>
+
+          <Surface variant="elevated">
+            <div className="flex items-start gap-3 mb-3">
+              <BookmarkCheck size={16} className="text-dnd-gold-bright shrink-0 mt-0.5" />
+              <p className="text-xs text-dnd-text-muted font-body italic flex-1">
+                {prepCapMode === 'auto'
+                  ? t('character.settings.prepared_cap_auto_hint', { cap: spellcasting.prepared_cap ?? 0 })
+                  : t('character.settings.prepared_cap_manual_hint')}
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {(['auto', 'manual'] as const).map((mode) => (
+                <m.button
+                  key={mode}
+                  onClick={() => updateMutation.mutate({ ...settings, prepared_cap_mode: mode })}
+                  className={`min-h-[44px] rounded-xl font-cinzel text-xs uppercase tracking-widest transition-colors
+                    ${prepCapMode === mode
+                      ? 'bg-gradient-gold text-dnd-ink shadow-engrave'
+                      : 'bg-dnd-surface border border-dnd-border text-dnd-text-muted'}`}
+                  whileTap={{ scale: 0.96 }}
+                  transition={spring.press}
+                >
+                  {t(`character.settings.mode_${mode}`)}
+                </m.button>
+              ))}
+            </div>
+            {prepCapMode === 'manual' && (
+              <div className="flex gap-2 mt-3">
+                <input
+                  type="number"
+                  min={1}
+                  inputMode="numeric"
+                  value={prepCapInput}
+                  onChange={(e) => setPrepCapInput(e.target.value)}
+                  placeholder={t('character.settings.prepared_cap_value_placeholder', {
+                    cap: spellcasting.prepared_cap ?? 0,
+                  })}
+                  className="flex-1 min-w-0 bg-dnd-surface border border-dnd-border rounded-xl px-3 py-2 text-sm font-mono"
+                />
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={!prepCapInput || Number(prepCapInput) < 1}
+                  onClick={() => {
+                    updateMutation.mutate({
+                      ...settings,
+                      prepared_cap_mode: 'manual',
+                      prepared_cap_value: Number(prepCapInput),
+                    })
+                    setPrepCapInput('')
+                  }}
+                >
+                  {t('character.settings.prepared_cap_save')}
+                </Button>
+              </div>
+            )}
+          </Surface>
+        </>
+      )}
 
       {/* Reset all character settings */}
       <Button
