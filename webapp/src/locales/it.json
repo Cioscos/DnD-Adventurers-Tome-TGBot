@@ -495,7 +495,10 @@
       "unsaved_changes": "Modifiche non salvate",
       "save_now": "Salva ora",
       "damage_already_in": "{{type}} è già in un'altra lista",
-      "damage_vuln_wins_hint": "Se uno stesso tipo appare in più liste, in D&D la vulnerabilità prevale."
+      "damage_vuln_wins_hint": "Se uno stesso tipo appare in più liste, in D&D la vulnerabilità prevale.",
+      "resistances_short": "Res.",
+      "immunities_short": "Imm.",
+      "vulnerabilities_short": "Vul."
     },
     "inspiration": {
       "title": "Ispirazione Eroica",

@@ -10,11 +10,13 @@
       "added": {
         "it": [
           "Nuovo incantesimo guidato: livello a chips, tempo di lancio, gittata e durata con valori standard selezionabili (più «Altro…» per i casi particolari), componenti V/S/M a interruttori con dettaglio del materiale, e dado del danno costruito con il builder dell’inventario (fino a 12 dadi, incluso il d20).",
-          "Selettore a tendina in stile pergamena (bottom-sheet) per le liste lunghe: classi del multiclasse e condizioni dei consumabili."
+          "Selettore a tendina in stile pergamena (bottom-sheet) per le liste lunghe: classi del multiclasse e condizioni dei consumabili.",
+          "In Identità, resistenze, immunità e vulnerabilità ora suggeriscono i tipi di danno 5e standard mentre scrivi; le tre liste compaiono come medaglie nella schermata principale del personaggio, con tap verso Identità."
         ],
         "en": [
           "Guided spell creation: level chips, casting time, range and duration with selectable standard values (plus “Other…” for edge cases), V/S/M component toggles with material detail, and damage dice built with the inventory builder (up to 12 dice, d20 included).",
-          "Parchment-style bottom-sheet picker for long lists: multiclass classes and consumable conditions."
+          "Parchment-style bottom-sheet picker for long lists: multiclass classes and consumable conditions.",
+          "In Identity, resistances, immunities and vulnerabilities now suggest the standard 5e damage types as you type; the three lists show up as badges on the character’s main screen, tapping through to Identity."
         ]
       },
       "improved": {

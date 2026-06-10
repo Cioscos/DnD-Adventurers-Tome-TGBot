@@ -4,7 +4,8 @@ import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
 import { CircleDot } from 'lucide-react'
 import {
-  GiHeartPlus, GiKnapsack, GiLightningTrio, GiPotionBall, GiSkullCrossedBones,
+  GiCheckedShield, GiFlame, GiHeartPlus, GiKnapsack, GiLightningTrio,
+  GiPotionBall, GiSkullCrossedBones,
 } from 'react-icons/gi'
 import HPGauge from '@/components/ui/HPGauge'
 import HeroXPBar from '@/components/ui/HeroXPBar'
@@ -26,6 +27,13 @@ import { useUnitSettings, formatWeightValue, weightUnitLabel } from '@/store/uni
 const DND_ABILITY_ORDER = [
   'strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma',
 ]
+
+// Stessa mappatura icona/tono del menu Identità (dove i valori si editano).
+const DMG_MODIFIER_GROUPS = [
+  { key: 'resistances', tone: 'cobalt', Icon: GiCheckedShield },
+  { key: 'immunities', tone: 'gold', Icon: GiLightningTrio },
+  { key: 'vulnerabilities', tone: 'crimson', Icon: GiFlame },
+] as const
 
 interface Props {
   char: CharacterFull
@@ -52,6 +60,11 @@ export default function HeroScreen({ char }: Props) {
   const activeConditions = char.conditions
     ? Object.entries(char.conditions).filter(([, v]) => v)
     : []
+
+  const damageModifiers = (char.damage_modifiers ?? {}) as Record<string, string[]>
+  const damageBadges = DMG_MODIFIER_GROUPS.flatMap(({ key, tone, Icon }) =>
+    (damageModifiers[key] ?? []).map((value) => ({ id: `${key}-${value}`, group: key, tone, Icon, value })),
+  )
 
   return (
     <div className="@container p-4 space-y-3 pb-safe">
@@ -234,6 +247,25 @@ export default function HeroScreen({ char }: Props) {
                 />
               )
             })}
+          </div>
+        )}
+
+        {/* Resistenze / immunità / vulnerabilità — si editano in Identità */}
+        {damageBadges.length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-3">
+            {damageBadges.map((b) => (
+              <StatPill
+                key={b.id}
+                icon={<b.Icon size={10} />}
+                label={t(`character.identity.${b.group}_short`)}
+                value={b.value}
+                tone={b.tone}
+                size="sm"
+                expandHitArea
+                aria-label={`${t(`character.identity.${b.group}`)}: ${b.value}`}
+                onClick={() => { haptic.light(); navigate(`/char/${char.id}/identity`) }}
+              />
+            ))}
           </div>
         )}
 

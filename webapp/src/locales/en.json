@@ -495,7 +495,10 @@
       "unsaved_changes": "Unsaved changes",
       "save_now": "Save now",
       "damage_already_in": "{{type}} is already in another list",
-      "damage_vuln_wins_hint": "If the same damage type appears in multiple lists, D&D says vulnerability wins."
+      "damage_vuln_wins_hint": "If the same damage type appears in multiple lists, D&D says vulnerability wins.",
+      "resistances_short": "Res.",
+      "immunities_short": "Imm.",
+      "vulnerabilities_short": "Vul."
     },
     "inspiration": {
       "title": "Heroic Inspiration",
