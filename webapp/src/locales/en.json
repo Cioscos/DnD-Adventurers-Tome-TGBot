@@ -401,6 +401,18 @@
       "reset_confirm_title": "Reset statistics?",
       "reset_confirm_body": "All cumulative counters (including natural 20s and 1s) will go back to zero. The roll history is not affected."
     },
+    "search": {
+      "title": "Search",
+      "placeholder": "Spells, items, abilities, notes…",
+      "hint": "Type at least 2 characters.",
+      "no_results": "No results.",
+      "type_spell": "Spells",
+      "type_item": "Items",
+      "type_ability": "Special abilities",
+      "type_note": "Notes",
+      "cantrip": "cantrip",
+      "spell_level": "lvl {{level}}"
+    },
     "dice_overlay": {
       "open": "Open dice tray",
       "close": "Close dice tray",
