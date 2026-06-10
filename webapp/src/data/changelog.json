@@ -1,6 +1,41 @@
 {
   "entries": [
     {
+      "version": "2.13.2",
+      "date": "2026-06-10",
+      "title": {
+        "it": "Dadi 3D: numeri, fisica e luci",
+        "en": "3D dice: numerals, physics and lighting"
+      },
+      "added": { "it": [], "en": [] },
+      "improved": {
+        "it": [
+          "Illuminazione della scena dei dadi più ricca: luce principale più forte, riempimento laterale e riflessi ambientali — i dettagli delle texture dei pack ora si vedono.",
+          "I valori delle facce seguono i dadi reali: facce opposte che sommano a 7/9/11/13/21 e numeri alti/bassi alternati tra facce vicine."
+        ],
+        "en": [
+          "Richer dice scene lighting: stronger key light, lateral fill and environment reflections — pack texture details now show.",
+          "Face values follow real dice: opposite faces sum to 7/9/11/13/21 with high/low numbers alternating between neighbours."
+        ]
+      },
+      "fixed": {
+        "it": [
+          "I dadi non si compenetrano più: con 5-6 dadi nascevano già sovrapposti e sui display a 120 Hz la simulazione girava a velocità doppia.",
+          "Eliminata la vibrazione dei dadi fermi vicino ai bordi (rimbalzi più realistici e spintarella di rilettura più dolce, diretta verso il centro).",
+          "Numeri sulle facce corretti: il d10 aveva facce non planari che tagliavano le cifre e numeri inclinati di ~19°; ora le cifre sono centrate, allineate alla geometria della faccia e sempre dentro i bordi.",
+          "Il d4 è un vero d4 ad apice: tre cifre per faccia e il risultato si legge dal vertice in alto — prima il valore era ambiguo e il dado si riassestava da solo a ogni lancio.",
+          "Le texture dei pack non sono più specchiate sulle facce (il rilievo delle normal map risultava invertito)."
+        ],
+        "en": [
+          "Dice no longer interpenetrate: with 5-6 dice they used to spawn already overlapping, and on 120 Hz displays the simulation ran at double speed.",
+          "Killed the resting-dice vibration near the edges (more realistic bounces and a gentler re-read nudge aimed at the centre).",
+          "Face numerals fixed: the d10 had non-planar faces cutting the digits and numbers tilted by ~19°; digits are now centred, aligned with the face geometry and always inside the edges.",
+          "The d4 is a true apex d4: three digits per face, the result reads from the top vertex — the value used to be ambiguous, with the die re-settling on every roll.",
+          "Pack textures are no longer mirrored on faces (normal-map relief came out inverted)."
+        ]
+      }
+    },
+    {
       "version": "2.13.1",
       "date": "2026-06-10",
       "title": {
