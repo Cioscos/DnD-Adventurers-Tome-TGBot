@@ -49,6 +49,19 @@
       "none_m": "None",
       "none_f": "None"
     },
+    "quick_actions": {
+      "title": "Quick actions",
+      "edit": "Edit quick actions",
+      "editor_title": "Quick actions",
+      "editor_hint": "Pick up to {{max}} actions to keep one tap away ({{count}}/{{max}}).",
+      "empty_hint": "Use + to pin the rolls you use most: attacks, saving throws and spells.",
+      "max_reached": "Maximum {{max}} quick actions.",
+      "group_weapons": "Weapon attacks",
+      "group_saves": "Saving throws",
+      "group_spells": "Spells",
+      "no_weapons": "No weapons in the inventory.",
+      "no_spells": "No spells in the book."
+    },
     "select": {
       "title": "Your characters",
       "subtitle": "Choose a hero for your adventure",

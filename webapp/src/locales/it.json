@@ -49,6 +49,19 @@
       "none_m": "Nessuno",
       "none_f": "Nessuna"
     },
+    "quick_actions": {
+      "title": "Azioni rapide",
+      "edit": "Modifica azioni rapide",
+      "editor_title": "Azioni rapide",
+      "editor_hint": "Scegli fino a {{max}} azioni da tenere a portata di tap ({{count}}/{{max}}).",
+      "empty_hint": "Aggiungi con + i tiri che usi più spesso: attacchi, tiri salvezza e incantesimi.",
+      "max_reached": "Massimo {{max}} azioni rapide.",
+      "group_weapons": "Attacchi con arma",
+      "group_saves": "Tiri salvezza",
+      "group_spells": "Incantesimi",
+      "no_weapons": "Nessun'arma in inventario.",
+      "no_spells": "Nessun incantesimo nel libro."
+    },
     "select": {
       "title": "I tuoi personaggi",
       "subtitle": "Scegli un eroe per la tua avventura",

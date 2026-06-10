@@ -19,6 +19,7 @@ import ConditionDetailModal from '@/pages/conditions/ConditionDetailModal'
 import PassiveAbilityDetailModal from '@/pages/abilities/PassiveAbilityDetailModal'
 import SpellSlotsSummary from '@/components/character/SpellSlotsSummary'
 import HeroStatsSection from '@/components/character/HeroStatsSection'
+import QuickActions from '@/components/character/QuickActions'
 import type { Ability, CharacterFull } from '@/types'
 import { useUnitSettings, formatWeightValue, weightUnitLabel } from '@/store/unitSettings'
 
@@ -319,6 +320,9 @@ export default function HeroScreen({ char }: Props) {
 
       {/* Summary shortcuts — fills the area left empty after progression/vitals moved out */}
       <HeroStatsSection char={char} />
+
+      {/* Azioni rapide personalizzabili (armi / TS / incantesimi) */}
+      <QuickActions char={char} />
 
       {/* Modals */}
       {detailCondKey !== null && (
