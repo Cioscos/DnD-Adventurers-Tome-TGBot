@@ -1,6 +1,28 @@
 {
   "entries": [
     {
+      "version": "2.12.0",
+      "date": "2026-06-10",
+      "title": {
+        "it": "Azioni rapide",
+        "en": "Quick actions"
+      },
+      "added": {
+        "it": [
+          "Nuova sezione «Azioni rapide» nella schermata principale: appunta fino a 8 tra attacchi con arma, tiri salvezza e incantesimi, e tienili a un tap di distanza.",
+          "Toccare un'arma o un tiro salvezza esegue subito il tiro (con i dadi 3D se attivi nelle impostazioni) e mostra il risultato con il reroll dell'ispirazione; toccare un incantesimo apre il libro già evidenziato.",
+          "Editor con «+»: scegli cosa appuntare da tre elenchi a interruttori; le voci di armi o incantesimi eliminati spariscono da sole."
+        ],
+        "en": [
+          "New “Quick actions” section on the main screen: pin up to 8 weapon attacks, saving throws and spells, and keep them one tap away.",
+          "Tapping a weapon or a saving throw rolls immediately (with 3D dice if enabled in settings) and shows the result with the inspiration reroll; tapping a spell opens the book already highlighted.",
+          "“+” editor: pick what to pin from three toggle lists; entries for deleted weapons or spells clean themselves up."
+        ]
+      },
+      "improved": { "it": [], "en": [] },
+      "fixed": { "it": [], "en": [] }
+    },
+    {
       "version": "2.11.0",
       "date": "2026-06-10",
       "title": {
