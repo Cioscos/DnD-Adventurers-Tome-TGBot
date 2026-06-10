@@ -52,6 +52,9 @@ export default function SpellDamageSheet({
   const [result, setResult] = useState<RollDamageResult | null>(null)
   const [slotConsumed, setSlotConsumed] = useState(false)
   const [showNoSlotWarning, setShowNoSlotWarning] = useState(false)
+  // Mentre i dadi 3D rotolano lo sheet si nasconde: altrimenti l'animazione
+  // resterebbe dietro la modale aperta.
+  const [rolling, setRolling] = useState(false)
 
   // Reset the form whenever a different spell is opened (identity tracked by id).
   const spellId = spell?.id
@@ -112,13 +115,18 @@ export default function SpellDamageSheet({
             extraCount = body.is_critical ? extra.count * 2 : extra.count
             groups.push({ kind: `d${extra.sides}` as DiceKind, count: extraCount })
           }
-          const detected = await dice.playAndCollect(groups)
-          main_rolls = detected.filter((d) => d.groupIndex === 0).map((d) => d.value)
-          if (extraCount > 0) {
-            extra_rolls = detected.filter((d) => d.groupIndex === 1).map((d) => d.value)
+          setRolling(true)
+          try {
+            const detected = await dice.playAndCollect(groups)
+            main_rolls = detected.filter((d) => d.groupIndex === 0).map((d) => d.value)
+            if (extraCount > 0) {
+              extra_rolls = detected.filter((d) => d.groupIndex === 1).map((d) => d.value)
+            }
+            if (main_rolls.length !== mainCount) main_rolls = undefined
+            if (extra_rolls && extra_rolls.length !== extraCount) extra_rolls = undefined
+          } finally {
+            setRolling(false)
           }
-          if (main_rolls.length !== mainCount) main_rolls = undefined
-          if (extra_rolls && extra_rolls.length !== extraCount) extra_rolls = undefined
         }
       }
 
@@ -187,7 +195,7 @@ export default function SpellDamageSheet({
 
   return (
     <Sheet
-      open={!!spell}
+      open={!!spell && !rolling}
       onClose={handleClose}
       title={t('character.spells.roll_damage.title', { name: spell.name })}
     >
@@ -253,10 +261,14 @@ export default function SpellDamageSheet({
             )}
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <div className="bg-dnd-surface border border-dnd-crimson/40 rounded-md p-3 text-center">
+            {/* «Pieno/Metà» ha senso solo per le spell con TS: per gli attacchi
+                la card è una sola, a tutta larghezza, con label «Danno». */}
+            <div className={`bg-dnd-surface border border-dnd-crimson/40 rounded-md p-3 text-center ${isAttack ? 'col-span-2' : ''}`}>
               <Swords size={16} className="mx-auto text-[var(--dnd-crimson-bright)]" />
               <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim mt-1">
-                {t('character.spells.roll_damage.full_damage')}
+                {isAttack
+                  ? t('character.spells.roll_damage.damage')
+                  : t('character.spells.roll_damage.full_damage')}
               </p>
               <p className="text-2xl font-display font-black text-dnd-text mt-0.5">
                 {result.total}

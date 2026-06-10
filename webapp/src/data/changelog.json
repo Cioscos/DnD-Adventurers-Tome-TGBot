@@ -1,6 +1,35 @@
 {
   "entries": [
     {
+      "version": "2.13.1",
+      "date": "2026-06-10",
+      "title": {
+        "it": "Rifiniture su azioni rapide e tiro danni",
+        "en": "Quick actions and damage roll polish"
+      },
+      "added": { "it": [], "en": [] },
+      "improved": {
+        "it": [
+          "Toccare un incantesimo nelle azioni rapide ora scorre la lista fino all'incantesimo, oltre ad aprirlo.",
+          "Nel risultato del tiro danni di un incantesimo di attacco il totale occupa tutta la larghezza con l'etichetta «Danno»; «Pieno/Dimezzato» restano per gli incantesimi con tiro salvezza."
+        ],
+        "en": [
+          "Tapping a spell in the quick actions now scrolls the list to the spell, besides opening it.",
+          "In an attack spell's damage result the total spans the full width labelled “Damage”; “Full/Half” remain for saving-throw spells."
+        ]
+      },
+      "fixed": {
+        "it": [
+          "Le modali di tiro aperte dalle azioni rapide (attacco con arma, tiro salvezza) comparivano fuori posto sulla seconda schermata del carosello, rompendo l'interfaccia.",
+          "Premendo «Rolla» nel tiro danni di un incantesimo, l'animazione 3D dei dadi partiva dietro il pannello ancora aperto: ora il pannello si nasconde durante il lancio e torna col risultato."
+        ],
+        "en": [
+          "Roll modals opened from the quick actions (weapon attack, saving throw) appeared misplaced on the carousel's second screen, breaking the UI.",
+          "Pressing “Roll” in a spell's damage roll started the 3D dice animation behind the still-open sheet: the sheet now hides during the roll and comes back with the result."
+        ]
+      }
+    },
+    {
       "version": "2.13.0",
       "date": "2026-06-10",
       "title": {

@@ -340,13 +340,28 @@ export default function Spells() {
       next.delete(spell.level)
       return next
     })
-    requestAnimationFrame(() => {
+    // Lo scroll va riprovato: al primo frame la riga può non essere ancora
+    // montata (livello appena de-collassato) e l'animazione di espansione
+    // della card (~350ms) sposta il layout dopo il primo scrollIntoView.
+    const scrollToSpell = (behavior: ScrollBehavior) =>
+      spellRefs.current.get(focusId)?.scrollIntoView({ behavior, block: 'center' })
+    let attempts = 0
+    const tryScroll = () => {
       const el = spellRefs.current.get(focusId)
-      el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      const params = new URLSearchParams(searchParams)
-      params.delete('focus')
-      setSearchParams(params, { replace: true })
-    })
+      if (el) {
+        scrollToSpell('smooth')
+      } else if (attempts++ < 10) {
+        requestAnimationFrame(tryScroll)
+      }
+    }
+    requestAnimationFrame(tryScroll)
+    // Secondo passaggio a layout assestato (fine animazione di espansione).
+    // Niente cleanup: il setSearchParams qui sotto rilancia subito l'effetto
+    // e una cleanup cancellerebbe il timer prima che scatti.
+    setTimeout(() => scrollToSpell('smooth'), 450)
+    const params = new URLSearchParams(searchParams)
+    params.delete('focus')
+    setSearchParams(params, { replace: true })
   }, [char, focusId, searchParams, setSearchParams])
 
   if (!char) {
