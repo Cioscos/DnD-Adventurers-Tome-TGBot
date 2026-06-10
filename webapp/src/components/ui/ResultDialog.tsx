@@ -1,4 +1,5 @@
 import React from 'react'
+import { createPortal } from 'react-dom'
 import { m, AnimatePresence } from 'framer-motion'
 import { spring } from '@/styles/motion'
 import { CornerFlourishes } from './Ornament'
@@ -60,7 +61,10 @@ export default function ResultDialog({
         : ''
     : ''
 
-  return (
+  // Portal su document.body: `position: fixed` si rompe dentro antenati con
+  // transform (es. il track del CharacterSwiper, largo 300%) — la modale
+  // finirebbe centrata sulla "pagina 2" del carosello.
+  return createPortal(
     <AnimatePresence>
       {open && (
         <m.div
@@ -119,6 +123,7 @@ export default function ResultDialog({
           </m.div>
         </m.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body,
   )
 }

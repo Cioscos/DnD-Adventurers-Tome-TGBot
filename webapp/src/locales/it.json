@@ -337,6 +337,7 @@
         "critical": "Critico (raddoppia i dadi)",
         "roll_button": "Rolla",
         "full_damage": "Pieno",
+        "damage": "Danno",
         "half_damage": "Dimezzato",
         "close": "Chiudi",
         "reroll": "Nuovo tiro",

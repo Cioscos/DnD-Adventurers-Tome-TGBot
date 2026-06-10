@@ -46,8 +46,9 @@ describe('ResultDialog', () => {
   })
 
   it('applies the accent border and the pulse class', () => {
-    const { container } = render(<ResultDialog open onClose={() => {}} accent="gold" pulse>x</ResultDialog>)
-    const dialog = container.querySelector('.border-2') as HTMLElement
+    render(<ResultDialog open onClose={() => {}} accent="gold" pulse>x</ResultDialog>)
+    // Il dialog è in portal su document.body, non nel container di render.
+    const dialog = document.body.querySelector('.border-2') as HTMLElement
     expect(dialog.className).toContain('border-dnd-gold')
     expect(dialog.className).toContain('animate-pulse-gold')
   })

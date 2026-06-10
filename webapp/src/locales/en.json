@@ -337,6 +337,7 @@
         "critical": "Critical (doubles dice)",
         "roll_button": "Roll",
         "full_damage": "Full",
+        "damage": "Damage",
         "half_damage": "Half",
         "close": "Close",
         "reroll": "Roll again",
