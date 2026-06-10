@@ -7,6 +7,7 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.schemas.common import ConcentrationSaveResult
+from api.services.dice_stats import record_dice
 from core.db.models import Character, CharacterHistory
 from core.game.stats import effective_ability_score
 
@@ -139,6 +140,7 @@ def roll_concentration_save(
     con_mod = con_score.modifier if con_score else 0
 
     die = random.randint(1, 20)
+    record_dice(char, [("d20", die)])
     total = die + con_mod
     is_crit = die == 20
     is_fumble = die == 1

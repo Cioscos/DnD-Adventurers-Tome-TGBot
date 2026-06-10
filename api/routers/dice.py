@@ -15,6 +15,7 @@ from sqlalchemy.orm.attributes import flag_modified
 from api.auth import get_current_user
 from api.database import get_db
 from api.services import telegram_notify
+from api.services.dice_stats import record_dice
 from core.db.models import Character, CharacterHistory
 from api.schemas.common import DiceResultEntry, DiceResultRequest, DiceRollResult
 
@@ -94,6 +95,7 @@ async def post_dice_result(
     })
     char.rolls_history = history[-_MAX_HISTORY:]
     flag_modified(char, "rolls_history")
+    record_dice(char, [(e.kind, e.value) for e in body.rolls])
 
     # Log to CharacterHistory (general events feed) so the roll appears in /history.
     if len(rolls) > 1:

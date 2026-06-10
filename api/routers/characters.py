@@ -43,6 +43,7 @@ from api.schemas.common import D20RollSubmission, RollResult
 from api.routers.classes import create_class_for_character
 from api.routers._helpers import prune_history
 from api.services import telegram_notify
+from api.services.dice_stats import record_dice
 from api.services.character_response import build_character_response
 from api.services.effects import apply_conditions
 from api.services.spell_slots import recalc_spell_slots
@@ -509,6 +510,7 @@ async def roll_skill(
     if body and body.with_inspiration:
         history_msg = f"Reroll ispirazione: {history_msg}"
     _add_history(session, char.id, "skill_roll", history_msg)
+    record_dice(char, [("d20", die)])
     await prune_history(session, char)
 
     return RollResult(
@@ -562,6 +564,7 @@ async def roll_saving_throw(
     if body and body.with_inspiration:
         history_msg = f"Reroll ispirazione: {history_msg}"
     _add_history(session, char.id, "saving_throw", history_msg)
+    record_dice(char, [("d20", die)])
     await prune_history(session, char)
 
     return RollResult(
