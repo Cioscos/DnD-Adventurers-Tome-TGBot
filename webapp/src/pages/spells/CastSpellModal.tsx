@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { Sparkles } from 'lucide-react'
+import { Sparkles, BookOpen } from 'lucide-react'
 import Sheet from '@/components/ui/Sheet'
 import Button from '@/components/ui/Button'
 import type { Spell, SpellSlot } from '@/types'
@@ -7,7 +7,10 @@ import type { Spell, SpellSlot } from '@/types'
 interface CastSpellModalProps {
   spell: Spell
   availableSlots: SpellSlot[]
+  /** True se l'incantesimo è rituale E il PG ha una classe con Ritual Casting. */
+  canRitual: boolean
   onCast: (slotLevel: number) => void
+  onCastRitual: () => void
   onCreateSlot: (level: number) => void
   onCancel: () => void
   isPending: boolean
@@ -17,7 +20,9 @@ interface CastSpellModalProps {
 export default function CastSpellModal({
   spell,
   availableSlots,
+  canRitual,
   onCast,
+  onCastRitual,
   onCreateSlot,
   onCancel,
   isPending,
@@ -63,6 +68,23 @@ export default function CastSpellModal({
             ))
           )}
         </div>
+        {/* Rituale: visibile anche a slot esauriti, un rituale non li richiede. */}
+        {canRitual && (
+          <div className="pt-3 border-t border-dnd-border/60 space-y-2">
+            <p className="text-xs text-dnd-text-muted font-body italic text-center">
+              {t('character.spells.ritual_hint')}
+            </p>
+            <Button
+              variant="secondary"
+              fullWidth
+              icon={<BookOpen size={14} />}
+              onClick={onCastRitual}
+              disabled={isPending}
+            >
+              {t('character.spells.cast_ritual')}
+            </Button>
+          </div>
+        )}
         <Button variant="ghost" fullWidth onClick={onCancel}>
           {t('common.cancel')}
         </Button>

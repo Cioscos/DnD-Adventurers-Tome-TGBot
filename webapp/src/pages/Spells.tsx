@@ -9,6 +9,7 @@ import { api } from '@/api/client'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
+import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import ScrollArea from '@/components/ScrollArea'
 import EmptyState from '@/components/ui/EmptyState'
 import FilterChip from '@/components/ui/FilterChip'
@@ -38,6 +39,10 @@ export default function Spells() {
   const [castingSpell, setCastingSpell] = useState<Spell | null>(null)
   const [rollDamageSpell, setRollDamageSpell] = useState<Spell | null>(null)
   const [pendingSlotLevel, setPendingSlotLevel] = useState<number | null>(null)
+  const [pendingRitual, setPendingRitual] = useState(false)
+  const [confirmCast, setConfirmCast] = useState<
+    { spell: Spell; slotLevel: number | null; ritual: boolean } | null
+  >(null)
   const [collapsedLevels, setCollapsedLevels] = useState<Set<number>>(new Set())
   const [concBannerExpanded, setConcBannerExpanded] = useState(false)
   const [searchParams, setSearchParams] = useSearchParams()
@@ -188,6 +193,16 @@ export default function Spells() {
     onError: () => haptic.error(),
   })
 
+  const castRitualMutation = useMutation({
+    mutationFn: (spell: Spell) => api.spells.use(charId, spell.id, null, true),
+    onSuccess: (updated) => {
+      qc.setQueryData(['character', charId], updated)
+      setCastingSpell(null)
+      haptic.success()
+    },
+    onError: () => haptic.error(),
+  })
+
   const useSlotMutation = useMutation({
     mutationFn: ({ slotId, newUsed }: { slotId: number; newUsed: number }) =>
       api.spellSlots.update(charId, slotId, { used: newUsed }),
@@ -261,18 +276,54 @@ export default function Spells() {
     setShowAdd(true)
   }, [])
 
-  const handleCastSlot = useCallback((slotLevel: number) => {
-    if (!castingSpell) return
-    if (castingSpell.damage_dice) {
+  // Avviso "non preparato": solo per PG con classi preparanti, su livellati.
+  const needsUnpreparedWarn = useCallback((spell: Spell) =>
+    !!spellcasting?.has_preparing_class && spell.level >= 1 && !spell.is_prepared,
+  [spellcasting])
+
+  const proceedSlotCast = useCallback((spell: Spell, slotLevel: number) => {
+    if (spell.damage_dice) {
       // Defer slot consumption to the damage sheet's Roll button.
+      setPendingRitual(false)
       setPendingSlotLevel(slotLevel)
-      setRollDamageSpell(castingSpell)
+      setRollDamageSpell(spell)
       setCastingSpell(null)
       return
     }
     // No damage to roll — consume slot immediately.
-    castMutation.mutate({ spell: castingSpell, slotLevel })
-  }, [castingSpell, castMutation])
+    castMutation.mutate({ spell, slotLevel })
+  }, [castMutation])
+
+  const proceedRitualCast = useCallback((spell: Spell) => {
+    if (spell.damage_dice) {
+      // Defer the ritual cast to the damage sheet's Roll button.
+      setPendingRitual(true)
+      setPendingSlotLevel(null)
+      setRollDamageSpell(spell)
+      setCastingSpell(null)
+      return
+    }
+    castRitualMutation.mutate(spell)
+  }, [castRitualMutation])
+
+  const handleCastSlot = useCallback((slotLevel: number) => {
+    if (!castingSpell) return
+    if (needsUnpreparedWarn(castingSpell)) {
+      setConfirmCast({ spell: castingSpell, slotLevel, ritual: false })
+      return
+    }
+    proceedSlotCast(castingSpell, slotLevel)
+  }, [castingSpell, needsUnpreparedWarn, proceedSlotCast])
+
+  const handleCastRitual = useCallback(() => {
+    if (!castingSpell) return
+    // RAW: il Mago rituala dal libro anche se non preparato, niente avviso.
+    if (needsUnpreparedWarn(castingSpell) && !spellcasting?.has_wizard) {
+      setConfirmCast({ spell: castingSpell, slotLevel: null, ritual: true })
+      return
+    }
+    proceedRitualCast(castingSpell)
+  }, [castingSpell, needsUnpreparedWarn, spellcasting, proceedRitualCast])
 
   const focusParam = searchParams.get('focus')
   const focusId = focusParam ? Number(focusParam) : null
@@ -583,13 +634,33 @@ export default function Spells() {
         <CastSpellModal
           spell={castingSpell}
           availableSlots={availableSlotsFor(castingSpell.level)}
+          canRitual={!!castingSpell.is_ritual && !!spellcasting?.has_ritual_caster}
           onCast={handleCastSlot}
+          onCastRitual={handleCastRitual}
           onCreateSlot={(level) => createSlotMutation.mutate(level)}
           onCancel={() => setCastingSpell(null)}
-          isPending={castMutation.isPending}
+          isPending={castMutation.isPending || castRitualMutation.isPending}
           isCreatingSlot={createSlotMutation.isPending}
         />
       )}
+
+      <ConfirmSheet
+        open={confirmCast !== null}
+        onClose={() => setConfirmCast(null)}
+        title={t('character.spells.unprepared_cast_title')}
+        body={confirmCast
+          ? t('character.spells.unprepared_cast_body', { name: confirmCast.spell.name })
+          : undefined}
+        confirmLabel={t('character.spells.cast_anyway')}
+        cancelLabel={t('common.cancel')}
+        loading={castMutation.isPending || castRitualMutation.isPending}
+        onConfirm={() => {
+          if (!confirmCast) return
+          if (confirmCast.ritual) proceedRitualCast(confirmCast.spell)
+          else if (confirmCast.slotLevel !== null) proceedSlotCast(confirmCast.spell, confirmCast.slotLevel)
+          setConfirmCast(null)
+        }}
+      />
 
       {showAdd && (
         <SpellForm
@@ -604,9 +675,11 @@ export default function Spells() {
         charId={charId}
         spell={rollDamageSpell}
         slotLevel={pendingSlotLevel}
+        asRitual={pendingRitual}
         onClose={() => {
           setRollDamageSpell(null)
           setPendingSlotLevel(null)
+          setPendingRitual(false)
         }}
       />
 
