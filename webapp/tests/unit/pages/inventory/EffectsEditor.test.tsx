@@ -35,8 +35,18 @@ describe('EffectsEditor', () => {
     const onChange = vi.fn()
     const effects: ItemEffect[] = [{ kind: 'heal', amount: '2d4+2' }]
     render(<EffectsEditor effects={effects} onChange={onChange} />)
-    await userEvent.selectOptions(screen.getByLabelText('character.inventory.effects.kind_label'), 'add_condition')
+    await userEvent.click(screen.getByRole('radio', { name: 'character.inventory.effects.kinds.add_condition' }))
     expect(onChange).toHaveBeenCalledWith([{ kind: 'add_condition', condition: 'poisoned' }])
+  })
+
+  it('picking a condition from the SelectSheet emits the updated effect', async () => {
+    const onChange = vi.fn()
+    const effects: ItemEffect[] = [{ kind: 'add_condition', condition: 'poisoned' }]
+    render(<EffectsEditor effects={effects} onChange={onChange} />)
+    // trigger shows the current condition, the sheet lists them all
+    await userEvent.click(screen.getByRole('button', { name: /character\.conditions\.poisoned/ }))
+    await userEvent.click(screen.getByRole('radio', { name: 'character.conditions.blinded' }))
+    expect(onChange).toHaveBeenCalledWith([{ kind: 'add_condition', condition: 'blinded' }])
   })
 
   it('remove drops the effect', async () => {

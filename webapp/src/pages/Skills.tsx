@@ -286,8 +286,11 @@ export default function Skills() {
 
   return (
     <Layout title={t('character.skills.title')} backTo={`/char/${charId}`} group="skills" page="skills">
-      {/* Sticky stats strip — prof bonus + passive perception stay visible on long scroll. */}
-      <div className="sticky top-0 z-10 -mx-4 px-4 pt-2 pb-2 bg-dnd-bg/95 backdrop-blur-sm">
+      {/* Sticky stats strip — prof bonus + passive perception stay visible on long scroll.
+          -top-4 compensa il p-4 del contenitore di scroll del Layout (stesso pattern di
+          Inventory/Spells): con top-0 la barra si fermava 16px sotto il bordo e il
+          contenuto scorreva visibile sopra il pannello blurrato. */}
+      <div className="sticky -top-4 z-10 -mx-4 px-4 pt-2 pb-2 bg-dnd-bg/95 backdrop-blur-sm">
         <Surface variant="elevated" className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <p className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-gold-dim">

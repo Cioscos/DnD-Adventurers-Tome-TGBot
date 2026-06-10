@@ -33,26 +33,32 @@ vi.mock('@/components/DndButton', async () => {
 
 const noop = () => {}
 
+// Drive the SelectSheet class picker: tap the trigger, then tap the option row.
+async function pickClass(optionLabel: string) {
+  await userEvent.click(screen.getByRole('button', { name: /character\.multiclass\.class_name/ }))
+  await userEvent.click(screen.getByRole('radio', { name: optionLabel }))
+}
+
 describe('AddClassForm', () => {
   it('selecting a predefined class auto-fills and locks its hit die', async () => {
     render(<AddClassForm onAdd={noop} onCancel={noop} isPending={false} />)
-    const [classSelect, hitDieSelect] = screen.getAllByRole('combobox')
-    await userEvent.selectOptions(classSelect, 'fighter')
-    expect(hitDieSelect).toBeDisabled()
-    expect(hitDieSelect).toHaveValue('10') // fighter → d10
+    await pickClass('dnd.classes.fighter')
+    const d10 = screen.getByRole('radio', { name: 'd10' })
+    expect(d10).toHaveAttribute('aria-checked', 'true') // fighter → d10
+    expect(d10).toBeDisabled()
   })
 
   it('keeps Add disabled until a class is chosen', async () => {
     render(<AddClassForm onAdd={noop} onCancel={noop} isPending={false} />)
     const add = screen.getByRole('button', { name: 'common.add' })
     expect(add).toBeDisabled()
-    await userEvent.selectOptions(screen.getAllByRole('combobox')[0], 'wizard')
+    await pickClass('dnd.classes.wizard')
     expect(add).toBeEnabled()
   })
 
   it('a custom class needs a name before it can be added', async () => {
     render(<AddClassForm onAdd={noop} onCancel={noop} isPending={false} />)
-    await userEvent.selectOptions(screen.getAllByRole('combobox')[0], '__custom__')
+    await pickClass('character.multiclass.custom_class')
     const add = screen.getByRole('button', { name: 'common.add' })
     expect(add).toBeDisabled()
     fireEvent.change(screen.getByLabelText('character.multiclass.custom_class_name'), { target: { value: 'Warden' } })
@@ -62,9 +68,19 @@ describe('AddClassForm', () => {
   it('submitting emits the assembled class form', async () => {
     const onAdd = vi.fn()
     render(<AddClassForm onAdd={onAdd} onCancel={noop} isPending={false} />)
-    await userEvent.selectOptions(screen.getAllByRole('combobox')[0], 'fighter')
+    await pickClass('dnd.classes.fighter')
     await userEvent.click(screen.getByRole('button', { name: 'common.add' }))
     expect(onAdd).toHaveBeenCalledWith(expect.objectContaining({ class_key: 'fighter', hit_die: '10', level: '1' }))
+  })
+
+  it('a custom class lets the user pick the hit die via chips', async () => {
+    const onAdd = vi.fn()
+    render(<AddClassForm onAdd={onAdd} onCancel={noop} isPending={false} />)
+    await pickClass('character.multiclass.custom_class')
+    fireEvent.change(screen.getByLabelText('character.multiclass.custom_class_name'), { target: { value: 'Warden' } })
+    await userEvent.click(screen.getByRole('radio', { name: 'd12' }))
+    await userEvent.click(screen.getByRole('button', { name: 'common.add' }))
+    expect(onAdd).toHaveBeenCalledWith(expect.objectContaining({ class_key: '__custom__', hit_die: '12' }))
   })
 
   it('cancel calls onCancel', async () => {

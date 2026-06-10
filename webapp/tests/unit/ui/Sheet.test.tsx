@@ -53,4 +53,23 @@ describe('Sheet', () => {
     render(<Sheet open onClose={() => {}} title="T" dismissible={false}>x</Sheet>)
     expect(screen.queryByRole('button', { name: 'Close' })).not.toBeInTheDocument()
   })
+
+  it('Escape only closes the topmost sheet when nested', () => {
+    const onCloseOuter = vi.fn()
+    const onCloseInner = vi.fn()
+    render(
+      <>
+        <Sheet open onClose={onCloseOuter} title="Outer">x</Sheet>
+        <Sheet open onClose={onCloseInner} title="Inner" zClassName="z-[60]">y</Sheet>
+      </>,
+    )
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(onCloseInner).toHaveBeenCalledTimes(1)
+    expect(onCloseOuter).not.toHaveBeenCalled()
+  })
+
+  it('applies the zClassName override to the backdrop wrapper', () => {
+    render(<Sheet open onClose={() => {}} zClassName="z-[60]">x</Sheet>)
+    expect(document.querySelector('.fixed.inset-0')).toHaveClass('z-[60]')
+  })
 })

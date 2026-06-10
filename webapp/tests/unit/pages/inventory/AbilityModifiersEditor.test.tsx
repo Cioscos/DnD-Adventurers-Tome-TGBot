@@ -31,12 +31,42 @@ describe('AbilityModifiersEditor', () => {
     expect(onChange).toHaveBeenLastCalledWith([{ ability: 'strength', kind: 'relative', value: 2 }])
   })
 
-  it('changing the ability emits an updated modifier', async () => {
+  it('renders value 0 as an empty field with a placeholder (no pre-fill)', () => {
+    const mods: AbilityModifier[] = [{ ability: 'strength', kind: 'relative', value: 0 }]
+    render(<AbilityModifiersEditor modifiers={mods} onChange={() => {}} />)
+    const input = screen.getByLabelText('character.inventory.item.modifiers.value')
+    expect(input).toHaveValue(null) // empty number input
+    expect(input).toHaveAttribute('placeholder', '0')
+  })
+
+  it('clearing the field does not snap a 0 back in while typing', () => {
+    const onChange = vi.fn()
+    const mods: AbilityModifier[] = [{ ability: 'strength', kind: 'relative', value: 3 }]
+    render(<AbilityModifiersEditor modifiers={mods} onChange={onChange} />)
+    const input = screen.getByLabelText('character.inventory.item.modifiers.value')
+    fireEvent.change(input, { target: { value: '' } })
+    expect(input).toHaveValue(null) // stays visually empty…
+    expect(onChange).toHaveBeenLastCalledWith([{ ability: 'strength', kind: 'relative', value: 0 }]) // …while 0 is committed
+    fireEvent.change(input, { target: { value: '5' } })
+    expect(onChange).toHaveBeenLastCalledWith([{ ability: 'strength', kind: 'relative', value: 5 }])
+  })
+
+  it('changing the ability via its chip emits an updated modifier', async () => {
     const onChange = vi.fn()
     const mods: AbilityModifier[] = [{ ability: 'strength', kind: 'relative', value: 1 }]
     render(<AbilityModifiersEditor modifiers={mods} onChange={onChange} />)
-    await userEvent.selectOptions(screen.getByLabelText('character.inventory.item.modifiers.ability'), 'dexterity')
+    expect(screen.getByRole('radio', { name: 'character.ability.strength_short' }))
+      .toHaveAttribute('aria-checked', 'true')
+    await userEvent.click(screen.getByRole('radio', { name: 'character.ability.dexterity_short' }))
     expect(onChange).toHaveBeenCalledWith([{ ability: 'dexterity', kind: 'relative', value: 1 }])
+  })
+
+  it('changing the kind via its chip emits an updated modifier', async () => {
+    const onChange = vi.fn()
+    const mods: AbilityModifier[] = [{ ability: 'strength', kind: 'relative', value: 1 }]
+    render(<AbilityModifiersEditor modifiers={mods} onChange={onChange} />)
+    await userEvent.click(screen.getByRole('radio', { name: 'character.inventory.item.modifiers.kind.absolute' }))
+    expect(onChange).toHaveBeenCalledWith([{ ability: 'strength', kind: 'absolute', value: 1 }])
   })
 
   it('remove drops the modifier at its index', async () => {

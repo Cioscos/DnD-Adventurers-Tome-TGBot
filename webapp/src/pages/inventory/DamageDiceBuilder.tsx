@@ -6,10 +6,15 @@ interface DamageDiceBuilderProps {
   /** Notazione canonica, es. "1d8", "2d6+3", "1d6-1". */
   value: string
   onChange: (next: string) => void
+  /** Tagli di dado proposti come chip (default: dadi arma 5e). */
+  dieSizes?: readonly number[]
+  /** Numero massimo di dadi (default 10; le spell arrivano a 12). */
+  maxCount?: number
+  /** Etichetta del campo (default: label inventario). */
+  label?: string
 }
 
 const COUNT_MIN = 1
-const COUNT_MAX = 10
 const MOD_MIN = -5
 const MOD_MAX = 20
 
@@ -47,14 +52,23 @@ function Stepper({ display, onDec, onInc, decDisabled, incDisabled }: StepperPro
   )
 }
 
-export default function DamageDiceBuilder({ value, onChange }: DamageDiceBuilderProps) {
+export default function DamageDiceBuilder({
+  value,
+  onChange,
+  dieSizes = DIE_SIZES,
+  maxCount = 10,
+  label,
+}: DamageDiceBuilderProps) {
   const { t } = useTranslation()
-  const { count, die, mod, unknownDie } = parseDamageDice(value)
+  const { count, die, mod } = parseDamageDice(value)
+  // Fuori-set rispetto ai dadi proposti QUI (non a DIE_SIZES hardcoded):
+  // con dieSizes custom (es. spell con d20) il set di riferimento cambia.
+  const unknownDie = !dieSizes.includes(die)
 
   const emit = (c: number, d: number, m: number) => onChange(serializeDamageDice(c, d, m))
 
   // Mostra il dado fuori-set (es. d20 homebrew) come chip extra, così l'edit non perde dati.
-  const dice: number[] = unknownDie ? [...DIE_SIZES, die] : [...DIE_SIZES]
+  const dice: number[] = unknownDie ? [...dieSizes, die] : [...dieSizes]
 
   const fmtMod = (m: number) => (m > 0 ? `+${m}` : m < 0 ? `${m}` : '+0')
   const preview =
@@ -65,7 +79,7 @@ export default function DamageDiceBuilder({ value, onChange }: DamageDiceBuilder
   return (
     <div>
       <label className="block text-[11px] uppercase tracking-wider mb-2 font-cinzel font-bold text-dnd-gold-dim">
-        {t('character.inventory.damage_dice_label')}
+        {label ?? t('character.inventory.damage_dice_label')}
       </label>
 
       {/* N° dadi */}
@@ -76,9 +90,9 @@ export default function DamageDiceBuilder({ value, onChange }: DamageDiceBuilder
         <Stepper
           display={String(count)}
           onDec={() => emit(Math.max(COUNT_MIN, count - 1), die, mod)}
-          onInc={() => emit(Math.min(COUNT_MAX, count + 1), die, mod)}
+          onInc={() => emit(Math.min(maxCount, count + 1), die, mod)}
           decDisabled={count <= COUNT_MIN}
-          incDisabled={count >= COUNT_MAX}
+          incDisabled={count >= maxCount}
         />
       </div>
 

@@ -9,7 +9,8 @@ import Surface from '@/components/ui/Surface'
 import { CornerFlourishes } from '@/components/ui/Ornament'
 import Button from '@/components/ui/Button'
 import { haptic } from '@/auth/telegram'
-import { PREDEFINED_CLASSES, CUSTOM_KEY } from '@/pages/multiclass/addClass.utils'
+import SelectSheet from '@/components/ui/SelectSheet'
+import { PREDEFINED_CLASSES, CUSTOM_KEY, classOptions } from '@/pages/multiclass/addClass.utils'
 import { unmetPrereqGroups, type AbilityKey } from '@/data/multiclassPrereqs'
 import { diffResourceMaxes } from '@/lib/resourceDiff'
 import { useRegisterOverlay } from '@/store/overlayStore'
@@ -195,8 +196,6 @@ export default function EditClassesModal({ char, targetLevel, onClose }: Props) 
     },
   })
 
-  const classPickerKeys = Object.keys(PREDEFINED_CLASSES)
-
   // Non-blocking multiclass prerequisite advisory for the currently picked class.
   const pickerUnmet = useMemo(() => {
     if (!pickerKey || pickerKey === CUSTOM_KEY) return []
@@ -368,21 +367,14 @@ export default function EditClassesModal({ char, targetLevel, onClose }: Props) 
               </div>
 
               <div className="space-y-3">
-                <select
+                <SelectSheet
+                  title={t('character.multiclass.class_name')}
+                  options={classOptions(t)}
                   value={pickerKey}
-                  onChange={(ev) => setPickerKey(ev.target.value)}
-                  className="w-full bg-dnd-surface rounded-xl px-3 py-2 min-h-[44px] outline-none"
-                >
-                  <option value="" disabled>
-                    {t('character.multiclass.class_name')}
-                  </option>
-                  {classPickerKeys.map((k) => (
-                    <option key={k} value={k}>
-                      {t(`dnd.classes.${k}`)}
-                    </option>
-                  ))}
-                  <option value={CUSTOM_KEY}>{t('character.multiclass.custom_class')}</option>
-                </select>
+                  onChange={setPickerKey}
+                  placeholder={t('character.multiclass.class_name')}
+                  zClassName="z-[70]"
+                />
 
                 {pickerKey === CUSTOM_KEY && (
                   <input

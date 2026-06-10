@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -17,6 +17,7 @@ import SectionDivider from '@/components/ui/SectionDivider'
 import { haptic } from '@/auth/telegram'
 import { useUnitSettings, formatLength, oppositeSystem, feetToDisplay, displayToFeet, unitLabel } from '@/store/unitSettings'
 import languagesSrd from '@/data/languages-srd.json'
+import { DAMAGE_TYPES } from '@/pages/inventory/itemMetadata'
 import IdentitySkeleton from '@/components/skeletons/IdentitySkeleton'
 
 const LANGUAGE_SUGGESTIONS = [...languagesSrd.common, ...languagesSrd.exotic]
@@ -60,6 +61,15 @@ export default function Identity() {
     queryKey: ['character', charId],
     queryFn: () => api.characters.get(charId),
   })
+
+  // Tipi di danno 5e tradotti come suggerimenti per resistenze/immunità/
+  // vulnerabilità (stessa fonte dei picker inventario; il testo libero resta
+  // possibile per i casi homebrew, es. "Danni non magici").
+  const dmgSuggestions = useMemo(
+    () => DAMAGE_TYPES.filter((d) => d !== 'dmg_other')
+      .map((d) => t(`character.inventory.damage_types.${d}`)),
+    [t],
+  )
 
   useEffect(() => {
     if (char && !draft) {
@@ -327,6 +337,7 @@ export default function Identity() {
                   placeholder={t('character.identity.damage_type_placeholder')}
                   splitOnComma
                   normalize={(raw) => raw.trim()}
+                  suggestions={dmgSuggestions}
                 />
               </div>
             )

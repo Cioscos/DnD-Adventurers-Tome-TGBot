@@ -39,3 +39,12 @@ export const emptyClass: ClassForm = {
 export function resolveClassName(form: ClassForm): string {
   return form.class_key === CUSTOM_KEY ? form.custom_name.trim() : form.class_key
 }
+
+/** Options for the class SelectSheet — shared by AddClassForm and
+ *  EditClassesModal so the two pickers always list the same classes. */
+export function classOptions(t: (key: string) => string): { value: string; label: string }[] {
+  return [
+    ...Object.keys(PREDEFINED_CLASSES).map((key) => ({ value: key, label: t(`dnd.classes.${key}`) })),
+    { value: CUSTOM_KEY, label: t('character.multiclass.custom_class') },
+  ]
+}
