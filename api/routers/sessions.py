@@ -34,6 +34,7 @@ from api.schemas.session import (
     SessionMessageCreate,
     SessionMessageRead,
 )
+from api.services import telegram_notify
 from api.services.encounter_view import build_encounter_block
 from core.db.models import (
     Character,
@@ -739,6 +740,14 @@ async def gm_grant_item(
             item_id=granted_item_id,
             status="ok",
         ))
+
+        if telegram_notify.notifications_enabled(char, "gm_events"):
+            await telegram_notify.send_telegram_message(
+                rid,
+                f"🎁 Il GM ti ha consegnato: {body.item.name} (×{body.item.quantity})",
+                button=("Apri l'inventario",
+                        telegram_notify.miniapp_url(f"/char/{char.id}/inventory")),
+            )
 
     _touch(session_obj)
     await db.flush()

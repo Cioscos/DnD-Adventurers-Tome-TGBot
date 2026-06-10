@@ -453,13 +453,41 @@ async def patch_combatant(
         comb.current_hp = max(0, min(body.current_hp, cap))
         if comb.current_hp == 0 and comb.kind == "monster":
             comb.is_dead = True
+    conditions_changed = False
     if body.conditions is not None:
+        conditions_changed = (comb.conditions or {}) != body.conditions
         comb.conditions = body.conditions
     if body.is_dead is not None:        # override esplicito del GM, vince sull'auto
         comb.is_dead = body.is_dead
 
     _touch(session)
     await db.flush()
+
+    # Notifica best-effort al proprietario del PG (categoria gm_events)
+    if (
+        conditions_changed
+        and comb.kind == "pc"
+        and comb.owner_user_id
+        and comb.owner_user_id != user_id
+    ):
+        rec_char = (
+            await db.get(Character, comb.character_id)
+            if comb.character_id is not None else None
+        )
+        if telegram_notify.notifications_enabled(rec_char, "gm_events"):
+            active = ", ".join(sorted(
+                k for k, v in (comb.conditions or {}).items() if v))
+            text = (
+                f"🌀 Il GM ha aggiornato le condizioni di {comb.name}: {active}"
+                if active
+                else f"🌀 Il GM ha rimosso le condizioni di {comb.name}"
+            )
+            await telegram_notify.send_telegram_message(
+                comb.owner_user_id, text,
+                button=("Apri la sessione",
+                        telegram_notify.miniapp_url(f"/session/{session_id}")),
+            )
+
     return build_encounter_block(enc, viewer_is_gm=True)
 
 
