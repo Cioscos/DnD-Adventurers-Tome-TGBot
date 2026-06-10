@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Plus, X } from 'lucide-react'
 import ChipSelect from '@/components/ui/ChipSelect'
@@ -20,6 +21,10 @@ export default function AbilityModifiersEditor({
   onChange,
 }: AbilityModifiersEditorProps) {
   const { t } = useTranslation()
+  // Raw text per row while the user types: a controlled number would force a
+  // "0" back into the field as soon as it's cleared (no pre-fill convention —
+  // value 0 renders as an empty field with a "0" placeholder).
+  const [drafts, setDrafts] = useState<Record<number, string>>({})
 
   const add = () => {
     onChange([
@@ -35,7 +40,28 @@ export default function AbilityModifiersEditor({
   }
 
   const remove = (index: number) => {
+    // Drafts are keyed by row index: drop them all so they can't shift onto
+    // the wrong row after the removal.
+    setDrafts({})
     onChange(modifiers.filter((_, i) => i !== index))
+  }
+
+  const displayValue = (index: number, value: number) =>
+    drafts[index] ?? (value === 0 ? '' : String(value))
+
+  const changeValue = (index: number, raw: string) => {
+    setDrafts((d) => ({ ...d, [index]: raw }))
+    const parsed = parseInt(raw, 10)
+    update(index, { value: Number.isNaN(parsed) ? 0 : parsed })
+  }
+
+  const commitValue = (index: number) => {
+    // On blur fall back to the canonical number (normalizes "05" → "5").
+    setDrafts((d) => {
+      const next = { ...d }
+      delete next[index]
+      return next
+    })
   }
 
   return (
@@ -73,9 +99,11 @@ export default function AbilityModifiersEditor({
             />
             <input
               type="number"
-              value={m.value}
-              onChange={(e) => update(i, { value: parseInt(e.target.value, 10) || 0 })}
-              className="flex-1 min-w-0 min-h-[44px] bg-dnd-surface border border-dnd-border rounded-md px-2 py-1 text-sm text-center font-mono"
+              value={displayValue(i, m.value)}
+              onChange={(e) => changeValue(i, e.target.value)}
+              onBlur={() => commitValue(i)}
+              placeholder="0"
+              className="flex-1 min-w-0 min-h-[44px] bg-dnd-surface border border-dnd-border rounded-md px-2 py-1 text-sm text-center font-mono placeholder:text-dnd-text-faint"
               aria-label={t('character.inventory.item.modifiers.value')}
             />
             <button

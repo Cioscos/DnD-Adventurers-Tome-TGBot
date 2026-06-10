@@ -31,6 +31,26 @@ describe('AbilityModifiersEditor', () => {
     expect(onChange).toHaveBeenLastCalledWith([{ ability: 'strength', kind: 'relative', value: 2 }])
   })
 
+  it('renders value 0 as an empty field with a placeholder (no pre-fill)', () => {
+    const mods: AbilityModifier[] = [{ ability: 'strength', kind: 'relative', value: 0 }]
+    render(<AbilityModifiersEditor modifiers={mods} onChange={() => {}} />)
+    const input = screen.getByLabelText('character.inventory.item.modifiers.value')
+    expect(input).toHaveValue(null) // empty number input
+    expect(input).toHaveAttribute('placeholder', '0')
+  })
+
+  it('clearing the field does not snap a 0 back in while typing', () => {
+    const onChange = vi.fn()
+    const mods: AbilityModifier[] = [{ ability: 'strength', kind: 'relative', value: 3 }]
+    render(<AbilityModifiersEditor modifiers={mods} onChange={onChange} />)
+    const input = screen.getByLabelText('character.inventory.item.modifiers.value')
+    fireEvent.change(input, { target: { value: '' } })
+    expect(input).toHaveValue(null) // stays visually empty…
+    expect(onChange).toHaveBeenLastCalledWith([{ ability: 'strength', kind: 'relative', value: 0 }]) // …while 0 is committed
+    fireEvent.change(input, { target: { value: '5' } })
+    expect(onChange).toHaveBeenLastCalledWith([{ ability: 'strength', kind: 'relative', value: 5 }])
+  })
+
   it('changing the ability via its chip emits an updated modifier', async () => {
     const onChange = vi.fn()
     const mods: AbilityModifier[] = [{ ability: 'strength', kind: 'relative', value: 1 }]
