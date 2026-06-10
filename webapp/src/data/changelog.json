@@ -1,6 +1,28 @@
 {
   "entries": [
     {
+      "version": "2.13.3",
+      "date": "2026-06-10",
+      "title": {
+        "it": "Fix ricerca globale",
+        "en": "Global search fix"
+      },
+      "added": { "it": [], "en": [] },
+      "improved": { "it": [], "en": [] },
+      "fixed": {
+        "it": [
+          "La ricerca globale del personaggio mandava in crash l'app (schermo bianco e tastiera chiusa) appena digitati i 2 caratteri minimi, se il personaggio aveva delle note: il nuovo formato delle note non era gestito dal motore di ricerca.",
+          "Le note vocali non compaiono più tra i risultati per il nome tecnico del file audio: ora si cercano solo per titolo.",
+          "Se l'app incontra un errore imprevisto, ora mostra una schermata di errore con un pulsante «Ricarica» invece di restare su uno schermo bianco irrecuperabile."
+        ],
+        "en": [
+          "The global character search crashed the app (white screen, keyboard dismissed) as soon as the 2 minimum characters were typed, if the character had notes: the search engine did not handle the new note format.",
+          "Voice notes no longer surface in results via their technical audio file name: they now match by title only.",
+          "When the app hits an unexpected error, it now shows an error screen with a “Reload” button instead of an unrecoverable white screen."
+        ]
+      }
+    },
+    {
       "version": "2.13.2",
       "date": "2026-06-10",
       "title": {

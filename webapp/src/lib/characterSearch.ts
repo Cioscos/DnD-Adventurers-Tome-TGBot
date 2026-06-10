@@ -22,6 +22,19 @@ export function normalize(s: string): string {
     .replace(/[̀-ͯ]/g, '')
 }
 
+/** Body testuale di una nota — il BE salva sia stringhe legacy sia dict
+ *  {body, created_at, updated_at, tags} (api/routers/notes.py). I body
+ *  "[VOICE:...]" sono path tecnici delle note vocali, non testo cercabile. */
+function noteBody(value: unknown): string {
+  const body =
+    typeof value === 'string'
+      ? value
+      : typeof value === 'object' && value !== null && typeof (value as { body?: unknown }).body === 'string'
+        ? (value as { body: string }).body
+        : ''
+  return body.startsWith('[VOICE:') ? '' : body
+}
+
 /** Ricerca client-side sui contenuti del personaggio (incantesimi, oggetti,
  *  abilità speciali, note). Match `includes` accent-insensitive sul nome —
  *  per le note anche sul corpo. Max 8 risultati per categoria. */
@@ -30,7 +43,7 @@ export function searchCharacter(char: CharacterFull, query: string): SearchResul
   if (q.length < MIN_QUERY_LENGTH) return []
 
   const results: SearchResult[] = []
-  const matches = (s: string | undefined | null) => !!s && normalize(s).includes(q)
+  const matches = (s: string | undefined | null) => typeof s === 'string' && normalize(s).includes(q)
 
   const spells = (char.spells ?? []).filter((s) => matches(s.name)).slice(0, MAX_PER_TYPE)
   for (const s of spells) {
@@ -65,7 +78,7 @@ export function searchCharacter(char: CharacterFull, query: string): SearchResul
   }
 
   const notes = Object.entries(char.notes ?? {})
-    .filter(([title, body]) => matches(title) || matches(body))
+    .filter(([title, value]) => matches(title) || matches(noteBody(value)))
     .slice(0, MAX_PER_TYPE)
   for (const [title] of notes) {
     results.push({

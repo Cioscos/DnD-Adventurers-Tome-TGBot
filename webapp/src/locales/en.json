@@ -8,6 +8,11 @@
     "confirm": "Confirm",
     "loading": "Loading...",
     "error": "Error",
+    "error_boundary": {
+      "title": "Something went wrong",
+      "message": "An unexpected error occurred. Reload the app to continue your adventure.",
+      "reload": "Reload"
+    },
     "retry": "Retry",
     "add": "Add",
     "edit": "Edit",

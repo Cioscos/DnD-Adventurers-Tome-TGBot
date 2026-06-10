@@ -198,7 +198,11 @@ export interface CharacterFull extends CharacterSummary {
   hp_gained?: number
   concentration_save?: ConcentrationSaveResult | null
   rolls_history?: DiceRollResult[]
-  notes?: Record<string, string>
+  /** Raw dal BE: valore stringa legacy oppure dict {body, created_at, updated_at, tags}. */
+  notes?: Record<
+    string,
+    string | { body?: string; created_at?: string | null; updated_at?: string | null; tags?: string[] }
+  >
   settings?: Record<string, unknown>
   conditions?: Record<string, unknown>
   skills?: Record<string, unknown>
