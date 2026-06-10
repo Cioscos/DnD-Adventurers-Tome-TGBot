@@ -4,6 +4,7 @@ import ModalProvider from './components/ModalProvider'
 import DiceAnimationProvider from './dice/DiceAnimationProvider'
 import DiceOverlay from './components/DiceOverlay'
 import Skeleton from './components/Skeleton'
+import { getDevUserId } from './auth/devUser'
 import { getStartParam } from './auth/telegram'
 import { parseStartParam } from './lib/startParam'
 
@@ -53,6 +54,18 @@ function StartParamRedirect() {
     }
   }, [navigate])
   return null
+}
+
+/** Chip fisso che identifica il tab quando si impersona un utente dev
+ *  (?dev_user=<id>), per non confondere le finestre GM/giocatore. */
+function DevUserBadge() {
+  const devUserId = getDevUserId()
+  if (!devUserId) return null
+  return (
+    <div className="fixed bottom-safe left-2 z-[70] pointer-events-none rounded-full bg-amber-500/90 px-2 py-0.5 text-[10px] font-bold text-black">
+      DEV #{devUserId}
+    </div>
+  )
 }
 
 function PageFallback() {
@@ -108,6 +121,7 @@ export default function App() {
           </Routes>
           </Suspense>
           <DiceOverlay />
+          <DevUserBadge />
         </DiceAnimationProvider>
       </ModalProvider>
     </HashRouter>

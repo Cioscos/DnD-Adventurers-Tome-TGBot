@@ -19,7 +19,7 @@ import time
 from dataclasses import dataclass
 from urllib.parse import parse_qsl, unquote
 
-from fastapi import Header, HTTPException, status
+from fastapi import Depends, Header, HTTPException, status
 
 
 @dataclass(frozen=True)
@@ -135,9 +135,21 @@ def verify_init_data(init_data: str, bot_token: str = _BOT_TOKEN) -> int:
 
 def get_current_telegram_user(
     x_telegram_init_data: str = Header("", alias="X-Telegram-Init-Data"),
+    x_dev_user_id: str = Header("", alias="X-Dev-User-Id"),
 ) -> TelegramUser:
     """FastAPI dependency returning the full verified Telegram user."""
     if _DEV_USER_ID is not None:
+        # Dev-only impersonation: lets a second browser tab act as a different
+        # user (e.g. to test game sessions, which need >=2 distinct users).
+        # Honored exclusively when DEV_USER_ID is set, so it has no effect in
+        # production where initData verification is mandatory.
+        if x_dev_user_id:
+            try:
+                return TelegramUser(
+                    id=int(x_dev_user_id), first_name=f"Dev {x_dev_user_id}"
+                )
+            except ValueError:
+                logger.warning("Ignoring non-numeric X-Dev-User-Id: %r", x_dev_user_id)
         return TelegramUser(id=_DEV_USER_ID, first_name="Dev User", username=None)
     if not x_telegram_init_data:
         logger.warning("Request missing X-Telegram-Init-Data header")
@@ -150,10 +162,10 @@ def get_current_telegram_user(
 
 
 def get_current_user(
-    x_telegram_init_data: str = Header("", alias="X-Telegram-Init-Data"),
+    tg_user: TelegramUser = Depends(get_current_telegram_user),
 ) -> int:
     """FastAPI dependency that returns the verified Telegram user_id."""
-    return get_current_telegram_user(x_telegram_init_data).id
+    return tg_user.id
 
 
 def _normalize_lang(code: str | None) -> str:
@@ -164,7 +176,7 @@ def _normalize_lang(code: str | None) -> str:
 
 
 def get_current_lang(
-    x_telegram_init_data: str = Header("", alias="X-Telegram-Init-Data"),
+    tg_user: TelegramUser = Depends(get_current_telegram_user),
 ) -> str:
     """FastAPI dependency che ritorna la lingua del richiedente ('it'|'en')."""
-    return _normalize_lang(get_current_telegram_user(x_telegram_init_data).language_code)
+    return _normalize_lang(tg_user.language_code)

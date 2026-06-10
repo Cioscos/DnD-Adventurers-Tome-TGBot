@@ -102,7 +102,7 @@ app.add_middleware(
     allow_origins=_ALLOWED_ORIGINS,
     allow_credentials=False,
     allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["X-Telegram-Init-Data", "Content-Type", "Accept"],
+    allow_headers=["X-Telegram-Init-Data", "X-Dev-User-Id", "Content-Type", "Accept"],
 )
 
 # ---------------------------------------------------------------------------

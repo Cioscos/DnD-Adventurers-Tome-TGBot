@@ -5,6 +5,7 @@
  * The base URL is read from VITE_API_BASE_URL (set in .env.local for dev).
  */
 
+import { getDevUserId } from '@/auth/devUser'
 import { getInitData } from '@/auth/telegram'
 import type {
   HomebrewResource,
@@ -130,16 +131,24 @@ export class ApiError extends Error {
   }
 }
 
+function authHeaders(): Record<string, string> {
+  const headers: Record<string, string> = {
+    'X-Telegram-Init-Data': getInitData(),
+  }
+  const devUserId = getDevUserId()
+  if (devUserId) headers['X-Dev-User-Id'] = devUserId
+  return headers
+}
+
 async function request<T>(
   path: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const initData = getInitData()
   const res = await fetch(`${BASE_URL}${path}`, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
-      'X-Telegram-Init-Data': initData,
+      ...authHeaders(),
       ...options.headers,
     },
   })
@@ -155,12 +164,9 @@ async function requestFormData<T>(
   path: string,
   formData: FormData,
 ): Promise<T> {
-  const initData = getInitData()
   const res = await fetch(`${BASE_URL}${path}`, {
     method: 'POST',
-    headers: {
-      'X-Telegram-Init-Data': initData,
-    },
+    headers: authHeaders(),
     body: formData,
   })
   if (!res.ok) {
@@ -178,10 +184,11 @@ function requestFormDataWithProgress<T>(
   onProgress: (pct: number) => void,
 ): Promise<T> {
   return new Promise((resolve, reject) => {
-    const initData = getInitData()
     const xhr = new XMLHttpRequest()
     xhr.open('POST', `${BASE_URL}${path}`)
-    xhr.setRequestHeader('X-Telegram-Init-Data', initData)
+    for (const [name, value] of Object.entries(authHeaders())) {
+      xhr.setRequestHeader(name, value)
+    }
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100))
     }
