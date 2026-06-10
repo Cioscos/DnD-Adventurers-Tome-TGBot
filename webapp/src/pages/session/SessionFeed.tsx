@@ -349,8 +349,22 @@ export default function SessionFeed({
             const mine = it.user_id === myUserId
             const isWhisper = !!it.recipient_user_id
             const recName = isWhisper ? recipientName(it.recipient_user_id ?? null) : null
+            // Legacy grant messages (pre-2.14.0) lack item_name and fall back to raw body.
+            const isGrant = it.item_id != null && !!it.item_name
             const isGrantToMe =
               !!it.item_id && it.recipient_user_id === myUserId && myCharId !== null
+            const grantBody = isGrant
+              ? it.recipient_user_id === myUserId
+                ? t('session.feed.grant_received', {
+                    name: it.item_name,
+                    qty: it.item_quantity ?? 1,
+                  })
+                : t('session.feed.grant_sent', {
+                    recipient: recipientName(it.recipient_user_id ?? null) ?? '',
+                    name: it.item_name,
+                    qty: it.item_quantity ?? 1,
+                  })
+              : null
 
             const bubbleContent = (
               <>
@@ -368,8 +382,8 @@ export default function SessionFeed({
                   </p>
                 )}
                 <p className="whitespace-pre-wrap break-words">
-                  {isGrantToMe && <Gift size={12} className="inline -mt-0.5 mr-1 text-dnd-gold-bright" />}
-                  {it.body}
+                  {isGrant && <Gift size={12} className="inline -mt-0.5 mr-1 text-dnd-gold-bright" />}
+                  {grantBody ?? it.body}
                 </p>
                 {isGrantToMe && (
                   <p className="text-[10px] uppercase tracking-wider mt-1 text-[var(--dnd-amber)]/80 font-cinzel">

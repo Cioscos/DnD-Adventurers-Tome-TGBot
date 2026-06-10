@@ -1208,7 +1208,9 @@
       "item_not_found_toast": "Oggetto non più presente nel tuo inventario"
     },
     "feed": {
-      "grant_chip": "Tocca per aprire nell'inventario"
+      "grant_chip": "Tocca per aprire nell'inventario",
+      "grant_received": "Il GM ti ha consegnato: {{name}} (×{{qty}})",
+      "grant_sent": "Hai consegnato a {{recipient}}: {{name}} (×{{qty}})"
     },
     "combat": {
       "start_encounter": "Inizia combattimento",
@@ -1241,6 +1243,11 @@
       "auto_roll_confirm": "Mancano le iniziative di: {{names}}. Tirarle automaticamente?",
       "next": "Turno successivo",
       "prev": "Turno precedente",
+      "end_my_turn": "Termina turno",
+      "skip_pc_confirm_title": "Saltare il turno?",
+      "skip_pc_confirm_body": "Saltare il turno di {{name}}?",
+      "skip_pc_confirm_cta": "Salta turno",
+      "turn_already_advanced": "Il turno è già passato oltre",
       "end": "Termina",
       "end_confirm": "Terminare il combattimento?",
       "all_monsters_down": "Tutti i nemici sono a terra",

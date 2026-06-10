@@ -399,17 +399,36 @@ async def _turn_endpoint(
 ) -> EncounterLive:
     session = await _load_session(session_id, db)
     _assert_participant(session, user_id)
-    _assert_gm(session, user_id)
+    is_gm = user_id == session.gm_user_id
+    if backward:
+        _assert_gm(session, user_id)
     _assert_session_active(session)
     enc = await _require_open_encounter(session_id, db)
     if enc.status != "active":
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Encounter not active")
+    if not backward and not is_gm:
+        # A player may only end their own PC's turn. This check doubles as the
+        # anti-race guard: a stale "end turn" after the GM already advanced
+        # fails here instead of advancing twice.
+        active = next(
+            (c for c in enc.combatants if c.id == enc.active_combatant_id), None
+        )
+        if (
+            active is None
+            or active.kind != "pc"
+            or active.owner_user_id != user_id
+            or active.is_dead
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={"code": "not_your_turn"},
+            )
     moved = _advance_turn(enc, list(enc.combatants), backward=backward)
     _touch(session)
     await db.flush()
     if moved is not None:
         await _notify_turn(enc, moved)
-    return build_encounter_block(enc, viewer_is_gm=True)
+    return build_encounter_block(enc, viewer_is_gm=is_gm)
 
 
 @router.post("/{session_id}/encounter/next-turn", response_model=EncounterLive)
