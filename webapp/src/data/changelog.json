@@ -1,6 +1,24 @@
 {
   "entries": [
     {
+      "version": "2.14.1",
+      "date": "2026-06-11",
+      "title": {
+        "it": "Dadi 3D: numeri dritti sul d8",
+        "en": "3D dice: upright numbers on the d8"
+      },
+      "added": { "it": [], "en": [] },
+      "improved": { "it": [], "en": [] },
+      "fixed": {
+        "it": [
+          "Dadi 3D: sul d8 i numeri 2, 4, 6 e 8 apparivano ruotati di 60° rispetto alla faccia; ora tutte le cifre seguono l'orientamento dei d8 reali."
+        ],
+        "en": [
+          "3D dice: on the d8 the numbers 2, 4, 6 and 8 appeared rotated by 60° relative to the face; all digits now follow the orientation of real d8 dice."
+        ]
+      }
+    },
+    {
       "version": "2.14.0",
       "date": "2026-06-11",
       "title": {
