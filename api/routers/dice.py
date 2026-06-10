@@ -191,3 +191,25 @@ async def clear_dice_history(
 ) -> None:
     char = await _get_owned(char_id, user_id, session)
     char.rolls_history = []
+
+
+@router.get("/{char_id}/dice/stats")
+async def get_dice_stats(
+    char_id: int,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> dict:
+    """Contatori cumulativi raw {kind: {faccia: conteggio}}; il FE deriva il resto."""
+    char = await _get_owned(char_id, user_id, session)
+    return {"stats": char.dice_stats or {}}
+
+
+@router.delete("/{char_id}/dice/stats", status_code=204)
+async def reset_dice_stats(
+    char_id: int,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> None:
+    char = await _get_owned(char_id, user_id, session)
+    char.dice_stats = {}
+    flag_modified(char, "dice_stats")
