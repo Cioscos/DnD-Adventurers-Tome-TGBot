@@ -387,6 +387,20 @@
         "init": "Iniziativa"
       }
     },
+    "dice_stats": {
+      "title": "Statistiche dei tiri",
+      "empty_title": "Nessun tiro registrato",
+      "empty_hint": "Tira qualche dado: i contatori si accumulano da soli.",
+      "nat20": "Naturali 20",
+      "nat1": "Naturali 1",
+      "total_rolls": "Tiri totali",
+      "rolls_count": "{{count}} tiri",
+      "rolls_count_one": "{{count}} tiro",
+      "average": "media",
+      "reset": "Azzera statistiche",
+      "reset_confirm_title": "Azzerare le statistiche?",
+      "reset_confirm_body": "Tutti i contatori cumulativi (inclusi i naturali 20 e 1) torneranno a zero. La cronologia dei tiri non viene toccata."
+    },
     "dice_overlay": {
       "open": "Apri lanciatore dadi",
       "close": "Chiudi lanciatore",
