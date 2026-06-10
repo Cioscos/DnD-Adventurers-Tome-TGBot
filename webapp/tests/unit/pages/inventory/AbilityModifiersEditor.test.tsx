@@ -31,12 +31,22 @@ describe('AbilityModifiersEditor', () => {
     expect(onChange).toHaveBeenLastCalledWith([{ ability: 'strength', kind: 'relative', value: 2 }])
   })
 
-  it('changing the ability emits an updated modifier', async () => {
+  it('changing the ability via its chip emits an updated modifier', async () => {
     const onChange = vi.fn()
     const mods: AbilityModifier[] = [{ ability: 'strength', kind: 'relative', value: 1 }]
     render(<AbilityModifiersEditor modifiers={mods} onChange={onChange} />)
-    await userEvent.selectOptions(screen.getByLabelText('character.inventory.item.modifiers.ability'), 'dexterity')
+    expect(screen.getByRole('radio', { name: 'character.ability.strength_short' }))
+      .toHaveAttribute('aria-checked', 'true')
+    await userEvent.click(screen.getByRole('radio', { name: 'character.ability.dexterity_short' }))
     expect(onChange).toHaveBeenCalledWith([{ ability: 'dexterity', kind: 'relative', value: 1 }])
+  })
+
+  it('changing the kind via its chip emits an updated modifier', async () => {
+    const onChange = vi.fn()
+    const mods: AbilityModifier[] = [{ ability: 'strength', kind: 'relative', value: 1 }]
+    render(<AbilityModifiersEditor modifiers={mods} onChange={onChange} />)
+    await userEvent.click(screen.getByRole('radio', { name: 'character.inventory.item.modifiers.kind.absolute' }))
+    expect(onChange).toHaveBeenCalledWith([{ ability: 'strength', kind: 'absolute', value: 1 }])
   })
 
   it('remove drops the modifier at its index', async () => {

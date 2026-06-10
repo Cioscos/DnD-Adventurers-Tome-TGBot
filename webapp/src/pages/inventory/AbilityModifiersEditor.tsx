@@ -1,11 +1,14 @@
 import { useTranslation } from 'react-i18next'
 import { Plus, X } from 'lucide-react'
+import ChipSelect from '@/components/ui/ChipSelect'
 import type { AbilityModifier, AbilityName, AbilityModifierKind } from '@/types'
 
 const ABILITY_ORDER: AbilityName[] = [
   'strength', 'dexterity', 'constitution',
   'intelligence', 'wisdom', 'charisma',
 ]
+
+const KINDS: AbilityModifierKind[] = ['relative', 'absolute']
 
 interface AbilityModifiersEditorProps {
   modifiers: AbilityModifier[]
@@ -46,43 +49,44 @@ export default function AbilityModifiersEditor({
         </p>
       )}
       {modifiers.map((m, i) => (
-        <div key={i} className="flex items-center gap-2">
-          <select
+        <div key={i} className="rounded-xl border border-dnd-border p-3 space-y-2.5">
+          <ChipSelect
+            label={t('character.inventory.item.modifiers.ability')}
+            options={ABILITY_ORDER.map((ab) => ({
+              value: ab,
+              label: t(`character.ability.${ab}_short`),
+            }))}
             value={m.ability}
-            onChange={(e) => update(i, { ability: e.target.value as AbilityName })}
-            className="flex-1 bg-dnd-surface border border-dnd-border rounded-md px-2 py-1 text-sm"
-            aria-label={t('character.inventory.item.modifiers.ability')}
-          >
-            {ABILITY_ORDER.map((ab) => (
-              <option key={ab} value={ab}>
-                {t(`character.ability.${ab}_short`)}
-              </option>
-            ))}
-          </select>
-          <select
-            value={m.kind}
-            onChange={(e) => update(i, { kind: e.target.value as AbilityModifierKind })}
-            className="bg-dnd-surface border border-dnd-border rounded-md px-2 py-1 text-sm"
-            aria-label={t('character.inventory.item.modifiers.kind_label')}
-          >
-            <option value="relative">{t('character.inventory.item.modifiers.kind.relative')}</option>
-            <option value="absolute">{t('character.inventory.item.modifiers.kind.absolute')}</option>
-          </select>
-          <input
-            type="number"
-            value={m.value}
-            onChange={(e) => update(i, { value: parseInt(e.target.value, 10) || 0 })}
-            className="w-20 bg-dnd-surface border border-dnd-border rounded-md px-2 py-1 text-sm text-center font-mono"
-            aria-label={t('character.inventory.item.modifiers.value')}
+            onChange={(v) => update(i, { ability: v as AbilityName })}
+            columns={3}
           />
-          <button
-            type="button"
-            onClick={() => remove(i)}
-            className="text-dnd-text-muted hover:text-[var(--dnd-crimson-bright)] transition-colors p-1"
-            aria-label={t('character.inventory.item.modifiers.remove')}
-          >
-            <X size={16} />
-          </button>
+          <div className="flex items-end gap-2">
+            <ChipSelect
+              className="shrink-0"
+              label={t('character.inventory.item.modifiers.kind_label')}
+              options={KINDS.map((k) => ({
+                value: k,
+                label: t(`character.inventory.item.modifiers.kind.${k}`),
+              }))}
+              value={m.kind}
+              onChange={(v) => update(i, { kind: v as AbilityModifierKind })}
+            />
+            <input
+              type="number"
+              value={m.value}
+              onChange={(e) => update(i, { value: parseInt(e.target.value, 10) || 0 })}
+              className="flex-1 min-w-0 min-h-[44px] bg-dnd-surface border border-dnd-border rounded-md px-2 py-1 text-sm text-center font-mono"
+              aria-label={t('character.inventory.item.modifiers.value')}
+            />
+            <button
+              type="button"
+              onClick={() => remove(i)}
+              className="shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center text-dnd-text-muted hover:text-[var(--dnd-crimson-bright)] transition-colors"
+              aria-label={t('character.inventory.item.modifiers.remove')}
+            >
+              <X size={16} />
+            </button>
+          </div>
         </div>
       ))}
       <button

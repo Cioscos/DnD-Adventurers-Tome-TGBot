@@ -4,13 +4,13 @@ import Sheet from '@/components/ui/Sheet'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
 import WizardFooter from '@/components/ui/WizardFooter'
+import DamageTypePicker from '@/components/ui/DamageTypePicker'
 import DamageDiceBuilder from './DamageDiceBuilder'
 import { getItemTypeIcon } from '@/lib/itemIcons'
 import AbilityModifiersEditor from './AbilityModifiersEditor'
 import EffectsEditor from './EffectsEditor'
 import {
   ITEM_TYPES,
-  DAMAGE_TYPES,
   WEAPON_PROPERTIES,
   ARMOR_TYPES,
   WEAPON_TYPES,
@@ -30,9 +30,6 @@ interface ItemFormProps {
   onCancel: () => void
   isPending: boolean
 }
-
-const SELECT_CLS =
-  'w-full px-3 py-2.5 min-h-[48px] rounded-lg bg-dnd-surface text-dnd-text border-b-2 border-dnd-border outline-none font-body text-sm'
 
 type WizardStep = 'type' | 'base' | 'advanced'
 
@@ -196,22 +193,12 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
               onChange={(v) => setForm((f) => ({ ...f, damage_dice: v }))}
             />
 
-            <div>
-              <label className="block text-[11px] uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
-                {t('character.inventory.damage_type_label')}
-              </label>
-              <select
-                value={form.damage_type}
-                onChange={(e) => setForm((f) => ({ ...f, damage_type: e.target.value }))}
-                className={SELECT_CLS}
-              >
-                {DAMAGE_TYPES.map((dt) => (
-                  <option key={dt} value={dt}>
-                    {t(`character.inventory.damage_types.${dt}`)}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <DamageTypePicker
+              label={t('character.inventory.damage_type_label')}
+              value={form.damage_type}
+              onChange={(v) => setForm((f) => ({ ...f, damage_type: v }))}
+              valueFormat="item"
+            />
 
             <div>
               <label className="block text-[11px] uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">

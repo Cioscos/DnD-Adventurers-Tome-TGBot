@@ -1,5 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { Plus, X } from 'lucide-react'
+import ChipSelect from '@/components/ui/ChipSelect'
+import SelectSheet from '@/components/ui/SelectSheet'
 import {
   EFFECT_KINDS,
   CONDITION_SLUGS,
@@ -11,9 +13,6 @@ interface EffectsEditorProps {
   effects: ItemEffect[]
   onChange: (next: ItemEffect[]) => void
 }
-
-const FIELD_CLS =
-  'bg-dnd-surface border border-dnd-border rounded-md px-2 py-1 text-sm'
 
 function defaultEffect(kind: EffectKind): ItemEffect {
   if (kind === 'heal') return { kind: 'heal', amount: '2d4+2' }
@@ -30,6 +29,11 @@ export default function EffectsEditor({ effects, onChange }: EffectsEditorProps)
 
   const changeKind = (i: number, kind: EffectKind) => update(i, defaultEffect(kind))
 
+  const conditionOptions = CONDITION_SLUGS.map((c) => ({
+    value: c,
+    label: t(`character.conditions.${c}`, { defaultValue: c }),
+  }))
+
   return (
     <div className="space-y-2">
       <label className="block text-[11px] uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
@@ -41,17 +45,27 @@ export default function EffectsEditor({ effects, onChange }: EffectsEditorProps)
         </p>
       )}
       {effects.map((e, i) => (
-        <div key={i} className="flex items-center gap-2">
-          <select
-            value={e.kind}
-            onChange={(ev) => changeKind(i, ev.target.value as EffectKind)}
-            className={`${FIELD_CLS} flex-1`}
-            aria-label={t('character.inventory.effects.kind_label')}
-          >
-            {EFFECT_KINDS.map((k) => (
-              <option key={k} value={k}>{t(`character.inventory.effects.kinds.${k}`)}</option>
-            ))}
-          </select>
+        <div key={i} className="rounded-xl border border-dnd-border p-3 space-y-2.5">
+          <div className="flex items-start gap-2">
+            <ChipSelect
+              className="flex-1 min-w-0"
+              label={t('character.inventory.effects.kind_label')}
+              options={EFFECT_KINDS.map((k) => ({
+                value: k,
+                label: t(`character.inventory.effects.kinds.${k}`),
+              }))}
+              value={e.kind}
+              onChange={(v) => changeKind(i, v as EffectKind)}
+            />
+            <button
+              type="button"
+              onClick={() => remove(i)}
+              className="shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center text-dnd-text-muted hover:text-[var(--dnd-crimson-bright)] transition-colors"
+              aria-label={t('common.remove', { defaultValue: 'Rimuovi' })}
+            >
+              <X size={16} />
+            </button>
+          </div>
 
           {e.kind === 'heal' ? (
             <input
@@ -59,30 +73,18 @@ export default function EffectsEditor({ effects, onChange }: EffectsEditorProps)
               value={e.amount}
               onChange={(ev) => update(i, { kind: 'heal', amount: ev.target.value })}
               placeholder="2d4+2"
-              className={`${FIELD_CLS} w-28 text-center font-mono`}
+              className="w-28 min-h-[44px] bg-dnd-surface border border-dnd-border rounded-md px-2 py-1 text-sm text-center font-mono"
               aria-label={t('character.inventory.effects.amount_label')}
             />
           ) : (
-            <select
+            <SelectSheet
+              label={t('character.inventory.effects.condition_label')}
+              options={conditionOptions}
               value={e.condition}
-              onChange={(ev) => update(i, { kind: e.kind, condition: ev.target.value })}
-              className={`${FIELD_CLS} flex-1`}
-              aria-label={t('character.inventory.effects.condition_label')}
-            >
-              {CONDITION_SLUGS.map((c) => (
-                <option key={c} value={c}>{t(`character.conditions.${c}`, { defaultValue: c })}</option>
-              ))}
-            </select>
+              onChange={(v) => update(i, { kind: e.kind, condition: v })}
+              placeholder={t('common.select')}
+            />
           )}
-
-          <button
-            type="button"
-            onClick={() => remove(i)}
-            className="shrink-0 min-h-[44px] min-w-[44px] -my-2 flex items-center justify-center text-dnd-text-muted hover:text-[var(--dnd-crimson-bright)] transition-colors"
-            aria-label={t('common.remove', { defaultValue: 'Rimuovi' })}
-          >
-            <X size={16} />
-          </button>
         </div>
       ))}
       <button
