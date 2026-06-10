@@ -8,11 +8,9 @@ Spec: docs/superpowers/specs/2026-06-09-combat-tracker-design.md
 from __future__ import annotations
 
 import logging
-import os
 import random
 from typing import Annotated, Optional
 
-import httpx
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -30,6 +28,7 @@ from api.schemas.encounter import (
     InitiativeRollRequest,
     ReorderRequest,
 )
+from api.services import telegram_notify
 from api.services.encounter_view import build_encounter_block
 from core.db.models import (
     Character,
@@ -45,8 +44,6 @@ from core.game.stats import effective_ability_score
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/sessions", tags=["encounters"])
-
-_BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
 
 
 # ---------------------------------------------------------------------------
@@ -166,6 +163,30 @@ def _advance_turn(
     return None
 
 
+async def _notify_encounter_opened(
+    session: GameSession, gm_user_id: int, db: AsyncSession
+) -> None:
+    """Best-effort 'encounter opened' ping to every player of the session."""
+    players = [
+        p for p in session.participants
+        if p.role == SessionRole.PLAYER and p.user_id != gm_user_id
+    ]
+    char_ids = [p.character_id for p in players if p.character_id is not None]
+    chars_by_id: dict[int, Character] = {}
+    if char_ids:
+        res = await db.execute(select(Character).where(Character.id.in_(char_ids)))
+        chars_by_id = {c.id: c for c in res.scalars()}
+    url = telegram_notify.miniapp_url(f"/session/{session.id}")
+    for p in players:
+        rec_char = chars_by_id.get(p.character_id) if p.character_id else None
+        if not telegram_notify.notifications_enabled(rec_char, "encounter"):
+            continue
+        await telegram_notify.send_telegram_message(
+            p.user_id, "⚔️ Incontro iniziato — tira l'iniziativa!",
+            button=("Apri la sessione", url),
+        )
+
+
 def _system_feed_message(session: GameSession, body: str) -> SessionMessage:
     return SessionMessage(
         session_id=session.id,
@@ -179,19 +200,14 @@ def _system_feed_message(session: GameSession, body: str) -> SessionMessage:
 
 async def _notify_turn(enc: Encounter, combatant: Combatant) -> None:
     """Fire-and-forget 'your turn' ping to the PC owner's private chat."""
-    if combatant.kind != "pc" or not combatant.owner_user_id or not _BOT_TOKEN:
+    if combatant.kind != "pc" or not combatant.owner_user_id:
         return
-    text = f"⚔️ Tocca a te! Round {enc.round} — {combatant.name}"
-    try:
-        async with httpx.AsyncClient(timeout=10) as client:
-            resp = await client.post(
-                f"https://api.telegram.org/bot{_BOT_TOKEN}/sendMessage",
-                json={"chat_id": combatant.owner_user_id, "text": text},
-            )
-        if not resp.is_success:
-            logger.warning("turn notification failed: %s %s", resp.status_code, resp.text)
-    except Exception as exc:  # noqa: BLE001 — il turno avanza comunque
-        logger.warning("turn notification error: %s", exc)
+    await telegram_notify.send_telegram_message(
+        combatant.owner_user_id,
+        f"⚔️ Tocca a te! Round {enc.round} — {combatant.name}",
+        button=("Apri la sessione",
+                telegram_notify.miniapp_url(f"/session/{enc.session_id}")),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -228,6 +244,7 @@ async def create_encounter(
     _touch(session)
     await db.flush()
     await db.refresh(enc, attribute_names=["combatants"])
+    await _notify_encounter_opened(session, user_id, db)
     return build_encounter_block(enc, viewer_is_gm=True)
 
 
@@ -461,13 +478,41 @@ async def patch_combatant(
         comb.current_hp = max(0, min(body.current_hp, cap))
         if comb.current_hp == 0 and comb.kind == "monster":
             comb.is_dead = True
+    conditions_changed = False
     if body.conditions is not None:
+        conditions_changed = (comb.conditions or {}) != body.conditions
         comb.conditions = body.conditions
     if body.is_dead is not None:        # override esplicito del GM, vince sull'auto
         comb.is_dead = body.is_dead
 
     _touch(session)
     await db.flush()
+
+    # Notifica best-effort al proprietario del PG (categoria gm_events)
+    if (
+        conditions_changed
+        and comb.kind == "pc"
+        and comb.owner_user_id
+        and comb.owner_user_id != user_id
+    ):
+        rec_char = (
+            await db.get(Character, comb.character_id)
+            if comb.character_id is not None else None
+        )
+        if telegram_notify.notifications_enabled(rec_char, "gm_events"):
+            active = ", ".join(sorted(
+                k for k, v in (comb.conditions or {}).items() if v))
+            text = (
+                f"🌀 Il GM ha aggiornato le condizioni di {comb.name}: {active}"
+                if active
+                else f"🌀 Il GM ha rimosso le condizioni di {comb.name}"
+            )
+            await telegram_notify.send_telegram_message(
+                comb.owner_user_id, text,
+                button=("Apri la sessione",
+                        telegram_notify.miniapp_url(f"/session/{session_id}")),
+            )
+
     return build_encounter_block(enc, viewer_is_gm=True)
 
 

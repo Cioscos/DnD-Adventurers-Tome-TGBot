@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
-import { Settings2, Languages, RefreshCw, Eye, Sun, History, Coins, Trash2, BookmarkCheck } from 'lucide-react'
+import { Settings2, Languages, RefreshCw, Eye, Sun, History, Coins, Trash2, BookmarkCheck, Bell } from 'lucide-react'
 import {
   GiSparkles as Sparkles, GiCutDiamond as Gem,
   GiPerspectiveDiceSixFacesRandom as Dices,
@@ -155,6 +155,7 @@ export default function Settings() {
   const retentionMode = ((settings.history_retention_mode as RetentionMode | undefined) ?? 'off') as RetentionMode
   const retentionEvents = Number(settings.history_retention_events ?? 100)
   const retentionDays = Number(settings.history_retention_days ?? 30)
+  const notifPrefs = (settings.notifications as Record<string, boolean> | undefined) ?? {}
 
   const toggleLanguage = () => {
     const newLang = locale === 'it' ? 'en' : 'it'
@@ -348,6 +349,29 @@ export default function Settings() {
             </p>
           )}
         </div>
+      </Surface>
+
+      {/* Telegram game notifications — per-category opt-out (BE: telegram_notify) */}
+      <SectionDivider icon={<Bell size={11} />} align="center">
+        {t('character.settings.notifications.title')}
+      </SectionDivider>
+
+      <Surface variant="elevated" className="space-y-3">
+        {(['party_emergency', 'gm_events', 'level_up', 'encounter'] as const).map((key) => (
+          <SwitchToggle
+            key={key}
+            icon={<Bell size={16} />}
+            label={t(`character.settings.notifications.${key}`)}
+            hint={t(`character.settings.notifications.${key}_hint`)}
+            checked={notifPrefs[key] !== false}
+            onChange={(next) =>
+              updateMutation.mutate({
+                ...settings,
+                notifications: { ...notifPrefs, [key]: next },
+              })
+            }
+          />
+        ))}
       </Surface>
 
       {/* Currency preferences — hide Electrum toggle */}

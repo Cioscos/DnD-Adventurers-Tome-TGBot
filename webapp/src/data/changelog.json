@@ -1,6 +1,28 @@
 {
   "entries": [
     {
+      "version": "2.9.0",
+      "date": "2026-06-10",
+      "title": {
+        "it": "Notifiche di gioco su Telegram",
+        "en": "Telegram game notifications"
+      },
+      "added": {
+        "it": [
+          "Il bot ti avvisa in chat quando succede qualcosa di importante: un compagno di sessione scende a 0 PF o muore, il GM ti consegna un oggetto o ti applica una condizione, superi la soglia di esperienza per il nuovo livello, o il GM apre un incontro.",
+          "Ogni notifica ha un bottone che apre l'app direttamente sulla pagina giusta (sessione, inventario o esperienza) — anche il «Tocca a te!» del combattimento ora porta dritto alla sessione.",
+          "Nelle impostazioni del personaggio puoi silenziare ogni categoria di notifica con quattro interruttori dedicati."
+        ],
+        "en": [
+          "The bot pings you in chat when something important happens: a session companion drops to 0 HP or dies, the GM grants you an item or applies a condition, your experience crosses the next level threshold, or the GM opens an encounter.",
+          "Every notification carries a button that opens the app on the right page (session, inventory or experience) — the combat “Your turn!” ping now deep-links to the session too.",
+          "In the character settings you can mute each notification category with four dedicated switches."
+        ]
+      },
+      "improved": { "it": [], "en": [] },
+      "fixed": { "it": [], "en": [] }
+    },
+    {
       "version": "2.8.0",
       "date": "2026-06-10",
       "title": {

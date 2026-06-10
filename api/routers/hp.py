@@ -15,6 +15,7 @@ from sqlalchemy.orm import selectinload
 from api.auth import get_current_user
 from api.database import get_db
 from api.services.effects import apply_heal
+from api.services.telegram_notify import notify_party_emergency
 from api.services.homebrew.dispatcher import dispatch
 from api.services.homebrew.passive import get_passive_modifiers
 from core.db.models import Character, CharacterHistory
@@ -150,6 +151,14 @@ async def update_hp(
                                  f"Danno a 0 PF: +{inc} fallimento ({ds['failures']}/3)")
                 char.death_saves = ds
             # old>0 ridotto a 0 senza sforamento massiccio -> privo di sensi/morente (0 fallimenti)
+
+        # Notifica best-effort ai compagni di sessione (categoria party_emergency)
+        if char.current_hit_points == 0 and amount > 0:
+            if char.is_dead:
+                await notify_party_emergency(session, char, f"💀 {char.name} è morto!")
+            elif old > 0:
+                await notify_party_emergency(
+                    session, char, f"🩸 {char.name} è a terra (0 PF)!")
 
         # Privo di sensi (0 PF) => fine concentrazione (RAW)
         if char.current_hit_points == 0:
@@ -386,6 +395,7 @@ async def update_death_saves(
         if ds["failures"] >= 3:
             char.is_dead = True
             _add_history(session, char.id, "death_save", "Morto — 3 fallimenti")
+            await notify_party_emergency(session, char, f"💀 {char.name} è morto!")
 
     elif body.action == DeathSaveAction.STABILIZE:
         ds["stable"] = True
@@ -468,6 +478,7 @@ async def roll_death_save(
     if ds.get("failures", 0) >= 3:
         char.is_dead = True
         _add_history(session, char.id, "death_save", "Morto — 3 fallimenti")
+        await notify_party_emergency(session, char, f"💀 {char.name} è morto!")
 
     return DeathSaveRollResult(
         die=die,

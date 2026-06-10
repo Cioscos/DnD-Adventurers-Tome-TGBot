@@ -867,6 +867,17 @@
       "unit_system_hint": "Distanze in piedi/metri e pesi in libbre/chili (5 ft ≈ 1,5 m · 1 lb = 0,5 kg).",
       "unit_imperial": "Piedi & libbre",
       "unit_metric": "Metri & chili",
+      "notifications": {
+        "title": "Notifiche Telegram",
+        "party_emergency": "Emergenze di gruppo",
+        "party_emergency_hint": "Un compagno della sessione scende a 0 PF o muore.",
+        "gm_events": "Eventi del GM",
+        "gm_events_hint": "Oggetti consegnati e condizioni applicate dal GM in sessione.",
+        "level_up": "Livello",
+        "level_up_hint": "Quando l'esperienza supera la soglia del livello successivo.",
+        "encounter": "Incontri",
+        "encounter_hint": "Quando il GM apre un incontro nella sessione."
+      },
       "currency_group": "Monete",
       "currency_show_electrum": "Mostra Electrum",
       "currency_show_electrum_hint": "Mostra le monete d'electrum nella pagina Monete.",

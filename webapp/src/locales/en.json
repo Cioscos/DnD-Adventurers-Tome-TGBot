@@ -867,6 +867,17 @@
       "unit_system_hint": "Distances in feet/meters and weights in pounds/kilos (5 ft ≈ 1.5 m · 1 lb = 0.5 kg).",
       "unit_imperial": "Feet & pounds",
       "unit_metric": "Meters & kilos",
+      "notifications": {
+        "title": "Telegram notifications",
+        "party_emergency": "Party emergencies",
+        "party_emergency_hint": "A session companion drops to 0 HP or dies.",
+        "gm_events": "GM events",
+        "gm_events_hint": "Items granted and conditions applied by the GM in session.",
+        "level_up": "Level up",
+        "level_up_hint": "When experience crosses the next level threshold.",
+        "encounter": "Encounters",
+        "encounter_hint": "When the GM opens an encounter in the session."
+      },
       "currency_group": "Currency",
       "currency_show_electrum": "Show Electrum",
       "currency_show_electrum_hint": "Show electrum coins on the Currency page.",

@@ -1,41 +1,8 @@
 """start / next-turn / prev-turn / end + notifica bot (routers/encounters.py)."""
 from __future__ import annotations
 
-import api.routers.encounters as enc_module
 from tests.integration._encounter_helpers import GM_ID, PLAYER_ID, as_user, seed_session
-
-
-class _FakeResponse:
-    def __init__(self, status_code: int = 200):
-        self.status_code = status_code
-        self.text = "stub"
-
-    @property
-    def is_success(self) -> bool:
-        return 200 <= self.status_code < 300
-
-
-def install_fake_telegram(monkeypatch, *, status_code: int = 200) -> list[dict]:
-    """Cattura le sendMessage del modulo encounters (pattern di test_dice_post_to_chat)."""
-    captured: list[dict] = []
-
-    class _FakeClient:
-        def __init__(self, *args, **kwargs):
-            pass
-
-        async def __aenter__(self):
-            return self
-
-        async def __aexit__(self, *args):
-            return False
-
-        async def post(self, url, json=None):
-            captured.append({"url": url, "json": json})
-            return _FakeResponse(status_code)
-
-    monkeypatch.setattr(enc_module, "_BOT_TOKEN", "fake-token")
-    monkeypatch.setattr(enc_module.httpx, "AsyncClient", _FakeClient)
-    return captured
+from tests.integration._telegram_stub import install_fake_telegram
 
 
 async def setup_full_encounter(client, test_session_factory) -> tuple[int, dict]:
@@ -108,10 +75,11 @@ async def test_start_orders_by_initiative_then_mod(client, test_session_factory,
     assert names == ["Eroe", "Goblin 1", "Goblin 2"]          # 17, 12, 6
     assert [c["sort_order"] for c in enc["combatants"]] == [10, 20, 30]
     assert enc["active_combatant_id"] == enc["combatants"][0]["id"]
-    # primo turno = PG -> notifica al proprietario
-    assert len(captured) == 1
-    assert captured[0]["json"]["chat_id"] == PLAYER_ID
-    assert "Round 1" in captured[0]["json"]["text"]
+    # primo turno = PG -> notifica al proprietario (oltre al ping 'incontro iniziato')
+    turn_pings = [c for c in captured if "Tocca a te" in c["json"]["text"]]
+    assert len(turn_pings) == 1
+    assert turn_pings[0]["json"]["chat_id"] == PLAYER_ID
+    assert "Round 1" in turn_pings[0]["json"]["text"]
 
 
 async def test_start_twice_is_409(client, test_session_factory, monkeypatch):

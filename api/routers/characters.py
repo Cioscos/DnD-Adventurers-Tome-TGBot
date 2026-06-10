@@ -42,6 +42,7 @@ from api.schemas.character import (
 from api.schemas.common import D20RollSubmission, RollResult
 from api.routers.classes import create_class_for_character
 from api.routers._helpers import prune_history
+from api.services import telegram_notify
 from api.services.character_response import build_character_response
 from api.services.effects import apply_conditions
 from api.services.spell_slots import recalc_spell_slots
@@ -396,6 +397,7 @@ async def update_xp(
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> CharacterFull:
     char = await _get_owned(char_id, user_id, session, full=True)
+    old_xp = char.experience_points or 0
     if body.set is not None:
         char.experience_points = max(0, body.set)
     elif body.add is not None:
@@ -427,6 +429,23 @@ async def update_xp(
     if total_hp_gained > 0:
         char.hit_points += total_hp_gained
         char.current_hit_points += total_hp_gained
+
+    # Notifica best-effort: solo all'attraversamento di soglia (categoria level_up)
+    old_level_from_xp = xp_to_level(old_xp)
+    new_level_from_xp = xp_to_level(char.experience_points)
+    if (
+        new_level_from_xp > old_level_from_xp
+        and telegram_notify.notifications_enabled(char, "level_up")
+    ):
+        if len(char.classes) == 1:
+            text = f"🎉 {char.name} è salito al livello {new_level_from_xp}!"
+        else:
+            text = f"✨ Level-up disponibile per {char.name} (liv. {new_level_from_xp})!"
+        await telegram_notify.send_telegram_message(
+            user_id, text,
+            button=("Apri Esperienza",
+                    telegram_notify.miniapp_url(f"/char/{char_id}/xp")),
+        )
 
     # Re-SELECT so model_validate sees non-expired columns AND the freshly
     # generated class-feature Ability rows are loaded via selectinload. See

@@ -3,11 +3,9 @@
 from __future__ import annotations
 
 import logging
-import os
 from datetime import datetime
 from typing import Annotated
 
-import httpx
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import select
@@ -16,11 +14,11 @@ from sqlalchemy.orm.attributes import flag_modified
 
 from api.auth import get_current_user
 from api.database import get_db
+from api.services import telegram_notify
 from core.db.models import Character, CharacterHistory
 from api.schemas.common import DiceResultEntry, DiceResultRequest, DiceRollResult
 
 logger = logging.getLogger(__name__)
-_BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
 
 router = APIRouter(prefix="/characters", tags=["dice"])
 
@@ -167,7 +165,7 @@ async def post_dice_to_chat(
     """
     await _get_owned(char_id, user_id, session)
 
-    if not _BOT_TOKEN:
+    if not telegram_notify.bot_token_configured():
         raise HTTPException(status_code=503, detail="BOT_TOKEN not configured")
 
     rolls = body.rolls
@@ -177,14 +175,9 @@ async def post_dice_to_chat(
     else:
         text = f"🎲 {body.notation}: *{body.total}*"
 
-    async with httpx.AsyncClient(timeout=10) as client:
-        resp = await client.post(
-            f"https://api.telegram.org/bot{_BOT_TOKEN}/sendMessage",
-            json={"chat_id": user_id, "text": text, "parse_mode": "Markdown"},
-        )
-
-    if not resp.is_success:
-        logger.warning("Telegram sendMessage failed: %s %s", resp.status_code, resp.text)
+    ok = await telegram_notify.send_telegram_message(
+        user_id, text, parse_mode="Markdown")
+    if not ok:
         raise HTTPException(status_code=502, detail="Failed to send Telegram message")
 
     return {"ok": True}
