@@ -79,4 +79,46 @@ describe('searchCharacter', () => {
     expect(r.type).toBe('note')
     expect(r.title).toBe('Sessione 3')
   })
+
+  // Le note create dalla webapp sono salvate dal BE nel formato dict
+  // {body, created_at, updated_at, tags} — non stringhe (api/routers/notes.py).
+  describe('dict-shaped notes (current backend format)', () => {
+    it('does not throw when a dict note title does not match the query', () => {
+      const char = makeChar({
+        notes: { 'Diario': { body: 'testo qualunque', created_at: '2026-06-01', tags: [] } },
+      })
+      expect(() => searchCharacter(char, 'xy')).not.toThrow()
+    })
+
+    it('matches the body of a dict-shaped note', () => {
+      const char = makeChar({
+        notes: { 'Sessione 3': { body: 'incontrato il lich Vecna', tags: ['png'] } },
+      })
+      const [r] = searchCharacter(char, 'vecna')
+      expect(r.type).toBe('note')
+      expect(r.title).toBe('Sessione 3')
+    })
+
+    it('matches voice notes by title only, never by their [VOICE:] body', () => {
+      const char = makeChar({
+        notes: { 'Memo del vecna': { body: '[VOICE:7/abc.webm]', created_at: '2026-06-01' } },
+      })
+      expect(searchCharacter(char, 'vecna')).toHaveLength(1)
+      expect(searchCharacter(char, 'voice')).toHaveLength(0)
+      expect(searchCharacter(char, 'webm')).toHaveLength(0)
+    })
+
+    it('tolerates malformed note values without throwing', () => {
+      const char = makeChar({
+        notes: {
+          'Numero': 42,
+          'Nullo': null,
+          'Senza body': { tags: ['vuota'] },
+        } as never,
+      })
+      expect(() => searchCharacter(char, 'xy')).not.toThrow()
+      const [r] = searchCharacter(char, 'senza')
+      expect(r.title).toBe('Senza body')
+    })
+  })
 })

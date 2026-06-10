@@ -8,6 +8,11 @@
     "confirm": "Conferma",
     "loading": "Caricamento...",
     "error": "Errore",
+    "error_boundary": {
+      "title": "Qualcosa è andato storto",
+      "message": "Si è verificato un errore imprevisto. Ricarica l'app per continuare l'avventura.",
+      "reload": "Ricarica"
+    },
     "retry": "Riprova",
     "add": "Aggiungi",
     "edit": "Modifica",

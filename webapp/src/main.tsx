@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import { MutationCache, QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { LazyMotion, domMax } from 'framer-motion'
 import App from './App'
+import AppErrorBoundary from './components/AppErrorBoundary'
 import Toast from './components/ui/Toast'
 import {
   showHomebrewNotifications,
@@ -100,11 +101,13 @@ const queryClient = new QueryClient({
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <LazyMotion features={domMax} strict>
-      <QueryClientProvider client={queryClient}>
-        <App />
-        <Toast />
-      </QueryClientProvider>
-    </LazyMotion>
+    <AppErrorBoundary>
+      <LazyMotion features={domMax} strict>
+        <QueryClientProvider client={queryClient}>
+          <App />
+          <Toast />
+        </QueryClientProvider>
+      </LazyMotion>
+    </AppErrorBoundary>
   </React.StrictMode>
 )
