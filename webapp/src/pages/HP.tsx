@@ -272,7 +272,7 @@ export default function HP() {
                         label={t('character.hp.temp')}
                       />
                     )}
-                    <span className="rounded-full bg-[rgba(13,10,8,0.25)] px-2 py-0.5 text-xs font-mono text-dnd-text-faint">
+                    <span className="rounded-full bg-[rgba(13,10,8,0.25)] px-2 py-0.5 text-xs font-mono text-dnd-text">
                       {Math.round(hpPct)}%
                     </span>
                   </div>

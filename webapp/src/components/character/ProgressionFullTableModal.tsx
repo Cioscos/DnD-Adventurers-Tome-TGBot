@@ -34,7 +34,7 @@ export default function ProgressionFullTableModal({ className, currentLevel, onC
   return createPortal(
     <AnimatePresence>
       <m.div
-        className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-3 sm:p-4"
+        className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-[var(--dnd-overlay)] backdrop-blur-[6px] p-3 sm:p-4"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}

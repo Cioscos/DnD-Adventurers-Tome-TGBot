@@ -1,14 +1,58 @@
 {
   "entries": [
     {
+      "version": "2.14.2",
+      "date": "2026-06-11",
+      "title": {
+        "it": "Rifiniture di design e leggibilità",
+        "en": "Design and legibility polish"
+      },
+      "added": {
+        "it": [],
+        "en": []
+      },
+      "improved": {
+        "it": [
+          "Indicatore Ispirazione più compatto nell'header (On/Off): il nome del personaggio ha più spazio",
+          "Overlay delle modali uniformati al velo caldo del design system (niente più nero puro)"
+        ],
+        "en": [
+          "More compact Inspiration indicator in the header (On/Off): the character name gets more room",
+          "Modal overlays unified on the design system warm veil (no more pure black)"
+        ]
+      },
+      "fixed": {
+        "it": [
+          "Le etichette delle caratteristiche non si spezzano più a metà parola sugli schermi stretti",
+          "Il pulsante dei dadi non copre più i contenuti in fondo alle schermate del personaggio",
+          "Tiri salvezza competenti: evidenziazione conforme al design system (bordo pieno, niente bagliore decorativo)",
+          "Percentuale HP leggibile anche in tema chiaro",
+          "Icona velocità nel riepilogo equipaggiamento in tinta neutra"
+        ],
+        "en": [
+          "Ability score labels no longer break mid-word on narrow screens",
+          "The dice button no longer covers content at the bottom of character screens",
+          "Proficient saving throws: highlight now matches the design system (full border, no decorative glow)",
+          "HP percentage readable in light theme too",
+          "Speed icon in the equipment summary uses a neutral tint"
+        ]
+      }
+    },
+    {
       "version": "2.14.1",
       "date": "2026-06-11",
       "title": {
         "it": "Dadi 3D: numeri dritti sul d8",
         "en": "3D dice: upright numbers on the d8"
       },
-      "added": { "it": [], "en": [] },
-      "improved": { "it": [], "en": [] },
+      "added": {
+        "it": [],
+        "en": []
+      },
+      "improved": {
+        "it": [],
+        "en": []
+      },
       "fixed": {
         "it": [
           "Dadi 3D: sul d8 i numeri 2, 4, 6 e 8 apparivano ruotati di 60° rispetto alla faccia; ora tutte le cifre seguono l'orientamento dei d8 reali."
@@ -69,8 +113,14 @@
           "Development mode: opening the app with ?dev_user=<id> makes the tab impersonate a second user (“DEV #id” badge), so game sessions can be tested locally with GM and player in two windows. No effect in production."
         ]
       },
-      "improved": { "it": [], "en": [] },
-      "fixed": { "it": [], "en": [] }
+      "improved": {
+        "it": [],
+        "en": []
+      },
+      "fixed": {
+        "it": [],
+        "en": []
+      }
     },
     {
       "version": "2.13.3",
@@ -79,8 +129,14 @@
         "it": "Fix ricerca globale",
         "en": "Global search fix"
       },
-      "added": { "it": [], "en": [] },
-      "improved": { "it": [], "en": [] },
+      "added": {
+        "it": [],
+        "en": []
+      },
+      "improved": {
+        "it": [],
+        "en": []
+      },
       "fixed": {
         "it": [
           "La ricerca globale del personaggio mandava in crash l'app (schermo bianco e tastiera chiusa) appena digitati i 2 caratteri minimi, se il personaggio aveva delle note: il nuovo formato delle note non era gestito dal motore di ricerca.",
@@ -101,7 +157,10 @@
         "it": "Dadi 3D: numeri, fisica e luci",
         "en": "3D dice: numerals, physics and lighting"
       },
-      "added": { "it": [], "en": [] },
+      "added": {
+        "it": [],
+        "en": []
+      },
       "improved": {
         "it": [
           "Illuminazione della scena dei dadi più ricca: luce principale più forte, riempimento laterale e riflessi ambientali — i dettagli delle texture dei pack ora si vedono.",
@@ -136,7 +195,10 @@
         "it": "Rifiniture su azioni rapide e tiro danni",
         "en": "Quick actions and damage roll polish"
       },
-      "added": { "it": [], "en": [] },
+      "added": {
+        "it": [],
+        "en": []
+      },
       "improved": {
         "it": [
           "Toccare un incantesimo nelle azioni rapide ora scorre la lista fino all'incantesimo, oltre ad aprirlo.",
@@ -177,8 +239,14 @@
           "Share buttons only appear on Telegram clients that support the feature."
         ]
       },
-      "improved": { "it": [], "en": [] },
-      "fixed": { "it": [], "en": [] }
+      "improved": {
+        "it": [],
+        "en": []
+      },
+      "fixed": {
+        "it": [],
+        "en": []
+      }
     },
     {
       "version": "2.12.0",
@@ -199,8 +267,14 @@
           "“+” editor: pick what to pin from three toggle lists; entries for deleted weapons or spells clean themselves up."
         ]
       },
-      "improved": { "it": [], "en": [] },
-      "fixed": { "it": [], "en": [] }
+      "improved": {
+        "it": [],
+        "en": []
+      },
+      "fixed": {
+        "it": [],
+        "en": []
+      }
     },
     {
       "version": "2.11.0",
@@ -219,8 +293,14 @@
           "Tap a result to jump to the right page — spells open already highlighted in the list."
         ]
       },
-      "improved": { "it": [], "en": [] },
-      "fixed": { "it": [], "en": [] }
+      "improved": {
+        "it": [],
+        "en": []
+      },
+      "fixed": {
+        "it": [],
+        "en": []
+      }
     },
     {
       "version": "2.10.0",
@@ -241,8 +321,14 @@
           "“Reset statistics” button with confirmation, separate from clearing the history."
         ]
       },
-      "improved": { "it": [], "en": [] },
-      "fixed": { "it": [], "en": [] }
+      "improved": {
+        "it": [],
+        "en": []
+      },
+      "fixed": {
+        "it": [],
+        "en": []
+      }
     },
     {
       "version": "2.9.0",
@@ -263,8 +349,14 @@
           "In the character settings you can mute each notification category with four dedicated switches."
         ]
       },
-      "improved": { "it": [], "en": [] },
-      "fixed": { "it": [], "en": [] }
+      "improved": {
+        "it": [],
+        "en": []
+      },
+      "fixed": {
+        "it": [],
+        "en": []
+      }
     },
     {
       "version": "2.8.0",
