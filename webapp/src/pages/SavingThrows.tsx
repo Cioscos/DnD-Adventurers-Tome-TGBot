@@ -148,7 +148,7 @@ export default function SavingThrows() {
                   interactive
                   onClick={() => rollMutation.mutate(ability)}
                   className={`relative !p-2 cursor-pointer
-                    ${isProficient ? 'border-l-4 border-dnd-gold-bright border-dnd-gold/50 shadow-halo-gold' : ''}`}
+                    ${isProficient ? 'border-dnd-gold/50' : ''}`}
                 >
                   <div className="flex items-center gap-3 min-h-[44px]">
                     <m.button

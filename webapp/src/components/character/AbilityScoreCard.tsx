@@ -36,10 +36,10 @@ export default function AbilityScoreCard({ score, expanded, onToggle, onEdit }: 
       )}
 
       <div className="relative z-10 pointer-events-none">
-        {/* 3-col header: spacer | name (centered) | pencil — name can never collide with the pencil. */}
-        <div className="grid grid-cols-[40px_1fr_40px] items-center">
-          <span aria-hidden />
-          <span className="min-w-0 break-words text-center text-[11px] font-cinzel uppercase tracking-[0.08em] leading-tight text-dnd-text opacity-90">
+        {/* 2-col header: name | pencil. I nomi sono parole singole non spezzabili:
+            il corpo scala con la card (clamp) e degrada a ellissi, mai a metà parola. */}
+        <div className="grid grid-cols-[minmax(0,1fr)_40px] items-center gap-1">
+          <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-center text-[clamp(7.5px,2.4vw,11px)] font-cinzel uppercase tracking-[0.04em] leading-tight text-dnd-text opacity-90">
             {fullName}
           </span>
           <m.button

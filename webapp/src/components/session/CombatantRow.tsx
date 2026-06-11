@@ -18,7 +18,7 @@ const BUCKET_BAR: Record<HpBucket, string> = {
   lightly_wounded: 'bg-dnd-gold-bright',
   badly_wounded: 'bg-[var(--dnd-amber)]',
   dying: 'bg-[var(--dnd-crimson-bright)]',
-  dead: 'bg-black',
+  dead: 'bg-dnd-ink',
 }
 
 interface Props {
@@ -93,8 +93,7 @@ export default function CombatantRow({
         ${c.is_dead ? 'opacity-50' : ''}
         ${isActive
           ? 'border-dnd-gold bg-dnd-surface-raised ring-2 ring-dnd-gold-bright/50 shadow-[0_0_12px_rgba(212,168,71,0.35)]'
-          : 'border-dnd-border bg-dnd-surface'}
-        ${isPc ? 'border-l-4 border-l-dnd-gold-dim/70' : 'border-l-4 border-l-[var(--dnd-crimson)]'}
+          : `bg-dnd-surface ${isPc ? 'border-dnd-gold-dim/70' : 'border-dnd-crimson/50'}`}
         ${clickable ? 'cursor-pointer hover:border-dnd-gold-bright' : ''}`}
     >
       <div className="flex items-center gap-3">

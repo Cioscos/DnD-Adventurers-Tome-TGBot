@@ -101,7 +101,7 @@ export default function EquipmentStatsFooter({ char }: Props) {
           className="flex items-center gap-2 text-dnd-text"
           title={`${t('character.identity.speed', { defaultValue: 'Speed' })}: ${formatLength(speedTotal, system)}`}
         >
-          <GiBootPrints size={14} aria-hidden="true" className="text-[var(--dnd-emerald-bright)]" />
+          <GiBootPrints size={14} aria-hidden="true" className="text-dnd-text-muted" />
           <span className="font-mono normal-case tracking-normal text-dnd-text font-bold tabular-nums">
             {formatLength(speedTotal, system)}
           </span>

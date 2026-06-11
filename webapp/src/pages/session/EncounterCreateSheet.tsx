@@ -34,7 +34,7 @@ export default function EncounterCreateSheet({ sessionId, onClose }: Props) {
 
   return (
     <div
-      className="fixed inset-0 bg-black/60 flex items-end z-50 p-4"
+      className="fixed inset-0 bg-[var(--dnd-overlay)] backdrop-blur-[6px] flex items-end z-50 p-4"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div className="w-full rounded-2xl bg-dnd-surface-elevated p-4 space-y-3">

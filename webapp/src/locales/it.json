@@ -558,8 +558,8 @@
       "use_reroll": "Usa Ispirazione",
       "reroll_badge": "↻ Reroll ispirazione",
       "unavailable_error": "Ispirazione non disponibile",
-      "on": "Attiva",
-      "off": "Disattiva",
+      "on": "On",
+      "off": "Off",
       "aria": "Ispirazione eroica"
     },
     "inSession": {

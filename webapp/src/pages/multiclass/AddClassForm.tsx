@@ -54,7 +54,7 @@ export default function AddClassForm({ onAdd, onCancel, isPending, lockLevelTo }
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-end z-50 p-4">
+    <div className="fixed inset-0 bg-[var(--dnd-overlay)] backdrop-blur-[6px] flex items-end z-50 p-4">
       <Card className="w-full space-y-3">
         <h3 className="font-semibold">{t('character.multiclass.add_class')}</h3>
 

@@ -70,7 +70,7 @@ function ParticipantRow({
     lightly_wounded:  'bg-dnd-gold-bright',
     badly_wounded:    'bg-[var(--dnd-amber)]',
     dying:            'bg-[var(--dnd-crimson-bright)]',
-    dead:             'bg-black',
+    dead:             'bg-dnd-ink',
   }
 
   const handleClick = () => {
