@@ -1,7 +1,7 @@
 # Ledger — impeccable pass per componenti
 
 Coda di lavoro a batch di pagina. Stati: `☐` da fare · `◐` parziale · `✅` completato · `⛔` bloccato (motivo).
-Derivato da `component-coverage.md` dell'audit 2026-06-11; i findings citati (#n) sono in `report.md` della stessa cartella.
+Questo ledger è stato seminato dall'audit FE del 2026-06-11 (`fe-playwright-audit/reports/2026-06-11_18-58-mobile/`): i findings citati (#n) vengono da quel `report.md`. Le run della skill risolvono comunque l'audit PIÙ RECENTE disponibile (vedi SKILL.md, Passo 0): se nel frattempo ne esiste uno più nuovo, integra qui i suoi findings prima di lavorare il batch.
 
 > Baseline impeccable audit: **14/20** (2026-06-11, pre-B0). Score di fine giro: aggiornare qui.
 > B0 (già consegnato in PR #166): label stats, pill On/Off, pb-24 swiper, side-stripe saves/combatant, backdrop warm, chip % HP, icona velocità.
