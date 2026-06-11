@@ -1,6 +1,52 @@
 {
   "entries": [
     {
+      "version": "2.14.4",
+      "date": "2026-06-12",
+      "title": {
+        "it": "Tinte del design finalmente reali e ricerca più completa",
+        "en": "Design tints finally real and a more complete search"
+      },
+      "added": {
+        "it": [
+          "La ricerca globale trova anche le risorse homebrew attive (es. Punti Fortuna), con contatore e salto diretto alle Abilità"
+        ],
+        "en": [
+          "Global search now finds active homebrew resources (e.g. Luck Points), with their counter and a direct jump to Abilities"
+        ]
+      },
+      "improved": {
+        "it": [
+          "Intestazione della scheda più compatta: il nome del personaggio guadagna quasi metà larghezza in più prima di troncarsi",
+          "Le evidenziazioni colorate previste dal design (selezioni, righe competenti, pip dei tiri contro morte) ora si vedono davvero, in tema scuro e chiaro",
+          "Tabella di progressione di classe ripulita: intestazioni compatte senza parole spezzate e più livelli visibili",
+          "ESC e il gesto back chiudono anche i pannelli dell’equipaggiamento e la tabella di progressione",
+          "I pallini del carosello del personaggio sono più facili da toccare"
+        ],
+        "en": [
+          "More compact sheet header: the character name gets almost half again as much width before truncating",
+          "The colored highlights the design always intended (selections, proficient rows, death save pips) now actually show, in dark and light themes",
+          "Cleaner class progression table: compact headers with no broken words and more levels visible",
+          "ESC and the back gesture also close the equipment panels and the progression table",
+          "The character carousel dots are easier to tap"
+        ]
+      },
+      "fixed": {
+        "it": [
+          "I banner \"Critico!\" e \"Fumble!\" e la CD del tiro di concentrazione ora seguono la lingua dell’app",
+          "Nel selettore di equipaggiamento il tipo dell’oggetto è tradotto (\"Arma\" invece di \"weapon\")",
+          "La percentuale dei punti ferita è leggibile anche in tema chiaro",
+          "Tiro salvezza con bonus negativo mostrato in rosso come nelle Skills"
+        ],
+        "en": [
+          "The \"Critical!\" and \"Fumble!\" banners and the concentration save DC now follow the app language",
+          "In the equip picker the item type is translated (\"Weapon\" instead of a raw key)",
+          "The hit point percentage is readable in light theme too",
+          "Saving throws with a negative bonus are shown in red like in Skills"
+        ]
+      }
+    },
+    {
       "version": "2.14.3",
       "date": "2026-06-11",
       "title": {

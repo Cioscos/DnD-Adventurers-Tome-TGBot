@@ -5,6 +5,7 @@ Questo ledger è stato seminato dall'audit FE del 2026-06-11 (`fe-playwright-aud
 
 > Baseline impeccable audit: **14/20** (2026-06-11, pre-B0). Score di fine giro: aggiornare qui.
 > Fine giro r2 (B1-B3): **18/20** — Acc 4 (contrasto chip e touch target risolti; 12px di sistema ok), Perf 3 (invariata, nessun profiling), Theming 4, Responsive 3 (#V1 nome header ancora aperto → B4), Anti-Patterns 4 (side-stripe e em dash eliminati; resta z-[9999] in Maps, P3 → B11). Re-audit completo in B16.
+> Fine giro r3 (B4-B7): **19/20** — Acc 4 (dots 40px, header 40px, long-press con ring di progresso), Perf 3 (invariata; color-mix a costo trascurabile, nessun profiling), Theming 4 (fix alpha: 312 tinte reali in entrambi i temi, #fff banditi; resta la divergenza DESIGN.md↔codice su font-display/spring.elastic → B16/document), Responsive 4 (#V1 risolto, verificato 375+320), Anti-Patterns 4 (copy hardcoded i18n-izzato; resta z-[9999] Maps → B11). Re-audit completo in B16.
 > B0 (già consegnato in PR #166): label stats, pill On/Off, pb-24 swiper, side-stripe saves/combatant, backdrop warm, chip % HP, icona velocità.
 
 ## Batch trasversali (prima: sbloccano i batch di pagina)
