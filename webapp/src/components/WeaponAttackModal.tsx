@@ -80,13 +80,13 @@ export default function WeaponAttackModal({
       }
     >
       {is_critical && (
-        <p className="text-dnd-gold-bright font-bold font-cinzel flex items-center justify-center gap-1.5">
-          <Star size={14} fill="currentColor" /> CRITICO!
+        <p className="text-dnd-gold-bright font-bold font-cinzel uppercase tracking-wider flex items-center justify-center gap-1.5">
+          <Star size={14} fill="currentColor" /> {t('character.dice.critical_banner')}
         </p>
       )}
       {is_fumble && (
-        <p className="text-dnd-crimson-bright font-bold font-cinzel flex items-center justify-center gap-1.5">
-          <Skull size={14} /> FUMBLE!
+        <p className="text-dnd-crimson-bright font-bold font-cinzel uppercase tracking-wider flex items-center justify-center gap-1.5">
+          <Skull size={14} /> {t('character.dice.fumble_banner')}
         </p>
       )}
 

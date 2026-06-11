@@ -76,7 +76,7 @@ export default function RollResultModal({
           animate={{ scale: [0.5, 1.2, 1] }}
           transition={{ duration: 0.5 }}
         >
-          <Star size={14} fill="currentColor" /> CRITICO!
+          <Star size={14} fill="currentColor" /> {t('character.dice.critical_banner')}
         </m.p>
       )}
       {is_fumble && (
@@ -86,7 +86,7 @@ export default function RollResultModal({
           animate={{ scale: [0.5, 1.2, 1] }}
           transition={{ duration: 0.5 }}
         >
-          <Skull size={14} /> FUMBLE!
+          <Skull size={14} /> {t('character.dice.fumble_banner')}
         </m.p>
       )}
 

@@ -32,18 +32,18 @@ function PipGroup({ label, count, tone, icon, urgent = false }: PipGroupProps) {
     ? 'border-dnd-emerald-bright'
     : 'border-[var(--dnd-crimson-bright)]'
   const emptyBorder = tone === 'emerald'
-    ? 'border-[color:rgb(63_166_106_/_0.35)]'
-    : 'border-[color:rgb(179_58_58_/_0.35)]'
+    ? 'border-dnd-emerald/35'
+    : 'border-dnd-crimson/35'
   const labelColor = tone === 'emerald'
-    ? 'text-[color:rgb(63_166_106_/_0.85)]'
-    : 'text-[color:rgb(179_58_58_/_0.85)]'
+    ? 'text-dnd-emerald/85'
+    : 'text-dnd-crimson/85'
   const glow = tone === 'emerald'
     ? 'shadow-[0_0_8px_rgba(63,166,106,0.5)]'
     : 'shadow-[0_0_8px_rgba(179,58,58,0.5)]'
   const urgentGlow = urgent
     ? 'shadow-[0_0_18px_rgba(179,58,58,0.85)]'
     : ''
-  const iconColor = tone === 'emerald' ? 'text-dnd-ink' : 'text-white'
+  const iconColor = tone === 'emerald' ? 'text-dnd-ink' : 'text-dnd-parchment'
 
   return (
     <div className="flex flex-col items-center gap-2">
@@ -140,7 +140,7 @@ export default function DeathSaves({ deathSaves, onRoll, onAction, isRolling }: 
             size="sm"
             onClick={() => onAction('success')}
             icon={<Check size={14} />}
-            className="!bg-[var(--dnd-emerald)]/15 !border-dnd-emerald/40 !text-[var(--dnd-emerald-bright)]"
+            className="!bg-dnd-emerald/15 !border-dnd-emerald/40 !text-[var(--dnd-emerald-bright)]"
           >
             {t('character.death_saves.success')}
           </Button>
@@ -149,7 +149,7 @@ export default function DeathSaves({ deathSaves, onRoll, onAction, isRolling }: 
             size="sm"
             onClick={() => onAction('failure')}
             icon={<X size={14} />}
-            className="!bg-[var(--dnd-crimson)]/15 !border-dnd-crimson/40 !text-[var(--dnd-crimson-bright)]"
+            className="!bg-dnd-crimson/15 !border-dnd-crimson/40 !text-[var(--dnd-crimson-bright)]"
           >
             {t('character.death_saves.failure')}
           </Button>
@@ -158,7 +158,7 @@ export default function DeathSaves({ deathSaves, onRoll, onAction, isRolling }: 
             size="sm"
             onClick={() => onAction('stabilize')}
             icon={<Heart size={14} />}
-            className="!bg-[var(--dnd-cobalt)]/15 !border-dnd-cobalt/40 !text-[var(--dnd-cobalt-bright)]"
+            className="!bg-dnd-cobalt/15 !border-dnd-cobalt/40 !text-[var(--dnd-cobalt-bright)]"
           >
             {t('character.death_saves.stabilize')}
           </Button>

@@ -189,7 +189,7 @@ export default function ArmorClass() {
                 {t('character.ac.unarmored_badge')}
               </span>
             ) : char.base_armor_class_override ? (
-              <span className="text-[8px] font-cinzel uppercase tracking-wider px-1 py-px rounded-full bg-[var(--dnd-crimson-deep)]/30 text-[var(--dnd-crimson-bright)] border border-dnd-crimson/50">
+              <span className="text-[8px] font-cinzel uppercase tracking-wider px-1 py-px rounded-full bg-dnd-crimson-deep/30 text-[var(--dnd-crimson-bright)] border border-dnd-crimson/50">
                 {t('character.ac.manual_override')}
               </span>
             ) : equippedBodyArmor && (
@@ -218,7 +218,7 @@ export default function ArmorClass() {
               {t('character.ac.shield')}
             </p>
             {char.shield_armor_class_override ? (
-              <span className="text-[8px] font-cinzel uppercase tracking-wider px-1 py-px rounded-full bg-[var(--dnd-crimson-deep)]/30 text-[var(--dnd-crimson-bright)] border border-dnd-crimson/50">
+              <span className="text-[8px] font-cinzel uppercase tracking-wider px-1 py-px rounded-full bg-dnd-crimson-deep/30 text-[var(--dnd-crimson-bright)] border border-dnd-crimson/50">
                 {t('character.ac.manual_override')}
               </span>
             ) : equippedShield && (

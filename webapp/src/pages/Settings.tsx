@@ -488,7 +488,7 @@ export default function Settings() {
           <button
             type="button"
             onClick={() => setShowRecalcConfirm(true)}
-            className="w-full inline-flex items-center justify-center gap-2 min-h-[44px] px-3 py-2 rounded-xl bg-dnd-surface border border-[var(--dnd-crimson-bright)]/40 text-[var(--dnd-crimson-bright)] text-sm font-body"
+            className="w-full inline-flex items-center justify-center gap-2 min-h-[44px] px-3 py-2 rounded-xl bg-dnd-surface border border-dnd-crimson-bright/40 text-[var(--dnd-crimson-bright)] text-sm font-body"
           >
             <RefreshCw size={14} />
             {t('character.settings.hp.recalc')}

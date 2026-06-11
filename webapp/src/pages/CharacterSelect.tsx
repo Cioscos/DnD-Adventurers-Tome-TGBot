@@ -275,7 +275,7 @@ export default function CharacterSelect() {
                   ornamented
                   layoutId={`char-hero-${char.id}`}
                   onClick={() => navigate(`/char/${char.id}`)}
-                  className={`overflow-hidden${isDown ? ' !border-[var(--dnd-crimson-bright)]/70 shadow-halo-danger' : ''}`}
+                  className={`overflow-hidden${isDown ? ' !border-dnd-crimson-bright/70 shadow-halo-danger' : ''}`}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0 space-y-1.5">
@@ -284,7 +284,7 @@ export default function CharacterSelect() {
                           {char.name}
                         </h2>
                         {isDown && (
-                          <span className="text-[10px] font-cinzel uppercase tracking-wider px-2 py-0.5 rounded-full bg-[var(--dnd-crimson)]/20 text-[var(--dnd-crimson-bright)] border border-[var(--dnd-crimson-bright)]/40 shrink-0">
+                          <span className="text-[10px] font-cinzel uppercase tracking-wider px-2 py-0.5 rounded-full bg-dnd-crimson/20 text-[var(--dnd-crimson-bright)] border border-dnd-crimson-bright/40 shrink-0">
                             {t('character.select.unconscious_badge')}
                           </span>
                         )}
@@ -327,7 +327,7 @@ export default function CharacterSelect() {
                         e.stopPropagation()
                         handleDelete(char)
                       }}
-                      className="w-11 h-11 flex items-center justify-center rounded-lg text-[var(--dnd-crimson-bright)] shrink-0 hover:bg-[var(--dnd-crimson)]/10"
+                      className="w-11 h-11 flex items-center justify-center rounded-lg text-[var(--dnd-crimson-bright)] shrink-0 hover:bg-dnd-crimson/10"
                       aria-label="Elimina"
                       whileTap={{ scale: 0.9 }}
                     >

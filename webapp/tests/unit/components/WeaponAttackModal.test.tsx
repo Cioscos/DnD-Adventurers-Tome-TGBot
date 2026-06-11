@@ -79,8 +79,8 @@ describe('WeaponAttackModal', () => {
     expect(screen.getByTestId('rd-title')).toHaveTextContent('Longsword')
     expect(screen.getByText('19')).toBeInTheDocument() // to_hit_total
     expect(screen.getByText('9')).toBeInTheDocument() // damage_total
-    expect(screen.queryByText('CRITICO!')).not.toBeInTheDocument()
-    expect(screen.queryByText('FUMBLE!')).not.toBeInTheDocument()
+    expect(screen.queryByText('Critico!')).not.toBeInTheDocument()
+    expect(screen.queryByText('Fumble!')).not.toBeInTheDocument()
     const dialog = screen.getByTestId('result-dialog')
     expect(dialog).toHaveAttribute('data-accent', 'emerald')
     expect(dialog).toHaveAttribute('data-pulse', 'false')
@@ -95,7 +95,7 @@ describe('WeaponAttackModal', () => {
       damage_total: 16,
     }
     render(<WeaponAttackModal result={crit} onClose={() => {}} />)
-    expect(screen.getByText('CRITICO!')).toBeInTheDocument()
+    expect(screen.getByText('Critico!')).toBeInTheDocument()
     expect(screen.getByText(/\(critico\)/)).toBeInTheDocument() // doubled-dice damage label
     expect(screen.getByText('16')).toBeInTheDocument()
     const dialog = screen.getByTestId('result-dialog')
@@ -106,7 +106,7 @@ describe('WeaponAttackModal', () => {
   it('on a fumble: crimson accent, FUMBLE banner, and the damage block is hidden', () => {
     const fumble: WeaponAttackResult = { ...baseResult, is_fumble: true }
     render(<WeaponAttackModal result={fumble} onClose={() => {}} />)
-    expect(screen.getByText('FUMBLE!')).toBeInTheDocument()
+    expect(screen.getByText('Fumble!')).toBeInTheDocument()
     expect(screen.getByTestId('result-dialog')).toHaveAttribute('data-accent', 'crimson')
     expect(screen.getByText('19')).toBeInTheDocument() // to-hit still shown
     expect(screen.queryByText('9')).not.toBeInTheDocument() // damage_total NOT rendered on fumble

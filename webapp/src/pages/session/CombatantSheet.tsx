@@ -118,7 +118,7 @@ export default function CombatantSheet({ sessionId, encounter, combatant: c, onC
                 type="button"
                 onClick={() => applyHp(-1)}
                 disabled={patchMutation.isPending}
-                className="flex-1 px-3 py-2 rounded-md border border-[var(--dnd-crimson-bright)]/60
+                className="flex-1 px-3 py-2 rounded-md border border-dnd-crimson-bright/60
                            text-[var(--dnd-crimson-bright)] text-sm font-cinzel uppercase tracking-wider
                            active:opacity-70 disabled:opacity-40"
               >
@@ -128,7 +128,7 @@ export default function CombatantSheet({ sessionId, encounter, combatant: c, onC
                 type="button"
                 onClick={() => applyHp(1)}
                 disabled={patchMutation.isPending}
-                className="flex-1 px-3 py-2 rounded-md border border-[var(--dnd-emerald-bright)]/60
+                className="flex-1 px-3 py-2 rounded-md border border-dnd-emerald-bright/60
                            text-[var(--dnd-emerald-bright)] text-sm font-cinzel uppercase tracking-wider
                            active:opacity-70 disabled:opacity-40"
               >
@@ -237,7 +237,7 @@ export default function CombatantSheet({ sessionId, encounter, combatant: c, onC
               )
             }
             disabled={removeMutation.isPending}
-            className="flex-1 px-3 py-2.5 rounded-md border border-[var(--dnd-crimson-bright)]/60
+            className="flex-1 px-3 py-2.5 rounded-md border border-dnd-crimson-bright/60
                        text-[var(--dnd-crimson-bright)] text-sm inline-flex items-center
                        justify-center gap-1.5 active:opacity-70 disabled:opacity-40"
           >

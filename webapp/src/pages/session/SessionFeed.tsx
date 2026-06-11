@@ -380,7 +380,7 @@ export default function SessionFeed({
                   {grantBody ?? it.body}
                 </p>
                 {isGrantToMe && (
-                  <p className="text-[10px] uppercase tracking-wider mt-1 text-[var(--dnd-amber)]/80 font-cinzel">
+                  <p className="text-[10px] uppercase tracking-wider mt-1 text-dnd-amber/80 font-cinzel">
                     {t('session.feed.grant_chip')}
                   </p>
                 )}
@@ -389,7 +389,7 @@ export default function SessionFeed({
 
             const baseClass = `max-w-[80%] rounded-lg px-3 py-2 text-sm font-body text-left
               ${isWhisper
-                ? 'bg-[var(--dnd-amber)]/15 border border-[var(--dnd-amber)]/40 italic'
+                ? 'bg-dnd-amber/15 border border-dnd-amber/40 italic'
                 : mine
                   ? 'ml-auto bg-gradient-gold text-dnd-ink'
                   : 'bg-dnd-surface border border-dnd-border text-dnd-text'}
@@ -401,7 +401,7 @@ export default function SessionFeed({
                   key={itemKey(it)}
                   type="button"
                   onClick={() => handleGrantClick(it)}
-                  className={`${baseClass} cursor-pointer hover:bg-[var(--dnd-amber)]/25 transition-colors`}
+                  className={`${baseClass} cursor-pointer hover:bg-dnd-amber/25 transition-colors`}
                 >
                   {bubbleContent}
                 </button>
@@ -417,7 +417,7 @@ export default function SessionFeed({
       </div>
 
       {whisperTarget && (
-        <div className="mt-3 mb-2 flex items-center justify-between gap-2 rounded-full px-3 py-1.5 bg-[var(--dnd-amber)]/20 border border-[var(--dnd-amber)]/60">
+        <div className="mt-3 mb-2 flex items-center justify-between gap-2 rounded-full px-3 py-1.5 bg-dnd-amber/20 border border-dnd-amber/60">
           <div className="flex items-center gap-2 min-w-0">
             <Lock size={12} className="text-[var(--dnd-amber)] shrink-0" />
             <span className="text-xs font-cinzel uppercase tracking-wider text-[var(--dnd-amber)] truncate">

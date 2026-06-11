@@ -1,3 +1,14 @@
+/**
+ * I token colore vivono in CSS vars (tema dark/light in index.css). Una var()
+ * "opaca" non permette a Tailwind di iniettare l'alpha del modificatore
+ * (`bg-dnd-gold/15`): senza questo wrapper quelle utility venivano scartate
+ * in silenzio e ~300 tinte previste dal design non sono mai esistite.
+ * color-mix(<alpha-value>) le rende reali mantenendo il flip di tema via var.
+ * Supporto: Chrome/WebView 111+, Safari 16.2+ (il target Telegram è oltre).
+ */
+const alpha = (cssVar) =>
+  `color-mix(in srgb, var(${cssVar}) calc(<alpha-value> * 100%), transparent)`
+
 /** @type {import('tailwindcss').Config} */
 export default {
   content: [
@@ -20,46 +31,46 @@ export default {
           'secondary-bg': 'var(--tg-theme-secondary-bg-color)',
         },
         dnd: {
-          ink: 'var(--dnd-ink)',
-          bg: 'var(--dnd-bg)',
-          surface: 'var(--dnd-surface)',
-          'surface-raised': 'var(--dnd-surface-raised)',
-          'surface-lifted': 'var(--dnd-surface-lifted)',
-          'surface-elevated': 'var(--dnd-surface-raised)', // alias legacy
-          border: 'var(--dnd-border)',
-          'border-strong': 'var(--dnd-border-strong)',
-          gold: 'var(--dnd-gold)',
-          'gold-bright': 'var(--dnd-gold-bright)',
-          'gold-dim': 'var(--dnd-gold-dim)',
-          'gold-deep': 'var(--dnd-gold-deep)',
-          parchment: 'var(--dnd-parchment)',
-          text: 'var(--dnd-text)',
-          'text-muted': 'var(--dnd-text-muted)',
-          'text-faint': 'var(--dnd-text-faint)',
-          'text-secondary': 'var(--dnd-text-muted)', // alias legacy
-          danger: 'var(--dnd-crimson)',
-          crimson: 'var(--dnd-crimson)',
-          'crimson-bright': 'var(--dnd-crimson-bright)',
-          'crimson-deep': 'var(--dnd-crimson-deep)',
-          success: 'var(--dnd-emerald)',
-          emerald: 'var(--dnd-emerald)',
-          'emerald-bright': 'var(--dnd-emerald-bright)',
-          'emerald-deep': 'var(--dnd-emerald-deep)',
-          arcane: 'var(--dnd-arcane)',
-          'arcane-bright': 'var(--dnd-arcane-bright)',
-          'arcane-deep': 'var(--dnd-arcane-deep)',
-          info: 'var(--dnd-cobalt)',
-          cobalt: 'var(--dnd-cobalt)',
-          'cobalt-bright': 'var(--dnd-cobalt-bright)',
-          'cobalt-deep': 'var(--dnd-cobalt-deep)',
-          amber: 'var(--dnd-amber)',
-          highlight: 'var(--dnd-amber)',
-          'highlight-muted': 'var(--dnd-amber)',
-          'success-text': 'var(--dnd-emerald-bright)',
-          'arcane-text': 'var(--dnd-arcane-bright)',
-          'info-text': 'var(--dnd-cobalt-bright)',
-          'chip-bg': 'var(--dnd-chip-bg)',
-          'chip-border': 'var(--dnd-chip-border)',
+          ink: alpha('--dnd-ink'),
+          bg: alpha('--dnd-bg'),
+          surface: alpha('--dnd-surface'),
+          'surface-raised': alpha('--dnd-surface-raised'),
+          'surface-lifted': alpha('--dnd-surface-lifted'),
+          'surface-elevated': alpha('--dnd-surface-raised'), // alias legacy
+          border: alpha('--dnd-border'),
+          'border-strong': alpha('--dnd-border-strong'),
+          gold: alpha('--dnd-gold'),
+          'gold-bright': alpha('--dnd-gold-bright'),
+          'gold-dim': alpha('--dnd-gold-dim'),
+          'gold-deep': alpha('--dnd-gold-deep'),
+          parchment: alpha('--dnd-parchment'),
+          text: alpha('--dnd-text'),
+          'text-muted': alpha('--dnd-text-muted'),
+          'text-faint': alpha('--dnd-text-faint'),
+          'text-secondary': alpha('--dnd-text-muted'), // alias legacy
+          danger: alpha('--dnd-crimson'),
+          crimson: alpha('--dnd-crimson'),
+          'crimson-bright': alpha('--dnd-crimson-bright'),
+          'crimson-deep': alpha('--dnd-crimson-deep'),
+          success: alpha('--dnd-emerald'),
+          emerald: alpha('--dnd-emerald'),
+          'emerald-bright': alpha('--dnd-emerald-bright'),
+          'emerald-deep': alpha('--dnd-emerald-deep'),
+          arcane: alpha('--dnd-arcane'),
+          'arcane-bright': alpha('--dnd-arcane-bright'),
+          'arcane-deep': alpha('--dnd-arcane-deep'),
+          info: alpha('--dnd-cobalt'),
+          cobalt: alpha('--dnd-cobalt'),
+          'cobalt-bright': alpha('--dnd-cobalt-bright'),
+          'cobalt-deep': alpha('--dnd-cobalt-deep'),
+          amber: alpha('--dnd-amber'),
+          highlight: alpha('--dnd-amber'),
+          'highlight-muted': alpha('--dnd-amber'),
+          'success-text': alpha('--dnd-emerald-bright'),
+          'arcane-text': alpha('--dnd-arcane-bright'),
+          'info-text': alpha('--dnd-cobalt-bright'),
+          'chip-bg': alpha('--dnd-chip-bg'),
+          'chip-border': alpha('--dnd-chip-border'),
           overlay: 'var(--dnd-overlay)',
         },
       },

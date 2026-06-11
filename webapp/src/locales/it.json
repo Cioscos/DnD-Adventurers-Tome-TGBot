@@ -314,6 +314,7 @@
       "stop_concentration": "Interrompi concentrazione",
       "conc_save_damage_placeholder": "Danno subito",
       "conc_save_btn": "TS Concentrazione",
+      "conc_save_title": "Concentrazione: CD {{dc}}",
       "conc_save_success": "Concentrazione mantenuta!",
       "conc_save_fail": "Concentrazione persa!",
       "damage": "Danno",
@@ -390,6 +391,8 @@
     },
     "dice": {
       "title": "Tira Dadi",
+      "critical_banner": "Critico!",
+      "fumble_banner": "Fumble!",
       "send_to_chat": "Invia al gruppo",
       "send_to_bot": "Manda al bot",
       "history": "Cronologia",

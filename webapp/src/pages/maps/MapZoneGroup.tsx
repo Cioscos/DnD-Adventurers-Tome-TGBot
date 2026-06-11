@@ -187,7 +187,7 @@ function MapZoneGroupInner({
             />
             <button
               onClick={(e) => { e.stopPropagation(); onDeleteFile(m.id, zoneName) }}
-              className="absolute top-1 right-1 w-5 h-5 rounded-full bg-[var(--dnd-ink)]/80 text-dnd-text text-xs flex items-center justify-center leading-none z-10"
+              className="absolute top-1 right-1 w-5 h-5 rounded-full bg-dnd-ink/80 text-dnd-text text-xs flex items-center justify-center leading-none z-10"
             >
               ✕
             </button>

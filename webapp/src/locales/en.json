@@ -314,6 +314,7 @@
       "stop_concentration": "Stop concentration",
       "conc_save_damage_placeholder": "Damage taken",
       "conc_save_btn": "Concentration Save",
+      "conc_save_title": "Concentration: DC {{dc}}",
       "conc_save_success": "Concentration maintained!",
       "conc_save_fail": "Concentration lost!",
       "damage": "Damage",
@@ -390,6 +391,8 @@
     },
     "dice": {
       "title": "Roll Dice",
+      "critical_banner": "Critical!",
+      "fumble_banner": "Fumble!",
       "send_to_chat": "Send to group",
       "send_to_bot": "Send to bot",
       "history": "History",

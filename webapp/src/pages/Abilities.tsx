@@ -411,7 +411,7 @@ export default function Abilities() {
                     <m.button
                       onClick={() => usesMutation.mutate({ abilityId: ab.id, uses: Math.max(0, current - 1) })}
                       disabled={current <= 0 || usesMutation.isPending}
-                      className="w-11 h-11 rounded-xl bg-[var(--dnd-crimson)]/15 text-[var(--dnd-crimson-bright)] border border-[var(--dnd-crimson)]/30 flex items-center justify-center disabled:opacity-30"
+                      className="w-11 h-11 rounded-xl bg-dnd-crimson/15 text-[var(--dnd-crimson-bright)] border border-dnd-crimson/30 flex items-center justify-center disabled:opacity-30"
                       whileTap={{ scale: 0.9 }}
                     >
                       <Minus size={16} />
@@ -425,7 +425,7 @@ export default function Abilities() {
                     <m.button
                       onClick={() => usesMutation.mutate({ abilityId: ab.id, uses: Math.min(max, current + 1) })}
                       disabled={current >= max || usesMutation.isPending}
-                      className="w-11 h-11 rounded-xl bg-[var(--dnd-emerald)]/15 text-[var(--dnd-emerald-bright)] border border-dnd-emerald/30 flex items-center justify-center disabled:opacity-30"
+                      className="w-11 h-11 rounded-xl bg-dnd-emerald/15 text-[var(--dnd-emerald-bright)] border border-dnd-emerald/30 flex items-center justify-center disabled:opacity-30"
                       whileTap={{ scale: 0.9 }}
                     >
                       <Plus size={16} />

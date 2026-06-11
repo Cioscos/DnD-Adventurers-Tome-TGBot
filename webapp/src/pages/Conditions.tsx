@@ -328,7 +328,7 @@ export default function Conditions() {
                   ${isActive
                     ? 'bg-gradient-ember text-white shadow-parchment-md'
                     : isFilled
-                      ? 'bg-[var(--dnd-amber)]/40 text-[var(--dnd-amber)]'
+                      ? 'bg-dnd-amber/40 text-[var(--dnd-amber)]'
                       : 'bg-dnd-surface border border-dnd-border text-dnd-text-faint'}`}
                 whileTap={{ scale: 0.92 }}
                 transition={spring.press}
@@ -394,7 +394,7 @@ export default function Conditions() {
               }}
               className={`flex items-center rounded-xl border transition-colors
                 ${active
-                  ? 'bg-gradient-to-br from-[var(--dnd-crimson-deep)]/40 to-[var(--dnd-crimson)]/20 border-dnd-crimson/60 shadow-halo-danger text-dnd-text'
+                  ? 'bg-gradient-to-br from-dnd-crimson-deep/40 to-dnd-crimson/20 border-dnd-crimson/60 shadow-halo-danger text-dnd-text'
                   : 'bg-dnd-surface border-dnd-border text-dnd-text-muted'}`}
             >
               <m.button

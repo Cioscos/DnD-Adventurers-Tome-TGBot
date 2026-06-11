@@ -110,7 +110,7 @@ function SkillRow({
       transition={{ delay: idx * 0.02, duration: 0.18 }}
       className={`flex items-center gap-2 px-3 py-2 rounded-xl border transition-colors
         ${isExpert
-          ? 'bg-gradient-to-r from-[var(--dnd-arcane-deep)]/30 to-[var(--dnd-gold-deep)]/20 border-dnd-arcane/40'
+          ? 'bg-gradient-to-r from-dnd-arcane-deep/30 to-dnd-gold-deep/20 border-dnd-arcane/40'
           : isProficient
             ? 'bg-dnd-surface-raised border-dnd-gold/30'
             : 'bg-dnd-surface border-dnd-border'}`}

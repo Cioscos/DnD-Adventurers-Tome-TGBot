@@ -24,13 +24,13 @@ export default function ConcentrationSaveDialog({ result, onClose }: Props) {
       accent={accent}
       pulse={pulse}
       size="sm"
-      title={<>🔮 {t('character.spells.concentration')}: DC {dc}</>}
+      title={<>🔮 {t('character.spells.conc_save_title', { dc })}</>}
     >
       {is_critical && (
-        <p className="text-dnd-gold-bright font-bold font-cinzel">✦ CRITICO!</p>
+        <p className="text-dnd-gold-bright font-bold font-cinzel uppercase tracking-wider">✦ {t('character.dice.critical_banner')}</p>
       )}
       {is_fumble && (
-        <p className="text-dnd-crimson-bright font-bold font-cinzel">💀 FUMBLE!</p>
+        <p className="text-dnd-crimson-bright font-bold font-cinzel uppercase tracking-wider">💀 {t('character.dice.fumble_banner')}</p>
       )}
 
       <m.p

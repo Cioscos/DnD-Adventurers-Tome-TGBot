@@ -249,7 +249,7 @@ export default function SpellSlots() {
                   {slotsMode !== 'auto' && (
                     <m.button
                       onClick={() => removeSlot.mutate(slot.id)}
-                      className="w-11 h-11 rounded-lg text-[var(--dnd-crimson-bright)] flex items-center justify-center hover:bg-[var(--dnd-crimson)]/10"
+                      className="w-11 h-11 rounded-lg text-[var(--dnd-crimson-bright)] flex items-center justify-center hover:bg-dnd-crimson/10"
                       whileTap={{ scale: 0.9 }}
                       aria-label="Remove"
                     >

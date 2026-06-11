@@ -273,7 +273,7 @@ export default function HP() {
                         label={t('character.hp.temp')}
                       />
                     )}
-                    <span className="rounded-full bg-[rgba(13,10,8,0.25)] px-2 py-0.5 text-xs font-mono text-dnd-text">
+                    <span className="rounded-full bg-dnd-ink/25 px-2 py-0.5 text-xs font-mono text-dnd-text">
                       {Math.round(hpPct)}%
                     </span>
                   </div>
@@ -286,7 +286,7 @@ export default function HP() {
                   {atZero && ds.stable && (
                     <p className="mt-3 inline-flex items-center justify-center gap-1.5 rounded-full px-3 py-1.5
                                   text-[11px] font-cinzel font-bold uppercase tracking-wider
-                                  bg-[var(--dnd-cobalt)]/15 border border-dnd-cobalt/40 text-[var(--dnd-cobalt-bright)]">
+                                  bg-dnd-cobalt/15 border border-dnd-cobalt/40 text-[var(--dnd-cobalt-bright)]">
                       <HeartPulse size={13} />
                       {t('character.death_saves.stabilized_badge')}
                     </p>
