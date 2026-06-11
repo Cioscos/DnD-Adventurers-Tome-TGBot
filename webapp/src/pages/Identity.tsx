@@ -251,7 +251,7 @@ export default function Identity() {
         </div>
         <p className="text-[10px] text-dnd-text-faint font-body italic max-w-[300px] text-center">
           {t('character.identity.private_hint', {
-            defaultValue: 'Background, ideali, legami, difetti — visibili solo al giocatore.',
+            defaultValue: 'Background, ideali, legami, difetti: visibili solo al giocatore.',
           })}
         </p>
       </div>

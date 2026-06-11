@@ -991,7 +991,7 @@
       "name_placeholder": "Il nome del tuo eroe",
       "hit_die": "Dado vita",
       "step_identity": "Identità",
-      "identity_skip": "Salta — compili dopo",
+      "identity_skip": "Salta: compili dopo",
       "identity_optional_hint": "Tutto opzionale: puoi saltare e completare dopo.",
       "create_cta": "Crea"
     },
@@ -999,7 +999,7 @@
       "equipment": "Equipaggiamento",
       "hands_conflict": {
         "title": "Mani occupate",
-        "body": "Per equipaggiare {{newItem}} verrà rimosso {{removedItem}} — un'arma a due mani occupa entrambe le mani.",
+        "body": "Per equipaggiare {{newItem}} verrà rimosso {{removedItem}}: un'arma a due mani occupa entrambe le mani.",
         "confirm": "Continua"
       },
       "silhouette": {

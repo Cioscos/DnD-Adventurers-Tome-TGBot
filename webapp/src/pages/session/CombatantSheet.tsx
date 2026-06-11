@@ -102,7 +102,7 @@ export default function CombatantSheet({ sessionId, encounter, combatant: c, onC
         {isFullMonster && c.current_hp !== null && (
           <section className="space-y-2">
             <p className="text-xs uppercase tracking-wider text-dnd-gold-dim font-cinzel">
-              {t('session.combat.hp_controls')} — <span className="font-mono tabular-nums">{c.current_hp}/{c.max_hp}</span>
+              {t('session.combat.hp_controls')}: <span className="font-mono tabular-nums">{c.current_hp}/{c.max_hp}</span>
             </p>
             <div className="flex gap-2">
               <input

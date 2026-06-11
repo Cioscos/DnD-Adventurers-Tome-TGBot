@@ -991,15 +991,15 @@
       "name_placeholder": "Your hero's name",
       "hit_die": "Hit die",
       "step_identity": "Identity",
-      "identity_skip": "Skip — fill in later",
-      "identity_optional_hint": "All optional — you can skip and fill in later.",
+      "identity_skip": "Skip: fill in later",
+      "identity_optional_hint": "All optional: you can skip and fill in later.",
       "create_cta": "Create"
     },
     "equipment": {
       "equipment": "Equipment",
       "hands_conflict": {
         "title": "Hands occupied",
-        "body": "Equipping {{newItem}} will remove {{removedItem}} — a two-handed weapon occupies both hands.",
+        "body": "Equipping {{newItem}} will remove {{removedItem}}: a two-handed weapon occupies both hands.",
         "confirm": "Continue"
       },
       "silhouette": {

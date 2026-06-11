@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { ChevronsUp } from 'lucide-react'
 import { GiPolarStar as Star } from 'react-icons/gi'
 import { XP_THRESHOLDS, levelFromXp } from '@/lib/xpThresholds'
+import { formatInt } from '@/lib/format'
 
 interface HeroXPBarProps {
   currentXP: number
@@ -23,7 +24,7 @@ export default function HeroXPBar({
   className = '',
   suppressHalo = false,
 }: HeroXPBarProps) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
 
   const xpLevel = levelFromXp(currentXP)
   // Finding #4: with no classes (total_level 0) the character has no level — show
@@ -41,8 +42,8 @@ export default function HeroXPBar({
   const rightLabel = levelUpReady ? null : (
     nextThreshold !== null
       ? t('character.xp.bar.progress', {
-          current: currentXP.toLocaleString(),
-          threshold: nextThreshold.toLocaleString(),
+          current: formatInt(currentXP, i18n.language),
+          threshold: formatInt(nextThreshold, i18n.language),
         })
       : t('character.xp.bar.max')
   )

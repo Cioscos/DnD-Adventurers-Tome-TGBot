@@ -20,6 +20,7 @@ import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { spring, ease } from '@/styles/motion'
 import { XP_THRESHOLDS, levelFromXp } from '@/lib/xpThresholds'
 import { diffResourceMaxes } from '@/lib/resourceDiff'
+import { formatInt, localeTag } from '@/lib/format'
 import ProgressionPreview from '@/components/character/ProgressionPreview'
 import ClassTabs from '@/components/character/ClassTabs'
 import LevelUpBanner from '@/pages/multiclass/LevelUpBanner'
@@ -38,7 +39,7 @@ function pickDefaultClass(char: CharacterFull): string {
 export default function Experience() {
   const { id } = useParams<{ id: string }>()
   const charId = Number(id)
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const qc = useQueryClient()
   const [addValue, setAddValue] = useState('')
   const [setMode, setSetMode] = useState(false)
@@ -226,6 +227,7 @@ export default function Experience() {
           <Star size={14} className="text-[var(--dnd-amber)]" />
           <AnimatedNumber
             value={xp}
+            locale={localeTag(i18n.language)}
             className="text-2xl font-display font-bold text-dnd-text"
             stiffness={120}
             damping={26}
@@ -242,7 +244,7 @@ export default function Experience() {
         {nextThreshold && (
           <div className="mt-4">
             <div className="flex items-center justify-end mb-1.5">
-              <StatPill tone="default" size="sm" value={`${xpToNext.toLocaleString()} ${t('character.xp.label')} → ${level + 1}`} />
+              <StatPill tone="default" size="sm" value={`${formatInt(xpToNext, i18n.language)} ${t('character.xp.label')} → ${level + 1}`} />
             </div>
             {/* XP progress bar */}
             <div className="h-3 rounded-full bg-dnd-ink/60 overflow-hidden border border-dnd-border relative">
