@@ -1,4 +1,5 @@
 import React from 'react'
+import { useTranslation } from 'react-i18next'
 import Sheet from './Sheet'
 import Button, { type ButtonVariant } from './Button'
 
@@ -29,6 +30,7 @@ export default function ConfirmSheet({
   loading = false,
   centered = true,
 }: ConfirmSheetProps) {
+  const { t } = useTranslation()
   return (
     <Sheet open={open} onClose={onClose} centered={centered} title={title}>
       <div className="p-5 space-y-4">
@@ -40,7 +42,7 @@ export default function ConfirmSheet({
         {/* Annulla a sinistra, conferma a destra (convenzione: l'azione di conferma sta sempre a destra). */}
         <div className="flex gap-2">
           <Button variant="secondary" fullWidth onClick={onClose}>
-            {cancelLabel ?? 'Annulla'}
+            {cancelLabel ?? t('common.cancel')}
           </Button>
           <Button
             variant={confirmVariant}

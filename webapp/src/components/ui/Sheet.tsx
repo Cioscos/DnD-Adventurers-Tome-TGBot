@@ -4,6 +4,7 @@ import { m, AnimatePresence, useDragControls, type PanInfo } from 'framer-motion
 import { X } from 'lucide-react'
 import { spring } from '@/styles/motion'
 import { useRegisterOverlay } from '@/store/overlayStore'
+import { useOverlayDismiss } from '@/hooks/useOverlayDismiss'
 
 interface SheetProps {
   open: boolean
@@ -18,11 +19,6 @@ interface SheetProps {
    *  nesting a sheet above an already-open z-50 overlay. */
   zClassName?: string
 }
-
-// Stack of currently-open sheets: with nested sheets (e.g. SelectSheet inside a
-// form Sheet) only the topmost one may react to Escape, otherwise a single
-// keypress would close the whole stack at once.
-const escapeStack: symbol[] = []
 
 /**
  * Modal bottom sheet (mobile) / centered dialog (desktop-md+).
@@ -40,31 +36,20 @@ export default function Sheet({
 }: SheetProps) {
   const dragControls = useDragControls()
   const sheetRef = useRef<HTMLDivElement>(null)
-  const stackToken = useRef(Symbol('sheet'))
 
   useRegisterOverlay(open)
+  // Escape e back/popstate chiudono solo lo sheet in cima allo stack condiviso.
+  useOverlayDismiss(open, onClose, dismissible)
 
-  // Prevent body scroll + close on Escape when open
+  // Prevent body scroll when open
   useEffect(() => {
     if (!open) return
-    const token = stackToken.current
-    escapeStack.push(token)
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      const topmost = escapeStack[escapeStack.length - 1] === token
-      if (event.key === 'Escape' && dismissible && topmost) onClose()
-    }
-    document.addEventListener('keydown', handleKeyDown)
-
     return () => {
-      const i = escapeStack.indexOf(token)
-      if (i !== -1) escapeStack.splice(i, 1)
       document.body.style.overflow = prev
-      document.removeEventListener('keydown', handleKeyDown)
     }
-  }, [open, dismissible, onClose])
+  }, [open])
 
   const handleDragEnd = (_: unknown, info: PanInfo) => {
     if (info.offset.y > 120 || info.velocity.y > 800) {
@@ -125,7 +110,7 @@ export default function Sheet({
                     type="button"
                     onClick={onClose}
                     aria-label="Close"
-                    className="absolute top-0 right-3 p-1.5 rounded-full text-dnd-gold-dim hover:text-dnd-gold-bright hover:bg-dnd-surface-raised transition-colors"
+                    className="absolute -top-1 right-2 w-10 h-10 flex items-center justify-center rounded-full text-dnd-gold-dim hover:text-dnd-gold-bright hover:bg-dnd-surface-raised transition-colors"
                   >
                     <X size={18} />
                   </button>
@@ -133,12 +118,12 @@ export default function Sheet({
               </div>
             ) : (
               dismissible && (
-                <div className="flex justify-end px-3 -mt-1">
+                <div className="flex justify-end px-2 -mt-2">
                   <button
                     type="button"
                     onClick={onClose}
                     aria-label="Close"
-                    className="p-1.5 rounded-full text-dnd-gold-dim hover:text-dnd-gold-bright hover:bg-dnd-surface-raised transition-colors"
+                    className="w-10 h-10 flex items-center justify-center rounded-full text-dnd-gold-dim hover:text-dnd-gold-bright hover:bg-dnd-surface-raised transition-colors"
                   >
                     <X size={18} />
                   </button>

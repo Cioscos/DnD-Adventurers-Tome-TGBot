@@ -8,9 +8,10 @@ Questo ledger è stato seminato dall'audit FE del 2026-06-11 (`fe-playwright-aud
 
 ## Batch trasversali (prima: sbloccano i batch di pagina)
 
-- ☐ **B1 — Modali & overlay** · `ui/Sheet`, `ui/ConfirmSheet`, `ui/ResultDialog`, `ModalProvider`, `hp/HitDiceModal`, `notes` delete confirm, `maps/MapUploadForm`
+- ✅ **B1 — Modali & overlay** · `ui/Sheet`, `ui/ConfirmSheet`, `ui/ResultDialog`, `ModalProvider`, `hp/HitDiceModal`, `notes` delete confirm, `maps/MapUploadForm`
   Findings: #4 ordine bottoni invertito (HitDiceModal, conferma nota, MapUploadForm → footer condiviso conferma-a-destra), #7 ESC non chiude ResultDialog, #12 back/history non chiude gli overlay (integrazione popstate/BackButton in ModalProvider).
-  Verifica: hp→riposo breve, note→elimina, maps→form, skills→roll+ESC, back con sheet aperto.
+  Esito: nuovo hook condiviso `hooks/useOverlayDismiss` (stack globale ESC + sentinella history singola, StrictMode-safe) agganciato a Sheet/ResultDialog/ModalProvider → copre anche SearchOverlay e tutti gli sheet derivati. Footer invertiti in HitDiceModal (+label "Riposa" anti-wrap), MapUploadForm; conferma nota migrata a ConfirmSheet (one-off rimosso); fallback `cancelLabel` di ConfirmSheet ora i18n; X di Sheet 30→40px. Verificato 375×667 dark+light, ESC annidato (dialogo sopra sheet), back su Sheet/ResultDialog/SearchOverlay, vitest overlay, tsc+lint. **Da verificare su device Telegram**: comportamento BackButton nativo con la sentinella history.
+  Nota per i batch successivi: gli overlay CUSTOM non-Sheet (`EquipItemPicker`, `ItemDetailsModal`, `ProgressionFullTableModal`, `SlotActionSheet`, viewer di `Maps`, `AddClassForm`, `LevelUpModal`, `EditClassesModal`) vanno agganciati a `useOverlayDismiss` nei rispettivi batch (B4/B5/B10/B11).
 - ☐ **B2 — Copy & i18n** · `locales/it.json`, `locales/en.json`, formatter numerici/orari
   Findings: #1 em dash (sweep U+2014 su entrambi i locale, incl. "Salta — compili dopo" e HandsConflictDialog), #8 "intelligence" grezzo nel modale save, #V4 separatore migliaia ("2,700"→"2.700" in it) e orario AM/PM nel feed sessione (→24h, coerente con Cronologia). Centralizzare `Intl.NumberFormat(locale)`/`hour12:false`.
   Verifica: wizard step 3, saves modal, xp hero, session feed, i18n it↔en.
@@ -28,6 +29,7 @@ Questo ledger è stato seminato dall'audit FE del 2026-06-11 (`fe-playwright-aud
 - ☐ **B9 — Zaino** · `pages/Inventory`, `inventory/ItemForm`, `DamageDiceBuilder`, `InventoryItem`, `AbilityModifiersEditor` (⛔ visto ma non compilato), `EffectsEditor` (⛔), `pages/Currency`
 - ☐ **B10 — Crescita** · `pages/Multiclass`, `multiclass/EditClassesModal`, `AddClassForm`, `LevelUpBanner`, `LevelUpModal` (⛔: esercitarlo con multiclasse), `pages/Experience`, `pages/Abilities`, `abilities/PassiveAbilityDetailModal` (⛔: serve una passiva, creala), `homebrew/CustomResourceCounter`
 - ☐ **B11 — Stato & diario** · `pages/Conditions`, `conditions/ConditionDetailModal`, `pages/History`, `pages/Notes`, `notes/NoteEditor`, `NoteItem`, `NoteViewModal` (⛔), `VoiceRecorder` (⛔: serve permesso mic, prova su device), `pages/Maps`, `maps/MapUploadForm`, `MapZoneGroup`, `ZoomableImage`
+  Nota da B1: `MapUploadForm` usa ancora i componenti legacy `DndButton`/`DndInput`/`Card` invece di `ui/Button`/`ui/Input`/`Surface` (drift one-off, da migrare qui); viewer fullscreen di Maps da agganciare a `useOverlayDismiss`.
 - ☐ **B12 — Dadi** · `pages/Dice`, `pages/DiceStats`, `DiceOverlay` (FAB), `DicePoolResultModal`, `ui/DiceIcon`, `ui/PresetTextField`, pack texture (settings); unico posto con easing elastico ammesso
 - ☐ **B13 — Identità, impostazioni & home** · `pages/Identity`, `pages/Settings` (tutte le sezioni), `pages/Changelog`, `pages/CharacterSelect`, `ui/SwitchToggle`, `ui/SelectSheet`, `ui/ChipInput` (⛔ campo Lingue mai esercitato), `ui/Flags`
 - ☐ **B14 — Homebrew** · `pages/Homebrew` (hub/template), `homebrew/RuleEditor` + tutte le sections (`PropertyFormModal`, `PassiveModifierFormModal`, `EffectFormModal`, `EffectChainEditor` ⛔ mai aperti: crea una regola completa), `PropertyBadge`/`CustomConditionCard`/`HomebrewBreakdownRow`/`HomebrewNotification` (⛔: installare Sanguinamento e Qualità&Usura per vederli)
@@ -44,3 +46,4 @@ Questo ledger è stato seminato dall'audit FE del 2026-06-11 (`fe-playwright-aud
 ## Diario
 
 - 2026-06-11 · B0 consegnato in PR #166 (v2.14.2) · baseline 14/20
+- 2026-06-11 · B1 completato su `feat/impeccable-pass-r2`: hook `useOverlayDismiss` (ESC+back per tutti gli overlay primitivi), conferma-a-destra in HitDiceModal/MapUploadForm/Notes (→ConfirmSheet), X Sheet 40px, label "Riposa". Pendenze: BackButton su device; overlay custom nei batch B4/B5/B10/B11.

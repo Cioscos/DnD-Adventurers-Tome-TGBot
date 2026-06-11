@@ -4,6 +4,7 @@ import { m, AnimatePresence } from 'framer-motion'
 import { spring } from '@/styles/motion'
 import { CornerFlourishes } from './Ornament'
 import { useRegisterOverlay } from '@/store/overlayStore'
+import { useOverlayDismiss } from '@/hooks/useOverlayDismiss'
 
 export type DialogAccent = 'default' | 'gold' | 'crimson' | 'emerald' | 'arcane' | 'cobalt'
 export type DialogSize = 'sm' | 'md'
@@ -52,6 +53,9 @@ export default function ResultDialog({
   okLabel = 'OK',
 }: ResultDialogProps) {
   useRegisterOverlay(open)
+  // DESIGN.md §Dialogs: "Tap outside dismisses; ESC dismisses." Il back chiude
+  // il dialogo invece di lasciare la pagina (finding #7/#12 audit FE).
+  useOverlayDismiss(open, onClose)
 
   const pulseClass = pulse
     ? accent === 'gold'

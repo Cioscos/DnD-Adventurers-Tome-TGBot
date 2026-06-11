@@ -2,6 +2,7 @@ import { useState, useCallback, type ReactNode } from 'react'
 import { m, AnimatePresence, useDragControls, type PanInfo } from 'framer-motion'
 import { spring } from '@/styles/motion'
 import { useRegisterOverlay } from '@/store/overlayStore'
+import { useOverlayDismiss } from '@/hooks/useOverlayDismiss'
 import { ModalContext, type ModalOptions } from './modalContext'
 
 function ModalShell({
@@ -15,6 +16,9 @@ function ModalShell({
 }) {
   const dragControls = useDragControls()
   const dismissible = options.dismissible !== false
+
+  // Escape e back/popstate chiudono il modale in cima (finding #7/#12 audit FE).
+  useOverlayDismiss(true, onClose, dismissible)
 
   const handleDragEnd = (_: unknown, info: PanInfo) => {
     if (info.offset.y > 120 || info.velocity.y > 800) {

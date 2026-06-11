@@ -81,7 +81,11 @@ export default function HitDiceModal({
           })}
         </div>
 
+        {/* Annulla a sinistra, conferma a destra (convenzione ConfirmSheet). */}
         <div className="flex gap-2 pt-1">
+          <Button variant="secondary" fullWidth onClick={onClose}>
+            {t('common.cancel')}
+          </Button>
           <Button
             variant="primary"
             fullWidth
@@ -90,9 +94,6 @@ export default function HitDiceModal({
             icon={<Moon size={16} />}
           >
             {t('character.hp.confirm_rest')}
-          </Button>
-          <Button variant="secondary" fullWidth onClick={onClose}>
-            {t('common.cancel')}
           </Button>
         </div>
       </div>

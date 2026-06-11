@@ -9,6 +9,7 @@ import { api } from '@/api/client'
 import Layout from '@/components/Layout'
 import Button from '@/components/ui/Button'
 import Sheet from '@/components/ui/Sheet'
+import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import ScrollArea from '@/components/ScrollArea'
 import EmptyState from '@/components/ui/EmptyState'
 import { haptic } from '@/auth/telegram'
@@ -240,32 +241,16 @@ export default function Notes() {
         </div>
       </ScrollArea>
 
-      <Sheet
+      <ConfirmSheet
         open={deleteTarget !== null}
         onClose={() => setDeleteTarget(null)}
-        centered
+        onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget)}
         title={t('common.confirm')}
-      >
-        <div className="p-5 space-y-3">
-          <p className="text-sm text-center text-dnd-text font-body">
-            {deleteTarget && t('character.notes.delete_confirm', { title: deleteTarget })}
-          </p>
-          <div className="flex gap-2">
-            <Button
-              variant="danger"
-              fullWidth
-              onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget)}
-              loading={deleteMutation.isPending}
-              haptic="error"
-            >
-              {t('common.delete')}
-            </Button>
-            <Button variant="secondary" fullWidth onClick={() => setDeleteTarget(null)}>
-              {t('common.cancel')}
-            </Button>
-          </div>
-        </div>
-      </Sheet>
+        body={deleteTarget ? t('character.notes.delete_confirm', { title: deleteTarget }) : undefined}
+        confirmLabel={t('common.delete')}
+        cancelLabel={t('common.cancel')}
+        loading={deleteMutation.isPending}
+      />
 
       <Sheet
         open={isEditorOpen}
