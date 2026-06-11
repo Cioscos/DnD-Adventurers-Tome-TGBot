@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { ChevronLeft } from 'lucide-react'
+import { ChevronLeft, RefreshCw, UserX } from 'lucide-react'
 import { m, AnimatePresence } from 'framer-motion'
 import { useSwipeNavigation, getGroupInfo } from '@/hooks/useSwipeNavigation'
 import { pageSkeleton } from '@/components/skeletons/pageSkeletons'
+import { api, ApiError } from '@/api/client'
+import EmptyState from '@/components/ui/EmptyState'
 import { spring } from '@/styles/motion'
 import { haptic } from '@/auth/telegram'
 
@@ -27,6 +30,22 @@ export default function Layout({ title, children, backTo, group, page, hideScrol
   const swipe = useSwipeNavigation(group, page)
   const info = getGroupInfo(group, page)
   const { id } = useParams<{ id: string }>()
+
+  // Guard condiviso sul personaggio (audit FE 2026-06-11, #10): con un id
+  // inesistente (deep-link stantio, personaggio eliminato altrove) le pagine
+  // restavano su skeleton/main vuoto perché nessuna gestiva isError. La query
+  // è la stessa delle pagine (stessa key → dedupe), quindi non costa fetch
+  // extra; qui si decide solo cosa mostrare al posto del contenuto.
+  const charId = Number(id)
+  const charQuery = useQuery({
+    queryKey: ['character', charId],
+    queryFn: () => api.characters.get(charId),
+    enabled: Number.isFinite(charId) && charId > 0,
+    retry: (failureCount, error) =>
+      !(error instanceof ApiError && (error.status === 404 || error.status === 403)) && failureCount < 3,
+  })
+  const charNotFound = charQuery.error instanceof ApiError
+    && (charQuery.error.status === 404 || charQuery.error.status === 403)
 
   // Ghost skeleton: the skeleton of the page the swipe is heading toward, so the
   // area behind the outgoing page is never blank during the drag.
@@ -202,7 +221,30 @@ export default function Layout({ title, children, backTo, group, page, hideScrol
           onTouchEnd={swipe.onTouchEnd}
           onScroll={handleMainScroll}
         >
-          {children}
+          {charQuery.isError ? (
+            charNotFound ? (
+              <EmptyState
+                icon={<UserX size={28} />}
+                title={t('layout.char_error.not_found')}
+                hint={t('layout.char_error.not_found_hint')}
+                action={{
+                  label: t('layout.char_error.back_to_list'),
+                  onClick: () => navigate('/'),
+                }}
+              />
+            ) : (
+              <EmptyState
+                icon={<RefreshCw size={28} />}
+                title={t('layout.char_error.generic')}
+                action={{
+                  label: t('layout.char_error.retry'),
+                  onClick: () => charQuery.refetch(),
+                }}
+              />
+            )
+          ) : (
+            children
+          )}
         </main>
 
         {/* Ghost layer: skeleton of the incoming page, only while swiping. */}

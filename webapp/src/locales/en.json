@@ -151,6 +151,7 @@
     },
     "death_saves": {
       "title": "Death Saves",
+      "stabilized_badge": "Stabilized · unconscious",
       "successes": "Successes",
       "failures": "Failures",
       "success": "Success",
@@ -1099,6 +1100,13 @@
   "layout": {
     "nav": {
       "go_to": "Go to {{page}}"
+    },
+    "char_error": {
+      "not_found": "Character not found",
+      "not_found_hint": "It may have been deleted, or the link is no longer valid.",
+      "back_to_list": "Back to characters",
+      "generic": "Could not load the character",
+      "retry": "Try again"
     }
   },
   "session": {

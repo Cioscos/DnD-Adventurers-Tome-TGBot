@@ -15,9 +15,9 @@ Questo ledger è stato seminato dall'audit FE del 2026-06-11 (`fe-playwright-aud
 - ✅ **B2 — Copy & i18n** · `locales/it.json`, `locales/en.json`, formatter numerici/orari
   Findings: #1 em dash (sweep U+2014 su entrambi i locale, incl. "Salta — compili dopo" e HandsConflictDialog), #8 "intelligence" grezzo nel modale save, #V4 separatore migliaia ("2,700"→"2.700" in it) e orario AM/PM nel feed sessione (→24h, coerente con Cronologia). Centralizzare `Intl.NumberFormat(locale)`/`hour12:false`.
   Esito: em dash rimossi dal copy (identity_skip/optional_hint, HandsConflictDialog body, private_hint fallback, CombatantSheet label→":", SessionFeed separatore→"·"); i "—" segnaposto valore-assente restano (glifo, non copy). #8: description raw soppressa nei saves (titolo già localizzato). #V4: nuovo `lib/format.ts` (formatInt/formatTime24/localeTag sul locale APP, non navigator) adottato da HeroXPBar, Experience (incl. locale di AnimatedNumber) e SessionFeed. Nota: it-IT CLDR non raggruppa i numeri a 4 cifre ("2700", "27.000" da 5 in su) — corretto, non regressione. Verificato: wizard step 3, save INT, hero XP, feed 24h, tsc+lint.
-- ☐ **B3 — Stati di errore & harden** · `AppErrorBoundary`, hook dati condiviso, `hp/DeathSaves`
+- ✅ **B3 — Stati di errore & harden** · `AppErrorBoundary`, hook dati condiviso, `hp/DeathSaves`
   Findings: #10 id inesistente → main vuoto (EmptyState "Personaggio non trovato" + CTA lista nel Layout su 404), #5 indicatore "Stabilizzato · privo di sensi" (cobalt + icona) a 0 HP stabile. Passata empty/loading/error sulle pagine principali.
-  Verifica: /char/9999/hp, death saves→3 successi, route abort.
+  Esito: #10 guard condiviso in `Layout` (stessa query del personaggio → dedupe; 404/403 = EmptyState "non trovato" + CTA lista, altri errori = EmptyState + Riprova; retry disattivato sui 404). Copre tutte le pagine Layout-based in un punto solo; CharacterMain ha già il suo branch. #5: badge cobalt `stabilized_badge` (HeartPulse + Cinzel) nella sezione alive quando `hp=0 && stable`. Verificato: /char/9999/hp + CTA, danno→0→stable→badge→cura, tsc+lint.
 
 ## Batch di pagina
 
@@ -41,10 +41,12 @@ Questo ledger è stato seminato dall'audit FE del 2026-06-11 (`fe-playwright-aud
 
 ## Fuori scope (bug funzionali trovati durante il pass — segnalare, non fixare qui)
 
-- (vuoto)
+- **Stabilizza assegna 1 HP** (`api/routers/hp.py:402-404`): l'azione manuale STABILIZE imposta `current_hit_points = 1`, ma in 5e RAW una creatura stabilizzata resta a 0 HP (priva di sensi). House rule o bug? Da confermare con `/fullstack-functional-audit`.
+- **`stable` non si resetta col danno 1→0**: dopo Stabilizza (HP 1, `stable=true`), un danno che riporta a 0 mostra subito "stabilizzato" senza nuovi tiri; in RAW il danno a una creatura stabile la rende di nuovo morente. Correlato al punto sopra.
 
 ## Diario
 
 - 2026-06-11 · B0 consegnato in PR #166 (v2.14.2) · baseline 14/20
 - 2026-06-11 · B1 completato su `feat/impeccable-pass-r2`: hook `useOverlayDismiss` (ESC+back per tutti gli overlay primitivi), conferma-a-destra in HitDiceModal/MapUploadForm/Notes (→ConfirmSheet), X Sheet 40px, label "Riposa". Pendenze: BackButton su device; overlay custom nei batch B4/B5/B10/B11.
 - 2026-06-11 · B2 completato: sweep em dash (locale+tsx), description raw soppressa nei saves, `lib/format.ts` per numeri/orari sul locale app (XP, feed 24h).
+- 2026-06-11 · B3 completato: guard 404 condiviso nel Layout (EmptyState + CTA), badge "Stabilizzato · privo di sensi" a 0 HP. 2 sospetti funzionali su stabilize → Fuori scope.

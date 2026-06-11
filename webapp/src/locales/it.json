@@ -151,6 +151,7 @@
     },
     "death_saves": {
       "title": "Tiri vs Morte",
+      "stabilized_badge": "Stabilizzato · privo di sensi",
       "successes": "Successi",
       "failures": "Fallimenti",
       "success": "Successo",
@@ -1099,6 +1100,13 @@
   "layout": {
     "nav": {
       "go_to": "Vai a {{page}}"
+    },
+    "char_error": {
+      "not_found": "Personaggio non trovato",
+      "not_found_hint": "Forse è stato eliminato o il collegamento non è più valido.",
+      "back_to_list": "Torna ai personaggi",
+      "generic": "Impossibile caricare il personaggio",
+      "retry": "Riprova"
     }
   },
   "session": {
