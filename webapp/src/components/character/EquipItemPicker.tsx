@@ -9,6 +9,7 @@ import { api } from '@/api/client'
 import { haptic } from '@/auth/telegram'
 import { ITEM_TYPE_TO_SLOTS, handsConflict } from '@/lib/equipmentSlots'
 import { useRegisterOverlay } from '@/store/overlayStore'
+import { useOverlayDismiss } from '@/hooks/useOverlayDismiss'
 import type { EquipmentSlot, Item, CharacterFull } from '@/types'
 import { useUnitSettings, formatWeight } from '@/store/unitSettings'
 import HandsConflictDialog from './HandsConflictDialog'
@@ -32,6 +33,8 @@ export default function EquipItemPicker({ charId, slot, items, onClose }: Props)
   const qc = useQueryClient()
   const navigate = useNavigate()
   useRegisterOverlay(true)
+  // Overlay custom non-Sheet: ESC e back/BackButton chiudono (nota batch B1).
+  useOverlayDismiss(true, onClose)
   const system = useUnitSettings((s) => s.system)
 
   const [conflict, setConflict] = useState<{ newItem: Item; removedItem: Item } | null>(null)
@@ -110,7 +113,8 @@ export default function EquipItemPicker({ charId, slot, items, onClose }: Props)
   const slotLabel = t(`character.equipment.slots.${slot}`, { defaultValue: slot })
 
   return createPortal(
-    <AnimatePresence>
+    <>
+      <AnimatePresence>
       <m.div
         className="fixed inset-0 z-50 flex items-end sm:items-center justify-center backdrop-blur-sm"
         style={{ background: 'var(--dnd-overlay)' }}
@@ -202,7 +206,7 @@ export default function EquipItemPicker({ charId, slot, items, onClose }: Props)
                       <span className="flex flex-col gap-0.5 min-w-0 flex-1">
                         <span className="text-sm font-bold text-dnd-text">{it.name}</span>
                         <span className="text-[11px] text-dnd-text-muted break-words">
-                          {it.item_type} · {formatWeight(it.weight, system)}
+                          {t(`character.inventory.types.${it.item_type}`, { defaultValue: it.item_type })} · {formatWeight(it.weight, system)}
                         </span>
                       </span>
                     </button>
@@ -213,6 +217,10 @@ export default function EquipItemPicker({ charId, slot, items, onClose }: Props)
           )}
         </m.div>
       </m.div>
+      </AnimatePresence>
+      {/* Fuori da AnimatePresence: è uno Sheet con portal e animazioni proprie
+          (due figli anonimi nella stessa AnimatePresence = warning di chiavi
+          duplicate React). */}
       {conflict && (
         <HandsConflictDialog
           newItem={conflict.newItem}
@@ -222,7 +230,7 @@ export default function EquipItemPicker({ charId, slot, items, onClose }: Props)
           onConfirm={() => equip.mutate({ itemId: conflict.newItem.id, removeId: conflict.removedItem.id })}
         />
       )}
-    </AnimatePresence>,
+    </>,
     document.body,
   )
 }

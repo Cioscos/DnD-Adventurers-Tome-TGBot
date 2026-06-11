@@ -18,7 +18,7 @@ export default function HandsConflictDialog({ newItem, removedItem, pending, onC
     <Sheet open onClose={onCancel} centered title={t('character.equipment.hands_conflict.title')}>
       <div className="p-5 space-y-4">
         <div className="flex justify-center">
-          <span className="w-12 h-12 rounded-full flex items-center justify-center border text-[var(--dnd-amber)] border-[color:var(--dnd-amber)]/50 bg-[color:var(--dnd-amber)]/15">
+          <span className="w-12 h-12 rounded-full flex items-center justify-center border text-[var(--dnd-amber)] border-dnd-amber/50 bg-dnd-amber/15">
             <AlertTriangle size={22} />
           </span>
         </div>
@@ -35,7 +35,7 @@ export default function HandsConflictDialog({ newItem, removedItem, pending, onC
             onClick={onConfirm}
             loading={pending}
             haptic="warning"
-            className="!text-[var(--dnd-amber)] !border-[color:var(--dnd-amber)]/55"
+            className="!text-[var(--dnd-amber)] !border-dnd-amber/55"
           >
             {t('character.equipment.hands_conflict.confirm')}
           </Button>

@@ -183,7 +183,8 @@ export default function SavingThrows() {
                       </p>
                     </div>
 
-                    <p className="text-3xl font-mono font-bold leading-none tabular-nums text-dnd-text">
+                    {/* Negativo in crimson come in Skills: stesso vocabolario. */}
+                    <p className={`text-3xl font-mono font-bold leading-none tabular-nums ${total >= 0 ? 'text-dnd-text' : 'text-dnd-crimson-bright'}`}>
                       {total >= 0 ? '+' : ''}{total}
                     </p>
                     <DiceIcon sides={20} size={24} className="text-dnd-gold/80 shrink-0" />

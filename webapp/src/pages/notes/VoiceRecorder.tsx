@@ -103,7 +103,7 @@ export default function VoiceRecorder({ onRecordComplete, onCancel, isPending }:
       </div>
 
       {micError && (
-        <p className="text-sm text-[var(--dnd-danger)] bg-[var(--dnd-danger)]/10 rounded-xl px-3 py-2">
+        <p className="text-sm text-[var(--dnd-danger)] bg-dnd-danger/10 rounded-xl px-3 py-2">
           {micError}
         </p>
       )}
@@ -136,7 +136,7 @@ export default function VoiceRecorder({ onRecordComplete, onCancel, isPending }:
           {isRecording && (
             <button
               onClick={stopRecording}
-              className="w-16 h-16 rounded-full bg-[var(--dnd-danger)]/30 border-2 border-[var(--dnd-danger)]
+              className="w-16 h-16 rounded-full bg-dnd-danger/30 border-2 border-[var(--dnd-danger)]
                          flex items-center justify-center active:opacity-70"
             >
               <span className="w-6 h-6 rounded bg-[var(--dnd-danger)]" />

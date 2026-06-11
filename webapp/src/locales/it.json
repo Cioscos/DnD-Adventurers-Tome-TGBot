@@ -248,7 +248,7 @@
       "title": "Tiri Salvezza",
       "proficient": "Competente",
       "roll": "Tira dado",
-      "ts_short": "Tiro Salvezza",
+      "ts_short": "comp",
       "tap_to_roll": "Tocca per tirare",
       "homebrew_label": "Bonus Homebrew"
     },
@@ -314,6 +314,7 @@
       "stop_concentration": "Interrompi concentrazione",
       "conc_save_damage_placeholder": "Danno subito",
       "conc_save_btn": "TS Concentrazione",
+      "conc_save_title": "Concentrazione: CD {{dc}}",
       "conc_save_success": "Concentrazione mantenuta!",
       "conc_save_fail": "Concentrazione persa!",
       "damage": "Danno",
@@ -390,6 +391,8 @@
     },
     "dice": {
       "title": "Tira Dadi",
+      "critical_banner": "Critico!",
+      "fumble_banner": "Fumble!",
       "send_to_chat": "Invia al gruppo",
       "send_to_bot": "Manda al bot",
       "history": "Cronologia",
@@ -429,12 +432,13 @@
     },
     "search": {
       "title": "Cerca",
-      "placeholder": "Incantesimi, oggetti, abilità, note…",
+      "placeholder": "Incantesimi, oggetti, abilità, risorse, note…",
       "hint": "Scrivi almeno 2 caratteri.",
       "no_results": "Nessun risultato.",
       "type_spell": "Incantesimi",
       "type_item": "Oggetti",
       "type_ability": "Abilità speciali",
+      "type_resource": "Risorse",
       "type_note": "Note",
       "cantrip": "trucchetto",
       "spell_level": "liv. {{level}}"
@@ -1055,9 +1059,9 @@
         "no_data": "Dati di progressione non disponibili",
         "current_level": "Livello attuale",
         "features_header": "Caratteristiche",
-        "level_header": "Livello",
-        "pb_header": "Bonus Competenza",
-        "level_cell": "Liv. {{n}}"
+        "level_header": "Liv.",
+        "pb_header": "Comp.",
+        "level_cell": "L{{n}}"
       }
     },
     "swiper": {

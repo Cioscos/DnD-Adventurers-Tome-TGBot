@@ -5,6 +5,7 @@ import { m, AnimatePresence } from 'framer-motion'
 import { X } from 'lucide-react'
 import { progressionRows, localizeFeatures } from '@/lib/classProgression'
 import { useRegisterOverlay } from '@/store/overlayStore'
+import { useOverlayDismiss } from '@/hooks/useOverlayDismiss'
 
 interface Props {
   className: string
@@ -18,6 +19,8 @@ export default function ProgressionFullTableModal({ className, currentLevel, onC
   const rows = progressionRows(className) ?? []
 
   useRegisterOverlay(true)
+  // Overlay custom non-Sheet: ESC e back/BackButton chiudono (nota batch B1).
+  useOverlayDismiss(true, onClose)
 
   useEffect(() => {
     currentRowRef.current?.scrollIntoView({ behavior: 'auto', block: 'center' })
@@ -64,9 +67,9 @@ export default function ProgressionFullTableModal({ className, currentLevel, onC
             <table className="w-full text-left text-[12px] table-fixed">
               <thead className="text-[10px] uppercase tracking-wider text-dnd-gold-dim sticky top-0 bg-dnd-surface-raised">
                 <tr>
-                  <th className="px-2 py-2 w-14 break-words">{t('character.equipment.progression.level_header')}</th>
-                  <th className="px-2 py-2 w-16 break-words">{t('character.equipment.progression.pb_header')}</th>
-                  <th className="px-2 py-2 break-words">{t('character.equipment.progression.features_header')}</th>
+                  <th className="px-2 py-2 w-12">{t('character.equipment.progression.level_header')}</th>
+                  <th className="px-2 py-2 w-14">{t('character.equipment.progression.pb_header')}</th>
+                  <th className="px-2 py-2">{t('character.equipment.progression.features_header')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -83,7 +86,7 @@ export default function ProgressionFullTableModal({ className, currentLevel, onC
                           : 'text-dnd-text-muted border-t border-dnd-gold-dim/10'
                       }
                     >
-                      <td className="px-2 py-2 w-14 font-mono font-bold break-words whitespace-normal">{t('character.equipment.progression.level_cell', { n: lv })}</td>
+                      <td className="px-2 py-2 w-12 font-mono font-bold tabular-nums">{t('character.equipment.progression.level_cell', { n: lv })}</td>
                       <td className="px-2 py-2 font-mono">+{r.proficiency_bonus}</td>
                       <td className="px-2 py-2 break-words">{localizeFeatures(r.features, i18n.language)}</td>
                     </tr>

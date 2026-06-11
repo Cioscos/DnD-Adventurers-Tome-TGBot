@@ -234,7 +234,7 @@ export default function EditClassesModal({ char, targetLevel, onClose }: Props) 
             className={`text-center py-3 rounded-xl border transition-colors ${
               isValid
                 ? 'bg-dnd-surface border-dnd-gold text-dnd-gold-bright'
-                : 'bg-dnd-surface border-[var(--dnd-crimson)]/60 text-[var(--dnd-crimson-bright)]'
+                : 'bg-dnd-surface border-dnd-crimson/60 text-[var(--dnd-crimson-bright)]'
             }`}
           >
             <p className="text-[10px] font-cinzel uppercase tracking-[0.3em] opacity-80">
@@ -293,7 +293,7 @@ export default function EditClassesModal({ char, targetLevel, onClose }: Props) 
                   <button
                     type="button"
                     onClick={() => removeNewEntry(e.tempId)}
-                    className="hit-44 w-9 h-9 rounded-lg text-[var(--dnd-crimson-bright)] flex items-center justify-center hover:bg-[var(--dnd-crimson)]/10"
+                    className="hit-44 w-9 h-9 rounded-lg text-[var(--dnd-crimson-bright)] flex items-center justify-center hover:bg-dnd-crimson/10"
                     aria-label={t('character.multiclass.edit.remove_new')}
                   >
                     <Trash2 size={14} />

@@ -4,6 +4,7 @@ import { m, AnimatePresence } from 'framer-motion'
 import { X } from 'lucide-react'
 import { TYPE_ICON } from '@/pages/inventory/itemMetadata'
 import { useRegisterOverlay } from '@/store/overlayStore'
+import { useOverlayDismiss } from '@/hooks/useOverlayDismiss'
 import type { EquipmentSlot, Item } from '@/types'
 import { useUnitSettings, formatWeight } from '@/store/unitSettings'
 
@@ -17,12 +18,14 @@ function MetadataField({ label, value }: { label: string; value: string | number
   let displayValue: string
   if (typeof value === 'boolean') displayValue = value ? '✓' : '—'
   else displayValue = String(value)
+  // Tabular Numerics: i valori numerici (quantità, CA, requisiti) in mono.
+  const numeric = typeof value === 'number'
   return (
     <div className="flex items-baseline justify-between gap-3 py-1">
       <span className="text-[11px] font-cinzel uppercase tracking-widest text-dnd-gold-dim shrink-0">
         {label}
       </span>
-      <span className="text-sm font-body text-dnd-text text-right truncate">
+      <span className={`text-sm text-dnd-text text-right truncate ${numeric ? 'font-mono tabular-nums' : 'font-body'}`}>
         {displayValue}
       </span>
     </div>
@@ -33,6 +36,8 @@ export default function ItemDetailsModal({ item, slot, onClose }: Props) {
   const { t } = useTranslation()
   const system = useUnitSettings((s) => s.system)
   useRegisterOverlay(true)
+  // Overlay custom non-Sheet: ESC e back/BackButton chiudono (nota batch B1).
+  useOverlayDismiss(true, onClose)
 
   const slotLabel = t(`character.equipment.slots.${slot}`, { defaultValue: slot })
   const typeLabel = t(`character.inventory.types.${item.item_type}`, { defaultValue: item.item_type })
@@ -78,7 +83,7 @@ export default function ItemDetailsModal({ item, slot, onClose }: Props) {
               type="button"
               onClick={onClose}
               aria-label={t('common.close', { defaultValue: 'Close' })}
-              className="w-9 h-9 -mr-1 shrink-0 flex items-center justify-center rounded-full border border-dnd-gold-dim/40"
+              className="w-10 h-10 -mr-1 shrink-0 flex items-center justify-center rounded-full border border-dnd-gold-dim/40"
             >
               <X size={18} className="text-dnd-gold" />
             </button>

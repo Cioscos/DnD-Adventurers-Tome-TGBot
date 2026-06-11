@@ -55,13 +55,13 @@ describe('RollResultModal', () => {
     render(<RollResultModal result={result({ is_critical: true })} title="T" onClose={() => {}} />)
     expect(screen.getByTestId('dialog')).toHaveAttribute('data-accent', 'gold')
     expect(screen.getByTestId('dialog')).toHaveAttribute('data-pulse', 'true')
-    expect(screen.getByText(/CRITICO/)).toBeInTheDocument()
+    expect(screen.getByText('character.dice.critical_banner')).toBeInTheDocument()
   })
 
   it('a fumble is crimson and shows the FUMBLE banner', () => {
     render(<RollResultModal result={result({ is_fumble: true })} title="T" onClose={() => {}} />)
     expect(screen.getByTestId('dialog')).toHaveAttribute('data-accent', 'crimson')
-    expect(screen.getByText(/FUMBLE/)).toBeInTheDocument()
+    expect(screen.getByText('character.dice.fumble_banner')).toBeInTheDocument()
   })
 
   it('offers the inspiration reroll only when available and not already rerolled', async () => {

@@ -248,7 +248,7 @@
       "title": "Saving Throws",
       "proficient": "Proficient",
       "roll": "Roll dice",
-      "ts_short": "Saving Throw",
+      "ts_short": "prof",
       "tap_to_roll": "Tap to roll",
       "homebrew_label": "Homebrew Bonus"
     },
@@ -314,6 +314,7 @@
       "stop_concentration": "Stop concentration",
       "conc_save_damage_placeholder": "Damage taken",
       "conc_save_btn": "Concentration Save",
+      "conc_save_title": "Concentration: DC {{dc}}",
       "conc_save_success": "Concentration maintained!",
       "conc_save_fail": "Concentration lost!",
       "damage": "Damage",
@@ -390,6 +391,8 @@
     },
     "dice": {
       "title": "Roll Dice",
+      "critical_banner": "Critical!",
+      "fumble_banner": "Fumble!",
       "send_to_chat": "Send to group",
       "send_to_bot": "Send to bot",
       "history": "History",
@@ -429,12 +432,13 @@
     },
     "search": {
       "title": "Search",
-      "placeholder": "Spells, items, abilities, notes…",
+      "placeholder": "Spells, items, abilities, resources, notes…",
       "hint": "Type at least 2 characters.",
       "no_results": "No results.",
       "type_spell": "Spells",
       "type_item": "Items",
       "type_ability": "Special abilities",
+      "type_resource": "Resources",
       "type_note": "Notes",
       "cantrip": "cantrip",
       "spell_level": "lvl {{level}}"
@@ -1055,9 +1059,9 @@
         "no_data": "Progression data not available",
         "current_level": "Current level",
         "features_header": "Features",
-        "level_header": "Level",
-        "pb_header": "Proficiency Bonus",
-        "level_cell": "Lv. {{n}}"
+        "level_header": "Lv.",
+        "pb_header": "Prof.",
+        "level_cell": "L{{n}}"
       }
     },
     "swiper": {

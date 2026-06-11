@@ -5,6 +5,7 @@ import { m, AnimatePresence } from 'framer-motion'
 import { api } from '@/api/client'
 import { haptic } from '@/auth/telegram'
 import { useRegisterOverlay } from '@/store/overlayStore'
+import { useOverlayDismiss } from '@/hooks/useOverlayDismiss'
 import type { EquipmentSlot, Item, CharacterFull } from '@/types'
 
 interface Props {
@@ -20,6 +21,8 @@ export default function SlotActionSheet({ charId, slot, item, onClose, onReplace
   const { t } = useTranslation()
   const qc = useQueryClient()
   useRegisterOverlay(true)
+  // Overlay custom non-Sheet: ESC e back/BackButton chiudono (nota batch B1).
+  useOverlayDismiss(true, onClose)
 
   const unequip = useMutation({
     mutationFn: () =>

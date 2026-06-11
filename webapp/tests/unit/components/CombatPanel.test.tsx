@@ -44,6 +44,8 @@ vi.mock('framer-motion', async () => {
   return {
     m: new Proxy({}, { get: (_t: object, tag: string | symbol) => make(String(tag)) }),
     AnimatePresence: ({ children }: { children?: React.ReactNode }) => children,
+    // Sheet usa il drag-to-dismiss dal giro r2.
+    useDragControls: () => ({ start: () => {} }),
   }
 })
 

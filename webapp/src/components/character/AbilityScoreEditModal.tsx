@@ -46,7 +46,7 @@ export default function AbilityScoreEditModal({
             disabled={value <= MIN}
             whileTap={{ scale: 0.9 }}
             aria-label={t('character.stats.decrease')}
-            className="w-14 h-14 rounded-xl bg-[var(--dnd-crimson)]/15 text-[var(--dnd-crimson-bright)] border border-[var(--dnd-crimson)]/40 flex items-center justify-center disabled:opacity-30"
+            className="w-14 h-14 rounded-xl bg-dnd-crimson/15 text-[var(--dnd-crimson-bright)] border border-dnd-crimson/40 flex items-center justify-center disabled:opacity-30"
           >
             <Minus size={24} />
           </m.button>
@@ -65,7 +65,7 @@ export default function AbilityScoreEditModal({
             disabled={value >= MAX}
             whileTap={{ scale: 0.9 }}
             aria-label={t('character.stats.increase')}
-            className="w-14 h-14 rounded-xl bg-[var(--dnd-emerald)]/20 text-[var(--dnd-emerald-bright)] border border-dnd-emerald/40 flex items-center justify-center disabled:opacity-30"
+            className="w-14 h-14 rounded-xl bg-dnd-emerald/20 text-[var(--dnd-emerald-bright)] border border-dnd-emerald/40 flex items-center justify-center disabled:opacity-30"
           >
             <Plus size={24} />
           </m.button>

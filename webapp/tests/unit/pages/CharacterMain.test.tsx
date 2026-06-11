@@ -3,10 +3,24 @@ import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from '../utils/renderWithProviders'
 import CharacterMain from '@/pages/CharacterMain'
+import { ApiError } from '@/api/client'
 
 const { getChar, updateInspiration, navigateSpy } = vi.hoisted(() => ({ getChar: vi.fn(), updateInspiration: vi.fn(), navigateSpy: vi.fn() }))
 
-vi.mock('@/api/client', () => ({ api: { characters: { get: getChar, updateInspiration } } }))
+vi.mock('@/api/client', () => {
+  // Speculare alla classe reale: CharacterMain fa `instanceof ApiError` e
+  // legge `.status` per distinguere 404/403 dagli errori generici.
+  class ApiError extends Error {
+    constructor(
+      public status: number,
+      public detail: unknown,
+    ) {
+      super(`API ${status}`)
+      this.name = 'ApiError'
+    }
+  }
+  return { api: { characters: { get: getChar, updateInspiration } }, ApiError }
+})
 vi.mock('react-router-dom', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
   return { ...actual, useParams: () => ({ id: '7' }), useNavigate: () => navigateSpy }
@@ -26,7 +40,12 @@ vi.mock('framer-motion', async () => {
     for (const k in props) if (!MOTION.has(k)) clean[k] = props[k]
     return React.createElement(tag, clean)
   }
-  return { m: new Proxy({}, { get: (_t: object, tag: string | symbol) => make(String(tag)) }) }
+  return {
+    m: new Proxy({}, { get: (_t: object, tag: string | symbol) => make(String(tag)) }),
+    AnimatePresence: (p: { children?: unknown }) => React.createElement(React.Fragment, null, p.children),
+    // SearchOverlay monta Sheet, che usa il drag-to-dismiss dal giro r2.
+    useDragControls: () => ({ start: () => {} }),
+  }
 })
 vi.mock('@/components/ui/Skeleton', async () => {
   const React = await import('react')
@@ -64,9 +83,18 @@ describe('CharacterMain', () => {
     await waitFor(() => expect(updateInspiration).toHaveBeenCalledWith(7, true))
   })
 
-  it('shows an error state when the character fails to load', async () => {
+  it('shows a retryable error state when the character fails to load', async () => {
     getChar.mockRejectedValue(new Error('boom'))
     renderWithProviders(<CharacterMain />)
-    expect(await screen.findByText('common.error')).toBeInTheDocument()
+    expect(await screen.findByText('layout.char_error.generic')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'layout.char_error.retry' })).toBeInTheDocument()
+  })
+
+  it('shows the not-found state with a back-to-list CTA on 404', async () => {
+    getChar.mockRejectedValue(new ApiError(404, 'not found'))
+    renderWithProviders(<CharacterMain />)
+    expect(await screen.findByText('layout.char_error.not_found')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'layout.char_error.back_to_list' }))
+    expect(navigateSpy).toHaveBeenCalledWith('/')
   })
 })

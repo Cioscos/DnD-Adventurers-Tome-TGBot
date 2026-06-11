@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { normalize, searchCharacter, MIN_QUERY_LENGTH } from '@/lib/characterSearch'
 import type { CharacterFull } from '@/types'
+import type { HomebrewResource } from '@/lib/homebrew/types'
 
 function makeChar(partial: Partial<CharacterFull>): CharacterFull {
   return {
@@ -22,6 +23,9 @@ const item = (id: number, name: string, quantity = 1) =>
 
 const ability = (id: number, name: string) =>
   ({ id, name, is_passive: false, is_active: true, restoration_type: 'none', is_class_feature: false })
+
+const resource = (id: number, name: string, current = 3, max = 3): HomebrewResource =>
+  ({ id, rule_id: id, character_id: 7, key: `res_${id}`, name, current, max, restoration_type: 'long_rest' })
 
 describe('normalize', () => {
   it('lowercases and strips diacritics', () => {
@@ -71,6 +75,30 @@ describe('searchCharacter', () => {
     const spells = Array.from({ length: 12 }, (_, i) => spell(i, `Magia ${i}`))
     const char = makeChar({ spells })
     expect(searchCharacter(char, 'magia')).toHaveLength(8)
+  })
+
+  // Audit FE 2026-06-11, #11: le risorse homebrew (endpoint separato) entrano
+  // nell'indice quando il chiamante le passa come terzo argomento.
+  describe('homebrew resources', () => {
+    it('matches resources accent-insensitively and routes to abilities', () => {
+      const char = makeChar({})
+      const [r] = searchCharacter(char, 'fortuna', [resource(1, 'Punti Fortuna', 2, 3)])
+      expect(r.type).toBe('resource')
+      expect(r.title).toBe('Punti Fortuna')
+      expect(r.meta).toEqual({ resourceCurrent: 2, resourceMax: 3 })
+      expect(r.route).toBe('/char/7/abilities')
+    })
+
+    it('is omitted by default (callers without resources keep working)', () => {
+      const char = makeChar({ abilities: [ability(1, 'Fortuna del Ladro')] })
+      expect(searchCharacter(char, 'fortuna').map((r) => r.type)).toEqual(['ability'])
+    })
+
+    it('caps resources at 8 like the other categories', () => {
+      const resources = Array.from({ length: 12 }, (_, i) => resource(i, `Riserva ${i}`))
+      const char = makeChar({})
+      expect(searchCharacter(char, 'riserva', resources)).toHaveLength(8)
+    })
   })
 
   it('matches note bodies, not only titles', () => {

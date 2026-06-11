@@ -236,7 +236,7 @@ export default function MapUploadForm({
       )}
 
       {uploadError && (
-        <p className="text-sm text-[var(--dnd-danger)] bg-[var(--dnd-danger)]/10 rounded-xl px-3 py-2">
+        <p className="text-sm text-[var(--dnd-danger)] bg-dnd-danger/10 rounded-xl px-3 py-2">
           {uploadError}
         </p>
       )}

@@ -1,13 +1,14 @@
 import type { CharacterFull } from '@/types'
+import type { HomebrewResource } from '@/lib/homebrew/types'
 
-export type SearchResultType = 'spell' | 'item' | 'ability' | 'note'
+export type SearchResultType = 'spell' | 'item' | 'ability' | 'resource' | 'note'
 
 export interface SearchResult {
   type: SearchResultType
   id: string
   title: string
   /** Dati grezzi per il sottotitolo — la label i18n la costruisce il componente. */
-  meta?: { spellLevel?: number; quantity?: number }
+  meta?: { spellLevel?: number; quantity?: number; resourceCurrent?: number; resourceMax?: number }
   route: string
 }
 
@@ -36,9 +37,15 @@ function noteBody(value: unknown): string {
 }
 
 /** Ricerca client-side sui contenuti del personaggio (incantesimi, oggetti,
- *  abilità speciali, note). Match `includes` accent-insensitive sul nome —
- *  per le note anche sul corpo. Max 8 risultati per categoria. */
-export function searchCharacter(char: CharacterFull, query: string): SearchResult[] {
+ *  abilità speciali, risorse homebrew, note). Match `includes` accent-insensitive
+ *  sul nome — per le note anche sul corpo. Max 8 risultati per categoria.
+ *  Le risorse homebrew vivono su un endpoint separato (non in CharacterFull):
+ *  il chiamante le passa quando le ha (audit FE 2026-06-11, #11). */
+export function searchCharacter(
+  char: CharacterFull,
+  query: string,
+  resources: HomebrewResource[] = [],
+): SearchResult[] {
   const q = normalize(query.trim())
   if (q.length < MIN_QUERY_LENGTH) return []
 
@@ -73,6 +80,17 @@ export function searchCharacter(char: CharacterFull, query: string): SearchResul
       type: 'ability',
       id: `ability-${a.id}`,
       title: a.name,
+      route: `/char/${char.id}/abilities`,
+    })
+  }
+
+  const matchedResources = resources.filter((r) => matches(r.name)).slice(0, MAX_PER_TYPE)
+  for (const r of matchedResources) {
+    results.push({
+      type: 'resource',
+      id: `resource-${r.id}`,
+      title: r.name,
+      meta: { resourceCurrent: r.current, resourceMax: r.max },
       route: `/char/${char.id}/abilities`,
     })
   }

@@ -1,9 +1,12 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { SearchX, Wand2, Backpack, Sparkles, StickyNote } from 'lucide-react'
+import { GiCrystalBall } from 'react-icons/gi'
 import Sheet from '@/components/ui/Sheet'
 import Input from '@/components/ui/Input'
+import { api } from '@/api/client'
 import { haptic } from '@/auth/telegram'
 import {
   searchCharacter,
@@ -13,12 +16,14 @@ import {
 } from '@/lib/characterSearch'
 import type { CharacterFull } from '@/types'
 
-const TYPE_ORDER: readonly SearchResultType[] = ['spell', 'item', 'ability', 'note']
+const TYPE_ORDER: readonly SearchResultType[] = ['spell', 'item', 'ability', 'resource', 'note']
 
 const TYPE_ICONS: Record<SearchResultType, React.ReactNode> = {
   spell: <Wand2 size={14} />,
   item: <Backpack size={14} />,
   ability: <Sparkles size={14} />,
+  // Stessa icona di CustomResourceCounter: vocabolario coerente.
+  resource: <GiCrystalBall size={14} />,
   note: <StickyNote size={14} />,
 }
 
@@ -33,7 +38,18 @@ export default function SearchOverlay({ char, open, onClose }: SearchOverlayProp
   const navigate = useNavigate()
   const [query, setQuery] = useState('')
 
-  const results = useMemo(() => searchCharacter(char, query), [char, query])
+  // Le risorse homebrew non sono in CharacterFull: stessa query key della
+  // pagina Abilità (dedupe in cache), fetch solo a overlay aperto.
+  const { data: resources } = useQuery({
+    queryKey: ['homebrew-resources', char.id],
+    queryFn: () => api.homebrew.listResources(char.id),
+    enabled: open,
+  })
+
+  const results = useMemo(
+    () => searchCharacter(char, query, resources ?? []),
+    [char, query, resources],
+  )
   const grouped = useMemo(
     () =>
       TYPE_ORDER.flatMap((type) => {
@@ -50,6 +66,9 @@ export default function SearchOverlay({ char, open, onClose }: SearchOverlayProp
         : t('character.search.spell_level', { level: r.meta.spellLevel })
     }
     if (r.meta?.quantity !== undefined) return `×${r.meta.quantity}`
+    if (r.meta?.resourceCurrent !== undefined) {
+      return `${r.meta.resourceCurrent}/${r.meta.resourceMax}`
+    }
     return null
   }
 
