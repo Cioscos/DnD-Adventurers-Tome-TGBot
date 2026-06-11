@@ -13,6 +13,7 @@ import type { CharacterFull, SessionFeedItem, SessionFeedResponse, SessionPartic
 import { haptic } from '@/auth/telegram'
 import { EVENT_META } from '@/lib/eventMeta'
 import { enqueue, type Reward } from '@/lib/rewardQueue'
+import { formatTime24 } from '@/lib/format'
 
 const SLOW_MODE_MS = 3000
 
@@ -38,13 +39,6 @@ interface Props {
 
 const POLL_MS = 3000
 
-function formatTime(iso: string) {
-  const d = new Date(iso)
-  // Use the browser/i18n locale rather than hardcoding it-IT so EN users see
-  // English-formatted timestamps (audit cross-cutting fix).
-  const locale = typeof navigator !== 'undefined' ? navigator.language : undefined
-  return d.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })
-}
 
 function itemKey(it: SessionFeedItem): string {
   return it.type === 'message' ? `m:${it.message_id ?? ''}` : `e:${it.event_id ?? ''}`
@@ -61,7 +55,7 @@ export default function SessionFeed({
   onClearWhisperTarget,
   onRewardEnqueued,
 }: Props) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const qc = useQueryClient()
   const navigate = useNavigate()
 
@@ -332,7 +326,7 @@ export default function SessionFeed({
                         <span className="font-cinzel text-dnd-gold-dim not-italic">
                           {it.character_name}
                         </span>
-                        {' — '}
+                        {' · '}
                         {it.description}
                       </>
                     ) : (
@@ -340,7 +334,7 @@ export default function SessionFeed({
                     )}
                   </span>
                   <span className="font-mono text-[10px] text-dnd-text-faint">
-                    {formatTime(it.timestamp)}
+                    {formatTime24(it.timestamp, i18n.language)}
                   </span>
                 </div>
               )

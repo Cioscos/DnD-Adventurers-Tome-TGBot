@@ -131,7 +131,7 @@
       "hit_dice_spend_hint": "Spendi dadi vita per recuperare HP",
       "hit_dice_result": "Dadi vita spesi",
       "new_hp": "Nuovi HP",
-      "confirm_rest": "Conferma riposo",
+      "confirm_rest": "Riposa",
       "concentration_active": "In concentrazione",
       "concentration_lost": "Concentrazione persa!",
       "critical_hit": "Colpo critico",
@@ -151,6 +151,7 @@
     },
     "death_saves": {
       "title": "Tiri vs Morte",
+      "stabilized_badge": "Stabilizzato · privo di sensi",
       "successes": "Successi",
       "failures": "Fallimenti",
       "success": "Successo",
@@ -991,7 +992,7 @@
       "name_placeholder": "Il nome del tuo eroe",
       "hit_die": "Dado vita",
       "step_identity": "Identità",
-      "identity_skip": "Salta — compili dopo",
+      "identity_skip": "Salta: compili dopo",
       "identity_optional_hint": "Tutto opzionale: puoi saltare e completare dopo.",
       "create_cta": "Crea"
     },
@@ -999,7 +1000,7 @@
       "equipment": "Equipaggiamento",
       "hands_conflict": {
         "title": "Mani occupate",
-        "body": "Per equipaggiare {{newItem}} verrà rimosso {{removedItem}} — un'arma a due mani occupa entrambe le mani.",
+        "body": "Per equipaggiare {{newItem}} verrà rimosso {{removedItem}}: un'arma a due mani occupa entrambe le mani.",
         "confirm": "Continua"
       },
       "silhouette": {
@@ -1099,6 +1100,13 @@
   "layout": {
     "nav": {
       "go_to": "Vai a {{page}}"
+    },
+    "char_error": {
+      "not_found": "Personaggio non trovato",
+      "not_found_hint": "Forse è stato eliminato o il collegamento non è più valido.",
+      "back_to_list": "Torna ai personaggi",
+      "generic": "Impossibile caricare il personaggio",
+      "retry": "Riprova"
     }
   },
   "session": {

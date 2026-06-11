@@ -1,0 +1,1 @@
+const o={it:"it-IT",en:"en-US"};function r(t){return o[t]??t}function i(t,n){return new Intl.NumberFormat(r(n)).format(t)}function a(t,n){const e=typeof t=="string"?new Date(t):t;return new Intl.DateTimeFormat(r(n),{hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(e)}export{a,i as f,r as l};

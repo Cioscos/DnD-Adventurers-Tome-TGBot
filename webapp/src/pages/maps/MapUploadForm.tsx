@@ -241,15 +241,8 @@ export default function MapUploadForm({
         </p>
       )}
 
+      {/* Annulla a sinistra, conferma a destra (convenzione ConfirmSheet). */}
       <div className="flex gap-2">
-        <DndButton
-          onClick={handleUpload}
-          disabled={!zoneName.trim() || selectedFiles.length === 0 || isUploading}
-          loading={isUploading}
-          className="flex-1"
-        >
-          {t('character.maps.upload_btn')}
-        </DndButton>
         <DndButton
           variant="secondary"
           onClick={handleCancel}
@@ -257,6 +250,14 @@ export default function MapUploadForm({
           className="flex-1"
         >
           {t('common.cancel')}
+        </DndButton>
+        <DndButton
+          onClick={handleUpload}
+          disabled={!zoneName.trim() || selectedFiles.length === 0 || isUploading}
+          loading={isUploading}
+          className="flex-1"
+        >
+          {t('character.maps.upload_btn')}
         </DndButton>
       </div>
     </Card>

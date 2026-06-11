@@ -131,7 +131,7 @@
       "hit_dice_spend_hint": "Spend hit dice to recover HP",
       "hit_dice_result": "Hit dice spent",
       "new_hp": "New HP",
-      "confirm_rest": "Confirm rest",
+      "confirm_rest": "Rest",
       "concentration_active": "Concentrating",
       "concentration_lost": "Concentration lost!",
       "critical_hit": "Critical hit",
@@ -151,6 +151,7 @@
     },
     "death_saves": {
       "title": "Death Saves",
+      "stabilized_badge": "Stabilized · unconscious",
       "successes": "Successes",
       "failures": "Failures",
       "success": "Success",
@@ -991,15 +992,15 @@
       "name_placeholder": "Your hero's name",
       "hit_die": "Hit die",
       "step_identity": "Identity",
-      "identity_skip": "Skip — fill in later",
-      "identity_optional_hint": "All optional — you can skip and fill in later.",
+      "identity_skip": "Skip: fill in later",
+      "identity_optional_hint": "All optional: you can skip and fill in later.",
       "create_cta": "Create"
     },
     "equipment": {
       "equipment": "Equipment",
       "hands_conflict": {
         "title": "Hands occupied",
-        "body": "Equipping {{newItem}} will remove {{removedItem}} — a two-handed weapon occupies both hands.",
+        "body": "Equipping {{newItem}} will remove {{removedItem}}: a two-handed weapon occupies both hands.",
         "confirm": "Continue"
       },
       "silhouette": {
@@ -1099,6 +1100,13 @@
   "layout": {
     "nav": {
       "go_to": "Go to {{page}}"
+    },
+    "char_error": {
+      "not_found": "Character not found",
+      "not_found_hint": "It may have been deleted, or the link is no longer valid.",
+      "back_to_list": "Back to characters",
+      "generic": "Could not load the character",
+      "retry": "Try again"
     }
   },
   "session": {

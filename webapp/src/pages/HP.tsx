@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { AnimatePresence, m } from 'framer-motion'
+import { HeartPulse } from 'lucide-react'
 import {
   GiNightSleep as Moon, GiCampfire as Campfire, GiPotionBall as FlaskConical,
   GiHeartPlus as Heart,
@@ -279,6 +280,17 @@ export default function HP() {
                   <div className="mt-3">
                     <HPGauge current={char.current_hit_points} max={hpMax} temp={char.temp_hp} size="lg" segmented />
                   </div>
+                  {/* A 0 HP stabile la sezione resta "alive": senza questo badge lo
+                      stato "privo di sensi ma stabile" sarebbe indistinguibile da
+                      un'anomalia (audit FE #5). Cobalt = info, mai crimson. */}
+                  {atZero && ds.stable && (
+                    <p className="mt-3 inline-flex items-center justify-center gap-1.5 rounded-full px-3 py-1.5
+                                  text-[11px] font-cinzel font-bold uppercase tracking-wider
+                                  bg-[var(--dnd-cobalt)]/15 border border-dnd-cobalt/40 text-[var(--dnd-cobalt-bright)]">
+                      <HeartPulse size={13} />
+                      {t('character.death_saves.stabilized_badge')}
+                    </p>
+                  )}
                   <HomebrewBreakdownRow value={char.hp_max_homebrew_modifier ?? 0} label={t('character.hp.homebrew_max_bonus_label')} />
                 </Surface>
               </m.div>

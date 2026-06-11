@@ -70,7 +70,9 @@ export default function SavingThrows() {
     },
     onSuccess: ({ result, ability }) => {
       setRollState({
-        result,
+        // description è la chiave raw dell'ability ("intelligence"): il titolo
+        // localizzato la copre già, mostrarla duplicherebbe in inglese grezzo.
+        result: { ...result, description: undefined },
         ability,
         title: `${t('character.saves.title')}: ${t(`character.stats.${ability}`)}`,
         wasRerolled: false,
@@ -91,7 +93,7 @@ export default function SavingThrows() {
       return api.characters.rollSavingThrow(charId, ability, die, true)
     },
     onSuccess: (result) => {
-      setRollState((prev) => prev && { ...prev, result, wasRerolled: true })
+      setRollState((prev) => prev && { ...prev, result: { ...result, description: undefined }, wasRerolled: true })
       qc.invalidateQueries({ queryKey: ['character', charId] })
       haptic.success()
     },

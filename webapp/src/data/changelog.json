@@ -1,6 +1,48 @@
 {
   "entries": [
     {
+      "version": "2.14.3",
+      "date": "2026-06-11",
+      "title": {
+        "it": "Modali più prevedibili e copy rifinito",
+        "en": "More predictable modals and refined copy"
+      },
+      "added": {
+        "it": [
+          "A 0 HP con tiri salvezza stabili la scheda mostra il badge \"Stabilizzato · privo di sensi\"",
+          "Personaggio inesistente o eliminato: la pagina ora lo dice chiaramente e offre il ritorno alla lista"
+        ],
+        "en": [
+          "At 0 HP with stable death saves the sheet shows the \"Stabilized · unconscious\" badge",
+          "Missing or deleted character: the page now says so clearly and offers a way back to the list"
+        ]
+      },
+      "improved": {
+        "it": [
+          "Il tasto Indietro e il gesto back chiudono il pannello aperto invece di lasciare la pagina",
+          "ESC chiude anche i dialoghi dei risultati (tiri, dadi vita), non solo i pannelli",
+          "Conferma sempre a destra e Annulla a sinistra in tutte le finestre (riposo breve, mappe, note)",
+          "Numeri e orari seguono la lingua dell'app: separatore migliaia corretto e feed di sessione in formato 24 ore"
+        ],
+        "en": [
+          "The Back button and back gesture close the open panel instead of leaving the page",
+          "ESC also closes result dialogs (rolls, hit dice), not just panels",
+          "Confirm always on the right and Cancel on the left in every dialog (short rest, maps, notes)",
+          "Numbers and times follow the app language: correct thousands separator and 24-hour session feed"
+        ]
+      },
+      "fixed": {
+        "it": [
+          "Rimossa la dicitura inglese grezza sotto il risultato dei tiri salvezza",
+          "Ripulito il copy da trattini lunghi non conformi al design system"
+        ],
+        "en": [
+          "Removed the raw English label under saving throw results",
+          "Copy cleaned of em dashes that violated the design system"
+        ]
+      }
+    },
+    {
       "version": "2.14.2",
       "date": "2026-06-11",
       "title": {

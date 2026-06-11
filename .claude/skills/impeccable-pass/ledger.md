@@ -1,0 +1,53 @@
+# Ledger — impeccable pass per componenti
+
+Coda di lavoro a batch di pagina. Stati: `☐` da fare · `◐` parziale · `✅` completato · `⛔` bloccato (motivo).
+Questo ledger è stato seminato dall'audit FE del 2026-06-11 (`fe-playwright-audit/reports/2026-06-11_18-58-mobile/`): i findings citati (#n) vengono da quel `report.md`. Le run della skill risolvono comunque l'audit PIÙ RECENTE disponibile (vedi SKILL.md, Passo 0): se nel frattempo ne esiste uno più nuovo, integra qui i suoi findings prima di lavorare il batch.
+
+> Baseline impeccable audit: **14/20** (2026-06-11, pre-B0). Score di fine giro: aggiornare qui.
+> Fine giro r2 (B1-B3): **18/20** — Acc 4 (contrasto chip e touch target risolti; 12px di sistema ok), Perf 3 (invariata, nessun profiling), Theming 4, Responsive 3 (#V1 nome header ancora aperto → B4), Anti-Patterns 4 (side-stripe e em dash eliminati; resta z-[9999] in Maps, P3 → B11). Re-audit completo in B16.
+> B0 (già consegnato in PR #166): label stats, pill On/Off, pb-24 swiper, side-stripe saves/combatant, backdrop warm, chip % HP, icona velocità.
+
+## Batch trasversali (prima: sbloccano i batch di pagina)
+
+- ✅ **B1 — Modali & overlay** · `ui/Sheet`, `ui/ConfirmSheet`, `ui/ResultDialog`, `ModalProvider`, `hp/HitDiceModal`, `notes` delete confirm, `maps/MapUploadForm`
+  Findings: #4 ordine bottoni invertito (HitDiceModal, conferma nota, MapUploadForm → footer condiviso conferma-a-destra), #7 ESC non chiude ResultDialog, #12 back/history non chiude gli overlay (integrazione popstate/BackButton in ModalProvider).
+  Esito: nuovo hook condiviso `hooks/useOverlayDismiss` (stack globale ESC + sentinella history singola, StrictMode-safe) agganciato a Sheet/ResultDialog/ModalProvider → copre anche SearchOverlay e tutti gli sheet derivati. Footer invertiti in HitDiceModal (+label "Riposa" anti-wrap), MapUploadForm; conferma nota migrata a ConfirmSheet (one-off rimosso); fallback `cancelLabel` di ConfirmSheet ora i18n; X di Sheet 30→40px. Verificato 375×667 dark+light, ESC annidato (dialogo sopra sheet), back su Sheet/ResultDialog/SearchOverlay, vitest overlay, tsc+lint. **Da verificare su device Telegram**: comportamento BackButton nativo con la sentinella history.
+  Nota per i batch successivi: gli overlay CUSTOM non-Sheet (`EquipItemPicker`, `ItemDetailsModal`, `ProgressionFullTableModal`, `SlotActionSheet`, viewer di `Maps`, `AddClassForm`, `LevelUpModal`, `EditClassesModal`) vanno agganciati a `useOverlayDismiss` nei rispettivi batch (B4/B5/B10/B11).
+- ✅ **B2 — Copy & i18n** · `locales/it.json`, `locales/en.json`, formatter numerici/orari
+  Findings: #1 em dash (sweep U+2014 su entrambi i locale, incl. "Salta — compili dopo" e HandsConflictDialog), #8 "intelligence" grezzo nel modale save, #V4 separatore migliaia ("2,700"→"2.700" in it) e orario AM/PM nel feed sessione (→24h, coerente con Cronologia). Centralizzare `Intl.NumberFormat(locale)`/`hour12:false`.
+  Esito: em dash rimossi dal copy (identity_skip/optional_hint, HandsConflictDialog body, private_hint fallback, CombatantSheet label→":", SessionFeed separatore→"·"); i "—" segnaposto valore-assente restano (glifo, non copy). #8: description raw soppressa nei saves (titolo già localizzato). #V4: nuovo `lib/format.ts` (formatInt/formatTime24/localeTag sul locale APP, non navigator) adottato da HeroXPBar, Experience (incl. locale di AnimatedNumber) e SessionFeed. Nota: it-IT CLDR non raggruppa i numeri a 4 cifre ("2700", "27.000" da 5 in su) — corretto, non regressione. Verificato: wizard step 3, save INT, hero XP, feed 24h, tsc+lint.
+- ✅ **B3 — Stati di errore & harden** · `AppErrorBoundary`, hook dati condiviso, `hp/DeathSaves`
+  Findings: #10 id inesistente → main vuoto (EmptyState "Personaggio non trovato" + CTA lista nel Layout su 404), #5 indicatore "Stabilizzato · privo di sensi" (cobalt + icona) a 0 HP stabile. Passata empty/loading/error sulle pagine principali.
+  Esito: #10 guard condiviso in `Layout` (stessa query del personaggio → dedupe; 404/403 = EmptyState "non trovato" + CTA lista, altri errori = EmptyState + Riprova; retry disattivato sui 404). Copre tutte le pagine Layout-based in un punto solo; CharacterMain ha già il suo branch. #5: badge cobalt `stabilized_badge` (HeartPulse + Cinzel) nella sezione alive quando `hp=0 && stable`. Verificato: /char/9999/hp + CTA, danno→0→stable→badge→cura, tsc+lint.
+
+## Batch di pagina
+
+- ☐ **B4 — Hub personaggio** · `CharacterMain`, `character/HeroScreen`, `CharacterSwiper`, `SwiperDots`, `HeroStatsSection`, `QuickActions`, `SpellSlotsSummary`, `ProgressionPreview`, `ProgressionFullTableModal` (⛔ mai aperto: esercitalo), `ui/HPGauge`, `ui/HeroXPBar`, `ui/ConditionBadge`, `SearchOverlay` (#11: indicizzare risorse homebrew)
+- ☐ **B5 — PaperDoll & equip** · `character/EquipmentScreen`, `PaperDoll`, `EquipmentSlotCell`, `SlotActionSheet`, `EquipItemPicker`, `EquipmentStatsFooter`, `HandsConflictDialog`, `ItemDetailsModal` (⛔ mai aperto), silhouette upload
+- ☐ **B6 — Punti Ferita** · `pages/HP`, `hp/HpOperationForm`, `DeathSaves`, `DeathSaveResultDialog`, `InstantDeathDialog`, `DeadState`, `HitDiceResultDialog`, `ConcentrationSaveDialog`, `components/HPBar` (light mode con rigore pari al dark)
+- ☐ **B7 — Tiri** · `pages/Skills`, `pages/SavingThrows`, `pages/Actions`, `RollResultModal`, `WeaponAttackModal`, `InspirationRerollButton`, long-press competenza (`useLongPress`)
+- ☐ **B8 — Magia** · `pages/Spells`, `spells/SpellForm`, `SpellItem`, `SpellFilter`, `CastSpellModal`, `SpellDamageSheet` (⛔: serve spell con danno, creala), `pages/SpellSlots`, `character/AutoModeBanner`, banner concentrazione
+- ☐ **B9 — Zaino** · `pages/Inventory`, `inventory/ItemForm`, `DamageDiceBuilder`, `InventoryItem`, `AbilityModifiersEditor` (⛔ visto ma non compilato), `EffectsEditor` (⛔), `pages/Currency`
+- ☐ **B10 — Crescita** · `pages/Multiclass`, `multiclass/EditClassesModal`, `AddClassForm`, `LevelUpBanner`, `LevelUpModal` (⛔: esercitarlo con multiclasse), `pages/Experience`, `pages/Abilities`, `abilities/PassiveAbilityDetailModal` (⛔: serve una passiva, creala), `homebrew/CustomResourceCounter`
+- ☐ **B11 — Stato & diario** · `pages/Conditions`, `conditions/ConditionDetailModal`, `pages/History`, `pages/Notes`, `notes/NoteEditor`, `NoteItem`, `NoteViewModal` (⛔), `VoiceRecorder` (⛔: serve permesso mic, prova su device), `pages/Maps`, `maps/MapUploadForm`, `MapZoneGroup`, `ZoomableImage`
+  Nota da B1: `MapUploadForm` usa ancora i componenti legacy `DndButton`/`DndInput`/`Card` invece di `ui/Button`/`ui/Input`/`Surface` (drift one-off, da migrare qui); viewer fullscreen di Maps da agganciare a `useOverlayDismiss`.
+- ☐ **B12 — Dadi** · `pages/Dice`, `pages/DiceStats`, `DiceOverlay` (FAB), `DicePoolResultModal`, `ui/DiceIcon`, `ui/PresetTextField`, pack texture (settings); unico posto con easing elastico ammesso
+- ☐ **B13 — Identità, impostazioni & home** · `pages/Identity`, `pages/Settings` (tutte le sezioni), `pages/Changelog`, `pages/CharacterSelect`, `ui/SwitchToggle`, `ui/SelectSheet`, `ui/ChipInput` (⛔ campo Lingue mai esercitato), `ui/Flags`
+- ☐ **B14 — Homebrew** · `pages/Homebrew` (hub/template), `homebrew/RuleEditor` + tutte le sections (`PropertyFormModal`, `PassiveModifierFormModal`, `EffectFormModal`, `EffectChainEditor` ⛔ mai aperti: crea una regola completa), `PropertyBadge`/`CustomConditionCard`/`HomebrewBreakdownRow`/`HomebrewNotification` (⛔: installare Sanguinamento e Qualità&Usura per vederli)
+- ☐ **B15 — Sessione** · `pages/Session`, `SessionJoin`, `SessionRoom`, `session/SessionFeed`, `GrantItemModal`, `EncounterCreateSheet`, `CombatPanel`+`CombatantSheet`+`AddMonsterSheet`+`InitiativeCta`+`TurnBar`+`CombatantRow`+`RewardPopup`+`ParticipantIdentitySheet` (⛔: avviare un combattimento con 2 tab `?dev_user`), `ui/InSessionBanner`
+
+## Chiusura giro
+
+- ☐ **B16 — Re-audit** · ricalcola lo score impeccable (5 dimensioni), aggiorna la baseline qui sopra, riepilogo delta per l'utente. Se <17/20, apri il giro successivo con i residui.
+
+## Fuori scope (bug funzionali trovati durante il pass — segnalare, non fixare qui)
+
+- **Stabilizza assegna 1 HP** (`api/routers/hp.py:402-404`): l'azione manuale STABILIZE imposta `current_hit_points = 1`, ma in 5e RAW una creatura stabilizzata resta a 0 HP (priva di sensi). House rule o bug? Da confermare con `/fullstack-functional-audit`.
+- **`stable` non si resetta col danno 1→0**: dopo Stabilizza (HP 1, `stable=true`), un danno che riporta a 0 mostra subito "stabilizzato" senza nuovi tiri; in RAW il danno a una creatura stabile la rende di nuovo morente. Correlato al punto sopra.
+
+## Diario
+
+- 2026-06-11 · B0 consegnato in PR #166 (v2.14.2) · baseline 14/20
+- 2026-06-11 · B1 completato su `feat/impeccable-pass-r2`: hook `useOverlayDismiss` (ESC+back per tutti gli overlay primitivi), conferma-a-destra in HitDiceModal/MapUploadForm/Notes (→ConfirmSheet), X Sheet 40px, label "Riposa". Pendenze: BackButton su device; overlay custom nei batch B4/B5/B10/B11.
+- 2026-06-11 · B2 completato: sweep em dash (locale+tsx), description raw soppressa nei saves, `lib/format.ts` per numeri/orari sul locale app (XP, feed 24h).
+- 2026-06-11 · B3 completato: guard 404 condiviso nel Layout (EmptyState + CTA), badge "Stabilizzato · privo di sensi" a 0 HP. 2 sospetti funzionali su stabilize → Fuori scope.
