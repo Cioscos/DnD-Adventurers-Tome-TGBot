@@ -248,7 +248,7 @@
       "title": "Saving Throws",
       "proficient": "Proficient",
       "roll": "Roll dice",
-      "ts_short": "Saving Throw",
+      "ts_short": "prof",
       "tap_to_roll": "Tap to roll",
       "homebrew_label": "Homebrew Bonus"
     },

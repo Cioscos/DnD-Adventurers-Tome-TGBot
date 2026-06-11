@@ -248,7 +248,7 @@
       "title": "Tiri Salvezza",
       "proficient": "Competente",
       "roll": "Tira dado",
-      "ts_short": "Tiro Salvezza",
+      "ts_short": "comp",
       "tap_to_roll": "Tocca per tirare",
       "homebrew_label": "Bonus Homebrew"
     },
