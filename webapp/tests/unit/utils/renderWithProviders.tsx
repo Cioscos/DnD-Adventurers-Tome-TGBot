@@ -8,7 +8,10 @@ import { MemoryRouter } from 'react-router-dom'
  * Pure-function/lib units do not need this — import the function directly.
  */
 export function renderWithProviders(ui: ReactElement, { route = '/' } = {}) {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  // retryDelay 0: i componenti che impostano una propria politica `retry`
+  // (es. il guard 404 di Layout/CharacterMain) esauriscono i tentativi
+  // subito invece di pagare il backoff esponenziale (~7s) nel test.
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false, retryDelay: 0 } } })
   return render(
     <QueryClientProvider client={qc}>
       <MemoryRouter initialEntries={[route]}>{ui}</MemoryRouter>

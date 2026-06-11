@@ -304,7 +304,7 @@ export default function HeroScreen({ char }: Props) {
                       {shortLabel}
                     </span>
                     <span className="text-xl font-mono font-bold tabular-nums leading-none mt-0.5">{score.value}</span>
-                    <span className="text-[11px] font-mono font-bold mt-0.5 px-1.5 py-0.5 rounded-full bg-[rgba(13,10,8,0.25)]">
+                    <span className="text-[11px] font-mono font-bold mt-0.5 px-1.5 py-0.5 rounded-full bg-dnd-ink/25">
                       {modStr}
                     </span>
                   </m.button>

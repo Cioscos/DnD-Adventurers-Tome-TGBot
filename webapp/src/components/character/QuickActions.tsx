@@ -218,7 +218,7 @@ export default function QuickActions({ char }: Props) {
                               disabled:opacity-60 ${spanFull ? 'col-span-2' : ''}`}
                 >
                   <Icon size={16} className="text-dnd-gold shrink-0" />
-                  <span className="flex-1 min-w-0 truncate text-sm text-dnd-text font-body break-words">
+                  <span className="flex-1 min-w-0 truncate text-sm text-dnd-text font-body">
                     {actionLabel(a)}
                   </span>
                 </m.button>

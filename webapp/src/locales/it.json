@@ -429,12 +429,13 @@
     },
     "search": {
       "title": "Cerca",
-      "placeholder": "Incantesimi, oggetti, abilità, note…",
+      "placeholder": "Incantesimi, oggetti, abilità, risorse, note…",
       "hint": "Scrivi almeno 2 caratteri.",
       "no_results": "Nessun risultato.",
       "type_spell": "Incantesimi",
       "type_item": "Oggetti",
       "type_ability": "Abilità speciali",
+      "type_resource": "Risorse",
       "type_note": "Note",
       "cantrip": "trucchetto",
       "spell_level": "liv. {{level}}"
@@ -1055,9 +1056,9 @@
         "no_data": "Dati di progressione non disponibili",
         "current_level": "Livello attuale",
         "features_header": "Caratteristiche",
-        "level_header": "Livello",
-        "pb_header": "Bonus Competenza",
-        "level_cell": "Liv. {{n}}"
+        "level_header": "Liv.",
+        "pb_header": "Comp.",
+        "level_cell": "L{{n}}"
       }
     },
     "swiper": {

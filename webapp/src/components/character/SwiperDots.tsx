@@ -12,8 +12,10 @@ export default function SwiperDots({ active, onSelect, labels }: Props) {
     <div
       role="tablist"
       aria-label="Character screens"
-      className="absolute bottom-safe left-0 right-0 z-30 flex justify-center gap-2 pointer-events-auto"
+      className="absolute bottom-safe left-0 right-0 z-30 flex justify-center pointer-events-none"
     >
+      {/* Il pallino è il segnale visivo; il bottone attorno è l'area di tocco
+          (≥40px), invisibile, così i tre tab restano usabili col pollice. */}
       {[0, 1, 2].map((idx) => {
         const isActive = idx === active
         return (
@@ -24,17 +26,19 @@ export default function SwiperDots({ active, onSelect, labels }: Props) {
             aria-selected={isActive}
             aria-label={labels[idx]}
             onClick={() => onSelect(idx as CharacterScreen)}
-            className="rounded-full border border-dnd-gold-dim/40"
-            style={{
-              width: isActive ? 24 : 8,
-              height: 8,
-              background: isActive
-                ? 'var(--dnd-gold-bright, #d4af37)'
-                : 'rgba(212,175,55,0.3)',
-            }}
-            transition={{ duration: 0.2 }}
+            className="min-w-[40px] min-h-[40px] flex items-center justify-center pointer-events-auto"
             whileTap={{ scale: 0.9 }}
-          />
+          >
+            <m.span
+              className={`block rounded-full border border-dnd-gold-dim/40 ${
+                isActive ? 'bg-dnd-gold-bright' : 'bg-dnd-gold/30'
+              }`}
+              animate={{ width: isActive ? 24 : 8 }}
+              initial={false}
+              style={{ height: 8 }}
+              transition={{ duration: 0.2 }}
+            />
+          </m.button>
         )
       })}
     </div>

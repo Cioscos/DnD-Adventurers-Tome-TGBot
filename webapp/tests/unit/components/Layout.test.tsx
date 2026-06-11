@@ -1,7 +1,18 @@
 import { describe, it, expect, vi, afterEach, beforeAll } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render as rtlRender, screen } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import userEvent from '@testing-library/user-event'
 import Layout from '@/components/Layout'
+
+// Il guard condiviso del Layout (batch B3) usa useQuery + ApiError: serve un
+// QueryClient nel tree e un client API mockato (qui: query sempre pending,
+// così i children renderizzano come nel caso felice).
+const render = (ui: React.ReactElement) => {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  return rtlRender(ui, {
+    wrapper: ({ children }) => <QueryClientProvider client={qc}>{children}</QueryClientProvider>,
+  })
+}
 
 beforeAll(() => {
   // jsdom lacks Element.scrollBy — the breadcrumb auto-scroll effect calls it.
@@ -12,6 +23,12 @@ type Info = { pages: string[]; index: number; total: number } | null
 const { navigateSpy, groupInfo } = vi.hoisted(() => ({ navigateSpy: vi.fn(), groupInfo: { value: null as Info } }))
 
 vi.mock('react-router-dom', () => ({ useNavigate: () => navigateSpy, useParams: () => ({ id: '7' }) }))
+vi.mock('@/api/client', () => ({
+  api: { characters: { get: vi.fn(() => new Promise(() => {})) } },
+  ApiError: class ApiError extends Error {
+    constructor(public status: number, public detail: unknown) { super('api error') }
+  },
+}))
 vi.mock('react-i18next', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
   return { ...actual, useTranslation: () => ({ t: (k: string) => k, i18n: { language: 'it' } }) }

@@ -429,12 +429,13 @@
     },
     "search": {
       "title": "Search",
-      "placeholder": "Spells, items, abilities, notes…",
+      "placeholder": "Spells, items, abilities, resources, notes…",
       "hint": "Type at least 2 characters.",
       "no_results": "No results.",
       "type_spell": "Spells",
       "type_item": "Items",
       "type_ability": "Special abilities",
+      "type_resource": "Resources",
       "type_note": "Notes",
       "cantrip": "cantrip",
       "spell_level": "lvl {{level}}"
@@ -1055,9 +1056,9 @@
         "no_data": "Progression data not available",
         "current_level": "Current level",
         "features_header": "Features",
-        "level_header": "Level",
-        "pb_header": "Proficiency Bonus",
-        "level_cell": "Lv. {{n}}"
+        "level_header": "Lv.",
+        "pb_header": "Prof.",
+        "level_cell": "L{{n}}"
       }
     },
     "swiper": {
