@@ -4,6 +4,7 @@ Coda di lavoro a batch di pagina. Stati: `☐` da fare · `◐` parziale · `✅
 Questo ledger è stato seminato dall'audit FE del 2026-06-11 (`fe-playwright-audit/reports/2026-06-11_18-58-mobile/`): i findings citati (#n) vengono da quel `report.md`. Le run della skill risolvono comunque l'audit PIÙ RECENTE disponibile (vedi SKILL.md, Passo 0): se nel frattempo ne esiste uno più nuovo, integra qui i suoi findings prima di lavorare il batch.
 
 > Baseline impeccable audit: **14/20** (2026-06-11, pre-B0). Score di fine giro: aggiornare qui.
+> Fine giro r2 (B1-B3): **18/20** — Acc 4 (contrasto chip e touch target risolti; 12px di sistema ok), Perf 3 (invariata, nessun profiling), Theming 4, Responsive 3 (#V1 nome header ancora aperto → B4), Anti-Patterns 4 (side-stripe e em dash eliminati; resta z-[9999] in Maps, P3 → B11). Re-audit completo in B16.
 > B0 (già consegnato in PR #166): label stats, pill On/Off, pb-24 swiper, side-stripe saves/combatant, backdrop warm, chip % HP, icona velocità.
 
 ## Batch trasversali (prima: sbloccano i batch di pagina)
