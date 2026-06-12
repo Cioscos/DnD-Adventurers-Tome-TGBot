@@ -22,9 +22,9 @@ export default function DeadState({ cause, onRevive, reviving }: DeadStateProps)
   return (
     <Surface variant="ember" ornamented>
       <div className="flex flex-col items-center gap-4 text-center">
-        <Skull size={56} className="text-[var(--dnd-crimson-bright)]" />
+        <Skull size={56} className="text-dnd-crimson-bright" />
         <div className="flex flex-col gap-1">
-          <h3 className="font-display font-black text-[var(--dnd-crimson-bright)] text-2xl uppercase tracking-[0.15em]">
+          <h3 className="font-display font-black text-dnd-crimson-bright text-2xl uppercase tracking-[0.15em]">
             {t('character.death_saves.dead_title')}
           </h3>
           <p className="text-sm font-body text-dnd-text-muted">

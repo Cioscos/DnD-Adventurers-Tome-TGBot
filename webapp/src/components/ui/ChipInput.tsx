@@ -170,7 +170,7 @@ export default function ChipInput({
         </div>
       )}
       {error && (
-        <p className="text-[11px] text-[var(--dnd-crimson-bright)] mt-1 font-body italic">{error}</p>
+        <p className="text-[11px] text-dnd-crimson-bright mt-1 font-body italic">{error}</p>
       )}
       {hint && !error && (
         <p className="text-[11px] text-dnd-text-faint mt-1 font-body italic">{hint}</p>

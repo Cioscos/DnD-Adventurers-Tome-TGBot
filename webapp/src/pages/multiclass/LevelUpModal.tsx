@@ -89,7 +89,7 @@ export default function LevelUpModal({ char, xpLevel, onClose }: LevelUpModalPro
 
   return (
     <div
-      className="fixed inset-0 bg-[var(--dnd-overlay)] backdrop-blur-[6px] z-50 flex items-end sm:items-center justify-center p-4"
+      className="fixed inset-0 bg-dnd-overlay backdrop-blur-[6px] z-50 flex items-end sm:items-center justify-center p-4"
       role="dialog"
       aria-modal="true"
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}

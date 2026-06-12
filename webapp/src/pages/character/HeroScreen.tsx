@@ -95,14 +95,14 @@ export default function HeroScreen({ char }: Props) {
           onClick={() => { haptic.light(); navigate(`/char/${char.id}/inventory`) }}
           whileTap={{ scale: 0.95 }}
           aria-label={t('character.inventory.weight_badge_aria', { n: weightLabel })}
-          className={`absolute top-1 right-1 z-[3] flex flex-col items-center justify-center gap-0.5 min-w-[44px] min-h-[44px] px-2 py-1 rounded-xl bg-dnd-bg ${overloaded ? 'border border-[var(--dnd-amber)]' : 'border border-dnd-gold-dim'}`}
+          className={`absolute top-1 right-1 z-[3] flex flex-col items-center justify-center gap-0.5 min-w-[44px] min-h-[44px] px-2 py-1 rounded-xl bg-dnd-bg ${overloaded ? 'border border-dnd-amber' : 'border border-dnd-gold-dim'}`}
         >
           <GiKnapsack
             size={20}
             aria-hidden="true"
-            className={overloaded ? 'text-[var(--dnd-amber)]' : 'text-dnd-gold-bright'}
+            className={overloaded ? 'text-dnd-amber' : 'text-dnd-gold-bright'}
           />
-          <span className={`text-[11px] font-mono font-bold tabular-nums leading-none ${overloaded ? 'text-[var(--dnd-amber)]' : 'text-dnd-text'}`}>
+          <span className={`text-[11px] font-mono font-bold tabular-nums leading-none ${overloaded ? 'text-dnd-amber' : 'text-dnd-text'}`}>
             {weightLabel}
           </span>
           <span className="text-[10px] font-mono text-dnd-text-muted leading-none">
@@ -117,7 +117,7 @@ export default function HeroScreen({ char }: Props) {
             whileTap={{ scale: 0.98 }}
             aria-label={t('character.death_saves.dead_title')}
             className="mt-3 w-full min-h-[44px] flex items-center justify-center gap-2 px-3 py-2 rounded-xl
-                       bg-[rgba(179,58,58,0.12)] border border-dnd-crimson/50 text-[var(--dnd-crimson-bright)]"
+                       bg-[rgba(179,58,58,0.12)] border border-dnd-crimson/50 text-dnd-crimson-bright"
           >
             <GiSkullCrossedBones size={16} aria-hidden />
             <span className="text-[11px] font-cinzel uppercase tracking-widest font-bold">
@@ -140,12 +140,12 @@ export default function HeroScreen({ char }: Props) {
             >
               <div className="flex items-center justify-between text-sm mb-1.5">
                 <span className="inline-flex items-center gap-1.5 font-mono">
-                  <GiHeartPlus size={14} className="text-[var(--dnd-crimson-bright)]" />
+                  <GiHeartPlus size={14} className="text-dnd-crimson-bright" />
                   <span className="text-dnd-text font-bold">
                     {char.current_hit_points}/{hpMax}
                   </span>
                   {char.temp_hp > 0 && (
-                    <span className="text-[var(--dnd-cobalt-bright)]">(+{char.temp_hp} temp)</span>
+                    <span className="text-dnd-cobalt-bright">(+{char.temp_hp} temp)</span>
                   )}
                 </span>
                 <span className="text-dnd-text-muted font-mono text-xs">{hpPct}%</span>

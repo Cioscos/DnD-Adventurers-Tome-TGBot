@@ -114,13 +114,13 @@ export default function Input({
   const isTextarea = variant === 'textarea'
 
   const labelColor = displayError
-    ? 'text-[var(--dnd-crimson-bright)]'
+    ? 'text-dnd-crimson-bright'
     : focused
       ? 'text-dnd-gold-bright'
       : 'text-dnd-gold-dim'
 
   const underlineColor = displayError
-    ? 'border-[var(--dnd-crimson)]'
+    ? 'border-dnd-crimson'
     : focused
       ? 'border-dnd-gold shadow-[0_2px_0_0_var(--dnd-gold-glow)]'
       : 'border-dnd-border'
@@ -194,7 +194,7 @@ export default function Input({
             initial={{ opacity: 0, y: -4 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
-            className="text-[var(--dnd-crimson-bright)] text-[11px] mt-1 font-body"
+            className="text-dnd-crimson-bright text-[11px] mt-1 font-body"
           >
             {displayError}
           </m.p>

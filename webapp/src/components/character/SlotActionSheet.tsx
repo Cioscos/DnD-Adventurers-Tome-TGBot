@@ -71,7 +71,7 @@ export default function SlotActionSheet({ charId, slot, item, onClose, onReplace
               type="button"
               onClick={() => unequip.mutate()}
               disabled={unequip.isPending}
-              className={`${itemBtnCls} text-[var(--dnd-crimson-bright)] disabled:opacity-60`}
+              className={`${itemBtnCls} text-dnd-crimson-bright disabled:opacity-60`}
             >
               {t('character.equipment.actions.unequip', { defaultValue: 'Unequip' })}
             </button>
