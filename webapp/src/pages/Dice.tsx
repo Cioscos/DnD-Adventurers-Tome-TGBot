@@ -9,7 +9,7 @@ import { api } from '@/api/client'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
-import Sheet from '@/components/ui/Sheet'
+import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import DiceIcon from '@/components/ui/DiceIcon'
 import { DiceRunicWatermark } from '@/components/ui/Ornament'
 import ScrollArea from '@/components/ScrollArea'
@@ -203,7 +203,7 @@ export default function Dice() {
           disabled={rollPending || initiativeRolling}
           className="min-h-[44px] rounded-xl bg-dnd-chip-bg border border-dnd-gold-dim/40 text-dnd-gold-bright font-cinzel text-xs uppercase tracking-widest disabled:opacity-40"
           whileTap={{ scale: 0.93 }}
-          title={t('character.dice.stat_roll_hint', { defaultValue: '4d6 scarta più basso (tiro caratteristica)' })}
+          title={t('character.dice.stat_roll_hint')}
         >
           4d6kh3
         </m.button>
@@ -345,7 +345,7 @@ export default function Dice() {
                     })}
                     {'] '}
                     <span className="text-[10px] uppercase tracking-widest text-dnd-text-faint">
-                      {t('character.dice.dropped', { defaultValue: 'scarta' })} {statRollExtras.dropped}
+                      {t('character.dice.dropped')} {statRollExtras.dropped}
                     </span>
                   </p>
                 )
@@ -373,7 +373,7 @@ export default function Dice() {
       {/* Statistiche cumulative */}
       <Link
         to={`/char/${charId}/dice/stats`}
-        className="flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-dnd-surface border border-dnd-border text-dnd-gold font-cinzel text-[11px] uppercase tracking-widest"
+        className="flex items-center justify-center gap-2 min-h-[44px] px-3 py-2 rounded-xl bg-dnd-surface border border-dnd-border text-dnd-gold font-cinzel text-[11px] uppercase tracking-widest"
         onClick={() => haptic.light()}
       >
         <BarChart3 size={14} />
@@ -404,8 +404,8 @@ export default function Dice() {
                 const rel = ts
                   ? formatRelative(ts, {
                       locale: locale === 'en' ? 'en' : 'it',
-                      todayLabel: locale === 'en' ? 'Today' : 'Oggi',
-                      yesterdayLabel: locale === 'en' ? 'Yesterday' : 'Ieri',
+                      todayLabel: t('common.date.today'),
+                      yesterdayLabel: t('common.date.yesterday'),
                     })
                   : null
                 const abs = ts ? formatAbsolute(ts, locale === 'en' ? 'en' : 'it') : null
@@ -453,32 +453,15 @@ export default function Dice() {
       )}
 
       {/* Clear confirmation */}
-      <Sheet
+      <ConfirmSheet
         open={showClearConfirm}
         onClose={() => setShowClearConfirm(false)}
-        centered
+        onConfirm={() => clearHistoryMutation.mutate()}
         title={t('character.dice.clear')}
-      >
-        <div className="p-5 space-y-3">
-          <p className="text-sm text-center text-dnd-text font-body">
-            {t('character.dice.clear_confirm')}
-          </p>
-          <div className="flex gap-2">
-            <Button variant="secondary" fullWidth onClick={() => setShowClearConfirm(false)}>
-              {t('common.cancel')}
-            </Button>
-            <Button
-              variant="danger"
-              fullWidth
-              onClick={() => clearHistoryMutation.mutate()}
-              loading={clearHistoryMutation.isPending}
-              haptic="error"
-            >
-              {t('common.confirm')}
-            </Button>
-          </div>
-        </div>
-      </Sheet>
+        body={t('character.dice.clear_confirm')}
+        confirmLabel={t('common.confirm')}
+        loading={clearHistoryMutation.isPending}
+      />
     </Layout>
   )
 }

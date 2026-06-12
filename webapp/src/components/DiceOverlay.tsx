@@ -217,7 +217,7 @@ export default function DiceOverlay() {
                     <DiceIcon sides={SIDES_FOR[kind]} size={28} />
                     {count > 0 && (
                       <span className="absolute -top-1 -right-1 min-w-[20px] h-5 px-1
-                                       rounded-full bg-dnd-crimson text-white text-[11px]
+                                       rounded-full bg-dnd-crimson text-dnd-parchment text-[11px]
                                        font-bold font-mono flex items-center justify-center
                                        border border-dnd-surface-raised">
                         {count}
@@ -237,7 +237,7 @@ export default function DiceOverlay() {
               onClick={handleRoll}
               disabled={isRolling}
               className="absolute right-full top-0 mr-2 h-14 px-5 rounded-2xl
-                         bg-gradient-to-r from-dnd-gold-deep to-dnd-gold-bright
+                         bg-gradient-gold
                          border border-dnd-gold-dim shadow-halo-gold
                          flex items-center justify-center gap-2 text-dnd-ink
                          font-cinzel uppercase tracking-wider font-bold text-sm
@@ -259,7 +259,7 @@ export default function DiceOverlay() {
           aria-label={open ? t('character.dice_overlay.close') : t('character.dice_overlay.open')}
           onClick={toggleOpen}
           className="w-14 h-14 rounded-full
-                     bg-gradient-to-br from-dnd-gold-deep to-dnd-gold-bright
+                     bg-gradient-gold
                      border border-dnd-gold-dim shadow-halo-gold
                      flex items-center justify-center text-dnd-ink touch-manipulation"
           whileTap={{ scale: 0.9 }}

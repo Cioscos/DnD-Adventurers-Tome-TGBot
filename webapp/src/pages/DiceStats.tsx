@@ -56,6 +56,9 @@ function FaceHistogram({ sides, faces }: { sides: DieSide; faces: Record<string,
             : sides === 20 && v === 1
               ? 'bg-dnd-crimson'
               : 'bg-dnd-gold-dim'
+        // Oltre le 20 facce (d100) le colonne sono ~3px: un'etichetta per
+        // faccia diventa una poltiglia illeggibile, mostra solo i multipli di 10.
+        const showTick = sides <= 20 || v % 10 === 0
         return (
           <div key={v} className="flex-1 flex flex-col items-center gap-0.5 min-w-0">
             <div className="w-full flex items-end h-9 rounded-sm bg-dnd-surface">
@@ -65,7 +68,7 @@ function FaceHistogram({ sides, faces }: { sides: DieSide; faces: Record<string,
               />
             </div>
             <span className="text-[7px] leading-none text-dnd-text-faint tabular-nums">
-              {v}
+              {showTick ? v : ' '}
             </span>
           </div>
         )

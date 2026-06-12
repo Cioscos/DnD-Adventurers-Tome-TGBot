@@ -32,14 +32,14 @@ describe('NoteViewModal', () => {
     expect(screen.getByText('enfasi').tagName).toBe('EM')
   })
 
-  it('wires edit / delete / close', async () => {
-    const onEdit = vi.fn(); const onDelete = vi.fn(); const onClose = vi.fn()
-    render(<NoteViewModal note={note} onClose={onClose} onEdit={onEdit} onDelete={onDelete} />)
+  // La chiusura passa dallo Sheet (X / ESC / backdrop): niente bottone Chiudi dedicato.
+  it('wires edit / delete', async () => {
+    const onEdit = vi.fn(); const onDelete = vi.fn()
+    render(<NoteViewModal note={note} onClose={() => {}} onEdit={onEdit} onDelete={onDelete} />)
     await userEvent.click(screen.getByRole('button', { name: 'common.edit' }))
     expect(onEdit).toHaveBeenCalledWith('La Cripta', 'Testo *enfasi*', ['Lore', 'NPC'])
     await userEvent.click(screen.getByRole('button', { name: 'common.delete' }))
     expect(onDelete).toHaveBeenCalledWith('La Cripta')
-    await userEvent.click(screen.getByRole('button', { name: 'common.close' }))
-    expect(onClose).toHaveBeenCalledTimes(1)
+    expect(screen.queryByRole('button', { name: 'common.close' })).not.toBeInTheDocument()
   })
 })

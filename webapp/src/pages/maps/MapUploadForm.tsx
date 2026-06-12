@@ -1,9 +1,10 @@
 import { useRef, useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { UploadCloud, X, FileText } from 'lucide-react'
-import Card from '@/components/Card'
-import DndInput from '@/components/DndInput'
-import DndButton from '@/components/DndButton'
+import Surface from '@/components/ui/Surface'
+import Input from '@/components/ui/Input'
+import Button from '@/components/ui/Button'
+import FilterChip from '@/components/ui/FilterChip'
 import { api } from '@/api/client'
 import { haptic } from '@/auth/telegram'
 
@@ -63,10 +64,7 @@ export default function MapUploadForm({
     if (!zoneName.trim() || selectedFiles.length === 0) return
     const tooLarge = selectedFiles.find((f) => f.size > MAX_SIZE)
     if (tooLarge) {
-      setUploadError(t('character.maps.error_too_large', {
-        name: tooLarge.name,
-        defaultValue: '{{name}} supera il limite di 10 MB',
-      }))
+      setUploadError(t('character.maps.error_too_large', { name: tooLarge.name }))
       haptic.error()
       return
     }
@@ -81,7 +79,7 @@ export default function MapUploadForm({
       haptic.success()
       onUploadComplete()
     } catch (err) {
-      setUploadError(err instanceof Error ? err.message : 'Upload failed')
+      setUploadError(err instanceof Error ? err.message : t('character.maps.upload_error'))
       haptic.error()
     } finally {
       setIsUploading(false)
@@ -110,8 +108,8 @@ export default function MapUploadForm({
   }
 
   return (
-    <Card className="space-y-3">
-      <DndInput
+    <Surface variant="flat" className="space-y-3">
+      <Input
         label={t('character.maps.zone_name')}
         value={zoneName}
         onChange={setZoneName}
@@ -119,24 +117,21 @@ export default function MapUploadForm({
       />
 
       {existingZones.length > 0 && (
-        <div className="flex gap-1 flex-wrap">
+        <div className="flex gap-1.5 flex-wrap">
           {existingZones.map((z) => (
-            <button
+            <FilterChip
               key={z}
-              onClick={() => setZoneName(z)}
-              className={`px-2 py-1 rounded-lg text-xs font-medium transition-colors ${
-                zoneName === z ? 'bg-dnd-gold text-dnd-bg' : 'bg-dnd-surface'
-              }`}
-            >
-              {z}
-            </button>
+              label={z}
+              selected={zoneName === z}
+              onToggle={() => setZoneName(z)}
+            />
           ))}
         </div>
       )}
 
       {/* Dropzone */}
       <div>
-        <label className="block text-[11px] uppercase tracking-wider mb-1 font-medium text-dnd-gold-dim">
+        <label className="block text-[11px] uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
           {t('character.maps.select_files')}
         </label>
         <button
@@ -155,10 +150,10 @@ export default function MapUploadForm({
         >
           <UploadCloud size={28} className="text-dnd-gold-bright" />
           <span className="text-sm font-body text-dnd-text">
-            {t('character.maps.dropzone_primary', { defaultValue: 'Trascina i file qui o tocca per selezionarli' })}
+            {t('character.maps.dropzone_primary')}
           </span>
           <span className="text-[10px] font-mono text-dnd-text-faint">
-            {t('character.maps.dropzone_accept', { defaultValue: 'PNG, JPG, PDF · max 10 MB' })}
+            {t('character.maps.dropzone_accept')}
           </span>
         </button>
         <input
@@ -205,7 +200,7 @@ export default function MapUploadForm({
                   )}
                   {isDone && (
                     <p className="text-[10px] font-mono text-dnd-gold-bright mt-0.5">
-                      {t('character.maps.uploaded', { defaultValue: 'Caricato' })}
+                      {t('character.maps.uploaded')}
                     </p>
                   )}
                 </div>
@@ -213,10 +208,11 @@ export default function MapUploadForm({
                   <button
                     type="button"
                     onClick={() => removeFile(idx)}
-                    className="w-9 h-9 flex items-center justify-center text-dnd-text-muted hover:text-[var(--dnd-crimson-bright)]"
-                    aria-label={`Remove ${file.name}`}
+                    className="w-11 h-11 flex items-center justify-center shrink-0 rounded-lg
+                               text-dnd-text-muted hover:text-dnd-crimson-bright transition-colors"
+                    aria-label={`${t('common.remove')} ${file.name}`}
                   >
-                    <X size={14} />
+                    <X size={16} />
                   </button>
                 )}
               </div>
@@ -228,7 +224,6 @@ export default function MapUploadForm({
                 current: activeIndex + 1,
                 total: selectedFiles.length,
                 pct: activeProgress,
-                defaultValue: '{{current}}/{{total}} · {{pct}}%',
               })}
             </p>
           )}
@@ -236,30 +231,30 @@ export default function MapUploadForm({
       )}
 
       {uploadError && (
-        <p className="text-sm text-[var(--dnd-danger)] bg-dnd-danger/10 rounded-xl px-3 py-2">
+        <p className="text-sm text-dnd-crimson-bright bg-dnd-crimson/10 rounded-xl px-3 py-2">
           {uploadError}
         </p>
       )}
 
       {/* Annulla a sinistra, conferma a destra (convenzione ConfirmSheet). */}
       <div className="flex gap-2">
-        <DndButton
+        <Button
           variant="secondary"
           onClick={handleCancel}
           disabled={isUploading}
-          className="flex-1"
+          fullWidth
         >
           {t('common.cancel')}
-        </DndButton>
-        <DndButton
+        </Button>
+        <Button
           onClick={handleUpload}
           disabled={!zoneName.trim() || selectedFiles.length === 0 || isUploading}
           loading={isUploading}
-          className="flex-1"
+          fullWidth
         >
           {t('character.maps.upload_btn')}
-        </DndButton>
+        </Button>
       </div>
-    </Card>
+    </Surface>
   )
 }

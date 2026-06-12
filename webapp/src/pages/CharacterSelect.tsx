@@ -204,7 +204,7 @@ export default function CharacterSelect() {
   if (isError) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-4">
-        <p className="text-[var(--dnd-crimson-bright)] font-body">{t('common.error')}</p>
+        <p className="text-dnd-crimson-bright font-body">{t('common.error')}</p>
         <Button onClick={() => refetch()} variant="primary">
           {t('common.retry')}
         </Button>
@@ -228,7 +228,7 @@ export default function CharacterSelect() {
         <div className="pt-4">
           <FancyHeader
             title={t('character.select.title')}
-            subtitle={t('character.select.subtitle', { defaultValue: 'Scegli un eroe per la tua avventura' })}
+            subtitle={t('character.select.subtitle')}
             align="center"
             size="xl"
           />
@@ -284,7 +284,7 @@ export default function CharacterSelect() {
                           {char.name}
                         </h2>
                         {isDown && (
-                          <span className="text-[10px] font-cinzel uppercase tracking-wider px-2 py-0.5 rounded-full bg-dnd-crimson/20 text-[var(--dnd-crimson-bright)] border border-dnd-crimson-bright/40 shrink-0">
+                          <span className="text-[10px] font-cinzel uppercase tracking-wider px-2 py-0.5 rounded-full bg-dnd-crimson/20 text-dnd-crimson-bright border border-dnd-crimson-bright/40 shrink-0">
                             {t('character.select.unconscious_badge')}
                           </span>
                         )}
@@ -303,7 +303,7 @@ export default function CharacterSelect() {
                       {/* HP + AC row */}
                       <div className="mt-2.5 flex items-center gap-2">
                         <span className="inline-flex items-center gap-1 text-xs text-dnd-text-muted font-mono w-[70px] shrink-0">
-                          <Heart size={12} className="text-[var(--dnd-crimson-bright)]" />
+                          <Heart size={12} className="text-dnd-crimson-bright" />
                           {char.current_hit_points}/{char.hit_points}
                         </span>
                         <div className="flex-1">
@@ -327,8 +327,8 @@ export default function CharacterSelect() {
                         e.stopPropagation()
                         handleDelete(char)
                       }}
-                      className="w-11 h-11 flex items-center justify-center rounded-lg text-[var(--dnd-crimson-bright)] shrink-0 hover:bg-dnd-crimson/10"
-                      aria-label="Elimina"
+                      className="w-11 h-11 flex items-center justify-center rounded-lg text-dnd-crimson-bright shrink-0 hover:bg-dnd-crimson/10"
+                      aria-label={t('common.delete')}
                       whileTap={{ scale: 0.9 }}
                     >
                       <Trash2 size={16} />
@@ -394,7 +394,7 @@ export default function CharacterSelect() {
               <Input
                 value={newName}
                 onChange={setNewName}
-                placeholder={t('character.create.name_placeholder', { defaultValue: 'Il nome del tuo eroe' })}
+                placeholder={t('character.create.name_placeholder')}
                 autoFocus
                 onCommit={handleNameNext}
               />
@@ -418,19 +418,13 @@ export default function CharacterSelect() {
               transition={{ duration: 0.18 }}
             >
               <p className="text-[11px] text-dnd-text-faint truncate font-body mb-3">
-                {t('character.create.step_class_subtitle', {
-                  name: newName.trim() || '—',
-                  defaultValue: 'Per {{name}} · Passo 2/3',
-                })}
+                {t('character.create.step_class_subtitle', { name: newName.trim() || '—' })}
               </p>
 
               {!showCustom ? (
                 <>
                   <p className="text-[12px] text-dnd-gold-bright font-body italic text-center mb-3">
-                    {t('character.create.tap_class_hint', {
-                      name: newName.trim() || '—',
-                      defaultValue: 'Tocca per scegliere la classe di {{name}}',
-                    })}
+                    {t('character.create.tap_class_hint', { name: newName.trim() || '—' })}
                   </p>
 
                   <m.div
@@ -528,7 +522,7 @@ export default function CharacterSelect() {
                     label={t('character.create.custom_class_name')}
                     value={customName}
                     onChange={setCustomName}
-                    placeholder="Artificer..."
+                    placeholder={t('character.create.custom_class_placeholder')}
                     autoFocus
                     onCommit={handleCustomSelect}
                     className="mb-3"

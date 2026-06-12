@@ -9,17 +9,21 @@ vi.mock('react-i18next', async (orig) => {
 })
 vi.mock('@/api/client', () => ({ api: { maps: { uploadWithProgress: vi.fn() } } }))
 vi.mock('@/auth/telegram', () => ({ haptic: new Proxy({}, { get: () => () => {} }) }))
-vi.mock('@/components/Card', async () => {
+vi.mock('@/components/ui/Surface', async () => {
   const React = await import('react')
   return { default: (p: { children?: unknown }) => React.createElement('div', null, p.children) }
 })
-vi.mock('@/components/DndInput', async () => {
+vi.mock('@/components/ui/Input', async () => {
   const React = await import('react')
   return { default: (p: { label?: string; value: string; onChange: (v: string) => void }) => React.createElement('input', { 'aria-label': p.label, value: p.value, onChange: (e: { target: { value: string } }) => p.onChange(e.target.value) }) }
 })
-vi.mock('@/components/DndButton', async () => {
+vi.mock('@/components/ui/Button', async () => {
   const React = await import('react')
   return { default: (p: { onClick?: () => void; disabled?: boolean; loading?: boolean; children?: unknown }) => React.createElement('button', { onClick: p.onClick, disabled: p.disabled || p.loading }, p.children) }
+})
+vi.mock('@/components/ui/FilterChip', async () => {
+  const React = await import('react')
+  return { default: (p: { label?: unknown; selected?: boolean; onToggle?: () => void }) => React.createElement('button', { onClick: p.onToggle, 'aria-pressed': p.selected }, p.label as string) }
 })
 
 const base = { charId: 7, onUploadComplete: () => {}, onCancel: () => {} }

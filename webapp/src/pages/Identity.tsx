@@ -38,9 +38,9 @@ type Draft = {
 }
 
 const DMG_TONES: Record<keyof DamageModifiers, { text: string; icon: typeof Shield }> = {
-  resistances: { text: 'text-[var(--dnd-cobalt-bright)]', icon: Shield },
+  resistances: { text: 'text-dnd-cobalt-bright', icon: Shield },
   immunities: { text: 'text-dnd-gold-bright', icon: Zap },
-  vulnerabilities: { text: 'text-[var(--dnd-crimson-bright)]', icon: Flame },
+  vulnerabilities: { text: 'text-dnd-crimson-bright', icon: Flame },
 }
 
 const DMG_KEYS: Array<keyof DamageModifiers> = ['resistances', 'immunities', 'vulnerabilities']
@@ -169,10 +169,12 @@ export default function Identity() {
 
   return (
     <Layout title={t('character.identity.title')} backTo={`/char/${charId}`} group="character" page="identity">
+      {/* Avviso, non pericolo: ambra (Candle Amber), non la variante ember che
+          il giocatore legge come crisi HP (Semantic Triad). */}
       {dirty && (
         <Surface
-          variant="ember"
-          className="sticky top-2 z-20 flex items-center justify-between gap-3 !py-2.5 !px-3"
+          variant="elevated"
+          className="sticky top-2 z-20 flex items-center justify-between gap-3 !py-2.5 !px-3 !border-dnd-amber/60"
         >
           <span className="text-xs font-body text-dnd-text">
             {t('character.identity.unsaved_changes')}
@@ -202,7 +204,7 @@ export default function Identity() {
 
       {/* Physicality */}
       <SectionDivider icon={<User size={11} />} align="center">
-        {t('character.identity.physicality', { defaultValue: 'Fisicità' })}
+        {t('character.identity.physicality')}
       </SectionDivider>
 
       <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
@@ -239,7 +241,7 @@ export default function Identity() {
 
       {/* Personality */}
       <SectionDivider icon={<Feather size={11} />} align="center">
-        {t('character.identity.personality', { defaultValue: 'Personalità' })}
+        {t('character.identity.personality')}
       </SectionDivider>
 
       <div className="flex flex-col items-center gap-1 -mt-2 mb-3 text-dnd-gold-dim">
@@ -250,9 +252,7 @@ export default function Identity() {
           </span>
         </div>
         <p className="text-[10px] text-dnd-text-faint font-body italic max-w-[300px] text-center">
-          {t('character.identity.private_hint', {
-            defaultValue: 'Background, ideali, legami, difetti: visibili solo al giocatore.',
-          })}
+          {t('character.identity.private_hint')}
         </p>
       </div>
 
@@ -288,7 +288,7 @@ export default function Identity() {
 
       {/* Culture */}
       <SectionDivider icon={<Globe2 size={11} />} align="center">
-        {t('character.identity.culture', { defaultValue: 'Cultura' })}
+        {t('character.identity.culture')}
       </SectionDivider>
 
       <Surface variant="elevated">
@@ -296,7 +296,7 @@ export default function Identity() {
           label={t('character.identity.languages')}
           values={draft.languages}
           onChange={(next) => setDraft((d) => d ? { ...d, languages: next } : d)}
-          placeholder="Comune, Elfico..."
+          placeholder={t('character.identity.language_placeholder')}
           splitOnComma
           suggestions={LANGUAGE_SUGGESTIONS}
         />
@@ -306,7 +306,7 @@ export default function Identity() {
           label={t('character.identity.proficiencies')}
           values={draft.general_proficiencies}
           onChange={(next) => setDraft((d) => d ? { ...d, general_proficiencies: next } : d)}
-          placeholder="Armature leggere, Spade..."
+          placeholder={t('character.identity.proficiency_placeholder')}
           splitOnComma
         />
       </Surface>

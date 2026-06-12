@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import DndInput from '@/components/DndInput'
-import DndButton from '@/components/DndButton'
+import Input from '@/components/ui/Input'
+import Button from '@/components/ui/Button'
 import ChipInput from '@/components/ui/ChipInput'
 
 const TAG_SUGGESTIONS_IT = ['Lore', 'NPC', 'Quest', 'Loot', 'Trama', 'Segreto']
@@ -43,55 +43,48 @@ export default function NoteEditor({ initialNote, onSave, onCancel, isPending }:
   return (
     <div className="space-y-3">
       {!isEdit && (
-        <DndInput
+        <Input
           label={t('character.notes.title_label')}
           value={title}
           onChange={setTitle}
           placeholder={t('character.notes.title_placeholder')}
         />
       )}
-      <div>
-        <label className="block text-[11px] uppercase tracking-wider mb-1 font-medium text-dnd-gold-dim">
-          {t('character.notes.body_label')}
-        </label>
-        <textarea
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-          placeholder={t('character.notes.body_placeholder')}
-          rows={10}
-          className="w-full bg-dnd-surface rounded-xl px-3 py-2 outline-none resize-none
-                     border border-transparent focus:border-dnd-gold-dim
-                     focus:shadow-[0_0_0_2px_var(--dnd-gold-glow)]
-                     placeholder:text-dnd-text-muted/50"
-        />
-      </div>
+      <Input
+        variant="textarea"
+        rows={10}
+        label={t('character.notes.body_label')}
+        value={body}
+        onChange={setBody}
+        placeholder={t('character.notes.body_placeholder')}
+      />
       <ChipInput
         values={tags}
         onChange={setTags}
         suggestions={tagSuggestions}
         label={
-          <span className="block text-[11px] uppercase tracking-wider mb-1 font-medium text-dnd-gold-dim">
-            {t('character.notes.tags_label', { defaultValue: 'Tag' })}
+          <span className="block text-[11px] uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
+            {t('character.notes.tags_label')}
           </span>
         }
-        placeholder={t('character.notes.tags_placeholder', { defaultValue: 'NPC, Lore, Quest…' })}
+        placeholder={t('character.notes.tags_placeholder')}
       />
       <div className="flex gap-2">
-        <DndButton
+        <Button
           variant="secondary"
           onClick={onCancel}
-          className="flex-1"
+          fullWidth
         >
           {t('common.cancel')}
-        </DndButton>
-        <DndButton
+        </Button>
+        <Button
           onClick={handleSave}
           disabled={isPending || (!isEdit && !title.trim())}
           loading={isPending}
-          className="flex-1"
+          fullWidth
         >
           {t('common.save')}
-        </DndButton>
+        </Button>
       </div>
     </div>
   )

@@ -292,7 +292,7 @@ export default function Conditions() {
         </p>
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <Flame size={16} className="text-[var(--dnd-amber)]" />
+            <Flame size={16} className="text-dnd-amber" />
             <span className="font-cinzel uppercase tracking-widest text-xs text-dnd-gold-dim">
               {t('character.conditions.exhaustion_condition')}
             </span>
@@ -311,7 +311,7 @@ export default function Conditions() {
             </button>
           </div>
           <span className={`text-lg font-display font-black
-            ${currentExhaustion > 0 ? 'text-[var(--dnd-amber)]' : 'text-dnd-text-faint'}`}>
+            ${currentExhaustion > 0 ? 'text-dnd-amber' : 'text-dnd-text-faint'}`}>
             {currentExhaustion}<span className="text-sm text-dnd-text-muted">/6</span>
           </span>
         </div>
@@ -326,9 +326,9 @@ export default function Conditions() {
                 onClick={() => setExhaustion(level)}
                 className={`flex-1 min-h-[44px] rounded-lg font-cinzel font-black text-sm
                   ${isActive
-                    ? 'bg-gradient-ember text-white shadow-parchment-md'
+                    ? 'bg-gradient-ember text-dnd-parchment shadow-parchment-md'
                     : isFilled
-                      ? 'bg-dnd-amber/40 text-[var(--dnd-amber)]'
+                      ? 'bg-dnd-amber/40 text-dnd-amber'
                       : 'bg-dnd-surface border border-dnd-border text-dnd-text-faint'}`}
                 whileTap={{ scale: 0.92 }}
                 transition={spring.press}
@@ -405,7 +405,7 @@ export default function Conditions() {
                 transition={{ duration: 0.25 }}
                 className="flex-1 flex items-center gap-2 px-3 py-3 text-left"
               >
-                <Icon size={18} className={active ? 'text-[var(--dnd-crimson-bright)]' : 'text-dnd-text-faint'} />
+                <Icon size={18} className={active ? 'text-dnd-crimson-bright' : 'text-dnd-text-faint'} />
                 <span className="text-sm font-body leading-tight">
                   {t(`character.conditions.${key}`)}
                 </span>

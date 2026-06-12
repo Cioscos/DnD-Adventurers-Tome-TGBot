@@ -12,6 +12,7 @@ import { api } from '@/api/client'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
+import Input from '@/components/ui/Input'
 import SectionDivider from '@/components/ui/SectionDivider'
 import SwitchToggle from '@/components/ui/SwitchToggle'
 import ConfirmSheet from '@/components/ui/ConfirmSheet'
@@ -40,7 +41,7 @@ function D20Thumb({ body, accent, active }: { body: string; accent: string; acti
       style={{
         filter: active
           ? 'drop-shadow(0 0 4px var(--dnd-gold-glow))'
-          : 'drop-shadow(0 1px 2px rgba(0,0,0,0.35))',
+          : 'drop-shadow(0 1px 2px rgba(26,16,8,0.35))',
       }}
     >
       <polygon
@@ -255,12 +256,10 @@ export default function Settings() {
           <Settings2 size={16} className="text-dnd-gold-bright shrink-0 mt-0.5" />
           <div className="flex-1">
             <p className="font-display font-bold text-dnd-gold-bright">
-              {t('character.settings.unit_system', { defaultValue: 'Sistema di misura' })}
+              {t('character.settings.unit_system')}
             </p>
             <p className="text-xs text-dnd-text-muted mt-0.5 font-body italic">
-              {t('character.settings.unit_system_hint', {
-                defaultValue: 'Distanze in piedi/metri e pesi in libbre/chili (5 ft ≈ 1,5 m · 1 lb = 0,5 kg).',
-              })}
+              {t('character.settings.unit_system_hint')}
             </p>
           </div>
         </div>
@@ -282,8 +281,8 @@ export default function Settings() {
               transition={spring.press}
             >
               {mode === 'imperial'
-                ? t('character.settings.unit_imperial', { defaultValue: 'Piedi & libbre' })
-                : t('character.settings.unit_metric', { defaultValue: 'Metri & chili' })}
+                ? t('character.settings.unit_imperial')
+                : t('character.settings.unit_metric')}
             </m.button>
           ))}
         </div>
@@ -344,7 +343,7 @@ export default function Settings() {
             <p className="text-xs text-dnd-text-faint pl-6">…</p>
           )}
           {packError && (
-            <p className="text-xs text-[var(--dnd-crimson-bright)] pl-6">
+            <p className="text-xs text-dnd-crimson-bright pl-6">
               {t('character.settings.dice.pack.load_error')}
             </p>
           )}
@@ -435,37 +434,30 @@ export default function Settings() {
         {retentionPreview && retentionPreview.total > 0 && (
           <div className="mt-3 space-y-1 text-[11px] text-dnd-text-muted font-body italic leading-snug">
             <p>
-              {t('character.settings.history_retention_total', {
-                n: retentionPreview.total,
-                defaultValue: 'Cronologia attuale: {{n}} voci.',
-              })}
+              {t('character.settings.history_retention_total', { n: retentionPreview.total })}
             </p>
             <p
               className={
                 retentionPreview.would_purge_events > 0
-                  ? 'text-[var(--dnd-crimson-bright)]'
+                  ? 'text-dnd-crimson-bright'
                   : ''
               }
             >
               {t('character.settings.history_retention_preview_events', {
                 n: retentionPreview.would_purge_events,
                 keep: retentionEvents,
-                defaultValue:
-                  'Ultimi {{keep}} eventi: perderai {{n}} voci più vecchie ora.',
               })}
             </p>
             <p
               className={
                 retentionPreview.would_purge_days > 0
-                  ? 'text-[var(--dnd-crimson-bright)]'
+                  ? 'text-dnd-crimson-bright'
                   : ''
               }
             >
               {t('character.settings.history_retention_preview_days', {
                 n: retentionPreview.would_purge_days,
                 days: retentionDays,
-                defaultValue:
-                  'Ultimi {{days}} giorni: perderai {{n}} voci precedenti.',
               })}
             </p>
           </div>
@@ -488,7 +480,7 @@ export default function Settings() {
           <button
             type="button"
             onClick={() => setShowRecalcConfirm(true)}
-            className="w-full inline-flex items-center justify-center gap-2 min-h-[44px] px-3 py-2 rounded-xl bg-dnd-surface border border-dnd-crimson-bright/40 text-[var(--dnd-crimson-bright)] text-sm font-body"
+            className="w-full inline-flex items-center justify-center gap-2 min-h-[44px] px-3 py-2 rounded-xl bg-dnd-surface border border-dnd-crimson-bright/40 text-dnd-crimson-bright text-sm font-body"
           >
             <RefreshCw size={14} />
             {t('character.settings.hp.recalc')}
@@ -576,21 +568,20 @@ export default function Settings() {
               ))}
             </div>
             {prepCapMode === 'manual' && (
-              <div className="flex gap-2 mt-3">
-                <input
-                  type="number"
-                  min={1}
+              <div className="flex gap-2 mt-3 items-start">
+                <Input
                   inputMode="numeric"
+                  min={1}
                   value={prepCapInput}
-                  onChange={(e) => setPrepCapInput(e.target.value)}
+                  onChange={setPrepCapInput}
                   placeholder={t('character.settings.prepared_cap_value_placeholder', {
                     cap: spellcasting.prepared_cap ?? 0,
                   })}
-                  className="flex-1 min-w-0 bg-dnd-surface border border-dnd-border rounded-xl px-3 py-2 text-sm font-mono"
+                  className="flex-1 min-w-0"
                 />
                 <Button
                   variant="secondary"
-                  size="sm"
+                  size="md"
                   disabled={!prepCapInput || Number(prepCapInput) < 1}
                   onClick={() => {
                     updateMutation.mutate({

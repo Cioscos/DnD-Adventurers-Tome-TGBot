@@ -114,7 +114,7 @@ function ButtonInner({
       {ripples.map((r) => (
         <span
           key={r.id}
-          className="absolute rounded-full bg-white/30 pointer-events-none"
+          className="absolute rounded-full bg-dnd-parchment/30 pointer-events-none"
           style={{
             left: r.x,
             top: r.y,

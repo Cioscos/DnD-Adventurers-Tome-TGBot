@@ -1,4 +1,4 @@
-import { useState, Suspense, lazy } from 'react'
+import { useState, useRef, useEffect, Suspense, lazy } from 'react'
 import { createPortal } from 'react-dom'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -9,12 +9,13 @@ import { GiTreasureMap as MapIcon } from 'react-icons/gi'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
 import Button from '@/components/ui/Button'
-import Sheet from '@/components/ui/Sheet'
+import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import EmptyState from '@/components/ui/EmptyState'
 import { haptic } from '@/auth/telegram'
 import MapUploadForm from '@/pages/maps/MapUploadForm'
 import MapZoneGroup from '@/pages/maps/MapZoneGroup'
 import { useRegisterOverlay } from '@/store/overlayStore'
+import { useOverlayDismiss } from '@/hooks/useOverlayDismiss'
 import type { MapEntry } from '@/types'
 import MapsSkeleton from '@/components/skeletons/MapsSkeleton'
 
@@ -36,6 +37,18 @@ export default function Maps() {
   // Hide the dice FAB while the full-screen map viewer is open (custom overlay,
   // not a Sheet/ResultDialog).
   useRegisterOverlay(overlayMap !== null)
+  // ESC / back chiudono il viewer come ogni altro overlay (DESIGN: never trap).
+  useOverlayDismiss(overlayMap !== null, () => setOverlayMap(null))
+
+  // Il body non scrolla (pattern Layout): per portare il form in vista si
+  // scrolla il contenitore interno, window.scrollTo sarebbe un no-op.
+  const uploadFormRef = useRef<HTMLDivElement>(null)
+  const [scrollToForm, setScrollToForm] = useState(0)
+  useEffect(() => {
+    if (scrollToForm > 0) {
+      uploadFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }, [scrollToForm])
 
   const { data: char } = useQuery({
     queryKey: ['character', charId],
@@ -65,7 +78,7 @@ export default function Maps() {
   const openUploadForZone = (zone: string) => {
     setUploadInitialZone(zone)
     setShowUpload(true)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    setScrollToForm((n) => n + 1)
   }
 
   const handleUploadComplete = () => {
@@ -109,16 +122,18 @@ export default function Maps() {
       </Button>
 
       {showUpload && (
-        <MapUploadForm
-          charId={charId}
-          existingZones={existingZones}
-          onUploadComplete={handleUploadComplete}
-          onCancel={() => {
-            setShowUpload(false)
-            setUploadInitialZone('')
-          }}
-          initialZone={uploadInitialZone}
-        />
+        <div ref={uploadFormRef} className="scroll-mt-4">
+          <MapUploadForm
+            charId={charId}
+            existingZones={existingZones}
+            onUploadComplete={handleUploadComplete}
+            onCancel={() => {
+              setShowUpload(false)
+              setUploadInitialZone('')
+            }}
+            initialZone={uploadInitialZone}
+          />
+        </div>
       )}
 
       {maps.length === 0 && !showUpload ? (
@@ -152,8 +167,7 @@ export default function Maps() {
         <AnimatePresence>
           {overlayMap && (
             <m.div
-              className="fixed inset-0 z-[9999] flex flex-col"
-              style={{ background: 'rgba(5, 5, 8, 0.98)' }}
+              className="fixed inset-0 z-50 flex flex-col bg-dnd-ink/95"
               onClick={() => setOverlayMap(null)}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -166,7 +180,7 @@ export default function Maps() {
                              bg-gradient-gold text-dnd-ink border-2 border-dnd-gold-bright
                              shadow-[0_0_20px_var(--dnd-gold-glow)]"
                   whileTap={{ scale: 0.9 }}
-                  aria-label="Close"
+                  aria-label={t('common.close')}
                 >
                   <X size={24} strokeWidth={3} />
                 </m.button>
@@ -199,11 +213,11 @@ export default function Maps() {
                   <iframe
                     src={api.maps.fileUrl(charId, overlayMap.id)}
                     title={overlayMap.zone_name}
-                    className="w-full h-full rounded-xl bg-white"
+                    className="w-full h-full rounded-xl bg-dnd-parchment"
                     onClick={(e) => e.stopPropagation()}
                   />
                 ) : (
-                  <div className="text-center text-white space-y-4">
+                  <div className="text-center text-dnd-parchment space-y-4">
                     <FileText size={80} className="mx-auto text-dnd-gold-bright" />
                     <p className="text-sm opacity-70 font-body">{overlayMap.zone_name}</p>
                     <a
@@ -225,60 +239,26 @@ export default function Maps() {
       )}
 
       {/* Delete single file confirm */}
-      <Sheet
+      <ConfirmSheet
         open={deleteTarget !== null}
         onClose={() => setDeleteTarget(null)}
-        centered
+        onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
         title={t('common.confirm')}
-      >
-        <div className="p-5 space-y-3">
-          <p className="text-sm text-center text-dnd-text font-body">
-            {deleteTarget && t('character.maps.delete_file_confirm', { zone: deleteTarget.zone })}
-          </p>
-          <div className="flex gap-2">
-            <Button
-              variant="danger"
-              fullWidth
-              onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
-              loading={deleteMutation.isPending}
-              haptic="error"
-            >
-              {t('common.delete')}
-            </Button>
-            <Button variant="secondary" fullWidth onClick={() => setDeleteTarget(null)}>
-              {t('common.cancel')}
-            </Button>
-          </div>
-        </div>
-      </Sheet>
+        body={deleteTarget ? t('character.maps.delete_file_confirm', { zone: deleteTarget.zone }) : undefined}
+        confirmLabel={t('common.delete')}
+        loading={deleteMutation.isPending}
+      />
 
       {/* Delete entire zone confirm */}
-      <Sheet
+      <ConfirmSheet
         open={deleteZoneTarget !== null}
         onClose={() => setDeleteZoneTarget(null)}
-        centered
+        onConfirm={() => deleteZoneTarget && deleteZoneMutation.mutate(deleteZoneTarget)}
         title={t('common.confirm')}
-      >
-        <div className="p-5 space-y-3">
-          <p className="text-sm text-center text-dnd-text font-body">
-            {deleteZoneTarget && t('character.maps.delete_zone_confirm', { zone: deleteZoneTarget })}
-          </p>
-          <div className="flex gap-2">
-            <Button
-              variant="danger"
-              fullWidth
-              onClick={() => deleteZoneTarget && deleteZoneMutation.mutate(deleteZoneTarget)}
-              loading={deleteZoneMutation.isPending}
-              haptic="error"
-            >
-              {t('common.delete')}
-            </Button>
-            <Button variant="secondary" fullWidth onClick={() => setDeleteZoneTarget(null)}>
-              {t('common.cancel')}
-            </Button>
-          </div>
-        </div>
-      </Sheet>
+        body={deleteZoneTarget ? t('character.maps.delete_zone_confirm', { zone: deleteZoneTarget }) : undefined}
+        confirmLabel={t('common.delete')}
+        loading={deleteZoneMutation.isPending}
+      />
     </Layout>
   )
 }

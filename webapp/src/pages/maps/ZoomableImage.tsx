@@ -12,15 +12,16 @@ export default function ZoomableImage({ src, alt }: ZoomableImageProps) {
       initialScale={1}
       minScale={0.5}
       maxScale={6}
+      centerOnInit
       doubleClick={{ mode: 'reset' }}
       wheel={{ step: 0.2 }}
       pinch={{ step: 8 }}
       panning={{ velocityDisabled: false }}
     >
-      <TransformComponent
-        wrapperClass="!w-full !h-full flex items-center justify-center"
-        contentClass="flex items-center justify-center"
-      >
+      {/* Niente flex-centering qui: la libreria centra già il contenuto via
+          translate; sommare il centering flex raddoppia l'offset (immagine
+          spinta in basso a destra). */}
+      <TransformComponent wrapperClass="!w-full !h-full">
         <img
           src={src}
           alt={alt}

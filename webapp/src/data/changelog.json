@@ -1,6 +1,54 @@
 {
   "entries": [
     {
+      "version": "2.14.7",
+      "date": "2026-06-12",
+      "title": {
+        "it": "Rifinitura diffusa: stato, diario, mappe, dadi e identità",
+        "en": "Broad polish: conditions, journal, maps, dice and identity"
+      },
+      "added": {
+        "it": [],
+        "en": []
+      },
+      "improved": {
+        "it": [
+          "Note: Modifica ed Elimina sono ora icone facili da toccare sulla card, e il dettaglio nota ha azioni più chiare",
+          "Editor di note, registratore vocale e caricamento mappe allineati allo stile di sistema (campi, etichette, scelta zona a chip)",
+          "Microfono non disponibile: toccando il bottone ora viene spiegato il perché (prima il tasto era solo disabilitato)",
+          "Ricerca della cronologia allineata ai campi di sistema; timeline leggibile anche in modalità chiara",
+          "Lanciatore dadi: bottoni col gradiente oro di sistema, contatore del pool più leggibile e istogramma del d100 senza etichette accavallate",
+          "Identità: l'avviso di modifiche non salvate è ora ambra (avvertimento) e non rosso (pericolo); campo del tetto di preparazione a sistema nelle impostazioni"
+        ],
+        "en": [
+          "Notes: Edit and Delete are now easy-to-tap icons on the card, and the note detail has clearer actions",
+          "Note editor, voice recorder and map upload aligned to the system style (fields, labels, chip zone picker)",
+          "Microphone unavailable: tapping the button now explains why (previously it was just disabled)",
+          "History search aligned to system fields; timeline readable in light mode too",
+          "Dice launcher: buttons on the system gold gradient, more legible pool counter and d100 histogram without overlapping labels",
+          "Identity: the unsaved-changes notice is now amber (warning) instead of red (danger); prepared-spells cap field follows the system style in settings"
+        ]
+      },
+      "fixed": {
+        "it": [
+          "Svuotare la cronologia ed eliminare mappe o zone ora hanno la conferma a destra come nel resto dell'app",
+          "Il visore mappe a schermo intero si chiude con ESC e col tasto indietro, e l'immagine è centrata correttamente",
+          "Aggiungere una mappa a una zona esistente porta davvero il modulo in vista",
+          "Pagina Note vuota: il titolo ora dice \"Nessuna nota\" invece di \"Nessuno\"",
+          "Svuotare la cronologia dei tiri ora conferma con l'azione a destra; \"Totale\" e le date dei tiri sono tradotti correttamente",
+          "Le sezioni Fisicità e Cultura della pagina Identità e i suggerimenti di lingue e competenze ora sono tradotti anche in inglese"
+        ],
+        "en": [
+          "Clearing the history and deleting maps or zones now confirm with the action on the right like the rest of the app",
+          "The fullscreen map viewer closes with ESC and the back button, and the image is centered correctly",
+          "Adding a map to an existing zone now actually scrolls the form into view",
+          "Empty Notes page: the title now reads \"No notes yet\" instead of a generic \"None\"",
+          "Clearing the dice history now confirms with the action on the right; \"Total\" and roll dates are properly translated",
+          "The Physicality and Culture sections of the Identity page and the language/proficiency hints are now translated in English too"
+        ]
+      }
+    },
+    {
       "version": "2.14.6",
       "date": "2026-06-12",
       "title": {

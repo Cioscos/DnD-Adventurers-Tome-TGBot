@@ -8,7 +8,8 @@ import { GiOpenBook as BookOpen } from 'react-icons/gi'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
 import Button from '@/components/ui/Button'
-import Sheet from '@/components/ui/Sheet'
+import ConfirmSheet from '@/components/ui/ConfirmSheet'
+import Input from '@/components/ui/Input'
 import ScrollArea from '@/components/ScrollArea'
 import Skeleton from '@/components/ui/Skeleton'
 import EmptyState from '@/components/ui/EmptyState'
@@ -78,7 +79,6 @@ export default function History() {
             <span className="text-[11px] font-cinzel uppercase tracking-widest text-dnd-gold-dim">
               {t('character.history.entries_count', {
                 count: search ? filteredEntries.length : entries.length,
-                defaultValue: '{{count}} voci',
               })}
             </span>
             <Button
@@ -93,29 +93,25 @@ export default function History() {
           </div>
 
           {/* Search filter — client-side substring match on description. */}
-          <div className="relative">
-            <Search
-              size={14}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-dnd-text-faint pointer-events-none"
-            />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder={t('character.history.search_placeholder', { defaultValue: 'Cerca nella cronologia...' })}
-              className="w-full min-h-[40px] pl-9 pr-9 py-2 rounded-xl bg-dnd-surface border border-dnd-border text-dnd-text text-sm font-body outline-none focus:border-dnd-gold/60"
-            />
-            {search && (
-              <button
-                type="button"
-                onClick={() => setSearch('')}
-                className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center text-dnd-text-faint hover:text-dnd-gold-bright"
-                aria-label={t('common.cancel')}
-              >
-                <X size={14} />
-              </button>
-            )}
-          </div>
+          <Input
+            type="search"
+            value={search}
+            onChange={setSearch}
+            placeholder={t('character.history.search_placeholder')}
+            leadingIcon={<Search size={14} />}
+            trailingAction={
+              search ? (
+                <button
+                  type="button"
+                  onClick={() => setSearch('')}
+                  className="w-10 h-10 rounded-full flex items-center justify-center text-dnd-text-faint hover:text-dnd-gold-bright"
+                  aria-label={t('common.cancel')}
+                >
+                  <X size={14} />
+                </button>
+              ) : undefined
+            }
+          />
 
           <ScrollArea>
             <div className="relative">
@@ -125,20 +121,20 @@ export default function History() {
                 style={{
                   background:
                     'linear-gradient(to bottom, transparent 0%, var(--dnd-gold-deep) 6%, var(--dnd-gold) 25%, var(--dnd-gold-bright) 50%, var(--dnd-gold) 75%, var(--dnd-gold-deep) 94%, transparent 100%)',
-                  boxShadow: '0 0 6px var(--dnd-gold-glow), 0 0 12px rgba(212,175,55,0.35)',
+                  boxShadow: '0 0 6px var(--dnd-gold-glow), 0 0 12px var(--dnd-gold-glow)',
                 }}
               />
               <div
                 className="absolute left-[24.5px] top-2 bottom-2 w-px opacity-80"
                 style={{
                   background:
-                    'linear-gradient(to bottom, transparent 0%, rgba(255,240,200,0.7) 30%, rgba(255,240,200,0.9) 50%, rgba(255,240,200,0.7) 70%, transparent 100%)',
+                    'linear-gradient(to bottom, transparent 0%, color-mix(in srgb, var(--dnd-gold-bright) 70%, transparent) 30%, color-mix(in srgb, var(--dnd-gold-bright) 90%, transparent) 50%, color-mix(in srgb, var(--dnd-gold-bright) 70%, transparent) 70%, transparent 100%)',
                 }}
               />
               <div className="space-y-3">
                 {filteredEntries.length === 0 && search && (
                   <p className="ml-[60px] text-sm italic text-dnd-text-muted font-body py-4">
-                    {t('character.history.no_match', { defaultValue: 'Nessuna voce corrispondente.' })}
+                    {t('character.history.no_match')}
                   </p>
                 )}
                 {filteredEntries.map((entry, idx) => {
@@ -178,32 +174,15 @@ export default function History() {
         </>
       )}
 
-      <Sheet
+      <ConfirmSheet
         open={confirmClear}
         onClose={() => setConfirmClear(false)}
-        centered
+        onConfirm={() => clearMutation.mutate()}
         title={t('character.history.clear')}
-      >
-        <div className="p-5 space-y-3">
-          <p className="text-sm text-center text-dnd-text font-body">
-            {t('character.history.clear_confirm')}
-          </p>
-          <div className="flex gap-2">
-            <Button
-              variant="danger"
-              fullWidth
-              onClick={() => clearMutation.mutate()}
-              loading={clearMutation.isPending}
-              haptic="error"
-            >
-              {t('common.confirm')}
-            </Button>
-            <Button variant="secondary" fullWidth onClick={() => setConfirmClear(false)}>
-              {t('common.cancel')}
-            </Button>
-          </div>
-        </div>
-      </Sheet>
+        body={t('character.history.clear_confirm')}
+        confirmLabel={t('common.confirm')}
+        loading={clearMutation.isPending}
+      />
     </Layout>
   )
 }

@@ -35,15 +35,14 @@ export default function NoteViewModal({ note, onClose, onEdit, onDelete }: Props
           {note ? renderInlineMarkdown(note.body) : null}
         </div>
 
+        {/* Lo Sheet chiude già con X, ESC, backdrop e back: niente bottone
+            Chiudi ridondante. Azione distruttiva a sinistra, principale a destra. */}
         <div className="flex gap-2 pt-1">
-          <Button variant="secondary" fullWidth onClick={() => note && onEdit(note.title, note.body, tags)}>
-            {t('common.edit')}
-          </Button>
           <Button variant="danger" fullWidth onClick={() => note && onDelete(note.title)}>
             {t('common.delete')}
           </Button>
-          <Button fullWidth onClick={onClose}>
-            {t('common.close')}
+          <Button variant="secondary" fullWidth onClick={() => note && onEdit(note.title, note.body, tags)}>
+            {t('common.edit')}
           </Button>
         </div>
       </div>

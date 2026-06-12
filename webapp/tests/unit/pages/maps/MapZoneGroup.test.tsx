@@ -40,7 +40,7 @@ describe('MapZoneGroup', () => {
     renderWithProviders(<MapZoneGroup {...base} maps={[maps[0]]} onPreview={onPreview} onDeleteFile={onDeleteFile} />)
     await userEvent.click(screen.getByRole('button', { name: 'Foresta' }))
     expect(onPreview).toHaveBeenCalledWith(maps[0])
-    await userEvent.click(screen.getByRole('button', { name: '✕' }))
+    await userEvent.click(screen.getByRole('button', { name: 'common.delete' }))
     expect(onDeleteFile).toHaveBeenCalledWith(1, 'Foresta')
   })
 })
