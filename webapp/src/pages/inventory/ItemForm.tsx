@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import Sheet from '@/components/ui/Sheet'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
+import SwitchToggle from '@/components/ui/SwitchToggle'
 import WizardFooter from '@/components/ui/WizardFooter'
 import DamageTypePicker from '@/components/ui/DamageTypePicker'
 import DamageDiceBuilder from './DamageDiceBuilder'
@@ -286,15 +287,12 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
               />
             </div>
 
-            <label className="flex items-center gap-2 cursor-pointer text-sm text-dnd-text font-body">
-              <input
-                type="checkbox"
-                checked={form.stealth_disadvantage}
-                onChange={(e) => setForm((f) => ({ ...f, stealth_disadvantage: e.target.checked }))}
-                className="w-5 h-5 accent-dnd-gold"
-              />
-              {t('character.inventory.stealth_disadvantage_label')}
-            </label>
+            <SwitchToggle
+              checked={form.stealth_disadvantage}
+              onChange={(v) => setForm((f) => ({ ...f, stealth_disadvantage: v }))}
+              label={t('character.inventory.stealth_disadvantage_label')}
+              aria-label={t('character.inventory.stealth_disadvantage_label')}
+            />
           </>
         )}
 

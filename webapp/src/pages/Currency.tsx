@@ -223,7 +223,7 @@ export default function Currency() {
                     </p>
                   )}
                   {isNegativeAdd && (
-                    <p className="text-[10px] text-[var(--dnd-crimson-bright)] mt-0.5 font-body italic">
+                    <p className="text-[10px] text-dnd-crimson-bright mt-0.5 font-body italic">
                       {t('character.currency.remove_preview', {
                         amount: Math.abs(draftNum),
                         coin: t(`character.currency.${key}`),
@@ -259,8 +259,9 @@ export default function Currency() {
         {t('common.save')}
       </Button>
 
+      {/* Conversione: azione neutra, non magica — secondary (Semantic Triad). */}
       <Button
-        variant="arcane"
+        variant="secondary"
         size="md"
         fullWidth
         onClick={() => setShowConvert(true)}
@@ -332,7 +333,11 @@ export default function Currency() {
             )
           })()}
 
+          {/* Annulla a sinistra, conferma a destra (convenzione di sistema). */}
           <div className="flex gap-2 pt-1">
+            <Button variant="secondary" fullWidth onClick={() => setShowConvert(false)}>
+              {t('common.cancel')}
+            </Button>
             <Button
               variant="primary"
               fullWidth
@@ -342,9 +347,6 @@ export default function Currency() {
               haptic="success"
             >
               {t('character.currency.convert')}
-            </Button>
-            <Button variant="secondary" fullWidth onClick={() => setShowConvert(false)}>
-              {t('common.cancel')}
             </Button>
           </div>
         </div>

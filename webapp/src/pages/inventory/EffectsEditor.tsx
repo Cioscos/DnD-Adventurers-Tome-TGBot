@@ -60,8 +60,8 @@ export default function EffectsEditor({ effects, onChange }: EffectsEditorProps)
             <button
               type="button"
               onClick={() => remove(i)}
-              className="shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center text-dnd-text-muted hover:text-[var(--dnd-crimson-bright)] transition-colors"
-              aria-label={t('common.remove', { defaultValue: 'Rimuovi' })}
+              className="shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center text-dnd-text-muted hover:text-dnd-crimson-bright transition-colors"
+              aria-label={t('common.remove')}
             >
               <X size={16} />
             </button>
@@ -73,7 +73,7 @@ export default function EffectsEditor({ effects, onChange }: EffectsEditorProps)
               value={e.amount}
               onChange={(ev) => update(i, { kind: 'heal', amount: ev.target.value })}
               placeholder="2d4+2"
-              className="w-28 min-h-[44px] bg-dnd-surface border border-dnd-border rounded-md px-2 py-1 text-sm text-center font-mono"
+              className="w-28 min-h-[44px] bg-dnd-surface border border-dnd-border rounded-md px-2 py-1 text-sm text-center font-mono focus:border-dnd-gold/60 focus:outline-none"
               aria-label={t('character.inventory.effects.amount_label')}
             />
           ) : (
@@ -90,7 +90,7 @@ export default function EffectsEditor({ effects, onChange }: EffectsEditorProps)
       <button
         type="button"
         onClick={add}
-        className="inline-flex items-center gap-1 text-xs text-dnd-gold-bright hover:text-dnd-gold transition-colors px-2 py-1"
+        className="inline-flex items-center gap-1 min-h-[44px] text-xs text-dnd-gold-bright hover:text-dnd-gold transition-colors px-2 py-1"
       >
         <Plus size={14} />
         {t('character.inventory.effects.add')}
