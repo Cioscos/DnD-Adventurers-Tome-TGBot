@@ -66,10 +66,10 @@ function ParticipantRow({
   const conds = conditionEntries(snapshot?.conditions)
 
   const bucketColorClass: Record<string, string> = {
-    healthy:          'bg-[var(--dnd-emerald-bright)]',
+    healthy:          'bg-dnd-emerald-bright',
     lightly_wounded:  'bg-dnd-gold-bright',
-    badly_wounded:    'bg-[var(--dnd-amber)]',
-    dying:            'bg-[var(--dnd-crimson-bright)]',
+    badly_wounded:    'bg-dnd-amber',
+    dying:            'bg-dnd-crimson-bright',
     dead:             'bg-dnd-ink',
   }
 
@@ -130,7 +130,7 @@ function ParticipantRow({
               <>
                 <div className="mt-2 flex items-center text-xs font-cinzel">
                   <div className="flex items-center gap-1.5">
-                    <Heart size={12} className="text-[var(--dnd-crimson-bright)]" />
+                    <Heart size={12} className="text-dnd-crimson-bright" />
                     <span className="uppercase tracking-wider">
                       {snapshot.hp_bucket
                         ? t(`session.hp_bucket.${snapshot.hp_bucket}`)
@@ -146,7 +146,7 @@ function ParticipantRow({
               <>
                 <div className="mt-2 grid grid-cols-2 gap-2 text-xs font-mono">
                   <div className="flex items-center gap-1.5">
-                    <Heart size={12} className="text-[var(--dnd-crimson-bright)]" />
+                    <Heart size={12} className="text-dnd-crimson-bright" />
                     <span>{snapshot.current_hit_points}/{snapshot.hit_points}</span>
                     {(snapshot.temp_hp ?? 0) > 0 && <span className="text-dnd-arcane-bright">+{snapshot.temp_hp}</span>}
                   </div>
@@ -157,7 +157,7 @@ function ParticipantRow({
                 </div>
                 <div className="mt-1.5 h-1.5 w-full rounded-full bg-dnd-surface overflow-hidden">
                   <div
-                    className="h-full bg-gradient-to-r from-[var(--dnd-crimson)] via-[var(--dnd-amber)] to-[var(--dnd-emerald-bright)]"
+                    className="h-full bg-gradient-to-r from-dnd-crimson via-dnd-amber to-dnd-emerald-bright"
                     style={{ width: `${hpPct}%` }}
                   />
                 </div>
@@ -265,7 +265,7 @@ export default function SessionRoom() {
   const shareInvite = useShareMessage(() => api.share.invite(sessionId))
 
   const myCharId =
-    live?.participants.find((p) => p.user_id === myUserId)?.character_id ?? null
+    live?.participants?.find((p) => p.user_id === myUserId)?.character_id ?? null
 
   if (isLoading) {
     return (
@@ -292,7 +292,7 @@ export default function SessionRoom() {
     return (
       <Layout title={t('session.title')} backTo="/session">
         <Surface variant="ember">
-          <p className="text-center font-display font-bold text-[var(--dnd-crimson-bright)] py-6">
+          <p className="text-center font-display font-bold text-dnd-crimson-bright py-6">
             {t('session.closed_notice')}
           </p>
           <Button variant="secondary" fullWidth onClick={() => navigate('/session')}>
@@ -415,7 +415,7 @@ export default function SessionRoom() {
           icon={<Gift size={16} />}
           onClick={() => setShowGrantItem(true)}
         >
-          {t('session.grant_item.button', { defaultValue: 'Consegna oggetto' })}
+          {t('session.grant_item.button')}
         </Button>
       )}
 

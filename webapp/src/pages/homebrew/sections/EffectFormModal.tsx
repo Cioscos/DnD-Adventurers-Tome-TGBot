@@ -5,6 +5,7 @@ import Sheet from '@/components/ui/Sheet'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
 import FilterChip from '@/components/ui/FilterChip'
+import SwitchToggle from '@/components/ui/SwitchToggle'
 import type {
   Effect,
   Filter,
@@ -111,6 +112,8 @@ interface EffectFormModalProps {
   onClose: () => void
   /** `null` while the picker is open; non-null once a type has been chosen. */
   effect: Effect | null
+  /** True when adding a brand-new step (drives the modal title). */
+  isNew?: boolean
   tables?: Table[]
   onSave: (effect: Effect) => void
 }
@@ -128,6 +131,7 @@ export default function EffectFormModal({
   open,
   onClose,
   effect,
+  isNew = false,
   tables,
   onSave,
 }: EffectFormModalProps) {
@@ -144,9 +148,9 @@ export default function EffectFormModal({
   }, [open, effect])
 
   const title = useMemo(() => {
-    if (!draft) return t('homebrew.effects.modal_title_new')
+    if (isNew) return t('homebrew.effects.modal_title_new')
     return t('homebrew.effects.modal_title_edit')
-  }, [draft, t])
+  }, [isNew, t])
 
   if (!draft) {
     return <Sheet open={open} onClose={onClose} title={title} centered><div /></Sheet>
@@ -320,7 +324,7 @@ function EffectFormBody({ draft, update, tables, errors }: BodyProps) {
               ))}
             </select>
             {errors.table && (
-              <p className="text-[var(--dnd-crimson-bright)] text-[11px] mt-1 font-body">
+              <p className="text-dnd-crimson-bright text-[11px] mt-1 font-body">
                 {errors.table}
               </p>
             )}
@@ -445,17 +449,15 @@ function EffectFormBody({ draft, update, tables, errors }: BodyProps) {
             onChange={(v) => update<typeof draft>({ type: v || undefined })}
             placeholder={t('homebrew.effects.fields.damage_type_placeholder')}
           />
-          <label className="flex items-center gap-2 min-h-[44px] cursor-pointer">
-            <input
-              type="checkbox"
-              checked={!!draft.was_critical}
-              onChange={(e) => update<typeof draft>({ was_critical: e.target.checked || undefined })}
-              className="w-5 h-5 accent-dnd-gold"
-            />
+          <div className="flex items-center justify-between gap-2 min-h-[44px]">
             <span className="text-sm font-body text-dnd-text">
               {t('homebrew.effects.fields.was_critical')}
             </span>
-          </label>
+            <SwitchToggle
+              checked={!!draft.was_critical}
+              onChange={(checked) => update<typeof draft>({ was_critical: checked || undefined })}
+            />
+          </div>
         </>
       )
 
@@ -787,7 +789,7 @@ function CasesEditor({
                 type="button"
                 onClick={() => removeCase(k)}
                 className="w-11 h-11 inline-flex items-center justify-center rounded-lg text-dnd-crimson hover:text-dnd-crimson-bright hover:bg-dnd-crimson/10"
-                aria-label="Delete case"
+                aria-label={t('common.delete')}
               >
                 <Trash2 size={14} />
               </button>

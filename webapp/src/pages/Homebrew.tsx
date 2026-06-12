@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
-import { Plus, CheckCircle2, BookOpenCheck, Zap, Trash2, Loader2 } from 'lucide-react'
+import { Plus, CheckCircle2, BookOpenCheck, Zap, Trash2, Loader2, RefreshCw } from 'lucide-react'
 import { GiScrollUnfurled, GiPotionBall, GiCauldron } from 'react-icons/gi'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
@@ -14,6 +14,7 @@ import SectionDivider from '@/components/ui/SectionDivider'
 import Skeleton from '@/components/Skeleton'
 import Reveal from '@/components/ui/Reveal'
 import ConfirmSheet from '@/components/ui/ConfirmSheet'
+import EmptyState from '@/components/ui/EmptyState'
 import {
   showHomebrewNotifications,
   type NotificationLike,
@@ -71,7 +72,7 @@ function RuleCard({
           <span className="inline-block mt-1 px-1.5 py-0.5 rounded-lg
                            bg-dnd-chip-bg border border-dnd-chip-border/60
                            text-dnd-gold-bright font-cinzel uppercase
-                           text-[10px] tracking-[0.08em] leading-none">
+                           text-[11px] tracking-[0.08em] leading-none">
             {fromTemplateLabel}
           </span>
         )}
@@ -195,11 +196,19 @@ export default function Homebrew() {
   const toast = useToast()
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null)
 
-  const { data: rules, error: rulesError } = useQuery({
+  const {
+    data: rules,
+    error: rulesError,
+    refetch: refetchRules,
+  } = useQuery({
     queryKey: ['homebrew-rules', charId],
     queryFn: () => api.homebrew.listRules(charId),
   })
-  const { data: templates, error: templatesError } = useQuery({
+  const {
+    data: templates,
+    error: templatesError,
+    refetch: refetchTemplates,
+  } = useQuery({
     queryKey: ['homebrew-templates'],
     queryFn: () => api.homebrew.listTemplates(),
   })
@@ -283,11 +292,17 @@ export default function Homebrew() {
   if (rulesError || templatesError) {
     return (
       <Layout title={t('homebrew.page_title')}>
-        <div className="p-4">
-          <Surface variant="ember">
-            <p className="text-sm font-body text-dnd-text">{t('homebrew.load_error')}</p>
-          </Surface>
-        </div>
+        <EmptyState
+          icon={<RefreshCw size={28} />}
+          title={t('homebrew.load_error')}
+          action={{
+            label: t('common.retry'),
+            onClick: () => {
+              if (rulesError) void refetchRules()
+              if (templatesError) void refetchTemplates()
+            },
+          }}
+        />
       </Layout>
     )
   }

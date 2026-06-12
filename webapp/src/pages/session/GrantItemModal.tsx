@@ -2,7 +2,9 @@ import { useCallback, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { GiCrown as Crown } from 'react-icons/gi'
-import { User } from 'lucide-react'
+import { Check, User } from 'lucide-react'
+import Sheet from '@/components/ui/Sheet'
+import Button from '@/components/ui/Button'
 import ItemForm from '@/pages/inventory/ItemForm'
 import { buildItemMetadata, type ItemFormData } from '@/pages/inventory/itemMetadata'
 import { api } from '@/api/client'
@@ -83,48 +85,38 @@ export default function GrantItemModal({
   }
 
   return (
-    <div
-      className="fixed inset-0 bg-black/60 flex items-end z-50 p-4"
-      onClick={(e) => e.target === e.currentTarget && onClose()}
-    >
-      <div className="w-full rounded-2xl bg-dnd-surface-elevated p-4 space-y-3 max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between">
-          <h3 className="font-semibold font-cinzel text-dnd-gold">
-            {t('session.grant_item.recipients_label')}
-          </h3>
-          <button
-            onClick={onClose}
-            className="text-dnd-text-secondary text-sm"
-            aria-label={t('common.cancel')}
-          >
-            &#x2715;
-          </button>
-        </div>
-
+    <Sheet open onClose={onClose} title={t('session.grant_item.recipients_label')}>
+      <div className="p-1 space-y-3">
         <p className="text-xs text-dnd-text-muted font-body italic">
           {pendingForm?.name} · ×{pendingForm?.quantity || 1}
         </p>
 
         {players.length === 0 ? (
           <p className="text-sm text-dnd-text-muted text-center py-4">
-            {t('session.grant_item.no_players', { defaultValue: 'Nessun giocatore in sessione' })}
+            {t('session.grant_item.no_players')}
           </p>
         ) : (
           <div className="space-y-1.5">
             {players.map((p) => {
               const checked = selected.has(p.user_id)
               return (
-                <label
+                <button
                   key={p.user_id}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border cursor-pointer transition-colors
+                  type="button"
+                  onClick={() => toggle(p.user_id)}
+                  aria-pressed={checked}
+                  className={`w-full min-h-[48px] flex items-center gap-3 px-3 py-2.5 rounded-lg border text-left transition-colors
                     ${checked ? 'border-dnd-gold bg-dnd-surface-raised' : 'border-dnd-border bg-dnd-surface'}`}
                 >
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    onChange={() => toggle(p.user_id)}
-                    className="w-4 h-4 accent-dnd-gold"
-                  />
+                  <span
+                    className={`w-5 h-5 shrink-0 inline-flex items-center justify-center rounded border
+                      ${checked
+                        ? 'bg-dnd-gold border-dnd-gold text-dnd-ink'
+                        : 'border-dnd-border-strong text-transparent'}`}
+                    aria-hidden
+                  >
+                    <Check size={14} />
+                  </span>
                   <User size={14} className="text-dnd-text-muted shrink-0" />
                   <span className="font-body text-sm text-dnd-text truncate flex-1">
                     {p.display_name ?? `#${p.user_id}`}
@@ -132,34 +124,33 @@ export default function GrantItemModal({
                   {p.user_id === gmUserId && (
                     <Crown size={12} className="text-dnd-gold-bright" />
                   )}
-                </label>
+                </button>
               )
             })}
           </div>
         )}
 
-        <div className="flex gap-2 pt-2 border-t border-dnd-gold-dim/10">
-          <button
-            type="button"
+        <div className="flex gap-2 pt-2">
+          <Button
+            variant="secondary"
+            fullWidth
             onClick={() => setStep('form')}
             disabled={grantMutation.isPending}
-            className="flex-1 px-3 py-2 rounded-md bg-dnd-surface border border-dnd-border text-sm
-                       active:opacity-60 disabled:opacity-40"
           >
             {t('common.back')}
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            variant="primary"
+            fullWidth
+            haptic="success"
             onClick={() => grantMutation.mutate()}
-            disabled={selected.size === 0 || grantMutation.isPending}
-            className="flex-1 px-3 py-2 rounded-md bg-gradient-to-r from-dnd-gold-deep to-dnd-gold-bright
-                       text-black font-cinzel font-bold uppercase tracking-widest text-xs
-                       active:opacity-80 disabled:opacity-40"
+            disabled={selected.size === 0}
+            loading={grantMutation.isPending}
           >
-            {t('session.grant_item.confirm', { defaultValue: 'Consegna' })}
-          </button>
+            {t('session.grant_item.confirm')}
+          </Button>
         </div>
       </div>
-    </div>
+    </Sheet>
   )
 }

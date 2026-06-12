@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
+import Sheet from '@/components/ui/Sheet'
 import { api } from '@/api/client'
 import { haptic } from '@/auth/telegram'
 import type { EncounterMode } from '@/types'
@@ -33,28 +34,23 @@ export default function EncounterCreateSheet({ sessionId, onClose }: Props) {
   ]
 
   return (
-    <div
-      className="fixed inset-0 bg-[var(--dnd-overlay)] backdrop-blur-[6px] flex items-end z-50 p-4"
-      onClick={(e) => e.target === e.currentTarget && onClose()}
-    >
-      <div className="w-full rounded-2xl bg-dnd-surface-elevated p-4 space-y-3">
-        <h3 className="font-semibold font-cinzel text-dnd-gold text-center">
-          {t('session.combat.mode_title')}
-        </h3>
+    <Sheet open onClose={onClose} title={t('session.combat.mode_title')}>
+      <div className="p-1 space-y-3">
         {modes.map(({ mode, label, desc }) => (
           <button
             key={mode}
             type="button"
             disabled={createMutation.isPending}
             onClick={() => createMutation.mutate(mode)}
-            className="w-full text-left rounded-lg border border-dnd-border bg-dnd-surface
-                       p-3 hover:border-dnd-gold-bright active:opacity-80 disabled:opacity-40"
+            className="w-full min-h-[48px] text-left rounded-lg border border-dnd-border bg-dnd-surface
+                       p-3 hover:border-dnd-gold-bright active:opacity-80 disabled:opacity-40
+                       transition-colors"
           >
             <p className="font-display font-bold text-dnd-gold-bright">{label}</p>
             <p className="text-xs text-dnd-text-muted font-body mt-0.5">{desc}</p>
           </button>
         ))}
       </div>
-    </div>
+    </Sheet>
   )
 }

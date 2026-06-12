@@ -32,7 +32,7 @@ export default function ScrollArea({ children, className = '' }: ScrollAreaProps
       {children}
       <div ref={sentinelRef} className="h-1" />
       {!atBottom && (
-        <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-[var(--dnd-bg)] to-transparent flex items-end justify-center pb-2">
+        <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-dnd-bg to-transparent flex items-end justify-center pb-2">
           {showHint && (
             <span className="text-[10px] text-dnd-gold-dim opacity-70">↓ scorri</span>
           )}

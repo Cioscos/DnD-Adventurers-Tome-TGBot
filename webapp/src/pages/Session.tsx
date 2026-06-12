@@ -11,6 +11,7 @@ import Reveal from '@/components/ui/Reveal'
 import Skeleton from '@/components/ui/Skeleton'
 import { api } from '@/api/client'
 import { haptic } from '@/auth/telegram'
+import { getMyRole } from '@/lib/sessionHelpers'
 
 export default function Session() {
   const navigate = useNavigate()
@@ -20,6 +21,12 @@ export default function Session() {
   const { data: active, isLoading } = useQuery({
     queryKey: ['session-me'],
     queryFn: () => api.sessions.me(),
+  })
+
+  const { data: meInfo } = useQuery({
+    queryKey: ['auth-me'],
+    queryFn: () => api.me(),
+    staleTime: Infinity,
   })
 
   const { data: characters = [] } = useQuery({
@@ -49,6 +56,9 @@ export default function Session() {
   if (active) {
     const sessionName =
       active.gm_display_name?.trim() || active.title?.trim() || `#${active.gm_user_id}`
+    // participants può mancare su payload parziali: getMyRole è null-safe e
+    // deriva il ruolo del viewer dal proprio user_id, non dalla lista GM.
+    const myRole = getMyRole(active, meInfo?.user_id)
     return (
       <Layout title={t('session.title')} backTo="/">
         <Surface variant="sigil" ornamented>
@@ -60,9 +70,11 @@ export default function Session() {
             <p className="text-center text-[11px] uppercase tracking-widest font-cinzel text-dnd-gold-dim">
               {t('session.code_label')}: <span className="text-dnd-gold-bright">{active.code}</span>
             </p>
-            <p className="text-sm text-dnd-text-muted font-body text-center">
-              {t(`session.role_${active.gm_user_id === active.participants.find(p => p.role === 'game_master')?.user_id ? 'game_master' : 'player'}`)}
-            </p>
+            {myRole !== 'none' && (
+              <p className="text-sm text-dnd-text-muted font-body text-center">
+                {t(`session.role_${myRole === 'gm' ? 'game_master' : 'player'}`)}
+              </p>
+            )}
             <Button
               variant="primary"
               size="lg"

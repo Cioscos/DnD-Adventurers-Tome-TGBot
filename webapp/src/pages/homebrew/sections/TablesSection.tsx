@@ -4,6 +4,7 @@ import { Plus, Trash2, X } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import Input from '@/components/ui/Input'
+import { resolveLabelI18n, type Locale } from '@/lib/homebrew/i18n-dsl'
 import type { Property, Table } from '@/lib/homebrew/types'
 
 export interface TablesSectionProps {
@@ -278,7 +279,8 @@ function TableCard({
   onCommitCell,
   onRequestDelete,
 }: TableCardProps) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const locale: Locale = i18n.language?.startsWith('en') ? 'en' : 'it'
 
   const axisProp = findEnumProperty(enumProperties, table.row_axis)
   const rowValues = axisProp?.values ?? []
@@ -299,8 +301,8 @@ function TableCard({
         <button
           type="button"
           onClick={onRequestDelete}
-          className="shrink-0 mt-6 p-1.5 rounded-lg text-dnd-crimson hover:text-dnd-crimson-bright hover:bg-dnd-crimson/10 transition-colors min-w-[40px] min-h-[40px] flex items-center justify-center"
-          aria-label="Delete table"
+          className="shrink-0 mt-6 p-1.5 rounded-lg text-dnd-crimson hover:text-dnd-crimson-bright hover:bg-dnd-crimson/10 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+          aria-label={t('common.delete')}
         >
           <Trash2 size={16} />
         </button>
@@ -321,7 +323,7 @@ function TableCard({
             <option value="">{t('homebrew.tables.row_axis_placeholder')}</option>
             {enumProperties.map((p) => (
               <option key={p.key} value={p.key}>
-                {p.label_i18n.it ?? p.key} ({p.key})
+                {resolveLabelI18n(p.label_i18n, locale, p.key)} ({p.key})
               </option>
             ))}
           </select>
@@ -343,8 +345,8 @@ function TableCard({
             <thead>
               <tr>
                 {/* Top-left corner — empty */}
-                <th className="bg-dnd-surface/40 border border-dnd-border p-1 text-[10px] font-cinzel uppercase tracking-wider text-dnd-gold-dim text-left min-w-[100px]">
-                  {axisProp.label_i18n.it ?? axisProp.key}
+                <th className="bg-dnd-surface/40 border border-dnd-border p-1 text-[11px] font-cinzel uppercase tracking-wider text-dnd-gold-dim text-left min-w-[100px]">
+                  {resolveLabelI18n(axisProp.label_i18n, locale, axisProp.key)}
                 </th>
                 {table.col_bins.map((bin, binIdx) => (
                   <th
@@ -377,7 +379,7 @@ function TableCard({
             </thead>
             <tbody>
               {rowValues.map((rv) => {
-                const label = axisProp.value_labels_i18n?.[rv]?.it ?? rv
+                const label = resolveLabelI18n(axisProp.value_labels_i18n?.[rv], locale, rv)
                 const rowCells = table.cells[rv] ?? []
                 return (
                   <tr key={rv}>
@@ -459,8 +461,8 @@ function ColBinHeader({ bin, onChange, onRemove }: ColBinHeaderProps) {
           <button
             type="button"
             onClick={onRemove}
-            className="ml-auto p-1 rounded text-dnd-crimson/70 hover:text-dnd-crimson-bright hover:bg-dnd-crimson/10 transition-colors min-w-[28px] min-h-[28px] flex items-center justify-center"
-            aria-label="Remove column"
+            className="hit-44 ml-auto p-1 rounded text-dnd-crimson/70 hover:text-dnd-crimson-bright hover:bg-dnd-crimson/10 transition-colors min-w-[28px] min-h-[28px] flex items-center justify-center"
+            aria-label={t('common.remove')}
           >
             <X size={12} />
           </button>

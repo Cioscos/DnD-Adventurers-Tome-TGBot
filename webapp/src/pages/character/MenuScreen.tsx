@@ -93,11 +93,11 @@ const MENU_SECTIONS: MenuSection[] = [
 
 function toneIconClass(tone?: MenuItem['tone']): string {
   switch (tone) {
-    case 'crimson': return 'text-[var(--dnd-crimson-bright)]'
+    case 'crimson': return 'text-dnd-crimson-bright'
     case 'arcane': return 'text-dnd-arcane-bright'
-    case 'cobalt': return 'text-[var(--dnd-cobalt-bright)]'
-    case 'emerald': return 'text-[var(--dnd-emerald-bright)]'
-    case 'amber': return 'text-[var(--dnd-amber)]'
+    case 'cobalt': return 'text-dnd-cobalt-bright'
+    case 'emerald': return 'text-dnd-emerald-bright'
+    case 'amber': return 'text-dnd-amber'
     case 'gold':
     default: return 'text-dnd-gold-bright'
   }

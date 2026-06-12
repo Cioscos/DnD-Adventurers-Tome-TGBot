@@ -28,9 +28,9 @@ interface HpOperationFormProps {
 // Short labels fit the 5-column segmented control at 390px viewport.
 const ops: { key: HPOp; label_key: string; full_key: string; icon: IconCmp; toneClass: string }[] = [
   { key: 'damage',      label_key: 'character.hp.damage_short',  full_key: 'character.hp.damage',      icon: Minus,       toneClass: '!bg-gradient-ember !text-dnd-parchment !border-transparent shadow-halo-danger' },
-  { key: 'heal',        label_key: 'character.hp.heal_short',    full_key: 'character.hp.heal',        icon: Plus,        toneClass: '!bg-dnd-emerald/25 !text-[var(--dnd-emerald-bright)] !border-dnd-emerald/60' },
-  { key: 'set_current', label_key: 'character.hp.current_short', full_key: 'character.hp.set_current', icon: Heart,       toneClass: '!bg-dnd-cobalt/20 !text-[var(--dnd-cobalt-bright)] !border-dnd-cobalt/60' },
-  { key: 'set_max',     label_key: 'character.hp.max_short',     full_key: 'character.hp.set_max',     icon: HeartPulse,  toneClass: '!bg-dnd-amber/20 !text-[var(--dnd-amber)] !border-dnd-amber/60' },
+  { key: 'heal',        label_key: 'character.hp.heal_short',    full_key: 'character.hp.heal',        icon: Plus,        toneClass: '!bg-dnd-emerald/25 !text-dnd-emerald-bright !border-dnd-emerald/60' },
+  { key: 'set_current', label_key: 'character.hp.current_short', full_key: 'character.hp.set_current', icon: Heart,       toneClass: '!bg-dnd-cobalt/20 !text-dnd-cobalt-bright !border-dnd-cobalt/60' },
+  { key: 'set_max',     label_key: 'character.hp.max_short',     full_key: 'character.hp.set_max',     icon: HeartPulse,  toneClass: '!bg-dnd-amber/20 !text-dnd-amber !border-dnd-amber/60' },
   { key: 'set_temp',    label_key: 'character.hp.temp_short',    full_key: 'character.hp.set_temp',    icon: Sparkles,    toneClass: '!bg-dnd-arcane/20 !text-dnd-arcane-bright !border-dnd-arcane/60' },
 ]
 

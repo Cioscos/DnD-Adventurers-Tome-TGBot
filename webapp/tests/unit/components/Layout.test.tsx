@@ -22,7 +22,7 @@ beforeAll(() => {
 type Info = { pages: string[]; index: number; total: number } | null
 const { navigateSpy, groupInfo } = vi.hoisted(() => ({ navigateSpy: vi.fn(), groupInfo: { value: null as Info } }))
 
-vi.mock('react-router-dom', () => ({ useNavigate: () => navigateSpy, useParams: () => ({ id: '7' }) }))
+vi.mock('react-router-dom', () => ({ useNavigate: () => navigateSpy, useParams: () => ({ id: '7' }), useLocation: () => ({ pathname: '/char/7' }) }))
 vi.mock('@/api/client', () => ({
   api: { characters: { get: vi.fn(() => new Promise(() => {})) } },
   ApiError: class ApiError extends Error {

@@ -1,6 +1,48 @@
 {
   "entries": [
     {
+      "version": "2.14.8",
+      "date": "2026-06-12",
+      "title": {
+        "it": "Rifinitura regole homebrew e sessione",
+        "en": "Homebrew rules and session polish"
+      },
+      "added": {
+        "it": [],
+        "en": []
+      },
+      "improved": {
+        "it": [
+          "Editor homebrew: le etichette di caratteristiche, modificatori e tabelle seguono ora la lingua dell'app (prima erano sempre in italiano)",
+          "Editor homebrew: pulsanti Modifica/Elimina e le X di rimozione più facili da toccare; selettori di filtro uniformati allo stile di sistema",
+          "Effetto danno: l'opzione \"colpo critico\" usa l'interruttore standard; il titolo del passo distingue ora Nuovo da Modifica",
+          "Sessione: i fogli del combattimento (tipo incontro, aggiungi mostro, gestione mostro, destinatari consegna) seguono lo stile di sistema e si chiudono con ESC o col tasto indietro",
+          "Sessione: chat e popup ricompensa con tocchi più comodi (chiudi sussurro, schermo intero, campo messaggio)",
+          "Coerenza visiva: ultimi colori fuori palette portati ai token del design system in tutta l'app"
+        ],
+        "en": [
+          "Homebrew editor: property, modifier and table labels now follow the app language (they were always Italian before)",
+          "Homebrew editor: Edit/Delete buttons and remove crosses are easier to tap; filter pickers aligned to the system style",
+          "Damage effect: the \"critical hit\" option uses the standard switch; the step title now tells New from Edit apart",
+          "Session: combat sheets (encounter type, add monster, monster management, grant recipients) follow the system style and close with ESC or the back button",
+          "Session: chat and reward popup with more comfortable touch targets (cancel whisper, fullscreen, message field)",
+          "Visual consistency: last off-palette colors moved to design-system tokens across the app"
+        ]
+      },
+      "fixed": {
+        "it": [
+          "Pagina homebrew: in caso di errore di caricamento ora compare il pulsante Riprova",
+          "Sessione: a un giocatore la stanza non viene più oscurata da un finto \"personaggio non trovato\"",
+          "Sessione: la pagina iniziale mostra il ruolo corretto (prima diceva sempre Game Master) e non si blocca più su dati parziali"
+        ],
+        "en": [
+          "Homebrew page: a Retry button now appears when loading fails",
+          "Session: the room is no longer hidden from a player by a false \"character not found\" screen",
+          "Session: the landing page shows the correct role (it always said Game Master before) and no longer breaks on partial data"
+        ]
+      }
+    },
+    {
       "version": "2.14.7",
       "date": "2026-06-12",
       "title": {

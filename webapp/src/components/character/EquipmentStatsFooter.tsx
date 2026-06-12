@@ -71,7 +71,7 @@ export default function EquipmentStatsFooter({ char }: Props) {
       {/* Inline meta: weapon damage + carry — sized up + de-muted so critical info reads */}
       <div className="flex flex-wrap items-center justify-center gap-3 text-sm font-cinzel uppercase tracking-[0.18em]">
         <span className="flex items-center gap-2 text-dnd-text">
-          <GiCrossedSwords size={14} aria-hidden="true" className="text-[var(--dnd-crimson-bright)]" />
+          <GiCrossedSwords size={14} aria-hidden="true" className="text-dnd-crimson-bright" />
           <span className="font-mono normal-case tracking-normal text-dnd-text font-bold tabular-nums">
             {damage ?? '—'}
           </span>
@@ -87,9 +87,9 @@ export default function EquipmentStatsFooter({ char }: Props) {
           <GiWeight
             size={14}
             aria-hidden="true"
-            className={overload ? 'text-[var(--dnd-amber)]' : 'text-dnd-text-muted'}
+            className={overload ? 'text-dnd-amber' : 'text-dnd-text-muted'}
           />
-          <span className={`font-mono normal-case tracking-normal font-bold tabular-nums ${overload ? 'text-[var(--dnd-amber)]' : 'text-dnd-text'}`}>
+          <span className={`font-mono normal-case tracking-normal font-bold tabular-nums ${overload ? 'text-dnd-amber' : 'text-dnd-text'}`}>
             {`${formatWeightValue(encumbrance, system)}/${formatWeightValue(carryCap, system)}`}
             <span className="text-dnd-text-muted ml-0.5 font-normal">{weightUnitLabel(system)}</span>
           </span>

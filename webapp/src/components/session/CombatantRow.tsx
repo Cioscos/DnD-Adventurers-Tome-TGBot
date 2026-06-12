@@ -14,10 +14,10 @@ import type {
 } from '@/types'
 
 const BUCKET_BAR: Record<HpBucket, string> = {
-  healthy: 'bg-[var(--dnd-emerald-bright)]',
+  healthy: 'bg-dnd-emerald-bright',
   lightly_wounded: 'bg-dnd-gold-bright',
-  badly_wounded: 'bg-[var(--dnd-amber)]',
-  dying: 'bg-[var(--dnd-crimson-bright)]',
+  badly_wounded: 'bg-dnd-amber',
+  dying: 'bg-dnd-crimson-bright',
   dead: 'bg-dnd-ink',
 }
 
@@ -40,7 +40,7 @@ function HpBar({ pct, bucket }: { pct: number | null; bucket: HpBucket | null })
         <div className={`h-full ${BUCKET_BAR[bucket]}`} style={{ width: '100%' }} />
       ) : (
         <div
-          className="h-full bg-gradient-to-r from-[var(--dnd-crimson)] via-[var(--dnd-amber)] to-[var(--dnd-emerald-bright)]"
+          className="h-full bg-gradient-to-r from-dnd-crimson via-dnd-amber to-dnd-emerald-bright"
           style={{ width: `${pct ?? 0}%` }}
         />
       )}
@@ -92,7 +92,7 @@ export default function CombatantRow({
       className={`rounded-lg border p-3 transition-all min-h-[44px]
         ${c.is_dead ? 'opacity-50' : ''}
         ${isActive
-          ? 'border-dnd-gold bg-dnd-surface-raised ring-2 ring-dnd-gold-bright/50 shadow-[0_0_12px_rgba(212,168,71,0.35)]'
+          ? 'border-dnd-gold bg-dnd-surface-raised ring-2 ring-dnd-gold-bright/50 shadow-dnd-glow'
           : `bg-dnd-surface ${isPc ? 'border-dnd-gold-dim/70' : 'border-dnd-crimson/50'}`}
         ${clickable ? 'cursor-pointer hover:border-dnd-gold-bright' : ''}`}
     >
@@ -109,7 +109,7 @@ export default function CombatantRow({
             ) : isPc ? (
               <User size={13} className="shrink-0 text-dnd-gold-bright" />
             ) : (
-              <PawPrint size={13} className="shrink-0 text-[var(--dnd-crimson-bright)]" />
+              <PawPrint size={13} className="shrink-0 text-dnd-crimson-bright" />
             )}
             <p className="font-display font-bold text-dnd-text break-words">
               {c.name}
@@ -125,7 +125,7 @@ export default function CombatantRow({
             <>
               <div className="mt-1 flex items-center gap-3 text-xs font-mono tabular-nums">
                 <span className="flex items-center gap-1">
-                  <Heart size={11} className="text-[var(--dnd-crimson-bright)]" />
+                  <Heart size={11} className="text-dnd-crimson-bright" />
                   {snapshot.current_hit_points}/{snapshot.hit_points}
                 </span>
                 <span className="flex items-center gap-1">
@@ -142,7 +142,7 @@ export default function CombatantRow({
             <>
               <div className="mt-1 flex items-center gap-3 text-xs font-mono tabular-nums">
                 <span className="flex items-center gap-1">
-                  <Heart size={11} className="text-[var(--dnd-crimson-bright)]" />
+                  <Heart size={11} className="text-dnd-crimson-bright" />
                   {c.current_hp}/{c.max_hp}
                 </span>
                 {c.ac !== null && (

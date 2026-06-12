@@ -162,7 +162,7 @@ function SkillRow({
         <span className={`text-sm font-mono font-bold w-10 text-right shrink-0 tabular-nums
           ${hasMark
             ? 'text-dnd-gold-bright'
-            : bonus >= 0 ? 'text-dnd-text' : 'text-[var(--dnd-crimson-bright)]'}`}>
+            : bonus >= 0 ? 'text-dnd-text' : 'text-dnd-crimson-bright'}`}>
           {bonus >= 0 ? '+' : ''}{bonus}
         </span>
       </div>

@@ -185,6 +185,7 @@ export default function EffectChainEditor({
           setEditingIndex(null)
         }}
         effect={draftEffect}
+        isNew={editingIndex === null}
         tables={tables}
         onSave={handleSave}
       />
@@ -228,6 +229,7 @@ function EffectCard({
   onEdit,
   onDelete,
 }: CardProps) {
+  const { t } = useTranslation()
   return (
     <div className="bg-dnd-surface-raised border border-dnd-border rounded-2xl p-3">
       <div className="flex items-start gap-2">
@@ -245,7 +247,7 @@ function EffectCard({
             onClick={onMoveUp}
             disabled={index === 0}
             className="w-11 h-11 inline-flex items-center justify-center rounded-lg text-dnd-gold-dim hover:text-dnd-gold-bright hover:bg-dnd-surface transition-colors disabled:opacity-30 disabled:pointer-events-none"
-            aria-label="Move up"
+            aria-label={t('homebrew.effects.move_up')}
           >
             <ChevronUp size={16} />
           </button>
@@ -254,7 +256,7 @@ function EffectCard({
             onClick={onMoveDown}
             disabled={index === total - 1}
             className="w-11 h-11 inline-flex items-center justify-center rounded-lg text-dnd-gold-dim hover:text-dnd-gold-bright hover:bg-dnd-surface transition-colors disabled:opacity-30 disabled:pointer-events-none"
-            aria-label="Move down"
+            aria-label={t('homebrew.effects.move_down')}
           >
             <ChevronDown size={16} />
           </button>
@@ -262,7 +264,7 @@ function EffectCard({
             type="button"
             onClick={onEdit}
             className="w-11 h-11 inline-flex items-center justify-center rounded-lg text-dnd-gold-dim hover:text-dnd-gold-bright hover:bg-dnd-surface transition-colors"
-            aria-label="Edit"
+            aria-label={t('common.edit')}
           >
             <Pencil size={16} />
           </button>
@@ -270,7 +272,7 @@ function EffectCard({
             type="button"
             onClick={onDelete}
             className="w-11 h-11 inline-flex items-center justify-center rounded-lg text-dnd-crimson hover:text-dnd-crimson-bright hover:bg-dnd-crimson/10 transition-colors"
-            aria-label="Delete"
+            aria-label={t('common.delete')}
           >
             <Trash2 size={16} />
           </button>
@@ -362,7 +364,7 @@ function BranchLabel({
     >
       <span className="w-3 h-px bg-dnd-gold-dim/50" aria-hidden />
       <span
-        className={`text-[10px] uppercase tracking-widest font-cinzel font-bold text-dnd-gold-dim ${
+        className={`text-[11px] uppercase tracking-widest font-cinzel font-bold text-dnd-gold-dim ${
           mono ? 'font-mono normal-case tracking-normal' : ''
         }`}
       >

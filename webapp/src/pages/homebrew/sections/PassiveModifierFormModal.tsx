@@ -265,7 +265,7 @@ export default function PassiveModifierFormModal({
             ))}
           </div>
           {errors.target && (
-            <p className="text-[var(--dnd-crimson-bright)] text-[11px] mt-1 font-body">
+            <p className="text-dnd-crimson-bright text-[11px] mt-1 font-body">
               {errors.target}
             </p>
           )}

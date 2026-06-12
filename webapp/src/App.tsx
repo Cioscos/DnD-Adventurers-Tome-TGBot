@@ -62,7 +62,7 @@ function DevUserBadge() {
   const devUserId = getDevUserId()
   if (!devUserId) return null
   return (
-    <div className="fixed bottom-safe left-2 z-[70] pointer-events-none rounded-full bg-amber-500/90 px-2 py-0.5 text-[10px] font-bold text-black">
+    <div className="fixed bottom-safe left-2 z-[70] pointer-events-none rounded-full bg-amber-500/90 px-2 py-0.5 text-[10px] font-bold text-dnd-ink">
       DEV #{devUserId}
     </div>
   )

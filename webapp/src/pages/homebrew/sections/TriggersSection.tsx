@@ -4,6 +4,8 @@ import type { TFunction } from 'i18next'
 import { Plus, Trash2, X } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import ConfirmSheet from '@/components/ui/ConfirmSheet'
+import FilterChip from '@/components/ui/FilterChip'
+import Input from '@/components/ui/Input'
 import Sheet from '@/components/ui/Sheet'
 import { eventLabel, type Locale } from '@/lib/homebrew/i18n-dsl'
 import type { EventType, Filter, FilterOp, Table, Trigger } from '@/lib/homebrew/types'
@@ -259,7 +261,7 @@ export default function TriggersSection({ triggers, tables, onChange }: Triggers
                   type="button"
                   onClick={() => setConfirmDeleteIndex(index)}
                   className="shrink-0 w-11 h-11 inline-flex items-center justify-center rounded-lg text-dnd-crimson hover:text-dnd-crimson-bright hover:bg-dnd-crimson/10 transition-colors mt-6"
-                  aria-label="Delete trigger"
+                  aria-label={t('common.delete')}
                 >
                   <Trash2 size={16} />
                 </button>
@@ -288,8 +290,8 @@ export default function TriggersSection({ triggers, tables, onChange }: Triggers
                         <button
                           type="button"
                           onClick={() => handleRemoveFilter(index, fi)}
-                          className="w-7 h-7 inline-flex items-center justify-center rounded-full hover:bg-dnd-crimson/20 hover:text-dnd-crimson-bright text-dnd-gold-dim transition-colors"
-                          aria-label="Remove filter"
+                          className="hit-44 w-7 h-7 inline-flex items-center justify-center rounded-full hover:bg-dnd-crimson/20 hover:text-dnd-crimson-bright text-dnd-gold-dim transition-colors"
+                          aria-label={t('common.remove')}
                         >
                           <X size={12} />
                         </button>
@@ -452,60 +454,38 @@ function FilterPicker({
             <div className="text-[11px] uppercase tracking-wider font-cinzel font-bold text-dnd-gold-dim">
               {t('homebrew.triggers.object_property_label')}
             </div>
-            <input
-              type="text"
+            <Input
               value={propKey}
-              onChange={(e) => setPropKey(e.target.value)}
+              onChange={setPropKey}
               placeholder={t('homebrew.triggers.property_key_field')}
-              className="w-full px-3 py-2.5 min-h-[48px] rounded-lg bg-dnd-surface text-dnd-text border-b-2 border-dnd-border outline-none focus:border-dnd-gold/70 font-body"
             />
             <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setPropOp('eq')}
-                className={`flex-1 min-h-[44px] px-3 rounded-lg border text-sm font-body transition-colors ${
-                  propOp === 'eq'
-                    ? 'bg-dnd-chip-bg border-dnd-gold/60 text-dnd-gold-bright'
-                    : 'bg-dnd-surface border-dnd-border text-dnd-text-muted'
-                }`}
-              >
-                {t('homebrew.triggers.op_eq')}
-              </button>
-              <button
-                type="button"
-                onClick={() => setPropOp('neq')}
-                className={`flex-1 min-h-[44px] px-3 rounded-lg border text-sm font-body transition-colors ${
-                  propOp === 'neq'
-                    ? 'bg-dnd-chip-bg border-dnd-gold/60 text-dnd-gold-bright'
-                    : 'bg-dnd-surface border-dnd-border text-dnd-text-muted'
-                }`}
-              >
-                {t('homebrew.triggers.op_neq')}
-              </button>
+              <FilterChip
+                label={t('homebrew.triggers.op_eq')}
+                selected={propOp === 'eq'}
+                onToggle={() => setPropOp('eq')}
+                className="flex-1 justify-center"
+              />
+              <FilterChip
+                label={t('homebrew.triggers.op_neq')}
+                selected={propOp === 'neq'}
+                onToggle={() => setPropOp('neq')}
+                className="flex-1 justify-center"
+              />
             </div>
             <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setPropValueBool(true)}
-                className={`flex-1 min-h-[44px] px-3 rounded-full border text-sm font-body transition-colors ${
-                  propValueBool
-                    ? 'bg-dnd-chip-bg border-dnd-gold/60 text-dnd-gold-bright'
-                    : 'bg-dnd-surface border-dnd-border text-dnd-text-muted'
-                }`}
-              >
-                {t('homebrew.triggers.value_yes')}
-              </button>
-              <button
-                type="button"
-                onClick={() => setPropValueBool(false)}
-                className={`flex-1 min-h-[44px] px-3 rounded-full border text-sm font-body transition-colors ${
-                  !propValueBool
-                    ? 'bg-dnd-chip-bg border-dnd-gold/60 text-dnd-gold-bright'
-                    : 'bg-dnd-surface border-dnd-border text-dnd-text-muted'
-                }`}
-              >
-                {t('homebrew.triggers.value_no')}
-              </button>
+              <FilterChip
+                label={t('homebrew.triggers.value_yes')}
+                selected={propValueBool}
+                onToggle={() => setPropValueBool(true)}
+                className="flex-1 justify-center"
+              />
+              <FilterChip
+                label={t('homebrew.triggers.value_no')}
+                selected={!propValueBool}
+                onToggle={() => setPropValueBool(false)}
+                className="flex-1 justify-center"
+              />
             </div>
             <Button
               variant="primary"
@@ -521,12 +501,10 @@ function FilterPicker({
             <div className="text-[11px] uppercase tracking-wider font-cinzel font-bold text-dnd-gold-dim">
               {t('homebrew.triggers.custom_condition_label')}
             </div>
-            <input
-              type="text"
+            <Input
               value={conditionName}
-              onChange={(e) => setConditionName(e.target.value)}
+              onChange={setConditionName}
               placeholder={t('homebrew.triggers.condition_key_field')}
-              className="w-full px-3 py-2.5 min-h-[48px] rounded-lg bg-dnd-surface text-dnd-text border-b-2 border-dnd-border outline-none focus:border-dnd-gold/70 font-body"
             />
             <Button
               variant="primary"

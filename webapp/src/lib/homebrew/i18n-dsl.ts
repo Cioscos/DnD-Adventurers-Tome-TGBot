@@ -14,6 +14,20 @@ import type { Effect, EventType, Filter } from "./types"
 
 export type Locale = "it" | "en"
 
+/**
+ * Resolve a DSL `label_i18n` map against the app locale: requested locale
+ * first, then it → en, then the caller's fallback (usually the DSL key).
+ * Mirrors the lookup PropertyBadge already does, shared so list editors
+ * don't hardcode `.it`.
+ */
+export function resolveLabelI18n(
+  labels: Record<string, string> | undefined,
+  locale: Locale,
+  fallback: string,
+): string {
+  return labels?.[locale] ?? labels?.it ?? labels?.en ?? fallback
+}
+
 // ---------------------------------------------------------------------------
 // Events
 // ---------------------------------------------------------------------------

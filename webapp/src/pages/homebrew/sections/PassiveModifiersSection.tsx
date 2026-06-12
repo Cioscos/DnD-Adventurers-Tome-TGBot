@@ -4,6 +4,7 @@ import type { TFunction } from 'i18next'
 import { Pencil, Plus, Trash2 } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import ConfirmSheet from '@/components/ui/ConfirmSheet'
+import { resolveLabelI18n, type Locale } from '@/lib/homebrew/i18n-dsl'
 import type { PassiveModifier } from '@/lib/homebrew/types'
 import PassiveModifierFormModal from './PassiveModifierFormModal'
 
@@ -65,7 +66,8 @@ function formatValue(value: number | string): string {
  * each card open the modal form or a confirm sheet.
  */
 export default function PassiveModifiersSection({ mods, onChange }: PassiveModifiersSectionProps) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const locale: Locale = i18n.language?.startsWith('en') ? 'en' : 'it'
   const [modalOpen, setModalOpen] = useState(false)
   const [editingIndex, setEditingIndex] = useState<number | null>(null)
   const [confirmDeleteIndex, setConfirmDeleteIndex] = useState<number | null>(null)
@@ -110,7 +112,7 @@ export default function PassiveModifiersSection({ mods, onChange }: PassiveModif
       ) : (
         <ul className="space-y-2">
           {mods.map((mod, index) => {
-            const label = mod.label_i18n.it ?? '?'
+            const label = resolveLabelI18n(mod.label_i18n, locale, '?')
             return (
               <li
                 key={`${mod.target}-${index}`}
@@ -131,7 +133,7 @@ export default function PassiveModifiersSection({ mods, onChange }: PassiveModif
                       type="button"
                       onClick={() => openEdit(index)}
                       className="w-11 h-11 inline-flex items-center justify-center rounded-lg text-dnd-gold-dim hover:text-dnd-gold-bright hover:bg-dnd-surface transition-colors"
-                      aria-label="Edit"
+                      aria-label={t('common.edit')}
                     >
                       <Pencil size={16} />
                     </button>
@@ -139,7 +141,7 @@ export default function PassiveModifiersSection({ mods, onChange }: PassiveModif
                       type="button"
                       onClick={() => setConfirmDeleteIndex(index)}
                       className="w-11 h-11 inline-flex items-center justify-center rounded-lg text-dnd-crimson hover:text-dnd-crimson-bright hover:bg-dnd-crimson/10 transition-colors"
-                      aria-label="Delete"
+                      aria-label={t('common.delete')}
                     >
                       <Trash2 size={16} />
                     </button>
@@ -170,7 +172,7 @@ export default function PassiveModifiersSection({ mods, onChange }: PassiveModif
         body={
           deletingMod
             ? t('homebrew.passive.delete_confirm', {
-                name: deletingMod.label_i18n.it ?? '?',
+                name: resolveLabelI18n(deletingMod.label_i18n, locale, '?'),
               })
             : ''
         }

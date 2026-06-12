@@ -36,13 +36,13 @@ function toneClasses(tone: StatPillProps['tone']): string {
     case 'arcane':
       return 'bg-[rgba(155,89,182,0.12)] border-dnd-arcane/40 text-dnd-arcane-bright'
     case 'crimson':
-      return 'bg-[rgba(179,58,58,0.12)] border-dnd-crimson/40 text-[var(--dnd-crimson-bright)]'
+      return 'bg-[rgba(179,58,58,0.12)] border-dnd-crimson/40 text-dnd-crimson-bright'
     case 'emerald':
-      return 'bg-[rgba(63,166,106,0.12)] border-dnd-emerald/40 text-[var(--dnd-emerald-bright)]'
+      return 'bg-[rgba(63,166,106,0.12)] border-dnd-emerald/40 text-dnd-emerald-bright'
     case 'cobalt':
-      return 'bg-[rgba(58,124,165,0.12)] border-dnd-cobalt/40 text-[var(--dnd-cobalt-bright)]'
+      return 'bg-[rgba(58,124,165,0.12)] border-dnd-cobalt/40 text-dnd-cobalt-bright'
     case 'amber':
-      return 'bg-[rgba(232,165,71,0.12)] border-dnd-amber/50 text-[var(--dnd-amber)]'
+      return 'bg-[rgba(232,165,71,0.12)] border-dnd-amber/50 text-dnd-amber'
     case 'default':
     default:
       return 'bg-dnd-surface border-dnd-border text-dnd-text'

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Pencil, Plus, Trash2 } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import ConfirmSheet from '@/components/ui/ConfirmSheet'
+import { resolveLabelI18n, type Locale } from '@/lib/homebrew/i18n-dsl'
 import type { Property } from '@/lib/homebrew/types'
 import PropertyFormModal from './PropertyFormModal'
 
@@ -36,7 +37,8 @@ function formatDefault(prop: Property): string {
  * the list rendering and the splice/replace orchestration.
  */
 export default function PropertiesSection({ properties, onChange }: PropertiesSectionProps) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const locale: Locale = i18n.language?.startsWith('en') ? 'en' : 'it'
   const [modalOpen, setModalOpen] = useState(false)
   const [editingIndex, setEditingIndex] = useState<number | null>(null)
   const [confirmDeleteIndex, setConfirmDeleteIndex] = useState<number | null>(null)
@@ -82,7 +84,7 @@ export default function PropertiesSection({ properties, onChange }: PropertiesSe
       ) : (
         <ul className="space-y-2">
           {properties.map((prop, index) => {
-            const label = prop.label_i18n.it ?? prop.key
+            const label = resolveLabelI18n(prop.label_i18n, locale, prop.key)
             return (
               <li
                 key={`${prop.key}-${index}`}
@@ -94,7 +96,7 @@ export default function PropertiesSection({ properties, onChange }: PropertiesSe
                       <span className="font-display font-bold text-dnd-text">
                         {label}
                       </span>
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-dnd-chip-bg border border-dnd-border text-[10px] font-cinzel uppercase tracking-wider text-dnd-gold-dim">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-dnd-chip-bg border border-dnd-border text-[11px] font-cinzel uppercase tracking-wider text-dnd-gold-dim">
                         {t(`homebrew.properties.type_badge.${prop.type}`)}
                       </span>
                     </div>
@@ -119,7 +121,7 @@ export default function PropertiesSection({ properties, onChange }: PropertiesSe
                         {prop.values.map((v) => (
                           <span
                             key={v}
-                            className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-dnd-chip-bg text-[10px] font-mono text-dnd-text-muted"
+                            className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-dnd-chip-bg text-[11px] font-mono text-dnd-text-muted"
                           >
                             {v}
                           </span>
@@ -131,16 +133,16 @@ export default function PropertiesSection({ properties, onChange }: PropertiesSe
                     <button
                       type="button"
                       onClick={() => openEdit(index)}
-                      className="p-1.5 rounded-lg text-dnd-gold-dim hover:text-dnd-gold-bright hover:bg-dnd-surface transition-colors"
-                      aria-label="Edit"
+                      className="w-11 h-11 inline-flex items-center justify-center rounded-lg text-dnd-gold-dim hover:text-dnd-gold-bright hover:bg-dnd-surface transition-colors"
+                      aria-label={t('common.edit')}
                     >
                       <Pencil size={16} />
                     </button>
                     <button
                       type="button"
                       onClick={() => setConfirmDeleteIndex(index)}
-                      className="p-1.5 rounded-lg text-dnd-crimson hover:text-dnd-crimson-bright hover:bg-dnd-crimson/10 transition-colors"
-                      aria-label="Delete"
+                      className="w-11 h-11 inline-flex items-center justify-center rounded-lg text-dnd-crimson hover:text-dnd-crimson-bright hover:bg-dnd-crimson/10 transition-colors"
+                      aria-label={t('common.delete')}
                     >
                       <Trash2 size={16} />
                     </button>
@@ -176,7 +178,7 @@ export default function PropertiesSection({ properties, onChange }: PropertiesSe
         body={
           deletingProp
             ? t('homebrew.properties.delete_confirm', {
-                name: deletingProp.label_i18n.it ?? deletingProp.key,
+                name: resolveLabelI18n(deletingProp.label_i18n, locale, deletingProp.key),
               })
             : ''
         }
