@@ -140,7 +140,7 @@ export default function DicePoolResultModal({
 
       {results.length > 1 && (
         <p className="text-dnd-text-muted text-xs font-body">
-          Totale:{' '}
+          {t('common.total')}:{' '}
           <span className="font-display font-black text-dnd-gold-bright text-base">
             {total}
           </span>
