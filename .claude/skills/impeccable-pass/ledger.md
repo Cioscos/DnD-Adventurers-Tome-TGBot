@@ -48,8 +48,8 @@ Questo ledger è stato seminato dall'audit FE del 2026-06-11 (`fe-playwright-aud
 
 ## Fuori scope (bug funzionali trovati durante il pass — segnalare, non fixare qui)
 
-- **Stabilizza assegna 1 HP** (`api/routers/hp.py:402-404`): l'azione manuale STABILIZE imposta `current_hit_points = 1`, ma in 5e RAW una creatura stabilizzata resta a 0 HP (priva di sensi). House rule o bug? Da confermare con `/fullstack-functional-audit`.
-- **`stable` non si resetta col danno 1→0**: dopo Stabilizza (HP 1, `stable=true`), un danno che riporta a 0 mostra subito "stabilizzato" senza nuovi tiri; in RAW il danno a una creatura stabile la rende di nuovo morente. Correlato al punto sopra.
+- ✅ ~~**Stabilizza assegna 1 HP**~~ — RISOLTO su `fix/death-saves-raw` (v2.14.5): STABILIZE non cura più, il personaggio resta a 0 HP/stabile (RAW). Test: `test_stabilize_keeps_hp_at_zero`.
+- ✅ ~~**`stable` non si resetta col danno 1→0**~~ — RISOLTO su `fix/death-saves-raw` (v2.14.5): la caduta a 0 da HP positivi azzera sempre il tracker (anche `stable` stantio) e il danno a creatura stabile a 0 riapre la morte con conteggio fresco. Test: `test_drop_to_zero_clears_stale_stable`, `test_damage_while_stable_at_zero_restarts_dying_fresh`.
 
 ## Diario
 

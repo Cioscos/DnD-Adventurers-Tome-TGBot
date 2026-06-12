@@ -140,6 +140,11 @@ async def update_hp(
                 char.is_dead = True
                 _add_history(session, char.id, "death_save", "Morte istantanea (danno massiccio)")
             elif old == 0:
+                # Danno a una creatura stabile: torna morente con conteggio
+                # fresco (RAW: i conteggi si azzerano quando si diventa stabili,
+                # quindi i fallimenti pre-stabilizzazione non si sommano).
+                if ds.get("stable", False):
+                    ds = {"successes": 0, "failures": 0, "stable": False}
                 # danno subìto già a 0 PF -> fallimenti (2 se colpo critico)
                 inc = 2 if body.was_critical_hit else 1
                 ds["failures"] = min(3, ds.get("failures", 0) + inc)
@@ -151,7 +156,12 @@ async def update_hp(
                     _add_history(session, char.id, "death_save",
                                  f"Danno a 0 PF: +{inc} fallimento ({ds['failures']}/3)")
                 char.death_saves = ds
-            # old>0 ridotto a 0 senza sforamento massiccio -> privo di sensi/morente (0 fallimenti)
+            else:
+                # old>0 ridotto a 0 senza sforamento massiccio -> privo di sensi/
+                # morente con tracker fresco. L'azzeramento esplicito ripulisce
+                # anche un eventuale "stable" stantio (RAW: chi scende a 0 HP
+                # ricomincia a morire da capo).
+                char.death_saves = {"successes": 0, "failures": 0, "stable": False}
 
         # Notifica best-effort ai compagni di sessione (categoria party_emergency)
         if char.current_hit_points == 0 and amount > 0:
@@ -400,8 +410,10 @@ async def update_death_saves(
             await notify_party_emergency(session, char, f"💀 {char.name} è morto!")
 
     elif body.action == DeathSaveAction.STABILIZE:
+        # RAW: stabilizzare (Medicina CD 10, Risparmiare i Morenti) non cura —
+        # la creatura resta a 0 HP, priva di sensi ma stabile. La risalita a
+        # HP positivi passa solo da cure/riposo, che azzerano il tracker.
         ds["stable"] = True
-        char.current_hit_points = 1
         _add_history(session, char.id, "death_save", "Stabilizzato")
 
     elif body.action == DeathSaveAction.RESET:
