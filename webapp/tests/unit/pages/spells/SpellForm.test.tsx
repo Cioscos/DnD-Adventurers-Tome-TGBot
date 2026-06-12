@@ -91,7 +91,8 @@ describe('SpellForm', () => {
     expect(screen.getByRole('button', { name: 'M' })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByLabelText('character.spells.material_detail_label')).toHaveValue('guano e zolfo')
     // damage section revealed with dice + type selected
-    expect(screen.getByRole('switch')).toHaveAttribute('aria-checked', 'true')
+    expect(screen.getByRole('switch', { name: 'character.spells.deals_damage' }))
+      .toHaveAttribute('aria-checked', 'true')
     expect(screen.getByText('8d6')).toBeInTheDocument()
     expect(screen.getByRole('radio', { name: 'character.inventory.damage_types.dmg_fire' }))
       .toHaveAttribute('aria-checked', 'true')
@@ -116,8 +117,9 @@ describe('SpellForm', () => {
       is_concentration: false, is_ritual: false,
     } as Spell
     render(<SpellForm initialData={initial} onSubmit={onSubmit} onCancel={() => {}} isPending={false} />)
-    expect(screen.getByRole('switch')).toHaveAttribute('aria-checked', 'true')
-    await userEvent.click(screen.getByRole('switch'))
+    const dealsDamage = screen.getByRole('switch', { name: 'character.spells.deals_damage' })
+    expect(dealsDamage).toHaveAttribute('aria-checked', 'true')
+    await userEvent.click(dealsDamage)
     await userEvent.click(screen.getByRole('button', { name: 'common.save' }))
     expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ damage_dice: '', damage_type: '' }))
   })

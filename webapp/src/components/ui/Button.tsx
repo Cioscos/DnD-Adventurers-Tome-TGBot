@@ -33,7 +33,7 @@ function variantClasses(variant: ButtonVariant): string {
     case 'danger':
       return 'bg-dnd-crimson/15 text-dnd-crimson-bright border border-dnd-crimson/40 hover:bg-dnd-crimson/25 hover:border-dnd-crimson/60'
     case 'arcane':
-      return 'bg-gradient-to-r from-dnd-arcane-deep to-dnd-arcane text-white border border-dnd-arcane-bright/40 shadow-halo-arcane'
+      return 'bg-gradient-to-r from-dnd-arcane-deep to-dnd-arcane text-dnd-parchment border border-dnd-arcane-bright/40 shadow-halo-arcane'
     case 'ghost':
       return 'bg-transparent text-dnd-gold hover:text-dnd-gold-bright border border-transparent'
   }

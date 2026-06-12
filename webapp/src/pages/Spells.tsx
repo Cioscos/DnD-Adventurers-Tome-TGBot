@@ -43,6 +43,7 @@ export default function Spells() {
   const [confirmCast, setConfirmCast] = useState<
     { spell: Spell; slotLevel: number | null; ritual: boolean } | null
   >(null)
+  const [confirmForget, setConfirmForget] = useState<Spell | null>(null)
   const [collapsedLevels, setCollapsedLevels] = useState<Set<number>>(new Set())
   const [concBannerExpanded, setConcBannerExpanded] = useState(false)
   const [searchParams, setSearchParams] = useSearchParams()
@@ -137,7 +138,10 @@ export default function Spells() {
 
   const removeMutation = useMutation({
     mutationFn: (spellId: number) => api.spells.remove(charId, spellId),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['character', charId] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['character', charId] })
+      setConfirmForget(null)
+    },
   })
 
   const concentrationMutation = useMutation({
@@ -480,7 +484,7 @@ export default function Spells() {
           </span>
           <span className={`font-mono text-xs tabular-nums ${
             spellcasting.prepared_count > (spellcasting.prepared_cap ?? 0)
-              ? 'text-[var(--dnd-danger)]'
+              ? 'text-dnd-crimson-bright'
               : 'text-dnd-text'
           }`}>
             {spellcasting.prepared_count}/{spellcasting.prepared_cap ?? 0}
@@ -630,7 +634,7 @@ export default function Spells() {
                               concentrationMutation.mutate(concentratingId === spell.id ? null : spell.id)
                             }
                             onEdit={() => handleEditSpell(spell)}
-                            onRemove={() => removeMutation.mutate(spell.id)}
+                            onRemove={() => setConfirmForget(spell)}
                             concentratingSpellId={concentratingId ?? null}
                             usePending={castMutation.isPending || concentrationMutation.isPending}
                             showPreparedToggle={!!spellcasting?.has_preparing_class && spell.level >= 1}
@@ -677,6 +681,21 @@ export default function Spells() {
           if (confirmCast.ritual) proceedRitualCast(confirmCast.spell)
           else if (confirmCast.slotLevel !== null) proceedSlotCast(confirmCast.spell, confirmCast.slotLevel)
           setConfirmCast(null)
+        }}
+      />
+
+      {/* Dimentica: eliminazione definitiva, sempre confermata (audit #9). */}
+      <ConfirmSheet
+        open={confirmForget !== null}
+        onClose={() => setConfirmForget(null)}
+        title={t('character.spells.forget_confirm_title')}
+        body={confirmForget
+          ? t('character.spells.forget_confirm_body', { name: confirmForget.name })
+          : undefined}
+        confirmLabel={t('character.spells.forget')}
+        loading={removeMutation.isPending}
+        onConfirm={() => {
+          if (confirmForget) removeMutation.mutate(confirmForget.id)
         }}
       />
 
