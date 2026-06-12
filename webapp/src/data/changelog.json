@@ -1,6 +1,32 @@
 {
   "entries": [
     {
+      "version": "2.14.9",
+      "date": "2026-06-12",
+      "title": {
+        "it": "Sessione più leggera sulla batteria",
+        "en": "Session room lighter on battery"
+      },
+      "added": {
+        "it": [],
+        "en": []
+      },
+      "improved": {
+        "it": [
+          "Stanza di sessione: eliminato il lavoro di ridisegno in background che avveniva ogni 2,5 secondi anche senza novità; nelle sessioni lunghe il telefono lavora (e consuma) solo quando cambia davvero qualcosa",
+          "Documento di design allineato all'app reale: ruolo del carattere display sui valori eroe, molla elastica dei numeri e chip filtro a pillola ora sono regole ufficiali del sistema"
+        ],
+        "en": [
+          "Session room: removed the background re-rendering that happened every 2.5 seconds even with no changes; during long sessions the phone now works (and drains) only when something actually changes",
+          "Design document aligned with the real app: the display font role on hero values, the elastic number pop and the pill-shaped filter chips are now official system rules"
+        ]
+      },
+      "fixed": {
+        "it": [],
+        "en": []
+      }
+    },
+    {
       "version": "2.14.8",
       "date": "2026-06-12",
       "title": {

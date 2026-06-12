@@ -285,7 +285,9 @@ export interface GameSession {
   status: SessionStatus
   title?: string | null
   created_at: string
-  last_activity_at: string
+  /** Keep-alive del server: cambia a ogni GET di /live, quindi SessionRoom
+   *  lo scarta prima della cache (structural sharing); può mancare. */
+  last_activity_at?: string
   closed_at?: string | null
   participants: SessionParticipant[]
 }
