@@ -1262,6 +1262,7 @@
       "waiting_others": "Waiting for the others…",
       "roll_failed": "Roll failed, try again",
       "add_monster": "Add monster",
+      "monster_name_label": "Name",
       "monster_name_placeholder": "Monster name",
       "count_label": "Count",
       "init_mod_label": "Initiative mod",

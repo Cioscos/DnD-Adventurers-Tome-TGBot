@@ -2,6 +2,9 @@ import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
+import Sheet from '@/components/ui/Sheet'
+import Input from '@/components/ui/Input'
+import Button from '@/components/ui/Button'
 import { api } from '@/api/client'
 import { haptic } from '@/auth/telegram'
 import type { EncounterMode } from '@/types'
@@ -41,72 +44,74 @@ export default function AddMonsterSheet({ sessionId, mode, onClose }: Props) {
     },
   })
 
-  const field = (
-    label: string,
-    value: string,
-    set: (v: string) => void,
-    opts: { placeholder: string; type?: string },
-  ) => (
-    <label className="block">
-      <span className="text-xs uppercase tracking-wider text-dnd-gold-dim font-cinzel">
-        {label}
-      </span>
-      <input
-        type={opts.type ?? 'number'}
-        inputMode={opts.type === 'text' ? undefined : 'numeric'}
-        value={value}
-        placeholder={opts.placeholder}
-        onChange={(e) => set(e.target.value)}
-        className="mt-1 w-full rounded-md bg-dnd-surface border border-dnd-border
-                   px-3 py-2.5 text-sm text-dnd-text placeholder:text-dnd-text-muted/60"
-      />
-    </label>
-  )
-
   return (
-    <div
-      className="fixed inset-0 bg-black/60 flex items-end z-50 p-4"
-      onClick={(e) => e.target === e.currentTarget && onClose()}
-    >
-      <div className="w-full rounded-2xl bg-dnd-surface-elevated p-4 space-y-3 max-h-[90vh] overflow-y-auto">
-        <h3 className="font-semibold font-cinzel text-dnd-gold text-center">
-          {t('session.combat.add_monster')}
-        </h3>
-        {field(t('session.combat.add_monster'), name, setName, {
-          placeholder: t('session.combat.monster_name_placeholder'), type: 'text',
-        })}
+    <Sheet open onClose={onClose} title={t('session.combat.add_monster')}>
+      <div className="p-1 space-y-3">
+        <Input
+          label={t('session.combat.monster_name_label')}
+          value={name}
+          onChange={setName}
+          placeholder={t('session.combat.monster_name_placeholder')}
+        />
         <div className="grid grid-cols-2 gap-3">
-          {field(t('session.combat.count_label'), count, setCount, { placeholder: '1' })}
-          {field(t('session.combat.init_mod_label'), initMod, setInitMod, { placeholder: '0' })}
+          <Input
+            label={t('session.combat.count_label')}
+            type="number"
+            inputMode="numeric"
+            value={count}
+            onChange={setCount}
+            placeholder="1"
+          />
+          <Input
+            label={t('session.combat.init_mod_label')}
+            type="number"
+            inputMode="numeric"
+            value={initMod}
+            onChange={setInitMod}
+            placeholder="0"
+          />
         </div>
         {mode === 'full' && (
           <div className="grid grid-cols-2 gap-3">
-            {field(t('session.combat.max_hp_label'), maxHp, setMaxHp, { placeholder: '7' })}
-            {field(t('session.combat.ac_label'), ac, setAc, { placeholder: '13' })}
+            <Input
+              label={t('session.combat.max_hp_label')}
+              type="number"
+              inputMode="numeric"
+              value={maxHp}
+              onChange={setMaxHp}
+              placeholder="7"
+            />
+            <Input
+              label={t('session.combat.ac_label')}
+              type="number"
+              inputMode="numeric"
+              value={ac}
+              onChange={setAc}
+              placeholder="13"
+            />
           </div>
         )}
-        <div className="flex gap-2 pt-2 border-t border-dnd-gold-dim/10">
-          <button
-            type="button"
+        <div className="flex gap-2 pt-2">
+          <Button
+            variant="secondary"
+            fullWidth
             onClick={onClose}
             disabled={addMutation.isPending}
-            className="flex-1 px-3 py-2 rounded-md bg-dnd-surface border border-dnd-border
-                       text-sm active:opacity-60 disabled:opacity-40"
           >
             {t('common.cancel')}
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            variant="primary"
+            fullWidth
+            haptic="success"
             onClick={() => addMutation.mutate()}
-            disabled={!name.trim() || addMutation.isPending}
-            className="flex-1 px-3 py-2 rounded-md bg-gradient-to-r from-dnd-gold-deep to-dnd-gold-bright
-                       text-black font-cinzel font-bold uppercase tracking-widest text-xs
-                       active:opacity-80 disabled:opacity-40"
+            disabled={!name.trim()}
+            loading={addMutation.isPending}
           >
             {t('session.combat.add_confirm')}
-          </button>
+          </Button>
         </div>
       </div>
-    </div>
+    </Sheet>
   )
 }

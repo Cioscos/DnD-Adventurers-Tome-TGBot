@@ -23,7 +23,7 @@ export default function InSessionBanner({ charId }: InSessionBannerProps) {
 
   if (!session) return null
   if (session.status !== 'active') return null
-  const isMember = session.participants.some(p => p.character_id === charId)
+  const isMember = session.participants?.some(p => p.character_id === charId) ?? false
   if (!isMember) return null
 
   const label = session.title || t('session.active_session_banner')

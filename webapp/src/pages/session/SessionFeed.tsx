@@ -11,6 +11,7 @@ import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
 import type { CharacterFull, SessionFeedItem, SessionFeedResponse, SessionParticipant } from '@/types'
 import { haptic } from '@/auth/telegram'
+import { useOverlayDismiss } from '@/hooks/useOverlayDismiss'
 import { EVENT_META } from '@/lib/eventMeta'
 import { enqueue, type Reward } from '@/lib/rewardQueue'
 import { formatTime24 } from '@/lib/format'
@@ -219,23 +220,19 @@ export default function SessionFeed({
     cooldownUntil !== null ? Math.max(0, Math.ceil((cooldownUntil - Date.now()) / 1000)) : 0
   const onCooldown = cooldownRemaining > 0
 
-  // ESC closes fullscreen + body scroll lock + Telegram expand.
+  // ESC/back chiudono il fullscreen (stack overlay condiviso); qui restano
+  // scroll lock, expand Telegram e lo scroll in fondo dopo lo swap di layout.
+  useOverlayDismiss(fullscreen, () => setFullscreen(false))
   useEffect(() => {
     if (!fullscreen) return
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setFullscreen(false)
-    }
-    window.addEventListener('keydown', onKey)
     const prevOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     const tg = (window as { Telegram?: { WebApp?: { expand?: () => void } } }).Telegram?.WebApp
     tg?.expand?.()
-    // Scroll feed to bottom after layout swap.
     requestAnimationFrame(() => {
       scrollerRef.current?.scrollTo({ top: scrollerRef.current.scrollHeight })
     })
     return () => {
-      window.removeEventListener('keydown', onKey)
       document.body.style.overflow = prevOverflow
     }
   }, [fullscreen])
@@ -293,7 +290,7 @@ export default function SessionFeed({
             type="button"
             onClick={loadPrevious}
             disabled={loadingPrev}
-            className="text-xs font-cinzel uppercase tracking-wider text-dnd-gold-dim hover:text-dnd-gold-bright disabled:opacity-50 px-3 py-1 rounded border border-dnd-border"
+            className="min-h-[40px] text-xs font-cinzel uppercase tracking-wider text-dnd-gold-dim hover:text-dnd-gold-bright disabled:opacity-50 px-3 py-1 rounded-lg border border-dnd-border"
           >
             {loadingPrev ? t('session.loading_previous') : t('session.load_previous')}
           </button>
@@ -369,7 +366,7 @@ export default function SessionFeed({
                     {it.role === 'player' && !isWhisper && <UserIcon size={10} />}
                     {mine ? t('session.you') : senderLabel(it)}
                     {isWhisper && recName && (
-                      <span className="text-[var(--dnd-amber)]">
+                      <span className="text-dnd-amber">
                         {' '}{t('session.whisper.recipient_prefix', { name: recName })}
                       </span>
                     )}
@@ -419,8 +416,8 @@ export default function SessionFeed({
       {whisperTarget && (
         <div className="mt-3 mb-2 flex items-center justify-between gap-2 rounded-full px-3 py-1.5 bg-dnd-amber/20 border border-dnd-amber/60">
           <div className="flex items-center gap-2 min-w-0">
-            <Lock size={12} className="text-[var(--dnd-amber)] shrink-0" />
-            <span className="text-xs font-cinzel uppercase tracking-wider text-[var(--dnd-amber)] truncate">
+            <Lock size={12} className="text-dnd-amber shrink-0" />
+            <span className="text-xs font-cinzel uppercase tracking-wider text-dnd-amber truncate">
               {t('session.whisper.target_chip', {
                 name:
                   whisperTarget.user_id === gmUserId
@@ -433,9 +430,9 @@ export default function SessionFeed({
             type="button"
             onClick={onClearWhisperTarget}
             aria-label={t('session.whisper.cancel')}
-            className="text-[var(--dnd-amber)] hover:text-dnd-gold-bright text-xs font-bold"
+            className="hit-44 w-7 h-7 inline-flex items-center justify-center rounded-full text-dnd-amber hover:text-dnd-gold-bright"
           >
-            ✕
+            <X size={14} />
           </button>
         </div>
       )}
@@ -461,7 +458,7 @@ export default function SessionFeed({
               : t('session.message_placeholder')
           }
           disabled={onCooldown || sendMutation.isPending}
-          className="flex-1 px-3 py-2 rounded bg-dnd-surface border border-dnd-border text-dnd-text font-body text-sm disabled:opacity-50"
+          className="flex-1 min-h-[44px] px-3 py-2 rounded-lg bg-dnd-surface border border-dnd-border focus:border-dnd-gold/70 outline-none text-dnd-text font-body text-sm disabled:opacity-50"
         />
         <Button
           variant="primary"
@@ -493,7 +490,7 @@ export default function SessionFeed({
             onClick={() => setFullscreen(false)}
             aria-label={t('session.chat_fullscreen_close')}
             title={t('session.chat_fullscreen_close')}
-            className="p-2 rounded-full text-dnd-gold-dim hover:text-dnd-gold-bright hover:bg-dnd-surface transition-colors"
+            className="w-10 h-10 inline-flex items-center justify-center rounded-full text-dnd-gold-dim hover:text-dnd-gold-bright hover:bg-dnd-surface transition-colors"
           >
             <X size={18} />
           </button>
@@ -514,7 +511,7 @@ export default function SessionFeed({
           onClick={() => setFullscreen(true)}
           aria-label={t('session.chat_fullscreen_open')}
           title={t('session.chat_fullscreen_open')}
-          className="p-1.5 rounded text-dnd-gold-dim hover:text-dnd-gold-bright hover:bg-dnd-surface-raised transition-colors"
+          className="w-10 h-10 inline-flex items-center justify-center rounded-lg text-dnd-gold-dim hover:text-dnd-gold-bright hover:bg-dnd-surface-raised transition-colors"
         >
           <Maximize2 size={14} />
         </button>

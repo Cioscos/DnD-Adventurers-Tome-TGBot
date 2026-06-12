@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { ChevronLeft, RefreshCw, UserX } from 'lucide-react'
@@ -36,15 +36,20 @@ export default function Layout({ title, children, backTo, group, page, hideScrol
   // restavano su skeleton/main vuoto perché nessuna gestiva isError. La query
   // è la stessa delle pagine (stessa key → dedupe), quindi non costa fetch
   // extra; qui si decide solo cosa mostrare al posto del contenuto.
+  // SOLO sulle route /char/:id — altre route con un param :id (es. /session/:id)
+  // non devono interpretarlo come personaggio: a un giocatore la stanza
+  // sessione veniva oscurata da un finto "personaggio non trovato" (403).
+  const { pathname } = useLocation()
+  const isCharRoute = pathname.startsWith('/char/')
   const charId = Number(id)
   const charQuery = useQuery({
     queryKey: ['character', charId],
     queryFn: () => api.characters.get(charId),
-    enabled: Number.isFinite(charId) && charId > 0,
+    enabled: isCharRoute && Number.isFinite(charId) && charId > 0,
     retry: (failureCount, error) =>
       !(error instanceof ApiError && (error.status === 404 || error.status === 403)) && failureCount < 3,
   })
-  const charNotFound = charQuery.error instanceof ApiError
+  const charNotFound = isCharRoute && charQuery.error instanceof ApiError
     && (charQuery.error.status === 404 || charQuery.error.status === 403)
 
   // Ghost skeleton: the skeleton of the page the swipe is heading toward, so the
@@ -221,7 +226,7 @@ export default function Layout({ title, children, backTo, group, page, hideScrol
           onTouchEnd={swipe.onTouchEnd}
           onScroll={handleMainScroll}
         >
-          {charQuery.isError ? (
+          {isCharRoute && charQuery.isError ? (
             charNotFound ? (
               <EmptyState
                 icon={<UserX size={28} />}

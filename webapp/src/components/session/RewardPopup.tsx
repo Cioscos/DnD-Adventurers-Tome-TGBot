@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next'
 import { m, AnimatePresence } from 'framer-motion'
 import { Gift } from 'lucide-react'
 import Button from '@/components/ui/Button'
+import { useOverlayDismiss } from '@/hooks/useOverlayDismiss'
+import { spring } from '@/styles/motion'
 import type { Reward } from '@/lib/rewardQueue'
 
 interface Props {
@@ -16,18 +18,16 @@ interface Props {
 export default function RewardPopup({ reward, description, onDismiss, onGoToInventory }: Props) {
   const { t } = useTranslation()
 
+  // ESC + back/BackButton chiudono il popup (stack overlay condiviso).
+  useOverlayDismiss(true, onDismiss)
+
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onDismiss()
-    }
-    window.addEventListener('keydown', onKey)
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     return () => {
-      window.removeEventListener('keydown', onKey)
       document.body.style.overflow = prev
     }
-  }, [onDismiss])
+  }, [])
 
   return createPortal(
     <AnimatePresence>
@@ -43,13 +43,13 @@ export default function RewardPopup({ reward, description, onDismiss, onGoToInve
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.9, opacity: 0 }}
-          transition={{ type: 'spring', stiffness: 220, damping: 26 }}
+          transition={spring.swipe}
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex flex-col items-center text-center gap-2">
             <Gift size={36} className="text-dnd-gold-bright" />
             <h2 className="text-base font-cinzel uppercase tracking-widest text-dnd-gold-bright">
-              {t('session.reward.title', { defaultValue: 'Hai ricevuto un oggetto!' })}
+              {t('session.reward.title')}
             </h2>
           </div>
 
@@ -71,10 +71,10 @@ export default function RewardPopup({ reward, description, onDismiss, onGoToInve
 
           <div className="flex flex-col gap-2 pt-2">
             <Button variant="primary" fullWidth onClick={onGoToInventory}>
-              {t('session.reward.cta_inventory', { defaultValue: "Vedi nell'inventario" })}
+              {t('session.reward.cta_inventory')}
             </Button>
             <Button variant="secondary" fullWidth onClick={onDismiss}>
-              {t('session.reward.cta_dismiss', { defaultValue: 'OK' })}
+              {t('session.reward.cta_dismiss')}
             </Button>
           </div>
         </m.div>

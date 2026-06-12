@@ -87,7 +87,7 @@ export default function SessionJoin() {
           </span>
           <div className="flex items-center gap-2">
             {code.length === 6 && /^[A-Z0-9]{6}$/.test(code) && (
-              <Check size={14} className="text-[var(--dnd-emerald-bright)]" />
+              <Check size={14} className="text-dnd-emerald-bright" />
             )}
             <button
               type="button"
@@ -146,7 +146,7 @@ export default function SessionJoin() {
 
       {error && (
         <Surface variant="ember" className="text-center">
-          <p className="text-[var(--dnd-crimson-bright)] text-sm font-body">
+          <p className="text-dnd-crimson-bright text-sm font-body">
             {error}
           </p>
         </Surface>

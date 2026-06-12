@@ -88,11 +88,11 @@ export default function ParticipantIdentitySheet({
       )))
     : 0
   const bucketColor: Record<string, string> = {
-    healthy:          'bg-[var(--dnd-emerald-bright)]',
+    healthy:          'bg-dnd-emerald-bright',
     lightly_wounded:  'bg-dnd-gold-bright',
-    badly_wounded:    'bg-[var(--dnd-amber)]',
-    dying:            'bg-[var(--dnd-crimson-bright)]',
-    dead:             'bg-black',
+    badly_wounded:    'bg-dnd-amber',
+    dying:            'bg-dnd-crimson-bright',
+    dead:             'bg-dnd-ink',
   }
   const canWhisper = !!target && !!onStartWhisper && target.user_id !== myUserId
 
@@ -132,7 +132,7 @@ export default function ParticipantIdentitySheet({
                 <>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5 text-xs font-cinzel">
-                      <Heart size={12} className="text-[var(--dnd-crimson-bright)]" />
+                      <Heart size={12} className="text-dnd-crimson-bright" />
                       <span className="uppercase tracking-wider">
                         {snapshot.hp_bucket
                           ? t(`session.hp_bucket.${snapshot.hp_bucket}`)
@@ -151,7 +151,7 @@ export default function ParticipantIdentitySheet({
                 <>
                   <div className="grid grid-cols-2 gap-2 text-sm font-mono">
                     <div className="flex items-center gap-1.5">
-                      <Heart size={14} className="text-[var(--dnd-crimson-bright)]" />
+                      <Heart size={14} className="text-dnd-crimson-bright" />
                       <span>
                         {t('session.detail.hp_label')}: {snapshot.current_hit_points}/{snapshot.hit_points}
                       </span>
@@ -170,7 +170,7 @@ export default function ParticipantIdentitySheet({
                   )}
                   <div className="mt-2 h-1.5 w-full rounded-full bg-dnd-surface overflow-hidden">
                     <div
-                      className="h-full bg-gradient-to-r from-[var(--dnd-crimson)] via-[var(--dnd-amber)] to-[var(--dnd-emerald-bright)]"
+                      className="h-full bg-gradient-to-r from-dnd-crimson via-dnd-amber to-dnd-emerald-bright"
                       style={{ width: `${hpPct}%` }}
                     />
                   </div>
@@ -214,7 +214,7 @@ export default function ParticipantIdentitySheet({
         )}
 
         {isError && (
-          <p className="text-center text-sm text-[var(--dnd-crimson-bright)] py-8">
+          <p className="text-center text-sm text-dnd-crimson-bright py-8">
             {t('session.identity.error')}
           </p>
         )}

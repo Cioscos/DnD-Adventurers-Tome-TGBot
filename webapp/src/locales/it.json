@@ -1262,6 +1262,7 @@
       "waiting_others": "In attesa degli altri…",
       "roll_failed": "Tiro non riuscito, riprova",
       "add_monster": "Aggiungi mostro",
+      "monster_name_label": "Nome",
       "monster_name_placeholder": "Nome del mostro",
       "count_label": "Quantità",
       "init_mod_label": "Mod. iniziativa",
