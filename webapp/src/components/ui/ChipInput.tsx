@@ -1,4 +1,5 @@
 import React, { useState, useRef, useMemo, type KeyboardEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import { X } from 'lucide-react'
 import { m } from 'framer-motion'
 
@@ -33,6 +34,7 @@ export default function ChipInput({
   hint,
   className = '',
 }: ChipInputProps) {
+  const { t } = useTranslation()
   const [input, setInput] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [showSuggestions, setShowSuggestions] = useState(false)
@@ -121,7 +123,7 @@ export default function ChipInput({
                 remove(idx)
               }}
               className="hit-44 inline-flex items-center justify-center text-dnd-gold-dim hover:text-dnd-gold-bright"
-              aria-label={`Remove ${v}`}
+              aria-label={`${t('common.remove')} ${v}`}
             >
               <X size={12} />
             </button>

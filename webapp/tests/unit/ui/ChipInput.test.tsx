@@ -24,7 +24,7 @@ describe('ChipInput', () => {
   it('removing a chip emits the filtered list', async () => {
     const onChange = vi.fn()
     render(<ChipInput values={['elfico', 'comune']} onChange={onChange} />)
-    await userEvent.click(screen.getByRole('button', { name: 'Remove elfico' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Rimuovi elfico' }))
     expect(onChange).toHaveBeenCalledWith(['comune'])
   })
 
