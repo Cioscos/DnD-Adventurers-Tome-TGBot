@@ -1,6 +1,38 @@
 {
   "entries": [
     {
+      "version": "2.14.8",
+      "date": "2026-06-12",
+      "title": {
+        "it": "Rifinitura regole homebrew e sessione",
+        "en": "Homebrew rules and session polish"
+      },
+      "added": {
+        "it": [],
+        "en": []
+      },
+      "improved": {
+        "it": [
+          "Editor homebrew: le etichette di caratteristiche, modificatori e tabelle seguono ora la lingua dell'app (prima erano sempre in italiano)",
+          "Editor homebrew: pulsanti Modifica/Elimina e le X di rimozione più facili da toccare; selettori di filtro uniformati allo stile di sistema",
+          "Effetto danno: l'opzione \"colpo critico\" usa l'interruttore standard; il titolo del passo distingue ora Nuovo da Modifica"
+        ],
+        "en": [
+          "Homebrew editor: property, modifier and table labels now follow the app language (they were always Italian before)",
+          "Homebrew editor: Edit/Delete buttons and remove crosses are easier to tap; filter pickers aligned to the system style",
+          "Damage effect: the \"critical hit\" option uses the standard switch; the step title now tells New from Edit apart"
+        ]
+      },
+      "fixed": {
+        "it": [
+          "Pagina homebrew: in caso di errore di caricamento ora compare il pulsante Riprova"
+        ],
+        "en": [
+          "Homebrew page: a Retry button now appears when loading fails"
+        ]
+      }
+    },
+    {
       "version": "2.14.7",
       "date": "2026-06-12",
       "title": {

@@ -79,7 +79,7 @@ export default function SubjectSection({ subject, onChange }: SubjectSectionProp
               onClick={() => setType(value)}
               whileTap={{ scale: 0.97 }}
               aria-pressed={selected}
-              className={`flex flex-col items-center justify-center gap-1 min-h-[64px] px-2 py-2 rounded-xl border font-cinzel uppercase text-[10px] tracking-widest transition-colors ${styles}`}
+              className={`flex flex-col items-center justify-center gap-1 min-h-[64px] px-2 py-2 rounded-xl border font-cinzel uppercase text-[11px] tracking-widest transition-colors ${styles}`}
             >
               <span className="text-xl leading-none" aria-hidden>
                 {emoji}

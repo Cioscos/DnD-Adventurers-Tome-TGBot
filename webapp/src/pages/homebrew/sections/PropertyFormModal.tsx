@@ -282,7 +282,7 @@ export default function PropertyFormModal({
             </div>
           )}
           {!draft.keyOverridden && errors.key && (
-            <p className="text-[var(--dnd-crimson-bright)] text-[11px] mt-1 font-body">
+            <p className="text-dnd-crimson-bright text-[11px] mt-1 font-body">
               {errors.key}
             </p>
           )}
@@ -343,7 +343,7 @@ export default function PropertyFormModal({
                 )}
               </select>
               {errors.default && (
-                <p className="text-[var(--dnd-crimson-bright)] text-[11px] mt-1 font-body">
+                <p className="text-dnd-crimson-bright text-[11px] mt-1 font-body">
                   {errors.default}
                 </p>
               )}

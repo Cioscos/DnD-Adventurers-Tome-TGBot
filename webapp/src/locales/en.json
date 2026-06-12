@@ -1473,6 +1473,8 @@
     "effects": {
       "empty": "No steps yet. Press \"Add step\" to describe what the trigger does.",
       "add_step": "Add step",
+      "move_up": "Move up",
+      "move_down": "Move down",
       "add_case": "Add case",
       "case_key_placeholder": "e.g. poor, excellent",
       "case_key_required": "Enter a name for the case",
