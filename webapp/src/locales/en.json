@@ -643,6 +643,7 @@
       "mic_denied_tooltip": "Microphone permission denied. Enable it in your browser settings.",
       "mic_missing": "Microphone not available in this browser",
       "delete_confirm": "Delete \"{{title}}\"?",
+      "empty_title": "No notes yet",
       "empty_hint": "Jot clues, NPCs, and ideas for your next session.",
       "search_placeholder": "Search notes…",
       "sort_recent": "Recent",
@@ -674,7 +675,8 @@
       "dropzone_primary": "Drop files here or tap to select",
       "dropzone_accept": "PNG, JPG, PDF · max 10 MB",
       "uploaded": "Uploaded",
-      "upload_progress_count": "{{current}}/{{total}} · {{pct}}%"
+      "upload_progress_count": "{{current}}/{{total}} · {{pct}}%",
+      "upload_error": "Upload failed. Try again."
     },
     "history": {
       "title": "History",

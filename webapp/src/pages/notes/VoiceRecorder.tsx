@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import Card from '@/components/Card'
-import DndButton from '@/components/DndButton'
+import { Mic, Square } from 'lucide-react'
+import Surface from '@/components/ui/Surface'
+import Button from '@/components/ui/Button'
+import Input from '@/components/ui/Input'
 
 interface VoiceRecorderProps {
   onRecordComplete: (blob: Blob, title: string) => void
@@ -87,38 +89,30 @@ export default function VoiceRecorder({ onRecordComplete, onCancel, isPending }:
 
   return (
     <div className="space-y-3">
-      <div>
-        <p className="text-[11px] uppercase tracking-wider mb-1 font-medium text-dnd-gold-dim">
-          {t('character.notes.title_label')}
-        </p>
-        <input
-          type="text"
-          value={voiceTitle}
-          onChange={(e) => setVoiceTitle(e.target.value)}
-          placeholder={t('character.notes.title_placeholder')}
-          className="w-full bg-dnd-surface rounded-xl px-3 py-2 outline-none
-                     border border-transparent focus:border-dnd-gold-dim
-                     focus:shadow-[0_0_0_2px_var(--dnd-gold-glow)]"
-        />
-      </div>
+      <Input
+        label={t('character.notes.title_label')}
+        value={voiceTitle}
+        onChange={setVoiceTitle}
+        placeholder={t('character.notes.title_placeholder')}
+      />
 
       {micError && (
-        <p className="text-sm text-[var(--dnd-danger)] bg-dnd-danger/10 rounded-xl px-3 py-2">
+        <p className="text-sm text-dnd-crimson-bright bg-dnd-crimson/10 rounded-xl px-3 py-2">
           {micError}
         </p>
       )}
 
-      <Card className="text-center space-y-4">
+      <Surface variant="flat" className="text-center space-y-4">
         {/* Duration display */}
-        <p className={`text-4xl font-mono font-bold ${isRecording ? 'text-[var(--dnd-danger)]' : ''}`}>
+        <p className={`text-4xl font-mono font-bold tabular-nums ${isRecording ? 'text-dnd-crimson-bright' : 'text-dnd-text'}`}>
           {formatDuration(recordingDuration)}
         </p>
 
         {/* Recording indicator */}
         {isRecording && (
           <div className="flex items-center justify-center gap-2">
-            <span className="w-3 h-3 rounded-full bg-[var(--dnd-danger)] animate-pulse" />
-            <span className="text-sm text-[var(--dnd-danger)]">{t('character.notes.recording')}</span>
+            <span className="w-3 h-3 rounded-full bg-dnd-crimson animate-pulse" />
+            <span className="text-sm text-dnd-crimson-bright">{t('character.notes.recording')}</span>
           </div>
         )}
 
@@ -127,19 +121,21 @@ export default function VoiceRecorder({ onRecordComplete, onCancel, isPending }:
           {!isRecording && !recordedBlob && (
             <button
               onClick={startRecording}
-              className="w-16 h-16 rounded-full bg-[var(--dnd-danger)] flex items-center justify-center
+              aria-label={t('character.notes.record_voice')}
+              className="w-16 h-16 rounded-full bg-dnd-crimson text-dnd-parchment flex items-center justify-center
                          active:opacity-70 transition-opacity"
             >
-              <span className="text-2xl">🎤</span>
+              <Mic size={28} />
             </button>
           )}
           {isRecording && (
             <button
               onClick={stopRecording}
-              className="w-16 h-16 rounded-full bg-dnd-danger/30 border-2 border-[var(--dnd-danger)]
+              aria-label={t('character.notes.recording')}
+              className="w-16 h-16 rounded-full bg-dnd-crimson/30 border-2 border-dnd-crimson text-dnd-crimson-bright
                          flex items-center justify-center active:opacity-70"
             >
-              <span className="w-6 h-6 rounded bg-[var(--dnd-danger)]" />
+              <Square size={22} fill="currentColor" />
             </button>
           )}
         </div>
@@ -157,30 +153,30 @@ export default function VoiceRecorder({ onRecordComplete, onCancel, isPending }:
                 setRecordedBlob(null)
                 setRecordingDuration(0)
               }}
-              className="text-xs text-dnd-text-muted"
+              className="min-h-[44px] px-3 text-xs text-dnd-text-muted hover:text-dnd-gold-bright transition-colors"
             >
               {t('character.notes.discard_recording')}
             </button>
           </div>
         )}
-      </Card>
+      </Surface>
 
       <div className="flex gap-2">
-        <DndButton
+        <Button
           variant="secondary"
           onClick={handleCancel}
-          className="flex-1"
+          fullWidth
         >
           {t('common.cancel')}
-        </DndButton>
-        <DndButton
+        </Button>
+        <Button
           onClick={handleSave}
           disabled={!voiceTitle.trim() || !recordedBlob || isPending}
           loading={isPending}
-          className="flex-1"
+          fullWidth
         >
           {t('common.save')}
-        </DndButton>
+        </Button>
       </div>
     </div>
   )

@@ -643,6 +643,7 @@
       "mic_denied_tooltip": "Permesso microfono negato. Abilitalo nelle impostazioni del browser.",
       "mic_missing": "Microfono non disponibile su questo browser",
       "delete_confirm": "Eliminare \"{{title}}\"?",
+      "empty_title": "Nessuna nota",
       "empty_hint": "Annota indizi, NPC e idee per la prossima sessione.",
       "search_placeholder": "Cerca note…",
       "sort_recent": "Recenti",
@@ -674,7 +675,8 @@
       "dropzone_primary": "Trascina i file qui o tocca per selezionarli",
       "dropzone_accept": "PNG, JPG, PDF · max 10 MB",
       "uploaded": "Caricato",
-      "upload_progress_count": "{{current}}/{{total}} · {{pct}}%"
+      "upload_progress_count": "{{current}}/{{total}} · {{pct}}%",
+      "upload_error": "Caricamento non riuscito. Riprova."
     },
     "history": {
       "title": "Cronologia",

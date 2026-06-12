@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { X, FileText } from 'lucide-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/api/client'
 import type { CharacterFull, MapEntry } from '@/types'
@@ -129,16 +130,16 @@ function MapZoneGroupInner({
           {zoneName}
           <span className="ml-1.5 font-normal opacity-70">({maps.length})</span>
         </p>
-        <div className="flex gap-3 items-center">
+        <div className="flex gap-1 items-center">
           <button
             onClick={() => onAddMore(zoneName)}
-            className="text-xs text-dnd-gold-dim"
+            className="min-h-[44px] px-2 text-xs text-dnd-gold-dim hover:text-dnd-gold-bright transition-colors"
           >
             + {t('character.maps.add_more')}
           </button>
           <button
             onClick={() => onDeleteZone(zoneName)}
-            className="text-xs text-[var(--dnd-danger)]"
+            className="min-h-[44px] px-2 text-xs text-dnd-crimson-bright transition-colors"
           >
             {t('character.maps.delete_zone')}
           </button>
@@ -174,7 +175,7 @@ function MapZoneGroupInner({
               />
             ) : (
               <div className="w-full h-full flex flex-col items-center justify-center text-dnd-text-muted pointer-events-none">
-                <span className="text-3xl">📄</span>
+                <FileText size={30} className="text-dnd-gold-dim" />
                 <span className="text-xs mt-1 uppercase opacity-60">{m.file_type}</span>
               </div>
             )}
@@ -187,9 +188,10 @@ function MapZoneGroupInner({
             />
             <button
               onClick={(e) => { e.stopPropagation(); onDeleteFile(m.id, zoneName) }}
-              className="absolute top-1 right-1 w-5 h-5 rounded-full bg-dnd-ink/80 text-dnd-text text-xs flex items-center justify-center leading-none z-10"
+              className="absolute top-1 right-1 w-10 h-10 rounded-full bg-dnd-ink/80 text-dnd-text flex items-center justify-center z-10"
+              aria-label={t('common.delete')}
             >
-              ✕
+              <X size={16} />
             </button>
           </div>
         ))}

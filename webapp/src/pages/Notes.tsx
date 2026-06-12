@@ -14,6 +14,7 @@ import ScrollArea from '@/components/ScrollArea'
 import EmptyState from '@/components/ui/EmptyState'
 import { haptic } from '@/auth/telegram'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
+import { useToast } from '@/hooks/useToast'
 import VoiceRecorder from '@/pages/notes/VoiceRecorder'
 import NoteEditor from '@/pages/notes/NoteEditor'
 import NoteItem from '@/pages/notes/NoteItem'
@@ -32,6 +33,7 @@ export default function Notes() {
   const charId = Number(id)
   const { t } = useTranslation()
   const qc = useQueryClient()
+  const toast = useToast()
   const reduceMotion = useReducedMotion()
   const [mode, setMode] = useState<Mode>('list')
   const [editNote, setEditNote] = useState<{ title: string; body: string; tags?: string[] } | null>(null)
@@ -161,19 +163,29 @@ export default function Notes() {
         >
           {t('character.notes.new')}
         </Button>
+        {/* Mic non disponibile: il bottone resta tappabile e spiega il perché
+            con un toast (i tooltip `title` non esistono su mobile). */}
         <Button
           variant="secondary"
           size="md"
-          onClick={() => setMode('record')}
-          disabled={micStatus === 'denied' || micStatus === 'missing'}
+          onClick={() => {
+            if (micStatus === 'missing') {
+              toast.info(t('character.notes.mic_missing'))
+            } else if (micStatus === 'denied') {
+              toast.info(t('character.notes.mic_denied_tooltip'))
+            } else {
+              setMode('record')
+            }
+          }}
           icon={micStatus === 'denied' || micStatus === 'missing' ? <MicOff size={16} /> : <Mic size={16} />}
+          className={micStatus === 'denied' || micStatus === 'missing' ? 'opacity-60' : ''}
           haptic="medium"
           aria-label={t('character.notes.record_voice')}
           title={
             micStatus === 'missing'
-              ? t('character.notes.mic_missing', { defaultValue: 'Microfono non disponibile su questo browser' })
+              ? t('character.notes.mic_missing')
               : micStatus === 'denied'
-                ? t('character.notes.mic_denied_tooltip', { defaultValue: 'Permesso microfono negato. Abilitalo nelle impostazioni del browser.' })
+                ? t('character.notes.mic_denied_tooltip')
                 : t('character.notes.record_voice')
           }
         />
@@ -182,7 +194,7 @@ export default function Notes() {
       {!isLoading && notes.length === 0 && (
         <EmptyState
           icon={<NotebookPen size={32} />}
-          title={t('common.none')}
+          title={t('character.notes.empty_title')}
           hint={t('character.notes.empty_hint')}
           action={{
             label: t('character.notes.new'),

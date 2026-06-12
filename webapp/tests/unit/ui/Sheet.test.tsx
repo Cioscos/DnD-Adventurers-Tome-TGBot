@@ -4,6 +4,10 @@ import userEvent from '@testing-library/user-event'
 import Sheet from '@/components/ui/Sheet'
 
 vi.mock('@/styles/motion', () => ({ spring: new Proxy({}, { get: () => ({}) }) }))
+vi.mock('react-i18next', async (orig) => {
+  const actual = (await orig()) as Record<string, unknown>
+  return { ...actual, useTranslation: () => ({ t: (k: string) => k, i18n: { language: 'it' } }) }
+})
 vi.mock('@/store/overlayStore', () => ({ useRegisterOverlay: () => {} }))
 vi.mock('framer-motion', async () => {
   const React = await import('react')
@@ -30,13 +34,13 @@ describe('Sheet', () => {
     render(<Sheet open onClose={() => {}} title="Titolo">contenuto</Sheet>)
     expect(screen.getByText('Titolo')).toBeInTheDocument()
     expect(screen.getByText('contenuto')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'common.close' })).toBeInTheDocument()
   })
 
   it('closes via the close button and the backdrop', async () => {
     const onClose = vi.fn()
     render(<Sheet open onClose={onClose} title="T">x</Sheet>)
-    await userEvent.click(screen.getByRole('button', { name: 'Close' }))
+    await userEvent.click(screen.getByRole('button', { name: 'common.close' }))
     expect(onClose).toHaveBeenCalledTimes(1)
     fireEvent.click(document.querySelector('.fixed.inset-0') as HTMLElement)
     expect(onClose).toHaveBeenCalledTimes(2)
@@ -51,7 +55,7 @@ describe('Sheet', () => {
 
   it('hides the close button when not dismissible', () => {
     render(<Sheet open onClose={() => {}} title="T" dismissible={false}>x</Sheet>)
-    expect(screen.queryByRole('button', { name: 'Close' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'common.close' })).not.toBeInTheDocument()
   })
 
   it('Escape only closes the topmost sheet when nested', () => {

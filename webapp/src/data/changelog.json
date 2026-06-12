@@ -1,6 +1,46 @@
 {
   "entries": [
     {
+      "version": "2.14.7",
+      "date": "2026-06-12",
+      "title": {
+        "it": "Rifinitura di condizioni, diario, note e mappe",
+        "en": "Conditions, journal, notes and maps polish"
+      },
+      "added": {
+        "it": [],
+        "en": []
+      },
+      "improved": {
+        "it": [
+          "Note: Modifica ed Elimina sono ora icone facili da toccare sulla card, e il dettaglio nota ha azioni più chiare",
+          "Editor di note, registratore vocale e caricamento mappe allineati allo stile di sistema (campi, etichette, scelta zona a chip)",
+          "Microfono non disponibile: toccando il bottone ora viene spiegato il perché (prima il tasto era solo disabilitato)",
+          "Ricerca della cronologia allineata ai campi di sistema; timeline leggibile anche in modalità chiara"
+        ],
+        "en": [
+          "Notes: Edit and Delete are now easy-to-tap icons on the card, and the note detail has clearer actions",
+          "Note editor, voice recorder and map upload aligned to the system style (fields, labels, chip zone picker)",
+          "Microphone unavailable: tapping the button now explains why (previously it was just disabled)",
+          "History search aligned to system fields; timeline readable in light mode too"
+        ]
+      },
+      "fixed": {
+        "it": [
+          "Svuotare la cronologia ed eliminare mappe o zone ora hanno la conferma a destra come nel resto dell'app",
+          "Il visore mappe a schermo intero si chiude con ESC e col tasto indietro, e l'immagine è centrata correttamente",
+          "Aggiungere una mappa a una zona esistente porta davvero il modulo in vista",
+          "Pagina Note vuota: il titolo ora dice \"Nessuna nota\" invece di \"Nessuno\""
+        ],
+        "en": [
+          "Clearing the history and deleting maps or zones now confirm with the action on the right like the rest of the app",
+          "The fullscreen map viewer closes with ESC and the back button, and the image is centered correctly",
+          "Adding a map to an existing zone now actually scrolls the form into view",
+          "Empty Notes page: the title now reads \"No notes yet\" instead of a generic \"None\""
+        ]
+      }
+    },
+    {
       "version": "2.14.6",
       "date": "2026-06-12",
       "title": {

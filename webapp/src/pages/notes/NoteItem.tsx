@@ -1,6 +1,7 @@
 import React from 'react'
 import { useTranslation } from 'react-i18next'
-import Card from '@/components/Card'
+import { Mic, Pencil, Trash2 } from 'lucide-react'
+import Surface from '@/components/ui/Surface'
 import { renderInlineMarkdown } from '@/lib/inlineMarkdown'
 import { formatRelative, formatAbsolute } from '@/lib/relativeTime'
 import { useCharacterStore } from '@/store/characterStore'
@@ -32,26 +33,31 @@ function NoteItemInner({ note, onEdit, onDelete, onView, voiceUrl }: NoteItemPro
   const relLabel = stamp
     ? formatRelative(stamp, {
         locale: locale === 'en' ? 'en' : 'it',
-        todayLabel: t('common.today', { defaultValue: locale === 'en' ? 'Today' : 'Oggi' }),
-        yesterdayLabel: t('common.yesterday', { defaultValue: locale === 'en' ? 'Yesterday' : 'Ieri' }),
+        todayLabel: t('common.date.today'),
+        yesterdayLabel: t('common.date.yesterday'),
       })
     : null
   const absLabel = stamp ? formatAbsolute(stamp, locale === 'en' ? 'en' : 'it') : null
   const editedPrefix = note.updated_at
-    ? t('character.notes.edited_prefix', { defaultValue: locale === 'en' ? 'edited' : 'modificata' })
-    : t('character.notes.created_prefix', { defaultValue: locale === 'en' ? 'created' : 'creata' })
+    ? t('character.notes.edited_prefix')
+    : t('character.notes.created_prefix')
 
   if (note.is_voice) {
     const filename = extractVoiceFilename(note.body)
     return (
-      <Card>
+      <Surface variant="flat">
         <div className="flex items-start justify-between gap-2 mb-2">
-          <h3 className="font-semibold font-cinzel text-dnd-gold">🎤 {note.title}</h3>
+          <h3 className="font-semibold font-cinzel text-dnd-gold flex items-center gap-1.5 min-w-0">
+            <Mic size={14} className="shrink-0 text-dnd-gold-dim" />
+            <span className="truncate">{note.title}</span>
+          </h3>
           <button
             onClick={() => onDelete(note.title)}
-            className="text-xs text-[var(--dnd-danger)] shrink-0"
+            className="w-11 h-11 -my-2.5 -mr-2 flex items-center justify-center shrink-0 rounded-lg
+                       text-dnd-text-muted hover:text-dnd-crimson-bright transition-colors"
+            aria-label={t('common.delete')}
           >
-            {t('common.delete')}
+            <Trash2 size={16} />
           </button>
         </div>
         {filename && voiceUrl ? (
@@ -73,31 +79,36 @@ function NoteItemInner({ note, onEdit, onDelete, onView, voiceUrl }: NoteItemPro
             {editedPrefix} · {relLabel}
           </p>
         )}
-      </Card>
+      </Surface>
     )
   }
 
   return (
-    <Card
+    <Surface
+      variant="flat"
       onClick={onView ? () => onView(note) : undefined}
       className={onView ? 'cursor-pointer' : undefined}
     >
-      <div className="flex items-start justify-between gap-2 mb-1">
-        <h3 className="font-semibold font-cinzel text-dnd-gold">{note.title}</h3>
-        <div className="flex gap-2 shrink-0">
+      <div className="flex items-start justify-between gap-1 mb-1">
+        <h3 className="font-semibold font-cinzel text-dnd-gold min-w-0 break-words pt-2">{note.title}</h3>
+        <div className="flex shrink-0 -my-2 -mr-2">
           {onEdit && (
             <button
               onClick={(e) => { e.stopPropagation(); onEdit(note.title, note.body, note.tags ?? []) }}
-              className="text-xs text-dnd-gold-dim"
+              className="w-11 h-11 flex items-center justify-center rounded-lg
+                         text-dnd-text-muted hover:text-dnd-gold-bright transition-colors"
+              aria-label={t('common.edit')}
             >
-              {t('common.edit')}
+              <Pencil size={16} />
             </button>
           )}
           <button
             onClick={(e) => { e.stopPropagation(); onDelete(note.title) }}
-            className="text-xs text-[var(--dnd-danger)]"
+            className="w-11 h-11 flex items-center justify-center rounded-lg
+                       text-dnd-text-muted hover:text-dnd-crimson-bright transition-colors"
+            aria-label={t('common.delete')}
           >
-            {t('common.delete')}
+            <Trash2 size={16} />
           </button>
         </div>
       </div>
@@ -124,7 +135,7 @@ function NoteItemInner({ note, onEdit, onDelete, onView, voiceUrl }: NoteItemPro
           {editedPrefix} · {relLabel}
         </p>
       )}
-    </Card>
+    </Surface>
   )
 }
 

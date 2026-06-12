@@ -5,6 +5,7 @@ import { X } from 'lucide-react'
 import { spring } from '@/styles/motion'
 import { useRegisterOverlay } from '@/store/overlayStore'
 import { useOverlayDismiss } from '@/hooks/useOverlayDismiss'
+import { useTranslation } from 'react-i18next'
 
 interface SheetProps {
   open: boolean
@@ -37,6 +38,7 @@ export default function Sheet({
   const dragControls = useDragControls()
   const sheetRef = useRef<HTMLDivElement>(null)
 
+  const { t } = useTranslation()
   useRegisterOverlay(open)
   // Escape e back/popstate chiudono solo lo sheet in cima allo stack condiviso.
   useOverlayDismiss(open, onClose, dismissible)
@@ -109,7 +111,7 @@ export default function Sheet({
                   <button
                     type="button"
                     onClick={onClose}
-                    aria-label="Close"
+                    aria-label={t('common.close')}
                     className="absolute -top-1 right-2 w-10 h-10 flex items-center justify-center rounded-full text-dnd-gold-dim hover:text-dnd-gold-bright hover:bg-dnd-surface-raised transition-colors"
                   >
                     <X size={18} />
@@ -122,7 +124,7 @@ export default function Sheet({
                   <button
                     type="button"
                     onClick={onClose}
-                    aria-label="Close"
+                    aria-label={t('common.close')}
                     className="w-10 h-10 flex items-center justify-center rounded-full text-dnd-gold-dim hover:text-dnd-gold-bright hover:bg-dnd-surface-raised transition-colors"
                   >
                     <X size={18} />
