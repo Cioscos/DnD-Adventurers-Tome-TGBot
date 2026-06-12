@@ -63,7 +63,7 @@ export default function CastSpellModal({
                 onClick={() => onCast(slot.level)}
                 disabled={isPending}
               >
-                {t('character.slots.level', { level: slot.level })} · {slot.available}/{slot.total}
+                {t('character.slots.level', { level: slot.level })} · <span className="font-mono tabular-nums">{slot.available}/{slot.total}</span>
               </Button>
             ))
           )}

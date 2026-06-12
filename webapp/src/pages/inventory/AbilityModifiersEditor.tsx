@@ -103,13 +103,13 @@ export default function AbilityModifiersEditor({
               onChange={(e) => changeValue(i, e.target.value)}
               onBlur={() => commitValue(i)}
               placeholder="0"
-              className="flex-1 min-w-0 min-h-[44px] bg-dnd-surface border border-dnd-border rounded-md px-2 py-1 text-sm text-center font-mono placeholder:text-dnd-text-faint"
+              className="flex-1 min-w-0 min-h-[44px] bg-dnd-surface border border-dnd-border rounded-md px-2 py-1 text-sm text-center font-mono placeholder:text-dnd-text-faint focus:border-dnd-gold/60 focus:outline-none"
               aria-label={t('character.inventory.item.modifiers.value')}
             />
             <button
               type="button"
               onClick={() => remove(i)}
-              className="shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center text-dnd-text-muted hover:text-[var(--dnd-crimson-bright)] transition-colors"
+              className="shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center text-dnd-text-muted hover:text-dnd-crimson-bright transition-colors"
               aria-label={t('character.inventory.item.modifiers.remove')}
             >
               <X size={16} />
@@ -120,7 +120,7 @@ export default function AbilityModifiersEditor({
       <button
         type="button"
         onClick={add}
-        className="inline-flex items-center gap-1 text-xs text-dnd-gold-bright hover:text-dnd-gold transition-colors px-2 py-1"
+        className="inline-flex items-center gap-1 min-h-[44px] text-xs text-dnd-gold-bright hover:text-dnd-gold transition-colors px-2 py-1"
       >
         <Plus size={14} />
         {t('character.inventory.item.modifiers.add')}

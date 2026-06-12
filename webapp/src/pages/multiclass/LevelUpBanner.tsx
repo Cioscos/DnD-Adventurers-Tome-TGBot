@@ -33,11 +33,11 @@ export default function LevelUpBanner({
       transition={spring.elastic}
       whileTap={{ scale: 0.97 }}
       aria-label={label}
-      className={`w-full rounded-2xl bg-[rgba(232,165,71,0.18)] border border-[var(--dnd-amber)]
-                  text-[var(--dnd-amber)]
+      className={`w-full rounded-2xl bg-dnd-amber/15 border border-dnd-amber
+                  text-dnd-amber
                   px-4 py-3 text-sm font-cinzel uppercase tracking-wider
                   flex items-center justify-center gap-2 shadow-parchment-md
-                  hover:bg-[rgba(232,165,71,0.28)] hover:text-[color-mix(in_oklab,var(--dnd-amber)_75%,white)]
+                  hover:bg-dnd-amber/25
                   transition ${className}`}
     >
       <Sparkles size={16} className="animate-shimmer" />

@@ -84,7 +84,7 @@ export default function AutoModeBanner({ onGoToSettings }: AutoModeBannerProps) 
             <button
               type="button"
               onClick={onGoToSettings}
-              className="mt-3 inline-flex items-center gap-1 min-h-[44px] px-3 rounded-full bg-dnd-surface border border-dnd-arcane/40 text-dnd-arcane-bright font-cinzel text-[10px] uppercase tracking-widest"
+              className="mt-3 inline-flex items-center gap-1 min-h-[44px] px-3 rounded-lg bg-dnd-surface border border-dnd-arcane/40 text-dnd-arcane-bright font-cinzel text-[10px] uppercase tracking-widest"
             >
               <SettingsIcon size={11} />
               {t('character.slots.go_to_settings')}

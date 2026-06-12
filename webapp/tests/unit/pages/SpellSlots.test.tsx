@@ -172,13 +172,16 @@ describe('SpellSlots page', () => {
     await waitFor(() => expect(addSpy).toHaveBeenCalledWith(9, 2, 1))
   })
 
-  it('removing a slot DELETEs it', async () => {
+  it('removing a slot asks for confirmation, then DELETEs it', async () => {
     getChar.mockResolvedValue(manualChar)
     removeSpy.mockResolvedValue(undefined)
     renderWithProviders(<SpellSlots />)
     await screen.findByText('2/3')
 
-    await userEvent.click(screen.getByLabelText('Remove'))
+    await userEvent.click(screen.getByLabelText('character.slots.remove_level_aria'))
+    // Nessuna DELETE finché l'utente non conferma.
+    expect(removeSpy).not.toHaveBeenCalled()
+    await userEvent.click(screen.getByRole('button', { name: 'common.delete' }))
     await waitFor(() => expect(removeSpy).toHaveBeenCalledWith(9, 100))
   })
 

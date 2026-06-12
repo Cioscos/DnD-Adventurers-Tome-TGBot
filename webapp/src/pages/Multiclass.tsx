@@ -147,9 +147,9 @@ export default function Multiclass() {
                 </div>
                 <m.button
                   onClick={() => setRemoveTarget(cls)}
-                  className="w-11 h-11 rounded-lg text-[var(--dnd-crimson-bright)] flex items-center justify-center hover:bg-dnd-crimson/10 shrink-0"
+                  className="w-11 h-11 rounded-lg text-dnd-crimson-bright flex items-center justify-center hover:bg-dnd-crimson/10 shrink-0"
                   whileTap={{ scale: 0.9 }}
-                  aria-label="Remove"
+                  aria-label={`${t('common.remove')} ${cls.class_name}`}
                 >
                   <X size={16} />
                 </m.button>

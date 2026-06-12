@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { m } from 'framer-motion'
 import {
   GiPerspectiveDiceSixFacesRandom as Dices, GiCrossedSwords as Swords,
   GiCheckedShield as Shield,
@@ -10,6 +9,8 @@ import { api } from '@/api/client'
 import type { Spell, RollDamageRequest, RollDamageResult, CharacterFull } from '@/types'
 import Sheet from '@/components/ui/Sheet'
 import Button from '@/components/ui/Button'
+import Input from '@/components/ui/Input'
+import SwitchToggle from '@/components/ui/SwitchToggle'
 import { haptic } from '@/auth/telegram'
 import { useDiceAnimation } from '@/dice/useDiceAnimation'
 import { useDiceSettings } from '@/store/diceSettings'
@@ -212,41 +213,31 @@ export default function SpellDamageSheet({
             </div>
           )}
 
-          <div>
-            <label className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim">
-              {t('character.spells.roll_damage.extra_dice')}
-            </label>
-            <input
-              type="text"
-              value={extraDice}
-              onChange={(e) => setExtraDice(e.target.value)}
-              placeholder={t('character.spells.roll_damage.extra_dice_placeholder')}
-              className="mt-1 w-full bg-dnd-surface border border-dnd-border rounded-md px-3 py-2 text-sm font-mono"
-            />
-          </div>
+          <Input
+            label={t('character.spells.roll_damage.extra_dice')}
+            value={extraDice}
+            onChange={setExtraDice}
+            placeholder={t('character.spells.roll_damage.extra_dice_placeholder')}
+          />
 
           {isAttack && (
-            <label className="flex items-center gap-2 text-sm cursor-pointer">
-              <input
-                type="checkbox"
-                checked={isCritical}
-                onChange={(e) => setIsCritical(e.target.checked)}
-                className="w-4 h-4"
-              />
-              <span>{t('character.spells.roll_damage.critical')}</span>
-            </label>
+            <SwitchToggle
+              checked={isCritical}
+              onChange={setIsCritical}
+              label={t('character.spells.roll_damage.critical')}
+            />
           )}
 
-          <m.button
-            type="button"
+          <Button
+            variant="primary"
+            fullWidth
+            icon={<Dices size={18} />}
             onClick={handleRoll}
-            disabled={mutation.isPending}
-            whileTap={{ scale: 0.97 }}
-            className="w-full inline-flex items-center justify-center gap-2 bg-gradient-to-r from-dnd-gold-deep to-dnd-gold-bright text-black px-4 py-3 rounded-md font-cinzel font-bold uppercase tracking-widest disabled:opacity-60"
+            loading={mutation.isPending}
+            haptic="medium"
           >
-            <Dices size={18} />
             {t('character.spells.roll_damage.roll_button')}
-          </m.button>
+          </Button>
         </div>
       ) : (
         <div className="space-y-4 p-1">
@@ -264,7 +255,7 @@ export default function SpellDamageSheet({
             {/* «Pieno/Metà» ha senso solo per le spell con TS: per gli attacchi
                 la card è una sola, a tutta larghezza, con label «Danno». */}
             <div className={`bg-dnd-surface border border-dnd-crimson/40 rounded-md p-3 text-center ${isAttack ? 'col-span-2' : ''}`}>
-              <Swords size={16} className="mx-auto text-[var(--dnd-crimson-bright)]" />
+              <Swords size={16} className="mx-auto text-dnd-crimson-bright" />
               <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim mt-1">
                 {isAttack
                   ? t('character.spells.roll_damage.damage')
@@ -276,7 +267,7 @@ export default function SpellDamageSheet({
             </div>
             {!isAttack && (
               <div className="bg-dnd-surface border border-dnd-cobalt/40 rounded-md p-3 text-center">
-                <Shield size={16} className="mx-auto text-[var(--dnd-cobalt-bright)]" />
+                <Shield size={16} className="mx-auto text-dnd-cobalt-bright" />
                 <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim mt-1">
                   {t('character.spells.roll_damage.half_damage')}
                 </p>

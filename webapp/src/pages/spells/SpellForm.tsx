@@ -186,7 +186,7 @@ export default function SpellForm({ initialData, onSubmit, onCancel, isPending }
           value={form.casting_time}
           onChange={(v) => setForm((f) => ({ ...f, casting_time: v }))}
           customLabel={t('common.other')}
-          placeholder="es. 1 ora"
+          placeholder={t('character.spells.casting_time_placeholder')}
         />
 
         <PresetTextField
@@ -195,7 +195,7 @@ export default function SpellForm({ initialData, onSubmit, onCancel, isPending }
           value={form.range_area}
           onChange={(v) => setForm((f) => ({ ...f, range_area: v }))}
           customLabel={t('common.other')}
-          placeholder="es. Cono 4,5 m"
+          placeholder={t('character.spells.range_placeholder')}
         />
 
         <PresetTextField
@@ -208,7 +208,7 @@ export default function SpellForm({ initialData, onSubmit, onCancel, isPending }
             is_concentration: isConcentrationDuration(v) ? true : f.is_concentration,
           }))}
           customLabel={t('common.other')}
-          placeholder="es. Fino a dissoluzione"
+          placeholder={t('character.spells.duration_placeholder')}
         />
 
         {componentsFallback ? (
@@ -263,6 +263,7 @@ export default function SpellForm({ initialData, onSubmit, onCancel, isPending }
             checked={dealsDamage}
             onChange={toggleDealsDamage}
             label={t('character.spells.deals_damage')}
+            aria-label={t('character.spells.deals_damage')}
           />
           {dealsDamage && (
             <>
@@ -294,26 +295,18 @@ export default function SpellForm({ initialData, onSubmit, onCancel, isPending }
         />
 
         <div className="space-y-1.5">
-          <div className="flex gap-4">
-            <label className="flex items-center gap-2 text-sm text-dnd-text font-body cursor-pointer">
-              <input
-                type="checkbox"
-                checked={form.is_concentration}
-                onChange={(e) => setForm((f) => ({ ...f, is_concentration: e.target.checked }))}
-                className="w-5 h-5 accent-dnd-gold"
-              />
-              {t('character.spells.concentration')}
-            </label>
-            <label className="flex items-center gap-2 text-sm text-dnd-text font-body cursor-pointer">
-              <input
-                type="checkbox"
-                checked={form.is_ritual}
-                onChange={(e) => setForm((f) => ({ ...f, is_ritual: e.target.checked }))}
-                className="w-5 h-5 accent-dnd-gold"
-              />
-              {t('character.spells.ritual')}
-            </label>
-          </div>
+          <SwitchToggle
+            checked={form.is_concentration}
+            onChange={(v) => setForm((f) => ({ ...f, is_concentration: v }))}
+            label={t('character.spells.concentration')}
+            aria-label={t('character.spells.concentration')}
+          />
+          <SwitchToggle
+            checked={form.is_ritual}
+            onChange={(v) => setForm((f) => ({ ...f, is_ritual: v }))}
+            label={t('character.spells.ritual')}
+            aria-label={t('character.spells.ritual')}
+          />
           <p className="text-[11px] text-dnd-text-muted font-body italic leading-snug">
             {t('character.spells.concentration_marker_help')}
           </p>

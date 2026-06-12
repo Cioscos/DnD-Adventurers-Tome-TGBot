@@ -1,5 +1,5 @@
-// Form-model helpers for AddClassForm, kept out of the component module so the
-// component file only exports a component (react-refresh/only-export-components).
+// Form-model helpers for the class picker (EditClassesModal), kept out of the
+// component module so it only exports a component (react-refresh/only-export-components).
 
 export const PREDEFINED_CLASSES: Record<string, { hit_die: number; spellcasting_ability: string | null }> = {
   barbarian: { hit_die: 12, spellcasting_ability: null },
@@ -40,8 +40,7 @@ export function resolveClassName(form: ClassForm): string {
   return form.class_key === CUSTOM_KEY ? form.custom_name.trim() : form.class_key
 }
 
-/** Options for the class SelectSheet — shared by AddClassForm and
- *  EditClassesModal so the two pickers always list the same classes. */
+/** Options for the class SelectSheet used by the EditClassesModal picker. */
 export function classOptions(t: (key: string) => string): { value: string; label: string }[] {
   return [
     ...Object.keys(PREDEFINED_CLASSES).map((key) => ({ value: key, label: t(`dnd.classes.${key}`) })),

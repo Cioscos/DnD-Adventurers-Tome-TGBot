@@ -511,7 +511,7 @@ export default function Inventory() {
 
         {char.carry_capacity_override ? (
           <div className="flex items-center justify-between gap-2 mt-1.5">
-            <p className="text-[10px] text-[var(--dnd-crimson-bright)] font-body italic flex-1">
+            <p className="text-[10px] text-dnd-crimson-bright font-body italic flex-1">
               {t('character.inventory.carry_override_hint')}
             </p>
             <Button
@@ -645,35 +645,18 @@ export default function Inventory() {
         />
       )}
 
-      {/* Delete confirmation as Sheet */}
-      <Sheet
+      {/* Delete confirmation — ConfirmSheet condiviso (annulla sx, elimina dx) */}
+      <ConfirmSheet
         open={deleteTarget !== null}
         onClose={() => setDeleteTarget(null)}
-        centered
+        onConfirm={() => deleteTarget !== null && deleteMutation.mutate(deleteTarget)}
         title={t('common.confirm')}
-      >
-        <div className="p-5 space-y-3">
-          <p className="text-sm text-center text-dnd-text font-body">
-            {t('character.select.delete_confirm', {
-              name: items.find((i) => i.id === deleteTarget)?.name ?? '',
-            })}
-          </p>
-          <div className="flex gap-2">
-            <Button
-              variant="danger"
-              fullWidth
-              onClick={() => deleteTarget !== null && deleteMutation.mutate(deleteTarget)}
-              loading={deleteMutation.isPending}
-              haptic="error"
-            >
-              {t('common.delete')}
-            </Button>
-            <Button variant="secondary" fullWidth onClick={() => setDeleteTarget(null)}>
-              {t('common.cancel')}
-            </Button>
-          </div>
-        </div>
-      </Sheet>
+        body={t('character.select.delete_confirm', {
+          name: items.find((i) => i.id === deleteTarget)?.name ?? '',
+        })}
+        confirmLabel={t('common.delete')}
+        loading={deleteMutation.isPending}
+      />
 
       <ConfirmSheet
         open={useTarget !== null}
@@ -740,8 +723,6 @@ export default function Inventory() {
           }
         />
       )}
-
-      <AnimatePresence />
     </Layout>
   )
 }

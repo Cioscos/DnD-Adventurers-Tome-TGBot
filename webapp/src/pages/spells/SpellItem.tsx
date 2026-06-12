@@ -207,7 +207,7 @@ function SpellItemInner({
                 className={`flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg
                             border active:opacity-60 cursor-help
                             ${isConcentrating
-                              ? 'bg-dnd-danger/20 text-[var(--dnd-danger)] border-dnd-danger/30'
+                              ? 'bg-dnd-danger/20 text-dnd-crimson-bright border-dnd-danger/30'
                               : 'bg-dnd-arcane/20 text-dnd-arcane-text border-dnd-arcane/30'
                             }`}
               >
@@ -249,7 +249,7 @@ function SpellItemInner({
                     role="menuitem"
                     onClick={() => { setMenuOpen(false); onRemove() }}
                     className="w-full flex items-center gap-2 px-3 py-2.5 text-sm font-body
-                               text-[var(--dnd-danger)] border-t border-dnd-border
+                               text-dnd-crimson-bright border-t border-dnd-border
                                hover:bg-dnd-danger/10 active:opacity-70 text-left"
                   >
                     <Trash2 size={14} />

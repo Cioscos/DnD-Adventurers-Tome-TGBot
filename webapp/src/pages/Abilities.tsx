@@ -11,6 +11,7 @@ import Sheet from '@/components/ui/Sheet'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import ChipSelect from '@/components/ui/ChipSelect'
+import SwitchToggle from '@/components/ui/SwitchToggle'
 import Surface from '@/components/ui/Surface'
 import ScrollArea from '@/components/ScrollArea'
 import StatPill from '@/components/ui/StatPill'
@@ -19,7 +20,6 @@ import FilterRow from '@/components/ui/FilterRow'
 import EmptyState from '@/components/ui/EmptyState'
 import CustomResourceCounter from '@/components/homebrew/CustomResourceCounter'
 import { haptic } from '@/auth/telegram'
-import { spring } from '@/styles/motion'
 import type { Ability } from '@/types'
 import type { HomebrewResource } from '@/lib/homebrew/types'
 import AbilitiesSkeleton from '@/components/skeletons/AbilitiesSkeleton'
@@ -411,7 +411,7 @@ export default function Abilities() {
                     <m.button
                       onClick={() => usesMutation.mutate({ abilityId: ab.id, uses: Math.max(0, current - 1) })}
                       disabled={current <= 0 || usesMutation.isPending}
-                      className="w-11 h-11 rounded-xl bg-dnd-crimson/15 text-[var(--dnd-crimson-bright)] border border-dnd-crimson/30 flex items-center justify-center disabled:opacity-30"
+                      className="w-11 h-11 rounded-xl bg-dnd-crimson/15 text-dnd-crimson-bright border border-dnd-crimson/30 flex items-center justify-center disabled:opacity-30"
                       whileTap={{ scale: 0.9 }}
                     >
                       <Minus size={16} />
@@ -425,7 +425,7 @@ export default function Abilities() {
                     <m.button
                       onClick={() => usesMutation.mutate({ abilityId: ab.id, uses: Math.min(max, current + 1) })}
                       disabled={current >= max || usesMutation.isPending}
-                      className="w-11 h-11 rounded-xl bg-dnd-emerald/15 text-[var(--dnd-emerald-bright)] border border-dnd-emerald/30 flex items-center justify-center disabled:opacity-30"
+                      className="w-11 h-11 rounded-xl bg-dnd-emerald/15 text-dnd-emerald-bright border border-dnd-emerald/30 flex items-center justify-center disabled:opacity-30"
                       whileTap={{ scale: 0.9 }}
                     >
                       <Plus size={16} />
@@ -682,23 +682,20 @@ export default function Abilities() {
                 placeholder={t('character.abilities.name_placeholder')}
                 autoFocus
               />
-              <m.label
-                className="flex items-center gap-3 p-3 rounded-xl bg-dnd-surface border border-dnd-border cursor-pointer"
-                whileTap={{ scale: 0.98 }}
-                transition={spring.press}
-              >
-                <input
-                  type="checkbox"
+              <div className="p-3 rounded-xl bg-dnd-surface border border-dnd-border">
+                <SwitchToggle
                   checked={form.is_passive}
-                  onChange={(e) => setForm((f) => ({ ...f, is_passive: e.target.checked }))}
-                  className="w-5 h-5 accent-[var(--dnd-gold)]"
+                  onChange={(v) => setForm((f) => ({ ...f, is_passive: v }))}
+                  label={t('character.abilities.passive')}
+                  icon={<Sparkles size={14} />}
+                  aria-label={t('character.abilities.passive')}
                 />
-                <Sparkles size={14} className="text-dnd-gold-bright" />
-                <span className="text-sm font-cinzel uppercase tracking-wider text-dnd-gold-bright">
-                  {t('character.abilities.passive')}
-                </span>
-              </m.label>
+              </div>
+              {/* Annulla a sinistra, avanzamento a destra (convenzione di sistema). */}
               <div className="flex gap-2 pt-2">
+                <Button variant="secondary" fullWidth onClick={closeForm}>
+                  {t('common.cancel')}
+                </Button>
                 <Button
                   variant="primary"
                   fullWidth
@@ -707,9 +704,6 @@ export default function Abilities() {
                   haptic="medium"
                 >
                   {t('common.next', { defaultValue: 'Avanti' })}
-                </Button>
-                <Button variant="secondary" fullWidth onClick={closeForm}>
-                  {t('common.cancel')}
                 </Button>
               </div>
             </>

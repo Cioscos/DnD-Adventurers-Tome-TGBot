@@ -1,6 +1,44 @@
 {
   "entries": [
     {
+      "version": "2.14.6",
+      "date": "2026-06-12",
+      "title": {
+        "it": "Rifinitura di magia, zaino e crescita",
+        "en": "Magic, backpack and growth polish"
+      },
+      "added": {
+        "it": [],
+        "en": []
+      },
+      "improved": {
+        "it": [
+          "Tiro danni degli incantesimi rifinito: bottone, campo dadi extra e interruttore critico ora seguono lo stile di sistema",
+          "Interruttori al posto delle caselle di spunta in tutti i form (incantesimi, oggetti, abilità)",
+          "Colori semantici più coerenti: testi di pericolo più leggibili in penombra, niente viola arcano su azioni non magiche",
+          "Conteggi slot in cifre tabellari nella scelta dello slot; etichette e suggerimenti mancanti ora tradotti"
+        ],
+        "en": [
+          "Spell damage roll polished: button, extra dice field and critical toggle now follow the system style",
+          "Switches replace checkboxes across all forms (spells, items, abilities)",
+          "More consistent semantic colors: danger text easier to read in dim light, no decorative arcane purple on non-magic actions",
+          "Tabular slot counts in the slot picker; missing labels and hints now translated"
+        ]
+      },
+      "fixed": {
+        "it": [
+          "Dimenticare un incantesimo e rimuovere un livello di slot ora chiedono conferma prima di eliminare",
+          "Ordine dei bottoni corretto (conferma a destra) nell'eliminazione oggetto, nella conversione monete e nel wizard delle abilità",
+          "ESC e il tasto indietro chiudono anche i modali di gestione classi e salita di livello (picker annidato incluso)"
+        ],
+        "en": [
+          "Forgetting a spell and removing a slot level now ask for confirmation before deleting",
+          "Button order fixed (confirm on the right) in item deletion, coin conversion and the abilities wizard",
+          "ESC and the back button now also close the class management and level-up modals (nested picker included)"
+        ]
+      }
+    },
+    {
       "version": "2.14.5",
       "date": "2026-06-12",
       "title": {

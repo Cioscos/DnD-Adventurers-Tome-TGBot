@@ -76,6 +76,16 @@ vi.mock('@/components/ui/EmptyState', async () => {
   const React = await import('react')
   return { default: (p: { title?: unknown }) => React.createElement('div', { 'data-testid': 'empty' }, p.title) }
 })
+// ConfirmSheet renders a confirm button only while open (so onConfirm is reachable).
+vi.mock('@/components/ui/ConfirmSheet', async () => {
+  const React = await import('react')
+  return {
+    default: (p: { open?: boolean; onConfirm?: () => void; confirmLabel?: string }) =>
+      p.open
+        ? React.createElement('button', { onClick: p.onConfirm }, p.confirmLabel)
+        : null,
+  }
+})
 vi.mock('@/components/ui/FilterChip', async () => {
   const React = await import('react')
   return { default: (p: { label?: unknown }) => React.createElement('span', null, p.label) }
@@ -244,11 +254,14 @@ describe('Spells page', () => {
     await waitFor(() => expect(concSpy).toHaveBeenCalledWith(9, 102))
   })
 
-  it('removing a spell DELETEs it', async () => {
+  it('removing a spell asks for confirmation, then DELETEs it', async () => {
     getChar.mockResolvedValue(manualChar())
     removeSpy.mockResolvedValue(undefined)
     renderWithProviders(<Spells />)
     await userEvent.click(await screen.findByText('remove-Bless'))
+    // Nessuna DELETE finché l'utente non conferma (audit #9).
+    expect(removeSpy).not.toHaveBeenCalled()
+    await userEvent.click(screen.getByRole('button', { name: 'character.spells.forget' }))
     await waitFor(() => expect(removeSpy).toHaveBeenCalledWith(9, 102))
   })
 

@@ -20,7 +20,10 @@ vi.mock('framer-motion', async () => {
     for (const k in props) if (!MOTION.has(k)) clean[k] = props[k]
     return React.createElement(tag, clean)
   }
-  return { m: new Proxy({}, { get: (_t: object, tag: string | symbol) => make(String(tag)) }) }
+  return {
+    m: new Proxy({}, { get: (_t: object, tag: string | symbol) => make(String(tag)) }),
+    AnimatePresence: (p: { children?: unknown }) => p.children,
+  }
 })
 vi.mock('@/auth/telegram', () => ({ haptic: new Proxy({}, { get: () => () => {} }) }))
 vi.mock('@/dice/useDiceAnimation', () => ({ useDiceAnimation: () => ({ playAndCollect: () => Promise.resolve([]) }) }))

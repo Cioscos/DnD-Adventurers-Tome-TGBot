@@ -11,6 +11,7 @@ import { toast } from 'sonner'
 import { haptic } from '@/auth/telegram'
 import { progressionRows, localizeFeatures } from '@/lib/classProgression'
 import { useRegisterOverlay } from '@/store/overlayStore'
+import { useOverlayDismiss } from '@/hooks/useOverlayDismiss'
 import { fireLevelUpConfetti } from '@/lib/celebrate'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import type { CharacterFull, CharacterClass } from '@/types'
@@ -26,6 +27,7 @@ export default function LevelUpModal({ char, xpLevel, onClose }: LevelUpModalPro
   const qc = useQueryClient()
   const reducedMotion = useReducedMotion()
   useRegisterOverlay(true)
+  useOverlayDismiss(true, onClose)
   const classes = useMemo<CharacterClass[]>(() => char.classes ?? [], [char.classes])
   // For multiclass characters the single-class progression table's proficiency
   // bonus is NOT the character's real PB (which scales with total level), so we
@@ -141,7 +143,7 @@ export default function LevelUpModal({ char, xpLevel, onClose }: LevelUpModalPro
                     {/* Level badge */}
                     <div className="flex-shrink-0 w-14 h-14 rounded-xl bg-gradient-gold flex flex-col items-center justify-center shadow-engrave">
                       <span className="text-[11px] font-cinzel uppercase tracking-wider text-dnd-ink/70 leading-none">
-                        Liv
+                        {t('character.equipment.progression.level_header')}
                       </span>
                       <span className="font-display font-black text-2xl text-dnd-ink leading-none mt-0.5">
                         {targetLevel}
@@ -193,7 +195,7 @@ export default function LevelUpModal({ char, xpLevel, onClose }: LevelUpModalPro
                   >
                     <span className="block">{cls.class_name}</span>
                     <span className="block text-[10px] opacity-70 font-mono mt-0.5">
-                      Liv {cls.level}
+                      {t('character.equipment.progression.level_header')} {cls.level}
                     </span>
                   </button>
                 )

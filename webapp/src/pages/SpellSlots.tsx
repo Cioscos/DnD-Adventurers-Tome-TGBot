@@ -139,6 +139,7 @@ export default function SpellSlots() {
   const qc = useQueryClient()
   const navigate = useNavigate()
   const [confirmResetOpen, setConfirmResetOpen] = useState(false)
+  const [confirmRemoveSlot, setConfirmRemoveSlot] = useState<SpellSlot | null>(null)
 
   const { data: char } = useQuery({
     queryKey: ['character', charId],
@@ -167,7 +168,10 @@ export default function SpellSlots() {
 
   const removeSlot = useMutation({
     mutationFn: (slotId: number) => api.spellSlots.remove(charId, slotId),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['character', charId] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['character', charId] })
+      setConfirmRemoveSlot(null)
+    },
   })
 
   const resetAll = useMutation({
@@ -243,15 +247,15 @@ export default function SpellSlots() {
                   )}
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className={`text-sm font-mono font-bold tabular-nums ${slot.available > 0 ? 'text-[var(--dnd-emerald-bright)]' : 'text-dnd-text-faint'}`}>
+                  <span className={`text-sm font-mono font-bold tabular-nums ${slot.available > 0 ? 'text-dnd-emerald-bright' : 'text-dnd-text-faint'}`}>
                     {slot.available}/{slot.total}
                   </span>
                   {slotsMode !== 'auto' && (
                     <m.button
-                      onClick={() => removeSlot.mutate(slot.id)}
-                      className="w-11 h-11 rounded-lg text-[var(--dnd-crimson-bright)] flex items-center justify-center hover:bg-dnd-crimson/10"
+                      onClick={() => setConfirmRemoveSlot(slot)}
+                      className="w-11 h-11 rounded-lg text-dnd-crimson-bright flex items-center justify-center hover:bg-dnd-crimson/10"
                       whileTap={{ scale: 0.9 }}
-                      aria-label="Remove"
+                      aria-label={t('character.slots.remove_level_aria', { level: slot.level })}
                     >
                       <X size={16} />
                     </m.button>
@@ -299,8 +303,8 @@ export default function SpellSlots() {
                   slotId={slot.id}
                   total={slot.total}
                   label={t('character.slots.total')}
-                  decrementAria={t('character.slots.decrement_total', { defaultValue: '-1' })}
-                  incrementAria={t('character.slots.increment_total', { defaultValue: '+1' })}
+                  decrementAria={t('character.slots.decrement_total')}
+                  incrementAria={t('character.slots.increment_total')}
                   onCommit={(next) => updateTotal.mutate({ slotId: slot.id, total: next })}
                 />
               )}
@@ -345,6 +349,21 @@ export default function SpellSlots() {
         confirmVariant="primary"
         loading={resetAll.isPending}
         onConfirm={() => resetAll.mutate()}
+      />
+
+      {/* Rimozione livello slot: distruttiva (perde totale e utilizzo), sempre confermata. */}
+      <ConfirmSheet
+        open={confirmRemoveSlot !== null}
+        onClose={() => setConfirmRemoveSlot(null)}
+        title={t('character.slots.remove_confirm_title')}
+        body={confirmRemoveSlot
+          ? t('character.slots.remove_confirm_body', { level: confirmRemoveSlot.level })
+          : undefined}
+        confirmLabel={t('common.delete')}
+        loading={removeSlot.isPending}
+        onConfirm={() => {
+          if (confirmRemoveSlot) removeSlot.mutate(confirmRemoveSlot.id)
+        }}
       />
     </Layout>
   )

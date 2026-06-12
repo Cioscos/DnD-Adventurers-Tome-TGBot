@@ -140,13 +140,14 @@ function WeaponPropertyTags({ item }: { item: Item }) {
 /* ---------- Consumable / potion / scroll effect (paragraph callout) ---------- */
 
 function ItemEffectCallout({ item }: { item: Item }) {
+  const { t } = useTranslation()
   const meta = item.item_metadata as Record<string, unknown> | undefined
   if (!meta?.effect) return null
   if (!['consumable', 'potion', 'scroll'].includes(item.item_type)) return null
   return (
     <div className="bg-dnd-highlight/10 border border-dnd-highlight/20 rounded-lg px-2 py-1.5">
       <span className="text-[10px] uppercase tracking-wide text-dnd-highlight-muted block mb-0.5 inline-flex items-center gap-1">
-        <FlaskConical size={11} /> Effetto
+        <FlaskConical size={11} /> {t('character.inventory.effect_label')}
       </span>
       <p className="text-xs text-dnd-highlight-muted leading-relaxed whitespace-pre-wrap">
         {String(meta.effect)}
@@ -333,13 +334,13 @@ function InventoryItemInner({
               <button
                 onClick={() => onQuantityChange(-1)}
                 className="w-11 h-11 rounded-md bg-dnd-surface-raised border border-dnd-border text-dnd-gold font-bold active:opacity-60"
-                aria-label="-"
+                aria-label={t('character.inventory.quantity_decrease')}
               >&minus;</button>
               <span className="w-6 text-center font-mono font-bold text-dnd-gold-bright">{item.quantity}</span>
               <button
                 onClick={() => onQuantityChange(1)}
                 className="w-11 h-11 rounded-md bg-dnd-surface-raised border border-dnd-border text-dnd-gold font-bold active:opacity-60"
-                aria-label="+"
+                aria-label={t('character.inventory.quantity_increase')}
               >+</button>
             </div>
           )}
