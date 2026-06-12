@@ -1,6 +1,34 @@
 {
   "entries": [
     {
+      "version": "2.14.5",
+      "date": "2026-06-12",
+      "title": {
+        "it": "Stabilizzazione fedele alle regole",
+        "en": "Rules-faithful stabilization"
+      },
+      "added": {
+        "it": [],
+        "en": []
+      },
+      "improved": {
+        "it": [],
+        "en": []
+      },
+      "fixed": {
+        "it": [
+          "Stabilizzare un personaggio non lo cura più: resta a 0 PF, privo di sensi ma stabile, come da regole 5e (la scheda mostra il badge dedicato)",
+          "Scendere a 0 PF inizia sempre una nuova condizione di morente: un vecchio stato \"stabilizzato\" non sopravvive alla caduta",
+          "Il danno subìto da stabile a 0 PF riapre i tiri contro morte con conteggio azzerato: i fallimenti precedenti alla stabilizzazione non si sommano più"
+        ],
+        "en": [
+          "Stabilizing a character no longer heals them: they stay at 0 HP, unconscious but stable, per the 5e rules (the sheet shows the dedicated badge)",
+          "Dropping to 0 HP always starts a fresh dying state: a stale \"stabilized\" flag no longer survives the fall",
+          "Damage taken while stable at 0 HP reopens death saves with a reset tracker: failures from before the stabilization no longer add up"
+        ]
+      }
+    },
+    {
       "version": "2.14.4",
       "date": "2026-06-12",
       "title": {

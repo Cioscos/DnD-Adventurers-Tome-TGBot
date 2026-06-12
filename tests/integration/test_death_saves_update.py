@@ -4,8 +4,13 @@ Manual death-state transitions driven from the UI (the dice-roll path lives in
 ``test_death_save_roll.py``):
 
 - ``SUCCESS`` x3 ⇒ stable; ``FAILURE`` x3 ⇒ dead.
-- ``STABILIZE`` marks the character stable and sets them to 1 HP.
+- ``STABILIZE`` marks the character stable; HP stay at 0 (RAW: stabilizing is
+  not healing — the creature remains unconscious until actually healed).
 - ``RESET`` clears the tracker.
+- Damage interplay (RAW): dropping from positive HP to 0 starts a fresh dying
+  state (any stale ``stable`` flag is cleared); damage taken while stable at
+  0 HP makes the creature dying again with a fresh tracker (old failures from
+  before the stabilization do not carry over).
 - Once dead the endpoint is inert (no further mutation); only ``/revive`` brings
   the character back, at 1 HP, with a cleared tracker. ``/revive`` is a no-op on a
   living character.
@@ -43,12 +48,48 @@ async def test_three_failures_kill(client):
     assert body["is_dead"] is True
 
 
-async def test_stabilize_sets_one_hp(client):
+async def test_stabilize_keeps_hp_at_zero(client):
     cid = await _create_character(client)
     await client.patch(f"/characters/{cid}/hp", json={"op": "set_max", "value": 20})
+    await client.patch(f"/characters/{cid}/hp", json={"op": "set_current", "value": 20})
+    # Porta a 0 senza sforamento massiccio (20 esatti: overflow 0 < max 20).
+    await client.patch(f"/characters/{cid}/hp", json={"op": "damage", "value": 20})
     body = await _action(client, cid, "stabilize")
     assert body["death_saves"]["stable"] is True
-    assert body["current_hit_points"] == 1
+    assert body["current_hit_points"] == 0  # RAW: stabilizzare non cura
+    assert body["is_dead"] is False
+
+
+async def test_drop_to_zero_clears_stale_stable(client):
+    """Scendere da HP positivi a 0 inizia sempre una condizione di morente
+    fresca: un flag ``stable`` residuo (es. dato legacy) non deve sopravvivere."""
+    cid = await _create_character(client)
+    await client.patch(f"/characters/{cid}/hp", json={"op": "set_max", "value": 20})
+    await client.patch(f"/characters/{cid}/hp", json={"op": "set_current", "value": 20})
+    # stable=True con HP positivi (le azioni manuali non richiedono 0 HP).
+    for _ in range(3):
+        await _action(client, cid, "success")
+    body = await client.patch(f"/characters/{cid}/hp", json={"op": "damage", "value": 20})
+    ds = body.json()["death_saves"]
+    assert ds == {"successes": 0, "failures": 0, "stable": False}
+
+
+async def test_damage_while_stable_at_zero_restarts_dying_fresh(client):
+    """Danno a una creatura stabile a 0 HP: torna morente con tracker fresco —
+    i fallimenti accumulati prima della stabilizzazione non si sommano."""
+    cid = await _create_character(client)
+    await client.patch(f"/characters/{cid}/hp", json={"op": "set_max", "value": 20})
+    await client.patch(f"/characters/{cid}/hp", json={"op": "set_current", "value": 20})
+    await client.patch(f"/characters/{cid}/hp", json={"op": "damage", "value": 20})
+    await _action(client, cid, "failure")
+    await _action(client, cid, "failure")          # 2 fallimenti, poi stabilizzato
+    await _action(client, cid, "stabilize")
+    r = await client.patch(f"/characters/{cid}/hp", json={"op": "damage", "value": 5})
+    body = r.json()
+    ds = body["death_saves"]
+    assert ds["stable"] is False
+    assert ds["failures"] == 1                     # fresco: NON 3 (= morte)
+    assert body["is_dead"] is False
 
 
 async def test_reset_clears_tracker(client):
