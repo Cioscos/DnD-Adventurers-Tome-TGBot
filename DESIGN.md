@@ -71,6 +71,7 @@ rounded:
   md: "12px"
   lg: "16px"
   xl: "24px"
+  full: "999px"
 spacing:
   xs: "4px"
   sm: "8px"
@@ -141,6 +142,17 @@ components:
     typography: "{typography.label}"
     rounded: "{rounded.sm}"
     padding: "4px 10px"
+  chip-filter:
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.text-muted}"
+    typography: "{typography.label}"
+    rounded: "{rounded.full}"
+    padding: "6px 12px"
+    height: "44px"
+  chip-filter-selected:
+    backgroundColor: "{colors.surface-raised}"
+    textColor: "{colors.gold-bright}"
+    rounded: "{rounded.full}"
   dialog-default:
     backgroundColor: "{colors.surface-raised}"
     textColor: "{colors.text}"
@@ -167,7 +179,7 @@ The system explicitly rejects the SaaS-cream "soft neutral + blue accent + round
 - Halo glows (gold / arcane / danger) signal *required action*, not decoration.
 - Subtle SVG turbulence grain (0.035 opacity in dark, 0.09 in light) — a printed-page texture, not a filter on top.
 - Five named semantic palettes: gold (primary), crimson (danger), emerald (success), arcane (magic), cobalt (info), amber (highlight).
-- Motion uses ease-out parchment curves (`cubic-bezier(0.22, 1, 0.36, 1)`); no bounce, no elastic outside the dice roller.
+- Motion uses ease-out parchment curves (`cubic-bezier(0.22, 1, 0.36, 1)`). One elastic spring (`spring.elastic`, stiffness 240 / damping 10) is reserved for the dice roller and for single-element value pops at the moment a result lands; elastic never moves layout, lists, pages, or modals.
 
 ## 2. Colors: The Illuminated Palette
 
@@ -215,7 +227,7 @@ Light mode is a deliberate alternative palette, not a derivation. Background is 
 
 ### Hierarchy
 
-- **Display** (Cormorant Unicase, 600, `clamp(1.875rem, 6vw, 2.75rem)`, line-height 1.05): page title bars (e.g. character name on the hero screen), result-dialog titles when the moment is large.
+- **Display** (Cormorant Unicase, 600, `clamp(1.875rem, 6vw, 2.75rem)`, line-height 1.05): page title bars (e.g. character name on the hero screen), result-dialog titles when the moment is large, entity names (character cards, combatant rows), and hero numerals — the single illuminated value of a surface (current HP, AC in the shield, an ability score). When it carries a hero numeral the weight rises (`font-bold` / `font-black`) and the size scales to the moment, up to 5rem for current HP.
 - **Headline** (Cinzel, 700, 1.25rem, line-height 1.2): section headers inside a screen, modal titles.
 - **Title** (Cinzel, 600, 1rem, letter-spacing 0.04em): grouped-card titles, list-item headers.
 - **Body** (Fraunces, 400, 0.9375rem, line-height 1.55, ss01+ss02): rule text, descriptions, narrative copy. Cap line length at 65–75ch.
@@ -223,8 +235,9 @@ Light mode is a deliberate alternative palette, not a derivation. Background is 
 - **Mono** (JetBrains Mono, 500, 0.875rem, tabular-nums): dice values, AC, HP numbers in tables, history timestamps.
 
 ### Named Rules
-- **The Inscription Rule.** Cinzel is for inscribed words: page titles, labels, chips, button text, ornamental rules. Use it short — never set a paragraph in Cinzel; never set a label in Fraunces. Long-form text always falls to Fraunces.
-- **The Tabular Numerics Rule.** Any number that compares against another number (HP/maxHP, dice rolls, AC components, money totals) is set in JetBrains Mono with `font-variant-numeric: tabular-nums`. Mixed-font numerics inside a row break the rhythm.
+- **The Inscription Rule.** Cinzel is for inscribed words: section headers, labels, chips, button text, ornamental rules. Use it short — never set a paragraph in Cinzel; never set a label in Fraunces. Long-form text always falls to Fraunces.
+- **The Illuminated Capital Rule.** Cormorant Unicase speaks only for what the manuscript would illuminate: proper names (the character, a combatant, a page title) and the one hero value the eye must land on first (current HP, AC, a coin total). Everything structural — section headers, list labels, buttons, form captions — stays in Cinzel. If a screen sets more than one or two values in Cormorant, it has stopped illuminating and started shouting.
+- **The Tabular Numerics Rule.** Any number that compares against another number (HP/maxHP, dice rolls, AC components, money totals) is set in JetBrains Mono with `font-variant-numeric: tabular-nums`. Mixed-font numerics inside a row break the rhythm. One sanctioned exception: the single hero numeral of a surface is an illuminated capital in Cormorant Unicase (see The Illuminated Capital Rule); its comparative companions stay mono — `38` may be illuminated, `/54` never is.
 - **The No Gradient Text Rule.** Even though the system has a `--gradient-flourish` and an `animate-gold-shimmer` utility, gradient text is reserved for **one** ornamental flourish element per page (the page-header underline glyph). Body text, headings, button labels, numerics — all solid color. The `animate-gold-shimmer` utility outside that one role is forbidden.
 
 ## 4. Elevation
@@ -250,7 +263,7 @@ Halos are a separate vocabulary. They are not for elevation — they are for **r
 
 ### Named Rules
 - **The Warm-Shadow Rule.** Shadows are tinted warm-brown (`rgba(26,16,8,...)`), never neutral gray, never pure black. A neutral-gray drop shadow on a parchment surface looks like a screenshot of a dialog box, not a page lifting off a tome.
-- **The Halo-as-Signal Rule.** Halos are reserved for "this needs your attention". Never decorative, never for hover-only fluff, never on more than one element per screen at a time. If two halos compete, the user can't tell where to look.
+- **The Halo-as-Signal Rule.** Halos carry meaning, never decoration, never hover-only fluff. They speak two dialects. **Attention** ("act here now": 0 HP, concentration active, focus-visible) allows at most one per screen — if two attention halos compete, the user can't tell where to look. **Selection** (the ring on a selected filter pill, gold or arcane by tone) marks "this is shaping what you see" and may repeat across a filter row. A halo that is neither attention nor selection is forbidden.
 
 ## 5. Components
 
@@ -290,11 +303,13 @@ Surfaces come in seven named variants — each is a scene the page wants to evok
 - **Interactive surfaces** scale to `0.98` on press with the press spring (`stiffness 420, damping 28, mass 0.6`). Optional layoutId for shared-element transitions.
 
 ### Chips / Pills
-Chips are small inscribed labels — Cinzel caps text on a tinted surface with a hairline. The default chip is a gold inscription on gold-tinted ground; semantic chips swap the tint and text color but keep the same shape.
+Two species share the Cinzel-caps inscription but differ in shape, and the shape is the signal: a lozenge is a static label, a pill is a tappable toggle.
 
-- **Shape:** `rounded-lg` (8px), padding `4px 10px`.
-- **Style:** `bg-dnd-chip-bg`, `border border-dnd-chip-border`, `text-dnd-gold-bright`, label typography (Cinzel 11px uppercase 0.08em).
-- **Selected state:** background `gold/20`, text `gold-bright`, full gold border. No filled-pill swap.
+- **Inscribed chip** (static label, tag, badge): `rounded-lg` (8px), padding `4px 10px`, `bg-dnd-chip-bg`, `border border-dnd-chip-border`, `text-dnd-gold-bright`, label typography (Cinzel 11px uppercase 0.08em). Never interactive, never haloed. Semantic variants swap tint and text color but keep the lozenge.
+- **Filter pill** (`FilterChip`, interactive filter / toggle): `rounded-full`, min-height 44px (touch target), same label typography, optional leading icon and mono count badge. Three tones: gold (default), arcane (magic filters), neutral.
+  - **Resting:** `bg-dnd-surface`, `border-dnd-border`, muted text.
+  - **Selected:** tinted ground (gold chip tint / arcane mist), strong border (`gold/70` / `arcane/70`), bright text, plus the matching **selection halo** (`shadow-halo-gold` / `shadow-halo-arcane`) — a selection ring, not an attention halo (see The Halo-as-Signal Rule). The neutral tone selects without a halo.
+- The full-round shape is reserved for the filter pill: buttons, inscribed chips, and inputs never go pill.
 
 ### Dialogs / Result Modals
 The signature container of the system. A parchment-gradient panel framed by an accent border (gold by default; swappable to crimson, emerald, arcane, cobalt) and four corner flourishes. Backdrop is the warm overlay (`#2e2410` at 55% / `#0d0a08` at 82%) plus a 6px backdrop blur.
@@ -305,11 +320,11 @@ The signature container of the system. A parchment-gradient panel framed by an a
 - **Tap outside dismisses; ESC dismisses.** Never trap the user.
 
 ### Hero Numbers (signature)
-HP, AC, dice totals, XP — the values the player checks first. Set in mono, large (`clamp` to scale up on tablet), with one of three drop-shadow glows that map to threshold:
+HP, AC, dice totals, XP — the values the player checks first. The hero value itself is an illuminated capital: Cormorant Unicase (`font-display`), heavy (`font-black`), large (up to 5rem for current HP). Its comparative companions stay in JetBrains Mono — the `/max` beside it, the breakdown rows beneath it, the history columns around it. `38` is illuminated; `/54` is not. HP carries one of three drop-shadow glows that map to threshold:
 - `hp-glow-emerald` for healthy (≥75%)
 - `hp-glow-gold` for wounded (25–75%)
 - `hp-glow-crimson` for critical (≤25%)
-The glow itself is signal — hue and intensity together communicate state at a glance from across the table.
+The glow itself is signal — hue and intensity together communicate state at a glance from across the table. On value change the number pops in with `spring.elastic` (scale 0.85 → 1): the one sanctioned elastic gesture outside the dice roller.
 
 ### Ornaments (signature)
 - **Corner flourishes**: 4 SVG sigils on dialog corners, gold-dim, decorative-only.
@@ -322,9 +337,9 @@ The glow itself is signal — hue and intensity together communicate state at a 
 - **Do** ground every neutral in the warm-brown family; tint gray toward `#1a1512` or `#f4e8c1`. Pure neutrals look like screenshots, not pages.
 - **Do** reserve gold (`#d4a847` / `#f0c970`) for primary affordance and ornament — under 10% of any screen.
 - **Do** pair color with icon and label on every semantic state (danger, success, arcane, info, amber). A color-blind user must read the same signal at a glance.
-- **Do** use halos (`halo-gold`, `halo-arcane`, `halo-danger`) only when the user must act now. Never decorative.
+- **Do** use attention halos (`halo-gold`, `halo-arcane`, `halo-danger`) only when the user must act now; selection halos only on selected filter pills. Never decorative.
 - **Do** set inscribed elements (titles, labels, chips, buttons) in Cinzel; set reading copy in Fraunces; set numerics in JetBrains Mono with tabular-nums.
-- **Do** ease motion with the parchment curve `cubic-bezier(0.22, 1, 0.36, 1)`. Springs only for press feedback (`spring.press`) and dialog/swipe entrances (`spring.swipe`).
+- **Do** ease motion with the parchment curve `cubic-bezier(0.22, 1, 0.36, 1)`. Springs for press feedback (`spring.press`), dialog/swipe entrances (`spring.swipe`), state snaps (`spring.snappy`), page drift (`spring.drift`), and value pops (`spring.elastic`, value reveals only).
 - **Do** respect `prefers-reduced-motion`: collapse animations to instant; signal lives in color + icon + copy.
 - **Do** keep tap targets at minimum 40px, 44px for destructive or hard-to-undo actions.
 - **Do** treat the light "aged parchment" mode with the same ornamental and contrast rigor as dark mode. It is not a contrast-flip.
@@ -338,7 +353,7 @@ The glow itself is signal — hue and intensity together communicate state at a 
 - **Don't** use `border-left` or `border-right` greater than 1px as a colored accent on cards, list items, callouts, or alerts. Side-stripe borders are banned.
 - **Don't** use `background-clip: text` on body, headings, or button labels. The one exception is the page-header flourish glyph.
 - **Don't** apply glassmorphism (`backdrop-filter: blur`) decoratively. The only sanctioned use is the dialog backdrop overlay.
-- **Don't** use bouncing or elastic easing outside the dice-roller. No `outBack` for layout transitions.
+- **Don't** use bouncing or elastic easing on layout, lists, pages, or modals. Elastic lives in exactly two places: the dice roller and the single-element pop of a hero number or result value. No `outBack` for layout transitions.
 - **Don't** flash the screen, shake the viewport, or full-bleed-overlay red on damage. Drama lives in typography weight, ink density, and one beat of motion.
 - **Don't** stack two named halos on the same screen. If two things need the user's attention at once, the page is the problem.
 - **Don't** use `#000` or `#fff` anywhere — for any reason. There is always a tinted neighbor that reads better.

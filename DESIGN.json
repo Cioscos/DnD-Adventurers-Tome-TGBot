@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-04-30T00:00:00Z",
+  "generatedAt": "2026-06-12T00:00:00Z",
   "title": "Design System: D&D Adventurer's Tome",
   "extensions": {
     "colorMeta": {
@@ -29,7 +29,7 @@
       "amber": { "role": "tertiary", "displayName": "Candle Amber", "canonical": "#e8a547", "tonalRamp": ["#3a2810", "#5a3e14", "#7a531c", "#a06d28", "#c48835", "#e8a547", "#f0bd6e", "#f7d6a0"] }
     },
     "typographyMeta": {
-      "display": { "displayName": "Display (Cormorant Unicase)", "purpose": "Page title bars and dialog headlines for moments that warrant scale." },
+      "display": { "displayName": "Display (Cormorant Unicase)", "purpose": "Page title bars, dialog headlines, entity names (character cards, combatants) and hero numerals — the single illuminated value of a surface. Weight rises to bold/black on numerals." },
       "headline": { "displayName": "Headline (Cinzel)", "purpose": "Section headers inside a screen, modal titles." },
       "title": { "displayName": "Title (Cinzel)", "purpose": "Grouped-card titles, list-item headers." },
       "body": { "displayName": "Body (Fraunces ss01 ss02)", "purpose": "Rule text, descriptions, narrative copy. Cap line length at 65–75ch." },
@@ -55,7 +55,9 @@
       { "name": "duration-slow", "value": "460ms", "purpose": "Modal exit, page transition." },
       { "name": "spring-press", "value": "stiffness 420, damping 28, mass 0.6", "purpose": "Button press / surface scale-down." },
       { "name": "spring-swipe", "value": "stiffness 260, damping 28", "purpose": "Dialog entrance, card swipe." },
-      { "name": "spring-drift", "value": "stiffness 180, damping 22, mass 0.9", "purpose": "Page transition." }
+      { "name": "spring-drift", "value": "stiffness 180, damping 22, mass 0.9", "purpose": "Page transition." },
+      { "name": "spring-snappy", "value": "stiffness 320, damping 26", "purpose": "State snaps: toggles, ability-card flips." },
+      { "name": "spring-elastic", "value": "stiffness 240, damping 10, mass 1", "purpose": "Dice roller and single-element value pops only (a result number landing). Never layout, lists, pages, or modals." }
     ],
     "breakpoints": [
       { "name": "xs", "value": "375px" },
@@ -117,17 +119,25 @@
       "name": "Inscribed Chip",
       "kind": "chip",
       "refersTo": "chip-default",
-      "description": "Small inscribed label — Cinzel caps on gold-tinted ground with hairline.",
+      "description": "Small inscribed label — Cinzel caps on gold-tinted ground with hairline. Static, never interactive, never haloed.",
       "html": "<span class=\"ds-chip\">Concentrazione</span>",
       "css": ".ds-chip { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 8px; background: rgba(240,201,112,0.08); border: 1px solid rgba(240,201,112,0.18); color: #f0c970; font-family: Cinzel, Georgia, serif; font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }"
+    },
+    {
+      "name": "Filter Pill",
+      "kind": "chip",
+      "refersTo": "chip-filter",
+      "description": "Interactive filter toggle — full-round pill, 44px touch target. Selected state carries tint, strong border and a gold selection halo (a selection ring, not an attention halo). The pill shape is the interactivity signal: static chips stay lozenge.",
+      "html": "<div style=\"display:flex;gap:8px;align-items:center\"><button class=\"ds-pill ds-pill-selected\" aria-pressed=\"true\"><span>Preparati</span><span class=\"ds-pill-count\">7</span></button><button class=\"ds-pill\" aria-pressed=\"false\"><span>Rituali</span></button></div>",
+      "css": ".ds-pill { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 6px 12px; border-radius: 999px; background: #241d18; border: 1px solid #4a3d30; color: #b5a482; font-family: Cinzel, Georgia, serif; font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; transition: color 160ms cubic-bezier(0.22,1,0.36,1), border-color 160ms cubic-bezier(0.22,1,0.36,1); } .ds-pill:hover { color: rgba(240,201,112,0.8); } .ds-pill:active { transform: scale(0.95); } .ds-pill-selected { background: rgba(240,201,112,0.08); border-color: rgba(212,168,71,0.7); color: #f0c970; box-shadow: 0 0 0 2px rgba(212,168,71,0.35), 0 0 18px rgba(240,201,112,0.22); } .ds-pill-count { padding: 0 6px; border-radius: 999px; background: rgba(36,29,24,0.6); font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 0.625rem; font-weight: 500; }"
     },
     {
       "name": "HP Hero Number",
       "kind": "custom",
       "refersTo": "hp-glow-emerald",
-      "description": "Signature numeric — current/max HP set in JetBrains Mono with threshold-mapped drop-shadow glow.",
-      "html": "<div class=\"ds-hp\"><span class=\"ds-hp-label\">HP</span><div class=\"ds-hp-value ds-hp-glow-gold\">38<span class=\"ds-hp-sep\">/</span>54</div></div>",
-      "css": ".ds-hp { display: inline-flex; flex-direction: column; align-items: center; gap: 4px; } .ds-hp-label { font-family: Cinzel, Georgia, serif; font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #8b7335; } .ds-hp-value { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: clamp(2rem, 6vw, 3rem); font-weight: 500; color: #f0c970; font-variant-numeric: tabular-nums; } .ds-hp-sep { color: #857761; margin: 0 4px; } .ds-hp-glow-emerald { filter: drop-shadow(0 0 18px rgba(63, 166, 106, 0.35)); color: #6fd195; } .ds-hp-glow-gold { filter: drop-shadow(0 0 18px rgba(240, 201, 112, 0.50)); color: #f0c970; } .ds-hp-glow-crimson { filter: drop-shadow(0 0 22px rgba(232, 80, 80, 0.60)); color: #e85050; }"
+      "description": "Signature numeric — the hero value as an illuminated capital (Cormorant Unicase, black weight) with threshold-mapped glow; the /max companion stays JetBrains Mono.",
+      "html": "<div class=\"ds-hp\"><span class=\"ds-hp-label\">HP</span><div class=\"ds-hp-row\"><span class=\"ds-hp-value ds-hp-glow-gold\">38</span><span class=\"ds-hp-max\">/54</span></div></div>",
+      "css": ".ds-hp { display: inline-flex; flex-direction: column; align-items: center; gap: 4px; } .ds-hp-label { font-family: Cinzel, Georgia, serif; font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #8b7335; } .ds-hp-row { display: flex; align-items: flex-end; gap: 6px; } .ds-hp-value { font-family: 'Cormorant Unicase', Cinzel, Georgia, serif; font-size: clamp(2.5rem, 8vw, 4rem); font-weight: 900; line-height: 1; color: #f0c970; } .ds-hp-max { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 1.125rem; font-weight: 500; color: #b5a482; font-variant-numeric: tabular-nums; padding-bottom: 6px; } .ds-hp-glow-emerald { filter: drop-shadow(0 0 18px rgba(63, 166, 106, 0.35)); color: #6fd195; } .ds-hp-glow-gold { filter: drop-shadow(0 0 18px rgba(240, 201, 112, 0.50)); color: #f0c970; } .ds-hp-glow-crimson { filter: drop-shadow(0 0 22px rgba(232, 80, 80, 0.60)); color: #e85050; }"
     },
     {
       "name": "Result Dialog",
@@ -148,25 +158,26 @@
       "Halo glows (gold / arcane / danger) signal required action, not decoration.",
       "Subtle SVG turbulence grain (0.035 dark / 0.09 light) — printed-page texture.",
       "Five named semantic palettes: gold (primary), crimson (danger), emerald (success), arcane (magic), cobalt (info), amber (highlight).",
-      "Motion uses ease-out parchment curves; no bounce, no elastic outside the dice roller."
+      "Motion uses ease-out parchment curves. One elastic spring (stiffness 240 / damping 10) is reserved for the dice roller and single-element value pops; elastic never moves layout, lists, pages, or modals."
     ],
     "rules": [
       { "name": "The Gold Leaf Rule", "body": "Gold is the primary affordance and the focus halo. It must not exceed 10% of any rendered screen and must not appear as a decorative gradient on text. If you need to draw the eye somewhere and gold is already used elsewhere on the screen, you have placed the wrong element first — rebuild the hierarchy, do not double-up gold.", "section": "colors" },
       { "name": "The Two Inks Rule", "body": "Surfaces use the warm-brown ink family; ornament uses gold ink. Mixing the two on the same element flattens the manuscript metaphor. Keep them separate.", "section": "colors" },
       { "name": "The Semantic Triad Rule", "body": "Crimson / Emerald / Arcane are reserved for their semantic meanings (damage, healing, magic). Never use them decoratively. If a surface needs visual interest, use surface elevation or ornament — not borrowed semantic color.", "section": "colors" },
-      { "name": "The Inscription Rule", "body": "Cinzel is for inscribed words: page titles, labels, chips, button text, ornamental rules. Use it short — never set a paragraph in Cinzel; never set a label in Fraunces. Long-form text always falls to Fraunces.", "section": "typography" },
-      { "name": "The Tabular Numerics Rule", "body": "Any number that compares against another number is set in JetBrains Mono with font-variant-numeric: tabular-nums. Mixed-font numerics inside a row break the rhythm.", "section": "typography" },
+      { "name": "The Inscription Rule", "body": "Cinzel is for inscribed words: section headers, labels, chips, button text, ornamental rules. Use it short — never set a paragraph in Cinzel; never set a label in Fraunces. Long-form text always falls to Fraunces.", "section": "typography" },
+      { "name": "The Illuminated Capital Rule", "body": "Cormorant Unicase speaks only for what the manuscript would illuminate: proper names (the character, a combatant, a page title) and the one hero value the eye must land on first (current HP, AC, a coin total). Everything structural stays in Cinzel. If a screen sets more than one or two values in Cormorant, it has stopped illuminating and started shouting.", "section": "typography" },
+      { "name": "The Tabular Numerics Rule", "body": "Any number that compares against another number is set in JetBrains Mono with font-variant-numeric: tabular-nums. Mixed-font numerics inside a row break the rhythm. One sanctioned exception: the single hero numeral of a surface is an illuminated capital in Cormorant Unicase; its comparative companions stay mono — 38 may be illuminated, /54 never is.", "section": "typography" },
       { "name": "The No Gradient Text Rule", "body": "Gradient text is reserved for one ornamental flourish element per page. Body text, headings, button labels, numerics — all solid color.", "section": "typography" },
       { "name": "The Warm-Shadow Rule", "body": "Shadows are tinted warm-brown, never neutral gray, never pure black. A neutral-gray drop shadow on parchment looks like a screenshot of a dialog box, not a page lifting off a tome.", "section": "elevation" },
-      { "name": "The Halo-as-Signal Rule", "body": "Halos are reserved for 'this needs your attention'. Never decorative, never for hover-only fluff, never on more than one element per screen at a time.", "section": "elevation" }
+      { "name": "The Halo-as-Signal Rule", "body": "Halos carry meaning, never decoration, never hover-only fluff. Two dialects: attention ('act here now') allows at most one per screen; selection (the ring on a selected filter pill) marks 'this is shaping what you see' and may repeat across a filter row. A halo that is neither attention nor selection is forbidden.", "section": "elevation" }
     ],
     "dos": [
       "Do ground every neutral in the warm-brown family; tint gray toward #1a1512 or #f4e8c1.",
       "Do reserve gold (#d4a847 / #f0c970) for primary affordance and ornament — under 10% of any screen.",
       "Do pair color with icon and label on every semantic state. A color-blind user must read the same signal at a glance.",
-      "Do use halos only when the user must act now. Never decorative.",
-      "Do set inscribed elements in Cinzel; reading copy in Fraunces; numerics in JetBrains Mono with tabular-nums.",
-      "Do ease motion with cubic-bezier(0.22, 1, 0.36, 1). Springs only for press feedback and dialog/swipe entrances.",
+      "Do use attention halos only when the user must act now; selection halos only on selected filter pills. Never decorative.",
+      "Do set inscribed elements in Cinzel; reading copy in Fraunces; comparative numerics in JetBrains Mono with tabular-nums; the single hero numeral in Cormorant Unicase.",
+      "Do ease motion with cubic-bezier(0.22, 1, 0.36, 1). Springs for press feedback, dialog/swipe entrances, state snaps, page drift, and value pops (elastic, value reveals only).",
       "Do respect prefers-reduced-motion: collapse animations to instant; signal lives in color + icon + copy.",
       "Do keep tap targets at minimum 40px, 44px for destructive or hard-to-undo actions.",
       "Do treat the light aged-parchment mode with the same rigor as dark mode."
@@ -180,7 +191,7 @@
       "Don't use border-left or border-right greater than 1px as a colored accent. Side-stripe borders are banned.",
       "Don't use background-clip: text on body, headings, or button labels. The one exception is the page-header flourish glyph.",
       "Don't apply glassmorphism decoratively. The only sanctioned use is the dialog backdrop overlay.",
-      "Don't use bouncing or elastic easing outside the dice-roller.",
+      "Don't use bouncing or elastic easing on layout, lists, pages, or modals. Elastic lives in exactly two places: the dice roller and the single-element pop of a hero number or result value.",
       "Don't flash the screen, shake the viewport, or full-bleed-overlay red on damage.",
       "Don't stack two named halos on the same screen.",
       "Don't use #000 or #fff anywhere — for any reason.",
