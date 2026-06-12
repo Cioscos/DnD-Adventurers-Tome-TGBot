@@ -161,7 +161,7 @@ describe('Multiclass page', () => {
     getChar.mockResolvedValue(char())
     removeSpy.mockResolvedValue(char())
     renderWithProviders(<Multiclass />)
-    await userEvent.click(await screen.findByLabelText('Remove'))
+    await userEvent.click(await screen.findByLabelText(/common\.remove/))
     // ConfirmSheet now open → confirm button (confirmLabel = common.delete).
     await userEvent.click(screen.getByRole('button', { name: 'common.delete' }))
     await waitFor(() => expect(removeSpy).toHaveBeenCalledWith(7, 11))

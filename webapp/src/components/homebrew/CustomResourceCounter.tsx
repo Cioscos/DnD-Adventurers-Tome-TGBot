@@ -74,7 +74,7 @@ export default function CustomResourceCounter({
             onClick={onDecrement}
             disabled={atMin || isPending}
             aria-label={t('character.homebrew.resources.aria_decrement', { name: resource.name })}
-            className="w-11 h-11 rounded-xl bg-dnd-crimson/15 text-[var(--dnd-crimson-bright)]
+            className="w-11 h-11 rounded-xl bg-dnd-crimson/15 text-dnd-crimson-bright
                        border border-dnd-crimson/30 flex items-center justify-center
                        disabled:opacity-30"
             whileTap={{ scale: 0.9 }}
@@ -93,7 +93,7 @@ export default function CustomResourceCounter({
             onClick={onIncrement}
             disabled={atMax || isPending}
             aria-label={t('character.homebrew.resources.aria_increment', { name: resource.name })}
-            className="w-11 h-11 rounded-xl bg-dnd-emerald/15 text-[var(--dnd-emerald-bright)]
+            className="w-11 h-11 rounded-xl bg-dnd-emerald/15 text-dnd-emerald-bright
                        border border-dnd-emerald/30 flex items-center justify-center
                        disabled:opacity-30"
             whileTap={{ scale: 0.9 }}
@@ -108,7 +108,7 @@ export default function CustomResourceCounter({
               type="button"
               onClick={onRestore}
               disabled={isPending}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg
+              className="inline-flex items-center gap-1.5 min-h-[44px] px-3 py-1.5 rounded-lg
                          bg-dnd-gold/10 border border-dnd-gold-dim/40 text-dnd-gold-bright
                          text-[11px] font-cinzel uppercase tracking-wider
                          disabled:opacity-40"

@@ -224,7 +224,7 @@ export default function Experience() {
         )}
 
         <div className="flex items-center justify-center gap-2 mt-3">
-          <Star size={14} className="text-[var(--dnd-amber)]" />
+          <Star size={14} className="text-dnd-amber" />
           <AnimatedNumber
             value={xp}
             locale={localeTag(i18n.language)}

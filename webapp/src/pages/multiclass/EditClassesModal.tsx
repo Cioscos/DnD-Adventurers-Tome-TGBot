@@ -8,12 +8,14 @@ import { api } from '@/api/client'
 import Surface from '@/components/ui/Surface'
 import { CornerFlourishes } from '@/components/ui/Ornament'
 import Button from '@/components/ui/Button'
+import Input from '@/components/ui/Input'
 import { haptic } from '@/auth/telegram'
 import SelectSheet from '@/components/ui/SelectSheet'
 import { PREDEFINED_CLASSES, CUSTOM_KEY, classOptions } from '@/pages/multiclass/addClass.utils'
 import { unmetPrereqGroups, type AbilityKey } from '@/data/multiclassPrereqs'
 import { diffResourceMaxes } from '@/lib/resourceDiff'
 import { useRegisterOverlay } from '@/store/overlayStore'
+import { useOverlayDismiss } from '@/hooks/useOverlayDismiss'
 import type { CharacterFull } from '@/types'
 
 type ExistingEntry = {
@@ -69,6 +71,17 @@ export default function EditClassesModal({ char, targetLevel, onClose }: Props) 
   const [pickerKey, setPickerKey] = useState<string>('')
   const [pickerCustomName, setPickerCustomName] = useState('')
   const [pickerSubclass, setPickerSubclass] = useState('')
+
+  const closePicker = () => {
+    setShowPicker(false)
+    setPickerKey('')
+    setPickerCustomName('')
+    setPickerSubclass('')
+  }
+
+  // ESC/back coerenti: il picker annidato sta in cima allo stack, poi il modale.
+  useOverlayDismiss(true, onClose)
+  useOverlayDismiss(showPicker, closePicker)
 
   const currentSum = useMemo(
     () => entries.reduce((s, e) => s + (Number.isFinite(e.level) ? e.level : 0), 0),
@@ -137,10 +150,7 @@ export default function EditClassesModal({ char, targetLevel, onClose }: Props) 
         level: 1,
       },
     ])
-    setShowPicker(false)
-    setPickerKey('')
-    setPickerCustomName('')
-    setPickerSubclass('')
+    closePicker()
   }
 
   const commit = useMutation({
@@ -234,7 +244,7 @@ export default function EditClassesModal({ char, targetLevel, onClose }: Props) 
             className={`text-center py-3 rounded-xl border transition-colors ${
               isValid
                 ? 'bg-dnd-surface border-dnd-gold text-dnd-gold-bright'
-                : 'bg-dnd-surface border-dnd-crimson/60 text-[var(--dnd-crimson-bright)]'
+                : 'bg-dnd-surface border-dnd-crimson/60 text-dnd-crimson-bright'
             }`}
           >
             <p className="text-[10px] font-cinzel uppercase tracking-[0.3em] opacity-80">
@@ -286,14 +296,14 @@ export default function EditClassesModal({ char, targetLevel, onClose }: Props) 
                   value={Number.isFinite(e.level) ? e.level : ''}
                   onChange={(ev) => setEntryLevel(e.tempId, ev.target.value)}
                   onBlur={() => normalizeEntryLevel(e.tempId)}
-                  className="w-20 min-h-[44px] rounded-lg bg-dnd-surface border border-dnd-border text-dnd-gold-bright font-mono text-center"
-                  aria-label={`${e.className} level`}
+                  className="w-20 min-h-[44px] rounded-lg bg-dnd-surface border border-dnd-border text-dnd-gold-bright font-mono text-center focus:border-dnd-gold/60 focus:outline-none"
+                  aria-label={`${e.className} · ${t('character.multiclass.level')}`}
                 />
                 {e.kind === 'new' && (
                   <button
                     type="button"
                     onClick={() => removeNewEntry(e.tempId)}
-                    className="hit-44 w-9 h-9 rounded-lg text-[var(--dnd-crimson-bright)] flex items-center justify-center hover:bg-dnd-crimson/10"
+                    className="hit-44 w-9 h-9 rounded-lg text-dnd-crimson-bright flex items-center justify-center hover:bg-dnd-crimson/10"
                     aria-label={t('character.multiclass.edit.remove_new')}
                   >
                     <Trash2 size={14} />
@@ -345,12 +355,7 @@ export default function EditClassesModal({ char, targetLevel, onClose }: Props) 
           role="dialog"
           aria-modal="true"
           onClick={(ev) => {
-            if (ev.target === ev.currentTarget) {
-              setShowPicker(false)
-              setPickerKey('')
-              setPickerCustomName('')
-              setPickerSubclass('')
-            }
+            if (ev.target === ev.currentTarget) closePicker()
           }}
         >
           <m.div
@@ -358,7 +363,7 @@ export default function EditClassesModal({ char, targetLevel, onClose }: Props) 
             animate={{ y: 0, opacity: 1 }}
             className="w-full max-w-md max-h-[90vh] overflow-y-auto"
           >
-            <Surface variant="arcane" ornamented className="space-y-5 p-6">
+            <Surface variant="tome" ornamented className="space-y-5 p-6">
               <div className="text-dnd-gold-dim pointer-events-none"><CornerFlourishes /></div>
               <div className="text-center">
                 <h3 className="font-display text-xl font-black text-dnd-gold-bright uppercase tracking-widest">
@@ -377,21 +382,17 @@ export default function EditClassesModal({ char, targetLevel, onClose }: Props) 
                 />
 
                 {pickerKey === CUSTOM_KEY && (
-                  <input
-                    type="text"
+                  <Input
                     value={pickerCustomName}
-                    onChange={(ev) => setPickerCustomName(ev.target.value)}
+                    onChange={setPickerCustomName}
                     placeholder={t('character.multiclass.custom_class_name')}
-                    className="w-full bg-dnd-surface rounded-xl px-3 py-2 min-h-[44px] outline-none"
                   />
                 )}
 
-                <input
-                  type="text"
+                <Input
                   value={pickerSubclass}
-                  onChange={(ev) => setPickerSubclass(ev.target.value)}
+                  onChange={setPickerSubclass}
                   placeholder={t('character.multiclass.subclass')}
-                  className="w-full bg-dnd-surface rounded-xl px-3 py-2 min-h-[44px] outline-none"
                 />
 
                 {pickerUnmet.length > 0 && (
@@ -421,21 +422,16 @@ export default function EditClassesModal({ char, targetLevel, onClose }: Props) 
 
               <div className="pt-4 border-t border-dnd-border/50 grid grid-cols-2 gap-3">
                 <Button
-                  variant="danger"
+                  variant="ghost"
                   size="md"
                   fullWidth
                   icon={<X size={16} />}
-                  onClick={() => {
-                    setShowPicker(false)
-                    setPickerKey('')
-                    setPickerCustomName('')
-                    setPickerSubclass('')
-                  }}
+                  onClick={closePicker}
                 >
                   {t('character.multiclass.edit.cancel')}
                 </Button>
                 <Button
-                  variant="arcane"
+                  variant="primary"
                   size="md"
                   fullWidth
                   disabled={!pickerKey || (pickerKey === CUSTOM_KEY && !pickerCustomName.trim())}
