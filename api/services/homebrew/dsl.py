@@ -55,6 +55,9 @@ class Property(BaseModel):
     default: Any
     label_i18n: dict[str, str]
     value_labels_i18n: Optional[dict[str, dict[str, str]]] = None
+    # #47: optional author-declared semantic tone per enum value (overrides the FE
+    # heuristic in propertyBadge.utils.ts). Keys must be declared values.
+    tone_by_value: Optional[dict[str, Literal["danger", "success", "neutral"]]] = None
 
     @field_validator("key")
     @classmethod
@@ -94,6 +97,22 @@ class Property(BaseModel):
                 missing = {"it", "en"} - set(langs.keys())
                 if missing:
                     raise ValueError(f"value_labels_i18n['{val}'] missing languages: {missing}")
+        return self
+
+    @model_validator(mode="after")
+    def _tone_by_value_consistency(self) -> "Property":
+        # tone_by_value lets a rule author declare the badge tone per enum value,
+        # overriding the FE heuristic. Only valid for enum; keys must be declared
+        # values (tone strings are constrained by the Literal type above). (#47)
+        if self.tone_by_value is not None:
+            if self.type != "enum":
+                raise ValueError("tone_by_value is only valid for type='enum'")
+            allowed = set(self.values or [])
+            for val in self.tone_by_value:
+                if val not in allowed:
+                    raise ValueError(
+                        f"tone_by_value key '{val}' is not in values {sorted(allowed)}"
+                    )
         return self
 
 

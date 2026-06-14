@@ -60,7 +60,8 @@
       "expert_label_one": "esperto",
       "expert_label_other": "esperti",
       "none_m": "Nessuno",
-      "none_f": "Nessuna"
+      "none_f": "Nessuna",
+      "speed_homebrew_label": "Velocità · regola homebrew"
     },
     "quick_actions": {
       "title": "Azioni rapide",
@@ -1402,6 +1403,11 @@
         "boolean": "sì/no",
         "text": "testo"
       },
+      "tone": {
+        "neutral": "Neutro",
+        "danger": "Negativo",
+        "success": "Positivo"
+      },
       "default_label": "Valore di default",
       "values_label": "Valori possibili",
       "delete_confirm": "Eliminare la caratteristica '{{name}}'? Gli oggetti perderanno questa proprietà.",
@@ -1420,7 +1426,9 @@
         "values_helper": "Separa i valori con virgole o a-capo",
         "default_required": "Seleziona un valore di default",
         "values_empty": "Aggiungi almeno un valore",
-        "label_required": "Compila entrambe le etichette"
+        "label_required": "Compila entrambe le etichette",
+        "tone_label": "Tono badge per valore",
+        "tone_helper": "Colore semantico del badge per ogni valore (opzionale)."
       }
     },
     "tables": {

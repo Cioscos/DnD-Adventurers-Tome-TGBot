@@ -55,6 +55,49 @@ def test_property_key_lowercase_snake_case():
         )
 
 
+def test_property_tone_by_value_valid():
+    # #47: an enum property can declare a semantic tone per value (overrides the
+    # FE heuristic). Keys must be declared values; tones are danger/success/neutral.
+    p = Property(
+        key="quality", type="enum",
+        values=["pessima", "ordinaria", "buona"], default="ordinaria",
+        label_i18n={"it": "Qualità", "en": "Quality"},
+        tone_by_value={"pessima": "danger", "buona": "success"},
+    )
+    assert p.tone_by_value == {"pessima": "danger", "buona": "success"}
+
+
+def test_property_tone_by_value_rejects_non_enum():
+    with pytest.raises(ValidationError) as exc:
+        Property(
+            key="count", type="number", default=0,
+            label_i18n={"it": "N", "en": "N"},
+            tone_by_value={"x": "danger"},
+        )
+    assert "tone_by_value" in str(exc.value)
+
+
+def test_property_tone_by_value_key_must_be_in_values():
+    with pytest.raises(ValidationError) as exc:
+        Property(
+            key="quality", type="enum",
+            values=["pessima", "buona"], default="buona",
+            label_i18n={"it": "Q", "en": "Q"},
+            tone_by_value={"straordinaria": "success"},
+        )
+    assert "tone_by_value" in str(exc.value)
+
+
+def test_property_tone_by_value_rejects_unknown_tone():
+    with pytest.raises(ValidationError):
+        Property(
+            key="quality", type="enum",
+            values=["a", "b"], default="a",
+            label_i18n={"it": "Q", "en": "Q"},
+            tone_by_value={"a": "purple"},
+        )
+
+
 def test_action_roll_dice_basic():
     a = ActionRollDice(action="roll_dice", notation="1d20", store_as="wear_roll")
     assert a.notation == "1d20"

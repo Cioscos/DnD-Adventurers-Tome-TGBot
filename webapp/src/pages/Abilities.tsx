@@ -134,8 +134,12 @@ export default function Abilities() {
     mutationFn: ({ resourceId, current }: { resourceId: number; current: number }) =>
       api.homebrew.patchResource(charId, resourceId, current),
     onSuccess: (updated) => {
+      // Strip the transient `homebrew_notifications` queue (already surfaced as a
+      // toast by the global MutationCache) so the cached row matches the list
+      // shape, where that field is always absent (#36).
+      const { homebrew_notifications: _omit, ...row } = updated
       qc.setQueryData<HomebrewResource[]>(['homebrew-resources', charId], (prev) =>
-        (prev ?? []).map((r) => (r.id === updated.id ? updated : r)),
+        (prev ?? []).map((r) => (r.id === row.id ? row : r)),
       )
     },
   })

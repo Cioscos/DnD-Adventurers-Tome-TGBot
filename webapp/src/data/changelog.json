@@ -1,6 +1,40 @@
 {
   "entries": [
     {
+      "version": "2.16.0",
+      "date": "2026-06-14",
+      "title": {
+        "it": "Regole homebrew: tono badge e attribuzioni (6/7)",
+        "en": "Homebrew rules: badge tones & attributions (6/7)"
+      },
+      "added": {
+        "it": [
+          "Editor regole: per le caratteristiche a elenco puoi ora scegliere il colore (tono) del badge per ogni valore — neutro, negativo o positivo — invece di affidarti solo all'euristica automatica",
+          "La velocità modificata da una regola homebrew mostra ora una riga di attribuzione (come già fanno CA, PF, abilità e tiri salvezza), così è chiaro da dove arriva il bonus"
+        ],
+        "en": [
+          "Rule editor: for list properties you can now pick the badge color (tone) for each value — neutral, negative or positive — instead of relying only on the automatic heuristic",
+          "Speed altered by a homebrew rule now shows an attribution row (like AC, HP, abilities and saving throws already do), so it's clear where the bonus comes from"
+        ]
+      },
+      "improved": {
+        "it": [
+          "I contatori numerici delle caratteristiche degli oggetti occupano ora l'intera riga e restano leggibili anche su schermi stretti"
+        ],
+        "en": [
+          "Numeric property counters on items now span the full row and stay legible on narrow screens"
+        ]
+      },
+      "fixed": {
+        "it": [
+          "Template «Arma incantata»: corretta la descrizione — il bonus da fuoco scatta a ogni tiro per colpire che non sia un fumble, non «a ogni colpo a segno»"
+        ],
+        "en": [
+          "«Enchanted weapon» template: fixed the description — the fire bonus triggers on every attack roll that isn't a fumble, not «on every hit»"
+        ]
+      }
+    },
+    {
       "version": "2.15.2",
       "date": "2026-06-14",
       "title": {

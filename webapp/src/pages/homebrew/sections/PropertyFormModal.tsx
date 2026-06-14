@@ -5,6 +5,7 @@ import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
 import FilterChip from '@/components/ui/FilterChip'
 import type { Property, PropertyType } from '@/lib/homebrew/types'
+import type { BadgeTone } from '@/components/homebrew/propertyBadge.utils'
 
 const KEY_REGEX = /^[a-z][a-z0-9_]{0,59}$/
 
@@ -52,6 +53,7 @@ interface DraftState {
   type: PropertyType
   valuesText: string
   defaultValue: unknown
+  toneByValue: Record<string, BadgeTone>
 }
 
 function emptyDraft(): DraftState {
@@ -63,6 +65,7 @@ function emptyDraft(): DraftState {
     type: 'enum',
     valuesText: '',
     defaultValue: '',
+    toneByValue: {},
   }
 }
 
@@ -76,6 +79,7 @@ function draftFromProperty(prop: Property): DraftState {
     type: prop.type,
     valuesText: values.join(', '),
     defaultValue: prop.default,
+    toneByValue: prop.tone_by_value ?? {},
   }
 }
 
@@ -175,6 +179,10 @@ export default function PropertyFormModal({
     if (errors.default) setErrors((e) => ({ ...e, default: undefined }))
   }
 
+  const setTone = (value: string, tone: BadgeTone) => {
+    setDraft((d) => ({ ...d, toneByValue: { ...d.toneByValue, [value]: tone } }))
+  }
+
   const setKeyOverride = (raw: string) => {
     // Sanitize the user input lightly — drop disallowed chars on the fly.
     const cleaned = raw.toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 60)
@@ -229,6 +237,13 @@ export default function PropertyFormModal({
     }
     if (draft.type === 'enum') {
       next.values = parsedValues
+      // Persist only non-neutral tones for values still present (#47).
+      const tones: Record<string, BadgeTone> = {}
+      for (const v of parsedValues) {
+        const tone = draft.toneByValue[v]
+        if (tone && tone !== 'neutral') tones[v] = tone
+      }
+      if (Object.keys(tones).length > 0) next.tone_by_value = tones
     }
     onSave(next)
   }
@@ -348,6 +363,38 @@ export default function PropertyFormModal({
                 </p>
               )}
             </div>
+
+            {/* Per-value badge tone — author-declared override of the heuristic (#47). */}
+            {parsedValues.length > 0 && (
+              <div>
+                <label className="block text-[11px] uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
+                  {t('homebrew.properties.modal.tone_label')}
+                </label>
+                <div className="space-y-1.5">
+                  {parsedValues.map((v) => (
+                    <div
+                      key={v}
+                      className="rounded-lg bg-dnd-surface border border-dnd-border/60 px-2.5 py-2"
+                    >
+                      <div className="text-sm text-dnd-text mb-1.5 truncate">{v}</div>
+                      <div className="flex gap-1.5">
+                        {(['neutral', 'danger', 'success'] as const).map((tone) => (
+                          <FilterChip
+                            key={tone}
+                            label={t(`homebrew.properties.tone.${tone}`)}
+                            selected={(draft.toneByValue[v] ?? 'neutral') === tone}
+                            onToggle={() => setTone(v, tone)}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-1.5 text-[11px] italic text-dnd-text-muted font-body">
+                  {t('homebrew.properties.modal.tone_helper')}
+                </p>
+              </div>
+            )}
           </>
         )}
 

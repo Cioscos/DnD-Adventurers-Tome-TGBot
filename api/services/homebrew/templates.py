@@ -208,7 +208,7 @@ TEMPLATES = [
     {
         "id": "enchanted_weapon",
         "name": "Arma incantata +1d6",
-        "description": "Le armi marcate 'incantate' infliggono +1d6 danni da fuoco aggiuntivi a ogni colpo a segno.",
+        "description": "Le armi marcate 'incantate' infliggono +1d6 danni da fuoco aggiuntivi a ogni tiro per colpire (tranne il fumble).",
         "icon": "⚔️",
         "dsl": _ENCHANTED_WEAPON_DSL,
     },
