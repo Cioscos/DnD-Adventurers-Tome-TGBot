@@ -102,12 +102,29 @@ async def dispatch(
     *,
     depth: int = 0,
     triggered_rule_stack: tuple[int, ...] = (),
+    only_rule_id: int | None = None,
 ) -> list[RuleFiringResult]:
-    """Fire all enabled homebrew rules matching the event for this character.
+    """Fire enabled homebrew rules matching the event for this character.
+
+    When ``only_rule_id`` is given, the dispatch is scoped to that single rule
+    instead of every enabled rule. This is used by the ``manual-trigger/{rule_id}``
+    endpoint so tapping a rule's "activate manually" button fires THAT rule only
+    (#19): a rule without a ``$event.rule_id`` self-filter (e.g. the luck_points
+    template) must not fire — and drain its resource — on an unrelated manual tap.
+    Cascade re-emits (depth > 0) never pass ``only_rule_id``, so chained events
+    still reach every matching rule.
 
     Flushes mutations to the session before returning, but does NOT commit.
     The caller (router) is responsible for `await session.commit()` after
     `dispatch` returns successfully. On exception, the caller should roll back.
+
+    Side effects of dispatch — including auto-disabling a rule whose DSL no longer
+    validates (`rule.enabled = False`) — follow this same best-effort contract (#30):
+    they persist only if the caller commits. On a rollback the disable is lost, which
+    is safe because the invalid rule is re-validated and re-disabled on the next event
+    (idempotent). dispatch deliberately does not commit on its own: it shares the
+    router's session, so an isolated commit would prematurely persist in-flight
+    business mutations the router may still roll back.
     """
     if depth > MAX_DEPTH:
         session.add(CharacterHistory(
@@ -123,12 +140,13 @@ async def dispatch(
     if "classes" in inspect(char).unloaded:
         await session.refresh(char, attribute_names=["classes"])
 
-    rules_res = await session.execute(
-        select(HomebrewRule).where(
-            HomebrewRule.character_id == char.id,
-            HomebrewRule.enabled == True,  # noqa: E712
-        ).order_by(HomebrewRule.id.asc())
+    rules_stmt = select(HomebrewRule).where(
+        HomebrewRule.character_id == char.id,
+        HomebrewRule.enabled == True,  # noqa: E712
     )
+    if only_rule_id is not None:
+        rules_stmt = rules_stmt.where(HomebrewRule.id == only_rule_id)
+    rules_res = await session.execute(rules_stmt.order_by(HomebrewRule.id.asc()))
     rules = list(rules_res.scalars())
 
     engine = RuleEngine()
@@ -150,6 +168,9 @@ async def dispatch(
                 event_type="homebrew",
                 description=f"⚠️ Regola '{rule.name}' disattivata: DSL non valido ({e})",
             ))
+            # Best-effort auto-disable (#30): flushed, not committed — persists only if
+            # the router commits the request. On rollback it is lost, which is safe: the
+            # invalid rule is re-validated and re-disabled on the next event (idempotent).
             rule.enabled = False
             await session.flush()
             continue
@@ -202,6 +223,9 @@ async def dispatch(
                         event_type="homebrew",
                         description=f"⚠️ Regola '{rule.name}' disattivata: DSL non valido ({e})",
                     ))
+                    # Best-effort auto-disable — same contract as the up-front
+                    # validation above (#30): persists only if the router commits;
+                    # idempotent re-disable on the next event otherwise.
                     rule.enabled = False
                     await session.flush()
                     continue

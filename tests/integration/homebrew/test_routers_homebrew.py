@@ -360,6 +360,47 @@ async def test_install_template_without_resources_does_not_create_any(client, ch
     assert resources == []
 
 
+@pytest.mark.asyncio
+async def test_materialized_resource_persists_restoration_type_as_enum_name(
+    client, char_id, test_session_factory,
+):
+    """#15 (verified false positive — regression guard): the raw column stores the
+    enum NAME ('LONG_REST'), consistent with Ability and the engine.py heal-migration.
+
+    The audit claimed _materialize_resources persisted the lowercase VALUE, but on
+    SQLAlchemy 2.0.48 (the pinned version) a *valid* value-string is coerced to its
+    member on write, so the NAME is already stored for all four members — including
+    'manual' -> 'MANUAL', whose old pass-through bug only existed before MANUAL was an
+    enum member. The API/ORM still surface the lowercase value, hence the raw-SQL read.
+    This locks by-NAME storage so a future SQLAlchemy change (or an Enum values_callable)
+    cannot silently regress it to value-storage.
+    """
+    from sqlalchemy import text
+
+    body = _resource_rule_body()
+    body["dsl"]["resources"] = [
+        {"key": "rt_long", "name": "L", "max": 3, "restoration_type": "long_rest"},
+        {"key": "rt_short", "name": "S", "max": 3, "restoration_type": "short_rest"},
+        {"key": "rt_none", "name": "N", "max": 3, "restoration_type": "none"},
+        {"key": "rt_manual", "name": "M", "max": 3, "restoration_type": "manual"},
+    ]
+    r = await client.post(f"/characters/{char_id}/homebrew/rules", json=body)
+    assert r.status_code == 201, r.text
+
+    async with test_session_factory() as session:
+        rows = (await session.execute(text(
+            "SELECT key, restoration_type FROM homebrew_resources "
+            "WHERE character_id = :cid"
+        ), {"cid": char_id})).all()
+    stored = {key: rt for key, rt in rows}
+    assert stored == {
+        "rt_long": "LONG_REST",
+        "rt_short": "SHORT_REST",
+        "rt_none": "NONE",
+        "rt_manual": "MANUAL",
+    }
+
+
 # ─── Homebrew resources: list + PATCH endpoints ──────────────────────────────
 
 
@@ -571,6 +612,63 @@ async def test_damage_character_propagates_was_critical(
 
 
 @pytest.mark.asyncio
+async def test_damage_character_reemits_gross_amount_not_net_of_temp_hp(
+    client, char_id, test_session_factory,
+):
+    """#29: the re-emitted damage_taken.amount must be the GROSS damage dealt,
+    consistent with hp.py (which passes body.value), NOT the residual left after
+    temp-HP absorption. The actual HP lost stays derivable from
+    current_hp_before/after, so no separate key is needed.
+    """
+    from sqlalchemy import select as _select
+
+    from core.db.models import Character, CharacterHistory
+
+    # 5 temp HP, 30/30 real HP.
+    async with test_session_factory() as s:
+        ch = (await s.execute(
+            _select(Character).where(Character.id == char_id)
+        )).scalar_one()
+        ch.temp_hp = 5
+        ch.current_hit_points = 30
+        ch.hit_points = 30
+        await s.commit()
+
+    # Dealer: deal 8 on manual_trigger → 5 absorbed by temp HP, 3 to real HP.
+    dealer = {
+        "name": "Dealer", "description": "deals 8", "enabled": True,
+        "dsl": {"version": 1, "subject": {"type": "character"},
+                "triggers": [{"event": "manual_trigger", "filters": [],
+                              "effects": [{"action": "damage_character", "amount": 8}]}]},
+    }
+    rsp = await client.post(f"/characters/{char_id}/homebrew/rules", json=dealer)
+    assert rsp.status_code == 201, rsp.text
+    dealer_id = rsp.json()["id"]
+
+    # Listener records the amount it observed on the re-emitted damage_taken.
+    listener = {
+        "name": "Listener", "description": "records amount", "enabled": True,
+        "dsl": {"version": 1, "subject": {"type": "character"},
+                "triggers": [{"event": "damage_taken", "filters": [],
+                              "effects": [{"action": "add_history",
+                                           "description": "DT-AMOUNT=$event.amount"}]}]},
+    }
+    assert (
+        await client.post(f"/characters/{char_id}/homebrew/rules", json=listener)
+    ).status_code == 201
+
+    r = await client.post(f"/characters/{char_id}/homebrew/manual-trigger/{dealer_id}")
+    assert r.status_code == 200, r.text
+
+    async with test_session_factory() as s:
+        descs = (await s.execute(_select(CharacterHistory.description).where(
+            CharacterHistory.character_id == char_id))).scalars().all()
+    joined = "\n".join(d or "" for d in descs)
+    # Gross damage (8), NOT the residual 3 left after the 5 temp HP were absorbed.
+    assert "DT-AMOUNT=8" in joined
+
+
+@pytest.mark.asyncio
 async def test_patch_resource_already_at_zero_does_not_fire_events(client, char_id):
     # Create rule with max=0 → current=0; PATCH to 0 is a no-op (no events).
     await client.post(
@@ -682,6 +780,86 @@ async def test_patch_resource_wrong_owner_via_url_returns_403(client, test_sessi
     assert r.status_code == 403
 
 
+# ─── Homebrew resources: DELETE (orphan cleanup, #31) ────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_delete_resource_returns_204_and_removes_it(client, char_id):
+    """#31: DELETE removes a resource so the player can clean up orphans left by a
+    DSL edit (materialization is additive and never removes rows)."""
+    await client.post(f"/characters/{char_id}/homebrew/rules", json=_resource_rule_body())
+    res_id = (await client.get(f"/characters/{char_id}/homebrew/resources")).json()[0]["id"]
+    r = await client.delete(f"/characters/{char_id}/homebrew/resources/{res_id}")
+    assert r.status_code == 204
+    assert (await client.get(f"/characters/{char_id}/homebrew/resources")).json() == []
+
+
+@pytest.mark.asyncio
+async def test_delete_resource_frees_unique_key_for_another_rule(client, char_id):
+    """#31: deleting an orphan resource frees the UNIQUE(character_id, key) slot so a
+    different rule can (re)use that key without the 409 collision."""
+    a = await client.post(f"/characters/{char_id}/homebrew/rules", json=_resource_rule_body(name="A"))
+    assert a.status_code == 201
+    res_id = (await client.get(f"/characters/{char_id}/homebrew/resources")).json()[0]["id"]
+    d = await client.delete(f"/characters/{char_id}/homebrew/resources/{res_id}")
+    assert d.status_code == 204
+    # Same key, different rule — no longer collides now that the orphan is gone.
+    b = await client.post(f"/characters/{char_id}/homebrew/rules", json=_resource_rule_body(name="B"))
+    assert b.status_code == 201
+
+
+@pytest.mark.asyncio
+async def test_delete_resource_unknown_id_returns_404(client, char_id):
+    r = await client.delete(f"/characters/{char_id}/homebrew/resources/99999")
+    assert r.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_delete_resource_other_user_resource_returns_404(client, test_session_factory, char_id):
+    """A resource id that exists but belongs to another character must be unreachable
+    from our character's URL → 404 (mirrors the PATCH ownership guard)."""
+    from core.db.models import Character, HomebrewResource, HomebrewRule
+    async with test_session_factory() as s:
+        other = Character(user_id=9999, name="Other")
+        s.add(other)
+        await s.commit()
+        await s.refresh(other)
+        rule = HomebrewRule(
+            character_id=other.id, name="x", description=None, enabled=True,
+            dsl={"version": 1, "subject": {"type": "character"},
+                 "triggers": [{"event": "manual_trigger", "filters": [], "effects": []}]},
+            version=1, template_id=None,
+            created_at="2026-01-01T00:00:00", updated_at="2026-01-01T00:00:00",
+        )
+        s.add(rule)
+        await s.commit()
+        await s.refresh(rule)
+        res = HomebrewResource(
+            rule_id=rule.id, character_id=other.id, key="luck_points",
+            name="Luck", current=3, max=3, restoration_type="long_rest",
+        )
+        s.add(res)
+        await s.commit()
+        await s.refresh(res)
+        other_resource_id = res.id
+    r = await client.delete(f"/characters/{char_id}/homebrew/resources/{other_resource_id}")
+    assert r.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_delete_resource_wrong_owner_via_url_returns_403(client, test_session_factory):
+    """DELETE where the URL's char_id is owned by another user must 403 at the char gate."""
+    from core.db.models import Character
+    async with test_session_factory() as s:
+        other = Character(user_id=9999, name="Other")
+        s.add(other)
+        await s.commit()
+        await s.refresh(other)
+        other_id = other.id
+    r = await client.delete(f"/characters/{other_id}/homebrew/resources/1")
+    assert r.status_code == 403
+
+
 # ─── Manual endpoints: turn-start + manual-trigger ───────────────────────────
 
 
@@ -756,6 +934,59 @@ async def test_manual_trigger_fires_event(client, char_id):
     assert r2.status_code == 200
     notes = r2.json()["notifications"]
     assert any(n["message"] == "Manual fired" for n in notes)
+
+
+@pytest.mark.asyncio
+async def test_manual_trigger_only_fires_targeted_rule(client, char_id):
+    """#19: POST /manual-trigger/{rule_id} must fire ONLY the targeted rule, not
+    every enabled rule with a manual_trigger. A luck-style rule that drains a
+    resource and has no $event.rule_id self-filter must NOT be spent when the user
+    taps a *different* manual rule (the luck_points template omits that filter).
+    """
+    # Vulnerable rule: drains `luck` on manual_trigger, NO self-filter.
+    luck = {
+        "name": "Luck", "description": "drains luck", "enabled": True,
+        "dsl": {
+            "version": 1,
+            "subject": {"type": "character"},
+            "resources": [{"key": "luck", "name": "Luck", "max": 3,
+                           "restoration_type": "long_rest"}],
+            "triggers": [{
+                "event": "manual_trigger", "filters": [],
+                "effects": [{"action": "change_resource", "key": "luck", "delta": -1}],
+            }],
+        },
+    }
+    assert (
+        await client.post(f"/characters/{char_id}/homebrew/rules", json=luck)
+    ).status_code == 201
+
+    # A different manual rule — the one the user actually taps.
+    other = {
+        "name": "Other", "description": "unrelated manual rule", "enabled": True,
+        "dsl": {
+            "version": 1,
+            "subject": {"type": "character"},
+            "triggers": [{
+                "event": "manual_trigger", "filters": [],
+                "effects": [{"action": "notify", "severity": "info", "message": "Other fired"}],
+            }],
+        },
+    }
+    r_other = await client.post(f"/characters/{char_id}/homebrew/rules", json=other)
+    assert r_other.status_code == 201
+    other_id = r_other.json()["id"]
+
+    # Tap the OTHER rule's manual trigger.
+    r = await client.post(f"/characters/{char_id}/homebrew/manual-trigger/{other_id}")
+    assert r.status_code == 200, r.text
+
+    # The targeted rule fired …
+    assert any(n["rule_id"] == other_id for n in r.json()["notifications"])
+    # … but the luck resource was NOT drained (only the targeted rule should fire).
+    resources = (await client.get(f"/characters/{char_id}/homebrew/resources")).json()
+    luck_res = next(x for x in resources if x["key"] == "luck")
+    assert luck_res["current"] == 3
 
 
 @pytest.mark.asyncio

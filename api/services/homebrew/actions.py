@@ -271,6 +271,12 @@ async def execute_damage_character(action, ctx, rfr, session, char, **kw):
     # cascade rules filtering on $event.was_critical_hit / from_critical fire (#6).
     was_critical = bool(action.get("was_critical"))
 
+    # event.amount for the re-emitted damage_taken / dropped_to_zero is the GROSS
+    # damage dealt — consistent with hp.py:update_hp, which passes body.value (#29).
+    # Temp HP is absorbed first for the HP math, but the events keep the gross value;
+    # the actual HP lost stays derivable from current_hp_before/after.
+    gross = amount
+
     # Absorb temp HP first (mirror hp.py:update_hp semantics)
     if char.temp_hp > 0:
         absorbed = min(char.temp_hp, amount)
@@ -289,7 +295,7 @@ async def execute_damage_character(action, ctx, rfr, session, char, **kw):
     stack = base_stack + (rfr.rule_id,) if rfr.rule_id else base_stack
     await dispatch(
         session, char, "damage_taken",
-        {"amount": amount, "was_critical_hit": was_critical,
+        {"amount": gross, "was_critical_hit": was_critical,
          "current_hp_before": before,
          "current_hp_after": char.current_hit_points},
         depth=depth, triggered_rule_stack=stack,
@@ -297,7 +303,7 @@ async def execute_damage_character(action, ctx, rfr, session, char, **kw):
     if before > 0 and char.current_hit_points == 0:
         await dispatch(
             session, char, "dropped_to_zero",
-            {"damage_amount": amount, "from_critical": was_critical},
+            {"damage_amount": gross, "from_critical": was_critical},
             depth=depth, triggered_rule_stack=stack,
         )
 
