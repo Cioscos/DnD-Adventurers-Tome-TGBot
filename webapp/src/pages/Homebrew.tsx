@@ -253,9 +253,9 @@ export default function Homebrew() {
   // Manual trigger — same `{notifications: [...]}` shape as turn-start, so the
   // global MutationCache handler (keyed on `homebrew_notifications`) skips it.
   // We surface notifications by hand; empty list → neutral info toast so the
-  // tap is always acknowledged. The Phase 3 dispatcher fires ALL enabled rules
-  // with a `manual_trigger`, not just the one whose card was tapped — the
-  // response's `rule_id` is informative only.
+  // tap is always acknowledged. The dispatcher fires ONLY the tapped rule
+  // (scoped by `rule_id` on the backend, #19), so unrelated rules that also
+  // listen on `manual_trigger` are not triggered.
   const manualTriggerMut = useMutation({
     mutationFn: (ruleId: number) => api.homebrew.manualTrigger(charId, ruleId),
     onSuccess: (resp) => {

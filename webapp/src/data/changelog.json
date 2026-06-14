@@ -1,6 +1,32 @@
 {
   "entries": [
     {
+      "version": "2.15.2",
+      "date": "2026-06-14",
+      "title": {
+        "it": "Regole homebrew più coerenti (5/7)",
+        "en": "More consistent homebrew rules (5/7)"
+      },
+      "added": {
+        "it": [],
+        "en": []
+      },
+      "improved": {
+        "it": [],
+        "en": []
+      },
+      "fixed": {
+        "it": [
+          "Attivazione manuale: tocca una regola e scatta solo quella. Prima, se avevi più regole ad attivazione manuale (es. Punti Fortuna), attivarne una poteva consumare per sbaglio anche le altre",
+          "Regole che reagiscono ai danni subiti: ora ricevono sempre il danno pieno inflitto, anche quando una parte è assorbita dai PF temporanei (prima vedevano solo la parte residua)"
+        ],
+        "en": [
+          "Manual activation: tapping a rule now triggers only that rule. Before, if you had several manually-activated rules (e.g. Luck Points), activating one could accidentally spend the others too",
+          "Rules that react to damage taken now always receive the full damage dealt, even when part of it is absorbed by temporary HP (they used to see only the leftover amount)"
+        ]
+      }
+    },
+    {
       "version": "2.15.1",
       "date": "2026-06-14",
       "title": {

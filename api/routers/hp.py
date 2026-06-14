@@ -183,7 +183,10 @@ async def update_hp(
         ):
             conc_result = roll_concentration_save(char, body.value, session)
 
-        # Emit homebrew events: damage_taken (always) + dropped_to_zero (when HP crossed 0)
+        # Emit homebrew events: damage_taken (always) + dropped_to_zero (when HP crossed 0).
+        # event.amount is the GROSS damage requested (body.value, before temp-HP
+        # absorption); the actual HP lost is current_hp_before - current_hp_after. This
+        # is the canonical semantics — actions.execute_damage_character matches it (#29).
         firing = await dispatch(
             session, char, "damage_taken",
             {

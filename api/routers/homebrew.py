@@ -492,6 +492,38 @@ async def patch_resource(
     return result
 
 
+@router.delete(
+    "/characters/{char_id}/homebrew/resources/{resource_id}",
+    status_code=204,
+)
+async def delete_resource(
+    char_id: int, resource_id: int,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> None:
+    """Delete a homebrew resource — manual orphan cleanup (#31).
+
+    Resource materialization is additive: editing a rule's DSL never removes a
+    resource row, so a key that is no longer referenced lingers and keeps holding
+    the UNIQUE(character_id, key) slot, blocking another rule from using that key.
+    This endpoint lets the owner remove such an orphan explicitly.
+
+    Returns 404 if the resource doesn't exist or belongs to another character,
+    403 if the URL's character is owned by another user.
+    """
+    char = await _get_owned_char(char_id, user_id, session)
+    res = await session.execute(
+        select(HomebrewResource).where(
+            HomebrewResource.id == resource_id,
+            HomebrewResource.character_id == char.id,
+        )
+    )
+    resource = res.scalar_one_or_none()
+    if resource is None:
+        raise HTTPException(404, "Resource not found")
+    await session.delete(resource)
+
+
 # ─── Manual trigger endpoints ───────────────────────────────────────────────
 
 
@@ -523,12 +555,14 @@ async def manual_trigger(
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
 ) -> dict:
-    """Fire the `manual_trigger` event for the character.
+    """Fire the `manual_trigger` event for the targeted rule only.
 
-    The dispatcher fires ALL enabled rules with a `manual_trigger` trigger.
-    The provided `rule_id` is passed in the event payload so a rule's DSL
-    can scope itself with a filter like
-    ``{"path": "$event.rule_id", "op": "eq", "value": <literal_id>}``.
+    The dispatch is scoped to `rule_id` (``only_rule_id``): tapping a rule's
+    "activate manually" button fires THAT rule only, never every enabled rule
+    that also listens on `manual_trigger` (#19 — e.g. a luck_points rule without
+    a `$event.rule_id` self-filter must not be drained by an unrelated manual tap).
+    `rule_id` is still passed in the payload, so existing rules that self-filter
+    on ``$event.rule_id`` keep working unchanged.
 
     Returns 404 if the rule is missing, 403 if it belongs to another user,
     409 if the rule is disabled.
@@ -537,5 +571,7 @@ async def manual_trigger(
     rule = await _get_owned_rule(char_id, rule_id, user_id, session)
     if not rule.enabled:
         raise HTTPException(409, "Rule is disabled")
-    firing = await dispatch(session, char, "manual_trigger", {"rule_id": rule_id})
+    firing = await dispatch(
+        session, char, "manual_trigger", {"rule_id": rule_id}, only_rule_id=rule_id,
+    )
     return {"notifications": collect_homebrew_notifications(firing)}
