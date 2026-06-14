@@ -1,6 +1,34 @@
 {
   "entries": [
     {
+      "version": "2.14.10",
+      "date": "2026-06-14",
+      "title": {
+        "it": "Regole homebrew più solide (1/7)",
+        "en": "Sturdier homebrew rules (1/7)"
+      },
+      "added": {
+        "it": [],
+        "en": []
+      },
+      "improved": {
+        "it": [],
+        "en": []
+      },
+      "fixed": {
+        "it": [
+          "Qualità & Usura: un colpo a vuoto a mani nude (1 naturale) non rovina più tutte le armi e armature possedute — l'usura colpisce solo l'oggetto davvero coinvolto",
+          "Risorse personalizzate: quando una regola consuma una risorsa fino a esaurirla, le regole collegate agli eventi «risorsa cambiata» e «risorsa esaurita» ora scattano davvero (prima reagivano solo alle modifiche manuali)",
+          "Modificatore permanente: ora è agganciabile solo all'evento «salita di livello», dove ha senso il «+X per livello»; su eventi ripetibili sommava il bonus a ogni attivazione gonfiando PF o velocità"
+        ],
+        "en": [
+          "Quality & Wear: a missed unarmed strike (natural 1) no longer wears down every weapon and armor you own — wear only affects the item actually involved",
+          "Custom resources: when a rule drains a resource to empty, rules bound to the «resource changed» and «resource depleted» events now actually fire (previously only manual edits triggered them)",
+          "Permanent modifier: it can now only be attached to the «level up» event, where «+X per level» makes sense; on repeatable events it stacked the bonus on every trigger, inflating HP or speed"
+        ]
+      }
+    },
+    {
       "version": "2.14.9",
       "date": "2026-06-12",
       "title": {

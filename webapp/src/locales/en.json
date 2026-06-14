@@ -1539,6 +1539,7 @@
         "params_json_invalid": "Invalid JSON",
         "modifier_target": "What it modifies (target)",
         "modifier_target_invalid": "Invalid target (e.g. character.ac)",
+        "modifier_event_invalid": "Permanent modifier: it applies on EVERY firing, so it's only allowed on a level-up trigger.",
         "modifier_label": "Visible label",
         "required": "Required field",
         "amount_invalid": "Enter a number, dice notation or $variable",

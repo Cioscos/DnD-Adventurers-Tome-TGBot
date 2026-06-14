@@ -338,25 +338,62 @@ async def _load_resource(session: AsyncSession, char_id: int, key: str) -> Homeb
     return obj
 
 
+async def _reemit_resource_events(session, char, resource, before, after, rfr, **kw):
+    """Re-emit resource_changed / resource_depleted after a rule-driven mutation.
+
+    Mirrors the manual PATCH endpoint (api/routers/homebrew.py:patch_resource) so
+    that cascade rules bound to these events fire for engine-driven changes
+    (change_resource / restore_resource), not only for manual UI edits. Depth and
+    the triggered-rule stack are threaded exactly like execute_damage_character so
+    the MAX_DEPTH / triggered_rule_stack anti-recursion guards stay effective.
+
+    Payload `rule_id` carries the resource OWNER's rule id (matching the manual
+    endpoint, so manual_trigger-style self-scoping still works), while the
+    anti-recursion stack is threaded with the CURRENTLY executing rule (rfr).
+    """
+    if before == after:
+        return
+    from api.services.homebrew.dispatcher import dispatch
+    depth = kw.get("_depth", 0) + 1
+    base_stack = kw.get("_stack", ())
+    stack = base_stack + (rfr.rule_id,) if rfr.rule_id else base_stack
+    await dispatch(
+        session, char, "resource_changed",
+        {"key": resource.key, "before": before, "after": after,
+         "rule_id": resource.rule_id},
+        depth=depth, triggered_rule_stack=stack,
+    )
+    if before > 0 and after == 0:
+        await dispatch(
+            session, char, "resource_depleted",
+            {"key": resource.key, "rule_id": resource.rule_id},
+            depth=depth, triggered_rule_stack=stack,
+        )
+
+
 async def execute_change_resource(action, ctx, rfr, session, char, **kw):
     delta = _resolve_amount(action["delta"], ctx, field="change_resource.delta")
     resource = await _load_resource(session, char.id, action["key"])
-    new = resource.current + delta
-    new = max(0, min(resource.max, new))
+    before = resource.current
+    new = max(0, min(resource.max, resource.current + delta))
     resource.current = new
     await session.flush()
+    await _reemit_resource_events(session, char, resource, before, new, rfr, **kw)
 
 
 async def execute_restore_resource(action, ctx, rfr, session, char, **kw):
     amount = action["amount"]
     resource = await _load_resource(session, char.id, action["key"])
+    before = resource.current
     if amount == "max":
         resource.current = resource.max
-        await session.flush()
-        return
-    amount = _resolve_amount(amount, ctx, field="restore_resource.amount")
-    resource.current = min(resource.max, resource.current + amount)
+    else:
+        amount = _resolve_amount(amount, ctx, field="restore_resource.amount")
+        resource.current = min(resource.max, resource.current + amount)
     await session.flush()
+    await _reemit_resource_events(
+        session, char, resource, before, resource.current, rfr, **kw
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -384,7 +421,16 @@ async def execute_remove_condition(action, ctx, rfr, session, char, **kw):
 
 
 # ---------------------------------------------------------------------------
-# Retroactive permanent modifiers (Task 1.10)
+# Permanent per-firing modifiers (Task 1.10)
+#
+# NOTA (decisione D1): apply_modifier_once NON è idempotente. Il delta viene
+# applicato a OGNI innesco del trigger — è il comportamento voluto per il
+# pattern canonico "+N HP / +N velocità per livello" su `level_up` (un firing
+# per ogni salita di livello). Per questo l'editor consente di agganciare
+# questa azione SOLO a eventi a transizione singola (es. level_up) e non a
+# eventi liberamente ri-attivabili dall'utente (turn_started, manual_trigger).
+# Limite noto e documentato: un PATCH di livello su→giù→su ri-applica il delta
+# per il livello riattraversato.
 # ---------------------------------------------------------------------------
 
 
@@ -406,6 +452,14 @@ def _eval_delta(delta, char) -> int:
 
 
 async def execute_apply_modifier_once(action, ctx, rfr, session, char, **kw):
+    """Apply a permanent delta to a stored character field on EVERY firing.
+
+    NOT idempotent (see the section note above): each firing adds `delta`. Bind
+    only to single-transition events such as `level_up`. Supported targets are
+    `character.hit_points_max` and `character.speed` (both stored fields). For
+    AC / skills / saving throws use passive_modifiers instead (computed, with an
+    attributed breakdown row).
+    """
     target = action["target"]
     delta = _eval_delta(action["delta"], char)
     label = action["label"]

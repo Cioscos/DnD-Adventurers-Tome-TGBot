@@ -85,6 +85,7 @@ _QUALITY_WEAR_DSL = {
          "filters": [
              {"path": "$event.is_fumble", "op": "eq", "value": True},
              {"path": "$subject", "op": "has_property", "value": "quality"},
+             {"path": "$subject.is_equipped", "op": "eq", "value": True},
          ],
          "effects": _wear_effects()},
         {"event": "damage_taken",

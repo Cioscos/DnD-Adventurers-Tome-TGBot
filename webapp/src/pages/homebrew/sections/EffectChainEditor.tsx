@@ -5,9 +5,9 @@ import Button from '@/components/ui/Button'
 import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import Sheet from '@/components/ui/Sheet'
 import { actionLabel, type Locale } from '@/lib/homebrew/i18n-dsl'
-import type { Effect, EffectAction, Table } from '@/lib/homebrew/types'
+import type { Effect, EffectAction, EventType, Table } from '@/lib/homebrew/types'
 import EffectFormModal from './EffectFormModal'
-import { defaultEffect } from './effectForm.utils'
+import { defaultEffect, isActionAllowedForEvent } from './effectForm.utils'
 
 const ACTION_TYPES: readonly EffectAction[] = [
   'roll_dice',
@@ -34,6 +34,12 @@ export interface EffectChainEditorProps {
   onChange: (effects: Effect[]) => void
   /** Visual indent depth for nested if/match branches. 0 by default. */
   depth?: number
+  /**
+   * Event of the parent trigger, propagated down through nested branches so the
+   * action picker and validation can restrict event-bound actions such as
+   * apply_modifier_once (see ACTION_EVENT_ALLOWLIST). Undefined = unrestricted.
+   */
+  triggerEvent?: EventType
 }
 
 /**
@@ -49,6 +55,7 @@ export default function EffectChainEditor({
   tables,
   onChange,
   depth = 0,
+  triggerEvent,
 }: EffectChainEditorProps) {
   const { t, i18n } = useTranslation()
   const locale: Locale = i18n.language?.startsWith('en') ? 'en' : 'it'
@@ -144,6 +151,7 @@ export default function EffectChainEditor({
                   effect={effect}
                   tables={tables}
                   depth={depth + 1}
+                  triggerEvent={triggerEvent}
                   onChange={(patch) => updateBranch(index, patch)}
                 />
               )}
@@ -152,6 +160,7 @@ export default function EffectChainEditor({
                   effect={effect}
                   tables={tables}
                   depth={depth + 1}
+                  triggerEvent={triggerEvent}
                   onChange={(cases) => updateBranch(index, { cases } as Partial<Effect>)}
                 />
               )}
@@ -172,6 +181,7 @@ export default function EffectChainEditor({
       {/* Action-type picker */}
       <ActionPicker
         open={pickerOpen}
+        triggerEvent={triggerEvent}
         onClose={() => setPickerOpen(false)}
         onPick={handlePick}
       />
@@ -187,6 +197,7 @@ export default function EffectChainEditor({
         effect={draftEffect}
         isNew={editingIndex === null}
         tables={tables}
+        triggerEvent={triggerEvent}
         onSave={handleSave}
       />
 
@@ -290,10 +301,11 @@ interface IfBranchesProps {
   effect: Extract<Effect, { action: 'if' }>
   tables?: Table[]
   depth: number
+  triggerEvent?: EventType
   onChange: (patch: Partial<Effect>) => void
 }
 
-function IfBranches({ effect, tables, depth, onChange }: IfBranchesProps) {
+function IfBranches({ effect, tables, depth, triggerEvent, onChange }: IfBranchesProps) {
   const { t } = useTranslation()
   return (
     <div className="space-y-2">
@@ -302,6 +314,7 @@ function IfBranches({ effect, tables, depth, onChange }: IfBranchesProps) {
         effects={effect.then}
         tables={tables}
         depth={depth}
+        triggerEvent={triggerEvent}
         onChange={(then) => onChange({ then } as Partial<Effect>)}
       />
 
@@ -310,6 +323,7 @@ function IfBranches({ effect, tables, depth, onChange }: IfBranchesProps) {
         effects={effect.else ?? []}
         tables={tables}
         depth={depth}
+        triggerEvent={triggerEvent}
         onChange={(els) =>
           onChange({ else: els.length === 0 ? undefined : els } as Partial<Effect>)
         }
@@ -326,10 +340,11 @@ interface MatchBranchesProps {
   effect: Extract<Effect, { action: 'match' }>
   tables?: Table[]
   depth: number
+  triggerEvent?: EventType
   onChange: (cases: Record<string, Effect[]>) => void
 }
 
-function MatchBranches({ effect, tables, depth, onChange }: MatchBranchesProps) {
+function MatchBranches({ effect, tables, depth, triggerEvent, onChange }: MatchBranchesProps) {
   const keys = Object.keys(effect.cases)
   return (
     <div className="space-y-2">
@@ -340,6 +355,7 @@ function MatchBranches({ effect, tables, depth, onChange }: MatchBranchesProps) 
             effects={effect.cases[k]}
             tables={tables}
             depth={depth}
+            triggerEvent={triggerEvent}
             onChange={(branch) => onChange({ ...effect.cases, [k]: branch })}
           />
         </div>
@@ -380,19 +396,22 @@ function BranchLabel({
 
 function ActionPicker({
   open,
+  triggerEvent,
   onClose,
   onPick,
 }: {
   open: boolean
+  triggerEvent?: EventType
   onClose: () => void
   onPick: (action: EffectAction) => void
 }) {
   const { t } = useTranslation()
+  const actions = ACTION_TYPES.filter((a) => isActionAllowedForEvent(a, triggerEvent))
   return (
     <Sheet open={open} onClose={onClose} title={t('homebrew.effects.action_picker_title')} centered>
       <div className="p-5">
         <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {ACTION_TYPES.map((action) => (
+          {actions.map((action) => (
             <li key={action}>
               <button
                 type="button"

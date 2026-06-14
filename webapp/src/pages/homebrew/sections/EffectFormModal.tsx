@@ -8,11 +8,13 @@ import FilterChip from '@/components/ui/FilterChip'
 import SwitchToggle from '@/components/ui/SwitchToggle'
 import type {
   Effect,
+  EventType,
   Filter,
   FilterOp,
   NotifySeverity,
   Table,
 } from '@/lib/homebrew/types'
+import { isActionAllowedForEvent } from './effectForm.utils'
 
 // ---------------------------------------------------------------------------
 // Backend mirrors
@@ -115,6 +117,8 @@ interface EffectFormModalProps {
   /** True when adding a brand-new step (drives the modal title). */
   isNew?: boolean
   tables?: Table[]
+  /** Event of the parent trigger — drives event-bound action validation (D1). */
+  triggerEvent?: EventType
   onSave: (effect: Effect) => void
 }
 
@@ -133,6 +137,7 @@ export default function EffectFormModal({
   effect,
   isNew = false,
   tables,
+  triggerEvent,
   onSave,
 }: EffectFormModalProps) {
   const { t } = useTranslation()
@@ -219,6 +224,9 @@ export default function EffectFormModal({
         if (!conditionKey(e.key)) errs.key = t('homebrew.effects.fields.required')
         break
       case 'apply_modifier_once':
+        if (!isActionAllowedForEvent('apply_modifier_once', triggerEvent)) {
+          errs.modifier_event = t('homebrew.effects.fields.modifier_event_invalid')
+        }
         if (!MODIFIER_TARGET_REGEX.test(e.target.trim())) {
           errs.modifier_target = t('homebrew.effects.fields.modifier_target_invalid')
         }
@@ -539,6 +547,11 @@ function EffectFormBody({ draft, update, tables, errors }: BodyProps) {
     case 'apply_modifier_once':
       return (
         <>
+          {errors.modifier_event && (
+            <p className="text-xs font-body text-dnd-crimson-bright bg-dnd-crimson/10 border border-dnd-crimson/40 rounded-lg px-3 py-2">
+              {errors.modifier_event}
+            </p>
+          )}
           <Input
             label={t('homebrew.effects.fields.modifier_target')}
             value={draft.target}
