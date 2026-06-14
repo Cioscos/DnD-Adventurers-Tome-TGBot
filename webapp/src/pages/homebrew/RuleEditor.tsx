@@ -15,6 +15,7 @@ import SubjectSection from './sections/SubjectSection'
 import PropertiesSection from './sections/PropertiesSection'
 import TablesSection from './sections/TablesSection'
 import PassiveModifiersSection from './sections/PassiveModifiersSection'
+import ResourcesSection from './sections/ResourcesSection'
 import TriggersSection from './sections/TriggersSection'
 
 // -----------------------------------------------------------------------------
@@ -286,6 +287,13 @@ export default function RuleEditor() {
           <PassiveModifiersSection
             mods={dsl.passive_modifiers ?? []}
             onChange={(mods) => setDsl((prev) => ({ ...prev, passive_modifiers: mods }))}
+          />
+        </CollapsiblePanel>
+
+        <CollapsiblePanel title={t('homebrew.editor.sections.resources')} defaultOpen={false}>
+          <ResourcesSection
+            resources={dsl.resources ?? []}
+            onChange={(resources) => setDsl((prev) => ({ ...prev, resources }))}
           />
         </CollapsiblePanel>
 

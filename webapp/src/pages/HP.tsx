@@ -87,6 +87,8 @@ export default function HP() {
       api.characters.updateHp(charId, op, val, wasCritical ?? false),
     onSuccess: (updated) => {
       qc.setQueryData(['character', charId], updated)
+      // HP events (damage/heal) can drive homebrew change_resource rules (#18).
+      qc.invalidateQueries({ queryKey: ['homebrew-resources', charId] })
       setValue('')
       setCrit(false)
       haptic.success()
@@ -111,6 +113,8 @@ export default function HP() {
       api.characters.rest(charId, restType),
     onSuccess: (updated) => {
       qc.setQueryData(['character', charId], updated)
+      // Rest auto-restores homebrew resources (D3) and fires rest events (#18).
+      qc.invalidateQueries({ queryKey: ['homebrew-resources', charId] })
       haptic.success()
     },
   })
@@ -180,6 +184,7 @@ export default function HP() {
     hpMutation.mutate({ op, val, wasCritical }, {
       onSuccess: (updated) => {
         qc.setQueryData(['character', charId], updated)
+        qc.invalidateQueries({ queryKey: ['homebrew-resources', charId] })
         setCrit(false)
         maybeShowInstantDeath(updated)
         const conc = updated.concentration_save

@@ -821,3 +821,102 @@ async def test_manual_trigger_wrong_owner_returns_403(client, test_session_facto
         f"/characters/{other_id}/homebrew/manual-trigger/{other_rule_id}"
     )
     assert r.status_code == 403
+
+
+# ─── Fase 3: resource lifecycle (auto-restore, undeclared rejection) ─────────
+
+
+@pytest.mark.asyncio
+async def test_rest_auto_restores_homebrew_resources_by_restoration_type(client, char_id):
+    """#13/D3: a long rest restores long_rest AND short_rest homebrew resources;
+    a short rest restores only short_rest ones; 'none' never auto-restores."""
+    body = {
+        "name": "Pools", "description": "rest pools", "enabled": True,
+        "dsl": {
+            "version": 1, "subject": {"type": "character"},
+            "resources": [
+                {"key": "luck", "name": "Luck", "max": 3, "restoration_type": "long_rest"},
+                {"key": "ki", "name": "Ki", "max": 2, "restoration_type": "short_rest"},
+                {"key": "fate", "name": "Fate", "max": 4, "restoration_type": "none"},
+            ],
+            "triggers": [{"event": "manual_trigger", "filters": [],
+                          "effects": [{"action": "notify", "severity": "info", "message": "x"}]}],
+        },
+    }
+    assert (await client.post(f"/characters/{char_id}/homebrew/rules", json=body)).status_code == 201
+
+    resources = (await client.get(f"/characters/{char_id}/homebrew/resources")).json()
+    ids = {r["key"]: r["id"] for r in resources}
+    for key in ("luck", "ki", "fate"):
+        await client.patch(
+            f"/characters/{char_id}/homebrew/resources/{ids[key]}", json={"current": 0}
+        )
+
+    # Short rest → only 'ki' (short_rest) restored.
+    assert (await client.post(
+        f"/characters/{char_id}/rest", json={"rest_type": "short"}
+    )).status_code == 200
+    by_key = {r["key"]: r for r in (await client.get(f"/characters/{char_id}/homebrew/resources")).json()}
+    assert by_key["ki"]["current"] == 2
+    assert by_key["luck"]["current"] == 0
+    assert by_key["fate"]["current"] == 0
+
+    # Long rest → 'luck' (long_rest) and 'ki' (short_rest) restored; 'fate' (none) not.
+    assert (await client.post(
+        f"/characters/{char_id}/rest", json={"rest_type": "long"}
+    )).status_code == 200
+    by_key = {r["key"]: r for r in (await client.get(f"/characters/{char_id}/homebrew/resources")).json()}
+    assert by_key["luck"]["current"] == 3
+    assert by_key["ki"]["current"] == 2
+    assert by_key["fate"]["current"] == 0
+
+
+@pytest.mark.asyncio
+async def test_create_rule_undeclared_resource_key_returns_422(client, char_id):
+    """#14: a change_resource referencing a key that is neither declared in
+    dsl['resources'] nor already owned is rejected with 422 (no silent placeholder)."""
+    body = {
+        "name": "Bad", "description": "uses undeclared key", "enabled": True,
+        "dsl": {
+            "version": 1, "subject": {"type": "character"},
+            "triggers": [{
+                "event": "manual_trigger", "filters": [],
+                "effects": [{"action": "change_resource", "key": "ghost_points", "delta": -1}],
+            }],
+        },
+    }
+    r = await client.post(f"/characters/{char_id}/homebrew/rules", json=body)
+    assert r.status_code == 422
+    assert "ghost_points" in r.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_item_created_after_install_gets_property_defaults(
+    client, char_id, test_session_factory,
+):
+    """#32: an item acquired AFTER an item-scoped rule is installed still receives
+    the rule's hb_<key> defaults (materialized on create)."""
+    import json as _json
+
+    from sqlalchemy import select as _select
+
+    from core.db.models import Item
+
+    assert (await client.post(
+        f"/characters/{char_id}/homebrew/templates/quality_wear/install"
+    )).status_code == 201
+
+    # Weapon created AFTER the install.
+    r = await client.post(
+        f"/characters/{char_id}/items",
+        json={"name": "Ascia", "item_type": "weapon", "quantity": 1},
+    )
+    assert r.status_code == 201, r.text
+
+    async with test_session_factory() as s:
+        item = (await s.execute(
+            _select(Item).where(Item.character_id == char_id, Item.name == "Ascia")
+        )).scalar_one()
+        md = _json.loads(item.item_metadata or "{}")
+    assert md.get("hb_quality") == "ordinaria"
+    assert md.get("hb_damage_state") == "integra"

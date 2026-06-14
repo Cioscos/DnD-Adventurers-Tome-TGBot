@@ -38,18 +38,27 @@ def test_bleeding_template_exists():
 def test_bleeding_template_has_turn_started_trigger():
     t = get_template("bleeding")
     triggers = t["dsl"]["triggers"]
-    assert len(triggers) == 1
-    assert triggers[0]["event"] == "turn_started"
+    # Two triggers now (#37): manual_trigger applies custom:bleeding (so it's
+    # reachable from the UI) and turn_started bleeds while the condition holds.
+    assert {tr["event"] for tr in triggers} == {"manual_trigger", "turn_started"}
+    turn = next(tr for tr in triggers if tr["event"] == "turn_started")
     # Filter checks `$character.conditions` has `custom:bleeding`
-    filt = triggers[0]["filters"][0]
+    filt = turn["filters"][0]
     assert filt["path"] == "$character.conditions"
     assert filt["op"] == "has_property"
     assert filt["value"] == "custom:bleeding"
+    # The manual trigger applies the condition so the chain is reachable.
+    manual = next(tr for tr in triggers if tr["event"] == "manual_trigger")
+    assert any(
+        e["action"] == "apply_condition" and e["key"] == "custom:bleeding"
+        for e in manual["effects"]
+    )
 
 
 def test_bleeding_template_uses_dollar_var_runtime():
     t = get_template("bleeding")
-    effects = t["dsl"]["triggers"][0]["effects"]
+    turn = next(tr for tr in t["dsl"]["triggers"] if tr["event"] == "turn_started")
+    effects = turn["effects"]
     # First effect rolls 1d4 → store_as "blood"; second damages with $blood.
     assert effects[0]["action"] == "roll_dice"
     assert effects[0]["store_as"] == "blood"

@@ -112,6 +112,14 @@ _BLEEDING_DSL = {
     "tables": [],
     "passive_modifiers": [],
     "triggers": [
+        {"event": "manual_trigger",
+         "filters": [],
+         "effects": [
+             {"action": "apply_condition", "key": "custom:bleeding"},
+             {"action": "notify", "severity": "warning",
+              "message": "🩸 Sanguinamento applicato"},
+             {"action": "add_history", "description": "Sanguinamento applicato"},
+         ]},
         {"event": "turn_started",
          "filters": [
              {"path": "$character.conditions", "op": "has_property", "value": "custom:bleeding"},

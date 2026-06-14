@@ -1099,6 +1099,27 @@
         "restoration_caption_short_rest": "Restored on short rest",
         "restoration_caption_none": "Manual restore only",
         "restoration_caption_manual": "Manual restore only",
+        "empty": "No resources yet. Resources are rechargeable counters (e.g. Luck Points, Inspiration).",
+        "add_button": "Add resource",
+        "delete_confirm": "Delete resource \"{{name}}\"?",
+        "max_badge": "max {{max}}",
+        "modal": {
+          "title_new": "New resource",
+          "title_edit": "Edit resource",
+          "name_label": "Resource name",
+          "name_placeholder": "e.g. Luck Points",
+          "name_required": "Enter a name",
+          "key_label": "Key (auto)",
+          "key_override": "Customize",
+          "key_invalid": "Lowercase, digits and _ only (start with a letter, max 60)",
+          "max_label": "Maximum value",
+          "max_invalid": "Enter an integer >= 0",
+          "restoration_type_label": "When does it restore?",
+          "restoration_long_rest": "Long rest",
+          "restoration_short_rest": "Short rest",
+          "restoration_none": "No restore",
+          "restoration_manual": "Manual only"
+        },
         "aria_decrement": "Decrement {{name}}",
         "aria_increment": "Increment {{name}}"
       }
@@ -1333,6 +1354,7 @@
         "properties": "Properties",
         "tables": "Tables (advanced)",
         "passive_modifiers": "Passive modifiers",
+        "resources": "Resources",
         "triggers": "Triggers and effects"
       },
       "section_tbd": "Section under construction",

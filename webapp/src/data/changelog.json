@@ -1,6 +1,44 @@
 {
   "entries": [
     {
+      "version": "2.15.0",
+      "date": "2026-06-14",
+      "title": {
+        "it": "Risorse homebrew complete (3/7)",
+        "en": "Complete homebrew resources (3/7)"
+      },
+      "added": {
+        "it": [
+          "Editor regole: nuova sezione «Risorse» per dichiarare contatori personalizzati (nome, valore massimo, tipo di ripristino) — prima le risorse custom erano creabili solo dai template predefiniti",
+          "Template Sanguinamento: ora si attiva direttamente dall'app (attivazione manuale che applica la condizione), così il sanguinamento a inizio turno funziona dall'inizio alla fine senza scorciatoie"
+        ],
+        "en": [
+          "Rule editor: a new «Resources» section to declare custom counters (name, maximum, restoration type) — custom resources used to be creatable only from the built-in templates",
+          "Bleeding template: now activatable straight from the app (a manual trigger that applies the condition), so the start-of-turn bleed works end to end with no workarounds"
+        ]
+      },
+      "improved": {
+        "it": [
+          "Risorse personalizzate: ora si ripristinano automaticamente al riposo secondo il tipo impostato (il riposo lungo ricarica anche quelle da riposo breve), come le abilità — coerente con quanto già mostrato nella scheda",
+          "Oggetti aggiunti dopo l'attivazione di una regola sugli oggetti ricevono comunque le sue proprietà personalizzate (prima restavano fuori finché non le impostavi a mano)"
+        ],
+        "en": [
+          "Custom resources now auto-restore on rest based on their type (a long rest also recharges short-rest ones), like abilities — consistent with what the sheet already showed",
+          "Items added after an item rule is enabled now receive its custom properties too (previously they were left out until set by hand)"
+        ]
+      },
+      "fixed": {
+        "it": [
+          "I contatori delle risorse personalizzate si aggiornano subito dopo riposo e modifiche ai PF (prima restavano fermi al valore vecchio fino a un refresh)",
+          "Una regola che usa una risorsa senza averla dichiarata viene ora rifiutata con un messaggio chiaro, invece di creare un contatore fittizio bloccato a 1"
+        ],
+        "en": [
+          "Custom resource counters refresh immediately after rest and HP changes (they used to stay stuck at the old value until a refresh)",
+          "A rule using a resource it never declared is now rejected with a clear message, instead of silently creating an unusable counter capped at 1"
+        ]
+      }
+    },
+    {
       "version": "2.14.11",
       "date": "2026-06-14",
       "title": {

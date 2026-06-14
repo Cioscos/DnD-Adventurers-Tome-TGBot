@@ -198,12 +198,11 @@ async def _materialize_resources(
 
     2. **Inferred keys** — resource keys referenced by ``change_resource`` /
        ``restore_resource`` actions anywhere in the trigger graph but NOT
-       covered by an explicit ResourceDef.  For these we create a minimal
-       placeholder row (max=1, current=1, restoration_type="none") so that the
-       runtime action has something to operate on.  If the key already exists
-       (from a previous rule or a prior call) we silently skip it — no 409,
-       because the existing state belongs to the player and must not be
-       overwritten.
+       covered by an explicit ResourceDef.  If such a key is NOT already owned
+       as a resource, we reject the save with HTTP 422 (#14): the author must
+       declare it in ``dsl["resources"]`` with explicit max/name/restoration_type
+       (the editor's Resources section).  Keys already owned are accepted as-is
+       (the action operates on the existing row).
 
     Idempotent: safe to call multiple times (update_rule calls it after every
     DSL change).  Rows are only ever ADDED, never removed — removing rows would
@@ -261,26 +260,19 @@ async def _materialize_resources(
             )
         )
         already_exist: set[str] = set(existing_res2.scalars())
-        for key in inferred_keys:
-            if key in already_exist:
-                # Skip silently — the row may belong to a different rule or
-                # have been created by a previous call.  We NEVER overwrite
-                # existing player state.
-                continue
-            # Build a human-readable name from the snake_case key.
-            display_name = key.replace("_", " ").title()
-            session.add(HomebrewResource(
-                rule_id=rule.id,
-                character_id=char.id,
-                key=key,
-                name=display_name,
-                # Default max=1 keeps the placeholder meaningful without
-                # granting the player an unreasonable amount of a resource
-                # they have not explicitly configured.
-                current=1,
-                max=1,
-                restoration_type="none",
-            ))
+        # Keys referenced by change_resource/restore_resource but neither declared
+        # in dsl["resources"] nor already owned as a resource are an authoring
+        # mistake: reject with 422 instead of silently materializing an unusable
+        # max=1/restoration_type=none placeholder (#14). The editor's Resources
+        # section (D3 / F3-9) is where the author declares max/name/restoration.
+        undeclared = sorted(inferred_keys - already_exist)
+        if undeclared:
+            raise HTTPException(
+                422,
+                "Resource key(s) referenced by change_resource/restore_resource "
+                "but not declared: " + ", ".join(undeclared)
+                + ". Declare them in the rule's resources (key, max, restoration_type).",
+            )
 
     if explicit_keys or inferred_keys:
         await session.flush()

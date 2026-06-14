@@ -1099,6 +1099,27 @@
         "restoration_caption_short_rest": "Recupera con riposo breve",
         "restoration_caption_none": "Solo recupero manuale",
         "restoration_caption_manual": "Solo recupero manuale",
+        "empty": "Nessuna risorsa. Le risorse sono contatori ricaricabili (es. Punti Fortuna, Ispirazione).",
+        "add_button": "Aggiungi risorsa",
+        "delete_confirm": "Eliminare la risorsa \"{{name}}\"?",
+        "max_badge": "max {{max}}",
+        "modal": {
+          "title_new": "Nuova risorsa",
+          "title_edit": "Modifica risorsa",
+          "name_label": "Nome risorsa",
+          "name_placeholder": "es. Punti Fortuna",
+          "name_required": "Inserisci un nome",
+          "key_label": "Chiave (auto)",
+          "key_override": "Personalizza",
+          "key_invalid": "Solo minuscole, cifre e _ (inizia con una lettera, max 60)",
+          "max_label": "Valore massimo",
+          "max_invalid": "Inserisci un intero >= 0",
+          "restoration_type_label": "Quando si ripristina?",
+          "restoration_long_rest": "Riposo lungo",
+          "restoration_short_rest": "Riposo breve",
+          "restoration_none": "Nessun ripristino",
+          "restoration_manual": "Solo manuale"
+        },
         "aria_decrement": "Diminuisci {{name}}",
         "aria_increment": "Aumenta {{name}}"
       }
@@ -1333,6 +1354,7 @@
         "properties": "Caratteristiche",
         "tables": "Tabelle (avanzato)",
         "passive_modifiers": "Modificatori passivi",
+        "resources": "Risorse",
         "triggers": "Trigger ed effetti"
       },
       "section_tbd": "Sezione in costruzione",
