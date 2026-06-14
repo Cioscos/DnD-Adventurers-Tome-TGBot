@@ -1,6 +1,38 @@
 {
   "entries": [
     {
+      "version": "2.14.11",
+      "date": "2026-06-14",
+      "title": {
+        "it": "Editor regole homebrew: contratto allineato (2/7)",
+        "en": "Homebrew rules editor: contract aligned (2/7)"
+      },
+      "added": {
+        "it": [],
+        "en": []
+      },
+      "improved": {
+        "it": [
+          "Editor homebrew: l'operatore «è uno di» (in) ora accetta più valori separati da virgola, così i confronti su una lista funzionano davvero",
+          "Modificatore permanente: il delta accetta la sintassi «N*level» (es. 2*level) per scalare il bonus con il livello, capacità già presente nel motore ma finora bloccata dall'editor"
+        ],
+        "en": [
+          "Homebrew editor: the «is one of» (in) operator now accepts several comma-separated values, so list comparisons actually work",
+          "Permanent modifier: the delta accepts the «N*level» syntax (e.g. 2*level) to scale the bonus with level — already supported by the engine but previously blocked by the editor"
+        ]
+      },
+      "fixed": {
+        "it": [
+          "Modificatore permanente: il bersaglio è ora limitato a PF massimi e velocità (gli unici applicabili); prima si poteva salvare «character.ac», che a gioco falliva in silenzio",
+          "Effetto danno: l'opzione «colpo critico» viene ora propagata agli eventi, così le regole a catena che reagiscono ai colpi critici scattano"
+        ],
+        "en": [
+          "Permanent modifier: the target is now limited to max HP and speed (the only applicable ones); previously you could save «character.ac», which silently failed at play time",
+          "Damage effect: the «critical hit» toggle is now propagated to events, so cascade rules reacting to critical hits actually fire"
+        ]
+      }
+    },
+    {
       "version": "2.14.10",
       "date": "2026-06-14",
       "title": {

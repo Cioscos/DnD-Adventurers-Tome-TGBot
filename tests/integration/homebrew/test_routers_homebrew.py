@@ -514,6 +514,63 @@ async def test_change_resource_action_reemits_changed_and_depleted(
 
 
 @pytest.mark.asyncio
+async def test_damage_character_propagates_was_critical(
+    client, char_id, test_session_factory,
+):
+    """#6: the `was_critical` toggle on damage_character must propagate into the
+    re-emitted damage_taken (`was_critical_hit`) so cascade rules can filter on it.
+    Before the fix the flag was hardcoded False and the listener never fired.
+    """
+    from sqlalchemy import select as _select
+
+    from core.db.models import CharacterHistory
+
+    dealer = {
+        "name": "Critico", "description": "danno critico", "enabled": True,
+        "dsl": {
+            "version": 1, "subject": {"type": "character"},
+            "triggers": [{
+                "event": "manual_trigger", "filters": [],
+                "effects": [{"action": "damage_character", "amount": 1,
+                             "was_critical": True}],
+            }],
+        },
+    }
+    rsp = await client.post(f"/characters/{char_id}/homebrew/rules", json=dealer)
+    assert rsp.status_code == 201, rsp.text
+    dealer_id = rsp.json()["id"]
+
+    listener = {
+        "name": "Reazione al critico", "description": "listener", "enabled": True,
+        "dsl": {
+            "version": 1, "subject": {"type": "character"},
+            "triggers": [{
+                "event": "damage_taken",
+                "filters": [{"path": "$event.was_critical_hit", "op": "eq", "value": True}],
+                "effects": [{"action": "add_history", "description": "CRIT-REACTION"}],
+            }],
+        },
+    }
+    assert (
+        await client.post(f"/characters/{char_id}/homebrew/rules", json=listener)
+    ).status_code == 201
+
+    r = await client.post(
+        f"/characters/{char_id}/homebrew/manual-trigger/{dealer_id}"
+    )
+    assert r.status_code == 200, r.text
+
+    async with test_session_factory() as s:
+        descs = (await s.execute(
+            _select(CharacterHistory.description).where(
+                CharacterHistory.character_id == char_id,
+            )
+        )).scalars().all()
+    # The cascade listener fired → was_critical_hit propagated as True.
+    assert any("CRIT-REACTION" in (d or "") for d in descs)
+
+
+@pytest.mark.asyncio
 async def test_patch_resource_already_at_zero_does_not_fire_events(client, char_id):
     # Create rule with max=0 → current=0; PATCH to 0 is a no-op (no events).
     await client.post(

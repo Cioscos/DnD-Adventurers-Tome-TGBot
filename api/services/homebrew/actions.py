@@ -261,6 +261,9 @@ async def execute_unequip(action, ctx, rfr, session, char, **kw):
 
 async def execute_damage_character(action, ctx, rfr, session, char, **kw):
     amount = _resolve_amount(action["amount"], ctx, field="damage_character.amount")
+    # Propagate the editor `was_critical` toggle into the re-emitted events so
+    # cascade rules filtering on $event.was_critical_hit / from_critical fire (#6).
+    was_critical = bool(action.get("was_critical"))
 
     # Absorb temp HP first (mirror hp.py:update_hp semantics)
     if char.temp_hp > 0:
@@ -280,7 +283,7 @@ async def execute_damage_character(action, ctx, rfr, session, char, **kw):
     stack = base_stack + (rfr.rule_id,) if rfr.rule_id else base_stack
     await dispatch(
         session, char, "damage_taken",
-        {"amount": amount, "was_critical_hit": False,
+        {"amount": amount, "was_critical_hit": was_critical,
          "current_hp_before": before,
          "current_hp_after": char.current_hit_points},
         depth=depth, triggered_rule_stack=stack,
@@ -288,7 +291,7 @@ async def execute_damage_character(action, ctx, rfr, session, char, **kw):
     if before > 0 and char.current_hit_points == 0:
         await dispatch(
             session, char, "dropped_to_zero",
-            {"damage_amount": amount, "from_critical": False},
+            {"damage_amount": amount, "from_critical": was_critical},
             depth=depth, triggered_rule_stack=stack,
         )
 
