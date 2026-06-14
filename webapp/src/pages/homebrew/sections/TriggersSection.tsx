@@ -314,6 +314,7 @@ export default function TriggersSection({ triggers, tables, onChange }: Triggers
                 <EffectChainEditor
                   effects={trig.effects}
                   tables={tables}
+                  triggerEvent={trig.event}
                   onChange={(effects) => updateTrigger(index, { ...trig, effects })}
                 />
               </div>

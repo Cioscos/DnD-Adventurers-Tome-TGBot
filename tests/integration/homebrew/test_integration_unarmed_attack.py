@@ -44,3 +44,61 @@ async def test_non_monk_unarmed_is_flat_one(client, char_id, patch_random_roll):
     assert body["damage_rolls"] == [1]
     assert body["damage_total"] == 1   # 1 + 0
     assert body["is_critical"] is False
+
+
+@pytest.mark.asyncio
+async def test_unarmed_fumble_does_not_wear_owned_items(
+    client, char_id, test_session_factory, patch_random_roll,
+):
+    """#3 regression: a nat-1 *unarmed* strike must NOT wear any owned item.
+
+    ``attack_unarmed`` emits ``attack_rolled`` with ``item_id=None``. An
+    item-scoped rule (quality_wear) must not fan-out onto every owned item: the
+    dispatcher now skips the fan-out for item-originated events without an
+    item_id, and the template's ``attack_rolled`` trigger also requires
+    ``$subject.is_equipped == True``. Either guard alone keeps the weapon intact.
+    """
+    import json
+
+    from sqlalchemy import select
+
+    from core.db.models import Item
+
+    # Equipped weapon carrying the quality property.
+    async with test_session_factory() as s:
+        weapon = Item(
+            character_id=char_id, name="Spada", item_type="weapon", quantity=1,
+            item_metadata=json.dumps({"damage_dice": "1d8", "weapon_type": "melee"}),
+            is_equipped=True,
+        )
+        s.add(weapon)
+        await s.commit()
+        await s.refresh(weapon)
+        weapon_id = weapon.id
+
+    inst = await client.post(
+        f"/characters/{char_id}/homebrew/templates/quality_wear/install"
+    )
+    assert inst.status_code == 201, inst.text
+
+    # Worst quality: any wear roll maps to a damaging cell, so if the rule fired
+    # on the unarmed strike we would observe damage_state changing.
+    async with test_session_factory() as s:
+        w = (await s.execute(select(Item).where(Item.id == weapon_id))).scalar_one()
+        md = json.loads(w.item_metadata)
+        md["hb_quality"] = "pessima"
+        w.item_metadata = json.dumps(md)
+        await s.commit()
+
+    # nat-1 unarmed strike → is_fumble True. fallback=10 would map a (wrongly
+    # fired) wear roll to a "D" cell for pessima, which we assert does NOT happen.
+    patch_random_roll([1])
+    r = await client.post(f"/characters/{char_id}/attack/unarmed")
+    assert r.status_code == 200, r.text
+    assert r.json()["is_fumble"] is True
+
+    async with test_session_factory() as s:
+        w = (await s.execute(select(Item).where(Item.id == weapon_id))).scalar_one()
+        md = json.loads(w.item_metadata)
+    assert md["hb_damage_state"] == "integra"  # untouched — no fan-out
+    assert w.is_equipped is True

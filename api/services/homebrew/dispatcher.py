@@ -20,6 +20,14 @@ logger = logging.getLogger(__name__)
 
 MAX_DEPTH = 8
 
+# Eventi "originati da un item specifico": il loro payload trasporta un item_id
+# che identifica l'item soggetto. Se per uno di questi eventi item_id è None
+# (es. attacco a mano libera → attack_rolled con item_id=None) NON esiste un
+# item soggetto, quindi una regola item-scoped non deve fare fan-out su TUTTI
+# gli item del personaggio. Per gli eventi character-level (turn_started,
+# dropped_to_zero, long_rest_taken, …) il fan-out su tutti gli item resta voluto.
+_ITEM_ORIGINATED_EVENTS = frozenset({"attack_rolled"})
+
 
 def _now() -> str:
     return datetime.utcnow().isoformat(timespec="seconds")
@@ -163,6 +171,11 @@ async def dispatch(
                     continue
                 items: list[Item] = [obj]
             else:
+                # Vedi _ITEM_ORIGINATED_EVENTS: per un evento originato da un item
+                # (es. attack_rolled da attacco a mano libera) senza item_id non
+                # c'è un item soggetto → niente fan-out su tutti gli item.
+                if event_type in _ITEM_ORIGINATED_EVENTS:
+                    continue
                 items = await _matching_items(session, char, subject_def.get("filter"))
             subjects = [_item_to_ctx_dict(i) for i in items]
         else:

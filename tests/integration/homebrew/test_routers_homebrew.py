@@ -437,6 +437,83 @@ async def test_patch_resource_to_zero_fires_changed_and_depleted(client, char_id
 
 
 @pytest.mark.asyncio
+async def test_change_resource_action_reemits_changed_and_depleted(
+    client, char_id, test_session_factory,
+):
+    """#1 regression: a rule-driven change_resource that drains a resource to 0
+    must re-emit resource_changed AND resource_depleted — exactly like the manual
+    PATCH — so cascade rules bound to those events fire for engine-driven
+    mutations too (previously only the manual UI edit emitted them).
+
+    Verified via CharacterHistory: notifications produced inside a *nested*
+    re-emit are not threaded back into the top-level firing result (this mirrors
+    execute_damage_character), but add_history entries are persisted by every
+    dispatch invocation, so they are the reliable cascade signal here.
+    """
+    from sqlalchemy import select as _select
+
+    from core.db.models import CharacterHistory
+
+    # Spender owns luck_points (max=3) and drains it on manual_trigger.
+    spender = {
+        "name": "Spender", "description": "Drains luck", "enabled": True,
+        "dsl": {
+            "version": 1,
+            "subject": {"type": "character"},
+            "resources": [{"key": "luck_points", "name": "Luck", "max": 3,
+                           "restoration_type": "long_rest"}],
+            "triggers": [{
+                "event": "manual_trigger", "filters": [],
+                "effects": [{"action": "change_resource",
+                             "key": "luck_points", "delta": -3}],
+            }],
+        },
+    }
+    rsp = await client.post(f"/characters/{char_id}/homebrew/rules", json=spender)
+    assert rsp.status_code == 201, rsp.text
+    spender_id = rsp.json()["id"]
+
+    # Two cascade listeners, each writing a recognizable history entry.
+    for nm, ev, desc in [
+        ("Listener A", "resource_changed", "HB-CHANGED"),
+        ("Listener B", "resource_depleted", "HB-DEPLETED"),
+    ]:
+        body = {
+            "name": nm, "description": "listener", "enabled": True,
+            "dsl": {
+                "version": 1,
+                "subject": {"type": "character"},
+                "triggers": [{
+                    "event": ev, "filters": [],
+                    "effects": [{"action": "add_history", "description": desc}],
+                }],
+            },
+        }
+        assert (
+            await client.post(f"/characters/{char_id}/homebrew/rules", json=body)
+        ).status_code == 201
+
+    # Fire the spender → luck 3 → 0 → cascade changed + depleted.
+    r = await client.post(
+        f"/characters/{char_id}/homebrew/manual-trigger/{spender_id}"
+    )
+    assert r.status_code == 200, r.text
+
+    res = (await client.get(f"/characters/{char_id}/homebrew/resources")).json()
+    assert res[0]["current"] == 0  # drained
+
+    async with test_session_factory() as s:
+        descriptions = (await s.execute(
+            _select(CharacterHistory.description).where(
+                CharacterHistory.character_id == char_id,
+            )
+        )).scalars().all()
+    joined = "\n".join(d or "" for d in descriptions)
+    assert "HB-CHANGED" in joined    # resource_changed cascade fired
+    assert "HB-DEPLETED" in joined   # resource_depleted cascade fired
+
+
+@pytest.mark.asyncio
 async def test_patch_resource_already_at_zero_does_not_fire_events(client, char_id):
     # Create rule with max=0 → current=0; PATCH to 0 is a no-op (no events).
     await client.post(

@@ -1539,6 +1539,7 @@
         "params_json_invalid": "JSON non valido",
         "modifier_target": "Cosa modifica (target)",
         "modifier_target_invalid": "Target non valido (es. character.ac)",
+        "modifier_event_invalid": "Modificatore permanente: si applica a OGNI innesco, perciò è ammesso solo su un trigger di salita di livello.",
         "modifier_label": "Etichetta visibile",
         "required": "Campo obbligatorio",
         "amount_invalid": "Inserisci un numero, una notazione dadi o $variabile",

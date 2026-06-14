@@ -1,4 +1,4 @@
-import type { Effect, EffectAction } from '@/lib/homebrew/types'
+import type { Effect, EffectAction, EventType } from '@/lib/homebrew/types'
 
 /** Seed Effect for a freshly-picked action — mirrors the backend defaults. */
 export function defaultEffect(action: EffectAction): Effect {
@@ -36,4 +36,27 @@ export function defaultEffect(action: EffectAction): Effect {
     case 'add_history':
       return { action, description: '' }
   }
+}
+
+/**
+ * Azioni con restrizione sull'evento del trigger (decisione D1).
+ *
+ * `apply_modifier_once` applica un delta PERMANENTE alla stat a OGNI innesco
+ * (vedi api/services/homebrew/actions.py): ha senso solo su eventi a transizione
+ * singola come `level_up` ("+N HP / +N velocità per livello"). Su eventi
+ * liberamente ri-attivabili (turn_started, manual_trigger, …) accumulerebbe il
+ * delta a ogni tap, corrompendo HP/velocità in modo permanente.
+ */
+export const ACTION_EVENT_ALLOWLIST: Partial<Record<EffectAction, readonly EventType[]>> = {
+  apply_modifier_once: ['level_up'],
+}
+
+/** True if `action` may be attached to a trigger on `event` (no entry = unrestricted). */
+export function isActionAllowedForEvent(action: EffectAction, event?: EventType): boolean {
+  const allowed = ACTION_EVENT_ALLOWLIST[action]
+  if (!allowed) return true
+  // Evento ignoto (es. EffectChainEditor montato senza contesto): non bloccare
+  // qui; la validazione di EffectFormModal resta la rete di sicurezza al salvataggio.
+  if (!event) return true
+  return allowed.includes(event)
 }
