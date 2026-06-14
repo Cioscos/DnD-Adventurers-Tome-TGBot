@@ -67,6 +67,9 @@ export type BadgeTone = 'danger' | 'success' | 'neutral'
  */
 export function tonePerValue(property: Property, value: unknown): BadgeTone {
   if (property.type !== 'enum') return 'neutral'
+  // Author-declared tone (DSL `tone_by_value`) wins over the heuristic (#47).
+  const declared = property.tone_by_value?.[String(value)]
+  if (declared) return declared
   const isStateLike = /quality|condition|state/i.test(property.key)
   if (!isStateLike) return 'neutral'
   const normalized = String(value).toLowerCase()

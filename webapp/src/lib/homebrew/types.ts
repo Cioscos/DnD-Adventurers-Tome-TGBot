@@ -55,6 +55,8 @@ export interface Property {
   default: unknown
   label_i18n: Record<string, string>
   value_labels_i18n?: Record<string, Record<string, string>>
+  /** #47: author-declared badge tone per enum value (overrides the heuristic). */
+  tone_by_value?: Record<string, 'danger' | 'success' | 'neutral'>
 }
 
 // ---------------------------------------------------------------------------

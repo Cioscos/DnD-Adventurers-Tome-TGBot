@@ -4,9 +4,11 @@ import { useTranslation } from 'react-i18next'
 interface Props {
   value: number
   label?: string
+  /** Overrides the default `+{value}` rendering (e.g. a unit-formatted speed delta). */
+  display?: string
 }
 
-export default function HomebrewBreakdownRow({ value, label }: Props) {
+export default function HomebrewBreakdownRow({ value, label, display }: Props) {
   const { t } = useTranslation()
 
   if (value === 0) return null
@@ -20,7 +22,7 @@ export default function HomebrewBreakdownRow({ value, label }: Props) {
         {text}
       </span>
       <span className="font-mono font-bold tabular-nums text-dnd-gold-bright">
-        +{value}
+        {display ?? `+${value}`}
       </span>
     </div>
   )

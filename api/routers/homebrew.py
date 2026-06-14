@@ -357,8 +357,10 @@ async def create_rule(
     )
     session.add(rule)
     await session.flush()
-    if body.dsl.get("subject", {}).get("type") == "item":
-        await _materialize_property_defaults(session, char, rule)
+    # _materialize_property_defaults already early-returns when the subject isn't an
+    # item, so call it unconditionally — same as install_template (#43: removed the
+    # redundant outer guard that duplicated the internal check).
+    await _materialize_property_defaults(session, char, rule)
     await _materialize_resources(session, char, rule)
     return rule
 

@@ -190,15 +190,18 @@ function HomebrewPropertyChips({
   return (
     <div className="grid grid-cols-2 gap-1.5">
       {entries.map(([key, value, property]) => (
-        <PropertyBadge
-          key={key}
-          propertyKey={key}
-          value={value}
-          property={property}
-          locale={locale}
-          onSetProperty={(k, v) => onSetProperty(item.id, k, v)}
-          disabled={pending}
-        />
+        // Number badges (label + value + two 44px steppers) can't stay legible in
+        // a ~167px half-column at 375px, so they span the full row (#35).
+        <div key={key} className={property.type === 'number' ? 'col-span-2' : undefined}>
+          <PropertyBadge
+            propertyKey={key}
+            value={value}
+            property={property}
+            locale={locale}
+            onSetProperty={(k, v) => onSetProperty(item.id, k, v)}
+            disabled={pending}
+          />
+        </div>
       ))}
     </div>
   )

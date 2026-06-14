@@ -60,7 +60,8 @@
       "expert_label_one": "expert",
       "expert_label_other": "expert",
       "none_m": "None",
-      "none_f": "None"
+      "none_f": "None",
+      "speed_homebrew_label": "Speed · homebrew rule"
     },
     "quick_actions": {
       "title": "Quick actions",
@@ -1402,6 +1403,11 @@
         "boolean": "yes/no",
         "text": "text"
       },
+      "tone": {
+        "neutral": "Neutral",
+        "danger": "Negative",
+        "success": "Positive"
+      },
       "default_label": "Default value",
       "values_label": "Possible values",
       "delete_confirm": "Delete property '{{name}}'? Items will lose this property.",
@@ -1420,7 +1426,9 @@
         "values_helper": "Separate values with commas or newlines",
         "default_required": "Select a default value",
         "values_empty": "Add at least one value",
-        "label_required": "Fill in both labels"
+        "label_required": "Fill in both labels",
+        "tone_label": "Badge tone per value",
+        "tone_helper": "Optional semantic badge color for each value."
       }
     },
     "tables": {

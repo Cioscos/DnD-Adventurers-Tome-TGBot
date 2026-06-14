@@ -5,6 +5,7 @@ import { BarChart3 } from 'lucide-react'
 import { GiShieldEchoes, GiArcheryTarget } from 'react-icons/gi'
 import Surface from '@/components/ui/Surface'
 import SectionDivider from '@/components/ui/SectionDivider'
+import HomebrewBreakdownRow from '@/components/homebrew/HomebrewBreakdownRow'
 import { haptic } from '@/auth/telegram'
 import { profBonus } from '@/lib/dnd'
 import { useUnitSettings, formatLength } from '@/store/unitSettings'
@@ -131,6 +132,18 @@ export default function HeroStatsSection({ char }: Props) {
           </m.button>
         ))}
       </div>
+
+      {/* Speed folds its homebrew modifier into the total above; surface an
+          attribution row (like AC/HP) so an altered speed isn't unexplained (#34). */}
+      {(char.speed_homebrew_modifier ?? 0) !== 0 && (
+        <div className="mt-1.5 rounded-lg border border-dnd-border bg-dnd-surface-raised">
+          <HomebrewBreakdownRow
+            value={char.speed_homebrew_modifier ?? 0}
+            label={t('character.hero.speed_homebrew_label')}
+            display={`${(char.speed_homebrew_modifier ?? 0) > 0 ? '+' : ''}${formatLength(char.speed_homebrew_modifier ?? 0, unitSystem)}`}
+          />
+        </div>
+      )}
 
       {/* Saves / Skills summary cards. */}
       <div className="grid grid-cols-2 gap-2 mt-2">
