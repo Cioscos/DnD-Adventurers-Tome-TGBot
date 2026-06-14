@@ -1,7 +1,7 @@
 {
   "name": "dnd-bot-webapp",
   "private": true,
-  "version": "2.14.10",
+  "version": "2.14.11",
   "type": "module",
   "scripts": {
     "dev": "vite",

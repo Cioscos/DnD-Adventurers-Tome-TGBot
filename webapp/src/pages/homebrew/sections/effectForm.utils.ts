@@ -30,7 +30,8 @@ export function defaultEffect(action: EffectAction): Effect {
     case 'remove_condition':
       return { action, key: '' }
     case 'apply_modifier_once':
-      return { action, target: 'character.ac', delta: 1, label: '' }
+      // D2: l'engine supporta solo i campi base persistiti hit_points_max/speed.
+      return { action, target: 'character.hit_points_max', delta: 1, label: '' }
     case 'notify':
       return { action, severity: 'info', message: '' }
     case 'add_history':
@@ -59,4 +60,63 @@ export function isActionAllowedForEvent(action: EffectAction, event?: EventType)
   // qui; la validazione di EffectFormModal resta la rete di sicurezza al salvataggio.
   if (!event) return true
   return allowed.includes(event)
+}
+
+// ---------------------------------------------------------------------------
+// Amount / compare-value coercion (shared with EffectFormModal)
+// ---------------------------------------------------------------------------
+
+// Mirrors the backend amount/dice grammar (api/services/homebrew/actions.py).
+export const DICE_REGEX = /^(\d+)d(\d+)([+-]\d+)?$/
+// `$name` / `$vars.name` — the bare form without `$` is rejected (the backend
+// would read it as dice notation instead).
+const VAR_PATH = /^\$(vars\.)?[A-Za-z_][A-Za-z0-9_]*$/
+// `N*level` is accepted by _eval_delta ONLY for apply_modifier_once.delta;
+// case-insensitive to mirror its `.lower()`.
+const LEVEL_EXPR_REGEX = /^-?\d+\*level$/i
+
+export function isAmountValid(raw: string, allowMax: boolean, allowLevel = false): boolean {
+  const v = raw.trim()
+  if (v === '') return false
+  if (allowMax && v === 'max') return true
+  if (allowLevel && LEVEL_EXPR_REGEX.test(v)) return true
+  if (VAR_PATH.test(v)) return true
+  if (DICE_REGEX.test(v)) return true
+  const n = Number(v)
+  return Number.isFinite(n)
+}
+
+export function coerceAmount(raw: string, allowMax: boolean, allowLevel = false): number | string {
+  const v = raw.trim()
+  if (allowMax && v === 'max') return 'max'
+  if (allowLevel && LEVEL_EXPR_REGEX.test(v)) return v
+  // Variable references (`$name` / `$vars.name`) pass through verbatim — they
+  // must NOT be funneled into Number().
+  if (VAR_PATH.test(v)) return v
+  if (DICE_REGEX.test(v)) return v
+  const n = Number(v)
+  return Number.isFinite(n) ? n : v
+}
+
+/** Coerce a raw compare-value string to boolean / number / string for the DSL. */
+export function coerceCompareValue(raw: string): boolean | number | string {
+  const trimmed = raw.trim()
+  if (trimmed === 'true') return true
+  if (trimmed === 'false') return false
+  if (trimmed !== '' && Number.isFinite(Number(trimmed))) return Number(trimmed)
+  return raw
+}
+
+/**
+ * Coerce a comma-separated string into an array for the `in` operator (#7).
+ * The backend evaluate_filter rejects a scalar/string rhs for FilterOp.IN and
+ * tests `lhs in rhs`, so the value MUST be a list. Each element is coerced like
+ * a scalar compare-value; empty items are dropped.
+ */
+export function coerceListValue(raw: string): (boolean | number | string)[] {
+  return raw
+    .split(',')
+    .map((s) => s.trim())
+    .filter((s) => s !== '')
+    .map(coerceCompareValue)
 }

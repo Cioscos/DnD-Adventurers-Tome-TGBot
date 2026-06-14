@@ -14,23 +14,24 @@ import type {
   NotifySeverity,
   Table,
 } from '@/lib/homebrew/types'
-import { isActionAllowedForEvent } from './effectForm.utils'
+import {
+  coerceAmount,
+  coerceCompareValue,
+  coerceListValue,
+  DICE_REGEX,
+  isActionAllowedForEvent,
+  isAmountValid,
+} from './effectForm.utils'
 
 // ---------------------------------------------------------------------------
 // Backend mirrors
 // ---------------------------------------------------------------------------
 
-const DICE_REGEX = /^(\d+)d(\d+)([+-]\d+)?$/
 const VAR_REGEX = /^[a-zA-Z_][a-zA-Z0-9_]{0,59}$/
-// Variable reference accepted by the backend `_resolve_amount`
-// (api/services/homebrew/actions.py): `$name` or `$vars.name`. The bare form
-// without `$` is intentionally rejected — the backend would read it as dice
-// notation instead.
-const VAR_PATH = /^\$(vars\.)?[A-Za-z_][A-Za-z0-9_]*$/
-// Mirrors api/services/homebrew/dsl.py modifier target regex used in
-// PassiveModifierFormModal.
-const MODIFIER_TARGET_REGEX =
-  /^character\.(ac|hit_points_max|speed|skill\.[a-z_]+|saving_throw\.[a-z]+)$/
+// apply_modifier_once muta un campo BASE persistito; l'engine (D2) gestisce solo
+// character.hit_points_max e character.speed. AC / skill / TS restano dominio dei
+// passive_modifier (calcolati, con riga di breakdown) — vedi PassiveModifierFormModal.
+const APPLY_MODIFIER_ONCE_TARGET_REGEX = /^character\.(hit_points_max|speed)$/
 
 const FILTER_OPS: readonly FilterOp[] = [
   'eq',
@@ -53,27 +54,6 @@ const SEVERITY_OPTIONS: readonly NotifySeverity[] = [
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function isAmountValid(raw: string, allowMax: boolean): boolean {
-  const v = raw.trim()
-  if (v === '') return false
-  if (allowMax && v === 'max') return true
-  if (VAR_PATH.test(v)) return true
-  if (DICE_REGEX.test(v)) return true
-  const n = Number(v)
-  return Number.isFinite(n)
-}
-
-function coerceAmount(raw: string, allowMax: boolean): number | string {
-  const v = raw.trim()
-  if (allowMax && v === 'max') return 'max'
-  // Variable references (`$name` / `$vars.name`) pass through verbatim — they
-  // must NOT be funneled into Number().
-  if (VAR_PATH.test(v)) return v
-  if (DICE_REGEX.test(v)) return v
-  const n = Number(v)
-  return Number.isFinite(n) ? n : v
-}
 
 /**
  * Normalize a free-text condition name into the canonical `custom:<slug>` key
@@ -227,10 +207,10 @@ export default function EffectFormModal({
         if (!isActionAllowedForEvent('apply_modifier_once', triggerEvent)) {
           errs.modifier_event = t('homebrew.effects.fields.modifier_event_invalid')
         }
-        if (!MODIFIER_TARGET_REGEX.test(e.target.trim())) {
+        if (!APPLY_MODIFIER_ONCE_TARGET_REGEX.test(e.target.trim())) {
           errs.modifier_target = t('homebrew.effects.fields.modifier_target_invalid')
         }
-        if (!isAmountValid(String(e.delta), false)) {
+        if (!isAmountValid(String(e.delta), false, true)) {
           errs.delta = t('homebrew.effects.fields.amount_invalid')
         }
         if (!e.label.trim()) errs.label = t('homebrew.effects.fields.required')
@@ -556,14 +536,14 @@ function EffectFormBody({ draft, update, tables, errors }: BodyProps) {
             label={t('homebrew.effects.fields.modifier_target')}
             value={draft.target}
             onChange={(v) => update<typeof draft>({ target: v })}
-            placeholder="character.ac"
+            placeholder="character.hit_points_max"
             error={errors.modifier_target}
           />
           <Input
             label={t('homebrew.effects.fields.delta')}
             value={String(draft.delta)}
-            onChange={(v) => update<typeof draft>({ delta: coerceAmount(v, false) })}
-            placeholder="1"
+            onChange={(v) => update<typeof draft>({ delta: coerceAmount(v, false, true) })}
+            placeholder="2*level"
             error={errors.delta}
           />
           <Input
@@ -696,15 +676,6 @@ function ConditionNameInput({
   )
 }
 
-/** Coerce a raw compare-value string to boolean / number / string for the DSL. */
-function coerceCompareValue(raw: string): boolean | number | string {
-  const trimmed = raw.trim()
-  if (trimmed === 'true') return true
-  if (trimmed === 'false') return false
-  if (trimmed !== '' && Number.isFinite(Number(trimmed))) return Number(trimmed)
-  return raw
-}
-
 function FilterEditor({
   cond,
   onChange,
@@ -715,6 +686,7 @@ function FilterEditor({
   pathError?: string
 }) {
   const { t } = useTranslation()
+  const isInOp = cond.op === 'in'
   return (
     <>
       <Input
@@ -730,7 +702,20 @@ function FilterEditor({
         </label>
         <select
           value={cond.op}
-          onChange={(e) => onChange({ ...cond, op: e.target.value as FilterOp })}
+          onChange={(e) => {
+            const nextOp = e.target.value as FilterOp
+            // Keep `value` shape consistent with the operator: `in` needs a list,
+            // the others a scalar. Convert on switch so a saved rule is never
+            // `in` with a scalar (the backend rejects it) nor vice-versa.
+            let nextValue = cond.value
+            if (nextOp === 'in' && !Array.isArray(cond.value)) {
+              const s = cond.value == null ? '' : String(cond.value)
+              nextValue = s.trim() === '' ? [] : coerceListValue(s)
+            } else if (nextOp !== 'in' && Array.isArray(cond.value)) {
+              nextValue = cond.value.length ? cond.value[0] : ''
+            }
+            onChange({ ...cond, op: nextOp, value: nextValue })
+          }}
           className="w-full px-3 py-2.5 min-h-[48px] rounded-lg bg-dnd-surface text-dnd-text border-b-2 border-dnd-border outline-none font-body"
         >
           {FILTER_OPS.map((op) => (
@@ -738,12 +723,21 @@ function FilterEditor({
           ))}
         </select>
       </div>
-      <Input
-        label={t('homebrew.effects.fields.cond_value')}
-        value={String(cond.value ?? '')}
-        onChange={(v) => onChange({ ...cond, value: coerceCompareValue(v) })}
-        placeholder="..."
-      />
+      {isInOp ? (
+        <Input
+          label={t('homebrew.effects.fields.cond_value_list')}
+          value={Array.isArray(cond.value) ? cond.value.join(', ') : String(cond.value ?? '')}
+          onChange={(v) => onChange({ ...cond, value: coerceListValue(v) })}
+          placeholder="fuoco, freddo, veleno"
+        />
+      ) : (
+        <Input
+          label={t('homebrew.effects.fields.cond_value')}
+          value={String(cond.value ?? '')}
+          onChange={(v) => onChange({ ...cond, value: coerceCompareValue(v) })}
+          placeholder="..."
+        />
+      )}
     </>
   )
 }

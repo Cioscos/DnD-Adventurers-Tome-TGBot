@@ -86,7 +86,7 @@ export interface PassiveModifier {
 // Resource definition
 // ---------------------------------------------------------------------------
 
-export type RestorationType = "long_rest" | "short_rest" | "none"
+export type RestorationType = "long_rest" | "short_rest" | "none" | "manual"
 
 export interface ResourceDef {
   key: string
