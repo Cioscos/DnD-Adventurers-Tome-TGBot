@@ -83,16 +83,18 @@ async def test_engine_continues_on_action_error(db_session):
     char = Character(user_id=1, name="T")
     db_session.add(char)
     await db_session.flush()
-    # First effect references a missing table — ActionExecutionError.
+    # First effect mutates a resource that doesn't exist → runtime
+    # ActionExecutionError (valid at schema level; fails only at execution). A
+    # missing lookup table is now rejected at create by F4-22, so we use a
+    # runtime-only failure here to exercise engine resilience.
     # Second effect is a plain notify and should still run.
     dsl = {
-        "version": 1, "subject": {"type": "item"},
+        "version": 1, "subject": {"type": "character"},
         "triggers": [{
-            "event": "attack_rolled",
+            "event": "manual_trigger",
             "filters": [],
             "effects": [
-                {"action": "lookup_table", "table": "missing",
-                 "row": "$subject.quality", "col": "$wear_roll", "store_as": "x"},
+                {"action": "change_resource", "key": "ghost_points", "delta": -1},
                 {"action": "notify", "severity": "warning", "message": "second"},
             ],
         }],
@@ -104,15 +106,14 @@ async def test_engine_continues_on_action_error(db_session):
     db_session.add(rule)
     await db_session.flush()
 
-    ctx = ExecutionContext.new("attack_rolled", {"is_fumble": True},
-                                 {"_kind": "item", "metadata": {"hb_quality": "pessima"}},
+    ctx = ExecutionContext.new("manual_trigger", {},
+                                 {"_kind": "character", "_id": char.id},
                                  {"id": char.id})
-    ctx.set_var("wear_roll", 5)
     engine = RuleEngine()
     result = await engine.execute_trigger(rule, rule.dsl["triggers"][0], ctx, db_session, char)
     assert result is not None
     assert len(result.errors) == 1
-    assert "missing" in result.errors[0]
+    assert "ghost_points" in result.errors[0]
     # The second effect ran despite the first failing.
     assert len(result.notifications) == 1
     assert result.notifications[0].message == "second"

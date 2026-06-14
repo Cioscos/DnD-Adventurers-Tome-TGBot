@@ -78,13 +78,40 @@ class Property(BaseModel):
                 raise ValueError(f"default '{self.default}' must be in values {self.values}")
         return self
 
+    @model_validator(mode="after")
+    def _value_labels_consistency(self) -> "Property":
+        # value_labels_i18n keys must be declared values, and each map must cover
+        # it/en (parallels label_i18n). Only meaningful for enum properties (#27).
+        if self.value_labels_i18n is not None:
+            if self.type != "enum":
+                raise ValueError("value_labels_i18n is only valid for type='enum'")
+            allowed = set(self.values or [])
+            for val, langs in self.value_labels_i18n.items():
+                if val not in allowed:
+                    raise ValueError(
+                        f"value_labels_i18n key '{val}' is not in values {sorted(allowed)}"
+                    )
+                missing = {"it", "en"} - set(langs.keys())
+                if missing:
+                    raise ValueError(f"value_labels_i18n['{val}'] missing languages: {missing}")
+        return self
 
-_DICE_RE = re.compile(r"^(\d+)d(\d+)([+-]\d+)?$", re.IGNORECASE)
+
+# N and M must be >= 1 (no '1d0' → runtime ValueError); caps avoid pathological rolls (#33).
+_DICE_RE = re.compile(r"^([1-9]\d*)d([1-9]\d*)([+-]\d+)?$", re.IGNORECASE)
+_DICE_MAX_COUNT = 100
+_DICE_MAX_SIDES = 1000
 
 
 def _validate_dice_notation(v: str) -> str:
-    if not _DICE_RE.match(v.strip()):
-        raise ValueError(f"Invalid dice notation: '{v}' (expected NdM or NdM+K)")
+    m = _DICE_RE.match(v.strip())
+    if not m:
+        raise ValueError(f"Invalid dice notation: '{v}' (expected NdM or NdM+K with N,M >= 1)")
+    count, sides = int(m.group(1)), int(m.group(2))
+    if count > _DICE_MAX_COUNT or sides > _DICE_MAX_SIDES:
+        raise ValueError(
+            f"Dice '{v}' exceeds limits (count <= {_DICE_MAX_COUNT}, sides <= {_DICE_MAX_SIDES})"
+        )
     return v
 
 
@@ -126,12 +153,29 @@ class ActionMatch(_ActionBase):
             raise ValueError("match requires at least one case")
         return self
 
+    @model_validator(mode="after")
+    def _validate_case_actions(self) -> "ActionMatch":
+        # Recursively validate the nested actions in every case (#8) — previously
+        # only top-level effects were checked, so a malformed nested action only
+        # failed (silently) at runtime.
+        for case_effects in self.cases.values():
+            for eff in case_effects:
+                parse_action(eff)
+        return self
+
 
 class ActionIf(_ActionBase):
     action: Literal["if"]
     cond: Filter
     then: list[dict] = Field(default_factory=list)
     else_: list[dict] = Field(default_factory=list, alias="else")
+
+    @model_validator(mode="after")
+    def _validate_branch_actions(self) -> "ActionIf":
+        # Recursively validate nested actions in then/else branches (#8).
+        for eff in [*self.then, *self.else_]:
+            parse_action(eff)
+        return self
 
 
 class ActionSetProperty(_ActionBase):
@@ -209,6 +253,11 @@ class ActionChangeResource(_ActionBase):
     key: str
     delta: IntOrDice
 
+    @field_validator("key")
+    @classmethod
+    def _key_format(cls, v: str) -> str:
+        return _validate_key(v)
+
     @field_validator("delta")
     @classmethod
     def _delta_format(cls, v):
@@ -223,6 +272,11 @@ class ActionRestoreResource(_ActionBase):
     action: Literal["restore_resource"]
     key: str
     amount: IntOrDice | Literal["max"]
+
+    @field_validator("key")
+    @classmethod
+    def _key_format(cls, v: str) -> str:
+        return _validate_key(v)
 
     @field_validator("amount")
     @classmethod
@@ -245,9 +299,31 @@ class ActionRemoveCondition(_ActionBase):
 
 class ActionApplyModifierOnce(_ActionBase):
     action: Literal["apply_modifier_once"]
-    target: str  # e.g. "character.hit_points_max"
-    delta: IntOrDice | str  # accepts "2*level" syntax — evaluated at runtime
+    target: str  # restricted to stored base fields (see validator) — D2
+    delta: IntOrDice | str  # int, dice, $var or "N*level" — evaluated at runtime
     label: str = Field(..., min_length=1, max_length=200)
+
+    @field_validator("target")
+    @classmethod
+    def _target_supported(cls, v: str) -> str:
+        # D2: the engine only mutates the two stored base fields. AC / skills /
+        # saving throws belong to passive_modifiers (computed, with breakdown).
+        if v not in ("character.hit_points_max", "character.speed"):
+            raise ValueError(
+                "apply_modifier_once target must be 'character.hit_points_max' "
+                "or 'character.speed'"
+            )
+        return v
+
+    @field_validator("delta")
+    @classmethod
+    def _delta_format(cls, v):
+        if isinstance(v, str):
+            s = v.strip()
+            if s.startswith("$") or re.fullmatch(r"-?\d+\*level", s, re.IGNORECASE):
+                return v
+            return _validate_dice_notation(v)
+        return v
 
 
 class ActionNotify(_ActionBase):
@@ -328,7 +404,10 @@ class SubjectFilter(BaseModel):
     name_contains: Optional[str] = None
 
 
-SubjectType = Literal["item", "character", "ability"]
+# 'ability' removed (#11): the dispatcher never scoped it (subject._id was the
+# character id and $subject.name raised), so it was misleading. Scope an ability
+# rule via $event.ability_id / $event.ability_name instead.
+SubjectType = Literal["item", "character"]
 
 
 class Subject(BaseModel):
@@ -362,6 +441,24 @@ class Table(BaseModel):
                 raise ValueError(f"col_bins entries must be [lo, hi] with lo<=hi: {b}")
         return self
 
+    @model_validator(mode="after")
+    def _bins_and_cells_non_empty(self) -> "Table":
+        # An empty bin list or no rows makes every lookup fail at runtime (#26).
+        if not self.col_bins:
+            raise ValueError("col_bins must declare at least one bin")
+        if not self.cells:
+            raise ValueError("cells must declare at least one row")
+        return self
+
+    @model_validator(mode="after")
+    def _bins_no_overlap(self) -> "Table":
+        # Overlapping bins make later bins unreachable (first match wins) (#26).
+        ordered = sorted(self.col_bins, key=lambda b: b[0])
+        for prev, cur in zip(ordered, ordered[1:]):
+            if cur[0] <= prev[1]:
+                raise ValueError(f"col_bins must not overlap: {prev} and {cur}")
+        return self
+
 
 _PASSIVE_TARGET_RE = re.compile(
     r"^character\.(ac|hit_points_max|speed|skill\.[a-z_]+|saving_throw\.[a-z]+)$"
@@ -373,7 +470,7 @@ class PassiveModifier(BaseModel):
     model_config = ConfigDict(extra="forbid")
     when: Filter
     target: str
-    value: int | str  # int or dice notation (for future random deltas; MVP only int)
+    value: int  # MVP: integer deltas only — dice/random are deferred (#23)
     label_i18n: dict[str, str]
 
     @field_validator("target")
@@ -384,6 +481,19 @@ class PassiveModifier(BaseModel):
                 f"Target '{v}' not supported. Allowed: character.ac, character.hit_points_max, "
                 f"character.speed, character.skill.<slug>, character.saving_throw.<slug>"
             )
+        # Restrict skill / saving_throw slugs to the ones the response builder
+        # actually applies, so an unknown slug is rejected at create instead of
+        # silently dropped at runtime (#28).
+        if v.startswith("character.skill."):
+            from core.data.skills import SKILL_ABILITY_MAP
+            slug = v[len("character.skill."):]
+            if slug not in SKILL_ABILITY_MAP:
+                raise ValueError(f"Unknown skill slug '{slug}' in target '{v}'")
+        elif v.startswith("character.saving_throw."):
+            from core.game.stats import ABILITY_NAMES
+            slug = v[len("character.saving_throw."):]
+            if slug not in ABILITY_NAMES:
+                raise ValueError(f"Unknown saving-throw ability '{slug}' in target '{v}'")
         return v
 
     @field_validator("label_i18n")
@@ -444,4 +554,34 @@ class RuleDSL(BaseModel):
     def _has_at_least_one_behavior(self) -> "RuleDSL":
         if not self.triggers and not self.passive_modifiers:
             raise ValueError("Rule must declare at least one trigger or passive_modifier")
+        return self
+
+    @model_validator(mode="after")
+    def _lookup_tables_exist(self) -> "RuleDSL":
+        # Every lookup_table action (incl. nested in if/match) must reference a
+        # declared table id (#25) — caught at create, not silently at runtime.
+        table_ids = {t.id for t in self.tables}
+
+        def _scan(effects: list) -> None:
+            for eff in effects:
+                if not isinstance(eff, dict):
+                    continue
+                action = eff.get("action")
+                if action == "lookup_table":
+                    tid = eff.get("table")
+                    if tid not in table_ids:
+                        raise ValueError(
+                            f"lookup_table references unknown table '{tid}' "
+                            f"(declared: {sorted(table_ids)})"
+                        )
+                elif action == "if":
+                    _scan(eff.get("then") or [])
+                    _scan(eff.get("else") or [])
+                elif action == "match":
+                    for case in (eff.get("cases") or {}).values():
+                        if isinstance(case, list):
+                            _scan(case)
+
+        for trig in self.triggers:
+            _scan(trig.effects)
         return self

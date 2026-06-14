@@ -37,10 +37,14 @@ async def get_passive_modifiers(
                 continue
             # Determine subjects to evaluate against.
             if subject_def.get("type") == "item":
-                allowed_types = (subject_def.get("filter") or {}).get("item_types")
+                filt = subject_def.get("filter") or {}
+                allowed_types = filt.get("item_types")
+                name_contains = filt.get("name_contains")
                 candidates = [
                     i for i in all_items
-                    if not allowed_types or i.item_type in allowed_types
+                    if (not allowed_types or i.item_type in allowed_types)
+                    and (not name_contains
+                         or name_contains.lower() in (i.name or "").lower())
                 ]
             else:
                 candidates = [None]  # single subject = char itself

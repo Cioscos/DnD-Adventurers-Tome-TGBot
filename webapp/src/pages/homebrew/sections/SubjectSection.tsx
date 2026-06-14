@@ -12,7 +12,6 @@ export interface SubjectSectionProps {
 const SUBJECT_TYPES: readonly { value: SubjectType; emoji: string }[] = [
   { value: 'item', emoji: '⚔️' },
   { value: 'character', emoji: '👤' },
-  { value: 'ability', emoji: '🌟' },
 ]
 
 const ITEM_TYPES = [
