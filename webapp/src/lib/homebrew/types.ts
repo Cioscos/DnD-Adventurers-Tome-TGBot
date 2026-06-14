@@ -30,7 +30,7 @@ export interface Filter {
 // Subject
 // ---------------------------------------------------------------------------
 
-export type SubjectType = "item" | "character" | "ability"
+export type SubjectType = "item" | "character"
 
 export interface SubjectFilter {
   item_types?: string[]

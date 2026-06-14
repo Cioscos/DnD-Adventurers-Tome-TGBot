@@ -57,8 +57,14 @@ def execute_lookup_table(action, ctx, rfr, session, char, *, rule: RuleDSL, **kw
     row_value = _resolve_or_value(action["row"], ctx)
     col_value = _resolve_or_value(action["col"], ctx)
 
-    # Map numeric col to its bin index
+    # Map numeric col to its bin index. A literal string col (e.g. "3") is coerced
+    # to a number so authors aren't forced to route it through a $var (#16).
     col_index = None
+    if isinstance(col_value, str):
+        try:
+            col_value = int(col_value.strip())
+        except ValueError:
+            pass
     if isinstance(col_value, (int, float)):
         for i, (lo, hi) in enumerate(table.col_bins):
             if lo <= col_value <= hi:
@@ -392,7 +398,8 @@ async def execute_restore_resource(action, ctx, rfr, session, char, **kw):
         resource.current = resource.max
     else:
         amount = _resolve_amount(amount, ctx, field="restore_resource.amount")
-        resource.current = min(resource.max, resource.current + amount)
+        # Clamp both bounds: 'restore' must never push current below 0 (#17).
+        resource.current = max(0, min(resource.max, resource.current + amount))
     await session.flush()
     await _reemit_resource_events(
         session, char, resource, before, resource.current, rfr, **kw

@@ -1,6 +1,42 @@
 {
   "entries": [
     {
+      "version": "2.15.1",
+      "date": "2026-06-14",
+      "title": {
+        "it": "Editor regole più rigoroso (4/7)",
+        "en": "Stricter rule editor (4/7)"
+      },
+      "added": {
+        "it": [],
+        "en": []
+      },
+      "improved": {
+        "it": [
+          "Regole homebrew: errori come dadi non validi (es. 1d0), tabelle inesistenti, chiavi risorsa malformate o azioni annidate sbagliate vengono ora bloccati al salvataggio con un messaggio, invece di fallire in silenzio durante il gioco",
+          "Tabelle: ora accettano una colonna numerica scritta direttamente (prima serviva per forza una variabile)"
+        ],
+        "en": [
+          "Homebrew rules: errors like invalid dice (e.g. 1d0), missing tables, malformed resource keys or wrong nested actions are now caught on save with a message, instead of failing silently during play",
+          "Tables: a numeric column can now be written directly (a variable used to be required)"
+        ]
+      },
+      "fixed": {
+        "it": [
+          "Modificatori passivi: i bonus su abilità o tiri salvezza con nomi inesistenti non vengono più accettati (prima erano salvati ma mai applicati); il filtro «il nome contiene» è ora rispettato anche per i bonus passivi",
+          "Modificatore permanente: il limite a PF massimi e velocità è ora applicato anche dal server",
+          "Tabelle con fasce di valori vuote o sovrapposte vengono rifiutate, così non producono risultati imprevedibili",
+          "Rimosso il tipo di soggetto «Abilità» dalle regole: non veniva mai applicato correttamente — per le abilità si usano i filtri sull'evento"
+        ],
+        "en": [
+          "Passive modifiers: bonuses targeting non-existent skills or saving throws are no longer accepted (they used to be saved but never applied); the «name contains» filter is now honored for passive bonuses too",
+          "Permanent modifier: the limit to max HP and speed is now enforced on the server as well",
+          "Tables with empty or overlapping value bands are now rejected, so they can't produce unpredictable results",
+          "Removed the «Ability» subject type from rules: it was never applied correctly — use event filters for abilities instead"
+        ]
+      }
+    },
+    {
       "version": "2.15.0",
       "date": "2026-06-14",
       "title": {
