@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Plus, Trash2, X } from 'lucide-react'
+import { Plus, Trash2, X, AlertTriangle } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import Input from '@/components/ui/Input'
 import { resolveLabelI18n, type Locale } from '@/lib/homebrew/i18n-dsl'
 import type { Property, Table } from '@/lib/homebrew/types'
+import { computeTableWarnings, formatBin } from './tablesSection.utils'
 
 export interface TablesSectionProps {
   tables: Table[]
@@ -40,13 +41,6 @@ function findEnumProperty(properties: Property[], rowAxis: string): Property | n
   const prop = properties.find((p) => p.key === rowAxis)
   if (!prop || prop.type !== 'enum') return null
   return prop
-}
-
-/**
- * Display a [lo, hi] tuple as "lo-hi", collapsing to "lo" when lo === hi.
- */
-function formatBin(bin: [number, number]): string {
-  return bin[0] === bin[1] ? String(bin[0]) : `${bin[0]}-${bin[1]}`
 }
 
 // ---------------------------------------------------------------------------
@@ -284,6 +278,7 @@ function TableCard({
 
   const axisProp = findEnumProperty(enumProperties, table.row_axis)
   const rowValues = axisProp?.values ?? []
+  const warnings = computeTableWarnings(table)
 
   return (
     <li className="bg-dnd-surface-raised border border-dnd-border rounded-2xl p-3 space-y-3">
@@ -411,6 +406,20 @@ function TableCard({
           </table>
         </div>
       ) : null}
+
+      {warnings.length > 0 && (
+        <ul className="space-y-1 pt-0.5">
+          {warnings.map((w, i) => (
+            <li
+              key={i}
+              className="flex items-start gap-1.5 text-[11px] font-body text-dnd-amber"
+            >
+              <AlertTriangle size={12} className="shrink-0 mt-0.5" />
+              <span>{t(w.key, w.params)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
     </li>
   )
 }
