@@ -60,8 +60,8 @@ export default function CustomConditionCard({
           {title}
         </div>
         {subtitle && (
-          <div className="text-[10px] font-cinzel uppercase tracking-[0.18em]
-                          text-dnd-text-faint truncate">
+          <div className="text-[11px] font-cinzel uppercase tracking-[0.1em]
+                          leading-tight text-dnd-text-faint">
             {subtitle}
           </div>
         )}
