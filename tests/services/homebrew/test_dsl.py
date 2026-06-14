@@ -12,6 +12,7 @@ from api.services.homebrew.dsl import (
     ActionChangeResource, ActionRestoreResource,
     ActionApplyCondition, ActionRemoveCondition, ActionApplyModifierOnce,
     ActionNotify, ActionAddHistory,
+    Trigger,
     parse_action,
 )
 
@@ -96,6 +97,43 @@ def test_property_tone_by_value_rejects_unknown_tone():
             label_i18n={"it": "Q", "en": "Q"},
             tone_by_value={"a": "purple"},
         )
+
+
+def test_trigger_rejects_excessive_nesting_depth():
+    # #45: nesting `if` deeper than the cap must be rejected at validation.
+    node = [{"action": "notify", "severity": "info", "message": "x"}]
+    for _ in range(12):
+        node = [{
+            "action": "if",
+            "cond": {"path": "$subject.quality", "op": "eq", "value": "x"},
+            "then": node, "else": [],
+        }]
+    with pytest.raises(ValidationError) as exc:
+        Trigger(event="manual_trigger", effects=node)
+    assert "deep" in str(exc.value).lower() or "nesting" in str(exc.value).lower()
+
+
+def test_trigger_rejects_too_many_actions():
+    # #45: a single trigger with more than the cap of actions must be rejected.
+    effects = [
+        {"action": "notify", "severity": "info", "message": f"m{i}"}
+        for i in range(201)
+    ]
+    with pytest.raises(ValidationError) as exc:
+        Trigger(event="manual_trigger", effects=effects)
+    assert "actions" in str(exc.value).lower()
+
+
+def test_trigger_allows_reasonable_nesting_and_count():
+    # #45: ordinary nested triggers stay well within the generous caps.
+    effects = [{
+        "action": "if",
+        "cond": {"path": "$subject.quality", "op": "eq", "value": "x"},
+        "then": [{"action": "notify", "severity": "info", "message": "y"}],
+        "else": [],
+    }]
+    t = Trigger(event="manual_trigger", effects=effects)
+    assert len(t.effects) == 1
 
 
 def test_action_roll_dice_basic():

@@ -1445,7 +1445,9 @@
       "col_bin_hi": "To",
       "add_column": "+ column",
       "cell_placeholder": "comma-separated actions",
-      "delete_confirm": "Delete table '{{name}}'?"
+      "delete_confirm": "Delete table '{{name}}'?",
+      "warn_overlap": "Overlapping ranges ({{a}} and {{b}}): columns after the first will never be used.",
+      "warn_no_outcomes": "No outcome defined: fill at least one cell."
     },
     "passive": {
       "empty": "No passive modifiers yet. Modifiers are bonuses or maluses that apply automatically when a condition is true (e.g. +1 to AC when equipping magical armor).",

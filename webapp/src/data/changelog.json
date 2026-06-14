@@ -1,6 +1,32 @@
 {
   "entries": [
     {
+      "version": "2.16.1",
+      "date": "2026-06-15",
+      "title": {
+        "it": "Editor regole: tabelle più sicure (7/7)",
+        "en": "Rule editor: safer tables (7/7)"
+      },
+      "added": {
+        "it": [],
+        "en": []
+      },
+      "improved": {
+        "it": [
+          "Editor regole — Tabelle: l'editor segnala subito gli intervalli sovrapposti e le tabelle senza esiti, prima del salvataggio",
+          "Le regole homebrew con annidamenti o numero di azioni eccessivi vengono rifiutate con un messaggio chiaro, invece di rallentare l'app"
+        ],
+        "en": [
+          "Rule editor — Tables: the editor now flags overlapping ranges and tables with no outcome right away, before saving",
+          "Homebrew rules with excessive nesting or action counts are now rejected with a clear message instead of slowing the app down"
+        ]
+      },
+      "fixed": {
+        "it": [],
+        "en": []
+      }
+    },
+    {
       "version": "2.16.0",
       "date": "2026-06-14",
       "title": {

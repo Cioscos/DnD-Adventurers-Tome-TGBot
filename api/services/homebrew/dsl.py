@@ -164,7 +164,7 @@ class ActionLookupTable(_ActionBase):
 class ActionMatch(_ActionBase):
     action: Literal["match"]
     value: str
-    cases: dict[str, list[dict]]  # validated recursively at engine layer
+    cases: dict[str, list[dict]]  # validated recursively at parse (see _validate_case_actions)
 
     @model_validator(mode="after")
     def _has_cases(self) -> "ActionMatch":
@@ -524,12 +524,62 @@ class PassiveModifier(BaseModel):
         return v
 
 
+# Defensive caps on a single trigger's effect tree (#45). Recursive validation of
+# match.cases / if.then / if.else and MAX_DEPTH on event re-emits already prevent
+# runaway recursion, but neither bounds nesting depth nor how many actions a single
+# trigger runs. Generous limits — no real rule comes close.
+_MAX_NESTING_DEPTH = 10
+_MAX_TRIGGER_ACTIONS = 200
+
+
+def _effect_tree_stats(effects: list, depth: int = 1) -> tuple[int, int]:
+    """(total action count, max nesting depth) over an effect tree.
+
+    Recurses into match.cases / if.then / if.else. ``depth`` is 1-based, so a flat
+    trigger is depth 1. Raises early once the depth cap is exceeded, bounding the
+    recursion itself so a pathologically deep tree can't blow the Python stack.
+    """
+    if depth > _MAX_NESTING_DEPTH:
+        raise ValueError(
+            f"trigger effects nested too deep (max {_MAX_NESTING_DEPTH} levels)"
+        )
+    total = 0
+    max_depth = depth
+    for eff in effects:
+        if not isinstance(eff, dict):
+            continue
+        total += 1
+        action = eff.get("action")
+        branches: list[list] = []
+        if action == "if":
+            branches = [eff.get("then") or [], eff.get("else") or []]
+        elif action == "match":
+            branches = [c for c in (eff.get("cases") or {}).values() if isinstance(c, list)]
+        for branch in branches:
+            sub_total, sub_depth = _effect_tree_stats(branch, depth + 1)
+            total += sub_total
+            max_depth = max(max_depth, sub_depth)
+    return total, max_depth
+
+
 class Trigger(BaseModel):
     """An event-driven trigger with filters and effects."""
     model_config = ConfigDict(extra="forbid")
     event: EventType
     filters: list[Filter] = Field(default_factory=list)
     effects: list[dict] = Field(default_factory=list)  # validated recursively at parse
+
+    @field_validator("effects")
+    @classmethod
+    def _within_caps(cls, v: list[dict]) -> list[dict]:
+        # #45: enforce generous depth/action caps BEFORE parse_action recurses, so a
+        # pathologically deep tree fails cleanly here instead of via RecursionError.
+        total, _ = _effect_tree_stats(v)
+        if total > _MAX_TRIGGER_ACTIONS:
+            raise ValueError(
+                f"trigger has too many actions ({total}; max {_MAX_TRIGGER_ACTIONS})"
+            )
+        return v
 
     @field_validator("effects")
     @classmethod

@@ -1445,7 +1445,9 @@
       "col_bin_hi": "A",
       "add_column": "+ colonna",
       "cell_placeholder": "azioni separate da virgola",
-      "delete_confirm": "Eliminare la tabella '{{name}}'?"
+      "delete_confirm": "Eliminare la tabella '{{name}}'?",
+      "warn_overlap": "Intervalli sovrapposti ({{a}} e {{b}}): le colonne dopo la prima non verranno mai usate.",
+      "warn_no_outcomes": "Nessun esito definito: compila almeno una cella."
     },
     "passive": {
       "empty": "Nessun modificatore passivo. I modificatori sono bonus o malus che si applicano automaticamente quando una condizione è vera (es. +1 alla CA quando si equipaggia un'armatura magica).",
