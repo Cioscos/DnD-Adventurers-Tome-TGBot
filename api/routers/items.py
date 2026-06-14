@@ -17,7 +17,7 @@ from sqlalchemy.orm import selectinload
 from api.auth import get_current_user
 from api.database import get_db
 from api.services.dice_stats import record_dice
-from core.db.models import Character, CharacterClass, CharacterHistory, EquipmentSlot, Item
+from core.db.models import Character, CharacterClass, CharacterHistory, EquipmentSlot, HomebrewRule, Item
 from api.schemas.character import CharacterFull
 from api.schemas.item import ItemCreate, ItemRead, ItemUpdate, WeaponAttackResult
 from core.game.stats import effective_ability_score
@@ -117,6 +117,39 @@ async def list_items(
     return char.items
 
 
+async def _apply_item_property_defaults(
+    session: AsyncSession, char_id: int, item: Item
+) -> None:
+    """Materialize hb_<key> defaults from every enabled item-scoped homebrew rule
+    onto a single newly-created item, so a rule installed BEFORE the item is
+    acquired still applies to it (#32). Item-first mirror of
+    homebrew._materialize_property_defaults; only sets missing keys.
+    """
+    res = await session.execute(
+        select(HomebrewRule).where(
+            HomebrewRule.character_id == char_id,
+            HomebrewRule.enabled.is_(True),
+        )
+    )
+    md = json.loads(item.item_metadata or "{}")
+    changed = False
+    for rule in res.scalars():
+        subject_def = rule.dsl.get("subject", {})
+        if subject_def.get("type") != "item":
+            continue
+        properties = rule.dsl.get("properties") or []
+        item_types = (subject_def.get("filter") or {}).get("item_types")
+        if item_types and item.item_type not in item_types:
+            continue
+        for prop in properties:
+            key = f"hb_{prop['key']}"
+            if key not in md:
+                md[key] = prop["default"]
+                changed = True
+    if changed:
+        item.item_metadata = json.dumps(md)
+
+
 @router.post("/{char_id}/items", response_model=CharacterFull, status_code=201)
 async def add_item(
     char_id: int,
@@ -157,6 +190,8 @@ async def add_item(
     )
     session.add(item)
     await session.flush()
+    # Apply homebrew property defaults from rules installed before this item (#32).
+    await _apply_item_property_defaults(session, char_id, item)
     char.recalculate_encumbrance()
     await session.refresh(char, attribute_names=["items"])
     return await build_character_response(session, char)

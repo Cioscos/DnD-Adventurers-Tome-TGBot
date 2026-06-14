@@ -94,3 +94,35 @@ async def test_bleeding_template_no_condition_no_damage(
         from core.db.models import Character
         char = (await s.execute(select(Character).where(Character.id == char_id))).scalar_one()
     assert char.current_hit_points == 20
+
+
+@pytest.mark.asyncio
+async def test_bleeding_manual_trigger_applies_condition_end_to_end(
+    client, char_id, test_session_factory, patch_random_roll,
+):
+    """#37: the bleeding template now exposes a manual_trigger that applies
+    custom:bleeding, so the whole install → apply → bleed-on-turn chain is
+    reachable from the API (no DB hack to seed the condition)."""
+    await _seed_character(test_session_factory, char_id, hp=20)
+
+    inst = await client.post(f"/characters/{char_id}/homebrew/templates/bleeding/install")
+    assert inst.status_code == 201
+    rule_id = inst.json()["id"]
+
+    # Apply the condition through the new manual trigger (not via DB).
+    r = await client.post(f"/characters/{char_id}/homebrew/manual-trigger/{rule_id}")
+    assert r.status_code == 200, r.text
+
+    from core.db.models import Character
+    async with test_session_factory() as s:
+        char = (await s.execute(select(Character).where(Character.id == char_id))).scalar_one()
+    assert "custom:bleeding" in (char.conditions or {})
+
+    # The turn tick then drains HP (full chain works).
+    patch_random_roll(3)
+    turn = await client.post(f"/characters/{char_id}/homebrew/turn-start")
+    assert turn.status_code == 200
+
+    async with test_session_factory() as s:
+        char = (await s.execute(select(Character).where(Character.id == char_id))).scalar_one()
+    assert char.current_hit_points == 17

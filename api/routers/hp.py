@@ -85,6 +85,7 @@ async def _get_owned_full(
             selectinload(Character.currency),
             selectinload(Character.abilities),
             selectinload(Character.maps),
+            selectinload(Character.homebrew_resources),
         )
         .where(Character.id == char_id)
     )
@@ -277,6 +278,11 @@ async def rest(
         for ability in char.abilities:
             if ability.restoration_type in ("long_rest", "short_rest") and ability.max_uses is not None:
                 ability.uses = ability.max_uses
+        # Homebrew resources auto-restore on rest by restoration_type (D3),
+        # mirroring abilities: a long rest restores both long_rest and short_rest.
+        for resource in char.homebrew_resources:
+            if resource.restoration_type in ("long_rest", "short_rest"):
+                resource.current = resource.max
         # Reset death saves
         char.death_saves = {"successes": 0, "failures": 0, "stable": False}
         # A long rest reduces Exhaustion by 1 level (PHB p.186). Keep the value an
@@ -313,6 +319,10 @@ async def rest(
         for ability in char.abilities:
             if ability.restoration_type == "short_rest" and ability.max_uses is not None:
                 ability.uses = ability.max_uses
+        # Homebrew resources: a short rest restores only short_rest resources (D3).
+        for resource in char.homebrew_resources:
+            if resource.restoration_type == "short_rest":
+                resource.current = resource.max
         _add_history(session, char.id, "rest",
                      f"Riposo breve completato (HP recuperati: {healed})")
 
