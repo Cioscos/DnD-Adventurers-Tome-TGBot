@@ -279,7 +279,7 @@ Versioning **SemVer guidato da label PR** (`release:major|minor|patch`). Due wor
 **Checklist quando completi uno sviluppo, PRIMA di aprire la PR:**
 1. Decidi il bump (`major`/`minor`/`patch`) rispetto all'ultimo tag rilasciato.
 2. Aggiungi una nuova voce in testa a `entries` in `changelog.json`: `version` (nuovo numero), `date` (oggi, `YYYY-MM-DD`), e `added`/`improved`/`fixed` con testi **it + en**.
-3. Allinea `webapp/package.json` → `version` e `pyproject.toml` → `version` allo stesso numero.
+3. Allinea `webapp/package.json` → `version`, `pyproject.toml` → `version` **e `uv.lock`** (la riga `version` sotto `[[package]]` con `name = "dnd-bot-revamped"`) allo stesso numero, includendoli nello stesso commit del bump. `uv.lock` va modificato **a mano con Edit** (progetto `virtual`: la versione è testo puro, nessun hash da ricalcolare) — non eseguire `uv lock`/`uv sync` da WSL (corrompe il `.venv` Windows). Se lo dimentichi, un `uv run` da Windows riallineerà `uv.lock` più tardi lasciando una modifica orfana non committata (drift osservato: `uv.lock` fermo a una versione vecchia per molte release).
 4. Applica alla PR la label `release:<kind>` corrispondente (le 3 label vanno create una volta nelle impostazioni del repo).
 
 Lo script è testabile in locale (non tocca `.venv`): `node .github/scripts/changelog.mjs check <ultimoTag> <kind>`.
