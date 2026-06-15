@@ -154,7 +154,7 @@ export default function ResourceFormModal({
               <button
                 type="button"
                 onClick={enableKeyOverride}
-                className="text-[11px] font-cinzel uppercase tracking-wider text-dnd-gold-dim hover:text-dnd-gold-bright transition-colors"
+                className="hit-44 text-[11px] font-cinzel uppercase tracking-wider text-dnd-gold-dim hover:text-dnd-gold-bright transition-colors"
               >
                 {t('homebrew.resources.modal.key_override')}
               </button>

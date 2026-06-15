@@ -173,6 +173,61 @@ async def test_delete_rule_unknown_returns_404(client, char_id):
 
 
 @pytest.mark.asyncio
+async def test_delete_rule_clears_only_its_own_custom_conditions(
+    client, char_id, test_session_factory,
+):
+    """#FN1: a rule's apply_condition writes custom:<slug> into char.conditions,
+    a JSON blob OUTSIDE the relational graph — so deleting the rule cannot cascade
+    it away. delete_rule must remove the custom:* entries this rule owns so they
+    don't linger as orphans pointing at a deleted rule, while leaving standard
+    conditions (poisoned/exhaustion) and OTHER rules' custom conditions intact."""
+    from sqlalchemy import select as _select
+    from sqlalchemy.orm.attributes import flag_modified
+
+    from core.db.models import Character
+
+    rsp = await client.post(
+        f"/characters/{char_id}/homebrew/rules",
+        json={
+            "name": "Bleed", "description": "applies bleeding", "enabled": True,
+            "dsl": {
+                "version": 1, "subject": {"type": "character"},
+                "triggers": [{
+                    "event": "manual_trigger", "filters": [],
+                    "effects": [{"action": "apply_condition", "key": "custom:bleeding"}],
+                }],
+            },
+        },
+    )
+    assert rsp.status_code == 201, rsp.text
+    rule_id = rsp.json()["id"]
+
+    # Seed: a standard condition, this rule's custom condition, and an unrelated
+    # custom condition owned by a different rule.
+    async with test_session_factory() as s:
+        ch = (await s.execute(_select(Character).where(Character.id == char_id))).scalar_one()
+        ch.conditions = {
+            "poisoned": True,
+            "exhaustion": 2,
+            "custom:bleeding": {"rule_id": rule_id, "params": {}},
+            "custom:other": {"rule_id": 999999, "params": {}},
+        }
+        flag_modified(ch, "conditions")
+        await s.commit()
+
+    r = await client.delete(f"/characters/{char_id}/homebrew/rules/{rule_id}")
+    assert r.status_code == 204
+
+    async with test_session_factory() as s:
+        ch = (await s.execute(_select(Character).where(Character.id == char_id))).scalar_one()
+        conds = ch.conditions or {}
+    assert "custom:bleeding" not in conds        # orphan removed
+    assert conds.get("poisoned") is True         # standard condition intact
+    assert conds.get("exhaustion") == 2          # standard condition intact
+    assert "custom:other" in conds               # another rule's custom intact
+
+
+@pytest.mark.asyncio
 async def test_create_rule_from_scratch_returns_201(client, char_id):
     body = {
         "name": "My custom",

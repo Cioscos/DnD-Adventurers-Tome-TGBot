@@ -1,6 +1,40 @@
 {
   "entries": [
     {
+      "version": "2.16.2",
+      "date": "2026-06-15",
+      "title": {
+        "it": "Editor regole: rifiniture risorse, toni e tocco",
+        "en": "Rule editor: resources, tones & touch polish"
+      },
+      "added": {
+        "it": [],
+        "en": []
+      },
+      "improved": {
+        "it": [
+          "Tono badge nell'editor regole: i selettori del tono per valore mostrano ora il colore semantico (rosso per negativo, verde per positivo) anche prima della selezione, così capisci a colpo d'occhio cosa stai scegliendo",
+          "Editor regole: l'area toccabile del link \"Modifica chiave\" è ora di 44px, più comoda da raggiungere",
+          "Condizioni personalizzate: il sottotitolo della card non viene più troncato sugli schermi stretti"
+        ],
+        "en": [
+          "Badge tone in the rule editor: per-value tone selectors now show the semantic color (red for negative, green for positive) even before selection, so you can tell at a glance what you're choosing",
+          "Rule editor: the \"Edit key\" link tap area is now 44px, easier to reach",
+          "Custom conditions: the card subtitle is no longer truncated on narrow screens"
+        ]
+      },
+      "fixed": {
+        "it": [
+          "Risorse homebrew: la sezione \"Risorse\" dell'editor e il suo form ora sono completamente tradotti (prima mostravano chiavi tecniche grezze)",
+          "Condizioni homebrew: eliminando una regola che applica una condizione personalizzata, quella condizione viene ora rimossa dal personaggio invece di restare orfana; le altre condizioni (anche di altre regole) restano intatte"
+        ],
+        "en": [
+          "Homebrew resources: the editor's \"Resources\" section and its form are now fully translated (they previously showed raw technical keys)",
+          "Homebrew conditions: deleting a rule that applies a custom condition now removes that condition from the character instead of leaving it orphaned; other conditions (and other rules' ones) stay intact"
+        ]
+      }
+    },
+    {
       "version": "2.16.1",
       "date": "2026-06-15",
       "title": {

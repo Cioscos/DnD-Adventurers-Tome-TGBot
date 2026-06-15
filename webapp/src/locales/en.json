@@ -1477,6 +1477,29 @@
         "target_required": "Pick what to modify"
       }
     },
+    "resources": {
+      "empty": "No resources yet. Add a custom resource (e.g. Luck Points) with a maximum and a rest recovery.",
+      "add_button": "Add resource",
+      "max_badge": "Max {{max}}",
+      "delete_confirm": "Delete resource '{{name}}'?",
+      "modal": {
+        "title_new": "New resource",
+        "title_edit": "Edit resource",
+        "name_label": "Name",
+        "name_placeholder": "e.g. Luck Points",
+        "name_required": "Name is required",
+        "key_label": "Key (auto)",
+        "key_override": "Edit key",
+        "key_invalid": "Lowercase letters, digits and _ only (max 60 chars)",
+        "max_label": "Maximum",
+        "max_invalid": "Enter a whole number greater than or equal to 0",
+        "restoration_type_label": "Recovery",
+        "restoration_long_rest": "Long rest",
+        "restoration_short_rest": "Short rest",
+        "restoration_none": "None",
+        "restoration_manual": "Manual"
+      }
+    },
     "triggers": {
       "empty": "No triggers yet. Triggers react to game events (e.g. when you roll a 1 on attack, when you level up) by running a sequence of steps.",
       "add_button": "Add trigger",

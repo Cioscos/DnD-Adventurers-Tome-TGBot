@@ -1477,6 +1477,29 @@
         "target_required": "Scegli cosa modificare"
       }
     },
+    "resources": {
+      "empty": "Nessuna risorsa ancora. Aggiungi una risorsa personalizzata (es. Punti Fortuna) con un massimo e un recupero al riposo.",
+      "add_button": "Aggiungi risorsa",
+      "max_badge": "Max {{max}}",
+      "delete_confirm": "Eliminare la risorsa '{{name}}'?",
+      "modal": {
+        "title_new": "Nuova risorsa",
+        "title_edit": "Modifica risorsa",
+        "name_label": "Nome",
+        "name_placeholder": "es. Punti Fortuna",
+        "name_required": "Il nome è obbligatorio",
+        "key_label": "Chiave (auto)",
+        "key_override": "Modifica chiave",
+        "key_invalid": "Solo lettere minuscole, numeri e _ (max 60 caratteri)",
+        "max_label": "Massimo",
+        "max_invalid": "Inserisci un numero intero maggiore o uguale a 0",
+        "restoration_type_label": "Recupero",
+        "restoration_long_rest": "Riposo lungo",
+        "restoration_short_rest": "Riposo breve",
+        "restoration_none": "Nessuno",
+        "restoration_manual": "Manuale"
+      }
+    },
     "triggers": {
       "empty": "Nessun trigger ancora. I trigger reagiscono a eventi del gioco (es. quando tiri 1 attaccando, quando salgi di livello) eseguendo una sequenza di passi.",
       "add_button": "Aggiungi trigger",
