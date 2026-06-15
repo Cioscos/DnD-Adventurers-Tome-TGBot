@@ -1,6 +1,30 @@
 {
   "entries": [
     {
+      "version": "2.16.4",
+      "date": "2026-06-15",
+      "title": {
+        "it": "L'invito alla sessione ora apre davvero la sessione",
+        "en": "Session invite now actually opens the session"
+      },
+      "added": {
+        "it": [],
+        "en": []
+      },
+      "improved": {
+        "it": [],
+        "en": []
+      },
+      "fixed": {
+        "it": [
+          "Invito alla sessione (completa il fix della 2.16.3): toccando il bottone dell'invito ora si apre davvero la pagina d'ingresso (e da lì l'auto-join con un solo personaggio). Al lancio, Telegram aggiunge i propri dati nel fragment dell'URL: il router li scambiava per una rotta sconosciuta e riportava alla lista dei personaggi. Ora il deep-link viene risolto prima del routing."
+        ],
+        "en": [
+          "Session invite (completes the 2.16.3 fix): tapping the invite button now actually opens the join page (and from there auto-join with a single character). On launch Telegram appends its own data to the URL fragment, which the router mistook for an unknown route and bounced back to the character list. The deep link is now resolved before routing kicks in."
+        ]
+      }
+    },
+    {
       "version": "2.16.3",
       "date": "2026-06-15",
       "title": {

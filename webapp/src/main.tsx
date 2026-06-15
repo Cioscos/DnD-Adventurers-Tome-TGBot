@@ -10,12 +10,27 @@ import {
   type NotificationLike,
 } from './components/homebrew/HomebrewNotification'
 import { initTheme } from './theme/applyTheme'
+import { getStartParam } from './auth/telegram'
+import { parseStartParam } from './lib/startParam'
 import './index.css'
 import './i18n'
 
 // Signal Telegram that the Mini App is ready
 window.Telegram?.WebApp?.ready()
 window.Telegram?.WebApp?.expand()
+
+// Telegram deep-link (t.me/<bot>?startapp=join_XXX): risolvilo PRIMA che React e
+// HashRouter montino. Al lancio Telegram scrive i suoi dati nel fragment
+// (#tgWebAppData=…&tgWebAppStartParam=join_XXX); HashRouter lo interpreterebbe
+// come rotta sconosciuta e la route catch-all `*` rimbalzerebbe su '/'
+// (CharacterSelect), sovrascrivendo qualsiasi redirect fatto via effetto in-app.
+// Riscrivendo qui il fragment, il router parte direttamente sulla pagina di join.
+// Sicuro: l'initData per l'auth è letto dall'oggetto WebApp dell'SDK, non dal
+// fragment dell'URL, quindi rimuovere tgWebAppData dall'hash non rompe l'auth.
+const startAction = parseStartParam(getStartParam())
+if (startAction?.kind === 'join') {
+  window.location.hash = `/session/join?code=${startAction.code}`
+}
 
 // Lock the app frame against Telegram's native vertical-swipe gesture (Bot API
 // 7.7+). Without this, a fast vertical scroll inside our own scroll containers
