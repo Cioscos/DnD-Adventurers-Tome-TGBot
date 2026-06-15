@@ -1,12 +1,10 @@
-import { lazy, Suspense, useEffect } from 'react'
-import { HashRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
+import { lazy, Suspense } from 'react'
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
 import ModalProvider from './components/ModalProvider'
 import DiceAnimationProvider from './dice/DiceAnimationProvider'
 import DiceOverlay from './components/DiceOverlay'
 import Skeleton from './components/Skeleton'
 import { getDevUserId } from './auth/devUser'
-import { getStartParam } from './auth/telegram'
-import { parseStartParam } from './lib/startParam'
 
 // Lazy-loaded pages
 const CharacterSelect = lazy(() => import('./pages/CharacterSelect'))
@@ -39,31 +37,6 @@ const Homebrew = lazy(() => import('./pages/Homebrew'))
 const RuleEditor = lazy(() => import('./pages/homebrew/RuleEditor'))
 const Changelog = lazy(() => import('./pages/Changelog'))
 
-/** Deep link esterni (t.me/<bot>?startapp=…): reindirizza una sola volta per
- *  APERTURA della Mini App, così il back non rimbalza sulla destinazione ma un
- *  nuovo avvio (nuovo invito) torna a funzionare.
- *
- *  Il guard è un flag a livello di MODULO, non `sessionStorage`: deduplica il
- *  doppio effect di React StrictMode e i re-mount entro lo stesso page-load, ma
- *  si resetta a ogni apertura fresca. Il vecchio guard in sessionStorage
- *  persisteva nel webview riusato da Telegram e bloccava per sempre il redirect
- *  alle aperture successive → si restava su CharacterSelect invece di entrare
- *  in sessione. */
-let startParamRedirectDone = false
-function StartParamRedirect() {
-  const navigate = useNavigate()
-  useEffect(() => {
-    if (startParamRedirectDone) return
-    const action = parseStartParam(getStartParam())
-    if (!action) return
-    startParamRedirectDone = true
-    if (action.kind === 'join') {
-      navigate(`/session/join?code=${action.code}`, { replace: true })
-    }
-  }, [navigate])
-  return null
-}
-
 /** Chip fisso che identifica il tab quando si impersona un utente dev
  *  (?dev_user=<id>), per non confondere le finestre GM/giocatore. */
 function DevUserBadge() {
@@ -92,7 +65,6 @@ export default function App() {
     <HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <ModalProvider>
         <DiceAnimationProvider>
-          <StartParamRedirect />
           <Suspense fallback={<PageFallback />}>
             <Routes>
             <Route path="/" element={<CharacterSelect />} />

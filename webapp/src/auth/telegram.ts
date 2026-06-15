@@ -170,10 +170,31 @@ export function telegramConfirm(
   callback(window.confirm(message))
 }
 
-/** Parametro startapp dei deep link (t.me/<bot>?startapp=…), se presente. */
+/** Parametro startapp dei deep link (t.me/<bot>?startapp=…), se presente.
+ *
+ *  Telegram lo espone in `initDataUnsafe.start_param`, ma al LANCIO lo passa
+ *  anche nel fragment dell'URL come `tgWebAppStartParam`
+ *  (#tgWebAppData=…&tgWebAppStartParam=join_XXX). Leggiamo il fragment come
+ *  fallback: è utile quando l'SDK non ha ancora popolato `initDataUnsafe` e,
+ *  soprattutto, permette di risolvere il deep link prima che HashRouter monti
+ *  (vedi main.tsx) — altrimenti il fragment è una "rotta" sconosciuta e la
+ *  route `*` rimbalza su CharacterSelect. */
 export function getStartParam(): string | null {
   const webApp = typeof window !== 'undefined' ? window.Telegram?.WebApp : undefined
-  return webApp?.initDataUnsafe?.start_param ?? twa?.initDataUnsafe?.start_param ?? null
+  const fromSdk = webApp?.initDataUnsafe?.start_param ?? twa?.initDataUnsafe?.start_param
+  if (fromSdk) return fromSdk
+  if (typeof window !== 'undefined') {
+    // Solo se il fragment è in forma key=value (lancio Telegram), non una
+    // rotta applicativa `#/...` già normalizzata da HashRouter.
+    const frag = window.location.hash.replace(/^#/, '')
+    if (frag && !frag.startsWith('/')) {
+      const fromHash = new URLSearchParams(frag).get('tgWebAppStartParam')
+      if (fromHash) return fromHash
+    }
+    const fromSearch = new URLSearchParams(window.location.search).get('tgWebAppStartParam')
+    if (fromSearch) return fromSearch
+  }
+  return null
 }
 
 /** Il client supporta la condivisione dei messaggi preparati (Bot API 8.0+)? */
