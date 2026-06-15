@@ -1,6 +1,32 @@
 {
   "entries": [
     {
+      "version": "2.16.3",
+      "date": "2026-06-15",
+      "title": {
+        "it": "Correzioni: freeze aggiunta abilità e invito di sessione",
+        "en": "Fixes: ability-add freeze & session invite"
+      },
+      "added": {
+        "it": [],
+        "en": []
+      },
+      "improved": {
+        "it": [],
+        "en": []
+      },
+      "fixed": {
+        "it": [
+          "Abilità speciali: aggiungere una nuova abilità non blocca più l'interfaccia — restava un overlay invisibile a intercettare tocchi e scorrimento, costringendo a ricaricare la pagina. Il fix vale per tutti i pannelli a comparsa dell'app.",
+          "Invito alla sessione: il bottone dell'invito ora porta davvero dentro la sessione. Con un solo personaggio entri in automatico, con più di uno lo scegli e poi entri, se non ne hai ancora ti viene proposto di crearne uno; se sei già in quella sessione vieni portato dentro."
+        ],
+        "en": [
+          "Special abilities: adding a new ability no longer freezes the interface — an invisible overlay used to keep intercepting taps and scrolling, forcing a page reload. The fix applies to every pop-up panel in the app.",
+          "Session invite: the invite button now really takes you into the session. With a single character you join automatically, with several you pick one and join, and with none you're prompted to create one; if you're already in that session you're taken straight in."
+        ]
+      }
+    },
+    {
       "version": "2.16.2",
       "date": "2026-06-15",
       "title": {

@@ -63,11 +63,17 @@ export default function Sheet({
     <AnimatePresence>
       {open && (
         <m.div
+          key="sheet-backdrop"
           className={`fixed inset-0 ${zClassName} flex items-end md:items-center justify-center`}
           style={{ background: 'var(--dnd-overlay)', backdropFilter: 'blur(6px)' }}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
+          initial={{ opacity: 0, pointerEvents: 'none' }}
+          animate={{ opacity: 1, pointerEvents: 'auto' }}
+          // pointerEvents legato all'animazione: in chiusura il backdrop diventa
+          // SUBITO click-through. Se un re-render concorrente (es. la lista che
+          // cambia mentre lo Sheet esce) lascia l'AnimatePresence orfana — bug
+          // noto di framer-motion con portal — il nodo resta a opacity 0 ma NON
+          // intercetta più tap/scroll, quindi la pagina non si blocca.
+          exit={{ opacity: 0, pointerEvents: 'none' }}
           transition={{ duration: 0.2 }}
           onClick={dismissible ? onClose : undefined}
         >

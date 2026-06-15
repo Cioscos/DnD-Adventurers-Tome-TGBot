@@ -40,15 +40,23 @@ const RuleEditor = lazy(() => import('./pages/homebrew/RuleEditor'))
 const Changelog = lazy(() => import('./pages/Changelog'))
 
 /** Deep link esterni (t.me/<bot>?startapp=…): reindirizza una sola volta per
- *  sessione, così il back non continua a rimbalzare sulla destinazione. */
+ *  APERTURA della Mini App, così il back non rimbalza sulla destinazione ma un
+ *  nuovo avvio (nuovo invito) torna a funzionare.
+ *
+ *  Il guard è un flag a livello di MODULO, non `sessionStorage`: deduplica il
+ *  doppio effect di React StrictMode e i re-mount entro lo stesso page-load, ma
+ *  si resetta a ogni apertura fresca. Il vecchio guard in sessionStorage
+ *  persisteva nel webview riusato da Telegram e bloccava per sempre il redirect
+ *  alle aperture successive → si restava su CharacterSelect invece di entrare
+ *  in sessione. */
+let startParamRedirectDone = false
 function StartParamRedirect() {
   const navigate = useNavigate()
   useEffect(() => {
+    if (startParamRedirectDone) return
     const action = parseStartParam(getStartParam())
     if (!action) return
-    const guard = `start_param_handled:${action.kind}:${action.code}`
-    if (sessionStorage.getItem(guard)) return
-    sessionStorage.setItem(guard, '1')
+    startParamRedirectDone = true
     if (action.kind === 'join') {
       navigate(`/session/join?code=${action.code}`, { replace: true })
     }
