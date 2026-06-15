@@ -1,8 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Hash, Users, ClipboardCheck, Check } from 'lucide-react'
+import { Hash, Users, ClipboardCheck, Check, UserPlus } from 'lucide-react'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
@@ -22,10 +22,21 @@ export default function SessionJoin() {
   const [selectedCharId, setSelectedCharId] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const { data: characters = [], isLoading } = useQuery({
+  const { data: characters = [], isLoading: charsLoading } = useQuery({
     queryKey: ['characters'],
     queryFn: () => api.characters.list(),
   })
+
+  // Sessione attiva del viewer. Vincolo BE: si può stare in UNA sola sessione
+  // alla volta (un join mentre se ne ha già una → 409). Serve per: (a) portare
+  // chi è già dentro direttamente nella stanza invece di rifargli il join, e
+  // (b) evitare un auto-join che fallirebbe se è in un'altra sessione.
+  const { data: activeSession, isLoading: sessionLoading } = useQuery({
+    queryKey: ['session-me'],
+    queryFn: () => api.sessions.me(),
+  })
+
+  const isLoading = charsLoading || sessionLoading
 
   const autoChar = useMemo(
     () => (characters.length === 1 ? characters[0] : null),
@@ -33,18 +44,18 @@ export default function SessionJoin() {
   )
 
   const effectiveCharId = selectedCharId ?? autoChar?.id ?? null
-
-  const canJoin = code.trim().length === 6 && effectiveCharId !== null
+  const normalizedCode = code.trim().toUpperCase()
+  const canJoin = normalizedCode.length === 6 && effectiveCharId !== null
 
   const joinMutation = useMutation({
     mutationFn: () => {
       if (!effectiveCharId) throw new Error('no-char')
-      return api.sessions.join(code.trim().toUpperCase(), effectiveCharId)
+      return api.sessions.join(normalizedCode, effectiveCharId)
     },
     onSuccess: (session) => {
       qc.setQueryData(['session-me'], session)
       haptic.success()
-      navigate(`/session/${session.id}`)
+      navigate(`/session/${session.id}`, { replace: true })
     },
     onError: (err) => {
       haptic.error()
@@ -55,12 +66,35 @@ export default function SessionJoin() {
       }
     },
   })
+  // `mutate` è un riferimento stabile (TanStack): può stare nelle deps
+  // dell'effetto senza farlo ri-scattare a ogni render.
+  const join = joinMutation.mutate
 
-  const submit = () => {
-    setError(null)
-    if (!canJoin) return  // UI already prevents this via disabled button
-    joinMutation.mutate()
-  }
+  // Sto già in una sessione che è proprio quella dell'invito (o sono arrivato
+  // senza codice): entro diretto. Se invece è UN'ALTRA sessione, non posso
+  // unirmi a questa (darebbe 409) → messaggio bloccante.
+  const enteringActive =
+    !!activeSession && (normalizedCode.length !== 6 || activeSession.code === normalizedCode)
+  const inAnotherSession =
+    !!activeSession && normalizedCode.length === 6 && activeSession.code !== normalizedCode
+
+  // Auto-join: arrivo dal deep-link (codice valido), non sono in nessuna
+  // sessione e ho ESATTAMENTE un personaggio → entro subito, senza tap.
+  const shouldAutoJoin =
+    !activeSession && !!autoChar && normalizedCode.length === 6 && !error
+  const autoJoinedRef = useRef(false)
+
+  useEffect(() => {
+    if (isLoading) return
+    if (activeSession) {
+      if (enteringActive) navigate(`/session/${activeSession.id}`, { replace: true })
+      return
+    }
+    if (shouldAutoJoin && !autoJoinedRef.current) {
+      autoJoinedRef.current = true
+      join()
+    }
+  }, [isLoading, activeSession, enteringActive, shouldAutoJoin, navigate, join])
 
   if (isLoading) {
     return (
@@ -69,6 +103,44 @@ export default function SessionJoin() {
       </Layout>
     )
   }
+
+  // Redirect verso la sessione attiva in volo, oppure auto-join in corso:
+  // schermata d'attesa dedicata, niente flash del form.
+  if (enteringActive || shouldAutoJoin) {
+    return (
+      <Layout title={t('session.join_player')} backTo="/session">
+        <Surface variant="elevated" className="text-center">
+          <p className="text-sm text-dnd-text font-body">{t('session.joining')}</p>
+        </Surface>
+      </Layout>
+    )
+  }
+
+  // Già in un'altra sessione attiva: non posso unirmi a questa.
+  if (inAnotherSession) {
+    return (
+      <Layout title={t('session.join_player')} backTo="/session">
+        <Surface variant="ember" className="text-center space-y-3">
+          <p className="text-dnd-text text-sm font-body">{t('session.already_in_other')}</p>
+          <Button
+            variant="primary"
+            fullWidth
+            onClick={() => navigate(`/session/${activeSession!.id}`, { replace: true })}
+          >
+            {t('session.resume')}
+          </Button>
+        </Surface>
+      </Layout>
+    )
+  }
+
+  const submit = () => {
+    setError(null)
+    if (!canJoin) return  // UI already prevents this via disabled button
+    joinMutation.mutate()
+  }
+
+  const hasCharacters = characters.length > 0
 
   return (
     <Layout title={t('session.join_player')} backTo="/session">
@@ -117,7 +189,21 @@ export default function SessionJoin() {
           </p>
         </div>
 
-        {autoChar ? (
+        {!hasCharacters ? (
+          <div className="space-y-3">
+            <p className="text-sm text-dnd-text-muted font-body italic">
+              {t('session.join_needs_character')}
+            </p>
+            <Button
+              variant="primary"
+              fullWidth
+              icon={<UserPlus size={16} />}
+              onClick={() => navigate('/')}
+            >
+              {t('session.create_first_character')}
+            </Button>
+          </div>
+        ) : autoChar ? (
           <p className="text-sm text-dnd-text font-body">
             {t('session.single_char_auto', { name: autoChar.name })}
           </p>
@@ -152,16 +238,18 @@ export default function SessionJoin() {
         </Surface>
       )}
 
-      <Button
-        variant="primary"
-        size="lg"
-        fullWidth
-        disabled={!canJoin || joinMutation.isPending}
-        loading={joinMutation.isPending}
-        onClick={submit}
-      >
-        {t('session.join_button')}
-      </Button>
+      {hasCharacters && (
+        <Button
+          variant="primary"
+          size="lg"
+          fullWidth
+          disabled={!canJoin || joinMutation.isPending}
+          loading={joinMutation.isPending}
+          onClick={submit}
+        >
+          {t('session.join_button')}
+        </Button>
+      )}
     </Layout>
   )
 }
