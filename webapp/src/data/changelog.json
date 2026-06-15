@@ -25,10 +25,12 @@
       },
       "fixed": {
         "it": [
-          "Risorse homebrew: la sezione \"Risorse\" dell'editor e il suo form ora sono completamente tradotti (prima mostravano chiavi tecniche grezze)"
+          "Risorse homebrew: la sezione \"Risorse\" dell'editor e il suo form ora sono completamente tradotti (prima mostravano chiavi tecniche grezze)",
+          "Condizioni homebrew: eliminando una regola che applica una condizione personalizzata, quella condizione viene ora rimossa dal personaggio invece di restare orfana; le altre condizioni (anche di altre regole) restano intatte"
         ],
         "en": [
-          "Homebrew resources: the editor's \"Resources\" section and its form are now fully translated (they previously showed raw technical keys)"
+          "Homebrew resources: the editor's \"Resources\" section and its form are now fully translated (they previously showed raw technical keys)",
+          "Homebrew conditions: deleting a rule that applies a custom condition now removes that condition from the character instead of leaving it orphaned; other conditions (and other rules' ones) stay intact"
         ]
       }
     },

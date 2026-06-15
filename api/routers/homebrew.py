@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm.attributes import flag_modified
 
 from api.auth import get_current_user
 from api.database import get_db
@@ -321,6 +322,23 @@ async def delete_rule(
     session: Annotated[AsyncSession, Depends(get_db)],
 ) -> None:
     rule = await _get_owned_rule(char_id, rule_id, user_id, session)
+    char = await _get_owned_char(char_id, user_id, session)
+    # Custom conditions applied by this rule live in char.conditions (a JSON blob,
+    # outside the relational graph), so deleting the rule cannot cascade them away —
+    # they would linger as orphans pointing at a now-deleted rule. Remove only the
+    # custom:* entries this rule owns; standard conditions (bool/int) and other
+    # rules' custom conditions stay untouched. (HomebrewResource rows ARE removed
+    # by the ORM cascade on HomebrewRule.resources.)
+    conditions = dict(char.conditions or {})
+    orphaned = [
+        key for key, value in conditions.items()
+        if isinstance(value, dict) and value.get("rule_id") == rule.id
+    ]
+    if orphaned:
+        for key in orphaned:
+            conditions.pop(key, None)
+        char.conditions = conditions
+        flag_modified(char, "conditions")
     await session.delete(rule)
 
 
