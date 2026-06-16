@@ -1,6 +1,30 @@
 {
   "entries": [
     {
+      "version": "2.16.5",
+      "date": "2026-06-16",
+      "title": {
+        "it": "Tiri di abilità e salvezza: al centro ora c'è il totale",
+        "en": "Ability & saving throw rolls: the total is now front and center"
+      },
+      "added": {
+        "it": [],
+        "en": []
+      },
+      "improved": {
+        "it": [
+          "Le modali di prova di abilità e di tiro salvezza ora mostrano in grande, al centro, il totale con il modificatore già applicato (es. 23) invece del solo tiro del d20 (18). Il dettaglio del lancio (es. «d20 (18) +5») resta visibile nella riga sotto."
+        ],
+        "en": [
+          "Ability check and saving throw result dialogs now show the final total with the modifier already applied (e.g. 23) front and center, instead of just the raw d20 roll (18). The roll breakdown (e.g. \"d20 (18) +5\") stays visible on the line below."
+        ]
+      },
+      "fixed": {
+        "it": [],
+        "en": []
+      }
+    },
+    {
       "version": "2.16.4",
       "date": "2026-06-15",
       "title": {
