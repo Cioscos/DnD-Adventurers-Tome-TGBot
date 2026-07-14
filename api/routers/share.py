@@ -97,7 +97,8 @@ async def share_item(
     text = "\n".join(lines)
 
     # Snapshot per l'import lato destinatario (bottone deep-link shr_<token>).
-    # Se la prepare fallisce (502) resta una riga orfana: scade in 30 giorni.
+    # Se la prepare fallisce (502) l'HTTPException fa rollback della sessione
+    # (get_db committa solo a richiesta conclusa senza errori): niente orfani.
     share_row = content_shares.create_item_share(item, char, user_id)
     db.add(share_row)
     await db.flush()
