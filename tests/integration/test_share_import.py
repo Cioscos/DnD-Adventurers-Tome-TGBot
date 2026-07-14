@@ -59,3 +59,55 @@ async def test_share_item_adds_deeplink_button_and_snapshot(
     assert share.sender_char_name == "Merlino"
     assert share.payload["name"] == "Corda di seta"
     assert share.expires_at > share.created_at
+
+
+async def test_share_note_text_has_preview_and_button(
+        client, test_session_factory, monkeypatch):
+    captured = install_fake_telegram(monkeypatch)
+    cid = await _make_char(client)
+    r = await client.post(f"/characters/{cid}/notes",
+                          json={"title": "Piano segreto", "body": "Entrare dal retro",
+                                "tags": ["missione"]})
+    assert r.status_code == 201, r.text
+
+    r = await client.post(f"/characters/{cid}/share/notes/Piano%20segreto")
+    assert r.status_code == 200, r.text
+
+    payload = _prepared_calls(captured)[-1]["json"]
+    text = payload["result"]["input_message_content"]["message_text"]
+    assert "Piano segreto" in text
+    assert "Entrare dal retro" in text
+    token = _token_of(captured)
+    async with test_session_factory() as s:
+        share = await s.get(ContentShare, token)
+    assert share.kind == "note"
+    assert share.payload["title"] == "Piano segreto"
+    assert share.payload["tags"] == ["missione"]
+
+    assert (await client.post(f"/characters/{cid}/share/notes/Inesistente")).status_code == 404
+
+
+async def test_share_note_voice_copies_audio(client, monkeypatch, tmp_path):
+    import api.routers.notes as notes_router
+    import api.services.content_shares as cs
+    monkeypatch.setattr(notes_router, "_VOICE_DIR", tmp_path / "voice_notes")
+    monkeypatch.setattr(cs, "SHARED_VOICE_DIR", tmp_path / "shared")
+    captured = install_fake_telegram(monkeypatch)
+    cid = await _make_char(client)
+
+    r = await client.post(
+        f"/characters/{cid}/notes/voice",
+        data={"title": "Memo vocale"},
+        files={"file": ("memo.webm", b"finto-audio", "audio/webm")},
+    )
+    assert r.status_code == 201, r.text
+
+    r = await client.post(f"/characters/{cid}/share/notes/Memo%20vocale")
+    assert r.status_code == 200, r.text
+
+    text = _prepared_calls(captured)[-1]["json"]["result"]["input_message_content"]["message_text"]
+    assert "Memo vocale" in text
+    assert "finto-audio" not in text  # niente body per le vocali
+    shared_files = list((tmp_path / "shared").iterdir())
+    assert len(shared_files) == 1
+    assert shared_files[0].read_bytes() == b"finto-audio"

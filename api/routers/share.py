@@ -114,6 +114,46 @@ async def share_item(
     return _prepared_or_502(prep_id)
 
 
+@router.post("/characters/{char_id}/share/notes/{title}")
+async def share_note(
+    char_id: int,
+    title: str,
+    user_id: Annotated[int, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> dict:
+    _require_token()
+    char = await _get_owned_char(char_id, user_id, db)
+    notes = char.notes or {}
+    if title not in notes:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Note not found")
+    value = notes[title]
+    body = str(value.get("body", "")) if isinstance(value, dict) else str(value or "")
+    tags = list(value.get("tags") or []) if isinstance(value, dict) else []
+
+    try:
+        share_row = content_shares.create_note_share(title, body, tags, char, user_id)
+    except FileNotFoundError:
+        raise HTTPException(status_code=410, detail="Voice file not found")
+    db.add(share_row)
+    await db.flush()
+
+    is_voice = body.startswith("[VOICE:")
+    lines = [f"{'🎙' if is_voice else '📝'} *{title}*", f"_{char.name}_"]
+    if not is_voice and body:
+        lines.append(body if len(body) <= 200 else body[:200] + "…")
+    text = "\n".join(lines)
+
+    button = None
+    username = await telegram_notify.get_bot_username()
+    if username:
+        button = ("Aggiungi al tuo personaggio",
+                  f"https://t.me/{username}?startapp=shr_{share_row.token}")
+
+    prep_id = await telegram_notify.save_prepared_message(
+        user_id, title=title, text=text, parse_mode="Markdown", button=button)
+    return _prepared_or_502(prep_id)
+
+
 @router.post("/sessions/{session_id}/share/invite")
 async def share_session_invite(
     session_id: int,
