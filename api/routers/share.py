@@ -15,7 +15,7 @@ from sqlalchemy.orm import selectinload
 
 from api.auth import get_current_user
 from api.database import get_db
-from api.services import telegram_notify
+from api.services import content_shares, telegram_notify
 from core.db.models import Character, GameSession, SessionStatus
 
 router = APIRouter(tags=["share"])
@@ -96,8 +96,20 @@ async def share_item(
         lines.append(item.description)
     text = "\n".join(lines)
 
+    # Snapshot per l'import lato destinatario (bottone deep-link shr_<token>).
+    # Se la prepare fallisce (502) resta una riga orfana: scade in 30 giorni.
+    share_row = content_shares.create_item_share(item, char, user_id)
+    db.add(share_row)
+    await db.flush()
+
+    button = None
+    username = await telegram_notify.get_bot_username()
+    if username:
+        button = ("Aggiungi al tuo personaggio",
+                  f"https://t.me/{username}?startapp=shr_{share_row.token}")
+
     prep_id = await telegram_notify.save_prepared_message(
-        user_id, title=item.name, text=text, parse_mode="Markdown")
+        user_id, title=item.name, text=text, parse_mode="Markdown", button=button)
     return _prepared_or_502(prep_id)
 
 
