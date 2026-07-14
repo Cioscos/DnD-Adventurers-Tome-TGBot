@@ -38,6 +38,7 @@ from api.routers import (
     notes,
     sessions,
     share,
+    shares,
     silhouette,
     spell_slots,
     spells,
@@ -68,6 +69,17 @@ async def lifespan(_app: FastAPI):
             await backfill_consumable_types(_s)
     except Exception as exc:  # non-fatal: never block startup on a data backfill
         logger.warning("backfill_consumable_types failed (non-fatal): %s", exc)
+
+    # Cleanup best-effort delle condivisioni scadute (snapshot + file audio)
+    from api.services.content_shares import cleanup_expired
+    try:
+        async with AsyncSession(engine) as _s:
+            removed = await cleanup_expired(_s)
+            await _s.commit()
+            if removed:
+                logger.info("Removed %d expired content share(s)", removed)
+    except Exception as exc:  # non-fatal: mai bloccare l'avvio per il cleanup
+        logger.warning("content share cleanup failed (non-fatal): %s", exc)
 
     cleanup_task = asyncio.create_task(run_session_cleanup())
     try:
@@ -144,4 +156,5 @@ app.include_router(history.router)
 app.include_router(sessions.router)
 app.include_router(encounters.router)
 app.include_router(share.router)
+app.include_router(shares.router)
 app.include_router(homebrew.router)

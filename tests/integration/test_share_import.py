@@ -111,3 +111,125 @@ async def test_share_note_voice_copies_audio(client, monkeypatch, tmp_path):
     shared_files = list((tmp_path / "shared").iterdir())
     assert len(shared_files) == 1
     assert shared_files[0].read_bytes() == b"finto-audio"
+
+
+# ---------------------------------------------------------------------------
+# GET /shares/{token} + POST /shares/{token}/import
+# ---------------------------------------------------------------------------
+
+from datetime import datetime, timedelta, timezone
+
+
+async def _expire(test_session_factory, token: str) -> None:
+    async with test_session_factory() as s:
+        share = await s.get(ContentShare, token)
+        share.expires_at = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
+        await s.commit()
+
+
+async def test_preview_and_import_item_by_other_user(
+        client, test_session_factory, monkeypatch):
+    captured = install_fake_telegram(monkeypatch)
+    cid = await _make_char(client)
+    item_id = await _make_item(client, cid, name="Pozione rara")
+    assert (await client.post(f"/characters/{cid}/share/items/{item_id}")).status_code == 200
+    token = _token_of(captured)
+
+    # Il mittente cancella l'originale: lo snapshot sopravvive
+    assert (await client.delete(f"/characters/{cid}/items/{item_id}")).status_code in (200, 204)
+
+    as_user(PLAYER_ID)
+    dest_cid = await _make_char(client, name="Rico")
+
+    r = await client.get(f"/shares/{token}")
+    assert r.status_code == 200, r.text
+    preview = r.json()
+    assert preview["kind"] == "item"
+    assert preview["title"] == "Pozione rara"
+    assert preview["sender_char_name"] == "Merlino"
+
+    r = await client.post(f"/shares/{token}/import", json={"char_id": dest_cid})
+    assert r.status_code == 200, r.text
+    assert r.json()["kind"] == "item"
+    items = (await client.get(f"/characters/{dest_cid}/items")).json()
+    assert any(i["name"] == "Pozione rara" and not i["is_equipped"] for i in items)
+
+    # Multi-import: una seconda copia è legittima
+    assert (await client.post(f"/shares/{token}/import", json={"char_id": dest_cid})).status_code == 200
+    as_user(TEST_USER_ID)
+
+
+async def test_import_note_with_collision_gets_suffix(
+        client, test_session_factory, monkeypatch):
+    captured = install_fake_telegram(monkeypatch)
+    cid = await _make_char(client)
+    assert (await client.post(f"/characters/{cid}/notes",
+            json={"title": "Piano", "body": "condiviso", "tags": []})).status_code == 201
+    assert (await client.post(f"/characters/{cid}/share/notes/Piano")).status_code == 200
+    token = _token_of(captured)
+
+    as_user(PLAYER_ID)
+    dest_cid = await _make_char(client, name="Rico")
+    assert (await client.post(f"/characters/{dest_cid}/notes",
+            json={"title": "Piano", "body": "mio", "tags": []})).status_code == 201
+
+    r = await client.post(f"/shares/{token}/import", json={"char_id": dest_cid})
+    assert r.status_code == 200, r.text
+    assert r.json()["title"] == "Piano (2)"
+    titles = {n["title"] for n in (await client.get(f"/characters/{dest_cid}/notes")).json()}
+    assert {"Piano", "Piano (2)"} <= titles
+    as_user(TEST_USER_ID)
+
+
+async def test_import_voice_note_copies_audio_missing_file_410(
+        client, test_session_factory, monkeypatch, tmp_path):
+    import api.routers.notes as notes_router
+    import api.services.content_shares as cs
+    monkeypatch.setattr(notes_router, "_VOICE_DIR", tmp_path / "voice_notes")
+    monkeypatch.setattr(cs, "SHARED_VOICE_DIR", tmp_path / "shared")
+    monkeypatch.setattr(cs, "VOICE_NOTES_DIR", tmp_path / "voice_notes")
+    captured = install_fake_telegram(monkeypatch)
+    cid = await _make_char(client)
+    assert (await client.post(
+        f"/characters/{cid}/notes/voice",
+        data={"title": "Memo"},
+        files={"file": ("memo.webm", b"finto-audio", "audio/webm")},
+    )).status_code == 201
+    assert (await client.post(f"/characters/{cid}/share/notes/Memo")).status_code == 200
+    token = _token_of(captured)
+
+    as_user(PLAYER_ID)
+    dest_cid = await _make_char(client, name="Rico")
+    r = await client.post(f"/shares/{token}/import", json={"char_id": dest_cid})
+    assert r.status_code == 200, r.text
+    notes = (await client.get(f"/characters/{dest_cid}/notes")).json()
+    assert any(n["title"] == "Memo" and n["is_voice"] for n in notes)
+
+    # Audio condiviso rimosso a mano dal disco → 410 e snapshot eliminato
+    for f in (tmp_path / "shared").iterdir():
+        f.unlink()
+    assert (await client.post(f"/shares/{token}/import",
+                              json={"char_id": dest_cid})).status_code == 410
+    assert (await client.get(f"/shares/{token}")).status_code == 404
+    as_user(TEST_USER_ID)
+
+
+async def test_share_guards(client, test_session_factory, monkeypatch):
+    captured = install_fake_telegram(monkeypatch)
+    cid = await _make_char(client)
+    item_id = await _make_item(client, cid, name="Scudo")
+    assert (await client.post(f"/characters/{cid}/share/items/{item_id}")).status_code == 200
+    token = _token_of(captured)
+
+    # Token ignoto
+    assert (await client.get("/shares/tokenfinto1")).status_code == 404
+    # Import su PG di un ALTRO utente
+    as_user(PLAYER_ID)
+    assert (await client.post(f"/shares/{token}/import",
+                              json={"char_id": cid})).status_code == 403
+    as_user(TEST_USER_ID)
+    # Scaduto
+    await _expire(test_session_factory, token)
+    assert (await client.get(f"/shares/{token}")).status_code == 410
+    assert (await client.post(f"/shares/{token}/import",
+                              json={"char_id": cid})).status_code == 410
