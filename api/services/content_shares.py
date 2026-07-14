@@ -47,7 +47,7 @@ def create_item_share(item: Item, char: Character, user_id: int) -> ContentShare
             "name": item.name,
             "description": item.description,
             "weight": item.weight or 0.0,
-            "quantity": item.quantity or 1,
+            "quantity": item.quantity if item.quantity is not None else 1,
             "item_type": item.item_type or "generic",
             "item_metadata": item.item_metadata,
         },
@@ -105,12 +105,13 @@ def unique_note_title(existing: dict, title: str) -> str:
 def import_item(share: ContentShare, char: Character) -> Item:
     """Costruisce la copia dell'item per `char` (il chiamante fa db.add)."""
     p = share.payload or {}
+    q = p.get("quantity")
     return Item(
         character_id=char.id,
         name=str(p.get("name") or "?"),
         description=p.get("description"),
         weight=float(p.get("weight") or 0.0),
-        quantity=int(p.get("quantity") or 1),
+        quantity=int(q) if q is not None else 1,
         item_type=str(p.get("item_type") or "generic"),
         item_metadata=p.get("item_metadata"),
         is_equipped=False,

@@ -139,3 +139,12 @@ async def test_cleanup_expired_removes_rows_and_files(
     async with test_session_factory() as s:
         rows = (await s.execute(select(ContentShare.token))).scalars().all()
     assert rows == ["alive"]
+
+
+def test_share_and_import_preserve_zero_quantity():
+    item = Item(character_id=1, name="Pozione esaurita", weight=0.5,
+                quantity=0, item_type="consumable")
+    share = cs.create_item_share(item, _char(), user_id=1)
+    assert share.payload["quantity"] == 0
+    imported = cs.import_item(share, Character(id=7, user_id=2, name="Rico"))
+    assert imported.quantity == 0
