@@ -56,7 +56,7 @@ function NoteItemInner({ note, onEdit, onDelete, onView, onShare, voiceUrl }: No
             {onShare && (
               <button
                 onClick={() => onShare(note.title)}
-                className="w-11 h-11 -my-2.5 flex items-center justify-center shrink-0 rounded-lg
+                className="w-11 h-11 flex items-center justify-center shrink-0 rounded-lg
                            text-dnd-text-muted hover:text-dnd-gold-bright transition-colors"
                 aria-label={t('share.action')}
               >
@@ -65,7 +65,7 @@ function NoteItemInner({ note, onEdit, onDelete, onView, onShare, voiceUrl }: No
             )}
             <button
               onClick={() => onDelete(note.title)}
-              className="w-11 h-11 -my-2.5 -mr-2 flex items-center justify-center shrink-0 rounded-lg
+              className="w-11 h-11 flex items-center justify-center shrink-0 rounded-lg
                          text-dnd-text-muted hover:text-dnd-crimson-bright transition-colors"
               aria-label={t('common.delete')}
             >
