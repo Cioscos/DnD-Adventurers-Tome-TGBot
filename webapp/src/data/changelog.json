@@ -1,6 +1,23 @@
 {
   "entries": [
     {
+      "version": "2.17.0",
+      "date": "2026-07-15",
+      "title": { "it": "Condividi e importa oggetti e note", "en": "Share & import items and notes" },
+      "added": {
+        "it": [
+          "Gli oggetti dell'inventario e le note (anche vocali) si condividono su Telegram: il messaggio ha un bottone che apre la Mini App e aggiunge una copia a un tuo personaggio.",
+          "Pagina di import con anteprima del contenuto e scelta del personaggio (l'ultimo usato è preselezionato)."
+        ],
+        "en": [
+          "Inventory items and notes (voice included) can be shared on Telegram: the message carries a button that opens the Mini App and adds a copy to one of your characters.",
+          "Import page with content preview and character picker (your last-used character is preselected)."
+        ]
+      },
+      "improved": { "it": [], "en": [] },
+      "fixed": { "it": [], "en": [] }
+    },
+    {
       "version": "2.16.5",
       "date": "2026-06-16",
       "title": {

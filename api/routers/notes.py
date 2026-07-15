@@ -246,12 +246,14 @@ async def get_voice_file(
     await _get_owned(char_id, user_id, session)
 
     file_path = _VOICE_DIR / str(char_id) / filename
-    if not file_path.exists():
-        raise HTTPException(status_code=404, detail="Voice file not found")
 
-    # Prevent path traversal
+    # Prevent path traversal (checked before exists() so a laundered file
+    # copied outside _VOICE_DIR can never be served even if it exists on disk)
     if not file_path.resolve().is_relative_to(_VOICE_DIR.resolve()):
         raise HTTPException(status_code=400, detail="Invalid filename")
+
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Voice file not found")
 
     media_map = {
         ".webm": "audio/webm", ".ogg": "audio/ogg",

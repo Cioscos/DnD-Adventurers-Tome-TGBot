@@ -30,6 +30,8 @@ window.Telegram?.WebApp?.expand()
 const startAction = parseStartParam(getStartParam())
 if (startAction?.kind === 'join') {
   window.location.hash = `/session/join?code=${startAction.code}`
+} else if (startAction?.kind === 'share') {
+  window.location.hash = `/share/${startAction.token}`
 }
 
 // Lock the app frame against Telegram's native vertical-swipe gesture (Bot API

@@ -752,3 +752,29 @@ class HomebrewResource(Base):
     )
 
     rule: Mapped["HomebrewRule"] = relationship(back_populates="resources")
+
+
+# ---------------------------------------------------------------------------
+# Content sharing (snapshot di item/note condivisi via deep link Telegram)
+# ---------------------------------------------------------------------------
+
+class ContentShare(Base):
+    """Snapshot condivisibile di un item o una nota (deep link ``shr_<token>``).
+
+    Il payload è congelato alla condivisione: il destinatario importa una
+    copia indipendente anche se il mittente poi cancella l'originale.
+    ``created_at``/``expires_at`` sono ISO-8601 UTC (String, come le altre
+    tabelle recenti) — il confronto lessicografico equivale a quello temporale.
+    """
+
+    __tablename__ = "content_shares"
+
+    token: Mapped[str] = mapped_column(String(32), primary_key=True)
+    kind: Mapped[str] = mapped_column(String(10), nullable=False)  # "item" | "note"
+    payload: Mapped[dict] = mapped_column(JSON, nullable=False)
+    # Solo note vocali: copia dell'audio in data/shared_voice/{token}.{ext}
+    voice_file_path: Mapped[Optional[str]] = mapped_column(String(500))
+    created_by: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    sender_char_name: Mapped[str] = mapped_column(String(200), nullable=False)
+    created_at: Mapped[str] = mapped_column(String(50), nullable=False)
+    expires_at: Mapped[str] = mapped_column(String(50), nullable=False)

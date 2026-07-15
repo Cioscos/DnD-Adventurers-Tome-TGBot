@@ -12,8 +12,9 @@ import Sheet from '@/components/ui/Sheet'
 import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import ScrollArea from '@/components/ScrollArea'
 import EmptyState from '@/components/ui/EmptyState'
-import { haptic } from '@/auth/telegram'
+import { canShareMessage, haptic } from '@/auth/telegram'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
+import { useShareMessage } from '@/hooks/useShareMessage'
 import { useToast } from '@/hooks/useToast'
 import VoiceRecorder from '@/pages/notes/VoiceRecorder'
 import NoteEditor from '@/pages/notes/NoteEditor'
@@ -112,6 +113,8 @@ export default function Notes() {
     },
     onError: () => haptic.error(),
   })
+
+  const shareNote = useShareMessage((title: string) => api.share.note(charId, title))
 
   const startEdit = (title: string, body: string, tags: string[]) => {
     setOriginalTitle(title)
@@ -231,6 +234,7 @@ export default function Notes() {
                 onEdit={startEdit}
                 onDelete={(title) => setDeleteTarget(title)}
                 onView={(n) => setViewNote(n)}
+                onShare={canShareMessage() ? (title) => shareNote.mutate(title) : undefined}
                 voiceUrl={(filename) => api.notes.voiceUrl(charId, filename)}
               />
             </m.div>
@@ -246,6 +250,7 @@ export default function Notes() {
               <NoteItem
                 note={note}
                 onDelete={(title) => setDeleteTarget(title)}
+                onShare={canShareMessage() ? (title) => shareNote.mutate(title) : undefined}
                 voiceUrl={(filename) => api.notes.voiceUrl(charId, filename)}
               />
             </m.div>

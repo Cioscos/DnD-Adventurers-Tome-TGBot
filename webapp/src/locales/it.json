@@ -49,7 +49,20 @@
     "action": "Condividi",
     "card": "Condividi nel gruppo",
     "invite": "Condividi l'invito",
-    "error": "Condivisione non riuscita. Riprova."
+    "error": "Condivisione non riuscita. Riprova.",
+    "import": {
+      "title": "Contenuto condiviso",
+      "from": "da {{name}}",
+      "voice_note": "Nota vocale",
+      "pick_character": "Aggiungi a…",
+      "needs_character": "Ti serve un personaggio per importare questo contenuto.",
+      "add_button": "Aggiungi a {{name}}",
+      "success": "\"{{title}}\" aggiunto!",
+      "error": "Import non riuscito. Riprova.",
+      "expired": "Questa condivisione è scaduta.",
+      "not_found": "Questa condivisione non è più disponibile.",
+      "go_home": "Vai ai tuoi personaggi"
+    }
   },
   "character": {
     "hero": {

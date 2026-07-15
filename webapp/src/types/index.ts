@@ -266,6 +266,23 @@ export interface Note {
   tags?: string[]
 }
 
+export interface SharePreview {
+  kind: 'item' | 'note'
+  title: string
+  description?: string | null
+  is_voice: boolean
+  item_type?: string | null
+  quantity?: number | null
+  sender_char_name: string
+}
+
+export interface ShareImportResult {
+  ok: boolean
+  kind: 'item' | 'note'
+  char_id: number
+  title: string
+}
+
 export type SessionRole = 'game_master' | 'player'
 export type SessionStatus = 'active' | 'closed'
 
