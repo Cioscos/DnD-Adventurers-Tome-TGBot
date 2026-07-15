@@ -1,6 +1,6 @@
 import React from 'react'
 import { useTranslation } from 'react-i18next'
-import { Mic, Pencil, Trash2 } from 'lucide-react'
+import { Mic, Pencil, Share2, Trash2 } from 'lucide-react'
 import Surface from '@/components/ui/Surface'
 import { renderInlineMarkdown } from '@/lib/inlineMarkdown'
 import { formatRelative, formatAbsolute } from '@/lib/relativeTime'
@@ -22,10 +22,11 @@ interface NoteItemProps {
   onEdit?: (title: string, body: string, tags: string[]) => void
   onDelete: (title: string) => void
   onView?: (note: Note) => void
+  onShare?: (title: string) => void
   voiceUrl?: (filename: string) => string
 }
 
-function NoteItemInner({ note, onEdit, onDelete, onView, voiceUrl }: NoteItemProps) {
+function NoteItemInner({ note, onEdit, onDelete, onView, onShare, voiceUrl }: NoteItemProps) {
   const { t } = useTranslation()
   const locale = useCharacterStore((s) => s.locale)
   const stamp = note.updated_at ?? note.created_at ?? null
@@ -51,14 +52,26 @@ function NoteItemInner({ note, onEdit, onDelete, onView, voiceUrl }: NoteItemPro
             <Mic size={14} className="shrink-0 text-dnd-gold-dim" />
             <span className="truncate">{note.title}</span>
           </h3>
-          <button
-            onClick={() => onDelete(note.title)}
-            className="w-11 h-11 -my-2.5 -mr-2 flex items-center justify-center shrink-0 rounded-lg
-                       text-dnd-text-muted hover:text-dnd-crimson-bright transition-colors"
-            aria-label={t('common.delete')}
-          >
-            <Trash2 size={16} />
-          </button>
+          <div className="flex shrink-0 -my-2.5 -mr-2 gap-0.5">
+            {onShare && (
+              <button
+                onClick={() => onShare(note.title)}
+                className="w-11 h-11 -my-2.5 flex items-center justify-center shrink-0 rounded-lg
+                           text-dnd-text-muted hover:text-dnd-gold-bright transition-colors"
+                aria-label={t('share.action')}
+              >
+                <Share2 size={16} />
+              </button>
+            )}
+            <button
+              onClick={() => onDelete(note.title)}
+              className="w-11 h-11 -my-2.5 -mr-2 flex items-center justify-center shrink-0 rounded-lg
+                         text-dnd-text-muted hover:text-dnd-crimson-bright transition-colors"
+              aria-label={t('common.delete')}
+            >
+              <Trash2 size={16} />
+            </button>
+          </div>
         </div>
         {filename && voiceUrl ? (
           <audio
@@ -92,6 +105,16 @@ function NoteItemInner({ note, onEdit, onDelete, onView, voiceUrl }: NoteItemPro
       <div className="flex items-start justify-between gap-1 mb-1">
         <h3 className="font-semibold font-cinzel text-dnd-gold min-w-0 break-words pt-2">{note.title}</h3>
         <div className="flex shrink-0 -my-2 -mr-2">
+          {onShare && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onShare(note.title) }}
+              className="w-11 h-11 flex items-center justify-center rounded-lg
+                         text-dnd-text-muted hover:text-dnd-gold-bright transition-colors"
+              aria-label={t('share.action')}
+            >
+              <Share2 size={16} />
+            </button>
+          )}
           {onEdit && (
             <button
               onClick={(e) => { e.stopPropagation(); onEdit(note.title, note.body, note.tags ?? []) }}
