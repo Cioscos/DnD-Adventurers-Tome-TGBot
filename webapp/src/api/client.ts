@@ -38,6 +38,8 @@ import type {
   RollDamageResult,
   SessionFeedResponse,
   SessionMessage,
+  ShareImportResult,
+  SharePreview,
   Spell,
   SpellSlot,
 } from '@/types'
@@ -720,9 +722,18 @@ export const api = {
     item: (charId: number, itemId: number) =>
       request<{ prepared_message_id: string }>(
         `/characters/${charId}/share/items/${itemId}`, { method: 'POST' }),
+    note: (charId: number, title: string) =>
+      request<{ prepared_message_id: string }>(
+        `/characters/${charId}/share/notes/${encodeURIComponent(title)}`, { method: 'POST' }),
     invite: (sessionId: number) =>
       request<{ prepared_message_id: string }>(
         `/sessions/${sessionId}/share/invite`, { method: 'POST' }),
+    get: (token: string) => request<SharePreview>(`/shares/${token}`),
+    import: (token: string, charId: number) =>
+      request<ShareImportResult>(`/shares/${token}/import`, {
+        method: 'POST',
+        body: JSON.stringify({ char_id: charId }),
+      }),
   },
 
   // ---------------------------------------------------------------------------

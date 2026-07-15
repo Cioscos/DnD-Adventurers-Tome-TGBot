@@ -49,7 +49,20 @@
     "action": "Share",
     "card": "Share to group",
     "invite": "Share invite",
-    "error": "Sharing failed. Try again."
+    "error": "Sharing failed. Try again.",
+    "import": {
+      "title": "Shared content",
+      "from": "from {{name}}",
+      "voice_note": "Voice note",
+      "pick_character": "Add to…",
+      "needs_character": "You need a character to import this content.",
+      "add_button": "Add to {{name}}",
+      "success": "\"{{title}}\" added!",
+      "error": "Import failed. Try again.",
+      "expired": "This share has expired.",
+      "not_found": "This share is no longer available.",
+      "go_home": "Go to your characters"
+    }
   },
   "character": {
     "hero": {
