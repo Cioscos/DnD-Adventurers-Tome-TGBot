@@ -71,7 +71,9 @@ def create_note_share(
     stored_body = body
     if body.startswith("[VOICE:") and body.endswith("]"):
         src = Path(body[7:-1])
-        if not src.exists():
+        # Confinamento: il body è testo libero — un [VOICE:...] contraffatto
+        # non deve permettere di copiare (e poi servire) file arbitrari.
+        if not src.exists() or not src.resolve().is_relative_to(VOICE_NOTES_DIR.resolve()):
             raise FileNotFoundError(str(src))
         SHARED_VOICE_DIR.mkdir(parents=True, exist_ok=True)
         dest = SHARED_VOICE_DIR / f"{token}{src.suffix}"

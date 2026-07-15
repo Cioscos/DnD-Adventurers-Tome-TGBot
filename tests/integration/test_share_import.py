@@ -92,6 +92,7 @@ async def test_share_note_voice_copies_audio(client, monkeypatch, tmp_path):
     import api.services.content_shares as cs
     monkeypatch.setattr(notes_router, "_VOICE_DIR", tmp_path / "voice_notes")
     monkeypatch.setattr(cs, "SHARED_VOICE_DIR", tmp_path / "shared")
+    monkeypatch.setattr(cs, "VOICE_NOTES_DIR", tmp_path / "voice_notes")
     captured = install_fake_telegram(monkeypatch)
     cid = await _make_char(client)
 

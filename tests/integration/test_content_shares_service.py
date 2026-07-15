@@ -32,7 +32,8 @@ def test_create_item_share_freezes_payload():
 
 def test_create_note_share_copies_voice_file(tmp_path, monkeypatch):
     monkeypatch.setattr(cs, "SHARED_VOICE_DIR", tmp_path / "shared")
-    src = tmp_path / "voice" / "abc.webm"
+    monkeypatch.setattr(cs, "VOICE_NOTES_DIR", tmp_path / "voice_notes")
+    src = tmp_path / "voice_notes" / "1" / "abc.webm"
     src.parent.mkdir(parents=True)
     src.write_bytes(b"audio")
     share = cs.create_note_share("Memo", f"[VOICE:{src}]", [], _char(), user_id=1)
@@ -92,7 +93,8 @@ def test_import_note_text_with_title_collision():
 def test_import_note_voice_copies_into_char_dir(tmp_path, monkeypatch):
     monkeypatch.setattr(cs, "SHARED_VOICE_DIR", tmp_path / "shared")
     monkeypatch.setattr(cs, "VOICE_NOTES_DIR", tmp_path / "voice_notes")
-    src = tmp_path / "orig.webm"
+    src = tmp_path / "voice_notes" / "1" / "orig.webm"
+    src.parent.mkdir(parents=True)
     src.write_bytes(b"audio")
     share = cs.create_note_share("Memo", f"[VOICE:{src}]", [], _char(), user_id=1)
     dest = Character(id=9, user_id=2, name="Rico")
@@ -107,7 +109,8 @@ def test_import_note_voice_copies_into_char_dir(tmp_path, monkeypatch):
 def test_import_note_voice_missing_file_raises(tmp_path, monkeypatch):
     monkeypatch.setattr(cs, "SHARED_VOICE_DIR", tmp_path / "shared")
     monkeypatch.setattr(cs, "VOICE_NOTES_DIR", tmp_path / "voice_notes")
-    src = tmp_path / "orig.webm"
+    src = tmp_path / "voice_notes" / "1" / "orig.webm"
+    src.parent.mkdir(parents=True)
     src.write_bytes(b"audio")
     share = cs.create_note_share("Memo", f"[VOICE:{src}]", [], _char(), user_id=1)
     Path(share.voice_file_path).unlink()  # disco ripulito a mano
@@ -148,3 +151,25 @@ def test_share_and_import_preserve_zero_quantity():
     assert share.payload["quantity"] == 0
     imported = cs.import_item(share, Character(id=7, user_id=2, name="Rico"))
     assert imported.quantity == 0
+
+
+def test_create_note_share_rejects_voice_path_outside_voice_dir(tmp_path, monkeypatch):
+    """Un body contraffatto [VOICE:/file/arbitrario] non deve copiare file
+    fuori da VOICE_NOTES_DIR (lettura arbitraria server-side via laundering)."""
+    monkeypatch.setattr(cs, "SHARED_VOICE_DIR", tmp_path / "shared")
+    monkeypatch.setattr(cs, "VOICE_NOTES_DIR", tmp_path / "voice_notes")
+    secret = tmp_path / "secrets.env"
+    secret.write_bytes(b"BOT_TOKEN=supersegreto")
+    with pytest.raises(FileNotFoundError):
+        cs.create_note_share("Exploit", f"[VOICE:{secret}]", [], _char(), user_id=1)
+    assert not (tmp_path / "shared").exists() or not any((tmp_path / "shared").iterdir())
+
+
+def test_create_note_share_accepts_legit_voice_path(tmp_path, monkeypatch):
+    monkeypatch.setattr(cs, "SHARED_VOICE_DIR", tmp_path / "shared")
+    monkeypatch.setattr(cs, "VOICE_NOTES_DIR", tmp_path / "voice_notes")
+    src = tmp_path / "voice_notes" / "5" / "abc.webm"
+    src.parent.mkdir(parents=True)
+    src.write_bytes(b"audio")
+    share = cs.create_note_share("Memo", f"[VOICE:{src}]", [], _char(), user_id=1)
+    assert share.voice_file_path is not None
