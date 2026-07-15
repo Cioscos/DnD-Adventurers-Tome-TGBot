@@ -8,6 +8,18 @@ describe('parseStartParam', () => {
     expect(parseStartParam('  join_XY12Z9  ')).toEqual({ kind: 'join', code: 'XY12Z9' })
   })
 
+  it('parses shr_<token> into a share action preserving case', () => {
+    expect(parseStartParam('shr_Ab1-_x9Zq2w')).toEqual({ kind: 'share', token: 'Ab1-_x9Zq2w' })
+    expect(parseStartParam('  shr_abcdefgh  ')).toEqual({ kind: 'share', token: 'abcdefgh' })
+  })
+
+  it('rejects malformed shr_ values', () => {
+    expect(parseStartParam('shr_')).toBeNull()
+    expect(parseStartParam('shr_ab')).toBeNull() // too short (< 8 chars)
+    expect(parseStartParam('shr_bad!token')).toBeNull() // invalid charset
+    expect(parseStartParam(`shr_${'a'.repeat(65)}`)).toBeNull() // too long (> 64 chars)
+  })
+
   it('rejects everything else', () => {
     expect(parseStartParam(null)).toBeNull()
     expect(parseStartParam(undefined)).toBeNull()
