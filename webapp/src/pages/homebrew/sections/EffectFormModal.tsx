@@ -4,6 +4,7 @@ import { Plus, Trash2 } from 'lucide-react'
 import Sheet from '@/components/ui/Sheet'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
+import IconButton from '@/components/ui/IconButton'
 import FilterChip from '@/components/ui/FilterChip'
 import SwitchToggle from '@/components/ui/SwitchToggle'
 import type {
@@ -792,14 +793,13 @@ function CasesEditor({
               className="flex items-center gap-2 px-2 py-1.5 bg-dnd-surface rounded-lg"
             >
               <span className="flex-1 font-mono text-xs text-dnd-text truncate">"{k}"</span>
-              <button
-                type="button"
+              <IconButton
+                icon={<Trash2 size={14} />}
                 onClick={() => removeCase(k)}
-                className="w-11 h-11 inline-flex items-center justify-center rounded-lg text-dnd-crimson hover:text-dnd-crimson-bright hover:bg-dnd-crimson/10"
+                haptic="none"
+                className="w-11 h-11 rounded-lg text-dnd-crimson hover:text-dnd-crimson-bright hover:bg-dnd-crimson/10"
                 aria-label={t('common.delete')}
-              >
-                <Trash2 size={14} />
-              </button>
+              />
             </li>
           ))}
         </ul>

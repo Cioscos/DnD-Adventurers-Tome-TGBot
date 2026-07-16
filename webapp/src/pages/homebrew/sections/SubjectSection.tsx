@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { m } from 'framer-motion'
+import Pressable from '@/components/ui/Pressable'
 import FilterChip from '@/components/ui/FilterChip'
 import Input from '@/components/ui/Input'
 import type { Subject, SubjectType } from '@/lib/homebrew/types'
@@ -72,9 +72,8 @@ export default function SubjectSection({ subject, onChange }: SubjectSectionProp
             ? 'bg-dnd-chip-bg border-dnd-gold/70 text-dnd-gold-bright shadow-halo-gold'
             : 'bg-dnd-surface border-dnd-border text-dnd-text-muted hover:text-dnd-gold-bright/80'
           return (
-            <m.button
+            <Pressable
               key={value}
-              type="button"
               onClick={() => setType(value)}
               whileTap={{ scale: 0.97 }}
               aria-pressed={selected}
@@ -86,7 +85,7 @@ export default function SubjectSection({ subject, onChange }: SubjectSectionProp
               <span className="text-center leading-tight">
                 {t(`homebrew.subject.types.${value}`)}
               </span>
-            </m.button>
+            </Pressable>
           )
         })}
       </div>

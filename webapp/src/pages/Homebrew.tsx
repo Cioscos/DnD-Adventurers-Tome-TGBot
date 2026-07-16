@@ -3,12 +3,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
-import { Plus, CheckCircle2, BookOpenCheck, Zap, Trash2, Loader2, RefreshCw } from 'lucide-react'
+import { Plus, CheckCircle2, BookOpenCheck, Zap, Trash2, RefreshCw } from 'lucide-react'
 import { GiScrollUnfurled, GiPotionBall, GiCauldron } from 'react-icons/gi'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
+import IconButton from '@/components/ui/IconButton'
 import SwitchToggle from '@/components/ui/SwitchToggle'
 import SectionDivider from '@/components/ui/SectionDivider'
 import Skeleton from '@/components/Skeleton'
@@ -88,47 +89,33 @@ function RuleCard({
       >
         <SwitchToggle checked={rule.enabled} onChange={onToggle} />
         {onManualTrigger && (
-          <button
-            type="button"
+          <IconButton
+            icon={<Zap size={18} />}
             onClick={(e) => {
               e.stopPropagation()
               onManualTrigger()
             }}
-            disabled={isFiring}
+            loading={isFiring}
+            haptic="none"
             title={manualTriggerLabel}
             aria-label={manualTriggerLabel}
-            className="w-11 h-11 flex items-center justify-center rounded-xl
-                       text-dnd-gold-bright hover:bg-dnd-gold-bright/10
-                       active:bg-dnd-gold-bright/20 transition-colors
-                       disabled:opacity-50 disabled:cursor-wait"
-          >
-            {isFiring ? (
-              <Loader2 size={18} className="animate-spin" />
-            ) : (
-              <Zap size={18} />
-            )}
-          </button>
+            className="w-11 h-11 rounded-xl text-dnd-gold-bright hover:bg-dnd-gold-bright/10
+                       active:bg-dnd-gold-bright/20 disabled:opacity-50"
+          />
         )}
-        <button
-          type="button"
+        <IconButton
+          icon={<Trash2 size={18} />}
           onClick={(e) => {
             e.stopPropagation()
             onDelete()
           }}
-          disabled={isDeleting}
+          loading={isDeleting}
+          haptic="none"
           title={deleteLabel}
           aria-label={deleteLabel}
-          className="w-11 h-11 flex items-center justify-center rounded-xl
-                     text-dnd-text-muted hover:text-dnd-crimson hover:bg-dnd-crimson/10
-                     active:bg-dnd-crimson/20 transition-colors
-                     disabled:opacity-50 disabled:cursor-wait"
-        >
-          {isDeleting ? (
-            <Loader2 size={18} className="animate-spin" />
-          ) : (
-            <Trash2 size={18} />
-          )}
-        </button>
+          className="w-11 h-11 rounded-xl text-dnd-text-muted hover:text-dnd-crimson hover:bg-dnd-crimson/10
+                     active:bg-dnd-crimson/20 disabled:opacity-50"
+        />
       </div>
     </m.div>
   )

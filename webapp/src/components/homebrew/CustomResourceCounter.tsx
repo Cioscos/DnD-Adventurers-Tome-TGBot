@@ -1,7 +1,8 @@
 import { useTranslation } from 'react-i18next'
-import { m } from 'framer-motion'
 import { Plus, Minus, RotateCcw } from 'lucide-react'
 import { GiCrystalBall } from 'react-icons/gi'
+import IconButton from '@/components/ui/IconButton'
+import Pressable from '@/components/ui/Pressable'
 import type { HomebrewResource } from '@/lib/homebrew/types'
 
 interface CustomResourceCounterProps {
@@ -69,18 +70,16 @@ export default function CustomResourceCounter({
         )}
 
         <div className="flex items-center gap-3 rounded-xl bg-dnd-surface border border-dnd-border p-2">
-          <m.button
-            type="button"
+          <IconButton
+            icon={<Minus size={16} />}
             onClick={onDecrement}
-            disabled={atMin || isPending}
+            disabled={atMin}
+            loading={isPending}
+            haptic="none"
             aria-label={t('character.homebrew.resources.aria_decrement', { name: resource.name })}
             className="w-11 h-11 rounded-xl bg-dnd-crimson/15 text-dnd-crimson-bright
-                       border border-dnd-crimson/30 flex items-center justify-center
-                       disabled:opacity-30"
-            whileTap={{ scale: 0.9 }}
-          >
-            <Minus size={16} />
-          </m.button>
+                       border border-dnd-crimson/30 disabled:opacity-30"
+          />
           <div className="flex-1 text-center">
             <p className="text-lg font-display font-black text-dnd-gold-bright">
               <span className="font-mono tabular-nums">{resource.current}</span>
@@ -88,26 +87,23 @@ export default function CustomResourceCounter({
               <span className="text-sm text-dnd-text-muted font-mono tabular-nums">{resource.max}</span>
             </p>
           </div>
-          <m.button
-            type="button"
+          <IconButton
+            icon={<Plus size={16} />}
             onClick={onIncrement}
-            disabled={atMax || isPending}
+            disabled={atMax}
+            loading={isPending}
+            haptic="none"
             aria-label={t('character.homebrew.resources.aria_increment', { name: resource.name })}
             className="w-11 h-11 rounded-xl bg-dnd-emerald/15 text-dnd-emerald-bright
-                       border border-dnd-emerald/30 flex items-center justify-center
-                       disabled:opacity-30"
-            whileTap={{ scale: 0.9 }}
-          >
-            <Plus size={16} />
-          </m.button>
+                       border border-dnd-emerald/30 disabled:opacity-30"
+          />
         </div>
 
         {!atMax && (
           <div className="flex">
-            <m.button
-              type="button"
+            <Pressable
               onClick={onRestore}
-              disabled={isPending}
+              pending={isPending}
               className="inline-flex items-center gap-1.5 min-h-[44px] px-3 py-1.5 rounded-lg
                          bg-dnd-gold/10 border border-dnd-gold-dim/40 text-dnd-gold-bright
                          text-[11px] font-cinzel uppercase tracking-wider
@@ -116,7 +112,7 @@ export default function CustomResourceCounter({
             >
               <RotateCcw size={12} />
               {t('character.homebrew.resources.restore')}
-            </m.button>
+            </Pressable>
           </div>
         )}
       </div>

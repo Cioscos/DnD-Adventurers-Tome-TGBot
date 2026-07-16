@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Plus, Trash2, X, AlertTriangle } from 'lucide-react'
 import Button from '@/components/ui/Button'
+import IconButton from '@/components/ui/IconButton'
+import Pressable from '@/components/ui/Pressable'
 import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import Input from '@/components/ui/Input'
 import { resolveLabelI18n, type Locale } from '@/lib/homebrew/i18n-dsl'
@@ -293,14 +295,13 @@ function TableCard({
             className="font-mono"
           />
         </div>
-        <button
-          type="button"
+        <IconButton
+          icon={<Trash2 size={16} />}
           onClick={onRequestDelete}
-          className="shrink-0 mt-6 p-1.5 rounded-lg text-dnd-crimson hover:text-dnd-crimson-bright hover:bg-dnd-crimson/10 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+          haptic="none"
+          className="shrink-0 mt-6 p-1.5 rounded-lg text-dnd-crimson hover:text-dnd-crimson-bright hover:bg-dnd-crimson/10 min-w-[44px] min-h-[44px]"
           aria-label={t('common.delete')}
-        >
-          <Trash2 size={16} />
-        </button>
+        />
       </div>
 
       {/* Axis pickers */}
@@ -360,15 +361,14 @@ function TableCard({
                   </th>
                 ))}
                 <th className="bg-dnd-surface/40 border border-dnd-border p-1 w-[44px]">
-                  <button
-                    type="button"
+                  <IconButton
+                    icon={<Plus size={16} />}
                     onClick={onAddColumn}
-                    className="w-full min-h-[36px] flex items-center justify-center rounded-md text-dnd-gold-dim hover:text-dnd-gold-bright hover:bg-dnd-surface/60 transition-colors"
+                    haptic="none"
+                    className="w-full min-h-[36px] rounded-md text-dnd-gold-dim hover:text-dnd-gold-bright hover:bg-dnd-surface/60"
                     title={t('homebrew.tables.add_column')}
                     aria-label={t('homebrew.tables.add_column')}
-                  >
-                    <Plus size={16} />
-                  </button>
+                  />
                 </th>
               </tr>
             </thead>
@@ -467,14 +467,13 @@ function ColBinHeader({ bin, onChange, onRemove }: ColBinHeaderProps) {
           className="w-12 px-1 py-1 min-h-[32px] rounded bg-dnd-surface text-dnd-text border border-dnd-border outline-none text-center font-mono text-[12px]"
         />
         {onRemove && (
-          <button
-            type="button"
+          <Pressable
             onClick={onRemove}
             className="hit-44 ml-auto p-1 rounded text-dnd-crimson/70 hover:text-dnd-crimson-bright hover:bg-dnd-crimson/10 transition-colors min-w-[28px] min-h-[28px] flex items-center justify-center"
             aria-label={t('common.remove')}
           >
             <X size={12} />
-          </button>
+          </Pressable>
         )}
       </div>
       <div className="text-[10px] text-dnd-text-muted font-mono text-center">

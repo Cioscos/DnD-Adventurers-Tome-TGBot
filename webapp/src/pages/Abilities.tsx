@@ -618,7 +618,7 @@ export default function Abilities() {
                 onRestore={() =>
                   resourceMutation.mutate({ resourceId: r.id, current: r.max })
                 }
-                isPending={resourceMutation.isPending}
+                isPending={resourceMutation.isPending && resourceMutation.variables?.resourceId === r.id}
               />
             ))}
           </div>

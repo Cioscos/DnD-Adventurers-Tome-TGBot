@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ChevronDown, ChevronUp, Pencil, Plus, Trash2 } from 'lucide-react'
 import Button from '@/components/ui/Button'
+import IconButton from '@/components/ui/IconButton'
+import Pressable from '@/components/ui/Pressable'
 import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import Sheet from '@/components/ui/Sheet'
 import { actionLabel, type Locale } from '@/lib/homebrew/i18n-dsl'
@@ -253,40 +255,36 @@ function EffectCard({
           </p>
         </div>
         <div className="flex flex-col gap-0.5 shrink-0">
-          <button
-            type="button"
+          <IconButton
+            icon={<ChevronUp size={16} />}
             onClick={onMoveUp}
             disabled={index === 0}
-            className="w-11 h-11 inline-flex items-center justify-center rounded-lg text-dnd-gold-dim hover:text-dnd-gold-bright hover:bg-dnd-surface transition-colors disabled:opacity-30 disabled:pointer-events-none"
+            haptic="none"
+            className="w-11 h-11 rounded-lg text-dnd-gold-dim hover:text-dnd-gold-bright hover:bg-dnd-surface disabled:opacity-30"
             aria-label={t('homebrew.effects.move_up')}
-          >
-            <ChevronUp size={16} />
-          </button>
-          <button
-            type="button"
+          />
+          <IconButton
+            icon={<ChevronDown size={16} />}
             onClick={onMoveDown}
             disabled={index === total - 1}
-            className="w-11 h-11 inline-flex items-center justify-center rounded-lg text-dnd-gold-dim hover:text-dnd-gold-bright hover:bg-dnd-surface transition-colors disabled:opacity-30 disabled:pointer-events-none"
+            haptic="none"
+            className="w-11 h-11 rounded-lg text-dnd-gold-dim hover:text-dnd-gold-bright hover:bg-dnd-surface disabled:opacity-30"
             aria-label={t('homebrew.effects.move_down')}
-          >
-            <ChevronDown size={16} />
-          </button>
-          <button
-            type="button"
+          />
+          <IconButton
+            icon={<Pencil size={16} />}
             onClick={onEdit}
-            className="w-11 h-11 inline-flex items-center justify-center rounded-lg text-dnd-gold-dim hover:text-dnd-gold-bright hover:bg-dnd-surface transition-colors"
+            haptic="none"
+            className="w-11 h-11 rounded-lg text-dnd-gold-dim hover:text-dnd-gold-bright hover:bg-dnd-surface"
             aria-label={t('common.edit')}
-          >
-            <Pencil size={16} />
-          </button>
-          <button
-            type="button"
+          />
+          <IconButton
+            icon={<Trash2 size={16} />}
             onClick={onDelete}
-            className="w-11 h-11 inline-flex items-center justify-center rounded-lg text-dnd-crimson hover:text-dnd-crimson-bright hover:bg-dnd-crimson/10 transition-colors"
+            haptic="none"
+            className="w-11 h-11 rounded-lg text-dnd-crimson hover:text-dnd-crimson-bright hover:bg-dnd-crimson/10"
             aria-label={t('common.delete')}
-          >
-            <Trash2 size={16} />
-          </button>
+          />
         </div>
       </div>
     </div>
@@ -413,13 +411,12 @@ function ActionPicker({
         <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {actions.map((action) => (
             <li key={action}>
-              <button
-                type="button"
+              <Pressable
                 onClick={() => onPick(action)}
                 className="w-full min-h-[48px] px-3 py-2.5 rounded-xl bg-dnd-surface-raised border border-dnd-border hover:border-dnd-gold/70 text-left text-sm font-body text-dnd-text transition-colors"
               >
                 {t(`homebrew.effects.actions.${action}`)}
-              </button>
+              </Pressable>
             </li>
           ))}
         </ul>

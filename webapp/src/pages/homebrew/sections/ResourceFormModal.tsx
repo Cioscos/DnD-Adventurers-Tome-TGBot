@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import Sheet from '@/components/ui/Sheet'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
+import Pressable from '@/components/ui/Pressable'
 import ChipSelect from '@/components/ui/ChipSelect'
 import type { ResourceDef, RestorationType } from '@/lib/homebrew/types'
 
@@ -151,13 +152,12 @@ export default function ResourceFormModal({
           ) : (
             <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-dnd-surface border border-dnd-border">
               <code className="font-mono text-sm text-dnd-text">{autoKey || '—'}</code>
-              <button
-                type="button"
+              <Pressable
                 onClick={enableKeyOverride}
                 className="hit-44 text-[11px] font-cinzel uppercase tracking-wider text-dnd-gold-dim hover:text-dnd-gold-bright transition-colors"
               >
                 {t('homebrew.resources.modal.key_override')}
-              </button>
+              </Pressable>
             </div>
           )}
           {!draft.keyOverridden && errors.key && (

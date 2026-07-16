@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Pencil, Plus, Trash2 } from 'lucide-react'
 import Button from '@/components/ui/Button'
+import IconButton from '@/components/ui/IconButton'
 import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import { resolveLabelI18n, type Locale } from '@/lib/homebrew/i18n-dsl'
 import type { Property } from '@/lib/homebrew/types'
@@ -130,22 +131,20 @@ export default function PropertiesSection({ properties, onChange }: PropertiesSe
                     )}
                   </div>
                   <div className="flex flex-col gap-1 shrink-0">
-                    <button
-                      type="button"
+                    <IconButton
+                      icon={<Pencil size={16} />}
                       onClick={() => openEdit(index)}
-                      className="w-11 h-11 inline-flex items-center justify-center rounded-lg text-dnd-gold-dim hover:text-dnd-gold-bright hover:bg-dnd-surface transition-colors"
+                      haptic="none"
+                      className="w-11 h-11 rounded-lg text-dnd-gold-dim hover:text-dnd-gold-bright hover:bg-dnd-surface"
                       aria-label={t('common.edit')}
-                    >
-                      <Pencil size={16} />
-                    </button>
-                    <button
-                      type="button"
+                    />
+                    <IconButton
+                      icon={<Trash2 size={16} />}
                       onClick={() => setConfirmDeleteIndex(index)}
-                      className="w-11 h-11 inline-flex items-center justify-center rounded-lg text-dnd-crimson hover:text-dnd-crimson-bright hover:bg-dnd-crimson/10 transition-colors"
+                      haptic="none"
+                      className="w-11 h-11 rounded-lg text-dnd-crimson hover:text-dnd-crimson-bright hover:bg-dnd-crimson/10"
                       aria-label={t('common.delete')}
-                    >
-                      <Trash2 size={16} />
-                    </button>
+                    />
                   </div>
                 </div>
               </li>

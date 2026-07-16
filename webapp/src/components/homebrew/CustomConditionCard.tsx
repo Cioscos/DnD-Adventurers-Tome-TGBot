@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { Sparkles, Trash2 } from 'lucide-react'
+import IconButton from '@/components/ui/IconButton'
 
 interface CustomConditionCardProps {
   conditionKey: string
@@ -66,18 +67,15 @@ export default function CustomConditionCard({
           </div>
         )}
       </div>
-      <button
-        type="button"
+      <IconButton
+        icon={<Trash2 size={16} />}
         onClick={onRemove}
-        disabled={isPending}
+        loading={isPending}
+        haptic="none"
         aria-label={t('character.conditions.custom_remove_aria', { name: title })}
-        className="shrink-0 w-11 h-11 inline-flex items-center justify-center
-                   rounded-lg text-dnd-crimson hover:text-dnd-crimson-bright
-                   hover:bg-dnd-crimson/15 transition-colors
-                   disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        <Trash2 size={16} />
-      </button>
+        className="shrink-0 w-11 h-11 rounded-lg text-dnd-crimson hover:text-dnd-crimson-bright
+                   hover:bg-dnd-crimson/15 disabled:opacity-50"
+      />
     </div>
   )
 }
