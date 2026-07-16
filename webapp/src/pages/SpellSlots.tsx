@@ -28,13 +28,19 @@ interface TotalEditorProps {
   label: string
   decrementAria: string
   incrementAria: string
+  /** BE mutation in flight for THIS slot's total — drives the ± buttons' spinner/disabled state. */
+  pending: boolean
   onCommit: (next: number) => void
 }
 
-function TotalEditor({ total, label, decrementAria, incrementAria, onCommit }: TotalEditorProps) {
+function TotalEditor({ total, label, decrementAria, incrementAria, pending, onCommit }: TotalEditorProps) {
   const [draft, setDraft] = useState<string>(String(total))
   const [editing, setEditing] = useState(false)
   const repeatRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Handler currently registered on `window` for pointerup/pointercancel — kept so
+  // stopRepeat() can remove it even when the button itself never gets the event
+  // (see stopRepeat below).
+  const releaseRef = useRef<(() => void) | null>(null)
   const valueRef = useRef(total)
 
   useEffect(() => {
@@ -42,18 +48,31 @@ function TotalEditor({ total, label, decrementAria, incrementAria, onCommit }: T
     if (!editing) setDraft(String(total))
   }, [total, editing])
 
-  useEffect(() => () => {
-    if (repeatRef.current) clearTimeout(repeatRef.current)
-  }, [])
-
+  // Ends the repeat chain and detaches the window-level release listener.
+  // Registered on `window` (not just the button's own onPointerUp/onPointerLeave/
+  // onPointerCancel) because the ± button gets `disabled` mid-hold as soon as
+  // `pending` flips true (first tap already dispatches the mutation): a disabled
+  // <button> stops receiving pointer events, so relying solely on its own handlers
+  // would leave the repeat firing forever after release. Window still sees the
+  // pointerup/pointercancel (it bubbles from whatever element is now under the
+  // pointer once the disabled button drops out of hit-testing), so the chain
+  // always stops on release regardless of the button's disabled state.
   const stopRepeat = useCallback(() => {
     if (repeatRef.current) {
       clearTimeout(repeatRef.current)
       repeatRef.current = null
     }
+    if (releaseRef.current) {
+      window.removeEventListener('pointerup', releaseRef.current)
+      window.removeEventListener('pointercancel', releaseRef.current)
+      releaseRef.current = null
+    }
   }, [])
 
+  useEffect(() => stopRepeat, [stopRepeat])
+
   const startRepeat = useCallback((delta: 1 | -1) => {
+    stopRepeat() // defensive: clear any stale chain/listener from a previous press
     const apply = () => {
       const next = Math.max(1, valueRef.current + delta)
       if (next !== valueRef.current) {
@@ -69,7 +88,12 @@ function TotalEditor({ total, label, decrementAria, incrementAria, onCommit }: T
       repeatRef.current = setTimeout(tick, delay)
     }
     repeatRef.current = setTimeout(tick, 380)
-  }, [onCommit])
+
+    const release = () => stopRepeat()
+    releaseRef.current = release
+    window.addEventListener('pointerup', release, { once: true })
+    window.addEventListener('pointercancel', release, { once: true })
+  }, [onCommit, stopRepeat])
 
   const commitDraft = () => {
     const parsed = parseInt(draft, 10)
@@ -91,6 +115,8 @@ function TotalEditor({ total, label, decrementAria, incrementAria, onCommit }: T
         onPointerUp={stopRepeat}
         onPointerLeave={stopRepeat}
         onPointerCancel={stopRepeat}
+        pending={pending}
+        spinnerSize={12}
         className="w-11 h-11 rounded-lg bg-dnd-surface border border-dnd-border flex items-center justify-center text-dnd-gold"
         whileTap={{ scale: 0.9 }}
         aria-label={decrementAria}
@@ -120,6 +146,8 @@ function TotalEditor({ total, label, decrementAria, incrementAria, onCommit }: T
         onPointerUp={stopRepeat}
         onPointerLeave={stopRepeat}
         onPointerCancel={stopRepeat}
+        pending={pending}
+        spinnerSize={12}
         className="w-11 h-11 rounded-lg bg-dnd-surface border border-dnd-border flex items-center justify-center text-dnd-gold"
         whileTap={{ scale: 0.9 }}
         aria-label={incrementAria}
@@ -304,6 +332,7 @@ export default function SpellSlots() {
                   label={t('character.slots.total')}
                   decrementAria={t('character.slots.decrement_total')}
                   incrementAria={t('character.slots.increment_total')}
+                  pending={updateTotal.isPending && updateTotal.variables?.slotId === slot.id}
                   onCommit={(next) => updateTotal.mutate({ slotId: slot.id, total: next })}
                 />
               )}
