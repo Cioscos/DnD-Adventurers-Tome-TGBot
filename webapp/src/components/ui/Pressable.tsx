@@ -34,6 +34,10 @@ interface PressableProps {
   onPointerUp?: (e: React.PointerEvent<HTMLButtonElement>) => void
   onPointerLeave?: (e: React.PointerEvent<HTMLButtonElement>) => void
   onPointerCancel?: (e: React.PointerEvent<HTMLButtonElement>) => void
+  /** Escape hatch: HTML5 drag-and-drop dropzone (es. MapUploadForm). */
+  onDragOver?: (e: React.DragEvent<HTMLButtonElement>) => void
+  onDragLeave?: (e: React.DragEvent<HTMLButtonElement>) => void
+  onDrop?: (e: React.DragEvent<HTMLButtonElement>) => void
   title?: string
   style?: React.CSSProperties
   role?: string
@@ -66,6 +70,9 @@ function PressableInner({
   onPointerUp,
   onPointerLeave,
   onPointerCancel,
+  onDragOver,
+  onDragLeave,
+  onDrop,
   title,
   style,
   role,
@@ -108,6 +115,9 @@ function PressableInner({
       onPointerUp={onPointerUp}
       onPointerLeave={onPointerLeave}
       onPointerCancel={onPointerCancel}
+      onDragOver={onDragOver}
+      onDragLeave={onDragLeave}
+      onDrop={onDrop}
       title={title}
       style={style}
       role={role}

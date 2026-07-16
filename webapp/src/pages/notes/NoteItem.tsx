@@ -2,6 +2,7 @@ import React from 'react'
 import { useTranslation } from 'react-i18next'
 import { Mic, Pencil, Share2, Trash2 } from 'lucide-react'
 import Surface from '@/components/ui/Surface'
+import Pressable from '@/components/ui/Pressable'
 import { renderInlineMarkdown } from '@/lib/inlineMarkdown'
 import { formatRelative, formatAbsolute } from '@/lib/relativeTime'
 import { useCharacterStore } from '@/store/characterStore'
@@ -23,10 +24,13 @@ interface NoteItemProps {
   onDelete: (title: string) => void
   onView?: (note: Note) => void
   onShare?: (title: string) => void
+  /** useShareMessage().isPending, already narrowed to this note by the caller
+   *  (the mutation is shared across every note's share button). */
+  sharePending?: boolean
   voiceUrl?: (filename: string) => string
 }
 
-function NoteItemInner({ note, onEdit, onDelete, onView, onShare, voiceUrl }: NoteItemProps) {
+function NoteItemInner({ note, onEdit, onDelete, onView, onShare, sharePending = false, voiceUrl }: NoteItemProps) {
   const { t } = useTranslation()
   const locale = useCharacterStore((s) => s.locale)
   const stamp = note.updated_at ?? note.created_at ?? null
@@ -54,23 +58,24 @@ function NoteItemInner({ note, onEdit, onDelete, onView, onShare, voiceUrl }: No
           </h3>
           <div className="flex shrink-0 -my-2.5 -mr-2 gap-0.5">
             {onShare && (
-              <button
+              <Pressable
                 onClick={() => onShare(note.title)}
+                pending={sharePending}
                 className="w-11 h-11 flex items-center justify-center shrink-0 rounded-lg
                            text-dnd-text-muted hover:text-dnd-gold-bright transition-colors"
                 aria-label={t('share.action')}
               >
                 <Share2 size={16} />
-              </button>
+              </Pressable>
             )}
-            <button
+            <Pressable
               onClick={() => onDelete(note.title)}
               className="w-11 h-11 flex items-center justify-center shrink-0 rounded-lg
                          text-dnd-text-muted hover:text-dnd-crimson-bright transition-colors"
               aria-label={t('common.delete')}
             >
               <Trash2 size={16} />
-            </button>
+            </Pressable>
           </div>
         </div>
         {filename && voiceUrl ? (
@@ -106,33 +111,34 @@ function NoteItemInner({ note, onEdit, onDelete, onView, onShare, voiceUrl }: No
         <h3 className="font-semibold font-cinzel text-dnd-gold min-w-0 break-words pt-2">{note.title}</h3>
         <div className="flex shrink-0 -my-2 -mr-2">
           {onShare && (
-            <button
+            <Pressable
               onClick={(e) => { e.stopPropagation(); onShare(note.title) }}
+              pending={sharePending}
               className="w-11 h-11 flex items-center justify-center rounded-lg
                          text-dnd-text-muted hover:text-dnd-gold-bright transition-colors"
               aria-label={t('share.action')}
             >
               <Share2 size={16} />
-            </button>
+            </Pressable>
           )}
           {onEdit && (
-            <button
+            <Pressable
               onClick={(e) => { e.stopPropagation(); onEdit(note.title, note.body, note.tags ?? []) }}
               className="w-11 h-11 flex items-center justify-center rounded-lg
                          text-dnd-text-muted hover:text-dnd-gold-bright transition-colors"
               aria-label={t('common.edit')}
             >
               <Pencil size={16} />
-            </button>
+            </Pressable>
           )}
-          <button
+          <Pressable
             onClick={(e) => { e.stopPropagation(); onDelete(note.title) }}
             className="w-11 h-11 flex items-center justify-center rounded-lg
                        text-dnd-text-muted hover:text-dnd-crimson-bright transition-colors"
             aria-label={t('common.delete')}
           >
             <Trash2 size={16} />
-          </button>
+          </Pressable>
         </div>
       </div>
       {tags.length > 0 && (

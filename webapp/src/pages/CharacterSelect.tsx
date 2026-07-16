@@ -13,6 +13,7 @@ import type { CharacterSummary } from '@/types'
 import HPGauge from '@/components/ui/HPGauge'
 import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
+import Pressable from '@/components/ui/Pressable'
 import Input from '@/components/ui/Input'
 import ChipInput from '@/components/ui/ChipInput'
 import Sheet from '@/components/ui/Sheet'
@@ -322,17 +323,18 @@ export default function CharacterSelect() {
                       </div>
                     </div>
 
-                    <m.button
+                    <Pressable
                       onClick={(e) => {
                         e.stopPropagation()
                         handleDelete(char)
                       }}
+                      pending={deleteMutation.isPending && deleteMutation.variables === char.id}
                       className="w-11 h-11 flex items-center justify-center rounded-lg text-dnd-crimson-bright shrink-0 hover:bg-dnd-crimson/10"
                       aria-label={t('common.delete')}
                       whileTap={{ scale: 0.9 }}
                     >
                       <Trash2 size={16} />
-                    </m.button>
+                    </Pressable>
                   </div>
                 </Surface>
               </Reveal.Item>
@@ -355,15 +357,14 @@ export default function CharacterSelect() {
 
         {/* Version footer — opens the in-app changelog / release notes. */}
         <div className="pt-2 flex justify-center">
-          <button
-            type="button"
+          <Pressable
             onClick={() => { haptic.light(); navigate('/changelog') }}
             className="min-h-[44px] px-3 inline-flex items-center gap-1.5 text-dnd-text-faint hover:text-dnd-gold-bright transition-colors"
             aria-label={t('changelog.view')}
           >
             <ScrollText size={13} className="shrink-0" />
             <span className="font-mono tabular-nums text-xs">v{currentVersion()}</span>
-          </button>
+          </Pressable>
         </div>
       </div>
       </div>
@@ -437,7 +438,7 @@ export default function CharacterSelect() {
                     }}
                   >
                     {DND_CLASSES.map((cls) => (
-                      <m.button
+                      <Pressable
                         key={cls.key}
                         onClick={() => setSelectedClass({
                           class_name: t(`dnd.classes.${cls.key}`),
@@ -460,13 +461,13 @@ export default function CharacterSelect() {
                           {t(`dnd.classes.${cls.key}`)}
                         </span>
                         <span className="text-[10px] text-dnd-text-faint font-mono mt-0.5">d{cls.hit_die}</span>
-                      </m.button>
+                      </Pressable>
                     ))}
                   </m.div>
 
                   {/* Special options row */}
                   <div className="grid grid-cols-2 gap-2 mb-1">
-                    <m.button
+                    <Pressable
                       onClick={() => setShowCustom(true)}
                       className={`flex flex-col items-center justify-center py-2.5 px-1 rounded-xl
                                  bg-dnd-surface-raised border text-center
@@ -483,8 +484,8 @@ export default function CharacterSelect() {
                       <span className="text-[10px] text-dnd-text-faint font-mono mt-0.5">
                         {isCustomSelected && selectedClass ? `d${selectedClass.hit_die}` : 'd?'}
                       </span>
-                    </m.button>
-                    <m.button
+                    </Pressable>
+                    <Pressable
                       onClick={() => setSelectedClass(null)}
                       className={`flex flex-col items-center justify-center py-2.5 px-1 rounded-xl
                                  bg-dnd-surface border text-center
@@ -499,7 +500,7 @@ export default function CharacterSelect() {
                         {t('character.create.skip_class')}
                       </span>
                       <span className="text-[10px] text-dnd-text-faint font-mono mt-0.5">—</span>
-                    </m.button>
+                    </Pressable>
                   </div>
 
                   <WizardFooter
@@ -533,7 +534,7 @@ export default function CharacterSelect() {
                   </p>
                   <div className="flex gap-2 mb-4">
                     {[6, 8, 10, 12].map((d) => (
-                      <m.button
+                      <Pressable
                         key={d}
                         onClick={() => setCustomHitDie(d)}
                         className={`flex-1 py-2.5 rounded-xl font-cinzel font-bold text-sm transition-colors
@@ -543,7 +544,7 @@ export default function CharacterSelect() {
                         whileTap={{ scale: 0.95 }}
                       >
                         d{d}
-                      </m.button>
+                      </Pressable>
                     ))}
                   </div>
 
@@ -568,13 +569,13 @@ export default function CharacterSelect() {
               transition={{ duration: 0.18 }}
             >
               <div className="flex justify-end mb-1">
-                <button
+                <Pressable
                   onClick={() => handleCreate(null)}
-                  disabled={createMutation.isPending}
+                  pending={createMutation.isPending}
                   className="text-[12px] text-dnd-gold-dim hover:text-dnd-gold-bright font-body underline underline-offset-2 disabled:opacity-40"
                 >
                   {t('character.create.identity_skip')}
-                </button>
+                </Pressable>
               </div>
               <p className="text-[11px] text-dnd-text-faint font-body italic text-center mb-3">
                 {t('character.create.identity_optional_hint')}

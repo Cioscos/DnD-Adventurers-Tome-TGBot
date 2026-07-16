@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/api/client'
 import type { CharacterFull, MapEntry } from '@/types'
 import { haptic } from '@/auth/telegram'
+import Pressable from '@/components/ui/Pressable'
 
 interface MapZoneGroupProps {
   charId: number
@@ -131,18 +132,18 @@ function MapZoneGroupInner({
           <span className="ml-1.5 font-normal opacity-70">({maps.length})</span>
         </p>
         <div className="flex gap-1 items-center">
-          <button
+          <Pressable
             onClick={() => onAddMore(zoneName)}
             className="min-h-[44px] px-2 text-xs text-dnd-gold-dim hover:text-dnd-gold-bright transition-colors"
           >
             + {t('character.maps.add_more')}
-          </button>
-          <button
+          </Pressable>
+          <Pressable
             onClick={() => onDeleteZone(zoneName)}
             className="min-h-[44px] px-2 text-xs text-dnd-crimson-bright transition-colors"
           >
             {t('character.maps.delete_zone')}
-          </button>
+          </Pressable>
         </div>
       </div>
 
@@ -180,19 +181,19 @@ function MapZoneGroupInner({
               </div>
             )}
             {/* Click overlay (under delete button) — drag handlers live on the wrapper */}
-            <button
+            <Pressable
               type="button"
               onClick={() => onPreview(m)}
               className="absolute inset-0 w-full h-full"
               aria-label={zoneName}
             />
-            <button
+            <Pressable
               onClick={(e) => { e.stopPropagation(); onDeleteFile(m.id, zoneName) }}
               className="absolute top-1 right-1 w-10 h-10 rounded-full bg-dnd-ink/80 text-dnd-text flex items-center justify-center z-10"
               aria-label={t('common.delete')}
             >
               <X size={16} />
-            </button>
+            </Pressable>
           </div>
         ))}
       </div>

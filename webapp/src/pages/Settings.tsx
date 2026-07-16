@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { m } from 'framer-motion'
 import { Settings2, Languages, RefreshCw, Eye, Sun, History, Coins, Trash2, BookmarkCheck, Bell } from 'lucide-react'
 import {
   GiSparkles as Sparkles, GiCutDiamond as Gem,
@@ -12,6 +11,7 @@ import { api } from '@/api/client'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
+import Pressable from '@/components/ui/Pressable'
 import Input from '@/components/ui/Input'
 import SectionDivider from '@/components/ui/SectionDivider'
 import SwitchToggle from '@/components/ui/SwitchToggle'
@@ -29,6 +29,24 @@ import { spring } from '@/styles/motion'
 
 type RetentionMode = 'off' | 'events' | 'days'
 const RETENTION_MODES: readonly RetentionMode[] = ['off', 'events', 'days'] as const
+
+// updateMutation is shared by every setting control on this page (toggles,
+// mode pickers, the manual prep-cap save). Its `variables` alone can't
+// disambiguate which control is in flight — every call spreads the full
+// `settings` object, so unrelated fields (e.g. the currently-selected
+// retention mode) are always present in `variables` regardless of which
+// control triggered the mutation. We track the initiating control locally
+// instead, mirroring CombatantSheet's `activeAction` pattern.
+type SettingKey =
+  | `notif:${string}`
+  | 'hide_electrum'
+  | `retention:${RetentionMode}`
+  | 'hp_auto_calc'
+  | 'show_private_identity'
+  | `slot_mode:${'auto' | 'manual'}`
+  | `prep_cap_mode:${'auto' | 'manual'}`
+  | 'prep_cap_value'
+  | 'reset'
 
 function D20Thumb({ body, accent, active }: { body: string; accent: string; active: boolean }) {
   return (
@@ -120,6 +138,8 @@ export default function Settings() {
     staleTime: Infinity,
   })
 
+  const [activeSetting, setActiveSetting] = useState<SettingKey | null>(null)
+
   const updateMutation = useMutation({
     mutationFn: (settings: Record<string, unknown>) =>
       api.characters.update(charId, { settings }),
@@ -127,6 +147,7 @@ export default function Settings() {
       qc.setQueryData(['character', charId], updated)
       haptic.success()
     },
+    onSettled: () => setActiveSetting(null),
   })
 
   const [showRecalcConfirm, setShowRecalcConfirm] = useState(false)
@@ -169,15 +190,18 @@ export default function Settings() {
       setShowSlotModeConfirm(true)
       return
     }
+    setActiveSetting(`slot_mode:${mode}`)
     updateMutation.mutate({ ...settings, spell_slots_mode: mode })
   }
 
   const confirmManualToAuto = () => {
+    setActiveSetting('slot_mode:auto')
     updateMutation.mutate({ ...settings, spell_slots_mode: 'auto' })
     setShowSlotModeConfirm(false)
   }
 
   const confirmReset = () => {
+    setActiveSetting('reset')
     updateMutation.mutate({})
     setShowResetConfirm(false)
   }
@@ -219,7 +243,7 @@ export default function Settings() {
         </div>
         <div className="grid grid-cols-3 gap-2">
           {(['auto', 'light', 'dark'] as const satisfies readonly ThemeMode[]).map((mode) => (
-            <m.button
+            <Pressable
               key={mode}
               type="button"
               aria-pressed={themeMode === mode}
@@ -235,7 +259,7 @@ export default function Settings() {
               transition={spring.press}
             >
               {t(`character.settings.theme.mode_${mode}`)}
-            </m.button>
+            </Pressable>
           ))}
         </div>
       </Surface>
@@ -265,7 +289,7 @@ export default function Settings() {
         </div>
         <div className="grid grid-cols-2 gap-2">
           {(['imperial', 'metric'] as const satisfies readonly UnitSystem[]).map((mode) => (
-            <m.button
+            <Pressable
               key={mode}
               type="button"
               aria-pressed={unitSystem === mode}
@@ -283,7 +307,7 @@ export default function Settings() {
               {mode === 'imperial'
                 ? t('character.settings.unit_imperial')
                 : t('character.settings.unit_metric')}
-            </m.button>
+            </Pressable>
           ))}
         </div>
       </Surface>
@@ -363,12 +387,14 @@ export default function Settings() {
             label={t(`character.settings.notifications.${key}`)}
             hint={t(`character.settings.notifications.${key}_hint`)}
             checked={notifPrefs[key] !== false}
-            onChange={(next) =>
+            pending={updateMutation.isPending && activeSetting === `notif:${key}`}
+            onChange={(next) => {
+              setActiveSetting(`notif:${key}`)
               updateMutation.mutate({
                 ...settings,
                 notifications: { ...notifPrefs, [key]: next },
               })
-            }
+            }}
           />
         ))}
       </Surface>
@@ -381,7 +407,11 @@ export default function Settings() {
       <Surface variant="elevated">
         <SwitchToggle
           checked={!hideElectrum}
-          onChange={(next) => updateMutation.mutate({ ...settings, hide_electrum: !next })}
+          pending={updateMutation.isPending && activeSetting === 'hide_electrum'}
+          onChange={(next) => {
+            setActiveSetting('hide_electrum')
+            updateMutation.mutate({ ...settings, hide_electrum: !next })
+          }}
           icon={<Coins size={16} />}
           label={t('character.settings.currency_show_electrum')}
           hint={t('character.settings.currency_show_electrum_hint')}
@@ -413,10 +443,14 @@ export default function Settings() {
               : mode === 'events' ? t('character.settings.history_retention_events', { n: retentionEvents })
               : t('character.settings.history_retention_days', { n: retentionDays })
             return (
-              <m.button
+              <Pressable
                 key={mode}
                 type="button"
-                onClick={() => updateMutation.mutate({ ...settings, history_retention_mode: mode })}
+                onClick={() => {
+                  setActiveSetting(`retention:${mode}`)
+                  updateMutation.mutate({ ...settings, history_retention_mode: mode })
+                }}
+                pending={updateMutation.isPending && activeSetting === `retention:${mode}`}
                 className={`min-h-[44px] rounded-xl px-2 font-cinzel text-[10px] uppercase tracking-widest transition-colors
                   ${selected
                     ? 'bg-gradient-gold text-dnd-ink shadow-engrave'
@@ -425,7 +459,7 @@ export default function Settings() {
                 transition={spring.press}
               >
                 {label}
-              </m.button>
+              </Pressable>
             )
           })}
         </div>
@@ -472,19 +506,23 @@ export default function Settings() {
         <div className="space-y-3">
           <SwitchToggle
             checked={hpAutoCalc}
-            onChange={(next) => updateMutation.mutate({ ...settings, hp_auto_calc: next })}
+            pending={updateMutation.isPending && activeSetting === 'hp_auto_calc'}
+            onChange={(next) => {
+              setActiveSetting('hp_auto_calc')
+              updateMutation.mutate({ ...settings, hp_auto_calc: next })
+            }}
             label={t('character.settings.hp.auto_calc_toggle')}
             hint={t('character.settings.hp.auto_calc_hint')}
           />
 
-          <button
+          <Pressable
             type="button"
             onClick={() => setShowRecalcConfirm(true)}
             className="w-full inline-flex items-center justify-center gap-2 min-h-[44px] px-3 py-2 rounded-xl bg-dnd-surface border border-dnd-crimson-bright/40 text-dnd-crimson-bright text-sm font-body"
           >
             <RefreshCw size={14} />
             {t('character.settings.hp.recalc')}
-          </button>
+          </Pressable>
         </div>
       </Surface>
 
@@ -495,7 +533,11 @@ export default function Settings() {
       <Surface variant="elevated">
         <SwitchToggle
           checked={showPrivateIdentity}
-          onChange={(next) => updateMutation.mutate({ ...settings, show_private_identity: next })}
+          pending={updateMutation.isPending && activeSetting === 'show_private_identity'}
+          onChange={(next) => {
+            setActiveSetting('show_private_identity')
+            updateMutation.mutate({ ...settings, show_private_identity: next })
+          }}
           icon={<Eye size={16} />}
           label={t('character.settings.privacy.show_private_label')}
           hint={t('character.settings.privacy.show_private_hint')}
@@ -519,9 +561,10 @@ export default function Settings() {
         </div>
         <div className="grid grid-cols-2 gap-2">
           {(['auto', 'manual'] as const).map((mode) => (
-            <m.button
+            <Pressable
               key={mode}
               onClick={() => applySlotMode(mode)}
+              pending={updateMutation.isPending && activeSetting === `slot_mode:${mode}`}
               className={`min-h-[44px] rounded-xl font-cinzel text-xs uppercase tracking-widest transition-colors
                 ${slotsMode === mode
                   ? 'bg-gradient-gold text-dnd-ink shadow-engrave'
@@ -530,7 +573,7 @@ export default function Settings() {
               transition={spring.press}
             >
               {t(`character.settings.mode_${mode}`)}
-            </m.button>
+            </Pressable>
           ))}
         </div>
       </Surface>
@@ -553,9 +596,13 @@ export default function Settings() {
             </div>
             <div className="grid grid-cols-2 gap-2">
               {(['auto', 'manual'] as const).map((mode) => (
-                <m.button
+                <Pressable
                   key={mode}
-                  onClick={() => updateMutation.mutate({ ...settings, prepared_cap_mode: mode })}
+                  onClick={() => {
+                    setActiveSetting(`prep_cap_mode:${mode}`)
+                    updateMutation.mutate({ ...settings, prepared_cap_mode: mode })
+                  }}
+                  pending={updateMutation.isPending && activeSetting === `prep_cap_mode:${mode}`}
                   className={`min-h-[44px] rounded-xl font-cinzel text-xs uppercase tracking-widest transition-colors
                     ${prepCapMode === mode
                       ? 'bg-gradient-gold text-dnd-ink shadow-engrave'
@@ -564,7 +611,7 @@ export default function Settings() {
                   transition={spring.press}
                 >
                   {t(`character.settings.mode_${mode}`)}
-                </m.button>
+                </Pressable>
               ))}
             </div>
             {prepCapMode === 'manual' && (
@@ -583,7 +630,9 @@ export default function Settings() {
                   variant="secondary"
                   size="md"
                   disabled={!prepCapInput || Number(prepCapInput) < 1}
+                  loading={updateMutation.isPending && activeSetting === 'prep_cap_value'}
                   onClick={() => {
+                    setActiveSetting('prep_cap_value')
                     updateMutation.mutate({
                       ...settings,
                       prepared_cap_mode: 'manual',
@@ -635,6 +684,7 @@ export default function Settings() {
         confirmLabel={t('common.confirm')}
         cancelLabel={t('common.cancel')}
         confirmVariant="primary"
+        loading={updateMutation.isPending && activeSetting === 'slot_mode:auto'}
         onConfirm={confirmManualToAuto}
       />
 
@@ -646,6 +696,7 @@ export default function Settings() {
         confirmLabel={t('common.confirm')}
         cancelLabel={t('common.cancel')}
         confirmVariant="danger"
+        loading={updateMutation.isPending && activeSetting === 'reset'}
         onConfirm={confirmReset}
       />
     </Layout>

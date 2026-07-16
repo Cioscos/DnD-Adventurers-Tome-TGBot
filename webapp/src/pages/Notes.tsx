@@ -235,6 +235,7 @@ export default function Notes() {
                 onDelete={(title) => setDeleteTarget(title)}
                 onView={(n) => setViewNote(n)}
                 onShare={canShareMessage() ? (title) => shareNote.mutate(title) : undefined}
+                sharePending={shareNote.isPending && shareNote.variables === note.title}
                 voiceUrl={(filename) => api.notes.voiceUrl(charId, filename)}
               />
             </m.div>
@@ -251,6 +252,7 @@ export default function Notes() {
                 note={note}
                 onDelete={(title) => setDeleteTarget(title)}
                 onShare={canShareMessage() ? (title) => shareNote.mutate(title) : undefined}
+                sharePending={shareNote.isPending && shareNote.variables === note.title}
                 voiceUrl={(filename) => api.notes.voiceUrl(charId, filename)}
               />
             </m.div>
