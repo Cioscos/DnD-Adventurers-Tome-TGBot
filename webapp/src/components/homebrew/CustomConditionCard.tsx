@@ -13,6 +13,10 @@ interface CustomConditionCardProps {
   ruleName?: string
   onRemove: () => void
   isPending?: boolean
+  // Sibling-disable: true while the shared conditions mutation is in flight
+  // for a *different* condition key. Blocks a stale full-object spread from
+  // reverting the in-flight write, without showing this card's own spinner.
+  disabled?: boolean
 }
 
 /**
@@ -27,6 +31,7 @@ export default function CustomConditionCard({
   ruleName,
   onRemove,
   isPending = false,
+  disabled = false,
 }: CustomConditionCardProps) {
   const { t } = useTranslation()
 
@@ -71,6 +76,7 @@ export default function CustomConditionCard({
         icon={<Trash2 size={16} />}
         onClick={onRemove}
         loading={isPending}
+        disabled={disabled}
         haptic="none"
         aria-label={t('character.conditions.custom_remove_aria', { name: title })}
         className="shrink-0 w-11 h-11 rounded-lg text-dnd-crimson hover:text-dnd-crimson-bright

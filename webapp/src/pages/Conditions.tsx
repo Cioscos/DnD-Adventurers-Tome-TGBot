@@ -282,6 +282,7 @@ export default function Conditions() {
             icon={<RotateCcw size={12} />}
             haptic="warning"
             onClick={() => setConfirmResetOpen(true)}
+            disabled={mutation.isPending}
           >
             {t('character.conditions.reset_all')}
           </Button>
@@ -335,6 +336,7 @@ export default function Conditions() {
                 key={level}
                 onClick={() => setExhaustion(level)}
                 pending={mutation.isPending && pendingExhaustion === level}
+                disabled={mutation.isPending && pendingExhaustion !== level}
                 spinnerSize={12}
                 className={`flex-1 min-h-[44px] rounded-lg font-cinzel font-black text-sm
                   ${isActive
@@ -412,6 +414,7 @@ export default function Conditions() {
               <Pressable
                 onClick={() => toggle(key)}
                 pending={mutation.isPending && pendingConditionKey === key}
+                disabled={mutation.isPending && pendingConditionKey !== key}
                 whileTap={{ scale: 0.95 }}
                 animate={active ? { x: [-2, 2, -1, 1, 0] } : { x: 0 }}
                 transition={{ duration: 0.25 }}
@@ -449,6 +452,7 @@ export default function Conditions() {
                 key={c.key}
                 onClick={() => applyCustom(c)}
                 pending={mutation.isPending && pendingConditionKey === c.key}
+                disabled={mutation.isPending && pendingConditionKey !== c.key}
                 whileTap={{ scale: 0.95 }}
                 transition={spring.press}
                 aria-label={t('character.conditions.apply_custom_aria', { name: c.ruleName })}
@@ -488,6 +492,7 @@ export default function Conditions() {
                   ruleName={ruleName}
                   onRemove={() => removeCustom(key)}
                   isPending={mutation.isPending && pendingConditionKey === key}
+                  disabled={mutation.isPending && pendingConditionKey !== key}
                 />
               )
             })}

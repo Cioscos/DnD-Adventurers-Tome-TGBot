@@ -276,7 +276,6 @@ export default function ArmorClass() {
             size="sm"
             icon={<RotateCcw size={12} />}
             onClick={() => resetOverrideMutation.mutate()}
-            disabled={resetOverrideMutation.isPending}
             loading={resetOverrideMutation.isPending}
             haptic="warning"
           >

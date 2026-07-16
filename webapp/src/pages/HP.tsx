@@ -379,7 +379,6 @@ export default function HP() {
           size="lg"
           fullWidth
           onClick={() => setShowShortRest(true)}
-          disabled={restMutation.isPending}
           loading={restMutation.isPending}
           icon={<Campfire size={18} />}
           haptic="medium"
@@ -391,7 +390,6 @@ export default function HP() {
           size="lg"
           fullWidth
           onClick={() => setShowLongRestConfirm(true)}
-          disabled={restMutation.isPending}
           loading={restMutation.isPending}
           icon={<Moon size={18} />}
           haptic="success"

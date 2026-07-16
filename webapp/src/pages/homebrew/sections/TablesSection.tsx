@@ -365,7 +365,7 @@ function TableCard({
                     icon={<Plus size={16} />}
                     onClick={onAddColumn}
                     haptic="none"
-                    className="w-full min-h-[36px] rounded-md text-dnd-gold-dim hover:text-dnd-gold-bright hover:bg-dnd-surface/60"
+                    className="w-full rounded-md text-dnd-gold-dim hover:text-dnd-gold-bright hover:bg-dnd-surface/60"
                     title={t('homebrew.tables.add_column')}
                     aria-label={t('homebrew.tables.add_column')}
                   />
