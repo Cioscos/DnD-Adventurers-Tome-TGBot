@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Sparkles } from 'lucide-react'
-import { m } from 'framer-motion'
 import Sheet from '@/components/ui/Sheet'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
+import Pressable from '@/components/ui/Pressable'
 import ChipSelect from '@/components/ui/ChipSelect'
 import PresetTextField from '@/components/ui/PresetTextField'
 import DamageTypePicker from '@/components/ui/DamageTypePicker'
@@ -159,8 +159,7 @@ export default function SpellForm({ initialData, onSubmit, onCancel, isPending }
         />
 
         {srdMatch && (
-          <button
-            type="button"
+          <Pressable
             onClick={applySrd}
             className="w-full flex items-center gap-2 px-3 py-2 rounded-xl bg-dnd-arcane/15 border border-dnd-arcane/40 text-dnd-arcane-text text-xs font-body text-left hover:bg-dnd-arcane/25 transition-colors"
           >
@@ -170,7 +169,7 @@ export default function SpellForm({ initialData, onSubmit, onCancel, isPending }
                 defaultValue: 'Compila da SRD: livello, gittata, durata, componenti, danno (campi vuoti).',
               })}
             </span>
-          </button>
+          </Pressable>
         )}
 
         <ChipSelect
@@ -227,9 +226,8 @@ export default function SpellForm({ initialData, onSubmit, onCancel, isPending }
               {COMPONENT_TOKENS.map((token) => {
                 const active = componentTokens.includes(token)
                 return (
-                  <m.button
+                  <Pressable
                     key={token}
-                    type="button"
                     aria-pressed={active}
                     onClick={() => toggleComponent(token)}
                     whileTap={{ scale: 0.95 }}
@@ -239,7 +237,7 @@ export default function SpellForm({ initialData, onSubmit, onCancel, isPending }
                         : 'bg-dnd-surface-raised text-dnd-text border border-dnd-border'}`}
                   >
                     {token}
-                  </m.button>
+                  </Pressable>
                 )
               })}
             </div>

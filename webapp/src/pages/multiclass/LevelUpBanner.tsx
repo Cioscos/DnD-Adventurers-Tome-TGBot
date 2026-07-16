@@ -1,8 +1,8 @@
-import { m } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import { GiSparkles as Sparkles } from 'react-icons/gi'
 import { spring } from '@/styles/motion'
 import { haptic } from '@/auth/telegram'
+import Pressable from '@/components/ui/Pressable'
 
 interface LevelUpBannerProps {
   onOpen: () => void
@@ -25,8 +25,7 @@ export default function LevelUpBanner({
   }
 
   return (
-    <m.button
-      type="button"
+    <Pressable
       onClick={handleClick}
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
@@ -42,6 +41,6 @@ export default function LevelUpBanner({
     >
       <Sparkles size={16} className="animate-shimmer" />
       {label}
-    </m.button>
+    </Pressable>
   )
 }

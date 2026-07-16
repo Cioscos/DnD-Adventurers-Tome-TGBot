@@ -7,6 +7,7 @@ import { api } from '@/api/client'
 import Surface from '@/components/ui/Surface'
 import { CornerFlourishes } from '@/components/ui/Ornament'
 import Button from '@/components/ui/Button'
+import Pressable from '@/components/ui/Pressable'
 import { toast } from 'sonner'
 import { haptic } from '@/auth/telegram'
 import { progressionRows, localizeFeatures } from '@/lib/classProgression'
@@ -184,9 +185,8 @@ export default function LevelUpModal({ char, xpLevel, onClose }: LevelUpModalPro
               {classes.map((cls) => {
                 const active = cls.id === selectedClassId
                 return (
-                  <button
+                  <Pressable
                     key={cls.id}
-                    type="button"
                     onClick={() => setSelectedClassId(cls.id)}
                     className={`min-h-[52px] px-4 py-2 rounded-xl font-cinzel text-xs uppercase tracking-widest flex-1 min-w-[120px] transition-all
                       ${active
@@ -197,7 +197,7 @@ export default function LevelUpModal({ char, xpLevel, onClose }: LevelUpModalPro
                     <span className="block text-[10px] opacity-70 font-mono mt-0.5">
                       {t('character.equipment.progression.level_header')} {cls.level}
                     </span>
-                  </button>
+                  </Pressable>
                 )
               })}
             </div>

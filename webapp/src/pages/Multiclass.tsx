@@ -9,6 +9,7 @@ import { api } from '@/api/client'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
+import Pressable from '@/components/ui/Pressable'
 import StatPill from '@/components/ui/StatPill'
 import EmptyState from '@/components/ui/EmptyState'
 import ConfirmSheet from '@/components/ui/ConfirmSheet'
@@ -145,14 +146,14 @@ export default function Multiclass() {
                     )}
                   </div>
                 </div>
-                <m.button
+                <Pressable
                   onClick={() => setRemoveTarget(cls)}
                   className="w-11 h-11 rounded-lg text-dnd-crimson-bright flex items-center justify-center hover:bg-dnd-crimson/10 shrink-0"
                   whileTap={{ scale: 0.9 }}
                   aria-label={`${t('common.remove')} ${cls.class_name}`}
                 >
                   <X size={16} />
-                </m.button>
+                </Pressable>
               </div>
               <div className="text-dnd-gold-dim my-2">
                 <FlourishDivider />

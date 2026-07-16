@@ -9,6 +9,8 @@ import { api } from '@/api/client'
 import Layout from '@/components/Layout'
 import Sheet from '@/components/ui/Sheet'
 import Button from '@/components/ui/Button'
+import Pressable from '@/components/ui/Pressable'
+import IconButton from '@/components/ui/IconButton'
 import Input from '@/components/ui/Input'
 import ChipSelect from '@/components/ui/ChipSelect'
 import SwitchToggle from '@/components/ui/SwitchToggle'
@@ -324,7 +326,7 @@ export default function Abilities() {
             : 'bg-gradient-parchment border-dnd-border'}
           ${isDepleted ? 'opacity-60' : ''}`}
       >
-        <m.button
+        <Pressable
           className="w-full flex items-center gap-2 px-3 py-3 text-left"
           onClick={() => setExpanded(isOpen ? null : ab.id)}
           whileTap={{ scale: 0.995 }}
@@ -350,7 +352,7 @@ export default function Abilities() {
           <m.div animate={{ rotate: isOpen ? 180 : 0 }} transition={{ duration: 0.2 }}>
             <ChevronDown size={14} className="text-dnd-text-faint" />
           </m.div>
-        </m.button>
+        </Pressable>
 
         <AnimatePresence initial={false}>
           {isOpen && (
@@ -387,7 +389,7 @@ export default function Abilities() {
                     {Array.from({ length: max }).map((_, i) => {
                       const isUsed = i < usedCount
                       return (
-                        <m.button
+                        <Pressable
                           key={i}
                           onClick={() =>
                             usesMutation.mutate({
@@ -395,7 +397,8 @@ export default function Abilities() {
                               uses: isUsed ? current + 1 : current - 1,
                             })
                           }
-                          disabled={usesMutation.isPending}
+                          pending={usesMutation.isPending && usesMutation.variables?.abilityId === ab.id}
+                          spinnerSize={12}
                           whileTap={{ scale: 0.85 }}
                           aria-pressed={isUsed}
                           className={`w-7 h-7 rounded-full border-2 transition-all disabled:opacity-50 ${
@@ -412,28 +415,28 @@ export default function Abilities() {
                 {/* Usi > soglia → stepper numerico */}
                 {hasUses && !usePips && (
                   <div className="flex items-center gap-3 rounded-xl bg-dnd-surface border border-dnd-border p-2">
-                    <m.button
+                    <IconButton
+                      icon={<Minus size={16} />}
                       onClick={() => usesMutation.mutate({ abilityId: ab.id, uses: Math.max(0, current - 1) })}
-                      disabled={current <= 0 || usesMutation.isPending}
-                      className="w-11 h-11 rounded-xl bg-dnd-crimson/15 text-dnd-crimson-bright border border-dnd-crimson/30 flex items-center justify-center disabled:opacity-30"
-                      whileTap={{ scale: 0.9 }}
-                    >
-                      <Minus size={16} />
-                    </m.button>
+                      loading={usesMutation.isPending && usesMutation.variables?.abilityId === ab.id}
+                      disabled={current <= 0}
+                      haptic="none"
+                      className="w-11 h-11 rounded-xl bg-dnd-crimson/15 text-dnd-crimson-bright border border-dnd-crimson/30 disabled:opacity-30"
+                    />
                     <div className="flex-1 text-center">
                       <p className="text-lg font-display font-black text-dnd-gold-bright">
                         <span className="font-mono">{current}</span>
                         <span className="text-sm text-dnd-text-muted"> / {max}</span>
                       </p>
                     </div>
-                    <m.button
+                    <IconButton
+                      icon={<Plus size={16} />}
                       onClick={() => usesMutation.mutate({ abilityId: ab.id, uses: Math.min(max, current + 1) })}
-                      disabled={current >= max || usesMutation.isPending}
-                      className="w-11 h-11 rounded-xl bg-dnd-emerald/15 text-dnd-emerald-bright border border-dnd-emerald/30 flex items-center justify-center disabled:opacity-30"
-                      whileTap={{ scale: 0.9 }}
-                    >
-                      <Plus size={16} />
-                    </m.button>
+                      loading={usesMutation.isPending && usesMutation.variables?.abilityId === ab.id}
+                      disabled={current >= max}
+                      haptic="none"
+                      className="w-11 h-11 rounded-xl bg-dnd-emerald/15 text-dnd-emerald-bright border border-dnd-emerald/30 disabled:opacity-30"
+                    />
                   </div>
                 )}
 
@@ -456,7 +459,7 @@ export default function Abilities() {
                       variant="danger"
                       size="sm"
                       onClick={() => deleteMutation.mutate(ab.id)}
-                      disabled={deleteMutation.isPending}
+                      loading={deleteMutation.isPending && deleteMutation.variables === ab.id}
                       icon={<Trash2 size={12} />}
                     >
                       {t('common.delete')}
@@ -757,7 +760,7 @@ export default function Abilities() {
                   variant="primary"
                   fullWidth
                   onClick={submitForm}
-                  disabled={!form.name.trim() || isPending}
+                  disabled={!form.name.trim()}
                   loading={isPending}
                   haptic="success"
                 >

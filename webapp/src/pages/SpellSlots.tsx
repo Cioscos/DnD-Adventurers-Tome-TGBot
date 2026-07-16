@@ -2,13 +2,13 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { m } from 'framer-motion'
 import { Minus, Plus, RotateCcw, X } from 'lucide-react'
 import { GiCutDiamond as Gem, GiSparkles as Sparkles } from 'react-icons/gi'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
+import Pressable from '@/components/ui/Pressable'
 import Reveal from '@/components/ui/Reveal'
 import EmptyState from '@/components/ui/EmptyState'
 import ConfirmSheet from '@/components/ui/ConfirmSheet'
@@ -86,7 +86,7 @@ function TotalEditor({ total, label, decrementAria, incrementAria, onCommit }: T
       <span className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-gold-dim flex-1">
         {label}
       </span>
-      <m.button
+      <Pressable
         onPointerDown={() => startRepeat(-1)}
         onPointerUp={stopRepeat}
         onPointerLeave={stopRepeat}
@@ -94,10 +94,9 @@ function TotalEditor({ total, label, decrementAria, incrementAria, onCommit }: T
         className="w-11 h-11 rounded-lg bg-dnd-surface border border-dnd-border flex items-center justify-center text-dnd-gold"
         whileTap={{ scale: 0.9 }}
         aria-label={decrementAria}
-        type="button"
       >
         <Minus size={16} />
-      </m.button>
+      </Pressable>
       <input
         type="number"
         min={1}
@@ -116,7 +115,7 @@ function TotalEditor({ total, label, decrementAria, incrementAria, onCommit }: T
                    font-mono font-bold text-dnd-gold-bright tabular-nums
                    focus:border-dnd-gold/60 focus:outline-none"
       />
-      <m.button
+      <Pressable
         onPointerDown={() => startRepeat(1)}
         onPointerUp={stopRepeat}
         onPointerLeave={stopRepeat}
@@ -124,10 +123,9 @@ function TotalEditor({ total, label, decrementAria, incrementAria, onCommit }: T
         className="w-11 h-11 rounded-lg bg-dnd-surface border border-dnd-border flex items-center justify-center text-dnd-gold"
         whileTap={{ scale: 0.9 }}
         aria-label={incrementAria}
-        type="button"
       >
         <Plus size={16} />
-      </m.button>
+      </Pressable>
     </div>
   )
 }
@@ -251,14 +249,14 @@ export default function SpellSlots() {
                     {slot.available}/{slot.total}
                   </span>
                   {slotsMode !== 'auto' && (
-                    <m.button
+                    <Pressable
                       onClick={() => setConfirmRemoveSlot(slot)}
                       className="w-11 h-11 rounded-lg text-dnd-crimson-bright flex items-center justify-center hover:bg-dnd-crimson/10"
                       whileTap={{ scale: 0.9 }}
                       aria-label={t('character.slots.remove_level_aria', { level: slot.level })}
                     >
                       <X size={16} />
-                    </m.button>
+                    </Pressable>
                   )}
                 </div>
               </div>
@@ -266,9 +264,10 @@ export default function SpellSlots() {
               {/* Slot gems */}
               <div className="flex gap-2 flex-wrap mb-3">
                 {Array.from({ length: slot.total }).map((_, i) => (
-                  <m.button
+                  <Pressable
                     key={i}
-                    type="button"
+                    pending={updateSlot.isPending && updateSlot.variables?.slotId === slot.id}
+                    spinnerSize={12}
                     onClick={() => {
                       if (i < slot.used) {
                         haptic.light()
@@ -324,8 +323,10 @@ export default function SpellSlots() {
           </div>
           <div className="flex flex-wrap gap-2">
             {missingLevels.map((level) => (
-              <m.button
+              <Pressable
                 key={level}
+                pending={addSlot.isPending && addSlot.variables === level}
+                spinnerSize={12}
                 onClick={() => addSlot.mutate(level)}
                 className="min-h-[44px] px-3 py-1.5 rounded-lg bg-dnd-surface border border-dnd-arcane/60
                            text-dnd-arcane-bright font-cinzel text-xs uppercase tracking-wider
@@ -333,7 +334,7 @@ export default function SpellSlots() {
                 whileTap={{ scale: 0.92 }}
               >
                 + {t('character.slots.level', { level })}
-              </m.button>
+              </Pressable>
             ))}
           </div>
         </Surface>
