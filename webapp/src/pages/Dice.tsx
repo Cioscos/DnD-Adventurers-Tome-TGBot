@@ -9,6 +9,7 @@ import { api } from '@/api/client'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
+import Pressable from '@/components/ui/Pressable'
 import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import DiceIcon from '@/components/ui/DiceIcon'
 import { DiceRunicWatermark } from '@/components/ui/Ornament'
@@ -161,6 +162,15 @@ export default function Dice() {
     onError: () => haptic.error(),
   })
 
+  // P5: was a bare `api.dice.postToChat(...).catch(() => {})` fire-and-forget
+  // call directly in the tap handler — no pending feedback at all. Wrapped so
+  // the "send to chat" Button can show `loading`. Error handling stays a silent
+  // no-op, matching the original `.catch(() => {})`.
+  const postToChatMutation = useMutation({
+    mutationFn: (result: DiceRollResult) => api.dice.postToChat(charId, result),
+    onError: () => {},
+  })
+
   const dexMod = char?.ability_scores.find((s) => s.name === 'dexterity')?.modifier ?? 0
   const modLabel = dexMod >= 0 ? `+${dexMod}` : String(dexMod)
 
@@ -182,31 +192,34 @@ export default function Dice() {
 
       {/* Common roll presets */}
       <div className="grid grid-cols-3 gap-2">
-        <m.button
+        <Pressable
           onClick={() => handlePresetMulti(2)}
-          disabled={rollPending || initiativeRolling}
+          pending={rollPending || initiativeRolling}
+          spinnerSize={14}
           className="min-h-[44px] rounded-xl bg-dnd-chip-bg border border-dnd-gold-dim/40 text-dnd-gold-bright font-cinzel text-xs uppercase tracking-widest disabled:opacity-40"
           whileTap={{ scale: 0.93 }}
         >
           2d6
-        </m.button>
-        <m.button
+        </Pressable>
+        <Pressable
           onClick={() => handlePresetMulti(3)}
-          disabled={rollPending || initiativeRolling}
+          pending={rollPending || initiativeRolling}
+          spinnerSize={14}
           className="min-h-[44px] rounded-xl bg-dnd-chip-bg border border-dnd-gold-dim/40 text-dnd-gold-bright font-cinzel text-xs uppercase tracking-widest disabled:opacity-40"
           whileTap={{ scale: 0.93 }}
         >
           3d6
-        </m.button>
-        <m.button
+        </Pressable>
+        <Pressable
           onClick={handleStatRoll}
-          disabled={rollPending || initiativeRolling}
+          pending={rollPending || initiativeRolling}
+          spinnerSize={14}
           className="min-h-[44px] rounded-xl bg-dnd-chip-bg border border-dnd-gold-dim/40 text-dnd-gold-bright font-cinzel text-xs uppercase tracking-widest disabled:opacity-40"
           whileTap={{ scale: 0.93 }}
           title={t('character.dice.stat_roll_hint')}
         >
           4d6kh3
-        </m.button>
+        </Pressable>
       </div>
 
       {/* Dice count stepper */}
@@ -215,14 +228,14 @@ export default function Dice() {
           {t('character.dice.count')}
         </p>
         <div className="flex items-center justify-between gap-3">
-          <m.button
+          <Pressable
             onClick={() => setCount((c) => Math.max(1, c - 1))}
             disabled={count <= 1}
             className="w-12 h-12 rounded-2xl bg-dnd-surface border border-dnd-border flex items-center justify-center text-dnd-gold disabled:opacity-30"
             whileTap={{ scale: 0.9 }}
           >
             <Minus size={18} />
-          </m.button>
+          </Pressable>
           <m.span
             key={count}
             className="text-4xl font-display font-black text-dnd-gold-bright min-w-[3rem] text-center"
@@ -232,14 +245,14 @@ export default function Dice() {
           >
             {count}
           </m.span>
-          <m.button
+          <Pressable
             onClick={() => setCount((c) => Math.min(10, c + 1))}
             disabled={count >= 10}
             className="w-12 h-12 rounded-2xl bg-dnd-surface border border-dnd-border flex items-center justify-center text-dnd-gold disabled:opacity-30"
             whileTap={{ scale: 0.9 }}
           >
             <Plus size={18} />
-          </m.button>
+          </Pressable>
         </div>
       </Surface>
 
@@ -250,25 +263,25 @@ export default function Dice() {
         </div>
         <div className="relative grid grid-cols-3 sm:grid-cols-4 gap-2">
           {DICE.slice(0, 6).map((die) => (
-            <m.button
+            <Pressable
               key={die}
               onClick={() => handleRoll(die)}
-              disabled={rollPending || initiativeRolling}
+              pending={rollPending || initiativeRolling}
               className="aspect-square rounded-2xl bg-dnd-surface-raised border border-dnd-border hover:border-dnd-gold/60 hover:shadow-halo-gold transition-[box-shadow,border-color] duration-200 flex items-center justify-center disabled:opacity-40 text-dnd-gold-bright"
               whileTap={{ scale: 0.92 }}
             >
               <DiceIcon sides={die} size={42} />
-            </m.button>
+            </Pressable>
           ))}
-          <m.button
+          <Pressable
             onClick={() => handleRoll(100)}
-            disabled={rollPending || initiativeRolling}
+            pending={rollPending || initiativeRolling}
             className="col-span-3 sm:col-span-2 rounded-2xl bg-dnd-surface-raised border border-dnd-border hover:border-dnd-gold/60 hover:shadow-halo-gold transition-[box-shadow,border-color] duration-200 flex items-center justify-center gap-2 py-3 disabled:opacity-40 text-dnd-gold-bright"
             whileTap={{ scale: 0.95 }}
           >
             <DiceIcon sides={100} size={34} />
             <span className="font-cinzel font-bold">d100</span>
-          </m.button>
+          </Pressable>
         </div>
       </Surface>
 
@@ -356,8 +369,9 @@ export default function Dice() {
                   size="sm"
                   onClick={() => {
                     haptic.light()
-                    api.dice.postToChat(charId, lastResult).catch(() => {})
+                    postToChatMutation.mutate(lastResult)
                   }}
+                  loading={postToChatMutation.isPending}
                   icon={<Send size={14} />}
                   className="mt-3"
                   title={t('character.dice.send_to_bot')}

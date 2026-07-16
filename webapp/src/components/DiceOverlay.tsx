@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { m, AnimatePresence } from 'framer-motion'
 import { GiPerspectiveDiceSixFacesRandom as Dices } from 'react-icons/gi'
 import DiceIcon from '@/components/ui/DiceIcon'
+import Pressable from '@/components/ui/Pressable'
 import DicePoolResultModal from '@/components/DicePoolResultModal'
 import { useCharacterStore } from '@/store/characterStore'
 import { useAnyOverlayOpen } from '@/store/overlayStore'
@@ -194,9 +195,8 @@ export default function DiceOverlay() {
               {KINDS.map((kind, idx) => {
                 const count = pool[kind] ?? 0
                 return (
-                  <m.button
+                  <Pressable
                     key={kind}
-                    type="button"
                     onClick={() => handleKindClick(kind)}
                     onPointerDown={() => handlePointerDown(kind)}
                     onPointerUp={handlePointerUpOrLeave}
@@ -223,7 +223,7 @@ export default function DiceOverlay() {
                         {count}
                       </span>
                     )}
-                  </m.button>
+                  </Pressable>
                 )
               })}
             </m.div>
@@ -232,10 +232,10 @@ export default function DiceOverlay() {
 
         <AnimatePresence>
           {poolTotal > 0 && (
-            <m.button
-              type="button"
+            <Pressable
               onClick={handleRoll}
-              disabled={isRolling}
+              pending={isRolling}
+              spinnerSize={16}
               className="absolute right-full top-0 mr-2 h-14 px-5 rounded-2xl
                          bg-gradient-gold
                          border border-dnd-gold-dim shadow-halo-gold
@@ -250,12 +250,11 @@ export default function DiceOverlay() {
             >
               <Dices size={18} />
               {isRolling ? t('character.dice_overlay.rolling') : t('character.dice_overlay.roll')}
-            </m.button>
+            </Pressable>
           )}
         </AnimatePresence>
 
-        <m.button
-          type="button"
+        <Pressable
           aria-label={open ? t('character.dice_overlay.close') : t('character.dice_overlay.open')}
           onClick={toggleOpen}
           className="w-14 h-14 rounded-full
@@ -268,7 +267,7 @@ export default function DiceOverlay() {
           transition={{ type: 'spring', stiffness: 260, damping: 22 }}
         >
           <Dices size={26} />
-        </m.button>
+        </Pressable>
       </div>
       )}
 
@@ -283,8 +282,7 @@ export default function DiceOverlay() {
 
       <AnimatePresence>
         {warningText && (
-          <m.button
-            type="button"
+          <Pressable
             role="alert"
             onClick={() => setWarningText(null)}
             className="fixed bottom-24 left-4 right-4 mx-auto z-[55]
@@ -298,7 +296,7 @@ export default function DiceOverlay() {
             transition={{ type: 'spring', stiffness: 320, damping: 26 }}
           >
             {warningText}
-          </m.button>
+          </Pressable>
         )}
       </AnimatePresence>
     </>

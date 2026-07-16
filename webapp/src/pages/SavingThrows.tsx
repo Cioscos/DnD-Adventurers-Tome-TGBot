@@ -2,7 +2,6 @@ import { useState, Fragment } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { m } from 'framer-motion'
 import { Check } from 'lucide-react'
 import { GiShieldEchoes as ShieldAlert } from 'react-icons/gi'
 import { api, ApiError } from '@/api/client'
@@ -10,6 +9,7 @@ import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
 import StatPill from '@/components/ui/StatPill'
 import Reveal from '@/components/ui/Reveal'
+import Pressable from '@/components/ui/Pressable'
 import DiceIcon from '@/components/ui/DiceIcon'
 import RollResultModal, { type RollResult } from '@/components/RollResultModal'
 import { haptic } from '@/auth/telegram'
@@ -123,6 +123,13 @@ export default function SavingThrows() {
     mutation.mutate({ ...saves, [ability]: !current })
   }
 
+  // `mutation` has a single call site (toggle, above) always sending a full
+  // saves-shaped object with exactly one key flipped — diffing against the
+  // current `saves` reliably recovers which ability is in flight (P4).
+  const pendingAbility = mutation.isPending
+    ? ABILITIES.find((a) => mutation.variables?.[a] !== saves[a])
+    : undefined
+
   return (
     <Layout title={t('character.saves.title')} backTo={`/char/${charId}`} group="combat" page="saves">
       <Surface variant="elevated" className="flex items-center justify-between">
@@ -153,11 +160,13 @@ export default function SavingThrows() {
                     ${isProficient ? 'border-dnd-gold/50' : ''}`}
                 >
                   <div className="flex items-center gap-3 min-h-[44px]">
-                    <m.button
+                    <Pressable
                       onClick={(e) => {
                         e.stopPropagation()
                         toggle(ability)
                       }}
+                      pending={pendingAbility === ability}
+                      spinnerSize={12}
                       className="w-11 h-11 flex items-center justify-center rounded-full shrink-0"
                       whileTap={{ scale: 0.85 }}
                       aria-label="Proficiency"
@@ -168,7 +177,7 @@ export default function SavingThrows() {
                           : 'border-dnd-border'}`}>
                         {isProficient && <Check size={12} className="text-dnd-ink" strokeWidth={3} />}
                       </div>
-                    </m.button>
+                    </Pressable>
 
                     <div className="flex-1 min-w-0">
                       <p

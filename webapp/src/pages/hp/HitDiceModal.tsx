@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { m } from 'framer-motion'
 import { Minus, Plus } from 'lucide-react'
 import { GiNightSleep as Moon, GiDiceSixFacesOne as Dice1 } from 'react-icons/gi'
 import Sheet from '@/components/ui/Sheet'
 import Button from '@/components/ui/Button'
+import Pressable from '@/components/ui/Pressable'
 import type { CharacterClass } from '@/types'
 
 interface HitDiceModalProps {
@@ -13,6 +13,10 @@ interface HitDiceModalProps {
   onConfirmRest: () => void
   onClose: () => void
   isPending: boolean
+  /** classId currently in flight on the shared hitDiceMutation (P4 scoping), undefined when none. */
+  pendingClassId?: number
+  /** True while the short-rest mutation itself is in flight (onConfirmRest). */
+  restPending?: boolean
 }
 
 export default function HitDiceModal({
@@ -21,6 +25,8 @@ export default function HitDiceModal({
   onConfirmRest,
   onClose,
   isPending,
+  pendingClassId,
+  restPending,
 }: HitDiceModalProps) {
   const { t } = useTranslation()
   const [hitDiceCounts, setHitDiceCounts] = useState<Record<number, number>>({})
@@ -42,6 +48,7 @@ export default function HitDiceModal({
         <div className="space-y-3">
           {classes.map((cls) => {
             const count = hitDiceCounts[cls.id] ?? 0
+            const thisPending = isPending && pendingClassId === cls.id
             return (
               <div key={cls.id} className="flex items-center gap-3 p-2 rounded-xl bg-dnd-surface border border-dnd-border">
                 <div className="flex-1 min-w-0">
@@ -49,27 +56,27 @@ export default function HitDiceModal({
                   <p className="text-[11px] text-dnd-text-faint font-mono">d{cls.hit_die ?? 8}</p>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <m.button
+                  <Pressable
                     onClick={() => setHitDiceCounts((c) => ({ ...c, [cls.id]: Math.max(0, (c[cls.id] ?? 0) - 1) }))}
                     className="w-11 h-11 rounded-lg bg-dnd-surface-raised border border-dnd-border flex items-center justify-center text-dnd-gold"
                     whileTap={{ scale: 0.9 }}
                   >
                     <Minus size={14} />
-                  </m.button>
+                  </Pressable>
                   <span className="w-6 text-center font-mono font-bold text-dnd-gold-bright">{count}</span>
-                  <m.button
+                  <Pressable
                     onClick={() => setHitDiceCounts((c) => ({ ...c, [cls.id]: (c[cls.id] ?? 0) + 1 }))}
                     className="w-11 h-11 rounded-lg bg-dnd-surface-raised border border-dnd-border flex items-center justify-center text-dnd-gold"
                     whileTap={{ scale: 0.9 }}
                   >
                     <Plus size={14} />
-                  </m.button>
+                  </Pressable>
                   <Button
                     variant="primary"
                     size="sm"
                     onClick={() => { if (count > 0) onSpend(cls.id, count) }}
-                    disabled={!count || isPending}
-                    loading={isPending}
+                    disabled={!count}
+                    loading={thisPending}
                     icon={<Dice1 size={14} />}
                     haptic="success"
                   >
@@ -91,6 +98,7 @@ export default function HitDiceModal({
             fullWidth
             onClick={onConfirmRest}
             disabled={isPending}
+            loading={restPending}
             icon={<Moon size={16} />}
           >
             {t('character.hp.confirm_rest')}

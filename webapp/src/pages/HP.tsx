@@ -318,6 +318,7 @@ export default function HP() {
                   onRoll={() => deathRollMutation.mutate()}
                   onAction={(action) => deathMutation.mutate(action)}
                   isRolling={deathRollMutation.isPending}
+                  pendingAction={deathMutation.isPending ? deathMutation.variables : undefined}
                 />
               </m.div>
             )}
@@ -363,6 +364,7 @@ export default function HP() {
           onApply={handleApply}
           isPending={hpMutation.isPending}
           hpMutate={handleQuickApply}
+          pendingQuickVal={hpMutation.isPending ? hpMutation.variables?.val : undefined}
           atZero={atZero}
           crit={crit}
           setCrit={setCrit}
@@ -378,6 +380,7 @@ export default function HP() {
           fullWidth
           onClick={() => setShowShortRest(true)}
           disabled={restMutation.isPending}
+          loading={restMutation.isPending}
           icon={<Campfire size={18} />}
           haptic="medium"
         >
@@ -423,6 +426,8 @@ export default function HP() {
           }}
           onClose={() => setShowShortRest(false)}
           isPending={hitDiceMutation.isPending}
+          pendingClassId={hitDiceMutation.isPending ? hitDiceMutation.variables?.classId : undefined}
+          restPending={restMutation.isPending}
         />
       )}
 

@@ -1,5 +1,4 @@
 import { useTranslation } from 'react-i18next'
-import { m } from 'framer-motion'
 import { Minus, Plus, Heart, HeartPulse, Check } from 'lucide-react'
 import { GiSkullCrossedBones as Skull } from 'react-icons/gi'
 import { GiSparkles as Sparkles } from 'react-icons/gi'
@@ -8,6 +7,7 @@ type IconCmp = ComponentType<SVGAttributes<SVGElement> & { size?: number | strin
 import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
+import Pressable from '@/components/ui/Pressable'
 import { haptic } from '@/auth/telegram'
 
 type HPOp = 'damage' | 'heal' | 'set_max' | 'set_current' | 'set_temp'
@@ -20,6 +20,8 @@ interface HpOperationFormProps {
   onApply: () => void
   isPending: boolean
   hpMutate: (args: { op: HPOp; val: number }) => void
+  /** Val of the quick-shortcut currently in flight on the shared hpMutation (P4 scoping), undefined when none. */
+  pendingQuickVal?: number
   atZero: boolean
   crit: boolean
   setCrit: (c: boolean) => void
@@ -42,6 +44,7 @@ export default function HpOperationForm({
   onApply,
   isPending,
   hpMutate,
+  pendingQuickVal,
   atZero,
   crit,
   setCrit,
@@ -57,7 +60,7 @@ export default function HpOperationForm({
             const Icon = op.icon
             const isActive = activeOp === op.key
             return (
-              <m.button
+              <Pressable
                 key={op.key}
                 onClick={() => { setActiveOp(op.key); haptic.selection() }}
                 title={t(op.full_key)}
@@ -69,7 +72,7 @@ export default function HpOperationForm({
               >
                 <Icon size={18} strokeWidth={2.2} />
                 <span className="leading-tight">{t(op.label_key)}</span>
-              </m.button>
+              </Pressable>
             )
           })}
         </div>
@@ -78,7 +81,7 @@ export default function HpOperationForm({
             const Icon = op.icon
             const isActive = activeOp === op.key
             return (
-              <m.button
+              <Pressable
                 key={op.key}
                 onClick={() => { setActiveOp(op.key); haptic.selection() }}
                 title={t(op.full_key)}
@@ -90,7 +93,7 @@ export default function HpOperationForm({
               >
                 <Icon size={18} strokeWidth={2.2} />
                 <span className="leading-tight">{t(op.label_key)}</span>
-              </m.button>
+              </Pressable>
             )
           })}
         </div>
@@ -110,8 +113,7 @@ export default function HpOperationForm({
             className="[&_input]:text-3xl [&_input]:font-display [&_input]:font-bold [&_input]:text-center [&_input]:min-h-[60px]"
           />
           {activeOp === 'damage' && atZero && (
-            <button
-              type="button"
+            <Pressable
               onClick={() => { setCrit(!crit); haptic.selection() }}
               aria-pressed={crit}
               className={`flex items-center justify-center gap-2 min-h-[44px] rounded-xl border font-cinzel text-xs uppercase tracking-wider transition-colors
@@ -121,7 +123,7 @@ export default function HpOperationForm({
             >
               <Skull size={16} />
               {t('character.hp.critical_hit')}
-            </button>
+            </Pressable>
           )}
           <Button
             variant="primary"
@@ -141,19 +143,21 @@ export default function HpOperationForm({
       {/* Quick shortcuts — at least 52px min-height */}
       <div className="grid grid-cols-4 gap-2">
         {[1, 5, 10, 20].map((n) => (
-          <m.button
+          <Pressable
             key={n}
             onClick={() => {
               hpMutate({ op: activeOp, val: n })
               haptic.light()
             }}
+            pending={pendingQuickVal === n}
+            spinnerSize={16}
             className="min-h-[52px] rounded-2xl bg-dnd-surface border border-dnd-border
                        text-dnd-gold-bright font-mono font-bold text-base
                        hover:border-dnd-gold/70 transition-colors"
             whileTap={{ scale: 0.94 }}
           >
             {activeOp === 'damage' ? `−${n}` : activeOp === 'heal' ? `+${n}` : `${n}`}
-          </m.button>
+          </Pressable>
         ))}
       </div>
     </>

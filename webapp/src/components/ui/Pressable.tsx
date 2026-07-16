@@ -1,5 +1,5 @@
 import React from 'react'
-import { m, type TargetAndTransition, type Transition, type Variants } from 'framer-motion'
+import { m, type Target, type TargetAndTransition, type Transition, type Variants } from 'framer-motion'
 import { fireHaptic, type HapticKind } from '@/lib/haptics'
 import Spinner from './Spinner'
 
@@ -21,10 +21,19 @@ interface PressableProps {
   whileHover?: TargetAndTransition
   /** Escape hatch: animazione persistente non legata al gesture (es. halo su equip). */
   animate?: TargetAndTransition
+  /** Escape hatch: stato iniziale per entrance animation diretta (non-variants). */
+  initial?: Target
+  /** Escape hatch: animazione di uscita quando il bottone è dentro AnimatePresence. */
+  exit?: TargetAndTransition
   /** Escape hatch: transition custom per `animate`/`whileTap`/`whileHover`. */
   transition?: Transition
   /** Escape hatch: propagazione variants da un motion parent (stagger). */
   variants?: Variants
+  /** Escape hatch: long-press manuale (es. DiceOverlay clear-pool). */
+  onPointerDown?: (e: React.PointerEvent<HTMLButtonElement>) => void
+  onPointerUp?: (e: React.PointerEvent<HTMLButtonElement>) => void
+  onPointerLeave?: (e: React.PointerEvent<HTMLButtonElement>) => void
+  onPointerCancel?: (e: React.PointerEvent<HTMLButtonElement>) => void
   title?: string
   style?: React.CSSProperties
   role?: string
@@ -49,8 +58,14 @@ function PressableInner({
   whileTap,
   whileHover,
   animate,
+  initial,
+  exit,
   transition,
   variants,
+  onPointerDown,
+  onPointerUp,
+  onPointerLeave,
+  onPointerCancel,
   title,
   style,
   role,
@@ -85,8 +100,14 @@ function PressableInner({
       whileTap={isDisabled ? undefined : whileTap}
       whileHover={isDisabled ? undefined : whileHover}
       animate={animate}
+      initial={initial}
+      exit={exit}
       transition={transition}
       variants={variants}
+      onPointerDown={onPointerDown}
+      onPointerUp={onPointerUp}
+      onPointerLeave={onPointerLeave}
+      onPointerCancel={onPointerCancel}
       title={title}
       style={style}
       role={role}

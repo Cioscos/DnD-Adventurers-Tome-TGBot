@@ -12,6 +12,13 @@ vi.mock('react-i18next', async (orig) => {
   return { ...actual, useTranslation: () => ({ t: (k: string) => k, i18n: { language: 'it' } }) }
 })
 // framer-motion: strip motion props, keep DOM-valid ones (onClick survives).
+// The per-tag cache matters: real framer-motion's `m.button` is a stable
+// component reference across renders. Without caching here, every access of
+// `m.button` (e.g. from Pressable's own JSX, re-evaluated on every render)
+// mints a *new* function identity, which React treats as a different
+// component type — unmounting/remounting the DOM node on every state update.
+// That breaks any test holding a pre-interaction element reference and
+// re-asserting on it post-interaction (e.g. an aria-pressed toggle check).
 vi.mock('framer-motion', async () => {
   const React = await import('react')
   const MOTION = new Set(['initial', 'animate', 'exit', 'transition', 'variants', 'whileTap', 'whileHover', 'drag', 'layout'])
@@ -20,7 +27,16 @@ vi.mock('framer-motion', async () => {
     for (const k in props) if (!MOTION.has(k)) clean[k] = props[k]
     return React.createElement(tag, clean)
   }
-  return { m: new Proxy({}, { get: (_t: object, tag: string | symbol) => make(String(tag)) }) }
+  const cache = new Map<string, ReturnType<typeof make>>()
+  return {
+    m: new Proxy({}, {
+      get: (_t: object, tag: string | symbol) => {
+        const key = String(tag)
+        if (!cache.has(key)) cache.set(key, make(key))
+        return cache.get(key)!
+      },
+    }),
+  }
 })
 vi.mock('@/auth/telegram', () => ({ haptic: new Proxy({}, { get: () => () => {} }) }))
 vi.mock('@/components/ui/Surface', async () => {

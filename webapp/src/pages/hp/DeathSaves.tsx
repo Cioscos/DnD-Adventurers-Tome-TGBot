@@ -7,6 +7,7 @@ import {
 } from 'react-icons/gi'
 import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
+import Pressable from '@/components/ui/Pressable'
 import { spring } from '@/styles/motion'
 
 interface DeathSavesProps {
@@ -14,6 +15,8 @@ interface DeathSavesProps {
   onRoll: () => void
   onAction: (action: string) => void
   isRolling: boolean
+  /** action string currently in flight on the shared deathMutation (P4 scoping), undefined when none. */
+  pendingAction?: string
 }
 
 type PipTone = 'emerald' | 'crimson'
@@ -72,7 +75,7 @@ function PipGroup({ label, count, tone, icon, urgent = false }: PipGroupProps) {
   )
 }
 
-export default function DeathSaves({ deathSaves, onRoll, onAction, isRolling }: DeathSavesProps) {
+export default function DeathSaves({ deathSaves, onRoll, onAction, isRolling, pendingAction }: DeathSavesProps) {
   const { t } = useTranslation()
   const successes = deathSaves.successes ?? 0
   const failures = deathSaves.failures ?? 0
@@ -122,9 +125,10 @@ export default function DeathSaves({ deathSaves, onRoll, onAction, isRolling }: 
           <p className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-text-muted">
             {t('character.death_saves.manual_override')}
           </p>
-          <button
-            type="button"
+          <Pressable
             onClick={() => onAction('reset')}
+            pending={pendingAction === 'reset'}
+            spinnerSize={12}
             className="inline-flex items-center justify-center
                        min-h-[32px] px-2 rounded
                        text-[10px] font-cinzel uppercase tracking-widest
@@ -132,13 +136,14 @@ export default function DeathSaves({ deathSaves, onRoll, onAction, isRolling }: 
                        transition-colors"
           >
             {t('character.death_saves.reset')}
-          </button>
+          </Pressable>
         </div>
         <div className="grid grid-cols-3 gap-2">
           <Button
             variant="secondary"
             size="sm"
             onClick={() => onAction('success')}
+            loading={pendingAction === 'success'}
             icon={<Check size={14} />}
             className="!bg-dnd-emerald/15 !border-dnd-emerald/40 !text-dnd-emerald-bright"
           >
@@ -148,6 +153,7 @@ export default function DeathSaves({ deathSaves, onRoll, onAction, isRolling }: 
             variant="secondary"
             size="sm"
             onClick={() => onAction('failure')}
+            loading={pendingAction === 'failure'}
             icon={<X size={14} />}
             className="!bg-dnd-crimson/15 !border-dnd-crimson/40 !text-dnd-crimson-bright"
           >
@@ -157,6 +163,7 @@ export default function DeathSaves({ deathSaves, onRoll, onAction, isRolling }: 
             variant="secondary"
             size="sm"
             onClick={() => onAction('stabilize')}
+            loading={pendingAction === 'stabilize'}
             icon={<Heart size={14} />}
             className="!bg-dnd-cobalt/15 !border-dnd-cobalt/40 !text-dnd-cobalt-bright"
           >

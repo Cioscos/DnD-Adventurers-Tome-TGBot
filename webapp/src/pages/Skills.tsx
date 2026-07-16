@@ -13,6 +13,7 @@ import Surface from '@/components/ui/Surface'
 import SectionDivider from '@/components/ui/SectionDivider'
 import StatPill from '@/components/ui/StatPill'
 import Sheet from '@/components/ui/Sheet'
+import Pressable from '@/components/ui/Pressable'
 import ScrollArea from '@/components/ScrollArea'
 import RollResultModal, { type RollResult } from '@/components/RollResultModal'
 import { haptic } from '@/auth/telegram'
@@ -166,15 +167,16 @@ function SkillRow({
           {bonus >= 0 ? '+' : ''}{bonus}
         </span>
       </div>
-      <m.button
+      <Pressable
         onClick={onRoll}
-        disabled={rollPending}
+        pending={rollPending}
+        spinnerSize={14}
         className="shrink-0 w-11 h-11 rounded-xl bg-dnd-chip-bg border border-dnd-gold-dim/40 flex items-center justify-center text-dnd-gold disabled:opacity-30"
         whileTap={{ scale: 0.88 }}
         aria-label={rollAriaLabel}
       >
         <Dices size={16} />
-      </m.button>
+      </Pressable>
     </m.div>
   )
 }
@@ -406,14 +408,19 @@ export default function Skills() {
             { value: 'expert' as ProfLevel, label: t('character.skills.expert') },
           ]).map(({ value, label }) => {
             const isCurrent = picker !== null && getLevel(skills[picker]) === value
+            // `mutation` is also shared with the long-press toggle() cycle, but both
+            // call sites send the same single-key {[skillKey]: level} shape, so this
+            // stays a correct (if practically invisible, since the Sheet closes
+            // synchronously on click) P4 scoping.
+            const isPendingThis = mutation.isPending && picker !== null && mutation.variables?.[picker] === value
             return (
-              <button
+              <Pressable
                 key={String(value)}
-                type="button"
                 onClick={() => {
                   if (picker) mutation.mutate({ [picker]: value })
                   setPicker(null)
                 }}
+                pending={isPendingThis}
                 className={`w-full min-h-[44px] px-4 py-2.5 rounded-xl border text-sm font-body text-left transition-colors flex items-center justify-between ${
                   isCurrent
                     ? 'bg-dnd-gold/15 border-dnd-gold text-dnd-gold-bright'
@@ -422,7 +429,7 @@ export default function Skills() {
               >
                 <span>{label}</span>
                 {isCurrent && <Check size={14} className="text-dnd-gold-bright" />}
-              </button>
+              </Pressable>
             )
           })}
         </div>
