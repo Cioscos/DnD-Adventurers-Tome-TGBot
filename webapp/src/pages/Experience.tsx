@@ -12,6 +12,7 @@ import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
+import Pressable from '@/components/ui/Pressable'
 import StatPill from '@/components/ui/StatPill'
 import AnimatedNumber from '@/components/ui/AnimatedNumber'
 import { CornerFlourish } from '@/components/ui/Ornament'
@@ -274,7 +275,7 @@ export default function Experience() {
           {(['add', 'set'] as const).map((m) => {
             const isActive = setMode ? m === 'set' : m === 'add'
             return (
-              <button
+              <Pressable
                 key={m}
                 onClick={() => setSetMode(m === 'set')}
                 className={`min-h-[44px] rounded-lg font-cinzel text-xs uppercase tracking-widest transition-colors
@@ -283,7 +284,7 @@ export default function Experience() {
                     : 'bg-transparent text-dnd-text-muted'}`}
               >
                 {m === 'add' ? `+ ${t('character.xp.add')}` : `= ${t('character.currency.mode_set')}`}
-              </button>
+              </Pressable>
             )
           })}
         </div>

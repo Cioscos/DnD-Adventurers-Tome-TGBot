@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { Plus, X } from 'lucide-react'
 import ChipSelect from '@/components/ui/ChipSelect'
 import SelectSheet from '@/components/ui/SelectSheet'
+import Pressable from '@/components/ui/Pressable'
 import {
   EFFECT_KINDS,
   CONDITION_SLUGS,
@@ -57,14 +58,13 @@ export default function EffectsEditor({ effects, onChange }: EffectsEditorProps)
               value={e.kind}
               onChange={(v) => changeKind(i, v as EffectKind)}
             />
-            <button
-              type="button"
+            <Pressable
               onClick={() => remove(i)}
               className="shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center text-dnd-text-muted hover:text-dnd-crimson-bright transition-colors"
               aria-label={t('common.remove')}
             >
               <X size={16} />
-            </button>
+            </Pressable>
           </div>
 
           {e.kind === 'heal' ? (
@@ -87,14 +87,13 @@ export default function EffectsEditor({ effects, onChange }: EffectsEditorProps)
           )}
         </div>
       ))}
-      <button
-        type="button"
+      <Pressable
         onClick={add}
         className="inline-flex items-center gap-1 min-h-[44px] text-xs text-dnd-gold-bright hover:text-dnd-gold transition-colors px-2 py-1"
       >
         <Plus size={14} />
         {t('character.inventory.effects.add')}
-      </button>
+      </Pressable>
     </div>
   )
 }

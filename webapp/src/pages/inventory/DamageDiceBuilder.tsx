@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { Minus, Plus } from 'lucide-react'
 import { DIE_SIZES, parseDamageDice, serializeDamageDice } from './itemMetadata'
+import Pressable from '@/components/ui/Pressable'
 
 interface DamageDiceBuilderProps {
   /** Notazione canonica, es. "1d8", "2d6+3", "1d6-1". */
@@ -29,25 +30,23 @@ interface StepperProps {
 function Stepper({ display, onDec, onInc, decDisabled, incDisabled }: StepperProps) {
   return (
     <div className="inline-flex items-center rounded-lg bg-dnd-surface border border-dnd-border overflow-hidden">
-      <button
-        type="button"
+      <Pressable
         onClick={onDec}
         disabled={decDisabled}
         className="w-11 h-11 flex items-center justify-center text-dnd-gold-bright disabled:opacity-30 active:bg-dnd-surface-raised"
       >
         <Minus size={16} />
-      </button>
+      </Pressable>
       <span className="min-w-[44px] text-center text-base font-bold text-dnd-text tabular-nums">
         {display}
       </span>
-      <button
-        type="button"
+      <Pressable
         onClick={onInc}
         disabled={incDisabled}
         className="w-11 h-11 flex items-center justify-center text-dnd-gold-bright disabled:opacity-30 active:bg-dnd-surface-raised"
       >
         <Plus size={16} />
-      </button>
+      </Pressable>
     </div>
   )
 }
@@ -105,9 +104,8 @@ export default function DamageDiceBuilder({
           {dice.map((d) => {
             const active = d === die
             return (
-              <button
+              <Pressable
                 key={d}
-                type="button"
                 onClick={() => emit(count, d, mod)}
                 className={`min-h-[44px] px-3 rounded-lg text-sm font-bold tabular-nums transition-colors
                   ${active
@@ -115,7 +113,7 @@ export default function DamageDiceBuilder({
                     : 'bg-dnd-surface-raised text-dnd-text border border-dnd-border'}`}
               >
                 d{d}
-              </button>
+              </Pressable>
             )
           })}
         </div>

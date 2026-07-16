@@ -13,6 +13,7 @@ import type { Item } from '@/types'
 import type { Property } from '@/lib/homebrew/types'
 import PropertyBadge from '@/components/homebrew/PropertyBadge'
 import { useUnitSettings, formatWeight } from '@/store/unitSettings'
+import Pressable from '@/components/ui/Pressable'
 
 /**
  * A homebrew Property resolved from an active rule, paired with the item types
@@ -224,6 +225,10 @@ interface InventoryItemProps {
   equipPending: boolean
   attackPending: boolean
   usePending: boolean
+  /** Mutazione condivisa di quantità (P4, già scoped sull'item dal padre). */
+  quantityPending: boolean
+  /** Mutazione condivisa di condivisione (P4, già scoped sull'item dal padre). */
+  sharePending: boolean
   propertyByKey: Map<string, ItemProperty>
   locale: 'it' | 'en'
   onSetProperty: (itemId: number, key: string, value: unknown) => void
@@ -244,6 +249,8 @@ function InventoryItemInner({
   equipPending,
   attackPending,
   usePending,
+  quantityPending,
+  sharePending,
   propertyByKey,
   locale,
   onSetProperty,
@@ -265,7 +272,7 @@ function InventoryItemInner({
         ${item.is_equipped ? 'border-dnd-emerald/60' : 'border-transparent'}`}
     >
       {/* Header row — tap to expand */}
-      <button
+      <Pressable
         className="w-full flex items-center gap-2 px-4 py-3 text-left active:opacity-70"
         onClick={onToggle}
       >
@@ -298,7 +305,7 @@ function InventoryItemInner({
         <span className="text-dnd-text-muted text-xs shrink-0 ml-1">
           {isExpanded ? '˄' : '˅'}
         </span>
-      </button>
+      </Pressable>
 
       {/* Expanded detail panel */}
       {isExpanded && (
@@ -334,26 +341,31 @@ function InventoryItemInner({
               <span className="text-xs text-dnd-text-muted flex-1 font-medium">
                 {t('character.inventory.quantity')}
               </span>
-              <button
+              <Pressable
                 onClick={() => onQuantityChange(-1)}
+                pending={quantityPending}
+                spinnerSize={12}
                 className="w-11 h-11 rounded-md bg-dnd-surface-raised border border-dnd-border text-dnd-gold font-bold active:opacity-60"
                 aria-label={t('character.inventory.quantity_decrease')}
-              >&minus;</button>
+              >&minus;</Pressable>
               <span className="w-6 text-center font-mono font-bold text-dnd-gold-bright">{item.quantity}</span>
-              <button
+              <Pressable
                 onClick={() => onQuantityChange(1)}
+                pending={quantityPending}
+                spinnerSize={12}
                 className="w-11 h-11 rounded-md bg-dnd-surface-raised border border-dnd-border text-dnd-gold font-bold active:opacity-60"
                 aria-label={t('character.inventory.quantity_increase')}
-              >+</button>
+              >+</Pressable>
             </div>
           )}
 
           {/* Action buttons — same pattern as SpellItem */}
           <div className="flex gap-2 flex-wrap border-t border-dnd-gold-dim/10 pt-2">
             {canEquip && (
-              <button
+              <Pressable
                 onClick={onEquipToggle}
-                disabled={equipPending}
+                pending={equipPending}
+                spinnerSize={12}
                 className={`flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg border active:opacity-60 disabled:opacity-30
                   ${item.is_equipped
                     ? 'bg-dnd-amber/15 text-dnd-amber border-dnd-amber/30'
@@ -362,22 +374,23 @@ function InventoryItemInner({
               >
                 {item.is_equipped ? <ArrowLeftRight size={12} /> : <Swords size={12} />}
                 {item.is_equipped ? t('character.inventory.unequip') : t('character.inventory.equip')}
-              </button>
+              </Pressable>
             )}
             {item.item_type === 'weapon' && (
-              <button
+              <Pressable
                 onClick={onAttack}
-                disabled={attackPending}
+                pending={attackPending}
+                spinnerSize={12}
                 className="flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg
                            bg-dnd-crimson/20 text-dnd-crimson-bright border border-dnd-crimson/30
                            active:opacity-60 disabled:opacity-30"
               >
                 <Target size={12} />
                 {t('character.inventory.attack')}
-              </button>
+              </Pressable>
             )}
             {canUse && (
-              <button
+              <Pressable
                 onClick={onUse}
                 disabled={usePending || item.quantity <= 0}
                 className="flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg
@@ -386,20 +399,22 @@ function InventoryItemInner({
               >
                 <FlaskConical size={12} />
                 {t('character.inventory.use')}
-              </button>
+              </Pressable>
             )}
             {onShare && (
-              <button
+              <Pressable
                 onClick={onShare}
+                pending={sharePending}
+                spinnerSize={12}
                 className="flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg
                            bg-dnd-surface text-dnd-gold border border-dnd-gold-dim/40
                            active:opacity-60"
               >
                 <Share2 size={12} />
                 {t('share.action')}
-              </button>
+              </Pressable>
             )}
-            <button
+            <Pressable
               onClick={onEdit}
               className="flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg
                          bg-dnd-info/20 text-dnd-info-text border border-dnd-info/30
@@ -407,8 +422,8 @@ function InventoryItemInner({
             >
               <Pencil size={12} />
               {t('common.edit')}
-            </button>
-            <button
+            </Pressable>
+            <Pressable
               onClick={onDelete}
               className="flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg
                          bg-dnd-crimson/15 text-dnd-crimson-bright border border-dnd-crimson/30
@@ -416,7 +431,7 @@ function InventoryItemInner({
             >
               <Trash2 size={12} />
               {t('common.delete')}
-            </button>
+            </Pressable>
           </div>
         </div>
       )}
