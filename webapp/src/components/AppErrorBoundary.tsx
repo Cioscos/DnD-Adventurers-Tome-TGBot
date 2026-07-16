@@ -41,6 +41,7 @@ export default class AppErrorBoundary extends Component<Props, State> {
         <p className="font-body text-sm text-dnd-text-muted max-w-xs">
           {i18n.t('common.error_boundary.message')}
         </p>
+        {/* eslint-disable-next-line no-restricted-syntax -- crash fallback: deve rendere anche se framer-motion è rotto, il kit UI (m.button) non è affidabile qui */}
         <button
           type="button"
           onClick={() => window.location.reload()}

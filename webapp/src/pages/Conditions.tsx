@@ -205,6 +205,7 @@ export default function Conditions() {
   // rendering. The leftover `false` shadow is cleaned up next time the source
   // rule's `remove_condition` action runs (which does a proper pop()).
   const removeCustom = (key: string) => {
+    setPendingConditionKey(key)
     mutation.mutate({ [key]: false })
   }
 
@@ -486,7 +487,7 @@ export default function Conditions() {
                   value={value}
                   ruleName={ruleName}
                   onRemove={() => removeCustom(key)}
-                  isPending={mutation.isPending}
+                  isPending={mutation.isPending && pendingConditionKey === key}
                 />
               )
             })}

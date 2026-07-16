@@ -49,6 +49,26 @@ export default [
     },
   },
 
+  // Bottoni raw vietati fuori dal kit UI: ogni superficie tappabile deve saper
+  // esprimere lo stato pending (spec 2026-07-16, DESIGN.md §Buttons).
+  {
+    files: ['src/**/*.tsx'],
+    ignores: ['src/components/ui/**'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "JSXOpeningElement[name.name='button']",
+          message: 'Bottone raw vietato: usa Button, IconButton o Pressable da components/ui/ (feedback pending integrato).',
+        },
+        {
+          selector: "JSXOpeningElement[name.object.name='m'][name.property.name='button']",
+          message: 'm.button raw vietato: usa Button, IconButton o Pressable da components/ui/ (feedback pending integrato).',
+        },
+      ],
+    },
+  },
+
   // File di config / script Node (vite.config.ts, playwright config, scripts/*).
   {
     files: ['*.{js,cjs,mjs,ts}', 'scripts/**/*.{js,mjs}'],
