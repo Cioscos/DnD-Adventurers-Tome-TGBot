@@ -1,11 +1,12 @@
 import React, { useState, useRef } from 'react'
 import { m } from 'framer-motion'
 import { spring } from '@/styles/motion'
-import { haptic } from '@/auth/telegram'
+import { fireHaptic, type HapticKind } from '@/lib/haptics'
+import Spinner from './Spinner'
 
 export type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'arcane' | 'ghost'
 export type ButtonSize = 'sm' | 'md' | 'lg'
-export type HapticKind = 'light' | 'medium' | 'success' | 'error' | 'warning' | 'none'
+export type { HapticKind } from '@/lib/haptics'
 
 interface ButtonProps {
   variant?: ButtonVariant
@@ -76,13 +77,7 @@ function ButtonInner({
   const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
     if (isDisabled) return
     // haptic
-    if (hapticKind !== 'none') {
-      if (hapticKind === 'success') haptic.success()
-      else if (hapticKind === 'error') haptic.error()
-      else if (hapticKind === 'warning') haptic.warning()
-      else if (hapticKind === 'medium') haptic.medium()
-      else haptic.light()
-    }
+    fireHaptic(hapticKind)
     // ink-spread ripple on primary
     if (variant === 'primary' && btnRef.current) {
       const rect = btnRef.current.getBoundingClientRect()
@@ -129,7 +124,7 @@ function ButtonInner({
 
       {loading ? (
         <>
-          <span className="w-4 h-4 border-2 border-current/30 border-t-current rounded-full animate-spin" />
+          <Spinner />
           {children}
         </>
       ) : (
