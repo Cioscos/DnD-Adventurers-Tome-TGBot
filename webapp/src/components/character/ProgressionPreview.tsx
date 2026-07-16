@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { m } from 'framer-motion'
 import Surface from '@/components/ui/Surface'
+import Pressable from '@/components/ui/Pressable'
 import { progressionRows, localizeFeatures } from '@/lib/classProgression'
 import ProgressionFullTableModal from './ProgressionFullTableModal'
 
@@ -63,7 +63,7 @@ export default function ProgressionPreview({ className, currentLevel, isMulticla
             const row = rows[lv - 1]
             const isCurrent = lv === currentLevel
             return (
-              <m.button
+              <Pressable
                 key={lv}
                 type="button"
                 onClick={() => setShowFull(true)}
@@ -84,7 +84,7 @@ export default function ProgressionPreview({ className, currentLevel, isMulticla
                   <span className="font-mono text-[10px] text-center @max-[300px]:hidden">+{row?.proficiency_bonus ?? '?'}</span>
                 )}
                 <span className="text-[11px] @max-[360px]:text-[10px] truncate">{row?.features ? localizeFeatures(row.features, i18n.language) : '—'}</span>
-              </m.button>
+              </Pressable>
             )
           })}
         </div>

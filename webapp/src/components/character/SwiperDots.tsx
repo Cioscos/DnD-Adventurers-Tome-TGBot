@@ -1,4 +1,5 @@
 import { m } from 'framer-motion'
+import Pressable from '@/components/ui/Pressable'
 import type { CharacterScreen } from '@/store/characterStore'
 
 interface Props {
@@ -19,7 +20,7 @@ export default function SwiperDots({ active, onSelect, labels }: Props) {
       {[0, 1, 2].map((idx) => {
         const isActive = idx === active
         return (
-          <m.button
+          <Pressable
             key={idx}
             type="button"
             role="tab"
@@ -38,7 +39,7 @@ export default function SwiperDots({ active, onSelect, labels }: Props) {
               style={{ height: 8 }}
               transition={{ duration: 0.2 }}
             />
-          </m.button>
+          </Pressable>
         )
       })}
     </div>

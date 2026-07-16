@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { m } from 'framer-motion'
 import { Plus, Check } from 'lucide-react'
 import {
   GiCrossedSwords, GiShieldEchoes, GiSpellBook, GiLightningStorm,
@@ -10,6 +9,7 @@ import {
 import { api, ApiError } from '@/api/client'
 import Surface from '@/components/ui/Surface'
 import Sheet from '@/components/ui/Sheet'
+import Pressable from '@/components/ui/Pressable'
 import RollResultModal, { type RollResult } from '@/components/RollResultModal'
 import WeaponAttackModal, { type WeaponAttackResult } from '@/components/WeaponAttackModal'
 import { haptic } from '@/auth/telegram'
@@ -167,6 +167,25 @@ export default function QuickActions({ char }: Props) {
     return entries.some((e) => quickActionKey(e) === key)
   }
 
+  // Mutazione condivisa fra tutte le righe pin/unpin dell'editor (P4): `variables`
+  // è la lista risultante (non l'entry cliccata), quindi deriviamo la chiave
+  // toggled per differenza simmetrica rispetto a `entries` (una sola voce cambia
+  // per chiamata, per costruzione di toggleEntry).
+  const pendingToggleKey = (() => {
+    if (!settingsMutation.isPending || !settingsMutation.variables) return null
+    const nextKeys = new Set(settingsMutation.variables.map(quickActionKey))
+    const curKeys = new Set(entries.map(quickActionKey))
+    for (const k of nextKeys) if (!curKeys.has(k)) return k
+    for (const k of curKeys) if (!nextKeys.has(k)) return k
+    return null
+  })()
+
+  const isActionPending = (a: ResolvedQuickAction): boolean => {
+    if (a.type === 'weapon') return attackMutation.isPending && attackMutation.variables === a.item.id
+    if (a.type === 'save') return saveMutation.isPending && saveMutation.variables === a.ability
+    return false
+  }
+
   const actionLabel = (a: ResolvedQuickAction): string =>
     a.type === 'weapon' ? a.item.name
       : a.type === 'save' ? t(`character.stats.${a.ability}`)
@@ -174,7 +193,6 @@ export default function QuickActions({ char }: Props) {
 
   const weapons = (char.items ?? []).filter((i) => i.item_type === 'weapon')
   const spells = char.spells ?? []
-  const busy = attackMutation.isPending || saveMutation.isPending
 
   return (
     <>
@@ -186,7 +204,7 @@ export default function QuickActions({ char }: Props) {
               {t('character.quick_actions.title')}
             </p>
           </div>
-          <m.button
+          <Pressable
             type="button"
             onClick={() => { haptic.light(); setEditorOpen(true) }}
             whileTap={{ scale: 0.9 }}
@@ -194,7 +212,7 @@ export default function QuickActions({ char }: Props) {
             className="w-9 h-9 flex items-center justify-center rounded-full bg-dnd-surface border border-dnd-gold-dim/40 text-dnd-gold-bright"
           >
             <Plus size={16} />
-          </m.button>
+          </Pressable>
         </div>
 
         {resolved.length === 0 ? (
@@ -207,10 +225,10 @@ export default function QuickActions({ char }: Props) {
               const Icon = TYPE_ICONS[a.type]
               const spanFull = resolved.length % 2 === 1 && i === resolved.length - 1
               return (
-                <m.button
+                <Pressable
                   key={a.key}
                   type="button"
-                  disabled={busy}
+                  pending={isActionPending(a)}
                   onClick={() => run(a)}
                   whileTap={{ scale: 0.96 }}
                   className={`min-h-[44px] flex items-center gap-2 px-3 py-2 rounded-xl
@@ -221,7 +239,7 @@ export default function QuickActions({ char }: Props) {
                   <span className="flex-1 min-w-0 truncate text-sm text-dnd-text font-body">
                     {actionLabel(a)}
                   </span>
-                </m.button>
+                </Pressable>
               )
             })}
           </div>
@@ -280,10 +298,11 @@ export default function QuickActions({ char }: Props) {
                   {group.rows.map(({ entry, label }) => {
                     const pinned = isPinned(entry)
                     return (
-                      <button
+                      <Pressable
                         key={quickActionKey(entry)}
                         type="button"
                         onClick={() => toggleEntry(entry)}
+                        pending={pendingToggleKey === quickActionKey(entry)}
                         className={`w-full min-h-[44px] flex items-center gap-2 px-3 py-2 rounded-xl border text-left
                           ${pinned
                             ? 'bg-dnd-gold/15 border-dnd-gold text-dnd-gold-bright'
@@ -291,7 +310,7 @@ export default function QuickActions({ char }: Props) {
                       >
                         <span className="flex-1 min-w-0 truncate text-sm font-body">{label}</span>
                         {pinned && <Check size={16} className="shrink-0" />}
-                      </button>
+                      </Pressable>
                     )
                   })}
                 </div>

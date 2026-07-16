@@ -14,6 +14,7 @@ import {
 import type { ComponentType, SVGAttributes } from 'react'
 import SectionDivider from '@/components/ui/SectionDivider'
 import Reveal from '@/components/ui/Reveal'
+import Pressable from '@/components/ui/Pressable'
 import { haptic } from '@/auth/telegram'
 import { spring, stagger } from '@/styles/motion'
 
@@ -130,7 +131,7 @@ export default function MenuScreen({ charId }: Props) {
                 const Icon = item.icon
                 return (
                   <Reveal.Item key={item.key}>
-                    <m.button
+                    <Pressable
                       onClick={() => {
                         haptic.light()
                         navigate(`/char/${charId}/${item.path}`)
@@ -145,7 +146,7 @@ export default function MenuScreen({ charId }: Props) {
                       <span className="text-[11px] text-dnd-text-muted font-body text-center leading-tight">
                         {t(`character.menu.${item.key}`)}
                       </span>
-                    </m.button>
+                    </Pressable>
                   </Reveal.Item>
                 )
               })}

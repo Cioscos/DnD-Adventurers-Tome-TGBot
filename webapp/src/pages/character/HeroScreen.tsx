@@ -12,6 +12,7 @@ import HeroXPBar from '@/components/ui/HeroXPBar'
 import Surface from '@/components/ui/Surface'
 import StatPill from '@/components/ui/StatPill'
 import { ShieldEmblem } from '@/components/ui/Ornament'
+import Pressable from '@/components/ui/Pressable'
 import { haptic } from '@/auth/telegram'
 import { spring } from '@/styles/motion'
 import { formatCondition, CONDITION_ICONS } from '@/lib/conditions'
@@ -75,7 +76,7 @@ export default function HeroScreen({ char }: Props) {
         ornamented
         className="relative overflow-hidden"
       >
-        <m.button
+        <Pressable
           type="button"
           onClick={() => { haptic.light(); navigate(`/char/${char.id}/identity`) }}
           whileTap={{ scale: 0.99 }}
@@ -88,9 +89,9 @@ export default function HeroScreen({ char }: Props) {
           {char.race && (
             <p className="text-xs text-dnd-text-muted font-body">{char.race}</p>
           )}
-        </m.button>
+        </Pressable>
 
-        <m.button
+        <Pressable
           type="button"
           onClick={() => { haptic.light(); navigate(`/char/${char.id}/inventory`) }}
           whileTap={{ scale: 0.95 }}
@@ -108,10 +109,10 @@ export default function HeroScreen({ char }: Props) {
           <span className="text-[10px] font-mono text-dnd-text-muted leading-none">
             {weightUnitLabel(unitSystem)}
           </span>
-        </m.button>
+        </Pressable>
 
         {char.is_dead && (
-          <m.button
+          <Pressable
             type="button"
             onClick={() => { haptic.light(); navigate(`/char/${char.id}/hp`) }}
             whileTap={{ scale: 0.98 }}
@@ -126,12 +127,12 @@ export default function HeroScreen({ char }: Props) {
             <span className="font-body italic text-sm">
               {t('character.death_saves.revive')}
             </span>
-          </m.button>
+          </Pressable>
         )}
 
         <div className="mt-4 flex items-center gap-3 @max-[300px]:flex-col @max-[300px]:items-stretch">
           <div className="flex-1 min-w-0">
-            <m.button
+            <Pressable
               type="button"
               onClick={() => { haptic.light(); navigate(`/char/${char.id}/hp`) }}
               whileTap={{ scale: 0.99 }}
@@ -157,9 +158,9 @@ export default function HeroScreen({ char }: Props) {
                 size="md"
                 segmented
               />
-            </m.button>
+            </Pressable>
 
-            <m.button
+            <Pressable
               type="button"
               onClick={() => { haptic.light(); navigate(`/char/${char.id}/xp`) }}
               whileTap={{ scale: 0.99 }}
@@ -171,10 +172,10 @@ export default function HeroScreen({ char }: Props) {
                 totalClassLevel={char.total_level}
                 suppressHalo={hpPct > 0 && hpPct <= 25}
               />
-            </m.button>
+            </Pressable>
           </div>
 
-          <m.button
+          <Pressable
             type="button"
             onClick={() => { haptic.light(); navigate(`/char/${char.id}/ac`) }}
             whileTap={{ scale: 0.95 }}
@@ -191,13 +192,13 @@ export default function HeroScreen({ char }: Props) {
                 {t('character.ac.short', { defaultValue: 'CA' })}
               </span>
             </span>
-          </m.button>
+          </Pressable>
         </div>
 
         {char.concentrating_spell_id && (() => {
           const spell = char.spells?.find((s) => s.id === char.concentrating_spell_id)
           return (
-            <m.button
+            <Pressable
               onClick={() => navigate(`/char/${char.id}/spells`)}
               className="mt-3 w-full min-h-[44px] flex items-center justify-center gap-2 px-3 py-2 rounded-xl
                          bg-gradient-arcane-mist border border-dnd-arcane/50 text-dnd-arcane-bright"
@@ -212,7 +213,7 @@ export default function HeroScreen({ char }: Props) {
                   {spell.name}
                 </span>
               )}
-            </m.button>
+            </Pressable>
           )
         })()}
 
@@ -290,7 +291,7 @@ export default function HeroScreen({ char }: Props) {
                   defaultValue: score.name.slice(0, 3).toUpperCase(),
                 })
                 return (
-                  <m.button
+                  <Pressable
                     key={score.name}
                     type="button"
                     onClick={() => { haptic.light(); navigate(`/char/${char.id}/stats`) }}
@@ -307,7 +308,7 @@ export default function HeroScreen({ char }: Props) {
                     <span className="text-[11px] font-mono font-bold mt-0.5 px-1.5 py-0.5 rounded-full bg-dnd-ink/25">
                       {modStr}
                     </span>
-                  </m.button>
+                  </Pressable>
                 )
               })}
             </m.div>

@@ -5,6 +5,7 @@ import { X } from 'lucide-react'
 import { TYPE_ICON } from '@/pages/inventory/itemMetadata'
 import { useRegisterOverlay } from '@/store/overlayStore'
 import { useOverlayDismiss } from '@/hooks/useOverlayDismiss'
+import Pressable from '@/components/ui/Pressable'
 import type { EquipmentSlot, Item } from '@/types'
 import { useUnitSettings, formatWeight } from '@/store/unitSettings'
 
@@ -79,14 +80,14 @@ export default function ItemDetailsModal({ item, slot, onClose }: Props) {
                 {typeLabel}
               </p>
             </div>
-            <button
+            <Pressable
               type="button"
               onClick={onClose}
               aria-label={t('common.close', { defaultValue: 'Close' })}
               className="w-10 h-10 -mr-1 shrink-0 flex items-center justify-center rounded-full border border-dnd-gold-dim/40"
             >
               <X size={18} className="text-dnd-gold" />
-            </button>
+            </Pressable>
           </header>
 
           <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">

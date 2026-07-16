@@ -1,5 +1,5 @@
 import React from 'react'
-import { m, type TargetAndTransition } from 'framer-motion'
+import { m, type TargetAndTransition, type Transition, type Variants } from 'framer-motion'
 import { fireHaptic, type HapticKind } from '@/lib/haptics'
 import Spinner from './Spinner'
 
@@ -17,12 +17,23 @@ interface PressableProps {
   children?: React.ReactNode
   type?: 'button' | 'submit'
   whileTap?: TargetAndTransition
+  /** Escape hatch: hover gesture (es. Layout back button). */
+  whileHover?: TargetAndTransition
+  /** Escape hatch: animazione persistente non legata al gesture (es. halo su equip). */
+  animate?: TargetAndTransition
+  /** Escape hatch: transition custom per `animate`/`whileTap`/`whileHover`. */
+  transition?: Transition
+  /** Escape hatch: propagazione variants da un motion parent (stagger). */
+  variants?: Variants
   title?: string
   style?: React.CSSProperties
   role?: string
   'aria-label'?: string
   'aria-pressed'?: boolean
   'aria-checked'?: boolean
+  'aria-expanded'?: boolean
+  'aria-selected'?: boolean
+  'aria-current'?: React.AriaAttributes['aria-current']
 }
 
 function PressableInner({
@@ -36,12 +47,19 @@ function PressableInner({
   children,
   type = 'button',
   whileTap,
+  whileHover,
+  animate,
+  transition,
+  variants,
   title,
   style,
   role,
   'aria-label': ariaLabel,
   'aria-pressed': ariaPressed,
   'aria-checked': ariaChecked,
+  'aria-expanded': ariaExpanded,
+  'aria-selected': ariaSelected,
+  'aria-current': ariaCurrent,
 }: PressableProps) {
   const isDisabled = disabled || pending
 
@@ -65,12 +83,19 @@ function PressableInner({
       data-pending={pending || undefined}
       className={`${positioned ? '' : 'relative'} ${className}`}
       whileTap={isDisabled ? undefined : whileTap}
+      whileHover={isDisabled ? undefined : whileHover}
+      animate={animate}
+      transition={transition}
+      variants={variants}
       title={title}
       style={style}
       role={role}
       aria-label={ariaLabel}
       aria-pressed={ariaPressed}
       aria-checked={ariaChecked}
+      aria-expanded={ariaExpanded}
+      aria-selected={ariaSelected}
+      aria-current={ariaCurrent}
     >
       {children}
       {pending && spinner && (

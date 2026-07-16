@@ -6,6 +6,7 @@ import { X } from 'lucide-react'
 import { progressionRows, localizeFeatures } from '@/lib/classProgression'
 import { useRegisterOverlay } from '@/store/overlayStore'
 import { useOverlayDismiss } from '@/hooks/useOverlayDismiss'
+import Pressable from '@/components/ui/Pressable'
 
 interface Props {
   className: string
@@ -54,14 +55,14 @@ export default function ProgressionFullTableModal({ className, currentLevel, onC
             <h2 className="text-sm font-cinzel uppercase tracking-widest text-dnd-gold-bright">
               {className}: {t('character.equipment.progression.title', { defaultValue: 'Progression' })}
             </h2>
-            <button
+            <Pressable
               type="button"
               onClick={onClose}
               aria-label={t('common.close', { defaultValue: 'Close' })}
               className="w-11 h-11 -mr-1 flex items-center justify-center rounded-full border border-dnd-gold-dim/40"
             >
               <X size={20} className="text-dnd-gold" />
-            </button>
+            </Pressable>
           </header>
           <div className="flex-1 overflow-y-auto">
             <table className="w-full text-left text-[12px] table-fixed">
