@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import Sheet from '@/components/ui/Sheet'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
+import Pressable from '@/components/ui/Pressable'
 import SwitchToggle from '@/components/ui/SwitchToggle'
 import WizardFooter from '@/components/ui/WizardFooter'
 import DamageTypePicker from '@/components/ui/DamageTypePicker'
@@ -100,9 +101,8 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
               const lastSpan =
                 idx === ITEM_TYPES.length - 1 && ITEM_TYPES.length % 2 === 1 ? 'col-span-2' : ''
               return (
-                <button
+                <Pressable
                   key={type}
-                  type="button"
                   onClick={() => setForm((f) => ({ ...f, item_type: type }))}
                   className={`min-h-[46px] flex items-center gap-2 px-3 rounded-xl text-sm font-medium transition-colors ${lastSpan}
                     ${active
@@ -113,7 +113,7 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
                   <span className="text-left leading-tight">
                     {t(`character.inventory.types.${type}`)}
                   </span>
-                </button>
+                </Pressable>
               )
             })}
           </div>
@@ -228,9 +228,8 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
                 {WEAPON_PROPERTIES.map((prop) => {
                   const active = form.properties.includes(prop)
                   return (
-                    <button
+                    <Pressable
                       key={prop}
-                      type="button"
                       onClick={() => toggleProperty(prop)}
                       className={`min-h-[44px] px-3 py-2 rounded-lg text-xs font-medium transition-colors
                         ${active
@@ -238,7 +237,7 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
                           : 'bg-dnd-surface-raised text-dnd-text border border-dnd-border'}`}
                     >
                       {active ? '✓ ' : ''}{t(`character.inventory.weapon_properties.${prop}`)}
-                    </button>
+                    </Pressable>
                   )
                 })}
               </div>
@@ -324,9 +323,8 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
                       ? 'col-span-2'
                       : ''
                   return (
-                    <button
+                    <Pressable
                       key={st}
-                      type="button"
                       onClick={() => setForm((f) => ({ ...f, subtype: st }))}
                       className={`min-h-[44px] px-3 rounded-xl text-sm font-medium transition-colors ${lastSpan}
                         ${active
@@ -334,7 +332,7 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
                           : 'bg-dnd-surface-raised text-dnd-text border border-dnd-border'}`}
                     >
                       {t(`character.inventory.subtypes.${st}`)}
-                    </button>
+                    </Pressable>
                   )
                 })}
               </div>

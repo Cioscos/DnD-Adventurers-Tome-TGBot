@@ -1,10 +1,10 @@
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { m } from 'framer-motion'
 import { BarChart3 } from 'lucide-react'
 import { GiShieldEchoes, GiArcheryTarget } from 'react-icons/gi'
 import Surface from '@/components/ui/Surface'
 import SectionDivider from '@/components/ui/SectionDivider'
+import Pressable from '@/components/ui/Pressable'
 import HomebrewBreakdownRow from '@/components/homebrew/HomebrewBreakdownRow'
 import { haptic } from '@/auth/telegram'
 import { profBonus } from '@/lib/dnd'
@@ -112,7 +112,7 @@ export default function HeroStatsSection({ char }: Props) {
       {/* Combat-number cells — 2×2 grid, full names above, mono value below. */}
       <div className="grid grid-cols-2 gap-1.5">
         {cells.map((c) => (
-          <m.button
+          <Pressable
             key={c.key}
             type="button"
             onClick={() => go(c.path)}
@@ -129,7 +129,7 @@ export default function HeroStatsSection({ char }: Props) {
             <span className="text-2xl font-mono font-bold tabular-nums leading-none mt-1">
               {c.value}
             </span>
-          </m.button>
+          </Pressable>
         ))}
       </div>
 

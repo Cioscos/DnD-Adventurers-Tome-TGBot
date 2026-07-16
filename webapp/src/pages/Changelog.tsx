@@ -4,6 +4,7 @@ import { m, AnimatePresence } from 'framer-motion'
 import { ChevronDown, Sparkles, Wrench, Bug, ScrollText } from 'lucide-react'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
+import Pressable from '@/components/ui/Pressable'
 import EmptyState from '@/components/ui/EmptyState'
 import { haptic } from '@/auth/telegram'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
@@ -31,7 +32,7 @@ function EntryCard({ entry, isCurrent, defaultOpen }: { entry: ChangelogEntry; i
 
   return (
     <Surface variant="elevated">
-      <button
+      <Pressable
         type="button"
         onClick={() => { haptic.light(); setOpen((o) => !o) }}
         className="w-full flex items-center gap-3 text-left"
@@ -56,7 +57,7 @@ function EntryCard({ entry, isCurrent, defaultOpen }: { entry: ChangelogEntry; i
         <m.div animate={{ rotate: open ? 180 : 0 }} transition={{ duration: reduceMotion ? 0 : 0.2 }} className="shrink-0">
           <ChevronDown size={20} className="text-dnd-gold-dim" />
         </m.div>
-      </button>
+      </Pressable>
 
       <AnimatePresence initial={false}>
         {open && (

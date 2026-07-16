@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { ChevronDown, Settings as SettingsIcon } from 'lucide-react'
 import { GiSparkles as Sparkles } from 'react-icons/gi'
 import Surface from '@/components/ui/Surface'
+import Pressable from '@/components/ui/Pressable'
 import { haptic } from '@/auth/telegram'
 import { ease, spring } from '@/styles/motion'
 
@@ -47,7 +48,7 @@ export default function AutoModeBanner({ onGoToSettings }: AutoModeBannerProps) 
       className={`transition-colors duration-300 ${open ? '!border-dnd-arcane' : ''}`}
     >
       {/* Pill toggle row — sempre visibile (target tocco >= 44px) */}
-      <button
+      <Pressable
         type="button"
         onClick={toggle}
         aria-expanded={open}
@@ -65,7 +66,7 @@ export default function AutoModeBanner({ onGoToSettings }: AutoModeBannerProps) 
         >
           <ChevronDown size={16} />
         </m.span>
-      </button>
+      </Pressable>
 
       {/* Corpo collassabile — frase completa + scorciatoia Impostazioni */}
       <AnimatePresence initial={false}>
@@ -81,14 +82,14 @@ export default function AutoModeBanner({ onGoToSettings }: AutoModeBannerProps) 
             <p className="pt-2.5 text-xs text-dnd-text font-body">
               {t('character.slots.auto_hint')}
             </p>
-            <button
+            <Pressable
               type="button"
               onClick={onGoToSettings}
               className="mt-3 inline-flex items-center gap-1 min-h-[44px] px-3 rounded-lg bg-dnd-surface border border-dnd-arcane/40 text-dnd-arcane-bright font-cinzel text-[10px] uppercase tracking-widest"
             >
               <SettingsIcon size={11} />
               {t('character.slots.go_to_settings')}
-            </button>
+            </Pressable>
           </m.div>
         )}
       </AnimatePresence>

@@ -44,4 +44,19 @@ describe('SwitchToggle', () => {
     await userEvent.click(screen.getByText('Dadi 3D'))
     expect(onChange).toHaveBeenCalledWith(true)
   })
+
+  it('con pending il knob è disabilitato e mostra lo spinner', () => {
+    render(<SwitchToggle checked={false} onChange={() => {}} pending />)
+    const knob = screen.getByRole('switch')
+    expect(knob).toBeDisabled()
+    expect(knob).toHaveAttribute('aria-busy', 'true')
+    expect(screen.getByRole('status')).toBeInTheDocument()
+  })
+
+  it('con pending onChange non viene mai chiamato (né dal knob né dalla label)', async () => {
+    const onChange = vi.fn()
+    render(<SwitchToggle checked={false} onChange={onChange} pending label="Dadi 3D" />)
+    await userEvent.click(screen.getByText('Dadi 3D'))
+    expect(onChange).not.toHaveBeenCalled()
+  })
 })

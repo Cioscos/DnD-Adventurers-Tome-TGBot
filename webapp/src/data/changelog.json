@@ -1,6 +1,34 @@
 {
   "entries": [
     {
+      "version": "2.18.0",
+      "date": "2026-07-16",
+      "title": {
+        "it": "Feedback di caricamento ovunque",
+        "en": "Loading feedback everywhere"
+      },
+      "added": {
+        "it": [],
+        "en": []
+      },
+      "improved": {
+        "it": [
+          "Ogni pulsante o controllo che parla col server ora mostra subito uno spinner e si disabilita finché l'operazione non è conclusa: mai più l'impressione che non stia succedendo nulla.",
+          "Nelle liste (oggetti, incantesimi, condizioni) lo spinner appare solo sull'elemento su cui hai tappato.",
+          "I tap ripetuti durante un'operazione in corso non possono più causare azioni duplicate."
+        ],
+        "en": [
+          "Every button or control that talks to the server now shows an immediate spinner and stays disabled until the operation completes: no more wondering whether anything is happening.",
+          "In lists (items, spells, conditions) the spinner appears only on the element you tapped.",
+          "Repeated taps during an in-flight operation can no longer trigger duplicate actions."
+        ]
+      },
+      "fixed": {
+        "it": [],
+        "en": []
+      }
+    },
+    {
       "version": "2.17.0",
       "date": "2026-07-15",
       "title": { "it": "Condividi e importa oggetti e note", "en": "Share & import items and notes" },

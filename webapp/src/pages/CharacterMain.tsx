@@ -11,6 +11,7 @@ import { haptic } from '@/auth/telegram'
 import EmptyState from '@/components/ui/EmptyState'
 import Skeleton from '@/components/ui/Skeleton'
 import InSessionBanner from '@/components/ui/InSessionBanner'
+import Pressable from '@/components/ui/Pressable'
 import { useCharacterStore } from '@/store/characterStore'
 import CharacterSwiper from '@/components/character/CharacterSwiper'
 import SearchOverlay from '@/components/SearchOverlay'
@@ -105,20 +106,20 @@ export default function CharacterMain() {
         animate={{ y: 0, opacity: 1 }}
         transition={spring.drift}
       >
-        <m.button
+        <Pressable
           onClick={() => navigate('/')}
           className="w-10 h-10 shrink-0 flex items-center justify-center rounded-full bg-dnd-surface border border-dnd-gold-dim/30"
           whileTap={{ scale: 0.9 }}
           aria-label={t('common.back')}
         >
           <ChevronLeft size={20} className="text-dnd-gold-bright" />
-        </m.button>
+        </Pressable>
 
         <h1 className="text-xl font-display font-bold text-dnd-gold-bright truncate flex-1 flex items-center gap-2 min-w-0"
             style={{ textShadow: '0 1px 4px var(--dnd-gold-glow)' }}>
           <span className="truncate">{char.name}</span>
           {char.concentrating_spell_id && (
-            <m.button
+            <Pressable
               type="button"
               onClick={() => {
                 haptic.light()
@@ -130,11 +131,11 @@ export default function CharacterMain() {
               className="shrink-0 inline-flex items-center justify-center w-6 h-6 rounded-full bg-dnd-arcane-deep/50 border border-dnd-arcane-bright text-dnd-arcane-bright font-cinzel font-black text-[10px] shadow-halo-arcane animate-pulse"
             >
               C
-            </m.button>
+            </Pressable>
           )}
         </h1>
 
-        <m.button
+        <Pressable
           onClick={() => {
             haptic.light()
             setSearchOpen(true)
@@ -144,10 +145,11 @@ export default function CharacterMain() {
           aria-label={t('character.search.title')}
         >
           <Search size={18} className="text-dnd-gold-bright" />
-        </m.button>
+        </Pressable>
 
-        <m.button
+        <Pressable
           onClick={() => inspirationMutation.mutate(!char.heroic_inspiration)}
+          pending={inspirationMutation.isPending}
           title={char.heroic_inspiration
             ? t('character.inspiration.tap_to_spend')
             : t('character.inspiration.tap_to_grant')}
@@ -169,16 +171,16 @@ export default function CharacterMain() {
           >
             {char.heroic_inspiration ? t('character.inspiration.on') : t('character.inspiration.off')}
           </span>
-        </m.button>
+        </Pressable>
 
-        <m.button
+        <Pressable
           onClick={() => navigate(`/char/${charId}/settings`)}
           className="w-10 h-10 shrink-0 flex items-center justify-center rounded-full bg-dnd-surface border border-dnd-gold-dim/30"
           whileTap={{ scale: 0.9 }}
           aria-label={t('character.menu.settings')}
         >
           <Settings size={18} className="text-dnd-gold-bright" />
-        </m.button>
+        </Pressable>
       </m.header>
 
       <InSessionBanner charId={charId} />

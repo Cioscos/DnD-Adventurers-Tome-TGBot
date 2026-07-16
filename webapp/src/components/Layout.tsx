@@ -8,6 +8,7 @@ import { useSwipeNavigation, getGroupInfo } from '@/hooks/useSwipeNavigation'
 import { pageSkeleton } from '@/components/skeletons/pageSkeletons'
 import { api, ApiError } from '@/api/client'
 import EmptyState from '@/components/ui/EmptyState'
+import Pressable from '@/components/ui/Pressable'
 import { spring } from '@/styles/motion'
 import { haptic } from '@/auth/telegram'
 
@@ -153,7 +154,7 @@ export default function Layout({ title, children, backTo, group, page, hideScrol
         transition={spring.drift}
       >
         <div className="flex items-center gap-3">
-          <m.button
+          <Pressable
             onClick={handleBack}
             className="shrink-0 w-11 h-11 flex items-center justify-center rounded-full bg-dnd-surface border border-dnd-gold-dim/30"
             aria-label="Indietro"
@@ -161,7 +162,7 @@ export default function Layout({ title, children, backTo, group, page, hideScrol
             whileHover={{ boxShadow: 'var(--halo-gold)' }}
           >
             <ChevronLeft size={22} className="text-dnd-gold-bright" />
-          </m.button>
+          </Pressable>
           <h1 className="text-lg font-bold font-display text-dnd-gold-bright truncate flex-1 title-glow">
             {title}
           </h1>
@@ -196,7 +197,7 @@ export default function Layout({ title, children, backTo, group, page, hideScrol
                             {t(`character.menu.${pageKey}`)}
                           </span>
                         ) : (
-                          <m.button
+                          <Pressable
                             type="button"
                             onClick={() => goToPage(pageKey)}
                             whileTap={{ scale: 0.95 }}
@@ -205,7 +206,7 @@ export default function Layout({ title, children, backTo, group, page, hideScrol
                             style={{ filter: 'blur(0.5px)' }}
                           >
                             {t(`character.menu.${pageKey}`)}
-                          </m.button>
+                          </Pressable>
                         )}
                       </span>
                     ))}

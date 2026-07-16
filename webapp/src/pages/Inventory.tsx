@@ -10,6 +10,7 @@ import { api, ApiError } from '@/api/client'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
+import Pressable from '@/components/ui/Pressable'
 import Sheet from '@/components/ui/Sheet'
 import { slotsAllowedFor, SLOT_PLACEHOLDER_ICON, handsConflict } from '@/lib/equipmentSlots'
 import type { EquipmentSlot } from '@/types'
@@ -453,8 +454,7 @@ export default function Inventory() {
             {t('character.inventory.carry_label')}
           </p>
           {!editingCap && (
-            <button
-              type="button"
+            <Pressable
               title={t('character.inventory.carry_edit')}
               onClick={() => {
                 setCapDraft(String(lbToDisplay(char.carry_capacity, system)))
@@ -464,7 +464,7 @@ export default function Inventory() {
               className="min-h-[44px] min-w-[44px] -my-2 -mr-2 flex items-center justify-center text-dnd-gold-dim active:opacity-70"
             >
               <Pencil size={14} />
-            </button>
+            </Pressable>
           )}
         </div>
 
@@ -494,7 +494,8 @@ export default function Inventory() {
                   Math.max(0, Math.round(displayToLb(Number(capDraft) || 0, system))),
                 )
               }
-              disabled={updateCapMutation.isPending || !(Number(capDraft) > 0)}
+              disabled={!(Number(capDraft) > 0)}
+              loading={updateCapMutation.isPending}
               haptic="success"
             >
               {t('common.save')}
@@ -519,7 +520,7 @@ export default function Inventory() {
               size="sm"
               icon={<RotateCcw size={12} />}
               onClick={() => resetCapMutation.mutate()}
-              disabled={resetCapMutation.isPending}
+              loading={resetCapMutation.isPending}
               haptic="warning"
             >
               {t('character.inventory.carry_reset_to_auto')}
@@ -560,8 +561,7 @@ export default function Inventory() {
           const isSingle = groupItems.length === 1
           return (
             <div key={type} className={isSingle ? 'mb-2' : 'mb-4'}>
-              <m.button
-                type="button"
+              <Pressable
                 onClick={() => toggleType(type)}
                 className={`sticky -top-4 z-[5] -mx-4 w-[calc(100%+2rem)] px-5 flex items-center gap-2 bg-dnd-bg/95 backdrop-blur-sm border-b border-dnd-border/40 text-left ${isSingle ? 'py-1' : 'py-2'} ${scrolled ? 'pr-24' : ''}`}
                 aria-expanded={!isCollapsed}
@@ -577,7 +577,7 @@ export default function Inventory() {
                 <span className="text-[10px] text-dnd-text-muted font-mono tabular-nums">
                   · {groupItems.length}
                 </span>
-              </m.button>
+              </Pressable>
               <AnimatePresence>
                 {!isCollapsed && (
                   <m.div
@@ -606,13 +606,15 @@ export default function Inventory() {
                             onEdit={() => handleEdit(item)}
                             onDelete={() => setDeleteTarget(item.id)}
                             onShare={canShareMessage() ? () => shareItem.mutate(item.id) : undefined}
-                            equipPending={toggleEquip.isPending}
-                            attackPending={attackMutation.isPending}
-                            usePending={consumeMutation.isPending}
+                            equipPending={toggleEquip.isPending && toggleEquip.variables?.itemId === item.id}
+                            attackPending={attackMutation.isPending && attackMutation.variables === item.id}
+                            usePending={consumeMutation.isPending && consumeMutation.variables === item.id}
+                            quantityPending={updateQty.isPending && updateQty.variables?.itemId === item.id}
+                            sharePending={shareItem.isPending && shareItem.variables === item.id}
                             propertyByKey={propertyByKey}
                             locale={locale}
                             onSetProperty={handleSetProperty}
-                            setPropertyPending={setPropertyMutation.isPending}
+                            setPropertyPending={setPropertyMutation.isPending && setPropertyMutation.variables?.itemId === item.id}
                           />
                         </m.div>
                       ))}
@@ -685,10 +687,14 @@ export default function Inventory() {
               {slotsAllowedFor(slotPickerItem.item_type).map((slot) => {
                 const Icon = SLOT_PLACEHOLDER_ICON[slot]
                 return (
-                  <m.button
+                  <Pressable
                     key={slot}
                     onClick={() => doEquip(slotPickerItem, slot)}
-                    disabled={toggleEquip.isPending}
+                    pending={
+                      toggleEquip.isPending &&
+                      toggleEquip.variables?.itemId === slotPickerItem.id &&
+                      toggleEquip.variables?.slot === slot
+                    }
                     className="flex items-center gap-2 p-3 rounded-xl bg-dnd-surface border border-dnd-border hover:border-dnd-gold/60 disabled:opacity-50"
                     whileTap={{ scale: 0.96 }}
                   >
@@ -696,7 +702,7 @@ export default function Inventory() {
                     <span className="text-sm font-cinzel text-dnd-gold-bright">
                       {t(`character.equipment.slots.${slot}`)}
                     </span>
-                  </m.button>
+                  </Pressable>
                 )
               })}
             </div>

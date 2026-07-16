@@ -9,6 +9,7 @@ import { api } from '@/api/client'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
+import Pressable from '@/components/ui/Pressable'
 import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import ScrollArea from '@/components/ScrollArea'
 import EmptyState from '@/components/ui/EmptyState'
@@ -454,6 +455,7 @@ export default function Spells() {
           concBannerExpanded={concBannerExpanded}
           setConcBannerExpanded={setConcBannerExpanded}
           onStop={() => concentrationMutation.mutate(null)}
+          stopPending={concentrationMutation.isPending && concentrationMutation.variables === null}
           labels={{
             concentration: t('character.spells.concentration'),
             stop: t('character.spells.stop_concentration'),
@@ -558,8 +560,7 @@ export default function Spells() {
                   (stesso pattern di Inventory): con top-0 l'header si fermava
                   16px sotto il bordo visivo della pagina. */}
               <div className="sticky -top-4 z-[5] -mx-4 w-[calc(100%+2rem)] px-5 py-2 flex items-center gap-2 bg-dnd-bg/95 backdrop-blur-sm border-b border-dnd-border/40">
-                <m.button
-                  type="button"
+                <Pressable
                   onClick={() => toggleLevel(level)}
                   className="flex items-center gap-2 flex-1 min-w-0 text-left"
                   aria-expanded={!collapsedLevels.has(level)}
@@ -571,14 +572,14 @@ export default function Spells() {
                   <span className="font-cinzel uppercase tracking-widest text-xs text-dnd-gold-bright truncate">
                     {level === 0 ? t('character.spells.cantrip_label') : t('character.spells.level_label', { level })}
                   </span>
-                </m.button>
+                </Pressable>
                 {slot && slot.total > 0 && (
                   <div className="flex gap-1 items-center shrink-0">
                     {Array.from({ length: slot.total }).map((_, i) => (
-                      <m.button
+                      <Pressable
                         key={i}
-                        type="button"
-                        disabled={useSlotMutation.isPending}
+                        pending={useSlotMutation.isPending && useSlotMutation.variables?.slotId === slot.id}
+                        spinnerSize={12}
                         onClick={() => {
                           if (i < slot.used) {
                             haptic.light()
@@ -636,10 +637,21 @@ export default function Spells() {
                             onEdit={() => handleEditSpell(spell)}
                             onRemove={() => setConfirmForget(spell)}
                             concentratingSpellId={concentratingId ?? null}
-                            usePending={castMutation.isPending || concentrationMutation.isPending}
+                            // "Use" only dispatches directly (no intervening modal/sheet) for a
+                            // concentration cantrip with no damage roll — every other path opens
+                            // CastSpellModal/SpellDamageSheet, which already show their own pending.
+                            usePending={
+                              spell.level === 0 && !spell.damage_dice && spell.is_concentration &&
+                              concentrationMutation.isPending && concentrationMutation.variables === spell.id
+                            }
                             showPreparedToggle={!!spellcasting?.has_preparing_class && spell.level >= 1}
                             onPreparedToggle={() => handlePreparedToggle(spell)}
-                            preparedPending={preparedMutation.isPending}
+                            preparedPending={preparedMutation.isPending && preparedMutation.variables?.spellId === spell.id}
+                            concentrationPending={
+                              concentrationMutation.isPending &&
+                              (concentrationMutation.variables === spell.id ||
+                                (concentrationMutation.variables === null && concentratingId === spell.id))
+                            }
                           />
                         </div>
                       ))}
@@ -730,6 +742,7 @@ interface ConcentrationPanelProps {
   concBannerExpanded: boolean
   setConcBannerExpanded: (updater: (v: boolean) => boolean) => void
   onStop: () => void
+  stopPending: boolean
   labels: {
     concentration: string
     stop: string
@@ -744,6 +757,7 @@ function ConcentrationPanel({
   concBannerExpanded,
   setConcBannerExpanded,
   onStop,
+  stopPending,
   labels,
 }: ConcentrationPanelProps) {
   return (
@@ -779,6 +793,7 @@ function ConcentrationPanel({
             variant="danger"
             size="sm"
             onClick={onStop}
+            loading={stopPending}
             icon={<Ban size={12} />}
             haptic="warning"
             className="shrink-0 whitespace-nowrap self-end @[22rem]:self-auto"
@@ -792,13 +807,12 @@ function ConcentrationPanel({
               {description}
             </p>
             {description.length > 120 && (
-              <button
-                type="button"
+              <Pressable
                 onClick={() => setConcBannerExpanded((v) => !v)}
                 className="mt-1 text-[11px] font-cinzel uppercase tracking-widest text-dnd-arcane-bright hover:text-dnd-gold-bright"
               >
                 {concBannerExpanded ? labels.collapse : labels.expand}
-              </button>
+              </Pressable>
             )}
           </div>
         )}

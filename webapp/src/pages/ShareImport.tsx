@@ -6,6 +6,7 @@ import { Gift, Mic, UserPlus, Users } from 'lucide-react'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
+import Pressable from '@/components/ui/Pressable'
 import Skeleton from '@/components/ui/Skeleton'
 import { api, ApiError } from '@/api/client'
 import { haptic } from '@/auth/telegram'
@@ -144,7 +145,7 @@ export default function ShareImport() {
         ) : (
           <div className="space-y-2">
             {characters.map((c) => (
-              <button
+              <Pressable
                 key={c.id}
                 onClick={() => setSelectedCharId(c.id)}
                 className={`w-full text-left px-3 py-2.5 rounded-lg border transition-colors
@@ -158,7 +159,7 @@ export default function ShareImport() {
                     {c.class_summary || t('character.select.new')}
                   </span>
                 </div>
-              </button>
+              </Pressable>
             ))}
           </div>
         )}

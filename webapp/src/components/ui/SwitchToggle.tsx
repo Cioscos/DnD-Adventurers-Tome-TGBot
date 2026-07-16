@@ -1,6 +1,7 @@
 import { m } from 'framer-motion'
 import { spring } from '@/styles/motion'
 import { haptic } from '@/auth/telegram'
+import Spinner from './Spinner'
 
 interface SwitchToggleProps {
   checked: boolean
@@ -9,6 +10,7 @@ interface SwitchToggleProps {
   hint?: React.ReactNode
   icon?: React.ReactNode
   disabled?: boolean
+  pending?: boolean
   'aria-label'?: string
 }
 
@@ -21,10 +23,11 @@ export default function SwitchToggle({
   hint,
   icon,
   disabled = false,
+  pending = false,
   'aria-label': ariaLabel,
 }: SwitchToggleProps) {
   const toggle = () => {
-    if (disabled) return
+    if (disabled || pending) return
     haptic.light()
     onChange(!checked)
   }
@@ -39,18 +42,21 @@ export default function SwitchToggle({
         e.stopPropagation()
         toggle()
       }}
-      disabled={disabled}
+      disabled={disabled || pending}
+      aria-busy={pending || undefined}
       className={`w-12 h-7 rounded-full transition-colors shrink-0 border flex items-center px-0.5 disabled:opacity-50
         ${checked
           ? 'bg-gradient-to-r from-dnd-gold-dim to-dnd-gold-bright border-dnd-gold-bright shadow-[0_0_8px_var(--dnd-gold-glow)] justify-end'
           : 'bg-dnd-surface border-dnd-border justify-start'}`}
-      whileTap={disabled ? undefined : { scale: 0.92 }}
+      whileTap={disabled || pending ? undefined : { scale: 0.92 }}
     >
       <m.span
         layout
         transition={spring.snappy}
-        className="block w-5 h-5 rounded-full bg-dnd-parchment shadow-parchment-md"
-      />
+        className="w-5 h-5 rounded-full bg-dnd-parchment shadow-parchment-md flex items-center justify-center text-dnd-ink"
+      >
+        {pending && <Spinner size={12} />}
+      </m.span>
     </m.button>
   )
 

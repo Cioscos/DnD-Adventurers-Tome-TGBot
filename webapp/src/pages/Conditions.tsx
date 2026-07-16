@@ -10,6 +10,7 @@ import type { Effect, HomebrewRule } from '@/lib/homebrew/types'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
+import Pressable from '@/components/ui/Pressable'
 import FilterChip from '@/components/ui/FilterChip'
 import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import { haptic } from '@/auth/telegram'
@@ -90,6 +91,11 @@ export default function Conditions() {
   const qc = useQueryClient()
   const toast = useToast()
   const [pendingExhaustion, setPendingExhaustion] = useState<number | null>(null)
+  // Key of the condition (or custom:<slug>) whose mutation.mutate() call is in
+  // flight — the shared `mutation` object also serves setExhaustion/removeCustom/
+  // resetAll, so a variables-diff would be ambiguous; tracking the key explicitly
+  // (set right before mutate, cleared on settle) mirrors pendingExhaustion above.
+  const [pendingConditionKey, setPendingConditionKey] = useState<string | null>(null)
   const [detailKey, setDetailKey] = useState<string | null>(null)
   const [showExhaustionDetails, setShowExhaustionDetails] = useState(false)
   const [filterActive, setFilterActive] = useState(false)
@@ -115,10 +121,12 @@ export default function Conditions() {
     onSuccess: (updated) => {
       qc.setQueryData(['character', charId], updated)
       setPendingExhaustion(null)
+      setPendingConditionKey(null)
       haptic.light()
     },
     onError: () => {
       setPendingExhaustion(null)
+      setPendingConditionKey(null)
       haptic.error()
     },
   })
@@ -183,6 +191,7 @@ export default function Conditions() {
 
   const toggle = (key: string) => {
     const current = conditions[key] ?? false
+    setPendingConditionKey(key)
     mutation.mutate({ ...conditions, [key]: !current })
   }
 
@@ -196,6 +205,7 @@ export default function Conditions() {
   // rendering. The leftover `false` shadow is cleaned up next time the source
   // rule's `remove_condition` action runs (which does a proper pop()).
   const removeCustom = (key: string) => {
+    setPendingConditionKey(key)
     mutation.mutate({ [key]: false })
   }
 
@@ -204,6 +214,7 @@ export default function Conditions() {
   // resulting entry is indistinguishable from one the rule applied itself —
   // CustomConditionCard renders it and the "start of turn" CTA can tick it.
   const applyCustom = (c: AppliableCustom) => {
+    setPendingConditionKey(c.key)
     mutation.mutate({
       ...conditions,
       [c.key]: { rule_id: c.ruleId, params: {} },
@@ -271,6 +282,7 @@ export default function Conditions() {
             icon={<RotateCcw size={12} />}
             haptic="warning"
             onClick={() => setConfirmResetOpen(true)}
+            disabled={mutation.isPending}
           >
             {t('character.conditions.reset_all')}
           </Button>
@@ -296,8 +308,7 @@ export default function Conditions() {
             <span className="font-cinzel uppercase tracking-widest text-xs text-dnd-gold-dim">
               {t('character.conditions.exhaustion_condition')}
             </span>
-            <button
-              type="button"
+            <Pressable
               aria-label={t('character.conditions.detail_aria')}
               aria-expanded={showExhaustionDetails}
               onClick={() => setShowExhaustionDetails((v) => !v)}
@@ -308,7 +319,7 @@ export default function Conditions() {
               }`}
             >
               <Info size={14} />
-            </button>
+            </Pressable>
           </div>
           <span className={`text-lg font-display font-black
             ${currentExhaustion > 0 ? 'text-dnd-amber' : 'text-dnd-text-faint'}`}>
@@ -321,9 +332,12 @@ export default function Conditions() {
             const isActive = displayLevel === level
             const isFilled = level <= displayLevel
             return (
-              <m.button
+              <Pressable
                 key={level}
                 onClick={() => setExhaustion(level)}
+                pending={mutation.isPending && pendingExhaustion === level}
+                disabled={mutation.isPending && pendingExhaustion !== level}
+                spinnerSize={12}
                 className={`flex-1 min-h-[44px] rounded-lg font-cinzel font-black text-sm
                   ${isActive
                     ? 'bg-gradient-ember text-dnd-parchment shadow-parchment-md'
@@ -334,7 +348,7 @@ export default function Conditions() {
                 transition={spring.press}
               >
                 {level}
-              </m.button>
+              </Pressable>
             )
           })}
         </div>
@@ -397,9 +411,10 @@ export default function Conditions() {
                   ? 'bg-gradient-to-br from-dnd-crimson-deep/40 to-dnd-crimson/20 border-dnd-crimson/60 shadow-halo-danger text-dnd-text'
                   : 'bg-dnd-surface border-dnd-border text-dnd-text-muted'}`}
             >
-              <m.button
-                type="button"
+              <Pressable
                 onClick={() => toggle(key)}
+                pending={mutation.isPending && pendingConditionKey === key}
+                disabled={mutation.isPending && pendingConditionKey !== key}
                 whileTap={{ scale: 0.95 }}
                 animate={active ? { x: [-2, 2, -1, 1, 0] } : { x: 0 }}
                 transition={{ duration: 0.25 }}
@@ -409,15 +424,14 @@ export default function Conditions() {
                 <span className="text-sm font-body leading-tight">
                   {t(`character.conditions.${key}`)}
                 </span>
-              </m.button>
-              <button
-                type="button"
+              </Pressable>
+              <Pressable
                 aria-label={t('character.conditions.detail_aria')}
                 onClick={() => setDetailKey(key)}
                 className="shrink-0 p-3 text-dnd-text-muted hover:text-dnd-gold-bright transition-colors"
               >
                 <Info size={16} />
-              </button>
+              </Pressable>
             </m.div>
           )
         })}
@@ -434,11 +448,11 @@ export default function Conditions() {
           </h3>
           <div className="flex flex-wrap gap-2">
             {appliableCustoms.map((c) => (
-              <m.button
+              <Pressable
                 key={c.key}
-                type="button"
                 onClick={() => applyCustom(c)}
-                disabled={mutation.isPending}
+                pending={mutation.isPending && pendingConditionKey === c.key}
+                disabled={mutation.isPending && pendingConditionKey !== c.key}
                 whileTap={{ scale: 0.95 }}
                 transition={spring.press}
                 aria-label={t('character.conditions.apply_custom_aria', { name: c.ruleName })}
@@ -450,7 +464,7 @@ export default function Conditions() {
               >
                 <Plus size={16} className="shrink-0" />
                 <span className="truncate max-w-[12rem]">{c.ruleName}</span>
-              </m.button>
+              </Pressable>
             ))}
           </div>
         </Surface>
@@ -477,7 +491,8 @@ export default function Conditions() {
                   value={value}
                   ruleName={ruleName}
                   onRemove={() => removeCustom(key)}
-                  isPending={mutation.isPending}
+                  isPending={mutation.isPending && pendingConditionKey === key}
+                  disabled={mutation.isPending && pendingConditionKey !== key}
                 />
               )
             })}
@@ -502,6 +517,7 @@ export default function Conditions() {
         cancelLabel={t('common.cancel')}
         confirmVariant="primary"
         onConfirm={resetAll}
+        loading={mutation.isPending}
       />
     </Layout>
   )

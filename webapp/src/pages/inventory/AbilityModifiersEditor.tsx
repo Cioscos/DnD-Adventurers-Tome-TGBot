@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Plus, X } from 'lucide-react'
 import ChipSelect from '@/components/ui/ChipSelect'
+import Pressable from '@/components/ui/Pressable'
 import type { AbilityModifier, AbilityName, AbilityModifierKind } from '@/types'
 
 const ABILITY_ORDER: AbilityName[] = [
@@ -106,25 +107,23 @@ export default function AbilityModifiersEditor({
               className="flex-1 min-w-0 min-h-[44px] bg-dnd-surface border border-dnd-border rounded-md px-2 py-1 text-sm text-center font-mono placeholder:text-dnd-text-faint focus:border-dnd-gold/60 focus:outline-none"
               aria-label={t('character.inventory.item.modifiers.value')}
             />
-            <button
-              type="button"
+            <Pressable
               onClick={() => remove(i)}
               className="shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center text-dnd-text-muted hover:text-dnd-crimson-bright transition-colors"
               aria-label={t('character.inventory.item.modifiers.remove')}
             >
               <X size={16} />
-            </button>
+            </Pressable>
           </div>
         </div>
       ))}
-      <button
-        type="button"
+      <Pressable
         onClick={add}
         className="inline-flex items-center gap-1 min-h-[44px] text-xs text-dnd-gold-bright hover:text-dnd-gold transition-colors px-2 py-1"
       >
         <Plus size={14} />
         {t('character.inventory.item.modifiers.add')}
-      </button>
+      </Pressable>
     </div>
   )
 }

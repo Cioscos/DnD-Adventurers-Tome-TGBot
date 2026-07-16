@@ -1,5 +1,5 @@
-import { m } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
+import Pressable from '@/components/ui/Pressable'
 
 interface ClassEntry {
   class_name: string
@@ -20,7 +20,7 @@ export default function ClassTabs({ classes, selected, onSelect }: Props) {
       {classes.map((c) => {
         const isActive = c.class_name === selected
         return (
-          <m.button
+          <Pressable
             key={c.class_name}
             role="tab"
             aria-selected={isActive}
@@ -35,7 +35,7 @@ export default function ClassTabs({ classes, selected, onSelect }: Props) {
           >
             {t(`dnd.classes.${c.class_name}`, { defaultValue: c.class_name })}
             <span className="ml-1 opacity-70">L{c.level}</span>
-          </m.button>
+          </Pressable>
         )
       })}
     </div>

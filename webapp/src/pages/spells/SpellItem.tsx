@@ -6,6 +6,7 @@ import {
   GiCrossedSwords as Swords, GiCheckedShield as Shield,
   GiSparkles as Sparkles,
 } from 'react-icons/gi'
+import Pressable from '@/components/ui/Pressable'
 import type { Spell } from '@/types'
 
 interface SpellItemProps {
@@ -22,6 +23,8 @@ interface SpellItemProps {
   showPreparedToggle: boolean
   onPreparedToggle: () => void
   preparedPending: boolean
+  /** P4-scoped: true quando la concentrationMutation condivisa sta operando su questo spell. */
+  concentrationPending: boolean
 }
 
 function SpellItemInner({
@@ -37,6 +40,7 @@ function SpellItemInner({
   showPreparedToggle,
   onPreparedToggle,
   preparedPending,
+  concentrationPending,
 }: SpellItemProps) {
   const { t } = useTranslation()
   const isConcentrating = concentratingSpellId === spell.id
@@ -65,10 +69,10 @@ function SpellItemInner({
     >
       <div className={`w-full flex items-center gap-1 pr-3 ${showPreparedToggle ? 'pl-1' : 'pl-3'}`}>
         {showPreparedToggle && (
-          <button
-            type="button"
+          <Pressable
             onClick={onPreparedToggle}
-            disabled={preparedPending}
+            pending={preparedPending}
+            spinnerSize={12}
             className="hit-44 shrink-0 flex items-center justify-center w-8 h-8 rounded-lg
                        active:opacity-60 disabled:opacity-40"
             aria-pressed={spell.is_prepared}
@@ -79,9 +83,9 @@ function SpellItemInner({
             {spell.is_prepared
               ? <BookmarkCheck size={16} className="text-dnd-gold-bright" />
               : <Bookmark size={16} className="text-dnd-text-muted/60" />}
-          </button>
+          </Pressable>
         )}
-        <button
+        <Pressable
           className="flex-1 min-w-0 flex items-center gap-2 py-2.5 text-left"
           onClick={onToggle}
         >
@@ -98,7 +102,7 @@ function SpellItemInner({
             {spell.is_pinned && <span className="text-xs">&#x1F4CC;</span>}
           </div>
           <span className="text-dnd-text-muted text-xs ml-1">{isExpanded ? '\u02C4' : '\u02C5'}</span>
-        </button>
+        </Pressable>
       </div>
 
       {isExpanded && (
@@ -171,21 +175,23 @@ function SpellItemInner({
 
           {/* Action buttons */}
           <div className="flex gap-2 flex-wrap border-t border-dnd-gold-dim/10 pt-2">
-            <button
+            <Pressable
               onClick={onUse}
-              disabled={usePending}
+              pending={usePending}
+              spinnerSize={12}
               className="flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg
                          bg-dnd-success/20 text-dnd-success-text border border-dnd-success/30
                          active:opacity-60 disabled:opacity-30"
             >
               <Sparkles size={12} />
               {t('character.spells.use')}
-            </button>
+            </Pressable>
 
             {showPreparedToggle && (
-              <button
+              <Pressable
                 onClick={onPreparedToggle}
-                disabled={preparedPending}
+                pending={preparedPending}
+                spinnerSize={12}
                 className={`flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg
                             border active:opacity-60 disabled:opacity-30
                             ${spell.is_prepared
@@ -196,12 +202,14 @@ function SpellItemInner({
                 {spell.is_prepared
                   ? t('character.spells.prepared')
                   : t('character.spells.prepare')}
-              </button>
+              </Pressable>
             )}
 
             {spell.is_concentration && (
-              <button
+              <Pressable
                 onClick={onConcentrationToggle}
+                pending={concentrationPending}
+                spinnerSize={12}
                 title={t('character.spells.concentration_button_title')}
                 aria-label={t('character.spells.concentration_button_title')}
                 className={`flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg
@@ -215,12 +223,11 @@ function SpellItemInner({
                 {isConcentrating
                   ? t('character.spells.stop_concentration')
                   : t('character.spells.concentration')}
-              </button>
+              </Pressable>
             )}
             <div ref={menuRef} className="relative ml-auto flex items-center">
-              <button
+              <Pressable
                 onClick={() => setMenuOpen((v) => !v)}
-                aria-haspopup="menu"
                 aria-expanded={menuOpen}
                 className="flex items-center justify-center w-11 h-9 rounded-lg
                            bg-dnd-surface-raised border border-dnd-border
@@ -228,7 +235,7 @@ function SpellItemInner({
                 title={t('character.spells.more_actions', { defaultValue: 'Altre azioni' })}
               >
                 <MoreVertical size={14} />
-              </button>
+              </Pressable>
               {menuOpen && (
                 <div
                   role="menu"
@@ -236,7 +243,7 @@ function SpellItemInner({
                              rounded-xl border border-dnd-gold-dim/40 bg-dnd-surface-raised
                              shadow-parchment-md overflow-hidden"
                 >
-                  <button
+                  <Pressable
                     role="menuitem"
                     onClick={() => { setMenuOpen(false); onEdit() }}
                     className="w-full flex items-center gap-2 px-3 py-2.5 text-sm font-body text-dnd-text
@@ -244,8 +251,8 @@ function SpellItemInner({
                   >
                     <Pencil size={14} className="text-dnd-info-text" />
                     {t('character.spells.edit')}
-                  </button>
-                  <button
+                  </Pressable>
+                  <Pressable
                     role="menuitem"
                     onClick={() => { setMenuOpen(false); onRemove() }}
                     className="w-full flex items-center gap-2 px-3 py-2.5 text-sm font-body
@@ -254,7 +261,7 @@ function SpellItemInner({
                   >
                     <Trash2 size={14} />
                     {t('character.spells.forget')}
-                  </button>
+                  </Pressable>
                 </div>
               )}
             </div>

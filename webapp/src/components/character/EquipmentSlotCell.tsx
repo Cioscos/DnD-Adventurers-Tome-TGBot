@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { m, useReducedMotion } from 'framer-motion'
 import { SLOT_PLACEHOLDER_ICON, equippedItemIcon } from '@/lib/equipmentSlots'
 import { haptic } from '@/auth/telegram'
+import Pressable from '@/components/ui/Pressable'
 import type { EquipmentSlot, Item } from '@/types'
 
 interface Props {
@@ -40,7 +41,7 @@ export default function EquipmentSlotCell({ slot, equipped, size = 'md', onTap }
   }, [equipped?.id, reduced])
 
   return (
-    <m.button
+    <Pressable
       type="button"
       onClick={() => { haptic.light(); onTap(equipped) }}
       whileTap={reduced ? undefined : { scale: 0.97 }}
@@ -86,6 +87,6 @@ export default function EquipmentSlotCell({ slot, equipped, size = 'md', onTap }
           className="text-dnd-text-faint"
         />
       )}
-    </m.button>
+    </Pressable>
   )
 }

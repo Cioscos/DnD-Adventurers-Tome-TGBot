@@ -1,6 +1,6 @@
-import { m } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import { GiPolarStar as Star } from 'react-icons/gi'
+import Pressable from '@/components/ui/Pressable'
 
 type Props = {
   available: boolean
@@ -13,10 +13,10 @@ export default function InspirationRerollButton({ available, pending = false, on
   if (!available) return null
 
   return (
-    <m.button
+    <Pressable
       type="button"
       onClick={onClick}
-      disabled={pending}
+      pending={pending}
       className="w-full py-2.5 rounded-xl border border-dnd-arcane/60
                  bg-gradient-to-r from-dnd-arcane-deep/40 to-dnd-gold-deep/30
                  text-dnd-gold-bright font-cinzel uppercase tracking-wider
@@ -26,6 +26,6 @@ export default function InspirationRerollButton({ available, pending = false, on
     >
       <Star size={16} className="text-dnd-arcane-bright" fill="currentColor" />
       {t('character.inspiration.use_reroll')}
-    </m.button>
+    </Pressable>
   )
 }

@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { m } from 'framer-motion'
 import { GiFist, GiCrossedSwords } from 'react-icons/gi'
 import { Target } from 'lucide-react'
 import { api, ApiError } from '@/api/client'
@@ -10,6 +9,7 @@ import { unarmedDamageDice } from '@/lib/unarmedStrike'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
 import SectionDivider from '@/components/ui/SectionDivider'
+import Pressable from '@/components/ui/Pressable'
 import WeaponAttackModal from '@/components/WeaponAttackModal'
 import type { WeaponAttackResult } from '@/components/WeaponAttackModal'
 import ActionsSkeleton from '@/components/skeletons/ActionsSkeleton'
@@ -90,15 +90,15 @@ export default function Actions() {
             <p className="font-cinzel text-dnd-gold">{t('character.actions.unarmed')}</p>
             <p className="text-xs text-dnd-text-muted">{t('character.actions.unarmed_desc', { damage: unarmedDamage })}</p>
           </div>
-          <m.button
+          <Pressable
             onClick={() => unarmedAttack.mutate()}
-            disabled={unarmedAttack.isPending}
+            pending={unarmedAttack.isPending}
             whileTap={{ scale: 0.93 }}
             className="flex items-center gap-1 text-sm font-medium px-4 h-11 rounded-lg bg-dnd-crimson/20 text-dnd-crimson-bright border border-dnd-crimson/30 disabled:opacity-50"
           >
             <Target size={14} />
             {t('character.actions.attack')}
-          </m.button>
+          </Pressable>
         </div>
       </Surface>
 
@@ -115,15 +115,15 @@ export default function Actions() {
               <div className="flex items-center gap-3">
                 <GiCrossedSwords size={22} className="text-dnd-gold shrink-0" />
                 <span className="flex-1 min-w-0 truncate">{w.name}</span>
-                <m.button
+                <Pressable
                   onClick={() => weaponAttack.mutate(w.id)}
-                  disabled={weaponAttack.isPending}
+                  pending={weaponAttack.isPending && weaponAttack.variables === w.id}
                   whileTap={{ scale: 0.93 }}
                   className="flex items-center gap-1 text-sm font-medium px-4 h-11 rounded-lg bg-dnd-crimson/20 text-dnd-crimson-bright border border-dnd-crimson/30 disabled:opacity-50"
                 >
                   <Target size={14} />
                   {t('character.actions.attack')}
-                </m.button>
+                </Pressable>
               </div>
             </Surface>
           ))}

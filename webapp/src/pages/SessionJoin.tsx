@@ -8,6 +8,7 @@ import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import Skeleton from '@/components/ui/Skeleton'
+import Pressable from '@/components/ui/Pressable'
 import { api, ApiError } from '@/api/client'
 import { haptic } from '@/auth/telegram'
 
@@ -161,8 +162,7 @@ export default function SessionJoin() {
             {code.length === 6 && /^[A-Z0-9]{6}$/.test(code) && (
               <Check size={14} className="text-dnd-emerald-bright" />
             )}
-            <button
-              type="button"
+            <Pressable
               onClick={async () => {
                 try {
                   const text = await navigator.clipboard.readText()
@@ -176,7 +176,7 @@ export default function SessionJoin() {
             >
               <ClipboardCheck size={12} />
               {t('common.paste')}
-            </button>
+            </Pressable>
           </div>
         </div>
       </Surface>
@@ -210,7 +210,7 @@ export default function SessionJoin() {
         ) : (
           <div className="space-y-2">
             {characters.map((c) => (
-              <button
+              <Pressable
                 key={c.id}
                 onClick={() => setSelectedCharId(c.id)}
                 className={`w-full text-left px-3 py-2.5 rounded-lg border transition-colors
@@ -224,7 +224,7 @@ export default function SessionJoin() {
                     {c.class_summary || t('character.select.new')}
                   </span>
                 </div>
-              </button>
+              </Pressable>
             ))}
           </div>
         )}
@@ -243,7 +243,7 @@ export default function SessionJoin() {
           variant="primary"
           size="lg"
           fullWidth
-          disabled={!canJoin || joinMutation.isPending}
+          disabled={!canJoin}
           loading={joinMutation.isPending}
           onClick={submit}
         >

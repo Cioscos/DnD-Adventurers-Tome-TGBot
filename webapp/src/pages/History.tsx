@@ -8,6 +8,7 @@ import { GiOpenBook as BookOpen } from 'react-icons/gi'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
 import Button from '@/components/ui/Button'
+import Pressable from '@/components/ui/Pressable'
 import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import Input from '@/components/ui/Input'
 import ScrollArea from '@/components/ScrollArea'
@@ -101,14 +102,13 @@ export default function History() {
             leadingIcon={<Search size={14} />}
             trailingAction={
               search ? (
-                <button
-                  type="button"
+                <Pressable
                   onClick={() => setSearch('')}
                   className="w-10 h-10 rounded-full flex items-center justify-center text-dnd-text-faint hover:text-dnd-gold-bright"
                   aria-label={t('common.cancel')}
                 >
                   <X size={14} />
-                </button>
+                </Pressable>
               ) : undefined
             }
           />

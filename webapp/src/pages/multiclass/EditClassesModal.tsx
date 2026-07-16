@@ -8,6 +8,7 @@ import { api } from '@/api/client'
 import Surface from '@/components/ui/Surface'
 import { CornerFlourishes } from '@/components/ui/Ornament'
 import Button from '@/components/ui/Button'
+import Pressable from '@/components/ui/Pressable'
 import Input from '@/components/ui/Input'
 import { haptic } from '@/auth/telegram'
 import SelectSheet from '@/components/ui/SelectSheet'
@@ -300,14 +301,13 @@ export default function EditClassesModal({ char, targetLevel, onClose }: Props) 
                   aria-label={`${e.className} · ${t('character.multiclass.level')}`}
                 />
                 {e.kind === 'new' && (
-                  <button
-                    type="button"
+                  <Pressable
                     onClick={() => removeNewEntry(e.tempId)}
                     className="hit-44 w-9 h-9 rounded-lg text-dnd-crimson-bright flex items-center justify-center hover:bg-dnd-crimson/10"
                     aria-label={t('character.multiclass.edit.remove_new')}
                   >
                     <Trash2 size={14} />
-                  </button>
+                  </Pressable>
                 )}
               </Surface>
             ))}

@@ -1,7 +1,7 @@
 import { useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { m } from 'framer-motion'
 import Surface from '@/components/ui/Surface'
+import Pressable from '@/components/ui/Pressable'
 import { haptic } from '@/auth/telegram'
 import type { SpellSlot } from '@/types'
 
@@ -31,7 +31,7 @@ export default function SpellSlotsSummary({ slots }: Props) {
 
   return (
     <Surface variant="tome" className="@container !p-2.5">
-      <m.button
+      <Pressable
         type="button"
         onClick={() => {
           haptic.light()
@@ -54,7 +54,7 @@ export default function SpellSlotsSummary({ slots }: Props) {
             </div>
           ))}
         </div>
-      </m.button>
+      </Pressable>
     </Surface>
   )
 }

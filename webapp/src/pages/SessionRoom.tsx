@@ -14,6 +14,7 @@ import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
 import Skeleton from '@/components/ui/Skeleton'
+import Pressable from '@/components/ui/Pressable'
 import SectionDivider from '@/components/ui/SectionDivider'
 import ConditionBadge from '@/components/ui/ConditionBadge'
 import { api } from '@/api/client'
@@ -338,8 +339,7 @@ export default function SessionRoom() {
               <p className="font-display font-bold text-3xl text-dnd-gold-bright tracking-[0.3em]">
                 {live.code}
               </p>
-              <button
-                type="button"
+              <Pressable
                 onClick={async () => {
                   try {
                     await navigator.clipboard.writeText(live.code)
@@ -353,17 +353,16 @@ export default function SessionRoom() {
                 aria-label={t('common.copy')}
               >
                 <Copy size={16} />
-              </button>
+              </Pressable>
               {canShareMessage() && (
-                <button
-                  type="button"
+                <Pressable
                   onClick={() => { haptic.light(); shareInvite.mutate() }}
-                  disabled={shareInvite.isPending}
+                  pending={shareInvite.isPending}
                   className="w-11 h-11 inline-flex items-center justify-center rounded-full bg-dnd-chip-bg border border-dnd-gold-dim/40 text-dnd-gold-bright hover:border-dnd-gold/70 disabled:opacity-50"
                   aria-label={t('share.invite')}
                 >
                   <Share2 size={16} />
-                </button>
+                </Pressable>
               )}
             </div>
             <p className="text-sm text-dnd-text-muted font-body italic mt-1">
@@ -449,6 +448,7 @@ export default function SessionRoom() {
         size="md"
         fullWidth
         icon={amGm ? <XOctagon size={16} /> : <LogOut size={16} />}
+        loading={amGm ? closeMutation.isPending : leaveMutation.isPending}
         onClick={confirmLeave}
       >
         {amGm ? t('session.close') : t('session.leave')}

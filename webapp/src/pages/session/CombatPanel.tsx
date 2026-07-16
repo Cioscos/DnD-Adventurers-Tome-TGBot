@@ -183,7 +183,7 @@ export default function CombatPanel({ live, sessionId, amGm, myUserId }: Props) 
           size="md"
           fullWidth
           icon={<ChevronRight size={16} />}
-          disabled={turnMutation.isPending}
+          loading={turnMutation.isPending}
           onClick={() => turnMutation.mutate('next')}
         >
           {t('session.combat.end_my_turn')}
@@ -219,7 +219,7 @@ export default function CombatPanel({ live, sessionId, amGm, myUserId }: Props) 
               size="sm"
               icon={<RefreshCw size={14} />}
               onClick={() => syncMutation.mutate()}
-              disabled={syncMutation.isPending}
+              loading={syncMutation.isPending}
               className="flex-1"
             >
               {t('session.combat.sync_pcs')}
@@ -231,7 +231,7 @@ export default function CombatPanel({ live, sessionId, amGm, myUserId }: Props) 
               size="md"
               fullWidth
               icon={<Swords size={16} />}
-              disabled={startMutation.isPending}
+              loading={startMutation.isPending}
               onClick={() => startMutation.mutate(false)}
             >
               {t('session.combat.start')}
@@ -242,7 +242,7 @@ export default function CombatPanel({ live, sessionId, amGm, myUserId }: Props) 
               size="sm"
               fullWidth
               icon={<Flag size={14} />}
-              disabled={endMutation.isPending}
+              loading={endMutation.isPending}
               onClick={() =>
                 telegramConfirm(
                   t('session.combat.end_confirm'),
@@ -283,6 +283,7 @@ export default function CombatPanel({ live, sessionId, amGm, myUserId }: Props) 
         confirmLabel={t('session.combat.skip_pc_confirm_cta')}
         cancelLabel={t('common.cancel')}
         confirmVariant="primary"
+        loading={turnMutation.isPending}
       />
     </>
   )

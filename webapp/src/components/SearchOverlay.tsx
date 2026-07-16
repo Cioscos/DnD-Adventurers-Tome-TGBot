@@ -6,6 +6,7 @@ import { SearchX, Wand2, Backpack, Sparkles, StickyNote } from 'lucide-react'
 import { GiCrystalBall } from 'react-icons/gi'
 import Sheet from '@/components/ui/Sheet'
 import Input from '@/components/ui/Input'
+import Pressable from '@/components/ui/Pressable'
 import { api } from '@/api/client'
 import { haptic } from '@/auth/telegram'
 import {
@@ -114,7 +115,7 @@ export default function SearchOverlay({ char, open, onClose }: SearchOverlayProp
                 </p>
                 <div className="space-y-1">
                   {ofType.map((r) => (
-                    <button
+                    <Pressable
                       key={r.id}
                       type="button"
                       onClick={() => openResult(r)}
@@ -130,7 +131,7 @@ export default function SearchOverlay({ char, open, onClose }: SearchOverlayProp
                           {subtitle(r)}
                         </span>
                       )}
-                    </button>
+                    </Pressable>
                   ))}
                 </div>
               </div>

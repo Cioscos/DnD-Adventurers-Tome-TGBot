@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { ChevronDown, Pencil } from 'lucide-react'
 import { haptic } from '@/auth/telegram'
 import { spring } from '@/styles/motion'
+import Pressable from '@/components/ui/Pressable'
 import type { AbilityScore } from '@/types'
 
 interface Props {
@@ -26,7 +27,7 @@ export default function AbilityScoreCard({ score, expanded, onToggle, onEdit }: 
     >
       {/* Stretched expand button (behind content) — only when there are bonuses to reveal. */}
       {hasBonus && (
-        <button
+        <Pressable
           type="button"
           onClick={() => { haptic.light(); onToggle() }}
           aria-expanded={expanded}
@@ -42,7 +43,7 @@ export default function AbilityScoreCard({ score, expanded, onToggle, onEdit }: 
           <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-center text-[clamp(7.5px,2.4vw,11px)] font-cinzel uppercase tracking-[0.04em] leading-tight text-dnd-text opacity-90">
             {fullName}
           </span>
-          <m.button
+          <Pressable
             type="button"
             onClick={() => { haptic.light(); onEdit() }}
             whileTap={{ scale: 0.9 }}
@@ -50,7 +51,7 @@ export default function AbilityScoreCard({ score, expanded, onToggle, onEdit }: 
             className="pointer-events-auto justify-self-end flex h-10 w-10 items-center justify-center rounded-full bg-dnd-bg border border-dnd-border text-dnd-gold"
           >
             <Pencil size={14} />
-          </m.button>
+          </Pressable>
         </div>
 
         {/* value + modifier (+ inline chevron when expandable) — same height with/without bonus */}

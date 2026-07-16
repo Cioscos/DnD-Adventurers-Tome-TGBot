@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
 import { Plus, Trash2, X } from 'lucide-react'
 import Button from '@/components/ui/Button'
+import IconButton from '@/components/ui/IconButton'
+import Pressable from '@/components/ui/Pressable'
 import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import FilterChip from '@/components/ui/FilterChip'
 import Input from '@/components/ui/Input'
@@ -257,14 +259,13 @@ export default function TriggersSection({ triggers, tables, onChange }: Triggers
                     ))}
                   </select>
                 </div>
-                <button
-                  type="button"
+                <IconButton
+                  icon={<Trash2 size={16} />}
                   onClick={() => setConfirmDeleteIndex(index)}
-                  className="shrink-0 w-11 h-11 inline-flex items-center justify-center rounded-lg text-dnd-crimson hover:text-dnd-crimson-bright hover:bg-dnd-crimson/10 transition-colors mt-6"
+                  haptic="none"
+                  className="shrink-0 w-11 h-11 rounded-lg text-dnd-crimson hover:text-dnd-crimson-bright hover:bg-dnd-crimson/10 mt-6"
                   aria-label={t('common.delete')}
-                >
-                  <Trash2 size={16} />
-                </button>
+                />
               </div>
 
               {/* Filters */}
@@ -287,25 +288,23 @@ export default function TriggersSection({ triggers, tables, onChange }: Triggers
                             {String(f.path)} {f.op} {String(f.value)}
                           </span>
                         )}
-                        <button
-                          type="button"
+                        <Pressable
                           onClick={() => handleRemoveFilter(index, fi)}
                           className="hit-44 w-7 h-7 inline-flex items-center justify-center rounded-full hover:bg-dnd-crimson/20 hover:text-dnd-crimson-bright text-dnd-gold-dim transition-colors"
                           aria-label={t('common.remove')}
                         >
                           <X size={12} />
-                        </button>
+                        </Pressable>
                       </span>
                     )
                   })}
-                  <button
-                    type="button"
+                  <Pressable
                     onClick={() => setFilterPickerIndex(index)}
                     className="inline-flex items-center gap-1 min-h-[36px] px-3 py-1 rounded-full bg-dnd-surface border border-dashed border-dnd-border text-dnd-text-muted hover:text-dnd-gold-bright hover:border-dnd-gold/60 text-[11px] font-body transition-colors"
                   >
                     <Plus size={12} />
                     <span>{t('homebrew.triggers.add_filter')}</span>
-                  </button>
+                  </Pressable>
                 </div>
               </div>
 
@@ -436,13 +435,12 @@ function FilterPicker({
               const label = presetLabel(preset, t) ?? preset.path
               return (
                 <li key={i}>
-                  <button
-                    type="button"
+                  <Pressable
                     onClick={() => onPick(preset)}
                     className="w-full min-h-[48px] px-3 py-2.5 rounded-xl bg-dnd-surface-raised border border-dnd-border hover:border-dnd-gold/70 text-left text-sm font-body text-dnd-text transition-colors"
                   >
                     {label}
-                  </button>
+                  </Pressable>
                 </li>
               )
             })}

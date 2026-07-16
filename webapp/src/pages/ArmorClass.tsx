@@ -9,6 +9,7 @@ import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
+import Pressable from '@/components/ui/Pressable'
 import { ShieldEmblem } from '@/components/ui/Ornament'
 import HomebrewBreakdownRow from '@/components/homebrew/HomebrewBreakdownRow'
 import ArmorClassSkeleton from '@/components/skeletons/ArmorClassSkeleton'
@@ -275,7 +276,7 @@ export default function ArmorClass() {
             size="sm"
             icon={<RotateCcw size={12} />}
             onClick={() => resetOverrideMutation.mutate()}
-            disabled={resetOverrideMutation.isPending}
+            loading={resetOverrideMutation.isPending}
             haptic="warning"
           >
             {t('character.ac.reset_to_auto')}
@@ -299,11 +300,10 @@ export default function ArmorClass() {
           ]).map((opt) => {
             const active = unarmoredAbility === opt.key
             return (
-              <m.button
+              <Pressable
                 key={String(opt.key)}
-                type="button"
                 onClick={() => unarmoredMutation.mutate(opt.key)}
-                disabled={unarmoredMutation.isPending}
+                pending={unarmoredMutation.isPending && unarmoredMutation.variables === opt.key}
                 whileTap={{ scale: 0.96 }}
                 className={`min-h-[44px] rounded-lg px-2 py-1.5 font-cinzel text-[11px] uppercase tracking-wider border transition-colors disabled:opacity-50 ${
                   active
@@ -318,7 +318,7 @@ export default function ArmorClass() {
                     {t('character.ac.unarmored_formula', { value: opt.preview })}
                   </span>
                 )}
-              </m.button>
+              </Pressable>
             )
           })}
         </div>

@@ -9,6 +9,7 @@ import { useNavigate } from 'react-router-dom'
 import { api, ApiError } from '@/api/client'
 import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
+import Pressable from '@/components/ui/Pressable'
 import type { CharacterFull, SessionFeedItem, SessionFeedResponse, SessionParticipant } from '@/types'
 import { haptic } from '@/auth/telegram'
 import { useOverlayDismiss } from '@/hooks/useOverlayDismiss'
@@ -286,14 +287,14 @@ export default function SessionFeed({
     <>
       {hasMoreBefore && (
         <div className="flex justify-center mb-2">
-          <button
-            type="button"
+          <Pressable
             onClick={loadPrevious}
-            disabled={loadingPrev}
+            pending={loadingPrev}
+            spinnerSize={12}
             className="min-h-[40px] text-xs font-cinzel uppercase tracking-wider text-dnd-gold-dim hover:text-dnd-gold-bright disabled:opacity-50 px-3 py-1 rounded-lg border border-dnd-border"
           >
             {loadingPrev ? t('session.loading_previous') : t('session.load_previous')}
-          </button>
+          </Pressable>
         </div>
       )}
 
@@ -394,14 +395,13 @@ export default function SessionFeed({
 
             if (isGrantToMe) {
               return (
-                <button
+                <Pressable
                   key={itemKey(it)}
-                  type="button"
                   onClick={() => handleGrantClick(it)}
                   className={`${baseClass} cursor-pointer hover:bg-dnd-amber/25 transition-colors`}
                 >
                   {bubbleContent}
-                </button>
+                </Pressable>
               )
             }
             return (
@@ -426,14 +426,13 @@ export default function SessionFeed({
               })}
             </span>
           </div>
-          <button
-            type="button"
+          <Pressable
             onClick={onClearWhisperTarget}
             aria-label={t('session.whisper.cancel')}
             className="hit-44 w-7 h-7 inline-flex items-center justify-center rounded-full text-dnd-amber hover:text-dnd-gold-bright"
           >
             <X size={14} />
-          </button>
+          </Pressable>
         </div>
       )}
 
@@ -469,7 +468,8 @@ export default function SessionFeed({
             !sendMutation.isPending &&
             sendMutation.mutate(chatInput.trim())
           }
-          disabled={!chatInput.trim() || sendMutation.isPending || onCooldown}
+          disabled={!chatInput.trim() || onCooldown}
+          loading={sendMutation.isPending}
           icon={<Send size={14} />}
         >
           {onCooldown ? `${cooldownRemaining}s` : t('session.send')}
@@ -485,15 +485,14 @@ export default function SessionFeed({
           <h2 className="font-display font-bold text-dnd-gold-bright text-base">
             {t('session.chat_and_history')}
           </h2>
-          <button
-            type="button"
+          <Pressable
             onClick={() => setFullscreen(false)}
             aria-label={t('session.chat_fullscreen_close')}
             title={t('session.chat_fullscreen_close')}
             className="w-10 h-10 inline-flex items-center justify-center rounded-full text-dnd-gold-dim hover:text-dnd-gold-bright hover:bg-dnd-surface transition-colors"
           >
             <X size={18} />
-          </button>
+          </Pressable>
         </header>
         <div className="flex-1 min-h-0 flex flex-col p-3 pb-safe gap-2">
           {chatBody}
@@ -506,15 +505,14 @@ export default function SessionFeed({
   return (
     <Surface variant="elevated" className="relative">
       <div className="flex items-center justify-end mb-1">
-        <button
-          type="button"
+        <Pressable
           onClick={() => setFullscreen(true)}
           aria-label={t('session.chat_fullscreen_open')}
           title={t('session.chat_fullscreen_open')}
           className="w-10 h-10 inline-flex items-center justify-center rounded-lg text-dnd-gold-dim hover:text-dnd-gold-bright hover:bg-dnd-surface-raised transition-colors"
         >
           <Maximize2 size={14} />
-        </button>
+        </Pressable>
       </div>
       {chatBody}
     </Surface>

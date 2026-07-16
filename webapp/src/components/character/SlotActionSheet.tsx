@@ -6,6 +6,7 @@ import { api } from '@/api/client'
 import { haptic } from '@/auth/telegram'
 import { useRegisterOverlay } from '@/store/overlayStore'
 import { useOverlayDismiss } from '@/hooks/useOverlayDismiss'
+import Pressable from '@/components/ui/Pressable'
 import type { EquipmentSlot, Item, CharacterFull } from '@/types'
 
 interface Props {
@@ -61,20 +62,20 @@ export default function SlotActionSheet({ charId, slot, item, onClose, onReplace
             <h2 className="text-sm font-bold text-dnd-gold-bright">{item.name}</h2>
           </header>
           <div className="flex flex-col">
-            <button type="button" onClick={() => onDetails(item)} className={`${itemBtnCls} text-dnd-text`}>
+            <Pressable type="button" onClick={() => onDetails(item)} className={`${itemBtnCls} text-dnd-text`}>
               {t('character.equipment.actions.details', { defaultValue: 'Details' })}
-            </button>
-            <button type="button" onClick={onReplace} className={`${itemBtnCls} text-dnd-text`}>
+            </Pressable>
+            <Pressable type="button" onClick={onReplace} className={`${itemBtnCls} text-dnd-text`}>
               {t('character.equipment.actions.replace', { defaultValue: 'Replace' })}
-            </button>
-            <button
+            </Pressable>
+            <Pressable
               type="button"
               onClick={() => unequip.mutate()}
-              disabled={unequip.isPending}
+              pending={unequip.isPending}
               className={`${itemBtnCls} text-dnd-crimson-bright disabled:opacity-60`}
             >
               {t('character.equipment.actions.unequip', { defaultValue: 'Unequip' })}
-            </button>
+            </Pressable>
           </div>
         </m.div>
       </m.div>

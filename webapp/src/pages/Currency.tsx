@@ -10,6 +10,7 @@ import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
+import Pressable from '@/components/ui/Pressable'
 import Sheet from '@/components/ui/Sheet'
 import ChipSelect from '@/components/ui/ChipSelect'
 import { haptic } from '@/auth/telegram'
@@ -188,7 +189,7 @@ export default function Currency() {
       <Surface variant="flat" className="!p-1.5">
         <div className="grid grid-cols-2 gap-1">
           {(['set', 'add'] as const).map((m) => (
-            <button
+            <Pressable
               key={m}
               onClick={() => setMode(m)}
               className={`min-h-[44px] rounded-lg font-cinzel text-xs uppercase tracking-widest transition-colors
@@ -197,7 +198,7 @@ export default function Currency() {
                   : 'bg-transparent text-dnd-text-muted'}`}
             >
               {t(`character.currency.mode_${m}`)}
-            </button>
+            </Pressable>
           ))}
         </div>
       </Surface>
@@ -251,7 +252,7 @@ export default function Currency() {
         size="lg"
         fullWidth
         onClick={() => mutation.mutate()}
-        disabled={mutation.isPending || !isDirty}
+        disabled={!isDirty}
         loading={mutation.isPending}
         icon={<Save size={18} />}
         haptic="success"
@@ -282,8 +283,7 @@ export default function Currency() {
               columns={5}
             />
             <div className="flex justify-center">
-              <m.button
-                type="button"
+              <Pressable
                 onClick={() => {
                   const tmp = convertSource
                   setConvertSource(convertTarget)
@@ -294,7 +294,7 @@ export default function Currency() {
                 aria-label={t('character.currency.swap')}
               >
                 <ArrowUpDown size={16} />
-              </m.button>
+              </Pressable>
             </div>
             <ChipSelect
               label={t('character.currency.convert_to')}

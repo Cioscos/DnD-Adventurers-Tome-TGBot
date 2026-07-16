@@ -279,6 +279,8 @@ Buttons read as inscribed plates pressed into the page. Primary is gold leaf wit
 - **Ghost:** transparent, gold text, no border at rest. Hover: gold-bright text only.
 - **Loading:** spinner (current-color, 4px stroke) replaces leading icon; label remains visible.
 - **Haptic:** every variant fires a Telegram haptic on press (light by default, success/error/warning/medium overridable).
+- **Kit only:** raw `<button>`/`<m.button>` are forbidden outside `components/ui/` (enforced by ESLint). Every tappable surface is `Button`, `IconButton`, or the unstyled `Pressable`; all of them express a pending state (spinner + disabled) that MUST be wired to `mutation.isPending` for any BE-triggering control. `SwitchToggle` takes `pending` for async toggles. The pending spinner appears immediately on tap — no delay, no minimum duration.
+- **Shared-mutation siblings:** when several controls fire the same mutation writing one shared payload (JSON blob), the pressed control shows `pending` and its siblings are `disabled` (no spinner) while the mutation is in flight — prevents stale-spread lost updates. Independent mutations block only the pressed control.
 
 ### Inputs
 Inputs are a single horizontal underline rule that warms to gold under focus, like a quill drawing the writing line. Floating placeholders are not used; the label is a Cinzel small-caps caption above the field.

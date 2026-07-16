@@ -7,6 +7,7 @@ import { m, AnimatePresence } from 'framer-motion'
 import { X, Package } from 'lucide-react'
 import { api } from '@/api/client'
 import { haptic } from '@/auth/telegram'
+import Pressable from '@/components/ui/Pressable'
 import { ITEM_TYPE_TO_SLOTS, handsConflict } from '@/lib/equipmentSlots'
 import { useRegisterOverlay } from '@/store/overlayStore'
 import { useOverlayDismiss } from '@/hooks/useOverlayDismiss'
@@ -134,14 +135,14 @@ export default function EquipItemPicker({ charId, slot, items, onClose }: Props)
             <h2 className="text-sm font-cinzel uppercase tracking-widest text-dnd-gold-bright">
               {t('character.equipment.picker.title', { defaultValue: 'Equip' })}: {slotLabel}
             </h2>
-            <button
+            <Pressable
               type="button"
               onClick={onClose}
               aria-label={t('common.close', { defaultValue: 'Close' })}
               className="w-11 h-11 flex items-center justify-center rounded-full border border-dnd-border hover:border-dnd-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dnd-gold focus-visible:ring-offset-2 focus-visible:ring-offset-dnd-surface-raised transition-colors"
             >
               <X size={18} className="text-dnd-text-muted" />
-            </button>
+            </Pressable>
           </header>
           {shownFacets.length > 0 && (
             <div className="px-4 py-3 border-b border-dnd-border bg-dnd-surface space-y-2">
@@ -154,7 +155,7 @@ export default function EquipItemPicker({ charId, slot, items, onClose }: Props)
                     {facetValues[key].map((v) => {
                       const on = filters[key].has(v)
                       return (
-                        <button
+                        <Pressable
                           key={v}
                           type="button"
                           onClick={() => toggleFilter(key, v)}
@@ -162,7 +163,7 @@ export default function EquipItemPicker({ charId, slot, items, onClose }: Props)
                             ${on ? 'bg-dnd-gold text-dnd-ink shadow-halo-gold' : 'bg-dnd-surface-raised text-dnd-text border border-dnd-border'}`}
                         >
                           {chipLabel(key, v)}
-                        </button>
+                        </Pressable>
                       )
                     })}
                   </div>
@@ -175,14 +176,14 @@ export default function EquipItemPicker({ charId, slot, items, onClose }: Props)
               <p className="text-sm text-dnd-text-faint italic">
                 {t('character.equipment.picker.empty', { defaultValue: 'No compatible items in inventory.' })}
               </p>
-              <button
+              <Pressable
                 type="button"
                 onClick={() => { onClose(); navigate(`/char/${charId}/inventory`) }}
                 className="inline-flex items-center gap-2 min-h-[44px] px-4 rounded-full bg-dnd-surface border border-dnd-gold-dim/60 hover:border-dnd-gold text-dnd-gold-bright font-cinzel text-[11px] uppercase tracking-widest transition-colors"
               >
                 <Package size={14} aria-hidden="true" />
                 {t('character.equipment.picker.go_to_inventory', { defaultValue: 'Open inventory' })}
-              </button>
+              </Pressable>
             </div>
           ) : (
             <ul className="divide-y divide-dnd-border/60">
@@ -190,10 +191,10 @@ export default function EquipItemPicker({ charId, slot, items, onClose }: Props)
                 const initial = it.name?.trim()?.[0]?.toUpperCase() ?? ''
                 return (
                   <li key={it.id}>
-                    <button
+                    <Pressable
                       type="button"
                       onClick={() => handlePick(it)}
-                      disabled={equip.isPending}
+                      pending={equip.isPending && equip.variables?.itemId === it.id}
                       className="w-full text-left px-4 py-3 hover:bg-dnd-surface focus-visible:outline-none focus-visible:bg-dnd-surface focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-dnd-gold flex items-center gap-3 disabled:opacity-60"
                     >
                       <m.span
@@ -209,7 +210,7 @@ export default function EquipItemPicker({ charId, slot, items, onClose }: Props)
                           {t(`character.inventory.types.${it.item_type}`, { defaultValue: it.item_type })} · {formatWeight(it.weight, system)}
                         </span>
                       </span>
-                    </button>
+                    </Pressable>
                   </li>
                 )
               })}

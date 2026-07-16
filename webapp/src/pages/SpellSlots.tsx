@@ -2,13 +2,13 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { m } from 'framer-motion'
 import { Minus, Plus, RotateCcw, X } from 'lucide-react'
 import { GiCutDiamond as Gem, GiSparkles as Sparkles } from 'react-icons/gi'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
+import Pressable from '@/components/ui/Pressable'
 import Reveal from '@/components/ui/Reveal'
 import EmptyState from '@/components/ui/EmptyState'
 import ConfirmSheet from '@/components/ui/ConfirmSheet'
@@ -28,13 +28,19 @@ interface TotalEditorProps {
   label: string
   decrementAria: string
   incrementAria: string
+  /** BE mutation in flight for THIS slot's total — drives the ± buttons' spinner/disabled state. */
+  pending: boolean
   onCommit: (next: number) => void
 }
 
-function TotalEditor({ total, label, decrementAria, incrementAria, onCommit }: TotalEditorProps) {
+function TotalEditor({ total, label, decrementAria, incrementAria, pending, onCommit }: TotalEditorProps) {
   const [draft, setDraft] = useState<string>(String(total))
   const [editing, setEditing] = useState(false)
   const repeatRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Handler currently registered on `window` for pointerup/pointercancel — kept so
+  // stopRepeat() can remove it even when the button itself never gets the event
+  // (see stopRepeat below).
+  const releaseRef = useRef<(() => void) | null>(null)
   const valueRef = useRef(total)
 
   useEffect(() => {
@@ -42,18 +48,31 @@ function TotalEditor({ total, label, decrementAria, incrementAria, onCommit }: T
     if (!editing) setDraft(String(total))
   }, [total, editing])
 
-  useEffect(() => () => {
-    if (repeatRef.current) clearTimeout(repeatRef.current)
-  }, [])
-
+  // Ends the repeat chain and detaches the window-level release listener.
+  // Registered on `window` (not just the button's own onPointerUp/onPointerLeave/
+  // onPointerCancel) because the ± button gets `disabled` mid-hold as soon as
+  // `pending` flips true (first tap already dispatches the mutation): a disabled
+  // <button> stops receiving pointer events, so relying solely on its own handlers
+  // would leave the repeat firing forever after release. Window still sees the
+  // pointerup/pointercancel (it bubbles from whatever element is now under the
+  // pointer once the disabled button drops out of hit-testing), so the chain
+  // always stops on release regardless of the button's disabled state.
   const stopRepeat = useCallback(() => {
     if (repeatRef.current) {
       clearTimeout(repeatRef.current)
       repeatRef.current = null
     }
+    if (releaseRef.current) {
+      window.removeEventListener('pointerup', releaseRef.current)
+      window.removeEventListener('pointercancel', releaseRef.current)
+      releaseRef.current = null
+    }
   }, [])
 
+  useEffect(() => stopRepeat, [stopRepeat])
+
   const startRepeat = useCallback((delta: 1 | -1) => {
+    stopRepeat() // defensive: clear any stale chain/listener from a previous press
     const apply = () => {
       const next = Math.max(1, valueRef.current + delta)
       if (next !== valueRef.current) {
@@ -69,7 +88,12 @@ function TotalEditor({ total, label, decrementAria, incrementAria, onCommit }: T
       repeatRef.current = setTimeout(tick, delay)
     }
     repeatRef.current = setTimeout(tick, 380)
-  }, [onCommit])
+
+    const release = () => stopRepeat()
+    releaseRef.current = release
+    window.addEventListener('pointerup', release, { once: true })
+    window.addEventListener('pointercancel', release, { once: true })
+  }, [onCommit, stopRepeat])
 
   const commitDraft = () => {
     const parsed = parseInt(draft, 10)
@@ -86,18 +110,19 @@ function TotalEditor({ total, label, decrementAria, incrementAria, onCommit }: T
       <span className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-gold-dim flex-1">
         {label}
       </span>
-      <m.button
+      <Pressable
         onPointerDown={() => startRepeat(-1)}
         onPointerUp={stopRepeat}
         onPointerLeave={stopRepeat}
         onPointerCancel={stopRepeat}
+        pending={pending}
+        spinnerSize={12}
         className="w-11 h-11 rounded-lg bg-dnd-surface border border-dnd-border flex items-center justify-center text-dnd-gold"
         whileTap={{ scale: 0.9 }}
         aria-label={decrementAria}
-        type="button"
       >
         <Minus size={16} />
-      </m.button>
+      </Pressable>
       <input
         type="number"
         min={1}
@@ -116,18 +141,19 @@ function TotalEditor({ total, label, decrementAria, incrementAria, onCommit }: T
                    font-mono font-bold text-dnd-gold-bright tabular-nums
                    focus:border-dnd-gold/60 focus:outline-none"
       />
-      <m.button
+      <Pressable
         onPointerDown={() => startRepeat(1)}
         onPointerUp={stopRepeat}
         onPointerLeave={stopRepeat}
         onPointerCancel={stopRepeat}
+        pending={pending}
+        spinnerSize={12}
         className="w-11 h-11 rounded-lg bg-dnd-surface border border-dnd-border flex items-center justify-center text-dnd-gold"
         whileTap={{ scale: 0.9 }}
         aria-label={incrementAria}
-        type="button"
       >
         <Plus size={16} />
-      </m.button>
+      </Pressable>
     </div>
   )
 }
@@ -251,14 +277,14 @@ export default function SpellSlots() {
                     {slot.available}/{slot.total}
                   </span>
                   {slotsMode !== 'auto' && (
-                    <m.button
+                    <Pressable
                       onClick={() => setConfirmRemoveSlot(slot)}
                       className="w-11 h-11 rounded-lg text-dnd-crimson-bright flex items-center justify-center hover:bg-dnd-crimson/10"
                       whileTap={{ scale: 0.9 }}
                       aria-label={t('character.slots.remove_level_aria', { level: slot.level })}
                     >
                       <X size={16} />
-                    </m.button>
+                    </Pressable>
                   )}
                 </div>
               </div>
@@ -266,9 +292,10 @@ export default function SpellSlots() {
               {/* Slot gems */}
               <div className="flex gap-2 flex-wrap mb-3">
                 {Array.from({ length: slot.total }).map((_, i) => (
-                  <m.button
+                  <Pressable
                     key={i}
-                    type="button"
+                    pending={updateSlot.isPending && updateSlot.variables?.slotId === slot.id}
+                    spinnerSize={12}
                     onClick={() => {
                       if (i < slot.used) {
                         haptic.light()
@@ -305,6 +332,7 @@ export default function SpellSlots() {
                   label={t('character.slots.total')}
                   decrementAria={t('character.slots.decrement_total')}
                   incrementAria={t('character.slots.increment_total')}
+                  pending={updateTotal.isPending && updateTotal.variables?.slotId === slot.id}
                   onCommit={(next) => updateTotal.mutate({ slotId: slot.id, total: next })}
                 />
               )}
@@ -324,8 +352,10 @@ export default function SpellSlots() {
           </div>
           <div className="flex flex-wrap gap-2">
             {missingLevels.map((level) => (
-              <m.button
+              <Pressable
                 key={level}
+                pending={addSlot.isPending && addSlot.variables === level}
+                spinnerSize={12}
                 onClick={() => addSlot.mutate(level)}
                 className="min-h-[44px] px-3 py-1.5 rounded-lg bg-dnd-surface border border-dnd-arcane/60
                            text-dnd-arcane-bright font-cinzel text-xs uppercase tracking-wider
@@ -333,7 +363,7 @@ export default function SpellSlots() {
                 whileTap={{ scale: 0.92 }}
               >
                 + {t('character.slots.level', { level })}
-              </m.button>
+              </Pressable>
             ))}
           </div>
         </Surface>

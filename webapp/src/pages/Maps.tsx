@@ -9,6 +9,7 @@ import { GiTreasureMap as MapIcon } from 'react-icons/gi'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
 import Button from '@/components/ui/Button'
+import Pressable from '@/components/ui/Pressable'
 import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import EmptyState from '@/components/ui/EmptyState'
 import { haptic } from '@/auth/telegram'
@@ -174,7 +175,7 @@ export default function Maps() {
               exit={{ opacity: 0 }}
             >
               <div className="flex justify-end p-4 pt-safe shrink-0 relative z-10">
-                <m.button
+                <Pressable
                   onClick={(e) => { e.stopPropagation(); setOverlayMap(null) }}
                   className="w-12 h-12 flex items-center justify-center rounded-full
                              bg-gradient-gold text-dnd-ink border-2 border-dnd-gold-bright
@@ -183,7 +184,7 @@ export default function Maps() {
                   aria-label={t('common.close')}
                 >
                   <X size={24} strokeWidth={3} />
-                </m.button>
+                </Pressable>
               </div>
               <div
                 className="flex-1 flex items-center justify-center p-4 overflow-auto"

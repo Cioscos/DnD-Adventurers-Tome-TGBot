@@ -4,6 +4,7 @@ import { UploadCloud, X, FileText } from 'lucide-react'
 import Surface from '@/components/ui/Surface'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
+import Pressable from '@/components/ui/Pressable'
 import FilterChip from '@/components/ui/FilterChip'
 import { api } from '@/api/client'
 import { haptic } from '@/auth/telegram'
@@ -134,7 +135,7 @@ export default function MapUploadForm({
         <label className="block text-[11px] uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
           {t('character.maps.select_files')}
         </label>
-        <button
+        <Pressable
           type="button"
           onClick={() => fileInputRef.current?.click()}
           onDragOver={(e) => { e.preventDefault(); setIsDragOver(true) }}
@@ -155,7 +156,7 @@ export default function MapUploadForm({
           <span className="text-[10px] font-mono text-dnd-text-faint">
             {t('character.maps.dropzone_accept')}
           </span>
-        </button>
+        </Pressable>
         <input
           ref={fileInputRef}
           type="file"
@@ -205,7 +206,7 @@ export default function MapUploadForm({
                   )}
                 </div>
                 {!isUploading && (
-                  <button
+                  <Pressable
                     type="button"
                     onClick={() => removeFile(idx)}
                     className="w-11 h-11 flex items-center justify-center shrink-0 rounded-lg
@@ -213,7 +214,7 @@ export default function MapUploadForm({
                     aria-label={`${t('common.remove')} ${file.name}`}
                   >
                     <X size={16} />
-                  </button>
+                  </Pressable>
                 )}
               </div>
             )

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Mic, Square } from 'lucide-react'
 import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
+import Pressable from '@/components/ui/Pressable'
 import Input from '@/components/ui/Input'
 
 interface VoiceRecorderProps {
@@ -119,24 +120,24 @@ export default function VoiceRecorder({ onRecordComplete, onCancel, isPending }:
         {/* Record / Stop buttons */}
         <div className="flex justify-center gap-4">
           {!isRecording && !recordedBlob && (
-            <button
+            <Pressable
               onClick={startRecording}
               aria-label={t('character.notes.record_voice')}
               className="w-16 h-16 rounded-full bg-dnd-crimson text-dnd-parchment flex items-center justify-center
                          active:opacity-70 transition-opacity"
             >
               <Mic size={28} />
-            </button>
+            </Pressable>
           )}
           {isRecording && (
-            <button
+            <Pressable
               onClick={stopRecording}
               aria-label={t('character.notes.recording')}
               className="w-16 h-16 rounded-full bg-dnd-crimson/30 border-2 border-dnd-crimson text-dnd-crimson-bright
                          flex items-center justify-center active:opacity-70"
             >
               <Square size={22} fill="currentColor" />
-            </button>
+            </Pressable>
           )}
         </div>
 
@@ -148,7 +149,7 @@ export default function VoiceRecorder({ onRecordComplete, onCancel, isPending }:
               src={URL.createObjectURL(recordedBlob)}
               className="w-full"
             />
-            <button
+            <Pressable
               onClick={() => {
                 setRecordedBlob(null)
                 setRecordingDuration(0)
@@ -156,7 +157,7 @@ export default function VoiceRecorder({ onRecordComplete, onCancel, isPending }:
               className="min-h-[44px] px-3 text-xs text-dnd-text-muted hover:text-dnd-gold-bright transition-colors"
             >
               {t('character.notes.discard_recording')}
-            </button>
+            </Pressable>
           </div>
         )}
       </Surface>

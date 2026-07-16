@@ -71,7 +71,7 @@ export default function InitiativeCta({ sessionId, combatant }: Props) {
         size="md"
         fullWidth
         icon={<Dices size={18} />}
-        disabled={rollMutation.isPending}
+        loading={rollMutation.isPending}
         onClick={() => rollMutation.mutate()}
       >
         {t('session.combat.roll_initiative')}

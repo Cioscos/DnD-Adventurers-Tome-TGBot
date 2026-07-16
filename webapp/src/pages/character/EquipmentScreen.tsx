@@ -10,6 +10,7 @@ import EquipmentStatsFooter from '@/components/character/EquipmentStatsFooter'
 import SectionDivider from '@/components/ui/SectionDivider'
 import Sheet from '@/components/ui/Sheet'
 import Button from '@/components/ui/Button'
+import Pressable from '@/components/ui/Pressable'
 import { api } from '@/api/client'
 import { haptic } from '@/auth/telegram'
 import { useToast } from '@/hooks/useToast'
@@ -75,19 +76,19 @@ export default function EquipmentScreen({ char }: Props) {
         onSlotTap={handleSlotTap}
         silhouetteUrl={effectiveUrl}
         silhouetteAction={
-          <button
+          <Pressable
             type="button"
             onClick={() => {
               haptic.light()
               if (char.has_custom_silhouette) setSilMenu(true)
               else fileRef.current?.click()
             }}
-            disabled={uploadSil.isPending}
+            pending={uploadSil.isPending}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-dnd-surface-raised border border-dnd-gold-dim/60 text-dnd-gold-bright text-[10px] font-cinzel uppercase tracking-widest shadow-parchment-md disabled:opacity-50 active:scale-95"
           >
             {char.has_custom_silhouette ? <Pencil size={12} /> : <ImagePlus size={12} />}
             {uploadSil.isPending ? t('character.equipment.silhouette.uploading') : t('character.equipment.silhouette.upload')}
-          </button>
+          </Pressable>
         }
       />
 

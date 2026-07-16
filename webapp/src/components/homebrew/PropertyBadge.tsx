@@ -1,5 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { Sparkles, Hash, Check, X } from 'lucide-react'
+import IconButton from '@/components/ui/IconButton'
+import Pressable from '@/components/ui/Pressable'
 import type { Property } from '@/lib/homebrew/types'
 import { tonePerValue, type BadgeTone } from './propertyBadge.utils'
 
@@ -124,24 +126,22 @@ export default function PropertyBadge({
           <span className="opacity-75">{label}:</span>{' '}
           <span className="font-semibold tabular-nums">{valueLabel}</span>
         </span>
-        <button
-          type="button"
+        <IconButton
+          icon={<>&minus;</>}
           onClick={() => step(-1)}
-          disabled={disabled}
-          className="w-11 h-11 -my-1.5 shrink-0 inline-flex items-center justify-center rounded-md text-current active:opacity-60 disabled:opacity-30"
+          loading={disabled}
+          haptic="none"
+          className="w-11 h-11 -my-1.5 rounded-md text-current active:opacity-60 disabled:opacity-30"
           aria-label="-"
-        >
-          &minus;
-        </button>
-        <button
-          type="button"
+        />
+        <IconButton
+          icon={<>+</>}
           onClick={() => step(1)}
-          disabled={disabled}
-          className="w-11 h-11 -my-1.5 shrink-0 inline-flex items-center justify-center rounded-md text-current active:opacity-60 disabled:opacity-30"
+          loading={disabled}
+          haptic="none"
+          className="w-11 h-11 -my-1.5 rounded-md text-current active:opacity-60 disabled:opacity-30"
           aria-label="+"
-        >
-          +
-        </button>
+        />
       </div>
     )
   }
@@ -157,15 +157,14 @@ export default function PropertyBadge({
       }
     }
     return (
-      <button
-        type="button"
+      <Pressable
         onClick={handleTap}
-        disabled={disabled}
+        pending={disabled}
         className={`flex items-center gap-1.5 rounded-lg px-2 min-h-[44px] w-full text-left ${TONE_CLASSES[tone]} active:opacity-60 disabled:opacity-50`}
         title={`${label}: ${valueLabel}`}
       >
         {inner}
-      </button>
+      </Pressable>
     )
   }
 

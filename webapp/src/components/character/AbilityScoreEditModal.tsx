@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { m } from 'framer-motion'
 import { Minus, Plus } from 'lucide-react'
 import Sheet from '@/components/ui/Sheet'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
+import Pressable from '@/components/ui/Pressable'
 
 const MIN = 1
 const MAX = 30
@@ -41,7 +41,7 @@ export default function AbilityScoreEditModal({
     <Sheet open={open} onClose={onClose} title={t('character.stats.edit_title', { ability: label })} centered>
       <div className="px-5 py-5 space-y-5">
         <div className="flex items-center justify-center gap-4">
-          <m.button
+          <Pressable
             onClick={() => setValue((v) => clamp((Number.isFinite(v) ? v : currentValue) - 1))}
             disabled={value <= MIN}
             whileTap={{ scale: 0.9 }}
@@ -49,7 +49,7 @@ export default function AbilityScoreEditModal({
             className="w-14 h-14 rounded-xl bg-dnd-crimson/15 text-dnd-crimson-bright border border-dnd-crimson/40 flex items-center justify-center disabled:opacity-30"
           >
             <Minus size={24} />
-          </m.button>
+          </Pressable>
 
           <div className="flex flex-col items-center min-w-[96px]">
             <span className="text-5xl font-mono font-bold tabular-nums text-dnd-text leading-none">
@@ -60,7 +60,7 @@ export default function AbilityScoreEditModal({
             </span>
           </div>
 
-          <m.button
+          <Pressable
             onClick={() => setValue((v) => clamp((Number.isFinite(v) ? v : currentValue) + 1))}
             disabled={value >= MAX}
             whileTap={{ scale: 0.9 }}
@@ -68,7 +68,7 @@ export default function AbilityScoreEditModal({
             className="w-14 h-14 rounded-xl bg-dnd-emerald/20 text-dnd-emerald-bright border border-dnd-emerald/40 flex items-center justify-center disabled:opacity-30"
           >
             <Plus size={24} />
-          </m.button>
+          </Pressable>
         </div>
 
         <Input
