@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import Surface from '@/components/ui/Surface'
+import Pressable from '@/components/ui/Pressable'
 
 interface Props {
   round: number
@@ -17,17 +18,17 @@ export default function TurnBar({ round, activeName, amGm, pending, onPrev, onNe
     <Surface variant="elevated">
       <div className="flex items-center justify-between gap-2">
         {amGm ? (
-          <button
-            type="button"
+          <Pressable
             onClick={onPrev}
-            disabled={pending}
+            pending={pending}
+            spinnerSize={16}
             aria-label={t('session.combat.prev')}
             className="w-11 h-11 inline-flex items-center justify-center rounded-full
                        bg-dnd-chip-bg border border-dnd-gold-dim/40 text-dnd-gold-bright
                        active:scale-95 disabled:opacity-40"
           >
             <ChevronLeft size={20} />
-          </button>
+          </Pressable>
         ) : <div className="w-11" />}
         <div className="text-center min-w-0">
           <p className="text-xs uppercase tracking-widest text-dnd-gold-dim font-cinzel">
@@ -40,17 +41,17 @@ export default function TurnBar({ round, activeName, amGm, pending, onPrev, onNe
           )}
         </div>
         {amGm ? (
-          <button
-            type="button"
+          <Pressable
             onClick={onNext}
-            disabled={pending}
+            pending={pending}
+            spinnerSize={16}
             aria-label={t('session.combat.next')}
             className="w-11 h-11 inline-flex items-center justify-center rounded-full
                        bg-dnd-chip-bg border border-dnd-gold-dim/40 text-dnd-gold-bright
                        active:scale-95 disabled:opacity-40"
           >
             <ChevronRight size={20} />
-          </button>
+          </Pressable>
         ) : <div className="w-11" />}
       </div>
     </Surface>

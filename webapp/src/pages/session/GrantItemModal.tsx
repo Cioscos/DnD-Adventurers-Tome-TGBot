@@ -5,6 +5,7 @@ import { GiCrown as Crown } from 'react-icons/gi'
 import { Check, User } from 'lucide-react'
 import Sheet from '@/components/ui/Sheet'
 import Button from '@/components/ui/Button'
+import Pressable from '@/components/ui/Pressable'
 import ItemForm from '@/pages/inventory/ItemForm'
 import { buildItemMetadata, type ItemFormData } from '@/pages/inventory/itemMetadata'
 import { api } from '@/api/client'
@@ -100,9 +101,8 @@ export default function GrantItemModal({
             {players.map((p) => {
               const checked = selected.has(p.user_id)
               return (
-                <button
+                <Pressable
                   key={p.user_id}
-                  type="button"
                   onClick={() => toggle(p.user_id)}
                   aria-pressed={checked}
                   className={`w-full min-h-[48px] flex items-center gap-3 px-3 py-2.5 rounded-lg border text-left transition-colors
@@ -124,7 +124,7 @@ export default function GrantItemModal({
                   {p.user_id === gmUserId && (
                     <Crown size={12} className="text-dnd-gold-bright" />
                   )}
-                </button>
+                </Pressable>
               )
             })}
           </div>
