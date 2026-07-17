@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   quickActionKey,
   resolveQuickActions,
+  readQuickActions,
   hitDiceRemaining,
   QUICK_ACTIONS_MAX,
   type QuickActionEntry,
@@ -81,5 +82,43 @@ describe('resolveQuickActions', () => {
     const entries: QuickActionEntry[] = Array.from({ length: 15 }, () => ({ type: 'rest', rest: 'long' as const }))
     expect(QUICK_ACTIONS_MAX).toBe(12)
     expect(resolveQuickActions(char, entries)).toHaveLength(12)
+  })
+})
+
+describe('readQuickActions', () => {
+  it('array valido → passthrough, altrimenti []', () => {
+    const entries = [{ type: 'weapon', id: 10 }]
+    expect(readQuickActions({ quick_actions: entries })).toEqual(entries)
+    expect(readQuickActions(undefined)).toEqual([])
+    expect(readQuickActions({})).toEqual([])
+    expect(readQuickActions({ quick_actions: 'x' })).toEqual([])
+    expect(readQuickActions({ quick_actions: 42 })).toEqual([])
+  })
+})
+
+describe('resolveQuickActions — tipi legacy (weapon/save/spell)', () => {
+  it('risolve le voci valide preservando l\'ordine misto', () => {
+    const entries: QuickActionEntry[] = [
+      { type: 'spell', id: 20 },
+      { type: 'save', ability: 'dexterity' },
+      { type: 'weapon', id: 10 },
+    ]
+    const resolved = resolveQuickActions(char, entries)
+    expect(resolved.map((r) => r.key)).toEqual(['spell-20', 'save-dexterity', 'weapon-10'])
+  })
+
+  it('scarta arma non-weapon, save sconosciuto, incantesimo eliminato', () => {
+    const entries: QuickActionEntry[] = [
+      { type: 'weapon', id: 11 },          // è ammunition, non weapon
+      { type: 'save', ability: 'luck' },   // ability inesistente
+      { type: 'spell', id: 999 },          // eliminato
+    ]
+    expect(resolveQuickActions(char, entries)).toEqual([])
+  })
+})
+
+describe('quickActionKey — variante spell', () => {
+  it('genera spell-<id>', () => {
+    expect(quickActionKey({ type: 'spell', id: 20 })).toBe('spell-20')
   })
 })
