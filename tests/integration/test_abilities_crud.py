@@ -153,3 +153,22 @@ async def test_patch_uses_is_clamped_to_max(client):
     r = await client.patch(f"/characters/{cid}/abilities/{aid}", json={"uses": -3})
     assert r.status_code == 200
     assert r.json()["uses"] == 0
+
+
+async def test_lowering_max_uses_clamps_uses_without_firing_use(client):
+    r = await client.post("/characters", json={"name": "Clamp MaxUses"})
+    cid = r.json()["id"]
+    r = await client.post(
+        f"/characters/{cid}/abilities",
+        json={"name": "Sanità", "max_uses": 200, "uses": 200, "is_active": True,
+              "restoration_type": "manual"},
+    )
+    aid = r.json()["id"]
+
+    # Abbassare solo max_uses clampa uses al nuovo tetto…
+    r = await client.patch(f"/characters/{cid}/abilities/{aid}", json={"max_uses": 5})
+    assert r.status_code == 200
+    assert r.json()["max_uses"] == 5
+    assert r.json()["uses"] == 5
+    # …senza segnalare un falso "uso" (nessuna notifica homebrew nel payload).
+    assert r.json().get("homebrew_notifications") in (None, [])
