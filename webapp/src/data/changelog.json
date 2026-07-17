@@ -34,8 +34,12 @@
         ]
       },
       "fixed": {
-        "it": [],
-        "en": []
+        "it": [
+          "Azioni rapide su mobile: i contatori (usi abilità, munizioni) occupano ora l'intera riga e il pulsante + non esce più dal bordo della card; tasti +/− ingranditi a 44px per il tocco."
+        ],
+        "en": [
+          "Quick Actions on mobile: counters (ability uses, ammunition) now span the full row and the + button no longer overflows the card edge; +/− buttons enlarged to 44px for easier tapping."
+        ]
       }
     },
     {

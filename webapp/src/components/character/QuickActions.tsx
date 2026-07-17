@@ -474,21 +474,21 @@ export default function QuickActions({ char }: Props) {
                 return (
                   <div
                     key={a.key}
-                    className={`min-h-[44px] flex items-center gap-1.5 px-2 py-1.5 rounded-xl
-                                bg-dnd-surface border border-dnd-border ${spanFull ? 'col-span-2' : ''}`}
+                    className="min-h-[44px] flex items-center gap-1.5 px-2 py-1.5 rounded-xl
+                                bg-dnd-surface border border-dnd-border col-span-2"
                   >
                     <Icon size={14} className="text-dnd-gold shrink-0" />
                     <span className="flex-1 min-w-0 truncate text-xs text-dnd-text font-body">
                       {actionLabel(a)}
                     </span>
                     <IconButton
-                      icon={<Minus size={12} />}
+                      icon={<Minus size={16} />}
                       onClick={() => change(Math.max(0, current - 1))}
                       loading={rowPending}
                       disabled={current <= 0}
                       haptic="light"
                       aria-label={`${actionLabel(a)} -1`}
-                      className="w-8 h-8 rounded-lg bg-dnd-crimson/15 text-dnd-crimson-bright border border-dnd-crimson/30 disabled:opacity-30"
+                      className="w-11 h-11 rounded-lg bg-dnd-crimson/15 text-dnd-crimson-bright border border-dnd-crimson/30 disabled:opacity-30"
                     />
                     <Pressable
                       type="button"
@@ -500,13 +500,13 @@ export default function QuickActions({ char }: Props) {
                       {current}{max != null ? <span className="text-dnd-text-muted text-[10px]">/{max}</span> : null}
                     </Pressable>
                     <IconButton
-                      icon={<Plus size={12} />}
+                      icon={<Plus size={16} />}
                       onClick={() => change(max != null ? Math.min(max, current + 1) : current + 1)}
                       loading={rowPending}
                       disabled={max != null && current >= max}
                       haptic="light"
                       aria-label={`${actionLabel(a)} +1`}
-                      className="w-8 h-8 rounded-lg bg-dnd-emerald/15 text-dnd-emerald-bright border border-dnd-emerald/30 disabled:opacity-30"
+                      className="w-11 h-11 rounded-lg bg-dnd-emerald/15 text-dnd-emerald-bright border border-dnd-emerald/30 disabled:opacity-30"
                     />
                   </div>
                 )
