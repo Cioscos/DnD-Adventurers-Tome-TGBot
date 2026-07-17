@@ -51,6 +51,7 @@ export default function HpQuickSheet({ char, open, onClose }: HpQuickSheetProps)
     hpMutation.mutate({ op, value: n }, {
       onSuccess: (updated) => {
         qc.setQueryData(['character', char.id], updated)
+        qc.invalidateQueries({ queryKey: ['homebrew-resources', char.id] })
         haptic.success()
         const conc = updated.concentration_save
         if (conc?.lost_concentration) {
@@ -60,7 +61,10 @@ export default function HpQuickSheet({ char, open, onClose }: HpQuickSheetProps)
           message: t(op === 'damage' ? 'character.hp.quick_damage_undo' : 'character.hp.quick_heal_undo', { n }),
           actionLabel: t('character.hp.quick_undo_action'),
           onUndo: () => hpMutation.mutate({ op: 'set_current', value: prevCurrent }, {
-            onSuccess: (u) => qc.setQueryData(['character', char.id], u),
+            onSuccess: (u) => {
+              qc.setQueryData(['character', char.id], u)
+              qc.invalidateQueries({ queryKey: ['homebrew-resources', char.id] })
+            },
           }),
         })
         setAmount('')
