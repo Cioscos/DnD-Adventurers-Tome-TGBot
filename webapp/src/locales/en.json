@@ -881,6 +881,10 @@
       "custom_section": "Custom abilities",
       "class_feature_locked": "Managed automatically by the class: you can spend its uses and edit its description.",
       "edit_description": "Edit description",
+      "set_uses_title": "Set uses",
+      "set_uses_hint": "From 0 to {{max}}",
+      "set_uses_hint_unbounded": "Number (minimum 0)",
+      "tap_to_edit": "tap to edit",
       "filters": {
         "class": "Class",
         "type": "Type",

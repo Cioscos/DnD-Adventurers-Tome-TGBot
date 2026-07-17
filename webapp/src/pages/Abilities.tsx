@@ -11,6 +11,7 @@ import Sheet from '@/components/ui/Sheet'
 import Button from '@/components/ui/Button'
 import Pressable from '@/components/ui/Pressable'
 import IconButton from '@/components/ui/IconButton'
+import UsesEditSheet from '@/components/ui/UsesEditSheet'
 import Input from '@/components/ui/Input'
 import ChipSelect from '@/components/ui/ChipSelect'
 import SwitchToggle from '@/components/ui/SwitchToggle'
@@ -83,6 +84,9 @@ export default function Abilities() {
   // cambiare solo la descrizione, via PATCH { description }).
   const [descFeature, setDescFeature] = useState<Ability | null>(null)
   const [descDraft, setDescDraft] = useState('')
+  // Set manuale degli usi (stepper numerico > soglia pip): tap sul numero
+  // apre l'editor invece di richiedere N tap su −/+.
+  const [usesEditAbility, setUsesEditAbility] = useState<Ability | null>(null)
   // Filtri a chips: multi-selezione: unione fra chip della stessa dimensione,
   // intersezione fra dimensioni diverse (set vuoto = nessun vincolo).
   const [classFilter, setClassFilter] = useState<Set<number>>(() => new Set())
@@ -423,12 +427,21 @@ export default function Abilities() {
                       haptic="none"
                       className="w-11 h-11 rounded-xl bg-dnd-crimson/15 text-dnd-crimson-bright border border-dnd-crimson/30 disabled:opacity-30"
                     />
-                    <div className="flex-1 text-center">
+                    <Pressable
+                      className="flex-1 text-center rounded-lg py-1 border border-transparent
+                                 hover:border-dnd-gold-dim/40 transition-colors"
+                      onClick={() => setUsesEditAbility(ab)}
+                      whileTap={{ scale: 0.97 }}
+                      aria-label={t('character.abilities.set_uses_title')}
+                    >
                       <p className="text-lg font-display font-black text-dnd-gold-bright">
                         <span className="font-mono">{current}</span>
                         <span className="text-sm text-dnd-text-muted"> / {max}</span>
                       </p>
-                    </div>
+                      <p className="text-[9px] font-cinzel uppercase tracking-widest text-dnd-text-faint">
+                        {t('character.abilities.tap_to_edit')}
+                      </p>
+                    </Pressable>
                     <IconButton
                       icon={<Plus size={16} />}
                       onClick={() => usesMutation.mutate({ abilityId: ab.id, uses: Math.min(max, current + 1) })}
@@ -771,6 +784,24 @@ export default function Abilities() {
           )}
         </div>
       </Sheet>
+
+      <UsesEditSheet
+        open={usesEditAbility != null}
+        title={usesEditAbility
+          ? `${t('character.abilities.set_uses_title')} · ${usesEditAbility.name}`
+          : t('character.abilities.set_uses_title')}
+        value={usesEditAbility?.uses ?? 0}
+        max={usesEditAbility?.max_uses ?? null}
+        isPending={usesMutation.isPending}
+        onClose={() => setUsesEditAbility(null)}
+        onSave={(n) => {
+          if (!usesEditAbility) return
+          usesMutation.mutate(
+            { abilityId: usesEditAbility.id, uses: n },
+            { onSuccess: () => setUsesEditAbility(null) },
+          )
+        }}
+      />
     </Layout>
   )
 }

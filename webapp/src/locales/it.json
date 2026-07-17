@@ -881,6 +881,10 @@
       "custom_section": "Abilità personalizzate",
       "class_feature_locked": "Gestita automaticamente dalla classe: puoi consumarne gli usi e modificarne la descrizione.",
       "edit_description": "Modifica descrizione",
+      "set_uses_title": "Imposta usi",
+      "set_uses_hint": "Da 0 a {{max}}",
+      "set_uses_hint_unbounded": "Numero (minimo 0)",
+      "tap_to_edit": "tocca per modificare",
       "filters": {
         "class": "Classe",
         "type": "Tipo",
