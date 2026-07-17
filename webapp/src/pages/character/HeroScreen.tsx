@@ -21,6 +21,7 @@ import PassiveAbilityDetailModal from '@/pages/abilities/PassiveAbilityDetailMod
 import SpellSlotsSummary from '@/components/character/SpellSlotsSummary'
 import HeroStatsSection from '@/components/character/HeroStatsSection'
 import QuickActions from '@/components/character/QuickActions'
+import HpQuickSheet from '@/components/character/HpQuickSheet'
 import type { Ability, CharacterFull } from '@/types'
 import { useUnitSettings, formatWeightValue, weightUnitLabel } from '@/store/unitSettings'
 
@@ -47,6 +48,7 @@ export default function HeroScreen({ char }: Props) {
 
   const [detailCondKey, setDetailCondKey] = useState<string | null>(null)
   const [detailAbility, setDetailAbility] = useState<Ability | null>(null)
+  const [hpSheetOpen, setHpSheetOpen] = useState(false)
 
   const hpMax = char.hit_points + (char.hp_max_homebrew_modifier ?? 0)
   const acTotal = char.ac + (char.ac_breakdown?.homebrew ?? 0)
@@ -134,7 +136,11 @@ export default function HeroScreen({ char }: Props) {
           <div className="flex-1 min-w-0">
             <Pressable
               type="button"
-              onClick={() => { haptic.light(); navigate(`/char/${char.id}/hp`) }}
+              onClick={() => {
+                haptic.light()
+                if (char.is_dead) navigate(`/char/${char.id}/hp`)
+                else setHpSheetOpen(true)
+              }}
               whileTap={{ scale: 0.99 }}
               className="w-full text-left"
               aria-label={t('character.hp.title', { defaultValue: 'Hit Points' })}
@@ -343,6 +349,7 @@ export default function HeroScreen({ char }: Props) {
           onClose={() => setDetailAbility(null)}
         />
       )}
+      <HpQuickSheet char={char} open={hpSheetOpen} onClose={() => setHpSheetOpen(false)} />
     </div>
   )
 }

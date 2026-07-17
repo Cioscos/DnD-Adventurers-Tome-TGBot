@@ -182,6 +182,11 @@
       "quick_heal_undo": "Healed {{n}} HP",
       "quick_temp_undo": "Added {{n}} temp HP",
       "quick_undo_action": "Undo",
+      "quick_sheet_title": "Damage / Heal",
+      "quick_damage": "Damage",
+      "quick_heal": "Heal",
+      "quick_apply": "Apply",
+      "go_full_page": "Full HP page",
       "homebrew_max_bonus_label": "Homebrew HP Max",
       "hit_dice_remaining_label": "available"
     },
