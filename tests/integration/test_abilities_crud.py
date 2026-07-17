@@ -134,3 +134,22 @@ async def test_delete_unknown_ability_is_404(client):
     cid = await _create_character(client)
     r = await client.delete(f"/characters/{cid}/abilities/999999")
     assert r.status_code == 404, r.text
+
+
+async def test_patch_uses_is_clamped_to_max(client):
+    r = await client.post("/characters", json={"name": "Clamp Uses"})
+    cid = r.json()["id"]
+    r = await client.post(
+        f"/characters/{cid}/abilities",
+        json={"name": "Sanità", "max_uses": 200, "uses": 200, "is_active": True,
+              "restoration_type": "manual"},
+    )
+    aid = r.json()["id"]
+
+    r = await client.patch(f"/characters/{cid}/abilities/{aid}", json={"uses": 999})
+    assert r.status_code == 200
+    assert r.json()["uses"] == 200
+
+    r = await client.patch(f"/characters/{cid}/abilities/{aid}", json={"uses": -3})
+    assert r.status_code == 200
+    assert r.json()["uses"] == 0

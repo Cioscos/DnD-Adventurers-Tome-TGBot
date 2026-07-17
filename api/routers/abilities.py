@@ -98,6 +98,9 @@ async def update_ability(
     old_uses = ability.uses
     for field, value in body.model_dump(exclude_unset=True).items():
         setattr(ability, field, value)
+    # Backstop del set manuale (spec 2026-07-17): uses vive in [0, max_uses].
+    if ability.max_uses is not None and ability.uses is not None:
+        ability.uses = max(0, min(ability.uses, ability.max_uses))
     await session.flush()
 
     notifications: list[dict] = []
