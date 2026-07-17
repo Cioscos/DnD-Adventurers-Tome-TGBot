@@ -1,8 +1,7 @@
-import { m } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
-import { ChevronDown, Pencil } from 'lucide-react'
+import { Pencil } from 'lucide-react'
 import { haptic } from '@/auth/telegram'
-import { spring } from '@/styles/motion'
+import ExpandChevron from '@/components/ui/ExpandChevron'
 import Pressable from '@/components/ui/Pressable'
 import type { AbilityScore } from '@/types'
 
@@ -66,14 +65,7 @@ export default function AbilityScoreCard({ score, expanded, onToggle, onEdit }: 
             {modStr}
           </span>
           {hasBonus && (
-            <m.span
-              aria-hidden
-              className="mb-1.5 text-dnd-gold-bright"
-              animate={{ rotate: expanded ? 180 : 0 }}
-              transition={spring.snappy}
-            >
-              <ChevronDown size={14} />
-            </m.span>
+            <ExpandChevron open={expanded} className="mb-1.5 text-dnd-gold-bright" />
           )}
         </div>
       </div>

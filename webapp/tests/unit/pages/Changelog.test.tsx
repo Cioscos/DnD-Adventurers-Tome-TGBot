@@ -17,7 +17,11 @@ vi.mock('framer-motion', async () => {
     for (const k in props) if (!MOTION.has(k)) clean[k] = props[k]
     return React.createElement(tag, clean)
   }
-  return { m: new Proxy({}, { get: (_t: object, tag: string | symbol) => make(String(tag)) }), AnimatePresence: (p: { children?: unknown }) => React.createElement(React.Fragment, null, p.children) }
+  return {
+    m: new Proxy({}, { get: (_t: object, tag: string | symbol) => make(String(tag)) }),
+    AnimatePresence: (p: { children?: unknown }) => React.createElement(React.Fragment, null, p.children),
+    useReducedMotion: () => false,
+  }
 })
 vi.mock('@/components/Layout', async () => {
   const React = await import('react')

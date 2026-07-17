@@ -18,6 +18,7 @@ vi.mock('framer-motion', async () => {
   return {
     m: new Proxy({}, { get: (_t: object, tag: string | symbol) => make(String(tag)) }),
     AnimatePresence: (p: { children?: unknown }) => React.createElement(React.Fragment, null, p.children),
+    useReducedMotion: () => false,
   }
 })
 vi.mock('@/styles/motion', () => ({ ease: {}, spring: new Proxy({}, { get: () => ({}) }) }))
