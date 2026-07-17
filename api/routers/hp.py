@@ -276,6 +276,24 @@ async def rest(
         # Reset all spell slots
         for slot in char.spell_slots:
             slot.used = 0
+        # Recupero dadi vita (RAW PHB): fino a metà del totale (min 1),
+        # dal dado più grande in caso di multiclasse (spec 2026-07-17).
+        total_level = sum(c.level for c in char.classes)
+        hd_budget = max(1, total_level // 2)
+        hd_regained = 0
+        for cls in sorted(char.classes, key=lambda c: (c.hit_die or 8), reverse=True):
+            if hd_budget <= 0:
+                break
+            spent = min(cls.hit_dice_used or 0, cls.level)
+            if spent <= 0:
+                continue
+            back = min(spent, hd_budget)
+            cls.hit_dice_used = spent - back
+            hd_budget -= back
+            hd_regained += back
+        if hd_regained:
+            _add_history(session, char.id, "hit_dice",
+                         f"Dadi vita recuperati: {hd_regained} (riposo lungo)")
         # Restore long-rest AND short-rest abilities (long rest includes short rest
         # benefits). Le ex-risorse di classe sono ora Ability e rientrano qui.
         for ability in char.abilities:
