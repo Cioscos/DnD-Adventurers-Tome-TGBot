@@ -85,3 +85,16 @@ async def test_short_rest_does_not_restore_hit_dice(client):
     r = await client.post(f"/characters/{cid}/rest", json={"rest_type": "short"})
     assert r.status_code == 200
     assert r.json()["classes"][0]["hit_dice_used"] == 2
+
+
+async def test_manual_hit_dice_used_update_is_clamped(client):
+    cid = await _create_character(client)
+    class_id = await _add_class(client, cid, level=4)
+
+    r = await client.patch(f"/characters/{cid}/classes/{class_id}", json={"hit_dice_used": 99})
+    assert r.status_code == 200, r.text
+    assert next(c for c in r.json()["classes"] if c["id"] == class_id)["hit_dice_used"] == 4
+
+    r = await client.patch(f"/characters/{cid}/classes/{class_id}", json={"hit_dice_used": -5})
+    assert r.status_code == 200
+    assert next(c for c in r.json()["classes"] if c["id"] == class_id)["hit_dice_used"] == 0
