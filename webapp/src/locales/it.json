@@ -74,7 +74,15 @@
       "expert_label_other": "esperti",
       "none_m": "Nessuno",
       "none_f": "Nessuna",
-      "speed_homebrew_label": "Velocità · regola homebrew"
+      "speed_homebrew_label": "Velocità · regola homebrew",
+      "customize": "Personalizza schermata",
+      "layout_title": "Layout schermata",
+      "section_slots": "Slot incantesimo",
+      "section_stats": "Statistiche",
+      "section_quick_actions": "Azioni rapide",
+      "move_up": "Sposta su",
+      "move_down": "Sposta giù",
+      "toggle_visibility": "Mostra/nascondi"
     },
     "quick_actions": {
       "title": "Azioni rapide",

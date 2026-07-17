@@ -74,7 +74,15 @@
       "expert_label_other": "expert",
       "none_m": "None",
       "none_f": "None",
-      "speed_homebrew_label": "Speed · homebrew rule"
+      "speed_homebrew_label": "Speed · homebrew rule",
+      "customize": "Customize screen",
+      "layout_title": "Screen layout",
+      "section_slots": "Spell slots",
+      "section_stats": "Statistics",
+      "section_quick_actions": "Quick actions",
+      "move_up": "Move up",
+      "move_down": "Move down",
+      "toggle_visibility": "Show/hide"
     },
     "quick_actions": {
       "title": "Quick actions",

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
-import { CircleDot } from 'lucide-react'
+import { CircleDot, SlidersHorizontal } from 'lucide-react'
 import {
   GiCheckedShield, GiFlame, GiHeartPlus, GiKnapsack, GiLightningTrio,
   GiPotionBall, GiSkullCrossedBones,
@@ -22,6 +22,8 @@ import SpellSlotsSummary from '@/components/character/SpellSlotsSummary'
 import HeroStatsSection from '@/components/character/HeroStatsSection'
 import QuickActions from '@/components/character/QuickActions'
 import HpQuickSheet from '@/components/character/HpQuickSheet'
+import HeroLayoutSheet from '@/components/character/HeroLayoutSheet'
+import { readHeroLayout, type HeroSectionKey } from '@/lib/heroLayout'
 import type { Ability, CharacterFull } from '@/types'
 import { useUnitSettings, formatWeightValue, weightUnitLabel } from '@/store/unitSettings'
 
@@ -49,6 +51,7 @@ export default function HeroScreen({ char }: Props) {
   const [detailCondKey, setDetailCondKey] = useState<string | null>(null)
   const [detailAbility, setDetailAbility] = useState<Ability | null>(null)
   const [hpSheetOpen, setHpSheetOpen] = useState(false)
+  const [layoutSheetOpen, setLayoutSheetOpen] = useState(false)
 
   const hpMax = char.hit_points + (char.hp_max_homebrew_modifier ?? 0)
   const acTotal = char.ac + (char.ac_breakdown?.homebrew ?? 0)
@@ -69,6 +72,8 @@ export default function HeroScreen({ char }: Props) {
   const damageBadges = DMG_MODIFIER_GROUPS.flatMap(({ key, tone, Icon }) =>
     (damageModifiers[key] ?? []).map((value) => ({ id: `${key}-${value}`, group: key, tone, Icon, value })),
   )
+
+  const layout = readHeroLayout(char.settings as Record<string, unknown> | undefined)
 
   return (
     <div className="@container p-4 space-y-3 pb-safe">
@@ -322,14 +327,29 @@ export default function HeroScreen({ char }: Props) {
         )}
       </Surface>
 
-      {/* Spell slots summary */}
-      {char.spell_slots && <SpellSlotsSummary slots={char.spell_slots} />}
+      {/* Sezioni sotto la hero card: ordine e visibilità da settings.hero_layout */}
+      {layout.order.map((key: HeroSectionKey) => {
+        if (layout.hidden.includes(key)) return null
+        if (key === 'slots') return char.spell_slots
+          ? <SpellSlotsSummary key={key} slots={char.spell_slots} />
+          : null
+        if (key === 'stats') return <HeroStatsSection key={key} char={char} />
+        return <QuickActions key={key} char={char} />
+      })}
 
-      {/* Summary shortcuts — fills the area left empty after progression/vitals moved out */}
-      <HeroStatsSection char={char} />
-
-      {/* Azioni rapide personalizzabili (armi / TS / incantesimi) */}
-      <QuickActions char={char} />
+      {/* Personalizzazione layout (spec 2026-07-17) */}
+      <Pressable
+        type="button"
+        onClick={() => { haptic.light(); setLayoutSheetOpen(true) }}
+        whileTap={{ scale: 0.98 }}
+        className="w-full min-h-[44px] flex items-center justify-center gap-2 rounded-xl
+                   text-dnd-text-faint hover:text-dnd-gold-dim transition-colors"
+      >
+        <SlidersHorizontal size={13} aria-hidden />
+        <span className="text-[11px] font-cinzel uppercase tracking-widest">
+          {t('character.hero.customize')}
+        </span>
+      </Pressable>
 
       {/* Modals */}
       {detailCondKey !== null && (
@@ -350,6 +370,7 @@ export default function HeroScreen({ char }: Props) {
         />
       )}
       <HpQuickSheet char={char} open={hpSheetOpen} onClose={() => setHpSheetOpen(false)} />
+      <HeroLayoutSheet char={char} open={layoutSheetOpen} onClose={() => setLayoutSheetOpen(false)} />
     </div>
   )
 }
