@@ -48,8 +48,10 @@ export default function HitDiceModal({
 
         <div className="space-y-3">
           {classes.map((cls) => {
-            const count = hitDiceCounts[cls.id] ?? 0
             const remaining = hitDiceRemaining(cls)
+            // Clamp at read-time: dopo una spesa il pool scende mentre lo sheet
+            // resta montato — il count salvato non deve mai superare i residui.
+            const count = Math.min(remaining, hitDiceCounts[cls.id] ?? 0)
             const thisPending = isPending && pendingClassId === cls.id
             return (
               <div key={cls.id} className="flex items-center gap-3 p-2 rounded-xl bg-dnd-surface border border-dnd-border">
