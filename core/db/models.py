@@ -279,7 +279,7 @@ class CharacterClass(Base):
     # Hit die size for this class (e.g. 6, 8, 10, 12)
     hit_die: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     # Dadi vita spesi (residui = level - hit_dice_used). Spec 2026-07-17.
-    hit_dice_used: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    hit_dice_used: Mapped[int] = mapped_column(Integer, default=0, nullable=False, server_default="0")
 
     character: Mapped["Character"] = relationship(back_populates="classes")
     # NB: le ex-"risorse di classe" (Furia, Punti Ki, …) sono state assorbite in
