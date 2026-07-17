@@ -364,6 +364,11 @@ async def spend_hit_dice(
     if body.count < 1:
         raise HTTPException(status_code=400, detail="count must be >= 1")
 
+    # Pool residuo per classe (spec 2026-07-17): level - hit_dice_used.
+    remaining = max(0, cls.level - (cls.hit_dice_used or 0))
+    if body.count > remaining:
+        raise HTTPException(status_code=409, detail="hit_dice_exhausted")
+
     hit_die = cls.hit_die or 8
 
     # CON modifier
@@ -378,6 +383,8 @@ async def spend_hit_dice(
     old_hp = char.current_hit_points
     char.current_hit_points = min(char.hit_points, old_hp + total_healed)
     actual_healed = char.current_hit_points - old_hp
+
+    cls.hit_dice_used = (cls.hit_dice_used or 0) + body.count
 
     _add_history(session, char.id, "hit_dice",
                  f"Dado vita {body.count}d{hit_die}+{con_mod}: "

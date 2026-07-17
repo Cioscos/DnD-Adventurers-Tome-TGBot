@@ -28,3 +28,30 @@ async def test_new_class_exposes_hit_dice_used_zero(client):
     r = await client.get(f"/characters/{cid}")
     cls = r.json()["classes"][0]
     assert cls["hit_dice_used"] == 0
+
+
+async def test_spend_increments_used_and_respects_pool(client):
+    cid = await _create_character(client)
+    class_id = await _add_class(client, cid, level=3)
+    await client.patch(f"/characters/{cid}/hp", json={"op": "set_max", "value": 50})
+    await client.patch(f"/characters/{cid}/hp", json={"op": "set_current", "value": 1})
+
+    r = await client.post(f"/characters/{cid}/hit_dice/spend", json={"class_id": class_id, "count": 2})
+    assert r.status_code == 200, r.text
+
+    r = await client.get(f"/characters/{cid}")
+    assert r.json()["classes"][0]["hit_dice_used"] == 2
+
+
+async def test_overspend_returns_409(client):
+    cid = await _create_character(client)
+    class_id = await _add_class(client, cid, level=2)
+    await client.patch(f"/characters/{cid}/hp", json={"op": "set_max", "value": 50})
+    await client.patch(f"/characters/{cid}/hp", json={"op": "set_current", "value": 1})
+
+    r = await client.post(f"/characters/{cid}/hit_dice/spend", json={"class_id": class_id, "count": 3})
+    assert r.status_code == 409
+    assert r.json()["detail"] == "hit_dice_exhausted"
+    # nulla è cambiato
+    r = await client.get(f"/characters/{cid}")
+    assert r.json()["classes"][0]["hit_dice_used"] == 0
