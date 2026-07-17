@@ -100,7 +100,6 @@
       "no_weapons": "Nessun'arma in inventario.",
       "no_spells": "Nessun incantesimo nel libro.",
       "no_abilities": "Nessuna abilità attiva con usi limitati.",
-      "no_ammo": "Nessuna munizione in inventario.",
       "pin_as_action": "Azione",
       "pin_as_counter": "Contatore",
       "ability_used_toast": "{{name}}: uso segnato ({{current}}/{{max}})",

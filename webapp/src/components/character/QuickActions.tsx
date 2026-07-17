@@ -228,6 +228,7 @@ export default function QuickActions({ char }: Props) {
     mutationFn: (restType: 'long' | 'short') => api.characters.rest(char.id, restType),
     onSuccess: (updated) => {
       qc.setQueryData(['character', char.id], updated)
+      qc.invalidateQueries({ queryKey: ['homebrew-resources', char.id] })
       setConfirmLongRest(false)
       setShortRestOpen(false)
       toast.success(t('character.quick_actions.rest_done'))

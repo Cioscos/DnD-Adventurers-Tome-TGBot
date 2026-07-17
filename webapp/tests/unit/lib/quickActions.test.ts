@@ -78,6 +78,11 @@ describe('resolveQuickActions', () => {
     expect(resolveQuickActions(char, entries)).toEqual([])
   })
 
+  it('scarta elementi malformati (null, numeri, stringhe) senza throw', () => {
+    const entries = [null, 42, 'x'] as unknown as QuickActionEntry[]
+    expect(resolveQuickActions(char, entries)).toEqual([])
+  })
+
   it('tronca a QUICK_ACTIONS_MAX (12)', () => {
     const entries: QuickActionEntry[] = Array.from({ length: 15 }, () => ({ type: 'rest', rest: 'long' as const }))
     expect(QUICK_ACTIONS_MAX).toBe(12)

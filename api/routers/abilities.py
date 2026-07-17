@@ -99,8 +99,9 @@ async def update_ability(
     for field, value in edited.items():
         setattr(ability, field, value)
     # Backstop del set manuale (spec 2026-07-17): uses vive in [0, max_uses].
-    if ability.max_uses is not None and ability.uses is not None:
-        ability.uses = max(0, min(ability.uses, ability.max_uses))
+    if ability.uses is not None:
+        floor = max(0, ability.uses)
+        ability.uses = floor if ability.max_uses is None else min(floor, ability.max_uses)
     await session.flush()
 
     notifications: list[dict] = []

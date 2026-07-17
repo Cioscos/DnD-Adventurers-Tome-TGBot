@@ -100,7 +100,6 @@
       "no_weapons": "No weapons in the inventory.",
       "no_spells": "No spells in the book.",
       "no_abilities": "No active ability with limited uses.",
-      "no_ammo": "No ammunition in inventory.",
       "pin_as_action": "Action",
       "pin_as_counter": "Counter",
       "ability_used_toast": "{{name}}: use marked ({{current}}/{{max}})",

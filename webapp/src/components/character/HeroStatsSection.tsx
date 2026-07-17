@@ -109,6 +109,8 @@ export default function HeroStatsSection({ char }: Props) {
     },
     onSuccess: (value) => {
       qc.invalidateQueries({ queryKey: ['character', char.id] })
+      qc.invalidateQueries({ queryKey: ['dice-history', char.id] })
+      qc.invalidateQueries({ queryKey: ['history', char.id] })
       setInitResult({
         die: value,
         bonus: dexMod,

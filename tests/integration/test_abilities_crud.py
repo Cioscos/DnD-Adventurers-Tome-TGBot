@@ -155,6 +155,23 @@ async def test_patch_uses_is_clamped_to_max(client):
     assert r.json()["uses"] == 0
 
 
+async def test_patch_uses_floors_at_zero_without_max_uses(client):
+    """Un'abilità senza max_uses (illimitata) deve comunque avere un pavimento a
+    0: un PATCH con uses negativo va clampato, non lasciato negativo."""
+    r = await client.post("/characters", json={"name": "Clamp No Max"})
+    cid = r.json()["id"]
+    r = await client.post(
+        f"/characters/{cid}/abilities",
+        json={"name": "Illimitata", "uses": 3, "is_active": True,
+              "restoration_type": "manual"},
+    )
+    aid = r.json()["id"]
+
+    r = await client.patch(f"/characters/{cid}/abilities/{aid}", json={"uses": -5})
+    assert r.status_code == 200, r.text
+    assert r.json()["uses"] == 0
+
+
 async def test_lowering_max_uses_clamps_uses_without_firing_use(client):
     r = await client.post("/characters", json={"name": "Clamp MaxUses"})
     cid = r.json()["id"]

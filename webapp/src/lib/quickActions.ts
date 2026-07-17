@@ -70,6 +70,7 @@ export function resolveQuickActions(
   const resolved: ResolvedQuickAction[] = []
   for (const entry of entries) {
     if (resolved.length >= QUICK_ACTIONS_MAX) break
+    if (!entry || typeof entry !== 'object') continue
     const key = quickActionKey(entry)
     switch (entry.type) {
       case 'weapon': {
