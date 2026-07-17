@@ -74,7 +74,15 @@
       "expert_label_other": "esperti",
       "none_m": "Nessuno",
       "none_f": "Nessuna",
-      "speed_homebrew_label": "Velocità · regola homebrew"
+      "speed_homebrew_label": "Velocità · regola homebrew",
+      "customize": "Personalizza schermata",
+      "layout_title": "Layout schermata",
+      "section_slots": "Slot incantesimo",
+      "section_stats": "Statistiche",
+      "section_quick_actions": "Azioni rapide",
+      "move_up": "Sposta su",
+      "move_down": "Sposta giù",
+      "toggle_visibility": "Mostra/nascondi"
     },
     "quick_actions": {
       "title": "Azioni rapide",
@@ -86,8 +94,26 @@
       "group_weapons": "Attacchi con arma",
       "group_saves": "Tiri salvezza",
       "group_spells": "Incantesimi",
+      "group_abilities": "Abilità speciali",
+      "group_counters": "Contatori",
+      "group_rests": "Riposi",
       "no_weapons": "Nessun'arma in inventario.",
-      "no_spells": "Nessun incantesimo nel libro."
+      "no_spells": "Nessun incantesimo nel libro.",
+      "no_abilities": "Nessuna abilità attiva con usi limitati.",
+      "pin_as_action": "Azione",
+      "pin_as_counter": "Contatore",
+      "ability_used_toast": "{{name}}: uso segnato ({{current}}/{{max}})",
+      "ability_depleted": "Usi esauriti",
+      "undo": "Annulla",
+      "inspiration": "Ispirazione eroica",
+      "rest_long": "Riposo lungo",
+      "rest_short": "Riposo breve",
+      "confirm_long_rest_title": "Riposo lungo",
+      "confirm_long_rest_body": "HP al massimo, slot e abilità ripristinati, concentrazione interrotta. Confermi?",
+      "rest_done": "Riposo completato",
+      "spend_hit_die_title": "Spendi un dado vita",
+      "spend_hit_die_body": "{{cls}}: tira 1d{{die}} + COS e recupera HP ({{remaining}} rimasti).",
+      "hit_die_exhausted": "Nessun dado vita rimasto"
     },
     "select": {
       "title": "I tuoi personaggi",
@@ -163,7 +189,13 @@
       "quick_heal_undo": "Curati {{n}} HP",
       "quick_temp_undo": "Aggiunti {{n}} HP temporanei",
       "quick_undo_action": "Annulla",
-      "homebrew_max_bonus_label": "HP Max Homebrew"
+      "quick_sheet_title": "Danno / Cura",
+      "quick_damage": "Danno",
+      "quick_heal": "Cura",
+      "quick_apply": "Applica",
+      "go_full_page": "Pagina HP completa",
+      "homebrew_max_bonus_label": "HP Max Homebrew",
+      "hit_dice_remaining_label": "disponibili"
     },
     "death_saves": {
       "title": "Tiri vs Morte",
@@ -881,6 +913,10 @@
       "custom_section": "Abilità personalizzate",
       "class_feature_locked": "Gestita automaticamente dalla classe: puoi consumarne gli usi e modificarne la descrizione.",
       "edit_description": "Modifica descrizione",
+      "set_uses_title": "Imposta usi",
+      "set_uses_hint": "Da 0 a {{max}}",
+      "set_uses_hint_unbounded": "Numero (minimo 0)",
+      "tap_to_edit": "tocca per modificare",
       "filters": {
         "class": "Classe",
         "type": "Tipo",

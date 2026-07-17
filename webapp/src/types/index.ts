@@ -40,6 +40,8 @@ export interface CharacterClass {
   subclass?: string
   spellcasting_ability?: string
   hit_die?: number
+  /** Dadi vita spesi (residui = level - hit_dice_used). */
+  hit_dice_used?: number
 }
 
 export interface Currency {

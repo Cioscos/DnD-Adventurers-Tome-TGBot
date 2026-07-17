@@ -5,6 +5,7 @@ import { GiNightSleep as Moon, GiDiceSixFacesOne as Dice1 } from 'react-icons/gi
 import Sheet from '@/components/ui/Sheet'
 import Button from '@/components/ui/Button'
 import Pressable from '@/components/ui/Pressable'
+import { hitDiceRemaining } from '@/lib/quickActions'
 import type { CharacterClass } from '@/types'
 
 interface HitDiceModalProps {
@@ -47,13 +48,19 @@ export default function HitDiceModal({
 
         <div className="space-y-3">
           {classes.map((cls) => {
-            const count = hitDiceCounts[cls.id] ?? 0
+            const remaining = hitDiceRemaining(cls)
+            // Clamp at read-time: dopo una spesa il pool scende mentre lo sheet
+            // resta montato — il count salvato non deve mai superare i residui.
+            const count = Math.min(remaining, hitDiceCounts[cls.id] ?? 0)
             const thisPending = isPending && pendingClassId === cls.id
             return (
               <div key={cls.id} className="flex items-center gap-3 p-2 rounded-xl bg-dnd-surface border border-dnd-border">
                 <div className="flex-1 min-w-0">
                   <p className="font-display font-bold text-sm text-dnd-gold-bright truncate">{cls.class_name}</p>
-                  <p className="text-[11px] text-dnd-text-faint font-mono">d{cls.hit_die ?? 8}</p>
+                  <p className="text-[11px] text-dnd-text-faint font-mono">
+                    d{cls.hit_die ?? 8} · <span className="tabular-nums">{remaining}/{cls.level}</span>{' '}
+                    {t('character.hp.hit_dice_remaining_label')}
+                  </p>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <Pressable
@@ -65,7 +72,7 @@ export default function HitDiceModal({
                   </Pressable>
                   <span className="w-6 text-center font-mono font-bold text-dnd-gold-bright">{count}</span>
                   <Pressable
-                    onClick={() => setHitDiceCounts((c) => ({ ...c, [cls.id]: (c[cls.id] ?? 0) + 1 }))}
+                    onClick={() => setHitDiceCounts((c) => ({ ...c, [cls.id]: Math.min(remaining, (c[cls.id] ?? 0) + 1) }))}
                     className="w-11 h-11 rounded-lg bg-dnd-surface-raised border border-dnd-border flex items-center justify-center text-dnd-gold"
                     whileTap={{ scale: 0.9 }}
                   >
@@ -75,7 +82,7 @@ export default function HitDiceModal({
                     variant="primary"
                     size="sm"
                     onClick={() => { if (count > 0) onSpend(cls.id, count) }}
-                    disabled={!count}
+                    disabled={!count || remaining === 0}
                     loading={thisPending}
                     icon={<Dice1 size={14} />}
                     haptic="success"

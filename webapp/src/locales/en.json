@@ -74,7 +74,15 @@
       "expert_label_other": "expert",
       "none_m": "None",
       "none_f": "None",
-      "speed_homebrew_label": "Speed · homebrew rule"
+      "speed_homebrew_label": "Speed · homebrew rule",
+      "customize": "Customize screen",
+      "layout_title": "Screen layout",
+      "section_slots": "Spell slots",
+      "section_stats": "Statistics",
+      "section_quick_actions": "Quick actions",
+      "move_up": "Move up",
+      "move_down": "Move down",
+      "toggle_visibility": "Show/hide"
     },
     "quick_actions": {
       "title": "Quick actions",
@@ -86,8 +94,26 @@
       "group_weapons": "Weapon attacks",
       "group_saves": "Saving throws",
       "group_spells": "Spells",
+      "group_abilities": "Special abilities",
+      "group_counters": "Counters",
+      "group_rests": "Rests",
       "no_weapons": "No weapons in the inventory.",
-      "no_spells": "No spells in the book."
+      "no_spells": "No spells in the book.",
+      "no_abilities": "No active ability with limited uses.",
+      "pin_as_action": "Action",
+      "pin_as_counter": "Counter",
+      "ability_used_toast": "{{name}}: use marked ({{current}}/{{max}})",
+      "ability_depleted": "No uses left",
+      "undo": "Undo",
+      "inspiration": "Heroic inspiration",
+      "rest_long": "Long rest",
+      "rest_short": "Short rest",
+      "confirm_long_rest_title": "Long rest",
+      "confirm_long_rest_body": "HP restored to max, slots and abilities recharged, concentration broken. Confirm?",
+      "rest_done": "Rest completed",
+      "spend_hit_die_title": "Spend a hit die",
+      "spend_hit_die_body": "{{cls}}: roll 1d{{die}} + CON and heal ({{remaining}} left).",
+      "hit_die_exhausted": "No hit dice left"
     },
     "select": {
       "title": "Your characters",
@@ -163,7 +189,13 @@
       "quick_heal_undo": "Healed {{n}} HP",
       "quick_temp_undo": "Added {{n}} temp HP",
       "quick_undo_action": "Undo",
-      "homebrew_max_bonus_label": "Homebrew HP Max"
+      "quick_sheet_title": "Damage / Heal",
+      "quick_damage": "Damage",
+      "quick_heal": "Heal",
+      "quick_apply": "Apply",
+      "go_full_page": "Full HP page",
+      "homebrew_max_bonus_label": "Homebrew HP Max",
+      "hit_dice_remaining_label": "available"
     },
     "death_saves": {
       "title": "Death Saves",
@@ -881,6 +913,10 @@
       "custom_section": "Custom abilities",
       "class_feature_locked": "Managed automatically by the class: you can spend its uses and edit its description.",
       "edit_description": "Edit description",
+      "set_uses_title": "Set uses",
+      "set_uses_hint": "From 0 to {{max}}",
+      "set_uses_hint_unbounded": "Number (minimum 0)",
+      "tap_to_edit": "tap to edit",
       "filters": {
         "class": "Class",
         "type": "Type",

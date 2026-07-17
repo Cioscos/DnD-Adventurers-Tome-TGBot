@@ -97,6 +97,7 @@ class CharacterClassRead(BaseModel):
     subclass: Optional[str] = None
     spellcasting_ability: Optional[str] = None
     hit_die: Optional[int] = None
+    hit_dice_used: int = 0
 
     model_config = {"from_attributes": True}
 
@@ -114,6 +115,7 @@ class CharacterClassUpdate(BaseModel):
     subclass: Optional[str] = None
     spellcasting_ability: Optional[str] = None
     hit_die: Optional[int] = None
+    hit_dice_used: Optional[int] = None
 
 
 class ClassLevelEntry(BaseModel):

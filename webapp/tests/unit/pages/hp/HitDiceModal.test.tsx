@@ -34,7 +34,8 @@ vi.mock('@/components/ui/Button', async () => {
   }
 })
 
-const classes = [{ id: 1, class_name: 'fighter', hit_die: 10, level: 5 }] as unknown as CharacterClass[]
+// level 5, hit_dice_used 2 -> remaining 3 (hitDiceRemaining = level - hit_dice_used).
+const classes = [{ id: 1, class_name: 'fighter', hit_die: 10, level: 5, hit_dice_used: 2 }] as unknown as CharacterClass[]
 
 // The stepper +/- are icon-only buttons (no text) → identify them as the empty-text buttons.
 const stepperButtons = () => screen.getAllByRole('button').filter((b) => (b.textContent || '').trim() === '')
@@ -47,12 +48,15 @@ describe('HitDiceModal', () => {
     expect(screen.getByText('common.none')).toBeInTheDocument()
   })
 
-  it('lists each class with its hit-die size', () => {
+  it('lists each class with its hit-die size and remaining/level indicator', () => {
     render(
       <HitDiceModal classes={classes} onSpend={() => {}} onConfirmRest={() => {}} onClose={() => {}} isPending={false} />,
     )
     expect(screen.getByText('fighter')).toBeInTheDocument()
-    expect(screen.getByText('d10')).toBeInTheDocument()
+    // Row markup is "d10 · {remaining}/{level} {label}" split across text nodes/spans
+    // (die-size text and the "3/5" remaining indicator are separate nodes).
+    expect(screen.getByText(/d10/)).toBeInTheDocument()
+    expect(screen.getByText('3/5')).toBeInTheDocument()
   })
 
   it('keeps the roll button disabled at 0 dice, then spends the chosen count for that class', async () => {

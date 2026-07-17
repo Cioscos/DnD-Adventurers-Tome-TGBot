@@ -86,9 +86,9 @@ async def update_ability(
     # Le feature di classe (auto-generate) hanno struttura protetta: si possono
     # cambiare solo `uses` e `description`. Nome/max_uses/restoration_type/tipo
     # sono governati dall'auto-calcolo e ri-sincronizzati al level-up.
+    edited = body.model_dump(exclude_unset=True)
     if ability.is_class_feature:
-        edited = set(body.model_dump(exclude_unset=True).keys())
-        forbidden = edited - {"uses", "description"}
+        forbidden = set(edited.keys()) - {"uses", "description"}
         if forbidden:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
@@ -96,16 +96,21 @@ async def update_ability(
             )
 
     old_uses = ability.uses
-    for field, value in body.model_dump(exclude_unset=True).items():
+    for field, value in edited.items():
         setattr(ability, field, value)
+    # Backstop del set manuale (spec 2026-07-17): uses vive in [0, max_uses].
+    if ability.uses is not None:
+        floor = max(0, ability.uses)
+        ability.uses = floor if ability.max_uses is None else min(floor, ability.max_uses)
     await session.flush()
 
     notifications: list[dict] = []
-    # Only dispatch when `uses` actually decreased — incrementing or restoring
-    # `uses` (e.g. after a rest) is not "using" the ability and must not fire
-    # ability_used. None-aware comparison: skip if either side is None.
+    # Only dispatch when the PATCH itself decreased `uses` — incrementing,
+    # restoring, or a clamp caused by lowering max_uses is not "using" the
+    # ability and must not fire ability_used.
     if (
-        old_uses is not None
+        "uses" in edited
+        and old_uses is not None
         and ability.uses is not None
         and ability.uses < old_uses
     ):

@@ -134,3 +134,58 @@ async def test_delete_unknown_ability_is_404(client):
     cid = await _create_character(client)
     r = await client.delete(f"/characters/{cid}/abilities/999999")
     assert r.status_code == 404, r.text
+
+
+async def test_patch_uses_is_clamped_to_max(client):
+    r = await client.post("/characters", json={"name": "Clamp Uses"})
+    cid = r.json()["id"]
+    r = await client.post(
+        f"/characters/{cid}/abilities",
+        json={"name": "Sanità", "max_uses": 200, "uses": 200, "is_active": True,
+              "restoration_type": "manual"},
+    )
+    aid = r.json()["id"]
+
+    r = await client.patch(f"/characters/{cid}/abilities/{aid}", json={"uses": 999})
+    assert r.status_code == 200
+    assert r.json()["uses"] == 200
+
+    r = await client.patch(f"/characters/{cid}/abilities/{aid}", json={"uses": -3})
+    assert r.status_code == 200
+    assert r.json()["uses"] == 0
+
+
+async def test_patch_uses_floors_at_zero_without_max_uses(client):
+    """Un'abilità senza max_uses (illimitata) deve comunque avere un pavimento a
+    0: un PATCH con uses negativo va clampato, non lasciato negativo."""
+    r = await client.post("/characters", json={"name": "Clamp No Max"})
+    cid = r.json()["id"]
+    r = await client.post(
+        f"/characters/{cid}/abilities",
+        json={"name": "Illimitata", "uses": 3, "is_active": True,
+              "restoration_type": "manual"},
+    )
+    aid = r.json()["id"]
+
+    r = await client.patch(f"/characters/{cid}/abilities/{aid}", json={"uses": -5})
+    assert r.status_code == 200, r.text
+    assert r.json()["uses"] == 0
+
+
+async def test_lowering_max_uses_clamps_uses_without_firing_use(client):
+    r = await client.post("/characters", json={"name": "Clamp MaxUses"})
+    cid = r.json()["id"]
+    r = await client.post(
+        f"/characters/{cid}/abilities",
+        json={"name": "Sanità", "max_uses": 200, "uses": 200, "is_active": True,
+              "restoration_type": "manual"},
+    )
+    aid = r.json()["id"]
+
+    # Abbassare solo max_uses clampa uses al nuovo tetto…
+    r = await client.patch(f"/characters/{cid}/abilities/{aid}", json={"max_uses": 5})
+    assert r.status_code == 200
+    assert r.json()["max_uses"] == 5
+    assert r.json()["uses"] == 5
+    # …senza segnalare un falso "uso" (nessuna notifica homebrew nel payload).
+    assert r.json().get("homebrew_notifications") in (None, [])

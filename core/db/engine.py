@@ -127,6 +127,8 @@ _MIGRATIONS: list[tuple[str, str, str, str | None]] = [
     ("spells", "is_prepared", "BOOLEAN", "1"),
     # Statistiche cumulative dei tiri (contatori per faccia, per tipo di dado)
     ("characters", "dice_stats", "JSON", None),
+    # Hit dice tracking (spec 2026-07-17)
+    ("character_classes", "hit_dice_used", "INTEGER NOT NULL", "0"),
 ]
 
 # Tables to drop if they exist (legacy feature cleanup)

@@ -18,10 +18,10 @@ async def _create_character(client) -> int:
     return r.json()["id"]
 
 
-async def _add_class(client, cid: int, *, name: str = "fighter", hit_die: int = 10):
+async def _add_class(client, cid: int, *, name: str = "fighter", level: int = 1, hit_die: int = 10):
     r = await client.post(
         f"/characters/{cid}/classes",
-        json={"class_name": name, "level": 1, "hit_die": hit_die},
+        json={"class_name": name, "level": level, "hit_die": hit_die},
     )
     assert r.status_code == 201, r.text
     cls = next(c for c in r.json()["classes"] if c["class_name"] == name)
@@ -35,7 +35,7 @@ async def _set_hp(client, cid: int, maximum: int, current: int):
 
 async def test_spending_dice_heals_within_die_range(client):
     cid = await _create_character(client)
-    class_id, die = await _add_class(client, cid, hit_die=10)
+    class_id, die = await _add_class(client, cid, level=2, hit_die=10)
     await _set_hp(client, cid, 100, 1)  # plenty of headroom so nothing is clamped
 
     r = await client.post(

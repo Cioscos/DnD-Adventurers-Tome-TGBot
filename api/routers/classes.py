@@ -273,7 +273,12 @@ async def update_class(
     if cls is None:
         raise HTTPException(status_code=404, detail="Class not found")
     old_level = cls.level
-    for field, value in body.model_dump(exclude_unset=True).items():
+    data = body.model_dump(exclude_unset=True)
+    # Clamp difensivo: i dadi vita spesi vivono in [0, level] (spec 2026-07-17).
+    if data.get("hit_dice_used") is not None:
+        effective_level = data.get("level") or cls.level or 1
+        data["hit_dice_used"] = max(0, min(int(data["hit_dice_used"]), int(effective_level)))
+    for field, value in data.items():
         setattr(cls, field, value)
 
     # When level changes, sync class-feature abilities for predefined classes.

@@ -1,6 +1,44 @@
 {
   "entries": [
     {
+      "version": "2.19.0",
+      "date": "2026-07-17",
+      "title": {
+        "it": "La home diventa una plancia di gioco",
+        "en": "The home screen becomes a play dashboard"
+      },
+      "added": {
+        "it": [
+          "Lancio degli incantesimi direttamente dalla home: slot, danni e concentrazione senza cambiare pagina.",
+          "Abilità speciali, contatori (sanità, munizioni, ispirazione eroica), dadi vita e riposi pinnabili nelle Azioni rapide (fino a 12 voci).",
+          "Danno e cura rapidi dal tap sulla barra HP.",
+          "Tap su Iniziativa per tirare 1d20+DES al volo.",
+          "Sezioni della home riordinabili e nascondibili (Personalizza schermata).",
+          "Dadi vita ora tracciati: spesa dal pool residuo e recupero di metà al riposo lungo."
+        ],
+        "en": [
+          "Cast spells straight from the home screen: slots, damage and concentration without leaving the page.",
+          "Special abilities, counters (sanity, ammunition, heroic inspiration), hit dice and rests pinnable in Quick Actions (up to 12 entries).",
+          "Quick damage and healing by tapping the HP bar.",
+          "Tap Initiative to roll 1d20+DEX on the fly.",
+          "Home sections can be reordered and hidden (Customize screen).",
+          "Hit dice are now tracked: spend from the remaining pool, recover half on a long rest."
+        ]
+      },
+      "improved": {
+        "it": [
+          "Gli usi delle abilità si impostano anche scrivendo il numero (basta tap sul contatore), addio duecento tap su meno."
+        ],
+        "en": [
+          "Ability uses can now be typed directly (tap the counter) — no more two hundred taps on minus."
+        ]
+      },
+      "fixed": {
+        "it": [],
+        "en": []
+      }
+    },
+    {
       "version": "2.18.0",
       "date": "2026-07-16",
       "title": {

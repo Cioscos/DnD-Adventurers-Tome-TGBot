@@ -1,14 +1,21 @@
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { useState } from 'react'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { BarChart3 } from 'lucide-react'
 import { GiShieldEchoes, GiArcheryTarget } from 'react-icons/gi'
 import Surface from '@/components/ui/Surface'
 import SectionDivider from '@/components/ui/SectionDivider'
 import Pressable from '@/components/ui/Pressable'
 import HomebrewBreakdownRow from '@/components/homebrew/HomebrewBreakdownRow'
+import RollResultModal, { type RollResult } from '@/components/RollResultModal'
 import { haptic } from '@/auth/telegram'
 import { profBonus } from '@/lib/dnd'
 import { useUnitSettings, formatLength } from '@/store/unitSettings'
+import { useDiceAnimation } from '@/dice/useDiceAnimation'
+import { useDiceSettings } from '@/store/diceSettings'
+import { useReducedMotion } from '@/hooks/useReducedMotion'
+import { api } from '@/api/client'
 import type { CharacterFull } from '@/types'
 
 // Canonical D&D 5e ability order (mirrors the local const in HeroScreen.tsx /
@@ -76,6 +83,46 @@ export default function HeroStatsSection({ char }: Props) {
   }
   const totalSkillProf = profCount + expertCount
 
+  const qc = useQueryClient()
+  const dice = useDiceAnimation()
+  const animate3d = useDiceSettings((s) => s.animate3d)
+  const reducedMotion = useReducedMotion()
+  const [initResult, setInitResult] = useState<RollResult | null>(null)
+
+  const initiativeMutation = useMutation({
+    mutationFn: async () => {
+      // Il client tira (con animazione 3D se attiva), il BE persiste nello storico.
+      let value: number | undefined
+      if (animate3d && !reducedMotion) {
+        const detected = await dice.playAndCollect([{ kind: 'd20', count: 1 }])
+        value = detected[0]?.value
+      }
+      if (value == null) value = 1 + Math.floor(Math.random() * 20)
+      const notation = `1d20${dexMod >= 0 ? '+' : ''}${dexMod}`
+      await api.dice.result(char.id, {
+        rolls: [{ kind: 'd20', value }],
+        modifier: dexMod,
+        notation,
+        label: t('character.hero.initiative'),
+      })
+      return value
+    },
+    onSuccess: (value) => {
+      qc.invalidateQueries({ queryKey: ['character', char.id] })
+      qc.invalidateQueries({ queryKey: ['dice-history', char.id] })
+      qc.invalidateQueries({ queryKey: ['history', char.id] })
+      setInitResult({
+        die: value,
+        bonus: dexMod,
+        total: value + dexMod,
+        is_critical: value === 20,
+        is_fumble: value === 1,
+      })
+      haptic.success()
+    },
+    onError: () => haptic.error(),
+  })
+
   const cells = [
     {
       key: 'init',
@@ -115,7 +162,8 @@ export default function HeroStatsSection({ char }: Props) {
           <Pressable
             key={c.key}
             type="button"
-            onClick={() => go(c.path)}
+            onClick={() => (c.key === 'init' ? (haptic.medium(), initiativeMutation.mutate()) : go(c.path))}
+            pending={c.key === 'init' && initiativeMutation.isPending}
             aria-label={`${c.label}: ${c.value}`}
             className="flex flex-col items-center justify-center min-h-[68px] rounded-lg p-2 border
                        bg-dnd-surface-raised border-dnd-border text-dnd-text
@@ -192,6 +240,14 @@ export default function HeroStatsSection({ char }: Props) {
           )}
         </Surface>
       </div>
+
+      {initResult && (
+        <RollResultModal
+          result={initResult}
+          title={t('character.hero.initiative')}
+          onClose={() => setInitResult(null)}
+        />
+      )}
     </div>
   )
 }
