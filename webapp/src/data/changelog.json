@@ -1,6 +1,26 @@
 {
   "entries": [
     {
+      "version": "2.19.2",
+      "date": "2026-07-17",
+      "title": {
+        "it": "Lista incantesimi allineata allo stile delle abilità",
+        "en": "Spell list aligned with the abilities style"
+      },
+      "added": { "it": [], "en": [] },
+      "improved": {
+        "it": [
+          "Le voci della lista incantesimi usano ora lo stesso stile delle abilità speciali: card con bordo, titolo in oro, badge Concentrazione/Rituale uniformi e apertura animata.",
+          "La freccia di espansione è ora un'icona chiara e allineata, coerente in tutta l'app (incantesimi, abilità, caratteristiche, changelog)."
+        ],
+        "en": [
+          "Spell list entries now share the special abilities style: bordered cards, gold titles, uniform Concentration/Ritual badges and animated expansion.",
+          "The expand arrow is now a clear, aligned icon, consistent across the app (spells, abilities, ability scores, changelog)."
+        ]
+      },
+      "fixed": { "it": [], "en": [] }
+    },
+    {
       "version": "2.19.1",
       "date": "2026-07-17",
       "title": {
