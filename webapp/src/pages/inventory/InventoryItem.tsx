@@ -309,7 +309,7 @@ function InventoryItemInner({
 
       {/* Expanded detail panel */}
       {isExpanded && (
-        <div className="spell-detail-enter px-3 pt-3 pb-3 space-y-3 border-t border-dnd-gold-dim/10">
+        <div className="animate-fade-in px-3 pt-3 pb-3 space-y-3 border-t border-dnd-gold-dim/10">
           {/* Description */}
           {item.description && (
             <p className="text-sm text-dnd-text whitespace-pre-wrap leading-relaxed italic">
