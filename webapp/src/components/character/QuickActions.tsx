@@ -1,22 +1,28 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Plus, Check } from 'lucide-react'
 import {
   GiCrossedSwords, GiShieldEchoes, GiSpellBook, GiLightningStorm,
+  GiLightningTrio, GiAbacus, GiPolarStar, GiArrowhead,
+  GiDiceSixFacesOne, GiNightSleep, GiCampfire,
 } from 'react-icons/gi'
 import { api, ApiError } from '@/api/client'
 import Surface from '@/components/ui/Surface'
 import Sheet from '@/components/ui/Sheet'
 import Pressable from '@/components/ui/Pressable'
+import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import RollResultModal, { type RollResult } from '@/components/RollResultModal'
 import WeaponAttackModal, { type WeaponAttackResult } from '@/components/WeaponAttackModal'
+import HitDiceModal from '@/pages/hp/HitDiceModal'
+import HitDiceResultDialog from '@/pages/hp/HitDiceResultDialog'
 import { haptic } from '@/auth/telegram'
 import { useDiceAnimation } from '@/dice/useDiceAnimation'
 import { useDiceSettings } from '@/store/diceSettings'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { useToast } from '@/hooks/useToast'
+import { showUndoToast } from '@/components/ui/UndoToast'
+import { useCastFlow } from '@/pages/spells/useCastFlow'
 import {
   readQuickActions,
   resolveQuickActions,
@@ -26,7 +32,8 @@ import {
   type QuickActionEntry,
   type ResolvedQuickAction,
 } from '@/lib/quickActions'
-import type { CharacterFull } from '@/types'
+import type { HitDiceSpendResult } from '@/api/client'
+import type { CharacterFull, Ability, CharacterClass } from '@/types'
 
 interface Props {
   char: CharacterFull
@@ -35,24 +42,37 @@ interface Props {
 type AttackState = { result: WeaponAttackResult; itemId: number; wasRerolled: boolean }
 type SaveRollState = { result: RollResult; ability: string; wasRerolled: boolean }
 
+// NOTE (Task 11): `counter_ability`/`counter_inspiration`/`counter_ammo` icon entries
+// are wired here (used by TYPE_ICONS lookups already keyed by the full 9-variant
+// union) but their tiles render `null` until Task 12 adds the counter tile UI.
 const TYPE_ICONS = {
   weapon: GiCrossedSwords,
   save: GiShieldEchoes,
   spell: GiSpellBook,
+  ability: GiLightningTrio,
+  counter_ability: GiAbacus,
+  counter_inspiration: GiPolarStar,
+  counter_ammo: GiArrowhead,
+  hit_die: GiDiceSixFacesOne,
+  rest: GiNightSleep,
 } as const
 
 export default function QuickActions({ char }: Props) {
   const { t } = useTranslation()
-  const navigate = useNavigate()
   const qc = useQueryClient()
   const toast = useToast()
   const dice = useDiceAnimation()
   const animate3d = useDiceSettings((s) => s.animate3d)
   const reducedMotion = useReducedMotion()
+  const castFlow = useCastFlow(char.id, char)
 
   const [editorOpen, setEditorOpen] = useState(false)
   const [attackState, setAttackState] = useState<AttackState | null>(null)
   const [saveState, setSaveState] = useState<SaveRollState | null>(null)
+  const [confirmHitDie, setConfirmHitDie] = useState<{ cls: CharacterClass; remaining: number } | null>(null)
+  const [hitDieResult, setHitDieResult] = useState<HitDiceSpendResult | null>(null)
+  const [confirmLongRest, setConfirmLongRest] = useState(false)
+  const [shortRestOpen, setShortRestOpen] = useState(false)
 
   const settings = (char.settings as Record<string, unknown>) ?? {}
   const entries = readQuickActions(settings)
@@ -137,14 +157,87 @@ export default function QuickActions({ char }: Props) {
     },
   })
 
+  // NOTE (Task 11): `inspirationMutation`/`ammoMutation` from the brief power only
+  // the counter_inspiration/counter_ammo tiles, which return `null` until Task 12
+  // wires them up. Adding them now would violate noUnusedLocals/no-unused-vars —
+  // they land alongside the counter tile UI in Task 12.
+
+  const usesMutation = useMutation({
+    mutationFn: ({ abilityId, uses }: { abilityId: number; uses: number }) =>
+      api.abilities.update(char.id, abilityId, { uses }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['character', char.id] }),
+    onError: () => haptic.error(),
+  })
+
+  const consumeAbility = (ability: Ability) => {
+    const current = ability.uses ?? 0
+    if (current <= 0) {
+      toast.error(t('character.quick_actions.ability_depleted'))
+      return
+    }
+    usesMutation.mutate(
+      { abilityId: ability.id, uses: current - 1 },
+      {
+        onSuccess: () => {
+          showUndoToast({
+            message: t('character.quick_actions.ability_used_toast', {
+              name: ability.name, current: current - 1, max: ability.max_uses ?? 0,
+            }),
+            actionLabel: t('character.quick_actions.undo'),
+            onUndo: () => usesMutation.mutate({ abilityId: ability.id, uses: current }),
+          })
+        },
+      },
+    )
+  }
+
+  const hitDieMutation = useMutation({
+    mutationFn: ({ classId, count }: { classId: number; count: number }) =>
+      api.characters.spendHitDice(char.id, classId, count),
+    onSuccess: (result) => {
+      setConfirmHitDie(null)
+      setHitDieResult(result)
+      qc.invalidateQueries({ queryKey: ['character', char.id] })
+      haptic.success()
+    },
+    onError: (err) => {
+      if (err instanceof ApiError && err.status === 409) {
+        toast.error(t('character.quick_actions.hit_die_exhausted'))
+        qc.invalidateQueries({ queryKey: ['character', char.id] })
+        setConfirmHitDie(null)
+      } else {
+        haptic.error()
+      }
+    },
+  })
+
+  const restMutation = useMutation({
+    mutationFn: (restType: 'long' | 'short') => api.characters.rest(char.id, restType),
+    onSuccess: (updated) => {
+      qc.setQueryData(['character', char.id], updated)
+      setConfirmLongRest(false)
+      setShortRestOpen(false)
+      toast.success(t('character.quick_actions.rest_done'))
+      haptic.success()
+    },
+    onError: () => haptic.error(),
+  })
+
   const run = (action: ResolvedQuickAction) => {
     haptic.light()
-    if (action.type === 'weapon') {
-      attackMutation.mutate(action.item.id)
-    } else if (action.type === 'save') {
-      saveMutation.mutate(action.ability)
-    } else {
-      navigate(`/char/${char.id}/spells?focus=${action.spell.id}`)
+    switch (action.type) {
+      case 'weapon': attackMutation.mutate(action.item.id); break
+      case 'save': saveMutation.mutate(action.ability); break
+      case 'spell': castFlow.beginCast(action.spell); break
+      case 'ability': consumeAbility(action.ability); break
+      case 'hit_die':
+        if (action.remaining > 0) setConfirmHitDie({ cls: action.cls, remaining: action.remaining })
+        break
+      case 'rest':
+        if (action.rest === 'long') setConfirmLongRest(true)
+        else setShortRestOpen(true)
+        break
+      default: break // i contatori hanno i propri bottoni, non passano da run
     }
   }
 
@@ -183,13 +276,23 @@ export default function QuickActions({ char }: Props) {
   const isActionPending = (a: ResolvedQuickAction): boolean => {
     if (a.type === 'weapon') return attackMutation.isPending && attackMutation.variables === a.item.id
     if (a.type === 'save') return saveMutation.isPending && saveMutation.variables === a.ability
+    if (a.type === 'spell') return castFlow.isSpellPending(a.spell.id)
+    if (a.type === 'ability') return usesMutation.isPending && usesMutation.variables?.abilityId === a.ability.id
     return false
   }
 
-  const actionLabel = (a: ResolvedQuickAction): string =>
-    a.type === 'weapon' ? a.item.name
-      : a.type === 'save' ? t(`character.stats.${a.ability}`)
-        : a.spell.name
+  const actionLabel = (a: ResolvedQuickAction): string => {
+    switch (a.type) {
+      case 'weapon': return a.item.name
+      case 'save': return t(`character.stats.${a.ability}`)
+      case 'spell': return a.spell.name
+      case 'ability': case 'counter_ability': return a.ability.name
+      case 'counter_inspiration': return t('character.quick_actions.inspiration')
+      case 'counter_ammo': return a.item.name
+      case 'hit_die': return `d${a.cls.hit_die ?? 8} · ${a.cls.class_name}`
+      case 'rest': return t(`character.quick_actions.rest_${a.rest}`)
+    }
+  }
 
   const weapons = (char.items ?? []).filter((i) => i.item_type === 'weapon')
   const spells = char.spells ?? []
@@ -222,8 +325,15 @@ export default function QuickActions({ char }: Props) {
         ) : (
           <div className="grid grid-cols-2 gap-2">
             {resolved.map((a, i) => {
-              const Icon = TYPE_ICONS[a.type]
               const spanFull = resolved.length % 2 === 1 && i === resolved.length - 1
+              if (a.type === 'counter_ability' || a.type === 'counter_inspiration' || a.type === 'counter_ammo') {
+                return null // task 12: tile contatore
+              }
+              const Icon = TYPE_ICONS[a.type === 'rest' && a.rest === 'short' ? 'rest' : a.type]
+              const RestIcon = a.type === 'rest' && a.rest === 'short' ? GiCampfire : Icon
+              const depleted =
+                (a.type === 'ability' && (a.ability.uses ?? 0) <= 0) ||
+                (a.type === 'hit_die' && a.remaining <= 0)
               return (
                 <Pressable
                   key={a.key}
@@ -233,12 +343,22 @@ export default function QuickActions({ char }: Props) {
                   whileTap={{ scale: 0.96 }}
                   className={`min-h-[44px] flex items-center gap-2 px-3 py-2 rounded-xl
                               bg-dnd-surface border border-dnd-border text-left
-                              disabled:opacity-60 ${spanFull ? 'col-span-2' : ''}`}
+                              disabled:opacity-60 ${depleted ? 'opacity-50' : ''} ${spanFull ? 'col-span-2' : ''}`}
                 >
-                  <Icon size={16} className="text-dnd-gold shrink-0" />
+                  <RestIcon size={16} className="text-dnd-gold shrink-0" />
                   <span className="flex-1 min-w-0 truncate text-sm text-dnd-text font-body">
                     {actionLabel(a)}
                   </span>
+                  {a.type === 'ability' && (
+                    <span className="text-[10px] font-mono tabular-nums text-dnd-text-muted shrink-0">
+                      {a.ability.uses ?? 0}/{a.ability.max_uses ?? 0}
+                    </span>
+                  )}
+                  {a.type === 'hit_die' && (
+                    <span className="text-[10px] font-mono tabular-nums text-dnd-text-muted shrink-0">
+                      {a.remaining}/{a.cls.level}
+                    </span>
+                  )}
                 </Pressable>
               )
             })}
@@ -281,6 +401,14 @@ export default function QuickActions({ char }: Props) {
                 label: s.name,
               })),
               emptyKey: 'character.quick_actions.no_spells',
+            },
+            {
+              labelKey: 'character.quick_actions.group_rests',
+              rows: (['long', 'short'] as const).map((rest) => ({
+                entry: { type: 'rest', rest } as QuickActionEntry,
+                label: t(`character.quick_actions.rest_${rest}`),
+              })),
+              emptyKey: null,
             },
           ]).map((group) => (
             <div key={group.labelKey}>
@@ -341,6 +469,52 @@ export default function QuickActions({ char }: Props) {
           wasRerolled={saveState.wasRerolled}
           onInspirationReroll={() => saveRerollMutation.mutate(saveState.ability)}
         />
+      )}
+
+      {castFlow.elements}
+
+      <ConfirmSheet
+        open={confirmLongRest}
+        onClose={() => setConfirmLongRest(false)}
+        title={t('character.quick_actions.confirm_long_rest_title')}
+        body={t('character.quick_actions.confirm_long_rest_body')}
+        confirmLabel={t('character.quick_actions.rest_long')}
+        confirmVariant="primary"
+        loading={restMutation.isPending}
+        onConfirm={() => restMutation.mutate('long')}
+      />
+
+      {shortRestOpen && (
+        <HitDiceModal
+          classes={char.classes ?? []}
+          onSpend={(classId, count) => hitDieMutation.mutate({ classId, count })}
+          onConfirmRest={() => restMutation.mutate('short')}
+          onClose={() => setShortRestOpen(false)}
+          isPending={hitDieMutation.isPending}
+          pendingClassId={hitDieMutation.isPending ? hitDieMutation.variables?.classId : undefined}
+          restPending={restMutation.isPending}
+        />
+      )}
+
+      <ConfirmSheet
+        open={confirmHitDie !== null}
+        onClose={() => setConfirmHitDie(null)}
+        title={t('character.quick_actions.spend_hit_die_title')}
+        body={confirmHitDie
+          ? t('character.quick_actions.spend_hit_die_body', {
+              cls: confirmHitDie.cls.class_name,
+              die: confirmHitDie.cls.hit_die ?? 8,
+              remaining: confirmHitDie.remaining,
+            })
+          : undefined}
+        confirmLabel={t('character.quick_actions.spend_hit_die_title')}
+        confirmVariant="primary"
+        loading={hitDieMutation.isPending}
+        onConfirm={() => confirmHitDie && hitDieMutation.mutate({ classId: confirmHitDie.cls.id, count: 1 })}
+      />
+
+      {hitDieResult && (
+        <HitDiceResultDialog result={hitDieResult} onClose={() => setHitDieResult(null)} />
       )}
     </>
   )
