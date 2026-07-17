@@ -3,12 +3,13 @@ import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m, AnimatePresence } from 'framer-motion'
-import { Plus, Minus, Pencil, Trash2, RotateCcw, ChevronDown, FilterX } from 'lucide-react'
+import { Plus, Minus, Pencil, Trash2, RotateCcw, FilterX } from 'lucide-react'
 import { GiLightningTrio as Zap, GiSparkles as Sparkles } from 'react-icons/gi'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
 import Sheet from '@/components/ui/Sheet'
 import Button from '@/components/ui/Button'
+import ExpandChevron from '@/components/ui/ExpandChevron'
 import Pressable from '@/components/ui/Pressable'
 import IconButton from '@/components/ui/IconButton'
 import UsesEditSheet from '@/components/ui/UsesEditSheet'
@@ -353,9 +354,7 @@ export default function Abilities() {
               </span>
             )}
           </div>
-          <m.div animate={{ rotate: isOpen ? 180 : 0 }} transition={{ duration: 0.2 }}>
-            <ChevronDown size={14} className="text-dnd-text-faint" />
-          </m.div>
+          <ExpandChevron open={isOpen} />
         </Pressable>
 
         <AnimatePresence initial={false}>

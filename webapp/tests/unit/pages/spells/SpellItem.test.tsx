@@ -54,4 +54,28 @@ describe('SpellItem', () => {
     await userEvent.click(screen.getByRole('menuitem', { name: /character.spells.forget/ }))
     expect(onRemove).toHaveBeenCalledTimes(1)
   })
+
+  it('shows C/R badges as pills and the shared expand chevron', () => {
+    const { container } = render(
+      <SpellItem spell={spell({ is_concentration: true, is_ritual: true })} isExpanded={false} {...base} />,
+    )
+    expect(screen.getByTitle('character.spells.badge_concentration')).toBeInTheDocument()
+    expect(screen.getByTitle('character.spells.badge_ritual')).toBeInTheDocument()
+    expect(screen.getByText('C')).toBeInTheDocument()
+    expect(screen.getByText('R')).toBeInTheDocument()
+    // wrapper aria-hidden con svg = ExpandChevron (le icone lucide hanno aria-hidden sull'svg, non su uno span)
+    expect(container.querySelector('span[aria-hidden] svg')).not.toBeNull()
+  })
+
+  it('uses the parchment variant when castable and the flat variant when unprepared', () => {
+    const preparing = { showPreparedToggle: true, onPreparedToggle: () => {}, preparedPending: false }
+    const { container, rerender } = render(
+      <SpellItem spell={spell({ is_prepared: false })} isExpanded={false} {...base} {...preparing} />,
+    )
+    expect((container.firstChild as HTMLElement).className).toContain('bg-dnd-surface')
+    rerender(
+      <SpellItem spell={spell({ is_prepared: true })} isExpanded={false} {...base} {...preparing} />,
+    )
+    expect((container.firstChild as HTMLElement).className).toContain('bg-gradient-parchment')
+  })
 })

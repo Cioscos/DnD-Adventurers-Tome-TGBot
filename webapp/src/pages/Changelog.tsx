@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { m, AnimatePresence } from 'framer-motion'
-import { ChevronDown, Sparkles, Wrench, Bug, ScrollText } from 'lucide-react'
+import { Sparkles, Wrench, Bug, ScrollText } from 'lucide-react'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
 import Pressable from '@/components/ui/Pressable'
 import EmptyState from '@/components/ui/EmptyState'
+import ExpandChevron from '@/components/ui/ExpandChevron'
 import { haptic } from '@/auth/telegram'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { changelog, localizedLines, localizedTitle, type ChangelogEntry } from '@/lib/version'
@@ -54,9 +55,7 @@ function EntryCard({ entry, isCurrent, defaultOpen }: { entry: ChangelogEntry; i
           )}
           <p className="mt-0.5 text-xs font-mono tabular-nums text-dnd-text-faint">{entry.date}</p>
         </div>
-        <m.div animate={{ rotate: open ? 180 : 0 }} transition={{ duration: reduceMotion ? 0 : 0.2 }} className="shrink-0">
-          <ChevronDown size={20} className="text-dnd-gold-dim" />
-        </m.div>
+        <ExpandChevron open={open} size={20} className="text-dnd-gold-dim" />
       </Pressable>
 
       <AnimatePresence initial={false}>

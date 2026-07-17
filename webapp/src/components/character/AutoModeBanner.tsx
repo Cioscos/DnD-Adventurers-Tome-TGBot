@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { m, AnimatePresence } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
-import { ChevronDown, Settings as SettingsIcon } from 'lucide-react'
+import { Settings as SettingsIcon } from 'lucide-react'
 import { GiSparkles as Sparkles } from 'react-icons/gi'
 import Surface from '@/components/ui/Surface'
 import Pressable from '@/components/ui/Pressable'
+import ExpandChevron from '@/components/ui/ExpandChevron'
 import { haptic } from '@/auth/telegram'
-import { ease, spring } from '@/styles/motion'
+import { ease } from '@/styles/motion'
 
 // Stato del banner Auto-mode condiviso fra tutti i personaggi (chiave globale):
 // aperto al primissimo accesso (chiave assente), poi ricorda l'ultima scelta.
@@ -58,14 +59,7 @@ export default function AutoModeBanner({ onGoToSettings }: AutoModeBannerProps) 
         <span className="flex-1 min-w-0 truncate font-cinzel uppercase tracking-wider text-xs text-dnd-arcane-bright">
           {t('character.slots.auto_label')}
         </span>
-        <m.span
-          aria-hidden
-          className="shrink-0 text-dnd-arcane-bright"
-          animate={{ rotate: open ? 180 : 0 }}
-          transition={spring.snappy}
-        >
-          <ChevronDown size={16} />
-        </m.span>
+        <ExpandChevron open={open} size={16} className="text-dnd-arcane-bright" />
       </Pressable>
 
       {/* Corpo collassabile — frase completa + scorciatoia Impostazioni */}
