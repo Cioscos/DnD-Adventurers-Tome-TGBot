@@ -163,7 +163,8 @@
       "quick_heal_undo": "Healed {{n}} HP",
       "quick_temp_undo": "Added {{n}} temp HP",
       "quick_undo_action": "Undo",
-      "homebrew_max_bonus_label": "Homebrew HP Max"
+      "homebrew_max_bonus_label": "Homebrew HP Max",
+      "hit_dice_remaining_label": "available"
     },
     "death_saves": {
       "title": "Death Saves",

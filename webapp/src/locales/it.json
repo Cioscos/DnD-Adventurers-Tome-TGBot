@@ -163,7 +163,8 @@
       "quick_heal_undo": "Curati {{n}} HP",
       "quick_temp_undo": "Aggiunti {{n}} HP temporanei",
       "quick_undo_action": "Annulla",
-      "homebrew_max_bonus_label": "HP Max Homebrew"
+      "homebrew_max_bonus_label": "HP Max Homebrew",
+      "hit_dice_remaining_label": "disponibili"
     },
     "death_saves": {
       "title": "Tiri vs Morte",
