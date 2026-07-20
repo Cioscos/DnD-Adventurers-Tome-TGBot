@@ -12,6 +12,7 @@ import { useAnyOverlayOpen } from '@/store/overlayStore'
 import { haptic } from '@/auth/telegram'
 import { api } from '@/api/client'
 import { useRollAndPersist, type RollEntry, type RollGroup } from '@/dice/useRollAndPersist'
+import { useDeferredBlur } from '@/hooks/useDeferredBlur'
 import type { DiceKind } from '@/dice/types'
 
 const KINDS: DiceKind[] = ['d4', 'd6', 'd8', 'd10', 'd12', 'd20', 'd100']
@@ -60,6 +61,8 @@ export default function DiceOverlay() {
 
   const [results, setResults] = useState<RollGroup[] | null>(null)
   const [warningText, setWarningText] = useState<string | null>(null)
+  const { blurStyle: warningBlurStyle, onEntranceComplete: onWarningEntranceComplete } =
+    useDeferredBlur(warningText !== null, 12)
 
   const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -287,13 +290,15 @@ export default function DiceOverlay() {
             onClick={() => setWarningText(null)}
             className="fixed bottom-24 left-4 right-4 mx-auto z-[55]
                        max-w-xs
-                       rounded-2xl bg-dnd-surface-raised/95 backdrop-blur-md
+                       rounded-2xl bg-dnd-surface-raised/95
                        border border-dnd-crimson shadow-parchment-xl
                        px-4 py-3 text-center font-body text-sm text-dnd-crimson-bright"
+            style={warningBlurStyle}
             initial={{ opacity: 0, y: 20, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 10, scale: 0.95 }}
             transition={{ type: 'spring', stiffness: 320, damping: 26 }}
+            onAnimationComplete={onWarningEntranceComplete}
           >
             {warningText}
           </Pressable>

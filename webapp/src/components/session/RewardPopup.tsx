@@ -5,6 +5,7 @@ import { m, AnimatePresence } from 'framer-motion'
 import { Gift } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import { useOverlayDismiss } from '@/hooks/useOverlayDismiss'
+import { useDeferredBlur } from '@/hooks/useDeferredBlur'
 import { spring } from '@/styles/motion'
 import type { Reward } from '@/lib/rewardQueue'
 
@@ -20,6 +21,10 @@ export default function RewardPopup({ reward, description, onDismiss, onGoToInve
 
   // ESC + back/BackButton chiudono il popup (stack overlay condiviso).
   useOverlayDismiss(true, onDismiss)
+  // Il genitore smonta questo componente con un semplice `{cond && <.../>}`
+  // (nessuna AnimatePresence esterna): "visible" è costante true finché il
+  // componente esiste.
+  const { blurStyle, onEntranceComplete } = useDeferredBlur(true)
 
   useEffect(() => {
     const prev = document.body.style.overflow
@@ -32,10 +37,12 @@ export default function RewardPopup({ reward, description, onDismiss, onGoToInve
   return createPortal(
     <AnimatePresence>
       <m.div
-        className="fixed inset-0 z-[60] flex items-center justify-center bg-dnd-overlay backdrop-blur-[6px] p-4"
+        className="fixed inset-0 z-[60] flex items-center justify-center bg-dnd-overlay p-4"
+        style={blurStyle}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
+        onAnimationComplete={onEntranceComplete}
         onClick={onDismiss}
       >
         <m.div

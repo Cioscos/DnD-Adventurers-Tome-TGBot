@@ -17,6 +17,7 @@ import { unmetPrereqGroups, type AbilityKey } from '@/data/multiclassPrereqs'
 import { diffResourceMaxes } from '@/lib/resourceDiff'
 import { useRegisterOverlay } from '@/store/overlayStore'
 import { useOverlayDismiss } from '@/hooks/useOverlayDismiss'
+import { useDeferredBlur } from '@/hooks/useDeferredBlur'
 import type { CharacterFull } from '@/types'
 
 type ExistingEntry = {
@@ -56,6 +57,12 @@ export default function EditClassesModal({ char, targetLevel, onClose }: Props) 
   const { t } = useTranslation()
   const qc = useQueryClient()
   useRegisterOverlay(true)
+  // Backdrop statico (nessuna animazione di opacità propria): il blur si
+  // accende a fine ingresso della card sopra di esso (onEntranceComplete
+  // agganciato al suo onAnimationComplete), non a una transizione che il
+  // backdrop non possiede. "visible" costante true finché il modale esiste
+  // (il genitore smonta con un semplice `{cond && <.../>}`).
+  const modalBlur = useDeferredBlur(true)
 
   const [entries, setEntries] = useState<Entry[]>(() =>
     (char.classes ?? []).map((c) => ({
@@ -72,6 +79,9 @@ export default function EditClassesModal({ char, targetLevel, onClose }: Props) 
   const [pickerKey, setPickerKey] = useState<string>('')
   const [pickerCustomName, setPickerCustomName] = useState('')
   const [pickerSubclass, setPickerSubclass] = useState('')
+  // Il picker annidato ha un toggle reale (showPicker): il blur si spegne
+  // subito quando il picker si chiude, coerentemente col resto del pattern.
+  const pickerBlur = useDeferredBlur(showPicker)
 
   const closePicker = () => {
     setShowPicker(false)
@@ -217,7 +227,8 @@ export default function EditClassesModal({ char, targetLevel, onClose }: Props) 
 
   return (
     <div
-      className="fixed inset-0 bg-dnd-overlay backdrop-blur-[6px] z-50 flex items-end sm:items-center justify-center p-4"
+      className="fixed inset-0 bg-dnd-overlay z-50 flex items-end sm:items-center justify-center p-4"
+      style={modalBlur.blurStyle}
       role="dialog"
       aria-modal="true"
       onClick={(e) => {
@@ -227,6 +238,7 @@ export default function EditClassesModal({ char, targetLevel, onClose }: Props) 
       <m.div
         initial={{ y: 40, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
+        onAnimationComplete={modalBlur.onEntranceComplete}
         className="w-full max-w-xl max-h-[90vh] overflow-y-auto"
       >
         <Surface variant="tome" ornamented className="space-y-6 p-6">
@@ -351,7 +363,8 @@ export default function EditClassesModal({ char, targetLevel, onClose }: Props) 
       {/* Nested picker overlay — higher z-index sits above the edit modal */}
       {showPicker && (
         <div
-          className="fixed inset-0 bg-dnd-overlay backdrop-blur-[6px] z-[60] flex items-end sm:items-center justify-center p-4"
+          className="fixed inset-0 bg-dnd-overlay z-[60] flex items-end sm:items-center justify-center p-4"
+          style={pickerBlur.blurStyle}
           role="dialog"
           aria-modal="true"
           onClick={(ev) => {
@@ -361,6 +374,7 @@ export default function EditClassesModal({ char, targetLevel, onClose }: Props) 
           <m.div
             initial={{ y: 40, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
+            onAnimationComplete={pickerBlur.onEntranceComplete}
             className="w-full max-w-md max-h-[90vh] overflow-y-auto"
           >
             <Surface variant="tome" ornamented className="space-y-5 p-6">

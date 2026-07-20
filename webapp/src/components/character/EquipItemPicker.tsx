@@ -11,6 +11,7 @@ import Pressable from '@/components/ui/Pressable'
 import { ITEM_TYPE_TO_SLOTS, handsConflict } from '@/lib/equipmentSlots'
 import { useRegisterOverlay } from '@/store/overlayStore'
 import { useOverlayDismiss } from '@/hooks/useOverlayDismiss'
+import { useDeferredBlur } from '@/hooks/useDeferredBlur'
 import type { EquipmentSlot, Item, CharacterFull } from '@/types'
 import { useUnitSettings, formatWeight } from '@/store/unitSettings'
 import HandsConflictDialog from './HandsConflictDialog'
@@ -36,6 +37,11 @@ export default function EquipItemPicker({ charId, slot, items, onClose }: Props)
   useRegisterOverlay(true)
   // Overlay custom non-Sheet: ESC e back/BackButton chiudono (nota batch B1).
   useOverlayDismiss(true, onClose)
+  // Il genitore smonta questo componente con un semplice `{cond && <.../>}`
+  // (nessuna AnimatePresence esterna): l'exit dichiarato sotto non viene mai
+  // giocato, quindi "visible" per il blur differito è costante true finché
+  // il componente esiste.
+  const { blurStyle, onEntranceComplete } = useDeferredBlur(true, 4)
   const system = useUnitSettings((s) => s.system)
 
   const [conflict, setConflict] = useState<{ newItem: Item; removedItem: Item } | null>(null)
@@ -117,11 +123,12 @@ export default function EquipItemPicker({ charId, slot, items, onClose }: Props)
     <>
       <AnimatePresence>
       <m.div
-        className="fixed inset-0 z-50 flex items-end sm:items-center justify-center backdrop-blur-sm"
-        style={{ background: 'var(--dnd-overlay)' }}
+        className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
+        style={{ background: 'var(--dnd-overlay)', ...blurStyle }}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
+        onAnimationComplete={onEntranceComplete}
         onClick={onClose}
       >
         <m.div

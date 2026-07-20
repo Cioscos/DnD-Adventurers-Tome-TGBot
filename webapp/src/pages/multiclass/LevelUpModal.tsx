@@ -13,6 +13,7 @@ import { haptic } from '@/auth/telegram'
 import { progressionRows, localizeFeatures } from '@/lib/classProgression'
 import { useRegisterOverlay } from '@/store/overlayStore'
 import { useOverlayDismiss } from '@/hooks/useOverlayDismiss'
+import { useDeferredBlur } from '@/hooks/useDeferredBlur'
 import { fireLevelUpConfetti } from '@/lib/celebrate'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import type { CharacterFull, CharacterClass } from '@/types'
@@ -29,6 +30,9 @@ export default function LevelUpModal({ char, xpLevel, onClose }: LevelUpModalPro
   const reducedMotion = useReducedMotion()
   useRegisterOverlay(true)
   useOverlayDismiss(true, onClose)
+  // Backdrop statico (nessuna animazione di opacità propria): il blur si
+  // accende a fine ingresso della card sopra di esso.
+  const { blurStyle, onEntranceComplete } = useDeferredBlur(true)
   const classes = useMemo<CharacterClass[]>(() => char.classes ?? [], [char.classes])
   // For multiclass characters the single-class progression table's proficiency
   // bonus is NOT the character's real PB (which scales with total level), so we
@@ -90,7 +94,8 @@ export default function LevelUpModal({ char, xpLevel, onClose }: LevelUpModalPro
 
   return (
     <div
-      className="fixed inset-0 bg-dnd-overlay backdrop-blur-[6px] z-50 flex items-end sm:items-center justify-center p-4"
+      className="fixed inset-0 bg-dnd-overlay z-50 flex items-end sm:items-center justify-center p-4"
+      style={blurStyle}
       role="dialog"
       aria-modal="true"
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
@@ -98,6 +103,7 @@ export default function LevelUpModal({ char, xpLevel, onClose }: LevelUpModalPro
       <m.div
         initial={{ y: 40, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
+        onAnimationComplete={onEntranceComplete}
         className="w-full max-w-xl max-h-[90vh] overflow-y-auto"
       >
         <Surface variant="tome" ornamented className="space-y-6 p-6">

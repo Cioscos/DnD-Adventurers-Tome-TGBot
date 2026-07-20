@@ -27,6 +27,8 @@ interface PressableProps {
   exit?: TargetAndTransition
   /** Escape hatch: transition custom per `animate`/`whileTap`/`whileHover`. */
   transition?: Transition
+  /** Escape hatch: callback a fine animazione (es. blur differito su un toast). */
+  onAnimationComplete?: () => void
   /** Escape hatch: propagazione variants da un motion parent (stagger). */
   variants?: Variants
   /** Escape hatch: long-press manuale (es. DiceOverlay clear-pool). */
@@ -65,6 +67,7 @@ function PressableInner({
   initial,
   exit,
   transition,
+  onAnimationComplete,
   variants,
   onPointerDown,
   onPointerUp,
@@ -110,6 +113,7 @@ function PressableInner({
       initial={initial}
       exit={exit}
       transition={transition}
+      onAnimationComplete={onAnimationComplete}
       variants={variants}
       onPointerDown={onPointerDown}
       onPointerUp={onPointerUp}
