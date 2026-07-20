@@ -6,6 +6,7 @@ import { X } from 'lucide-react'
 import { progressionRows, localizeFeatures } from '@/lib/classProgression'
 import { useRegisterOverlay } from '@/store/overlayStore'
 import { useOverlayDismiss } from '@/hooks/useOverlayDismiss'
+import { useDeferredBlur } from '@/hooks/useDeferredBlur'
 import Pressable from '@/components/ui/Pressable'
 
 interface Props {
@@ -22,6 +23,10 @@ export default function ProgressionFullTableModal({ className, currentLevel, onC
   useRegisterOverlay(true)
   // Overlay custom non-Sheet: ESC e back/BackButton chiudono (nota batch B1).
   useOverlayDismiss(true, onClose)
+  // Il genitore smonta questo componente con un semplice `{cond && <.../>}`
+  // (nessuna AnimatePresence esterna): "visible" è costante true finché il
+  // componente esiste.
+  const { blurStyle, onEntranceComplete } = useDeferredBlur(true)
 
   useEffect(() => {
     currentRowRef.current?.scrollIntoView({ behavior: 'auto', block: 'center' })
@@ -38,10 +43,12 @@ export default function ProgressionFullTableModal({ className, currentLevel, onC
   return createPortal(
     <AnimatePresence>
       <m.div
-        className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-dnd-overlay backdrop-blur-[6px] p-3 sm:p-4"
+        className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-dnd-overlay p-3 sm:p-4"
+        style={blurStyle}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
+        onAnimationComplete={onEntranceComplete}
         onClick={onClose}
       >
         <m.div

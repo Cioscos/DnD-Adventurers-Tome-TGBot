@@ -1,8 +1,9 @@
 import { useState, useCallback, type ReactNode } from 'react'
-import { m, AnimatePresence, useDragControls, type PanInfo } from 'framer-motion'
+import { m, AnimatePresence, useDragControls, useIsPresent, type PanInfo } from 'framer-motion'
 import { spring } from '@/styles/motion'
 import { useRegisterOverlay } from '@/store/overlayStore'
 import { useOverlayDismiss } from '@/hooks/useOverlayDismiss'
+import { useDeferredBlur } from '@/hooks/useDeferredBlur'
 import { ModalContext, type ModalOptions } from './modalContext'
 
 function ModalShell({
@@ -15,6 +16,8 @@ function ModalShell({
   depth: number
 }) {
   const dragControls = useDragControls()
+  const isPresent = useIsPresent()
+  const { blurStyle, onEntranceComplete } = useDeferredBlur(isPresent)
   const dismissible = options.dismissible !== false
 
   // Escape e back/popstate chiudono il modale in cima (finding #7/#12 audit FE).
@@ -29,11 +32,12 @@ function ModalShell({
   return (
     <m.div
       className="fixed inset-0 flex items-center justify-center p-4"
-      style={{ zIndex: 50 + depth, background: 'var(--dnd-overlay)', backdropFilter: 'blur(6px)' }}
+      style={{ zIndex: 50 + depth, background: 'var(--dnd-overlay)', ...blurStyle }}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.2 }}
+      onAnimationComplete={onEntranceComplete}
       onClick={dismissible ? onClose : undefined}
     >
       <m.div

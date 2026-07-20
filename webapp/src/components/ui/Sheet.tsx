@@ -5,6 +5,7 @@ import { X } from 'lucide-react'
 import { spring } from '@/styles/motion'
 import { useRegisterOverlay } from '@/store/overlayStore'
 import { useOverlayDismiss } from '@/hooks/useOverlayDismiss'
+import { useDeferredBlur } from '@/hooks/useDeferredBlur'
 import { useTranslation } from 'react-i18next'
 
 interface SheetProps {
@@ -37,6 +38,7 @@ export default function Sheet({
 }: SheetProps) {
   const dragControls = useDragControls()
   const sheetRef = useRef<HTMLDivElement>(null)
+  const { blurStyle, onEntranceComplete } = useDeferredBlur(open)
 
   const { t } = useTranslation()
   useRegisterOverlay(open)
@@ -65,7 +67,7 @@ export default function Sheet({
         <m.div
           key="sheet-backdrop"
           className={`fixed inset-0 ${zClassName} flex items-end md:items-center justify-center`}
-          style={{ background: 'var(--dnd-overlay)', backdropFilter: 'blur(6px)' }}
+          style={{ background: 'var(--dnd-overlay)', ...blurStyle }}
           initial={{ opacity: 0, pointerEvents: 'none' }}
           animate={{ opacity: 1, pointerEvents: 'auto' }}
           // pointerEvents legato all'animazione: in chiusura il backdrop diventa
@@ -75,6 +77,7 @@ export default function Sheet({
           // intercetta più tap/scroll, quindi la pagina non si blocca.
           exit={{ opacity: 0, pointerEvents: 'none' }}
           transition={{ duration: 0.2 }}
+          onAnimationComplete={onEntranceComplete}
           onClick={dismissible ? onClose : undefined}
         >
           <m.div

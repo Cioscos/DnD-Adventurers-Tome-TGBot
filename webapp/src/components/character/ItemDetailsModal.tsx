@@ -5,6 +5,7 @@ import { X } from 'lucide-react'
 import { TYPE_ICON } from '@/pages/inventory/itemMetadata'
 import { useRegisterOverlay } from '@/store/overlayStore'
 import { useOverlayDismiss } from '@/hooks/useOverlayDismiss'
+import { useDeferredBlur } from '@/hooks/useDeferredBlur'
 import Pressable from '@/components/ui/Pressable'
 import type { EquipmentSlot, Item } from '@/types'
 import { useUnitSettings, formatWeight } from '@/store/unitSettings'
@@ -39,6 +40,10 @@ export default function ItemDetailsModal({ item, slot, onClose }: Props) {
   useRegisterOverlay(true)
   // Overlay custom non-Sheet: ESC e back/BackButton chiudono (nota batch B1).
   useOverlayDismiss(true, onClose)
+  // Il genitore smonta questo componente con un semplice `{cond && <.../>}`
+  // (nessuna AnimatePresence esterna): "visible" è costante true finché il
+  // componente esiste.
+  const { blurStyle, onEntranceComplete } = useDeferredBlur(true, 4)
 
   const slotLabel = t(`character.equipment.slots.${slot}`, { defaultValue: slot })
   const typeLabel = t(`character.inventory.types.${item.item_type}`, { defaultValue: item.item_type })
@@ -52,11 +57,12 @@ export default function ItemDetailsModal({ item, slot, onClose }: Props) {
   return createPortal(
     <AnimatePresence>
       <m.div
-        className="fixed inset-0 z-50 flex items-end justify-center backdrop-blur-sm"
-        style={{ background: 'var(--dnd-overlay)' }}
+        className="fixed inset-0 z-50 flex items-end justify-center"
+        style={{ background: 'var(--dnd-overlay)', ...blurStyle }}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
+        onAnimationComplete={onEntranceComplete}
         onClick={onClose}
       >
         <m.div

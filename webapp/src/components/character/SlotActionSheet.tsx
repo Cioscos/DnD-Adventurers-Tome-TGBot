@@ -6,6 +6,7 @@ import { api } from '@/api/client'
 import { haptic } from '@/auth/telegram'
 import { useRegisterOverlay } from '@/store/overlayStore'
 import { useOverlayDismiss } from '@/hooks/useOverlayDismiss'
+import { useDeferredBlur } from '@/hooks/useDeferredBlur'
 import Pressable from '@/components/ui/Pressable'
 import type { EquipmentSlot, Item, CharacterFull } from '@/types'
 
@@ -24,6 +25,10 @@ export default function SlotActionSheet({ charId, slot, item, onClose, onReplace
   useRegisterOverlay(true)
   // Overlay custom non-Sheet: ESC e back/BackButton chiudono (nota batch B1).
   useOverlayDismiss(true, onClose)
+  // Il genitore smonta questo componente con un semplice `{cond && <.../>}`
+  // (nessuna AnimatePresence esterna): "visible" è costante true finché il
+  // componente esiste.
+  const { blurStyle, onEntranceComplete } = useDeferredBlur(true, 4)
 
   const unequip = useMutation({
     mutationFn: () =>
@@ -42,11 +47,12 @@ export default function SlotActionSheet({ charId, slot, item, onClose, onReplace
   return createPortal(
     <AnimatePresence>
       <m.div
-        className="fixed inset-0 z-50 flex items-end justify-center backdrop-blur-sm"
-        style={{ background: 'var(--dnd-overlay)' }}
+        className="fixed inset-0 z-50 flex items-end justify-center"
+        style={{ background: 'var(--dnd-overlay)', ...blurStyle }}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
+        onAnimationComplete={onEntranceComplete}
         onClick={onClose}
       >
         <m.div
