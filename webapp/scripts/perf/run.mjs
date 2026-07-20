@@ -9,21 +9,9 @@ import { connectDevice, launchLocal } from './lib/session.mjs'
 import { startTracing, stopTracing } from './lib/tracing.mjs'
 import { analyzeTrace } from './lib/metrics.mjs'
 import { createRunDir, writeRun } from './lib/report.mjs'
+import { scenarios as SCENARIOS } from './scenarios.mjs'
 
 const RESULTS_ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), 'results')
-
-// Task 4 sposta il registry in scenarios.mjs; qui esiste solo lo smoke.
-const SCENARIOS = [
-  {
-    id: 'smoke',
-    title: 'Smoke (verifica harness)',
-    instructions: 'Nessuna azione richiesta.',
-    auto: async (page) => {
-      await page.evaluate(() => window.scrollTo(0, 200))
-      await page.waitForTimeout(3000)
-    },
-  },
-]
 
 async function main() {
   const { values } = parseArgs({

@@ -1,6 +1,24 @@
 {
   "entries": [
     {
+      "version": "2.19.3",
+      "date": "2026-07-20",
+      "title": {
+        "it": "Strumentazione interna per le performance",
+        "en": "Internal performance tooling"
+      },
+      "added": {
+        "it": [
+          "Strumentazione interna per misurare le performance dell'app sul telefono reale (nessun cambiamento visibile)."
+        ],
+        "en": [
+          "Internal tooling to measure app performance on real phones (no visible changes)."
+        ]
+      },
+      "improved": { "it": [], "en": [] },
+      "fixed": { "it": [], "en": [] }
+    },
+    {
       "version": "2.19.2",
       "date": "2026-07-17",
       "title": {
