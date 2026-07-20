@@ -51,8 +51,13 @@ export function analyzeTrace(events, { viewport } = {}) {
   const main = findMainThread(events)
   const onMain = main ? x.filter((e) => e.pid === main.pid && e.tid === main.tid) : x
 
-  const t0 = Math.min(...x.map((e) => e.ts))
-  const t1 = Math.max(...x.map((e) => e.ts + e.dur))
+  let t0 = Infinity
+  let t1 = -Infinity
+  for (const e of x) {
+    if (e.ts < t0) t0 = e.ts
+    const end = e.ts + e.dur
+    if (end > t1) t1 = end
+  }
   const durationMs = (t1 - t0) / 1000
 
   const longTasks = onMain

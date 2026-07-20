@@ -101,4 +101,16 @@ describe('analyzeTrace', () => {
     ]
     expect(analyzeTrace(events).fullScreenPaints).toBe(0)
   })
+
+  it('regge trace da centinaia di migliaia di eventi senza stack overflow', () => {
+    // Simula traccia grande (es. animazione 3D dadi) con 300_000 eventi
+    const events = [threadMeta, ev('RunTask', 0, 3_000_000_000)]
+    for (let i = 0; i < 300_000; i++) {
+      events.push(ev('FunctionCall', i * 10, 5))
+    }
+    const r = analyzeTrace(events)
+    expect(r.durationMs).toBe(3000000)
+    expect(r.longTasks).toHaveLength(1)
+    expect(r.frames.drawn).toBe(0)
+  })
 })
