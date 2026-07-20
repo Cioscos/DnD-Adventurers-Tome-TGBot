@@ -145,7 +145,13 @@ export default function DiceAnimationProvider({ children }: { children: ReactNod
             aria-hidden
             className="fixed inset-0 z-[60]"
             onTransitionEnd={(e) => {
-              if (e.propertyName === 'opacity' && overlayVisible) onEntranceComplete()
+              // target === currentTarget: onTransitionEnd fa bubbling, senza
+              // questa guardia la transizione di opacity di un discendente
+              // (es. dentro DiceScene) risalirebbe fino a qui e segnerebbe
+              // l'ingresso completato in anticipo (review Minor #1).
+              if (e.target === e.currentTarget && e.propertyName === 'opacity' && overlayVisible) {
+                onEntranceComplete()
+              }
             }}
             style={{
               opacity: overlayVisible ? 1 : 0,
