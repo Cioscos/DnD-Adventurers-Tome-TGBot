@@ -73,3 +73,6 @@ docs/superpowers/
 
 # Skill-generated reports + screenshots (regenerated per run, never versioned)
 .claude/skills/*/reports/
+
+# Perf harness — output dei run (mai committare)
+webapp/scripts/perf/results/

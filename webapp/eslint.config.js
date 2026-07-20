@@ -75,6 +75,13 @@ export default [
     languageOptions: { globals: { ...globals.node } },
   },
 
+  // Perf harness (scripts/perf/): oltre al codice Node, usa page.evaluate()
+  // per callback eseguite nel contesto browser della WebView/Chrome tracciata.
+  {
+    files: ['scripts/perf/**/*.mjs'],
+    languageOptions: { globals: { ...globals.node, ...globals.browser } },
+  },
+
   // Spec E2E Playwright: scaffolding di test, NON codice React.
   // - niente plugin React → niente falsi positivi di rules-of-hooks su helper non-React;
   // - `no-explicit-any` off → gli E2E usano any per i payload di page.evaluate e i cast lato browser.
