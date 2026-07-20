@@ -46,51 +46,66 @@ async function main() {
   }
 
   let session
-  if (values.mode === 'device') {
-    const { socket } = await forwardDevtools({ port: Number(values.port) })
-    console.log(`✓ adb forward attivo su ${socket}`)
-    session = await connectDevice({ port: Number(values.port) })
-  } else {
-    session = await launchLocal({ url: values.url, cpuThrottle: Number(values.throttle) })
-  }
-  console.log(`✓ Collegato a: ${session.page.url()}`)
-
-  const viewport = await session.page.evaluate(() => ({
-    width: window.innerWidth,
-    height: window.innerHeight,
-  }))
-
-  const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
-  const dir = await createRunDir(RESULTS_ROOT, values.label)
+  let rl
+  let dir
+  let viewport
   const results = []
+  let completedOk = false
 
-  for (const s of wanted) {
-    console.log(`\n▶ ${s.title}`)
-    if (s.auto) {
-      const cdp = await startTracing(session.page)
-      await s.auto(session.page)
-      const events = await stopTracing(cdp)
-      results.push(await collect(dir, s, events, viewport))
+  try {
+    if (values.mode === 'device') {
+      const { socket } = await forwardDevtools({ port: Number(values.port) })
+      console.log(`✓ adb forward attivo su ${socket}`)
+      session = await connectDevice({ port: Number(values.port) })
     } else {
-      console.log(`  ${s.instructions}`)
-      await rl.question('  INVIO per AVVIARE la registrazione… ')
-      const cdp = await startTracing(session.page)
-      await rl.question('  Esegui ora il gesto, poi INVIO per FERMARE… ')
-      const events = await stopTracing(cdp)
-      results.push(await collect(dir, s, events, viewport))
+      session = await launchLocal({ url: values.url, cpuThrottle: Number(values.throttle) })
     }
-  }
+    console.log(`✓ Collegato a: ${session.page.url()}`)
 
-  rl.close()
-  const meta = {
-    label: values.label,
-    mode: values.mode,
-    date: new Date().toISOString(),
-    viewport,
+    viewport = await session.page.evaluate(() => ({
+      width: window.innerWidth,
+      height: window.innerHeight,
+    }))
+
+    rl = readline.createInterface({ input: process.stdin, output: process.stdout })
+    dir = await createRunDir(RESULTS_ROOT, values.label)
+
+    for (const s of wanted) {
+      console.log(`\n▶ ${s.title}`)
+      if (s.auto) {
+        const cdp = await startTracing(session.page)
+        await s.auto(session.page)
+        const events = await stopTracing(cdp)
+        results.push(await collect(dir, s, events, viewport))
+      } else {
+        console.log(`  ${s.instructions}`)
+        await rl.question('  INVIO per AVVIARE la registrazione… ')
+        const cdp = await startTracing(session.page)
+        await rl.question('  Esegui ora il gesto, poi INVIO per FERMARE… ')
+        const events = await stopTracing(cdp)
+        results.push(await collect(dir, s, events, viewport))
+      }
+    }
+
+    completedOk = true
+  } finally {
+    rl?.close()
+    if (dir && results.length > 0) {
+      const meta = {
+        label: values.label,
+        mode: values.mode,
+        date: new Date().toISOString(),
+        viewport,
+      }
+      await writeRun(dir, meta, results)
+      console.log(
+        completedOk
+          ? `\n✓ Report scritto in ${dir}`
+          : `\n⚠ Report PARZIALE scritto in ${dir} (interrotto da un errore)`,
+      )
+    }
+    await session?.close()
   }
-  await writeRun(dir, meta, results)
-  console.log(`\n✓ Report scritto in ${dir}`)
-  await session.close()
 }
 
 async function collect(dir, scenario, events, viewport) {
