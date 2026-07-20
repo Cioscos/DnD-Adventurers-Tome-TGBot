@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from 'react'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
+import { useDeferredBlur } from '@/hooks/useDeferredBlur'
 import { useDiceSettings } from '@/store/diceSettings'
 import type { DiceAnimationApi, DicePlayRequest, PlayCollectGroup, DetectedResult } from './types'
 import type { SceneRequest } from './DiceScene'
@@ -32,6 +33,7 @@ export default function DiceAnimationProvider({ children }: { children: ReactNod
   const [sceneRequest, setSceneRequest] = useState<SceneRequest | null>(null)
   const [overlayVisible, setOverlayVisible] = useState(false)
   const [isPlaying, setIsPlaying] = useState(false)
+  const { blurStyle, onEntranceComplete } = useDeferredBlur(overlayVisible)
 
   const sceneReadyRef = useRef(false)
   const readyWaitersRef = useRef<Array<() => void>>([])
@@ -142,13 +144,15 @@ export default function DiceAnimationProvider({ children }: { children: ReactNod
           <div
             aria-hidden
             className="fixed inset-0 z-[60]"
+            onTransitionEnd={(e) => {
+              if (e.propertyName === 'opacity' && overlayVisible) onEntranceComplete()
+            }}
             style={{
               opacity: overlayVisible ? 1 : 0,
               pointerEvents: 'none',
               transition: 'opacity 180ms ease-out',
               background: overlayVisible ? 'var(--dnd-overlay)' : 'transparent',
-              backdropFilter: overlayVisible ? 'blur(6px)' : 'none',
-              WebkitBackdropFilter: overlayVisible ? 'blur(6px)' : 'none',
+              ...blurStyle,
               willChange: 'opacity',
             }}
           >

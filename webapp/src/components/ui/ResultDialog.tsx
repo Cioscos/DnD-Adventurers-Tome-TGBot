@@ -5,6 +5,7 @@ import { spring } from '@/styles/motion'
 import { CornerFlourishes } from './Ornament'
 import { useRegisterOverlay } from '@/store/overlayStore'
 import { useOverlayDismiss } from '@/hooks/useOverlayDismiss'
+import { useDeferredBlur } from '@/hooks/useDeferredBlur'
 
 export type DialogAccent = 'default' | 'gold' | 'crimson' | 'emerald' | 'arcane' | 'cobalt'
 export type DialogSize = 'sm' | 'md'
@@ -56,6 +57,7 @@ export default function ResultDialog({
   // DESIGN.md §Dialogs: "Tap outside dismisses; ESC dismisses." Il back chiude
   // il dialogo invece di lasciare la pagina (finding #7/#12 audit FE).
   useOverlayDismiss(open, onClose)
+  const { blurStyle, onEntranceComplete } = useDeferredBlur(open)
 
   const pulseClass = pulse
     ? accent === 'gold'
@@ -73,12 +75,13 @@ export default function ResultDialog({
       {open && (
         <m.div
           className="fixed inset-0 flex items-center justify-center z-50 p-4"
-          style={{ background: 'var(--dnd-overlay)', backdropFilter: 'blur(6px)' }}
+          style={{ background: 'var(--dnd-overlay)', ...blurStyle }}
           onClick={onClose}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
+          onAnimationComplete={onEntranceComplete}
         >
           <m.div
             className={`relative rounded-3xl p-6 pt-7 w-full ${SIZE_CLASS[size]} space-y-4 text-center
