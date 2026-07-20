@@ -1,6 +1,24 @@
 {
   "entries": [
     {
+      "version": "2.19.4",
+      "date": "2026-07-20",
+      "title": {
+        "it": "Aperture di modali e sheet più fluide su Android",
+        "en": "Smoother modal and sheet openings on Android"
+      },
+      "added": { "it": [], "en": [] },
+      "improved": { "it": [], "en": [] },
+      "fixed": {
+        "it": [
+          "Su Telegram Android l'apertura di modali, sheet e overlay dei dadi non sfarfalla più: l'effetto sfocatura dello sfondo viene applicato a fine animazione invece che durante."
+        ],
+        "en": [
+          "On Telegram Android, opening modals, sheets and the dice overlay no longer flickers: the background blur is applied after the animation instead of during it."
+        ]
+      }
+    },
+    {
       "version": "2.19.3",
       "date": "2026-07-20",
       "title": {
