@@ -57,3 +57,11 @@ export type TintOverride = { ink?: string; outline?: string }
 export function getTintOverride(manifest: PackManifest, tint: DiceTint): TintOverride | undefined {
   return manifest.tints?.[tint]
 }
+
+/** Manifest di un pack (solo JSON + zod, niente three): per la UI di Settings,
+ *  che non deve trascinarsi dietro il chunk 3D. */
+export async function loadManifest(id: string): Promise<PackManifest> {
+  const res = await fetch(`${import.meta.env.BASE_URL}dice-packs/${id}/pack.json`)
+  if (!res.ok) throw new Error(`pack.json not found for ${id}`)
+  return PackManifestSchema.parse(await res.json())
+}

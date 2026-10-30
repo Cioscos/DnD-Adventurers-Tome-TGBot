@@ -26,7 +26,6 @@ import { haptic, telegramConfirm } from '@/auth/telegram'
 import { useToast } from '@/hooks/useToast'
 import { spring, stagger } from '@/styles/motion'
 import languagesSrd from '@/data/languages-srd.json'
-import { currentVersion } from '@/lib/version'
 
 const LANGUAGE_SUGGESTIONS = [...languagesSrd.common, ...languagesSrd.exotic]
 
@@ -363,7 +362,7 @@ export default function CharacterSelect() {
             aria-label={t('changelog.view')}
           >
             <ScrollText size={13} className="shrink-0" />
-            <span className="font-mono tabular-nums text-xs">v{currentVersion()}</span>
+            <span className="font-mono tabular-nums text-xs">v{__APP_VERSION__}</span>
           </Pressable>
         </div>
       </div>

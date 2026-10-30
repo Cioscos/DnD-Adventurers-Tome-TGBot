@@ -172,6 +172,7 @@ function MapZoneGroupInner({
                 alt={zoneName}
                 className="w-full h-full object-cover pointer-events-none"
                 loading="lazy"
+                decoding="async"
                 draggable={false}
               />
             ) : (

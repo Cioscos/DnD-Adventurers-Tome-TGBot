@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 import { Minus, Plus, RotateCcw, X } from 'lucide-react'
 import { GiCutDiamond as Gem, GiSparkles as Sparkles } from 'react-icons/gi'
 import { api } from '@/api/client'
@@ -15,7 +16,7 @@ import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import { haptic } from '@/auth/telegram'
 import { stagger } from '@/styles/motion'
 import { toRoman } from '@/lib/roman'
-import type { SpellSlot } from '@/types'
+import type { CharacterFull, SpellSlot } from '@/types'
 import SpellSlotsSkeleton from '@/components/skeletons/SpellSlotsSkeleton'
 import AutoModeBanner from '@/components/character/AutoModeBanner'
 
@@ -185,10 +186,38 @@ export default function SpellSlots() {
     queryFn: () => api.characters.get(charId),
   })
 
+  // Gemme ottimistiche: il tap aggiorna subito la cache (prima: PATCH + GET
+  // completo del personaggio via tunnel prima di vedere la gemma cambiare).
+  // `scope` serializza i tap rapidi, così le PATCH arrivano in ordine.
   const updateSlot = useMutation({
     mutationFn: ({ slotId, used }: { slotId: number; used: number }) =>
       api.spellSlots.update(charId, slotId, { used }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['character', charId] }),
+    scope: { id: `spell-slots-${charId}` },
+    onMutate: async ({ slotId, used }) => {
+      await qc.cancelQueries({ queryKey: ['character', charId] })
+      const prev = qc.getQueryData<CharacterFull>(['character', charId])
+      if (prev) {
+        qc.setQueryData<CharacterFull>(['character', charId], {
+          ...prev,
+          spell_slots: prev.spell_slots.map((s) =>
+            s.id === slotId ? { ...s, used, available: s.total - used } : s,
+          ),
+        })
+      }
+      return { prev }
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) qc.setQueryData(['character', charId], ctx.prev)
+      haptic.error()
+      toast.error(t('common.action_failed'))
+    },
+    onSettled: () => {
+      // Riallinea col BE solo a coda vuota: niente refetch fra un tap e l'altro.
+      // (isMutating conta anche questa mutation e quelle in coda nello scope.)
+      if (qc.isMutating({ predicate: (m) => m.options.scope?.id === `spell-slots-${charId}` }) <= 1) {
+        void qc.invalidateQueries({ queryKey: ['character', charId] })
+      }
+    },
   })
 
   const updateTotal = useMutation({
@@ -307,8 +336,6 @@ export default function SpellSlots() {
                 {Array.from({ length: slot.total }).map((_, i) => (
                   <Pressable
                     key={i}
-                    pending={updateSlot.isPending && updateSlot.variables?.slotId === slot.id}
-                    spinnerSize={12}
                     onClick={() => {
                       if (i < slot.used) {
                         haptic.light()

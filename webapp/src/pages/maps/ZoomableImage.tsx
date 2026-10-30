@@ -26,6 +26,7 @@ export default function ZoomableImage({ src, alt }: ZoomableImageProps) {
           src={src}
           alt={alt}
           className="max-w-full max-h-[calc(100vh-7rem)] rounded-xl object-contain shadow-parchment-2xl select-none"
+          decoding="async"
           draggable={false}
         />
       </TransformComponent>

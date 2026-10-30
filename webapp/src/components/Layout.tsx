@@ -150,7 +150,7 @@ export default function Layout({ title, children, backTo, group, page, hideScrol
     >
       <m.header
         className="shrink-0 z-10 flex flex-col px-4 py-3 pt-safe
-                    bg-dnd-surface-raised/95 backdrop-blur-sm
+                    bg-dnd-surface-raised
                     border-b border-dnd-gold-dim/40 shadow-parchment-md"
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}

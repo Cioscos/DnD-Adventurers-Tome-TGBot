@@ -133,6 +133,17 @@ describe('SpellSlots page', () => {
     )
   })
 
+  it('a gem tap updates the UI optimistically, before the PATCH resolves', async () => {
+    getChar.mockResolvedValue(manualChar)
+    updateSpy.mockReturnValue(new Promise(() => {})) // rete appesa
+    renderWithProviders(<SpellSlots />)
+    await screen.findByText('2/3')
+
+    await userEvent.click(screen.getAllByLabelText('character.slots.gem_aria')[1])
+    // available 2 → 1 senza aspettare il BE
+    expect(await screen.findByText('1/3')).toBeInTheDocument()
+  })
+
   it('clicking a used gem PATCHes used-1 (clamped to 0)', async () => {
     getChar.mockResolvedValue(manualChar)
     updateSpy.mockResolvedValue(slot)
