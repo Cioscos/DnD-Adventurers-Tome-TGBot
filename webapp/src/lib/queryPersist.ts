@@ -12,20 +12,23 @@ export const CACHE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000
 const PERSISTED_ROOTS: readonly unknown[] = ['characters', 'character', 'notes']
 
 /** `request()` lancia `ApiError` solo se il server ha risposto: tutto il resto è rete
- *  (fetch fallito, timeout). */
+ *  (fetch fallito, timeout). Un `ApiError` ripristinato dalla cache è un oggetto
+ *  semplice, ma conserva `status`: resta una risposta del server. */
 export function isNetworkError(err: unknown): boolean {
-  return !(err instanceof ApiError)
+  if (err instanceof ApiError) return false
+  return typeof (err as { status?: unknown } | null | undefined)?.status !== 'number'
 }
 
 export function shouldPersistQuery(query: Query): boolean {
   if (!PERSISTED_ROOTS.includes(query.queryKey[0])) return false
   const { status, data, error } = query.state
   if (status === 'success') return true
-  // Ogni salvataggio riscrive l'intera cache: da offline il refetch fallito porta
-  // la query in `error`, e scartarla qui cancellerebbe la copia che si sta
-  // mostrando, lasciando vuoto il ricaricamento successivo. Una risposta HTTP di
-  // errore (404/403) invece sconfessa la copia, che va persa.
-  return status === 'error' && data !== undefined && isNetworkError(error)
+  // Ogni salvataggio riscrive l'intera cache: un refetch fallito porta la query in
+  // `error`, e scartarla qui cancellerebbe la copia che si sta mostrando, lasciando
+  // vuoto il ricaricamento successivo. Vale per la rete e per 401/5xx, che non dicono
+  // nulla sui dati. Solo 404/403 sconfessano la copia, che va persa.
+  if (status !== 'error' || data === undefined) return false
+  return !(error instanceof ApiError && (error.status === 404 || error.status === 403))
 }
 
 /** Una cache per utente: stesso dispositivo, account diversi, dati separati. */

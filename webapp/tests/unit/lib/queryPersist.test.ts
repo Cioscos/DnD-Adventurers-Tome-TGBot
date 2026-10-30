@@ -51,9 +51,15 @@ describe('shouldPersistQuery', () => {
     expect(shouldPersistQuery(query(['character', 1], { status: 'error', error: new TypeError('x') }))).toBe(false)
   })
 
-  it('does not persist a query whose refetch was answered with an HTTP error', () => {
-    const state = { status: 'error', data: { id: 1 }, error: new ApiError(404, 'gone') }
+  it.each([404, 403])('discards the cached copy on a %i', (status) => {
+    const state = { status: 'error', data: { id: 1 }, error: new ApiError(status, 'gone') }
     expect(shouldPersistQuery(query(['character', 1], state))).toBe(false)
+  })
+
+  // Una sessione scaduta (401) o un backend in errore non dicono nulla sui dati.
+  it.each([401, 500, 503])('keeps the cached copy on a %i', (status) => {
+    const state = { status: 'error', data: { id: 1 }, error: new ApiError(status, 'boom') }
+    expect(shouldPersistQuery(query(['character', 1], state))).toBe(true)
   })
 
   // Da offline ogni salvataggio riscrive l'intera cache: senza questo caso il
@@ -77,6 +83,13 @@ describe('isNetworkError', () => {
 
   it('is false for an ApiError', () => {
     expect(isNetworkError(new ApiError(500, 'boom'))).toBe(false)
+  })
+
+  it('still recognises an ApiError restored from storage as a plain object', () => {
+    const restored = JSON.parse(JSON.stringify(new ApiError(500, 'boom')))
+    expect(isNetworkError(restored)).toBe(false)
+    // Un TypeError serializzato diventa {}: resta rete.
+    expect(isNetworkError(JSON.parse(JSON.stringify(new TypeError('x'))))).toBe(true)
   })
 })
 

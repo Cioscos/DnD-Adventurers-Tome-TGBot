@@ -5,7 +5,7 @@ import { isNetworkError } from '@/lib/queryPersist'
 
 export type OfflineNoticeQuery = Pick<
   UseQueryResult<unknown, unknown>,
-  'data' | 'dataUpdatedAt' | 'error' | 'failureReason' | 'isRefetchError'
+  'data' | 'dataUpdatedAt' | 'error' | 'failureReason' | 'isFetching' | 'isRefetchError'
 >
 
 interface OfflineNoticeProps {
@@ -21,17 +21,21 @@ function formatDataTime(timestamp: number, locale: string): string {
     ...(isToday ? {} : { day: '2-digit', month: '2-digit' }),
     hour: '2-digit',
     minute: '2-digit',
+    // Sempre HH:mm, anche con le lingue che userebbero AM/PM.
+    hour12: false,
   })
 }
 
-/** Avvisa che i dati a schermo vengono dalla cache perché l'ultimo aggiornamento non
- *  ha raggiunto il server. Una risposta di errore del server non è "offline".
- *  `failureReason` copre i tentativi in corso: con la rete giù durano secondi e
- *  intanto la query non è ancora in `error`. */
+/** Avvisa che i dati a schermo non sono aggiornati perché l'ultimo aggiornamento è
+ *  fallito: "offline" se non ha raggiunto il server, testo neutro se il server ha
+ *  risposto con un errore. `failureReason` copre i tentativi in corso: con la rete giù
+ *  durano secondi e intanto la query non è ancora in `error`. Fuori da un fetch non
+ *  conta: `setQueryData` non lo azzera e resterebbe anche su dati appena salvati. */
 export default function OfflineNotice({ query, className = '' }: OfflineNoticeProps) {
   const { t, i18n } = useTranslation()
-  const failure = query.isRefetchError ? query.error : query.failureReason
-  if (query.data === undefined || !failure || !isNetworkError(failure)) return null
+  const failure = query.isRefetchError ? query.error : query.isFetching ? query.failureReason : null
+  if (query.data === undefined || !failure) return null
+  const textKey = isNetworkError(failure) ? 'common.offline_data_from' : 'common.stale_data_from'
 
   return (
     <p
@@ -40,7 +44,7 @@ export default function OfflineNotice({ query, className = '' }: OfflineNoticePr
     >
       <WifiOff size={14} className="shrink-0 text-dnd-amber" />
       <span className="min-w-0">
-        {t('common.offline_data_from', { time: formatDataTime(query.dataUpdatedAt, i18n.language) })}
+        {t(textKey, { time: formatDataTime(query.dataUpdatedAt, i18n.language) })}
       </span>
     </p>
   )

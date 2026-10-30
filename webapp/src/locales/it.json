@@ -17,6 +17,7 @@
     "retry": "Riprova",
     "offline_unavailable": "Non disponibile offline",
     "offline_data_from": "Offline · dati delle {{time}}",
+    "stale_data_from": "Dati non aggiornati · dati delle {{time}}",
     "add": "Aggiungi",
     "edit": "Modifica",
     "close": "Chiudi",

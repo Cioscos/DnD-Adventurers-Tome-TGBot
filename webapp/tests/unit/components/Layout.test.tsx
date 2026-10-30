@@ -83,6 +83,13 @@ describe('Layout', () => {
       expect(screen.queryByText('layout.char_error.generic')).not.toBeInTheDocument()
     })
 
+    it('keeps the page with the neutral notice on a 500', async () => {
+      vi.mocked(api.characters.get).mockRejectedValue(new ApiError(500, 'boom'))
+      cachedRender(<Layout title="T"><p>contenuto</p></Layout>)
+      expect(await screen.findByText('common.stale_data_from')).toBeInTheDocument()
+      expect(screen.getByText('contenuto')).toBeInTheDocument()
+    })
+
     it('shows not found on 404 even with a cached sheet', async () => {
       vi.mocked(api.characters.get).mockRejectedValue(new ApiError(404, 'gone'))
       cachedRender(<Layout title="T"><p>contenuto</p></Layout>)
@@ -98,7 +105,7 @@ describe('Layout', () => {
     })
 
     it('reports on the page query when one is given', async () => {
-      const failedNotes = { data: [], dataUpdatedAt: Date.now(), error: new TypeError('x'), failureReason: null, isRefetchError: true }
+      const failedNotes = { data: [], dataUpdatedAt: Date.now(), error: new TypeError('x'), failureReason: null, isFetching: false, isRefetchError: true }
       cachedRender(<Layout title="T" offlineQuery={failedNotes}><p>contenuto</p></Layout>)
       expect(await screen.findByText('common.offline_data_from')).toBeInTheDocument()
       expect(screen.getByText('contenuto')).toBeInTheDocument()

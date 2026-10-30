@@ -122,11 +122,20 @@ describe('CharacterMain', () => {
     expect(screen.queryByTestId('swiper')).not.toBeInTheDocument()
   })
 
-  it('does not flag cached data as offline on a server error', async () => {
-    getChar.mockRejectedValue(new ApiError(500, 'boom'))
+  it.each([500, 401])('keeps the sheet and says it is not updated on a %i', async (status) => {
+    getChar.mockRejectedValue(new ApiError(status, 'boom'))
     renderWithProviders(<CharacterMain />, { client: cachedClient() })
     await waitFor(() => expect(getChar).toHaveBeenCalledTimes(4))
-    expect(await screen.findByText('Aragorn')).toBeInTheDocument()
+    expect(await screen.findByText('common.stale_data_from')).toBeInTheDocument()
+    expect(screen.getByText('Aragorn')).toBeInTheDocument()
     expect(screen.queryByText('common.offline_data_from')).not.toBeInTheDocument()
+    expect(screen.queryByText('layout.char_error.not_found')).not.toBeInTheDocument()
+  })
+
+  it('shows not found when refetch returns 403 despite cache', async () => {
+    getChar.mockRejectedValue(new ApiError(403, 'forbidden'))
+    renderWithProviders(<CharacterMain />, { client: cachedClient() })
+    expect(await screen.findByText('layout.char_error.not_found')).toBeInTheDocument()
+    expect(screen.queryByText('common.stale_data_from')).not.toBeInTheDocument()
   })
 })
