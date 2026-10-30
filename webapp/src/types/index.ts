@@ -178,7 +178,10 @@ export interface SpellcastingInfo {
   has_wizard: boolean
 }
 
-export interface CharacterFull extends CharacterSummary {
+// Il dettaglio backend non restituisce ac_homebrew_modifier (solo la lista): resta opzionale
+// e CharacterFull non è assegnabile a CharacterSummary, così effectiveAc non gira su di esso.
+export interface CharacterFull extends Omit<CharacterSummary, 'ac_homebrew_modifier'> {
+  ac_homebrew_modifier?: number
   background?: string
   alignment?: string
   speed: number
