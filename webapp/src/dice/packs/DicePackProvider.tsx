@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
+import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { useDiceSettings } from '@/store/diceSettings'
 import type { LoadedPack } from './loader'
 import { isBundledPack, type PackId } from './registry'
@@ -26,12 +27,17 @@ function whenIdle(cb: () => void): () => void {
 export function DicePackProvider({ children }: { children: ReactNode }) {
   const packIdRaw = useDiceSettings((s) => s.packId)
   const setPackId = useDiceSettings((s) => s.setPackId)
+  const animate3d = useDiceSettings((s) => s.animate3d)
+  const reducedMotion = useReducedMotion()
+  // Con i dadi 3D spenti non si scaricano three né le texture del pack.
+  const enabled = animate3d && !reducedMotion
   const packId = isBundledPack(packIdRaw) ? packIdRaw : ('default' as PackId)
   const [pack, setPack] = useState<LoadedPack | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    if (!enabled) return
     let cancelled = false
     const previousId: PackId | null =
       pack?.manifest.id && isBundledPack(pack.manifest.id) ? (pack.manifest.id as PackId) : null
@@ -66,7 +72,7 @@ export function DicePackProvider({ children }: { children: ReactNode }) {
       cancelIdle()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [packId, setPackId])
+  }, [packId, setPackId, enabled])
 
   return <DicePackCtx.Provider value={{ pack, loading, error }}>{children}</DicePackCtx.Provider>
 }

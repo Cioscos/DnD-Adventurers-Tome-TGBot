@@ -7,6 +7,7 @@ import { m, AnimatePresence } from 'framer-motion'
 import { Plus, Weight, ChevronRight, Pencil, RotateCcw } from 'lucide-react'
 import { GiKnapsack as Backpack } from 'react-icons/gi'
 import { api, ApiError } from '@/api/client'
+import { useAnimatedRoll } from '@/dice/useAnimatedRoll'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
@@ -253,8 +254,13 @@ export default function Inventory() {
 
   const shareItem = useShareMessage((itemId: number) => api.share.item(charId, itemId))
 
+  const rollDice = useAnimatedRoll()
+
   const attackMutation = useMutation({
-    mutationFn: (itemId: number) => api.items.attack(charId, itemId),
+    mutationFn: async (itemId: number) => {
+      const die = (await rollDice('d20', 1))?.[0]
+      return api.items.attack(charId, itemId, false, die)
+    },
     onSuccess: (result, itemId) => {
       setAttackState({ result, itemId, wasRerolled: false })
       haptic.success()
@@ -262,7 +268,10 @@ export default function Inventory() {
   })
 
   const attackRerollMutation = useMutation({
-    mutationFn: (itemId: number) => api.items.attack(charId, itemId, true),
+    mutationFn: async (itemId: number) => {
+      const die = (await rollDice('d20', 1))?.[0]
+      return api.items.attack(charId, itemId, true, die)
+    },
     onSuccess: (result) => {
       setAttackState((prev) => prev && { ...prev, result, wasRerolled: true })
       qc.invalidateQueries({ queryKey: ['character', charId] })

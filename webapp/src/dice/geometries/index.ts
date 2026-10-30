@@ -33,7 +33,7 @@ const NUMERAL_LIFT = 0.002
 
 /** Lato del quad numerale = fattore × raggio di Chebyshev della faccia. */
 const NUMERAL_SIZE_FACTOR: Record<DiceUvKind, number> = {
-  d4: 0.7, // cifre per-angolo (numerazione apex)
+  d4: 0.95, // cifre per-angolo (numerazione apex)
   d6: 1.7,
   d8: 1.5,
   d10: 1.45,
@@ -492,6 +492,8 @@ export interface DiceGeometryData {
   faceNormals: Record<number, THREE.Vector3>
   /** Frame dei quad numerali (3 per faccia sul d4, 1 altrove). */
   faceFrames: FaceFrame[]
+  /** Raggio della sfera inscritta (centro → faccia più vicina). */
+  inradius: number
   /** Number of faces */
   faceCount: number
   /** Ordered list of all valid face values for fallback selection */
@@ -511,6 +513,12 @@ export function getDiceGeometry(kind: DiceKind): DiceGeometryData {
     shape: buildCannonShape(template),
     faceNormals: buildFaceNormals(template),
     faceFrames: buildFaceFrames(template, uvKind),
+    inradius: Math.min(
+      ...template.faces.map((face) => {
+        const { centroid, normal } = buildFaceBasis(template, face)
+        return centroid.dot(normal)
+      }),
+    ),
     faceCount: template.faces.length,
     faceValues: [...template.faceValues],
   }
@@ -556,11 +564,4 @@ export function getDiceGeometry(kind: DiceKind): DiceGeometryData {
 
   cache.set(key, data)
   return data
-}
-
-export function disposeDiceGeometries(): void {
-  for (const { geometry } of cache.values()) {
-    geometry.dispose()
-  }
-  cache.clear()
 }

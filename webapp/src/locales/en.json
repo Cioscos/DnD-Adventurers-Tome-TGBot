@@ -457,6 +457,7 @@
       "pact_badge": "Pact"
     },
     "dice": {
+      "tap_to_skip": "Tap to skip",
       "title": "Roll Dice",
       "critical_banner": "Critical!",
       "fumble_banner": "Fumble!",

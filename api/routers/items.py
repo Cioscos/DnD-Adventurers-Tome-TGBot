@@ -9,7 +9,7 @@ from datetime import datetime
 from typing import Annotated, Optional
 
 from fastapi import APIRouter, Body, Depends, HTTPException, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -424,8 +424,9 @@ async def use_consumable(
 # ---------------------------------------------------------------------------
 
 class AttackSubmission(BaseModel):
-    """Optional payload for weapon attacks. Today only carries the inspiration flag."""
+    """Optional payload for attacks: inspiration flag and the d20 read by the 3D dice."""
     with_inspiration: bool = False
+    die: int | None = Field(default=None, ge=1, le=20)
 
 
 @router.post("/{char_id}/items/{item_id}/attack", response_model=WeaponAttackResult)
@@ -477,7 +478,7 @@ async def attack_with_weapon(
     pb = char.proficiency_bonus
 
     # To-hit roll
-    to_hit_die = random.randint(1, 20)
+    to_hit_die = body.die if body and body.die is not None else random.randint(1, 20)
     to_hit_bonus = ability_mod + pb
     to_hit_total = to_hit_die + to_hit_bonus
     is_critical = to_hit_die == 20
@@ -569,7 +570,7 @@ async def attack_unarmed(
     ability_mod, damage_dice_str = unarmed_strike_profile(str_mod, dex_mod, monk_level)
     pb = char.proficiency_bonus
 
-    to_hit_die = random.randint(1, 20)
+    to_hit_die = body.die if body and body.die is not None else random.randint(1, 20)
     to_hit_bonus = ability_mod + pb
     to_hit_total = to_hit_die + to_hit_bonus
     is_critical = to_hit_die == 20

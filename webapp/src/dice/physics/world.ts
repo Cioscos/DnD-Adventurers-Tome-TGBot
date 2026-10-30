@@ -75,12 +75,6 @@ export function createDiceWorld(): DiceWorld {
   return { world, diceMaterial, floorMaterial, walls, halfX: WORLD_HALF, halfZ: WORLD_HALF }
 }
 
-export function disposeDiceWorld(dw: DiceWorld): void {
-  while (dw.world.bodies.length) {
-    dw.world.removeBody(dw.world.bodies[0])
-  }
-}
-
 /**
  * Riposiziona i 4 muri della box fisica così che coincidano con i bordi
  * dello schermo proiettati sul piano floor (y = PHYSICS.floorY).

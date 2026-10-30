@@ -38,8 +38,10 @@ export function getDiceMaterial(
       normalMap: packMaps.normal ?? null,
       roughnessMap: packMaps.roughness ?? null,
       emissiveMap: packMaps.emissive ?? null,
-      emissive: packMaps.emissive ? 0xffffff : 0x000000,
-      emissiveIntensity: packMaps.emissiveIntensity ?? (packMaps.emissive ? 1.0 : 0),
+      // Senza mappa emissiva, critico e fallimento si vedono dal bagliore della tinta.
+      emissive: packMaps.emissive ? 0xffffff : palette[tint].emissive,
+      emissiveIntensity:
+        packMaps.emissiveIntensity ?? (packMaps.emissive ? 1.0 : palette[tint].emissiveIntensity),
       metalness: m.metalness ?? palette[tint].metalness,
       roughness: m.roughness ?? palette[tint].roughness,
       envMapIntensity: m.envMapIntensity ?? 1,
@@ -63,13 +65,6 @@ export function getDiceMaterial(
   })
   cache.set(key, mat)
   return mat
-}
-
-export function disposeDiceMaterials(): void {
-  for (const mat of cache.values()) mat.dispose()
-  cache.clear()
-  for (const mat of numeralMatCache.values()) mat.dispose()
-  numeralMatCache.clear()
 }
 
 const numeralMatCache = new Map<string, THREE.MeshStandardMaterial>()

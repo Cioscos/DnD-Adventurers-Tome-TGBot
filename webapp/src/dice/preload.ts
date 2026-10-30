@@ -12,7 +12,8 @@ export function preloadDiceScene(): Promise<unknown> {
 
 export function schedulePreloadDiceScene(): void {
   const run = () => {
-    void preloadDiceScene()
+    // Un errore qui non conta: se il chunk manca, lo gestisce il primo tiro.
+    preloadDiceScene().catch(() => {})
   }
   if (typeof window === 'undefined') return
   const ric = (window as Window & { requestIdleCallback?: (cb: () => void) => void })

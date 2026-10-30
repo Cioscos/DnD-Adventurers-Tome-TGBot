@@ -232,6 +232,14 @@ function requestFormDataWithProgress<T>(
 // Characters
 // ---------------------------------------------------------------------------
 
+function attackBody(withInspiration: boolean, die: number | undefined): string | undefined {
+  if (!withInspiration && die === undefined) return undefined
+  return JSON.stringify({
+    ...(withInspiration ? { with_inspiration: true } : {}),
+    ...(die !== undefined ? { die } : {}),
+  })
+}
+
 export const api = {
   me: () => request<{ user_id: number }>('/auth/me'),
 
@@ -383,10 +391,10 @@ export const api = {
       }),
 
     // Hit dice spending
-    spendHitDice: (id: number, classId: number, count: number) =>
+    spendHitDice: (id: number, classId: number, count: number, rolls?: number[]) =>
       request<HitDiceSpendResult>(`/characters/${id}/hit_dice/spend`, {
         method: 'POST',
-        body: JSON.stringify({ class_id: classId, count }),
+        body: JSON.stringify(rolls ? { class_id: classId, count, rolls } : { class_id: classId, count }),
       }),
 
     // Death save roll
@@ -505,19 +513,15 @@ export const api = {
       }),
     remove: (charId: number, itemId: number) =>
       request<CharacterFull>(`/characters/${charId}/items/${itemId}`, { method: 'DELETE' }),
-    attack: (charId: number, itemId: number, withInspiration: boolean = false) =>
+    attack: (charId: number, itemId: number, withInspiration: boolean = false, die?: number) =>
       request<WeaponAttackResult>(`/characters/${charId}/items/${itemId}/attack`, {
         method: 'POST',
-        body: withInspiration
-          ? JSON.stringify({ with_inspiration: true })
-          : undefined,
+        body: attackBody(withInspiration, die),
       }),
-    attackUnarmed: (charId: number, withInspiration: boolean = false) =>
+    attackUnarmed: (charId: number, withInspiration: boolean = false, die?: number) =>
       request<WeaponAttackResult>(`/characters/${charId}/attack/unarmed`, {
         method: 'POST',
-        body: withInspiration
-          ? JSON.stringify({ with_inspiration: true })
-          : undefined,
+        body: attackBody(withInspiration, die),
       }),
     use: (charId: number, itemId: number) =>
       request<CharacterFull>(`/characters/${charId}/items/${itemId}/use`, {

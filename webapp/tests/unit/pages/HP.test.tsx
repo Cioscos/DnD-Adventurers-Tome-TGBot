@@ -328,7 +328,7 @@ describe('HP page', () => {
     // short rest button → opens HitDiceModal
     await userEvent.click(screen.getByRole('button', { name: 'character.hp.short_rest' }))
     await userEvent.click(await screen.findByTestId('hd-spend'))
-    await waitFor(() => expect(spendHitDiceSpy).toHaveBeenCalledWith(7, 1, 2))
+    await waitFor(() => expect(spendHitDiceSpy).toHaveBeenCalledWith(7, 1, 2, undefined))
     await userEvent.click(screen.getByTestId('hd-rest'))
     await waitFor(() => expect(restSpy).toHaveBeenCalledWith(7, 'short'))
 

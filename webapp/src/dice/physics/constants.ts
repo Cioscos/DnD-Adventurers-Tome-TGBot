@@ -8,7 +8,8 @@ export const PHYSICS = {
   // Substep fisso + accumulator (world.step a 3 argomenti): la sim resta in
   // tempo reale su display 60/120 Hz e la penetrazione per step si dimezza.
   fixedTimeStep: 1 / 120,
-  maxSubSteps: 5,
+  // Copre il delta massimo per frame (1/15 s): sotto i 24 fps i dadi non rallentano.
+  maxSubSteps: 8,
   solverIterations: 14,
   solverTolerance: 1e-3,
   defaultFriction: 0.4,
@@ -27,6 +28,9 @@ export const PHYSICS = {
   throwLinearMax: 7,
   throwAngularRange: 25,
   simulationHardTimeoutMs: 5000,
+  // Tetto dell'intero lancio, ritentativi compresi; oltre retryBudgetMs non si ritenta più.
+  totalBudgetMs: 8000,
+  retryBudgetMs: 6000,
   spawnConeDeg: 20,
   spawnYBase: 3.5,
   spawnYJitter: 0.15,

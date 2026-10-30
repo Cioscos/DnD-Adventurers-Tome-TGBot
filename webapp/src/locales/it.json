@@ -457,6 +457,7 @@
       "pact_badge": "Patto"
     },
     "dice": {
+      "tap_to_skip": "Tocca per saltare",
       "title": "Tira Dadi",
       "critical_banner": "Critico!",
       "fumble_banner": "Fumble!",
