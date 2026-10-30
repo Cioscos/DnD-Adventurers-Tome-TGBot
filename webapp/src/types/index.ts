@@ -176,6 +176,7 @@ export interface SpellcastingInfo {
   cap_mode: 'auto' | 'manual'
   has_ritual_caster: boolean
   has_wizard: boolean
+  casters: { class_id: number; class_name: string; ability: string; save_dc: number; attack_bonus: number }[]
 }
 
 // Il dettaglio backend non restituisce ac_homebrew_modifier (solo la lista): resta opzionale

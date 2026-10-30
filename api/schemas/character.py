@@ -29,6 +29,16 @@ class AcBreakdown(BaseModel):
     homebrew: int
 
 
+class SpellCasterStats(BaseModel):
+    """CD e bonus di attacco incantesimi di una classe che lancia incantesimi."""
+
+    class_id: int
+    class_name: str
+    ability: str
+    save_dc: int
+    attack_bonus: int
+
+
 class SpellcastingInfo(BaseModel):
     """Blocco derivato: preparazione incantesimi + capacità rituali (spec 2026-06-10)."""
 
@@ -38,6 +48,7 @@ class SpellcastingInfo(BaseModel):
     cap_mode: str = "auto"
     has_ritual_caster: bool = False
     has_wizard: bool = False
+    casters: list[SpellCasterStats] = []
 
 
 class CharacterSummary(BaseModel):
