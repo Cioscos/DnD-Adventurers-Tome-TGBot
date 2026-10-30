@@ -244,6 +244,10 @@ class HPUpdate(BaseModel):
     was_critical_hit: bool = False
 
 
+class HPUndoRequest(BaseModel):
+    op_id: str
+
+
 class RestRequest(BaseModel):
     rest_type: str  # "long" | "short"
     hit_dice_used: Optional[int] = None

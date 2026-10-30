@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import random
+import uuid
 from datetime import datetime
 from typing import Annotated, Optional
 
@@ -27,6 +28,7 @@ from api.schemas.common import (
     DeathSaveUpdate,
     DeathSaveAction,
     HPOp,
+    HPUndoRequest,
     HPUpdate,
     RestRequest,
 )
@@ -97,6 +99,18 @@ async def _get_owned_full(
     return char
 
 
+def _hp_state(char: Character) -> dict:
+    """Campi toccati da un'operazione PF, per lo snapshot di annullamento."""
+    return {
+        "current_hit_points": char.current_hit_points,
+        "hit_points": char.hit_points,
+        "temp_hp": char.temp_hp,
+        "death_saves": dict(char.death_saves or {}),
+        "is_dead": char.is_dead,
+        "concentrating_spell_id": char.concentrating_spell_id,
+    }
+
+
 # ---------------------------------------------------------------------------
 # HP update
 # ---------------------------------------------------------------------------
@@ -112,6 +126,7 @@ async def update_hp(
     # Da morto ogni operazione PF è inerte (solo /revive riporta in vita).
     if char.is_dead:
         return await build_character_response(session, char)
+    before = _hp_state(char)
     conc_result: ConcentrationSaveResult | None = None
     notifications: list[dict] = []
 
@@ -241,12 +256,54 @@ async def update_hp(
             _add_history(session, char.id, "death_save",
                          "Tiri salvezza morte azzerati (HP risaliti sopra 0)")
 
+    # Nuovo dict (non mutazione in place): la colonna JSON non è tracciata.
+    op_id = uuid.uuid4().hex
+    char.hp_undo = {"op_id": op_id, "before": before, "after": _hp_state(char)}
+
     result = await build_character_response(session, char)
+    result.hp_undo_id = op_id
     if conc_result is not None:
         result.concentration_save = conc_result
     if notifications:
         result.homebrew_notifications = notifications
     return result
+
+
+@router.post("/{char_id}/hp/undo", response_model=CharacterFull)
+async def undo_hp(
+    char_id: int,
+    body: HPUndoRequest,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> CharacterFull:
+    """Annulla l'ultima operazione PF, solo se nulla è cambiato dopo di essa."""
+    char = await _get_owned_full(char_id, user_id, session)
+    snap = char.hp_undo
+    if (
+        not snap
+        or snap.get("op_id") != body.op_id
+        or _hp_state(char) != snap.get("after")
+    ):
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="hp_undo_not_applicable")
+
+    before = snap["before"]
+    old = char.current_hit_points
+    char.current_hit_points = before["current_hit_points"]
+    char.hit_points = before["hit_points"]
+    char.temp_hp = before["temp_hp"]
+    char.death_saves = dict(before["death_saves"])
+    char.is_dead = before["is_dead"]
+    spell_id = before["concentrating_spell_id"]
+    # L'incantesimo può essere stato eliminato nel frattempo.
+    if spell_id is not None and not any(s.id == spell_id for s in char.spells):
+        spell_id = None
+    char.concentrating_spell_id = spell_id
+    char.hp_undo = None
+
+    _add_history(session, char.id, "hp_change",
+                 f"Annullata ultima operazione PF ({old} → {char.current_hit_points})",
+                 meta={"op": "UNDO"})
+    return await build_character_response(session, char)
 
 
 # ---------------------------------------------------------------------------

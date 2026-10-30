@@ -130,6 +130,9 @@ class Character(Base):
     settings: Mapped[Optional[dict]] = mapped_column(JSON, default=dict)
     # Contatori cumulativi dei tiri: {"d20": {"1": 3, "20": 2}, ...} (faccia → conteggio)
     dice_stats: Mapped[Optional[dict]] = mapped_column(JSON, default=dict)
+    # Snapshot server-side dell'ultima operazione PF per l'annullamento:
+    # {"op_id": str, "before": {...}, "after": {...}} (None = niente da annullare)
+    hp_undo: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
 
     # Active conditions (JSON dict: condition_slug → bool or int for exhaustion)
     conditions: Mapped[Optional[dict]] = mapped_column(JSON, default=dict)
