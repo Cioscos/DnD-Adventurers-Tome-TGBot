@@ -1,6 +1,52 @@
 {
   "entries": [
     {
+      "version": "2.23.0",
+      "date": "2026-10-31",
+      "title": {
+        "it": "Danni, incantesimi e munizioni più intelligenti",
+        "en": "Smarter damage, spells and ammo"
+      },
+      "added": {
+        "it": [
+          "Il danno può essere dimezzato (resistenza) o raddoppiato (vulnerabilità): si spegne dopo un colpo e la cronologia annota il calcolo.",
+          "L'app tira il d20 degli incantesimi d'attacco: 20 è danno critico automatico, 1 è mancato. Lo slot si spende al tiro e con l'ispirazione si può ritirare.",
+          "CD e bonus d'attacco degli incantesimi in testa alla pagina Incantesimi, una riga per classe.",
+          "Campo Tipo (Attacco / Tiro salvezza / Nessuno) nel modulo incantesimo, compilato dal catalogo.",
+          "Nuovo tipo oggetto: Munizione.",
+          "Le armi a munizioni scalano la munizione equipaggiata e la finestra dell'attacco mostra quante ne restano: se mancano compare un avviso, ma l'attacco parte comunque.",
+          "Azioni rapide predefinite calcolate dal personaggio finché non le modifichi, riordinabili trascinandole, con \"Ripristina predefinite\".",
+          "Messaggio di conferma per i lanci senza danno."
+        ],
+        "en": [
+          "Damage can be halved (resistance) or doubled (vulnerability): it switches off after one hit and the history notes the calculation.",
+          "The app rolls the d20 for attack spells: 20 is an automatic critical hit, 1 is a miss. The slot is spent on the roll and inspiration lets you reroll.",
+          "Spell save DC and attack bonus at the top of the Spells page, one row per class.",
+          "Type field (Attack / Saving throw / None) in the spell form, filled in from the catalog.",
+          "New item type: Ammunition.",
+          "Ammo weapons use up the equipped ammunition and the attack window shows how many are left: a warning appears if you are out, but the attack still goes through.",
+          "Default quick actions computed from your character until you edit them, reorderable by dragging, with \"Restore defaults\".",
+          "Confirmation message for casts with no damage."
+        ]
+      },
+      "improved": {
+        "it": [],
+        "en": []
+      },
+      "fixed": {
+        "it": [
+          "Gli attacchi con le armi (e senz'armi) ora contano i bonus degli oggetti alle caratteristiche, come la scheda: i numeri possono cambiare per chi ha questi oggetti.",
+          "Un danno ridotto a 0 non chiede più il tiro di concentrazione.",
+          "Il contatore munizioni delle azioni rapide ora vede anche le munizioni create dall'app."
+        ],
+        "en": [
+          "Weapon (and unarmed) attacks now count item bonuses to ability scores, like the sheet: numbers may change for characters with such items.",
+          "Damage reduced to 0 no longer asks for a concentration check.",
+          "The quick actions ammo counter now also sees ammunition created in the app."
+        ]
+      }
+    },
+    {
       "version": "2.22.0",
       "date": "2026-10-30",
       "title": {
