@@ -326,7 +326,7 @@
       "attack": "Attack"
     },
     "attack": {
-      "ammo_missing": "No ammunition equipped: track your ammunition yourself"
+      "ammo_missing": "Ammunition empty or not equipped: track it yourself"
     },
     "ability": {
       "strength_short": "STR",

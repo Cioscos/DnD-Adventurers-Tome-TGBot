@@ -78,4 +78,10 @@ describe('SpellItem', () => {
     )
     expect((container.firstChild as HTMLElement).className).toContain('bg-gradient-parchment')
   })
+
+  it('shows the translated attack/save label, not the raw code', () => {
+    render(<SpellItem spell={spell({ attack_save: 'ATK', damage_dice: '1d8' })} isExpanded={true} {...base} />)
+    expect(screen.getByText('character.spells.attack_save.atk')).toBeInTheDocument()
+    expect(screen.queryByText('ATK')).toBeNull()
+  })
 })

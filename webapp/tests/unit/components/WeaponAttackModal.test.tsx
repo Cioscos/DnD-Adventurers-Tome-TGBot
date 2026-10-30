@@ -176,7 +176,7 @@ describe('WeaponAttackModal', () => {
 
   it('shows the missing ammunition warning', () => {
     render(<WeaponAttackModal result={{ ...baseResult, ammo_missing: true }} onClose={() => {}} />)
-    expect(screen.getByText('Nessuna munizione equipaggiata: scala tu le munizioni')).toBeInTheDocument()
+    expect(screen.getByText('Munizioni esaurite o non equipaggiate: scala tu le munizioni')).toBeInTheDocument()
   })
 
   it('shows neither line without ammo info', () => {

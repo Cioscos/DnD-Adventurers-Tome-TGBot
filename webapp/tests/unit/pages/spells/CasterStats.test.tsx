@@ -19,7 +19,7 @@ describe('CasterStats', () => {
         ]}
       />,
     )
-    expect(screen.getByText('Mago · Intelligenza · CD 15 · +7')).toBeInTheDocument()
-    expect(screen.getByText('Chierico · Saggezza · CD 12 · -1')).toBeInTheDocument()
+    expect(screen.getByText('Mago · INT · CD 15 · +7')).toBeInTheDocument()
+    expect(screen.getByText('Chierico · SAG · CD 12 · -1')).toBeInTheDocument()
   })
 })

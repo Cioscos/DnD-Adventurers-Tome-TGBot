@@ -326,7 +326,7 @@
       "attack": "Attacca"
     },
     "attack": {
-      "ammo_missing": "Nessuna munizione equipaggiata: scala tu le munizioni"
+      "ammo_missing": "Munizioni esaurite o non equipaggiate: scala tu le munizioni"
     },
     "ability": {
       "strength_short": "FOR",

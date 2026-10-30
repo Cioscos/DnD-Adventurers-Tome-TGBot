@@ -11,6 +11,7 @@ import Sheet from '@/components/ui/Sheet'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import SwitchToggle from '@/components/ui/SwitchToggle'
+import { isAttackSpell } from '@/lib/spellType'
 import { haptic } from '@/auth/telegram'
 import { rollValues } from '@/dice/d100'
 import { useDiceAnimation } from '@/dice/useDiceAnimation'
@@ -159,11 +160,7 @@ export default function SpellDamageSheet({
 
   if (!spell) return null
 
-  const isAttack =
-    spell.attack_save === 'ATK' ||
-    spell.attack_save === null ||
-    spell.attack_save === undefined ||
-    spell.attack_save === ''
+  const isAttack = isAttackSpell(spell) || !spell.attack_save?.trim()
   const isCantrip = spell.level === 0
 
   const handleRoll = () => {

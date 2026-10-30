@@ -4,15 +4,13 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { api, ApiError } from '@/api/client'
 import { haptic } from '@/auth/telegram'
+import { isAttackSpell } from '@/lib/spellType'
 import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import { useAnimatedRoll } from '@/dice/useAnimatedRoll'
 import CastSpellModal from '@/pages/spells/CastSpellModal'
 import SpellAttackModal from '@/pages/spells/SpellAttackModal'
 import SpellDamageSheet from '@/pages/spells/SpellDamageSheet'
 import type { CharacterFull, Spell, SpellAttackResult, SpellSlot } from '@/types'
-
-/** Incantesimo con tiro per colpire: il d20 precede il danno (spec 2026-10-30). */
-const isAttackSpell = (spell: Spell) => spell.attack_save?.trim().toUpperCase() === 'ATK'
 
 type AttackCast = { spell: Spell; slotLevel: number | null; ritual: boolean }
 type AttackState = AttackCast & { result: SpellAttackResult; wasRerolled: boolean }

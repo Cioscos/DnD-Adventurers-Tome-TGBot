@@ -338,12 +338,15 @@ export default function QuickActions({ char }: Props) {
   const commitOrder = () => {
     const keys = orderRef.current
     orderRef.current = null
-    setOrderDraft(null)
-    if (!keys) return
+    if (!keys) { setOrderDraft(null); return }
     const byKey = new Map(entries.map((e) => [quickActionKey(e), e]))
     const next = keys.map((k) => byKey.get(k)).filter((e): e is QuickActionEntry => !!e)
-    if (next.map(quickActionKey).join('|') === entries.map(quickActionKey).join('|')) return
-    settingsMutation.mutate(next)
+    if (next.map(quickActionKey).join('|') === entries.map(quickActionKey).join('|')) {
+      setOrderDraft(null)
+      return
+    }
+    // La bozza resta finché il salvataggio non si chiude: niente scatto all'ordine vecchio.
+    settingsMutation.mutate(next, { onSettled: () => setOrderDraft(null) })
   }
 
   const isPinned = (entry: QuickActionEntry) => {
@@ -662,6 +665,7 @@ export default function QuickActions({ char }: Props) {
                 )
               })}
             </Reorder.Group>
+            {isCustom && (
             <Pressable
               type="button"
               onClick={() => setConfirmRestore(true)}
@@ -670,6 +674,7 @@ export default function QuickActions({ char }: Props) {
               <RotateCcw size={14} />
               {t('character.quick_actions.restore_defaults')}
             </Pressable>
+            )}
           </div>
 
           {editorGroupsTop.map(renderGroup)}

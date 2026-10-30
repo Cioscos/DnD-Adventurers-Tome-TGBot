@@ -155,6 +155,27 @@ describe('QuickActions defaults and order', () => {
     ])
   })
 
+  it('keeps the new order rendered while the save is pending', async () => {
+    let resolveUpdate: (v: CharacterFull) => void = () => {}
+    update.mockReturnValue(new Promise<CharacterFull>((r) => { resolveUpdate = r }))
+    renderQC(autoChar)
+    await userEvent.click(screen.getByLabelText('character.quick_actions.edit'))
+    await userEvent.click(screen.getByText('test-reorder'))
+    await userEvent.click(screen.getAllByText('test-drop')[0])
+    await waitFor(() => expect(update).toHaveBeenCalledTimes(1))
+    const order = () => screen.getAllByRole('listitem').map((li) => li.textContent)
+    // Ancora in volo: l'ordine nuovo (invertito) non deve tornare al vecchio.
+    expect(order()[0]).not.toContain('Spada')
+    expect(order()[order().length - 1]).toContain('Spada')
+    resolveUpdate(autoChar)
+  })
+
+  it('hides restore defaults when the list is not custom', async () => {
+    renderQC(autoChar)
+    await userEvent.click(screen.getByLabelText('character.quick_actions.edit'))
+    expect(screen.queryByText('character.quick_actions.restore_defaults')).toBeNull()
+  })
+
   it('restores defaults by removing the saved list', async () => {
     update.mockResolvedValue(autoChar)
     renderQC({ ...autoChar, settings: { theme: 'x', quick_actions: [] } } as unknown as CharacterFull)

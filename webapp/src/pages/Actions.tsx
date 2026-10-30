@@ -42,6 +42,7 @@ export default function Actions() {
     },
     onSuccess: (result, itemId) => {
       setAttackState({ result, source: { type: 'weapon', itemId }, wasRerolled: false })
+      qc.invalidateQueries({ queryKey: ['character', charId] })
       haptic.success()
     },
   })
@@ -53,6 +54,7 @@ export default function Actions() {
     },
     onSuccess: (result) => {
       setAttackState({ result, source: { type: 'unarmed' }, wasRerolled: false })
+      qc.invalidateQueries({ queryKey: ['character', charId] })
       haptic.success()
     },
   })

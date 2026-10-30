@@ -11,7 +11,7 @@ export default function CasterStats({ casters }: { casters: Caster[] }) {
   return (
     <div className="rounded-xl border border-dnd-border bg-dnd-surface-raised px-3 py-2 space-y-1">
       {casters.map((c) => {
-        const ability = t(`common.abilities.${c.ability.toLowerCase()}`, { defaultValue: c.ability })
+        const ability = t(`character.ability.${c.ability.toLowerCase()}_short`, { defaultValue: c.ability.toUpperCase() })
         const cls = t(`dnd.classes.${c.class_name.toLowerCase()}`, { defaultValue: c.class_name })
         const attack = `${c.attack_bonus >= 0 ? '+' : '-'}${Math.abs(c.attack_bonus)}`
         return (
