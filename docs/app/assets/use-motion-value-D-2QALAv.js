@@ -1,0 +1,1 @@
+import{r as t}from"./react-vendor-CPSJdvAW.js";import{aN as n,aI as u,aP as r}from"./index-EPbcX7Vk.js";function i(o){const e=n(()=>r(o)),{isStatic:s}=t.useContext(u);if(s){const[,a]=t.useState(o);t.useEffect(()=>e.on("change",a),[])}return e}export{i as u};
