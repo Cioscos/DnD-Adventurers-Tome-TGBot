@@ -5,15 +5,16 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import QuickActions from '@/components/character/QuickActions'
 import type { CharacterFull } from '@/types'
 
-const { spendHitDice, notifyMutationError, toastError } = vi.hoisted(() => ({
+const { spendHitDice, update, notifyMutationError, toastError } = vi.hoisted(() => ({
   spendHitDice: vi.fn(),
+  update: vi.fn(),
   notifyMutationError: vi.fn(),
   toastError: vi.fn(),
 }))
 
 vi.mock('@/api/client', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
-  return { ...actual, api: { characters: { spendHitDice } } }
+  return { ...actual, api: { characters: { spendHitDice, update } } }
 })
 vi.mock('@/lib/mutationError', () => ({ notifyMutationError }))
 vi.mock('@/hooks/useToast', () => ({ useToast: () => ({ error: toastError, success: vi.fn() }) }))
@@ -26,7 +27,26 @@ vi.mock('react-i18next', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
   return { ...actual, useTranslation: () => ({ t: (k: string) => k, i18n: { language: 'it' } }) }
 })
-vi.mock('@/components/ui/Sheet', () => ({ default: () => null }))
+vi.mock('@/components/ui/Sheet', () => ({
+  default: (p: { open: boolean; children: unknown }) => (p.open ? p.children : null),
+}))
+vi.mock('framer-motion', async (orig) => {
+  const actual = (await orig()) as Record<string, unknown>
+  const React = await import('react')
+  return {
+    ...actual,
+    Reorder: {
+      Group: (p: { values: string[]; onReorder: (v: string[]) => void; children: unknown }) =>
+        React.createElement('ul', null,
+          React.createElement('button', { onClick: () => p.onReorder([...p.values].reverse()) }, 'test-reorder'),
+          p.children),
+      Item: (p: { onDragEnd?: () => void; children: unknown }) =>
+        React.createElement('li', null,
+          React.createElement('button', { onClick: () => p.onDragEnd?.() }, 'test-drop'),
+          p.children),
+    },
+  }
+})
 vi.mock('@/components/ui/ConfirmSheet', async () => {
   const React = await import('react')
   return {
@@ -71,5 +91,77 @@ describe('QuickActions hit die', () => {
     await spendOneHitDie()
     await waitFor(() => expect(toastError).toHaveBeenCalledWith('character.quick_actions.hit_die_exhausted'))
     expect(notifyMutationError).not.toHaveBeenCalled()
+  })
+})
+
+function renderQC(c: CharacterFull) {
+  return render(
+    <QueryClientProvider client={new QueryClient({ defaultOptions: { mutations: { retry: false } } })}>
+      <QuickActions char={c} />
+    </QueryClientProvider>,
+  )
+}
+
+const autoChar = {
+  id: 7,
+  settings: {},
+  items: [{ id: 10, name: 'Spada', item_type: 'weapon', is_equipped: true }],
+  spells: [],
+  abilities: [],
+  classes: [{ id: 1, class_name: 'fighter', level: 3, hit_die: 10, hit_dice_used: 0 }],
+} as unknown as CharacterFull
+
+describe('QuickActions defaults and order', () => {
+  it('shows the automatic list for a character without a saved list', () => {
+    renderQC(autoChar)
+    expect(screen.getByText('Spada')).toBeTruthy()
+    expect(screen.getByText('character.quick_actions.rest_short')).toBeTruthy()
+  })
+
+  it('shows nothing for an emptied saved list', () => {
+    renderQC({ ...autoChar, settings: { quick_actions: [] } } as unknown as CharacterFull)
+    expect(screen.queryByText('Spada')).toBeNull()
+    expect(screen.getByText('character.quick_actions.empty_hint')).toBeTruthy()
+  })
+
+  it('saves the full list on the first change', async () => {
+    update.mockResolvedValue(autoChar)
+    renderQC(autoChar)
+    await userEvent.click(screen.getByLabelText('character.quick_actions.edit'))
+    expect(screen.getByText('character.quick_actions.defaults_hint')).toBeTruthy()
+    // Toggle off the weapon in the weapons group (not the one in the order list).
+    const weaponRow = screen.getAllByText('Spada').map((e) => e.closest('button')).find((b) => b && b.className.includes('min-h-[44px]') && b.className.includes('w-full'))
+    await userEvent.click(weaponRow!)
+    await waitFor(() => expect(update).toHaveBeenCalledTimes(1))
+    expect(update.mock.calls[0][1].settings.quick_actions).toEqual([
+      { type: 'hit_die', classId: 1 },
+      { type: 'rest', rest: 'short' },
+      { type: 'counter_inspiration' },
+    ])
+  })
+
+  it('saves the new order after a reorder', async () => {
+    update.mockResolvedValue(autoChar)
+    renderQC(autoChar)
+    await userEvent.click(screen.getByLabelText('character.quick_actions.edit'))
+    await userEvent.click(screen.getByText('test-reorder'))
+    await userEvent.click(screen.getAllByText('test-drop')[0])
+    await waitFor(() => expect(update).toHaveBeenCalledTimes(1))
+    expect(update.mock.calls[0][1].settings.quick_actions).toEqual([
+      { type: 'counter_inspiration' },
+      { type: 'rest', rest: 'short' },
+      { type: 'hit_die', classId: 1 },
+      { type: 'weapon', id: 10 },
+    ])
+  })
+
+  it('restores defaults by removing the saved list', async () => {
+    update.mockResolvedValue(autoChar)
+    renderQC({ ...autoChar, settings: { theme: 'x', quick_actions: [] } } as unknown as CharacterFull)
+    await userEvent.click(screen.getByLabelText('character.quick_actions.edit'))
+    await userEvent.click(screen.getByText('character.quick_actions.restore_defaults'))
+    await userEvent.click(screen.getByText('confirm:character.quick_actions.restore_title'))
+    await waitFor(() => expect(update).toHaveBeenCalledTimes(1))
+    expect(update.mock.calls[0][1]).toEqual({ settings: { theme: 'x' } })
   })
 })

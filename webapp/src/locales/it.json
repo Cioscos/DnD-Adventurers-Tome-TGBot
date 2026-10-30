@@ -89,6 +89,12 @@
       "toggle_visibility": "Mostra/nascondi"
     },
     "quick_actions": {
+      "group_order": "Ordine",
+      "restore_defaults": "Ripristina predefinite",
+      "restore_title": "Ripristinare le azioni predefinite?",
+      "restore_body": "La tua lista verrà sostituita da quella calcolata dal personaggio.",
+      "defaults_hint": "Lista automatica: si aggiorna con armi e incantesimi finché non la modifichi.",
+      "drag_handle": "Trascina per riordinare",
       "title": "Azioni rapide",
       "edit": "Modifica azioni rapide",
       "editor_title": "Azioni rapide",

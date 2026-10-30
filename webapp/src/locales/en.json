@@ -89,6 +89,12 @@
       "toggle_visibility": "Show/hide"
     },
     "quick_actions": {
+      "group_order": "Order",
+      "restore_defaults": "Restore defaults",
+      "restore_title": "Restore the default actions?",
+      "restore_body": "Your list will be replaced by the one computed from the character.",
+      "defaults_hint": "Automatic list: it follows your weapons and spells until you edit it.",
+      "drag_handle": "Drag to reorder",
       "title": "Quick actions",
       "edit": "Edit quick actions",
       "editor_title": "Quick actions",

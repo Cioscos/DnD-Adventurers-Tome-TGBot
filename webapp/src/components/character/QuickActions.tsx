@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Plus, Check, Minus } from 'lucide-react'
+import { Reorder, useDragControls } from 'framer-motion'
+import { Plus, Check, Minus, GripVertical, RotateCcw } from 'lucide-react'
 import {
   GiCrossedSwords, GiShieldEchoes, GiSpellBook, GiLightningStorm,
   GiLightningTrio, GiAbacus, GiPolarStar, GiArrowhead,
@@ -25,7 +26,8 @@ import { notifyMutationError } from '@/lib/mutationError'
 import { showUndoToast } from '@/components/ui/UndoToast'
 import { useCastFlow } from '@/pages/spells/useCastFlow'
 import {
-  readQuickActions,
+  effectiveQuickActions,
+  hasCustomQuickActions,
   resolveQuickActions,
   isAmmunitionItem,
   quickActionKey,
@@ -58,6 +60,31 @@ const TYPE_ICONS = {
   rest: GiNightSleep,
 } as const
 
+function OrderRow({ id, label, handleLabel, onDragEnd }: {
+  id: string; label: string; handleLabel: string; onDragEnd: () => void
+}) {
+  const controls = useDragControls()
+  return (
+    <Reorder.Item
+      value={id}
+      dragListener={false}
+      dragControls={controls}
+      onDragEnd={onDragEnd}
+      className="flex items-center gap-2 pl-3 rounded-xl border bg-dnd-surface border-dnd-border list-none"
+    >
+      <span className="flex-1 min-w-0 truncate text-sm font-body text-dnd-text">{label}</span>
+      <Pressable
+        type="button"
+        aria-label={handleLabel}
+        onPointerDown={(e) => controls.start(e)}
+        className="w-11 h-11 flex items-center justify-center shrink-0 text-dnd-text-muted touch-none cursor-grab"
+      >
+        <GripVertical size={18} />
+      </Pressable>
+    </Reorder.Item>
+  )
+}
+
 export default function QuickActions({ char }: Props) {
   const { t } = useTranslation()
   const qc = useQueryClient()
@@ -72,10 +99,14 @@ export default function QuickActions({ char }: Props) {
   const [hitDieResult, setHitDieResult] = useState<HitDiceSpendResult | null>(null)
   const [confirmLongRest, setConfirmLongRest] = useState(false)
   const [shortRestOpen, setShortRestOpen] = useState(false)
+  const [confirmRestore, setConfirmRestore] = useState(false)
+  const [orderDraft, setOrderDraft] = useState<string[] | null>(null)
+  const orderRef = useRef<string[] | null>(null)
   const [counterEdit, setCounterEdit] = useState<CounterEditState | null>(null)
 
   const settings = (char.settings as Record<string, unknown>) ?? {}
-  const entries = readQuickActions(settings)
+  const entries = effectiveQuickActions(char)
+  const isCustom = hasCustomQuickActions(settings)
   const resolved = resolveQuickActions(char, entries)
 
   const settingsMutation = useMutation({
@@ -83,6 +114,20 @@ export default function QuickActions({ char }: Props) {
       api.characters.update(char.id, { settings: { ...settings, quick_actions: next } }),
     onSuccess: (updated) => {
       qc.setQueryData(['character', char.id], updated)
+      haptic.light()
+    },
+  })
+
+  const restoreMutation = useMutation({
+    mutationFn: () => {
+      const rest = { ...settings }
+      delete rest.quick_actions
+      return api.characters.update(char.id, { settings: rest })
+    },
+    onSuccess: (updated) => {
+      qc.setQueryData(['character', char.id], updated)
+      setConfirmRestore(false)
+      setOrderDraft(null)
       haptic.light()
     },
   })
@@ -288,6 +333,17 @@ export default function QuickActions({ char }: Props) {
       }
       settingsMutation.mutate([...entries, entry])
     }
+  }
+
+  const commitOrder = () => {
+    const keys = orderRef.current
+    orderRef.current = null
+    setOrderDraft(null)
+    if (!keys) return
+    const byKey = new Map(entries.map((e) => [quickActionKey(e), e]))
+    const next = keys.map((k) => byKey.get(k)).filter((e): e is QuickActionEntry => !!e)
+    if (next.map(quickActionKey).join('|') === entries.map(quickActionKey).join('|')) return
+    settingsMutation.mutate(next)
   }
 
   const isPinned = (entry: QuickActionEntry) => {
@@ -575,6 +631,47 @@ export default function QuickActions({ char }: Props) {
             {t('character.quick_actions.editor_hint', { max: QUICK_ACTIONS_MAX, count: entries.length })}
           </p>
 
+          {!isCustom && (
+            <p className="text-xs text-dnd-text-muted font-body italic">
+              {t('character.quick_actions.defaults_hint')}
+            </p>
+          )}
+
+          <div>
+            <p className="font-cinzel text-xs uppercase tracking-widest text-dnd-gold-dim mb-1 px-1">
+              {t('character.quick_actions.group_order')}
+            </p>
+            <Reorder.Group
+              axis="y"
+              as="ul"
+              values={orderDraft ?? resolved.map((a) => a.key)}
+              onReorder={(keys: string[]) => { orderRef.current = keys; setOrderDraft(keys) }}
+              className="space-y-1 p-0 m-0"
+            >
+              {(orderDraft ?? resolved.map((a) => a.key)).map((key) => {
+                const a = resolved.find((r) => r.key === key)
+                if (!a) return null
+                return (
+                  <OrderRow
+                    key={key}
+                    id={key}
+                    label={actionLabel(a)}
+                    handleLabel={t('character.quick_actions.drag_handle')}
+                    onDragEnd={commitOrder}
+                  />
+                )
+              })}
+            </Reorder.Group>
+            <Pressable
+              type="button"
+              onClick={() => setConfirmRestore(true)}
+              className="mt-2 w-full min-h-[44px] flex items-center justify-center gap-2 px-3 py-2 rounded-xl border border-dnd-border text-xs font-cinzel uppercase tracking-wide text-dnd-text-muted"
+            >
+              <RotateCcw size={14} />
+              {t('character.quick_actions.restore_defaults')}
+            </Pressable>
+          </div>
+
           {editorGroupsTop.map(renderGroup)}
 
           <div>
@@ -682,6 +779,17 @@ export default function QuickActions({ char }: Props) {
       )}
 
       {castFlow.elements}
+
+      <ConfirmSheet
+        open={confirmRestore}
+        onClose={() => setConfirmRestore(false)}
+        title={t('character.quick_actions.restore_title')}
+        body={t('character.quick_actions.restore_body')}
+        confirmLabel={t('character.quick_actions.restore_defaults')}
+        confirmVariant="primary"
+        loading={restoreMutation.isPending}
+        onConfirm={() => restoreMutation.mutate()}
+      />
 
       <ConfirmSheet
         open={confirmLongRest}
