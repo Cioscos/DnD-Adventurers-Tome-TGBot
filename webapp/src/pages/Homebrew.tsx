@@ -68,12 +68,12 @@ function RuleCard({
         <GiScrollUnfurled size={20} />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="font-display font-bold text-dnd-text truncate">{rule.name}</p>
+        <p className="font-display font-bold text-[15px] text-dnd-text truncate">{rule.name}</p>
         {rule.template_id != null && (
           <span className="inline-block mt-1 px-1.5 py-0.5 rounded-lg
                            bg-dnd-chip-bg border border-dnd-chip-border/60
                            text-dnd-gold-bright font-cinzel uppercase
-                           text-xs tracking-normal leading-none">
+                           text-xs tracking-normal leading-none whitespace-nowrap">
             {fromTemplateLabel}
           </span>
         )}

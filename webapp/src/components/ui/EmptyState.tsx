@@ -20,7 +20,7 @@ interface EmptyStateProps {
 export default function EmptyState({ icon, title, hint, action, className = '' }: EmptyStateProps) {
   return (
     <Surface variant="flat" className={`text-center py-8 ${className}`}>
-      {icon && <div className="mx-auto mb-2 text-dnd-text-faint">{icon}</div>}
+      {icon && <div className="flex justify-center mb-2 text-dnd-text-faint">{icon}</div>}
       <p className="text-dnd-text-muted font-body italic">{title}</p>
       {hint && (
         <p className="text-xs text-dnd-text-faint font-body mt-2 max-w-[28ch] mx-auto">{hint}</p>

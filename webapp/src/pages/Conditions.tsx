@@ -423,9 +423,9 @@ export default function Conditions() {
                 whileTap={{ scale: 0.95 }}
                 animate={active && justActivated === key ? { x: [-2, 2, -1, 1, 0] } : { x: 0 }}
                 transition={{ duration: 0.25 }}
-                className="flex-1 flex items-center gap-2 px-3 py-3 text-left"
+                className="flex-1 min-w-0 flex items-center gap-1.5 pl-3 py-3 text-left"
               >
-                <Icon size={18} className={active ? 'text-dnd-crimson-bright' : 'text-dnd-text-faint'} />
+                <Icon size={18} className={`shrink-0 ${active ? 'text-dnd-crimson-bright' : 'text-dnd-text-faint'}`} />
                 <span className="text-sm font-body leading-tight">
                   {t(`character.conditions.${key}`)}
                 </span>

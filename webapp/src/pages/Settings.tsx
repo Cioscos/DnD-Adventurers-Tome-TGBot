@@ -483,7 +483,7 @@ export default function Settings() {
                   updateMutation.mutate({ ...settings, history_retention_mode: mode })
                 }}
                 pending={updateMutation.isPending && activeSetting === `retention:${mode}`}
-                className={`min-h-[44px] rounded-xl px-2 font-cinzel text-xs uppercase tracking-widest transition-colors
+                className={`min-h-[44px] rounded-xl px-2 font-cinzel text-xs uppercase tracking-normal transition-colors
                   ${selected
                     ? 'bg-gradient-gold text-dnd-ink shadow-engrave'
                     : 'bg-dnd-surface border border-dnd-border text-dnd-text-muted'}`}

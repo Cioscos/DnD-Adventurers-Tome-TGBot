@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
@@ -87,7 +88,9 @@ export default function LevelUpModal({ char, xpLevel, onClose }: LevelUpModalPro
 
   const entriesForClass = progressionRows(selectedClass.class_name)
 
-  return (
+  // Portal come Sheet e ResultDialog: dentro <main> l'intestazione, più alta coi
+  // breadcrumb da 44 px, resta sopra l'overlay e taglia il bordo della modale.
+  return createPortal(
     <div
       className="fixed inset-0 bg-dnd-overlay z-50 flex items-end sm:items-center justify-center p-4"
       style={blurStyle}
@@ -227,6 +230,7 @@ export default function LevelUpModal({ char, xpLevel, onClose }: LevelUpModalPro
           </div>
         </Surface>
       </m.div>
-    </div>
+    </div>,
+    document.body,
   )
 }
