@@ -184,6 +184,8 @@
       "concentration_active": "Concentrating",
       "concentration_lost": "Concentration lost!",
       "critical_hit": "Critical hit",
+      "modifier_half": "½ Resistance",
+      "modifier_double": "×2 Vulnerability",
       "damage_short": "DMG",
       "heal_short": "HEAL",
       "current_short": "CURR",

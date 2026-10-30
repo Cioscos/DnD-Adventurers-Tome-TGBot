@@ -280,10 +280,16 @@ export const api = {
       request<void>(`/characters/${id}`, { method: 'DELETE' }),
 
     // HP
-    updateHp: (id: number, op: string, value: number, wasCritical = false) =>
+    updateHp: (
+      id: number,
+      op: string,
+      value: number,
+      wasCritical = false,
+      modifier?: { damage_modifier: 'half' | 'double'; raw_value: number },
+    ) =>
       request<CharacterFull>(`/characters/${id}/hp`, {
         method: 'PATCH',
-        body: JSON.stringify({ op, value, was_critical_hit: wasCritical }),
+        body: JSON.stringify({ op, value, was_critical_hit: wasCritical, ...modifier }),
       }),
     undoHp: (id: number, opId: string) =>
       request<CharacterFull>(`/characters/${id}/hp/undo`, {

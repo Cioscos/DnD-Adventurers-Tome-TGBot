@@ -184,6 +184,8 @@
       "concentration_active": "In concentrazione",
       "concentration_lost": "Concentrazione persa!",
       "critical_hit": "Colpo critico",
+      "modifier_half": "½ Resistenza",
+      "modifier_double": "×2 Vulnerabilità",
       "damage_short": "DANNI",
       "heal_short": "CURA",
       "current_short": "ATTUALI",

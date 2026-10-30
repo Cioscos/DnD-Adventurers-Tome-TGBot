@@ -78,6 +78,7 @@ function Harness({
   const [activeOp, setActiveOp] = useState<HPOp>('damage')
   const [value, setValue] = useState('')
   const [crit, setCrit] = useState(false)
+  const [damageModifier, setDamageModifier] = useState<'half' | 'double' | null>(null)
   return (
     <HpOperationForm
       activeOp={activeOp}
@@ -90,6 +91,8 @@ function Harness({
       atZero={atZero}
       crit={crit}
       setCrit={setCrit}
+      damageModifier={damageModifier}
+      setDamageModifier={setDamageModifier}
     />
   )
 }
@@ -124,6 +127,29 @@ describe('HpOperationForm', () => {
     render(<Harness hpMutate={hpMutate} />)
     await userEvent.click(screen.getByText(`${MINUS}10`))
     expect(hpMutate).toHaveBeenCalledWith({ op: 'damage', val: 10 })
+  })
+
+  it('shows the half/double toggles only on the damage tab, mutually exclusive', async () => {
+    render(<Harness />)
+    const half = screen.getByRole('button', { name: 'character.hp.modifier_half' })
+    const dbl = screen.getByRole('button', { name: 'character.hp.modifier_double' })
+    await userEvent.click(half)
+    expect(half).toHaveAttribute('aria-pressed', 'true')
+    await userEvent.click(dbl)
+    expect(half).toHaveAttribute('aria-pressed', 'false')
+    expect(dbl).toHaveAttribute('aria-pressed', 'true')
+    await userEvent.click(dbl)
+    expect(dbl).toHaveAttribute('aria-pressed', 'false')
+    await userEvent.click(screen.getByText('character.hp.heal_short'))
+    expect(screen.queryByRole('button', { name: 'character.hp.modifier_half' })).not.toBeInTheDocument()
+  })
+
+  it('previews raw → applied when a value is typed and a modifier is on', async () => {
+    render(<Harness />)
+    await userEvent.type(screen.getByTestId('hp-input'), '15')
+    expect(screen.queryByText('15 → 7')).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'character.hp.modifier_half' }))
+    expect(screen.getByText('15 → 7')).toBeInTheDocument()
   })
 
   it('confirm is disabled until a value is typed, then calls onApply', async () => {
