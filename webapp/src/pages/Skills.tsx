@@ -293,14 +293,14 @@ export default function Skills() {
       <div className="sticky -top-4 z-10 -mx-4 px-4 pt-2 pb-2 bg-dnd-bg/95 backdrop-blur-sm">
         <Surface variant="elevated" className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <p className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-gold-dim">
+            <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim">
               {t('character.skills.prof_bonus')}
             </p>
             <StatPill tone="gold" size="sm" value={`+${pb}`} />
           </div>
           <div className="flex items-center gap-2">
             <Eye size={14} className="text-dnd-arcane-bright" />
-            <p className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-gold-dim">
+            <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim">
               {t('character.skills.passive_perception')}
             </p>
             <StatPill tone="arcane" size="sm" value={passivePerception} />
@@ -389,7 +389,7 @@ export default function Skills() {
             const total = abilMod + profPart + pickerHb
             const abilLabel = t(`character.ability.${skill.ability}_short`, { defaultValue: skill.ability })
             return (
-              <p className="text-[11px] font-body text-dnd-text-faint mb-3">
+              <p className="text-xs font-body text-dnd-text-faint mb-3">
                 {t('character.skills.breakdown', {
                   total: `${total >= 0 ? '+' : ''}${total}`,
                   abilMod: `${abilMod >= 0 ? '+' : ''}${abilMod}`,

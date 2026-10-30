@@ -13,7 +13,7 @@ function SectionDividerInner({ children, icon, align = 'left', className = '' }:
     return (
       <div className={`flex items-center gap-2 mt-5 mb-3 text-dnd-gold-dim ${className}`}>
         <FlourishDivider />
-        <span className="shrink-0 flex items-center gap-1.5 px-2 text-[10px] font-cinzel font-bold uppercase tracking-[0.25em] text-dnd-gold">
+        <span className="shrink-0 flex items-center gap-1.5 px-2 text-xs font-cinzel font-bold uppercase tracking-[0.25em] text-dnd-gold">
           {icon}
           {children}
         </span>
@@ -23,7 +23,7 @@ function SectionDividerInner({ children, icon, align = 'left', className = '' }:
   }
   return (
     <div className={`flex items-center gap-2 mt-4 mb-2 ${className}`}>
-      <span className="flex items-center gap-1.5 text-[10px] font-cinzel font-bold text-dnd-gold uppercase tracking-[0.25em] whitespace-nowrap shrink-0">
+      <span className="flex items-center gap-1.5 text-xs font-cinzel font-bold text-dnd-gold uppercase tracking-[0.25em] whitespace-nowrap shrink-0">
         {icon}
         {children}
       </span>

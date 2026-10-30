@@ -395,7 +395,7 @@ export default function QuickActions({ char }: Props) {
 
   const renderGroup = (group: EditorGroup) => (
     <div key={group.labelKey}>
-      <p className="font-cinzel text-[10px] uppercase tracking-widest text-dnd-gold-dim mb-1 px-1">
+      <p className="font-cinzel text-xs uppercase tracking-widest text-dnd-gold-dim mb-1 px-1">
         {t(group.labelKey)}
       </p>
       {group.rows.length === 0 ? (
@@ -444,7 +444,7 @@ export default function QuickActions({ char }: Props) {
             onClick={() => { haptic.light(); setEditorOpen(true) }}
             whileTap={{ scale: 0.9 }}
             aria-label={t('character.quick_actions.edit')}
-            className="w-9 h-9 flex items-center justify-center rounded-full bg-dnd-surface border border-dnd-gold-dim/40 text-dnd-gold-bright"
+            className="w-11 h-11 flex items-center justify-center rounded-full bg-dnd-surface border border-dnd-gold-dim/40 text-dnd-gold-bright"
           >
             <Plus size={16} />
           </Pressable>
@@ -474,7 +474,7 @@ export default function QuickActions({ char }: Props) {
                       ${spanFull ? 'col-span-2' : ''}`}
                   >
                     <GiPolarStar size={16} className="shrink-0" />
-                    <span className="flex-1 min-w-0 truncate text-sm font-body">
+                    <span className="flex-1 min-w-0 line-clamp-2 leading-tight text-sm font-body">
                       {actionLabel(a)}
                     </span>
                     <Check size={14} className={`shrink-0 ${a.active ? '' : 'opacity-0'}`} />
@@ -497,7 +497,7 @@ export default function QuickActions({ char }: Props) {
                                 bg-dnd-surface border border-dnd-border col-span-2"
                   >
                     <Icon size={14} className="text-dnd-gold shrink-0" />
-                    <span className="flex-1 min-w-0 truncate text-xs text-dnd-text font-body">
+                    <span className="flex-1 min-w-0 line-clamp-2 leading-tight text-xs text-dnd-text font-body">
                       {actionLabel(a)}
                     </span>
                     <IconButton
@@ -515,7 +515,7 @@ export default function QuickActions({ char }: Props) {
                       aria-label={t('character.abilities.set_uses_title')}
                       className="min-w-[44px] text-center font-mono font-bold tabular-nums text-sm text-dnd-gold-bright"
                     >
-                      {current}{max != null ? <span className="text-dnd-text-muted text-[10px]">/{max}</span> : null}
+                      {current}{max != null ? <span className="text-dnd-text-muted text-xs">/{max}</span> : null}
                     </Pressable>
                     <IconButton
                       icon={<Plus size={16} />}
@@ -545,16 +545,16 @@ export default function QuickActions({ char }: Props) {
                               disabled:opacity-60 ${depleted ? 'opacity-50' : ''} ${spanFull ? 'col-span-2' : ''}`}
                 >
                   <RestIcon size={16} className="text-dnd-gold shrink-0" />
-                  <span className="flex-1 min-w-0 truncate text-sm text-dnd-text font-body">
+                  <span className="flex-1 min-w-0 line-clamp-2 leading-tight text-sm text-dnd-text font-body">
                     {actionLabel(a)}
                   </span>
                   {a.type === 'ability' && (
-                    <span className="text-[10px] font-mono tabular-nums text-dnd-text-muted shrink-0">
+                    <span className="text-xs font-mono tabular-nums text-dnd-text-muted shrink-0">
                       {a.ability.uses ?? 0}/{a.ability.max_uses ?? 0}
                     </span>
                   )}
                   {a.type === 'hit_die' && (
-                    <span className="text-[10px] font-mono tabular-nums text-dnd-text-muted shrink-0">
+                    <span className="text-xs font-mono tabular-nums text-dnd-text-muted shrink-0">
                       {a.remaining}/{a.cls.level}
                     </span>
                   )}
@@ -579,7 +579,7 @@ export default function QuickActions({ char }: Props) {
           {editorGroupsTop.map(renderGroup)}
 
           <div>
-            <p className="font-cinzel text-[10px] uppercase tracking-widest text-dnd-gold-dim mb-1 px-1">
+            <p className="font-cinzel text-xs uppercase tracking-widest text-dnd-gold-dim mb-1 px-1">
               {t('character.quick_actions.group_abilities')}
             </p>
             {pinnableAbilities.length === 0 ? (
@@ -617,7 +617,7 @@ export default function QuickActions({ char }: Props) {
                         type="button"
                         onClick={() => toggleExclusive(actionEntry, counterEntry)}
                         pending={pendingToggleKey === quickActionKey(actionEntry)}
-                        className={`px-2.5 py-1.5 rounded-lg border text-[11px] font-cinzel uppercase tracking-wide
+                        className={`px-2.5 py-1.5 rounded-lg border text-xs font-cinzel uppercase tracking-wide
                           ${actionPinned ? 'bg-dnd-gold/15 border-dnd-gold text-dnd-gold-bright' : 'border-dnd-border text-dnd-text-muted'}`}
                       >
                         {t('character.quick_actions.pin_as_action')}
@@ -626,7 +626,7 @@ export default function QuickActions({ char }: Props) {
                         type="button"
                         onClick={() => toggleExclusive(counterEntry, actionEntry)}
                         pending={pendingToggleKey === quickActionKey(counterEntry)}
-                        className={`px-2.5 py-1.5 rounded-lg border text-[11px] font-cinzel uppercase tracking-wide
+                        className={`px-2.5 py-1.5 rounded-lg border text-xs font-cinzel uppercase tracking-wide
                           ${counterPinned ? 'bg-dnd-gold/15 border-dnd-gold text-dnd-gold-bright' : 'border-dnd-border text-dnd-text-muted'}`}
                       >
                         {t('character.quick_actions.pin_as_counter')}

@@ -239,7 +239,7 @@ export default function TriggersSection({ triggers, tables, onChange }: Triggers
             >
               <div className="flex items-start gap-2">
                 <div className="flex-1 min-w-0 space-y-1.5">
-                  <label className="block text-[11px] uppercase tracking-wider font-cinzel font-bold text-dnd-gold-dim">
+                  <label className="block text-xs uppercase tracking-wider font-cinzel font-bold text-dnd-gold-dim">
                     {t('homebrew.triggers.event_label')}
                   </label>
                   <select
@@ -270,7 +270,7 @@ export default function TriggersSection({ triggers, tables, onChange }: Triggers
 
               {/* Filters */}
               <div className="space-y-2">
-                <div className="text-[11px] uppercase tracking-wider font-cinzel font-bold text-dnd-gold-dim">
+                <div className="text-xs uppercase tracking-wider font-cinzel font-bold text-dnd-gold-dim">
                   {t('homebrew.triggers.filters_label')}
                 </div>
                 <div className="flex flex-wrap gap-2 items-center">
@@ -279,12 +279,12 @@ export default function TriggersSection({ triggers, tables, onChange }: Triggers
                     return (
                       <span
                         key={fi}
-                        className="inline-flex items-center gap-1.5 min-h-[36px] pl-3 pr-1 py-1 rounded-full bg-dnd-chip-bg border border-dnd-gold/60 text-dnd-gold-bright text-[11px] font-body"
+                        className="inline-flex items-center gap-1.5 min-h-[36px] pl-3 pr-1 py-1 rounded-full bg-dnd-chip-bg border border-dnd-gold/60 text-dnd-gold-bright text-xs font-body"
                       >
                         {label ? (
                           <span>{label}</span>
                         ) : (
-                          <span className="font-mono text-[10px] text-dnd-text">
+                          <span className="font-mono text-xs text-dnd-text">
                             {String(f.path)} {f.op} {String(f.value)}
                           </span>
                         )}
@@ -300,7 +300,7 @@ export default function TriggersSection({ triggers, tables, onChange }: Triggers
                   })}
                   <Pressable
                     onClick={() => setFilterPickerIndex(index)}
-                    className="inline-flex items-center gap-1 min-h-[36px] px-3 py-1 rounded-full bg-dnd-surface border border-dashed border-dnd-border text-dnd-text-muted hover:text-dnd-gold-bright hover:border-dnd-gold/60 text-[11px] font-body transition-colors"
+                    className="inline-flex items-center gap-1 min-h-[36px] px-3 py-1 rounded-full bg-dnd-surface border border-dashed border-dnd-border text-dnd-text-muted hover:text-dnd-gold-bright hover:border-dnd-gold/60 text-xs font-body transition-colors"
                   >
                     <Plus size={12} />
                     <span>{t('homebrew.triggers.add_filter')}</span>
@@ -450,7 +450,7 @@ function FilterPicker({
         {/* Custom filter builder */}
         {isItemEvent ? (
           <div className="space-y-2.5">
-            <div className="text-[11px] uppercase tracking-wider font-cinzel font-bold text-dnd-gold-dim">
+            <div className="text-xs uppercase tracking-wider font-cinzel font-bold text-dnd-gold-dim">
               {t('homebrew.triggers.object_property_label')}
             </div>
             <Input
@@ -497,7 +497,7 @@ function FilterPicker({
           </div>
         ) : (
           <div className="space-y-2.5">
-            <div className="text-[11px] uppercase tracking-wider font-cinzel font-bold text-dnd-gold-dim">
+            <div className="text-xs uppercase tracking-wider font-cinzel font-bold text-dnd-gold-dim">
               {t('homebrew.triggers.custom_condition_label')}
             </div>
             <Input

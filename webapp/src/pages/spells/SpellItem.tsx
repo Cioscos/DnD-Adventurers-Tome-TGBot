@@ -177,7 +177,7 @@ function SpellItemInner({
               {/* Higher level note */}
               {spell.higher_level && (
                 <div className="bg-dnd-highlight/10 border border-dnd-highlight/20 rounded-lg px-2 py-1.5">
-                  <span className="text-[10px] uppercase tracking-wide text-dnd-highlight-muted block mb-0.5">{t('character.spells.chip_higher_level')}</span>
+                  <span className="text-xs uppercase tracking-wide text-dnd-highlight-muted block mb-0.5">{t('character.spells.chip_higher_level')}</span>
                   <p className="text-xs text-dnd-highlight-muted leading-relaxed">{spell.higher_level}</p>
                 </div>
               )}
@@ -185,7 +185,7 @@ function SpellItemInner({
               {/* Concentration workflow hint — clarifies that conc starts on cast,
                   and the toggle button is for manual control only. */}
               {spell.is_concentration && (
-                <div className="flex items-start gap-1.5 text-[11px] text-dnd-text-muted font-body italic leading-snug">
+                <div className="flex items-start gap-1.5 text-xs text-dnd-text-muted font-body italic leading-snug">
                   <Info size={11} className="text-dnd-arcane-bright shrink-0 mt-0.5" />
                   <span>{t('character.spells.concentration_help')}</span>
                 </div>

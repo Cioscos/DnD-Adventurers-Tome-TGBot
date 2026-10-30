@@ -62,12 +62,12 @@ export default function FilterChip({
       whileTap={{ scale: 0.95 }}
       aria-pressed={selected}
       aria-label={ariaLabel}
-      className={`inline-flex items-center gap-1.5 min-h-[44px] px-3 py-1.5 rounded-full border font-cinzel uppercase text-[11px] tracking-widest transition-colors ${baseColors} ${className}`}
+      className={`inline-flex items-center gap-1.5 min-h-[44px] px-3 py-1.5 rounded-full border font-cinzel uppercase text-xs tracking-widest transition-colors ${baseColors} ${className}`}
     >
       {icon && <span className="shrink-0 -ml-0.5">{icon}</span>}
       <span>{label}</span>
       {typeof count === 'number' && (
-        <span className="ml-0.5 px-1.5 rounded-full bg-dnd-surface/60 text-[10px] font-mono">
+        <span className="ml-0.5 px-1.5 rounded-full bg-dnd-surface/60 text-xs font-mono">
           {count}
         </span>
       )}

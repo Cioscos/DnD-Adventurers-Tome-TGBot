@@ -86,7 +86,7 @@ export default function History() {
         <>
           {/* Top-of-page action bar — clear button always reachable without scrolling. */}
           <div className="flex items-center justify-between gap-2">
-            <span className="text-[11px] font-cinzel uppercase tracking-widest text-dnd-gold-dim">
+            <span className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim">
               {t('character.history.entries_count', {
                 count: search ? filteredEntries.length : entries.length,
               })}
@@ -168,7 +168,7 @@ export default function History() {
                           {entry.description}
                         </p>
                         <p
-                          className="text-[10px] text-dnd-text-faint font-mono mt-0.5 cursor-help"
+                          className="text-xs text-dnd-text-faint font-mono mt-0.5 cursor-help"
                           title={absoluteTime}
                         >
                           {formatDate(entry.timestamp)}

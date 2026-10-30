@@ -37,7 +37,7 @@ export default function EffectsEditor({ effects, onChange }: EffectsEditorProps)
 
   return (
     <div className="space-y-2">
-      <label className="block text-[11px] uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
+      <label className="block text-xs uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
         {t('character.inventory.effects.title')}
       </label>
       {effects.length === 0 && (

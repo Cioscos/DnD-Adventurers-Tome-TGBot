@@ -63,7 +63,7 @@ export default function NoteEditor({ initialNote, onSave, onCancel, isPending }:
         onChange={setTags}
         suggestions={tagSuggestions}
         label={
-          <span className="block text-[11px] uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
+          <span className="block text-xs uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
             {t('character.notes.tags_label')}
           </span>
         }

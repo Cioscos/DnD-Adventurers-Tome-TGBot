@@ -41,14 +41,14 @@ export default function SpellSlotsSummary({ slots }: Props) {
         className="w-full text-left"
         aria-label={t('character.equipment.summary.spell_slots', { defaultValue: 'Spell slots' })}
       >
-        <div className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-gold-dim mb-1">
+        <div className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim mb-1">
           {t('character.equipment.summary.spell_slots', { defaultValue: 'Spell slots' })}
         </div>
         <div className="grid grid-cols-9 gap-1 @max-[300px]:gap-0.5 text-center font-mono text-dnd-text">
           {cells.map((c) => (
             <div key={c.level} className="flex flex-col">
-              <span className="text-[9px] @max-[300px]:text-[8px] text-dnd-gold-dim">{c.level}</span>
-              <span className={`@max-[300px]:text-[11px] ${c.total === 0 ? 'text-dnd-text-muted' : 'text-dnd-gold-bright font-bold'}`}>
+              <span className="text-xs text-dnd-gold-dim">{c.level}</span>
+              <span className={`@max-[300px]:text-xs ${c.total === 0 ? 'text-dnd-text-muted' : 'text-dnd-gold-bright font-bold'}`}>
                 {c.total}
               </span>
             </div>

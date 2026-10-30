@@ -65,7 +65,7 @@ export default function SubjectSection({ subject, onChange }: SubjectSectionProp
   return (
     <div className="space-y-4">
       {/* Region 1 — Subject type radio cards */}
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-2 gap-2">
         {SUBJECT_TYPES.map(({ value, emoji }) => {
           const selected = subject.type === value
           const styles = selected
@@ -77,7 +77,7 @@ export default function SubjectSection({ subject, onChange }: SubjectSectionProp
               onClick={() => setType(value)}
               whileTap={{ scale: 0.97 }}
               aria-pressed={selected}
-              className={`flex flex-col items-center justify-center gap-1 min-h-[64px] px-2 py-2 rounded-xl border font-cinzel uppercase text-[11px] tracking-widest transition-colors ${styles}`}
+              className={`flex flex-col items-center justify-center gap-1 min-h-[64px] px-2 py-2 rounded-xl border font-cinzel uppercase text-xs tracking-widest transition-colors ${styles}`}
             >
               <span className="text-xl leading-none" aria-hidden>
                 {emoji}
@@ -94,7 +94,7 @@ export default function SubjectSection({ subject, onChange }: SubjectSectionProp
       {subject.type === 'item' && (
         <div className="space-y-3">
           <div>
-            <label className="block text-[11px] uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
+            <label className="block text-xs uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
               {t('homebrew.subject.item_types_label')}
             </label>
             <div className="flex flex-wrap gap-1.5">
@@ -107,7 +107,7 @@ export default function SubjectSection({ subject, onChange }: SubjectSectionProp
                 />
               ))}
             </div>
-            <p className="mt-1.5 text-[11px] italic text-dnd-text-muted font-body">
+            <p className="mt-1.5 text-xs italic text-dnd-text-muted font-body">
               {t('homebrew.subject.item_types_helper')}
             </p>
           </div>

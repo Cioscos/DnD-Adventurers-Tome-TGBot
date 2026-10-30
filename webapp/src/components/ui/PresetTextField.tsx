@@ -52,7 +52,7 @@ export default function PresetTextField({
 
   return (
     <div className={className}>
-      <label className="block text-[11px] uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
+      <label className="block text-xs uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
         {label}
       </label>
       <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={label}>

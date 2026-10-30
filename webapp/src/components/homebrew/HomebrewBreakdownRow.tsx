@@ -17,7 +17,7 @@ export default function HomebrewBreakdownRow({ value, label, display }: Props) {
 
   return (
     <div className="flex items-center justify-between gap-2 px-2 py-1 text-sm">
-      <span className="flex items-center gap-1.5 text-[10px] font-cinzel uppercase tracking-[0.3em] text-dnd-gold-dim">
+      <span className="flex items-center gap-1.5 text-xs font-cinzel uppercase tracking-[0.3em] text-dnd-gold-dim">
         <Sparkles size={14} className="text-dnd-gold-dim" />
         {text}
       </span>

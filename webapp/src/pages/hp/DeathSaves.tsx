@@ -50,7 +50,7 @@ function PipGroup({ label, count, tone, icon, urgent = false }: PipGroupProps) {
 
   return (
     <div className="flex flex-col items-center gap-2">
-      <p className={`text-[10px] font-cinzel uppercase tracking-widest ${labelColor}`}>
+      <p className={`text-xs font-cinzel uppercase tracking-widest ${labelColor}`}>
         {label}
       </p>
       <div className={`flex gap-2 ${urgent ? 'animate-pulse' : ''}`}>
@@ -122,7 +122,7 @@ export default function DeathSaves({ deathSaves, onRoll, onAction, isRolling, pe
 
       <div className="flex flex-col gap-3 pt-4 border-t border-dnd-border/40">
         <div className="flex items-center justify-between gap-3">
-          <p className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-text-muted">
+          <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-text-muted">
             {t('character.death_saves.manual_override')}
           </p>
           <Pressable
@@ -131,7 +131,7 @@ export default function DeathSaves({ deathSaves, onRoll, onAction, isRolling, pe
             spinnerSize={12}
             className="inline-flex items-center justify-center
                        min-h-[32px] px-2 rounded
-                       text-[10px] font-cinzel uppercase tracking-widest
+                       text-xs font-cinzel uppercase tracking-widest
                        text-dnd-text-muted hover:text-dnd-gold-bright
                        transition-colors"
           >

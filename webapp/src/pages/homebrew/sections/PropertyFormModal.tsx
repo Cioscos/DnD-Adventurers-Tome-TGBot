@@ -273,7 +273,7 @@ export default function PropertyFormModal({
 
         {/* Key — auto-derived with optional override */}
         <div>
-          <label className="block text-[11px] uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
+          <label className="block text-xs uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
             {t('homebrew.properties.modal.key_label')}
           </label>
           {draft.keyOverridden ? (
@@ -290,14 +290,14 @@ export default function PropertyFormModal({
               </code>
               <Pressable
                 onClick={enableKeyOverride}
-                className="hit-44 text-[11px] font-cinzel uppercase tracking-wider text-dnd-gold-dim hover:text-dnd-gold-bright transition-colors"
+                className="hit-44 text-xs font-cinzel uppercase tracking-wider text-dnd-gold-dim hover:text-dnd-gold-bright transition-colors"
               >
                 {t('homebrew.properties.modal.key_override')}
               </Pressable>
             </div>
           )}
           {!draft.keyOverridden && errors.key && (
-            <p className="text-dnd-crimson-bright text-[11px] mt-1 font-body">
+            <p className="text-dnd-crimson-bright text-xs mt-1 font-body">
               {errors.key}
             </p>
           )}
@@ -305,7 +305,7 @@ export default function PropertyFormModal({
 
         {/* Type radio (chip row) */}
         <div>
-          <label className="block text-[11px] uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
+          <label className="block text-xs uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
             {t('homebrew.properties.modal.type_label')}
           </label>
           <div className="flex flex-wrap gap-1.5">
@@ -332,11 +332,11 @@ export default function PropertyFormModal({
               placeholder={t('homebrew.properties.modal.values_placeholder')}
               error={errors.values}
             />
-            <p className="-mt-2 text-[11px] italic text-dnd-text-muted font-body">
+            <p className="-mt-2 text-xs italic text-dnd-text-muted font-body">
               {t('homebrew.properties.modal.values_helper')}
             </p>
             <div>
-              <label className="block text-[11px] uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
+              <label className="block text-xs uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
                 {t('homebrew.properties.default_label')}
               </label>
               <select
@@ -358,7 +358,7 @@ export default function PropertyFormModal({
                 )}
               </select>
               {errors.default && (
-                <p className="text-dnd-crimson-bright text-[11px] mt-1 font-body">
+                <p className="text-dnd-crimson-bright text-xs mt-1 font-body">
                   {errors.default}
                 </p>
               )}
@@ -367,7 +367,7 @@ export default function PropertyFormModal({
             {/* Per-value badge tone — author-declared override of the heuristic (#47). */}
             {parsedValues.length > 0 && (
               <div>
-                <label className="block text-[11px] uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
+                <label className="block text-xs uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
                   {t('homebrew.properties.modal.tone_label')}
                 </label>
                 <div className="space-y-1.5">
@@ -391,7 +391,7 @@ export default function PropertyFormModal({
                     </div>
                   ))}
                 </div>
-                <p className="mt-1.5 text-[11px] italic text-dnd-text-muted font-body">
+                <p className="mt-1.5 text-xs italic text-dnd-text-muted font-body">
                   {t('homebrew.properties.modal.tone_helper')}
                 </p>
               </div>
@@ -412,7 +412,7 @@ export default function PropertyFormModal({
 
         {draft.type === 'boolean' && (
           <div>
-            <label className="block text-[11px] uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
+            <label className="block text-xs uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
               {t('homebrew.properties.default_label')}
             </label>
             <div className="flex gap-1.5">

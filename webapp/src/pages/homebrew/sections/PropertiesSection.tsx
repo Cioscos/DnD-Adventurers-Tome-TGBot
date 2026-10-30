@@ -97,12 +97,12 @@ export default function PropertiesSection({ properties, onChange }: PropertiesSe
                       <span className="font-display font-bold text-dnd-text">
                         {label}
                       </span>
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-dnd-chip-bg border border-dnd-border text-[11px] font-cinzel uppercase tracking-wider text-dnd-gold-dim">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-dnd-chip-bg border border-dnd-border text-xs font-cinzel uppercase tracking-wider text-dnd-gold-dim">
                         {t(`homebrew.properties.type_badge.${prop.type}`)}
                       </span>
                     </div>
-                    <div className="mt-1 text-[11px] text-dnd-text-muted font-body flex items-center gap-2 flex-wrap">
-                      <code className="font-mono text-[11px] text-dnd-gold-dim">
+                    <div className="mt-1 text-xs text-dnd-text-muted font-body flex items-center gap-2 flex-wrap">
+                      <code className="font-mono text-xs text-dnd-gold-dim">
                         {prop.key}
                       </code>
                       <span>·</span>
@@ -122,7 +122,7 @@ export default function PropertiesSection({ properties, onChange }: PropertiesSe
                         {prop.values.map((v) => (
                           <span
                             key={v}
-                            className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-dnd-chip-bg text-[11px] font-mono text-dnd-text-muted"
+                            className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-dnd-chip-bg text-xs font-mono text-dnd-text-muted"
                           >
                             {v}
                           </span>

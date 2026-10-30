@@ -44,7 +44,7 @@ function CoinTile({ metal, label }: { metal: CoinMetal; label: string }) {
   }
   return (
     <div
-      className="w-11 h-11 rounded-full border-2 border-dnd-gold-deep/60 flex items-center justify-center font-cinzel font-black text-[10px] shadow-parchment-md text-dnd-ink"
+      className="w-11 h-11 rounded-full border-2 border-dnd-gold-deep/60 flex items-center justify-center font-cinzel font-black text-xs shadow-parchment-md text-dnd-ink"
       style={style}
     >
       {label}
@@ -168,7 +168,7 @@ export default function Currency() {
 
       {/* Total gold hero */}
       <Surface variant="tome" ornamented className="text-center">
-        <p className="text-[10px] font-cinzel uppercase tracking-[0.3em] text-dnd-gold-dim mb-1">
+        <p className="text-xs font-cinzel uppercase tracking-[0.3em] text-dnd-gold-dim mb-1">
           {t('character.currency.total_gold')}
         </p>
         <div className="flex items-center justify-center gap-3">
@@ -220,12 +220,12 @@ export default function Currency() {
                     {t(`character.currency.${key}`)}
                   </p>
                   {currentCoins && (
-                    <p className="text-[10px] text-dnd-text-faint mt-0.5 font-mono">
+                    <p className="text-xs text-dnd-text-faint mt-0.5 font-mono">
                       {t('character.currency.current_value', { n: currentCoins[key] })}
                     </p>
                   )}
                   {isNegativeAdd && (
-                    <p className="text-[10px] text-dnd-crimson-bright mt-0.5 font-body italic">
+                    <p className="text-xs text-dnd-crimson-bright mt-0.5 font-body italic">
                       {t('character.currency.remove_preview', {
                         amount: Math.abs(draftNum),
                         coin: t(`character.currency.${key}`),
@@ -322,7 +322,7 @@ export default function Currency() {
             const targetRate = COIN_IN_GOLD[convertTarget] ?? 1
             const targetAmount = inGold / targetRate
             return (
-              <p className="text-[11px] font-body text-dnd-text-faint text-center">
+              <p className="text-xs font-body text-dnd-text-faint text-center">
                 {t('character.currency.convert_preview', {
                   amount: amountNum,
                   source: t(`character.currency.${convertSource}`),

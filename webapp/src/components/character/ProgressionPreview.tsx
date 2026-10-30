@@ -49,10 +49,10 @@ export default function ProgressionPreview({ className, currentLevel, isMulticla
     <>
       <Surface variant="tome" className="@container !p-2.5">
         <div className="flex items-center justify-between mb-1.5">
-          <div className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-gold-dim">
+          <div className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim">
             {t('character.equipment.progression.title', { defaultValue: 'Progression' })}
           </div>
-          <div className="text-[10px] text-dnd-text-muted italic">
+          <div className="text-xs text-dnd-text-muted italic">
             {t('character.equipment.progression.tap_full_table', {
               defaultValue: 'Tap row for full table',
             })}
@@ -79,11 +79,11 @@ export default function ProgressionPreview({ className, currentLevel, isMulticla
                 }`}
                 aria-current={isCurrent ? 'true' : undefined}
               >
-                <span className="font-mono text-[11px] @max-[360px]:text-[10px] font-bold text-center">L{lv}</span>
+                <span className="font-mono text-xs font-bold text-center">L{lv}</span>
                 {!isMulticlass && (
-                  <span className="font-mono text-[10px] text-center @max-[300px]:hidden">+{row?.proficiency_bonus ?? '?'}</span>
+                  <span className="font-mono text-xs text-center @max-[300px]:hidden">+{row?.proficiency_bonus ?? '?'}</span>
                 )}
-                <span className="text-[11px] @max-[360px]:text-[10px] truncate">{row?.features ? localizeFeatures(row.features, i18n.language) : '—'}</span>
+                <span className="text-xs truncate">{row?.features ? localizeFeatures(row.features, i18n.language) : '—'}</span>
               </Pressable>
             )
           })}

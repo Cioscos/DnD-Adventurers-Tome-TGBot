@@ -122,7 +122,7 @@ export default function PassiveModifiersSection({ mods, onChange }: PassiveModif
                 <div className="flex items-start gap-2">
                   <div className="flex-1 min-w-0">
                     <div className="font-display font-bold text-dnd-text">{label}</div>
-                    <div className="mt-1 text-[11px] text-dnd-text-muted font-body flex items-center gap-2 flex-wrap">
+                    <div className="mt-1 text-xs text-dnd-text-muted font-body flex items-center gap-2 flex-wrap">
                       <span>{targetLabel(mod.target, t)}</span>
                       <span className="font-mono text-dnd-gold-bright">
                         {formatValue(mod.value)}

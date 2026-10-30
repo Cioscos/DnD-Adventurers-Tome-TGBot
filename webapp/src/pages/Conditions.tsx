@@ -304,7 +304,7 @@ export default function Conditions() {
 
       {/* Exhaustion tracker — separated because levels are cumulative, not toggle. */}
       <Surface variant="elevated" ornamented>
-        <p className="text-[9px] font-cinzel uppercase tracking-[0.3em] text-dnd-text-faint italic mb-1.5 text-center">
+        <p className="text-xs font-cinzel uppercase tracking-[0.3em] text-dnd-text-faint italic mb-1.5 text-center">
           {t('character.conditions.exhaustion_caption', { defaultValue: 'Livelli (cumulativi)' })}
         </p>
         <div className="flex items-center justify-between mb-3">

@@ -57,7 +57,7 @@ export default function HeroXPBar({
         </span>
         {levelUpReady ? (
           <span
-            className={`inline-flex items-center gap-1 min-h-[44px] px-3 rounded-md text-[10px] font-cinzel font-bold tracking-widest uppercase bg-dnd-gold text-dnd-ink border border-dnd-gold-bright ${suppressHalo ? '' : 'animate-glow-pulse'}`}
+            className={`inline-flex items-center gap-1 min-h-[44px] px-3 rounded-md text-xs font-cinzel font-bold tracking-widest uppercase bg-dnd-gold text-dnd-ink border border-dnd-gold-bright ${suppressHalo ? '' : 'animate-glow-pulse'}`}
           >
             <ChevronsUp size={12} />
             {t('character.xp.bar.level_up')}

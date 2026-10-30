@@ -219,7 +219,7 @@ export default function SpellForm({ initialData, onSubmit, onCancel, isPending }
           />
         ) : (
           <div>
-            <label className="block text-[11px] uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
+            <label className="block text-xs uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
               {t('character.spells.components')}
             </label>
             <div className="flex gap-2">
@@ -241,7 +241,7 @@ export default function SpellForm({ initialData, onSubmit, onCancel, isPending }
                 )
               })}
             </div>
-            <p className="text-[11px] text-dnd-text-muted font-body italic mt-1.5">
+            <p className="text-xs text-dnd-text-muted font-body italic mt-1.5">
               {t('character.spells.components_help')}
             </p>
             {componentTokens.includes('M') && (
@@ -305,7 +305,7 @@ export default function SpellForm({ initialData, onSubmit, onCancel, isPending }
             label={t('character.spells.ritual')}
             aria-label={t('character.spells.ritual')}
           />
-          <p className="text-[11px] text-dnd-text-muted font-body italic leading-snug">
+          <p className="text-xs text-dnd-text-muted font-body italic leading-snug">
             {t('character.spells.concentration_marker_help')}
           </p>
         </div>

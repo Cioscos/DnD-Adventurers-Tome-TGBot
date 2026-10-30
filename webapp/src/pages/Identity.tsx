@@ -231,7 +231,7 @@ export default function Identity() {
             }
           />
           {Number(draft.speed) > 0 && (
-            <p className="mt-1 text-[10px] font-mono text-dnd-text-faint tabular-nums">
+            <p className="mt-1 text-xs font-mono text-dnd-text-faint tabular-nums">
               ≈ {formatLength(displayToFeet(Number(draft.speed) || 0, unitSystem), oppositeSystem(unitSystem))}
             </p>
           )}
@@ -246,17 +246,17 @@ export default function Identity() {
       <div className="flex flex-col items-center gap-1 -mt-2 mb-3 text-dnd-gold-dim">
         <div className="flex items-center gap-1">
           <Lock size={10} />
-          <span className="text-[10px] font-cinzel uppercase tracking-wider">
+          <span className="text-xs font-cinzel uppercase tracking-wider">
             {t('character.identity.private_badge')}
           </span>
         </div>
-        <p className="text-[10px] text-dnd-text-faint font-body italic max-w-[300px] text-center">
+        <p className="text-xs text-dnd-text-faint font-body italic max-w-[300px] text-center">
           {t('character.identity.private_hint')}
         </p>
       </div>
 
       <Surface variant="parchment" className="!pt-5 !px-4 !pb-4 relative !mt-8 !mb-6">
-        <span className="absolute -top-2.5 left-4 px-2 bg-dnd-surface-raised text-[10px] font-cinzel uppercase tracking-widest text-dnd-gold-dim rounded">
+        <span className="absolute -top-2.5 left-4 px-2 bg-dnd-surface-raised text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim rounded">
           {t('character.identity.background')}
         </span>
         <Input
@@ -270,7 +270,7 @@ export default function Identity() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5 !mt-6">
         {personalitySections.map(({ key, label }) => (
           <Surface key={key} variant="parchment" className="!pt-5 !px-4 !pb-4 relative">
-            <span className="absolute -top-2.5 left-4 px-2 bg-dnd-surface-raised text-[10px] font-cinzel uppercase tracking-widest text-dnd-gold-dim rounded">
+            <span className="absolute -top-2.5 left-4 px-2 bg-dnd-surface-raised text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim rounded">
               {label}
             </span>
             <Input
@@ -315,7 +315,7 @@ export default function Identity() {
         {t('character.identity.damage_modifiers')}
       </SectionDivider>
 
-      <p className="text-[10px] uppercase tracking-widest text-dnd-text-faint italic text-center -mt-2 mb-2">
+      <p className="text-xs uppercase tracking-widest text-dnd-text-faint italic text-center -mt-2 mb-2">
         {t('character.identity.damage_vuln_wins_hint')}
       </p>
 
@@ -328,7 +328,7 @@ export default function Identity() {
               <div key={key}>
                 <div className="flex items-center gap-2 mb-2">
                   <ToneIcon size={12} className={tone.text} />
-                  <p className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-gold-dim">
+                  <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim">
                     {t(`character.identity.${key}`)}
                   </p>
                 </div>

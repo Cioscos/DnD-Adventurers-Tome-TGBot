@@ -269,7 +269,7 @@ export default function HP() {
                 transition={{ duration: 0.2 }}
               >
                 <Surface variant="tome" ornamented className="relative text-center">
-                  <p className="text-[10px] font-cinzel uppercase tracking-[0.25em] text-dnd-gold-dim mb-2">
+                  <p className="text-xs font-cinzel uppercase tracking-[0.25em] text-dnd-gold-dim mb-2">
                     <Heart size={10} className="inline mr-1 text-dnd-crimson-bright" />
                     {t('character.hp.title')}
                   </p>
@@ -306,7 +306,7 @@ export default function HP() {
                       un'anomalia (audit FE #5). Cobalt = info, mai crimson. */}
                   {atZero && ds.stable && (
                     <p className="mt-3 inline-flex items-center justify-center gap-1.5 rounded-full px-3 py-1.5
-                                  text-[11px] font-cinzel font-bold uppercase tracking-wider
+                                  text-xs font-cinzel font-bold uppercase tracking-wider
                                   bg-dnd-cobalt/15 border border-dnd-cobalt/40 text-dnd-cobalt-bright">
                       <HeartPulse size={13} />
                       {t('character.death_saves.stabilized_badge')}

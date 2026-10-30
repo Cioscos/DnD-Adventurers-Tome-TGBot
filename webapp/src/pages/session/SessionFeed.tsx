@@ -331,7 +331,7 @@ export default function SessionFeed({
                       it.description
                     )}
                   </span>
-                  <span className="font-mono text-[10px] text-dnd-text-faint">
+                  <span className="font-mono text-xs text-dnd-text-faint">
                     {formatTime24(it.timestamp, i18n.language)}
                   </span>
                 </div>
@@ -361,7 +361,7 @@ export default function SessionFeed({
             const bubbleContent = (
               <>
                 {(!mine || isWhisper) && (
-                  <p className="text-[10px] uppercase tracking-wider opacity-70 mb-0.5 font-cinzel flex items-center gap-1">
+                  <p className="text-xs uppercase tracking-wider opacity-70 mb-0.5 font-cinzel flex items-center gap-1">
                     {isWhisper && <Lock size={10} />}
                     {it.role === 'game_master' && !isWhisper && <Crown size={10} />}
                     {it.role === 'player' && !isWhisper && <UserIcon size={10} />}
@@ -378,7 +378,7 @@ export default function SessionFeed({
                   {grantBody ?? it.body}
                 </p>
                 {isGrantToMe && (
-                  <p className="text-[10px] uppercase tracking-wider mt-1 text-dnd-amber/80 font-cinzel">
+                  <p className="text-xs uppercase tracking-wider mt-1 text-dnd-amber/80 font-cinzel">
                     {t('session.feed.grant_chip')}
                   </p>
                 )}

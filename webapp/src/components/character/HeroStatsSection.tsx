@@ -170,7 +170,7 @@ export default function HeroStatsSection({ char }: Props) {
             whileTap={{ scale: 0.95 }}
           >
             <span className="flex items-center justify-center text-center min-h-[2.2em] px-0.5
-                             text-[11px] font-cinzel uppercase tracking-wide leading-tight opacity-80">
+                             text-xs font-cinzel uppercase tracking-wide leading-tight opacity-80">
               {c.label}
             </span>
             <span className="text-2xl font-mono font-bold tabular-nums leading-none mt-1">
@@ -197,7 +197,7 @@ export default function HeroStatsSection({ char }: Props) {
         <Surface variant="elevated" interactive onClick={() => go('saves')} className="!p-3 min-h-[56px]">
           <div className="flex items-center gap-1.5 mb-1.5">
             <GiShieldEchoes size={13} className="text-dnd-gold-bright shrink-0" />
-            <span className="text-[10px] font-cinzel font-bold uppercase tracking-widest text-dnd-gold truncate">
+            <span className="text-xs font-cinzel font-bold uppercase tracking-widest text-dnd-gold truncate">
               {t('character.saves.title')}
             </span>
           </div>
@@ -218,7 +218,7 @@ export default function HeroStatsSection({ char }: Props) {
         <Surface variant="elevated" interactive onClick={() => go('skills')} className="!p-3 min-h-[56px]">
           <div className="flex items-center gap-1.5 mb-1.5">
             <GiArcheryTarget size={13} className="text-dnd-gold-bright shrink-0" />
-            <span className="text-[10px] font-cinzel font-bold uppercase tracking-widest text-dnd-gold truncate">
+            <span className="text-xs font-cinzel font-bold uppercase tracking-widest text-dnd-gold truncate">
               {t('character.skills.title')}
             </span>
           </div>

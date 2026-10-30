@@ -150,7 +150,7 @@ export default function MenuScreen({ char }: Props) {
                       whileTap={{ scale: 0.93 }}
                     >
                       <Icon size={22} strokeWidth={2} className={toneIconClass(item.tone)} />
-                      <span className="text-[11px] text-dnd-text-muted font-body text-center leading-tight">
+                      <span className="text-xs text-dnd-text-muted font-body text-center leading-tight">
                         {t(`character.menu.${item.key}`)}
                       </span>
                     </Pressable>

@@ -34,7 +34,7 @@ export default function ScrollArea({ children, className = '' }: ScrollAreaProps
       {!atBottom && (
         <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-dnd-bg to-transparent flex items-end justify-center pb-2">
           {showHint && (
-            <span className="text-[10px] text-dnd-gold-dim opacity-70">↓ scorri</span>
+            <span className="text-xs text-dnd-gold-dim opacity-70">↓ scorri</span>
           )}
         </div>
       )}

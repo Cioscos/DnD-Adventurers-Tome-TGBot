@@ -139,7 +139,7 @@ export default function ResourceFormModal({
 
         {/* Key — auto-derived with optional override */}
         <div>
-          <label className="block text-[11px] uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
+          <label className="block text-xs uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
             {t('homebrew.resources.modal.key_label')}
           </label>
           {draft.keyOverridden ? (
@@ -154,14 +154,14 @@ export default function ResourceFormModal({
               <code className="font-mono text-sm text-dnd-text">{autoKey || '—'}</code>
               <Pressable
                 onClick={enableKeyOverride}
-                className="hit-44 text-[11px] font-cinzel uppercase tracking-wider text-dnd-gold-dim hover:text-dnd-gold-bright transition-colors"
+                className="hit-44 text-xs font-cinzel uppercase tracking-wider text-dnd-gold-dim hover:text-dnd-gold-bright transition-colors"
               >
                 {t('homebrew.resources.modal.key_override')}
               </Pressable>
             </div>
           )}
           {!draft.keyOverridden && errors.key && (
-            <p className="text-dnd-crimson-bright text-[11px] mt-1 font-body">{errors.key}</p>
+            <p className="text-dnd-crimson-bright text-xs mt-1 font-body">{errors.key}</p>
           )}
         </div>
 

@@ -24,7 +24,7 @@ function MetadataField({ label, value }: { label: string; value: string | number
   const numeric = typeof value === 'number'
   return (
     <div className="flex items-baseline justify-between gap-3 py-1">
-      <span className="text-[11px] font-cinzel uppercase tracking-widest text-dnd-gold-dim shrink-0">
+      <span className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim shrink-0">
         {label}
       </span>
       <span className={`text-sm text-dnd-text text-right truncate ${numeric ? 'font-mono tabular-nums' : 'font-body'}`}>
@@ -75,14 +75,14 @@ export default function ItemDetailsModal({ item, slot, onClose }: Props) {
         >
           <header className="flex items-start justify-between px-4 py-3 border-b border-dnd-border">
             <div className="min-w-0 flex-1">
-              <p className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-gold-dim">
+              <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim">
                 {slotLabel}
               </p>
               <h2 className="text-base font-bold text-dnd-gold-bright leading-tight">
                 <span className="mr-1.5" aria-hidden>{typeIcon}</span>
                 {item.name}
               </h2>
-              <p className="text-[11px] font-body italic text-dnd-text-faint mt-0.5">
+              <p className="text-xs font-body italic text-dnd-text-faint mt-0.5">
                 {typeLabel}
               </p>
             </div>
@@ -189,14 +189,14 @@ export default function ItemDetailsModal({ item, slot, onClose }: Props) {
 
             {properties.length > 0 && (
               <div>
-                <p className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-gold-dim mb-1.5">
+                <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim mb-1.5">
                   {t('character.inventory.properties_label', { defaultValue: 'Proprietà' })}
                 </p>
                 <div className="flex flex-wrap gap-1.5">
                   {properties.map((p) => (
                     <span
                       key={p}
-                      className="px-2 py-0.5 rounded-full bg-dnd-surface border border-dnd-gold-dim/40 text-[11px] font-body text-dnd-gold-bright"
+                      className="px-2 py-0.5 rounded-full bg-dnd-surface border border-dnd-gold-dim/40 text-xs font-body text-dnd-gold-bright"
                     >
                       {t(`character.inventory.weapon_properties.${p}`, { defaultValue: p })}
                     </span>
@@ -207,14 +207,14 @@ export default function ItemDetailsModal({ item, slot, onClose }: Props) {
 
             {abilityMods.length > 0 && (
               <div>
-                <p className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-gold-dim mb-1.5">
+                <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim mb-1.5">
                   {t('character.inventory.ability_modifiers_label', { defaultValue: 'Modificatori caratteristica' })}
                 </p>
                 <div className="flex flex-wrap gap-1.5">
                   {abilityMods.map((m, i) => (
                     <span
                       key={`${m.ability}-${i}`}
-                      className="px-2 py-0.5 rounded-full bg-dnd-gold/15 border border-dnd-gold/40 text-[11px] font-body text-dnd-gold-bright"
+                      className="px-2 py-0.5 rounded-full bg-dnd-gold/15 border border-dnd-gold/40 text-xs font-body text-dnd-gold-bright"
                     >
                       {t(`character.ability.${m.ability}_short`, { defaultValue: m.ability.slice(0, 3).toUpperCase() })}
                       {' '}
@@ -227,7 +227,7 @@ export default function ItemDetailsModal({ item, slot, onClose }: Props) {
 
             {effects.length > 0 && (
               <div>
-                <p className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-gold-dim mb-1.5">
+                <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim mb-1.5">
                   {t('character.inventory.effects.title', { defaultValue: 'Effetti' })}
                 </p>
                 <div className="flex flex-wrap gap-1.5">
@@ -236,7 +236,7 @@ export default function ItemDetailsModal({ item, slot, onClose }: Props) {
                       ? t('character.inventory.use_confirm.heal', { amount: e.amount, defaultValue: `Cura ${e.amount}` })
                       : t(`character.conditions.${e.condition}`, { defaultValue: e.condition })
                     return (
-                      <span key={i} className="px-2 py-0.5 rounded-full bg-dnd-emerald/15 border border-dnd-emerald/40 text-[11px] font-body text-dnd-emerald-bright">
+                      <span key={i} className="px-2 py-0.5 rounded-full bg-dnd-emerald/15 border border-dnd-emerald/40 text-xs font-body text-dnd-emerald-bright">
                         {label}
                       </span>
                     )

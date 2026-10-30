@@ -84,7 +84,7 @@ export default function EquipmentScreen({ char }: Props) {
               else fileRef.current?.click()
             }}
             pending={uploadSil.isPending}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-dnd-surface-raised border border-dnd-gold-dim/60 text-dnd-gold-bright text-[10px] font-cinzel uppercase tracking-widest shadow-parchment-md disabled:opacity-50 active:scale-95"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-dnd-surface-raised border border-dnd-gold-dim/60 text-dnd-gold-bright text-xs font-cinzel uppercase tracking-widest shadow-parchment-md disabled:opacity-50 active:scale-95"
           >
             {char.has_custom_silhouette ? <Pencil size={12} /> : <ImagePlus size={12} />}
             {uploadSil.isPending ? t('character.equipment.silhouette.uploading') : t('character.equipment.silhouette.upload')}

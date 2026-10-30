@@ -67,7 +67,7 @@ function FaceHistogram({ sides, faces }: { sides: DieSide; faces: Record<string,
                 style={{ height: `${pct}%` }}
               />
             </div>
-            <span className="text-[7px] leading-none text-dnd-text-faint tabular-nums">
+            <span className="text-xs leading-none text-dnd-text-faint tabular-nums">
               {showTick ? v : ' '}
             </span>
           </div>
@@ -131,7 +131,7 @@ export default function DiceStats() {
           {/* Trofei nat 20 / nat 1 + totale */}
           <div className="grid grid-cols-2 gap-3">
             <Surface variant="elevated" className="text-center py-3">
-              <p className="font-cinzel text-[10px] uppercase tracking-widest text-dnd-emerald-bright">
+              <p className="font-cinzel text-xs uppercase tracking-widest text-dnd-emerald-bright">
                 {t('character.dice_stats.nat20')}
               </p>
               <p className="text-3xl font-mono font-bold tabular-nums text-dnd-emerald-bright mt-1">
@@ -139,7 +139,7 @@ export default function DiceStats() {
               </p>
             </Surface>
             <Surface variant="elevated" className="text-center py-3">
-              <p className="font-cinzel text-[10px] uppercase tracking-widest text-dnd-crimson-bright">
+              <p className="font-cinzel text-xs uppercase tracking-widest text-dnd-crimson-bright">
                 {t('character.dice_stats.nat1')}
               </p>
               <p className="text-3xl font-mono font-bold tabular-nums text-dnd-crimson-bright mt-1">
@@ -149,7 +149,7 @@ export default function DiceStats() {
           </div>
 
           <Surface variant="elevated" className="flex items-center justify-between px-4 py-3">
-            <span className="font-cinzel text-[10px] uppercase tracking-widest text-dnd-gold-dim">
+            <span className="font-cinzel text-xs uppercase tracking-widest text-dnd-gold-dim">
               {t('character.dice_stats.total_rolls')}
             </span>
             <span className="text-xl font-mono font-bold tabular-nums text-dnd-gold-bright">

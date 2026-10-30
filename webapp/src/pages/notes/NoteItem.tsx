@@ -91,7 +91,7 @@ function NoteItemInner({ note, onEdit, onDelete, onView, onShare, sharePending =
         )}
         {relLabel && (
           <p
-            className="mt-2 text-[10px] text-dnd-text-faint italic"
+            className="mt-2 text-xs text-dnd-text-faint italic"
             title={absLabel ?? undefined}
           >
             {editedPrefix} · {relLabel}
@@ -146,7 +146,7 @@ function NoteItemInner({ note, onEdit, onDelete, onView, onShare, sharePending =
           {tags.map((tag) => (
             <span
               key={tag}
-              className="text-[10px] font-cinzel uppercase tracking-wider px-1.5 py-px rounded-full bg-dnd-chip-bg text-dnd-gold-dim border border-dnd-border"
+              className="text-xs font-cinzel uppercase tracking-wider px-1.5 py-px rounded-full bg-dnd-chip-bg text-dnd-gold-dim border border-dnd-border"
             >
               {tag}
             </span>
@@ -158,7 +158,7 @@ function NoteItemInner({ note, onEdit, onDelete, onView, onShare, sharePending =
       </p>
       {relLabel && (
         <p
-          className="mt-2 text-[10px] text-dnd-text-faint italic"
+          className="mt-2 text-xs text-dnd-text-faint italic"
           title={absLabel ?? undefined}
         >
           {editedPrefix} · {relLabel}

@@ -347,7 +347,7 @@ export default function Spells() {
           (Tabular Numerics). Rosso solo oltre il tetto (legacy grandfathered). */}
       {spellcasting?.has_preparing_class && spells.length > 0 && (
         <div className="flex items-center justify-end gap-1.5 px-1">
-          <span className="font-cinzel text-[11px] uppercase tracking-widest text-dnd-gold-dim">
+          <span className="font-cinzel text-xs uppercase tracking-widest text-dnd-gold-dim">
             {t('character.spells.prepared_counter')}
           </span>
           <span className={`font-mono text-xs tabular-nums ${
@@ -596,7 +596,7 @@ function ConcentrationPanel({
           <div className="flex items-center gap-2 min-w-0">
             <FlaskConical size={16} className="text-dnd-arcane-bright shrink-0" />
             <div className="min-w-0 flex-1">
-              <p className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-arcane-bright">
+              <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-arcane-bright">
                 {labels.concentration}
               </p>
               <p className="text-base font-display font-bold text-dnd-gold-bright truncate">
@@ -624,7 +624,7 @@ function ConcentrationPanel({
             {description.length > 120 && (
               <Pressable
                 onClick={() => setConcBannerExpanded((v) => !v)}
-                className="mt-1 text-[11px] font-cinzel uppercase tracking-widest text-dnd-arcane-bright hover:text-dnd-gold-bright"
+                className="mt-1 text-xs font-cinzel uppercase tracking-widest text-dnd-arcane-bright hover:text-dnd-gold-bright"
               >
                 {concBannerExpanded ? labels.collapse : labels.expand}
               </Pressable>

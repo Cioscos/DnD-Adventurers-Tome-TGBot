@@ -77,7 +77,7 @@ export default function DamageDiceBuilder({
 
   return (
     <div>
-      <label className="block text-[11px] uppercase tracking-wider mb-2 font-cinzel font-bold text-dnd-gold-dim">
+      <label className="block text-xs uppercase tracking-wider mb-2 font-cinzel font-bold text-dnd-gold-dim">
         {label ?? t('character.inventory.damage_dice_label')}
       </label>
 

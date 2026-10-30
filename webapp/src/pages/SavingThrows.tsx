@@ -184,7 +184,7 @@ export default function SavingThrows() {
                       >
                         {t(`character.stats.${ability}`)}
                       </p>
-                      <p className="text-[10px] text-dnd-text-faint font-mono leading-tight mt-0.5">
+                      <p className="text-xs text-dnd-text-faint font-mono leading-tight mt-0.5">
                         {abilMod >= 0 ? '+' : ''}{abilMod}
                         {isProficient ? ` +${pb} ${t('character.saves.ts_short')}` : ''}
                       </p>

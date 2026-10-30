@@ -129,7 +129,7 @@ function WeaponPropertyTags({ item }: { item: Item }) {
       {props.map((p, i) => (
         <span
           key={i}
-          className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-dnd-chip-bg text-dnd-text-muted select-none pointer-events-none"
+          className="text-xs font-medium px-1.5 py-0.5 rounded-md bg-dnd-chip-bg text-dnd-text-muted select-none pointer-events-none"
         >
           {t(`character.inventory.weapon_properties.${p}`, { defaultValue: String(p) })}
         </span>
@@ -147,7 +147,7 @@ function ItemEffectCallout({ item }: { item: Item }) {
   if (!['consumable', 'potion', 'scroll'].includes(item.item_type)) return null
   return (
     <div className="bg-dnd-highlight/10 border border-dnd-highlight/20 rounded-lg px-2 py-1.5">
-      <span className="text-[10px] uppercase tracking-wide text-dnd-highlight-muted block mb-0.5 inline-flex items-center gap-1">
+      <span className="text-xs uppercase tracking-wide text-dnd-highlight-muted block mb-0.5 inline-flex items-center gap-1">
         <FlaskConical size={11} /> {t('character.inventory.effect_label')}
       </span>
       <p className="text-xs text-dnd-highlight-muted leading-relaxed whitespace-pre-wrap">
@@ -281,17 +281,17 @@ function InventoryItemInner({
           <div className="flex items-center gap-2 flex-wrap">
             <span className="font-medium text-sm text-dnd-text">{item.name}</span>
             {item.is_equipped && (
-              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-dnd-emerald/20 text-dnd-emerald-bright border border-dnd-emerald/30">
+              <span className="text-xs font-semibold px-1.5 py-0.5 rounded-md bg-dnd-emerald/20 text-dnd-emerald-bright border border-dnd-emerald/30">
                 {t('character.inventory.equipped')}
               </span>
             )}
             {item.is_equipped && item.item_type === 'armor' && meta?.ac_value != null && (
-              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-dnd-info/20 text-dnd-info-text border border-dnd-info/30">
+              <span className="text-xs font-semibold px-1.5 py-0.5 rounded-md bg-dnd-info/20 text-dnd-info-text border border-dnd-info/30">
                 CA {String(meta.ac_value)}
               </span>
             )}
             {item.is_equipped && item.item_type === 'shield' && meta?.ac_bonus != null && (
-              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-dnd-info/20 text-dnd-info-text border border-dnd-info/30">
+              <span className="text-xs font-semibold px-1.5 py-0.5 rounded-md bg-dnd-info/20 text-dnd-info-text border border-dnd-info/30">
                 +{String(meta.ac_bonus)} CA
               </span>
             )}

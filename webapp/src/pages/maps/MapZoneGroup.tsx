@@ -135,13 +135,13 @@ function MapZoneGroupInner({
         <div className="flex gap-1 items-center">
           <Pressable
             onClick={() => onAddMore(zoneName)}
-            className="min-h-[44px] px-2 text-xs text-dnd-gold-dim hover:text-dnd-gold-bright transition-colors"
+            className="min-h-[44px] px-2 text-xs whitespace-nowrap text-dnd-gold-dim hover:text-dnd-gold-bright transition-colors"
           >
             + {t('character.maps.add_more')}
           </Pressable>
           <Pressable
             onClick={() => onDeleteZone(zoneName)}
-            className="min-h-[44px] px-2 text-xs text-dnd-crimson-bright transition-colors"
+            className="min-h-[44px] px-2 text-xs whitespace-nowrap text-dnd-crimson-bright transition-colors"
           >
             {t('character.maps.delete_zone')}
           </Pressable>
@@ -149,7 +149,7 @@ function MapZoneGroupInner({
       </div>
 
       {isReorderable && (
-        <p className="px-1 mb-1.5 text-[10px] uppercase tracking-widest text-dnd-text-faint italic">
+        <p className="px-1 mb-1.5 text-xs uppercase tracking-widest text-dnd-text-faint italic">
           {t('character.maps.reorder_hint')}
         </p>
       )}

@@ -276,7 +276,7 @@ export default function CharacterSelect() {
                           {char.name}
                         </h2>
                         {status === 'down' && (
-                          <span className="text-[10px] font-cinzel uppercase tracking-wider px-2 py-0.5 rounded-full bg-dnd-crimson/20 text-dnd-crimson-bright border border-dnd-crimson-bright/40 shrink-0">
+                          <span className="text-xs font-cinzel uppercase tracking-wider px-2 py-0.5 rounded-full bg-dnd-crimson/20 text-dnd-crimson-bright border border-dnd-crimson-bright/40 shrink-0">
                             {t('character.select.unconscious_badge')}
                           </span>
                         )}
@@ -407,7 +407,7 @@ export default function CharacterSelect() {
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.18 }}
             >
-              <p className="text-[11px] text-dnd-text-faint truncate font-body mb-3">
+              <p className="text-xs text-dnd-text-faint truncate font-body mb-3">
                 {t('character.create.step_class_subtitle', { name: newName.trim() || '—' })}
               </p>
 
@@ -449,7 +449,7 @@ export default function CharacterSelect() {
                         <span className="text-[13px] font-display font-bold text-dnd-gold-bright">
                           {t(`dnd.classes.${cls.key}`)}
                         </span>
-                        <span className="text-[10px] text-dnd-text-faint font-mono mt-0.5">d{cls.hit_die}</span>
+                        <span className="text-xs text-dnd-text-faint font-mono mt-0.5">d{cls.hit_die}</span>
                       </Pressable>
                     ))}
                   </m.div>
@@ -470,7 +470,7 @@ export default function CharacterSelect() {
                       <span className="text-[13px] font-display font-bold text-dnd-text">
                         {isCustomSelected && selectedClass ? selectedClass.class_name : t('character.create.custom_class')}
                       </span>
-                      <span className="text-[10px] text-dnd-text-faint font-mono mt-0.5">
+                      <span className="text-xs text-dnd-text-faint font-mono mt-0.5">
                         {isCustomSelected && selectedClass ? `d${selectedClass.hit_die}` : 'd?'}
                       </span>
                     </Pressable>
@@ -488,7 +488,7 @@ export default function CharacterSelect() {
                       <span className="text-[13px] font-display font-bold text-dnd-text">
                         {t('character.create.skip_class')}
                       </span>
-                      <span className="text-[10px] text-dnd-text-faint font-mono mt-0.5">—</span>
+                      <span className="text-xs text-dnd-text-faint font-mono mt-0.5">—</span>
                     </Pressable>
                   </div>
 
@@ -518,7 +518,7 @@ export default function CharacterSelect() {
                     className="mb-3"
                   />
 
-                  <p className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-gold-dim mb-1.5">
+                  <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim mb-1.5">
                     {t('character.create.hit_die')}
                   </p>
                   <div className="flex gap-2 mb-4">
@@ -566,7 +566,7 @@ export default function CharacterSelect() {
                   {t('character.create.identity_skip')}
                 </Pressable>
               </div>
-              <p className="text-[11px] text-dnd-text-faint font-body italic text-center mb-3">
+              <p className="text-xs text-dnd-text-faint font-body italic text-center mb-3">
                 {t('character.create.identity_optional_hint')}
               </p>
 

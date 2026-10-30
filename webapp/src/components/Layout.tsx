@@ -227,7 +227,7 @@ export default function Layout({ title, children, backTo, group, page, hideScrol
                           <span className="text-dnd-gold-dim/50 shrink-0 px-1">◈</span>
                         )}
                         {pageKey === activeKey ? (
-                          <span ref={activeCrumbRef} className="text-dnd-gold-bright font-semibold whitespace-nowrap px-2 py-1.5">
+                          <span ref={activeCrumbRef} className="inline-flex items-center min-h-[44px] text-dnd-gold-bright font-semibold whitespace-nowrap px-2 py-1.5">
                             {t(`character.menu.${pageKey}`)}
                           </span>
                         ) : (
@@ -236,8 +236,7 @@ export default function Layout({ title, children, backTo, group, page, hideScrol
                             onClick={() => swipe.goToPage(pageKey)}
                             whileTap={{ scale: 0.95 }}
                             aria-label={t('layout.nav.go_to', { page: t(`character.menu.${pageKey}`) })}
-                            className="text-dnd-text-muted opacity-70 whitespace-nowrap px-2 py-1.5 min-h-[32px] rounded hover:filter-none hover:text-dnd-gold-bright hover:opacity-100 transition-colors"
-                            style={{ filter: 'blur(0.5px)' }}
+                            className="text-dnd-text-muted opacity-70 whitespace-nowrap px-2 py-1.5 min-h-[44px] rounded hover:text-dnd-gold-bright hover:opacity-100 transition-colors"
                           >
                             {t(`character.menu.${pageKey}`)}
                           </Pressable>

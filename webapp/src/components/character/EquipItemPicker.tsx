@@ -155,7 +155,7 @@ export default function EquipItemPicker({ charId, slot, items, onClose }: Props)
             <div className="px-4 py-3 border-b border-dnd-border bg-dnd-surface space-y-2">
               {shownFacets.map((key) => (
                 <div key={key}>
-                  <p className="text-[9px] font-cinzel uppercase tracking-widest text-dnd-gold-dim mb-1">
+                  <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim mb-1">
                     {t(facetLabelKey[key])}
                   </p>
                   <div className="flex flex-wrap gap-1.5">
@@ -166,7 +166,7 @@ export default function EquipItemPicker({ charId, slot, items, onClose }: Props)
                           key={v}
                           type="button"
                           onClick={() => toggleFilter(key, v)}
-                          className={`px-2.5 py-1.5 rounded-full text-[11px] font-medium transition-colors
+                          className={`px-2.5 py-1.5 rounded-full text-xs font-medium transition-colors
                             ${on ? 'bg-dnd-gold text-dnd-ink shadow-halo-gold' : 'bg-dnd-surface-raised text-dnd-text border border-dnd-border'}`}
                         >
                           {chipLabel(key, v)}
@@ -186,7 +186,7 @@ export default function EquipItemPicker({ charId, slot, items, onClose }: Props)
               <Pressable
                 type="button"
                 onClick={() => { onClose(); navigate(`/char/${charId}/inventory`) }}
-                className="inline-flex items-center gap-2 min-h-[44px] px-4 rounded-full bg-dnd-surface border border-dnd-gold-dim/60 hover:border-dnd-gold text-dnd-gold-bright font-cinzel text-[11px] uppercase tracking-widest transition-colors"
+                className="inline-flex items-center gap-2 min-h-[44px] px-4 rounded-full bg-dnd-surface border border-dnd-gold-dim/60 hover:border-dnd-gold text-dnd-gold-bright font-cinzel text-xs uppercase tracking-widest transition-colors"
               >
                 <Package size={14} aria-hidden="true" />
                 {t('character.equipment.picker.go_to_inventory', { defaultValue: 'Open inventory' })}
@@ -213,7 +213,7 @@ export default function EquipItemPicker({ charId, slot, items, onClose }: Props)
                       </m.span>
                       <span className="flex flex-col gap-0.5 min-w-0 flex-1">
                         <span className="text-sm font-bold text-dnd-text">{it.name}</span>
-                        <span className="text-[11px] text-dnd-text-muted break-words">
+                        <span className="text-xs text-dnd-text-muted break-words">
                           {t(`character.inventory.types.${it.item_type}`, { defaultValue: it.item_type })} · {formatWeight(it.weight, system)}
                         </span>
                       </span>

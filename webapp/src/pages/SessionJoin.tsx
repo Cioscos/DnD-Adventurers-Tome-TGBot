@@ -160,7 +160,7 @@ export default function SessionJoin() {
           inputMode="text"
         />
         <div className="mt-2 flex items-center justify-between gap-2">
-          <span className="text-[10px] font-mono tabular-nums text-dnd-text-faint">
+          <span className="text-xs font-mono tabular-nums text-dnd-text-faint">
             {t('session.code_format_hint', { count: code.length })}
           </span>
           <div className="flex items-center gap-2">
@@ -177,7 +177,7 @@ export default function SessionJoin() {
                   /* clipboard read can fail (permission denied / unsupported) — silent */
                 }
               }}
-              className="inline-flex items-center gap-1 min-h-[44px] px-3 rounded-full bg-dnd-chip-bg border border-dnd-gold-dim/40 text-dnd-gold-bright text-[10px] font-cinzel uppercase tracking-widest"
+              className="inline-flex items-center gap-1 min-h-[44px] px-3 rounded-full bg-dnd-chip-bg border border-dnd-gold-dim/40 text-dnd-gold-bright text-xs font-cinzel uppercase tracking-widest"
             >
               <ClipboardCheck size={12} />
               {t('common.paste')}

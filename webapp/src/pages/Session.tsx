@@ -69,7 +69,7 @@ export default function Session() {
             subtitle={sessionName}
           />
           <div className="mt-4 space-y-2">
-            <p className="text-center text-[11px] uppercase tracking-widest font-cinzel text-dnd-gold-dim">
+            <p className="text-center text-xs uppercase tracking-widest font-cinzel text-dnd-gold-dim">
               {t('session.code_label')}: <span className="text-dnd-gold-bright">{active.code}</span>
             </p>
             {myRole !== 'none' && (

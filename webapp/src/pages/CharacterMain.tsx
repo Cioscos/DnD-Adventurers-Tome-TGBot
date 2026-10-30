@@ -135,7 +135,7 @@ export default function CharacterMain() {
               whileTap={{ scale: 0.9 }}
               title={t('character.spells.concentration_active', { defaultValue: 'Concentrazione attiva' })}
               aria-label={t('character.spells.concentration_active', { defaultValue: 'Concentrazione attiva' })}
-              className="shrink-0 inline-flex items-center justify-center w-6 h-6 rounded-full bg-dnd-arcane-deep/50 border border-dnd-arcane-bright text-dnd-arcane-bright font-cinzel font-black text-[10px] shadow-halo-arcane animate-pulse"
+              className="shrink-0 inline-flex items-center justify-center w-6 h-6 rounded-full bg-dnd-arcane-deep/50 border border-dnd-arcane-bright text-dnd-arcane-bright font-cinzel font-black text-xs shadow-halo-arcane animate-pulse"
             >
               C
             </Pressable>
@@ -172,7 +172,7 @@ export default function CharacterMain() {
             className={char.heroic_inspiration ? 'text-dnd-gold-bright' : 'text-dnd-gold-dim'}
           />
           <span
-            className={`text-[10px] font-cinzel font-bold uppercase tracking-wider leading-none ${
+            className={`text-xs font-cinzel font-bold uppercase tracking-wider leading-none ${
               char.heroic_inspiration ? 'text-dnd-gold-bright' : 'text-dnd-text-muted'
             }`}
           >

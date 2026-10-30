@@ -121,7 +121,7 @@ function TotalEditor({ total, label, decrementAria, incrementAria, pending, onCo
 
   return (
     <div className="flex items-center gap-2 pt-2 border-t border-dnd-border/40">
-      <span className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-gold-dim flex-1">
+      <span className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim flex-1">
         {label}
       </span>
       <Pressable
@@ -309,7 +309,7 @@ export default function SpellSlots() {
                     {t('character.slots.level', { level: slot.level })}
                   </span>
                   {slot.is_pact && (
-                    <span className="px-1.5 py-0.5 rounded-full border border-dnd-arcane/60 bg-dnd-arcane-mist/30 text-dnd-arcane-bright font-cinzel text-[9px] uppercase tracking-widest">
+                    <span className="px-1.5 py-0.5 rounded-full border border-dnd-arcane/60 bg-dnd-arcane-mist/30 text-dnd-arcane-bright font-cinzel text-xs uppercase tracking-widest">
                       {t('character.slots.pact_badge')}
                     </span>
                   )}
@@ -386,7 +386,7 @@ export default function SpellSlots() {
         <Surface variant="flat" className="mt-3">
           <div className="flex items-center gap-2 mb-2">
             <Sparkles size={14} className="text-dnd-arcane-bright" />
-            <p className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-gold-dim">
+            <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim">
               {t('character.slots.add_new_level')}
             </p>
           </div>

@@ -346,7 +346,7 @@ export default function Abilities() {
               <StatPill tone="amber" size="sm" value={t('character.abilities.active')} />
             )}
             {hasUses && (
-              <span className="text-[10px] text-dnd-text-faint font-mono tabular-nums">
+              <span className="text-xs text-dnd-text-faint font-mono tabular-nums">
                 {current}/{max}
               </span>
             )}
@@ -372,7 +372,7 @@ export default function Abilities() {
                 )}
 
                 {hasUses && (
-                  <div className="flex items-center gap-1.5 text-[10px] text-dnd-text-muted font-cinzel uppercase tracking-widest">
+                  <div className="flex items-center gap-1.5 text-xs text-dnd-text-muted font-cinzel uppercase tracking-widest">
                     <RotateCcw size={11} />
                     <span>
                       {t('character.abilities.restoration_label')}:{' '}
@@ -434,7 +434,7 @@ export default function Abilities() {
                         <span className="font-mono">{current}</span>
                         <span className="text-sm text-dnd-text-muted"> / {max}</span>
                       </p>
-                      <p className="text-[9px] font-cinzel uppercase tracking-widest text-dnd-text-faint">
+                      <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-text-faint">
                         {t('character.abilities.tap_to_edit')}
                       </p>
                     </Pressable>
@@ -452,7 +452,7 @@ export default function Abilities() {
                 {/* Le feature di classe hanno struttura bloccata: niente modifica/elimina */}
                 {ab.is_class_feature ? (
                   <div className="pt-1 border-t border-dnd-gold-dim/15 space-y-2">
-                    <p className="text-[10px] text-dnd-text-faint/70 italic font-body">
+                    <p className="text-xs text-dnd-text-faint/70 italic font-body">
                       {t('character.abilities.class_feature_locked')}
                     </p>
                     <Button variant="secondary" size="sm" onClick={() => openDescEdit(ab)} icon={<Pencil size={12} />}>

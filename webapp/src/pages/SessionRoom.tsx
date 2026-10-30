@@ -112,7 +112,7 @@ function ParticipantRow({
               {isGm ? t('session.game_master') : (snapshot?.name ?? participant.display_name ?? `#${participant.user_id}`)}
             </p>
             {isMe && (
-              <span className="text-[10px] uppercase tracking-wider text-dnd-text-muted font-cinzel">
+              <span className="text-xs uppercase tracking-wider text-dnd-text-muted font-cinzel">
                 {t('session.you')}
               </span>
             )}
@@ -177,7 +177,7 @@ function ParticipantRow({
               </div>
             )}
             {snapshot.last_roll && (
-              <div className="mt-1 text-[11px] text-dnd-text-muted flex items-center gap-1">
+              <div className="mt-1 text-xs text-dnd-text-muted flex items-center gap-1">
                 <Dices size={11} />
                 <span>{snapshot.last_roll.notation} → {snapshot.last_roll.total}</span>
               </div>

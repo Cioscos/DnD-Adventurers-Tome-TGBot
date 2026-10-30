@@ -474,7 +474,7 @@ export default function Settings() {
                   updateMutation.mutate({ ...settings, history_retention_mode: mode })
                 }}
                 pending={updateMutation.isPending && activeSetting === `retention:${mode}`}
-                className={`min-h-[44px] rounded-xl px-2 font-cinzel text-[10px] uppercase tracking-widest transition-colors
+                className={`min-h-[44px] rounded-xl px-2 font-cinzel text-xs uppercase tracking-widest transition-colors
                   ${selected
                     ? 'bg-gradient-gold text-dnd-ink shadow-engrave'
                     : 'bg-dnd-surface border border-dnd-border text-dnd-text-muted'}`}
@@ -489,7 +489,7 @@ export default function Settings() {
         {/* Retention purge preview — shows what each mode would delete now,
             so users can decide before committing the change (U080). */}
         {retentionPreview && retentionPreview.total > 0 && (
-          <div className="mt-3 space-y-1 text-[11px] text-dnd-text-muted font-body italic leading-snug">
+          <div className="mt-3 space-y-1 text-xs text-dnd-text-muted font-body italic leading-snug">
             <p>
               {t('character.settings.history_retention_total', { n: retentionPreview.total })}
             </p>

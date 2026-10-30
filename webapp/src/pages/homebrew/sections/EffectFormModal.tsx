@@ -299,7 +299,7 @@ function EffectFormBody({ draft, update, tables, errors }: BodyProps) {
       return (
         <>
           <div>
-            <label className="block text-[11px] uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
+            <label className="block text-xs uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
               {t('homebrew.effects.fields.table')}
             </label>
             <select
@@ -313,7 +313,7 @@ function EffectFormBody({ draft, update, tables, errors }: BodyProps) {
               ))}
             </select>
             {errors.table && (
-              <p className="text-dnd-crimson-bright text-[11px] mt-1 font-body">
+              <p className="text-dnd-crimson-bright text-xs mt-1 font-body">
                 {errors.table}
               </p>
             )}
@@ -561,7 +561,7 @@ function EffectFormBody({ draft, update, tables, errors }: BodyProps) {
       return (
         <>
           <div>
-            <label className="block text-[11px] uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
+            <label className="block text-xs uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
               {t('homebrew.effects.fields.severity')}
             </label>
             <div className="flex flex-wrap gap-1.5">
@@ -614,7 +614,7 @@ function TargetRadio({
   const { t } = useTranslation()
   return (
     <div>
-      <label className="block text-[11px] uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
+      <label className="block text-xs uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
         {t('homebrew.effects.fields.target_subject_or_character')}
       </label>
       <div className="flex flex-wrap gap-1.5">
@@ -668,7 +668,7 @@ function ConditionNameInput({
         error={error}
       />
       {derived && (
-        <p className="text-[11px] font-body text-dnd-text-muted">
+        <p className="text-xs font-body text-dnd-text-muted">
           {t('homebrew.effects.fields.condition_key_hint')}{' '}
           <span className="font-mono text-dnd-gold-dim">{derived}</span>
         </p>
@@ -698,7 +698,7 @@ function FilterEditor({
         error={pathError}
       />
       <div>
-        <label className="block text-[11px] uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
+        <label className="block text-xs uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
           {t('homebrew.effects.fields.cond_op')}
         </label>
         <select
@@ -778,7 +778,7 @@ function CasesEditor({
 
   return (
     <div>
-      <label className="block text-[11px] uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
+      <label className="block text-xs uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
         {t('homebrew.effects.fields.case_chip')}
       </label>
       {keys.length === 0 ? (

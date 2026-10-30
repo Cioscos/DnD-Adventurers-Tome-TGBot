@@ -110,7 +110,7 @@ export default function SearchOverlay({ char, open, onClose }: SearchOverlayProp
           <div className="space-y-3 max-h-[55vh] overflow-y-auto scrollbar-hide">
             {grouped.map(({ type, results: ofType }) => (
               <div key={type}>
-                <p className="font-cinzel text-[10px] uppercase tracking-widest text-dnd-gold-dim mb-1 px-1">
+                <p className="font-cinzel text-xs uppercase tracking-widest text-dnd-gold-dim mb-1 px-1">
                   {t(`character.search.type_${type}`)}
                 </p>
                 <div className="space-y-1">
