@@ -80,15 +80,20 @@ async def prune_history(session: AsyncSession, char: Character) -> int:
         return 0
 
 
-def effective_con_mod(char) -> int:
-    """Compute effective CON modifier given character's current state
-    (base CON + modifiers from equipped items)."""
-    con_row = next((a for a in char.ability_scores if a.name == "constitution"), None)
-    if con_row is None:
+def effective_ability_mod(char, ability: str) -> int:
+    """Effective modifier for `ability` (base score + modifiers from equipped
+    items), the same value the character sheet shows."""
+    row = next((a for a in char.ability_scores if a.name == ability), None)
+    if row is None:
         return 0
     eq_items = [i for i in char.items if i.is_equipped]
-    effective, _ = effective_ability_score("constitution", con_row.value, eq_items)
+    effective, _ = effective_ability_score(ability, row.value, eq_items)
     return (effective - 10) // 2
+
+
+def effective_con_mod(char) -> int:
+    """Effective CON modifier (base CON + modifiers from equipped items)."""
+    return effective_ability_mod(char, "constitution")
 
 
 def _append_concentration_history(

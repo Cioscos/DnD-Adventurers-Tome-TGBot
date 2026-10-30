@@ -22,7 +22,11 @@ from api.schemas.character import CharacterFull
 from api.schemas.item import ItemCreate, ItemRead, ItemUpdate, WeaponAttackResult
 from core.game.stats import effective_ability_score
 from core.game.attacks import unarmed_strike_profile
-from api.routers._helpers import collect_homebrew_notifications, effective_con_mod
+from api.routers._helpers import (
+    collect_homebrew_notifications,
+    effective_ability_mod,
+    effective_con_mod,
+)
 from api.services.equipment import slot_allowed_for_type, swap_slot_occupant
 from api.services.homebrew.dispatcher import dispatch
 from api.services.character_response import build_character_response
@@ -457,13 +461,9 @@ async def attack_with_weapon(
     weapon_type: str = meta.get("weapon_type", "melee")
     properties: list[str] = meta.get("properties", [])
 
-    # Determine ability modifier
-    def _mod(ability: str) -> int:
-        sc = next((s for s in char.ability_scores if s.name == ability), None)
-        return sc.modifier if sc else 0
-
-    str_mod = _mod("strength")
-    dex_mod = _mod("dexterity")
+    # Determine ability modifier (effective: equipped-item bonuses included)
+    str_mod = effective_ability_mod(char, "strength")
+    dex_mod = effective_ability_mod(char, "dexterity")
 
     is_finesse = any("finesse" in p.lower() for p in properties)
     is_ranged = weapon_type == "ranged"
@@ -557,12 +557,8 @@ async def attack_unarmed(
             raise HTTPException(status_code=409, detail="Ispirazione non disponibile")
         char.heroic_inspiration = False
 
-    def _mod(ability: str) -> int:
-        sc = next((s for s in char.ability_scores if s.name == ability), None)
-        return sc.modifier if sc else 0
-
-    str_mod = _mod("strength")
-    dex_mod = _mod("dexterity")
+    str_mod = effective_ability_mod(char, "strength")
+    dex_mod = effective_ability_mod(char, "dexterity")
     monk_level = next(
         (c.level for c in char.classes if c.class_name.lower() == "monaco"), 0
     )
