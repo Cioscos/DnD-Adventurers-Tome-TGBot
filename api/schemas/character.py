@@ -262,3 +262,19 @@ class InspirationUpdate(BaseModel):
 class XPUpdate(BaseModel):
     add: Optional[int] = None
     set: Optional[int] = None
+
+class SpellAttackResult(BaseModel):
+    """Esito di POST /characters/{id}/spells/{spell_id}/attack.
+
+    Vive qui (non in schemas/spell.py) per evitare l'import circolare con CharacterFull.
+    """
+
+    spell_name: str
+    to_hit_die: int
+    to_hit_bonus: int
+    to_hit_total: int
+    is_critical: bool
+    is_fumble: bool
+    caster_class: Optional[str] = None
+    character: CharacterFull
+    homebrew_notifications: Optional[list[dict]] = None

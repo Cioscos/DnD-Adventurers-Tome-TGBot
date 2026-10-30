@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from typing import Optional
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 _EXTRA_DICE_RE = re.compile(r"^(\d+)d(\d+)([+-]\d+)?$", re.IGNORECASE)
 
@@ -72,6 +72,13 @@ class SpellUseRequest(BaseModel):
     # 400, non 422, per coerenza con gli altri errori di dominio dell'endpoint).
     slot_level: int | None = None
     as_ritual: bool = False
+
+
+class SpellAttackRequest(BaseModel):
+    slot_level: int | None = None
+    ritual: bool = False
+    die: int | None = Field(None, ge=1, le=20)
+    with_inspiration: bool = False
 
 
 class SpellSlotRead(BaseModel):
