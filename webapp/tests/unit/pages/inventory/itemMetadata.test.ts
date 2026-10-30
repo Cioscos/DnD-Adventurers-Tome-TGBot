@@ -14,3 +14,12 @@ describe('itemMetadata — ammunition', () => {
     expect(itemToFormData(item).item_type).toBe('ammunition')
   })
 })
+
+describe('INVENTORY_TYPE_ORDER', () => {
+  it('gives every item type (ammunition included) its own group, with a label', async () => {
+    const { INVENTORY_TYPE_ORDER } = await import('@/pages/inventory/itemMetadata')
+    const en = (await import('@/locales/en.json')).default as any
+    for (const t of ITEM_TYPES) expect(INVENTORY_TYPE_ORDER).toContain(t)
+    expect(en.character.inventory.types.ammunition).toBeTruthy()
+  })
+})

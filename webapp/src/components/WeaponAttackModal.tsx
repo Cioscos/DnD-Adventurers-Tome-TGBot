@@ -6,21 +6,9 @@ import {
 } from 'react-icons/gi'
 import ResultDialog from './ui/ResultDialog'
 import InspirationRerollButton from './InspirationRerollButton'
+import type { WeaponAttackResult } from '@/api/client'
 
-export type WeaponAttackResult = {
-  weapon_name: string
-  to_hit_die: number
-  to_hit_bonus: number
-  to_hit_total: number
-  is_critical: boolean
-  is_fumble: boolean
-  damage_dice: string
-  damage_rolls: number[]
-  damage_bonus: number
-  damage_total: number
-  ammo?: { item_id: number; name: string; remaining: number } | null
-  ammo_missing?: boolean
-}
+export type { WeaponAttackResult }
 
 type Props = {
   result: WeaponAttackResult
