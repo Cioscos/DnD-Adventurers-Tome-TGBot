@@ -10,10 +10,11 @@ import {
   type NotificationLike,
 } from './components/homebrew/HomebrewNotification'
 import { initTheme } from './theme/applyTheme'
-import { getStartParam } from './auth/telegram'
+import { getStartParam, haptic } from './auth/telegram'
+import { toast } from 'sonner'
 import { parseStartParam } from './lib/startParam'
 import './index.css'
-import './i18n'
+import i18n from './i18n'
 
 // Signal Telegram that the Mini App is ready
 window.Telegram?.WebApp?.ready()
@@ -112,6 +113,15 @@ const queryClient = new QueryClient({
       const list = (data as { homebrew_notifications?: unknown }).homebrew_notifications
       if (!Array.isArray(list) || list.length === 0) return
       showHomebrewNotifications(list as NotificationLike[])
+    },
+    // Rete del tavolo (tunnel → Pi): una mutation fallita senza un onError suo
+    // era silenziosa e il giocatore credeva di aver speso lo slot. Rete di
+    // sicurezza globale: vibrazione + toast, solo se la mutation non gestisce
+    // l'errore da sé.
+    onError: (_error, _vars, _ctx, mutation) => {
+      if (mutation.options.onError) return
+      haptic.error()
+      toast.error(i18n.t('common.action_failed'))
     },
   }),
 })

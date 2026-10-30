@@ -58,6 +58,7 @@ export default function DiceOverlay() {
   // Dim the launcher while the page is actively scrolling so it stops covering
   // content the user is reading; it stays tappable and fades back when idle.
   const [scrolling, setScrolling] = useState(false)
+  const [typing, setTyping] = useState(false)
 
   const [results, setResults] = useState<RollGroup[] | null>(null)
   const [warningText, setWarningText] = useState<string | null>(null)
@@ -78,6 +79,21 @@ export default function DiceOverlay() {
     return () => {
       if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current)
       if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current)
+    }
+  }, [])
+
+  // Tastiera mobile aperta (focus su un campo di testo): il FAB galleggerebbe
+  // sopra la tastiera, accanto a "Conferma". Lo nascondiamo finché si digita.
+  useEffect(() => {
+    const isField = (el: EventTarget | null) =>
+      el instanceof HTMLElement && el.matches('input:not([type=checkbox]):not([type=radio]):not([type=range]), textarea, [contenteditable="true"]')
+    const onFocusIn = (e: FocusEvent) => { if (isField(e.target)) setTyping(true) }
+    const onFocusOut = (e: FocusEvent) => { if (!isField(e.relatedTarget)) setTyping(false) }
+    document.addEventListener('focusin', onFocusIn)
+    document.addEventListener('focusout', onFocusOut)
+    return () => {
+      document.removeEventListener('focusin', onFocusIn)
+      document.removeEventListener('focusout', onFocusOut)
     }
   }, [])
 
@@ -184,8 +200,8 @@ export default function DiceOverlay() {
 
   return (
     <>
-      {!anyOverlayOpen && (
-      <div className="fixed bottom-4 right-4 z-40">
+      {!anyOverlayOpen && !typing && (
+      <div className="fixed bottom-safe-fab right-4 z-40">
         <AnimatePresence>
           {open && (
             <m.div

@@ -8,6 +8,7 @@
     "confirm": "Conferma",
     "loading": "Caricamento...",
     "error": "Errore",
+    "action_failed": "Operazione non riuscita: controlla la connessione e riprova.",
     "error_boundary": {
       "title": "Qualcosa è andato storto",
       "message": "Si è verificato un errore imprevisto. Ricarica l'app per continuare l'avventura.",

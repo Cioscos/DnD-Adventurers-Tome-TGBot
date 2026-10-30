@@ -50,8 +50,8 @@ function TotalEditor({ total, label, decrementAria, incrementAria, pending, onCo
 
   // Ends the repeat chain and detaches the window-level release listener.
   // Registered on `window` (not just the button's own onPointerUp/onPointerLeave/
-  // onPointerCancel) because the ± button gets `disabled` mid-hold as soon as
-  // `pending` flips true (first tap already dispatches the mutation): a disabled
+  // onPointerCancel) because the ± button can get `disabled` mid-hold when
+  // `pending` flips true (a previous release's PATCH still in flight): a disabled
   // <button> stops receiving pointer events, so relying solely on its own handlers
   // would leave the repeat firing forever after release. Window still sees the
   // pointerup/pointercancel (it bubbles from whatever element is now under the
@@ -71,13 +71,17 @@ function TotalEditor({ total, label, decrementAria, incrementAria, pending, onCo
 
   useEffect(() => stopRepeat, [stopRepeat])
 
+  // Durante la pressione si aggiorna solo il draft locale; il valore finale va
+  // al BE con UNA PATCH al rilascio (prima: una PATCH + invalidazione per tick,
+  // con risposte che potevano arrivare fuori ordine).
   const startRepeat = useCallback((delta: 1 | -1) => {
     stopRepeat() // defensive: clear any stale chain/listener from a previous press
+    const startValue = valueRef.current
     const apply = () => {
       const next = Math.max(1, valueRef.current + delta)
       if (next !== valueRef.current) {
         valueRef.current = next
-        onCommit(next)
+        setDraft(String(next))
       }
     }
     apply()
@@ -89,11 +93,20 @@ function TotalEditor({ total, label, decrementAria, incrementAria, pending, onCo
     }
     repeatRef.current = setTimeout(tick, 380)
 
-    const release = () => stopRepeat()
+    const release = () => {
+      stopRepeat()
+      if (valueRef.current !== startValue) onCommit(valueRef.current)
+    }
     releaseRef.current = release
     window.addEventListener('pointerup', release, { once: true })
     window.addEventListener('pointercancel', release, { once: true })
   }, [onCommit, stopRepeat])
+
+  // Fine pressione dai gestori del bottone: rilascia (e committa) la catena
+  // attiva. No-op se il listener su window l'ha già chiusa.
+  const finishRepeat = useCallback(() => {
+    releaseRef.current?.()
+  }, [])
 
   const commitDraft = () => {
     const parsed = parseInt(draft, 10)
@@ -112,9 +125,9 @@ function TotalEditor({ total, label, decrementAria, incrementAria, pending, onCo
       </span>
       <Pressable
         onPointerDown={() => startRepeat(-1)}
-        onPointerUp={stopRepeat}
-        onPointerLeave={stopRepeat}
-        onPointerCancel={stopRepeat}
+        onPointerUp={finishRepeat}
+        onPointerLeave={finishRepeat}
+        onPointerCancel={finishRepeat}
         pending={pending}
         spinnerSize={12}
         className="w-11 h-11 rounded-lg bg-dnd-surface border border-dnd-border flex items-center justify-center text-dnd-gold"
@@ -143,9 +156,9 @@ function TotalEditor({ total, label, decrementAria, incrementAria, pending, onCo
       />
       <Pressable
         onPointerDown={() => startRepeat(1)}
-        onPointerUp={stopRepeat}
-        onPointerLeave={stopRepeat}
-        onPointerCancel={stopRepeat}
+        onPointerUp={finishRepeat}
+        onPointerLeave={finishRepeat}
+        onPointerCancel={finishRepeat}
         pending={pending}
         spinnerSize={12}
         className="w-11 h-11 rounded-lg bg-dnd-surface border border-dnd-border flex items-center justify-center text-dnd-gold"

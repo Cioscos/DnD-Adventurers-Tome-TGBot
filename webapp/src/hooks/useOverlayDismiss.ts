@@ -115,6 +115,11 @@ function syncBackButton() {
   else bb.hide()
 }
 
+/** Almeno un overlay (Sheet, modal, picker) è aperto? Per i gesti di pagina. */
+export function isAnyOverlayOpen(): boolean {
+  return stack.length > 0
+}
+
 /** Registra il back "di pagina" (genitore logico) per la BackButton Telegram. */
 export function usePageBack(onBack: (() => void) | null): void {
   const backRef = useRef(onBack ?? (() => {}))

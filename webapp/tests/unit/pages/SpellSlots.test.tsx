@@ -160,6 +160,25 @@ describe('SpellSlots page', () => {
     )
   })
 
+  it('a press on + updates the draft and commits ONE PATCH on release', async () => {
+    getChar.mockResolvedValue(manualChar)
+    updateSpy.mockResolvedValue(slot)
+    renderWithProviders(<SpellSlots />)
+    await screen.findByText('2/3')
+
+    const plus = screen.getByRole('button', { name: 'character.slots.increment_total' })
+    fireEvent.pointerDown(plus)
+    // Durante la pressione nessuna PATCH: cambia solo il campo.
+    expect(updateSpy).not.toHaveBeenCalled()
+    expect(screen.getByRole('spinbutton')).toHaveValue(4)
+    // Il mock di framer rimonta il <button> a ogni render: va riletto.
+    fireEvent.pointerUp(screen.getByRole('button', { name: 'character.slots.increment_total' }))
+    await waitFor(() =>
+      expect(updateSpy).toHaveBeenCalledWith(9, 100, { total: 4 }),
+    )
+    expect(updateSpy).toHaveBeenCalledTimes(1)
+  })
+
   it('adding a missing level POSTs a new slot (level, total=1)', async () => {
     getChar.mockResolvedValue(manualChar)
     addSpy.mockResolvedValue(slot)

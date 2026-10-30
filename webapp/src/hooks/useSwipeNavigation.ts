@@ -2,6 +2,11 @@ import { useRef, useCallback, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useModal } from '@/components/modalContext'
 import { haptic } from '@/auth/telegram'
+import { isAnyOverlayOpen } from '@/hooks/useOverlayDismiss'
+
+// Il gesto parte da qui dentro? Allora non è uno swipe di pagina: righe di chip
+// a scroll orizzontale, campi di testo (selezione/cursore), opt-out espliciti.
+const NO_PAGE_SWIPE = '[data-no-page-swipe], .overflow-x-auto, .overflow-x-scroll, input, textarea, [contenteditable="true"]'
 
 const PAGE_GROUPS: Record<string, string[]> = {
   combat: ['hp', 'ac', 'saves', 'actions'],
@@ -35,7 +40,11 @@ export function useSwipeNavigation(group?: string, page?: string) {
   const onTouchStart = useCallback((e: React.TouchEvent) => {
     if (isModalOpen || !info) return
     const touch = e.touches[0]
-    touchRef.current = { startX: touch.clientX, startY: touch.clientY, swiping: false, locked: false }
+    // Gli eventi React risalgono anche dai portal: un drag dentro uno Sheet
+    // aperto (figlio di Layout nell'albero) navigava alla pagina accanto.
+    const target = e.target as Element | null
+    const blocked = isAnyOverlayOpen() || !!target?.closest?.(NO_PAGE_SWIPE)
+    touchRef.current = { startX: touch.clientX, startY: touch.clientY, swiping: false, locked: blocked }
   }, [isModalOpen, info])
 
   const onTouchMove = useCallback((e: React.TouchEvent) => {
