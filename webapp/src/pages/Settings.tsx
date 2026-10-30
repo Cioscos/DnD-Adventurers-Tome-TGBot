@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Settings2, Languages, RefreshCw, Eye, Sun, History, Coins, Trash2, BookmarkCheck, Bell } from 'lucide-react'
@@ -8,6 +8,7 @@ import {
   GiPerspectiveDiceSixFacesRandom as Dices,
 } from 'react-icons/gi'
 import { api } from '@/api/client'
+import type { CharacterSummary } from '@/types'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
@@ -18,6 +19,7 @@ import SwitchToggle from '@/components/ui/SwitchToggle'
 import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import { FlagIT, FlagEN } from '@/components/ui/Flags'
 import { haptic } from '@/auth/telegram'
+import { useToast } from '@/hooks/useToast'
 import { useCharacterStore } from '@/store/characterStore'
 import { useDiceSettings } from '@/store/diceSettings'
 import { useThemeSettings, type ThemeMode } from '@/store/themeSettings'
@@ -96,6 +98,8 @@ export default function Settings() {
   const charId = Number(id)
   const { t, i18n } = useTranslation()
   const qc = useQueryClient()
+  const navigate = useNavigate()
+  const toast = useToast()
   const { locale, setLocale } = useCharacterStore()
   const animate3d = useDiceSettings((s) => s.animate3d)
   const setAnimate3d = useDiceSettings((s) => s.setAnimate3d)
@@ -153,6 +157,7 @@ export default function Settings() {
   const [showRecalcConfirm, setShowRecalcConfirm] = useState(false)
   const [showSlotModeConfirm, setShowSlotModeConfirm] = useState(false)
   const [showResetConfirm, setShowResetConfirm] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   // Tetto preparazione manuale: input mai precompilato (placeholder only).
   const [prepCapInput, setPrepCapInput] = useState('')
 
@@ -161,6 +166,25 @@ export default function Settings() {
     onSuccess: (updated) => {
       qc.setQueryData(['character', charId], updated)
       haptic.success()
+    },
+  })
+
+  // Eliminazione personaggio: pulisce la cache e torna alla home. In caso di
+  // errore resta sulla pagina e avvisa.
+  const deleteMutation = useMutation({
+    mutationFn: () => api.characters.delete(charId),
+    onSuccess: () => {
+      qc.setQueryData<CharacterSummary[]>(['characters'], (old) =>
+        old ? old.filter((c) => c.id !== charId) : old,
+      )
+      qc.removeQueries({ queryKey: ['character', charId] })
+      haptic.success()
+      navigate('/', { replace: true })
+    },
+    onError: () => {
+      setShowDeleteConfirm(false)
+      haptic.error()
+      toast.error(t('character.select.delete_failed'))
     },
   })
 
@@ -660,6 +684,22 @@ export default function Settings() {
         {t('character.settings.reset_settings')}
       </Button>
 
+      {/* Zona pericolosa: eliminazione del personaggio, in fondo alla pagina. */}
+      <SectionDivider icon={<Trash2 size={11} />} align="center">
+        {t('character.settings.danger_zone')}
+      </SectionDivider>
+
+      <Button
+        variant="danger"
+        size="md"
+        fullWidth
+        icon={<Trash2 size={16} />}
+        onClick={() => setShowDeleteConfirm(true)}
+        haptic="warning"
+      >
+        {t('character.settings.delete_character')}
+      </Button>
+
       <ConfirmSheet
         open={showRecalcConfirm}
         onClose={() => setShowRecalcConfirm(false)}
@@ -697,6 +737,18 @@ export default function Settings() {
         confirmVariant="danger"
         loading={updateMutation.isPending && activeSetting === 'reset'}
         onConfirm={confirmReset}
+      />
+
+      <ConfirmSheet
+        open={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        title={t('character.settings.delete_character')}
+        body={t('character.select.delete_confirm', { name: char.name })}
+        confirmLabel={t('common.delete')}
+        cancelLabel={t('common.cancel')}
+        confirmVariant="danger"
+        loading={deleteMutation.isPending}
+        onConfirm={() => deleteMutation.mutate()}
       />
     </Layout>
   )

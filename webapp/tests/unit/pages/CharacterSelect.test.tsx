@@ -86,4 +86,12 @@ describe('CharacterSelect', () => {
     expect(screen.getByText('character.select.unconfigured_badge')).toBeTruthy()
     expect(screen.queryByText('character.select.unconscious_badge')).toBeNull()
   })
+
+  it('no delete button on cards', async () => {
+    list.mockResolvedValue([char()])
+    me.mockResolvedValue(null)
+    renderWithProviders(<CharacterSelect />)
+    await screen.findByText('Aragorn')
+    expect(screen.queryByRole('button', { name: 'common.delete' })).toBeNull()
+  })
 })

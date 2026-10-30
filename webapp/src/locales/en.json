@@ -1019,6 +1019,8 @@
       "history_retention_total": "Current history: {{n}} entries.",
       "history_retention_preview_events": "Last {{keep}} events: you'd lose {{n}} older entries now.",
       "history_retention_preview_days": "Last {{days}} days: you'd lose {{n}} older entries.",
+      "danger_zone": "Danger zone",
+      "delete_character": "Delete character",
       "reset_settings": "Reset settings",
       "reset_settings_confirm": "Reset all preferences for this character to defaults?",
       "carry_capacity": "Show carry capacity",

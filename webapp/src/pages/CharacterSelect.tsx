@@ -3,13 +3,12 @@ import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
-import { Plus, Trash2, Pencil, SkipForward, ScrollText } from 'lucide-react'
+import { Plus, Pencil, SkipForward, ScrollText } from 'lucide-react'
 import {
   GiSparkles as Sparkles, GiCheckedShield as Shield, GiHeartPlus as Heart,
   GiCrossedSwords as Swords,
 } from 'react-icons/gi'
 import { api } from '@/api/client'
-import type { CharacterSummary } from '@/types'
 import { cardStatus, effectiveAc, effectiveHpMax } from '@/lib/characterStatus'
 import HPGauge from '@/components/ui/HPGauge'
 import Surface from '@/components/ui/Surface'
@@ -23,7 +22,7 @@ import FancyHeader from '@/components/ui/FancyHeader'
 import Reveal from '@/components/ui/Reveal'
 import Skeleton from '@/components/ui/Skeleton'
 import { WaxSeal } from '@/components/ui/Ornament'
-import { haptic, telegramConfirm } from '@/auth/telegram'
+import { haptic } from '@/auth/telegram'
 import { useToast } from '@/hooks/useToast'
 import { spring, stagger } from '@/styles/motion'
 import languagesSrd from '@/data/languages-srd.json'
@@ -125,21 +124,6 @@ export default function CharacterSelect() {
     },
   })
 
-  const deleteMutation = useMutation({
-    mutationFn: (id: number) => api.characters.delete(id),
-    onSuccess: (_, id) => {
-      qc.setQueryData<CharacterSummary[]>(['characters'], (old) =>
-        old ? old.filter((c) => c.id !== id) : old
-      )
-      qc.removeQueries({ queryKey: ['character', id] })
-      haptic.success()
-    },
-    onError: () => {
-      haptic.error()
-      toast.error(t('character.select.delete_failed'))
-    },
-  })
-
   const resetWizard = () => {
     setCreating(false)
     setStep('name')
@@ -180,15 +164,6 @@ export default function CharacterSelect() {
 
   const handleCreate = (identity: IdentityPayload | null) => {
     createMutation.mutate({ name: newName.trim(), cls: selectedClass ?? null, identity })
-  }
-
-  const handleDelete = (char: CharacterSummary) => {
-    telegramConfirm(
-      t('character.select.delete_confirm', { name: char.name }),
-      (confirmed) => {
-        if (confirmed) deleteMutation.mutate(char.id)
-      }
-    )
   }
 
   // Helpers selezione classe (evidenziazione).
@@ -343,18 +318,6 @@ export default function CharacterSelect() {
                       </div>
                     </div>
 
-                    <Pressable
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleDelete(char)
-                      }}
-                      pending={deleteMutation.isPending && deleteMutation.variables === char.id}
-                      className="w-11 h-11 flex items-center justify-center rounded-lg text-dnd-crimson-bright shrink-0 hover:bg-dnd-crimson/10"
-                      aria-label={t('common.delete')}
-                      whileTap={{ scale: 0.9 }}
-                    >
-                      <Trash2 size={16} />
-                    </Pressable>
                   </div>
                 </Surface>
               </Reveal.Item>
