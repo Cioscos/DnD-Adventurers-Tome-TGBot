@@ -1,3 +1,4 @@
+import CasterStats from '@/pages/spells/CasterStats'
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -97,6 +98,7 @@ export default function Spells() {
         is_ritual: data.is_ritual,
         damage_dice: data.damage_dice.trim() || undefined,
         damage_type: data.damage_type.trim() || undefined,
+        attack_save: data.attack_save || undefined,
         is_pinned: false,
       }),
     onSuccess: () => {
@@ -121,6 +123,8 @@ export default function Spells() {
         is_ritual: data.is_ritual,
         damage_dice: data.damage_dice.trim() || undefined,
         damage_type: data.damage_type.trim() || undefined,
+        // null (not undefined) so editing back to "Nessuno" actually clears it.
+        attack_save: data.attack_save || null,
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['character', charId] })
@@ -342,6 +346,8 @@ export default function Spells() {
           }}
         />
       )}
+
+      <CasterStats casters={spellcasting?.casters ?? []} />
 
       {/* Contatore di preparazione: etichetta in Cinzel, numeri mono tabulari
           (Tabular Numerics). Rosso solo oltre il tetto (legacy grandfathered). */}

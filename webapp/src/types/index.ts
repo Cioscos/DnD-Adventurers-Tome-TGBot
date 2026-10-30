@@ -90,7 +90,7 @@ export interface Spell {
   is_concentration: boolean
   is_ritual: boolean
   higher_level?: string
-  attack_save?: string
+  attack_save?: string | null
   damage_dice?: string
   damage_type?: string
   is_pinned: boolean

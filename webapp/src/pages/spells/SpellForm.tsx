@@ -34,12 +34,13 @@ export type SpellFormData = {
   is_ritual: boolean
   damage_dice: string
   damage_type: string
+  attack_save: '' | 'ATK' | 'SAVE'
 }
 
 const emptyForm: SpellFormData = {
   name: '', level: '0', description: '', casting_time: '', range_area: '',
   components: '', duration: '', is_concentration: false, is_ritual: false,
-  damage_dice: '', damage_type: '',
+  damage_dice: '', damage_type: '', attack_save: '',
 }
 
 const COMPONENT_TOKENS: readonly ComponentToken[] = ['V', 'S', 'M']
@@ -77,6 +78,7 @@ export default function SpellForm({ initialData, onSubmit, onCancel, isPending }
         is_ritual: initialData.is_ritual,
         damage_dice: initialData.damage_dice || '',
         damage_type: initialData.damage_type || '',
+        attack_save: initialData.attack_save === 'ATK' || initialData.attack_save === 'SAVE' ? initialData.attack_save : '',
       })
       const parsed = parseComponents(initialData.components || '')
       setMaterialDraft(parsed.material)
@@ -111,6 +113,7 @@ export default function SpellForm({ initialData, onSubmit, onCancel, isPending }
       damage_type: f.damage_type.trim() || srdMatch.damage_type || '',
       is_concentration: f.is_concentration || !!srdMatch.is_concentration,
       is_ritual: f.is_ritual || !!srdMatch.is_ritual,
+      attack_save: f.attack_save || srdMatch.attack_save || '',
     }))
     // Side states mirror the fill-if-empty rule above.
     if (!form.components.trim() && srdMatch.components) {
@@ -282,6 +285,18 @@ export default function SpellForm({ initialData, onSubmit, onCancel, isPending }
             </>
           )}
         </div>
+
+        <ChipSelect
+          label={t('character.spells.attack_save.label')}
+          options={[
+            { value: 'ATK', label: t('character.spells.attack_save.atk') },
+            { value: 'SAVE', label: t('character.spells.attack_save.save') },
+            { value: '', label: t('character.spells.attack_save.none') },
+          ]}
+          value={form.attack_save}
+          onChange={(v) => setForm((f) => ({ ...f, attack_save: v as SpellFormData['attack_save'] }))}
+          columns={3}
+        />
 
         <Input
           variant="textarea"

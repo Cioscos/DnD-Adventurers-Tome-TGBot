@@ -430,6 +430,13 @@
         "clear": "Azzera filtri",
         "no_results": "Nessun incantesimo corrisponde ai filtri"
       },
+      "caster_row": "{{class}} · {{ability}} · CD {{dc}} · {{attack}}",
+      "attack_save": {
+        "label": "Tipo",
+        "atk": "Attacco",
+        "save": "Tiro salvezza",
+        "none": "Nessuno"
+      },
       "deals_damage": "Infligge danno",
       "damage_dice_label": "Dado del danno",
       "damage_type_label": "Tipo di danno",

@@ -430,6 +430,13 @@
         "clear": "Clear filters",
         "no_results": "No spells match the filters"
       },
+      "caster_row": "{{class}} · {{ability}} · DC {{dc}} · {{attack}}",
+      "attack_save": {
+        "label": "Type",
+        "atk": "Attack",
+        "save": "Saving throw",
+        "none": "None"
+      },
       "deals_damage": "Deals damage",
       "damage_dice_label": "Damage dice",
       "damage_type_label": "Damage type",

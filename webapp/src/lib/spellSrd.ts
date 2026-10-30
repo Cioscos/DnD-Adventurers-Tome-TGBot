@@ -10,6 +10,7 @@ export interface SrdSpell {
   damage_type?: string
   is_concentration?: boolean
   is_ritual?: boolean
+  attack_save?: 'ATK' | 'SAVE'
   aliases?: string[]
 }
 
