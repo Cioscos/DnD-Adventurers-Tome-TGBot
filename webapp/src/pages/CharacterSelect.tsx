@@ -11,6 +11,7 @@ import {
 import { api } from '@/api/client'
 import { cardStatus, effectiveAc, effectiveHpMax } from '@/lib/characterStatus'
 import HPGauge from '@/components/ui/HPGauge'
+import OfflineNotice from '@/components/ui/OfflineNotice'
 import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
 import Pressable from '@/components/ui/Pressable'
@@ -85,10 +86,13 @@ export default function CharacterSelect() {
   const [languages, setLanguages] = useState<string[]>([])
   const [personalityTraits, setPersonalityTraits] = useState('')
 
-  const { data: characters = [], isLoading, isError, refetch } = useQuery({
+  const charactersQuery = useQuery({
     queryKey: ['characters'],
     queryFn: () => api.characters.list(),
   })
+  const { isLoading, isError, refetch } = charactersQuery
+  // Il default vuoto solo qui: il controllo dell'errore deve vedere l'assenza di dati.
+  const characters = charactersQuery.data ?? []
 
   // Sessione attiva: un errore equivale a nessuna sessione (il pulsante resta quello semplice).
   const { data: activeSession } = useQuery({
@@ -185,7 +189,7 @@ export default function CharacterSelect() {
     )
   }
 
-  if (isError) {
+  if (isError && charactersQuery.data === undefined) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-4">
         <p className="text-dnd-crimson-bright font-body">{t('common.error')}</p>
@@ -217,6 +221,8 @@ export default function CharacterSelect() {
             size="xl"
           />
         </div>
+
+        <OfflineNotice query={charactersQuery} />
 
         {/* Session CTA (always available — GM does not need a character) */}
         <Button

@@ -1,12 +1,13 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { QueryClient } from '@tanstack/react-query'
 import { renderWithProviders } from '../utils/renderWithProviders'
 import CharacterSelect from '@/pages/CharacterSelect'
 
 const { list, me, navigateSpy } = vi.hoisted(() => ({ list: vi.fn(), me: vi.fn(), navigateSpy: vi.fn() }))
 
-vi.mock('@/api/client', () => ({ api: { characters: { list }, sessions: { me } } }))
+vi.mock('@/api/client', () => ({ api: { characters: { list }, sessions: { me } }, ApiError: class ApiError extends Error {} }))
 vi.mock('react-router-dom', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
   return { ...actual, useNavigate: () => navigateSpy }
@@ -43,6 +44,35 @@ const char = (over: Record<string, unknown> = {}) => ({
 afterEach(() => { list.mockReset(); me.mockReset(); navigateSpy.mockReset() })
 
 describe('CharacterSelect', () => {
+  it('keeps the cached list and shows the notice when the refetch fails for network', async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    client.setQueryData(['characters'], [char()])
+    list.mockRejectedValue(new TypeError('Failed to fetch'))
+    me.mockResolvedValue(null)
+    renderWithProviders(<CharacterSelect />, { client })
+    expect(await screen.findByText('common.offline_data_from')).toBeTruthy()
+    expect(screen.getByText('Aragorn')).toBeTruthy()
+    expect(screen.queryByText('common.error')).toBeNull()
+  })
+
+  it('shows the error, not the empty roster, when the fetch fails without cache', async () => {
+    list.mockRejectedValue(new TypeError('Failed to fetch'))
+    me.mockResolvedValue(null)
+    renderWithProviders(<CharacterSelect />)
+    expect(await screen.findByText('common.error')).toBeTruthy()
+    expect(screen.queryByText('character.select.empty')).toBeNull()
+  })
+
+  it('does not flag an empty cached list as an error', async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    client.setQueryData(['characters'], [])
+    list.mockRejectedValue(new TypeError('Failed to fetch'))
+    me.mockResolvedValue(null)
+    renderWithProviders(<CharacterSelect />, { client })
+    expect(await screen.findByText('common.offline_data_from')).toBeTruthy()
+    expect(screen.queryByText('common.error')).toBeNull()
+  })
+
   it('shows resume session when a session is active', async () => {
     list.mockResolvedValue([char()])
     me.mockResolvedValue({ id: 7, status: 'active' })

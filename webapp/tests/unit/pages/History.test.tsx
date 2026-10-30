@@ -80,4 +80,11 @@ describe('History', () => {
     await userEvent.click(screen.getByRole('button', { name: 'common.confirm' }))
     await waitFor(() => expect(clear).toHaveBeenCalledWith(7))
   })
+
+  it('failed fetch without cache shows offline unavailable, not empty', async () => {
+    get.mockRejectedValue(new TypeError('Failed to fetch'))
+    renderWithProviders(<History />)
+    expect(await screen.findByText('common.offline_unavailable')).toBeInTheDocument()
+    expect(screen.queryByText('character.history.empty')).not.toBeInTheDocument()
+  })
 })

@@ -2,10 +2,11 @@ import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Gift, Mic, UserPlus, Users } from 'lucide-react'
+import { Gift, Mic, UserPlus, Users, WifiOff } from 'lucide-react'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
+import EmptyState from '@/components/ui/EmptyState'
 import Pressable from '@/components/ui/Pressable'
 import Skeleton from '@/components/ui/Skeleton'
 import { api, ApiError } from '@/api/client'
@@ -29,10 +30,12 @@ export default function ShareImport() {
     retry: false,
   })
 
-  const { data: characters = [], isLoading: charsLoading } = useQuery({
+  const charactersQuery = useQuery({
     queryKey: ['characters'],
     queryFn: () => api.characters.list(),
   })
+  const charsLoading = charactersQuery.isLoading
+  const characters = charactersQuery.data ?? []
 
   // Preselezione: scelta esplicita > ultimo PG usato (se esiste ancora) > unico PG
   const effectiveCharId =
@@ -87,6 +90,8 @@ export default function ShareImport() {
 
   const preview = shareQuery.data
   const hasCharacters = characters.length > 0
+  // Un fetch fallito non è "nessun personaggio": non va mandato a crearne uno.
+  const charactersUnavailable = charactersQuery.isError && charactersQuery.data === undefined
 
   return (
     <Layout title={t('share.import.title')} backTo="/">
@@ -128,7 +133,13 @@ export default function ShareImport() {
           </p>
         </div>
 
-        {!hasCharacters ? (
+        {charactersUnavailable ? (
+          <EmptyState
+            icon={<WifiOff size={32} />}
+            title={t('common.offline_unavailable')}
+            action={{ label: t('common.retry'), onClick: () => charactersQuery.refetch() }}
+          />
+        ) : !hasCharacters ? (
           <div className="space-y-3">
             <p className="text-sm text-dnd-text-muted font-body italic">
               {t('share.import.needs_character')}

@@ -11,6 +11,7 @@ import { haptic } from '@/auth/telegram'
 import EmptyState from '@/components/ui/EmptyState'
 import Skeleton from '@/components/ui/Skeleton'
 import InSessionBanner from '@/components/ui/InSessionBanner'
+import OfflineNotice from '@/components/ui/OfflineNotice'
 import Pressable from '@/components/ui/Pressable'
 import { useCharacterStore } from '@/store/characterStore'
 import CharacterSwiper from '@/components/character/CharacterSwiper'
@@ -37,13 +38,14 @@ export default function CharacterMain() {
 
   // Stessa politica del guard condiviso nel Layout (audit FE 2026-06-11, #10):
   // 404/403 non si ritentano, gli altri errori sì.
-  const { data: char, isLoading, isError, error, refetch } = useQuery({
+  const charQuery = useQuery({
     queryKey: ['character', charId],
     queryFn: () => api.characters.get(charId),
     enabled: !!charId,
     retry: (failureCount, err) =>
       !(err instanceof ApiError && (err.status === 404 || err.status === 403)) && failureCount < 3,
   })
+  const { data: char, isLoading, error, refetch } = charQuery
   const charNotFound = error instanceof ApiError
     && (error.status === 404 || error.status === 403)
 
@@ -66,7 +68,9 @@ export default function CharacterMain() {
     )
   }
 
-  if (isError || !char) {
+  // Un refetch fallito con una copia in cache non è un errore da schermata piena:
+  // la scheda resta, segnalata da OfflineNotice. Il 404/403 invece la sconfessa.
+  if (charNotFound || !char) {
     return (
       <div className="min-h-screen flex flex-col justify-center p-4 pt-safe pb-safe">
         {charNotFound ? (
@@ -187,6 +191,8 @@ export default function CharacterMain() {
       </m.header>
 
       <InSessionBanner charId={charId} />
+
+      <OfflineNotice query={charQuery} className="shrink-0 mx-3 mt-2" />
 
       <CharacterSwiper
         hero={<HeroScreen char={char} />}

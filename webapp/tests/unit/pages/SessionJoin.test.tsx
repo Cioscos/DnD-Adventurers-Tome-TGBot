@@ -60,4 +60,11 @@ describe('SessionJoin', () => {
     await waitFor(() => expect(join).toHaveBeenCalledWith('ABCDEF', 7))
     await waitFor(() => expect(navigateSpy).toHaveBeenCalledWith('/session/3'))
   })
+
+  it('failed character fetch shows offline unavailable, not "create a character"', async () => {
+    list.mockRejectedValue(new TypeError('Failed to fetch'))
+    renderWithProviders(<SessionJoin />)
+    expect(await screen.findByText('common.offline_unavailable')).toBeInTheDocument()
+    expect(screen.queryByText('session.join_needs_character')).not.toBeInTheDocument()
+  })
 })

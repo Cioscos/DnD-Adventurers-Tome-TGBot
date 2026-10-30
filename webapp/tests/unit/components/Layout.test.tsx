@@ -3,6 +3,7 @@ import { render as rtlRender, screen } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import userEvent from '@testing-library/user-event'
 import Layout from '@/components/Layout'
+import { api, ApiError } from '@/api/client'
 
 // Il guard condiviso del Layout (batch B3) usa useQuery + ApiError: serve un
 // QueryClient nel tree e un client API mockato (qui: query sempre pending,
@@ -60,6 +61,50 @@ afterEach(() => {
 })
 
 describe('Layout', () => {
+  describe('character guard with a cached sheet', () => {
+    const cachedRender = (ui: React.ReactElement, { cached = true } = {}) => {
+      // retryDelay 0: il guard ha una sua politica di retry, senza backoff nel test.
+      const qc = new QueryClient({ defaultOptions: { queries: { retry: false, retryDelay: 0 } } })
+      if (cached) qc.setQueryData(['character', 7], { id: 7, name: 'Aragorn' })
+      return rtlRender(ui, {
+        wrapper: ({ children }) => <QueryClientProvider client={qc}>{children}</QueryClientProvider>,
+      })
+    }
+
+    afterEach(() => {
+      vi.mocked(api.characters.get).mockImplementation(() => new Promise(() => {}))
+    })
+
+    it('keeps the page and shows the notice when the refetch fails for network', async () => {
+      vi.mocked(api.characters.get).mockRejectedValue(new TypeError('Failed to fetch'))
+      cachedRender(<Layout title="T"><p>contenuto</p></Layout>)
+      expect(await screen.findByText('common.offline_data_from')).toBeInTheDocument()
+      expect(screen.getByText('contenuto')).toBeInTheDocument()
+      expect(screen.queryByText('layout.char_error.generic')).not.toBeInTheDocument()
+    })
+
+    it('shows not found on 404 even with a cached sheet', async () => {
+      vi.mocked(api.characters.get).mockRejectedValue(new ApiError(404, 'gone'))
+      cachedRender(<Layout title="T"><p>contenuto</p></Layout>)
+      expect(await screen.findByText('layout.char_error.not_found')).toBeInTheDocument()
+      expect(screen.queryByText('contenuto')).not.toBeInTheDocument()
+    })
+
+    it('shows the retry state when there is no cached sheet', async () => {
+      vi.mocked(api.characters.get).mockRejectedValue(new TypeError('Failed to fetch'))
+      cachedRender(<Layout title="T"><p>contenuto</p></Layout>, { cached: false })
+      expect(await screen.findByText('layout.char_error.generic')).toBeInTheDocument()
+      expect(screen.queryByText('contenuto')).not.toBeInTheDocument()
+    })
+
+    it('reports on the page query when one is given', async () => {
+      const failedNotes = { data: [], dataUpdatedAt: Date.now(), error: new TypeError('x'), failureReason: null, isRefetchError: true }
+      cachedRender(<Layout title="T" offlineQuery={failedNotes}><p>contenuto</p></Layout>)
+      expect(await screen.findByText('common.offline_data_from')).toBeInTheDocument()
+      expect(screen.getByText('contenuto')).toBeInTheDocument()
+    })
+  })
+
   it('renders the title, children and a back button', () => {
     render(<Layout title="Punti Ferita">corpo pagina</Layout>)
     expect(screen.getByRole('heading', { name: 'Punti Ferita' })).toBeInTheDocument()

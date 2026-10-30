@@ -15,6 +15,8 @@
       "reload": "Reload"
     },
     "retry": "Retry",
+    "offline_unavailable": "Not available offline",
+    "offline_data_from": "Offline · data from {{time}}",
     "add": "Add",
     "edit": "Edit",
     "close": "Close",

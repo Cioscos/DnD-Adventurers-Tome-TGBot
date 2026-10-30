@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
-import { Trash2, Search, X } from 'lucide-react'
+import { Trash2, Search, X, WifiOff } from 'lucide-react'
 import { GiOpenBook as BookOpen } from 'react-icons/gi'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
@@ -25,10 +25,12 @@ export default function History() {
   const qc = useQueryClient()
   const [confirmClear, setConfirmClear] = useState(false)
 
-  const { data: entries = [], isLoading } = useQuery({
+  const historyQuery = useQuery({
     queryKey: ['history', charId],
     queryFn: () => api.history.get(charId),
   })
+  const { isLoading } = historyQuery
+  const entries = useMemo(() => historyQuery.data ?? [], [historyQuery.data])
 
   const [search, setSearch] = useState('')
   const filteredEntries = useMemo(() => {
@@ -54,7 +56,7 @@ export default function History() {
   })
 
   return (
-    <Layout title={t('character.history.title')} backTo={`/char/${charId}`} group="tools" page="history" hideScrollbar>
+    <Layout title={t('character.history.title')} backTo={`/char/${charId}`} group="tools" page="history" hideScrollbar offlineQuery={historyQuery}>
       {isLoading ? (
         <div className="space-y-2">
           {Array.from({ length: 4 }).map((_, i) => (
@@ -67,6 +69,13 @@ export default function History() {
             </div>
           ))}
         </div>
+      ) : historyQuery.isError && historyQuery.data === undefined ? (
+        // Un fetch fallito non è "cronologia vuota".
+        <EmptyState
+          icon={<WifiOff size={32} />}
+          title={t('common.offline_unavailable')}
+          action={{ label: t('common.retry'), onClick: () => historyQuery.refetch() }}
+        />
       ) : entries.length === 0 ? (
         <EmptyState
           icon={<BookOpen size={32} />}

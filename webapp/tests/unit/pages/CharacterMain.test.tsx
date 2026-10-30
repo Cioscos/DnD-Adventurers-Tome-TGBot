@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { QueryClient } from '@tanstack/react-query'
 import { renderWithProviders } from '../utils/renderWithProviders'
 import CharacterMain from '@/pages/CharacterMain'
 import { ApiError } from '@/api/client'
@@ -96,5 +97,36 @@ describe('CharacterMain', () => {
     expect(await screen.findByText('layout.char_error.not_found')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'layout.char_error.back_to_list' }))
     expect(navigateSpy).toHaveBeenCalledWith('/')
+  })
+
+  const cachedClient = () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, retryDelay: 0 } } })
+    // Niente staleTime in questo client: al montaggio parte subito il refetch.
+    client.setQueryData(['character', 7], { id: 7, name: 'Aragorn', heroic_inspiration: false })
+    return client
+  }
+
+  it('keeps cached sheet when refetch fails for network', async () => {
+    getChar.mockRejectedValue(new TypeError('Failed to fetch'))
+    renderWithProviders(<CharacterMain />, { client: cachedClient() })
+    expect(await screen.findByText('common.offline_data_from')).toBeInTheDocument()
+    expect(screen.getByText('Aragorn')).toBeInTheDocument()
+    expect(screen.getByTestId('swiper')).toBeInTheDocument()
+    expect(screen.queryByText('layout.char_error.generic')).not.toBeInTheDocument()
+  })
+
+  it('shows not found when refetch returns 404 despite cache', async () => {
+    getChar.mockRejectedValue(new ApiError(404, 'not found'))
+    renderWithProviders(<CharacterMain />, { client: cachedClient() })
+    expect(await screen.findByText('layout.char_error.not_found')).toBeInTheDocument()
+    expect(screen.queryByTestId('swiper')).not.toBeInTheDocument()
+  })
+
+  it('does not flag cached data as offline on a server error', async () => {
+    getChar.mockRejectedValue(new ApiError(500, 'boom'))
+    renderWithProviders(<CharacterMain />, { client: cachedClient() })
+    await waitFor(() => expect(getChar).toHaveBeenCalledTimes(4))
+    expect(await screen.findByText('Aragorn')).toBeInTheDocument()
+    expect(screen.queryByText('common.offline_data_from')).not.toBeInTheDocument()
   })
 })

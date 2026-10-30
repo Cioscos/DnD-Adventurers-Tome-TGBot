@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
-import { Plus, Mic, MicOff } from 'lucide-react'
+import { Plus, Mic, MicOff, WifiOff } from 'lucide-react'
 import { GiQuillInk as NotebookPen } from 'react-icons/gi'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
@@ -66,10 +66,14 @@ export default function Notes() {
     }
   }, [])
 
-  const { data: notes = [], isLoading } = useQuery({
+  const notesQuery = useQuery({
     queryKey: ['notes', charId],
     queryFn: () => api.notes.list(charId),
   })
+  const { isLoading } = notesQuery
+  const notes = notesQuery.data ?? []
+  // Un fetch fallito non è "nessuna nota".
+  const unavailable = notesQuery.isError && notesQuery.data === undefined
 
   const addMutation = useMutation({
     mutationFn: ({ title, body, tags }: { title: string; body: string; tags: string[] }) =>
@@ -147,7 +151,7 @@ export default function Notes() {
   const voiceNotes = notes.filter((n) => n.is_voice)
 
   return (
-    <Layout title={t('character.notes.title')} backTo={`/char/${charId}`} group="tools" page="notes">
+    <Layout title={t('character.notes.title')} backTo={`/char/${charId}`} group="tools" page="notes" offlineQuery={notesQuery}>
       <div className="flex gap-2">
         <Button
           variant="primary"
@@ -190,7 +194,15 @@ export default function Notes() {
         />
       </div>
 
-      {!isLoading && notes.length === 0 && (
+      {unavailable && (
+        <EmptyState
+          icon={<WifiOff size={32} />}
+          title={t('common.offline_unavailable')}
+          action={{ label: t('common.retry'), onClick: () => notesQuery.refetch() }}
+        />
+      )}
+
+      {!isLoading && !unavailable && notes.length === 0 && (
         <EmptyState
           icon={<NotebookPen size={32} />}
           title={t('character.notes.empty_title')}

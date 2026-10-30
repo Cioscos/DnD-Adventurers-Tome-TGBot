@@ -2,10 +2,11 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Hash, Users, ClipboardCheck, Check, UserPlus } from 'lucide-react'
+import { Hash, Users, ClipboardCheck, Check, UserPlus, WifiOff } from 'lucide-react'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
+import EmptyState from '@/components/ui/EmptyState'
 import Input from '@/components/ui/Input'
 import Skeleton from '@/components/ui/Skeleton'
 import Pressable from '@/components/ui/Pressable'
@@ -23,10 +24,12 @@ export default function SessionJoin() {
   const [selectedCharId, setSelectedCharId] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const { data: characters = [], isLoading: charsLoading } = useQuery({
+  const charactersQuery = useQuery({
     queryKey: ['characters'],
     queryFn: () => api.characters.list(),
   })
+  const charsLoading = charactersQuery.isLoading
+  const characters = useMemo(() => charactersQuery.data ?? [], [charactersQuery.data])
 
   // Sessione attiva del viewer. Vincolo BE: si può stare in UNA sola sessione
   // alla volta (un join mentre se ne ha già una → 409). Serve per: (a) portare
@@ -142,6 +145,8 @@ export default function SessionJoin() {
   }
 
   const hasCharacters = characters.length > 0
+  // Un fetch fallito non è "nessun personaggio": non va mandato a crearne uno.
+  const charactersUnavailable = charactersQuery.isError && charactersQuery.data === undefined
 
   return (
     <Layout title={t('session.join_player')} backTo="/session">
@@ -189,7 +194,13 @@ export default function SessionJoin() {
           </p>
         </div>
 
-        {!hasCharacters ? (
+        {charactersUnavailable ? (
+          <EmptyState
+            icon={<WifiOff size={32} />}
+            title={t('common.offline_unavailable')}
+            action={{ label: t('common.retry'), onClick: () => charactersQuery.refetch() }}
+          />
+        ) : !hasCharacters ? (
           <div className="space-y-3">
             <p className="text-sm text-dnd-text-muted font-body italic">
               {t('session.join_needs_character')}

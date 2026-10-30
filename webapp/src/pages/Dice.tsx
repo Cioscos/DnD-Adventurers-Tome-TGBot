@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m, AnimatePresence } from 'framer-motion'
-import { Send, Minus, Plus, Trash2, BarChart3 } from 'lucide-react'
+import { Send, Minus, Plus, Trash2, BarChart3, WifiOff } from 'lucide-react'
 import { GiCrossedSwords as Swords } from 'react-icons/gi'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
@@ -11,6 +11,7 @@ import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
 import Pressable from '@/components/ui/Pressable'
 import ConfirmSheet from '@/components/ui/ConfirmSheet'
+import EmptyState from '@/components/ui/EmptyState'
 import DiceIcon from '@/components/ui/DiceIcon'
 import { DiceRunicWatermark } from '@/components/ui/Ornament'
 import ScrollArea from '@/components/ScrollArea'
@@ -74,10 +75,11 @@ export default function Dice() {
     queryFn: () => api.characters.get(charId),
   })
 
-  const { data: history = [] } = useQuery({
+  const historyQuery = useQuery({
     queryKey: ['dice-history', charId],
     queryFn: () => api.dice.history(charId),
   })
+  const history = historyQuery.data ?? []
 
   const { roll, isPending: rollPending } = useRollAndPersist(charId)
 
@@ -394,6 +396,13 @@ export default function Dice() {
       </Link>
 
       {/* History */}
+      {historyQuery.isError && historyQuery.data === undefined && (
+        <EmptyState
+          icon={<WifiOff size={32} />}
+          title={t('common.offline_unavailable')}
+          action={{ label: t('common.retry'), onClick: () => historyQuery.refetch() }}
+        />
+      )}
       {history.length > 0 && (
         <div>
           <div className="flex justify-between items-center mb-2 px-1">

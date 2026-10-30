@@ -1,18 +1,22 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { MutationCache, QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { MutationCache, QueryClient } from '@tanstack/react-query'
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client'
 import { LazyMotion, MotionConfig, domMax } from 'framer-motion'
 import App from './App'
 import AppErrorBoundary from './components/AppErrorBoundary'
+import RestoreGate from './components/RestoreGate'
 import Toast from './components/ui/Toast'
 import {
   showHomebrewNotifications,
   type NotificationLike,
 } from './components/homebrew/HomebrewNotification'
 import { initTheme } from './theme/applyTheme'
-import { getStartParam } from './auth/telegram'
+import { getStartParam, getTelegramUser } from './auth/telegram'
+import { getDevUserId } from './auth/devUser'
 import { notifyMutationError } from './lib/mutationError'
 import { parseStartParam } from './lib/startParam'
+import { CACHE_MAX_AGE_MS, createPersister, shouldPersistQuery } from './lib/queryPersist'
 import './index.css'
 import './i18n'
 
@@ -100,6 +104,9 @@ const queryClient = new QueryClient({
     queries: {
       staleTime: 30_000,
       retry: 1,
+      // Default 'online': da offline la query resta IN PAUSA, quindi uno skeleton
+      // infinito senza cache e nessun avviso sui dati in cache. Deve fallire.
+      networkMode: 'always',
     },
     mutations: {
       // Default 'online': da offline la mutation resta IN PAUSA (niente errore,
@@ -131,6 +138,19 @@ const queryClient = new QueryClient({
   }),
 })
 
+// Cache in sola lettura: senza gcTime pari alla durata massima il ripristino scarta
+// le query. Vale per le sole chiavi salvate (vedi shouldPersistQuery).
+for (const queryKey of [['characters'], ['character'], ['notes']]) {
+  queryClient.setQueryDefaults(queryKey, { gcTime: CACHE_MAX_AGE_MS })
+}
+
+const persistOptions = {
+  persister: createPersister(getTelegramUser()?.id ?? getDevUserId()),
+  maxAge: CACHE_MAX_AGE_MS,
+  buster: __APP_VERSION__,
+  dehydrateOptions: { shouldDehydrateQuery: shouldPersistQuery },
+}
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <AppErrorBoundary>
@@ -139,10 +159,12 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             transform/layout di TUTTE le animazioni JS (opacità e colori restano),
             senza dipendere dal gating manuale di ogni componente. */}
         <MotionConfig reducedMotion="user">
-          <QueryClientProvider client={queryClient}>
-            <App />
+          <PersistQueryClientProvider client={queryClient} persistOptions={persistOptions}>
+            <RestoreGate>
+              <App />
+            </RestoreGate>
             <Toast />
-          </QueryClientProvider>
+          </PersistQueryClientProvider>
         </MotionConfig>
       </LazyMotion>
     </AppErrorBoundary>
