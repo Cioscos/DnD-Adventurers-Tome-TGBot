@@ -29,6 +29,16 @@ class AcBreakdown(BaseModel):
     homebrew: int
 
 
+class SpellCasterStats(BaseModel):
+    """CD e bonus di attacco incantesimi di una classe che lancia incantesimi."""
+
+    class_id: int
+    class_name: str
+    ability: str
+    save_dc: int
+    attack_bonus: int
+
+
 class SpellcastingInfo(BaseModel):
     """Blocco derivato: preparazione incantesimi + capacità rituali (spec 2026-06-10)."""
 
@@ -38,6 +48,7 @@ class SpellcastingInfo(BaseModel):
     cap_mode: str = "auto"
     has_ritual_caster: bool = False
     has_wizard: bool = False
+    casters: list[SpellCasterStats] = []
 
 
 class CharacterSummary(BaseModel):
@@ -251,3 +262,19 @@ class InspirationUpdate(BaseModel):
 class XPUpdate(BaseModel):
     add: Optional[int] = None
     set: Optional[int] = None
+
+class SpellAttackResult(BaseModel):
+    """Esito di POST /characters/{id}/spells/{spell_id}/attack.
+
+    Vive qui (non in schemas/spell.py) per evitare l'import circolare con CharacterFull.
+    """
+
+    spell_name: str
+    to_hit_die: int
+    to_hit_bonus: int
+    to_hit_total: int
+    is_critical: bool
+    is_fumble: bool
+    caster_class: Optional[str] = None
+    character: CharacterFull
+    homebrew_notifications: Optional[list[dict]] = None

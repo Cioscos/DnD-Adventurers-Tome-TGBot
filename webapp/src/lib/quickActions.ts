@@ -48,6 +48,41 @@ export function readQuickActions(settings: Record<string, unknown> | undefined):
   return Array.isArray(raw) ? (raw as QuickActionEntry[]) : []
 }
 
+export function hasCustomQuickActions(settings: Record<string, unknown> | undefined): boolean {
+  return Array.isArray(settings?.quick_actions)
+}
+
+/** Lista automatica finché l'utente non personalizza: armi equipaggiate,
+ *  incantesimi dannosi (preparati se la classe prepara), abilità a usi,
+ *  dadi vita, riposo breve, ispirazione. */
+export function defaultQuickActions(char: CharacterFull): QuickActionEntry[] {
+  const preparing = !!char.spellcasting?.has_preparing_class
+  const out: QuickActionEntry[] = []
+  for (const i of char.items ?? []) {
+    if (i.item_type === 'weapon' && i.is_equipped) out.push({ type: 'weapon', id: i.id })
+  }
+  for (const s of char.spells ?? []) {
+    if (!s.damage_dice) continue
+    if (s.level === 0 || !preparing || s.is_prepared) out.push({ type: 'spell', id: s.id })
+  }
+  for (const a of char.abilities ?? []) {
+    if (isPinnableAbility(a)) out.push({ type: 'ability', id: a.id })
+  }
+  for (const c of char.classes ?? []) out.push({ type: 'hit_die', classId: c.id })
+  out.push({ type: 'rest', rest: 'short' }, { type: 'counter_inspiration' })
+  return out.slice(0, QUICK_ACTIONS_MAX)
+}
+
+export function effectiveQuickActions(char: CharacterFull): QuickActionEntry[] {
+  const settings = char.settings as Record<string, unknown> | undefined
+  return hasCustomQuickActions(settings) ? readQuickActions(settings) : defaultQuickActions(char)
+}
+
+/** Munizione = tipo `ammunition` oppure qualsiasi oggetto nello slot munizioni. */
+export function isAmmunitionItem(item: Item): boolean {
+  return item.item_type === 'ammunition' || item.equipment_slot === 'ammunition'
+}
+
 /** Un'abilità è pinnabile (azione o contatore) solo se attiva e con usi limitati. */
 function isPinnableAbility(a: Ability | undefined): a is Ability {
   return !!a && !a.is_passive && a.max_uses != null
@@ -103,7 +138,7 @@ export function resolveQuickActions(
       }
       case 'counter_ammo': {
         const item = items.get(entry.id)
-        if (item && item.item_type === 'ammunition') resolved.push({ type: 'counter_ammo', key, item })
+        if (item && isAmmunitionItem(item)) resolved.push({ type: 'counter_ammo', key, item })
         break
       }
       case 'hit_die': {

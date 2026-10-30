@@ -127,12 +127,20 @@ vi.mock('@/pages/hp/HpOperationForm', async () => {
       hpMutate: (a: { op: string; val: number }) => void
       setCrit: (v: boolean) => void
       setActiveOp: (op: string) => void
+      activeOp: string
+      damageModifier: 'half' | 'double' | null
+      setDamageModifier: (m: 'half' | 'double' | null) => void
     }) =>
       React.createElement('div', { 'data-testid': 'hp-op-form' },
         React.createElement('input', { 'data-testid': 'hp-value', value: p.value, onChange: (e: { target: { value: string } }) => p.setValue(e.target.value) }),
         React.createElement('button', { 'data-testid': 'hp-apply', onClick: p.onApply }, 'apply'),
         React.createElement('button', { 'data-testid': 'hp-quick-heal', onClick: () => p.hpMutate({ op: 'heal', val: 3 }) }, 'quick'),
         React.createElement('button', { 'data-testid': 'hp-crit', onClick: () => p.setCrit(true) }, 'crit'),
+        React.createElement('button', { 'data-testid': 'hp-quick-damage', onClick: () => p.hpMutate({ op: 'damage', val: 10 }) }, 'quickdmg'),
+        React.createElement('button', { 'data-testid': 'hp-tab-heal', onClick: () => p.setActiveOp('heal') }, 'tabheal'),
+        React.createElement('button', { 'data-testid': 'hp-tab-damage', onClick: () => p.setActiveOp('damage') }, 'tabdmg'),
+        React.createElement('button', { 'data-testid': 'hp-mod-half', onClick: () => p.setDamageModifier('half') }, 'half'),
+        React.createElement('span', { 'data-testid': 'hp-mod-state' }, String(p.damageModifier)),
       ),
   }
 })
@@ -389,5 +397,52 @@ describe('HP page', () => {
     await userEvent.type(screen.getByTestId('hp-value'), '99')
     await userEvent.click(screen.getByTestId('hp-apply'))
     expect(await screen.findByTestId('instant-death')).toBeInTheDocument()
+  })
+
+  describe('damage modifier', () => {
+    it('halves a typed damage and sends the raw value', async () => {
+      getChar.mockResolvedValue(aliveChar)
+      updateHpSpy.mockResolvedValue(aliveChar)
+      renderWithProviders(<HP />)
+      await screen.findByTestId('hp-op-form')
+
+      await userEvent.click(screen.getByTestId('hp-mod-half'))
+      await userEvent.type(screen.getByTestId('hp-value'), '15')
+      await userEvent.click(screen.getByTestId('hp-apply'))
+      await waitFor(() => expect(updateHpSpy).toHaveBeenCalledWith(7, 'damage', 7, false, { damage_modifier: 'half', raw_value: 15 }))
+    })
+
+    it('halves a quick damage button', async () => {
+      getChar.mockResolvedValue(aliveChar)
+      updateHpSpy.mockResolvedValue(aliveChar)
+      renderWithProviders(<HP />)
+      await screen.findByTestId('hp-op-form')
+
+      await userEvent.click(screen.getByTestId('hp-mod-half'))
+      await userEvent.click(screen.getByTestId('hp-quick-damage'))
+      await waitFor(() => expect(updateHpSpy).toHaveBeenCalledWith(7, 'damage', 5, false, { damage_modifier: 'half', raw_value: 10 }))
+    })
+
+    it('turns the modifier off after one damage', async () => {
+      getChar.mockResolvedValue(aliveChar)
+      updateHpSpy.mockResolvedValue(aliveChar)
+      renderWithProviders(<HP />)
+      await screen.findByTestId('hp-op-form')
+
+      await userEvent.click(screen.getByTestId('hp-mod-half'))
+      expect(screen.getByTestId('hp-mod-state')).toHaveTextContent('half')
+      await userEvent.click(screen.getByTestId('hp-quick-damage'))
+      await waitFor(() => expect(screen.getByTestId('hp-mod-state')).toHaveTextContent('null'))
+    })
+
+    it('resets the modifier when leaving the damage tab', async () => {
+      getChar.mockResolvedValue(aliveChar)
+      renderWithProviders(<HP />)
+      await screen.findByTestId('hp-op-form')
+
+      await userEvent.click(screen.getByTestId('hp-mod-half'))
+      await userEvent.click(screen.getByTestId('hp-tab-heal'))
+      expect(screen.getByTestId('hp-mod-state')).toHaveTextContent('null')
+    })
   })
 })

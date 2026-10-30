@@ -102,7 +102,7 @@ export default function ParticipantIdentitySheet({
       onClose={onClose}
       title={data?.name ?? t('session.identity.title')}
     >
-      <div className="space-y-3 p-1">
+      <div className="space-y-3 p-5">
         {canWhisper && (
           <Button
             variant="secondary"

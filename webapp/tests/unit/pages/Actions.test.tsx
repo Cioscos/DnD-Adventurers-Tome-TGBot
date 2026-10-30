@@ -2,6 +2,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 import type { ReactNode } from 'react'
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { QueryClient } from '@tanstack/react-query'
 import { renderWithProviders } from '../utils/renderWithProviders'
 import Actions from '@/pages/Actions'
 import type { WeaponAttackResult } from '@/components/WeaponAttackModal'
@@ -193,5 +194,31 @@ describe('Actions page', () => {
     attackSpy.mockResolvedValue({ ...weaponResult, to_hit_total: 25 })
     await userEvent.click(screen.getByTestId('modal-reroll'))
     await waitFor(() => expect(attackSpy).toHaveBeenCalledWith(7, 10, true, undefined))
+  })
+
+  it('invalidates the character query after a weapon attack (ammo is consumed server-side)', async () => {
+    getChar.mockResolvedValue(CHAR)
+    attackSpy.mockResolvedValue(weaponResult)
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const spy = vi.spyOn(client, 'invalidateQueries')
+    renderWithProviders(<Actions />, { client })
+    await screen.findByText('Greatsword')
+
+    await userEvent.click(screen.getAllByRole('button')[1])
+    await screen.findByTestId('attack-modal')
+    expect(spy).toHaveBeenCalledWith({ queryKey: ['character', 7] })
+  })
+
+  it('invalidates the character query after an unarmed attack', async () => {
+    getChar.mockResolvedValue(CHAR)
+    unarmedSpy.mockResolvedValue(weaponResult)
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const spy = vi.spyOn(client, 'invalidateQueries')
+    renderWithProviders(<Actions />, { client })
+    await screen.findByText('Greatsword')
+
+    await userEvent.click(screen.getAllByRole('button')[0])
+    await screen.findByTestId('attack-modal')
+    expect(spy).toHaveBeenCalledWith({ queryKey: ['character', 7] })
   })
 })

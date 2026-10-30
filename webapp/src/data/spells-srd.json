@@ -5,6 +5,7 @@
   },
   "fire bolt": {
     "level": 0,
+    "attack_save": "ATK",
     "casting_time": "1 azione",
     "range_area": "36 m",
     "components": "V, S",
@@ -15,6 +16,7 @@
   },
   "ray of frost": {
     "level": 0,
+    "attack_save": "ATK",
     "casting_time": "1 azione",
     "range_area": "18 m",
     "components": "V, S",
@@ -25,6 +27,7 @@
   },
   "sacred flame": {
     "level": 0,
+    "attack_save": "SAVE",
     "casting_time": "1 azione",
     "range_area": "18 m",
     "components": "V, S",
@@ -129,6 +132,7 @@
   },
   "burning hands": {
     "level": 1,
+    "attack_save": "SAVE",
     "casting_time": "1 azione",
     "range_area": "Cono 4,5 m",
     "components": "V, S",
@@ -139,6 +143,7 @@
   },
   "thunderwave": {
     "level": 1,
+    "attack_save": "SAVE",
     "casting_time": "1 azione",
     "range_area": "Cubo 4,5 m",
     "components": "V, S",
@@ -167,6 +172,7 @@
   },
   "scorching ray": {
     "level": 2,
+    "attack_save": "ATK",
     "casting_time": "1 azione",
     "range_area": "36 m",
     "components": "V, S",
@@ -177,6 +183,7 @@
   },
   "hold person": {
     "level": 2,
+    "attack_save": "SAVE",
     "casting_time": "1 azione",
     "range_area": "18 m",
     "components": "V, S, M",
@@ -186,6 +193,7 @@
   },
   "spiritual weapon": {
     "level": 2,
+    "attack_save": "ATK",
     "casting_time": "1 azione bonus",
     "range_area": "18 m",
     "components": "V, S",
@@ -196,6 +204,7 @@
   },
   "fireball": {
     "level": 3,
+    "attack_save": "SAVE",
     "casting_time": "1 azione",
     "range_area": "45 m, sfera 6 m",
     "components": "V, S, M",
@@ -206,6 +215,7 @@
   },
   "lightning bolt": {
     "level": 3,
+    "attack_save": "SAVE",
     "casting_time": "1 azione",
     "range_area": "Linea 30 m",
     "components": "V, S, M",

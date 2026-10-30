@@ -147,6 +147,8 @@ vi.mock('@/pages/spells/SpellDamageSheet', async () => {
       p.spell ? React.createElement('div', { 'data-testid': 'damage-sheet', 'data-slot': String(p.slotLevel) }, p.spell.name) : null,
   }
 })
+// Il d20 degli incantesimi d'attacco (useCastFlow) richiede il DiceAnimationProvider.
+vi.mock('@/dice/useAnimatedRoll', () => ({ useAnimatedRoll: () => async () => undefined }))
 
 // CharacterFull-shaped fixture (only the fields Spells reads).
 const manualChar = () => ({

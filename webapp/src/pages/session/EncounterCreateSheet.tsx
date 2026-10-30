@@ -36,7 +36,7 @@ export default function EncounterCreateSheet({ sessionId, onClose }: Props) {
 
   return (
     <Sheet open onClose={onClose} title={t('session.combat.mode_title')}>
-      <div className="p-1 space-y-3">
+      <div className="p-5 space-y-3">
         {modes.map(({ mode, label, desc }) => (
           <Pressable
             key={mode}

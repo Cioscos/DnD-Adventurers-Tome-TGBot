@@ -11,6 +11,7 @@ import Sheet from '@/components/ui/Sheet'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import SwitchToggle from '@/components/ui/SwitchToggle'
+import { isAttackSpell } from '@/lib/spellType'
 import { haptic } from '@/auth/telegram'
 import { rollValues } from '@/dice/d100'
 import { useDiceAnimation } from '@/dice/useDiceAnimation'
@@ -37,6 +38,10 @@ interface SpellDamageSheetProps {
   slotLevel: number | null
   /** Lancio rituale: nessuno slot consumato al Roll (spec 2026-06-10). */
   asRitual?: boolean
+  /** Slot/rituale/concentrazione già consumati dal tiro per colpire: il Roll non li tocca. */
+  slotAlreadyConsumed?: boolean
+  /** Apre lo sheet con l'interruttore del critico acceso (20 naturale al tiro per colpire). */
+  initialCritical?: boolean
   onClose: () => void
 }
 
@@ -45,12 +50,14 @@ export default function SpellDamageSheet({
   spell,
   slotLevel,
   asRitual = false,
+  slotAlreadyConsumed = false,
+  initialCritical = false,
   onClose,
 }: SpellDamageSheetProps) {
   const { t } = useTranslation()
   const qc = useQueryClient()
   const [extraDice, setExtraDice] = useState('')
-  const [isCritical, setIsCritical] = useState(false)
+  const [isCritical, setIsCritical] = useState(initialCritical)
   const [result, setResult] = useState<RollDamageResult | null>(null)
   const [slotConsumed, setSlotConsumed] = useState(false)
   const [showNoSlotWarning, setShowNoSlotWarning] = useState(false)
@@ -63,12 +70,12 @@ export default function SpellDamageSheet({
   useEffect(() => {
     if (spellId != null) {
       setExtraDice('')
-      setIsCritical(false)
+      setIsCritical(initialCritical)
       setResult(null)
-      setSlotConsumed(false)
+      setSlotConsumed(slotAlreadyConsumed)
       setShowNoSlotWarning(false)
     }
-  }, [spellId])
+  }, [spellId, initialCritical, slotAlreadyConsumed])
 
   const dice = useDiceAnimation()
   const animate3d = useDiceSettings((s) => s.animate3d)
@@ -80,7 +87,9 @@ export default function SpellDamageSheet({
     mutationFn: async (body: RollDamageRequest) => {
       if (!spell) throw new Error('no spell')
 
-      if (asRitual && !slotConsumed) {
+      if (slotAlreadyConsumed) {
+        // Il tiro per colpire (/attack) ha già consumato slot o rituale.
+      } else if (asRitual && !slotConsumed) {
         // Rituale: nessuno slot, il BE registra il lancio e attiva la concentrazione.
         const updated = await api.spells.use(charId, spell.id, null, true)
         qc.setQueryData(['character', charId], updated)
@@ -151,11 +160,7 @@ export default function SpellDamageSheet({
 
   if (!spell) return null
 
-  const isAttack =
-    spell.attack_save === 'ATK' ||
-    spell.attack_save === null ||
-    spell.attack_save === undefined ||
-    spell.attack_save === ''
+  const isAttack = isAttackSpell(spell) || !spell.attack_save?.trim()
   const isCantrip = spell.level === 0
 
   const handleRoll = () => {
@@ -169,12 +174,12 @@ export default function SpellDamageSheet({
   const reset = () => {
     setResult(null)
     setExtraDice('')
-    setIsCritical(false)
+    setIsCritical(initialCritical)
   }
 
   const handleReroll = () => {
-    if (asRitual || slotLevel == null || slotLevel === 0) {
-      // Rituale o trucchetto: nessuno slot coinvolto.
+    if (slotAlreadyConsumed || asRitual || slotLevel == null || slotLevel === 0) {
+      // Dopo un tiro per colpire, rituale o trucchetto: nessuno slot coinvolto.
       reset()
       return
     }
@@ -206,7 +211,7 @@ export default function SpellDamageSheet({
       title={t('character.spells.roll_damage.title', { name: spell.name })}
     >
       {!result ? (
-        <div className="space-y-4 p-1">
+        <div className="space-y-4 p-5">
           {!isCantrip && (
             <div>
               <label className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim">
@@ -245,7 +250,7 @@ export default function SpellDamageSheet({
           </Button>
         </div>
       ) : (
-        <div className="space-y-4 p-1">
+        <div className="space-y-4 p-5">
           <div className="text-center">
             <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim mb-2">
               {result.breakdown}

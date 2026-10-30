@@ -15,22 +15,24 @@ from sqlalchemy.orm import selectinload
 from api.auth import get_current_user
 from api.database import get_db
 from core.db.models import Character, CharacterClass, CharacterHistory, Spell, SpellSlot
-from api.schemas.character import CharacterFull
+from api.schemas.character import CharacterFull, SpellAttackResult
 from api.schemas.common import ConcentrationSaveResult
 from api.schemas.spell import (
     ConcentrationUpdate,
     RollDamageRequest,
     RollDamageResult,
+    SpellAttackRequest,
     SpellCreate,
     SpellRead,
     SpellUpdate,
     SpellUseRequest,
 )
 from api.routers.items import _roll_dice, _DICE_RE
-from api.routers._helpers import roll_concentration_save
+from api.routers._helpers import collect_homebrew_notifications, roll_concentration_save
 from api.services.character_response import build_character_response
 from api.services.dice_stats import record_dice
-from api.services.spellcasting import build_spellcasting_info
+from api.services.homebrew.dispatcher import dispatch
+from api.services.spellcasting import best_caster, build_spellcasting_info
 from core.data.spellcasting import has_ritual_caster
 
 
@@ -91,6 +93,41 @@ def _ensure_prepare_capacity(char: Character) -> None:
                 f"({info.prepared_count}/{info.prepared_cap or 0})"
             ),
         )
+
+
+def _consume_cast(
+    session, char: Character, spell: Spell, slot_level: int | None, ritual: bool
+) -> None:
+    """Consuma il lancio (slot o rituale) e attiva la concentrazione.
+
+    Condiviso da /use e /attack (che salta lo slot per i cantrip).
+    """
+    if ritual:
+        # Lancio rituale: +10 min, nessuno slot (PHB). Richiede il tag ritual
+        # e una classe con Ritual Casting; il vincolo "preparato" è solo un
+        # avviso FE (spec 2026-06-10).
+        if not spell.is_ritual:
+            raise HTTPException(status_code=400, detail="Spell is not a ritual")
+        if not has_ritual_caster(char.classes):
+            raise HTTPException(
+                status_code=400, detail="No class with Ritual Casting"
+            )
+        _add_history(
+            session, char.id, "spell_ritual_cast",
+            f"Lancio rituale: {spell.name}",
+        )
+    else:
+        if slot_level is None:
+            raise HTTPException(status_code=400, detail="slot_level is required")
+        slot = next((s for s in char.spell_slots if s.level == slot_level), None)
+        if slot is None:
+            raise HTTPException(status_code=400, detail=f"No slot configured for level {slot_level}")
+        if slot.available == 0:
+            raise HTTPException(status_code=400, detail=f"No slots available at level {slot_level}")
+        slot.use_slot()
+
+    if spell.is_concentration:
+        char.concentrating_spell_id = spell.id
 
 
 @router.get("/{char_id}/spells", response_model=list[SpellRead])
@@ -189,38 +226,74 @@ async def use_spell(
     if spell is None:
         raise HTTPException(status_code=404, detail="Spell not found")
 
-    if body.as_ritual:
-        # Lancio rituale: +10 min, nessuno slot (PHB). Richiede il tag ritual
-        # e una classe con Ritual Casting; il vincolo "preparato" è solo un
-        # avviso FE (spec 2026-06-10).
-        if not spell.is_ritual:
-            raise HTTPException(status_code=400, detail="Spell is not a ritual")
-        if not has_ritual_caster(char.classes):
-            raise HTTPException(
-                status_code=400, detail="No class with Ritual Casting"
-            )
-        _add_history(
-            session, char_id, "spell_ritual_cast",
-            f"Lancio rituale: {spell.name}",
-        )
-    else:
-        if body.slot_level is None:
-            raise HTTPException(status_code=400, detail="slot_level is required")
-        # Use the slot
-        slot = next(
-            (s for s in char.spell_slots if s.level == body.slot_level), None
-        )
-        if slot is None:
-            raise HTTPException(status_code=400, detail=f"No slot configured for level {body.slot_level}")
-        if slot.available == 0:
-            raise HTTPException(status_code=400, detail=f"No slots available at level {body.slot_level}")
-        slot.use_slot()
-
-    # Activate concentration if the spell requires it
-    if spell.is_concentration:
-        char.concentrating_spell_id = spell_id
-
+    _consume_cast(session, char, spell, body.slot_level, body.as_ritual)
     return await build_character_response(session, char)
+
+
+@router.post("/{char_id}/spells/{spell_id}/attack", response_model=SpellAttackResult)
+async def spell_attack(
+    char_id: int,
+    spell_id: int,
+    body: SpellAttackRequest,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> SpellAttackResult:
+    char = await _get_owned_full(char_id, user_id, session)
+    spell = next((s for s in char.spells if s.id == spell_id), None)
+    if spell is None:
+        raise HTTPException(status_code=404, detail="Spell not found")
+    if (spell.attack_save or "").strip().upper() != "ATK":
+        raise HTTPException(status_code=400, detail="Spell is not an attack spell")
+
+    if body.with_inspiration:
+        if not char.heroic_inspiration:
+            raise HTTPException(status_code=409, detail="Ispirazione non disponibile")
+        char.heroic_inspiration = False
+    elif spell.level == 0:
+        # Cantrip: nessun consumo, ma la concentrazione si attiva comunque.
+        if spell.is_concentration:
+            char.concentrating_spell_id = spell.id
+    else:
+        _consume_cast(session, char, spell, body.slot_level, body.ritual)
+
+    caster = best_caster(char)
+    bonus = caster.attack_bonus if caster else char.proficiency_bonus
+    die = body.die if body.die is not None else random.randint(1, 20)
+    total = die + bonus
+    is_critical = die == 20
+    is_fumble = die == 1
+
+    text = f"Attacco incantesimo {spell.name}: d20={die}+{bonus}={total}" + (
+        " (CRITICO!)" if is_critical else " (FUMBLE!)" if is_fumble else ""
+    )
+    if body.with_inspiration:
+        text = f"Reroll ispirazione: {text}"
+    _add_history(session, char_id, "spell_attack", text)
+    record_dice(char, [("d20", die)])
+
+    firing = await dispatch(
+        session, char, "attack_rolled",
+        {
+            "spell_id": spell.id,
+            "to_hit_die": die,
+            "to_hit_total": total,
+            "is_critical": is_critical,
+            "is_fumble": is_fumble,
+        },
+    )
+    notifications = collect_homebrew_notifications(firing)
+
+    return SpellAttackResult(
+        spell_name=spell.name,
+        to_hit_die=die,
+        to_hit_bonus=bonus,
+        to_hit_total=total,
+        is_critical=is_critical,
+        is_fumble=is_fumble,
+        caster_class=caster.class_name if caster else None,
+        character=await build_character_response(session, char),
+        homebrew_notifications=notifications or None,
+    )
 
 
 @router.patch("/{char_id}/concentration", response_model=CharacterFull)

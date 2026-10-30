@@ -134,4 +134,25 @@ describe('SpellForm', () => {
     await userEvent.click(screen.getByRole('button', { name: 'common.add' }))
     expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ components: 'V, S' }))
   })
+  it('picking Attacco in the Tipo selector emits attack_save ATK', async () => {
+    srd.value = null
+    const onSubmit = vi.fn()
+    render(<SpellForm onSubmit={onSubmit} onCancel={() => {}} isPending={false} />)
+    fireEvent.change(screen.getByLabelText('character.spells.name'), { target: { value: 'Scudo' } })
+    await userEvent.click(screen.getByRole('radio', { name: 'character.spells.attack_save.atk' }))
+    await userEvent.click(screen.getByRole('button', { name: 'common.add' }))
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ attack_save: 'ATK' }))
+  })
+
+  it('SRD autofill of an attack spell sets attack_save ATK', async () => {
+    srd.value = { level: 0, attack_save: 'ATK' }
+    const onSubmit = vi.fn()
+    render(<SpellForm onSubmit={onSubmit} onCancel={() => {}} isPending={false} />)
+    fireEvent.change(screen.getByLabelText('character.spells.name'), { target: { value: 'fire bolt' } })
+    await userEvent.click(screen.getByText('character.spells.srd_autofill'))
+    expect(screen.getByRole('radio', { name: 'character.spells.attack_save.atk' }))
+      .toHaveAttribute('aria-checked', 'true')
+    await userEvent.click(screen.getByRole('button', { name: 'common.add' }))
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ attack_save: 'ATK' }))
+  })
 })

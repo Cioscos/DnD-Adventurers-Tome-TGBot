@@ -9,6 +9,7 @@ import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import Pressable from '@/components/ui/Pressable'
 import { haptic } from '@/auth/telegram'
+import { applyDamageModifier, type DamageModifier } from '@/lib/damageModifier'
 
 type HPOp = 'damage' | 'heal' | 'set_max' | 'set_current' | 'set_temp'
 
@@ -25,6 +26,8 @@ interface HpOperationFormProps {
   atZero: boolean
   crit: boolean
   setCrit: (c: boolean) => void
+  damageModifier: DamageModifier
+  setDamageModifier: (m: DamageModifier) => void
 }
 
 // Short labels fit the 5-column segmented control at 390px viewport.
@@ -48,8 +51,12 @@ export default function HpOperationForm({
   atZero,
   crit,
   setCrit,
+  damageModifier,
+  setDamageModifier,
 }: HpOperationFormProps) {
   const { t } = useTranslation()
+  const rawTyped = parseInt(value, 10)
+  const showPreview = activeOp === 'damage' && !!damageModifier && !isNaN(rawTyped) && rawTyped > 0
 
   return (
     <>
@@ -102,6 +109,26 @@ export default function HpOperationForm({
       {/* Number input + apply */}
       <Surface variant="elevated">
         <div className="flex flex-col gap-3">
+          {activeOp === 'damage' && (
+            <div className="grid grid-cols-2 gap-2">
+              {(['half', 'double'] as const).map((mod) => {
+                const on = damageModifier === mod
+                return (
+                  <Pressable
+                    key={mod}
+                    onClick={() => { setDamageModifier(on ? null : mod); haptic.selection() }}
+                    aria-pressed={on}
+                    className={`flex items-center justify-center min-h-[44px] rounded-xl border font-cinzel text-xs uppercase tracking-wider transition-colors
+                      ${on
+                        ? '!bg-dnd-cobalt/20 !text-dnd-cobalt-bright !border-dnd-cobalt/60'
+                        : 'bg-transparent text-dnd-text-muted border-dnd-border'}`}
+                  >
+                    {t(mod === 'half' ? 'character.hp.modifier_half' : 'character.hp.modifier_double')}
+                  </Pressable>
+                )
+              })}
+            </div>
+          )}
           <Input
             type="number"
             min={0}
@@ -116,6 +143,11 @@ export default function HpOperationForm({
             onCommit={onApply}
             className="[&_input]:text-3xl [&_input]:font-display [&_input]:font-bold [&_input]:text-center [&_input]:min-h-[60px]"
           />
+          {showPreview && (
+            <p className="text-center font-mono text-sm tabular-nums text-dnd-cobalt-bright">
+              {`${rawTyped} → ${applyDamageModifier(rawTyped, damageModifier)}`}
+            </p>
+          )}
           {activeOp === 'damage' && atZero && (
             <Pressable
               onClick={() => { setCrit(!crit); haptic.selection() }}

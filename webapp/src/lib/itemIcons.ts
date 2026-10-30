@@ -9,6 +9,7 @@ import {
   GiKnapsack,
   GiScrollUnfurled,
   GiSwapBag,
+  GiArrowhead,
 } from 'react-icons/gi'
 
 const ICONS: Record<string, IconType> = {
@@ -19,6 +20,7 @@ const ICONS: Record<string, IconType> = {
   tool: GiWrench,
   accessory: GiCutDiamond,
   gear: GiKnapsack,
+  ammunition: GiArrowhead,
   potion: GiPotionBall,
   scroll: GiScrollUnfurled,
   generic: GiSwapBag,

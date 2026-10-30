@@ -84,6 +84,7 @@ export const ITEM_TYPE_TO_SLOTS: Record<string, EquipmentSlot[]> = {
   shield: ['off_hand'],
   accessory: ['neck', 'cloak', 'ring1', 'ring2'],
   gear: ['head', 'hands', 'feet', 'ammunition'],
+  ammunition: ['ammunition'],
 }
 
 export function slotsAllowedFor(itemType: string): EquipmentSlot[] {

@@ -167,4 +167,20 @@ describe('WeaponAttackModal', () => {
     expect(screen.getByText('19')).toBeInTheDocument()
     expect(screen.getByText('9')).toBeInTheDocument()
   })
+
+  it('shows remaining ammunition', () => {
+    const r: WeaponAttackResult = { ...baseResult, ammo: { item_id: 3, name: 'Frecce', remaining: 17 } }
+    render(<WeaponAttackModal result={r} onClose={() => {}} />)
+    expect(screen.getByText('Frecce: 17')).toBeInTheDocument()
+  })
+
+  it('shows the missing ammunition warning', () => {
+    render(<WeaponAttackModal result={{ ...baseResult, ammo_missing: true }} onClose={() => {}} />)
+    expect(screen.getByText('Munizioni esaurite o non equipaggiate: scala tu le munizioni')).toBeInTheDocument()
+  })
+
+  it('shows neither line without ammo info', () => {
+    render(<WeaponAttackModal result={baseResult} onClose={() => {}} />)
+    expect(screen.queryByText(/munizion/i)).not.toBeInTheDocument()
+  })
 })

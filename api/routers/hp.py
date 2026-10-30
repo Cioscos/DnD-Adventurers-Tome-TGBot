@@ -143,8 +143,12 @@ async def update_hp(
             amount -= absorbed
         old = char.current_hit_points
         char.current_hit_points = max(0, char.current_hit_points - amount)
+        note = ""
+        if body.raw_value is not None and body.damage_modifier:
+            word = "dimezzati" if body.damage_modifier == "half" else "raddoppiati"
+            note = f" ({body.raw_value} {word})"
         _add_history(session, char.id, "hp_change",
-                     f"Danni: -{body.value} HP ({old} → {char.current_hit_points})",
+                     f"Danni: -{body.value} HP{note} ({old} → {char.current_hit_points})",
                      meta={"op": "DAMAGE"})
 
         # --- Morte & tiri salvezza (D&D 5e RAW) ---
@@ -195,7 +199,8 @@ async def update_hp(
 
         # Auto concentration save — only if still conscious and concentrating
         if (
-            char.concentrating_spell_id is not None
+            body.value > 0
+            and char.concentrating_spell_id is not None
             and char.current_hit_points > 0
         ):
             conc_result = roll_concentration_save(char, body.value, session)
@@ -204,16 +209,17 @@ async def update_hp(
         # event.amount is the GROSS damage requested (body.value, before temp-HP
         # absorption); the actual HP lost is current_hp_before - current_hp_after. This
         # is the canonical semantics — actions.execute_damage_character matches it (#29).
-        firing = await dispatch(
-            session, char, "damage_taken",
-            {
-                "amount": body.value,
-                "was_critical_hit": body.was_critical_hit,
-                "current_hp_before": old,
-                "current_hp_after": char.current_hit_points,
-            },
-        )
-        notifications.extend(collect_homebrew_notifications(firing))
+        if body.value > 0:
+            firing = await dispatch(
+                session, char, "damage_taken",
+                {
+                    "amount": body.value,
+                    "was_critical_hit": body.was_critical_hit,
+                    "current_hp_before": old,
+                    "current_hp_after": char.current_hit_points,
+                },
+            )
+            notifications.extend(collect_homebrew_notifications(firing))
         if old > 0 and char.current_hit_points == 0:
             firing = await dispatch(
                 session, char, "dropped_to_zero",

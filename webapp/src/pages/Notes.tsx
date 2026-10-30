@@ -284,7 +284,7 @@ export default function Notes() {
         onClose={() => setMode('list')}
         title={mode === 'edit' ? t('common.edit') : t('character.notes.new')}
       >
-        <div className="p-4">
+        <div className="p-5">
           <NoteEditor
             initialNote={mode === 'edit' ? editNote : null}
             onSave={handleEditorSave}

@@ -3,9 +3,15 @@ import type { AbilityModifier } from '@/types'
 
 export const ITEM_TYPES = [
   'weapon', 'armor', 'shield', 'consumable', 'tool',
-  'accessory', 'gear', 'generic',
+  'accessory', 'gear', 'ammunition', 'generic',
 ] as const
 export type ItemType = typeof ITEM_TYPES[number]
+
+/** Ordine dei gruppi nella pagina inventario (ogni tipo non elencato cade in `generic`). */
+export const INVENTORY_TYPE_ORDER = [
+  'weapon', 'armor', 'shield', 'consumable', 'tool', 'accessory', 'gear', 'ammunition',
+  'potion', 'scroll', 'generic',
+] as const
 
 /** Tipi a quantità singola (sempre 1): non mostrano il selettore quantità. */
 export const SINGLE_QTY_TYPES = ['weapon', 'armor', 'shield'] as const
@@ -108,6 +114,7 @@ export const TYPE_ICON: Record<string, string> = {
   potion: '\uD83E\uDDEA',
   scroll: '\uD83D\uDCDC',
   gear: '\uD83C\uDF92',
+  ammunition: '\uD83C\uDFF9',
 }
 
 /** Emoji for a consumable based on its subtype (falls back to the consumable icon). */

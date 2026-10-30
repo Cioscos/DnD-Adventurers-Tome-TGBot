@@ -46,6 +46,13 @@ function SpellItemInner({
   concentrationPending,
 }: SpellItemProps) {
   const { t } = useTranslation()
+  const attackSaveLabel = (v?: string | null) => {
+    const key = v?.trim().toUpperCase()
+    if (!key) return ''
+    if (key === 'ATK') return t('character.spells.attack_save.atk')
+    if (key === 'SAVE') return t('character.spells.attack_save.save')
+    return v ?? ''
+  }
   const isConcentrating = concentratingSpellId === spell.id
   // Castabile = preparato, oppure stato preparazione non applicabile
   // (trucchetti, caster a conoscenza): variante piena come le abilità attive.
@@ -165,10 +172,10 @@ function SpellItemInner({
                       <span className="text-xs font-medium text-dnd-text truncate">{spell.damage_dice}{spell.damage_type ? ` ${spell.damage_type}` : ''}</span>
                     </div>
                   )}
-                  {spell.attack_save && (
+                  {attackSaveLabel(spell.attack_save) && (
                     <div className="flex items-center gap-1.5 bg-dnd-chip-bg rounded-lg px-2 py-1.5">
                       <Shield size={12} className="text-dnd-gold-dim shrink-0" />
-                      <span className="text-xs font-medium text-dnd-text truncate">{spell.attack_save}</span>
+                      <span className="text-xs font-medium text-dnd-text truncate">{attackSaveLabel(spell.attack_save)}</span>
                     </div>
                   )}
                 </div>

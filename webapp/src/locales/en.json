@@ -89,6 +89,12 @@
       "toggle_visibility": "Show/hide"
     },
     "quick_actions": {
+      "group_order": "Order",
+      "restore_defaults": "Restore defaults",
+      "restore_title": "Restore the default actions?",
+      "restore_body": "Your list will be replaced by the one computed from the character.",
+      "defaults_hint": "Automatic list: it follows your weapons and spells until you edit it.",
+      "drag_handle": "Drag to reorder",
       "title": "Quick actions",
       "edit": "Edit quick actions",
       "editor_title": "Quick actions",
@@ -184,6 +190,8 @@
       "concentration_active": "Concentrating",
       "concentration_lost": "Concentration lost!",
       "critical_hit": "Critical hit",
+      "modifier_half": "½ Resistance",
+      "modifier_double": "×2 Vulnerability",
       "damage_short": "DMG",
       "heal_short": "HEAL",
       "current_short": "CURR",
@@ -317,6 +325,9 @@
       "no_weapons": "No weapon equipped",
       "attack": "Attack"
     },
+    "attack": {
+      "ammo_missing": "Ammunition empty or not equipped: track it yourself"
+    },
     "ability": {
       "strength_short": "STR",
       "dexterity_short": "DEX",
@@ -425,12 +436,26 @@
         "clear": "Clear filters",
         "no_results": "No spells match the filters"
       },
+      "caster_row": "{{class}} · {{ability}} · DC {{dc}} · {{attack}}",
+      "attack_save": {
+        "label": "Type",
+        "atk": "Attack",
+        "save": "Saving throw",
+        "none": "None"
+      },
       "deals_damage": "Deals damage",
       "damage_dice_label": "Damage dice",
       "damage_type_label": "Damage type",
       "material_detail_label": "Material component",
       "material_detail_placeholder": "e.g. a pinch of sand",
-      "components_help": "V verbal, S somatic, M material"
+      "components_help": "V verbal, S somatic, M material",
+      "cast_done": "{{name}} cast",
+      "cast_done_slot": " · level {{level}} slot",
+      "cast_done_ritual": " · as a ritual",
+      "cast_done_concentration": " · concentrating",
+      "to_hit": "To hit",
+      "attack_caster": "{{class}} · {{bonus}}",
+      "attack_roll_damage": "Roll damage"
     },
     "slots": {
       "title": "Spell Slots",
@@ -799,6 +824,7 @@
         "potion": "Potion",
         "scroll": "Scroll",
         "gear": "Gear",
+        "ammunition": "Ammunition",
         "other": "Other"
       },
       "weapon_type": {

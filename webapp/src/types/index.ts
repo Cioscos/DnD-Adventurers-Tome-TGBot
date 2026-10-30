@@ -90,7 +90,7 @@ export interface Spell {
   is_concentration: boolean
   is_ritual: boolean
   higher_level?: string
-  attack_save?: string
+  attack_save?: string | null
   damage_dice?: string
   damage_type?: string
   is_pinned: boolean
@@ -176,6 +176,7 @@ export interface SpellcastingInfo {
   cap_mode: 'auto' | 'manual'
   has_ritual_caster: boolean
   has_wizard: boolean
+  casters: { class_id: number; class_name: string; ability: string; save_dc: number; attack_bonus: number }[]
 }
 
 // Il dettaglio backend non restituisce ac_homebrew_modifier (solo la lista): resta opzionale
@@ -422,6 +423,26 @@ export interface RollDamageRequest {
   is_critical?: boolean
   main_rolls?: number[]
   extra_rolls?: number[]
+}
+
+/** Esito di POST /characters/{id}/spells/{spell_id}/attack. */
+export interface SpellAttackResult {
+  spell_name: string
+  to_hit_die: number
+  to_hit_bonus: number
+  to_hit_total: number
+  is_critical: boolean
+  is_fumble: boolean
+  caster_class: string | null
+  character: CharacterFull
+  homebrew_notifications?: Array<Record<string, unknown>> | null
+}
+
+export interface SpellAttackRequest {
+  slot_level: number | null
+  ritual?: boolean
+  die?: number
+  with_inspiration?: boolean
 }
 
 export interface RollDamageResult {

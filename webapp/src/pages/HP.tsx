@@ -36,6 +36,7 @@ import HomebrewBreakdownRow from '@/components/homebrew/HomebrewBreakdownRow'
 import HPSkeleton from '@/components/skeletons/HPSkeleton'
 import { useIsFirstValue } from '@/hooks/useIsFirstValue'
 import { notifyMutationError } from '@/lib/mutationError'
+import { applyDamageModifier, type DamageModifier } from '@/lib/damageModifier'
 
 type HPOp = 'damage' | 'heal' | 'set_max' | 'set_current' | 'set_temp'
 
@@ -60,6 +61,7 @@ export default function HP() {
   const [value, setValue] = useState('')
   const [activeOp, setActiveOp] = useState<HPOp>('damage')
   const [crit, setCrit] = useState(false)
+  const [damageModifier, setDamageModifier] = useState<DamageModifier>(null)
   const [instantDeathOpen, setInstantDeathOpen] = useState(false)
   // Synchronous guard against double-fire of handleApply (Input.onCommit on blur +
   // button.onClick both fire when the user taps Conferma — `hpMutation.isPending` isn't
@@ -97,14 +99,20 @@ export default function HP() {
   }
 
   const hpMutation = useMutation({
-    mutationFn: ({ op, val, wasCritical }: { op: HPOp; val: number; wasCritical?: boolean }) =>
-      api.characters.updateHp(charId, op, val, wasCritical ?? false),
+    mutationFn: ({ op, val, wasCritical, modifier }: {
+      op: HPOp; val: number; wasCritical?: boolean
+      modifier?: { damage_modifier: 'half' | 'double'; raw_value: number }
+    }) =>
+      modifier
+        ? api.characters.updateHp(charId, op, val, wasCritical ?? false, modifier)
+        : api.characters.updateHp(charId, op, val, wasCritical ?? false),
     onSuccess: (updated, { op, val }) => {
       qc.setQueryData(['character', charId], updated)
       // HP events (damage/heal) can drive homebrew change_resource rules (#18).
       qc.invalidateQueries({ queryKey: ['homebrew-resources', charId] })
       setValue('')
       setCrit(false)
+      setDamageModifier(null)
       haptic.success()
       maybeShowInstantDeath(updated)
       const conc = updated.concentration_save
@@ -208,13 +216,31 @@ export default function HP() {
     if (isNaN(n) || n <= 0) return
     savingRef.current = true
     const wasCritical = activeOp === 'damage' && char?.current_hit_points === 0 && crit
-    hpMutation.mutate({ op: activeOp, val: n, wasCritical })
+    runHpMutation(activeOp, n, wasCritical)
+  }
+
+  // Il modificatore vale solo per il danno: `val` è già il valore applicato, il grezzo
+  // viaggia come annotazione.
+  const runHpMutation = (op: HPOp, raw: number, wasCritical: boolean) => {
+    if (op === 'damage' && damageModifier) {
+      hpMutation.mutate({
+        op, val: applyDamageModifier(raw, damageModifier), wasCritical,
+        modifier: { damage_modifier: damageModifier, raw_value: raw },
+      })
+    } else {
+      hpMutation.mutate({ op, val: raw, wasCritical })
+    }
+  }
+
+  const handleSetActiveOp = (op: HPOp) => {
+    setActiveOp(op)
+    setDamageModifier(null)
   }
 
   const handleQuickApply = ({ op, val }: { op: HPOp; val: number }) => {
     if (!char || hpMutation.isPending) return
     const wasCritical = op === 'damage' && char.current_hit_points === 0 && crit
-    hpMutation.mutate({ op, val, wasCritical })
+    runHpMutation(op, val, wasCritical)
   }
 
   if (!char) {
@@ -369,7 +395,7 @@ export default function HP() {
       {!isDead && (
         <HpOperationForm
           activeOp={activeOp}
-          setActiveOp={setActiveOp}
+          setActiveOp={handleSetActiveOp}
           value={value}
           setValue={setValue}
           onApply={handleApply}
@@ -379,6 +405,8 @@ export default function HP() {
           atZero={atZero}
           crit={crit}
           setCrit={setCrit}
+          damageModifier={damageModifier}
+          setDamageModifier={setDamageModifier}
         />
       )}
 

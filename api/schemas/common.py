@@ -242,6 +242,9 @@ class HPUpdate(BaseModel):
     op: HPOp
     value: int
     was_critical_hit: bool = False
+    # Solo annotazione: `value` è già il danno applicato dopo resistenza/vulnerabilità.
+    damage_modifier: Literal["half", "double"] | None = None
+    raw_value: int | None = Field(None, ge=0)
 
 
 class HPUndoRequest(BaseModel):

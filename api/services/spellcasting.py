@@ -12,7 +12,8 @@ manuale (``settings.prepared_cap_mode = 'manual'``).
 
 from __future__ import annotations
 
-from api.schemas.character import SpellcastingInfo
+from api.routers._helpers import effective_ability_mod
+from api.schemas.character import SpellCasterStats, SpellcastingInfo
 from core.data.spellcasting import (
     compute_prepared_cap,
     has_preparing_class,
@@ -20,6 +21,35 @@ from core.data.spellcasting import (
     has_wizard,
 )
 from core.db.models import Character
+
+
+def _caster_stats(char: Character) -> list[SpellCasterStats]:
+    pb = char.proficiency_bonus
+    out: list[SpellCasterStats] = []
+    for cls in char.classes:
+        ability = (cls.spellcasting_ability or "").strip().lower()
+        if not ability:
+            continue
+        mod = effective_ability_mod(char, ability)
+        out.append(
+            SpellCasterStats(
+                class_id=cls.id,
+                class_name=cls.class_name,
+                ability=ability,
+                save_dc=8 + pb + mod,
+                attack_bonus=pb + mod,
+            )
+        )
+    return out
+
+
+def best_caster(char: Character) -> SpellCasterStats | None:
+    """Caster con il bonus di attacco più alto (il primo in caso di parità)."""
+    best: SpellCasterStats | None = None
+    for c in _caster_stats(char):
+        if best is None or c.attack_bonus > best.attack_bonus:
+            best = c
+    return best
 
 
 def build_spellcasting_info(char: Character) -> SpellcastingInfo:
@@ -45,4 +75,5 @@ def build_spellcasting_info(char: Character) -> SpellcastingInfo:
         cap_mode=cap_mode if preparing else "auto",
         has_ritual_caster=has_ritual_caster(classes),
         has_wizard=has_wizard(classes),
+        casters=_caster_stats(char),
     )

@@ -36,6 +36,8 @@ import type {
   ParticipantIdentity,
   RollDamageRequest,
   RollDamageResult,
+  SpellAttackRequest,
+  SpellAttackResult,
   SessionFeedResponse,
   SessionMessage,
   ShareImportResult,
@@ -85,6 +87,8 @@ export type WeaponAttackResult = {
   damage_rolls: number[]
   damage_bonus: number
   damage_total: number
+  ammo?: { item_id: number; name: string; remaining: number } | null
+  ammo_missing?: boolean
 }
 
 export type HitDiceSpendResult = {
@@ -280,10 +284,16 @@ export const api = {
       request<void>(`/characters/${id}`, { method: 'DELETE' }),
 
     // HP
-    updateHp: (id: number, op: string, value: number, wasCritical = false) =>
+    updateHp: (
+      id: number,
+      op: string,
+      value: number,
+      wasCritical = false,
+      modifier?: { damage_modifier: 'half' | 'double'; raw_value: number },
+    ) =>
       request<CharacterFull>(`/characters/${id}/hp`, {
         method: 'PATCH',
-        body: JSON.stringify({ op, value, was_critical_hit: wasCritical }),
+        body: JSON.stringify({ op, value, was_critical_hit: wasCritical, ...modifier }),
       }),
     undoHp: (id: number, opId: string) =>
       request<CharacterFull>(`/characters/${id}/hp/undo`, {
@@ -471,6 +481,11 @@ export const api = {
       }),
     rollDamage: (charId: number, spellId: number, body: RollDamageRequest): Promise<RollDamageResult> =>
       request<RollDamageResult>(`/characters/${charId}/spells/${spellId}/roll_damage`, {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+    attack: (charId: number, spellId: number, body: SpellAttackRequest): Promise<SpellAttackResult> =>
+      request<SpellAttackResult>(`/characters/${charId}/spells/${spellId}/attack`, {
         method: 'POST',
         body: JSON.stringify(body),
       }),

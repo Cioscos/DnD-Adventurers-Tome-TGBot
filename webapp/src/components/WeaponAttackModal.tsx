@@ -6,19 +6,9 @@ import {
 } from 'react-icons/gi'
 import ResultDialog from './ui/ResultDialog'
 import InspirationRerollButton from './InspirationRerollButton'
+import type { WeaponAttackResult } from '@/api/client'
 
-export type WeaponAttackResult = {
-  weapon_name: string
-  to_hit_die: number
-  to_hit_bonus: number
-  to_hit_total: number
-  is_critical: boolean
-  is_fumble: boolean
-  damage_dice: string
-  damage_rolls: number[]
-  damage_bonus: number
-  damage_total: number
-}
+export type { WeaponAttackResult }
 
 type Props = {
   result: WeaponAttackResult
@@ -41,6 +31,7 @@ export default function WeaponAttackModal({
   const {
     weapon_name, to_hit_die, to_hit_bonus, to_hit_total,
     is_critical, is_fumble, damage_dice, damage_rolls, damage_bonus, damage_total,
+    ammo, ammo_missing,
   } = result
 
   const bonusStr = (n: number) => n >= 0 ? `+${n}` : `${n}`
@@ -124,6 +115,17 @@ export default function WeaponAttackModal({
             {damage_total}
           </p>
         </m.div>
+      )}
+
+      {ammo && (
+        <p className="text-sm text-dnd-text-muted font-body tabular-nums">
+          {ammo.name}: {ammo.remaining}
+        </p>
+      )}
+      {ammo_missing && (
+        <p className="text-sm text-dnd-crimson-bright font-body">
+          {t('character.attack.ammo_missing')}
+        </p>
       )}
     </ResultDialog>
   )

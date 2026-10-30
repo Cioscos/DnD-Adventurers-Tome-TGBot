@@ -89,6 +89,12 @@
       "toggle_visibility": "Mostra/nascondi"
     },
     "quick_actions": {
+      "group_order": "Ordine",
+      "restore_defaults": "Ripristina predefinite",
+      "restore_title": "Ripristinare le azioni predefinite?",
+      "restore_body": "La tua lista verrà sostituita da quella calcolata dal personaggio.",
+      "defaults_hint": "Lista automatica: si aggiorna con armi e incantesimi finché non la modifichi.",
+      "drag_handle": "Trascina per riordinare",
       "title": "Azioni rapide",
       "edit": "Modifica azioni rapide",
       "editor_title": "Azioni rapide",
@@ -184,6 +190,8 @@
       "concentration_active": "In concentrazione",
       "concentration_lost": "Concentrazione persa!",
       "critical_hit": "Colpo critico",
+      "modifier_half": "½ Resistenza",
+      "modifier_double": "×2 Vulnerabilità",
       "damage_short": "DANNI",
       "heal_short": "CURA",
       "current_short": "ATTUALI",
@@ -317,6 +325,9 @@
       "no_weapons": "Nessun'arma equipaggiata",
       "attack": "Attacca"
     },
+    "attack": {
+      "ammo_missing": "Munizioni esaurite o non equipaggiate: scala tu le munizioni"
+    },
     "ability": {
       "strength_short": "FOR",
       "dexterity_short": "DES",
@@ -425,12 +436,26 @@
         "clear": "Azzera filtri",
         "no_results": "Nessun incantesimo corrisponde ai filtri"
       },
+      "caster_row": "{{class}} · {{ability}} · CD {{dc}} · {{attack}}",
+      "attack_save": {
+        "label": "Tipo",
+        "atk": "Attacco",
+        "save": "Tiro salvezza",
+        "none": "Nessuno"
+      },
       "deals_damage": "Infligge danno",
       "damage_dice_label": "Dado del danno",
       "damage_type_label": "Tipo di danno",
       "material_detail_label": "Componente materiale",
       "material_detail_placeholder": "es. un pizzico di sabbia",
-      "components_help": "V verbale, S somatica, M materiale"
+      "components_help": "V verbale, S somatica, M materiale",
+      "cast_done": "{{name}} lanciato",
+      "cast_done_slot": " · slot {{level}}° livello",
+      "cast_done_ritual": " · come rituale",
+      "cast_done_concentration": " · concentrazione attiva",
+      "to_hit": "Per colpire",
+      "attack_caster": "{{class}} · {{bonus}}",
+      "attack_roll_damage": "Tira danni"
     },
     "slots": {
       "title": "Slot Incantesimo",
@@ -799,6 +824,7 @@
         "potion": "Pozione",
         "scroll": "Pergamena",
         "gear": "Equipaggiamento",
+        "ammunition": "Munizione",
         "other": "Altro"
       },
       "weapon_type": {

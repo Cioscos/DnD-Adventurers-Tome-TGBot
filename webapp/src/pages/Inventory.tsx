@@ -26,7 +26,7 @@ import { canShareMessage, haptic } from '@/auth/telegram'
 import { useShareMessage } from '@/hooks/useShareMessage'
 import InventoryItem, { type ItemProperty } from '@/pages/inventory/InventoryItem'
 import ItemForm from '@/pages/inventory/ItemForm'
-import { buildItemMetadata, buildHomebrewMetadataPatch, type ItemFormData, type ItemEffect } from '@/pages/inventory/itemMetadata'
+import { INVENTORY_TYPE_ORDER, buildItemMetadata, buildHomebrewMetadataPatch, type ItemFormData, type ItemEffect } from '@/pages/inventory/itemMetadata'
 import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import { getItemTypeIcon } from '@/lib/itemIcons'
 import type { Item } from '@/types'
@@ -349,8 +349,7 @@ export default function Inventory() {
     setExpanded(highlightId)
 
     // Sblocca il tipo collassato (se serve)
-    const TYPE_ORDER = ['weapon', 'armor', 'shield', 'consumable', 'tool', 'accessory', 'gear', 'potion', 'scroll', 'generic']
-    const typeKey = TYPE_ORDER.includes(target.item_type) ? target.item_type : 'generic'
+    const typeKey = (INVENTORY_TYPE_ORDER as readonly string[]).includes(target.item_type) ? target.item_type : 'generic'
     setCollapsedTypes((prev) => {
       if (!prev.has(typeKey)) return prev
       const next = new Set(prev)
@@ -403,7 +402,7 @@ export default function Inventory() {
   const items: Item[] = char.items ?? []
   const totalWeight = items.reduce((sum, i) => sum + i.weight * i.quantity, 0)
 
-  const TYPE_ORDER: string[] = ['weapon', 'armor', 'shield', 'consumable', 'tool', 'accessory', 'gear', 'potion', 'scroll', 'generic']
+  const TYPE_ORDER: readonly string[] = INVENTORY_TYPE_ORDER
   const grouped = items.reduce<Record<string, Item[]>>((acc, item) => {
     const key = TYPE_ORDER.includes(item.item_type) ? item.item_type : 'generic'
     if (!acc[key]) acc[key] = []
