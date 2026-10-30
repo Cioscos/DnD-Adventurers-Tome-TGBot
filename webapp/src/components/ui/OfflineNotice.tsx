@@ -22,7 +22,7 @@ function formatDataTime(timestamp: number, locale: string): string {
     hour: '2-digit',
     minute: '2-digit',
     // Sempre HH:mm, anche con le lingue che userebbero AM/PM.
-    hour12: false,
+    hourCycle: 'h23',
   })
 }
 

@@ -117,6 +117,9 @@ export default function HP() {
     onSuccess: (updated) => {
       qc.setQueryData(['character', charId], updated)
       qc.invalidateQueries({ queryKey: ['homebrew-resources', charId] })
+      // I dialog raccontavano l'operazione appena annullata.
+      setInstantDeathOpen(false)
+      setConcSaveResult(null)
     },
     onError: (err) => {
       if (err instanceof ApiError && err.status === 409) {

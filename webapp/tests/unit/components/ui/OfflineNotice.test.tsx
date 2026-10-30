@@ -54,6 +54,16 @@ describe('OfflineNotice', () => {
     expect(screen.getByText('common.offline_data_from|14:05')).toBeInTheDocument()
   })
 
+  // hour12: false può dare 24:05 su alcuni motori, hourCycle no.
+  it('asks for the h23 cycle instead of hour12', () => {
+    const spy = vi.spyOn(Date.prototype, 'toLocaleString')
+    render(<OfflineNotice query={{ ...base, isRefetchError: true, error: new TypeError('x') }} />)
+    const options = spy.mock.calls[0][1]
+    expect(options?.hourCycle).toBe('h23')
+    expect(options).not.toHaveProperty('hour12')
+    spy.mockRestore()
+  })
+
   it('writes midnight as 00, not 24, in English', () => {
     lang.value = 'en'
     render(<OfflineNotice query={{ ...base, dataUpdatedAt: todayAt(0, 5), isRefetchError: true, error: new TypeError('x') }} />)

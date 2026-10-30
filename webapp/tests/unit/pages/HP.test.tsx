@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { screen, waitFor } from '@testing-library/react'
+import { act, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from '../utils/renderWithProviders'
 import HP from '@/pages/HP'
@@ -276,6 +276,32 @@ describe('HP page', () => {
     showUndoToastSpy.mock.calls[0][0].onUndo()
     await waitFor(() => expect(undoHpSpy).toHaveBeenCalledWith(7, 'abc'))
     expect(updateHpSpy).toHaveBeenCalledTimes(1)
+  })
+
+  // L'annullamento riporta indietro lo stato: i dialog dell'operazione annullata non
+  // devono restare aperti a raccontare una morte o un TS che non valgono più.
+  it('undo closes the instant-death and concentration dialogs', async () => {
+    getChar.mockResolvedValue(aliveChar)
+    updateHpSpy.mockResolvedValue({
+      ...aliveChar,
+      hp_undo_id: 'abc',
+      is_dead: true,
+      current_hit_points: 0,
+      death_saves: { successes: 0, failures: 1, stable: false },
+      concentration_save: { dc: 10, die: 4, total: 6, success: false, lost_concentration: true },
+    })
+    undoHpSpy.mockResolvedValue(aliveChar)
+    renderWithProviders(<HP />)
+    await screen.findByTestId('hp-op-form')
+
+    await userEvent.click(screen.getByTestId('hp-quick-heal'))
+    expect(await screen.findByTestId('instant-death')).toBeInTheDocument()
+    expect(screen.getByTestId('conc-dialog')).toBeInTheDocument()
+    await waitFor(() => expect(showUndoToastSpy).toHaveBeenCalled())
+
+    act(() => { showUndoToastSpy.mock.calls[0][0].onUndo() })
+    await waitFor(() => expect(screen.queryByTestId('instant-death')).toBeNull())
+    expect(screen.queryByTestId('conc-dialog')).toBeNull()
   })
 
   it('short rest spends hit dice and rests; long rest goes through the confirm sheet', async () => {

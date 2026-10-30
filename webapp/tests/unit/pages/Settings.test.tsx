@@ -43,7 +43,7 @@ vi.mock('@/dice/packs/dicePackContext', () => ({ useDicePack: () => ({ loading: 
 vi.mock('@/dice/packs/manifest', () => ({ loadManifest: async () => ({ name: 'x' }) }))
 vi.mock('@/components/Layout', async () => {
   const React = await import('react')
-  return { default: (p: { children?: unknown }) => React.createElement('div', null, p.children) }
+  return { default: (p: { children?: unknown }) => React.createElement('div', { 'data-testid': 'layout' }, p.children) }
 })
 vi.mock('@/components/ui/ConfirmSheet', async () => {
   const React = await import('react')
@@ -76,6 +76,17 @@ afterEach(() => {
   navigateSpy.mockReset(); toastError.mockReset()
 })
 
+describe('Settings without data', () => {
+  // Una pagina bianca non avrebbe nemmeno il pulsante indietro.
+  it('renders the layout while the character is not available', async () => {
+    getChar.mockReturnValue(new Promise(() => {}))
+    retentionPreview.mockResolvedValue({ total: 0, would_purge_events: 0, would_purge_days: 0 })
+    setup()
+    expect(await screen.findByTestId('layout')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'character.settings.delete_character' })).toBeNull()
+  })
+})
+
 describe('Settings delete character', () => {
   const arrange = () => {
     getChar.mockResolvedValue(char)
@@ -99,6 +110,8 @@ describe('Settings delete character', () => {
     await waitFor(() => expect(navigateSpy).toHaveBeenCalledWith('/', { replace: true }))
     expect(deleteChar).toHaveBeenCalledWith(5)
     expect(removeSpy).toHaveBeenCalledWith({ queryKey: ['character', 5] })
+    // Le note sono persistite su localStorage: non devono sopravvivere al personaggio.
+    expect(removeSpy).toHaveBeenCalledWith({ queryKey: ['notes', 5] })
     expect(qc.getQueryData(['characters'])).toEqual([{ id: 6, name: 'Boromir' }])
   })
 

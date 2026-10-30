@@ -89,6 +89,9 @@ export default function CharacterSelect() {
   const charactersQuery = useQuery({
     queryKey: ['characters'],
     queryFn: () => api.characters.list(),
+    // Le modifiche sulla scheda (PF, morte, CA) non invalidano la lista: al ritorno in
+    // home va sempre riletta, anche entro lo staleTime.
+    refetchOnMount: 'always',
   })
   const { isLoading, isError, refetch } = charactersQuery
   // Il default vuoto solo qui: il controllo dell'errore deve vedere l'assenza di dati.

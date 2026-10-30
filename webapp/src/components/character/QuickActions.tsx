@@ -23,6 +23,7 @@ import { useDiceAnimation } from '@/dice/useDiceAnimation'
 import { useDiceSettings } from '@/store/diceSettings'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { useToast } from '@/hooks/useToast'
+import { notifyMutationError } from '@/lib/mutationError'
 import { showUndoToast } from '@/components/ui/UndoToast'
 import { useCastFlow } from '@/pages/spells/useCastFlow'
 import {
@@ -242,7 +243,7 @@ export default function QuickActions({ char }: Props) {
         qc.invalidateQueries({ queryKey: ['character', char.id] })
         setConfirmHitDie(null)
       } else {
-        haptic.error()
+        notifyMutationError()
       }
     },
   })

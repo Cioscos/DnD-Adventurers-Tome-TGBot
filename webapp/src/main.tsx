@@ -16,7 +16,7 @@ import { getStartParam, getTelegramUser } from './auth/telegram'
 import { getDevUserId } from './auth/devUser'
 import { notifyMutationError } from './lib/mutationError'
 import { parseStartParam } from './lib/startParam'
-import { CACHE_MAX_AGE_MS, createPersister, shouldPersistQuery } from './lib/queryPersist'
+import { CACHE_MAX_AGE_MS, OFFLINE_QUERY_DEFAULTS, createPersister, shouldPersistQuery } from './lib/queryPersist'
 import './index.css'
 import './i18n'
 
@@ -104,9 +104,7 @@ const queryClient = new QueryClient({
     queries: {
       staleTime: 30_000,
       retry: 1,
-      // Default 'online': da offline la query resta IN PAUSA, quindi uno skeleton
-      // infinito senza cache e nessun avviso sui dati in cache. Deve fallire.
-      networkMode: 'always',
+      ...OFFLINE_QUERY_DEFAULTS,
     },
     mutations: {
       // Default 'online': da offline la mutation resta IN PAUSA (niente errore,

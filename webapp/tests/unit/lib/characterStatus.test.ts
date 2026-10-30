@@ -26,6 +26,17 @@ describe('cardStatus', () => {
 })
 
 describe('effective values', () => {
+  // Tra il deploy di Pages e quello del Raspberry il frontend nuovo legge l'API vecchia.
+  it('treats modifiers missing from an older API as 0', () => {
+    const older = base({ hit_points: 5, ac: 12 }) as unknown as Record<string, unknown>
+    delete older.hp_max_homebrew_modifier
+    delete older.ac_homebrew_modifier
+    const c = older as unknown as CharacterSummary
+    expect(effectiveHpMax(c)).toBe(5)
+    expect(effectiveAc(c)).toBe(12)
+    expect(cardStatus({ ...c, hit_points: 0 })).toBe('unconfigured')
+  })
+
   it('adds homebrew modifiers', () => {
     const c = base({ hit_points: 20, hp_max_homebrew_modifier: 5, ac: 15, ac_homebrew_modifier: 2 })
     expect(effectiveHpMax(c)).toBe(25)

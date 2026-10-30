@@ -2,14 +2,17 @@ import type { CharacterSummary } from '@/types'
 
 export type CardStatus = 'dead' | 'unconfigured' | 'down' | 'ok'
 
+// `?? 0` sui modificatori: tra il deploy di Pages e quello del Raspberry il frontend
+// nuovo legge l'API vecchia, che non li manda.
+
 /** PF massimi effettivi: base + modificatore homebrew. */
 export function effectiveHpMax(c: CharacterSummary): number {
-  return c.hit_points + c.hp_max_homebrew_modifier
+  return c.hit_points + (c.hp_max_homebrew_modifier ?? 0)
 }
 
 /** CA effettiva: base + modificatore homebrew. */
 export function effectiveAc(c: CharacterSummary): number {
-  return c.ac + c.ac_homebrew_modifier
+  return c.ac + (c.ac_homebrew_modifier ?? 0)
 }
 
 /** Stato della card in home. Morto vince su tutto; PF massimi a 0 = non configurato. */

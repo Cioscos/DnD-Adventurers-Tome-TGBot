@@ -10,6 +10,7 @@ import {
 import { api } from '@/api/client'
 import type { CharacterSummary } from '@/types'
 import Layout from '@/components/Layout'
+import GenericPageSkeleton from '@/components/skeletons/GenericPageSkeleton'
 import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
 import Pressable from '@/components/ui/Pressable'
@@ -178,6 +179,8 @@ export default function Settings() {
         old ? old.filter((c) => c.id !== charId) : old,
       )
       qc.removeQueries({ queryKey: ['character', charId] })
+      // Le note sono salvate in localStorage: non devono sopravvivere al personaggio.
+      qc.removeQueries({ queryKey: ['notes', charId] })
       haptic.success()
       navigate('/', { replace: true })
     },
@@ -188,7 +191,13 @@ export default function Settings() {
     },
   })
 
-  if (!char) return null
+  if (!char) {
+    return (
+      <Layout title={t('character.settings.title')} backTo={`/char/${charId}`}>
+        <GenericPageSkeleton />
+      </Layout>
+    )
+  }
 
   const settings = (char.settings as Record<string, unknown>) ?? {}
   const slotsMode = (settings.spell_slots_mode as string) ?? 'auto'

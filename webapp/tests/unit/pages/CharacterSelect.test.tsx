@@ -55,6 +55,18 @@ describe('CharacterSelect', () => {
     expect(screen.queryByText('common.error')).toBeNull()
   })
 
+  // Danno sulla scheda e ritorno in home entro lo staleTime: ['characters'] non viene
+  // invalidata, quindi solo il refetch al montaggio porta i PF e il badge aggiornati.
+  it('refetches the list on mount even when the cached copy is still fresh', async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 30_000 } } })
+    client.setQueryData(['characters'], [char()])
+    list.mockResolvedValue([char({ is_dead: true, current_hit_points: 0 })])
+    me.mockResolvedValue(null)
+    renderWithProviders(<CharacterSelect />, { client })
+    expect(await screen.findByText('character.select.dead_badge')).toBeTruthy()
+    expect(list).toHaveBeenCalledTimes(1)
+  })
+
   it('shows the error, not the empty roster, when the fetch fails without cache', async () => {
     list.mockRejectedValue(new TypeError('Failed to fetch'))
     me.mockResolvedValue(null)

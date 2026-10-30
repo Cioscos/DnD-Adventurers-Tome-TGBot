@@ -10,6 +10,7 @@ import HitDiceModal from '@/pages/hp/HitDiceModal'
 import HitDiceResultDialog from '@/pages/hp/HitDiceResultDialog'
 import { haptic } from '@/auth/telegram'
 import { useToast } from '@/hooks/useToast'
+import { notifyMutationError } from '@/lib/mutationError'
 import type { HitDiceSpendResult } from '@/api/client'
 import type { CharacterFull } from '@/types'
 
@@ -41,7 +42,7 @@ export default function RestSheet({ char, open, onClose }: Props) {
         toast.error(t('character.quick_actions.hit_die_exhausted'))
         qc.invalidateQueries({ queryKey: ['character', char.id] })
       } else {
-        haptic.error()
+        notifyMutationError()
       }
     },
   })
