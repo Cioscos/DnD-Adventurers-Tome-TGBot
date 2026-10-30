@@ -5,7 +5,7 @@
 
 import { readdirSync, mkdirSync, writeFileSync, existsSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const WEBAPP_ROOT = resolve(__dirname, '..')
@@ -27,7 +27,7 @@ export function generateSilhouetteManifest() {
 }
 
 // CLI: node scripts/generate-silhouette-manifest.mjs
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   const files = generateSilhouetteManifest()
   console.log(`Wrote ${files.length} entries to ${OUT_PATH}`)
 }
