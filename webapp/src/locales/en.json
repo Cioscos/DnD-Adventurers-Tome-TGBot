@@ -145,6 +145,7 @@
       "class": "Class",
       "xp": "Experience",
       "conditions": "Conditions",
+      "rest": "Rest",
       "history": "History",
       "notes": "Notes",
       "maps": "Maps",

@@ -164,7 +164,7 @@ export default function Conditions() {
 
   if (!char) {
     return (
-      <Layout title={t('character.conditions.title')} backTo={`/char/${charId}`} group="character" page="conditions">
+      <Layout title={t('character.conditions.title')} backTo={`/char/${charId}`} group="combat" page="conditions">
         <ConditionsSkeleton />
       </Layout>
     )
@@ -247,7 +247,7 @@ export default function Conditions() {
   }
 
   return (
-    <Layout title={t('character.conditions.title')} backTo={`/char/${charId}`} group="character" page="conditions">
+    <Layout title={t('character.conditions.title')} backTo={`/char/${charId}`} group="combat" page="conditions">
       {/* Turn-start CTA — only visible when at least one homebrew-applied
           `custom:*` condition is active, because that's the only situation
           where a `turn_started` trigger can have an effect the player

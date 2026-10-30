@@ -9,14 +9,19 @@ vi.mock('@/components/modalContext', () => ({ useModal: () => ({ isModalOpen: fa
 vi.mock('@/auth/telegram', () => ({ haptic: new Proxy({}, { get: () => () => {} }) }))
 
 describe('getGroupInfo', () => {
+  it('conditions is the last page of combat', () => {
+    expect(getGroupInfo('combat', 'conditions')?.pages).toEqual(['hp', 'ac', 'saves', 'actions', 'conditions'])
+  })
+
   it('resolves a page within its group to {index, total}', () => {
-    expect(getGroupInfo('combat', 'hp')).toEqual({ pages: ['hp', 'ac', 'saves', 'actions'], index: 0, total: 4 })
+    expect(getGroupInfo('combat', 'hp')).toEqual({ pages: ['hp', 'ac', 'saves', 'actions', 'conditions'], index: 0, total: 5 })
     expect(getGroupInfo('combat', 'saves')?.index).toBe(2)
   })
 
   it('returns null for an unknown group, page, or missing args', () => {
     expect(getGroupInfo('nope', 'hp')).toBeNull()
     expect(getGroupInfo('combat', 'nope')).toBeNull()
+    expect(getGroupInfo('character', 'conditions')).toBeNull()
     expect(getGroupInfo(undefined, undefined)).toBeNull()
   })
 })
@@ -104,7 +109,7 @@ describe('useSwipeNavigation — rilascio del gesto', () => {
   })
 
   it('oltre il bordo del gruppo non naviga', () => {
-    const s = setup('actions')
+    const s = setup('conditions')
     drag(s, 100, 5)
     expect(navigateSpy).not.toHaveBeenCalled()
   })

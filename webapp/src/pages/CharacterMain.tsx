@@ -191,7 +191,7 @@ export default function CharacterMain() {
       <CharacterSwiper
         hero={<HeroScreen char={char} />}
         equipment={<EquipmentScreen char={char} />}
-        menu={<MenuScreen charId={charId} />}
+        menu={<MenuScreen char={char} />}
       />
 
       <SearchOverlay char={char} open={searchOpen} onClose={() => setSearchOpen(false)} />
