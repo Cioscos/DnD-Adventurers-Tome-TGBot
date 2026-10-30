@@ -22,6 +22,7 @@ from api.schemas.character import CharacterFull
 from api.schemas.item import AmmoState, ItemCreate, ItemRead, ItemUpdate, WeaponAttackResult
 from core.game.stats import effective_ability_score
 from core.game.attacks import unarmed_strike_profile
+from core.data.spell_slots import normalize_class_name
 from api.routers._helpers import (
     collect_homebrew_notifications,
     effective_ability_mod,
@@ -582,7 +583,7 @@ async def attack_unarmed(
     str_mod = effective_ability_mod(char, "strength")
     dex_mod = effective_ability_mod(char, "dexterity")
     monk_level = next(
-        (c.level for c in char.classes if c.class_name.lower() == "monaco"), 0
+        (c.level for c in char.classes if normalize_class_name(c.class_name) == "monk"), 0
     )
 
     ability_mod, damage_dice_str = unarmed_strike_profile(str_mod, dex_mod, monk_level)
