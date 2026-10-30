@@ -304,6 +304,7 @@ To regenerate after major design drift, run `$impeccable document` (DESIGN.md + 
 2. Always work on a feature branch, never directly on main.
 3. Use Context7 MCP server when it makes sense.
 4. Brainstorming/spec docs from the superpowers skills live under `docs/superpowers/` (and `.superpowers/`), both gitignored. They are **local working material — do not commit them by default**. Commit explicitly with `git add -f` only when the user asks for in-repo traceability.
+5. **GitHub account before pushing or opening a PR**: this repo belongs to `Cioscos`, but the machine also has the `cischi` account, which gets a 403 here. First check with `gh auth status` and, if `Cioscos` is not active, run `gh auth switch --hostname github.com --user Cioscos` (global for github.com: tell the user). Switching is not enough for `git push`, because Git Credential Manager may still offer `cischi`: if the push gets a 403, retry with `git -c credential.helper= -c "credential.helper=!gh auth git-credential" push`.
 
 ## Accessibility scope (webapp)
 
