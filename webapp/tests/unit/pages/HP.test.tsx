@@ -232,6 +232,20 @@ describe('HP page', () => {
     await waitFor(() => expect(updateHpSpy).toHaveBeenCalledWith(7, 'damage', 5, false))
   })
 
+  it('typed value also shows one undo toast that undoes with the op id', async () => {
+    getChar.mockResolvedValue(aliveChar)
+    updateHpSpy.mockResolvedValue({ ...aliveChar, hp_undo_id: 'typed' })
+    undoHpSpy.mockResolvedValue(aliveChar)
+    renderWithProviders(<HP />)
+    await screen.findByTestId('hp-op-form')
+
+    await userEvent.type(screen.getByTestId('hp-value'), '5')
+    await userEvent.click(screen.getByTestId('hp-apply'))
+    await waitFor(() => expect(showUndoToastSpy).toHaveBeenCalledTimes(1))
+    showUndoToastSpy.mock.calls[0][0].onUndo()
+    await waitFor(() => expect(undoHpSpy).toHaveBeenCalledWith(7, 'typed'))
+  })
+
   it('does not call updateHp for non-positive / NaN input (guard)', async () => {
     getChar.mockResolvedValue(aliveChar)
     renderWithProviders(<HP />)
