@@ -442,7 +442,14 @@
       "damage_type_label": "Damage type",
       "material_detail_label": "Material component",
       "material_detail_placeholder": "e.g. a pinch of sand",
-      "components_help": "V verbal, S somatic, M material"
+      "components_help": "V verbal, S somatic, M material",
+      "cast_done": "{{name}} cast",
+      "cast_done_slot": " · level {{level}} slot",
+      "cast_done_ritual": " · as a ritual",
+      "cast_done_concentration": " · concentrating",
+      "to_hit": "To hit",
+      "attack_caster": "{{class}} · {{bonus}}",
+      "attack_roll_damage": "Roll damage"
     },
     "slots": {
       "title": "Spell Slots",

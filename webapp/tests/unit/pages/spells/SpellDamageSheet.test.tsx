@@ -76,4 +76,22 @@ describe('SpellDamageSheet', () => {
     expect(await screen.findByText('character.spells.roll_damage.half_damage')).toBeInTheDocument()
     expect(screen.getByText('7')).toBeInTheDocument()
   })
+
+  it('does not consume the slot again after the attack roll', async () => {
+    rollDamage.mockResolvedValue(result)
+    const ray = { ...leveled, attack_save: 'ATK', is_concentration: true }
+    renderWithProviders(<SpellDamageSheet charId={7} spell={ray} slotLevel={3} slotAlreadyConsumed onClose={() => {}} />)
+    await userEvent.click(screen.getByRole('button', { name: /roll_button/ }))
+    await waitFor(() => expect(rollDamage).toHaveBeenCalledWith(7, 2, expect.objectContaining({ casting_level: 3 })))
+    expect(useSpell).not.toHaveBeenCalled()
+    expect(updateConc).not.toHaveBeenCalled()
+  })
+
+  it('opens with the critical switch on after a natural 20', async () => {
+    rollDamage.mockResolvedValue(result)
+    renderWithProviders(<SpellDamageSheet charId={7} spell={cantrip} slotLevel={0} slotAlreadyConsumed initialCritical onClose={() => {}} />)
+    expect(screen.getByRole('switch')).toHaveAttribute('aria-checked', 'true')
+    await userEvent.click(screen.getByRole('button', { name: /roll_button/ }))
+    await waitFor(() => expect(rollDamage).toHaveBeenCalledWith(7, 1, expect.objectContaining({ is_critical: true })))
+  })
 })

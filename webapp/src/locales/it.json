@@ -442,7 +442,14 @@
       "damage_type_label": "Tipo di danno",
       "material_detail_label": "Componente materiale",
       "material_detail_placeholder": "es. un pizzico di sabbia",
-      "components_help": "V verbale, S somatica, M materiale"
+      "components_help": "V verbale, S somatica, M materiale",
+      "cast_done": "{{name}} lanciato",
+      "cast_done_slot": " · slot {{level}}° livello",
+      "cast_done_ritual": " · come rituale",
+      "cast_done_concentration": " · concentrazione attiva",
+      "to_hit": "Per colpire",
+      "attack_caster": "{{class}} · {{bonus}}",
+      "attack_roll_damage": "Tira danni"
     },
     "slots": {
       "title": "Slot Incantesimo",

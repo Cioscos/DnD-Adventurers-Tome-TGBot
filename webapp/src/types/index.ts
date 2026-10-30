@@ -425,6 +425,26 @@ export interface RollDamageRequest {
   extra_rolls?: number[]
 }
 
+/** Esito di POST /characters/{id}/spells/{spell_id}/attack. */
+export interface SpellAttackResult {
+  spell_name: string
+  to_hit_die: number
+  to_hit_bonus: number
+  to_hit_total: number
+  is_critical: boolean
+  is_fumble: boolean
+  caster_class: string | null
+  character: CharacterFull
+  homebrew_notifications?: Array<Record<string, unknown>> | null
+}
+
+export interface SpellAttackRequest {
+  slot_level: number | null
+  ritual?: boolean
+  die?: number
+  with_inspiration?: boolean
+}
+
 export interface RollDamageResult {
   rolls: number[]
   total: number

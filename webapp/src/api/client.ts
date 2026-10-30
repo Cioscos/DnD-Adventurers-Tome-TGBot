@@ -36,6 +36,8 @@ import type {
   ParticipantIdentity,
   RollDamageRequest,
   RollDamageResult,
+  SpellAttackRequest,
+  SpellAttackResult,
   SessionFeedResponse,
   SessionMessage,
   ShareImportResult,
@@ -479,6 +481,11 @@ export const api = {
       }),
     rollDamage: (charId: number, spellId: number, body: RollDamageRequest): Promise<RollDamageResult> =>
       request<RollDamageResult>(`/characters/${charId}/spells/${spellId}/roll_damage`, {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+    attack: (charId: number, spellId: number, body: SpellAttackRequest): Promise<SpellAttackResult> =>
+      request<SpellAttackResult>(`/characters/${charId}/spells/${spellId}/attack`, {
         method: 'POST',
         body: JSON.stringify(body),
       }),
