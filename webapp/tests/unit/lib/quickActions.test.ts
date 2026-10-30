@@ -4,10 +4,11 @@ import {
   resolveQuickActions,
   readQuickActions,
   hitDiceRemaining,
+  isAmmunitionItem,
   QUICK_ACTIONS_MAX,
   type QuickActionEntry,
 } from '@/lib/quickActions'
-import type { CharacterFull, CharacterClass } from '@/types'
+import type { CharacterFull, CharacterClass, Item } from '@/types'
 
 const char = {
   id: 1,
@@ -125,5 +126,19 @@ describe('resolveQuickActions — tipi legacy (weapon/save/spell)', () => {
 describe('quickActionKey — variante spell', () => {
   it('genera spell-<id>', () => {
     expect(quickActionKey({ type: 'spell', id: 20 })).toBe('spell-20')
+  })
+})
+
+describe('isAmmunitionItem', () => {
+  it('riconosce tipo munizione e gear nello slot munizioni, non il gear semplice', () => {
+    expect(isAmmunitionItem({ item_type: 'ammunition', equipment_slot: null } as unknown as Item)).toBe(true)
+    expect(isAmmunitionItem({ item_type: 'gear', equipment_slot: 'ammunition' } as unknown as Item)).toBe(true)
+    expect(isAmmunitionItem({ item_type: 'gear', equipment_slot: null } as unknown as Item)).toBe(false)
+  })
+
+  it('resolveQuickActions mantiene un gear nello slot munizioni come counter_ammo', () => {
+    const c = { ...char, items: [{ id: 50, name: 'Quadrelli', item_type: 'gear', equipment_slot: 'ammunition', quantity: 5 }] } as unknown as CharacterFull
+    const r = resolveQuickActions(c, [{ type: 'counter_ammo', id: 50 }])
+    expect(r.map((x) => x.type)).toEqual(['counter_ammo'])
   })
 })

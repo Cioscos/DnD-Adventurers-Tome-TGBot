@@ -48,6 +48,11 @@ export function readQuickActions(settings: Record<string, unknown> | undefined):
   return Array.isArray(raw) ? (raw as QuickActionEntry[]) : []
 }
 
+/** Munizione = tipo `ammunition` oppure qualsiasi oggetto nello slot munizioni. */
+export function isAmmunitionItem(item: Item): boolean {
+  return item.item_type === 'ammunition' || item.equipment_slot === 'ammunition'
+}
+
 /** Un'abilità è pinnabile (azione o contatore) solo se attiva e con usi limitati. */
 function isPinnableAbility(a: Ability | undefined): a is Ability {
   return !!a && !a.is_passive && a.max_uses != null
@@ -103,7 +108,7 @@ export function resolveQuickActions(
       }
       case 'counter_ammo': {
         const item = items.get(entry.id)
-        if (item && item.item_type === 'ammunition') resolved.push({ type: 'counter_ammo', key, item })
+        if (item && isAmmunitionItem(item)) resolved.push({ type: 'counter_ammo', key, item })
         break
       }
       case 'hit_die': {

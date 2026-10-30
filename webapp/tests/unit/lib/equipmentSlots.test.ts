@@ -29,6 +29,7 @@ describe('ITEM_TYPE_TO_SLOTS — contract with backend EQUIPMENT_SLOT_COMPAT', (
       shield: ['off_hand'],
       accessory: ['neck', 'cloak', 'ring1', 'ring2'],
       gear: ['head', 'hands', 'feet', 'ammunition'],
+      ammunition: ['ammunition'],
     })
   })
 

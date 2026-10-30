@@ -18,6 +18,8 @@ export type WeaponAttackResult = {
   damage_rolls: number[]
   damage_bonus: number
   damage_total: number
+  ammo?: { item_id: number; name: string; remaining: number } | null
+  ammo_missing?: boolean
 }
 
 type Props = {
@@ -41,6 +43,7 @@ export default function WeaponAttackModal({
   const {
     weapon_name, to_hit_die, to_hit_bonus, to_hit_total,
     is_critical, is_fumble, damage_dice, damage_rolls, damage_bonus, damage_total,
+    ammo, ammo_missing,
   } = result
 
   const bonusStr = (n: number) => n >= 0 ? `+${n}` : `${n}`
@@ -124,6 +127,17 @@ export default function WeaponAttackModal({
             {damage_total}
           </p>
         </m.div>
+      )}
+
+      {ammo && (
+        <p className="text-sm text-dnd-text-muted font-body tabular-nums">
+          {ammo.name}: {ammo.remaining}
+        </p>
+      )}
+      {ammo_missing && (
+        <p className="text-sm text-dnd-crimson-bright font-body">
+          {t('character.attack.ammo_missing')}
+        </p>
       )}
     </ResultDialog>
   )

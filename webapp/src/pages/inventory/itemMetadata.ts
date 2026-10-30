@@ -3,7 +3,7 @@ import type { AbilityModifier } from '@/types'
 
 export const ITEM_TYPES = [
   'weapon', 'armor', 'shield', 'consumable', 'tool',
-  'accessory', 'gear', 'generic',
+  'accessory', 'gear', 'ammunition', 'generic',
 ] as const
 export type ItemType = typeof ITEM_TYPES[number]
 
@@ -108,6 +108,7 @@ export const TYPE_ICON: Record<string, string> = {
   potion: '\uD83E\uDDEA',
   scroll: '\uD83D\uDCDC',
   gear: '\uD83C\uDF92',
+  ammunition: '🏹',
 }
 
 /** Emoji for a consumable based on its subtype (falls back to the consumable icon). */

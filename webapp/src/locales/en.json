@@ -319,6 +319,9 @@
       "no_weapons": "No weapon equipped",
       "attack": "Attack"
     },
+    "attack": {
+      "ammo_missing": "No ammunition equipped: track your ammunition yourself"
+    },
     "ability": {
       "strength_short": "STR",
       "dexterity_short": "DEX",
@@ -801,6 +804,7 @@
         "potion": "Potion",
         "scroll": "Scroll",
         "gear": "Gear",
+        "ammunition": "Ammunition",
         "other": "Other"
       },
       "weapon_type": {

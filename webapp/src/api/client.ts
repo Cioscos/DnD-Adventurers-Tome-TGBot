@@ -85,6 +85,8 @@ export type WeaponAttackResult = {
   damage_rolls: number[]
   damage_bonus: number
   damage_total: number
+  ammo?: { item_id: number; name: string; remaining: number } | null
+  ammo_missing?: boolean
 }
 
 export type HitDiceSpendResult = {

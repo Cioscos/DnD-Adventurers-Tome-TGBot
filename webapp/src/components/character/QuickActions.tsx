@@ -27,6 +27,7 @@ import { useCastFlow } from '@/pages/spells/useCastFlow'
 import {
   readQuickActions,
   resolveQuickActions,
+  isAmmunitionItem,
   quickActionKey,
   QUICK_ACTIONS_MAX,
   SAVE_ABILITIES,
@@ -333,7 +334,7 @@ export default function QuickActions({ char }: Props) {
   // Mirrors resolveQuickActions' isPinnableAbility() in lib/quickActions.ts: solo
   // abilità attive (non passive) con un tetto di usi possono essere pinnate.
   const pinnableAbilities = (char.abilities ?? []).filter((a) => !a.is_passive && a.max_uses != null)
-  const ammoItems = (char.items ?? []).filter((i) => i.item_type === 'ammunition')
+  const ammoItems = (char.items ?? []).filter(isAmmunitionItem)
 
   // Gruppi editor "generici" (una riga = un pin/unpin): il blocco abilità (doppio
   // pin per riga) è renderizzato a parte fra questi due, quindi l'elenco è diviso

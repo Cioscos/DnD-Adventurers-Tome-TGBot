@@ -319,6 +319,9 @@
       "no_weapons": "Nessun'arma equipaggiata",
       "attack": "Attacca"
     },
+    "attack": {
+      "ammo_missing": "Nessuna munizione equipaggiata: scala tu le munizioni"
+    },
     "ability": {
       "strength_short": "FOR",
       "dexterity_short": "DES",
@@ -801,6 +804,7 @@
         "potion": "Pozione",
         "scroll": "Pergamena",
         "gear": "Equipaggiamento",
+        "ammunition": "Munizione",
         "other": "Altro"
       },
       "weapon_type": {
