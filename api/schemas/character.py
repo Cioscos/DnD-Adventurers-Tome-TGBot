@@ -55,6 +55,9 @@ class CharacterSummary(BaseModel):
     class_summary: str
     heroic_inspiration: bool = False
     experience_points: int = 0
+    hp_max_homebrew_modifier: int = 0
+    ac_homebrew_modifier: int = 0
+    is_dead: bool = False
 
     model_config = {"from_attributes": True}
 
