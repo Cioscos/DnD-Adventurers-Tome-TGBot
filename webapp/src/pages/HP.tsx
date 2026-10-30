@@ -9,7 +9,7 @@ import {
   GiHeartPlus as Heart,
 } from 'react-icons/gi'
 import { toast } from 'sonner'
-import { api, type DeathSaveRollResult, type ConcentrationSaveResult, type HitDiceSpendResult } from '@/api/client'
+import { api, ApiError, type DeathSaveRollResult, type ConcentrationSaveResult, type HitDiceSpendResult } from '@/api/client'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
 import HPGauge from '@/components/ui/HPGauge'
@@ -111,6 +111,23 @@ export default function HP() {
     },
   })
 
+  // Annulla tramite lo snapshot del server; 409 = i PF sono cambiati nel frattempo.
+  const undoMutation = useMutation({
+    mutationFn: (opId: string) => api.characters.undoHp(charId, opId),
+    onSuccess: (updated) => {
+      qc.setQueryData(['character', charId], updated)
+      qc.invalidateQueries({ queryKey: ['homebrew-resources', charId] })
+    },
+    onError: (err) => {
+      if (err instanceof ApiError && err.status === 409) {
+        toast.error(t('character.hp.undo_stale'))
+        qc.invalidateQueries({ queryKey: ['character', charId] })
+      } else {
+        notifyMutationError()
+      }
+    },
+  })
+
   const restMutation = useMutation({
     mutationFn: (restType: 'long' | 'short') =>
       api.characters.rest(charId, restType),
@@ -169,17 +186,13 @@ export default function HP() {
 
   const handleQuickApply = ({ op, val }: { op: HPOp; val: number }) => {
     if (!char || hpMutation.isPending) return
-    const prev = {
-      current: char.current_hit_points,
-      max: char.hit_points,
-      temp: char.temp_hp ?? 0,
-    }
-    const undoMap: Record<HPOp, { op: HPOp; val: number; messageKey: string } | null> = {
-      damage:      { op: 'set_current', val: prev.current, messageKey: 'character.hp.quick_damage_undo' },
-      heal:        { op: 'set_current', val: prev.current, messageKey: 'character.hp.quick_heal_undo' },
-      set_current: { op: 'set_current', val: prev.current, messageKey: 'character.hp.quick_heal_undo' },
-      set_max:     { op: 'set_max',     val: prev.max,     messageKey: 'character.hp.quick_heal_undo' },
-      set_temp:    { op: 'set_temp',    val: prev.temp,    messageKey: 'character.hp.quick_temp_undo' },
+    // Solo la chiave del messaggio: l'annullamento vero lo fa il server con lo snapshot.
+    const undoMap: Record<HPOp, string> = {
+      damage:      'character.hp.quick_damage_undo',
+      heal:        'character.hp.quick_heal_undo',
+      set_current: 'character.hp.quick_heal_undo',
+      set_max:     'character.hp.quick_heal_undo',
+      set_temp:    'character.hp.quick_temp_undo',
     }
     const wasCritical = op === 'damage' && char.current_hit_points === 0 && crit
     hpMutation.mutate({ op, val, wasCritical }, {
@@ -196,12 +209,14 @@ export default function HP() {
           }
         }
         haptic.success()
-        const undo = undoMap[op]
-        if (!undo) return
+        const undoId = updated.hp_undo_id
+        if (!undoId) return
+        const base = t(undoMap[op], { n: val })
+        const hasHomebrew = (updated.homebrew_notifications?.length ?? 0) > 0
         showUndoToast({
-          message: t(undo.messageKey, { n: val }),
+          message: hasHomebrew ? `${base} · ${t('character.hp.undo_homebrew_note')}` : base,
           actionLabel: t('character.hp.quick_undo_action'),
-          onUndo: () => hpMutation.mutate({ op: undo.op, val: undo.val }),
+          onUndo: () => undoMutation.mutate(undoId),
         })
       },
     })

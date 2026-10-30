@@ -190,6 +190,8 @@
       "quick_heal_undo": "Curati {{n}} HP",
       "quick_temp_undo": "Aggiunti {{n}} HP temporanei",
       "quick_undo_action": "Annulla",
+      "undo_stale": "I PF sono cambiati, non posso annullare",
+      "undo_homebrew_note": "Gli altri effetti delle regole restano",
       "quick_sheet_title": "Danno / Cura",
       "quick_damage": "Danno",
       "quick_heal": "Cura",

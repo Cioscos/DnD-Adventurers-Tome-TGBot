@@ -190,6 +190,8 @@
       "quick_heal_undo": "Healed {{n}} HP",
       "quick_temp_undo": "Added {{n}} temp HP",
       "quick_undo_action": "Undo",
+      "undo_stale": "HP have changed, can't undo",
+      "undo_homebrew_note": "Other rule effects stay",
       "quick_sheet_title": "Damage / Heal",
       "quick_damage": "Damage",
       "quick_heal": "Heal",

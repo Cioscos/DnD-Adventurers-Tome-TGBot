@@ -277,6 +277,11 @@ export const api = {
         method: 'PATCH',
         body: JSON.stringify({ op, value, was_critical_hit: wasCritical }),
       }),
+    undoHp: (id: number, opId: string) =>
+      request<CharacterFull>(`/characters/${id}/hp/undo`, {
+        method: 'POST',
+        body: JSON.stringify({ op_id: opId }),
+      }),
     revive: (id: number) =>
       request<CharacterFull>(`/characters/${id}/revive`, {
         method: 'POST',

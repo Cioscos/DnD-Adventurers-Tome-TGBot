@@ -7,7 +7,7 @@ import HP from '@/pages/HP'
 // Spies hoisted so the vi.mock factories can close over them.
 const {
   getChar, updateHpSpy, restSpy, reviveSpy, updateDeathSavesSpy,
-  rollDeathSaveSpy, spendHitDiceSpy, showUndoToastSpy, toastWarning, playAndCollect,
+  rollDeathSaveSpy, spendHitDiceSpy, undoHpSpy, showUndoToastSpy, toastWarning, playAndCollect,
 } = vi.hoisted(() => ({
   getChar: vi.fn(),
   updateHpSpy: vi.fn(),
@@ -16,6 +16,7 @@ const {
   updateDeathSavesSpy: vi.fn(),
   rollDeathSaveSpy: vi.fn(),
   spendHitDiceSpy: vi.fn(),
+  undoHpSpy: vi.fn(),
   showUndoToastSpy: vi.fn(),
   toastWarning: vi.fn(),
   playAndCollect: vi.fn(),
@@ -31,7 +32,13 @@ vi.mock('@/api/client', () => ({
       updateDeathSaves: updateDeathSavesSpy,
       rollDeathSave: rollDeathSaveSpy,
       spendHitDice: spendHitDiceSpy,
+      undoHp: undoHpSpy,
     },
+  },
+  ApiError: class ApiError extends Error {
+    constructor(public status: number, public detail: unknown) {
+      super(`API ${status}`)
+    }
   },
 }))
 
@@ -248,13 +255,27 @@ describe('HP page', () => {
 
   it('quick apply fires updateHp(heal) and shows an undo toast', async () => {
     getChar.mockResolvedValue(aliveChar)
-    updateHpSpy.mockResolvedValue(aliveChar)
+    updateHpSpy.mockResolvedValue({ ...aliveChar, hp_undo_id: 'abc' })
     renderWithProviders(<HP />)
     await screen.findByTestId('hp-op-form')
 
     await userEvent.click(screen.getByTestId('hp-quick-heal'))
     await waitFor(() => expect(updateHpSpy).toHaveBeenCalledWith(7, 'heal', 3, false))
     await waitFor(() => expect(showUndoToastSpy).toHaveBeenCalled())
+  })
+
+  it('quick apply undo calls undoHp with the op id', async () => {
+    getChar.mockResolvedValue(aliveChar)
+    updateHpSpy.mockResolvedValue({ ...aliveChar, hp_undo_id: 'abc' })
+    undoHpSpy.mockResolvedValue(aliveChar)
+    renderWithProviders(<HP />)
+    await screen.findByTestId('hp-op-form')
+
+    await userEvent.click(screen.getByTestId('hp-quick-heal'))
+    await waitFor(() => expect(showUndoToastSpy).toHaveBeenCalled())
+    showUndoToastSpy.mock.calls[0][0].onUndo()
+    await waitFor(() => expect(undoHpSpy).toHaveBeenCalledWith(7, 'abc'))
+    expect(updateHpSpy).toHaveBeenCalledTimes(1)
   })
 
   it('short rest spends hit dice and rests; long rest goes through the confirm sheet', async () => {

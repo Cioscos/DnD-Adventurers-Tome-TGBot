@@ -199,6 +199,9 @@ export interface CharacterFull extends CharacterSummary {
   concentrating_spell_id?: number
   hp_gained?: number
   concentration_save?: ConcentrationSaveResult | null
+  /** Id dello snapshot per annullare l'ultima modifica PF; null se nulla è cambiato. */
+  hp_undo_id?: string | null
+  homebrew_notifications?: Array<Record<string, unknown>> | null
   rolls_history?: DiceRollResult[]
   /** Raw dal BE: valore stringa legacy oppure dict {body, created_at, updated_at, tags}. */
   notes?: Record<
