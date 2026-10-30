@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { GiNightSleep, GiCampfire } from 'react-icons/gi'
 import { api, ApiError } from '@/api/client'
+import { useAnimatedRoll } from '@/dice/useAnimatedRoll'
 import Sheet from '@/components/ui/Sheet'
 import Pressable from '@/components/ui/Pressable'
 import ConfirmSheet from '@/components/ui/ConfirmSheet'
@@ -29,9 +30,14 @@ export default function RestSheet({ char, open, onClose }: Props) {
   const [confirmLongRest, setConfirmLongRest] = useState(false)
   const [hitDieResult, setHitDieResult] = useState<HitDiceSpendResult | null>(null)
 
+  const rollDice = useAnimatedRoll()
+
   const hitDieMutation = useMutation({
-    mutationFn: ({ classId, count }: { classId: number; count: number }) =>
-      api.characters.spendHitDice(char.id, classId, count),
+    mutationFn: async ({ classId, count }: { classId: number; count: number }) => {
+      const hitDie = char.classes.find((c) => c.id === classId)?.hit_die
+      const rolls = await rollDice(`d${hitDie ?? 8}`, count)
+      return api.characters.spendHitDice(char.id, classId, count, rolls)
+    },
     onSuccess: (result) => {
       setHitDieResult(result)
       qc.invalidateQueries({ queryKey: ['character', char.id] })

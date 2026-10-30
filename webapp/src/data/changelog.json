@@ -1,6 +1,64 @@
 {
   "entries": [
     {
+      "version": "2.22.0",
+      "date": "2026-10-30",
+      "title": {
+        "it": "Dadi più veloci, e che non sbagliano",
+        "en": "Faster dice that get it right"
+      },
+      "added": {
+        "it": [
+          "Tocca lo schermo durante il lancio per saltare l'animazione.",
+          "Quando i dadi si fermano, i valori compaiono scritti sotto di loro.",
+          "Il 20 e l'1 naturali sul d20 cambiano colore appena il dado si ferma.",
+          "Attacchi e dadi vita ora si tirano con i dadi 3D.",
+          "Nel d100 le decine e le unità si riconoscono dai numeri sulle facce."
+        ],
+        "en": [
+          "Tap the screen during a roll to skip the animation.",
+          "When the dice stop, their values appear written below them.",
+          "A natural 20 or 1 on the d20 changes color as soon as the die stops.",
+          "Attacks and hit dice now roll with the 3D dice.",
+          "On the d100, tens and units are recognizable from the numbers on the faces."
+        ]
+      },
+      "improved": {
+        "it": [
+          "I dadi si fermano prima: niente più attese di secondi con il dado già immobile.",
+          "I dadi restano appoggiati ai bordi molto più di rado.",
+          "Nei tiri con molti dadi se ne animano al massimo 12: il totale conta comunque tutti i dadi.",
+          "Numeri del d4 più grandi.",
+          "Con i dadi 3D spenti non si scaricano più le texture dei pacchetti."
+        ],
+        "en": [
+          "Dice stop sooner: no more waiting for seconds with a die that is already still.",
+          "Dice end up leaning against the edges far less often.",
+          "Rolls with many dice animate 12 at most: the total still counts every die.",
+          "Larger numbers on the d4.",
+          "With the 3D dice off, pack textures are no longer downloaded."
+        ]
+      },
+      "fixed": {
+        "it": [
+          "Il d100 salvava in cronologia la somma dei due dadi invece del risultato, e con più d100 ne tirava uno solo.",
+          "Un tocco durante l'animazione faceva perdere il primo tiro.",
+          "Senza WebGL o con il download dei dadi non riuscito, il tiro restava bloccato: ora il risultato arriva comunque.",
+          "In rari casi con molti dadi, il valore salvato poteva differire da quello mostrato.",
+          "I dadi finivano dietro le finestre e i pannelli aperti, per esempio nel riposo breve.",
+          "Se i dadi non partivano, il reroll con ispirazione poteva dare 1 naturale."
+        ],
+        "en": [
+          "The d100 saved the sum of the two dice to history instead of the result, and several d100 rolled as just one.",
+          "A tap during the animation lost the first roll.",
+          "Without WebGL or when the dice failed to download, the roll got stuck: the result now always arrives.",
+          "In rare rolls with many dice, the saved value could differ from the one shown.",
+          "Dice ended up behind open dialogs and sheets, for example during a short rest.",
+          "If the dice failed to start, an inspiration reroll could give a natural 1."
+        ]
+      }
+    },
+    {
       "version": "2.21.0",
       "date": "2026-10-30",
       "title": {

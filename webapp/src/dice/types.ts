@@ -4,17 +4,9 @@ export type DiceTint = 'normal' | 'crit' | 'fumble' | 'arcane' | 'ember'
 
 export interface DiceGroup {
   kind: DiceKind
-  /** Opzionale: se presente, attivava lo snap legacy (rimosso). Ora ignorato. */
-  results?: number[]
-  /** Numero di body fisici da spawnare quando results è assente. Default: 1. */
+  /** Quanti tiri: ogni d100 è una coppia di d10 fisici. Default: 1. */
   count?: number
   tint?: DiceTint
-  label?: string
-}
-
-export interface DicePlayRequest {
-  groups: DiceGroup[]
-  interGroupMs?: number
 }
 
 export interface DetectedResult {
@@ -26,11 +18,16 @@ export interface DetectedResult {
 export interface PlayCollectGroup {
   kind: DiceKind
   tint?: DiceTint
+  /** Quanti tiri: ogni d100 è una coppia di d10 fisici. */
   count: number
 }
 
 export interface DiceAnimationApi {
-  play: (req: DicePlayRequest) => Promise<void>
+  /**
+   * Anima il tiro e restituisce sempre tutti i dadi richiesti, nell'ordine dei
+   * gruppi: quelli che non si possono animare (scena non disponibile, oltre il
+   * tetto per tiro) sono generati in locale.
+   */
   playAndCollect: (groups: PlayCollectGroup[]) => Promise<DetectedResult[]>
   isPlaying: boolean
 }

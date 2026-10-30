@@ -1,11 +1,12 @@
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { api, type DiceResultRequestBody } from '@/api/client'
 import { useDiceSettings } from '@/store/diceSettings'
 import { useDiceAnimation } from './useDiceAnimation'
+import { pairD100 } from './d100'
 import { rollMany } from './rng'
-import type { DiceKind, DiceTint } from './types'
+import type { DetectedResult, DiceKind, DiceTint } from './types'
 
 export interface RollEntry {
   kind: DiceKind
@@ -34,6 +35,7 @@ export function useRollAndPersist(charId: number | null) {
   const reducedMotion = useReducedMotion()
   const dice = useDiceAnimation()
   const qc = useQueryClient()
+  const [animating, setAnimating] = useState(false)
 
   const persist = useMutation({
     mutationFn: (body: DiceResultRequestBody) =>
@@ -56,12 +58,14 @@ export function useRollAndPersist(charId: number | null) {
       let resultsPerEntry: number[][]
 
       if (useAnimation) {
-        const playGroups = entries.map((e) => ({
-          kind: e.kind,
-          tint: e.tint,
-          count: e.kind === 'd100' ? e.count * 2 : e.count,
-        }))
-        const detected = await dice.playAndCollect(playGroups)
+        const playGroups = entries.map((e) => ({ kind: e.kind, tint: e.tint, count: e.count }))
+        setAnimating(true)
+        let detected: DetectedResult[]
+        try {
+          detected = await dice.playAndCollect(playGroups)
+        } finally {
+          setAnimating(false)
+        }
         resultsPerEntry = entries.map((_e, gi) =>
           detected.filter((d) => d.groupIndex === gi).map((d) => d.value),
         )
@@ -99,15 +103,21 @@ export function useRollAndPersist(charId: number | null) {
 
       // When keepHighest is in effect, send the kept-top-N sum as `total` so the
       // backend persists it verbatim (the default server-side computation would
-      // include the dropped dice).
+      // include the dropped dice). Same for d100: the server only sees two d10
+      // and would add them up instead of reading a percentile.
+      const hasD100 = entries.some((e) => e.kind === 'd100')
       const bodyTotal =
-        opts.keepHighest && groupResults.length === 1 ? groupResults[0].total : undefined
+        hasD100 || (opts.keepHighest && groupResults.length === 1)
+          ? groupResults.reduce((s, g) => s + g.total, 0) + (hasD100 ? (opts.modifier ?? 0) : 0)
+          : undefined
+      const bodyNotation =
+        opts.notation ?? (hasD100 ? entries.map((e) => `${e.count}${e.kind}`).join(' + ') : null)
 
       await persist.mutateAsync({
         rolls: bodyRolls,
         label: opts.label ?? null,
         modifier: opts.modifier ?? 0,
-        notation: opts.notation ?? null,
+        notation: bodyNotation,
         total: bodyTotal ?? null,
       })
 
@@ -116,20 +126,5 @@ export function useRollAndPersist(charId: number | null) {
     [animate3d, charId, dice, persist, reducedMotion],
   )
 
-  return { roll, isPending: persist.isPending, error: persist.error }
-}
-
-function pairD100(vals: number[]): number {
-  // Geometry d10 face values are 1..10. In percentile convention, "10" represents
-  // the digit 0 (e.g. tens=10 → 00 in percentile, ones=10 → 0 in percentile).
-  // Pair 00+0 represents 100.
-  let total = 0
-  for (let i = 0; i < vals.length; i += 2) {
-    const tens = vals[i] % 10
-    const ones = vals[i + 1] % 10
-    let v = tens * 10 + ones
-    if (v === 0) v = 100
-    total += v
-  }
-  return total
+  return { roll, isPending: animating || persist.isPending, error: persist.error }
 }

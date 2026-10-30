@@ -3,69 +3,72 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { ContactShadows } from '@react-three/drei'
 import * as THREE from 'three'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
-import * as CANNON from 'cannon-es'
 import type { DiceGroup, DiceKind, DiceTint, DetectedResult } from './types'
 import { getDiceGeometry } from './geometries'
 import { getDiceMaterial, getNumeralMaterial } from './materials'
 import { createDiceWorld, updateWalls, type DiceWorld } from './physics/world'
-import { spawnDiceBody, computeSpawnPositions, totalKineticActivity } from './physics/spawner'
-import { faceUp } from './physics/faceDetector'
-import { PHYSICS } from './physics/constants'
+import { createRollSimulation, type RollSimulation, type SimDieSpec } from './physics/rollSimulation'
+import { d100FaceLabel, type D100Role } from './d100'
+import type { LoadedPack } from './packs/loader'
 import { useDicePack } from './packs/dicePackContext'
 import { getTintOverride } from './packs/manifest'
 
 export type SceneRequest = {
   id: number
   groups: DiceGroup[]
+  /** I dadi si sono fermati: inizia la pausa finale. */
+  onSettled?: (results: DetectedResult[]) => void
   onComplete: (results: DetectedResult[]) => void
 }
 
-type Phase = 'idle' | 'simulating' | 'reading' | 'holding'
-
 interface Entity {
-  body: CANNON.Body
   group: THREE.Group | null
-  detectedValue: number | null
-  retries: number
   kind: Exclude<DiceKind, 'd100'>
-  groupIndex: number
   tint: DiceTint
+  d100Role: D100Role | null
 }
 
 const PLANE_GEOMETRY = new THREE.PlaneGeometry(1, 1)
 
-/**
- * Separa le coppie di dadi rimaste compenetrate (centri a distanza < diametro)
- * con un impulso lungo la congiungente. Ritorna true se ha trovato overlap.
- */
-function separateOverlaps(entities: Entity[]): boolean {
-  let found = false
-  const dir = new CANNON.Vec3()
-  for (let i = 0; i < entities.length; i++) {
-    for (let j = i + 1; j < entities.length; j++) {
-      const a = entities[i].body
-      const b = entities[j].body
-      b.position.vsub(a.position, dir)
-      const dist = dir.length()
-      if (dist >= 0.6) continue
-      found = true
-      if (dist < 1e-4) dir.set(1, 0, 0)
-      else dir.scale(1 / dist, dir)
-      a.wakeUp()
-      b.wakeUp()
-      b.applyImpulse(new CANNON.Vec3(dir.x * 0.6, 0.25, dir.z * 0.6))
-      a.applyImpulse(new CANNON.Vec3(-dir.x * 0.6, 0.25, -dir.z * 0.6))
-    }
-  }
-  return found
+const HOLD_MS = 1500
+const LIFT_IN = 220
+const LIFT_OUT = 300
+const SCALE_BOOST = 0.22
+/** Dopo un salto la pausa finale si accorcia: resta il tempo di leggere i valori. */
+const HOLD_START_AFTER_SKIP_MS = 700
+
+function faceLabel(value: number, e: Entity): string {
+  return e.d100Role ? d100FaceLabel(value, e.d100Role) : String(value)
+}
+
+/** 20 e 1 naturali sul d20: il dado cambia aspetto appena si ferma. */
+function highlightNaturals(entities: Entity[], results: DetectedResult[], pack: LoadedPack | null) {
+  results.forEach((r, i) => {
+    const e = entities[i]
+    if (r.kind !== 'd20' || !e.group || (r.value !== 20 && r.value !== 1)) return
+    const tint: DiceTint = r.value === 20 ? 'crit' : 'fumble'
+    // Un re-render (pack appena caricato) riapplica il materiale da e.tint.
+    e.tint = tint
+    const override = pack ? getTintOverride(pack.manifest, tint) : undefined
+    const frames = getDiceGeometry(e.kind).faceFrames
+    e.group.children.forEach((child, childIdx) => {
+      const mesh = child as THREE.Mesh
+      mesh.material =
+        childIdx === 0
+          ? getDiceMaterial(tint, pack, e.kind)
+          : getNumeralMaterial(faceLabel(frames[childIdx - 1].value, e), tint, override)
+    })
+  })
 }
 
 type Props = {
   request: SceneRequest | null
   onMount?: () => void
+  /** Cambia a ogni tocco sull'overlay: salta l'animazione in corso. */
+  skipToken?: number
 }
 
-export default function DiceScene({ request, onMount }: Props) {
+export default function DiceScene({ request, onMount, skipToken }: Props) {
   return (
     <Canvas
       dpr={[1, 1.5]}
@@ -108,7 +111,7 @@ export default function DiceScene({ request, onMount }: Props) {
       />
       <SceneEnvironment />
       <CameraFit />
-      <Orchestrator request={request} onMount={onMount} />
+      <Orchestrator request={request} onMount={onMount} skipToken={skipToken} />
     </Canvas>
   )
 }
@@ -146,15 +149,15 @@ function SceneEnvironment() {
   return null
 }
 
-function Orchestrator({ request, onMount }: Props) {
+function Orchestrator({ request, onMount, skipToken = 0 }: Props) {
   const worldRef = useRef<DiceWorld | null>(null)
   if (!worldRef.current) worldRef.current = createDiceWorld()
 
   const entitiesRef = useRef<Entity[]>([])
-  const phaseRef = useRef<Phase>('idle')
-  const phaseStartRef = useRef<number>(0)
-  const lowEnergyMsRef = useRef<number>(0)
-  const repairUsedRef = useRef<boolean>(false)
+  const simRef = useRef<RollSimulation | null>(null)
+  const holdMsRef = useRef<number | null>(null)
+  const finishedRef = useRef(true)
+  const skippedRef = useRef(false)
   const [version, setVersion] = useState(0)
   const { invalidate, camera, size } = useThree()
   const { pack } = useDicePack()
@@ -162,8 +165,10 @@ function Orchestrator({ request, onMount }: Props) {
   onMountRef.current = onMount
 
   const onCompleteRef = useRef<((results: DetectedResult[]) => void) | undefined>(undefined)
+  const onSettledRef = useRef<((results: DetectedResult[]) => void) | undefined>(undefined)
   useEffect(() => {
     onCompleteRef.current = request?.onComplete
+    onSettledRef.current = request?.onSettled
   }, [request])
 
   useEffect(() => {
@@ -175,202 +180,108 @@ function Orchestrator({ request, onMount }: Props) {
     onMountRef.current?.()
   }, [])
 
+  // Tocco sull'overlay: durante il lancio accelera la fisica, durante la
+  // pausa finale chiude subito.
   useEffect(() => {
-    if (!request) return
-    const world = worldRef.current!.world
+    if (skipToken === 0) return
+    if (holdMsRef.current !== null) holdMsRef.current = Math.max(holdMsRef.current, HOLD_MS)
+    else if (simRef.current) {
+      skippedRef.current = true
+      simRef.current.skip()
+    }
+  }, [skipToken])
 
-    for (const e of entitiesRef.current) world.removeBody(e.body)
+  useEffect(() => {
+    simRef.current?.dispose()
+    simRef.current = null
+    holdMsRef.current = null
+    skippedRef.current = false
+    finishedRef.current = true
     entitiesRef.current = []
 
-    // count total bodies across all groups (d100 = 2 d10 bodies)
-    const groupSpec = request.groups.map((g) => {
-      const kindBase: Exclude<DiceKind, 'd100'> = g.kind === 'd100' ? 'd10' : g.kind
-      const bodyCount = g.kind === 'd100' ? 2 : g.results?.length ?? g.count ?? 1
-      return { kindBase, bodyCount, tint: g.tint ?? 'normal' }
-    })
-    const totalBodies = groupSpec.reduce((s, g) => s + g.bodyCount, 0)
-    const positions = computeSpawnPositions(totalBodies, worldRef.current!)
+    if (!request) {
+      // Svuota la scena: al tiro dopo non deve ricomparire l'ultimo fotogramma.
+      setVersion((v) => v + 1)
+      invalidate()
+      return
+    }
 
+    const specs: SimDieSpec[] = []
     const entities: Entity[] = []
-    let posIdx = 0
-    for (let gi = 0; gi < groupSpec.length; gi++) {
-      const { kindBase, bodyCount, tint } = groupSpec[gi]
-      const geomData = getDiceGeometry(kindBase)
+    request.groups.forEach((g, groupIndex) => {
+      const kind: Exclude<DiceKind, 'd100'> = g.kind === 'd100' ? 'd10' : g.kind
+      const bodyCount = (g.count ?? 1) * (g.kind === 'd100' ? 2 : 1)
       for (let i = 0; i < bodyCount; i++) {
-        const body = spawnDiceBody({
-          shape: geomData.shape,
-          material: worldRef.current!.diceMaterial,
-          position: positions[posIdx++],
-          totalCount: totalBodies,
-        })
-        world.addBody(body)
+        specs.push({ kind, groupIndex })
         entities.push({
-          body,
           group: null,
-          detectedValue: null,
-          retries: 0,
-          kind: kindBase,
-          groupIndex: gi,
-          tint,
+          kind,
+          tint: g.tint ?? 'normal',
+          d100Role: g.kind === 'd100' ? (i % 2 === 0 ? 'tens' : 'units') : null,
         })
       }
-    }
+    })
+    simRef.current = createRollSimulation(worldRef.current!, specs)
     entitiesRef.current = entities
-    phaseRef.current = 'simulating'
-    phaseStartRef.current = performance.now()
-    lowEnergyMsRef.current = 0
-    repairUsedRef.current = false
+    finishedRef.current = false
     setVersion((v) => v + 1)
 
     let raf = 0
     const tick = () => {
       invalidate()
-      if (phaseRef.current !== 'idle') raf = requestAnimationFrame(tick)
+      if (!finishedRef.current) raf = requestAnimationFrame(tick)
     }
     tick()
     return () => cancelAnimationFrame(raf)
   }, [request, invalidate])
 
   useFrame((_, delta) => {
-    if (phaseRef.current === 'idle') return
-    const now = performance.now()
-    const elapsed = now - phaseStartRef.current
-    const world = worldRef.current!.world
+    const sim = simRef.current
+    if (!sim || finishedRef.current) return
+    const entities = entitiesRef.current
 
-    if (phaseRef.current === 'simulating') {
-      // Substep fissi + accumulator: tempo reale anche a 120 Hz e penetrazione
-      // per step dimezzata. Il clamp del delta copre i gap di idle del canvas.
-      world.step(PHYSICS.fixedTimeStep, Math.min(delta, 1 / 15), PHYSICS.maxSubSteps)
-      for (const e of entitiesRef.current) {
-        if (e.group) {
-          const p = e.body.interpolatedPosition
-          const q = e.body.interpolatedQuaternion
-          e.group.position.set(p.x, p.y, p.z)
-          e.group.quaternion.set(q.x, q.y, q.z, q.w)
-        }
-      }
-      const allSleeping = entitiesRef.current.every(
-        (e) => e.body.sleepState === CANNON.Body.SLEEPING,
-      )
-      const timedOut = elapsed > PHYSICS.simulationHardTimeoutMs
-
-      // Force-sleep su attività cinetica bassa sostenuta.
-      // Soglia per body, scala con numero dadi (più dadi = soglia più tollerante).
-      const n = entitiesRef.current.length
-      const perBodyThreshold = n <= 3 ? 0.08 : n <= 8 ? 0.18 : 0.35
-      const totalThreshold = perBodyThreshold * n
-      const activity = totalKineticActivity(entitiesRef.current.map((e) => e.body))
-      if (activity < totalThreshold) {
-        lowEnergyMsRef.current += delta * 1000
-      } else {
-        lowEnergyMsRef.current = 0
-      }
-      const lowEnergyTimeout = n <= 3 ? 700 : 500
-      const stalled = lowEnergyMsRef.current >= lowEnergyTimeout
-
-      if (allSleeping || timedOut || stalled) {
-        // Pila ferma ma ancora sovrapposta? Un solo tentativo di separazione
-        // prima di congelare i dadi compenetrati.
-        if (stalled && !timedOut && !repairUsedRef.current) {
-          repairUsedRef.current = true
-          if (separateOverlaps(entitiesRef.current)) {
-            lowEnergyMsRef.current = 0
-            return
-          }
-        }
-        if (timedOut || stalled) for (const e of entitiesRef.current) e.body.sleep()
-        lowEnergyMsRef.current = 0
-        // Allinea i gruppi allo stato raw: l'interpolazione può restare un
-        // substep indietro e la lettura/holding usa lo stato canonico.
-        for (const e of entitiesRef.current) {
-          if (e.group) {
-            e.group.position.set(e.body.position.x, e.body.position.y, e.body.position.z)
-            e.group.quaternion.set(
-              e.body.quaternion.x,
-              e.body.quaternion.y,
-              e.body.quaternion.z,
-              e.body.quaternion.w,
-            )
-          }
-        }
-        phaseRef.current = 'reading'
-        phaseStartRef.current = now
-      }
-      return
-    }
-
-    if (phaseRef.current === 'reading') {
-      const COS_15 = Math.cos((15 * Math.PI) / 180)
-      const MAX_RETRIES = 2
-      let needRetry = false
-      for (const e of entitiesRef.current) {
-        if (e.detectedValue !== null) continue
-        const geomData = getDiceGeometry(e.kind)
-        const q = new THREE.Quaternion(
-          e.body.quaternion.x,
-          e.body.quaternion.y,
-          e.body.quaternion.z,
-          e.body.quaternion.w,
-        )
-        const { value, dot } = faceUp(geomData.faceNormals, q)
-        if (dot < COS_15 && e.retries < MAX_RETRIES) {
-          // ambiguo (dado in pendenza, tipicamente appoggiato a un muro):
-          // spintarella verso il centro arena + leggero lift, così cade piatto
-          e.body.wakeUp()
-          const px = e.body.position.x
-          const pz = e.body.position.z
-          const len = Math.hypot(px, pz) || 1
-          e.body.applyImpulse(new CANNON.Vec3((-px / len) * 0.8, 1.0, (-pz / len) * 0.8))
-          e.body.angularVelocity.set(
-            (Math.random() - 0.5) * 4,
-            (Math.random() - 0.5) * 4,
-            (Math.random() - 0.5) * 4,
-          )
-          e.retries += 1
-          needRetry = true
+    if (holdMsRef.current === null) {
+      sim.advance(delta)
+      sim.dice.forEach((d, i) => {
+        const g = entities[i].group
+        if (!g) return
+        if (sim.phase === 'settled') {
+          // La lettura e la pausa finale usano lo stato canonico: l'interpolazione
+          // può restare un substep indietro.
+          g.position.set(d.body.position.x, d.body.position.y, d.body.position.z)
+          g.quaternion.set(d.body.quaternion.x, d.body.quaternion.y, d.body.quaternion.z, d.body.quaternion.w)
         } else {
-          e.detectedValue = value
+          const p = d.body.interpolatedPosition
+          const q = d.body.interpolatedQuaternion
+          g.position.set(p.x, p.y, p.z)
+          g.quaternion.set(q.x, q.y, q.z, q.w)
         }
-      }
-      if (needRetry) {
-        phaseRef.current = 'simulating'
-        phaseStartRef.current = now
-      } else {
-        phaseRef.current = 'holding'
-        phaseStartRef.current = now
+      })
+      if (sim.phase === 'settled') {
+        holdMsRef.current = skippedRef.current ? HOLD_START_AFTER_SKIP_MS : 0
+        highlightNaturals(entities, sim.results(), pack)
+        onSettledRef.current?.(sim.results())
       }
       return
     }
 
-    if (phaseRef.current === 'holding') {
-      const HOLD_MS = 1500
-      const LIFT_IN = 220
-      const LIFT_OUT = 300
-      const SCALE_BOOST = 0.22
-      let progress: number
-      if (elapsed < LIFT_IN) {
-        const t = elapsed / LIFT_IN
-        progress = 1 - Math.pow(1 - t, 2)
-      } else if (elapsed < HOLD_MS - LIFT_OUT) {
-        progress = 1
-      } else {
-        const t = Math.min(1, (elapsed - (HOLD_MS - LIFT_OUT)) / LIFT_OUT)
-        progress = 1 - (1 - Math.pow(1 - t, 2))
-      }
-      const scale = 1 + SCALE_BOOST * progress
-      entitiesRef.current.forEach((e) => {
-        if (!e.group) return
-        e.group.scale.setScalar(scale)
-      })
-      if (elapsed > HOLD_MS) {
-        phaseRef.current = 'idle'
-        const results: DetectedResult[] = entitiesRef.current.map((e) => ({
-          groupIndex: e.groupIndex,
-          kind: e.kind,
-          value: e.detectedValue ?? 1,
-        }))
-        onCompleteRef.current?.(results)
-      }
+    holdMsRef.current += Math.min(delta, 1 / 15) * 1000
+    const elapsed = holdMsRef.current
+    let progress: number
+    if (elapsed < LIFT_IN) {
+      const t = elapsed / LIFT_IN
+      progress = 1 - Math.pow(1 - t, 2)
+    } else if (elapsed < HOLD_MS - LIFT_OUT) {
+      progress = 1
+    } else {
+      const t = Math.min(1, (elapsed - (HOLD_MS - LIFT_OUT)) / LIFT_OUT)
+      progress = 1 - (1 - Math.pow(1 - t, 2))
+    }
+    const scale = 1 + SCALE_BOOST * progress
+    for (const e of entities) e.group?.scale.setScalar(scale)
+    if (elapsed >= HOLD_MS) {
+      finishedRef.current = true
+      onCompleteRef.current?.(sim.results())
     }
   })
 
@@ -396,7 +307,7 @@ function Orchestrator({ request, onMount }: Props) {
                 <mesh
                   key={frameIdx}
                   geometry={PLANE_GEOMETRY}
-                  material={getNumeralMaterial(String(ff.value), e.tint, override)}
+                  material={getNumeralMaterial(faceLabel(ff.value, e), e.tint, override)}
                   position={ff.offsetPosition.toArray()}
                   quaternion={[ff.quaternion.x, ff.quaternion.y, ff.quaternion.z, ff.quaternion.w]}
                   scale={ff.size}

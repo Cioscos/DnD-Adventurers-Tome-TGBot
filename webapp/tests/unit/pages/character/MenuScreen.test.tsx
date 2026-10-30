@@ -7,6 +7,7 @@ import MenuScreen from '@/pages/character/MenuScreen'
 import type { CharacterFull } from '@/types'
 
 const { navigateSpy, restSpy } = vi.hoisted(() => ({ navigateSpy: vi.fn(), restSpy: vi.fn() }))
+vi.mock('@/dice/useAnimatedRoll', () => ({ useAnimatedRoll: () => async () => undefined }))
 vi.mock('@/api/client', () => ({
   api: { characters: { rest: restSpy, spendHitDice: vi.fn() } },
   ApiError: class extends Error {},

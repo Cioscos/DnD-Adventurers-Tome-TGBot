@@ -26,7 +26,7 @@ vi.mock('@/api/client', () => ({
   },
 }))
 
-// animate3d=false → the mutation takes the Math.random path (no 3D animation),
+// animate3d=false → the mutation takes the local rng path (no 3D animation),
 // keeping the reroll deterministic and free of the dice canvas.
 vi.mock('@/store/diceSettings', () => ({
   useDiceSettings: (sel: (s: { animate3d: boolean }) => unknown) => sel({ animate3d: false }),
@@ -34,6 +34,7 @@ vi.mock('@/store/diceSettings', () => ({
 vi.mock('@/dice/useDiceAnimation', () => ({
   useDiceAnimation: () => ({ playAndCollect: () => Promise.resolve([]) }),
 }))
+vi.mock('@/dice/rng', () => ({ rollMany: () => [{ kind: 'd20', value: 12 }] }))
 vi.mock('@/hooks/useReducedMotion', () => ({ useReducedMotion: () => false }))
 vi.mock('@/hooks/useToast', () => ({ useToast: () => ({ error: toastError }) }))
 vi.mock('@/auth/telegram', () => ({ haptic: { success: () => {}, error: () => {} } }))
@@ -96,8 +97,6 @@ describe('DicePoolResultModal', () => {
   })
 
   it('rerolls via api.dice.result with the exact DiceResultRequest payload, then locks the button', async () => {
-    // floor(0.55 * 20) + 1 = 12
-    vi.spyOn(Math, 'random').mockReturnValue(0.55)
     diceResult.mockResolvedValue({ notation: '1d20', rolls: [12], total: 12 })
 
     const group: RollGroup = { kind: 'd20', notation: '1d20', rolls: [3], total: 3 }

@@ -41,6 +41,8 @@ from api.services.character_response import build_character_response
 class HitDiceSpendRequest(BaseModel):
     class_id: int
     count: int
+    # Facce lette dai dadi 3D; senza, tira il server.
+    rolls: list[int] | None = None
 
 
 class HitDiceSpendResult(BaseModel):
@@ -450,7 +452,17 @@ async def spend_hit_dice(
     con_score = next((s for s in char.ability_scores if s.name == "constitution"), None)
     con_mod = con_score.modifier if con_score else 0
 
-    rolls = [random.randint(1, hit_die) for _ in range(body.count)]
+    if body.rolls is not None:
+        if len(body.rolls) != body.count:
+            raise HTTPException(
+                status_code=400,
+                detail=f"rolls length {len(body.rolls)} != expected {body.count}",
+            )
+        if any(v < 1 or v > hit_die for v in body.rolls):
+            raise HTTPException(status_code=400, detail=f"rolls values must be in [1, {hit_die}]")
+        rolls = list(body.rolls)
+    else:
+        rolls = [random.randint(1, hit_die) for _ in range(body.count)]
     # Each die heals roll + CON mod (minimum 1 per die)
     per_die = [max(1, r + con_mod) for r in rolls]
     total_healed = sum(per_die)

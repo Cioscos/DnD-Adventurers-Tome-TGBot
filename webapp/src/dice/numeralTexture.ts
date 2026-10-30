@@ -20,6 +20,11 @@ const NUMERAL_INK: Record<DiceTint, string> = {
 
 const DEFAULT_OUTLINE = 'rgba(0,0,0,0.65)'
 
+/** Numeri che capovolti si leggono come un altro numero del dado (60/90 sono le decine del d100). */
+export function needsOrientationMark(label: string): boolean {
+  return ['6', '9', '66', '99', '60', '90'].includes(label)
+}
+
 function drawLabel(ctx: CanvasRenderingContext2D, label: string, ink: string, outline: string) {
   ctx.clearRect(0, 0, SIZE, SIZE)
 
@@ -42,7 +47,7 @@ function drawLabel(ctx: CanvasRenderingContext2D, label: string, ink: string, ou
   ctx.fillStyle = ink
   ctx.fillText(label, cx, cy)
 
-  if (label === '6' || label === '9' || label === '66' || label === '99') {
+  if (needsOrientationMark(label)) {
     const dotSize = Math.round(px * 0.42)
     ctx.font = `900 ${dotSize}px "Cinzel", "Georgia", serif`
     // Pull the underline closer to the digit so it stays inside the canvas
@@ -89,9 +94,4 @@ export function getNumeralTexture(
 
   cache.set(key, tex)
   return tex
-}
-
-export function disposeNumeralTextures(): void {
-  for (const tex of cache.values()) tex.dispose()
-  cache.clear()
 }

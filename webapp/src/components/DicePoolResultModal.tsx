@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import ResultDialog from './ui/ResultDialog'
 import InspirationRerollButton from './InspirationRerollButton'
 import { api, ApiError, type DiceResultRequestBody } from '@/api/client'
+import { rollMany } from '@/dice/rng'
 import { useDiceAnimation } from '@/dice/useDiceAnimation'
 import { useDiceSettings } from '@/store/diceSettings'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
@@ -61,9 +62,9 @@ export default function DicePoolResultModal({
       let dieValue: number
       if (useAnimation) {
         const detected = await dice.playAndCollect([{ kind: 'd20', count: 1 }])
-        dieValue = detected[0]?.value ?? 1
+        dieValue = detected[0].value
       } else {
-        dieValue = Math.floor(Math.random() * 20) + 1
+        dieValue = rollMany('d20', 1)[0].value
       }
       const body: DiceResultRequestBody = {
         rolls: [{ kind: 'd20', value: dieValue }],

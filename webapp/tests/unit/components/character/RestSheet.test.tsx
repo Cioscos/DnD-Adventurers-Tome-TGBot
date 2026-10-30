@@ -13,6 +13,7 @@ const { spendHitDice, rest, notifyMutationError, toastError, toastSuccess } = vi
   toastSuccess: vi.fn(),
 }))
 
+vi.mock('@/dice/useAnimatedRoll', () => ({ useAnimatedRoll: () => async () => undefined }))
 vi.mock('@/api/client', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
   return { ...actual, api: { characters: { spendHitDice, rest } } }
@@ -66,7 +67,7 @@ describe('RestSheet short rest', () => {
     setup()
     await openShortRest()
     await userEvent.click(screen.getByText('spend'))
-    await waitFor(() => expect(spendHitDice).toHaveBeenCalledWith(7, 1, 2))
+    await waitFor(() => expect(spendHitDice).toHaveBeenCalledWith(7, 1, 2, undefined))
     expect(await screen.findByTestId('hit-die-result')).toBeTruthy()
     expect(notifyMutationError).not.toHaveBeenCalled()
   })

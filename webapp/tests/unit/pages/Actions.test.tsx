@@ -13,6 +13,8 @@ const { getChar, attackSpy, unarmedSpy, toastError } = vi.hoisted(() => ({
   toastError: vi.fn(),
 }))
 
+const rollDice = vi.hoisted(() => vi.fn())
+vi.mock('@/dice/useAnimatedRoll', () => ({ useAnimatedRoll: () => rollDice }))
 vi.mock('@/api/client', () => ({
   api: {
     characters: { get: getChar },
@@ -137,6 +139,18 @@ describe('Actions page', () => {
     expect(screen.getAllByRole('button')).toHaveLength(2)
   })
 
+  it('sends the d20 read by the 3D dice to the attack endpoint', async () => {
+    rollDice.mockResolvedValueOnce([17])
+    getChar.mockResolvedValue(CHAR)
+    attackSpy.mockResolvedValue(weaponResult)
+    renderWithProviders(<Actions />)
+    await screen.findByText('Greatsword')
+
+    await userEvent.click(screen.getAllByRole('button')[1])
+    await waitFor(() => expect(attackSpy).toHaveBeenCalledWith(7, 10, false, 17))
+    expect(rollDice).toHaveBeenCalledWith('d20', 1)
+  })
+
   it('fires api.items.attack(charId, itemId) and opens the result modal with the full result', async () => {
     getChar.mockResolvedValue(CHAR)
     attackSpy.mockResolvedValue(weaponResult)
@@ -144,7 +158,7 @@ describe('Actions page', () => {
     await screen.findByText('Greatsword')
 
     await userEvent.click(screen.getAllByRole('button')[1]) // weapon attack (after unarmed)
-    await waitFor(() => expect(attackSpy).toHaveBeenCalledWith(7, 10))
+    await waitFor(() => expect(attackSpy).toHaveBeenCalledWith(7, 10, false, undefined))
 
     const modal = await screen.findByTestId('attack-modal')
     expect(modal).toHaveTextContent('Greatsword')
@@ -163,7 +177,7 @@ describe('Actions page', () => {
     await screen.findByText('Greatsword')
 
     await userEvent.click(screen.getAllByRole('button')[0]) // unarmed
-    await waitFor(() => expect(unarmedSpy).toHaveBeenCalledWith(7))
+    await waitFor(() => expect(unarmedSpy).toHaveBeenCalledWith(7, false, undefined))
     expect(await screen.findByTestId('attack-modal')).toBeInTheDocument()
   })
 
@@ -178,6 +192,6 @@ describe('Actions page', () => {
 
     attackSpy.mockResolvedValue({ ...weaponResult, to_hit_total: 25 })
     await userEvent.click(screen.getByTestId('modal-reroll'))
-    await waitFor(() => expect(attackSpy).toHaveBeenCalledWith(7, 10, true))
+    await waitFor(() => expect(attackSpy).toHaveBeenCalledWith(7, 10, true, undefined))
   })
 })

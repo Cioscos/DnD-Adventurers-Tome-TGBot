@@ -28,6 +28,7 @@ import DeadState from '@/pages/hp/DeadState'
 import InstantDeathDialog from '@/pages/hp/InstantDeathDialog'
 import type { CharacterFull } from '@/types'
 import ConcentrationSaveDialog from '@/pages/hp/ConcentrationSaveDialog'
+import { useAnimatedRoll } from '@/dice/useAnimatedRoll'
 import { useDiceAnimation } from '@/dice/useDiceAnimation'
 import { useDiceSettings } from '@/store/diceSettings'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
@@ -53,6 +54,7 @@ export default function HP() {
   const { t } = useTranslation()
   const qc = useQueryClient()
   const dice = useDiceAnimation()
+  const rollDice = useAnimatedRoll()
   const animate3d = useDiceSettings((s) => s.animate3d)
   const reducedMotion = useReducedMotion()
   const [value, setValue] = useState('')
@@ -188,8 +190,11 @@ export default function HP() {
   })
 
   const hitDiceMutation = useMutation({
-    mutationFn: ({ classId, count }: { classId: number; count: number }) =>
-      api.characters.spendHitDice(charId, classId, count),
+    mutationFn: async ({ classId, count }: { classId: number; count: number }) => {
+      const hitDie = char?.classes.find((c) => c.id === classId)?.hit_die
+      const rolls = await rollDice(`d${hitDie ?? 8}`, count)
+      return api.characters.spendHitDice(charId, classId, count, rolls)
+    },
     onSuccess: (result) => {
       setHitDiceResult(result)
       qc.invalidateQueries({ queryKey: ['character', charId] })

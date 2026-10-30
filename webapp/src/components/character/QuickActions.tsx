@@ -19,9 +19,7 @@ import WeaponAttackModal, { type WeaponAttackResult } from '@/components/WeaponA
 import HitDiceModal from '@/pages/hp/HitDiceModal'
 import HitDiceResultDialog from '@/pages/hp/HitDiceResultDialog'
 import { haptic } from '@/auth/telegram'
-import { useDiceAnimation } from '@/dice/useDiceAnimation'
-import { useDiceSettings } from '@/store/diceSettings'
-import { useReducedMotion } from '@/hooks/useReducedMotion'
+import { useAnimatedRoll } from '@/dice/useAnimatedRoll'
 import { useToast } from '@/hooks/useToast'
 import { notifyMutationError } from '@/lib/mutationError'
 import { showUndoToast } from '@/components/ui/UndoToast'
@@ -63,9 +61,7 @@ export default function QuickActions({ char }: Props) {
   const { t } = useTranslation()
   const qc = useQueryClient()
   const toast = useToast()
-  const dice = useDiceAnimation()
-  const animate3d = useDiceSettings((s) => s.animate3d)
-  const reducedMotion = useReducedMotion()
+  const rollDice = useAnimatedRoll()
   const castFlow = useCastFlow(char.id, char)
 
   const [editorOpen, setEditorOpen] = useState(false)
@@ -91,7 +87,10 @@ export default function QuickActions({ char }: Props) {
   })
 
   const attackMutation = useMutation({
-    mutationFn: (itemId: number) => api.items.attack(char.id, itemId),
+    mutationFn: async (itemId: number) => {
+      const die = (await rollDice('d20', 1))?.[0]
+      return api.items.attack(char.id, itemId, false, die)
+    },
     onSuccess: (result, itemId) => {
       setAttackState({ result, itemId, wasRerolled: false })
       qc.invalidateQueries({ queryKey: ['character', char.id] })
@@ -100,7 +99,10 @@ export default function QuickActions({ char }: Props) {
   })
 
   const attackRerollMutation = useMutation({
-    mutationFn: (itemId: number) => api.items.attack(char.id, itemId, true),
+    mutationFn: async (itemId: number) => {
+      const die = (await rollDice('d20', 1))?.[0]
+      return api.items.attack(char.id, itemId, true, die)
+    },
     onSuccess: (result) => {
       setAttackState((prev) => prev && { ...prev, result, wasRerolled: true })
       qc.invalidateQueries({ queryKey: ['character', char.id] })
@@ -116,17 +118,9 @@ export default function QuickActions({ char }: Props) {
     },
   })
 
-  const rollSaveDie = async (): Promise<number | undefined> => {
-    if (animate3d && !reducedMotion) {
-      const detected = await dice.playAndCollect([{ kind: 'd20', count: 1 }])
-      return detected[0]?.value
-    }
-    return undefined
-  }
-
   const saveMutation = useMutation({
     mutationFn: async (ability: string) => {
-      const die = await rollSaveDie()
+      const die = (await rollDice('d20', 1))?.[0]
       const result = await api.characters.rollSavingThrow(char.id, ability, die)
       return { result, ability }
     },
@@ -139,7 +133,7 @@ export default function QuickActions({ char }: Props) {
 
   const saveRerollMutation = useMutation({
     mutationFn: async (ability: string) => {
-      const die = await rollSaveDie()
+      const die = (await rollDice('d20', 1))?.[0]
       return api.characters.rollSavingThrow(char.id, ability, die, true)
     },
     onSuccess: (result) => {
@@ -229,8 +223,11 @@ export default function QuickActions({ char }: Props) {
   }
 
   const hitDieMutation = useMutation({
-    mutationFn: ({ classId, count }: { classId: number; count: number }) =>
-      api.characters.spendHitDice(char.id, classId, count),
+    mutationFn: async ({ classId, count }: { classId: number; count: number }) => {
+      const hitDie = char.classes.find((c) => c.id === classId)?.hit_die
+      const rolls = await rollDice(`d${hitDie ?? 8}`, count)
+      return api.characters.spendHitDice(char.id, classId, count, rolls)
+    },
     onSuccess: (result) => {
       setConfirmHitDie(null)
       setHitDieResult(result)

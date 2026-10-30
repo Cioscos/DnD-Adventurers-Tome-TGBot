@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { GiFist, GiCrossedSwords } from 'react-icons/gi'
 import { Target } from 'lucide-react'
 import { api, ApiError } from '@/api/client'
+import { useAnimatedRoll } from '@/dice/useAnimatedRoll'
 import { unarmedDamageDice } from '@/lib/unarmedStrike'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
@@ -32,8 +33,13 @@ export default function Actions() {
     queryFn: () => api.characters.get(charId),
   })
 
+  const rollDice = useAnimatedRoll()
+
   const weaponAttack = useMutation({
-    mutationFn: (itemId: number) => api.items.attack(charId, itemId),
+    mutationFn: async (itemId: number) => {
+      const die = (await rollDice('d20', 1))?.[0]
+      return api.items.attack(charId, itemId, false, die)
+    },
     onSuccess: (result, itemId) => {
       setAttackState({ result, source: { type: 'weapon', itemId }, wasRerolled: false })
       haptic.success()
@@ -41,7 +47,10 @@ export default function Actions() {
   })
 
   const unarmedAttack = useMutation({
-    mutationFn: () => api.items.attackUnarmed(charId),
+    mutationFn: async () => {
+      const die = (await rollDice('d20', 1))?.[0]
+      return api.items.attackUnarmed(charId, false, die)
+    },
     onSuccess: (result) => {
       setAttackState({ result, source: { type: 'unarmed' }, wasRerolled: false })
       haptic.success()
@@ -49,10 +58,12 @@ export default function Actions() {
   })
 
   const rerollAttack = useMutation({
-    mutationFn: (source: AttackSource) =>
-      source.type === 'weapon'
-        ? api.items.attack(charId, source.itemId, true)
-        : api.items.attackUnarmed(charId, true),
+    mutationFn: async (source: AttackSource) => {
+      const die = (await rollDice('d20', 1))?.[0]
+      return source.type === 'weapon'
+        ? api.items.attack(charId, source.itemId, true, die)
+        : api.items.attackUnarmed(charId, true, die)
+    },
     onSuccess: (result) => {
       setAttackState((prev) => prev && { ...prev, result, wasRerolled: true })
       qc.invalidateQueries({ queryKey: ['character', charId] })
