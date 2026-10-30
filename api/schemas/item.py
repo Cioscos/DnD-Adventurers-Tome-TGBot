@@ -181,6 +181,12 @@ class ItemUpdate(BaseModel):
         return v
 
 
+class AmmoState(BaseModel):
+    item_id: int
+    name: str
+    remaining: int
+
+
 class WeaponAttackResult(BaseModel):
     weapon_name: str
     to_hit_die: int
@@ -193,3 +199,5 @@ class WeaponAttackResult(BaseModel):
     damage_bonus: int
     damage_total: int
     homebrew_notifications: Optional[list[dict]] = None
+    ammo: Optional[AmmoState] = None
+    ammo_missing: bool = False

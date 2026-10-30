@@ -18,6 +18,7 @@ EQUIPMENT_SLOT_COMPAT: dict[str, set[EquipmentSlot]] = {
                   EquipmentSlot.RING1, EquipmentSlot.RING2},
     "gear": {EquipmentSlot.HEAD, EquipmentSlot.HANDS,
              EquipmentSlot.FEET, EquipmentSlot.AMMUNITION},
+    "ammunition": {EquipmentSlot.AMMUNITION},
 }
 
 

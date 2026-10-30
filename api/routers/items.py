@@ -19,7 +19,7 @@ from api.database import get_db
 from api.services.dice_stats import record_dice
 from core.db.models import Character, CharacterClass, CharacterHistory, EquipmentSlot, HomebrewRule, Item
 from api.schemas.character import CharacterFull
-from api.schemas.item import ItemCreate, ItemRead, ItemUpdate, WeaponAttackResult
+from api.schemas.item import AmmoState, ItemCreate, ItemRead, ItemUpdate, WeaponAttackResult
 from core.game.stats import effective_ability_score
 from core.game.attacks import unarmed_strike_profile
 from api.routers._helpers import (
@@ -509,6 +509,26 @@ async def attack_with_weapon(
     _add_history(session, char.id, "attack_roll", result_str)
     _record_attack_dice(char, to_hit_die, damage_dice_str, damage_rolls, is_fumble)
 
+    # Ammunition: scale one piece per attack (also on miss/fumble), never on a reroll.
+    ammo_state: AmmoState | None = None
+    ammo_missing = False
+    if any("ammunition" in p.lower() for p in properties):
+        source = next(
+            (i for i in char.items if i.equipment_slot == EquipmentSlot.AMMUNITION), None
+        )
+        if source is None:
+            candidates = [i for i in char.items if i.item_type == "ammunition"]
+            source = candidates[0] if len(candidates) == 1 else None
+        if source is None or source.quantity <= 0:
+            ammo_missing = True
+        elif not (body and body.with_inspiration):
+            source.quantity -= 1
+        if source is not None:
+            ammo_state = (
+                AmmoState(item_id=source.id, name=source.name, remaining=max(0, source.quantity))
+                if not ammo_missing else None
+            )
+
     # Emit homebrew event so installed rules (e.g. Qualità & Usura) can react.
     firing_results = await dispatch(
         session, char, "attack_rolled",
@@ -524,6 +544,8 @@ async def attack_with_weapon(
     notifications = collect_homebrew_notifications(firing_results)
 
     return WeaponAttackResult(
+        ammo=ammo_state,
+        ammo_missing=ammo_missing,
         weapon_name=item.name,
         to_hit_die=to_hit_die,
         to_hit_bonus=to_hit_bonus,
