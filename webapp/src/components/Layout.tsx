@@ -18,6 +18,7 @@ import { haptic } from '@/auth/telegram'
 // resta fermo invece di rifare l'ingresso e la striscia non riparte da sinistra.
 let mountedGroup: string | undefined
 let crumbScrollLeft = 0
+let crumbCollapsed = false
 
 interface LayoutProps {
   title: string
@@ -77,7 +78,6 @@ export default function Layout({ title, children, backTo, group, page, hideScrol
   // update per animation frame, (2) accumulated directional travel instead of
   // per-event delta, and (3) a short lock after each toggle so the resize-induced
   // scroll events can't flip the state back.
-  const [tablistCollapsed, setTablistCollapsed] = useState(false)
   // Calcolato al primo render, mentre il Layout uscente è ancora montato.
   const [sameGroup] = useState(() => !!group && mountedGroup === group)
   useEffect(() => {
@@ -86,6 +86,18 @@ export default function Layout({ title, children, backTo, group, page, hideScrol
       mountedGroup = undefined
     }
   }, [group])
+  // La pagina nuova parte dall'alto, quindi i breadcrumb vanno riaperti: se erano
+  // chiusi si parte da chiusi e si riaprono animati, senza far saltare il contenuto.
+  const [tablistCollapsed, setTablistCollapsed] = useState(() => sameGroup && crumbCollapsed)
+  useEffect(() => {
+    setTablistCollapsed(false)
+  }, [])
+  useEffect(() => {
+    crumbCollapsed = tablistCollapsed
+  }, [tablistCollapsed])
+  // Arrivo da swipe: lo skeleton con cui la pagina è entrata sfuma nel contenuto.
+  const [arrivalVisible, setArrivalVisible] = useState(!!swipe.arrivedBySwipe)
+  const ArrivalSkeleton = pageSkeleton(page)
   const lastScrollTopRef = useRef(0)
   const accumRef = useRef(0)        // accumulated travel in the current direction
   const rafPendingRef = useRef(false)
@@ -245,10 +257,11 @@ export default function Layout({ title, children, backTo, group, page, hideScrol
       <div className="relative flex-1 min-w-0 overflow-hidden">
         <main
           ref={swipe.contentRef}
-          className={`absolute inset-0 overflow-y-auto overflow-x-hidden overscroll-contain p-4 pt-4 pb-[max(env(safe-area-inset-bottom),var(--tg-content-bottom,0px),6rem)] space-y-3 animate-fade-in${hideScrollbar ? ' scrollbar-hide' : ''}`}
+          className={`absolute inset-0 overflow-y-auto overflow-x-hidden overscroll-contain p-4 pt-4 pb-[max(env(safe-area-inset-bottom),var(--tg-content-bottom,0px),6rem)] space-y-3${info ? ' touch-pan-y' : ''}${swipe.arrivedBySwipe ? '' : ' animate-fade-in'}${hideScrollbar ? ' scrollbar-hide' : ''}`}
           onTouchStart={swipe.onTouchStart}
           onTouchMove={swipe.onTouchMove}
           onTouchEnd={swipe.onTouchEnd}
+          onTouchCancel={swipe.onTouchEnd}
           onScroll={handleMainScroll}
         >
           {isCharRoute && charQuery.isError ? (
@@ -277,15 +290,32 @@ export default function Layout({ title, children, backTo, group, page, hideScrol
           )}
         </main>
 
+        {/* touch-pan-y su <main>: l'orizzontale è dello swipe di pagina, non del
+            browser (che farebbe il suo back o annullerebbe il tocco a metà gesto). */}
         {/* Ghost layer: skeleton of the incoming page, only while swiping. */}
         {info && swipe.ghostDir !== 0 && (
           <div
             ref={swipe.ghostRef}
             aria-hidden
             className="absolute inset-0 overflow-hidden p-4 pt-4 pointer-events-none"
+            // Già fuori schermo dal primo frame, prima del primo touchmove che lo muove.
+            style={{ transform: `translateX(${swipe.ghostDir === -1 ? '-100%' : '100%'})` }}
           >
             <GhostSkeleton />
           </div>
+        )}
+
+        {arrivalVisible && (
+          <m.div
+            aria-hidden
+            className="absolute inset-0 overflow-hidden p-4 pt-4 pointer-events-none bg-dnd-bg"
+            initial={{ opacity: 1 }}
+            animate={{ opacity: 0 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+            onAnimationComplete={() => setArrivalVisible(false)}
+          >
+            <ArrivalSkeleton />
+          </m.div>
         )}
       </div>
     </div>
