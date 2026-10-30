@@ -71,7 +71,6 @@ export default function LevelUpModal({ char, xpLevel, onClose }: LevelUpModalPro
       }
       onClose()
     },
-    onError: () => haptic.error(),
   })
 
   const nextLevels = useMemo(() => {

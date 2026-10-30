@@ -10,11 +10,11 @@ import {
   type NotificationLike,
 } from './components/homebrew/HomebrewNotification'
 import { initTheme } from './theme/applyTheme'
-import { getStartParam, haptic } from './auth/telegram'
-import { toast } from 'sonner'
+import { getStartParam } from './auth/telegram'
+import { notifyMutationError } from './lib/mutationError'
 import { parseStartParam } from './lib/startParam'
 import './index.css'
-import i18n from './i18n'
+import './i18n'
 
 // Signal Telegram that the Mini App is ready
 window.Telegram?.WebApp?.ready()
@@ -101,6 +101,12 @@ const queryClient = new QueryClient({
       staleTime: 30_000,
       retry: 1,
     },
+    mutations: {
+      // Default 'online': da offline la mutation resta IN PAUSA (niente errore,
+      // niente rollback dell'ottimistico, spinner fermo) e riparte da sola al
+      // ritorno della rete, magari minuti dopo. Al tavolo deve fallire subito.
+      networkMode: 'always',
+    },
   },
   // Global surface for homebrew rule notifications: any mutation whose
   // response body carries a `homebrew_notifications` array gets piped
@@ -120,8 +126,7 @@ const queryClient = new QueryClient({
     // l'errore da sé.
     onError: (_error, _vars, _ctx, mutation) => {
       if (mutation.options.onError) return
-      haptic.error()
-      toast.error(i18n.t('common.action_failed'))
+      notifyMutationError()
     },
   }),
 })

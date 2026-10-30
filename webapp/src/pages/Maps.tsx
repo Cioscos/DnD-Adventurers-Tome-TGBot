@@ -63,7 +63,6 @@ export default function Maps() {
       setDeleteTarget(null)
       haptic.success()
     },
-    onError: () => haptic.error(),
   })
 
   const deleteZoneMutation = useMutation({
@@ -73,7 +72,6 @@ export default function Maps() {
       setDeleteZoneTarget(null)
       haptic.success()
     },
-    onError: () => haptic.error(),
   })
 
   const openUploadForZone = (zone: string) => {

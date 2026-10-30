@@ -101,7 +101,6 @@ export default function Currency() {
       setDraft({ platinum: '', gold: '', electrum: '', silver: '', copper: '' })
       haptic.success()
     },
-    onError: () => haptic.error(),
   })
 
   const convertMutation = useMutation({
@@ -115,7 +114,6 @@ export default function Currency() {
       setShowConvert(false)
       haptic.success()
     },
-    onError: () => haptic.error(),
   })
 
   if (!char) {

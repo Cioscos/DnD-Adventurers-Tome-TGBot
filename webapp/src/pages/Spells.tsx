@@ -105,7 +105,6 @@ export default function Spells() {
       setEditingSpell(null)
       haptic.success()
     },
-    onError: () => haptic.error(),
   })
 
   const updateMutation = useMutation({
@@ -129,7 +128,6 @@ export default function Spells() {
       setEditingSpell(null)
       haptic.success()
     },
-    onError: () => haptic.error(),
   })
 
   const removeMutation = useMutation({

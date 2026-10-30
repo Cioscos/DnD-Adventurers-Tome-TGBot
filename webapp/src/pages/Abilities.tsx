@@ -167,7 +167,6 @@ export default function Abilities() {
       closeForm()
       haptic.success()
     },
-    onError: () => haptic.error(),
   })
 
   const updateMutation = useMutation({
@@ -185,7 +184,6 @@ export default function Abilities() {
       closeForm()
       haptic.success()
     },
-    onError: () => haptic.error(),
   })
 
   const usesMutation = useMutation({
@@ -212,7 +210,6 @@ export default function Abilities() {
       setDescFeature(null)
       haptic.success()
     },
-    onError: () => haptic.error(),
   })
 
   function openAdd() {

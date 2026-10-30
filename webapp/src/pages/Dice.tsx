@@ -159,7 +159,6 @@ export default function Dice() {
       setShowClearConfirm(false)
       haptic.success()
     },
-    onError: () => haptic.error(),
   })
 
   // P5: was a bare `api.dice.postToChat(...).catch(() => {})` fire-and-forget

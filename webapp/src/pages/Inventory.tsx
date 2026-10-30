@@ -124,7 +124,6 @@ export default function Inventory() {
       setEditingItem(null)
       haptic.success()
     },
-    onError: () => haptic.error(),
   })
 
   const updateMutation = useMutation({
@@ -143,7 +142,6 @@ export default function Inventory() {
       setEditingItem(null)
       haptic.success()
     },
-    onError: () => haptic.error(),
   })
 
   const toggleEquip = useMutation({
@@ -203,7 +201,6 @@ export default function Inventory() {
       setEditingCap(false)
       haptic.success()
     },
-    onError: () => haptic.error(),
   })
 
   const resetCapMutation = useMutation({
@@ -212,7 +209,6 @@ export default function Inventory() {
       qc.setQueryData(['character', charId], updated)
       haptic.success()
     },
-    onError: () => haptic.error(),
   })
 
   // Edit a single homebrew property (hb_<key>) on an item. The backend PATCH
@@ -230,7 +226,6 @@ export default function Inventory() {
       qc.setQueryData(['character', charId], updated)
       haptic.success()
     },
-    onError: () => haptic.error(),
   })
 
   const handleSetProperty = useCallback(
@@ -254,7 +249,6 @@ export default function Inventory() {
       setDeleteTarget(null)
       haptic.success()
     },
-    onError: () => haptic.error(),
   })
 
   const shareItem = useShareMessage((itemId: number) => api.share.item(charId, itemId))
@@ -265,7 +259,6 @@ export default function Inventory() {
       setAttackState({ result, itemId, wasRerolled: false })
       haptic.success()
     },
-    onError: () => haptic.error(),
   })
 
   const attackRerollMutation = useMutation({
@@ -300,7 +293,6 @@ export default function Inventory() {
       }
       haptic.success()
     },
-    onError: () => haptic.error(),
   })
 
   const summarizeEffects = (item: Item): string => {

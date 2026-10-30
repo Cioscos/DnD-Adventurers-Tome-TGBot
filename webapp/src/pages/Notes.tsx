@@ -79,7 +79,6 @@ export default function Notes() {
       setMode('list')
       haptic.success()
     },
-    onError: () => haptic.error(),
   })
 
   const updateMutation = useMutation({
@@ -90,7 +89,6 @@ export default function Notes() {
       setMode('list')
       haptic.success()
     },
-    onError: () => haptic.error(),
   })
 
   const deleteMutation = useMutation({
@@ -100,7 +98,6 @@ export default function Notes() {
       setDeleteTarget(null)
       haptic.success()
     },
-    onError: () => haptic.error(),
   })
 
   const voiceUploadMutation = useMutation({
@@ -111,7 +108,6 @@ export default function Notes() {
       setMode('list')
       haptic.success()
     },
-    onError: () => haptic.error(),
   })
 
   const shareNote = useShareMessage((title: string) => api.share.note(charId, title))

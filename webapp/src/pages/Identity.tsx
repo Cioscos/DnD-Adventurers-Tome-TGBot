@@ -129,7 +129,6 @@ export default function Identity() {
       haptic.success()
       if (draft) setPristine(snapshot(draft))
     },
-    onError: () => haptic.error(),
   })
 
   if (!char || !draft) {

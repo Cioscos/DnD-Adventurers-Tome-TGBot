@@ -28,6 +28,7 @@ import LevelUpModal from '@/pages/multiclass/LevelUpModal'
 import ExperienceSkeleton from '@/components/skeletons/ExperienceSkeleton'
 import type { CharacterFull } from '@/types'
 import { useIsFirstValue } from '@/hooks/useIsFirstValue'
+import { notifyMutationError } from '@/lib/mutationError'
 
 function pickDefaultClass(char: CharacterFull): string {
   const classes = char.classes ?? []
@@ -108,7 +109,7 @@ export default function Experience() {
       savingRef.current = false
     },
     onError: () => {
-      haptic.error()
+      notifyMutationError()
       savingRef.current = false
     },
   })

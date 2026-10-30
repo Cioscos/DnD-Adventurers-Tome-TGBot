@@ -24,6 +24,7 @@ import {
 } from '@/components/homebrew/HomebrewNotification'
 import { useToast } from '@/hooks/useToast'
 import ConditionsSkeleton from '@/components/skeletons/ConditionsSkeleton'
+import { notifyMutationError } from '@/lib/mutationError'
 
 const CONDITION_KEYS = [
   'blinded', 'charmed', 'deafened', 'frightened', 'grappled',
@@ -130,7 +131,7 @@ export default function Conditions() {
     onError: () => {
       setPendingExhaustion(null)
       setPendingConditionKey(null)
-      haptic.error()
+      notifyMutationError()
     },
   })
 

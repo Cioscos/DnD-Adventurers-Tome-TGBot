@@ -34,6 +34,7 @@ import { useReducedMotion } from '@/hooks/useReducedMotion'
 import HomebrewBreakdownRow from '@/components/homebrew/HomebrewBreakdownRow'
 import HPSkeleton from '@/components/skeletons/HPSkeleton'
 import { useIsFirstValue } from '@/hooks/useIsFirstValue'
+import { notifyMutationError } from '@/lib/mutationError'
 
 type HPOp = 'damage' | 'heal' | 'set_max' | 'set_current' | 'set_temp'
 
@@ -74,7 +75,6 @@ export default function HP() {
       qc.setQueryData(['character', charId], updated)
       haptic.success()
     },
-    onError: () => haptic.error(),
   })
 
   // Morte istantanea = morto per danno massiccio (failures < 3). Il caso
@@ -106,7 +106,7 @@ export default function HP() {
       savingRef.current = false
     },
     onError: () => {
-      haptic.error()
+      notifyMutationError()
       savingRef.current = false
     },
   })
@@ -146,7 +146,6 @@ export default function HP() {
       qc.invalidateQueries({ queryKey: ['character', charId] })
       haptic.success()
     },
-    onError: () => haptic.error(),
   })
 
   const hitDiceMutation = useMutation({
@@ -157,7 +156,6 @@ export default function HP() {
       qc.invalidateQueries({ queryKey: ['character', charId] })
       haptic.success()
     },
-    onError: () => haptic.error(),
   })
 
   const handleApply = () => {

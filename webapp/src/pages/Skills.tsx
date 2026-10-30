@@ -210,7 +210,6 @@ export default function Skills() {
       qc.setQueryData(['character', charId], updated)
       haptic.light()
     },
-    onError: () => haptic.error(),
   })
 
   const rollMutation = useMutation({
@@ -231,7 +230,6 @@ export default function Skills() {
       setRollState({ result: { ...result, description: undefined }, skillName, wasRerolled: false })
       haptic.success()
     },
-    onError: () => haptic.error(),
   })
 
   const rerollMutation = useMutation({

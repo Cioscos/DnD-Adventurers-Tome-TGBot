@@ -50,7 +50,6 @@ export default function ArmorClass() {
       setMagic('')
       haptic.success()
     },
-    onError: () => haptic.error(),
   })
 
   const resetOverrideMutation = useMutation({
@@ -61,7 +60,6 @@ export default function ArmorClass() {
       setShield('')
       haptic.success()
     },
-    onError: () => haptic.error(),
   })
 
   const unarmoredMutation = useMutation({
@@ -72,7 +70,6 @@ export default function ArmorClass() {
       setBase('')
       haptic.success()
     },
-    onError: () => haptic.error(),
   })
 
   if (!char) {

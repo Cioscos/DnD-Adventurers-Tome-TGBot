@@ -87,7 +87,6 @@ export default function QuickActions({ char }: Props) {
       qc.setQueryData(['character', char.id], updated)
       haptic.light()
     },
-    onError: () => haptic.error(),
   })
 
   const attackMutation = useMutation({
@@ -97,7 +96,6 @@ export default function QuickActions({ char }: Props) {
       qc.invalidateQueries({ queryKey: ['character', char.id] })
       haptic.success()
     },
-    onError: () => haptic.error(),
   })
 
   const attackRerollMutation = useMutation({
@@ -136,7 +134,6 @@ export default function QuickActions({ char }: Props) {
       qc.invalidateQueries({ queryKey: ['character', char.id] })
       haptic.success()
     },
-    onError: () => haptic.error(),
   })
 
   const saveRerollMutation = useMutation({
@@ -165,7 +162,6 @@ export default function QuickActions({ char }: Props) {
       qc.setQueryData(['character', char.id], updated)
       haptic.light()
     },
-    onError: () => haptic.error(),
   })
 
   // Contatori (munizioni, usi) ottimistici: in combattimento si toccano a
@@ -261,7 +257,6 @@ export default function QuickActions({ char }: Props) {
       toast.success(t('character.quick_actions.rest_done'))
       haptic.success()
     },
-    onError: () => haptic.error(),
   })
 
   const run = (action: ResolvedQuickAction) => {

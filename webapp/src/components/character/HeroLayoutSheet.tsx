@@ -30,7 +30,6 @@ export default function HeroLayoutSheet({ char, open, onClose }: HeroLayoutSheet
       qc.setQueryData(['character', char.id], updated)
       haptic.light()
     },
-    onError: () => haptic.error(),
   })
 
   const move = (key: HeroSectionKey, dir: -1 | 1) => {

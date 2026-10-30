@@ -54,7 +54,6 @@ export default function SavingThrows() {
       qc.setQueryData(['character', charId], updated)
       haptic.light()
     },
-    onError: () => haptic.error(),
   })
 
   const rollMutation = useMutation({
@@ -79,7 +78,6 @@ export default function SavingThrows() {
       })
       haptic.success()
     },
-    onError: () => haptic.error(),
   })
 
   const rerollMutation = useMutation({

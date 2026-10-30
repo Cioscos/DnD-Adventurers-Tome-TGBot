@@ -162,7 +162,6 @@ export default function Settings() {
       qc.setQueryData(['character', charId], updated)
       haptic.success()
     },
-    onError: () => haptic.error(),
   })
 
   if (!char) return null

@@ -43,7 +43,6 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
       qc.setQueryData(['character', charId], updated)
       haptic.success()
     },
-    onError: () => haptic.error(),
   })
 
   const castMutation = useMutation({
@@ -60,7 +59,6 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
       setCastingSpell(null)
       haptic.success()
     },
-    onError: () => haptic.error(),
   })
 
   const castRitualMutation = useMutation({
@@ -70,7 +68,6 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
       setCastingSpell(null)
       haptic.success()
     },
-    onError: () => haptic.error(),
   })
 
   // "Crea slot" dal modal di cast quando non ce ne sono: in Auto mode si passa
@@ -96,7 +93,6 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
       if (mode === 'auto') toast.info(t('character.spells.create_slot_switches_manual'))
       haptic.success()
     },
-    onError: () => haptic.error(),
   })
 
   const beginCast = useCallback((spell: Spell) => {
