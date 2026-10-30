@@ -137,6 +137,9 @@ export interface CharacterSummary {
   class_summary: string
   heroic_inspiration: boolean
   experience_points: number
+  hp_max_homebrew_modifier: number
+  ac_homebrew_modifier: number
+  is_dead: boolean
 }
 
 export interface ConcentrationSaveResult {
@@ -186,7 +189,6 @@ export interface CharacterFull extends CharacterSummary {
   shield_armor_class_override: boolean
   unarmored_defense_ability?: 'wisdom' | 'constitution' | null
   ac_breakdown?: AcBreakdown | null
-  hp_max_homebrew_modifier?: number
   speed_homebrew_modifier?: number
   skills_homebrew_modifiers?: Record<string, number>
   saves_homebrew_modifiers?: Record<string, number>
@@ -213,7 +215,6 @@ export interface CharacterFull extends CharacterSummary {
   skills?: Record<string, unknown>
   saving_throws?: Record<string, boolean>
   death_saves?: DeathSaves
-  is_dead?: boolean
   personality?: Record<string, string>
   languages?: string[]
   general_proficiencies?: string[]

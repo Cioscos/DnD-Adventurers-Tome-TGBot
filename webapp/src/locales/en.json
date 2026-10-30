@@ -126,6 +126,8 @@
       "delete_undo_action": "Undo",
       "skip_class_label": "Continue without class",
       "unconscious_badge": "Unconscious",
+      "dead_badge": "Dead",
+      "unconfigured_badge": "Needs setup",
       "delete_failed": "Delete failed. Please try again."
     },
     "menu": {

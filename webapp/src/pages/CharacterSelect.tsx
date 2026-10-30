@@ -10,6 +10,7 @@ import {
 } from 'react-icons/gi'
 import { api } from '@/api/client'
 import type { CharacterSummary } from '@/types'
+import { cardStatus, effectiveAc, effectiveHpMax } from '@/lib/characterStatus'
 import HPGauge from '@/components/ui/HPGauge'
 import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
@@ -89,6 +90,14 @@ export default function CharacterSelect() {
     queryKey: ['characters'],
     queryFn: () => api.characters.list(),
   })
+
+  // Sessione attiva: un errore equivale a nessuna sessione (il pulsante resta quello semplice).
+  const { data: activeSession } = useQuery({
+    queryKey: ['session-me'],
+    queryFn: () => api.sessions.me(),
+    retry: false,
+  })
+  const hasActiveSession = activeSession?.status === 'active'
 
   const createMutation = useMutation({
     mutationFn: async ({ name, cls, identity }: { name: string; cls: SelectedClass | null; identity: IdentityPayload | null }) => {
@@ -240,9 +249,9 @@ export default function CharacterSelect() {
           size="md"
           fullWidth
           icon={<Swords size={16} />}
-          onClick={() => navigate('/session')}
+          onClick={() => navigate(hasActiveSession ? `/session/${activeSession!.id}` : '/session')}
         >
-          {t('session.title')}
+          {hasActiveSession ? t('session.resume') : t('session.title')}
         </Button>
 
         {/* Character roster */}
@@ -266,7 +275,9 @@ export default function CharacterSelect() {
         ) : (
           <Reveal.Stagger stagger={stagger.list} className="space-y-3">
             {characters.map((char) => {
-              const isDown = char.current_hit_points === 0
+              const status = cardStatus(char)
+              const isDanger = status === 'dead' || status === 'down'
+              const hpMax = effectiveHpMax(char)
               return (
               <Reveal.Item key={char.id}>
                 <Surface
@@ -275,7 +286,7 @@ export default function CharacterSelect() {
                   ornamented
                   layoutId={`char-hero-${char.id}`}
                   onClick={() => navigate(`/char/${char.id}`)}
-                  className={`overflow-hidden${isDown ? ' !border-dnd-crimson-bright/70 shadow-halo-danger' : ''}`}
+                  className={`overflow-hidden${isDanger ? ' !border-dnd-crimson-bright/70 shadow-halo-danger' : ''}`}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0 space-y-1.5">
@@ -283,9 +294,19 @@ export default function CharacterSelect() {
                         <h2 className="font-display font-bold text-lg text-dnd-gold-bright truncate">
                           {char.name}
                         </h2>
-                        {isDown && (
+                        {status === 'down' && (
                           <span className="text-[10px] font-cinzel uppercase tracking-wider px-2 py-0.5 rounded-full bg-dnd-crimson/20 text-dnd-crimson-bright border border-dnd-crimson-bright/40 shrink-0">
                             {t('character.select.unconscious_badge')}
+                          </span>
+                        )}
+                        {status === 'dead' && (
+                          <span className="text-xs font-cinzel uppercase tracking-wider px-2 py-0.5 rounded-full bg-dnd-crimson/20 text-dnd-crimson-bright border border-dnd-crimson-bright/40 shrink-0">
+                            {t('character.select.dead_badge')}
+                          </span>
+                        )}
+                        {status === 'unconfigured' && (
+                          <span className="text-xs font-cinzel uppercase tracking-wider px-2 py-0.5 rounded-full bg-dnd-surface-raised text-dnd-text-muted border border-dnd-border shrink-0">
+                            {t('character.select.unconfigured_badge')}
                           </span>
                         )}
                         {char.heroic_inspiration && (
@@ -304,12 +325,12 @@ export default function CharacterSelect() {
                       <div className="mt-2.5 flex items-center gap-2">
                         <span className="inline-flex items-center gap-1 text-xs text-dnd-text-muted font-mono w-[70px] shrink-0">
                           <Heart size={12} className="text-dnd-crimson-bright" />
-                          {char.current_hit_points}/{char.hit_points}
+                          {char.current_hit_points}/{hpMax}
                         </span>
                         <div className="flex-1">
                           <HPGauge
                             current={char.current_hit_points}
-                            max={char.hit_points}
+                            max={hpMax}
                             temp={char.temp_hp}
                             size="md"
                             segmented
@@ -317,7 +338,7 @@ export default function CharacterSelect() {
                         </div>
                         <span className="inline-flex items-center gap-1 text-xs text-dnd-gold font-mono shrink-0">
                           <Shield size={12} />
-                          {char.ac}
+                          {effectiveAc(char)}
                         </span>
                       </div>
                     </div>

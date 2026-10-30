@@ -126,6 +126,8 @@
       "delete_undo_action": "Annulla",
       "skip_class_label": "Procedi senza classe",
       "unconscious_badge": "Incosciente",
+      "dead_badge": "Morto",
+      "unconfigured_badge": "Da configurare",
       "delete_failed": "Eliminazione non riuscita. Riprova."
     },
     "menu": {
