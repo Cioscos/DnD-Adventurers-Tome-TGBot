@@ -68,12 +68,12 @@ function RuleCard({
         <GiScrollUnfurled size={20} />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="font-display font-bold text-dnd-text truncate">{rule.name}</p>
+        <p className="font-display font-bold text-[15px] text-dnd-text truncate">{rule.name}</p>
         {rule.template_id != null && (
           <span className="inline-block mt-1 px-1.5 py-0.5 rounded-lg
                            bg-dnd-chip-bg border border-dnd-chip-border/60
                            text-dnd-gold-bright font-cinzel uppercase
-                           text-[11px] tracking-[0.08em] leading-none">
+                           text-xs tracking-normal leading-none whitespace-nowrap">
             {fromTemplateLabel}
           </span>
         )}
@@ -140,7 +140,7 @@ function TemplateCard({ template, installed, installing, onInstall, t }: Templat
         <span className="text-2xl leading-none shrink-0" aria-hidden>
           {template.icon}
         </span>
-        <p className="font-display font-bold text-dnd-text leading-tight flex-1 min-w-0">
+        <p className="font-display font-bold text-[15px] text-dnd-text leading-tight flex-1 min-w-0">
           {template.name}
         </p>
       </div>

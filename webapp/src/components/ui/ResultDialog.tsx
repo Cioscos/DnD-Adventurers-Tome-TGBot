@@ -105,7 +105,7 @@ export default function ResultDialog({
                   </p>
                 )}
                 {subtitle && (
-                  <p className="text-[11px] text-dnd-arcane-bright font-cinzel uppercase tracking-wider">
+                  <p className="text-xs text-dnd-arcane-bright font-cinzel uppercase tracking-wider">
                     {subtitle}
                   </p>
                 )}

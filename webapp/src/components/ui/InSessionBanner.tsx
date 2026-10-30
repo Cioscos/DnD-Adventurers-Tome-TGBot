@@ -46,7 +46,7 @@ export default function InSessionBanner({ charId }: InSessionBannerProps) {
     >
       <Swords size={14} className="text-dnd-amber shrink-0" />
       <div className="flex-1 min-w-0 text-left">
-        <p className="text-[10px] uppercase tracking-widest font-cinzel text-dnd-amber leading-none">
+        <p className="text-xs uppercase tracking-widest font-cinzel text-dnd-amber leading-none">
           {t('character.inSession.label')}
         </p>
         <p className="text-sm font-display font-bold text-dnd-gold-bright truncate leading-tight mt-0.5">

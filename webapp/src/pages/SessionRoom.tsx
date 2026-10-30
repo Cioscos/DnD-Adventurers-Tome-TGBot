@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
-import { LogOut, User, Gift, Copy, Share2 } from 'lucide-react'
+import { LogOut, User, Gift, Copy, Share2, WifiOff } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   GiCrown as Crown, GiHeartPlus as Heart, GiCheckedShield as Shield,
@@ -12,12 +12,13 @@ import {
 } from 'react-icons/gi'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
+import EmptyState from '@/components/ui/EmptyState'
 import Button from '@/components/ui/Button'
 import Skeleton from '@/components/ui/Skeleton'
 import Pressable from '@/components/ui/Pressable'
 import SectionDivider from '@/components/ui/SectionDivider'
 import ConditionBadge from '@/components/ui/ConditionBadge'
-import { api } from '@/api/client'
+import { api, ApiError } from '@/api/client'
 import type { CharacterLiveSnapshot, SessionParticipant } from '@/types'
 import { canShareMessage, haptic, telegramConfirm } from '@/auth/telegram'
 import { useShareMessage } from '@/hooks/useShareMessage'
@@ -112,7 +113,7 @@ function ParticipantRow({
               {isGm ? t('session.game_master') : (snapshot?.name ?? participant.display_name ?? `#${participant.user_id}`)}
             </p>
             {isMe && (
-              <span className="text-[10px] uppercase tracking-wider text-dnd-text-muted font-cinzel">
+              <span className="text-xs uppercase tracking-wider text-dnd-text-muted font-cinzel">
                 {t('session.you')}
               </span>
             )}
@@ -177,7 +178,7 @@ function ParticipantRow({
               </div>
             )}
             {snapshot.last_roll && (
-              <div className="mt-1 text-[11px] text-dnd-text-muted flex items-center gap-1">
+              <div className="mt-1 text-xs text-dnd-text-muted flex items-center gap-1">
                 <Dices size={11} />
                 <span>{snapshot.last_roll.notation} → {snapshot.last_roll.total}</span>
               </div>
@@ -216,7 +217,7 @@ export default function SessionRoom() {
   })
   const myUserId = meInfo?.user_id ?? 0
 
-  const { data: live, isLoading } = useQuery({
+  const { data: live, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['session-live', sessionId],
     queryFn: async () => {
       // last_activity_at è il keep-alive del server: cambia a OGNI poll e
@@ -283,6 +284,21 @@ export default function SessionRoom() {
       <Layout title={t('session.title')} backTo="/session">
         <Skeleton.Rect height="120px" />
         <Skeleton.Rect height="180px" delay={100} />
+      </Layout>
+    )
+  }
+
+  // Un errore di rete non dice che la sessione non esiste: "non trovata" solo se
+  // lo ha risposto il server. Tornata la rete la query riparte da sola.
+  const notFound = error instanceof ApiError && (error.status === 404 || error.status === 403)
+  if (!live && isError && !notFound) {
+    return (
+      <Layout title={t('session.title')} backTo="/session">
+        <EmptyState
+          icon={<WifiOff size={32} />}
+          title={t('common.offline_unavailable')}
+          action={{ label: t('common.retry'), onClick: () => refetch() }}
+        />
       </Layout>
     )
   }

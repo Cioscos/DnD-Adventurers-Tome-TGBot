@@ -147,7 +147,7 @@ export default function Input({
       transition={{ duration: 0.25 }}
     >
       {label && !floatingLabel && (
-        <label className={`block text-[11px] uppercase tracking-wider mb-1.5 font-cinzel font-bold transition-colors ${labelColor}`}>
+        <label className={`block text-xs uppercase tracking-wider mb-1.5 font-cinzel font-bold transition-colors ${labelColor}`}>
           {label}
         </label>
       )}
@@ -210,7 +210,7 @@ export default function Input({
             initial={{ opacity: 0, y: -4 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
-            className="text-dnd-crimson-bright text-[11px] mt-1 font-body"
+            className="text-dnd-crimson-bright text-xs mt-1 font-body"
           >
             {displayError}
           </m.p>

@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
-import { Trash2, BarChart3 } from 'lucide-react'
+import { Trash2, BarChart3, WifiOff } from 'lucide-react'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
@@ -67,7 +67,7 @@ function FaceHistogram({ sides, faces }: { sides: DieSide; faces: Record<string,
                 style={{ height: `${pct}%` }}
               />
             </div>
-            <span className="text-[7px] leading-none text-dnd-text-faint tabular-nums">
+            <span className="text-xs leading-none text-dnd-text-faint tabular-nums">
               {showTick ? v : ' '}
             </span>
           </div>
@@ -84,10 +84,11 @@ export default function DiceStats() {
   const qc = useQueryClient()
   const [showResetConfirm, setShowResetConfirm] = useState(false)
 
-  const { data } = useQuery({
+  const statsQuery = useQuery({
     queryKey: ['dice-stats', charId],
     queryFn: () => api.dice.stats(charId),
   })
+  const { data } = statsQuery
 
   const resetMutation = useMutation({
     mutationFn: () => api.dice.resetStats(charId),
@@ -110,8 +111,16 @@ export default function DiceStats() {
       backTo={`/char/${charId}/dice`}
       group="tools"
       page="dice"
+      offlineQuery={statsQuery}
     >
-      {totalRolls === 0 ? (
+      {statsQuery.isError && data === undefined ? (
+        // Un fetch fallito non è "nessun tiro".
+        <EmptyState
+          icon={<WifiOff size={32} />}
+          title={t('common.offline_unavailable')}
+          action={{ label: t('common.retry'), onClick: () => statsQuery.refetch() }}
+        />
+      ) : totalRolls === 0 ? (
         <EmptyState
           icon={<BarChart3 size={32} />}
           title={t('character.dice_stats.empty_title')}
@@ -122,7 +131,7 @@ export default function DiceStats() {
           {/* Trofei nat 20 / nat 1 + totale */}
           <div className="grid grid-cols-2 gap-3">
             <Surface variant="elevated" className="text-center py-3">
-              <p className="font-cinzel text-[10px] uppercase tracking-widest text-dnd-emerald-bright">
+              <p className="font-cinzel text-xs uppercase tracking-widest text-dnd-emerald-bright">
                 {t('character.dice_stats.nat20')}
               </p>
               <p className="text-3xl font-mono font-bold tabular-nums text-dnd-emerald-bright mt-1">
@@ -130,7 +139,7 @@ export default function DiceStats() {
               </p>
             </Surface>
             <Surface variant="elevated" className="text-center py-3">
-              <p className="font-cinzel text-[10px] uppercase tracking-widest text-dnd-crimson-bright">
+              <p className="font-cinzel text-xs uppercase tracking-widest text-dnd-crimson-bright">
                 {t('character.dice_stats.nat1')}
               </p>
               <p className="text-3xl font-mono font-bold tabular-nums text-dnd-crimson-bright mt-1">
@@ -140,7 +149,7 @@ export default function DiceStats() {
           </div>
 
           <Surface variant="elevated" className="flex items-center justify-between px-4 py-3">
-            <span className="font-cinzel text-[10px] uppercase tracking-widest text-dnd-gold-dim">
+            <span className="font-cinzel text-xs uppercase tracking-widest text-dnd-gold-dim">
               {t('character.dice_stats.total_rolls')}
             </span>
             <span className="text-xl font-mono font-bold tabular-nums text-dnd-gold-bright">

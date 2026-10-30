@@ -36,10 +36,11 @@ export default function AbilityScoreCard({ score, expanded, onToggle, onEdit }: 
       )}
 
       <div className="relative z-10 pointer-events-none">
-        {/* 2-col header: name | pencil. I nomi sono parole singole non spezzabili:
-            il corpo scala con la card (clamp) e degrada a ellissi, mai a metà parola. */}
-        <div className="grid grid-cols-[minmax(0,1fr)_40px] items-center gap-1">
-          <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-center text-[clamp(7.5px,2.4vw,11px)] font-cinzel uppercase tracking-[0.04em] leading-tight text-dnd-text opacity-90">
+        {/* 2-col header: name | pencil. I nomi sono parole singole non spezzabili e il
+            corpo resta a 12 px: senza spaziatura e con la matita verso il bordo della card
+            ci stanno per intero, sotto degradano a ellissi, mai a metà parola. */}
+        <div className="-mr-2 grid grid-cols-[minmax(0,1fr)_40px] items-center gap-1">
+          <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-center text-xs font-cinzel uppercase tracking-normal leading-tight text-dnd-text opacity-90">
             {fullName}
           </span>
           <Pressable

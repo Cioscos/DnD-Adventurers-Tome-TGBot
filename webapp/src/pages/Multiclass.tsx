@@ -64,7 +64,7 @@ export default function Multiclass() {
       {/* Total level hero (only if has classes) */}
       {classes.length > 0 && (
         <Surface variant="tome" ornamented className="text-center">
-          <p className="text-[10px] font-cinzel uppercase tracking-[0.3em] text-dnd-gold-dim mb-1">
+          <p className="text-xs font-cinzel uppercase tracking-[0.3em] text-dnd-gold-dim mb-1">
             {t('character.multiclass.total_level', { defaultValue: 'Livello totale' })}
           </p>
           <p className="text-5xl font-display font-black text-dnd-gold-bright"
@@ -72,7 +72,7 @@ export default function Multiclass() {
             {targetLevel}
           </p>
           {levelUpAvailable && (
-            <p className="mt-1 text-[10px] font-mono text-dnd-text-muted tabular-nums">
+            <p className="mt-1 text-xs font-mono text-dnd-text-muted tabular-nums">
               {t('character.xp.level_distributed_hint', {
                 distributed: classLevelSum,
                 pending: targetLevel - classLevelSum,
@@ -161,7 +161,7 @@ export default function Multiclass() {
 
               {/* Level display (read-only; change via modals) */}
               <div className="flex items-center gap-2">
-                <p className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-gold-dim flex-1">
+                <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim flex-1">
                   {t('character.multiclass.level')}
                 </p>
                 <span className="font-display font-black text-2xl text-dnd-gold-bright">

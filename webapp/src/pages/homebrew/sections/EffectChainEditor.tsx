@@ -378,7 +378,7 @@ function BranchLabel({
     >
       <span className="w-3 h-px bg-dnd-gold-dim/50" aria-hidden />
       <span
-        className={`text-[11px] uppercase tracking-widest font-cinzel font-bold text-dnd-gold-dim ${
+        className={`text-xs uppercase tracking-widest font-cinzel font-bold text-dnd-gold-dim ${
           mono ? 'font-mono normal-case tracking-normal' : ''
         }`}
       >

@@ -36,7 +36,7 @@ export function renderInlineMarkdown(input: string): React.ReactNode {
       nodes.push(<em key={key++}>{match[4]}</em>)
     } else if (match[5]) {
       nodes.push(
-        <code key={key++} className="px-1 rounded bg-dnd-surface-raised font-mono text-[0.85em]">
+        <code key={key++} className="px-1 rounded bg-dnd-surface-raised font-mono text-[max(0.85em,12px)]">
           {match[5]}
         </code>,
       )

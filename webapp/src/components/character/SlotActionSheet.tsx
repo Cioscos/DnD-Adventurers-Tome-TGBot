@@ -64,7 +64,7 @@ export default function SlotActionSheet({ charId, slot, item, onClose, onReplace
           onClick={(e) => e.stopPropagation()}
         >
           <header className="px-4 py-3 border-b border-dnd-border">
-            <p className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-gold-dim">{slotLabel}</p>
+            <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim">{slotLabel}</p>
             <h2 className="text-sm font-bold text-dnd-gold-bright">{item.name}</h2>
           </header>
           <div className="flex flex-col">

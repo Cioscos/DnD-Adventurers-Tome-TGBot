@@ -91,7 +91,7 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
 
         {/* Type — griglia chip a selezione singola */}
         <div>
-          <label className="block text-[11px] uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
+          <label className="block text-xs uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
             {t('character.inventory.item_type')}
           </label>
           <div className="grid grid-cols-2 gap-2">
@@ -158,7 +158,7 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
           />
         </div>
         {Number(form.weight) > 0 && (
-          <p className="-mt-1 text-[10px] font-mono text-dnd-text-faint tabular-nums">
+          <p className="-mt-1 text-xs font-mono text-dnd-text-faint tabular-nums">
             ≈ {formatWeight(displayToLb(Number(form.weight) || 0, system), oppositeSystem(system))}
           </p>
         )}
@@ -202,7 +202,7 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
             />
 
             <div>
-              <label className="block text-[11px] uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
+              <label className="block text-xs uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
                 {t('character.inventory.weapon_type_label')}
               </label>
               <div className="flex gap-2">
@@ -221,7 +221,7 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
             </div>
 
             <div>
-              <label className="block text-[11px] uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
+              <label className="block text-xs uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
                 {t('character.inventory.properties_label')}
               </label>
               <div className="flex flex-wrap gap-2">
@@ -249,7 +249,7 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
         {form.item_type === 'armor' && (
           <>
             <div>
-              <label className="block text-[11px] uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
+              <label className="block text-xs uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
                 {t('character.inventory.armor_type_label')}
               </label>
               <div className="flex gap-2">
@@ -310,7 +310,7 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
         {form.item_type === 'consumable' && (
           <>
             <div>
-              <label className="block text-[11px] uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
+              <label className="block text-xs uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
                 {t('character.inventory.subtype_label')}
               </label>
               <div className="grid grid-cols-2 gap-2">

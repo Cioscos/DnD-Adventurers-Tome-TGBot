@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { GiHeartPlus, GiCrossedSwords } from 'react-icons/gi'
-import { api } from '@/api/client'
+import { api, ApiError } from '@/api/client'
 import Sheet from '@/components/ui/Sheet'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
@@ -11,6 +11,7 @@ import ChipSelect from '@/components/ui/ChipSelect'
 import { showUndoToast } from '@/components/ui/UndoToast'
 import { useToast } from '@/hooks/useToast'
 import { haptic } from '@/auth/telegram'
+import { notifyMutationError } from '@/lib/mutationError'
 import { parseCounterInput } from '@/lib/counterInput'
 import type { CharacterFull } from '@/types'
 
@@ -33,8 +34,26 @@ export default function HpQuickSheet({ char, open, onClose }: HpQuickSheetProps)
   const [amount, setAmount] = useState('')
 
   const hpMutation = useMutation({
-    mutationFn: ({ op, value }: { op: 'damage' | 'heal' | 'set_current'; value: number }) =>
+    mutationFn: ({ op, value }: { op: 'damage' | 'heal'; value: number }) =>
       api.characters.updateHp(char.id, op, value),
+  })
+
+  // Annulla tramite lo snapshot del server (mai set_current dal client). 409 = i PF
+  // sono cambiati nel frattempo; ogni altro errore (rete compresa) usa l'avviso standard.
+  const undoMutation = useMutation({
+    mutationFn: (opId: string) => api.characters.undoHp(char.id, opId),
+    onSuccess: (u) => {
+      qc.setQueryData(['character', char.id], u)
+      qc.invalidateQueries({ queryKey: ['homebrew-resources', char.id] })
+    },
+    onError: (err) => {
+      if (err instanceof ApiError && err.status === 409) {
+        toast.error(t('character.hp.undo_stale'))
+        qc.invalidateQueries({ queryKey: ['character', char.id] })
+      } else {
+        notifyMutationError()
+      }
+    },
   })
 
   // 0 is parsed successfully by parseCounterInput (it only rejects empty/non-numeric
@@ -46,7 +65,6 @@ export default function HpQuickSheet({ char, open, onClose }: HpQuickSheetProps)
   const apply = () => {
     const n = parsedAmount
     if (n === null || n === 0) { haptic.error(); return }
-    const prevCurrent = char.current_hit_points
     hpMutation.mutate({ op, value: n }, {
       onSuccess: (updated) => {
         qc.setQueryData(['character', char.id], updated)
@@ -56,16 +74,16 @@ export default function HpQuickSheet({ char, open, onClose }: HpQuickSheetProps)
         if (conc?.lost_concentration) {
           toast.warning(t('character.hp.concentration_lost'), { duration: 4000 })
         }
-        showUndoToast({
-          message: t(op === 'damage' ? 'character.hp.quick_damage_undo' : 'character.hp.quick_heal_undo', { n }),
-          actionLabel: t('character.hp.quick_undo_action'),
-          onUndo: () => hpMutation.mutate({ op: 'set_current', value: prevCurrent }, {
-            onSuccess: (u) => {
-              qc.setQueryData(['character', char.id], u)
-              qc.invalidateQueries({ queryKey: ['homebrew-resources', char.id] })
-            },
-          }),
-        })
+        const undoId = updated.hp_undo_id
+        if (undoId) {
+          const base = t(op === 'damage' ? 'character.hp.quick_damage_undo' : 'character.hp.quick_heal_undo', { n })
+          const hasHomebrew = (updated.homebrew_notifications?.length ?? 0) > 0
+          showUndoToast({
+            message: hasHomebrew ? `${base} · ${t('character.hp.undo_homebrew_note')}` : base,
+            actionLabel: t('character.hp.quick_undo_action'),
+            onUndo: () => undoMutation.mutate(undoId),
+          })
+        }
         setAmount('')
         onClose()
       },

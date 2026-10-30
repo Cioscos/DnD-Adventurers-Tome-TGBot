@@ -251,7 +251,7 @@ export default function PassiveModifierFormModal({
 
         {/* Target category */}
         <div>
-          <label className="block text-[11px] uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
+          <label className="block text-xs uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
             {t('homebrew.passive.modal.target_label')}
           </label>
           <div className="flex flex-wrap gap-1.5">
@@ -265,7 +265,7 @@ export default function PassiveModifierFormModal({
             ))}
           </div>
           {errors.target && (
-            <p className="text-dnd-crimson-bright text-[11px] mt-1 font-body">
+            <p className="text-dnd-crimson-bright text-xs mt-1 font-body">
               {errors.target}
             </p>
           )}
@@ -274,7 +274,7 @@ export default function PassiveModifierFormModal({
         {/* Sub-picker for skill / save */}
         {(draft.category === 'skill' || draft.category === 'save') && (
           <div>
-            <label className="block text-[11px] uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
+            <label className="block text-xs uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
               {draft.category === 'skill'
                 ? t('homebrew.passive.modal.skill_sub_label')
                 : t('homebrew.passive.modal.save_sub_label')}
@@ -306,7 +306,7 @@ export default function PassiveModifierFormModal({
             placeholder="0"
             error={errors.value}
           />
-          <p className="mt-1 text-[11px] italic text-dnd-text-muted font-body">
+          <p className="mt-1 text-xs italic text-dnd-text-muted font-body">
             {t('homebrew.passive.modal.value_helper')}
           </p>
         </div>

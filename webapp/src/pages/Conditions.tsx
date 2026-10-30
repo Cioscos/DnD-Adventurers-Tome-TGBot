@@ -164,7 +164,7 @@ export default function Conditions() {
 
   if (!char) {
     return (
-      <Layout title={t('character.conditions.title')} backTo={`/char/${charId}`} group="character" page="conditions">
+      <Layout title={t('character.conditions.title')} backTo={`/char/${charId}`} group="combat" page="conditions">
         <ConditionsSkeleton />
       </Layout>
     )
@@ -247,7 +247,7 @@ export default function Conditions() {
   }
 
   return (
-    <Layout title={t('character.conditions.title')} backTo={`/char/${charId}`} group="character" page="conditions">
+    <Layout title={t('character.conditions.title')} backTo={`/char/${charId}`} group="combat" page="conditions">
       {/* Turn-start CTA — only visible when at least one homebrew-applied
           `custom:*` condition is active, because that's the only situation
           where a `turn_started` trigger can have an effect the player
@@ -304,7 +304,7 @@ export default function Conditions() {
 
       {/* Exhaustion tracker — separated because levels are cumulative, not toggle. */}
       <Surface variant="elevated" ornamented>
-        <p className="text-[9px] font-cinzel uppercase tracking-[0.3em] text-dnd-text-faint italic mb-1.5 text-center">
+        <p className="text-xs font-cinzel uppercase tracking-[0.3em] text-dnd-text-faint italic mb-1.5 text-center">
           {t('character.conditions.exhaustion_caption', { defaultValue: 'Livelli (cumulativi)' })}
         </p>
         <div className="flex items-center justify-between mb-3">
@@ -423,9 +423,9 @@ export default function Conditions() {
                 whileTap={{ scale: 0.95 }}
                 animate={active && justActivated === key ? { x: [-2, 2, -1, 1, 0] } : { x: 0 }}
                 transition={{ duration: 0.25 }}
-                className="flex-1 flex items-center gap-2 px-3 py-3 text-left"
+                className="flex-1 min-w-0 flex items-center gap-1.5 pl-3 py-3 text-left"
               >
-                <Icon size={18} className={active ? 'text-dnd-crimson-bright' : 'text-dnd-text-faint'} />
+                <Icon size={18} className={`shrink-0 ${active ? 'text-dnd-crimson-bright' : 'text-dnd-text-faint'}`} />
                 <span className="text-sm font-body leading-tight">
                   {t(`character.conditions.${key}`)}
                 </span>

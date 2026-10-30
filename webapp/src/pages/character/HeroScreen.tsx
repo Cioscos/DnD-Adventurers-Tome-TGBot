@@ -110,10 +110,10 @@ export default function HeroScreen({ char }: Props) {
             aria-hidden="true"
             className={overloaded ? 'text-dnd-amber' : 'text-dnd-gold-bright'}
           />
-          <span className={`text-[11px] font-mono font-bold tabular-nums leading-none ${overloaded ? 'text-dnd-amber' : 'text-dnd-text'}`}>
+          <span className={`text-xs font-mono font-bold tabular-nums leading-none ${overloaded ? 'text-dnd-amber' : 'text-dnd-text'}`}>
             {weightLabel}
           </span>
-          <span className="text-[10px] font-mono text-dnd-text-muted leading-none">
+          <span className="text-xs font-mono text-dnd-text-muted leading-none">
             {weightUnitLabel(unitSystem)}
           </span>
         </Pressable>
@@ -128,7 +128,7 @@ export default function HeroScreen({ char }: Props) {
                        bg-[rgba(179,58,58,0.12)] border border-dnd-crimson/50 text-dnd-crimson-bright"
           >
             <GiSkullCrossedBones size={16} aria-hidden />
-            <span className="text-[11px] font-cinzel uppercase tracking-widest font-bold">
+            <span className="text-xs font-cinzel uppercase tracking-widest font-bold">
               {t('character.death_saves.dead_title')}
             </span>
             <span className="font-body italic text-sm">
@@ -199,7 +199,7 @@ export default function HeroScreen({ char }: Props) {
                     style={{ textShadow: '0 1px 3px rgba(var(--dnd-shadow-color), 0.6)' }}>
                 {acTotal}
               </span>
-              <span className="text-[11px] font-cinzel uppercase tracking-wide text-dnd-gold-dim leading-none mt-0.5">
+              <span className="text-xs font-cinzel uppercase tracking-wide text-dnd-gold-dim leading-none mt-0.5">
                 {t('character.ac.short', { defaultValue: 'CA' })}
               </span>
             </span>
@@ -216,7 +216,7 @@ export default function HeroScreen({ char }: Props) {
               whileTap={{ scale: 0.98 }}
             >
               <GiPotionBall size={14} aria-hidden />
-              <span className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-arcane-bright/80">
+              <span className="text-xs font-cinzel uppercase tracking-widest text-dnd-arcane-bright/80">
                 {t('character.spells.concentration')}
               </span>
               {spell?.name && (
@@ -312,11 +312,11 @@ export default function HeroScreen({ char }: Props) {
                     transition={spring.snappy}
                     whileTap={{ scale: 0.95 }}
                   >
-                    <span className="text-[11px] font-cinzel uppercase tracking-wider opacity-80">
+                    <span className="text-xs font-cinzel uppercase tracking-wider opacity-80">
                       {shortLabel}
                     </span>
                     <span className="text-xl font-mono font-bold tabular-nums leading-none mt-0.5">{score.value}</span>
-                    <span className="text-[11px] font-mono font-bold mt-0.5 px-1.5 py-0.5 rounded-full bg-dnd-ink/25">
+                    <span className="text-xs font-mono font-bold mt-0.5 px-1.5 py-0.5 rounded-full bg-dnd-ink/25">
                       {modStr}
                     </span>
                   </Pressable>
@@ -346,7 +346,7 @@ export default function HeroScreen({ char }: Props) {
                    text-dnd-text-faint hover:text-dnd-gold-dim transition-colors"
       >
         <SlidersHorizontal size={13} aria-hidden />
-        <span className="text-[11px] font-cinzel uppercase tracking-widest">
+        <span className="text-xs font-cinzel uppercase tracking-widest">
           {t('character.hero.customize')}
         </span>
       </Pressable>

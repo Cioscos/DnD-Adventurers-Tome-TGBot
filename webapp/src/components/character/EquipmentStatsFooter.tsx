@@ -59,7 +59,7 @@ export default function EquipmentStatsFooter({ char }: Props) {
         >
           {acTotal}
         </span>
-        <span className="flex items-center gap-1.5 text-[10px] font-cinzel uppercase tracking-[0.25em] text-dnd-gold-dim">
+        <span className="flex items-center gap-1.5 text-xs font-cinzel uppercase tracking-[0.25em] text-dnd-gold-dim">
           <GiCheckedShield size={11} aria-hidden="true" />
           {t('character.ac.short', { defaultValue: 'AC' })}
         </span>

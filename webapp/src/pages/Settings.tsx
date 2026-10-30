@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Settings2, Languages, RefreshCw, Eye, Sun, History, Coins, Trash2, BookmarkCheck, Bell } from 'lucide-react'
@@ -8,7 +8,9 @@ import {
   GiPerspectiveDiceSixFacesRandom as Dices,
 } from 'react-icons/gi'
 import { api } from '@/api/client'
+import type { CharacterSummary } from '@/types'
 import Layout from '@/components/Layout'
+import GenericPageSkeleton from '@/components/skeletons/GenericPageSkeleton'
 import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
 import Pressable from '@/components/ui/Pressable'
@@ -18,6 +20,7 @@ import SwitchToggle from '@/components/ui/SwitchToggle'
 import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import { FlagIT, FlagEN } from '@/components/ui/Flags'
 import { haptic } from '@/auth/telegram'
+import { useToast } from '@/hooks/useToast'
 import { useCharacterStore } from '@/store/characterStore'
 import { useDiceSettings } from '@/store/diceSettings'
 import { useThemeSettings, type ThemeMode } from '@/store/themeSettings'
@@ -52,8 +55,8 @@ function D20Thumb({ body, accent, active }: { body: string; accent: string; acti
   return (
     <svg
       viewBox="0 0 24 24"
-      width="24"
-      height="24"
+      width="32"
+      height="32"
       aria-hidden
       className="shrink-0"
       style={{
@@ -70,7 +73,7 @@ function D20Thumb({ body, accent, active }: { body: string; accent: string; acti
         strokeLinejoin="round"
       />
       <polygon
-        points="12,5 18,9 12,13 6,9"
+        points="12,4.5 16.5,7 12,9.5 7.5,7"
         fill="none"
         stroke={accent}
         strokeOpacity="0.55"
@@ -78,9 +81,9 @@ function D20Thumb({ body, accent, active }: { body: string; accent: string; acti
       />
       <text
         x="12"
-        y="17.5"
+        y="18"
         textAnchor="middle"
-        fontSize="6"
+        fontSize="9"
         fontWeight="700"
         fill={accent}
         fontFamily="Cinzel, serif"
@@ -96,6 +99,8 @@ export default function Settings() {
   const charId = Number(id)
   const { t, i18n } = useTranslation()
   const qc = useQueryClient()
+  const navigate = useNavigate()
+  const toast = useToast()
   const { locale, setLocale } = useCharacterStore()
   const animate3d = useDiceSettings((s) => s.animate3d)
   const setAnimate3d = useDiceSettings((s) => s.setAnimate3d)
@@ -153,6 +158,7 @@ export default function Settings() {
   const [showRecalcConfirm, setShowRecalcConfirm] = useState(false)
   const [showSlotModeConfirm, setShowSlotModeConfirm] = useState(false)
   const [showResetConfirm, setShowResetConfirm] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   // Tetto preparazione manuale: input mai precompilato (placeholder only).
   const [prepCapInput, setPrepCapInput] = useState('')
 
@@ -164,7 +170,34 @@ export default function Settings() {
     },
   })
 
-  if (!char) return null
+  // Eliminazione personaggio: pulisce la cache e torna alla home. In caso di
+  // errore resta sulla pagina e avvisa.
+  const deleteMutation = useMutation({
+    mutationFn: () => api.characters.delete(charId),
+    onSuccess: () => {
+      qc.setQueryData<CharacterSummary[]>(['characters'], (old) =>
+        old ? old.filter((c) => c.id !== charId) : old,
+      )
+      qc.removeQueries({ queryKey: ['character', charId] })
+      // Le note sono salvate in localStorage: non devono sopravvivere al personaggio.
+      qc.removeQueries({ queryKey: ['notes', charId] })
+      haptic.success()
+      navigate('/', { replace: true })
+    },
+    onError: () => {
+      setShowDeleteConfirm(false)
+      haptic.error()
+      toast.error(t('character.select.delete_failed'))
+    },
+  })
+
+  if (!char) {
+    return (
+      <Layout title={t('character.settings.title')} backTo={`/char/${charId}`}>
+        <GenericPageSkeleton />
+      </Layout>
+    )
+  }
 
   const settings = (char.settings as Record<string, unknown>) ?? {}
   const slotsMode = (settings.spell_slots_mode as string) ?? 'auto'
@@ -450,7 +483,7 @@ export default function Settings() {
                   updateMutation.mutate({ ...settings, history_retention_mode: mode })
                 }}
                 pending={updateMutation.isPending && activeSetting === `retention:${mode}`}
-                className={`min-h-[44px] rounded-xl px-2 font-cinzel text-[10px] uppercase tracking-widest transition-colors
+                className={`min-h-[44px] rounded-xl px-2 font-cinzel text-xs uppercase tracking-normal transition-colors
                   ${selected
                     ? 'bg-gradient-gold text-dnd-ink shadow-engrave'
                     : 'bg-dnd-surface border border-dnd-border text-dnd-text-muted'}`}
@@ -465,7 +498,7 @@ export default function Settings() {
         {/* Retention purge preview — shows what each mode would delete now,
             so users can decide before committing the change (U080). */}
         {retentionPreview && retentionPreview.total > 0 && (
-          <div className="mt-3 space-y-1 text-[11px] text-dnd-text-muted font-body italic leading-snug">
+          <div className="mt-3 space-y-1 text-xs text-dnd-text-muted font-body italic leading-snug">
             <p>
               {t('character.settings.history_retention_total', { n: retentionPreview.total })}
             </p>
@@ -660,6 +693,22 @@ export default function Settings() {
         {t('character.settings.reset_settings')}
       </Button>
 
+      {/* Zona pericolosa: eliminazione del personaggio, in fondo alla pagina. */}
+      <SectionDivider icon={<Trash2 size={11} />} align="center">
+        {t('character.settings.danger_zone')}
+      </SectionDivider>
+
+      <Button
+        variant="danger"
+        size="md"
+        fullWidth
+        icon={<Trash2 size={16} />}
+        onClick={() => setShowDeleteConfirm(true)}
+        haptic="warning"
+      >
+        {t('character.settings.delete_character')}
+      </Button>
+
       <ConfirmSheet
         open={showRecalcConfirm}
         onClose={() => setShowRecalcConfirm(false)}
@@ -697,6 +746,18 @@ export default function Settings() {
         confirmVariant="danger"
         loading={updateMutation.isPending && activeSetting === 'reset'}
         onConfirm={confirmReset}
+      />
+
+      <ConfirmSheet
+        open={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        title={t('character.settings.delete_character')}
+        body={t('character.select.delete_confirm', { name: char.name })}
+        confirmLabel={t('common.delete')}
+        cancelLabel={t('common.cancel')}
+        confirmVariant="danger"
+        loading={deleteMutation.isPending}
+        onConfirm={() => deleteMutation.mutate()}
       />
     </Layout>
   )

@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m, AnimatePresence } from 'framer-motion'
-import { Send, Minus, Plus, Trash2, BarChart3 } from 'lucide-react'
+import { Send, Minus, Plus, Trash2, BarChart3, WifiOff } from 'lucide-react'
 import { GiCrossedSwords as Swords } from 'react-icons/gi'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
@@ -11,6 +11,7 @@ import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
 import Pressable from '@/components/ui/Pressable'
 import ConfirmSheet from '@/components/ui/ConfirmSheet'
+import EmptyState from '@/components/ui/EmptyState'
 import DiceIcon from '@/components/ui/DiceIcon'
 import { DiceRunicWatermark } from '@/components/ui/Ornament'
 import ScrollArea from '@/components/ScrollArea'
@@ -74,10 +75,11 @@ export default function Dice() {
     queryFn: () => api.characters.get(charId),
   })
 
-  const { data: history = [] } = useQuery({
+  const historyQuery = useQuery({
     queryKey: ['dice-history', charId],
     queryFn: () => api.dice.history(charId),
   })
+  const history = historyQuery.data ?? []
 
   const { roll, isPending: rollPending } = useRollAndPersist(charId)
 
@@ -223,7 +225,7 @@ export default function Dice() {
 
       {/* Dice count stepper */}
       <Surface variant="elevated">
-        <p className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-gold-dim mb-2">
+        <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim mb-2">
           {t('character.dice.count')}
         </p>
         <div className="flex items-center justify-between gap-3">
@@ -294,7 +296,7 @@ export default function Dice() {
             transition={spring.elastic}
           >
             <Surface variant="elevated" ornamented className="text-center">
-              <p className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-gold-dim mb-1 flex items-center justify-center gap-1.5">
+              <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim mb-1 flex items-center justify-center gap-1.5">
                 <Swords size={12} /> {t('character.dice.initiative')}
               </p>
               <m.p
@@ -323,7 +325,7 @@ export default function Dice() {
             transition={spring.elastic}
           >
             <Surface variant="elevated" ornamented className="text-center">
-              <p className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-gold-dim mb-1">
+              <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim mb-1">
                 {lastResult.notation}
               </p>
               <m.p
@@ -356,7 +358,7 @@ export default function Dice() {
                       )
                     })}
                     {'] '}
-                    <span className="text-[10px] uppercase tracking-widest text-dnd-text-faint">
+                    <span className="text-xs uppercase tracking-widest text-dnd-text-faint">
                       {t('character.dice.dropped')} {statRollExtras.dropped}
                     </span>
                   </p>
@@ -386,7 +388,7 @@ export default function Dice() {
       {/* Statistiche cumulative */}
       <Link
         to={`/char/${charId}/dice/stats`}
-        className="flex items-center justify-center gap-2 min-h-[44px] px-3 py-2 rounded-xl bg-dnd-surface border border-dnd-border text-dnd-gold font-cinzel text-[11px] uppercase tracking-widest"
+        className="flex items-center justify-center gap-2 min-h-[44px] px-3 py-2 rounded-xl bg-dnd-surface border border-dnd-border text-dnd-gold font-cinzel text-xs uppercase tracking-widest"
         onClick={() => haptic.light()}
       >
         <BarChart3 size={14} />
@@ -394,10 +396,17 @@ export default function Dice() {
       </Link>
 
       {/* History */}
+      {historyQuery.isError && historyQuery.data === undefined && (
+        <EmptyState
+          icon={<WifiOff size={32} />}
+          title={t('common.offline_unavailable')}
+          action={{ label: t('common.retry'), onClick: () => historyQuery.refetch() }}
+        />
+      )}
       {history.length > 0 && (
         <div>
           <div className="flex justify-between items-center mb-2 px-1">
-            <h3 className="font-cinzel text-[10px] uppercase tracking-widest text-dnd-gold-dim">
+            <h3 className="font-cinzel text-xs uppercase tracking-widest text-dnd-gold-dim">
               {t('character.dice.history')}
             </h3>
             <Button
@@ -439,13 +448,13 @@ export default function Dice() {
                       <div className="flex items-baseline gap-1.5 min-w-0">
                         <span className="text-xs text-dnd-gold-dim font-mono shrink-0">{entry.notation}</span>
                         {entry.rolls.length > 1 && (
-                          <span className="text-[10px] text-dnd-text-faint font-mono truncate">
+                          <span className="text-xs text-dnd-text-faint font-mono truncate">
                             [{entry.rolls.join('+')}]
                           </span>
                         )}
                       </div>
                       {(rel || sourceLabel || entry.label) && (
-                        <div className="flex items-center gap-1.5 text-[9px] text-dnd-text-faint italic mt-0.5">
+                        <div className="flex items-center gap-1.5 text-xs text-dnd-text-faint italic mt-0.5">
                           {sourceLabel && (
                             <span className="font-cinzel uppercase tracking-wider px-1 py-px rounded bg-dnd-chip-bg text-dnd-gold-dim border border-dnd-border not-italic">
                               {sourceLabel}

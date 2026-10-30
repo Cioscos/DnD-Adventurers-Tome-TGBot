@@ -55,7 +55,7 @@ export default function CustomResourceCounter({
           <div className="font-display font-bold text-sm text-dnd-gold-bright truncate">
             {resource.name}
           </div>
-          <div className="text-[10px] font-cinzel uppercase tracking-[0.18em] text-dnd-text-faint truncate">
+          <div className="text-xs font-cinzel uppercase tracking-[0.18em] text-dnd-text-faint truncate">
             {t('character.homebrew.resources.subtitle')}
           </div>
         </div>
@@ -63,7 +63,7 @@ export default function CustomResourceCounter({
 
       <div className="px-3 pb-3 space-y-2 border-t border-dnd-gold-dim/15">
         {restorationCaption && (
-          <div className="flex items-center gap-1.5 pt-2 text-[10px] text-dnd-text-muted font-cinzel uppercase tracking-widest">
+          <div className="flex items-center gap-1.5 pt-2 text-xs text-dnd-text-muted font-cinzel uppercase tracking-widest">
             <RotateCcw size={11} />
             <span>{restorationCaption}</span>
           </div>
@@ -106,7 +106,7 @@ export default function CustomResourceCounter({
               pending={isPending}
               className="inline-flex items-center gap-1.5 min-h-[44px] px-3 py-1.5 rounded-lg
                          bg-dnd-gold/10 border border-dnd-gold-dim/40 text-dnd-gold-bright
-                         text-[11px] font-cinzel uppercase tracking-wider
+                         text-xs font-cinzel uppercase tracking-wider
                          disabled:opacity-40"
               whileTap={{ scale: 0.95 }}
             >

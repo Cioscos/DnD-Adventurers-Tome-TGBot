@@ -137,6 +137,9 @@ export interface CharacterSummary {
   class_summary: string
   heroic_inspiration: boolean
   experience_points: number
+  hp_max_homebrew_modifier: number
+  ac_homebrew_modifier: number
+  is_dead: boolean
 }
 
 export interface ConcentrationSaveResult {
@@ -175,7 +178,10 @@ export interface SpellcastingInfo {
   has_wizard: boolean
 }
 
-export interface CharacterFull extends CharacterSummary {
+// Il dettaglio backend non restituisce ac_homebrew_modifier (solo la lista): resta opzionale
+// e CharacterFull non è assegnabile a CharacterSummary, così effectiveAc non gira su di esso.
+export interface CharacterFull extends Omit<CharacterSummary, 'ac_homebrew_modifier'> {
+  ac_homebrew_modifier?: number
   background?: string
   alignment?: string
   speed: number
@@ -186,7 +192,6 @@ export interface CharacterFull extends CharacterSummary {
   shield_armor_class_override: boolean
   unarmored_defense_ability?: 'wisdom' | 'constitution' | null
   ac_breakdown?: AcBreakdown | null
-  hp_max_homebrew_modifier?: number
   speed_homebrew_modifier?: number
   skills_homebrew_modifiers?: Record<string, number>
   saves_homebrew_modifiers?: Record<string, number>
@@ -199,6 +204,9 @@ export interface CharacterFull extends CharacterSummary {
   concentrating_spell_id?: number
   hp_gained?: number
   concentration_save?: ConcentrationSaveResult | null
+  /** Id dello snapshot per annullare l'ultima modifica PF; null se nulla è cambiato. */
+  hp_undo_id?: string | null
+  homebrew_notifications?: Array<Record<string, unknown>> | null
   rolls_history?: DiceRollResult[]
   /** Raw dal BE: valore stringa legacy oppure dict {body, created_at, updated_at, tags}. */
   notes?: Record<
@@ -210,7 +218,6 @@ export interface CharacterFull extends CharacterSummary {
   skills?: Record<string, unknown>
   saving_throws?: Record<string, boolean>
   death_saves?: DeathSaves
-  is_dead?: boolean
   personality?: Record<string, string>
   languages?: string[]
   general_proficiencies?: string[]

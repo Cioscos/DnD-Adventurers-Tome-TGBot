@@ -11,6 +11,7 @@ import { haptic } from '@/auth/telegram'
 import EmptyState from '@/components/ui/EmptyState'
 import Skeleton from '@/components/ui/Skeleton'
 import InSessionBanner from '@/components/ui/InSessionBanner'
+import OfflineNotice from '@/components/ui/OfflineNotice'
 import Pressable from '@/components/ui/Pressable'
 import { useCharacterStore } from '@/store/characterStore'
 import CharacterSwiper from '@/components/character/CharacterSwiper'
@@ -37,13 +38,14 @@ export default function CharacterMain() {
 
   // Stessa politica del guard condiviso nel Layout (audit FE 2026-06-11, #10):
   // 404/403 non si ritentano, gli altri errori sì.
-  const { data: char, isLoading, isError, error, refetch } = useQuery({
+  const charQuery = useQuery({
     queryKey: ['character', charId],
     queryFn: () => api.characters.get(charId),
     enabled: !!charId,
     retry: (failureCount, err) =>
       !(err instanceof ApiError && (err.status === 404 || err.status === 403)) && failureCount < 3,
   })
+  const { data: char, isLoading, error, refetch } = charQuery
   const charNotFound = error instanceof ApiError
     && (error.status === 404 || error.status === 403)
 
@@ -66,7 +68,9 @@ export default function CharacterMain() {
     )
   }
 
-  if (isError || !char) {
+  // Un refetch fallito con una copia in cache non è un errore da schermata piena:
+  // la scheda resta, segnalata da OfflineNotice. Il 404/403 invece la sconfessa.
+  if (charNotFound || !char) {
     return (
       <div className="min-h-screen flex flex-col justify-center p-4 pt-safe pb-safe">
         {charNotFound ? (
@@ -131,7 +135,7 @@ export default function CharacterMain() {
               whileTap={{ scale: 0.9 }}
               title={t('character.spells.concentration_active', { defaultValue: 'Concentrazione attiva' })}
               aria-label={t('character.spells.concentration_active', { defaultValue: 'Concentrazione attiva' })}
-              className="shrink-0 inline-flex items-center justify-center w-6 h-6 rounded-full bg-dnd-arcane-deep/50 border border-dnd-arcane-bright text-dnd-arcane-bright font-cinzel font-black text-[10px] shadow-halo-arcane animate-pulse"
+              className="shrink-0 inline-flex items-center justify-center w-6 h-6 rounded-full bg-dnd-arcane-deep/50 border border-dnd-arcane-bright text-dnd-arcane-bright font-cinzel font-black text-xs shadow-halo-arcane animate-pulse"
             >
               C
             </Pressable>
@@ -168,7 +172,7 @@ export default function CharacterMain() {
             className={char.heroic_inspiration ? 'text-dnd-gold-bright' : 'text-dnd-gold-dim'}
           />
           <span
-            className={`text-[10px] font-cinzel font-bold uppercase tracking-wider leading-none ${
+            className={`text-xs font-cinzel font-bold uppercase tracking-wider leading-none ${
               char.heroic_inspiration ? 'text-dnd-gold-bright' : 'text-dnd-text-muted'
             }`}
           >
@@ -188,10 +192,12 @@ export default function CharacterMain() {
 
       <InSessionBanner charId={charId} />
 
+      <OfflineNotice query={charQuery} className="shrink-0 mx-3 mt-2" />
+
       <CharacterSwiper
         hero={<HeroScreen char={char} />}
         equipment={<EquipmentScreen char={char} />}
-        menu={<MenuScreen charId={charId} />}
+        menu={<MenuScreen char={char} />}
       />
 
       <SearchOverlay char={char} open={searchOpen} onClose={() => setSearchOpen(false)} />

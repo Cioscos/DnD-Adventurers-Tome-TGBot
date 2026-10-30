@@ -70,4 +70,15 @@ describe('Session', () => {
     renderWithProviders(<Session />)
     expect(await screen.findByRole('button', { name: 'session.join_button' })).toBeDisabled()
   })
+
+  it('failed character fetch offers a retry instead of claiming there are no characters', async () => {
+    me.mockResolvedValue(null)
+    list.mockRejectedValue(new TypeError('Failed to fetch'))
+    renderWithProviders(<Session />)
+    expect(await screen.findByText('common.offline_unavailable')).toBeInTheDocument()
+    expect(screen.queryByText('session.no_characters_hint')).not.toBeInTheDocument()
+    list.mockResolvedValue([{ id: 1, name: 'Aragorn' }])
+    await userEvent.click(screen.getByRole('button', { name: 'common.retry' }))
+    expect(await screen.findByRole('button', { name: 'session.join_button' })).toBeEnabled()
+  })
 })

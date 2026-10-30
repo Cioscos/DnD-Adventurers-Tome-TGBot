@@ -9,7 +9,7 @@ import {
   GiHeartPlus as Heart,
 } from 'react-icons/gi'
 import { toast } from 'sonner'
-import { api, type DeathSaveRollResult, type ConcentrationSaveResult, type HitDiceSpendResult } from '@/api/client'
+import { api, ApiError, type DeathSaveRollResult, type ConcentrationSaveResult, type HitDiceSpendResult } from '@/api/client'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
 import HPGauge from '@/components/ui/HPGauge'
@@ -37,6 +37,15 @@ import { useIsFirstValue } from '@/hooks/useIsFirstValue'
 import { notifyMutationError } from '@/lib/mutationError'
 
 type HPOp = 'damage' | 'heal' | 'set_max' | 'set_current' | 'set_temp'
+
+// Solo la chiave del messaggio: l'annullamento vero lo fa il server con lo snapshot.
+const UNDO_MESSAGE_KEYS: Record<HPOp, string> = {
+  damage:      'character.hp.quick_damage_undo',
+  heal:        'character.hp.quick_heal_undo',
+  set_current: 'character.hp.quick_heal_undo',
+  set_max:     'character.hp.quick_heal_undo',
+  set_temp:    'character.hp.quick_temp_undo',
+}
 
 export default function HP() {
   const { id } = useParams<{ id: string }>()
@@ -88,7 +97,7 @@ export default function HP() {
   const hpMutation = useMutation({
     mutationFn: ({ op, val, wasCritical }: { op: HPOp; val: number; wasCritical?: boolean }) =>
       api.characters.updateHp(charId, op, val, wasCritical ?? false),
-    onSuccess: (updated) => {
+    onSuccess: (updated, { op, val }) => {
       qc.setQueryData(['character', charId], updated)
       // HP events (damage/heal) can drive homebrew change_resource rules (#18).
       qc.invalidateQueries({ queryKey: ['homebrew-resources', charId] })
@@ -104,10 +113,40 @@ export default function HP() {
         }
       }
       savingRef.current = false
+      // Stesso annullamento per scorciatoie e valore scritto a mano.
+      const undoId = updated.hp_undo_id
+      if (!undoId) return
+      const base = t(UNDO_MESSAGE_KEYS[op], { n: val })
+      const hasHomebrew = (updated.homebrew_notifications?.length ?? 0) > 0
+      showUndoToast({
+        message: hasHomebrew ? `${base} · ${t('character.hp.undo_homebrew_note')}` : base,
+        actionLabel: t('character.hp.quick_undo_action'),
+        onUndo: () => undoMutation.mutate(undoId),
+      })
     },
     onError: () => {
       notifyMutationError()
       savingRef.current = false
+    },
+  })
+
+  // Annulla tramite lo snapshot del server; 409 = i PF sono cambiati nel frattempo.
+  const undoMutation = useMutation({
+    mutationFn: (opId: string) => api.characters.undoHp(charId, opId),
+    onSuccess: (updated) => {
+      qc.setQueryData(['character', charId], updated)
+      qc.invalidateQueries({ queryKey: ['homebrew-resources', charId] })
+      // I dialog raccontavano l'operazione appena annullata.
+      setInstantDeathOpen(false)
+      setConcSaveResult(null)
+    },
+    onError: (err) => {
+      if (err instanceof ApiError && err.status === 409) {
+        toast.error(t('character.hp.undo_stale'))
+        qc.invalidateQueries({ queryKey: ['character', charId] })
+      } else {
+        notifyMutationError()
+      }
     },
   })
 
@@ -169,42 +208,8 @@ export default function HP() {
 
   const handleQuickApply = ({ op, val }: { op: HPOp; val: number }) => {
     if (!char || hpMutation.isPending) return
-    const prev = {
-      current: char.current_hit_points,
-      max: char.hit_points,
-      temp: char.temp_hp ?? 0,
-    }
-    const undoMap: Record<HPOp, { op: HPOp; val: number; messageKey: string } | null> = {
-      damage:      { op: 'set_current', val: prev.current, messageKey: 'character.hp.quick_damage_undo' },
-      heal:        { op: 'set_current', val: prev.current, messageKey: 'character.hp.quick_heal_undo' },
-      set_current: { op: 'set_current', val: prev.current, messageKey: 'character.hp.quick_heal_undo' },
-      set_max:     { op: 'set_max',     val: prev.max,     messageKey: 'character.hp.quick_heal_undo' },
-      set_temp:    { op: 'set_temp',    val: prev.temp,    messageKey: 'character.hp.quick_temp_undo' },
-    }
     const wasCritical = op === 'damage' && char.current_hit_points === 0 && crit
-    hpMutation.mutate({ op, val, wasCritical }, {
-      onSuccess: (updated) => {
-        qc.setQueryData(['character', charId], updated)
-        qc.invalidateQueries({ queryKey: ['homebrew-resources', charId] })
-        setCrit(false)
-        maybeShowInstantDeath(updated)
-        const conc = updated.concentration_save
-        if (conc) {
-          setConcSaveResult(conc)
-          if (conc.lost_concentration) {
-            toast.warning(t('character.hp.concentration_lost'), { duration: 4000 })
-          }
-        }
-        haptic.success()
-        const undo = undoMap[op]
-        if (!undo) return
-        showUndoToast({
-          message: t(undo.messageKey, { n: val }),
-          actionLabel: t('character.hp.quick_undo_action'),
-          onUndo: () => hpMutation.mutate({ op: undo.op, val: undo.val }),
-        })
-      },
-    })
+    hpMutation.mutate({ op, val, wasCritical })
   }
 
   if (!char) {
@@ -254,7 +259,7 @@ export default function HP() {
                 transition={{ duration: 0.2 }}
               >
                 <Surface variant="tome" ornamented className="relative text-center">
-                  <p className="text-[10px] font-cinzel uppercase tracking-[0.25em] text-dnd-gold-dim mb-2">
+                  <p className="text-xs font-cinzel uppercase tracking-[0.25em] text-dnd-gold-dim mb-2">
                     <Heart size={10} className="inline mr-1 text-dnd-crimson-bright" />
                     {t('character.hp.title')}
                   </p>
@@ -291,7 +296,7 @@ export default function HP() {
                       un'anomalia (audit FE #5). Cobalt = info, mai crimson. */}
                   {atZero && ds.stable && (
                     <p className="mt-3 inline-flex items-center justify-center gap-1.5 rounded-full px-3 py-1.5
-                                  text-[11px] font-cinzel font-bold uppercase tracking-wider
+                                  text-xs font-cinzel font-bold uppercase tracking-wider
                                   bg-dnd-cobalt/15 border border-dnd-cobalt/40 text-dnd-cobalt-bright">
                       <HeartPulse size={13} />
                       {t('character.death_saves.stabilized_badge')}

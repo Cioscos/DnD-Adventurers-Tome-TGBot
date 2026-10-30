@@ -260,14 +260,14 @@ export default function EditClassesModal({ char, targetLevel, onClose }: Props) 
                 : 'bg-dnd-surface border-dnd-crimson/60 text-dnd-crimson-bright'
             }`}
           >
-            <p className="text-[10px] font-cinzel uppercase tracking-[0.3em] opacity-80">
+            <p className="text-xs font-cinzel uppercase tracking-[0.3em] opacity-80">
               {t('character.multiclass.edit.sum_label')}
             </p>
             <p className="font-display font-black text-3xl">
               {t('character.multiclass.edit.sum_display', { current: currentSum, target: targetLevel })}
             </p>
             {!isValid && entries.length > 0 && (
-              <p className="mt-1.5 text-[11px] font-body italic opacity-90">
+              <p className="mt-1.5 text-xs font-body italic opacity-90">
                 {currentSum < targetLevel
                   ? t('character.multiclass.edit.helper_too_low', {
                       n: targetLevel - currentSum,
@@ -283,7 +283,7 @@ export default function EditClassesModal({ char, targetLevel, onClose }: Props) 
 
           {/* Entries + add class (grouped section) */}
           <div className="space-y-4">
-            <p className="text-[10px] font-cinzel uppercase tracking-[0.3em] text-dnd-gold-dim text-center">
+            <p className="text-xs font-cinzel uppercase tracking-[0.3em] text-dnd-gold-dim text-center">
               {t('character.multiclass.edit.classes_label')}
             </p>
             {entries.map((e) => (
@@ -292,7 +292,7 @@ export default function EditClassesModal({ char, targetLevel, onClose }: Props) 
                   <p className="font-display font-bold text-dnd-gold-bright truncate">
                     {e.className}
                     {e.kind === 'new' && (
-                      <span className="ml-2 text-[10px] font-cinzel uppercase tracking-widest text-dnd-amber">
+                      <span className="ml-2 text-xs font-cinzel uppercase tracking-widest text-dnd-amber">
                         {t('character.multiclass.edit.new_tag')}
                       </span>
                     )}
@@ -413,7 +413,7 @@ export default function EditClassesModal({ char, targetLevel, onClose }: Props) 
                   <Surface variant="elevated" className="!p-3 border border-dnd-amber/50 space-y-1.5">
                     <div className="flex items-center gap-2">
                       <AlertTriangle size={14} className="text-dnd-amber shrink-0" />
-                      <p className="text-[11px] font-cinzel uppercase tracking-widest text-dnd-amber">
+                      <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-amber">
                         {t('character.multiclass.prereq_warning')}
                       </p>
                     </div>
@@ -427,7 +427,7 @@ export default function EditClassesModal({ char, targetLevel, onClose }: Props) 
                         </li>
                       ))}
                     </ul>
-                    <p className="text-[10px] text-dnd-text-faint font-body italic">
+                    <p className="text-xs text-dnd-text-faint font-body italic">
                       {t('character.multiclass.prereq_can_proceed')}
                     </p>
                   </Surface>

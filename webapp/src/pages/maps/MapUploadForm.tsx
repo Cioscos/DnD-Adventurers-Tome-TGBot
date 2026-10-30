@@ -132,7 +132,7 @@ export default function MapUploadForm({
 
       {/* Dropzone */}
       <div>
-        <label className="block text-[11px] uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
+        <label className="block text-xs uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
           {t('character.maps.select_files')}
         </label>
         <Pressable
@@ -153,7 +153,7 @@ export default function MapUploadForm({
           <span className="text-sm font-body text-dnd-text">
             {t('character.maps.dropzone_primary')}
           </span>
-          <span className="text-[10px] font-mono text-dnd-text-faint">
+          <span className="text-xs font-mono text-dnd-text-faint">
             {t('character.maps.dropzone_accept')}
           </span>
         </Pressable>
@@ -188,7 +188,7 @@ export default function MapUploadForm({
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-body text-dnd-text truncate">{file.name}</p>
-                  <p className="text-[10px] font-mono text-dnd-text-faint">
+                  <p className="text-xs font-mono text-dnd-text-faint">
                     {(file.size / 1024 / 1024).toFixed(2)} MB
                   </p>
                   {isUploading && isActive && (
@@ -200,7 +200,7 @@ export default function MapUploadForm({
                     </div>
                   )}
                   {isDone && (
-                    <p className="text-[10px] font-mono text-dnd-gold-bright mt-0.5">
+                    <p className="text-xs font-mono text-dnd-gold-bright mt-0.5">
                       {t('character.maps.uploaded')}
                     </p>
                   )}
@@ -220,7 +220,7 @@ export default function MapUploadForm({
             )
           })}
           {isUploading && activeIndex !== null && selectedFiles.length > 1 && (
-            <p className="text-[10px] font-mono text-dnd-text-faint text-center">
+            <p className="text-xs font-mono text-dnd-text-faint text-center">
               {t('character.maps.upload_progress_count', {
                 current: activeIndex + 1,
                 total: selectedFiles.length,

@@ -126,7 +126,7 @@ export default function DicePoolResultModal({
             <span className="text-dnd-gold-dim min-w-0 flex-1">
               <span className="font-semibold">{g.notation}</span>
               {g.rolls.length > 1 && (
-                <span className="text-dnd-text-faint text-[11px] ml-1.5 break-words">
+                <span className="text-dnd-text-faint text-xs ml-1.5 break-words">
                   {formatRollList(g.rolls)}
                 </span>
               )}

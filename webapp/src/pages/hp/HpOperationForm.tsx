@@ -64,7 +64,7 @@ export default function HpOperationForm({
                 key={op.key}
                 onClick={() => { setActiveOp(op.key); haptic.selection() }}
                 title={t(op.full_key)}
-                className={`flex flex-col items-center gap-0.5 py-2 px-1 rounded-xl font-cinzel text-[11px] uppercase tracking-tight border min-h-[52px]
+                className={`flex flex-col items-center gap-0.5 py-2 px-1 rounded-xl font-cinzel text-xs uppercase tracking-tight border min-h-[52px]
                   ${isActive
                     ? op.toneClass
                     : 'bg-transparent text-dnd-text-muted border-transparent'}`}
@@ -85,7 +85,7 @@ export default function HpOperationForm({
                 key={op.key}
                 onClick={() => { setActiveOp(op.key); haptic.selection() }}
                 title={t(op.full_key)}
-                className={`flex flex-col items-center gap-0.5 py-2 px-1 rounded-xl font-cinzel text-[11px] uppercase tracking-tight border min-h-[52px]
+                className={`flex flex-col items-center gap-0.5 py-2 px-1 rounded-xl font-cinzel text-xs uppercase tracking-tight border min-h-[52px]
                   ${isActive
                     ? op.toneClass
                     : 'bg-transparent text-dnd-text-muted border-transparent'}`}

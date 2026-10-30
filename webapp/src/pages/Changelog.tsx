@@ -45,7 +45,7 @@ function EntryCard({ entry, isCurrent, defaultOpen }: { entry: ChangelogEntry; i
               v{entry.version}
             </span>
             {isCurrent && (
-              <span className="text-[10px] font-cinzel uppercase tracking-wider px-2 py-0.5 rounded-full bg-dnd-gold/20 text-dnd-gold-bright border border-dnd-gold/40 shrink-0">
+              <span className="text-xs font-cinzel uppercase tracking-wider px-2 py-0.5 rounded-full bg-dnd-gold/20 text-dnd-gold-bright border border-dnd-gold/40 shrink-0">
                 {t('changelog.current')}
               </span>
             )}
@@ -73,7 +73,7 @@ function EntryCard({ entry, isCurrent, defaultOpen }: { entry: ChangelogEntry; i
                 <div key={key}>
                   <div className="flex items-center gap-2 mb-1.5">
                     <Icon size={14} className="text-dnd-gold-dim shrink-0" />
-                    <span className="text-[11px] font-cinzel uppercase tracking-widest text-dnd-gold-dim">
+                    <span className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim">
                       {t(`changelog.sections.${key}`)}
                     </span>
                   </div>

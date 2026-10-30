@@ -57,7 +57,7 @@ typography:
     fontFeature: "\"ss01\", \"ss02\""
   label:
     fontFamily: "Cinzel, Georgia, serif"
-    fontSize: "0.6875rem"
+    fontSize: "0.75rem"
     fontWeight: 700
     lineHeight: 1.2
     letterSpacing: "0.08em"
@@ -231,7 +231,7 @@ Light mode is a deliberate alternative palette, not a derivation. Background is 
 - **Headline** (Cinzel, 700, 1.25rem, line-height 1.2): section headers inside a screen, modal titles.
 - **Title** (Cinzel, 600, 1rem, letter-spacing 0.04em): grouped-card titles, list-item headers.
 - **Body** (Fraunces, 400, 0.9375rem, line-height 1.55, ss01+ss02): rule text, descriptions, narrative copy. Cap line length at 65–75ch.
-- **Label** (Cinzel, 700, 0.6875rem, uppercase, letter-spacing 0.08em): every form label, every chip, every tag, every legend caption. Almost every small piece of inscribed text in the UI is this style.
+- **Label** (Cinzel, 700, 0.75rem, uppercase, letter-spacing 0.08em): every form label, every chip, every tag, every legend caption. Almost every small piece of inscribed text in the UI is this style.
 - **Mono** (JetBrains Mono, 500, 0.875rem, tabular-nums): dice values, AC, HP numbers in tables, history timestamps.
 
 ### Named Rules
@@ -307,7 +307,7 @@ Surfaces come in seven named variants — each is a scene the page wants to evok
 ### Chips / Pills
 Two species share the Cinzel-caps inscription but differ in shape, and the shape is the signal: a lozenge is a static label, a pill is a tappable toggle.
 
-- **Inscribed chip** (static label, tag, badge): `rounded-lg` (8px), padding `4px 10px`, `bg-dnd-chip-bg`, `border border-dnd-chip-border`, `text-dnd-gold-bright`, label typography (Cinzel 11px uppercase 0.08em). Never interactive, never haloed. Semantic variants swap tint and text color but keep the lozenge.
+- **Inscribed chip** (static label, tag, badge): `rounded-lg` (8px), padding `4px 10px`, `bg-dnd-chip-bg`, `border border-dnd-chip-border`, `text-dnd-gold-bright`, label typography (Cinzel 12px uppercase 0.08em). Never interactive, never haloed. Semantic variants swap tint and text color but keep the lozenge.
 - **Filter pill** (`FilterChip`, interactive filter / toggle): `rounded-full`, min-height 44px (touch target), same label typography, optional leading icon and mono count badge. Three tones: gold (default), arcane (magic filters), neutral.
   - **Resting:** `bg-dnd-surface`, `border-dnd-border`, muted text.
   - **Selected:** tinted ground (gold chip tint / arcane mist), strong border (`gold/70` / `arcane/70`), bright text, plus the matching **selection halo** (`shadow-halo-gold` / `shadow-halo-arcane`) — a selection ring, not an attention halo (see The Halo-as-Signal Rule). The neutral tone selects without a halo.

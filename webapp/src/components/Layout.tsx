@@ -9,6 +9,7 @@ import { usePageBack } from '@/hooks/useOverlayDismiss'
 import { pageSkeleton } from '@/components/skeletons/pageSkeletons'
 import { api, ApiError } from '@/api/client'
 import EmptyState from '@/components/ui/EmptyState'
+import OfflineNotice, { type OfflineNoticeQuery } from '@/components/ui/OfflineNotice'
 import Pressable from '@/components/ui/Pressable'
 import { spring } from '@/styles/motion'
 
@@ -30,9 +31,12 @@ interface LayoutProps {
   page?: string
   /** Hide native scrollbar on the scrolling main region. */
   hideScrollbar?: boolean
+  /** Query dei dati mostrati dalla pagina, quando non sono quelli del personaggio:
+   * è di questa che l'avviso offline deve riportare lo stato e l'orario. */
+  offlineQuery?: OfflineNoticeQuery
 }
 
-export default function Layout({ title, children, backTo, group, page, hideScrollbar = false }: LayoutProps) {
+export default function Layout({ title, children, backTo, group, page, hideScrollbar = false, offlineQuery }: LayoutProps) {
   const navigate = useNavigate()
   const { t } = useTranslation()
   const swipe = useSwipeNavigation(group, page)
@@ -223,7 +227,7 @@ export default function Layout({ title, children, backTo, group, page, hideScrol
                           <span className="text-dnd-gold-dim/50 shrink-0 px-1">◈</span>
                         )}
                         {pageKey === activeKey ? (
-                          <span ref={activeCrumbRef} className="text-dnd-gold-bright font-semibold whitespace-nowrap px-2 py-1.5">
+                          <span ref={activeCrumbRef} className="inline-flex items-center min-h-[44px] text-dnd-gold-bright font-semibold whitespace-nowrap px-2 py-1.5">
                             {t(`character.menu.${pageKey}`)}
                           </span>
                         ) : (
@@ -232,8 +236,7 @@ export default function Layout({ title, children, backTo, group, page, hideScrol
                             onClick={() => swipe.goToPage(pageKey)}
                             whileTap={{ scale: 0.95 }}
                             aria-label={t('layout.nav.go_to', { page: t(`character.menu.${pageKey}`) })}
-                            className="text-dnd-text-muted opacity-70 whitespace-nowrap px-2 py-1.5 min-h-[32px] rounded hover:filter-none hover:text-dnd-gold-bright hover:opacity-100 transition-colors"
-                            style={{ filter: 'blur(0.5px)' }}
+                            className="text-dnd-text-muted opacity-70 whitespace-nowrap px-2 py-1.5 min-h-[44px] rounded hover:text-dnd-gold-bright hover:opacity-100 transition-colors"
                           >
                             {t(`character.menu.${pageKey}`)}
                           </Pressable>
@@ -258,29 +261,32 @@ export default function Layout({ title, children, backTo, group, page, hideScrol
           onTouchCancel={swipe.onTouchEnd}
           onScroll={handleMainScroll}
         >
-          {isCharRoute && charQuery.isError ? (
-            charNotFound ? (
-              <EmptyState
-                icon={<UserX size={28} />}
-                title={t('layout.char_error.not_found')}
-                hint={t('layout.char_error.not_found_hint')}
-                action={{
-                  label: t('layout.char_error.back_to_list'),
-                  onClick: () => navigate('/'),
-                }}
-              />
-            ) : (
-              <EmptyState
-                icon={<RefreshCw size={28} />}
-                title={t('layout.char_error.generic')}
-                action={{
-                  label: t('layout.char_error.retry'),
-                  onClick: () => charQuery.refetch(),
-                }}
-              />
-            )
+          {/* Prima il 404/403, che sconfessa anche una copia in cache; poi l'errore
+              senza dati. Con dati in cache la pagina resta, segnalata dall'avviso. */}
+          {charNotFound ? (
+            <EmptyState
+              icon={<UserX size={28} />}
+              title={t('layout.char_error.not_found')}
+              hint={t('layout.char_error.not_found_hint')}
+              action={{
+                label: t('layout.char_error.back_to_list'),
+                onClick: () => navigate('/'),
+              }}
+            />
+          ) : isCharRoute && charQuery.isError && charQuery.data === undefined ? (
+            <EmptyState
+              icon={<RefreshCw size={28} />}
+              title={t('layout.char_error.generic')}
+              action={{
+                label: t('layout.char_error.retry'),
+                onClick: () => charQuery.refetch(),
+              }}
+            />
           ) : (
-            children
+            <>
+              <OfflineNotice query={offlineQuery ?? charQuery} />
+              {children}
+            </>
           )}
         </main>
 

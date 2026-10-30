@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { screen, waitFor } from '@testing-library/react'
+import { act, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from '../utils/renderWithProviders'
 import HP from '@/pages/HP'
@@ -7,7 +7,7 @@ import HP from '@/pages/HP'
 // Spies hoisted so the vi.mock factories can close over them.
 const {
   getChar, updateHpSpy, restSpy, reviveSpy, updateDeathSavesSpy,
-  rollDeathSaveSpy, spendHitDiceSpy, showUndoToastSpy, toastWarning, playAndCollect,
+  rollDeathSaveSpy, spendHitDiceSpy, undoHpSpy, showUndoToastSpy, toastWarning, playAndCollect,
 } = vi.hoisted(() => ({
   getChar: vi.fn(),
   updateHpSpy: vi.fn(),
@@ -16,6 +16,7 @@ const {
   updateDeathSavesSpy: vi.fn(),
   rollDeathSaveSpy: vi.fn(),
   spendHitDiceSpy: vi.fn(),
+  undoHpSpy: vi.fn(),
   showUndoToastSpy: vi.fn(),
   toastWarning: vi.fn(),
   playAndCollect: vi.fn(),
@@ -31,7 +32,13 @@ vi.mock('@/api/client', () => ({
       updateDeathSaves: updateDeathSavesSpy,
       rollDeathSave: rollDeathSaveSpy,
       spendHitDice: spendHitDiceSpy,
+      undoHp: undoHpSpy,
     },
+  },
+  ApiError: class ApiError extends Error {
+    constructor(public status: number, public detail: unknown) {
+      super(`API ${status}`)
+    }
   },
 }))
 
@@ -225,6 +232,20 @@ describe('HP page', () => {
     await waitFor(() => expect(updateHpSpy).toHaveBeenCalledWith(7, 'damage', 5, false))
   })
 
+  it('typed value also shows one undo toast that undoes with the op id', async () => {
+    getChar.mockResolvedValue(aliveChar)
+    updateHpSpy.mockResolvedValue({ ...aliveChar, hp_undo_id: 'typed' })
+    undoHpSpy.mockResolvedValue(aliveChar)
+    renderWithProviders(<HP />)
+    await screen.findByTestId('hp-op-form')
+
+    await userEvent.type(screen.getByTestId('hp-value'), '5')
+    await userEvent.click(screen.getByTestId('hp-apply'))
+    await waitFor(() => expect(showUndoToastSpy).toHaveBeenCalledTimes(1))
+    showUndoToastSpy.mock.calls[0][0].onUndo()
+    await waitFor(() => expect(undoHpSpy).toHaveBeenCalledWith(7, 'typed'))
+  })
+
   it('does not call updateHp for non-positive / NaN input (guard)', async () => {
     getChar.mockResolvedValue(aliveChar)
     renderWithProviders(<HP />)
@@ -248,13 +269,53 @@ describe('HP page', () => {
 
   it('quick apply fires updateHp(heal) and shows an undo toast', async () => {
     getChar.mockResolvedValue(aliveChar)
-    updateHpSpy.mockResolvedValue(aliveChar)
+    updateHpSpy.mockResolvedValue({ ...aliveChar, hp_undo_id: 'abc' })
     renderWithProviders(<HP />)
     await screen.findByTestId('hp-op-form')
 
     await userEvent.click(screen.getByTestId('hp-quick-heal'))
     await waitFor(() => expect(updateHpSpy).toHaveBeenCalledWith(7, 'heal', 3, false))
     await waitFor(() => expect(showUndoToastSpy).toHaveBeenCalled())
+  })
+
+  it('quick apply undo calls undoHp with the op id', async () => {
+    getChar.mockResolvedValue(aliveChar)
+    updateHpSpy.mockResolvedValue({ ...aliveChar, hp_undo_id: 'abc' })
+    undoHpSpy.mockResolvedValue(aliveChar)
+    renderWithProviders(<HP />)
+    await screen.findByTestId('hp-op-form')
+
+    await userEvent.click(screen.getByTestId('hp-quick-heal'))
+    await waitFor(() => expect(showUndoToastSpy).toHaveBeenCalled())
+    showUndoToastSpy.mock.calls[0][0].onUndo()
+    await waitFor(() => expect(undoHpSpy).toHaveBeenCalledWith(7, 'abc'))
+    expect(updateHpSpy).toHaveBeenCalledTimes(1)
+  })
+
+  // L'annullamento riporta indietro lo stato: i dialog dell'operazione annullata non
+  // devono restare aperti a raccontare una morte o un TS che non valgono più.
+  it('undo closes the instant-death and concentration dialogs', async () => {
+    getChar.mockResolvedValue(aliveChar)
+    updateHpSpy.mockResolvedValue({
+      ...aliveChar,
+      hp_undo_id: 'abc',
+      is_dead: true,
+      current_hit_points: 0,
+      death_saves: { successes: 0, failures: 1, stable: false },
+      concentration_save: { dc: 10, die: 4, total: 6, success: false, lost_concentration: true },
+    })
+    undoHpSpy.mockResolvedValue(aliveChar)
+    renderWithProviders(<HP />)
+    await screen.findByTestId('hp-op-form')
+
+    await userEvent.click(screen.getByTestId('hp-quick-heal'))
+    expect(await screen.findByTestId('instant-death')).toBeInTheDocument()
+    expect(screen.getByTestId('conc-dialog')).toBeInTheDocument()
+    await waitFor(() => expect(showUndoToastSpy).toHaveBeenCalled())
+
+    act(() => { showUndoToastSpy.mock.calls[0][0].onUndo() })
+    await waitFor(() => expect(screen.queryByTestId('instant-death')).toBeNull())
+    expect(screen.queryByTestId('conc-dialog')).toBeNull()
   })
 
   it('short rest spends hit dice and rests; long rest goes through the confirm sheet', async () => {

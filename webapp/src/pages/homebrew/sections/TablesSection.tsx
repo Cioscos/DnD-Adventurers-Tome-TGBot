@@ -307,7 +307,7 @@ function TableCard({
       {/* Axis pickers */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
-          <label className="block text-[11px] uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
+          <label className="block text-xs uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
             {t('homebrew.tables.row_axis_label')}
           </label>
           <select
@@ -341,7 +341,7 @@ function TableCard({
             <thead>
               <tr>
                 {/* Top-left corner — empty */}
-                <th className="bg-dnd-surface/40 border border-dnd-border p-1 text-[11px] font-cinzel uppercase tracking-wider text-dnd-gold-dim text-left min-w-[100px]">
+                <th className="bg-dnd-surface/40 border border-dnd-border p-1 text-xs font-cinzel uppercase tracking-wider text-dnd-gold-dim text-left min-w-[100px]">
                   {resolveLabelI18n(axisProp.label_i18n, locale, axisProp.key)}
                 </th>
                 {table.col_bins.map((bin, binIdx) => (
@@ -382,7 +382,7 @@ function TableCard({
                       <div className="text-[12px] font-display text-dnd-text">
                         {label}
                       </div>
-                      <code className="text-[10px] font-mono text-dnd-text-muted block mt-0.5">
+                      <code className="text-xs font-mono text-dnd-text-muted block mt-0.5">
                         {rv}
                       </code>
                     </th>
@@ -412,7 +412,7 @@ function TableCard({
           {warnings.map((w, i) => (
             <li
               key={i}
-              className="flex items-start gap-1.5 text-[11px] font-body text-dnd-amber"
+              className="flex items-start gap-1.5 text-xs font-body text-dnd-amber"
             >
               <AlertTriangle size={12} className="shrink-0 mt-0.5" />
               <span>{t(w.key, w.params)}</span>
@@ -456,7 +456,7 @@ function ColBinHeader({ bin, onChange, onRemove }: ColBinHeaderProps) {
           aria-label={t('homebrew.tables.col_bin_lo')}
           className="w-12 px-1 py-1 min-h-[32px] rounded bg-dnd-surface text-dnd-text border border-dnd-border outline-none text-center font-mono text-[12px]"
         />
-        <span className="text-dnd-text-muted text-[11px]">–</span>
+        <span className="text-dnd-text-muted text-xs">–</span>
         <input
           type="text"
           inputMode="numeric"
@@ -476,7 +476,7 @@ function ColBinHeader({ bin, onChange, onRemove }: ColBinHeaderProps) {
           </Pressable>
         )}
       </div>
-      <div className="text-[10px] text-dnd-text-muted font-mono text-center">
+      <div className="text-xs text-dnd-text-muted font-mono text-center">
         {formatBin(bin)}
       </div>
     </div>
@@ -502,7 +502,7 @@ function CellInput({ initial, placeholder, onCommit }: CellInputProps) {
       onBlur={() => onCommit(value)}
       placeholder={placeholder}
       rows={2}
-      className="w-full px-1.5 py-1 min-h-[48px] rounded bg-dnd-surface text-dnd-text border border-dnd-border outline-none focus:border-dnd-gold font-mono text-[11px] resize-y"
+      className="w-full px-1.5 py-1 min-h-[48px] rounded bg-dnd-surface text-dnd-text border border-dnd-border outline-none focus:border-dnd-gold font-mono text-xs resize-y"
     />
   )
 }

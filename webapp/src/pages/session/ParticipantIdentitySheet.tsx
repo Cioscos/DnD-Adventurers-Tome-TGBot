@@ -41,7 +41,7 @@ function FieldRow({ label, value }: FieldRowProps) {
   if (value === null || value === undefined || value === '') return null
   return (
     <div className="flex items-baseline justify-between gap-3 py-1">
-      <span className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-gold-dim shrink-0">
+      <span className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim shrink-0">
         {label}
       </span>
       <span className="text-sm text-dnd-text text-right">{value}</span>
@@ -53,7 +53,7 @@ function BlockRow({ label, value }: FieldRowProps) {
   if (value === null || value === undefined || value === '') return null
   return (
     <div className="py-2">
-      <p className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-gold-dim mb-1">
+      <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim mb-1">
         {label}
       </p>
       <p className="text-sm text-dnd-text italic whitespace-pre-wrap">{value}</p>
@@ -177,7 +177,7 @@ export default function ParticipantIdentitySheet({
                 </>
               )}
 
-              <p className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-gold-dim mt-3 mb-1">
+              <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim mt-3 mb-1">
                 {t('session.detail.conditions_label')}
               </p>
               {conds.length > 0 ? (
@@ -195,7 +195,7 @@ export default function ParticipantIdentitySheet({
               {snapshot.last_roll && (
                 <div className="mt-3 flex items-center gap-1.5 text-xs text-dnd-text-muted border-t border-dnd-border pt-2">
                   <Dices size={12} />
-                  <span className="font-cinzel uppercase tracking-wider text-[10px] text-dnd-gold-dim">
+                  <span className="font-cinzel uppercase tracking-wider text-xs text-dnd-gold-dim">
                     {t('session.detail.last_roll_label')}:
                   </span>
                   <span className="font-mono">
@@ -247,7 +247,7 @@ export default function ParticipantIdentitySheet({
             </SectionDivider>
             <div className="flex items-center justify-center gap-1 -mt-2 mb-2 text-dnd-gold-dim">
               <Lock size={10} />
-              <span className="text-[10px] font-cinzel uppercase tracking-wider">
+              <span className="text-xs font-cinzel uppercase tracking-wider">
                 {t('character.identity.private_badge')}
               </span>
             </div>

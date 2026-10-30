@@ -55,6 +55,9 @@ class CharacterSummary(BaseModel):
     class_summary: str
     heroic_inspiration: bool = False
     experience_points: int = 0
+    hp_max_homebrew_modifier: int = 0
+    ac_homebrew_modifier: int = 0
+    is_dead: bool = False
 
     model_config = {"from_attributes": True}
 
@@ -114,6 +117,9 @@ class CharacterFull(BaseModel):
 
     # Populated only by POST /hp when op=DAMAGE on a concentrating character
     concentration_save: Optional[ConcentrationSaveResult] = None
+
+    # Populated only by PATCH /hp: id dell'operazione annullabile via POST /hp/undo
+    hp_undo_id: Optional[str] = None
 
     # Populated only by endpoints that fire homebrew rules (POST /hp, POST /attack, etc.).
     homebrew_notifications: Optional[list[dict]] = None

@@ -26,11 +26,11 @@ const SLIDE_EASE = 'cubic-bezier(0.22, 1, 0.36, 1)'
 let slideArrival = false
 
 const PAGE_GROUPS: Record<string, string[]> = {
-  combat: ['hp', 'ac', 'saves', 'actions'],
+  combat: ['hp', 'ac', 'saves', 'actions', 'conditions'],
   magic: ['spells', 'slots'],
   skills: ['stats', 'skills', 'abilities'],
   equipment: ['inventory', 'currency'],
-  character: ['identity', 'class', 'xp', 'conditions'],
+  character: ['identity', 'class', 'xp'],
   tools: ['dice', 'notes', 'maps', 'history'],
 }
 

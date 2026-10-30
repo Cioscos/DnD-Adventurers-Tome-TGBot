@@ -47,6 +47,7 @@ from api.services.dice_stats import record_dice
 from api.services.character_response import build_character_response
 from api.services.effects import apply_conditions
 from api.services.spell_slots import recalc_spell_slots
+from api.services.homebrew.passive import get_passive_modifiers
 
 router = APIRouter(prefix="/characters", tags=["characters"])
 
@@ -166,14 +167,25 @@ async def _refresh_char_full(
 async def list_characters(
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
-) -> list[Character]:
+) -> list[CharacterSummary]:
     result = await session.execute(
         select(Character)
         .options(selectinload(Character.classes))
         .where(Character.user_id == user_id)
         .order_by(Character.id)
     )
-    return list(result.scalars().all())
+    summaries: list[CharacterSummary] = []
+    for c in result.scalars().all():
+        summary = CharacterSummary.model_validate(c)
+        # Modificatori passivi homebrew, coerenti con la scheda completa.
+        summary.hp_max_homebrew_modifier = await get_passive_modifiers(
+            session, c, "character.hit_points_max"
+        )
+        summary.ac_homebrew_modifier = await get_passive_modifiers(
+            session, c, "character.ac"
+        )
+        summaries.append(summary)
+    return summaries
 
 
 # ---------------------------------------------------------------------------

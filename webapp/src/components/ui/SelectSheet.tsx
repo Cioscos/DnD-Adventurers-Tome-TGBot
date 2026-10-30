@@ -49,7 +49,7 @@ export default function SelectSheet({
   return (
     <div className={className}>
       {label && (
-        <label className="block text-[11px] uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
+        <label className="block text-xs uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
           {label}
         </label>
       )}

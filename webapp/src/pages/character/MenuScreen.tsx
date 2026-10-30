@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
@@ -9,23 +10,24 @@ import {
   GiArcheryTarget, GiLightningTrio, GiCrossedSwords, GiTwoCoins,
   GiScrollUnfurled, GiPolarStar, GiPerspectiveDiceSixFacesRandom,
   GiQuillInk, GiTreasureMap, GiOpenBook, GiPotionBall, GiCauldron,
-  GiFist, GiKnapsack,
+  GiFist, GiKnapsack, GiNightSleep,
 } from 'react-icons/gi'
 import type { ComponentType, SVGAttributes } from 'react'
 import SectionDivider from '@/components/ui/SectionDivider'
 import Reveal from '@/components/ui/Reveal'
 import Pressable from '@/components/ui/Pressable'
+import RestSheet from '@/components/character/RestSheet'
 import { haptic } from '@/auth/telegram'
 import { spring, stagger } from '@/styles/motion'
+import type { CharacterFull } from '@/types'
 
 type IconCmp = ComponentType<SVGAttributes<SVGElement> & { size?: number | string }>
 
 type MenuItem = {
   key: string
   icon: IconCmp
-  path: string
   tone?: 'gold' | 'crimson' | 'arcane' | 'cobalt' | 'emerald' | 'amber'
-}
+} & ({ path: string } | { action: 'rest' })
 
 type MenuSection = {
   labelKey: string
@@ -42,6 +44,8 @@ const MENU_SECTIONS: MenuSection[] = [
       { key: 'ac',      icon: GiCheckedShield, path: 'ac',      tone: 'gold' },
       { key: 'saves',   icon: GiShieldEchoes,  path: 'saves',   tone: 'cobalt' },
       { key: 'actions', icon: GiFist,          path: 'actions', tone: 'crimson' },
+      { key: 'conditions', icon: CircleDot,     path: 'conditions', tone: 'crimson' },
+      { key: 'rest',    icon: GiNightSleep,    action: 'rest',    tone: 'amber' },
     ],
   },
   {
@@ -76,7 +80,6 @@ const MENU_SECTIONS: MenuSection[] = [
       { key: 'identity',   icon: User,            path: 'identity',   tone: 'gold' },
       { key: 'class',      icon: GiScrollUnfurled, path: 'class',     tone: 'gold' },
       { key: 'xp',         icon: GiPolarStar,     path: 'xp',         tone: 'amber' },
-      { key: 'conditions', icon: CircleDot,       path: 'conditions', tone: 'crimson' },
     ],
   },
   {
@@ -105,12 +108,13 @@ function toneIconClass(tone?: MenuItem['tone']): string {
 }
 
 interface Props {
-  charId: number
+  char: CharacterFull
 }
 
-export default function MenuScreen({ charId }: Props) {
+export default function MenuScreen({ char }: Props) {
   const navigate = useNavigate()
   const { t } = useTranslation()
+  const [restOpen, setRestOpen] = useState(false)
 
   return (
     <div className="p-4 space-y-4 pb-safe">
@@ -127,14 +131,17 @@ export default function MenuScreen({ charId }: Props) {
               {t(section.labelKey)}
             </SectionDivider>
             <Reveal.Stagger stagger={stagger.listTight} delay={0} className="grid grid-cols-3 gap-2">
-              {section.items.map((item) => {
+              {section.items
+                .filter((item) => !('action' in item) || !char.is_dead)
+                .map((item) => {
                 const Icon = item.icon
                 return (
                   <Reveal.Item key={item.key}>
                     <Pressable
                       onClick={() => {
                         haptic.light()
-                        navigate(`/char/${charId}/${item.path}`)
+                        if ('action' in item) setRestOpen(true)
+                        else navigate(`/char/${char.id}/${item.path}`)
                       }}
                       className="w-full flex flex-col items-center gap-1.5 px-2 py-3 rounded-2xl
                                  bg-dnd-surface border border-dnd-border
@@ -143,7 +150,7 @@ export default function MenuScreen({ charId }: Props) {
                       whileTap={{ scale: 0.93 }}
                     >
                       <Icon size={22} strokeWidth={2} className={toneIconClass(item.tone)} />
-                      <span className="text-[11px] text-dnd-text-muted font-body text-center leading-tight">
+                      <span className="text-xs text-dnd-text-muted font-body text-center leading-tight">
                         {t(`character.menu.${item.key}`)}
                       </span>
                     </Pressable>
@@ -154,6 +161,7 @@ export default function MenuScreen({ charId }: Props) {
           </m.div>
         )
       })}
+      <RestSheet char={char} open={restOpen} onClose={() => setRestOpen(false)} />
     </div>
   )
 }

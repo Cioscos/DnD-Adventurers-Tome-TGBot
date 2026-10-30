@@ -69,6 +69,13 @@ afterEach(() => {
 })
 
 describe('LevelUpModal', () => {
+  // Dentro <main> l'intestazione restava sopra l'overlay e tagliava la modale.
+  it('renders outside the page tree, in a portal on body', () => {
+    const { container } = renderWithProviders(<LevelUpModal char={char()} xpLevel={6} onClose={vi.fn()} />)
+    expect(container.querySelector('[role="dialog"]')).toBeNull()
+    expect(screen.getByRole('dialog').parentElement).toBe(document.body)
+  })
+
   it('renders a selector button per class with its current level', () => {
     renderWithProviders(<LevelUpModal char={char()} xpLevel={6} onClose={vi.fn()} />)
     expect(screen.getByText('wizard')).toBeInTheDocument()

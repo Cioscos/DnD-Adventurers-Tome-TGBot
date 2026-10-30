@@ -53,7 +53,7 @@ export default function ConcentrationSaveDialog({ result, onClose }: Props) {
       </p>
 
       {lost_concentration && (
-        <p className="text-[10px] text-dnd-crimson-bright font-body italic">
+        <p className="text-xs text-dnd-crimson-bright font-body italic">
           {t('character.spells.conc_lost')}
         </p>
       )}

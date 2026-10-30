@@ -3,14 +3,15 @@ import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
-import { Plus, Trash2, Pencil, SkipForward, ScrollText } from 'lucide-react'
+import { Plus, Pencil, SkipForward, ScrollText } from 'lucide-react'
 import {
   GiSparkles as Sparkles, GiCheckedShield as Shield, GiHeartPlus as Heart,
   GiCrossedSwords as Swords,
 } from 'react-icons/gi'
 import { api } from '@/api/client'
-import type { CharacterSummary } from '@/types'
+import { cardStatus, effectiveAc, effectiveHpMax } from '@/lib/characterStatus'
 import HPGauge from '@/components/ui/HPGauge'
+import OfflineNotice from '@/components/ui/OfflineNotice'
 import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
 import Pressable from '@/components/ui/Pressable'
@@ -22,7 +23,7 @@ import FancyHeader from '@/components/ui/FancyHeader'
 import Reveal from '@/components/ui/Reveal'
 import Skeleton from '@/components/ui/Skeleton'
 import { WaxSeal } from '@/components/ui/Ornament'
-import { haptic, telegramConfirm } from '@/auth/telegram'
+import { haptic } from '@/auth/telegram'
 import { useToast } from '@/hooks/useToast'
 import { spring, stagger } from '@/styles/motion'
 import languagesSrd from '@/data/languages-srd.json'
@@ -85,10 +86,24 @@ export default function CharacterSelect() {
   const [languages, setLanguages] = useState<string[]>([])
   const [personalityTraits, setPersonalityTraits] = useState('')
 
-  const { data: characters = [], isLoading, isError, refetch } = useQuery({
+  const charactersQuery = useQuery({
     queryKey: ['characters'],
     queryFn: () => api.characters.list(),
+    // Le modifiche sulla scheda (PF, morte, CA) non invalidano la lista: al ritorno in
+    // home va sempre riletta, anche entro lo staleTime.
+    refetchOnMount: 'always',
   })
+  const { isLoading, isError, refetch } = charactersQuery
+  // Il default vuoto solo qui: il controllo dell'errore deve vedere l'assenza di dati.
+  const characters = charactersQuery.data ?? []
+
+  // Sessione attiva: un errore equivale a nessuna sessione (il pulsante resta quello semplice).
+  const { data: activeSession } = useQuery({
+    queryKey: ['session-me'],
+    queryFn: () => api.sessions.me(),
+    retry: false,
+  })
+  const hasActiveSession = activeSession?.status === 'active'
 
   const createMutation = useMutation({
     mutationFn: async ({ name, cls, identity }: { name: string; cls: SelectedClass | null; identity: IdentityPayload | null }) => {
@@ -113,21 +128,6 @@ export default function CharacterSelect() {
     },
     onError: () => {
       toast.error(t('character.create.create_failed'))
-    },
-  })
-
-  const deleteMutation = useMutation({
-    mutationFn: (id: number) => api.characters.delete(id),
-    onSuccess: (_, id) => {
-      qc.setQueryData<CharacterSummary[]>(['characters'], (old) =>
-        old ? old.filter((c) => c.id !== id) : old
-      )
-      qc.removeQueries({ queryKey: ['character', id] })
-      haptic.success()
-    },
-    onError: () => {
-      haptic.error()
-      toast.error(t('character.select.delete_failed'))
     },
   })
 
@@ -173,15 +173,6 @@ export default function CharacterSelect() {
     createMutation.mutate({ name: newName.trim(), cls: selectedClass ?? null, identity })
   }
 
-  const handleDelete = (char: CharacterSummary) => {
-    telegramConfirm(
-      t('character.select.delete_confirm', { name: char.name }),
-      (confirmed) => {
-        if (confirmed) deleteMutation.mutate(char.id)
-      }
-    )
-  }
-
   // Helpers selezione classe (evidenziazione).
   const isBuiltinSelected = (key: string) =>
     selectedClass != null && selectedClass.class_name === t(`dnd.classes.${key}`)
@@ -201,7 +192,7 @@ export default function CharacterSelect() {
     )
   }
 
-  if (isError) {
+  if (isError && charactersQuery.data === undefined) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-4">
         <p className="text-dnd-crimson-bright font-body">{t('common.error')}</p>
@@ -234,15 +225,17 @@ export default function CharacterSelect() {
           />
         </div>
 
+        <OfflineNotice query={charactersQuery} />
+
         {/* Session CTA (always available — GM does not need a character) */}
         <Button
           variant="secondary"
           size="md"
           fullWidth
           icon={<Swords size={16} />}
-          onClick={() => navigate('/session')}
+          onClick={() => navigate(hasActiveSession ? `/session/${activeSession!.id}` : '/session')}
         >
-          {t('session.title')}
+          {hasActiveSession ? t('session.resume') : t('session.title')}
         </Button>
 
         {/* Character roster */}
@@ -266,7 +259,9 @@ export default function CharacterSelect() {
         ) : (
           <Reveal.Stagger stagger={stagger.list} className="space-y-3">
             {characters.map((char) => {
-              const isDown = char.current_hit_points === 0
+              const status = cardStatus(char)
+              const isDanger = status === 'dead' || status === 'down'
+              const hpMax = effectiveHpMax(char)
               return (
               <Reveal.Item key={char.id}>
                 <Surface
@@ -275,7 +270,7 @@ export default function CharacterSelect() {
                   ornamented
                   layoutId={`char-hero-${char.id}`}
                   onClick={() => navigate(`/char/${char.id}`)}
-                  className={`overflow-hidden${isDown ? ' !border-dnd-crimson-bright/70 shadow-halo-danger' : ''}`}
+                  className={`overflow-hidden${isDanger ? ' !border-dnd-crimson-bright/70 shadow-halo-danger' : ''}`}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0 space-y-1.5">
@@ -283,9 +278,19 @@ export default function CharacterSelect() {
                         <h2 className="font-display font-bold text-lg text-dnd-gold-bright truncate">
                           {char.name}
                         </h2>
-                        {isDown && (
-                          <span className="text-[10px] font-cinzel uppercase tracking-wider px-2 py-0.5 rounded-full bg-dnd-crimson/20 text-dnd-crimson-bright border border-dnd-crimson-bright/40 shrink-0">
+                        {status === 'down' && (
+                          <span className="text-xs font-cinzel uppercase tracking-wider px-2 py-0.5 rounded-full bg-dnd-crimson/20 text-dnd-crimson-bright border border-dnd-crimson-bright/40 shrink-0">
                             {t('character.select.unconscious_badge')}
+                          </span>
+                        )}
+                        {status === 'dead' && (
+                          <span className="text-xs font-cinzel uppercase tracking-wider px-2 py-0.5 rounded-full bg-dnd-crimson/20 text-dnd-crimson-bright border border-dnd-crimson-bright/40 shrink-0">
+                            {t('character.select.dead_badge')}
+                          </span>
+                        )}
+                        {status === 'unconfigured' && (
+                          <span className="text-xs font-cinzel uppercase tracking-wider px-2 py-0.5 rounded-full bg-dnd-surface-raised text-dnd-text-muted border border-dnd-border shrink-0">
+                            {t('character.select.unconfigured_badge')}
                           </span>
                         )}
                         {char.heroic_inspiration && (
@@ -304,12 +309,12 @@ export default function CharacterSelect() {
                       <div className="mt-2.5 flex items-center gap-2">
                         <span className="inline-flex items-center gap-1 text-xs text-dnd-text-muted font-mono w-[70px] shrink-0">
                           <Heart size={12} className="text-dnd-crimson-bright" />
-                          {char.current_hit_points}/{char.hit_points}
+                          {char.current_hit_points}/{hpMax}
                         </span>
                         <div className="flex-1">
                           <HPGauge
                             current={char.current_hit_points}
-                            max={char.hit_points}
+                            max={hpMax}
                             temp={char.temp_hp}
                             size="md"
                             segmented
@@ -317,23 +322,11 @@ export default function CharacterSelect() {
                         </div>
                         <span className="inline-flex items-center gap-1 text-xs text-dnd-gold font-mono shrink-0">
                           <Shield size={12} />
-                          {char.ac}
+                          {effectiveAc(char)}
                         </span>
                       </div>
                     </div>
 
-                    <Pressable
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleDelete(char)
-                      }}
-                      pending={deleteMutation.isPending && deleteMutation.variables === char.id}
-                      className="w-11 h-11 flex items-center justify-center rounded-lg text-dnd-crimson-bright shrink-0 hover:bg-dnd-crimson/10"
-                      aria-label={t('common.delete')}
-                      whileTap={{ scale: 0.9 }}
-                    >
-                      <Trash2 size={16} />
-                    </Pressable>
                   </div>
                 </Surface>
               </Reveal.Item>
@@ -417,7 +410,7 @@ export default function CharacterSelect() {
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.18 }}
             >
-              <p className="text-[11px] text-dnd-text-faint truncate font-body mb-3">
+              <p className="text-xs text-dnd-text-faint truncate font-body mb-3">
                 {t('character.create.step_class_subtitle', { name: newName.trim() || '—' })}
               </p>
 
@@ -459,7 +452,7 @@ export default function CharacterSelect() {
                         <span className="text-[13px] font-display font-bold text-dnd-gold-bright">
                           {t(`dnd.classes.${cls.key}`)}
                         </span>
-                        <span className="text-[10px] text-dnd-text-faint font-mono mt-0.5">d{cls.hit_die}</span>
+                        <span className="text-xs text-dnd-text-faint font-mono mt-0.5">d{cls.hit_die}</span>
                       </Pressable>
                     ))}
                   </m.div>
@@ -480,7 +473,7 @@ export default function CharacterSelect() {
                       <span className="text-[13px] font-display font-bold text-dnd-text">
                         {isCustomSelected && selectedClass ? selectedClass.class_name : t('character.create.custom_class')}
                       </span>
-                      <span className="text-[10px] text-dnd-text-faint font-mono mt-0.5">
+                      <span className="text-xs text-dnd-text-faint font-mono mt-0.5">
                         {isCustomSelected && selectedClass ? `d${selectedClass.hit_die}` : 'd?'}
                       </span>
                     </Pressable>
@@ -498,7 +491,7 @@ export default function CharacterSelect() {
                       <span className="text-[13px] font-display font-bold text-dnd-text">
                         {t('character.create.skip_class')}
                       </span>
-                      <span className="text-[10px] text-dnd-text-faint font-mono mt-0.5">—</span>
+                      <span className="text-xs text-dnd-text-faint font-mono mt-0.5">—</span>
                     </Pressable>
                   </div>
 
@@ -528,7 +521,7 @@ export default function CharacterSelect() {
                     className="mb-3"
                   />
 
-                  <p className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-gold-dim mb-1.5">
+                  <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim mb-1.5">
                     {t('character.create.hit_die')}
                   </p>
                   <div className="flex gap-2 mb-4">
@@ -576,7 +569,7 @@ export default function CharacterSelect() {
                   {t('character.create.identity_skip')}
                 </Pressable>
               </div>
-              <p className="text-[11px] text-dnd-text-faint font-body italic text-center mb-3">
+              <p className="text-xs text-dnd-text-faint font-body italic text-center mb-3">
                 {t('character.create.identity_optional_hint')}
               </p>
 

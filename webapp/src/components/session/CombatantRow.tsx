@@ -115,7 +115,7 @@ export default function CombatantRow({
               {c.name}
             </p>
             {c.is_dead && (
-              <span className="text-[10px] uppercase tracking-wider text-dnd-text-muted font-cinzel">
+              <span className="text-xs uppercase tracking-wider text-dnd-text-muted font-cinzel">
                 {t('session.combat.dead_label')}
               </span>
             )}

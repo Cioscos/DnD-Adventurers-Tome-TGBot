@@ -58,12 +58,12 @@ export default function ProgressTriad({
       {(label || showNum) && (
         <div className="flex items-center justify-between mb-1">
           {label && (
-            <span className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-gold-dim">
+            <span className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim">
               {label}
             </span>
           )}
           {showNum && (
-            <span className="text-[11px] font-mono tabular-nums text-dnd-text">
+            <span className="text-xs font-mono tabular-nums text-dnd-text">
               {display ?? `${value} / ${max}`}
             </span>
           )}

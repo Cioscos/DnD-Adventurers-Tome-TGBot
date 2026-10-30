@@ -73,7 +73,7 @@ export default function ProgressionFullTableModal({ className, currentLevel, onC
           </header>
           <div className="flex-1 overflow-y-auto">
             <table className="w-full text-left text-[12px] table-fixed">
-              <thead className="text-[10px] uppercase tracking-wider text-dnd-gold-dim sticky top-0 bg-dnd-surface-raised">
+              <thead className="text-xs uppercase tracking-wider text-dnd-gold-dim sticky top-0 bg-dnd-surface-raised">
                 <tr>
                   <th className="px-2 py-2 w-12">{t('character.equipment.progression.level_header')}</th>
                   <th className="px-2 py-2 w-14">{t('character.equipment.progression.pb_header')}</th>

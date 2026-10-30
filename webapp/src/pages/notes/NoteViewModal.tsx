@@ -23,7 +23,7 @@ export default function NoteViewModal({ note, onClose, onEdit, onDelete }: Props
             {tags.map((tag) => (
               <span
                 key={tag}
-                className="text-[10px] font-cinzel uppercase tracking-wider px-1.5 py-px rounded-full bg-dnd-chip-bg text-dnd-gold-dim border border-dnd-border"
+                className="text-xs font-cinzel uppercase tracking-wider px-1.5 py-px rounded-full bg-dnd-chip-bg text-dnd-gold-dim border border-dnd-border"
               >
                 {tag}
               </span>

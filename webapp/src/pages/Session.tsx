@@ -29,10 +29,13 @@ export default function Session() {
     staleTime: Infinity,
   })
 
-  const { data: characters = [] } = useQuery({
+  const charactersQuery = useQuery({
     queryKey: ['characters'],
     queryFn: () => api.characters.list(),
   })
+  const characters = charactersQuery.data ?? []
+  // Un fetch fallito non è "nessun personaggio": il bottone diventa un riprova.
+  const charactersUnavailable = charactersQuery.isError && charactersQuery.data === undefined
 
   const createMutation = useMutation({
     mutationFn: () => api.sessions.create(),
@@ -66,7 +69,7 @@ export default function Session() {
             subtitle={sessionName}
           />
           <div className="mt-4 space-y-2">
-            <p className="text-center text-[11px] uppercase tracking-widest font-cinzel text-dnd-gold-dim">
+            <p className="text-center text-xs uppercase tracking-widest font-cinzel text-dnd-gold-dim">
               {t('session.code_label')}: <span className="text-dnd-gold-bright">{active.code}</span>
             </p>
             {myRole !== 'none' && (
@@ -133,19 +136,21 @@ export default function Session() {
                 {t('session.join_player')}
               </p>
               <p className="text-xs text-dnd-text-muted font-body italic mt-1">
-                {hasCharacters
-                  ? t('session.join_player_hint')
-                  : t('session.no_characters_hint')}
+                {charactersUnavailable
+                  ? t('common.offline_unavailable')
+                  : hasCharacters
+                    ? t('session.join_player_hint')
+                    : t('session.no_characters_hint')}
               </p>
               <div className="mt-3">
                 <Button
                   variant="secondary"
                   size="md"
                   fullWidth
-                  disabled={!hasCharacters}
-                  onClick={() => navigate('/session/join')}
+                  disabled={!hasCharacters && !charactersUnavailable}
+                  onClick={() => (charactersUnavailable ? charactersQuery.refetch() : navigate('/session/join'))}
                 >
-                  {t('session.join_button')}
+                  {charactersUnavailable ? t('common.retry') : t('session.join_button')}
                 </Button>
               </div>
             </div>

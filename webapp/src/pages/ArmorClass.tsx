@@ -130,7 +130,7 @@ export default function ArmorClass() {
       {/* Hero AC */}
       <Surface variant="tome" ornamented className="relative overflow-hidden">
         <div className="flex flex-col items-center py-4">
-          <p className="text-[10px] font-cinzel uppercase tracking-[0.3em] text-dnd-gold-dim mb-2">
+          <p className="text-xs font-cinzel uppercase tracking-[0.3em] text-dnd-gold-dim mb-2">
             {t('character.ac.total')}
           </p>
 
@@ -161,7 +161,7 @@ export default function ArmorClass() {
           <p className="text-sm text-dnd-text-muted font-mono mt-3">
             {char.base_armor_class} + {char.shield_armor_class} + {char.magic_armor}
           </p>
-          <p className="text-[10px] text-dnd-text-faint font-cinzel uppercase tracking-wider mt-0.5">
+          <p className="text-xs text-dnd-text-faint font-cinzel uppercase tracking-wider mt-0.5">
             {t('character.ac.legend')}
           </p>
         </div>
@@ -178,7 +178,7 @@ export default function ArmorClass() {
         <Surface variant="elevated">
           <div className="flex items-center gap-1 flex-wrap">
             <p
-              className="font-cinzel text-[10px] uppercase tracking-widest text-dnd-gold-dim cursor-help"
+              className="font-cinzel text-xs uppercase tracking-widest text-dnd-gold-dim cursor-help"
               title={t('character.ac.base_help', {
                 defaultValue: 'Base = 10 + bonus DEX (con cap se armatura media/pesante) oppure valore armatura equipaggiata.',
               })}
@@ -186,15 +186,15 @@ export default function ArmorClass() {
               {t('character.ac.base')}
             </p>
             {unarmoredActive ? (
-              <span className="text-[8px] font-cinzel uppercase tracking-wider px-1 py-px rounded-full bg-dnd-gold/20 text-dnd-gold-bright border border-dnd-gold/50">
+              <span className="text-xs font-cinzel uppercase tracking-wider px-1 py-px rounded-full bg-dnd-gold/20 text-dnd-gold-bright border border-dnd-gold/50">
                 {t('character.ac.unarmored_badge')}
               </span>
             ) : char.base_armor_class_override ? (
-              <span className="text-[8px] font-cinzel uppercase tracking-wider px-1 py-px rounded-full bg-dnd-crimson-deep/30 text-dnd-crimson-bright border border-dnd-crimson/50">
+              <span className="text-xs font-cinzel uppercase tracking-wider px-1 py-px rounded-full bg-dnd-crimson-deep/30 text-dnd-crimson-bright border border-dnd-crimson/50">
                 {t('character.ac.manual_override')}
               </span>
             ) : equippedBodyArmor && (
-              <span className="text-[8px] font-cinzel uppercase tracking-wider px-1 py-px rounded-full bg-dnd-gold/20 text-dnd-gold-bright border border-dnd-gold/50">
+              <span className="text-xs font-cinzel uppercase tracking-wider px-1 py-px rounded-full bg-dnd-gold/20 text-dnd-gold-bright border border-dnd-gold/50">
                 {t('character.ac.auto_from_armor')}
               </span>
             )}
@@ -215,15 +215,15 @@ export default function ArmorClass() {
         </Surface>
         <Surface variant="elevated">
           <div className="flex items-center gap-1 flex-wrap">
-            <p className="font-cinzel text-[10px] uppercase tracking-widest text-dnd-gold-dim">
+            <p className="font-cinzel text-xs uppercase tracking-widest text-dnd-gold-dim">
               {t('character.ac.shield')}
             </p>
             {char.shield_armor_class_override ? (
-              <span className="text-[8px] font-cinzel uppercase tracking-wider px-1 py-px rounded-full bg-dnd-crimson-deep/30 text-dnd-crimson-bright border border-dnd-crimson/50">
+              <span className="text-xs font-cinzel uppercase tracking-wider px-1 py-px rounded-full bg-dnd-crimson-deep/30 text-dnd-crimson-bright border border-dnd-crimson/50">
                 {t('character.ac.manual_override')}
               </span>
             ) : equippedShield && (
-              <span className="text-[8px] font-cinzel uppercase tracking-wider px-1 py-px rounded-full bg-dnd-gold/20 text-dnd-gold-bright border border-dnd-gold/50">
+              <span className="text-xs font-cinzel uppercase tracking-wider px-1 py-px rounded-full bg-dnd-gold/20 text-dnd-gold-bright border border-dnd-gold/50">
                 {t('character.ac.auto_from_armor')}
               </span>
             )}
@@ -242,7 +242,7 @@ export default function ArmorClass() {
           />
         </Surface>
         <Surface variant="elevated">
-          <p className="font-cinzel text-[10px] uppercase tracking-widest text-dnd-gold-dim">
+          <p className="font-cinzel text-xs uppercase tracking-widest text-dnd-gold-dim">
             {t('character.ac.magic')}
           </p>
           <p className="text-2xl font-display font-black text-dnd-gold-bright mt-0.5">
@@ -261,14 +261,14 @@ export default function ArmorClass() {
       </m.div>
 
       {equippedBodyArmor && !char.base_armor_class_override && (
-        <p className="text-[10px] text-dnd-text-faint font-body italic px-2 -mt-1">
+        <p className="text-xs text-dnd-text-faint font-body italic px-2 -mt-1">
           {t('character.ac.auto_from_armor_hint', { name: equippedBodyArmor.name })}
         </p>
       )}
 
       {(char.base_armor_class_override || char.shield_armor_class_override) && (
         <div className="flex items-center justify-between gap-2 px-2 -mt-1">
-          <p className="text-[10px] text-dnd-crimson-bright font-body italic flex-1">
+          <p className="text-xs text-dnd-crimson-bright font-body italic flex-1">
             {t('character.ac.manual_override_hint')}
           </p>
           <Button
@@ -286,10 +286,10 @@ export default function ArmorClass() {
 
       {/* Unarmored Defense (Monk: WIS, Barbarian: CON) */}
       <Surface variant="elevated" className="space-y-2.5">
-        <p className="font-cinzel text-[10px] uppercase tracking-widest text-dnd-gold-dim">
+        <p className="font-cinzel text-xs uppercase tracking-widest text-dnd-gold-dim">
           {t('character.ac.unarmored_title')}
         </p>
-        <p className="text-[11px] text-dnd-text-muted font-body">
+        <p className="text-xs text-dnd-text-muted font-body">
           {t('character.ac.unarmored_hint')}
         </p>
         <div className="grid grid-cols-3 gap-2">
@@ -305,7 +305,7 @@ export default function ArmorClass() {
                 onClick={() => unarmoredMutation.mutate(opt.key)}
                 pending={unarmoredMutation.isPending && unarmoredMutation.variables === opt.key}
                 whileTap={{ scale: 0.96 }}
-                className={`min-h-[44px] rounded-lg px-2 py-1.5 font-cinzel text-[11px] uppercase tracking-wider border transition-colors disabled:opacity-50 ${
+                className={`min-h-[44px] rounded-lg px-2 py-1.5 font-cinzel text-xs uppercase tracking-wider border transition-colors disabled:opacity-50 ${
                   active
                     ? 'bg-dnd-gold/20 text-dnd-gold-bright border-dnd-gold'
                     : 'bg-dnd-surface text-dnd-text-muted border-dnd-border hover:border-dnd-gold/60'
@@ -314,7 +314,7 @@ export default function ArmorClass() {
               >
                 <span className="block">{opt.label}</span>
                 {opt.preview !== undefined && (
-                  <span className="block text-[10px] font-mono tabular-nums mt-0.5 opacity-80">
+                  <span className="block text-xs font-mono tabular-nums mt-0.5 opacity-80">
                     {t('character.ac.unarmored_formula', { value: opt.preview })}
                   </span>
                 )}
@@ -323,7 +323,7 @@ export default function ArmorClass() {
           })}
         </div>
         {unarmoredActive && (
-          <p className="text-[10px] text-dnd-text-faint font-body italic">
+          <p className="text-xs text-dnd-text-faint font-body italic">
             {t('character.ac.unarmored_active_hint')}
           </p>
         )}

@@ -84,7 +84,7 @@ function StatPillInner({
   const isInteractive = !!onClick || (iconOnly && revealOnTap)
   const showValue = !iconOnly || revealed
   const showLabel = !iconOnly && !!label
-  const padding = size === 'sm' ? 'px-2 py-1 text-[11px]' : 'px-2.5 py-1 text-xs'
+  const padding = size === 'sm' ? 'px-2 py-1 text-xs' : 'px-2.5 py-1 text-xs'
   const hitAreaCls = expandHitArea && isInteractive
     ? "relative before:content-[''] before:absolute before:left-1/2 before:top-1/2 before:-translate-x-1/2 before:-translate-y-1/2 before:min-w-[44px] before:min-h-[44px] before:w-full before:h-full"
     : ''

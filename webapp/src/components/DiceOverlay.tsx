@@ -220,7 +220,7 @@ export default function DiceOverlay() {
                     <DiceIcon sides={SIDES_FOR[kind]} size={28} />
                     {count > 0 && (
                       <span className="absolute -top-1 -right-1 min-w-[20px] h-5 px-1
-                                       rounded-full bg-dnd-crimson text-dnd-parchment text-[11px]
+                                       rounded-full bg-dnd-crimson text-dnd-parchment text-xs
                                        font-bold font-mono flex items-center justify-center
                                        border border-dnd-surface-raised">
                         {count}

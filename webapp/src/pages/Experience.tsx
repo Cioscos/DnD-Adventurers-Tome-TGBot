@@ -203,7 +203,7 @@ export default function Experience() {
             ))}
           </div>
         )}
-        <p className="text-[10px] font-cinzel uppercase tracking-[0.3em] text-dnd-gold-dim mb-1">
+        <p className="text-xs font-cinzel uppercase tracking-[0.3em] text-dnd-gold-dim mb-1">
           {t('character.xp.level_abbr')}
         </p>
         <m.p
@@ -218,7 +218,7 @@ export default function Experience() {
         </m.p>
 
         {levelUpAvailable && (
-          <p className="mt-2 text-[10px] font-mono text-dnd-text-muted tabular-nums">
+          <p className="mt-2 text-xs font-mono text-dnd-text-muted tabular-nums">
             {t('character.xp.level_distributed_hint', {
               distributed: totalClassLevel,
               pending: level - totalClassLevel,
@@ -266,7 +266,7 @@ export default function Experience() {
                 />
               ))}
             </div>
-            <p className="text-[10px] text-dnd-text-faint font-mono mt-1 text-right">{progress}%</p>
+            <p className="text-xs text-dnd-text-faint font-mono mt-1 text-right">{progress}%</p>
           </div>
         )}
       </Surface>

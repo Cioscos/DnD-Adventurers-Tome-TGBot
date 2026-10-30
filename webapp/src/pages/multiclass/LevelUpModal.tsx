@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
@@ -87,7 +88,9 @@ export default function LevelUpModal({ char, xpLevel, onClose }: LevelUpModalPro
 
   const entriesForClass = progressionRows(selectedClass.class_name)
 
-  return (
+  // Portal come Sheet e ResultDialog: dentro <main> l'intestazione, più alta coi
+  // breadcrumb da 44 px, resta sopra l'overlay e taglia il bordo della modale.
+  return createPortal(
     <div
       className="fixed inset-0 bg-dnd-overlay z-50 flex items-end sm:items-center justify-center p-4"
       style={blurStyle}
@@ -115,7 +118,7 @@ export default function LevelUpModal({ char, xpLevel, onClose }: LevelUpModalPro
 
           {/* Preview unlocks */}
           <Surface variant="flat" className="space-y-5 p-5">
-            <p className="text-[10px] font-cinzel uppercase tracking-[0.3em] text-dnd-gold-dim text-center">
+            <p className="text-xs font-cinzel uppercase tracking-[0.3em] text-dnd-gold-dim text-center">
               {t('character.multiclass.level_up.preview_next_levels')}
             </p>
             {!entriesForClass ? (
@@ -144,7 +147,7 @@ export default function LevelUpModal({ char, xpLevel, onClose }: LevelUpModalPro
                   >
                     {/* Level badge */}
                     <div className="flex-shrink-0 w-14 h-14 rounded-xl bg-gradient-gold flex flex-col items-center justify-center shadow-engrave">
-                      <span className="text-[11px] font-cinzel uppercase tracking-wider text-dnd-ink/70 leading-none">
+                      <span className="text-xs font-cinzel uppercase tracking-wider text-dnd-ink/70 leading-none">
                         {t('character.equipment.progression.level_header')}
                       </span>
                       <span className="font-display font-black text-2xl text-dnd-ink leading-none mt-0.5">
@@ -179,7 +182,7 @@ export default function LevelUpModal({ char, xpLevel, onClose }: LevelUpModalPro
 
           {/* Class selector */}
           <div className="space-y-3">
-            <p className="text-[10px] font-cinzel uppercase tracking-[0.3em] text-dnd-gold-dim text-center">
+            <p className="text-xs font-cinzel uppercase tracking-[0.3em] text-dnd-gold-dim text-center">
               {t('character.multiclass.level_up.choose_class')}
             </p>
             <div className="flex gap-3 flex-wrap">
@@ -195,7 +198,7 @@ export default function LevelUpModal({ char, xpLevel, onClose }: LevelUpModalPro
                         : 'bg-dnd-surface text-dnd-text border border-dnd-border hover:border-dnd-gold/60'}`}
                   >
                     <span className="block">{cls.class_name}</span>
-                    <span className="block text-[10px] opacity-70 font-mono mt-0.5">
+                    <span className="block text-xs opacity-70 font-mono mt-0.5">
                       {t('character.equipment.progression.level_header')} {cls.level}
                     </span>
                   </Pressable>
@@ -227,6 +230,7 @@ export default function LevelUpModal({ char, xpLevel, onClose }: LevelUpModalPro
           </div>
         </Surface>
       </m.div>
-    </div>
+    </div>,
+    document.body,
   )
 }

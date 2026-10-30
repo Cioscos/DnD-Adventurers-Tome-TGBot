@@ -442,7 +442,7 @@ export default function Inventory() {
       <Surface variant="elevated" className="!py-2">
         <div className="flex items-center gap-2 mb-1.5">
           <Weight size={13} className="text-dnd-gold-dim" />
-          <p className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-gold-dim flex-1">
+          <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim flex-1">
             {t('character.inventory.carry_label')}
           </p>
           {!editingCap && (
@@ -504,7 +504,7 @@ export default function Inventory() {
 
         {char.carry_capacity_override ? (
           <div className="flex items-center justify-between gap-2 mt-1.5">
-            <p className="text-[10px] text-dnd-crimson-bright font-body italic flex-1">
+            <p className="text-xs text-dnd-crimson-bright font-body italic flex-1">
               {t('character.inventory.carry_override_hint')}
             </p>
             <Button
@@ -519,7 +519,7 @@ export default function Inventory() {
             </Button>
           </div>
         ) : (
-          <p className="text-[10px] text-dnd-text-faint font-body italic mt-1.5">
+          <p className="text-xs text-dnd-text-faint font-body italic mt-1.5">
             {t('character.equipment.carry_formula', {
               str: char.ability_scores.find((s) => s.name.toLowerCase() === 'strength')?.value ?? 10,
               factor: system === 'metric' ? '7.5' : '15',
@@ -566,7 +566,7 @@ export default function Inventory() {
                 <span className="font-cinzel uppercase tracking-widest text-xs text-dnd-gold-bright flex-1">
                   {t(`character.inventory.types.${type}`)}
                 </span>
-                <span className="text-[10px] text-dnd-text-muted font-mono tabular-nums">
+                <span className="text-xs text-dnd-text-muted font-mono tabular-nums">
                   · {groupItems.length}
                 </span>
               </Pressable>

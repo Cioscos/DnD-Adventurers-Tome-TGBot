@@ -101,3 +101,27 @@ async def test_delete_other_owner_is_403(client, test_session_factory):
         await s.commit()
         other_id = other.id
     assert (await client.delete(f"/characters/{other_id}")).status_code == 403
+
+
+# --- GET /characters: modificatori homebrew e stato di morte ----------------
+
+async def test_list_includes_homebrew_modifiers(client, monkeypatch):
+    await _make_char(client, "Brew")
+
+    async def fake(session, character, target_path):
+        return {"character.hit_points_max": 5, "character.ac": 2}.get(target_path, 0)
+
+    monkeypatch.setattr("api.routers.characters.get_passive_modifiers", fake)
+    row = (await client.get("/characters")).json()[0]
+    assert row["hp_max_homebrew_modifier"] == 5
+    assert row["ac_homebrew_modifier"] == 2
+
+
+async def test_list_includes_is_dead(client, test_session_factory):
+    cid = await _make_char(client, "Dead")
+    async with test_session_factory() as s:
+        char = await s.get(Character, cid)
+        char.is_dead = True
+        await s.commit()
+    row = (await client.get("/characters")).json()[0]
+    assert row["is_dead"] is True

@@ -96,7 +96,7 @@ export default function WeaponAttackModal({
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
       >
-        <p className="text-[10px] text-dnd-text-faint mb-1 font-cinzel uppercase tracking-wider">
+        <p className="text-xs text-dnd-text-faint mb-1 font-cinzel uppercase tracking-wider">
           Per colpire
         </p>
         <p className="text-xs text-dnd-text-muted font-body">
@@ -114,7 +114,7 @@ export default function WeaponAttackModal({
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
         >
-          <p className="text-[10px] text-dnd-text-faint mb-1 font-cinzel uppercase tracking-wider">
+          <p className="text-xs text-dnd-text-faint mb-1 font-cinzel uppercase tracking-wider">
             Danno{is_critical ? ' (critico)' : ''}: {damage_dice}
           </p>
           <p className="text-xs text-dnd-text-muted font-body font-mono">

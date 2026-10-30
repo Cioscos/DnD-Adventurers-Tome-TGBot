@@ -68,12 +68,12 @@ export default function ResourcesSection({ resources, onChange }: ResourcesSecti
                     <span className="font-display font-bold text-dnd-text break-words">
                       {res.name}
                     </span>
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-dnd-chip-bg border border-dnd-border text-[11px] font-cinzel uppercase tracking-wider text-dnd-gold-dim">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-dnd-chip-bg border border-dnd-border text-xs font-cinzel uppercase tracking-wider text-dnd-gold-dim">
                       {t('homebrew.resources.max_badge', { max: res.max })}
                     </span>
                   </div>
-                  <div className="mt-1 text-[11px] text-dnd-text-muted font-body flex items-center gap-2 flex-wrap">
-                    <code className="font-mono text-[11px] text-dnd-gold-dim">{res.key}</code>
+                  <div className="mt-1 text-xs text-dnd-text-muted font-body flex items-center gap-2 flex-wrap">
+                    <code className="font-mono text-xs text-dnd-gold-dim">{res.key}</code>
                     <span>·</span>
                     <span>{t(`homebrew.resources.modal.restoration_${res.restoration_type}`)}</span>
                   </div>

@@ -99,7 +99,7 @@ export default function ChipInput({
   return (
     <div className={className}>
       {label && (
-        <p className="text-[10px] font-cinzel uppercase tracking-widest text-dnd-gold-dim mb-1.5">
+        <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim mb-1.5">
           {label}
         </p>
       )}
@@ -160,7 +160,7 @@ export default function ChipInput({
                 commit(s)
                 inputRef.current?.focus()
               }}
-              className="px-2 py-1 rounded-full text-[11px] font-body
+              className="px-2 py-1 rounded-full text-xs font-body
                          bg-dnd-chip-bg border border-dnd-gold-dim/30
                          text-dnd-text-muted hover:text-dnd-gold-bright hover:border-dnd-gold/60"
             >
@@ -170,10 +170,10 @@ export default function ChipInput({
         </div>
       )}
       {error && (
-        <p className="text-[11px] text-dnd-crimson-bright mt-1 font-body italic">{error}</p>
+        <p className="text-xs text-dnd-crimson-bright mt-1 font-body italic">{error}</p>
       )}
       {hint && !error && (
-        <p className="text-[11px] text-dnd-text-faint mt-1 font-body italic">{hint}</p>
+        <p className="text-xs text-dnd-text-faint mt-1 font-body italic">{hint}</p>
       )}
     </div>
   )
