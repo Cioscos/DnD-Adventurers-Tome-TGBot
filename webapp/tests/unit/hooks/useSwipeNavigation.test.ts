@@ -108,4 +108,33 @@ describe('useSwipeNavigation — rilascio del gesto', () => {
     drag(s, 100, 5)
     expect(navigateSpy).not.toHaveBeenCalled()
   })
+
+  it('un breadcrumb fa la slide verso la pagina scelta e naviga a slide finita', () => {
+    const { hook } = setup('hp')
+    act(() => hook.result.current.goToPage('actions'))
+    // Pagina non adiacente: il ghost deve essere quella scelta, verso destra.
+    expect(hook.result.current.slideTarget).toBe('actions')
+    expect(hook.result.current.ghostDir).toBe(1)
+    expect(navigateSpy).not.toHaveBeenCalled()
+    act(() => { vi.advanceTimersByTime(400) })
+    expect(navigateSpy).toHaveBeenCalledWith('/char/7/actions', { replace: true })
+  })
+
+  it('un breadcrumb precedente fa la slide nel verso opposto', () => {
+    const { hook } = setup('actions')
+    act(() => hook.result.current.goToPage('hp'))
+    expect(hook.result.current.ghostDir).toBe(-1)
+  })
+
+  it('la pagina corrente e i tocchi durante la slide non fanno nulla', () => {
+    const { hook } = setup('hp')
+    act(() => hook.result.current.goToPage('hp'))
+    expect(hook.result.current.slideTarget).toBeNull()
+    act(() => hook.result.current.goToPage('ac'))
+    act(() => hook.result.current.goToPage('saves'))
+    expect(hook.result.current.slideTarget).toBe('ac')
+    act(() => { vi.advanceTimersByTime(400) })
+    expect(navigateSpy).toHaveBeenCalledTimes(1)
+    expect(navigateSpy).toHaveBeenCalledWith('/char/7/ac', { replace: true })
+  })
 })

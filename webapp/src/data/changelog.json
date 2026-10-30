@@ -26,7 +26,7 @@
           "Notifiche e pulsante dei dadi non finiscono più sotto i controlli di Telegram o la barra di sistema; il pulsante dei dadi si nasconde mentre scrivi.",
           "Il pulsante dei dadi non lampeggia più durante lo scorrimento.",
           "Passando da una pagina all'altra con lo swipe, l'intestazione resta ferma e cambia solo il contenuto.",
-          "Swipe tra le pagine più naturale: la pagina scorre seguendo il dito e cambia solo oltre metà schermo o con un gesto deciso, altrimenti torna al suo posto."
+          "Swipe tra le pagine più naturale: la pagina scorre seguendo il dito e cambia solo oltre metà schermo o con un gesto deciso, altrimenti torna al suo posto. Anche toccando una voce del percorso in alto la pagina scorre invece di cambiare di colpo."
         ],
         "en": [
           "Much lighter app startup: the 3D dice engine loads only when needed.",
@@ -36,7 +36,7 @@
           "Notifications and the dice button no longer end up under Telegram's controls or the system bar; the dice button hides while you type.",
           "The dice button no longer flickers while scrolling.",
           "When swiping between pages, the header stays still and only the content changes.",
-          "More natural page swipe: the page slides with your finger and changes only past halfway or with a decisive flick, otherwise it returns to its place."
+          "More natural page swipe: the page slides with your finger and changes only past halfway or with a decisive flick, otherwise it returns to its place. Tapping an item in the top trail also slides the page instead of switching abruptly."
         ]
       },
       "fixed": {

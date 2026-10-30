@@ -11,7 +11,6 @@ import { api, ApiError } from '@/api/client'
 import EmptyState from '@/components/ui/EmptyState'
 import Pressable from '@/components/ui/Pressable'
 import { spring } from '@/styles/motion'
-import { haptic } from '@/auth/telegram'
 
 // Ogni pagina monta il proprio Layout, quindi navigare fra pagine dello stesso
 // gruppo (swipe, breadcrumb) ricrea l'header. Questi valori gli danno continuità:
@@ -64,8 +63,10 @@ export default function Layout({ title, children, backTo, group, page, hideScrol
   // Ghost skeleton: the skeleton of the page the swipe is heading toward, so the
   // area behind the outgoing page is never blank during the drag.
   const ghostKey = info && swipe.ghostDir !== 0
-    ? info.pages[info.index + swipe.ghostDir]
+    ? swipe.slideTarget ?? info.pages[info.index + swipe.ghostDir]
     : undefined
+  // Il breadcrumb toccato si accende subito, senza aspettare la fine della slide.
+  const activeKey = swipe.slideTarget ?? page
   const GhostSkeleton = pageSkeleton(ghostKey)
 
   // Tablist collapse: hide the breadcrumb row when the user scrolls down, reveal
@@ -119,7 +120,7 @@ export default function Layout({ title, children, backTo, group, page, hideScrol
     c.scrollBy({ left: delta, behavior: 'smooth' })
     // sameGroup è fisso per tutta la vita del componente.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, group])
+  }, [activeKey, group])
 
   // Finding #5: prefer the declared logical parent (e.g. the character hub) over
   // history.back(), so a single tap from a deep page returns to /char/:id instead
@@ -200,13 +201,6 @@ export default function Layout({ title, children, backTo, group, page, hideScrol
           </h1>
         </div>
         {info && (() => {
-          const goToPage = (pageKey: string) => {
-            if (id) {
-              haptic.light()
-              navigate(`/char/${id}/${pageKey}`, { replace: true })
-            }
-          }
-
           return (
             <AnimatePresence initial={false}>
               {!tablistCollapsed && (
@@ -228,14 +222,14 @@ export default function Layout({ title, children, backTo, group, page, hideScrol
                         {i > 0 && (
                           <span className="text-dnd-gold-dim/50 shrink-0 px-1">◈</span>
                         )}
-                        {i === info.index ? (
+                        {pageKey === activeKey ? (
                           <span ref={activeCrumbRef} className="text-dnd-gold-bright font-semibold whitespace-nowrap px-2 py-1.5">
                             {t(`character.menu.${pageKey}`)}
                           </span>
                         ) : (
                           <Pressable
                             type="button"
-                            onClick={() => goToPage(pageKey)}
+                            onClick={() => swipe.goToPage(pageKey)}
                             whileTap={{ scale: 0.95 }}
                             aria-label={t('layout.nav.go_to', { page: t(`character.menu.${pageKey}`) })}
                             className="text-dnd-text-muted opacity-70 whitespace-nowrap px-2 py-1.5 min-h-[32px] rounded hover:filter-none hover:text-dnd-gold-bright hover:opacity-100 transition-colors"

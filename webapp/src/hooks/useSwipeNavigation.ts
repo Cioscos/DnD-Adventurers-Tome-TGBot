@@ -55,6 +55,8 @@ export function useSwipeNavigation(group?: string, page?: string) {
   const contentRef = useRef<HTMLDivElement>(null)
   const ghostRef = useRef<HTMLDivElement>(null)
   const [ghostDir, setGhostDir] = useState<-1 | 0 | 1>(0)
+  // Pagina scelta da un breadcrumb, anche non adiacente, durante la sua slide.
+  const [slideTarget, setSlideTarget] = useState<string | null>(null)
   // Animazione di rilascio in corso: i tocchi vengono ignorati finché non finisce.
   const settleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   // Arrivo da uno swipe: Layout fa sfumare lo skeleton invece del fade-in di pagina.
@@ -214,10 +216,49 @@ export function useSwipeNavigation(group?: string, page?: string) {
     }, RETURN_MS)
   }, [info, navigate, id, reducedMotion])
 
+  // Tocco su un breadcrumb: stessa slide dello swipe, nel verso della pagina scelta.
+  const goToPage = useCallback((pageKey: string) => {
+    if (!info || settleTimerRef.current) return
+    const targetIndex = info.pages.indexOf(pageKey)
+    if (targetIndex === -1 || targetIndex === info.index) return
+    haptic.light()
+    const path = `/char/${id}/${pageKey}`
+    if (reducedMotion) {
+      navigate(path, { replace: true })
+      return
+    }
+    const dir = targetIndex > info.index ? 1 : -1
+    setSlideTarget(pageKey)
+    setGhostDir(dir)
+    settleTimerRef.current = setTimeout(() => {
+      settleTimerRef.current = null
+      slideArrival = true
+      navigate(path, { replace: true })
+    }, SLIDE_MAX_MS)
+    // Il ghost nasce fuori schermo col render di questo tocco: la slide parte dal
+    // frame dopo, a posizione iniziale già applicata (o non ci sarebbe transizione).
+    requestAnimationFrame(() => {
+      const content = contentRef.current
+      const ghost = ghostRef.current
+      const easing = `transform ${SLIDE_MAX_MS}ms ${SLIDE_EASE}`
+      ghost?.getBoundingClientRect()
+      if (content) {
+        content.style.transition = easing
+        content.style.transform = `translateX(${dir === 1 ? '-100%' : '100%'})`
+      }
+      if (ghost) {
+        ghost.style.transition = easing
+        ghost.style.transform = 'translateX(0)'
+      }
+    })
+  }, [info, id, navigate, reducedMotion])
+
   return {
     contentRef,
     ghostRef,
     ghostDir,
+    slideTarget,
+    goToPage,
     arrivedBySwipe,
     onTouchStart,
     onTouchMove,
