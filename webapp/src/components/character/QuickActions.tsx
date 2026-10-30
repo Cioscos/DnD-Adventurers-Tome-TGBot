@@ -629,7 +629,7 @@ export default function QuickActions({ char }: Props) {
         onClose={() => setEditorOpen(false)}
         title={t('character.quick_actions.editor_title')}
       >
-        <div className="space-y-4 max-h-[60vh] overflow-y-auto scrollbar-hide">
+        <div className="space-y-4 px-4 max-h-[60vh] overflow-y-auto scrollbar-hide">
           <p className="text-xs text-dnd-text-muted font-body italic">
             {t('character.quick_actions.editor_hint', { max: QUICK_ACTIONS_MAX, count: entries.length })}
           </p>
