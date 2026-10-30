@@ -1,7 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { MutationCache, QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { LazyMotion, domMax } from 'framer-motion'
+import { LazyMotion, MotionConfig, domMax } from 'framer-motion'
 import App from './App'
 import AppErrorBoundary from './components/AppErrorBoundary'
 import Toast from './components/ui/Toast'
@@ -120,10 +120,15 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <AppErrorBoundary>
       <LazyMotion features={domMax} strict>
-        <QueryClientProvider client={queryClient}>
-          <App />
-          <Toast />
-        </QueryClientProvider>
+        {/* reducedMotion="user": con "riduci movimento" di sistema framer salta
+            transform/layout di TUTTE le animazioni JS (opacità e colori restano),
+            senza dipendere dal gating manuale di ogni componente. */}
+        <MotionConfig reducedMotion="user">
+          <QueryClientProvider client={queryClient}>
+            <App />
+            <Toast />
+          </QueryClientProvider>
+        </MotionConfig>
       </LazyMotion>
     </AppErrorBoundary>
   </React.StrictMode>

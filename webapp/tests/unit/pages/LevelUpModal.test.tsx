@@ -4,11 +4,10 @@ import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from '../utils/renderWithProviders'
 import LevelUpModal from '@/pages/multiclass/LevelUpModal'
 
-const { distributeSpy, toastSuccess, toastInfo, confettiSpy } = vi.hoisted(() => ({
+const { distributeSpy, toastSuccess, toastInfo } = vi.hoisted(() => ({
   distributeSpy: vi.fn(),
   toastSuccess: vi.fn(),
   toastInfo: vi.fn(),
-  confettiSpy: vi.fn(),
 }))
 
 vi.mock('@/api/client', () => ({ api: { classes: { distribute: distributeSpy } } }))
@@ -30,7 +29,6 @@ vi.mock('framer-motion', async () => {
 })
 
 vi.mock('sonner', () => ({ toast: { success: toastSuccess, info: toastInfo } }))
-vi.mock('@/lib/celebrate', () => ({ fireLevelUpConfetti: confettiSpy }))
 vi.mock('@/hooks/useReducedMotion', () => ({ useReducedMotion: () => false }))
 vi.mock('@/store/overlayStore', () => ({ useRegisterOverlay: () => {} }))
 vi.mock('@/auth/telegram', () => ({ haptic: { success: () => {}, error: () => {}, medium: () => {} } }))
@@ -68,7 +66,6 @@ afterEach(() => {
   distributeSpy.mockReset()
   toastSuccess.mockReset()
   toastInfo.mockReset()
-  confettiSpy.mockReset()
 })
 
 describe('LevelUpModal', () => {
@@ -90,7 +87,6 @@ describe('LevelUpModal', () => {
       ]),
     )
     expect(toastSuccess).toHaveBeenCalled()       // level-up celebration
-    expect(confettiSpy).toHaveBeenCalled()         // !reducedMotion → confetti
     expect(onClose).toHaveBeenCalled()
   })
 

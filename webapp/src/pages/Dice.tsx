@@ -267,7 +267,7 @@ export default function Dice() {
               key={die}
               onClick={() => handleRoll(die)}
               pending={rollPending || initiativeRolling}
-              className="aspect-square rounded-2xl bg-dnd-surface-raised border border-dnd-border hover:border-dnd-gold/60 hover:shadow-halo-gold transition-[box-shadow,border-color] duration-200 flex items-center justify-center disabled:opacity-40 text-dnd-gold-bright"
+              className="aspect-square rounded-2xl bg-dnd-surface-raised border border-dnd-border hover:border-dnd-gold/60 transition-colors duration-200 flex items-center justify-center disabled:opacity-40 text-dnd-gold-bright"
               whileTap={{ scale: 0.92 }}
             >
               <DiceIcon sides={die} size={42} />
@@ -276,7 +276,7 @@ export default function Dice() {
           <Pressable
             onClick={() => handleRoll(100)}
             pending={rollPending || initiativeRolling}
-            className="col-span-3 sm:col-span-2 rounded-2xl bg-dnd-surface-raised border border-dnd-border hover:border-dnd-gold/60 hover:shadow-halo-gold transition-[box-shadow,border-color] duration-200 flex items-center justify-center gap-2 py-3 disabled:opacity-40 text-dnd-gold-bright"
+            className="col-span-3 sm:col-span-2 rounded-2xl bg-dnd-surface-raised border border-dnd-border hover:border-dnd-gold/60 transition-colors duration-200 flex items-center justify-center gap-2 py-3 disabled:opacity-40 text-dnd-gold-bright"
             whileTap={{ scale: 0.95 }}
           >
             <DiceIcon sides={100} size={34} />

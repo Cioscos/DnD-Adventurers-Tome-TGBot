@@ -33,6 +33,7 @@ import { useDiceSettings } from '@/store/diceSettings'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import HomebrewBreakdownRow from '@/components/homebrew/HomebrewBreakdownRow'
 import HPSkeleton from '@/components/skeletons/HPSkeleton'
+import { useIsFirstValue } from '@/hooks/useIsFirstValue'
 
 type HPOp = 'damage' | 'heal' | 'set_max' | 'set_current' | 'set_temp'
 
@@ -64,6 +65,8 @@ export default function HP() {
     queryKey: ['character', charId],
     queryFn: () => api.characters.get(charId),
   })
+  // Pop del valore solo quando CAMBIA, non all'ingresso nella pagina.
+  const isFirstValue = useIsFirstValue(char)
 
   const reviveMutation = useMutation({
     mutationFn: () => api.characters.revive(charId),
@@ -260,7 +263,7 @@ export default function HP() {
                   <div className="flex items-end justify-center gap-1.5">
                     <m.span
                       key={char.current_hit_points}
-                      initial={{ scale: 0.85, opacity: 0.4 }}
+                      initial={isFirstValue ? false : { scale: 0.85, opacity: 0.4 }}
                       animate={{ scale: 1, opacity: 1 }}
                       transition={spring.elastic}
                       className={`font-display font-black leading-none text-[5rem] ${hpColor} ${hpGlowClass}`}

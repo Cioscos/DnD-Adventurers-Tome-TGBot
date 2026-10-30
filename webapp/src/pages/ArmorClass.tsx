@@ -16,6 +16,7 @@ import ArmorClassSkeleton from '@/components/skeletons/ArmorClassSkeleton'
 import { haptic } from '@/auth/telegram'
 import { spring } from '@/styles/motion'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
+import { useIsFirstValue } from '@/hooks/useIsFirstValue'
 
 export default function ArmorClass() {
   const { id } = useParams<{ id: string }>()
@@ -32,6 +33,8 @@ export default function ArmorClass() {
     queryKey: ['character', charId],
     queryFn: () => api.characters.get(charId),
   })
+  // Pop del valore solo quando CAMBIA, non all'ingresso nella pagina.
+  const isFirstValue = useIsFirstValue(char)
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -145,7 +148,7 @@ export default function ArmorClass() {
             </m.div>
             <m.span
               key={acTotal}
-              initial={{ scale: 0.6, opacity: 0 }}
+              initial={isFirstValue ? false : { scale: 0.6, opacity: 0 }}
               animate={{ scale: [0.6, 1.15, 1], opacity: 1 }}
               transition={spring.elastic}
               className="absolute font-display font-black text-dnd-gold-bright leading-none"

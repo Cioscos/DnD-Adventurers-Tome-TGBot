@@ -450,7 +450,7 @@ export default function CharacterSelect() {
                                    text-center
                                    ${isBuiltinSelected(cls.key)
                                      ? '!border-dnd-gold shadow-halo-gold'
-                                     : 'border-dnd-border hover:border-dnd-gold/60 hover:shadow-halo-gold'}`}
+                                     : 'border-dnd-border hover:border-dnd-gold/60'}`}
                         variants={{
                           initial: { opacity: 0, scale: 0.9 },
                           animate: { opacity: 1, scale: 1 },

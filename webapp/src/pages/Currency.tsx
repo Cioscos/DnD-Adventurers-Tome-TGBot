@@ -16,6 +16,7 @@ import ChipSelect from '@/components/ui/ChipSelect'
 import { haptic } from '@/auth/telegram'
 import { spring } from '@/styles/motion'
 import CurrencySkeleton from '@/components/skeletons/CurrencySkeleton'
+import { useIsFirstValue } from '@/hooks/useIsFirstValue'
 
 const COINS = [
   { key: 'platinum', metal: 'platinum', label: 'PP' },
@@ -61,6 +62,8 @@ export default function Currency() {
     queryKey: ['character', charId],
     queryFn: () => api.characters.get(charId),
   })
+  // Pop del valore solo quando CAMBIA, non all'ingresso nella pagina.
+  const isFirstValue = useIsFirstValue(char)
 
   const [mode, setMode] = useState<'set' | 'add'>('add')
   const [draft, setDraft] = useState<Record<CoinKey, string>>({
@@ -174,7 +177,7 @@ export default function Currency() {
           <Coins size={32} className="text-dnd-gold-bright drop-shadow-[0_0_8px_var(--dnd-gold-glow)]" />
           <m.span
             key={totalGold}
-            initial={{ scale: 0.85, opacity: 0.5 }}
+            initial={isFirstValue ? false : { scale: 0.85, opacity: 0.5 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={spring.elastic}
             className="text-4xl font-display font-black text-dnd-gold-bright"

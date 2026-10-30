@@ -436,7 +436,7 @@ export default function Inventory() {
                 onClick={() => setShowAdd(true)}
                 icon={<Plus size={18} />}
                 haptic="medium"
-                className={scrolled ? '!rounded-full shadow-halo-gold' : ''}
+                className={scrolled ? '!rounded-full' : ''}
               >
                 {scrolled ? t('character.inventory.add_short') : t('character.inventory.add')}
               </Button>

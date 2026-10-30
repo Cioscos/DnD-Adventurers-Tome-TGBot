@@ -18,6 +18,9 @@ const OFFSET_RATIO = 0.25
 // onDragEnd with offset≈0 and velocity > VELOCITY_THRESHOLD and accidentally
 // flip activeScreen.
 const TAP_OFFSET_THRESHOLD = 10
+// Spring dello snap (più rigido di spring.swipe: lo swiper dell'hub deve
+// assestarsi in fretta sotto il pollice).
+const SNAP_SPRING = { type: 'spring', stiffness: 360, damping: 32 } as const
 
 export default function CharacterSwiper({ hero, equipment, menu }: Props) {
   const { t } = useTranslation()
@@ -46,6 +49,9 @@ export default function CharacterSwiper({ hero, equipment, menu }: Props) {
     return () => ro.disconnect()
   }, [])
 
+  // Velocità di rilascio dell'ultimo drag, consumata dallo snap successivo.
+  const releaseVelocityRef = useRef(0)
+
   // Snap to current screen whenever activeScreen or width changes
   useEffect(() => {
     if (width === 0) return
@@ -58,11 +64,11 @@ export default function CharacterSwiper({ hero, equipment, menu }: Props) {
       x.set(target)
       initialAppliedRef.current = true
     } else {
-      const controls = animate(x, target, {
-        type: 'spring',
-        stiffness: 360,
-        damping: 32,
-      })
+      // Eredita la velocità del flick (se lo snap nasce da un drag): lo spring
+      // continua il movimento del dito invece di ripartire da fermo.
+      const velocity = releaseVelocityRef.current
+      releaseVelocityRef.current = 0
+      const controls = animate(x, target, { ...SNAP_SPRING, velocity })
       return () => controls.stop()
     }
   }, [activeScreen, width, x, reduced])
@@ -70,6 +76,7 @@ export default function CharacterSwiper({ hero, equipment, menu }: Props) {
   const handleDragEnd = (_e: unknown, info: PanInfo) => {
     const offset = info.offset.x
     const velocity = info.velocity.x
+    releaseVelocityRef.current = velocity
     let next: CharacterScreen = activeScreen
     // Ignore taps: any gesture whose absolute horizontal offset never exceeded
     // the tap threshold cannot trigger a screen change, regardless of velocity.
@@ -92,7 +99,8 @@ export default function CharacterSwiper({ hero, equipment, menu }: Props) {
       if (reduced) {
         x.set(target)
       } else {
-        animate(x, target, { type: 'spring', stiffness: 360, damping: 32 })
+        releaseVelocityRef.current = 0
+        animate(x, target, { ...SNAP_SPRING, velocity })
       }
     }
   }

@@ -96,6 +96,9 @@ export default function Conditions() {
   // resetAll, so a variables-diff would be ambiguous; tracking the key explicitly
   // (set right before mutate, cleared on settle) mirrors pendingExhaustion above.
   const [pendingConditionKey, setPendingConditionKey] = useState<string | null>(null)
+  // Ultima condizione ATTIVATA dall'utente: lo shake è il beat della transizione
+  // inattiva→attiva, non deve ripartire al mount per quelle già attive.
+  const [justActivated, setJustActivated] = useState<string | null>(null)
   const [detailKey, setDetailKey] = useState<string | null>(null)
   const [showExhaustionDetails, setShowExhaustionDetails] = useState(false)
   const [filterActive, setFilterActive] = useState(false)
@@ -192,6 +195,7 @@ export default function Conditions() {
   const toggle = (key: string) => {
     const current = conditions[key] ?? false
     setPendingConditionKey(key)
+    setJustActivated(current ? null : key)
     mutation.mutate({ ...conditions, [key]: !current })
   }
 
@@ -408,7 +412,7 @@ export default function Conditions() {
               }}
               className={`flex items-center rounded-xl border transition-colors
                 ${active
-                  ? 'bg-gradient-to-br from-dnd-crimson-deep/40 to-dnd-crimson/20 border-dnd-crimson/60 shadow-halo-danger text-dnd-text'
+                  ? 'bg-gradient-to-br from-dnd-crimson-deep/40 to-dnd-crimson/20 border-dnd-crimson/60 text-dnd-text'
                   : 'bg-dnd-surface border-dnd-border text-dnd-text-muted'}`}
             >
               <Pressable
@@ -416,7 +420,7 @@ export default function Conditions() {
                 pending={mutation.isPending && pendingConditionKey === key}
                 disabled={mutation.isPending && pendingConditionKey !== key}
                 whileTap={{ scale: 0.95 }}
-                animate={active ? { x: [-2, 2, -1, 1, 0] } : { x: 0 }}
+                animate={active && justActivated === key ? { x: [-2, 2, -1, 1, 0] } : { x: 0 }}
                 transition={{ duration: 0.25 }}
                 className="flex-1 flex items-center gap-2 px-3 py-3 text-left"
               >
