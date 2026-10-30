@@ -9,6 +9,7 @@ import {
   useState,
   type ReactNode,
 } from 'react'
+import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { useDeferredBlur } from '@/hooks/useDeferredBlur'
@@ -18,6 +19,7 @@ import type { SceneRequest } from './DiceScene'
 import { DicePackProvider } from './packs/DicePackProvider'
 import DiceErrorBoundary from './DiceErrorBoundary'
 import { schedulePreloadDiceScene } from './preload'
+import { rollValues } from './d100'
 import { rollMany } from './rng'
 
 const DiceScene = lazy(() => import('./DiceScene'))
@@ -28,6 +30,8 @@ const DiceAnimationContext = createContext<DiceAnimationApi | null>(null)
 const MAX_ANIMATED_DICE = 12
 /** Rete lenta: se la scena non arriva, il tiro non resta in attesa. */
 const SCENE_LOAD_TIMEOUT_MS = 8000
+/** Ben oltre il tetto del lancio: una scena bloccata non ferma il tiro e la coda. */
+const ROLL_WATCHDOG_MS = 30000
 const OVERLAY_FADE_MS = 180
 
 const bodiesPerRoll = (g: PlayCollectGroup) => (g.kind === 'd100' ? 2 : 1)
@@ -48,6 +52,18 @@ function capForAnimation(groups: PlayCollectGroup[]): PlayCollectGroup[] {
     })
   }
   return groups.map((g, i) => ({ ...g, count: counts[i] }))
+}
+
+/**
+ * Valori da mostrare a dadi fermi: su un dado lontano dal centro la faccia in
+ * alto non è quella più in vista, quindi il numero va scritto.
+ */
+function formatValues(groups: PlayCollectGroup[], results: DetectedResult[]): string {
+  return groups
+    .flatMap((g, groupIndex) =>
+      rollValues(g.kind, results.filter((r) => r.groupIndex === groupIndex).map((r) => r.value)),
+    )
+    .join(' · ')
 }
 
 /** Risultati animati, completati in locale fino al numero di dadi richiesto. */
@@ -71,6 +87,7 @@ export default function DiceAnimationProvider({ children }: { children: ReactNod
   const [overlayVisible, setOverlayVisible] = useState(false)
   const [isPlaying, setIsPlaying] = useState(false)
   const [skipToken, setSkipToken] = useState(0)
+  const [settledValues, setSettledValues] = useState<string | null>(null)
   const { blurStyle, onEntranceComplete } = useDeferredBlur(overlayVisible)
 
   const sceneReadyRef = useRef(false)
@@ -122,6 +139,7 @@ export default function DiceAnimationProvider({ children }: { children: ReactNod
 
   const animate = useCallback(
     async (groups: PlayCollectGroup[]): Promise<DetectedResult[]> => {
+      setSettledValues(null)
       setIsPlaying(true)
       setOverlayVisible(true)
       setShouldMountScene(true)
@@ -129,13 +147,20 @@ export default function DiceAnimationProvider({ children }: { children: ReactNod
 
       const detected = ready
         ? await new Promise<DetectedResult[]>((resolve) => {
+            const watchdog = setTimeout(() => done([]), ROLL_WATCHDOG_MS)
             const done = (r: DetectedResult[]) => {
+              clearTimeout(watchdog)
               pendingCompleteRef.current = null
               resolve(r)
             }
             pendingCompleteRef.current = done
             const id = ++requestIdRef.current
-            setSceneRequest({ id, groups, onComplete: done })
+            setSceneRequest({
+              id,
+              groups,
+              onSettled: (r) => setSettledValues(formatValues(groups, r)),
+              onComplete: done,
+            })
           })
         : []
 
@@ -171,13 +196,18 @@ export default function DiceAnimationProvider({ children }: { children: ReactNod
     <DicePackProvider>
       <DiceAnimationContext.Provider value={api}>
         {children}
-        {shouldMountScene && (
+        {/* Su body e sopra z-50/z-60: Sheet e dialog stanno lì, fuori dal contesto
+            di impilamento dell'app; i toast (z-9999) restano sopra. */}
+        {shouldMountScene && createPortal(
           <div
             aria-hidden
             data-testid="dice-overlay"
-            className="fixed inset-0 z-[60]"
+            className="fixed inset-0 z-[90]"
             onClick={() => {
-              if (overlayVisible) setSkipToken((v) => v + 1)
+              if (!overlayVisible) return
+              // Scena ancora in arrivo: il tiro prosegue senza animazione.
+              if (!sceneReadyRef.current) settleWaiters(false)
+              else setSkipToken((v) => v + 1)
             }}
             onTransitionEnd={(e) => {
               // target === currentTarget: onTransitionEnd fa bubbling, senza
@@ -190,9 +220,9 @@ export default function DiceAnimationProvider({ children }: { children: ReactNod
             }}
             style={{
               opacity: overlayVisible ? 1 : 0,
-              // Attivo solo durante il tiro: il tocco salta l'animazione e non
-              // arriva ai pulsanti sotto.
-              pointerEvents: overlayVisible ? 'auto' : 'none',
+              // Attivo per tutto il tiro, dissolvenza compresa: il tocco salta
+              // l'animazione e non arriva ai pulsanti sotto.
+              pointerEvents: isPlaying ? 'auto' : 'none',
               transition: `opacity ${OVERLAY_FADE_MS}ms ease-out`,
               background: overlayVisible ? 'var(--dnd-overlay)' : 'transparent',
               ...blurStyle,
@@ -204,10 +234,20 @@ export default function DiceAnimationProvider({ children }: { children: ReactNod
                 <DiceScene request={sceneRequest} onMount={handleSceneMount} skipToken={skipToken} />
               </Suspense>
             </DiceErrorBoundary>
-            <p className="absolute inset-x-0 bottom-8 text-center text-xs font-cinzel uppercase tracking-widest text-dnd-parchment/80 pointer-events-none">
-              {t('character.dice.tap_to_skip')}
-            </p>
-          </div>
+            {settledValues ? (
+              <p
+                data-testid="dice-values"
+                className="absolute inset-x-4 bottom-8 text-center text-3xl font-mono font-bold tabular-nums text-dnd-parchment pointer-events-none"
+              >
+                {settledValues}
+              </p>
+            ) : (
+              <p className="absolute inset-x-0 bottom-8 text-center text-xs font-cinzel uppercase tracking-widest text-dnd-parchment/80 pointer-events-none">
+                {t('character.dice.tap_to_skip')}
+              </p>
+            )}
+          </div>,
+          document.body,
         )}
       </DiceAnimationContext.Provider>
     </DicePackProvider>

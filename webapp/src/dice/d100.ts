@@ -15,6 +15,14 @@ export function pairD100(vals: number[]): number {
   return total
 }
 
+/** Valori per tiro a partire dai dadi fisici: ogni coppia di un d100 è un percentile. */
+export function rollValues(kind: string, vals: number[]): number[] {
+  if (kind !== 'd100') return vals
+  const percentiles: number[] = []
+  for (let i = 0; i + 1 < vals.length; i += 2) percentiles.push(pairD100(vals.slice(i, i + 2)))
+  return percentiles
+}
+
 /** Etichetta di una faccia d10 quando il dado fa parte di un d100. */
 export function d100FaceLabel(value: number, role: D100Role): string {
   const digit = value % 10

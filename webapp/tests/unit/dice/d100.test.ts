@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { d100FaceLabel, pairD100 } from '@/dice/d100'
+import { d100FaceLabel, pairD100, rollValues } from '@/dice/d100'
 import { needsOrientationMark } from '@/dice/numeralTexture'
 
 describe('pairD100', () => {
@@ -14,6 +14,16 @@ describe('pairD100', () => {
 
   it('reads 00 + 0 as 100', () => {
     expect(pairD100([10, 10])).toBe(100)
+  })
+})
+
+describe('rollValues', () => {
+  it('turns each d100 pair into one percentile', () => {
+    expect(rollValues('d100', [3, 8, 10, 10])).toEqual([38, 100])
+  })
+
+  it('leaves the other dice as they are', () => {
+    expect(rollValues('d8', [3, 8])).toEqual([3, 8])
   })
 })
 

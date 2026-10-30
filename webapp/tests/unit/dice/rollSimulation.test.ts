@@ -87,6 +87,24 @@ describe('createRollSimulation', () => {
     }
   })
 
+  it('rarely leaves a lone die leaning on a wall', () => {
+    const dw = arena()
+    let tilted = 0
+    const rolls = 200
+    for (let roll = 0; roll < rolls; roll++) {
+      const sim = createRollSimulation(dw, specs('d4', 1))
+      settle(sim)
+      const q = sim.dice[0].body.quaternion
+      const { dot } = faceUp(
+        getDiceGeometry('d4').faceNormals,
+        new THREE.Quaternion(q.x, q.y, q.z, q.w),
+      )
+      if (dot < Math.cos((15 * Math.PI) / 180)) tilted++
+      sim.dispose()
+    }
+    expect(tilted / rolls).toBeLessThan(0.03)
+  })
+
   it('reports each die under its own group', () => {
     const dw = arena()
     const sim = createRollSimulation(dw, [
@@ -111,6 +129,22 @@ describe('createRollSimulation', () => {
     const frames = settle(sim)
     expect(frames).toBeLessThan(20)
     sim.dice.forEach((d, i) => expect(sim.results()[i].value).toBe(shownValue(d.body, 'd20')))
+    sim.dispose()
+  })
+
+  it('lets the dice really land when skipped on a slow device', () => {
+    // Telefono lento: ogni lettura dell'orologio costa 20 ms, cannon esce dal
+    // suo ciclo dopo un solo substep e scarta il tempo residuo.
+    let clock = 0
+    vi.spyOn(performance, 'now').mockImplementation(() => (clock += 20))
+    const dw = arena()
+    const sim = createRollSimulation(dw, specs('d6', 4))
+    const startedAt = dw.world.time
+    sim.skip()
+    settle(sim, 20000)
+    expect(sim.phase).toBe('settled')
+    // Col vecchio conteggio il tetto scattava dopo 1 s esatto di fisica, a dadi in volo.
+    expect(dw.world.time - startedAt).toBeGreaterThan(1.05)
     sim.dispose()
   })
 

@@ -16,6 +16,8 @@ import { getTintOverride } from './packs/manifest'
 export type SceneRequest = {
   id: number
   groups: DiceGroup[]
+  /** I dadi si sono fermati: inizia la pausa finale. */
+  onSettled?: (results: DetectedResult[]) => void
   onComplete: (results: DetectedResult[]) => void
 }
 
@@ -32,6 +34,8 @@ const HOLD_MS = 1500
 const LIFT_IN = 220
 const LIFT_OUT = 300
 const SCALE_BOOST = 0.22
+/** Dopo un salto la pausa finale si accorcia: resta il tempo di leggere i valori. */
+const HOLD_START_AFTER_SKIP_MS = 700
 
 function faceLabel(value: number, e: Entity): string {
   return e.d100Role ? d100FaceLabel(value, e.d100Role) : String(value)
@@ -43,6 +47,8 @@ function highlightNaturals(entities: Entity[], results: DetectedResult[], pack: 
     const e = entities[i]
     if (r.kind !== 'd20' || !e.group || (r.value !== 20 && r.value !== 1)) return
     const tint: DiceTint = r.value === 20 ? 'crit' : 'fumble'
+    // Un re-render (pack appena caricato) riapplica il materiale da e.tint.
+    e.tint = tint
     const override = pack ? getTintOverride(pack.manifest, tint) : undefined
     const frames = getDiceGeometry(e.kind).faceFrames
     e.group.children.forEach((child, childIdx) => {
@@ -151,6 +157,7 @@ function Orchestrator({ request, onMount, skipToken = 0 }: Props) {
   const simRef = useRef<RollSimulation | null>(null)
   const holdMsRef = useRef<number | null>(null)
   const finishedRef = useRef(true)
+  const skippedRef = useRef(false)
   const [version, setVersion] = useState(0)
   const { invalidate, camera, size } = useThree()
   const { pack } = useDicePack()
@@ -158,8 +165,10 @@ function Orchestrator({ request, onMount, skipToken = 0 }: Props) {
   onMountRef.current = onMount
 
   const onCompleteRef = useRef<((results: DetectedResult[]) => void) | undefined>(undefined)
+  const onSettledRef = useRef<((results: DetectedResult[]) => void) | undefined>(undefined)
   useEffect(() => {
     onCompleteRef.current = request?.onComplete
+    onSettledRef.current = request?.onSettled
   }, [request])
 
   useEffect(() => {
@@ -176,13 +185,17 @@ function Orchestrator({ request, onMount, skipToken = 0 }: Props) {
   useEffect(() => {
     if (skipToken === 0) return
     if (holdMsRef.current !== null) holdMsRef.current = Math.max(holdMsRef.current, HOLD_MS)
-    else simRef.current?.skip()
+    else if (simRef.current) {
+      skippedRef.current = true
+      simRef.current.skip()
+    }
   }, [skipToken])
 
   useEffect(() => {
     simRef.current?.dispose()
     simRef.current = null
     holdMsRef.current = null
+    skippedRef.current = false
     finishedRef.current = true
     entitiesRef.current = []
 
@@ -245,8 +258,9 @@ function Orchestrator({ request, onMount, skipToken = 0 }: Props) {
         }
       })
       if (sim.phase === 'settled') {
-        holdMsRef.current = 0
+        holdMsRef.current = skippedRef.current ? HOLD_START_AFTER_SKIP_MS : 0
         highlightNaturals(entities, sim.results(), pack)
+        onSettledRef.current?.(sim.results())
       }
       return
     }

@@ -37,7 +37,10 @@ export function DicePackProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!enabled) return
+    if (!enabled) {
+      setLoading(false)
+      return
+    }
     let cancelled = false
     const previousId: PackId | null =
       pack?.manifest.id && isBundledPack(pack.manifest.id) ? (pack.manifest.id as PackId) : null

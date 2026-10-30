@@ -4,7 +4,7 @@ import type { ReactNode } from 'react'
 import type { SceneRequest } from '@/dice/DiceScene'
 
 const scene = vi.hoisted(() => ({
-  mode: 'ok' as 'ok' | 'throw',
+  mode: 'ok' as 'ok' | 'throw' | 'slow',
   requests: [] as SceneRequest[],
   skipTokens: [] as number[],
 }))
@@ -23,7 +23,7 @@ vi.mock('@/dice/DiceScene', async () => {
     }) {
       if (scene.mode === 'throw') throw new Error('Error creating WebGL context.')
       React.useEffect(() => {
-        onMount?.()
+        if (scene.mode !== 'slow') onMount?.()
       }, [])
       React.useEffect(() => {
         if (request) scene.requests.push(request)
@@ -171,6 +171,86 @@ describe('DiceAnimationProvider', () => {
     await act(async () => scene.requests[0].onComplete([]))
     await tick(250)
     await expect(promise).resolves.toHaveLength(3)
+  })
+
+  it('shows the values as soon as the dice stop, instead of the skip hint', async () => {
+    const { result } = renderHook(() => useDiceAnimation(), { wrapper })
+    await act(async () => {
+      void result.current.playAndCollect([
+        { kind: 'd20', count: 2 },
+        { kind: 'd100', count: 1 },
+      ])
+    })
+    await waitFor(() => expect(scene.requests).toHaveLength(1))
+    const overlay = document.querySelector('[data-testid="dice-overlay"]') as HTMLElement
+    expect(overlay.querySelector('[data-testid="dice-values"]')).toBeNull()
+    await act(async () =>
+      scene.requests[0].onSettled?.([
+        { groupIndex: 0, kind: 'd20', value: 20 },
+        { groupIndex: 0, kind: 'd20', value: 3 },
+        { groupIndex: 1, kind: 'd10', value: 5 },
+        { groupIndex: 1, kind: 'd10', value: 7 },
+      ]),
+    )
+    expect(overlay.querySelector('[data-testid="dice-values"]')?.textContent).toBe('20 · 3 · 57')
+  })
+
+  it('renders above sheets and dialogs, which live directly on the body', async () => {
+    const { result } = renderHook(() => useDiceAnimation(), { wrapper })
+    await act(async () => {
+      void result.current.playAndCollect([{ kind: 'd20', count: 1 }])
+    })
+    await waitFor(() => expect(scene.requests).toHaveLength(1))
+    const overlay = document.querySelector('[data-testid="dice-overlay"]') as HTMLElement
+    expect(overlay.parentElement).toBe(document.body)
+    expect(overlay.className).toContain('z-[90]')
+  })
+
+  it('keeps taps away from the page until the overlay has faded out', async () => {
+    const { result } = renderHook(() => useDiceAnimation(), { wrapper })
+    await act(async () => {
+      void result.current.playAndCollect([{ kind: 'd20', count: 1 }])
+    })
+    await waitFor(() => expect(scene.requests).toHaveLength(1))
+    const overlay = document.querySelector('[data-testid="dice-overlay"]') as HTMLElement
+    await act(async () => scene.requests[0].onComplete([{ groupIndex: 0, kind: 'd20', value: 5 }]))
+    expect(overlay.style.opacity).toBe('0')
+    expect(overlay.style.pointerEvents).toBe('auto')
+    await tick(250)
+    expect(overlay.style.pointerEvents).toBe('none')
+  })
+
+  it('stops waiting for a slow scene when the overlay is tapped', async () => {
+    scene.mode = 'slow'
+    const { result } = renderHook(() => useDiceAnimation(), { wrapper })
+    let promise: Promise<unknown[]> = Promise.resolve([])
+    await act(async () => {
+      promise = result.current.playAndCollect([{ kind: 'd6', count: 2 }])
+    })
+    await tick(20)
+    const overlay = document.querySelector('[data-testid="dice-overlay"]') as HTMLElement
+    await act(async () => overlay.click())
+    await tick(250)
+    await expect(promise).resolves.toHaveLength(2)
+    expect(scene.requests).toHaveLength(0)
+  })
+
+  it('does not let a stuck scene hold the roll and the queue forever', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    try {
+      const { result } = renderHook(() => useDiceAnimation(), { wrapper })
+      let promise: Promise<unknown[]> = Promise.resolve([])
+      await act(async () => {
+        promise = result.current.playAndCollect([{ kind: 'd8', count: 2 }])
+      })
+      await waitFor(() => expect(scene.requests).toHaveLength(1))
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(31000)
+      })
+      await expect(promise).resolves.toHaveLength(2)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('asks the scene to skip when the overlay is tapped', async () => {

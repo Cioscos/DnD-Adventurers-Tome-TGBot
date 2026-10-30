@@ -12,6 +12,7 @@ import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import SwitchToggle from '@/components/ui/SwitchToggle'
 import { haptic } from '@/auth/telegram'
+import { rollValues } from '@/dice/d100'
 import { useDiceAnimation } from '@/dice/useDiceAnimation'
 import { useDiceSettings } from '@/store/diceSettings'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
@@ -119,9 +120,14 @@ export default function SpellDamageSheet({
           setRolling(true)
           try {
             const detected = await dice.playAndCollect(groups)
-            main_rolls = detected.filter((d) => d.groupIndex === 0).map((d) => d.value)
+            const valuesOf = (groupIndex: number) =>
+              rollValues(
+                groups[groupIndex].kind,
+                detected.filter((d) => d.groupIndex === groupIndex).map((d) => d.value),
+              )
+            main_rolls = valuesOf(0)
             if (extraCount > 0) {
-              extra_rolls = detected.filter((d) => d.groupIndex === 1).map((d) => d.value)
+              extra_rolls = valuesOf(1)
             }
             if (main_rolls.length !== mainCount) main_rolls = undefined
             if (extra_rolls && extra_rolls.length !== extraCount) extra_rolls = undefined

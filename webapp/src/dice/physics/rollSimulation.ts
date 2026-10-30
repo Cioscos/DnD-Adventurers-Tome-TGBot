@@ -36,6 +36,8 @@ export interface RollSimulation {
 
 const COS_15 = Math.cos((15 * Math.PI) / 180)
 const MAX_RETRIES = 2
+const RETRY_PUSH = 2
+const RETRY_LIFT = 4.5
 const MAX_FRAME_SECONDS = 1 / 15
 const SKIP_FRAME_BUDGET_MS = 12
 const SKIP_STEPS_PER_BATCH = 8
@@ -147,13 +149,13 @@ export function createRollSimulation(dw: DiceWorld, specs: SimDieSpec[]): RollSi
     for (const d of dice) {
       const { dot } = faceUp(getDiceGeometry(d.kind).faceNormals, quaternionOf(d.body))
       if (dot >= COS_15 || d.retries >= MAX_RETRIES || !canRetry) continue
-      // ambiguo (dado in pendenza, tipicamente appoggiato a un muro):
-      // spintarella verso il centro arena + leggero lift, così cade piatto
+      // ambiguo (dado in pendenza, tipicamente appoggiato a un muro): spinta verso
+      // il centro arena + lift, abbastanza da staccarlo e farlo ricadere piatto
       d.body.wakeUp()
       const px = d.body.position.x
       const pz = d.body.position.z
       const len = Math.hypot(px, pz) || 1
-      d.body.applyImpulse(new CANNON.Vec3((-px / len) * 0.8, 1.0, (-pz / len) * 0.8))
+      d.body.applyImpulse(new CANNON.Vec3((-px / len) * RETRY_PUSH, RETRY_LIFT, (-pz / len) * RETRY_PUSH))
       d.body.angularVelocity.set(
         (Math.random() - 0.5) * 4,
         (Math.random() - 0.5) * 4,
@@ -197,6 +199,14 @@ export function createRollSimulation(dw: DiceWorld, specs: SimDieSpec[]): RollSi
     readOrRetry()
   }
 
+  // I timer contano il tempo fisico davvero simulato: cannon può fermarsi prima
+  // dei substep richiesti su un dispositivo lento, e scarta il tempo residuo.
+  const stepAndCheck = (seconds: number, maxSubSteps: number) => {
+    const before = world.time
+    world.step(PHYSICS.fixedTimeStep, seconds, maxSubSteps)
+    checkStop((world.time - before) * 1000)
+  }
+
   return {
     dice,
     get phase() {
@@ -208,16 +218,14 @@ export function createRollSimulation(dw: DiceWorld, specs: SimDieSpec[]): RollSi
         const started = performance.now()
         const batchSeconds = PHYSICS.fixedTimeStep * SKIP_STEPS_PER_BATCH
         do {
-          world.step(PHYSICS.fixedTimeStep, batchSeconds, SKIP_STEPS_PER_BATCH)
-          checkStop(batchSeconds * 1000)
+          stepAndCheck(batchSeconds, SKIP_STEPS_PER_BATCH)
         } while (phase === 'simulating' && performance.now() - started < SKIP_FRAME_BUDGET_MS)
         return
       }
       const seconds = Math.min(deltaSeconds, MAX_FRAME_SECONDS)
       // Substep fissi + accumulator: tempo reale anche a 120 Hz e penetrazione
       // per step dimezzata.
-      world.step(PHYSICS.fixedTimeStep, seconds, PHYSICS.maxSubSteps)
-      checkStop(seconds * 1000)
+      stepAndCheck(seconds, PHYSICS.maxSubSteps)
     },
     skip() {
       skipping = true
