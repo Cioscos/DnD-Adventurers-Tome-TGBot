@@ -229,6 +229,8 @@ body,
    home indicator / Telegram fullscreen controls; falls back to 0.5rem (=bottom-2)
    outside Telegram where the insets are 0. */
 .bottom-safe { bottom: calc(0.5rem + max(env(safe-area-inset-bottom, 0px), var(--tg-safe-bottom, 0px) + var(--tg-content-bottom, 0px))); }
+/* FAB dadi: stesso termine, base 1rem (=bottom-4) — fuori dall'home indicator. */
+.bottom-safe-fab { bottom: calc(1rem + max(env(safe-area-inset-bottom, 0px), var(--tg-safe-bottom, 0px) + var(--tg-content-bottom, 0px))); }
 
 .scrollbar-hide {
   -ms-overflow-style: none;
@@ -380,6 +382,8 @@ body::after {
 
 /* HP number glow — three intensities matching health threshold.
    Crimson softened to ~0.3 alpha to avoid overpowering the "/ max" label. */
+/* transition sul filter: al cambio soglia il glow sfuma invece di scattare. */
+.hp-glow-emerald, .hp-glow-gold, .hp-glow-crimson { transition: filter 300ms ease; }
 .hp-glow-emerald { filter: drop-shadow(0 0 16px rgba(63, 166, 106, 0.30)); }
 .hp-glow-gold    { filter: drop-shadow(0 0 16px rgba(240, 201, 112, 0.42)); }
 .hp-glow-crimson { filter: drop-shadow(0 0 18px rgba(232, 80, 80, 0.32)); }

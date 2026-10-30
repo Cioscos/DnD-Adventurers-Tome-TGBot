@@ -96,7 +96,6 @@ export default function DiceStats() {
       haptic.success()
       setShowResetConfirm(false)
     },
-    onError: () => haptic.error(),
   })
 
   const stats = data?.stats ?? {}

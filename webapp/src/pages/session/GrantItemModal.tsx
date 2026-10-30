@@ -66,7 +66,6 @@ export default function GrantItemModal({
       qc.invalidateQueries({ queryKey: ['session-feed'] })
       onClose()
     },
-    onError: () => haptic.error(),
   })
 
   const handleFormSubmit = useCallback((data: ItemFormData) => {

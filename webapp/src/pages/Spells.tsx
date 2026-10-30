@@ -23,6 +23,7 @@ import SpellForm, { type SpellFormData } from '@/pages/spells/SpellForm'
 import { useCastFlow } from '@/pages/spells/useCastFlow'
 import type { Spell, SpellSlot } from '@/types'
 import SpellsSkeleton from '@/components/skeletons/SpellsSkeleton'
+import { useReducedMotion } from '@/hooks/useReducedMotion'
 
 type SpellProp = 'concentration' | 'ritual' | 'prepared'
 
@@ -104,7 +105,6 @@ export default function Spells() {
       setEditingSpell(null)
       haptic.success()
     },
-    onError: () => haptic.error(),
   })
 
   const updateMutation = useMutation({
@@ -128,7 +128,6 @@ export default function Spells() {
       setEditingSpell(null)
       haptic.success()
     },
-    onError: () => haptic.error(),
   })
 
   const removeMutation = useMutation({
@@ -579,22 +578,19 @@ function ConcentrationPanel({
   stopPending,
   labels,
 }: ConcentrationPanelProps) {
+  const reducedMotion = useReducedMotion()
   return (
-    <m.div
-      className="relative rounded-2xl"
-      animate={{
-        boxShadow: [
-          '0 0 0 2px rgba(155, 89, 182, 0.20), 0 0 14px rgba(155, 89, 182, 0.18)',
-          '0 0 0 2px rgba(155, 89, 182, 0.42), 0 0 28px rgba(155, 89, 182, 0.42)',
-          '0 0 0 2px rgba(155, 89, 182, 0.20), 0 0 14px rgba(155, 89, 182, 0.18)',
-        ],
-      }}
-      transition={{
-        duration: 2.8,
-        repeat: Infinity,
-        ease: 'easeInOut',
-      }}
-    >
+    <div className="relative rounded-2xl">
+      {/* Respiro della concentrazione: l'halo è un layer statico di cui si anima
+          solo l'opacity (compositor), non il box-shadow (repaint a ogni frame).
+          Con "riduci movimento" resta fermo a piena intensità. */}
+      <m.div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 rounded-2xl shadow-halo-arcane"
+        initial={{ opacity: reducedMotion ? 1 : 0.45 }}
+        animate={reducedMotion ? { opacity: 1 } : { opacity: [0.45, 1, 0.45] }}
+        transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
+      />
       <Surface variant="arcane" ornamented className="space-y-3 @container shadow-none">
         <div className="flex flex-col gap-3 @[22rem]:flex-row @[22rem]:items-center @[22rem]:justify-between">
           <div className="flex items-center gap-2 min-w-0">
@@ -636,6 +632,6 @@ function ConcentrationPanel({
           </div>
         )}
       </Surface>
-    </m.div>
+    </div>
   )
 }

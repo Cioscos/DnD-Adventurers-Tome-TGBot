@@ -14,6 +14,7 @@ import AbilityScoresSkeleton from '@/components/skeletons/AbilityScoresSkeleton'
 import AbilityScoreEditModal from '@/components/character/AbilityScoreEditModal'
 import AbilityScoreCard from '@/components/character/AbilityScoreCard'
 import AbilityScoreDetail from '@/components/character/AbilityScoreDetail'
+import { notifyMutationError } from '@/lib/mutationError'
 
 // Canonical D&D 5e ordering — STR/DEX/CON/INT/WIS/CHA (mirror HeroScreen.tsx).
 const DND_ABILITY_ORDER = [
@@ -49,7 +50,7 @@ export default function AbilityScores() {
       }
     },
     onError: () => {
-      haptic.error()
+      notifyMutationError()
     },
   })
 

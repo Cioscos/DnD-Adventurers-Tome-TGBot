@@ -120,7 +120,6 @@ export default function HeroStatsSection({ char }: Props) {
       })
       haptic.success()
     },
-    onError: () => haptic.error(),
   })
 
   const cells = [

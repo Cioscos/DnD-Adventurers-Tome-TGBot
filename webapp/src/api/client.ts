@@ -142,12 +142,23 @@ function authHeaders(): Record<string, string> {
   return headers
 }
 
+// Una richiesta appesa (Wi-Fi del locale, tunnel che cade) lasciava lo spinner
+// `pending` per sempre: oltre questa soglia si fallisce e la UI può reagire.
+const REQUEST_TIMEOUT_MS = 20_000
+
+function timeoutSignal(): AbortSignal | undefined {
+  return typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function'
+    ? AbortSignal.timeout(REQUEST_TIMEOUT_MS)
+    : undefined
+}
+
 async function request<T>(
   path: string,
   options: RequestInit = {}
 ): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {
     ...options,
+    signal: options.signal ?? timeoutSignal(),
     headers: {
       'Content-Type': 'application/json',
       ...authHeaders(),

@@ -141,7 +141,6 @@ export default function SpellDamageSheet({
       haptic.success()
       setResult(data)
     },
-    onError: () => haptic.error(),
   })
 
   if (!spell) return null

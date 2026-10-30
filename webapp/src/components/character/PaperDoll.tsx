@@ -65,6 +65,9 @@ export default function PaperDoll({ items, onSlotTap, silhouetteUrl, silhouetteA
               src={silhouetteUrl as string}
               alt={t('character.equipment.equipment', { defaultValue: 'Equipment' })}
               className="max-h-[320px] w-auto object-contain"
+              // PNG da ~700 KB: decodifica fuori dal main thread (lo swiper
+              // monta questo schermo mentre l'utente è ancora sulla Hero).
+              decoding="async"
               style={{ filter: 'drop-shadow(0 2px 6px rgba(var(--dnd-shadow-color), 0.45))' }}
               onError={() => setImgFailed(true)}
             />

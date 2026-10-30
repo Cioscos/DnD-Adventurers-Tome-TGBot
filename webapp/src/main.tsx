@@ -1,7 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { MutationCache, QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { LazyMotion, domMax } from 'framer-motion'
+import { LazyMotion, MotionConfig, domMax } from 'framer-motion'
 import App from './App'
 import AppErrorBoundary from './components/AppErrorBoundary'
 import Toast from './components/ui/Toast'
@@ -11,6 +11,7 @@ import {
 } from './components/homebrew/HomebrewNotification'
 import { initTheme } from './theme/applyTheme'
 import { getStartParam } from './auth/telegram'
+import { notifyMutationError } from './lib/mutationError'
 import { parseStartParam } from './lib/startParam'
 import './index.css'
 import './i18n'
@@ -100,6 +101,12 @@ const queryClient = new QueryClient({
       staleTime: 30_000,
       retry: 1,
     },
+    mutations: {
+      // Default 'online': da offline la mutation resta IN PAUSA (niente errore,
+      // niente rollback dell'ottimistico, spinner fermo) e riparte da sola al
+      // ritorno della rete, magari minuti dopo. Al tavolo deve fallire subito.
+      networkMode: 'always',
+    },
   },
   // Global surface for homebrew rule notifications: any mutation whose
   // response body carries a `homebrew_notifications` array gets piped
@@ -113,6 +120,14 @@ const queryClient = new QueryClient({
       if (!Array.isArray(list) || list.length === 0) return
       showHomebrewNotifications(list as NotificationLike[])
     },
+    // Rete del tavolo (tunnel → Pi): una mutation fallita senza un onError suo
+    // era silenziosa e il giocatore credeva di aver speso lo slot. Rete di
+    // sicurezza globale: vibrazione + toast, solo se la mutation non gestisce
+    // l'errore da sé.
+    onError: (_error, _vars, _ctx, mutation) => {
+      if (mutation.options.onError) return
+      notifyMutationError()
+    },
   }),
 })
 
@@ -120,10 +135,15 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <AppErrorBoundary>
       <LazyMotion features={domMax} strict>
-        <QueryClientProvider client={queryClient}>
-          <App />
-          <Toast />
-        </QueryClientProvider>
+        {/* reducedMotion="user": con "riduci movimento" di sistema framer salta
+            transform/layout di TUTTE le animazioni JS (opacità e colori restano),
+            senza dipendere dal gating manuale di ogni componente. */}
+        <MotionConfig reducedMotion="user">
+          <QueryClientProvider client={queryClient}>
+            <App />
+            <Toast />
+          </QueryClientProvider>
+        </MotionConfig>
       </LazyMotion>
     </AppErrorBoundary>
   </React.StrictMode>

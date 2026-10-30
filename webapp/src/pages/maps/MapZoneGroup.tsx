@@ -6,6 +6,7 @@ import { api } from '@/api/client'
 import type { CharacterFull, MapEntry } from '@/types'
 import { haptic } from '@/auth/telegram'
 import Pressable from '@/components/ui/Pressable'
+import { notifyMutationError } from '@/lib/mutationError'
 
 interface MapZoneGroupProps {
   charId: number
@@ -76,7 +77,7 @@ function MapZoneGroupInner({
     },
     onError: (_err, _vars, ctx) => {
       if (ctx?.previous) qc.setQueryData(['character', charId], ctx.previous)
-      haptic.error()
+      notifyMutationError()
       qc.invalidateQueries({ queryKey: ['character', charId] })
     },
     onSuccess: (data) => {
@@ -172,6 +173,7 @@ function MapZoneGroupInner({
                 alt={zoneName}
                 className="w-full h-full object-cover pointer-events-none"
                 loading="lazy"
+                decoding="async"
                 draggable={false}
               />
             ) : (

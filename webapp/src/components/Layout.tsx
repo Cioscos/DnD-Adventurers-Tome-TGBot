@@ -1,16 +1,23 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { ChevronLeft, RefreshCw, UserX } from 'lucide-react'
 import { m, AnimatePresence } from 'framer-motion'
 import { useSwipeNavigation, getGroupInfo } from '@/hooks/useSwipeNavigation'
+import { usePageBack } from '@/hooks/useOverlayDismiss'
 import { pageSkeleton } from '@/components/skeletons/pageSkeletons'
 import { api, ApiError } from '@/api/client'
 import EmptyState from '@/components/ui/EmptyState'
 import Pressable from '@/components/ui/Pressable'
 import { spring } from '@/styles/motion'
-import { haptic } from '@/auth/telegram'
+
+// Ogni pagina monta il proprio Layout, quindi navigare fra pagine dello stesso
+// gruppo (swipe, breadcrumb) ricrea l'header. Questi valori gli danno continuità:
+// resta fermo invece di rifare l'ingresso e la striscia non riparte da sinistra.
+let mountedGroup: string | undefined
+let crumbScrollLeft = 0
+let crumbCollapsed = false
 
 interface LayoutProps {
   title: string
@@ -56,8 +63,10 @@ export default function Layout({ title, children, backTo, group, page, hideScrol
   // Ghost skeleton: the skeleton of the page the swipe is heading toward, so the
   // area behind the outgoing page is never blank during the drag.
   const ghostKey = info && swipe.ghostDir !== 0
-    ? info.pages[info.index + swipe.ghostDir]
+    ? swipe.slideTarget ?? info.pages[info.index + swipe.ghostDir]
     : undefined
+  // Il breadcrumb toccato si accende subito, senza aspettare la fine della slide.
+  const activeKey = swipe.slideTarget ?? page
   const GhostSkeleton = pageSkeleton(ghostKey)
 
   // Tablist collapse: hide the breadcrumb row when the user scrolls down, reveal
@@ -70,7 +79,26 @@ export default function Layout({ title, children, backTo, group, page, hideScrol
   // update per animation frame, (2) accumulated directional travel instead of
   // per-event delta, and (3) a short lock after each toggle so the resize-induced
   // scroll events can't flip the state back.
-  const [tablistCollapsed, setTablistCollapsed] = useState(false)
+  // Calcolato al primo render, mentre il Layout uscente è ancora montato.
+  const [sameGroup] = useState(() => !!group && mountedGroup === group)
+  useEffect(() => {
+    mountedGroup = group
+    return () => {
+      mountedGroup = undefined
+    }
+  }, [group])
+  // La pagina nuova parte dall'alto, quindi i breadcrumb vanno riaperti: se erano
+  // chiusi si parte da chiusi e si riaprono animati, senza far saltare il contenuto.
+  const [tablistCollapsed, setTablistCollapsed] = useState(() => sameGroup && crumbCollapsed)
+  useEffect(() => {
+    setTablistCollapsed(false)
+  }, [])
+  useEffect(() => {
+    crumbCollapsed = tablistCollapsed
+  }, [tablistCollapsed])
+  // Arrivo da swipe: lo skeleton con cui la pagina è entrata sfuma nel contenuto.
+  const [arrivalVisible, setArrivalVisible] = useState(!!swipe.arrivedBySwipe)
+  const ArrivalSkeleton = pageSkeleton(page)
   const lastScrollTopRef = useRef(0)
   const accumRef = useRef(0)        // accumulated travel in the current direction
   const rafPendingRef = useRef(false)
@@ -81,15 +109,18 @@ export default function Layout({ title, children, backTo, group, page, hideScrol
   const crumbScrollRef = useRef<HTMLDivElement>(null)
   const activeCrumbRef = useRef<HTMLSpanElement>(null)
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const c = crumbScrollRef.current
     const a = activeCrumbRef.current
     if (!c || !a) return
+    if (sameGroup) c.scrollLeft = crumbScrollLeft
     const cRect = c.getBoundingClientRect()
     const aRect = a.getBoundingClientRect()
     const delta = (aRect.left - cRect.left) - (c.clientWidth - a.offsetWidth) / 2
     c.scrollBy({ left: delta, behavior: 'smooth' })
-  }, [page, group])
+    // sameGroup è fisso per tutta la vita del componente.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeKey, group])
 
   // Finding #5: prefer the declared logical parent (e.g. the character hub) over
   // history.back(), so a single tap from a deep page returns to /char/:id instead
@@ -98,6 +129,8 @@ export default function Layout({ title, children, backTo, group, page, hideScrol
     if (backTo) navigate(backTo)
     else navigate(-1)
   }
+  // Stessa destinazione per il back hardware/BackButton di Telegram (Android).
+  usePageBack(handleBack)
 
   const handleMainScroll = (e: React.UIEvent<HTMLElement>) => {
     // Capture scrollTop now: e.currentTarget is no longer valid inside the rAF.
@@ -147,9 +180,9 @@ export default function Layout({ title, children, backTo, group, page, hideScrol
     >
       <m.header
         className="shrink-0 z-10 flex flex-col px-4 py-3 pt-safe
-                    bg-dnd-surface-raised/95 backdrop-blur-sm
+                    bg-dnd-surface-raised
                     border-b border-dnd-gold-dim/40 shadow-parchment-md"
-        initial={{ y: -20, opacity: 0 }}
+        initial={sameGroup ? false : { y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={spring.drift}
       >
@@ -157,7 +190,7 @@ export default function Layout({ title, children, backTo, group, page, hideScrol
           <Pressable
             onClick={handleBack}
             className="shrink-0 w-11 h-11 flex items-center justify-center rounded-full bg-dnd-surface border border-dnd-gold-dim/30"
-            aria-label="Indietro"
+            aria-label={t('common.back')}
             whileTap={{ scale: 0.9 }}
             whileHover={{ boxShadow: 'var(--halo-gold)' }}
           >
@@ -168,13 +201,6 @@ export default function Layout({ title, children, backTo, group, page, hideScrol
           </h1>
         </div>
         {info && (() => {
-          const goToPage = (pageKey: string) => {
-            if (id) {
-              haptic.light()
-              navigate(`/char/${id}/${pageKey}`, { replace: true })
-            }
-          }
-
           return (
             <AnimatePresence initial={false}>
               {!tablistCollapsed && (
@@ -186,20 +212,24 @@ export default function Layout({ title, children, backTo, group, page, hideScrol
                   transition={{ duration: 0.18, ease: [0.25, 0.1, 0.25, 1] }}
                   className="overflow-hidden"
                 >
-                  <div ref={crumbScrollRef} className="flex items-center overflow-x-auto scrollbar-hide touch-pan-x text-xs font-body whitespace-nowrap px-1">
+                  <div
+                    ref={crumbScrollRef}
+                    onScroll={(e) => { crumbScrollLeft = e.currentTarget.scrollLeft }}
+                    className="flex items-center overflow-x-auto scrollbar-hide touch-pan-x text-xs font-body whitespace-nowrap px-1"
+                  >
                     {info.pages.map((pageKey, i) => (
                       <span key={pageKey} className="flex items-center shrink-0">
                         {i > 0 && (
                           <span className="text-dnd-gold-dim/50 shrink-0 px-1">◈</span>
                         )}
-                        {i === info.index ? (
+                        {pageKey === activeKey ? (
                           <span ref={activeCrumbRef} className="text-dnd-gold-bright font-semibold whitespace-nowrap px-2 py-1.5">
                             {t(`character.menu.${pageKey}`)}
                           </span>
                         ) : (
                           <Pressable
                             type="button"
-                            onClick={() => goToPage(pageKey)}
+                            onClick={() => swipe.goToPage(pageKey)}
                             whileTap={{ scale: 0.95 }}
                             aria-label={t('layout.nav.go_to', { page: t(`character.menu.${pageKey}`) })}
                             className="text-dnd-text-muted opacity-70 whitespace-nowrap px-2 py-1.5 min-h-[32px] rounded hover:filter-none hover:text-dnd-gold-bright hover:opacity-100 transition-colors"
@@ -221,10 +251,11 @@ export default function Layout({ title, children, backTo, group, page, hideScrol
       <div className="relative flex-1 min-w-0 overflow-hidden">
         <main
           ref={swipe.contentRef}
-          className={`absolute inset-0 overflow-y-auto overflow-x-hidden overscroll-contain p-4 pt-4 pb-[max(env(safe-area-inset-bottom),var(--tg-content-bottom,0px),6rem)] space-y-3 animate-fade-in${hideScrollbar ? ' scrollbar-hide' : ''}`}
+          className={`absolute inset-0 overflow-y-auto overflow-x-hidden overscroll-contain p-4 pt-4 pb-[max(env(safe-area-inset-bottom),var(--tg-content-bottom,0px),6rem)] space-y-3${info ? ' touch-pan-y' : ''}${swipe.arrivedBySwipe ? '' : ' animate-fade-in'}${hideScrollbar ? ' scrollbar-hide' : ''}`}
           onTouchStart={swipe.onTouchStart}
           onTouchMove={swipe.onTouchMove}
           onTouchEnd={swipe.onTouchEnd}
+          onTouchCancel={swipe.onTouchEnd}
           onScroll={handleMainScroll}
         >
           {isCharRoute && charQuery.isError ? (
@@ -253,15 +284,32 @@ export default function Layout({ title, children, backTo, group, page, hideScrol
           )}
         </main>
 
+        {/* touch-pan-y su <main>: l'orizzontale è dello swipe di pagina, non del
+            browser (che farebbe il suo back o annullerebbe il tocco a metà gesto). */}
         {/* Ghost layer: skeleton of the incoming page, only while swiping. */}
         {info && swipe.ghostDir !== 0 && (
           <div
             ref={swipe.ghostRef}
             aria-hidden
             className="absolute inset-0 overflow-hidden p-4 pt-4 pointer-events-none"
+            // Già fuori schermo dal primo frame, prima del primo touchmove che lo muove.
+            style={{ transform: `translateX(${swipe.ghostDir === -1 ? '-100%' : '100%'})` }}
           >
             <GhostSkeleton />
           </div>
+        )}
+
+        {arrivalVisible && (
+          <m.div
+            aria-hidden
+            className="absolute inset-0 overflow-hidden p-4 pt-4 pointer-events-none bg-dnd-bg"
+            initial={{ opacity: 1 }}
+            animate={{ opacity: 0 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+            onAnimationComplete={() => setArrivalVisible(false)}
+          >
+            <ArrivalSkeleton />
+          </m.div>
         )}
       </div>
     </div>

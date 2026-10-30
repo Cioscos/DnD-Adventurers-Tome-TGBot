@@ -41,7 +41,6 @@ export default function Session() {
       haptic.success()
       navigate(`/session/${session.id}`)
     },
-    onError: () => haptic.error(),
   })
 
   if (isLoading) {

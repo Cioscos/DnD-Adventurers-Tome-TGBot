@@ -38,7 +38,6 @@ export default function Actions() {
       setAttackState({ result, source: { type: 'weapon', itemId }, wasRerolled: false })
       haptic.success()
     },
-    onError: () => haptic.error(),
   })
 
   const unarmedAttack = useMutation({
@@ -47,7 +46,6 @@ export default function Actions() {
       setAttackState({ result, source: { type: 'unarmed' }, wasRerolled: false })
       haptic.success()
     },
-    onError: () => haptic.error(),
   })
 
   const rerollAttack = useMutation({

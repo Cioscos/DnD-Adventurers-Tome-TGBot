@@ -20,7 +20,7 @@ beforeAll(() => {
 })
 
 type Info = { pages: string[]; index: number; total: number } | null
-const { navigateSpy, groupInfo } = vi.hoisted(() => ({ navigateSpy: vi.fn(), groupInfo: { value: null as Info } }))
+const { navigateSpy, goToPageSpy, groupInfo } = vi.hoisted(() => ({ navigateSpy: vi.fn(), goToPageSpy: vi.fn(), groupInfo: { value: null as Info } }))
 
 vi.mock('react-router-dom', () => ({ useNavigate: () => navigateSpy, useParams: () => ({ id: '7' }), useLocation: () => ({ pathname: '/char/7' }) }))
 vi.mock('@/api/client', () => ({
@@ -34,7 +34,7 @@ vi.mock('react-i18next', async (orig) => {
   return { ...actual, useTranslation: () => ({ t: (k: string) => k, i18n: { language: 'it' } }) }
 })
 vi.mock('@/hooks/useSwipeNavigation', () => ({
-  useSwipeNavigation: () => ({ contentRef: { current: null }, ghostRef: { current: null }, ghostDir: 0, onTouchStart() {}, onTouchMove() {}, onTouchEnd() {}, currentIndex: 0, total: 1 }),
+  useSwipeNavigation: () => ({ contentRef: { current: null }, ghostRef: { current: null }, ghostDir: 0, onTouchStart() {}, onTouchMove() {}, onTouchEnd() {}, goToPage: goToPageSpy, currentIndex: 0, total: 1 }),
   getGroupInfo: () => groupInfo.value,
 }))
 vi.mock('@/components/skeletons/pageSkeletons', () => ({ pageSkeleton: () => () => null }))
@@ -64,16 +64,16 @@ describe('Layout', () => {
     render(<Layout title="Punti Ferita">corpo pagina</Layout>)
     expect(screen.getByRole('heading', { name: 'Punti Ferita' })).toBeInTheDocument()
     expect(screen.getByText('corpo pagina')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Indietro' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'common.back' })).toBeInTheDocument()
   })
 
   it('navigates to backTo when provided, else steps back in history', async () => {
     const { rerender } = render(<Layout title="T" backTo="/char/7">x</Layout>)
-    await userEvent.click(screen.getByRole('button', { name: 'Indietro' }))
+    await userEvent.click(screen.getByRole('button', { name: 'common.back' }))
     expect(navigateSpy).toHaveBeenCalledWith('/char/7')
     navigateSpy.mockReset()
     rerender(<Layout title="T">x</Layout>)
-    await userEvent.click(screen.getByRole('button', { name: 'Indietro' }))
+    await userEvent.click(screen.getByRole('button', { name: 'common.back' }))
     expect(navigateSpy).toHaveBeenCalledWith(-1)
   })
 
@@ -81,7 +81,7 @@ describe('Layout', () => {
     groupInfo.value = { pages: ['hp', 'ac', 'saves', 'actions'], index: 1, total: 4 }
     render(<Layout title="T" group="combat" page="ac">x</Layout>)
     await userEvent.click(screen.getByText('character.menu.hp'))
-    expect(navigateSpy).toHaveBeenCalledWith('/char/7/hp', { replace: true })
+    expect(goToPageSpy).toHaveBeenCalledWith('hp')
   })
 
   it('omits the breadcrumb when there is no group info', () => {

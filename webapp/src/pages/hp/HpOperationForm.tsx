@@ -109,6 +109,10 @@ export default function HpOperationForm({
             onChange={setValue}
             placeholder="0"
             inputMode="numeric"
+            enterKeyHint="done"
+            // Solo Invio/Conferma applicano: al blur (tap su "Cura", su uno
+            // shortcut, su Indietro) il valore veniva applicato con l'op attiva.
+            commitOnBlur={false}
             onCommit={onApply}
             className="[&_input]:text-3xl [&_input]:font-display [&_input]:font-bold [&_input]:text-center [&_input]:min-h-[60px]"
           />
@@ -140,12 +144,19 @@ export default function HpOperationForm({
         </div>
       </Surface>
 
-      {/* Quick shortcuts — at least 52px min-height */}
+      {/* Quick shortcuts — at least 52px min-height. Applicano al volo solo le
+          op incrementali (danno/cura/temp); per "Imposta attuali/max" riempiono
+          il campo: un tap su "5" non deve fissare i PF massimi a 5. */}
       <div className="grid grid-cols-4 gap-2">
         {[1, 5, 10, 20].map((n) => (
           <Pressable
             key={n}
             onClick={() => {
+              if (activeOp === 'set_max' || activeOp === 'set_current') {
+                setValue(String(n))
+                haptic.selection()
+                return
+              }
               hpMutate({ op: activeOp, val: n })
               haptic.light()
             }}

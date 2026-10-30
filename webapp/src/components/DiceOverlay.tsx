@@ -9,6 +9,7 @@ import Pressable from '@/components/ui/Pressable'
 import DicePoolResultModal from '@/components/DicePoolResultModal'
 import { useCharacterStore } from '@/store/characterStore'
 import { useAnyOverlayOpen } from '@/store/overlayStore'
+import { useIsScrolling } from '@/hooks/useIsScrolling'
 import { haptic } from '@/auth/telegram'
 import { api } from '@/api/client'
 import { useRollAndPersist, type RollEntry, type RollGroup } from '@/dice/useRollAndPersist'
@@ -57,7 +58,8 @@ export default function DiceOverlay() {
   const [pool, setPool] = useState<DicePool>({})
   // Dim the launcher while the page is actively scrolling so it stops covering
   // content the user is reading; it stays tappable and fades back when idle.
-  const [scrolling, setScrolling] = useState(false)
+  const scrolling = useIsScrolling()
+  const [typing, setTyping] = useState(false)
 
   const [results, setResults] = useState<RollGroup[] | null>(null)
   const [warningText, setWarningText] = useState<string | null>(null)
@@ -81,20 +83,18 @@ export default function DiceOverlay() {
     }
   }, [])
 
-  // Capture-phase listener catches scroll on any descendant scroll container
-  // (Layout's <main>, the character swiper screens, ...) since scroll doesn't
-  // bubble. Debounced so the launcher fades back ~600ms after scrolling stops.
+  // Tastiera mobile aperta (focus su un campo di testo): il FAB galleggerebbe
+  // sopra la tastiera, accanto a "Conferma". Lo nascondiamo finché si digita.
   useEffect(() => {
-    let idleTimer: ReturnType<typeof setTimeout> | null = null
-    const onScroll = () => {
-      setScrolling(true)
-      if (idleTimer) clearTimeout(idleTimer)
-      idleTimer = setTimeout(() => setScrolling(false), 600)
-    }
-    window.addEventListener('scroll', onScroll, true)
+    const isField = (el: EventTarget | null) =>
+      el instanceof HTMLElement && el.matches('input:not([type=checkbox]):not([type=radio]):not([type=range]), textarea, [contenteditable="true"]')
+    const onFocusIn = (e: FocusEvent) => { if (isField(e.target)) setTyping(true) }
+    const onFocusOut = (e: FocusEvent) => { if (!isField(e.relatedTarget)) setTyping(false) }
+    document.addEventListener('focusin', onFocusIn)
+    document.addEventListener('focusout', onFocusOut)
     return () => {
-      window.removeEventListener('scroll', onScroll, true)
-      if (idleTimer) clearTimeout(idleTimer)
+      document.removeEventListener('focusin', onFocusIn)
+      document.removeEventListener('focusout', onFocusOut)
     }
   }, [])
 
@@ -184,8 +184,8 @@ export default function DiceOverlay() {
 
   return (
     <>
-      {!anyOverlayOpen && (
-      <div className="fixed bottom-4 right-4 z-40">
+      {!anyOverlayOpen && !typing && (
+      <div className="fixed bottom-safe-fab right-4 z-40">
         <AnimatePresence>
           {open && (
             <m.div
@@ -267,7 +267,13 @@ export default function DiceOverlay() {
           whileTap={{ scale: 0.9 }}
           initial={{ opacity: 0, scale: 0.6 }}
           animate={{ opacity: scrolling && !open ? 0.35 : 1, scale: 1, rotate: open ? 45 : 0 }}
-          transition={{ type: 'spring', stiffness: 260, damping: 22 }}
+          // Opacità senza molla (rimbalzerebbe): si attenua subito, torna con calma.
+          transition={{
+            type: 'spring',
+            stiffness: 260,
+            damping: 22,
+            opacity: { duration: scrolling && !open ? 0.15 : 0.4, ease: 'easeOut' },
+          }}
         >
           <Dices size={26} />
         </Pressable>

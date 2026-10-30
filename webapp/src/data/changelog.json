@@ -1,6 +1,60 @@
 {
   "entries": [
     {
+      "version": "2.20.0",
+      "date": "2026-10-30",
+      "title": {
+        "it": "Più fluida e affidabile al tavolo, da telefono",
+        "en": "Smoother and more reliable at the table, on your phone"
+      },
+      "added": {
+        "it": [
+          "Il tasto Indietro di Android ora chiude la finestra aperta o torna alla pagina precedente, invece di chiudere l'app.",
+          "Ricerca incantesimi con tastiera \"cerca\" e pulsante per svuotarla."
+        ],
+        "en": [
+          "The Android Back button now closes the open sheet or goes to the previous page, instead of closing the app.",
+          "Spell search with a \"search\" keyboard and a clear button."
+        ]
+      },
+      "improved": {
+        "it": [
+          "Avvio dell'app molto più leggero: il motore 3D dei dadi si carica solo quando serve.",
+          "Slot incantesimo, munizioni e usi delle abilità rispondono al tocco all'istante, senza attendere il server.",
+          "Se un'azione non va a buon fine per problemi di rete ora compare un avviso, e le richieste bloccate non lasciano più la rotellina all'infinito.",
+          "Animazioni più sobrie: i numeri \"saltano\" solo quando cambiano, le condizioni non tremano più all'apertura della pagina, rispetto dell'impostazione \"riduci movimento\".",
+          "Notifiche e pulsante dei dadi non finiscono più sotto i controlli di Telegram o la barra di sistema; il pulsante dei dadi si nasconde mentre scrivi.",
+          "Il pulsante dei dadi non lampeggia più durante lo scorrimento.",
+          "Passando da una pagina all'altra con lo swipe, l'intestazione resta ferma e cambia solo il contenuto.",
+          "Swipe tra le pagine più naturale: la pagina scorre seguendo il dito e cambia solo oltre metà schermo o con un gesto deciso, altrimenti torna al suo posto. Anche toccando una voce del percorso in alto la pagina scorre invece di cambiare di colpo."
+        ],
+        "en": [
+          "Much lighter app startup: the 3D dice engine loads only when needed.",
+          "Spell slots, ammo and ability uses respond to taps instantly, without waiting for the server.",
+          "If an action fails because of the network you now get a notice, and stuck requests no longer leave the spinner running forever.",
+          "Calmer animations: numbers \"pop\" only when they change, conditions no longer shake when the page opens, and the \"reduce motion\" setting is respected.",
+          "Notifications and the dice button no longer end up under Telegram's controls or the system bar; the dice button hides while you type.",
+          "The dice button no longer flickers while scrolling.",
+          "When swiping between pages, the header stays still and only the content changes.",
+          "More natural page swipe: the page slides with your finger and changes only past halfway or with a decisive flick, otherwise it returns to its place. Tapping an item in the top trail also slides the page instead of switching abruptly."
+        ]
+      },
+      "fixed": {
+        "it": [
+          "PF: scrivere un valore e poi toccare un'altra operazione non applica più il valore con l'operazione sbagliata.",
+          "PF: le scorciatoie 1/5/10/20 su \"Imposta attuali/massimi\" riempiono il campo invece di applicare subito.",
+          "Lo swipe tra pagine non scatta più trascinando dentro una finestra aperta o su una riga di filtri.",
+          "Tenere premuto +/− sul totale degli slot invia un solo aggiornamento al rilascio."
+        ],
+        "en": [
+          "HP: typing a value and then tapping another operation no longer applies it with the wrong operation.",
+          "HP: the 1/5/10/20 shortcuts on \"Set current/max\" fill the field instead of applying immediately.",
+          "Page swipe no longer triggers when dragging inside an open sheet or on a filter row.",
+          "Holding +/− on a slot total sends a single update on release."
+        ]
+      }
+    },
+    {
       "version": "2.19.4",
       "date": "2026-07-20",
       "title": {

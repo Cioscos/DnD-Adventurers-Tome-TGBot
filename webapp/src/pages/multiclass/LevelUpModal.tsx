@@ -14,8 +14,6 @@ import { progressionRows, localizeFeatures } from '@/lib/classProgression'
 import { useRegisterOverlay } from '@/store/overlayStore'
 import { useOverlayDismiss } from '@/hooks/useOverlayDismiss'
 import { useDeferredBlur } from '@/hooks/useDeferredBlur'
-import { fireLevelUpConfetti } from '@/lib/celebrate'
-import { useReducedMotion } from '@/hooks/useReducedMotion'
 import type { CharacterFull, CharacterClass } from '@/types'
 
 interface LevelUpModalProps {
@@ -27,7 +25,6 @@ interface LevelUpModalProps {
 export default function LevelUpModal({ char, xpLevel, onClose }: LevelUpModalProps) {
   const { t, i18n } = useTranslation()
   const qc = useQueryClient()
-  const reducedMotion = useReducedMotion()
   useRegisterOverlay(true)
   useOverlayDismiss(true, onClose)
   // Backdrop statico (nessuna animazione di opacità propria): il blur si
@@ -58,15 +55,14 @@ export default function LevelUpModal({ char, xpLevel, onClose }: LevelUpModalPro
     onSuccess: (updated) => {
       qc.setQueryData(['character', char.id], updated)
       haptic.success()
-      // Celebratory beat for the class level-up. The modal closes on success,
-      // so a panel pulse wouldn't be seen — fire the screen confetti + toast
-      // (the same call-out as the XP page). Reduced-motion: toast + icon only.
+      // Celebratory beat for the class level-up: the modal closes on success,
+      // so the toast + haptic carry it (no confetti — DESIGN.md bans the gacha
+      // "ranked-up celebration" register).
       const newTotal = classes.reduce((sum, c) => sum + c.level, 0) + 1
       toast.success(t('character.xp.level_up_toast', { level: newTotal }), {
         duration: 3500,
         icon: '✨',
       })
-      if (!reducedMotion) fireLevelUpConfetti()
       if (updated.hp_gained && updated.hp_gained > 0) {
         toast.success(t('character.xp.hp_gained_toast', { hp: updated.hp_gained }), {
           duration: 2000,
@@ -75,7 +71,6 @@ export default function LevelUpModal({ char, xpLevel, onClose }: LevelUpModalPro
       }
       onClose()
     },
-    onError: () => haptic.error(),
   })
 
   const nextLevels = useMemo(() => {

@@ -80,6 +80,64 @@ function handleKeyDown(event: KeyboardEvent) {
   if (top.dismissibleRef.current) top.closeRef.current()
 }
 
+/*
+ * BackButton nativa di Telegram. In fullscreen (e in generale su Android) il
+ * back di sistema NON produce un popstate: se la BackButton è nascosta Telegram
+ * minimizza/chiude la Mini App. Con la BackButton visibile, invece, il back
+ * hardware scatena `onClick` (smoke device R3, 2026-06-12). La mostriamo quando
+ * c'è qualcosa da "indietreggiare": un overlay aperto (chiude quello in cima) o
+ * una pagina con un genitore logico registrato dal Layout (usePageBack).
+ */
+const pageBackStack: MutableRefObject<() => void>[] = []
+let backButtonBound = false
+
+function telegramBackButton() {
+  return typeof window !== 'undefined' ? window.Telegram?.WebApp?.BackButton : undefined
+}
+
+function handleTelegramBack() {
+  const top = stack[stack.length - 1]
+  if (top) {
+    if (top.dismissibleRef.current) top.closeRef.current()
+    return
+  }
+  pageBackStack[pageBackStack.length - 1]?.current()
+}
+
+function syncBackButton() {
+  const bb = telegramBackButton()
+  if (!bb) return
+  if (!backButtonBound) {
+    backButtonBound = true
+    bb.onClick(handleTelegramBack)
+  }
+  if (stack.length > 0 || pageBackStack.length > 0) bb.show()
+  else bb.hide()
+}
+
+/** Almeno un overlay (Sheet, modal, picker) è aperto? Per i gesti di pagina. */
+export function isAnyOverlayOpen(): boolean {
+  return stack.length > 0
+}
+
+/** Registra il back "di pagina" (genitore logico) per la BackButton Telegram. */
+export function usePageBack(onBack: (() => void) | null): void {
+  const backRef = useRef(onBack ?? (() => {}))
+  backRef.current = onBack ?? (() => {})
+  const enabled = onBack !== null
+
+  useEffect(() => {
+    if (!enabled) return
+    pageBackStack.push(backRef)
+    syncBackButton()
+    return () => {
+      const i = pageBackStack.indexOf(backRef)
+      if (i !== -1) pageBackStack.splice(i, 1)
+      syncBackButton()
+    }
+  }, [enabled])
+}
+
 function handlePopState() {
   if (expectedPops > 0) {
     expectedPops -= 1
@@ -114,11 +172,13 @@ export function useOverlayDismiss(open: boolean, onClose: () => void, dismissibl
     const entry: Entry = { id: nextId++, closeRef, dismissibleRef }
     stack.push(entry)
     scheduleSync()
+    syncBackButton()
 
     return () => {
       const i = stack.indexOf(entry)
       if (i !== -1) stack.splice(i, 1)
       scheduleSync()
+      syncBackButton()
     }
   }, [open])
 }

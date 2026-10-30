@@ -133,6 +133,17 @@ describe('SpellSlots page', () => {
     )
   })
 
+  it('a gem tap updates the UI optimistically, before the PATCH resolves', async () => {
+    getChar.mockResolvedValue(manualChar)
+    updateSpy.mockReturnValue(new Promise(() => {})) // rete appesa
+    renderWithProviders(<SpellSlots />)
+    await screen.findByText('2/3')
+
+    await userEvent.click(screen.getAllByLabelText('character.slots.gem_aria')[1])
+    // available 2 → 1 senza aspettare il BE
+    expect(await screen.findByText('1/3')).toBeInTheDocument()
+  })
+
   it('clicking a used gem PATCHes used-1 (clamped to 0)', async () => {
     getChar.mockResolvedValue(manualChar)
     updateSpy.mockResolvedValue(slot)
@@ -158,6 +169,25 @@ describe('SpellSlots page', () => {
     await waitFor(() =>
       expect(updateSpy).toHaveBeenCalledWith(9, 100, { total: 5 }),
     )
+  })
+
+  it('a press on + updates the draft and commits ONE PATCH on release', async () => {
+    getChar.mockResolvedValue(manualChar)
+    updateSpy.mockResolvedValue(slot)
+    renderWithProviders(<SpellSlots />)
+    await screen.findByText('2/3')
+
+    const plus = screen.getByRole('button', { name: 'character.slots.increment_total' })
+    fireEvent.pointerDown(plus)
+    // Durante la pressione nessuna PATCH: cambia solo il campo.
+    expect(updateSpy).not.toHaveBeenCalled()
+    expect(screen.getByRole('spinbutton')).toHaveValue(4)
+    // Il mock di framer rimonta il <button> a ogni render: va riletto.
+    fireEvent.pointerUp(screen.getByRole('button', { name: 'character.slots.increment_total' }))
+    await waitFor(() =>
+      expect(updateSpy).toHaveBeenCalledWith(9, 100, { total: 4 }),
+    )
+    expect(updateSpy).toHaveBeenCalledTimes(1)
   })
 
   it('adding a missing level POSTs a new slot (level, total=1)', async () => {

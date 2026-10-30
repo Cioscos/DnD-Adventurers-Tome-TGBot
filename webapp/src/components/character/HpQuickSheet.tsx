@@ -35,7 +35,6 @@ export default function HpQuickSheet({ char, open, onClose }: HpQuickSheetProps)
   const hpMutation = useMutation({
     mutationFn: ({ op, value }: { op: 'damage' | 'heal' | 'set_current'; value: number }) =>
       api.characters.updateHp(char.id, op, value),
-    onError: () => haptic.error(),
   })
 
   // 0 is parsed successfully by parseCounterInput (it only rejects empty/non-numeric

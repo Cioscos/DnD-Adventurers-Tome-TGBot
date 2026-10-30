@@ -6,7 +6,6 @@ import { m } from 'framer-motion'
 import { Check, ChevronsUp } from 'lucide-react'
 import { GiPolarStar as Star } from 'react-icons/gi'
 import { toast } from 'sonner'
-import { fireLevelUpConfetti } from '@/lib/celebrate'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
@@ -28,6 +27,8 @@ import LevelUpBanner from '@/pages/multiclass/LevelUpBanner'
 import LevelUpModal from '@/pages/multiclass/LevelUpModal'
 import ExperienceSkeleton from '@/components/skeletons/ExperienceSkeleton'
 import type { CharacterFull } from '@/types'
+import { useIsFirstValue } from '@/hooks/useIsFirstValue'
+import { notifyMutationError } from '@/lib/mutationError'
 
 function pickDefaultClass(char: CharacterFull): string {
   const classes = char.classes ?? []
@@ -63,6 +64,8 @@ export default function Experience() {
     queryKey: ['character', charId],
     queryFn: () => api.characters.get(charId),
   })
+  // Pop del valore solo quando CAMBIA, non all'ingresso nella pagina.
+  const isFirstValue = useIsFirstValue(char)
 
   const mutation = useMutation({
     mutationFn: ({ add, set }: { add?: number; set?: number }) =>
@@ -78,10 +81,9 @@ export default function Experience() {
           duration: 3500,
           icon: '✨',
         })
-        if (!reducedMotion) {
-          fireLevelUpConfetti()
-          setLevelUpBurstKey((k) => k + 1)
-        }
+        // Beat del level-up: burst dei flourish sulla card (niente coriandoli,
+        // DESIGN.md vieta il registro gacha delle "ranked-up celebrations").
+        if (!reducedMotion) setLevelUpBurstKey((k) => k + 1)
       }
       if (updated.hp_gained && updated.hp_gained > 0) {
         toast.success(t('character.xp.hp_gained_toast', { hp: updated.hp_gained }), {
@@ -107,7 +109,7 @@ export default function Experience() {
       savingRef.current = false
     },
     onError: () => {
-      haptic.error()
+      notifyMutationError()
       savingRef.current = false
     },
   })
@@ -208,7 +210,7 @@ export default function Experience() {
           key={level}
           className="text-7xl font-display font-black text-dnd-gold-bright leading-none tabular-nums"
           style={{ textShadow: '0 3px 12px var(--dnd-gold-glow)' }}
-          initial={{ scale: 0.6, opacity: 0 }}
+          initial={isFirstValue ? false : { scale: 0.6, opacity: 0 }}
           animate={{ scale: [0.6, 1.1, 1], opacity: 1 }}
           transition={spring.elastic}
         >
@@ -250,9 +252,9 @@ export default function Experience() {
             {/* XP progress bar */}
             <div className="h-3 rounded-full bg-dnd-ink/60 overflow-hidden border border-dnd-border relative">
               <m.div
-                className="h-full rounded-full bg-gradient-gold shadow-[inset_0_1px_0_rgba(255,220,140,0.3)]"
+                className="h-full w-full origin-left rounded-full bg-gradient-gold shadow-[inset_0_1px_0_rgba(255,220,140,0.3)]"
                 initial={false}
-                animate={{ width: `${progress}%` }}
+                animate={{ scaleX: progress / 100 }}
                 transition={spring.drift}
               />
               {/* Threshold ticks at 25/50/75% */}

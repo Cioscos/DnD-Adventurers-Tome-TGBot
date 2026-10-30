@@ -22,6 +22,12 @@ interface InputProps {
   rows?: number
   autoFocus?: boolean
   onCommit?: (value: string) => void
+  /** false → onCommit SOLO con Invio, mai al blur. Per i form dove il blur nasce
+   *  dal tap su un ALTRO controllo (es. cambio operazione HP): committare lì
+   *  applicherebbe il valore con l'operazione sbagliata. */
+  commitOnBlur?: boolean
+  /** Etichetta del tasto Invio della tastiera mobile. */
+  enterKeyHint?: 'done' | 'go' | 'next' | 'search' | 'send' | 'enter'
   inputRef?: React.Ref<HTMLInputElement | HTMLTextAreaElement>
 }
 
@@ -44,6 +50,8 @@ export default function Input({
   rows = 3,
   autoFocus,
   onCommit,
+  commitOnBlur = true,
+  enterKeyHint,
   inputRef,
 }: InputProps) {
   const [focused, setFocused] = useState(false)
@@ -74,29 +82,34 @@ export default function Input({
 
   const displayError = error || localError
 
-  const handleBlur = useCallback(() => {
-    setFocused(false)
+  // Validazione numerica: restituisce false (e segnala) se il valore è fuori range.
+  const validate = useCallback((): boolean => {
     if (inputMode === 'numeric' || type === 'number') {
       const num = Number(value)
       if (value !== '' && isNaN(num)) {
         setLocalError('Valore non valido')
         setShake((s) => s + 1)
-        return
+        return false
       }
       if (min !== undefined && num < min) {
         setLocalError(`Minimo: ${min}`)
         setShake((s) => s + 1)
-        return
+        return false
       }
       if (max !== undefined && num > max) {
         setLocalError(`Massimo: ${max}`)
         setShake((s) => s + 1)
-        return
+        return false
       }
     }
     setLocalError('')
-    onCommit?.(value)
-  }, [value, min, max, inputMode, type, onCommit])
+    return true
+  }, [value, min, max, inputMode, type])
+
+  const handleBlur = useCallback(() => {
+    setFocused(false)
+    if (validate() && commitOnBlur) onCommit?.(value)
+  }, [validate, commitOnBlur, onCommit, value])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     if (localError) setLocalError('')
@@ -107,6 +120,8 @@ export default function Input({
     if (e.key === 'Enter' && variant !== 'textarea') {
       // blur() will trigger handleBlur, which calls onCommit exactly once.
       // Calling onCommit here as well caused duplicate submissions (e.g. heal applied twice).
+      // Con commitOnBlur=false il blur non committa: l'Invio lo fa qui, una volta.
+      if (!commitOnBlur && validate()) onCommit?.(value)
       ;(e.target as HTMLElement).blur()
     }
   }
@@ -166,6 +181,7 @@ export default function Input({
             ref={setRefs as React.Ref<HTMLInputElement>}
             type={inputMode === 'numeric' ? 'text' : type}
             inputMode={inputMode}
+            enterKeyHint={enterKeyHint}
             value={value}
             onChange={handleChange}
             onFocus={() => setFocused(true)}

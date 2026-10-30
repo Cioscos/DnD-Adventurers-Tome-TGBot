@@ -27,6 +27,7 @@ import GrantItemModal from '@/pages/session/GrantItemModal'
 import CombatPanel from '@/pages/session/CombatPanel'
 import { dequeue, peek, pruneOlderThan, type Reward } from '@/lib/rewardQueue'
 import RewardPopup from '@/components/session/RewardPopup'
+import { notifyMutationError } from '@/lib/mutationError'
 
 function conditionEntries(
   conditions: Record<string, unknown> | null | undefined,
@@ -244,7 +245,7 @@ export default function SessionRoom() {
     },
     onError: (err) => {
       console.error('leave session failed', err)
-      haptic.error()
+      notifyMutationError()
     },
   })
 
@@ -258,7 +259,7 @@ export default function SessionRoom() {
     },
     onError: (err) => {
       console.error('close session failed', err)
-      haptic.error()
+      notifyMutationError()
     },
   })
 

@@ -4,11 +4,10 @@ import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from '../utils/renderWithProviders'
 import Experience from '@/pages/Experience'
 
-const { getChar, updateXPSpy, toastSuccess, confettiSpy } = vi.hoisted(() => ({
+const { getChar, updateXPSpy, toastSuccess } = vi.hoisted(() => ({
   getChar: vi.fn(),
   updateXPSpy: vi.fn(),
   toastSuccess: vi.fn(),
-  confettiSpy: vi.fn(),
 }))
 
 vi.mock('@/api/client', () => ({
@@ -37,7 +36,6 @@ vi.mock('framer-motion', async () => {
 })
 
 vi.mock('sonner', () => ({ toast: { success: toastSuccess, error: vi.fn() } }))
-vi.mock('@/lib/celebrate', () => ({ fireLevelUpConfetti: confettiSpy }))
 vi.mock('@/auth/telegram', () => ({ haptic: { success: () => {}, error: () => {} } }))
 vi.mock('@/hooks/useReducedMotion', () => ({ useReducedMotion: () => true }))
 vi.mock('@/styles/motion', () => ({
@@ -94,7 +92,6 @@ afterEach(() => {
   getChar.mockReset()
   updateXPSpy.mockReset()
   toastSuccess.mockReset()
-  confettiSpy.mockReset()
 })
 
 describe('Experience page', () => {

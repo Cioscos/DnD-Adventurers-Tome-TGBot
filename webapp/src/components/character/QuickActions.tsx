@@ -87,7 +87,6 @@ export default function QuickActions({ char }: Props) {
       qc.setQueryData(['character', char.id], updated)
       haptic.light()
     },
-    onError: () => haptic.error(),
   })
 
   const attackMutation = useMutation({
@@ -97,7 +96,6 @@ export default function QuickActions({ char }: Props) {
       qc.invalidateQueries({ queryKey: ['character', char.id] })
       haptic.success()
     },
-    onError: () => haptic.error(),
   })
 
   const attackRerollMutation = useMutation({
@@ -136,7 +134,6 @@ export default function QuickActions({ char }: Props) {
       qc.invalidateQueries({ queryKey: ['character', char.id] })
       haptic.success()
     },
-    onError: () => haptic.error(),
   })
 
   const saveRerollMutation = useMutation({
@@ -165,21 +162,47 @@ export default function QuickActions({ char }: Props) {
       qc.setQueryData(['character', char.id], updated)
       haptic.light()
     },
-    onError: () => haptic.error(),
   })
+
+  // Contatori (munizioni, usi) ottimistici: in combattimento si toccano a
+  // raffica, e prima ogni tap aspettava PATCH + GET completo del personaggio a
+  // pulsante bloccato. Lo scope serializza le PATCH (valori assoluti → ordine
+  // conta); il riallineamento col BE avviene a coda vuota.
+  const charKey = ['character', char.id]
+  const counterScope = `quick-counters-${char.id}`
+  const patchChar = async (patch: (c: CharacterFull) => CharacterFull) => {
+    await qc.cancelQueries({ queryKey: charKey })
+    const prev = qc.getQueryData<CharacterFull>(charKey)
+    if (prev) qc.setQueryData<CharacterFull>(charKey, patch(prev))
+    return { prev }
+  }
+  const counterHandlers = {
+    scope: { id: counterScope },
+    onError: (_e: unknown, _v: unknown, ctx: { prev?: CharacterFull } | undefined) => {
+      if (ctx?.prev) qc.setQueryData(charKey, ctx.prev)
+      toast.error(t('common.action_failed'))
+    },
+    onSettled: () => {
+      if (qc.isMutating({ predicate: (m) => m.options.scope?.id === counterScope }) <= 1) {
+        void qc.invalidateQueries({ queryKey: charKey })
+      }
+    },
+  }
 
   const ammoMutation = useMutation({
     mutationFn: ({ itemId, quantity }: { itemId: number; quantity: number }) =>
       api.items.update(char.id, itemId, { quantity }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['character', char.id] }),
-    onError: () => haptic.error(),
+    onMutate: ({ itemId, quantity }) =>
+      patchChar((c) => ({ ...c, items: c.items.map((i) => (i.id === itemId ? { ...i, quantity } : i)) })),
+    ...counterHandlers,
   })
 
   const usesMutation = useMutation({
     mutationFn: ({ abilityId, uses }: { abilityId: number; uses: number }) =>
       api.abilities.update(char.id, abilityId, { uses }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['character', char.id] }),
-    onError: () => haptic.error(),
+    onMutate: ({ abilityId, uses }) =>
+      patchChar((c) => ({ ...c, abilities: c.abilities.map((ab) => (ab.id === abilityId ? { ...ab, uses } : ab)) })),
+    ...counterHandlers,
   })
 
   const consumeAbility = (ability: Ability) => {
@@ -234,7 +257,6 @@ export default function QuickActions({ char }: Props) {
       toast.success(t('character.quick_actions.rest_done'))
       haptic.success()
     },
-    onError: () => haptic.error(),
   })
 
   const run = (action: ResolvedQuickAction) => {
@@ -463,9 +485,6 @@ export default function QuickActions({ char }: Props) {
                 const isAbility = a.type === 'counter_ability'
                 const current = isAbility ? (a.ability.uses ?? 0) : (a.item.quantity ?? 0)
                 const max = isAbility ? (a.ability.max_uses ?? 0) : null
-                const rowPending = isAbility
-                  ? usesMutation.isPending && usesMutation.variables?.abilityId === a.ability.id
-                  : ammoMutation.isPending && ammoMutation.variables?.itemId === a.item.id
                 const change = (next: number) => {
                   if (isAbility) usesMutation.mutate({ abilityId: a.ability.id, uses: next })
                   else ammoMutation.mutate({ itemId: a.item.id, quantity: next })
@@ -484,7 +503,6 @@ export default function QuickActions({ char }: Props) {
                     <IconButton
                       icon={<Minus size={16} />}
                       onClick={() => change(Math.max(0, current - 1))}
-                      loading={rowPending}
                       disabled={current <= 0}
                       haptic="light"
                       aria-label={`${actionLabel(a)} -1`}
@@ -502,7 +520,6 @@ export default function QuickActions({ char }: Props) {
                     <IconButton
                       icon={<Plus size={16} />}
                       onClick={() => change(max != null ? Math.min(max, current + 1) : current + 1)}
-                      loading={rowPending}
                       disabled={max != null && current >= max}
                       haptic="light"
                       aria-label={`${actionLabel(a)} +1`}

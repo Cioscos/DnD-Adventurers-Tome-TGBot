@@ -52,4 +52,15 @@ describe('Input', () => {
     render(<Input value="x" onChange={() => {}} error="Campo obbligatorio" placeholder="n" />)
     expect(screen.getByText('Campo obbligatorio')).toBeInTheDocument()
   })
+
+  it('commitOnBlur=false: il blur non committa, Invio sì (una volta)', () => {
+    const onCommit = vi.fn()
+    render(<Input value="8" onChange={() => {}} onCommit={onCommit} commitOnBlur={false} placeholder="hp" />)
+    const input = screen.getByPlaceholderText('hp')
+    fireEvent.blur(input)
+    expect(onCommit).not.toHaveBeenCalled()
+    fireEvent.keyDown(input, { key: 'Enter' })
+    expect(onCommit).toHaveBeenCalledTimes(1)
+    expect(onCommit).toHaveBeenCalledWith('8')
+  })
 })

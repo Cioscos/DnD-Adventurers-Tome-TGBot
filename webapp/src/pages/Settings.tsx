@@ -23,7 +23,7 @@ import { useDiceSettings } from '@/store/diceSettings'
 import { useThemeSettings, type ThemeMode } from '@/store/themeSettings'
 import { useUnitSettings, type UnitSystem } from '@/store/unitSettings'
 import { BUNDLED_PACKS, PACK_PREVIEW, type PackId } from '@/dice/packs/registry'
-import { loadManifest } from '@/dice/packs/loader'
+import { loadManifest } from '@/dice/packs/manifest'
 import { useDicePack } from '@/dice/packs/dicePackContext'
 import { spring } from '@/styles/motion'
 
@@ -162,7 +162,6 @@ export default function Settings() {
       qc.setQueryData(['character', charId], updated)
       haptic.success()
     },
-    onError: () => haptic.error(),
   })
 
   if (!char) return null
