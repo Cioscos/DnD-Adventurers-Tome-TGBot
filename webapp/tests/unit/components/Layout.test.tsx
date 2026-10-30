@@ -64,16 +64,16 @@ describe('Layout', () => {
     render(<Layout title="Punti Ferita">corpo pagina</Layout>)
     expect(screen.getByRole('heading', { name: 'Punti Ferita' })).toBeInTheDocument()
     expect(screen.getByText('corpo pagina')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Indietro' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'common.back' })).toBeInTheDocument()
   })
 
   it('navigates to backTo when provided, else steps back in history', async () => {
     const { rerender } = render(<Layout title="T" backTo="/char/7">x</Layout>)
-    await userEvent.click(screen.getByRole('button', { name: 'Indietro' }))
+    await userEvent.click(screen.getByRole('button', { name: 'common.back' }))
     expect(navigateSpy).toHaveBeenCalledWith('/char/7')
     navigateSpy.mockReset()
     rerender(<Layout title="T">x</Layout>)
-    await userEvent.click(screen.getByRole('button', { name: 'Indietro' }))
+    await userEvent.click(screen.getByRole('button', { name: 'common.back' }))
     expect(navigateSpy).toHaveBeenCalledWith(-1)
   })
 

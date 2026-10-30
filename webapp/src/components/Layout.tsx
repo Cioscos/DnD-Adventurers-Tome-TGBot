@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { ChevronLeft, RefreshCw, UserX } from 'lucide-react'
 import { m, AnimatePresence } from 'framer-motion'
 import { useSwipeNavigation, getGroupInfo } from '@/hooks/useSwipeNavigation'
+import { usePageBack } from '@/hooks/useOverlayDismiss'
 import { pageSkeleton } from '@/components/skeletons/pageSkeletons'
 import { api, ApiError } from '@/api/client'
 import EmptyState from '@/components/ui/EmptyState'
@@ -98,6 +99,8 @@ export default function Layout({ title, children, backTo, group, page, hideScrol
     if (backTo) navigate(backTo)
     else navigate(-1)
   }
+  // Stessa destinazione per il back hardware/BackButton di Telegram (Android).
+  usePageBack(handleBack)
 
   const handleMainScroll = (e: React.UIEvent<HTMLElement>) => {
     // Capture scrollTop now: e.currentTarget is no longer valid inside the rAF.
@@ -157,7 +160,7 @@ export default function Layout({ title, children, backTo, group, page, hideScrol
           <Pressable
             onClick={handleBack}
             className="shrink-0 w-11 h-11 flex items-center justify-center rounded-full bg-dnd-surface border border-dnd-gold-dim/30"
-            aria-label="Indietro"
+            aria-label={t('common.back')}
             whileTap={{ scale: 0.9 }}
             whileHover={{ boxShadow: 'var(--halo-gold)' }}
           >

@@ -18,6 +18,7 @@ import SearchOverlay from '@/components/SearchOverlay'
 import HeroScreen from '@/pages/character/HeroScreen'
 import EquipmentScreen from '@/pages/character/EquipmentScreen'
 import MenuScreen from '@/pages/character/MenuScreen'
+import { usePageBack } from '@/hooks/useOverlayDismiss'
 
 export default function CharacterMain() {
   const { id } = useParams<{ id: string }>()
@@ -27,6 +28,8 @@ export default function CharacterMain() {
   const qc = useQueryClient()
   const setActiveCharId = useCharacterStore((s) => s.setActiveCharId)
   const [searchOpen, setSearchOpen] = useState(false)
+  // Back hardware/BackButton di Telegram: dal hub si torna alla lista personaggi.
+  usePageBack(() => navigate('/'))
 
   useEffect(() => {
     if (!Number.isNaN(charId)) setActiveCharId(charId)
@@ -108,7 +111,7 @@ export default function CharacterMain() {
       >
         <Pressable
           onClick={() => navigate('/')}
-          className="w-10 h-10 shrink-0 flex items-center justify-center rounded-full bg-dnd-surface border border-dnd-gold-dim/30"
+          className="w-11 h-11 shrink-0 flex items-center justify-center rounded-full bg-dnd-surface border border-dnd-gold-dim/30"
           whileTap={{ scale: 0.9 }}
           aria-label={t('common.back')}
         >
