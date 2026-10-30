@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -12,6 +12,12 @@ import EmptyState from '@/components/ui/EmptyState'
 import Pressable from '@/components/ui/Pressable'
 import { spring } from '@/styles/motion'
 import { haptic } from '@/auth/telegram'
+
+// Ogni pagina monta il proprio Layout, quindi navigare fra pagine dello stesso
+// gruppo (swipe, breadcrumb) ricrea l'header. Questi valori gli danno continuità:
+// resta fermo invece di rifare l'ingresso e la striscia non riparte da sinistra.
+let mountedGroup: string | undefined
+let crumbScrollLeft = 0
 
 interface LayoutProps {
   title: string
@@ -72,6 +78,14 @@ export default function Layout({ title, children, backTo, group, page, hideScrol
   // per-event delta, and (3) a short lock after each toggle so the resize-induced
   // scroll events can't flip the state back.
   const [tablistCollapsed, setTablistCollapsed] = useState(false)
+  // Calcolato al primo render, mentre il Layout uscente è ancora montato.
+  const [sameGroup] = useState(() => !!group && mountedGroup === group)
+  useEffect(() => {
+    mountedGroup = group
+    return () => {
+      mountedGroup = undefined
+    }
+  }, [group])
   const lastScrollTopRef = useRef(0)
   const accumRef = useRef(0)        // accumulated travel in the current direction
   const rafPendingRef = useRef(false)
@@ -82,14 +96,17 @@ export default function Layout({ title, children, backTo, group, page, hideScrol
   const crumbScrollRef = useRef<HTMLDivElement>(null)
   const activeCrumbRef = useRef<HTMLSpanElement>(null)
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const c = crumbScrollRef.current
     const a = activeCrumbRef.current
     if (!c || !a) return
+    if (sameGroup) c.scrollLeft = crumbScrollLeft
     const cRect = c.getBoundingClientRect()
     const aRect = a.getBoundingClientRect()
     const delta = (aRect.left - cRect.left) - (c.clientWidth - a.offsetWidth) / 2
     c.scrollBy({ left: delta, behavior: 'smooth' })
+    // sameGroup è fisso per tutta la vita del componente.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, group])
 
   // Finding #5: prefer the declared logical parent (e.g. the character hub) over
@@ -152,7 +169,7 @@ export default function Layout({ title, children, backTo, group, page, hideScrol
         className="shrink-0 z-10 flex flex-col px-4 py-3 pt-safe
                     bg-dnd-surface-raised
                     border-b border-dnd-gold-dim/40 shadow-parchment-md"
-        initial={{ y: -20, opacity: 0 }}
+        initial={sameGroup ? false : { y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={spring.drift}
       >
@@ -189,7 +206,11 @@ export default function Layout({ title, children, backTo, group, page, hideScrol
                   transition={{ duration: 0.18, ease: [0.25, 0.1, 0.25, 1] }}
                   className="overflow-hidden"
                 >
-                  <div ref={crumbScrollRef} className="flex items-center overflow-x-auto scrollbar-hide touch-pan-x text-xs font-body whitespace-nowrap px-1">
+                  <div
+                    ref={crumbScrollRef}
+                    onScroll={(e) => { crumbScrollLeft = e.currentTarget.scrollLeft }}
+                    className="flex items-center overflow-x-auto scrollbar-hide touch-pan-x text-xs font-body whitespace-nowrap px-1"
+                  >
                     {info.pages.map((pageKey, i) => (
                       <span key={pageKey} className="flex items-center shrink-0">
                         {i > 0 && (

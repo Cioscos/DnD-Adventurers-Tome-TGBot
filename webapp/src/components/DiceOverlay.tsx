@@ -9,6 +9,7 @@ import Pressable from '@/components/ui/Pressable'
 import DicePoolResultModal from '@/components/DicePoolResultModal'
 import { useCharacterStore } from '@/store/characterStore'
 import { useAnyOverlayOpen } from '@/store/overlayStore'
+import { useIsScrolling } from '@/hooks/useIsScrolling'
 import { haptic } from '@/auth/telegram'
 import { api } from '@/api/client'
 import { useRollAndPersist, type RollEntry, type RollGroup } from '@/dice/useRollAndPersist'
@@ -57,7 +58,7 @@ export default function DiceOverlay() {
   const [pool, setPool] = useState<DicePool>({})
   // Dim the launcher while the page is actively scrolling so it stops covering
   // content the user is reading; it stays tappable and fades back when idle.
-  const [scrolling, setScrolling] = useState(false)
+  const scrolling = useIsScrolling()
   const [typing, setTyping] = useState(false)
 
   const [results, setResults] = useState<RollGroup[] | null>(null)
@@ -94,23 +95,6 @@ export default function DiceOverlay() {
     return () => {
       document.removeEventListener('focusin', onFocusIn)
       document.removeEventListener('focusout', onFocusOut)
-    }
-  }, [])
-
-  // Capture-phase listener catches scroll on any descendant scroll container
-  // (Layout's <main>, the character swiper screens, ...) since scroll doesn't
-  // bubble. Debounced so the launcher fades back ~600ms after scrolling stops.
-  useEffect(() => {
-    let idleTimer: ReturnType<typeof setTimeout> | null = null
-    const onScroll = () => {
-      setScrolling(true)
-      if (idleTimer) clearTimeout(idleTimer)
-      idleTimer = setTimeout(() => setScrolling(false), 600)
-    }
-    window.addEventListener('scroll', onScroll, true)
-    return () => {
-      window.removeEventListener('scroll', onScroll, true)
-      if (idleTimer) clearTimeout(idleTimer)
     }
   }, [])
 
@@ -283,7 +267,13 @@ export default function DiceOverlay() {
           whileTap={{ scale: 0.9 }}
           initial={{ opacity: 0, scale: 0.6 }}
           animate={{ opacity: scrolling && !open ? 0.35 : 1, scale: 1, rotate: open ? 45 : 0 }}
-          transition={{ type: 'spring', stiffness: 260, damping: 22 }}
+          // Opacità senza molla (rimbalzerebbe): si attenua subito, torna con calma.
+          transition={{
+            type: 'spring',
+            stiffness: 260,
+            damping: 22,
+            opacity: { duration: scrolling && !open ? 0.15 : 0.4, ease: 'easeOut' },
+          }}
         >
           <Dices size={26} />
         </Pressable>

@@ -23,14 +23,18 @@
           "Slot incantesimo, munizioni e usi delle abilità rispondono al tocco all'istante, senza attendere il server.",
           "Se un'azione non va a buon fine per problemi di rete ora compare un avviso, e le richieste bloccate non lasciano più la rotellina all'infinito.",
           "Animazioni più sobrie: i numeri \"saltano\" solo quando cambiano, le condizioni non tremano più all'apertura della pagina, rispetto dell'impostazione \"riduci movimento\".",
-          "Notifiche e pulsante dei dadi non finiscono più sotto i controlli di Telegram o la barra di sistema; il pulsante dei dadi si nasconde mentre scrivi."
+          "Notifiche e pulsante dei dadi non finiscono più sotto i controlli di Telegram o la barra di sistema; il pulsante dei dadi si nasconde mentre scrivi.",
+          "Il pulsante dei dadi non lampeggia più durante lo scorrimento.",
+          "Passando da una pagina all'altra con lo swipe, l'intestazione resta ferma e cambia solo il contenuto."
         ],
         "en": [
           "Much lighter app startup: the 3D dice engine loads only when needed.",
           "Spell slots, ammo and ability uses respond to taps instantly, without waiting for the server.",
           "If an action fails because of the network you now get a notice, and stuck requests no longer leave the spinner running forever.",
           "Calmer animations: numbers \"pop\" only when they change, conditions no longer shake when the page opens, and the \"reduce motion\" setting is respected.",
-          "Notifications and the dice button no longer end up under Telegram's controls or the system bar; the dice button hides while you type."
+          "Notifications and the dice button no longer end up under Telegram's controls or the system bar; the dice button hides while you type.",
+          "The dice button no longer flickers while scrolling.",
+          "When swiping between pages, the header stays still and only the content changes."
         ]
       },
       "fixed": {
