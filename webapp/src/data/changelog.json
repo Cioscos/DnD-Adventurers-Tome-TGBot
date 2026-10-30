@@ -1,6 +1,60 @@
 {
   "entries": [
     {
+      "version": "2.21.0",
+      "date": "2026-10-30",
+      "title": {
+        "it": "Riprendi al volo, anche senza rete",
+        "en": "Pick up where you left off, even offline"
+      },
+      "added": {
+        "it": [
+          "\"Riprendi sessione\" nella home, anche per i master senza un personaggio.",
+          "Voce Riposo nel menu del personaggio.",
+          "Scheda e note del personaggio leggibili senza rete, con un avviso che mostra quanto sono vecchi i dati.",
+          "Le pagine senza dati salvati dicono che non sono disponibili offline, invece di sembrare vuote."
+        ],
+        "en": [
+          "\"Resume session\" on the home screen, also for GMs without a character.",
+          "Rest entry in the character menu.",
+          "Character sheet and notes readable without a network, with a notice showing how old the data is.",
+          "Pages without saved data say they aren't available offline, instead of looking empty."
+        ]
+      },
+      "improved": {
+        "it": [
+          "Testo minimo di 12 px in tutta l'app, compresi i numeri dentro le icone dei dadi.",
+          "Voci del percorso in alto più nitide e grandi, e + delle Azioni rapide più grande.",
+          "Le Condizioni si trovano ora nella sezione Combattimento.",
+          "L'eliminazione del personaggio è ora in fondo alle Impostazioni del personaggio.",
+          "Le carte della home mostrano gli stessi PF e CA della scheda, anche con le regole homebrew.",
+          "Nuovi badge \"Morto\" e \"Da configurare\".",
+          "L'elenco della home si aggiorna quando ci torni."
+        ],
+        "en": [
+          "Minimum text size of 12 px across the app, including the numbers inside dice icons.",
+          "Sharper, larger items in the top trail, and a larger Quick Actions +.",
+          "Conditions now live in the Combat section.",
+          "Deleting a character is now at the bottom of the character's Settings.",
+          "Home cards show the same HP and AC as the sheet, including homebrew rules.",
+          "New \"Dead\" and \"To set up\" badges.",
+          "The home list refreshes when you come back to it."
+        ]
+      },
+      "fixed": {
+        "it": [
+          "Annulla PF ora ripristina davvero PF temporanei, concentrazione, tiri salvezza contro morte e morte, e si rifiuta se i PF sono cambiati nel frattempo.",
+          "Un personaggio senza classe non appare più privo di sensi.",
+          "Spendere un dado vita senza rete ora mostra un avviso."
+        ],
+        "en": [
+          "HP undo now truly restores temporary HP, concentration, death saves and death, and refuses if HP changed in the meantime.",
+          "A character without a class no longer appears unconscious.",
+          "Spending a hit die without a network now shows a notice."
+        ]
+      }
+    },
+    {
       "version": "2.20.0",
       "date": "2026-10-30",
       "title": {
