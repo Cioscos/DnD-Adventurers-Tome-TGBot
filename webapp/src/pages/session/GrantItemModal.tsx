@@ -86,7 +86,7 @@ export default function GrantItemModal({
 
   return (
     <Sheet open onClose={onClose} title={t('session.grant_item.recipients_label')}>
-      <div className="p-1 space-y-3">
+      <div className="p-5 space-y-3">
         <p className="text-xs text-dnd-text-muted font-body italic">
           {pendingForm?.name} · ×{pendingForm?.quantity || 1}
         </p>

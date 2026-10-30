@@ -89,7 +89,7 @@ export default function SearchOverlay({ char, open, onClose }: SearchOverlayProp
 
   return (
     <Sheet open={open} onClose={close} title={t('character.search.title')}>
-      <div className="space-y-3">
+      <div className="space-y-3 p-5">
         <Input
           value={query}
           onChange={setQuery}

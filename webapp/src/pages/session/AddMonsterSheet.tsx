@@ -46,7 +46,7 @@ export default function AddMonsterSheet({ sessionId, mode, onClose }: Props) {
 
   return (
     <Sheet open onClose={onClose} title={t('session.combat.add_monster')}>
-      <div className="p-1 space-y-3">
+      <div className="p-5 space-y-3">
         <Input
           label={t('session.combat.monster_name_label')}
           value={name}

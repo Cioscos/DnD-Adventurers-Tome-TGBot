@@ -106,7 +106,7 @@ export default function CombatantSheet({ sessionId, encounter, combatant: c, onC
 
   return (
     <Sheet open onClose={onClose} title={c.name}>
-      <div className="p-1 space-y-4">
+      <div className="p-5 space-y-4">
         {isFullMonster && c.current_hp !== null && (
           <section className="space-y-2">
             <p className="text-xs uppercase tracking-wider text-dnd-gold-dim font-cinzel">

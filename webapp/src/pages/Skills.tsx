@@ -375,7 +375,7 @@ export default function Skills() {
         onClose={() => setPicker(null)}
         title={t('character.skills.picker_title')}
       >
-        <div className="p-4 space-y-2">
+        <div className="p-5 space-y-2">
           {picker !== null && (() => {
             // Compute bonus breakdown for the currently-targeted skill so the user
             // understands what each proficiency level will produce.

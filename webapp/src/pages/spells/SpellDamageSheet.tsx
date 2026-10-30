@@ -211,7 +211,7 @@ export default function SpellDamageSheet({
       title={t('character.spells.roll_damage.title', { name: spell.name })}
     >
       {!result ? (
-        <div className="space-y-4 p-1">
+        <div className="space-y-4 p-5">
           {!isCantrip && (
             <div>
               <label className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim">
@@ -250,7 +250,7 @@ export default function SpellDamageSheet({
           </Button>
         </div>
       ) : (
-        <div className="space-y-4 p-1">
+        <div className="space-y-4 p-5">
           <div className="text-center">
             <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim mb-2">
               {result.breakdown}
