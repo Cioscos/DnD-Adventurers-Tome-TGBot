@@ -37,12 +37,16 @@
         "it": [
           "Gli attacchi con le armi (e senz'armi) ora contano i bonus degli oggetti alle caratteristiche, come la scheda: i numeri possono cambiare per chi ha questi oggetti.",
           "Un danno ridotto a 0 non chiede più il tiro di concentrazione.",
-          "Il contatore munizioni delle azioni rapide ora vede anche le munizioni create dall'app."
+          "Il contatore munizioni delle azioni rapide ora vede anche le munizioni create dall'app.",
+          "Il colpo senz'armi del Monaco ora usa Destrezza e dado delle arti marziali anche per le classi salvate con il nome inglese.",
+          "Pannelli con margini laterali uniformi: niente più contenuto attaccato ai bordi dello schermo."
         ],
         "en": [
           "Weapon (and unarmed) attacks now count item bonuses to ability scores, like the sheet: numbers may change for characters with such items.",
           "Damage reduced to 0 no longer asks for a concentration check.",
-          "The quick actions ammo counter now also sees ammunition created in the app."
+          "The quick actions ammo counter now also sees ammunition created in the app.",
+          "The Monk's unarmed strike now uses Dexterity and the Martial Arts die also for classes saved with the English name.",
+          "Sheets now have consistent side margins: no more content touching the screen edges."
         ]
       }
     },
