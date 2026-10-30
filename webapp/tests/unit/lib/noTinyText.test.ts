@@ -5,6 +5,9 @@ import { describe, expect, it } from 'vitest'
 const SRC_DIR = join(process.cwd(), 'src')
 const EXCLUDED_DIRS = new Set(['graphify-out'])
 const SOURCE_FILE = /\.(ts|tsx|css)$/
+// Non intercetta: `text-[clamp(...)]` e `text-[Nem]`, `font-size` nel CSS, `style={{ fontSize }}`
+// e il `fontSize` dei <text> SVG, i cui px reali dipendono da viewBox e taglia resa
+// (per DiceIcon li verifica DiceIcon.test.tsx).
 const TINY_TEXT = /text-\[\d(\.\d+)?px\]|text-\[1[01](\.\d+)?px\]/
 
 function sourceFiles(dir: string): string[] {

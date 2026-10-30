@@ -194,7 +194,7 @@ export default function SavingThrows() {
                     <p className={`text-3xl font-mono font-bold leading-none tabular-nums ${total >= 0 ? 'text-dnd-text' : 'text-dnd-crimson-bright'}`}>
                       {total >= 0 ? '+' : ''}{total}
                     </p>
-                    <DiceIcon sides={20} size={24} className="text-dnd-gold/80 shrink-0" />
+                    <DiceIcon sides={20} size={28} className="text-dnd-gold/80 shrink-0" />
                   </div>
                 </Surface>
               </Reveal.Item>

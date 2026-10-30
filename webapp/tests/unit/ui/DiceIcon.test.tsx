@@ -16,4 +16,15 @@ describe('DiceIcon', () => {
     render(<DiceIcon sides={100} />)
     expect(screen.getByText('%')).toBeInTheDocument()
   })
+
+  // Il viewBox è 60 unità: i px reali sono fontSize × size / 60. Le taglie sono
+  // quelle dei punti d'uso (Dadi 42 e 34, Statistiche, overlay e Tiri Salvezza 28).
+  it.each([28, 34, 42, 48])('draws the numeral at 12 px or more when rendered at %i px', (size) => {
+    for (const sides of [4, 6, 8, 10, 12, 20, 100] as const) {
+      const { container, unmount } = render(<DiceIcon sides={sides} size={size} />)
+      const fontSize = Number(container.querySelector('text')?.getAttribute('font-size'))
+      expect(fontSize * size / 60).toBeGreaterThanOrEqual(12)
+      unmount()
+    }
+  })
 })

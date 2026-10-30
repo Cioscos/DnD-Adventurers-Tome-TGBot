@@ -10,6 +10,11 @@ describe('renderInlineMarkdown', () => {
     expect(screen.getByText('codice').tagName).toBe('CODE')
   })
 
+  it('keeps inline code at 12 px or more inside small text', () => {
+    render(<div>{renderInlineMarkdown('`codice`')}</div>)
+    expect(screen.getByText('codice').className).toContain('text-[max(0.85em,12px)]')
+  })
+
   it('returns the input untouched when empty', () => {
     expect(renderInlineMarkdown('')).toBe('')
   })

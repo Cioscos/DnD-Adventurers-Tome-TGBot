@@ -54,8 +54,8 @@ function D20Thumb({ body, accent, active }: { body: string; accent: string; acti
   return (
     <svg
       viewBox="0 0 24 24"
-      width="24"
-      height="24"
+      width="32"
+      height="32"
       aria-hidden
       className="shrink-0"
       style={{
@@ -72,7 +72,7 @@ function D20Thumb({ body, accent, active }: { body: string; accent: string; acti
         strokeLinejoin="round"
       />
       <polygon
-        points="12,5 18,9 12,13 6,9"
+        points="12,4.5 16.5,7 12,9.5 7.5,7"
         fill="none"
         stroke={accent}
         strokeOpacity="0.55"
@@ -80,9 +80,9 @@ function D20Thumb({ body, accent, active }: { body: string; accent: string; acti
       />
       <text
         x="12"
-        y="17.5"
+        y="18"
         textAnchor="middle"
-        fontSize="6"
+        fontSize="9"
         fontWeight="700"
         fill={accent}
         fontFamily="Cinzel, serif"
