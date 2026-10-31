@@ -32,7 +32,7 @@ export default function AttunementSection({ charId, items }: Props) {
       haptic.success()
     },
     onError: (err) => {
-      if (err instanceof ApiError && err.status === 409) {
+      if (err instanceof ApiError && err.status === 409 && err.detail === 'attunement_limit') {
         setError(t('character.inventory.magic.attunement_limit'))
         haptic.error()
       } else {

@@ -268,7 +268,14 @@ export function buildItemMetadata(form: ItemFormData): Record<string, unknown> |
     if (form.charges) {
       magic.charges = { ...form.charges, current: Math.min(form.charges.current, form.charges.max) }
     }
-    if (form.granted_spells.length > 0) magic.granted_spells = form.granted_spells
+    if (form.granted_spells.length > 0) {
+      // CD/attacco dell'oggetto: vuoti = non impostati, quindi omessi.
+      magic.granted_spells = form.granted_spells.map(({ save_dc, attack_bonus, ...rest }) => ({
+        ...rest,
+        ...(save_dc != null ? { save_dc } : {}),
+        ...(attack_bonus != null ? { attack_bonus } : {}),
+      }))
+    }
     meta = { ...(meta ?? {}), ...magic }
   }
 

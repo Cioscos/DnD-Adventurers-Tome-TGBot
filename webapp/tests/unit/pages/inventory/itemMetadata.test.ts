@@ -102,3 +102,16 @@ describe('magic item fields', () => {
     expect(isItemFormValid({ ...form, granted_spells: [{ ...form.granted_spells[0], charges_cost: 8 }] })).toBe(false)
   })
 })
+
+describe('granted spell DC / attack bonus', () => {
+  const base = { ...emptyForm, name: 'Bacchetta', is_magic: true, charges: { max: 5, current: 5, recharge: 'none' as const, recharge_amount: 'all' } }
+  const spell = { name: 'Dardo', level: 1, charges_cost: 1, is_concentration: false }
+  it('round-trips save_dc and attack_bonus, omitting them when empty', () => {
+    const set = buildItemMetadata({ ...base, granted_spells: [{ ...spell, save_dc: 16, attack_bonus: 0 }] })!
+    expect(set.granted_spells).toEqual([{ ...spell, save_dc: 16, attack_bonus: 0 }])
+    const form = itemToFormData({ name: 'B', item_type: 'generic', quantity: 1, weight: 0, item_metadata: set } as unknown as Item)
+    expect(form.granted_spells[0].save_dc).toBe(16)
+    const empty = buildItemMetadata({ ...base, granted_spells: [{ ...spell, save_dc: undefined, attack_bonus: null }] })!
+    expect(empty.granted_spells).toEqual([spell])
+  })
+})

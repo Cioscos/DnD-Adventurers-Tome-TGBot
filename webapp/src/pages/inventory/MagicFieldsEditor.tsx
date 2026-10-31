@@ -42,6 +42,28 @@ function NumField({ value, onChange, min, max, label, className = '' }: {
   )
 }
 
+/** Numero opzionale: campo vuoto = non impostato (undefined). */
+function OptNumField({ value, onChange, min, max, label }: {
+  value: number | null | undefined; onChange: (n: number | undefined) => void; min: number; max: number; label: string
+}) {
+  return (
+    <input
+      type="number"
+      inputMode="numeric"
+      aria-label={label}
+      title={label}
+      min={min}
+      max={max}
+      value={value ?? ''}
+      onChange={(e) => {
+        const n = parseInt(e.target.value, 10)
+        onChange(Number.isNaN(n) ? undefined : Math.min(max, Math.max(min, n)))
+      }}
+      className={`${fieldCls} text-center w-full`}
+    />
+  )
+}
+
 interface Props {
   form: ItemFormData
   onChange: (patch: Partial<ItemFormData>) => void
@@ -213,6 +235,18 @@ export default function MagicFieldsEditor({ form, onChange }: Props) {
                     {m('spell_cost')}
                     <NumField label={m('spell_cost')} value={g.charges_cost} min={0} max={charges?.max ?? 0} className="w-full"
                       onChange={(n) => setSpell(i, { charges_cost: n })} />
+                  </label>
+                </div>
+                <div className="flex gap-2">
+                  <label className="flex-1 text-xs text-dnd-text-muted">
+                    {m('spell_save_dc')}
+                    <OptNumField label={m('spell_save_dc')} value={g.save_dc} min={1} max={30}
+                      onChange={(n) => setSpell(i, { save_dc: n })} />
+                  </label>
+                  <label className="flex-1 text-xs text-dnd-text-muted">
+                    {m('spell_attack_bonus')}
+                    <OptNumField label={m('spell_attack_bonus')} value={g.attack_bonus} min={-10} max={30}
+                      onChange={(n) => setSpell(i, { attack_bonus: n })} />
                   </label>
                 </div>
                 <SwitchToggle

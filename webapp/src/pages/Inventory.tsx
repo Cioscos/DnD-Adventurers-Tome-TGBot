@@ -668,6 +668,8 @@ export default function Inventory() {
         />
       )}
 
+      {itemCast.elements}
+
       {attackState && (
         <WeaponAttackModal
           result={attackState.result}

@@ -60,3 +60,14 @@ describe('AttunementSection', () => {
     expect(await screen.findByText('character.inventory.magic.attunement_limit')).toBeTruthy()
   })
 })
+
+describe('AttunementSection other 409s', () => {
+  it('does not claim the limit for a different 409', async () => {
+    const { ApiError } = await import('@/api/client')
+    update.mockRejectedValue(new ApiError(409, 'something_else'))
+    renderIt([mk(4, false)])
+    await userEvent.click(screen.getByRole('button', { name: /Anello 4/ }))
+    expect(await screen.findByRole('alert')).toBeTruthy()
+    expect(screen.queryByText('character.inventory.magic.attunement_limit')).toBeNull()
+  })
+})
