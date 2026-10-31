@@ -236,12 +236,24 @@ The only callback handler is `bot.handlers.wiki.navigation_callback` — see `bo
 | `DELETE` | `/characters/{id}/dice/history` | Clear the character's dice roll history |
 | `POST` | `/characters/{id}/maps/upload` | Upload a map image from the webapp (multipart/form-data: `zone_name` + `file`) |
 | `GET` | `/characters/{id}/maps/{map_id}/file` | Serve map file — local disk if `local_file_path` set, else Telegram proxy |
+| `GET` | `/characters/{id}/export` | Export the character as JSON (`/export/send` posts it to the user's chat) |
+| `POST` | `/characters/import` | Import an exported character (validated; `/characters/{id}/duplicate` clones one) |
+| `GET` | `/characters/{id}/turn-state` | Turn view: action economy, durations, concentration, active conditions |
+| `POST` | `/characters/{id}/rounds/tick` | Advance one round: decrement condition/concentration durations |
+| `POST` | `/characters/{id}/items/{item_id}/charges` | Spend/restore magic item charges |
+| `POST` | `/characters/{id}/items/{item_id}/cast` | Cast a spell granted by an item (consumes charges) |
+| `POST` | `/characters/{id}/choices/{choice_id}/resolve` | Resolve a pending level choice (ASI or feat) |
+| `*` | `/characters/{id}/companions[...]` | Familiars, companions, summons and wild shape (CRUD, activate/deactivate, hp, attack) |
 
 ### D&D 5e Rule Compliance Notes
 - **Death save roll**: nat 20 → revive with 1 HP + reset saves; nat 1 → 2 failures; 10+ → 1 success; 2-9 → 1 failure
 - **Rests break concentration**: both short and long rest clear `concentrating_spell_id`
 - **HP above 0 resets death saves**: HEAL/SET_CURRENT automatically clears death saves when HP crosses from 0 to positive
 - **Long rest includes short-rest resources**: long rest restores abilities/resources with `restoration_type` of `long_rest` OR `short_rest`
+- **d20 modes**: advantage/disadvantage on all d20 rolls (skills, saves, initiative, death saves); advantage and disadvantage cancel out
+- **Damage types**: resistance halves, vulnerability doubles, immunity zeroes damage before it hits HP
+- **Durations**: conditions and concentration expire after a round count, decremented by `rounds/tick`
+- **Wild shape**: damage beyond the beast form's HP carries over to the normal form; a form at 0 HP ends
 
 ## i18n
 

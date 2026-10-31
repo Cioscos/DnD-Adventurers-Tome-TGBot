@@ -1,6 +1,71 @@
 {
   "entries": [
     {
+      "version": "2.24.0",
+      "date": "2026-10-31",
+      "title": { "it": "Al tavolo come su D&D Beyond (e oltre)", "en": "At the table like D&D Beyond (and beyond)" },
+      "added": {
+        "it": [
+          "Creazione guidata del personaggio con specie e punteggi caratteristica (point buy).",
+          "Catalogo SRD 5e tradotto in italiano: incantesimi, oggetti ed equipaggiamento da aggiungere con un tocco.",
+          "Esporta, importa e duplica i personaggi; l'esportazione può essere inviata in chat.",
+          "Vantaggio e svantaggio su abilità, tiri salvezza, iniziativa e tiri morte con pressione lunga, più note situazionali sui tiri.",
+          "Tipi di danno con resistenze, immunità e vulnerabilità applicate automaticamente.",
+          "Armi magiche, versatili e da lancio, con scalatura dei trucchetti e bonus d'attacco per arma.",
+          "Economia d'azione, vista Turno con banner e durate in round per condizioni e concentrazione.",
+          "Oggetti magici con sintonia, bonus condizionati, cariche e incantesimi lanciati dagli oggetti.",
+          "Scelte di livello (aumento caratteristiche o talento), avanzamento a milestone e PF tirati al level-up.",
+          "Passive Intuizione e Indagare, sensi, Tuttofare e anteprima di cosa recupera il riposo.",
+          "Competenze per categoria, aspetto del personaggio e ingombro dettagliato con peso delle monete.",
+          "Famigli, compagni ed evocazioni, e forma selvatica con danno in eccesso.",
+          "Avviso quando il server non è aggiornato all'ultima versione."
+        ],
+        "en": [
+          "Guided character creation with species and ability scores (point buy).",
+          "SRD 5e catalogue translated into Italian: add spells, items and equipment with a tap.",
+          "Export, import and duplicate characters; the export can be sent to chat.",
+          "Advantage and disadvantage on skills, saving throws, initiative and death saves via long press, plus situational roll notes.",
+          "Damage types with resistances, immunities and vulnerabilities applied automatically.",
+          "Magic, versatile and thrown weapons, with cantrip scaling and per-weapon attack bonuses.",
+          "Action economy, a Turn view with banner, and round durations for conditions and concentration.",
+          "Magic items with attunement, conditional bonuses, charges and spells cast from items.",
+          "Level choices (ability score increase or feat), milestone advancement and rolled HP on level-up.",
+          "Passive Insight and Investigation, senses, Jack of All Trades and a preview of what a rest restores.",
+          "Proficiencies by category, character appearance and detailed encumbrance with coin weight.",
+          "Familiars, companions and summons, and wild shape with overflow damage.",
+          "A notice when the server is not up to date with the latest version."
+        ]
+      },
+      "improved": {
+        "it": [
+          "Il piè di pagina mostra il peso totale trasportato.",
+          "L'iniziativa negli scontri ora include i bonus degli oggetti.",
+          "I suggerimenti dei tag delle note sono cambiati.",
+          "I pulsanti hanno aree di tocco più grandi (44 px).",
+          "Il menu della modalità di tiro non esce più dallo schermo."
+        ],
+        "en": [
+          "The footer shows the total carried weight.",
+          "Encounter initiative now includes item bonuses.",
+          "Note tag suggestions have changed.",
+          "Buttons have larger touch targets (44 px).",
+          "The roll mode menu no longer goes off screen."
+        ]
+      },
+      "fixed": {
+        "it": [
+          "Tiri coerenti con le regole per i PF tirati, gli import malformati e i duplicati di chiavi nell'import.",
+          "La forma selvatica gestisce correttamente 0 PF, annullamento dei PF e una sola forma attiva.",
+          "Le preferenze si reimpostano in modo sicuro e il turno si aggiorna al cambio turno."
+        ],
+        "en": [
+          "Rolled HP, malformed imports and duplicate keys on import are now handled correctly.",
+          "Wild shape correctly handles 0 HP, HP cancellation and a single active form.",
+          "Preferences reset safely and the turn view refreshes when the turn changes."
+        ]
+      }
+    },
+    {
       "version": "2.23.2",
       "date": "2026-10-31",
       "title": { "it": "Tiri coerenti con la scheda", "en": "Rolls that match the sheet" },
