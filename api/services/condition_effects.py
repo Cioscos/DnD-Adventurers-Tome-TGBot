@@ -45,8 +45,10 @@ class UndoLog:
     from_combatant_id: int | None = None
     to_combatant_id: int | None = None
     round_before: int | None = None
+    round_after: int | None = None
     decremented: list[dict] = field(default_factory=list)  # {effect_id, prev_count}
-    expired: list[dict] = field(default_factory=list)  # {target, slug, prev_value, effect_snapshot}
+    # {target, slug, prev_value, effect_snapshot, pending_saves: [snapshot]}
+    expired: list[dict] = field(default_factory=list)
     created_saves: list[int] = field(default_factory=list)
     skip_cleared: list[int] = field(default_factory=list)  # effect ids whose save_skip_once was consumed
     # {char_id, prev_rounds, prev_spell_id, prev_item_spell, released_effects: [snapshot]}
@@ -60,8 +62,78 @@ class UndoLog:
         return cls(**data)
 
 
-def effect_snapshot(effect: ConditionEffect) -> dict:
-    return {c.name: getattr(effect, c.name) for c in ConditionEffect.__table__.columns}
+def effect_snapshot(effect: ConditionEffect | PendingSave) -> dict:
+    return {c.name: getattr(effect, c.name) for c in type(effect).__table__.columns}
+
+
+async def _restore_row(db: AsyncSession, model, snap: dict):
+    """Recreate a deleted row, keeping its id unless something reused it meanwhile."""
+    data = dict(snap)
+    if await db.get(model, data["id"]) is not None:
+        data.pop("id")
+    row = model(**data)
+    db.add(row)
+    await db.flush()
+    return row
+
+
+async def undo_last_advance(db: AsyncSession, enc: Encounter) -> None:
+    """Revert the last forward advance (spec §2 "Turno indietro"), one step only and
+    only if the pointer is still where that advance left it. Each entry is reverted
+    only if its state is still the one the advance left; conflicting ones are skipped."""
+    data, enc.last_advance_undo = enc.last_advance_undo, None
+    if not data:
+        return
+    log = UndoLog.from_json(data)
+    if enc.active_combatant_id != log.to_combatant_id or enc.round != log.round_after:
+        return
+    created = set(log.created_saves)
+    for sid in log.created_saves:
+        ps = await db.get(PendingSave, sid)
+        if ps is not None and ps.status == "pending":
+            await db.delete(ps)
+    for d in log.decremented:
+        eff = await db.get(ConditionEffect, d["effect_id"])
+        if eff is not None and eff.expiry_count == d["prev_count"] - 1:
+            eff.expiry_count = d["prev_count"]
+    new_ids: dict[int, int] = {}
+    for x in log.expired:
+        kind, tid = x["target"]
+        slug = x["slug"]
+        owner = await db.get(Character if kind == "character" else Combatant, tid)
+        if owner is None or (owner.conditions or {}).get(slug) or (await db.execute(
+                select(ConditionEffect.id).where(_target_filter((kind, tid)),
+                                                 ConditionEffect.slug == slug))).first():
+            continue
+        owner.conditions = {**(owner.conditions or {}), slug: x["prev_value"]}
+        eff = await _restore_row(db, ConditionEffect, x["effect_snapshot"])
+        new_ids[x["effect_snapshot"]["id"]] = eff.id
+        for ps in x.get("pending_saves", []):
+            if ps["id"] not in created:  # created by this advance: stays undone
+                await _restore_row(db, PendingSave, {**ps, "effect_id": eff.id})
+    for eid in log.skip_cleared:
+        eff = await db.get(ConditionEffect, new_ids.get(eid, eid))
+        if eff is not None:
+            eff.save_skip_once = True
+    c = log.concentration
+    char = await db.get(Character, c["char_id"]) if c else None
+    if char is not None:
+        prev = c["prev_rounds"]
+        s = dict(char.settings or {})
+        left = prev - 1 if isinstance(prev, int) and not isinstance(prev, bool) and prev > 1 else None
+        ended = left is None and isinstance(prev, int) and not isinstance(prev, bool)
+        still = (char.concentrating_spell_id is None and not s.get("concentration_item_spell")
+                 and "concentration_rounds_left" not in s) if ended else (
+            char.concentrating_spell_id == c["prev_spell_id"]
+            and s.get("concentration_item_spell") == c["prev_item_spell"]
+            and s.get("concentration_rounds_left") == left)
+        if still:
+            char.concentrating_spell_id = c["prev_spell_id"]
+            s["concentration_rounds_left"] = prev
+            if c["prev_item_spell"] is not None:
+                s["concentration_item_spell"] = c["prev_item_spell"]
+            char.settings = s
+    await db.flush()
 
 
 def _target_filter(target: Target):

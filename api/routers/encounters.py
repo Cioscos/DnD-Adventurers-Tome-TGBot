@@ -32,7 +32,7 @@ from api.schemas.encounter import (
 from api.services import telegram_notify
 from api.services.homebrew.passive import get_passive_modifiers
 from api.services.d20 import resolve_body
-from api.services.condition_effects import UndoLog
+from api.services.condition_effects import UndoLog, undo_last_advance
 from api.services.durations import process_edge
 from api.services.encounter_view import build_encounter_block
 from core.db.models import (
@@ -450,12 +450,14 @@ async def _turn_endpoint(
                 detail={"code": "not_your_turn"},
             )
     from_id, round_before = enc.active_combatant_id, enc.round
+    if backward:
+        await undo_last_advance(db, enc)
     moved = _advance_turn(enc, list(enc.combatants), backward=backward)
     _touch(session)
     await db.flush()
     if not backward and moved is not None:
         undo = UndoLog(from_combatant_id=from_id, to_combatant_id=moved.id,
-                       round_before=round_before)
+                       round_before=round_before, round_after=enc.round)
         outgoing = next((c for c in enc.combatants if c.id == from_id), None)
         if outgoing is not None:
             await process_edge(db, enc, outgoing, "end", undo)

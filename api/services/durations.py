@@ -86,6 +86,8 @@ async def _expire_effect(session: AsyncSession, eff: ConditionEffect, undo: Undo
     """Switch the condition off on its target (dropping the effect row); returns its label."""
     label = condition_label(eff.slug)
     snapshot = effect_snapshot(eff)
+    saves = [effect_snapshot(ps) for ps in (await session.execute(select(PendingSave).where(
+        PendingSave.effect_id == eff.id).order_by(PendingSave.id))).scalars()]
     if eff.character_id is not None:
         target = ("character", eff.character_id)
         char = await session.get(Character, eff.character_id)
@@ -101,7 +103,8 @@ async def _expire_effect(session: AsyncSession, eff: ConditionEffect, undo: Undo
         await clear_effects_for(session, target, [eff.slug])
     if undo is not None:
         undo.expired.append({"target": list(target), "slug": eff.slug,
-                             "prev_value": prev, "effect_snapshot": snapshot})
+                             "prev_value": prev, "effect_snapshot": snapshot,
+                             "pending_saves": saves})
     return label
 
 
