@@ -1,10 +1,11 @@
-"""Round-based durations for conditions and concentration (settings JSON)."""
+"""Round-based durations for conditions (condition_effects) and concentration (settings JSON)."""
 from __future__ import annotations
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.data.labels import condition_label
 from core.db.models import Character
+from api.services.condition_effects import effects_for_character
 from api.services.effects import _add_history, apply_conditions
 
 
@@ -44,19 +45,6 @@ def set_concentration_rounds(char: Character, rounds: int | None) -> None:
     char.settings = s
 
 
-def set_condition_durations(char: Character, durations: dict[str, int | None]) -> None:
-    """None (or <= 0) removes the duration for that condition."""
-    s = dict(char.settings or {})
-    cd = dict(s.get("condition_durations") or {})
-    for slug, rounds in durations.items():
-        if rounds is None or rounds <= 0:
-            cd.pop(slug, None)
-        else:
-            cd[slug] = rounds
-    s["condition_durations"] = cd
-    char.settings = s
-
-
 def _is_int(v: object) -> bool:
     return isinstance(v, int) and not isinstance(v, bool)
 
@@ -64,24 +52,18 @@ def _is_int(v: object) -> bool:
 async def tick_rounds(session: AsyncSession, char: Character) -> list[str]:
     """Decrement every duration by one round; expire effects reaching 0."""
     s = dict(char.settings or {})
-    raw_cd = s.get("condition_durations")
-    cd = dict(raw_cd) if isinstance(raw_cd, dict) else {}
     expired: list[str] = []
     to_clear: dict[str, bool] = {}
-    for slug, left in list(cd.items()):
-        if not _is_int(left):  # malformed (hand-edited/imported) entry: drop it, never 500
-            del cd[slug]
+    for eff in await effects_for_character(session, char.id):
+        if eff.expiry_count is None:
             continue
-        left -= 1
-        if left > 0:
-            cd[slug] = left
+        eff.expiry_count -= 1
+        if eff.expiry_count > 0:
             continue
-        del cd[slug]
-        label = condition_label(slug)
+        label = condition_label(eff.slug)
         expired.append(label)
-        to_clear[slug] = False
+        to_clear[eff.slug] = False  # apply_conditions drops the effect row
         _add_history(session, char.id, "condition_change", f"Durata scaduta: {label}")
-    s["condition_durations"] = cd
 
     conc = s.get("concentration_rounds_left")
     ended_conc = False

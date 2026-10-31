@@ -51,7 +51,8 @@ from api.services.d20 import d20_history_label, d20_records, resolve_body
 from api.services.dice_stats import record_dice
 from api.services.character_response import build_character_response
 from api.services.effects import apply_conditions
-from api.services.durations import set_condition_durations, tick_rounds
+from api.services.condition_effects import ExpirySpec, effects_for_character, upsert_effect
+from api.services.durations import tick_rounds
 from api.services.spell_slots import recalc_spell_slots
 from api.services.choices import add_asi_choices
 from api.services.hp_rolls import record_rolls, stored_rolls
@@ -437,12 +438,12 @@ async def update_conditions(
 ) -> CharacterFull:
     char = await _get_owned(char_id, user_id, session, full=True)
     result = await apply_conditions(session, char, body.conditions)
-    durations = dict(body.durations or {})
-    for slug, val in body.conditions.items():
-        if not val:
-            durations[slug] = None
-    if durations:
-        set_condition_durations(char, durations)
+    # apply_conditions already dropped the effects of conditions turned off
+    gm_slugs = {e.slug for e in await effects_for_character(session, char_id) if e.applied_by_gm}
+    for slug, rounds in (body.durations or {}).items():
+        if rounds and rounds > 0 and (char.conditions or {}).get(slug) and slug not in gm_slugs:
+            await upsert_effect(session, ("character", char_id), slug,
+                                expiry=ExpirySpec("owner", "start", rounds))
     if result["changed"]:
         await prune_history(session, char)
 

@@ -19,6 +19,7 @@ from api.schemas.common import (
     MapRead,
     RollMode,
 )
+from api.schemas.condition_effects import ConditionEffectRead, PendingSaveRead
 from api.schemas.item import ItemRead
 from api.schemas.spell import SpellRead, SpellSlotRead
 
@@ -167,6 +168,9 @@ class CharacterFull(BaseModel):
 
     # Populated only by POST /rounds/tick: labels of effects that just expired.
     expired_effects: Optional[list[str]] = None
+
+    condition_effects: list[ConditionEffectRead] = []
+    pending_saves: list[PendingSaveRead] = []
 
     # Populated only by POST /items/{id}/use (consumable use result).
     consumable_use: Optional[ConsumableUseResult] = None
