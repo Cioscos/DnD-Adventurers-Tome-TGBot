@@ -12,9 +12,8 @@ import RollResultModal, { type RollResult } from '@/components/RollResultModal'
 import { haptic } from '@/auth/telegram'
 import { profBonus } from '@/lib/dnd'
 import { useUnitSettings, formatLength } from '@/store/unitSettings'
-import { useDiceAnimation } from '@/dice/useDiceAnimation'
-import { useDiceSettings } from '@/store/diceSettings'
-import { useReducedMotion } from '@/hooks/useReducedMotion'
+import { useD20Roll, type RollMode } from '@/hooks/useD20Roll'
+import RollButton from '@/components/ui/RollButton'
 import { api } from '@/api/client'
 import type { CharacterFull } from '@/types'
 
@@ -84,35 +83,34 @@ export default function HeroStatsSection({ char }: Props) {
   const totalSkillProf = profCount + expertCount
 
   const qc = useQueryClient()
-  const dice = useDiceAnimation()
-  const animate3d = useDiceSettings((s) => s.animate3d)
-  const reducedMotion = useReducedMotion()
+  const rollD20 = useD20Roll()
   const [initResult, setInitResult] = useState<RollResult | null>(null)
 
   const initiativeMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (mode: RollMode) => {
       // Il client tira (con animazione 3D se attiva), il BE persiste nello storico.
-      let value: number | undefined
-      if (animate3d && !reducedMotion) {
-        const detected = await dice.playAndCollect([{ kind: 'd20', count: 1 }])
-        value = detected[0]?.value
-      }
-      if (value == null) value = 1 + Math.floor(Math.random() * 20)
-      const notation = `1d20${dexMod >= 0 ? '+' : ''}${dexMod}`
+      const n = mode === 'normal' ? 1 : 2
+      const faces = (await rollD20(mode)) ?? Array.from({ length: n }, () => 1 + Math.floor(Math.random() * 20))
+      const value = mode === 'advantage' ? Math.max(...faces) : mode === 'disadvantage' ? Math.min(...faces) : faces[0]
+      const keep = mode === 'advantage' ? 'kh1' : mode === 'disadvantage' ? 'kl1' : ''
+      const notation = `${n}d20${keep}${dexMod >= 0 ? '+' : ''}${dexMod}`
       await api.dice.result(char.id, {
-        rolls: [{ kind: 'd20', value }],
+        rolls: faces.map((v) => ({ kind: 'd20' as const, value: v })),
         modifier: dexMod,
         notation,
         label: t('character.hero.initiative'),
+        mode,
       })
-      return value
+      return { value, faces, mode }
     },
-    onSuccess: (value) => {
+    onSuccess: ({ value, faces, mode }) => {
       qc.invalidateQueries({ queryKey: ['character', char.id] })
       qc.invalidateQueries({ queryKey: ['dice-history', char.id] })
       qc.invalidateQueries({ queryKey: ['history', char.id] })
       setInitResult({
         die: value,
+        dice: faces,
+        mode,
         bonus: dexMod,
         total: value + dexMod,
         is_critical: value === 20,
@@ -157,27 +155,44 @@ export default function HeroStatsSection({ char }: Props) {
 
       {/* Combat-number cells — 2×2 grid, full names above, mono value below. */}
       <div className="grid grid-cols-2 gap-1.5">
-        {cells.map((c) => (
-          <Pressable
-            key={c.key}
-            type="button"
-            onClick={() => (c.key === 'init' ? (haptic.medium(), initiativeMutation.mutate()) : go(c.path))}
-            pending={c.key === 'init' && initiativeMutation.isPending}
-            aria-label={`${c.label}: ${c.value}`}
-            className="flex flex-col items-center justify-center min-h-[68px] rounded-lg p-2 border
+        {cells.map((c) => {
+          const cellClass = `flex flex-col items-center justify-center min-h-[68px] rounded-lg p-2 border
                        bg-dnd-surface-raised border-dnd-border text-dnd-text
-                       hover:border-dnd-gold transition-colors"
-            whileTap={{ scale: 0.95 }}
-          >
-            <span className="flex items-center justify-center text-center min-h-[2.2em] px-0.5
-                             text-xs font-cinzel uppercase tracking-wide leading-tight opacity-80">
-              {c.label}
-            </span>
-            <span className="text-2xl font-mono font-bold tabular-nums leading-none mt-1">
-              {c.value}
-            </span>
-          </Pressable>
-        ))}
+                       hover:border-dnd-gold transition-colors`
+          const body = (
+            <>
+              <span className="flex items-center justify-center text-center min-h-[2.2em] px-0.5
+                               text-xs font-cinzel uppercase tracking-wide leading-tight opacity-80">
+                {c.label}
+              </span>
+              <span className="text-2xl font-mono font-bold tabular-nums leading-none mt-1">
+                {c.value}
+              </span>
+            </>
+          )
+          return c.key === 'init' ? (
+            <RollButton
+              key={c.key}
+              onRoll={(mode) => { haptic.medium(); initiativeMutation.mutate(mode) }}
+              pending={initiativeMutation.isPending}
+              ariaLabel={`${c.label}: ${c.value}`}
+              className={cellClass}
+            >
+              {body}
+            </RollButton>
+          ) : (
+            <Pressable
+              key={c.key}
+              type="button"
+              onClick={() => go(c.path)}
+              aria-label={`${c.label}: ${c.value}`}
+              className={cellClass}
+              whileTap={{ scale: 0.95 }}
+            >
+              {body}
+            </Pressable>
+          )
+        })}
       </div>
 
       {/* Speed folds its homebrew modifier into the total above; surface an

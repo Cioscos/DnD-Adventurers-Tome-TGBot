@@ -22,6 +22,8 @@ import { useLongPress } from '@/hooks/useLongPress'
 import { useDiceAnimation } from '@/dice/useDiceAnimation'
 import { useDiceSettings } from '@/store/diceSettings'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
+import { useD20Roll, d20Arg, type RollMode } from '@/hooks/useD20Roll'
+import RollButton from '@/components/ui/RollButton'
 import { profBonus } from '@/lib/dnd'
 import HomebrewBreakdownRow from '@/components/homebrew/HomebrewBreakdownRow'
 import SkillsSkeleton from '@/components/skeletons/SkillsSkeleton'
@@ -72,7 +74,7 @@ interface SkillRowProps {
   rollPending: boolean
   onTap: () => void
   onLongPress: () => void
-  onRoll: () => void
+  onRoll: (mode: RollMode) => void
   rollAriaLabel: string
 }
 
@@ -167,16 +169,14 @@ function SkillRow({
           {bonus >= 0 ? '+' : ''}{bonus}
         </span>
       </div>
-      <Pressable
-        onClick={onRoll}
+      <RollButton
+        onRoll={onRoll}
         pending={rollPending}
-        spinnerSize={14}
-        className="shrink-0 w-11 h-11 rounded-xl bg-dnd-chip-bg border border-dnd-gold-dim/40 flex items-center justify-center text-dnd-gold disabled:opacity-30"
-        whileTap={{ scale: 0.88 }}
-        aria-label={rollAriaLabel}
+        className="shrink-0 w-11 h-11 rounded-xl bg-dnd-chip-bg border border-dnd-gold-dim/40 flex items-center justify-center text-dnd-gold active:scale-90 transition-transform"
+        ariaLabel={rollAriaLabel}
       >
         <Dices size={16} />
-      </Pressable>
+      </RollButton>
     </m.div>
   )
 }
@@ -187,6 +187,7 @@ export default function Skills() {
   const { t } = useTranslation()
   const qc = useQueryClient()
   const dice = useDiceAnimation()
+  const rollD20 = useD20Roll()
   const animate3d = useDiceSettings((s) => s.animate3d)
   const reducedMotion = useReducedMotion()
   type RollState = {
@@ -213,14 +214,8 @@ export default function Skills() {
   })
 
   const rollMutation = useMutation({
-    mutationFn: async (skillName: string) => {
-      const useAnimation = animate3d && !reducedMotion
-      let die: number | undefined
-      if (useAnimation) {
-        const detected = await dice.playAndCollect([{ kind: 'd20', count: 1 }])
-        die = detected[0]?.value
-      }
-      const result = await api.characters.rollSkill(charId, skillName, die)
+    mutationFn: async ({ skillName, mode }: { skillName: string; mode: RollMode }) => {
+      const result = await api.characters.rollSkill(charId, skillName, d20Arg(mode, await rollD20(mode)))
       return { result, skillName }
     },
     onSuccess: ({ result, skillName }) => {
@@ -326,7 +321,7 @@ export default function Skills() {
                     const abilMod = abilityModifier(skill.ability)
                     const bonus = abilMod + (level === 'expert' ? 2 * pb : level ? pb : 0) + (char.skills_homebrew_modifiers?.[skill.key] ?? 0)
 
-                    const isRollingThis = rollMutation.isPending && rollMutation.variables === skill.key
+                    const isRollingThis = rollMutation.isPending && rollMutation.variables?.skillName === skill.key
                     return (
                       <Fragment key={skill.key}>
                         <SkillRow
@@ -341,7 +336,7 @@ export default function Skills() {
                             haptic.medium()
                             setPicker(skill.key)
                           }}
-                          onRoll={() => rollMutation.mutate(skill.key)}
+                          onRoll={(mode) => rollMutation.mutate({ skillName: skill.key, mode })}
                           rollAriaLabel={t('character.skills.roll')}
                         />
                         <HomebrewBreakdownRow

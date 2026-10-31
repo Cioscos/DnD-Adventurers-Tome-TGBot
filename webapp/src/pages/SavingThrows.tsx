@@ -18,6 +18,8 @@ import { useDiceAnimation } from '@/dice/useDiceAnimation'
 import { useDiceSettings } from '@/store/diceSettings'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { useToast } from '@/hooks/useToast'
+import { useD20Roll, d20Arg, type RollMode } from '@/hooks/useD20Roll'
+import RollButton from '@/components/ui/RollButton'
 import { profBonus } from '@/lib/dnd'
 import HomebrewBreakdownRow from '@/components/homebrew/HomebrewBreakdownRow'
 import SavingThrowsSkeleton from '@/components/skeletons/SavingThrowsSkeleton'
@@ -37,6 +39,7 @@ export default function SavingThrows() {
   const { t } = useTranslation()
   const qc = useQueryClient()
   const dice = useDiceAnimation()
+  const rollD20 = useD20Roll()
   const animate3d = useDiceSettings((s) => s.animate3d)
   const reducedMotion = useReducedMotion()
   const toast = useToast()
@@ -57,14 +60,8 @@ export default function SavingThrows() {
   })
 
   const rollMutation = useMutation({
-    mutationFn: async (ability: string) => {
-      const useAnimation = animate3d && !reducedMotion
-      let die: number | undefined
-      if (useAnimation) {
-        const detected = await dice.playAndCollect([{ kind: 'd20', count: 1 }])
-        die = detected[0]?.value
-      }
-      const result = await api.characters.rollSavingThrow(charId, ability, die)
+    mutationFn: async ({ ability, mode }: { ability: string; mode: RollMode }) => {
+      const result = await api.characters.rollSavingThrow(charId, ability, d20Arg(mode, await rollD20(mode)))
       return { result, ability }
     },
     onSuccess: ({ result, ability }) => {
@@ -153,7 +150,7 @@ export default function SavingThrows() {
                 <Surface
                   variant={isProficient ? 'elevated' : 'flat'}
                   interactive
-                  onClick={() => rollMutation.mutate(ability)}
+                  onClick={() => rollMutation.mutate({ ability, mode: 'normal' })}
                   className={`relative !p-2 cursor-pointer
                     ${isProficient ? 'border-dnd-gold/50' : ''}`}
                 >
@@ -194,7 +191,14 @@ export default function SavingThrows() {
                     <p className={`text-3xl font-mono font-bold leading-none tabular-nums ${total >= 0 ? 'text-dnd-text' : 'text-dnd-crimson-bright'}`}>
                       {total >= 0 ? '+' : ''}{total}
                     </p>
-                    <DiceIcon sides={20} size={28} className="text-dnd-gold/80 shrink-0" />
+                    <RollButton
+                      onRoll={(mode) => rollMutation.mutate({ ability, mode })}
+                      pending={rollMutation.isPending && rollMutation.variables?.ability === ability}
+                      ariaLabel={t('character.skills.roll')}
+                      className="w-11 h-11 -mr-1 flex items-center justify-center shrink-0"
+                    >
+                      <DiceIcon sides={20} size={28} className="text-dnd-gold/80" />
+                    </RollButton>
                   </div>
                 </Surface>
               </Reveal.Item>

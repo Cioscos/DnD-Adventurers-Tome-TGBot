@@ -1,5 +1,12 @@
 {
   "common": {
+    "roll_mode": {
+      "title": "Roll mode",
+      "advantage": "Advantage",
+      "normal": "Normal",
+      "disadvantage": "Disadvantage",
+      "hint": "Press and hold for advantage or disadvantage"
+    },
     "back": "Back",
     "next": "Next",
     "save": "Save",

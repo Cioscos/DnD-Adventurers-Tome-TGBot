@@ -29,9 +29,7 @@ import InstantDeathDialog from '@/pages/hp/InstantDeathDialog'
 import type { CharacterFull } from '@/types'
 import ConcentrationSaveDialog from '@/pages/hp/ConcentrationSaveDialog'
 import { useAnimatedRoll } from '@/dice/useAnimatedRoll'
-import { useDiceAnimation } from '@/dice/useDiceAnimation'
-import { useDiceSettings } from '@/store/diceSettings'
-import { useReducedMotion } from '@/hooks/useReducedMotion'
+import { useD20Roll, d20Arg, type RollMode } from '@/hooks/useD20Roll'
 import HomebrewBreakdownRow from '@/components/homebrew/HomebrewBreakdownRow'
 import HPSkeleton from '@/components/skeletons/HPSkeleton'
 import { useIsFirstValue } from '@/hooks/useIsFirstValue'
@@ -54,10 +52,8 @@ export default function HP() {
   const charId = Number(id)
   const { t } = useTranslation()
   const qc = useQueryClient()
-  const dice = useDiceAnimation()
+  const rollD20 = useD20Roll()
   const rollDice = useAnimatedRoll()
-  const animate3d = useDiceSettings((s) => s.animate3d)
-  const reducedMotion = useReducedMotion()
   const [value, setValue] = useState('')
   const [activeOp, setActiveOp] = useState<HPOp>('damage')
   const [crit, setCrit] = useState(false)
@@ -181,15 +177,8 @@ export default function HP() {
   })
 
   const deathRollMutation = useMutation({
-    mutationFn: async () => {
-      const useAnimation = animate3d && !reducedMotion
-      let die: number | undefined
-      if (useAnimation) {
-        const detected = await dice.playAndCollect([{ kind: 'd20', count: 1 }])
-        die = detected[0]?.value
-      }
-      return api.characters.rollDeathSave(charId, die)
-    },
+    mutationFn: async (mode: RollMode) =>
+      api.characters.rollDeathSave(charId, d20Arg(mode, await rollD20(mode))),
     onSuccess: (result) => {
       setDeathRollResult(result)
       qc.invalidateQueries({ queryKey: ['character', charId] })
@@ -352,7 +341,7 @@ export default function HP() {
                 </p>
                 <DeathSaves
                   deathSaves={ds}
-                  onRoll={() => deathRollMutation.mutate()}
+                  onRoll={(mode) => deathRollMutation.mutate(mode)}
                   onAction={(action) => deathMutation.mutate(action)}
                   isRolling={deathRollMutation.isPending}
                   pendingAction={deathMutation.isPending ? deathMutation.variables : undefined}

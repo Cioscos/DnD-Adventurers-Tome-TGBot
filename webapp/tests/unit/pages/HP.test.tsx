@@ -147,9 +147,9 @@ vi.mock('@/pages/hp/HpOperationForm', async () => {
 vi.mock('@/pages/hp/DeathSaves', async () => {
   const React = await import('react')
   return {
-    default: (p: { onRoll: () => void; onAction: (a: string) => void }) =>
+    default: (p: { onRoll: (m: string) => void; onAction: (a: string) => void }) =>
       React.createElement('div', { 'data-testid': 'death-saves' },
-        React.createElement('button', { 'data-testid': 'ds-roll', onClick: p.onRoll }, 'roll'),
+        React.createElement('button', { 'data-testid': 'ds-roll', onClick: () => p.onRoll('normal') }, 'roll'),
         React.createElement('button', { 'data-testid': 'ds-action', onClick: () => p.onAction('mark_success') }, 'action'),
       ),
   }

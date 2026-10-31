@@ -83,4 +83,10 @@ describe('RollResultModal', () => {
     await userEvent.click(screen.getByTestId('rd-close'))
     expect(onClose).toHaveBeenCalledTimes(1)
   })
+
+  it('shows both dice with the discarded one dimmed', () => {
+    render(<RollResultModal result={result({ die: 15, dice: [7, 15], mode: 'advantage' })} title="T" onClose={() => {}} />)
+    expect(screen.getByText('7').className).toContain('opacity-40')
+    expect(screen.getByText(', 15').className).not.toContain('opacity-40')
+  })
 })

@@ -46,8 +46,19 @@ import type {
   SpellSlot,
 } from '@/types'
 
+export type RollMode = 'normal' | 'advantage' | 'disadvantage'
+
+/** Legacy single die (number) or the new `{dice, mode}` pair; omit values and the server rolls. */
+export type D20Roll = number | { dice?: number[]; mode?: RollMode }
+
+function d20Fields(roll: D20Roll | undefined): Record<string, unknown> {
+  return typeof roll === 'object' ? { dice: roll.dice, mode: roll.mode } : { die: roll }
+}
+
 export type RollResult = {
   die: number
+  dice?: number[]
+  mode?: RollMode
   bonus: number
   total: number
   is_critical: boolean
@@ -100,6 +111,8 @@ export type HitDiceSpendResult = {
 
 export type DeathSaveRollResult = {
   die: number
+  dice?: number[]
+  mode?: RollMode
   outcome: 'nat20' | 'nat1' | 'success' | 'failure'
   successes: number
   failures: number
@@ -120,6 +133,7 @@ export type DiceResultRequestBody = {
   notation?: string | null
   with_inspiration?: boolean
   total?: number | null
+  mode?: RollMode
 }
 
 export type { ConcentrationSaveResult } from '@/types'
@@ -390,27 +404,27 @@ export const api = {
     rollSkill: (
       id: number,
       skillName: string,
-      die?: number,
+      die?: D20Roll,
       withInspiration: boolean = false,
     ) =>
       request<RollResult>(`/characters/${id}/skills/${encodeURIComponent(skillName)}/roll`, {
         method: 'POST',
         body:
           die != null || withInspiration
-            ? JSON.stringify({ die, with_inspiration: withInspiration })
+            ? JSON.stringify({ ...d20Fields(die), with_inspiration: withInspiration })
             : undefined,
       }),
     rollSavingThrow: (
       id: number,
       ability: string,
-      die?: number,
+      die?: D20Roll,
       withInspiration: boolean = false,
     ) =>
       request<RollResult>(`/characters/${id}/saving_throws/${encodeURIComponent(ability)}/roll`, {
         method: 'POST',
         body:
           die != null || withInspiration
-            ? JSON.stringify({ die, with_inspiration: withInspiration })
+            ? JSON.stringify({ ...d20Fields(die), with_inspiration: withInspiration })
             : undefined,
       }),
 
@@ -422,10 +436,10 @@ export const api = {
       }),
 
     // Death save roll
-    rollDeathSave: (id: number, die?: number) =>
+    rollDeathSave: (id: number, die?: D20Roll) =>
       request<DeathSaveRollResult>(`/characters/${id}/death_saves/roll`, {
         method: 'POST',
-        body: die != null ? JSON.stringify({ die }) : undefined,
+        body: die != null ? JSON.stringify(d20Fields(die)) : undefined,
       }),
 
     // HP recalc
@@ -876,10 +890,10 @@ export const api = {
           method: 'POST',
           body: JSON.stringify(payload),
         }),
-      rollInitiative: (sessionId: number, combatantId: number, die?: number) =>
+      rollInitiative: (sessionId: number, combatantId: number, die?: D20Roll) =>
         request<EncounterLive>(
           `/sessions/${sessionId}/encounter/combatants/${combatantId}/initiative`,
-          { method: 'POST', body: JSON.stringify({ die: die ?? null }) },
+          { method: 'POST', body: JSON.stringify(typeof die === 'object' ? d20Fields(die) : { die: die ?? null }) },
         ),
       patchCombatant: (sessionId: number, combatantId: number, patch: CombatantPatch) =>
         request<EncounterLive>(

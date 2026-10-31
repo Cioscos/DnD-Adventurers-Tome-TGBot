@@ -1,5 +1,12 @@
 {
   "common": {
+    "roll_mode": {
+      "title": "Modalità del tiro",
+      "advantage": "Vantaggio",
+      "normal": "Normale",
+      "disadvantage": "Svantaggio",
+      "hint": "Tieni premuto per vantaggio o svantaggio"
+    },
     "back": "Indietro",
     "next": "Avanti",
     "save": "Salva",

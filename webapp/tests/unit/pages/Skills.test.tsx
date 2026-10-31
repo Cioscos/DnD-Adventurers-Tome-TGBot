@@ -57,7 +57,9 @@ vi.mock('@/store/diceSettings', () => ({
 // Surface the tap (onClick) and long-press (onContextMenu) handlers as plain DOM events;
 // the timing behaviour of the real hook is covered by useLongPress.test.ts.
 vi.mock('@/hooks/useLongPress', () => ({
-  useLongPress: (opts: { onClick?: () => void; onLongPress?: () => void }) => ({
+  useLongPress: (opts: { onClick?: () => void; onLongPress?: () => void; thresholdMs?: number }) =>
+    // RollButton (450 ms) taps via pointer-up; the skill row (500 ms) via plain click.
+    opts.thresholdMs === 450 ? { onPointerUp: () => opts.onClick?.() } : ({
     onClick: opts.onClick,
     onContextMenu: (e: { preventDefault?: () => void }) => {
       e.preventDefault?.()
