@@ -153,6 +153,13 @@ describe('SavingThrows page', () => {
     expect(screen.getByText('+4')).toBeInTheDocument()
   })
 
+  it('adds item save bonuses to the displayed total', async () => {
+    getChar.mockResolvedValue({ ...baseChar, saves_items_modifiers: { strength: 1 } })
+    renderWithProviders(<SavingThrows />)
+    await screen.findByTestId('pb')
+    expect(screen.getByText('+5')).toBeInTheDocument()
+  })
+
   it('toggling proficiency merges the flipped value into the existing map', async () => {
     getChar.mockResolvedValue(baseChar)
     updateSavingThrows.mockResolvedValue(baseChar)

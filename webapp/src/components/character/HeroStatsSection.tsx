@@ -70,7 +70,7 @@ export default function HeroStatsSection({ char }: Props) {
   const profSaves = ABILITY_ORDER.filter((a) => saves[a]).map((a) => ({
     key: a,
     label: t(`character.ability.${a}_short`, { defaultValue: a.slice(0, 3).toUpperCase() }),
-    bonus: abilityMod(a) + pb + (char.saves_homebrew_modifiers?.[a] ?? 0),
+    bonus: abilityMod(a) + pb + (char.saves_homebrew_modifiers?.[a] ?? 0) + (char.saves_items_modifiers?.[a] ?? 0),
   }))
 
   // Skill proficiency counts (only keys actually set on the character).

@@ -44,6 +44,7 @@ async def test_cloak_of_protection_requires_attunement_for_bonus(client):
     assert r.json()["ac_breakdown"]["items"] == 1
     roll1 = (await client.post(f"/characters/{cid}/saving_throws/dexterity/roll", json={"die": 10})).json()
     assert roll1["bonus"] == roll0["bonus"] + 1
+    assert r.json()["saves_items_modifiers"]["dexterity"] == 1
 
 
 async def test_fourth_attunement_rejected_409(client):
@@ -138,3 +139,29 @@ async def test_speed_and_initiative_items(client):
     dex = next(a["modifier"] for a in b["ability_scores"] if a["name"] == "dexterity")
     assert b["speed_items_modifier"] == 10
     assert b["initiative_bonus"] == dex + 2
+
+
+async def _swing(client, cid, wid):
+    return (await client.post(f"/characters/{cid}/items/{wid}/attack", json={"die": 10})).json()
+
+
+async def test_weapon_bonus_applies_only_to_that_weapon(client):
+    cid = await _char(client)
+    sword = await _item(client, cid, name="Spada", item_type="weapon", slot="main_hand", damage_dice="1d8",
+                        bonuses=[{"target": "attack", "value": 2}])
+    dagger = await _item(client, cid, name="Pugnale", item_type="weapon", slot="off_hand", damage_dice="1d4")
+    s = await _swing(client, cid, sword)
+    d = await _swing(client, cid, dagger)
+    assert s["to_hit_bonus"] == d["to_hit_bonus"] + 2
+
+
+async def test_ring_attack_bonus_applies_to_all_weapons_and_unarmed(client):
+    cid = await _char(client)
+    sword = await _item(client, cid, name="Spada", item_type="weapon", slot="main_hand", damage_dice="1d8")
+    dagger = await _item(client, cid, name="Pugnale", item_type="weapon", slot="off_hand", damage_dice="1d4")
+    b = [(await _swing(client, cid, w))["to_hit_bonus"] for w in (sword, dagger)]
+    u0 = (await client.post(f"/characters/{cid}/attack/unarmed", json={"die": 10})).json()["to_hit_bonus"]
+    await _item(client, cid, name="Anello", slot="ring1", bonuses=[{"target": "attack", "value": 1}])
+    a = [(await _swing(client, cid, w))["to_hit_bonus"] for w in (sword, dagger)]
+    u1 = (await client.post(f"/characters/{cid}/attack/unarmed", json={"die": 10})).json()["to_hit_bonus"]
+    assert a == [x + 1 for x in b] and u1 == u0 + 1

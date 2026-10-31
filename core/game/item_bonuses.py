@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from typing import Iterable
 
-from api.services.equipment import EQUIPMENT_SLOT_COMPAT
+from core.data.equipment_slots import EQUIPMENT_SLOT_COMPAT
 
 _EQUIPPABLE_TYPES = set(EQUIPMENT_SLOT_COMPAT) | {"clothing"}
 
@@ -30,6 +30,14 @@ def is_active_for_bonuses(item) -> bool:
     if meta.get("requires_attunement") and not meta.get("attuned"):
         return False
     return bool(item.is_equipped) or item.item_type not in _EQUIPPABLE_TYPES
+
+
+def attack_bonus_total(items: Iterable, weapon, target: str) -> int:
+    """`attack`/`damage` bonus for a swing: the weapon's own bonus (if active) plus
+    bonuses of active non-weapon items. `weapon=None` = unarmed (non-weapon items only)."""
+    others = [i for i in items if i.item_type != "weapon"]
+    own = [weapon] if weapon is not None else []
+    return item_bonus_total(own, target) + item_bonus_total(others, target)
 
 
 def item_bonus_total(items: Iterable, target: str) -> int:

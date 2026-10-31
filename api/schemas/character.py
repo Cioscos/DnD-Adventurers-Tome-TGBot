@@ -112,6 +112,7 @@ class CharacterFull(BaseModel):
     initiative_bonus: int = 0
     skills_homebrew_modifiers: dict[str, int] = Field(default_factory=dict)
     saves_homebrew_modifiers: dict[str, int] = Field(default_factory=dict)
+    saves_items_modifiers: dict[str, int] = Field(default_factory=dict)
 
     # Carry
     carry_capacity: int

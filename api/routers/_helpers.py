@@ -1,6 +1,5 @@
 """Shared helpers for router logic (avoid circular imports)."""
 import logging
-from core.game.item_bonuses import item_bonus_total
 from datetime import datetime, timedelta
 
 from sqlalchemy import delete, func, select
@@ -12,6 +11,7 @@ from api.services.dice_stats import record_dice
 from api.services.durations import end_concentration
 from api.services.homebrew.passive import get_passive_modifiers
 from core.db.models import Character, CharacterHistory
+from core.game.item_bonuses import item_bonus_total
 from core.game.stats import effective_ability_score
 
 logger = logging.getLogger(__name__)

@@ -205,6 +205,7 @@ export interface CharacterFull extends Omit<CharacterSummary, 'ac_homebrew_modif
   initiative_bonus?: number
   skills_homebrew_modifiers?: Record<string, number>
   saves_homebrew_modifiers?: Record<string, number>
+  saves_items_modifiers?: Record<string, number>
   carry_capacity: number
   carry_capacity_override: boolean
   has_custom_silhouette: boolean

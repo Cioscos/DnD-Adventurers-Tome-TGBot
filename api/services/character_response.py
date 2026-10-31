@@ -71,5 +71,8 @@ async def build_character_response(
         val = await get_passive_modifiers(session, char, f"character.saving_throw.{slug}")
         if val:
             response.saves_homebrew_modifiers[slug] = val
+        item_val = item_bonus_total(char.items, f"save.{slug}")
+        if item_val:
+            response.saves_items_modifiers[slug] = item_val
 
     return response

@@ -144,7 +144,7 @@ export default function SavingThrows() {
           const isProficient = saves[ability] ?? false
           const score = char.ability_scores.find((s) => s.name === ability)
           const abilMod = score?.modifier ?? 0
-          const total = abilMod + (isProficient ? pb : 0) + (char.saves_homebrew_modifiers?.[ability] ?? 0)
+          const total = abilMod + (isProficient ? pb : 0) + (char.saves_homebrew_modifiers?.[ability] ?? 0) + (char.saves_items_modifiers?.[ability] ?? 0)
 
           return (
             <Fragment key={ability}>

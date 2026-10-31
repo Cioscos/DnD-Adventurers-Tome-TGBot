@@ -22,7 +22,7 @@ from core.db.models import Character, CharacterClass, CharacterHistory, Equipmen
 from api.schemas.character import CharacterFull
 from api.schemas.item import AmmoState, ItemCreate, ItemRead, ItemUpdate, WeaponAttackResult
 from core.game.stats import effective_ability_score
-from core.game.item_bonuses import is_attuned, item_bonus_total
+from core.game.item_bonuses import attack_bonus_total, is_attuned
 from core.game.attacks import unarmed_strike_profile
 from core.data.spell_slots import normalize_class_name
 from api.routers._helpers import (
@@ -531,7 +531,7 @@ async def attack_with_weapon(
     # To-hit roll
     outcome = resolve_body(body)
     to_hit_die = outcome.kept
-    to_hit_bonus = ability_mod + pb + magic_bonus + item_bonus_total(char.items, "attack")
+    to_hit_bonus = ability_mod + pb + magic_bonus + attack_bonus_total(char.items, item, "attack")
     to_hit_total = to_hit_die + to_hit_bonus
     is_critical = to_hit_die == 20
     is_fumble = to_hit_die == 1
@@ -548,7 +548,7 @@ async def attack_with_weapon(
         damage_bonus = 0
         damage_total = 0
     else:
-        damage_bonus = ability_mod + magic_bonus + item_bonus_total(char.items, "damage") + dice_bonus
+        damage_bonus = ability_mod + magic_bonus + attack_bonus_total(char.items, item, "damage") + dice_bonus
         damage_total = max(0, sum(damage_rolls) + damage_bonus)
 
     result_str = (
@@ -646,7 +646,7 @@ async def attack_unarmed(
 
     outcome = resolve_body(body)
     to_hit_die = outcome.kept
-    to_hit_bonus = ability_mod + pb
+    to_hit_bonus = ability_mod + pb + attack_bonus_total(char.items, None, "attack")
     to_hit_total = to_hit_die + to_hit_bonus
     is_critical = to_hit_die == 20
     is_fumble = to_hit_die == 1
@@ -667,7 +667,7 @@ async def attack_unarmed(
         damage_bonus = 0
         damage_total = 0
     else:
-        damage_bonus = ability_mod + dice_bonus
+        damage_bonus = ability_mod + attack_bonus_total(char.items, None, "damage") + dice_bonus
         damage_total = max(0, sum(damage_rolls) + damage_bonus)
 
     weapon_name = "Attacco a mano libera"
