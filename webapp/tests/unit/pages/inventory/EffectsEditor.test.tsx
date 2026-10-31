@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { LazyMotion, domMax } from 'framer-motion'
 import userEvent from '@testing-library/user-event'
 import EffectsEditor from '@/pages/inventory/EffectsEditor'
 import type { ItemEffect } from '@/pages/inventory/itemMetadata'
@@ -42,10 +43,14 @@ describe('EffectsEditor', () => {
   it('picking a condition from the SelectSheet emits the updated effect', async () => {
     const onChange = vi.fn()
     const effects: ItemEffect[] = [{ kind: 'add_condition', condition: 'poisoned' }]
-    render(<EffectsEditor effects={effects} onChange={onChange} />)
+    // come in main.tsx: senza LazyMotion i feature di animazione non girano e il backdrop
+    // dello Sheet (initial pointer-events:none) non diventa mai cliccabile
+    render(<LazyMotion features={domMax}><EffectsEditor effects={effects} onChange={onChange} /></LazyMotion>)
     // trigger shows the current condition, the sheet lists them all
     await userEvent.click(screen.getByRole('button', { name: /character\.conditions\.poisoned/ }))
-    await userEvent.click(screen.getByRole('radio', { name: 'character.conditions.blinded' }))
+    const option = await screen.findByRole('radio', { name: 'character.conditions.blinded' })
+    await waitFor(() => expect(option.closest('[class*="fixed"]')).toHaveStyle({ pointerEvents: 'auto' }))
+    await userEvent.click(option)
     expect(onChange).toHaveBeenCalledWith([{ kind: 'add_condition', condition: 'blinded' }])
   })
 

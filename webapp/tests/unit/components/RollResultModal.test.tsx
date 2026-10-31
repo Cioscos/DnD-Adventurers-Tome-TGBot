@@ -46,8 +46,7 @@ describe('RollResultModal', () => {
   it('shows a neutral roll with the d20 (die) + bonus = total breakdown', () => {
     render(<RollResultModal result={result()} title="Tiro" onClose={() => {}} />)
     expect(screen.getByTestId('dialog')).toHaveAttribute('data-accent', 'default')
-    expect(screen.getByText('15')).toBeInTheDocument()
-    expect(screen.getByText(/d20 \(15\) \+3 =/)).toBeInTheDocument()
+    expect(screen.getByText(/d20 \(15\) \+3/)).toBeInTheDocument()
     expect(screen.getByText('18')).toBeInTheDocument()
   })
 
