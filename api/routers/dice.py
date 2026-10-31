@@ -15,6 +15,7 @@ from sqlalchemy.orm.attributes import flag_modified
 from api.auth import get_current_user
 from api.database import get_db
 from api.services import telegram_notify
+from api.services.d20 import resolve_d20
 from api.services.dice_stats import record_dice
 from core.db.models import Character, CharacterHistory
 from api.schemas.common import DiceResultEntry, DiceResultRequest, DiceRollResult
@@ -66,6 +67,11 @@ async def post_dice_result(
 
     rolls = [e.value for e in body.rolls]
     total = body.total if body.total is not None else sum(rolls) + body.modifier
+    # An inspiration reroll is a single d20: it falls through to the legacy path.
+    if body.mode != "normal" and not body.with_inspiration:
+        if any(e.kind != "d20" for e in body.rolls):
+            raise HTTPException(status_code=422, detail="dice_count_mismatch")
+        total = resolve_d20(body.mode, rolls, None).kept + body.modifier
 
     # notation: prefer client-supplied, else infer
     if body.notation:

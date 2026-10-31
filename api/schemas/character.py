@@ -15,6 +15,7 @@ from api.schemas.common import (
     ConsumableUseResult,
     CurrencyRead,
     MapRead,
+    RollMode,
 )
 from api.schemas.item import ItemRead
 from api.schemas.spell import SpellRead, SpellSlotRead
@@ -271,6 +272,8 @@ class SpellAttackResult(BaseModel):
 
     spell_name: str
     to_hit_die: int
+    dice: list[int] = []
+    mode: RollMode = "normal"
     to_hit_bonus: int
     to_hit_total: int
     is_critical: bool

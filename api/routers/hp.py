@@ -15,6 +15,7 @@ from sqlalchemy.orm import selectinload
 
 from api.auth import get_current_user
 from api.database import get_db
+from api.services.d20 import d20_records, resolve_body
 from api.services.dice_stats import record_dice
 from api.services.effects import apply_heal
 from api.services.telegram_notify import notify_party_emergency
@@ -203,7 +204,10 @@ async def update_hp(
             and char.concentrating_spell_id is not None
             and char.current_hit_points > 0
         ):
-            conc_result = await roll_concentration_save(char, body.value, session)
+            conc_result = await roll_concentration_save(
+                char, body.value, session,
+                "advantage" if (char.settings or {}).get("war_caster") else "normal",
+            )
 
         # Emit homebrew events: damage_taken (always) + dropped_to_zero (when HP crossed 0).
         # event.amount is the GROSS damage requested (body.value, before temp-HP
@@ -560,8 +564,9 @@ async def roll_death_save(
         )
     ds = dict(char.death_saves or {"successes": 0, "failures": 0, "stable": False})
 
-    die = body.die if body and body.die is not None else random.randint(1, 20)
-    record_dice(char, [("d20", die)])
+    d20 = resolve_body(body)
+    die = d20.kept
+    record_dice(char, d20_records(d20))
     revived = False
 
     if die == 20:
@@ -608,6 +613,8 @@ async def roll_death_save(
 
     return DeathSaveRollResult(
         die=die,
+        dice=d20.dice,
+        mode=d20.mode,
         outcome=outcome,
         successes=ds["successes"],
         failures=ds["failures"],

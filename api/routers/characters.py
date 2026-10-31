@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import random
 from datetime import datetime
 from typing import Annotated
 
@@ -43,6 +42,7 @@ from api.schemas.common import D20RollSubmission, RollResult
 from api.routers.classes import create_class_for_character
 from api.routers._helpers import effective_ability_mod, prune_history, saving_throw_bonus
 from api.services import telegram_notify
+from api.services.d20 import d20_history_label, d20_records, resolve_body
 from api.services.dice_stats import record_dice
 from api.services.character_response import build_character_response
 from api.services.effects import apply_conditions
@@ -509,23 +509,26 @@ async def roll_skill(
         bonus = ability_mod
     bonus += await get_passive_modifiers(session, char, f"character.skill.{skill_name}")
 
-    die = body.die if body and body.die is not None else random.randint(1, 20)
+    outcome = resolve_body(body)
+    die = outcome.kept
     total = die + bonus
     is_crit = die == 20
     is_fumble = die == 1
 
     history_msg = (
-        f"Abilità {skill_label(skill_name)}: d20={die} {'+ ' if bonus >= 0 else ''}{bonus} = {total}"
+        f"Abilità {skill_label(skill_name)}: {d20_history_label(outcome)} {'+ ' if bonus >= 0 else ''}{bonus} = {total}"
         + (" (CRITICO)" if is_crit else " (FUMBLE)" if is_fumble else "")
     )
     if body and body.with_inspiration:
         history_msg = f"Reroll ispirazione: {history_msg}"
     _add_history(session, char.id, "skill_roll", history_msg)
-    record_dice(char, [("d20", die)])
+    record_dice(char, d20_records(outcome))
     await prune_history(session, char)
 
     return RollResult(
         die=die,
+        dice=outcome.dice,
+        mode=outcome.mode,
         bonus=bonus,
         total=total,
         is_critical=is_crit,
@@ -557,23 +560,26 @@ async def roll_saving_throw(
 
     bonus = await saving_throw_bonus(session, char, ability)
 
-    die = body.die if body and body.die is not None else random.randint(1, 20)
+    outcome = resolve_body(body)
+    die = outcome.kept
     total = die + bonus
     is_crit = die == 20
     is_fumble = die == 1
 
     history_msg = (
-        f"TS {ability_label(ability)}: d20={die} {'+ ' if bonus >= 0 else ''}{bonus} = {total}"
+        f"TS {ability_label(ability)}: {d20_history_label(outcome)} {'+ ' if bonus >= 0 else ''}{bonus} = {total}"
         + (" (CRITICO)" if is_crit else " (FUMBLE)" if is_fumble else "")
     )
     if body and body.with_inspiration:
         history_msg = f"Reroll ispirazione: {history_msg}"
     _add_history(session, char.id, "saving_throw", history_msg)
-    record_dice(char, [("d20", die)])
+    record_dice(char, d20_records(outcome))
     await prune_history(session, char)
 
     return RollResult(
         die=die,
+        dice=outcome.dice,
+        mode=outcome.mode,
         bonus=bonus,
         total=total,
         is_critical=is_crit,

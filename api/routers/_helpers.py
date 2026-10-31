@@ -1,12 +1,12 @@
 """Shared helpers for router logic (avoid circular imports)."""
 import logging
-import random
 from datetime import datetime, timedelta
 
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.schemas.common import ConcentrationSaveResult
+from api.schemas.common import ConcentrationSaveResult, RollMode
+from api.services.d20 import d20_history_label, d20_records, resolve_d20
 from api.services.dice_stats import record_dice
 from api.services.homebrew.passive import get_passive_modifiers
 from core.db.models import Character, CharacterHistory
@@ -113,7 +113,7 @@ def _append_concentration_history(
     char_id: int,
     damage: int,
     dc: int,
-    die: int,
+    label: str,
     con_mod: int,
     total: int,
     success: bool,
@@ -123,7 +123,7 @@ def _append_concentration_history(
     outcome = "SUCCESSO" if success else "FALLIMENTO"
     desc = (
         f"TS Concentrazione (danno {damage}, DC {dc}): "
-        f"d20={die}+{con_mod}={total}: {outcome}"
+        f"{label}+{con_mod}={total}: {outcome}"
         + (" → concentrazione persa" if lost_concentration else "")
     )
     session.add(CharacterHistory(
@@ -138,6 +138,8 @@ async def roll_concentration_save(
     char: Character,
     damage: int,
     session: AsyncSession,
+    mode: RollMode = "normal",
+    dice: list[int] | None = None,
 ) -> ConcentrationSaveResult:
     """Roll a CON save vs DC=max(10, damage//2). RAW: natural 20 and 1 have
     no special effect on saving throws, only the total counts.
@@ -152,8 +154,9 @@ async def roll_concentration_save(
     dc = max(10, damage // 2)
     con_mod = await saving_throw_bonus(session, char, "constitution")
 
-    die = random.randint(1, 20)
-    record_dice(char, [("d20", die)])
+    outcome = resolve_d20(mode, dice, None)
+    die = outcome.kept
+    record_dice(char, d20_records(outcome))
     total = die + con_mod
     is_crit = die == 20
     is_fumble = die == 1
@@ -164,11 +167,13 @@ async def roll_concentration_save(
         char.concentrating_spell_id = None
 
     _append_concentration_history(
-        session, char.id, damage, dc, die, con_mod, total, success, lost_concentration,
+        session, char.id, damage, dc, d20_history_label(outcome), con_mod, total, success, lost_concentration,
     )
 
     return ConcentrationSaveResult(
         die=die,
+        dice=outcome.dice,
+        mode=outcome.mode,
         bonus=con_mod,
         total=total,
         is_critical=is_crit,

@@ -8,6 +8,7 @@ from typing import Any, Optional
 
 from pydantic import BaseModel, ValidationInfo, field_validator
 
+from api.schemas.common import RollMode
 from core.db.models import EquipmentSlot
 from api.services.equipment import slot_allowed_for_type
 
@@ -190,6 +191,8 @@ class AmmoState(BaseModel):
 class WeaponAttackResult(BaseModel):
     weapon_name: str
     to_hit_die: int
+    dice: list[int] = []
+    mode: RollMode = "normal"
     to_hit_bonus: int
     to_hit_total: int
     is_critical: bool

@@ -7,6 +7,8 @@ from typing import Optional
 
 from pydantic import BaseModel, Field, field_validator
 
+from api.schemas.common import D20Dice, RollMode
+
 _EXTRA_DICE_RE = re.compile(r"^(\d+)d(\d+)([+-]\d+)?$", re.IGNORECASE)
 
 
@@ -79,6 +81,8 @@ class SpellAttackRequest(BaseModel):
     ritual: bool = False
     die: int | None = Field(None, ge=1, le=20)
     with_inspiration: bool = False
+    mode: RollMode = "normal"
+    dice: D20Dice | None = None
 
 
 class SpellSlotRead(BaseModel):

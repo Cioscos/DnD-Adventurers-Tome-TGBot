@@ -16,7 +16,7 @@ from api.auth import get_current_user
 from api.database import get_db
 from core.db.models import Character, CharacterClass, CharacterHistory, Spell, SpellSlot
 from api.schemas.character import CharacterFull, SpellAttackResult
-from api.schemas.common import ConcentrationSaveResult
+from api.schemas.common import ConcentrationSaveResult, D20Dice, RollMode
 from api.schemas.spell import (
     ConcentrationUpdate,
     RollDamageRequest,
@@ -30,6 +30,7 @@ from api.schemas.spell import (
 from api.routers.items import _roll_dice, _DICE_RE
 from api.routers._helpers import collect_homebrew_notifications, roll_concentration_save
 from api.services.character_response import build_character_response
+from api.services.d20 import d20_records, d20_history_label, resolve_body
 from api.services.dice_stats import record_dice
 from api.services.homebrew.dispatcher import dispatch
 from api.services.spellcasting import best_caster, build_spellcasting_info
@@ -38,6 +39,8 @@ from core.data.spellcasting import has_ritual_caster
 
 class ConcentrationSaveRequest(BaseModel):
     damage: int
+    mode: RollMode = "normal"
+    dice: D20Dice | None = None
 
 router = APIRouter(prefix="/characters", tags=["spells"])
 
@@ -258,18 +261,19 @@ async def spell_attack(
 
     caster = best_caster(char)
     bonus = caster.attack_bonus if caster else char.proficiency_bonus
-    die = body.die if body.die is not None else random.randint(1, 20)
+    outcome = resolve_body(body)
+    die = outcome.kept
     total = die + bonus
     is_critical = die == 20
     is_fumble = die == 1
 
-    text = f"Attacco incantesimo {spell.name}: d20={die}+{bonus}={total}" + (
+    text = f"Attacco incantesimo {spell.name}: {d20_history_label(outcome)}+{bonus}={total}" + (
         " (CRITICO!)" if is_critical else " (FUMBLE!)" if is_fumble else ""
     )
     if body.with_inspiration:
         text = f"Reroll ispirazione: {text}"
     _add_history(session, char_id, "spell_attack", text)
-    record_dice(char, [("d20", die)])
+    record_dice(char, d20_records(outcome))
 
     firing = await dispatch(
         session, char, "attack_rolled",
@@ -286,6 +290,8 @@ async def spell_attack(
     return SpellAttackResult(
         spell_name=spell.name,
         to_hit_die=die,
+        dice=outcome.dice,
+        mode=outcome.mode,
         to_hit_bonus=bonus,
         to_hit_total=total,
         is_critical=is_critical,
@@ -320,7 +326,9 @@ async def concentration_save(
     session: Annotated[AsyncSession, Depends(get_db)],
 ) -> ConcentrationSaveResult:
     char = await _get_owned_full(char_id, user_id, session)
-    return await roll_concentration_save(char, body.damage, session)
+    return await roll_concentration_save(
+        char, body.damage, session, body.mode, body.dice,
+    )
 
 
 # ---------------------------------------------------------------------------

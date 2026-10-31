@@ -29,6 +29,7 @@ from api.schemas.encounter import (
     ReorderRequest,
 )
 from api.services import telegram_notify
+from api.services.d20 import resolve_body
 from api.services.encounter_view import build_encounter_block
 from core.db.models import (
     Character,
@@ -319,7 +320,7 @@ async def roll_initiative(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail="Initiative already rolled",
         )
-    die = body.die if body.die is not None else random.randint(1, 20)
+    die = resolve_body(body).kept
     comb.initiative_die = die
     comb.initiative = die + comb.initiative_mod
     _touch(session)

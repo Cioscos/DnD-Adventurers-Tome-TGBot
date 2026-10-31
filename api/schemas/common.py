@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any, Literal, Optional
+from typing import Annotated, Any, Literal, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -264,12 +264,18 @@ class DeathSaveAction(str, Enum):
     ROLL = "roll"
 
 
+RollMode = Literal["normal", "advantage", "disadvantage"]
+D20Dice = Annotated[list[Annotated[int, Field(ge=1, le=20)]], Field(max_length=2)]
+
+
 class DeathSaveUpdate(BaseModel):
     action: DeathSaveAction
 
 
 class DeathSaveRollResult(BaseModel):
     die: int
+    dice: list[int] = []
+    mode: RollMode = "normal"
     outcome: str  # "nat20" | "nat1" | "success" | "failure"
     successes: int
     failures: int
@@ -297,6 +303,8 @@ class DiceResultRequest(BaseModel):
     # Optional client-supplied total override. Used by stat-rolls (4d6kh3) where the
     # displayed total is the sum of the kept dice, not all rolls.
     total: int | None = None
+    # advantage/disadvantage: rolls must be exactly two d20; total computed server-side.
+    mode: RollMode = "normal"
 
 
 class DiceRollResult(BaseModel):
@@ -315,6 +323,8 @@ class DiceRollResult(BaseModel):
 
 class RollResult(BaseModel):
     die: int = 20
+    dice: list[int] = []
+    mode: RollMode = "normal"
     bonus: int
     total: int
     is_critical: bool = False
@@ -326,6 +336,8 @@ class D20RollSubmission(BaseModel):
     """Optional client-supplied d20 value (from 3D physics face detection)."""
     die: Optional[int] = Field(default=None, ge=1, le=20)
     with_inspiration: bool = False
+    mode: RollMode = "normal"
+    dice: Optional[D20Dice] = None
 
 
 class ConcentrationSaveResult(RollResult):

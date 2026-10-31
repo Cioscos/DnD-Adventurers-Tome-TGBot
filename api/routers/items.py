@@ -16,6 +16,7 @@ from sqlalchemy.orm import selectinload
 
 from api.auth import get_current_user
 from api.database import get_db
+from api.services.d20 import D20Outcome, d20_history_label, d20_records, resolve_body
 from api.services.dice_stats import record_dice
 from core.db.models import Character, CharacterClass, CharacterHistory, EquipmentSlot, HomebrewRule, Item
 from api.schemas.character import CharacterFull
@@ -32,7 +33,7 @@ from api.services.equipment import slot_allowed_for_type, swap_slot_occupant
 from api.services.homebrew.dispatcher import dispatch
 from api.services.character_response import build_character_response
 from api.services.effects import apply_heal, apply_conditions
-from api.schemas.common import ConsumableUseResult
+from api.schemas.common import ConsumableUseResult, D20Dice, RollMode
 
 router = APIRouter(prefix="/characters", tags=["items"])
 
@@ -75,13 +76,13 @@ def _roll_dice(notation: str) -> tuple[list[int], int]:
 
 def _record_attack_dice(
     char: Character,
-    to_hit_die: int,
+    outcome: D20Outcome,
     damage_dice_str: str,
     damage_rolls: list[int],
     is_fumble: bool,
 ) -> None:
     """Statistiche: d20 di to-hit + dadi danno (esclusi fumble e danno piatto '1')."""
-    recorded: list[tuple[str, int]] = [("d20", to_hit_die)]
+    recorded = d20_records(outcome)
     m = _DICE_RE.match(damage_dice_str.strip()) if damage_dice_str else None
     if not is_fumble and m:
         sides = int(m.group(2))
@@ -432,6 +433,8 @@ class AttackSubmission(BaseModel):
     """Optional payload for attacks: inspiration flag and the d20 read by the 3D dice."""
     with_inspiration: bool = False
     die: int | None = Field(default=None, ge=1, le=20)
+    mode: RollMode = "normal"
+    dice: D20Dice | None = None
 
 
 @router.post("/{char_id}/items/{item_id}/attack", response_model=WeaponAttackResult)
@@ -479,7 +482,8 @@ async def attack_with_weapon(
     pb = char.proficiency_bonus
 
     # To-hit roll
-    to_hit_die = body.die if body and body.die is not None else random.randint(1, 20)
+    outcome = resolve_body(body)
+    to_hit_die = outcome.kept
     to_hit_bonus = ability_mod + pb
     to_hit_total = to_hit_die + to_hit_bonus
     is_critical = to_hit_die == 20
@@ -501,14 +505,14 @@ async def attack_with_weapon(
         damage_total = max(0, sum(damage_rolls) + damage_bonus)
 
     result_str = (
-        f"Attacco {item.name}: colpire d20={to_hit_die}+{to_hit_bonus}={to_hit_total}"
+        f"Attacco {item.name}: colpire {d20_history_label(outcome)}+{to_hit_bonus}={to_hit_total}"
         + (" (CRITICO!)" if is_critical else " (FUMBLE!)" if is_fumble else "")
         + f" | Danno: {'+'.join(str(r) for r in damage_rolls)}+{damage_bonus}={damage_total}"
     )
     if body and body.with_inspiration:
         result_str = f"Reroll ispirazione (to-hit): {result_str}"
     _add_history(session, char.id, "attack_roll", result_str)
-    _record_attack_dice(char, to_hit_die, damage_dice_str, damage_rolls, is_fumble)
+    _record_attack_dice(char, outcome, damage_dice_str, damage_rolls, is_fumble)
 
     # Ammunition: scale one piece per attack (also on miss/fumble), never on a reroll.
     ammo_state: AmmoState | None = None
@@ -549,6 +553,8 @@ async def attack_with_weapon(
         ammo_missing=ammo_missing,
         weapon_name=item.name,
         to_hit_die=to_hit_die,
+        dice=outcome.dice,
+        mode=outcome.mode,
         to_hit_bonus=to_hit_bonus,
         to_hit_total=to_hit_total,
         is_critical=is_critical,
@@ -589,7 +595,8 @@ async def attack_unarmed(
     ability_mod, damage_dice_str = unarmed_strike_profile(str_mod, dex_mod, monk_level)
     pb = char.proficiency_bonus
 
-    to_hit_die = body.die if body and body.die is not None else random.randint(1, 20)
+    outcome = resolve_body(body)
+    to_hit_die = outcome.kept
     to_hit_bonus = ability_mod + pb
     to_hit_total = to_hit_die + to_hit_bonus
     is_critical = to_hit_die == 20
@@ -616,14 +623,14 @@ async def attack_unarmed(
 
     weapon_name = "Attacco a mano libera"
     result_str = (
-        f"Attacco {weapon_name}: colpire d20={to_hit_die}+{to_hit_bonus}={to_hit_total}"
+        f"Attacco {weapon_name}: colpire {d20_history_label(outcome)}+{to_hit_bonus}={to_hit_total}"
         + (" (CRITICO!)" if is_critical else " (FUMBLE!)" if is_fumble else "")
         + f" | Danno: {'+'.join(str(r) for r in damage_rolls)}+{damage_bonus}={damage_total}"
     )
     if body and body.with_inspiration:
         result_str = f"Reroll ispirazione (to-hit): {result_str}"
     _add_history(session, char.id, "attack_roll", result_str)
-    _record_attack_dice(char, to_hit_die, damage_dice_str, damage_rolls, is_fumble)
+    _record_attack_dice(char, outcome, damage_dice_str, damage_rolls, is_fumble)
 
     firing_results = await dispatch(
         session, char, "attack_rolled",
@@ -641,6 +648,8 @@ async def attack_unarmed(
     return WeaponAttackResult(
         weapon_name=weapon_name,
         to_hit_die=to_hit_die,
+        dice=outcome.dice,
+        mode=outcome.mode,
         to_hit_bonus=to_hit_bonus,
         to_hit_total=to_hit_total,
         is_critical=is_critical,
