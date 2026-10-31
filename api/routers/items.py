@@ -31,6 +31,7 @@ from api.routers._helpers import (
     effective_con_mod,
 )
 from api.services.durations import start_concentration
+from api.services.condition_effects import release_concentration_effects
 from api.services.item_charges import set_item_charges
 from core.game.actions import parse_duration_rounds
 from api.services.equipment import slot_allowed_for_type, swap_slot_occupant
@@ -796,6 +797,7 @@ async def cast_from_item(
             start_concentration(char, match.id, rounds)
         else:
             start_concentration(char, None, rounds, {"item_id": item.id, "name": spell["name"]})
+        await release_concentration_effects(session, char)
 
     _add_history(session, char.id, "spell_cast",
                  f"Lanciato {spell['name']} da {item.name} ({cost} cariche)")

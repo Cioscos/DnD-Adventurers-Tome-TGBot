@@ -10,9 +10,10 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from typing import Iterable, Literal
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from core.data.labels import condition_label
 from api.schemas.condition_effects import ConditionEffectRead, PendingSaveRead
 from core.db.models import (
     Character, Combatant, ConditionEffect, Encounter, PendingSave,
@@ -97,24 +98,7 @@ async def undo_last_advance(db: AsyncSession, enc: Encounter) -> None:
         if eff is not None and eff.expiry_count == d["prev_count"] - 1:
             eff.expiry_count = d["prev_count"]
     new_ids: dict[int, int] = {}
-    for x in log.expired:
-        kind, tid = x["target"]
-        slug = x["slug"]
-        owner = await db.get(Character if kind == "character" else Combatant, tid)
-        if owner is None or (owner.conditions or {}).get(slug) or (await db.execute(
-                select(ConditionEffect.id).where(_target_filter((kind, tid)),
-                                                 ConditionEffect.slug == slug))).first():
-            continue
-        owner.conditions = {**(owner.conditions or {}), slug: x["prev_value"]}
-        eff = await _restore_row(db, ConditionEffect, x["effect_snapshot"])
-        new_ids[x["effect_snapshot"]["id"]] = eff.id
-        for ps in x.get("pending_saves", []):
-            if ps["id"] not in created:  # created by this advance: stays undone
-                await _restore_row(db, PendingSave, {**ps, "effect_id": eff.id})
-    for eid in log.skip_cleared:
-        eff = await db.get(ConditionEffect, new_ids.get(eid, eid))
-        if eff is not None:
-            eff.save_skip_once = True
+    await _restore_released(db, log.expired, created, new_ids)
     c = log.concentration
     char = await db.get(Character, c["char_id"]) if c else None
     if char is not None:
@@ -133,7 +117,74 @@ async def undo_last_advance(db: AsyncSession, enc: Encounter) -> None:
             if c["prev_item_spell"] is not None:
                 s["concentration_item_spell"] = c["prev_item_spell"]
             char.settings = s
+            await _restore_released(db, c.get("released_effects", []), created, new_ids)
+    for eid in log.skip_cleared:
+        eff = await db.get(ConditionEffect, new_ids.get(eid, eid))
+        if eff is not None:
+            eff.save_skip_once = True
     await db.flush()
+
+
+async def _restore_released(db: AsyncSession, entries: list[dict], created: set[int],
+                            new_ids: dict[int, int]) -> None:
+    """Recreate effects an advance switched off, skipping targets changed meanwhile."""
+    for x in entries:
+        kind, tid = x["target"]
+        slug = x["slug"]
+        owner = await db.get(Character if kind == "character" else Combatant, tid)
+        if owner is None or (owner.conditions or {}).get(slug) or (await db.execute(
+                select(ConditionEffect.id).where(_target_filter((kind, tid)),
+                                                 ConditionEffect.slug == slug))).first():
+            continue
+        owner.conditions = {**(owner.conditions or {}), slug: x["prev_value"]}
+        eff = await _restore_row(db, ConditionEffect, x["effect_snapshot"])
+        new_ids[x["effect_snapshot"]["id"]] = eff.id
+        for ps in x.get("pending_saves", []):
+            if ps["id"] not in created:  # created by this advance: stays undone
+                await _restore_row(db, PendingSave, {**ps, "effect_id": eff.id})
+
+
+async def expire_effect(db: AsyncSession, eff: ConditionEffect, history: str | None,
+                        undo_list: list[dict] | None) -> str:
+    """Switch the condition off on its target (dropping the effect row); returns its label.
+    ``history`` (formatted with ``{label}``) is logged on a PC target."""
+    from api.services.effects import _add_history, apply_conditions  # circular import
+    label = condition_label(eff.slug)
+    snapshot = effect_snapshot(eff)
+    saves = [effect_snapshot(ps) for ps in (await db.execute(select(PendingSave).where(
+        PendingSave.effect_id == eff.id).order_by(PendingSave.id))).scalars()]
+    if eff.character_id is not None:
+        target = ("character", eff.character_id)
+        char = await db.get(Character, eff.character_id)
+        prev = (char.conditions or {}).get(eff.slug)
+        if history:
+            _add_history(db, char.id, "condition_change", history.format(label=label))
+        await apply_conditions(db, char, {eff.slug: False})
+    else:
+        target = ("combatant", eff.combatant_id)
+        comb = await db.get(Combatant, eff.combatant_id)
+        conds = dict(comb.conditions or {})
+        prev = conds.pop(eff.slug, None)
+        comb.conditions = conds
+        await clear_effects_for(db, target, [eff.slug])
+    if undo_list is not None:
+        undo_list.append({"target": list(target), "slug": eff.slug, "prev_value": prev,
+                          "effect_snapshot": snapshot, "pending_saves": saves})
+    return label
+
+
+async def release_concentration_effects(db: AsyncSession, char: Character,
+                                        undo_list: list[dict] | None = None) -> list[str]:
+    """Spec §5: end the effects tied to ``char``'s concentration on a spell other than the
+    current one (all of them if it no longer concentrates). Returns their labels."""
+    q = select(ConditionEffect).where(ConditionEffect.ends_with_concentration.is_(True),
+                                      ConditionEffect.source_character_id == char.id)
+    if char.concentrating_spell_id is not None:
+        q = q.where(or_(ConditionEffect.source_spell_id.is_(None),
+                        ConditionEffect.source_spell_id != char.concentrating_spell_id))
+    history = f"Terminata (fine concentrazione di {char.name}): {{label}}"
+    return [await expire_effect(db, eff, history, undo_list)
+            for eff in (await db.execute(q.order_by(ConditionEffect.id))).scalars().all()]
 
 
 def _target_filter(target: Target):

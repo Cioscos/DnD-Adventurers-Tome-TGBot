@@ -29,6 +29,7 @@ from api.schemas.spell import (
 )
 from api.routers.items import _roll_dice, _DICE_RE
 from api.services.durations import end_concentration, start_concentration
+from api.services.condition_effects import release_concentration_effects
 from core.game.actions import parse_duration_rounds
 from api.routers._helpers import collect_homebrew_notifications, roll_concentration_save
 from api.services.character_response import build_character_response
@@ -233,6 +234,7 @@ async def use_spell(
         raise HTTPException(status_code=404, detail="Spell not found")
 
     _consume_cast(session, char, spell, body.slot_level, body.as_ritual)
+    await release_concentration_effects(session, char)
     return await build_character_response(session, char)
 
 
@@ -261,6 +263,7 @@ async def spell_attack(
             start_concentration(char, spell.id, parse_duration_rounds(spell.duration))
     else:
         _consume_cast(session, char, spell, body.slot_level, body.ritual)
+    await release_concentration_effects(session, char)
 
     caster = best_caster(char)
     bonus = caster.attack_bonus if caster else char.proficiency_bonus
@@ -317,6 +320,7 @@ async def update_concentration(
         end_concentration(char)
     else:
         start_concentration(char, body.spell_id, body.rounds)
+    await release_concentration_effects(session, char)
     return await build_character_response(session, char)
 
 

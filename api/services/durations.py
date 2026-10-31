@@ -8,12 +8,11 @@ from typing import Literal
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core.data.labels import condition_label
 from core.db.models import Character, Combatant, ConditionEffect, Encounter, PendingSave
 from api.services.condition_effects import (
-    UndoLog, clear_effects_for, effect_snapshot, effects_for_character,
+    UndoLog, effects_for_character, expire_effect, release_concentration_effects,
 )
-from api.services.effects import _add_history, apply_conditions
+from api.services.effects import _add_history
 
 
 def is_concentrating(char: Character) -> bool:
@@ -82,32 +81,6 @@ def _tick_concentration(session: AsyncSession, char: Character) -> tuple[dict | 
     return entry, ended
 
 
-async def _expire_effect(session: AsyncSession, eff: ConditionEffect, undo: UndoLog | None) -> str:
-    """Switch the condition off on its target (dropping the effect row); returns its label."""
-    label = condition_label(eff.slug)
-    snapshot = effect_snapshot(eff)
-    saves = [effect_snapshot(ps) for ps in (await session.execute(select(PendingSave).where(
-        PendingSave.effect_id == eff.id).order_by(PendingSave.id))).scalars()]
-    if eff.character_id is not None:
-        target = ("character", eff.character_id)
-        char = await session.get(Character, eff.character_id)
-        prev = (char.conditions or {}).get(eff.slug)
-        _add_history(session, char.id, "condition_change", f"Durata scaduta: {label}")
-        await apply_conditions(session, char, {eff.slug: False})
-    else:
-        target = ("combatant", eff.combatant_id)
-        comb = await session.get(Combatant, eff.combatant_id)
-        conds = dict(comb.conditions or {})
-        prev = conds.pop(eff.slug, None)
-        comb.conditions = conds
-        await clear_effects_for(session, target, [eff.slug])
-    if undo is not None:
-        undo.expired.append({"target": list(target), "slug": eff.slug,
-                             "prev_value": prev, "effect_snapshot": snapshot,
-                             "pending_saves": saves})
-    return label
-
-
 async def tick_rounds(session: AsyncSession, char: Character) -> list[str]:
     """Manual "end of round": every expiry on the PC -1 (any anchor/edge), concentration
     -1. No repeated saves (out of combat there are no turns)."""
@@ -118,10 +91,11 @@ async def tick_rounds(session: AsyncSession, char: Character) -> list[str]:
         if eff.expiry_count - 1 > 0:
             eff.expiry_count -= 1
         else:
-            expired.append(await _expire_effect(session, eff, None))
+            expired.append(await expire_effect(session, eff, "Durata scaduta: {label}", None))
     _, ended = _tick_concentration(session, char)
     if ended:
         expired.append("Concentrazione")
+        expired += await release_concentration_effects(session, char)
     return expired
 
 
@@ -154,7 +128,7 @@ async def process_edge(db: AsyncSession, enc: Encounter, combatant: Combatant,
             undo.decremented.append({"effect_id": eff.id, "prev_count": eff.expiry_count})
             eff.expiry_count -= 1
         else:
-            expired.append(await _expire_effect(db, eff, undo))
+            expired.append(await expire_effect(db, eff, "Durata scaduta: {label}", undo.expired))
 
     if char is not None and edge == "start":
         entry, ended = _tick_concentration(db, char)
@@ -162,6 +136,8 @@ async def process_edge(db: AsyncSession, enc: Encounter, combatant: Combatant,
             undo.concentration = entry
         if ended:
             expired.append("Concentrazione")
+            expired += await release_concentration_effects(
+                db, char, entry["released_effects"])
 
     saves = (await db.execute(select(ConditionEffect).where(
         on_x, ConditionEffect.save_edge == edge, ConditionEffect.save_ability.is_not(None),
