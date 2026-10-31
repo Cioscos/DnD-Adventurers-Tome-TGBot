@@ -285,6 +285,18 @@ export const api = {
     delete: (id: number) =>
       request<void>(`/characters/${id}`, { method: 'DELETE' }),
 
+    // Export / import / duplicate
+    export: (id: number) => request<unknown>(`/characters/${id}/export`),
+    exportSend: (id: number) =>
+      request<{ ok: boolean }>(`/characters/${id}/export/send`, { method: 'POST' }),
+    import: (file: File) => {
+      const fd = new FormData()
+      fd.append('file', file)
+      return requestFormData<CharacterFull>('/characters/import', fd)
+    },
+    duplicate: (id: number) =>
+      request<CharacterFull>(`/characters/${id}/duplicate`, { method: 'POST' }),
+
     // HP
     updateHp: (
       id: number,

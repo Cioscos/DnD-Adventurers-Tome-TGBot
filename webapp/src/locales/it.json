@@ -137,7 +137,9 @@
       "unconscious_badge": "Incosciente",
       "dead_badge": "Morto",
       "unconfigured_badge": "Da configurare",
-      "delete_failed": "Eliminazione non riuscita. Riprova."
+      "delete_failed": "Eliminazione non riuscita. Riprova.",
+      "import": "Importa",
+      "import_failed": "Importazione non riuscita."
     },
     "menu": {
       "hp": "Punti Ferita",
@@ -1050,6 +1052,20 @@
       "history_retention_total": "Cronologia attuale: {{n}} voci.",
       "history_retention_preview_events": "Ultimi {{keep}} eventi: perderai {{n}} voci più vecchie ora.",
       "history_retention_preview_days": "Ultimi {{days}} giorni: perderai {{n}} voci precedenti.",
+      "transfer": {
+        "title": "Esporta e copia",
+        "export": "Esporta",
+        "export_hint": "Salva la scheda come file JSON o inviala in chat.",
+        "duplicate": "Duplica",
+        "duplicate_hint": "Crea una copia di questo personaggio.",
+        "duplicate_failed": "Duplicazione non riuscita. Riprova.",
+        "send": "Invia in chat Telegram",
+        "download": "Scarica file",
+        "download_only": "Invio in chat non disponibile: puoi solo scaricare il file.",
+        "sent": "File inviato in chat.",
+        "send_failed": "Invio non riuscito. Riprova.",
+        "export_failed": "Esportazione non riuscita. Riprova."
+      },
       "danger_zone": "Zona pericolosa",
       "delete_character": "Elimina personaggio",
       "reset_settings": "Reimposta impostazioni",

@@ -2,12 +2,12 @@ import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Settings2, Languages, RefreshCw, Eye, Sun, History, Coins, Trash2, BookmarkCheck, Bell } from 'lucide-react'
+import { Settings2, Languages, RefreshCw, Eye, Sun, History, Coins, Trash2, BookmarkCheck, Bell, Download, Send, Copy, Share2 } from 'lucide-react'
 import {
   GiSparkles as Sparkles, GiCutDiamond as Gem,
   GiPerspectiveDiceSixFacesRandom as Dices,
 } from 'react-icons/gi'
-import { api } from '@/api/client'
+import { api, ApiError } from '@/api/client'
 import type { CharacterSummary } from '@/types'
 import Layout from '@/components/Layout'
 import GenericPageSkeleton from '@/components/skeletons/GenericPageSkeleton'
@@ -18,6 +18,7 @@ import Input from '@/components/ui/Input'
 import SectionDivider from '@/components/ui/SectionDivider'
 import SwitchToggle from '@/components/ui/SwitchToggle'
 import ConfirmSheet from '@/components/ui/ConfirmSheet'
+import Sheet from '@/components/ui/Sheet'
 import { FlagIT, FlagEN } from '@/components/ui/Flags'
 import { haptic } from '@/auth/telegram'
 import { useToast } from '@/hooks/useToast'
@@ -189,6 +190,46 @@ export default function Settings() {
       haptic.error()
       toast.error(t('character.select.delete_failed'))
     },
+  })
+
+  const [showExport, setShowExport] = useState(false)
+  // Dopo un 503 (bot non configurato) resta solo il download.
+  const [sendUnavailable, setSendUnavailable] = useState(false)
+
+  const sendMutation = useMutation({
+    mutationFn: () => api.characters.exportSend(charId),
+    onSuccess: () => {
+      toast.success(t('character.settings.transfer.sent'))
+      setShowExport(false)
+    },
+    onError: (e) => {
+      if (e instanceof ApiError && e.status === 503) setSendUnavailable(true)
+      else toast.error(t('character.settings.transfer.send_failed'))
+    },
+  })
+
+  const downloadMutation = useMutation({
+    mutationFn: async () => {
+      const data = await api.characters.export(charId)
+      const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }))
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${(char?.name ?? 'character').replace(/[^\w-]+/g, '_')}.json`
+      a.click()
+      URL.revokeObjectURL(url)
+    },
+    onSuccess: () => setShowExport(false),
+    onError: () => toast.error(t('character.settings.transfer.export_failed')),
+  })
+
+  const duplicateMutation = useMutation({
+    mutationFn: () => api.characters.duplicate(charId),
+    onSuccess: (copy) => {
+      qc.invalidateQueries({ queryKey: ['characters'] })
+      haptic.success()
+      navigate(`/char/${copy.id}`)
+    },
+    onError: () => toast.error(t('character.settings.transfer.duplicate_failed')),
   })
 
   if (!char) {
@@ -680,6 +721,73 @@ export default function Settings() {
           </Surface>
         </>
       )}
+
+      <SectionDivider icon={<Share2 size={11} />} align="center">
+        {t('character.settings.transfer.title')}
+      </SectionDivider>
+
+      <Surface variant="elevated" className="space-y-3">
+        <p className="text-xs text-dnd-text-muted font-body italic">
+          {t('character.settings.transfer.export_hint')}
+        </p>
+        <Button
+          variant="secondary"
+          size="md"
+          fullWidth
+          icon={<Download size={16} />}
+          onClick={() => { setSendUnavailable(false); setShowExport(true) }}
+        >
+          {t('character.settings.transfer.export')}
+        </Button>
+        <p className="text-xs text-dnd-text-muted font-body italic">
+          {t('character.settings.transfer.duplicate_hint')}
+        </p>
+        <Button
+          variant="secondary"
+          size="md"
+          fullWidth
+          icon={<Copy size={16} />}
+          loading={duplicateMutation.isPending}
+          onClick={() => duplicateMutation.mutate()}
+        >
+          {t('character.settings.transfer.duplicate')}
+        </Button>
+      </Surface>
+
+      <Sheet
+        open={showExport}
+        onClose={() => setShowExport(false)}
+        title={t('character.settings.transfer.export')}
+      >
+        <div className="p-5 space-y-3">
+          {sendUnavailable ? (
+            <p className="text-sm text-dnd-text-muted font-body italic">
+              {t('character.settings.transfer.download_only')}
+            </p>
+          ) : (
+            <Button
+              variant="primary"
+              size="md"
+              fullWidth
+              icon={<Send size={16} />}
+              loading={sendMutation.isPending}
+              onClick={() => sendMutation.mutate()}
+            >
+              {t('character.settings.transfer.send')}
+            </Button>
+          )}
+          <Button
+            variant="secondary"
+            size="md"
+            fullWidth
+            icon={<Download size={16} />}
+            loading={downloadMutation.isPending}
+            onClick={() => downloadMutation.mutate()}
+          >
+            {t('character.settings.transfer.download')}
+          </Button>
+        </div>
+      </Sheet>
 
       {/* Reset all character settings */}
       <Button

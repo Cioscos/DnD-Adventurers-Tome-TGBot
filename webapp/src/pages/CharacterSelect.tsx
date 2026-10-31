@@ -1,14 +1,14 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
-import { Plus, Pencil, SkipForward, ScrollText } from 'lucide-react'
+import { Plus, Pencil, SkipForward, ScrollText, Upload } from 'lucide-react'
 import {
   GiSparkles as Sparkles, GiCheckedShield as Shield, GiHeartPlus as Heart,
   GiCrossedSwords as Swords,
 } from 'react-icons/gi'
-import { api } from '@/api/client'
+import { api, ApiError } from '@/api/client'
 import { cardStatus, effectiveAc, effectiveHpMax } from '@/lib/characterStatus'
 import HPGauge from '@/components/ui/HPGauge'
 import OfflineNotice from '@/components/ui/OfflineNotice'
@@ -128,6 +128,20 @@ export default function CharacterSelect() {
     },
     onError: () => {
       toast.error(t('character.create.create_failed'))
+    },
+  })
+
+  const fileRef = useRef<HTMLInputElement>(null)
+  const importMutation = useMutation({
+    mutationFn: (file: File) => api.characters.import(file),
+    onSuccess: (char) => {
+      qc.invalidateQueries({ queryKey: ['characters'] })
+      haptic.success()
+      navigate(`/char/${char.id}`)
+    },
+    onError: (e) => {
+      // 413/422: il server spiega il motivo; per un 422 strutturato (lista) basta il messaggio generico.
+      toast.error(e instanceof ApiError && typeof e.detail === 'string' ? e.detail : t('character.select.import_failed'))
     },
   })
 
@@ -345,6 +359,28 @@ export default function CharacterSelect() {
           haptic="medium"
         >
           {t('character.select.new')}
+        </Button>
+
+        <input
+          ref={fileRef}
+          type="file"
+          accept=".json,application/json"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0]
+            e.target.value = ''
+            if (file) importMutation.mutate(file)
+          }}
+        />
+        <Button
+          variant="secondary"
+          size="md"
+          fullWidth
+          icon={<Upload size={16} />}
+          loading={importMutation.isPending}
+          onClick={() => fileRef.current?.click()}
+        >
+          {t('character.select.import')}
         </Button>
 
         {/* Version footer — opens the in-app changelog / release notes. */}
