@@ -24,7 +24,9 @@ numerate (1..N) che corrisponde alla mappatura UV di un dado specifico.
 ## Installazione del pack
 
 1. Crea cartella `webapp/public/dice-packs/<pack_id>/`.
-2. Copia i PNG generati lì.
+2. Converti i PNG generati in WebP e copiali lì (un pack PNG pesa ~22 MB e su
+   mobile non fa in tempo a caricarsi prima del tiro; in WebP ~3 MB):
+   `for f in *.png; do ffmpeg -i "$f" -c:v libwebp -quality 90 "${f%.png}.webp"; done`
 3. Crea `pack.json` (vedi schema in `webapp/src/dice/packs/manifest.ts`).
 4. Aggiungi `<pack_id>` a `BUNDLED_PACKS` in `webapp/src/dice/packs/registry.ts`.
 5. Esegui `npm run build:prod` per inserirli nel bundle prod.

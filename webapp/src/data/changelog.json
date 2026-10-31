@@ -1,6 +1,30 @@
 {
   "entries": [
     {
+      "version": "2.24.3",
+      "date": "2026-10-31",
+      "title": {
+        "it": "Dadi personalizzati più leggeri",
+        "en": "Lighter custom dice"
+      },
+      "added": {
+        "it": [],
+        "en": []
+      },
+      "improved": {
+        "it": [],
+        "en": []
+      },
+      "fixed": {
+        "it": [
+          "I pack di dadi personalizzati (Hell Dice, Poison Dice) si caricano anche sul telefono: le texture pesano 7 volte meno, così arrivano prima del tiro invece di lasciare i dadi standard."
+        ],
+        "en": [
+          "Custom dice packs (Hell Dice, Poison Dice) now load on phones too: textures are 7× smaller, so they arrive before the roll instead of leaving the standard dice."
+        ]
+      }
+    },
+    {
       "version": "2.24.2",
       "date": "2026-10-31",
       "title": { "it": "Tasti più facili da premere", "en": "Easier-to-tap buttons" },
