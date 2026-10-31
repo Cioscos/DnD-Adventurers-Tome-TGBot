@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from tests.integration._encounter_helpers import GM_ID, PLAYER_ID, as_user, seed_session
-from tests.integration.test_encounters_turns import setup_full_encounter
+from tests.integration._encounter_helpers import setup_full_encounter
 
 
 async def test_turn_state_not_in_session(client, test_session_factory):

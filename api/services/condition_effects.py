@@ -6,7 +6,7 @@ constraint: guaranteed here via ``Target``).
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from typing import Iterable, Literal
 
@@ -33,6 +33,35 @@ class SaveSpec:
     ability: str
     dc: int
     edge: Literal["start", "end"]
+
+
+@dataclass
+class UndoLog:
+    """What one forward turn advance changed, stored on ``Encounter.last_advance_undo``.
+
+    ``decremented`` holds only effects that survived; expired ones are in ``expired``
+    (snapshot taken before the decrement, so recreating it restores the prior count).
+    """
+    from_combatant_id: int | None = None
+    to_combatant_id: int | None = None
+    round_before: int | None = None
+    decremented: list[dict] = field(default_factory=list)  # {effect_id, prev_count}
+    expired: list[dict] = field(default_factory=list)  # {target, slug, prev_value, effect_snapshot}
+    created_saves: list[int] = field(default_factory=list)
+    skip_cleared: list[int] = field(default_factory=list)  # effect ids whose save_skip_once was consumed
+    # {char_id, prev_rounds, prev_spell_id, prev_item_spell, released_effects: [snapshot]}
+    concentration: dict | None = None
+
+    def to_json(self) -> dict:
+        return asdict(self)
+
+    @classmethod
+    def from_json(cls, data: dict) -> "UndoLog":
+        return cls(**data)
+
+
+def effect_snapshot(effect: ConditionEffect) -> dict:
+    return {c.name: getattr(effect, c.name) for c in ConditionEffect.__table__.columns}
 
 
 def _target_filter(target: Target):

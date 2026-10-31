@@ -5,7 +5,7 @@ from api.services.condition_effects import ExpirySpec, effects_for_character, up
 from core.db.models import Character
 from tests.integration._encounter_helpers import GM_ID, PLAYER_ID, as_user
 from tests.integration._telegram_stub import install_fake_telegram
-from tests.integration.test_encounters_turns import setup_full_encounter
+from tests.integration._encounter_helpers import setup_full_encounter
 
 
 async def _char(client) -> int:

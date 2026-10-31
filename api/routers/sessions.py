@@ -247,18 +247,9 @@ async def my_active_session(
     return await _find_active_session_for_user(user_id, db)
 
 
-@character_turn_router.get("/{character_id}/turn-state", response_model=TurnState)
-async def character_turn_state(
-    character_id: int,
-    user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
-) -> TurnState:
-    char = await db.get(Character, character_id)
-    if char is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Character not found")
-    if char.user_id != user_id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
-    row = (
+async def active_encounter_row(db: AsyncSession, character_id: int):
+    """(Encounter, combatant_id) of the PC's active encounter in an active session, or None."""
+    return (
         await db.execute(
             select(Encounter, Combatant.id)
             .join(Combatant, Combatant.encounter_id == Encounter.id)
@@ -271,6 +262,20 @@ async def character_turn_state(
             .limit(1)
         )
     ).first()
+
+
+@character_turn_router.get("/{character_id}/turn-state", response_model=TurnState)
+async def character_turn_state(
+    character_id: int,
+    user_id: Annotated[int, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> TurnState:
+    char = await db.get(Character, character_id)
+    if char is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Character not found")
+    if char.user_id != user_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+    row = await active_encounter_row(db, character_id)
     if row is None:
         return TurnState(in_encounter=False, is_my_turn=False)
     enc, combatant_id = row

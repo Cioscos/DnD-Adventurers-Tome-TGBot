@@ -32,17 +32,21 @@ from api.schemas.encounter import (
 from api.services import telegram_notify
 from api.services.homebrew.passive import get_passive_modifiers
 from api.services.d20 import resolve_body
-from api.services.durations import tick_rounds
+from api.services.condition_effects import UndoLog
+from api.services.durations import process_edge
 from api.services.encounter_view import build_encounter_block
 from core.db.models import (
     Character,
     Combatant,
+    ConditionEffect,
     Encounter,
     GameSession,
+    PendingSave,
     SessionMessage,
     SessionRole,
     SessionStatus,
 )
+from core.data.labels import ability_label, condition_label
 from core.game.stats import effective_ability_score
 
 logger = logging.getLogger(__name__)
@@ -212,6 +216,24 @@ async def _notify_turn(enc: Encounter, combatant: Combatant) -> None:
         button=("Apri la sessione",
                 telegram_notify.miniapp_url(f"/session/{enc.session_id}")),
     )
+
+
+async def _notify_saves(db: AsyncSession, save_ids: list[int]) -> None:
+    """Best-effort ping to the PC owner for each repeated save just created."""
+    for save_id in save_ids:
+        ps = await db.get(PendingSave, save_id)
+        if ps is None or ps.character_id is None:
+            continue  # monster saves only show up to the GM
+        char = await db.get(Character, ps.character_id)
+        if char is None or not telegram_notify.notifications_enabled(char, "gm_events"):
+            continue
+        eff = await db.get(ConditionEffect, ps.effect_id)
+        await telegram_notify.send_telegram_message(
+            char.user_id,
+            f"🎲 Tiro salvezza: {ability_label(ps.ability)} CD {ps.dc} "
+            f"per liberarti da {condition_label(eff.slug)}",
+            button=("Apri la scheda", telegram_notify.miniapp_url(f"/char/{char.id}")),
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -427,13 +449,20 @@ async def _turn_endpoint(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail={"code": "not_your_turn"},
             )
+    from_id, round_before = enc.active_combatant_id, enc.round
     moved = _advance_turn(enc, list(enc.combatants), backward=backward)
     _touch(session)
     await db.flush()
-    if not backward and moved is not None and moved.kind == "pc" and moved.character_id:
-        pc = await db.get(Character, moved.character_id)
-        if pc is not None:
-            await tick_rounds(db, pc)
+    if not backward and moved is not None:
+        undo = UndoLog(from_combatant_id=from_id, to_combatant_id=moved.id,
+                       round_before=round_before)
+        outgoing = next((c for c in enc.combatants if c.id == from_id), None)
+        if outgoing is not None:
+            await process_edge(db, enc, outgoing, "end", undo)
+        await process_edge(db, enc, moved, "start", undo)
+        enc.last_advance_undo = undo.to_json()
+        await db.flush()
+        await _notify_saves(db, undo.created_saves)
     if moved is not None:
         await _notify_turn(enc, moved)
     return build_encounter_block(enc, viewer_is_gm=is_gm)

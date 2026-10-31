@@ -1,38 +1,10 @@
 """start / next-turn / prev-turn / end + notifica bot (routers/encounters.py)."""
 from __future__ import annotations
 
-from tests.integration._encounter_helpers import GM_ID, PLAYER_ID, as_user, seed_session
+from tests.integration._encounter_helpers import (
+    GM_ID, PLAYER_ID, as_user, seed_session, setup_full_encounter,
+)
 from tests.integration._telegram_stub import install_fake_telegram
-
-
-async def setup_full_encounter(client, test_session_factory) -> tuple[int, dict]:
-    """Sessione + incontro full con PG (DEX 16) e 2 goblin; iniziative note.
-
-    PG: die 14 + 3 = 17 -> primo. Goblin 1: die 10 + 2 = 12. Goblin 2: die 4 + 2 = 6.
-    Ritorna (session_id, encounter_json_dopo_le_iniziative).
-    """
-    sid, _ = await seed_session(test_session_factory)
-    r = await client.post(f"/sessions/{sid}/encounter", json={"mode": "full"})
-    assert r.status_code == 201, r.text
-    r = await client.post(
-        f"/sessions/{sid}/encounter/combatants",
-        json={"name": "Goblin", "count": 2, "initiative_mod": 2, "max_hp": 7, "ac": 15},
-    )
-    enc = r.json()
-    pc = next(c for c in enc["combatants"] if c["kind"] == "pc")
-    g1, g2 = [c for c in enc["combatants"] if c["kind"] == "monster"]
-    as_user(PLAYER_ID)
-    await client.post(
-        f"/sessions/{sid}/encounter/combatants/{pc['id']}/initiative", json={"die": 14},
-    )
-    as_user(GM_ID)
-    await client.post(
-        f"/sessions/{sid}/encounter/combatants/{g1['id']}/initiative", json={"die": 10},
-    )
-    r = await client.post(
-        f"/sessions/{sid}/encounter/combatants/{g2['id']}/initiative", json={"die": 4},
-    )
-    return sid, r.json()
 
 
 # ---------------------------------------------------------------------------

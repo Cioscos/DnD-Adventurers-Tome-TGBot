@@ -44,6 +44,7 @@ from api.schemas.character import (
 )
 from api.schemas.common import D20RollSubmission, RollResult
 from api.routers.classes import create_class_for_character
+from api.routers.sessions import active_encounter_row
 from core.game.item_bonuses import item_bonus_total
 from api.routers._helpers import effective_ability_mod, effective_con_mod, prune_history, saving_throw_bonus
 from api.services import telegram_notify
@@ -462,6 +463,9 @@ async def tick_round(
     session: Annotated[AsyncSession, Depends(get_db)],
 ) -> CharacterFull:
     char = await _get_owned(char_id, user_id, session, full=True)
+    if await active_encounter_row(session, char_id) is not None:
+        # In combat the turn edges drive durations: a manual tick would double-count.
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail={"code": "in_encounter"})
     expired = await tick_rounds(session, char)
     await prune_history(session, char)
     char = await _refresh_char_full(session, char_id, user_id)
