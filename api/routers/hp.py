@@ -24,7 +24,7 @@ from api.services.wild_shape import absorb_damage, get_active_form
 from api.services.telegram_notify import notify_party_emergency
 from api.services.homebrew.dispatcher import dispatch
 from api.services.homebrew.passive import get_passive_modifiers
-from core.db.models import Character, CharacterHistory
+from core.db.models import Character, CharacterHistory, Companion
 from api.schemas.character import CharacterFull
 from api.schemas.common import (
     D20RollSubmission,
@@ -109,9 +109,13 @@ async def _get_owned_full(
     return char
 
 
-def _hp_state(char: Character) -> dict:
-    """Campi toccati da un'operazione PF, per lo snapshot di annullamento."""
+def _hp_state(char: Character, form=None) -> dict:
+    """Campi toccati da un'operazione PF (forma selvatica inclusa), per lo snapshot di annullamento."""
     return {
+        "form": None if form is None else {
+            "form_id": form.id, "current_hp": form.current_hp,
+            "temp_hp": form.temp_hp, "is_active": form.is_active,
+        },
         "current_hit_points": char.current_hit_points,
         "hit_points": char.hit_points,
         "temp_hp": char.temp_hp,
@@ -136,7 +140,8 @@ async def update_hp(
     # Da morto ogni operazione PF è inerte (solo /revive riporta in vita).
     if char.is_dead:
         return await build_character_response(session, char)
-    before = _hp_state(char)
+    form = await get_active_form(session, char.id)  # the form involved in this op, if any
+    before = _hp_state(char, form)
     conc_result: ConcentrationSaveResult | None = None
     notifications: list[dict] = []
 
@@ -160,10 +165,12 @@ async def update_hp(
         # through the normal path below (temp HP, death rules, one concentration save).
         conc_damage = applied
         form_absorbed = False
-        form = await get_active_form(session, char.id)
+        pre_form = applied
+        form_overflow = 0
         if form is not None and applied > 0:
             overflow = absorb_damage(form, applied)
             if overflow > 0:
+                form_overflow = overflow
                 form.is_active = False
                 _add_history(session, char.id, "companion_hp",
                              f"Forma selvatica terminata: {form.name} (danno in eccesso {overflow})")
@@ -183,14 +190,16 @@ async def update_hp(
         char.current_hit_points = max(0, char.current_hit_points - amount)
         if slug is not None and mod in ("half", "double", "immune"):
             word = {"half": "resistenza", "double": "vulnerabilità", "immune": "immunità"}[mod]
-            desc = (f"Danno {raw} {LABELS_IT[slug]} → {applied} ({word}) "
+            desc = (f"Danno {raw} {LABELS_IT[slug]} → {pre_form} ({word}) "
                     f"({old} → {char.current_hit_points})")
         else:
             note = ""
             if body.raw_value is not None and mod in ("half", "double"):
                 word = "dimezzati" if mod == "half" else "raddoppiati"
                 note = f" ({body.raw_value} {word})"
-            desc = f"Danni: -{applied} HP{note} ({old} → {char.current_hit_points})"
+            desc = f"Danni: -{pre_form} HP{note} ({old} → {char.current_hit_points})"
+        if form_overflow:
+            desc += f" — forma assorbe {pre_form - form_overflow}, eccesso {form_overflow}"
         if not form_absorbed:
             _add_history(session, char.id, "hp_change", desc, meta={"op": "DAMAGE"})
 
@@ -280,7 +289,6 @@ async def update_hp(
         # Shared applier (see api/services/effects.py). The bottom-of-function
         # death-save reset block stays as an idempotent no-op: apply_heal already
         # zeroed the saves, so its guard finds nothing to reset and won't double-log.
-        form = await get_active_form(session, char.id)
         if form is not None:  # while transformed, healing goes to the form
             form.current_hp = min(form.max_hp, form.current_hp + body.value)
             _add_history(session, char.id, "companion_hp",
@@ -304,6 +312,10 @@ async def update_hp(
         _add_history(session, char.id, "hp_change",
                      f"HP correnti impostati: {old} → {char.current_hit_points}",
                      meta={"op": "SET_CURRENT"})
+        if char.current_hit_points == 0 and form is not None and form.is_active:
+            form.is_active = False
+            _add_history(session, char.id, "companion_hp",
+                         f"Forma selvatica terminata: {form.name} (PF a 0)")
 
     elif body.op == HPOp.SET_TEMP:
         char.temp_hp = max(0, body.value)
@@ -318,7 +330,7 @@ async def update_hp(
 
     # Nuovo dict (non mutazione in place): la colonna JSON non è tracciata.
     op_id = uuid.uuid4().hex
-    char.hp_undo = {"op_id": op_id, "before": before, "after": _hp_state(char)}
+    char.hp_undo = {"op_id": op_id, "before": before, "after": _hp_state(char, form)}
 
     result = await build_character_response(session, char)
     result.hp_undo_id = op_id
@@ -339,14 +351,23 @@ async def undo_hp(
     """Annulla l'ultima operazione PF, solo se nulla è cambiato dopo di essa."""
     char = await _get_owned_full(char_id, user_id, session)
     snap = char.hp_undo
+    form = None
+    if snap and (snap.get("after") or {}).get("form"):
+        form = (await session.execute(select(Companion).where(
+            Companion.id == snap["after"]["form"]["form_id"], Companion.character_id == char.id,
+        ))).scalar_one_or_none()
     if (
         not snap
         or snap.get("op_id") != body.op_id
-        or _hp_state(char) != snap.get("after")
+        or _hp_state(char, form) != snap.get("after")
     ):
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="hp_undo_not_applicable")
 
     before = snap["before"]
+    if before.get("form"):
+        form.current_hp = before["form"]["current_hp"]
+        form.temp_hp = before["form"]["temp_hp"]
+        form.is_active = before["form"]["is_active"]
     old = char.current_hit_points
     char.current_hit_points = before["current_hit_points"]
     char.hit_points = before["hit_points"]

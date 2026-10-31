@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from core.db.models import Ability
-from tests.integration.test_hp_undo import _force_d20, _hp, _make_char, _start_concentration
+from tests.integration.test_hp_undo import _force_d20, _hp, _make_char, _start_concentration, _undo
 
 STATBLOCK = {"size": "Medium", "type": "beast", "actions": []}
 
@@ -125,3 +125,42 @@ async def test_massive_damage_overflow_uses_overflow_only(client):
     # 45 total >= 20 max would be instant death; overflow is only 15
     body = await _hp(client, cid, "damage", 45)
     assert body["is_dead"] is False and body["current_hit_points"] == 5
+
+
+async def test_undo_restores_form_hp_when_absorbed(client):
+    cid = await _make_char(client, 20)
+    f = await _form(client, cid, hp=10)
+    await _activate(client, cid, f["id"])
+    body = await _hp(client, cid, "damage", 6)
+    assert body["active_form"]["current_hp"] == 4
+    r = await _undo(client, cid, body["hp_undo_id"])
+    assert r.status_code == 200, r.text
+    assert r.json()["active_form"]["current_hp"] == 10 and r.json()["current_hit_points"] == 20
+
+
+async def test_undo_overflow_reactivates_form(client):
+    cid = await _make_char(client, 20)
+    f = await _form(client, cid, hp=5)
+    await _activate(client, cid, f["id"])
+    await _hp(client, cid, "damage", 2)  # form at 3
+    body = await _hp(client, cid, "damage", 10)  # form 3, overflow 7
+    assert body["active_form"] is None and body["current_hit_points"] == 13
+    r = await _undo(client, cid, body["hp_undo_id"])
+    assert r.status_code == 200, r.text
+    assert r.json()["current_hit_points"] == 20
+    assert r.json()["active_form"]["current_hp"] == 3
+
+
+async def test_activate_blocked_when_character_down(client):
+    cid = await _make_char(client, 20, current=0)
+    f = await _form(client, cid)
+    r = await _activate(client, cid, f["id"])
+    assert r.status_code == 409 and r.json()["detail"] == "character_down"
+
+
+async def test_set_current_zero_ends_form(client):
+    cid = await _make_char(client, 20)
+    f = await _form(client, cid)
+    await _activate(client, cid, f["id"])
+    body = await _hp(client, cid, "set_current", 0)
+    assert body["active_form"] is None

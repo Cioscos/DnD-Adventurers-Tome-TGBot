@@ -17,7 +17,7 @@ from api.schemas.companion import (
 )
 from api.services.d20 import d20_history_label, d20_records, resolve_d20
 from api.services.dice_stats import record_dice
-from core.db.models import Ability, Character,CharacterHistory, Companion
+from core.db.models import Ability, Character, CharacterHistory, Companion
 
 router = APIRouter(prefix="/characters", tags=["companions"])
 
@@ -132,12 +132,14 @@ async def activate_wild_shape(
     session: Annotated[AsyncSession, Depends(get_db)],
     body: Annotated[CompanionActivate | None, Body()] = None,
 ) -> Companion:
-    await _get_char(session, char_id, user_id)
+    char = await _get_char(session, char_id, user_id)
     comp = await _get_companion(session, char_id, comp_id)
     if comp.kind != "wild_shape":
         raise HTTPException(status_code=422, detail="active_only_wild_shape")
     if comp.is_active:
         return comp
+    if char.is_dead or char.current_hit_points == 0:
+        raise HTTPException(status_code=409, detail="character_down")
     ability = (await session.execute(
         select(Ability).where(Ability.character_id == char_id, Ability.feature_key == "druid.wild_shape")
     )).scalars().first()
@@ -148,6 +150,7 @@ async def activate_wild_shape(
             raise HTTPException(status_code=409, detail="no_wild_shape_uses")
     comp.is_active = True
     comp.current_hp = comp.max_hp  # each transformation starts at full HP
+    comp.temp_hp = 0
     await _deactivate_others(session, char_id, comp.id)
     _history(session, char_id, "companion_hp", f"Forma selvatica: {comp.name}")
     return comp
