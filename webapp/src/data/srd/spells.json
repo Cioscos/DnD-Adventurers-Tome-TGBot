@@ -9228,7 +9228,7 @@
    "save_ability": null,
    "damage_dice": "3d4+3",
    "damage_type": "force",
-   "higher_levels_dice": null,
+   "higher_levels_dice": "1d4+1",
    "classes": [
     "sorcerer",
     "wizard"

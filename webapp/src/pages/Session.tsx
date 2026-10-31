@@ -48,7 +48,7 @@ export default function Session() {
 
   if (isLoading) {
     return (
-      <Layout title={t('session.title')} backTo="/">
+      <Layout help="session" title={t('session.title')} backTo="/">
         <Skeleton.Rect height="120px" />
         <Skeleton.Rect height="120px" delay={100} />
       </Layout>
@@ -62,7 +62,7 @@ export default function Session() {
     // deriva il ruolo del viewer dal proprio user_id, non dalla lista GM.
     const myRole = getMyRole(active, meInfo?.user_id)
     return (
-      <Layout title={t('session.title')} backTo="/">
+      <Layout help="session" title={t('session.title')} backTo="/">
         <Surface variant="sigil" ornamented>
           <FancyHeader
             title={t('session.active_session_banner')}
@@ -95,7 +95,7 @@ export default function Session() {
   const hasCharacters = characters.length > 0
 
   return (
-    <Layout title={t('session.title')} backTo="/">
+    <Layout help="session" title={t('session.title')} backTo="/">
       <FancyHeader title={t('session.title')} subtitle={t('session.landing_subtitle')} />
 
       <Reveal.Stagger className="space-y-3">

@@ -1,6 +1,100 @@
 {
   "entries": [
     {
+      "version": "2.26.0",
+      "date": "2026-10-31",
+      "title": {
+        "it": "Condizioni che seguono i turni",
+        "en": "Conditions that follow the turns"
+      },
+      "added": {
+        "it": [
+          "Il GM applica le condizioni dalla stanza della sessione, con durata, tiro salvezza ripetuto, fonte e legame alla concentrazione. Può anche toglierle.",
+          "Una condizione può finire all'inizio o alla fine del turno di un combattente. L'incontro la fa scadere da solo.",
+          "Tiri salvezza in sospeso: una fascia in alto resta visibile finché non tiri, e diventa rossa nel tuo turno. Scegli Normale, Vantaggio o Svantaggio con un tocco. Se fallisci, puoi ritirare con l'Ispirazione.",
+          "Le condizioni legate alla concentrazione di un incantatore finiscono quando la concentrazione finisce, anche se l'incantesimo viene eliminato.",
+          "Il GM segna Superato o Fallito sui tiri salvezza dei mostri. Un pallino ambra indica i PG con un tiro salvezza in sospeso."
+        ],
+        "en": [
+          "The GM applies conditions from the session room, with duration, repeated saving throw, source and concentration link. The GM can also remove them.",
+          "A condition can end at the start or the end of a combatant's turn. The encounter expires it automatically.",
+          "Pending saving throws: a bar at the top stays visible until you roll, and turns red on your turn. Pick Normal, Advantage or Disadvantage with one tap. If you fail, you can re-roll with Inspiration.",
+          "Conditions tied to a caster's concentration end when the concentration ends, also when the spell is deleted.",
+          "The GM marks monster saving throws as Passed or Failed. An amber dot shows the PCs with a pending saving throw."
+        ]
+      },
+      "improved": {
+        "it": [
+          "Condizioni e Turno mostrano quando finisce ogni condizione e il suo tiro salvezza.",
+          "Il turno indietro del GM annulla anche le scadenze e i tiri salvezza dell'ultimo avanzamento.",
+          "Le guide di Condizioni, Turno e Stanza della sessione spiegano le nuove funzioni."
+        ],
+        "en": [
+          "Conditions and Turn show when each condition ends and its saving throw.",
+          "The GM's previous turn also undoes the expiries and saving throws of the last advance.",
+          "The Conditions, Turn and Session room guides explain the new features."
+        ]
+      },
+      "fixed": {
+        "it": [
+          "In incontro i round non scalano più due volte: \"Fine round\" è nascosto e i round scorrono a ogni tuo turno.",
+          "Le condizioni che il GM mette a un PG arrivano sulla sua scheda, con i loro effetti."
+        ],
+        "en": [
+          "In an encounter, rounds no longer advance twice: \"End of round\" is hidden and rounds advance on each of your turns.",
+          "Conditions the GM puts on a PC reach the character sheet, with their effects."
+        ]
+      }
+    },
+    {
+      "version": "2.25.0",
+      "date": "2026-10-31",
+      "title": {
+        "it": "Una guida in ogni pagina",
+        "en": "A guide on every page"
+      },
+      "added": {
+        "it": [
+          "Ogni pagina ha un pulsante \"?\" in alto. Toccalo per leggere la guida della pagina: cosa mostra e come usare ogni funzione."
+        ],
+        "en": [
+          "Every page has a \"?\" button at the top. Tap it to read the page guide: what the page shows and how to use each feature."
+        ]
+      },
+      "improved": {
+        "it": [
+          "Le abilità speciali chiedono conferma prima di essere eliminate.",
+          "Mappe: puoi riordinare i file anche dal telefono. Tieni premuta una miniatura, poi tocca la posizione di destinazione.",
+          "Note: i tag suggeriti seguono la lingua dell'app.",
+          "Lancio di un incantesimo: scelta dello slot e tiro dei danni stanno nello stesso pannello, con \"Indietro\" per cambiare slot. I dadi rotolano sopra il pannello senza chiuderlo.",
+          "Scelta dello slot: i pallini mostrano gli slot usati e liberi al posto di \"1/2\".",
+          "Il colpo critico viene solo dal tiro per colpire: niente più interruttore manuale nel tiro dei danni."
+        ],
+        "en": [
+          "Special abilities now ask for confirmation before deletion.",
+          "Maps: you can reorder files on your phone too. Hold a thumbnail, then tap the destination position.",
+          "Notes: suggested tags follow the app language.",
+          "Casting a spell: slot choice and damage roll share one panel, with \"Back\" to change slot. The dice roll over the panel without closing it.",
+          "Slot choice: dots show used and free slots instead of \"1/2\".",
+          "A critical hit comes only from the attack roll: no more manual switch in the damage roll."
+        ]
+      },
+      "fixed": {
+        "it": [
+          "Modificare una caratteristica con un bonus da oggetto non somma più il bonus due volte: la finestra parte dal valore base.",
+          "Turno: sul telefono \"Lancia\" apre di nuovo la scelta dello slot invece di chiuderla subito.",
+          "Gli sheet non si alzano più per un istante quando il contenuto cambia con un'animazione laterale.",
+          "Dardo incantato dal catalogo: con uno slot più alto aggiunge un dardo (1d4+1) per ogni livello in più."
+        ],
+        "en": [
+          "Editing an ability score with an item bonus no longer adds the bonus twice: the dialog starts from the base value.",
+          "Turn: on phones, \"Cast\" opens the slot picker again instead of closing it at once.",
+          "Sheets no longer jump up for a moment when their content changes with a side animation.",
+          "Magic Missile from the catalog: a higher slot adds one dart (1d4+1) for each extra level."
+        ]
+      }
+    },
+    {
       "version": "2.24.3",
       "date": "2026-10-31",
       "title": {

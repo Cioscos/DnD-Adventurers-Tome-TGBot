@@ -242,7 +242,7 @@ export default function Settings() {
 
   if (!char) {
     return (
-      <Layout title={t('character.settings.title')} backTo={`/char/${charId}`}>
+      <Layout help="settings" title={t('character.settings.title')} backTo={`/char/${charId}`}>
         <GenericPageSkeleton />
       </Layout>
     )
@@ -289,7 +289,7 @@ export default function Settings() {
   }
 
   return (
-    <Layout title={t('character.settings.title')} backTo={`/char/${charId}`}>
+    <Layout help="settings" title={t('character.settings.title')} backTo={`/char/${charId}`}>
       <SectionDivider icon={<Settings2 size={11} />} align="center">
         {t('character.settings.preferences')}
       </SectionDivider>

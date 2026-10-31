@@ -1,10 +1,11 @@
 """Durate in round per condizioni e concentrazione + tick sui turni."""
 from __future__ import annotations
 
+from api.services.condition_effects import ExpirySpec, effects_for_character, upsert_effect
 from core.db.models import Character
 from tests.integration._encounter_helpers import GM_ID, PLAYER_ID, as_user
 from tests.integration._telegram_stub import install_fake_telegram
-from tests.integration.test_encounters_turns import setup_full_encounter
+from tests.integration._encounter_helpers import setup_full_encounter
 
 
 async def _char(client) -> int:
@@ -13,22 +14,26 @@ async def _char(client) -> int:
     return r.json()["id"]
 
 
+def _counts(r) -> dict:
+    return {e["slug"]: e["expiry_count"] for e in r.json()["condition_effects"]}
+
+
 async def test_condition_duration_set_and_ticks_to_removal(client):
     cid = await _char(client)
     r = await client.patch(
         f"/characters/{cid}/conditions",
         json={"conditions": {"poisoned": True}, "durations": {"poisoned": 2}},
     )
-    assert r.json()["settings"]["condition_durations"] == {"poisoned": 2}
+    assert _counts(r) == {"poisoned": 2}
     r = await client.post(f"/characters/{cid}/rounds/tick")
-    assert r.json()["settings"]["condition_durations"] == {"poisoned": 1}
+    assert _counts(r) == {"poisoned": 1}
     assert r.json()["conditions"]["poisoned"] is True
     assert r.json()["expired_effects"] == []
     r = await client.post(f"/characters/{cid}/rounds/tick")
     body = r.json()
     assert body["conditions"]["poisoned"] is False
     assert len(body["expired_effects"]) == 1
-    assert body["settings"]["condition_durations"] == {}
+    assert body["condition_effects"] == []
     hist = (await client.get(f"/characters/{cid}/history")).json()
     assert any("Durata scaduta" in h["description"] for h in hist)
 
@@ -87,7 +92,7 @@ async def test_clearing_condition_removes_duration(client):
         json={"conditions": {"poisoned": True}, "durations": {"poisoned": 5}},
     )
     r = await client.patch(f"/characters/{cid}/conditions", json={"conditions": {"poisoned": False}})
-    assert r.json()["settings"]["condition_durations"] == {}
+    assert r.json()["condition_effects"] == []
 
 
 async def test_rest_clears_concentration_duration(client):
@@ -124,14 +129,16 @@ async def _pc_setup(client, test_session_factory, monkeypatch):
         comb = await s.get(Combatant, pc["id"])
         cid = comb.character_id
         ch = await s.get(Character, cid)
-        ch.settings = {"condition_durations": {"poisoned": 3}, "quick_actions": ["a"]}
+        ch.settings = {"quick_actions": ["a"]}
+        await upsert_effect(s, ("character", cid), "poisoned",
+                            expiry=ExpirySpec("owner", "start", 3))
         await s.commit()
     return sid, cid
 
 
 async def _durs(test_session_factory, cid):
     async with test_session_factory() as s:
-        return (await s.get(Character, cid)).settings["condition_durations"]
+        return {e.slug: e.expiry_count for e in await effects_for_character(s, cid)}
 
 
 async def test_next_turn_ticks_only_new_active_pc(client, test_session_factory, monkeypatch):
@@ -157,8 +164,9 @@ async def test_malformed_durations_do_not_block_next_turn(client, test_session_f
     sid, cid = await _pc_setup(client, test_session_factory, monkeypatch)
     async with test_session_factory() as s:
         ch = await s.get(Character, cid)
-        ch.settings = {"condition_durations": {"poisoned": "x", "blinded": None, "deafened": 2},
-                       "concentration_rounds_left": "abc"}
+        ch.settings = {"concentration_rounds_left": "abc"}
+        await upsert_effect(s, ("character", cid), "deafened",
+                            expiry=ExpirySpec("owner", "start", 2))
         await s.commit()
     as_user(GM_ID)
     for _ in range(3):  # back to the PC -> tick runs on the malformed sheet
@@ -166,7 +174,7 @@ async def test_malformed_durations_do_not_block_next_turn(client, test_session_f
         assert r.status_code == 200, r.text
     async with test_session_factory() as s:
         settings = (await s.get(Character, cid)).settings
-    assert settings["condition_durations"] == {"deafened": 1}
+    assert await _durs(test_session_factory, cid) == {"poisoned": 2, "deafened": 1}
     assert "concentration_rounds_left" not in settings
 
 
@@ -183,5 +191,5 @@ async def test_patch_settings_keeps_server_owned_keys(client):
     }})
     s = r.json()["settings"]
     assert s["roll_notes"] == "x"
-    assert s["condition_durations"] == {}
+    assert "condition_durations" not in s
     assert "hp_rolls" not in s and "concentration_rounds_left" not in s

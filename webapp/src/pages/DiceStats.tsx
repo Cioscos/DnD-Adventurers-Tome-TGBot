@@ -111,6 +111,7 @@ export default function DiceStats() {
       backTo={`/char/${charId}/dice`}
       group="tools"
       page="dice"
+      help="dice_stats"
       offlineQuery={statsQuery}
     >
       {statsQuery.isError && data === undefined ? (

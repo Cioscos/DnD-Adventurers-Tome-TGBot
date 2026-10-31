@@ -100,7 +100,7 @@ export default function Changelog() {
   const { t } = useTranslation()
 
   return (
-    <Layout title={t('changelog.title')} backTo="/">
+    <Layout help="changelog" title={t('changelog.title')} backTo="/">
       {changelog.length === 0 ? (
         <EmptyState icon={<ScrollText size={32} />} title={t('changelog.empty')} />
       ) : (

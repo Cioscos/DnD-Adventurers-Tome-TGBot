@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import CombatantRow from '@/components/session/CombatantRow'
 import type { CharacterLiveSnapshot, CombatantLive } from '@/types'
 
@@ -73,5 +74,32 @@ describe('CombatantRow', () => {
       <CombatantRow combatant={monster({ is_dead: true })} isActive={false} amGm={false} mode="light" />,
     )
     expect(screen.getByTestId('combatant-row').dataset.dead).toBe('true')
+  })
+
+  it('PG con TS in sospeso: pallino ambra', () => {
+    render(
+      <CombatantRow
+        combatant={monster({ id: 2, kind: 'pc', character_id: 7, name: 'Eroe' })}
+        snapshot={{ ...pcSnapshot, has_pending_save: true }}
+        isActive={false} amGm={true} mode="full"
+      />,
+    )
+    expect(screen.getByLabelText('session.combat.pending_save')).toBeInTheDocument()
+  })
+
+  it('mostro con TS pendente: Superato invia passed=true senza aprire lo sheet', async () => {
+    const onResolveSave = vi.fn()
+    const onTap = vi.fn()
+    render(
+      <CombatantRow
+        combatant={monster({
+          pending_saves: [{ id: 5, slug: 'poisoned', ability: 'constitution', dc: 15, status: 'pending', created_at: '' }],
+        })}
+        isActive={false} amGm={true} mode="full" onTap={onTap} onResolveSave={onResolveSave}
+      />,
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'session.combat.save_passed' }))
+    expect(onResolveSave).toHaveBeenCalledWith(5, true)
+    expect(onTap).not.toHaveBeenCalled()
   })
 })

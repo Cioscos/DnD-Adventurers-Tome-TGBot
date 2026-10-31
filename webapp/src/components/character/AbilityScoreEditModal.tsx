@@ -13,15 +13,17 @@ interface Props {
   open: boolean
   /** Localized ability label, e.g. "Destrezza". */
   label: string
-  /** Current stored value. */
+  /** Current stored (base) value. */
   currentValue: number
+  /** Effective value with item bonuses; shown as a hint when it differs from the base. */
+  effectiveValue?: number
   saving?: boolean
   onClose: () => void
   onSave: (value: number) => void
 }
 
 export default function AbilityScoreEditModal({
-  open, label, currentValue, saving = false, onClose, onSave,
+  open, label, currentValue, effectiveValue, saving = false, onClose, onSave,
 }: Props) {
   const { t } = useTranslation()
   const [value, setValue] = useState<number>(currentValue)
@@ -70,6 +72,12 @@ export default function AbilityScoreEditModal({
             <Plus size={24} />
           </Pressable>
         </div>
+
+        {effectiveValue !== undefined && effectiveValue !== currentValue && (
+          <p className="text-xs text-center text-dnd-text-muted">
+            {t('character.stats.base_hint', { effective: effectiveValue })}
+          </p>
+        )}
 
         <Input
           value={String(Number.isFinite(value) ? value : '')}

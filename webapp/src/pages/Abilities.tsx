@@ -8,6 +8,7 @@ import { GiLightningTrio as Zap, GiSparkles as Sparkles } from 'react-icons/gi'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
 import Sheet from '@/components/ui/Sheet'
+import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import Button from '@/components/ui/Button'
 import ExpandChevron from '@/components/ui/ExpandChevron'
 import Pressable from '@/components/ui/Pressable'
@@ -83,6 +84,7 @@ export default function Abilities() {
   const [form, setForm] = useState<AddForm>(emptyForm)
   const [expanded, setExpanded] = useState<number | null>(null)
   const [confirmFeatId, setConfirmFeatId] = useState<number | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<Ability | null>(null)
   const [editingAbility, setEditingAbility] = useState<Ability | null>(null)
   const [wizardStep, setWizardStep] = useState<'basics' | 'details'>('basics')
   // Editor descrizione-only per le feature di classe (struttura bloccata: si può
@@ -201,6 +203,7 @@ export default function Abilities() {
   const deleteMutation = useMutation({
     mutationFn: (abilityId: number) => api.abilities.remove(charId, abilityId),
     onSuccess: () => {
+      setDeleteTarget(null)
       qc.invalidateQueries({ queryKey: ['character', charId] })
       haptic.success()
     },
@@ -505,8 +508,7 @@ export default function Abilities() {
                       <Button
                         variant="danger"
                         size="sm"
-                        onClick={() => deleteMutation.mutate(ab.id)}
-                        loading={deleteMutation.isPending && deleteMutation.variables === ab.id}
+                        onClick={() => setDeleteTarget(ab)}
                         icon={<Trash2 size={12} />}
                       >
                         {t('common.delete')}
@@ -846,6 +848,16 @@ export default function Abilities() {
             { onSuccess: () => setUsesEditAbility(null) },
           )
         }}
+      />
+      <ConfirmSheet
+        open={deleteTarget !== null}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+        title={t('common.confirm')}
+        body={deleteTarget ? t('character.abilities.delete_confirm', { name: deleteTarget.name }) : undefined}
+        confirmLabel={t('common.delete')}
+        cancelLabel={t('common.cancel')}
+        loading={deleteMutation.isPending}
       />
     </Layout>
   )

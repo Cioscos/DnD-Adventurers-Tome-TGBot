@@ -101,6 +101,13 @@ export default function CombatPanel({ live, sessionId, amGm, myUserId }: Props) 
     onError,
   })
 
+  const resolveSaveMutation = useMutation({
+    mutationFn: ({ saveId, passed }: { saveId: number; passed: boolean }) =>
+      api.sessions.encounter.resolveSave(sessionId, saveId, passed),
+    onSuccess: () => { haptic.light(); invalidate() },
+    onError,
+  })
+
   const endMutation = useMutation({
     mutationFn: () => api.sessions.encounter.end(sessionId),
     onSuccess: () => { haptic.warning(); invalidate() },
@@ -153,6 +160,8 @@ export default function CombatPanel({ live, sessionId, amGm, myUserId }: Props) 
       amGm={amGm}
       mode={enc.mode}
       onTap={amGm ? () => setSheetTarget(c) : undefined}
+      onResolveSave={amGm ? (saveId, passed) => resolveSaveMutation.mutate({ saveId, passed }) : undefined}
+      resolvingSaveId={resolveSaveMutation.isPending ? resolveSaveMutation.variables?.saveId : null}
     />
   ))
 
@@ -268,6 +277,7 @@ export default function CombatPanel({ live, sessionId, amGm, myUserId }: Props) 
           sessionId={sessionId}
           encounter={enc}
           combatant={enc.combatants.find((c) => c.id === sheetTarget.id) ?? sheetTarget}
+          liveCharacters={live.live_characters}
           onClose={() => setSheetTarget(null)}
         />
       )}

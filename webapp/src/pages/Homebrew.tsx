@@ -288,7 +288,7 @@ export default function Homebrew() {
 
   if (rulesError || templatesError) {
     return (
-      <Layout title={t('homebrew.page_title')}>
+      <Layout help="homebrew" title={t('homebrew.page_title')}>
         <EmptyState
           icon={<RefreshCw size={28} />}
           title={t('homebrew.load_error')}
@@ -306,7 +306,7 @@ export default function Homebrew() {
 
   if (!rules || !templates) {
     return (
-      <Layout title={t('homebrew.page_title')}>
+      <Layout help="homebrew" title={t('homebrew.page_title')}>
         <Skeleton.Ornament />
         <Skeleton.Rect height="72px" />
         <Skeleton.Rect height="72px" delay={80} />
@@ -329,7 +329,7 @@ export default function Homebrew() {
   )
 
   return (
-    <Layout title={t('homebrew.page_title')}>
+    <Layout help="homebrew" title={t('homebrew.page_title')}>
       {/* Active rules */}
       <m.section
         initial={{ opacity: 0, y: 12 }}

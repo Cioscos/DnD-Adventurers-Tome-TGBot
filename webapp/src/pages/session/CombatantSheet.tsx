@@ -2,43 +2,42 @@ import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
-import { ArrowUp, ArrowDown, Trash2 } from 'lucide-react'
+import { ArrowUp, ArrowDown, Plus, Trash2, X } from 'lucide-react'
 import { GiDeathSkull as Skull, GiHeartPlus as Heart } from 'react-icons/gi'
 import Sheet from '@/components/ui/Sheet'
 import Input from '@/components/ui/Input'
 import Pressable from '@/components/ui/Pressable'
+import IconButton from '@/components/ui/IconButton'
+import AddConditionSheet from '@/pages/session/AddConditionSheet'
 import { api } from '@/api/client'
 import { haptic, telegramConfirm } from '@/auth/telegram'
 import { formatCondition } from '@/lib/conditions'
-import type { CombatantLive, CombatantPatch, EncounterLive } from '@/types'
-
-const STANDARD_CONDITIONS = [
-  'blinded', 'charmed', 'deafened', 'frightened', 'grappled',
-  'incapacitated', 'invisible', 'paralyzed', 'petrified', 'poisoned',
-  'prone', 'restrained', 'stunned', 'unconscious',
-] as const
+import { formatExpiry, formatSave } from '@/lib/conditionEffects'
+import type { CharacterLiveSnapshot, CombatantLive, CombatantPatch, EncounterLive } from '@/types'
 
 interface Props {
   sessionId: number
   encounter: EncounterLive
   combatant: CombatantLive
+  liveCharacters: CharacterLiveSnapshot[]
   onClose: () => void
 }
 
-export default function CombatantSheet({ sessionId, encounter, combatant: c, onClose }: Props) {
+export default function CombatantSheet({ sessionId, encounter, combatant: c, liveCharacters, onClose }: Props) {
   const { t } = useTranslation()
   const qc = useQueryClient()
   const [amount, setAmount] = useState('')
   const [initiative, setInitiative] = useState('')
   // patchMutation is shared by several distinct controls below (damage, heal,
-  // per-condition toggles, initiative apply, mark dead). Its `variables`
+  // initiative apply, mark dead). Its `variables`
   // shape alone can't disambiguate which control is in flight (e.g. damage
   // and heal both send `{ current_hp }`), so we track the initiating control
   // locally and clear it once the mutation settles.
   const [activeAction, setActiveAction] = useState<
-    'damage' | 'heal' | 'initiative' | 'dead' | `cond:${string}` | null
+    'damage' | 'heal' | 'initiative' | 'dead' | null
   >(null)
   const [reorderDir, setReorderDir] = useState<-1 | 1 | null>(null)
+  const [showAddCondition, setShowAddCondition] = useState(false)
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ['session-live', sessionId] })
   const onError = () => {
@@ -57,6 +56,12 @@ export default function CombatantSheet({ sessionId, encounter, combatant: c, onC
   const removeMutation = useMutation({
     mutationFn: () => api.sessions.encounter.removeCombatant(sessionId, c.id),
     onSuccess: () => { haptic.warning(); invalidate(); onClose() },
+    onError,
+  })
+
+  const removeConditionMutation = useMutation({
+    mutationFn: (slug: string) => api.sessions.encounter.removeCondition(sessionId, c.id, slug),
+    onSuccess: () => { haptic.light(); invalidate() },
     onError,
   })
 
@@ -88,13 +93,11 @@ export default function CombatantSheet({ sessionId, encounter, combatant: c, onC
     setAmount('')
   }
 
-  const toggleCondition = (slug: string) => {
-    const next: Record<string, unknown> = { ...c.conditions }
-    if (next[slug]) delete next[slug]
-    else next[slug] = true
-    setActiveAction(`cond:${slug}`)
-    patchMutation.mutate({ conditions: next })
-  }
+  // PG: la fonte è la scheda (live_characters); mostri: il combattente.
+  const snap = c.kind === 'pc' ? liveCharacters.find((s) => s.id === c.character_id) : undefined
+  const conditions = (c.kind === 'pc' ? snap?.conditions : c.conditions) ?? {}
+  const effects = (c.kind === 'pc' ? snap?.condition_effects : c.condition_effects) ?? []
+  const activeConds = Object.entries(conditions).filter(([, v]) => Boolean(v))
 
   const applyInitiative = () => {
     const v = Number(initiative)
@@ -148,35 +151,53 @@ export default function CombatantSheet({ sessionId, encounter, combatant: c, onC
           </section>
         )}
 
-        {c.kind === 'monster' && (
-          <section className="space-y-2">
-            <p className="text-xs uppercase tracking-wider text-dnd-gold-dim font-cinzel">
-              {t('session.combat.conditions_title')}
-            </p>
-            <div className="grid grid-cols-2 gap-1.5">
-              {STANDARD_CONDITIONS.map((slug) => {
-                const active = Boolean(c.conditions[slug])
-                const thisAction = `cond:${slug}` as const
-                return (
-                  <Pressable
-                    key={slug}
-                    onClick={() => toggleCondition(slug)}
-                    aria-pressed={active}
-                    disabled={patchMutation.isPending && activeAction !== thisAction}
-                    pending={patchMutation.isPending && activeAction === thisAction}
-                    spinnerSize={12}
-                    className={`min-h-[44px] px-2.5 py-2 rounded-md border text-xs text-left break-words
-                      ${active
-                        ? 'border-dnd-amber bg-dnd-surface-raised text-dnd-amber'
-                        : 'border-dnd-border bg-dnd-surface text-dnd-text-muted'}`}
-                  >
-                    {formatCondition(slug, true, t)}
-                  </Pressable>
-                )
-              })}
-            </div>
-          </section>
-        )}
+        <section className="space-y-2">
+          <p className="text-xs uppercase tracking-wider text-dnd-gold-dim font-cinzel">
+            {t('session.combat.active_conditions')}
+          </p>
+          {activeConds.length === 0 && (
+            <p className="text-sm text-dnd-text-muted">{t('session.combat.no_conditions')}</p>
+          )}
+          {activeConds.map(([slug, val]) => {
+            const eff = effects.find((e) => e.slug === slug)
+            const label = slug.startsWith('custom:') ? slug.slice('custom:'.length) : formatCondition(slug, val, t)
+            const details = eff
+              ? [
+                  formatExpiry(eff, t, c.name),
+                  formatSave(eff, t, c.name),
+                  eff.source_name && t('session.combat.source_label', { name: eff.source_name }),
+                ].filter(Boolean)
+              : []
+            const removing = removeConditionMutation.isPending && removeConditionMutation.variables === slug
+            return (
+              <div
+                key={slug}
+                className="flex items-center gap-2 rounded-md border border-dnd-amber/50 bg-dnd-surface px-3 py-2"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm text-dnd-amber break-words">{label}</p>
+                  {details.map((d) => (
+                    <p key={d as string} className="text-xs text-dnd-text-muted break-words">{d}</p>
+                  ))}
+                </div>
+                <IconButton
+                  icon={<X size={16} />}
+                  aria-label={t('session.combat.remove_condition', { name: label })}
+                  loading={removing}
+                  disabled={removeConditionMutation.isPending && !removing}
+                  onClick={() => removeConditionMutation.mutate(slug)}
+                />
+              </div>
+            )
+          })}
+          <Pressable
+            onClick={() => setShowAddCondition(true)}
+            className="w-full min-h-[44px] px-3 py-2.5 rounded-md bg-dnd-surface border border-dnd-border
+                       text-sm inline-flex items-center justify-center gap-1.5 active:opacity-60"
+          >
+            <Plus size={14} /> {t('session.combat.add_condition')}
+          </Pressable>
+        </section>
 
         <section className="space-y-2">
           <p className="text-xs uppercase tracking-wider text-dnd-gold-dim font-cinzel">
@@ -261,6 +282,15 @@ export default function CombatantSheet({ sessionId, encounter, combatant: c, onC
           </Pressable>
         </section>
       </div>
+      {showAddCondition && (
+        <AddConditionSheet
+          sessionId={sessionId}
+          encounter={encounter}
+          target={c}
+          liveCharacters={liveCharacters}
+          onClose={() => setShowAddCondition(false)}
+        />
+      )}
     </Sheet>
   )
 }

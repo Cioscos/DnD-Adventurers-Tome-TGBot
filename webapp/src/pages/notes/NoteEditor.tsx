@@ -5,9 +5,6 @@ import Button from '@/components/ui/Button'
 import ChipInput from '@/components/ui/ChipInput'
 import Pressable from '@/components/ui/Pressable'
 
-const TAG_SUGGESTIONS_IT = ['Organizzazioni', 'Alleati', 'Nemici', 'Storia', 'Luoghi']
-const TAG_SUGGESTIONS_EN = ['Organizations', 'Allies', 'Enemies', 'Backstory', 'Places']
-
 interface NoteEditorProps {
   initialNote?: { title: string; body: string; tags?: string[] } | null
   onSave: (title: string, body: string, tags: string[]) => void
@@ -16,7 +13,7 @@ interface NoteEditorProps {
 }
 
 export default function NoteEditor({ initialNote, onSave, onCancel, isPending }: NoteEditorProps) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const isEdit = !!initialNote
 
   const [title, setTitle] = useState('')
@@ -39,7 +36,8 @@ export default function NoteEditor({ initialNote, onSave, onCancel, isPending }:
     onSave(title.trim(), body.trim(), tags)
   }
 
-  const tagSuggestions = i18n.language === 'en' ? TAG_SUGGESTIONS_EN : TAG_SUGGESTIONS_IT
+  const rawSuggestions = t('character.notes.tag_suggestions', { returnObjects: true })
+  const tagSuggestions: string[] = Array.isArray(rawSuggestions) ? rawSuggestions : []
   const pending = tagSuggestions.filter((s) => !tags.some((x) => x.toLowerCase() === s.toLowerCase()))
 
   return (

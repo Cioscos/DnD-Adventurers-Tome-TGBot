@@ -10,9 +10,11 @@ import { spring } from '@/styles/motion'
 import { haptic } from '@/auth/telegram'
 import EmptyState from '@/components/ui/EmptyState'
 import Skeleton from '@/components/ui/Skeleton'
+import PendingSavesBanner from '@/components/PendingSavesBanner'
 import InSessionBanner from '@/components/ui/InSessionBanner'
 import OfflineNotice from '@/components/ui/OfflineNotice'
 import Pressable from '@/components/ui/Pressable'
+import PageHelp from '@/components/PageHelp'
 import { useCharacterStore } from '@/store/characterStore'
 import CharacterSwiper from '@/components/character/CharacterSwiper'
 import SearchOverlay from '@/components/SearchOverlay'
@@ -190,9 +192,11 @@ export default function CharacterMain() {
         >
           <Settings size={18} className="text-dnd-gold-bright" />
         </Pressable>
+        <PageHelp helpKey="character" title={char.name} className="w-10 h-10" />
       </m.header>
 
       <InSessionBanner charId={charId} />
+      <PendingSavesBanner charId={charId} />
 
       <OfflineNotice query={charQuery} className="shrink-0 mx-3 mt-2" />
 
