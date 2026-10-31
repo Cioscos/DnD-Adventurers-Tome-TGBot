@@ -11,8 +11,14 @@ from core.db.models import Character, CharacterClass
 
 
 def stored_rolls(char: Character) -> dict[int, dict[int, int]]:
-    raw = (char.settings or {}).get("hp_rolls") or {}
-    return {int(c): {int(lv): int(r) for lv, r in lv_map.items()} for c, lv_map in raw.items()}
+    raw = (char.settings or {}).get("hp_rolls")
+    out: dict[int, dict[int, int]] = {}
+    for c, lv_map in (raw.items() if isinstance(raw, dict) else ()):  # tolerant: imported files are untrusted
+        try:
+            out[int(c)] = {int(lv): int(r) for lv, r in lv_map.items()}
+        except (TypeError, ValueError, AttributeError):
+            continue
+    return out
 
 
 def record_rolls(

@@ -187,6 +187,7 @@ export default function HeroScreen({ char }: Props) {
               <HeroXPBar
                 currentXP={char.experience_points}
                 totalClassLevel={char.total_level}
+                milestone={char.settings?.advancement === 'milestone'}
                 suppressHalo={hpPct > 0 && hpPct <= 25}
               />
             </Pressable>

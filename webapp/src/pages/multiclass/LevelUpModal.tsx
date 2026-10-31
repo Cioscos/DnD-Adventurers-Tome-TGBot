@@ -12,8 +12,7 @@ import Pressable from '@/components/ui/Pressable'
 import { toast } from 'sonner'
 import { haptic } from '@/auth/telegram'
 import { progressionRows, localizeFeatures } from '@/lib/classProgression'
-import { useDiceAnimation } from '@/dice/useDiceAnimation'
-import type { DiceKind } from '@/dice/types'
+import HpRoller from '@/pages/multiclass/HpRoller'
 import { useRegisterOverlay } from '@/store/overlayStore'
 import { useOverlayDismiss } from '@/hooks/useOverlayDismiss'
 import { useDeferredBlur } from '@/hooks/useDeferredBlur'
@@ -23,49 +22,6 @@ interface LevelUpModalProps {
   char: CharacterFull
   xpLevel: number
   onClose: () => void
-}
-
-const DIE_KINDS: Record<number, DiceKind> = { 4: 'd4', 6: 'd6', 8: 'd8', 10: 'd10', 12: 'd12' }
-
-/** Hit-die roll for the gained level (3D dice, local fallback). Rendered only in rolled-HP mode. */
-function HpRoller({ die, conMod, roll, onRoll }: {
-  die: number
-  conMod: number
-  roll: number | null
-  onRoll: (n: number) => void
-}) {
-  const { t } = useTranslation()
-  const { playAndCollect } = useDiceAnimation()
-  const [rolling, setRolling] = useState(false)
-  const run = async () => {
-    setRolling(true)
-    const local = () => 1 + Math.floor(Math.random() * die)
-    let value = local()
-    try {
-      const kind = DIE_KINDS[die]
-      const res = kind ? await playAndCollect([{ kind, count: 1 }]) : []
-      if (res.length === 1 && res[0].value >= 1 && res[0].value <= die) value = res[0].value
-    } catch {
-      /* keep the local roll */
-    } finally {
-      setRolling(false)
-    }
-    onRoll(value)
-  }
-  return (
-    <div className="space-y-2 text-center">
-      <Button variant="secondary" size="md" className="min-h-11" onClick={run} loading={rolling}>
-        {t('character.multiclass.level_up.roll_hp', { die })}
-      </Button>
-      <p className="text-sm font-mono tabular-nums text-dnd-text-muted">
-        {roll === null
-          ? t('character.multiclass.level_up.roll_hp_required')
-          : t('character.multiclass.level_up.roll_hp_result', {
-              roll, con: conMod >= 0 ? `+${conMod}` : conMod, total: Math.max(1, roll + conMod),
-            })}
-      </p>
-    </div>
-  )
 }
 
 export default function LevelUpModal({ char, xpLevel, onClose }: LevelUpModalProps) {
@@ -262,7 +218,7 @@ export default function LevelUpModal({ char, xpLevel, onClose }: LevelUpModalPro
           {/* Confirm — visually separated footer */}
           <div className="pt-5 border-t border-dnd-border/50 space-y-4">
             {rolledHp && hitDie > 0 && (
-              <HpRoller die={hitDie} conMod={conMod} roll={hpRoll} onRoll={setHpRoll} />
+              <HpRoller die={hitDie} count={1} conMod={conMod} rolls={hpRoll === null ? null : [hpRoll]} onRoll={(r) => setHpRoll(r[0])} />
             )}
             <Button
               variant="primary"

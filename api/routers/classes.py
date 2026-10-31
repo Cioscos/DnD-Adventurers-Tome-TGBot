@@ -298,6 +298,8 @@ async def update_class(
         effective_level = data.get("level") or cls.level or 1
         data["hit_dice_used"] = max(0, min(int(data["hit_dice_used"]), int(effective_level)))
     hp_rolls = data.pop("hp_rolls", None)
+    if hp_rolls is not None and (body.level is None or body.level == old_level):
+        raise HTTPException(status_code=422, detail="hp_rolls requires a level change")
     old_total_hp = char.hit_points or 0
     old_current_hp = char.current_hit_points or 0
     for field, value in data.items():

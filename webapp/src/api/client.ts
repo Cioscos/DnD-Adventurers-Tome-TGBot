@@ -416,7 +416,7 @@ export const api = {
         method: 'PATCH',
         body: JSON.stringify({ heroic_inspiration }),
       }),
-    updateXP: (id: number, data: { add?: number; set?: number }) =>
+    updateXP: (id: number, data: { add?: number; set?: number; hp_rolls?: number[] }) =>
       request<CharacterFull>(`/characters/${id}/xp`, {
         method: 'PATCH',
         body: JSON.stringify(data),

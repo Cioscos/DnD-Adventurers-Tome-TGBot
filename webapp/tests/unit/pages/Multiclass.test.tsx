@@ -113,6 +113,19 @@ afterEach(() => {
 })
 
 describe('Multiclass page', () => {
+  it('milestone mode: a level-up is available even with 0 XP', async () => {
+    getChar.mockResolvedValue(char({ experience_points: 0, settings: { advancement: 'milestone' } }))
+    renderWithProviders(<Multiclass />)
+    expect(await screen.findByText('levelup-banner')).toBeInTheDocument()
+  })
+
+  it('xp mode with 0 XP below the class sum offers no level-up', async () => {
+    getChar.mockResolvedValue(char({ experience_points: 0 }))
+    renderWithProviders(<Multiclass />)
+    await screen.findByText('character.multiclass.manage_classes')
+    expect(screen.queryByText('levelup-banner')).toBeNull()
+  })
+
   it('shows the skeleton while the character query is pending', () => {
     getChar.mockReturnValue(new Promise(() => {}))
     renderWithProviders(<Multiclass />)

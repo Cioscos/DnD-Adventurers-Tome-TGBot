@@ -1235,7 +1235,7 @@
         "new_spell_slot": "Nuovo slot di {{level}}° livello",
         "confirm": "Conferma",
         "at_max_toast": "Classe al livello massimo",
-        "roll_hp": "Tira d{{die}} per i PF",
+        "roll_hp": "Tira {{count}}d{{die}} per i PF",
         "roll_hp_result": "Tiro {{roll}} + COS {{con}} = {{total}} PF",
         "roll_hp_required": "Tira il dado vita per continuare",
         "progression_missing": "Dati progressione non disponibili"

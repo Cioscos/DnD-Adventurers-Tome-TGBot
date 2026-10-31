@@ -83,6 +83,11 @@ async def build_export(session: AsyncSession, char: Character) -> CharacterExpor
         cols[k] = cols[k] or {}
     for k in ("languages", "general_proficiencies", "pending_choices"):
         cols[k] = cols[k] or []
+    # hp_rolls e' indicizzato per class_id: nel file usa le stesse chiavi "c{i}" delle abilita'.
+    if cols["settings"].get("hp_rolls"):
+        cols["settings"] = {**cols["settings"], "hp_rolls": {
+            class_key[int(cid)]: m for cid, m in cols["settings"]["hp_rolls"].items()
+            if int(cid) in class_key}}
 
     # Export tollerante: i limiti di import non si applicano ai dati gia' salvati (altrimenti 500).
     # Anche /duplicate ne beneficia: passa l'oggetto gia' costruito a import_character senza
@@ -187,6 +192,13 @@ async def import_character(
     char.currency = Currency(**(data.currency.model_dump() if data.currency else {}))
     session.add(char)
     await session.flush()  # assegna gli id nuovi
+
+    rolls = (char.settings or {}).get("hp_rolls")
+    if rolls:  # chiavi "c{i}" del file -> id nuovi; chiavi sconosciute scartate
+        s = dict(char.settings)
+        s["hp_rolls"] = {str(classes[int(k[1:])].id): v for k, v in rolls.items()
+                         if k in class_keys}
+        char.settings = s
 
     for a in data.abilities:
         src = classes[int(a.source_class_key[1:])].id if a.source_class_key else None

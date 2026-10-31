@@ -307,6 +307,8 @@ class InspirationUpdate(BaseModel):
 class XPUpdate(BaseModel):
     add: Optional[int] = None
     set: Optional[int] = None
+    # Single class, XP mode: one die roll per gained level (1..hit_die). Omitted -> fixed HP.
+    hp_rolls: Optional[list[int]] = None
 
 class SpellAttackResult(BaseModel):
     """Esito di POST /characters/{id}/spells/{spell_id}/attack.

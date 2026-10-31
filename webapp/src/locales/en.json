@@ -1235,7 +1235,7 @@
         "new_spell_slot": "New {{level}}th level spell slot",
         "confirm": "Confirm",
         "at_max_toast": "Class at max level",
-        "roll_hp": "Roll d{{die}} for HP",
+        "roll_hp": "Roll {{count}}d{{die}} for HP",
         "roll_hp_result": "Roll {{roll}} + CON {{con}} = {{total}} HP",
         "roll_hp_required": "Roll the hit die to continue",
         "progression_missing": "Progression data unavailable"

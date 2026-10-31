@@ -44,7 +44,7 @@ from api.schemas.character import (
 from api.schemas.common import D20RollSubmission, RollResult
 from api.routers.classes import create_class_for_character
 from core.game.item_bonuses import item_bonus_total
-from api.routers._helpers import effective_ability_mod, prune_history, saving_throw_bonus
+from api.routers._helpers import effective_ability_mod, effective_con_mod, prune_history, saving_throw_bonus
 from api.services import telegram_notify
 from api.services.d20 import d20_history_label, d20_records, resolve_body
 from api.services.dice_stats import record_dice
@@ -505,13 +505,18 @@ async def update_xp(
     milestone = settings.get("advancement") == "milestone"
 
     # For single-class characters, keep class level in sync with XP-derived level.
+    # hp_rolls only make sense for a single class in XP mode (others use the level-up modal).
+    if body.hp_rolls is not None and (milestone or len(char.classes) != 1):
+        raise HTTPException(status_code=422, detail="hp_rolls_not_applicable")
     if len(char.classes) == 1 and not milestone:
         cls = char.classes[0]
         old_level = cls.level
         new_level = xp_to_level(char.experience_points)
-        if new_level != old_level:
+        if new_level != old_level or body.hp_rolls:
             cls.level = new_level
-            record_rolls(char, cls, old_level, new_level, None)  # drop stale rolls
+            # Validates hp_rolls (count/range -> 422) and drops stale rolls. Omitted rolls in
+            # rolled mode fall back to the fixed value so older clients keep working.
+            record_rolls(char, cls, old_level, new_level, body.hp_rolls)
             add_asi_choices(char, cls.class_name, old_level, new_level)
             await sync_class_feature_abilities(session, char, cls, lang=lang)
 
@@ -521,8 +526,12 @@ async def update_xp(
                 )
                 con_mod = (con_row.value - 10) // 2 if con_row else 0
                 for lvl in range(old_level + 1, new_level + 1):
-                    # level 1 was handled at character creation; always use level 2+ formula
-                    total_hp_gained += hit_points_for_level(cls.hit_die, con_mod, max(2, lvl))
+                    if body.hp_rolls:
+                        # rolled: roll + effective CON, min 1
+                        total_hp_gained += max(1, body.hp_rolls[lvl - old_level - 1] + effective_con_mod(char))
+                    else:
+                        # level 1 was handled at character creation; always use level 2+ formula
+                        total_hp_gained += hit_points_for_level(cls.hit_die, con_mod, max(2, lvl))
 
     if total_hp_gained > 0:
         char.hit_points += total_hp_gained

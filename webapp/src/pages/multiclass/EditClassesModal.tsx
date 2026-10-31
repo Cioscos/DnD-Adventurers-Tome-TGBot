@@ -46,6 +46,8 @@ type Entry = ExistingEntry | NewEntry
 interface Props {
   char: CharacterFull
   targetLevel: number
+  /** Milestone advancement: any total up to `targetLevel` (20) is valid, not only an exact match. */
+  milestone?: boolean
   onClose: () => void
 }
 
@@ -53,7 +55,7 @@ function makeTempId(): string {
   return Math.random().toString(36).slice(2)
 }
 
-export default function EditClassesModal({ char, targetLevel, onClose }: Props) {
+export default function EditClassesModal({ char, targetLevel, milestone = false, onClose }: Props) {
   const { t } = useTranslation()
   const qc = useQueryClient()
   useRegisterOverlay(true)
@@ -99,7 +101,7 @@ export default function EditClassesModal({ char, targetLevel, onClose }: Props) 
     [entries],
   )
   const allLevelsValid = entries.every((e) => e.level >= 1 && e.level <= 20)
-  const isValid = entries.length > 0 && allLevelsValid && currentSum === targetLevel
+  const isValid = entries.length > 0 && allLevelsValid && (milestone ? currentSum <= targetLevel : currentSum === targetLevel)
 
   const isDirty = useMemo(() => {
     const initial = new Map((char.classes ?? []).map((c) => [c.id, c.level]))
@@ -266,7 +268,7 @@ export default function EditClassesModal({ char, targetLevel, onClose }: Props) 
             <p className="font-display font-black text-3xl">
               {t('character.multiclass.edit.sum_display', { current: currentSum, target: targetLevel })}
             </p>
-            {!isValid && entries.length > 0 && (
+            {!isValid && entries.length > 0 && !(milestone && currentSum < targetLevel) && (
               <p className="mt-1.5 text-xs font-body italic opacity-90">
                 {currentSum < targetLevel
                   ? t('character.multiclass.edit.helper_too_low', {
