@@ -235,6 +235,7 @@ async def _load_live_characters(
             armor_category=armor_category(char),
             condition_effects=effects,
             has_pending_save=any(p.status == "pending" for p in pendings),
+            is_concentrating=char.concentrating_spell_id is not None,
         )
     return out
 
@@ -441,6 +442,7 @@ async def get_session_live(
                 conditions=raw["conditions"],
                 condition_effects=raw["condition_effects"],
                 has_pending_save=raw["has_pending_save"],
+                is_concentrating=raw["is_concentrating"],
                 death_saves=raw["death_saves"],
                 heroic_inspiration=raw["heroic_inspiration"],
                 last_roll=raw["last_roll"],
@@ -461,6 +463,7 @@ async def get_session_live(
                 conditions=raw["conditions"],
                 condition_effects=raw["condition_effects"],
                 has_pending_save=raw["has_pending_save"],
+                is_concentrating=raw["is_concentrating"],
                 death_saves=None,
                 heroic_inspiration=raw["heroic_inspiration"],
                 last_roll=raw["last_roll"],

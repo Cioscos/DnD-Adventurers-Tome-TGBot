@@ -63,6 +63,7 @@ class CharacterLiveSnapshot(BaseModel):
     armor_category: Optional[str] = None
     condition_effects: list[ConditionEffectRead] = []
     has_pending_save: bool = False
+    is_concentrating: bool = False
 
 
 class SessionParticipantRead(BaseModel):

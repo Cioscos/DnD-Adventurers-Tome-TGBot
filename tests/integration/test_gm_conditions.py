@@ -123,6 +123,8 @@ async def test_link_records_spell(client, test_session_factory, monkeypatch):
         (await s.get(Character, char_id)).concentrating_spell_id = sp.id
         await s.commit()
         spell_id = sp.id
+    live = (await client.get(f"/sessions/{sid}/live")).json()["live_characters"]
+    assert next(c for c in live if c["id"] == char_id)["is_concentrating"] is True
     r = await client.post(_url(sid, g1), json={
         "slug": "paralyzed", "source_combatant_id": pc_id, "ends_with_concentration": True,
     })
