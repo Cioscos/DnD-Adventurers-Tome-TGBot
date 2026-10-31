@@ -164,3 +164,24 @@ async def test_set_current_zero_ends_form(client):
     await _activate(client, cid, f["id"])
     body = await _hp(client, cid, "set_current", 0)
     assert body["active_form"] is None
+
+
+async def test_undo_does_not_leave_two_active_forms(client):
+    cid = await _make_char(client, 20)
+    a = await _form(client, cid, hp=5)
+    b = await _form(client, cid, hp=5)
+    await _activate(client, cid, a["id"])
+    body = await _hp(client, cid, "damage", 10)  # overflow ends A
+    await _activate(client, cid, b["id"])
+    r = await _undo(client, cid, body["hp_undo_id"])
+    assert r.status_code == 200, r.text
+    comps = (await client.get(f"/characters/{cid}/companions")).json()
+    assert [c["id"] for c in comps if c["is_active"]] == [a["id"]]
+
+
+async def test_set_max_clamping_to_zero_ends_form(client):
+    cid = await _make_char(client, 20)
+    f = await _form(client, cid)
+    await _activate(client, cid, f["id"])
+    body = await _hp(client, cid, "set_max", 0)
+    assert body["current_hit_points"] == 0 and body["active_form"] is None

@@ -20,6 +20,7 @@ from api.services.dice_stats import record_dice
 from api.services.effects import apply_heal
 from api.services.item_charges import plan_item_recharges, set_item_charges
 from api.services.durations import end_concentration, is_concentrating
+from api.routers.companions import _deactivate_others
 from api.services.wild_shape import absorb_damage, get_active_form
 from api.services.telegram_notify import notify_party_emergency
 from api.services.homebrew.dispatcher import dispatch
@@ -312,13 +313,14 @@ async def update_hp(
         _add_history(session, char.id, "hp_change",
                      f"HP correnti impostati: {old} → {char.current_hit_points}",
                      meta={"op": "SET_CURRENT"})
-        if char.current_hit_points == 0 and form is not None and form.is_active:
-            form.is_active = False
-            _add_history(session, char.id, "companion_hp",
-                         f"Forma selvatica terminata: {form.name} (PF a 0)")
 
     elif body.op == HPOp.SET_TEMP:
         char.temp_hp = max(0, body.value)
+
+    if body.op in (HPOp.SET_MAX, HPOp.SET_CURRENT) and char.current_hit_points == 0             and form is not None and form.is_active:
+        form.is_active = False
+        _add_history(session, char.id, "companion_hp",
+                     f"Forma selvatica terminata: {form.name} (PF a 0)")
 
     # Auto-reset death saves when rising from 0 HP
     if was_at_zero and char.current_hit_points > 0:
@@ -368,6 +370,8 @@ async def undo_hp(
         form.current_hp = before["form"]["current_hp"]
         form.temp_hp = before["form"]["temp_hp"]
         form.is_active = before["form"]["is_active"]
+        if form.is_active:  # at most one active form
+            await _deactivate_others(session, char.id, form.id)
     old = char.current_hit_points
     char.current_hit_points = before["current_hit_points"]
     char.hit_points = before["hit_points"]
