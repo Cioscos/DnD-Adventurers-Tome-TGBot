@@ -9,6 +9,8 @@ import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import ChipSelect from '@/components/ui/ChipSelect'
 import DamageTypeControls from '@/components/ui/DamageTypeControls'
+import HPGauge from '@/components/ui/HPGauge'
+import CharacterHpSecondary from '@/components/character/CharacterHpSecondary'
 import {
   applyDamageModifier, damageMultiplier, damagePreviewText, type DamageModifier,
 } from '@/lib/damageModifier'
@@ -117,9 +119,26 @@ export default function HpQuickSheet({ char, open, onClose }: HpQuickSheetProps)
     <Sheet open={open} onClose={onClose} title={t('character.hp.quick_sheet_title')}>
       <div className="p-5 space-y-3">
         {char.active_form && (
-          <p className="text-sm font-body text-center text-dnd-emerald-bright">
-            {t('character.extras.hp_goes_to_form', { name: char.active_form.name })}
-          </p>
+          <div className="text-center space-y-1.5">
+            <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim">{char.active_form.name}</p>
+            <p data-testid="form-hp-primary" className="font-mono tabular-nums">
+              <span className="text-2xl font-bold text-dnd-text">{char.active_form.current_hp}/{char.active_form.max_hp}</span>
+              {char.active_form.temp_hp > 0 && (
+                <span className="ml-1.5 text-sm text-dnd-cobalt-bright">(+{char.active_form.temp_hp})</span>
+              )}
+            </p>
+            <HPGauge
+              current={char.active_form.current_hp}
+              max={char.active_form.max_hp}
+              temp={char.active_form.temp_hp}
+              size="sm"
+              segmented
+            />
+            <CharacterHpSecondary char={char} />
+            <p className="text-sm font-body text-dnd-emerald-bright">
+              {t('character.extras.hp_goes_to_form', { name: char.active_form.name })}
+            </p>
+          </div>
         )}
         <ChipSelect
           label=""

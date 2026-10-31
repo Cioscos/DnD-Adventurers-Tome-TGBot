@@ -211,6 +211,27 @@ afterEach(() => {
   toastWarning.mockReset()
 })
 
+describe('HP page — wild shape', () => {
+  it('shows the active form HP as primary and the character HP as secondary', async () => {
+    getChar.mockResolvedValue({
+      ...aliveChar, name: 'Elandor', temp_hp: 3,
+      active_form: { companion_id: 9, name: 'Lupo', current_hp: 8, max_hp: 11, temp_hp: 2, armor_class: 13 },
+    })
+    renderWithProviders(<HP />)
+    expect(await screen.findByText('8')).toBeInTheDocument()
+    expect(screen.getByText('/11')).toBeInTheDocument()
+    expect(screen.getByText('Lupo')).toBeInTheDocument()
+    const gauge = screen.getByTestId('hp-gauge')
+    expect(gauge).toHaveAttribute('data-current', '8')
+    expect(gauge).toHaveAttribute('data-max', '11')
+    expect(gauge).toHaveAttribute('data-temp', '2')
+    const secondary = screen.getByTestId('character-hp-secondary')
+    expect(secondary).toHaveTextContent('Elandor')
+    expect(secondary).toHaveTextContent('20/35')
+    expect(secondary).toHaveTextContent('+3')
+  })
+})
+
 describe('HP page', () => {
   it('shows the skeleton while the character query is pending', () => {
     getChar.mockReturnValue(new Promise(() => {}))
