@@ -1,6 +1,21 @@
 {
   "entries": [
     {
+      "version": "2.23.1",
+      "date": "2026-10-31",
+      "title": { "it": "Header senza lampeggi", "en": "No more flickering header" },
+      "added": { "it": [], "en": [] },
+      "improved": { "it": [], "en": [] },
+      "fixed": {
+        "it": [
+          "L'header delle pagine non lampeggia più per un istante dopo essere comparso, e lo stesso vale per le altre dissolvenze dell'app."
+        ],
+        "en": [
+          "The page header no longer flickers for a moment after appearing, and the same goes for the other fades in the app."
+        ]
+      }
+    },
+    {
       "version": "2.23.0",
       "date": "2026-10-31",
       "title": {
