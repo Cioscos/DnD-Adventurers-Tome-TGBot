@@ -25,7 +25,7 @@ import { useToast } from '@/hooks/useToast'
 import { useCharacterStore } from '@/store/characterStore'
 import { useDiceSettings } from '@/store/diceSettings'
 import { useThemeSettings, type ThemeMode } from '@/store/themeSettings'
-import { useUnitSettings, type UnitSystem } from '@/store/unitSettings'
+import { useUnitSettings, formatLength, formatWeight, type UnitSystem } from '@/store/unitSettings'
 import { BUNDLED_PACKS, PACK_PREVIEW, type PackId } from '@/dice/packs/registry'
 import { loadManifest } from '@/dice/packs/manifest'
 import { useDicePack } from '@/dice/packs/dicePackContext'
@@ -653,7 +653,10 @@ export default function Settings() {
               updateMutation.mutate({ ...settings, encumbrance_variant: next })
             }}
             label={t('character.settings.encumbrance_variant_label')}
-            hint={t('character.settings.encumbrance_variant_hint')}
+            hint={t('character.settings.encumbrance_variant_hint', {
+              slow1: `−${formatLength(10, unitSystem)}`,
+              slow2: `−${formatLength(20, unitSystem)}`,
+            })}
           />
           <SwitchToggle
             checked={settings.coin_weight === true}
@@ -663,7 +666,7 @@ export default function Settings() {
               updateMutation.mutate({ ...settings, coin_weight: next })
             }}
             label={t('character.settings.coin_weight_label')}
-            hint={t('character.settings.coin_weight_hint')}
+            hint={t('character.settings.coin_weight_hint', { unit_weight: formatWeight(1, unitSystem) })}
           />
         </div>
       </Surface>
