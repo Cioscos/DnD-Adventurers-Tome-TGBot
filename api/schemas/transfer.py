@@ -1,31 +1,37 @@
 """Schema del file di esportazione/importazione personaggio (format_version 1)."""
 from __future__ import annotations
 
-from typing import Any, Literal, Optional
+from typing import Annotated, Any, Literal, Optional
 
 from pydantic import BaseModel, Field
 
+from core.db.models import EquipmentSlot
+
+
+Int0 = Annotated[int, Field(ge=0, le=1_000_000)]
+Restoration = Literal["long_rest", "short_rest", "none", "manual"]
+
 
 class ExportCharacter(BaseModel):
-    name: str
-    race: Optional[str] = None
-    gender: Optional[str] = None
-    hit_points: int = 0
-    current_hit_points: int = 0
-    temp_hp: int = 0
+    name: str = Field(min_length=1, max_length=100)
+    race: Optional[str] = Field(None, max_length=100)
+    gender: Optional[str] = Field(None, max_length=50)
+    hit_points: Int0 = 0
+    current_hit_points: Int0 = 0
+    temp_hp: Int0 = 0
     base_armor_class: int = 10
     shield_armor_class: int = 0
     magic_armor: int = 0
     base_armor_class_override: bool = False
     shield_armor_class_override: bool = False
     unarmored_defense_ability: Optional[str] = None
-    carry_capacity: int = 150
+    carry_capacity: Int0 = 150
     carry_capacity_override: bool = False
-    spell_slots_mode: str = "manual"
+    spell_slots_mode: Literal["automatic", "manual"] = "manual"
     heroic_inspiration: bool = False
-    experience_points: int = 0
+    experience_points: Int0 = 0
     is_dead: bool = False
-    speed: int = 30
+    speed: Int0 = 30
     background: Optional[str] = None
     alignment: Optional[str] = None
     settings: dict = Field(default_factory=dict)
@@ -42,34 +48,34 @@ class ExportCharacter(BaseModel):
 
 
 class ExportClass(BaseModel):
-    class_name: str
-    level: int = 1
+    class_name: str = Field(max_length=100)
+    level: int = Field(1, ge=1, le=20)
     subclass: Optional[str] = None
     spellcasting_ability: Optional[str] = None
-    hit_die: Optional[int] = None
-    hit_dice_used: int = 0
+    hit_die: Optional[int] = Field(None, ge=1, le=100)
+    hit_dice_used: Int0 = 0
 
 
 class ExportAbilityScore(BaseModel):
-    name: str
-    value: int = 10
+    name: str = Field(max_length=50)
+    value: int = Field(10, ge=1, le=30)
 
 
 class ExportItem(BaseModel):
-    name: str
+    name: str = Field(max_length=200)
     description: Optional[str] = None
-    weight: float = 0.0
-    quantity: int = 1
-    item_type: str = "generic"
+    weight: float = Field(0.0, ge=0, le=1_000_000)
+    quantity: Int0 = 1
+    item_type: str = Field("generic", max_length=20)
     item_metadata: dict[str, Any] = Field(default_factory=dict)
     is_equipped: bool = False
-    equipment_slot: Optional[str] = None
+    equipment_slot: Optional[EquipmentSlot] = None
 
 
 class ExportSpell(BaseModel):
-    export_key: str
-    name: str
-    level: int = 0
+    export_key: str = Field(max_length=20)
+    name: str = Field(max_length=200)
+    level: int = Field(0, ge=0, le=9)
     description: Optional[str] = None
     casting_time: Optional[str] = None
     range_area: Optional[str] = None
@@ -86,35 +92,36 @@ class ExportSpell(BaseModel):
 
 
 class ExportSpellSlot(BaseModel):
-    level: int
-    total: int = 0
-    used: int = 0
+    level: int = Field(ge=1, le=9)
+    total: Int0 = 0
+    used: Int0 = 0
     is_pact: bool = False
 
 
 class ExportAbility(BaseModel):
-    name: str
+    name: str = Field(max_length=200)
     description: Optional[str] = None
-    max_uses: Optional[int] = None
-    uses: Optional[int] = None
+    max_uses: Optional[Int0] = None
+    uses: Optional[Int0] = None
     is_passive: bool = False
     is_active: bool = False
-    restoration_type: str = "none"
+    restoration_type: Restoration = "none"
     is_class_feature: bool = False
     feature_key: Optional[str] = None
     source_class_key: Optional[str] = None  # "c<indice in classes>"
 
 
 class ExportCurrency(BaseModel):
-    copper: int = 0
-    silver: int = 0
-    electrum: int = 0
-    gold: int = 0
-    platinum: int = 0
+    copper: Int0 = 0
+    silver: Int0 = 0
+    electrum: Int0 = 0
+    gold: Int0 = 0
+    platinum: Int0 = 0
 
 
 class ExportHomebrewRule(BaseModel):
-    name: str
+    name: str = Field(max_length=100)
+    version: int = Field(1, ge=1)
     description: Optional[str] = None
     enabled: bool = True
     dsl: dict = Field(default_factory=dict)
@@ -122,12 +129,12 @@ class ExportHomebrewRule(BaseModel):
 
 
 class ExportHomebrewResource(BaseModel):
-    rule_index: int
-    key: str
-    name: str
-    current: int = 0
-    max: int = 0
-    restoration_type: str = "none"
+    rule_index: int = Field(ge=0)
+    key: str = Field(max_length=60)
+    name: str = Field(max_length=100)
+    current: Int0 = 0
+    max: Int0 = 0
+    restoration_type: Restoration = "none"
 
 
 class CharacterExport(BaseModel):
@@ -135,14 +142,14 @@ class CharacterExport(BaseModel):
     app_version: Optional[str] = None
     exported_at: str
     character: ExportCharacter
-    classes: list[ExportClass] = Field(default_factory=list)
-    ability_scores: list[ExportAbilityScore] = Field(default_factory=list)
-    items: list[ExportItem] = Field(default_factory=list)
-    spells: list[ExportSpell] = Field(default_factory=list)
+    classes: list[ExportClass] = Field(default_factory=list, max_length=20)
+    ability_scores: list[ExportAbilityScore] = Field(default_factory=list, max_length=20)
+    items: list[ExportItem] = Field(default_factory=list, max_length=500)
+    spells: list[ExportSpell] = Field(default_factory=list, max_length=500)
     concentrating_spell_key: Optional[str] = None
-    spell_slots: list[ExportSpellSlot] = Field(default_factory=list)
-    abilities: list[ExportAbility] = Field(default_factory=list)
+    spell_slots: list[ExportSpellSlot] = Field(default_factory=list, max_length=40)
+    abilities: list[ExportAbility] = Field(default_factory=list, max_length=500)
     currency: Optional[ExportCurrency] = None
-    homebrew_rules: list[ExportHomebrewRule] = Field(default_factory=list)
-    homebrew_resources: list[ExportHomebrewResource] = Field(default_factory=list)
+    homebrew_rules: list[ExportHomebrewRule] = Field(default_factory=list, max_length=50)
+    homebrew_resources: list[ExportHomebrewResource] = Field(default_factory=list, max_length=500)
     companions: list = Field(default_factory=list)  # riempito dal task compagni (R7)
