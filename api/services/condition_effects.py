@@ -10,7 +10,7 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from typing import Iterable, Literal
 
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.data.labels import condition_label
@@ -270,13 +270,13 @@ async def effects_for_character(db: AsyncSession, char_id: int) -> list[Conditio
 
 
 async def open_pending_saves(db: AsyncSession, char_id: int) -> list[PendingSave]:
-    """All pending saves plus the latest non-dismissed failed one."""
+    """All pending saves plus each effect's failed save, unless a newer save superseded it."""
+    newest = dict((await db.execute(select(PendingSave.effect_id, func.max(PendingSave.id)).where(
+        PendingSave.character_id == char_id).group_by(PendingSave.effect_id))).all())
     rows = list((await db.execute(select(PendingSave).where(
         PendingSave.character_id == char_id, PendingSave.dismissed.is_(False),
         PendingSave.status.in_(("pending", "failed"))).order_by(PendingSave.id))).scalars())
-    failed = [r for r in rows if r.status == "failed"]
-    keep_failed = failed[-1:] if failed else []
-    return [r for r in rows if r.status == "pending"] + keep_failed
+    return [r for r in rows if r.status == "pending" or newest.get(r.effect_id) == r.id]
 
 
 async def effect_reads(db: AsyncSession, effects: list[ConditionEffect]) -> list[ConditionEffectRead]:

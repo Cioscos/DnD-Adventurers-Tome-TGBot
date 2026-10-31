@@ -138,3 +138,29 @@ async def test_inspiration_reroll_blocked_by_newer_pending(client, test_session_
     r = await _post(client, cid, psid, {"die": 20, "with_inspiration": True})
     assert r.status_code == 409 and r.json()["detail"]["code"] == "not_rerollable"
     assert (await _conds(test_session_factory, cid))[1] is True
+
+
+async def test_superseded_failed_save_is_closed_per_effect(client, test_session_factory):
+    """Spec §4: un fallito si chiude quando nasce un nuovo TS sullo stesso effetto."""
+    cid, old_failed = await _setup(client, test_session_factory, status="failed")
+    async with test_session_factory() as s:
+        ch = await s.get(Character, cid)
+        ch.conditions = {"poisoned": True, "frightened": True}
+        poison = (await s.get(PendingSave, old_failed)).effect_id
+        fright = await upsert_effect(s, ("character", cid), "frightened",
+                                     save=SaveSpec("wisdom", 12, "end"))
+        fright_failed = PendingSave(effect_id=fright.id, character_id=cid, ability="wisdom",
+                                    dc=12, status="failed", created_at="2026-10-31T11:00:00")
+        s.add(fright_failed)
+        await s.flush()
+        # Un fallito più recente su Avvelenato, poi superato da un nuovo TS in sospeso.
+        s.add(PendingSave(effect_id=poison, character_id=cid, ability="constitution",
+                          dc=10, status="failed", created_at="2026-10-31T11:00:00"))
+        await s.flush()
+        new_pending = PendingSave(effect_id=poison, character_id=cid, ability="constitution",
+                                  dc=10, status="pending", created_at="2026-10-31T12:00:00")
+        s.add(new_pending)
+        await s.commit()
+        ids = {new_pending.id, fright_failed.id}
+    ts = (await client.get(f"/characters/{cid}/turn-state")).json()
+    assert {p["id"] for p in ts["pending_saves"]} == ids
