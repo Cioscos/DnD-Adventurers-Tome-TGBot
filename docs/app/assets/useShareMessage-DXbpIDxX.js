@@ -1,1 +1,0 @@
-import{u as n,e as u,j as e,bP as c,l as i}from"./index-hEXnWT0R.js";function p(r){const a=i(),{t}=n();return u({mutationFn:async s=>{const{prepared_message_id:o}=await r(s);return c(o)},onSuccess:s=>{s&&e.success()},onError:()=>{e.error(),a.error(t("share.error"))}})}export{p as u};

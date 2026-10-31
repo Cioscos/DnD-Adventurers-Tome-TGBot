@@ -43,6 +43,8 @@ describe('SwitchToggle', () => {
     expect(screen.getByText('anteprima')).toBeInTheDocument()
     await userEvent.click(screen.getByText('Dadi 3D'))
     expect(onChange).toHaveBeenCalledWith(true)
+    // un solo toggle: con <label> il click veniva inoltrato al knob → doppio toggle, nessun effetto
+    expect(onChange).toHaveBeenCalledTimes(1)
   })
 
   it('con pending il knob è disabilitato e mostra lo spinner', () => {

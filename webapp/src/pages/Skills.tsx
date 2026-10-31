@@ -182,7 +182,7 @@ function SkillRow({
       <RollButton
         onRoll={onRoll}
         pending={rollPending}
-        className="shrink-0 w-11 max-xs:w-10 h-11 rounded-xl bg-dnd-chip-bg border border-dnd-gold-dim/40 flex items-center justify-center text-dnd-gold active:scale-90 transition-transform"
+        className="relative shrink-0 w-11 max-xs:w-10 h-11 rounded-xl bg-dnd-chip-bg border border-dnd-gold-dim/40 flex items-center justify-center text-dnd-gold active:scale-90 transition-transform"
         ariaLabel={rollAriaLabel}
       >
         <Dices size={16} />

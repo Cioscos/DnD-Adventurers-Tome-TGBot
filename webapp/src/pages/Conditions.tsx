@@ -345,7 +345,7 @@ export default function Conditions() {
               aria-label={t('character.conditions.detail_aria')}
               aria-expanded={showExhaustionDetails}
               onClick={() => setShowExhaustionDetails((v) => !v)}
-              className={`transition-colors ${
+              className={`relative hit-44 transition-colors ${
                 showExhaustionDetails
                   ? 'text-dnd-gold-bright'
                   : 'text-dnd-text-muted hover:text-dnd-gold-bright'

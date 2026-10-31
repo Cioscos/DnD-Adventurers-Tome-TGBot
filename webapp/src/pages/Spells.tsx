@@ -473,10 +473,10 @@ export default function Spells() {
               {/* -top-4 compensa il p-4 del contenitore di scroll del Layout
                   (stesso pattern di Inventory): con top-0 l'header si fermava
                   16px sotto il bordo visivo della pagina. */}
-              <div className="sticky -top-4 z-[5] -mx-4 w-[calc(100%+2rem)] px-5 py-2 flex items-center gap-2 bg-dnd-bg/95 backdrop-blur-sm border-b border-dnd-border/40">
+              <div className="sticky -top-4 z-[5] -mx-4 w-[calc(100%+2rem)] px-5 py-0.5 flex items-center gap-2 bg-dnd-bg/95 backdrop-blur-sm border-b border-dnd-border/40">
                 <Pressable
                   onClick={() => toggleLevel(level)}
-                  className="flex items-center gap-2 flex-1 min-w-0 text-left"
+                  className="flex items-center gap-2 flex-1 min-w-0 min-h-[44px] text-left"
                   aria-expanded={!collapsedLevels.has(level)}
                 >
                   <ChevronRight

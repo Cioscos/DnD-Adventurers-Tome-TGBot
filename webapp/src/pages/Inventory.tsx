@@ -589,7 +589,7 @@ export default function Inventory() {
             <div key={type} className={isSingle ? 'mb-2' : 'mb-4'}>
               <Pressable
                 onClick={() => toggleType(type)}
-                className={`sticky -top-4 z-[5] -mx-4 w-[calc(100%+2rem)] px-5 flex items-center gap-2 bg-dnd-bg/95 backdrop-blur-sm border-b border-dnd-border/40 text-left ${isSingle ? 'py-1' : 'py-2'} ${scrolled ? 'pr-24' : ''}`}
+                className={`sticky -top-4 z-[5] -mx-4 w-[calc(100%+2rem)] px-5 flex items-center gap-2 bg-dnd-bg/95 backdrop-blur-sm border-b border-dnd-border/40 text-left min-h-[44px] ${isSingle ? 'py-1' : 'py-2'} ${scrolled ? 'pr-24' : ''}`}
                 aria-expanded={!isCollapsed}
               >
                 <ChevronRight
