@@ -12,6 +12,7 @@ import EmptyState from '@/components/ui/EmptyState'
 import ServerVersionBanner from '@/components/ui/ServerVersionBanner'
 import OfflineNotice, { type OfflineNoticeQuery } from '@/components/ui/OfflineNotice'
 import Pressable from '@/components/ui/Pressable'
+import PageHelp from '@/components/PageHelp'
 import { spring } from '@/styles/motion'
 
 // Ogni pagina monta il proprio Layout, quindi navigare fra pagine dello stesso
@@ -35,9 +36,11 @@ interface LayoutProps {
   /** Query dei dati mostrati dalla pagina, quando non sono quelli del personaggio:
    * è di questa che l'avviso offline deve riportare lo stato e l'orario. */
   offlineQuery?: OfflineNoticeQuery
+  /** Chiave della guida "?" (`help.<key>` nei locale). Default: `page`. */
+  help?: string
 }
 
-export default function Layout({ title, children, backTo, group, page, hideScrollbar = false, offlineQuery }: LayoutProps) {
+export default function Layout({ title, children, backTo, group, page, hideScrollbar = false, offlineQuery, help = page }: LayoutProps) {
   const navigate = useNavigate()
   const { t } = useTranslation()
   const swipe = useSwipeNavigation(group, page)
@@ -204,6 +207,7 @@ export default function Layout({ title, children, backTo, group, page, hideScrol
           <h1 className="text-lg font-bold font-display text-dnd-gold-bright truncate flex-1 title-glow">
             {title}
           </h1>
+          {help && <PageHelp helpKey={help} title={title} />}
         </div>
         {info && (() => {
           return (

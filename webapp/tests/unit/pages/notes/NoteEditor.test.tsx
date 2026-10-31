@@ -5,7 +5,8 @@ import NoteEditor from '@/pages/notes/NoteEditor'
 
 vi.mock('react-i18next', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
-  return { ...actual, useTranslation: () => ({ t: (k: string) => k, i18n: { language: 'it' } }) }
+  const t = (k: string) => (k === 'character.notes.tag_suggestions' ? ['Organizzazioni', 'Alleati', 'Nemici', 'Storia', 'Luoghi'] : k)
+  return { ...actual, useTranslation: () => ({ t, i18n: { language: 'it' } }) }
 })
 vi.mock('@/components/ui/Input', async () => {
   const React = await import('react')

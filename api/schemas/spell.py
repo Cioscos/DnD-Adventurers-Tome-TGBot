@@ -12,7 +12,8 @@ from api.schemas.common import D20Dice, RollMode
 _EXTRA_DICE_RE = re.compile(r"^(\d+)d(\d+)([+-]\d+)?$", re.IGNORECASE)
 
 
-_UPCAST_PATTERN = r"^\d+d\d+$"
+# Bonus opzionale: il dardo extra di Dardo incantato è 1d4+1 per livello.
+_UPCAST_PATTERN = r"^\d+d\d+([+-]\d+)?$"
 
 
 class SpellRead(BaseModel):

@@ -57,7 +57,8 @@ export default function AbilityScores() {
   const handleSave = (ability: string, value: number) => {
     if (updateMutation.isPending) return
     if (value < 1 || value > 30) return
-    if (char?.ability_scores.find((s) => s.name === ability)?.value === value) {
+    const s = char?.ability_scores.find((x) => x.name === ability)
+    if ((s?.base_value ?? s?.value) === value) {
       setEditing(null)
       return
     }
@@ -119,7 +120,9 @@ export default function AbilityScores() {
           <AbilityScoreEditModal
             open={editing !== null && score !== undefined}
             label={score ? t(`character.stats.${score.name}`, { defaultValue: score.name }) : ''}
-            currentValue={score?.value ?? 0}
+            // Il PATCH salva il valore base: partire dall'effettivo (con i bonus degli oggetti) li sommerebbe due volte.
+            currentValue={score?.base_value ?? score?.value ?? 0}
+            effectiveValue={score?.value}
             saving={updateMutation.isPending}
             onClose={() => setEditing(null)}
             onSave={(value) => { if (score) handleSave(score.name, value) }}

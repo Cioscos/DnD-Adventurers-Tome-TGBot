@@ -8,10 +8,6 @@ vi.mock('react-i18next', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
   return { ...actual, useTranslation: () => ({ t: (k: string) => k, i18n: { language: 'it' } }) }
 })
-vi.mock('@/components/ui/Sheet', async () => {
-  const React = await import('react')
-  return { default: (p: { open: boolean; children?: unknown }) => (p.open ? React.createElement('div', null, p.children) : null) }
-})
 vi.mock('@/components/ui/Button', async () => {
   const React = await import('react')
   return { default: (p: { onClick?: () => void; disabled?: boolean; loading?: boolean; children?: unknown }) => React.createElement('button', { onClick: p.onClick, disabled: p.disabled || p.loading }, p.children) }
@@ -23,9 +19,9 @@ const noop = () => {}
 describe('CastSpellModal', () => {
   it('offers slot buttons and casts at the chosen level', async () => {
     const onCast = vi.fn()
-    const slots = [{ id: 10, level: 3, available: 2, total: 3 }] as SpellSlot[]
+    const slots = [{ id: 10, level: 3, available: 2, used: 1, total: 3 }] as SpellSlot[]
     render(<CastSpellModal spell={spell} availableSlots={slots} onCast={onCast} onCreateSlot={noop} onCancel={noop} isPending={false} isCreatingSlot={false} />)
-    await userEvent.click(screen.getByText(/2\/3/))
+    await userEvent.click(screen.getByText('character.slots.available_count'))
     expect(onCast).toHaveBeenCalledWith(3)
   })
 

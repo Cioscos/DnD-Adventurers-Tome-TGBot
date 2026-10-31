@@ -142,7 +142,9 @@ export default function Sheet({
               )
             )}
 
-            <div className="overflow-y-auto overscroll-contain pb-safe-lg"
+            {/* overflow-y-auto rende auto anche l'asse x: un contenuto che scorre di lato
+                farebbe comparire una barra orizzontale che alza lo sheet. */}
+            <div className="overflow-y-auto overflow-x-hidden overscroll-contain pb-safe-lg"
                  style={{ maxHeight: 'calc(85vh - 60px)' }}>
               {children}
             </div>

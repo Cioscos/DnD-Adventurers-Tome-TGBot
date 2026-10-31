@@ -1,6 +1,54 @@
 {
   "entries": [
     {
+      "version": "2.25.0",
+      "date": "2026-10-31",
+      "title": {
+        "it": "Una guida in ogni pagina",
+        "en": "A guide on every page"
+      },
+      "added": {
+        "it": [
+          "Ogni pagina ha un pulsante \"?\" in alto. Toccalo per leggere la guida della pagina: cosa mostra e come usare ogni funzione."
+        ],
+        "en": [
+          "Every page has a \"?\" button at the top. Tap it to read the page guide: what the page shows and how to use each feature."
+        ]
+      },
+      "improved": {
+        "it": [
+          "Le abilità speciali chiedono conferma prima di essere eliminate.",
+          "Mappe: puoi riordinare i file anche dal telefono. Tieni premuta una miniatura, poi tocca la posizione di destinazione.",
+          "Note: i tag suggeriti seguono la lingua dell'app.",
+          "Lancio di un incantesimo: scelta dello slot e tiro dei danni stanno nello stesso pannello, con \"Indietro\" per cambiare slot. I dadi rotolano sopra il pannello senza chiuderlo.",
+          "Scelta dello slot: i pallini mostrano gli slot usati e liberi al posto di \"1/2\".",
+          "Il colpo critico viene solo dal tiro per colpire: niente più interruttore manuale nel tiro dei danni."
+        ],
+        "en": [
+          "Special abilities now ask for confirmation before deletion.",
+          "Maps: you can reorder files on your phone too. Hold a thumbnail, then tap the destination position.",
+          "Notes: suggested tags follow the app language.",
+          "Casting a spell: slot choice and damage roll share one panel, with \"Back\" to change slot. The dice roll over the panel without closing it.",
+          "Slot choice: dots show used and free slots instead of \"1/2\".",
+          "A critical hit comes only from the attack roll: no more manual switch in the damage roll."
+        ]
+      },
+      "fixed": {
+        "it": [
+          "Modificare una caratteristica con un bonus da oggetto non somma più il bonus due volte: la finestra parte dal valore base.",
+          "Turno: sul telefono \"Lancia\" apre di nuovo la scelta dello slot invece di chiuderla subito.",
+          "Gli sheet non si alzano più per un istante quando il contenuto cambia con un'animazione laterale.",
+          "Dardo incantato dal catalogo: con uno slot più alto aggiunge un dardo (1d4+1) per ogni livello in più."
+        ],
+        "en": [
+          "Editing an ability score with an item bonus no longer adds the bonus twice: the dialog starts from the base value.",
+          "Turn: on phones, \"Cast\" opens the slot picker again instead of closing it at once.",
+          "Sheets no longer jump up for a moment when their content changes with a side animation.",
+          "Magic Missile from the catalog: a higher slot adds one dart (1d4+1) for each extra level."
+        ]
+      }
+    },
+    {
       "version": "2.24.3",
       "date": "2026-10-31",
       "title": {

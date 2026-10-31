@@ -353,6 +353,7 @@
       "modifier": "Modifier",
       "hp_recalc_toast": "Max HP updated: {{old}} → {{new}}",
       "edit_title": "Edit {{ability}}",
+      "base_hint": "Base value, without item bonuses (effective: {{effective}}).",
       "decrease": "Decrease",
       "increase": "Increase"
     },
@@ -535,7 +536,7 @@
         "increase_level": "Increase level",
         "extra_dice": "Extra dice",
         "extra_dice_placeholder": "e.g. 2d6",
-        "critical": "Critical (doubles dice)",
+        "critical": "Critical hit: dice are doubled",
         "roll_button": "Roll",
         "full_damage": "Full",
         "damage": "Damage",
@@ -600,6 +601,8 @@
       "used": "Used",
       "total": "Total",
       "available": "Available",
+      "available_count_one": "{{count}} available",
+      "available_count_other": "{{count}} available",
       "reset_all": "Reset all",
       "add_level": "Add slot level",
       "gem_aria": "Level {{level}} slot {{index}}/{{total}} {{state}}",
@@ -939,6 +942,7 @@
       "legend": "You are a legend"
     },
     "notes": {
+      "tag_suggestions": ["Organizations", "Allies", "Enemies", "Backstory", "Places"],
       "title": "Notes",
       "new": "New note",
       "voice": "Voice note (recorded via bot)",
@@ -980,7 +984,8 @@
       "empty_title": "No maps",
       "empty_hint": "Upload a dungeon map or adventure PDF: always at your fingertips.",
       "zoom_hint": "Pinch to zoom",
-      "reorder_hint": "Drag to reorder",
+      "reorder_hint": "Hold or drag to reorder",
+      "reorder_pick_target": "Tap the destination position",
       "error_too_large": "{{name}} exceeds the 10 MB limit",
       "dropzone_primary": "Drop files here or tap to select",
       "dropzone_accept": "PNG, JPG, PDF · max 10 MB",
@@ -1238,6 +1243,7 @@
       }
     },
     "abilities": {
+      "delete_confirm": "Delete the ability \"{{name}}\"? This cannot be undone.",
       "title": "Special Abilities",
       "add": "Add ability",
       "uses_left": "{{current}}/{{max}} uses",
@@ -2096,6 +2102,2148 @@
       "added": "New features",
       "improved": "Improvements",
       "fixed": "Fixes"
+    }
+  },
+  "help": {
+    "open": "Page guide",
+    "title": "Guide: {{page}}",
+    "abilities": {
+      "summary": "This page shows the special abilities of the character: class features, feats and custom abilities. Here you can spend uses, add abilities and edit them.",
+      "sections": [
+        {
+          "title": "What you see",
+          "items": [
+            "The \"Class features\" section contains the abilities that the app creates from the class and the level.",
+            "The \"Custom abilities\" section contains the abilities that you add and the feats.",
+            "Each row shows the name, the source class, \"Passive\" or \"Active\" and the uses left.",
+            "A faded row means an ability with no uses left.",
+            "Tap a row to see the description and the controls. Tap it again to close it."
+          ]
+        },
+        {
+          "title": "Spend and recover uses",
+          "items": [
+            "Open the ability row.",
+            "With 10 uses or less you see one pip for each use. A lit pip is a spent use.",
+            "Tap an empty pip to spend a use. Tap a lit pip to recover it.",
+            "With more than 10 uses you see a counter. Tap \"-\" to spend a use and \"+\" to recover it.",
+            "To type the exact number, tap the number of uses and use \"Set uses\".",
+            "\"Restoration\" tells you when the app recovers the uses."
+          ]
+        },
+        {
+          "title": "Restoration with rests",
+          "items": [
+            "A short rest recovers the uses of abilities with \"Short rest\".",
+            "A long rest recovers the uses of abilities with \"Long rest\" and \"Short rest\".",
+            "The app never recovers the uses of abilities with \"Manual\". Recover them yourself on this page."
+          ]
+        },
+        {
+          "title": "Add an ability",
+          "items": [
+            "Tap \"Add ability\".",
+            "Type the \"Name\". Turn on \"Passive\" if the ability has no uses to spend.",
+            "Tap \"Next\".",
+            "Type the \"Description\" if you want.",
+            "For an active ability, type the \"Max uses\" and select the \"Restoration\".",
+            "The app suggests the \"Restoration\" from the name, for example \"Short rest\" for \"Action Surge\".",
+            "Select the \"Action type\" if you want. Then tap \"Add\"."
+          ]
+        },
+        {
+          "title": "Edit or delete an ability",
+          "items": [
+            "Open the row of a custom ability.",
+            "Tap \"Edit\" to change the data, then tap \"Save\" in the second step.",
+            "To delete the ability, tap \"Delete\". Then tap \"Delete\" in the confirmation dialog.",
+            "WARNING: after you confirm, you cannot undo the deletion.",
+            "For class features you can only spend uses and tap \"Edit description\"."
+          ]
+        },
+        {
+          "title": "Remove a feat",
+          "items": [
+            "Open the feat row.",
+            "Tap \"Remove feat\". Then tap \"Confirm removal\".",
+            "WARNING: the ability score increases and the saving throw proficiency of the feat are not reverted."
+          ]
+        },
+        {
+          "title": "Filters",
+          "items": [
+            "Filters show when a category has at least two different values.",
+            "You can filter by \"Class\", \"Type\" and \"Recovery\". The number on a filter tells how many abilities match.",
+            "Tap a filter to turn it on. Tap it again to turn it off.",
+            "Filters in the same row add together. Filters in different rows combine.",
+            "Tap \"Clear filters\" to see all the abilities again."
+          ]
+        },
+        {
+          "title": "Custom resources",
+          "items": [
+            "If a homebrew rule creates a resource, you see it in \"Custom resources\".",
+            "Tap \"-\" or \"+\" to change the value by 1.",
+            "Tap \"Restore\" to set the resource back to its maximum."
+          ]
+        }
+      ]
+    },
+    "ac": {
+      "summary": "This page shows and changes the Armor Class of the character. The total AC is the sum of Base, Shield and Magic, plus the bonuses from magic items and homebrew rules.",
+      "sections": [
+        {
+          "title": "What the page shows",
+          "items": [
+            "The large shield shows the \"Total\" AC.",
+            "Below the shield, the \"Base · Shield · Magic\" row shows the three values.",
+            "The \"Magic items\" row shows the bonus from equipped magic items, if there is one.",
+            "The \"Homebrew\" row shows the bonus from homebrew rules, if there is one.",
+            "The three panels \"Base\", \"Shield\" and \"Magic\" show each value separately."
+          ]
+        },
+        {
+          "title": "Automatic calculation",
+          "items": [
+            "When you equip body armor, the app calculates the Base from the armor.",
+            "When you equip a shield, the app calculates the Shield value from the shield.",
+            "The \"Auto\" label shows a value that comes from the equipment.",
+            "Without armor, the Base is 10."
+          ]
+        },
+        {
+          "title": "Change the values manually",
+          "items": [
+            "Type the new value in the field below \"Base\", \"Shield\" or \"Magic\".",
+            "The \"New AC\" label shows the total before you save.",
+            "Tap \"Save\" at the bottom of the page or \"Save now\" in the \"Unsaved changes\" bar.",
+            "A Base or Shield value that you type gets the \"Manual\" label.",
+            "Manual values do not change when you change the equipment."
+          ]
+        },
+        {
+          "title": "Go back to automatic calculation",
+          "items": [
+            "To remove the manual values, tap \"Reset to auto\".",
+            "The app calculates Base and Shield again from the equipped armor and shield.",
+            "The Magic value does not change."
+          ]
+        },
+        {
+          "title": "Unarmored Defense",
+          "items": [
+            "Unarmored Defense calculates the Base as 10 + DEX mod + the mod of the selected ability.",
+            "For a Monk, tap \"WIS\". For a Barbarian, tap \"CON\".",
+            "Each button shows the AC that you get with that option.",
+            "When Unarmored Defense is on, the Base gets the \"Unarmored\" label and does not accept manual values.",
+            "The Base changes automatically when you change the ability scores.",
+            "Do not equip body armor when this function is on.",
+            "To turn off the function, tap \"Off\". The Base goes back to the armor value, or to 10."
+          ]
+        }
+      ]
+    },
+    "actions": {
+      "summary": "This page is for attacks. It shows the unarmed strike and the equipped weapons. The app rolls the d20 and the damage and shows the result.",
+      "sections": [
+        {
+          "title": "What the page shows",
+          "items": [
+            "At the top, \"Attacks per action\" shows how many attacks you make with one Attack action.",
+            "The \"Unarmed Strike\" panel shows the damage die of the unarmed strike.",
+            "For a Monk, the damage die follows the Monk level.",
+            "The \"Equipped weapons\" section shows only the equipped weapons.",
+            "If you have no equipped weapons, the section shows \"No weapon equipped\". To equip a weapon, use the inventory or the equipment."
+          ]
+        },
+        {
+          "title": "Make an attack",
+          "items": [
+            "To attack, tap \"Attack\" next to the weapon or the unarmed strike.",
+            "To attack with advantage or disadvantage, press and hold \"Attack\" and select the mode.",
+            "The app rolls the d20 and adds the attack bonus.",
+            "The result shows \"To hit\", the die roll and the total.",
+            "If you hit, the result also shows the \"Damage\", the dice rolls and the total."
+          ]
+        },
+        {
+          "title": "Weapon options",
+          "items": [
+            "For a versatile weapon, select \"One hand\" or \"Two hands\" before you attack.",
+            "For a thrown weapon, select \"Melee\" or \"Thrown\" before you attack.",
+            "The app keeps your selection for each weapon. The selection also applies on the Turn page."
+          ]
+        },
+        {
+          "title": "Critical hits, fumbles and warnings",
+          "items": [
+            "With a natural 20 the result shows \"Critical!\" and the damage is critical.",
+            "With a natural 1 the result shows \"Fumble!\" and does not show the damage.",
+            "\"Proficiency not listed\" means that the character does not have proficiency with this weapon.",
+            "For a weapon that uses ammunition, the app removes one equipped ammunition and shows the ammunition that remains.",
+            "If you have no equipped ammunition, the result shows a warning. In this case, count the ammunition yourself."
+          ]
+        },
+        {
+          "title": "Reroll with Heroic Inspiration",
+          "items": [
+            "If you have Heroic Inspiration, the result shows the \"Use Inspiration\" button.",
+            "To roll the d20 again, tap \"Use Inspiration\".",
+            "The app spends the Heroic Inspiration and shows the new result with the \"Inspiration reroll\" mark.",
+            "You can reroll only one time for each attack."
+          ]
+        }
+      ]
+    },
+    "changelog": {
+      "summary": "This page shows the release notes of the app. Each entry lists the new features, improvements and fixes of one version.",
+      "sections": [
+        {
+          "title": "Version list",
+          "items": [
+            "The most recent version is at the top.",
+            "Each entry shows the version number and the date.",
+            "The \"Current\" badge shows the version that you use now.",
+            "The entry of the current version is already open."
+          ]
+        },
+        {
+          "title": "Read a version",
+          "items": [
+            "To open an entry, tap the entry.",
+            "To close an open entry, tap the entry again.",
+            "\"New features\" lists the features that the version adds.",
+            "\"Improvements\" lists the features that work better.",
+            "\"Fixes\" lists the errors that the version corrects."
+          ]
+        },
+        {
+          "title": "Open and close the page",
+          "items": [
+            "To open this page, tap the version number at the bottom of the character list.",
+            "To go back to the character list, tap the back arrow."
+          ]
+        }
+      ]
+    },
+    "character": {
+      "summary": "This is the main sheet of the character. It has three screens: \"Character\", \"Equipment\" and \"Menu\". From here you see the most important data and open all the other pages.",
+      "sections": [
+        {
+          "title": "Header and screens",
+          "items": [
+            "To go back to the character list, tap the arrow on the left.",
+            "To search spells, items, abilities, resources and notes, tap the magnifier. Type at least 2 characters and tap a result.",
+            "To grant or spend Heroic Inspiration, tap the \"On\" / \"Off\" button.",
+            "To open \"Settings\", tap the gear.",
+            "When you maintain concentration, the \"C\" badge shows next to the name. To open the spell, tap the badge.",
+            "To change screen, swipe left or right.",
+            "To open a screen directly, tap one of the dots at the bottom.",
+            "During an active session, tap the \"In active session\" banner to go back to the session."
+          ]
+        },
+        {
+          "title": "Character screen: main card",
+          "items": [
+            "To open \"Identity\", tap the classes and race at the top.",
+            "To open \"Inventory\", tap the backpack at the top right. The number is the weight that you carry. An amber border shows that you exceed your carry capacity.",
+            "To open \"Experience\", tap the experience bar.",
+            "To open \"Armor Class\", tap the shield with the AC.",
+            "To open \"Ability Scores\", tap one of the six scores at the bottom.",
+            "To read a passive ability or an active condition, tap its badge.",
+            "The resistance, immunity and vulnerability badges open \"Identity\", where you edit them.",
+            "In wild shape, the HP and AC are those of the form. To go back to the normal form, tap \"End form\"."
+          ]
+        },
+        {
+          "title": "Quick damage and healing",
+          "items": [
+            "Tap the HP bar to open \"Damage / Heal\".",
+            "Tap \"Damage\" or \"Heal\".",
+            "For damage, you can select the \"Damage type (optional)\". The app applies the resistances, immunities and vulnerabilities of the character automatically.",
+            "To force a modifier, tap \"½ Resistance\", \"×2 Vulnerability\", \"Immune\" or \"Full\".",
+            "Type the value and tap \"Apply\".",
+            "To cancel the last change, tap \"Undo\" in the message that appears.",
+            "If the damage breaks concentration, the app shows \"Concentration lost!\".",
+            "For temporary HP and death saving throws, tap \"Full HP page\". If the character is dead, the bar opens that page directly."
+          ]
+        },
+        {
+          "title": "Alerts on the Character screen",
+          "items": [
+            "The \"It's your turn\" banner appears in a session when it is your turn. To open the Turn view, tap the banner.",
+            "The \"Level choices\" badge appears when you must select an ability score increase or a feat.",
+            "To make the choice, tap the badge. Select \"Ability score increase\" and spend 2 points, or select a \"Feat\". Then tap \"Confirm\".",
+            "The \"Dead\" banner appears when the character is dead. To bring the character back to life, tap the banner.",
+            "The \"Concentration\" banner shows the spell that you maintain. To open the spells, tap the banner."
+          ]
+        },
+        {
+          "title": "Statistics and slots",
+          "items": [
+            "The \"Statistics\" section shows Initiative, proficiency bonus, passive Perception and Speed.",
+            "To roll initiative, tap \"Initiative\". To roll with advantage or disadvantage, press and hold.",
+            "To open the related page, tap one of the other statistics.",
+            "The \"Saving Throws\" and \"Skills\" cards show your proficiencies. Tap a card to open its page.",
+            "The \"Spell slots\" section shows the total number of slots for each level. Tap the section to open the slots.",
+            "To change the order of the sections, tap \"Customize screen\" and use the arrows.",
+            "To show or hide a section, tap the eye."
+          ]
+        },
+        {
+          "title": "Quick actions",
+          "items": [
+            "\"Quick actions\" are the rolls and counters that you use most.",
+            "To roll an attack, a saving throw or an attack spell, tap its button. For advantage or disadvantage, press and hold.",
+            "For a special ability, tap the button. The app marks one use and shows \"Undo\" for some seconds.",
+            "For counters, use \"-\" and \"+\". To type a value, tap the number in the middle.",
+            "To spend a hit die or take a rest, tap its button and confirm.",
+            "To select the actions, tap \"+\". You can keep a maximum of 12 actions.",
+            "In the editor, tap an entry to add it or remove it. To change the order, drag the handle of the entry.",
+            "WARNING: \"Restore defaults\" replaces your list with the list computed from the character."
+          ]
+        },
+        {
+          "title": "Equipment screen",
+          "items": [
+            "The figure shows 11 slots: head, neck, cloak, body, hands, two rings, feet, ammunition, main hand and off hand.",
+            "To equip an item, tap an empty slot and tap an item from the inventory. The list shows only the items that fit the slot.",
+            "If the inventory has no items that fit, tap \"Go to inventory\" to add one.",
+            "For a full slot, tap the slot and select \"Details\", \"Replace\" or \"Unequip\".",
+            "A two-handed weapon occupies both hands. The app asks for confirmation before it removes the other item.",
+            "Below the figure you see the AC, the damage of the main-hand weapon, the carried weight and the speed.",
+            "To use your own image, tap \"Upload silhouette\". To change it or remove it, tap the button again and select \"Change image\" or \"Remove (reset to default)\"."
+          ]
+        },
+        {
+          "title": "Menu screen and rest",
+          "items": [
+            "The menu collects all the character pages in six groups: \"Combat\", \"Magic\", \"Skills\", \"Inventory & Coins\", \"Character\" and \"Tools\".",
+            "To open a page, tap its icon.",
+            "To rest, tap \"Rest\" and select \"Short rest\" or \"Long rest\".",
+            "In a short rest, you can spend hit dice to recover HP. Then tap \"Rest\".",
+            "A long rest restores HP to maximum, recharges slots and abilities and breaks concentration. The app asks for confirmation.",
+            "When the character is dead, the menu does not show \"Rest\"."
+          ]
+        }
+      ]
+    },
+    "class": {
+      "summary": "This page shows the classes of the character and their level. Here you can level up, add or remove classes and distribute levels in multiclass.",
+      "sections": [
+        {
+          "title": "What you see",
+          "items": [
+            "At the top you see the \"Total level\" of the character.",
+            "Each card shows one class with the subclass, the hit die and the spellcasting ability.",
+            "The number to the right of \"Level\" is the class level.",
+            "If XP gives more levels than you assigned, you see for example \"3 distributed · 1 to assign\".",
+            "If the character has no classes, tap \"Add your first class\"."
+          ]
+        },
+        {
+          "title": "Level up",
+          "items": [
+            "When a level is ready to assign, \"Level up available! Tap to pick a class\" shows.",
+            "With milestone advancement, this button is always available up to level 20.",
+            "Tap the button to open \"Level up\".",
+            "In \"Next unlocks\" you see the features of the next three levels of the selected class.",
+            "In \"Choose class\", tap the class that gets the new level.",
+            "If you use \"Rolled HP\", tap \"Roll 1dX for HP\" before you confirm.",
+            "Tap \"Confirm\". The app adds one level to the selected class.",
+            "A class at level 20 cannot level up."
+          ]
+        },
+        {
+          "title": "Effects of the new level",
+          "items": [
+            "If \"Auto HP\" is on, the app adds the HP of the new level.",
+            "The app creates or updates the class features of the new level.",
+            "If the max uses of a resource increase, a message shows the old and the new value.",
+            "The app calculates the spell slots again.",
+            "At a level with an ability score increase, the app creates a pending level choice."
+          ]
+        },
+        {
+          "title": "Manage classes",
+          "items": [
+            "Tap \"Manage classes\" to open \"Edit classes\".",
+            "Type the level of each class in its field. The level must be from 1 to 20.",
+            "\"Level sum\" must be equal to the XP level.",
+            "With milestone advancement, the sum can be 20 at most.",
+            "If the sum is not correct, a red message tells you how many levels to add or remove.",
+            "Tap \"Confirm\" to save. Tap \"Cancel\" to close without saving."
+          ]
+        },
+        {
+          "title": "Add a class",
+          "items": [
+            "In \"Edit classes\", tap \"Add class\".",
+            "Tap \"Class name\" and select a class from the list.",
+            "For a class that is not in the list, select \"Custom\" and type the \"Custom name\".",
+            "Type the \"Subclass\" if you want. Then tap \"Add\".",
+            "If the character does not meet the multiclass prerequisites, you see a warning. You can continue anyway.",
+            "The new class has the label \"NEW\". Tap the trash icon to remove it before you confirm.",
+            "Tap \"Confirm\" to save the new class."
+          ]
+        },
+        {
+          "title": "Remove a class",
+          "items": [
+            "Tap the X on the class card.",
+            "Tap \"Delete\" to confirm.",
+            "WARNING: the app removes the class and the resources linked to it. You cannot undo this action.",
+            "The app calculates max HP and spell slots again from the classes that remain."
+          ]
+        },
+        {
+          "title": "Pending level choices",
+          "items": [
+            "When a choice is pending, \"Level choices: N\" shows on the character screen.",
+            "Tap the button to open the first choice.",
+            "In \"Ability score increase\", distribute 2 points with \"+\" and \"-\". No ability can go above 20.",
+            "In \"Feat\", select a feat from the list. Feats with \"Already taken\" are not available.",
+            "If the feat asks for it, select the ability to increase.",
+            "For a feat that is not in the list, select \"Custom feat\" and type the name and the description.",
+            "Tap \"Confirm\". The app applies the effects, for example it updates HP if Constitution changes.",
+            "The feat shows on the \"Special Abilities\" page."
+          ]
+        }
+      ]
+    },
+    "conditions": {
+      "summary": "This page manages the conditions of the character, such as Blinded or Prone, and the Exhaustion level. You can give a duration in rounds to the conditions.",
+      "sections": [
+        {
+          "title": "Turn a condition on and off",
+          "items": [
+            "To turn on a condition, tap its name in the grid.",
+            "An active condition becomes red.",
+            "To remove the condition, tap its name again.",
+            "To read the rules of the condition, tap the \"i\" icon next to the name."
+          ]
+        },
+        {
+          "title": "Duration in rounds",
+          "items": [
+            "Before you turn on a condition, set the duration in \"Duration in rounds\".",
+            "Type the number of rounds or tap \"1 round\" or \"1 minute = 10\".",
+            "For a condition without a duration, tap \"Until ended\".",
+            "The duration applies to the conditions that you turn on after you set it.",
+            "A condition with a duration shows the rounds that remain next to the name.",
+            "To remove one round from all durations, tap \"End of round (−1)\". The button shows only when a duration is active.",
+            "When a duration gets to 0, the app removes the condition and shows \"Expired\"."
+          ]
+        },
+        {
+          "title": "Exhaustion",
+          "items": [
+            "Exhaustion has levels from 0 to 6. The levels are cumulative.",
+            "To set the level, tap the related number.",
+            "To read the effects of each level, tap the \"i\" icon next to \"Exhaustion\".",
+            "The current level is highlighted in the list of effects.",
+            "A long rest decreases Exhaustion by 1 level."
+          ]
+        },
+        {
+          "title": "Filter and reset",
+          "items": [
+            "To see all conditions, tap \"All\".",
+            "To see only the active conditions, tap \"Active\". The number shows how many conditions are active.",
+            "To remove all standard conditions and Exhaustion, tap \"Reset all\" and then \"Confirm\".",
+            "WARNING: \"Reset all\" removes all standard conditions and sets Exhaustion to 0.",
+            "\"Reset all\" does not remove the custom conditions."
+          ]
+        },
+        {
+          "title": "Custom conditions (homebrew)",
+          "items": [
+            "Active homebrew rules can apply custom conditions.",
+            "To apply a condition from a rule, tap its name in \"Apply condition\".",
+            "The \"Custom\" section shows the active custom conditions.",
+            "To remove a custom condition, tap the trash icon on its card.",
+            "When a custom condition is active, the \"Start of turn\" button shows.",
+            "At the start of your turn, tap \"Start of turn\". The app runs the homebrew rules for the start of the turn, for example damage each turn."
+          ]
+        }
+      ]
+    },
+    "currency": {
+      "summary": "This page shows the coins of the character and their total value in gold. Here you add, remove and convert coins.",
+      "sections": [
+        {
+          "title": "Read the coins",
+          "items": [
+            "The \"Total in gold\" panel shows the value of all coins in gold pieces.",
+            "Each row shows one coin: Platinum (PP), Gold (GP), Electrum (EP), Silver (SP) and Copper (CP).",
+            "Below the coin name, \"current\" shows the current quantity.",
+            "Values: 1 PP is 10 GP. 1 GP is 2 EP, 10 SP or 100 CP.",
+            "To show or hide Electrum, use \"Show Electrum\" in the settings."
+          ]
+        },
+        {
+          "title": "Add or remove coins",
+          "items": [
+            "Tap \"Add / Remove\".",
+            "In the field of the coin, type the quantity to add.",
+            "To remove coins, type a negative number, for example -5.",
+            "The total in gold shows the result immediately.",
+            "Tap \"Save\" to confirm.",
+            "A coin quantity never goes below 0."
+          ]
+        },
+        {
+          "title": "Set a quantity",
+          "items": [
+            "Tap \"Set\".",
+            "In the field of the coin, type the new quantity. The empty field shows the current value in grey.",
+            "An empty field does not change the coin.",
+            "Tap \"Save\" to confirm.",
+            "When you change the mode, the app clears the fields."
+          ]
+        },
+        {
+          "title": "Unsaved changes",
+          "items": [
+            "When you type in a field, the \"Unsaved changes\" bar appears at the top.",
+            "Tap \"Save now\" to save the changes."
+          ]
+        },
+        {
+          "title": "Convert coins",
+          "items": [
+            "Tap \"Convert\".",
+            "In \"From\", select the start coin. In \"To\", select the result coin.",
+            "To swap the two coins, tap the button with the arrows.",
+            "Type the quantity to convert in \"Amount\". The app shows the result of the conversion.",
+            "Tap \"Convert\" to confirm.",
+            "If you do not have sufficient coins, the app does not do the conversion.",
+            "If the result is not a whole number, the app adds the remainder in copper pieces."
+          ]
+        }
+      ]
+    },
+    "dice": {
+      "summary": "This page rolls dice for the character. The app records each roll in the history and in the statistics.",
+      "sections": [
+        {
+          "title": "Roll dice",
+          "items": [
+            "Select the number of dice with \"-\" and \"+\" in \"Number of dice\". The maximum is 10.",
+            "Tap a die: d4, d6, d8, d10, d12, d20 or d100.",
+            "The result shows the formula, the total and the value of each die.",
+            "This page has no advantage or disadvantage. On other pages, press and hold the roll button to select them."
+          ]
+        },
+        {
+          "title": "Quick rolls",
+          "items": [
+            "To roll initiative, tap \"Roll Initiative\". The app rolls 1d20 and adds the Dexterity modifier.",
+            "The \"Roll Initiative\" button shows the current Dexterity modifier.",
+            "To roll 2 or 3 six-sided dice, tap \"2d6\" or \"3d6\".",
+            "To roll an ability score, tap \"4d6kh3\". The app rolls 4d6 and removes the lowest die.",
+            "The result shows the removed die with a line through it."
+          ]
+        },
+        {
+          "title": "3D animation and dice packs",
+          "items": [
+            "If the 3D animation is on, the dice roll on the screen.",
+            "To see the result immediately, tap the screen during the animation.",
+            "To turn the animation on or off, use \"3D dice animation\" in the settings.",
+            "To change the look of the dice, select a \"Dice pack\" in the settings.",
+            "You can select a dice pack only when the 3D animation is on."
+          ]
+        },
+        {
+          "title": "Send the result to the bot",
+          "items": [
+            "Below the result, tap \"Send to bot\".",
+            "The bot sends the result to your private Telegram chat.",
+            "\"Send to bot\" appears only when you open the app in Telegram."
+          ]
+        },
+        {
+          "title": "History",
+          "items": [
+            "The \"History\" section shows the last 10 rolls.",
+            "Each row shows the formula, the dice, the total and the time of the roll.",
+            "The history also contains rolls from other pages. A label shows the source, for example \"Weapon\" or \"Spell\".",
+            "To clear the history, tap \"Clear history\". In the confirmation window, tap \"Confirm\".",
+            "WARNING: The app deletes all the roll history. You cannot undo this action.",
+            "The roll statistics do not change when you clear the history."
+          ]
+        },
+        {
+          "title": "Statistics",
+          "items": [
+            "To see the counters of all rolls, tap \"Roll statistics\".",
+            "The statistics page shows the natural 20s, the natural 1s and a chart for each die type."
+          ]
+        }
+      ]
+    },
+    "dice_stats": {
+      "summary": "This page shows the counters of all dice that the character rolled. The counters increase automatically with each roll.",
+      "sections": [
+        {
+          "title": "Summary",
+          "items": [
+            "\"Natural 20s\" shows how many times the d20 gave 20.",
+            "\"Natural 1s\" shows how many times the d20 gave 1.",
+            "\"Total rolls\" shows the number of all dice rolled."
+          ]
+        },
+        {
+          "title": "Cards for each die type",
+          "items": [
+            "Each card shows one die type, for example d20.",
+            "On the right you see the number of rolls and the average result.",
+            "The chart shows how many times each face came up. A higher bar shows more results.",
+            "For the d20, the bar for 20 is green and the bar for 1 is red.",
+            "For dice with many faces, only some numbers appear below the chart."
+          ]
+        },
+        {
+          "title": "Data source",
+          "items": [
+            "The counters include rolls from the \"Roll Dice\" page and rolls from other pages, for example weapon attacks.",
+            "If there are no rolls, the page shows \"No rolls recorded yet\".",
+            "Without a connection, the page shows \"Not available offline\". Tap \"Retry\" to load the data again."
+          ]
+        },
+        {
+          "title": "Reset the statistics",
+          "items": [
+            "Tap \"Reset statistics\" at the bottom of the page.",
+            "In the confirmation window, tap \"Reset statistics\".",
+            "WARNING: All counters go back to zero, also natural 20s and 1s. You cannot undo this action.",
+            "The roll history does not change."
+          ]
+        }
+      ]
+    },
+    "extras": {
+      "summary": "This page manages the creatures of the character: familiars, companions, mounts, summons and wild shapes. For each creature you can track HP, AC and attacks.",
+      "sections": [
+        {
+          "title": "Add a creature",
+          "items": [
+            "Tap \"Add\".",
+            "In \"Type\", select \"Familiars\", \"Companions\", \"Mounts\", \"Summons\" or \"Wild shapes\".",
+            "To use a creature from the catalogue, tap \"Pick from monster catalogue\" and select the monster.",
+            "The app writes the name, the \"Max HP\", the \"AC\" and the statblock of the monster.",
+            "For a creature that is not in the catalogue, type \"Name\", \"Max HP\" and \"AC\".",
+            "To give an attack to the creature, type \"Attack\", \"Bonus\" and \"Damage\". Type the damage as 1d6+2.",
+            "If necessary, type the \"Notes\". Then tap \"Add\".",
+            "You can save a maximum of 30 creatures."
+          ]
+        },
+        {
+          "title": "Rule warnings",
+          "items": [
+            "For a familiar, the app shows a warning if the monster is not an allowed form.",
+            "For a wild shape, the app shows a warning if the monster is not a beast or if the CR is above the limit for your druid level.",
+            "The app also shows a warning for a flying speed before level 8 and a swimming speed before level 4.",
+            "The warnings are only advice. You can add the creature anyway."
+          ]
+        },
+        {
+          "title": "What each card shows",
+          "items": [
+            "The page groups the creatures by type.",
+            "Each card shows the name, the notes, the AC and the HP bar.",
+            "At 0 HP the card shows \"Down (0 HP)\".",
+            "To see traits and actions, tap \"Statblock\".",
+            "The EN label shows a catalogue text that has no Italian translation."
+          ]
+        },
+        {
+          "title": "Creature damage and healing",
+          "items": [
+            "Type the value in \"Amount\".",
+            "To remove HP from the creature, tap \"Damage\".",
+            "To add HP to the creature, tap \"Heal\".",
+            "These operations change only the HP of the creature, not the HP of the character."
+          ]
+        },
+        {
+          "title": "Creature attacks",
+          "items": [
+            "Each attack shows the attack bonus and the damage die.",
+            "To attack, tap \"Attack\".",
+            "To attack with advantage or disadvantage, press and hold \"Attack\" and select the mode.",
+            "Below the attacks, a row shows the roll, the attack total and the damage."
+          ]
+        },
+        {
+          "title": "Wild shape",
+          "items": [
+            "To take a form, tap \"Activate form\". The number in brackets shows the Wild Shape uses that remain.",
+            "The app removes one Wild Shape use. The form starts with all its HP.",
+            "You can have only one active form. If you activate a form, the app ends the other form.",
+            "If no uses remain, the app asks for confirmation. To activate the form anyway, tap \"Activate anyway\".",
+            "If the character is at 0 HP, you cannot take a form.",
+            "When a form is active, damage and healing on the Hit Points page go to the form.",
+            "To go back to the normal form, tap \"End form\". The form also ends when it gets to 0 HP."
+          ]
+        },
+        {
+          "title": "Delete a creature",
+          "items": [
+            "Tap \"Delete\" on the card of the creature.",
+            "Tap \"Delete\" again to confirm.",
+            "WARNING: The app deletes the creature and its data. You cannot undo this operation."
+          ]
+        }
+      ]
+    },
+    "history": {
+      "summary": "This page shows the history of the character. Each entry is one event: a roll, a hit point change, a rest or another action.",
+      "sections": [
+        {
+          "title": "Read the history",
+          "items": [
+            "The events are on a vertical line. The most recent event is at the top.",
+            "Each entry has a colored icon. The icon shows the type of event, for example hit points, rest, roll or spell.",
+            "Below each description is the relative date, for example \"Today\" or \"Yesterday\".",
+            "On a computer, put the pointer on the date to see the exact date and time.",
+            "The number of entries is at the top left."
+          ]
+        },
+        {
+          "title": "What the app records",
+          "items": [
+            "The app adds an entry automatically when you change the character or make a roll.",
+            "Some examples: hit points, armor class, level, spell slots, coins, bag and conditions.",
+            "The app also records attack rolls, skill checks, saving throws, death saves, hit dice and rests.",
+            "If there are no events, the page shows \"No events recorded\"."
+          ]
+        },
+        {
+          "title": "Search for an entry",
+          "items": [
+            "Type a word in the \"Search history…\" field.",
+            "The list shows only the entries with that word in the description.",
+            "The counter shows the number of entries found.",
+            "If no entry matches, the page shows \"No matching entries.\".",
+            "To show all entries again, tap the X in the search field."
+          ]
+        },
+        {
+          "title": "Clear the history",
+          "items": [
+            "Tap \"Clear history\".",
+            "In the confirmation window, tap \"Confirm\".",
+            "WARNING: this action deletes all entries. You cannot undo it."
+          ]
+        },
+        {
+          "title": "Without a connection",
+          "items": [
+            "If the app cannot load the history, the page shows an error message.",
+            "To load the data again, tap \"Retry\"."
+          ]
+        }
+      ]
+    },
+    "home": {
+      "summary": "This page shows all your characters. From here you open a sheet, create a new character, import a character or enter a game session.",
+      "sections": [
+        {
+          "title": "Character list",
+          "items": [
+            "Each card shows the name, classes, race, current and maximum HP, the HP bar and the Armor Class.",
+            "To open a character, tap its card.",
+            "The \"Unconscious\" badge shows that the character has 0 HP.",
+            "The \"Dead\" badge shows that the character is dead.",
+            "The \"Needs setup\" badge shows that the character has no maximum HP yet.",
+            "The gold sparkle icon shows that the character has Heroic Inspiration.",
+            "If you have no characters, the page shows the message \"No characters yet. Create one!\"."
+          ]
+        },
+        {
+          "title": "Game session",
+          "items": [
+            "To create or join a session, tap \"Game session\".",
+            "You do not need a character to open the session as GM.",
+            "If you are already in an active session, the button changes to \"Resume session\".",
+            "To go back to the active session, tap \"Resume session\"."
+          ]
+        },
+        {
+          "title": "Create a character: name and class",
+          "items": [
+            "Tap \"New character\".",
+            "Type the character name and tap \"Next\".",
+            "Tap one of the 12 classes. Below each class you see its hit die.",
+            "For a class that is not in the list, tap \"Custom\", type the \"Class name\", select the \"Hit die\" and tap \"Confirm\".",
+            "To create the character without a class, tap \"No class\".",
+            "Tap \"Next\" to go to the next step.",
+            "The character starts at level 1 of the class that you select."
+          ]
+        },
+        {
+          "title": "Create a character: species",
+          "items": [
+            "This step is optional.",
+            "To select a species, tap \"Pick from catalogue\" and tap a species.",
+            "If the species has subraces, tap a subrace or \"None\".",
+            "The box shows the speed, ability bonuses, senses and traits of the species.",
+            "To remove the selected species, tap \"Remove species\".",
+            "Without a catalogue species, you can type the species in the \"Species (free text)\" field.",
+            "Tap \"Next\"."
+          ]
+        },
+        {
+          "title": "Create a character: ability scores",
+          "items": [
+            "Select a method: \"Standard array\", \"Point buy\", \"Roll 4d6\" or \"Manual\".",
+            "With \"Standard array\", tap a value below each ability. If the value is already in use, the two abilities swap their values.",
+            "With \"Point buy\", use \"-\" and \"+\". You have 27 points and each value goes from 8 to 15.",
+            "With \"Roll 4d6\", tap \"Roll 4d6 (drop lowest)\" and then assign the six results. To roll again, tap \"Reroll\".",
+            "With \"Manual\", use \"-\" and \"+\" to set each value from 3 to 20.",
+            "The value on screen already includes the species bonuses.",
+            "To keep all scores at 10, tap \"Skip: leave all at 10\"."
+          ]
+        },
+        {
+          "title": "Create a character: identity",
+          "items": [
+            "All the fields in this step are optional.",
+            "Type the race, gender and alignment.",
+            "To select a background, tap \"Pick background from catalogue\". The app also adds its skills and languages.",
+            "To add a language, type it in the \"Languages\" field or tap a suggestion.",
+            "To create the character, tap \"Create\".",
+            "To create the character without this data, tap \"Skip: fill in later\".",
+            "To go back one step, tap \"Back\". To close the procedure, tap \"Cancel\" in the first step."
+          ]
+        },
+        {
+          "title": "Import a character",
+          "items": [
+            "Tap \"Import\".",
+            "Select a JSON file that you exported before from the \"Settings\" of a character.",
+            "If the file is valid, the app creates the character and opens its sheet.",
+            "If the file is not valid, the app shows an error message."
+          ]
+        },
+        {
+          "title": "Release notes",
+          "items": [
+            "At the bottom of the page you see the version number of the app.",
+            "To read what changed in each version, tap the version number."
+          ]
+        }
+      ]
+    },
+    "homebrew": {
+      "summary": "This page contains the homebrew rules of the character. A homebrew rule is a house rule that the app applies automatically.",
+      "sections": [
+        {
+          "title": "What a rule does",
+          "items": [
+            "A rule can give a fixed bonus or malus, for example +1 to AC.",
+            "A rule can react to a game event, for example an attack roll or a long rest.",
+            "A rule can add properties to items and custom resources to the character.",
+            "The app applies only the active rules."
+          ]
+        },
+        {
+          "title": "Read the list",
+          "items": [
+            "\"Active rules\" shows the rules that the app applies. The number shows how many there are.",
+            "\"Disabled rules\" shows the rules that the app does not apply.",
+            "The \"From template\" badge shows a rule installed from a recipe.",
+            "The \"Feat\" badge shows a rule that comes from a feat.",
+            "If you have no rules, the page shows \"No rules yet. Install a template to get started.\"."
+          ]
+        },
+        {
+          "title": "Install a recipe",
+          "items": [
+            "Scroll to \"Ready-to-use recipes\".",
+            "Read the name and the description of the recipe.",
+            "Tap \"Install\". The app adds the rule to the list.",
+            "When the recipe is already installed, the button shows \"Installed\"."
+          ]
+        },
+        {
+          "title": "Enable and disable a rule",
+          "items": [
+            "Tap the switch on the rule.",
+            "When you disable a rule, the app moves it to \"Disabled rules\".",
+            "When you enable a rule, the app moves it to \"Active rules\".",
+            "If the rule contains errors, the app can disable it automatically."
+          ]
+        },
+        {
+          "title": "Trigger a rule manually",
+          "items": [
+            "Some rules have the event \"When I manually trigger the rule\".",
+            "These rules, when active, have the lightning button \"Trigger now\".",
+            "Tap \"Trigger now\" to run the rule immediately.",
+            "If the rule changes nothing, the app shows \"Manual trigger · no rule reacted\"."
+          ]
+        },
+        {
+          "title": "Create and edit a rule",
+          "items": [
+            "To create a rule, tap \"New rule\".",
+            "To edit a rule, tap the rule in the list.",
+            "You cannot edit the rules with the \"Feat\" badge. Manage them from the feat choice when you level up."
+          ]
+        },
+        {
+          "title": "Delete a rule",
+          "items": [
+            "Tap the trash icon on the rule.",
+            "In the confirmation window, tap \"Delete\".",
+            "WARNING: this action deletes the rule. You cannot undo it."
+          ]
+        }
+      ]
+    },
+    "hp": {
+      "summary": "This page manages the Hit Points of the character. Here you apply damage and healing, set temporary HP and take rests. At 0 HP the page shows the Death Saves.",
+      "sections": [
+        {
+          "title": "What the page shows",
+          "items": [
+            "The large number shows the current HP and the maximum HP.",
+            "The number is green above 50%, gold down to 25% and red below.",
+            "The bar shows the percentage of HP that remains.",
+            "If you have temporary HP, a \"+N Temporary\" label shows below the number.",
+            "If a homebrew rule increases the maximum HP, the \"Homebrew HP Max\" row shows the bonus.",
+            "If you concentrate on a spell, the \"Concentrating\" panel shows the spell name.",
+            "If a wild shape is active, the number and the bar show the HP of the form."
+          ]
+        },
+        {
+          "title": "Apply damage or healing",
+          "items": [
+            "Select the operation: \"DMG\", \"HEAL\", \"CURR\", \"MAX\" or \"Temporary\".",
+            "Type the value in the number field.",
+            "Tap \"Confirm\" or press Enter to apply the value.",
+            "To apply 1, 5, 10 or 20 points immediately, tap the related quick button.",
+            "With \"CURR\" and \"MAX\", the quick buttons only write the value in the field. Then tap \"Confirm\".",
+            "\"CURR\" sets the current HP. The value cannot be more than the maximum HP.",
+            "\"MAX\" sets the maximum HP. If the current HP are higher, the app lowers them to the new maximum.",
+            "After each operation a message shows. To undo the operation, tap \"Undo\" in the message."
+          ]
+        },
+        {
+          "title": "Temporary HP",
+          "items": [
+            "To set temporary HP, select \"Temporary\", type the value and tap \"Confirm\".",
+            "The new value replaces the previous temporary HP. The two values do not add up.",
+            "When you take damage, the app removes the temporary HP first and then the current HP.",
+            "A long rest sets the temporary HP to 0."
+          ]
+        },
+        {
+          "title": "Damage type, resistances and immunities",
+          "items": [
+            "With \"DMG\" selected, you can select a \"Damage type (optional)\".",
+            "When you select a type, the app selects the modifier from the resistances, vulnerabilities and immunities of the character.",
+            "To change the modifier, tap \"Full\", \"½ Resistance\", \"×2 Vulnerability\" or \"Immune\".",
+            "Without a damage type, you can select only \"½ Resistance\" or \"×2 Vulnerability\".",
+            "Resistance halves the damage, vulnerability doubles it and immunity sets it to 0.",
+            "Below the field, a preview shows the damage you typed and the damage that the app applies."
+          ]
+        },
+        {
+          "title": "Automatic effects of damage",
+          "items": [
+            "If you concentrate and take damage, the app rolls the Constitution saving throw and shows the result.",
+            "If the saving throw fails, the app removes the concentration and shows \"Concentration lost!\".",
+            "When the HP go to 0, the app removes the concentration.",
+            "If the damage above 0 is equal to or more than the maximum HP, the character dies immediately.",
+            "If a wild shape is active, the form takes the damage first. The extra damage goes to the character.",
+            "When the form goes to 0 HP, the form ends."
+          ]
+        },
+        {
+          "title": "Death Saves (at 0 HP)",
+          "items": [
+            "At 0 HP the page shows the \"Successes\" and \"Failures\" dots.",
+            "To roll the saving throw, tap \"Roll d20\".",
+            "To roll with advantage or disadvantage, press and hold \"Roll d20\" and select the mode.",
+            "A result of 10 or more is a success. A result below 10 is a failure.",
+            "A natural 20 gives you 1 HP and you become conscious. A natural 1 counts as two failures.",
+            "Three successes make the character stable. Three failures kill the character.",
+            "To change the dots manually, tap \"Success\", \"Failure\", \"Stabilize\" or \"Reset\".",
+            "If you take damage at 0 HP, you get one failure. To count two failures, first turn on \"Critical hit\"."
+          ]
+        },
+        {
+          "title": "Stable, healing and death",
+          "items": [
+            "When you are stable at 0 HP, the \"Stabilized · unconscious\" label shows below the HP.",
+            "When the HP go above 0, the app resets the Death Saves.",
+            "When the character is dead, the page shows \"Dead\" and the cause.",
+            "When the character is dead, damage, healing and rests have no effect.",
+            "To bring the character back, tap \"Bring back to life\" and confirm.",
+            "The character returns with 1 HP and the Death Saves reset."
+          ]
+        },
+        {
+          "title": "Short rest and long rest",
+          "items": [
+            "To take a short rest, tap \"Short rest\".",
+            "To spend hit dice, use \"+\" and \"-\" next to the class and then tap the die button.",
+            "Each hit die heals the die result plus the Constitution modifier, with a minimum of 1.",
+            "To complete the short rest, tap \"Rest\".",
+            "The short rest restores short-rest abilities and Pact slots. It also removes the concentration.",
+            "To take a long rest, tap \"Long rest\" and then \"Rest\".",
+            "The long rest restores all HP, slots, abilities and half of the hit dice. It sets the temporary HP to 0.",
+            "The long rest removes the concentration and decreases Exhaustion by 1 level."
+          ]
+        }
+      ]
+    },
+    "identity": {
+      "summary": "On this page you edit the identity of the character: name, appearance, senses, personality, languages, proficiencies and damage modifiers. The changes stay only on your phone until you tap \"Save\".",
+      "sections": [
+        {
+          "title": "Save the changes",
+          "items": [
+            "When you change a field, the \"Unsaved changes\" alert appears at the top.",
+            "To save immediately, tap \"Save now\" in the alert.",
+            "You can also tap \"Save\" at the bottom of the page.",
+            "WARNING: if you leave the page without saving, you lose the changes."
+          ]
+        },
+        {
+          "title": "Name and physicality",
+          "items": [
+            "To change the character name, type in the \"Name\" field.",
+            "Type \"Race\", \"Gender\" and \"Alignment\" as free text.",
+            "Type the \"Speed\" in the unit system that you selected in \"Settings\".",
+            "Below the speed you see the value converted to the other unit system.",
+            "In the \"Appearance\" box, type age, height, weight, eyes, hair and skin."
+          ]
+        },
+        {
+          "title": "Senses",
+          "items": [
+            "To give a sense to the character, tap \"Darkvision\", \"Blindsight\", \"Truesight\" or \"Tremorsense\".",
+            "When you turn on a sense, the app sets the range to 60 feet (18 meters).",
+            "To change the range, type the value in the field next to the sense.",
+            "To remove a sense, tap its name again.",
+            "The active senses appear in the \"Statistics\" section of the main sheet."
+          ]
+        },
+        {
+          "title": "Personality",
+          "items": [
+            "Type \"Background\", \"Personality traits\", \"Ideals\", \"Bonds\" and \"Flaws\".",
+            "This information is private. Only you see it.",
+            "To show it to the GM and the other players in a session, turn on the option in \"Settings\", section \"Privacy\"."
+          ]
+        },
+        {
+          "title": "Languages and proficiencies",
+          "items": [
+            "To add a language, type it in the \"Languages\" field and confirm. You can also tap a suggestion.",
+            "To add more entries together, separate them with a comma.",
+            "Add proficiencies in the fields \"Proficiencies: armor\", \"Proficiencies: weapons\", \"Proficiencies: tools\" and \"Other proficiencies\".",
+            "To remove an entry, tap its x."
+          ]
+        },
+        {
+          "title": "Damage modifiers",
+          "items": [
+            "For each list, tap the damage types: \"Resistances\", \"Immunities\" and \"Vulnerabilities\".",
+            "A damage type stays in one list only. If you select it in a different list, the app moves it.",
+            "When you apply damage with its type, the app uses these lists automatically.",
+            "For a homebrew type, type it in the \"Add custom (homebrew)…\" field.",
+            "The app does not apply custom types automatically.",
+            "The modifiers appear as badges on the main sheet."
+          ]
+        },
+        {
+          "title": "Share the sheet",
+          "items": [
+            "To send a summary of the character to a Telegram chat, tap \"Share to group\" and select the chat.",
+            "The summary shows name, race, classes, HP, AC and the number of natural 20s.",
+            "The button appears only when you open the app inside Telegram."
+          ]
+        }
+      ]
+    },
+    "inventory": {
+      "summary": "This page shows the items of the character, grouped by type. Here you add, equip and use items and check the carry load.",
+      "sections": [
+        {
+          "title": "Carry load",
+          "items": [
+            "The \"Carry\" panel shows the total weight and the carry capacity.",
+            "The color of the bar changes when you are near the limit.",
+            "The app calculates the carry capacity from Strength.",
+            "To set a manual value, tap the pencil. Type the value and tap \"Save\".",
+            "To go back to the automatic calculation, tap \"Reset to auto\"."
+          ]
+        },
+        {
+          "title": "Item list",
+          "items": [
+            "The items are in groups by type, for example \"Weapon\" and \"Armor\".",
+            "To close or open a group, tap its header.",
+            "In each group, the equipped items are at the top.",
+            "Tap an item to see the details and the actions.",
+            "The \"Equipped\" badge shows an equipped item. For armor and shields, the AC value also appears.",
+            "To change the quantity, tap \"-\" or \"+\" next to \"Quantity\".",
+            "If a homebrew rule is active, the item shows its properties. You can change them in the details."
+          ]
+        },
+        {
+          "title": "Add and edit an item",
+          "items": [
+            "To add an item, tap \"Add item\".",
+            "Step 1: type the \"Item name\" and select the \"Type\".",
+            "To copy the data from the rulebook, tap \"Equipment from catalogue\" or \"Magic item from catalogue\".",
+            "Step 2: enter the quantity, the weight and the description.",
+            "Step 3: enter the data for the type, for example the weapon damage or the armor AC. Here you also set the magic data.",
+            "Tap \"Next\" to go to the next step. Tap \"Add\" to save.",
+            "To edit, open the item and tap \"Edit\". At step 3, tap \"Save\"."
+          ]
+        },
+        {
+          "title": "Equip an item",
+          "items": [
+            "The \"Equip\" button appears for weapons, armor, shields and accessories.",
+            "Open the item and tap \"Equip\".",
+            "If the item can go in more than one slot, select the slot in the \"Choose slot\" window.",
+            "If the slot is occupied, the app removes the previous item.",
+            "A two-handed weapon occupies both hands. The app asks for confirmation before it removes the other item. Tap \"Continue\".",
+            "To remove an equipped item, tap \"Remove\".",
+            "Equipped armor and shields change the AC."
+          ]
+        },
+        {
+          "title": "Attack with a weapon",
+          "items": [
+            "Open the weapon and tap \"Attack\".",
+            "For advantage or disadvantage, press and hold \"Attack\" and select the mode.",
+            "For a versatile weapon, select \"One hand\" or \"Two hands\" before the attack.",
+            "For a thrown weapon, select \"Melee\" or \"Thrown\" before the attack. The app keeps your selection.",
+            "The result shows the to-hit roll and the damage.",
+            "If you have inspiration, tap \"Use Inspiration\" to roll the to-hit roll again.",
+            "A weapon with ammunition uses 1 piece of ammunition for each attack. The app uses the equipped ammunition."
+          ]
+        },
+        {
+          "title": "Use a consumable",
+          "items": [
+            "The \"Use\" button appears for consumables with at least one effect.",
+            "Open the item and tap \"Use\". In the confirmation window, tap \"Use\".",
+            "The app applies the effects: healing, added conditions or removed conditions.",
+            "The app removes 1 from the quantity.",
+            "To add an effect, edit the item and tap \"Add effect\"."
+          ]
+        },
+        {
+          "title": "Magic items",
+          "items": [
+            "The \"Attunement\" section shows the attuned items. The limit is 3 items.",
+            "To attune an item, tap the item below \"Awaiting attunement\".",
+            "To end attunement, tap the item with the text \"End attunement\".",
+            "To use a charge, tap \"-\" next to \"Charges\". To add a charge, tap \"+\".",
+            "A rest recharges the charges as set in the \"Recharge\" field of the item.",
+            "To cast a spell from the item, tap \"Cast\". The app removes the necessary charges.",
+            "If the item requires attunement, you must be attuned to cast.",
+            "If the spell is an attack, tap \"Roll to hit\" in the result."
+          ]
+        },
+        {
+          "title": "Share and delete",
+          "items": [
+            "To send an item to a Telegram chat, open the item and tap \"Share\".",
+            "\"Share\" appears only in Telegram versions that support it.",
+            "To delete an item, open the item and tap \"Delete\". In the confirmation window, tap \"Delete\".",
+            "WARNING: The app deletes the item. You cannot undo this action."
+          ]
+        }
+      ]
+    },
+    "maps": {
+      "summary": "This page contains the maps of the character. The maps are images or PDF files, put into zones.",
+      "sections": [
+        {
+          "title": "Upload a map",
+          "items": [
+            "Tap \"Add map\".",
+            "Type the name in the \"Zone name\" field, for example \"Dungeon level 1\".",
+            "To use a zone that already exists, tap its name below the field.",
+            "Tap the \"Drop files here or tap to select\" area and select the files.",
+            "You can select more than one file. On a computer, you can also drag the files into the area.",
+            "To remove a file from the list, tap the X near the file.",
+            "Tap \"Upload\". The bar shows the upload progress."
+          ]
+        },
+        {
+          "title": "Accepted files",
+          "items": [
+            "The app accepts images and PDF files, for example PNG, JPG and PDF.",
+            "Each file must be 10 MB or less.",
+            "If a file is too large, the app shows an error and does not upload the files."
+          ]
+        },
+        {
+          "title": "Manage a zone",
+          "items": [
+            "Each zone shows its name and the thumbnails of its files.",
+            "To add files to a zone, tap \"+ Add more\" in the zone.",
+            "To change the order, hold a thumbnail. Then tap the destination position.",
+            "On a computer, you can also drag a thumbnail to the new position.",
+            "The app saves the new order automatically."
+          ]
+        },
+        {
+          "title": "View a map",
+          "items": [
+            "Tap a thumbnail to open the file in full screen.",
+            "To zoom an image, pinch the screen with two fingers.",
+            "The app shows small PDF files directly. For larger PDF files, tap \"Open file\".",
+            "To close, tap the X at the top right or tap the dark background."
+          ]
+        },
+        {
+          "title": "Delete files and zones",
+          "items": [
+            "To delete a file, tap the trash icon on the thumbnail. Then tap \"Delete\".",
+            "To delete a zone, tap \"Delete zone\". Then tap \"Delete\".",
+            "WARNING: \"Delete zone\" also deletes all the files in the zone.",
+            "WARNING: you cannot undo the deletion of a file or a zone."
+          ]
+        }
+      ]
+    },
+    "notes": {
+      "summary": "This page contains the notes of the character. You can write text notes, add tags and record voice notes.",
+      "sections": [
+        {
+          "title": "Create a text note",
+          "items": [
+            "Tap \"New note\".",
+            "Type the title in the \"Title\" field. The title is necessary.",
+            "Type the text in the \"Content\" field.",
+            "To add a tag, type it in the \"Tags\" field.",
+            "You can also tap a suggested tag, for example \"Allies\" or \"Places\".",
+            "Tap \"Save\"."
+          ]
+        },
+        {
+          "title": "Read a note",
+          "items": [
+            "Each note shows the title, the start of the text, the tags and the date.",
+            "The date shows when you created or edited the note.",
+            "Tap a text note to open it and read all the text.",
+            "In the note window, you can tap \"Edit\" or \"Delete\"."
+          ]
+        },
+        {
+          "title": "Edit a note",
+          "items": [
+            "Tap the pencil icon on the note.",
+            "Change the content or the tags.",
+            "Tap \"Save\".",
+            "You cannot change the title of a note that already exists."
+          ]
+        },
+        {
+          "title": "Record a voice note",
+          "items": [
+            "Tap the microphone button, to the right of \"New note\".",
+            "Type the title of the voice note.",
+            "Tap the record button to start. The timer shows the duration.",
+            "Tap the button again to stop the recording.",
+            "To record again, tap \"Discard and re-record\".",
+            "Tap \"Save\". The button works only when there is a title and a recording.",
+            "Voice notes are at the bottom of the list, with an audio player."
+          ]
+        },
+        {
+          "title": "Microphone problems",
+          "items": [
+            "If the microphone is not available, the microphone button has a line through it.",
+            "Tap that button to read the reason.",
+            "If you denied the permission, enable the microphone in the browser settings."
+          ]
+        },
+        {
+          "title": "Share a note",
+          "items": [
+            "Tap the \"Share\" icon on the note.",
+            "Select a Telegram chat.",
+            "This function is available only in the Telegram versions that support it."
+          ]
+        },
+        {
+          "title": "Delete a note",
+          "items": [
+            "Tap the trash icon on the note.",
+            "In the confirmation window, tap \"Delete\".",
+            "WARNING: this action deletes the note. You cannot undo it."
+          ]
+        }
+      ]
+    },
+    "rule_editor": {
+      "summary": "On this page you create or edit a homebrew rule. The editor has a number of sections. Tap the title of a section to open or close it.",
+      "sections": [
+        {
+          "title": "Identity and subject of the rule",
+          "items": [
+            "In \"Identity\", type the \"Name\" of the rule. The name is necessary.",
+            "Type a short \"Description\". The description is optional.",
+            "In \"Applies to\", select \"Items\", \"Character\" or \"Special abilities\".",
+            "If you select \"Items\", you can select the types in \"Only these item types\". Leave it empty for all items.",
+            "To limit the rule to some items, type a word in \"Only if the name contains\"."
+          ]
+        },
+        {
+          "title": "Item properties",
+          "items": [
+            "A property is a custom value on items, for example \"Quality\".",
+            "Tap \"Add property\".",
+            "Type \"Label (IT)\" and \"Label (EN)\". Both labels are necessary.",
+            "Select the \"Type\": \"list\", \"number\", \"yes/no\" or \"text\".",
+            "For the \"list\" type, type the \"Possible values\" with commas between them. Then select the \"Default value\".",
+            "The app adds the default value to the items that match the rule.",
+            "In the Inventory, the property is a chip that you can change."
+          ]
+        },
+        {
+          "title": "Tables (advanced)",
+          "items": [
+            "A table connects the result of a roll to a value of a property.",
+            "Before you create a table, add a property of the \"list\" type.",
+            "Tap \"Add table\". Select the property in \"Row (bound to)\".",
+            "Type the variable in \"Column (variable)\". For each column, type the \"From\" and \"To\" range.",
+            "If two ranges overlap, the app shows a warning."
+          ]
+        },
+        {
+          "title": "Passive modifiers",
+          "items": [
+            "A passive modifier is a fixed bonus or malus. The app always applies it when the rule is active.",
+            "Tap \"Add modifier\".",
+            "In \"What it modifies\", select \"AC\", \"Max HP\", \"Speed\", \"Skill\" or \"Saving throw\".",
+            "For \"Skill\" and \"Saving throw\", select which skill or which saving throw.",
+            "In \"Bonus / malus\", type a whole number, positive or negative.",
+            "The modifier is a \"Homebrew\" line on the related page, and the app adds it to the total."
+          ]
+        },
+        {
+          "title": "Resources",
+          "items": [
+            "A resource is a custom counter, for example \"Luck Points\".",
+            "Tap \"Add resource\". Type the \"Name\" and the \"Maximum\".",
+            "In \"Recovery\", select \"Long rest\", \"Short rest\", \"None\" or \"Manual\".",
+            "The app restores the resource at the selected rest. A long rest also restores the \"Short rest\" resources.",
+            "The counter is in \"Special Abilities\", in the custom resources."
+          ]
+        },
+        {
+          "title": "Triggers and effects",
+          "items": [
+            "A trigger runs a sequence of steps when a game event occurs.",
+            "Tap \"Add trigger\". Select the \"Event\", for example \"At the start of my turn\".",
+            "To limit the trigger, tap \"Add filter\". For example, \"Only if nat-20 (critical)\".",
+            "Tap \"Add step\". Select the type of step, for example \"Roll a die\" or \"Notify\".",
+            "Fill in the fields of the step and confirm.",
+            "To change the order of the steps, tap \"Move up\" or \"Move down\".",
+            "To edit a step, tap the pencil. To delete it, tap the trash icon.",
+            "A permanent modifier (\"Apply modifier once\") is permitted only with the event \"When I level up\"."
+          ]
+        },
+        {
+          "title": "Save the rule",
+          "items": [
+            "Tap \"Save\".",
+            "If the name is empty, the app shows an error on the \"Name\" field.",
+            "The rule must have at least one trigger or one passive modifier. If not, the app does not save it.",
+            "After you save, the app goes back to the list of rules.",
+            "To exit without saving, tap \"Cancel\".",
+            "WARNING: if you tap \"Cancel\", the app does not save your changes."
+          ]
+        }
+      ]
+    },
+    "saves": {
+      "summary": "This page shows the saving throws of the six abilities. Here you can set proficiency, roll the die and write notes for rolls.",
+      "sections": [
+        {
+          "title": "What you see",
+          "items": [
+            "At the top you see the \"Proficiency bonus\" of the character.",
+            "Each row shows one ability and its saving throw.",
+            "Below the name you see the ability modifier and, if you are proficient, the bonus with \"prof\".",
+            "The large number on the right is the total saving throw bonus.",
+            "The total also includes bonuses from equipped items and homebrew rules.",
+            "A negative total is red."
+          ]
+        },
+        {
+          "title": "Set proficiency",
+          "items": [
+            "Tap the circle to the left of the name.",
+            "A circle with a check mark means that you are proficient.",
+            "When you are proficient, the app adds the proficiency bonus to the total.",
+            "Tap the circle again to remove the proficiency."
+          ]
+        },
+        {
+          "title": "Roll the die",
+          "items": [
+            "Tap the saving throw row to roll 1d20 plus the bonus.",
+            "You can also tap the d20 button on the right.",
+            "To roll with advantage or disadvantage, press and hold the d20 button.",
+            "In the menu, tap \"Advantage\", \"Normal\" or \"Disadvantage\".",
+            "The result shows the total. A natural 20 is a critical, a natural 1 is a fumble.",
+            "If 3D dice animations are on, the app uses the value of the animated dice."
+          ]
+        },
+        {
+          "title": "Reroll with Inspiration",
+          "items": [
+            "If the character has Heroic Inspiration, the result shows \"Use Inspiration\".",
+            "Tap \"Use Inspiration\" to roll the d20 again.",
+            "The app spends the Inspiration and shows \"Inspiration reroll\" on the new result.",
+            "You can reroll only one time for each roll."
+          ]
+        },
+        {
+          "title": "Situational notes",
+          "items": [
+            "Tap the pencil next to the d20 to open the saving throw note.",
+            "Write a short note, for example \"advantage vs. charm\".",
+            "Tap \"Save\". The note shows below the row and in the result window.",
+            "To delete the note, remove the text and tap \"Save\"."
+          ]
+        },
+        {
+          "title": "Homebrew Bonus",
+          "items": [
+            "If a homebrew rule gives a bonus to a saving throw, \"Homebrew Bonus\" shows below the row.",
+            "The app includes this bonus in the total."
+          ]
+        }
+      ]
+    },
+    "session": {
+      "summary": "This page is the entry to the game session. In a session, the Game Master and the players play together in real time.",
+      "sections": [
+        {
+          "title": "Create a session as Game Master",
+          "items": [
+            "In the \"Create as Game Master\" box, tap \"Create session\".",
+            "The app creates the session and opens the session room.",
+            "In the room, the app shows a code of 6 characters. Give this code to the players.",
+            "You do not need a character to create a session."
+          ]
+        },
+        {
+          "title": "Join as a player",
+          "items": [
+            "In the \"Join as Player\" box, tap \"Join\".",
+            "On the next page, type the code and select the character.",
+            "To join as a player, you need at least one character.",
+            "If you have no characters, the \"Join\" button does not work. You can join only as Game Master."
+          ]
+        },
+        {
+          "title": "Session already active",
+          "items": [
+            "You can be in only one session at a time.",
+            "If you are already in a session, the page shows \"Session already active\".",
+            "The box shows the name of the session and your role: \"Game Master\" or \"Player\".",
+            "To go back to the room, tap \"Resume session\"."
+          ]
+        },
+        {
+          "title": "Without a connection",
+          "items": [
+            "If the app cannot load the characters, the player box shows an error message.",
+            "To load the data again, tap \"Retry\"."
+          ]
+        }
+      ]
+    },
+    "session_join": {
+      "summary": "On this page you join a session as a player. You need the session code and a character.",
+      "sections": [
+        {
+          "title": "Type the code",
+          "items": [
+            "Ask the Game Master for the code. The code has 6 characters, letters and numbers.",
+            "Type the code in the \"Access code\" field. The app writes the letters in upper case.",
+            "Below the field, the counter shows how many characters you typed, for example \"4/6 chars\".",
+            "To paste a copied code, tap \"Paste\"."
+          ]
+        },
+        {
+          "title": "Select the character",
+          "items": [
+            "In \"Pick your character\", tap the character that you want to use.",
+            "If you have only one character, the app selects it automatically and shows \"You'll play as\" with its name.",
+            "If you have no characters, tap \"Create your first character\"."
+          ]
+        },
+        {
+          "title": "Join the session",
+          "items": [
+            "Tap \"Join\". The button works only with a code of 6 characters and a selected character.",
+            "The app opens the session room.",
+            "If the code is not correct, the app shows an error message."
+          ]
+        },
+        {
+          "title": "Join with an invite link",
+          "items": [
+            "If you open an invite link, the app types the code automatically.",
+            "If you have only one character, the app joins the session automatically.",
+            "While the app joins, the page shows \"Joining the session…\"."
+          ]
+        },
+        {
+          "title": "If you are already in another session",
+          "items": [
+            "You can be in only one session at a time.",
+            "If you are in another session, the page shows \"You're already in another active session\".",
+            "To go back to the active session, tap \"Resume session\".",
+            "To join the new session, first leave the active session."
+          ]
+        }
+      ]
+    },
+    "session_room": {
+      "summary": "This is the session room. Here the Game Master and the players see the party, write in the chat and manage the combat. Some functions are only for the Game Master.",
+      "sections": [
+        {
+          "title": "Code, invite and exit",
+          "items": [
+            "At the top, the Game Master sees the \"Access code\" of the session.",
+            "To copy the code, tap the copy icon near the code.",
+            "To send an invite in a Telegram chat, tap the share icon.",
+            "The player who opens the invite joins with the code already typed.",
+            "The player sees the role \"Player\" and the name of the session at the top.",
+            "To leave, the player taps \"Leave session\" and confirms. The player can join again with the same code.",
+            "WARNING: \"Close session\" (Game Master) closes the session for everyone. You cannot undo this action."
+          ]
+        },
+        {
+          "title": "Players",
+          "items": [
+            "The \"Players\" section shows all the participants. Your row has the \"You\" label.",
+            "Each row shows the name, class, hit points, conditions and last roll of the character.",
+            "The Game Master sees the exact hit points. The other players see only the status, for example \"Lightly wounded\".",
+            "Tap your row to open the sheet of your character.",
+            "Tap the row of another participant to see the status and identity of the character.",
+            "Private information is visible only if the owner makes it public."
+          ]
+        },
+        {
+          "title": "Chat and history",
+          "items": [
+            "\"Chat & History\" shows the messages and the game events of the characters.",
+            "Events are, for example, rolls, rests, hit points, conditions and death saves.",
+            "To write, use the \"Write a message…\" field and tap \"Send\".",
+            "After a message, wait some seconds before you send another. The field shows the wait time.",
+            "To see older messages, tap \"Load previous\".",
+            "To open the chat in full screen, tap \"Open fullscreen\"."
+          ]
+        },
+        {
+          "title": "Whisper a message",
+          "items": [
+            "A whisper is a private message. Only you and the recipient see it.",
+            "Tap the row of the participant.",
+            "Tap \"Whisper to\" with the name.",
+            "Above the text field, the app shows \"Whispering to\" with the name. Type and send the message.",
+            "To go back to messages for everyone, tap the X near \"Whispering to\"."
+          ]
+        },
+        {
+          "title": "Hand over an item (Game Master)",
+          "items": [
+            "Tap \"Hand over item\".",
+            "Fill in the data of the item and confirm.",
+            "In \"Recipients\", tap one or more players.",
+            "Tap \"Deliver\". The app adds the item to the inventory of each recipient.",
+            "The player gets the message \"You received an item!\". To open the item, tap \"View in inventory\"."
+          ]
+        },
+        {
+          "title": "Prepare the combat (Game Master)",
+          "items": [
+            "Tap \"Start combat\".",
+            "Select \"Light\" for initiative, turns and rounds only.",
+            "Select \"Full\" to also manage HP, AC and conditions of the monsters.",
+            "The app adds the characters of the players automatically.",
+            "To add monsters, tap \"Add monster\". Type the name, the count and the initiative modifier.",
+            "To add the characters that joined later, tap \"Sync PCs\".",
+            "Tap \"Start\". If some initiatives are missing, the app asks if it must roll them automatically."
+          ]
+        },
+        {
+          "title": "Manage the combat (Game Master)",
+          "items": [
+            "The app puts the participants in initiative order. The bar shows the round and whose turn it is.",
+            "To go to the next or previous turn, tap the arrows in the bar.",
+            "If you skip the turn of a character, the app asks for a confirmation.",
+            "Tap a participant to change initiative and order, or to mark it dead.",
+            "In \"Full\" mode, you can also apply damage, healing and conditions to the monsters.",
+            "Tap \"End\" to finish the combat.",
+            "WARNING: \"Remove from combat\" removes the participant from the encounter."
+          ]
+        },
+        {
+          "title": "Fight (player)",
+          "items": [
+            "During the setup, tap \"Roll initiative!\". The app rolls a d20 and adds your modifier.",
+            "When it is your turn, the app shows \"Your turn!\" and sends a message in your private Telegram chat.",
+            "At the start of your turn, the app decreases the duration of conditions and concentration by one round.",
+            "At the end of your turn, tap \"End turn\"."
+          ]
+        }
+      ]
+    },
+    "settings": {
+      "summary": "On this page you change the app preferences and the game rules of the character. Here you export, duplicate and delete the character.",
+      "sections": [
+        {
+          "title": "App preferences",
+          "items": [
+            "Language, theme, dice animation, unit system and dice pack apply to the whole app on this device.",
+            "To change the language, tap the \"Italiano\" / \"English\" button.",
+            "To change the theme, tap \"Auto\", \"Light\" or \"Dark\". \"Auto\" follows the Telegram theme.",
+            "To see dice results without animation, turn off \"3D dice animation\".",
+            "To change the unit system, tap \"Feet & pounds\" or \"Meters & kilos\".",
+            "To change the look of the 3D dice, select a pack in \"Dice pack\". This option works only when the 3D animation is on."
+          ]
+        },
+        {
+          "title": "Telegram notifications",
+          "items": [
+            "The bot sends you chat messages for session events.",
+            "\"Party emergencies\": a session companion drops to 0 HP or dies.",
+            "\"GM events\": the GM gives you an item or applies a condition to you.",
+            "\"Level up\": your experience crosses the next level threshold.",
+            "\"Encounters\": the GM opens an encounter in the session.",
+            "To stop a type of notification, turn off its switch."
+          ]
+        },
+        {
+          "title": "Currency and history",
+          "items": [
+            "To hide electrum coins on the \"Currency\" page, turn off \"Show Electrum\".",
+            "In \"History retention\", select \"Off\", \"Last 100 events\" or \"Last 30 days\".",
+            "Below the buttons you see how many entries you have and how many entries each mode removes.",
+            "WARNING: with a mode on, the app deletes the oldest entries when it records a new event. You cannot recover them."
+          ]
+        },
+        {
+          "title": "Hit points and advancement",
+          "items": [
+            "With \"Auto HP\" on, the app calculates max HP from class levels and the Constitution modifier.",
+            "To recalculate max HP now, tap \"Recalculate HP from formula\" and then \"Confirm\".",
+            "With \"Milestone advancement\" on, you do not track XP. A level-up button replaces the XP counter.",
+            "With \"Rolled HP\" on, you roll the hit die when you level up instead of using the fixed value."
+          ]
+        },
+        {
+          "title": "Optional rules",
+          "items": [
+            "With \"Advantage on concentration saves (War Caster)\" on, you roll Constitution saves for concentration with advantage.",
+            "With \"Detailed encumbrance\" on, above STR×5 your speed drops by 10 feet (3 meters).",
+            "Above STR×10 your speed drops by 20 feet (6 meters). You also have disadvantage on STR, DEX and CON checks, saves and attacks.",
+            "With \"Coin weight\" on, 50 coins weigh 1 pound (0.5 kg) and count toward your load.",
+            "With \"Show private info to GM and other players\" on, background, traits, ideals, bonds and flaws are visible in sessions."
+          ]
+        },
+        {
+          "title": "Slots and prepared spells",
+          "items": [
+            "In \"Spell slots mode\", \"AUTO\" calculates the slots from classes and level.",
+            "With \"MANUAL\" you set the slots yourself.",
+            "WARNING: if you switch from \"MANUAL\" to \"AUTO\", the automatic calculation overwrites the manual slots.",
+            "The \"Preparation cap\" section appears only if you have a class that prepares spells.",
+            "With \"AUTO\", the app calculates the maximum number of prepared spells from your classes.",
+            "With \"MANUAL\", type the number and tap \"Save cap\"."
+          ]
+        },
+        {
+          "title": "Export and duplicate",
+          "items": [
+            "To save the sheet, tap \"Export\".",
+            "To receive the file in the bot chat, tap \"Send to Telegram chat\".",
+            "To save the file on the device, tap \"Download file\".",
+            "To create a new character from the file, use \"Import\" in the character list.",
+            "To create a copy of this character, tap \"Duplicate\". The app opens the copy."
+          ]
+        },
+        {
+          "title": "Danger zone",
+          "items": [
+            "To set the character preferences back to the default values, tap \"Reset settings\" and then \"Confirm\".",
+            "The reset does not change milestone, rolled HP, War Caster and the game data.",
+            "To delete the character, tap \"Delete character\" and then \"Delete\".",
+            "WARNING: deletion removes the character and all its data. You cannot undo it."
+          ]
+        }
+      ]
+    },
+    "share_import": {
+      "summary": "This page opens when you tap \"Aggiungi al tuo personaggio\" in a message shared on Telegram. From here you add the shared item or note to one of your characters.",
+      "sections": [
+        {
+          "title": "Content preview",
+          "items": [
+            "At the top you see the title of the item or note.",
+            "Below the title you see the name of the character that shared it.",
+            "For an item you see the description and the quantity, if it is more than 1.",
+            "For a voice note you see the label \"Voice note\"."
+          ]
+        },
+        {
+          "title": "Add the content",
+          "items": [
+            "In \"Add to…\", tap the character that receives the content.",
+            "The app already selects the last character that you used, or your only character.",
+            "Tap \"Add to\" followed by the character name.",
+            "After an item, the app opens the inventory of the character. The item is not equipped.",
+            "After a note, the app opens the notes of the character.",
+            "If you already have a note with the same title, the app adds a number to the title."
+          ]
+        },
+        {
+          "title": "If you have no characters",
+          "items": [
+            "You need a character to import the content.",
+            "Tap \"Create your first character\" to go to the character list.",
+            "Create the character and then tap the button in the Telegram message again."
+          ]
+        },
+        {
+          "title": "Share not available",
+          "items": [
+            "A share lasts 30 days.",
+            "After 30 days the app shows \"This share has expired.\".",
+            "If the content does not exist anymore, the app shows \"This share is no longer available.\".",
+            "To go back to the list, tap \"Go to your characters\"."
+          ]
+        }
+      ]
+    },
+    "skills": {
+      "summary": "This page shows the 18 skills of the character with their bonus. Here you can set proficiency, roll the die and write notes for rolls.",
+      "sections": [
+        {
+          "title": "What you see",
+          "items": [
+            "At the top you see the \"Proficiency bonus\" and three passive values.",
+            "The passive values are \"Passive Perception\", \"Passive Insight\" and \"Passive Investigation\".",
+            "This bar stays visible when you scroll the page.",
+            "The skills are in groups, one for each ability.",
+            "The number to the right of the name is the total skill bonus.",
+            "A negative bonus is red."
+          ]
+        },
+        {
+          "title": "Proficiency levels",
+          "items": [
+            "An empty circle means no proficiency.",
+            "A check mark means \"Proficient\": the app adds the proficiency bonus.",
+            "A star means \"Expert\": the app adds two times the proficiency bonus.",
+            "The \"½\" symbol means Jack of All Trades: the app adds half the proficiency bonus, rounded down.",
+            "The total bonus is: ability modifier plus proficiency plus the other bonuses."
+          ]
+        },
+        {
+          "title": "Change proficiency",
+          "items": [
+            "Tap the skill name to go to the next level.",
+            "The order is: no proficiency, \"Proficient\", \"Expert\", then no proficiency again.",
+            "To select a specific level, press and hold the skill name.",
+            "A ring fills while you hold. When it is full, \"Proficiency level\" opens.",
+            "The panel shows the calculation of the \"Current bonus\".",
+            "Tap \"None\", \"Proficient\" or \"Expert\"."
+          ]
+        },
+        {
+          "title": "Roll the die",
+          "items": [
+            "Tap the dice button to roll 1d20 plus the skill bonus.",
+            "To roll with advantage or disadvantage, press and hold the dice button.",
+            "In the menu, tap \"Advantage\", \"Normal\" or \"Disadvantage\".",
+            "With advantage or disadvantage the app rolls two d20 and shows the discarded die crossed out.",
+            "The result shows the total. A natural 20 is a critical, a natural 1 is a fumble.",
+            "If 3D dice animations are on, the app uses the value of the animated dice."
+          ]
+        },
+        {
+          "title": "Reroll with Inspiration",
+          "items": [
+            "If the character has Heroic Inspiration, the result shows \"Use Inspiration\".",
+            "Tap \"Use Inspiration\" to roll the d20 again.",
+            "The app spends the Inspiration and shows \"Inspiration reroll\" on the new result.",
+            "You can reroll only one time for each roll."
+          ]
+        },
+        {
+          "title": "Situational notes",
+          "items": [
+            "Tap the pencil next to the dice button to open the skill note.",
+            "Write a short note, for example \"advantage vs. charm\".",
+            "Tap \"Save\". The note shows below the skill and in the result window.",
+            "To delete the note, remove the text and tap \"Save\"."
+          ]
+        },
+        {
+          "title": "Homebrew Bonus",
+          "items": [
+            "If a homebrew rule gives a bonus to a skill, the row \"Homebrew Bonus\" shows below the skill.",
+            "The app includes this bonus in the total and in the passive values."
+          ]
+        }
+      ]
+    },
+    "slots": {
+      "summary": "This page shows the spell slots for each level. Here you mark used slots and restore them.",
+      "sections": [
+        {
+          "title": "Read the slots",
+          "items": [
+            "Each card shows one slot level, for example \"Level 1\".",
+            "The number on the right shows the available slots and the total.",
+            "A gold gem is a used slot. An empty gem is an available slot.",
+            "The \"Pact\" badge shows the Warlock Pact Magic slots."
+          ]
+        },
+        {
+          "title": "Use and recover a slot",
+          "items": [
+            "To use a slot, tap an empty gem.",
+            "To recover a slot, tap a gold gem.",
+            "When you cast a spell from the Spells page, the app uses the slot automatically."
+          ]
+        },
+        {
+          "title": "Restore all slots",
+          "items": [
+            "To restore all slots, tap \"Reset all\".",
+            "In the confirmation window, tap \"Confirm\".",
+            "A long rest restores all slots.",
+            "A short rest restores only the \"Pact\" slots."
+          ]
+        },
+        {
+          "title": "Auto mode",
+          "items": [
+            "In Auto mode, the app calculates the slots from the classes and the level, with the D&D 5e 2014 rules.",
+            "In Auto mode, you cannot change the total and you cannot add or remove levels.",
+            "The \"Auto Mode\" panel explains this rule. Tap the panel to open or close it.",
+            "To change to manual mode, tap \"Go to Settings\"."
+          ]
+        },
+        {
+          "title": "Manual mode",
+          "items": [
+            "To add a level, tap \"+ Level N\" in \"Add new level\".",
+            "To change the total, tap \"-\" or \"+\" next to \"Total\".",
+            "Press and hold \"-\" or \"+\" to change the total faster.",
+            "You can also type the total in the number field. The minimum total is 1.",
+            "To remove a level, tap the X on the card. Then tap \"Delete\".",
+            "WARNING: The removal deletes the total and the used slots of that level. You cannot undo this action."
+          ]
+        }
+      ]
+    },
+    "spells": {
+      "summary": "This page shows the spells of the character, grouped by level. Here you cast spells, roll damage and manage concentration and preparation.",
+      "sections": [
+        {
+          "title": "Page overview",
+          "items": [
+            "At the top, one row for each spellcasting class shows the ability, the saving throw DC and the attack bonus.",
+            "The spells are in groups: \"CANTRIP\", \"LEVEL 1\" and so on.",
+            "To close or open a group, tap the level header.",
+            "Next to the header are the slot gems of that level. A gold gem is a used slot.",
+            "To use a slot, tap an empty gem. To recover it, tap a gold gem.",
+            "The \"C\" badge shows concentration. The \"R\" badge shows a ritual.",
+            "Tap the name of a spell to see the description, the details and the actions."
+          ]
+        },
+        {
+          "title": "Search and filter",
+          "items": [
+            "To search, type the name in the \"Search spells...\" field.",
+            "To clear the search, tap the X in the field.",
+            "To filter, tap the chips in the \"Level\", \"Properties\" and \"School\" rows.",
+            "Chips in the same row add results. Chips in different rows reduce the results.",
+            "A filter row appears only if it is useful for your spells.",
+            "To remove all filters, tap \"Clear filters\"."
+          ]
+        },
+        {
+          "title": "Add and edit a spell",
+          "items": [
+            "To add a spell, tap the \"+\" button next to the search field.",
+            "To copy the data from the rulebook, tap \"Add from catalogue\" and select the spell.",
+            "Fill in the \"Name\", \"Level\", \"Casting time\", \"Range\", \"Duration\", \"Components\" and \"Description\" fields.",
+            "If the spell causes damage, turn on \"Deals damage\". Then select \"Damage dice\" and \"Damage type\".",
+            "In \"Type\", select \"Attack\", \"Saving throw\" or \"None\".",
+            "Turn on \"Concentration\" or \"Ritual\" if necessary. A concentration duration turns on \"Concentration\" automatically.",
+            "Tap \"Add\" to save.",
+            "To edit, open the spell, tap the three-dot button and then \"Edit\". Tap \"Save\"."
+          ]
+        },
+        {
+          "title": "Cast a spell",
+          "items": [
+            "Open the spell and tap \"Use\".",
+            "For a spell of level 1 or higher, select the slot in the \"Choose slot level\" window. The gold dots are the used slots.",
+            "To select a different slot before you roll damage, tap \"Back\".",
+            "If you have no free slots, tap \"Create level N slot\". In Auto mode, the app changes to manual slot management.",
+            "To cast a ritual without a slot, tap \"Cast as ritual\". The casting time increases by 10 minutes.",
+            "\"Cast as ritual\" appears only if one of your classes can cast rituals.",
+            "For an attack spell, press and hold \"Use\" to select advantage or disadvantage.",
+            "An attack spell rolls the d20 to hit. In the result, tap \"Roll damage\" to roll the damage.",
+            "If you have inspiration, tap \"Use Inspiration\" to roll the to-hit roll again."
+          ]
+        },
+        {
+          "title": "Roll damage",
+          "items": [
+            "For a spell with damage, the app opens the \"Damage roll\" window.",
+            "Tap \"Roll\" to roll. For a spell of level 1 or higher, the app uses the slot at this time.",
+            "The app adds the higher-level dice automatically. Cantrip dice increase with the character level.",
+            "To add more dice, type the formula in \"Extra dice\", for example 2d6.",
+            "A critical comes only from the attack roll: after a natural 20, the app doubles the damage dice.",
+            "For a saving throw spell, the result shows the \"Full\" damage and the \"Half\" damage.",
+            "To cast again, tap \"Roll again\". The app uses one more slot of the same level.",
+            "If you have no more slots of that level, the app shows a warning and does not roll."
+          ]
+        },
+        {
+          "title": "Concentration",
+          "items": [
+            "When you cast a concentration spell with \"Use\", concentration starts automatically.",
+            "You can concentrate on one spell only. A new concentration spell replaces the previous one.",
+            "The \"Concentration\" panel at the top shows the active spell.",
+            "To end concentration, tap \"Stop concentration\".",
+            "To start concentration without a cast, open the spell and tap \"Concentration\".",
+            "When you take damage, the app rolls the Constitution saving throw automatically. If it fails, concentration ends.",
+            "A short rest or a long rest ends concentration."
+          ]
+        },
+        {
+          "title": "Prepare spells",
+          "items": [
+            "This function appears only if the character has a class that prepares spells.",
+            "The \"Prepared\" counter shows the prepared spells and the limit.",
+            "To prepare a spell, tap the bookmark on the left of the name. You can also open the spell and tap \"Prepare\".",
+            "To cancel the preparation, tap the bookmark again.",
+            "At the limit, the app does not prepare the spell. Unprepare a spell or increase the limit in the settings.",
+            "If you cast a spell that is not prepared, the app asks for confirmation. Tap \"Cast anyway\" to continue.",
+            "The Wizard can cast a ritual that is not prepared without confirmation."
+          ]
+        },
+        {
+          "title": "Forget a spell",
+          "items": [
+            "Open the spell, tap the three-dot button and then \"Forget\".",
+            "In the confirmation window, tap \"Forget\".",
+            "WARNING: The app deletes the spell and its details. You cannot undo this action."
+          ]
+        }
+      ]
+    },
+    "stats": {
+      "summary": "This page shows the six ability scores of the character. Here you can see each score with its modifier and change the value.",
+      "sections": [
+        {
+          "title": "What you see",
+          "items": [
+            "Each card shows one ability: Strength, Dexterity, Constitution, Intelligence, Wisdom and Charisma.",
+            "The large number is the score. The number next to it is the modifier.",
+            "The app calculates the modifier as: score minus 10, divided by 2, rounded down.",
+            "On narrow screens the name is short, for example \"STR\" or \"CON\".",
+            "A gold score tells you that an equipped item changes the value."
+          ]
+        },
+        {
+          "title": "Change a score",
+          "items": [
+            "Tap the pencil on the ability card.",
+            "If the ability has no item bonus, you can also tap the card.",
+            "Tap \"-\" or \"+\" to change the value by 1, or type the number in the field.",
+            "The value must be from 1 to 30.",
+            "Below the number you see the new \"Modifier\".",
+            "Tap \"Save\" to confirm. Tap \"Cancel\" to close without saving."
+          ]
+        },
+        {
+          "title": "See item bonuses",
+          "items": [
+            "A card with an arrow has bonuses from equipped items.",
+            "Tap the card to open the \"Sources\" detail.",
+            "\"Base\" is the value that you saved. Each row below is an item with its bonus.",
+            "A value with \"=\" replaces the score instead of adding a bonus.",
+            "\"Effective\" is the final value that the app uses for calculations.",
+            "Tap the card again to close the detail."
+          ]
+        },
+        {
+          "title": "Automatic effects",
+          "items": [
+            "The value that you save is the base value. The app adds item bonuses on top of it.",
+            "If you change Constitution and \"Auto HP\" is on, the app updates max HP and current HP.",
+            "A message shows you the old and the new max HP.",
+            "If you change Strength, the app calculates the carry capacity again.",
+            "With Unarmored Defense, the app updates base AC when you change Dexterity or the second ability.",
+            "New modifiers apply immediately to skills, saving throws and dice rolls."
+          ]
+        }
+      ]
+    },
+    "turn": {
+      "summary": "This page shows what you can do on your turn. It puts weapons, spells and abilities into Action, Bonus action and Reaction. You can also mark what you already used.",
+      "sections": [
+        {
+          "title": "What the page shows",
+          "items": [
+            "At the top, \"Attacks per action\" shows how many attacks you make with one Attack action.",
+            "During a session encounter, the row also shows the round number.",
+            "The \"Action\", \"Bonus action\" and \"Reaction\" sections show the entries of each type.",
+            "The equipped weapons and the \"Unarmed strike\" are in the \"Action\" section.",
+            "Spells go into the section of their casting time. The page shows cantrips and prepared spells.",
+            "Active abilities go into the section of their action type. Passive abilities do not show.",
+            "Each section also shows the standard actions of the rules, with a short description."
+          ]
+        },
+        {
+          "title": "Attack",
+          "items": [
+            "To attack, tap \"Attack\" next to the weapon or the \"Unarmed strike\".",
+            "To attack with advantage or disadvantage, press and hold \"Attack\" and select the mode.",
+            "For a versatile or thrown weapon, first select \"One hand\" or \"Two hands\", \"Melee\" or \"Thrown\".",
+            "The result is the same as on the Actions page."
+          ]
+        },
+        {
+          "title": "Cast spells",
+          "items": [
+            "To cast a spell, tap \"Cast\".",
+            "For an attack spell with advantage or disadvantage, press and hold \"Cast\" and select the mode.",
+            "For a spell of level 1 or higher, select the slot to use.",
+            "The cast works as on the Spells page: the app uses the slot and manages concentration."
+          ]
+        },
+        {
+          "title": "Use abilities",
+          "items": [
+            "An ability with limited uses shows the uses that remain in brackets.",
+            "To use the ability, tap \"Use\". The app removes one use.",
+            "When no uses remain, the button shows \"No uses left\".",
+            "To recover the uses, take a rest on the Hit Points page."
+          ]
+        },
+        {
+          "title": "Mark used actions",
+          "items": [
+            "To mark a section as used, tap \"Used\" in the section.",
+            "A used section becomes lighter. To remove the mark, tap \"Used\" again.",
+            "To remove all marks, tap \"New turn\".",
+            "During a session, the app removes all marks when your turn starts.",
+            "The app does not save the marks. When you leave the page, the marks go away."
+          ]
+        },
+        {
+          "title": "End of round and \"Other\" entries",
+          "items": [
+            "To move the time forward by one round, tap \"End of round (−1)\".",
+            "The app removes one round from the duration of conditions and concentration.",
+            "When a duration gets to 0, the app removes the effect and shows an \"Expired\" message.",
+            "To see the entries without an action type, tap \"Other\".",
+            "The \"Other\" section shows, for example, spells with a longer casting time."
+          ]
+        }
+      ]
+    },
+    "xp": {
+      "summary": "This page shows the level and the experience points of the character. Here you can add or set XP, level up and see the class progression.",
+      "sections": [
+        {
+          "title": "What you see",
+          "items": [
+            "The large number is the character level. Below it you see the current XP.",
+            "The pill above the bar tells how much XP you need for the next level.",
+            "The bar and the percentage show the progress to the next level.",
+            "At level 20 you see \"You are a legend\" and the bar does not show.",
+            "With one class, the class level follows the XP automatically."
+          ]
+        },
+        {
+          "title": "Add or set XP",
+          "items": [
+            "Tap \"+ Add XP\" to add a value to the current XP.",
+            "Tap \"= Set\" to replace the current XP with a new value.",
+            "Type the number in the field.",
+            "Tap \"Apply\".",
+            "If the character levels up, a message shows the new level.",
+            "With one class, if you remove XP the class level goes down. If \"Auto HP\" is on, max HP also goes down."
+          ]
+        },
+        {
+          "title": "Level up with one tap",
+          "items": [
+            "Tap \"LEVEL UP\" to set the XP to the threshold of the next level.",
+            "With one class, the app adds the level to the class immediately.",
+            "If \"Auto HP\" is on, the app adds the HP and shows a message with the HP gained.",
+            "If the max uses of a resource increase, a message shows the old and the new value."
+          ]
+        },
+        {
+          "title": "Rolled HP",
+          "items": [
+            "This procedure applies with one class, with \"Rolled HP\" and \"Auto HP\" on.",
+            "When an XP change gives a level up, the button \"Roll 1dX for HP\" shows.",
+            "Tap the button to roll the hit die for each new level.",
+            "The result shows the roll, the Constitution modifier and the total HP.",
+            "Tap \"Confirm\" to save the XP and the HP."
+          ]
+        },
+        {
+          "title": "Multiclass",
+          "items": [
+            "With more than one class, XP does not give the level to a class automatically.",
+            "When a level is ready to assign, \"Level up available! Go to the Class page to assign the level.\" shows.",
+            "Below the level you see how many levels are distributed and how many are to assign.",
+            "Tap the banner to open \"Level up\" and select the class."
+          ]
+        },
+        {
+          "title": "Milestone advancement",
+          "items": [
+            "With \"Milestone advancement\" on in the settings, the page does not show XP.",
+            "The level is the sum of the class levels.",
+            "Tap \"LEVEL UP\" to open \"Level up\" and select the class."
+          ]
+        },
+        {
+          "title": "Class progression",
+          "items": [
+            "At the bottom you see the \"Progression\" table of the class with the levels near the current level.",
+            "The current level is highlighted in gold.",
+            "With more than one class, tap a class name to see its progression.",
+            "Tap a row to open the full table."
+          ]
+        }
+      ]
     }
   }
 }

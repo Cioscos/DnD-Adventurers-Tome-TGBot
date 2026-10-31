@@ -1,0 +1,59 @@
+import{r as m,j as t,a as A,b as T}from"./react-vendor-CPSJdvAW.js";import{u as N,bT as W,m as v,s as C,bS as O,bB as F,at as H,aC as U,aA as I,aB as K,aD as X,P as Z}from"./index-TSQgF5dZ.js";/**
+ * @license lucide-react v1.11.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */const _=(...e)=>e.filter((r,n,s)=>!!r&&r.trim()!==""&&s.indexOf(r)===n).join(" ").trim();/**
+ * @license lucide-react v1.11.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */const Q=e=>e.replace(/([a-z0-9])([A-Z])/g,"$1-$2").toLowerCase();/**
+ * @license lucide-react v1.11.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */const Y=e=>e.replace(/^([A-Z])|[\s-_]+(\w)/g,(r,n,s)=>s?s.toUpperCase():n.toLowerCase());/**
+ * @license lucide-react v1.11.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */const D=e=>{const r=Y(e);return r.charAt(0).toUpperCase()+r.slice(1)};/**
+ * @license lucide-react v1.11.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */var k={xmlns:"http://www.w3.org/2000/svg",width:24,height:24,viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:2,strokeLinecap:"round",strokeLinejoin:"round"};/**
+ * @license lucide-react v1.11.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */const G=e=>{for(const r in e)if(r.startsWith("aria-")||r==="role"||r==="title")return!0;return!1},J=m.createContext({}),V=()=>m.useContext(J),q=m.forwardRef(({color:e,size:r,strokeWidth:n,absoluteStrokeWidth:s,className:a="",children:o,iconNode:u,...d},c)=>{const{size:i=24,strokeWidth:h=2,absoluteStrokeWidth:f=!1,color:b="currentColor",className:x=""}=V()??{},l=s??f?Number(n??h)*24/Number(r??i):n??h;return m.createElement("svg",{ref:c,...k,width:r??i??k.width,height:r??i??k.height,stroke:e??b,strokeWidth:l,className:_("lucide",x,a),...!o&&!G(d)&&{"aria-hidden":"true"},...d},[...u.map(([p,y])=>m.createElement(p,y)),...Array.isArray(o)?o:[o]])});/**
+ * @license lucide-react v1.11.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */const $=(e,r)=>{const n=m.forwardRef(({className:s,...a},o)=>m.createElement(q,{ref:o,iconNode:r,className:_(`lucide-${Q(D(e))}`,`lucide-${e}`,s),...a}));return n.displayName=D(e),n};/**
+ * @license lucide-react v1.11.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */const ee=[["circle",{cx:"12",cy:"12",r:"10",key:"1mglay"}],["path",{d:"M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3",key:"1u773s"}],["path",{d:"M12 17h.01",key:"p32p05"}]],te=$("circle-question-mark",ee);/**
+ * @license lucide-react v1.11.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */const re=[["path",{d:"M12 20h.01",key:"zekei9"}],["path",{d:"M8.5 16.429a5 5 0 0 1 7 0",key:"1bycff"}],["path",{d:"M5 12.859a10 10 0 0 1 5.17-2.69",key:"1dl1wf"}],["path",{d:"M19 12.859a10 10 0 0 0-2.007-1.523",key:"4k23kn"}],["path",{d:"M2 8.82a15 15 0 0 1 4.177-2.643",key:"1grhjp"}],["path",{d:"M22 8.82a15 15 0 0 0-11.288-3.764",key:"z3jwby"}],["path",{d:"m2 2 20 20",key:"1ooewy"}]],ae=$("wifi-off",re);/**
+ * @license lucide-react v1.11.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */const ne=[["path",{d:"M18 6 6 18",key:"1bl5f8"}],["path",{d:"m6 6 12 12",key:"d8bk6v"}]],R=$("x",ne);function se(e,r){const n=new Date(e),s=n.toDateString()===new Date().toDateString();return n.toLocaleString(r,{...s?{}:{day:"2-digit",month:"2-digit"},hour:"2-digit",minute:"2-digit",hourCycle:"h23"})}function fe({query:e,className:r=""}){const{t:n,i18n:s}=N(),a=e.isRefetchError?e.error:e.isFetching?e.failureReason:null;if(e.data===void 0||!a)return null;const o=W(a)?"common.offline_data_from":"common.stale_data_from";return t.jsxs("p",{role:"status",className:`flex items-center gap-1.5 rounded-lg border border-dnd-amber/40 bg-dnd-amber/10 px-3 py-1.5 text-xs font-body tabular-nums text-dnd-text ${r}`,children:[t.jsx(ae,{size:14,className:"shrink-0 text-dnd-amber"}),t.jsx("span",{className:"min-w-0",children:n(o,{time:se(e.dataUpdatedAt,s.language)})})]})}function oe(e){switch(e){case"elevated":return"bg-dnd-surface-raised border border-dnd-gold-dim/50 shadow-parchment-lg";case"tome":return"bg-gradient-parchment border border-dnd-border-strong shadow-parchment-xl surface-parchment";case"parchment":return"bg-gradient-parchment border border-dnd-border shadow-parchment-md surface-parchment";case"arcane":return"bg-gradient-arcane-mist border border-dnd-arcane/40 shadow-halo-arcane";case"ember":return"bg-dnd-surface border border-dnd-crimson/50 shadow-halo-danger";case"sigil":return"bg-gradient-parchment border border-dnd-gold/40 shadow-parchment-xl surface-parchment";case"flat":default:return"bg-dnd-surface border border-transparent"}}function de({children:e,className:r="",variant:n="flat",ornamented:s=!1,interactive:a=!1,asMotion:o=!1,layoutId:u,onClick:d,style:c,tabIndex:i,role:h,"aria-label":f}){const b="relative rounded-2xl p-4 transition-shadow duration-300",x=a||d?"cursor-pointer active:scale-[0.98] will-change-transform":"",l=`${b} ${oe(n)} ${x} ${r}`,p=t.jsx("div",{className:s?"relative z-[1] pt-3 px-2 pb-2":"contents",children:e});return o||u?t.jsx(v.div,{layoutId:u,className:l,onClick:d,style:c,tabIndex:i,role:h,"aria-label":f,whileTap:a||d?{scale:.98}:void 0,transition:C.press,children:p}):t.jsx("div",{className:l,onClick:d,style:c,tabIndex:i,role:h,"aria-label":f,children:p})}const be=A.memo(de);function ie(e){switch(e){case"primary":return"bg-gradient-gold text-dnd-ink shadow-engrave";case"secondary":return"bg-dnd-surface-raised text-dnd-text border border-dnd-gold-dim/30 hover:border-dnd-gold/70";case"danger":return"bg-dnd-crimson/15 text-dnd-crimson-bright border border-dnd-crimson/40 hover:bg-dnd-crimson/25 hover:border-dnd-crimson/60";case"arcane":return"bg-gradient-to-r from-dnd-arcane-deep to-dnd-arcane text-dnd-parchment border border-dnd-arcane-bright/40 shadow-halo-arcane";case"ghost":return"bg-transparent text-dnd-gold hover:text-dnd-gold-bright border border-transparent"}}function ce(e){switch(e){case"sm":return"min-h-11 px-3 py-2 text-xs";case"lg":return"min-h-[56px] px-5 py-3.5 text-base";case"md":default:return"min-h-[48px] px-4 py-3 text-sm"}}function le({variant:e="primary",size:r="md",loading:n=!1,disabled:s=!1,icon:a,iconPosition:o="left",fullWidth:u=!1,haptic:d="light",children:c,onClick:i,className:h="",type:f="button",title:b,"aria-label":x}){const l=s||n,[p,y]=m.useState([]),w=m.useRef(null),M=g=>{if(!l){if(F(d),e==="primary"&&w.current){const S=w.current.getBoundingClientRect(),B=g.clientX-S.left,L=g.clientY-S.top,E=Date.now()+Math.random();y(j=>[...j,{id:E,x:B,y:L}]),setTimeout(()=>y(j=>j.filter(P=>P.id!==E)),400)}i==null||i(g)}},z=`relative overflow-hidden rounded-xl font-semibold flex items-center justify-center gap-2 transition-colors duration-150 disabled:opacity-40 disabled:pointer-events-none ${ce(r)} ${ie(e)} ${u?"w-full":""} ${h}`;return t.jsxs(v.button,{ref:w,type:f,onClick:M,disabled:l,className:z,title:b,"aria-label":x,whileTap:{scale:.97},transition:C.press,children:[p.map(g=>t.jsx("span",{className:"absolute rounded-full bg-dnd-parchment/30 pointer-events-none",style:{left:g.x,top:g.y,width:8,height:8,marginLeft:-4,marginTop:-4,animation:"ink-spread 320ms ease-out forwards"}},g.id)),n?t.jsxs(t.Fragment,{children:[t.jsx(O,{}),c]}):t.jsxs(t.Fragment,{children:[a&&o==="left"&&a,c,a&&o==="right"&&a]})]})}const xe=A.memo(le);function me({open:e,onClose:r,children:n,title:s,dismissible:a=!0,centered:o=!1,className:u="",zClassName:d="z-50"}){const c=H(),i=m.useRef(null),{blurStyle:h,onEntranceComplete:f}=U(e),{t:b}=N();I(e),K(e,r,a),m.useEffect(()=>{if(!e)return;const l=document.body.style.overflow;return document.body.style.overflow="hidden",()=>{document.body.style.overflow=l}},[e]);const x=(l,p)=>{(p.offset.y>120||p.velocity.y>800)&&a&&r()};return T.createPortal(t.jsx(X,{children:e&&t.jsx(v.div,{className:`fixed inset-0 ${d} flex items-end md:items-center justify-center`,style:{background:"var(--dnd-overlay)",...h},initial:{opacity:0,pointerEvents:"none"},animate:{opacity:1,pointerEvents:"auto"},exit:{opacity:0,pointerEvents:"none"},transition:{duration:.2},onAnimationComplete:f,onClick:a?r:void 0,children:t.jsxs(v.div,{ref:i,className:`
+              relative w-full bg-gradient-parchment surface-parchment
+              border-t border-dnd-border-strong md:border
+              rounded-t-3xl md:rounded-3xl md:max-w-md
+              shadow-parchment-2xl
+              max-h-[85vh] overflow-hidden
+              ${o?"md:self-center":""}
+              ${u}
+            `,initial:o?{opacity:0,scale:.96}:{y:"100%"},animate:o?{opacity:1,scale:1}:{y:0},exit:o?{opacity:0,scale:.98}:{y:"100%"},transition:C.swipe,drag:a&&!o?"y":!1,dragConstraints:{top:0,bottom:0},dragElastic:{top:0,bottom:.4},dragControls:c,dragListener:!1,onDragEnd:x,onClick:l=>l.stopPropagation(),children:[t.jsx("div",{className:"flex justify-center py-2 cursor-grab active:cursor-grabbing md:hidden touch-none",onPointerDown:l=>c.start(l),children:t.jsx("div",{className:"w-10 h-1 rounded-full bg-dnd-gold-dim/50"})}),s?t.jsxs("div",{className:"relative px-5 pb-3 border-b border-dnd-border/50",children:[t.jsx("h2",{className:"font-display text-xl font-bold text-dnd-gold-bright text-center pr-8",children:s}),a&&t.jsx("button",{type:"button",onClick:r,"aria-label":b("common.close"),className:"absolute -top-1 right-2 w-10 h-10 flex items-center justify-center rounded-full text-dnd-gold-dim hover:text-dnd-gold-bright hover:bg-dnd-surface-raised transition-colors",children:t.jsx(R,{size:18})})]}):a&&t.jsx("div",{className:"flex justify-end px-2 -mt-2",children:t.jsx("button",{type:"button",onClick:r,"aria-label":b("common.close"),className:"w-10 h-10 flex items-center justify-center rounded-full text-dnd-gold-dim hover:text-dnd-gold-bright hover:bg-dnd-surface-raised transition-colors",children:t.jsx(R,{size:18})})}),t.jsx("div",{className:"overflow-y-auto overflow-x-hidden overscroll-contain pb-safe-lg",style:{maxHeight:"calc(85vh - 60px)"},children:n})]})},"sheet-backdrop")}),document.body)}function ge({helpKey:e,title:r,className:n="w-11 h-11"}){const{t:s}=N(),[a,o]=m.useState(!1),u=s(`help.${e}`,{returnObjects:!0});if(typeof u!="object")return null;const d=a?u:null;return t.jsxs(t.Fragment,{children:[t.jsx(Z,{onClick:()=>o(!0),className:`${n} shrink-0 flex items-center justify-center rounded-full bg-dnd-surface border border-dnd-gold-dim/30`,"aria-label":s("help.open"),whileTap:{scale:.9},whileHover:{boxShadow:"var(--halo-gold)"},children:t.jsx(te,{size:20,className:"text-dnd-gold-bright"})}),t.jsx(me,{open:a,onClose:()=>o(!1),title:s("help.title",{page:r}),children:d&&t.jsxs("div",{className:"px-5 py-4 space-y-5 font-body text-dnd-text",children:[t.jsx("p",{className:"text-sm leading-relaxed text-dnd-text-muted",children:d.summary}),d.sections.map(c=>t.jsxs("section",{className:"space-y-2",children:[t.jsx("h3",{className:"font-display font-bold text-dnd-gold-bright",children:c.title}),t.jsx("ul",{className:"list-disc pl-5 space-y-1.5 text-sm leading-relaxed marker:text-dnd-gold-dim",children:c.items.map(i=>t.jsx("li",{children:i},i))})]},c.title))]})})]})}export{xe as B,fe as O,ge as P,be as S,ae as W,R as X,me as a,$ as c};

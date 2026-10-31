@@ -133,4 +133,45 @@ describe('useLongPress', () => {
     vi.advanceTimersByTime(500)
     expect(onLongPress).not.toHaveBeenCalled() // poll timer was cleared
   })
+  // Regression: a tap that opens an overlay (e.g. "Lancia" on the Turn page → slot sheet)
+  // was closed at once by the compatibility mousedown/click the browser synthesizes after
+  // touchend, which landed on the overlay's freshly mounted backdrop. Cancelling the
+  // touchend suppresses those ghost events.
+  const touchEnd = () => ({ preventDefault: vi.fn() }) as unknown as React.TouchEvent & { preventDefault: ReturnType<typeof vi.fn> }
+
+  it('cancels the touchend after a handled tap so no ghost click follows', () => {
+    const onClick = vi.fn()
+    const { result } = renderHook(() => useLongPress({ onClick, onLongPress: vi.fn(), thresholdMs: 500 }))
+    const end = touchEnd()
+
+    result.current.onPointerDown(evt(0, 0))
+    result.current.onTouchStart(evt(0, 0))
+    result.current.onPointerUp() // tap handled here (pointerup precedes touchend)
+    result.current.onTouchEnd(end)
+
+    expect(onClick).toHaveBeenCalledTimes(1)
+    expect(end.preventDefault).toHaveBeenCalled()
+  })
+
+  it('cancels the touchend after a long press', () => {
+    const { result } = renderHook(() => useLongPress({ onClick: vi.fn(), onLongPress: vi.fn(), thresholdMs: 500 }))
+    const end = touchEnd()
+
+    result.current.onTouchStart(evt(0, 0))
+    vi.advanceTimersByTime(500)
+    result.current.onTouchEnd(end)
+
+    expect(end.preventDefault).toHaveBeenCalled()
+  })
+
+  it('leaves the touchend alone after a scroll', () => {
+    const { result } = renderHook(() => useLongPress({ onClick: vi.fn(), onLongPress: vi.fn(), thresholdMs: 500 }))
+    const end = touchEnd()
+
+    result.current.onTouchStart(evt(0, 0))
+    result.current.onTouchMove(evt(0, 40))
+    result.current.onTouchEnd(end)
+
+    expect(end.preventDefault).not.toHaveBeenCalled()
+  })
 })

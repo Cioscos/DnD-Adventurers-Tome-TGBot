@@ -386,6 +386,8 @@ async def roll_spell_damage(
         um = _DICE_RE.match(spell.higher_levels_dice.strip())
         if um and int(um.group(2)) == sides:
             base_count += int(um.group(1)) * (casting_level - spell.level)
+            # Bonus fisso per livello (Dardo incantato: +1 per ogni dardo extra).
+            base_bonus += int(um.group(3) or 0) * (casting_level - spell.level)
 
     # Apply critical (double dice count, not the flat bonus)
     dice_count = base_count * 2 if body.is_critical else base_count
