@@ -16,6 +16,7 @@ from api.services.spellcasting import build_spellcasting_info
 from core.data.skills import SKILL_ABILITY_MAP
 from core.db.models import ABILITY_NAMES, Character
 from core.game.actions import attacks_per_action
+from core.game.stats import effective_ability_score
 from core.game.item_bonuses import item_bonus_total
 from core.game.skills import PASSIVE_SKILLS, has_jack_of_all_trades, passive_score, skill_bonus
 from api.routers._helpers import effective_ability_mod
@@ -64,6 +65,7 @@ async def build_character_response(
         + item_bonus_total(char.items, "initiative")
         + await get_passive_modifiers(session, char, "character.initiative")
     )
+    _apply_encumbrance(char, response)
     response.pending_choices = list(char.pending_choices or [])
 
     for slug in SKILL_ABILITY_MAP:
@@ -86,3 +88,25 @@ async def build_character_response(
             response.saves_items_modifiers[slug] = item_val
 
     return response
+
+
+def _apply_encumbrance(char: Character, response: CharacterFull) -> None:
+    """Total carried weight (+ coins at 50/lb if enabled) and the optional variant level."""
+    cfg = char.settings or {}
+    # Live sum: the stored column can lag when items were just added/changed in this request.
+    total = float(sum(i.weight * i.quantity for i in char.items))
+    response.encumbrance = total
+    cur = char.currency
+    if cfg.get("coin_weight") and cur is not None:
+        total += (cur.copper + cur.silver + cur.electrum + cur.gold + cur.platinum) / 50
+    response.encumbrance_total = total
+    if not cfg.get("encumbrance_variant"):
+        return
+    row = next((a for a in char.ability_scores if a.name == "strength"), None)
+    strength, _ = effective_ability_score(
+        "strength", row.value if row else 10, [i for i in char.items if i.is_equipped]
+    )
+    if total > strength * 10:
+        response.encumbrance_level, response.speed_encumbrance_penalty_ft = "heavily", 20
+    elif total > strength * 5:
+        response.encumbrance_level, response.speed_encumbrance_penalty_ft = "encumbered", 10

@@ -65,7 +65,7 @@ export default function HeroStatsSection({ char }: Props) {
   const senses = ((char.settings?.senses as { type: string; range_ft: number }[] | undefined) ?? [])
     .filter((s) => s.range_ft > 0)
 
-  const speedTotal = (char.speed ?? 30) + (char.speed_homebrew_modifier ?? 0) + (char.speed_items_modifier ?? 0)
+  const speedTotal = (char.speed ?? 30) + (char.speed_homebrew_modifier ?? 0) + (char.speed_items_modifier ?? 0) - (char.speed_encumbrance_penalty_ft ?? 0)
   const speedLabel = formatLength(speedTotal, unitSystem)
 
   // Proficient saving throws with their total bonus (same math as SavingThrows.tsx).
@@ -226,6 +226,19 @@ export default function HeroStatsSection({ char }: Props) {
             label={t('character.hero.speed_items_label')}
             display={`${(char.speed_items_modifier ?? 0) > 0 ? '+' : ''}${formatLength(char.speed_items_modifier ?? 0, unitSystem)}`}
           />
+        </div>
+      )}
+
+      {(char.encumbrance_level ?? 'none') !== 'none' && (
+        <div className="mt-1.5 rounded-lg border border-dnd-amber/50 bg-dnd-surface-raised">
+          <HomebrewBreakdownRow
+            value={-(char.speed_encumbrance_penalty_ft ?? 0)}
+            label={t(`character.hero.encumbrance_${char.encumbrance_level}`)}
+            display={`−${formatLength(char.speed_encumbrance_penalty_ft ?? 0, unitSystem)}`}
+          />
+          {char.encumbrance_level === 'heavily' && (
+            <p className="px-3 pb-2 text-xs font-body text-dnd-amber">{t('character.hero.encumbrance_heavily_note')}</p>
+          )}
         </div>
       )}
 

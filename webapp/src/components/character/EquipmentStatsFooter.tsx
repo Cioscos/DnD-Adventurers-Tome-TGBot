@@ -19,9 +19,7 @@ export default function EquipmentStatsFooter({ char }: Props) {
       ? (mainHand.item_metadata as { damage_dice?: string }).damage_dice
       : null
 
-  const encumbrance = char.items
-    ?.filter((i) => i.is_equipped)
-    .reduce((sum, i) => sum + (i.weight || 0) * (i.quantity || 1), 0) ?? 0
+  const encumbrance = char.encumbrance_total ?? char.encumbrance ?? 0
 
   const acTotal = char.ac + (char.ac_breakdown?.homebrew ?? 0) + (char.ac_breakdown?.items ?? 0)
 
@@ -30,7 +28,7 @@ export default function EquipmentStatsFooter({ char }: Props) {
   const carryCap = char.carry_capacity
   const overload = encumbrance > carryCap
 
-  const speedTotal = (char.speed ?? 30) + (char.speed_homebrew_modifier ?? 0) + (char.speed_items_modifier ?? 0)
+  const speedTotal = (char.speed ?? 30) + (char.speed_homebrew_modifier ?? 0) + (char.speed_items_modifier ?? 0) - (char.speed_encumbrance_penalty_ft ?? 0)
 
   const strScore = char.ability_scores.find((s) => s.name.toLowerCase() === 'strength')?.value ?? 10
   const carryFormula = char.carry_capacity_override

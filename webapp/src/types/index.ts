@@ -233,6 +233,10 @@ export interface CharacterFull extends Omit<CharacterSummary, 'ac_homebrew_modif
   /** Solo da POST /rounds/tick: etichette degli effetti appena scaduti. */
   expired_effects?: string[] | null
   encumbrance: number
+  /** Oggetti (+ monete se attivo) calcolati dal server: unica fonte per Inventario, Equipaggiamento ed Eroe. */
+  encumbrance_total?: number
+  encumbrance_level?: 'none' | 'encumbered' | 'heavily'
+  speed_encumbrance_penalty_ft?: number
   spell_slots_mode: string
   spellcasting?: SpellcastingInfo | null
   concentrating_spell_id?: number

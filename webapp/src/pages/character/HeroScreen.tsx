@@ -60,8 +60,9 @@ export default function HeroScreen({ char }: Props) {
   const hpMax = char.hit_points + (char.hp_max_homebrew_modifier ?? 0)
   const acTotal = char.ac + (char.ac_breakdown?.homebrew ?? 0) + (char.ac_breakdown?.items ?? 0)
   const unitSystem = useUnitSettings((s) => s.system)
-  const weightLabel = formatWeightValue(char.encumbrance, unitSystem)
-  const overloaded = char.encumbrance > char.carry_capacity
+  const encumbranceTotal = char.encumbrance_total ?? char.encumbrance
+  const weightLabel = formatWeightValue(encumbranceTotal, unitSystem)
+  const overloaded = encumbranceTotal > char.carry_capacity
 
   const hpPct = hpMax > 0
     ? Math.round((char.current_hit_points / hpMax) * 100)

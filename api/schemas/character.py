@@ -124,6 +124,10 @@ class CharacterFull(BaseModel):
     carry_capacity: int
     carry_capacity_override: bool = False
     encumbrance: float
+    # Server-computed (items + coins if enabled) and variant level; see character_response.
+    encumbrance_total: float = 0.0
+    encumbrance_level: str = "none"
+    speed_encumbrance_penalty_ft: int = 0
 
     # Computed
     total_level: int = 0

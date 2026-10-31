@@ -46,10 +46,14 @@ describe('EquipmentStatsFooter', () => {
     expect(screen.getByText('—')).toBeInTheDocument()
   })
 
-  it('sums only equipped item weight × quantity into encumbrance, against carry capacity', () => {
-    // equipped: Sword 3 + Plate 13 = 16 (Rations 50 not equipped → excluded); cap 15 → overload.
-    render(<EquipmentStatsFooter char={char()} />)
+  it('shows the server-computed encumbrance total against carry capacity', () => {
+    render(<EquipmentStatsFooter char={char({ encumbrance_total: 16 })} />)
     expect(screen.getByText(/16\/15/)).toBeInTheDocument()
+  })
+
+  it('subtracts the encumbrance speed penalty from speed (30 + 10 - 20 = 20)', () => {
+    render(<EquipmentStatsFooter char={char({ speed_encumbrance_penalty_ft: 20 })} />)
+    expect(screen.getByText('20 ft')).toBeInTheDocument()
   })
 
   it('adds the homebrew speed modifier to base speed (30 + 10 = 40)', () => {

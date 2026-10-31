@@ -424,7 +424,7 @@ export default function Inventory() {
   }
 
   const items: Item[] = char.items ?? []
-  const totalWeight = items.reduce((sum, i) => sum + i.weight * i.quantity, 0)
+  const totalWeight = char.encumbrance_total ?? items.reduce((sum, i) => sum + i.weight * i.quantity, 0)
 
   const TYPE_ORDER: readonly string[] = INVENTORY_TYPE_ORDER
   const grouped = items.reduce<Record<string, Item[]>>((acc, item) => {

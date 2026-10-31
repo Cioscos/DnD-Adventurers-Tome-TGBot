@@ -49,6 +49,8 @@ type SettingKey =
   | 'advancement'
   | 'hp_mode'
   | 'war_caster'
+  | 'encumbrance_variant'
+  | 'coin_weight'
   | 'show_private_identity'
   | `slot_mode:${'auto' | 'manual'}`
   | `prep_cap_mode:${'auto' | 'manual'}`
@@ -639,6 +641,31 @@ export default function Settings() {
           label={t('character.settings.war_caster_label')}
           hint={t('character.settings.war_caster_hint')}
         />
+      </Surface>
+
+      <Surface variant="elevated">
+        <div className="space-y-3">
+          <SwitchToggle
+            checked={settings.encumbrance_variant === true}
+            pending={updateMutation.isPending && activeSetting === 'encumbrance_variant'}
+            onChange={(next) => {
+              setActiveSetting('encumbrance_variant')
+              updateMutation.mutate({ ...settings, encumbrance_variant: next })
+            }}
+            label={t('character.settings.encumbrance_variant_label')}
+            hint={t('character.settings.encumbrance_variant_hint')}
+          />
+          <SwitchToggle
+            checked={settings.coin_weight === true}
+            pending={updateMutation.isPending && activeSetting === 'coin_weight'}
+            onChange={(next) => {
+              setActiveSetting('coin_weight')
+              updateMutation.mutate({ ...settings, coin_weight: next })
+            }}
+            label={t('character.settings.coin_weight_label')}
+            hint={t('character.settings.coin_weight_hint')}
+          />
+        </div>
       </Surface>
 
       <SectionDivider icon={<Eye size={11} />} align="center">
