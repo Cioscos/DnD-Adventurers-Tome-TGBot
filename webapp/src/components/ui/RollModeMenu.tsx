@@ -8,6 +8,7 @@ const OPTIONS: { mode: RollMode; tone: string }[] = [
   { mode: 'disadvantage', tone: 'text-dnd-crimson-bright' },
 ]
 const MENU_W = 176
+const MENU_H = 3 * 44 + 2 // three 44 px rows + border
 
 /** Small popover anchored under the roll button: Vantaggio / Normale / Svantaggio. */
 export default function RollModeMenu({
@@ -21,12 +22,15 @@ export default function RollModeMenu({
 }) {
   const { t } = useTranslation()
   const left = Math.max(8, Math.min(anchor.right - MENU_W, window.innerWidth - MENU_W - 8))
+  // Flip above the anchor when it would run off the bottom; never closer than 8px to the top.
+  const below = anchor.bottom + 4
+  const top = below + MENU_H > window.innerHeight - 8 ? Math.max(8, anchor.top - 4 - MENU_H) : below
   return createPortal(
     <div className="fixed inset-0 z-[70]" onClick={onClose} onContextMenu={(e) => e.preventDefault()}>
       <div
         role="menu"
         aria-label={t('common.roll_mode.title')}
-        style={{ top: anchor.bottom + 4, left, width: MENU_W }}
+        style={{ top, left, width: MENU_W }}
         className="absolute rounded-xl border border-dnd-gold-dim/40 bg-dnd-surface-raised shadow-xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >

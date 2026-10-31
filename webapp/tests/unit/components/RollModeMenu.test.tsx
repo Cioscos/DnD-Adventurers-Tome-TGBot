@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import RollButton from '@/components/ui/RollButton'
+import RollModeMenu from '@/components/ui/RollModeMenu'
 
 const { info } = vi.hoisted(() => ({ info: vi.fn() }))
 vi.mock('react-i18next', async (orig) => {
@@ -52,5 +53,20 @@ describe('RollButton + RollModeMenu', () => {
     render(<RollButton onRoll={vi.fn()} ariaLabel="a">x</RollButton>)
     expect(info).toHaveBeenCalledTimes(1)
     await userEvent.setup().keyboard('{Escape}')
+  })
+
+  it('opens above the anchor when there is no room below', () => {
+    const h = window.innerHeight
+    const anchor = { top: h - 50, bottom: h - 6, left: 0, right: 100 } as DOMRect
+    render(<RollModeMenu anchor={anchor} onSelect={vi.fn()} onClose={vi.fn()} />)
+    const top = parseFloat(screen.getByRole('menu').style.top)
+    expect(top).toBeLessThan(anchor.top)
+    expect(top).toBeGreaterThanOrEqual(8)
+  })
+
+  it('opens below the anchor when there is room', () => {
+    const anchor = { top: 20, bottom: 64, left: 0, right: 100 } as DOMRect
+    render(<RollModeMenu anchor={anchor} onSelect={vi.fn()} onClose={vi.fn()} />)
+    expect(parseFloat(screen.getByRole('menu').style.top)).toBe(68)
   })
 })
