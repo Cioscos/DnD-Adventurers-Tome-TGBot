@@ -675,6 +675,8 @@ class Encounter(Base):
     created_at: Mapped[str] = mapped_column(String(50), nullable=False)
     started_at: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     ended_at: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    # Snapshot per annullare l'ultimo avanzamento di turno
+    last_advance_undo: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
 
     combatants: Mapped[List["Combatant"]] = relationship(
         back_populates="encounter", cascade="all, delete-orphan"
@@ -714,6 +716,72 @@ class Combatant(Base):
     created_at: Mapped[str] = mapped_column(String(50), nullable=False)
 
     encounter: Mapped["Encounter"] = relationship(back_populates="combatants")
+
+
+class ConditionEffect(Base):
+    """Metadati di UNA condizione attiva su UN bersaglio (PG o mostro).
+
+    Esiste solo finché la condizione è attiva nella mappa ``conditions`` del
+    bersaglio. Enum come stringhe (validate da Pydantic Literal).
+    """
+
+    __tablename__ = "condition_effects"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    character_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("characters.id", ondelete="CASCADE"), nullable=True, index=True
+    )
+    combatant_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("combatants.id", ondelete="CASCADE"), nullable=True, index=True
+    )
+    slug: Mapped[str] = mapped_column(String(100), nullable=False)
+    expiry_anchor: Mapped[Optional[str]] = mapped_column(String(10), nullable=True)  # owner | source
+    expiry_edge: Mapped[Optional[str]] = mapped_column(String(10), nullable=True)  # start | end
+    expiry_count: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    save_ability: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    save_dc: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    save_edge: Mapped[Optional[str]] = mapped_column(String(10), nullable=True)  # start | end
+    # Se True il prossimo bordo save_edge non crea TS e azzera il flag
+    save_skip_once: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    source_combatant_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("combatants.id", ondelete="SET NULL"), nullable=True
+    )
+    source_character_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("characters.id", ondelete="SET NULL"), nullable=True
+    )
+    ends_with_concentration: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    source_spell_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("spells.id", ondelete="SET NULL"), nullable=True
+    )
+    applied_by_gm: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    encounter_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("encounters.id", ondelete="SET NULL"), nullable=True
+    )
+    created_at: Mapped[str] = mapped_column(String(50), nullable=False)
+
+
+class PendingSave(Base):
+    """TS ripetuto in attesa (o esito recente) per un ConditionEffect."""
+
+    __tablename__ = "pending_saves"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    effect_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("condition_effects.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    character_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("characters.id", ondelete="CASCADE"), nullable=True, index=True
+    )
+    combatant_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("combatants.id", ondelete="CASCADE"), nullable=True
+    )
+    ability: Mapped[str] = mapped_column(String(20), nullable=False)
+    dc: Mapped[int] = mapped_column(Integer, nullable=False)
+    status: Mapped[str] = mapped_column(String(10), default="pending", nullable=False)  # pending | failed | passed
+    created_at: Mapped[str] = mapped_column(String(50), nullable=False)
+    resolved_at: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    last_roll: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    dismissed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
 
 # ---------------------------------------------------------------------------
