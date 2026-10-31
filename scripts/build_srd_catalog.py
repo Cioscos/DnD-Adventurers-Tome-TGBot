@@ -64,11 +64,11 @@ MECHANICS: dict[str, dict] = {
     "staff-of-striking": _w(10, "dawn", "1d6+4", bonuses=[("attack", 3), ("damage", 3)]),
     "staff-of-power": _w(
         20, "dawn", "2d8+4",
-        [("cone-of-cold", 5), ("fireball", 5), ("globe-of-invulnerability", 5), ("hold-monster", 5), ("levitate", 2),
+        [("cone-of-cold", 5), ("fireball", 5), ("globe-of-invulnerability", 6), ("hold-monster", 5), ("levitate", 2),
          ("lightning-bolt", 5), ("magic-missile", 1), ("ray-of-enfeeblement", 1), ("wall-of-force", 5)],
         [("attack", 2), ("damage", 2), ("spell_attack", 2), ("ac", 2), ("saves", 2)]),
     "staff-of-the-magi": _w(
-        50, "dawn", "2d8+4",
+        50, "dawn", "4d6+2",
         [("conjure-elemental", 7), ("dispel-magic", 3), ("fireball", 7), ("flaming-sphere", 2), ("ice-storm", 4),
          ("invisibility", 2), ("knock", 2), ("lightning-bolt", 7), ("passwall", 5), ("plane-shift", 7),
          ("telekinesis", 5), ("wall-of-fire", 4), ("web", 2)],
@@ -105,6 +105,9 @@ ROLL_NOTES = {
     "elf": {"charm_save": "Advantage on saving throws against being charmed, and magic can't put you to sleep."},
     "halfling": {"frightened_save": "Advantage on saving throws against being frightened."},
 }
+
+# Desc only mentions attunement further down (Giant's Bane clause), so the first-line check misses it.
+ATTUNEMENT_OVERRIDES = {"hammer-of-thunderbolts"}
 
 SEM = asyncio.Semaphore(15)
 
@@ -162,11 +165,21 @@ def linear_increment(levels: dict[str, str]) -> str | None:
     return f"{n}d{parts[0][1]}" if n > 0 else None
 
 
+def dice(d: str | None) -> str | None:
+    """Normalise a dice string to NdM[+K]: strip spaces, drop the '+ MOD' placeholder (UI adds the modifier)."""
+    return re.sub(r"\+?MOD$", "", d.replace(" ", "")) if d else d
+
+
+HIGHER_RE = re.compile(r"(?:increases by|additional) (\d+d\d+) for each slot level above", re.I)
+
+
 def build_spell(s: dict) -> dict:
     dmg = s["damage"][0] if s.get("damage") else {}
     table = dmg.get("damage_at_slot_level") or dmg.get("damage_at_character_level") or {}
     base = table[min(table, key=int)] if table else None
     inc = linear_increment(dmg["damage_at_slot_level"]) if dmg.get("damage_at_slot_level") else None
+    if inc is None and base and (m := HIGHER_RE.search(text(s.get("higher_level")))):
+        inc = m[1]  # "every two slot levels" / extra darts or rays do not match
     aoe = s.get("area_of_effect")
     return {
         "index": s["index"], "name": en(s["name"]), "level": s["level"], "school": s["school"]["index"],
@@ -177,7 +190,7 @@ def build_spell(s: dict) -> dict:
         "desc": en(text(s["desc"])), "higher_level": en(text(s["higher_level"])) if s.get("higher_level") else None,
         "attack_type": "ATK" if s.get("attack_type") else ("SAVE" if s.get("dc") else None),
         "save_ability": s["dc"]["dc_type"]["index"] if s.get("dc") else None,
-        "damage_dice": base,
+        "damage_dice": dice(base),
         "damage_type": dmg["damage_type"]["index"] if dmg.get("damage_type") else None,
         "higher_levels_dice": inc,
         "classes": sorted(c["index"] for c in s.get("classes", [])),
@@ -188,7 +201,7 @@ def build_magic_item(m: dict) -> dict:
     desc = m.get("desc") or []
     out = {
         "index": m["index"], "name": en(m["name"]), "rarity": m["rarity"]["name"].lower(),
-        "requires_attunement": any("requires attunement" in d.lower() for d in desc[:1]),
+        "requires_attunement": m["index"] in ATTUNEMENT_OVERRIDES or any("requires attunement" in d.lower() for d in desc[:1]),
         "category": m["equipment_category"]["index"], "desc": en(text(desc)),
         "charges": None, "bonuses": [], "granted_spells": [],
     }
@@ -203,11 +216,12 @@ def build_equipment(e: dict) -> dict | None:
         props = [PROP_SLUGS[p["index"]] for p in e.get("properties", []) if p["index"] in PROP_SLUGS]
         two = e.get("two_handed_damage")
         dmg = e.get("damage") or {}  # the net deals no damage
-        return {**base, "damage_dice": dmg.get("damage_dice"), "damage_type": (dmg.get("damage_type") or {}).get("index"),
+        return {**base, "damage_dice": dice(dmg.get("damage_dice")), "damage_type": (dmg.get("damage_type") or {}).get("index"),
                 "weapon_category": e["weapon_category"].lower(), "weapon_range": e["weapon_range"].lower(),
                 "properties": sorted(props),
-                "versatile_dice": two["damage_dice"] if two and "prop_versatile" in props else None,
-                "range_ft": (e.get("range") or {}).get("normal")}
+                "versatile_dice": dice(two["damage_dice"]) if two and "prop_versatile" in props else None,
+                "range_ft": (e.get("range") or {}).get("normal"),
+                "thrown_range_ft": [tr["normal"], tr["long"]] if (tr := e.get("throw_range")) else None}
     if cat == "armor":
         return {**base, "armor_type": e["armor_category"].lower(), "ac_value": e["armor_class"]["base"],
                 "dex_bonus": e["armor_class"]["dex_bonus"], "strength_req": e.get("str_minimum") or 0,
@@ -274,7 +288,7 @@ def build_monster(m: dict) -> dict:
         d = (a.get("damage") or [{}])[0]
         dt = (d.get("damage_type") or {}).get("index")
         return {"name": en(a["name"]), "desc": en(a["desc"]), "attack_bonus": a.get("attack_bonus"),
-                "damage_dice": d.get("damage_dice"), "damage_type": dt}
+                "damage_dice": dice(d.get("damage_dice")), "damage_type": dt}
 
     return {
         "index": m["index"], "name": en(m["name"]), "size": m["size"].lower(), "type": m["type"],

@@ -3584,9 +3584,9 @@
    },
    "attack_type": "SAVE",
    "save_ability": "dex",
-   "damage_dice": "10d6 + 40",
+   "damage_dice": "10d6+40",
    "damage_type": "force",
-   "higher_levels_dice": null,
+   "higher_levels_dice": "3d6",
    "classes": [
     "sorcerer",
     "wizard"
@@ -4869,7 +4869,7 @@
    "higher_level": null,
    "attack_type": "SAVE",
    "save_ability": "con",
-   "damage_dice": "7d8 + 30",
+   "damage_dice": "7d8+30",
    "damage_type": "necrotic",
    "higher_levels_dice": null,
    "classes": [
@@ -5135,7 +5135,7 @@
    "save_ability": "dex",
    "damage_dice": "4d6",
    "damage_type": "fire",
-   "higher_levels_dice": null,
+   "higher_levels_dice": "1d6",
    "classes": [
     "cleric"
    ]
@@ -5577,7 +5577,7 @@
    "save_ability": "con",
    "damage_dice": "10d6",
    "damage_type": "cold",
-   "higher_levels_dice": null,
+   "higher_levels_dice": "1d6",
    "classes": [
     "wizard"
    ]
@@ -8096,7 +8096,7 @@
    },
    "attack_type": null,
    "save_ability": null,
-   "damage_dice": "3d4 + 3",
+   "damage_dice": "3d4+3",
    "damage_type": "force",
    "higher_levels_dice": null,
    "classes": [
@@ -9187,7 +9187,7 @@
    "save_ability": "wis",
    "damage_dice": "4d10",
    "damage_type": "psychic",
-   "higher_levels_dice": null,
+   "higher_levels_dice": "1d10",
    "classes": [
     "wizard"
    ]
@@ -11361,7 +11361,7 @@
    "save_ability": null,
    "damage_dice": "5d8",
    "damage_type": null,
-   "higher_levels_dice": null,
+   "higher_levels_dice": "2d8",
    "classes": [
     "bard",
     "sorcerer",
@@ -11786,7 +11786,7 @@
    },
    "attack_type": "ATK",
    "save_ability": null,
-   "damage_dice": "1d8 + MOD",
+   "damage_dice": "1d8",
    "damage_type": "force",
    "higher_levels_dice": null,
    "classes": [
@@ -12937,7 +12937,7 @@
    "save_ability": "dex",
    "damage_dice": "5d8",
    "damage_type": "fire",
-   "higher_levels_dice": null,
+   "higher_levels_dice": "1d8",
    "classes": [
     "druid",
     "sorcerer",

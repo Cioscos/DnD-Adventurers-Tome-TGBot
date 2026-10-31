@@ -19,7 +19,8 @@
     "prop_versatile"
    ],
    "versatile_dice": "1d10",
-   "range_ft": 5
+   "range_ft": 5,
+   "thrown_range_ft": null
   },
   {
    "index": "blowgun",
@@ -36,7 +37,8 @@
     "prop_loading"
    ],
    "versatile_dice": null,
-   "range_ft": 25
+   "range_ft": 25,
+   "thrown_range_ft": null
   },
   {
    "index": "breastplate",
@@ -88,7 +90,8 @@
     "prop_light"
    ],
    "versatile_dice": null,
-   "range_ft": 5
+   "range_ft": 5,
+   "thrown_range_ft": null
   },
   {
    "index": "crossbow-hand",
@@ -106,7 +109,8 @@
     "prop_loading"
    ],
    "versatile_dice": null,
-   "range_ft": 30
+   "range_ft": 30,
+   "thrown_range_ft": null
   },
   {
    "index": "crossbow-heavy",
@@ -125,7 +129,8 @@
     "prop_two_handed"
    ],
    "versatile_dice": null,
-   "range_ft": 100
+   "range_ft": 100,
+   "thrown_range_ft": null
   },
   {
    "index": "crossbow-light",
@@ -143,7 +148,8 @@
     "prop_two_handed"
    ],
    "versatile_dice": null,
-   "range_ft": 80
+   "range_ft": 80,
+   "thrown_range_ft": null
   },
   {
    "index": "dagger",
@@ -161,7 +167,11 @@
     "prop_thrown"
    ],
    "versatile_dice": null,
-   "range_ft": 5
+   "range_ft": 5,
+   "thrown_range_ft": [
+    20,
+    60
+   ]
   },
   {
    "index": "dart",
@@ -178,7 +188,11 @@
     "prop_thrown"
    ],
    "versatile_dice": null,
-   "range_ft": 20
+   "range_ft": 20,
+   "thrown_range_ft": [
+    20,
+    60
+   ]
   },
   {
    "index": "flail",
@@ -192,7 +206,8 @@
    "weapon_range": "melee",
    "properties": [],
    "versatile_dice": null,
-   "range_ft": 5
+   "range_ft": 5,
+   "thrown_range_ft": null
   },
   {
    "index": "glaive",
@@ -210,7 +225,8 @@
     "prop_two_handed"
    ],
    "versatile_dice": null,
-   "range_ft": 5
+   "range_ft": 5,
+   "thrown_range_ft": null
   },
   {
    "index": "greataxe",
@@ -227,7 +243,8 @@
     "prop_two_handed"
    ],
    "versatile_dice": null,
-   "range_ft": 5
+   "range_ft": 5,
+   "thrown_range_ft": null
   },
   {
    "index": "greatclub",
@@ -243,7 +260,8 @@
     "prop_two_handed"
    ],
    "versatile_dice": null,
-   "range_ft": 5
+   "range_ft": 5,
+   "thrown_range_ft": null
   },
   {
    "index": "greatsword",
@@ -260,7 +278,8 @@
     "prop_two_handed"
    ],
    "versatile_dice": null,
-   "range_ft": 5
+   "range_ft": 5,
+   "thrown_range_ft": null
   },
   {
    "index": "halberd",
@@ -278,7 +297,8 @@
     "prop_two_handed"
    ],
    "versatile_dice": null,
-   "range_ft": 5
+   "range_ft": 5,
+   "thrown_range_ft": null
   },
   {
    "index": "half-plate-armor",
@@ -307,7 +327,11 @@
     "prop_thrown"
    ],
    "versatile_dice": null,
-   "range_ft": 5
+   "range_ft": 5,
+   "thrown_range_ft": [
+    20,
+    60
+   ]
   },
   {
    "index": "hide-armor",
@@ -335,7 +359,11 @@
     "prop_thrown"
    ],
    "versatile_dice": null,
-   "range_ft": 5
+   "range_ft": 5,
+   "thrown_range_ft": [
+    30,
+    120
+   ]
   },
   {
    "index": "lance",
@@ -352,7 +380,8 @@
     "prop_special"
    ],
    "versatile_dice": null,
-   "range_ft": 5
+   "range_ft": 5,
+   "thrown_range_ft": null
   },
   {
    "index": "leather-armor",
@@ -381,7 +410,11 @@
     "prop_thrown"
    ],
    "versatile_dice": null,
-   "range_ft": 5
+   "range_ft": 5,
+   "thrown_range_ft": [
+    20,
+    60
+   ]
   },
   {
    "index": "longbow",
@@ -399,7 +432,8 @@
     "prop_two_handed"
    ],
    "versatile_dice": null,
-   "range_ft": 150
+   "range_ft": 150,
+   "thrown_range_ft": null
   },
   {
    "index": "longsword",
@@ -415,7 +449,8 @@
     "prop_versatile"
    ],
    "versatile_dice": "1d10",
-   "range_ft": 5
+   "range_ft": 5,
+   "thrown_range_ft": null
   },
   {
    "index": "mace",
@@ -429,7 +464,8 @@
    "weapon_range": "melee",
    "properties": [],
    "versatile_dice": null,
-   "range_ft": 5
+   "range_ft": 5,
+   "thrown_range_ft": null
   },
   {
    "index": "maul",
@@ -446,7 +482,8 @@
     "prop_two_handed"
    ],
    "versatile_dice": null,
-   "range_ft": 5
+   "range_ft": 5,
+   "thrown_range_ft": null
   },
   {
    "index": "morningstar",
@@ -460,7 +497,8 @@
    "weapon_range": "melee",
    "properties": [],
    "versatile_dice": null,
-   "range_ft": 5
+   "range_ft": 5,
+   "thrown_range_ft": null
   },
   {
    "index": "net",
@@ -477,7 +515,11 @@
     "prop_thrown"
    ],
    "versatile_dice": null,
-   "range_ft": 5
+   "range_ft": 5,
+   "thrown_range_ft": [
+    5,
+    15
+   ]
   },
   {
    "index": "padded-armor",
@@ -507,7 +549,8 @@
     "prop_two_handed"
    ],
    "versatile_dice": null,
-   "range_ft": 5
+   "range_ft": 5,
+   "thrown_range_ft": null
   },
   {
    "index": "plate-armor",
@@ -535,7 +578,8 @@
     "prop_versatile"
    ],
    "versatile_dice": "1d8",
-   "range_ft": 5
+   "range_ft": 5,
+   "thrown_range_ft": null
   },
   {
    "index": "rapier",
@@ -551,7 +595,8 @@
     "prop_finesse"
    ],
    "versatile_dice": null,
-   "range_ft": 5
+   "range_ft": 5,
+   "thrown_range_ft": null
   },
   {
    "index": "ring-mail",
@@ -592,7 +637,8 @@
     "prop_light"
    ],
    "versatile_dice": null,
-   "range_ft": 5
+   "range_ft": 5,
+   "thrown_range_ft": null
   },
   {
    "index": "shield",
@@ -621,7 +667,8 @@
     "prop_two_handed"
    ],
    "versatile_dice": null,
-   "range_ft": 80
+   "range_ft": 80,
+   "thrown_range_ft": null
   },
   {
    "index": "shortsword",
@@ -638,7 +685,8 @@
     "prop_light"
    ],
    "versatile_dice": null,
-   "range_ft": 5
+   "range_ft": 5,
+   "thrown_range_ft": null
   },
   {
    "index": "sickle",
@@ -654,7 +702,8 @@
     "prop_light"
    ],
    "versatile_dice": null,
-   "range_ft": 5
+   "range_ft": 5,
+   "thrown_range_ft": null
   },
   {
    "index": "sling",
@@ -670,7 +719,8 @@
     "prop_ammunition"
    ],
    "versatile_dice": null,
-   "range_ft": 30
+   "range_ft": 30,
+   "thrown_range_ft": null
   },
   {
    "index": "spear",
@@ -687,7 +737,11 @@
     "prop_versatile"
    ],
    "versatile_dice": "1d8",
-   "range_ft": 5
+   "range_ft": 5,
+   "thrown_range_ft": [
+    20,
+    60
+   ]
   },
   {
    "index": "splint-armor",
@@ -728,7 +782,11 @@
     "prop_versatile"
    ],
    "versatile_dice": "1d8",
-   "range_ft": 5
+   "range_ft": 5,
+   "thrown_range_ft": [
+    20,
+    60
+   ]
   },
   {
    "index": "war-pick",
@@ -742,7 +800,8 @@
    "weapon_range": "melee",
    "properties": [],
    "versatile_dice": null,
-   "range_ft": 5
+   "range_ft": 5,
+   "thrown_range_ft": null
   },
   {
    "index": "warhammer",
@@ -758,7 +817,8 @@
     "prop_versatile"
    ],
    "versatile_dice": "1d10",
-   "range_ft": 5
+   "range_ft": 5,
+   "thrown_range_ft": null
   },
   {
    "index": "whip",
@@ -775,7 +835,8 @@
     "prop_reach"
    ],
    "versatile_dice": null,
-   "range_ft": 5
+   "range_ft": 5,
+   "thrown_range_ft": null
   }
  ]
 }
