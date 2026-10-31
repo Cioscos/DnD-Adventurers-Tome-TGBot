@@ -638,7 +638,9 @@ async def gm_apply_condition(
                 raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                                     detail={"code": "source_not_concentrating"})
             spell_id = src_char.concentrating_spell_id
-        await _set_condition(db, comb, body.slug, True)
+        owner = await _pc_char(db, comb) if comb.kind == "pc" else comb
+        if not (owner.conditions or {}).get(body.slug):  # keep custom:* payloads on re-apply
+            await _set_condition(db, comb, body.slug, True)
         target = ("character", comb.character_id) if comb.kind == "pc" else ("combatant", comb.id)
         await upsert_effect(
             db, target, body.slug,

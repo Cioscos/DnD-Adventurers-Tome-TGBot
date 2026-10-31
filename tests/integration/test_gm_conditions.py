@@ -279,3 +279,20 @@ async def test_monster_owner_start_expiry_on_its_turn(client, test_session_facto
         assert list((await s.execute(select(PendingSave))).scalars()) == []
         assert (await s.get(Encounter, (await s.get(Combatant, g1)).encounter_id)) \
             .last_advance_undo["expired"][0]["slug"] == "blinded"
+
+
+async def test_gm_reapply_custom_keeps_homebrew_payload(client, test_session_factory, monkeypatch):
+    """Spec non-goal: riapplicare un custom:* non sovrascrive {rule_id, params}."""
+    _, sid, char_id, pc_id, _, _ = await _start(client, test_session_factory, monkeypatch)
+    payload = {"rule_id": 1, "params": {}}
+    async with test_session_factory() as s:
+        (await s.get(Character, char_id)).conditions = {"custom:x": payload}
+        await s.commit()
+    r = await client.post(_url(sid, pc_id), json={
+        "slug": "custom:x", "expiry": {"anchor": "owner", "edge": "end", "count": 2},
+    })
+    assert r.status_code == 200, r.text
+    async with test_session_factory() as s:
+        assert (await s.get(Character, char_id)).conditions == {"custom:x": payload}
+    [eff] = await _effects(test_session_factory, character_id=char_id)
+    assert eff.slug == "custom:x" and eff.expiry_count is not None
