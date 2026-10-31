@@ -218,7 +218,6 @@ describe('Conditions page', () => {
     const withDuration = {
       id: 5,
       conditions: { poisoned: true },
-      settings: { condition_durations: { poisoned: 2 } },
       condition_effects: [{
         slug: 'poisoned', expiry_anchor: 'owner', expiry_edge: 'end', expiry_count: 1,
         save_ability: 'constitution', save_dc: 13, save_edge: 'end',
@@ -232,6 +231,7 @@ describe('Conditions page', () => {
       listRules.mockResolvedValue([])
       renderWithProviders(<Conditions />)
       expect(await screen.findByText('character.conditions.duration.tick')).toBeInTheDocument()
+      expect(screen.getByText('character.conditions.duration.left')).toBeInTheDocument()
       expect(screen.getByText('character.conditions.effect.until_end_owner_next')).toBeInTheDocument()
       expect(screen.getByText('character.conditions.effect.save_end')).toBeInTheDocument()
       expect(screen.getByText('character.conditions.effect.by_gm')).toBeInTheDocument()

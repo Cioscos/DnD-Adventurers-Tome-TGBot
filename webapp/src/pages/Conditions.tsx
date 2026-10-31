@@ -241,7 +241,8 @@ export default function Conditions() {
     })
   }
 
-  const durations = (char.settings?.condition_durations ?? {}) as Record<string, number>
+  const durations = Object.fromEntries((char.condition_effects ?? [])
+    .filter((e) => e.expiry_count != null).map((e) => [e.slug, e.expiry_count as number]))
   const hasDurations = Object.keys(durations).length > 0 || char.settings?.concentration_rounds_left != null
 
   const effectRows = (char.condition_effects ?? [])
