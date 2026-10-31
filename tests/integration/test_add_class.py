@@ -77,3 +77,15 @@ async def test_add_class_to_missing_character_is_404(client):
     r = await client.post("/characters/999999/classes",
                           json={"class_name": "Guerriero", "level": 1, "hit_die": 10})
     assert r.status_code == 404, r.text
+
+
+async def test_english_class_name_seeds_saves_and_resources(client):
+    """Con l'interfaccia in inglese il FE invia "Barbarian": stessi TS e risorse di "Barbaro"."""
+    cid = await _empty_character(client)
+    r = await client.post(f"/characters/{cid}/classes",
+                          json={"class_name": "Barbarian", "level": 1, "hit_die": 12})
+    assert r.status_code == 201, r.text
+    body = r.json()
+    assert body["saving_throws"]["strength"] is True
+    assert body["saving_throws"]["constitution"] is True
+    assert any(a.get("feature_key") == "barbarian.rage" for a in body["abilities"])

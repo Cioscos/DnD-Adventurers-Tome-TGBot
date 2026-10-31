@@ -63,7 +63,7 @@ def build_spellcasting_info(char: Character) -> SpellcastingInfo:
         if cap_mode == "manual":
             cap = max(0, int(settings.get("prepared_cap_value") or 0))
         else:
-            modifiers = {a.name: a.modifier for a in char.ability_scores}
+            modifiers = {a.name: effective_ability_mod(char, a.name) for a in char.ability_scores}
             cap = compute_prepared_cap(classes, modifiers)
 
     count = sum(1 for s in char.spells if s.level >= 1 and s.is_prepared)

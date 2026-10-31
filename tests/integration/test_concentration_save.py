@@ -3,7 +3,8 @@
 Exercises ``api/routers/_helpers.py::roll_concentration_save`` through the
 endpoint. D&D 5e rules encoded (the shared d20 is pinned via monkeypatch):
 - DC is ``max(10, damage // 2)``.
-- A natural 20 always succeeds and a natural 1 always fails, regardless of DC.
+- RAW: natural 20 and 1 have no special effect on saving throws; only the
+  total counts (flags ``is_critical``/``is_fumble`` are informative).
 - A normal roll succeeds iff ``die + CON mod >= DC``.
 - On failure while concentrating, ``concentrating_spell_id`` is cleared and
   ``lost_concentration`` is True.
@@ -46,30 +47,32 @@ async def _start_concentration(client, cid: int) -> int:
     return spell_id
 
 
-async def test_nat20_always_succeeds(client, monkeypatch):
+async def test_nat20_does_not_auto_succeed(client, monkeypatch):
     cid = await _create_character(client)
     _force_d20(monkeypatch, 20)
-    # Huge damage → DC 50, but a nat 20 passes anyway.
+    # Huge damage → DC 50: a nat 20 (total 20) still fails (RAW).
     r = await client.post(f"/characters/{cid}/concentration/save", json={"damage": 100})
     assert r.status_code == 200, r.text
     body = r.json()
     assert body["die"] == 20
     assert body["is_critical"] is True
     assert body["dc"] == 50
-    assert body["success"] is True
+    assert body["success"] is False
 
 
-async def test_nat1_always_fails(client, monkeypatch):
+async def test_nat1_does_not_auto_fail(client, monkeypatch):
     cid = await _create_character(client)
+    await client.patch(f"/characters/{cid}/ability_scores/constitution", json={"value": 30})
     _force_d20(monkeypatch, 1)
-    # Trivial damage → DC 10, but a nat 1 fails anyway.
+    # CON 30 → +10: a nat 1 totals 11 and beats DC 10 (RAW).
     r = await client.post(f"/characters/{cid}/concentration/save", json={"damage": 2})
     assert r.status_code == 200, r.text
     body = r.json()
     assert body["die"] == 1
     assert body["is_fumble"] is True
     assert body["dc"] == 10
-    assert body["success"] is False
+    assert body["total"] == 11
+    assert body["success"] is True
 
 
 async def test_dc_floor_is_10(client, monkeypatch):
@@ -116,7 +119,7 @@ async def test_successful_save_keeps_concentration(client, monkeypatch):
     cid = await _create_character(client)
     spell_id = await _start_concentration(client, cid)
 
-    _force_d20(monkeypatch, 20)  # nat 20 → success even vs DC 20
+    _force_d20(monkeypatch, 20)  # 20 >= DC 20 → success
     r = await client.post(f"/characters/{cid}/concentration/save", json={"damage": 40})
     assert r.status_code == 200, r.text
     body = r.json()

@@ -13,8 +13,11 @@ export default function ConcentrationSaveDialog({ result, onClose }: Props) {
   const { t } = useTranslation()
   const { success, dc, total, die, bonus, is_critical, is_fumble, lost_concentration } = result
 
-  const accent = is_critical ? 'gold' : success ? 'emerald' : 'crimson'
-  const pulse = is_critical || is_fumble
+  // RAW: 20 e 1 naturali non decidono il TS, quindi il banner compare solo se concorda con l'esito.
+  const showCritical = is_critical && success
+  const showFumble = is_fumble && !success
+  const accent = showCritical ? 'gold' : success ? 'emerald' : 'crimson'
+  const pulse = showCritical || showFumble
   const numberColor = success ? 'text-dnd-emerald-bright' : 'text-dnd-crimson-bright'
 
   return (
@@ -26,10 +29,10 @@ export default function ConcentrationSaveDialog({ result, onClose }: Props) {
       size="sm"
       title={<>🔮 {t('character.spells.conc_save_title', { dc })}</>}
     >
-      {is_critical && (
+      {showCritical && (
         <p className="text-dnd-gold-bright font-bold font-cinzel uppercase tracking-wider">✦ {t('character.dice.critical_banner')}</p>
       )}
-      {is_fumble && (
+      {showFumble && (
         <p className="text-dnd-crimson-bright font-bold font-cinzel uppercase tracking-wider">💀 {t('character.dice.fumble_banner')}</p>
       )}
 

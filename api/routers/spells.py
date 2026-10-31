@@ -320,7 +320,7 @@ async def concentration_save(
     session: Annotated[AsyncSession, Depends(get_db)],
 ) -> ConcentrationSaveResult:
     char = await _get_owned_full(char_id, user_id, session)
-    return roll_concentration_save(char, body.damage, session)
+    return await roll_concentration_save(char, body.damage, session)
 
 
 # ---------------------------------------------------------------------------
