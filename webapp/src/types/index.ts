@@ -98,6 +98,9 @@ export interface Spell {
   damage_type?: string
   is_pinned: boolean
   is_prepared: boolean
+  school?: string | null
+  srd_index?: string | null
+  higher_levels_dice?: string | null
 }
 
 export interface SpellSlot {

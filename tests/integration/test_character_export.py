@@ -33,7 +33,7 @@ async def _make_char(factory, user_id=TEST_USER_ID) -> int:
                  equipment_slot=EquipmentSlot.MAIN_HAND, item_metadata='{"damage_dice": "1d8"}'),
             Item(name="Rope", item_metadata="not json"),
         ]
-        spells = [Spell(name="Bless", level=1, is_concentration=True), Spell(name="Light", level=0)]
+        spells = [Spell(name="Bless", level=1, is_concentration=True, school="enchantment", srd_index="bless", higher_levels_dice="1d4"), Spell(name="Light", level=0)]
         c.spells = spells
         c.spell_slots = [SpellSlot(level=1, total=3, used=1), SpellSlot(level=1, total=2, is_pact=True)]
         c.currency = Currency(gold=50)

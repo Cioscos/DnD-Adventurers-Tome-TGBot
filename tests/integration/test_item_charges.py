@@ -111,3 +111,14 @@ async def test_cast_concentration_from_item(client):
     iid2 = await _item(client, cid, name="Bacchetta", charges=_ch(), granted_spells=[spell2])
     r = await client.post(f"/characters/{cid}/items/{iid2}/cast", json={"spell_index": 0})
     assert r.json()["concentrating_spell_id"] == sp
+
+
+async def test_cast_concentration_matches_by_srd_index(client):
+    cid = await _char(client)
+    sp = (await client.post(f"/characters/{cid}/spells", json={
+        "name": "Benedizione", "level": 1, "is_concentration": True, "srd_index": "bless"})).json()["id"]
+    # Nome diverso (altra lingua) ma stesso srd_index: usa lo spell del personaggio.
+    granted = {"name": "Bless", "level": 1, "charges_cost": 0, "is_concentration": True, "srd_index": "bless"}
+    iid = await _item(client, cid, charges=_ch(), granted_spells=[granted])
+    r = await client.post(f"/characters/{cid}/items/{iid}/cast", json={"spell_index": 0})
+    assert r.json()["concentrating_spell_id"] == sp

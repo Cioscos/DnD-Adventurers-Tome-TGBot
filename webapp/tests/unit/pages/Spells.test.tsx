@@ -123,7 +123,7 @@ vi.mock('@/pages/spells/SpellForm', async () => {
   const FORM_DATA = {
     name: 'Magic Missile', level: '1', description: '', casting_time: '', range_area: '',
     components: '', duration: '', is_concentration: false, is_ritual: false,
-    damage_dice: '3d4+3', damage_type: 'force',
+    damage_dice: '3d4+3', damage_type: 'force', higher_level: '', school: 'evocation', srd_index: 'magic-missile', higher_levels_dice: '',
   }
   return { default: (p: { onSubmit?: (d: unknown) => void }) => React.createElement('button', { onClick: () => p.onSubmit?.(FORM_DATA) }, 'submit-spell') }
 })
@@ -290,6 +290,8 @@ describe('Spells page', () => {
         is_ritual: false,
         damage_dice: '3d4+3',
         damage_type: 'force',
+        school: 'evocation',
+        srd_index: 'magic-missile',
         is_pinned: false,
       }),
     )

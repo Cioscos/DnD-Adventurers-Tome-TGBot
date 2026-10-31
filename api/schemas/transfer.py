@@ -110,6 +110,9 @@ class ExportSpell(BaseModel):
     damage_type: Optional[str] = None
     is_pinned: bool = False
     is_prepared: bool = False
+    school: Optional[str] = Field(default=None, max_length=30)
+    srd_index: Optional[str] = Field(default=None, max_length=80)
+    higher_levels_dice: Optional[str] = Field(default=None, pattern=r"^\d+d\d+$")
 
 
 class ExportSpellSlot(BaseModel):

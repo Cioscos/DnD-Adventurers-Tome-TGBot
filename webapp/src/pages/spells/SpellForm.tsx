@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Sparkles } from 'lucide-react'
+import { BookOpen, RefreshCw } from 'lucide-react'
 import Sheet from '@/components/ui/Sheet'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
@@ -10,7 +10,10 @@ import PresetTextField from '@/components/ui/PresetTextField'
 import DamageTypePicker from '@/components/ui/DamageTypePicker'
 import SwitchToggle from '@/components/ui/SwitchToggle'
 import DamageDiceBuilder from '@/pages/inventory/DamageDiceBuilder'
-import { lookupSrdSpell } from '@/lib/spellSrd'
+import ConfirmSheet from '@/components/ui/ConfirmSheet'
+import CatalogPicker from '@/components/catalog/CatalogPicker'
+import { loadCatalog, spellToForm, type Lang, type SpellEntry } from '@/lib/srd/catalog'
+import { useUnitSettings } from '@/store/unitSettings'
 import { parseComponents, serializeComponents, type ComponentToken } from './spellComponents'
 import {
   CASTING_TIME_PRESETS,
@@ -35,12 +38,17 @@ export type SpellFormData = {
   damage_dice: string
   damage_type: string
   attack_save: '' | 'ATK' | 'SAVE'
+  higher_level: string
+  school: string
+  srd_index: string
+  higher_levels_dice: string
 }
 
 const emptyForm: SpellFormData = {
   name: '', level: '0', description: '', casting_time: '', range_area: '',
   components: '', duration: '', is_concentration: false, is_ritual: false,
   damage_dice: '', damage_type: '', attack_save: '',
+  higher_level: '', school: '', srd_index: '', higher_levels_dice: '',
 }
 
 const COMPONENT_TOKENS: readonly ComponentToken[] = ['V', 'S', 'M']
@@ -53,7 +61,11 @@ interface SpellFormProps {
 }
 
 export default function SpellForm({ initialData, onSubmit, onCancel, isPending }: SpellFormProps) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const lang: Lang = i18n.language?.startsWith('en') ? 'en' : 'it'
+  const unitSystem = useUnitSettings((s) => s.system)
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const [confirmReload, setConfirmReload] = useState(false)
   const [form, setForm] = useState<SpellFormData>(emptyForm)
   const [dealsDamage, setDealsDamage] = useState(false)
   // Material detail kept aside so toggling M off/on doesn't lose the text
@@ -79,6 +91,10 @@ export default function SpellForm({ initialData, onSubmit, onCancel, isPending }
         damage_dice: initialData.damage_dice || '',
         damage_type: initialData.damage_type || '',
         attack_save: initialData.attack_save === 'ATK' || initialData.attack_save === 'SAVE' ? initialData.attack_save : '',
+        higher_level: initialData.higher_level || '',
+        school: initialData.school || '',
+        srd_index: initialData.srd_index || '',
+        higher_levels_dice: initialData.higher_levels_dice || '',
       })
       const parsed = parseComponents(initialData.components || '')
       setMaterialDraft(parsed.material)
@@ -96,32 +112,24 @@ export default function SpellForm({ initialData, onSubmit, onCancel, isPending }
     onSubmit(dealsDamage ? form : { ...form, damage_dice: '', damage_type: '' })
   }
 
-  // SRD auto-fill: when the user types a recognized spell name, propose to fill
-  // empty optional fields (range, components, duration, damage). We never overwrite
-  // a non-empty field the user has already touched.
-  const srdMatch = !isEditing ? lookupSrdSpell(form.name) : null
-  const applySrd = () => {
-    if (!srdMatch) return
-    setForm((f) => ({
-      ...f,
-      level: f.level === '0' && srdMatch.level !== 0 ? String(srdMatch.level) : f.level,
-      casting_time: f.casting_time.trim() || srdMatch.casting_time || '',
-      range_area: f.range_area.trim() || srdMatch.range_area || '',
-      components: f.components.trim() || srdMatch.components || '',
-      duration: f.duration.trim() || srdMatch.duration || '',
-      damage_dice: f.damage_dice.trim() || srdMatch.damage_dice || '',
-      damage_type: f.damage_type.trim() || srdMatch.damage_type || '',
-      is_concentration: f.is_concentration || !!srdMatch.is_concentration,
-      is_ritual: f.is_ritual || !!srdMatch.is_ritual,
-      attack_save: f.attack_save || srdMatch.attack_save || '',
-    }))
-    // Side states mirror the fill-if-empty rule above.
-    if (!form.components.trim() && srdMatch.components) {
-      const parsed = parseComponents(srdMatch.components)
+  // Catalogue prefill: overwrites the form with the entry text in the current language.
+  const applyEntry = (entry: SpellEntry, only?: (keyof SpellFormData)[]) => {
+    const filled = spellToForm(entry, lang, unitSystem)
+    const patch = only
+      ? Object.fromEntries(Object.entries(filled).filter(([k]) => only.includes(k as keyof SpellFormData)))
+      : filled
+    setForm((f) => ({ ...f, ...patch }))
+    if (!only) {
+      const parsed = parseComponents(filled.components ?? '')
       setMaterialDraft(parsed.material)
       setComponentsFallback(!parsed.conformant)
+      setDealsDamage(!!filled.damage_dice)
     }
-    if (form.damage_dice.trim() || srdMatch.damage_dice) setDealsDamage(true)
+  }
+  const reloadFromCatalog = async () => {
+    setConfirmReload(false)
+    const entry = (await loadCatalog('spells')).find((e) => e.index === form.srd_index)
+    if (entry) applyEntry(entry, ['name', 'description', 'casting_time', 'range_area', 'duration', 'higher_level'])
   }
 
   const componentTokens = parseComponents(form.components).tokens
@@ -161,19 +169,14 @@ export default function SpellForm({ initialData, onSubmit, onCancel, isPending }
           placeholder={t('character.spells.name')}
         />
 
-        {srdMatch && (
-          <Pressable
-            onClick={applySrd}
-            className="w-full flex items-center gap-2 px-3 py-2 rounded-xl bg-dnd-arcane/15 border border-dnd-arcane/40 text-dnd-arcane-text text-xs font-body text-left hover:bg-dnd-arcane/25 transition-colors"
-          >
-            <Sparkles size={14} className="text-dnd-arcane-bright shrink-0" />
-            <span className="flex-1">
-              {t('character.spells.srd_autofill', {
-                defaultValue: 'Compila da SRD: livello, gittata, durata, componenti, danno (campi vuoti).',
-              })}
-            </span>
-          </Pressable>
-        )}
+        <Button
+          variant="secondary"
+          fullWidth
+          icon={form.srd_index ? <RefreshCw size={16} /> : <BookOpen size={16} />}
+          onClick={() => (form.srd_index ? setConfirmReload(true) : setPickerOpen(true))}
+        >
+          {form.srd_index ? t('character.spells.reload_catalog') : t('character.spells.from_catalog')}
+        </Button>
 
         <ChipSelect
           label={t('character.spells.level')}
@@ -341,6 +344,22 @@ export default function SpellForm({ initialData, onSubmit, onCancel, isPending }
           </Button>
         </div>
       </div>
+      {pickerOpen && (
+        <CatalogPicker
+          kind="spells"
+          onClose={() => setPickerOpen(false)}
+          onPick={(e) => { applyEntry(e); setPickerOpen(false) }}
+        />
+      )}
+      <ConfirmSheet
+        open={confirmReload}
+        onClose={() => setConfirmReload(false)}
+        onConfirm={() => void reloadFromCatalog()}
+        title={t('character.spells.reload_title')}
+        body={t('character.spells.reload_body')}
+        confirmLabel={t('character.spells.reload_confirm')}
+        confirmVariant="primary"
+      />
     </Sheet>
   )
 }

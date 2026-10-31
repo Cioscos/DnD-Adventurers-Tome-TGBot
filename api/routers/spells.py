@@ -380,6 +380,12 @@ async def roll_spell_damage(
         base_count *= cantrip_dice_multiplier(char.total_level)
     sides = int(m.group(2))
     base_bonus = int(m.group(3)) if m.group(3) else 0
+    # Upcast automatico: i dadi per livello extra si sommano ai dadi base (solo
+    # incantesimi di livello >= 1, stessi lati). "sleep" no: i suoi dadi sono un pool di PF.
+    if spell.level > 0 and spell.higher_levels_dice and spell.srd_index != "sleep":
+        um = _DICE_RE.match(spell.higher_levels_dice.strip())
+        if um and int(um.group(2)) == sides:
+            base_count += int(um.group(1)) * (casting_level - spell.level)
 
     # Apply critical (double dice count, not the flat bonus)
     dice_count = base_count * 2 if body.is_critical else base_count

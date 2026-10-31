@@ -1,4 +1,11 @@
 {
+  "catalog": {
+    "title": "Catalogo SRD",
+    "search": "Cerca per nome (it/en)...",
+    "empty": "Nessun risultato",
+    "en_badge": "EN",
+    "show_more": "Mostra altri ({{count}})"
+  },
   "common": {
     "roll_mode": {
       "title": "Modalità del tiro",
@@ -461,9 +468,25 @@
       "concentration_break_warn": "Romperai la concentrazione su {{spell}}.",
       "expand": "Espandi",
       "collapse": "Comprimi",
-      "srd_autofill": "Compila da SRD: livello, gittata, durata, componenti, danno (solo campi vuoti).",
+      "from_catalog": "Aggiungi dal catalogo",
+      "reload_catalog": "Ricarica testo dal catalogo",
+      "reload_title": "Ricaricare dal catalogo?",
+      "reload_body": "Nome, descrizione, tempo di lancio, gittata, durata e a livelli superiori verranno sostituiti con il testo del catalogo.",
+      "reload_confirm": "Ricarica",
+      "upcast_auto": "Livelli superiori: +{{dice}} per livello (già incluso)",
+      "schools": {
+        "abjuration": "Abiurazione",
+        "conjuration": "Convocazione",
+        "divination": "Divinazione",
+        "enchantment": "Ammaliamento",
+        "evocation": "Invocazione",
+        "illusion": "Illusione",
+        "necromancy": "Necromanzia",
+        "transmutation": "Trasmutazione"
+      },
       "filters": {
         "level": "Livello",
+        "school": "Scuola",
         "property": "Proprietà",
         "level_n": "Liv. {{level}}",
         "clear": "Azzera filtri",

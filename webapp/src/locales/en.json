@@ -1,4 +1,11 @@
 {
+  "catalog": {
+    "title": "SRD catalogue",
+    "search": "Search by name (it/en)...",
+    "empty": "No results",
+    "en_badge": "EN",
+    "show_more": "Show more ({{count}})"
+  },
   "common": {
     "roll_mode": {
       "title": "Roll mode",
@@ -461,9 +468,25 @@
       "concentration_break_warn": "You'll break concentration on {{spell}}.",
       "expand": "Expand",
       "collapse": "Collapse",
-      "srd_autofill": "Auto-fill from SRD: level, range, duration, components, damage (empty fields only).",
+      "from_catalog": "Add from catalogue",
+      "reload_catalog": "Reload text from catalogue",
+      "reload_title": "Reload from catalogue?",
+      "reload_body": "Name, description, casting time, range, duration and at higher levels will be replaced with the catalogue text.",
+      "reload_confirm": "Reload",
+      "upcast_auto": "Higher levels: +{{dice}} per level (already included)",
+      "schools": {
+        "abjuration": "Abjuration",
+        "conjuration": "Conjuration",
+        "divination": "Divination",
+        "enchantment": "Enchantment",
+        "evocation": "Evocation",
+        "illusion": "Illusion",
+        "necromancy": "Necromancy",
+        "transmutation": "Transmutation"
+      },
       "filters": {
         "level": "Level",
+        "school": "School",
         "property": "Properties",
         "level_n": "Lv {{level}}",
         "clear": "Clear filters",
