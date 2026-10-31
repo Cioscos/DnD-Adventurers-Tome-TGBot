@@ -24,6 +24,7 @@ import {
   CONSUMABLE_SUBTYPES,
   hasSingleQuantity,
   emptyForm,
+  catalogPrefill,
   isItemFormValid,
   itemToFormData,
   type ItemFormData,
@@ -79,7 +80,7 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
   // Catalogue prefill: weight comes in canonical lb, the form shows the active unit.
   const applyCatalog = (patch: Partial<ItemFormData>) => {
     setForm((f) => ({
-      ...f, ...patch,
+      ...catalogPrefill(f, patch),
       weight: patch.weight != null ? String(lbToDisplay(Number(patch.weight) || 0, system)) : f.weight,
     }))
     setPicker(null)
@@ -470,7 +471,7 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
           kind="magic-items"
           onClose={() => setPicker(null)}
           onPick={(e) => { void loadCatalog('spells').then((sp) => applyCatalog(magicItemToForm(e, lang, sp)))
-            .catch(() => toast.error(t('common.action_failed'))) }}
+            .catch(() => { setPicker(null); toast.error(t('common.action_failed')) }) }}
         />
       )}
     </Sheet>

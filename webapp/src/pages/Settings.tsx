@@ -30,6 +30,7 @@ import { BUNDLED_PACKS, PACK_PREVIEW, type PackId } from '@/dice/packs/registry'
 import { loadManifest } from '@/dice/packs/manifest'
 import { useDicePack } from '@/dice/packs/dicePackContext'
 import { spring } from '@/styles/motion'
+import { resetPreferences } from '@/lib/settings'
 
 type RetentionMode = 'off' | 'events' | 'days'
 const RETENTION_MODES: readonly RetentionMode[] = ['off', 'events', 'days'] as const
@@ -220,8 +221,10 @@ export default function Settings() {
       const a = document.createElement('a')
       a.href = url
       a.download = `${(char?.name ?? 'character').replace(/[^\w-]+/g, '_')}.json`
+      document.body.append(a)
       a.click()
-      URL.revokeObjectURL(url)
+      a.remove()
+      setTimeout(() => URL.revokeObjectURL(url), 0)
     },
     onSuccess: () => setShowExport(false),
     onError: () => toast.error(t('character.settings.transfer.export_failed')),
@@ -281,7 +284,7 @@ export default function Settings() {
 
   const confirmReset = () => {
     setActiveSetting('reset')
-    updateMutation.mutate({})
+    updateMutation.mutate(resetPreferences(settings))
     setShowResetConfirm(false)
   }
 

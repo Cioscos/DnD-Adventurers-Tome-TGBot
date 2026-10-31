@@ -97,10 +97,15 @@ describe('Settings export / duplicate', () => {
     m.exportChar.mockResolvedValue({ format_version: 1 })
     const createUrl = vi.fn(() => 'blob:x')
     Object.assign(URL, { createObjectURL: createUrl, revokeObjectURL: vi.fn() })
-    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+    let attached = false
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
+      attached = this.isConnected  // some browsers ignore clicks on detached anchors
+    })
     await open()
     await userEvent.click(screen.getByText('character.settings.transfer.download'))
     await waitFor(() => expect(click).toHaveBeenCalled())
+    expect(attached).toBe(true)
+    expect(document.querySelector('a[download]')).toBeNull()
     expect(m.exportChar).toHaveBeenCalledWith(5)
     expect(createUrl).toHaveBeenCalled()
   })

@@ -405,7 +405,8 @@ export default function Skills() {
             const abilMod = abilityModifier(skill.ability)
             const lvl = getLevel(skills[picker])
             const profMul = lvl === 'expert' ? 2 : lvl ? 1 : 0
-            const profPart = profMul * pb
+            // Jack of All Trades: half proficiency (rounded down) on unproficient skills, as the server does.
+            const profPart = lvl ? profMul * pb : (char.jack_of_all_trades ? Math.floor(pb / 2) : 0)
             const pickerHb = char.skills_homebrew_modifiers?.[picker] ?? 0
             const total = char.skill_bonuses?.[picker] ?? abilMod + profPart + pickerHb
             const abilLabel = t(`character.ability.${skill.ability}_short`, { defaultValue: skill.ability })
@@ -415,7 +416,7 @@ export default function Skills() {
                   total: `${total >= 0 ? '+' : ''}${total}`,
                   abilMod: `${abilMod >= 0 ? '+' : ''}${abilMod}`,
                   ability: abilLabel,
-                  prof: `${profMul === 0 ? '+0' : profMul === 1 ? `+${pb}` : `+${pb * 2}`}`,
+                  prof: `+${profPart}`,
                   defaultValue: 'Bonus attuale: {{total}} = {{abilMod}} {{ability}} {{prof}} comp',
                 })}
               </p>

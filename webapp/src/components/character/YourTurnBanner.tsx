@@ -5,6 +5,7 @@ import Pressable from '@/components/ui/Pressable'
 import { GiCrossedSwords } from 'react-icons/gi'
 import { api } from '@/api/client'
 import { haptic } from '@/auth/telegram'
+import { useTurnState } from '@/hooks/useTurnState'
 import { spring } from '@/styles/motion'
 
 /** "È il tuo turno" nella Hero: polling ogni 5 s solo con una sessione attiva. */
@@ -13,12 +14,7 @@ export default function YourTurnBanner({ charId }: { charId: number }) {
   const { t } = useTranslation()
   const { data: session } = useQuery({ queryKey: ['session-me'], queryFn: () => api.sessions.me() })
   const inSession = session?.status === 'active'
-  const { data: turn } = useQuery({
-    queryKey: ['turn-state', charId],
-    queryFn: () => api.characters.turnState(charId),
-    enabled: inSession,
-    refetchInterval: 5000,
-  })
+  const { data: turn } = useTurnState(charId, inSession)
   if (!inSession || !turn?.is_my_turn) return null
 
   return (

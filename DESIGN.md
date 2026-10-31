@@ -271,7 +271,7 @@ Halos are a separate vocabulary. They are not for elevation — they are for **r
 Buttons read as inscribed plates pressed into the page. Primary is gold leaf with shadow-engrave inset and an ink-spread ripple on press; secondary is a raised parchment surface with a gold-dim hairline border that warms to gold on hover; ghost is a transparent gold-text affordance for tertiary navigation.
 
 - **Shape:** rounded `12px` (`rounded-xl`). Never sharp; never pill.
-- **Sizes:** sm `min-h-40px`, md `min-h-48px`, lg `min-h-56px`. Never below 40px on a phone.
+- **Sizes:** sm `min-h-44px`, md `min-h-48px`, lg `min-h-56px`. Never below 44px on a phone (touch target).
 - **Primary:** `bg-gradient-gold`, `text-dnd-ink`, `shadow-engrave`. Hover: brighten gradient (no scale). Press: `scale 0.97`, ink-spread ripple at click coordinate (320ms ease-out).
 - **Secondary:** `bg-dnd-surface-raised`, `text-dnd-text`, `border border-dnd-gold-dim/30`. Hover: border warms to `border-dnd-gold/70`.
 - **Danger:** crimson tint at 15% on surface, crimson-bright text, crimson border at 40%. No solid red fill — danger reads as warning ink, not as alarm.
@@ -343,7 +343,7 @@ The glow itself is signal — hue and intensity together communicate state at a 
 - **Do** set inscribed elements (titles, labels, chips, buttons) in Cinzel; set reading copy in Fraunces; set numerics in JetBrains Mono with tabular-nums.
 - **Do** ease motion with the parchment curve `cubic-bezier(0.22, 1, 0.36, 1)`. Springs for press feedback (`spring.press`), dialog/swipe entrances (`spring.swipe`), state snaps (`spring.snappy`), page drift (`spring.drift`), and value pops (`spring.elastic`, value reveals only).
 - **Do** respect `prefers-reduced-motion`: collapse animations to instant; signal lives in color + icon + copy.
-- **Do** keep tap targets at minimum 40px, 44px for destructive or hard-to-undo actions.
+- **Do** keep tap targets at minimum 44px.
 - **Do** treat the light "aged parchment" mode with the same ornamental and contrast rigor as dark mode. It is not a contrast-flip.
 
 ### Don't:

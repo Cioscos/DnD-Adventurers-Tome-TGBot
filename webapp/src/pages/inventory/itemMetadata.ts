@@ -210,6 +210,12 @@ export const emptyForm: ItemFormData = {
   extra_meta: {},
 }
 
+/** A catalogue pick starts from the empty form (keeping the typed quantity), so a
+ *  previous pick's fields (magic bonuses, charges, rarity...) never leak into it. */
+export function catalogPrefill(prev: ItemFormData, patch: Partial<ItemFormData>): ItemFormData {
+  return { ...emptyForm, quantity: prev.quantity, ...patch }
+}
+
 export function buildItemMetadata(form: ItemFormData): Record<string, unknown> | undefined {
   let meta: Record<string, unknown> | undefined
   switch (form.item_type) {

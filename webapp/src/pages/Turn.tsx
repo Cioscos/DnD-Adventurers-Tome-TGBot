@@ -13,6 +13,7 @@ import WeaponChoiceRow from '@/components/WeaponChoiceRow'
 import ActionsSkeleton from '@/components/skeletons/ActionsSkeleton'
 import { useWeaponAttackFlow } from '@/hooks/useWeaponAttackFlow'
 import { useTickRound } from '@/hooks/useTickRound'
+import { useTurnState } from '@/hooks/useTurnState'
 import { useCastFlow } from '@/pages/spells/useCastFlow'
 import { useWeaponChoices, choiceOf } from '@/store/weaponChoiceStore'
 import { groupForTurn, type TurnEntry } from '@/lib/turnGrouping'
@@ -39,12 +40,7 @@ export default function Turn() {
     queryFn: () => api.characters.get(charId),
   })
   const { data: session } = useQuery({ queryKey: ['session-me'], queryFn: () => api.sessions.me() })
-  const { data: turn } = useQuery({
-    queryKey: ['turn-state', charId],
-    queryFn: () => api.characters.turnState(charId),
-    enabled: session?.status === 'active',
-    refetchInterval: 5000,
-  })
+  const { data: turn } = useTurnState(charId, session?.status === 'active')
 
   // Un nuovo turno (false -> true) azzera gli indicatori "usata".
   const wasMyTurn = useRef(false)

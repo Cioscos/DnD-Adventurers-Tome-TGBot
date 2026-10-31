@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { ITEM_TYPES, TYPE_ICON, hasSingleQuantity, itemToFormData, emptyForm, buildItemMetadata, isItemFormValid } from '@/pages/inventory/itemMetadata'
+import { ITEM_TYPES, TYPE_ICON, hasSingleQuantity, itemToFormData, emptyForm, buildItemMetadata, isItemFormValid, catalogPrefill } from '@/pages/inventory/itemMetadata'
 import type { Item } from '@/types'
 
 describe('itemMetadata — ammunition', () => {
@@ -113,5 +113,14 @@ describe('granted spell DC / attack bonus', () => {
     expect(form.granted_spells[0].save_dc).toBe(16)
     const empty = buildItemMetadata({ ...base, granted_spells: [{ ...spell, save_dc: undefined, attack_bonus: null }] })!
     expect(empty.granted_spells).toEqual([spell])
+  })
+})
+
+describe('catalogPrefill', () => {
+  it('drops the previous pick fields and keeps the typed quantity', () => {
+    const magic = { ...emptyForm, quantity: '3', name: 'Anello', is_magic: true, rarity: 'rare',
+      bonuses: [{ target: 'ac', value: 1 }], charges: { max: 3, current: 3 } } as typeof emptyForm
+    const out = catalogPrefill(magic, { name: 'Spada lunga', item_type: 'weapon' })
+    expect(out).toEqual({ ...emptyForm, quantity: '3', name: 'Spada lunga', item_type: 'weapon' })
   })
 })

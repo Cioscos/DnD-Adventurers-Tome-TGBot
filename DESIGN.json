@@ -179,7 +179,7 @@
       "Do set inscribed elements in Cinzel; reading copy in Fraunces; comparative numerics in JetBrains Mono with tabular-nums; the single hero numeral in Cormorant Unicase.",
       "Do ease motion with cubic-bezier(0.22, 1, 0.36, 1). Springs for press feedback, dialog/swipe entrances, state snaps, page drift, and value pops (elastic, value reveals only).",
       "Do respect prefers-reduced-motion: collapse animations to instant; signal lives in color + icon + copy.",
-      "Do keep tap targets at minimum 40px, 44px for destructive or hard-to-undo actions.",
+      "Do keep tap targets at minimum 44px.",
       "Do treat the light aged-parchment mode with the same rigor as dark mode."
     ],
     "donts": [

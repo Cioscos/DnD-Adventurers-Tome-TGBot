@@ -33,7 +33,11 @@ export default function CatalogPicker<K extends CatalogKind>({
 
   useEffect(() => {
     let alive = true
-    void loadCatalog(kind).then((e) => { if (alive) { setEntries(e); setLoaded(true) } })
+    // A failed chunk (stale client after a deploy) shows the empty state instead of a blank sheet.
+    loadCatalog(kind)
+      .then((e) => { if (alive) setEntries(e) })
+      .catch(() => {})
+      .finally(() => { if (alive) setLoaded(true) })
     return () => { alive = false }
   }, [kind])
 

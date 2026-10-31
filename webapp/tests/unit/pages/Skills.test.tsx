@@ -33,7 +33,9 @@ vi.mock('react-router-dom', async (orig) => {
 
 vi.mock('react-i18next', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
-  return { ...actual, useTranslation: () => ({ t: (k: string) => k, i18n: { language: 'it' } }) }
+  // The breakdown line exposes its prof term so the JoAT half-proficiency can be asserted.
+  const t = (k: string, o?: { prof?: string }) => (o?.prof !== undefined ? `${k}:${o.prof}` : k)
+  return { ...actual, useTranslation: () => ({ t, i18n: { language: 'it' } }) }
 })
 
 vi.mock('framer-motion', async () => {
@@ -191,6 +193,14 @@ describe('Skills page', () => {
     expect(await screen.findByTestId('picker')).toBeInTheDocument()
     await userEvent.click(screen.getByText('character.skills.proficient'))
     await waitFor(() => expect(updateSkills).toHaveBeenCalledWith(5, { stealth: true }))
+  })
+
+  it('picker breakdown includes the Jack of All Trades half proficiency', async () => {
+    getChar.mockResolvedValue({ ...baseChar, jack_of_all_trades: true })
+    renderWithProviders(<Skills />)
+    fireEvent.contextMenu(await screen.findByText('character.skills.stealth'))
+    // PB +3 at level 5 -> floor(3/2) = +1 on an unproficient skill
+    expect(await screen.findByText('character.skills.breakdown:+1')).toBeInTheDocument()
   })
 
   it('rolling a skill calls rollSkill with no die and opens the modal', async () => {

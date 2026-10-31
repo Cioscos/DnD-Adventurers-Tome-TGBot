@@ -158,7 +158,7 @@ export default function QuickActions({ char }: Props) {
   const attackRerollMutation = useMutation({
     mutationFn: async (itemId: number) => {
       const die = (await rollDice('d20', 1))?.[0]
-      return api.items.attack(char.id, itemId, true, die)
+      return api.items.attack(char.id, itemId, true, die, choiceOf(weaponChoices, itemId))
     },
     onSuccess: (result) => {
       setAttackState((prev) => prev && { ...prev, result, wasRerolled: true })
