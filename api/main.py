@@ -43,6 +43,7 @@ from api.routers import (
     spell_slots,
     spells,
     stats,
+    transfer,
 )
 from api.tasks.session_cleanup import run_session_cleanup
 
@@ -161,3 +162,4 @@ app.include_router(encounters.router)
 app.include_router(share.router)
 app.include_router(shares.router)
 app.include_router(homebrew.router)
+app.include_router(transfer.router)
