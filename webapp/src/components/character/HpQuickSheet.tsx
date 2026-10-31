@@ -116,6 +116,11 @@ export default function HpQuickSheet({ char, open, onClose }: HpQuickSheetProps)
   return (
     <Sheet open={open} onClose={onClose} title={t('character.hp.quick_sheet_title')}>
       <div className="p-5 space-y-3">
+        {char.active_form && (
+          <p className="text-sm font-body text-center text-dnd-emerald-bright">
+            {t('character.extras.hp_goes_to_form', { name: char.active_form.name })}
+          </p>
+        )}
         <ChipSelect
           label=""
           options={[

@@ -293,6 +293,11 @@ export default function HP() {
                     <Heart size={10} className="inline mr-1 text-dnd-crimson-bright" />
                     {t('character.hp.title')}
                   </p>
+                  {char.active_form && (
+                    <p className="mb-2 text-sm font-body text-dnd-emerald-bright">
+                      {t('character.extras.hp_goes_to_form', { name: char.active_form.name })}
+                    </p>
+                  )}
                   <div className="flex items-end justify-center gap-1.5">
                     <m.span
                       key={char.current_hit_points}

@@ -230,6 +230,8 @@ export interface CharacterFull extends Omit<CharacterSummary, 'ac_homebrew_modif
   carry_capacity_override: boolean
   has_custom_silhouette: boolean
   attacks_per_action?: number
+  /** Forma selvatica attiva: PF/CA della forma sostituiscono quelli del personaggio. */
+  active_form?: ActiveForm | null
   /** Solo da POST /rounds/tick: etichette degli effetti appena scaduti. */
   expired_effects?: string[] | null
   encumbrance: number
@@ -539,4 +541,68 @@ export interface TurnState {
   is_my_turn: boolean
   round: number | null
   session_id: number | null
+}
+
+export interface ActiveForm {
+  companion_id: number
+  name: string
+  current_hp: number
+  max_hp: number
+  temp_hp: number
+  armor_class: number
+}
+
+export type CompanionKind = 'familiar' | 'companion' | 'mount' | 'summon' | 'wild_shape'
+
+export interface CompanionAction {
+  name: string
+  desc?: string
+  attack_bonus?: number | null
+  damage_dice?: string | null
+  damage_type?: string | null
+  /** Testo mancante in italiano: mostrato in inglese con badge EN. */
+  en?: boolean
+}
+
+export interface CompanionStatblock {
+  size?: string
+  type?: string
+  speed?: Record<string, number>
+  abilities?: Record<string, number>
+  traits?: CompanionAction[]
+  actions?: CompanionAction[]
+  challenge_rating?: number
+  [key: string]: unknown
+}
+
+export interface Companion {
+  id: number
+  character_id: number
+  kind: CompanionKind
+  name: string
+  srd_index: string | null
+  statblock: CompanionStatblock
+  max_hp: number
+  current_hp: number
+  temp_hp: number
+  armor_class: number
+  notes: string | null
+  is_active: boolean
+  created_at: string
+  down: boolean
+}
+
+export type CompanionPayload = Partial<Pick<Companion,
+  'kind' | 'name' | 'srd_index' | 'statblock' | 'max_hp' | 'current_hp' | 'temp_hp' | 'armor_class' | 'notes' | 'is_active'>>
+
+export interface CompanionAttackResult {
+  to_hit_die: number
+  to_hit_bonus: number
+  to_hit_total: number
+  dice: number[]
+  mode: 'normal' | 'advantage' | 'disadvantage'
+  is_critical: boolean
+  damage_rolls: number[]
+  damage_total: number
+  damage_type: string | null
 }

@@ -40,6 +40,9 @@ import type {
   RollDamageResult,
   SpellAttackRequest,
   SpellAttackResult,
+  Companion,
+  CompanionAttackResult,
+  CompanionPayload,
   SessionFeedResponse,
   SessionMessage,
   ShareImportResult,
@@ -641,6 +644,26 @@ export const api = {
   // ---------------------------------------------------------------------------
   // Abilities (features)
   // ---------------------------------------------------------------------------
+  companions: {
+    list: (charId: number) => request<Companion[]>(`/characters/${charId}/companions`),
+    create: (charId: number, body: CompanionPayload) =>
+      request<Companion>(`/characters/${charId}/companions`, { method: 'POST', body: JSON.stringify(body) }),
+    update: (charId: number, id: number, body: CompanionPayload) =>
+      request<Companion>(`/characters/${charId}/companions/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+    remove: (charId: number, id: number) =>
+      request<void>(`/characters/${charId}/companions/${id}`, { method: 'DELETE' }),
+    hp: (charId: number, id: number, op: 'damage' | 'heal' | 'set_temp', value: number) =>
+      request<Companion>(`/characters/${charId}/companions/${id}/hp`, { method: 'PATCH', body: JSON.stringify({ op, value }) }),
+    attack: (charId: number, id: number, actionIndex: number, mode: RollMode, dice?: number[]) =>
+      request<CompanionAttackResult>(`/characters/${charId}/companions/${id}/attack`, {
+        method: 'POST', body: JSON.stringify({ action_index: actionIndex, mode, dice }),
+      }),
+    activate: (charId: number, id: number, force = false) =>
+      request<Companion>(`/characters/${charId}/companions/${id}/activate`, { method: 'POST', body: JSON.stringify({ force }) }),
+    deactivate: (charId: number, id: number) =>
+      request<Companion>(`/characters/${charId}/companions/${id}/deactivate`, { method: 'POST' }),
+  },
+
   abilities: {
     list: (charId: number) => request<Ability[]>(`/characters/${charId}/abilities`),
     add: (charId: number, data: Partial<Ability>) =>

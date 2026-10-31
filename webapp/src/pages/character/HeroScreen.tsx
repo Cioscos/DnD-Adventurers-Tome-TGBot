@@ -24,6 +24,7 @@ import HeroStatsSection from '@/components/character/HeroStatsSection'
 import PendingChoicesBadge from '@/components/character/PendingChoicesBadge'
 import YourTurnBanner from '@/components/character/YourTurnBanner'
 import QuickActions from '@/components/character/QuickActions'
+import ActiveFormBanner from '@/components/character/ActiveFormBanner'
 import HpQuickSheet from '@/components/character/HpQuickSheet'
 import HeroLayoutSheet from '@/components/character/HeroLayoutSheet'
 import { isConcentrating, concentrationLabel } from '@/lib/concentration'
@@ -57,15 +58,19 @@ export default function HeroScreen({ char }: Props) {
   const [hpSheetOpen, setHpSheetOpen] = useState(false)
   const [layoutSheetOpen, setLayoutSheetOpen] = useState(false)
 
-  const hpMax = char.hit_points + (char.hp_max_homebrew_modifier ?? 0)
-  const acTotal = char.ac + (char.ac_breakdown?.homebrew ?? 0) + (char.ac_breakdown?.items ?? 0)
+  const form = char.active_form ?? null
+  // In forma selvatica la barra PF e la CA mostrano quelle della forma.
+  const hpMax = form ? form.max_hp : char.hit_points + (char.hp_max_homebrew_modifier ?? 0)
+  const hpCurrent = form ? form.current_hp : char.current_hit_points
+  const tempHp = form ? form.temp_hp : char.temp_hp
+  const acTotal = form ? form.armor_class : char.ac + (char.ac_breakdown?.homebrew ?? 0) + (char.ac_breakdown?.items ?? 0)
   const unitSystem = useUnitSettings((s) => s.system)
   const encumbranceTotal = char.encumbrance_total ?? char.encumbrance
   const weightLabel = formatWeightValue(encumbranceTotal, unitSystem)
   const overloaded = encumbranceTotal > char.carry_capacity
 
   const hpPct = hpMax > 0
-    ? Math.round((char.current_hit_points / hpMax) * 100)
+    ? Math.round((hpCurrent / hpMax) * 100)
     : 0
 
   const passiveAbilities = char.abilities?.filter((a) => a.is_passive) ?? []
@@ -144,6 +149,8 @@ export default function HeroScreen({ char }: Props) {
           </Pressable>
         )}
 
+        {form && <ActiveFormBanner charId={char.id} form={form} />}
+
         <div className="mt-4 flex items-center gap-3 @max-[300px]:flex-col @max-[300px]:items-stretch">
           <div className="flex-1 min-w-0">
             <Pressable
@@ -161,18 +168,18 @@ export default function HeroScreen({ char }: Props) {
                 <span className="inline-flex items-center gap-1.5 font-mono">
                   <GiHeartPlus size={14} className="text-dnd-crimson-bright" />
                   <span className="text-dnd-text font-bold">
-                    {char.current_hit_points}/{hpMax}
+                    {hpCurrent}/{hpMax}
                   </span>
-                  {char.temp_hp > 0 && (
-                    <span className="text-dnd-cobalt-bright">(+{char.temp_hp} temp)</span>
+                  {tempHp > 0 && (
+                    <span className="text-dnd-cobalt-bright">(+{tempHp} temp)</span>
                   )}
                 </span>
                 <span className="text-dnd-text-muted font-mono text-xs">{hpPct}%</span>
               </div>
               <HPGauge
-                current={char.current_hit_points}
+                current={hpCurrent}
                 max={hpMax}
-                temp={char.temp_hp}
+                temp={tempHp}
                 size="md"
                 segmented
               />

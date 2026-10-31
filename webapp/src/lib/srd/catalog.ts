@@ -63,6 +63,26 @@ export interface MagicItemEntry extends BaseEntry {
   granted_spells: { spell: string; charge_cost: number }[]
 }
 
+export interface MonsterAction {
+  name: LocalizedField
+  desc: LocalizedField
+  attack_bonus: number | null
+  damage_dice: string | null
+  damage_type: string | null
+}
+
+export interface MonsterEntry extends BaseEntry {
+  size: string
+  type: string
+  armor_class: number
+  hit_points: number
+  speed: Record<string, number>
+  abilities: Record<string, number>
+  challenge_rating: number
+  traits: { name: LocalizedField; desc: LocalizedField }[]
+  actions: MonsterAction[]
+}
+
 export interface KindEntries {
   spells: SpellEntry
   'magic-items': MagicItemEntry
@@ -70,7 +90,7 @@ export interface KindEntries {
   races: BaseEntry
   backgrounds: BaseEntry
   feats: BaseEntry
-  monsters: BaseEntry
+  monsters: MonsterEntry
 }
 export type CatalogEntry<K extends CatalogKind> = KindEntries[K]
 

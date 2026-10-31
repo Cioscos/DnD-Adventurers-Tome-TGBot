@@ -10,7 +10,7 @@ import {
   GiArcheryTarget, GiLightningTrio, GiCrossedSwords, GiTwoCoins,
   GiScrollUnfurled, GiPolarStar, GiPerspectiveDiceSixFacesRandom,
   GiQuillInk, GiTreasureMap, GiOpenBook, GiPotionBall, GiCauldron,
-  GiFist, GiKnapsack, GiNightSleep, GiHourglass,
+  GiFist, GiKnapsack, GiNightSleep, GiHourglass, GiPawPrint,
 } from 'react-icons/gi'
 import type { ComponentType, SVGAttributes } from 'react'
 import SectionDivider from '@/components/ui/SectionDivider'
@@ -82,6 +82,7 @@ const MENU_SECTIONS: MenuSection[] = [
       { key: 'identity',   icon: User,            path: 'identity',   tone: 'gold' },
       { key: 'class',      icon: GiScrollUnfurled, path: 'class',     tone: 'gold' },
       { key: 'xp',         icon: GiPolarStar,     path: 'xp',         tone: 'amber' },
+      { key: 'extras',     icon: GiPawPrint,      path: 'extras',     tone: 'emerald' },
     ],
   },
   {
