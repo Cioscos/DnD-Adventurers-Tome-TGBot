@@ -4,6 +4,9 @@ import Sheet from '@/components/ui/Sheet'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
 import Pressable from '@/components/ui/Pressable'
+import { BookOpen } from 'lucide-react'
+import CatalogPicker from '@/components/catalog/CatalogPicker'
+import { loadCatalog, equipmentToForm, magicItemToForm, type Lang } from '@/lib/srd/catalog'
 import SwitchToggle from '@/components/ui/SwitchToggle'
 import WizardFooter from '@/components/ui/WizardFooter'
 import DamageTypePicker from '@/components/ui/DamageTypePicker'
@@ -37,7 +40,9 @@ interface ItemFormProps {
 type WizardStep = 'type' | 'base' | 'advanced'
 
 export default function ItemForm({ initialData, onSubmit, onCancel, isPending }: ItemFormProps) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const lang: Lang = i18n.language?.startsWith('en') ? 'en' : 'it'
+  const [picker, setPicker] = useState<'equipment' | 'magic-items' | null>(null)
   const system = useUnitSettings((s) => s.system)
   const [form, setForm] = useState<ItemFormData>(emptyForm)
   const [step, setStep] = useState<WizardStep>('type')
@@ -69,6 +74,15 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
     }))
   }
 
+  // Catalogue prefill: weight comes in canonical lb, the form shows the active unit.
+  const applyCatalog = (patch: Partial<ItemFormData>) => {
+    setForm((f) => ({
+      ...f, ...patch,
+      weight: patch.weight != null ? String(lbToDisplay(Number(patch.weight) || 0, system)) : f.weight,
+    }))
+    setPicker(null)
+  }
+
   const hidesQuantity = hasSingleQuantity(form.item_type)
 
   const canAdvanceFromType = form.name.trim().length > 0
@@ -82,6 +96,16 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
       <div className="p-5 space-y-3">
         {step === 'type' && (
         <>
+        {!isEditing && (
+          <div className="grid grid-cols-1 gap-2">
+            <Button variant="secondary" fullWidth icon={<BookOpen size={16} />} onClick={() => setPicker('equipment')}>
+              {t('character.inventory.from_equipment')}
+            </Button>
+            <Button variant="secondary" fullWidth icon={<BookOpen size={16} />} onClick={() => setPicker('magic-items')}>
+              {t('character.inventory.from_magic')}
+            </Button>
+          </div>
+        )}
         {/* Name */}
         <Input
           label={t('character.inventory.item_name')}
@@ -430,6 +454,20 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
         </>
         )}
       </div>
+      {picker === 'equipment' && (
+        <CatalogPicker
+          kind="equipment"
+          onClose={() => setPicker(null)}
+          onPick={(e) => applyCatalog(equipmentToForm(e, lang, system))}
+        />
+      )}
+      {picker === 'magic-items' && (
+        <CatalogPicker
+          kind="magic-items"
+          onClose={() => setPicker(null)}
+          onPick={(e) => { void loadCatalog('spells').then((sp) => applyCatalog(magicItemToForm(e, lang, sp))) }}
+        />
+      )}
     </Sheet>
   )
 }

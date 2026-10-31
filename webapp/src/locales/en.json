@@ -883,6 +883,8 @@
       "empty_hint": "Equip your hero: add a weapon, armor, or item.",
       "no_search_results": "No results",
       "item_name": "Item name",
+      "from_equipment": "Equipment from catalogue",
+      "from_magic": "Magic item from catalogue",
       "item_type": "Type",
       "add_short": "Add",
       "description": "Description",

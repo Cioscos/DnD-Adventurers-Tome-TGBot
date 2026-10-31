@@ -883,6 +883,8 @@
       "empty_hint": "Inizia ad equipaggiare il tuo personaggio. Aggiungi un'arma, un'armatura o un oggetto.",
       "no_search_results": "Nessun risultato",
       "item_name": "Nome oggetto",
+      "from_equipment": "Equipaggiamento dal catalogo",
+      "from_magic": "Oggetto magico dal catalogo",
       "item_type": "Tipo",
       "add_short": "Aggiungi",
       "description": "Descrizione",
