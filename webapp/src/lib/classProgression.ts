@@ -16,7 +16,7 @@ export interface ProgressionRow {
 
 const PROGRESSION = progressionData as Record<string, ProgressionRow[]>
 
-const CLASS_NAME_TO_PROGRESSION_KEY: Record<string, string> = {
+export const CLASS_NAME_TO_PROGRESSION_KEY: Record<string, string> = {
   barbarian: 'Barbaro',
   bard: 'Bardo',
   cleric: 'Chierico',

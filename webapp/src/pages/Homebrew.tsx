@@ -270,7 +270,7 @@ export default function Homebrew() {
     mutationFn: (ruleId: number) => {
       const isFeat = rules?.find((r) => r.id === ruleId)?.template_id?.startsWith('feat:')
       return isFeat
-        ? api.choices.removeFeat(charId, ruleId).then(() => undefined)
+        ? api.choices.removeFeatByRule(charId, ruleId).then(() => undefined)
         : api.homebrew.deleteRule(charId, ruleId)
     },
     onSuccess: () => {

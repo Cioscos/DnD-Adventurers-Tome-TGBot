@@ -372,6 +372,7 @@ export default function HeroScreen({ char }: Props) {
       {detailAbility !== null && (
         <PassiveAbilityDetailModal
           ability={detailAbility}
+          charId={char.id}
           onClose={() => setDetailAbility(null)}
         />
       )}

@@ -138,14 +138,70 @@ async def test_feat_lucky_counter_war_caster_setting(client):
     assert r.json()["settings"]["war_caster"] is True and r.json()["settings"]["keep"] == 1
 
 
+def _feat_ab(body: dict, key: str) -> dict:
+    return next(a for a in body["abilities"] if a["feature_key"] == f"feat.{key}")
+
+
+async def _take(client, body: dict, key: str, **extra) -> dict:
+    r = await _resolve(client, body, {"kind": "feat", "feat_key": key, **extra})
+    assert r.status_code == 200, r.text
+    return r.json()
+
+
 async def test_delete_feat_removes_rule_and_ability(client):
     body = await _to_level_4(client)
-    await _resolve(client, body, {"kind": "feat", "feat_key": "alert"})
-    rid = (await client.get(f"/characters/{body['id']}/homebrew/rules")).json()[0]["id"]
-    r = await client.delete(f"/characters/{body['id']}/feats/{rid}")
+    out = await _take(client, body, "alert")
+    assert out["initiative_bonus"] == body["initiative_bonus"] + 5
+    r = await client.delete(f"/characters/{body['id']}/feats/{_feat_ab(out, 'alert')['id']}")
     assert r.status_code == 200, r.text
     assert r.json()["initiative_bonus"] == body["initiative_bonus"]
     assert not [a for a in r.json()["abilities"] if a["feature_key"] == "feat.alert"]
+    assert (await client.get(f"/characters/{body['id']}/homebrew/rules")).json() == []
+    h = await client.get(f"/characters/{body['id']}/history")
+    assert any("Talento rimosso" in e["description"] for e in h.json())
+
+
+async def test_delete_feat_by_rule(client):
+    body = await _to_level_4(client)
+    await _take(client, body, "alert")
+    rid = (await client.get(f"/characters/{body['id']}/homebrew/rules")).json()[0]["id"]
+    r = await client.delete(f"/characters/{body['id']}/feats/by-rule/{rid}")
+    assert r.status_code == 200 and r.json()["initiative_bonus"] == body["initiative_bonus"]
+
+
+async def test_remove_war_caster_clears_setting(client):
+    body = await _to_level_4(client)
+    out = await _take(client, body, "war_caster")
+    assert out["settings"]["war_caster"] is True
+    r = await client.delete(f"/characters/{body['id']}/feats/{_feat_ab(out, 'war_caster')['id']}")
+    assert "war_caster" not in (r.json()["settings"] or {})
+
+
+async def test_remove_lucky_deletes_counter(client):
+    body = await _to_level_4(client)
+    out = await _take(client, body, "lucky")
+    r = await client.delete(f"/characters/{body['id']}/feats/{_feat_ab(out, 'lucky')['id']}")
+    assert r.status_code == 200
+    assert not [a for a in r.json()["abilities"] if a["feature_key"] == "feat.lucky"]
+
+
+async def test_remove_feat_other_user_403(client, test_session_factory):
+    from core.db.models import Character
+    body = await _to_level_4(client)
+    out = await _take(client, body, "grappler")
+    async with test_session_factory() as s:
+        (await s.get(Character, body["id"])).user_id = TEST_USER_ID + 1
+        await s.commit()
+    r = await client.delete(f"/characters/{body['id']}/feats/{_feat_ab(out, 'grappler')['id']}")
+    assert r.status_code == 403
+
+
+async def test_same_feat_twice_422(client):
+    body = await _to_level_4(client)
+    await _take(client, body, "alert")
+    out = (await client.patch(f"/characters/{body['id']}/xp", json={"set": 23000})).json()
+    r = await _resolve(client, out, {"kind": "feat", "feat_key": "alert"})
+    assert r.status_code == 422 and "feat_already_taken" in r.text
 
 
 async def test_custom_feat(client):
@@ -169,8 +225,6 @@ async def test_choice_other_user_403(client, test_session_factory):
     cid = body["pending_choices"][0]["id"]
     r = await client.post(f"/characters/{body['id']}/choices/{cid}/resolve",
                           json={"kind": "asi", "increases": {"strength": 1, "dexterity": 1}})
-    assert r.status_code == 403
-    r = await client.delete(f"/characters/{body['id']}/feats/1")
     assert r.status_code == 403
 
 

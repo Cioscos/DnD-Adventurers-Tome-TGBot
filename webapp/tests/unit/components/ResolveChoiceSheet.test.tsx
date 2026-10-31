@@ -45,6 +45,15 @@ describe('PendingChoicesBadge / ResolveChoiceSheet', () => {
     }))
   })
 
+  it('disables feats already taken', async () => {
+    const char = { ...mkChar(), abilities: [{ feature_key: 'feat.alert' }] } as unknown as CharacterFull
+    renderWithProviders(<PendingChoicesBadge char={char} />)
+    await userEvent.click(screen.getByText('character.level_choice.badge'))
+    await userEvent.click(screen.getByText('character.level_choice.feat'))
+    expect(screen.getByText('character.level_choice.feats.alert.name').closest('button')).toBeDisabled()
+    expect(screen.getByText('character.level_choice.feats.tough.name').closest('button')).not.toBeDisabled()
+  })
+
   it('posts a feat with its ability choice', async () => {
     resolve.mockResolvedValue({ id: 7 })
     renderWithProviders(<PendingChoicesBadge char={mkChar()} />)

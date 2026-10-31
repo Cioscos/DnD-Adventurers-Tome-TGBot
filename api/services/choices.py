@@ -6,6 +6,7 @@ from datetime import datetime
 from typing import Optional
 
 from fastapi import HTTPException
+from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.services.homebrew.dsl import RuleDSL
@@ -40,7 +41,10 @@ def add_asi_choices(char: Character, class_name: str, old_level: int, new_level:
 
 
 def _score_row(char: Character, ability: str):
-    return next(a for a in char.ability_scores if a.name == ability)
+    row = next((a for a in char.ability_scores if a.name == ability), None)
+    if row is None:
+        raise _bad(f"Missing ability score '{ability}'")
+    return row
 
 
 def _bump(char: Character, ability: str, amount: int) -> None:
@@ -80,6 +84,8 @@ def resolve_feat(
     spec = FEATS.get(feat_key)
     if spec is None:
         raise _bad(f"Unknown feat '{feat_key}'")
+    if any(a.feature_key == f"feat.{feat_key}" for a in char.abilities):
+        raise _bad("feat_already_taken")
     if spec.ability_increase:
         if ability not in spec.ability_increase:
             raise _bad(f"ability must be one of {spec.ability_increase}")
@@ -112,3 +118,27 @@ def resolve_feat(
         max_uses=c["max"] if c else None, uses=c["max"] if c else None,
         restoration_type=RestorationType(c["restoration"]) if c else RestorationType.NONE))
     _history(session, char, name)
+
+
+async def remove_feat(session: AsyncSession, char: Character, ability: Ability) -> None:
+    """Rimuove un talento: abilita, regola homebrew, impostazione. Gli aumenti di
+    caratteristica e la competenza nei TS NON vengono annullati (stato precedente non tracciato)."""
+    key = (ability.feature_key or "")[len("feat."):]
+    name = ability.name
+    if key == "custom":
+        await session.execute(delete(Ability).where(Ability.id == ability.id))
+    else:
+        await session.execute(delete(Ability).where(
+            Ability.character_id == char.id, Ability.feature_key == f"feat.{key}"))
+        await session.execute(delete(HomebrewRule).where(
+            HomebrewRule.character_id == char.id, HomebrewRule.template_id == f"feat:{key}"))
+        setting = FEATS[key].setting if key in FEATS else None
+        still_set = any(
+            a.id != ability.id and (a.feature_key or "")[5:] in FEATS
+            and FEATS[a.feature_key[5:]].setting == setting for a in char.abilities)
+        if setting and not still_set:
+            s = dict(char.settings or {})
+            s.pop(setting, None)
+            char.settings = s
+    session.add(CharacterHistory(character_id=char.id, timestamp=_now(),
+                                 event_type="level_choice", description=f"Talento rimosso: {name}"))

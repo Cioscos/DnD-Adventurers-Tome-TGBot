@@ -7,6 +7,7 @@ import Pressable from '@/components/ui/Pressable'
 import { api } from '@/api/client'
 import { haptic } from '@/auth/telegram'
 import { ABILITY_KEYS, FEAT_OPTIONS } from '@/lib/feats'
+import { CLASS_NAME_TO_PROGRESSION_KEY } from '@/lib/classProgression'
 import type { CharacterFull, PendingChoice, ResolveChoiceBody } from '@/types'
 
 interface Props {
@@ -34,6 +35,10 @@ export default function ResolveChoiceSheet({ char, choice, open, onClose }: Prop
   const score = (name: string) => char.ability_scores.find((s) => s.name === name)?.value ?? 10
   const spent = Object.values(inc).reduce((a, b) => a + b, 0)
   const feat = FEAT_OPTIONS.find((f) => f.key === featKey)
+  const taken = new Set((char.abilities ?? []).map((a) => a.feature_key))
+  // class_key e' il nome-tabella italiano ("Guerriero"): lo traduciamo nella lingua UI.
+  const classEn = Object.entries(CLASS_NAME_TO_PROGRESSION_KEY).find(([, v]) => v === choice.class_key)?.[0]
+  const classLabel = classEn ? t(`dnd.classes.${classEn}`, { defaultValue: choice.class_key }) : choice.class_key
 
   const bump = (name: string, delta: number) => {
     const next = (inc[name] ?? 0) + delta
@@ -80,7 +85,7 @@ export default function ResolveChoiceSheet({ char, choice, open, onClose }: Prop
   )
 
   return (
-    <Sheet open={open} onClose={onClose} title={`${t('character.level_choice.title')} · ${choice.class_key} ${choice.level}`}>
+    <Sheet open={open} onClose={onClose} title={`${t('character.level_choice.title')} · ${classLabel} ${choice.level}`}>
       <div className="p-5 space-y-3">
         <div className="flex gap-2">
           {tab('asi', t('character.level_choice.asi'))}
@@ -126,7 +131,8 @@ export default function ResolveChoiceSheet({ char, choice, open, onClose }: Prop
               <Pressable
                 key={f.key}
                 onClick={() => { setFeatKey(f.key); setAbility('') }}
-                className={`w-full min-h-[44px] px-3 py-2 rounded-xl border text-left ${
+                disabled={taken.has(`feat.${f.key}`)}
+                className={`w-full disabled:opacity-40 min-h-[44px] px-3 py-2 rounded-xl border text-left ${
                   featKey === f.key ? 'bg-dnd-gold/15 border-dnd-gold' : 'border-dnd-border'
                 }`}
               >
@@ -135,7 +141,9 @@ export default function ResolveChoiceSheet({ char, choice, open, onClose }: Prop
                 </span>
                 {f.key !== 'custom' && (
                   <span className="block text-xs font-body text-dnd-text-muted">
-                    {t(`character.level_choice.feats.${f.key}.summary`)}
+                    {taken.has(`feat.${f.key}`)
+                      ? t('character.level_choice.already_taken')
+                      : t(`character.level_choice.feats.${f.key}.summary`)}
                   </span>
                 )}
               </Pressable>

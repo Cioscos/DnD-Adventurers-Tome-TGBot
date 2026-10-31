@@ -649,8 +649,10 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(body),
       }),
-    removeFeat: (charId: number, ruleId: number) =>
-      request<CharacterFull>(`/characters/${charId}/feats/${ruleId}`, { method: 'DELETE' }),
+    removeFeat: (charId: number, abilityId: number) =>
+      request<CharacterFull>(`/characters/${charId}/feats/${abilityId}`, { method: 'DELETE' }),
+    removeFeatByRule: (charId: number, ruleId: number) =>
+      request<CharacterFull>(`/characters/${charId}/feats/by-rule/${ruleId}`, { method: 'DELETE' }),
   },
 
   // ---------------------------------------------------------------------------

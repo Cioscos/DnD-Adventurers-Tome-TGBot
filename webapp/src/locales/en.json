@@ -84,6 +84,10 @@
   },
   "character": {
     "level_choice": {
+      "remove": "Remove feat",
+      "remove_confirm": "Confirm removal",
+      "remove_warning": "Ability score increases and saving-throw proficiency are not reverted.",
+      "already_taken": "Already taken",
       "badge": "Level choices: {{count}}",
       "title": "Level choice",
       "asi": "Ability score increase",
