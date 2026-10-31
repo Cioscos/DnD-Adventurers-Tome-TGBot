@@ -885,6 +885,8 @@
       "item_name": "Item name",
       "from_equipment": "Equipment from catalogue",
       "from_magic": "Magic item from catalogue",
+      "range_label": "Range",
+      "thrown_range_label": "Thrown range",
       "item_type": "Type",
       "add_short": "Add",
       "description": "Description",

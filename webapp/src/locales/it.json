@@ -885,6 +885,8 @@
       "item_name": "Nome oggetto",
       "from_equipment": "Equipaggiamento dal catalogo",
       "from_magic": "Oggetto magico dal catalogo",
+      "range_label": "Gittata",
+      "thrown_range_label": "Gittata lancio",
       "item_type": "Tipo",
       "add_short": "Aggiungi",
       "description": "Descrizione",

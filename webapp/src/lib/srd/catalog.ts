@@ -176,15 +176,14 @@ export function upcastExtraDice(
   return Number(m[1]) * Math.max(0, castingLevel - spell.level)
 }
 
-const RANGE_LABEL: Record<Lang, { range: string; thrown: string }> = {
-  it: { range: 'Gittata', thrown: 'Gittata lancio' },
-  en: { range: 'Range', thrown: 'Thrown range' },
-}
+/** Localised labels for the range note, supplied by the caller (i18n lives in the locale files). */
+export interface RangeLabels { range: string; thrown: string }
 
 export function equipmentToForm(
   e: EquipmentEntry,
   lang: Lang,
   unitSystem: UnitSystem,
+  labels: RangeLabels,
 ): Partial<ItemFormData> {
   const base = {
     name: localized(e.name, lang).text,
@@ -200,7 +199,6 @@ export function equipmentToForm(
       stealth_disadvantage: !!e.stealth_disadvantage, strength_req: String(e.strength_req ?? 0),
     }
   }
-  const labels = RANGE_LABEL[lang]
   const notes = [
     e.range_ft && e.weapon_range === 'ranged' ? `${labels.range}: ${formatLength(e.range_ft, unitSystem)}` : '',
     e.thrown_range_ft ? `${labels.thrown}: ${formatLength(e.thrown_range_ft, unitSystem)}` : '',

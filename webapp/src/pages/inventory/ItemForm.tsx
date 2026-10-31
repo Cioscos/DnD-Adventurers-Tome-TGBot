@@ -4,6 +4,7 @@ import Sheet from '@/components/ui/Sheet'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
 import Pressable from '@/components/ui/Pressable'
+import { useToast } from '@/hooks/useToast'
 import { BookOpen } from 'lucide-react'
 import CatalogPicker from '@/components/catalog/CatalogPicker'
 import { loadCatalog, equipmentToForm, magicItemToForm, type Lang } from '@/lib/srd/catalog'
@@ -42,6 +43,7 @@ type WizardStep = 'type' | 'base' | 'advanced'
 export default function ItemForm({ initialData, onSubmit, onCancel, isPending }: ItemFormProps) {
   const { t, i18n } = useTranslation()
   const lang: Lang = i18n.language?.startsWith('en') ? 'en' : 'it'
+  const toast = useToast()
   const [picker, setPicker] = useState<'equipment' | 'magic-items' | null>(null)
   const system = useUnitSettings((s) => s.system)
   const [form, setForm] = useState<ItemFormData>(emptyForm)
@@ -458,14 +460,17 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
         <CatalogPicker
           kind="equipment"
           onClose={() => setPicker(null)}
-          onPick={(e) => applyCatalog(equipmentToForm(e, lang, system))}
+          onPick={(e) => applyCatalog(equipmentToForm(e, lang, system, {
+            range: t('character.inventory.range_label'), thrown: t('character.inventory.thrown_range_label'),
+          }))}
         />
       )}
       {picker === 'magic-items' && (
         <CatalogPicker
           kind="magic-items"
           onClose={() => setPicker(null)}
-          onPick={(e) => { void loadCatalog('spells').then((sp) => applyCatalog(magicItemToForm(e, lang, sp))) }}
+          onPick={(e) => { void loadCatalog('spells').then((sp) => applyCatalog(magicItemToForm(e, lang, sp)))
+            .catch(() => toast.error(t('common.action_failed'))) }}
         />
       )}
     </Sheet>
