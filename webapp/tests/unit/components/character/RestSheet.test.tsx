@@ -114,7 +114,7 @@ describe('RestSheet short rest', () => {
 describe('RestSheet preview', () => {
   const preview = {
     hp_gain: 12, hit_dice_regain: { '1': 2 }, slots: { '1': 3 }, pact_slots: 0, abilities: ['Furia'],
-    homebrew_resources: [], item_charges: ['Bacchetta: +1d6+1'], exhaustion_change: -1, ends_concentration: true,
+    homebrew_resources: [], item_charges: [{ name: 'Bacchetta', gain: null, formula: '1d6+1', full: false }], exhaustion_change: -1, ends_concentration: true,
   }
 
   it('shows what a long rest recovers before confirming', async () => {
@@ -123,7 +123,7 @@ describe('RestSheet preview', () => {
     await userEvent.click(screen.getByText('character.quick_actions.rest_long'))
     expect(await screen.findByText('+12')).toBeTruthy()
     expect(screen.getByText('Furia')).toBeTruthy()
-    expect(screen.getByText('Bacchetta: +1d6+1')).toBeTruthy()
+    expect(screen.getByText('+1d6+1')).toBeTruthy()
     expect(screen.getByText('character.rest_preview.concentration')).toBeTruthy()
     expect(restPreview).toHaveBeenCalledWith(7, 'long')
     expect(rest).not.toHaveBeenCalled()

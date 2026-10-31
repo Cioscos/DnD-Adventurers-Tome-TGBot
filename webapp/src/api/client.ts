@@ -122,7 +122,7 @@ export type RestPreview = {
   pact_slots: number
   abilities: string[]
   homebrew_resources: string[]
-  item_charges: string[]
+  item_charges: { name: string; gain: number | null; formula: string | null; full: boolean }[]
   exhaustion_change: number
   ends_concentration: boolean
 }

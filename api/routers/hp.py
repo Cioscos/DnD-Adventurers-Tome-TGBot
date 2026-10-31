@@ -33,6 +33,7 @@ from api.schemas.common import (
     HPOp,
     HPUndoRequest,
     HPUpdate,
+    ItemChargePreview,
     RestPreview,
     RestRequest,
 )
@@ -387,8 +388,10 @@ def compute_rest_effects(char: Character, rest_type: str, hp_max_bonus: int = 0)
     fx.homebrew_resources = [r.name for r in char.homebrew_resources
                              if _restores_resource(r, rest_type) and r.current != r.max]
     for r in plan_item_recharges(char.items, rest_type, roll=False):
-        gain = f"+{r.after - r.before} (piena)" if r.after is not None else f"+{r.formula}"
-        fx.item_charges.append(f"{r.item.name}: {gain}")
+        full = r.after is not None
+        fx.item_charges.append(ItemChargePreview(
+            name=r.item.name, gain=r.after - r.before if full else None,
+            formula=None if full else r.formula, full=full))
     return fx
 
 

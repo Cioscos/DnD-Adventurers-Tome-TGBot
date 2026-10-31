@@ -267,6 +267,13 @@ class RestRequest(BaseModel):
     hit_dice_used: Optional[int] = None
 
 
+class ItemChargePreview(BaseModel):
+    name: str
+    gain: Optional[int] = None  # note when known (recharge to max)
+    formula: Optional[str] = None  # dice recharge, e.g. "1d6+1"
+    full: bool = False  # recharges to max
+
+
 class RestPreview(BaseModel):
     """Cosa recupererebbe un riposo (nessuna scrittura)."""
     hp_gain: int = 0
@@ -275,7 +282,7 @@ class RestPreview(BaseModel):
     pact_slots: int = 0
     abilities: list[str] = []
     homebrew_resources: list[str] = []
-    item_charges: list[str] = []
+    item_charges: list[ItemChargePreview] = []
     exhaustion_change: int = 0
     ends_concentration: bool = False
 

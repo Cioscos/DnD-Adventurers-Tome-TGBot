@@ -25,7 +25,10 @@ export default function RestPreviewList({ charId, restType }: Props) {
   if (data.pact_slots > 0) rows.push([t('character.rest_preview.pact_slots'), `+${data.pact_slots}`])
   if (data.abilities.length) rows.push([t('character.rest_preview.abilities'), data.abilities.join(', ')])
   if (data.homebrew_resources.length) rows.push([t('character.rest_preview.resources'), data.homebrew_resources.join(', ')])
-  if (data.item_charges.length) rows.push([t('character.rest_preview.charges'), data.item_charges.join('; ')])
+  data.item_charges.forEach((c) => rows.push([
+    c.name,
+    c.full ? t('character.rest_preview.charge_full', { count: c.gain ?? 0 }) : `+${c.formula}`,
+  ]))
   if (data.exhaustion_change) rows.push([t('character.rest_preview.exhaustion'), String(data.exhaustion_change)])
 
   return (

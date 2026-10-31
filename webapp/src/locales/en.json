@@ -171,6 +171,7 @@
       "pact_slots": "Pact slots",
       "abilities": "Abilities",
       "resources": "Resources",
+      "charge_full": "+{{count}} (full)",
       "charges": "Charges",
       "exhaustion": "Exhaustion",
       "concentration": "Concentration ends",

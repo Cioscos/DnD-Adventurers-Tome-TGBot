@@ -171,6 +171,7 @@
       "pact_slots": "Slot patto",
       "abilities": "Abilità",
       "resources": "Risorse",
+      "charge_full": "+{{count}} (piena)",
       "charges": "Cariche",
       "exhaustion": "Spossatezza",
       "concentration": "La concentrazione si interrompe",

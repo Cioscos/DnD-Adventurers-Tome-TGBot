@@ -22,13 +22,13 @@ async def _setup(client):
         "name": "Pieno", "max_uses": 1, "uses": 1, "restoration_type": "long_rest"})
     await client.patch(f"/characters/{cid}/conditions", json={"conditions": {"exhaustion": 2}})
     await _item(client, cid, name="Bacchetta", charges=_ch(cur=0, amount="1d6+1"))
-    await _item(client, cid, name="Anello", charges=_ch(mx=3, cur=1, recharge="short_rest"))
+    ring = await _item(client, cid, name="Anello", charges=_ch(mx=3, cur=1, recharge="short_rest"))
     await client.post(f"/characters/{cid}/hit_dice/spend", json={"class_id": cls, "count": 3, "rolls": [1, 1, 1]})
     await client.patch(f"/characters/{cid}/hp", json={"op": "set_current", "value": 1})
     sp = (await client.post(f"/characters/{cid}/spells", json={
         "name": "Benedizione", "level": 1, "is_concentration": True})).json()["id"]
     await client.patch(f"/characters/{cid}/concentration", json={"spell_id": sp})
-    return cid, cls
+    return cid, cls, ring
 
 
 async def _snapshot(client, cid):
@@ -38,7 +38,7 @@ async def _snapshot(client, cid):
 
 
 async def test_long_preview_matches_rest(client, monkeypatch):
-    cid, cls = await _setup(client)
+    cid, cls, ring = await _setup(client)
     before, hist_before = await _snapshot(client, cid)
     p = (await client.get(f"/characters/{cid}/rest/preview", params={"rest_type": "long"})).json()
     after_preview, hist_after = await _snapshot(client, cid)
@@ -51,8 +51,8 @@ async def test_long_preview_matches_rest(client, monkeypatch):
     assert sorted(p["abilities"]) == ["Fiato", "Recupero"]
     assert p["exhaustion_change"] == -1
     assert p["ends_concentration"] is True
-    assert any("Bacchetta" in s and "1d6+1" in s for s in p["item_charges"])
-    assert any("Anello" in s for s in p["item_charges"])
+    assert {"name": "Bacchetta", "gain": None, "formula": "1d6+1", "full": False} in p["item_charges"]
+    assert {"name": "Anello", "gain": 2, "formula": None, "full": True} in p["item_charges"]
 
     monkeypatch.setattr(random, "randint", lambda a, b: 4)
     r = (await client.post(f"/characters/{cid}/rest", json={"rest_type": "long"})).json()
@@ -62,17 +62,18 @@ async def test_long_preview_matches_rest(client, monkeypatch):
     assert all(a["uses"] == a["max_uses"] for a in r["abilities"])
     assert r["conditions"]["exhaustion"] == 2 + p["exhaustion_change"]
     assert r["concentrating_spell_id"] is None
+    assert await _cur(client, cid, ring) == 1 + 2  # "all": il previsto +2 e' applicato
 
 
 async def test_short_preview_matches_rest(client):
-    cid, _ = await _setup(client)
+    cid, *_ = await _setup(client)
     before, _h = await _snapshot(client, cid)
     p = (await client.get(f"/characters/{cid}/rest/preview", params={"rest_type": "short"})).json()
     assert (await _snapshot(client, cid))[0] == before
     assert p["hp_gain"] == 0 and p["hit_dice_regain"] == {} and p["slots"] == {}
     assert p["pact_slots"] == 1 and p["abilities"] == ["Fiato"]
     assert p["exhaustion_change"] == 0 and p["ends_concentration"] is True
-    assert len(p["item_charges"]) == 1 and "Anello" in p["item_charges"][0]
+    assert [c["name"] for c in p["item_charges"]] == ["Anello"]
 
     r = (await client.post(f"/characters/{cid}/rest", json={"rest_type": "short"})).json()
     pact = next(s for s in r["spell_slots"] if s["is_pact"])
@@ -84,7 +85,7 @@ async def test_short_preview_matches_rest(client):
 
 
 async def test_preview_dead_character_recovers_nothing(client):
-    cid, _ = await _setup(client)
+    cid, *_ = await _setup(client)
     await client.patch(f"/characters/{cid}/hp", json={"op": "set_current", "value": 0})
     await _kill(client, cid)
     assert (await client.get(f"/characters/{cid}")).json()["is_dead"] is True
