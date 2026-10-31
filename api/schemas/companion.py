@@ -90,6 +90,10 @@ class CompanionRead(BaseModel):
     down: bool = False  # set by the hp endpoint: 0 HP means "a terra" (no death saves)
 
 
+class CompanionActivate(BaseModel):
+    force: bool = False  # activate even with no Wild Shape uses left
+
+
 class CompanionHp(BaseModel):
     op: Literal["damage", "heal", "set_temp"]
     value: int = Field(ge=0, le=100_000)

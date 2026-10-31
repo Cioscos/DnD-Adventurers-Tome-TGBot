@@ -5,19 +5,19 @@ import random
 from datetime import datetime, timezone
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Body, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.auth import get_current_user
 from api.database import get_db
 from api.schemas.companion import (
-    DICE_RE, MAX_COMPANIONS, CompanionAttack, CompanionAttackResult, CompanionCreate,
+    DICE_RE, MAX_COMPANIONS, CompanionActivate, CompanionAttack, CompanionAttackResult, CompanionCreate,
     CompanionHp, CompanionRead, CompanionUpdate,
 )
 from api.services.d20 import d20_history_label, d20_records, resolve_d20
 from api.services.dice_stats import record_dice
-from core.db.models import Character, CharacterHistory, Companion
+from core.db.models import Ability, Character,CharacterHistory, Companion
 
 router = APIRouter(prefix="/characters", tags=["companions"])
 
@@ -121,6 +121,50 @@ async def update_companion(
     comp.current_hp = min(comp.current_hp, comp.max_hp)
     if changes.get("is_active"):
         await _deactivate_others(session, char_id, comp.id)
+    return comp
+
+
+@router.post("/{char_id}/companions/{comp_id}/activate", response_model=CompanionRead)
+async def activate_wild_shape(
+    char_id: int,
+    comp_id: int,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+    body: Annotated[CompanionActivate | None, Body()] = None,
+) -> Companion:
+    await _get_char(session, char_id, user_id)
+    comp = await _get_companion(session, char_id, comp_id)
+    if comp.kind != "wild_shape":
+        raise HTTPException(status_code=422, detail="active_only_wild_shape")
+    if comp.is_active:
+        return comp
+    ability = (await session.execute(
+        select(Ability).where(Ability.character_id == char_id, Ability.feature_key == "druid.wild_shape")
+    )).scalars().first()
+    if ability is not None:
+        if (ability.uses or 0) > 0:
+            ability.uses -= 1
+        elif not (body and body.force):
+            raise HTTPException(status_code=409, detail="no_wild_shape_uses")
+    comp.is_active = True
+    comp.current_hp = comp.max_hp  # each transformation starts at full HP
+    await _deactivate_others(session, char_id, comp.id)
+    _history(session, char_id, "companion_hp", f"Forma selvatica: {comp.name}")
+    return comp
+
+
+@router.post("/{char_id}/companions/{comp_id}/deactivate", response_model=CompanionRead)
+async def deactivate_wild_shape(
+    char_id: int,
+    comp_id: int,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> Companion:
+    await _get_char(session, char_id, user_id)
+    comp = await _get_companion(session, char_id, comp_id)
+    if comp.is_active:
+        comp.is_active = False
+        _history(session, char_id, "companion_hp", "Forma selvatica terminata")
     return comp
 
 

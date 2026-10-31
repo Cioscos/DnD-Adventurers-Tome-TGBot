@@ -10,7 +10,8 @@ from __future__ import annotations
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.schemas.character import AcBreakdown, CharacterFull
+from api.schemas.character import AcBreakdown, ActiveForm, CharacterFull
+from api.services.wild_shape import get_active_form
 from api.services.homebrew.passive import get_passive_modifiers
 from api.services.spellcasting import build_spellcasting_info
 from core.data.skills import SKILL_ABILITY_MAP
@@ -42,6 +43,11 @@ async def build_character_response(
     response.has_custom_silhouette = bool(getattr(char, "silhouette_path", None))
     response.spellcasting = build_spellcasting_info(char)
     response.attacks_per_action = attacks_per_action(char.classes)
+    form = await get_active_form(session, char.id)
+    if form is not None:
+        response.active_form = ActiveForm(
+            companion_id=form.id, name=form.name, current_hp=form.current_hp,
+            max_hp=form.max_hp, temp_hp=form.temp_hp, armor_class=form.armor_class)
 
     hb_ac = await get_passive_modifiers(session, char, "character.ac")
     response.ac_breakdown = AcBreakdown(

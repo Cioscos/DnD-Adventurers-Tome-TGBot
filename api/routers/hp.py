@@ -20,6 +20,7 @@ from api.services.dice_stats import record_dice
 from api.services.effects import apply_heal
 from api.services.item_charges import plan_item_recharges, set_item_charges
 from api.services.durations import end_concentration, is_concentrating
+from api.services.wild_shape import absorb_damage, get_active_form
 from api.services.telegram_notify import notify_party_emergency
 from api.services.homebrew.dispatcher import dispatch
 from api.services.homebrew.passive import get_passive_modifiers
@@ -154,6 +155,24 @@ async def update_hp(
             applied = {"half": raw // 2, "double": raw * 2, "immune": 0}.get(mod, raw)
         elif mod == "immune":
             applied = 0
+        # Wild shape: the form soaks the (already resistance-adjusted, using the
+        # character's modifiers) damage first; only the overflow reaches the character
+        # through the normal path below (temp HP, death rules, one concentration save).
+        conc_damage = applied
+        form_absorbed = False
+        form = await get_active_form(session, char.id)
+        if form is not None and applied > 0:
+            overflow = absorb_damage(form, applied)
+            if overflow > 0:
+                form.is_active = False
+                _add_history(session, char.id, "companion_hp",
+                             f"Forma selvatica terminata: {form.name} (danno in eccesso {overflow})")
+                applied = conc_damage = overflow
+            else:
+                form_absorbed = True
+                applied = 0
+                _add_history(session, char.id, "companion_hp",
+                             f"{form.name}: -{conc_damage} → PF {form.current_hp}/{form.max_hp}, temp {form.temp_hp}")
         amount = applied
         # Absorb temp HP first
         if char.temp_hp > 0:
@@ -172,7 +191,8 @@ async def update_hp(
                 word = "dimezzati" if mod == "half" else "raddoppiati"
                 note = f" ({body.raw_value} {word})"
             desc = f"Danni: -{applied} HP{note} ({old} → {char.current_hit_points})"
-        _add_history(session, char.id, "hp_change", desc, meta={"op": "DAMAGE"})
+        if not form_absorbed:
+            _add_history(session, char.id, "hp_change", desc, meta={"op": "DAMAGE"})
 
         # --- Morte & tiri salvezza (D&D 5e RAW) ---
         if char.current_hit_points == 0 and amount > 0 and not char.is_dead:
@@ -222,12 +242,12 @@ async def update_hp(
 
         # Auto concentration save — only if still conscious and concentrating
         if (
-            applied > 0
+            conc_damage > 0
             and is_concentrating(char)
             and char.current_hit_points > 0
         ):
             conc_result = await roll_concentration_save(
-                char, applied, session,
+                char, conc_damage, session,
                 "advantage" if (char.settings or {}).get("war_caster") else "normal",
             )
 
@@ -260,8 +280,14 @@ async def update_hp(
         # Shared applier (see api/services/effects.py). The bottom-of-function
         # death-save reset block stays as an idempotent no-op: apply_heal already
         # zeroed the saves, so its guard finds nothing to reset and won't double-log.
-        result = await apply_heal(session, char, body.value)
-        notifications.extend(collect_homebrew_notifications(result["firing"]))
+        form = await get_active_form(session, char.id)
+        if form is not None:  # while transformed, healing goes to the form
+            form.current_hp = min(form.max_hp, form.current_hp + body.value)
+            _add_history(session, char.id, "companion_hp",
+                         f"{form.name}: +{body.value} → PF {form.current_hp}/{form.max_hp}")
+        else:
+            result = await apply_heal(session, char, body.value)
+            notifications.extend(collect_homebrew_notifications(result["firing"]))
 
     elif body.op == HPOp.SET_MAX:
         old = char.hit_points

@@ -78,6 +78,15 @@ class CharacterSummary(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class ActiveForm(BaseModel):
+    companion_id: int
+    name: str
+    current_hp: int
+    max_hp: int
+    temp_hp: int
+    armor_class: int
+
+
 class CharacterFull(BaseModel):
     """Complete character data with all relations."""
 
@@ -146,6 +155,9 @@ class CharacterFull(BaseModel):
 
     # Populated only by POST /hp when op=DAMAGE on a concentrating character
     concentration_save: Optional[ConcentrationSaveResult] = None
+
+    # Active wild shape form (populated by build_character_response); FE shows its AC/HP.
+    active_form: Optional[ActiveForm] = None
 
     # Populated only by PATCH /hp: id dell'operazione annullabile via POST /hp/undo
     hp_undo_id: Optional[str] = None
