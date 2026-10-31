@@ -1,1 +1,0 @@
-import{r as s}from"./react-vendor-CPSJdvAW.js";import{af as c,ag as i,ah as r}from"./index-Cz98MZt5.js";const u=new Set(["d4","d6","d8","d10","d12","d20"]);function f(){const t=c(),a=i(e=>e.animate3d),n=r();return s.useCallback(async(e,o)=>!a||n||!u.has(e)?void 0:(await t.playAndCollect([{kind:e,count:o}])).map(d=>d.value),[a,t,n])}export{f as u};

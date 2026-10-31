@@ -1,0 +1,1 @@
+function u(r){return Math.floor((Math.max(1,r)-1)/4)+2}function e(r){return r>=17?4:r>=11?3:r>=5?2:1}function i(r,t){const n=/^(\d+)d(\d+)([+-]\d+)?$/i.exec(r.trim());return n?`${Number(n[1])*e(t)}d${n[2]}${n[3]??""}`:r}function c(r){return(r??[]).reduce((t,n)=>t+n.level,0)}export{e as c,u as p,i as s,c as t};
