@@ -15,6 +15,7 @@ from typing import Callable, Optional, TYPE_CHECKING
 if TYPE_CHECKING:
     from core.db.models import Character
 
+from core.data.spell_slots import normalize_class_name
 from core.db.models import RestorationType
 
 # ---------------------------------------------------------------------------
@@ -324,7 +325,7 @@ def get_class_feature_specs(
     Le feature con max_uses == 0 (non ancora disponibili) sono escluse.
     `lang` seleziona la lingua della description (fallback "it").
     """
-    configs = CLASS_RESOURCES.get(class_name, [])
+    configs = CLASS_RESOURCES.get(class_table_key(class_name), [])
     result: list[dict] = []
     for cfg in configs:
         if cfg.cha_based and char is not None:
@@ -351,6 +352,13 @@ def get_class_feature_specs(
     return result
 
 
+def class_table_key(class_name: str | None) -> str | None:
+    """Key of the class tables above (Italian name) for an Italian, English or
+    canonical class name; None for custom classes."""
+    key = normalize_class_name(class_name)
+    return next((k for k in CLASS_HIT_DIE if normalize_class_name(k) == key), None) if key else None
+
+
 def get_saving_throw_proficiencies(class_name: str) -> dict[str, bool]:
     """Return the saving throw proficiencies granted by a starting class.
 
@@ -359,7 +367,7 @@ def get_saving_throw_proficiencies(class_name: str) -> dict[str, bool]:
     Only the starting (first) class should call this — multiclassing does not
     grant saving throw proficiencies in D&D 5e.
     """
-    abilities = CLASS_SAVING_THROWS.get(class_name)
+    abilities = CLASS_SAVING_THROWS.get(class_table_key(class_name))
     if not abilities:
         return {}
     return {ability: True for ability in abilities}

@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.schemas.common import ConcentrationSaveResult
 from api.services.dice_stats import record_dice
+from api.services.homebrew.passive import get_passive_modifiers
 from core.db.models import Character, CharacterHistory
 from core.game.stats import effective_ability_score
 
@@ -91,6 +92,17 @@ def effective_ability_mod(char, ability: str) -> int:
     return (effective - 10) // 2
 
 
+async def saving_throw_bonus(session: AsyncSession, char: Character, ability: str) -> int:
+    """Saving throw bonus as the sheet shows it: effective modifier,
+    proficiency and homebrew passive modifiers."""
+    proficient = bool((char.saving_throws or {}).get(ability, False))
+    return (
+        effective_ability_mod(char, ability)
+        + (char.proficiency_bonus if proficient else 0)
+        + await get_passive_modifiers(session, char, f"character.saving_throw.{ability}")
+    )
+
+
 def effective_con_mod(char) -> int:
     """Effective CON modifier (base CON + modifiers from equipped items)."""
     return effective_ability_mod(char, "constitution")
@@ -122,12 +134,13 @@ def _append_concentration_history(
     ))
 
 
-def roll_concentration_save(
+async def roll_concentration_save(
     char: Character,
     damage: int,
     session: AsyncSession,
 ) -> ConcentrationSaveResult:
-    """Roll a CON save vs DC=max(10, damage//2). Nat20 auto-pass, nat1 auto-fail.
+    """Roll a CON save vs DC=max(10, damage//2). RAW: natural 20 and 1 have
+    no special effect on saving throws, only the total counts.
 
     Side effects:
     - Clears char.concentrating_spell_id on failure (if it was set).
@@ -137,25 +150,14 @@ def roll_concentration_save(
     is_fumble, description, dc, success, lost_concentration.
     """
     dc = max(10, damage // 2)
-
-    # Raw CON modifier (equipped-item bonuses intentionally ignored here to
-    # preserve the pre-existing /concentration/save behavior). Swap to
-    # effective_con_mod(char) if item bonuses should apply.
-    con_score = next((s for s in char.ability_scores if s.name == "constitution"), None)
-    con_mod = con_score.modifier if con_score else 0
+    con_mod = await saving_throw_bonus(session, char, "constitution")
 
     die = random.randint(1, 20)
     record_dice(char, [("d20", die)])
     total = die + con_mod
     is_crit = die == 20
     is_fumble = die == 1
-
-    if is_crit:
-        success = True
-    elif is_fumble:
-        success = False
-    else:
-        success = total >= dc
+    success = total >= dc
 
     lost_concentration = not success and char.concentrating_spell_id is not None
     if lost_concentration:

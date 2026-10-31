@@ -22,6 +22,7 @@ from api.schemas.common import (
 from core.data.classes import (
     CLASS_HIT_DIE,
     CLASS_SPELLCASTING,
+    class_table_key,
     get_saving_throw_proficiencies,
 )
 from api.services.class_features import sync_class_feature_abilities
@@ -109,11 +110,12 @@ async def create_class_for_character(
 
     hit_die = body.hit_die
     spellcasting_ability = body.spellcasting_ability
-    if body.class_name in CLASS_HIT_DIE:
+    table_key = class_table_key(body.class_name)
+    if table_key:
         if hit_die is None:
-            hit_die = CLASS_HIT_DIE[body.class_name]
+            hit_die = CLASS_HIT_DIE[table_key]
         if spellcasting_ability is None:
-            spellcasting_ability = CLASS_SPELLCASTING.get(body.class_name)
+            spellcasting_ability = CLASS_SPELLCASTING.get(table_key)
 
     cls = CharacterClass(
         character_id=char.id,

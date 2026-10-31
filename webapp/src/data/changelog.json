@@ -1,6 +1,27 @@
 {
   "entries": [
     {
+      "version": "2.23.2",
+      "date": "2026-10-31",
+      "title": { "it": "Tiri coerenti con la scheda", "en": "Rolls that match the sheet" },
+      "added": { "it": [], "en": [] },
+      "improved": { "it": [], "en": [] },
+      "fixed": {
+        "it": [
+          "I tiri di abilità e i tiri salvezza ora usano lo stesso bonus mostrato in scheda, compresi gli oggetti equipaggiati e le regole homebrew.",
+          "Il tiro di concentrazione aggiunge la competenza nei tiri salvezza su Costituzione e segue il regolamento: un 20 o un 1 naturale non decidono più da soli l'esito.",
+          "Il numero massimo di incantesimi preparati e la cura dei dadi vita tengono conto degli oggetti che aumentano le caratteristiche.",
+          "Con l'app in inglese, le nuove classi ricevono di nuovo competenze nei tiri salvezza, caratteristica da incantatore e risorse di classe."
+        ],
+        "en": [
+          "Skill checks and saving throws now use the same bonus shown on the sheet, including equipped items and homebrew rules.",
+          "Concentration saves add Constitution saving throw proficiency and follow the rules: a natural 20 or 1 no longer decides the outcome on its own.",
+          "The prepared spell limit and hit dice healing now account for items that raise ability scores.",
+          "With the app in English, new classes again get their saving throw proficiencies, spellcasting ability and class resources."
+        ]
+      }
+    },
+    {
       "version": "2.23.1",
       "date": "2026-10-31",
       "title": { "it": "Header senza lampeggi", "en": "No more flickering header" },

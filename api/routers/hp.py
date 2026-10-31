@@ -203,7 +203,7 @@ async def update_hp(
             and char.concentrating_spell_id is not None
             and char.current_hit_points > 0
         ):
-            conc_result = roll_concentration_save(char, body.value, session)
+            conc_result = await roll_concentration_save(char, body.value, session)
 
         # Emit homebrew events: damage_taken (always) + dropped_to_zero (when HP crossed 0).
         # event.amount is the GROSS damage requested (body.value, before temp-HP
@@ -454,9 +454,7 @@ async def spend_hit_dice(
 
     hit_die = cls.hit_die or 8
 
-    # CON modifier
-    con_score = next((s for s in char.ability_scores if s.name == "constitution"), None)
-    con_mod = con_score.modifier if con_score else 0
+    con_mod = effective_con_mod(char)
 
     if body.rolls is not None:
         if len(body.rolls) != body.count:

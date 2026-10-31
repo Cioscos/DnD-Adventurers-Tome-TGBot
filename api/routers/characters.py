@@ -41,7 +41,7 @@ from api.schemas.character import (
 )
 from api.schemas.common import D20RollSubmission, RollResult
 from api.routers.classes import create_class_for_character
-from api.routers._helpers import prune_history
+from api.routers._helpers import effective_ability_mod, prune_history, saving_throw_bonus
 from api.services import telegram_notify
 from api.services.dice_stats import record_dice
 from api.services.character_response import build_character_response
@@ -496,9 +496,7 @@ async def roll_skill(
             raise HTTPException(status_code=409, detail="Ispirazione non disponibile")
         char.heroic_inspiration = False
 
-    ability_name = _SKILL_ABILITY[skill_name]
-    score = next((s for s in char.ability_scores if s.name == ability_name), None)
-    ability_mod = score.modifier if score else 0
+    ability_mod = effective_ability_mod(char, _SKILL_ABILITY[skill_name])
 
     skills: dict = char.skills or {}
     level = skills.get(skill_name)
@@ -509,6 +507,7 @@ async def roll_skill(
         bonus = ability_mod + pb
     else:
         bonus = ability_mod
+    bonus += await get_passive_modifiers(session, char, f"character.skill.{skill_name}")
 
     die = body.die if body and body.die is not None else random.randint(1, 20)
     total = die + bonus
@@ -556,13 +555,7 @@ async def roll_saving_throw(
             raise HTTPException(status_code=409, detail="Ispirazione non disponibile")
         char.heroic_inspiration = False
 
-    score = next((s for s in char.ability_scores if s.name == ability), None)
-    ability_mod = score.modifier if score else 0
-
-    saves: dict = char.saving_throws or {}
-    is_proficient = bool(saves.get(ability, False))
-    pb = char.proficiency_bonus
-    bonus = ability_mod + (pb if is_proficient else 0)
+    bonus = await saving_throw_bonus(session, char, ability)
 
     die = body.die if body and body.die is not None else random.randint(1, 20)
     total = die + bonus
