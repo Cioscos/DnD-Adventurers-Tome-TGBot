@@ -28,6 +28,7 @@ from api.routers import (
     characters,
     choices,
     classes,
+    companions,
     currency,
     dice,
     encounters,
@@ -174,3 +175,4 @@ app.include_router(share.router)
 app.include_router(shares.router)
 app.include_router(homebrew.router)
 app.include_router(transfer.router)
+app.include_router(companions.router)

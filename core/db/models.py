@@ -219,6 +219,10 @@ class Character(Base):
         viewonly=False,
     )
 
+    companions: Mapped[List["Companion"]] = relationship(
+        back_populates="character", cascade="all, delete-orphan", order_by="Companion.id"
+    )
+
     @property
     def ac(self) -> int:
         return self.base_armor_class + self.shield_armor_class + self.magic_armor
@@ -791,3 +795,26 @@ class ContentShare(Base):
     sender_char_name: Mapped[str] = mapped_column(String(200), nullable=False)
     created_at: Mapped[str] = mapped_column(String(50), nullable=False)
     expires_at: Mapped[str] = mapped_column(String(50), nullable=False)
+
+
+class Companion(Base):
+    """Familiar, companion, mount, summon or wild-shape form with a minimal statblock."""
+    __tablename__ = "companions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    character_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("characters.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    kind: Mapped[str] = mapped_column(String(20), nullable=False)
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    srd_index: Mapped[Optional[str]] = mapped_column(String(80), nullable=True)
+    statblock: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    max_hp: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    current_hp: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    temp_hp: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    armor_class: Mapped[int] = mapped_column(Integer, default=10, nullable=False)
+    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    created_at: Mapped[str] = mapped_column(String(50), nullable=False)
+
+    character: Mapped["Character"] = relationship(back_populates="companions")

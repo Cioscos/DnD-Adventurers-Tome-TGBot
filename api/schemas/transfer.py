@@ -5,6 +5,7 @@ from typing import Annotated, Any, Literal, Optional
 
 from pydantic import AfterValidator, BaseModel, Field, ValidationInfo, field_validator
 
+from api.schemas.companion import validate_statblock
 from core.db.models import EquipmentSlot
 from core.game.actions import ActionType
 
@@ -183,6 +184,26 @@ class ExportHomebrewResource(BaseModel):
     restoration_type: Restoration = "none"
 
 
+class ExportCompanion(BaseModel):
+    kind: Literal["familiar", "companion", "mount", "summon", "wild_shape"]
+    name: str = Field(min_length=1, max_length=100)
+    srd_index: Optional[str] = Field(default=None, max_length=80)
+    statblock: dict = Field(default_factory=dict)
+    max_hp: Int0 = 0
+    current_hp: Int0 = 0
+    temp_hp: Int0 = 0
+    armor_class: Annotated[int, _rng(0, 100)] = 10
+    notes: Optional[str] = None
+    is_active: bool = False
+
+    @field_validator("statblock")
+    @classmethod
+    def _statblock(cls, v, info: ValidationInfo):
+        if not (info.context or {}).get("lenient"):
+            validate_statblock(v)
+        return v
+
+
 class CharacterExport(BaseModel):
     format_version: Literal[1] = 1
     app_version: Optional[str] = None
@@ -198,4 +219,4 @@ class CharacterExport(BaseModel):
     currency: Optional[ExportCurrency] = None
     homebrew_rules: Annotated[list[ExportHomebrewRule], _cap(50)] = Field(default_factory=list)
     homebrew_resources: Annotated[list[ExportHomebrewResource], _cap(500)] = Field(default_factory=list)
-    companions: list = Field(default_factory=list)  # riempito dal task compagni (R7)
+    companions: Annotated[list[ExportCompanion], _cap(30)] = Field(default_factory=list)

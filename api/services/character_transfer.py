@@ -15,7 +15,7 @@ from api.schemas.transfer import CharacterExport, ExportCharacter
 from api.services.homebrew.dsl import RuleDSL
 from api.version import APP_VERSION
 from core.db.models import (
-    Ability, AbilityScore, Character, CharacterClass, Currency, HomebrewResource,
+    Ability, AbilityScore, Character, CharacterClass, Companion, Currency, HomebrewResource,
     HomebrewRule, Item, RestorationType, Spell, SpellSlot, SpellSlotsMode,
 )
 
@@ -62,6 +62,7 @@ async def load_for_export(session: AsyncSession, char_id: int) -> Character | No
             selectinload(Character.currency),
             selectinload(Character.homebrew_rules),
             selectinload(Character.homebrew_resources),
+            selectinload(Character.companions),
         )
     )
     return res.scalar_one_or_none()
@@ -124,6 +125,7 @@ async def build_export(session: AsyncSession, char: Character) -> CharacterExpor
             {**h.__dict__, "rule_index": rule_index[h.rule_id], "restoration_type": _val(h.restoration_type)}
             for h in char.homebrew_resources if h.rule_id in rule_index
         ],
+        "companions": [c.__dict__ for c in sorted(char.companions, key=lambda c: c.id)],
     })
 
 
@@ -229,6 +231,15 @@ async def import_character(
             character_id=char.id, rule_id=rules[h.rule_index].id,
             restoration_type=RestorationType(h.restoration_type),
             **h.model_dump(exclude={"rule_index", "restoration_type"}),
+        ))
+    active_seen = False
+    for c in data.companions:  # al massimo una forma attiva, solo per wild_shape
+        active = c.is_active and c.kind == "wild_shape" and not active_seen
+        active_seen = active_seen or active
+        session.add(Companion(
+            character_id=char.id, created_at=now,
+            **c.model_dump(exclude={"is_active", "current_hp"}),
+            current_hp=min(c.current_hp, c.max_hp), is_active=active,
         ))
     if data.concentrating_spell_key is not None:
         char.concentrating_spell_id = spells[spell_keys.index(data.concentrating_spell_key)].id
