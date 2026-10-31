@@ -54,3 +54,15 @@ describe('formatSave', () => {
     expect(formatSave(eff({}), t)).toBeNull()
   })
 })
+
+describe('vista GM (ownerName)', () => {
+  const t = i18next.t.bind(i18next)
+  it('il turno del portatore è in terza persona', () => {
+    expect(formatExpiry(eff({ expiry_anchor: 'owner', expiry_edge: 'end', expiry_count: 1 }), t, 'Goblin'))
+      .toBe('fino alla fine del prossimo turno di Goblin')
+    expect(formatExpiry(eff({ expiry_anchor: 'source', expiry_edge: 'start', expiry_count: 1, source_name: 'Orco' }), t, 'Goblin'))
+      .toBe("fino all'inizio del prossimo turno di Orco")
+    expect(formatSave(eff({ save_ability: 'constitution', save_dc: 15, save_edge: 'end' }), t, 'Goblin'))
+      .toBe('TS COS CD 15 alla fine del turno di Goblin')
+  })
+})

@@ -713,6 +713,8 @@
           "while_concentrating": "while {{name}} is concentrating",
           "save_start": "{{ability}} save DC {{dc}} at the start of your turn",
           "save_end": "{{ability}} save DC {{dc}} at the end of your turn",
+          "save_start_of": "{{ability}} save DC {{dc}} at the start of {{name}}'s turn",
+          "save_end_of": "{{ability}} save DC {{dc}} at the end of {{name}}'s turn",
           "save_any": "{{ability}} save DC {{dc}}",
           "by_gm": "from the GM",
           "active_title": "Active effects"
@@ -1817,7 +1819,38 @@
       "remove": "Remove from combat",
       "remove_confirm": "Remove {{name}} from combat?",
       "dead_label": "Dead",
-      "action_failed": "Action failed"
+      "action_failed": "Action failed",
+      "active_conditions": "Active conditions",
+      "no_conditions": "No active conditions",
+      "add_condition": "Add condition",
+      "remove_condition": "Remove {{name}}",
+      "source_label": "Source: {{name}}",
+      "pending_save": "Saving throw pending",
+      "save_passed": "Passed",
+      "save_failed": "Failed",
+      "cond": {
+        "condition": "Condition",
+        "pick": "Pick a condition",
+        "duration": "Duration",
+        "dur_none": "None",
+        "dur_rounds": "N rounds",
+        "dur_start": "Until the start of the next turn",
+        "dur_end": "Until the end of the next turn",
+        "rounds_label": "Rounds",
+        "of_label": "Turn of",
+        "of_target": "Target",
+        "of_source": "Source",
+        "save": "Repeated saving throw",
+        "save_none": "None",
+        "save_dc": "DC",
+        "save_edge_start": "Start of turn",
+        "save_edge_end": "End of turn",
+        "source": "Source (optional)",
+        "source_none": "None",
+        "concentration": "Ends if the source loses concentration",
+        "source_not_concentrating": "The source is not concentrating: they must cast the spell first.",
+        "submit": "Apply condition"
+      }
     }
   },
   "homebrew": {

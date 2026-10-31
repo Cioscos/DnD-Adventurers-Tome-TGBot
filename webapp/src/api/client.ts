@@ -22,6 +22,7 @@ import type {
   ResolveChoiceBody,
   CharacterSummary,
   CombatantPatch,
+  GmConditionApply,
   ConcentrationSaveResult,
   Currency,
   DiceRollResult,
@@ -993,6 +994,21 @@ export const api = {
         request<EncounterLive>(
           `/sessions/${sessionId}/encounter/combatants/${combatantId}`,
           { method: 'PATCH', body: JSON.stringify(patch) },
+        ),
+      applyCondition: (sessionId: number, combatantId: number, body: GmConditionApply) =>
+        request<EncounterLive>(
+          `/sessions/${sessionId}/encounter/combatants/${combatantId}/conditions`,
+          { method: 'POST', body: JSON.stringify(body) },
+        ),
+      removeCondition: (sessionId: number, combatantId: number, slug: string) =>
+        request<EncounterLive>(
+          `/sessions/${sessionId}/encounter/combatants/${combatantId}/conditions/${encodeURIComponent(slug)}`,
+          { method: 'DELETE' },
+        ),
+      resolveSave: (sessionId: number, saveId: number, passed: boolean) =>
+        request<EncounterLive>(
+          `/sessions/${sessionId}/encounter/pending-saves/${saveId}/resolve`,
+          { method: 'POST', body: JSON.stringify({ passed }) },
         ),
       removeCombatant: (sessionId: number, combatantId: number) =>
         request<EncounterLive>(

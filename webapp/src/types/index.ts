@@ -411,6 +411,9 @@ export interface CharacterLiveSnapshot {
   last_roll?: DiceRollResult | null
   hp_bucket: HpBucket | null
   armor_category: ArmorCategory | null
+  condition_effects?: ConditionEffect[]
+  has_pending_save?: boolean
+  is_concentrating?: boolean
 }
 
 export type EncounterMode = 'light' | 'full'
@@ -432,6 +435,17 @@ export interface CombatantLive {
   max_hp: number | null
   ac: number | null
   hp_bucket: HpBucket | null
+  condition_effects?: ConditionEffect[]
+  pending_saves?: PendingSave[]
+}
+
+export interface GmConditionApply {
+  slug: string
+  value?: boolean | number | Record<string, unknown>
+  expiry?: { anchor: 'owner' | 'source'; edge: 'start' | 'end'; count: number }
+  save?: { ability: string; dc: number; edge: 'start' | 'end' }
+  source_combatant_id?: number
+  ends_with_concentration?: boolean
 }
 
 export interface EncounterLive {

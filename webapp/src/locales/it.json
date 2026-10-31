@@ -712,6 +712,8 @@
           "while_concentrating": "finché {{name}} è concentrato",
           "save_start": "TS {{ability}} CD {{dc}} all'inizio del tuo turno",
           "save_end": "TS {{ability}} CD {{dc}} alla fine del tuo turno",
+          "save_start_of": "TS {{ability}} CD {{dc}} all'inizio del turno di {{name}}",
+          "save_end_of": "TS {{ability}} CD {{dc}} alla fine del turno di {{name}}",
           "save_any": "TS {{ability}} CD {{dc}}",
           "by_gm": "dal GM",
           "active_title": "Effetti attivi"
@@ -1816,7 +1818,38 @@
       "remove": "Rimuovi dal combattimento",
       "remove_confirm": "Rimuovere {{name}} dal combattimento?",
       "dead_label": "Morto",
-      "action_failed": "Operazione non riuscita"
+      "action_failed": "Operazione non riuscita",
+      "active_conditions": "Condizioni attive",
+      "no_conditions": "Nessuna condizione attiva",
+      "add_condition": "Aggiungi condizione",
+      "remove_condition": "Rimuovi {{name}}",
+      "source_label": "Fonte: {{name}}",
+      "pending_save": "Tiro salvezza in sospeso",
+      "save_passed": "Superato",
+      "save_failed": "Fallito",
+      "cond": {
+        "condition": "Condizione",
+        "pick": "Scegli una condizione",
+        "duration": "Durata",
+        "dur_none": "Nessuna",
+        "dur_rounds": "N round",
+        "dur_start": "Fino all'inizio del prossimo turno",
+        "dur_end": "Fino alla fine del prossimo turno",
+        "rounds_label": "Round",
+        "of_label": "Turno di",
+        "of_target": "Bersaglio",
+        "of_source": "Fonte",
+        "save": "Tiro salvezza ripetuto",
+        "save_none": "Nessuno",
+        "save_dc": "CD",
+        "save_edge_start": "Inizio turno",
+        "save_edge_end": "Fine turno",
+        "source": "Fonte (facoltativa)",
+        "source_none": "Nessuna",
+        "concentration": "Finisce se la fonte perde la concentrazione",
+        "source_not_concentrating": "La fonte non è concentrata: prima deve lanciare l'incantesimo.",
+        "submit": "Applica condizione"
+      }
     }
   },
   "homebrew": {
