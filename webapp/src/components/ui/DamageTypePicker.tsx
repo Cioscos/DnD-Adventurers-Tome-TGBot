@@ -12,6 +12,8 @@ interface DamageTypePickerProps {
   /** Re-tap on the active chip clears the value (spells may have no type). */
   allowEmpty?: boolean
   columns?: 2 | 3
+  /** Hide the generic `dmg_other` chip (resistances/immunities need real types). */
+  excludeOther?: boolean
   className?: string
 }
 
@@ -23,6 +25,7 @@ export default function DamageTypePicker({
   valueFormat = 'item',
   allowEmpty = false,
   columns = 2,
+  excludeOther = false,
   className = '',
 }: DamageTypePickerProps) {
   const { t } = useTranslation()
@@ -30,7 +33,7 @@ export default function DamageTypePicker({
   const toStored = (slug: string) => (valueFormat === 'spell' ? slug.replace(/^dmg_/, '') : slug)
   const toSlug = (stored: string) => (valueFormat === 'spell' ? `dmg_${stored}` : stored)
 
-  const options = DAMAGE_TYPES.map((slug) => ({
+  const options = DAMAGE_TYPES.filter((slug) => !(excludeOther && slug === 'dmg_other')).map((slug) => ({
     value: toStored(slug),
     label: t(`character.inventory.damage_types.${slug}`),
   }))

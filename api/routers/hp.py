@@ -33,6 +33,7 @@ from api.schemas.common import (
     HPUpdate,
     RestRequest,
 )
+from core.data.damage_types import LABELS_IT, canonical_damage_type, damage_multiplier
 from core.game.stats import total_base_hp
 from api.routers._helpers import collect_homebrew_notifications, effective_con_mod, roll_concentration_save
 from api.schemas.common import ConcentrationSaveResult
@@ -136,7 +137,19 @@ async def update_hp(
     was_at_zero = char.current_hit_points == 0
 
     if body.op == HPOp.DAMAGE:
-        amount = body.value
+        # Danno applicato dopo resistenza/immunità/vulnerabilità, PRIMA di PF temporanei
+        # e tiri salvezza morte (tutto il resto usa `applied`).
+        slug = canonical_damage_type(body.damage_type)
+        mod = body.damage_modifier
+        raw = body.raw_value if body.raw_value is not None else body.value
+        applied = body.value
+        if mod is None and slug is not None:
+            mod = damage_multiplier(char.damage_modifiers, slug)
+            raw = body.value
+            applied = {"half": raw // 2, "double": raw * 2, "immune": 0}.get(mod, raw)
+        elif mod == "immune":
+            applied = 0
+        amount = applied
         # Absorb temp HP first
         if char.temp_hp > 0:
             absorbed = min(char.temp_hp, amount)
@@ -144,13 +157,17 @@ async def update_hp(
             amount -= absorbed
         old = char.current_hit_points
         char.current_hit_points = max(0, char.current_hit_points - amount)
-        note = ""
-        if body.raw_value is not None and body.damage_modifier:
-            word = "dimezzati" if body.damage_modifier == "half" else "raddoppiati"
-            note = f" ({body.raw_value} {word})"
-        _add_history(session, char.id, "hp_change",
-                     f"Danni: -{body.value} HP{note} ({old} → {char.current_hit_points})",
-                     meta={"op": "DAMAGE"})
+        if slug is not None and mod in ("half", "double", "immune"):
+            word = {"half": "resistenza", "double": "vulnerabilità", "immune": "immunità"}[mod]
+            desc = (f"Danno {raw} {LABELS_IT[slug]} → {applied} ({word}) "
+                    f"({old} → {char.current_hit_points})")
+        else:
+            note = ""
+            if body.raw_value is not None and mod in ("half", "double"):
+                word = "dimezzati" if mod == "half" else "raddoppiati"
+                note = f" ({body.raw_value} {word})"
+            desc = f"Danni: -{applied} HP{note} ({old} → {char.current_hit_points})"
+        _add_history(session, char.id, "hp_change", desc, meta={"op": "DAMAGE"})
 
         # --- Morte & tiri salvezza (D&D 5e RAW) ---
         if char.current_hit_points == 0 and amount > 0 and not char.is_dead:
@@ -200,24 +217,24 @@ async def update_hp(
 
         # Auto concentration save — only if still conscious and concentrating
         if (
-            body.value > 0
+            applied > 0
             and char.concentrating_spell_id is not None
             and char.current_hit_points > 0
         ):
             conc_result = await roll_concentration_save(
-                char, body.value, session,
+                char, applied, session,
                 "advantage" if (char.settings or {}).get("war_caster") else "normal",
             )
 
         # Emit homebrew events: damage_taken (always) + dropped_to_zero (when HP crossed 0).
-        # event.amount is the GROSS damage requested (body.value, before temp-HP
+        # event.amount is the GROSS damage requested (applied, before temp-HP
         # absorption); the actual HP lost is current_hp_before - current_hp_after. This
         # is the canonical semantics — actions.execute_damage_character matches it (#29).
-        if body.value > 0:
+        if applied > 0:
             firing = await dispatch(
                 session, char, "damage_taken",
                 {
-                    "amount": body.value,
+                    "amount": applied,
                     "was_critical_hit": body.was_critical_hit,
                     "current_hp_before": old,
                     "current_hp_after": char.current_hit_points,
@@ -228,7 +245,7 @@ async def update_hp(
             firing = await dispatch(
                 session, char, "dropped_to_zero",
                 {
-                    "damage_amount": body.value,
+                    "damage_amount": applied,
                     "from_critical": body.was_critical_hit,
                 },
             )

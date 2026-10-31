@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -13,6 +13,8 @@ import Surface from '@/components/ui/Surface'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
 import ChipInput from '@/components/ui/ChipInput'
+import Pressable from '@/components/ui/Pressable'
+import { canonicalDamageType, damageTypeLabel } from '@/lib/damageModifier'
 import SectionDivider from '@/components/ui/SectionDivider'
 import { canShareMessage, haptic } from '@/auth/telegram'
 import { useShareMessage } from '@/hooks/useShareMessage'
@@ -44,6 +46,12 @@ const DMG_TONES: Record<keyof DamageModifiers, { text: string; icon: typeof Shie
 }
 
 const DMG_KEYS: Array<keyof DamageModifiers> = ['resistances', 'immunities', 'vulnerabilities']
+const DMG_SLUGS = DAMAGE_TYPES.filter((d) => d !== 'dmg_other').map((d) => d.replace(/^dmg_/, ''))
+
+// Etichette legacy ("Fuoco") -> slug; il testo non riconosciuto (homebrew) resta com'è.
+function normalizeDmg(values: string[] | undefined): string[] {
+  return [...new Set((values ?? []).map((v) => canonicalDamageType(v) ?? v))]
+}
 
 function snapshot(d: Draft): string {
   return JSON.stringify(d)
@@ -63,15 +71,6 @@ export default function Identity() {
     queryFn: () => api.characters.get(charId),
   })
 
-  // Tipi di danno 5e tradotti come suggerimenti per resistenze/immunità/
-  // vulnerabilità (stessa fonte dei picker inventario; il testo libero resta
-  // possibile per i casi homebrew, es. "Danni non magici").
-  const dmgSuggestions = useMemo(
-    () => DAMAGE_TYPES.filter((d) => d !== 'dmg_other')
-      .map((d) => t(`character.inventory.damage_types.${d}`)),
-    [t],
-  )
-
   useEffect(() => {
     if (char && !draft) {
       const personality = (char.personality as Record<string, string>) ?? {}
@@ -90,9 +89,9 @@ export default function Identity() {
         languages: (char.languages as string[]) ?? [],
         general_proficiencies: (char.general_proficiencies as string[]) ?? [],
         damageModifiers: {
-          resistances: raw.resistances ?? [],
-          immunities: raw.immunities ?? [],
-          vulnerabilities: raw.vulnerabilities ?? [],
+          resistances: normalizeDmg(raw.resistances),
+          immunities: normalizeDmg(raw.immunities),
+          vulnerabilities: normalizeDmg(raw.vulnerabilities),
         },
       }
       setDraft(initial)
@@ -144,20 +143,16 @@ export default function Identity() {
   const set = (key: keyof Draft) => (v: string) =>
     setDraft((d) => d ? { ...d, [key]: v } : d)
 
-  const setDmg = (key: keyof DamageModifiers) => (next: string[]) =>
-    setDraft((d) => d ? { ...d, damageModifiers: { ...d.damageModifiers, [key]: next } } : d)
-
-  const validateDmg = (key: keyof DamageModifiers) => (candidate: string): string | null => {
-    if (!draft) return null
-    const norm = candidate.trim().toLowerCase()
-    for (const other of DMG_KEYS) {
-      if (other === key) continue
-      if (draft.damageModifiers[other].some((v) => v.trim().toLowerCase() === norm)) {
-        return t('character.identity.damage_already_in', { type: t(`character.identity.${other}`) })
-      }
-    }
-    return null
-  }
+  // Un tipo sta in una sola lista: sceglierlo altrove lo sposta.
+  const toggleDmg = (key: keyof DamageModifiers, slug: string) =>
+    setDraft((d) => {
+      if (!d) return d
+      const had = d.damageModifiers[key].includes(slug)
+      const next = { ...d.damageModifiers }
+      for (const k of DMG_KEYS) next[k] = next[k].filter((v) => v !== slug)
+      if (!had) next[key] = [...next[key], slug]
+      return { ...d, damageModifiers: next }
+    })
 
   const personalitySections = [
     { key: 'personality_traits' as const, label: t('character.identity.personality') },
@@ -332,15 +327,24 @@ export default function Identity() {
                     {t(`character.identity.${key}`)}
                   </p>
                 </div>
-                <ChipInput
-                  values={draft.damageModifiers[key]}
-                  onChange={setDmg(key)}
-                  validate={validateDmg(key)}
-                  placeholder={t('character.identity.damage_type_placeholder')}
-                  splitOnComma
-                  normalize={(raw) => raw.trim()}
-                  suggestions={dmgSuggestions}
-                />
+                <div className="flex flex-wrap gap-2">
+                  {[...DMG_SLUGS, ...draft.damageModifiers[key].filter((v) => !DMG_SLUGS.includes(v))].map((slug) => {
+                    const on = draft.damageModifiers[key].includes(slug)
+                    return (
+                      <Pressable
+                        key={slug}
+                        onClick={() => { toggleDmg(key, slug); haptic.selection() }}
+                        aria-pressed={on}
+                        className={`min-h-[44px] px-3 rounded-xl border text-sm font-medium transition-colors
+                          ${on
+                            ? 'bg-dnd-gold text-dnd-ink border-transparent'
+                            : 'bg-dnd-surface-raised text-dnd-text border-dnd-border'}`}
+                      >
+                        {damageTypeLabel(t, slug)}
+                      </Pressable>
+                    )
+                  })}
+                </div>
               </div>
             )
           })}

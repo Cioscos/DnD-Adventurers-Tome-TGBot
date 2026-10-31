@@ -317,7 +317,7 @@ export const api = {
       op: string,
       value: number,
       wasCritical = false,
-      modifier?: { damage_modifier: 'half' | 'double'; raw_value: number },
+      modifier?: { damage_modifier?: 'half' | 'double' | 'none' | 'immune'; raw_value?: number; damage_type?: string },
     ) =>
       request<CharacterFull>(`/characters/${id}/hp`, {
         method: 'PATCH',

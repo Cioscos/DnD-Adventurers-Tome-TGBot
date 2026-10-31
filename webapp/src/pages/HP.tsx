@@ -34,7 +34,7 @@ import HomebrewBreakdownRow from '@/components/homebrew/HomebrewBreakdownRow'
 import HPSkeleton from '@/components/skeletons/HPSkeleton'
 import { useIsFirstValue } from '@/hooks/useIsFirstValue'
 import { notifyMutationError } from '@/lib/mutationError'
-import { applyDamageModifier, type DamageModifier } from '@/lib/damageModifier'
+import { applyDamageModifier, damageMultiplier, type DamageModifier } from '@/lib/damageModifier'
 
 type HPOp = 'damage' | 'heal' | 'set_max' | 'set_current' | 'set_temp'
 
@@ -58,6 +58,7 @@ export default function HP() {
   const [activeOp, setActiveOp] = useState<HPOp>('damage')
   const [crit, setCrit] = useState(false)
   const [damageModifier, setDamageModifier] = useState<DamageModifier>(null)
+  const [damageType, setDamageType] = useState('')
   const [instantDeathOpen, setInstantDeathOpen] = useState(false)
   // Synchronous guard against double-fire of handleApply (Input.onCommit on blur +
   // button.onClick both fire when the user taps Conferma — `hpMutation.isPending` isn't
@@ -97,7 +98,7 @@ export default function HP() {
   const hpMutation = useMutation({
     mutationFn: ({ op, val, wasCritical, modifier }: {
       op: HPOp; val: number; wasCritical?: boolean
-      modifier?: { damage_modifier: 'half' | 'double'; raw_value: number }
+      modifier?: { damage_modifier?: 'half' | 'double' | 'none' | 'immune'; raw_value?: number; damage_type?: string }
     }) =>
       modifier
         ? api.characters.updateHp(charId, op, val, wasCritical ?? false, modifier)
@@ -109,6 +110,7 @@ export default function HP() {
       setValue('')
       setCrit(false)
       setDamageModifier(null)
+      setDamageType('')
       haptic.success()
       maybeShowInstantDeath(updated)
       const conc = updated.concentration_save
@@ -211,11 +213,16 @@ export default function HP() {
   // Il modificatore vale solo per il danno: `val` è già il valore applicato, il grezzo
   // viaggia come annotazione.
   const runHpMutation = (op: HPOp, raw: number, wasCritical: boolean) => {
+    const type = damageType ? { damage_type: damageType } : {}
     if (op === 'damage' && damageModifier) {
+      // Override dell'utente: il client applica il moltiplicatore, il server annota (e azzera se immune).
       hpMutation.mutate({
         op, val: applyDamageModifier(raw, damageModifier), wasCritical,
-        modifier: { damage_modifier: damageModifier, raw_value: raw },
+        modifier: { damage_modifier: damageModifier, raw_value: raw, ...type },
       })
+    } else if (op === 'damage' && damageType) {
+      // Nessun override: il server applica le resistenze del personaggio al tipo.
+      hpMutation.mutate({ op, val: raw, wasCritical, modifier: type })
     } else {
       hpMutation.mutate({ op, val: raw, wasCritical })
     }
@@ -224,6 +231,7 @@ export default function HP() {
   const handleSetActiveOp = (op: HPOp) => {
     setActiveOp(op)
     setDamageModifier(null)
+    setDamageType('')
   }
 
   const handleQuickApply = ({ op, val }: { op: HPOp; val: number }) => {
@@ -396,6 +404,9 @@ export default function HP() {
           setCrit={setCrit}
           damageModifier={damageModifier}
           setDamageModifier={setDamageModifier}
+          damageType={damageType}
+          setDamageType={setDamageType}
+          proposedModifier={damageMultiplier(char.damage_modifiers, damageType)}
         />
       )}
 

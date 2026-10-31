@@ -242,9 +242,12 @@ class HPUpdate(BaseModel):
     op: HPOp
     value: int
     was_critical_hit: bool = False
-    # Solo annotazione: `value` è già il danno applicato dopo resistenza/vulnerabilità.
-    damage_modifier: Literal["half", "double"] | None = None
+    # Override esplicito: `value` è già il danno applicato dal client (annotazione),
+    # tranne "immune" che azzera. Senza override il server applica le resistenze
+    # del personaggio al `damage_type`.
+    damage_modifier: Literal["half", "double", "none", "immune"] | None = None
     raw_value: int | None = Field(None, ge=0)
+    damage_type: str | None = Field(None, max_length=40)
 
 
 class HPUndoRequest(BaseModel):

@@ -9,7 +9,8 @@ import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import Pressable from '@/components/ui/Pressable'
 import { haptic } from '@/auth/telegram'
-import { applyDamageModifier, type DamageModifier } from '@/lib/damageModifier'
+import DamageTypeControls from '@/components/ui/DamageTypeControls'
+import { applyDamageModifier, damagePreviewText, type DamageModifier, type DamageMultiplier } from '@/lib/damageModifier'
 
 type HPOp = 'damage' | 'heal' | 'set_max' | 'set_current' | 'set_temp'
 
@@ -28,6 +29,11 @@ interface HpOperationFormProps {
   setCrit: (c: boolean) => void
   damageModifier: DamageModifier
   setDamageModifier: (m: DamageModifier) => void
+  /** Tipo di danno opzionale ('' = nessuno); senza `setDamageType` il picker non compare. */
+  damageType?: string
+  setDamageType?: (type: string) => void
+  /** Moltiplicatore proposto dalle resistenze del personaggio per `damageType`. */
+  proposedModifier?: DamageMultiplier
 }
 
 // Short labels fit the 5-column segmented control at 390px viewport.
@@ -53,10 +59,15 @@ export default function HpOperationForm({
   setCrit,
   damageModifier,
   setDamageModifier,
+  damageType = '',
+  setDamageType,
+  proposedModifier,
 }: HpOperationFormProps) {
   const { t } = useTranslation()
   const rawTyped = parseInt(value, 10)
-  const showPreview = activeOp === 'damage' && !!damageModifier && !isNaN(rawTyped) && rawTyped > 0
+  // Override dell'utente, altrimenti la proposta del tipo di danno.
+  const effective: DamageModifier = damageModifier ?? (damageType ? proposedModifier ?? null : null)
+  const showPreview = activeOp === 'damage' && !!effective && effective !== 'none' && !isNaN(rawTyped) && rawTyped > 0
 
   return (
     <>
@@ -110,24 +121,13 @@ export default function HpOperationForm({
       <Surface variant="elevated">
         <div className="flex flex-col gap-3">
           {activeOp === 'damage' && (
-            <div className="grid grid-cols-2 gap-2">
-              {(['half', 'double'] as const).map((mod) => {
-                const on = damageModifier === mod
-                return (
-                  <Pressable
-                    key={mod}
-                    onClick={() => { setDamageModifier(on ? null : mod); haptic.selection() }}
-                    aria-pressed={on}
-                    className={`flex items-center justify-center min-h-[44px] rounded-xl border font-cinzel text-xs uppercase tracking-wider transition-colors
-                      ${on
-                        ? '!bg-dnd-cobalt/20 !text-dnd-cobalt-bright !border-dnd-cobalt/60'
-                        : 'bg-transparent text-dnd-text-muted border-dnd-border'}`}
-                  >
-                    {t(mod === 'half' ? 'character.hp.modifier_half' : 'character.hp.modifier_double')}
-                  </Pressable>
-                )
-              })}
-            </div>
+            <DamageTypeControls
+              damageType={damageType}
+              setDamageType={setDamageType}
+              damageModifier={damageModifier}
+              setDamageModifier={setDamageModifier}
+              proposedModifier={proposedModifier}
+            />
           )}
           <Input
             type="number"
@@ -145,7 +145,11 @@ export default function HpOperationForm({
           />
           {showPreview && (
             <p className="text-center font-mono text-sm tabular-nums text-dnd-cobalt-bright">
-              {`${rawTyped} → ${applyDamageModifier(rawTyped, damageModifier)}`}
+              {damagePreviewText(
+                damageType && effective ? t(`character.hp.preview_${effective}`) : null,
+                rawTyped,
+                applyDamageModifier(rawTyped, effective),
+              )}
             </p>
           )}
           {activeOp === 'damage' && atZero && (

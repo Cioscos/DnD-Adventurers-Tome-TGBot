@@ -16,6 +16,7 @@ import Pressable from '@/components/ui/Pressable'
 import { haptic } from '@/auth/telegram'
 import { spring } from '@/styles/motion'
 import { formatCondition, CONDITION_ICONS } from '@/lib/conditions'
+import { damageTypeLabel } from '@/lib/damageModifier'
 import ConditionDetailModal from '@/pages/conditions/ConditionDetailModal'
 import PassiveAbilityDetailModal from '@/pages/abilities/PassiveAbilityDetailModal'
 import SpellSlotsSummary from '@/components/character/SpellSlotsSummary'
@@ -70,7 +71,7 @@ export default function HeroScreen({ char }: Props) {
 
   const damageModifiers = (char.damage_modifiers ?? {}) as Record<string, string[]>
   const damageBadges = DMG_MODIFIER_GROUPS.flatMap(({ key, tone, Icon }) =>
-    (damageModifiers[key] ?? []).map((value) => ({ id: `${key}-${value}`, group: key, tone, Icon, value })),
+    (damageModifiers[key] ?? []).map((raw) => ({ id: `${key}-${raw}`, group: key, tone, Icon, value: damageTypeLabel(t, raw) })),
   )
 
   const layout = readHeroLayout(char.settings as Record<string, unknown> | undefined)
