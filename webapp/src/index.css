@@ -228,7 +228,10 @@ body,
 /* Safe-area-aware absolute `bottom` offset (e.g. floating carousel dots). Same
    max() term as .pb-safe so an element pinned to the bottom edge clears the
    home indicator / Telegram fullscreen controls; falls back to 0.5rem (=bottom-2)
-   outside Telegram where the insets are 0. */
+   outside Telegram where the insets are 0.
+   .pb-safe-dots: stessa distanza ma come padding, per una barra ancorata a
+   bottom:0 il cui sfondo deve coprire anche la fascia dell'inset. */
+.pb-safe-dots { padding-bottom: calc(0.5rem + max(env(safe-area-inset-bottom, 0px), var(--tg-safe-bottom, 0px) + var(--tg-content-bottom, 0px))); }
 .bottom-safe { bottom: calc(0.5rem + max(env(safe-area-inset-bottom, 0px), var(--tg-safe-bottom, 0px) + var(--tg-content-bottom, 0px))); }
 /* FAB dadi: stesso termine, base 1rem (=bottom-4) — fuori dall'home indicator. */
 .bottom-safe-fab { bottom: calc(1rem + max(env(safe-area-inset-bottom, 0px), var(--tg-safe-bottom, 0px) + var(--tg-content-bottom, 0px))); }

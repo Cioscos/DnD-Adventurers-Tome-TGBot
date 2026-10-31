@@ -20,11 +20,13 @@
       "fixed": {
         "it": [
           "Toccare il testo di un interruttore (impostazioni, oggetti magici, abilità passive) ora lo attiva davvero: prima lo cambiava due volte, senza effetto.",
-          "Sui telefoni stretti, nelle abilità il bordo sinistro del dado non apre più per sbaglio la nota."
+          "Sui telefoni stretti, nelle abilità il bordo sinistro del dado non apre più per sbaglio la nota.",
+          "In Telegram a schermo intero la barra dei pallini in fondo alla scheda arriva fino al bordo: sotto non spuntano più pezzi di card tagliati."
         ],
         "en": [
           "Tapping a switch's text (settings, magic items, passive abilities) now actually toggles it: it used to flip twice, with no effect.",
-          "On narrow phones, the left edge of the skill dice button no longer opens the note by mistake."
+          "On narrow phones, the left edge of the skill dice button no longer opens the note by mistake.",
+          "In Telegram fullscreen the dots bar at the bottom of the sheet reaches the edge: no more cut-off card bits peeking out below it."
         ]
       }
     },

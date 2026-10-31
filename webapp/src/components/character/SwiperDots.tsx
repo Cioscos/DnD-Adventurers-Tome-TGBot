@@ -14,7 +14,9 @@ export default function SwiperDots({ active, onSelect, labels }: Props) {
       role="tablist"
       aria-label="Character screens"
       // Scrim sotto i pallini: il contenuto che scorre sotto (es. CA dell'equipaggiamento) non si mescola con loro.
-      className="absolute bottom-safe left-0 right-0 z-30 flex justify-center pt-3 pointer-events-none bg-gradient-to-t from-dnd-bg via-dnd-bg/85 to-transparent"
+      // Ancorato a bottom-0 con l'inset come padding: con bottom-safe, in Telegram fullscreen
+      // restava una fascia scoperta sotto lo scrim dove il contenuto spuntava tagliato.
+      className="absolute bottom-0 pb-safe-dots left-0 right-0 z-30 flex justify-center pt-3 pointer-events-none bg-gradient-to-t from-dnd-bg via-dnd-bg/85 to-transparent"
     >
       {/* Il pallino è il segnale visivo; il bottone attorno è l'area di tocco
           (≥40px), invisibile, così i tre tab restano usabili col pollice. */}
