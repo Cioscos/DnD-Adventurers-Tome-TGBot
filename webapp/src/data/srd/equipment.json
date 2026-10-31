@@ -8,7 +8,8 @@
   {
    "index": "battleaxe",
    "name": {
-    "en": "Battleaxe"
+    "en": "Battleaxe",
+    "it": "Ascia da battaglia"
    },
    "weight_lb": 4,
    "damage_dice": "1d8",
@@ -25,7 +26,8 @@
   {
    "index": "blowgun",
    "name": {
-    "en": "Blowgun"
+    "en": "Blowgun",
+    "it": "Cerbottana"
    },
    "weight_lb": 1,
    "damage_dice": "1",
@@ -43,7 +45,8 @@
   {
    "index": "breastplate",
    "name": {
-    "en": "Breastplate"
+    "en": "Breastplate",
+    "it": "Corazza di piastre"
    },
    "weight_lb": 20,
    "armor_type": "medium",
@@ -55,7 +58,8 @@
   {
    "index": "chain-mail",
    "name": {
-    "en": "Chain Mail"
+    "en": "Chain Mail",
+    "it": "Cotta di maglia"
    },
    "weight_lb": 55,
    "armor_type": "heavy",
@@ -67,7 +71,8 @@
   {
    "index": "chain-shirt",
    "name": {
-    "en": "Chain Shirt"
+    "en": "Chain Shirt",
+    "it": "Giaco di maglia"
    },
    "weight_lb": 20,
    "armor_type": "medium",
@@ -79,7 +84,8 @@
   {
    "index": "club",
    "name": {
-    "en": "Club"
+    "en": "Club",
+    "it": "Randello"
    },
    "weight_lb": 2,
    "damage_dice": "1d4",
@@ -96,7 +102,8 @@
   {
    "index": "crossbow-hand",
    "name": {
-    "en": "Crossbow, hand"
+    "en": "Crossbow, hand",
+    "it": "Balestra a mano"
    },
    "weight_lb": 3,
    "damage_dice": "1d6",
@@ -115,7 +122,8 @@
   {
    "index": "crossbow-heavy",
    "name": {
-    "en": "Crossbow, heavy"
+    "en": "Crossbow, heavy",
+    "it": "Balestra pesante"
    },
    "weight_lb": 18,
    "damage_dice": "1d10",
@@ -135,7 +143,8 @@
   {
    "index": "crossbow-light",
    "name": {
-    "en": "Crossbow, light"
+    "en": "Crossbow, light",
+    "it": "Balestra leggera"
    },
    "weight_lb": 5,
    "damage_dice": "1d8",
@@ -154,7 +163,8 @@
   {
    "index": "dagger",
    "name": {
-    "en": "Dagger"
+    "en": "Dagger",
+    "it": "Pugnale"
    },
    "weight_lb": 1,
    "damage_dice": "1d4",
@@ -176,7 +186,8 @@
   {
    "index": "dart",
    "name": {
-    "en": "Dart"
+    "en": "Dart",
+    "it": "Dardo"
    },
    "weight_lb": 0.25,
    "damage_dice": "1d4",
@@ -197,7 +208,8 @@
   {
    "index": "flail",
    "name": {
-    "en": "Flail"
+    "en": "Flail",
+    "it": "Mazzafrusto"
    },
    "weight_lb": 2,
    "damage_dice": "1d8",
@@ -212,7 +224,8 @@
   {
    "index": "glaive",
    "name": {
-    "en": "Glaive"
+    "en": "Glaive",
+    "it": "Falcione"
    },
    "weight_lb": 6,
    "damage_dice": "1d10",
@@ -231,7 +244,8 @@
   {
    "index": "greataxe",
    "name": {
-    "en": "Greataxe"
+    "en": "Greataxe",
+    "it": "Ascia bipenne"
    },
    "weight_lb": 7,
    "damage_dice": "1d12",
@@ -249,7 +263,8 @@
   {
    "index": "greatclub",
    "name": {
-    "en": "Greatclub"
+    "en": "Greatclub",
+    "it": "Randello pesante"
    },
    "weight_lb": 10,
    "damage_dice": "1d8",
@@ -266,7 +281,8 @@
   {
    "index": "greatsword",
    "name": {
-    "en": "Greatsword"
+    "en": "Greatsword",
+    "it": "Spadone"
    },
    "weight_lb": 6,
    "damage_dice": "2d6",
@@ -284,7 +300,8 @@
   {
    "index": "halberd",
    "name": {
-    "en": "Halberd"
+    "en": "Halberd",
+    "it": "Alabarda"
    },
    "weight_lb": 6,
    "damage_dice": "1d10",
@@ -303,7 +320,8 @@
   {
    "index": "half-plate-armor",
    "name": {
-    "en": "Half Plate Armor"
+    "en": "Half Plate Armor",
+    "it": "Mezza armatura"
    },
    "weight_lb": 40,
    "armor_type": "medium",
@@ -315,7 +333,8 @@
   {
    "index": "handaxe",
    "name": {
-    "en": "Handaxe"
+    "en": "Handaxe",
+    "it": "Ascia"
    },
    "weight_lb": 2,
    "damage_dice": "1d6",
@@ -336,7 +355,8 @@
   {
    "index": "hide-armor",
    "name": {
-    "en": "Hide Armor"
+    "en": "Hide Armor",
+    "it": "Armatura di pelle"
    },
    "weight_lb": 12,
    "armor_type": "medium",
@@ -348,7 +368,8 @@
   {
    "index": "javelin",
    "name": {
-    "en": "Javelin"
+    "en": "Javelin",
+    "it": "Giavellotto"
    },
    "weight_lb": 2,
    "damage_dice": "1d6",
@@ -368,7 +389,8 @@
   {
    "index": "lance",
    "name": {
-    "en": "Lance"
+    "en": "Lance",
+    "it": "Lancia da cavaliere"
    },
    "weight_lb": 6,
    "damage_dice": "1d12",
@@ -386,7 +408,8 @@
   {
    "index": "leather-armor",
    "name": {
-    "en": "Leather Armor"
+    "en": "Leather Armor",
+    "it": "Armatura di cuoio"
    },
    "weight_lb": 10,
    "armor_type": "light",
@@ -398,7 +421,8 @@
   {
    "index": "light-hammer",
    "name": {
-    "en": "Light hammer"
+    "en": "Light hammer",
+    "it": "Martello leggero"
    },
    "weight_lb": 2,
    "damage_dice": "1d4",
@@ -419,7 +443,8 @@
   {
    "index": "longbow",
    "name": {
-    "en": "Longbow"
+    "en": "Longbow",
+    "it": "Arco lungo"
    },
    "weight_lb": 2,
    "damage_dice": "1d8",
@@ -438,7 +463,8 @@
   {
    "index": "longsword",
    "name": {
-    "en": "Longsword"
+    "en": "Longsword",
+    "it": "Spada lunga"
    },
    "weight_lb": 3,
    "damage_dice": "1d8",
@@ -455,7 +481,8 @@
   {
    "index": "mace",
    "name": {
-    "en": "Mace"
+    "en": "Mace",
+    "it": "Mazza"
    },
    "weight_lb": 4,
    "damage_dice": "1d6",
@@ -470,7 +497,8 @@
   {
    "index": "maul",
    "name": {
-    "en": "Maul"
+    "en": "Maul",
+    "it": "Maglio"
    },
    "weight_lb": 10,
    "damage_dice": "2d6",
@@ -488,7 +516,8 @@
   {
    "index": "morningstar",
    "name": {
-    "en": "Morningstar"
+    "en": "Morningstar",
+    "it": "Stella del mattino"
    },
    "weight_lb": 4,
    "damage_dice": "1d8",
@@ -503,7 +532,8 @@
   {
    "index": "net",
    "name": {
-    "en": "Net"
+    "en": "Net",
+    "it": "Rete"
    },
    "weight_lb": 3,
    "damage_dice": null,
@@ -524,7 +554,8 @@
   {
    "index": "padded-armor",
    "name": {
-    "en": "Padded Armor"
+    "en": "Padded Armor",
+    "it": "Armatura imbottita"
    },
    "weight_lb": 8,
    "armor_type": "light",
@@ -536,7 +567,8 @@
   {
    "index": "pike",
    "name": {
-    "en": "Pike"
+    "en": "Pike",
+    "it": "Picca"
    },
    "weight_lb": 18,
    "damage_dice": "1d10",
@@ -555,7 +587,8 @@
   {
    "index": "plate-armor",
    "name": {
-    "en": "Plate Armor"
+    "en": "Plate Armor",
+    "it": "Armatura completa"
    },
    "weight_lb": 65,
    "armor_type": "heavy",
@@ -567,7 +600,8 @@
   {
    "index": "quarterstaff",
    "name": {
-    "en": "Quarterstaff"
+    "en": "Quarterstaff",
+    "it": "Bastone ferrato"
    },
    "weight_lb": 4,
    "damage_dice": "1d6",
@@ -584,7 +618,8 @@
   {
    "index": "rapier",
    "name": {
-    "en": "Rapier"
+    "en": "Rapier",
+    "it": "Stocco"
    },
    "weight_lb": 2,
    "damage_dice": "1d8",
@@ -601,7 +636,8 @@
   {
    "index": "ring-mail",
    "name": {
-    "en": "Ring Mail"
+    "en": "Ring Mail",
+    "it": "Cotta ad anelli"
    },
    "weight_lb": 40,
    "armor_type": "heavy",
@@ -613,7 +649,8 @@
   {
    "index": "scale-mail",
    "name": {
-    "en": "Scale Mail"
+    "en": "Scale Mail",
+    "it": "Cotta di scaglie"
    },
    "weight_lb": 45,
    "armor_type": "medium",
@@ -625,7 +662,8 @@
   {
    "index": "scimitar",
    "name": {
-    "en": "Scimitar"
+    "en": "Scimitar",
+    "it": "Scimitarra"
    },
    "weight_lb": 3,
    "damage_dice": "1d6",
@@ -643,7 +681,8 @@
   {
    "index": "shield",
    "name": {
-    "en": "Shield"
+    "en": "Shield",
+    "it": "Scudo"
    },
    "weight_lb": 6,
    "armor_type": "shield",
@@ -655,7 +694,8 @@
   {
    "index": "shortbow",
    "name": {
-    "en": "Shortbow"
+    "en": "Shortbow",
+    "it": "Arco corto"
    },
    "weight_lb": 2,
    "damage_dice": "1d6",
@@ -673,7 +713,8 @@
   {
    "index": "shortsword",
    "name": {
-    "en": "Shortsword"
+    "en": "Shortsword",
+    "it": "Spada corta"
    },
    "weight_lb": 2,
    "damage_dice": "1d6",
@@ -691,7 +732,8 @@
   {
    "index": "sickle",
    "name": {
-    "en": "Sickle"
+    "en": "Sickle",
+    "it": "Falcetto"
    },
    "weight_lb": 2,
    "damage_dice": "1d4",
@@ -708,7 +750,8 @@
   {
    "index": "sling",
    "name": {
-    "en": "Sling"
+    "en": "Sling",
+    "it": "Fionda"
    },
    "weight_lb": 0,
    "damage_dice": "1d4",
@@ -725,7 +768,8 @@
   {
    "index": "spear",
    "name": {
-    "en": "Spear"
+    "en": "Spear",
+    "it": "Lancia"
    },
    "weight_lb": 3,
    "damage_dice": "1d6",
@@ -746,7 +790,8 @@
   {
    "index": "splint-armor",
    "name": {
-    "en": "Splint Armor"
+    "en": "Splint Armor",
+    "it": "Corazza a strisce"
    },
    "weight_lb": 60,
    "armor_type": "heavy",
@@ -758,7 +803,8 @@
   {
    "index": "studded-leather-armor",
    "name": {
-    "en": "Studded Leather Armor"
+    "en": "Studded Leather Armor",
+    "it": "Armatura di cuoio borchiato"
    },
    "weight_lb": 13,
    "armor_type": "light",
@@ -770,7 +816,8 @@
   {
    "index": "trident",
    "name": {
-    "en": "Trident"
+    "en": "Trident",
+    "it": "Tridente"
    },
    "weight_lb": 4,
    "damage_dice": "1d6",
@@ -791,7 +838,8 @@
   {
    "index": "war-pick",
    "name": {
-    "en": "War pick"
+    "en": "War pick",
+    "it": "Piccone da guerra"
    },
    "weight_lb": 2,
    "damage_dice": "1d8",
@@ -806,7 +854,8 @@
   {
    "index": "warhammer",
    "name": {
-    "en": "Warhammer"
+    "en": "Warhammer",
+    "it": "Martello da guerra"
    },
    "weight_lb": 2,
    "damage_dice": "1d8",
@@ -823,7 +872,8 @@
   {
    "index": "whip",
    "name": {
-    "en": "Whip"
+    "en": "Whip",
+    "it": "Frusta"
    },
    "weight_lb": 3,
    "damage_dice": "1d4",

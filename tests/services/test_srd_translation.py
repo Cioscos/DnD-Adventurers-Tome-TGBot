@@ -111,10 +111,8 @@ def test_checker_flags_glossary_violations(data, tmp_path):
 
 
 _real = batches.load("spells")["items"]
-_has_it = any("it" in s["name"] for s in _real)
 
 
-@pytest.mark.skipif(not _has_it, reason="catalogue not translated yet")
 def test_real_catalogue_translated():
     by_index = {s["index"]: s for s in _real}
     assert by_index["fireball"]["name"]["it"] == "Palla di fuoco"
