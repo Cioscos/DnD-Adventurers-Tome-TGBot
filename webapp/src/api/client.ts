@@ -293,6 +293,11 @@ export const api = {
         languages?: string[]
         personality?: { traits: string }
       } | null,
+      extras?: {
+        ability_scores?: Record<string, number>
+        species?: object
+        skills?: Record<string, boolean>
+      },
     ) =>
       request<CharacterFull>('/characters', {
         method: 'POST',
@@ -300,6 +305,7 @@ export const api = {
           name,
           ...(initialClass ? { initial_class: initialClass } : {}),
           ...(identity ? { identity } : {}),
+          ...extras,
         }),
       }),
     update: (id: number, data: Record<string, unknown>) =>

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -225,8 +225,37 @@ class CharacterIdentityCreate(BaseModel):
     personality: Optional[dict[str, Any]] = None  # { "traits": "..." }
 
 
+class SpeciesTrait(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+    description: str = Field(default="", max_length=4000)
+
+
+class SpeciesSense(BaseModel):
+    type: Literal["darkvision", "blindsight", "truesight", "tremorsense"]
+    range_ft: int = Field(ge=0, le=1000)
+
+
+class SpeciesApply(BaseModel):
+    """Species picked in the creation wizard; applied once by create_character.
+
+    ``ability_bonuses`` keys are short (str/dex/con/int/wis/cha) or full ability names.
+    """
+    name: str = Field(min_length=1, max_length=100)
+    speed_ft: Optional[int] = Field(default=None, ge=0, le=500)
+    senses: list[SpeciesSense] = Field(default_factory=list, max_length=8)
+    languages: list[str] = Field(default_factory=list, max_length=20)
+    ability_bonuses: dict[str, int] = Field(default_factory=dict)
+    roll_notes: dict[str, str] = Field(default_factory=dict)
+    traits: list[SpeciesTrait] = Field(default_factory=list, max_length=30)
+
+
 class CharacterCreate(BaseModel):
     name: str
+    # Base scores WITHOUT species bonuses; each 3-20 after bonuses (checked in the router).
+    ability_scores: Optional[dict[str, int]] = None
+    species: Optional[SpeciesApply] = None
+    # skill_slug -> proficient (e.g. from the background).
+    skills: Optional[dict[str, bool]] = None
     # Optional initial class — when provided the character + first class are
     # created atomically. Avoids the orphan-character risk of the previous
     # two-step client flow (POST /characters then POST /classes).

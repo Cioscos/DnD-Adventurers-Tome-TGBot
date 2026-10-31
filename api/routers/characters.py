@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from datetime import datetime
 from typing import Annotated
 
@@ -13,6 +14,7 @@ from sqlalchemy.orm import selectinload
 from api.auth import get_current_user, get_current_lang
 from api.database import get_db
 from core.db.models import (
+    Ability,
     AbilityScore,
     ABILITY_NAMES,
     Character,
@@ -24,6 +26,7 @@ from core.db.models import (
     SessionStatus,
 )
 from core.data.xp_thresholds import xp_to_level
+from core.data.skills import SKILL_ABILITY_MAP
 from core.data.labels import ability_label, skill_label
 from api.services.class_features import sync_class_feature_abilities
 from core.game.stats import hit_points_for_level
@@ -195,6 +198,53 @@ async def list_characters(
 # Create
 # ---------------------------------------------------------------------------
 
+_SHORT_ABILITY = {a[:3]: a for a in ABILITY_NAMES}
+_ROLL_NOTE_KEY = re.compile(r"^(save\.(%s)|skill\.(%s))$" % ("|".join(ABILITY_NAMES), "|".join(SKILL_ABILITY_MAP)))
+
+
+def _apply_creation_extras(char: Character, body: CharacterCreate) -> None:
+    """Scores (+species bonuses), species fields, skills; 422 on invalid input."""
+    def bad(msg: str):
+        return HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, msg)
+
+    scores = {a: 10 for a in ABILITY_NAMES}
+    for k, v in (body.ability_scores or {}).items():
+        if k not in scores:
+            raise bad(f"Unknown ability: {k}")
+        scores[k] = v
+    sp = body.species
+    if sp:
+        for k, v in sp.ability_bonuses.items():
+            full = _SHORT_ABILITY.get(k, k)
+            if full not in scores:
+                raise bad(f"Unknown ability bonus: {k}")
+            scores[full] += v
+        for k, v in sp.roll_notes.items():
+            if not _ROLL_NOTE_KEY.match(k) or len(v) > 120:
+                raise bad(f"Invalid roll note: {k}")
+    if body.ability_scores or sp:
+        if any(not 3 <= v <= 20 for v in scores.values()):
+            raise bad("Ability scores must be between 3 and 20")
+        for row in char.ability_scores:
+            row.value = scores[row.name]
+    if body.skills:
+        if any(k not in SKILL_ABILITY_MAP for k in body.skills):
+            raise bad("Unknown skill")
+        char.skills = {k: bool(v) for k, v in body.skills.items()}
+    if sp:
+        char.race = sp.name
+        if sp.speed_ft is not None:
+            char.speed = sp.speed_ft
+        s = dict(char.settings or {})
+        if sp.senses:
+            s["senses"] = [x.model_dump() for x in sp.senses]
+        if sp.roll_notes:
+            s["roll_notes"] = dict(sp.roll_notes)
+        char.settings = s
+        langs = list(char.languages or [])
+        char.languages = langs + [l for l in sp.languages if l not in langs]
+
+
 @router.post("", response_model=CharacterFull, status_code=status.HTTP_201_CREATED)
 async def create_character(
     body: CharacterCreate,
@@ -216,7 +266,10 @@ async def create_character(
     # Inizializza la collection abilities in memoria così che il sync delle
     # feature di classe (in create_class_for_character) non tenti un lazy-load
     # in contesto async (MissingGreenlet). Mirror di ability_scores/currency.
-    char.abilities = []
+    char.abilities = [
+        Ability(name=t.name, description=t.description, is_passive=True)
+        for t in (body.species.traits if body.species else [])
+    ]
     # Stesso motivo: create_class_for_character fa `if cls not in char.classes`.
     # Su un char appena flushato (persistente) la collection classes non è
     # caricata, quindi senza questa init l'accesso scatena un lazy-load async →
@@ -228,6 +281,7 @@ async def create_character(
     if body.identity is not None:
         for field, value in body.identity.model_dump(exclude_unset=True).items():
             setattr(char, field, value)
+    _apply_creation_extras(char, body)  # after identity so species languages merge
     session.add(char)
     await session.flush()  # assign id (cascades ability_scores + currency)
 
