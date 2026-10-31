@@ -60,6 +60,15 @@ def ability_modifier(score: int) -> int:
     return (score - 10) // 2
 
 
+def cantrip_dice_multiplier(total_level: int) -> int:
+    """Cantrip damage dice multiplier by total character level (5e 2014)."""
+    if total_level >= 17:
+        return 4
+    if total_level >= 11:
+        return 3
+    return 2 if total_level >= 5 else 1
+
+
 def unarmored_defense_ac(dex_mod: int, second_mod: int) -> int:
     """Unarmored Defense base AC: ``10 + DEX mod + second ability mod``.
 

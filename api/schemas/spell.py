@@ -146,6 +146,7 @@ class RollDamageResult(BaseModel):
     breakdown: str
     casting_level: int
     is_critical: bool
+    scaled_dice: str = ""    # base dice after cantrip scaling, e.g. "2d10"
     # --- new fields for 3D animation ---
     main_kind: str           # e.g. "d6"
     main_rolls: list[int]    # only main dice (not extras)

@@ -6,7 +6,7 @@ import json
 import random
 import re
 from datetime import datetime
-from typing import Annotated, Optional
+from typing import Annotated, Literal, Optional
 
 from fastapi import APIRouter, Body, Depends, HTTPException, status
 from pydantic import BaseModel, Field
@@ -435,6 +435,24 @@ class AttackSubmission(BaseModel):
     die: int | None = Field(default=None, ge=1, le=20)
     mode: RollMode = "normal"
     dice: D20Dice | None = None
+    grip: Literal["one", "two"] = "one"
+    attack_mode: Literal["melee", "thrown"] = "melee"
+
+
+def _lacks_weapon_proficiency(char, weapon_name: str, category: str | None) -> bool:
+    """True when the proficiency list is non-empty and covers neither the weapon nor its category.
+
+    Isolated so Task 25 can swap the lookup when proficiencies become categories.
+    """
+    profs = {str(p).strip().lower() for p in (char.general_proficiencies or [])}
+    if not profs:
+        return False
+    names = {weapon_name.strip().lower()}
+    if category == "simple":
+        names |= {"armi semplici", "simple weapons"}
+    elif category == "martial":
+        names |= {"armi da guerra", "martial weapons"}
+    return not (profs & names)
 
 
 @router.post("/{char_id}/items/{item_id}/attack", response_model=WeaponAttackResult)
@@ -455,22 +473,38 @@ async def attack_with_weapon(
     if item.item_type != "weapon":
         raise HTTPException(status_code=400, detail="Item is not a weapon")
 
+    meta = json.loads(item.item_metadata) if item.item_metadata else {}
+    damage_dice_str: str = meta.get("damage_dice", "1d4")
+    weapon_type: str = meta.get("weapon_type", "melee")
+    properties: list[str] = meta.get("properties", [])
+    magic_bonus = int(meta.get("magic_bonus") or 0)
+
+    has_prop = lambda name: any(name in p.lower() for p in properties)  # noqa: E731
+    is_finesse = has_prop("finesse")
+    grip = body.grip if body else "one"
+    attack_mode = body.attack_mode if body else "melee"
+
+    # Validate the choices before consuming inspiration.
+    if grip == "two" and has_prop("versatile") and meta.get("versatile_dice"):
+        if any(
+            i.is_equipped and i.equipment_slot == EquipmentSlot.OFF_HAND and i.id != item.id
+            for i in char.items
+        ):
+            raise HTTPException(status_code=422, detail="off_hand_occupied")
+        damage_dice_str = meta["versatile_dice"]
+    if attack_mode == "thrown" and not has_prop("thrown"):
+        raise HTTPException(status_code=422, detail="weapon_not_thrown")
+
     if body and body.with_inspiration:
         if not char.heroic_inspiration:
             raise HTTPException(status_code=409, detail="Ispirazione non disponibile")
         char.heroic_inspiration = False
 
-    meta = json.loads(item.item_metadata) if item.item_metadata else {}
-    damage_dice_str: str = meta.get("damage_dice", "1d4")
-    weapon_type: str = meta.get("weapon_type", "melee")
-    properties: list[str] = meta.get("properties", [])
-
     # Determine ability modifier (effective: equipped-item bonuses included)
     str_mod = effective_ability_mod(char, "strength")
     dex_mod = effective_ability_mod(char, "dexterity")
 
-    is_finesse = any("finesse" in p.lower() for p in properties)
-    is_ranged = weapon_type == "ranged"
+    is_ranged = weapon_type == "ranged" and attack_mode != "thrown"
 
     if is_finesse:
         ability_mod = max(str_mod, dex_mod)
@@ -484,7 +518,7 @@ async def attack_with_weapon(
     # To-hit roll
     outcome = resolve_body(body)
     to_hit_die = outcome.kept
-    to_hit_bonus = ability_mod + pb
+    to_hit_bonus = ability_mod + pb + magic_bonus
     to_hit_total = to_hit_die + to_hit_bonus
     is_critical = to_hit_die == 20
     is_fumble = to_hit_die == 1
@@ -501,7 +535,7 @@ async def attack_with_weapon(
         damage_bonus = 0
         damage_total = 0
     else:
-        damage_bonus = ability_mod + dice_bonus
+        damage_bonus = ability_mod + magic_bonus + dice_bonus
         damage_total = max(0, sum(damage_rolls) + damage_bonus)
 
     result_str = (
@@ -551,6 +585,8 @@ async def attack_with_weapon(
     return WeaponAttackResult(
         ammo=ammo_state,
         ammo_missing=ammo_missing,
+        magic_bonus=magic_bonus,
+        proficiency_warning=_lacks_weapon_proficiency(char, item.name, meta.get("weapon_category")),
         weapon_name=item.name,
         to_hit_die=to_hit_die,
         dice=outcome.dice,

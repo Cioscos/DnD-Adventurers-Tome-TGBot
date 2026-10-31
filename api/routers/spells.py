@@ -35,6 +35,7 @@ from api.services.dice_stats import record_dice
 from api.services.homebrew.dispatcher import dispatch
 from api.services.spellcasting import best_caster, build_spellcasting_info
 from core.data.spellcasting import has_ritual_caster
+from core.game.stats import cantrip_dice_multiplier
 
 
 class ConcentrationSaveRequest(BaseModel):
@@ -370,6 +371,8 @@ async def roll_spell_damage(
             detail=f"Invalid spell.damage_dice format: {spell.damage_dice!r}",
         )
     base_count = int(m.group(1))
+    if spell.level == 0:
+        base_count *= cantrip_dice_multiplier(char.total_level)
     sides = int(m.group(2))
     base_bonus = int(m.group(3)) if m.group(3) else 0
 
@@ -459,6 +462,7 @@ async def roll_spell_damage(
         breakdown=breakdown,
         casting_level=casting_level,
         is_critical=bool(body.is_critical),
+        scaled_dice=f"{base_count}d{sides}",
         main_kind=main_kind,
         main_rolls=main_rolls,
         extra_kind=extra_kind,
