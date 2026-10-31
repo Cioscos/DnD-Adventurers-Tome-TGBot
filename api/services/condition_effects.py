@@ -228,27 +228,34 @@ async def open_pending_saves(db: AsyncSession, char_id: int) -> list[PendingSave
     return [r for r in rows if r.status == "pending"] + keep_failed
 
 
-async def character_effect_payload(
-    db: AsyncSession, char_id: int,
-) -> tuple[list[ConditionEffectRead], list[PendingSaveRead]]:
-    """Read models for CharacterFull (source names resolved)."""
-    effects = await effects_for_character(db, char_id)
+async def effect_reads(db: AsyncSession, effects: list[ConditionEffect]) -> list[ConditionEffectRead]:
+    """Read models with source names resolved (PC and monster targets alike)."""
     comb_ids = {e.source_combatant_id for e in effects if e.source_combatant_id}
     char_ids = {e.source_character_id for e in effects if e.source_character_id}
     comb_names = dict((await db.execute(select(Combatant.id, Combatant.name).where(
         Combatant.id.in_(comb_ids)))).all()) if comb_ids else {}
     char_names = dict((await db.execute(select(Character.id, Character.name).where(
         Character.id.in_(char_ids)))).all()) if char_ids else {}
-    reads = [ConditionEffectRead(
+    return [ConditionEffectRead(
         slug=e.slug, expiry_anchor=e.expiry_anchor, expiry_edge=e.expiry_edge,
         expiry_count=e.expiry_count, save_ability=e.save_ability, save_dc=e.save_dc,
         save_edge=e.save_edge,
         source_name=comb_names.get(e.source_combatant_id) or char_names.get(e.source_character_id),
         ends_with_concentration=e.ends_with_concentration, applied_by_gm=e.applied_by_gm,
     ) for e in effects]
+
+
+def pending_read(p: PendingSave, slug: str) -> PendingSaveRead:
+    return PendingSaveRead(id=p.id, slug=slug, ability=p.ability, dc=p.dc, status=p.status,
+                           created_at=p.created_at, last_roll=p.last_roll)
+
+
+async def character_effect_payload(
+    db: AsyncSession, char_id: int,
+) -> tuple[list[ConditionEffectRead], list[PendingSaveRead]]:
+    """Read models for CharacterFull (source names resolved)."""
+    effects = await effects_for_character(db, char_id)
     slugs = {e.id: e.slug for e in effects}
-    pendings = [PendingSaveRead(
-        id=p.id, slug=slugs.get(p.effect_id, ""), ability=p.ability, dc=p.dc,
-        status=p.status, created_at=p.created_at, last_roll=p.last_roll,
-    ) for p in await open_pending_saves(db, char_id)]
-    return reads, pendings
+    pendings = [pending_read(p, slugs.get(p.effect_id, ""))
+                for p in await open_pending_saves(db, char_id)]
+    return await effect_reads(db, effects), pendings

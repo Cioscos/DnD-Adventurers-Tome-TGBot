@@ -1,5 +1,5 @@
 """Notifiche al giocatore per azioni del GM: loot consegnato e condizioni
-aggiornate sul suo combatant PC (categoria gm_events)."""
+applicate dal GM al suo PC dalla stanza (categoria gm_events)."""
 from __future__ import annotations
 
 from tests.integration._encounter_helpers import GM_ID, PLAYER_ID, as_user, seed_session
@@ -54,30 +54,29 @@ async def _open_encounter_with_pc(client, sid: int) -> int:
     return pc["id"]
 
 
-async def test_patch_conditions_on_pc_notifies_owner(
+async def test_gm_condition_on_pc_notifies_owner(
         client, test_session_factory, monkeypatch):
     captured = install_fake_telegram(monkeypatch)
     sid, _cid = await seed_session(test_session_factory)
     as_user(GM_ID)
     comb_id = await _open_encounter_with_pc(client, sid)
     captured.clear()  # scarta l'eventuale notifica 'incontro iniziato'
-    r = await client.patch(
-        f"/sessions/{sid}/encounter/combatants/{comb_id}",
-        json={"conditions": {"poisoned": True}})
+    r = await client.post(
+        f"/sessions/{sid}/encounter/combatants/{comb_id}/conditions",
+        json={"slug": "poisoned"})
     assert r.status_code == 200, r.text
     msgs = [c["json"] for c in captured if c["json"]["chat_id"] == PLAYER_ID]
     assert len(msgs) == 1
-    assert "🌀" in msgs[0]["text"] and "poisoned" in msgs[0]["text"]
+    assert "🌀" in msgs[0]["text"] and "Avvelenato" in msgs[0]["text"]
 
 
-async def test_patch_same_conditions_is_silent(client, test_session_factory, monkeypatch):
+async def test_gm_remove_absent_condition_is_silent(client, test_session_factory, monkeypatch):
     captured = install_fake_telegram(monkeypatch)
     sid, _cid = await seed_session(test_session_factory)
     as_user(GM_ID)
     comb_id = await _open_encounter_with_pc(client, sid)
-    await client.patch(f"/sessions/{sid}/encounter/combatants/{comb_id}",
-                       json={"conditions": {"poisoned": True}})
     captured.clear()
-    await client.patch(f"/sessions/{sid}/encounter/combatants/{comb_id}",
-                       json={"conditions": {"poisoned": True}})
+    r = await client.delete(
+        f"/sessions/{sid}/encounter/combatants/{comb_id}/conditions/poisoned")
+    assert r.status_code == 200, r.text
     assert captured == []

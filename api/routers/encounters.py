@@ -26,13 +26,18 @@ from api.schemas.encounter import (
     EncounterCreateRequest,
     EncounterLive,
     EncounterStartRequest,
+    GmConditionApply,
     InitiativeRollRequest,
+    PendingSaveResolve,
     ReorderRequest,
 )
 from api.services import telegram_notify
 from api.services.homebrew.passive import get_passive_modifiers
 from api.services.d20 import resolve_body
-from api.services.condition_effects import UndoLog, undo_last_advance
+from api.services.condition_effects import (
+    ExpirySpec, SaveSpec, UndoLog, clear_effects_for, undo_last_advance, upsert_effect,
+)
+from api.services.effects import apply_conditions
 from api.services.durations import process_edge
 from api.services.encounter_view import build_encounter_block
 from core.db.models import (
@@ -271,7 +276,7 @@ async def create_encounter(
     await db.flush()
     await db.refresh(enc, attribute_names=["combatants"])
     await _notify_encounter_opened(session, user_id, db)
-    return build_encounter_block(enc, viewer_is_gm=True)
+    return await build_encounter_block(db, enc, viewer_is_gm=True)
 
 
 @router.post(
@@ -314,7 +319,7 @@ async def add_combatants(
     _touch(session)
     await db.flush()
     await db.refresh(enc, attribute_names=["combatants"])
-    return build_encounter_block(enc, viewer_is_gm=True)
+    return await build_encounter_block(db, enc, viewer_is_gm=True)
 
 
 @router.post(
@@ -350,7 +355,7 @@ async def roll_initiative(
     comb.initiative = die + comb.initiative_mod
     _touch(session)
     await db.flush()
-    return build_encounter_block(enc, viewer_is_gm=is_gm)
+    return await build_encounter_block(db, enc, viewer_is_gm=is_gm)
 
 
 @router.post("/{session_id}/encounter/sync-pcs", response_model=EncounterLive)
@@ -374,7 +379,7 @@ async def sync_pcs(
     _touch(session)
     await db.flush()
     await db.refresh(enc, attribute_names=["combatants"])
-    return build_encounter_block(enc, viewer_is_gm=True)
+    return await build_encounter_block(db, enc, viewer_is_gm=True)
 
 
 @router.post("/{session_id}/encounter/start", response_model=EncounterLive)
@@ -417,7 +422,7 @@ async def start_encounter(
     await db.flush()
     if first is not None:
         await _notify_turn(enc, first)
-    return build_encounter_block(enc, viewer_is_gm=True)
+    return await build_encounter_block(db, enc, viewer_is_gm=True)
 
 
 async def _turn_endpoint(
@@ -467,7 +472,7 @@ async def _turn_endpoint(
         await _notify_saves(db, undo.created_saves)
     if moved is not None:
         await _notify_turn(enc, moved)
-    return build_encounter_block(enc, viewer_is_gm=is_gm)
+    return await build_encounter_block(db, enc, viewer_is_gm=is_gm)
 
 
 @router.post("/{session_id}/encounter/next-turn", response_model=EncounterLive)
@@ -508,6 +513,11 @@ async def patch_combatant(
     if comb is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Combatant not found")
 
+    if body.conditions is not None and comb.kind == "pc":
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={"code": "pc_conditions_on_sheet"},
+        )
     touches_hp = (
         body.current_hp is not None or body.max_hp is not None or body.ac is not None
     )
@@ -536,42 +546,178 @@ async def patch_combatant(
         comb.current_hp = max(0, min(body.current_hp, cap))
         if comb.current_hp == 0 and comb.kind == "monster":
             comb.is_dead = True
-    conditions_changed = False
     if body.conditions is not None:
-        conditions_changed = (comb.conditions or {}) != body.conditions
+        switched_off = [k for k, v in (comb.conditions or {}).items()
+                        if v and not body.conditions.get(k)]
         comb.conditions = body.conditions
+        await clear_effects_for(db, ("combatant", comb.id), switched_off)
     if body.is_dead is not None:        # override esplicito del GM, vince sull'auto
         comb.is_dead = body.is_dead
 
     _touch(session)
     await db.flush()
 
-    # Notifica best-effort al proprietario del PG (categoria gm_events)
-    if (
-        conditions_changed
-        and comb.kind == "pc"
-        and comb.owner_user_id
-        and comb.owner_user_id != user_id
-    ):
-        rec_char = (
-            await db.get(Character, comb.character_id)
-            if comb.character_id is not None else None
-        )
-        if telegram_notify.notifications_enabled(rec_char, "gm_events"):
-            active = ", ".join(sorted(
-                k for k, v in (comb.conditions or {}).items() if v))
-            text = (
-                f"🌀 Il GM ha aggiornato le condizioni di {comb.name}: {active}"
-                if active
-                else f"🌀 Il GM ha rimosso le condizioni di {comb.name}"
-            )
-            await telegram_notify.send_telegram_message(
-                comb.owner_user_id, text,
-                button=("Apri la sessione",
-                        telegram_notify.miniapp_url(f"/session/{session_id}")),
-            )
+    return await build_encounter_block(db, enc, viewer_is_gm=True)
 
-    return build_encounter_block(enc, viewer_is_gm=True)
+
+# ---------------------------------------------------------------------------
+# GM conditions (spec §3): PC -> sheet via apply_conditions, monster -> Combatant
+# ---------------------------------------------------------------------------
+
+async def _gm_combatant(
+    session_id: int, combatant_id: int, user_id: int, db: AsyncSession,
+) -> tuple[GameSession, Encounter, Combatant]:
+    session = await _load_session(session_id, db)
+    _assert_participant(session, user_id)
+    _assert_gm(session, user_id)
+    _assert_session_active(session)
+    enc = await _require_open_encounter(session_id, db)
+    comb = next((c for c in enc.combatants if c.id == combatant_id), None)
+    if comb is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Combatant not found")
+    return session, enc, comb
+
+
+async def _pc_char(db: AsyncSession, comb: Combatant) -> Character:
+    char = await db.get(Character, comb.character_id) if comb.character_id else None
+    if char is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Character not found")
+    return char
+
+
+async def _set_condition(db: AsyncSession, comb: Combatant, slug: str, value) -> None:
+    """Write one slug on the target's map; a falsy value drops the slug's effect."""
+    if comb.kind == "pc":
+        await apply_conditions(db, await _pc_char(db, comb), {slug: value})
+        return
+    comb.conditions = {**(comb.conditions or {}), slug: value}
+    if not value:
+        await clear_effects_for(db, ("combatant", comb.id), [slug])
+
+
+async def _notify_gm_condition(
+    session_id: int, user_id: int, comb: Combatant, db: AsyncSession, text: str,
+) -> None:
+    """Best-effort ping to the PC owner (gm_events)."""
+    if comb.kind != "pc" or not comb.owner_user_id or comb.owner_user_id == user_id:
+        return
+    char = await db.get(Character, comb.character_id) if comb.character_id else None
+    if not telegram_notify.notifications_enabled(char, "gm_events"):
+        return
+    await telegram_notify.send_telegram_message(
+        comb.owner_user_id, text,
+        button=("Apri la sessione", telegram_notify.miniapp_url(f"/session/{session_id}")),
+    )
+
+
+@router.post(
+    "/{session_id}/encounter/combatants/{combatant_id}/conditions",
+    response_model=EncounterLive,
+)
+async def gm_apply_condition(
+    session_id: int,
+    combatant_id: int,
+    body: GmConditionApply,
+    user_id: Annotated[int, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> EncounterLive:
+    session, enc, comb = await _gm_combatant(session_id, combatant_id, user_id, db)
+    if body.value is not None:
+        await _set_condition(db, comb, body.slug, body.value)
+    else:
+        src = None
+        if body.source_combatant_id is not None:
+            src = next((c for c in enc.combatants if c.id == body.source_combatant_id), None)
+            if src is None:
+                raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                                    detail="source_combatant_id not in this encounter")
+        src_char = await _pc_char(db, src) if src is not None and src.kind == "pc" else None
+        spell_id = None
+        if body.ends_with_concentration:
+            if src_char is None or src_char.concentrating_spell_id is None:
+                raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                                    detail={"code": "source_not_concentrating"})
+            spell_id = src_char.concentrating_spell_id
+        await _set_condition(db, comb, body.slug, True)
+        target = ("character", comb.character_id) if comb.kind == "pc" else ("combatant", comb.id)
+        await upsert_effect(
+            db, target, body.slug,
+            expiry=ExpirySpec(**body.expiry.model_dump()) if body.expiry else None,
+            save=SaveSpec(**body.save.model_dump()) if body.save else None,
+            source_combatant_id=src.id if src else None,
+            source_character_id=src_char.id if src_char else None,
+            source_spell_id=spell_id,
+            ends_with_concentration=body.ends_with_concentration,
+            applied_by_gm=True, encounter=enc,
+        )
+    _touch(session)
+    await db.flush()
+    await _notify_gm_condition(
+        session_id, user_id, comb, db,
+        f"🌀 Il GM ha applicato {condition_label(body.slug)} a {comb.name}",
+    )
+    return await build_encounter_block(db, enc, viewer_is_gm=True)
+
+
+@router.delete(
+    "/{session_id}/encounter/combatants/{combatant_id}/conditions/{slug}",
+    response_model=EncounterLive,
+)
+async def gm_remove_condition(
+    session_id: int,
+    combatant_id: int,
+    slug: str,
+    user_id: Annotated[int, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> EncounterLive:
+    session, enc, comb = await _gm_combatant(session_id, combatant_id, user_id, db)
+    owner = await _pc_char(db, comb) if comb.kind == "pc" else comb
+    was_on = bool((owner.conditions or {}).get(slug))
+    await _set_condition(db, comb, slug, 0 if slug == "exhaustion" else False)
+    _touch(session)
+    await db.flush()
+    if was_on:
+        await _notify_gm_condition(
+            session_id, user_id, comb, db,
+            f"🌀 Il GM ha rimosso {condition_label(slug)} da {comb.name}",
+        )
+    return await build_encounter_block(db, enc, viewer_is_gm=True)
+
+
+@router.post(
+    "/{session_id}/encounter/pending-saves/{save_id}/resolve",
+    response_model=EncounterLive,
+)
+async def gm_resolve_monster_save(
+    session_id: int,
+    save_id: int,
+    body: PendingSaveResolve,
+    user_id: Annotated[int, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> EncounterLive:
+    session = await _load_session(session_id, db)
+    _assert_participant(session, user_id)
+    _assert_gm(session, user_id)
+    _assert_session_active(session)
+    enc = await _require_open_encounter(session_id, db)
+    ps = await db.get(PendingSave, save_id)
+    if ps is not None and ps.character_id is not None:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                            detail="PC saves are rolled by the player")
+    comb = next((c for c in enc.combatants if ps and c.id == ps.combatant_id), None)
+    if comb is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pending save not found")
+    if ps.status != "pending":
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Save already resolved")
+    ps.status = "passed" if body.passed else "failed"
+    ps.resolved_at = _now()
+    if body.passed:
+        eff = await db.get(ConditionEffect, ps.effect_id)
+        if eff is not None:
+            await _set_condition(db, comb, eff.slug, False)  # drops the effect and its saves
+    _touch(session)
+    await db.flush()
+    return await build_encounter_block(db, enc, viewer_is_gm=True)
 
 
 def _move_pointer_off(enc: Encounter, combatants: list[Combatant], removed_id: int) -> None:
@@ -609,11 +755,13 @@ async def delete_combatant(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Combatant not found")
     if enc.active_combatant_id == comb.id:
         _move_pointer_off(enc, list(enc.combatants), comb.id)
+    # SQLite FK cascade is not guaranteed: drop the monster's effects explicitly
+    await clear_effects_for(db, ("combatant", comb.id), (comb.conditions or {}).keys())
     await db.delete(comb)
     _touch(session)
     await db.flush()
     await db.refresh(enc, attribute_names=["combatants"])
-    return build_encounter_block(enc, viewer_is_gm=True)
+    return await build_encounter_block(db, enc, viewer_is_gm=True)
 
 
 @router.post("/{session_id}/encounter/reorder", response_model=EncounterLive)
@@ -642,7 +790,7 @@ async def reorder_combatants(
         c.sort_order = position[c.id]
     _touch(session)
     await db.flush()
-    return build_encounter_block(enc, viewer_is_gm=True)
+    return await build_encounter_block(db, enc, viewer_is_gm=True)
 
 
 @router.post("/{session_id}/encounter/end", response_model=EncounterLive)
@@ -661,4 +809,4 @@ async def end_encounter(
     db.add(_system_feed_message(session, "🕊️ Combattimento terminato"))
     _touch(session)
     await db.flush()
-    return build_encounter_block(enc, viewer_is_gm=True)
+    return await build_encounter_block(db, enc, viewer_is_gm=True)

@@ -36,6 +36,7 @@ from api.schemas.session import (
     TurnState,
 )
 from api.services import telegram_notify
+from api.services.condition_effects import character_effect_payload
 from api.services.encounter_view import build_encounter_block
 from core.db.models import (
     Character,
@@ -214,6 +215,7 @@ async def _load_live_characters(
             ts = last_roll.get("timestamp")
             if joined and (not isinstance(ts, str) or ts < joined):
                 last_roll = None
+        effects, pendings = await character_effect_payload(db, char.id)
         out[char.id] = dict(
             id=char.id,
             user_id=char.user_id,
@@ -231,6 +233,8 @@ async def _load_live_characters(
             last_roll=last_roll,
             hp_bucket=hp_bucket(char),
             armor_category=armor_category(char),
+            condition_effects=effects,
+            has_pending_save=any(p.status == "pending" for p in pendings),
         )
     return out
 
@@ -433,6 +437,8 @@ async def get_session_live(
                 temp_hp=raw["temp_hp"],
                 ac=raw["ac"],
                 conditions=raw["conditions"],
+                condition_effects=raw["condition_effects"],
+                has_pending_save=raw["has_pending_save"],
                 death_saves=raw["death_saves"],
                 heroic_inspiration=raw["heroic_inspiration"],
                 last_roll=raw["last_roll"],
@@ -451,6 +457,8 @@ async def get_session_live(
                 temp_hp=None,
                 ac=None,
                 conditions=raw["conditions"],
+                condition_effects=raw["condition_effects"],
+                has_pending_save=raw["has_pending_save"],
                 death_saves=None,
                 heroic_inspiration=raw["heroic_inspiration"],
                 last_roll=raw["last_roll"],
@@ -468,7 +476,7 @@ async def get_session_live(
     )
     open_encounter = enc_result.scalars().first()
     encounter_block = (
-        build_encounter_block(open_encounter, viewer_is_gm=viewer_is_gm)
+        await build_encounter_block(db, open_encounter, viewer_is_gm=viewer_is_gm)
         if open_encounter is not None
         else None
     )
