@@ -17,6 +17,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import flag_modified
 
+from api.services.condition_effects import clear_effects_for
 from api.services.homebrew.dsl import Filter, RuleDSL
 from api.services.homebrew.exceptions import ActionExecutionError
 from api.services.homebrew.filters import evaluate_filter
@@ -433,6 +434,7 @@ async def execute_remove_condition(action, ctx, rfr, session, char, **kw):
     conditions.pop(action["key"], None)
     char.conditions = conditions
     flag_modified(char, "conditions")
+    await clear_effects_for(session, ("character", char.id), [action["key"]])
     await session.flush()
 
 

@@ -695,7 +695,28 @@
         "input_aria": "Durata in round",
         "left": "{{n}} round",
         "tick": "Fine round (−1)",
-        "expired": "Scaduto: {{names}}"
+        "expired": "Scaduto: {{names}}",
+        "in_encounter": "In incontro i round scorrono a ogni tuo turno"
+      },
+      "effect": {
+          "until_end_owner_next": "fino alla fine del tuo prossimo turno",
+          "until_end_owner_nth": "fino alla fine del {{n}}° tuo turno",
+          "until_start_owner_next": "fino all'inizio del tuo prossimo turno",
+          "until_start_owner_nth": "fino all'inizio del {{n}}° tuo turno",
+          "until_end_source_next": "fino alla fine del prossimo turno di {{name}}",
+          "until_end_source_nth": "fino alla fine del {{n}}° turno di {{name}}",
+          "until_start_source_next": "fino all'inizio del prossimo turno di {{name}}",
+          "until_start_source_nth": "fino all'inizio del {{n}}° turno di {{name}}",
+          "source_unknown": "un altro combattente",
+          "rounds": "{{count}} round",
+          "while_concentrating": "finché {{name}} è concentrato",
+          "save_start": "TS {{ability}} CD {{dc}} all'inizio del tuo turno",
+          "save_end": "TS {{ability}} CD {{dc}} alla fine del tuo turno",
+          "save_start_of": "TS {{ability}} CD {{dc}} all'inizio del turno di {{name}}",
+          "save_end_of": "TS {{ability}} CD {{dc}} alla fine del turno di {{name}}",
+          "save_any": "TS {{ability}} CD {{dc}}",
+          "by_gm": "dal GM",
+          "active_title": "Effetti attivi"
       },
       "title": "Condizioni",
       "exhaustion": "Spossatezza (livello {{level}})",
@@ -1797,7 +1818,38 @@
       "remove": "Rimuovi dal combattimento",
       "remove_confirm": "Rimuovere {{name}} dal combattimento?",
       "dead_label": "Morto",
-      "action_failed": "Operazione non riuscita"
+      "action_failed": "Operazione non riuscita",
+      "active_conditions": "Condizioni attive",
+      "no_conditions": "Nessuna condizione attiva",
+      "add_condition": "Aggiungi condizione",
+      "remove_condition": "Rimuovi {{name}}",
+      "source_label": "Fonte: {{name}}",
+      "pending_save": "Tiro salvezza in sospeso",
+      "save_passed": "Superato",
+      "save_failed": "Fallito",
+      "cond": {
+        "condition": "Condizione",
+        "pick": "Scegli una condizione",
+        "duration": "Durata",
+        "dur_none": "Nessuna",
+        "dur_rounds": "N round",
+        "dur_start": "Fino all'inizio del prossimo turno",
+        "dur_end": "Fino alla fine del prossimo turno",
+        "rounds_label": "Round",
+        "of_label": "Turno di",
+        "of_target": "Bersaglio",
+        "of_source": "Fonte",
+        "save": "Tiro salvezza ripetuto",
+        "save_none": "Nessuno",
+        "save_dc": "CD",
+        "save_edge_start": "Inizio turno",
+        "save_edge_end": "Fine turno",
+        "source": "Fonte (facoltativa)",
+        "source_none": "Nessuna",
+        "concentration": "Finisce se la fonte perde la concentrazione",
+        "source_not_concentrating": "La fonte non è concentrata: prima deve lanciare l'incantesimo.",
+        "submit": "Applica condizione"
+      }
     }
   },
   "homebrew": {
@@ -2532,6 +2584,7 @@
             "La durata vale per le condizioni che attivi dopo la scelta.",
             "Una condizione con durata mostra i round rimasti vicino al nome.",
             "Per togliere un round a tutte le durate, tocca \"Fine round (−1)\". Il pulsante compare solo con una durata attiva.",
+            "Durante un incontro della sessione, \"Fine round (−1)\" non compare. I round scorrono a ogni tuo turno.",
             "Quando una durata arriva a 0, l'app toglie la condizione e mostra \"Scaduto\"."
           ]
         },
@@ -2564,6 +2617,34 @@
             "Per togliere una condizione personalizzata, tocca l'icona del cestino nella sua scheda.",
             "Con una condizione personalizzata attiva, compare il pulsante \"Inizio turno\".",
             "All'inizio del tuo turno, tocca \"Inizio turno\". L'app attiva le regole homebrew di inizio turno, per esempio un danno ogni turno."
+          ]
+        },
+        {
+          "title": "Condizioni del Game Master",
+          "items": [
+            "Il Game Master può applicare una condizione dalla stanza della sessione.",
+            "La sezione \"Effetti attivi\" mostra queste condizioni con l'etichetta \"dal GM\".",
+            "Ogni condizione mostra quando finisce, per esempio \"fino alla fine del tuo prossimo turno\".",
+            "Una condizione può finire quando un altro personaggio perde la concentrazione. In questo caso vedi \"finché\" e il nome del personaggio.",
+            "Una condizione con tiro salvezza mostra caratteristica, CD e momento del tiro, per esempio \"TS COS CD 15 alla fine del tuo turno\".",
+            "Durante un incontro, l'app toglie la condizione quando arriva la scadenza.",
+            "Puoi togliere una condizione del Game Master. L'app scrive la modifica nello storico.",
+            "Non puoi cambiare la scadenza, il tiro salvezza o la fonte di una condizione del Game Master."
+          ]
+        },
+        {
+          "title": "Tiri salvezza in sospeso",
+          "items": [
+            "Quando devi fare un tiro salvezza per una condizione, una fascia ambra compare in alto nelle pagine del personaggio.",
+            "La fascia resta visibile finché non fai il tiro.",
+            "Quando è il tuo turno, la fascia diventa rossa e mostra \"Tocca a te\".",
+            "Tocca la fascia per aprire il tiro salvezza.",
+            "Scegli \"Normale\", \"Vantaggio\" o \"Svantaggio\".",
+            "Tocca \"Tira\". L'app mostra il totale contro la CD.",
+            "Se superi il tiro, l'app toglie la condizione.",
+            "Se fallisci il tiro, la condizione resta. Se hai l'Ispirazione, tocca \"Usa Ispirazione\" per ritirare.",
+            "Tocca \"OK\" per chiudere il risultato.",
+            "Con più tiri salvezza in sospeso, l'app li mostra uno alla volta."
           ]
         }
       ]
@@ -3695,7 +3776,8 @@
             "Per passare al turno successivo o precedente, tocca le frecce nella barra.",
             "Se salti il turno di un personaggio, l'app chiede una conferma.",
             "Tocca un partecipante per modificare iniziativa e ordine, o per segnarlo morto.",
-            "Nella modalità \"Completa\", puoi anche applicare danno, cura e condizioni ai mostri.",
+            "Nella modalità \"Completa\", puoi anche applicare danno e cura ai mostri.",
+            "Se torni al turno precedente subito dopo un avanzamento, l'app annulla le scadenze e i tiri salvezza di quell'avanzamento.",
             "Tocca \"Termina\" per finire il combattimento.",
             "ATTENZIONE: \"Rimuovi dal combattimento\" toglie il partecipante dall'incontro."
           ]
@@ -3707,6 +3789,23 @@
             "Quando è il tuo turno, l'app mostra \"Tocca a te!\" e invia un messaggio nella chat privata di Telegram.",
             "All'inizio del tuo turno, l'app riduce di un round la durata di condizioni e concentrazione.",
             "Alla fine del turno, tocca \"Termina turno\"."
+          ]
+        },
+        {
+          "title": "Condizioni (Game Master)",
+          "items": [
+            "Tocca un partecipante. La sezione \"Condizioni attive\" mostra le condizioni con scadenza, tiro salvezza e fonte.",
+            "Per togliere una condizione, tocca la X vicino al nome.",
+            "Per aggiungere una condizione, tocca \"Aggiungi condizione\" e scegli la condizione.",
+            "In \"Durata\", scegli \"Nessuna\", \"N round\", \"Fino all'inizio del prossimo turno\" o \"Fino alla fine del prossimo turno\".",
+            "Per una durata legata al turno, scegli in \"Turno di\" il \"Bersaglio\" o la \"Fonte\".",
+            "In \"Tiro salvezza ripetuto\", scegli la caratteristica, scrivi la CD e scegli \"Inizio turno\" o \"Fine turno\".",
+            "In \"Fonte (facoltativa)\", scegli il partecipante che causa la condizione.",
+            "Se la fonte è un personaggio concentrato, puoi attivare \"Finisce se la fonte perde la concentrazione\". Prima il giocatore deve lanciare l'incantesimo.",
+            "Tocca \"Applica condizione\".",
+            "Durante l'incontro, l'app toglie la condizione alla scadenza. L'app chiede il tiro salvezza all'inizio o alla fine del turno del bersaglio.",
+            "Un pallino ambra sulla riga di un personaggio indica un tiro salvezza in sospeso. Il giocatore fa il tiro nella sua app.",
+            "Per un mostro, la riga mostra il tiro salvezza in sospeso. Fai il tiro al tavolo e tocca \"Superato\" o \"Fallito\". \"Superato\" toglie la condizione."
           ]
         }
       ]
@@ -4168,8 +4267,17 @@
             "Per far avanzare il tempo di un round, tocca \"Fine round (−1)\".",
             "L'app toglie un round alla durata delle condizioni e della concentrazione.",
             "Quando una durata arriva a 0, l'app toglie l'effetto e mostra un messaggio \"Scaduto\".",
+            "Durante un incontro della sessione, \"Fine round (−1)\" non compare. I round scorrono a ogni tuo turno.",
             "Per vedere le voci senza un tipo di azione, tocca \"Altro\".",
             "La sezione \"Altro\" mostra, per esempio, incantesimi con tempo di lancio più lungo."
+          ]
+        },
+        {
+          "title": "Tiri salvezza in sospeso",
+          "items": [
+            "Quando devi fare un tiro salvezza per una condizione, una fascia ambra compare in alto.",
+            "Quando è il tuo turno, la fascia diventa rossa.",
+            "Tocca la fascia per fare il tiro. Per i dettagli, leggi la guida della pagina Condizioni."
           ]
         }
       ]
@@ -4245,5 +4353,24 @@
         }
       ]
     }
+  },
+  "pendingSaves": {
+    "banner_one": "Tiro salvezza: {{ability}} CD {{dc}} — {{condition}}",
+    "banner_many": "{{count}} tiri salvezza in sospeso",
+    "banner_failed": "Fallito: {{condition}} — tocca per vedere",
+    "your_turn": "Tocca a te",
+    "title": "Tiro salvezza: {{ability}}",
+    "line": "{{condition}} · CD {{dc}}",
+    "source": "da {{name}}",
+    "progress": "{{n}} di {{total}}",
+    "roll": "Tira",
+    "ok": "OK",
+    "total_vs_dc": "{{total}} contro CD {{dc}}",
+    "passed": "Superato — sei libero da {{condition}}",
+    "failed": "Fallito — resti {{condition}}",
+    "gone": "Quella condizione è già terminata",
+    "not_rerollable": "Questo tiro non si può ritirare",
+    "inspiration_unavailable": "Ispirazione non disponibile",
+    "error": "Tiro non riuscito, riprova"
   }
 }

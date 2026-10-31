@@ -36,6 +36,7 @@ from api.schemas.session import (
     TurnState,
 )
 from api.services import telegram_notify
+from api.services.condition_effects import character_effect_payload
 from api.services.encounter_view import build_encounter_block
 from core.db.models import (
     Character,
@@ -214,6 +215,7 @@ async def _load_live_characters(
             ts = last_roll.get("timestamp")
             if joined and (not isinstance(ts, str) or ts < joined):
                 last_roll = None
+        effects, pendings = await character_effect_payload(db, char.id)
         out[char.id] = dict(
             id=char.id,
             user_id=char.user_id,
@@ -231,6 +233,9 @@ async def _load_live_characters(
             last_roll=last_roll,
             hp_bucket=hp_bucket(char),
             armor_category=armor_category(char),
+            condition_effects=effects,
+            has_pending_save=any(p.status == "pending" for p in pendings),
+            is_concentrating=char.concentrating_spell_id is not None,
         )
     return out
 
@@ -247,18 +252,9 @@ async def my_active_session(
     return await _find_active_session_for_user(user_id, db)
 
 
-@character_turn_router.get("/{character_id}/turn-state", response_model=TurnState)
-async def character_turn_state(
-    character_id: int,
-    user_id: Annotated[int, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
-) -> TurnState:
-    char = await db.get(Character, character_id)
-    if char is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Character not found")
-    if char.user_id != user_id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
-    row = (
+async def active_encounter_row(db: AsyncSession, character_id: int):
+    """(Encounter, combatant_id) of the PC's active encounter in an active session, or None."""
+    return (
         await db.execute(
             select(Encounter, Combatant.id)
             .join(Combatant, Combatant.encounter_id == Encounter.id)
@@ -271,10 +267,26 @@ async def character_turn_state(
             .limit(1)
         )
     ).first()
+
+
+@character_turn_router.get("/{character_id}/turn-state", response_model=TurnState)
+async def character_turn_state(
+    character_id: int,
+    user_id: Annotated[int, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> TurnState:
+    char = await db.get(Character, character_id)
+    if char is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Character not found")
+    if char.user_id != user_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+    _, pendings = await character_effect_payload(db, character_id)
+    row = await active_encounter_row(db, character_id)
     if row is None:
-        return TurnState(in_encounter=False, is_my_turn=False)
+        return TurnState(in_encounter=False, is_my_turn=False, pending_saves=pendings)
     enc, combatant_id = row
     return TurnState(
+        pending_saves=pendings,
         in_encounter=True,
         is_my_turn=enc.active_combatant_id == combatant_id,
         round=enc.round,
@@ -428,6 +440,9 @@ async def get_session_live(
                 temp_hp=raw["temp_hp"],
                 ac=raw["ac"],
                 conditions=raw["conditions"],
+                condition_effects=raw["condition_effects"],
+                has_pending_save=raw["has_pending_save"],
+                is_concentrating=raw["is_concentrating"],
                 death_saves=raw["death_saves"],
                 heroic_inspiration=raw["heroic_inspiration"],
                 last_roll=raw["last_roll"],
@@ -446,6 +461,9 @@ async def get_session_live(
                 temp_hp=None,
                 ac=None,
                 conditions=raw["conditions"],
+                condition_effects=raw["condition_effects"],
+                has_pending_save=raw["has_pending_save"],
+                is_concentrating=raw["is_concentrating"],
                 death_saves=None,
                 heroic_inspiration=raw["heroic_inspiration"],
                 last_roll=raw["last_roll"],
@@ -463,7 +481,7 @@ async def get_session_live(
     )
     open_encounter = enc_result.scalars().first()
     encounter_block = (
-        build_encounter_block(open_encounter, viewer_is_gm=viewer_is_gm)
+        await build_encounter_block(db, open_encounter, viewer_is_gm=viewer_is_gm)
         if open_encounter is not None
         else None
     )

@@ -1,6 +1,52 @@
 {
   "entries": [
     {
+      "version": "2.26.0",
+      "date": "2026-10-31",
+      "title": {
+        "it": "Condizioni che seguono i turni",
+        "en": "Conditions that follow the turns"
+      },
+      "added": {
+        "it": [
+          "Il GM applica le condizioni dalla stanza della sessione, con durata, tiro salvezza ripetuto, fonte e legame alla concentrazione. Può anche toglierle.",
+          "Una condizione può finire all'inizio o alla fine del turno di un combattente. L'incontro la fa scadere da solo.",
+          "Tiri salvezza in sospeso: una fascia in alto resta visibile finché non tiri, e diventa rossa nel tuo turno. Scegli Normale, Vantaggio o Svantaggio con un tocco. Se fallisci, puoi ritirare con l'Ispirazione.",
+          "Le condizioni legate alla concentrazione di un incantatore finiscono quando la concentrazione finisce, anche se l'incantesimo viene eliminato.",
+          "Il GM segna Superato o Fallito sui tiri salvezza dei mostri. Un pallino ambra indica i PG con un tiro salvezza in sospeso."
+        ],
+        "en": [
+          "The GM applies conditions from the session room, with duration, repeated saving throw, source and concentration link. The GM can also remove them.",
+          "A condition can end at the start or the end of a combatant's turn. The encounter expires it automatically.",
+          "Pending saving throws: a bar at the top stays visible until you roll, and turns red on your turn. Pick Normal, Advantage or Disadvantage with one tap. If you fail, you can re-roll with Inspiration.",
+          "Conditions tied to a caster's concentration end when the concentration ends, also when the spell is deleted.",
+          "The GM marks monster saving throws as Passed or Failed. An amber dot shows the PCs with a pending saving throw."
+        ]
+      },
+      "improved": {
+        "it": [
+          "Condizioni e Turno mostrano quando finisce ogni condizione e il suo tiro salvezza.",
+          "Il turno indietro del GM annulla anche le scadenze e i tiri salvezza dell'ultimo avanzamento.",
+          "Le guide di Condizioni, Turno e Stanza della sessione spiegano le nuove funzioni."
+        ],
+        "en": [
+          "Conditions and Turn show when each condition ends and its saving throw.",
+          "The GM's previous turn also undoes the expiries and saving throws of the last advance.",
+          "The Conditions, Turn and Session room guides explain the new features."
+        ]
+      },
+      "fixed": {
+        "it": [
+          "In incontro i round non scalano più due volte: \"Fine round\" è nascosto e i round scorrono a ogni tuo turno.",
+          "Le condizioni che il GM mette a un PG arrivano sulla sua scheda, con i loro effetti."
+        ],
+        "en": [
+          "In an encounter, rounds no longer advance twice: \"End of round\" is hidden and rounds advance on each of your turns.",
+          "Conditions the GM puts on a PC reach the character sheet, with their effects."
+        ]
+      }
+    },
+    {
       "version": "2.25.0",
       "date": "2026-10-31",
       "title": {

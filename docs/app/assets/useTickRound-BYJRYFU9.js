@@ -1,1 +1,0 @@
-import{u as c,c as i,e as u,j as n,k as f,l as p}from"./index-TSQgF5dZ.js";function h(s){const{t:o}=c(),a=i(),r=p();return u({mutationFn:()=>f.characters.tickRound(s),onSuccess:t=>{a.setQueryData(["character",s],t);const e=t.expired_effects??[];e.length>0&&r.info(o("character.conditions.duration.expired",{names:e.join(", ")})),n.success()},onError:()=>n.error()})}export{h as u};

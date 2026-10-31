@@ -12,6 +12,7 @@ import EmptyState from '@/components/ui/EmptyState'
 import ServerVersionBanner from '@/components/ui/ServerVersionBanner'
 import OfflineNotice, { type OfflineNoticeQuery } from '@/components/ui/OfflineNotice'
 import Pressable from '@/components/ui/Pressable'
+import PendingSavesBanner from '@/components/PendingSavesBanner'
 import PageHelp from '@/components/PageHelp'
 import { spring } from '@/styles/motion'
 
@@ -257,6 +258,7 @@ export default function Layout({ title, children, backTo, group, page, hideScrol
       </m.header>
 
       <ServerVersionBanner />
+      {isCharRoute && charId > 0 && <PendingSavesBanner charId={charId} />}
 
       <div className="relative flex-1 min-w-0 overflow-hidden">
         <main

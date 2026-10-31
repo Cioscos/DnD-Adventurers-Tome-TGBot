@@ -11,6 +11,7 @@ from __future__ import annotations
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.schemas.character import AcBreakdown, ActiveForm, CharacterFull
+from api.services.condition_effects import character_effect_payload
 from api.services.wild_shape import get_active_form
 from api.services.homebrew.passive import get_passive_modifiers, passive_modifier
 from api.services.spellcasting import build_spellcasting_info
@@ -40,6 +41,8 @@ async def build_character_response(
     # At 27 calls/response this is 54 SELECTs. Batch by preloading rules+items once
     # and exposing a sum_modifiers(rules, items, target_path) helper.
     response = CharacterFull.model_validate(char)
+    response.condition_effects, response.pending_saves = await character_effect_payload(
+        session, char.id)
     response.has_custom_silhouette = bool(getattr(char, "silhouette_path", None))
     response.spellcasting = build_spellcasting_info(char)
     response.attacks_per_action = attacks_per_action(char.classes)
