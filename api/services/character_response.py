@@ -43,7 +43,7 @@ async def build_character_response(
     response = CharacterFull.model_validate(char)
     response.condition_effects, response.pending_saves = await character_effect_payload(
         session, char.id)
-    response.has_custom_silhouette =bool(getattr(char, "silhouette_path", None))
+    response.has_custom_silhouette = bool(getattr(char, "silhouette_path", None))
     response.spellcasting = build_spellcasting_info(char)
     response.attacks_per_action = attacks_per_action(char.classes)
     form = await get_active_form(session, char.id)

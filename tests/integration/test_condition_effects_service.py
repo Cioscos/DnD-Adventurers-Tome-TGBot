@@ -52,3 +52,11 @@ async def test_player_duration_does_not_override_gm_effect(client, test_session_
     eff = (await client.get(f"/characters/{cid}")).json()["condition_effects"][0]
     assert (eff["expiry_anchor"], eff["expiry_count"], eff["save_ability"], eff["save_dc"]) == (
         "source", 3, "constitution", 13)
+
+
+async def test_player_duration_ignored_for_exhaustion(client):
+    cid = await _char(client)
+    r = await client.patch(f"/characters/{cid}/conditions",
+                           json={"conditions": {"exhaustion": 2}, "durations": {"exhaustion": 3}})
+    assert r.json()["condition_effects"] == []
+    assert r.json()["conditions"]["exhaustion"] == 2

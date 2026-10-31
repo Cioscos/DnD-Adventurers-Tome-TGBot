@@ -441,7 +441,7 @@ async def update_conditions(
     # apply_conditions already dropped the effects of conditions turned off
     gm_slugs = {e.slug for e in await effects_for_character(session, char_id) if e.applied_by_gm}
     for slug, rounds in (body.durations or {}).items():
-        if rounds and rounds > 0 and (char.conditions or {}).get(slug) and slug not in gm_slugs:
+        if slug != "exhaustion" and rounds and rounds > 0 and (char.conditions or {}).get(slug) and slug not in gm_slugs:
             await upsert_effect(session, ("character", char_id), slug,
                                 expiry=ExpirySpec("owner", "start", rounds))
     if result["changed"]:
