@@ -19,6 +19,7 @@ import type {
 import type {
   Ability,
   CharacterFull,
+  ResolveChoiceBody,
   CharacterSummary,
   CombatantPatch,
   ConcentrationSaveResult,
@@ -640,6 +641,16 @@ export const api = {
       }),
     remove: (charId: number, abilityId: number) =>
       request<void>(`/characters/${charId}/abilities/${abilityId}`, { method: 'DELETE' }),
+  },
+
+  choices: {
+    resolve: (charId: number, choiceId: string, body: ResolveChoiceBody) =>
+      request<CharacterFull>(`/characters/${charId}/choices/${choiceId}/resolve`, {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+    removeFeat: (charId: number, ruleId: number) =>
+      request<CharacterFull>(`/characters/${charId}/feats/${ruleId}`, { method: 'DELETE' }),
   },
 
   // ---------------------------------------------------------------------------

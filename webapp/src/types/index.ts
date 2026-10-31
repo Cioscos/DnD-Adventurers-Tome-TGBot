@@ -55,6 +55,18 @@ export interface Currency {
 
 export type ActionType = 'action' | 'bonus_action' | 'reaction' | 'free' | 'special'
 
+export interface PendingChoice {
+  id: string
+  kind: 'asi'
+  class_key: string
+  level: number
+  created_at: string
+}
+
+export type ResolveChoiceBody =
+  | { kind: 'asi'; increases: Record<string, number> }
+  | { kind: 'feat'; feat_key: string; ability?: string | null; custom_name?: string | null; custom_text?: string | null }
+
 export interface Ability {
   id: number
   name: string
@@ -220,6 +232,8 @@ export interface CharacterFull extends Omit<CharacterSummary, 'ac_homebrew_modif
   spellcasting?: SpellcastingInfo | null
   concentrating_spell_id?: number
   hp_gained?: number
+  /** Scelte di livello in sospeso (aumento caratteristiche / talento). */
+  pending_choices?: PendingChoice[] | null
   concentration_save?: ConcentrationSaveResult | null
   /** Id dello snapshot per annullare l'ultima modifica PF; null se nulla è cambiato. */
   hp_undo_id?: string | null

@@ -16,6 +16,7 @@ import type { ComponentType, SVGAttributes } from 'react'
 import SectionDivider from '@/components/ui/SectionDivider'
 import Reveal from '@/components/ui/Reveal'
 import Pressable from '@/components/ui/Pressable'
+import PendingChoicesBadge from '@/components/character/PendingChoicesBadge'
 import RestSheet from '@/components/character/RestSheet'
 import { haptic } from '@/auth/telegram'
 import { spring, stagger } from '@/styles/motion'
@@ -119,6 +120,7 @@ export default function MenuScreen({ char }: Props) {
 
   return (
     <div className="p-4 space-y-4 pb-safe">
+      <PendingChoicesBadge char={char} />
       {MENU_SECTIONS.map((section, sIdx) => {
         const SectionIcon = section.icon
         return (

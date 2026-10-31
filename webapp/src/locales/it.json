@@ -83,6 +83,56 @@
     }
   },
   "character": {
+    "level_choice": {
+      "badge": "Scelte di livello: {{count}}",
+      "title": "Scelta di livello",
+      "asi": "Aumento caratteristiche",
+      "feat": "Talento",
+      "points_left": "Punti rimasti: {{n}}",
+      "increase": "Aumenta {{name}}",
+      "decrease": "Riduci {{name}}",
+      "pick_ability": "Caratteristica da aumentare",
+      "custom": "Talento personalizzato",
+      "custom_name": "Nome del talento",
+      "custom_text": "Descrizione",
+      "confirm": "Conferma",
+      "error": "Impossibile salvare la scelta",
+      "feat_label": "Talento",
+      "feats": {
+        "grappler": {
+          "name": "Lottatore",
+          "summary": "Vantaggio ai tiri per colpire le creature che stai lottando; puoi tentare di immobilizzarle."
+        },
+        "alert": {
+          "name": "Allerta",
+          "summary": "+5 all'iniziativa; non puoi essere sorpreso se sei cosciente."
+        },
+        "tough": {
+          "name": "Robusto",
+          "summary": "+2 punti ferita massimi per ogni livello."
+        },
+        "mobile": {
+          "name": "Mobile",
+          "summary": "+3 metri (+10 piedi) di velocita'; lo scatto non provoca attacchi di opportunita'."
+        },
+        "observant": {
+          "name": "Osservatore",
+          "summary": "+1 Intelligenza o Saggezza; +5 a Percezione e Indagare passive."
+        },
+        "resilient": {
+          "name": "Resiliente",
+          "summary": "+1 a una caratteristica a scelta e competenza nei suoi tiri salvezza."
+        },
+        "war_caster": {
+          "name": "Incantatore Bellico",
+          "summary": "Vantaggio ai tiri salvezza su Costituzione per mantenere la concentrazione."
+        },
+        "lucky": {
+          "name": "Fortunato",
+          "summary": "3 punti fortuna per riposo lungo per ritirare un d20."
+        }
+      }
+    },
     "roll_notes": {
       "title": "Nota situazionale: {{name}}",
       "edit": "Modifica nota: {{name}}",
@@ -1656,6 +1706,7 @@
     "disabled_state": "Disattivata",
     "install_success": "Template installato",
     "delete_success": "Regola eliminata",
+    "feat_label": "Talento",
     "from_template": "Da template",
     "no_rules_yet": "Nessuna regola ancora. Installa un template per iniziare.",
     "load_error": "Impossibile caricare le regole. Riprova più tardi.",

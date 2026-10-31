@@ -37,6 +37,7 @@ interface RuleCardProps {
   manualTriggerLabel: string
   deleteLabel: string
   fromTemplateLabel: string
+  featLabel: string
 }
 
 function RuleCard({
@@ -51,15 +52,18 @@ function RuleCard({
   manualTriggerLabel,
   deleteLabel,
   fromTemplateLabel,
+  featLabel,
 }: RuleCardProps) {
+  // Le regole dei talenti si gestiscono dalla scelta di livello: non modificabili.
+  const isFeat = rule.template_id?.startsWith('feat:') ?? false
   return (
     <m.div
-      onClick={onClick}
-      whileTap={{ scale: 0.99 }}
+      onClick={isFeat ? undefined : onClick}
+      whileTap={isFeat ? undefined : { scale: 0.99 }}
       transition={spring.press}
       className={`group flex items-center gap-3 p-3 rounded-2xl
                   bg-dnd-surface-raised border border-dnd-border
-                  hover:border-dnd-gold/60 cursor-pointer
+                  hover:border-dnd-gold/60 ${isFeat ? '' : 'cursor-pointer'}
                   transition-[border-color] duration-200 min-h-[64px]
                   ${dimmed ? 'opacity-70' : ''}`}
     >
@@ -74,7 +78,7 @@ function RuleCard({
                            bg-dnd-chip-bg border border-dnd-chip-border/60
                            text-dnd-gold-bright font-cinzel uppercase
                            text-xs tracking-normal leading-none whitespace-nowrap">
-            {fromTemplateLabel}
+            {isFeat ? featLabel : fromTemplateLabel}
           </span>
         )}
         {rule.description && (
@@ -263,9 +267,15 @@ export default function Homebrew() {
   })
 
   const deleteMut = useMutation({
-    mutationFn: (ruleId: number) => api.homebrew.deleteRule(charId, ruleId),
+    mutationFn: (ruleId: number) => {
+      const isFeat = rules?.find((r) => r.id === ruleId)?.template_id?.startsWith('feat:')
+      return isFeat
+        ? api.choices.removeFeat(charId, ruleId).then(() => undefined)
+        : api.homebrew.deleteRule(charId, ruleId)
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['homebrew-rules', charId] })
+      qc.invalidateQueries({ queryKey: ['character', charId] })
       setConfirmDeleteId(null)
       haptic.success()
       toast.success(t('homebrew.delete_success'), { hapticFeedback: false })
@@ -374,6 +384,7 @@ export default function Homebrew() {
                     manualTriggerLabel={t('homebrew.manual_trigger')}
                     deleteLabel={t('common.delete')}
                     fromTemplateLabel={t('homebrew.from_template')}
+                    featLabel={t('homebrew.feat_label')}
                   />
                 </Reveal.Item>
               )
@@ -410,6 +421,7 @@ export default function Homebrew() {
                   manualTriggerLabel={t('homebrew.manual_trigger')}
                   deleteLabel={t('common.delete')}
                   fromTemplateLabel={t('homebrew.from_template')}
+                    featLabel={t('homebrew.feat_label')}
                 />
               </Reveal.Item>
             ))}

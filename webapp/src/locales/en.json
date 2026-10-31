@@ -83,6 +83,56 @@
     }
   },
   "character": {
+    "level_choice": {
+      "badge": "Level choices: {{count}}",
+      "title": "Level choice",
+      "asi": "Ability score increase",
+      "feat": "Feat",
+      "points_left": "Points left: {{n}}",
+      "increase": "Increase {{name}}",
+      "decrease": "Decrease {{name}}",
+      "pick_ability": "Ability to increase",
+      "custom": "Custom feat",
+      "custom_name": "Feat name",
+      "custom_text": "Description",
+      "confirm": "Confirm",
+      "error": "Could not save the choice",
+      "feat_label": "Feat",
+      "feats": {
+        "grappler": {
+          "name": "Grappler",
+          "summary": "Advantage on attacks against creatures you are grappling; you can try to pin them."
+        },
+        "alert": {
+          "name": "Alert",
+          "summary": "+5 to initiative; you cannot be surprised while conscious."
+        },
+        "tough": {
+          "name": "Tough",
+          "summary": "+2 maximum hit points per level."
+        },
+        "mobile": {
+          "name": "Mobile",
+          "summary": "+10 feet speed; Dash does not provoke opportunity attacks."
+        },
+        "observant": {
+          "name": "Observant",
+          "summary": "+1 Intelligence or Wisdom; +5 to passive Perception and Investigation."
+        },
+        "resilient": {
+          "name": "Resilient",
+          "summary": "+1 to one ability of your choice and proficiency in its saving throws."
+        },
+        "war_caster": {
+          "name": "War Caster",
+          "summary": "Advantage on Constitution saves to maintain concentration."
+        },
+        "lucky": {
+          "name": "Lucky",
+          "summary": "3 luck points per long rest to reroll a d20."
+        }
+      }
+    },
     "roll_notes": {
       "title": "Situational note: {{name}}",
       "edit": "Edit note: {{name}}",
@@ -1656,6 +1706,7 @@
     "disabled_state": "Disabled",
     "install_success": "Template installed",
     "delete_success": "Rule deleted",
+    "feat_label": "Feat",
     "from_template": "From template",
     "no_rules_yet": "No rules yet. Install a template to get started.",
     "load_error": "Couldn't load rules. Try again later.",
