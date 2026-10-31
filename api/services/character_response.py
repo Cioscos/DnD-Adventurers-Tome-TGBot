@@ -17,6 +17,7 @@ from core.data.skills import SKILL_ABILITY_MAP
 from core.db.models import ABILITY_NAMES, Character
 from core.game.actions import attacks_per_action
 from core.game.item_bonuses import item_bonus_total
+from core.game.skills import PASSIVE_SKILLS, has_jack_of_all_trades, passive_score, skill_bonus
 from api.routers._helpers import effective_ability_mod
 
 
@@ -69,6 +70,12 @@ async def build_character_response(
         val = await get_passive_modifiers(session, char, f"character.skill.{slug}")
         if val:
             response.skills_homebrew_modifiers[slug] = val
+
+    response.jack_of_all_trades = has_jack_of_all_trades(char)
+    for slug in SKILL_ABILITY_MAP:
+        response.skill_bonuses[slug] = await skill_bonus(session, char, slug)
+    for slug in PASSIVE_SKILLS:
+        response.passives[slug] = await passive_score(session, char, slug)
 
     for slug in ABILITY_NAMES:
         val = await get_passive_modifiers(session, char, f"character.saving_throw.{slug}")

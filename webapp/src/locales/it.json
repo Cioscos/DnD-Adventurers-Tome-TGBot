@@ -152,6 +152,7 @@
       "none_m": "Nessuno",
       "none_f": "Nessuna",
       "speed_homebrew_label": "Velocità · regola homebrew",
+      "senses": "Sensi",
       "speed_items_label": "Velocità · oggetti magici",
       "customize": "Personalizza schermata",
       "layout_title": "Layout schermata",
@@ -362,6 +363,12 @@
       "unarmored_formula": "CA {{value}}",
       "unarmored_active_hint": "La Base si aggiorna con le caratteristiche; non indossare armatura del corpo."
     },
+    "senses": {
+      "darkvision": "Scurovisione",
+      "blindsight": "Vista cieca",
+      "truesight": "Vista pura",
+      "tremorsense": "Percezione tellurica"
+    },
     "skills": {
       "title": "Skills",
       "proficient": "Competente",
@@ -370,6 +377,8 @@
       "breakdown": "Bonus attuale: {{total}} = {{abilMod}} {{ability}} {{prof}} comp",
       "prof_bonus": "Bonus competenza",
       "passive_perception": "Percezione Passiva",
+      "passive_insight": "Intuizione Passiva",
+      "passive_investigation": "Indagare Passivo",
       "roll": "Tira dado",
       "acrobatics": "Acrobazia",
       "animal_handling": "Addestrare Animali",
@@ -746,6 +755,7 @@
       "proficiencies": "Competenze",
       "damage_modifiers": "Modificatori Danno",
       "physicality": "Fisicità",
+      "senses": "Sensi",
       "culture": "Cultura",
       "resistances": "Resistenze",
       "immunities": "Immunità",

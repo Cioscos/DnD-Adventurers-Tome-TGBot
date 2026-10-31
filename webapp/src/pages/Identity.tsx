@@ -34,6 +34,8 @@ type DamageModifiers = {
 type Draft = {
   name: string; race: string; gender: string; background: string
   alignment: string; speed: string
+  // tipo -> distanza nell'unità scelta; assente = senso non posseduto
+  senses: Record<string, string>
   personality_traits: string; ideals: string; bonds: string; flaws: string
   languages: string[]; general_proficiencies: string[]
   damageModifiers: DamageModifiers
@@ -44,6 +46,8 @@ const DMG_TONES: Record<keyof DamageModifiers, { text: string; icon: typeof Shie
   immunities: { text: 'text-dnd-gold-bright', icon: Zap },
   vulnerabilities: { text: 'text-dnd-crimson-bright', icon: Flame },
 }
+
+const SENSE_TYPES = ['darkvision', 'blindsight', 'truesight', 'tremorsense'] as const
 
 const DMG_KEYS: Array<keyof DamageModifiers> = ['resistances', 'immunities', 'vulnerabilities']
 const DMG_SLUGS = DAMAGE_TYPES.filter((d) => d !== 'dmg_other').map((d) => d.replace(/^dmg_/, ''))
@@ -82,6 +86,10 @@ export default function Identity() {
         background: char.background ?? '',
         alignment: char.alignment ?? '',
         speed: String(feetToDisplay(char.speed ?? 30, unitSystem)),
+        senses: Object.fromEntries(
+          ((char.settings?.senses as { type: string; range_ft: number }[] | undefined) ?? [])
+            .map((s) => [s.type, String(feetToDisplay(s.range_ft, unitSystem))]),
+        ),
         personality_traits: personality.traits ?? '',
         ideals: personality.ideals ?? '',
         bonds: personality.bonds ?? '',
@@ -121,6 +129,14 @@ export default function Identity() {
         languages: draft.languages,
         general_proficiencies: draft.general_proficiencies,
         damage_modifiers: draft.damageModifiers,
+        // settings replaces the whole dict server-side: always merge.
+        settings: {
+          ...char?.settings,
+          senses: SENSE_TYPES.filter((k) => draft.senses[k] !== undefined).map((k) => ({
+            type: k,
+            range_ft: displayToFeet(Number(draft.senses[k]) || 0, unitSystem),
+          })),
+        },
       })
     },
     onSuccess: (updated) => {
@@ -232,6 +248,53 @@ export default function Identity() {
           )}
         </Surface>
       </div>
+
+      {/* Senses */}
+      <Surface variant="elevated" className="mt-3 space-y-2">
+        <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim">
+          {t('character.identity.senses')}
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {SENSE_TYPES.map((k) => {
+            const on = draft.senses[k] !== undefined
+            const toggleSense = () =>
+              setDraft((d) => {
+                if (!d) return d
+                const next = { ...d.senses }
+                if (on) delete next[k]
+                else next[k] = String(feetToDisplay(60, unitSystem))
+                return { ...d, senses: next }
+              })
+            return (
+              <div key={k} className="flex items-center gap-2">
+                <Pressable
+                  type="button"
+                  onClick={toggleSense}
+                  aria-pressed={on}
+                  className={`min-h-11 flex-1 px-3 rounded-xl border text-sm font-body text-left ${
+                    on ? 'bg-dnd-gold/15 border-dnd-gold text-dnd-gold-bright' : 'bg-dnd-surface border-dnd-border text-dnd-text'
+                  }`}
+                >
+                  {t(`character.senses.${k}`)}
+                </Pressable>
+                {on && (
+                  <div className="w-24 shrink-0">
+                    <Input
+                      type="number"
+                      min={0}
+                      inputMode="decimal"
+                      aria-label={`${t(`character.senses.${k}`)} (${unitLabel(unitSystem)})`}
+                      value={draft.senses[k]}
+                      onChange={(v) => setDraft((d) => d ? { ...d, senses: { ...d.senses, [k]: v } } : d)}
+                      trailingAction={<span className="text-dnd-text-muted text-sm font-cinzel pr-1">{unitLabel(unitSystem)}</span>}
+                    />
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </Surface>
 
       {/* Personality */}
       <SectionDivider icon={<Feather size={11} />} align="center">

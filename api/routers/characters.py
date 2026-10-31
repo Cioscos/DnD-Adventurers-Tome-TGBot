@@ -27,6 +27,7 @@ from core.db.models import (
 )
 from core.data.xp_thresholds import xp_to_level
 from core.data.skills import SKILL_ABILITY_MAP
+from core.game.skills import skill_bonus
 from core.data.labels import ability_label, skill_label
 from api.services.class_features import sync_class_feature_abilities
 from core.game.stats import hit_points_for_level
@@ -591,18 +592,7 @@ async def roll_skill(
             raise HTTPException(status_code=409, detail="Ispirazione non disponibile")
         char.heroic_inspiration = False
 
-    ability_mod = effective_ability_mod(char, _SKILL_ABILITY[skill_name])
-
-    skills: dict = char.skills or {}
-    level = skills.get(skill_name)
-    pb = char.proficiency_bonus
-    if level == "expert":
-        bonus = ability_mod + 2 * pb
-    elif level is True or level == 1:
-        bonus = ability_mod + pb
-    else:
-        bonus = ability_mod
-    bonus += await get_passive_modifiers(session, char, f"character.skill.{skill_name}")
+    bonus = await skill_bonus(session, char, skill_name)
 
     outcome = resolve_body(body)
     die = outcome.kept

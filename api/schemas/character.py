@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Literal, Optional
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, TypeAdapter, field_validator, model_validator
 
 from api.schemas.common import (
     AbilityRead,
@@ -112,6 +112,10 @@ class CharacterFull(BaseModel):
     initiative_bonus: int = 0
     skills_homebrew_modifiers: dict[str, int] = Field(default_factory=dict)
     saves_homebrew_modifiers: dict[str, int] = Field(default_factory=dict)
+    # Server-computed totals shared by rolls and the sheet (skill_bonus / passive_score).
+    skill_bonuses: dict[str, int] = Field(default_factory=dict)
+    passives: dict[str, int] = Field(default_factory=dict)
+    jack_of_all_trades: bool = False
     saves_items_modifiers: dict[str, int] = Field(default_factory=dict)
 
     # Carry
@@ -281,6 +285,13 @@ class CharacterUpdate(BaseModel):
     damage_modifiers: Optional[dict[str, Any]] = None
     spell_slots_mode: Optional[str] = None
     settings: Optional[dict[str, Any]] = None
+
+    @field_validator("settings")
+    @classmethod
+    def _validate_senses(cls, v: Optional[dict[str, Any]]) -> Optional[dict[str, Any]]:
+        if v is not None and "senses" in v:
+            TypeAdapter(list[SpeciesSense]).validate_python(v["senses"])
+        return v
 
 
 class SkillsUpdate(BaseModel):

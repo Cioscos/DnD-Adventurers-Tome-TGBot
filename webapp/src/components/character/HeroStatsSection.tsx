@@ -60,7 +60,10 @@ export default function HeroStatsSection({ char }: Props) {
   const percLvl = skillLevel(skills['perception'])
   const percHb = char.skills_homebrew_modifiers?.['perception'] ?? 0
   const passivePerception =
+    char.passives?.perception ??
     10 + abilityMod('wisdom') + (percLvl === 'expert' ? 2 * pb : percLvl ? pb : 0) + percHb
+  const senses = ((char.settings?.senses as { type: string; range_ft: number }[] | undefined) ?? [])
+    .filter((s) => s.range_ft > 0)
 
   const speedTotal = (char.speed ?? 30) + (char.speed_homebrew_modifier ?? 0) + (char.speed_items_modifier ?? 0)
   const speedLabel = formatLength(speedTotal, unitSystem)
@@ -195,6 +198,14 @@ export default function HeroStatsSection({ char }: Props) {
           )
         })}
       </div>
+
+      {senses.length > 0 && (
+        <p className="mt-1.5 text-xs font-body text-dnd-text-muted text-center">
+          <span className="font-cinzel uppercase tracking-wide text-dnd-gold-dim">{t('character.hero.senses')}</span>
+          {': '}
+          {senses.map((s) => `${t(`character.senses.${s.type}`)} ${formatLength(s.range_ft, unitSystem)}`).join(' · ')}
+        </p>
+      )}
 
       {/* Speed folds its homebrew modifier into the total above; surface an
           attribution row (like AC/HP) so an altered speed isn't unexplained (#34). */}

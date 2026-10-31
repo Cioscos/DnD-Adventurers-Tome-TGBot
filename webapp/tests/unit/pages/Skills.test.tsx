@@ -155,8 +155,23 @@ describe('Skills page', () => {
     renderWithProviders(<Skills />)
     // athletics expert: +3 mod + 2×(+3 PB) = +9.
     expect(await screen.findByText('+9')).toBeInTheDocument()
-    // passive perception = 10 + (WIS +1, no prof) = 11.
-    expect(screen.getByText('11')).toBeInTheDocument()
+    // passive perception = 10 + (WIS +1, no prof) = 11 (insight too: same ability).
+    expect(screen.getAllByText('11').length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('shows server totals, three passives and the half marker for Jack of All Trades', async () => {
+    getChar.mockResolvedValue({
+      ...baseChar,
+      jack_of_all_trades: true,
+      skill_bonuses: { athletics: 9, acrobatics: 5, stealth: 7 },
+      passives: { perception: 13, insight: 14, investigation: 15 },
+    })
+    renderWithProviders(<Skills />)
+    expect(await screen.findByText('+7')).toBeInTheDocument()
+    expect(screen.getByText('13')).toBeInTheDocument()
+    expect(screen.getByText('14')).toBeInTheDocument()
+    expect(screen.getByText('15')).toBeInTheDocument()
+    expect(screen.getAllByText('½').length).toBeGreaterThan(0)
   })
 
   it('tapping a skill cycles its proficiency level and PATCHes it', async () => {

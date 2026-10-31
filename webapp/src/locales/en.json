@@ -152,6 +152,7 @@
       "none_m": "None",
       "none_f": "None",
       "speed_homebrew_label": "Speed · homebrew rule",
+      "senses": "Senses",
       "speed_items_label": "Speed · magic items",
       "customize": "Customize screen",
       "layout_title": "Screen layout",
@@ -362,6 +363,12 @@
       "unarmored_formula": "AC {{value}}",
       "unarmored_active_hint": "Base updates with ability scores; do not wear body armor."
     },
+    "senses": {
+      "darkvision": "Darkvision",
+      "blindsight": "Blindsight",
+      "truesight": "Truesight",
+      "tremorsense": "Tremorsense"
+    },
     "skills": {
       "title": "Skills",
       "proficient": "Proficient",
@@ -370,6 +377,8 @@
       "breakdown": "Current bonus: {{total}} = {{abilMod}} {{ability}} {{prof}} prof",
       "prof_bonus": "Proficiency bonus",
       "passive_perception": "Passive Perception",
+      "passive_insight": "Passive Insight",
+      "passive_investigation": "Passive Investigation",
       "roll": "Roll dice",
       "acrobatics": "Acrobatics",
       "animal_handling": "Animal Handling",
@@ -746,6 +755,7 @@
       "proficiencies": "Proficiencies",
       "damage_modifiers": "Damage Modifiers",
       "physicality": "Physicality",
+      "senses": "Senses",
       "culture": "Culture",
       "resistances": "Resistances",
       "immunities": "Immunities",

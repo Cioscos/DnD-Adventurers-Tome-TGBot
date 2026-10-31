@@ -221,6 +221,11 @@ export interface CharacterFull extends Omit<CharacterSummary, 'ac_homebrew_modif
   skills_homebrew_modifiers?: Record<string, number>
   saves_homebrew_modifiers?: Record<string, number>
   saves_items_modifiers?: Record<string, number>
+  /** Totali calcolati dal server (stesso valore del tiro): bonus abilità e punteggi passivi. */
+  skill_bonuses?: Record<string, number>
+  passives?: Record<string, number>
+  /** Tuttofare (Bardo >= 2): mezza competenza sulle abilità non competenti. */
+  jack_of_all_trades?: boolean
   carry_capacity: number
   carry_capacity_override: boolean
   has_custom_silhouette: boolean
