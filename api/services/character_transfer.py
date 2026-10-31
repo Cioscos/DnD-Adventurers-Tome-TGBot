@@ -84,10 +84,16 @@ async def build_export(session: AsyncSession, char: Character) -> CharacterExpor
     for k in ("languages", "general_proficiencies", "pending_choices"):
         cols[k] = cols[k] or []
     # hp_rolls e' indicizzato per class_id: nel file usa le stesse chiavi "c{i}" delle abilita'.
-    if cols["settings"].get("hp_rolls"):
-        cols["settings"] = {**cols["settings"], "hp_rolls": {
-            class_key[int(cid)]: m for cid, m in cols["settings"]["hp_rolls"].items()
-            if int(cid) in class_key}}
+    raw_rolls = cols["settings"].get("hp_rolls")
+    if raw_rolls is not None:  # dati legacy/corrotti: scarta quel che non e' {id: {...}}
+        valid = {}
+        for cid, m in (raw_rolls.items() if isinstance(raw_rolls, dict) else ()):
+            try:
+                if int(cid) in class_key and isinstance(m, dict):
+                    valid[class_key[int(cid)]] = m
+            except (TypeError, ValueError):
+                pass
+        cols["settings"] = {**cols["settings"], "hp_rolls": valid}
 
     # Export tollerante: i limiti di import non si applicano ai dati gia' salvati (altrimenti 500).
     # Anche /duplicate ne beneficia: passa l'oggetto gia' costruito a import_character senza
@@ -194,11 +200,13 @@ async def import_character(
     await session.flush()  # assegna gli id nuovi
 
     rolls = (char.settings or {}).get("hp_rolls")
-    if rolls:  # chiavi "c{i}" del file -> id nuovi; chiavi sconosciute scartate
+    if isinstance(rolls, dict) and rolls:  # chiavi "c{i}" del file -> id nuovi; chiavi sconosciute scartate
         s = dict(char.settings)
         s["hp_rolls"] = {str(classes[int(k[1:])].id): v for k, v in rolls.items()
-                         if k in class_keys}
+                         if k in class_keys and isinstance(v, dict)}
         char.settings = s
+    elif rolls is not None:  # non-dict (file artefatto): ignora
+        char.settings = {k: v for k, v in char.settings.items() if k != "hp_rolls"}
 
     for a in data.abilities:
         src = classes[int(a.source_class_key[1:])].id if a.source_class_key else None

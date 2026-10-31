@@ -162,3 +162,24 @@ async def test_rolls_survive_export_import_and_duplicate(client):
         assert copy["classes"][0]["id"] != gid
         r = await client.post(f"/characters/{copy['id']}/hp/recalc")
         assert r.json()["hit_points"] == 28
+
+
+async def test_import_ignores_malformed_hp_rolls(client):
+    cid, _ = await _fighter(client)
+    exp = (await client.get(f"/characters/{cid}/export")).json()
+    for bad in ([], "x", {"zz": {"2": 5}, "c0": 3}):
+        exp["character"]["settings"] = {"hp_rolls": bad}
+        r = await client.post("/characters/import", json=exp)
+        assert r.status_code == 201, (bad, r.text)
+
+
+async def test_export_and_duplicate_tolerate_corrupt_stored_hp_rolls(client, test_session_factory):
+    from sqlalchemy import update
+    from core.db.models import Character
+    cid, _ = await _fighter(client)
+    for bad in ([], "x", {"abc": {"2": 5}}, {"1": 7}):
+        async with test_session_factory() as s:
+            await s.execute(update(Character).where(Character.id == cid).values(settings={"hp_rolls": bad}))
+            await s.commit()
+        assert (await client.get(f"/characters/{cid}/export")).status_code == 200, bad
+        assert (await client.post(f"/characters/{cid}/duplicate")).status_code == 201, bad

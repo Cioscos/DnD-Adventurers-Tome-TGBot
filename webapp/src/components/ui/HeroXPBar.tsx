@@ -43,7 +43,7 @@ export default function HeroXPBar({
     : 100
 
   const rightLabel = levelUpReady ? null : (
-    nextThreshold !== null
+    milestone ? (totalClassLevel >= 20 ? t('character.xp.bar.max') : null) : nextThreshold !== null
       ? t('character.xp.bar.progress', {
           current: formatInt(currentXP, i18n.language),
           threshold: formatInt(nextThreshold, i18n.language),
