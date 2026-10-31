@@ -18,6 +18,7 @@ from api.database import get_db
 from api.services.d20 import d20_records, resolve_body
 from api.services.dice_stats import record_dice
 from api.services.effects import apply_heal
+from api.services.durations import end_concentration
 from api.services.telegram_notify import notify_party_emergency
 from api.services.homebrew.dispatcher import dispatch
 from api.services.homebrew.passive import get_passive_modifiers
@@ -213,7 +214,7 @@ async def update_hp(
 
         # Privo di sensi (0 PF) => fine concentrazione (RAW)
         if char.current_hit_points == 0:
-            char.concentrating_spell_id = None
+            end_concentration(char)
 
         # Auto concentration save — only if still conscious and concentrating
         if (
@@ -358,7 +359,7 @@ async def rest(
         char.current_hit_points = char.hit_points + hb_hp_bonus
         char.temp_hp = 0
         # Break concentration
-        char.concentrating_spell_id = None
+        end_concentration(char)
         # Reset all spell slots
         for slot in char.spell_slots:
             slot.used = 0
@@ -410,7 +411,7 @@ async def rest(
 
     elif body.rest_type == "short":
         # Break concentration
-        char.concentrating_spell_id = None
+        end_concentration(char)
         # Warlock Pact Magic slots recover on a short rest (unlike regular slots).
         for slot in char.spell_slots:
             if slot.is_pact:
@@ -696,6 +697,6 @@ async def revive(
         char.is_dead = False
         char.current_hit_points = 1
         char.death_saves = {"successes": 0, "failures": 0, "stable": False}
-        char.concentrating_spell_id = None
+        end_concentration(char)
         _add_history(session, char.id, "death_save", "Riportato in vita (1 PF)")
     return await build_character_response(session, char)

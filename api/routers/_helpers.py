@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from api.schemas.common import ConcentrationSaveResult, RollMode
 from api.services.d20 import d20_history_label, d20_records, resolve_d20
 from api.services.dice_stats import record_dice
+from api.services.durations import end_concentration
 from api.services.homebrew.passive import get_passive_modifiers
 from core.db.models import Character, CharacterHistory
 from core.game.stats import effective_ability_score
@@ -164,7 +165,7 @@ async def roll_concentration_save(
 
     lost_concentration = not success and char.concentrating_spell_id is not None
     if lost_concentration:
-        char.concentrating_spell_id = None
+        end_concentration(char)
 
     _append_concentration_history(
         session, char.id, damage, dc, d20_history_label(outcome), con_mod, total, success, lost_concentration,

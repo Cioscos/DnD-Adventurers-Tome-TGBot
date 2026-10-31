@@ -137,6 +137,9 @@ class CharacterFull(BaseModel):
     # Populated only by endpoints that fire homebrew rules (POST /hp, POST /attack, etc.).
     homebrew_notifications: Optional[list[dict]] = None
 
+    # Populated only by POST /rounds/tick: labels of effects that just expired.
+    expired_effects: Optional[list[str]] = None
+
     # Populated only by POST /items/{id}/use (consumable use result).
     consumable_use: Optional[ConsumableUseResult] = None
 
@@ -255,6 +258,8 @@ class SavingThrowsUpdate(BaseModel):
 class ConditionsUpdate(BaseModel):
     """Map of condition_slug → bool or int (exhaustion level)."""
     conditions: dict[str, Any]
+    # slug -> rounds left; None removes the duration
+    durations: Optional[dict[str, Optional[int]]] = None
 
 
 class InspirationUpdate(BaseModel):

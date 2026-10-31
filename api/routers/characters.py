@@ -46,6 +46,7 @@ from api.services.d20 import d20_history_label, d20_records, resolve_body
 from api.services.dice_stats import record_dice
 from api.services.character_response import build_character_response
 from api.services.effects import apply_conditions
+from api.services.durations import set_condition_durations, tick_rounds
 from api.services.spell_slots import recalc_spell_slots
 from api.services.homebrew.passive import get_passive_modifiers
 
@@ -368,6 +369,12 @@ async def update_conditions(
 ) -> CharacterFull:
     char = await _get_owned(char_id, user_id, session, full=True)
     result = await apply_conditions(session, char, body.conditions)
+    durations = dict(body.durations or {})
+    for slug, val in body.conditions.items():
+        if not val:
+            durations[slug] = None
+    if durations:
+        set_condition_durations(char, durations)
     if result["changed"]:
         await prune_history(session, char)
 
@@ -377,6 +384,21 @@ async def update_conditions(
     # serialization.
     char = await _refresh_char_full(session, char_id, user_id)
     return await build_character_response(session, char)
+
+
+@router.post("/{char_id}/rounds/tick", response_model=CharacterFull)
+async def tick_round(
+    char_id: int,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> CharacterFull:
+    char = await _get_owned(char_id, user_id, session, full=True)
+    expired = await tick_rounds(session, char)
+    await prune_history(session, char)
+    char = await _refresh_char_full(session, char_id, user_id)
+    resp = await build_character_response(session, char)
+    resp.expired_effects = expired
+    return resp
 
 
 # ---------------------------------------------------------------------------

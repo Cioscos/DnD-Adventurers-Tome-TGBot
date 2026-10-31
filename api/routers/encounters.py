@@ -30,6 +30,7 @@ from api.schemas.encounter import (
 )
 from api.services import telegram_notify
 from api.services.d20 import resolve_body
+from api.services.durations import tick_rounds
 from api.services.encounter_view import build_encounter_block
 from core.db.models import (
     Character,
@@ -427,6 +428,10 @@ async def _turn_endpoint(
     moved = _advance_turn(enc, list(enc.combatants), backward=backward)
     _touch(session)
     await db.flush()
+    if not backward and moved is not None and moved.kind == "pc" and moved.character_id:
+        pc = await db.get(Character, moved.character_id)
+        if pc is not None:
+            await tick_rounds(db, pc)
     if moved is not None:
         await _notify_turn(enc, moved)
     return build_encounter_block(enc, viewer_is_gm=is_gm)

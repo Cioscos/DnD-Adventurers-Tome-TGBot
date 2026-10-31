@@ -28,6 +28,8 @@ from api.schemas.spell import (
     SpellUseRequest,
 )
 from api.routers.items import _roll_dice, _DICE_RE
+from api.services.durations import end_concentration, set_concentration_rounds
+from core.game.actions import parse_duration_rounds
 from api.routers._helpers import collect_homebrew_notifications, roll_concentration_save
 from api.services.character_response import build_character_response
 from api.services.d20 import d20_records, d20_history_label, resolve_body
@@ -132,6 +134,7 @@ def _consume_cast(
 
     if spell.is_concentration:
         char.concentrating_spell_id = spell.id
+        set_concentration_rounds(char, parse_duration_rounds(spell.duration))
 
 
 @router.get("/{char_id}/spells", response_model=list[SpellRead])
@@ -257,6 +260,7 @@ async def spell_attack(
         # Cantrip: nessun consumo, ma la concentrazione si attiva comunque.
         if spell.is_concentration:
             char.concentrating_spell_id = spell.id
+            set_concentration_rounds(char, parse_duration_rounds(spell.duration))
     else:
         _consume_cast(session, char, spell, body.slot_level, body.ritual)
 
@@ -311,7 +315,11 @@ async def update_concentration(
     session: Annotated[AsyncSession, Depends(get_db)],
 ) -> CharacterFull:
     char = await _get_owned_full(char_id, user_id, session)
-    char.concentrating_spell_id = body.spell_id
+    if body.spell_id is None:
+        end_concentration(char)
+    else:
+        char.concentrating_spell_id = body.spell_id
+        set_concentration_rounds(char, body.rounds)
     return await build_character_response(session, char)
 
 
