@@ -15,6 +15,7 @@ from api.services.homebrew.passive import get_passive_modifiers
 from api.services.spellcasting import build_spellcasting_info
 from core.data.skills import SKILL_ABILITY_MAP
 from core.db.models import ABILITY_NAMES, Character
+from core.game.actions import attacks_per_action
 
 
 async def build_character_response(
@@ -36,6 +37,7 @@ async def build_character_response(
     response = CharacterFull.model_validate(char)
     response.has_custom_silhouette = bool(getattr(char, "silhouette_path", None))
     response.spellcasting = build_spellcasting_info(char)
+    response.attacks_per_action = attacks_per_action(char.classes)
 
     hb_ac = await get_passive_modifiers(session, char, "character.ac")
     response.ac_breakdown = AcBreakdown(

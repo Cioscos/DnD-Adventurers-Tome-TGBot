@@ -496,6 +496,8 @@ class Ability(Base):
     )
     is_class_feature: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     feature_key: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    # Costo in azioni: action | bonus_action | reaction | free | special (NULL = non indicato).
+    action_type: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
 
     character: Mapped["Character"] = relationship(back_populates="abilities")
 

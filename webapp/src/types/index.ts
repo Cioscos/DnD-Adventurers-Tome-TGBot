@@ -53,6 +53,8 @@ export interface Currency {
   platinum: number
 }
 
+export type ActionType = 'action' | 'bonus_action' | 'reaction' | 'free' | 'special'
+
 export interface Ability {
   id: number
   name: string
@@ -66,6 +68,7 @@ export interface Ability {
   source_class_id?: number | null
   is_class_feature: boolean
   feature_key?: string | null
+  action_type?: ActionType | null
 }
 
 export interface MapEntry {
@@ -199,6 +202,7 @@ export interface CharacterFull extends Omit<CharacterSummary, 'ac_homebrew_modif
   carry_capacity: number
   carry_capacity_override: boolean
   has_custom_silhouette: boolean
+  attacks_per_action?: number
   encumbrance: number
   spell_slots_mode: string
   spellcasting?: SpellcastingInfo | null

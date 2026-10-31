@@ -24,12 +24,12 @@ import FilterRow from '@/components/ui/FilterRow'
 import EmptyState from '@/components/ui/EmptyState'
 import CustomResourceCounter from '@/components/homebrew/CustomResourceCounter'
 import { haptic } from '@/auth/telegram'
-import type { Ability } from '@/types'
+import type { Ability, ActionType } from '@/types'
 import type { HomebrewResource } from '@/lib/homebrew/types'
 import AbilitiesSkeleton from '@/components/skeletons/AbilitiesSkeleton'
 
-type AddForm = { name: string; description: string; max_uses: string; is_passive: boolean; restoration_type: string }
-const emptyForm: AddForm = { name: '', description: '', max_uses: '', is_passive: false, restoration_type: 'long_rest' }
+type AddForm = { name: string; description: string; max_uses: string; is_passive: boolean; restoration_type: string; action_type: ActionType | '' }
+const emptyForm: AddForm = { name: '', description: '', max_uses: '', is_passive: false, restoration_type: 'long_rest', action_type: '' }
 
 // Sopra questa soglia gli usi si gestiscono con lo stepper numerico invece dei
 // pallini (es. Imposizione delle Mani = 5×livello, Punti Ki/Stregoneria alti).
@@ -61,6 +61,8 @@ function detectRestoration(name: string): string {
   return 'long_rest'
 }
 
+const ACTION_TYPES = ['action', 'bonus_action', 'reaction', 'free', 'special'] as const
+
 function abilityToForm(ab: Ability): AddForm {
   return {
     name: ab.name,
@@ -68,6 +70,7 @@ function abilityToForm(ab: Ability): AddForm {
     max_uses: ab.max_uses != null ? String(ab.max_uses) : '',
     is_passive: ab.is_passive,
     restoration_type: ab.restoration_type,
+    action_type: ab.action_type ?? '',
   }
 }
 
@@ -161,6 +164,7 @@ export default function Abilities() {
         is_passive: form.is_passive,
         is_active: !form.is_passive,
         restoration_type: form.restoration_type,
+        action_type: form.action_type || undefined,
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['character', charId] })
@@ -178,6 +182,7 @@ export default function Abilities() {
         is_passive: form.is_passive,
         is_active: !form.is_passive,
         restoration_type: form.restoration_type,
+        action_type: form.action_type || null,
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['character', charId] })
@@ -757,6 +762,16 @@ export default function Abilities() {
                   />
                 </>
               )}
+              <ChipSelect
+                label={t('character.abilities.action_type_label')}
+                options={([['', 'none'], ...ACTION_TYPES.map((a) => [a, a])] as const).map(([v, k]) => ({
+                  value: v,
+                  label: t(`character.abilities.action_type.${k}`),
+                }))}
+                value={form.action_type}
+                onChange={(v) => setForm((f) => ({ ...f, action_type: v as AddForm['action_type'] }))}
+                columns={3}
+              />
               <div className="flex gap-2 pt-2">
                 <Button
                   variant="secondary"

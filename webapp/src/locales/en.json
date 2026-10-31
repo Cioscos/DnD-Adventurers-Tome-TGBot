@@ -970,6 +970,15 @@
       "description_label": "Description",
       "max_uses_label": "Max uses",
       "restoration_label": "Restoration",
+      "action_type_label": "Action type",
+      "action_type": {
+        "none": "None",
+        "action": "Action",
+        "bonus_action": "Bonus action",
+        "reaction": "Reaction",
+        "free": "Free",
+        "special": "Special"
+      },
       "edit": "Edit",
       "detail": {
         "no_description": "No description available"

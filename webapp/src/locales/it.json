@@ -970,6 +970,15 @@
       "description_label": "Descrizione",
       "max_uses_label": "Usi massimi",
       "restoration_label": "Ripristino",
+      "action_type_label": "Tipo di azione",
+      "action_type": {
+        "none": "Nessuno",
+        "action": "Azione",
+        "bonus_action": "Azione bonus",
+        "reaction": "Reazione",
+        "free": "Gratuita",
+        "special": "Speciale"
+      },
       "edit": "Modifica",
       "detail": {
         "no_description": "Nessuna descrizione disponibile"

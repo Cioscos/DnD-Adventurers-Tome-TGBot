@@ -48,6 +48,7 @@ async def sync_class_feature_abilities(
                 is_active=True,
                 is_passive=False,
                 restoration_type=spec["restoration_type"],
+                action_type=spec["action_type"],
             )
             session.add(ability)
             char.abilities.append(ability)
@@ -55,6 +56,7 @@ async def sync_class_feature_abilities(
 
         # Aggiorna il nome (il catalogo è la fonte di verità per le feature).
         ability.name = spec["name"]
+        ability.action_type = spec["action_type"]
 
         # Le feature CHA-based non si ricalcolano al level-up (parità col vecchio
         # update_resources_for_level): il loro max dipende dal mod CAR, non dal livello.

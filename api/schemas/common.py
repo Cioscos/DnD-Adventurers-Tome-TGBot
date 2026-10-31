@@ -8,6 +8,7 @@ from typing import Annotated, Any, Literal, Optional
 from pydantic import BaseModel, Field, field_validator
 
 from core.db.models import RestorationType
+from core.game.actions import ActionType
 
 # Valid restoration_type values, derived from the enum so the schema can never
 # drift from the DB column. Accepting an unknown string here would silently
@@ -178,6 +179,7 @@ class AbilityRead(BaseModel):
     source_class_id: Optional[int] = None
     is_class_feature: bool = False
     feature_key: Optional[str] = None
+    action_type: Optional[str] = None
     # Homebrew rule notifications surfaced when an ability_used event fired
     # (PATCH /abilities/{id} with a decremented `uses`). Omitted/None on
     # POST/list responses to match CharacterFull's contract (Phase 2 pattern).
@@ -194,6 +196,7 @@ class AbilityCreate(BaseModel):
     is_passive: bool = False
     is_active: bool = False
     restoration_type: str = "none"
+    action_type: Optional[ActionType] = None
 
     _check_restoration = field_validator("restoration_type")(_validate_restoration_type)
 
@@ -206,6 +209,7 @@ class AbilityUpdate(BaseModel):
     is_passive: Optional[bool] = None
     is_active: Optional[bool] = None
     restoration_type: Optional[str] = None
+    action_type: Optional[ActionType] = None
 
     _check_restoration = field_validator("restoration_type")(_validate_restoration_type)
 

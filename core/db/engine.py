@@ -122,6 +122,7 @@ _MIGRATIONS: list[tuple[str, str, str, str | None]] = [
     ("abilities", "source_class_id", "INTEGER REFERENCES character_classes(id) ON DELETE CASCADE", None),
     ("abilities", "is_class_feature", "BOOLEAN", "0"),
     ("abilities", "feature_key", "VARCHAR(100)", None),
+    ("abilities", "action_type", "VARCHAR(20)", None),
     # Incantesimi preparati — backfill legacy a 1 (preparato): nulla cambia per
     # i personaggi esistenti finché l'utente non gestisce la preparazione.
     ("spells", "is_prepared", "BOOLEAN", "1"),

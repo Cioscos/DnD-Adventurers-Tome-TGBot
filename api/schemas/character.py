@@ -117,6 +117,7 @@ class CharacterFull(BaseModel):
     total_level: int = 0
     class_summary: str = ""
     proficiency_bonus: int = 2
+    attacks_per_action: int = 1
 
     # Meta
     experience_points: int = 0
