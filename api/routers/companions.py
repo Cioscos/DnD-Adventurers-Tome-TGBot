@@ -17,6 +17,7 @@ from api.schemas.companion import (
 )
 from api.services.d20 import d20_history_label, d20_records, resolve_d20
 from api.services.dice_stats import record_dice
+from api.services.wild_shape import deactivate_other_forms
 from core.db.models import Ability, Character, CharacterHistory, Companion
 
 router = APIRouter(prefix="/characters", tags=["companions"])
@@ -49,16 +50,6 @@ async def _get_companion(session: AsyncSession, char_id: int, comp_id: int) -> C
     if comp is None:
         raise HTTPException(status_code=404, detail="Companion not found")
     return comp
-
-
-async def _deactivate_others(session: AsyncSession, char_id: int, keep_id: int | None) -> None:
-    """At most one active wild shape: activating one deactivates the others (no 409)."""
-    res = await session.execute(
-        select(Companion).where(Companion.character_id == char_id, Companion.is_active.is_(True))
-    )
-    for other in res.scalars():
-        if other.id != keep_id:
-            other.is_active = False
 
 
 @router.get("/{char_id}/companions", response_model=list[CompanionRead])
@@ -95,7 +86,7 @@ async def create_companion(
     session.add(comp)
     await session.flush()
     if comp.is_active:
-        await _deactivate_others(session, char_id, comp.id)
+        await deactivate_other_forms(session, char_id, comp.id)
     _history(session, char_id, "companion_added", f"Aggiunto: {comp.name}")
     return comp
 
@@ -120,7 +111,7 @@ async def update_companion(
         raise HTTPException(status_code=422, detail="active_only_wild_shape")
     comp.current_hp = min(comp.current_hp, comp.max_hp)
     if changes.get("is_active"):
-        await _deactivate_others(session, char_id, comp.id)
+        await deactivate_other_forms(session, char_id, comp.id)
     return comp
 
 
@@ -151,7 +142,7 @@ async def activate_wild_shape(
     comp.is_active = True
     comp.current_hp = comp.max_hp  # each transformation starts at full HP
     comp.temp_hp = 0
-    await _deactivate_others(session, char_id, comp.id)
+    await deactivate_other_forms(session, char_id, comp.id)
     _history(session, char_id, "companion_hp", f"Forma selvatica: {comp.name}")
     return comp
 

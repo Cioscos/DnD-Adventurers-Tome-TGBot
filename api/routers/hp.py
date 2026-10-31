@@ -20,8 +20,7 @@ from api.services.dice_stats import record_dice
 from api.services.effects import apply_heal
 from api.services.item_charges import plan_item_recharges, set_item_charges
 from api.services.durations import end_concentration, is_concentrating
-from api.routers.companions import _deactivate_others
-from api.services.wild_shape import absorb_damage, get_active_form
+from api.services.wild_shape import absorb_damage, deactivate_other_forms, get_active_form
 from api.services.telegram_notify import notify_party_emergency
 from api.services.homebrew.dispatcher import dispatch
 from api.services.homebrew.passive import get_passive_modifiers
@@ -384,7 +383,7 @@ async def undo_hp(
         form.temp_hp = before["form"]["temp_hp"]
         form.is_active = before["form"]["is_active"]
         if form.is_active:  # at most one active form
-            await _deactivate_others(session, char.id, form.id)
+            await deactivate_other_forms(session, char.id, form.id)
     old = char.current_hit_points
     char.current_hit_points = before["current_hit_points"]
     char.hit_points = before["hit_points"]
