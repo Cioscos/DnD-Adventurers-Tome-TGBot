@@ -695,7 +695,27 @@
         "input_aria": "Duration in rounds",
         "left": "{{n}} rounds",
         "tick": "End of round (−1)",
-        "expired": "Expired: {{names}}"
+        "expired": "Expired: {{names}}",
+        "in_encounter": "In an encounter, rounds advance on each of your turns"
+      },
+      "effect": {
+          "until_end_owner_next": "until the end of your next turn",
+          "until_end_owner_nth": "until the end of your turn no. {{n}}",
+          "until_start_owner_next": "until the start of your next turn",
+          "until_start_owner_nth": "until the start of your turn no. {{n}}",
+          "until_end_source_next": "until the end of {{name}}'s next turn",
+          "until_end_source_nth": "until the end of {{name}}'s turn no. {{n}}",
+          "until_start_source_next": "until the start of {{name}}'s next turn",
+          "until_start_source_nth": "until the start of {{name}}'s turn no. {{n}}",
+          "source_unknown": "another combatant",
+          "rounds_one": "{{count}} round",
+          "rounds_other": "{{count}} rounds",
+          "while_concentrating": "while {{name}} is concentrating",
+          "save_start": "{{ability}} save DC {{dc}} at the start of your turn",
+          "save_end": "{{ability}} save DC {{dc}} at the end of your turn",
+          "save_any": "{{ability}} save DC {{dc}}",
+          "by_gm": "from the GM",
+          "active_title": "Active effects"
       },
       "title": "Conditions",
       "exhaustion": "Exhaustion (level {{level}})",
@@ -4249,7 +4269,7 @@
   "pendingSaves": {
     "banner_one": "Saving throw: {{ability}} DC {{dc}} — {{condition}}",
     "banner_many": "{{count}} saving throws pending",
-    "banner_failed": "Failed: {{condition}} — tap to close",
+    "banner_failed": "Failed: {{condition}} — tap to view",
     "your_turn": "Your turn",
     "title": "Saving throw: {{ability}}",
     "line": "{{condition}} · DC {{dc}}",

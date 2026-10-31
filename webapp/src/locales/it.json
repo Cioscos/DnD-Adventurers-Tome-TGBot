@@ -695,7 +695,26 @@
         "input_aria": "Durata in round",
         "left": "{{n}} round",
         "tick": "Fine round (−1)",
-        "expired": "Scaduto: {{names}}"
+        "expired": "Scaduto: {{names}}",
+        "in_encounter": "In incontro i round scorrono a ogni tuo turno"
+      },
+      "effect": {
+          "until_end_owner_next": "fino alla fine del tuo prossimo turno",
+          "until_end_owner_nth": "fino alla fine del {{n}}° tuo turno",
+          "until_start_owner_next": "fino all'inizio del tuo prossimo turno",
+          "until_start_owner_nth": "fino all'inizio del {{n}}° tuo turno",
+          "until_end_source_next": "fino alla fine del prossimo turno di {{name}}",
+          "until_end_source_nth": "fino alla fine del {{n}}° turno di {{name}}",
+          "until_start_source_next": "fino all'inizio del prossimo turno di {{name}}",
+          "until_start_source_nth": "fino all'inizio del {{n}}° turno di {{name}}",
+          "source_unknown": "un altro combattente",
+          "rounds": "{{count}} round",
+          "while_concentrating": "finché {{name}} è concentrato",
+          "save_start": "TS {{ability}} CD {{dc}} all'inizio del tuo turno",
+          "save_end": "TS {{ability}} CD {{dc}} alla fine del tuo turno",
+          "save_any": "TS {{ability}} CD {{dc}}",
+          "by_gm": "dal GM",
+          "active_title": "Effetti attivi"
       },
       "title": "Condizioni",
       "exhaustion": "Spossatezza (livello {{level}})",
@@ -4249,7 +4268,7 @@
   "pendingSaves": {
     "banner_one": "Tiro salvezza: {{ability}} CD {{dc}} — {{condition}}",
     "banner_many": "{{count}} tiri salvezza in sospeso",
-    "banner_failed": "Fallito: {{condition}} — tocca per chiudere",
+    "banner_failed": "Fallito: {{condition}} — tocca per vedere",
     "your_turn": "Tocca a te",
     "title": "Tiro salvezza: {{ability}}",
     "line": "{{condition}} · CD {{dc}}",

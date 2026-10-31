@@ -27,6 +27,8 @@ import ConditionsSkeleton from '@/components/skeletons/ConditionsSkeleton'
 import { notifyMutationError } from '@/lib/mutationError'
 import DurationInput from '@/components/character/DurationInput'
 import { useTickRound } from '@/hooks/useTickRound'
+import { useTurnState } from '@/hooks/useTurnState'
+import { formatExpiry, formatSave } from '@/lib/conditionEffects'
 
 const CONDITION_KEYS = [
   'blinded', 'charmed', 'deafened', 'frightened', 'grappled',
@@ -123,6 +125,10 @@ export default function Conditions() {
     queryKey: ['homebrew-rules', charId],
     queryFn: () => api.homebrew.listRules(charId),
   })
+
+  const { data: session } = useQuery({ queryKey: ['session-me'], queryFn: () => api.sessions.me() })
+  const { data: turn } = useTurnState(charId, session?.status === 'active')
+  const inEncounter = !!turn?.in_encounter
 
   const mutation = useMutation({
     mutationFn: ({ conditions, durations }: { conditions: Record<string, unknown>; durations?: Record<string, number | null> }) =>
@@ -238,6 +244,11 @@ export default function Conditions() {
   const durations = (char.settings?.condition_durations ?? {}) as Record<string, number>
   const hasDurations = Object.keys(durations).length > 0 || char.settings?.concentration_rounds_left != null
 
+  const effectRows = (char.condition_effects ?? [])
+    .filter((e) => conditions[e.slug])
+    .map((e) => ({ e, expiry: formatExpiry(e, t), save: formatSave(e, t) }))
+    .filter((r) => r.expiry || r.save || r.e.applied_by_gm)
+
   const activeCount =
     CONDITION_KEYS.filter((k) => conditions[k]).length +
     (currentExhaustion > 0 ? 1 : 0) +
@@ -280,7 +291,12 @@ export default function Conditions() {
 
       <Surface variant="flat">
         <DurationInput value={nextDuration} onChange={setNextDuration} />
-        {hasDurations && (
+        {inEncounter && (
+          <p className="mt-2 text-xs text-dnd-text-muted font-body">
+            {t('character.conditions.duration.in_encounter')}
+          </p>
+        )}
+        {hasDurations && !inEncounter && (
           <Button
             variant="secondary"
             size="sm"
@@ -418,6 +434,30 @@ export default function Conditions() {
           )
         })()}
       </Surface>
+
+      {effectRows.length > 0 && (
+        <Surface variant="flat">
+          <h3 className="font-cinzel uppercase tracking-widest text-xs text-dnd-gold-bright mb-2">
+            {t('character.conditions.effect.active_title')}
+          </h3>
+          <ul className="space-y-2">
+            {effectRows.map(({ e, expiry, save }) => (
+              <li key={e.slug} className="text-sm font-body">
+                <span className="font-semibold text-dnd-text">
+                  {(CONDITION_KEYS as readonly string[]).includes(e.slug) ? t(`character.conditions.${e.slug}`) : e.slug}
+                </span>
+                {e.applied_by_gm && (
+                  <span className="ml-2 text-xs uppercase tracking-wider text-dnd-amber">
+                    {t('character.conditions.effect.by_gm')}
+                  </span>
+                )}
+                {expiry && <p className="text-xs text-dnd-text-muted">{expiry}</p>}
+                {save && <p className="text-xs text-dnd-text-muted tabular-nums">{save}</p>}
+              </li>
+            ))}
+          </ul>
+        </Surface>
+      )}
 
       {/* Condition grid */}
       <m.div
