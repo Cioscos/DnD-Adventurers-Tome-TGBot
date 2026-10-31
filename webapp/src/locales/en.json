@@ -352,7 +352,7 @@
       "mode_melee": "Melee",
       "mode_thrown": "Thrown",
       "magic_bonus": "Magic bonus +{{n}}",
-      "proficiency_warning": "You are not proficient with this weapon",
+      "proficiency_warning": "Proficiency not listed",
       "to_hit": "To hit",
       "damage": "Damage",
       "damage_critical": "Damage (critical)"

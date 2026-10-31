@@ -22,6 +22,8 @@ import HitDiceResultDialog from '@/pages/hp/HitDiceResultDialog'
 import { haptic } from '@/auth/telegram'
 import { useAnimatedRoll } from '@/dice/useAnimatedRoll'
 import { isAttackSpell } from '@/lib/spellType'
+import WeaponChoiceRow from '@/components/WeaponChoiceRow'
+import { useWeaponChoices, choiceOf } from '@/store/weaponChoiceStore'
 import RollButton from '@/components/ui/RollButton'
 import { useD20Roll, d20Arg, type RollMode } from '@/hooks/useD20Roll'
 import { useToast } from '@/hooks/useToast'
@@ -94,6 +96,8 @@ export default function QuickActions({ char }: Props) {
   const toast = useToast()
   const rollDice = useAnimatedRoll()
   const rollD20 = useD20Roll()
+  const weaponChoices = useWeaponChoices((s) => s.choices)
+  const setWeaponChoice = useWeaponChoices((s) => s.setChoice)
   const castFlow = useCastFlow(char.id, char)
 
   const [editorOpen, setEditorOpen] = useState(false)
@@ -138,7 +142,9 @@ export default function QuickActions({ char }: Props) {
 
   const attackMutation = useMutation({
     mutationFn: async ({ itemId, mode }: { itemId: number; mode: RollMode }) =>
-      api.items.attack(char.id, itemId, false, d20Arg(mode, await rollD20(mode))),
+      api.items.attack(
+        char.id, itemId, false, d20Arg(mode, await rollD20(mode)), choiceOf(weaponChoices, itemId),
+      ),
     onSuccess: (result, { itemId }) => {
       setAttackState({ result, itemId, wasRerolled: false })
       qc.invalidateQueries({ queryKey: ['character', char.id] })
@@ -597,7 +603,7 @@ export default function QuickActions({ char }: Props) {
                               disabled:opacity-60 ${depleted ? 'opacity-50' : ''} ${spanFull ? 'col-span-2' : ''}`
               if (a.type === 'weapon' || a.type === 'save' || (a.type === 'spell' && isAttackSpell(a.spell))) {
                 // d20 rolls: long press opens the advantage/disadvantage menu.
-                return (
+                const tile = (
                   <RollButton
                     key={a.key}
                     onRoll={(mode) => run(a, mode)}
@@ -610,6 +616,21 @@ export default function QuickActions({ char }: Props) {
                       {actionLabel(a)}
                     </span>
                   </RollButton>
+                )
+                if (a.type !== 'weapon') return tile
+                // Versatile/thrown weapons: choice row right under the tile.
+                const row = (
+                  <WeaponChoiceRow
+                    item={a.item}
+                    choice={choiceOf(weaponChoices, a.item.id)}
+                    onChange={(c) => setWeaponChoice(a.item.id, c)}
+                  />
+                )
+                return (
+                  <div key={a.key} className={`flex flex-col ${spanFull ? 'col-span-2' : ''}`}>
+                    {tile}
+                    {row}
+                  </div>
                 )
               }
               return (

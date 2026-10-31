@@ -105,3 +105,13 @@ async def test_no_warning_when_list_empty(client):
     cid = await _char(client)
     wid = await _weapon(client, cid, weapon_category="martial")
     assert (await _attack(client, cid, wid)).json()["proficiency_warning"] is False
+
+
+async def test_thrown_ranged_non_finesse_uses_strength(client):
+    cid = await _char(client, strength=16, dexterity=8)  # FOR +3, DES -1
+    wid = await _weapon(
+        client, cid, "Giavellotto", weapon_type="ranged", properties=["prop_thrown"]
+    )
+    # Ranged attacks normally use DEX; thrown must switch to STR.
+    assert (await _attack(client, cid, wid)).json()["to_hit_bonus"] == 1  # -1 DES + PB 2
+    assert (await _attack(client, cid, wid, attack_mode="thrown")).json()["to_hit_bonus"] == 5

@@ -352,7 +352,7 @@
       "mode_melee": "Mischia",
       "mode_thrown": "Lancio",
       "magic_bonus": "Bonus magico +{{n}}",
-      "proficiency_warning": "Non sei competente con quest'arma",
+      "proficiency_warning": "Competenza non indicata",
       "to_hit": "Per colpire",
       "damage": "Danno",
       "damage_critical": "Danno (critico)"

@@ -13,7 +13,8 @@ import SectionDivider from '@/components/ui/SectionDivider'
 import RollButton from '@/components/ui/RollButton'
 import WeaponChoiceRow from '@/components/WeaponChoiceRow'
 import { useD20Roll, d20Arg, type RollMode } from '@/hooks/useD20Roll'
-import { DEFAULT_WEAPON_CHOICE, type WeaponChoice } from '@/lib/weaponOptions'
+import type { WeaponChoice } from '@/lib/weaponOptions'
+import { useWeaponChoices, choiceOf } from '@/store/weaponChoiceStore'
 import WeaponAttackModal from '@/components/WeaponAttackModal'
 import type { WeaponAttackResult } from '@/components/WeaponAttackModal'
 import ActionsSkeleton from '@/components/skeletons/ActionsSkeleton'
@@ -30,8 +31,9 @@ export default function Actions() {
   const qc = useQueryClient()
   const toast = useToast()
   const [attackState, setAttackState] = useState<AttackState | null>(null)
-  // Scelta pre-attacco ricordata per arma (una/due mani, mischia/lancio).
-  const [choices, setChoices] = useState<Record<number, WeaponChoice>>({})
+  // Scelta pre-attacco ricordata per arma (una/due mani, mischia/lancio), condivisa fra le pagine.
+  const choices = useWeaponChoices((s) => s.choices)
+  const setChoice = useWeaponChoices((s) => s.setChoice)
 
   const { data: char } = useQuery({
     queryKey: ['character', charId],
@@ -43,12 +45,12 @@ export default function Actions() {
 
   const weaponAttack = useMutation({
     mutationFn: async ({ itemId, mode }: { itemId: number; mode: RollMode }) => {
-      const choice = choices[itemId] ?? DEFAULT_WEAPON_CHOICE
+      const choice = choiceOf(choices, itemId)
       return api.items.attack(charId, itemId, false, d20Arg(mode, await rollD20(mode)), choice)
     },
     onSuccess: (result, { itemId }) => {
       setAttackState({
-        result, source: { type: 'weapon', itemId, choice: choices[itemId] ?? DEFAULT_WEAPON_CHOICE }, wasRerolled: false,
+        result, source: { type: 'weapon', itemId, choice: choiceOf(choices, itemId) }, wasRerolled: false,
       })
       qc.invalidateQueries({ queryKey: ['character', charId] })
       haptic.success()
@@ -144,8 +146,8 @@ export default function Actions() {
               </div>
               <WeaponChoiceRow
                 item={w}
-                choice={choices[w.id] ?? DEFAULT_WEAPON_CHOICE}
-                onChange={(c) => setChoices((prev) => ({ ...prev, [w.id]: c }))}
+                choice={choiceOf(choices, w.id)}
+                onChange={(c) => setChoice(w.id, c)}
               />
             </Surface>
           ))}

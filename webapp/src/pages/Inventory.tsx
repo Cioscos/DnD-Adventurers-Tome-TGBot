@@ -9,7 +9,8 @@ import { GiKnapsack as Backpack } from 'react-icons/gi'
 import { api, ApiError } from '@/api/client'
 import { useAnimatedRoll } from '@/dice/useAnimatedRoll'
 import { useD20Roll, d20Arg, type RollMode } from '@/hooks/useD20Roll'
-import { DEFAULT_WEAPON_CHOICE, type WeaponChoice } from '@/lib/weaponOptions'
+import type { WeaponChoice } from '@/lib/weaponOptions'
+import { useWeaponChoices, choiceOf } from '@/store/weaponChoiceStore'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
@@ -61,7 +62,8 @@ export default function Inventory() {
   }
   const [attackState, setAttackState] = useState<AttackState | null>(null)
   // Scelta pre-attacco ricordata per arma (una/due mani, mischia/lancio).
-  const [weaponChoices, setWeaponChoices] = useState<Record<number, WeaponChoice>>({})
+  const weaponChoices = useWeaponChoices((s) => s.choices)
+  const setWeaponChoice = useWeaponChoices((s) => s.setChoice)
   const [slotPickerItem, setSlotPickerItem] = useState<Item | null>(null)
   const [equipConflict, setEquipConflict] = useState<{ item: Item; slot: EquipmentSlot; removedItem: Item } | null>(null)
   const toast = useToast()
@@ -266,11 +268,11 @@ export default function Inventory() {
     mutationFn: async ({ itemId, mode }: { itemId: number; mode: RollMode }) =>
       api.items.attack(
         charId, itemId, false, d20Arg(mode, await rollD20(mode)),
-        weaponChoices[itemId] ?? DEFAULT_WEAPON_CHOICE,
+        choiceOf(weaponChoices, itemId),
       ),
     onSuccess: (result, { itemId }) => {
       setAttackState({
-        result, itemId, choice: weaponChoices[itemId] ?? DEFAULT_WEAPON_CHOICE, wasRerolled: false,
+        result, itemId, choice: choiceOf(weaponChoices, itemId), wasRerolled: false,
       })
       haptic.success()
     },
@@ -611,8 +613,8 @@ export default function Inventory() {
                             onEquipToggle={() => handleEquipToggle(item)}
                             onQuantityChange={(delta) => updateQty.mutate({ itemId: item.id, quantity: item.quantity + delta })}
                             onAttack={(mode) => attackMutation.mutate({ itemId: item.id, mode })}
-                            weaponChoice={weaponChoices[item.id] ?? DEFAULT_WEAPON_CHOICE}
-                            onWeaponChoice={(c) => setWeaponChoices((prev) => ({ ...prev, [item.id]: c }))}
+                            weaponChoice={choiceOf(weaponChoices, item.id)}
+                            onWeaponChoice={(c) => setWeaponChoice(item.id, c)}
                             onUse={() => setUseTarget(item)}
                             onEdit={() => handleEdit(item)}
                             onDelete={() => setDeleteTarget(item.id)}
