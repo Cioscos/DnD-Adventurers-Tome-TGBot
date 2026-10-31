@@ -82,6 +82,7 @@ export default function Abilities() {
   const [showAdd, setShowAdd] = useState(false)
   const [form, setForm] = useState<AddForm>(emptyForm)
   const [expanded, setExpanded] = useState<number | null>(null)
+  const [confirmFeatId, setConfirmFeatId] = useState<number | null>(null)
   const [editingAbility, setEditingAbility] = useState<Ability | null>(null)
   const [wizardStep, setWizardStep] = useState<'basics' | 'details'>('basics')
   // Editor descrizione-only per le feature di classe (struttura bloccata: si può
@@ -201,6 +202,16 @@ export default function Abilities() {
     mutationFn: (abilityId: number) => api.abilities.remove(charId, abilityId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['character', charId] })
+      haptic.success()
+    },
+  })
+
+  const removeFeatMutation = useMutation({
+    mutationFn: (abilityId: number) => api.choices.removeFeat(charId, abilityId),
+    onSuccess: (updated) => {
+      qc.setQueryData(['character', charId], updated)
+      qc.invalidateQueries({ queryKey: ['homebrew-rules', charId] })
+      setConfirmFeatId(null)
       haptic.success()
     },
   })
@@ -469,15 +480,38 @@ export default function Abilities() {
                     <Button variant="secondary" size="sm" onClick={() => openEdit(ab)} icon={<Pencil size={12} />}>
                       {t('character.abilities.edit')}
                     </Button>
-                    <Button
-                      variant="danger"
-                      size="sm"
-                      onClick={() => deleteMutation.mutate(ab.id)}
-                      loading={deleteMutation.isPending && deleteMutation.variables === ab.id}
-                      icon={<Trash2 size={12} />}
-                    >
-                      {t('common.delete')}
-                    </Button>
+                    {(ab.feature_key ?? '').startsWith('feat.') ? (
+                      <div className="flex-1 space-y-1">
+                        {confirmFeatId === ab.id && (
+                          <p className="text-xs text-dnd-text-muted font-body">
+                            {t('character.level_choice.remove_warning')}
+                          </p>
+                        )}
+                        <Button
+                          variant="danger"
+                          size="sm"
+                          onClick={() =>
+                            confirmFeatId === ab.id ? removeFeatMutation.mutate(ab.id) : setConfirmFeatId(ab.id)
+                          }
+                          loading={removeFeatMutation.isPending && removeFeatMutation.variables === ab.id}
+                          icon={<Trash2 size={12} />}
+                        >
+                          {confirmFeatId === ab.id
+                            ? t('character.level_choice.remove_confirm')
+                            : t('character.level_choice.remove')}
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        onClick={() => deleteMutation.mutate(ab.id)}
+                        loading={deleteMutation.isPending && deleteMutation.variables === ab.id}
+                        icon={<Trash2 size={12} />}
+                      >
+                        {t('common.delete')}
+                      </Button>
+                    )}
                   </div>
                 )}
               </div>

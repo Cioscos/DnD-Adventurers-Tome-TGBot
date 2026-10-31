@@ -4,13 +4,14 @@ import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from '../utils/renderWithProviders'
 import Abilities from '@/pages/Abilities'
 
-const { getChar, listResources, patchResource, addSpy, updateSpy, removeSpy } = vi.hoisted(() => ({
+const { getChar, listResources, patchResource, addSpy, updateSpy, removeSpy, removeFeat } = vi.hoisted(() => ({
   getChar: vi.fn(),
   listResources: vi.fn(),
   patchResource: vi.fn(),
   addSpy: vi.fn(),
   updateSpy: vi.fn(),
   removeSpy: vi.fn(),
+  removeFeat: vi.fn(),
 }))
 
 vi.mock('@/api/client', () => ({
@@ -18,6 +19,7 @@ vi.mock('@/api/client', () => ({
     characters: { get: getChar },
     homebrew: { listResources, patchResource },
     abilities: { add: addSpy, update: updateSpy, remove: removeSpy },
+    choices: { removeFeat },
   },
 }))
 
@@ -213,6 +215,19 @@ describe('Abilities page', () => {
     const unlit = screen.getAllByRole('button', { pressed: false })
     await userEvent.click(unlit[0])           // spend → uses current-1 = 0
     await waitFor(() => expect(updateSpy).toHaveBeenCalledWith(3, 2, { uses: 0 }))
+  })
+
+  it('removes a feat counter through the feat endpoint after confirming', async () => {
+    getChar.mockResolvedValue(char([{ ...lucky, feature_key: 'feat.lucky' }]))
+    removeFeat.mockResolvedValue(char([]))
+    renderWithProviders(<Abilities />)
+    await userEvent.click(await screen.findByRole('button', { name: /Lucky/ }))
+    expect(screen.queryByRole('button', { name: 'common.delete' })).toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: 'character.level_choice.remove' }))
+    expect(screen.getByText('character.level_choice.remove_warning')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'character.level_choice.remove_confirm' }))
+    await waitFor(() => expect(removeFeat).toHaveBeenCalledWith(3, 2))
+    expect(removeSpy).not.toHaveBeenCalled()
   })
 
   it('deletes a custom ability', async () => {
