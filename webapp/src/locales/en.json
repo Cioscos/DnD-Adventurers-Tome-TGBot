@@ -2585,6 +2585,7 @@
             "The duration applies to the conditions that you turn on after you set it.",
             "A condition with a duration shows the rounds that remain next to the name.",
             "To remove one round from all durations, tap \"End of round (−1)\". The button shows only when a duration is active.",
+            "During a session encounter, \"End of round (−1)\" does not show. The rounds advance on each of your turns.",
             "When a duration gets to 0, the app removes the condition and shows \"Expired\"."
           ]
         },
@@ -2617,6 +2618,34 @@
             "To remove a custom condition, tap the trash icon on its card.",
             "When a custom condition is active, the \"Start of turn\" button shows.",
             "At the start of your turn, tap \"Start of turn\". The app runs the homebrew rules for the start of the turn, for example damage each turn."
+          ]
+        },
+        {
+          "title": "Conditions from the Game Master",
+          "items": [
+            "The Game Master can apply a condition from the session room.",
+            "The \"Active effects\" section shows these conditions with the \"from the GM\" label.",
+            "Each condition shows when it ends, for example \"until the end of your next turn\".",
+            "A condition can end when another character loses concentration. In this case you see \"while\" and the name of the character.",
+            "A condition with a saving throw shows the ability, the DC and the time of the roll, for example \"CON save DC 15 at the end of your turn\".",
+            "During an encounter, the app removes the condition when it expires.",
+            "You can remove a condition from the Game Master. The app writes the change in the history.",
+            "You cannot change the expiry, the saving throw or the source of a condition from the Game Master."
+          ]
+        },
+        {
+          "title": "Pending saving throws",
+          "items": [
+            "When you must make a saving throw for a condition, an amber bar shows at the top of the character pages.",
+            "The bar stays visible until you make the roll.",
+            "When it is your turn, the bar becomes red and shows \"Your turn\".",
+            "Tap the bar to open the saving throw.",
+            "Select \"Normal\", \"Advantage\" or \"Disadvantage\".",
+            "Tap \"Roll\". The app shows the total against the DC.",
+            "If you pass the roll, the app removes the condition.",
+            "If you fail the roll, the condition stays. If you have Inspiration, tap \"Use Inspiration\" to roll again.",
+            "Tap \"OK\" to close the result.",
+            "When more saving throws are pending, the app shows them one at a time."
           ]
         }
       ]
@@ -3748,7 +3777,8 @@
             "To go to the next or previous turn, tap the arrows in the bar.",
             "If you skip the turn of a character, the app asks for a confirmation.",
             "Tap a participant to change initiative and order, or to mark it dead.",
-            "In \"Full\" mode, you can also apply damage, healing and conditions to the monsters.",
+            "In \"Full\" mode, you can also apply damage and healing to the monsters.",
+            "If you go back to the previous turn just after an advance, the app undoes the expiries and the saving throws of that advance.",
             "Tap \"End\" to finish the combat.",
             "WARNING: \"Remove from combat\" removes the participant from the encounter."
           ]
@@ -3760,6 +3790,23 @@
             "When it is your turn, the app shows \"Your turn!\" and sends a message in your private Telegram chat.",
             "At the start of your turn, the app decreases the duration of conditions and concentration by one round.",
             "At the end of your turn, tap \"End turn\"."
+          ]
+        },
+        {
+          "title": "Conditions (Game Master)",
+          "items": [
+            "Tap a participant. The \"Active conditions\" section shows the conditions with expiry, saving throw and source.",
+            "To remove a condition, tap the X next to the name.",
+            "To add a condition, tap \"Add condition\" and select the condition.",
+            "In \"Duration\", select \"None\", \"N rounds\", \"Until the start of the next turn\" or \"Until the end of the next turn\".",
+            "For a duration tied to a turn, select \"Target\" or \"Source\" in \"Turn of\".",
+            "In \"Repeated saving throw\", select the ability, type the DC and select \"Start of turn\" or \"End of turn\".",
+            "In \"Source (optional)\", select the participant that causes the condition.",
+            "If the source is a concentrating character, you can turn on \"Ends if the source loses concentration\". The player must cast the spell first.",
+            "Tap \"Apply condition\".",
+            "During the encounter, the app removes the condition when it expires. The app asks for the saving throw at the start or at the end of the turn of the target.",
+            "An amber dot on the row of a character shows a pending saving throw. The player makes the roll in the app.",
+            "For a monster, the row shows the pending saving throw. Make the roll at the table and tap \"Passed\" or \"Failed\". \"Passed\" removes the condition."
           ]
         }
       ]
@@ -4221,8 +4268,17 @@
             "To move the time forward by one round, tap \"End of round (−1)\".",
             "The app removes one round from the duration of conditions and concentration.",
             "When a duration gets to 0, the app removes the effect and shows an \"Expired\" message.",
+            "During a session encounter, \"End of round (−1)\" does not show. The rounds advance on each of your turns.",
             "To see the entries without an action type, tap \"Other\".",
             "The \"Other\" section shows, for example, spells with a longer casting time."
+          ]
+        },
+        {
+          "title": "Pending saving throws",
+          "items": [
+            "When you must make a saving throw for a condition, an amber bar shows at the top.",
+            "When it is your turn, the bar becomes red.",
+            "Tap the bar to make the roll. For more details, read the guide of the Conditions page."
           ]
         }
       ]
