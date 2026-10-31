@@ -279,11 +279,13 @@ async def character_turn_state(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Character not found")
     if char.user_id != user_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+    _, pendings = await character_effect_payload(db, character_id)
     row = await active_encounter_row(db, character_id)
     if row is None:
-        return TurnState(in_encounter=False, is_my_turn=False)
+        return TurnState(in_encounter=False, is_my_turn=False, pending_saves=pendings)
     enc, combatant_id = row
     return TurnState(
+        pending_saves=pendings,
         in_encounter=True,
         is_my_turn=enc.active_combatant_id == combatant_id,
         round=enc.round,

@@ -6,7 +6,7 @@ from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, Field
 
-from api.schemas.condition_effects import ConditionEffectRead
+from api.schemas.condition_effects import ConditionEffectRead, PendingSaveRead
 from api.schemas.encounter import EncounterLive
 from api.schemas.item import ItemCreate
 
@@ -179,3 +179,4 @@ class TurnState(BaseModel):
     is_my_turn: bool
     round: Optional[int] = None
     session_id: Optional[int] = None
+    pending_saves: list[PendingSaveRead] = []

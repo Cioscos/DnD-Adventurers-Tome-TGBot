@@ -10,7 +10,7 @@ async def test_turn_state_not_in_session(client, test_session_factory):
     as_user(PLAYER_ID)
     r = await client.get(f"/characters/{char_id}/turn-state")
     assert r.status_code == 200, r.text
-    assert r.json() == {"in_encounter": False, "is_my_turn": False, "round": None, "session_id": None}
+    assert r.json() == {"in_encounter": False, "is_my_turn": False, "round": None, "session_id": None, "pending_saves": []}
 
 
 async def test_turn_state_my_turn_true(client, test_session_factory):
@@ -21,7 +21,7 @@ async def test_turn_state_my_turn_true(client, test_session_factory):
     assert r.status_code == 200, r.text
     as_user(PLAYER_ID)
     r = await client.get(f"/characters/{pc['character_id']}/turn-state")
-    assert r.json() == {"in_encounter": True, "is_my_turn": True, "round": 1, "session_id": sid}
+    assert r.json() == {"in_encounter": True, "is_my_turn": True, "round": 1, "session_id": sid, "pending_saves": []}
     # Dopo next-turn tocca a un goblin.
     as_user(GM_ID)
     await client.post(f"/sessions/{sid}/encounter/next-turn")

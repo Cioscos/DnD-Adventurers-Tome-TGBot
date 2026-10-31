@@ -5,6 +5,8 @@ from typing import Optional
 
 from pydantic import BaseModel
 
+from api.schemas.common import RollResult
+
 
 class ConditionEffectRead(BaseModel):
     slug: str
@@ -27,3 +29,10 @@ class PendingSaveRead(BaseModel):
     status: str
     created_at: str
     last_roll: Optional[dict] = None
+
+
+class PendingSaveRollResult(BaseModel):
+    save: PendingSaveRead
+    roll: RollResult
+    passed: bool
+    condition_removed: bool

@@ -20,7 +20,9 @@ from core.db.models import (
     Character,
     CharacterClass,
     CharacterHistory,
+    ConditionEffect,
     Currency,
+    PendingSave,
     GameSession,
     SessionParticipant,
     SessionStatus,
@@ -28,7 +30,7 @@ from core.db.models import (
 from core.data.xp_thresholds import xp_to_level
 from core.data.skills import SKILL_ABILITY_MAP
 from api.services.skills import skill_bonus
-from core.data.labels import ability_label, skill_label
+from core.data.labels import ability_label, condition_label, skill_label
 from api.services.class_features import sync_class_feature_abilities
 from core.game.stats import hit_points_for_level
 from api.schemas.character import (
@@ -43,6 +45,7 @@ from api.schemas.character import (
     XPUpdate,
 )
 from api.schemas.common import D20RollSubmission, RollResult
+from api.schemas.condition_effects import PendingSaveRollResult
 from api.routers.classes import create_class_for_character
 from api.routers.sessions import active_encounter_row
 from core.game.item_bonuses import item_bonus_total
@@ -52,7 +55,7 @@ from api.services.d20 import d20_history_label, d20_records, resolve_body
 from api.services.dice_stats import record_dice
 from api.services.character_response import build_character_response
 from api.services.effects import apply_conditions
-from api.services.condition_effects import ExpirySpec, effects_for_character, upsert_effect
+from api.services.condition_effects import ExpirySpec, effects_for_character, pending_read, upsert_effect
 from api.services.durations import tick_rounds
 from api.services.spell_slots import recalc_spell_slots
 from api.services.choices import add_asi_choices
@@ -695,3 +698,92 @@ async def roll_saving_throw(
         is_fumble=is_fumble,
         description=ability,
     )
+
+
+# ---------------------------------------------------------------------------
+# Pending (repeated) saving throws on condition effects
+# ---------------------------------------------------------------------------
+
+async def _owned_pending_save(session: AsyncSession, char_id: int, psid: int) -> PendingSave:
+    ps = await session.get(PendingSave, psid)
+    if ps is None or ps.character_id != char_id:
+        raise HTTPException(status_code=404, detail="Pending save not found")
+    return ps
+
+
+@router.post("/{char_id}/pending-saves/{psid}/roll", response_model=PendingSaveRollResult)
+async def roll_pending_save(
+    char_id: int,
+    psid: int,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+    body: Annotated[D20RollSubmission | None, Body()] = None,
+) -> PendingSaveRollResult:
+    char = await _get_owned(char_id, user_id, session, full=True)
+    ps = await _owned_pending_save(session, char_id, psid)
+    reroll = bool(body and body.with_inspiration)
+
+    effect = await session.get(ConditionEffect, ps.effect_id)
+    if effect is None or not (char.conditions or {}).get(effect.slug):
+        ps.dismissed = True
+        await session.commit()  # persist before the 409 (get_db rolls back on errors)
+        raise HTTPException(status_code=409, detail={"code": "condition_gone"})
+    if ps.status == "pending":
+        if reroll:
+            raise HTTPException(status_code=409, detail={"code": "not_rerollable"})
+    else:
+        newer = (await session.execute(select(PendingSave.id).where(
+            PendingSave.effect_id == ps.effect_id, PendingSave.id > ps.id))).first()
+        if ps.status != "failed" or not reroll or newer:
+            raise HTTPException(status_code=409, detail={"code": "not_rerollable"})
+        if not char.heroic_inspiration:
+            raise HTTPException(status_code=409, detail={"code": "inspiration_unavailable"})
+    if reroll:
+        char.heroic_inspiration = False
+
+    bonus = await saving_throw_bonus(session, char, ps.ability)
+    outcome = resolve_body(body)
+    die = outcome.kept
+    total = die + bonus
+    passed = total >= ps.dc
+    is_crit, is_fumble = die == 20, die == 1
+
+    history_msg = (
+        f"TS {ability_label(ps.ability)} per {condition_label(effect.slug)}: "
+        f"{d20_history_label(outcome)} {'+ ' if bonus >= 0 else ''}{bonus} = {total} (CD {ps.dc})"
+    )
+    if reroll:
+        history_msg = f"Reroll ispirazione: {history_msg}"
+    _add_history(session, char.id, "saving_throw", history_msg)
+    record_dice(char, d20_records(outcome))
+    await prune_history(session, char)
+
+    ps.status = "passed" if passed else "failed"
+    ps.resolved_at = datetime.utcnow().isoformat(timespec="seconds")
+    ps.last_roll = {"die": die, "dice": outcome.dice, "bonus": bonus, "total": total,
+                    "mode": outcome.mode, "passed": passed}
+    # Build the read model before apply_conditions deletes the effect and its saves.
+    save_read = pending_read(ps, effect.slug)
+    if passed:
+        await apply_conditions(session, char, {effect.slug: False})
+    await session.flush()
+
+    return PendingSaveRollResult(
+        save=save_read, passed=passed, condition_removed=passed,
+        roll=RollResult(die=die, dice=outcome.dice, mode=outcome.mode, bonus=bonus, total=total,
+                        is_critical=is_crit, is_fumble=is_fumble, description=ps.ability),
+    )
+
+
+@router.post("/{char_id}/pending-saves/{psid}/dismiss", status_code=204)
+async def dismiss_pending_save(
+    char_id: int,
+    psid: int,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> None:
+    await _get_owned(char_id, user_id, session)
+    ps = await _owned_pending_save(session, char_id, psid)
+    if ps.status not in ("failed", "passed"):
+        raise HTTPException(status_code=409, detail={"code": "not_dismissable"})
+    ps.dismissed = True
