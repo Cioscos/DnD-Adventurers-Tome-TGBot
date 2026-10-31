@@ -46,6 +46,7 @@ type SettingKey =
   | 'hide_electrum'
   | `retention:${RetentionMode}`
   | 'hp_auto_calc'
+  | 'war_caster'
   | 'show_private_identity'
   | `slot_mode:${'auto' | 'manual'}`
   | `prep_cap_mode:${'auto' | 'manual'}`
@@ -244,6 +245,7 @@ export default function Settings() {
   const slotsMode = (settings.spell_slots_mode as string) ?? 'auto'
   const spellcasting = char.spellcasting ?? null
   const prepCapMode = (settings.prepared_cap_mode as string) ?? 'auto'
+  const warCaster = settings.war_caster === true
   const hpAutoCalc = (settings.hp_auto_calc as boolean | undefined) !== false
   const showPrivateIdentity = (settings.show_private_identity as boolean | undefined) === true
   const hideElectrum = (settings.hide_electrum as boolean | undefined) === true
@@ -597,6 +599,19 @@ export default function Settings() {
             {t('character.settings.hp.recalc')}
           </Pressable>
         </div>
+      </Surface>
+
+      <Surface variant="elevated">
+        <SwitchToggle
+          checked={warCaster}
+          pending={updateMutation.isPending && activeSetting === 'war_caster'}
+          onChange={(next) => {
+            setActiveSetting('war_caster')
+            updateMutation.mutate({ ...settings, war_caster: next })
+          }}
+          label={t('character.settings.war_caster_label')}
+          hint={t('character.settings.war_caster_hint')}
+        />
       </Surface>
 
       <SectionDivider icon={<Eye size={11} />} align="center">

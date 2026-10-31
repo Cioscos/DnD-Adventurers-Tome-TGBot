@@ -76,6 +76,11 @@
     }
   },
   "character": {
+    "roll_notes": {
+      "title": "Situational note: {{name}}",
+      "edit": "Edit note: {{name}}",
+      "placeholder": "E.g. advantage vs. charm"
+    },
     "hero": {
       "stats_section": "Statistics",
       "initiative": "Initiative",
@@ -1018,6 +1023,8 @@
       }
     },
     "settings": {
+      "war_caster_label": "Advantage on concentration saves (War Caster)",
+      "war_caster_hint": "Roll Constitution saves to maintain concentration with advantage.",
       "title": "Settings",
       "spell_slots_mode": "Spell slots mode",
       "mode_auto": "AUTO",

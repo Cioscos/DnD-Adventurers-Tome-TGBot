@@ -22,8 +22,11 @@ import { useLongPress } from '@/hooks/useLongPress'
 import { useDiceAnimation } from '@/dice/useDiceAnimation'
 import { useDiceSettings } from '@/store/diceSettings'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
+import type { CharacterFull } from '@/types'
 import { useD20Roll, d20Arg, type RollMode } from '@/hooks/useD20Roll'
 import RollButton from '@/components/ui/RollButton'
+import RollNoteEditor from '@/components/character/RollNoteEditor'
+import { rollNoteOf } from '@/lib/settings'
 import { profBonus } from '@/lib/dnd'
 import HomebrewBreakdownRow from '@/components/homebrew/HomebrewBreakdownRow'
 import SkillsSkeleton from '@/components/skeletons/SkillsSkeleton'
@@ -76,6 +79,7 @@ interface SkillRowProps {
   onLongPress: () => void
   onRoll: (mode: RollMode) => void
   rollAriaLabel: string
+  char: CharacterFull
 }
 
 function SkillRow({
@@ -89,6 +93,7 @@ function SkillRow({
   onLongPress,
   onRoll,
   rollAriaLabel,
+  char,
 }: SkillRowProps) {
   const [pressProgress, setPressProgress] = useState(0)
   const longPress = useLongPress({
@@ -111,7 +116,7 @@ function SkillRow({
       initial={{ opacity: 0, x: -4 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: idx * 0.02, duration: 0.18 }}
-      className={`flex items-center gap-2 px-3 py-2 rounded-xl border transition-colors
+      className={`flex flex-wrap items-center gap-2 px-3 py-2 rounded-xl border transition-colors
         ${isExpert
           ? 'bg-gradient-to-r from-dnd-arcane-deep/30 to-dnd-gold-deep/20 border-dnd-arcane/40'
           : isProficient
@@ -169,6 +174,7 @@ function SkillRow({
           {bonus >= 0 ? '+' : ''}{bonus}
         </span>
       </div>
+      <RollNoteEditor char={char} noteKey={`skill.${skillKey}`} label={label} />
       <RollButton
         onRoll={onRoll}
         pending={rollPending}
@@ -177,6 +183,9 @@ function SkillRow({
       >
         <Dices size={16} />
       </RollButton>
+      {rollNoteOf(char, `skill.${skillKey}`) && (
+        <p className="basis-full text-xs text-dnd-text-muted font-body italic">{rollNoteOf(char, `skill.${skillKey}`)}</p>
+      )}
     </m.div>
   )
 }
@@ -338,6 +347,7 @@ export default function Skills() {
                           }}
                           onRoll={(mode) => rollMutation.mutate({ skillName: skill.key, mode })}
                           rollAriaLabel={t('character.skills.roll')}
+                          char={char}
                         />
                         <HomebrewBreakdownRow
                           value={char.skills_homebrew_modifiers?.[skill.key] ?? 0}
@@ -357,6 +367,7 @@ export default function Skills() {
         <RollResultModal
           result={rollState.result}
           title={t(`character.skills.${rollState.skillName}`)}
+          note={rollNoteOf(char, `skill.${rollState.skillName}`)}
           inspirationAvailable={Boolean(char.heroic_inspiration)}
           isRerolling={rerollMutation.isPending}
           wasRerolled={rollState.wasRerolled}

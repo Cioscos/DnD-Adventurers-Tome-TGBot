@@ -138,6 +138,12 @@ afterEach(() => {
 })
 
 describe('Skills page', () => {
+  it('shows the roll note under the row', async () => {
+    getChar.mockResolvedValue({ ...baseChar, settings: { roll_notes: { 'skill.stealth': 'svantaggio in armatura' } } })
+    renderWithProviders(<Skills />)
+    expect(await screen.findByText('svantaggio in armatura')).toBeInTheDocument()
+  })
+
   it('shows the skeleton while the character query is pending', () => {
     getChar.mockReturnValue(new Promise(() => {}))
     renderWithProviders(<Skills />)

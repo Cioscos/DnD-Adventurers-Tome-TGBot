@@ -20,6 +20,8 @@ export type RollResult = {
 type Props = {
   result: RollResult
   title: string
+  /** Situational note (e.g. "advantage vs. magic"), shown under the breakdown. */
+  note?: string
   onClose: () => void
   inspirationAvailable?: boolean
   isRerolling?: boolean
@@ -30,6 +32,7 @@ type Props = {
 export default function RollResultModal({
   result,
   title,
+  note,
   onClose,
   inspirationAvailable = false,
   isRerolling = false,
@@ -125,6 +128,8 @@ export default function RollResultModal({
           <>d20 ({die}) {bonusStr}</>
         )}
       </p>
+
+      {note && <p className="text-xs text-dnd-text font-body">{note}</p>}
 
       {result.description && (
         <p className="text-xs text-dnd-text-muted italic font-body">{result.description}</p>

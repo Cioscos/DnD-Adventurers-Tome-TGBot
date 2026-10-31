@@ -76,6 +76,11 @@
     }
   },
   "character": {
+    "roll_notes": {
+      "title": "Nota situazionale: {{name}}",
+      "edit": "Modifica nota: {{name}}",
+      "placeholder": "Es. vantaggio contro charme"
+    },
     "hero": {
       "stats_section": "Statistiche",
       "initiative": "Iniziativa",
@@ -1018,6 +1023,8 @@
       }
     },
     "settings": {
+      "war_caster_label": "Vantaggio ai TS di concentrazione (Incantatore da guerra)",
+      "war_caster_hint": "Tira con vantaggio i tiri salvezza su Costituzione per mantenere la concentrazione.",
       "title": "Impostazioni",
       "spell_slots_mode": "Modalità slot incantesimi",
       "mode_auto": "AUTO",

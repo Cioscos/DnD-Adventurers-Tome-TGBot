@@ -43,6 +43,11 @@ const result = (over: Partial<RollResult> = {}): RollResult => ({
 })
 
 describe('RollResultModal', () => {
+  it('shows the situational note', () => {
+    render(<RollResultModal result={result()} title="T" note="vantaggio vs charme" onClose={() => {}} />)
+    expect(screen.getByText('vantaggio vs charme')).toBeInTheDocument()
+  })
+
   it('shows a neutral roll with the d20 (die) + bonus = total breakdown', () => {
     render(<RollResultModal result={result()} title="Tiro" onClose={() => {}} />)
     expect(screen.getByTestId('dialog')).toHaveAttribute('data-accent', 'default')
