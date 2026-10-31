@@ -138,4 +138,18 @@ describe('CharacterSelect import', () => {
     await pick()
     await waitFor(() => expect(m.toastError).toHaveBeenCalledWith('File too large'))
   })
+
+  it('shows the pydantic messages with their field on a 422 list detail', async () => {
+    const { ApiError } = await import('@/api/client')
+    m.importChar.mockRejectedValue(new ApiError(422, [{ loc: ['body', 'hit_points'], msg: 'must be >= 0' }]))
+    await pick()
+    await waitFor(() => expect(m.toastError).toHaveBeenCalledWith('hit_points: must be >= 0'))
+  })
+
+  it('falls back to the generic text when the detail is unusable', async () => {
+    const { ApiError } = await import('@/api/client')
+    m.importChar.mockRejectedValue(new ApiError(422, [{}]))
+    await pick()
+    await waitFor(() => expect(m.toastError).toHaveBeenCalledWith('character.select.import_failed'))
+  })
 })

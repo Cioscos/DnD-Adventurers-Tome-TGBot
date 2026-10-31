@@ -62,6 +62,21 @@ type IdentityPayload = {
 
 type Step = 'name' | 'class' | 'identity'
 
+// `detail` e' una stringa (413) oppure la lista di errori pydantic (422): mostriamo i primi msg con il campo.
+function importErrorText(detail: unknown): string {
+  if (typeof detail === 'string') return detail
+  if (!Array.isArray(detail)) return ''
+  return detail
+    .slice(0, 3)
+    .map((d: { msg?: unknown; loc?: unknown }) => {
+      if (typeof d?.msg !== 'string') return ''
+      const loc = Array.isArray(d.loc) ? d.loc.filter((x) => x !== 'body').join('.') : ''
+      return loc ? `${loc}: ${d.msg}` : d.msg
+    })
+    .filter(Boolean)
+    .join('; ')
+}
+
 export default function CharacterSelect() {
   const { t } = useTranslation()
   const navigate = useNavigate()
@@ -140,8 +155,7 @@ export default function CharacterSelect() {
       navigate(`/char/${char.id}`)
     },
     onError: (e) => {
-      // 413/422: il server spiega il motivo; per un 422 strutturato (lista) basta il messaggio generico.
-      toast.error(e instanceof ApiError && typeof e.detail === 'string' ? e.detail : t('character.select.import_failed'))
+      toast.error((e instanceof ApiError && importErrorText(e.detail)) || t('character.select.import_failed'))
     },
   })
 
