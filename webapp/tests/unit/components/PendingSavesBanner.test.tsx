@@ -59,4 +59,20 @@ describe('PendingSavesBanner', () => {
     rerender(<PendingSavesBanner charId={7} />)
     expect(warning).toHaveBeenCalledTimes(1)
   })
+
+  it('keeps the sheet mounted after the saves list empties', async () => {
+    state.saves = [save()]
+    const { rerender } = render(<PendingSavesBanner charId={7} />)
+    await userEvent.click(screen.getByRole('button'))
+    state.saves = []
+    rerender(<PendingSavesBanner charId={7} />)
+    expect(screen.getByTestId('sheet')).toBeInTheDocument()
+  })
+
+  it('failed-only banner opens the sheet instead of dismissing', async () => {
+    state.saves = [save({ status: 'failed' })]
+    render(<PendingSavesBanner charId={7} />)
+    await userEvent.click(screen.getByRole('button'))
+    expect(screen.getByTestId('sheet')).toBeInTheDocument()
+  })
 })

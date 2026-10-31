@@ -1,9 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
 import { Dices } from 'lucide-react'
-import { api } from '@/api/client'
 import { haptic } from '@/auth/telegram'
 import { usePendingSaves } from '@/hooks/usePendingSaves'
 import Pressable from '@/components/ui/Pressable'
@@ -12,7 +10,6 @@ import SaveRollSheet from '@/components/SaveRollSheet'
 /** Always-on strip while the character has repeated saving throws to roll. */
 export default function PendingSavesBanner({ charId }: { charId: number }) {
   const { t } = useTranslation()
-  const qc = useQueryClient()
   const { saves, isMyTurn } = usePendingSaves(charId)
   const [open, setOpen] = useState(false)
   const pending = saves.filter((s) => s.status === 'pending')
@@ -24,32 +21,24 @@ export default function PendingSavesBanner({ charId }: { charId: number }) {
     wasStrong.current = strong
   }, [strong])
 
-  if (saves.length === 0) return null
   const first = pending[0] ?? saves[0]
-  const cond = t(`character.conditions.${first.slug}`, { defaultValue: first.slug })
-  const label =
-    pending.length > 1
+  const cond = first ? t(`character.conditions.${first.slug}`, { defaultValue: first.slug }) : ''
+  const label = !first
+    ? ''
+    : pending.length > 1
       ? t('pendingSaves.banner_many', { count: pending.length })
       : pending.length === 1
         ? t('pendingSaves.banner_one', { ability: t(`character.stats.${first.ability}`), dc: first.dc, condition: cond })
         : t('pendingSaves.banner_failed', { condition: cond })
 
-  const onTap = async () => {
+  const onTap = () => {
     haptic.light()
-    if (pending.length > 0) return setOpen(true)
-    // Only a failed outcome is left: tapping closes it.
-    try {
-      await Promise.all(saves.map((s) => api.characters.pendingSaves.dismiss(charId, s.id)))
-    } catch {
-      // Already closed elsewhere.
-    }
-    qc.invalidateQueries({ queryKey: ['character', charId] })
-    qc.invalidateQueries({ queryKey: ['turn-state', charId] })
+    setOpen(true)
   }
 
   return (
     <>
-      <m.div
+      {saves.length > 0 && <m.div
         initial={{ y: -8, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         data-testid="pending-saves-banner"
@@ -78,8 +67,8 @@ export default function PendingSavesBanner({ charId }: { charId: number }) {
             <span className="shrink-0 text-xs uppercase tracking-widest font-cinzel">{t('pendingSaves.your_turn')}</span>
           )}
         </Pressable>
-      </m.div>
-      {open && <SaveRollSheet charId={charId} saves={pending} onClose={() => setOpen(false)} />}
+      </m.div>}
+      {open && <SaveRollSheet charId={charId} saves={[...pending, ...saves.filter((s) => s.status !== 'pending')]} onClose={() => setOpen(false)} />}
     </>
   )
 }

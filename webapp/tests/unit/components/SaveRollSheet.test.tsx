@@ -45,6 +45,19 @@ function setup(inspiration = false) {
   return { onClose, invalidate }
 }
 
+function setupLive(saves: (typeof save)[], inspiration = false) {
+  const qc = new QueryClient()
+  qc.setQueryData(['character', 7], { heroic_inspiration: inspiration })
+  const onClose = vi.fn()
+  const ui = (list: (typeof save)[]) => (
+    <QueryClientProvider client={qc}>
+      <SaveRollSheet charId={7} saves={list} onClose={onClose} />
+    </QueryClientProvider>
+  )
+  const view = render(ui(saves))
+  return { onClose, shrink: () => view.rerender(ui([])) }
+}
+
 beforeEach(() => {
   rollSpy.mockReset()
   dismissSpy.mockReset()
@@ -94,5 +107,37 @@ describe('SaveRollSheet', () => {
     await waitFor(() => expect(onClose).toHaveBeenCalled())
     expect(toastError).toHaveBeenCalledWith('pendingSaves.gone')
     expect(invalidate).toHaveBeenCalled()
+  })
+
+  it('keeps the passed outcome when the live saves list empties', async () => {
+    rollSpy.mockResolvedValue(result(true))
+    const { onClose, shrink } = setupLive([save])
+    await userEvent.click(screen.getByText('pendingSaves.roll'))
+    await screen.findByText('pendingSaves.passed')
+    shrink()
+    expect(screen.getByText('pendingSaves.passed')).toBeInTheDocument()
+    expect(onClose).not.toHaveBeenCalled()
+  })
+
+  it('walks a two-save queue even if the live list shrinks', async () => {
+    rollSpy.mockResolvedValue(result(true))
+    const { onClose, shrink } = setupLive([save, { ...save, id: 2, ability: 'wisdom' }])
+    await userEvent.click(screen.getByText('pendingSaves.roll'))
+    await screen.findByText('pendingSaves.passed')
+    shrink()
+    await userEvent.click(screen.getByText('pendingSaves.ok'))
+    expect(onClose).not.toHaveBeenCalled()
+    expect(screen.getByText('pendingSaves.roll')).toBeInTheDocument()
+  })
+
+  it('a failed save opens on its outcome with re-roll and OK dismisses', async () => {
+    dismissSpy.mockResolvedValue(undefined)
+    const failed = { ...save, status: 'failed' as const }
+    const { onClose } = setupLive([failed], true)
+    expect(screen.getByText('pendingSaves.failed')).toBeInTheDocument()
+    expect(screen.getByText('character.inspiration.use_reroll')).toBeInTheDocument()
+    await userEvent.click(screen.getByText('pendingSaves.ok'))
+    await waitFor(() => expect(onClose).toHaveBeenCalled())
+    expect(dismissSpy).toHaveBeenCalledWith(7, 1)
   })
 })

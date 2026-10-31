@@ -20,7 +20,7 @@ interface Props {
   onClose: () => void
 }
 
-export default function SaveRollSheet({ charId, saves, onClose }: Props) {
+export default function SaveRollSheet({ charId, saves: live, onClose }: Props) {
   const { t } = useTranslation()
   const qc = useQueryClient()
   const toast = useToast()
@@ -29,11 +29,27 @@ export default function SaveRollSheet({ charId, saves, onClose }: Props) {
   const [done, setDone] = useState<number[]>([])
   // The save stays in `shown` after a pass, when the server drops it from the list.
   const [shown, setShown] = useState<{ save: PendingSave; res: PendingSaveRollResult } | null>(null)
+  // Queue frozen at open: the live list shrinks as the server drops resolved saves.
+  const [saves] = useState(live)
   const total = useRef(saves.length)
   const { data: char } = useQuery({ queryKey: ['character', charId], queryFn: () => api.characters.get(charId) })
 
   const current = saves.find((s) => !done.includes(s.id))
-  const active = shown?.save ?? current
+  // An already-failed save opens straight on its outcome (re-roll / OK).
+  const view =
+    shown ??
+    (current?.status === 'failed'
+      ? {
+          save: current,
+          res: {
+            save: current,
+            roll: { total: Number((current.last_roll as { total?: number } | null)?.total ?? 0) } as PendingSaveRollResult['roll'],
+            passed: false,
+            condition_removed: false,
+          },
+        }
+      : null)
+  const active = view?.save ?? current
   const refresh = () => {
     qc.invalidateQueries({ queryKey: ['character', charId] })
     qc.invalidateQueries({ queryKey: ['turn-state', charId] })
@@ -64,8 +80,8 @@ export default function SaveRollSheet({ charId, saves, onClose }: Props) {
   })
 
   const ok = async () => {
-    if (!shown) return
-    const { save, res } = shown
+    if (!view) return
+    const { save, res } = view
     try {
       if (!res.passed) await api.characters.pendingSaves.dismiss(charId, save.id)
     } catch {
@@ -96,7 +112,7 @@ export default function SaveRollSheet({ charId, saves, onClose }: Props) {
           )}
         </div>
 
-        {!shown ? (
+        {!view ? (
           <>
             <div role="radiogroup" aria-label={t('common.roll_mode.title')} className="grid grid-cols-3 gap-2">
               {MODES.map((md) => (
@@ -129,20 +145,20 @@ export default function SaveRollSheet({ charId, saves, onClose }: Props) {
         ) : (
           <div className="space-y-3">
             <p className="text-center font-mono text-3xl font-bold tabular-nums text-dnd-gold-bright">
-              {t('pendingSaves.total_vs_dc', { total: shown.res.roll.total, dc: active.dc })}
+              {t('pendingSaves.total_vs_dc', { total: view.res.roll.total, dc: active.dc })}
             </p>
             <p
               className={`text-center font-display font-bold ${
-                shown.res.passed ? 'text-dnd-emerald-bright' : 'text-dnd-crimson-bright'
+                view.res.passed ? 'text-dnd-emerald-bright' : 'text-dnd-crimson-bright'
               }`}
             >
-              {t(shown.res.passed ? 'pendingSaves.passed' : 'pendingSaves.failed', { condition: cond })}
+              {t(view.res.passed ? 'pendingSaves.passed' : 'pendingSaves.failed', { condition: cond })}
             </p>
-            {!shown.res.passed && (
+            {!view.res.passed && (
               <InspirationRerollButton
                 available={!!char?.heroic_inspiration}
                 pending={roll.isPending}
-                onClick={() => roll.mutate({ save: shown.save, reroll: true })}
+                onClick={() => roll.mutate({ save: view.save, reroll: true })}
               />
             )}
             <Button size="lg" fullWidth variant="secondary" onClick={ok}>
