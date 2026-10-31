@@ -70,7 +70,8 @@ class ExportCharacter(BaseModel):
     death_saves: dict = Field(default_factory=dict)
     personality: dict = Field(default_factory=dict)
     languages: list = Field(default_factory=list)
-    general_proficiencies: list = Field(default_factory=list)
+    # legacy exports carry a plain list, newer ones the {armor,weapons,tools,other} object
+    general_proficiencies: list | dict = Field(default_factory=list)
     damage_modifiers: dict = Field(default_factory=dict)
     pending_choices: list[ExportChoice] = Field(default_factory=list, max_length=40)
     # {titolo: {body, created_at, updated_at, tags, was_voice}}; le note vocali hanno body ""

@@ -10,6 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from api.schemas.common import normalize_proficiencies
 from api.schemas.transfer import CharacterExport, ExportCharacter
 from api.services.homebrew.dsl import RuleDSL
 from api.version import APP_VERSION
@@ -81,8 +82,9 @@ async def build_export(session: AsyncSession, char: Character) -> CharacterExpor
     for k in ("settings", "conditions", "skills", "saving_throws", "death_saves",
               "personality", "damage_modifiers"):
         cols[k] = cols[k] or {}
-    for k in ("languages", "general_proficiencies", "pending_choices"):
+    for k in ("languages", "pending_choices"):
         cols[k] = cols[k] or []
+    cols["general_proficiencies"] = normalize_proficiencies(cols["general_proficiencies"])
     # hp_rolls e' indicizzato per class_id: nel file usa le stesse chiavi "c{i}" delle abilita'.
     raw_rolls = cols["settings"].get("hp_rolls")
     if raw_rolls is not None:  # dati legacy/corrotti: scarta quel che non e' {id: {...}}
@@ -172,6 +174,7 @@ async def import_character(
         name = name[: 100 - len(name_suffix)] + name_suffix
 
     cols = data.character.model_dump(exclude={"notes", "name", "spell_slots_mode"})
+    cols["general_proficiencies"] = normalize_proficiencies(cols["general_proficiencies"])
     char = Character(
         user_id=user_id, name=name, notes=data.character.notes,
         spell_slots_mode=SpellSlotsMode(data.character.spell_slots_mode), **cols,

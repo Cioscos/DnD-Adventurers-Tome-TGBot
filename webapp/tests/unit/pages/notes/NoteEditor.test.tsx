@@ -38,6 +38,13 @@ describe('NoteEditor', () => {
     expect(screen.queryByLabelText('character.notes.title_label')).not.toBeInTheDocument()
   })
 
+  it('suggested tag chip click adds the tag and hides the chip', async () => {
+    render(<NoteEditor onSave={() => {}} onCancel={() => {}} isPending={false} />)
+    await userEvent.click(screen.getByRole('button', { name: '+ Alleati' }))
+    expect(screen.getByTestId('chips')).toHaveTextContent('Alleati')
+    expect(screen.queryByRole('button', { name: '+ Alleati' })).not.toBeInTheDocument()
+  })
+
   it('cancels', async () => {
     const onCancel = vi.fn()
     render(<NoteEditor onSave={() => {}} onCancel={onCancel} isPending={false} />)

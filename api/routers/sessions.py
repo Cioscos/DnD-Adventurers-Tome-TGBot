@@ -670,6 +670,8 @@ async def get_participant_identity(
     show_private = bool(settings_.get("show_private_identity")) or caller_user_id == user_id
 
     def _join_list(val) -> Optional[str]:
+        if isinstance(val, dict):  # proficiencies by category
+            val = [x for v in val.values() for x in v]
         if not val:
             return None
         if isinstance(val, list):

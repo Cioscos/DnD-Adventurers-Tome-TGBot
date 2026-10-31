@@ -30,6 +30,19 @@ def _validate_restoration_type(value: Optional[str]) -> Optional[str]:
 # AbilityScore
 # ---------------------------------------------------------------------------
 
+PROFICIENCY_CATEGORIES = ("armor", "weapons", "tools", "other")
+
+
+def normalize_proficiencies(v: Any) -> dict[str, list[str]]:
+    """Legacy plain list -> ``other``; object -> the four known categories only.
+
+    Stored data is migrated lazily: reads always return the object, writes store it.
+    """
+    if isinstance(v, dict):
+        return {k: [str(x) for x in (v.get(k) or [])] for k in PROFICIENCY_CATEGORIES}
+    return {**normalize_proficiencies({}), "other": [str(x) for x in (v or [])]}
+
+
 class AppliedModifierRead(BaseModel):
     """A single equipped-item modifier applied to an ability score."""
     source: str

@@ -256,7 +256,7 @@ export interface CharacterFull extends Omit<CharacterSummary, 'ac_homebrew_modif
   death_saves?: DeathSaves
   personality?: Record<string, string>
   languages?: string[]
-  general_proficiencies?: string[]
+  general_proficiencies?: Partial<Record<'armor' | 'weapons' | 'tools' | 'other', string[]>> | string[]
   damage_modifiers?: Record<string, string[]>
   classes: CharacterClass[]
   ability_scores: AbilityScore[]

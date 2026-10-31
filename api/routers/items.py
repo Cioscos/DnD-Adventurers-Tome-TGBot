@@ -37,7 +37,7 @@ from api.services.equipment import slot_allowed_for_type, swap_slot_occupant
 from api.services.homebrew.dispatcher import dispatch
 from api.services.character_response import build_character_response
 from api.services.effects import apply_heal, apply_conditions
-from api.schemas.common import ConsumableUseResult, D20Dice, RollMode
+from api.schemas.common import ConsumableUseResult, D20Dice, RollMode, normalize_proficiencies
 
 router = APIRouter(prefix="/characters", tags=["items"])
 
@@ -456,11 +456,12 @@ class AttackSubmission(BaseModel):
 
 
 def _lacks_weapon_proficiency(char, weapon_name: str, category: str | None) -> bool:
-    """True when the proficiency list is non-empty and covers neither the weapon nor its category.
+    """True when the weapons proficiencies are non-empty and cover neither the weapon nor its category.
 
-    Isolated so Task 25 can swap the lookup when proficiencies become categories.
+    Reads ``weapons`` plus ``other`` (legacy lists were migrated there).
     """
-    profs = {str(p).strip().lower() for p in (char.general_proficiencies or [])}
+    cats = normalize_proficiencies(char.general_proficiencies)
+    profs = {str(p).strip().lower() for p in cats["weapons"] + cats["other"]}
     if not profs:
         return False
     names = {weapon_name.strip().lower()}

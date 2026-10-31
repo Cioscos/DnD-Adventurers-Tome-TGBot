@@ -25,6 +25,29 @@ import IdentitySkeleton from '@/components/skeletons/IdentitySkeleton'
 
 const LANGUAGE_SUGGESTIONS = [...languagesSrd.common, ...languagesSrd.exotic]
 
+const PROF_KEYS = ['armor', 'weapons', 'tools', 'other'] as const
+type Proficiencies = Record<(typeof PROF_KEYS)[number], string[]>
+const APPEARANCE_KEYS = ['age', 'height', 'weight', 'eyes', 'hair', 'skin'] as const
+
+const PROF_SUGGESTIONS: Record<'it' | 'en', Record<'armor' | 'weapons' | 'tools', string[]>> = {
+  it: {
+    armor: ['Armature leggere', 'Armature medie', 'Armature pesanti', 'Scudi'],
+    weapons: ['Armi semplici', 'Armi da guerra'],
+    tools: ["Strumenti da ladro", "Strumenti da alchimista", "Strumenti da fabbro", "Strumenti da erborista", "Strumenti musicali", "Set da giocatore d'azzardo", "Strumenti da navigatore"],
+  },
+  en: {
+    armor: ['Light armor', 'Medium armor', 'Heavy armor', 'Shields'],
+    weapons: ['Simple weapons', 'Martial weapons'],
+    tools: ["Thieves' tools", "Alchemist's supplies", "Smith's tools", 'Herbalism kit', 'Musical instruments', 'Gaming set', "Navigator's tools"],
+  },
+}
+
+// Legacy: lista piatta -> "other" (il server fa lo stesso in lettura).
+function normalizeProfs(v: unknown): Proficiencies {
+  const o = (Array.isArray(v) ? { other: v } : v ?? {}) as Partial<Proficiencies>
+  return { armor: o.armor ?? [], weapons: o.weapons ?? [], tools: o.tools ?? [], other: o.other ?? [] }
+}
+
 type DamageModifiers = {
   resistances: string[]
   immunities: string[]
@@ -37,7 +60,8 @@ type Draft = {
   // tipo -> distanza nell'unità scelta; assente = senso non posseduto
   senses: Record<string, string>
   personality_traits: string; ideals: string; bonds: string; flaws: string
-  languages: string[]; general_proficiencies: string[]
+  languages: string[]; general_proficiencies: Proficiencies
+  appearance: Record<(typeof APPEARANCE_KEYS)[number], string>
   damageModifiers: DamageModifiers
 }
 
@@ -64,7 +88,8 @@ function snapshot(d: Draft): string {
 export default function Identity() {
   const { id } = useParams<{ id: string }>()
   const charId = Number(id)
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const profSuggestions = PROF_SUGGESTIONS[i18n.language === 'en' ? 'en' : 'it']
   const qc = useQueryClient()
   const [draft, setDraft] = useState<Draft | null>(null)
   const [pristine, setPristine] = useState<string>('')
@@ -95,7 +120,8 @@ export default function Identity() {
         bonds: personality.bonds ?? '',
         flaws: personality.flaws ?? '',
         languages: (char.languages as string[]) ?? [],
-        general_proficiencies: (char.general_proficiencies as string[]) ?? [],
+        general_proficiencies: normalizeProfs(char.general_proficiencies),
+        appearance: Object.fromEntries(APPEARANCE_KEYS.map((k) => [k, personality[k] ?? ''])) as Draft['appearance'],
         damageModifiers: {
           resistances: normalizeDmg(raw.resistances),
           immunities: normalizeDmg(raw.immunities),
@@ -120,7 +146,10 @@ export default function Identity() {
         background: draft.background.trim() || null,
         alignment: draft.alignment.trim() || null,
         speed: displayToFeet(Number(draft.speed) || 0, unitSystem) || 30,
+        // personality is replaced server-side: keep every existing key.
         personality: {
+          ...char?.personality,
+          ...draft.appearance,
           traits: draft.personality_traits.trim(),
           ideals: draft.ideals.trim(),
           bonds: draft.bonds.trim(),
@@ -249,6 +278,23 @@ export default function Identity() {
         </Surface>
       </div>
 
+      {/* Appearance */}
+      <Surface variant="elevated" className="mt-3 space-y-2">
+        <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim">
+          {t('character.identity.appearance')}
+        </p>
+        <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
+          {APPEARANCE_KEYS.map((k) => (
+            <Input
+              key={k}
+              label={t(`character.identity.appearance_${k}`)}
+              value={draft.appearance[k]}
+              onChange={(v) => setDraft((d) => d ? { ...d, appearance: { ...d.appearance, [k]: v } } : d)}
+            />
+          ))}
+        </div>
+      </Surface>
+
       {/* Senses */}
       <Surface variant="elevated" className="mt-3 space-y-2">
         <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim">
@@ -358,15 +404,18 @@ export default function Identity() {
           suggestions={LANGUAGE_SUGGESTIONS}
         />
       </Surface>
-      <Surface variant="elevated">
-        <ChipInput
-          label={t('character.identity.proficiencies')}
-          values={draft.general_proficiencies}
-          onChange={(next) => setDraft((d) => d ? { ...d, general_proficiencies: next } : d)}
-          placeholder={t('character.identity.proficiency_placeholder')}
-          splitOnComma
-        />
-      </Surface>
+      {PROF_KEYS.map((k) => (
+        <Surface key={k} variant="elevated">
+          <ChipInput
+            label={t(`character.identity.proficiencies_${k}`)}
+            values={draft.general_proficiencies[k]}
+            onChange={(next) => setDraft((d) => d ? { ...d, general_proficiencies: { ...d.general_proficiencies, [k]: next } } : d)}
+            placeholder={t('character.identity.proficiency_placeholder')}
+            splitOnComma
+            suggestions={k === 'other' ? undefined : profSuggestions[k]}
+          />
+        </Surface>
+      ))}
 
       {/* Damage Modifiers */}
       <SectionDivider icon={<Shield size={11} />} align="center">

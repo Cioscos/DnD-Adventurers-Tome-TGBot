@@ -7,6 +7,8 @@ from typing import Any, Literal, Optional
 from pydantic import BaseModel, Field, TypeAdapter, field_validator, model_validator
 
 from api.schemas.common import (
+    PROFICIENCY_CATEGORIES,
+    normalize_proficiencies,
     AbilityRead,
     AbilityScoreRead,
     CharacterClassCreate,
@@ -171,8 +173,13 @@ class CharacterFull(BaseModel):
     death_saves: Optional[dict[str, Any]] = None
     personality: Optional[dict[str, Any]] = None
     languages: Optional[list] = None
-    general_proficiencies: Optional[list] = None
+    general_proficiencies: Optional[dict[str, list[str]]] = None
     damage_modifiers: Optional[dict[str, Any]] = None
+
+    @field_validator("general_proficiencies", mode="before")
+    @classmethod
+    def _proficiency_categories(cls, v: Any) -> dict[str, list[str]]:
+        return normalize_proficiencies(v)
 
     # Relations
     classes: list[CharacterClassRead] = []
@@ -281,10 +288,17 @@ class CharacterUpdate(BaseModel):
     speed: Optional[int] = None
     personality: Optional[dict[str, Any]] = None
     languages: Optional[list[str]] = None
-    general_proficiencies: Optional[list[str]] = None
+    general_proficiencies: Optional[list[str] | dict[str, list[str]]] = None
     damage_modifiers: Optional[dict[str, Any]] = None
     spell_slots_mode: Optional[str] = None
     settings: Optional[dict[str, Any]] = None
+
+    @field_validator("general_proficiencies")
+    @classmethod
+    def _proficiency_categories(cls, v: Any) -> Any:
+        if isinstance(v, dict) and set(v) - set(PROFICIENCY_CATEGORIES):
+            raise ValueError("unknown proficiency category")
+        return None if v is None else normalize_proficiencies(v)
 
     @field_validator("settings")
     @classmethod

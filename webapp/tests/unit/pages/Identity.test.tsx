@@ -41,3 +41,20 @@ describe('Identity senses editor', () => {
     ])
   })
 })
+
+describe('Identity proficiencies and appearance', () => {
+  it('reads a legacy list into "other" and saves categories + appearance keeping personality', async () => {
+    const legacy = { ...char, general_proficiencies: ['Liuto'], personality: { traits: 'T', ideals: 'I', extra: 'keep' } }
+    getChar.mockResolvedValue(legacy)
+    updateChar.mockResolvedValue(legacy)
+    renderWithProviders(<Identity />)
+    expect(await screen.findByText('Liuto')).toBeInTheDocument()
+    const label = await screen.findByText(/^(Età|Age)$/)
+    await userEvent.type(label.closest('div')!.querySelector('input')!, '27')
+    await userEvent.click(await screen.findByRole('button', { name: /Salva ora|Save now/i }))
+    await waitFor(() => expect(updateChar).toHaveBeenCalled())
+    const body = updateChar.mock.calls.at(-1)![1]
+    expect(body.general_proficiencies).toEqual({ armor: [], weapons: [], tools: [], other: ['Liuto'] })
+    expect(body.personality).toMatchObject({ traits: 'T', ideals: 'I', extra: 'keep', age: '27' })
+  })
+})
