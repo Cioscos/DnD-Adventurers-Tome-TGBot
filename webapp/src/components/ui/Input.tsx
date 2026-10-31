@@ -173,7 +173,7 @@ export default function Input({
             autoFocus={autoFocus}
             className={`w-full px-3 py-2.5 min-h-[96px] rounded-lg bg-dnd-surface text-dnd-text
                         border-b-2 ${underlineColor} outline-none transition-all duration-200
-                        placeholder:text-dnd-text-faint font-body
+                        placeholder:text-dnd-text-faint font-body text-ellipsis
                         disabled:opacity-40 disabled:cursor-not-allowed resize-y`}
           />
         ) : (
@@ -192,7 +192,7 @@ export default function Input({
             autoFocus={autoFocus}
             className={`w-full px-3 py-2.5 min-h-[48px] rounded-lg bg-dnd-surface text-dnd-text
                         border-b-2 ${underlineColor} outline-none transition-all duration-200
-                        placeholder:text-dnd-text-faint font-body
+                        placeholder:text-dnd-text-faint font-body text-ellipsis
                         disabled:opacity-40 disabled:cursor-not-allowed
                         ${leadingIcon ? 'pl-10' : ''}
                         ${trailingAction ? 'pr-12' : ''}`}

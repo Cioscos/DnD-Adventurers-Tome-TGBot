@@ -140,11 +140,6 @@ export default function Maps() {
           icon={<MapIcon size={32} />}
           title={t('character.maps.empty_title')}
           hint={t('character.maps.empty_hint')}
-          action={{
-            label: t('character.maps.add_map'),
-            onClick: () => setShowUpload(true),
-            icon: <Plus size={14} />,
-          }}
         />
       ) : (
         Object.entries(zones).map(([zone, zoneMaps]) => (

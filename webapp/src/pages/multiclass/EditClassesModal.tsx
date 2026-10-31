@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
@@ -227,7 +228,8 @@ export default function EditClassesModal({ char, targetLevel, milestone = false,
     return unmetPrereqGroups(pickerKey, scoreOf)
   }, [pickerKey, char.ability_scores])
 
-  return (
+  // Portal: dentro il contenitore animato della pagina il `fixed` resta sotto l'header e viene tagliato.
+  return createPortal(
     <div
       className="fixed inset-0 bg-dnd-overlay z-50 flex items-end sm:items-center justify-center p-4"
       style={modalBlur.blurStyle}
@@ -462,6 +464,7 @@ export default function EditClassesModal({ char, targetLevel, milestone = false,
           </m.div>
         </div>
       )}
-    </div>
+    </div>,
+    document.body,
   )
 }

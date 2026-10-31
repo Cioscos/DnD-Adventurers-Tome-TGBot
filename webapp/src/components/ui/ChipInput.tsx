@@ -145,7 +145,7 @@ export default function ChipInput({
             if (input.trim()) commit(input)
           }}
           placeholder={values.length === 0 ? placeholder : ''}
-          className="flex-1 min-w-[80px] bg-transparent outline-none text-sm font-body text-dnd-text placeholder:text-dnd-text-faint py-1"
+          className="flex-1 min-w-[80px] bg-transparent outline-none text-sm font-body text-dnd-text placeholder:text-dnd-text-faint text-ellipsis py-1"
         />
       </div>
       {showSuggestions && filteredSuggestions.length > 0 && (

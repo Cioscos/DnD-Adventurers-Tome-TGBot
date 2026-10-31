@@ -47,7 +47,8 @@ export default function Actions() {
       </p>
 
       <Surface variant="elevated" ornamented>
-        <div className="flex items-center gap-3">
+        {/* Sotto 375px "Attacca" va a capo a tutta larghezza invece di schiacciare titolo e descrizione */}
+        <div className="flex flex-wrap items-center gap-3">
           <GiFist size={28} className="text-dnd-gold-bright shrink-0" />
           <div className="flex-1 min-w-0">
             <p className="font-cinzel text-dnd-gold">{t('character.actions.unarmed')}</p>
@@ -57,7 +58,7 @@ export default function Actions() {
             onRoll={(mode) => flow.attackUnarmed(mode)}
             pending={flow.isUnarmedPending}
             ariaLabel={t('character.actions.unarmed')}
-            className="flex items-center gap-1 text-sm font-medium px-4 h-11 rounded-lg bg-dnd-crimson/20 text-dnd-crimson-bright border border-dnd-crimson/30 active:scale-95 transition-transform"
+            className="max-xs:w-full justify-center flex items-center gap-1 text-sm font-medium px-4 h-11 rounded-lg bg-dnd-crimson/20 text-dnd-crimson-bright border border-dnd-crimson/30 active:scale-95 transition-transform"
           >
             <Target size={14} />
             {t('character.actions.attack')}

@@ -141,7 +141,7 @@ export default function HpOperationForm({
             // shortcut, su Indietro) il valore veniva applicato con l'op attiva.
             commitOnBlur={false}
             onCommit={onApply}
-            className="[&_input]:text-3xl [&_input]:font-display [&_input]:font-bold [&_input]:text-center [&_input]:min-h-[60px]"
+            className="[&_input]:text-3xl [&_input]:font-mono [&_input]:tabular-nums [&_input]:font-bold [&_input]:text-center [&_input]:min-h-[60px]"
           />
           {showPreview && (
             <p className="text-center font-mono text-sm tabular-nums text-dnd-cobalt-bright">

@@ -178,10 +178,12 @@ export default function SavingThrows() {
 
                     <div className="flex-1 min-w-0">
                       <p
-                        className="text-xs font-cinzel uppercase tracking-[0.18em] text-dnd-text leading-tight"
+                        className="text-xs font-cinzel uppercase tracking-[0.18em] text-dnd-text leading-tight truncate"
                         title={t(`character.stats.${ability}`)}
                       >
-                        {t(`character.stats.${ability}`)}
+                        {/* Sotto 375px il nome intero non sta accanto al totale: sigla */}
+                        <span className="max-xs:hidden">{t(`character.stats.${ability}`)}</span>
+                        <span className="xs:hidden">{t(`character.ability.${ability}_short`)}</span>
                       </p>
                       <p className="text-xs text-dnd-text-faint font-mono leading-tight mt-0.5">
                         {abilMod >= 0 ? '+' : ''}{abilMod}
@@ -190,7 +192,7 @@ export default function SavingThrows() {
                     </div>
 
                     {/* Negativo in crimson come in Skills: stesso vocabolario. */}
-                    <p className={`text-3xl font-mono font-bold leading-none tabular-nums ${total >= 0 ? 'text-dnd-text' : 'text-dnd-crimson-bright'}`}>
+                    <p className={`shrink-0 text-3xl font-mono font-bold leading-none tabular-nums ${total >= 0 ? 'text-dnd-text' : 'text-dnd-crimson-bright'}`}>
                       {total >= 0 ? '+' : ''}{total}
                     </p>
                     <span onClick={(e) => e.stopPropagation()} className="shrink-0">

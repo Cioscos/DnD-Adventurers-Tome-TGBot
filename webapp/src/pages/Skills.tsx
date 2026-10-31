@@ -118,7 +118,7 @@ function SkillRow({
       initial={{ opacity: 0, x: -4 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: idx * 0.02, duration: 0.18 }}
-      className={`flex flex-wrap items-center gap-2 px-3 py-2 rounded-xl border transition-colors
+      className={`flex flex-wrap items-center gap-2 max-xs:gap-1 px-3 max-xs:px-2 py-2 rounded-xl border transition-colors
         ${isExpert
           ? 'bg-gradient-to-r from-dnd-arcane-deep/30 to-dnd-gold-deep/20 border-dnd-arcane/40'
           : isProficient
@@ -127,9 +127,9 @@ function SkillRow({
     >
       <div
         {...longPress}
-        className="flex items-center gap-2 flex-1 min-w-0 select-none cursor-pointer"
+        className="flex items-center gap-2 max-xs:gap-1 flex-1 min-w-0 select-none cursor-pointer"
       >
-        <div className="relative w-11 h-11 rounded-full flex items-center justify-center shrink-0">
+        <div className="relative w-11 max-xs:w-7 h-11 rounded-full flex items-center justify-center shrink-0">
           {/* Halo-as-Signal progress ring during long-press hold */}
           {ringActive && (
             <svg
@@ -166,12 +166,12 @@ function SkillRow({
           )}
         </div>
         <span
-          className="flex-1 text-left text-sm font-body font-medium truncate"
+          className="flex-1 min-w-0 text-left text-sm font-body font-medium truncate max-xs:whitespace-normal max-xs:line-clamp-2 max-xs:leading-tight"
           title={label}
         >
           {label}
         </span>
-        <span className={`text-sm font-mono font-bold w-10 text-right shrink-0 tabular-nums
+        <span className={`text-sm font-mono font-bold w-10 max-xs:w-8 text-right shrink-0 tabular-nums
           ${hasMark
             ? 'text-dnd-gold-bright'
             : bonus >= 0 ? 'text-dnd-text' : 'text-dnd-crimson-bright'}`}>
@@ -182,7 +182,7 @@ function SkillRow({
       <RollButton
         onRoll={onRoll}
         pending={rollPending}
-        className="shrink-0 w-11 h-11 rounded-xl bg-dnd-chip-bg border border-dnd-gold-dim/40 flex items-center justify-center text-dnd-gold active:scale-90 transition-transform"
+        className="shrink-0 w-11 max-xs:w-10 h-11 rounded-xl bg-dnd-chip-bg border border-dnd-gold-dim/40 flex items-center justify-center text-dnd-gold active:scale-90 transition-transform"
         ariaLabel={rollAriaLabel}
       >
         <Dices size={16} />

@@ -390,7 +390,7 @@ export default function SpellSlots() {
               {t('character.slots.add_new_level')}
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="grid grid-cols-2 xs:grid-cols-3 gap-2">
             {missingLevels.map((level) => (
               <Pressable
                 key={level}

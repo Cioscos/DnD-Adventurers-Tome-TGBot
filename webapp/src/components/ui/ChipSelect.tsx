@@ -22,11 +22,12 @@ interface ChipSelectProps {
 }
 
 // Tailwind needs literal class names — no template `grid-cols-${n}`.
+// 3+ colonne non stanno sotto 375px ("Perforazione" esce dal chip): lì scendono a 2.
 const GRID_COLS: Record<number, string> = {
   2: 'grid-cols-2',
-  3: 'grid-cols-3',
-  4: 'grid-cols-4',
-  5: 'grid-cols-5',
+  3: 'grid-cols-2 xs:grid-cols-3',
+  4: 'grid-cols-2 xs:grid-cols-4',
+  5: 'grid-cols-2 xs:grid-cols-5',
 }
 
 /** Single-select chip group — the guided replacement for native `<select>`
@@ -56,10 +57,14 @@ export default function ChipSelect({
       <div className={layout} role="radiogroup" aria-label={label}>
         {options.map((opt, idx) => {
           const active = opt.value === value
-          const orphanSpan =
-            columns && spanOrphan && idx === options.length - 1 && options.length % columns === 1
-              ? 'col-span-full'
-              : ''
+          const last = columns && spanOrphan && idx === options.length - 1
+          const narrowCols = columns && columns >= 3 ? 2 : columns
+          const orphanSpan = !last || !columns || !narrowCols
+            ? ''
+            : [
+                options.length % narrowCols === 1 ? 'col-span-full' : '',
+                narrowCols !== columns ? (options.length % columns === 1 ? 'xs:col-span-full' : 'xs:col-span-1') : '',
+              ].join(' ')
           return (
             <m.button
               key={opt.value}

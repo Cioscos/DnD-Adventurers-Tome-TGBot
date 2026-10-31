@@ -48,7 +48,7 @@ export default function ProgressionPreview({ className, currentLevel, isMulticla
   return (
     <>
       <Surface variant="tome" className="@container !p-2.5">
-        <div className="flex items-center justify-between mb-1.5">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5 mb-1.5">
           <div className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim">
             {t('character.equipment.progression.title', { defaultValue: 'Progression' })}
           </div>

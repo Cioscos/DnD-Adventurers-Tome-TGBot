@@ -47,7 +47,7 @@ export default function DamageTypeControls({
               key={mod}
               onClick={() => { setDamageModifier(on || mod === proposedModifier ? null : mod); haptic.selection() }}
               aria-pressed={on}
-              className={`flex items-center justify-center min-h-[44px] rounded-xl border font-cinzel text-xs uppercase tracking-wider transition-colors
+              className={`flex items-center justify-center min-h-[44px] rounded-xl border px-2 font-cinzel text-xs uppercase tracking-wider max-xs:tracking-normal whitespace-nowrap transition-colors
                 ${on
                   ? '!bg-dnd-cobalt/20 !text-dnd-cobalt-bright !border-dnd-cobalt/60'
                   : 'bg-transparent text-dnd-text-muted border-dnd-border'}`}

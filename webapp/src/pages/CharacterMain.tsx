@@ -123,9 +123,10 @@ export default function CharacterMain() {
           <ChevronLeft size={20} className="text-dnd-gold-bright" />
         </Pressable>
 
-        <h1 className="text-xl font-display font-bold text-dnd-gold-bright truncate flex-1 flex items-center gap-2 min-w-0"
+        {/* Sotto 375px le tre azioni lasciano ~100px al nome: due righe più piccole invece di "Kael Vent…" */}
+        <h1 className="text-xl max-xs:text-base max-xs:leading-tight font-display font-bold text-dnd-gold-bright truncate max-xs:whitespace-normal flex-1 flex items-center gap-2 min-w-0"
             style={{ textShadow: '0 1px 4px var(--dnd-gold-glow)' }}>
-          <span className="truncate">{char.name}</span>
+          <span className="truncate max-xs:whitespace-normal max-xs:line-clamp-2 max-xs:break-words">{char.name}</span>
           {isConcentrating(char) && (
             <Pressable
               type="button"

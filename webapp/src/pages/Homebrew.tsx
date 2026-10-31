@@ -144,7 +144,7 @@ function TemplateCard({ template, installed, installing, onInstall, t }: Templat
         <span className="text-2xl leading-none shrink-0" aria-hidden>
           {template.icon}
         </span>
-        <p className="font-display font-bold text-[15px] text-dnd-text leading-tight flex-1 min-w-0">
+        <p className="font-display font-bold text-[15px] text-dnd-text leading-tight flex-1 min-w-0 break-words">
           {template.name}
         </p>
       </div>
@@ -312,7 +312,7 @@ export default function Homebrew() {
         <Skeleton.Rect height="72px" delay={80} />
         <Skeleton.Rect height="72px" delay={160} />
         <Skeleton.Ornament delay={200} />
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 xs:grid-cols-2 gap-3">
           <Skeleton.Rect height="140px" delay={240} />
           <Skeleton.Rect height="140px" delay={300} />
           <Skeleton.Rect height="140px" delay={360} />
@@ -438,7 +438,7 @@ export default function Homebrew() {
         <SectionDivider icon={<BookOpenCheck size={11} />} align="center">
           {t('homebrew.sections.library')}
         </SectionDivider>
-        <Reveal.Stagger stagger={stagger.listTight} delay={0.05} className="grid grid-cols-2 gap-3">
+        <Reveal.Stagger stagger={stagger.listTight} delay={0.05} className="grid grid-cols-1 xs:grid-cols-2 gap-3">
           {templates.map((tpl) => (
             <Reveal.Item key={tpl.id}>
               <TemplateCard

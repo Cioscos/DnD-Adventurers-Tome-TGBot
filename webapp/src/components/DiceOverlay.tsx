@@ -66,6 +66,26 @@ export default function DiceOverlay() {
   const { blurStyle: warningBlurStyle, onEntranceComplete: onWarningEntranceComplete } =
     useDeferredBlur(warningText !== null, 12)
 
+  const { pathname } = useLocation()
+  const dialRef = useRef<HTMLDivElement>(null)
+
+  // Il dial non deve sopravvivere a un cambio pagina né coprire i contenuti:
+  // si chiude navigando, con Esc e con un tap fuori (il pool resta).
+  useEffect(() => { setOpen(false) }, [pathname])
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }
+    const onDown = (e: PointerEvent) => {
+      if (dialRef.current && !dialRef.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('keydown', onKey)
+    document.addEventListener('pointerdown', onDown)
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      document.removeEventListener('pointerdown', onDown)
+    }
+  }, [open])
+
   const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const longPressFiredRef = useRef(false)
@@ -185,7 +205,7 @@ export default function DiceOverlay() {
   return (
     <>
       {!anyOverlayOpen && !typing && (
-      <div className="fixed bottom-safe-fab right-4 z-40">
+      <div ref={dialRef} className="fixed bottom-safe-fab right-4 z-40">
         <AnimatePresence>
           {open && (
             <m.div

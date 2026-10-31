@@ -177,7 +177,7 @@ export default function ArmorClass() {
         transition={{ ...spring.drift, delay: 0.10 }}
         className="grid grid-cols-3 gap-2"
       >
-        <Surface variant="elevated">
+        <Surface variant="elevated" className="max-xs:!p-2.5">
           <div className="flex items-center gap-1 flex-wrap">
             <p
               className="font-cinzel text-xs uppercase tracking-widest text-dnd-gold-dim cursor-help"
@@ -188,15 +188,15 @@ export default function ArmorClass() {
               {t('character.ac.base')}
             </p>
             {unarmoredActive ? (
-              <span className="text-xs font-cinzel uppercase tracking-wider px-1 py-px rounded-full bg-dnd-gold/20 text-dnd-gold-bright border border-dnd-gold/50">
+              <span className="max-xs:hidden max-w-full truncate text-xs font-cinzel uppercase tracking-wider px-1 py-px rounded-full bg-dnd-gold/20 text-dnd-gold-bright border border-dnd-gold/50">
                 {t('character.ac.unarmored_badge')}
               </span>
             ) : char.base_armor_class_override ? (
-              <span className="text-xs font-cinzel uppercase tracking-wider px-1 py-px rounded-full bg-dnd-crimson-deep/30 text-dnd-crimson-bright border border-dnd-crimson/50">
+              <span className="max-xs:hidden max-w-full truncate text-xs font-cinzel uppercase tracking-wider px-1 py-px rounded-full bg-dnd-crimson-deep/30 text-dnd-crimson-bright border border-dnd-crimson/50">
                 {t('character.ac.manual_override')}
               </span>
             ) : equippedBodyArmor && (
-              <span className="text-xs font-cinzel uppercase tracking-wider px-1 py-px rounded-full bg-dnd-gold/20 text-dnd-gold-bright border border-dnd-gold/50">
+              <span className="max-xs:hidden max-w-full truncate text-xs font-cinzel uppercase tracking-wider px-1 py-px rounded-full bg-dnd-gold/20 text-dnd-gold-bright border border-dnd-gold/50">
                 {t('character.ac.auto_from_armor')}
               </span>
             )}
@@ -212,20 +212,20 @@ export default function ArmorClass() {
             placeholder={String(char.base_armor_class)}
             inputMode="numeric"
             disabled={unarmoredActive}
-            className="mt-2 w-full [&_input]:text-base [&_input]:font-display [&_input]:font-bold [&_input]:text-center"
+            className="mt-2 w-full [&_input]:text-base [&_input]:font-mono [&_input]:tabular-nums [&_input]:font-bold [&_input]:text-center"
           />
         </Surface>
-        <Surface variant="elevated">
+        <Surface variant="elevated" className="max-xs:!p-2.5">
           <div className="flex items-center gap-1 flex-wrap">
             <p className="font-cinzel text-xs uppercase tracking-widest text-dnd-gold-dim">
               {t('character.ac.shield')}
             </p>
             {char.shield_armor_class_override ? (
-              <span className="text-xs font-cinzel uppercase tracking-wider px-1 py-px rounded-full bg-dnd-crimson-deep/30 text-dnd-crimson-bright border border-dnd-crimson/50">
+              <span className="max-xs:hidden max-w-full truncate text-xs font-cinzel uppercase tracking-wider px-1 py-px rounded-full bg-dnd-crimson-deep/30 text-dnd-crimson-bright border border-dnd-crimson/50">
                 {t('character.ac.manual_override')}
               </span>
             ) : equippedShield && (
-              <span className="text-xs font-cinzel uppercase tracking-wider px-1 py-px rounded-full bg-dnd-gold/20 text-dnd-gold-bright border border-dnd-gold/50">
+              <span className="max-xs:hidden max-w-full truncate text-xs font-cinzel uppercase tracking-wider px-1 py-px rounded-full bg-dnd-gold/20 text-dnd-gold-bright border border-dnd-gold/50">
                 {t('character.ac.auto_from_armor')}
               </span>
             )}
@@ -240,10 +240,10 @@ export default function ArmorClass() {
             onChange={setShield}
             placeholder={String(char.shield_armor_class)}
             inputMode="numeric"
-            className="mt-2 w-full [&_input]:text-base [&_input]:font-display [&_input]:font-bold [&_input]:text-center"
+            className="mt-2 w-full [&_input]:text-base [&_input]:font-mono [&_input]:tabular-nums [&_input]:font-bold [&_input]:text-center"
           />
         </Surface>
-        <Surface variant="elevated">
+        <Surface variant="elevated" className="max-xs:!p-2.5">
           <p className="font-cinzel text-xs uppercase tracking-widest text-dnd-gold-dim">
             {t('character.ac.magic')}
           </p>
@@ -257,7 +257,7 @@ export default function ArmorClass() {
             onChange={setMagic}
             placeholder={String(char.magic_armor)}
             inputMode="numeric"
-            className="mt-2 w-full [&_input]:text-base [&_input]:font-display [&_input]:font-bold [&_input]:text-center"
+            className="mt-2 w-full [&_input]:text-base [&_input]:font-mono [&_input]:tabular-nums [&_input]:font-bold [&_input]:text-center"
           />
         </Surface>
       </m.div>
@@ -269,7 +269,7 @@ export default function ArmorClass() {
       )}
 
       {(char.base_armor_class_override || char.shield_armor_class_override) && (
-        <div className="flex items-center justify-between gap-2 px-2 -mt-1">
+        <div className="flex max-xs:flex-col max-xs:items-start items-center justify-between gap-2 px-2 -mt-1">
           <p className="text-xs text-dnd-crimson-bright font-body italic flex-1">
             {t('character.ac.manual_override_hint')}
           </p>

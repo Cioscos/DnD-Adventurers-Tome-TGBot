@@ -269,10 +269,10 @@ export default function Identity() {
         <Surface variant="elevated" className="!p-3">
           <Input label={t('character.identity.gender')} value={draft.gender} onChange={set('gender')} placeholder={t('character.identity.placeholder_gender')} />
         </Surface>
-        <Surface variant="elevated" className="!p-3">
+        <Surface variant="elevated" className="!p-3 max-xs:col-span-2">
           <Input label={t('character.identity.alignment')} value={draft.alignment} onChange={set('alignment')} placeholder={t('character.identity.placeholder_alignment')} />
         </Surface>
-        <Surface variant="elevated" className="!p-3">
+        <Surface variant="elevated" className="!p-3 max-xs:col-span-2">
           <Input
             label={t('character.identity.speed')}
             type="number"
@@ -295,7 +295,7 @@ export default function Identity() {
       </div>
 
       {/* Appearance */}
-      <Surface variant="elevated" className="mt-3 space-y-2">
+      <Surface variant="elevated" className="mt-3 space-y-3">
         <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim">
           {t('character.identity.appearance')}
         </p>

@@ -61,8 +61,8 @@ export default function HitDiceModal({
                 <div className="flex-1 min-w-0">
                   <p className="font-display font-bold text-sm text-dnd-gold-bright truncate">{cls.class_name}</p>
                   <p className="text-xs text-dnd-text-faint font-mono">
-                    d{cls.hit_die ?? 8} · <span className="tabular-nums">{remaining}/{cls.level}</span>{' '}
-                    {t('character.hp.hit_dice_remaining_label')}
+                    d{cls.hit_die ?? 8} · <span className="tabular-nums">{remaining}/{cls.level}</span>
+                    <span className="max-xs:hidden">{' '}{t('character.hp.hit_dice_remaining_label')}</span>
                   </p>
                 </div>
                 <div className="flex items-center gap-1.5">

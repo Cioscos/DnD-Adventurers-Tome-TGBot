@@ -193,7 +193,7 @@ export default function Currency() {
             <Pressable
               key={m}
               onClick={() => setMode(m)}
-              className={`min-h-[44px] rounded-lg font-cinzel text-xs uppercase tracking-widest transition-colors
+              className={`min-h-[44px] min-w-0 px-2 rounded-lg font-cinzel text-xs uppercase tracking-widest max-xs:tracking-normal leading-tight transition-colors
                 ${mode === m
                   ? 'bg-gradient-gold text-dnd-ink shadow-engrave'
                   : 'bg-transparent text-dnd-text-muted'}`}

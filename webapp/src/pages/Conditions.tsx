@@ -421,7 +421,7 @@ export default function Conditions() {
 
       {/* Condition grid */}
       <m.div
-        className="grid grid-cols-2 md:grid-cols-3 gap-2"
+        className="grid grid-cols-2 max-[359px]:grid-cols-1 md:grid-cols-3 gap-2"
         initial="initial"
         animate="animate"
         variants={{
@@ -451,10 +451,10 @@ export default function Conditions() {
                 whileTap={{ scale: 0.95 }}
                 animate={active && justActivated === key ? { x: [-2, 2, -1, 1, 0] } : { x: 0 }}
                 transition={{ duration: 0.25 }}
-                className="flex-1 min-w-0 flex items-center gap-1.5 pl-3 py-3 text-left"
+                className="flex-1 min-w-0 flex items-center gap-1.5 pl-2.5 py-3 text-left"
               >
-                <Icon size={18} className={`shrink-0 ${active ? 'text-dnd-crimson-bright' : 'text-dnd-text-faint'}`} />
-                <span className="text-sm font-body leading-tight">
+                <Icon size={16} className={`shrink-0 ${active ? 'text-dnd-crimson-bright' : 'text-dnd-text-faint'}`} />
+                <span className="min-w-0 truncate text-sm font-body leading-tight">
                   {t(`character.conditions.${key}`)}
                 </span>
                 {active && durations[key] != null && (
@@ -466,7 +466,7 @@ export default function Conditions() {
               <Pressable
                 aria-label={t('character.conditions.detail_aria')}
                 onClick={() => setDetailKey(key)}
-                className="shrink-0 p-3 text-dnd-text-muted hover:text-dnd-gold-bright transition-colors"
+                className="shrink-0 hit-44 p-2 text-dnd-text-muted hover:text-dnd-gold-bright transition-colors"
               >
                 <Info size={16} />
               </Pressable>

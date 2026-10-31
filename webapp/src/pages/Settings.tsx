@@ -461,7 +461,7 @@ export default function Settings() {
         {t('character.settings.notifications.title')}
       </SectionDivider>
 
-      <Surface variant="elevated" className="space-y-3">
+      <Surface variant="elevated" className="divide-y divide-dnd-border/50 [&>*:not(:first-child)]:pt-3 [&>*:not(:last-child)]:pb-3">
         {(['party_emergency', 'gm_events', 'level_up', 'encounter'] as const).map((key) => (
           <SwitchToggle
             key={key}
@@ -517,7 +517,7 @@ export default function Settings() {
             </p>
           </div>
         </div>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-1 xs:grid-cols-3 gap-2">
           {RETENTION_MODES.map((mode) => {
             const selected = retentionMode === mode
             const label =
@@ -801,7 +801,7 @@ export default function Settings() {
         {t('character.settings.transfer.title')}
       </SectionDivider>
 
-      <Surface variant="elevated" className="space-y-3">
+      <Surface variant="elevated" className="space-y-2">
         <p className="text-xs text-dnd-text-muted font-body italic">
           {t('character.settings.transfer.export_hint')}
         </p>
@@ -814,7 +814,7 @@ export default function Settings() {
         >
           {t('character.settings.transfer.export')}
         </Button>
-        <p className="text-xs text-dnd-text-muted font-body italic">
+        <p className="text-xs text-dnd-text-muted font-body italic pt-2">
           {t('character.settings.transfer.duplicate_hint')}
         </p>
         <Button
@@ -864,7 +864,12 @@ export default function Settings() {
         </div>
       </Sheet>
 
-      {/* Reset all character settings */}
+      {/* Zona pericolosa: eliminazione del personaggio, in fondo alla pagina. */}
+      <SectionDivider icon={<Trash2 size={11} />} align="center">
+        {t('character.settings.danger_zone')}
+      </SectionDivider>
+
+      {/* Reset all character settings: distruttivo, quindi dentro la zona pericolosa */}
       <Button
         variant="danger"
         size="md"
@@ -875,11 +880,6 @@ export default function Settings() {
       >
         {t('character.settings.reset_settings')}
       </Button>
-
-      {/* Zona pericolosa: eliminazione del personaggio, in fondo alla pagina. */}
-      <SectionDivider icon={<Trash2 size={11} />} align="center">
-        {t('character.settings.danger_zone')}
-      </SectionDivider>
 
       <Button
         variant="danger"
