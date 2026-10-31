@@ -149,7 +149,8 @@ async def test_release_on_hp_undo_switch(client, test_session_factory, monkeypat
 
 async def test_release_on_new_concentration_cast(client, test_session_factory):
     caster, target, _ = await _setup(client, test_session_factory)
-    await client.post(f"/characters/{caster}/spell_slots", json={"level": 1, "total": 1})
+    rs = await client.post(f"/characters/{caster}/spell_slots", json={"level": 1, "total": 1})
+    assert rs.status_code == 201, rs.text
     b = await _spell(client, caster, "Hold Person")
     r = await client.post(f"/characters/{caster}/spells/{b}/use", json={"slot_level": 1})
     assert r.status_code == 200, r.text
@@ -171,6 +172,17 @@ async def test_release_on_item_cast(client, test_session_factory):
     r = await client.post(f"/characters/{caster}/items/{iid}/cast", json={"spell_index": 0})
     assert r.status_code == 200, r.text
     await _assert_released(client, test_session_factory, target)
+
+
+async def test_release_on_spell_delete(client, test_session_factory):
+    caster, target, spell = await _setup(client, test_session_factory)
+    r = await client.delete(f"/characters/{caster}/spells/{spell}")
+    assert r.status_code == 204, r.text
+    await _assert_released(client, test_session_factory, target)
+    async with test_session_factory() as s:
+        ch = await s.get(Character, caster)
+        assert ch.concentrating_spell_id is None
+        assert "concentration_rounds_left" not in (ch.settings or {})
 
 
 async def test_release_on_revive(client, test_session_factory):

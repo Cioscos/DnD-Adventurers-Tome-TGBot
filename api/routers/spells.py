@@ -205,13 +205,17 @@ async def remove_spell(
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
 ) -> None:
-    await _get_owned_full(char_id, user_id, session)
+    char = await _get_owned_full(char_id, user_id, session)
     result = await session.execute(
         select(Spell).where(Spell.id == spell_id, Spell.character_id == char_id)
     )
     spell = result.scalar_one_or_none()
     if spell is None:
         raise HTTPException(status_code=404, detail="Spell not found")
+    if char.concentrating_spell_id == spell_id:
+        end_concentration(char)
+        await session.flush()
+        await release_concentration_effects(session, char)
     await session.delete(spell)
 
 
