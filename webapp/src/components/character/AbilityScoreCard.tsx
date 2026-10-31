@@ -24,16 +24,15 @@ export default function AbilityScoreCard({ score, expanded, onToggle, onEdit }: 
       className={`relative rounded-2xl border bg-dnd-surface-raised p-3 transition-colors
                   ${expanded ? 'border-dnd-gold-dim' : 'border-dnd-border-strong'}`}
     >
-      {/* Stretched expand button (behind content) — only when there are bonuses to reveal. */}
-      {hasBonus && (
-        <Pressable
-          type="button"
-          onClick={() => { haptic.light(); onToggle() }}
-          aria-expanded={expanded}
-          aria-label={fullName}
-          className="absolute inset-0 z-0 rounded-2xl"
-        />
-      )}
+      {/* Stretched button (behind content): tutta la card è tappabile — espande i
+          bonus se ce ne sono, altrimenti apre la modifica come la matita. */}
+      <Pressable
+        type="button"
+        onClick={() => { haptic.light(); if (hasBonus) onToggle(); else onEdit() }}
+        aria-expanded={hasBonus ? expanded : undefined}
+        aria-label={hasBonus ? fullName : `${t('common.edit')} ${fullName}`}
+        className="absolute inset-0 z-0 rounded-2xl"
+      />
 
       <div className="relative z-10 pointer-events-none">
         {/* 2-col header: name | pencil. I nomi sono parole singole non spezzabili e il
@@ -50,7 +49,7 @@ export default function AbilityScoreCard({ score, expanded, onToggle, onEdit }: 
             onClick={() => { haptic.light(); onEdit() }}
             whileTap={{ scale: 0.9 }}
             aria-label={t('common.edit')}
-            className="pointer-events-auto justify-self-end flex h-10 w-10 items-center justify-center rounded-full bg-dnd-bg border border-dnd-border text-dnd-gold"
+            className="hit-44 pointer-events-auto justify-self-end flex h-10 w-10 items-center justify-center rounded-full bg-dnd-bg border border-dnd-border text-dnd-gold"
           >
             <Pencil size={14} />
           </Pressable>

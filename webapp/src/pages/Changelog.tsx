@@ -32,11 +32,12 @@ function EntryCard({ entry, isCurrent, defaultOpen }: { entry: ChangelogEntry; i
     .filter((s) => s.lines.length > 0)
 
   return (
-    <Surface variant="elevated">
+    // Padding sul bottone, non sulla card: tutta la card è area di tocco.
+    <Surface variant="elevated" className="!p-0">
       <Pressable
         type="button"
         onClick={() => { haptic.light(); setOpen((o) => !o) }}
-        className="w-full flex items-center gap-3 text-left"
+        className="w-full flex items-center gap-3 text-left p-4"
         aria-expanded={open}
       >
         <div className="flex-1 min-w-0">
@@ -68,7 +69,7 @@ function EntryCard({ entry, isCurrent, defaultOpen }: { entry: ChangelogEntry; i
             transition={{ duration: reduceMotion ? 0 : 0.22, ease: [0.22, 1, 0.36, 1] }}
             className="overflow-hidden"
           >
-            <div className="pt-4 space-y-4">
+            <div className="px-4 pb-4 space-y-4">
               {sections.map(({ key, Icon, lines }) => (
                 <div key={key}>
                   <div className="flex items-center gap-2 mb-1.5">
