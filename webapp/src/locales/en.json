@@ -163,6 +163,19 @@
       "move_down": "Move down",
       "toggle_visibility": "Show/hide"
     },
+    "rest_preview": {
+      "title": "What you recover",
+      "hp": "HP",
+      "hit_dice": "Hit dice",
+      "slots": "Slots",
+      "pact_slots": "Pact slots",
+      "abilities": "Abilities",
+      "resources": "Resources",
+      "charges": "Charges",
+      "exhaustion": "Exhaustion",
+      "concentration": "Concentration ends",
+      "nothing": "Nothing to recover"
+    },
     "quick_actions": {
       "group_order": "Order",
       "restore_defaults": "Restore defaults",

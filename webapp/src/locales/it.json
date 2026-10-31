@@ -163,6 +163,19 @@
       "move_down": "Sposta giù",
       "toggle_visibility": "Mostra/nascondi"
     },
+    "rest_preview": {
+      "title": "Cosa recuperi",
+      "hp": "PF",
+      "hit_dice": "Dadi vita",
+      "slots": "Slot",
+      "pact_slots": "Slot patto",
+      "abilities": "Abilità",
+      "resources": "Risorse",
+      "charges": "Cariche",
+      "exhaustion": "Spossatezza",
+      "concentration": "La concentrazione si interrompe",
+      "nothing": "Niente da recuperare"
+    },
     "quick_actions": {
       "group_order": "Ordine",
       "restore_defaults": "Ripristina predefinite",

@@ -33,6 +33,7 @@ from api.schemas.common import (
     HPOp,
     HPUndoRequest,
     HPUpdate,
+    RestPreview,
     RestRequest,
 )
 from core.data.damage_types import LABELS_IT, canonical_damage_type, damage_multiplier
@@ -342,6 +343,69 @@ async def undo_hp(
 # Rest
 # ---------------------------------------------------------------------------
 
+def _restores_ability(ability, rest_type: str) -> bool:
+    # A long rest includes short-rest benefits; le ex-risorse di classe sono Ability.
+    types = ("long_rest", "short_rest") if rest_type == "long" else ("short_rest",)
+    return ability.restoration_type in types and ability.max_uses is not None
+
+
+def _restores_resource(resource, rest_type: str) -> bool:
+    types = ("long_rest", "short_rest") if rest_type == "long" else ("short_rest",)
+    return resource.restoration_type in types
+
+
+def compute_rest_effects(char: Character, rest_type: str, hp_max_bonus: int = 0) -> RestPreview:
+    """Pure: cosa cambierebbe un riposo. Usata da /rest (che poi applica) e dall'anteprima."""
+    fx = RestPreview()
+    if char.is_dead:  # un riposo non rianima un personaggio morto
+        return fx
+    long = rest_type == "long"
+    fx.ends_concentration = is_concentrating(char)
+    fx.pact_slots = sum(s.used for s in char.spell_slots if s.is_pact and s.used > 0)
+    if long:
+        fx.hp_gain = max(0, char.hit_points + hp_max_bonus - char.current_hit_points)
+        for s in char.spell_slots:
+            if not s.is_pact and s.used > 0:
+                fx.slots[s.level] = fx.slots.get(s.level, 0) + s.used
+        # Recupero dadi vita (RAW PHB): fino a metà del totale (min 1),
+        # dal dado più grande in caso di multiclasse (spec 2026-07-17).
+        hd_budget = max(1, sum(c.level for c in char.classes) // 2)
+        for cls in sorted(char.classes, key=lambda c: (c.hit_die or 8), reverse=True):
+            if hd_budget <= 0:
+                break
+            spent = min(cls.hit_dice_used or 0, cls.level)
+            back = min(spent, hd_budget)
+            if back > 0:
+                fx.hit_dice_regain[cls.id] = back
+                hd_budget -= back
+        # A long rest reduces Exhaustion by 1 level (PHB p.186).
+        exh = (char.conditions or {}).get("exhaustion", 0)
+        if isinstance(exh, int) and not isinstance(exh, bool) and exh > 0:
+            fx.exhaustion_change = -1
+    fx.abilities = [a.name for a in char.abilities
+                    if _restores_ability(a, rest_type) and a.uses != a.max_uses]
+    fx.homebrew_resources = [r.name for r in char.homebrew_resources
+                             if _restores_resource(r, rest_type) and r.current != r.max]
+    for r in plan_item_recharges(char.items, rest_type, roll=False):
+        gain = f"+{r.after - r.before} (piena)" if r.after is not None else f"+{r.formula}"
+        fx.item_charges.append(f"{r.item.name}: {gain}")
+    return fx
+
+
+@router.get("/{char_id}/rest/preview", response_model=RestPreview)
+async def rest_preview(
+    char_id: int,
+    rest_type: str,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> RestPreview:
+    if rest_type not in ("long", "short"):
+        raise HTTPException(status_code=400, detail="rest_type must be 'long' or 'short'")
+    char = await _get_owned_full(char_id, user_id, session)
+    bonus = await get_passive_modifiers(session, char, "character.hit_points_max")
+    return compute_rest_effects(char, rest_type, bonus)
+
+
 @router.post("/{char_id}/rest", response_model=CharacterFull)
 async def rest(
     char_id: int,
@@ -354,6 +418,8 @@ async def rest(
     if char.is_dead:
         return await build_character_response(session, char)
     notifications: list[dict] = []
+    hb_hp_bonus = await get_passive_modifiers(session, char, "character.hit_points_max")
+    fx = compute_rest_effects(char, body.rest_type, hb_hp_bonus) if body.rest_type in ("long", "short") else None
     if body.rest_type in ("long", "short"):
         for r in plan_item_recharges(char.items, body.rest_type):
             set_item_charges(r.item, r.after)
@@ -362,7 +428,6 @@ async def rest(
 
     if body.rest_type == "long":
         # Restore to effective max HP (base + passive homebrew modifier).
-        hb_hp_bonus = await get_passive_modifiers(session, char, "character.hit_points_max")
         char.current_hit_points = char.hit_points + hb_hp_bonus
         char.temp_hp = 0
         # Break concentration
@@ -370,43 +435,30 @@ async def rest(
         # Reset all spell slots
         for slot in char.spell_slots:
             slot.used = 0
-        # Recupero dadi vita (RAW PHB): fino a metà del totale (min 1),
-        # dal dado più grande in caso di multiclasse (spec 2026-07-17).
-        total_level = sum(c.level for c in char.classes)
-        hd_budget = max(1, total_level // 2)
-        hd_regained = 0
-        for cls in sorted(char.classes, key=lambda c: (c.hit_die or 8), reverse=True):
-            if hd_budget <= 0:
-                break
-            spent = min(cls.hit_dice_used or 0, cls.level)
-            if spent <= 0:
-                continue
-            back = min(spent, hd_budget)
-            cls.hit_dice_used = spent - back
-            hd_budget -= back
-            hd_regained += back
+        hd_regained = sum(fx.hit_dice_regain.values())
+        for cls in char.classes:
+            if cls.id in fx.hit_dice_regain:
+                cls.hit_dice_used = min(cls.hit_dice_used or 0, cls.level) - fx.hit_dice_regain[cls.id]
         if hd_regained:
             _add_history(session, char.id, "hit_dice",
                          f"Dadi vita recuperati: {hd_regained} (riposo lungo)")
         # Restore long-rest AND short-rest abilities (long rest includes short rest
         # benefits). Le ex-risorse di classe sono ora Ability e rientrano qui.
         for ability in char.abilities:
-            if ability.restoration_type in ("long_rest", "short_rest") and ability.max_uses is not None:
+            if _restores_ability(ability, "long"):
                 ability.uses = ability.max_uses
         # Homebrew resources auto-restore on rest by restoration_type (D3),
         # mirroring abilities: a long rest restores both long_rest and short_rest.
         for resource in char.homebrew_resources:
-            if resource.restoration_type in ("long_rest", "short_rest"):
+            if _restores_resource(resource, "long"):
                 resource.current = resource.max
         # Reset death saves
         char.death_saves = {"successes": 0, "failures": 0, "stable": False}
-        # A long rest reduces Exhaustion by 1 level (PHB p.186). Keep the value an
-        # int (never False/None) to avoid the F04 history-serializer bug.
-        conditions = dict(char.conditions or {})
-        old_exh = conditions.get("exhaustion", 0)
-        old_exh = int(old_exh) if isinstance(old_exh, (int, bool)) and old_exh is not None else 0
-        if old_exh > 0:
-            new_exh = old_exh - 1
+        if fx.exhaustion_change:
+            # Keep the value an int (never False/None) to avoid the F04 history-serializer bug.
+            conditions = dict(char.conditions or {})
+            old_exh = conditions["exhaustion"]
+            new_exh = old_exh + fx.exhaustion_change
             conditions["exhaustion"] = new_exh
             char.conditions = conditions
             _add_history(session, char.id, "condition_change",
@@ -428,15 +480,14 @@ async def rest(
             # Simple roll: average hit die value * count (frontend handles the roll display)
             healed = body.hit_dice_used
             # Use effective max HP (base + passive homebrew modifier) as the heal cap.
-            hb_hp_bonus_short = await get_passive_modifiers(session, char, "character.hit_points_max")
-            char.current_hit_points = min(char.hit_points + hb_hp_bonus_short, char.current_hit_points + healed)
+            char.current_hit_points = min(char.hit_points + hb_hp_bonus, char.current_hit_points + healed)
         # Restore short-rest abilities (le ex-risorse di classe sono ora Ability).
         for ability in char.abilities:
-            if ability.restoration_type == "short_rest" and ability.max_uses is not None:
+            if _restores_ability(ability, "short"):
                 ability.uses = ability.max_uses
         # Homebrew resources: a short rest restores only short_rest resources (D3).
         for resource in char.homebrew_resources:
-            if resource.restoration_type == "short_rest":
+            if _restores_resource(resource, "short"):
                 resource.current = resource.max
         _add_history(session, char.id, "rest",
                      f"Riposo breve completato (HP recuperati: {healed})")

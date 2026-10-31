@@ -14,6 +14,7 @@ import Sheet from '@/components/ui/Sheet'
 import Pressable from '@/components/ui/Pressable'
 import IconButton from '@/components/ui/IconButton'
 import ConfirmSheet from '@/components/ui/ConfirmSheet'
+import RestPreviewList from '@/components/character/RestPreviewList'
 import UsesEditSheet from '@/components/ui/UsesEditSheet'
 import RollResultModal, { type RollResult } from '@/components/RollResultModal'
 import WeaponAttackModal, { type WeaponAttackResult } from '@/components/WeaponAttackModal'
@@ -891,7 +892,12 @@ export default function QuickActions({ char }: Props) {
         open={confirmLongRest}
         onClose={() => setConfirmLongRest(false)}
         title={t('character.quick_actions.confirm_long_rest_title')}
-        body={t('character.quick_actions.confirm_long_rest_body')}
+        body={
+          <div className="space-y-3">
+            <p>{t('character.quick_actions.confirm_long_rest_body')}</p>
+            {confirmLongRest && <RestPreviewList charId={char.id} restType="long" />}
+          </div>
+        }
         confirmLabel={t('character.quick_actions.rest_long')}
         confirmVariant="primary"
         loading={restMutation.isPending}
@@ -903,6 +909,7 @@ export default function QuickActions({ char }: Props) {
           classes={char.classes ?? []}
           onSpend={(classId, count) => hitDieMutation.mutate({ classId, count })}
           onConfirmRest={() => restMutation.mutate('short')}
+          preview={<RestPreviewList charId={char.id} restType="short" />}
           onClose={() => setShortRestOpen(false)}
           isPending={hitDieMutation.isPending}
           pendingClassId={hitDieMutation.isPending ? hitDieMutation.variables?.classId : undefined}

@@ -267,6 +267,19 @@ class RestRequest(BaseModel):
     hit_dice_used: Optional[int] = None
 
 
+class RestPreview(BaseModel):
+    """Cosa recupererebbe un riposo (nessuna scrittura)."""
+    hp_gain: int = 0
+    hit_dice_regain: dict[int, int] = {}  # class_id -> dadi vita
+    slots: dict[int, int] = {}  # livello -> slot (non patto) recuperati
+    pact_slots: int = 0
+    abilities: list[str] = []
+    homebrew_resources: list[str] = []
+    item_charges: list[str] = []
+    exhaustion_change: int = 0
+    ends_concentration: bool = False
+
+
 class DeathSaveAction(str, Enum):
     SUCCESS = "success"
     FAILURE = "failure"

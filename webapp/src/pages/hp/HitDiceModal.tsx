@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Minus, Plus } from 'lucide-react'
 import { GiNightSleep as Moon, GiDiceSixFacesOne as Dice1 } from 'react-icons/gi'
@@ -18,6 +18,8 @@ interface HitDiceModalProps {
   pendingClassId?: number
   /** True while the short-rest mutation itself is in flight (onConfirmRest). */
   restPending?: boolean
+  /** Anteprima del riposo mostrata sopra i pulsanti. */
+  preview?: ReactNode
 }
 
 export default function HitDiceModal({
@@ -28,6 +30,7 @@ export default function HitDiceModal({
   isPending,
   pendingClassId,
   restPending,
+  preview,
 }: HitDiceModalProps) {
   const { t } = useTranslation()
   const [hitDiceCounts, setHitDiceCounts] = useState<Record<number, number>>({})
@@ -94,6 +97,8 @@ export default function HitDiceModal({
             )
           })}
         </div>
+
+        {preview}
 
         {/* Annulla a sinistra, conferma a destra (convenzione ConfirmSheet). */}
         <div className="flex gap-2 pt-1">

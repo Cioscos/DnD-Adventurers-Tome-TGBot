@@ -115,6 +115,18 @@ export type HitDiceSpendResult = {
   new_current_hp: number
 }
 
+export type RestPreview = {
+  hp_gain: number
+  hit_dice_regain: Record<string, number>
+  slots: Record<string, number>
+  pact_slots: number
+  abilities: string[]
+  homebrew_resources: string[]
+  item_charges: string[]
+  exhaustion_change: number
+  ends_concentration: boolean
+}
+
 export type DeathSaveRollResult = {
   die: number
   dice?: number[]
@@ -355,6 +367,8 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ rest_type: restType, hit_dice_used: hitDiceUsed }),
       }),
+    restPreview: (id: number, restType: 'long' | 'short') =>
+      request<RestPreview>(`/characters/${id}/rest/preview?rest_type=${restType}`),
     updateDeathSaves: (id: number, action: string) =>
       request<CharacterFull>(`/characters/${id}/death_saves`, {
         method: 'PATCH',
