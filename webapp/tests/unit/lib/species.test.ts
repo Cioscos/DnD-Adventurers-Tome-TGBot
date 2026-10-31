@@ -22,3 +22,34 @@ describe('buildSpecies', () => {
     expect(p.ability_bonuses).toEqual({ con: 2 })
   })
 })
+
+import backgrounds from '@/data/srd/backgrounds.json'
+import { SKILL_KEYS, backgroundLanguages, backgroundSkills, creationExtras } from '@/lib/species'
+
+describe('creation extras', () => {
+  const scores = { strength: 15, dexterity: 14, constitution: 13, intelligence: 12, wisdom: 10, charisma: 8 }
+  it('sends displayed scores even if untouched, omits them only when skipped', () => {
+    expect(creationExtras({ scores, skipped: false, species: null, skills: [] })).toEqual({ ability_scores: scores })
+    expect(creationExtras({ scores, skipped: true, species: null, skills: [] })).toEqual({})
+  })
+  it('sends skills as booleans', () => {
+    expect(creationExtras({ scores, skipped: true, species: null, skills: ['insight'] }).skills).toEqual({ insight: true })
+  })
+})
+
+describe('background mapping', () => {
+  it('every real catalogue skill maps to a known key', () => {
+    for (const b of backgrounds.items) {
+      const mapped = backgroundSkills(b.skill_proficiencies)
+      expect(mapped).toHaveLength(b.skill_proficiencies.length)
+      mapped.forEach((k) => expect(SKILL_KEYS).toContain(k))
+    }
+  })
+  it('maps dashes and drops unknown skills', () => {
+    expect(backgroundSkills(['sleight-of-hand', 'bogus'])).toEqual(['sleight_of_hand'])
+  })
+  it('localises fixed background languages', () => {
+    expect(backgroundLanguages(['dwarvish', 'Sylvan'], 'it')).toEqual(['Nanico', 'Sylvan'])
+    expect(backgroundLanguages(undefined, 'it')).toEqual([])
+  })
+})

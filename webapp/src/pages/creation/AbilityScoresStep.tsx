@@ -35,15 +35,21 @@ export default function AbilityScoresStep({ mode, scores, pool, bonuses, onChang
 
   const roll = async () => {
     setRolling(true)
+    const local = () => Array.from({ length: 4 }, () => 1 + Math.floor(Math.random() * 6))
+    let rolled: number[]
     try {
       const res = await playAndCollect(Array.from({ length: 6 }, () => ({ kind: 'd6' as const, count: 4 })))
-      const rolled = Array.from({ length: 6 }, (_, g) =>
-        roll4d6DropLowest(res.filter((r) => r.groupIndex === g).map((r) => r.value)))
-      rolled.sort((a, b) => b - a)
-      onChange('roll', arrayScores(rolled), rolled)
+      rolled = Array.from({ length: 6 }, (_, g) => {
+        const dice = res.filter((r) => r.groupIndex === g).map((r) => r.value)
+        return roll4d6DropLowest(dice.length === 4 ? dice : local())
+      })
+    } catch {
+      rolled = Array.from({ length: 6 }, () => roll4d6DropLowest(local()))
     } finally {
       setRolling(false)
     }
+    rolled.sort((a, b) => b - a)
+    onChange('roll', arrayScores(rolled), rolled)
   }
 
   const spent = pointBuyTotal(Object.values(scores))

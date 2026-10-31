@@ -30,7 +30,7 @@ import languagesSrd from '@/data/languages-srd.json'
 import SpeciesStep, { type SpeciesChoice } from '@/pages/creation/SpeciesStep'
 import AbilityScoresStep from '@/pages/creation/AbilityScoresStep'
 import CatalogPicker from '@/components/catalog/CatalogPicker'
-import { buildSpecies } from '@/lib/species'
+import { creationExtras, backgroundLanguages, backgroundSkills as mapBackgroundSkills, buildSpecies } from '@/lib/species'
 import { localized } from '@/lib/srd/catalog'
 import { STANDARD_ARRAY, arrayScores, scoresValid, type ScoreMode, type Scores } from '@/lib/pointBuy'
 
@@ -64,12 +64,6 @@ type IdentityPayload = {
   background?: string
   languages?: string[]
   personality?: { traits: string }
-}
-
-type CreateExtras = {
-  ability_scores?: Scores
-  species?: ReturnType<typeof buildSpecies>
-  skills?: Record<string, boolean>
 }
 
 type Step = 'name' | 'class' | 'species' | 'abilities' | 'identity'
@@ -118,7 +112,7 @@ export default function CharacterSelect() {
   const [scoreMode, setScoreMode] = useState<ScoreMode>('array')
   const [scores, setScores] = useState<Scores>(arrayScores())
   const [scorePool, setScorePool] = useState<number[]>(STANDARD_ARRAY)
-  const [scoresTouched, setScoresTouched] = useState(false)
+  const [scoresSkipped, setScoresSkipped] = useState(false)
   const [pickBackground, setPickBackground] = useState(false)
   const [backgroundSkills, setBackgroundSkills] = useState<string[]>([])
   const lang = i18n.language?.startsWith('en') ? 'en' : 'it'
@@ -144,7 +138,7 @@ export default function CharacterSelect() {
   const hasActiveSession = activeSession?.status === 'active'
 
   const createMutation = useMutation({
-    mutationFn: async ({ name, cls, identity, extras }: { name: string; cls: SelectedClass | null; identity: IdentityPayload | null; extras: CreateExtras }) => {
+    mutationFn: async ({ name, cls, identity, extras }: { name: string; cls: SelectedClass | null; identity: IdentityPayload | null; extras: ReturnType<typeof creationExtras> }) => {
       return api.characters.create(
         name,
         cls
@@ -201,7 +195,7 @@ export default function CharacterSelect() {
     setScoreMode('array')
     setScores(arrayScores())
     setScorePool(STANDARD_ARRAY)
-    setScoresTouched(false)
+    setScoresSkipped(false)
     setBackgroundSkills([])
     setPickBackground(false)
   }
@@ -229,10 +223,7 @@ export default function CharacterSelect() {
   }
 
   const handleCreate = (identity: IdentityPayload | null) => {
-    const extras: CreateExtras = {}
-    if (scoresTouched) extras.ability_scores = scores
-    if (speciesPayload) extras.species = speciesPayload
-    if (backgroundSkills.length) extras.skills = Object.fromEntries(backgroundSkills.map((k) => [k, true]))
+    const extras = creationExtras({ scores, skipped: scoresSkipped, species: speciesPayload, skills: backgroundSkills })
     createMutation.mutate({ name: newName.trim(), cls: selectedClass ?? null, identity, extras })
   }
 
@@ -663,25 +654,23 @@ export default function CharacterSelect() {
                 scores={scores}
                 pool={scorePool}
                 bonuses={speciesPayload?.ability_bonuses ?? {}}
-                onChange={(mode, sc, pool) => { setScoreMode(mode); setScores(sc); setScorePool(pool); setScoresTouched(true) }}
+                onChange={(mode, sc, pool) => { setScoreMode(mode); setScores(sc); setScorePool(pool) }}
               />
               <WizardFooter
                 className="mt-4"
                 secondaryLabel={t('common.back')}
                 onSecondary={() => setStep('species')}
                 primaryLabel={`${t('common.next')} →`}
-                onPrimary={() => setStep('identity')}
+                onPrimary={() => { setScoresSkipped(false); setStep('identity') }}
                 primaryDisabled={!scoresValid(scoreMode, scores)}
                 primaryHaptic="medium"
               />
-              {scoresTouched && (
-                <Pressable
-                  onClick={() => { setScoresTouched(false); setScoreMode('array'); setScores(arrayScores()); setScorePool(STANDARD_ARRAY); setStep('identity') }}
-                  className="mt-1 w-full min-h-[44px] text-[12px] text-dnd-gold-dim underline underline-offset-2"
-                >
-                  {t('character.create.scores_skip')}
-                </Pressable>
-              )}
+              <Pressable
+                onClick={() => { setScoresSkipped(true); setScoreMode('array'); setScores(arrayScores()); setScorePool(STANDARD_ARRAY); setStep('identity') }}
+                className="mt-1 w-full min-h-[44px] text-[12px] text-dnd-gold-dim underline underline-offset-2"
+              >
+                {t('character.create.scores_skip')}
+              </Pressable>
             </m.div>
           )}
 
@@ -771,7 +760,8 @@ export default function CharacterSelect() {
           onClose={() => setPickBackground(false)}
           onPick={(e) => {
             setBackground(localized(e.name, lang).text)
-            setBackgroundSkills(((e.skill_proficiencies as string[] | undefined) ?? []).map((k) => k.replace(/-/g, '_')))
+            setBackgroundSkills(mapBackgroundSkills(e.skill_proficiencies as string[] | undefined))
+            setLanguages((prev) => [...new Set([...prev, ...backgroundLanguages(e.languages as string[] | undefined, lang)])])
             setPickBackground(false)
           }}
         />

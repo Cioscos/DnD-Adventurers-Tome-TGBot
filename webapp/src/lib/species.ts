@@ -74,3 +74,34 @@ export function buildSpecies(race: RaceEntry, sub: SubraceEntry | null, lang: La
     })),
   }
 }
+
+// Mirror of core/data/skills.py SKILLS keys (the sheet's Skills page uses the same slugs).
+export const SKILL_KEYS = [
+  'acrobatics', 'animal_handling', 'arcana', 'athletics', 'deception', 'history', 'insight',
+  'intimidation', 'investigation', 'medicine', 'nature', 'perception', 'performance', 'persuasion',
+  'religion', 'sleight_of_hand', 'stealth', 'survival',
+]
+
+/** Catalogue skill names -> backend slugs; unknown ones are dropped (an unknown slug would 422 the whole create). */
+export function backgroundSkills(skills: string[] | undefined): string[] {
+  return (skills ?? []).map((k) => k.replace(/-/g, '_')).filter((k) => SKILL_KEYS.includes(k))
+}
+
+/** Fixed languages of a catalogue background (none in the SRD: "two of your choice"), localised. */
+export function backgroundLanguages(langs: string[] | undefined, lang: Lang): string[] {
+  return (langs ?? []).map((l) => (LANGS[l] ? localized(LANGS[l], lang).text : l))
+}
+
+/** Extra POST /characters fields: scores are always sent (what you see is what you get) unless the step was skipped. */
+export function creationExtras(o: {
+  scores: Record<string, number>
+  skipped: boolean
+  species: SpeciesPayload | null
+  skills: string[]
+}) {
+  return {
+    ...(o.skipped ? {} : { ability_scores: o.scores }),
+    ...(o.species ? { species: o.species } : {}),
+    ...(o.skills.length ? { skills: Object.fromEntries(o.skills.map((k) => [k, true])) } : {}),
+  }
+}
