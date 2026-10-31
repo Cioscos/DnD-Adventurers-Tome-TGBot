@@ -56,7 +56,9 @@ export default function Multiclass() {
   }
 
   const classLevelSum = classes.reduce((s, c) => s + c.level, 0)
-  const targetLevel = levelFromXp(char.experience_points ?? 0)
+  // Milestone: no XP cap, the user raises levels freely (up to 20 total).
+  const milestone = char.settings?.advancement === 'milestone'
+  const targetLevel = milestone ? Math.min(20, classLevelSum + 1) : levelFromXp(char.experience_points ?? 0)
   const levelUpAvailable = classes.length > 0 && targetLevel > classLevelSum
 
   return (
@@ -69,9 +71,9 @@ export default function Multiclass() {
           </p>
           <p className="text-5xl font-display font-black text-dnd-gold-bright"
              style={{ textShadow: '0 2px 8px var(--dnd-gold-glow)' }}>
-            {targetLevel}
+            {milestone ? classLevelSum : targetLevel}
           </p>
-          {levelUpAvailable && (
+          {levelUpAvailable && !milestone && (
             <p className="mt-1 text-xs font-mono text-dnd-text-muted tabular-nums">
               {t('character.xp.level_distributed_hint', {
                 distributed: classLevelSum,
@@ -184,7 +186,8 @@ export default function Multiclass() {
       {showEditModal && (
         <EditClassesModal
           char={char}
-          targetLevel={targetLevel}
+          targetLevel={milestone ? 20 : targetLevel}
+          milestone={milestone}
           onClose={() => setShowEditModal(false)}
         />
       )}

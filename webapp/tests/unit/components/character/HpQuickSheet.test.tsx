@@ -99,3 +99,23 @@ describe('HpQuickSheet undo', () => {
     expect(showUndoToastSpy.mock.calls[0][0].message).toContain('character.hp.undo_homebrew_note')
   })
 })
+
+describe('HpQuickSheet wild shape', () => {
+  it('shows the form HP as primary and the character HP as secondary', () => {
+    const shaped = {
+      ...char, name: 'Elandor', temp_hp: 0,
+      active_form: { companion_id: 9, name: 'Lupo', current_hp: 8, max_hp: 11, temp_hp: 2, armor_class: 13 },
+    } as CharacterFull
+    renderWithProviders(<HpQuickSheet char={shaped} open onClose={() => {}} />)
+    expect(screen.getByText('Lupo')).toBeInTheDocument()
+    expect(screen.getByTestId('form-hp-primary')).toHaveTextContent('8/11')
+    expect(screen.getByTestId('form-hp-primary')).toHaveTextContent('+2')
+    expect(screen.getByTestId('character-hp-secondary')).toHaveTextContent('Elandor')
+    expect(screen.getByTestId('character-hp-secondary')).toHaveTextContent('10/20')
+  })
+
+  it('shows no form block without an active form', () => {
+    renderWithProviders(<HpQuickSheet char={char} open onClose={() => {}} />)
+    expect(screen.queryByTestId('form-hp-primary')).toBeNull()
+  })
+})

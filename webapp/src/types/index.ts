@@ -53,6 +53,20 @@ export interface Currency {
   platinum: number
 }
 
+export type ActionType = 'action' | 'bonus_action' | 'reaction' | 'free' | 'special'
+
+export interface PendingChoice {
+  id: string
+  kind: 'asi'
+  class_key: string
+  level: number
+  created_at: string
+}
+
+export type ResolveChoiceBody =
+  | { kind: 'asi'; increases: Record<string, number> }
+  | { kind: 'feat'; feat_key: string; ability?: string | null; custom_name?: string | null; custom_text?: string | null }
+
 export interface Ability {
   id: number
   name: string
@@ -66,6 +80,7 @@ export interface Ability {
   source_class_id?: number | null
   is_class_feature: boolean
   feature_key?: string | null
+  action_type?: ActionType | null
 }
 
 export interface MapEntry {
@@ -95,6 +110,9 @@ export interface Spell {
   damage_type?: string
   is_pinned: boolean
   is_prepared: boolean
+  school?: string | null
+  srd_index?: string | null
+  higher_levels_dice?: string | null
 }
 
 export interface SpellSlot {
@@ -139,6 +157,7 @@ export interface CharacterSummary {
   experience_points: number
   hp_max_homebrew_modifier: number
   ac_homebrew_modifier: number
+  ac_items_modifier?: number
   is_dead: boolean
 }
 
@@ -166,6 +185,8 @@ export interface AcBreakdown {
   shield: number
   magic: number
   homebrew: number
+  /** Bonus CA da oggetti magici attivi (equipaggiati/sintonizzati). */
+  items?: number
 }
 
 /** Blocco derivato dal BE: preparazione incantesimi + capacità rituali. */
@@ -194,16 +215,36 @@ export interface CharacterFull extends Omit<CharacterSummary, 'ac_homebrew_modif
   unarmored_defense_ability?: 'wisdom' | 'constitution' | null
   ac_breakdown?: AcBreakdown | null
   speed_homebrew_modifier?: number
+  speed_items_modifier?: number
+  /** DEX effettiva + bonus iniziativa da oggetti: stesso valore usato per il tiro. */
+  initiative_bonus?: number
   skills_homebrew_modifiers?: Record<string, number>
   saves_homebrew_modifiers?: Record<string, number>
+  saves_items_modifiers?: Record<string, number>
+  /** Totali calcolati dal server (stesso valore del tiro): bonus abilità e punteggi passivi. */
+  skill_bonuses?: Record<string, number>
+  passives?: Record<string, number>
+  /** Tuttofare (Bardo >= 2): mezza competenza sulle abilità non competenti. */
+  jack_of_all_trades?: boolean
   carry_capacity: number
   carry_capacity_override: boolean
   has_custom_silhouette: boolean
+  attacks_per_action?: number
+  /** Forma selvatica attiva: PF/CA della forma sostituiscono quelli del personaggio. */
+  active_form?: ActiveForm | null
+  /** Solo da POST /rounds/tick: etichette degli effetti appena scaduti. */
+  expired_effects?: string[] | null
   encumbrance: number
+  /** Oggetti (+ monete se attivo) calcolati dal server: unica fonte per Inventario, Equipaggiamento ed Eroe. */
+  encumbrance_total?: number
+  encumbrance_level?: 'none' | 'encumbered' | 'heavily'
+  speed_encumbrance_penalty_ft?: number
   spell_slots_mode: string
   spellcasting?: SpellcastingInfo | null
   concentrating_spell_id?: number
   hp_gained?: number
+  /** Scelte di livello in sospeso (aumento caratteristiche / talento). */
+  pending_choices?: PendingChoice[] | null
   concentration_save?: ConcentrationSaveResult | null
   /** Id dello snapshot per annullare l'ultima modifica PF; null se nulla è cambiato. */
   hp_undo_id?: string | null
@@ -221,7 +262,7 @@ export interface CharacterFull extends Omit<CharacterSummary, 'ac_homebrew_modif
   death_saves?: DeathSaves
   personality?: Record<string, string>
   languages?: string[]
-  general_proficiencies?: string[]
+  general_proficiencies?: Partial<Record<'armor' | 'weapons' | 'tools' | 'other', string[]>> | string[]
   damage_modifiers?: Record<string, string[]>
   classes: CharacterClass[]
   ability_scores: AbilityScore[]
@@ -429,6 +470,8 @@ export interface RollDamageRequest {
 export interface SpellAttackResult {
   spell_name: string
   to_hit_die: number
+  dice?: number[]
+  mode?: 'normal' | 'advantage' | 'disadvantage'
   to_hit_bonus: number
   to_hit_total: number
   is_critical: boolean
@@ -442,6 +485,8 @@ export interface SpellAttackRequest {
   slot_level: number | null
   ritual?: boolean
   die?: number
+  dice?: number[]
+  mode?: 'normal' | 'advantage' | 'disadvantage'
   with_inspiration?: boolean
 }
 
@@ -453,6 +498,7 @@ export interface RollDamageResult {
   breakdown: string
   casting_level: number
   is_critical: boolean
+  scaled_dice?: string
   main_kind: string
   main_rolls: number[]
   extra_kind: string | null
@@ -488,4 +534,75 @@ export interface SessionFeedItem {
 export interface SessionFeedResponse {
   items: SessionFeedItem[]
   has_more: boolean
+}
+
+export interface TurnState {
+  in_encounter: boolean
+  is_my_turn: boolean
+  round: number | null
+  session_id: number | null
+}
+
+export interface ActiveForm {
+  companion_id: number
+  name: string
+  current_hp: number
+  max_hp: number
+  temp_hp: number
+  armor_class: number
+}
+
+export type CompanionKind = 'familiar' | 'companion' | 'mount' | 'summon' | 'wild_shape'
+
+export interface CompanionAction {
+  name: string
+  desc?: string
+  attack_bonus?: number | null
+  damage_dice?: string | null
+  damage_type?: string | null
+  /** Testo mancante in italiano: mostrato in inglese con badge EN. */
+  en?: boolean
+}
+
+export interface CompanionStatblock {
+  size?: string
+  type?: string
+  speed?: Record<string, number>
+  abilities?: Record<string, number>
+  traits?: CompanionAction[]
+  actions?: CompanionAction[]
+  challenge_rating?: number
+  [key: string]: unknown
+}
+
+export interface Companion {
+  id: number
+  character_id: number
+  kind: CompanionKind
+  name: string
+  srd_index: string | null
+  statblock: CompanionStatblock
+  max_hp: number
+  current_hp: number
+  temp_hp: number
+  armor_class: number
+  notes: string | null
+  is_active: boolean
+  created_at: string
+  down: boolean
+}
+
+export type CompanionPayload = Partial<Pick<Companion,
+  'kind' | 'name' | 'srd_index' | 'statblock' | 'max_hp' | 'current_hp' | 'temp_hp' | 'armor_class' | 'notes' | 'is_active'>>
+
+export interface CompanionAttackResult {
+  to_hit_die: number
+  to_hit_bonus: number
+  to_hit_total: number
+  dice: number[]
+  mode: 'normal' | 'advantage' | 'disadvantage'
+  is_critical: boolean
+  damage_rolls: number[]
+  damage_total: number
+  damage_type: string | null
 }

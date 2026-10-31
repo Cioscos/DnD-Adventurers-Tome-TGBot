@@ -1,0 +1,679 @@
+{
+ "_meta": {
+  "source": "https://www.dnd5eapi.co (D&D 5e SRD 2014)",
+  "license": "CC-BY-4.0",
+  "generated_at": "2026-10-31"
+ },
+ "items": [
+  {
+   "index": "dragonborn",
+   "name": {
+    "en": "Dragonborn",
+    "it": "Dragonide"
+   },
+   "speed_ft": 30,
+   "ability_bonuses": {
+    "str": 2,
+    "cha": 1
+   },
+   "size": "medium",
+   "languages": [
+    "common",
+    "draconic"
+   ],
+   "senses": [],
+   "traits": [
+    {
+     "index": "draconic-ancestry",
+     "name": {
+      "en": "Draconic Ancestry",
+      "it": "Discendenza draconica"
+     },
+     "desc": {
+      "en": "You have draconic ancestry. Choose one type of dragon from the Draconic Ancestry table. Your breath weapon and damage resistance are determined by the dragon type, as shown in the table.",
+      "it": "Hai una discendenza draconica. Scegli un tipo di drago dalla tabella Discendenza draconica. La tua arma a soffio e la tua resistenza ai danni sono determinate dal tipo di drago, come mostrato nella tabella."
+     }
+    },
+    {
+     "index": "breath-weapon",
+     "name": {
+      "en": "Breath Weapon",
+      "it": "Arma a soffio"
+     },
+     "desc": {
+      "en": "You can use your action to exhale destructive energy. Your draconic ancestry determines the size, shape, and damage type of the exhalation.\n\nWhen you use your breath weapon, each creature in the area of the exhalation must make a saving throw, the type of which is determined by your draconic ancestry. The DC for this saving throw equals 8 + your Constitution modifier + your proficiency bonus. A creature takes 2d6 damage on a failed save, and half as much damage on a successful one. The damage increases to 3d6 at 6th level, 4d6 at 11th level, and 5d6 at 16th level.\n\nAfter you use your breath weapon, you cannot use it again until you complete a short or long rest.",
+      "it": "Puoi usare la tua azione per esalare energia distruttiva. La tua discendenza draconica determina la dimensione, la forma e il tipo di danno dell'esalazione.\n\nQuando usi la tua arma a soffio, ogni creatura nell'area dell'esalazione deve effettuare un tiro salvezza, il cui tipo è determinato dalla tua discendenza draconica. La CD di questo tiro salvezza è pari a 8 + il tuo modificatore di Costituzione + il tuo bonus di competenza. Una creatura subisce 2d6 danni se fallisce il tiro salvezza, e la metà di quei danni se lo supera. I danni aumentano a 3d6 al 6° livello, a 4d6 all'11° livello e a 5d6 al 16° livello.\n\nDopo aver usato la tua arma a soffio, non puoi usarla di nuovo finché non completi un riposo breve o lungo."
+     }
+    },
+    {
+     "index": "damage-resistance",
+     "name": {
+      "en": "Damage Resistance",
+      "it": "Resistenza ai danni"
+     },
+     "desc": {
+      "en": "You have resistance to the damage type associated with your draconic ancestry.",
+      "it": "Hai resistenza al tipo di danno associato alla tua discendenza draconica."
+     }
+    }
+   ],
+   "subraces": [],
+   "roll_notes": {}
+  },
+  {
+   "index": "dwarf",
+   "name": {
+    "en": "Dwarf",
+    "it": "Nano"
+   },
+   "speed_ft": 25,
+   "ability_bonuses": {
+    "con": 2
+   },
+   "size": "medium",
+   "languages": [
+    "common",
+    "dwarvish"
+   ],
+   "senses": [
+    {
+     "type": "darkvision",
+     "range_ft": 60
+    }
+   ],
+   "traits": [
+    {
+     "index": "darkvision",
+     "name": {
+      "en": "Darkvision",
+      "it": "Scurovisione"
+     },
+     "desc": {
+      "en": "You have superior vision in dark and dim conditions. You can see in dim light within 60 feet of you as if it were bright light, and in darkness as if it were dim light. You cannot discern color in darkness, only shades of gray.",
+      "it": "Hai una vista superiore nell'oscurità e in condizioni di luce fioca. Entro 60 piedi da te puoi vedere in luce fioca come se fosse luce intensa, e nell'oscurità come se fosse luce fioca. Nell'oscurità non puoi distinguere i colori, solo sfumature di grigio."
+     }
+    },
+    {
+     "index": "dwarven-resilience",
+     "name": {
+      "en": "Dwarven Resilience",
+      "it": "Resilienza nanica"
+     },
+     "desc": {
+      "en": "You have advantage on saving throws against poison, and you have resistance against poison damage.",
+      "it": "Hai vantaggio ai tiri salvezza contro il veleno e hai resistenza ai danni da veleno."
+     }
+    },
+    {
+     "index": "stonecunning",
+     "name": {
+      "en": "Stonecunning",
+      "it": "Conoscenza della pietra"
+     },
+     "desc": {
+      "en": "Whenever you make an Intelligence (History) check related to the origin of stonework, you are considered proficient in the History skill and add double your proficiency bonus to the check, instead of your normal proficiency bonus.",
+      "it": "Ogni volta che effettui una prova di Intelligenza (Storia) relativa all'origine di lavori in pietra, sei considerato competente nell'abilità Storia e aggiungi il doppio del tuo bonus di competenza alla prova, invece del normale bonus di competenza."
+     }
+    },
+    {
+     "index": "dwarven-combat-training",
+     "name": {
+      "en": "Dwarven Combat Training",
+      "it": "Addestramento da combattimento nanico"
+     },
+     "desc": {
+      "en": "You have proficiency with the battleaxe, handaxe, light hammer, and warhammer.",
+      "it": "Hai competenza con l'ascia da battaglia, l'ascia, il martello leggero e il martello da guerra."
+     }
+    },
+    {
+     "index": "tool-proficiency",
+     "name": {
+      "en": "Tool Proficiency",
+      "it": "Competenza negli strumenti"
+     },
+     "desc": {
+      "en": "You gain proficiency with the artisan's tools of your choice: smith's tools, brewer's supplies, or mason's tools.",
+      "it": "Ottieni competenza negli strumenti da artigiano a tua scelta: strumenti da fabbro, forniture da birraio o strumenti da muratore."
+     }
+    }
+   ],
+   "subraces": [
+    {
+     "index": "hill-dwarf",
+     "name": {
+      "en": "Hill Dwarf",
+      "it": "Nano delle colline"
+     },
+     "ability_bonuses": {
+      "wis": 1
+     },
+     "senses": [],
+     "traits": [
+      {
+       "index": "dwarven-toughness",
+       "name": {
+        "en": "Dwarven Toughness",
+        "it": "Robustezza nanica"
+       },
+       "desc": {
+        "en": "Your hit point maximum increases by 1, and it increases by 1 every time you gain a level.",
+        "it": "I tuoi punti ferita massimi aumentano di 1, e aumentano di 1 ogni volta che ottieni un livello."
+       }
+      }
+     ]
+    }
+   ],
+   "roll_notes": {
+    "poison_save": {
+     "en": "Advantage on saving throws against poison, and resistance against poison damage.",
+     "it": "Vantaggio ai tiri salvezza contro il veleno e resistenza ai danni da veleno."
+    }
+   }
+  },
+  {
+   "index": "elf",
+   "name": {
+    "en": "Elf",
+    "it": "Elfo"
+   },
+   "speed_ft": 30,
+   "ability_bonuses": {
+    "dex": 2
+   },
+   "size": "medium",
+   "languages": [
+    "common",
+    "elvish"
+   ],
+   "senses": [
+    {
+     "type": "darkvision",
+     "range_ft": 60
+    }
+   ],
+   "traits": [
+    {
+     "index": "darkvision",
+     "name": {
+      "en": "Darkvision",
+      "it": "Scurovisione"
+     },
+     "desc": {
+      "en": "You have superior vision in dark and dim conditions. You can see in dim light within 60 feet of you as if it were bright light, and in darkness as if it were dim light. You cannot discern color in darkness, only shades of gray.",
+      "it": "Hai una vista superiore nell'oscurità e in condizioni di luce fioca. Entro 60 piedi da te puoi vedere in luce fioca come se fosse luce intensa, e nell'oscurità come se fosse luce fioca. Nell'oscurità non puoi distinguere i colori, solo sfumature di grigio."
+     }
+    },
+    {
+     "index": "fey-ancestry",
+     "name": {
+      "en": "Fey Ancestry",
+      "it": "Retaggio fatato"
+     },
+     "desc": {
+      "en": "You have advantage on saving throws against being charmed, and magic cannot put you to sleep.",
+      "it": "Hai vantaggio ai tiri salvezza contro l'essere affascinato, e la magia non può farti addormentare."
+     }
+    },
+    {
+     "index": "trance",
+     "name": {
+      "en": "Trance",
+      "it": "Trance"
+     },
+     "desc": {
+      "en": "Elves do not need to sleep. Instead, they meditate deeply, remaining semiconscious, for 4 hours a day. (The Common word for such meditation is \"trance.\") While meditating, you can dream after a fashion; such dreams are actually mental exercises that have become reflexive through years of practice. After resting this way, you gain the same benefit that a human does from 8 hours of sleep.",
+      "it": "Gli elfi non hanno bisogno di dormire. Invece, meditano profondamente, restando semicoscienti, per 4 ore al giorno. (La parola comune per questa meditazione è \"trance\".) Mentre mediti, puoi sognare a modo tuo; tali sogni sono in realtà esercizi mentali che sono diventati riflessivi dopo anni di pratica. Dopo aver riposato in questo modo, ottieni lo stesso beneficio che un umano ottiene da 8 ore di sonno."
+     }
+    },
+    {
+     "index": "keen-senses",
+     "name": {
+      "en": "Keen Senses",
+      "it": "Sensi acuti"
+     },
+     "desc": {
+      "en": "You have proficiency in the Perception skill.",
+      "it": "Hai competenza nell'abilità Percezione."
+     }
+    }
+   ],
+   "subraces": [
+    {
+     "index": "high-elf",
+     "name": {
+      "en": "High Elf",
+      "it": "Elfo alto"
+     },
+     "ability_bonuses": {
+      "int": 1
+     },
+     "senses": [],
+     "traits": [
+      {
+       "index": "elf-weapon-training",
+       "name": {
+        "en": "Elf Weapon Training",
+        "it": "Addestramento con armi elfiche"
+       },
+       "desc": {
+        "en": "You have proficiency with the longsword, shortsword, shortbow, and longbow.",
+        "it": "Hai competenza con la spada lunga, la spada corta, l'arco corto e l'arco lungo."
+       }
+      },
+      {
+       "index": "high-elf-cantrip",
+       "name": {
+        "en": "High Elf Cantrip",
+        "it": "Trucchetto dell'elfo alto"
+       },
+       "desc": {
+        "en": "You know one cantrip of your choice form the wizard spell list. Intelligence is your spellcasting ability for it.",
+        "it": "Conosci un trucchetto a tua scelta dalla lista di incantesimi del mago. Intelligenza è la tua caratteristica da incantatore per esso."
+       }
+      },
+      {
+       "index": "extra-language",
+       "name": {
+        "en": "Extra Language",
+        "it": "Linguaggio aggiuntivo"
+       },
+       "desc": {
+        "en": "You can speak, read, and write one extra language of your choice.",
+        "it": "Puoi parlare, leggere e scrivere un linguaggio aggiuntivo a tua scelta."
+       }
+      }
+     ]
+    }
+   ],
+   "roll_notes": {
+    "charm_save": {
+     "en": "Advantage on saving throws against being charmed, and magic can't put you to sleep.",
+     "it": "Vantaggio ai tiri salvezza contro l'essere affascinato, e la magia non può farti addormentare."
+    }
+   }
+  },
+  {
+   "index": "gnome",
+   "name": {
+    "en": "Gnome",
+    "it": "Gnomo"
+   },
+   "speed_ft": 25,
+   "ability_bonuses": {
+    "int": 2
+   },
+   "size": "small",
+   "languages": [
+    "common",
+    "gnomish"
+   ],
+   "senses": [
+    {
+     "type": "darkvision",
+     "range_ft": 60
+    }
+   ],
+   "traits": [
+    {
+     "index": "darkvision",
+     "name": {
+      "en": "Darkvision",
+      "it": "Scurovisione"
+     },
+     "desc": {
+      "en": "You have superior vision in dark and dim conditions. You can see in dim light within 60 feet of you as if it were bright light, and in darkness as if it were dim light. You cannot discern color in darkness, only shades of gray.",
+      "it": "Hai una vista superiore nell'oscurità e in condizioni di luce fioca. Entro 60 piedi da te puoi vedere in luce fioca come se fosse luce intensa, e nell'oscurità come se fosse luce fioca. Nell'oscurità non puoi distinguere i colori, solo sfumature di grigio."
+     }
+    },
+    {
+     "index": "gnome-cunning",
+     "name": {
+      "en": "Gnome Cunning",
+      "it": "Astuzia gnomesca"
+     },
+     "desc": {
+      "en": "You have advantage on all Intelligence, Wisdom, and Charisma saving throws against magic.",
+      "it": "Hai vantaggio a tutti i tiri salvezza su Intelligenza, Saggezza e Carisma contro la magia."
+     }
+    }
+   ],
+   "subraces": [
+    {
+     "index": "rock-gnome",
+     "name": {
+      "en": "Rock Gnome",
+      "it": "Gnomo delle rocce"
+     },
+     "ability_bonuses": {
+      "con": 1
+     },
+     "senses": [],
+     "traits": [
+      {
+       "index": "artificers-lore",
+       "name": {
+        "en": "Artificer's Lore",
+        "it": "Conoscenze da artefice"
+       },
+       "desc": {
+        "en": "Whenever you make an Intelligence (History) check related to magic items, alchemical objects, or technological devices, you can add twice your proficiency bonus, instead of any proficiency bonus you normally apply.",
+        "it": "Ogni volta che effettui una prova di Intelligenza (Storia) relativa a oggetti magici, oggetti alchemici o dispositivi tecnologici, puoi aggiungere il doppio del tuo bonus di competenza, invece di qualsiasi bonus di competenza che normalmente applichi."
+       }
+      },
+      {
+       "index": "tinker",
+       "name": {
+        "en": "Tinker",
+        "it": "Armeggiare"
+       },
+       "desc": {
+        "en": "You have proficiency with artisan's tools (tinker's tools). Using those tools, you can spend 1 hour and 10 gp worth of materials to construct a Tiny clockwork device (AC 5, 1 hp). The device ceases to function after 24 hours (unless you spend 1 hour repairing it to keep the device functioning), or when you use your action to dismantle it; at that time, you can reclaim the materials used to create it. You can have up to three such devices active at a time.\n\nWhen you create a device, choose one of the following options:\n\nClockwork Toy: This toy is a clockwork animal, monster, or person, such as a frog, mouse, bird, dragon, or soldier. When placed on the ground, the toy moves 5 feet across the ground on each of your turns in a random direction. It makes noises as appropriate to the creature it represents.\n\nFire Starter: The device produces a miniature flame, which you can use to light a candle, torch, or campfire. Using the device requires your action.\n\nMusic Box: When opened, this music box plays a single song at a moderate volume. The box stops playing when it reaches the song's end or when it is closed.",
+        "it": "Hai competenza con gli strumenti da artigiano (strumenti da inventore). Usando quegli strumenti, puoi spendere 1 ora e materiali per un valore di 10 mo per costruire un congegno a orologeria Minuscolo (CA 5, 1 pf). Il congegno smette di funzionare dopo 24 ore (a meno che tu non spenda 1 ora a ripararlo per mantenerlo in funzione), o quando usi la tua azione per smantellarlo; in quel momento, puoi recuperare i materiali usati per crearlo. Puoi avere fino a tre congegni di questo tipo attivi contemporaneamente.\n\nQuando crei un congegno, scegli una delle seguenti opzioni:\n\nGiocattolo a orologeria: Questo giocattolo è un animale, un mostro o una persona a orologeria, come una rana, un topo, un uccello, un drago o un soldato. Quando viene posato a terra, il giocattolo si muove di 5 piedi sul terreno in una direzione casuale a ciascuno dei tuoi turni. Emette rumori appropriati alla creatura che rappresenta.\n\nAccendifuoco: Il congegno produce una fiamma in miniatura, che puoi usare per accendere una candela, una torcia o un fuoco da campo. Usare il congegno richiede la tua azione.\n\nScatola musicale: Quando viene aperta, questa scatola musicale suona un'unica canzone a un volume moderato. La scatola smette di suonare quando raggiunge la fine della canzone o quando viene chiusa."
+       }
+      }
+     ]
+    }
+   ],
+   "roll_notes": {}
+  },
+  {
+   "index": "half-elf",
+   "name": {
+    "en": "Half-Elf",
+    "it": "Mezzelfo"
+   },
+   "speed_ft": 30,
+   "ability_bonuses": {
+    "cha": 2
+   },
+   "size": "medium",
+   "languages": [
+    "common",
+    "elvish"
+   ],
+   "senses": [
+    {
+     "type": "darkvision",
+     "range_ft": 60
+    }
+   ],
+   "traits": [
+    {
+     "index": "darkvision",
+     "name": {
+      "en": "Darkvision",
+      "it": "Scurovisione"
+     },
+     "desc": {
+      "en": "You have superior vision in dark and dim conditions. You can see in dim light within 60 feet of you as if it were bright light, and in darkness as if it were dim light. You cannot discern color in darkness, only shades of gray.",
+      "it": "Hai una vista superiore nell'oscurità e in condizioni di luce fioca. Entro 60 piedi da te puoi vedere in luce fioca come se fosse luce intensa, e nell'oscurità come se fosse luce fioca. Nell'oscurità non puoi distinguere i colori, solo sfumature di grigio."
+     }
+    },
+    {
+     "index": "fey-ancestry",
+     "name": {
+      "en": "Fey Ancestry",
+      "it": "Retaggio fatato"
+     },
+     "desc": {
+      "en": "You have advantage on saving throws against being charmed, and magic cannot put you to sleep.",
+      "it": "Hai vantaggio ai tiri salvezza contro l'essere affascinato, e la magia non può farti addormentare."
+     }
+    },
+    {
+     "index": "skill-versatility",
+     "name": {
+      "en": "Skill Versatility",
+      "it": "Versatilità nelle abilità"
+     },
+     "desc": {
+      "en": "You gain proficiency in two skills of your choice.",
+      "it": "Ottieni competenza in due abilità a tua scelta."
+     }
+    }
+   ],
+   "subraces": [],
+   "roll_notes": {}
+  },
+  {
+   "index": "half-orc",
+   "name": {
+    "en": "Half-Orc",
+    "it": "Mezzorco"
+   },
+   "speed_ft": 30,
+   "ability_bonuses": {
+    "str": 2,
+    "con": 1
+   },
+   "size": "medium",
+   "languages": [
+    "common",
+    "orc"
+   ],
+   "senses": [
+    {
+     "type": "darkvision",
+     "range_ft": 60
+    }
+   ],
+   "traits": [
+    {
+     "index": "darkvision",
+     "name": {
+      "en": "Darkvision",
+      "it": "Scurovisione"
+     },
+     "desc": {
+      "en": "You have superior vision in dark and dim conditions. You can see in dim light within 60 feet of you as if it were bright light, and in darkness as if it were dim light. You cannot discern color in darkness, only shades of gray.",
+      "it": "Hai una vista superiore nell'oscurità e in condizioni di luce fioca. Entro 60 piedi da te puoi vedere in luce fioca come se fosse luce intensa, e nell'oscurità come se fosse luce fioca. Nell'oscurità non puoi distinguere i colori, solo sfumature di grigio."
+     }
+    },
+    {
+     "index": "savage-attacks",
+     "name": {
+      "en": "Savage Attacks",
+      "it": "Attacchi selvaggi"
+     },
+     "desc": {
+      "en": "When you score a critical hit with a melee weapon attack, you can roll one of the weapon's damage dice one additional time and add it to the extra damage of the critical hit.",
+      "it": "Quando ottieni un colpo critico con un attacco con arma da mischia, puoi tirare una volta in più uno dei dadi di danno dell'arma e aggiungerlo ai danni extra del colpo critico."
+     }
+    },
+    {
+     "index": "relentless-endurance",
+     "name": {
+      "en": "Relentless Endurance",
+      "it": "Resistenza implacabile"
+     },
+     "desc": {
+      "en": "When you are reduced to 0 hit points but not killed outright, you can drop to 1 hit point instead. you cannot use this feature again until you finish a long rest.",
+      "it": "Quando vieni ridotto a 0 punti ferita ma non ucciso sul colpo, puoi scendere invece a 1 punto ferita. Non puoi usare di nuovo questa capacità finché non termini un riposo lungo."
+     }
+    },
+    {
+     "index": "menacing",
+     "name": {
+      "en": "Menacing",
+      "it": "Minaccioso"
+     },
+     "desc": {
+      "en": "You gain proficiency in the Intimidation skill.",
+      "it": "Ottieni competenza nell'abilità Intimidire."
+     }
+    }
+   ],
+   "subraces": [],
+   "roll_notes": {}
+  },
+  {
+   "index": "halfling",
+   "name": {
+    "en": "Halfling",
+    "it": "Halfling"
+   },
+   "speed_ft": 25,
+   "ability_bonuses": {
+    "dex": 2
+   },
+   "size": "small",
+   "languages": [
+    "common",
+    "halfling"
+   ],
+   "senses": [],
+   "traits": [
+    {
+     "index": "brave",
+     "name": {
+      "en": "Brave",
+      "it": "Coraggioso"
+     },
+     "desc": {
+      "en": "You have advantage on saving throw against being frightened.",
+      "it": "Hai vantaggio ai tiri salvezza contro l'essere spaventato."
+     }
+    },
+    {
+     "index": "halfling-nimbleness",
+     "name": {
+      "en": "Halfling Nimbleness",
+      "it": "Agilità halfling"
+     },
+     "desc": {
+      "en": "You can move through the space of any creature that is of a size larger than yours.",
+      "it": "Puoi muoverti attraverso lo spazio di qualsiasi creatura di taglia superiore alla tua."
+     }
+    },
+    {
+     "index": "lucky",
+     "name": {
+      "en": "Lucky",
+      "it": "Fortunato"
+     },
+     "desc": {
+      "en": "When you roll a 1 on the d20 for an attack roll, ability check, or saving throw, you can reroll the die and must use the new roll.",
+      "it": "Quando ottieni 1 sul d20 di un tiro per colpire, una prova di caratteristica o un tiro salvezza, puoi ritirare il dado e devi usare il nuovo risultato."
+     }
+    }
+   ],
+   "subraces": [
+    {
+     "index": "lightfoot-halfling",
+     "name": {
+      "en": "Lightfoot Halfling",
+      "it": "Halfling piedelesto"
+     },
+     "ability_bonuses": {
+      "cha": 1
+     },
+     "senses": [],
+     "traits": [
+      {
+       "index": "naturally-stealthy",
+       "name": {
+        "en": "Naturally Stealthy",
+        "it": "Furtività naturale"
+       },
+       "desc": {
+        "en": "You can attempt to hide even when you are obscured only by a creature that is at least one size larger than you.",
+        "it": "Puoi tentare di nasconderti anche quando sei oscurato solo da una creatura che sia almeno di una taglia più grande della tua."
+       }
+      }
+     ]
+    }
+   ],
+   "roll_notes": {
+    "frightened_save": {
+     "en": "Advantage on saving throws against being frightened.",
+     "it": "Vantaggio ai tiri salvezza contro l'essere spaventato."
+    }
+   }
+  },
+  {
+   "index": "human",
+   "name": {
+    "en": "Human",
+    "it": "Umano"
+   },
+   "speed_ft": 30,
+   "ability_bonuses": {
+    "str": 1,
+    "dex": 1,
+    "con": 1,
+    "int": 1,
+    "wis": 1,
+    "cha": 1
+   },
+   "size": "medium",
+   "languages": [
+    "common"
+   ],
+   "senses": [],
+   "traits": [],
+   "subraces": [],
+   "roll_notes": {}
+  },
+  {
+   "index": "tiefling",
+   "name": {
+    "en": "Tiefling",
+    "it": "Tiefling"
+   },
+   "speed_ft": 30,
+   "ability_bonuses": {
+    "int": 1,
+    "cha": 2
+   },
+   "size": "medium",
+   "languages": [
+    "common",
+    "infernal"
+   ],
+   "senses": [
+    {
+     "type": "darkvision",
+     "range_ft": 60
+    }
+   ],
+   "traits": [
+    {
+     "index": "darkvision",
+     "name": {
+      "en": "Darkvision",
+      "it": "Scurovisione"
+     },
+     "desc": {
+      "en": "You have superior vision in dark and dim conditions. You can see in dim light within 60 feet of you as if it were bright light, and in darkness as if it were dim light. You cannot discern color in darkness, only shades of gray.",
+      "it": "Hai una vista superiore nell'oscurità e in condizioni di luce fioca. Entro 60 piedi da te puoi vedere in luce fioca come se fosse luce intensa, e nell'oscurità come se fosse luce fioca. Nell'oscurità non puoi distinguere i colori, solo sfumature di grigio."
+     }
+    },
+    {
+     "index": "hellish-resistance",
+     "name": {
+      "en": "Hellish Resistance",
+      "it": "Resistenza infernale"
+     },
+     "desc": {
+      "en": "You have resistance to fire damage.",
+      "it": "Hai resistenza ai danni da fuoco."
+     }
+    },
+    {
+     "index": "infernal-legacy",
+     "name": {
+      "en": "Infernal Legacy",
+      "it": "Eredità infernale"
+     },
+     "desc": {
+      "en": "You know the thaumaturgy cantrip. When you reach 3rd level, you can cast the hellish rebuke spell as a 2nd-level spell once with this trait and regain the ability to do so when you finish a long rest. When you reach 5th level, you can cast the darkness spell once with this trait and regain the ability to do so when you finish a long rest. Charisma is your spellcasting ability for these spells.",
+      "it": "Conosci il trucchetto taumaturgia. Quando raggiungi il 3° livello, puoi lanciare l'incantesimo rimprovero infernale come incantesimo di 2° livello una volta con questo tratto e riottieni la capacità di farlo quando termini un riposo lungo. Quando raggiungi il 5° livello, puoi lanciare l'incantesimo oscurità una volta con questo tratto e riottieni la capacità di farlo quando termini un riposo lungo. Carisma è la tua caratteristica da incantatore per questi incantesimi."
+     }
+    }
+   ],
+   "subraces": [],
+   "roll_notes": {}
+  }
+ ]
+}

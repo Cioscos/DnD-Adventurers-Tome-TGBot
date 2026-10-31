@@ -37,6 +37,9 @@ vi.mock('framer-motion', async () => {
 
 vi.mock('sonner', () => ({ toast: { success: toastSuccess, error: vi.fn() } }))
 vi.mock('@/auth/telegram', () => ({ haptic: { success: () => {}, error: () => {} } }))
+vi.mock('@/dice/useDiceAnimation', () => ({
+  useDiceAnimation: () => ({ playAndCollect: async () => [{ groupIndex: 0, value: 4 }] }),
+}))
 vi.mock('@/hooks/useReducedMotion', () => ({ useReducedMotion: () => true }))
 vi.mock('@/styles/motion', () => ({
   spring: new Proxy({}, { get: () => ({}) }),
@@ -171,5 +174,37 @@ describe('Experience page', () => {
     await waitFor(() =>
       expect(toastSuccess).toHaveBeenCalledWith('character.xp.hp_gained_toast', expect.anything()),
     )
+  })
+
+  it('rolled HP mode, single class: a level-raising XP change waits for the roll and sends hp_rolls', async () => {
+    const rolled = {
+      ...baseChar,
+      experience_points: 0,
+      settings: { hp_mode: 'rolled' },
+      classes: [{ id: 9, class_name: 'fighter', level: 1, hit_die: 10 }],
+    }
+    getChar.mockResolvedValue(rolled)
+    updateXPSpy.mockResolvedValue({ ...rolled, experience_points: 300 })
+    renderWithProviders(<Experience />)
+    await screen.findByPlaceholderText('character.xp.label')
+
+    fireEvent.change(screen.getByPlaceholderText('character.xp.label'), { target: { value: '300' } })
+    await userEvent.click(screen.getByRole('button', { name: 'common.applica' }))
+    expect(updateXPSpy).not.toHaveBeenCalled()
+
+    await userEvent.click(await screen.findByRole('button', { name: 'character.multiclass.level_up.roll_hp' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'character.multiclass.level_up.confirm' }))
+    await waitFor(() => expect(updateXPSpy).toHaveBeenCalledWith(5, { add: 300, set: undefined, hp_rolls: [4] }))
+  })
+
+  it('milestone mode hides the XP controls and shows the level-up button', async () => {
+    getChar.mockResolvedValue({
+      ...baseChar,
+      settings: { advancement: 'milestone' },
+      classes: [{ id: 9, class_name: 'fighter', level: 4, hit_die: 10 }],
+    })
+    renderWithProviders(<Experience />)
+    expect(await screen.findByText('character.xp.level_up_cta')).toBeInTheDocument()
+    expect(screen.queryByPlaceholderText('character.xp.label')).toBeNull()
   })
 })

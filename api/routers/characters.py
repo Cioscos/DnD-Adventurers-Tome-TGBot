@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import random
+import re
 from datetime import datetime
 from typing import Annotated
 
@@ -14,6 +14,7 @@ from sqlalchemy.orm import selectinload
 from api.auth import get_current_user, get_current_lang
 from api.database import get_db
 from core.db.models import (
+    Ability,
     AbilityScore,
     ABILITY_NAMES,
     Character,
@@ -25,6 +26,8 @@ from core.db.models import (
     SessionStatus,
 )
 from core.data.xp_thresholds import xp_to_level
+from core.data.skills import SKILL_ABILITY_MAP
+from api.services.skills import skill_bonus
 from core.data.labels import ability_label, skill_label
 from api.services.class_features import sync_class_feature_abilities
 from core.game.stats import hit_points_for_level
@@ -41,15 +44,24 @@ from api.schemas.character import (
 )
 from api.schemas.common import D20RollSubmission, RollResult
 from api.routers.classes import create_class_for_character
-from api.routers._helpers import effective_ability_mod, prune_history, saving_throw_bonus
+from core.game.item_bonuses import item_bonus_total
+from api.routers._helpers import effective_ability_mod, effective_con_mod, prune_history, saving_throw_bonus
 from api.services import telegram_notify
+from api.services.d20 import d20_history_label, d20_records, resolve_body
 from api.services.dice_stats import record_dice
 from api.services.character_response import build_character_response
 from api.services.effects import apply_conditions
+from api.services.durations import set_condition_durations, tick_rounds
 from api.services.spell_slots import recalc_spell_slots
+from api.services.choices import add_asi_choices
+from api.services.hp_rolls import record_rolls, stored_rolls
 from api.services.homebrew.passive import get_passive_modifiers
 
 router = APIRouter(prefix="/characters", tags=["characters"])
+
+# settings keys written only by server endpoints (level-up, conditions, rounds tick, cast).
+SERVER_OWNED_SETTINGS = ("hp_rolls", "condition_durations",
+                         "concentration_rounds_left", "concentration_item_spell")
 
 # Mapping from skill name to governing ability
 _SKILL_ABILITY: dict[str, str] = {
@@ -170,7 +182,7 @@ async def list_characters(
 ) -> list[CharacterSummary]:
     result = await session.execute(
         select(Character)
-        .options(selectinload(Character.classes))
+        .options(selectinload(Character.classes), selectinload(Character.items))
         .where(Character.user_id == user_id)
         .order_by(Character.id)
     )
@@ -184,6 +196,7 @@ async def list_characters(
         summary.ac_homebrew_modifier = await get_passive_modifiers(
             session, c, "character.ac"
         )
+        summary.ac_items_modifier = item_bonus_total(c.items, "ac")
         summaries.append(summary)
     return summaries
 
@@ -191,6 +204,53 @@ async def list_characters(
 # ---------------------------------------------------------------------------
 # Create
 # ---------------------------------------------------------------------------
+
+_SHORT_ABILITY = {a[:3]: a for a in ABILITY_NAMES}
+_ROLL_NOTE_KEY = re.compile(r"^(save\.(%s)|skill\.(%s))$" % ("|".join(ABILITY_NAMES), "|".join(SKILL_ABILITY_MAP)))
+
+
+def _apply_creation_extras(char: Character, body: CharacterCreate) -> None:
+    """Scores (+species bonuses), species fields, skills; 422 on invalid input."""
+    def bad(msg: str):
+        return HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, msg)
+
+    scores = {a: 10 for a in ABILITY_NAMES}
+    for k, v in (body.ability_scores or {}).items():
+        if k not in scores:
+            raise bad(f"Unknown ability: {k}")
+        scores[k] = v
+    sp = body.species
+    if sp:
+        for k, v in sp.ability_bonuses.items():
+            full = _SHORT_ABILITY.get(k, k)
+            if full not in scores:
+                raise bad(f"Unknown ability bonus: {k}")
+            scores[full] += v
+        for k, v in sp.roll_notes.items():
+            if not _ROLL_NOTE_KEY.match(k) or len(v) > 120:
+                raise bad(f"Invalid roll note: {k}")
+    if body.ability_scores or sp:
+        if any(not 3 <= v <= 20 for v in scores.values()):
+            raise bad("Ability scores must be between 3 and 20")
+        for row in char.ability_scores:
+            row.value = scores[row.name]
+    if body.skills:
+        if any(k not in SKILL_ABILITY_MAP for k in body.skills):
+            raise bad("Unknown skill")
+        char.skills = {k: bool(v) for k, v in body.skills.items()}
+    if sp:
+        char.race = sp.name
+        if sp.speed_ft is not None:
+            char.speed = sp.speed_ft
+        s = dict(char.settings or {})
+        if sp.senses:
+            s["senses"] = [x.model_dump() for x in sp.senses]
+        if sp.roll_notes:
+            s["roll_notes"] = dict(sp.roll_notes)
+        char.settings = s
+        langs = list(char.languages or [])
+        char.languages = langs + [l for l in sp.languages if l not in langs]
+
 
 @router.post("", response_model=CharacterFull, status_code=status.HTTP_201_CREATED)
 async def create_character(
@@ -213,7 +273,10 @@ async def create_character(
     # Inizializza la collection abilities in memoria così che il sync delle
     # feature di classe (in create_class_for_character) non tenti un lazy-load
     # in contesto async (MissingGreenlet). Mirror di ability_scores/currency.
-    char.abilities = []
+    char.abilities = [
+        Ability(name=t.name, description=t.description, is_passive=True)
+        for t in (body.species.traits if body.species else [])
+    ]
     # Stesso motivo: create_class_for_character fa `if cls not in char.classes`.
     # Su un char appena flushato (persistente) la collection classes non è
     # caricata, quindi senza questa init l'accesso scatena un lazy-load async →
@@ -225,6 +288,7 @@ async def create_character(
     if body.identity is not None:
         for field, value in body.identity.model_dump(exclude_unset=True).items():
             setattr(char, field, value)
+    _apply_creation_extras(char, body)  # after identity so species languages merge
     session.add(char)
     await session.flush()  # assign id (cascades ability_scores + currency)
 
@@ -271,6 +335,11 @@ async def update_character(
 ) -> CharacterFull:
     char = await _get_owned(char_id, user_id, session, full=True)
     for field, value in body.model_dump(exclude_unset=True).items():
+        if field == "settings" and value is not None:
+            # Server-owned keys: a stale client snapshot must never overwrite them.
+            old = char.settings or {}
+            value = {k: v for k, v in value.items() if k not in SERVER_OWNED_SETTINGS}
+            value.update({k: old[k] for k in SERVER_OWNED_SETTINGS if k in old})
         setattr(char, field, value)
     # Flush + re-SELECT so CharacterFull serialization sees a non-expired row
     # AND nested eager-loads (classes.resources) survive. See
@@ -368,6 +437,12 @@ async def update_conditions(
 ) -> CharacterFull:
     char = await _get_owned(char_id, user_id, session, full=True)
     result = await apply_conditions(session, char, body.conditions)
+    durations = dict(body.durations or {})
+    for slug, val in body.conditions.items():
+        if not val:
+            durations[slug] = None
+    if durations:
+        set_condition_durations(char, durations)
     if result["changed"]:
         await prune_history(session, char)
 
@@ -377,6 +452,21 @@ async def update_conditions(
     # serialization.
     char = await _refresh_char_full(session, char_id, user_id)
     return await build_character_response(session, char)
+
+
+@router.post("/{char_id}/rounds/tick", response_model=CharacterFull)
+async def tick_round(
+    char_id: int,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> CharacterFull:
+    char = await _get_owned(char_id, user_id, session, full=True)
+    expired = await tick_rounds(session, char)
+    await prune_history(session, char)
+    char = await _refresh_char_full(session, char_id, user_id)
+    resp = await build_character_response(session, char)
+    resp.expired_effects = expired
+    return resp
 
 
 # ---------------------------------------------------------------------------
@@ -421,23 +511,47 @@ async def update_xp(
 
     total_hp_gained = 0
 
+    # Milestone mode: level-ups go through classes/distribute, never from XP.
+    milestone = settings.get("advancement") == "milestone"
+
     # For single-class characters, keep class level in sync with XP-derived level.
-    if len(char.classes) == 1:
+    # hp_rolls only make sense for a single class in XP mode (others use the level-up modal).
+    if body.hp_rolls is not None and (milestone or len(char.classes) != 1):
+        raise HTTPException(status_code=422, detail="hp_rolls_not_applicable")
+    if len(char.classes) == 1 and not milestone:
         cls = char.classes[0]
         old_level = cls.level
         new_level = xp_to_level(char.experience_points)
-        if new_level != old_level:
+        if new_level != old_level or body.hp_rolls:
             cls.level = new_level
+            lost_rolls = stored_rolls(char).get(cls.id, {})  # read before record_rolls drops them
+            # Validates hp_rolls (count/range -> 422) and drops stale rolls. Omitted rolls in
+            # rolled mode fall back to the fixed value so older clients keep working.
+            record_rolls(char, cls, old_level, new_level, body.hp_rolls)
+            add_asi_choices(char, cls.class_name, old_level, new_level)
             await sync_class_feature_abilities(session, char, cls, lang=lang)
 
-            if auto_calc and cls.hit_die and new_level > old_level:
-                con_row = next(
-                    (a for a in char.ability_scores if a.name == "constitution"), None
+            con_row = next(
+                (a for a in char.ability_scores if a.name == "constitution"), None
+            )
+            con_mod = (con_row.value - 10) // 2 if con_row else 0
+            if auto_calc and cls.hit_die and new_level < old_level:
+                # Symmetric to level-up: each lost level gives back its stored roll or the fixed value.
+                lost = sum(
+                    max(1, lost_rolls[lvl] + effective_con_mod(char)) if lvl in lost_rolls
+                    else hit_points_for_level(cls.hit_die, con_mod, max(2, lvl))
+                    for lvl in range(new_level + 1, old_level + 1)
                 )
-                con_mod = (con_row.value - 10) // 2 if con_row else 0
+                char.hit_points = max(1, char.hit_points - lost)
+                char.current_hit_points = min(char.current_hit_points, char.hit_points)
+            if auto_calc and cls.hit_die and new_level > old_level:
                 for lvl in range(old_level + 1, new_level + 1):
-                    # level 1 was handled at character creation; always use level 2+ formula
-                    total_hp_gained += hit_points_for_level(cls.hit_die, con_mod, max(2, lvl))
+                    if body.hp_rolls:
+                        # rolled: roll + effective CON, min 1
+                        total_hp_gained += max(1, body.hp_rolls[lvl - old_level - 1] + effective_con_mod(char))
+                    else:
+                        # level 1 was handled at character creation; always use level 2+ formula
+                        total_hp_gained += hit_points_for_level(cls.hit_die, con_mod, max(2, lvl))
 
     if total_hp_gained > 0:
         char.hit_points += total_hp_gained
@@ -447,7 +561,8 @@ async def update_xp(
     old_level_from_xp = xp_to_level(old_xp)
     new_level_from_xp = xp_to_level(char.experience_points)
     if (
-        new_level_from_xp > old_level_from_xp
+        not milestone
+        and new_level_from_xp > old_level_from_xp
         and telegram_notify.notifications_enabled(char, "level_up")
     ):
         if len(char.classes) == 1:
@@ -496,36 +611,28 @@ async def roll_skill(
             raise HTTPException(status_code=409, detail="Ispirazione non disponibile")
         char.heroic_inspiration = False
 
-    ability_mod = effective_ability_mod(char, _SKILL_ABILITY[skill_name])
+    bonus = await skill_bonus(session, char, skill_name)
 
-    skills: dict = char.skills or {}
-    level = skills.get(skill_name)
-    pb = char.proficiency_bonus
-    if level == "expert":
-        bonus = ability_mod + 2 * pb
-    elif level is True or level == 1:
-        bonus = ability_mod + pb
-    else:
-        bonus = ability_mod
-    bonus += await get_passive_modifiers(session, char, f"character.skill.{skill_name}")
-
-    die = body.die if body and body.die is not None else random.randint(1, 20)
+    outcome = resolve_body(body)
+    die = outcome.kept
     total = die + bonus
     is_crit = die == 20
     is_fumble = die == 1
 
     history_msg = (
-        f"Abilità {skill_label(skill_name)}: d20={die} {'+ ' if bonus >= 0 else ''}{bonus} = {total}"
+        f"Abilità {skill_label(skill_name)}: {d20_history_label(outcome)} {'+ ' if bonus >= 0 else ''}{bonus} = {total}"
         + (" (CRITICO)" if is_crit else " (FUMBLE)" if is_fumble else "")
     )
     if body and body.with_inspiration:
         history_msg = f"Reroll ispirazione: {history_msg}"
     _add_history(session, char.id, "skill_roll", history_msg)
-    record_dice(char, [("d20", die)])
+    record_dice(char, d20_records(outcome))
     await prune_history(session, char)
 
     return RollResult(
         die=die,
+        dice=outcome.dice,
+        mode=outcome.mode,
         bonus=bonus,
         total=total,
         is_critical=is_crit,
@@ -557,23 +664,26 @@ async def roll_saving_throw(
 
     bonus = await saving_throw_bonus(session, char, ability)
 
-    die = body.die if body and body.die is not None else random.randint(1, 20)
+    outcome = resolve_body(body)
+    die = outcome.kept
     total = die + bonus
     is_crit = die == 20
     is_fumble = die == 1
 
     history_msg = (
-        f"TS {ability_label(ability)}: d20={die} {'+ ' if bonus >= 0 else ''}{bonus} = {total}"
+        f"TS {ability_label(ability)}: {d20_history_label(outcome)} {'+ ' if bonus >= 0 else ''}{bonus} = {total}"
         + (" (CRITICO)" if is_crit else " (FUMBLE)" if is_fumble else "")
     )
     if body and body.with_inspiration:
         history_msg = f"Reroll ispirazione: {history_msg}"
     _add_history(session, char.id, "saving_throw", history_msg)
-    record_dice(char, [("d20", die)])
+    record_dice(char, d20_records(outcome))
     await prune_history(session, char)
 
     return RollResult(
         die=die,
+        dice=outcome.dice,
+        mode=outcome.mode,
         bonus=bonus,
         total=total,
         is_critical=is_crit,

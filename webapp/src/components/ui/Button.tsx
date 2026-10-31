@@ -43,7 +43,7 @@ function variantClasses(variant: ButtonVariant): string {
 function sizeClasses(size: ButtonSize): string {
   switch (size) {
     case 'sm':
-      return 'min-h-[40px] px-3 py-2 text-xs'
+      return 'min-h-11 px-3 py-2 text-xs'
     case 'lg':
       return 'min-h-[56px] px-5 py-3.5 text-base'
     case 'md':

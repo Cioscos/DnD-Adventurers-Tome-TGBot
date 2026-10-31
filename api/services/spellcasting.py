@@ -21,6 +21,7 @@ from core.data.spellcasting import (
     has_wizard,
 )
 from core.db.models import Character
+from core.game.item_bonuses import item_bonus_total
 
 
 def _caster_stats(char: Character) -> list[SpellCasterStats]:
@@ -31,13 +32,15 @@ def _caster_stats(char: Character) -> list[SpellCasterStats]:
         if not ability:
             continue
         mod = effective_ability_mod(char, ability)
+        dc_item = item_bonus_total(char.items, "spell_dc")
+        atk_item = item_bonus_total(char.items, "spell_attack")
         out.append(
             SpellCasterStats(
                 class_id=cls.id,
                 class_name=cls.class_name,
                 ability=ability,
-                save_dc=8 + pb + mod,
-                attack_bonus=pb + mod,
+                save_dc=8 + pb + mod + dc_item,
+                attack_bonus=pb + mod + atk_item,
             )
         )
     return out

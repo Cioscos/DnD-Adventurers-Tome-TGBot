@@ -6,20 +6,8 @@ from typing import Optional
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from core.data.equipment_slots import EQUIPMENT_SLOT_COMPAT
 from core.db.models import EquipmentSlot, Item
-
-
-# Mapping from item_type to set of allowed equipment slots.
-EQUIPMENT_SLOT_COMPAT: dict[str, set[EquipmentSlot]] = {
-    "weapon": {EquipmentSlot.MAIN_HAND, EquipmentSlot.OFF_HAND},
-    "armor": {EquipmentSlot.BODY},
-    "shield": {EquipmentSlot.OFF_HAND},
-    "accessory": {EquipmentSlot.NECK, EquipmentSlot.CLOAK,
-                  EquipmentSlot.RING1, EquipmentSlot.RING2},
-    "gear": {EquipmentSlot.HEAD, EquipmentSlot.HANDS,
-             EquipmentSlot.FEET, EquipmentSlot.AMMUNITION},
-    "ammunition": {EquipmentSlot.AMMUNITION},
-}
 
 
 def slot_allowed_for_type(item_type: str, slot: EquipmentSlot) -> bool:

@@ -1,14 +1,14 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
-import { Plus, Pencil, SkipForward, ScrollText } from 'lucide-react'
+import { Plus, Pencil, SkipForward, ScrollText, Upload, BookOpen } from 'lucide-react'
 import {
   GiSparkles as Sparkles, GiCheckedShield as Shield, GiHeartPlus as Heart,
   GiCrossedSwords as Swords,
 } from 'react-icons/gi'
-import { api } from '@/api/client'
+import { api, ApiError } from '@/api/client'
 import { cardStatus, effectiveAc, effectiveHpMax } from '@/lib/characterStatus'
 import HPGauge from '@/components/ui/HPGauge'
 import OfflineNotice from '@/components/ui/OfflineNotice'
@@ -27,6 +27,12 @@ import { haptic } from '@/auth/telegram'
 import { useToast } from '@/hooks/useToast'
 import { spring, stagger } from '@/styles/motion'
 import languagesSrd from '@/data/languages-srd.json'
+import SpeciesStep, { type SpeciesChoice } from '@/pages/creation/SpeciesStep'
+import AbilityScoresStep from '@/pages/creation/AbilityScoresStep'
+import CatalogPicker from '@/components/catalog/CatalogPicker'
+import { creationExtras, backgroundLanguages, backgroundSkills as mapBackgroundSkills, buildSpecies } from '@/lib/species'
+import { localized } from '@/lib/srd/catalog'
+import { STANDARD_ARRAY, arrayScores, scoresValid, type ScoreMode, type Scores } from '@/lib/pointBuy'
 
 const LANGUAGE_SUGGESTIONS = [...languagesSrd.common, ...languagesSrd.exotic]
 
@@ -60,10 +66,25 @@ type IdentityPayload = {
   personality?: { traits: string }
 }
 
-type Step = 'name' | 'class' | 'identity'
+type Step = 'name' | 'class' | 'species' | 'abilities' | 'identity'
+
+// `detail` e' una stringa (413) oppure la lista di errori pydantic (422): mostriamo i primi msg con il campo.
+function importErrorText(detail: unknown): string {
+  if (typeof detail === 'string') return detail
+  if (!Array.isArray(detail)) return ''
+  return detail
+    .slice(0, 3)
+    .map((d: { msg?: unknown; loc?: unknown }) => {
+      if (typeof d?.msg !== 'string') return ''
+      const loc = Array.isArray(d.loc) ? d.loc.filter((x) => x !== 'body').join('.') : ''
+      return loc ? `${loc}: ${d.msg}` : d.msg
+    })
+    .filter(Boolean)
+    .join('; ')
+}
 
 export default function CharacterSelect() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const navigate = useNavigate()
   const qc = useQueryClient()
   const toast = useToast()
@@ -86,6 +107,17 @@ export default function CharacterSelect() {
   const [languages, setLanguages] = useState<string[]>([])
   const [personalityTraits, setPersonalityTraits] = useState('')
 
+  // Specie, punteggi, background dal catalogo (tutti opzionali).
+  const [species, setSpecies] = useState<SpeciesChoice>({ race: null, sub: null })
+  const [scoreMode, setScoreMode] = useState<ScoreMode>('array')
+  const [scores, setScores] = useState<Scores>(arrayScores())
+  const [scorePool, setScorePool] = useState<number[]>(STANDARD_ARRAY)
+  const [scoresSkipped, setScoresSkipped] = useState(false)
+  const [pickBackground, setPickBackground] = useState(false)
+  const [backgroundSkills, setBackgroundSkills] = useState<string[]>([])
+  const lang = i18n.language?.startsWith('en') ? 'en' : 'it'
+  const speciesPayload = species.race ? buildSpecies(species.race, species.sub, lang) : null
+
   const charactersQuery = useQuery({
     queryKey: ['characters'],
     queryFn: () => api.characters.list(),
@@ -106,7 +138,7 @@ export default function CharacterSelect() {
   const hasActiveSession = activeSession?.status === 'active'
 
   const createMutation = useMutation({
-    mutationFn: async ({ name, cls, identity }: { name: string; cls: SelectedClass | null; identity: IdentityPayload | null }) => {
+    mutationFn: async ({ name, cls, identity, extras }: { name: string; cls: SelectedClass | null; identity: IdentityPayload | null; extras: ReturnType<typeof creationExtras> }) => {
       return api.characters.create(
         name,
         cls
@@ -118,6 +150,7 @@ export default function CharacterSelect() {
             }
           : null,
         identity,
+        extras,
       )
     },
     onSuccess: (char) => {
@@ -128,6 +161,19 @@ export default function CharacterSelect() {
     },
     onError: () => {
       toast.error(t('character.create.create_failed'))
+    },
+  })
+
+  const fileRef = useRef<HTMLInputElement>(null)
+  const importMutation = useMutation({
+    mutationFn: (file: File) => api.characters.import(file),
+    onSuccess: (char) => {
+      qc.invalidateQueries({ queryKey: ['characters'] })
+      haptic.success()
+      navigate(`/char/${char.id}`)
+    },
+    onError: (e) => {
+      toast.error((e instanceof ApiError && importErrorText(e.detail)) || t('character.select.import_failed'))
     },
   })
 
@@ -145,6 +191,13 @@ export default function CharacterSelect() {
     setBackground('')
     setLanguages([])
     setPersonalityTraits('')
+    setSpecies({ race: null, sub: null })
+    setScoreMode('array')
+    setScores(arrayScores())
+    setScorePool(STANDARD_ARRAY)
+    setScoresSkipped(false)
+    setBackgroundSkills([])
+    setPickBackground(false)
   }
 
   const handleNameNext = () => {
@@ -160,7 +213,7 @@ export default function CharacterSelect() {
 
   const buildIdentityPayload = (): IdentityPayload | null => {
     const p: IdentityPayload = {}
-    if (race.trim()) p.race = race.trim()
+    if (race.trim() && !species.race) p.race = race.trim()
     if (gender.trim()) p.gender = gender.trim()
     if (alignment.trim()) p.alignment = alignment.trim()
     if (background.trim()) p.background = background.trim()
@@ -170,7 +223,8 @@ export default function CharacterSelect() {
   }
 
   const handleCreate = (identity: IdentityPayload | null) => {
-    createMutation.mutate({ name: newName.trim(), cls: selectedClass ?? null, identity })
+    const extras = creationExtras({ scores, skipped: scoresSkipped, species: speciesPayload, skills: backgroundSkills })
+    createMutation.mutate({ name: newName.trim(), cls: selectedClass ?? null, identity, extras })
   }
 
   // Helpers selezione classe (evidenziazione).
@@ -347,6 +401,28 @@ export default function CharacterSelect() {
           {t('character.select.new')}
         </Button>
 
+        <input
+          ref={fileRef}
+          type="file"
+          accept=".json,application/json"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0]
+            e.target.value = ''
+            if (file) importMutation.mutate(file)
+          }}
+        />
+        <Button
+          variant="secondary"
+          size="md"
+          fullWidth
+          icon={<Upload size={16} />}
+          loading={importMutation.isPending}
+          onClick={() => fileRef.current?.click()}
+        >
+          {t('character.select.import')}
+        </Button>
+
         {/* Version footer — opens the in-app changelog / release notes. */}
         <div className="pt-2 flex justify-center">
           <Pressable
@@ -372,6 +448,10 @@ export default function CharacterSelect() {
             ? t('character.create.step_name')
             : step === 'class'
             ? t('character.create.step_class')
+            : step === 'species'
+            ? t('character.create.step_species')
+            : step === 'abilities'
+            ? t('character.create.step_abilities')
             : t('character.create.step_identity')
         }
         dismissible={!createMutation.isPending}
@@ -500,7 +580,7 @@ export default function CharacterSelect() {
                     secondaryLabel={t('common.back')}
                     onSecondary={() => setStep('name')}
                     primaryLabel={`${t('common.next')} →`}
-                    onPrimary={() => setStep('identity')}
+                    onPrimary={() => setStep('species')}
                     primaryDisabled={selectedClass === undefined}
                     primaryHaptic="medium"
                   />
@@ -553,6 +633,47 @@ export default function CharacterSelect() {
             </m.div>
           )}
 
+          {step === 'species' && (
+            <m.div key="step-species" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.18 }}>
+              <SpeciesStep choice={species} onChoice={setSpecies} freeText={race} onFreeText={setRace} />
+              <WizardFooter
+                className="mt-4"
+                secondaryLabel={t('common.back')}
+                onSecondary={() => setStep('class')}
+                primaryLabel={`${t('common.next')} →`}
+                onPrimary={() => setStep('abilities')}
+                primaryHaptic="medium"
+              />
+            </m.div>
+          )}
+
+          {step === 'abilities' && (
+            <m.div key="step-abilities" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.18 }}>
+              <AbilityScoresStep
+                mode={scoreMode}
+                scores={scores}
+                pool={scorePool}
+                bonuses={speciesPayload?.ability_bonuses ?? {}}
+                onChange={(mode, sc, pool) => { setScoreMode(mode); setScores(sc); setScorePool(pool) }}
+              />
+              <WizardFooter
+                className="mt-4"
+                secondaryLabel={t('common.back')}
+                onSecondary={() => setStep('species')}
+                primaryLabel={`${t('common.next')} →`}
+                onPrimary={() => { setScoresSkipped(false); setStep('identity') }}
+                primaryDisabled={!scoresValid(scoreMode, scores)}
+                primaryHaptic="medium"
+              />
+              <Pressable
+                onClick={() => { setScoresSkipped(true); setScoreMode('array'); setScores(arrayScores()); setScorePool(STANDARD_ARRAY); setStep('identity') }}
+                className="mt-1 w-full min-h-[44px] text-[12px] text-dnd-gold-dim underline underline-offset-2"
+              >
+                {t('character.create.scores_skip')}
+              </Pressable>
+            </m.div>
+          )}
+
           {step === 'identity' && (
             <m.div
               key="step-identity"
@@ -592,10 +713,13 @@ export default function CharacterSelect() {
                   onChange={setAlignment}
                   placeholder={t('character.identity.placeholder_alignment')}
                 />
+                <Button variant="secondary" fullWidth icon={<BookOpen size={16} />} onClick={() => setPickBackground(true)}>
+                  {t('character.create.background_pick')}
+                </Button>
                 <Input
                   label={t('character.identity.background')}
                   value={background}
-                  onChange={setBackground}
+                  onChange={(v) => { setBackground(v); setBackgroundSkills([]) }}
                   placeholder={t('character.identity.placeholder_background')}
                 />
                 <ChipInput
@@ -619,7 +743,7 @@ export default function CharacterSelect() {
               <WizardFooter
                 className="mt-4"
                 secondaryLabel={t('common.back')}
-                onSecondary={() => setStep('class')}
+                onSecondary={() => setStep('abilities')}
                 primaryLabel={t('character.create.create_cta')}
                 onPrimary={() => handleCreate(buildIdentityPayload())}
                 primaryDisabled={createMutation.isPending}
@@ -630,6 +754,18 @@ export default function CharacterSelect() {
           )}
         </div>
       </Sheet>
+      {pickBackground && (
+        <CatalogPicker
+          kind="backgrounds"
+          onClose={() => setPickBackground(false)}
+          onPick={(e) => {
+            setBackground(localized(e.name, lang).text)
+            setBackgroundSkills(mapBackgroundSkills(e.skill_proficiencies as string[] | undefined))
+            setLanguages((prev) => [...new Set([...prev, ...backgroundLanguages(e.languages as string[] | undefined, lang)])])
+            setPickBackground(false)
+          }}
+        />
+      )}
     </div>
   )
 }

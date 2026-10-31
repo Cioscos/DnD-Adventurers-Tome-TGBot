@@ -6,7 +6,7 @@ import json
 import random
 import re
 from datetime import datetime
-from typing import Annotated, Optional
+from typing import Annotated, Literal, Optional
 
 from fastapi import APIRouter, Body, Depends, HTTPException, status
 from pydantic import BaseModel, Field
@@ -16,11 +16,13 @@ from sqlalchemy.orm import selectinload
 
 from api.auth import get_current_user
 from api.database import get_db
+from api.services.d20 import D20Outcome, d20_history_label, d20_records, resolve_body
 from api.services.dice_stats import record_dice
 from core.db.models import Character, CharacterClass, CharacterHistory, EquipmentSlot, HomebrewRule, Item
 from api.schemas.character import CharacterFull
 from api.schemas.item import AmmoState, ItemCreate, ItemRead, ItemUpdate, WeaponAttackResult
 from core.game.stats import effective_ability_score
+from core.game.item_bonuses import attack_bonus_total, is_attuned, item_meta
 from core.game.attacks import unarmed_strike_profile
 from core.data.spell_slots import normalize_class_name
 from api.routers._helpers import (
@@ -28,11 +30,14 @@ from api.routers._helpers import (
     effective_ability_mod,
     effective_con_mod,
 )
+from api.services.durations import start_concentration
+from api.services.item_charges import set_item_charges
+from core.game.actions import parse_duration_rounds
 from api.services.equipment import slot_allowed_for_type, swap_slot_occupant
 from api.services.homebrew.dispatcher import dispatch
 from api.services.character_response import build_character_response
 from api.services.effects import apply_heal, apply_conditions
-from api.schemas.common import ConsumableUseResult
+from api.schemas.common import ConsumableUseResult, D20Dice, RollMode, normalize_proficiencies
 
 router = APIRouter(prefix="/characters", tags=["items"])
 
@@ -75,13 +80,13 @@ def _roll_dice(notation: str) -> tuple[list[int], int]:
 
 def _record_attack_dice(
     char: Character,
-    to_hit_die: int,
+    outcome: D20Outcome,
     damage_dice_str: str,
     damage_rolls: list[int],
     is_fumble: bool,
 ) -> None:
     """Statistiche: d20 di to-hit + dadi danno (esclusi fumble e danno piatto '1')."""
-    recorded: list[tuple[str, int]] = [("d20", to_hit_die)]
+    recorded = d20_records(outcome)
     m = _DICE_RE.match(damage_dice_str.strip()) if damage_dice_str else None
     if not is_fumble and m:
         sides = int(m.group(2))
@@ -155,6 +160,14 @@ async def _apply_item_property_defaults(
         item.item_metadata = json.dumps(md)
 
 
+def _check_attunement_limit(char, item, new_meta: dict | None) -> None:
+    """409 when this write newly attunes an item and the character already has 3."""
+    if not (new_meta or {}).get("attuned") or (item is not None and is_attuned(item)):
+        return
+    if sum(1 for i in char.items if i is not item and is_attuned(i)) >= 3:
+        raise HTTPException(status_code=409, detail="attunement_limit")
+
+
 @router.post("/{char_id}/items", response_model=CharacterFull, status_code=201)
 async def add_item(
     char_id: int,
@@ -181,6 +194,7 @@ async def add_item(
             await session.refresh(char, attribute_names=["items"])
             return await build_character_response(session, char)
 
+    _check_attunement_limit(char, None, body.item_metadata)
     metadata_str = json.dumps(body.item_metadata) if body.item_metadata else None
     item = Item(
         character_id=char_id,
@@ -228,6 +242,9 @@ async def update_item(
     data = body.model_dump(exclude_unset=True)
     if "item_metadata" in data:
         data["item_metadata"] = json.dumps(data["item_metadata"]) if data["item_metadata"] else None
+
+    if "item_metadata" in body.model_fields_set:
+        _check_attunement_limit(char, item, body.item_metadata)
 
     # Validate slot/type compatibility using the (post-update) item_type.
     new_type = data.get("item_type", item.item_type)
@@ -432,6 +449,27 @@ class AttackSubmission(BaseModel):
     """Optional payload for attacks: inspiration flag and the d20 read by the 3D dice."""
     with_inspiration: bool = False
     die: int | None = Field(default=None, ge=1, le=20)
+    mode: RollMode = "normal"
+    dice: D20Dice | None = None
+    grip: Literal["one", "two"] = "one"
+    attack_mode: Literal["melee", "thrown"] = "melee"
+
+
+def _lacks_weapon_proficiency(char, weapon_name: str, category: str | None) -> bool:
+    """True when the weapons proficiencies are non-empty and cover neither the weapon nor its category.
+
+    Reads ``weapons`` plus ``other`` (legacy lists were migrated there).
+    """
+    cats = normalize_proficiencies(char.general_proficiencies)
+    profs = {str(p).strip().lower() for p in cats["weapons"] + cats["other"]}
+    if not profs:
+        return False
+    names = {weapon_name.strip().lower()}
+    if category == "simple":
+        names |= {"armi semplici", "simple weapons"}
+    elif category == "martial":
+        names |= {"armi da guerra", "martial weapons"}
+    return not (profs & names)
 
 
 @router.post("/{char_id}/items/{item_id}/attack", response_model=WeaponAttackResult)
@@ -452,22 +490,38 @@ async def attack_with_weapon(
     if item.item_type != "weapon":
         raise HTTPException(status_code=400, detail="Item is not a weapon")
 
+    meta = json.loads(item.item_metadata) if item.item_metadata else {}
+    damage_dice_str: str = meta.get("damage_dice", "1d4")
+    weapon_type: str = meta.get("weapon_type", "melee")
+    properties: list[str] = meta.get("properties", [])
+    magic_bonus = int(meta.get("magic_bonus") or 0)
+
+    has_prop = lambda name: any(name in p.lower() for p in properties)  # noqa: E731
+    is_finesse = has_prop("finesse")
+    grip = body.grip if body else "one"
+    attack_mode = body.attack_mode if body else "melee"
+
+    # Validate the choices before consuming inspiration.
+    if grip == "two" and has_prop("versatile") and meta.get("versatile_dice"):
+        if any(
+            i.is_equipped and i.equipment_slot == EquipmentSlot.OFF_HAND and i.id != item.id
+            for i in char.items
+        ):
+            raise HTTPException(status_code=422, detail="off_hand_occupied")
+        damage_dice_str = meta["versatile_dice"]
+    if attack_mode == "thrown" and not has_prop("thrown"):
+        raise HTTPException(status_code=422, detail="weapon_not_thrown")
+
     if body and body.with_inspiration:
         if not char.heroic_inspiration:
             raise HTTPException(status_code=409, detail="Ispirazione non disponibile")
         char.heroic_inspiration = False
 
-    meta = json.loads(item.item_metadata) if item.item_metadata else {}
-    damage_dice_str: str = meta.get("damage_dice", "1d4")
-    weapon_type: str = meta.get("weapon_type", "melee")
-    properties: list[str] = meta.get("properties", [])
-
     # Determine ability modifier (effective: equipped-item bonuses included)
     str_mod = effective_ability_mod(char, "strength")
     dex_mod = effective_ability_mod(char, "dexterity")
 
-    is_finesse = any("finesse" in p.lower() for p in properties)
-    is_ranged = weapon_type == "ranged"
+    is_ranged = weapon_type == "ranged" and attack_mode != "thrown"
 
     if is_finesse:
         ability_mod = max(str_mod, dex_mod)
@@ -479,8 +533,9 @@ async def attack_with_weapon(
     pb = char.proficiency_bonus
 
     # To-hit roll
-    to_hit_die = body.die if body and body.die is not None else random.randint(1, 20)
-    to_hit_bonus = ability_mod + pb
+    outcome = resolve_body(body)
+    to_hit_die = outcome.kept
+    to_hit_bonus = ability_mod + pb + magic_bonus + attack_bonus_total(char.items, item, "attack")
     to_hit_total = to_hit_die + to_hit_bonus
     is_critical = to_hit_die == 20
     is_fumble = to_hit_die == 1
@@ -497,18 +552,18 @@ async def attack_with_weapon(
         damage_bonus = 0
         damage_total = 0
     else:
-        damage_bonus = ability_mod + dice_bonus
+        damage_bonus = ability_mod + magic_bonus + attack_bonus_total(char.items, item, "damage") + dice_bonus
         damage_total = max(0, sum(damage_rolls) + damage_bonus)
 
     result_str = (
-        f"Attacco {item.name}: colpire d20={to_hit_die}+{to_hit_bonus}={to_hit_total}"
+        f"Attacco {item.name}: colpire {d20_history_label(outcome)}+{to_hit_bonus}={to_hit_total}"
         + (" (CRITICO!)" if is_critical else " (FUMBLE!)" if is_fumble else "")
         + f" | Danno: {'+'.join(str(r) for r in damage_rolls)}+{damage_bonus}={damage_total}"
     )
     if body and body.with_inspiration:
         result_str = f"Reroll ispirazione (to-hit): {result_str}"
     _add_history(session, char.id, "attack_roll", result_str)
-    _record_attack_dice(char, to_hit_die, damage_dice_str, damage_rolls, is_fumble)
+    _record_attack_dice(char, outcome, damage_dice_str, damage_rolls, is_fumble)
 
     # Ammunition: scale one piece per attack (also on miss/fumble), never on a reroll.
     ammo_state: AmmoState | None = None
@@ -547,8 +602,12 @@ async def attack_with_weapon(
     return WeaponAttackResult(
         ammo=ammo_state,
         ammo_missing=ammo_missing,
+        magic_bonus=magic_bonus,
+        proficiency_warning=_lacks_weapon_proficiency(char, item.name, meta.get("weapon_category")),
         weapon_name=item.name,
         to_hit_die=to_hit_die,
+        dice=outcome.dice,
+        mode=outcome.mode,
         to_hit_bonus=to_hit_bonus,
         to_hit_total=to_hit_total,
         is_critical=is_critical,
@@ -589,8 +648,9 @@ async def attack_unarmed(
     ability_mod, damage_dice_str = unarmed_strike_profile(str_mod, dex_mod, monk_level)
     pb = char.proficiency_bonus
 
-    to_hit_die = body.die if body and body.die is not None else random.randint(1, 20)
-    to_hit_bonus = ability_mod + pb
+    outcome = resolve_body(body)
+    to_hit_die = outcome.kept
+    to_hit_bonus = ability_mod + pb + attack_bonus_total(char.items, None, "attack")
     to_hit_total = to_hit_die + to_hit_bonus
     is_critical = to_hit_die == 20
     is_fumble = to_hit_die == 1
@@ -611,19 +671,19 @@ async def attack_unarmed(
         damage_bonus = 0
         damage_total = 0
     else:
-        damage_bonus = ability_mod + dice_bonus
+        damage_bonus = ability_mod + attack_bonus_total(char.items, None, "damage") + dice_bonus
         damage_total = max(0, sum(damage_rolls) + damage_bonus)
 
     weapon_name = "Attacco a mano libera"
     result_str = (
-        f"Attacco {weapon_name}: colpire d20={to_hit_die}+{to_hit_bonus}={to_hit_total}"
+        f"Attacco {weapon_name}: colpire {d20_history_label(outcome)}+{to_hit_bonus}={to_hit_total}"
         + (" (CRITICO!)" if is_critical else " (FUMBLE!)" if is_fumble else "")
         + f" | Danno: {'+'.join(str(r) for r in damage_rolls)}+{damage_bonus}={damage_total}"
     )
     if body and body.with_inspiration:
         result_str = f"Reroll ispirazione (to-hit): {result_str}"
     _add_history(session, char.id, "attack_roll", result_str)
-    _record_attack_dice(char, to_hit_die, damage_dice_str, damage_rolls, is_fumble)
+    _record_attack_dice(char, outcome, damage_dice_str, damage_rolls, is_fumble)
 
     firing_results = await dispatch(
         session, char, "attack_rolled",
@@ -641,6 +701,8 @@ async def attack_unarmed(
     return WeaponAttackResult(
         weapon_name=weapon_name,
         to_hit_die=to_hit_die,
+        dice=outcome.dice,
+        mode=outcome.mode,
         to_hit_bonus=to_hit_bonus,
         to_hit_total=to_hit_total,
         is_critical=is_critical,
@@ -651,3 +713,92 @@ async def attack_unarmed(
         damage_total=damage_total,
         homebrew_notifications=notifications if notifications else None,
     )
+
+
+# ---------------------------------------------------------------------------
+# Charges and spells cast from items
+# ---------------------------------------------------------------------------
+
+class ChargesDelta(BaseModel):
+    delta: int = Field(ge=-100, le=100)
+
+
+class ItemCast(BaseModel):
+    spell_index: int = Field(ge=0)
+
+
+async def _get_item(session: AsyncSession, char_id: int, item_id: int) -> Item:
+    item = (await session.execute(
+        select(Item).where(Item.id == item_id, Item.character_id == char_id)
+    )).scalar_one_or_none()
+    if item is None:
+        raise HTTPException(status_code=404, detail="Item not found")
+    return item
+
+
+@router.post("/{char_id}/items/{item_id}/charges", response_model=CharacterFull)
+async def adjust_item_charges(
+    char_id: int,
+    item_id: int,
+    body: ChargesDelta,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> CharacterFull:
+    char = await _get_owned_full(char_id, user_id, session)
+    item = await _get_item(session, char_id, item_id)
+    ch = item_meta(item).get("charges")
+    if not isinstance(ch, dict):
+        raise HTTPException(status_code=409, detail="no_charges")
+    old = int(ch.get("current") or 0)
+    new = max(0, min(int(ch.get("max") or 0), old + body.delta))
+    set_item_charges(item, new)
+    _add_history(session, char.id, "item_charges", f"Cariche {item.name}: {old} → {new}")
+    await session.flush()
+    await session.refresh(char, attribute_names=["items"])
+    return await build_character_response(session, char)
+
+
+@router.post("/{char_id}/items/{item_id}/cast", response_model=CharacterFull)
+async def cast_from_item(
+    char_id: int,
+    item_id: int,
+    body: ItemCast,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> CharacterFull:
+    char = await _get_owned_full(char_id, user_id, session)
+    item = await _get_item(session, char_id, item_id)
+    meta = item_meta(item)
+    granted = meta.get("granted_spells") or []
+    if body.spell_index >= len(granted):
+        raise HTTPException(status_code=422, detail="spell_index out of range")
+    spell = granted[body.spell_index]
+    if meta.get("requires_attunement") and not meta.get("attuned"):
+        raise HTTPException(status_code=409, detail="attunement_required")
+    cost = int(spell.get("charges_cost") or 0)
+    ch = meta.get("charges") if isinstance(meta.get("charges"), dict) else None
+    current = int(ch.get("current") or 0) if ch else 0
+    if cost > current:
+        raise HTTPException(status_code=409, detail="not_enough_charges")
+    if cost:
+        set_item_charges(item, current - cost)
+
+    if spell.get("is_concentration"):
+        # Match by srd_index (when both set), then by case-insensitive name.
+        name = spell["name"].lower()
+        idx = spell.get("srd_index")
+        match = (
+            next((s for s in char.spells if idx and s.srd_index == idx), None)
+            or next((s for s in char.spells if s.name.lower() == name), None)
+        )
+        rounds = parse_duration_rounds(spell.get("duration"))
+        if match:
+            start_concentration(char, match.id, rounds)
+        else:
+            start_concentration(char, None, rounds, {"item_id": item.id, "name": spell["name"]})
+
+    _add_history(session, char.id, "spell_cast",
+                 f"Lanciato {spell['name']} da {item.name} ({cost} cariche)")
+    await session.flush()
+    await session.refresh(char, attribute_names=["items"])
+    return await build_character_response(session, char)

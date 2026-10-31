@@ -152,6 +152,28 @@ describe('HpOperationForm', () => {
     expect(screen.getByText('15 → 7')).toBeInTheDocument()
   })
 
+  it('with a damage type, proposes the multiplier and previews "label: raw → applied"', async () => {
+    function Typed() {
+      const [value, setValue] = useState('14')
+      const [mod, setMod] = useState<'half' | 'double' | 'none' | 'immune' | null>(null)
+      return (
+        <HpOperationForm
+          activeOp="damage" setActiveOp={() => {}} value={value} setValue={setValue}
+          onApply={() => {}} isPending={false} hpMutate={() => {}} atZero={false}
+          crit={false} setCrit={() => {}} damageModifier={mod} setDamageModifier={setMod}
+          damageType="fire" setDamageType={() => {}} proposedModifier="half"
+        />
+      )
+    }
+    render(<Typed />)
+    expect(screen.getByText('character.hp.preview_half: 14 → 7')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'character.hp.modifier_half' })).toHaveAttribute('aria-pressed', 'true')
+    await userEvent.click(screen.getByRole('button', { name: 'character.hp.modifier_none' }))
+    expect(screen.queryByText(/→/)).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'character.hp.modifier_immune' }))
+    expect(screen.getByText('character.hp.preview_immune: 14 → 0')).toBeInTheDocument()
+  })
+
   it('confirm is disabled until a value is typed, then calls onApply', async () => {
     const onApply = vi.fn()
     render(<Harness onApply={onApply} />)

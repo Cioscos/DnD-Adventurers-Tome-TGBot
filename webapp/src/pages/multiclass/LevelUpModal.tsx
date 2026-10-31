@@ -12,6 +12,7 @@ import Pressable from '@/components/ui/Pressable'
 import { toast } from 'sonner'
 import { haptic } from '@/auth/telegram'
 import { progressionRows, localizeFeatures } from '@/lib/classProgression'
+import HpRoller from '@/pages/multiclass/HpRoller'
 import { useRegisterOverlay } from '@/store/overlayStore'
 import { useOverlayDismiss } from '@/hooks/useOverlayDismiss'
 import { useDeferredBlur } from '@/hooks/useDeferredBlur'
@@ -25,6 +26,9 @@ interface LevelUpModalProps {
 
 export default function LevelUpModal({ char, xpLevel, onClose }: LevelUpModalProps) {
   const { t, i18n } = useTranslation()
+  const rolledHp = char.settings?.hp_mode === 'rolled' && char.settings?.hp_auto_calc !== false
+  const [hpRoll, setHpRoll] = useState<number | null>(null)
+  const conMod = char.ability_scores?.find((a) => a.name === 'constitution')?.modifier ?? 0
   const qc = useQueryClient()
   useRegisterOverlay(true)
   useOverlayDismiss(true, onClose)
@@ -43,6 +47,8 @@ export default function LevelUpModal({ char, xpLevel, onClose }: LevelUpModalPro
     [classes, selectedClassId],
   )
   const selectedAtMax = !!selectedClass && selectedClass.level >= 20
+  const hitDie = selectedClass?.hit_die ?? 0
+  const needsRoll = rolledHp && hitDie > 0 && hpRoll === null
 
   const distribute = useMutation({
     mutationFn: () => {
@@ -51,7 +57,9 @@ export default function LevelUpModal({ char, xpLevel, onClose }: LevelUpModalPro
         class_id: c.id,
         level: c.id === selectedClass.id ? c.level + 1 : c.level,
       }))
-      return api.classes.distribute(char.id, payload)
+      return rolledHp && hpRoll !== null
+        ? api.classes.distribute(char.id, payload, [hpRoll])
+        : api.classes.distribute(char.id, payload)
     },
     onSuccess: (updated) => {
       qc.setQueryData(['character', char.id], updated)
@@ -191,7 +199,7 @@ export default function LevelUpModal({ char, xpLevel, onClose }: LevelUpModalPro
                 return (
                   <Pressable
                     key={cls.id}
-                    onClick={() => setSelectedClassId(cls.id)}
+                    onClick={() => { setSelectedClassId(cls.id); setHpRoll(null) }}
                     className={`min-h-[52px] px-4 py-2 rounded-xl font-cinzel text-xs uppercase tracking-widest flex-1 min-w-[120px] transition-all
                       ${active
                         ? 'bg-gradient-gold text-dnd-ink shadow-engrave border-2 border-dnd-gold scale-[1.02]'
@@ -208,7 +216,10 @@ export default function LevelUpModal({ char, xpLevel, onClose }: LevelUpModalPro
           </div>
 
           {/* Confirm — visually separated footer */}
-          <div className="pt-5 border-t border-dnd-border/50">
+          <div className="pt-5 border-t border-dnd-border/50 space-y-4">
+            {rolledHp && hitDie > 0 && (
+              <HpRoller die={hitDie} count={1} conMod={conMod} rolls={hpRoll === null ? null : [hpRoll]} onRoll={(r) => setHpRoll(r[0])} />
+            )}
             <Button
               variant="primary"
               size="lg"
@@ -220,7 +231,7 @@ export default function LevelUpModal({ char, xpLevel, onClose }: LevelUpModalPro
                 }
                 distribute.mutate()
               }}
-              disabled={selectedAtMax}
+              disabled={selectedAtMax || needsRoll}
               loading={distribute.isPending}
               icon={<ChevronsUp size={18} />}
               haptic="medium"

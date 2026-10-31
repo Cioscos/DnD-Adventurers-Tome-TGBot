@@ -26,7 +26,9 @@ from api.database import engine
 from api.routers import (
     abilities,
     characters,
+    choices,
     classes,
+    companions,
     currency,
     dice,
     encounters,
@@ -43,6 +45,7 @@ from api.routers import (
     spell_slots,
     spells,
     stats,
+    transfer,
 )
 from api.tasks.session_cleanup import run_session_cleanup
 
@@ -69,6 +72,14 @@ async def lifespan(_app: FastAPI):
             await backfill_consumable_types(_s)
     except Exception as exc:  # non-fatal: never block startup on a data backfill
         logger.warning("backfill_consumable_types failed (non-fatal): %s", exc)
+
+    # Data backfill: action_type delle feature di classe esistenti.
+    from core.db.engine import _backfill_ability_action_types
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(_backfill_ability_action_types)
+    except Exception as exc:  # non-fatal: never block startup on a data backfill
+        logger.warning("backfill_ability_action_types failed (non-fatal): %s", exc)
 
     # Cleanup best-effort delle condivisioni scadute (snapshot + file audio)
     from api.services.content_shares import cleanup_expired
@@ -121,9 +132,12 @@ app.add_middleware(
 # Health check (no auth)
 # ---------------------------------------------------------------------------
 
+from api.version import APP_VERSION  # noqa: E402
+
+
 @app.get("/health", tags=["meta"])
 async def health() -> dict:
-    return {"status": "ok"}
+    return {"status": "ok", "version": APP_VERSION}
 
 
 from typing import Annotated
@@ -143,6 +157,7 @@ app.include_router(characters.router)
 app.include_router(hp.router)
 app.include_router(stats.router)
 app.include_router(classes.router)
+app.include_router(choices.router)
 app.include_router(spells.router)
 app.include_router(spell_slots.router)
 app.include_router(items.router)
@@ -154,7 +169,10 @@ app.include_router(silhouette.router)
 app.include_router(dice.router)
 app.include_router(history.router)
 app.include_router(sessions.router)
+app.include_router(sessions.character_turn_router)
 app.include_router(encounters.router)
 app.include_router(share.router)
 app.include_router(shares.router)
 app.include_router(homebrew.router)
+app.include_router(transfer.router)
+app.include_router(companions.router)

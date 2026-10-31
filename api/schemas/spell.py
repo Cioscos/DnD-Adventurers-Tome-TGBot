@@ -7,7 +7,12 @@ from typing import Optional
 
 from pydantic import BaseModel, Field, field_validator
 
+from api.schemas.common import D20Dice, RollMode
+
 _EXTRA_DICE_RE = re.compile(r"^(\d+)d(\d+)([+-]\d+)?$", re.IGNORECASE)
+
+
+_UPCAST_PATTERN = r"^\d+d\d+$"
 
 
 class SpellRead(BaseModel):
@@ -27,6 +32,9 @@ class SpellRead(BaseModel):
     damage_type: Optional[str] = None
     is_pinned: bool = False
     is_prepared: bool = True
+    school: Optional[str] = None
+    srd_index: Optional[str] = None
+    higher_levels_dice: Optional[str] = None
 
     model_config = {"from_attributes": True}
 
@@ -47,6 +55,9 @@ class SpellCreate(BaseModel):
     damage_type: Optional[str] = None
     is_pinned: bool = False
     is_prepared: bool = False
+    school: Optional[str] = Field(default=None, max_length=30)
+    srd_index: Optional[str] = Field(default=None, max_length=80)
+    higher_levels_dice: Optional[str] = Field(default=None, pattern=_UPCAST_PATTERN)
 
 
 class SpellUpdate(BaseModel):
@@ -65,6 +76,9 @@ class SpellUpdate(BaseModel):
     damage_type: Optional[str] = None
     is_pinned: Optional[bool] = None
     is_prepared: Optional[bool] = None
+    school: Optional[str] = Field(default=None, max_length=30)
+    srd_index: Optional[str] = Field(default=None, max_length=80)
+    higher_levels_dice: Optional[str] = Field(default=None, pattern=_UPCAST_PATTERN)
 
 
 class SpellUseRequest(BaseModel):
@@ -79,6 +93,8 @@ class SpellAttackRequest(BaseModel):
     ritual: bool = False
     die: int | None = Field(None, ge=1, le=20)
     with_inspiration: bool = False
+    mode: RollMode = "normal"
+    dice: D20Dice | None = None
 
 
 class SpellSlotRead(BaseModel):
@@ -110,6 +126,7 @@ class SpellSlotUpdate(BaseModel):
 
 class ConcentrationUpdate(BaseModel):
     spell_id: Optional[int] = None  # null to drop concentration
+    rounds: Optional[int] = None
 
 
 class RollDamageRequest(BaseModel):
@@ -142,6 +159,7 @@ class RollDamageResult(BaseModel):
     breakdown: str
     casting_level: int
     is_critical: bool
+    scaled_dice: str = ""    # base dice after cantrip scaling, e.g. "2d10"
     # --- new fields for 3D animation ---
     main_kind: str           # e.g. "d6"
     main_rolls: list[int]    # only main dice (not extras)

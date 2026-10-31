@@ -18,6 +18,8 @@ import { useDiceAnimation } from '@/dice/useDiceAnimation'
 import { useDiceSettings } from '@/store/diceSettings'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import type { DiceKind } from '@/dice/types'
+import { upcastExtraDice } from '@/lib/srd/catalog'
+import { cantripMultiplier, totalLevelOf } from '@/lib/dnd'
 
 const ALLOWED_DICE_KINDS: DiceKind[] = ['d4', 'd6', 'd8', 'd10', 'd12', 'd20', 'd100']
 const isAllowedDiceKind = (k: string | null | undefined): k is DiceKind =>
@@ -117,7 +119,10 @@ export default function SpellDamageSheet({
         const main = parseDice(spell.damage_dice)
         const extra = parseDice(body.extra_dice ?? null)
         if (main && isAllowedDiceKind(`d${main.sides}`)) {
-          const mainCount = body.is_critical ? main.count * 2 : main.count
+          const cached = qc.getQueryData<CharacterFull>(['character', charId])
+          const scaled = (spell.level === 0 ? main.count * cantripMultiplier(totalLevelOf(cached?.classes)) : main.count)
+            + upcastExtraDice(spell, effectiveCastingLevel, main.sides)
+          const mainCount = body.is_critical ? scaled * 2 : scaled
           const groups: { kind: DiceKind; count: number }[] = [
             { kind: `d${main.sides}` as DiceKind, count: mainCount },
           ]
@@ -162,6 +167,8 @@ export default function SpellDamageSheet({
 
   const isAttack = isAttackSpell(spell) || !spell.attack_save?.trim()
   const isCantrip = spell.level === 0
+  const autoUpcast = parseDice(spell.higher_levels_dice)
+  const autoExtra = autoUpcast ? upcastExtraDice(spell, effectiveCastingLevel, autoUpcast.sides) : 0
 
   const handleRoll = () => {
     mutation.mutate({
@@ -221,6 +228,12 @@ export default function SpellDamageSheet({
                 {t('character.slots.level', { level: effectiveCastingLevel })}
               </div>
             </div>
+          )}
+
+          {autoExtra > 0 && (
+            <p className="text-sm text-dnd-text-muted font-body italic text-center">
+              {t('character.spells.upcast_auto', { dice: `${autoExtra}d${autoUpcast?.sides}` })}
+            </p>
           )}
 
           <Input

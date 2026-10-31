@@ -133,6 +133,8 @@ class Character(Base):
     # Snapshot server-side dell'ultima operazione PF per l'annullamento:
     # {"op_id": str, "before": {...}, "after": {...}} (None = niente da annullare)
     hp_undo: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    # Scelte di livello in sospeso: [{id, kind: "asi", class_key, level, created_at}]
+    pending_choices: Mapped[Optional[list]] = mapped_column(JSON, nullable=True, default=list)
 
     # Active conditions (JSON dict: condition_slug → bool or int for exhaustion)
     conditions: Mapped[Optional[dict]] = mapped_column(JSON, default=dict)
@@ -215,6 +217,10 @@ class Character(Base):
         primaryjoin="HomebrewResource.character_id == Character.id",
         cascade="all, delete-orphan",
         viewonly=False,
+    )
+
+    companions: Mapped[List["Companion"]] = relationship(
+        back_populates="character", cascade="all, delete-orphan", order_by="Companion.id"
     )
 
     @property
@@ -342,6 +348,10 @@ class Spell(Base):
     damage_dice: Mapped[Optional[str]] = mapped_column(String(100))
     damage_type: Mapped[Optional[str]] = mapped_column(String(100))
     is_pinned: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Catalogo SRD: scuola, indice (match con gli oggetti) e dadi di upcast per livello.
+    school: Mapped[Optional[str]] = mapped_column(String(30))
+    srd_index: Mapped[Optional[str]] = mapped_column(String(80))
+    higher_levels_dice: Mapped[Optional[str]] = mapped_column(String(20))
     # Preparazione (solo classi che preparano: Chierico/Druido/Paladino/Mago).
     # Backfill legacy a True in _MIGRATIONS; i nuovi incantesimi nascono False
     # (default in SpellCreate). Ignorata per i known caster.
@@ -496,6 +506,8 @@ class Ability(Base):
     )
     is_class_feature: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     feature_key: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    # Costo in azioni: action | bonus_action | reaction | free | special (NULL = non indicato).
+    action_type: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
 
     character: Mapped["Character"] = relationship(back_populates="abilities")
 
@@ -783,3 +795,26 @@ class ContentShare(Base):
     sender_char_name: Mapped[str] = mapped_column(String(200), nullable=False)
     created_at: Mapped[str] = mapped_column(String(50), nullable=False)
     expires_at: Mapped[str] = mapped_column(String(50), nullable=False)
+
+
+class Companion(Base):
+    """Familiar, companion, mount, summon or wild-shape form with a minimal statblock."""
+    __tablename__ = "companions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    character_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("characters.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    kind: Mapped[str] = mapped_column(String(20), nullable=False)
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    srd_index: Mapped[Optional[str]] = mapped_column(String(80), nullable=True)
+    statblock: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    max_hp: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    current_hp: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    temp_hp: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    armor_class: Mapped[int] = mapped_column(Integer, default=10, nullable=False)
+    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    created_at: Mapped[str] = mapped_column(String(50), nullable=False)
+
+    character: Mapped["Character"] = relationship(back_populates="companions")

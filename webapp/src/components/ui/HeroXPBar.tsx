@@ -16,6 +16,8 @@ interface HeroXPBarProps {
    * Halo-as-Signal Rule (one halo per screen).
    */
   suppressHalo?: boolean
+  /** Milestone advancement: level only, no XP progress; the chip invites to level up. */
+  milestone?: boolean
 }
 
 export default function HeroXPBar({
@@ -23,6 +25,7 @@ export default function HeroXPBar({
   totalClassLevel,
   className = '',
   suppressHalo = false,
+  milestone = false,
 }: HeroXPBarProps) {
   const { t, i18n } = useTranslation()
 
@@ -31,16 +34,16 @@ export default function HeroXPBar({
   // LIV 0 and suppress the LEVEL UP prompt, consistent with "Nessuna classe". The
   // XP-derived level is a pending value with no class to assign it to.
   const hasClasses = totalClassLevel > 0
-  const displayLevel = hasClasses ? xpLevel : 0
+  const displayLevel = hasClasses ? (milestone ? totalClassLevel : xpLevel) : 0
   const prevThreshold = xpLevel > 1 ? XP_THRESHOLDS[xpLevel - 1] : 0
   const nextThreshold: number | null = XP_THRESHOLDS[xpLevel] ?? null
-  const levelUpReady = hasClasses && xpLevel > totalClassLevel
+  const levelUpReady = hasClasses && (milestone ? totalClassLevel < 20 : xpLevel > totalClassLevel)
   const progressPct = nextThreshold
     ? Math.min(100, Math.max(0, Math.round(((currentXP - prevThreshold) / (nextThreshold - prevThreshold)) * 100)))
     : 100
 
   const rightLabel = levelUpReady ? null : (
-    nextThreshold !== null
+    milestone ? (totalClassLevel >= 20 ? t('character.xp.bar.max') : null) : nextThreshold !== null
       ? t('character.xp.bar.progress', {
           current: formatInt(currentXP, i18n.language),
           threshold: formatInt(nextThreshold, i18n.language),
@@ -66,6 +69,7 @@ export default function HeroXPBar({
           <span className="font-mono text-dnd-gold">{rightLabel}</span>
         )}
       </div>
+      {!milestone && (
       <div
         className="h-1.5 bg-dnd-surface border border-dnd-border rounded-full overflow-hidden"
         {...(nextThreshold !== null
@@ -88,6 +92,7 @@ export default function HeroXPBar({
           transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
         />
       </div>
+      )}
     </div>
   )
 }

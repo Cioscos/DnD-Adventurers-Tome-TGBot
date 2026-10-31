@@ -9,6 +9,7 @@ import { usePageBack } from '@/hooks/useOverlayDismiss'
 import { pageSkeleton } from '@/components/skeletons/pageSkeletons'
 import { api, ApiError } from '@/api/client'
 import EmptyState from '@/components/ui/EmptyState'
+import ServerVersionBanner from '@/components/ui/ServerVersionBanner'
 import OfflineNotice, { type OfflineNoticeQuery } from '@/components/ui/OfflineNotice'
 import Pressable from '@/components/ui/Pressable'
 import { spring } from '@/styles/motion'
@@ -250,6 +251,8 @@ export default function Layout({ title, children, backTo, group, page, hideScrol
           )
         })()}
       </m.header>
+
+      <ServerVersionBanner />
 
       <div className="relative flex-1 min-w-0 overflow-hidden">
         <main

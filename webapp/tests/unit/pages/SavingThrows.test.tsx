@@ -86,6 +86,10 @@ vi.mock('@/components/skeletons/SavingThrowsSkeleton', async () => {
   const React = await import('react')
   return { default: () => React.createElement('div', { 'data-testid': 'saves-skeleton' }) }
 })
+vi.mock('@/components/ui/Sheet', async () => {
+  const React = await import('react')
+  return { default: (p: { open: boolean; children?: unknown }) => (p.open ? React.createElement('div', null, p.children) : null) }
+})
 vi.mock('@/components/RollResultModal', async () => {
   const React = await import('react')
   return {
@@ -129,6 +133,12 @@ afterEach(() => {
 })
 
 describe('SavingThrows page', () => {
+  it('shows the roll note under the row', async () => {
+    getChar.mockResolvedValue({ ...baseChar, settings: { roll_notes: { 'save.strength': 'vantaggio vs paura' } } })
+    renderWithProviders(<SavingThrows />)
+    expect(await screen.findByText('vantaggio vs paura')).toBeInTheDocument()
+  })
+
   it('shows the skeleton while the character query is pending', () => {
     getChar.mockReturnValue(new Promise(() => {}))
     renderWithProviders(<SavingThrows />)
@@ -141,6 +151,13 @@ describe('SavingThrows page', () => {
     expect(await screen.findByTestId('pb')).toHaveTextContent('+2')
     // STR: mod +2 + PB +2 = +4 (only proficient ability with a non-zero mod).
     expect(screen.getByText('+4')).toBeInTheDocument()
+  })
+
+  it('adds item save bonuses to the displayed total', async () => {
+    getChar.mockResolvedValue({ ...baseChar, saves_items_modifiers: { strength: 1 } })
+    renderWithProviders(<SavingThrows />)
+    await screen.findByTestId('pb')
+    expect(screen.getByText('+5')).toBeInTheDocument()
   })
 
   it('toggling proficiency merges the flipped value into the existing map', async () => {

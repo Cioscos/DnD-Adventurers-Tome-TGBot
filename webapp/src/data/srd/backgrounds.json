@@ -1,0 +1,30 @@
+{
+ "_meta": {
+  "source": "https://www.dnd5eapi.co (D&D 5e SRD 2014)",
+  "license": "CC-BY-4.0",
+  "generated_at": "2026-10-31"
+ },
+ "items": [
+  {
+   "index": "acolyte",
+   "name": {
+    "en": "Acolyte",
+    "it": "Accolito"
+   },
+   "skill_proficiencies": [
+    "insight",
+    "religion"
+   ],
+   "feature": {
+    "name": {
+     "en": "Shelter of the Faithful",
+     "it": "Rifugio dei fedeli"
+    },
+    "desc": {
+     "en": "As an acolyte, you command the respect of those who share your faith, and you can perform the religious ceremonies of your deity. You and your adventuring companions can expect to receive free healing and care at a temple, shrine, or other established presence of your faith, though you must provide any material components needed for spells. Those who share your religion will support you (but only you) at a modest lifestyle.\n\nYou might also have ties to a specific temple dedicated to your chosen deity or pantheon, and you have a residence there. This could be the temple where you used to serve, if you remain on good terms with it, or a temple where you have found a new home. While near your temple, you can call upon the priests for assistance, provided the assistance you ask for is not hazardous and you remain in good standing with your temple.",
+     "it": "Come accolito, ti guadagni il rispetto di chi condivide la tua fede, e puoi officiare le cerimonie religiose della tua divinità. Tu e i tuoi compagni di avventura potete aspettarvi di ricevere cure e assistenza gratuite presso un tempio, un santuario o un'altra presenza consolidata della tua fede, anche se dovete fornire voi le componenti materiali necessarie per gli incantesimi. Chi condivide la tua religione ti sosterrà (ma solo te) con uno stile di vita modesto.\n\nPotresti anche avere legami con un tempio specifico dedicato alla divinità o al pantheon che hai scelto, e avere una residenza lì. Potrebbe essere il tempio in cui prestavi servizio, se sei rimasto in buoni rapporti con esso, o un tempio in cui hai trovato una nuova casa. Quando ti trovi vicino al tuo tempio, puoi chiedere aiuto ai sacerdoti, purché l'aiuto richiesto non sia pericoloso e tu rimanga in buoni rapporti con il tuo tempio."
+    }
+   }
+  }
+ ]
+}

@@ -1,8 +1,8 @@
 /** Preset values for the guided SpellForm fields.
  *
- *  These are LITERAL Italian DB strings, not i18n keys: the SRD autofill
- *  (`spells-srd.json`) writes Italian values regardless of the UI language,
- *  and the preset chips must byte-match them so editing an SRD-filled spell
+ *  These are LITERAL Italian DB strings, not i18n keys: the catalogue
+ *  prefill (`spellToForm`) writes Italian values for the Italian UI,
+ *  and the preset chips must byte-match them so editing a catalogue-filled spell
  *  highlights the right chip. Out-of-preset values fall on the "Altro…" chip.
  */
 

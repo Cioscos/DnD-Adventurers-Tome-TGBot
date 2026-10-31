@@ -1,5 +1,19 @@
 {
+  "catalog": {
+    "title": "Catalogo SRD",
+    "search": "Cerca per nome (it/en)...",
+    "empty": "Nessun risultato",
+    "en_badge": "EN",
+    "show_more": "Mostra altri ({{count}})"
+  },
   "common": {
+    "roll_mode": {
+      "title": "Modalità del tiro",
+      "advantage": "Vantaggio",
+      "normal": "Normale",
+      "disadvantage": "Svantaggio",
+      "hint": "Tieni premuto per vantaggio o svantaggio"
+    },
     "back": "Indietro",
     "next": "Avanti",
     "save": "Salva",
@@ -69,6 +83,65 @@
     }
   },
   "character": {
+    "level_choice": {
+      "remove": "Rimuovi talento",
+      "remove_confirm": "Conferma rimozione",
+      "remove_warning": "Gli aumenti di caratteristica e la competenza nel TS non vengono annullati.",
+      "already_taken": "Già scelto",
+      "badge": "Scelte di livello: {{count}}",
+      "title": "Scelta di livello",
+      "asi": "Aumento caratteristiche",
+      "feat": "Talento",
+      "points_left": "Punti rimasti: {{n}}",
+      "increase": "Aumenta {{name}}",
+      "decrease": "Riduci {{name}}",
+      "pick_ability": "Caratteristica da aumentare",
+      "custom": "Talento personalizzato",
+      "custom_name": "Nome del talento",
+      "custom_text": "Descrizione",
+      "confirm": "Conferma",
+      "error": "Impossibile salvare la scelta",
+      "feat_label": "Talento",
+      "feats": {
+        "grappler": {
+          "name": "Lottatore",
+          "summary": "Vantaggio ai tiri per colpire le creature che stai lottando; puoi tentare di immobilizzarle."
+        },
+        "alert": {
+          "name": "Allerta",
+          "summary": "+5 all'iniziativa; non puoi essere sorpreso se sei cosciente."
+        },
+        "tough": {
+          "name": "Robusto",
+          "summary": "+2 punti ferita massimi per ogni livello."
+        },
+        "mobile": {
+          "name": "Mobile",
+          "summary": "+3 metri (+10 piedi) di velocita'; lo scatto non provoca attacchi di opportunita'."
+        },
+        "observant": {
+          "name": "Osservatore",
+          "summary": "+1 Intelligenza o Saggezza; +5 a Percezione e Indagare passive."
+        },
+        "resilient": {
+          "name": "Resiliente",
+          "summary": "+1 a una caratteristica a scelta e competenza nei suoi tiri salvezza."
+        },
+        "war_caster": {
+          "name": "Incantatore Bellico",
+          "summary": "Vantaggio ai tiri salvezza su Costituzione per mantenere la concentrazione."
+        },
+        "lucky": {
+          "name": "Fortunato",
+          "summary": "3 punti fortuna per riposo lungo per ritirare un d20."
+        }
+      }
+    },
+    "roll_notes": {
+      "title": "Nota situazionale: {{name}}",
+      "edit": "Modifica nota: {{name}}",
+      "placeholder": "Es. vantaggio contro charme"
+    },
     "hero": {
       "stats_section": "Statistiche",
       "initiative": "Iniziativa",
@@ -79,6 +152,11 @@
       "none_m": "Nessuno",
       "none_f": "Nessuna",
       "speed_homebrew_label": "Velocità · regola homebrew",
+      "senses": "Sensi",
+      "speed_items_label": "Velocità · oggetti magici",
+      "encumbrance_encumbered": "Ingombro (variante)",
+      "encumbrance_heavily": "Molto ingombrato (variante)",
+      "encumbrance_heavily_note": "Svantaggio a prove, tiri salvezza e attacchi che usano FOR, DES o COS.",
       "customize": "Personalizza schermata",
       "layout_title": "Layout schermata",
       "section_slots": "Slot incantesimo",
@@ -87,6 +165,20 @@
       "move_up": "Sposta su",
       "move_down": "Sposta giù",
       "toggle_visibility": "Mostra/nascondi"
+    },
+    "rest_preview": {
+      "title": "Cosa recuperi",
+      "hp": "PF",
+      "hit_dice": "Dadi vita",
+      "slots": "Slot",
+      "pact_slots": "Slot patto",
+      "abilities": "Abilità",
+      "resources": "Risorse",
+      "charge_full": "+{{count}} (piena)",
+      "charges": "Cariche",
+      "exhaustion": "Spossatezza",
+      "concentration": "La concentrazione si interrompe",
+      "nothing": "Niente da recuperare"
     },
     "quick_actions": {
       "group_order": "Ordine",
@@ -137,7 +229,9 @@
       "unconscious_badge": "Incosciente",
       "dead_badge": "Morto",
       "unconfigured_badge": "Da configurare",
-      "delete_failed": "Eliminazione non riuscita. Riprova."
+      "delete_failed": "Eliminazione non riuscita. Riprova.",
+      "import": "Importa",
+      "import_failed": "Importazione non riuscita."
     },
     "menu": {
       "hp": "Punti Ferita",
@@ -146,6 +240,7 @@
       "skills": "Skills",
       "saves": "Tiri Salvezza",
       "actions": "Azioni",
+      "turn": "Turno",
       "spells": "Incantesimi",
       "slots": "Slot Incantesimi",
       "inventory": "Inventario",
@@ -153,6 +248,7 @@
       "abilities": "Abilità Speciali",
       "class": "Classe",
       "xp": "Esperienza",
+      "extras": "Extra",
       "conditions": "Condizioni",
       "rest": "Riposo",
       "history": "Cronologia",
@@ -192,6 +288,12 @@
       "critical_hit": "Colpo critico",
       "modifier_half": "½ Resistenza",
       "modifier_double": "×2 Vulnerabilità",
+      "modifier_none": "Pieno",
+      "modifier_immune": "Immune",
+      "preview_half": "Resistenza",
+      "preview_double": "Vulnerabilità",
+      "preview_immune": "Immunità",
+      "damage_type": "Tipo di danno (opzionale)",
       "damage_short": "DANNI",
       "heal_short": "CURA",
       "current_short": "ATTUALI",
@@ -261,6 +363,7 @@
       "shield": "Scudo",
       "magic": "Magia",
       "legend": "Base · Scudo · Magia",
+      "items_label": "Oggetti magici",
       "total": "Totale",
       "new_total": "Nuovo CA",
       "from_equipment": "Calcolato da equipaggiamento",
@@ -278,6 +381,12 @@
       "unarmored_formula": "CA {{value}}",
       "unarmored_active_hint": "La Base si aggiorna con le caratteristiche; non indossare armatura del corpo."
     },
+    "senses": {
+      "darkvision": "Scurovisione",
+      "blindsight": "Vista cieca",
+      "truesight": "Vista pura",
+      "tremorsense": "Percezione tellurica"
+    },
     "skills": {
       "title": "Skills",
       "proficient": "Competente",
@@ -286,6 +395,8 @@
       "breakdown": "Bonus attuale: {{total}} = {{abilMod}} {{ability}} {{prof}} comp",
       "prof_bonus": "Bonus competenza",
       "passive_perception": "Percezione Passiva",
+      "passive_insight": "Intuizione Passiva",
+      "passive_investigation": "Indagare Passivo",
       "roll": "Tira dado",
       "acrobatics": "Acrobazia",
       "animal_handling": "Addestrare Animali",
@@ -318,6 +429,7 @@
       "homebrew_label": "Bonus Homebrew"
     },
     "actions": {
+      "attacks_per_action": "Attacchi per azione: {{n}}",
       "title": "Azioni",
       "unarmed": "Attacco a mano libera",
       "unarmed_desc": "Colpo senza armi ({{damage}} + mod, contundente)",
@@ -326,7 +438,16 @@
       "attack": "Attacca"
     },
     "attack": {
-      "ammo_missing": "Munizioni esaurite o non equipaggiate: scala tu le munizioni"
+      "ammo_missing": "Munizioni esaurite o non equipaggiate: scala tu le munizioni",
+      "grip_one": "Una mano",
+      "grip_two": "Due mani",
+      "mode_melee": "Mischia",
+      "mode_thrown": "Lancio",
+      "magic_bonus": "Bonus magico +{{n}}",
+      "proficiency_warning": "Competenza non indicata",
+      "to_hit": "Per colpire",
+      "damage": "Danno",
+      "damage_critical": "Danno (critico)"
     },
     "ability": {
       "strength_short": "FOR",
@@ -428,9 +549,25 @@
       "concentration_break_warn": "Romperai la concentrazione su {{spell}}.",
       "expand": "Espandi",
       "collapse": "Comprimi",
-      "srd_autofill": "Compila da SRD: livello, gittata, durata, componenti, danno (solo campi vuoti).",
+      "from_catalog": "Aggiungi dal catalogo",
+      "reload_catalog": "Ricarica testo dal catalogo",
+      "reload_title": "Ricaricare dal catalogo?",
+      "reload_body": "Nome, descrizione, tempo di lancio, gittata, durata e a livelli superiori verranno sostituiti con il testo del catalogo.",
+      "reload_confirm": "Ricarica",
+      "upcast_auto": "Livelli superiori: +{{dice}} per livello (già incluso)",
+      "schools": {
+        "abjuration": "Abiurazione",
+        "conjuration": "Convocazione",
+        "divination": "Divinazione",
+        "enchantment": "Ammaliamento",
+        "evocation": "Invocazione",
+        "illusion": "Illusione",
+        "necromancy": "Necromanzia",
+        "transmutation": "Trasmutazione"
+      },
       "filters": {
         "level": "Livello",
+        "school": "Scuola",
         "property": "Proprietà",
         "level_n": "Liv. {{level}}",
         "clear": "Azzera filtri",
@@ -547,6 +684,16 @@
       "pool_cap_reached": "Limite massimo dadi raggiunto"
     },
     "conditions": {
+      "duration": {
+        "label": "Durata in round",
+        "until_end": "Fino a fine",
+        "one_round": "1 round",
+        "one_minute": "1 minuto = 10",
+        "input_aria": "Durata in round",
+        "left": "{{n}} round",
+        "tick": "Fine round (−1)",
+        "expired": "Scaduto: {{names}}"
+      },
       "title": "Condizioni",
       "exhaustion": "Spossatezza (livello {{level}})",
       "exhaustion_level": "Livello spossatezza",
@@ -626,6 +773,7 @@
       "proficiencies": "Competenze",
       "damage_modifiers": "Modificatori Danno",
       "physicality": "Fisicità",
+      "senses": "Sensi",
       "culture": "Cultura",
       "resistances": "Resistenze",
       "immunities": "Immunità",
@@ -642,11 +790,24 @@
       "private_badge": "Info private",
       "private_hint": "Background, ideali, legami, difetti: visibili solo al giocatore.",
       "language_placeholder": "Aggiungi lingua…",
+      "proficiencies_armor": "Competenze: armature",
+      "proficiencies_weapons": "Competenze: armi",
+      "proficiencies_tools": "Competenze: strumenti",
+      "proficiencies_other": "Altre competenze",
+      "appearance": "Aspetto",
+      "appearance_age": "Età",
+      "appearance_height": "Altezza",
+      "appearance_weight": "Peso",
+      "appearance_eyes": "Occhi",
+      "appearance_hair": "Capelli",
+      "appearance_skin": "Pelle",
       "proficiency_placeholder": "Aggiungi competenza…",
       "unsaved_changes": "Modifiche non salvate",
       "save_now": "Salva ora",
       "damage_already_in": "{{type}} è già in un'altra lista",
-      "damage_vuln_wins_hint": "Se uno stesso tipo appare in più liste, in D&D la vulnerabilità prevale.",
+      "damage_vuln_wins_hint": "Un tipo di danno sta in una sola lista. Dalla scheda PF, scegliendo il tipo, resistenze e immunità si applicano in automatico.",
+      "damage_custom_placeholder": "Aggiungi personalizzato (homebrew)…",
+      "damage_custom_hint": "Personalizzate: non applicate in automatico al calcolo del danno.",
       "resistances_short": "Res.",
       "immunities_short": "Imm.",
       "vulnerabilities_short": "Vul."
@@ -661,6 +822,71 @@
       "on": "On",
       "off": "Off",
       "aria": "Ispirazione eroica"
+    },
+    "extras": {
+      "title": "Extra",
+      "add": "Aggiungi",
+      "empty": "Nessun famiglio, compagno o forma salvata.",
+      "kind": "Tipo",
+      "from_catalog": "Scegli dal catalogo mostri",
+      "cr": "GS",
+      "name": "Nome",
+      "hp": "PF massimi",
+      "ac": "CA",
+      "attack": "Attacco",
+      "to_hit": "Bonus",
+      "damage": "Danno",
+      "notes": "Note",
+      "amount": "Quantità",
+      "down": "A terra (0 PF)",
+      "active": "Forma attiva",
+      "activate": "Attiva forma",
+      "end_form": "Termina forma",
+      "in_form_of": "In forma di {{name}}",
+      "hp_goes_to_form": "Danni e cure vanno alla forma: {{name}}",
+      "character_down": "Il personaggio è a 0 PF: impossibile assumere una forma.",
+      "force_title": "Nessun uso di Forma Selvatica",
+      "force_body": "Non hai usi rimasti. Attivare comunque la forma?",
+      "force_confirm": "Attiva comunque",
+      "delete_title": "Eliminare {{name}}?",
+      "limit": "Limite di 30 elementi raggiunto.",
+      "critical": "critico",
+      "statblock": "Scheda mostro",
+      "kinds": {
+        "familiar": "Famigli",
+        "companion": "Compagni",
+        "mount": "Cavalcature",
+        "summon": "Evocazioni",
+        "wild_shape": "Forme selvatiche"
+      },
+      "warn": {
+        "familiar_form": "Questa creatura non è una forma ammessa per il famiglio (consigliato, puoi comunque aggiungerla).",
+        "not_beast": "Forma selvatica richiede una bestia (consigliato, puoi comunque aggiungerla).",
+        "cr": "Il GS supera il limite per il tuo livello da druido (massimo {{cr}}).",
+        "fly": "Nessuna velocità di volo prima del livello 8 da druido.",
+        "swim": "Nessuna velocità di nuoto prima del livello 4 da druido."
+      }
+    },
+    "turn": {
+      "title": "Turno",
+      "round": "Round {{n}}",
+      "attacks_per_action": "Attacchi per azione: {{n}}",
+      "section_action": "Azione",
+      "section_bonus_action": "Azione bonus",
+      "section_reaction": "Reazione",
+      "section_other": "Altro",
+      "used": "Usata",
+      "mark_used": "Segna come usata",
+      "new_turn": "Nuovo turno",
+      "end_round": "Fine round (−1)",
+      "empty": "Nessuna voce",
+      "unarmed": "Colpo senza armi",
+      "attack": "Attacca",
+      "cast": "Lancia",
+      "use": "Usa",
+      "no_uses": "Usi esauriti",
+      "banner": "È il tuo turno",
+      "banner_cta": "Apri la vista Turno"
     },
     "inSession": {
       "label": "Sei in sessione",
@@ -796,6 +1022,10 @@
       "empty_hint": "Inizia ad equipaggiare il tuo personaggio. Aggiungi un'arma, un'armatura o un oggetto.",
       "no_search_results": "Nessun risultato",
       "item_name": "Nome oggetto",
+      "from_equipment": "Equipaggiamento dal catalogo",
+      "from_magic": "Oggetto magico dal catalogo",
+      "range_label": "Gittata",
+      "thrown_range_label": "Gittata lancio",
       "item_type": "Tipo",
       "add_short": "Aggiungi",
       "description": "Descrizione",
@@ -805,6 +1035,97 @@
       "modifier": "Modificatore",
       "damage_type_label": "Tipo danno",
       "weapon_type_label": "Tipo arma",
+      "magic": {
+        "is_magic": "Oggetto magico",
+        "rarity_label": "Rarità",
+        "rarity_none": "Nessuna",
+        "rarity": {
+          "common": "Comune",
+          "uncommon": "Non comune",
+          "rare": "Raro",
+          "very_rare": "Molto raro",
+          "legendary": "Leggendario",
+          "artifact": "Artefatto"
+        },
+        "cost_gp": "Valore (mo)",
+        "requires_attunement": "Richiede sintonia",
+        "bonuses": "Bonus",
+        "bonus_target": "Bersaglio del bonus",
+        "bonus_value": "Valore del bonus",
+        "add_bonus": "Aggiungi bonus",
+        "remove": "Rimuovi",
+        "targets": {
+          "ac": "CA",
+          "saves": "Tutti i TS",
+          "attack": "Attacco",
+          "damage": "Danni",
+          "spell_attack": "Attacco con incantesimi",
+          "spell_dc": "CD degli incantesimi",
+          "speed": "Velocità",
+          "initiative": "Iniziativa",
+          "save": {
+            "strength": "TS Forza",
+            "dexterity": "TS Destrezza",
+            "constitution": "TS Costituzione",
+            "intelligence": "TS Intelligenza",
+            "wisdom": "TS Saggezza",
+            "charisma": "TS Carisma"
+          }
+        },
+        "has_charges": "Ha delle cariche",
+        "charges_max": "Cariche massime",
+        "charges_current": "Cariche attuali",
+        "recharge_label": "Ricarica",
+        "recharge": {
+          "long_rest": "Riposo lungo",
+          "short_rest": "Riposo breve",
+          "dawn": "All'alba",
+          "none": "Mai"
+        },
+        "recharge_amount": "Cariche recuperate (\"all\" o dadi, es. 1d6+1)",
+        "recharge_amount_invalid": "Usa \"all\" o una notazione a dadi come 1d6+1",
+        "granted_spells": "Incantesimi concessi",
+        "spell_name": "Nome incantesimo",
+        "spell_level": "Livello",
+        "spell_cost": "Costo in cariche",
+        "spell_concentration": "Concentrazione",
+        "add_spell": "Aggiungi incantesimo",
+        "attunement_title": "Sintonia",
+        "attunement_limit": "Hai già 3 oggetti in sintonia",
+        "slot_empty": "Slot libero",
+        "attunable": "Da sintonizzare",
+        "attune": "Sintonizza",
+        "unattune": "Rimuovi sintonia",
+        "attuned": "In sintonia",
+        "not_attuned": "Senza sintonia",
+        "charges": "Cariche",
+        "charges_decrease": "Usa una carica",
+        "charges_increase": "Aggiungi una carica",
+        "cantrip": "Trucchetto",
+        "spell_level_n": "Livello {{level}}",
+        "cost_n": "{{n}} cariche",
+        "cast": "Lancia",
+        "cast_done": "{{name}} lanciato",
+        "spell_save_dc": "CD (opzionale)",
+        "spell_attack_bonus": "Bonus attacco (opzionale)",
+        "no_charges": "Questo oggetto non ha cariche",
+        "cast_spent": "Cariche spese: {{n}}",
+        "cast_remaining": "rimaste {{current}}/{{max}}",
+        "dc_save": "CD {{dc}} — TS su {{ability}}",
+        "dc_only": "CD {{dc}}",
+        "attack_bonus": "Attacco {{bonus}}",
+        "roll_attack": "Tira per colpire",
+        "not_enough_charges": "Cariche insufficienti",
+        "attunement_required": "L'oggetto richiede sintonia"
+      },
+      "magic_bonus_label": "Bonus magico (+0 a +10)",
+      "versatile_dice_label": "Dado a due mani (versatile)",
+      "weapon_category_label": "Categoria arma",
+      "weapon_category": {
+        "none": "Nessuna",
+        "simple": "Semplice",
+        "martial": "Da guerra"
+      },
       "properties_label": "Proprietà",
       "armor_type_label": "Tipo armatura",
       "ac_value_label": "Valore CA",
@@ -933,6 +1254,15 @@
       "description_label": "Descrizione",
       "max_uses_label": "Usi massimi",
       "restoration_label": "Ripristino",
+      "action_type_label": "Tipo di azione",
+      "action_type": {
+        "none": "Nessuno",
+        "action": "Azione",
+        "bonus_action": "Azione bonus",
+        "reaction": "Reazione",
+        "free": "Gratuita",
+        "special": "Speciale"
+      },
       "edit": "Modifica",
       "detail": {
         "no_description": "Nessuna descrizione disponibile"
@@ -990,6 +1320,9 @@
         "new_spell_slot": "Nuovo slot di {{level}}° livello",
         "confirm": "Conferma",
         "at_max_toast": "Classe al livello massimo",
+        "roll_hp": "Tira {{count}}d{{die}} per i PF",
+        "roll_hp_result": "Tiro {{roll}} + COS {{con}} = {{total}} PF",
+        "roll_hp_required": "Tira il dado vita per continuare",
         "progression_missing": "Dati progressione non disponibili"
       },
       "resource_max_increased": "{{name}}: massimo {{prev}} → {{next}}",
@@ -1009,6 +1342,12 @@
       }
     },
     "settings": {
+      "war_caster_label": "Vantaggio ai TS di concentrazione (Incantatore da guerra)",
+      "war_caster_hint": "Tira con vantaggio i tiri salvezza su Costituzione per mantenere la concentrazione.",
+      "encumbrance_variant_label": "Ingombro dettagliato",
+      "encumbrance_variant_hint": "Soglie FOR×5 ({{slow1}}) e FOR×10 ({{slow2}}, svantaggio a prove/TS/attacchi FOR DES COS).",
+      "coin_weight_label": "Peso delle monete",
+      "coin_weight_hint": "50 monete pesano {{unit_weight}} e contano nell'ingombro.",
       "title": "Impostazioni",
       "spell_slots_mode": "Modalità slot incantesimi",
       "mode_auto": "AUTO",
@@ -1050,6 +1389,20 @@
       "history_retention_total": "Cronologia attuale: {{n}} voci.",
       "history_retention_preview_events": "Ultimi {{keep}} eventi: perderai {{n}} voci più vecchie ora.",
       "history_retention_preview_days": "Ultimi {{days}} giorni: perderai {{n}} voci precedenti.",
+      "transfer": {
+        "title": "Esporta e copia",
+        "export": "Esporta",
+        "export_hint": "Salva la scheda come file JSON o inviala in chat.",
+        "duplicate": "Duplica",
+        "duplicate_hint": "Crea una copia di questo personaggio.",
+        "duplicate_failed": "Duplicazione non riuscita. Riprova.",
+        "send": "Invia in chat Telegram",
+        "download": "Scarica file",
+        "download_only": "Invio in chat non disponibile: puoi solo scaricare il file.",
+        "sent": "File inviato in chat.",
+        "send_failed": "Invio non riuscito. Riprova.",
+        "export_failed": "Esportazione non riuscita. Riprova."
+      },
       "danger_zone": "Zona pericolosa",
       "delete_character": "Elimina personaggio",
       "reset_settings": "Reimposta impostazioni",
@@ -1067,6 +1420,12 @@
           "disabled_hint": "Attiva l'animazione 3D per scegliere un pacchetto.",
           "load_error": "Impossibile caricare il pacchetto, ripristinato il predefinito."
         }
+      },
+      "advancement": {
+        "milestone_toggle": "Avanzamento a milestone",
+        "milestone_hint": "Sali di livello senza tracciare i PE: il pulsante di level-up sostituisce il contatore PE.",
+        "rolled_hp_toggle": "PF tirati",
+        "rolled_hp_hint": "Al level-up tira il dado vita invece di usare il valore fisso."
       },
       "hp": {
         "title": "Punti Ferita",
@@ -1105,6 +1464,28 @@
       "step_identity": "Identità",
       "identity_skip": "Salta: compili dopo",
       "identity_optional_hint": "Tutto opzionale: puoi saltare e completare dopo.",
+      "step_species": "Specie",
+      "step_abilities": "Punteggi caratteristica",
+      "species_hint": "Scegli una specie dal catalogo (facoltativo) o scrivila a mano.",
+      "species_pick": "Scegli dal catalogo",
+      "subrace": "Sottospecie",
+      "subrace_none": "Nessuna",
+      "species_speed": "Velocità",
+      "species_clear": "Rimuovi specie",
+      "species_free": "Specie (testo libero)",
+      "sense_darkvision": "Scurovisione",
+      "sense_blindsight": "Vista cieca",
+      "sense_truesight": "Vista del vero",
+      "sense_tremorsense": "Percezione tellurica",
+      "scores_mode_array": "Array standard",
+      "scores_mode_pointbuy": "Point buy",
+      "scores_mode_roll": "Tira 4d6",
+      "scores_mode_manual": "Manuale",
+      "points_left": "Punti: {{left}} / {{total}}",
+      "roll_4d6": "Tira 4d6 (scarta il più basso)",
+      "reroll": "Ritira",
+      "scores_skip": "Salta: lascia tutti a 10",
+      "background_pick": "Scegli background dal catalogo",
       "create_cta": "Crea"
     },
     "equipment": {
@@ -1230,6 +1611,7 @@
     }
   },
   "layout": {
+    "server_outdated": "Il server non è aggiornato: alcune funzioni potrebbero non funzionare.",
     "nav": {
       "go_to": "Vai a {{page}}"
     },
@@ -1426,6 +1808,7 @@
     "disabled_state": "Disattivata",
     "install_success": "Template installato",
     "delete_success": "Regola eliminata",
+    "feat_label": "Talento",
     "from_template": "Da template",
     "no_rules_yet": "Nessuna regola ancora. Installa un template per iniziare.",
     "load_error": "Impossibile caricare le regole. Riprova più tardi.",

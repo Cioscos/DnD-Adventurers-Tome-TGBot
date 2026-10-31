@@ -84,6 +84,31 @@ async def send_telegram_message(
         return False
 
 
+async def send_telegram_document(
+    chat_id: int, filename: str, content: bytes, caption: str | None = None
+) -> bool:
+    """sendDocument (multipart) in chat privata; True su 2xx, mai solleva."""
+    if not _BOT_TOKEN:
+        return False
+    data = {"chat_id": str(chat_id)}
+    if caption:
+        data["caption"] = caption
+    try:
+        async with httpx.AsyncClient(timeout=20) as client:
+            resp = await client.post(
+                f"https://api.telegram.org/bot{_BOT_TOKEN}/sendDocument",
+                data=data,
+                files={"document": (filename, content, "application/json")},
+            )
+        if not resp.is_success:
+            logger.warning("Telegram sendDocument failed: %s %s", resp.status_code, resp.text)
+            return False
+        return True
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Telegram sendDocument error: %s", exc)
+        return False
+
+
 async def get_bot_username() -> Optional[str]:
     """Username del bot via getMe (cache module-level). None se non disponibile."""
     global _BOT_USERNAME

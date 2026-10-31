@@ -24,12 +24,12 @@ import FilterRow from '@/components/ui/FilterRow'
 import EmptyState from '@/components/ui/EmptyState'
 import CustomResourceCounter from '@/components/homebrew/CustomResourceCounter'
 import { haptic } from '@/auth/telegram'
-import type { Ability } from '@/types'
+import type { Ability, ActionType } from '@/types'
 import type { HomebrewResource } from '@/lib/homebrew/types'
 import AbilitiesSkeleton from '@/components/skeletons/AbilitiesSkeleton'
 
-type AddForm = { name: string; description: string; max_uses: string; is_passive: boolean; restoration_type: string }
-const emptyForm: AddForm = { name: '', description: '', max_uses: '', is_passive: false, restoration_type: 'long_rest' }
+type AddForm = { name: string; description: string; max_uses: string; is_passive: boolean; restoration_type: string; action_type: ActionType | '' }
+const emptyForm: AddForm = { name: '', description: '', max_uses: '', is_passive: false, restoration_type: 'long_rest', action_type: '' }
 
 // Sopra questa soglia gli usi si gestiscono con lo stepper numerico invece dei
 // pallini (es. Imposizione delle Mani = 5×livello, Punti Ki/Stregoneria alti).
@@ -61,6 +61,8 @@ function detectRestoration(name: string): string {
   return 'long_rest'
 }
 
+const ACTION_TYPES = ['action', 'bonus_action', 'reaction', 'free', 'special'] as const
+
 function abilityToForm(ab: Ability): AddForm {
   return {
     name: ab.name,
@@ -68,6 +70,7 @@ function abilityToForm(ab: Ability): AddForm {
     max_uses: ab.max_uses != null ? String(ab.max_uses) : '',
     is_passive: ab.is_passive,
     restoration_type: ab.restoration_type,
+    action_type: ab.action_type ?? '',
   }
 }
 
@@ -79,6 +82,7 @@ export default function Abilities() {
   const [showAdd, setShowAdd] = useState(false)
   const [form, setForm] = useState<AddForm>(emptyForm)
   const [expanded, setExpanded] = useState<number | null>(null)
+  const [confirmFeatId, setConfirmFeatId] = useState<number | null>(null)
   const [editingAbility, setEditingAbility] = useState<Ability | null>(null)
   const [wizardStep, setWizardStep] = useState<'basics' | 'details'>('basics')
   // Editor descrizione-only per le feature di classe (struttura bloccata: si può
@@ -161,6 +165,7 @@ export default function Abilities() {
         is_passive: form.is_passive,
         is_active: !form.is_passive,
         restoration_type: form.restoration_type,
+        action_type: form.action_type || undefined,
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['character', charId] })
@@ -178,6 +183,7 @@ export default function Abilities() {
         is_passive: form.is_passive,
         is_active: !form.is_passive,
         restoration_type: form.restoration_type,
+        action_type: form.action_type || null,
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['character', charId] })
@@ -196,6 +202,16 @@ export default function Abilities() {
     mutationFn: (abilityId: number) => api.abilities.remove(charId, abilityId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['character', charId] })
+      haptic.success()
+    },
+  })
+
+  const removeFeatMutation = useMutation({
+    mutationFn: (abilityId: number) => api.choices.removeFeat(charId, abilityId),
+    onSuccess: (updated) => {
+      qc.setQueryData(['character', charId], updated)
+      qc.invalidateQueries({ queryKey: ['homebrew-rules', charId] })
+      setConfirmFeatId(null)
       haptic.success()
     },
   })
@@ -464,15 +480,38 @@ export default function Abilities() {
                     <Button variant="secondary" size="sm" onClick={() => openEdit(ab)} icon={<Pencil size={12} />}>
                       {t('character.abilities.edit')}
                     </Button>
-                    <Button
-                      variant="danger"
-                      size="sm"
-                      onClick={() => deleteMutation.mutate(ab.id)}
-                      loading={deleteMutation.isPending && deleteMutation.variables === ab.id}
-                      icon={<Trash2 size={12} />}
-                    >
-                      {t('common.delete')}
-                    </Button>
+                    {(ab.feature_key ?? '').startsWith('feat.') ? (
+                      <div className="flex-1 space-y-1">
+                        {confirmFeatId === ab.id && (
+                          <p className="text-xs text-dnd-text-muted font-body">
+                            {t('character.level_choice.remove_warning')}
+                          </p>
+                        )}
+                        <Button
+                          variant="danger"
+                          size="sm"
+                          onClick={() =>
+                            confirmFeatId === ab.id ? removeFeatMutation.mutate(ab.id) : setConfirmFeatId(ab.id)
+                          }
+                          loading={removeFeatMutation.isPending && removeFeatMutation.variables === ab.id}
+                          icon={<Trash2 size={12} />}
+                        >
+                          {confirmFeatId === ab.id
+                            ? t('character.level_choice.remove_confirm')
+                            : t('character.level_choice.remove')}
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        onClick={() => deleteMutation.mutate(ab.id)}
+                        loading={deleteMutation.isPending && deleteMutation.variables === ab.id}
+                        icon={<Trash2 size={12} />}
+                      >
+                        {t('common.delete')}
+                      </Button>
+                    )}
                   </div>
                 )}
               </div>
@@ -757,6 +796,16 @@ export default function Abilities() {
                   />
                 </>
               )}
+              <ChipSelect
+                label={t('character.abilities.action_type_label')}
+                options={([['', 'none'], ...ACTION_TYPES.map((a) => [a, a])] as const).map(([v, k]) => ({
+                  value: v,
+                  label: t(`character.abilities.action_type.${k}`),
+                }))}
+                value={form.action_type}
+                onChange={(v) => setForm((f) => ({ ...f, action_type: v as AddForm['action_type'] }))}
+                columns={3}
+              />
               <div className="flex gap-2 pt-2">
                 <Button
                   variant="secondary"

@@ -22,6 +22,11 @@ import { useLongPress } from '@/hooks/useLongPress'
 import { useDiceAnimation } from '@/dice/useDiceAnimation'
 import { useDiceSettings } from '@/store/diceSettings'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
+import type { CharacterFull } from '@/types'
+import { useD20Roll, d20Arg, type RollMode } from '@/hooks/useD20Roll'
+import RollButton from '@/components/ui/RollButton'
+import RollNoteEditor from '@/components/character/RollNoteEditor'
+import { rollNoteOf } from '@/lib/settings'
 import { profBonus } from '@/lib/dnd'
 import HomebrewBreakdownRow from '@/components/homebrew/HomebrewBreakdownRow'
 import SkillsSkeleton from '@/components/skeletons/SkillsSkeleton'
@@ -68,12 +73,14 @@ interface SkillRowProps {
   label: string
   level: ProfLevel
   bonus: number
+  half?: boolean
   idx: number
   rollPending: boolean
   onTap: () => void
   onLongPress: () => void
-  onRoll: () => void
+  onRoll: (mode: RollMode) => void
   rollAriaLabel: string
+  char: CharacterFull
 }
 
 function SkillRow({
@@ -81,12 +88,14 @@ function SkillRow({
   label,
   level,
   bonus,
+  half = false,
   idx,
   rollPending,
   onTap,
   onLongPress,
   onRoll,
   rollAriaLabel,
+  char,
 }: SkillRowProps) {
   const [pressProgress, setPressProgress] = useState(0)
   const longPress = useLongPress({
@@ -109,7 +118,7 @@ function SkillRow({
       initial={{ opacity: 0, x: -4 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: idx * 0.02, duration: 0.18 }}
-      className={`flex items-center gap-2 px-3 py-2 rounded-xl border transition-colors
+      className={`flex flex-wrap items-center gap-2 px-3 py-2 rounded-xl border transition-colors
         ${isExpert
           ? 'bg-gradient-to-r from-dnd-arcane-deep/30 to-dnd-gold-deep/20 border-dnd-arcane/40'
           : isProficient
@@ -151,7 +160,9 @@ function SkillRow({
               <Check size={11} className="text-dnd-ink" strokeWidth={3} />
             </div>
           ) : (
-            <div className="w-5 h-5 rounded-full border-2 border-dnd-border" />
+            <div className="w-5 h-5 rounded-full border-2 border-dnd-border flex items-center justify-center text-xs leading-none text-dnd-gold-dim">
+              {half ? '½' : null}
+            </div>
           )}
         </div>
         <span
@@ -167,16 +178,18 @@ function SkillRow({
           {bonus >= 0 ? '+' : ''}{bonus}
         </span>
       </div>
-      <Pressable
-        onClick={onRoll}
+      <RollNoteEditor char={char} noteKey={`skill.${skillKey}`} label={label} />
+      <RollButton
+        onRoll={onRoll}
         pending={rollPending}
-        spinnerSize={14}
-        className="shrink-0 w-11 h-11 rounded-xl bg-dnd-chip-bg border border-dnd-gold-dim/40 flex items-center justify-center text-dnd-gold disabled:opacity-30"
-        whileTap={{ scale: 0.88 }}
-        aria-label={rollAriaLabel}
+        className="shrink-0 w-11 h-11 rounded-xl bg-dnd-chip-bg border border-dnd-gold-dim/40 flex items-center justify-center text-dnd-gold active:scale-90 transition-transform"
+        ariaLabel={rollAriaLabel}
       >
         <Dices size={16} />
-      </Pressable>
+      </RollButton>
+      {rollNoteOf(char, `skill.${skillKey}`) && (
+        <p className="basis-full text-xs text-dnd-text-muted font-body italic">{rollNoteOf(char, `skill.${skillKey}`)}</p>
+      )}
     </m.div>
   )
 }
@@ -187,6 +200,7 @@ export default function Skills() {
   const { t } = useTranslation()
   const qc = useQueryClient()
   const dice = useDiceAnimation()
+  const rollD20 = useD20Roll()
   const animate3d = useDiceSettings((s) => s.animate3d)
   const reducedMotion = useReducedMotion()
   type RollState = {
@@ -213,14 +227,8 @@ export default function Skills() {
   })
 
   const rollMutation = useMutation({
-    mutationFn: async (skillName: string) => {
-      const useAnimation = animate3d && !reducedMotion
-      let die: number | undefined
-      if (useAnimation) {
-        const detected = await dice.playAndCollect([{ kind: 'd20', count: 1 }])
-        die = detected[0]?.value
-      }
-      const result = await api.characters.rollSkill(charId, skillName, die)
+    mutationFn: async ({ skillName, mode }: { skillName: string; mode: RollMode }) => {
+      const result = await api.characters.rollSkill(charId, skillName, d20Arg(mode, await rollD20(mode)))
       return { result, skillName }
     },
     onSuccess: ({ result, skillName }) => {
@@ -278,11 +286,17 @@ export default function Skills() {
     mutation.mutate({ [key]: next })
   }
 
-  const perceptionMod = abilityModifier('wisdom')
-  const perceptionLevel = getLevel(skills['perception'])
-  const perceptionHb = char.skills_homebrew_modifiers?.['perception'] ?? 0
-  const perceptionBonus = perceptionMod + (perceptionLevel === 'expert' ? 2 * pb : perceptionLevel ? pb : 0) + perceptionHb
-  const passivePerception = 10 + perceptionBonus
+  // Totali dal server (stessa funzione del tiro); il calcolo locale resta solo come ripiego.
+  const localBonus = (key: string, ability: string) => {
+    const level = getLevel(skills[key])
+    return abilityModifier(ability) + (level === 'expert' ? 2 * pb : level ? pb : 0) + (char.skills_homebrew_modifiers?.[key] ?? 0)
+  }
+  const passiveOf = (key: string, ability: string) => char.passives?.[key] ?? 10 + localBonus(key, ability)
+  const passiveRow = [
+    { key: 'perception', ability: 'wisdom' },
+    { key: 'insight', ability: 'wisdom' },
+    { key: 'investigation', ability: 'intelligence' },
+  ]
 
   return (
     <Layout title={t('character.skills.title')} backTo={`/char/${charId}`} group="skills" page="skills">
@@ -291,19 +305,23 @@ export default function Skills() {
           Inventory/Spells): con top-0 la barra si fermava 16px sotto il bordo e il
           contenuto scorreva visibile sopra il pannello blurrato. */}
       <div className="sticky -top-4 z-10 -mx-4 px-4 pt-2 pb-2 bg-dnd-bg/95 backdrop-blur-sm">
-        <Surface variant="elevated" className="flex items-center justify-between gap-3">
+        <Surface variant="elevated" className="flex flex-col gap-2">
           <div className="flex items-center gap-2">
             <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim">
               {t('character.skills.prof_bonus')}
             </p>
             <StatPill tone="gold" size="sm" value={`+${pb}`} />
           </div>
-          <div className="flex items-center gap-2">
-            <Eye size={14} className="text-dnd-arcane-bright" />
-            <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim">
-              {t('character.skills.passive_perception')}
-            </p>
-            <StatPill tone="arcane" size="sm" value={passivePerception} />
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            {passiveRow.map(({ key, ability }) => (
+              <div key={key} className="flex items-center gap-1.5">
+                {key === 'perception' && <Eye size={14} className="text-dnd-arcane-bright" />}
+                <p className="text-xs font-cinzel uppercase tracking-wide text-dnd-gold-dim">
+                  {t(`character.skills.passive_${key}`)}
+                </p>
+                <StatPill tone="arcane" size="sm" value={passiveOf(key, ability)} />
+              </div>
+            ))}
           </div>
         </Surface>
       </div>
@@ -324,9 +342,9 @@ export default function Skills() {
                   {groupSkills.map((skill, idx) => {
                     const level = getLevel(skills[skill.key])
                     const abilMod = abilityModifier(skill.ability)
-                    const bonus = abilMod + (level === 'expert' ? 2 * pb : level ? pb : 0) + (char.skills_homebrew_modifiers?.[skill.key] ?? 0)
+                    const bonus = char.skill_bonuses?.[skill.key] ?? abilMod + (level === 'expert' ? 2 * pb : level ? pb : 0) + (char.skills_homebrew_modifiers?.[skill.key] ?? 0)
 
-                    const isRollingThis = rollMutation.isPending && rollMutation.variables === skill.key
+                    const isRollingThis = rollMutation.isPending && rollMutation.variables?.skillName === skill.key
                     return (
                       <Fragment key={skill.key}>
                         <SkillRow
@@ -334,6 +352,7 @@ export default function Skills() {
                           label={t(`character.skills.${skill.key}`)}
                           level={level}
                           bonus={bonus}
+                          half={Boolean(char.jack_of_all_trades) && !level}
                           idx={idx}
                           rollPending={isRollingThis}
                           onTap={() => toggle(skill.key)}
@@ -341,8 +360,9 @@ export default function Skills() {
                             haptic.medium()
                             setPicker(skill.key)
                           }}
-                          onRoll={() => rollMutation.mutate(skill.key)}
+                          onRoll={(mode) => rollMutation.mutate({ skillName: skill.key, mode })}
                           rollAriaLabel={t('character.skills.roll')}
+                          char={char}
                         />
                         <HomebrewBreakdownRow
                           value={char.skills_homebrew_modifiers?.[skill.key] ?? 0}
@@ -362,6 +382,7 @@ export default function Skills() {
         <RollResultModal
           result={rollState.result}
           title={t(`character.skills.${rollState.skillName}`)}
+          note={rollNoteOf(char, `skill.${rollState.skillName}`)}
           inspirationAvailable={Boolean(char.heroic_inspiration)}
           isRerolling={rerollMutation.isPending}
           wasRerolled={rollState.wasRerolled}
@@ -384,9 +405,10 @@ export default function Skills() {
             const abilMod = abilityModifier(skill.ability)
             const lvl = getLevel(skills[picker])
             const profMul = lvl === 'expert' ? 2 : lvl ? 1 : 0
-            const profPart = profMul * pb
+            // Jack of All Trades: half proficiency (rounded down) on unproficient skills, as the server does.
+            const profPart = lvl ? profMul * pb : (char.jack_of_all_trades ? Math.floor(pb / 2) : 0)
             const pickerHb = char.skills_homebrew_modifiers?.[picker] ?? 0
-            const total = abilMod + profPart + pickerHb
+            const total = char.skill_bonuses?.[picker] ?? abilMod + profPart + pickerHb
             const abilLabel = t(`character.ability.${skill.ability}_short`, { defaultValue: skill.ability })
             return (
               <p className="text-xs font-body text-dnd-text-faint mb-3">
@@ -394,7 +416,7 @@ export default function Skills() {
                   total: `${total >= 0 ? '+' : ''}${total}`,
                   abilMod: `${abilMod >= 0 ? '+' : ''}${abilMod}`,
                   ability: abilLabel,
-                  prof: `${profMul === 0 ? '+0' : profMul === 1 ? `+${pb}` : `+${pb * 2}`}`,
+                  prof: `+${profPart}`,
                   defaultValue: 'Bonus attuale: {{total}} = {{abilMod}} {{ability}} {{prof}} comp',
                 })}
               </p>

@@ -6,6 +6,7 @@ import {
 } from 'react-icons/gi'
 import ResultDialog from './ui/ResultDialog'
 import InspirationRerollButton from './InspirationRerollButton'
+import D20Faces from './ui/D20Faces'
 import type { WeaponAttackResult } from '@/api/client'
 
 export type { WeaponAttackResult }
@@ -29,7 +30,7 @@ export default function WeaponAttackModal({
 }: Props) {
   const { t } = useTranslation()
   const {
-    weapon_name, to_hit_die, to_hit_bonus, to_hit_total,
+    weapon_name, to_hit_die, dice, mode, magic_bonus, proficiency_warning, to_hit_bonus, to_hit_total,
     is_critical, is_fumble, damage_dice, damage_rolls, damage_bonus, damage_total,
     ammo, ammo_missing,
   } = result
@@ -88,10 +89,11 @@ export default function WeaponAttackModal({
         transition={{ delay: 0.1 }}
       >
         <p className="text-xs text-dnd-text-faint mb-1 font-cinzel uppercase tracking-wider">
-          Per colpire
+          {t('character.attack.to_hit')}
         </p>
         <p className="text-xs text-dnd-text-muted font-body">
-          d20 ({to_hit_die}) {bonusStr(to_hit_bonus)}
+          <D20Faces die={to_hit_die} dice={dice} mode={mode} /> {bonusStr(to_hit_bonus)}
+          {!!magic_bonus && ` · ${t('character.attack.magic_bonus', { n: magic_bonus })}`}
         </p>
         <p className={`text-4xl font-black font-display mt-1 ${toHitColor}`}>
           {to_hit_total}
@@ -106,7 +108,7 @@ export default function WeaponAttackModal({
           transition={{ delay: 0.2 }}
         >
           <p className="text-xs text-dnd-text-faint mb-1 font-cinzel uppercase tracking-wider">
-            Danno{is_critical ? ' (critico)' : ''}: {damage_dice}
+            {is_critical ? t('character.attack.damage_critical') : t('character.attack.damage')}: {damage_dice}
           </p>
           <p className="text-xs text-dnd-text-muted font-body font-mono">
             [{damage_rolls.join(', ')}] {bonusStr(damage_bonus)}
@@ -117,6 +119,11 @@ export default function WeaponAttackModal({
         </m.div>
       )}
 
+      {proficiency_warning && (
+        <p className="text-sm text-dnd-gold-bright font-body">
+          {t('character.attack.proficiency_warning')}
+        </p>
+      )}
       {ammo && (
         <p className="text-sm text-dnd-text-muted font-body tabular-nums">
           {ammo.name}: {ammo.remaining}

@@ -10,11 +10,17 @@ from __future__ import annotations
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.schemas.character import AcBreakdown, CharacterFull
-from api.services.homebrew.passive import get_passive_modifiers
+from api.schemas.character import AcBreakdown, ActiveForm, CharacterFull
+from api.services.wild_shape import get_active_form
+from api.services.homebrew.passive import get_passive_modifiers, passive_modifier
 from api.services.spellcasting import build_spellcasting_info
 from core.data.skills import SKILL_ABILITY_MAP
 from core.db.models import ABILITY_NAMES, Character
+from core.game.actions import attacks_per_action
+from core.game.item_bonuses import item_bonus_total
+from core.game.skills import PASSIVE_SKILLS, has_jack_of_all_trades, skill_proficiency_part
+from core.game.stats import effective_ability_score
+from api.routers._helpers import effective_ability_mod
 
 
 async def build_character_response(
@@ -36,6 +42,12 @@ async def build_character_response(
     response = CharacterFull.model_validate(char)
     response.has_custom_silhouette = bool(getattr(char, "silhouette_path", None))
     response.spellcasting = build_spellcasting_info(char)
+    response.attacks_per_action = attacks_per_action(char.classes)
+    form = await get_active_form(session, char.id)
+    if form is not None:
+        response.active_form = ActiveForm(
+            companion_id=form.id, name=form.name, current_hp=form.current_hp,
+            max_hp=form.max_hp, temp_hp=form.temp_hp, armor_class=form.armor_class)
 
     hb_ac = await get_passive_modifiers(session, char, "character.ac")
     response.ac_breakdown = AcBreakdown(
@@ -43,6 +55,7 @@ async def build_character_response(
         shield=char.shield_armor_class,
         magic=char.magic_armor,
         homebrew=hb_ac,
+        items=item_bonus_total(char.items, "ac"),
     )
 
     response.hp_max_homebrew_modifier = await get_passive_modifiers(
@@ -52,14 +65,58 @@ async def build_character_response(
         session, char, "character.speed"
     )
 
-    for slug in SKILL_ABILITY_MAP:
+    response.speed_items_modifier = item_bonus_total(char.items, "speed")
+    response.initiative_bonus = (
+        effective_ability_mod(char, "dexterity")
+        + item_bonus_total(char.items, "initiative")
+        + await get_passive_modifiers(session, char, "character.initiative")
+    )
+    _apply_encumbrance(char, response)
+    response.pending_choices = list(char.pending_choices or [])
+
+    response.jack_of_all_trades = has_jack_of_all_trades(char)
+    # Same formula as api.services.skills.skill_bonus / passive_score, reusing the
+    # homebrew lookup once per skill instead of re-querying it.
+    for slug, ability in SKILL_ABILITY_MAP.items():
         val = await get_passive_modifiers(session, char, f"character.skill.{slug}")
         if val:
             response.skills_homebrew_modifiers[slug] = val
+        response.skill_bonuses[slug] = (
+            effective_ability_mod(char, ability) + skill_proficiency_part(char, slug) + val
+        )
+    for slug in PASSIVE_SKILLS:
+        response.passives[slug] = (
+            10 + response.skill_bonuses[slug] + await passive_modifier(session, char, slug)
+        )
 
     for slug in ABILITY_NAMES:
         val = await get_passive_modifiers(session, char, f"character.saving_throw.{slug}")
         if val:
             response.saves_homebrew_modifiers[slug] = val
+        item_val = item_bonus_total(char.items, f"save.{slug}")
+        if item_val:
+            response.saves_items_modifiers[slug] = item_val
 
     return response
+
+
+def _apply_encumbrance(char: Character, response: CharacterFull) -> None:
+    """Total carried weight (+ coins at 50/lb if enabled) and the optional variant level."""
+    cfg = char.settings or {}
+    # Live sum: the stored column can lag when items were just added/changed in this request.
+    total = float(sum(i.weight * i.quantity for i in char.items))
+    response.encumbrance = total
+    cur = char.currency
+    if cfg.get("coin_weight") and cur is not None:
+        total += (cur.copper + cur.silver + cur.electrum + cur.gold + cur.platinum) / 50
+    response.encumbrance_total = total
+    if not cfg.get("encumbrance_variant"):
+        return
+    row = next((a for a in char.ability_scores if a.name == "strength"), None)
+    strength, _ = effective_ability_score(
+        "strength", row.value if row else 10, [i for i in char.items if i.is_equipped]
+    )
+    if total > strength * 10:
+        response.encumbrance_level, response.speed_encumbrance_penalty_ft = "heavily", 20
+    elif total > strength * 5:
+        response.encumbrance_level, response.speed_encumbrance_penalty_ft = "encumbered", 10

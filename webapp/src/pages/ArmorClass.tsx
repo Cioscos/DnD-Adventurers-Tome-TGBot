@@ -98,11 +98,12 @@ export default function ArmorClass() {
 
   const isDirty = base !== '' || shield !== '' || magic !== ''
   const hbAc = char.ac_breakdown?.homebrew ?? 0
-  const acTotal = char.ac + hbAc
+  const itemsAc = char.ac_breakdown?.items ?? 0
+  const acTotal = char.ac + hbAc + itemsAc
   const previewBase = base !== '' ? Number(base) : char.base_armor_class
   const previewShield = shield !== '' ? Number(shield) : char.shield_armor_class
   const previewMagic = magic !== '' ? Number(magic) : char.magic_armor
-  const previewTotal = previewBase + previewShield + previewMagic + hbAc
+  const previewTotal = previewBase + previewShield + previewMagic + hbAc + itemsAc
 
   return (
     <Layout title={t('character.ac.title')} backTo={`/char/${charId}`} group="combat" page="ac">
@@ -166,6 +167,7 @@ export default function ArmorClass() {
           </p>
         </div>
         <HomebrewBreakdownRow value={char.ac_breakdown?.homebrew ?? 0} />
+        <HomebrewBreakdownRow value={itemsAc} label={t('character.ac.items_label')} />
       </Surface>
 
       {/* Single-row 3-col: Base · Shield · Magic */}

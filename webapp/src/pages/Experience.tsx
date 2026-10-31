@@ -25,6 +25,7 @@ import ProgressionPreview from '@/components/character/ProgressionPreview'
 import ClassTabs from '@/components/character/ClassTabs'
 import LevelUpBanner from '@/pages/multiclass/LevelUpBanner'
 import LevelUpModal from '@/pages/multiclass/LevelUpModal'
+import HpRoller from '@/pages/multiclass/HpRoller'
 import ExperienceSkeleton from '@/components/skeletons/ExperienceSkeleton'
 import type { CharacterFull } from '@/types'
 import { useIsFirstValue } from '@/hooks/useIsFirstValue'
@@ -46,6 +47,9 @@ export default function Experience() {
   const [addValue, setAddValue] = useState('')
   const [setMode, setSetMode] = useState(false)
   const [showLevelUpModal, setShowLevelUpModal] = useState(false)
+  // Rolled-HP mode, single class: an XP change that raises the level waits for the die rolls.
+  const [pendingXp, setPendingXp] = useState<{ payload: { add?: number; set?: number }; gained: number } | null>(null)
+  const [xpRolls, setXpRolls] = useState<number[] | null>(null)
   const [levelUpBurstKey, setLevelUpBurstKey] = useState(0)
   const [selectedClassOverride, setSelectedClassOverride] = useState<string | null>(null)
   const reducedMotion = useReducedMotion()
@@ -68,9 +72,11 @@ export default function Experience() {
   const isFirstValue = useIsFirstValue(char)
 
   const mutation = useMutation({
-    mutationFn: ({ add, set }: { add?: number; set?: number }) =>
-      api.characters.updateXP(charId, { add, set }),
+    mutationFn: ({ add, set, hp_rolls }: { add?: number; set?: number; hp_rolls?: number[] }) =>
+      api.characters.updateXP(charId, { add, set, hp_rolls }),
     onSuccess: (updated) => {
+      setPendingXp(null)
+      setXpRolls(null)
       const oldLevel = char ? levelFromXp(char.experience_points) : 0
       const newLevel = levelFromXp(updated.experience_points)
       qc.setQueryData(['character', charId], updated)
@@ -123,18 +129,19 @@ export default function Experience() {
   }
 
   const xp = char.experience_points
-  const level = levelFromXp(xp)
-  const nextThreshold = XP_THRESHOLDS[level] ?? null
+  const totalClassLevel = (char.classes ?? []).reduce((s: number, c: { level: number }) => s + c.level, 0)
+  const milestone = char.settings?.advancement === 'milestone'
+  const level = milestone ? totalClassLevel : levelFromXp(xp)
+  const nextThreshold = milestone ? null : (XP_THRESHOLDS[level] ?? null)
   const prevThreshold = XP_THRESHOLDS[level - 1] ?? 0
   const progress = nextThreshold
     ? Math.round(((xp - prevThreshold) / (nextThreshold - prevThreshold)) * 100)
     : 100
   const xpToNext = nextThreshold ? nextThreshold - xp : 0
 
-  const totalClassLevel = (char.classes ?? []).reduce((s: number, c: { level: number }) => s + c.level, 0)
   const isSingleClass = (char.classes ?? []).length === 1
   const isMulticlass = (char.classes ?? []).length > 1
-  const levelUpAvailable = isMulticlass && level > totalClassLevel
+  const levelUpAvailable = !milestone && isMulticlass && level > totalClassLevel
   const isMaxLevel = level >= 20
 
   // Derived (never '' when char exists): use the user's tab override when it still
@@ -147,17 +154,35 @@ export default function Experience() {
   const currentClassEntry = char.classes?.find((c) => c.class_name === selectedClass)
   const currentClassLevel = currentClassEntry?.level ?? 1
 
+  const soleClass = isSingleClass ? char.classes?.[0] : undefined
+  const rollsWanted = !milestone && char.settings?.hp_mode === 'rolled' && char.settings?.hp_auto_calc !== false
+    && !!soleClass?.hit_die
+  const conMod = char.ability_scores?.find((a) => a.name === 'constitution')?.modifier ?? 0
+
+  /** Sends the XP change, or opens the roll step first when it raises a single class's level in rolled mode. */
+  const submitXp = (payload: { add?: number; set?: number }) => {
+    const newXp = payload.set !== undefined ? Math.max(0, payload.set) : Math.max(0, xp + (payload.add ?? 0))
+    const gained = soleClass ? levelFromXp(newXp) - soleClass.level : 0
+    if (rollsWanted && gained > 0) {
+      setXpRolls(null)
+      setPendingXp({ payload, gained })
+      savingRef.current = false
+      return
+    }
+    mutation.mutate(payload)
+  }
+
   const handleApply = () => {
     if (savingRef.current || mutation.isPending) return
     const n = parseInt(addValue, 10)
     if (isNaN(n)) return
     savingRef.current = true
-    mutation.mutate(setMode ? { set: n } : { add: n })
+    submitXp(setMode ? { set: n } : { add: n })
   }
 
   const handleLevelUp = () => {
     if (nextThreshold === null) return
-    mutation.mutate({ set: nextThreshold })
+    submitXp({ set: nextThreshold })
   }
 
   return (
@@ -167,7 +192,7 @@ export default function Experience() {
         <LevelUpBanner onOpen={() => setShowLevelUpModal(true)} />
       )}
 
-      {isSingleClass && (
+      {isSingleClass && !milestone && (
         <p className="text-xs text-dnd-text-muted text-center italic font-body">
           {t('character.xp.single_class_synced')}
         </p>
@@ -226,6 +251,7 @@ export default function Experience() {
           </p>
         )}
 
+        {!milestone && (
         <div className="flex items-center justify-center gap-2 mt-3">
           <Star size={14} className="text-dnd-amber" />
           <AnimatedNumber
@@ -237,6 +263,7 @@ export default function Experience() {
           />
           <span className="text-xs font-cinzel uppercase tracking-wider text-dnd-text-muted">{t('character.xp.label')}</span>
         </div>
+        )}
 
         {isMaxLevel && (
           <p className="mt-3 text-sm font-display font-bold text-dnd-gold-bright">
@@ -271,7 +298,21 @@ export default function Experience() {
         )}
       </Surface>
 
+      {milestone && !isMaxLevel && (
+        <Button
+          variant="primary"
+          size="lg"
+          fullWidth
+          onClick={() => setShowLevelUpModal(true)}
+          icon={<ChevronsUp size={18} />}
+          haptic="medium"
+        >
+          <span className="font-cinzel tracking-widest uppercase">{t('character.xp.level_up_cta')}</span>
+        </Button>
+      )}
+
       {/* Mode toggle */}
+      {!milestone && (<>
       <Surface variant="flat" className="!p-1.5">
         <div className="grid grid-cols-2 gap-1">
           {(['add', 'set'] as const).map((m) => {
@@ -334,6 +375,29 @@ export default function Experience() {
           </span>
         </Button>
       )}
+      </>)}
+
+      {pendingXp && soleClass?.hit_die && (
+        <Surface variant="elevated" className="space-y-4">
+          <HpRoller
+            die={soleClass.hit_die}
+            count={pendingXp.gained}
+            conMod={conMod}
+            rolls={xpRolls}
+            onRoll={setXpRolls}
+          />
+          <Button
+            variant="primary"
+            size="lg"
+            fullWidth
+            disabled={xpRolls === null}
+            loading={mutation.isPending}
+            onClick={() => mutation.mutate({ ...pendingXp.payload, hp_rolls: xpRolls ?? undefined })}
+          >
+            {t('character.multiclass.level_up.confirm')}
+          </Button>
+        </Surface>
+      )}
 
       {/* Class progression table */}
       {char.classes && char.classes.length > 0 && (
@@ -346,7 +410,7 @@ export default function Experience() {
       {showLevelUpModal && (
         <LevelUpModal
           char={char}
-          xpLevel={level}
+          xpLevel={milestone ? level + 1 : level}
           onClose={() => setShowLevelUpModal(false)}
         />
       )}

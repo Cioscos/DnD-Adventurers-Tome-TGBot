@@ -1,8 +1,8 @@
 """PATCH /characters/{id}/classes/{class_id} — raw single-class edit.
 
 Unlike PATCH /xp and /classes/distribute, this endpoint edits class fields
-(level / subclass / hit_die) WITHOUT recomputing max HP — it is the manual
-"fix my sheet" path. A level INCREASE still re-syncs predefined class-feature
+(level / subclass / hit_die) and, on a level change, recomputes max HP like
+distribute (Task 22). A level INCREASE still re-syncs predefined class-feature
 abilities (e.g. a Monk gaining Ki points at level 2) and feeds spell-slot recalc.
 
 Contract: ``CharacterFull`` (api.classes.update → classes[]/proficiency_bonus/
@@ -31,13 +31,13 @@ async def _monk(client) -> tuple[int, int]:
     return body["id"], body["classes"][0]["id"]
 
 
-async def test_level_edit_does_not_ripple_hp(client):
+async def test_level_edit_recalculates_hp(client):
     cid, gid = await _fighter(client)
     r = await client.patch(f"/characters/{cid}/classes/{gid}", json={"level": 5})
     assert r.status_code == 200, r.text
     body = r.json()
     assert body["classes"][0]["level"] == 5
-    assert body["hit_points"] == 10              # raw edit leaves HP untouched
+    assert body["hit_points"] == 10 + 4 * 6      # level change recalcs HP like distribute (Task 22)
     assert body["proficiency_bonus"] == 3        # total level 5 → +3
 
 

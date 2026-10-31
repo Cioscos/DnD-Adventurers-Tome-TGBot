@@ -1,5 +1,19 @@
 {
+  "catalog": {
+    "title": "SRD catalogue",
+    "search": "Search by name (it/en)...",
+    "empty": "No results",
+    "en_badge": "EN",
+    "show_more": "Show more ({{count}})"
+  },
   "common": {
+    "roll_mode": {
+      "title": "Roll mode",
+      "advantage": "Advantage",
+      "normal": "Normal",
+      "disadvantage": "Disadvantage",
+      "hint": "Press and hold for advantage or disadvantage"
+    },
     "back": "Back",
     "next": "Next",
     "save": "Save",
@@ -69,6 +83,65 @@
     }
   },
   "character": {
+    "level_choice": {
+      "remove": "Remove feat",
+      "remove_confirm": "Confirm removal",
+      "remove_warning": "Ability score increases and saving-throw proficiency are not reverted.",
+      "already_taken": "Already taken",
+      "badge": "Level choices: {{count}}",
+      "title": "Level choice",
+      "asi": "Ability score increase",
+      "feat": "Feat",
+      "points_left": "Points left: {{n}}",
+      "increase": "Increase {{name}}",
+      "decrease": "Decrease {{name}}",
+      "pick_ability": "Ability to increase",
+      "custom": "Custom feat",
+      "custom_name": "Feat name",
+      "custom_text": "Description",
+      "confirm": "Confirm",
+      "error": "Could not save the choice",
+      "feat_label": "Feat",
+      "feats": {
+        "grappler": {
+          "name": "Grappler",
+          "summary": "Advantage on attacks against creatures you are grappling; you can try to pin them."
+        },
+        "alert": {
+          "name": "Alert",
+          "summary": "+5 to initiative; you cannot be surprised while conscious."
+        },
+        "tough": {
+          "name": "Tough",
+          "summary": "+2 maximum hit points per level."
+        },
+        "mobile": {
+          "name": "Mobile",
+          "summary": "+10 feet speed; Dash does not provoke opportunity attacks."
+        },
+        "observant": {
+          "name": "Observant",
+          "summary": "+1 Intelligence or Wisdom; +5 to passive Perception and Investigation."
+        },
+        "resilient": {
+          "name": "Resilient",
+          "summary": "+1 to one ability of your choice and proficiency in its saving throws."
+        },
+        "war_caster": {
+          "name": "War Caster",
+          "summary": "Advantage on Constitution saves to maintain concentration."
+        },
+        "lucky": {
+          "name": "Lucky",
+          "summary": "3 luck points per long rest to reroll a d20."
+        }
+      }
+    },
+    "roll_notes": {
+      "title": "Situational note: {{name}}",
+      "edit": "Edit note: {{name}}",
+      "placeholder": "E.g. advantage vs. charm"
+    },
     "hero": {
       "stats_section": "Statistics",
       "initiative": "Initiative",
@@ -79,6 +152,11 @@
       "none_m": "None",
       "none_f": "None",
       "speed_homebrew_label": "Speed · homebrew rule",
+      "senses": "Senses",
+      "speed_items_label": "Speed · magic items",
+      "encumbrance_encumbered": "Encumbered (variant)",
+      "encumbrance_heavily": "Heavily encumbered (variant)",
+      "encumbrance_heavily_note": "Disadvantage on ability checks, saving throws and attacks that use STR, DEX or CON.",
       "customize": "Customize screen",
       "layout_title": "Screen layout",
       "section_slots": "Spell slots",
@@ -87,6 +165,20 @@
       "move_up": "Move up",
       "move_down": "Move down",
       "toggle_visibility": "Show/hide"
+    },
+    "rest_preview": {
+      "title": "What you recover",
+      "hp": "HP",
+      "hit_dice": "Hit dice",
+      "slots": "Slots",
+      "pact_slots": "Pact slots",
+      "abilities": "Abilities",
+      "resources": "Resources",
+      "charge_full": "+{{count}} (full)",
+      "charges": "Charges",
+      "exhaustion": "Exhaustion",
+      "concentration": "Concentration ends",
+      "nothing": "Nothing to recover"
     },
     "quick_actions": {
       "group_order": "Order",
@@ -137,7 +229,9 @@
       "unconscious_badge": "Unconscious",
       "dead_badge": "Dead",
       "unconfigured_badge": "Needs setup",
-      "delete_failed": "Delete failed. Please try again."
+      "delete_failed": "Delete failed. Please try again.",
+      "import": "Import",
+      "import_failed": "Import failed."
     },
     "menu": {
       "hp": "Hit Points",
@@ -146,6 +240,7 @@
       "skills": "Skills",
       "saves": "Saving Throws",
       "actions": "Actions",
+      "turn": "Turn",
       "spells": "Spells",
       "slots": "Spell Slots",
       "inventory": "Inventory",
@@ -153,6 +248,7 @@
       "abilities": "Special Abilities",
       "class": "Class",
       "xp": "Experience",
+      "extras": "Extras",
       "conditions": "Conditions",
       "rest": "Rest",
       "history": "History",
@@ -192,6 +288,12 @@
       "critical_hit": "Critical hit",
       "modifier_half": "½ Resistance",
       "modifier_double": "×2 Vulnerability",
+      "modifier_none": "Full",
+      "modifier_immune": "Immune",
+      "preview_half": "Resistance",
+      "preview_double": "Vulnerability",
+      "preview_immune": "Immunity",
+      "damage_type": "Damage type (optional)",
       "damage_short": "DMG",
       "heal_short": "HEAL",
       "current_short": "CURR",
@@ -261,6 +363,7 @@
       "shield": "Shield",
       "magic": "Magic",
       "legend": "Base · Shield · Magic",
+      "items_label": "Magic items",
       "total": "Total",
       "new_total": "New AC",
       "from_equipment": "From equipment",
@@ -278,6 +381,12 @@
       "unarmored_formula": "AC {{value}}",
       "unarmored_active_hint": "Base updates with ability scores; do not wear body armor."
     },
+    "senses": {
+      "darkvision": "Darkvision",
+      "blindsight": "Blindsight",
+      "truesight": "Truesight",
+      "tremorsense": "Tremorsense"
+    },
     "skills": {
       "title": "Skills",
       "proficient": "Proficient",
@@ -286,6 +395,8 @@
       "breakdown": "Current bonus: {{total}} = {{abilMod}} {{ability}} {{prof}} prof",
       "prof_bonus": "Proficiency bonus",
       "passive_perception": "Passive Perception",
+      "passive_insight": "Passive Insight",
+      "passive_investigation": "Passive Investigation",
       "roll": "Roll dice",
       "acrobatics": "Acrobatics",
       "animal_handling": "Animal Handling",
@@ -318,6 +429,7 @@
       "homebrew_label": "Homebrew Bonus"
     },
     "actions": {
+      "attacks_per_action": "Attacks per action: {{n}}",
       "title": "Actions",
       "unarmed": "Unarmed Strike",
       "unarmed_desc": "Strike without weapons ({{damage}} + mod, bludgeoning)",
@@ -326,7 +438,16 @@
       "attack": "Attack"
     },
     "attack": {
-      "ammo_missing": "Ammunition empty or not equipped: track it yourself"
+      "ammo_missing": "Ammunition empty or not equipped: track it yourself",
+      "grip_one": "One hand",
+      "grip_two": "Two hands",
+      "mode_melee": "Melee",
+      "mode_thrown": "Thrown",
+      "magic_bonus": "Magic bonus +{{n}}",
+      "proficiency_warning": "Proficiency not listed",
+      "to_hit": "To hit",
+      "damage": "Damage",
+      "damage_critical": "Damage (critical)"
     },
     "ability": {
       "strength_short": "STR",
@@ -428,9 +549,25 @@
       "concentration_break_warn": "You'll break concentration on {{spell}}.",
       "expand": "Expand",
       "collapse": "Collapse",
-      "srd_autofill": "Auto-fill from SRD: level, range, duration, components, damage (empty fields only).",
+      "from_catalog": "Add from catalogue",
+      "reload_catalog": "Reload text from catalogue",
+      "reload_title": "Reload from catalogue?",
+      "reload_body": "Name, description, casting time, range, duration and at higher levels will be replaced with the catalogue text.",
+      "reload_confirm": "Reload",
+      "upcast_auto": "Higher levels: +{{dice}} per level (already included)",
+      "schools": {
+        "abjuration": "Abjuration",
+        "conjuration": "Conjuration",
+        "divination": "Divination",
+        "enchantment": "Enchantment",
+        "evocation": "Evocation",
+        "illusion": "Illusion",
+        "necromancy": "Necromancy",
+        "transmutation": "Transmutation"
+      },
       "filters": {
         "level": "Level",
+        "school": "School",
         "property": "Properties",
         "level_n": "Lv {{level}}",
         "clear": "Clear filters",
@@ -547,6 +684,16 @@
       "pool_cap_reached": "Maximum dice limit reached"
     },
     "conditions": {
+      "duration": {
+        "label": "Duration in rounds",
+        "until_end": "Until ended",
+        "one_round": "1 round",
+        "one_minute": "1 minute = 10",
+        "input_aria": "Duration in rounds",
+        "left": "{{n}} rounds",
+        "tick": "End of round (−1)",
+        "expired": "Expired: {{names}}"
+      },
       "title": "Conditions",
       "exhaustion": "Exhaustion (level {{level}})",
       "exhaustion_level": "Exhaustion level",
@@ -626,6 +773,7 @@
       "proficiencies": "Proficiencies",
       "damage_modifiers": "Damage Modifiers",
       "physicality": "Physicality",
+      "senses": "Senses",
       "culture": "Culture",
       "resistances": "Resistances",
       "immunities": "Immunities",
@@ -642,11 +790,24 @@
       "private_badge": "Private info",
       "private_hint": "Background, ideals, bonds, flaws: visible to the player only.",
       "language_placeholder": "Add language…",
+      "proficiencies_armor": "Proficiencies: armor",
+      "proficiencies_weapons": "Proficiencies: weapons",
+      "proficiencies_tools": "Proficiencies: tools",
+      "proficiencies_other": "Other proficiencies",
+      "appearance": "Appearance",
+      "appearance_age": "Age",
+      "appearance_height": "Height",
+      "appearance_weight": "Weight",
+      "appearance_eyes": "Eyes",
+      "appearance_hair": "Hair",
+      "appearance_skin": "Skin",
       "proficiency_placeholder": "Add proficiency…",
       "unsaved_changes": "Unsaved changes",
       "save_now": "Save now",
       "damage_already_in": "{{type}} is already in another list",
-      "damage_vuln_wins_hint": "If the same damage type appears in multiple lists, D&D says vulnerability wins.",
+      "damage_vuln_wins_hint": "A damage type lives in one list only. On the HP page, picking the type applies resistances and immunities automatically.",
+      "damage_custom_placeholder": "Add custom (homebrew)…",
+      "damage_custom_hint": "Custom entries: not applied automatically to damage calculation.",
       "resistances_short": "Res.",
       "immunities_short": "Imm.",
       "vulnerabilities_short": "Vul."
@@ -661,6 +822,71 @@
       "on": "On",
       "off": "Off",
       "aria": "Heroic Inspiration"
+    },
+    "extras": {
+      "title": "Extras",
+      "add": "Add",
+      "empty": "No familiars, companions or forms saved.",
+      "kind": "Type",
+      "from_catalog": "Pick from monster catalogue",
+      "cr": "CR",
+      "name": "Name",
+      "hp": "Max HP",
+      "ac": "AC",
+      "attack": "Attack",
+      "to_hit": "Bonus",
+      "damage": "Damage",
+      "notes": "Notes",
+      "amount": "Amount",
+      "down": "Down (0 HP)",
+      "active": "Active form",
+      "activate": "Activate form",
+      "end_form": "End form",
+      "in_form_of": "In the form of {{name}}",
+      "hp_goes_to_form": "Damage and healing go to the form: {{name}}",
+      "character_down": "The character is at 0 HP: cannot assume a form.",
+      "force_title": "No Wild Shape uses left",
+      "force_body": "You have no uses left. Activate the form anyway?",
+      "force_confirm": "Activate anyway",
+      "delete_title": "Delete {{name}}?",
+      "limit": "Limit of 30 entries reached.",
+      "critical": "critical",
+      "statblock": "Statblock",
+      "kinds": {
+        "familiar": "Familiars",
+        "companion": "Companions",
+        "mount": "Mounts",
+        "summon": "Summons",
+        "wild_shape": "Wild shapes"
+      },
+      "warn": {
+        "familiar_form": "This creature is not an allowed familiar form (advisory, you can still add it).",
+        "not_beast": "Wild Shape requires a beast (advisory, you can still add it).",
+        "cr": "CR exceeds the limit for your druid level (max {{cr}}).",
+        "fly": "No flying speed before druid level 8.",
+        "swim": "No swimming speed before druid level 4."
+      }
+    },
+    "turn": {
+      "title": "Turn",
+      "round": "Round {{n}}",
+      "attacks_per_action": "Attacks per action: {{n}}",
+      "section_action": "Action",
+      "section_bonus_action": "Bonus action",
+      "section_reaction": "Reaction",
+      "section_other": "Other",
+      "used": "Used",
+      "mark_used": "Mark as used",
+      "new_turn": "New turn",
+      "end_round": "End of round (−1)",
+      "empty": "Nothing here",
+      "unarmed": "Unarmed strike",
+      "attack": "Attack",
+      "cast": "Cast",
+      "use": "Use",
+      "no_uses": "No uses left",
+      "banner": "It's your turn",
+      "banner_cta": "Open the Turn view"
     },
     "inSession": {
       "label": "In active session",
@@ -796,6 +1022,10 @@
       "empty_hint": "Equip your hero: add a weapon, armor, or item.",
       "no_search_results": "No results",
       "item_name": "Item name",
+      "from_equipment": "Equipment from catalogue",
+      "from_magic": "Magic item from catalogue",
+      "range_label": "Range",
+      "thrown_range_label": "Thrown range",
       "item_type": "Type",
       "add_short": "Add",
       "description": "Description",
@@ -805,6 +1035,97 @@
       "modifier": "Modifier",
       "damage_type_label": "Damage type",
       "weapon_type_label": "Weapon type",
+      "magic": {
+        "is_magic": "Magic item",
+        "rarity_label": "Rarity",
+        "rarity_none": "None",
+        "rarity": {
+          "common": "Common",
+          "uncommon": "Uncommon",
+          "rare": "Rare",
+          "very_rare": "Very rare",
+          "legendary": "Legendary",
+          "artifact": "Artifact"
+        },
+        "cost_gp": "Value (gp)",
+        "requires_attunement": "Requires attunement",
+        "bonuses": "Bonuses",
+        "bonus_target": "Bonus target",
+        "bonus_value": "Bonus value",
+        "add_bonus": "Add bonus",
+        "remove": "Remove",
+        "targets": {
+          "ac": "AC",
+          "saves": "All saves",
+          "attack": "Attack",
+          "damage": "Damage",
+          "spell_attack": "Spell attack",
+          "spell_dc": "Spell DC",
+          "speed": "Speed",
+          "initiative": "Initiative",
+          "save": {
+            "strength": "Strength save",
+            "dexterity": "Dexterity save",
+            "constitution": "Constitution save",
+            "intelligence": "Intelligence save",
+            "wisdom": "Wisdom save",
+            "charisma": "Charisma save"
+          }
+        },
+        "has_charges": "Has charges",
+        "charges_max": "Max charges",
+        "charges_current": "Current charges",
+        "recharge_label": "Recharge",
+        "recharge": {
+          "long_rest": "Long rest",
+          "short_rest": "Short rest",
+          "dawn": "At dawn",
+          "none": "Never"
+        },
+        "recharge_amount": "Charges regained (\"all\" or dice, e.g. 1d6+1)",
+        "recharge_amount_invalid": "Use \"all\" or dice notation like 1d6+1",
+        "granted_spells": "Granted spells",
+        "spell_name": "Spell name",
+        "spell_level": "Level",
+        "spell_cost": "Charge cost",
+        "spell_concentration": "Concentration",
+        "add_spell": "Add spell",
+        "attunement_title": "Attunement",
+        "attunement_limit": "You already have 3 attuned items",
+        "slot_empty": "Empty slot",
+        "attunable": "Awaiting attunement",
+        "attune": "Attune",
+        "unattune": "End attunement",
+        "attuned": "Attuned",
+        "not_attuned": "Not attuned",
+        "charges": "Charges",
+        "charges_decrease": "Use a charge",
+        "charges_increase": "Add a charge",
+        "cantrip": "Cantrip",
+        "spell_level_n": "Level {{level}}",
+        "cost_n": "{{n}} charges",
+        "cast": "Cast",
+        "cast_done": "{{name}} cast",
+        "spell_save_dc": "DC (optional)",
+        "spell_attack_bonus": "Attack bonus (optional)",
+        "no_charges": "This item has no charges",
+        "cast_spent": "Charges spent: {{n}}",
+        "cast_remaining": "{{current}}/{{max}} left",
+        "dc_save": "DC {{dc}} — {{ability}} save",
+        "dc_only": "DC {{dc}}",
+        "attack_bonus": "Attack {{bonus}}",
+        "roll_attack": "Roll to hit",
+        "not_enough_charges": "Not enough charges",
+        "attunement_required": "This item requires attunement"
+      },
+      "magic_bonus_label": "Magic bonus (+0 to +10)",
+      "versatile_dice_label": "Two-handed die (versatile)",
+      "weapon_category_label": "Weapon category",
+      "weapon_category": {
+        "none": "None",
+        "simple": "Simple",
+        "martial": "Martial"
+      },
       "properties_label": "Properties",
       "armor_type_label": "Armor type",
       "ac_value_label": "AC value",
@@ -933,6 +1254,15 @@
       "description_label": "Description",
       "max_uses_label": "Max uses",
       "restoration_label": "Restoration",
+      "action_type_label": "Action type",
+      "action_type": {
+        "none": "None",
+        "action": "Action",
+        "bonus_action": "Bonus action",
+        "reaction": "Reaction",
+        "free": "Free",
+        "special": "Special"
+      },
       "edit": "Edit",
       "detail": {
         "no_description": "No description available"
@@ -990,6 +1320,9 @@
         "new_spell_slot": "New {{level}}th level spell slot",
         "confirm": "Confirm",
         "at_max_toast": "Class at max level",
+        "roll_hp": "Roll {{count}}d{{die}} for HP",
+        "roll_hp_result": "Roll {{roll}} + CON {{con}} = {{total}} HP",
+        "roll_hp_required": "Roll the hit die to continue",
         "progression_missing": "Progression data unavailable"
       },
       "resource_max_increased": "{{name}}: max {{prev}} → {{next}}",
@@ -1009,6 +1342,12 @@
       }
     },
     "settings": {
+      "war_caster_label": "Advantage on concentration saves (War Caster)",
+      "war_caster_hint": "Roll Constitution saves to maintain concentration with advantage.",
+      "encumbrance_variant_label": "Detailed encumbrance",
+      "encumbrance_variant_hint": "Thresholds STR×5 ({{slow1}}) and STR×10 ({{slow2}}, disadvantage on STR/DEX/CON checks, saves and attacks).",
+      "coin_weight_label": "Coin weight",
+      "coin_weight_hint": "50 coins weigh {{unit_weight}} and count toward encumbrance.",
       "title": "Settings",
       "spell_slots_mode": "Spell slots mode",
       "mode_auto": "AUTO",
@@ -1050,6 +1389,20 @@
       "history_retention_total": "Current history: {{n}} entries.",
       "history_retention_preview_events": "Last {{keep}} events: you'd lose {{n}} older entries now.",
       "history_retention_preview_days": "Last {{days}} days: you'd lose {{n}} older entries.",
+      "transfer": {
+        "title": "Export and copy",
+        "export": "Export",
+        "export_hint": "Save the sheet as a JSON file or send it to chat.",
+        "duplicate": "Duplicate",
+        "duplicate_hint": "Create a copy of this character.",
+        "duplicate_failed": "Duplicate failed. Please try again.",
+        "send": "Send to Telegram chat",
+        "download": "Download file",
+        "download_only": "Sending to chat is unavailable: only the file download works.",
+        "sent": "File sent to chat.",
+        "send_failed": "Sending failed. Please try again.",
+        "export_failed": "Export failed. Please try again."
+      },
       "danger_zone": "Danger zone",
       "delete_character": "Delete character",
       "reset_settings": "Reset settings",
@@ -1067,6 +1420,12 @@
           "disabled_hint": "Enable 3D animation to pick a pack.",
           "load_error": "Failed to load pack, restored default."
         }
+      },
+      "advancement": {
+        "milestone_toggle": "Milestone advancement",
+        "milestone_hint": "Level up without tracking XP: the level-up button replaces the XP counter.",
+        "rolled_hp_toggle": "Rolled HP",
+        "rolled_hp_hint": "On level-up, roll the hit die instead of taking the fixed value."
       },
       "hp": {
         "title": "Hit Points",
@@ -1105,6 +1464,28 @@
       "step_identity": "Identity",
       "identity_skip": "Skip: fill in later",
       "identity_optional_hint": "All optional: you can skip and fill in later.",
+      "step_species": "Species",
+      "step_abilities": "Ability scores",
+      "species_hint": "Pick a species from the catalogue (optional) or type your own.",
+      "species_pick": "Pick from catalogue",
+      "subrace": "Subrace",
+      "subrace_none": "None",
+      "species_speed": "Speed",
+      "species_clear": "Remove species",
+      "species_free": "Species (free text)",
+      "sense_darkvision": "Darkvision",
+      "sense_blindsight": "Blindsight",
+      "sense_truesight": "Truesight",
+      "sense_tremorsense": "Tremorsense",
+      "scores_mode_array": "Standard array",
+      "scores_mode_pointbuy": "Point buy",
+      "scores_mode_roll": "Roll 4d6",
+      "scores_mode_manual": "Manual",
+      "points_left": "Points: {{left}} / {{total}}",
+      "roll_4d6": "Roll 4d6 (drop lowest)",
+      "reroll": "Reroll",
+      "scores_skip": "Skip: leave all at 10",
+      "background_pick": "Pick background from catalogue",
       "create_cta": "Create"
     },
     "equipment": {
@@ -1230,6 +1611,7 @@
     }
   },
   "layout": {
+    "server_outdated": "The server is out of date: some features may not work.",
     "nav": {
       "go_to": "Go to {{page}}"
     },
@@ -1426,6 +1808,7 @@
     "disabled_state": "Disabled",
     "install_success": "Template installed",
     "delete_success": "Rule deleted",
+    "feat_label": "Feat",
     "from_template": "From template",
     "no_rules_yet": "No rules yet. Install a template to get started.",
     "load_error": "Couldn't load rules. Try again later.",

@@ -8,6 +8,9 @@ import { Plus, Weight, ChevronRight, Pencil, RotateCcw } from 'lucide-react'
 import { GiKnapsack as Backpack } from 'react-icons/gi'
 import { api, ApiError } from '@/api/client'
 import { useAnimatedRoll } from '@/dice/useAnimatedRoll'
+import { useD20Roll, d20Arg, type RollMode } from '@/hooks/useD20Roll'
+import type { WeaponChoice } from '@/lib/weaponOptions'
+import { useWeaponChoices, choiceOf } from '@/store/weaponChoiceStore'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
@@ -26,9 +29,12 @@ import { canShareMessage, haptic } from '@/auth/telegram'
 import { useShareMessage } from '@/hooks/useShareMessage'
 import InventoryItem, { type ItemProperty } from '@/pages/inventory/InventoryItem'
 import ItemForm from '@/pages/inventory/ItemForm'
+import AttunementSection from '@/pages/inventory/AttunementSection'
+import { useItemCast } from '@/pages/spells/useItemCast'
 import { INVENTORY_TYPE_ORDER, buildItemMetadata, buildHomebrewMetadataPatch, type ItemFormData, type ItemEffect } from '@/pages/inventory/itemMetadata'
 import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import { getItemTypeIcon } from '@/lib/itemIcons'
+import { itemGrantedSpells } from '@/lib/itemMagic'
 import type { Item } from '@/types'
 import InventorySkeleton from '@/components/skeletons/InventorySkeleton'
 
@@ -54,9 +60,13 @@ export default function Inventory() {
   type AttackState = {
     result: WeaponAttackResult
     itemId: number
+    choice: WeaponChoice
     wasRerolled: boolean
   }
   const [attackState, setAttackState] = useState<AttackState | null>(null)
+  // Scelta pre-attacco ricordata per arma (una/due mani, mischia/lancio).
+  const weaponChoices = useWeaponChoices((s) => s.choices)
+  const setWeaponChoice = useWeaponChoices((s) => s.setChoice)
   const [slotPickerItem, setSlotPickerItem] = useState<Item | null>(null)
   const [equipConflict, setEquipConflict] = useState<{ item: Item; slot: EquipmentSlot; removedItem: Item } | null>(null)
   const toast = useToast()
@@ -252,25 +262,39 @@ export default function Inventory() {
     },
   })
 
+  const chargesMutation = useMutation({
+    mutationFn: ({ itemId, delta }: { itemId: number; delta: number }) => api.items.charges(charId, itemId, delta),
+    onSuccess: (updated) => {
+      qc.setQueryData(['character', charId], updated)
+      haptic.light()
+    },
+    onError: () => toast.error(t('common.action_failed')),
+  })
+  const itemCast = useItemCast(charId)
+
   const shareItem = useShareMessage((itemId: number) => api.share.item(charId, itemId))
 
   const rollDice = useAnimatedRoll()
+  const rollD20 = useD20Roll()
 
   const attackMutation = useMutation({
-    mutationFn: async (itemId: number) => {
-      const die = (await rollDice('d20', 1))?.[0]
-      return api.items.attack(charId, itemId, false, die)
-    },
-    onSuccess: (result, itemId) => {
-      setAttackState({ result, itemId, wasRerolled: false })
+    mutationFn: async ({ itemId, mode }: { itemId: number; mode: RollMode }) =>
+      api.items.attack(
+        charId, itemId, false, d20Arg(mode, await rollD20(mode)),
+        choiceOf(weaponChoices, itemId),
+      ),
+    onSuccess: (result, { itemId }) => {
+      setAttackState({
+        result, itemId, choice: choiceOf(weaponChoices, itemId), wasRerolled: false,
+      })
       haptic.success()
     },
   })
 
   const attackRerollMutation = useMutation({
-    mutationFn: async (itemId: number) => {
+    mutationFn: async ({ itemId, choice }: { itemId: number; choice: WeaponChoice }) => {
       const die = (await rollDice('d20', 1))?.[0]
-      return api.items.attack(charId, itemId, true, die)
+      return api.items.attack(charId, itemId, true, die, choice)
     },
     onSuccess: (result) => {
       setAttackState((prev) => prev && { ...prev, result, wasRerolled: true })
@@ -400,7 +424,7 @@ export default function Inventory() {
   }
 
   const items: Item[] = char.items ?? []
-  const totalWeight = items.reduce((sum, i) => sum + i.weight * i.quantity, 0)
+  const totalWeight = char.encumbrance_total ?? items.reduce((sum, i) => sum + i.weight * i.quantity, 0)
 
   const TYPE_ORDER: readonly string[] = INVENTORY_TYPE_ORDER
   const grouped = items.reduce<Record<string, Item[]>>((acc, item) => {
@@ -551,6 +575,8 @@ export default function Inventory() {
         />
       )}
 
+      <AttunementSection charId={charId} items={items} />
+
       <ScrollArea>
         {orderedTypes.map((type) => {
           const groupItems = grouped[type]
@@ -601,13 +627,15 @@ export default function Inventory() {
                             onToggle={() => setExpanded(expanded === item.id ? null : item.id)}
                             onEquipToggle={() => handleEquipToggle(item)}
                             onQuantityChange={(delta) => updateQty.mutate({ itemId: item.id, quantity: item.quantity + delta })}
-                            onAttack={() => attackMutation.mutate(item.id)}
+                            onAttack={(mode) => attackMutation.mutate({ itemId: item.id, mode })}
+                            weaponChoice={choiceOf(weaponChoices, item.id)}
+                            onWeaponChoice={(c) => setWeaponChoice(item.id, c)}
                             onUse={() => setUseTarget(item)}
                             onEdit={() => handleEdit(item)}
                             onDelete={() => setDeleteTarget(item.id)}
                             onShare={canShareMessage() ? () => shareItem.mutate(item.id) : undefined}
                             equipPending={toggleEquip.isPending && toggleEquip.variables?.itemId === item.id}
-                            attackPending={attackMutation.isPending && attackMutation.variables === item.id}
+                            attackPending={attackMutation.isPending && attackMutation.variables?.itemId === item.id}
                             usePending={consumeMutation.isPending && consumeMutation.variables === item.id}
                             quantityPending={updateQty.isPending && updateQty.variables?.itemId === item.id}
                             sharePending={shareItem.isPending && shareItem.variables === item.id}
@@ -615,6 +643,10 @@ export default function Inventory() {
                             locale={locale}
                             onSetProperty={handleSetProperty}
                             setPropertyPending={setPropertyMutation.isPending && setPropertyMutation.variables?.itemId === item.id}
+                            onCharges={(delta) => chargesMutation.mutate({ itemId: item.id, delta })}
+                            onCastSpell={(i) => itemCast.mutate({ itemId: item.id, spellIndex: i, name: itemGrantedSpells(item)[i]?.name ?? '' })}
+                            chargesPending={chargesMutation.isPending && chargesMutation.variables?.itemId === item.id}
+                            castPending={itemCast.isPending && itemCast.variables?.itemId === item.id}
                           />
                         </m.div>
                       ))}
@@ -636,13 +668,15 @@ export default function Inventory() {
         />
       )}
 
+      {itemCast.elements}
+
       {attackState && (
         <WeaponAttackModal
           result={attackState.result}
           inspirationAvailable={Boolean(char?.heroic_inspiration)}
           isRerolling={attackRerollMutation.isPending}
           wasRerolled={attackState.wasRerolled}
-          onInspirationReroll={() => attackRerollMutation.mutate(attackState.itemId)}
+          onInspirationReroll={() => attackRerollMutation.mutate({ itemId: attackState.itemId, choice: attackState.choice })}
           onClose={() => setAttackState(null)}
         />
       )}

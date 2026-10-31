@@ -8,6 +8,12 @@ import Sheet from '@/components/ui/Sheet'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import ChipSelect from '@/components/ui/ChipSelect'
+import DamageTypeControls from '@/components/ui/DamageTypeControls'
+import HPGauge from '@/components/ui/HPGauge'
+import CharacterHpSecondary from '@/components/character/CharacterHpSecondary'
+import {
+  applyDamageModifier, damageMultiplier, damagePreviewText, type DamageModifier,
+} from '@/lib/damageModifier'
 import { showUndoToast } from '@/components/ui/UndoToast'
 import { useToast } from '@/hooks/useToast'
 import { haptic } from '@/auth/telegram'
@@ -32,10 +38,17 @@ export default function HpQuickSheet({ char, open, onClose }: HpQuickSheetProps)
   const toast = useToast()
   const [op, setOp] = useState<'damage' | 'heal'>('damage')
   const [amount, setAmount] = useState('')
+  const [damageType, setDamageType] = useState('')
+  const [damageModifier, setDamageModifier] = useState<DamageModifier>(null)
 
   const hpMutation = useMutation({
-    mutationFn: ({ op, value }: { op: 'damage' | 'heal'; value: number }) =>
-      api.characters.updateHp(char.id, op, value),
+    mutationFn: ({ op, value, modifier }: {
+      op: 'damage' | 'heal'; value: number
+      modifier?: { damage_modifier?: 'half' | 'double' | 'none' | 'immune'; raw_value?: number; damage_type?: string }
+    }) =>
+      modifier
+        ? api.characters.updateHp(char.id, op, value, false, modifier)
+        : api.characters.updateHp(char.id, op, value),
   })
 
   // Annulla tramite lo snapshot del server (mai set_current dal client). 409 = i PF
@@ -62,10 +75,20 @@ export default function HpQuickSheet({ char, open, onClose }: HpQuickSheetProps)
   const parsedAmount = parseCounterInput(amount, null)
   const isAmountInvalid = parsedAmount === null || parsedAmount === 0
 
+  const proposedModifier = damageMultiplier(char.damage_modifiers, damageType)
+  const effective: DamageModifier = damageModifier ?? (damageType ? proposedModifier : null)
+  const showPreview = op === 'damage' && !!effective && effective !== 'none' && !isAmountInvalid
+
   const apply = () => {
     const n = parsedAmount
     if (n === null || n === 0) { haptic.error(); return }
-    hpMutation.mutate({ op, value: n }, {
+    // Come in HP.tsx: l'override dell'utente viaggia esplicito (valore già applicato),
+    // altrimenti il server applica le resistenze al tipo.
+    const type = op === 'damage' && damageType ? { damage_type: damageType } : {}
+    const payload = op === 'damage' && damageModifier
+      ? { value: applyDamageModifier(n, damageModifier), modifier: { damage_modifier: damageModifier, raw_value: n, ...type } }
+      : { value: n, modifier: 'damage_type' in type ? type : undefined }
+    hpMutation.mutate({ op, ...payload }, {
       onSuccess: (updated) => {
         qc.setQueryData(['character', char.id], updated)
         qc.invalidateQueries({ queryKey: ['homebrew-resources', char.id] })
@@ -85,6 +108,8 @@ export default function HpQuickSheet({ char, open, onClose }: HpQuickSheetProps)
           })
         }
         setAmount('')
+        setDamageType('')
+        setDamageModifier(null)
         onClose()
       },
     })
@@ -93,6 +118,28 @@ export default function HpQuickSheet({ char, open, onClose }: HpQuickSheetProps)
   return (
     <Sheet open={open} onClose={onClose} title={t('character.hp.quick_sheet_title')}>
       <div className="p-5 space-y-3">
+        {char.active_form && (
+          <div className="text-center space-y-1.5">
+            <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim">{char.active_form.name}</p>
+            <p data-testid="form-hp-primary" className="font-mono tabular-nums">
+              <span className="text-2xl font-bold text-dnd-text">{char.active_form.current_hp}/{char.active_form.max_hp}</span>
+              {char.active_form.temp_hp > 0 && (
+                <span className="ml-1.5 text-sm text-dnd-cobalt-bright">(+{char.active_form.temp_hp})</span>
+              )}
+            </p>
+            <HPGauge
+              current={char.active_form.current_hp}
+              max={char.active_form.max_hp}
+              temp={char.active_form.temp_hp}
+              size="sm"
+              segmented
+            />
+            <CharacterHpSecondary char={char} />
+            <p className="text-sm font-body text-dnd-emerald-bright">
+              {t('character.extras.hp_goes_to_form', { name: char.active_form.name })}
+            </p>
+          </div>
+        )}
         <ChipSelect
           label=""
           options={[
@@ -103,6 +150,15 @@ export default function HpQuickSheet({ char, open, onClose }: HpQuickSheetProps)
           onChange={(v) => setOp(v as 'damage' | 'heal')}
           columns={2}
         />
+        {op === 'damage' && (
+          <DamageTypeControls
+            damageType={damageType}
+            setDamageType={setDamageType}
+            damageModifier={damageModifier}
+            setDamageModifier={setDamageModifier}
+            proposedModifier={proposedModifier}
+          />
+        )}
         <Input
           label={t('character.hp.quick_apply')}
           value={amount}
@@ -113,6 +169,15 @@ export default function HpQuickSheet({ char, open, onClose }: HpQuickSheetProps)
           autoFocus
           placeholder="0"
         />
+        {showPreview && (
+          <p className="text-center font-mono text-sm tabular-nums text-dnd-cobalt-bright">
+            {damagePreviewText(
+              damageType && effective ? t(`character.hp.preview_${effective}`) : null,
+              parsedAmount,
+              applyDamageModifier(parsedAmount, effective),
+            )}
+          </p>
+        )}
         <Button
           variant={op === 'damage' ? 'danger' : 'primary'}
           fullWidth

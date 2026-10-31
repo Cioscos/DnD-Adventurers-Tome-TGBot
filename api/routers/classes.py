@@ -25,6 +25,8 @@ from core.data.classes import (
     class_table_key,
     get_saving_throw_proficiencies,
 )
+from api.services.choices import add_asi_choices
+from api.services.hp_rolls import record_rolls, stored_rolls
 from api.services.class_features import sync_class_feature_abilities
 from core.data.xp_thresholds import xp_to_level
 from core.game.stats import hit_points_for_level, total_base_hp
@@ -160,6 +162,18 @@ async def create_class_for_character(
     return cls
 
 
+def _recalc_max_hp(char, old_total_hp: int, old_current_hp: int) -> int:
+    """Recompute max HP (rolled values included), ratio-scale current HP.
+    Returns the positive max-HP delta; no-op when hp_auto_calc is off."""
+    if not (char.settings or {}).get("hp_auto_calc", True):
+        return 0
+    new_total_hp = total_base_hp(char.classes, effective_con_mod(char), stored_rolls(char))
+    new_current = round(old_current_hp / old_total_hp * new_total_hp) if old_total_hp > 0 else old_current_hp
+    char.hit_points = new_total_hp
+    char.current_hit_points = max(0, min(new_current, new_total_hp))
+    return max(0, new_total_hp - old_total_hp)
+
+
 # ---------------------------------------------------------------------------
 # Classes
 # ---------------------------------------------------------------------------
@@ -206,7 +220,9 @@ async def distribute_class_levels(
     if existing_ids != body_ids:
         raise HTTPException(status_code=400, detail="classes_mismatch")
 
-    target_sum = xp_to_level(char.experience_points or 0)
+    # Milestone advancement ignores XP: only the global level cap applies.
+    milestone = (char.settings or {}).get("advancement") == "milestone"
+    target_sum = 20 if milestone else xp_to_level(char.experience_points or 0)
     new_sum = sum(entry.level for entry in body.classes)
     # Allow sum <= target (multi-pending level-up applies +1 per commit and
     # reopens the modal for remaining levels). Reject only sum > target,
@@ -223,28 +239,29 @@ async def distribute_class_levels(
     old_total_hp = char.hit_points or 0
     old_current_hp = char.current_hit_points or 0
 
-    # Apply level changes + resource sync
-    for cls in char.classes:
-        new_level = new_levels[cls.id]
+    classes_by_id = {c.id: c for c in char.classes}
+    gained_total = sum(max(0, e.level - classes_by_id[e.class_id].level) for e in body.classes)
+    if body.hp_rolls is not None and len(body.hp_rolls) != gained_total:
+        raise HTTPException(status_code=422, detail="hp_rolls must have one value per gained level")
+    rolls_left = list(body.hp_rolls) if body.hp_rolls is not None else None
+
+    # Apply level changes + resource sync (body order = hp_rolls order)
+    for entry in body.classes:
+        cls = classes_by_id[entry.class_id]
+        new_level = entry.level
         if new_level == cls.level:
             continue
+        gained = max(0, new_level - cls.level)
+        mine, rolls_left = (
+            (rolls_left[:gained], rolls_left[gained:]) if rolls_left is not None else (None, None)
+        )
+        record_rolls(char, cls, cls.level, new_level, mine)
+        add_asi_choices(char, cls.class_name, cls.level, new_level)
         cls.level = new_level
         await sync_class_feature_abilities(session, char, cls, lang=lang)
 
     # HP recalc (respecting hp_auto_calc); populate hp_gained for toast parity with PATCH /xp
-    settings = char.settings or {}
-    hp_gained = 0
-    if settings.get("hp_auto_calc", True):
-        con_mod = effective_con_mod(char)
-        new_total_hp = total_base_hp(char.classes, con_mod)
-        if old_total_hp > 0:
-            ratio = old_current_hp / old_total_hp
-            new_current = round(ratio * new_total_hp)
-        else:
-            new_current = old_current_hp
-        hp_gained = max(0, new_total_hp - old_total_hp)
-        char.hit_points = new_total_hp
-        char.current_hit_points = max(0, min(new_current, new_total_hp))
+    hp_gained = _recalc_max_hp(char, old_total_hp, old_current_hp)
 
     # Re-fetch so newly-inserted ClassResource rows (e.g. Punti Ki on a fresh
     # Monaco level) appear in the response — otherwise the FE multiclass card
@@ -280,11 +297,19 @@ async def update_class(
     if data.get("hit_dice_used") is not None:
         effective_level = data.get("level") or cls.level or 1
         data["hit_dice_used"] = max(0, min(int(data["hit_dice_used"]), int(effective_level)))
+    hp_rolls = data.pop("hp_rolls", None)
+    if hp_rolls is not None and (body.level is None or body.level == old_level):
+        raise HTTPException(status_code=422, detail="hp_rolls requires a level change")
+    old_total_hp = char.hit_points or 0
+    old_current_hp = char.current_hit_points or 0
     for field, value in data.items():
         setattr(cls, field, value)
+    add_asi_choices(char, cls.class_name, old_level, cls.level)
 
-    # When level changes, sync class-feature abilities for predefined classes.
-    if body.level is not None and body.level != old_level:
+    # When level changes, sync class-feature abilities and recalc max HP like distribute.
+    level_changed = body.level is not None and body.level != old_level
+    if level_changed:
+        record_rolls(char, cls, old_level, cls.level, hp_rolls)
         await sync_class_feature_abilities(session, char, cls, lang=lang)
 
     # Flush pending setattr mutations before any relationship traversal —
@@ -294,6 +319,7 @@ async def update_class(
     # has not been called").
     await session.flush()
     await session.refresh(char, attribute_names=["classes"])
+    hp_gained = _recalc_max_hp(char, old_total_hp, old_current_hp) if level_changed else 0
 
     # Emit level_up event for installed homebrew rules.
     # DEVIATION FROM PLAN LITERAL: plan says `if new_level != old_level`, which
@@ -320,6 +346,8 @@ async def update_class(
     response = await build_character_response(session, char)
     if notifications:
         response.homebrew_notifications = notifications
+    if hp_gained > 0:
+        response.hp_gained = hp_gained
     return response
 
 
@@ -350,7 +378,7 @@ async def remove_class(
     settings = char.settings or {}
     if settings.get("hp_auto_calc", True):
         con_mod = effective_con_mod(char)
-        new_total_hp = total_base_hp(char.classes, con_mod)
+        new_total_hp = total_base_hp(char.classes, con_mod, stored_rolls(char))
         if old_total_hp > 0:
             ratio = old_current_hp / old_total_hp
             new_current = round(ratio * new_total_hp)

@@ -15,12 +15,16 @@ from sqlalchemy.orm import selectinload
 
 from api.auth import get_current_user
 from api.database import get_db
+from api.services.d20 import d20_records, resolve_body
 from api.services.dice_stats import record_dice
 from api.services.effects import apply_heal
+from api.services.item_charges import plan_item_recharges, set_item_charges
+from api.services.durations import end_concentration, is_concentrating
+from api.services.wild_shape import absorb_damage, deactivate_other_forms, get_active_form
 from api.services.telegram_notify import notify_party_emergency
 from api.services.homebrew.dispatcher import dispatch
 from api.services.homebrew.passive import get_passive_modifiers
-from core.db.models import Character, CharacterHistory
+from core.db.models import Character, CharacterHistory, Companion
 from api.schemas.character import CharacterFull
 from api.schemas.common import (
     D20RollSubmission,
@@ -30,8 +34,12 @@ from api.schemas.common import (
     HPOp,
     HPUndoRequest,
     HPUpdate,
+    ItemChargePreview,
+    RestPreview,
     RestRequest,
 )
+from core.data.damage_types import LABELS_IT, canonical_damage_type, damage_multiplier
+from api.services.hp_rolls import stored_rolls
 from core.game.stats import total_base_hp
 from api.routers._helpers import collect_homebrew_notifications, effective_con_mod, roll_concentration_save
 from api.schemas.common import ConcentrationSaveResult
@@ -101,15 +109,23 @@ async def _get_owned_full(
     return char
 
 
-def _hp_state(char: Character) -> dict:
-    """Campi toccati da un'operazione PF, per lo snapshot di annullamento."""
+_CONC_SETTINGS = ("concentration_rounds_left", "concentration_item_spell")
+
+
+def _hp_state(char: Character, form=None) -> dict:
+    """Campi toccati da un'operazione PF (forma selvatica inclusa), per lo snapshot di annullamento."""
     return {
+        "form": None if form is None else {
+            "form_id": form.id, "current_hp": form.current_hp,
+            "temp_hp": form.temp_hp, "is_active": form.is_active,
+        },
         "current_hit_points": char.current_hit_points,
         "hit_points": char.hit_points,
         "temp_hp": char.temp_hp,
         "death_saves": dict(char.death_saves or {}),
         "is_dead": char.is_dead,
         "concentrating_spell_id": char.concentrating_spell_id,
+        **{k: (char.settings or {}).get(k) for k in _CONC_SETTINGS},
     }
 
 
@@ -128,14 +144,51 @@ async def update_hp(
     # Da morto ogni operazione PF è inerte (solo /revive riporta in vita).
     if char.is_dead:
         return await build_character_response(session, char)
-    before = _hp_state(char)
+    form = await get_active_form(session, char.id)  # the form involved in this op, if any
+    before = _hp_state(char, form)
     conc_result: ConcentrationSaveResult | None = None
     notifications: list[dict] = []
 
     was_at_zero = char.current_hit_points == 0
 
     if body.op == HPOp.DAMAGE:
-        amount = body.value
+        # Danno applicato dopo resistenza/immunità/vulnerabilità, PRIMA di PF temporanei
+        # e tiri salvezza morte (tutto il resto usa `applied`).
+        slug = canonical_damage_type(body.damage_type)
+        mod = body.damage_modifier
+        raw = body.raw_value if body.raw_value is not None else body.value
+        applied = body.value
+        if mod is None and slug is not None:
+            mod = damage_multiplier(char.damage_modifiers, slug)
+            raw = body.value
+            applied = {"half": raw // 2, "double": raw * 2, "immune": 0}.get(mod, raw)
+        elif mod == "immune":
+            applied = 0
+        # Wild shape: the form soaks the (already resistance-adjusted, using the
+        # character's modifiers) damage first; only the overflow reaches the character
+        # through the normal path below (temp HP, death rules, one concentration save).
+        conc_damage = applied
+        form_absorbed = False
+        pre_form = applied
+        form_overflow = 0
+        if form is not None and applied > 0:
+            overflow = absorb_damage(form, applied)
+            if overflow > 0:
+                form_overflow = overflow
+                form.is_active = False
+                _add_history(session, char.id, "companion_hp",
+                             f"Forma selvatica terminata: {form.name} (danno in eccesso {overflow})")
+                applied = conc_damage = overflow
+            else:
+                form_absorbed = True
+                applied = 0
+                _add_history(session, char.id, "companion_hp",
+                             f"{form.name}: -{conc_damage} → PF {form.current_hp}/{form.max_hp}, temp {form.temp_hp}")
+                if form.current_hp == 0:  # 5e: the form ends at 0 HP, even with no overflow
+                    form.is_active = False
+                    _add_history(session, char.id, "companion_hp",
+                                 f"Forma selvatica terminata: {form.name} (PF a 0)")
+        amount = applied
         # Absorb temp HP first
         if char.temp_hp > 0:
             absorbed = min(char.temp_hp, amount)
@@ -143,13 +196,20 @@ async def update_hp(
             amount -= absorbed
         old = char.current_hit_points
         char.current_hit_points = max(0, char.current_hit_points - amount)
-        note = ""
-        if body.raw_value is not None and body.damage_modifier:
-            word = "dimezzati" if body.damage_modifier == "half" else "raddoppiati"
-            note = f" ({body.raw_value} {word})"
-        _add_history(session, char.id, "hp_change",
-                     f"Danni: -{body.value} HP{note} ({old} → {char.current_hit_points})",
-                     meta={"op": "DAMAGE"})
+        if slug is not None and mod in ("half", "double", "immune"):
+            word = {"half": "resistenza", "double": "vulnerabilità", "immune": "immunità"}[mod]
+            desc = (f"Danno {raw} {LABELS_IT[slug]} → {pre_form} ({word}) "
+                    f"({old} → {char.current_hit_points})")
+        else:
+            note = ""
+            if body.raw_value is not None and mod in ("half", "double"):
+                word = "dimezzati" if mod == "half" else "raddoppiati"
+                note = f" ({body.raw_value} {word})"
+            desc = f"Danni: -{pre_form} HP{note} ({old} → {char.current_hit_points})"
+        if form_overflow:
+            desc += f" — forma assorbe {pre_form - form_overflow}, eccesso {form_overflow}"
+        if not form_absorbed:
+            _add_history(session, char.id, "hp_change", desc, meta={"op": "DAMAGE"})
 
         # --- Morte & tiri salvezza (D&D 5e RAW) ---
         if char.current_hit_points == 0 and amount > 0 and not char.is_dead:
@@ -195,25 +255,28 @@ async def update_hp(
 
         # Privo di sensi (0 PF) => fine concentrazione (RAW)
         if char.current_hit_points == 0:
-            char.concentrating_spell_id = None
+            end_concentration(char)
 
         # Auto concentration save — only if still conscious and concentrating
         if (
-            body.value > 0
-            and char.concentrating_spell_id is not None
+            conc_damage > 0
+            and is_concentrating(char)
             and char.current_hit_points > 0
         ):
-            conc_result = await roll_concentration_save(char, body.value, session)
+            conc_result = await roll_concentration_save(
+                char, conc_damage, session,
+                "advantage" if (char.settings or {}).get("war_caster") else "normal",
+            )
 
         # Emit homebrew events: damage_taken (always) + dropped_to_zero (when HP crossed 0).
-        # event.amount is the GROSS damage requested (body.value, before temp-HP
+        # event.amount is the GROSS damage requested (applied, before temp-HP
         # absorption); the actual HP lost is current_hp_before - current_hp_after. This
         # is the canonical semantics — actions.execute_damage_character matches it (#29).
-        if body.value > 0:
+        if applied > 0:
             firing = await dispatch(
                 session, char, "damage_taken",
                 {
-                    "amount": body.value,
+                    "amount": applied,
                     "was_critical_hit": body.was_critical_hit,
                     "current_hp_before": old,
                     "current_hp_after": char.current_hit_points,
@@ -224,7 +287,7 @@ async def update_hp(
             firing = await dispatch(
                 session, char, "dropped_to_zero",
                 {
-                    "damage_amount": body.value,
+                    "damage_amount": applied,
                     "from_critical": body.was_critical_hit,
                 },
             )
@@ -234,8 +297,13 @@ async def update_hp(
         # Shared applier (see api/services/effects.py). The bottom-of-function
         # death-save reset block stays as an idempotent no-op: apply_heal already
         # zeroed the saves, so its guard finds nothing to reset and won't double-log.
-        result = await apply_heal(session, char, body.value)
-        notifications.extend(collect_homebrew_notifications(result["firing"]))
+        if form is not None:  # while transformed, healing goes to the form
+            form.current_hp = min(form.max_hp, form.current_hp + body.value)
+            _add_history(session, char.id, "companion_hp",
+                         f"{form.name}: +{body.value} → PF {form.current_hp}/{form.max_hp}")
+        else:
+            result = await apply_heal(session, char, body.value)
+            notifications.extend(collect_homebrew_notifications(result["firing"]))
 
     elif body.op == HPOp.SET_MAX:
         old = char.hit_points
@@ -256,6 +324,16 @@ async def update_hp(
     elif body.op == HPOp.SET_TEMP:
         char.temp_hp = max(0, body.value)
 
+    if (
+        body.op in (HPOp.SET_MAX, HPOp.SET_CURRENT)
+        and char.current_hit_points == 0
+        and form is not None
+        and form.is_active
+    ):
+        form.is_active = False
+        _add_history(session, char.id, "companion_hp",
+                     f"Forma selvatica terminata: {form.name} (PF a 0)")
+
     # Auto-reset death saves when rising from 0 HP
     if was_at_zero and char.current_hit_points > 0:
         ds = dict(char.death_saves or {})
@@ -266,7 +344,7 @@ async def update_hp(
 
     # Nuovo dict (non mutazione in place): la colonna JSON non è tracciata.
     op_id = uuid.uuid4().hex
-    char.hp_undo = {"op_id": op_id, "before": before, "after": _hp_state(char)}
+    char.hp_undo = {"op_id": op_id, "before": before, "after": _hp_state(char, form)}
 
     result = await build_character_response(session, char)
     result.hp_undo_id = op_id
@@ -287,14 +365,25 @@ async def undo_hp(
     """Annulla l'ultima operazione PF, solo se nulla è cambiato dopo di essa."""
     char = await _get_owned_full(char_id, user_id, session)
     snap = char.hp_undo
+    form = None
+    if snap and (snap.get("after") or {}).get("form"):
+        form = (await session.execute(select(Companion).where(
+            Companion.id == snap["after"]["form"]["form_id"], Companion.character_id == char.id,
+        ))).scalar_one_or_none()
     if (
         not snap
         or snap.get("op_id") != body.op_id
-        or _hp_state(char) != snap.get("after")
+        or _hp_state(char, form) != snap.get("after")
     ):
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="hp_undo_not_applicable")
 
     before = snap["before"]
+    if before.get("form"):
+        form.current_hp = before["form"]["current_hp"]
+        form.temp_hp = before["form"]["temp_hp"]
+        form.is_active = before["form"]["is_active"]
+        if form.is_active:  # at most one active form
+            await deactivate_other_forms(session, char.id, form.id)
     old = char.current_hit_points
     char.current_hit_points = before["current_hit_points"]
     char.hit_points = before["hit_points"]
@@ -306,6 +395,13 @@ async def undo_hp(
     if spell_id is not None and not any(s.id == spell_id for s in char.spells):
         spell_id = None
     char.concentrating_spell_id = spell_id
+    settings = dict(char.settings or {})
+    for k in _CONC_SETTINGS:
+        if before[k] is None:
+            settings.pop(k, None)
+        else:
+            settings[k] = before[k]
+    char.settings = settings
     char.hp_undo = None
 
     _add_history(session, char.id, "hp_change",
@@ -317,6 +413,71 @@ async def undo_hp(
 # ---------------------------------------------------------------------------
 # Rest
 # ---------------------------------------------------------------------------
+
+def _restores_ability(ability, rest_type: str) -> bool:
+    # A long rest includes short-rest benefits; le ex-risorse di classe sono Ability.
+    types = ("long_rest", "short_rest") if rest_type == "long" else ("short_rest",)
+    return ability.restoration_type in types and ability.max_uses is not None
+
+
+def _restores_resource(resource, rest_type: str) -> bool:
+    types = ("long_rest", "short_rest") if rest_type == "long" else ("short_rest",)
+    return resource.restoration_type in types
+
+
+def compute_rest_effects(char: Character, rest_type: str, hp_max_bonus: int = 0) -> RestPreview:
+    """Pure: cosa cambierebbe un riposo. Usata da /rest (che poi applica) e dall'anteprima."""
+    fx = RestPreview()
+    if char.is_dead:  # un riposo non rianima un personaggio morto
+        return fx
+    long = rest_type == "long"
+    fx.ends_concentration = is_concentrating(char)
+    fx.pact_slots = sum(s.used for s in char.spell_slots if s.is_pact and s.used > 0)
+    if long:
+        fx.hp_gain = max(0, char.hit_points + hp_max_bonus - char.current_hit_points)
+        for s in char.spell_slots:
+            if not s.is_pact and s.used > 0:
+                fx.slots[s.level] = fx.slots.get(s.level, 0) + s.used
+        # Recupero dadi vita (RAW PHB): fino a metà del totale (min 1),
+        # dal dado più grande in caso di multiclasse (spec 2026-07-17).
+        hd_budget = max(1, sum(c.level for c in char.classes) // 2)
+        for cls in sorted(char.classes, key=lambda c: (c.hit_die or 8), reverse=True):
+            if hd_budget <= 0:
+                break
+            spent = min(cls.hit_dice_used or 0, cls.level)
+            back = min(spent, hd_budget)
+            if back > 0:
+                fx.hit_dice_regain[cls.id] = back
+                hd_budget -= back
+        # A long rest reduces Exhaustion by 1 level (PHB p.186).
+        exh = (char.conditions or {}).get("exhaustion", 0)
+        if isinstance(exh, int) and not isinstance(exh, bool) and exh > 0:
+            fx.exhaustion_change = -1
+    fx.abilities = [a.name for a in char.abilities
+                    if _restores_ability(a, rest_type) and a.uses != a.max_uses]
+    fx.homebrew_resources = [r.name for r in char.homebrew_resources
+                             if _restores_resource(r, rest_type) and r.current != r.max]
+    for r in plan_item_recharges(char.items, rest_type, roll=False):
+        full = r.after is not None
+        fx.item_charges.append(ItemChargePreview(
+            name=r.item.name, gain=r.after - r.before if full else None,
+            formula=None if full else r.formula, full=full))
+    return fx
+
+
+@router.get("/{char_id}/rest/preview", response_model=RestPreview)
+async def rest_preview(
+    char_id: int,
+    rest_type: str,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> RestPreview:
+    if rest_type not in ("long", "short"):
+        raise HTTPException(status_code=400, detail="rest_type must be 'long' or 'short'")
+    char = await _get_owned_full(char_id, user_id, session)
+    bonus = await get_passive_modifiers(session, char, "character.hit_points_max")
+    return compute_rest_effects(char, rest_type, bonus)
+
 
 @router.post("/{char_id}/rest", response_model=CharacterFull)
 async def rest(
@@ -330,54 +491,47 @@ async def rest(
     if char.is_dead:
         return await build_character_response(session, char)
     notifications: list[dict] = []
+    hb_hp_bonus = await get_passive_modifiers(session, char, "character.hit_points_max")
+    fx = compute_rest_effects(char, body.rest_type, hb_hp_bonus) if body.rest_type in ("long", "short") else None
+    if body.rest_type in ("long", "short"):
+        for r in plan_item_recharges(char.items, body.rest_type):
+            set_item_charges(r.item, r.after)
+            _add_history(session, char.id, "item_charges",
+                         f"Cariche ricaricate: {r.item.name} ({r.before} → {r.after})")
 
     if body.rest_type == "long":
         # Restore to effective max HP (base + passive homebrew modifier).
-        hb_hp_bonus = await get_passive_modifiers(session, char, "character.hit_points_max")
         char.current_hit_points = char.hit_points + hb_hp_bonus
         char.temp_hp = 0
         # Break concentration
-        char.concentrating_spell_id = None
+        end_concentration(char)
         # Reset all spell slots
         for slot in char.spell_slots:
             slot.used = 0
-        # Recupero dadi vita (RAW PHB): fino a metà del totale (min 1),
-        # dal dado più grande in caso di multiclasse (spec 2026-07-17).
-        total_level = sum(c.level for c in char.classes)
-        hd_budget = max(1, total_level // 2)
-        hd_regained = 0
-        for cls in sorted(char.classes, key=lambda c: (c.hit_die or 8), reverse=True):
-            if hd_budget <= 0:
-                break
-            spent = min(cls.hit_dice_used or 0, cls.level)
-            if spent <= 0:
-                continue
-            back = min(spent, hd_budget)
-            cls.hit_dice_used = spent - back
-            hd_budget -= back
-            hd_regained += back
+        hd_regained = sum(fx.hit_dice_regain.values())
+        for cls in char.classes:
+            if cls.id in fx.hit_dice_regain:
+                cls.hit_dice_used = min(cls.hit_dice_used or 0, cls.level) - fx.hit_dice_regain[cls.id]
         if hd_regained:
             _add_history(session, char.id, "hit_dice",
                          f"Dadi vita recuperati: {hd_regained} (riposo lungo)")
         # Restore long-rest AND short-rest abilities (long rest includes short rest
         # benefits). Le ex-risorse di classe sono ora Ability e rientrano qui.
         for ability in char.abilities:
-            if ability.restoration_type in ("long_rest", "short_rest") and ability.max_uses is not None:
+            if _restores_ability(ability, "long"):
                 ability.uses = ability.max_uses
         # Homebrew resources auto-restore on rest by restoration_type (D3),
         # mirroring abilities: a long rest restores both long_rest and short_rest.
         for resource in char.homebrew_resources:
-            if resource.restoration_type in ("long_rest", "short_rest"):
+            if _restores_resource(resource, "long"):
                 resource.current = resource.max
         # Reset death saves
         char.death_saves = {"successes": 0, "failures": 0, "stable": False}
-        # A long rest reduces Exhaustion by 1 level (PHB p.186). Keep the value an
-        # int (never False/None) to avoid the F04 history-serializer bug.
-        conditions = dict(char.conditions or {})
-        old_exh = conditions.get("exhaustion", 0)
-        old_exh = int(old_exh) if isinstance(old_exh, (int, bool)) and old_exh is not None else 0
-        if old_exh > 0:
-            new_exh = old_exh - 1
+        if fx.exhaustion_change:
+            # Keep the value an int (never False/None) to avoid the F04 history-serializer bug.
+            conditions = dict(char.conditions or {})
+            old_exh = conditions["exhaustion"]
+            new_exh = old_exh + fx.exhaustion_change
             conditions["exhaustion"] = new_exh
             char.conditions = conditions
             _add_history(session, char.id, "condition_change",
@@ -389,7 +543,7 @@ async def rest(
 
     elif body.rest_type == "short":
         # Break concentration
-        char.concentrating_spell_id = None
+        end_concentration(char)
         # Warlock Pact Magic slots recover on a short rest (unlike regular slots).
         for slot in char.spell_slots:
             if slot.is_pact:
@@ -399,15 +553,14 @@ async def rest(
             # Simple roll: average hit die value * count (frontend handles the roll display)
             healed = body.hit_dice_used
             # Use effective max HP (base + passive homebrew modifier) as the heal cap.
-            hb_hp_bonus_short = await get_passive_modifiers(session, char, "character.hit_points_max")
-            char.current_hit_points = min(char.hit_points + hb_hp_bonus_short, char.current_hit_points + healed)
+            char.current_hit_points = min(char.hit_points + hb_hp_bonus, char.current_hit_points + healed)
         # Restore short-rest abilities (le ex-risorse di classe sono ora Ability).
         for ability in char.abilities:
-            if ability.restoration_type == "short_rest" and ability.max_uses is not None:
+            if _restores_ability(ability, "short"):
                 ability.uses = ability.max_uses
         # Homebrew resources: a short rest restores only short_rest resources (D3).
         for resource in char.homebrew_resources:
-            if resource.restoration_type == "short_rest":
+            if _restores_resource(resource, "short"):
                 resource.current = resource.max
         _add_history(session, char.id, "rest",
                      f"Riposo breve completato (HP recuperati: {healed})")
@@ -560,8 +713,9 @@ async def roll_death_save(
         )
     ds = dict(char.death_saves or {"successes": 0, "failures": 0, "stable": False})
 
-    die = body.die if body and body.die is not None else random.randint(1, 20)
-    record_dice(char, [("d20", die)])
+    d20 = resolve_body(body)
+    die = d20.kept
+    record_dice(char, d20_records(d20))
     revived = False
 
     if die == 20:
@@ -608,6 +762,8 @@ async def roll_death_save(
 
     return DeathSaveRollResult(
         die=die,
+        dice=d20.dice,
+        mode=d20.mode,
         outcome=outcome,
         successes=ds["successes"],
         failures=ds["failures"],
@@ -638,7 +794,7 @@ async def recalc_hp(
     char = await _get_owned_full(char_id, user_id, session)
 
     con_mod = effective_con_mod(char)
-    new_max = total_base_hp(char.classes, con_mod)
+    new_max = total_base_hp(char.classes, con_mod, stored_rolls(char))
 
     old_max = char.hit_points
     char.hit_points = new_max
@@ -672,6 +828,6 @@ async def revive(
         char.is_dead = False
         char.current_hit_points = 1
         char.death_saves = {"successes": 0, "failures": 0, "stable": False}
-        char.concentrating_spell_id = None
+        end_concentration(char)
         _add_history(session, char.id, "death_save", "Riportato in vita (1 PF)")
     return await build_character_response(session, char)

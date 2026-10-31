@@ -4,6 +4,10 @@ import Sheet from '@/components/ui/Sheet'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
 import Pressable from '@/components/ui/Pressable'
+import { useToast } from '@/hooks/useToast'
+import { BookOpen } from 'lucide-react'
+import CatalogPicker from '@/components/catalog/CatalogPicker'
+import { loadCatalog, equipmentToForm, magicItemToForm, type Lang } from '@/lib/srd/catalog'
 import SwitchToggle from '@/components/ui/SwitchToggle'
 import WizardFooter from '@/components/ui/WizardFooter'
 import DamageTypePicker from '@/components/ui/DamageTypePicker'
@@ -11,6 +15,7 @@ import DamageDiceBuilder from './DamageDiceBuilder'
 import { getItemTypeIcon } from '@/lib/itemIcons'
 import AbilityModifiersEditor from './AbilityModifiersEditor'
 import EffectsEditor from './EffectsEditor'
+import MagicFieldsEditor from './MagicFieldsEditor'
 import {
   ITEM_TYPES,
   WEAPON_PROPERTIES,
@@ -19,6 +24,7 @@ import {
   CONSUMABLE_SUBTYPES,
   hasSingleQuantity,
   emptyForm,
+  catalogPrefill,
   isItemFormValid,
   itemToFormData,
   type ItemFormData,
@@ -36,7 +42,10 @@ interface ItemFormProps {
 type WizardStep = 'type' | 'base' | 'advanced'
 
 export default function ItemForm({ initialData, onSubmit, onCancel, isPending }: ItemFormProps) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const lang: Lang = i18n.language?.startsWith('en') ? 'en' : 'it'
+  const toast = useToast()
+  const [picker, setPicker] = useState<'equipment' | 'magic-items' | null>(null)
   const system = useUnitSettings((s) => s.system)
   const [form, setForm] = useState<ItemFormData>(emptyForm)
   const [step, setStep] = useState<WizardStep>('type')
@@ -68,6 +77,15 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
     }))
   }
 
+  // Catalogue prefill: weight comes in canonical lb, the form shows the active unit.
+  const applyCatalog = (patch: Partial<ItemFormData>) => {
+    setForm((f) => ({
+      ...catalogPrefill(f, patch),
+      weight: patch.weight != null ? String(lbToDisplay(Number(patch.weight) || 0, system)) : f.weight,
+    }))
+    setPicker(null)
+  }
+
   const hidesQuantity = hasSingleQuantity(form.item_type)
 
   const canAdvanceFromType = form.name.trim().length > 0
@@ -81,6 +99,16 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
       <div className="p-5 space-y-3">
         {step === 'type' && (
         <>
+        {!isEditing && (
+          <div className="grid grid-cols-1 gap-2">
+            <Button variant="secondary" fullWidth icon={<BookOpen size={16} />} onClick={() => setPicker('equipment')}>
+              {t('character.inventory.from_equipment')}
+            </Button>
+            <Button variant="secondary" fullWidth icon={<BookOpen size={16} />} onClick={() => setPicker('magic-items')}>
+              {t('character.inventory.from_magic')}
+            </Button>
+          </div>
+        )}
         {/* Name */}
         <Input
           label={t('character.inventory.item_name')}
@@ -242,6 +270,45 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
                 })}
               </div>
             </div>
+
+            <Input
+              label={t('character.inventory.magic_bonus_label')}
+              type="number"
+              value={form.magic_bonus}
+              onChange={(v) => setForm((f) => ({ ...f, magic_bonus: v }))}
+              min={0}
+              max={10}
+              placeholder="0"
+              inputMode="numeric"
+            />
+
+            {form.properties.includes('prop_versatile') && (
+              <Input
+                label={t('character.inventory.versatile_dice_label')}
+                value={form.versatile_dice}
+                onChange={(v) => setForm((f) => ({ ...f, versatile_dice: v }))}
+                placeholder="1d10"
+              />
+            )}
+
+            <div>
+              <label className="block text-xs uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
+                {t('character.inventory.weapon_category_label')}
+              </label>
+              <div className="flex gap-2">
+                {(['', 'simple', 'martial'] as const).map((wc) => (
+                  <Button
+                    key={wc || 'none'}
+                    variant={form.weapon_category === wc ? 'primary' : 'secondary'}
+                    size="sm"
+                    fullWidth
+                    onClick={() => setForm((f) => ({ ...f, weapon_category: wc }))}
+                  >
+                    {t(`character.inventory.weapon_category.${wc || 'none'}`)}
+                  </Button>
+                ))}
+              </div>
+            </div>
           </>
         )}
 
@@ -368,6 +435,9 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
           onChange={(next) => setForm((f) => ({ ...f, ability_modifiers: next }))}
         />
 
+        {/* === MAGIA (all types) === */}
+        <MagicFieldsEditor form={form} onChange={(patch) => setForm((f) => ({ ...f, ...patch }))} />
+
         <WizardFooter
           className="pt-2"
           secondaryLabel={t('common.back')}
@@ -387,6 +457,23 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
         </>
         )}
       </div>
+      {picker === 'equipment' && (
+        <CatalogPicker
+          kind="equipment"
+          onClose={() => setPicker(null)}
+          onPick={(e) => applyCatalog(equipmentToForm(e, lang, system, {
+            range: t('character.inventory.range_label'), thrown: t('character.inventory.thrown_range_label'),
+          }))}
+        />
+      )}
+      {picker === 'magic-items' && (
+        <CatalogPicker
+          kind="magic-items"
+          onClose={() => setPicker(null)}
+          onPick={(e) => { void loadCatalog('spells').then((sp) => applyCatalog(magicItemToForm(e, lang, sp)))
+            .catch(() => { setPicker(null); toast.error(t('common.action_failed')) }) }}
+        />
+      )}
     </Sheet>
   )
 }

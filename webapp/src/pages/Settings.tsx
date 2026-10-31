@@ -2,12 +2,12 @@ import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Settings2, Languages, RefreshCw, Eye, Sun, History, Coins, Trash2, BookmarkCheck, Bell } from 'lucide-react'
+import { Settings2, Languages, RefreshCw, Eye, Sun, History, Coins, Trash2, BookmarkCheck, Bell, Download, Send, Copy, Share2 } from 'lucide-react'
 import {
   GiSparkles as Sparkles, GiCutDiamond as Gem,
   GiPerspectiveDiceSixFacesRandom as Dices,
 } from 'react-icons/gi'
-import { api } from '@/api/client'
+import { api, ApiError } from '@/api/client'
 import type { CharacterSummary } from '@/types'
 import Layout from '@/components/Layout'
 import GenericPageSkeleton from '@/components/skeletons/GenericPageSkeleton'
@@ -18,17 +18,19 @@ import Input from '@/components/ui/Input'
 import SectionDivider from '@/components/ui/SectionDivider'
 import SwitchToggle from '@/components/ui/SwitchToggle'
 import ConfirmSheet from '@/components/ui/ConfirmSheet'
+import Sheet from '@/components/ui/Sheet'
 import { FlagIT, FlagEN } from '@/components/ui/Flags'
 import { haptic } from '@/auth/telegram'
 import { useToast } from '@/hooks/useToast'
 import { useCharacterStore } from '@/store/characterStore'
 import { useDiceSettings } from '@/store/diceSettings'
 import { useThemeSettings, type ThemeMode } from '@/store/themeSettings'
-import { useUnitSettings, type UnitSystem } from '@/store/unitSettings'
+import { useUnitSettings, formatLength, formatWeight, type UnitSystem } from '@/store/unitSettings'
 import { BUNDLED_PACKS, PACK_PREVIEW, type PackId } from '@/dice/packs/registry'
 import { loadManifest } from '@/dice/packs/manifest'
 import { useDicePack } from '@/dice/packs/dicePackContext'
 import { spring } from '@/styles/motion'
+import { resetPreferences } from '@/lib/settings'
 
 type RetentionMode = 'off' | 'events' | 'days'
 const RETENTION_MODES: readonly RetentionMode[] = ['off', 'events', 'days'] as const
@@ -45,6 +47,11 @@ type SettingKey =
   | 'hide_electrum'
   | `retention:${RetentionMode}`
   | 'hp_auto_calc'
+  | 'advancement'
+  | 'hp_mode'
+  | 'war_caster'
+  | 'encumbrance_variant'
+  | 'coin_weight'
   | 'show_private_identity'
   | `slot_mode:${'auto' | 'manual'}`
   | `prep_cap_mode:${'auto' | 'manual'}`
@@ -191,6 +198,48 @@ export default function Settings() {
     },
   })
 
+  const [showExport, setShowExport] = useState(false)
+  // Dopo un 503 (bot non configurato) resta solo il download.
+  const [sendUnavailable, setSendUnavailable] = useState(false)
+
+  const sendMutation = useMutation({
+    mutationFn: () => api.characters.exportSend(charId),
+    onSuccess: () => {
+      toast.success(t('character.settings.transfer.sent'))
+      setShowExport(false)
+    },
+    onError: (e) => {
+      if (e instanceof ApiError && e.status === 503) setSendUnavailable(true)
+      else toast.error(t('character.settings.transfer.send_failed'))
+    },
+  })
+
+  const downloadMutation = useMutation({
+    mutationFn: async () => {
+      const data = await api.characters.export(charId)
+      const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }))
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${(char?.name ?? 'character').replace(/[^\w-]+/g, '_')}.json`
+      document.body.append(a)
+      a.click()
+      a.remove()
+      setTimeout(() => URL.revokeObjectURL(url), 0)
+    },
+    onSuccess: () => setShowExport(false),
+    onError: () => toast.error(t('character.settings.transfer.export_failed')),
+  })
+
+  const duplicateMutation = useMutation({
+    mutationFn: () => api.characters.duplicate(charId),
+    onSuccess: (copy) => {
+      qc.invalidateQueries({ queryKey: ['characters'] })
+      haptic.success()
+      navigate(`/char/${copy.id}`)
+    },
+    onError: () => toast.error(t('character.settings.transfer.duplicate_failed')),
+  })
+
   if (!char) {
     return (
       <Layout title={t('character.settings.title')} backTo={`/char/${charId}`}>
@@ -203,6 +252,7 @@ export default function Settings() {
   const slotsMode = (settings.spell_slots_mode as string) ?? 'auto'
   const spellcasting = char.spellcasting ?? null
   const prepCapMode = (settings.prepared_cap_mode as string) ?? 'auto'
+  const warCaster = settings.war_caster === true
   const hpAutoCalc = (settings.hp_auto_calc as boolean | undefined) !== false
   const showPrivateIdentity = (settings.show_private_identity as boolean | undefined) === true
   const hideElectrum = (settings.hide_electrum as boolean | undefined) === true
@@ -234,7 +284,7 @@ export default function Settings() {
 
   const confirmReset = () => {
     setActiveSetting('reset')
-    updateMutation.mutate({})
+    updateMutation.mutate(resetPreferences(settings))
     setShowResetConfirm(false)
   }
 
@@ -558,6 +608,72 @@ export default function Settings() {
         </div>
       </Surface>
 
+      <Surface variant="elevated">
+        <div className="space-y-3">
+          <SwitchToggle
+            checked={settings.advancement === 'milestone'}
+            pending={updateMutation.isPending && activeSetting === 'advancement'}
+            onChange={(next) => {
+              setActiveSetting('advancement')
+              updateMutation.mutate({ ...settings, advancement: next ? 'milestone' : 'xp' })
+            }}
+            label={t('character.settings.advancement.milestone_toggle')}
+            hint={t('character.settings.advancement.milestone_hint')}
+          />
+          <SwitchToggle
+            checked={settings.hp_mode === 'rolled'}
+            pending={updateMutation.isPending && activeSetting === 'hp_mode'}
+            onChange={(next) => {
+              setActiveSetting('hp_mode')
+              updateMutation.mutate({ ...settings, hp_mode: next ? 'rolled' : 'fixed' })
+            }}
+            label={t('character.settings.advancement.rolled_hp_toggle')}
+            hint={t('character.settings.advancement.rolled_hp_hint')}
+          />
+        </div>
+      </Surface>
+
+      <Surface variant="elevated">
+        <SwitchToggle
+          checked={warCaster}
+          pending={updateMutation.isPending && activeSetting === 'war_caster'}
+          onChange={(next) => {
+            setActiveSetting('war_caster')
+            updateMutation.mutate({ ...settings, war_caster: next })
+          }}
+          label={t('character.settings.war_caster_label')}
+          hint={t('character.settings.war_caster_hint')}
+        />
+      </Surface>
+
+      <Surface variant="elevated">
+        <div className="space-y-3">
+          <SwitchToggle
+            checked={settings.encumbrance_variant === true}
+            pending={updateMutation.isPending && activeSetting === 'encumbrance_variant'}
+            onChange={(next) => {
+              setActiveSetting('encumbrance_variant')
+              updateMutation.mutate({ ...settings, encumbrance_variant: next })
+            }}
+            label={t('character.settings.encumbrance_variant_label')}
+            hint={t('character.settings.encumbrance_variant_hint', {
+              slow1: `−${formatLength(10, unitSystem)}`,
+              slow2: `−${formatLength(20, unitSystem)}`,
+            })}
+          />
+          <SwitchToggle
+            checked={settings.coin_weight === true}
+            pending={updateMutation.isPending && activeSetting === 'coin_weight'}
+            onChange={(next) => {
+              setActiveSetting('coin_weight')
+              updateMutation.mutate({ ...settings, coin_weight: next })
+            }}
+            label={t('character.settings.coin_weight_label')}
+            hint={t('character.settings.coin_weight_hint', { unit_weight: formatWeight(1, unitSystem) })}
+          />
+        </div>
+      </Surface>
+
       <SectionDivider icon={<Eye size={11} />} align="center">
         {t('character.settings.privacy.title')}
       </SectionDivider>
@@ -680,6 +796,73 @@ export default function Settings() {
           </Surface>
         </>
       )}
+
+      <SectionDivider icon={<Share2 size={11} />} align="center">
+        {t('character.settings.transfer.title')}
+      </SectionDivider>
+
+      <Surface variant="elevated" className="space-y-3">
+        <p className="text-xs text-dnd-text-muted font-body italic">
+          {t('character.settings.transfer.export_hint')}
+        </p>
+        <Button
+          variant="secondary"
+          size="md"
+          fullWidth
+          icon={<Download size={16} />}
+          onClick={() => { setSendUnavailable(false); setShowExport(true) }}
+        >
+          {t('character.settings.transfer.export')}
+        </Button>
+        <p className="text-xs text-dnd-text-muted font-body italic">
+          {t('character.settings.transfer.duplicate_hint')}
+        </p>
+        <Button
+          variant="secondary"
+          size="md"
+          fullWidth
+          icon={<Copy size={16} />}
+          loading={duplicateMutation.isPending}
+          onClick={() => duplicateMutation.mutate()}
+        >
+          {t('character.settings.transfer.duplicate')}
+        </Button>
+      </Surface>
+
+      <Sheet
+        open={showExport}
+        onClose={() => setShowExport(false)}
+        title={t('character.settings.transfer.export')}
+      >
+        <div className="p-5 space-y-3">
+          {sendUnavailable ? (
+            <p className="text-sm text-dnd-text-muted font-body italic">
+              {t('character.settings.transfer.download_only')}
+            </p>
+          ) : (
+            <Button
+              variant="primary"
+              size="md"
+              fullWidth
+              icon={<Send size={16} />}
+              loading={sendMutation.isPending}
+              onClick={() => sendMutation.mutate()}
+            >
+              {t('character.settings.transfer.send')}
+            </Button>
+          )}
+          <Button
+            variant="secondary"
+            size="md"
+            fullWidth
+            icon={<Download size={16} />}
+            loading={downloadMutation.isPending}
+            onClick={() => downloadMutation.mutate()}
+          >
+            {t('character.settings.transfer.download')}
+          </Button>
+        </div>
+      </Sheet>
 
       {/* Reset all character settings */}
       <Button

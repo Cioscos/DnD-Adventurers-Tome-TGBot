@@ -480,7 +480,8 @@ class Table(BaseModel):
 
 
 _PASSIVE_TARGET_RE = re.compile(
-    r"^character\.(ac|hit_points_max|speed|skill\.[a-z_]+|saving_throw\.[a-z]+)$"
+    r"^character\.(ac|hit_points_max|hit_points_max_per_level|speed|initiative|passive\.[a-z_]+"
+    r"|skill\.[a-z_]+|saving_throw\.[a-z]+)$"
 )
 
 
@@ -498,14 +499,15 @@ class PassiveModifier(BaseModel):
         if not _PASSIVE_TARGET_RE.match(v):
             raise ValueError(
                 f"Target '{v}' not supported. Allowed: character.ac, character.hit_points_max, "
-                f"character.speed, character.skill.<slug>, character.saving_throw.<slug>"
+                f"character.speed, character.initiative, character.hit_points_max_per_level, "
+                f"character.passive.<skill>, character.skill.<slug>, character.saving_throw.<slug>"
             )
         # Restrict skill / saving_throw slugs to the ones the response builder
         # actually applies, so an unknown slug is rejected at create instead of
         # silently dropped at runtime (#28).
-        if v.startswith("character.skill."):
+        if v.startswith(("character.skill.", "character.passive.")):
             from core.data.skills import SKILL_ABILITY_MAP
-            slug = v[len("character.skill."):]
+            slug = v.split(".", 2)[2]
             if slug not in SKILL_ABILITY_MAP:
                 raise ValueError(f"Unknown skill slug '{slug}' in target '{v}'")
         elif v.startswith("character.saving_throw."):

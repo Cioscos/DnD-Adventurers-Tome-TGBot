@@ -79,3 +79,47 @@ def test_migration_idempotent(tmp_path):
     with engine.connect() as conn:
         n = conn.execute(text("SELECT COUNT(*) FROM abilities")).scalar()
     assert n == 2
+
+
+def test_backfill_action_type_is_idempotent_and_selective(tmp_path):
+    from core.db.engine import _backfill_ability_action_types
+
+    engine = create_engine(f"sqlite:///{tmp_path/'b.db'}")
+    with engine.begin() as conn:
+        Base.metadata.create_all(conn)
+        _migrate_schema(conn)
+        for name, fk, cf, at in (
+            ("Furia", "barbarian.rage", 1, None),
+            ("Mia", None, 0, None),
+            ("Furia custom", "barbarian.rage", 1, "free"),
+        ):
+            conn.execute(text(
+                "INSERT INTO abilities (character_id, name, is_class_feature, feature_key, action_type,"
+                " restoration_type, is_passive, is_active) VALUES (1, :n, :cf, :fk, :at, 'NONE', 0, 1)"
+            ), {"n": name, "cf": cf, "fk": fk, "at": at})
+        for _ in range(2):
+            _backfill_ability_action_types(conn)
+        got = dict(conn.execute(text("SELECT name, action_type FROM abilities")).fetchall())
+    assert got == {"Furia": "bonus_action", "Mia": None, "Furia custom": "free"}
+
+
+async def test_api_startup_backfills_action_type(tmp_path, monkeypatch):
+    """Il lifespan dell'API esegue il backfill su una riga legacy con action_type NULL."""
+    from sqlalchemy.ext.asyncio import create_async_engine
+
+    import api.main as api_main
+
+    engine = create_async_engine(f"sqlite+aiosqlite:///{tmp_path/'s.db'}")
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+        await conn.execute(text(
+            "INSERT INTO abilities (character_id, name, is_class_feature, feature_key,"
+            " restoration_type, is_passive, is_active) VALUES (1, 'Furia', 1, 'barbarian.rage', 'NONE', 0, 1)"
+        ))
+    monkeypatch.setattr(api_main, "engine", engine)
+    async with api_main.lifespan(api_main.app):
+        pass
+    async with engine.connect() as conn:
+        at = (await conn.execute(text("SELECT action_type FROM abilities"))).scalar_one()
+    await engine.dispose()
+    assert at == "bonus_action"

@@ -21,6 +21,8 @@ import { toast } from 'sonner'
 import SpellFilter from '@/pages/spells/SpellFilter'
 import SpellItem from '@/pages/spells/SpellItem'
 import SpellForm, { type SpellFormData } from '@/pages/spells/SpellForm'
+import { totalLevelOf } from '@/lib/dnd'
+import { itemSpellConcentration } from '@/lib/concentration'
 import { useCastFlow } from '@/pages/spells/useCastFlow'
 import type { Spell, SpellSlot } from '@/types'
 import SpellsSkeleton from '@/components/skeletons/SpellsSkeleton'
@@ -49,6 +51,7 @@ export default function Spells() {
   // chip della stessa dimensione, intersezione fra dimensioni diverse.
   const [levelFilter, setLevelFilter] = useState<Set<number>>(() => new Set())
   const [propFilter, setPropFilter] = useState<Set<SpellProp>>(() => new Set())
+  const [schoolFilter, setSchoolFilter] = useState<Set<string>>(() => new Set())
 
   const toggleLevel = (level: number) => {
     setCollapsedLevels((prev) => {
@@ -72,7 +75,15 @@ export default function Spells() {
       else next.add(key)
       return next
     })
+  const toggleSchool = (key: string) =>
+    setSchoolFilter((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
   const clearSpellFilters = () => {
+    setSchoolFilter(new Set())
     setLevelFilter(new Set())
     setPropFilter(new Set())
   }
@@ -99,6 +110,10 @@ export default function Spells() {
         damage_dice: data.damage_dice.trim() || undefined,
         damage_type: data.damage_type.trim() || undefined,
         attack_save: data.attack_save || undefined,
+        higher_level: data.higher_level.trim() || undefined,
+        school: data.school || undefined,
+        srd_index: data.srd_index || undefined,
+        higher_levels_dice: data.higher_levels_dice || undefined,
         is_pinned: false,
       }),
     onSuccess: () => {
@@ -125,6 +140,10 @@ export default function Spells() {
         damage_type: data.damage_type.trim() || undefined,
         // null (not undefined) so editing back to "Nessuno" actually clears it.
         attack_save: data.attack_save || null,
+        higher_level: data.higher_level.trim() || undefined,
+        school: data.school || undefined,
+        srd_index: data.srd_index || undefined,
+        higher_levels_dice: data.higher_levels_dice || null,
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['character', charId] })
@@ -277,13 +296,21 @@ export default function Spells() {
     // una proprietà si mostra solo se discrimina davvero (presente ma non in tutti)
     .filter((o) => o.count > 0 && o.count < spells.length)
 
+  const schoolOptions = Array.from(
+    spells.reduce((acc, s) => (s.school ? acc.set(s.school, (acc.get(s.school) ?? 0) + 1) : acc), new Map<string, number>()),
+  )
+    .map(([key, count]) => ({ key, count }))
+    .sort((a, b) => a.key.localeCompare(b.key))
+
+  const showSchoolRow = schoolOptions.length >= 2
   const showLevelRow = levelOptions.length >= 2
   const showPropRow = propOptions.length >= 1
-  const showFilterBar = showLevelRow || showPropRow
-  const hasActiveChipFilter = levelFilter.size > 0 || propFilter.size > 0
+  const showFilterBar = showLevelRow || showPropRow || showSchoolRow
+  const hasActiveChipFilter = levelFilter.size > 0 || propFilter.size > 0 || schoolFilter.size > 0
 
   const matchesChips = (s: Spell): boolean => {
     if (levelFilter.size > 0 && !levelFilter.has(s.level)) return false
+    if (schoolFilter.size > 0 && !(s.school && schoolFilter.has(s.school))) return false
     if (propFilter.size > 0) {
       const matchesProp =
         (propFilter.has('concentration') && s.is_concentration) ||
@@ -308,6 +335,7 @@ export default function Spells() {
   const noResults = spells.length > 0 && filtered.length === 0
   const concentratingId = char.concentrating_spell_id
   const concentratingSpell = concentratingId ? spells.find(s => s.id === concentratingId) : null
+  const itemConcentration = concentratingSpell ? null : itemSpellConcentration(char)
 
   return (
     <Layout title={t('character.spells.title')} backTo={`/char/${charId}`} group="magic" page="spells">
@@ -320,10 +348,10 @@ export default function Spells() {
       />
 
       {/* Concentration panel — active spell + description. TS auto on /hp DAMAGE. */}
-      {concentratingId && concentratingSpell && (
+      {(concentratingSpell || itemConcentration) && (
         <ConcentrationPanel
-          name={concentratingSpell.name}
-          description={concentratingSpell.description}
+          name={concentratingSpell?.name ?? itemConcentration?.name ?? ''}
+          description={concentratingSpell?.description}
           concBannerExpanded={concBannerExpanded}
           setConcBannerExpanded={setConcBannerExpanded}
           onStop={() => concentrationMutation.mutate(null)}
@@ -392,6 +420,20 @@ export default function Spells() {
                   count={o.count}
                   selected={propFilter.has(o.key)}
                   onToggle={() => toggleProp(o.key)}
+                />
+              ))}
+            </FilterRow>
+          )}
+          {showSchoolRow && (
+            <FilterRow label={t('character.spells.filters.school')}>
+              {schoolOptions.map((o) => (
+                <FilterChip
+                  key={o.key}
+                  tone="arcane"
+                  label={t(`character.spells.schools.${o.key}`, { defaultValue: o.key })}
+                  count={o.count}
+                  selected={schoolFilter.has(o.key)}
+                  onToggle={() => toggleSchool(o.key)}
                 />
               ))}
             </FilterRow>
@@ -502,7 +544,8 @@ export default function Spells() {
                             spell={spell}
                             isExpanded={expanded === spell.id}
                             onToggle={() => setExpanded(expanded === spell.id ? null : spell.id)}
-                            onUse={() => castFlow.beginCast(spell)}
+                            onUse={(mode) => castFlow.beginCast(spell, mode)}
+                            totalLevel={totalLevelOf(char?.classes)}
                             onConcentrationToggle={() =>
                               concentrationMutation.mutate(concentratingId === spell.id ? null : spell.id)
                             }

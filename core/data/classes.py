@@ -73,6 +73,13 @@ CLASS_SAVING_THROWS: dict[str, tuple[str, str]] = {
     "Warlock":   ("wisdom", "charisma"),
 }
 
+# Livelli con Aumento dei Punteggi di Caratteristica (ASI), chiave = nome tabella italiano.
+ASI_LEVELS_DEFAULT: tuple[int, ...] = (4, 8, 12, 16, 19)
+ASI_LEVELS: dict[str, tuple[int, ...]] = {
+    "Guerriero": (4, 6, 8, 12, 14, 16, 19),
+    "Ladro": (4, 8, 10, 12, 16, 19),
+}
+
 # Hit die per class
 CLASS_HIT_DIE: dict[str, int] = {
     "Barbaro":   12,
@@ -116,7 +123,18 @@ class ResourceConfig:
     description: dict[str, str]
     note: Optional[str] = None
     cha_based: bool = False
+    # Tipo di azione per usarla in combattimento (core.game.actions.ActionType).
+    action_type: Optional[str] = None
 
+
+# Livelli di classe (chiave canonica) in cui scatta un attacco in più (2014).
+EXTRA_ATTACK_LEVELS: dict[str, tuple[int, ...]] = {
+    "fighter": (5, 11, 20),
+    "barbarian": (5,),
+    "monk": (5,),
+    "paladin": (5,),
+    "ranger": (5,),
+}
 
 # ---------------------------------------------------------------------------
 # Per-class resource configurations
@@ -141,6 +159,7 @@ CLASS_RESOURCES: dict[str, list[ResourceConfig]] = {
     "Barbaro": [
         ResourceConfig(
             key="barbarian.rage",
+            action_type="bonus_action",
             name="Furia",
             formula=lambda lv: _lookup(_BARBARO_FURIE, lv),
             restoration_type=RestorationType.LONG_REST,
@@ -153,6 +172,7 @@ CLASS_RESOURCES: dict[str, list[ResourceConfig]] = {
     "Bardo": [
         ResourceConfig(
             key="bard.bardic_inspiration",
+            action_type="bonus_action",
             name="Ispirazione Bardica",
             formula=lambda lv: lv,  # ignorata: cha_based=True
             restoration_type=RestorationType.SHORT_REST,
@@ -166,6 +186,7 @@ CLASS_RESOURCES: dict[str, list[ResourceConfig]] = {
     "Chierico": [
         ResourceConfig(
             key="cleric.channel_divinity",
+            action_type="action",
             name="Incanalare la Divinità",
             formula=lambda lv: _lookup(_CHIERICO_CD, lv),
             restoration_type=RestorationType.SHORT_REST,
@@ -178,6 +199,7 @@ CLASS_RESOURCES: dict[str, list[ResourceConfig]] = {
     "Druido": [
         ResourceConfig(
             key="druid.wild_shape",
+            action_type="action",
             name="Forma Selvatica",
             formula=lambda lv: 2 if lv >= 2 else 0,
             restoration_type=RestorationType.SHORT_REST,
@@ -190,6 +212,7 @@ CLASS_RESOURCES: dict[str, list[ResourceConfig]] = {
     "Guerriero": [
         ResourceConfig(
             key="fighter.superiority_dice",
+            action_type="special",
             name="Dadi Superiorità",
             formula=lambda lv: _lookup(_GUERRIERO_DS, lv),
             restoration_type=RestorationType.SHORT_REST,
@@ -201,6 +224,7 @@ CLASS_RESOURCES: dict[str, list[ResourceConfig]] = {
         ),
         ResourceConfig(
             key="fighter.action_surge",
+            action_type="special",
             name="Azione Impetuosa",
             formula=lambda lv: _lookup(_GUERRIERO_AS, lv),
             restoration_type=RestorationType.SHORT_REST,
@@ -211,6 +235,7 @@ CLASS_RESOURCES: dict[str, list[ResourceConfig]] = {
         ),
         ResourceConfig(
             key="fighter.second_wind",
+            action_type="bonus_action",
             name="Secondo Vento",
             formula=lambda lv: 1,
             restoration_type=RestorationType.SHORT_REST,
@@ -221,6 +246,7 @@ CLASS_RESOURCES: dict[str, list[ResourceConfig]] = {
         ),
         ResourceConfig(
             key="fighter.indomitable",
+            action_type="special",
             name="Indomabile",
             formula=lambda lv: _lookup(_GUERRIERO_IN, lv),
             restoration_type=RestorationType.LONG_REST,
@@ -233,6 +259,7 @@ CLASS_RESOURCES: dict[str, list[ResourceConfig]] = {
     "Monaco": [
         ResourceConfig(
             key="monk.ki",
+            action_type="special",
             name="Punti Ki",
             formula=lambda lv: lv if lv >= 2 else 0,
             restoration_type=RestorationType.SHORT_REST,
@@ -245,6 +272,7 @@ CLASS_RESOURCES: dict[str, list[ResourceConfig]] = {
     "Paladino": [
         ResourceConfig(
             key="paladin.lay_on_hands",
+            action_type="action",
             name="Imposizione delle Mani",
             formula=lambda lv: 5 * lv,
             restoration_type=RestorationType.LONG_REST,
@@ -256,6 +284,7 @@ CLASS_RESOURCES: dict[str, list[ResourceConfig]] = {
         ),
         ResourceConfig(
             key="paladin.channel_divinity",
+            action_type="action",
             name="Incanalare la Divinità",
             formula=lambda lv: _lookup(_PALADINO_CD, lv),
             restoration_type=RestorationType.SHORT_REST,
@@ -268,6 +297,7 @@ CLASS_RESOURCES: dict[str, list[ResourceConfig]] = {
     "Stregone": [
         ResourceConfig(
             key="sorcerer.sorcery_points",
+            action_type="special",
             name="Punti Stregoneria",
             formula=lambda lv: lv if lv >= 2 else 0,
             restoration_type=RestorationType.LONG_REST,
@@ -280,6 +310,7 @@ CLASS_RESOURCES: dict[str, list[ResourceConfig]] = {
     "Warlock": [
         ResourceConfig(
             key="warlock.pact_slots",
+            action_type="special",
             name="Slot Patto",
             formula=lambda lv: _lookup(_WARLOCK_PATTO, lv),
             restoration_type=RestorationType.SHORT_REST,
@@ -293,6 +324,7 @@ CLASS_RESOURCES: dict[str, list[ResourceConfig]] = {
     "Mago": [
         ResourceConfig(
             key="wizard.arcane_recovery",
+            action_type="special",
             name="Recupero Arcano",
             formula=lambda lv: 1,
             restoration_type=RestorationType.LONG_REST,
@@ -348,6 +380,7 @@ def get_class_feature_specs(
             "max_uses": total,
             "restoration_type": cfg.restoration_type,
             "cha_based": cfg.cha_based,
+            "action_type": cfg.action_type,
         })
     return result
 

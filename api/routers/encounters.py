@@ -16,6 +16,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from core.game.item_bonuses import item_bonus_total
 from api.auth import get_current_user
 from api.database import get_db
 from api.routers.sessions import _assert_participant, _load_session, _now, _touch
@@ -29,6 +30,9 @@ from api.schemas.encounter import (
     ReorderRequest,
 )
 from api.services import telegram_notify
+from api.services.homebrew.passive import get_passive_modifiers
+from api.services.d20 import resolve_body
+from api.services.durations import tick_rounds
 from api.services.encounter_view import build_encounter_block
 from core.db.models import (
     Character,
@@ -84,7 +88,7 @@ def _dex_modifier(char: Character) -> int:
     base = next((a.value for a in (char.ability_scores or []) if a.name == "dexterity"), 10)
     equipped = [i for i in (char.items or []) if i.is_equipped]
     effective, _ = effective_ability_score("dexterity", base, equipped)
-    return (effective - 10) // 2
+    return (effective - 10) // 2 + item_bonus_total(char.items or [], "initiative")
 
 
 async def _add_missing_pc_combatants(
@@ -117,7 +121,7 @@ async def _add_missing_pc_combatants(
             character_id=char.id,
             owner_user_id=p.user_id,
             name=char.name,
-            initiative_mod=_dex_modifier(char),
+            initiative_mod=_dex_modifier(char) + await get_passive_modifiers(db, char, "character.initiative"),
             created_at=_now(),
         )
         db.add(comb)
@@ -319,7 +323,7 @@ async def roll_initiative(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail="Initiative already rolled",
         )
-    die = body.die if body.die is not None else random.randint(1, 20)
+    die = resolve_body(body).kept
     comb.initiative_die = die
     comb.initiative = die + comb.initiative_mod
     _touch(session)
@@ -426,6 +430,10 @@ async def _turn_endpoint(
     moved = _advance_turn(enc, list(enc.combatants), backward=backward)
     _touch(session)
     await db.flush()
+    if not backward and moved is not None and moved.kind == "pc" and moved.character_id:
+        pc = await db.get(Character, moved.character_id)
+        if pc is not None:
+            await tick_rounds(db, pc)
     if moved is not None:
         await _notify_turn(enc, moved)
     return build_encounter_block(enc, viewer_is_gm=is_gm)

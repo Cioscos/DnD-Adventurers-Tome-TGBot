@@ -4,9 +4,12 @@ import { GiPolarStar as Star, GiSkullCrossedBones as Skull } from 'react-icons/g
 import { spring } from '@/styles/motion'
 import ResultDialog from './ui/ResultDialog'
 import InspirationRerollButton from './InspirationRerollButton'
+import type { RollMode } from '@/api/client'
 
 export type RollResult = {
   die: number
+  dice?: number[]
+  mode?: RollMode
   bonus: number
   total: number
   is_critical: boolean
@@ -17,6 +20,8 @@ export type RollResult = {
 type Props = {
   result: RollResult
   title: string
+  /** Situational note (e.g. "advantage vs. magic"), shown under the breakdown. */
+  note?: string
   onClose: () => void
   inspirationAvailable?: boolean
   isRerolling?: boolean
@@ -27,6 +32,7 @@ type Props = {
 export default function RollResultModal({
   result,
   title,
+  note,
   onClose,
   inspirationAvailable = false,
   isRerolling = false,
@@ -35,6 +41,9 @@ export default function RollResultModal({
 }: Props) {
   const { t } = useTranslation()
   const { die, bonus, total, is_critical, is_fumble } = result
+  const pair = result.dice && result.dice.length === 2 ? result.dice : null
+  // The kept die is the first matching face; the other one is the discarded one (dimmed).
+  const keptIdx = pair ? pair.indexOf(die) : -1
 
   // Neutral rolls get the default (gold) frame; emerald/crimson are reserved
   // for nat-20/nat-1 so the accent stays semantic (Semantic Triad), not
@@ -104,8 +113,23 @@ export default function RollResultModal({
       </m.div>
 
       <p key={`breakdown-${die}-${wasRerolled}`} className="text-xs text-dnd-text-muted font-mono">
-        d20 ({die}) {bonusStr}
+        {pair ? (
+          <>
+            {result.mode === 'disadvantage' ? t('common.roll_mode.disadvantage') : t('common.roll_mode.advantage')}{' '}
+            d20 (
+            {pair.map((v, i) => (
+              <span key={i} className={i === keptIdx ? 'font-bold text-dnd-text' : 'opacity-40 line-through'}>
+                {i > 0 && ', '}{v}
+              </span>
+            ))}
+            ) {bonusStr}
+          </>
+        ) : (
+          <>d20 ({die}) {bonusStr}</>
+        )}
       </p>
+
+      {note && <p className="text-xs text-dnd-text font-body">{note}</p>}
 
       {result.description && (
         <p className="text-xs text-dnd-text-muted italic font-body">{result.description}</p>

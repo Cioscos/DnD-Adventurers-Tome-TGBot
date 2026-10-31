@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, TypeAdapter, field_validator, model_validator
 
 from api.schemas.common import (
+    PROFICIENCY_CATEGORIES,
+    normalize_proficiencies,
     AbilityRead,
     AbilityScoreRead,
     CharacterClassCreate,
@@ -15,6 +17,7 @@ from api.schemas.common import (
     ConsumableUseResult,
     CurrencyRead,
     MapRead,
+    RollMode,
 )
 from api.schemas.item import ItemRead
 from api.schemas.spell import SpellRead, SpellSlotRead
@@ -27,6 +30,7 @@ class AcBreakdown(BaseModel):
     shield: int
     magic: int
     homebrew: int
+    items: int = 0
 
 
 class SpellCasterStats(BaseModel):
@@ -68,9 +72,19 @@ class CharacterSummary(BaseModel):
     experience_points: int = 0
     hp_max_homebrew_modifier: int = 0
     ac_homebrew_modifier: int = 0
+    ac_items_modifier: int = 0
     is_dead: bool = False
 
     model_config = {"from_attributes": True}
+
+
+class ActiveForm(BaseModel):
+    companion_id: int
+    name: str
+    current_hp: int
+    max_hp: int
+    temp_hp: int
+    armor_class: int
 
 
 class CharacterFull(BaseModel):
@@ -104,18 +118,31 @@ class CharacterFull(BaseModel):
     ac_breakdown: Optional[AcBreakdown] = None
     hp_max_homebrew_modifier: int = 0
     speed_homebrew_modifier: int = 0
+    speed_items_modifier: int = 0
+    # DEX effective mod + item initiative bonus (+ homebrew initiative, Task 21)
+    initiative_bonus: int = 0
     skills_homebrew_modifiers: dict[str, int] = Field(default_factory=dict)
     saves_homebrew_modifiers: dict[str, int] = Field(default_factory=dict)
+    # Server-computed totals shared by rolls and the sheet (skill_bonus / passive_score).
+    skill_bonuses: dict[str, int] = Field(default_factory=dict)
+    passives: dict[str, int] = Field(default_factory=dict)
+    jack_of_all_trades: bool = False
+    saves_items_modifiers: dict[str, int] = Field(default_factory=dict)
 
     # Carry
     carry_capacity: int
     carry_capacity_override: bool = False
     encumbrance: float
+    # Server-computed (items + coins if enabled) and variant level; see character_response.
+    encumbrance_total: float = 0.0
+    encumbrance_level: str = "none"
+    speed_encumbrance_penalty_ft: int = 0
 
     # Computed
     total_level: int = 0
     class_summary: str = ""
     proficiency_bonus: int = 2
+    attacks_per_action: int = 1
 
     # Meta
     experience_points: int = 0
@@ -129,16 +156,25 @@ class CharacterFull(BaseModel):
     # Populated only by POST /hp when op=DAMAGE on a concentrating character
     concentration_save: Optional[ConcentrationSaveResult] = None
 
+    # Active wild shape form (populated by build_character_response); FE shows its AC/HP.
+    active_form: Optional[ActiveForm] = None
+
     # Populated only by PATCH /hp: id dell'operazione annullabile via POST /hp/undo
     hp_undo_id: Optional[str] = None
 
     # Populated only by endpoints that fire homebrew rules (POST /hp, POST /attack, etc.).
     homebrew_notifications: Optional[list[dict]] = None
 
+    # Populated only by POST /rounds/tick: labels of effects that just expired.
+    expired_effects: Optional[list[str]] = None
+
     # Populated only by POST /items/{id}/use (consumable use result).
     consumable_use: Optional[ConsumableUseResult] = None
 
     has_custom_silhouette: bool = False
+
+    # Scelte di livello in sospeso (ASI / talento), popolato da build_character_response
+    pending_choices: Optional[list[dict[str, Any]]] = None
 
     # Preparazione incantesimi + rituali (popolato da build_character_response)
     spellcasting: Optional[SpellcastingInfo] = None
@@ -153,8 +189,13 @@ class CharacterFull(BaseModel):
     death_saves: Optional[dict[str, Any]] = None
     personality: Optional[dict[str, Any]] = None
     languages: Optional[list] = None
-    general_proficiencies: Optional[list] = None
+    general_proficiencies: Optional[dict[str, list[str]]] = None
     damage_modifiers: Optional[dict[str, Any]] = None
+
+    @field_validator("general_proficiencies", mode="before")
+    @classmethod
+    def _proficiency_categories(cls, v: Any) -> dict[str, list[str]]:
+        return normalize_proficiencies(v)
 
     # Relations
     classes: list[CharacterClassRead] = []
@@ -214,8 +255,37 @@ class CharacterIdentityCreate(BaseModel):
     personality: Optional[dict[str, Any]] = None  # { "traits": "..." }
 
 
+class SpeciesTrait(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+    description: str = Field(default="", max_length=4000)
+
+
+class SpeciesSense(BaseModel):
+    type: Literal["darkvision", "blindsight", "truesight", "tremorsense"]
+    range_ft: int = Field(ge=0, le=1000)
+
+
+class SpeciesApply(BaseModel):
+    """Species picked in the creation wizard; applied once by create_character.
+
+    ``ability_bonuses`` keys are short (str/dex/con/int/wis/cha) or full ability names.
+    """
+    name: str = Field(min_length=1, max_length=100)
+    speed_ft: Optional[int] = Field(default=None, ge=0, le=500)
+    senses: list[SpeciesSense] = Field(default_factory=list, max_length=8)
+    languages: list[str] = Field(default_factory=list, max_length=20)
+    ability_bonuses: dict[str, int] = Field(default_factory=dict)
+    roll_notes: dict[str, str] = Field(default_factory=dict)
+    traits: list[SpeciesTrait] = Field(default_factory=list, max_length=30)
+
+
 class CharacterCreate(BaseModel):
     name: str
+    # Base scores WITHOUT species bonuses; each 3-20 after bonuses (checked in the router).
+    ability_scores: Optional[dict[str, int]] = None
+    species: Optional[SpeciesApply] = None
+    # skill_slug -> proficient (e.g. from the background).
+    skills: Optional[dict[str, bool]] = None
     # Optional initial class — when provided the character + first class are
     # created atomically. Avoids the orphan-character risk of the previous
     # two-step client flow (POST /characters then POST /classes).
@@ -234,10 +304,24 @@ class CharacterUpdate(BaseModel):
     speed: Optional[int] = None
     personality: Optional[dict[str, Any]] = None
     languages: Optional[list[str]] = None
-    general_proficiencies: Optional[list[str]] = None
+    general_proficiencies: Optional[list[str] | dict[str, list[str]]] = None
     damage_modifiers: Optional[dict[str, Any]] = None
     spell_slots_mode: Optional[str] = None
     settings: Optional[dict[str, Any]] = None
+
+    @field_validator("general_proficiencies")
+    @classmethod
+    def _proficiency_categories(cls, v: Any) -> Any:
+        if isinstance(v, dict) and set(v) - set(PROFICIENCY_CATEGORIES):
+            raise ValueError("unknown proficiency category")
+        return None if v is None else normalize_proficiencies(v)
+
+    @field_validator("settings")
+    @classmethod
+    def _validate_senses(cls, v: Optional[dict[str, Any]]) -> Optional[dict[str, Any]]:
+        if v is not None and "senses" in v:
+            TypeAdapter(list[SpeciesSense]).validate_python(v["senses"])
+        return v
 
 
 class SkillsUpdate(BaseModel):
@@ -253,6 +337,8 @@ class SavingThrowsUpdate(BaseModel):
 class ConditionsUpdate(BaseModel):
     """Map of condition_slug → bool or int (exhaustion level)."""
     conditions: dict[str, Any]
+    # slug -> rounds left; None removes the duration
+    durations: Optional[dict[str, Optional[int]]] = None
 
 
 class InspirationUpdate(BaseModel):
@@ -262,6 +348,8 @@ class InspirationUpdate(BaseModel):
 class XPUpdate(BaseModel):
     add: Optional[int] = None
     set: Optional[int] = None
+    # Single class, XP mode: one die roll per gained level (1..hit_die). Omitted -> fixed HP.
+    hp_rolls: Optional[list[int]] = None
 
 class SpellAttackResult(BaseModel):
     """Esito di POST /characters/{id}/spells/{spell_id}/attack.
@@ -271,6 +359,8 @@ class SpellAttackResult(BaseModel):
 
     spell_name: str
     to_hit_die: int
+    dice: list[int] = []
+    mode: RollMode = "normal"
     to_hit_bonus: int
     to_hit_total: int
     is_critical: bool

@@ -6,6 +6,8 @@ from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, Field
 
+from api.schemas.common import D20Dice, RollMode
+
 EncounterMode = Literal["light", "full"]
 EncounterStatus = Literal["setup", "active", "ended"]
 
@@ -25,6 +27,8 @@ class CombatantAddRequest(BaseModel):
 class InitiativeRollRequest(BaseModel):
     """die is the 3D-dice detected face; None -> the server rolls."""
     die: Optional[int] = Field(default=None, ge=1, le=20)
+    mode: RollMode = "normal"
+    dice: Optional[D20Dice] = None
 
 
 class CombatantPatchRequest(BaseModel):

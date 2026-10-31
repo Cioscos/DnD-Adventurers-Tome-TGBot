@@ -10,12 +10,13 @@ import {
   GiArcheryTarget, GiLightningTrio, GiCrossedSwords, GiTwoCoins,
   GiScrollUnfurled, GiPolarStar, GiPerspectiveDiceSixFacesRandom,
   GiQuillInk, GiTreasureMap, GiOpenBook, GiPotionBall, GiCauldron,
-  GiFist, GiKnapsack, GiNightSleep,
+  GiFist, GiKnapsack, GiNightSleep, GiHourglass, GiPawPrint,
 } from 'react-icons/gi'
 import type { ComponentType, SVGAttributes } from 'react'
 import SectionDivider from '@/components/ui/SectionDivider'
 import Reveal from '@/components/ui/Reveal'
 import Pressable from '@/components/ui/Pressable'
+import PendingChoicesBadge from '@/components/character/PendingChoicesBadge'
 import RestSheet from '@/components/character/RestSheet'
 import { haptic } from '@/auth/telegram'
 import { spring, stagger } from '@/styles/motion'
@@ -43,6 +44,7 @@ const MENU_SECTIONS: MenuSection[] = [
       { key: 'hp',      icon: GiHeartPlus,     path: 'hp',      tone: 'crimson' },
       { key: 'ac',      icon: GiCheckedShield, path: 'ac',      tone: 'gold' },
       { key: 'saves',   icon: GiShieldEchoes,  path: 'saves',   tone: 'cobalt' },
+      { key: 'turn',    icon: GiHourglass,     path: 'turn',    tone: 'amber' },
       { key: 'actions', icon: GiFist,          path: 'actions', tone: 'crimson' },
       { key: 'conditions', icon: CircleDot,     path: 'conditions', tone: 'crimson' },
       { key: 'rest',    icon: GiNightSleep,    action: 'rest',    tone: 'amber' },
@@ -80,6 +82,7 @@ const MENU_SECTIONS: MenuSection[] = [
       { key: 'identity',   icon: User,            path: 'identity',   tone: 'gold' },
       { key: 'class',      icon: GiScrollUnfurled, path: 'class',     tone: 'gold' },
       { key: 'xp',         icon: GiPolarStar,     path: 'xp',         tone: 'amber' },
+      { key: 'extras',     icon: GiPawPrint,      path: 'extras',     tone: 'emerald' },
     ],
   },
   {
@@ -118,6 +121,7 @@ export default function MenuScreen({ char }: Props) {
 
   return (
     <div className="p-4 space-y-4 pb-safe">
+      <PendingChoicesBadge char={char} />
       {MENU_SECTIONS.map((section, sIdx) => {
         const SectionIcon = section.icon
         return (

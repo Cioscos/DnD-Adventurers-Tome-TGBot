@@ -3,9 +3,10 @@ import { useTranslation } from 'react-i18next'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
 import ChipInput from '@/components/ui/ChipInput'
+import Pressable from '@/components/ui/Pressable'
 
-const TAG_SUGGESTIONS_IT = ['Lore', 'NPC', 'Quest', 'Loot', 'Trama', 'Segreto']
-const TAG_SUGGESTIONS_EN = ['Lore', 'NPC', 'Quest', 'Loot', 'Plot', 'Secret']
+const TAG_SUGGESTIONS_IT = ['Organizzazioni', 'Alleati', 'Nemici', 'Storia', 'Luoghi']
+const TAG_SUGGESTIONS_EN = ['Organizations', 'Allies', 'Enemies', 'Backstory', 'Places']
 
 interface NoteEditorProps {
   initialNote?: { title: string; body: string; tags?: string[] } | null
@@ -39,6 +40,7 @@ export default function NoteEditor({ initialNote, onSave, onCancel, isPending }:
   }
 
   const tagSuggestions = i18n.language === 'en' ? TAG_SUGGESTIONS_EN : TAG_SUGGESTIONS_IT
+  const pending = tagSuggestions.filter((s) => !tags.some((x) => x.toLowerCase() === s.toLowerCase()))
 
   return (
     <div className="space-y-3">
@@ -61,7 +63,6 @@ export default function NoteEditor({ initialNote, onSave, onCancel, isPending }:
       <ChipInput
         values={tags}
         onChange={setTags}
-        suggestions={tagSuggestions}
         label={
           <span className="block text-xs uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
             {t('character.notes.tags_label')}
@@ -69,6 +70,20 @@ export default function NoteEditor({ initialNote, onSave, onCancel, isPending }:
         }
         placeholder={t('character.notes.tags_placeholder')}
       />
+      {pending.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {pending.map((s) => (
+            <Pressable
+              key={s}
+              type="button"
+              onClick={() => setTags((prev) => [...prev, s])}
+              className="min-h-11 px-3 rounded-xl border border-dnd-border bg-dnd-surface-raised text-sm font-body text-dnd-text"
+            >
+              + {s}
+            </Pressable>
+          ))}
+        </div>
+      )}
       <div className="flex gap-2">
         <Button
           variant="secondary"

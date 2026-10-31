@@ -43,11 +43,15 @@ const result = (over: Partial<RollResult> = {}): RollResult => ({
 })
 
 describe('RollResultModal', () => {
+  it('shows the situational note', () => {
+    render(<RollResultModal result={result()} title="T" note="vantaggio vs charme" onClose={() => {}} />)
+    expect(screen.getByText('vantaggio vs charme')).toBeInTheDocument()
+  })
+
   it('shows a neutral roll with the d20 (die) + bonus = total breakdown', () => {
     render(<RollResultModal result={result()} title="Tiro" onClose={() => {}} />)
     expect(screen.getByTestId('dialog')).toHaveAttribute('data-accent', 'default')
-    expect(screen.getByText('15')).toBeInTheDocument()
-    expect(screen.getByText(/d20 \(15\) \+3 =/)).toBeInTheDocument()
+    expect(screen.getByText(/d20 \(15\) \+3/)).toBeInTheDocument()
     expect(screen.getByText('18')).toBeInTheDocument()
   })
 
@@ -83,5 +87,11 @@ describe('RollResultModal', () => {
     render(<RollResultModal result={result()} title="T" onClose={onClose} />)
     await userEvent.click(screen.getByTestId('rd-close'))
     expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('shows both dice with the discarded one dimmed', () => {
+    render(<RollResultModal result={result({ die: 15, dice: [7, 15], mode: 'advantage' })} title="T" onClose={() => {}} />)
+    expect(screen.getByText('7').className).toContain('opacity-40')
+    expect(screen.getByText(', 15').className).not.toContain('opacity-40')
   })
 })

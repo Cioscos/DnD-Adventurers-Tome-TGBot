@@ -108,10 +108,10 @@ vi.mock('@/pages/spells/SpellFilter', async () => {
 vi.mock('@/pages/spells/SpellItem', async () => {
   const React = await import('react')
   return {
-    default: (p: { spell: { name: string }; onUse?: () => void; onConcentrationToggle?: () => void; onEdit?: () => void; onRemove?: () => void }) =>
+    default: (p: { spell: { name: string }; onUse?: (mode: string) => void; onConcentrationToggle?: () => void; onEdit?: () => void; onRemove?: () => void }) =>
       React.createElement('div', null, [
         React.createElement('span', { key: 'n' }, p.spell.name),
-        React.createElement('button', { key: 'u', onClick: p.onUse }, `use-${p.spell.name}`),
+        React.createElement('button', { key: 'u', onClick: () => p.onUse?.('normal') }, `use-${p.spell.name}`),
         React.createElement('button', { key: 'c', onClick: p.onConcentrationToggle }, `conc-${p.spell.name}`),
         React.createElement('button', { key: 'r', onClick: p.onRemove }, `remove-${p.spell.name}`),
       ]),
@@ -123,7 +123,7 @@ vi.mock('@/pages/spells/SpellForm', async () => {
   const FORM_DATA = {
     name: 'Magic Missile', level: '1', description: '', casting_time: '', range_area: '',
     components: '', duration: '', is_concentration: false, is_ritual: false,
-    damage_dice: '3d4+3', damage_type: 'force',
+    damage_dice: '3d4+3', damage_type: 'force', higher_level: '', school: 'evocation', srd_index: 'magic-missile', higher_levels_dice: '',
   }
   return { default: (p: { onSubmit?: (d: unknown) => void }) => React.createElement('button', { onClick: () => p.onSubmit?.(FORM_DATA) }, 'submit-spell') }
 })
@@ -149,6 +149,10 @@ vi.mock('@/pages/spells/SpellDamageSheet', async () => {
 })
 // Il d20 degli incantesimi d'attacco (useCastFlow) richiede il DiceAnimationProvider.
 vi.mock('@/dice/useAnimatedRoll', () => ({ useAnimatedRoll: () => async () => undefined }))
+vi.mock('@/hooks/useD20Roll', async (orig) => ({
+  ...((await orig()) as Record<string, unknown>),
+  useD20Roll: () => async () => undefined,
+}))
 
 // CharacterFull-shaped fixture (only the fields Spells reads).
 const manualChar = () => ({
@@ -286,6 +290,8 @@ describe('Spells page', () => {
         is_ritual: false,
         damage_dice: '3d4+3',
         damage_type: 'force',
+        school: 'evocation',
+        srd_index: 'magic-missile',
         is_pinned: false,
       }),
     )

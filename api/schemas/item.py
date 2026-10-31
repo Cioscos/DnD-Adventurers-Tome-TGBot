@@ -8,6 +8,8 @@ from typing import Any, Optional
 
 from pydantic import BaseModel, ValidationInfo, field_validator
 
+from api.schemas.common import RollMode
+from api.schemas.item_magic import validate_magic_meta
 from core.db.models import EquipmentSlot
 from api.services.equipment import slot_allowed_for_type
 
@@ -95,6 +97,22 @@ def _validate_effects(effects: Any) -> list[dict]:
     return result
 
 
+_VERSATILE_RE = re.compile(r"^\d+d\d+([+-]\d+)?$", re.IGNORECASE)
+
+
+def _validate_weapon_meta(v: dict) -> None:
+    """Validate the optional weapon keys (magic_bonus, versatile_dice, weapon_category)."""
+    mb = v.get("magic_bonus")
+    if mb is not None and (not isinstance(mb, int) or isinstance(mb, bool) or not 0 <= mb <= 10):
+        raise ValueError("magic_bonus must be an integer between 0 and 10")
+    vd = v.get("versatile_dice")
+    if vd not in (None, "") and not (isinstance(vd, str) and _VERSATILE_RE.match(vd.strip())):
+        raise ValueError("versatile_dice must be dice notation like '1d10'")
+    wc = v.get("weapon_category")
+    if wc not in (None, "simple", "martial"):
+        raise ValueError("weapon_category must be 'simple' or 'martial'")
+
+
 class ItemRead(BaseModel):
     id: int
     name: str
@@ -141,6 +159,8 @@ class ItemCreate(BaseModel):
                 raise ValueError(
                     f"subtype must be one of {sorted(_ALLOWED_SUBTYPES)}, got {v['subtype']!r}"
                 )
+            _validate_weapon_meta(v)
+            validate_magic_meta(v)
         return v
 
     @field_validator("equipment_slot", mode="after")
@@ -178,6 +198,8 @@ class ItemUpdate(BaseModel):
                 raise ValueError(
                     f"subtype must be one of {sorted(_ALLOWED_SUBTYPES)}, got {v['subtype']!r}"
                 )
+            _validate_weapon_meta(v)
+            validate_magic_meta(v)
         return v
 
 
@@ -190,6 +212,8 @@ class AmmoState(BaseModel):
 class WeaponAttackResult(BaseModel):
     weapon_name: str
     to_hit_die: int
+    dice: list[int] = []
+    mode: RollMode = "normal"
     to_hit_bonus: int
     to_hit_total: int
     is_critical: bool
@@ -201,3 +225,5 @@ class WeaponAttackResult(BaseModel):
     homebrew_notifications: Optional[list[dict]] = None
     ammo: Optional[AmmoState] = None
     ammo_missing: bool = False
+    magic_bonus: int = 0
+    proficiency_warning: bool = False

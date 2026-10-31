@@ -10,11 +10,11 @@ vi.mock('@/auth/telegram', () => ({ haptic: new Proxy({}, { get: () => () => {} 
 
 describe('getGroupInfo', () => {
   it('conditions is the last page of combat', () => {
-    expect(getGroupInfo('combat', 'conditions')?.pages).toEqual(['hp', 'ac', 'saves', 'actions', 'conditions'])
+    expect(getGroupInfo('combat', 'conditions')?.pages).toEqual(['hp', 'ac', 'saves', 'turn', 'actions', 'conditions'])
   })
 
   it('resolves a page within its group to {index, total}', () => {
-    expect(getGroupInfo('combat', 'hp')).toEqual({ pages: ['hp', 'ac', 'saves', 'actions', 'conditions'], index: 0, total: 5 })
+    expect(getGroupInfo('combat', 'hp')).toEqual({ pages: ['hp', 'ac', 'saves', 'turn', 'actions', 'conditions'], index: 0, total: 6 })
     expect(getGroupInfo('combat', 'saves')?.index).toBe(2)
   })
 

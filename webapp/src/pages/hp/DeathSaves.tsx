@@ -7,12 +7,14 @@ import {
 } from 'react-icons/gi'
 import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
+import RollButton from '@/components/ui/RollButton'
+import type { RollMode } from '@/api/client'
 import Pressable from '@/components/ui/Pressable'
 import { spring } from '@/styles/motion'
 
 interface DeathSavesProps {
   deathSaves: { successes: number; failures: number; stable: boolean }
-  onRoll: () => void
+  onRoll: (mode: RollMode) => void
   onAction: (action: string) => void
   isRolling: boolean
   /** action string currently in flight on the shared deathMutation (P4 scoping), undefined when none. */
@@ -106,19 +108,15 @@ export default function DeathSaves({ deathSaves, onRoll, onAction, isRolling, pe
         />
       </div>
 
-      <Button
-        variant="primary"
-        size="lg"
-        fullWidth
-        onClick={onRoll}
-        disabled={isRolling}
-        loading={isRolling}
-        icon={<Dice1 size={18} />}
-        haptic="medium"
-        className="mt-5"
+      <RollButton
+        onRoll={onRoll}
+        pending={isRolling}
+        ariaLabel={t('character.death_saves.roll')}
+        className="mt-5 w-full min-h-[56px] px-5 py-3.5 rounded-xl flex items-center justify-center gap-2 text-base font-bold bg-gradient-gold text-dnd-ink shadow-engrave"
       >
+        <Dice1 size={18} />
         {t('character.death_saves.roll')}
-      </Button>
+      </RollButton>
 
       <div className="flex flex-col gap-3 pt-4 border-t border-dnd-border/40">
         <div className="flex items-center justify-between gap-3">

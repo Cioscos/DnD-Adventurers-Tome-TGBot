@@ -51,6 +51,9 @@ _MIGRATIONS: list[tuple[str, str, str, str | None]] = [
     ("spells", "higher_level", "TEXT", None),
     ("spells", "attack_save", "VARCHAR(100)", None),
     ("spells", "is_pinned", "BOOLEAN", "0"),
+    ("spells", "school", "VARCHAR(30)", None),
+    ("spells", "srd_index", "VARCHAR(80)", None),
+    ("spells", "higher_levels_dice", "VARCHAR(20)", None),
     # Character concentration tracking
     ("characters", "concentrating_spell_id", "INTEGER REFERENCES spells(id) ON DELETE SET NULL", None),
     # CharacterClass subclass
@@ -122,6 +125,7 @@ _MIGRATIONS: list[tuple[str, str, str, str | None]] = [
     ("abilities", "source_class_id", "INTEGER REFERENCES character_classes(id) ON DELETE CASCADE", None),
     ("abilities", "is_class_feature", "BOOLEAN", "0"),
     ("abilities", "feature_key", "VARCHAR(100)", None),
+    ("abilities", "action_type", "VARCHAR(20)", None),
     # Incantesimi preparati — backfill legacy a 1 (preparato): nulla cambia per
     # i personaggi esistenti finché l'utente non gestisce la preparazione.
     ("spells", "is_prepared", "BOOLEAN", "1"),
@@ -129,6 +133,8 @@ _MIGRATIONS: list[tuple[str, str, str, str | None]] = [
     ("characters", "dice_stats", "JSON", None),
     # Snapshot per l'annullamento dell'ultima operazione PF
     ("characters", "hp_undo", "JSON", None),
+    # Scelte di livello in sospeso (ASI / talento)
+    ("characters", "pending_choices", "JSON", None),
     # Hit dice tracking (spec 2026-07-17)
     ("character_classes", "hit_dice_used", "INTEGER NOT NULL", "0"),
 ]
@@ -409,6 +415,22 @@ def _migrate_class_resources_to_abilities(connection) -> None:
         logger.info("Migrate %d class_resources -> abilities; dropped class_resources", migrated)
 
 
+def _backfill_ability_action_types(connection) -> None:
+    """Imposta ``action_type`` sulle feature di classe esistenti (NULL) dal catalogo.
+
+    Idempotente: tocca solo righe ``is_class_feature`` con ``action_type IS NULL``.
+    """
+    from core.data.classes import CLASS_RESOURCES
+
+    for configs in CLASS_RESOURCES.values():
+        for cfg in configs:
+            if cfg.action_type:
+                connection.execute(text(
+                    "UPDATE abilities SET action_type = :at "
+                    "WHERE is_class_feature = 1 AND action_type IS NULL AND feature_key = :fk"
+                ), {"at": cfg.action_type, "fk": cfg.key})
+
+
 async def init_db() -> None:
     """Create all tables and run schema + data migrations."""
     os.makedirs(os.path.dirname(_DB_PATH), exist_ok=True)
@@ -416,6 +438,7 @@ async def init_db() -> None:
         await conn.run_sync(Base.metadata.create_all)
         await conn.run_sync(_migrate_schema)
         await conn.run_sync(_migrate_class_resources_to_abilities)
+        await conn.run_sync(_backfill_ability_action_types)
 
 
 @asynccontextmanager

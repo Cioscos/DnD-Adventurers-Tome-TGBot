@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import { render } from '@testing-library/react'
 import Settings from '@/pages/Settings'
+import { useUnitSettings } from '@/store/unitSettings'
 
 const { getChar, deleteChar, retentionPreview, navigateSpy, toastError } = vi.hoisted(() => ({
   getChar: vi.fn(),
@@ -29,7 +30,8 @@ vi.mock('react-i18next', async (orig) => {
   return {
     ...actual,
     useTranslation: () => ({
-      t: (k: string, o?: { name?: string }) => (o?.name ? `${k}|${o.name}` : k),
+      t: (k: string, o?: { name?: string; slow1?: string; slow2?: string; unit_weight?: string }) =>
+        o?.name ? `${k}|${o.name}` : o?.slow1 ? `${k}|${o.slow1}|${o.slow2}` : o?.unit_weight ? `${k}|${o.unit_weight}` : k,
       i18n: { language: 'it', changeLanguage: vi.fn() },
     }),
   }
@@ -122,5 +124,16 @@ describe('Settings delete character', () => {
     await userEvent.click(screen.getByRole('button', { name: /::common\.delete$/ }))
     await waitFor(() => expect(toastError).toHaveBeenCalledWith('character.select.delete_failed'))
     expect(navigateSpy).not.toHaveBeenCalled()
+  })
+})
+
+describe('Settings encumbrance hints', () => {
+  it('interpolates metric units instead of hardcoded ft/lb', async () => {
+    useUnitSettings.setState({ system: 'metric' })
+    getChar.mockResolvedValue(char)
+    setup()
+    expect(await screen.findByText(/encumbrance_variant_hint\|−3 m\|−6 m/)).toBeTruthy()
+    expect(screen.getByText(/coin_weight_hint\|0\.5 kg/)).toBeTruthy()
+    useUnitSettings.setState({ system: 'imperial' })
   })
 })

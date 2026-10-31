@@ -147,9 +147,9 @@ vi.mock('@/pages/hp/HpOperationForm', async () => {
 vi.mock('@/pages/hp/DeathSaves', async () => {
   const React = await import('react')
   return {
-    default: (p: { onRoll: () => void; onAction: (a: string) => void }) =>
+    default: (p: { onRoll: (m: string) => void; onAction: (a: string) => void }) =>
       React.createElement('div', { 'data-testid': 'death-saves' },
-        React.createElement('button', { 'data-testid': 'ds-roll', onClick: p.onRoll }, 'roll'),
+        React.createElement('button', { 'data-testid': 'ds-roll', onClick: () => p.onRoll('normal') }, 'roll'),
         React.createElement('button', { 'data-testid': 'ds-action', onClick: () => p.onAction('mark_success') }, 'action'),
       ),
   }
@@ -211,6 +211,27 @@ afterEach(() => {
   toastWarning.mockReset()
 })
 
+describe('HP page — wild shape', () => {
+  it('shows the active form HP as primary and the character HP as secondary', async () => {
+    getChar.mockResolvedValue({
+      ...aliveChar, name: 'Elandor', temp_hp: 3,
+      active_form: { companion_id: 9, name: 'Lupo', current_hp: 8, max_hp: 11, temp_hp: 2, armor_class: 13 },
+    })
+    renderWithProviders(<HP />)
+    expect(await screen.findByText('8')).toBeInTheDocument()
+    expect(screen.getByText('/11')).toBeInTheDocument()
+    expect(screen.getByText('Lupo')).toBeInTheDocument()
+    const gauge = screen.getByTestId('hp-gauge')
+    expect(gauge).toHaveAttribute('data-current', '8')
+    expect(gauge).toHaveAttribute('data-max', '11')
+    expect(gauge).toHaveAttribute('data-temp', '2')
+    const secondary = screen.getByTestId('character-hp-secondary')
+    expect(secondary).toHaveTextContent('Elandor')
+    expect(secondary).toHaveTextContent('20/35')
+    expect(secondary).toHaveTextContent('+3')
+  })
+})
+
 describe('HP page', () => {
   it('shows the skeleton while the character query is pending', () => {
     getChar.mockReturnValue(new Promise(() => {}))
@@ -227,6 +248,13 @@ describe('HP page', () => {
     const gauge = screen.getByTestId('hp-gauge')
     expect(gauge).toHaveAttribute('data-current', '20')
     expect(gauge).toHaveAttribute('data-max', '35')
+  })
+
+  it('shows the concentration banner for a spell cast from an item', async () => {
+    getChar.mockResolvedValue({ ...aliveChar, settings: { concentration_item_spell: { item_id: 9, name: 'Volare' } } })
+    renderWithProviders(<HP />)
+    expect(await screen.findByText('character.hp.concentration_active')).toBeInTheDocument()
+    expect(screen.getByText('Volare')).toBeInTheDocument()
   })
 
   it('handleApply parses the value and calls updateHp(id, op, val, wasCritical=false) when alive', async () => {

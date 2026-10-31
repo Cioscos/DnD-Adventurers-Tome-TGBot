@@ -19,6 +19,7 @@ import type {
 import type {
   Ability,
   CharacterFull,
+  ResolveChoiceBody,
   CharacterSummary,
   CombatantPatch,
   ConcentrationSaveResult,
@@ -27,6 +28,7 @@ import type {
   EncounterLive,
   EncounterMode,
   GameSession,
+  TurnState,
   GameSessionLive,
   HistoryEntry,
   HistoryRetentionPreview,
@@ -38,6 +40,9 @@ import type {
   RollDamageResult,
   SpellAttackRequest,
   SpellAttackResult,
+  Companion,
+  CompanionAttackResult,
+  CompanionPayload,
   SessionFeedResponse,
   SessionMessage,
   ShareImportResult,
@@ -46,8 +51,19 @@ import type {
   SpellSlot,
 } from '@/types'
 
+export type RollMode = 'normal' | 'advantage' | 'disadvantage'
+
+/** Legacy single die (number) or the new `{dice, mode}` pair; omit values and the server rolls. */
+export type D20Roll = number | { dice?: number[]; mode?: RollMode }
+
+function d20Fields(roll: D20Roll | undefined): Record<string, unknown> {
+  return typeof roll === 'object' ? { dice: roll.dice, mode: roll.mode } : { die: roll }
+}
+
 export type RollResult = {
   die: number
+  dice?: number[]
+  mode?: RollMode
   bonus: number
   total: number
   is_critical: boolean
@@ -79,10 +95,14 @@ export type GMGrantItemResponse = {
 export type WeaponAttackResult = {
   weapon_name: string
   to_hit_die: number
+  dice?: number[]
+  mode?: RollMode
   to_hit_bonus: number
   to_hit_total: number
   is_critical: boolean
   is_fumble: boolean
+  magic_bonus?: number
+  proficiency_warning?: boolean
   damage_dice: string
   damage_rolls: number[]
   damage_bonus: number
@@ -98,8 +118,22 @@ export type HitDiceSpendResult = {
   new_current_hp: number
 }
 
+export type RestPreview = {
+  hp_gain: number
+  hit_dice_regain: Record<string, number>
+  slots: Record<string, number>
+  pact_slots: number
+  abilities: string[]
+  homebrew_resources: string[]
+  item_charges: { name: string; gain: number | null; formula: string | null; full: boolean }[]
+  exhaustion_change: number
+  ends_concentration: boolean
+}
+
 export type DeathSaveRollResult = {
   die: number
+  dice?: number[]
+  mode?: RollMode
   outcome: 'nat20' | 'nat1' | 'success' | 'failure'
   successes: number
   failures: number
@@ -120,6 +154,7 @@ export type DiceResultRequestBody = {
   notation?: string | null
   with_inspiration?: boolean
   total?: number | null
+  mode?: RollMode
 }
 
 export type { ConcentrationSaveResult } from '@/types'
@@ -236,15 +271,23 @@ function requestFormDataWithProgress<T>(
 // Characters
 // ---------------------------------------------------------------------------
 
-function attackBody(withInspiration: boolean, die: number | undefined): string | undefined {
-  if (!withInspiration && die === undefined) return undefined
+function attackBody(
+  withInspiration: boolean,
+  roll: D20Roll | undefined,
+  choice?: { grip?: 'one' | 'two'; attack_mode?: 'melee' | 'thrown' },
+): string | undefined {
+  const fields = roll === undefined ? {} : d20Fields(roll)
+  if (!withInspiration && roll === undefined && !choice) return undefined
   return JSON.stringify({
     ...(withInspiration ? { with_inspiration: true } : {}),
-    ...(die !== undefined ? { die } : {}),
+    ...fields,
+    ...choice,
   })
 }
 
 export const api = {
+  health: () => request<{ status: string; version: string | null }>('/health'),
+
   me: () => request<{ user_id: number }>('/auth/me'),
 
   characters: {
@@ -266,6 +309,11 @@ export const api = {
         languages?: string[]
         personality?: { traits: string }
       } | null,
+      extras?: {
+        ability_scores?: Record<string, number>
+        species?: object
+        skills?: Record<string, boolean>
+      },
     ) =>
       request<CharacterFull>('/characters', {
         method: 'POST',
@@ -273,6 +321,7 @@ export const api = {
           name,
           ...(initialClass ? { initial_class: initialClass } : {}),
           ...(identity ? { identity } : {}),
+          ...extras,
         }),
       }),
     update: (id: number, data: Record<string, unknown>) =>
@@ -283,13 +332,25 @@ export const api = {
     delete: (id: number) =>
       request<void>(`/characters/${id}`, { method: 'DELETE' }),
 
+    // Export / import / duplicate
+    export: (id: number) => request<unknown>(`/characters/${id}/export`),
+    exportSend: (id: number) =>
+      request<{ ok: boolean }>(`/characters/${id}/export/send`, { method: 'POST' }),
+    import: (file: File) => {
+      const fd = new FormData()
+      fd.append('file', file)
+      return requestFormData<CharacterFull>('/characters/import', fd)
+    },
+    duplicate: (id: number) =>
+      request<CharacterFull>(`/characters/${id}/duplicate`, { method: 'POST' }),
+
     // HP
     updateHp: (
       id: number,
       op: string,
       value: number,
       wasCritical = false,
-      modifier?: { damage_modifier: 'half' | 'double'; raw_value: number },
+      modifier?: { damage_modifier?: 'half' | 'double' | 'none' | 'immune'; raw_value?: number; damage_type?: string },
     ) =>
       request<CharacterFull>(`/characters/${id}/hp`, {
         method: 'PATCH',
@@ -309,6 +370,8 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ rest_type: restType, hit_dice_used: hitDiceUsed }),
       }),
+    restPreview: (id: number, restType: 'long' | 'short') =>
+      request<RestPreview>(`/characters/${id}/rest/preview?rest_type=${restType}`),
     updateDeathSaves: (id: number, action: string) =>
       request<CharacterFull>(`/characters/${id}/death_saves`, {
         method: 'PATCH',
@@ -356,17 +419,21 @@ export const api = {
       }),
 
     // Combat extras
-    updateConditions: (id: number, conditions: Record<string, unknown>) =>
+    updateConditions: (id: number, conditions: Record<string, unknown>, durations?: Record<string, number | null>) =>
       request<CharacterFull>(`/characters/${id}/conditions`, {
         method: 'PATCH',
-        body: JSON.stringify({ conditions }),
+        body: JSON.stringify(durations ? { conditions, durations } : { conditions }),
       }),
+    tickRound: (id: number) =>
+      request<CharacterFull>(`/characters/${id}/rounds/tick`, { method: 'POST' }),
+    turnState: (id: number) =>
+      request<TurnState>(`/characters/${id}/turn-state`),
     updateInspiration: (id: number, heroic_inspiration: boolean) =>
       request<CharacterFull>(`/characters/${id}/inspiration`, {
         method: 'PATCH',
         body: JSON.stringify({ heroic_inspiration }),
       }),
-    updateXP: (id: number, data: { add?: number; set?: number }) =>
+    updateXP: (id: number, data: { add?: number; set?: number; hp_rolls?: number[] }) =>
       request<CharacterFull>(`/characters/${id}/xp`, {
         method: 'PATCH',
         body: JSON.stringify(data),
@@ -376,27 +443,27 @@ export const api = {
     rollSkill: (
       id: number,
       skillName: string,
-      die?: number,
+      die?: D20Roll,
       withInspiration: boolean = false,
     ) =>
       request<RollResult>(`/characters/${id}/skills/${encodeURIComponent(skillName)}/roll`, {
         method: 'POST',
         body:
           die != null || withInspiration
-            ? JSON.stringify({ die, with_inspiration: withInspiration })
+            ? JSON.stringify({ ...d20Fields(die), with_inspiration: withInspiration })
             : undefined,
       }),
     rollSavingThrow: (
       id: number,
       ability: string,
-      die?: number,
+      die?: D20Roll,
       withInspiration: boolean = false,
     ) =>
       request<RollResult>(`/characters/${id}/saving_throws/${encodeURIComponent(ability)}/roll`, {
         method: 'POST',
         body:
           die != null || withInspiration
-            ? JSON.stringify({ die, with_inspiration: withInspiration })
+            ? JSON.stringify({ ...d20Fields(die), with_inspiration: withInspiration })
             : undefined,
       }),
 
@@ -408,10 +475,10 @@ export const api = {
       }),
 
     // Death save roll
-    rollDeathSave: (id: number, die?: number) =>
+    rollDeathSave: (id: number, die?: D20Roll) =>
       request<DeathSaveRollResult>(`/characters/${id}/death_saves/roll`, {
         method: 'POST',
-        body: die != null ? JSON.stringify({ die }) : undefined,
+        body: die != null ? JSON.stringify(d20Fields(die)) : undefined,
       }),
 
     // HP recalc
@@ -439,10 +506,10 @@ export const api = {
       request<CharacterFull>(`/characters/${charId}/classes/${classId}`, {
         method: 'DELETE',
       }),
-    distribute: (charId: number, classes: { class_id: number; level: number }[]) =>
+    distribute: (charId: number, classes: { class_id: number; level: number }[], hpRolls?: number[]) =>
       request<CharacterFull>(`/characters/${charId}/classes/distribute`, {
         method: 'PATCH',
-        body: JSON.stringify({ classes }),
+        body: JSON.stringify(hpRolls ? { classes, hp_rolls: hpRolls } : { classes }),
       }),
   },
 
@@ -528,12 +595,25 @@ export const api = {
       }),
     remove: (charId: number, itemId: number) =>
       request<CharacterFull>(`/characters/${charId}/items/${itemId}`, { method: 'DELETE' }),
-    attack: (charId: number, itemId: number, withInspiration: boolean = false, die?: number) =>
+    charges: (charId: number, itemId: number, delta: number) =>
+      request<CharacterFull>(`/characters/${charId}/items/${itemId}/charges`, {
+        method: 'POST',
+        body: JSON.stringify({ delta }),
+      }),
+    cast: (charId: number, itemId: number, spellIndex: number) =>
+      request<CharacterFull>(`/characters/${charId}/items/${itemId}/cast`, {
+        method: 'POST',
+        body: JSON.stringify({ spell_index: spellIndex }),
+      }),
+    attack: (
+      charId: number, itemId: number, withInspiration: boolean = false, die?: D20Roll,
+      choice?: { grip?: 'one' | 'two'; attack_mode?: 'melee' | 'thrown' },
+    ) =>
       request<WeaponAttackResult>(`/characters/${charId}/items/${itemId}/attack`, {
         method: 'POST',
-        body: attackBody(withInspiration, die),
+        body: attackBody(withInspiration, die, choice),
       }),
-    attackUnarmed: (charId: number, withInspiration: boolean = false, die?: number) =>
+    attackUnarmed: (charId: number, withInspiration: boolean = false, die?: D20Roll) =>
       request<WeaponAttackResult>(`/characters/${charId}/attack/unarmed`, {
         method: 'POST',
         body: attackBody(withInspiration, die),
@@ -564,6 +644,26 @@ export const api = {
   // ---------------------------------------------------------------------------
   // Abilities (features)
   // ---------------------------------------------------------------------------
+  companions: {
+    list: (charId: number) => request<Companion[]>(`/characters/${charId}/companions`),
+    create: (charId: number, body: CompanionPayload) =>
+      request<Companion>(`/characters/${charId}/companions`, { method: 'POST', body: JSON.stringify(body) }),
+    update: (charId: number, id: number, body: CompanionPayload) =>
+      request<Companion>(`/characters/${charId}/companions/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+    remove: (charId: number, id: number) =>
+      request<void>(`/characters/${charId}/companions/${id}`, { method: 'DELETE' }),
+    hp: (charId: number, id: number, op: 'damage' | 'heal' | 'set_temp', value: number) =>
+      request<Companion>(`/characters/${charId}/companions/${id}/hp`, { method: 'PATCH', body: JSON.stringify({ op, value }) }),
+    attack: (charId: number, id: number, actionIndex: number, mode: RollMode, dice?: number[]) =>
+      request<CompanionAttackResult>(`/characters/${charId}/companions/${id}/attack`, {
+        method: 'POST', body: JSON.stringify({ action_index: actionIndex, mode, dice }),
+      }),
+    activate: (charId: number, id: number, force = false) =>
+      request<Companion>(`/characters/${charId}/companions/${id}/activate`, { method: 'POST', body: JSON.stringify({ force }) }),
+    deactivate: (charId: number, id: number) =>
+      request<Companion>(`/characters/${charId}/companions/${id}/deactivate`, { method: 'POST' }),
+  },
+
   abilities: {
     list: (charId: number) => request<Ability[]>(`/characters/${charId}/abilities`),
     add: (charId: number, data: Partial<Ability>) =>
@@ -578,6 +678,18 @@ export const api = {
       }),
     remove: (charId: number, abilityId: number) =>
       request<void>(`/characters/${charId}/abilities/${abilityId}`, { method: 'DELETE' }),
+  },
+
+  choices: {
+    resolve: (charId: number, choiceId: string, body: ResolveChoiceBody) =>
+      request<CharacterFull>(`/characters/${charId}/choices/${choiceId}/resolve`, {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+    removeFeat: (charId: number, abilityId: number) =>
+      request<CharacterFull>(`/characters/${charId}/feats/${abilityId}`, { method: 'DELETE' }),
+    removeFeatByRule: (charId: number, ruleId: number) =>
+      request<CharacterFull>(`/characters/${charId}/feats/by-rule/${ruleId}`, { method: 'DELETE' }),
   },
 
   // ---------------------------------------------------------------------------
@@ -862,10 +974,10 @@ export const api = {
           method: 'POST',
           body: JSON.stringify(payload),
         }),
-      rollInitiative: (sessionId: number, combatantId: number, die?: number) =>
+      rollInitiative: (sessionId: number, combatantId: number, die?: D20Roll) =>
         request<EncounterLive>(
           `/sessions/${sessionId}/encounter/combatants/${combatantId}/initiative`,
-          { method: 'POST', body: JSON.stringify({ die: die ?? null }) },
+          { method: 'POST', body: JSON.stringify(typeof die === 'object' ? d20Fields(die) : { die: die ?? null }) },
         ),
       patchCombatant: (sessionId: number, combatantId: number, patch: CombatantPatch) =>
         request<EncounterLive>(

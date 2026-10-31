@@ -12,9 +12,8 @@ import RollResultModal, { type RollResult } from '@/components/RollResultModal'
 import { haptic } from '@/auth/telegram'
 import { profBonus } from '@/lib/dnd'
 import { useUnitSettings, formatLength } from '@/store/unitSettings'
-import { useDiceAnimation } from '@/dice/useDiceAnimation'
-import { useDiceSettings } from '@/store/diceSettings'
-import { useReducedMotion } from '@/hooks/useReducedMotion'
+import { useD20Roll, type RollMode } from '@/hooks/useD20Roll'
+import RollButton from '@/components/ui/RollButton'
 import { api } from '@/api/client'
 import type { CharacterFull } from '@/types'
 
@@ -54,15 +53,19 @@ export default function HeroStatsSection({ char }: Props) {
 
   const pb = profBonus(char.total_level ?? 1)
   const dexMod = abilityMod('dexterity')
+  const initBonus = char.initiative_bonus ?? dexMod
 
   // Passive perception — identical formula to Skills.tsx.
   const skills = (char.skills as Record<string, unknown>) ?? {}
   const percLvl = skillLevel(skills['perception'])
   const percHb = char.skills_homebrew_modifiers?.['perception'] ?? 0
   const passivePerception =
+    char.passives?.perception ??
     10 + abilityMod('wisdom') + (percLvl === 'expert' ? 2 * pb : percLvl ? pb : 0) + percHb
+  const senses = ((char.settings?.senses as { type: string; range_ft: number }[] | undefined) ?? [])
+    .filter((s) => s.range_ft > 0)
 
-  const speedTotal = (char.speed ?? 30) + (char.speed_homebrew_modifier ?? 0)
+  const speedTotal = (char.speed ?? 30) + (char.speed_homebrew_modifier ?? 0) + (char.speed_items_modifier ?? 0) - (char.speed_encumbrance_penalty_ft ?? 0)
   const speedLabel = formatLength(speedTotal, unitSystem)
 
   // Proficient saving throws with their total bonus (same math as SavingThrows.tsx).
@@ -70,7 +73,7 @@ export default function HeroStatsSection({ char }: Props) {
   const profSaves = ABILITY_ORDER.filter((a) => saves[a]).map((a) => ({
     key: a,
     label: t(`character.ability.${a}_short`, { defaultValue: a.slice(0, 3).toUpperCase() }),
-    bonus: abilityMod(a) + pb + (char.saves_homebrew_modifiers?.[a] ?? 0),
+    bonus: abilityMod(a) + pb + (char.saves_homebrew_modifiers?.[a] ?? 0) + (char.saves_items_modifiers?.[a] ?? 0),
   }))
 
   // Skill proficiency counts (only keys actually set on the character).
@@ -84,37 +87,36 @@ export default function HeroStatsSection({ char }: Props) {
   const totalSkillProf = profCount + expertCount
 
   const qc = useQueryClient()
-  const dice = useDiceAnimation()
-  const animate3d = useDiceSettings((s) => s.animate3d)
-  const reducedMotion = useReducedMotion()
+  const rollD20 = useD20Roll()
   const [initResult, setInitResult] = useState<RollResult | null>(null)
 
   const initiativeMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (mode: RollMode) => {
       // Il client tira (con animazione 3D se attiva), il BE persiste nello storico.
-      let value: number | undefined
-      if (animate3d && !reducedMotion) {
-        const detected = await dice.playAndCollect([{ kind: 'd20', count: 1 }])
-        value = detected[0]?.value
-      }
-      if (value == null) value = 1 + Math.floor(Math.random() * 20)
-      const notation = `1d20${dexMod >= 0 ? '+' : ''}${dexMod}`
+      const n = mode === 'normal' ? 1 : 2
+      const faces = (await rollD20(mode)) ?? Array.from({ length: n }, () => 1 + Math.floor(Math.random() * 20))
+      const value = mode === 'advantage' ? Math.max(...faces) : mode === 'disadvantage' ? Math.min(...faces) : faces[0]
+      const keep = mode === 'advantage' ? 'kh1' : mode === 'disadvantage' ? 'kl1' : ''
+      const notation = `${n}d20${keep}${initBonus >= 0 ? '+' : ''}${initBonus}`
       await api.dice.result(char.id, {
-        rolls: [{ kind: 'd20', value }],
-        modifier: dexMod,
+        rolls: faces.map((v) => ({ kind: 'd20' as const, value: v })),
+        modifier: initBonus,
         notation,
         label: t('character.hero.initiative'),
+        mode,
       })
-      return value
+      return { value, faces, mode }
     },
-    onSuccess: (value) => {
+    onSuccess: ({ value, faces, mode }) => {
       qc.invalidateQueries({ queryKey: ['character', char.id] })
       qc.invalidateQueries({ queryKey: ['dice-history', char.id] })
       qc.invalidateQueries({ queryKey: ['history', char.id] })
       setInitResult({
         die: value,
-        bonus: dexMod,
-        total: value + dexMod,
+        dice: faces,
+        mode,
+        bonus: initBonus,
+        total: value + initBonus,
         is_critical: value === 20,
         is_fumble: value === 1,
       })
@@ -126,7 +128,7 @@ export default function HeroStatsSection({ char }: Props) {
     {
       key: 'init',
       label: t('character.hero.initiative'),
-      value: sign(dexMod),
+      value: sign(initBonus),
       path: 'stats',
     },
     {
@@ -157,28 +159,53 @@ export default function HeroStatsSection({ char }: Props) {
 
       {/* Combat-number cells — 2×2 grid, full names above, mono value below. */}
       <div className="grid grid-cols-2 gap-1.5">
-        {cells.map((c) => (
-          <Pressable
-            key={c.key}
-            type="button"
-            onClick={() => (c.key === 'init' ? (haptic.medium(), initiativeMutation.mutate()) : go(c.path))}
-            pending={c.key === 'init' && initiativeMutation.isPending}
-            aria-label={`${c.label}: ${c.value}`}
-            className="flex flex-col items-center justify-center min-h-[68px] rounded-lg p-2 border
+        {cells.map((c) => {
+          const cellClass = `flex flex-col items-center justify-center min-h-[68px] rounded-lg p-2 border
                        bg-dnd-surface-raised border-dnd-border text-dnd-text
-                       hover:border-dnd-gold transition-colors"
-            whileTap={{ scale: 0.95 }}
-          >
-            <span className="flex items-center justify-center text-center min-h-[2.2em] px-0.5
-                             text-xs font-cinzel uppercase tracking-wide leading-tight opacity-80">
-              {c.label}
-            </span>
-            <span className="text-2xl font-mono font-bold tabular-nums leading-none mt-1">
-              {c.value}
-            </span>
-          </Pressable>
-        ))}
+                       hover:border-dnd-gold transition-colors`
+          const body = (
+            <>
+              <span className="flex items-center justify-center text-center min-h-[2.2em] px-0.5
+                               text-xs font-cinzel uppercase tracking-wide leading-tight opacity-80">
+                {c.label}
+              </span>
+              <span className="text-2xl font-mono font-bold tabular-nums leading-none mt-1">
+                {c.value}
+              </span>
+            </>
+          )
+          return c.key === 'init' ? (
+            <RollButton
+              key={c.key}
+              onRoll={(mode) => { haptic.medium(); initiativeMutation.mutate(mode) }}
+              pending={initiativeMutation.isPending}
+              ariaLabel={`${c.label}: ${c.value}`}
+              className={cellClass}
+            >
+              {body}
+            </RollButton>
+          ) : (
+            <Pressable
+              key={c.key}
+              type="button"
+              onClick={() => go(c.path)}
+              aria-label={`${c.label}: ${c.value}`}
+              className={cellClass}
+              whileTap={{ scale: 0.95 }}
+            >
+              {body}
+            </Pressable>
+          )
+        })}
       </div>
+
+      {senses.length > 0 && (
+        <p className="mt-1.5 text-xs font-body text-dnd-text-muted text-center">
+          <span className="font-cinzel uppercase tracking-wide text-dnd-gold-dim">{t('character.hero.senses')}</span>
+          {': '}
+          {senses.map((s) => `${t(`character.senses.${s.type}`)} ${formatLength(s.range_ft, unitSystem)}`).join(' · ')}
+        </p>
+      )}
 
       {/* Speed folds its homebrew modifier into the total above; surface an
           attribution row (like AC/HP) so an altered speed isn't unexplained (#34). */}
@@ -189,6 +216,29 @@ export default function HeroStatsSection({ char }: Props) {
             label={t('character.hero.speed_homebrew_label')}
             display={`${(char.speed_homebrew_modifier ?? 0) > 0 ? '+' : ''}${formatLength(char.speed_homebrew_modifier ?? 0, unitSystem)}`}
           />
+        </div>
+      )}
+
+      {(char.speed_items_modifier ?? 0) !== 0 && (
+        <div className="mt-1.5 rounded-lg border border-dnd-border bg-dnd-surface-raised">
+          <HomebrewBreakdownRow
+            value={char.speed_items_modifier ?? 0}
+            label={t('character.hero.speed_items_label')}
+            display={`${(char.speed_items_modifier ?? 0) > 0 ? '+' : ''}${formatLength(char.speed_items_modifier ?? 0, unitSystem)}`}
+          />
+        </div>
+      )}
+
+      {(char.encumbrance_level ?? 'none') !== 'none' && (
+        <div className="mt-1.5 rounded-lg border border-dnd-amber/50 bg-dnd-surface-raised">
+          <HomebrewBreakdownRow
+            value={-(char.speed_encumbrance_penalty_ft ?? 0)}
+            label={t(`character.hero.encumbrance_${char.encumbrance_level}`)}
+            display={`−${formatLength(char.speed_encumbrance_penalty_ft ?? 0, unitSystem)}`}
+          />
+          {char.encumbrance_level === 'heavily' && (
+            <p className="px-3 pb-2 text-xs font-body text-dnd-amber">{t('character.hero.encumbrance_heavily_note')}</p>
+          )}
         </div>
       )}
 

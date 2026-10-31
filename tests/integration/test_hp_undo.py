@@ -191,3 +191,16 @@ async def test_undo_with_deleted_concentration_spell_clears_it(client, monkeypat
     r = await _undo(client, cid, dmg["hp_undo_id"])
     assert r.status_code == 200, r.text
     assert r.json()["concentrating_spell_id"] is None
+
+
+async def test_undo_restores_concentration_rounds(client, monkeypatch):
+    cid = await _make_char(client, 20)
+    spell_id = await _start_concentration(client, cid)
+    await client.patch(f"/characters/{cid}/concentration", json={"spell_id": spell_id, "rounds": 7})
+    _force_d20(monkeypatch, 1)
+    dmg = await _hp(client, cid, "damage", 5)
+    assert "concentration_rounds_left" not in dmg["settings"]
+    r = await _undo(client, cid, dmg["hp_undo_id"])
+    assert r.status_code == 200, r.text
+    assert r.json()["concentrating_spell_id"] == spell_id
+    assert r.json()["settings"]["concentration_rounds_left"] == 7

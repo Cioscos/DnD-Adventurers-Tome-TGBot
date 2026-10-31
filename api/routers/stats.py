@@ -70,6 +70,27 @@ def _recompute_unarmored_base(char: Character) -> None:
     )
 
 
+def apply_ability_change(char: Character, ability: str, old_con_mod: int) -> None:
+    """Side effects of an ability score change; call after writing the new value.
+
+    `old_con_mod` is effective_con_mod(char) taken before the change.
+    """
+    if ability == "strength":
+        char.recalculate_carry_capacity()
+    # Unarmored Defense keeps base AC in sync with DEX and the chosen second ability.
+    if char.unarmored_defense_ability and ability in ("dexterity", char.unarmored_defense_ability):
+        _recompute_unarmored_base(char)
+    # CON change hook: retroactively adjust max HP and current HP
+    if ability == "constitution" and (char.settings or {}).get("hp_auto_calc", True):
+        delta = effective_con_mod(char) - old_con_mod
+        if delta != 0:
+            char.hit_points = max(0, char.hit_points + delta * char.total_level)
+            char.current_hit_points = max(
+                0,
+                min(char.current_hit_points + delta * char.total_level, char.hit_points),
+            )
+
+
 async def _get_owned_full(char_id: int, user_id: int, session: AsyncSession) -> Character:
     from core.db.models import CharacterClass
     result = await session.execute(
@@ -107,13 +128,7 @@ async def update_ability_score(
     if not 1 <= body.value <= 30:
         raise HTTPException(status_code=400, detail="Ability score must be between 1 and 30")
 
-    is_constitution = ability_name.lower() == "constitution"
-    settings = char.settings or {}
-    auto_calc = settings.get("hp_auto_calc", True)
-
-    old_con_mod = 0
-    if is_constitution and auto_calc:
-        old_con_mod = effective_con_mod(char)
+    old_con_mod = effective_con_mod(char)
 
     result = await session.execute(
         select(AbilityScore).where(
@@ -128,27 +143,7 @@ async def update_ability_score(
     else:
         score.value = body.value
 
-    # Recalculate carry capacity if STR changed
-    if ability_name.lower() == "strength":
-        char.recalculate_carry_capacity()
-
-    # Unarmored Defense keeps base AC in sync with DEX and the chosen second ability.
-    if char.unarmored_defense_ability and ability_name.lower() in (
-        "dexterity", char.unarmored_defense_ability,
-    ):
-        _recompute_unarmored_base(char)
-
-    # CON change hook: retroactively adjust max HP and current HP
-    if is_constitution and auto_calc:
-        new_con_mod = effective_con_mod(char)
-        delta = new_con_mod - old_con_mod
-        if delta != 0:
-            char.hit_points = max(0, char.hit_points + delta * char.total_level)
-            char.current_hit_points = max(
-                0,
-                min(char.current_hit_points + delta * char.total_level, char.hit_points),
-            )
-
+    apply_ability_change(char, ability_name.lower(), old_con_mod)
     return await build_character_response(session, char)
 
 

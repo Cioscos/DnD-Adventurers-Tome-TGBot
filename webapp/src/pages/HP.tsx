@@ -13,6 +13,7 @@ import { api, ApiError, type DeathSaveRollResult, type ConcentrationSaveResult, 
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
 import HPGauge from '@/components/ui/HPGauge'
+import CharacterHpSecondary from '@/components/character/CharacterHpSecondary'
 import Button from '@/components/ui/Button'
 import StatPill from '@/components/ui/StatPill'
 import ConfirmSheet from '@/components/ui/ConfirmSheet'
@@ -29,14 +30,13 @@ import InstantDeathDialog from '@/pages/hp/InstantDeathDialog'
 import type { CharacterFull } from '@/types'
 import ConcentrationSaveDialog from '@/pages/hp/ConcentrationSaveDialog'
 import { useAnimatedRoll } from '@/dice/useAnimatedRoll'
-import { useDiceAnimation } from '@/dice/useDiceAnimation'
-import { useDiceSettings } from '@/store/diceSettings'
-import { useReducedMotion } from '@/hooks/useReducedMotion'
+import { useD20Roll, d20Arg, type RollMode } from '@/hooks/useD20Roll'
 import HomebrewBreakdownRow from '@/components/homebrew/HomebrewBreakdownRow'
 import HPSkeleton from '@/components/skeletons/HPSkeleton'
 import { useIsFirstValue } from '@/hooks/useIsFirstValue'
 import { notifyMutationError } from '@/lib/mutationError'
-import { applyDamageModifier, type DamageModifier } from '@/lib/damageModifier'
+import { isConcentrating, concentrationLabel } from '@/lib/concentration'
+import { applyDamageModifier, damageMultiplier, type DamageModifier } from '@/lib/damageModifier'
 
 type HPOp = 'damage' | 'heal' | 'set_max' | 'set_current' | 'set_temp'
 
@@ -54,14 +54,13 @@ export default function HP() {
   const charId = Number(id)
   const { t } = useTranslation()
   const qc = useQueryClient()
-  const dice = useDiceAnimation()
+  const rollD20 = useD20Roll()
   const rollDice = useAnimatedRoll()
-  const animate3d = useDiceSettings((s) => s.animate3d)
-  const reducedMotion = useReducedMotion()
   const [value, setValue] = useState('')
   const [activeOp, setActiveOp] = useState<HPOp>('damage')
   const [crit, setCrit] = useState(false)
   const [damageModifier, setDamageModifier] = useState<DamageModifier>(null)
+  const [damageType, setDamageType] = useState('')
   const [instantDeathOpen, setInstantDeathOpen] = useState(false)
   // Synchronous guard against double-fire of handleApply (Input.onCommit on blur +
   // button.onClick both fire when the user taps Conferma — `hpMutation.isPending` isn't
@@ -101,7 +100,7 @@ export default function HP() {
   const hpMutation = useMutation({
     mutationFn: ({ op, val, wasCritical, modifier }: {
       op: HPOp; val: number; wasCritical?: boolean
-      modifier?: { damage_modifier: 'half' | 'double'; raw_value: number }
+      modifier?: { damage_modifier?: 'half' | 'double' | 'none' | 'immune'; raw_value?: number; damage_type?: string }
     }) =>
       modifier
         ? api.characters.updateHp(charId, op, val, wasCritical ?? false, modifier)
@@ -113,6 +112,7 @@ export default function HP() {
       setValue('')
       setCrit(false)
       setDamageModifier(null)
+      setDamageType('')
       haptic.success()
       maybeShowInstantDeath(updated)
       const conc = updated.concentration_save
@@ -181,15 +181,8 @@ export default function HP() {
   })
 
   const deathRollMutation = useMutation({
-    mutationFn: async () => {
-      const useAnimation = animate3d && !reducedMotion
-      let die: number | undefined
-      if (useAnimation) {
-        const detected = await dice.playAndCollect([{ kind: 'd20', count: 1 }])
-        die = detected[0]?.value
-      }
-      return api.characters.rollDeathSave(charId, die)
-    },
+    mutationFn: async (mode: RollMode) =>
+      api.characters.rollDeathSave(charId, d20Arg(mode, await rollD20(mode))),
     onSuccess: (result) => {
       setDeathRollResult(result)
       qc.invalidateQueries({ queryKey: ['character', charId] })
@@ -222,11 +215,16 @@ export default function HP() {
   // Il modificatore vale solo per il danno: `val` è già il valore applicato, il grezzo
   // viaggia come annotazione.
   const runHpMutation = (op: HPOp, raw: number, wasCritical: boolean) => {
+    const type = damageType ? { damage_type: damageType } : {}
     if (op === 'damage' && damageModifier) {
+      // Override dell'utente: il client applica il moltiplicatore, il server annota (e azzera se immune).
       hpMutation.mutate({
         op, val: applyDamageModifier(raw, damageModifier), wasCritical,
-        modifier: { damage_modifier: damageModifier, raw_value: raw },
+        modifier: { damage_modifier: damageModifier, raw_value: raw, ...type },
       })
+    } else if (op === 'damage' && damageType) {
+      // Nessun override: il server applica le resistenze del personaggio al tipo.
+      hpMutation.mutate({ op, val: raw, wasCritical, modifier: type })
     } else {
       hpMutation.mutate({ op, val: raw, wasCritical })
     }
@@ -235,6 +233,7 @@ export default function HP() {
   const handleSetActiveOp = (op: HPOp) => {
     setActiveOp(op)
     setDamageModifier(null)
+    setDamageType('')
   }
 
   const handleQuickApply = ({ op, val }: { op: HPOp; val: number }) => {
@@ -256,11 +255,17 @@ export default function HP() {
   const deathCause: 'death_saves' | 'massive_damage' = (ds.failures ?? 0) >= 3 ? 'death_saves' : 'massive_damage'
   const atZero = char.current_hit_points === 0
   const isDying = atZero && !ds.stable && !isDead
-  const isConcentrating = !!char.concentrating_spell_id
+  const concentrating = isConcentrating(char)
+  const concentrationName = concentrationLabel(char)
   const classes = char.classes ?? []
   const hbHp = char.hp_max_homebrew_modifier ?? 0
   const hpMax = char.hit_points + hbHp
-  const hpPct = hpMax > 0 ? (char.current_hit_points / hpMax) * 100 : 0
+  // In forma selvatica il numero grande e la barra sono quelli della forma (come in Eroe).
+  const form = char.active_form ?? null
+  const shownHp = form ? form.current_hp : char.current_hit_points
+  const shownMax = form ? form.max_hp : hpMax
+  const shownTemp = form ? form.temp_hp : char.temp_hp
+  const hpPct = shownMax > 0 ? (shownHp / shownMax) * 100 : 0
 
   // Color scale for HP number
   const hpColor = hpPct > 50
@@ -292,26 +297,31 @@ export default function HP() {
                 <Surface variant="tome" ornamented className="relative text-center">
                   <p className="text-xs font-cinzel uppercase tracking-[0.25em] text-dnd-gold-dim mb-2">
                     <Heart size={10} className="inline mr-1 text-dnd-crimson-bright" />
-                    {t('character.hp.title')}
+                    {form ? form.name : t('character.hp.title')}
                   </p>
+                  {form && (
+                    <p className="mb-2 text-sm font-body text-dnd-emerald-bright">
+                      {t('character.extras.hp_goes_to_form', { name: form.name })}
+                    </p>
+                  )}
                   <div className="flex items-end justify-center gap-1.5">
                     <m.span
-                      key={char.current_hit_points}
+                      key={shownHp}
                       initial={isFirstValue ? false : { scale: 0.85, opacity: 0.4 }}
                       animate={{ scale: 1, opacity: 1 }}
                       transition={spring.elastic}
                       className={`font-display font-black leading-none text-[5rem] ${hpColor} ${hpGlowClass}`}
                     >
-                      {char.current_hit_points}
+                      {shownHp}
                     </m.span>
-                    <span className="mb-3 text-xl font-mono text-dnd-text-muted">/{hpMax}</span>
+                    <span className="mb-3 text-xl font-mono text-dnd-text-muted">/{shownMax}</span>
                   </div>
                   <div className="mt-2 flex items-center justify-center gap-2">
-                    {char.temp_hp > 0 && (
+                    {shownTemp > 0 && (
                       <StatPill
                         tone="cobalt"
                         size="sm"
-                        value={`+${char.temp_hp}`}
+                        value={`+${shownTemp}`}
                         label={t('character.hp.temp')}
                       />
                     )}
@@ -320,8 +330,9 @@ export default function HP() {
                     </span>
                   </div>
                   <div className="mt-3">
-                    <HPGauge current={char.current_hit_points} max={hpMax} temp={char.temp_hp} size="lg" segmented />
+                    <HPGauge current={shownHp} max={shownMax} temp={shownTemp} size="lg" segmented />
                   </div>
+                  {form && <CharacterHpSecondary char={char} className="mt-2" />}
                   {/* A 0 HP stabile la sezione resta "alive": senza questo badge lo
                       stato "privo di sensi ma stabile" sarebbe indistinguibile da
                       un'anomalia (audit FE #5). Cobalt = info, mai crimson. */}
@@ -352,7 +363,7 @@ export default function HP() {
                 </p>
                 <DeathSaves
                   deathSaves={ds}
-                  onRoll={() => deathRollMutation.mutate()}
+                  onRoll={(mode) => deathRollMutation.mutate(mode)}
                   onAction={(action) => deathMutation.mutate(action)}
                   isRolling={deathRollMutation.isPending}
                   pendingAction={deathMutation.isPending ? deathMutation.variables : undefined}
@@ -380,13 +391,16 @@ export default function HP() {
       })()}
 
       {/* Concentration banner — passive indicator (auto-TS triggered by DAMAGE) */}
-      {!isDead && isConcentrating && (
+      {!isDead && concentrating && (
         <Surface variant="arcane">
           <div className="flex items-center gap-2">
             <FlaskConical size={16} className="text-dnd-arcane-bright" />
             <p className="text-sm font-cinzel uppercase tracking-wider text-dnd-arcane-bright">
               {t('character.hp.concentration_active')}
             </p>
+            {concentrationName && (
+              <p className="text-sm font-body italic text-dnd-arcane-bright truncate">{concentrationName}</p>
+            )}
           </div>
         </Surface>
       )}
@@ -407,6 +421,9 @@ export default function HP() {
           setCrit={setCrit}
           damageModifier={damageModifier}
           setDamageModifier={setDamageModifier}
+          damageType={damageType}
+          setDamageType={setDamageType}
+          proposedModifier={damageMultiplier(char.damage_modifiers, damageType)}
         />
       )}
 

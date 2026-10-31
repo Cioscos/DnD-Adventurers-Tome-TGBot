@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any, Literal, Optional
+from typing import Annotated, Any, Literal, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
 from core.db.models import RestorationType
+from core.game.actions import ActionType
 
 # Valid restoration_type values, derived from the enum so the schema can never
 # drift from the DB column. Accepting an unknown string here would silently
@@ -28,6 +29,19 @@ def _validate_restoration_type(value: Optional[str]) -> Optional[str]:
 # ---------------------------------------------------------------------------
 # AbilityScore
 # ---------------------------------------------------------------------------
+
+PROFICIENCY_CATEGORIES = ("armor", "weapons", "tools", "other")
+
+
+def normalize_proficiencies(v: Any) -> dict[str, list[str]]:
+    """Legacy plain list -> ``other``; object -> the four known categories only.
+
+    Stored data is migrated lazily: reads always return the object, writes store it.
+    """
+    if isinstance(v, dict):
+        return {k: [str(x) for x in (v.get(k) or [])] for k in PROFICIENCY_CATEGORIES}
+    return {**normalize_proficiencies({}), "other": [str(x) for x in (v or [])]}
+
 
 class AppliedModifierRead(BaseModel):
     """A single equipped-item modifier applied to an ability score."""
@@ -116,6 +130,7 @@ class CharacterClassUpdate(BaseModel):
     spellcasting_ability: Optional[str] = None
     hit_die: Optional[int] = None
     hit_dice_used: Optional[int] = None
+    hp_rolls: Optional[list[int]] = None  # one die roll per gained level (not a column)
 
 
 class ClassLevelEntry(BaseModel):
@@ -131,6 +146,9 @@ class ClassDistribute(BaseModel):
     `level` values must equal the character's XP-derived total level.
     """
     classes: list[ClassLevelEntry]
+    # One die roll per gained level, in body order (each 1..hit_die). Used when
+    # settings.hp_mode == "rolled"; omitted -> fixed value.
+    hp_rolls: Optional[list[int]] = None
 
 
 # ---------------------------------------------------------------------------
@@ -178,6 +196,7 @@ class AbilityRead(BaseModel):
     source_class_id: Optional[int] = None
     is_class_feature: bool = False
     feature_key: Optional[str] = None
+    action_type: Optional[str] = None
     # Homebrew rule notifications surfaced when an ability_used event fired
     # (PATCH /abilities/{id} with a decremented `uses`). Omitted/None on
     # POST/list responses to match CharacterFull's contract (Phase 2 pattern).
@@ -194,6 +213,7 @@ class AbilityCreate(BaseModel):
     is_passive: bool = False
     is_active: bool = False
     restoration_type: str = "none"
+    action_type: Optional[ActionType] = None
 
     _check_restoration = field_validator("restoration_type")(_validate_restoration_type)
 
@@ -206,6 +226,7 @@ class AbilityUpdate(BaseModel):
     is_passive: Optional[bool] = None
     is_active: Optional[bool] = None
     restoration_type: Optional[str] = None
+    action_type: Optional[ActionType] = None
 
     _check_restoration = field_validator("restoration_type")(_validate_restoration_type)
 
@@ -242,9 +263,12 @@ class HPUpdate(BaseModel):
     op: HPOp
     value: int
     was_critical_hit: bool = False
-    # Solo annotazione: `value` è già il danno applicato dopo resistenza/vulnerabilità.
-    damage_modifier: Literal["half", "double"] | None = None
+    # Override esplicito: `value` è già il danno applicato dal client (annotazione),
+    # tranne "immune" che azzera. Senza override il server applica le resistenze
+    # del personaggio al `damage_type`.
+    damage_modifier: Literal["half", "double", "none", "immune"] | None = None
     raw_value: int | None = Field(None, ge=0)
+    damage_type: str | None = Field(None, max_length=40)
 
 
 class HPUndoRequest(BaseModel):
@@ -256,6 +280,26 @@ class RestRequest(BaseModel):
     hit_dice_used: Optional[int] = None
 
 
+class ItemChargePreview(BaseModel):
+    name: str
+    gain: Optional[int] = None  # note when known (recharge to max)
+    formula: Optional[str] = None  # dice recharge, e.g. "1d6+1"
+    full: bool = False  # recharges to max
+
+
+class RestPreview(BaseModel):
+    """Cosa recupererebbe un riposo (nessuna scrittura)."""
+    hp_gain: int = 0
+    hit_dice_regain: dict[int, int] = {}  # class_id -> dadi vita
+    slots: dict[int, int] = {}  # livello -> slot (non patto) recuperati
+    pact_slots: int = 0
+    abilities: list[str] = []
+    homebrew_resources: list[str] = []
+    item_charges: list[ItemChargePreview] = []
+    exhaustion_change: int = 0
+    ends_concentration: bool = False
+
+
 class DeathSaveAction(str, Enum):
     SUCCESS = "success"
     FAILURE = "failure"
@@ -264,12 +308,18 @@ class DeathSaveAction(str, Enum):
     ROLL = "roll"
 
 
+RollMode = Literal["normal", "advantage", "disadvantage"]
+D20Dice = Annotated[list[Annotated[int, Field(ge=1, le=20)]], Field(max_length=2)]
+
+
 class DeathSaveUpdate(BaseModel):
     action: DeathSaveAction
 
 
 class DeathSaveRollResult(BaseModel):
     die: int
+    dice: list[int] = []
+    mode: RollMode = "normal"
     outcome: str  # "nat20" | "nat1" | "success" | "failure"
     successes: int
     failures: int
@@ -297,6 +347,8 @@ class DiceResultRequest(BaseModel):
     # Optional client-supplied total override. Used by stat-rolls (4d6kh3) where the
     # displayed total is the sum of the kept dice, not all rolls.
     total: int | None = None
+    # advantage/disadvantage: rolls must be exactly two d20; total computed server-side.
+    mode: RollMode = "normal"
 
 
 class DiceRollResult(BaseModel):
@@ -315,6 +367,8 @@ class DiceRollResult(BaseModel):
 
 class RollResult(BaseModel):
     die: int = 20
+    dice: list[int] = []
+    mode: RollMode = "normal"
     bonus: int
     total: int
     is_critical: bool = False
@@ -326,6 +380,8 @@ class D20RollSubmission(BaseModel):
     """Optional client-supplied d20 value (from 3D physics face detection)."""
     die: Optional[int] = Field(default=None, ge=1, le=20)
     with_inspiration: bool = False
+    mode: RollMode = "normal"
+    dice: Optional[D20Dice] = None
 
 
 class ConcentrationSaveResult(RollResult):

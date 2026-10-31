@@ -33,7 +33,9 @@ vi.mock('react-router-dom', async (orig) => {
 
 vi.mock('react-i18next', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
-  return { ...actual, useTranslation: () => ({ t: (k: string) => k, i18n: { language: 'it' } }) }
+  // The breakdown line exposes its prof term so the JoAT half-proficiency can be asserted.
+  const t = (k: string, o?: { prof?: string }) => (o?.prof !== undefined ? `${k}:${o.prof}` : k)
+  return { ...actual, useTranslation: () => ({ t, i18n: { language: 'it' } }) }
 })
 
 vi.mock('framer-motion', async () => {
@@ -57,7 +59,9 @@ vi.mock('@/store/diceSettings', () => ({
 // Surface the tap (onClick) and long-press (onContextMenu) handlers as plain DOM events;
 // the timing behaviour of the real hook is covered by useLongPress.test.ts.
 vi.mock('@/hooks/useLongPress', () => ({
-  useLongPress: (opts: { onClick?: () => void; onLongPress?: () => void }) => ({
+  useLongPress: (opts: { onClick?: () => void; onLongPress?: () => void; thresholdMs?: number }) =>
+    // RollButton (450 ms) taps via pointer-up; the skill row (500 ms) via plain click.
+    opts.thresholdMs === 450 ? { onPointerUp: () => opts.onClick?.() } : ({
     onClick: opts.onClick,
     onContextMenu: (e: { preventDefault?: () => void }) => {
       e.preventDefault?.()
@@ -136,6 +140,12 @@ afterEach(() => {
 })
 
 describe('Skills page', () => {
+  it('shows the roll note under the row', async () => {
+    getChar.mockResolvedValue({ ...baseChar, settings: { roll_notes: { 'skill.stealth': 'svantaggio in armatura' } } })
+    renderWithProviders(<Skills />)
+    expect(await screen.findByText('svantaggio in armatura')).toBeInTheDocument()
+  })
+
   it('shows the skeleton while the character query is pending', () => {
     getChar.mockReturnValue(new Promise(() => {}))
     renderWithProviders(<Skills />)
@@ -147,8 +157,23 @@ describe('Skills page', () => {
     renderWithProviders(<Skills />)
     // athletics expert: +3 mod + 2×(+3 PB) = +9.
     expect(await screen.findByText('+9')).toBeInTheDocument()
-    // passive perception = 10 + (WIS +1, no prof) = 11.
-    expect(screen.getByText('11')).toBeInTheDocument()
+    // passive perception = 10 + (WIS +1, no prof) = 11 (insight too: same ability).
+    expect(screen.getAllByText('11').length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('shows server totals, three passives and the half marker for Jack of All Trades', async () => {
+    getChar.mockResolvedValue({
+      ...baseChar,
+      jack_of_all_trades: true,
+      skill_bonuses: { athletics: 9, acrobatics: 5, stealth: 7 },
+      passives: { perception: 13, insight: 14, investigation: 15 },
+    })
+    renderWithProviders(<Skills />)
+    expect(await screen.findByText('+7')).toBeInTheDocument()
+    expect(screen.getByText('13')).toBeInTheDocument()
+    expect(screen.getByText('14')).toBeInTheDocument()
+    expect(screen.getByText('15')).toBeInTheDocument()
+    expect(screen.getAllByText('½').length).toBeGreaterThan(0)
   })
 
   it('tapping a skill cycles its proficiency level and PATCHes it', async () => {
@@ -168,6 +193,14 @@ describe('Skills page', () => {
     expect(await screen.findByTestId('picker')).toBeInTheDocument()
     await userEvent.click(screen.getByText('character.skills.proficient'))
     await waitFor(() => expect(updateSkills).toHaveBeenCalledWith(5, { stealth: true }))
+  })
+
+  it('picker breakdown includes the Jack of All Trades half proficiency', async () => {
+    getChar.mockResolvedValue({ ...baseChar, jack_of_all_trades: true })
+    renderWithProviders(<Skills />)
+    fireEvent.contextMenu(await screen.findByText('character.skills.stealth'))
+    // PB +3 at level 5 -> floor(3/2) = +1 on an unproficient skill
+    expect(await screen.findByText('character.skills.breakdown:+1')).toBeInTheDocument()
   })
 
   it('rolling a skill calls rollSkill with no die and opens the modal', async () => {

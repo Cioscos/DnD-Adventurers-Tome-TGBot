@@ -12,7 +12,7 @@ export function effectiveHpMax(c: CharacterSummary): number {
 
 /** CA effettiva: base + modificatore homebrew. */
 export function effectiveAc(c: CharacterSummary): number {
-  return c.ac + (c.ac_homebrew_modifier ?? 0)
+  return c.ac + (c.ac_homebrew_modifier ?? 0) + (c.ac_items_modifier ?? 0)
 }
 
 /** Stato della card in home. Morto vince su tutto; PF massimi a 0 = non configurato. */

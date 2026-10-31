@@ -106,6 +106,15 @@ describe('HeroStatsSection', () => {
     expect(screen.getByRole('button', { name: 'character.identity.speed: 30 ft' })).toBeInTheDocument()
   })
 
+  it('uses the server passive perception and lists senses', () => {
+    renderHero(char({
+      passives: { perception: 20 },
+      settings: { senses: [{ type: 'darkvision', range_ft: 60 }] },
+    } as Partial<CharacterFull>))
+    expect(screen.getByRole('button', { name: 'character.skills.passive_perception: 20' })).toBeInTheDocument()
+    expect(screen.getByText(/character\.senses\.darkvision 60 ft/)).toBeInTheDocument()
+  })
+
   it('does not navigate when the initiative cell is tapped (it rolls instead)', async () => {
     diceResultSpy.mockResolvedValue({ notation: '1d20+2', rolls: [15], total: 17, modifier: 2, label: 'character.hero.initiative' })
     renderHero(char())
