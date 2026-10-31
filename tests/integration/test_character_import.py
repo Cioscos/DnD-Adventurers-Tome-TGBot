@@ -55,6 +55,18 @@ async def test_import_roundtrip_equals_export(client, test_session_factory):
     assert r.json()["id"] != cid
 
 
+async def test_import_restores_ability_action_type(client, test_session_factory):
+    cid = await _make_valid(test_session_factory)
+    data = await _export(client, cid)
+    feat = next(a for a in data["abilities"] if a["name"] == "Arcane Recovery")
+    assert feat["action_type"] == "special"
+    r = await _import(client, data)
+    assert r.status_code == 201, r.text
+    imported = (await client.get(f"/characters/{r.json()['id']}/abilities")).json()
+    assert next(a for a in imported if a["name"] == "Arcane Recovery")["action_type"] == "special"
+    assert next(a for a in imported if a["name"] == "Manual")["action_type"] is None
+
+
 async def test_import_remaps_equipped_and_concentration(client, test_session_factory):
     cid = await _make_valid(test_session_factory)
     r = await _import(client, await _export(client, cid))

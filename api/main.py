@@ -71,6 +71,14 @@ async def lifespan(_app: FastAPI):
     except Exception as exc:  # non-fatal: never block startup on a data backfill
         logger.warning("backfill_consumable_types failed (non-fatal): %s", exc)
 
+    # Data backfill: action_type delle feature di classe esistenti.
+    from core.db.engine import _backfill_ability_action_types
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(_backfill_ability_action_types)
+    except Exception as exc:  # non-fatal: never block startup on a data backfill
+        logger.warning("backfill_ability_action_types failed (non-fatal): %s", exc)
+
     # Cleanup best-effort delle condivisioni scadute (snapshot + file audio)
     from api.services.content_shares import cleanup_expired
     try:
