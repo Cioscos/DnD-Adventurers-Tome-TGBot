@@ -1,6 +1,42 @@
 {
   "entries": [
     {
+      "version": "2.24.1",
+      "date": "2026-10-31",
+      "title": { "it": "Leggibile anche sui telefoni piccoli", "en": "Readable on small phones too" },
+      "added": { "it": [], "en": [] },
+      "improved": {
+        "it": [
+          "Sui telefoni stretti (sotto 375 px) Tiri salvezza e Caratteristiche mostrano le sigle (FOR, DES…) e i nomi delle abilità vanno a capo invece di troncarsi.",
+          "Il nome del personaggio nell'intestazione va su due righe invece di essere tagliato.",
+          "Chip dei tipi di danno, monete, condizioni, ricette homebrew e cronologia dei dadi si adattano alla larghezza senza uscire dai riquadri.",
+          "Il tema chiaro ha l'oro più scuro, leggibile sulla pergamena.",
+          "Impostazioni più ordinate: \"Reimposta impostazioni\" è nella zona pericolosa."
+        ],
+        "en": [
+          "On narrow phones (under 375 px) Saving Throws and Ability Scores show abbreviations (STR, DEX…) and skill names wrap instead of being cut off.",
+          "The character name in the header wraps onto two lines instead of being truncated.",
+          "Damage type chips, coins, conditions, homebrew recipes and dice history fit the width without spilling out of their boxes.",
+          "Light theme uses a darker gold that reads well on parchment.",
+          "Tidier Settings: \"Reset settings\" now lives in the danger zone."
+        ]
+      },
+      "fixed": {
+        "it": [
+          "Nei tiri salvezza il modificatore non copre più il nome della caratteristica.",
+          "La finestra \"Gestisci classi\" non viene più tagliata sotto l'intestazione.",
+          "Il menu dei dadi si chiude cambiando pagina, con Esc o toccando fuori.",
+          "La cronologia non mostra più il prefisso tecnico \"Custom:\" sulle condizioni homebrew."
+        ],
+        "en": [
+          "On saving throws the modifier no longer covers the ability name.",
+          "The \"Manage classes\" window is no longer clipped under the header.",
+          "The dice menu closes when changing page, pressing Esc or tapping outside.",
+          "History no longer shows the technical \"Custom:\" prefix on homebrew conditions."
+        ]
+      }
+    },
+    {
       "version": "2.24.0",
       "date": "2026-10-31",
       "title": { "it": "Al tavolo come su D&D Beyond (e oltre)", "en": "At the table like D&D Beyond (and beyond)" },

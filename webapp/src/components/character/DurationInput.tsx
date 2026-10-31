@@ -33,16 +33,19 @@ export default function DurationInput({ value, onChange }: Props) {
         label={t('character.conditions.duration.one_round')}
         selected={value === 1}
         onToggle={() => onChange(1)}
+        tone="neutral"
       />
       <FilterChip
         label={t('character.conditions.duration.one_minute')}
         selected={value === 10}
         onToggle={() => onChange(10)}
+        tone="neutral"
       />
       <FilterChip
         label={t('character.conditions.duration.until_end')}
         selected={value === null}
         onToggle={() => onChange(null)}
+        tone="neutral"
       />
     </div>
   )

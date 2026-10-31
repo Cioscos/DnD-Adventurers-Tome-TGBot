@@ -595,7 +595,7 @@
       "attack_roll_damage": "Tira danni"
     },
     "slots": {
-      "title": "Slot Incantesimo",
+      "title": "Slot Incantesimi",
       "level": "Livello {{level}}",
       "used": "Usati",
       "total": "Totale",
@@ -903,7 +903,7 @@
       "convert_preview": "{{amount}} {{source}} = {{result}} {{target}}",
       "total_gold": "Totale in oro",
       "mode_set": "Imposta",
-      "mode_add": "Aggiungi/Rimuovi",
+      "mode_add": "Aggiungi / Rimuovi",
       "convert_from": "Da",
       "convert_to": "A",
       "convert_amount": "Quantità",

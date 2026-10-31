@@ -13,7 +13,8 @@ export default function SwiperDots({ active, onSelect, labels }: Props) {
     <div
       role="tablist"
       aria-label="Character screens"
-      className="absolute bottom-safe left-0 right-0 z-30 flex justify-center pointer-events-none"
+      // Scrim sotto i pallini: il contenuto che scorre sotto (es. CA dell'equipaggiamento) non si mescola con loro.
+      className="absolute bottom-safe left-0 right-0 z-30 flex justify-center pt-3 pointer-events-none bg-gradient-to-t from-dnd-bg via-dnd-bg/85 to-transparent"
     >
       {/* Il pallino è il segnale visivo; il bottone attorno è l'area di tocco
           (≥40px), invisibile, così i tre tab restano usabili col pollice. */}

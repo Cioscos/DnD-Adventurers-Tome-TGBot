@@ -229,9 +229,9 @@ export default function SessionJoin() {
                     ? 'bg-gradient-gold text-dnd-ink border-dnd-gold shadow-engrave'
                     : 'bg-dnd-surface border-dnd-border text-dnd-text hover:border-dnd-gold-dim'}`}
               >
-                <div className="flex items-center justify-between">
-                  <span className="font-display font-bold">{c.name}</span>
-                  <span className="text-xs opacity-80 font-body">
+                <div className="flex max-xs:flex-col max-xs:items-start items-center justify-between gap-x-3 gap-y-0.5">
+                  <span className="min-w-0 break-words font-display font-bold">{c.name}</span>
+                  <span className="shrink-0 max-w-[50%] max-xs:max-w-full text-right max-xs:text-left text-xs opacity-80 font-body">
                     {c.class_summary || t('character.select.new')}
                   </span>
                 </div>

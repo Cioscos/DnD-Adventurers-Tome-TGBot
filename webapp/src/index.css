@@ -137,8 +137,9 @@
   --dnd-border-strong: #8a6f2c;
 
   --dnd-gold: #8a6a1e;
-  --dnd-gold-bright: #b38824;
-  --dnd-gold-dim: #b89a52;
+  /* Scuriti per leggibilità su pergamena (prima ~1.6:1 / 2.2:1 su surface-raised) */
+  --dnd-gold-bright: #96701a;
+  --dnd-gold-dim: #8a7034;
   --dnd-gold-deep: #5a4412;
   --dnd-gold-glow: rgba(138, 106, 30, 0.18);
 

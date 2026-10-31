@@ -41,7 +41,9 @@ export default function AbilityScoreCard({ score, expanded, onToggle, onEdit }: 
             ci stanno per intero, sotto degradano a ellissi, mai a metà parola. */}
         <div className="-mr-2 grid grid-cols-[minmax(0,1fr)_40px] items-center gap-1">
           <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-center text-xs font-cinzel uppercase tracking-normal leading-tight text-dnd-text opacity-90">
-            {fullName}
+            {/* Sotto 375px COSTITUZIONE/INTELLIGENZA non stanno accanto alla matita: sigla */}
+            <span className="max-xs:hidden">{fullName}</span>
+            <span className="xs:hidden">{t(`character.ability.${score.name}_short`, { defaultValue: fullName })}</span>
           </span>
           <Pressable
             type="button"

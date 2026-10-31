@@ -247,7 +247,7 @@ export default function HeroStatsSection({ char }: Props) {
         <Surface variant="elevated" interactive onClick={() => go('saves')} className="!p-3 min-h-[56px]">
           <div className="flex items-center gap-1.5 mb-1.5">
             <GiShieldEchoes size={13} className="text-dnd-gold-bright shrink-0" />
-            <span className="text-xs font-cinzel font-bold uppercase tracking-widest text-dnd-gold truncate">
+            <span className="text-xs font-cinzel font-bold uppercase tracking-widest max-xs:tracking-wide text-dnd-gold truncate max-xs:whitespace-normal leading-tight">
               {t('character.saves.title')}
             </span>
           </div>
@@ -268,7 +268,7 @@ export default function HeroStatsSection({ char }: Props) {
         <Surface variant="elevated" interactive onClick={() => go('skills')} className="!p-3 min-h-[56px]">
           <div className="flex items-center gap-1.5 mb-1.5">
             <GiArcheryTarget size={13} className="text-dnd-gold-bright shrink-0" />
-            <span className="text-xs font-cinzel font-bold uppercase tracking-widest text-dnd-gold truncate">
+            <span className="text-xs font-cinzel font-bold uppercase tracking-widest max-xs:tracking-wide text-dnd-gold truncate max-xs:whitespace-normal leading-tight">
               {t('character.skills.title')}
             </span>
           </div>

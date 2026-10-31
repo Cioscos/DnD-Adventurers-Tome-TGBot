@@ -42,7 +42,7 @@ export default function RollNoteEditor({ char, noteKey, label }: Props) {
           setOpen(true)
         }}
         aria-label={t('character.roll_notes.edit', { name: label })}
-        className="w-11 h-11 flex items-center justify-center shrink-0 text-dnd-text-faint"
+        className="w-11 max-xs:w-7 h-11 hit-44 flex items-center justify-center shrink-0 text-dnd-text-faint"
       >
         <Pencil size={14} />
       </Pressable>

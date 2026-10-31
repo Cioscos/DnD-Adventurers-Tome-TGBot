@@ -75,8 +75,12 @@ def skill_label(slug: str) -> str:
 
 
 def condition_label(slug: str) -> str:
-    """Italian label for a condition slug, with a title-cased fallback."""
-    return CONDITION_LABELS_IT.get(slug, _fallback(slug))
+    """Italian label for a condition slug, with a title-cased fallback.
+
+    Homebrew conditions are keyed ``custom:<name>``: the prefix is internal and
+    must not leak into user-facing text (history showed "Custom:Sanguinamento").
+    """
+    return CONDITION_LABELS_IT.get(slug, _fallback(slug.removeprefix("custom:")))
 
 
 def ability_label(slug: str) -> str:

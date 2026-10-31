@@ -445,10 +445,10 @@ export default function Dice() {
                     title={abs ?? undefined}
                   >
                     <div className="flex flex-col min-w-0 flex-1">
-                      <div className="flex items-baseline gap-1.5 min-w-0">
-                        <span className="text-xs text-dnd-gold-dim font-mono shrink-0">{entry.notation}</span>
+                      <div className="flex flex-wrap items-baseline gap-x-1.5 min-w-0">
+                        <span className="text-xs text-dnd-gold-dim font-mono max-w-full break-words">{entry.notation}</span>
                         {entry.rolls.length > 1 && (
-                          <span className="text-xs text-dnd-text-faint font-mono truncate">
+                          <span className="text-xs text-dnd-text-faint font-mono truncate min-w-0 max-w-full">
                             [{entry.rolls.join('+')}]
                           </span>
                         )}

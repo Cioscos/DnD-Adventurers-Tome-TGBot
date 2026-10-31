@@ -490,9 +490,12 @@ export default function CharacterSelect() {
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.18 }}
             >
-              <p className="text-xs text-dnd-text-faint truncate font-body mb-3">
-                {t('character.create.step_class_subtitle', { name: newName.trim() || '—' })}
-              </p>
+              {/* L'hint della griglia classi nomina già il PG: il sottotitolo serve solo nella vista custom */}
+              {showCustom && (
+                <p className="text-xs text-dnd-text-faint truncate font-body mb-3">
+                  {t('character.create.step_class_subtitle', { name: newName.trim() || '—' })}
+                </p>
+              )}
 
               {!showCustom ? (
                 <>

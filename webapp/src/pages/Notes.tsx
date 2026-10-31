@@ -207,14 +207,6 @@ export default function Notes() {
           icon={<NotebookPen size={32} />}
           title={t('character.notes.empty_title')}
           hint={t('character.notes.empty_hint')}
-          action={{
-            label: t('character.notes.new'),
-            onClick: () => {
-              setEditNote(null)
-              setMode('add')
-            },
-            icon: <Plus size={14} />,
-          }}
         />
       )}
 

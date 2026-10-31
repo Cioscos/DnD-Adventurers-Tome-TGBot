@@ -140,21 +140,21 @@ export default function MenuScreen({ char }: Props) {
                 .map((item) => {
                 const Icon = item.icon
                 return (
-                  <Reveal.Item key={item.key}>
+                  <Reveal.Item key={item.key} className="h-full">
                     <Pressable
                       onClick={() => {
                         haptic.light()
                         if ('action' in item) setRestOpen(true)
                         else navigate(`/char/${char.id}/${item.path}`)
                       }}
-                      className="w-full flex flex-col items-center gap-1.5 px-2 py-3 rounded-2xl
+                      className="w-full h-full flex flex-col items-center justify-center gap-1.5 px-2 max-xs:px-1 py-3 rounded-2xl
                                  bg-dnd-surface border border-dnd-border
                                  hover:border-dnd-gold/60 hover:shadow-halo-gold
                                  transition-[box-shadow,border-color] duration-200"
                       whileTap={{ scale: 0.93 }}
                     >
                       <Icon size={22} strokeWidth={2} className={toneIconClass(item.tone)} />
-                      <span className="text-xs text-dnd-text-muted font-body text-center leading-tight">
+                      <span className="text-xs text-dnd-text-muted font-body text-center leading-tight break-words hyphens-auto max-w-full">
                         {t(`character.menu.${item.key}`)}
                       </span>
                     </Pressable>
