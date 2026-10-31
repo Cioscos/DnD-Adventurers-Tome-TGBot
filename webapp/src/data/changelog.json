@@ -42,26 +42,32 @@
           "L'iniziativa negli scontri ora include i bonus degli oggetti.",
           "I suggerimenti dei tag delle note sono cambiati.",
           "I pulsanti hanno aree di tocco più grandi (44 px).",
-          "Il menu della modalità di tiro non esce più dallo schermo."
+          "Il menu della modalità di tiro non esce più dallo schermo.",
+          "In forma selvatica la pagina PF e la mini-scheda PF mostrano i PF della forma, con quelli del personaggio in piccolo."
         ],
         "en": [
           "The footer shows the total carried weight.",
           "Encounter initiative now includes item bonuses.",
           "Note tag suggestions have changed.",
           "Buttons have larger touch targets (44 px).",
-          "The roll mode menu no longer goes off screen."
+          "The roll mode menu no longer goes off screen.",
+          "In wild shape the HP page and HP quick sheet show the form's HP, with the character's HP shown smaller."
         ]
       },
       "fixed": {
         "it": [
           "Tiri coerenti con le regole per i PF tirati, gli import malformati e i duplicati di chiavi nell'import.",
           "La forma selvatica gestisce correttamente 0 PF, annullamento dei PF e una sola forma attiva.",
-          "Le preferenze si reimpostano in modo sicuro e il turno si aggiorna al cambio turno."
+          "Le preferenze si reimpostano in modo sicuro e il turno si aggiorna al cambio turno.",
+          "In Identità si possono di nuovo aggiungere resistenze, immunità e vulnerabilità personalizzate.",
+          "Perdere un livello per PE toglie i PF guadagnati a quel livello."
         ],
         "en": [
           "Rolled HP, malformed imports and duplicate keys on import are now handled correctly.",
           "Wild shape correctly handles 0 HP, HP cancellation and a single active form.",
-          "Preferences reset safely and the turn view refreshes when the turn changes."
+          "Preferences reset safely and the turn view refreshes when the turn changes.",
+          "Identity again lets you add custom resistances, immunities and vulnerabilities.",
+          "Losing a level through XP removes the HP gained at that level."
         ]
       }
     },
