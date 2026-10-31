@@ -18,7 +18,8 @@ from api.database import get_db
 from api.services.d20 import d20_records, resolve_body
 from api.services.dice_stats import record_dice
 from api.services.effects import apply_heal
-from api.services.durations import end_concentration
+from api.services.item_charges import plan_item_recharges, set_item_charges
+from api.services.durations import end_concentration, is_concentrating
 from api.services.telegram_notify import notify_party_emergency
 from api.services.homebrew.dispatcher import dispatch
 from api.services.homebrew.passive import get_passive_modifiers
@@ -219,7 +220,7 @@ async def update_hp(
         # Auto concentration save — only if still conscious and concentrating
         if (
             applied > 0
-            and char.concentrating_spell_id is not None
+            and is_concentrating(char)
             and char.current_hit_points > 0
         ):
             conc_result = await roll_concentration_save(
@@ -352,6 +353,11 @@ async def rest(
     if char.is_dead:
         return await build_character_response(session, char)
     notifications: list[dict] = []
+    if body.rest_type in ("long", "short"):
+        for r in plan_item_recharges(char.items, body.rest_type):
+            set_item_charges(r.item, r.after)
+            _add_history(session, char.id, "item_charges",
+                         f"Cariche ricaricate: {r.item.name} ({r.before} → {r.after})")
 
     if body.rest_type == "long":
         # Restore to effective max HP (base + passive homebrew modifier).

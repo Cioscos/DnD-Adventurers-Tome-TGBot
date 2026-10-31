@@ -8,13 +8,31 @@ from core.db.models import Character
 from api.services.effects import _add_history, apply_conditions
 
 
+def is_concentrating(char: Character) -> bool:
+    return char.concentrating_spell_id is not None or bool(
+        (char.settings or {}).get("concentration_item_spell"))
+
+
 def end_concentration(char: Character) -> None:
-    """Single place that drops concentration (spell id + round counter)."""
+    """Single place that drops concentration (spell id, item spell, round counter)."""
     char.concentrating_spell_id = None
-    if (char.settings or {}).get("concentration_rounds_left") is not None:
-        s = dict(char.settings)
-        s.pop("concentration_rounds_left")
+    s = dict(char.settings or {})
+    if any([s.pop("concentration_rounds_left", None) is not None,
+            s.pop("concentration_item_spell", None) is not None]):
         char.settings = s
+
+
+def start_concentration(char: Character, spell_id: int | None, rounds: int | None,
+                        item_spell: dict | None = None) -> None:
+    """Begin concentrating, properly ending any previous one first."""
+    end_concentration(char)
+    char.concentrating_spell_id = spell_id
+    s = dict(char.settings or {})
+    if item_spell is not None:
+        s["concentration_item_spell"] = item_spell
+    if rounds is not None:
+        s["concentration_rounds_left"] = rounds
+    char.settings = s
 
 
 def set_concentration_rounds(char: Character, rounds: int | None) -> None:
@@ -64,6 +82,7 @@ async def tick_rounds(session: AsyncSession, char: Character) -> list[str]:
             s["concentration_rounds_left"] = conc - 1
         else:
             s.pop("concentration_rounds_left")
+            s.pop("concentration_item_spell", None)
             ended_conc = True
     char.settings = s
     if ended_conc:

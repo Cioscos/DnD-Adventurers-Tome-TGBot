@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any, Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 _ABILITIES = ("strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma")
 BonusTarget = Literal[
@@ -18,20 +19,36 @@ class ItemBonus(BaseModel):
     value: int = Field(ge=-10, le=10)
 
 
-class ItemCharges(BaseModel):
-    """Minimal shape; Task 14 extends it."""
+_AMOUNT_RE = re.compile(r"^\d{1,2}d\d{1,3}([+-]\d{1,3})?$", re.IGNORECASE)
 
+
+class ItemCharges(BaseModel):
     model_config = ConfigDict(extra="allow")
-    max: int = Field(ge=0)
+    max: int = Field(ge=1, le=100)
     current: int = Field(ge=0)
     recharge: Literal["long_rest", "short_rest", "dawn", "none"] = "none"
-    recharge_amount: str = "all"
+    recharge_amount: str = "all"  # "all" or dice notation like "1d6+1"
+
+    @model_validator(mode="after")
+    def _check(self) -> "ItemCharges":
+        if self.current > self.max:
+            raise ValueError("current must be <= max")
+        self.recharge_amount = self.recharge_amount.strip()
+        if self.recharge_amount != "all" and not _AMOUNT_RE.match(self.recharge_amount):
+            raise ValueError("recharge_amount must be 'all' or dice notation")
+        return self
 
 
 class GrantedSpell(BaseModel):
-    """Minimal shape; Task 14 extends it."""
-
     model_config = ConfigDict(extra="allow")
+    name: str = Field(min_length=1, max_length=200)
+    level: int = Field(ge=0, le=9)
+    charges_cost: int = Field(default=0, ge=0, le=100)
+    srd_index: Optional[str] = None
+    save_dc: Optional[int] = None
+    attack_bonus: Optional[int] = None
+    is_concentration: bool = False
+    duration: Optional[str] = None
 
 
 class MagicFields(BaseModel):
@@ -57,3 +74,6 @@ def validate_magic_meta(v: dict[str, Any]) -> None:
     m = MagicFields.model_validate(subset)  # ValidationError is a ValueError
     if m.attuned and not m.requires_attunement:
         raise ValueError("attuned requires requires_attunement")
+    cap = m.charges.max if m.charges else 0
+    if any(g.charges_cost > cap for g in m.granted_spells):
+        raise ValueError("charges_cost exceeds charges.max")

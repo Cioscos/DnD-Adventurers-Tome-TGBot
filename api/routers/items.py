@@ -22,7 +22,7 @@ from core.db.models import Character, CharacterClass, CharacterHistory, Equipmen
 from api.schemas.character import CharacterFull
 from api.schemas.item import AmmoState, ItemCreate, ItemRead, ItemUpdate, WeaponAttackResult
 from core.game.stats import effective_ability_score
-from core.game.item_bonuses import attack_bonus_total, is_attuned
+from core.game.item_bonuses import attack_bonus_total, is_attuned, item_meta
 from core.game.attacks import unarmed_strike_profile
 from core.data.spell_slots import normalize_class_name
 from api.routers._helpers import (
@@ -30,6 +30,9 @@ from api.routers._helpers import (
     effective_ability_mod,
     effective_con_mod,
 )
+from api.services.durations import start_concentration
+from api.services.item_charges import set_item_charges
+from core.game.actions import parse_duration_rounds
 from api.services.equipment import slot_allowed_for_type, swap_slot_occupant
 from api.services.homebrew.dispatcher import dispatch
 from api.services.character_response import build_character_response
@@ -709,3 +712,88 @@ async def attack_unarmed(
         damage_total=damage_total,
         homebrew_notifications=notifications if notifications else None,
     )
+
+
+# ---------------------------------------------------------------------------
+# Charges and spells cast from items
+# ---------------------------------------------------------------------------
+
+class ChargesDelta(BaseModel):
+    delta: int = Field(ge=-100, le=100)
+
+
+class ItemCast(BaseModel):
+    spell_index: int = Field(ge=0)
+
+
+async def _get_item(session: AsyncSession, char_id: int, item_id: int) -> Item:
+    item = (await session.execute(
+        select(Item).where(Item.id == item_id, Item.character_id == char_id)
+    )).scalar_one_or_none()
+    if item is None:
+        raise HTTPException(status_code=404, detail="Item not found")
+    return item
+
+
+@router.post("/{char_id}/items/{item_id}/charges", response_model=CharacterFull)
+async def adjust_item_charges(
+    char_id: int,
+    item_id: int,
+    body: ChargesDelta,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> CharacterFull:
+    char = await _get_owned_full(char_id, user_id, session)
+    item = await _get_item(session, char_id, item_id)
+    ch = item_meta(item).get("charges")
+    if not isinstance(ch, dict):
+        raise HTTPException(status_code=409, detail="no_charges")
+    old = int(ch.get("current") or 0)
+    new = max(0, min(int(ch.get("max") or 0), old + body.delta))
+    set_item_charges(item, new)
+    _add_history(session, char.id, "item_charges", f"Cariche {item.name}: {old} → {new}")
+    await session.flush()
+    await session.refresh(char, attribute_names=["items"])
+    return await build_character_response(session, char)
+
+
+@router.post("/{char_id}/items/{item_id}/cast", response_model=CharacterFull)
+async def cast_from_item(
+    char_id: int,
+    item_id: int,
+    body: ItemCast,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> CharacterFull:
+    char = await _get_owned_full(char_id, user_id, session)
+    item = await _get_item(session, char_id, item_id)
+    meta = item_meta(item)
+    granted = meta.get("granted_spells") or []
+    if body.spell_index >= len(granted):
+        raise HTTPException(status_code=422, detail="spell_index out of range")
+    spell = granted[body.spell_index]
+    if meta.get("requires_attunement") and not meta.get("attuned"):
+        raise HTTPException(status_code=409, detail="attunement_required")
+    cost = int(spell.get("charges_cost") or 0)
+    ch = meta.get("charges") if isinstance(meta.get("charges"), dict) else None
+    current = int(ch.get("current") or 0) if ch else 0
+    if cost > current:
+        raise HTTPException(status_code=409, detail="not_enough_charges")
+    if cost:
+        set_item_charges(item, current - cost)
+
+    if spell.get("is_concentration"):
+        idx = (spell.get("srd_index") or "").lower()
+        name = spell["name"].lower()
+        match = next((s for s in char.spells if idx and (getattr(s, "srd_index", None) or "").lower() == idx), None)             or next((s for s in char.spells if s.name.lower() == name), None)
+        rounds = parse_duration_rounds(spell.get("duration"))
+        if match:
+            start_concentration(char, match.id, rounds)
+        else:
+            start_concentration(char, None, rounds, {"item_id": item.id, "name": spell["name"]})
+
+    _add_history(session, char.id, "spell_cast",
+                 f"Lanciato {spell['name']} da {item.name} ({cost} cariche)")
+    await session.flush()
+    await session.refresh(char, attribute_names=["items"])
+    return await build_character_response(session, char)
