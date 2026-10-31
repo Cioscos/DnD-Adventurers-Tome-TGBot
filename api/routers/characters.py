@@ -765,6 +765,7 @@ async def roll_pending_save(
     # Build the read model before apply_conditions deletes the effect and its saves.
     save_read = pending_read(ps, effect.slug)
     if passed:
+        _add_history(session, char.id, "condition_change", f"Liberato da: {condition_label(effect.slug)}")
         await apply_conditions(session, char, {effect.slug: False})
     await session.flush()
 

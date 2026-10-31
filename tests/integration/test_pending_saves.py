@@ -50,6 +50,7 @@ async def test_roll_pass_removes_condition(client, test_session_factory):
     hist = (await client.get(f"/characters/{cid}/history")).json()
     assert any("per Avvelenato" in h["description"] and "(CD 10)" in h["description"]
                for h in hist), hist
+    assert any("Liberato da: " in h["description"] for h in hist), hist
 
 
 async def test_roll_fail_keeps_condition(client, test_session_factory):
@@ -106,10 +107,11 @@ async def test_other_users_save_is_404(client, test_session_factory):
     cid, psid = await _setup(client, test_session_factory)
     as_user(999)
     r = await _post(client, cid, psid, {"die": 20})
-    assert r.status_code in (403, 404)
+    assert r.status_code == 403
 
 async def test_save_of_another_character_is_404(client, test_session_factory):
     cid, psid = await _setup(client, test_session_factory)
+    # same user, different character: the save does not belong to it
     other = (await client.post("/characters", json={"name": "Altro"})).json()["id"]
     r = await _post(client, other, psid, {"die": 20})
     assert r.status_code == 404
@@ -124,3 +126,15 @@ async def test_turn_state_lists_pending_and_dismiss(client, test_session_factory
     assert (await client.post(f"/characters/{cid}/pending-saves/{psid}/dismiss")).status_code == 204
     ts = (await client.get(f"/characters/{cid}/turn-state")).json()
     assert ts["pending_saves"] == []
+
+
+async def test_inspiration_reroll_blocked_by_newer_pending(client, test_session_factory):
+    cid, psid = await _setup(client, test_session_factory, status="failed", inspiration=True)
+    async with test_session_factory() as s:
+        old = await s.get(PendingSave, psid)
+        s.add(PendingSave(effect_id=old.effect_id, character_id=cid, ability="constitution",
+                          dc=10, status="pending", created_at="2026-10-31T11:00:00"))
+        await s.commit()
+    r = await _post(client, cid, psid, {"die": 20, "with_inspiration": True})
+    assert r.status_code == 409 and r.json()["detail"]["code"] == "not_rerollable"
+    assert (await _conds(test_session_factory, cid))[1] is True
