@@ -33,12 +33,14 @@ from api.schemas.session import (
     SessionJoinRequest,
     SessionMessageCreate,
     SessionMessageRead,
+    TurnState,
 )
 from api.services import telegram_notify
 from api.services.encounter_view import build_encounter_block
 from core.db.models import (
     Character,
     CharacterHistory,
+    Combatant,
     Encounter,
     GameSession,
     Item,
@@ -53,6 +55,8 @@ from core.utils.session_view import hp_bucket, armor_category
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
+# Stato del turno visto dalla scheda: vive sotto /characters ma usa i modelli di sessione.
+character_turn_router = APIRouter(prefix="/characters", tags=["sessions"])
 
 
 _MAX_CODE_RETRIES = 10
@@ -241,6 +245,41 @@ async def my_active_session(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> Optional[GameSession]:
     return await _find_active_session_for_user(user_id, db)
+
+
+@character_turn_router.get("/{character_id}/turn-state", response_model=TurnState)
+async def character_turn_state(
+    character_id: int,
+    user_id: Annotated[int, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> TurnState:
+    char = await db.get(Character, character_id)
+    if char is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Character not found")
+    if char.user_id != user_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+    row = (
+        await db.execute(
+            select(Encounter, Combatant.id)
+            .join(Combatant, Combatant.encounter_id == Encounter.id)
+            .join(GameSession, GameSession.id == Encounter.session_id)
+            .where(
+                Combatant.character_id == character_id,
+                Encounter.status == "active",
+                GameSession.status == SessionStatus.ACTIVE,
+            )
+            .limit(1)
+        )
+    ).first()
+    if row is None:
+        return TurnState(in_encounter=False, is_my_turn=False)
+    enc, combatant_id = row
+    return TurnState(
+        in_encounter=True,
+        is_my_turn=enc.active_combatant_id == combatant_id,
+        round=enc.round,
+        session_id=enc.session_id,
+    )
 
 
 def _compute_gm_display_name(tg_user: TelegramUser, custom_title: Optional[str]) -> str:

@@ -169,3 +169,10 @@ class GMGrantItemResult(BaseModel):
 
 class GMGrantItemResponse(BaseModel):
     results: list[GMGrantItemResult]
+
+
+class TurnState(BaseModel):
+    in_encounter: bool
+    is_my_turn: bool
+    round: Optional[int] = None
+    session_id: Optional[int] = None
