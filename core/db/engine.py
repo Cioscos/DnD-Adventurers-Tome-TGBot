@@ -133,6 +133,8 @@ _MIGRATIONS: list[tuple[str, str, str, str | None]] = [
     ("characters", "dice_stats", "JSON", None),
     # Snapshot per l'annullamento dell'ultima operazione PF
     ("characters", "hp_undo", "JSON", None),
+    # Scelte di livello in sospeso (ASI / talento)
+    ("characters", "pending_choices", "JSON", None),
     # Hit dice tracking (spec 2026-07-17)
     ("character_classes", "hit_dice_used", "INTEGER NOT NULL", "0"),
 ]

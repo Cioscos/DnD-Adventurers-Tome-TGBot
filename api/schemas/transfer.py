@@ -33,6 +33,14 @@ Int0 = Annotated[int, _rng(0, 1_000_000)]
 Restoration = Literal["long_rest", "short_rest", "none", "manual"]
 
 
+class ExportChoice(BaseModel):
+    id: str = Field(max_length=64)
+    kind: Literal["asi"] = "asi"
+    class_key: str = Field(max_length=100)
+    level: Annotated[int, _rng(1, 20)]
+    created_at: str = Field("", max_length=50)
+
+
 class ExportCharacter(BaseModel):
     name: str = Field(min_length=1, max_length=100)
     race: Optional[str] = Field(None, max_length=100)
@@ -64,6 +72,7 @@ class ExportCharacter(BaseModel):
     languages: list = Field(default_factory=list)
     general_proficiencies: list = Field(default_factory=list)
     damage_modifiers: dict = Field(default_factory=dict)
+    pending_choices: list[ExportChoice] = Field(default_factory=list, max_length=40)
     # {titolo: {body, created_at, updated_at, tags, was_voice}}; le note vocali hanno body ""
     notes: dict = Field(default_factory=dict)
 

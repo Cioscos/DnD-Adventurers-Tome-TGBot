@@ -26,6 +26,7 @@ from api.database import engine
 from api.routers import (
     abilities,
     characters,
+    choices,
     classes,
     currency,
     dice,
@@ -155,6 +156,7 @@ app.include_router(characters.router)
 app.include_router(hp.router)
 app.include_router(stats.router)
 app.include_router(classes.router)
+app.include_router(choices.router)
 app.include_router(spells.router)
 app.include_router(spell_slots.router)
 app.include_router(items.router)

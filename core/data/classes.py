@@ -73,6 +73,13 @@ CLASS_SAVING_THROWS: dict[str, tuple[str, str]] = {
     "Warlock":   ("wisdom", "charisma"),
 }
 
+# Livelli con Aumento dei Punteggi di Caratteristica (ASI), chiave = nome tabella italiano.
+ASI_LEVELS_DEFAULT: tuple[int, ...] = (4, 8, 12, 16, 19)
+ASI_LEVELS: dict[str, tuple[int, ...]] = {
+    "Guerriero": (4, 6, 8, 12, 14, 16, 19),
+    "Ladro": (4, 8, 10, 12, 16, 19),
+}
+
 # Hit die per class
 CLASS_HIT_DIE: dict[str, int] = {
     "Barbaro":   12,

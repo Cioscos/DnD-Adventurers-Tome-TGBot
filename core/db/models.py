@@ -133,6 +133,8 @@ class Character(Base):
     # Snapshot server-side dell'ultima operazione PF per l'annullamento:
     # {"op_id": str, "before": {...}, "after": {...}} (None = niente da annullare)
     hp_undo: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    # Scelte di livello in sospeso: [{id, kind: "asi", class_key, level, created_at}]
+    pending_choices: Mapped[Optional[list]] = mapped_column(JSON, nullable=True, default=list)
 
     # Active conditions (JSON dict: condition_slug → bool or int for exhaustion)
     conditions: Mapped[Optional[dict]] = mapped_column(JSON, default=dict)

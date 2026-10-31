@@ -81,7 +81,7 @@ async def build_export(session: AsyncSession, char: Character) -> CharacterExpor
     for k in ("settings", "conditions", "skills", "saving_throws", "death_saves",
               "personality", "damage_modifiers"):
         cols[k] = cols[k] or {}
-    for k in ("languages", "general_proficiencies"):
+    for k in ("languages", "general_proficiencies", "pending_choices"):
         cols[k] = cols[k] or []
 
     # Export tollerante: i limiti di import non si applicano ai dati gia' salvati (altrimenti 500).

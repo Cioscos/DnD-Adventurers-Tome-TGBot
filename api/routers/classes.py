@@ -25,6 +25,7 @@ from core.data.classes import (
     class_table_key,
     get_saving_throw_proficiencies,
 )
+from api.services.choices import add_asi_choices
 from api.services.class_features import sync_class_feature_abilities
 from core.data.xp_thresholds import xp_to_level
 from core.game.stats import hit_points_for_level, total_base_hp
@@ -228,6 +229,7 @@ async def distribute_class_levels(
         new_level = new_levels[cls.id]
         if new_level == cls.level:
             continue
+        add_asi_choices(char, cls.class_name, cls.level, new_level)
         cls.level = new_level
         await sync_class_feature_abilities(session, char, cls, lang=lang)
 
@@ -282,6 +284,7 @@ async def update_class(
         data["hit_dice_used"] = max(0, min(int(data["hit_dice_used"]), int(effective_level)))
     for field, value in data.items():
         setattr(cls, field, value)
+    add_asi_choices(char, cls.class_name, old_level, cls.level)
 
     # When level changes, sync class-feature abilities for predefined classes.
     if body.level is not None and body.level != old_level:

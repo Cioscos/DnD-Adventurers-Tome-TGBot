@@ -151,6 +151,9 @@ class CharacterFull(BaseModel):
 
     has_custom_silhouette: bool = False
 
+    # Scelte di livello in sospeso (ASI / talento), popolato da build_character_response
+    pending_choices: Optional[list[dict[str, Any]]] = None
+
     # Preparazione incantesimi + rituali (popolato da build_character_response)
     spellcasting: Optional[SpellcastingInfo] = None
 

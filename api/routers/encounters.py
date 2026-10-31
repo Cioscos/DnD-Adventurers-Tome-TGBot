@@ -30,6 +30,7 @@ from api.schemas.encounter import (
     ReorderRequest,
 )
 from api.services import telegram_notify
+from api.services.homebrew.passive import get_passive_modifiers
 from api.services.d20 import resolve_body
 from api.services.durations import tick_rounds
 from api.services.encounter_view import build_encounter_block
@@ -120,7 +121,7 @@ async def _add_missing_pc_combatants(
             character_id=char.id,
             owner_user_id=p.user_id,
             name=char.name,
-            initiative_mod=_dex_modifier(char),
+            initiative_mod=_dex_modifier(char) + await get_passive_modifiers(db, char, "character.initiative"),
             created_at=_now(),
         )
         db.add(comb)

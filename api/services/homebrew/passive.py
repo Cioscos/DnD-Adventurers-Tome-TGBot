@@ -3,18 +3,38 @@ from __future__ import annotations
 
 import json
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.services.homebrew.dsl import Filter
 from api.services.homebrew.filters import evaluate_filter
-from core.db.models import Character, HomebrewRule, Item
+from core.db.models import Character, CharacterClass, HomebrewRule, Item
+
+
+async def passive_modifier(session: AsyncSession, char: Character, skill: str) -> int:
+    """Homebrew bonus to the passive score of `skill` (e.g. "perception")."""
+    return await get_passive_modifiers(session, char, f"character.passive.{skill}")
 
 
 async def get_passive_modifiers(
     session: AsyncSession, char: Character, target_path: str,
 ) -> int:
-    """Sum all passive modifiers matching target_path across enabled rules."""
+    """Sum all passive modifiers matching target_path across enabled rules.
+
+    `character.hit_points_max` also includes `character.hit_points_max_per_level`
+    times the total class level, so every max-HP consumer stays consistent.
+    """
+    if target_path == "character.hit_points_max":
+        lv = (await session.execute(
+            select(func.coalesce(func.sum(CharacterClass.level), 0))
+            .where(CharacterClass.character_id == char.id)
+        )).scalar_one()
+        return (await _sum_modifiers(session, char, target_path)
+                + int(lv) * await _sum_modifiers(session, char, "character.hit_points_max_per_level"))
+    return await _sum_modifiers(session, char, target_path)
+
+
+async def _sum_modifiers(session: AsyncSession, char: Character, target_path: str) -> int:
     rules_res = await session.execute(
         select(HomebrewRule).where(
             HomebrewRule.character_id == char.id,

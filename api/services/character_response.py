@@ -58,9 +58,12 @@ async def build_character_response(
     )
 
     response.speed_items_modifier = item_bonus_total(char.items, "speed")
-    response.initiative_bonus = effective_ability_mod(char, "dexterity") + item_bonus_total(
-        char.items, "initiative"
+    response.initiative_bonus = (
+        effective_ability_mod(char, "dexterity")
+        + item_bonus_total(char.items, "initiative")
+        + await get_passive_modifiers(session, char, "character.initiative")
     )
+    response.pending_choices = list(char.pending_choices or [])
 
     for slug in SKILL_ABILITY_MAP:
         val = await get_passive_modifiers(session, char, f"character.skill.{slug}")

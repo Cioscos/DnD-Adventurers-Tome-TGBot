@@ -52,6 +52,7 @@ from api.services.character_response import build_character_response
 from api.services.effects import apply_conditions
 from api.services.durations import set_condition_durations, tick_rounds
 from api.services.spell_slots import recalc_spell_slots
+from api.services.choices import add_asi_choices
 from api.services.homebrew.passive import get_passive_modifiers
 
 router = APIRouter(prefix="/characters", tags=["characters"])
@@ -506,6 +507,7 @@ async def update_xp(
         new_level = xp_to_level(char.experience_points)
         if new_level != old_level:
             cls.level = new_level
+            add_asi_choices(char, cls.class_name, old_level, new_level)
             await sync_class_feature_abilities(session, char, cls, lang=lang)
 
             if auto_calc and cls.hit_die and new_level > old_level:
