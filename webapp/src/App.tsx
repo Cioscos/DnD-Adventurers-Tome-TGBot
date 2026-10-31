@@ -12,6 +12,7 @@ const CharacterMain = lazy(() => import('./pages/CharacterMain'))
 const HP = lazy(() => import('./pages/HP'))
 const ArmorClass = lazy(() => import('./pages/ArmorClass'))
 const Actions = lazy(() => import('./pages/Actions'))
+const Turn = lazy(() => import('./pages/Turn'))
 const AbilityScores = lazy(() => import('./pages/AbilityScores'))
 const Skills = lazy(() => import('./pages/Skills'))
 const SavingThrows = lazy(() => import('./pages/SavingThrows'))
@@ -73,6 +74,7 @@ export default function App() {
             <Route path="/char/:id/hp" element={<HP />} />
             <Route path="/char/:id/ac" element={<ArmorClass />} />
             <Route path="/char/:id/actions" element={<Actions />} />
+            <Route path="/char/:id/turn" element={<Turn />} />
             <Route path="/char/:id/stats" element={<AbilityScores />} />
             <Route path="/char/:id/skills" element={<Skills />} />
             <Route path="/char/:id/saves" element={<SavingThrows />} />

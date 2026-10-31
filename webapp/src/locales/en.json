@@ -160,6 +160,7 @@
       "skills": "Skills",
       "saves": "Saving Throws",
       "actions": "Actions",
+      "turn": "Turn",
       "spells": "Spells",
       "slots": "Spell Slots",
       "inventory": "Inventory",
@@ -338,6 +339,7 @@
       "homebrew_label": "Homebrew Bonus"
     },
     "actions": {
+      "attacks_per_action": "Attacks per action: {{n}}",
       "title": "Actions",
       "unarmed": "Unarmed Strike",
       "unarmed_desc": "Strike without weapons ({{damage}} + mod, bludgeoning)",
@@ -576,6 +578,16 @@
       "pool_cap_reached": "Maximum dice limit reached"
     },
     "conditions": {
+      "duration": {
+        "label": "Duration in rounds",
+        "until_end": "Until ended",
+        "one_round": "1 round",
+        "one_minute": "1 minute = 10",
+        "input_aria": "Duration in rounds",
+        "left": "{{n}} rounds",
+        "tick": "End of round (−1)",
+        "expired": "Expired: {{names}}"
+      },
       "title": "Conditions",
       "exhaustion": "Exhaustion (level {{level}})",
       "exhaustion_level": "Exhaustion level",
@@ -690,6 +702,27 @@
       "on": "On",
       "off": "Off",
       "aria": "Heroic Inspiration"
+    },
+    "turn": {
+      "title": "Turn",
+      "round": "Round {{n}}",
+      "attacks_per_action": "Attacks per action: {{n}}",
+      "section_action": "Action",
+      "section_bonus_action": "Bonus action",
+      "section_reaction": "Reaction",
+      "section_other": "Other",
+      "used": "Used",
+      "mark_used": "Mark as used",
+      "new_turn": "New turn",
+      "end_round": "End of round (−1)",
+      "empty": "Nothing here",
+      "unarmed": "Unarmed strike",
+      "attack": "Attack",
+      "cast": "Cast",
+      "use": "Use",
+      "no_uses": "No uses left",
+      "banner": "It's your turn",
+      "banner_cta": "Open the Turn view"
     },
     "inSession": {
       "label": "In active session",

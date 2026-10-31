@@ -21,6 +21,7 @@ import ConditionDetailModal from '@/pages/conditions/ConditionDetailModal'
 import PassiveAbilityDetailModal from '@/pages/abilities/PassiveAbilityDetailModal'
 import SpellSlotsSummary from '@/components/character/SpellSlotsSummary'
 import HeroStatsSection from '@/components/character/HeroStatsSection'
+import YourTurnBanner from '@/components/character/YourTurnBanner'
 import QuickActions from '@/components/character/QuickActions'
 import HpQuickSheet from '@/components/character/HpQuickSheet'
 import HeroLayoutSheet from '@/components/character/HeroLayoutSheet'
@@ -78,6 +79,7 @@ export default function HeroScreen({ char }: Props) {
 
   return (
     <div className="@container p-4 space-y-3 pb-safe">
+      <YourTurnBanner charId={char.id} />
       {/* Hero card */}
       <Surface
         variant="tome"

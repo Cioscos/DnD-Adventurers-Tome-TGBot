@@ -160,6 +160,7 @@
       "skills": "Skills",
       "saves": "Tiri Salvezza",
       "actions": "Azioni",
+      "turn": "Turno",
       "spells": "Incantesimi",
       "slots": "Slot Incantesimi",
       "inventory": "Inventario",
@@ -338,6 +339,7 @@
       "homebrew_label": "Bonus Homebrew"
     },
     "actions": {
+      "attacks_per_action": "Attacchi per azione: {{n}}",
       "title": "Azioni",
       "unarmed": "Attacco a mano libera",
       "unarmed_desc": "Colpo senza armi ({{damage}} + mod, contundente)",
@@ -576,6 +578,16 @@
       "pool_cap_reached": "Limite massimo dadi raggiunto"
     },
     "conditions": {
+      "duration": {
+        "label": "Durata in round",
+        "until_end": "Fino a fine",
+        "one_round": "1 round",
+        "one_minute": "1 minuto = 10",
+        "input_aria": "Durata in round",
+        "left": "{{n}} round",
+        "tick": "Fine round (−1)",
+        "expired": "Scaduto: {{names}}"
+      },
       "title": "Condizioni",
       "exhaustion": "Spossatezza (livello {{level}})",
       "exhaustion_level": "Livello spossatezza",
@@ -690,6 +702,27 @@
       "on": "On",
       "off": "Off",
       "aria": "Ispirazione eroica"
+    },
+    "turn": {
+      "title": "Turno",
+      "round": "Round {{n}}",
+      "attacks_per_action": "Attacchi per azione: {{n}}",
+      "section_action": "Azione",
+      "section_bonus_action": "Azione bonus",
+      "section_reaction": "Reazione",
+      "section_other": "Altro",
+      "used": "Usata",
+      "mark_used": "Segna come usata",
+      "new_turn": "Nuovo turno",
+      "end_round": "Fine round (−1)",
+      "empty": "Nessuna voce",
+      "unarmed": "Colpo senza armi",
+      "attack": "Attacca",
+      "cast": "Lancia",
+      "use": "Usa",
+      "no_uses": "Usi esauriti",
+      "banner": "È il tuo turno",
+      "banner_cta": "Apri la vista Turno"
     },
     "inSession": {
       "label": "Sei in sessione",

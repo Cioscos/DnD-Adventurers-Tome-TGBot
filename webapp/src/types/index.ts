@@ -203,6 +203,8 @@ export interface CharacterFull extends Omit<CharacterSummary, 'ac_homebrew_modif
   carry_capacity_override: boolean
   has_custom_silhouette: boolean
   attacks_per_action?: number
+  /** Solo da POST /rounds/tick: etichette degli effetti appena scaduti. */
+  expired_effects?: string[] | null
   encumbrance: number
   spell_slots_mode: string
   spellcasting?: SpellcastingInfo | null
@@ -497,4 +499,11 @@ export interface SessionFeedItem {
 export interface SessionFeedResponse {
   items: SessionFeedItem[]
   has_more: boolean
+}
+
+export interface TurnState {
+  in_encounter: boolean
+  is_my_turn: boolean
+  round: number | null
+  session_id: number | null
 }

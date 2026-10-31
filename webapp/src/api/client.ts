@@ -27,6 +27,7 @@ import type {
   EncounterLive,
   EncounterMode,
   GameSession,
+  TurnState,
   GameSessionLive,
   HistoryEntry,
   HistoryRetentionPreview,
@@ -394,11 +395,15 @@ export const api = {
       }),
 
     // Combat extras
-    updateConditions: (id: number, conditions: Record<string, unknown>) =>
+    updateConditions: (id: number, conditions: Record<string, unknown>, durations?: Record<string, number | null>) =>
       request<CharacterFull>(`/characters/${id}/conditions`, {
         method: 'PATCH',
-        body: JSON.stringify({ conditions }),
+        body: JSON.stringify(durations ? { conditions, durations } : { conditions }),
       }),
+    tickRound: (id: number) =>
+      request<CharacterFull>(`/characters/${id}/rounds/tick`, { method: 'POST' }),
+    turnState: (id: number) =>
+      request<TurnState>(`/characters/${id}/turn-state`),
     updateInspiration: (id: number, heroic_inspiration: boolean) =>
       request<CharacterFull>(`/characters/${id}/inspiration`, {
         method: 'PATCH',

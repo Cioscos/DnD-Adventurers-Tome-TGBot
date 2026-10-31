@@ -25,6 +25,8 @@ import {
 import { useToast } from '@/hooks/useToast'
 import ConditionsSkeleton from '@/components/skeletons/ConditionsSkeleton'
 import { notifyMutationError } from '@/lib/mutationError'
+import DurationInput from '@/components/character/DurationInput'
+import { useTickRound } from '@/hooks/useTickRound'
 
 const CONDITION_KEYS = [
   'blinded', 'charmed', 'deafened', 'frightened', 'grappled',
@@ -104,6 +106,9 @@ export default function Conditions() {
   const [showExhaustionDetails, setShowExhaustionDetails] = useState(false)
   const [filterActive, setFilterActive] = useState(false)
   const [confirmResetOpen, setConfirmResetOpen] = useState(false)
+  // Durata in round assegnata alle prossime condizioni attivate (null = fino a fine).
+  const [nextDuration, setNextDuration] = useState<number | null>(null)
+  const tick = useTickRound(charId)
 
   const { data: char } = useQuery({
     queryKey: ['character', charId],
@@ -120,8 +125,10 @@ export default function Conditions() {
   })
 
   const mutation = useMutation({
-    mutationFn: (conditions: Record<string, unknown>) =>
-      api.characters.updateConditions(charId, conditions),
+    mutationFn: ({ conditions, durations }: { conditions: Record<string, unknown>; durations?: Record<string, number | null> }) =>
+      durations
+        ? api.characters.updateConditions(charId, conditions, durations)
+        : api.characters.updateConditions(charId, conditions),
     onSuccess: (updated) => {
       qc.setQueryData(['character', charId], updated)
       setPendingExhaustion(null)
@@ -197,12 +204,15 @@ export default function Conditions() {
     const current = conditions[key] ?? false
     setPendingConditionKey(key)
     setJustActivated(current ? null : key)
-    mutation.mutate({ ...conditions, [key]: !current })
+    mutation.mutate({
+      conditions: { ...conditions, [key]: !current },
+      durations: !current && nextDuration != null ? { [key]: nextDuration } : undefined,
+    })
   }
 
   const setExhaustion = (level: number) => {
     setPendingExhaustion(level)
-    mutation.mutate({ ...conditions, exhaustion: level })
+    mutation.mutate({ conditions: { ...conditions, exhaustion: level } })
   }
 
   // PATCH /conditions merges, it cannot pop a key. Sending `false` marks the
@@ -211,7 +221,7 @@ export default function Conditions() {
   // rule's `remove_condition` action runs (which does a proper pop()).
   const removeCustom = (key: string) => {
     setPendingConditionKey(key)
-    mutation.mutate({ [key]: false })
+    mutation.mutate({ conditions: { [key]: false } })
   }
 
   // Manually apply a custom condition known to an enabled rule. Mirrors the
@@ -221,10 +231,12 @@ export default function Conditions() {
   const applyCustom = (c: AppliableCustom) => {
     setPendingConditionKey(c.key)
     mutation.mutate({
-      ...conditions,
-      [c.key]: { rule_id: c.ruleId, params: {} },
+      conditions: { ...conditions, [c.key]: { rule_id: c.ruleId, params: {} } },
     })
   }
+
+  const durations = (char.settings?.condition_durations ?? {}) as Record<string, number>
+  const hasDurations = Object.keys(durations).length > 0 || char.settings?.concentration_rounds_left != null
 
   const activeCount =
     CONDITION_KEYS.filter((k) => conditions[k]).length +
@@ -242,7 +254,7 @@ export default function Conditions() {
   const resetAll = () => {
     const cleared: Record<string, unknown> = { exhaustion: 0 }
     for (const k of CONDITION_KEYS) cleared[k] = false
-    mutation.mutate(cleared)
+    mutation.mutate({ conditions: cleared })
     setConfirmResetOpen(false)
   }
 
@@ -265,6 +277,22 @@ export default function Conditions() {
           {t('character.conditions.turn_start.label')}
         </Button>
       )}
+
+      <Surface variant="flat">
+        <DurationInput value={nextDuration} onChange={setNextDuration} />
+        {hasDurations && (
+          <Button
+            variant="secondary"
+            size="sm"
+            className="mt-2"
+            icon={<Clock size={14} />}
+            loading={tick.isPending}
+            onClick={() => tick.mutate()}
+          >
+            {t('character.conditions.duration.tick')}
+          </Button>
+        )}
+      </Surface>
 
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-2">
@@ -429,6 +457,11 @@ export default function Conditions() {
                 <span className="text-sm font-body leading-tight">
                   {t(`character.conditions.${key}`)}
                 </span>
+                {active && durations[key] != null && (
+                  <span className="ml-auto text-xs font-mono tabular-nums text-dnd-amber">
+                    {t('character.conditions.duration.left', { n: durations[key] })}
+                  </span>
+                )}
               </Pressable>
               <Pressable
                 aria-label={t('character.conditions.detail_aria')}
