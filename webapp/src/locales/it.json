@@ -1230,6 +1230,7 @@
     }
   },
   "layout": {
+    "server_outdated": "Il server non è aggiornato: alcune funzioni potrebbero non funzionare.",
     "nav": {
       "go_to": "Vai a {{page}}"
     },

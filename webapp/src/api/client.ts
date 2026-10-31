@@ -245,6 +245,8 @@ function attackBody(withInspiration: boolean, die: number | undefined): string |
 }
 
 export const api = {
+  health: () => request<{ status: string; version: string | null }>('/health'),
+
   me: () => request<{ user_id: number }>('/auth/me'),
 
   characters: {

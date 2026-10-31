@@ -121,9 +121,12 @@ app.add_middleware(
 # Health check (no auth)
 # ---------------------------------------------------------------------------
 
+from api.version import APP_VERSION  # noqa: E402
+
+
 @app.get("/health", tags=["meta"])
 async def health() -> dict:
-    return {"status": "ok"}
+    return {"status": "ok", "version": APP_VERSION}
 
 
 from typing import Annotated
