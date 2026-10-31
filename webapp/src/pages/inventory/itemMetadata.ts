@@ -1,5 +1,9 @@
 /** Pure logic — constants, form types, and metadata builder for inventory items. */
 import type { AbilityModifier } from '@/types'
+import {
+  MAGIC_KEYS, CHARGE_AMOUNT_RE,
+  type Rarity, type ItemBonus, type ItemCharges, type GrantedSpell,
+} from '@/lib/itemMagic'
 
 export const ITEM_TYPES = [
   'weapon', 'armor', 'shield', 'consumable', 'tool',
@@ -156,6 +160,17 @@ export type ItemFormData = {
   tool_type: string
   // ability modifiers (all item types)
   ability_modifiers?: AbilityModifier[]
+  // magic (R4)
+  is_magic: boolean
+  rarity: '' | Rarity
+  cost_gp: string
+  requires_attunement: boolean
+  attuned: boolean
+  bonuses: ItemBonus[]
+  charges: ItemCharges | null
+  granted_spells: GrantedSpell[]
+  /** Chiavi di item_metadata non gestite dal form (hb_*, futuri): il PATCH sostituisce tutto, vanno rimandate. */
+  extra_meta: Record<string, unknown>
 }
 
 export const emptyForm: ItemFormData = {
@@ -184,6 +199,15 @@ export const emptyForm: ItemFormData = {
   effects: [],
   tool_type: '',
   ability_modifiers: [],
+  is_magic: false,
+  rarity: '',
+  cost_gp: '',
+  requires_attunement: false,
+  attuned: false,
+  bonuses: [],
+  charges: null,
+  granted_spells: [],
+  extra_meta: {},
 }
 
 export function buildItemMetadata(form: ItemFormData): Record<string, unknown> | undefined {
@@ -232,11 +256,27 @@ export function buildItemMetadata(form: ItemFormData): Record<string, unknown> |
     meta = { ...(meta ?? {}), ability_modifiers: form.ability_modifiers }
   }
 
-  return meta
+  if (form.is_magic) {
+    const magic: Record<string, unknown> = { is_magic: true }
+    if (form.rarity) magic.rarity = form.rarity
+    if (form.cost_gp.trim() !== '' && Number(form.cost_gp) >= 0) magic.cost_gp = Number(form.cost_gp)
+    if (form.requires_attunement) {
+      magic.requires_attunement = true
+      if (form.attuned) magic.attuned = true
+    }
+    if (form.bonuses.length > 0) magic.bonuses = form.bonuses
+    if (form.charges) {
+      magic.charges = { ...form.charges, current: Math.min(form.charges.current, form.charges.max) }
+    }
+    if (form.granted_spells.length > 0) magic.granted_spells = form.granted_spells
+    meta = { ...(meta ?? {}), ...magic }
+  }
+
+  const merged = { ...(form.extra_meta ?? {}), ...(meta ?? {}) }
+  return Object.keys(merged).length > 0 ? merged : undefined
 }
 
-/**
- * Build the full `item_metadata` object for a homebrew-property PATCH.
+/** Build the full `item_metadata` object for a homebrew-property PATCH.
  *
  * The backend `PATCH /characters/{id}/items/{item_id}` REPLACES the whole
  * `item_metadata` column (it does `setattr(item, "item_metadata", json.dumps(...))`),
@@ -267,8 +307,28 @@ export function isItemFormValid(form: ItemFormData): boolean {
   if (form.weight !== '' && (isNaN(Number(form.weight)) || Number(form.weight) < 0)) return false
   if (form.quantity !== '' && (isNaN(Number(form.quantity)) || Number(form.quantity) < 1)) return false
   if (form.item_type === 'consumable' && !areEffectsValid(form.effects ?? [])) return false
+  if (form.is_magic) {
+    const c = form.charges
+    if (c) {
+      if (!Number.isInteger(c.max) || c.max < 1 || c.max > 100) return false
+      if (!Number.isInteger(c.current) || c.current < 0) return false
+      if (!CHARGE_AMOUNT_RE.test(c.recharge_amount.trim())) return false
+    }
+    const cap = c?.max ?? 0
+    for (const g of form.granted_spells) {
+      if (!g.name.trim() || g.charges_cost < 0 || g.charges_cost > cap) return false
+      if (!Number.isInteger(g.level) || g.level < 0 || g.level > 9) return false
+    }
+  }
   return true
 }
+
+/** Chiavi che il form riscrive da sé: tutte le altre finiscono in `extra_meta`. */
+const FORM_OWNED_KEYS = new Set<string>([
+  'damage_dice', 'damage_type', 'weapon_type', 'properties', 'magic_bonus', 'versatile_dice',
+  'weapon_category', 'armor_type', 'ac_value', 'stealth_disadvantage', 'strength_req', 'ac_bonus',
+  'subtype', 'effect', 'effects', 'tool_type', 'ability_modifiers', ...MAGIC_KEYS,
+])
 
 /** Build the form from an existing Item for editing. */
 export function itemToFormData(item: { name: string; item_type: string; quantity: number; weight: number; description?: string; item_metadata?: Record<string, unknown> }): ItemFormData {
@@ -303,5 +363,16 @@ export function itemToFormData(item: { name: string; item_type: string; quantity
     effects: Array.isArray(meta.effects) ? (meta.effects as ItemEffect[]) : [],
     tool_type: String(meta.tool_type ?? ''),
     ability_modifiers,
+    is_magic: !!meta.is_magic || MAGIC_KEYS.some((k) => k !== 'is_magic' && meta[k] != null && meta[k] !== false),
+    rarity: typeof meta.rarity === 'string' ? (meta.rarity as Rarity) : '',
+    cost_gp: meta.cost_gp != null ? String(meta.cost_gp) : '',
+    requires_attunement: !!meta.requires_attunement,
+    attuned: !!meta.attuned,
+    bonuses: Array.isArray(meta.bonuses) ? (meta.bonuses as ItemBonus[]) : [],
+    charges: meta.charges && typeof meta.charges === 'object' ? (meta.charges as ItemCharges) : null,
+    granted_spells: Array.isArray(meta.granted_spells) ? (meta.granted_spells as GrantedSpell[]) : [],
+    extra_meta: Object.fromEntries(
+      Object.entries(meta).filter(([k]) => !FORM_OWNED_KEYS.has(k)),
+    ),
   }
 }

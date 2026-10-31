@@ -22,6 +22,7 @@ import SpellFilter from '@/pages/spells/SpellFilter'
 import SpellItem from '@/pages/spells/SpellItem'
 import SpellForm, { type SpellFormData } from '@/pages/spells/SpellForm'
 import { totalLevelOf } from '@/lib/dnd'
+import { itemSpellConcentration } from '@/lib/concentration'
 import { useCastFlow } from '@/pages/spells/useCastFlow'
 import type { Spell, SpellSlot } from '@/types'
 import SpellsSkeleton from '@/components/skeletons/SpellsSkeleton'
@@ -309,6 +310,7 @@ export default function Spells() {
   const noResults = spells.length > 0 && filtered.length === 0
   const concentratingId = char.concentrating_spell_id
   const concentratingSpell = concentratingId ? spells.find(s => s.id === concentratingId) : null
+  const itemConcentration = concentratingSpell ? null : itemSpellConcentration(char)
 
   return (
     <Layout title={t('character.spells.title')} backTo={`/char/${charId}`} group="magic" page="spells">
@@ -321,10 +323,10 @@ export default function Spells() {
       />
 
       {/* Concentration panel — active spell + description. TS auto on /hp DAMAGE. */}
-      {concentratingId && concentratingSpell && (
+      {(concentratingSpell || itemConcentration) && (
         <ConcentrationPanel
-          name={concentratingSpell.name}
-          description={concentratingSpell.description}
+          name={concentratingSpell?.name ?? itemConcentration?.name ?? ''}
+          description={concentratingSpell?.description}
           concBannerExpanded={concBannerExpanded}
           setConcBannerExpanded={setConcBannerExpanded}
           onStop={() => concentrationMutation.mutate(null)}

@@ -571,6 +571,16 @@ export const api = {
       }),
     remove: (charId: number, itemId: number) =>
       request<CharacterFull>(`/characters/${charId}/items/${itemId}`, { method: 'DELETE' }),
+    charges: (charId: number, itemId: number, delta: number) =>
+      request<CharacterFull>(`/characters/${charId}/items/${itemId}/charges`, {
+        method: 'POST',
+        body: JSON.stringify({ delta }),
+      }),
+    cast: (charId: number, itemId: number, spellIndex: number) =>
+      request<CharacterFull>(`/characters/${charId}/items/${itemId}/cast`, {
+        method: 'POST',
+        body: JSON.stringify({ spell_index: spellIndex }),
+      }),
     attack: (
       charId: number, itemId: number, withInspiration: boolean = false, die?: D20Roll,
       choice?: { grip?: 'one' | 'two'; attack_mode?: 'melee' | 'thrown' },

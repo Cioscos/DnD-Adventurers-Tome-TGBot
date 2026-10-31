@@ -229,6 +229,13 @@ describe('HP page', () => {
     expect(gauge).toHaveAttribute('data-max', '35')
   })
 
+  it('shows the concentration banner for a spell cast from an item', async () => {
+    getChar.mockResolvedValue({ ...aliveChar, settings: { concentration_item_spell: { item_id: 9, name: 'Volare' } } })
+    renderWithProviders(<HP />)
+    expect(await screen.findByText('character.hp.concentration_active')).toBeInTheDocument()
+    expect(screen.getByText('Volare')).toBeInTheDocument()
+  })
+
   it('handleApply parses the value and calls updateHp(id, op, val, wasCritical=false) when alive', async () => {
     getChar.mockResolvedValue(aliveChar)
     updateHpSpy.mockResolvedValue(aliveChar)

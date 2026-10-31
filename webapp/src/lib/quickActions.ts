@@ -1,3 +1,4 @@
+import { itemCharges } from '@/lib/itemMagic'
 import type { CharacterFull, Item, Spell, Ability, CharacterClass } from '@/types'
 
 export const QUICK_ACTIONS_MAX = 12
@@ -14,6 +15,7 @@ export type QuickActionEntry =
   | { type: 'counter_ability'; id: number }
   | { type: 'counter_inspiration' }
   | { type: 'counter_ammo'; id: number }
+  | { type: 'item_charges'; id: number }
   | { type: 'hit_die'; classId: number }
   | { type: 'rest'; rest: 'long' | 'short' }
 
@@ -25,6 +27,7 @@ export type ResolvedQuickAction =
   | { type: 'counter_ability'; key: string; ability: Ability }
   | { type: 'counter_inspiration'; key: string; active: boolean }
   | { type: 'counter_ammo'; key: string; item: Item }
+  | { type: 'item_charges'; key: string; item: Item }
   | { type: 'hit_die'; key: string; cls: CharacterClass; remaining: number }
   | { type: 'rest'; key: string; rest: 'long' | 'short' }
 
@@ -139,6 +142,11 @@ export function resolveQuickActions(
       case 'counter_ammo': {
         const item = items.get(entry.id)
         if (item && isAmmunitionItem(item)) resolved.push({ type: 'counter_ammo', key, item })
+        break
+      }
+      case 'item_charges': {
+        const item = items.get(entry.id)
+        if (item && itemCharges(item)) resolved.push({ type: 'item_charges', key, item })
         break
       }
       case 'hit_die': {

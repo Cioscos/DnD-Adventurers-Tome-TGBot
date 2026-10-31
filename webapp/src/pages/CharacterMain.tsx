@@ -20,6 +20,7 @@ import HeroScreen from '@/pages/character/HeroScreen'
 import EquipmentScreen from '@/pages/character/EquipmentScreen'
 import MenuScreen from '@/pages/character/MenuScreen'
 import { usePageBack } from '@/hooks/useOverlayDismiss'
+import { isConcentrating } from '@/lib/concentration'
 
 export default function CharacterMain() {
   const { id } = useParams<{ id: string }>()
@@ -125,12 +126,12 @@ export default function CharacterMain() {
         <h1 className="text-xl font-display font-bold text-dnd-gold-bright truncate flex-1 flex items-center gap-2 min-w-0"
             style={{ textShadow: '0 1px 4px var(--dnd-gold-glow)' }}>
           <span className="truncate">{char.name}</span>
-          {char.concentrating_spell_id && (
+          {isConcentrating(char) && (
             <Pressable
               type="button"
               onClick={() => {
                 haptic.light()
-                navigate(`/char/${charId}/spells?focus=${char.concentrating_spell_id}`)
+                navigate(`/char/${charId}/spells${char.concentrating_spell_id ? `?focus=${char.concentrating_spell_id}` : ''}`)
               }}
               whileTap={{ scale: 0.9 }}
               title={t('character.spells.concentration_active', { defaultValue: 'Concentrazione attiva' })}

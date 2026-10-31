@@ -5,7 +5,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import QuickActions from '@/components/character/QuickActions'
 import type { CharacterFull } from '@/types'
 
-const { spendHitDice, update, notifyMutationError, toastError } = vi.hoisted(() => ({
+const { spendHitDice, update, notifyMutationError, toastError, charges } = vi.hoisted(() => ({
+  charges: vi.fn(),
   spendHitDice: vi.fn(),
   update: vi.fn(),
   notifyMutationError: vi.fn(),
@@ -14,7 +15,7 @@ const { spendHitDice, update, notifyMutationError, toastError } = vi.hoisted(() 
 
 vi.mock('@/api/client', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
-  return { ...actual, api: { characters: { spendHitDice, update } } }
+  return { ...actual, api: { characters: { spendHitDice, update }, items: { charges } } }
 })
 vi.mock('@/lib/mutationError', () => ({ notifyMutationError }))
 vi.mock('@/hooks/useToast', () => ({ useToast: () => ({ error: toastError, success: vi.fn() }) }))
@@ -184,5 +185,22 @@ describe('QuickActions defaults and order', () => {
     await userEvent.click(screen.getByText('confirm:character.quick_actions.restore_title'))
     await waitFor(() => expect(update).toHaveBeenCalledTimes(1))
     expect(update.mock.calls[0][1]).toEqual({ settings: { theme: 'x' } })
+  })
+})
+
+describe('QuickActions item charges', () => {
+  const wandChar = {
+    id: 7,
+    settings: { quick_actions: [{ type: 'item_charges', id: 5 }] },
+    items: [{ id: 5, name: 'Bacchetta', item_type: 'generic', item_metadata: { charges: { max: 7, current: 4, recharge: 'dawn', recharge_amount: 'all' } } }],
+    classes: [],
+  } as unknown as CharacterFull
+
+  it('decrements the charges through the charges endpoint', async () => {
+    charges.mockResolvedValue(wandChar)
+    renderQC(wandChar)
+    expect(screen.getByText('Bacchetta')).toBeTruthy()
+    await userEvent.click(screen.getByLabelText('Bacchetta -1'))
+    await waitFor(() => expect(charges).toHaveBeenCalledWith(7, 5, -1))
   })
 })

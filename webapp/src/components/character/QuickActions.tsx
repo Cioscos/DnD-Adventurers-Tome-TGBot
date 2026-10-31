@@ -6,7 +6,7 @@ import { Plus, Check, Minus, GripVertical, RotateCcw } from 'lucide-react'
 import {
   GiCrossedSwords, GiShieldEchoes, GiSpellBook, GiLightningStorm,
   GiLightningTrio, GiAbacus, GiPolarStar, GiArrowhead,
-  GiDiceSixFacesOne, GiNightSleep, GiCampfire,
+  GiDiceSixFacesOne, GiNightSleep, GiCampfire, GiMagicSwirl,
 } from 'react-icons/gi'
 import { api, ApiError } from '@/api/client'
 import Surface from '@/components/ui/Surface'
@@ -29,6 +29,7 @@ import { useD20Roll, d20Arg, type RollMode } from '@/hooks/useD20Roll'
 import { useToast } from '@/hooks/useToast'
 import { notifyMutationError } from '@/lib/mutationError'
 import { showUndoToast } from '@/components/ui/UndoToast'
+import { itemCharges } from '@/lib/itemMagic'
 import { useCastFlow } from '@/pages/spells/useCastFlow'
 import {
   effectiveQuickActions,
@@ -61,6 +62,7 @@ const TYPE_ICONS = {
   counter_ability: GiAbacus,
   counter_inspiration: GiPolarStar,
   counter_ammo: GiArrowhead,
+  item_charges: GiMagicSwirl,
   hit_die: GiDiceSixFacesOne,
   rest: GiNightSleep,
 } as const
@@ -245,6 +247,16 @@ export default function QuickActions({ char }: Props) {
     ...counterHandlers,
   })
 
+  const chargesMutation = useMutation({
+    mutationFn: ({ itemId, delta }: { itemId: number; delta: number }) =>
+      api.items.charges(char.id, itemId, delta),
+    onSuccess: (updated) => {
+      qc.setQueryData(['character', char.id], updated)
+      haptic.light()
+    },
+    onError: () => toast.error(t('common.action_failed')),
+  })
+
   const usesMutation = useMutation({
     mutationFn: ({ abilityId, uses }: { abilityId: number; uses: number }) =>
       api.abilities.update(char.id, abilityId, { uses }),
@@ -389,7 +401,7 @@ export default function QuickActions({ char }: Props) {
       case 'spell': return a.spell.name
       case 'ability': case 'counter_ability': return a.ability.name
       case 'counter_inspiration': return t('character.quick_actions.inspiration')
-      case 'counter_ammo': return a.item.name
+      case 'counter_ammo': case 'item_charges': return a.item.name
       case 'hit_die': return `d${a.cls.hit_die ?? 8} · ${a.cls.class_name}`
       case 'rest': return t(`character.quick_actions.rest_${a.rest}`)
     }
@@ -401,6 +413,7 @@ export default function QuickActions({ char }: Props) {
   // abilità attive (non passive) con un tetto di usi possono essere pinnate.
   const pinnableAbilities = (char.abilities ?? []).filter((a) => !a.is_passive && a.max_uses != null)
   const ammoItems = (char.items ?? []).filter(isAmmunitionItem)
+  const chargeItems = (char.items ?? []).filter((i) => itemCharges(i))
 
   // Gruppi editor "generici" (una riga = un pin/unpin): il blocco abilità (doppio
   // pin per riga) è renderizzato a parte fra questi due, quindi l'elenco è diviso
@@ -439,6 +452,10 @@ export default function QuickActions({ char }: Props) {
         { entry: { type: 'counter_inspiration' } as QuickActionEntry, label: t('character.quick_actions.inspiration') },
         ...ammoItems.map((it) => ({
           entry: { type: 'counter_ammo', id: it.id } as QuickActionEntry,
+          label: it.name,
+        })),
+        ...chargeItems.map((it) => ({
+          entry: { type: 'item_charges', id: it.id } as QuickActionEntry,
           label: it.name,
         })),
         ...(char.classes ?? []).map((cls) => ({
@@ -544,6 +561,40 @@ export default function QuickActions({ char }: Props) {
                     </span>
                     <Check size={14} className={`shrink-0 ${a.active ? '' : 'opacity-0'}`} />
                   </Pressable>
+                )
+              }
+              if (a.type === 'item_charges') {
+                const c = itemCharges(a.item)!
+                const bump = (delta: number) => chargesMutation.mutate({ itemId: a.item.id, delta })
+                return (
+                  <div
+                    key={a.key}
+                    className="min-h-[44px] flex items-center gap-1.5 px-2 py-1.5 rounded-xl bg-dnd-surface border border-dnd-border col-span-2"
+                  >
+                    <GiMagicSwirl size={14} className="text-dnd-gold shrink-0" />
+                    <span className="flex-1 min-w-0 line-clamp-2 leading-tight text-xs text-dnd-text font-body">
+                      {actionLabel(a)}
+                    </span>
+                    <IconButton
+                      icon={<Minus size={16} />}
+                      onClick={() => bump(-1)}
+                      disabled={c.current <= 0 || chargesMutation.isPending}
+                      haptic="light"
+                      aria-label={`${actionLabel(a)} -1`}
+                      className="w-11 h-11 rounded-lg bg-dnd-crimson/15 text-dnd-crimson-bright border border-dnd-crimson/30 disabled:opacity-30"
+                    />
+                    <span className="min-w-[44px] text-center font-mono font-bold tabular-nums text-sm text-dnd-gold-bright">
+                      {c.current}<span className="text-dnd-text-muted text-xs">/{c.max}</span>
+                    </span>
+                    <IconButton
+                      icon={<Plus size={16} />}
+                      onClick={() => bump(1)}
+                      disabled={c.current >= c.max || chargesMutation.isPending}
+                      haptic="light"
+                      aria-label={`${actionLabel(a)} +1`}
+                      className="w-11 h-11 rounded-lg bg-dnd-emerald/15 text-dnd-emerald-bright border border-dnd-emerald/30 disabled:opacity-30"
+                    />
+                  </div>
                 )
               }
               if (a.type === 'counter_ability' || a.type === 'counter_ammo') {

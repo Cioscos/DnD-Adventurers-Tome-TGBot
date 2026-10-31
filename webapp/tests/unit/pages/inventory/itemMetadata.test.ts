@@ -49,3 +49,56 @@ describe('weapon magic fields', () => {
     expect(f).toMatchObject({ magic_bonus: '1', versatile_dice: '1d10', weapon_category: 'simple' })
   })
 })
+
+describe('magic item fields', () => {
+  const item = {
+    id: 1, name: 'Bacchetta', item_type: 'generic', quantity: 1, weight: 1, description: '',
+    item_metadata: {
+      hb_enchanted: true, custom_key: { a: 1 }, rarity: 'rare', is_magic: true,
+      requires_attunement: true, attuned: true,
+      bonuses: [{ target: 'ac', value: 1 }],
+      charges: { max: 7, current: 5, recharge: 'dawn', recharge_amount: '1d6+1' },
+      granted_spells: [{ name: 'Dardo', level: 1, charges_cost: 1, is_concentration: false, srd_index: 'magic-missile' }],
+    },
+  } as unknown as Item
+
+  it('keeps unknown pre-existing keys and rewrites the magic ones', () => {
+    const form = itemToFormData(item)
+    expect(form.rarity).toBe('rare')
+    const meta = buildItemMetadata({ ...form, bonuses: [{ target: 'speed', value: 10 }] })!
+    expect(meta.hb_enchanted).toBe(true)
+    expect(meta.custom_key).toEqual({ a: 1 })
+    expect(meta.bonuses).toEqual([{ target: 'speed', value: 10 }])
+    expect(meta.charges).toEqual({ max: 7, current: 5, recharge: 'dawn', recharge_amount: '1d6+1' })
+    expect((meta.granted_spells as { srd_index: string }[])[0].srd_index).toBe('magic-missile')
+    expect(meta.attuned).toBe(true)
+  })
+
+  it('drops cleared magic fields and never attunes without requires_attunement', () => {
+    const form = itemToFormData(item)
+    const meta = buildItemMetadata({ ...form, charges: null, bonuses: [], granted_spells: [], requires_attunement: false })!
+    expect(meta).not.toHaveProperty('charges')
+    expect(meta).not.toHaveProperty('bonuses')
+    expect(meta).not.toHaveProperty('granted_spells')
+    expect(meta).not.toHaveProperty('attuned')
+    expect(meta.hb_enchanted).toBe(true)
+  })
+
+  it('omits all magic keys when the item is not magic, and clamps current to max', () => {
+    const form = itemToFormData(item)
+    const plain = buildItemMetadata({ ...form, is_magic: false })!
+    expect(plain).not.toHaveProperty('rarity')
+    expect(plain).not.toHaveProperty('charges')
+    const clamped = buildItemMetadata({ ...form, charges: { max: 3, current: 9, recharge: 'none', recharge_amount: 'all' } })!
+    expect((clamped.charges as { current: number }).current).toBe(3)
+  })
+
+  it('validates charges and granted spells', () => {
+    const form = itemToFormData(item)
+    expect(isItemFormValid(form)).toBe(true)
+    expect(isItemFormValid({ ...form, charges: { max: 0, current: 0, recharge: 'none', recharge_amount: 'all' } })).toBe(false)
+    expect(isItemFormValid({ ...form, charges: { ...form.charges!, recharge_amount: 'lots' } })).toBe(false)
+    expect(isItemFormValid({ ...form, granted_spells: [{ ...form.granted_spells[0], name: ' ' }] })).toBe(false)
+    expect(isItemFormValid({ ...form, granted_spells: [{ ...form.granted_spells[0], charges_cost: 8 }] })).toBe(false)
+  })
+})

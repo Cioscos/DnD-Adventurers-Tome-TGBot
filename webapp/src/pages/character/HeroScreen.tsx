@@ -25,6 +25,7 @@ import YourTurnBanner from '@/components/character/YourTurnBanner'
 import QuickActions from '@/components/character/QuickActions'
 import HpQuickSheet from '@/components/character/HpQuickSheet'
 import HeroLayoutSheet from '@/components/character/HeroLayoutSheet'
+import { isConcentrating, concentrationLabel } from '@/lib/concentration'
 import { readHeroLayout, type HeroSectionKey } from '@/lib/heroLayout'
 import type { Ability, CharacterFull } from '@/types'
 import { useUnitSettings, formatWeightValue, weightUnitLabel } from '@/store/unitSettings'
@@ -209,8 +210,8 @@ export default function HeroScreen({ char }: Props) {
           </Pressable>
         </div>
 
-        {char.concentrating_spell_id && (() => {
-          const spell = char.spells?.find((s) => s.id === char.concentrating_spell_id)
+        {isConcentrating(char) && (() => {
+          const spellName = concentrationLabel(char)
           return (
             <Pressable
               onClick={() => navigate(`/char/${char.id}/spells`)}
@@ -222,9 +223,9 @@ export default function HeroScreen({ char }: Props) {
               <span className="text-xs font-cinzel uppercase tracking-widest text-dnd-arcane-bright/80">
                 {t('character.spells.concentration')}
               </span>
-              {spell?.name && (
+              {spellName && (
                 <span className="font-body italic text-sm text-dnd-arcane-bright">
-                  {spell.name}
+                  {spellName}
                 </span>
               )}
             </Pressable>

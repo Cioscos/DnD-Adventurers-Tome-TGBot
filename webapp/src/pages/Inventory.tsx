@@ -29,9 +29,12 @@ import { canShareMessage, haptic } from '@/auth/telegram'
 import { useShareMessage } from '@/hooks/useShareMessage'
 import InventoryItem, { type ItemProperty } from '@/pages/inventory/InventoryItem'
 import ItemForm from '@/pages/inventory/ItemForm'
+import AttunementSection from '@/pages/inventory/AttunementSection'
+import { useItemCast } from '@/pages/spells/useItemCast'
 import { INVENTORY_TYPE_ORDER, buildItemMetadata, buildHomebrewMetadataPatch, type ItemFormData, type ItemEffect } from '@/pages/inventory/itemMetadata'
 import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import { getItemTypeIcon } from '@/lib/itemIcons'
+import { itemGrantedSpells } from '@/lib/itemMagic'
 import type { Item } from '@/types'
 import InventorySkeleton from '@/components/skeletons/InventorySkeleton'
 
@@ -258,6 +261,16 @@ export default function Inventory() {
       haptic.success()
     },
   })
+
+  const chargesMutation = useMutation({
+    mutationFn: ({ itemId, delta }: { itemId: number; delta: number }) => api.items.charges(charId, itemId, delta),
+    onSuccess: (updated) => {
+      qc.setQueryData(['character', charId], updated)
+      haptic.light()
+    },
+    onError: () => toast.error(t('common.action_failed')),
+  })
+  const itemCast = useItemCast(charId)
 
   const shareItem = useShareMessage((itemId: number) => api.share.item(charId, itemId))
 
@@ -562,6 +575,8 @@ export default function Inventory() {
         />
       )}
 
+      <AttunementSection charId={charId} items={items} />
+
       <ScrollArea>
         {orderedTypes.map((type) => {
           const groupItems = grouped[type]
@@ -628,6 +643,10 @@ export default function Inventory() {
                             locale={locale}
                             onSetProperty={handleSetProperty}
                             setPropertyPending={setPropertyMutation.isPending && setPropertyMutation.variables?.itemId === item.id}
+                            onCharges={(delta) => chargesMutation.mutate({ itemId: item.id, delta })}
+                            onCastSpell={(i) => itemCast.mutate({ itemId: item.id, spellIndex: i, name: itemGrantedSpells(item)[i]?.name ?? '' })}
+                            chargesPending={chargesMutation.isPending && chargesMutation.variables?.itemId === item.id}
+                            castPending={itemCast.isPending && itemCast.variables?.itemId === item.id}
                           />
                         </m.div>
                       ))}

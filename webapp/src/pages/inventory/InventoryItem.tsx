@@ -1,6 +1,6 @@
 import React from 'react'
 import { useTranslation } from 'react-i18next'
-import { Pencil, Trash2, ArrowLeftRight, Weight, Shield, AlertTriangle, Wrench, Share2 } from 'lucide-react'
+import { Pencil, Trash2, ArrowLeftRight, Weight, Shield, AlertTriangle, Wrench, Share2, Minus, Plus, Sparkles } from 'lucide-react'
 import {
   GiCrossedSwords as Swords,
   GiArcheryTarget as Target,
@@ -15,6 +15,8 @@ import PropertyBadge from '@/components/homebrew/PropertyBadge'
 import { useUnitSettings, formatWeight } from '@/store/unitSettings'
 import Pressable from '@/components/ui/Pressable'
 import RollButton from '@/components/ui/RollButton'
+import RarityBadge from '@/components/ui/RarityBadge'
+import { itemCharges, itemGrantedSpells, itemRarity, isAttuned, requiresAttunement, type ItemBonus } from '@/lib/itemMagic'
 import WeaponChoiceRow from '@/components/WeaponChoiceRow'
 import type { RollMode } from '@/api/client'
 import type { WeaponChoice } from '@/lib/weaponOptions'
@@ -212,6 +214,75 @@ function HomebrewPropertyChips({
   )
 }
 
+/* ---------- Magic: bonuses, charges, granted spells ---------- */
+
+function MagicSection({ item, onCharges, onCastSpell, chargesPending, castPending }: {
+  item: Item
+  onCharges?: (delta: number) => void
+  onCastSpell?: (index: number) => void
+  chargesPending?: boolean
+  castPending?: boolean
+}) {
+  const { t } = useTranslation()
+  const meta = item.item_metadata as Record<string, unknown> | undefined
+  const bonuses = Array.isArray(meta?.bonuses) ? (meta.bonuses as ItemBonus[]) : []
+  const charges = itemCharges(item)
+  const spells = itemGrantedSpells(item)
+  if (bonuses.length === 0 && !charges && spells.length === 0) return null
+
+  const stepCls = 'w-11 h-11 rounded-md bg-dnd-surface-raised border border-dnd-border text-dnd-gold active:opacity-60 disabled:opacity-30 flex items-center justify-center'
+  return (
+    <div className="space-y-2">
+      {bonuses.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {bonuses.map((b, i) => (
+            <span key={i} className="text-xs font-medium px-1.5 py-0.5 rounded-md bg-dnd-chip-bg text-dnd-text tabular-nums">
+              {t(`character.inventory.magic.targets.${b.target}`, { defaultValue: b.target })} {b.value > 0 ? '+' : ''}{b.value}
+            </span>
+          ))}
+        </div>
+      )}
+      {charges && onCharges && (
+        <div className="flex items-center gap-2 bg-dnd-chip-bg rounded-lg px-2 py-1.5">
+          <span className="text-xs text-dnd-text-muted flex-1 font-medium">{t('character.inventory.magic.charges')}</span>
+          <Pressable onClick={() => onCharges(-1)} disabled={charges.current <= 0 || chargesPending}
+            className={stepCls} aria-label={t('character.inventory.magic.charges_decrease')}>
+            <Minus size={16} />
+          </Pressable>
+          <span className="min-w-[3rem] text-center font-mono font-bold tabular-nums text-dnd-gold-bright">
+            {charges.current}<span className="text-dnd-text-muted text-xs">/{charges.max}</span>
+          </span>
+          <Pressable onClick={() => onCharges(1)} disabled={charges.current >= charges.max || chargesPending}
+            className={stepCls} aria-label={t('character.inventory.magic.charges_increase')}>
+            <Plus size={16} />
+          </Pressable>
+        </div>
+      )}
+      {spells.length > 0 && onCastSpell && spells.map((g, i) => (
+        <div key={i} className="flex items-center gap-2 bg-dnd-chip-bg rounded-lg px-2 py-1.5">
+          <div className="flex-1 min-w-0">
+            <p className="text-sm text-dnd-text truncate">{g.name}</p>
+            <p className="text-xs text-dnd-text-muted">
+              {g.level === 0 ? t('character.inventory.magic.cantrip') : t('character.inventory.magic.spell_level_n', { level: g.level })}
+              {g.charges_cost > 0 && ` · ${t('character.inventory.magic.cost_n', { n: g.charges_cost })}`}
+            </p>
+          </div>
+          <Pressable
+            onClick={() => onCastSpell(i)}
+            pending={castPending}
+            spinnerSize={12}
+            className="flex items-center gap-1 text-xs font-medium px-3 min-h-11 rounded-lg
+                       bg-dnd-arcane-deep/50 text-dnd-arcane-bright border border-dnd-arcane-bright/40 active:opacity-60 disabled:opacity-30"
+          >
+            <Sparkles size={12} />
+            {t('character.inventory.magic.cast')}
+          </Pressable>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 /* ---------- Main component ---------- */
 
 interface InventoryItemProps {
@@ -239,6 +310,11 @@ interface InventoryItemProps {
   locale: 'it' | 'en'
   onSetProperty: (itemId: number, key: string, value: unknown) => void
   setPropertyPending: boolean
+  /** Cariche (±delta) e lancio da oggetto: assenti nei contesti senza supporto magico. */
+  onCharges?: (delta: number) => void
+  onCastSpell?: (index: number) => void
+  chargesPending?: boolean
+  castPending?: boolean
 }
 
 function InventoryItemInner({
@@ -263,6 +339,10 @@ function InventoryItemInner({
   locale,
   onSetProperty,
   setPropertyPending,
+  onCharges,
+  onCastSpell,
+  chargesPending,
+  castPending,
 }: InventoryItemProps) {
   const { t } = useTranslation()
   const system = useUnitSettings((s) => s.system)
@@ -288,6 +368,12 @@ function InventoryItemInner({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="font-medium text-sm text-dnd-text">{item.name}</span>
+            {itemRarity(item) && <RarityBadge rarity={itemRarity(item)!} />}
+            {requiresAttunement(item) && (
+              <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-md border ${isAttuned(item) ? 'bg-dnd-gold/15 text-dnd-gold-bright border-dnd-gold/40' : 'bg-dnd-chip-bg text-dnd-text-muted border-dnd-border'}`}>
+                {t(isAttuned(item) ? 'character.inventory.magic.attuned' : 'character.inventory.magic.not_attuned')}
+              </span>
+            )}
             {item.is_equipped && (
               <span className="text-xs font-semibold px-1.5 py-0.5 rounded-md bg-dnd-emerald/20 text-dnd-emerald-bright border border-dnd-emerald/30">
                 {t('character.inventory.equipped')}
@@ -342,6 +428,14 @@ function InventoryItemInner({
 
           {/* Effect callout (consumable / potion / scroll) */}
           <ItemEffectCallout item={item} />
+
+          <MagicSection
+            item={item}
+            onCharges={onCharges}
+            onCastSpell={onCastSpell}
+            chargesPending={chargesPending}
+            castPending={castPending}
+          />
 
           {/* Quantity stepper — hidden for single-equip items (weapon, armor, shield) */}
           {!hasSingleQuantity(item.item_type) && (

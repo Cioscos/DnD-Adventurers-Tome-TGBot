@@ -205,3 +205,17 @@ describe('effectiveQuickActions', () => {
     expect(hasCustomQuickActions(c.settings)).toBe(true)
   })
 })
+
+describe('item_charges quick action', () => {
+  const wand = { id: 5, name: 'Bacchetta', item_type: 'generic', item_metadata: { charges: { max: 7, current: 4, recharge: 'dawn', recharge_amount: 'all' } } }
+  const plain = { id: 6, name: 'Sasso', item_type: 'generic' }
+  const char = { items: [wand, plain] } as unknown as Parameters<typeof resolveQuickActions>[0]
+
+  it('resolves items with charges and drops stale or charge-less ones', () => {
+    const r = resolveQuickActions(char, [
+      { type: 'item_charges', id: 5 }, { type: 'item_charges', id: 6 }, { type: 'item_charges', id: 99 },
+    ] as QuickActionEntry[])
+    expect(r.map((a) => a.key)).toEqual(['item_charges-5'])
+    expect(r[0].type).toBe('item_charges')
+  })
+})

@@ -11,6 +11,7 @@ import DamageDiceBuilder from './DamageDiceBuilder'
 import { getItemTypeIcon } from '@/lib/itemIcons'
 import AbilityModifiersEditor from './AbilityModifiersEditor'
 import EffectsEditor from './EffectsEditor'
+import MagicFieldsEditor from './MagicFieldsEditor'
 import {
   ITEM_TYPES,
   WEAPON_PROPERTIES,
@@ -406,6 +407,9 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
           modifiers={form.ability_modifiers ?? []}
           onChange={(next) => setForm((f) => ({ ...f, ability_modifiers: next }))}
         />
+
+        {/* === MAGIA (all types) === */}
+        <MagicFieldsEditor form={form} onChange={(patch) => setForm((f) => ({ ...f, ...patch }))} />
 
         <WizardFooter
           className="pt-2"

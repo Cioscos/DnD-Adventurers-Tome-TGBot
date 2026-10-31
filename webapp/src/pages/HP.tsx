@@ -34,6 +34,7 @@ import HomebrewBreakdownRow from '@/components/homebrew/HomebrewBreakdownRow'
 import HPSkeleton from '@/components/skeletons/HPSkeleton'
 import { useIsFirstValue } from '@/hooks/useIsFirstValue'
 import { notifyMutationError } from '@/lib/mutationError'
+import { isConcentrating, concentrationLabel } from '@/lib/concentration'
 import { applyDamageModifier, damageMultiplier, type DamageModifier } from '@/lib/damageModifier'
 
 type HPOp = 'damage' | 'heal' | 'set_max' | 'set_current' | 'set_temp'
@@ -253,7 +254,8 @@ export default function HP() {
   const deathCause: 'death_saves' | 'massive_damage' = (ds.failures ?? 0) >= 3 ? 'death_saves' : 'massive_damage'
   const atZero = char.current_hit_points === 0
   const isDying = atZero && !ds.stable && !isDead
-  const isConcentrating = !!char.concentrating_spell_id
+  const concentrating = isConcentrating(char)
+  const concentrationName = concentrationLabel(char)
   const classes = char.classes ?? []
   const hbHp = char.hp_max_homebrew_modifier ?? 0
   const hpMax = char.hit_points + hbHp
@@ -377,13 +379,16 @@ export default function HP() {
       })()}
 
       {/* Concentration banner — passive indicator (auto-TS triggered by DAMAGE) */}
-      {!isDead && isConcentrating && (
+      {!isDead && concentrating && (
         <Surface variant="arcane">
           <div className="flex items-center gap-2">
             <FlaskConical size={16} className="text-dnd-arcane-bright" />
             <p className="text-sm font-cinzel uppercase tracking-wider text-dnd-arcane-bright">
               {t('character.hp.concentration_active')}
             </p>
+            {concentrationName && (
+              <p className="text-sm font-body italic text-dnd-arcane-bright truncate">{concentrationName}</p>
+            )}
           </div>
         </Surface>
       )}
