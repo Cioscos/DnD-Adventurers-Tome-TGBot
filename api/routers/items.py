@@ -783,9 +783,9 @@ async def cast_from_item(
         set_item_charges(item, current - cost)
 
     if spell.get("is_concentration"):
-        idx = (spell.get("srd_index") or "").lower()
+        # Match by name only: Spell has no srd_index column.
         name = spell["name"].lower()
-        match = next((s for s in char.spells if idx and (getattr(s, "srd_index", None) or "").lower() == idx), None)             or next((s for s in char.spells if s.name.lower() == name), None)
+        match = next((s for s in char.spells if s.name.lower() == name), None)
         rounds = parse_duration_rounds(spell.get("duration"))
         if match:
             start_concentration(char, match.id, rounds)
