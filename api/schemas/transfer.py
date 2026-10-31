@@ -3,9 +3,10 @@ from __future__ import annotations
 
 from typing import Annotated, Any, Literal, Optional
 
-from pydantic import AfterValidator, BaseModel, Field, ValidationInfo
+from pydantic import AfterValidator, BaseModel, Field, ValidationInfo, field_validator
 
 from core.db.models import EquipmentSlot
+from core.game.actions import ActionType
 
 
 
@@ -128,7 +129,19 @@ class ExportAbility(BaseModel):
     restoration_type: Restoration = "none"
     is_class_feature: bool = False
     feature_key: Optional[str] = None
+    action_type: Optional[ActionType] = None
     source_class_key: Optional[str] = None  # "c<indice in classes>"
+
+    @field_validator("action_type", mode="wrap")
+    @classmethod
+    def _lenient_action_type(cls, v, handler, info: ValidationInfo):
+        # Export (lenient) non deve fallire su valori salvati inattesi: li esporta come None.
+        try:
+            return handler(v)
+        except ValueError:
+            if (info.context or {}).get("lenient"):
+                return None
+            raise
 
 
 class ExportCurrency(BaseModel):

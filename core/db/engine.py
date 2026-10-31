@@ -410,6 +410,22 @@ def _migrate_class_resources_to_abilities(connection) -> None:
         logger.info("Migrate %d class_resources -> abilities; dropped class_resources", migrated)
 
 
+def _backfill_ability_action_types(connection) -> None:
+    """Imposta ``action_type`` sulle feature di classe esistenti (NULL) dal catalogo.
+
+    Idempotente: tocca solo righe ``is_class_feature`` con ``action_type IS NULL``.
+    """
+    from core.data.classes import CLASS_RESOURCES
+
+    for configs in CLASS_RESOURCES.values():
+        for cfg in configs:
+            if cfg.action_type:
+                connection.execute(text(
+                    "UPDATE abilities SET action_type = :at "
+                    "WHERE is_class_feature = 1 AND action_type IS NULL AND feature_key = :fk"
+                ), {"at": cfg.action_type, "fk": cfg.key})
+
+
 async def init_db() -> None:
     """Create all tables and run schema + data migrations."""
     os.makedirs(os.path.dirname(_DB_PATH), exist_ok=True)
@@ -417,6 +433,7 @@ async def init_db() -> None:
         await conn.run_sync(Base.metadata.create_all)
         await conn.run_sync(_migrate_schema)
         await conn.run_sync(_migrate_class_resources_to_abilities)
+        await conn.run_sync(_backfill_ability_action_types)
 
 
 @asynccontextmanager

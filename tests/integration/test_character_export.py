@@ -41,7 +41,8 @@ async def _make_char(factory, user_id=TEST_USER_ID) -> int:
         await s.flush()
         s.add_all([
             Ability(character_id=c.id, name="Arcane Recovery", is_class_feature=True,
-                    source_class_id=c.classes[1].id, feature_key="wizard.arcane_recovery"),
+                    source_class_id=c.classes[1].id, feature_key="wizard.arcane_recovery",
+                    action_type="special"),
             Ability(character_id=c.id, name="Manual"),
         ])
         c.concentrating_spell_id = spells[0].id
@@ -71,7 +72,7 @@ async def test_export_contains_all_sections(client, test_session_factory):
     assert keys[d["concentrating_spell_key"]] == "Bless"
     assert sorted(sl["is_pact"] for sl in d["spell_slots"]) == [False, True]
     feat = next(a for a in d["abilities"] if a["name"] == "Arcane Recovery")
-    assert feat["source_class_key"] == "c1"
+    assert feat["source_class_key"] == "c1" and feat["action_type"] == "special"
     assert next(a for a in d["abilities"] if a["name"] == "Manual")["source_class_key"] is None
     assert d["currency"]["gold"] == 50
     notes = d["character"]["notes"]
