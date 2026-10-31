@@ -806,6 +806,8 @@
       "save_now": "Salva ora",
       "damage_already_in": "{{type}} è già in un'altra lista",
       "damage_vuln_wins_hint": "Un tipo di danno sta in una sola lista. Dalla scheda PF, scegliendo il tipo, resistenze e immunità si applicano in automatico.",
+      "damage_custom_placeholder": "Aggiungi personalizzato (homebrew)…",
+      "damage_custom_hint": "Personalizzate: non applicate in automatico al calcolo del danno.",
       "resistances_short": "Res.",
       "immunities_short": "Imm.",
       "vulnerabilities_short": "Vul."

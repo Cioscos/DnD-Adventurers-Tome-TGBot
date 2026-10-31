@@ -58,3 +58,39 @@ describe('Identity proficiencies and appearance', () => {
     expect(body.personality).toMatchObject({ traits: 'T', ideals: 'I', extra: 'keep', age: '27' })
   })
 })
+
+describe('Identity custom damage modifiers', () => {
+  const save = async () => {
+    await userEvent.click(await screen.findByRole('button', { name: /Salva ora|Save now/i }))
+    await waitFor(() => expect(updateChar).toHaveBeenCalled())
+    return updateChar.mock.calls.at(-1)![1].damage_modifiers
+  }
+
+  it('keeps legacy free text as a removable custom chip and adds new custom entries', async () => {
+    updateChar.mockReset()
+    const legacy = { ...char, damage_modifiers: { resistances: ['Danni non magici'] } }
+    getChar.mockResolvedValue(legacy)
+    updateChar.mockResolvedValue(legacy)
+    renderWithProviders(<Identity />)
+    expect(await screen.findByText('Danni non magici')).toBeInTheDocument()
+    expect(screen.getAllByText(/non applicat|not applied/i).length).toBeGreaterThan(0)
+    const resInput = screen.getByText('Danni non magici').closest('div')!.querySelector('input')!
+    await userEvent.type(resInput, 'Argento{Enter}')
+    await userEvent.click(screen.getByRole('button', { name: /Danni non magici/ }))
+    const mods = await save()
+    expect(mods.resistances).toEqual(['Argento'])
+  })
+
+  it('normalizes a typed canonical alias to its damage type key', async () => {
+    updateChar.mockReset()
+    getChar.mockResolvedValue(char)
+    updateChar.mockResolvedValue(char)
+    renderWithProviders(<Identity />)
+    const inputs = await screen.findAllByPlaceholderText(/personalizzat|custom/i)
+    await userEvent.type(inputs[1], 'Fire{Enter}')
+    await userEvent.type(inputs[0], 'fuoco{Enter}')  // moves it from immunities to resistances
+    const mods = await save()
+    expect(mods.resistances).toEqual(['fire'])
+    expect(mods.immunities).toEqual([])
+  })
+})

@@ -806,6 +806,8 @@
       "save_now": "Save now",
       "damage_already_in": "{{type}} is already in another list",
       "damage_vuln_wins_hint": "A damage type lives in one list only. On the HP page, picking the type applies resistances and immunities automatically.",
+      "damage_custom_placeholder": "Add custom (homebrew)…",
+      "damage_custom_hint": "Custom entries: not applied automatically to damage calculation.",
       "resistances_short": "Res.",
       "immunities_short": "Imm.",
       "vulnerabilities_short": "Vul."

@@ -199,6 +199,22 @@ export default function Identity() {
       return { ...d, damageModifiers: next }
     })
 
+  // Testo libero: gli alias canonici ("fuoco", "Fire") diventano il tipo (e si applicano), il resto resta homebrew.
+  const setCustomDmg = (key: keyof DamageModifiers, entries: string[]) =>
+    setDraft((d) => {
+      if (!d) return d
+      const next = { ...d.damageModifiers }
+      const customs: string[] = []
+      for (const v of entries) {
+        const slug = canonicalDamageType(v)
+        if (!slug) { customs.push(v); continue }
+        for (const k of DMG_KEYS) next[k] = next[k].filter((x) => x !== slug)
+        next[key] = [...next[key], slug]
+      }
+      next[key] = [...next[key].filter((v) => DMG_SLUGS.includes(v)), ...customs]
+      return { ...d, damageModifiers: next }
+    })
+
   const personalitySections = [
     { key: 'personality_traits' as const, label: t('character.identity.personality') },
     { key: 'ideals' as const, label: t('character.identity.ideals') },
@@ -429,6 +445,7 @@ export default function Identity() {
       <Surface variant="elevated">
         <div className="space-y-4">
           {DMG_KEYS.map((key) => {
+            const customs = draft.damageModifiers[key].filter((v) => !DMG_SLUGS.includes(v))
             const tone = DMG_TONES[key]
             const ToneIcon = tone.icon
             return (
@@ -440,7 +457,7 @@ export default function Identity() {
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {[...DMG_SLUGS, ...draft.damageModifiers[key].filter((v) => !DMG_SLUGS.includes(v))].map((slug) => {
+                  {DMG_SLUGS.map((slug) => {
                     const on = draft.damageModifiers[key].includes(slug)
                     return (
                       <Pressable
@@ -457,6 +474,13 @@ export default function Identity() {
                     )
                   })}
                 </div>
+                <ChipInput
+                  className="mt-2"
+                  values={customs}
+                  onChange={(next) => setCustomDmg(key, next)}
+                  placeholder={t('character.identity.damage_custom_placeholder')}
+                  hint={customs.length ? t('character.identity.damage_custom_hint') : undefined}
+                />
               </div>
             )
           })}
