@@ -4245,5 +4245,24 @@
         }
       ]
     }
+  },
+  "pendingSaves": {
+    "banner_one": "Tiro salvezza: {{ability}} CD {{dc}} — {{condition}}",
+    "banner_many": "{{count}} tiri salvezza in sospeso",
+    "banner_failed": "Fallito: {{condition}} — tocca per chiudere",
+    "your_turn": "Tocca a te",
+    "title": "Tiro salvezza: {{ability}}",
+    "line": "{{condition}} · CD {{dc}}",
+    "source": "da {{name}}",
+    "progress": "{{n}} di {{total}}",
+    "roll": "Tira",
+    "ok": "OK",
+    "total_vs_dc": "{{total}} contro CD {{dc}}",
+    "passed": "Superato — sei libero da {{condition}}",
+    "failed": "Fallito — resti {{condition}}",
+    "gone": "Quella condizione è già terminata",
+    "not_rerollable": "Questo tiro non si può ritirare",
+    "inspiration_unavailable": "Ispirazione non disponibile",
+    "error": "Tiro non riuscito, riprova"
   }
 }

@@ -10,6 +10,7 @@ import { spring } from '@/styles/motion'
 import { haptic } from '@/auth/telegram'
 import EmptyState from '@/components/ui/EmptyState'
 import Skeleton from '@/components/ui/Skeleton'
+import PendingSavesBanner from '@/components/PendingSavesBanner'
 import InSessionBanner from '@/components/ui/InSessionBanner'
 import OfflineNotice from '@/components/ui/OfflineNotice'
 import Pressable from '@/components/ui/Pressable'
@@ -195,6 +196,7 @@ export default function CharacterMain() {
       </m.header>
 
       <InSessionBanner charId={charId} />
+      <PendingSavesBanner charId={charId} />
 
       <OfflineNotice query={charQuery} className="shrink-0 mx-3 mt-2" />
 

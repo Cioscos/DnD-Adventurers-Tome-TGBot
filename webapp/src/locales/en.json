@@ -4245,5 +4245,24 @@
         }
       ]
     }
+  },
+  "pendingSaves": {
+    "banner_one": "Saving throw: {{ability}} DC {{dc}} — {{condition}}",
+    "banner_many": "{{count}} saving throws pending",
+    "banner_failed": "Failed: {{condition}} — tap to close",
+    "your_turn": "Your turn",
+    "title": "Saving throw: {{ability}}",
+    "line": "{{condition}} · DC {{dc}}",
+    "source": "from {{name}}",
+    "progress": "{{n}} of {{total}}",
+    "roll": "Roll",
+    "ok": "OK",
+    "total_vs_dc": "{{total}} vs DC {{dc}}",
+    "passed": "Passed — you are free from {{condition}}",
+    "failed": "Failed — you stay {{condition}}",
+    "gone": "That condition is already gone",
+    "not_rerollable": "This save can't be re-rolled",
+    "inspiration_unavailable": "Inspiration unavailable",
+    "error": "Roll failed, try again"
   }
 }

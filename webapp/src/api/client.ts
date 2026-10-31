@@ -29,6 +29,7 @@ import type {
   EncounterMode,
   GameSession,
   TurnState,
+  PendingSaveRollResult,
   GameSessionLive,
   HistoryEntry,
   HistoryRetentionPreview,
@@ -428,6 +429,15 @@ export const api = {
       request<CharacterFull>(`/characters/${id}/rounds/tick`, { method: 'POST' }),
     turnState: (id: number) =>
       request<TurnState>(`/characters/${id}/turn-state`),
+    pendingSaves: {
+      roll: (id: number, saveId: number, die?: D20Roll, withInspiration: boolean = false) =>
+        request<PendingSaveRollResult>(`/characters/${id}/pending-saves/${saveId}/roll`, {
+          method: 'POST',
+          body: JSON.stringify({ ...d20Fields(die), with_inspiration: withInspiration }),
+        }),
+      dismiss: (id: number, saveId: number) =>
+        request<void>(`/characters/${id}/pending-saves/${saveId}/dismiss`, { method: 'POST' }),
+    },
     updateInspiration: (id: number, heroic_inspiration: boolean) =>
       request<CharacterFull>(`/characters/${id}/inspiration`, {
         method: 'PATCH',
