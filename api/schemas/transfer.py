@@ -3,12 +3,32 @@ from __future__ import annotations
 
 from typing import Annotated, Any, Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import AfterValidator, BaseModel, Field, ValidationInfo
 
 from core.db.models import EquipmentSlot
 
 
-Int0 = Annotated[int, Field(ge=0, le=1_000_000)]
+
+
+def _rng(lo: float, hi: float) -> AfterValidator:
+    """Limite numerico: attivo in import, saltato con context={"lenient": True} (export)."""
+    def check(v, info: ValidationInfo):
+        if not (info.context or {}).get("lenient") and not (lo <= v <= hi):
+            raise ValueError(f"must be between {lo} and {hi}")
+        return v
+    return AfterValidator(check)
+
+
+def _cap(n: int) -> AfterValidator:
+    """Tetto sulla lunghezza di una lista: attivo in import, saltato in export."""
+    def check(v, info: ValidationInfo):
+        if not (info.context or {}).get("lenient") and len(v) > n:
+            raise ValueError(f"at most {n} entries")
+        return v
+    return AfterValidator(check)
+
+
+Int0 = Annotated[int, _rng(0, 1_000_000)]
 Restoration = Literal["long_rest", "short_rest", "none", "manual"]
 
 
@@ -49,22 +69,22 @@ class ExportCharacter(BaseModel):
 
 class ExportClass(BaseModel):
     class_name: str = Field(max_length=100)
-    level: int = Field(1, ge=1, le=20)
+    level: Annotated[int, _rng(1, 20)] = 1
     subclass: Optional[str] = None
     spellcasting_ability: Optional[str] = None
-    hit_die: Optional[int] = Field(None, ge=1, le=100)
+    hit_die: Optional[Annotated[int, _rng(1, 100)]] = None
     hit_dice_used: Int0 = 0
 
 
 class ExportAbilityScore(BaseModel):
     name: str = Field(max_length=50)
-    value: int = Field(10, ge=1, le=30)
+    value: Annotated[int, _rng(1, 30)] = 10
 
 
 class ExportItem(BaseModel):
     name: str = Field(max_length=200)
     description: Optional[str] = None
-    weight: float = Field(0.0, ge=0, le=1_000_000)
+    weight: Annotated[float, _rng(0, 1_000_000)] = 0.0
     quantity: Int0 = 1
     item_type: str = Field("generic", max_length=20)
     item_metadata: dict[str, Any] = Field(default_factory=dict)
@@ -75,7 +95,7 @@ class ExportItem(BaseModel):
 class ExportSpell(BaseModel):
     export_key: str = Field(max_length=20)
     name: str = Field(max_length=200)
-    level: int = Field(0, ge=0, le=9)
+    level: Annotated[int, _rng(0, 9)] = 0
     description: Optional[str] = None
     casting_time: Optional[str] = None
     range_area: Optional[str] = None
@@ -92,7 +112,7 @@ class ExportSpell(BaseModel):
 
 
 class ExportSpellSlot(BaseModel):
-    level: int = Field(ge=1, le=9)
+    level: Annotated[int, _rng(1, 9)]
     total: Int0 = 0
     used: Int0 = 0
     is_pact: bool = False
@@ -121,7 +141,7 @@ class ExportCurrency(BaseModel):
 
 class ExportHomebrewRule(BaseModel):
     name: str = Field(max_length=100)
-    version: int = Field(1, ge=1)
+    version: Annotated[int, _rng(1, 1_000_000)] = 1
     description: Optional[str] = None
     enabled: bool = True
     dsl: dict = Field(default_factory=dict)
@@ -129,7 +149,7 @@ class ExportHomebrewRule(BaseModel):
 
 
 class ExportHomebrewResource(BaseModel):
-    rule_index: int = Field(ge=0)
+    rule_index: Int0
     key: str = Field(max_length=60)
     name: str = Field(max_length=100)
     current: Int0 = 0
@@ -142,14 +162,14 @@ class CharacterExport(BaseModel):
     app_version: Optional[str] = None
     exported_at: str
     character: ExportCharacter
-    classes: list[ExportClass] = Field(default_factory=list, max_length=20)
-    ability_scores: list[ExportAbilityScore] = Field(default_factory=list, max_length=20)
-    items: list[ExportItem] = Field(default_factory=list, max_length=500)
-    spells: list[ExportSpell] = Field(default_factory=list, max_length=500)
+    classes: Annotated[list[ExportClass], _cap(20)] = Field(default_factory=list)
+    ability_scores: Annotated[list[ExportAbilityScore], _cap(20)] = Field(default_factory=list)
+    items: Annotated[list[ExportItem], _cap(500)] = Field(default_factory=list)
+    spells: Annotated[list[ExportSpell], _cap(500)] = Field(default_factory=list)
     concentrating_spell_key: Optional[str] = None
-    spell_slots: list[ExportSpellSlot] = Field(default_factory=list, max_length=40)
-    abilities: list[ExportAbility] = Field(default_factory=list, max_length=500)
+    spell_slots: Annotated[list[ExportSpellSlot], _cap(40)] = Field(default_factory=list)
+    abilities: Annotated[list[ExportAbility], _cap(500)] = Field(default_factory=list)
     currency: Optional[ExportCurrency] = None
-    homebrew_rules: list[ExportHomebrewRule] = Field(default_factory=list, max_length=50)
-    homebrew_resources: list[ExportHomebrewResource] = Field(default_factory=list, max_length=500)
+    homebrew_rules: Annotated[list[ExportHomebrewRule], _cap(50)] = Field(default_factory=list)
+    homebrew_resources: Annotated[list[ExportHomebrewResource], _cap(500)] = Field(default_factory=list)
     companions: list = Field(default_factory=list)  # riempito dal task compagni (R7)

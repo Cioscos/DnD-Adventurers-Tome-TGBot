@@ -84,7 +84,10 @@ async def build_export(session: AsyncSession, char: Character) -> CharacterExpor
     for k in ("languages", "general_proficiencies"):
         cols[k] = cols[k] or []
 
-    return CharacterExport.model_validate({
+    # Export tollerante: i limiti di import non si applicano ai dati gia' salvati (altrimenti 500).
+    # Anche /duplicate ne beneficia: passa l'oggetto gia' costruito a import_character senza
+    # rivalidarlo, quindi un personaggio "legacy" fuori limite si duplica com'e'.
+    return CharacterExport.model_validate(context={"lenient": True}, obj={
         "app_version": APP_VERSION,
         "exported_at": datetime.now(timezone.utc).isoformat(),
         "character": {**cols, "notes": _export_notes(char.notes)},
@@ -127,6 +130,15 @@ async def import_character(
         raise _unprocessable("Duplicate spell export_key")
     if data.concentrating_spell_key is not None and data.concentrating_spell_key not in spell_keys:
         raise _unprocessable("Unknown concentrating_spell_key")
+    # Chiavi uniche a DB: un file artefatto altrimenti darebbe IntegrityError (500).
+    for label, keys in (
+        ("class_name", [c.class_name for c in data.classes]),
+        ("ability score name", [a.name for a in data.ability_scores]),
+        ("spell slot (level, is_pact)", [(s.level, s.is_pact) for s in data.spell_slots]),
+        ("homebrew resource key", [h.key for h in data.homebrew_resources]),
+    ):
+        if len(set(keys)) != len(keys):
+            raise _unprocessable(f"Duplicate {label}")
     class_keys = {f"c{i}" for i in range(len(data.classes))}
     for a in data.abilities:
         if a.source_class_key is not None and a.source_class_key not in class_keys:
@@ -159,8 +171,8 @@ async def import_character(
     items = []
     for it in data.items:
         slot, equipped = it.equipment_slot, it.is_equipped
-        if slot is not None:
-            if slot in seen_slots:  # due oggetti sullo stesso slot: vince il primo
+        if slot is not None and equipped:
+            if slot in seen_slots:  # due oggetti equipaggiati sullo stesso slot: vince il primo
                 slot, equipped = None, False
             seen_slots.add(slot)
         items.append(Item(

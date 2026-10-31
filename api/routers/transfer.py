@@ -85,8 +85,16 @@ async def _import_body(request: Request) -> bytes:
         if len(raw) > limit:
             raise HTTPException(status_code=413, detail="File too large")
     if request.headers.get("content-type", "").startswith("multipart/form-data"):
-        request._body = raw  # permette a form() di rileggere il body gia' consumato
-        upload = (await request.form()).get("file")
+        sent = False
+
+        async def replay():  # il body e' gia' stato consumato: lo riproponiamo a form()
+            nonlocal sent
+            if sent:
+                return {"type": "http.disconnect"}
+            sent = True
+            return {"type": "http.request", "body": raw, "more_body": False}
+
+        upload = (await Request(request.scope, replay).form()).get("file")
         if upload is None or isinstance(upload, str):
             raise HTTPException(status_code=422, detail="Missing 'file' field")
         raw = await upload.read()

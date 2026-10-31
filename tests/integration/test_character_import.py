@@ -145,3 +145,46 @@ async def test_import_ignores_foreign_ids(client, test_session_factory):
         assert (await s.get(Character, other)).user_id == 999
         rows = (await s.execute(select(Item).where(Item.character_id == other))).scalars().all()
         assert len(rows) == 2  # untouched
+
+
+async def test_export_and_duplicate_survive_out_of_range_legacy_data(client, test_session_factory):
+    from core.db.models import CharacterClass, Spell
+    cid = await _make_valid(test_session_factory)
+    async with test_session_factory() as s:
+        cls = (await s.execute(select(CharacterClass).where(CharacterClass.character_id == cid))).scalars().first()
+        cls.level = 25
+        item = (await s.execute(select(Item).where(Item.character_id == cid))).scalars().first()
+        item.quantity = -1
+        spell = (await s.execute(select(Spell).where(Spell.character_id == cid))).scalars().first()
+        spell.level = 12
+        await s.commit()
+    r = await client.get(f"/characters/{cid}/export")
+    assert r.status_code == 200 and {c["level"] for c in r.json()["classes"]} >= {25}
+    d = await client.post(f"/characters/{cid}/duplicate")
+    assert d.status_code == 201, d.text
+    assert 25 in {c["level"] for c in d.json()["classes"]}
+    # ...ma lo stesso file ricaricato dall'esterno resta rifiutato
+    assert (await _import(client, r.json())).status_code == 422
+
+
+async def test_import_rejects_duplicate_unique_keys(client):
+    base = {"exported_at": "x", "character": {"name": "U"}}
+    bad = [
+        {"classes": [{"class_name": "wizard"}, {"class_name": "wizard"}]},
+        {"ability_scores": [{"name": "strength"}, {"name": "strength"}]},
+        {"spell_slots": [{"level": 1}, {"level": 1}]},
+        {"homebrew_rules": [{"name": "r", "dsl": VALID_DSL}],
+         "homebrew_resources": [{"rule_index": 0, "key": "k", "name": "a"}, {"rule_index": 0, "key": "k", "name": "b"}]},
+    ]
+    for extra in bad:
+        assert (await _import(client, {**base, **extra})).status_code == 422, extra
+    ok = {**base, "spell_slots": [{"level": 1}, {"level": 1, "is_pact": True}]}
+    assert (await _import(client, ok)).status_code == 201
+
+
+async def test_unequipped_item_does_not_claim_slot(client):
+    d = {"exported_at": "x", "character": {"name": "S"}, "items": [
+        {"name": "Old", "equipment_slot": "head"},
+        {"name": "New", "is_equipped": True, "equipment_slot": "head"}]}
+    items = {i["name"]: i for i in (await _import(client, d)).json()["items"]}
+    assert items["New"]["is_equipped"] and items["New"]["equipment_slot"] == "head"
