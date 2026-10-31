@@ -90,10 +90,14 @@ export type GMGrantItemResponse = {
 export type WeaponAttackResult = {
   weapon_name: string
   to_hit_die: number
+  dice?: number[]
+  mode?: RollMode
   to_hit_bonus: number
   to_hit_total: number
   is_critical: boolean
   is_fumble: boolean
+  magic_bonus?: number
+  proficiency_warning?: boolean
   damage_dice: string
   damage_rolls: number[]
   damage_bonus: number
@@ -250,11 +254,17 @@ function requestFormDataWithProgress<T>(
 // Characters
 // ---------------------------------------------------------------------------
 
-function attackBody(withInspiration: boolean, die: number | undefined): string | undefined {
-  if (!withInspiration && die === undefined) return undefined
+function attackBody(
+  withInspiration: boolean,
+  roll: D20Roll | undefined,
+  choice?: { grip?: 'one' | 'two'; attack_mode?: 'melee' | 'thrown' },
+): string | undefined {
+  const fields = roll === undefined ? {} : d20Fields(roll)
+  if (!withInspiration && roll === undefined && !choice) return undefined
   return JSON.stringify({
     ...(withInspiration ? { with_inspiration: true } : {}),
-    ...(die !== undefined ? { die } : {}),
+    ...fields,
+    ...choice,
   })
 }
 
@@ -556,12 +566,15 @@ export const api = {
       }),
     remove: (charId: number, itemId: number) =>
       request<CharacterFull>(`/characters/${charId}/items/${itemId}`, { method: 'DELETE' }),
-    attack: (charId: number, itemId: number, withInspiration: boolean = false, die?: number) =>
+    attack: (
+      charId: number, itemId: number, withInspiration: boolean = false, die?: D20Roll,
+      choice?: { grip?: 'one' | 'two'; attack_mode?: 'melee' | 'thrown' },
+    ) =>
       request<WeaponAttackResult>(`/characters/${charId}/items/${itemId}/attack`, {
         method: 'POST',
-        body: attackBody(withInspiration, die),
+        body: attackBody(withInspiration, die, choice),
       }),
-    attackUnarmed: (charId: number, withInspiration: boolean = false, die?: number) =>
+    attackUnarmed: (charId: number, withInspiration: boolean = false, die?: D20Roll) =>
       request<WeaponAttackResult>(`/characters/${charId}/attack/unarmed`, {
         method: 'POST',
         body: attackBody(withInspiration, die),

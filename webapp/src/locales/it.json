@@ -346,7 +346,16 @@
       "attack": "Attacca"
     },
     "attack": {
-      "ammo_missing": "Munizioni esaurite o non equipaggiate: scala tu le munizioni"
+      "ammo_missing": "Munizioni esaurite o non equipaggiate: scala tu le munizioni",
+      "grip_one": "Una mano",
+      "grip_two": "Due mani",
+      "mode_melee": "Mischia",
+      "mode_thrown": "Lancio",
+      "magic_bonus": "Bonus magico +{{n}}",
+      "proficiency_warning": "Non sei competente con quest'arma",
+      "to_hit": "Per colpire",
+      "damage": "Danno",
+      "damage_critical": "Danno (critico)"
     },
     "ability": {
       "strength_short": "FOR",
@@ -825,6 +834,14 @@
       "modifier": "Modificatore",
       "damage_type_label": "Tipo danno",
       "weapon_type_label": "Tipo arma",
+      "magic_bonus_label": "Bonus magico (+0 a +10)",
+      "versatile_dice_label": "Dado a due mani (versatile)",
+      "weapon_category_label": "Categoria arma",
+      "weapon_category": {
+        "none": "Nessuna",
+        "simple": "Semplice",
+        "martial": "Da guerra"
+      },
       "properties_label": "Proprietà",
       "armor_type_label": "Tipo armatura",
       "ac_value_label": "Valore CA",

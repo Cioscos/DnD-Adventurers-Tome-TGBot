@@ -18,6 +18,7 @@ import { useDiceAnimation } from '@/dice/useDiceAnimation'
 import { useDiceSettings } from '@/store/diceSettings'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import type { DiceKind } from '@/dice/types'
+import { cantripMultiplier, totalLevelOf } from '@/lib/dnd'
 
 const ALLOWED_DICE_KINDS: DiceKind[] = ['d4', 'd6', 'd8', 'd10', 'd12', 'd20', 'd100']
 const isAllowedDiceKind = (k: string | null | undefined): k is DiceKind =>
@@ -117,7 +118,9 @@ export default function SpellDamageSheet({
         const main = parseDice(spell.damage_dice)
         const extra = parseDice(body.extra_dice ?? null)
         if (main && isAllowedDiceKind(`d${main.sides}`)) {
-          const mainCount = body.is_critical ? main.count * 2 : main.count
+          const cached = qc.getQueryData<CharacterFull>(['character', charId])
+          const scaled = spell.level === 0 ? main.count * cantripMultiplier(totalLevelOf(cached?.classes)) : main.count
+          const mainCount = body.is_critical ? scaled * 2 : scaled
           const groups: { kind: DiceKind; count: number }[] = [
             { kind: `d${main.sides}` as DiceKind, count: mainCount },
           ]

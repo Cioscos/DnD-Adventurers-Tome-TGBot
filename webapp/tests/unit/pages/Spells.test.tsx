@@ -108,10 +108,10 @@ vi.mock('@/pages/spells/SpellFilter', async () => {
 vi.mock('@/pages/spells/SpellItem', async () => {
   const React = await import('react')
   return {
-    default: (p: { spell: { name: string }; onUse?: () => void; onConcentrationToggle?: () => void; onEdit?: () => void; onRemove?: () => void }) =>
+    default: (p: { spell: { name: string }; onUse?: (mode: string) => void; onConcentrationToggle?: () => void; onEdit?: () => void; onRemove?: () => void }) =>
       React.createElement('div', null, [
         React.createElement('span', { key: 'n' }, p.spell.name),
-        React.createElement('button', { key: 'u', onClick: p.onUse }, `use-${p.spell.name}`),
+        React.createElement('button', { key: 'u', onClick: () => p.onUse?.('normal') }, `use-${p.spell.name}`),
         React.createElement('button', { key: 'c', onClick: p.onConcentrationToggle }, `conc-${p.spell.name}`),
         React.createElement('button', { key: 'r', onClick: p.onRemove }, `remove-${p.spell.name}`),
       ]),
@@ -149,6 +149,10 @@ vi.mock('@/pages/spells/SpellDamageSheet', async () => {
 })
 // Il d20 degli incantesimi d'attacco (useCastFlow) richiede il DiceAnimationProvider.
 vi.mock('@/dice/useAnimatedRoll', () => ({ useAnimatedRoll: () => async () => undefined }))
+vi.mock('@/hooks/useD20Roll', async (orig) => ({
+  ...((await orig()) as Record<string, unknown>),
+  useD20Roll: () => async () => undefined,
+}))
 
 // CharacterFull-shaped fixture (only the fields Spells reads).
 const manualChar = () => ({

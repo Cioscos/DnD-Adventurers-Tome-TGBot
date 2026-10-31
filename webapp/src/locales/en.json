@@ -346,7 +346,16 @@
       "attack": "Attack"
     },
     "attack": {
-      "ammo_missing": "Ammunition empty or not equipped: track it yourself"
+      "ammo_missing": "Ammunition empty or not equipped: track it yourself",
+      "grip_one": "One hand",
+      "grip_two": "Two hands",
+      "mode_melee": "Melee",
+      "mode_thrown": "Thrown",
+      "magic_bonus": "Magic bonus +{{n}}",
+      "proficiency_warning": "You are not proficient with this weapon",
+      "to_hit": "To hit",
+      "damage": "Damage",
+      "damage_critical": "Damage (critical)"
     },
     "ability": {
       "strength_short": "STR",
@@ -825,6 +834,14 @@
       "modifier": "Modifier",
       "damage_type_label": "Damage type",
       "weapon_type_label": "Weapon type",
+      "magic_bonus_label": "Magic bonus (+0 to +10)",
+      "versatile_dice_label": "Two-handed die (versatile)",
+      "weapon_category_label": "Weapon category",
+      "weapon_category": {
+        "none": "None",
+        "simple": "Simple",
+        "martial": "Martial"
+      },
       "properties_label": "Properties",
       "armor_type_label": "Armor type",
       "ac_value_label": "AC value",

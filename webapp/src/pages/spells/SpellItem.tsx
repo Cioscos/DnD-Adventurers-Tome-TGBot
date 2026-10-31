@@ -10,13 +10,19 @@ import {
 import Pressable from '@/components/ui/Pressable'
 import StatPill from '@/components/ui/StatPill'
 import ExpandChevron from '@/components/ui/ExpandChevron'
+import RollButton from '@/components/ui/RollButton'
+import { isAttackSpell } from '@/lib/spellType'
+import { scaleCantripDice } from '@/lib/dnd'
+import type { RollMode } from '@/api/client'
 import type { Spell } from '@/types'
 
 interface SpellItemProps {
   spell: Spell
   isExpanded: boolean
   onToggle: () => void
-  onUse: () => void
+  onUse: (mode: RollMode) => void
+  /** Livello totale del personaggio: scala il dado dei trucchetti. */
+  totalLevel?: number
   onConcentrationToggle: () => void
   onEdit: () => void
   onRemove: () => void
@@ -35,6 +41,7 @@ function SpellItemInner({
   isExpanded,
   onToggle,
   onUse,
+  totalLevel = 1,
   onConcentrationToggle,
   onEdit,
   onRemove,
@@ -169,7 +176,7 @@ function SpellItemInner({
                   {spell.damage_dice && (
                     <div className="flex items-center gap-1.5 bg-dnd-chip-bg rounded-lg px-2 py-1.5">
                       <Swords size={12} className="text-dnd-gold-dim shrink-0" />
-                      <span className="text-xs font-medium text-dnd-text truncate">{spell.damage_dice}{spell.damage_type ? ` ${spell.damage_type}` : ''}</span>
+                      <span className="text-xs font-medium text-dnd-text truncate">{spell.level === 0 ? scaleCantripDice(spell.damage_dice, totalLevel) : spell.damage_dice}{spell.damage_type ? ` ${spell.damage_type}` : ''}</span>
                     </div>
                   )}
                   {attackSaveLabel(spell.attack_save) && (
@@ -200,17 +207,32 @@ function SpellItemInner({
 
               {/* Action buttons */}
               <div className="flex gap-2 flex-wrap border-t border-dnd-gold-dim/10 pt-2">
-                <Pressable
-                  onClick={onUse}
-                  pending={usePending}
-                  spinnerSize={12}
-                  className="flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg
-                             bg-dnd-success/20 text-dnd-success-text border border-dnd-success/30
-                             active:opacity-60 disabled:opacity-30"
-                >
-                  <Sparkles size={12} />
-                  {t('character.spells.use')}
-                </Pressable>
+                {isAttackSpell(spell) ? (
+                  // Spell attack: long press opens the advantage/disadvantage menu.
+                  <RollButton
+                    onRoll={onUse}
+                    pending={usePending}
+                    ariaLabel={`${t('character.spells.use')} ${spell.name}`}
+                    className="flex items-center gap-1 text-xs font-medium px-3 min-h-11 rounded-lg
+                               bg-dnd-success/20 text-dnd-success-text border border-dnd-success/30
+                               active:opacity-60"
+                  >
+                    <Sparkles size={12} />
+                    {t('character.spells.use')}
+                  </RollButton>
+                ) : (
+                  <Pressable
+                    onClick={() => onUse('normal')}
+                    pending={usePending}
+                    spinnerSize={12}
+                    className="flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg
+                               bg-dnd-success/20 text-dnd-success-text border border-dnd-success/30
+                               active:opacity-60 disabled:opacity-30"
+                  >
+                    <Sparkles size={12} />
+                    {t('character.spells.use')}
+                  </Pressable>
+                )}
 
                 {showPreparedToggle && (
                   <Pressable

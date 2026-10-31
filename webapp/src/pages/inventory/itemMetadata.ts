@@ -136,6 +136,11 @@ export type ItemFormData = {
   damage_type: string
   weapon_type: string
   properties: string[]
+  /** Bonus magico (+N) come stringa 0-10; vuoto = nessuno. */
+  magic_bonus: string
+  /** Dado a due mani (arma versatile); vuoto = non impostato. */
+  versatile_dice: string
+  weapon_category: '' | 'simple' | 'martial'
   // armor
   armor_type: string
   ac_value: string
@@ -166,6 +171,9 @@ export const emptyForm: ItemFormData = {
   damage_type: 'dmg_slashing',
   weapon_type: 'melee',
   properties: [],
+  magic_bonus: '',
+  versatile_dice: '',
+  weapon_category: '',
   armor_type: 'light',
   ac_value: '11',
   stealth_disadvantage: false,
@@ -188,6 +196,11 @@ export function buildItemMetadata(form: ItemFormData): Record<string, unknown> |
         weapon_type: form.weapon_type,
         properties: form.properties,
       }
+      if (Number(form.magic_bonus) > 0) meta.magic_bonus = Number(form.magic_bonus)
+      if (form.properties.includes('prop_versatile') && form.versatile_dice.trim()) {
+        meta.versatile_dice = form.versatile_dice.trim()
+      }
+      if (form.weapon_category) meta.weapon_category = form.weapon_category
       break
     case 'armor':
       meta = {
@@ -241,6 +254,12 @@ export function buildHomebrewMetadataPatch(
 export function isItemFormValid(form: ItemFormData): boolean {
   if (!form.name.trim()) return false
   if (form.item_type === 'weapon' && !DAMAGE_DICE_RE.test(form.damage_dice.trim())) return false
+  if (form.item_type === 'weapon') {
+    const mb = form.magic_bonus.trim()
+    if (mb !== '' && !(Number.isInteger(Number(mb)) && Number(mb) >= 0 && Number(mb) <= 10)) return false
+    if (form.properties.includes('prop_versatile') && form.versatile_dice.trim() !== ''
+      && !DAMAGE_DICE_RE.test(form.versatile_dice.trim())) return false
+  }
   if (form.item_type === 'armor' && (Number(form.ac_value) < 1 || isNaN(Number(form.ac_value)))) return false
   // Weight must be a non-negative number when provided. Empty/0 allowed for
   // weightless items, but negative weight is never valid (would mess up the
@@ -269,6 +288,9 @@ export function itemToFormData(item: { name: string; item_type: string; quantity
     damage_type: String(meta.damage_type ?? 'dmg_slashing'),
     weapon_type: String(meta.weapon_type ?? 'melee'),
     properties: Array.isArray(meta.properties) ? meta.properties.map(String) : [],
+    magic_bonus: meta.magic_bonus ? String(meta.magic_bonus) : '',
+    versatile_dice: meta.versatile_dice ? String(meta.versatile_dice) : '',
+    weapon_category: meta.weapon_category === 'simple' || meta.weapon_category === 'martial' ? meta.weapon_category : '',
     armor_type: String(meta.armor_type ?? 'light'),
     ac_value: String(meta.ac_value ?? '11'),
     stealth_disadvantage: !!meta.stealth_disadvantage,

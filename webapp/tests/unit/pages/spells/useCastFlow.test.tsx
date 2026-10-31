@@ -27,6 +27,10 @@ vi.mock('react-i18next', async (orig) => {
 })
 vi.mock('@/auth/telegram', () => ({ haptic: new Proxy({}, { get: () => () => {} }) }))
 vi.mock('@/dice/useAnimatedRoll', () => ({ useAnimatedRoll: () => rollDice }))
+vi.mock('@/hooks/useD20Roll', async (orig) => {
+  const actual = (await orig()) as Record<string, unknown>
+  return { ...actual, useD20Roll: () => async (mode: string) => rollDice('d20', mode === 'normal' ? 1 : 2) }
+})
 vi.mock('@/components/ui/ConfirmSheet', async () => {
   const React = await import('react')
   return {

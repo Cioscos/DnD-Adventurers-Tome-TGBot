@@ -40,3 +40,13 @@ describe('mod — ability score modifier', () => {
     expect(mod(3)).toBe(-4)
   })
 })
+
+describe('cantrip scaling', () => {
+  it('scales the dice count at 5/11/17', async () => {
+    const { cantripMultiplier, scaleCantripDice } = await import('@/lib/dnd')
+    expect([1, 4, 5, 10, 11, 16, 17, 20].map(cantripMultiplier)).toEqual([1, 1, 2, 2, 3, 3, 4, 4])
+    expect(scaleCantripDice('1d10', 5)).toBe('2d10')
+    expect(scaleCantripDice('1d6+2', 17)).toBe('4d6+2')
+    expect(scaleCantripDice('boh', 17)).toBe('boh')
+  })
+})

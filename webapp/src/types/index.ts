@@ -429,6 +429,8 @@ export interface RollDamageRequest {
 export interface SpellAttackResult {
   spell_name: string
   to_hit_die: number
+  dice?: number[]
+  mode?: 'normal' | 'advantage' | 'disadvantage'
   to_hit_bonus: number
   to_hit_total: number
   is_critical: boolean
@@ -442,6 +444,8 @@ export interface SpellAttackRequest {
   slot_level: number | null
   ritual?: boolean
   die?: number
+  dice?: number[]
+  mode?: 'normal' | 'advantage' | 'disadvantage'
   with_inspiration?: boolean
 }
 
@@ -453,6 +457,7 @@ export interface RollDamageResult {
   breakdown: string
   casting_level: number
   is_critical: boolean
+  scaled_dice?: string
   main_kind: string
   main_rolls: number[]
   extra_kind: string | null

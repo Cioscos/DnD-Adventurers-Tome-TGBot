@@ -10,14 +10,17 @@ import { unarmedDamageDice } from '@/lib/unarmedStrike'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
 import SectionDivider from '@/components/ui/SectionDivider'
-import Pressable from '@/components/ui/Pressable'
+import RollButton from '@/components/ui/RollButton'
+import WeaponChoiceRow from '@/components/WeaponChoiceRow'
+import { useD20Roll, d20Arg, type RollMode } from '@/hooks/useD20Roll'
+import { DEFAULT_WEAPON_CHOICE, type WeaponChoice } from '@/lib/weaponOptions'
 import WeaponAttackModal from '@/components/WeaponAttackModal'
 import type { WeaponAttackResult } from '@/components/WeaponAttackModal'
 import ActionsSkeleton from '@/components/skeletons/ActionsSkeleton'
 import { haptic } from '@/auth/telegram'
 import { useToast } from '@/hooks/useToast'
 
-type AttackSource = { type: 'weapon'; itemId: number } | { type: 'unarmed' }
+type AttackSource = { type: 'weapon'; itemId: number; choice: WeaponChoice } | { type: 'unarmed' }
 type AttackState = { result: WeaponAttackResult; source: AttackSource; wasRerolled: boolean }
 
 export default function Actions() {
@@ -27,6 +30,8 @@ export default function Actions() {
   const qc = useQueryClient()
   const toast = useToast()
   const [attackState, setAttackState] = useState<AttackState | null>(null)
+  // Scelta pre-attacco ricordata per arma (una/due mani, mischia/lancio).
+  const [choices, setChoices] = useState<Record<number, WeaponChoice>>({})
 
   const { data: char } = useQuery({
     queryKey: ['character', charId],
@@ -34,24 +39,25 @@ export default function Actions() {
   })
 
   const rollDice = useAnimatedRoll()
+  const rollD20 = useD20Roll()
 
   const weaponAttack = useMutation({
-    mutationFn: async (itemId: number) => {
-      const die = (await rollDice('d20', 1))?.[0]
-      return api.items.attack(charId, itemId, false, die)
+    mutationFn: async ({ itemId, mode }: { itemId: number; mode: RollMode }) => {
+      const choice = choices[itemId] ?? DEFAULT_WEAPON_CHOICE
+      return api.items.attack(charId, itemId, false, d20Arg(mode, await rollD20(mode)), choice)
     },
-    onSuccess: (result, itemId) => {
-      setAttackState({ result, source: { type: 'weapon', itemId }, wasRerolled: false })
+    onSuccess: (result, { itemId }) => {
+      setAttackState({
+        result, source: { type: 'weapon', itemId, choice: choices[itemId] ?? DEFAULT_WEAPON_CHOICE }, wasRerolled: false,
+      })
       qc.invalidateQueries({ queryKey: ['character', charId] })
       haptic.success()
     },
   })
 
   const unarmedAttack = useMutation({
-    mutationFn: async () => {
-      const die = (await rollDice('d20', 1))?.[0]
-      return api.items.attackUnarmed(charId, false, die)
-    },
+    mutationFn: async (mode: RollMode) =>
+      api.items.attackUnarmed(charId, false, d20Arg(mode, await rollD20(mode))),
     onSuccess: (result) => {
       setAttackState({ result, source: { type: 'unarmed' }, wasRerolled: false })
       qc.invalidateQueries({ queryKey: ['character', charId] })
@@ -63,7 +69,7 @@ export default function Actions() {
     mutationFn: async (source: AttackSource) => {
       const die = (await rollDice('d20', 1))?.[0]
       return source.type === 'weapon'
-        ? api.items.attack(charId, source.itemId, true, die)
+        ? api.items.attack(charId, source.itemId, true, die, source.choice)
         : api.items.attackUnarmed(charId, true, die)
     },
     onSuccess: (result) => {
@@ -101,15 +107,15 @@ export default function Actions() {
             <p className="font-cinzel text-dnd-gold">{t('character.actions.unarmed')}</p>
             <p className="text-xs text-dnd-text-muted">{t('character.actions.unarmed_desc', { damage: unarmedDamage })}</p>
           </div>
-          <Pressable
-            onClick={() => unarmedAttack.mutate()}
+          <RollButton
+            onRoll={(mode) => unarmedAttack.mutate(mode)}
             pending={unarmedAttack.isPending}
-            whileTap={{ scale: 0.93 }}
-            className="flex items-center gap-1 text-sm font-medium px-4 h-11 rounded-lg bg-dnd-crimson/20 text-dnd-crimson-bright border border-dnd-crimson/30 disabled:opacity-50"
+            ariaLabel={t('character.actions.unarmed')}
+            className="flex items-center gap-1 text-sm font-medium px-4 h-11 rounded-lg bg-dnd-crimson/20 text-dnd-crimson-bright border border-dnd-crimson/30 active:scale-95 transition-transform"
           >
             <Target size={14} />
             {t('character.actions.attack')}
-          </Pressable>
+          </RollButton>
         </div>
       </Surface>
 
@@ -126,16 +132,21 @@ export default function Actions() {
               <div className="flex items-center gap-3">
                 <GiCrossedSwords size={22} className="text-dnd-gold shrink-0" />
                 <span className="flex-1 min-w-0 truncate">{w.name}</span>
-                <Pressable
-                  onClick={() => weaponAttack.mutate(w.id)}
-                  pending={weaponAttack.isPending && weaponAttack.variables === w.id}
-                  whileTap={{ scale: 0.93 }}
-                  className="flex items-center gap-1 text-sm font-medium px-4 h-11 rounded-lg bg-dnd-crimson/20 text-dnd-crimson-bright border border-dnd-crimson/30 disabled:opacity-50"
+                <RollButton
+                  onRoll={(mode) => weaponAttack.mutate({ itemId: w.id, mode })}
+                  pending={weaponAttack.isPending && weaponAttack.variables?.itemId === w.id}
+                  ariaLabel={`${t('character.actions.attack')} ${w.name}`}
+                  className="flex items-center gap-1 text-sm font-medium px-4 h-11 rounded-lg bg-dnd-crimson/20 text-dnd-crimson-bright border border-dnd-crimson/30 active:scale-95 transition-transform"
                 >
                   <Target size={14} />
                   {t('character.actions.attack')}
-                </Pressable>
+                </RollButton>
               </div>
+              <WeaponChoiceRow
+                item={w}
+                choice={choices[w.id] ?? DEFAULT_WEAPON_CHOICE}
+                onChange={(c) => setChoices((prev) => ({ ...prev, [w.id]: c }))}
+              />
             </Surface>
           ))}
         </div>

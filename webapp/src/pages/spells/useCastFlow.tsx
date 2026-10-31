@@ -7,17 +7,18 @@ import { haptic } from '@/auth/telegram'
 import { isAttackSpell } from '@/lib/spellType'
 import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import { useAnimatedRoll } from '@/dice/useAnimatedRoll'
+import { useD20Roll, d20Arg, type RollMode } from '@/hooks/useD20Roll'
 import CastSpellModal from '@/pages/spells/CastSpellModal'
 import SpellAttackModal from '@/pages/spells/SpellAttackModal'
 import SpellDamageSheet from '@/pages/spells/SpellDamageSheet'
 import type { CharacterFull, Spell, SpellAttackResult, SpellSlot } from '@/types'
 
-type AttackCast = { spell: Spell; slotLevel: number | null; ritual: boolean }
+type AttackCast = { spell: Spell; slotLevel: number | null; ritual: boolean; mode: RollMode }
 type AttackState = AttackCast & { result: SpellAttackResult; wasRerolled: boolean }
 
 export interface CastFlow {
   /** Avvia il flusso di lancio per un incantesimo (identico a "Usa" nella pagina Spells). */
-  beginCast: (spell: Spell) => void
+  beginCast: (spell: Spell, mode?: RollMode) => void
   /** Pending dei percorsi senza sheet intermedio: trucchetto con concentrazione senza danno, tiro per colpire. */
   isSpellPending: (spellId: number) => boolean
   /** Sheet/modal del flusso: il chiamante li monta una volta nel proprio JSX. */
@@ -34,6 +35,9 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
   const { t } = useTranslation()
   const qc = useQueryClient()
   const rollDice = useAnimatedRoll()
+  const rollD20 = useD20Roll()
+  // Modalità d20 scelta alla pressione di "Usa": resta valida durante la scelta dello slot.
+  const [castMode, setCastMode] = useState<RollMode>('normal')
 
   const [castingSpell, setCastingSpell] = useState<Spell | null>(null)
   const [rollDamageSpell, setRollDamageSpell] = useState<Spell | null>(null)
@@ -97,9 +101,10 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
   // Tiro per colpire: il BE consuma slot/rituale e attiva la concentrazione come /use.
   const attackMutation = useMutation({
     mutationFn: async (cast: AttackCast) => {
-      const die = (await rollDice('d20', 1))?.[0]
+      const roll = d20Arg(cast.mode, await rollD20(cast.mode))
       const result = await api.spells.attack(charId, cast.spell.id, {
-        slot_level: cast.slotLevel, ritual: cast.ritual, die,
+        slot_level: cast.slotLevel, ritual: cast.ritual,
+        ...(typeof roll === 'object' ? { dice: roll.dice, mode: roll.mode } : { die: roll }),
       })
       return { cast, result }
     },
@@ -164,11 +169,12 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
     attackMutation.mutate(cast)
   }, [attackMutation])
 
-  const beginCast = useCallback((spell: Spell) => {
+  const beginCast = useCallback((spell: Spell, mode: RollMode = 'normal') => {
+    setCastMode(mode)
     if (spell.level === 0) {
       // Trucchetto — nessuno slot; la concentrazione si gestisce nello sheet danni se presente.
       if (isAttackSpell(spell)) {
-        beginAttack({ spell, slotLevel: null, ritual: false })
+        beginAttack({ spell, slotLevel: null, ritual: false, mode })
         return
       }
       if (spell.damage_dice) {
@@ -195,7 +201,7 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
 
   const proceedSlotCast = useCallback((spell: Spell, slotLevel: number) => {
     if (isAttackSpell(spell)) {
-      beginAttack({ spell, slotLevel, ritual: false })
+      beginAttack({ spell, slotLevel, ritual: false, mode: castMode })
       return
     }
     if (spell.damage_dice) {
@@ -207,11 +213,11 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
       return
     }
     castMutation.mutate({ spell, slotLevel })
-  }, [beginAttack, castMutation])
+  }, [beginAttack, castMutation, castMode])
 
   const proceedRitualCast = useCallback((spell: Spell) => {
     if (isAttackSpell(spell)) {
-      beginAttack({ spell, slotLevel: null, ritual: true })
+      beginAttack({ spell, slotLevel: null, ritual: true, mode: castMode })
       return
     }
     if (spell.damage_dice) {
@@ -222,7 +228,7 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
       return
     }
     castRitualMutation.mutate(spell)
-  }, [beginAttack, castRitualMutation])
+  }, [beginAttack, castRitualMutation, castMode])
 
   const handleCastSlot = useCallback((slotLevel: number) => {
     if (!castingSpell) return

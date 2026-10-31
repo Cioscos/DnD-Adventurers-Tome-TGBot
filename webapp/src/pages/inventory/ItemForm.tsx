@@ -242,6 +242,45 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
                 })}
               </div>
             </div>
+
+            <Input
+              label={t('character.inventory.magic_bonus_label')}
+              type="number"
+              value={form.magic_bonus}
+              onChange={(v) => setForm((f) => ({ ...f, magic_bonus: v }))}
+              min={0}
+              max={10}
+              placeholder="0"
+              inputMode="numeric"
+            />
+
+            {form.properties.includes('prop_versatile') && (
+              <Input
+                label={t('character.inventory.versatile_dice_label')}
+                value={form.versatile_dice}
+                onChange={(v) => setForm((f) => ({ ...f, versatile_dice: v }))}
+                placeholder="1d10"
+              />
+            )}
+
+            <div>
+              <label className="block text-xs uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
+                {t('character.inventory.weapon_category_label')}
+              </label>
+              <div className="flex gap-2">
+                {(['', 'simple', 'martial'] as const).map((wc) => (
+                  <Button
+                    key={wc || 'none'}
+                    variant={form.weapon_category === wc ? 'primary' : 'secondary'}
+                    size="sm"
+                    fullWidth
+                    onClick={() => setForm((f) => ({ ...f, weapon_category: wc }))}
+                  >
+                    {t(`character.inventory.weapon_category.${wc || 'none'}`)}
+                  </Button>
+                ))}
+              </div>
+            </div>
           </>
         )}
 

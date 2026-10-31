@@ -21,6 +21,7 @@ import { toast } from 'sonner'
 import SpellFilter from '@/pages/spells/SpellFilter'
 import SpellItem from '@/pages/spells/SpellItem'
 import SpellForm, { type SpellFormData } from '@/pages/spells/SpellForm'
+import { totalLevelOf } from '@/lib/dnd'
 import { useCastFlow } from '@/pages/spells/useCastFlow'
 import type { Spell, SpellSlot } from '@/types'
 import SpellsSkeleton from '@/components/skeletons/SpellsSkeleton'
@@ -502,7 +503,8 @@ export default function Spells() {
                             spell={spell}
                             isExpanded={expanded === spell.id}
                             onToggle={() => setExpanded(expanded === spell.id ? null : spell.id)}
-                            onUse={() => castFlow.beginCast(spell)}
+                            onUse={(mode) => castFlow.beginCast(spell, mode)}
+                            totalLevel={totalLevelOf(char?.classes)}
                             onConcentrationToggle={() =>
                               concentrationMutation.mutate(concentratingId === spell.id ? null : spell.id)
                             }

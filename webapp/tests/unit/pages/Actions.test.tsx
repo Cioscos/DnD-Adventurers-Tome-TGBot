@@ -16,6 +16,10 @@ const { getChar, attackSpy, unarmedSpy, toastError } = vi.hoisted(() => ({
 
 const rollDice = vi.hoisted(() => vi.fn())
 vi.mock('@/dice/useAnimatedRoll', () => ({ useAnimatedRoll: () => rollDice }))
+vi.mock('@/hooks/useD20Roll', async (orig) => {
+  const actual = (await orig()) as Record<string, unknown>
+  return { ...actual, useD20Roll: () => async (mode: string) => rollDice('d20', mode === 'normal' ? 1 : 2) }
+})
 vi.mock('@/api/client', () => ({
   api: {
     characters: { get: getChar },
@@ -148,7 +152,7 @@ describe('Actions page', () => {
     await screen.findByText('Greatsword')
 
     await userEvent.click(screen.getAllByRole('button')[1])
-    await waitFor(() => expect(attackSpy).toHaveBeenCalledWith(7, 10, false, 17))
+    await waitFor(() => expect(attackSpy).toHaveBeenCalledWith(7, 10, false, 17, { grip: 'one', attack_mode: 'melee' }))
     expect(rollDice).toHaveBeenCalledWith('d20', 1)
   })
 
@@ -159,7 +163,7 @@ describe('Actions page', () => {
     await screen.findByText('Greatsword')
 
     await userEvent.click(screen.getAllByRole('button')[1]) // weapon attack (after unarmed)
-    await waitFor(() => expect(attackSpy).toHaveBeenCalledWith(7, 10, false, undefined))
+    await waitFor(() => expect(attackSpy).toHaveBeenCalledWith(7, 10, false, undefined, { grip: 'one', attack_mode: 'melee' }))
 
     const modal = await screen.findByTestId('attack-modal')
     expect(modal).toHaveTextContent('Greatsword')
@@ -193,7 +197,7 @@ describe('Actions page', () => {
 
     attackSpy.mockResolvedValue({ ...weaponResult, to_hit_total: 25 })
     await userEvent.click(screen.getByTestId('modal-reroll'))
-    await waitFor(() => expect(attackSpy).toHaveBeenCalledWith(7, 10, true, undefined))
+    await waitFor(() => expect(attackSpy).toHaveBeenCalledWith(7, 10, true, undefined, { grip: 'one', attack_mode: 'melee' }))
   })
 
   it('invalidates the character query after a weapon attack (ammo is consumed server-side)', async () => {

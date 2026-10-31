@@ -14,6 +14,10 @@ import type { Property } from '@/lib/homebrew/types'
 import PropertyBadge from '@/components/homebrew/PropertyBadge'
 import { useUnitSettings, formatWeight } from '@/store/unitSettings'
 import Pressable from '@/components/ui/Pressable'
+import RollButton from '@/components/ui/RollButton'
+import WeaponChoiceRow from '@/components/WeaponChoiceRow'
+import type { RollMode } from '@/api/client'
+import type { WeaponChoice } from '@/lib/weaponOptions'
 
 /**
  * A homebrew Property resolved from an active rule, paired with the item types
@@ -216,7 +220,9 @@ interface InventoryItemProps {
   onToggle: () => void
   onEquipToggle: () => void
   onQuantityChange: (delta: number) => void
-  onAttack: () => void
+  onAttack: (mode: RollMode) => void
+  weaponChoice: WeaponChoice
+  onWeaponChoice: (c: WeaponChoice) => void
   onUse: () => void
   onEdit: () => void
   onDelete: () => void
@@ -242,6 +248,8 @@ function InventoryItemInner({
   onEquipToggle,
   onQuantityChange,
   onAttack,
+  weaponChoice,
+  onWeaponChoice,
   onUse,
   onEdit,
   onDelete,
@@ -359,6 +367,10 @@ function InventoryItemInner({
             </div>
           )}
 
+          {item.item_type === 'weapon' && (
+            <WeaponChoiceRow item={item} choice={weaponChoice} onChange={onWeaponChoice} />
+          )}
+
           {/* Action buttons — same pattern as SpellItem */}
           <div className="flex gap-2 flex-wrap border-t border-dnd-gold-dim/10 pt-2">
             {canEquip && (
@@ -377,17 +389,17 @@ function InventoryItemInner({
               </Pressable>
             )}
             {item.item_type === 'weapon' && (
-              <Pressable
-                onClick={onAttack}
+              <RollButton
+                onRoll={onAttack}
                 pending={attackPending}
-                spinnerSize={12}
-                className="flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg
+                ariaLabel={`${t('character.inventory.attack')} ${item.name}`}
+                className="flex items-center gap-1 text-xs font-medium px-3 min-h-11 rounded-lg
                            bg-dnd-crimson/20 text-dnd-crimson-bright border border-dnd-crimson/30
-                           active:opacity-60 disabled:opacity-30"
+                           active:opacity-60"
               >
                 <Target size={12} />
                 {t('character.inventory.attack')}
-              </Pressable>
+              </RollButton>
             )}
             {canUse && (
               <Pressable

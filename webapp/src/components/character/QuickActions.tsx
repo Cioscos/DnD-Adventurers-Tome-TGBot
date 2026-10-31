@@ -21,6 +21,9 @@ import HitDiceModal from '@/pages/hp/HitDiceModal'
 import HitDiceResultDialog from '@/pages/hp/HitDiceResultDialog'
 import { haptic } from '@/auth/telegram'
 import { useAnimatedRoll } from '@/dice/useAnimatedRoll'
+import { isAttackSpell } from '@/lib/spellType'
+import RollButton from '@/components/ui/RollButton'
+import { useD20Roll, d20Arg, type RollMode } from '@/hooks/useD20Roll'
 import { useToast } from '@/hooks/useToast'
 import { notifyMutationError } from '@/lib/mutationError'
 import { showUndoToast } from '@/components/ui/UndoToast'
@@ -90,6 +93,7 @@ export default function QuickActions({ char }: Props) {
   const qc = useQueryClient()
   const toast = useToast()
   const rollDice = useAnimatedRoll()
+  const rollD20 = useD20Roll()
   const castFlow = useCastFlow(char.id, char)
 
   const [editorOpen, setEditorOpen] = useState(false)
@@ -133,11 +137,9 @@ export default function QuickActions({ char }: Props) {
   })
 
   const attackMutation = useMutation({
-    mutationFn: async (itemId: number) => {
-      const die = (await rollDice('d20', 1))?.[0]
-      return api.items.attack(char.id, itemId, false, die)
-    },
-    onSuccess: (result, itemId) => {
+    mutationFn: async ({ itemId, mode }: { itemId: number; mode: RollMode }) =>
+      api.items.attack(char.id, itemId, false, d20Arg(mode, await rollD20(mode))),
+    onSuccess: (result, { itemId }) => {
       setAttackState({ result, itemId, wasRerolled: false })
       qc.invalidateQueries({ queryKey: ['character', char.id] })
       haptic.success()
@@ -165,9 +167,8 @@ export default function QuickActions({ char }: Props) {
   })
 
   const saveMutation = useMutation({
-    mutationFn: async (ability: string) => {
-      const die = (await rollDice('d20', 1))?.[0]
-      const result = await api.characters.rollSavingThrow(char.id, ability, die)
+    mutationFn: async ({ ability, mode }: { ability: string; mode: RollMode }) => {
+      const result = await api.characters.rollSavingThrow(char.id, ability, d20Arg(mode, await rollD20(mode)))
       return { result, ability }
     },
     onSuccess: ({ result, ability }) => {
@@ -303,12 +304,12 @@ export default function QuickActions({ char }: Props) {
     },
   })
 
-  const run = (action: ResolvedQuickAction) => {
+  const run = (action: ResolvedQuickAction, mode: RollMode = 'normal') => {
     haptic.light()
     switch (action.type) {
-      case 'weapon': attackMutation.mutate(action.item.id); break
-      case 'save': saveMutation.mutate(action.ability); break
-      case 'spell': castFlow.beginCast(action.spell); break
+      case 'weapon': attackMutation.mutate({ itemId: action.item.id, mode }); break
+      case 'save': saveMutation.mutate({ ability: action.ability, mode }); break
+      case 'spell': castFlow.beginCast(action.spell, mode); break
       case 'ability': consumeAbility(action.ability); break
       case 'hit_die':
         if (action.remaining > 0) setConfirmHitDie({ cls: action.cls, remaining: action.remaining })
@@ -368,8 +369,8 @@ export default function QuickActions({ char }: Props) {
   })()
 
   const isActionPending = (a: ResolvedQuickAction): boolean => {
-    if (a.type === 'weapon') return attackMutation.isPending && attackMutation.variables === a.item.id
-    if (a.type === 'save') return saveMutation.isPending && saveMutation.variables === a.ability
+    if (a.type === 'weapon') return attackMutation.isPending && attackMutation.variables?.itemId === a.item.id
+    if (a.type === 'save') return saveMutation.isPending && saveMutation.variables?.ability === a.ability
     if (a.type === 'spell') return castFlow.isSpellPending(a.spell.id)
     if (a.type === 'ability') return usesMutation.isPending && usesMutation.variables?.abilityId === a.ability.id
     return false
@@ -591,6 +592,26 @@ export default function QuickActions({ char }: Props) {
               const depleted =
                 (a.type === 'ability' && (a.ability.uses ?? 0) <= 0) ||
                 (a.type === 'hit_die' && a.remaining <= 0)
+              const tileClass = `min-h-[44px] flex items-center gap-2 px-3 py-2 rounded-xl
+                              bg-dnd-surface border border-dnd-border text-left
+                              disabled:opacity-60 ${depleted ? 'opacity-50' : ''} ${spanFull ? 'col-span-2' : ''}`
+              if (a.type === 'weapon' || a.type === 'save' || (a.type === 'spell' && isAttackSpell(a.spell))) {
+                // d20 rolls: long press opens the advantage/disadvantage menu.
+                return (
+                  <RollButton
+                    key={a.key}
+                    onRoll={(mode) => run(a, mode)}
+                    pending={isActionPending(a)}
+                    ariaLabel={actionLabel(a)}
+                    className={tileClass}
+                  >
+                    <RestIcon size={16} className="text-dnd-gold shrink-0" />
+                    <span className="flex-1 min-w-0 line-clamp-2 leading-tight text-sm text-dnd-text font-body">
+                      {actionLabel(a)}
+                    </span>
+                  </RollButton>
+                )
+              }
               return (
                 <Pressable
                   key={a.key}
@@ -598,9 +619,7 @@ export default function QuickActions({ char }: Props) {
                   pending={isActionPending(a)}
                   onClick={() => run(a)}
                   whileTap={{ scale: 0.96 }}
-                  className={`min-h-[44px] flex items-center gap-2 px-3 py-2 rounded-xl
-                              bg-dnd-surface border border-dnd-border text-left
-                              disabled:opacity-60 ${depleted ? 'opacity-50' : ''} ${spanFull ? 'col-span-2' : ''}`}
+                  className={tileClass}
                 >
                   <RestIcon size={16} className="text-dnd-gold shrink-0" />
                   <span className="flex-1 min-w-0 line-clamp-2 leading-tight text-sm text-dnd-text font-body">

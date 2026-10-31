@@ -7,6 +7,7 @@ import {
 import ResultDialog from '@/components/ui/ResultDialog'
 import InspirationRerollButton from '@/components/InspirationRerollButton'
 import Button from '@/components/ui/Button'
+import D20Faces from '@/components/ui/D20Faces'
 import type { SpellAttackResult } from '@/types'
 
 type Props = {
@@ -33,7 +34,7 @@ export default function SpellAttackModal({
   onInspirationReroll,
 }: Props) {
   const { t } = useTranslation()
-  const { spell_name, to_hit_die, to_hit_bonus, to_hit_total, is_critical, is_fumble, caster_class } = result
+  const { spell_name, to_hit_die, dice, mode, to_hit_bonus, to_hit_total, is_critical, is_fumble, caster_class } = result
 
   const bonusStr = `${to_hit_bonus >= 0 ? '+' : '-'}${Math.abs(to_hit_bonus)}`
   const accent = is_critical ? 'gold' : is_fumble ? 'crimson' : 'emerald'
@@ -106,7 +107,7 @@ export default function SpellAttackModal({
           {t('character.spells.to_hit')}
         </p>
         <p className="text-xs text-dnd-text-muted font-body tabular-nums">
-          d20 ({to_hit_die}) {bonusStr}
+          <D20Faces die={to_hit_die} dice={dice} mode={mode} /> {bonusStr}
         </p>
         <p className={`text-4xl font-black font-display mt-1 tabular-nums ${toHitColor}`}>
           {to_hit_total}

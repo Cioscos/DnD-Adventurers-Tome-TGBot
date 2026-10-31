@@ -8,6 +8,8 @@ import { Plus, Weight, ChevronRight, Pencil, RotateCcw } from 'lucide-react'
 import { GiKnapsack as Backpack } from 'react-icons/gi'
 import { api, ApiError } from '@/api/client'
 import { useAnimatedRoll } from '@/dice/useAnimatedRoll'
+import { useD20Roll, d20Arg, type RollMode } from '@/hooks/useD20Roll'
+import { DEFAULT_WEAPON_CHOICE, type WeaponChoice } from '@/lib/weaponOptions'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
@@ -54,9 +56,12 @@ export default function Inventory() {
   type AttackState = {
     result: WeaponAttackResult
     itemId: number
+    choice: WeaponChoice
     wasRerolled: boolean
   }
   const [attackState, setAttackState] = useState<AttackState | null>(null)
+  // Scelta pre-attacco ricordata per arma (una/due mani, mischia/lancio).
+  const [weaponChoices, setWeaponChoices] = useState<Record<number, WeaponChoice>>({})
   const [slotPickerItem, setSlotPickerItem] = useState<Item | null>(null)
   const [equipConflict, setEquipConflict] = useState<{ item: Item; slot: EquipmentSlot; removedItem: Item } | null>(null)
   const toast = useToast()
@@ -255,22 +260,26 @@ export default function Inventory() {
   const shareItem = useShareMessage((itemId: number) => api.share.item(charId, itemId))
 
   const rollDice = useAnimatedRoll()
+  const rollD20 = useD20Roll()
 
   const attackMutation = useMutation({
-    mutationFn: async (itemId: number) => {
-      const die = (await rollDice('d20', 1))?.[0]
-      return api.items.attack(charId, itemId, false, die)
-    },
-    onSuccess: (result, itemId) => {
-      setAttackState({ result, itemId, wasRerolled: false })
+    mutationFn: async ({ itemId, mode }: { itemId: number; mode: RollMode }) =>
+      api.items.attack(
+        charId, itemId, false, d20Arg(mode, await rollD20(mode)),
+        weaponChoices[itemId] ?? DEFAULT_WEAPON_CHOICE,
+      ),
+    onSuccess: (result, { itemId }) => {
+      setAttackState({
+        result, itemId, choice: weaponChoices[itemId] ?? DEFAULT_WEAPON_CHOICE, wasRerolled: false,
+      })
       haptic.success()
     },
   })
 
   const attackRerollMutation = useMutation({
-    mutationFn: async (itemId: number) => {
+    mutationFn: async ({ itemId, choice }: { itemId: number; choice: WeaponChoice }) => {
       const die = (await rollDice('d20', 1))?.[0]
-      return api.items.attack(charId, itemId, true, die)
+      return api.items.attack(charId, itemId, true, die, choice)
     },
     onSuccess: (result) => {
       setAttackState((prev) => prev && { ...prev, result, wasRerolled: true })
@@ -601,13 +610,15 @@ export default function Inventory() {
                             onToggle={() => setExpanded(expanded === item.id ? null : item.id)}
                             onEquipToggle={() => handleEquipToggle(item)}
                             onQuantityChange={(delta) => updateQty.mutate({ itemId: item.id, quantity: item.quantity + delta })}
-                            onAttack={() => attackMutation.mutate(item.id)}
+                            onAttack={(mode) => attackMutation.mutate({ itemId: item.id, mode })}
+                            weaponChoice={weaponChoices[item.id] ?? DEFAULT_WEAPON_CHOICE}
+                            onWeaponChoice={(c) => setWeaponChoices((prev) => ({ ...prev, [item.id]: c }))}
                             onUse={() => setUseTarget(item)}
                             onEdit={() => handleEdit(item)}
                             onDelete={() => setDeleteTarget(item.id)}
                             onShare={canShareMessage() ? () => shareItem.mutate(item.id) : undefined}
                             equipPending={toggleEquip.isPending && toggleEquip.variables?.itemId === item.id}
-                            attackPending={attackMutation.isPending && attackMutation.variables === item.id}
+                            attackPending={attackMutation.isPending && attackMutation.variables?.itemId === item.id}
                             usePending={consumeMutation.isPending && consumeMutation.variables === item.id}
                             quantityPending={updateQty.isPending && updateQty.variables?.itemId === item.id}
                             sharePending={shareItem.isPending && shareItem.variables === item.id}
@@ -642,7 +653,7 @@ export default function Inventory() {
           inspirationAvailable={Boolean(char?.heroic_inspiration)}
           isRerolling={attackRerollMutation.isPending}
           wasRerolled={attackState.wasRerolled}
-          onInspirationReroll={() => attackRerollMutation.mutate(attackState.itemId)}
+          onInspirationReroll={() => attackRerollMutation.mutate({ itemId: attackState.itemId, choice: attackState.choice })}
           onClose={() => setAttackState(null)}
         />
       )}
