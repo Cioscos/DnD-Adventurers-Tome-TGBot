@@ -12,13 +12,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.schemas.character import AcBreakdown, ActiveForm, CharacterFull
 from api.services.wild_shape import get_active_form
-from api.services.homebrew.passive import get_passive_modifiers
+from api.services.homebrew.passive import get_passive_modifiers, passive_modifier
 from api.services.spellcasting import build_spellcasting_info
 from core.data.skills import SKILL_ABILITY_MAP
 from core.db.models import ABILITY_NAMES, Character
 from core.game.actions import attacks_per_action
 from core.game.item_bonuses import item_bonus_total
-from core.game.skills import PASSIVE_SKILLS, has_jack_of_all_trades, passive_score, skill_bonus
+from core.game.skills import PASSIVE_SKILLS, has_jack_of_all_trades, skill_proficiency_part
 from core.game.stats import effective_ability_score
 from api.routers._helpers import effective_ability_mod
 
@@ -74,16 +74,20 @@ async def build_character_response(
     _apply_encumbrance(char, response)
     response.pending_choices = list(char.pending_choices or [])
 
-    for slug in SKILL_ABILITY_MAP:
+    response.jack_of_all_trades = has_jack_of_all_trades(char)
+    # Same formula as core.game.skills.skill_bonus / passive_score, reusing the
+    # homebrew lookup once per skill instead of re-querying it.
+    for slug, ability in SKILL_ABILITY_MAP.items():
         val = await get_passive_modifiers(session, char, f"character.skill.{slug}")
         if val:
             response.skills_homebrew_modifiers[slug] = val
-
-    response.jack_of_all_trades = has_jack_of_all_trades(char)
-    for slug in SKILL_ABILITY_MAP:
-        response.skill_bonuses[slug] = await skill_bonus(session, char, slug)
+        response.skill_bonuses[slug] = (
+            effective_ability_mod(char, ability) + skill_proficiency_part(char, slug) + val
+        )
     for slug in PASSIVE_SKILLS:
-        response.passives[slug] = await passive_score(session, char, slug)
+        response.passives[slug] = (
+            10 + response.skill_bonuses[slug] + await passive_modifier(session, char, slug)
+        )
 
     for slug in ABILITY_NAMES:
         val = await get_passive_modifiers(session, char, f"character.saving_throw.{slug}")

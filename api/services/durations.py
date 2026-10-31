@@ -57,13 +57,21 @@ def set_condition_durations(char: Character, durations: dict[str, int | None]) -
     char.settings = s
 
 
+def _is_int(v: object) -> bool:
+    return isinstance(v, int) and not isinstance(v, bool)
+
+
 async def tick_rounds(session: AsyncSession, char: Character) -> list[str]:
     """Decrement every duration by one round; expire effects reaching 0."""
     s = dict(char.settings or {})
-    cd = dict(s.get("condition_durations") or {})
+    raw_cd = s.get("condition_durations")
+    cd = dict(raw_cd) if isinstance(raw_cd, dict) else {}
     expired: list[str] = []
     to_clear: dict[str, bool] = {}
     for slug, left in list(cd.items()):
+        if not _is_int(left):  # malformed (hand-edited/imported) entry: drop it, never 500
+            del cd[slug]
+            continue
         left -= 1
         if left > 0:
             cd[slug] = left
@@ -77,7 +85,9 @@ async def tick_rounds(session: AsyncSession, char: Character) -> list[str]:
 
     conc = s.get("concentration_rounds_left")
     ended_conc = False
-    if conc is not None:
+    if conc is not None and not _is_int(conc):
+        s.pop("concentration_rounds_left")
+    elif conc is not None:
         if conc - 1 > 0:
             s["concentration_rounds_left"] = conc - 1
         else:

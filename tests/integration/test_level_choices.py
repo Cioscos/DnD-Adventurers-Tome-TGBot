@@ -242,3 +242,15 @@ async def test_pending_choices_roundtrip_export_import(client):
     r = await client.post("/characters/import", json=exp)
     assert r.status_code in (200, 201), r.text
     assert r.json()["pending_choices"] == body["pending_choices"]
+
+
+async def test_asi_con_raises_max_hp_and_str_carry(client):
+    body = await _to_level_4(client)
+    hp, cur = body["hit_points"], body["current_hit_points"]
+    r = await _resolve(client, body, {"kind": "asi", "increases": {"constitution": 2}})
+    assert r.status_code == 200, r.text
+    assert r.json()["hit_points"] == hp + 4  # CON mod +1, retroactive x level 4
+    assert r.json()["current_hit_points"] == cur + 4
+    body = await _to_level_4(client)
+    r = await _resolve(client, body, {"kind": "asi", "increases": {"strength": 1, "dexterity": 1}})
+    assert r.json()["carry_capacity"] == 20 * 15

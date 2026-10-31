@@ -110,6 +110,9 @@ async def _get_owned_full(
     return char
 
 
+_CONC_SETTINGS = ("concentration_rounds_left", "concentration_item_spell")
+
+
 def _hp_state(char: Character, form=None) -> dict:
     """Campi toccati da un'operazione PF (forma selvatica inclusa), per lo snapshot di annullamento."""
     return {
@@ -123,6 +126,7 @@ def _hp_state(char: Character, form=None) -> dict:
         "death_saves": dict(char.death_saves or {}),
         "is_dead": char.is_dead,
         "concentrating_spell_id": char.concentrating_spell_id,
+        **{k: (char.settings or {}).get(k) for k in _CONC_SETTINGS},
     }
 
 
@@ -181,6 +185,10 @@ async def update_hp(
                 applied = 0
                 _add_history(session, char.id, "companion_hp",
                              f"{form.name}: -{conc_damage} → PF {form.current_hp}/{form.max_hp}, temp {form.temp_hp}")
+                if form.current_hp == 0:  # 5e: the form ends at 0 HP, even with no overflow
+                    form.is_active = False
+                    _add_history(session, char.id, "companion_hp",
+                                 f"Forma selvatica terminata: {form.name} (PF a 0)")
         amount = applied
         # Absorb temp HP first
         if char.temp_hp > 0:
@@ -317,7 +325,12 @@ async def update_hp(
     elif body.op == HPOp.SET_TEMP:
         char.temp_hp = max(0, body.value)
 
-    if body.op in (HPOp.SET_MAX, HPOp.SET_CURRENT) and char.current_hit_points == 0             and form is not None and form.is_active:
+    if (
+        body.op in (HPOp.SET_MAX, HPOp.SET_CURRENT)
+        and char.current_hit_points == 0
+        and form is not None
+        and form.is_active
+    ):
         form.is_active = False
         _add_history(session, char.id, "companion_hp",
                      f"Forma selvatica terminata: {form.name} (PF a 0)")
@@ -383,6 +396,13 @@ async def undo_hp(
     if spell_id is not None and not any(s.id == spell_id for s in char.spells):
         spell_id = None
     char.concentrating_spell_id = spell_id
+    settings = dict(char.settings or {})
+    for k in _CONC_SETTINGS:
+        if before[k] is None:
+            settings.pop(k, None)
+        else:
+            settings[k] = before[k]
+    char.settings = settings
     char.hp_undo = None
 
     _add_history(session, char.id, "hp_change",

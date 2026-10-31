@@ -151,3 +151,37 @@ async def test_prev_turn_does_not_tick(client, test_session_factory, monkeypatch
     await client.post(f"/sessions/{sid}/encounter/next-turn")
     await client.post(f"/sessions/{sid}/encounter/prev-turn")  # torna al PG
     assert await _durs(test_session_factory, cid) == {"poisoned": 3}
+
+
+async def test_malformed_durations_do_not_block_next_turn(client, test_session_factory, monkeypatch):
+    sid, cid = await _pc_setup(client, test_session_factory, monkeypatch)
+    async with test_session_factory() as s:
+        ch = await s.get(Character, cid)
+        ch.settings = {"condition_durations": {"poisoned": "x", "blinded": None, "deafened": 2},
+                       "concentration_rounds_left": "abc"}
+        await s.commit()
+    as_user(GM_ID)
+    for _ in range(3):  # back to the PC -> tick runs on the malformed sheet
+        r = await client.post(f"/sessions/{sid}/encounter/next-turn")
+        assert r.status_code == 200, r.text
+    async with test_session_factory() as s:
+        settings = (await s.get(Character, cid)).settings
+    assert settings["condition_durations"] == {"deafened": 1}
+    assert "concentration_rounds_left" not in settings
+
+
+async def test_patch_settings_keeps_server_owned_keys(client):
+    cid = await _char(client)
+    await client.patch(
+        f"/characters/{cid}/conditions",
+        json={"conditions": {"poisoned": True}, "durations": {"poisoned": 1}},
+    )
+    stale = (await client.get(f"/characters/{cid}")).json()["settings"]
+    await client.post(f"/characters/{cid}/rounds/tick")  # duration expires server-side
+    r = await client.patch(f"/characters/{cid}", json={"settings": {
+        **stale, "roll_notes": "x", "hp_rolls": {"1": [9]}, "concentration_rounds_left": 5,
+    }})
+    s = r.json()["settings"]
+    assert s["roll_notes"] == "x"
+    assert s["condition_durations"] == {}
+    assert "hp_rolls" not in s and "concentration_rounds_left" not in s

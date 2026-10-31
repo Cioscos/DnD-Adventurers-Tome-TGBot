@@ -6,6 +6,8 @@ from typing import Annotated, Any, Literal, Optional
 from pydantic import AfterValidator, BaseModel, Field, ValidationInfo, field_validator
 
 from api.schemas.companion import validate_statblock
+from api.schemas.item import _validate_weapon_meta
+from api.schemas.item_magic import validate_magic_meta
 from core.db.models import EquipmentSlot
 from core.game.actions import ActionType
 
@@ -102,6 +104,15 @@ class ExportItem(BaseModel):
     item_metadata: dict[str, Any] = Field(default_factory=dict)
     is_equipped: bool = False
     equipment_slot: Optional[EquipmentSlot] = None
+
+    @field_validator("item_metadata")
+    @classmethod
+    def _check_meta(cls, v: dict[str, Any], info: ValidationInfo) -> dict[str, Any]:
+        # Same rules as item create/patch; export (lenient) keeps legacy data as-is.
+        if not (info.context or {}).get("lenient"):
+            _validate_weapon_meta(v)
+            validate_magic_meta(v)
+        return v
 
 
 class ExportSpell(BaseModel):

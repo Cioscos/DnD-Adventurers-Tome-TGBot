@@ -200,3 +200,21 @@ async def test_unequipped_item_does_not_claim_slot(client):
         {"name": "New", "is_equipped": True, "equipment_slot": "head"}]}
     items = {i["name"]: i for i in (await _import(client, d)).json()["items"]}
     assert items["New"]["is_equipped"] and items["New"]["equipment_slot"] == "head"
+
+
+async def test_import_rejects_bad_item_metadata(client, test_session_factory):
+    data = await _export(client, await _make_valid(test_session_factory))
+    data["items"] = [{"name": "Spada", "item_type": "weapon", "item_metadata": {"magic_bonus": "abc"}}]
+    assert (await _import(client, data)).status_code == 422
+    data["items"] = [{"name": "Anello", "item_metadata": {"charges": {"max": "x"}}}]
+    assert (await _import(client, data)).status_code == 422
+
+
+async def test_import_enforces_attunement_limit(client, test_session_factory):
+    data = await _export(client, await _make_valid(test_session_factory))
+    meta = {"is_magic": True, "requires_attunement": True, "attuned": True}
+    data["items"] = [{"name": f"Anello {i}", "item_metadata": meta} for i in range(4)]
+    r = await _import(client, data)
+    assert r.status_code == 422 and r.json()["detail"] == "attunement_limit"
+    data["items"] = data["items"][:3]
+    assert (await _import(client, data)).status_code == 201

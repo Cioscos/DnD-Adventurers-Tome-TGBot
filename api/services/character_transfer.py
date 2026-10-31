@@ -14,6 +14,7 @@ from api.schemas.common import normalize_proficiencies
 from api.schemas.transfer import CharacterExport, ExportCharacter
 from api.services.homebrew.dsl import RuleDSL
 from api.version import APP_VERSION
+from core.game.item_bonuses import is_attuned
 from core.db.models import (
     Ability, AbilityScore, Character, CharacterClass, Companion, Currency, HomebrewResource,
     HomebrewRule, Item, RestorationType, Spell, SpellSlot, SpellSlotsMode,
@@ -158,6 +159,8 @@ async def import_character(
     for a in data.abilities:
         if a.source_class_key is not None and a.source_class_key not in class_keys:
             raise _unprocessable("Unknown source_class_key")
+    if sum(1 for it in data.items if is_attuned(it)) > 3:
+        raise _unprocessable("attunement_limit")
     for h in data.homebrew_resources:
         if h.rule_index >= len(data.homebrew_rules):
             raise _unprocessable("Unknown rule_index")

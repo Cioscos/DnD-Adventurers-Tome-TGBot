@@ -185,3 +185,14 @@ async def test_set_max_clamping_to_zero_ends_form(client):
     await _activate(client, cid, f["id"])
     body = await _hp(client, cid, "set_max", 0)
     assert body["current_hit_points"] == 0 and body["active_form"] is None
+
+
+async def test_wild_shape_exact_zero_ends_form(client):
+    cid = await _make_char(client, 20)
+    f = await _form(client, cid, hp=5)
+    await _activate(client, cid, f["id"])
+    body = await _hp(client, cid, "damage", 5)
+    assert body["active_form"] is None and body["current_hit_points"] == 20
+    assert (await _comp(client, cid, f["id"]))["is_active"] is False
+    hist = (await client.get(f"/characters/{cid}/history")).json()
+    assert any("Forma selvatica terminata" in h["description"] for h in hist)

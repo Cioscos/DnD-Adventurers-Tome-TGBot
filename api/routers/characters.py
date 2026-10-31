@@ -59,6 +59,10 @@ from api.services.homebrew.passive import get_passive_modifiers
 
 router = APIRouter(prefix="/characters", tags=["characters"])
 
+# settings keys written only by server endpoints (level-up, conditions, rounds tick, cast).
+SERVER_OWNED_SETTINGS = ("hp_rolls", "condition_durations",
+                         "concentration_rounds_left", "concentration_item_spell")
+
 # Mapping from skill name to governing ability
 _SKILL_ABILITY: dict[str, str] = {
     "acrobatics": "dexterity",
@@ -331,6 +335,11 @@ async def update_character(
 ) -> CharacterFull:
     char = await _get_owned(char_id, user_id, session, full=True)
     for field, value in body.model_dump(exclude_unset=True).items():
+        if field == "settings" and value is not None:
+            # Server-owned keys: a stale client snapshot must never overwrite them.
+            old = char.settings or {}
+            value = {k: v for k, v in value.items() if k not in SERVER_OWNED_SETTINGS}
+            value.update({k: old[k] for k in SERVER_OWNED_SETTINGS if k in old})
         setattr(char, field, value)
     # Flush + re-SELECT so CharacterFull serialization sees a non-expired row
     # AND nested eager-loads (classes.resources) survive. See

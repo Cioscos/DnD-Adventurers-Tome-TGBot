@@ -10,7 +10,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.auth import get_current_lang, get_current_user
 from api.database import get_db
+from api.routers._helpers import effective_con_mod
 from api.routers.classes import _get_owned_full, _refresh_char_full
+from api.routers.stats import apply_ability_change
 from api.schemas.character import CharacterFull
 from api.services.character_response import build_character_response
 from api.services.choices import remove_feat, resolve_asi, resolve_feat
@@ -45,11 +47,16 @@ async def resolve_choice(
     choices = list(char.pending_choices or [])
     if not any(c["id"] == choice_id for c in choices):
         raise HTTPException(404, "Choice not found")
+    old_con_mod = effective_con_mod(char)
     if isinstance(body, AsiResolve):
         resolve_asi(session, char, body.increases)
+        changed = list(body.increases)
     else:
         resolve_feat(session, char, body.feat_key, body.ability,
                      body.custom_name, body.custom_text, lang)
+        changed = [body.ability] if body.ability else []
+    for ability in changed:  # same side effects as PATCH /ability_scores (CON HP, STR carry, AC)
+        apply_ability_change(char, ability, old_con_mod)
     char.pending_choices = [c for c in choices if c["id"] != choice_id]
     char = await _refresh_char_full(char_id, user_id, session)
     return await build_character_response(session, char)
