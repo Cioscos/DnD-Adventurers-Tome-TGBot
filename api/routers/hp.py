@@ -36,6 +36,7 @@ from api.schemas.common import (
     RestRequest,
 )
 from core.data.damage_types import LABELS_IT, canonical_damage_type, damage_multiplier
+from api.services.hp_rolls import stored_rolls
 from core.game.stats import total_base_hp
 from api.routers._helpers import collect_homebrew_notifications, effective_con_mod, roll_concentration_save
 from api.schemas.common import ConcentrationSaveResult
@@ -669,7 +670,7 @@ async def recalc_hp(
     char = await _get_owned_full(char_id, user_id, session)
 
     con_mod = effective_con_mod(char)
-    new_max = total_base_hp(char.classes, con_mod)
+    new_max = total_base_hp(char.classes, con_mod, stored_rolls(char))
 
     old_max = char.hit_points
     char.hit_points = new_max

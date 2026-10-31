@@ -115,7 +115,8 @@ async def test_level_up_apply_modifier_once_increments_hp_max(client, char_id):
     assert r.status_code == 200, r.text
     body = r.json()
 
-    assert body["hit_points"] == hp_before + 2, body
+    # level 1 -> 2 now recalcs max HP like distribute (d10, CON 0: +6), then the rule adds +2
+    assert body["hit_points"] == hp_before + 6 + 2, body
 
 
 @pytest.mark.asyncio

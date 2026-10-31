@@ -5,7 +5,7 @@ No side effects, no database access. Safe to unit-test in isolation.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Iterable, Literal
+from typing import Iterable, Literal, Mapping
 
 
 ABILITY_NAMES = (
@@ -80,8 +80,12 @@ def unarmored_defense_ac(dex_mod: int, second_mod: int) -> int:
 def total_base_hp(
     classes: "Iterable[_ClassLike]",
     con_mod: int,
+    rolls: "Mapping[int, Mapping[int, int]] | None" = None,
 ) -> int:
     """Sum of HP across every level of every class.
+
+    ``rolls`` (class id -> class level -> raw die roll) replaces the fixed value
+    of non-first levels: ``max(1, roll + con_mod)``.
 
     The 'first class' (lowest id, i.e. DB insertion order) owns the
     character's level-1 slot and uses the level-1 formula.
@@ -102,6 +106,8 @@ def total_base_hp(
             if not first_level_consumed:
                 total += hit_points_for_level(cls.hit_die, con_mod, 1)
                 first_level_consumed = True
+            elif rolled := (rolls or {}).get(cls.id, {}).get(level_within_class):
+                total += max(1, rolled + con_mod)
             else:
                 total += hit_points_for_level(cls.hit_die, con_mod, 2)
 

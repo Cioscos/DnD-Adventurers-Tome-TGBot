@@ -53,6 +53,7 @@ from api.services.effects import apply_conditions
 from api.services.durations import set_condition_durations, tick_rounds
 from api.services.spell_slots import recalc_spell_slots
 from api.services.choices import add_asi_choices
+from api.services.hp_rolls import record_rolls
 from api.services.homebrew.passive import get_passive_modifiers
 
 router = APIRouter(prefix="/characters", tags=["characters"])
@@ -500,13 +501,17 @@ async def update_xp(
 
     total_hp_gained = 0
 
+    # Milestone mode: level-ups go through classes/distribute, never from XP.
+    milestone = settings.get("advancement") == "milestone"
+
     # For single-class characters, keep class level in sync with XP-derived level.
-    if len(char.classes) == 1:
+    if len(char.classes) == 1 and not milestone:
         cls = char.classes[0]
         old_level = cls.level
         new_level = xp_to_level(char.experience_points)
         if new_level != old_level:
             cls.level = new_level
+            record_rolls(char, cls, old_level, new_level, None)  # drop stale rolls
             add_asi_choices(char, cls.class_name, old_level, new_level)
             await sync_class_feature_abilities(session, char, cls, lang=lang)
 
@@ -527,7 +532,8 @@ async def update_xp(
     old_level_from_xp = xp_to_level(old_xp)
     new_level_from_xp = xp_to_level(char.experience_points)
     if (
-        new_level_from_xp > old_level_from_xp
+        not milestone
+        and new_level_from_xp > old_level_from_xp
         and telegram_notify.notifications_enabled(char, "level_up")
     ):
         if len(char.classes) == 1:

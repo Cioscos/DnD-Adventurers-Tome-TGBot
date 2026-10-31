@@ -46,6 +46,8 @@ type SettingKey =
   | 'hide_electrum'
   | `retention:${RetentionMode}`
   | 'hp_auto_calc'
+  | 'advancement'
+  | 'hp_mode'
   | 'war_caster'
   | 'show_private_identity'
   | `slot_mode:${'auto' | 'manual'}`
@@ -598,6 +600,31 @@ export default function Settings() {
             <RefreshCw size={14} />
             {t('character.settings.hp.recalc')}
           </Pressable>
+        </div>
+      </Surface>
+
+      <Surface variant="elevated">
+        <div className="space-y-3">
+          <SwitchToggle
+            checked={settings.advancement === 'milestone'}
+            pending={updateMutation.isPending && activeSetting === 'advancement'}
+            onChange={(next) => {
+              setActiveSetting('advancement')
+              updateMutation.mutate({ ...settings, advancement: next ? 'milestone' : 'xp' })
+            }}
+            label={t('character.settings.advancement.milestone_toggle')}
+            hint={t('character.settings.advancement.milestone_hint')}
+          />
+          <SwitchToggle
+            checked={settings.hp_mode === 'rolled'}
+            pending={updateMutation.isPending && activeSetting === 'hp_mode'}
+            onChange={(next) => {
+              setActiveSetting('hp_mode')
+              updateMutation.mutate({ ...settings, hp_mode: next ? 'rolled' : 'fixed' })
+            }}
+            label={t('character.settings.advancement.rolled_hp_toggle')}
+            hint={t('character.settings.advancement.rolled_hp_hint')}
+          />
         </div>
       </Surface>
 

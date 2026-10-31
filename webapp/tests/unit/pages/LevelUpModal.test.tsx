@@ -29,6 +29,9 @@ vi.mock('framer-motion', async () => {
 })
 
 vi.mock('sonner', () => ({ toast: { success: toastSuccess, info: toastInfo } }))
+vi.mock('@/dice/useDiceAnimation', () => ({
+  useDiceAnimation: () => ({ playAndCollect: async () => [{ groupIndex: 0, value: 5 }] }),
+}))
 vi.mock('@/hooks/useReducedMotion', () => ({ useReducedMotion: () => false }))
 vi.mock('@/store/overlayStore', () => ({ useRegisterOverlay: () => {} }))
 vi.mock('@/auth/telegram', () => ({ haptic: { success: () => {}, error: () => {}, medium: () => {} } }))
@@ -115,6 +118,27 @@ describe('LevelUpModal', () => {
     renderWithProviders(<LevelUpModal char={char()} xpLevel={6} onClose={vi.fn()} />)
     await userEvent.click(screen.getByRole('button', { name: 'character.multiclass.level_up.confirm' }))
     await waitFor(() => expect(toastSuccess).toHaveBeenCalledTimes(2)) // level-up + hp_gained
+  })
+
+  it('rolled HP mode: confirm is locked until the hit die is rolled, then sends hp_rolls', async () => {
+    distributeSpy.mockResolvedValue({ id: 5, hp_gained: 7, classes: [] })
+    renderWithProviders(
+      <LevelUpModal
+        char={char({
+          settings: { hp_mode: 'rolled' },
+          classes: [{ id: 21, class_name: 'wizard', level: 3, hit_die: 6 }],
+        })}
+        xpLevel={4}
+        onClose={vi.fn()}
+      />,
+    )
+    const confirm = screen.getByRole('button', { name: 'character.multiclass.level_up.confirm' })
+    expect(confirm).toBeDisabled()
+    await userEvent.click(screen.getByRole('button', { name: 'character.multiclass.level_up.roll_hp' }))
+    const enabled = await screen.findByRole('button', { name: 'character.multiclass.level_up.confirm' })
+    await waitFor(() => expect(enabled).toBeEnabled())
+    await userEvent.click(enabled)
+    await waitFor(() => expect(distributeSpy).toHaveBeenCalledWith(5, [{ class_id: 21, level: 4 }], [5]))
   })
 
   it('disables confirm and never distributes when the selected class is at level 20', async () => {

@@ -123,18 +123,19 @@ export default function Experience() {
   }
 
   const xp = char.experience_points
-  const level = levelFromXp(xp)
-  const nextThreshold = XP_THRESHOLDS[level] ?? null
+  const totalClassLevel = (char.classes ?? []).reduce((s: number, c: { level: number }) => s + c.level, 0)
+  const milestone = char.settings?.advancement === 'milestone'
+  const level = milestone ? totalClassLevel : levelFromXp(xp)
+  const nextThreshold = milestone ? null : (XP_THRESHOLDS[level] ?? null)
   const prevThreshold = XP_THRESHOLDS[level - 1] ?? 0
   const progress = nextThreshold
     ? Math.round(((xp - prevThreshold) / (nextThreshold - prevThreshold)) * 100)
     : 100
   const xpToNext = nextThreshold ? nextThreshold - xp : 0
 
-  const totalClassLevel = (char.classes ?? []).reduce((s: number, c: { level: number }) => s + c.level, 0)
   const isSingleClass = (char.classes ?? []).length === 1
   const isMulticlass = (char.classes ?? []).length > 1
-  const levelUpAvailable = isMulticlass && level > totalClassLevel
+  const levelUpAvailable = !milestone && isMulticlass && level > totalClassLevel
   const isMaxLevel = level >= 20
 
   // Derived (never '' when char exists): use the user's tab override when it still
@@ -167,7 +168,7 @@ export default function Experience() {
         <LevelUpBanner onOpen={() => setShowLevelUpModal(true)} />
       )}
 
-      {isSingleClass && (
+      {isSingleClass && !milestone && (
         <p className="text-xs text-dnd-text-muted text-center italic font-body">
           {t('character.xp.single_class_synced')}
         </p>
@@ -226,6 +227,7 @@ export default function Experience() {
           </p>
         )}
 
+        {!milestone && (
         <div className="flex items-center justify-center gap-2 mt-3">
           <Star size={14} className="text-dnd-amber" />
           <AnimatedNumber
@@ -237,6 +239,7 @@ export default function Experience() {
           />
           <span className="text-xs font-cinzel uppercase tracking-wider text-dnd-text-muted">{t('character.xp.label')}</span>
         </div>
+        )}
 
         {isMaxLevel && (
           <p className="mt-3 text-sm font-display font-bold text-dnd-gold-bright">
@@ -271,7 +274,21 @@ export default function Experience() {
         )}
       </Surface>
 
+      {milestone && !isMaxLevel && (
+        <Button
+          variant="primary"
+          size="lg"
+          fullWidth
+          onClick={() => setShowLevelUpModal(true)}
+          icon={<ChevronsUp size={18} />}
+          haptic="medium"
+        >
+          <span className="font-cinzel tracking-widest uppercase">{t('character.xp.level_up_cta')}</span>
+        </Button>
+      )}
+
       {/* Mode toggle */}
+      {!milestone && (<>
       <Surface variant="flat" className="!p-1.5">
         <div className="grid grid-cols-2 gap-1">
           {(['add', 'set'] as const).map((m) => {
@@ -334,6 +351,7 @@ export default function Experience() {
           </span>
         </Button>
       )}
+      </>)}
 
       {/* Class progression table */}
       {char.classes && char.classes.length > 0 && (
@@ -346,7 +364,7 @@ export default function Experience() {
       {showLevelUpModal && (
         <LevelUpModal
           char={char}
-          xpLevel={level}
+          xpLevel={milestone ? level + 1 : level}
           onClose={() => setShowLevelUpModal(false)}
         />
       )}

@@ -1235,6 +1235,9 @@
         "new_spell_slot": "New {{level}}th level spell slot",
         "confirm": "Confirm",
         "at_max_toast": "Class at max level",
+        "roll_hp": "Roll d{{die}} for HP",
+        "roll_hp_result": "Roll {{roll}} + CON {{con}} = {{total}} HP",
+        "roll_hp_required": "Roll the hit die to continue",
         "progression_missing": "Progression data unavailable"
       },
       "resource_max_increased": "{{name}}: max {{prev}} → {{next}}",
@@ -1328,6 +1331,12 @@
           "disabled_hint": "Enable 3D animation to pick a pack.",
           "load_error": "Failed to load pack, restored default."
         }
+      },
+      "advancement": {
+        "milestone_toggle": "Milestone advancement",
+        "milestone_hint": "Level up without tracking XP: the level-up button replaces the XP counter.",
+        "rolled_hp_toggle": "Rolled HP",
+        "rolled_hp_hint": "On level-up, roll the hit die instead of taking the fixed value."
       },
       "hp": {
         "title": "Hit Points",

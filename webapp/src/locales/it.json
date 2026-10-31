@@ -1235,6 +1235,9 @@
         "new_spell_slot": "Nuovo slot di {{level}}° livello",
         "confirm": "Conferma",
         "at_max_toast": "Classe al livello massimo",
+        "roll_hp": "Tira d{{die}} per i PF",
+        "roll_hp_result": "Tiro {{roll}} + COS {{con}} = {{total}} PF",
+        "roll_hp_required": "Tira il dado vita per continuare",
         "progression_missing": "Dati progressione non disponibili"
       },
       "resource_max_increased": "{{name}}: massimo {{prev}} → {{next}}",
@@ -1328,6 +1331,12 @@
           "disabled_hint": "Attiva l'animazione 3D per scegliere un pacchetto.",
           "load_error": "Impossibile caricare il pacchetto, ripristinato il predefinito."
         }
+      },
+      "advancement": {
+        "milestone_toggle": "Avanzamento a milestone",
+        "milestone_hint": "Sali di livello senza tracciare i PE: il pulsante di level-up sostituisce il contatore PE.",
+        "rolled_hp_toggle": "PF tirati",
+        "rolled_hp_hint": "Al level-up tira il dado vita invece di usare il valore fisso."
       },
       "hp": {
         "title": "Punti Ferita",

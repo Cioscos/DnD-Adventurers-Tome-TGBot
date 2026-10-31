@@ -117,6 +117,7 @@ class CharacterClassUpdate(BaseModel):
     spellcasting_ability: Optional[str] = None
     hit_die: Optional[int] = None
     hit_dice_used: Optional[int] = None
+    hp_rolls: Optional[list[int]] = None  # one die roll per gained level (not a column)
 
 
 class ClassLevelEntry(BaseModel):
@@ -132,6 +133,9 @@ class ClassDistribute(BaseModel):
     `level` values must equal the character's XP-derived total level.
     """
     classes: list[ClassLevelEntry]
+    # One die roll per gained level, in body order (each 1..hit_die). Used when
+    # settings.hp_mode == "rolled"; omitted -> fixed value.
+    hp_rolls: Optional[list[int]] = None
 
 
 # ---------------------------------------------------------------------------
