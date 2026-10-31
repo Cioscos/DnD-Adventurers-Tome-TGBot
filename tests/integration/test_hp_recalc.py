@@ -82,4 +82,4 @@ async def test_recalc_returns_full_character_shape(client):
 
     for key in ("id", "hit_points", "current_hit_points", "ac", "ac_breakdown"):
         assert key in body, f"missing {key} in recalc response"
-    assert set(body["ac_breakdown"]) == {"base", "shield", "magic", "homebrew"}
+    assert set(body["ac_breakdown"]) == {"base", "shield", "magic", "homebrew", "items"}

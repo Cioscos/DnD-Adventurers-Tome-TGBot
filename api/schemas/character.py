@@ -28,6 +28,7 @@ class AcBreakdown(BaseModel):
     shield: int
     magic: int
     homebrew: int
+    items: int = 0
 
 
 class SpellCasterStats(BaseModel):
@@ -69,6 +70,7 @@ class CharacterSummary(BaseModel):
     experience_points: int = 0
     hp_max_homebrew_modifier: int = 0
     ac_homebrew_modifier: int = 0
+    ac_items_modifier: int = 0
     is_dead: bool = False
 
     model_config = {"from_attributes": True}
@@ -105,6 +107,9 @@ class CharacterFull(BaseModel):
     ac_breakdown: Optional[AcBreakdown] = None
     hp_max_homebrew_modifier: int = 0
     speed_homebrew_modifier: int = 0
+    speed_items_modifier: int = 0
+    # DEX effective mod + item initiative bonus (+ homebrew initiative, Task 21)
+    initiative_bonus: int = 0
     skills_homebrew_modifiers: dict[str, int] = Field(default_factory=dict)
     saves_homebrew_modifiers: dict[str, int] = Field(default_factory=dict)
 

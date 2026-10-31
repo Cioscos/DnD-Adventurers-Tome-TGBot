@@ -16,6 +16,8 @@ from api.services.spellcasting import build_spellcasting_info
 from core.data.skills import SKILL_ABILITY_MAP
 from core.db.models import ABILITY_NAMES, Character
 from core.game.actions import attacks_per_action
+from core.game.item_bonuses import item_bonus_total
+from api.routers._helpers import effective_ability_mod
 
 
 async def build_character_response(
@@ -45,6 +47,7 @@ async def build_character_response(
         shield=char.shield_armor_class,
         magic=char.magic_armor,
         homebrew=hb_ac,
+        items=item_bonus_total(char.items, "ac"),
     )
 
     response.hp_max_homebrew_modifier = await get_passive_modifiers(
@@ -52,6 +55,11 @@ async def build_character_response(
     )
     response.speed_homebrew_modifier = await get_passive_modifiers(
         session, char, "character.speed"
+    )
+
+    response.speed_items_modifier = item_bonus_total(char.items, "speed")
+    response.initiative_bonus = effective_ability_mod(char, "dexterity") + item_bonus_total(
+        char.items, "initiative"
     )
 
     for slug in SKILL_ABILITY_MAP:

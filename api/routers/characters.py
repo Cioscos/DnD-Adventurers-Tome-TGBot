@@ -40,6 +40,7 @@ from api.schemas.character import (
 )
 from api.schemas.common import D20RollSubmission, RollResult
 from api.routers.classes import create_class_for_character
+from core.game.item_bonuses import item_bonus_total
 from api.routers._helpers import effective_ability_mod, prune_history, saving_throw_bonus
 from api.services import telegram_notify
 from api.services.d20 import d20_history_label, d20_records, resolve_body
@@ -171,7 +172,7 @@ async def list_characters(
 ) -> list[CharacterSummary]:
     result = await session.execute(
         select(Character)
-        .options(selectinload(Character.classes))
+        .options(selectinload(Character.classes), selectinload(Character.items))
         .where(Character.user_id == user_id)
         .order_by(Character.id)
     )
@@ -185,6 +186,7 @@ async def list_characters(
         summary.ac_homebrew_modifier = await get_passive_modifiers(
             session, c, "character.ac"
         )
+        summary.ac_items_modifier = item_bonus_total(c.items, "ac")
         summaries.append(summary)
     return summaries
 

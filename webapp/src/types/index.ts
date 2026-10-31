@@ -142,6 +142,7 @@ export interface CharacterSummary {
   experience_points: number
   hp_max_homebrew_modifier: number
   ac_homebrew_modifier: number
+  ac_items_modifier?: number
   is_dead: boolean
 }
 
@@ -169,6 +170,8 @@ export interface AcBreakdown {
   shield: number
   magic: number
   homebrew: number
+  /** Bonus CA da oggetti magici attivi (equipaggiati/sintonizzati). */
+  items?: number
 }
 
 /** Blocco derivato dal BE: preparazione incantesimi + capacità rituali. */
@@ -197,6 +200,9 @@ export interface CharacterFull extends Omit<CharacterSummary, 'ac_homebrew_modif
   unarmored_defense_ability?: 'wisdom' | 'constitution' | null
   ac_breakdown?: AcBreakdown | null
   speed_homebrew_modifier?: number
+  speed_items_modifier?: number
+  /** DEX effettiva + bonus iniziativa da oggetti: stesso valore usato per il tiro. */
+  initiative_bonus?: number
   skills_homebrew_modifiers?: Record<string, number>
   saves_homebrew_modifiers?: Record<string, number>
   carry_capacity: number

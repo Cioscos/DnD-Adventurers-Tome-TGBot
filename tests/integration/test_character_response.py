@@ -27,7 +27,7 @@ async def test_baseline_breakdown_and_defaults(client):
     assert r.status_code == 200, r.text
     body = r.json()
 
-    assert body["ac_breakdown"] == {"base": 10, "shield": 0, "magic": 0, "homebrew": 0}
+    assert body["ac_breakdown"] == {"base": 10, "shield": 0, "magic": 0, "homebrew": 0, "items": 0}
     assert body["ac"] == 10
     assert body["has_custom_silhouette"] is False
     assert body["hp_max_homebrew_modifier"] == 0

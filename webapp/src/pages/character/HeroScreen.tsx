@@ -56,7 +56,7 @@ export default function HeroScreen({ char }: Props) {
   const [layoutSheetOpen, setLayoutSheetOpen] = useState(false)
 
   const hpMax = char.hit_points + (char.hp_max_homebrew_modifier ?? 0)
-  const acTotal = char.ac + (char.ac_breakdown?.homebrew ?? 0)
+  const acTotal = char.ac + (char.ac_breakdown?.homebrew ?? 0) + (char.ac_breakdown?.items ?? 0)
   const unitSystem = useUnitSettings((s) => s.system)
   const weightLabel = formatWeightValue(char.encumbrance, unitSystem)
   const overloaded = char.encumbrance > char.carry_capacity

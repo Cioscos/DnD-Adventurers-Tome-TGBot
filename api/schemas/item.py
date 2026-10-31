@@ -9,6 +9,7 @@ from typing import Any, Optional
 from pydantic import BaseModel, ValidationInfo, field_validator
 
 from api.schemas.common import RollMode
+from api.schemas.item_magic import validate_magic_meta
 from core.db.models import EquipmentSlot
 from api.services.equipment import slot_allowed_for_type
 
@@ -159,6 +160,7 @@ class ItemCreate(BaseModel):
                     f"subtype must be one of {sorted(_ALLOWED_SUBTYPES)}, got {v['subtype']!r}"
                 )
             _validate_weapon_meta(v)
+            validate_magic_meta(v)
         return v
 
     @field_validator("equipment_slot", mode="after")
@@ -197,6 +199,7 @@ class ItemUpdate(BaseModel):
                     f"subtype must be one of {sorted(_ALLOWED_SUBTYPES)}, got {v['subtype']!r}"
                 )
             _validate_weapon_meta(v)
+            validate_magic_meta(v)
         return v
 
 

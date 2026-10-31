@@ -22,6 +22,7 @@ from core.db.models import Character, CharacterClass, CharacterHistory, Equipmen
 from api.schemas.character import CharacterFull
 from api.schemas.item import AmmoState, ItemCreate, ItemRead, ItemUpdate, WeaponAttackResult
 from core.game.stats import effective_ability_score
+from core.game.item_bonuses import is_attuned, item_bonus_total
 from core.game.attacks import unarmed_strike_profile
 from core.data.spell_slots import normalize_class_name
 from api.routers._helpers import (
@@ -156,6 +157,14 @@ async def _apply_item_property_defaults(
         item.item_metadata = json.dumps(md)
 
 
+def _check_attunement_limit(char, item, new_meta: dict | None) -> None:
+    """409 when this write newly attunes an item and the character already has 3."""
+    if not (new_meta or {}).get("attuned") or (item is not None and is_attuned(item)):
+        return
+    if sum(1 for i in char.items if i is not item and is_attuned(i)) >= 3:
+        raise HTTPException(status_code=409, detail="attunement_limit")
+
+
 @router.post("/{char_id}/items", response_model=CharacterFull, status_code=201)
 async def add_item(
     char_id: int,
@@ -182,6 +191,7 @@ async def add_item(
             await session.refresh(char, attribute_names=["items"])
             return await build_character_response(session, char)
 
+    _check_attunement_limit(char, None, body.item_metadata)
     metadata_str = json.dumps(body.item_metadata) if body.item_metadata else None
     item = Item(
         character_id=char_id,
@@ -229,6 +239,9 @@ async def update_item(
     data = body.model_dump(exclude_unset=True)
     if "item_metadata" in data:
         data["item_metadata"] = json.dumps(data["item_metadata"]) if data["item_metadata"] else None
+
+    if "item_metadata" in body.model_fields_set:
+        _check_attunement_limit(char, item, body.item_metadata)
 
     # Validate slot/type compatibility using the (post-update) item_type.
     new_type = data.get("item_type", item.item_type)
@@ -518,7 +531,7 @@ async def attack_with_weapon(
     # To-hit roll
     outcome = resolve_body(body)
     to_hit_die = outcome.kept
-    to_hit_bonus = ability_mod + pb + magic_bonus
+    to_hit_bonus = ability_mod + pb + magic_bonus + item_bonus_total(char.items, "attack")
     to_hit_total = to_hit_die + to_hit_bonus
     is_critical = to_hit_die == 20
     is_fumble = to_hit_die == 1
@@ -535,7 +548,7 @@ async def attack_with_weapon(
         damage_bonus = 0
         damage_total = 0
     else:
-        damage_bonus = ability_mod + magic_bonus + dice_bonus
+        damage_bonus = ability_mod + magic_bonus + item_bonus_total(char.items, "damage") + dice_bonus
         damage_total = max(0, sum(damage_rolls) + damage_bonus)
 
     result_str = (

@@ -53,6 +53,7 @@ export default function HeroStatsSection({ char }: Props) {
 
   const pb = profBonus(char.total_level ?? 1)
   const dexMod = abilityMod('dexterity')
+  const initBonus = char.initiative_bonus ?? dexMod
 
   // Passive perception — identical formula to Skills.tsx.
   const skills = (char.skills as Record<string, unknown>) ?? {}
@@ -61,7 +62,7 @@ export default function HeroStatsSection({ char }: Props) {
   const passivePerception =
     10 + abilityMod('wisdom') + (percLvl === 'expert' ? 2 * pb : percLvl ? pb : 0) + percHb
 
-  const speedTotal = (char.speed ?? 30) + (char.speed_homebrew_modifier ?? 0)
+  const speedTotal = (char.speed ?? 30) + (char.speed_homebrew_modifier ?? 0) + (char.speed_items_modifier ?? 0)
   const speedLabel = formatLength(speedTotal, unitSystem)
 
   // Proficient saving throws with their total bonus (same math as SavingThrows.tsx).
@@ -93,10 +94,10 @@ export default function HeroStatsSection({ char }: Props) {
       const faces = (await rollD20(mode)) ?? Array.from({ length: n }, () => 1 + Math.floor(Math.random() * 20))
       const value = mode === 'advantage' ? Math.max(...faces) : mode === 'disadvantage' ? Math.min(...faces) : faces[0]
       const keep = mode === 'advantage' ? 'kh1' : mode === 'disadvantage' ? 'kl1' : ''
-      const notation = `${n}d20${keep}${dexMod >= 0 ? '+' : ''}${dexMod}`
+      const notation = `${n}d20${keep}${initBonus >= 0 ? '+' : ''}${initBonus}`
       await api.dice.result(char.id, {
         rolls: faces.map((v) => ({ kind: 'd20' as const, value: v })),
-        modifier: dexMod,
+        modifier: initBonus,
         notation,
         label: t('character.hero.initiative'),
         mode,
@@ -111,8 +112,8 @@ export default function HeroStatsSection({ char }: Props) {
         die: value,
         dice: faces,
         mode,
-        bonus: dexMod,
-        total: value + dexMod,
+        bonus: initBonus,
+        total: value + initBonus,
         is_critical: value === 20,
         is_fumble: value === 1,
       })
@@ -124,7 +125,7 @@ export default function HeroStatsSection({ char }: Props) {
     {
       key: 'init',
       label: t('character.hero.initiative'),
-      value: sign(dexMod),
+      value: sign(initBonus),
       path: 'stats',
     },
     {
@@ -203,6 +204,16 @@ export default function HeroStatsSection({ char }: Props) {
             value={char.speed_homebrew_modifier ?? 0}
             label={t('character.hero.speed_homebrew_label')}
             display={`${(char.speed_homebrew_modifier ?? 0) > 0 ? '+' : ''}${formatLength(char.speed_homebrew_modifier ?? 0, unitSystem)}`}
+          />
+        </div>
+      )}
+
+      {(char.speed_items_modifier ?? 0) !== 0 && (
+        <div className="mt-1.5 rounded-lg border border-dnd-border bg-dnd-surface-raised">
+          <HomebrewBreakdownRow
+            value={char.speed_items_modifier ?? 0}
+            label={t('character.hero.speed_items_label')}
+            display={`${(char.speed_items_modifier ?? 0) > 0 ? '+' : ''}${formatLength(char.speed_items_modifier ?? 0, unitSystem)}`}
           />
         </div>
       )}

@@ -16,6 +16,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from core.game.item_bonuses import item_bonus_total
 from api.auth import get_current_user
 from api.database import get_db
 from api.routers.sessions import _assert_participant, _load_session, _now, _touch
@@ -86,7 +87,7 @@ def _dex_modifier(char: Character) -> int:
     base = next((a.value for a in (char.ability_scores or []) if a.name == "dexterity"), 10)
     equipped = [i for i in (char.items or []) if i.is_equipped]
     effective, _ = effective_ability_score("dexterity", base, equipped)
-    return (effective - 10) // 2
+    return (effective - 10) // 2 + item_bonus_total(char.items or [], "initiative")
 
 
 async def _add_missing_pc_combatants(

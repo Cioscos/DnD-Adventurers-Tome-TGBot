@@ -23,14 +23,14 @@ export default function EquipmentStatsFooter({ char }: Props) {
     ?.filter((i) => i.is_equipped)
     .reduce((sum, i) => sum + (i.weight || 0) * (i.quantity || 1), 0) ?? 0
 
-  const acTotal = char.ac + (char.ac_breakdown?.homebrew ?? 0)
+  const acTotal = char.ac + (char.ac_breakdown?.homebrew ?? 0) + (char.ac_breakdown?.items ?? 0)
 
   // Carry capacity is canonical lb on the character; the local STR×15 recompute
   // was removed so a manual override (char.carry_capacity_override) is honored here too.
   const carryCap = char.carry_capacity
   const overload = encumbrance > carryCap
 
-  const speedTotal = (char.speed ?? 30) + (char.speed_homebrew_modifier ?? 0)
+  const speedTotal = (char.speed ?? 30) + (char.speed_homebrew_modifier ?? 0) + (char.speed_items_modifier ?? 0)
 
   const strScore = char.ability_scores.find((s) => s.name.toLowerCase() === 'strength')?.value ?? 10
   const carryFormula = char.carry_capacity_override

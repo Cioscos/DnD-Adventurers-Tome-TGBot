@@ -1,5 +1,6 @@
 """Shared helpers for router logic (avoid circular imports)."""
 import logging
+from core.game.item_bonuses import item_bonus_total
 from datetime import datetime, timedelta
 
 from sqlalchemy import delete, func, select
@@ -101,6 +102,7 @@ async def saving_throw_bonus(session: AsyncSession, char: Character, ability: st
         effective_ability_mod(char, ability)
         + (char.proficiency_bonus if proficient else 0)
         + await get_passive_modifiers(session, char, f"character.saving_throw.{ability}")
+        + item_bonus_total(char.items, f"save.{ability}")
     )
 
 
