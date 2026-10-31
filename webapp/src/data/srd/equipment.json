@@ -1,0 +1,781 @@
+{
+ "_meta": {
+  "source": "https://www.dnd5eapi.co (D&D 5e SRD 2014)",
+  "license": "CC-BY-4.0",
+  "generated_at": "2026-10-31"
+ },
+ "items": [
+  {
+   "index": "battleaxe",
+   "name": {
+    "en": "Battleaxe"
+   },
+   "weight_lb": 4,
+   "damage_dice": "1d8",
+   "damage_type": "slashing",
+   "weapon_category": "martial",
+   "weapon_range": "melee",
+   "properties": [
+    "prop_versatile"
+   ],
+   "versatile_dice": "1d10",
+   "range_ft": 5
+  },
+  {
+   "index": "blowgun",
+   "name": {
+    "en": "Blowgun"
+   },
+   "weight_lb": 1,
+   "damage_dice": "1",
+   "damage_type": "piercing",
+   "weapon_category": "martial",
+   "weapon_range": "ranged",
+   "properties": [
+    "prop_ammunition",
+    "prop_loading"
+   ],
+   "versatile_dice": null,
+   "range_ft": 25
+  },
+  {
+   "index": "breastplate",
+   "name": {
+    "en": "Breastplate"
+   },
+   "weight_lb": 20,
+   "armor_type": "medium",
+   "ac_value": 14,
+   "dex_bonus": true,
+   "strength_req": 0,
+   "stealth_disadvantage": false
+  },
+  {
+   "index": "chain-mail",
+   "name": {
+    "en": "Chain Mail"
+   },
+   "weight_lb": 55,
+   "armor_type": "heavy",
+   "ac_value": 16,
+   "dex_bonus": false,
+   "strength_req": 13,
+   "stealth_disadvantage": true
+  },
+  {
+   "index": "chain-shirt",
+   "name": {
+    "en": "Chain Shirt"
+   },
+   "weight_lb": 20,
+   "armor_type": "medium",
+   "ac_value": 13,
+   "dex_bonus": true,
+   "strength_req": 0,
+   "stealth_disadvantage": false
+  },
+  {
+   "index": "club",
+   "name": {
+    "en": "Club"
+   },
+   "weight_lb": 2,
+   "damage_dice": "1d4",
+   "damage_type": "bludgeoning",
+   "weapon_category": "simple",
+   "weapon_range": "melee",
+   "properties": [
+    "prop_light"
+   ],
+   "versatile_dice": null,
+   "range_ft": 5
+  },
+  {
+   "index": "crossbow-hand",
+   "name": {
+    "en": "Crossbow, hand"
+   },
+   "weight_lb": 3,
+   "damage_dice": "1d6",
+   "damage_type": "piercing",
+   "weapon_category": "martial",
+   "weapon_range": "ranged",
+   "properties": [
+    "prop_ammunition",
+    "prop_light",
+    "prop_loading"
+   ],
+   "versatile_dice": null,
+   "range_ft": 30
+  },
+  {
+   "index": "crossbow-heavy",
+   "name": {
+    "en": "Crossbow, heavy"
+   },
+   "weight_lb": 18,
+   "damage_dice": "1d10",
+   "damage_type": "piercing",
+   "weapon_category": "martial",
+   "weapon_range": "ranged",
+   "properties": [
+    "prop_ammunition",
+    "prop_heavy",
+    "prop_loading",
+    "prop_two_handed"
+   ],
+   "versatile_dice": null,
+   "range_ft": 100
+  },
+  {
+   "index": "crossbow-light",
+   "name": {
+    "en": "Crossbow, light"
+   },
+   "weight_lb": 5,
+   "damage_dice": "1d8",
+   "damage_type": "piercing",
+   "weapon_category": "simple",
+   "weapon_range": "ranged",
+   "properties": [
+    "prop_ammunition",
+    "prop_loading",
+    "prop_two_handed"
+   ],
+   "versatile_dice": null,
+   "range_ft": 80
+  },
+  {
+   "index": "dagger",
+   "name": {
+    "en": "Dagger"
+   },
+   "weight_lb": 1,
+   "damage_dice": "1d4",
+   "damage_type": "piercing",
+   "weapon_category": "simple",
+   "weapon_range": "melee",
+   "properties": [
+    "prop_finesse",
+    "prop_light",
+    "prop_thrown"
+   ],
+   "versatile_dice": null,
+   "range_ft": 5
+  },
+  {
+   "index": "dart",
+   "name": {
+    "en": "Dart"
+   },
+   "weight_lb": 0.25,
+   "damage_dice": "1d4",
+   "damage_type": "piercing",
+   "weapon_category": "simple",
+   "weapon_range": "ranged",
+   "properties": [
+    "prop_finesse",
+    "prop_thrown"
+   ],
+   "versatile_dice": null,
+   "range_ft": 20
+  },
+  {
+   "index": "flail",
+   "name": {
+    "en": "Flail"
+   },
+   "weight_lb": 2,
+   "damage_dice": "1d8",
+   "damage_type": "bludgeoning",
+   "weapon_category": "martial",
+   "weapon_range": "melee",
+   "properties": [],
+   "versatile_dice": null,
+   "range_ft": 5
+  },
+  {
+   "index": "glaive",
+   "name": {
+    "en": "Glaive"
+   },
+   "weight_lb": 6,
+   "damage_dice": "1d10",
+   "damage_type": "slashing",
+   "weapon_category": "martial",
+   "weapon_range": "melee",
+   "properties": [
+    "prop_heavy",
+    "prop_reach",
+    "prop_two_handed"
+   ],
+   "versatile_dice": null,
+   "range_ft": 5
+  },
+  {
+   "index": "greataxe",
+   "name": {
+    "en": "Greataxe"
+   },
+   "weight_lb": 7,
+   "damage_dice": "1d12",
+   "damage_type": "slashing",
+   "weapon_category": "martial",
+   "weapon_range": "melee",
+   "properties": [
+    "prop_heavy",
+    "prop_two_handed"
+   ],
+   "versatile_dice": null,
+   "range_ft": 5
+  },
+  {
+   "index": "greatclub",
+   "name": {
+    "en": "Greatclub"
+   },
+   "weight_lb": 10,
+   "damage_dice": "1d8",
+   "damage_type": "bludgeoning",
+   "weapon_category": "simple",
+   "weapon_range": "melee",
+   "properties": [
+    "prop_two_handed"
+   ],
+   "versatile_dice": null,
+   "range_ft": 5
+  },
+  {
+   "index": "greatsword",
+   "name": {
+    "en": "Greatsword"
+   },
+   "weight_lb": 6,
+   "damage_dice": "2d6",
+   "damage_type": "slashing",
+   "weapon_category": "martial",
+   "weapon_range": "melee",
+   "properties": [
+    "prop_heavy",
+    "prop_two_handed"
+   ],
+   "versatile_dice": null,
+   "range_ft": 5
+  },
+  {
+   "index": "halberd",
+   "name": {
+    "en": "Halberd"
+   },
+   "weight_lb": 6,
+   "damage_dice": "1d10",
+   "damage_type": "slashing",
+   "weapon_category": "martial",
+   "weapon_range": "melee",
+   "properties": [
+    "prop_heavy",
+    "prop_reach",
+    "prop_two_handed"
+   ],
+   "versatile_dice": null,
+   "range_ft": 5
+  },
+  {
+   "index": "half-plate-armor",
+   "name": {
+    "en": "Half Plate Armor"
+   },
+   "weight_lb": 40,
+   "armor_type": "medium",
+   "ac_value": 15,
+   "dex_bonus": true,
+   "strength_req": 0,
+   "stealth_disadvantage": true
+  },
+  {
+   "index": "handaxe",
+   "name": {
+    "en": "Handaxe"
+   },
+   "weight_lb": 2,
+   "damage_dice": "1d6",
+   "damage_type": "slashing",
+   "weapon_category": "simple",
+   "weapon_range": "melee",
+   "properties": [
+    "prop_light",
+    "prop_thrown"
+   ],
+   "versatile_dice": null,
+   "range_ft": 5
+  },
+  {
+   "index": "hide-armor",
+   "name": {
+    "en": "Hide Armor"
+   },
+   "weight_lb": 12,
+   "armor_type": "medium",
+   "ac_value": 12,
+   "dex_bonus": true,
+   "strength_req": 0,
+   "stealth_disadvantage": false
+  },
+  {
+   "index": "javelin",
+   "name": {
+    "en": "Javelin"
+   },
+   "weight_lb": 2,
+   "damage_dice": "1d6",
+   "damage_type": "piercing",
+   "weapon_category": "simple",
+   "weapon_range": "melee",
+   "properties": [
+    "prop_thrown"
+   ],
+   "versatile_dice": null,
+   "range_ft": 5
+  },
+  {
+   "index": "lance",
+   "name": {
+    "en": "Lance"
+   },
+   "weight_lb": 6,
+   "damage_dice": "1d12",
+   "damage_type": "piercing",
+   "weapon_category": "martial",
+   "weapon_range": "melee",
+   "properties": [
+    "prop_reach",
+    "prop_special"
+   ],
+   "versatile_dice": null,
+   "range_ft": 5
+  },
+  {
+   "index": "leather-armor",
+   "name": {
+    "en": "Leather Armor"
+   },
+   "weight_lb": 10,
+   "armor_type": "light",
+   "ac_value": 11,
+   "dex_bonus": true,
+   "strength_req": 0,
+   "stealth_disadvantage": false
+  },
+  {
+   "index": "light-hammer",
+   "name": {
+    "en": "Light hammer"
+   },
+   "weight_lb": 2,
+   "damage_dice": "1d4",
+   "damage_type": "bludgeoning",
+   "weapon_category": "simple",
+   "weapon_range": "melee",
+   "properties": [
+    "prop_light",
+    "prop_thrown"
+   ],
+   "versatile_dice": null,
+   "range_ft": 5
+  },
+  {
+   "index": "longbow",
+   "name": {
+    "en": "Longbow"
+   },
+   "weight_lb": 2,
+   "damage_dice": "1d8",
+   "damage_type": "piercing",
+   "weapon_category": "martial",
+   "weapon_range": "ranged",
+   "properties": [
+    "prop_ammunition",
+    "prop_heavy",
+    "prop_two_handed"
+   ],
+   "versatile_dice": null,
+   "range_ft": 150
+  },
+  {
+   "index": "longsword",
+   "name": {
+    "en": "Longsword"
+   },
+   "weight_lb": 3,
+   "damage_dice": "1d8",
+   "damage_type": "slashing",
+   "weapon_category": "martial",
+   "weapon_range": "melee",
+   "properties": [
+    "prop_versatile"
+   ],
+   "versatile_dice": "1d10",
+   "range_ft": 5
+  },
+  {
+   "index": "mace",
+   "name": {
+    "en": "Mace"
+   },
+   "weight_lb": 4,
+   "damage_dice": "1d6",
+   "damage_type": "bludgeoning",
+   "weapon_category": "simple",
+   "weapon_range": "melee",
+   "properties": [],
+   "versatile_dice": null,
+   "range_ft": 5
+  },
+  {
+   "index": "maul",
+   "name": {
+    "en": "Maul"
+   },
+   "weight_lb": 10,
+   "damage_dice": "2d6",
+   "damage_type": "bludgeoning",
+   "weapon_category": "martial",
+   "weapon_range": "melee",
+   "properties": [
+    "prop_heavy",
+    "prop_two_handed"
+   ],
+   "versatile_dice": null,
+   "range_ft": 5
+  },
+  {
+   "index": "morningstar",
+   "name": {
+    "en": "Morningstar"
+   },
+   "weight_lb": 4,
+   "damage_dice": "1d8",
+   "damage_type": "piercing",
+   "weapon_category": "martial",
+   "weapon_range": "melee",
+   "properties": [],
+   "versatile_dice": null,
+   "range_ft": 5
+  },
+  {
+   "index": "net",
+   "name": {
+    "en": "Net"
+   },
+   "weight_lb": 3,
+   "damage_dice": null,
+   "damage_type": null,
+   "weapon_category": "martial",
+   "weapon_range": "ranged",
+   "properties": [
+    "prop_special",
+    "prop_thrown"
+   ],
+   "versatile_dice": null,
+   "range_ft": 5
+  },
+  {
+   "index": "padded-armor",
+   "name": {
+    "en": "Padded Armor"
+   },
+   "weight_lb": 8,
+   "armor_type": "light",
+   "ac_value": 11,
+   "dex_bonus": true,
+   "strength_req": 0,
+   "stealth_disadvantage": true
+  },
+  {
+   "index": "pike",
+   "name": {
+    "en": "Pike"
+   },
+   "weight_lb": 18,
+   "damage_dice": "1d10",
+   "damage_type": "piercing",
+   "weapon_category": "martial",
+   "weapon_range": "melee",
+   "properties": [
+    "prop_heavy",
+    "prop_reach",
+    "prop_two_handed"
+   ],
+   "versatile_dice": null,
+   "range_ft": 5
+  },
+  {
+   "index": "plate-armor",
+   "name": {
+    "en": "Plate Armor"
+   },
+   "weight_lb": 65,
+   "armor_type": "heavy",
+   "ac_value": 18,
+   "dex_bonus": false,
+   "strength_req": 15,
+   "stealth_disadvantage": true
+  },
+  {
+   "index": "quarterstaff",
+   "name": {
+    "en": "Quarterstaff"
+   },
+   "weight_lb": 4,
+   "damage_dice": "1d6",
+   "damage_type": "bludgeoning",
+   "weapon_category": "simple",
+   "weapon_range": "melee",
+   "properties": [
+    "prop_versatile"
+   ],
+   "versatile_dice": "1d8",
+   "range_ft": 5
+  },
+  {
+   "index": "rapier",
+   "name": {
+    "en": "Rapier"
+   },
+   "weight_lb": 2,
+   "damage_dice": "1d8",
+   "damage_type": "piercing",
+   "weapon_category": "martial",
+   "weapon_range": "melee",
+   "properties": [
+    "prop_finesse"
+   ],
+   "versatile_dice": null,
+   "range_ft": 5
+  },
+  {
+   "index": "ring-mail",
+   "name": {
+    "en": "Ring Mail"
+   },
+   "weight_lb": 40,
+   "armor_type": "heavy",
+   "ac_value": 14,
+   "dex_bonus": false,
+   "strength_req": 0,
+   "stealth_disadvantage": true
+  },
+  {
+   "index": "scale-mail",
+   "name": {
+    "en": "Scale Mail"
+   },
+   "weight_lb": 45,
+   "armor_type": "medium",
+   "ac_value": 14,
+   "dex_bonus": true,
+   "strength_req": 0,
+   "stealth_disadvantage": true
+  },
+  {
+   "index": "scimitar",
+   "name": {
+    "en": "Scimitar"
+   },
+   "weight_lb": 3,
+   "damage_dice": "1d6",
+   "damage_type": "slashing",
+   "weapon_category": "martial",
+   "weapon_range": "melee",
+   "properties": [
+    "prop_finesse",
+    "prop_light"
+   ],
+   "versatile_dice": null,
+   "range_ft": 5
+  },
+  {
+   "index": "shield",
+   "name": {
+    "en": "Shield"
+   },
+   "weight_lb": 6,
+   "armor_type": "shield",
+   "ac_value": 2,
+   "dex_bonus": false,
+   "strength_req": 0,
+   "stealth_disadvantage": false
+  },
+  {
+   "index": "shortbow",
+   "name": {
+    "en": "Shortbow"
+   },
+   "weight_lb": 2,
+   "damage_dice": "1d6",
+   "damage_type": "piercing",
+   "weapon_category": "simple",
+   "weapon_range": "ranged",
+   "properties": [
+    "prop_ammunition",
+    "prop_two_handed"
+   ],
+   "versatile_dice": null,
+   "range_ft": 80
+  },
+  {
+   "index": "shortsword",
+   "name": {
+    "en": "Shortsword"
+   },
+   "weight_lb": 2,
+   "damage_dice": "1d6",
+   "damage_type": "piercing",
+   "weapon_category": "martial",
+   "weapon_range": "melee",
+   "properties": [
+    "prop_finesse",
+    "prop_light"
+   ],
+   "versatile_dice": null,
+   "range_ft": 5
+  },
+  {
+   "index": "sickle",
+   "name": {
+    "en": "Sickle"
+   },
+   "weight_lb": 2,
+   "damage_dice": "1d4",
+   "damage_type": "slashing",
+   "weapon_category": "simple",
+   "weapon_range": "melee",
+   "properties": [
+    "prop_light"
+   ],
+   "versatile_dice": null,
+   "range_ft": 5
+  },
+  {
+   "index": "sling",
+   "name": {
+    "en": "Sling"
+   },
+   "weight_lb": 0,
+   "damage_dice": "1d4",
+   "damage_type": "bludgeoning",
+   "weapon_category": "simple",
+   "weapon_range": "ranged",
+   "properties": [
+    "prop_ammunition"
+   ],
+   "versatile_dice": null,
+   "range_ft": 30
+  },
+  {
+   "index": "spear",
+   "name": {
+    "en": "Spear"
+   },
+   "weight_lb": 3,
+   "damage_dice": "1d6",
+   "damage_type": "piercing",
+   "weapon_category": "simple",
+   "weapon_range": "melee",
+   "properties": [
+    "prop_thrown",
+    "prop_versatile"
+   ],
+   "versatile_dice": "1d8",
+   "range_ft": 5
+  },
+  {
+   "index": "splint-armor",
+   "name": {
+    "en": "Splint Armor"
+   },
+   "weight_lb": 60,
+   "armor_type": "heavy",
+   "ac_value": 17,
+   "dex_bonus": false,
+   "strength_req": 15,
+   "stealth_disadvantage": true
+  },
+  {
+   "index": "studded-leather-armor",
+   "name": {
+    "en": "Studded Leather Armor"
+   },
+   "weight_lb": 13,
+   "armor_type": "light",
+   "ac_value": 12,
+   "dex_bonus": true,
+   "strength_req": 0,
+   "stealth_disadvantage": false
+  },
+  {
+   "index": "trident",
+   "name": {
+    "en": "Trident"
+   },
+   "weight_lb": 4,
+   "damage_dice": "1d6",
+   "damage_type": "piercing",
+   "weapon_category": "martial",
+   "weapon_range": "melee",
+   "properties": [
+    "prop_thrown",
+    "prop_versatile"
+   ],
+   "versatile_dice": "1d8",
+   "range_ft": 5
+  },
+  {
+   "index": "war-pick",
+   "name": {
+    "en": "War pick"
+   },
+   "weight_lb": 2,
+   "damage_dice": "1d8",
+   "damage_type": "piercing",
+   "weapon_category": "martial",
+   "weapon_range": "melee",
+   "properties": [],
+   "versatile_dice": null,
+   "range_ft": 5
+  },
+  {
+   "index": "warhammer",
+   "name": {
+    "en": "Warhammer"
+   },
+   "weight_lb": 2,
+   "damage_dice": "1d8",
+   "damage_type": "bludgeoning",
+   "weapon_category": "martial",
+   "weapon_range": "melee",
+   "properties": [
+    "prop_versatile"
+   ],
+   "versatile_dice": "1d10",
+   "range_ft": 5
+  },
+  {
+   "index": "whip",
+   "name": {
+    "en": "Whip"
+   },
+   "weight_lb": 3,
+   "damage_dice": "1d4",
+   "damage_type": "slashing",
+   "weapon_category": "martial",
+   "weapon_range": "melee",
+   "properties": [
+    "prop_finesse",
+    "prop_reach"
+   ],
+   "versatile_dice": null,
+   "range_ft": 5
+  }
+ ]
+}
