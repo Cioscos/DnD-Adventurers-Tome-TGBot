@@ -54,7 +54,7 @@ from api.services.effects import apply_conditions
 from api.services.durations import set_condition_durations, tick_rounds
 from api.services.spell_slots import recalc_spell_slots
 from api.services.choices import add_asi_choices
-from api.services.hp_rolls import record_rolls
+from api.services.hp_rolls import record_rolls, stored_rolls
 from api.services.homebrew.passive import get_passive_modifiers
 
 router = APIRouter(prefix="/characters", tags=["characters"])
@@ -524,17 +524,27 @@ async def update_xp(
         new_level = xp_to_level(char.experience_points)
         if new_level != old_level or body.hp_rolls:
             cls.level = new_level
+            lost_rolls = stored_rolls(char).get(cls.id, {})  # read before record_rolls drops them
             # Validates hp_rolls (count/range -> 422) and drops stale rolls. Omitted rolls in
             # rolled mode fall back to the fixed value so older clients keep working.
             record_rolls(char, cls, old_level, new_level, body.hp_rolls)
             add_asi_choices(char, cls.class_name, old_level, new_level)
             await sync_class_feature_abilities(session, char, cls, lang=lang)
 
-            if auto_calc and cls.hit_die and new_level > old_level:
-                con_row = next(
-                    (a for a in char.ability_scores if a.name == "constitution"), None
+            con_row = next(
+                (a for a in char.ability_scores if a.name == "constitution"), None
+            )
+            con_mod = (con_row.value - 10) // 2 if con_row else 0
+            if auto_calc and cls.hit_die and new_level < old_level:
+                # Symmetric to level-up: each lost level gives back its stored roll or the fixed value.
+                lost = sum(
+                    max(1, lost_rolls[lvl] + effective_con_mod(char)) if lvl in lost_rolls
+                    else hit_points_for_level(cls.hit_die, con_mod, max(2, lvl))
+                    for lvl in range(new_level + 1, old_level + 1)
                 )
-                con_mod = (con_row.value - 10) // 2 if con_row else 0
+                char.hit_points = max(1, char.hit_points - lost)
+                char.current_hit_points = min(char.current_hit_points, char.hit_points)
+            if auto_calc and cls.hit_die and new_level > old_level:
                 for lvl in range(old_level + 1, new_level + 1):
                     if body.hp_rolls:
                         # rolled: roll + effective CON, min 1

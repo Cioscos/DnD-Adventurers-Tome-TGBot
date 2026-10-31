@@ -3,8 +3,8 @@
 D&D 5e SRD thresholds (core.data.xp_thresholds): 300 → L2, 900 → L3.
 For a SINGLE-class character the class level tracks the XP-derived level and,
 with ``hp_auto_calc`` on, each gained level adds ``hit_die//2 + 1 + con_mod`` HP
-(the fixed method; level 1 was granted at creation). Level-DOWN syncs the class
-level but never *removes* HP. Multiclass characters do NOT auto-sync (the user
+(the fixed method; level 1 was granted at creation). Level-DOWN removes exactly
+what each lost level added (stored roll, else fixed) and clamps current HP. Multiclass characters do NOT auto-sync (the user
 distributes levels manually via /classes/distribute).
 
 Contract: ``CharacterFull`` with experience_points / classes[].level /
@@ -54,15 +54,45 @@ async def test_add_xp_levels_up_by_one(client):
     assert body["hit_points"] == 16
 
 
-async def test_level_down_syncs_level_but_keeps_hp(client):
+async def test_level_down_removes_fixed_hp_and_clamps_current(client):
     cid = await _fighter(client)
-    await client.patch(f"/characters/{cid}/xp", json={"set": 900})       # L3, 22 HP
-    r = await client.patch(f"/characters/{cid}/xp", json={"set": 0})     # back to L1
+    r = await client.patch(f"/characters/{cid}/xp", json={"set": 6500})  # L5: 10 + 4*6
+    assert r.json()["hit_points"] == 34
+    r = await client.patch(f"/characters/{cid}/xp", json={"set": 900})   # back to L3
     assert r.status_code == 200, r.text
     body = r.json()
-    assert body["classes"][0]["level"] == 1
-    assert body["hit_points"] == 22          # XP loss never strips HP
+    assert body["classes"][0]["level"] == 3
+    assert body["hit_points"] == 22           # exactly what 3 -> 5 added is removed
+    assert body["current_hit_points"] == 22   # clamped to the new max
     assert body["hp_gained"] is None
+
+
+async def test_level_down_keeps_current_hp_below_new_max(client):
+    cid = await _fighter(client)
+    await client.patch(f"/characters/{cid}/xp", json={"set": 6500})       # L5, 34 HP
+    r = await client.patch(f"/characters/{cid}/hp", json={"op": "damage", "value": 20})
+    assert r.json()["current_hit_points"] == 14
+    r = await client.patch(f"/characters/{cid}/xp", json={"set": 900})    # L3, max 22
+    assert r.json()["hit_points"] == 22
+    assert r.json()["current_hit_points"] == 14
+
+
+async def test_level_down_removes_stored_rolls(client):
+    cid = await _fighter(client)
+    r = await client.patch(f"/characters/{cid}", json={"settings": {"hp_mode": "rolled"}})
+    assert r.status_code == 200, r.text
+    r = await client.patch(f"/characters/{cid}/ability_scores/constitution", json={"value": 14})  # +2
+    assert r.status_code == 200, r.text
+    r = await client.patch(f"/characters/{cid}/xp", json={"set": 900, "hp_rolls": [4, 6]})       # L3
+    l3 = r.json()["hit_points"]
+    r = await client.patch(f"/characters/{cid}/xp", json={"set": 6500, "hp_rolls": [8, 9]})      # L5
+    assert r.json()["hit_points"] == l3 + (8 + 2) + (9 + 2)
+    r = await client.patch(f"/characters/{cid}/xp", json={"set": 900})                           # L3
+    body = r.json()
+    assert body["hit_points"] == l3
+    assert body["current_hit_points"] == l3
+    rolls = body["settings"]["hp_rolls"]
+    assert list(rolls.values()) == [{"2": 4, "3": 6}]   # rolls above the new level are dropped
 
 
 async def test_negative_xp_clamps_to_zero(client):
