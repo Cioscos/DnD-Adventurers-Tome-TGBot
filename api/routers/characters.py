@@ -27,7 +27,7 @@ from core.db.models import (
 )
 from core.data.xp_thresholds import xp_to_level
 from core.data.skills import SKILL_ABILITY_MAP
-from core.game.skills import skill_bonus
+from api.services.skills import skill_bonus
 from core.data.labels import ability_label, skill_label
 from api.services.class_features import sync_class_feature_abilities
 from core.game.stats import hit_points_for_level

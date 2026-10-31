@@ -75,7 +75,7 @@ async def build_character_response(
     response.pending_choices = list(char.pending_choices or [])
 
     response.jack_of_all_trades = has_jack_of_all_trades(char)
-    # Same formula as core.game.skills.skill_bonus / passive_score, reusing the
+    # Same formula as api.services.skills.skill_bonus / passive_score, reusing the
     # homebrew lookup once per skill instead of re-querying it.
     for slug, ability in SKILL_ABILITY_MAP.items():
         val = await get_passive_modifiers(session, char, f"character.skill.{slug}")

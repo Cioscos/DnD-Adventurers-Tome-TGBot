@@ -1,9 +1,6 @@
-"""Skill bonus and passive scores: one calculation shared by rolls, passives and the sheet."""
+"""Pure skill math (proficiency, Jack of All Trades); totals with homebrew live in api.services.skills."""
 from __future__ import annotations
 
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from core.data.skills import SKILL_ABILITY_MAP
 from core.data.spell_slots import normalize_class_name
 from core.db.models import Character
 
@@ -27,21 +24,3 @@ def skill_proficiency_part(char: Character, skill: str) -> int:
     if level is True or level == 1:
         return pb
     return pb // 2 if has_jack_of_all_trades(char) else 0
-
-
-async def skill_bonus(session: AsyncSession, char: Character, skill: str) -> int:
-    # Lazy imports: api.* imports core.* at module load.
-    from api.routers._helpers import effective_ability_mod
-    from api.services.homebrew.passive import get_passive_modifiers
-
-    return (
-        effective_ability_mod(char, SKILL_ABILITY_MAP[skill])
-        + skill_proficiency_part(char, skill)
-        + await get_passive_modifiers(session, char, f"character.skill.{skill}")
-    )
-
-
-async def passive_score(session: AsyncSession, char: Character, skill: str) -> int:
-    from api.services.homebrew.passive import passive_modifier
-
-    return 10 + await skill_bonus(session, char, skill) + await passive_modifier(session, char, skill)
