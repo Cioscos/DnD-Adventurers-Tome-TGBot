@@ -197,6 +197,15 @@ describe('CombatPanel', () => {
       expect(activeRow.querySelector('[data-testid="hp-bucket-bar"]')).not.toBeNull()
     })
 
+    it('round, menu ⋯ e nastro stanno in un unico blocco fisso in alto', () => {
+      renderPanel(active(2), { amGm: true, myUserId: GM_ID })
+      const bar = screen.getByTestId('combat-topbar')
+      expect(bar.className).toContain('sticky')
+      expect(bar).toContainElement(screen.getByText('session.combat.round_label'))
+      expect(bar).toContainElement(screen.getByRole('button', { name: 'session.combat.menu' }))
+      expect(bar).toContainElement(screen.getByTestId('round-ribbon'))
+    })
+
     it('i morti sono elencati dopo i vivi', () => {
       const deadGob = { ...goblin, is_dead: true }
       renderPanel(active(1, [deadGob, me, ally]))

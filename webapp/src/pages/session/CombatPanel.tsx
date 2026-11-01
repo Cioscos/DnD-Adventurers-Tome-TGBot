@@ -239,33 +239,41 @@ export default function CombatPanel({ live, sessionId, amGm, myUserId }: Props) 
 
   return (
     <>
-      <div className="flex items-center justify-between gap-2 min-h-[44px]">
-        <p className="font-cinzel uppercase tracking-widest text-sm text-dnd-gold-dim">
-          {isActivePhase ? (
-            <span className="tabular-nums">{t('session.combat.round_label', { n: enc.round })}</span>
-          ) : (
-            t('session.combat.setup_title')
+      {/* Round, menu e nastro restano visibili mentre scorri la lista. Il <main> di
+          Layout ha 1rem di padding in alto: top/margine negativi lo compensano. */}
+      <div
+        data-testid="combat-topbar"
+        className="sticky -top-4 z-10 -mx-4 -mt-4 px-4 pt-4 pb-2 space-y-1
+                   bg-dnd-bg border-b border-dnd-border shadow-parchment-md"
+      >
+        <div className="flex items-center justify-between gap-2 min-h-[44px]">
+          <p className="font-cinzel uppercase tracking-widest text-sm text-dnd-gold-dim">
+            {isActivePhase ? (
+              <span className="tabular-nums">{t('session.combat.round_label', { n: enc.round })}</span>
+            ) : (
+              t('session.combat.setup_title')
+            )}
+          </p>
+          {amGm && (
+            <Pressable
+              onClick={() => setShowMenu(true)}
+              aria-label={t('session.combat.menu')}
+              className="w-11 h-11 inline-flex items-center justify-center rounded-full
+                         bg-dnd-surface border border-dnd-gold-dim/50 text-dnd-gold-bright active:scale-95"
+            >
+              <MoreHorizontal size={20} />
+            </Pressable>
           )}
-        </p>
-        {amGm && (
-          <Pressable
-            onClick={() => setShowMenu(true)}
-            aria-label={t('session.combat.menu')}
-            className="w-11 h-11 inline-flex items-center justify-center rounded-full
-                       bg-dnd-surface border border-dnd-gold-dim/50 text-dnd-gold-bright active:scale-95"
-          >
-            <MoreHorizontal size={20} />
-          </Pressable>
+        </div>
+
+        {isActivePhase && (
+          <RoundRibbon
+            combatants={enc.combatants}
+            activeId={enc.active_combatant_id}
+            myUserId={myUserId}
+          />
         )}
       </div>
-
-      {isActivePhase && (
-        <RoundRibbon
-          combatants={enc.combatants}
-          activeId={enc.active_combatant_id}
-          myUserId={myUserId}
-        />
-      )}
 
       {!amGm && myCombatant && enc.status === 'setup' && (
         <InitiativeCta sessionId={sessionId} combatant={myCombatant} />

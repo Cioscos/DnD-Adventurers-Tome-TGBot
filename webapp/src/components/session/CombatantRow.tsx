@@ -238,7 +238,7 @@ export default function CombatantRow({
             </div>
           ))}
         </div>
-        {collapsed && (hpSummary || bucket) && (
+        {collapsed && !c.is_dead && (hpSummary || bucket) && (
           <span
             className={`shrink-0 text-xs font-mono tabular-nums
               ${hpSummary ? 'text-dnd-text' : BUCKET_TEXT[bucket!]}`}
