@@ -1,61 +1,74 @@
-# Perf harness — trace CDP della Mini App
+# Perf harness: misure automatiche della Mini App
 
-Misura le performance reali della webapp: sulla **WebView di Telegram Android**
-(modalità `device`) o su **Chrome locale con CPU throttling** (modalità `local`).
-Ogni run produce trace Chrome per scenario + `report.md` con long task, FPS,
-paint full-screen e bucket main-thread. Cartella `results/` gitignorata.
+L'harness pilota la Mini App da solo, sulla **WebView di Telegram Android**
+(`device`, default) o su **Chrome locale con CPU rallentata** (`local`), e misura
+i frame **solo mentre esegue i gesti**. Gli scenari sono di **sola lettura**:
+aprono, chiudono, navigano e scorrono, ma non tirano dadi, non salvano e non
+cambiano toggle. Girano sui tuoi dati reali senza modificarli.
 
-## Setup device (una tantum)
+File:
+- `run.mjs`: CLI, connessione, misure, report e confronto.
+- `scenarios.mjs`: i gesti.
+- `run.test.mjs`: test delle parti pure, da lanciare con `node --test scripts/perf/run.test.mjs`.
 
-1. **Telegram**: Impostazioni → tap ripetuti sul numero di versione finché non
-   si apre il menu debug → attiva **Enable WebView Debug**. Riavvia Telegram.
-2. **Telefono**: Opzioni sviluppatore → attiva **Debug wireless** (Android 11+;
-   telefono e PC sulla stessa Wi-Fi).
-3. **WSL**: `sudo apt install adb`
-4. **Pairing (solo la prima volta)**: sul telefono "Accoppia dispositivo con
-   codice" → `adb pair <ip>:<porta-pairing>` col codice mostrato.
-5. **Ogni sessione**: `adb connect <ip>:<porta-debug>` (porta della schermata
-   Debug wireless, diversa da quella di pairing). Verifica con `adb devices`.
+I risultati vanno in `results/` (gitignorata).
 
-Fallback USB se la Wi-Fi è instabile: usbipd-win (`winget install usbipd`,
-`usbipd bind --busid <X>`, `usbipd attach --wsl --busid <X>`, e `adb kill-server`
-sul lato Windows).
+## Setup device (una tantum, da Windows)
+
+1. Installa adb: `winget install Google.PlatformTools`, poi riapri il terminale.
+2. **Telegram**: Impostazioni → tap ripetuti sul numero di versione finché si
+   apre il menu debug → **Enable WebView Debug**. Poi **chiudi e riapri**
+   Telegram, togliendolo anche dalle app recenti.
+3. **Telefono**: Opzioni sviluppatore → **Debug wireless** (telefono e PC sulla
+   stessa Wi-Fi) → "Associa dispositivo con codice" →
+   `adb pair <ip>:<porta-pairing> <codice>`.
+   Se `pair` risponde `unknown host service`, un vecchio server adb di un altro
+   programma è ancora attivo: chiudilo con `adb kill-server` e riprova.
+4. Dopo il pairing il telefono si ricollega da solo (mDNS). Se non lo fa, usa
+   `adb connect <ip>:<porta>` con la porta mostrata nella schermata Debug wireless.
+   Verifica con `adb devices`.
+
+Se adb vede più dispositivi, l'harness sceglie da solo quello con la WebView in
+debug: non serve impostare `ANDROID_SERIAL`.
 
 ## Uso
 
-```bash
-# Baseline completa sul device (Mini App già aperta in Telegram):
-node scripts/perf/run.mjs --mode device --label baseline
+Apri la Mini App **su un personaggio**, tieni il telefono sbloccato e la Mini App
+in primo piano, poi:
 
-# Solo alcuni scenari:
-node scripts/perf/run.mjs --mode device --label baseline --scenario overlay-modal --scenario swiper-hub
+```powershell
+cd webapp
+node scripts/perf/run.mjs --label baseline                         # tutti gli scenari
+node scripts/perf/run.mjs --label check --scenario help-sheet-hub  # solo alcuni
+node scripts/perf/run.mjs --compare results/<dirA> results/<dirB>  # confronto → <dirB>/comparison.md
 
-# Modalità locale (throttling 6x, viewport 375×667) contro il dev server:
-node scripts/perf/run.mjs --mode local --url http://localhost:5173 --label local-check
-
-# Confronto fra due run:
-node scripts/perf/compare.mjs results/baseline-<ts> results/after-<ts>
+# Locale (Chrome installato, headless, 375×667, CPU 6x) con dev server e API locali avviati:
+node scripts/perf/run.mjs --mode local --url "http://localhost:5173/#/char/<id>" --label local
 ```
 
-Gli scenari (tranne `smoke`) sono manuali: il CLI dice quale gesto eseguire e
-delimita la trace con INVIO. Elenco scenari in `scenarios.mjs`.
+Gli id degli scenari sono in `scenarios.mjs`. Quando cambiano le etichette
+it/en dei pulsanti usati (guida, PF, aggiungi oggetto), vanno aggiornati lì.
 
 ## Come leggere il report
 
-- **Long task**: task main-thread >50 ms — durante un'animazione significano
-  frame persi certi. `causa` è l'evento interno più lungo.
-- **FPS medi / Dropped est.**: stima da `DrawFrame` sulla durata della trace
-  (approssimazione: non usa PipelineReporter).
-- **Paint full-screen**: repaint con clip ≥90% del viewport — durante
-  un'animazione di overlay è la firma del flicker da `backdrop-filter`.
-- **Bucket**: somma per categoria senza sottrarre l'annidamento (uno script che
-  contiene un Layout conta in entrambi).
+- **Frame p50/p95/max**: intervallo fra due `requestAnimationFrame`
+  consecutivi durante il gesto. A 120 Hz un frame pieno dura circa 8 ms, a 60 Hz
+  circa 16 ms.
+- **Scatti**: frame oltre 33 ms, cioè uno scatto visibile. È il numero da far scendere.
+- **LoAF**: frame bloccati per più di 50 ms (API `long-animation-frame`). Per i 3
+  peggiori il report mostra la quota stile+layout e gli **script responsabili**:
+  `invoker` e `sourceURL`. In produzione il bundle è minificato e i nomi non si
+  leggono, ma il file indica comunque la libreria o il chunk. `n/d` significa
+  che la WebView non supporta l'API.
+- **Trace**: `<scenario>.trace.json` si apre così com'è in Chrome DevTools →
+  Performance → "Load profile", per il flame chart completo.
 
 ## Troubleshooting
 
-- `Nessuna WebView in debug trovata` → Mini App chiusa, WebView Debug spento, o
-  adb non connesso.
-- Più socket WebView → l'harness prende l'ultimo; chiudi le altre app con
-  WebView o passa `--port` dopo un forward manuale del socket giusto.
-- `connectOverCDP` rifiutato → il forward punta a una WebView morta: riapri la
-  Mini App e rilancia.
+- `Nessuna WebView in debug trovata`: la Mini App è chiusa, WebView Debug è
+  spento (o Telegram non è stato riaperto), oppure adb non è connesso.
+- `WebView trovata ma non risponde`: il telefono è bloccato o Telegram è in
+  background (la WebView congelata non risponde al CDP). Sbloccalo e riporta la
+  Mini App in primo piano.
+- `ERRORE: …` su uno scenario: in genere un pulsante non trovato (etichetta
+  cambiata) o nessun personaggio aperto. Gli altri scenari girano comunque.
