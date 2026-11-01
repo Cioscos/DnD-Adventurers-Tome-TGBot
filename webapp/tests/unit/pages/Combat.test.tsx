@@ -7,7 +7,7 @@ import type { EncounterLive, GameSessionLive } from '@/types'
 const { navigateSpy, toastInfo, liveState } = vi.hoisted(() => ({
   navigateSpy: vi.fn(),
   toastInfo: vi.fn(),
-  liveState: { data: undefined as unknown },
+  liveState: { data: undefined as unknown, isFetching: false },
 }))
 
 vi.mock('react-router-dom', async (orig) => {
@@ -24,7 +24,7 @@ vi.mock('@/api/client', async (orig) => {
   return { ...actual, api: { me: () => Promise.resolve({ user_id: 99 }) } }
 })
 vi.mock('@/hooks/useSessionLive', () => ({
-  useSessionLive: () => ({ data: liveState.data, isLoading: false, isError: false, error: null, refetch: vi.fn() }),
+  useSessionLive: () => ({ data: liveState.data, isFetching: liveState.isFetching, isLoading: false, isError: false, error: null, refetch: vi.fn() }),
 }))
 vi.mock('@/components/Layout', async () => {
   const React = await import('react')
@@ -44,7 +44,7 @@ const live = (e: EncounterLive | null): GameSessionLive => ({
 const qc = new QueryClient()
 const ui = () => <QueryClientProvider client={qc}><Combat /></QueryClientProvider>
 
-beforeEach(() => { navigateSpy.mockReset(); toastInfo.mockReset() })
+beforeEach(() => { navigateSpy.mockReset(); toastInfo.mockReset(); liveState.isFetching = false })
 
 describe('Combat page', () => {
   it('redirects to the session when there is no open encounter', () => {
@@ -63,6 +63,18 @@ describe('Combat page', () => {
     rerender(ui())
     expect(toastInfo).toHaveBeenCalledWith('session.combat.ended_toast')
     expect(navigateSpy).toHaveBeenCalledWith('/session/12', { replace: true })
+  })
+
+  it('waits for the refetch before trusting a cached live without encounter', () => {
+    liveState.data = live(null)
+    liveState.isFetching = true
+    const { rerender } = render(ui())
+    expect(navigateSpy).not.toHaveBeenCalled()
+    liveState.data = live(enc)
+    liveState.isFetching = false
+    rerender(ui())
+    expect(navigateSpy).not.toHaveBeenCalled()
+    expect(screen.getByTestId('combat-panel')).toBeInTheDocument()
   })
 
   it('redirects when the session is closed', () => {

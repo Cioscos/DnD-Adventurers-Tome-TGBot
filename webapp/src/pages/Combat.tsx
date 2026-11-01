@@ -25,7 +25,7 @@ export default function Combat() {
   })
   const myUserId = meInfo?.user_id ?? 0
 
-  const { data: live, isLoading, isError, error, refetch } = useSessionLive(sessionId)
+  const { data: live, isLoading, isFetching, isError, error, refetch } = useSessionLive(sessionId)
   const open = !!live && live.status === 'active' && !!live.encounter
 
   // Incontro finito (o mai esistito, o sessione chiusa): si torna alla sessione.
@@ -36,9 +36,11 @@ export default function Combat() {
       hadEncounterRef.current = true
       return
     }
+    // La cache può essere di prima che l'incontro iniziasse: decide solo un dato fresco.
+    if (isFetching) return
     if (hadEncounterRef.current) toast.info(t('session.combat.ended_toast'))
     navigate(`/session/${sessionId}`, { replace: true })
-  }, [live, open, navigate, sessionId, t])
+  }, [live, open, isFetching, navigate, sessionId, t])
 
   const layout = (children: React.ReactNode) => (
     <Layout
@@ -50,7 +52,7 @@ export default function Combat() {
     </Layout>
   )
 
-  if (isLoading) {
+  if (isLoading || (live && !open)) {
     return layout(
       <>
         <Skeleton.Rect height="56px" />
@@ -78,8 +80,6 @@ export default function Combat() {
       </Surface>,
     )
   }
-
-  if (!open) return layout(null)
 
   return layout(
     <CombatPanel

@@ -332,7 +332,7 @@ export default function CombatPanel({ live, sessionId, amGm, myUserId }: Props) 
       )}
 
       <Sheet open={showMenu} onClose={() => setShowMenu(false)} title={t('session.combat.menu')}>
-        <div className="space-y-2">
+        <div className="p-5 space-y-2">
           {menuItem(<Plus size={16} />, t('session.combat.add_monster'), () => setShowAddMonster(true))}
           {menuItem(<RefreshCw size={16} />, t('session.combat.sync_pcs'), () => syncMutation.mutate())}
           {isActivePhase &&

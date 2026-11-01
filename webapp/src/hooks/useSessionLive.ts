@@ -19,6 +19,9 @@ export function useSessionLive(sessionId: number) {
       const d = query.state.data
       return d && d.status === 'active' ? 2500 : false
     },
+    // Si entra spesso da un'altra pagina con la cache vecchia (es. combattimento
+    // iniziato nel frattempo): al mount serve sempre il dato fresco.
+    refetchOnMount: 'always',
     enabled: Number.isFinite(sessionId),
   })
 }
