@@ -28,7 +28,7 @@ def test_fixture_core_values():
     assert exp.character.hit_points == 212
     assert exp.character.current_hit_points == 212 - 42
     assert [(c.class_name, c.level, c.subclass, c.hit_die) for c in exp.classes] == [
-        ("cleric", 19, "Tempest Domain", 8)]
+        ("Chierico", 19, "Tempest Domain", 8)]
     assert exp.classes[0].spellcasting_ability == "wisdom"
     assert exp.character.race == "Hill Dwarf" and exp.character.speed == 25
     assert exp.character.experience_points == 305000
@@ -39,6 +39,11 @@ def test_fixture_core_values():
     assert exp.character.spell_slots_mode == "automatic"
     assert {"Common", "Dwarvish"} <= set(exp.character.languages)
     assert "Heavy Armor" in exp.character.general_proficiencies["armor"]
+
+
+def test_class_name_follows_language():  # come il wizard: nome localizzato
+    assert convert(load(), lang="en")[0].classes[0].class_name == "Cleric"
+    assert convert(load(), lang="it")[0].classes[0].class_name == "Chierico"
 
 
 def test_fixture_items_and_ac():

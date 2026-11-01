@@ -22,6 +22,7 @@ from api.schemas.transfer import (
 )
 from core.data.damage_types import canonical_damage_type
 from core.data.skills import SKILL_ABILITY_MAP
+from core.data.classes import class_table_key
 from core.data.spell_slots import normalize_class_name
 from core.db.models import EquipmentSlot
 from core.data.equipment_slots import EQUIPMENT_SLOT_COMPAT
@@ -114,8 +115,9 @@ def _modifiers(data: dict, sources: tuple[str, ...] | None = None) -> list[dict]
 
 
 class _Ctx:
-    def __init__(self, data: dict):
+    def __init__(self, data: dict, lang: str = "it"):
         self.data = data
+        self.lang = lang
         self.report = ImportReport()
         self.scores: dict[str, int] = {a: 10 for a in ABILITIES}
         self.total_level = 1
@@ -162,7 +164,9 @@ def _classes(c: _Ctx) -> None:
         if key is None:
             c.approx("classes", raw, "ddb.reason.unknown_class")
         cast = _int(d.get("spellCastingAbilityId"))
-        obj = {"class_name": key or raw, "level": _clamp(_int(cl.get("level"), 1), 1, 20),
+        # come il wizard: nome localizzato (tabelle classi in italiano, DDB in inglese)
+        shown = (class_table_key(raw) if c.lang == "it" else None) or raw
+        obj = {"class_name": shown, "level": _clamp(_int(cl.get("level"), 1), 1, 20),
                "subclass": _str(_d(cl.get("subclassDefinition")).get("name"), 100) or None,
                "spellcasting_ability": ABILITIES[cast - 1] if 1 <= cast <= 6 else None,
                "hit_die": _clamp(_int(d.get("hitDice"), 8), 1, 100) if d.get("hitDice") else None,
@@ -624,7 +628,7 @@ def _run(c: _Ctx, section: str, fn: Callable[[_Ctx], Any]) -> Any:
         return None
 
 
-def convert(ddb: Any) -> tuple[CharacterExport, ImportReport, list[dict]]:
+def convert(ddb: Any, lang: str = "it") -> tuple[CharacterExport, ImportReport, list[dict]]:
     """JSON DDB (involucro {success, data} o `data` nudo) -> (export, report, feature_uses).
 
     feature_uses: [{class_index, name, used}] cariche usate dei privilegi di classe DDB,
@@ -634,7 +638,7 @@ def convert(ddb: Any) -> tuple[CharacterExport, ImportReport, list[dict]]:
         raise DdbImportError("ddb_invalid")
     data = ddb["data"] if isinstance(ddb.get("data"), dict) else ddb
     name = _str(data.get("name"), 100)
-    c = _Ctx(data)
+    c = _Ctx(data, lang)
     _run(c, "classes", _classes)
     if not name or not c.out.get("classes"):
         raise DdbImportError("ddb_invalid")

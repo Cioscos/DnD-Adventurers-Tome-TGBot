@@ -149,7 +149,7 @@ async def import_ddb_character(
     if ddb_id is None:
         raise _ddb_error("invalid_link")
     try:
-        export, report, feature_uses = convert(await fetch_ddb(ddb_id))
+        export, report, feature_uses = convert(await fetch_ddb(ddb_id), lang)
     except DdbImportError as e:
         raise _ddb_error(e.code)
     char = await import_character(session, user_id, export, name_suffix=_SUFFIX.get(lang, _SUFFIX["it"])["import"])

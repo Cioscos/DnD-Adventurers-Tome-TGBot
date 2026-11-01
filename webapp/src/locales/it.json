@@ -231,7 +231,8 @@
       "unconfigured_badge": "Da configurare",
       "delete_failed": "Eliminazione non riuscita. Riprova.",
       "import": "Importa",
-      "import_failed": "Importazione non riuscita."
+      "import_failed": "Importazione non riuscita.",
+      "import_ddb": "Importa da D&D Beyond"
     },
     "menu": {
       "hp": "Punti Ferita",
@@ -4415,5 +4416,56 @@
     "not_rerollable": "Questo tiro non si può ritirare",
     "inspiration_unavailable": "Ispirazione non disponibile",
     "error": "Tiro non riuscito, riprova"
+  },
+  "ddb_import": {
+    "title": "Importa da D&D Beyond",
+    "step_public": "Su D&D Beyond apri le impostazioni della scheda e imposta Character Privacy su Public.",
+    "step_link": "Copia il link della scheda e incollalo qui sotto.",
+    "private_after": "Dopo l'import puoi rimettere la scheda privata.",
+    "link_label": "Link della scheda",
+    "placeholder": "https://www.dndbeyond.com/characters/…",
+    "submit": "Importa",
+    "open": "Apri personaggio",
+    "summary_title": "Import completato",
+    "imported": "Importati",
+    "approximated": "Approssimati",
+    "skipped": "Saltati",
+    "errors": {
+      "invalid_link": "Il link non sembra una scheda D&D Beyond. Copia l'indirizzo della pagina della scheda.",
+      "ddb_private": "La scheda è privata. Impostala su Public in D&D Beyond e riprova.",
+      "ddb_not_found": "Scheda non trovata. Controlla il link.",
+      "ddb_unreachable": "D&D Beyond non risponde. Riprova più tardi.",
+      "ddb_invalid": "La scheda non contiene un personaggio importabile (manca il nome o la classe)."
+    },
+    "sections": {
+      "classes": "Classi",
+      "ability_scores": "Caratteristiche",
+      "hp": "Punti ferita",
+      "identity": "Identità",
+      "proficiencies": "Competenze",
+      "notes": "Note",
+      "items": "Oggetti",
+      "spells": "Incantesimi",
+      "spell_slots": "Slot incantesimo",
+      "abilities": "Privilegi",
+      "currency": "Monete",
+      "defenses": "Difese",
+      "creatures": "Creature",
+      "conditions": "Condizioni",
+      "other": "Altro"
+    },
+    "reasons": {
+      "ok": "importato",
+      "invalid": "dato non valido, saltato",
+      "unknown_class": "classe non presente nel nostro sistema: importata con il nome di D&D Beyond, senza privilegi automatici",
+      "hp_recomputed": "PF ricalcolati: verifica il massimo",
+      "attunement_limit": "oltre il limite di 3 sintonie: importato non sintonizzato",
+      "item_modifier": "effetto dell'oggetto non riconosciuto: riportalo a mano se serve",
+      "generic_item": "importato come oggetto generico",
+      "unknown_damage_type": "tipo di danno non riconosciuto",
+      "section_failed": "sezione non leggibile, saltata",
+      "not_supported": "non ancora supportato",
+      "identity_partial": "alcuni dati d'identità non sono stati importati"
+    }
   }
 }

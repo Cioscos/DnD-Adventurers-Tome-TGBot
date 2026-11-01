@@ -655,3 +655,21 @@ export interface CompanionAttackResult {
   damage_total: number
   damage_type: string | null
 }
+
+// Import da D&D Beyond (POST /characters/import/ddb)
+export interface DdbReportEntry {
+  section: string
+  name: string
+  reason: string
+}
+
+export interface DdbImportReport {
+  imported: DdbReportEntry[]
+  approximated: DdbReportEntry[]
+  skipped: DdbReportEntry[]
+}
+
+export interface DdbImportResult {
+  character: CharacterFull
+  report: DdbImportReport
+}
