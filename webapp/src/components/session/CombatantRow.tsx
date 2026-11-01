@@ -65,6 +65,9 @@ export default function CombatantRow({
     ? (c.pending_saves ?? []).filter((p) => p.status === 'pending')
     : []
 
+  // Etichetta del TS in sospeso: il primo effetto con un TS ripetuto.
+  const pcSave = snapshot?.condition_effects?.find((e) => e.save_ability && e.save_dc != null)
+
   // PG: snapshot live (già redatto server-side). Mostro full: campi del combattente.
   const showExactPc = isPc && !!snapshot && snapshot.hit_points !== null
   const showExactMonster = !isPc && mode === 'full' && amGm && c.max_hp !== null
@@ -125,9 +128,14 @@ export default function CombatantRow({
             {isPc && snapshot?.has_pending_save && (
               <span
                 aria-label={t('session.combat.pending_save')}
-                title={t('session.combat.pending_save')}
-                className="h-2.5 w-2.5 shrink-0 rounded-full bg-dnd-amber"
-              />
+                className="shrink-0 rounded-full border border-dnd-amber/60 bg-dnd-amber/15 px-2 py-0.5 text-xs font-body text-dnd-amber tabular-nums whitespace-nowrap"
+              >
+                {pcSave
+                  ? t('character.conditions.effect.save_any', {
+                      ability: t(`character.ability.${pcSave.save_ability}_short`), dc: pcSave.save_dc,
+                    })
+                  : t('session.combat.pending_save')}
+              </span>
             )}
             {c.is_dead && (
               <span className="text-xs uppercase tracking-wider text-dnd-text-muted font-cinzel">

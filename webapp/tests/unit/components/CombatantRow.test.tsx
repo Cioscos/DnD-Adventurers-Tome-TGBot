@@ -76,15 +76,20 @@ describe('CombatantRow', () => {
     expect(screen.getByTestId('combatant-row').dataset.dead).toBe('true')
   })
 
-  it('PG con TS in sospeso: pallino ambra', () => {
+  it('PG con TS in sospeso: pastiglia con caratteristica e CD', () => {
     render(
       <CombatantRow
         combatant={monster({ id: 2, kind: 'pc', character_id: 7, name: 'Eroe' })}
-        snapshot={{ ...pcSnapshot, has_pending_save: true }}
+        snapshot={{
+          ...pcSnapshot, has_pending_save: true,
+          condition_effects: [{ slug: 'prone', save_ability: 'constitution', save_dc: 13,
+            save_edge: 'end', ends_with_concentration: false, applied_by_gm: true }],
+        }}
         isActive={false} amGm={true} mode="full"
       />,
     )
-    expect(screen.getByLabelText('session.combat.pending_save')).toBeInTheDocument()
+    expect(screen.getByLabelText('session.combat.pending_save'))
+      .toHaveTextContent('character.conditions.effect.save_any')
   })
 
   it('mostro con TS pendente: Superato invia passed=true senza aprire lo sheet', async () => {

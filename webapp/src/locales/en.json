@@ -1826,6 +1826,7 @@
       "remove_condition": "Remove {{name}}",
       "source_label": "Source: {{name}}",
       "pending_save": "Saving throw pending",
+      "end_turn_save_hint": "At end of turn: {{save}} — {{condition}}",
       "save_passed": "Passed",
       "save_failed": "Failed",
       "cond": {
@@ -3805,7 +3806,7 @@
             "If the source is a concentrating character, you can turn on \"Ends if the source loses concentration\". The player must cast the spell first.",
             "Tap \"Apply condition\".",
             "During the encounter, the app removes the condition when it expires. The app asks for the saving throw at the start or at the end of the turn of the target.",
-            "An amber dot on the row of a character shows a pending saving throw. The player makes the roll in the app.",
+            "An amber label on the row of a character (e.g. “CON save DC 13”) shows a pending saving throw. The player makes the roll in the app.",
             "For a monster, the row shows the pending saving throw. Make the roll at the table and tap \"Passed\" or \"Failed\". \"Passed\" removes the condition."
           ]
         }

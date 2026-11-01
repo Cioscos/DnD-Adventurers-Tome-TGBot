@@ -1,6 +1,28 @@
 {
   "entries": [
     {
+      "version": "2.25.1",
+      "date": "2026-11-01",
+      "title": {
+        "it": "Tiri salvezza di fine turno più chiari",
+        "en": "Clearer end-of-turn saving throws"
+      },
+      "fixed": {
+        "it": [
+          "Nella stanza della sessione il giocatore ora vede la striscia dei tiri salvezza da fare, senza dover aprire la scheda del personaggio.",
+          "«Termina turno» apre subito il tiro salvezza di fine turno, così lo tiri prima che il combattimento vada avanti.",
+          "Durante il tuo turno, sotto «Termina turno», un promemoria dice quale tiro salvezza ti aspetta a fine turno.",
+          "Nella lista del combattimento il pallino ambra è diventato un'etichetta leggibile con caratteristica e CD del tiro salvezza (es. «TS COS CD 13»)."
+        ],
+        "en": [
+          "In the session room the player now sees the strip of saving throws to roll, without opening the character sheet.",
+          "“End turn” opens the end-of-turn saving throw right away, so you roll it before combat moves on.",
+          "During your turn, a reminder under “End turn” shows which saving throw waits for you at the end of the turn.",
+          "In the combat list the amber dot is now a readable label with the saving throw ability and DC (e.g. “CON save DC 13”)."
+        ]
+      }
+    },
+    {
       "version": "2.25.0",
       "date": "2026-10-31",
       "title": {
