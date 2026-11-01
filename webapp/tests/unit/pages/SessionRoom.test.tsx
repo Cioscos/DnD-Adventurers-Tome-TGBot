@@ -59,3 +59,24 @@ describe('SessionRoom without data', () => {
     expect(screen.queryByText('common.offline_unavailable')).toBeNull()
   })
 })
+
+describe('SessionRoom with an encounter', () => {
+  it('shows only the entry card, not the combatant list', async () => {
+    me.mockResolvedValue({ user_id: 1 })
+    live.mockResolvedValue({
+      id: 12, code: 'ABC123', gm_user_id: 1, gm_display_name: 'GM', status: 'active', title: null,
+      created_at: '', last_activity_at: '', closed_at: null, participants: [], live_characters: [],
+      encounter: {
+        id: 1, mode: 'full', status: 'active', round: 2, active_combatant_id: 5,
+        created_at: '', started_at: null, ended_at: null,
+        combatants: [{
+          id: 5, kind: 'monster', name: 'Goblin', initiative: 17, initiative_die: null, initiative_mod: 0,
+          sort_order: 1, is_dead: false, conditions: {}, current_hp: 7, max_hp: 7, ac: 15, hp_bucket: null,
+        }],
+      },
+    })
+    renderWithProviders(<SessionRoom />)
+    expect(await screen.findByTestId('combat-entry-card')).toBeTruthy()
+    expect(screen.queryByTestId('combatant-row')).toBeNull()
+  })
+})

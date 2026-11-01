@@ -19,6 +19,8 @@ export default function InSessionBanner({ charId }: InSessionBannerProps) {
   const { data: session } = useQuery({
     queryKey: ['session-me'],
     queryFn: () => api.sessions.me(),
+    // Il GM può avviare un incontro mentre sei sulla scheda: il banner deve accorgersene.
+    refetchInterval: (q) => (q.state.data?.status === 'active' ? 10_000 : false),
   })
 
   if (!session) return null
@@ -27,13 +29,20 @@ export default function InSessionBanner({ charId }: InSessionBannerProps) {
   if (!isMember) return null
 
   const label = session.title || t('session.active_session_banner')
+  const combat = session.encounter_status
+  const target = combat ? `/session/${session.id}/combat` : `/session/${session.id}`
+  const kicker = combat === 'active'
+    ? t('character.inSession.combat_active')
+    : combat === 'setup'
+      ? t('character.inSession.combat_setup')
+      : t('character.inSession.label')
 
   return (
     <m.button
       type="button"
       onClick={() => {
         haptic.light()
-        navigate(`/session/${session.id}`)
+        navigate(target)
       }}
       initial={{ y: -8, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
@@ -47,7 +56,7 @@ export default function InSessionBanner({ charId }: InSessionBannerProps) {
       <Swords size={14} className="text-dnd-amber shrink-0" />
       <div className="flex-1 min-w-0 text-left">
         <p className="text-xs uppercase tracking-widest font-cinzel text-dnd-amber leading-none">
-          {t('character.inSession.label')}
+          {kicker}
         </p>
         <p className="text-sm font-display font-bold text-dnd-gold-bright truncate leading-tight mt-0.5">
           {label}

@@ -10,18 +10,21 @@ import type { EncounterMode } from '@/types'
 interface Props {
   sessionId: number
   onClose: () => void
+  /** Dopo la creazione, a cache già aggiornata (la pagina Combattimento la legge subito). */
+  onCreated?: () => void
 }
 
-export default function EncounterCreateSheet({ sessionId, onClose }: Props) {
+export default function EncounterCreateSheet({ sessionId, onClose, onCreated }: Props) {
   const { t } = useTranslation()
   const qc = useQueryClient()
 
   const createMutation = useMutation({
     mutationFn: (mode: EncounterMode) => api.sessions.encounter.create(sessionId, mode),
-    onSuccess: () => {
+    onSuccess: async () => {
       haptic.success()
-      qc.invalidateQueries({ queryKey: ['session-live', sessionId] })
+      await qc.invalidateQueries({ queryKey: ['session-live', sessionId] })
       onClose()
+      onCreated?.()
     },
     onError: () => {
       haptic.error()

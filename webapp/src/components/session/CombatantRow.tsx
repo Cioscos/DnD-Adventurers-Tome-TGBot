@@ -33,6 +33,16 @@ interface Props {
   /** GM: esito di un TS pendente di un mostro (tirato al tavolo). */
   onResolveSave?: (saveId: number, passed: boolean) => void
   resolvingSaveId?: number | null
+  /** Riga compatta del tracciato: PF in una riga, niente barra. */
+  compact?: boolean
+}
+
+const BUCKET_TEXT: Record<HpBucket, string> = {
+  healthy: 'text-dnd-emerald-bright',
+  lightly_wounded: 'text-dnd-gold-bright',
+  badly_wounded: 'text-dnd-amber',
+  dying: 'text-dnd-crimson-bright',
+  dead: 'text-dnd-text-muted',
 }
 
 function HpBar({ pct, bucket }: { pct: number | null; bucket: HpBucket | null }) {
@@ -54,7 +64,7 @@ function HpBar({ pct, bucket }: { pct: number | null; bucket: HpBucket | null })
 }
 
 export default function CombatantRow({
-  combatant: c, snapshot, isActive, amGm, mode, onTap, onResolveSave, resolvingSaveId,
+  combatant: c, snapshot, isActive, amGm, mode, onTap, onResolveSave, resolvingSaveId, compact = false,
 }: Props) {
   const { t } = useTranslation()
   const isPc = c.kind === 'pc'
@@ -79,6 +89,14 @@ export default function CombatantRow({
   const pct = (cur: number | null | undefined, max: number | null | undefined) =>
     max && max > 0 ? Math.max(0, Math.min(100, Math.round(((cur ?? 0) / max) * 100))) : 0
 
+  const collapsed = compact
+  const bucket = pcBucket ?? monsterBucket
+  const hpSummary = showExactPc && snapshot
+    ? `${snapshot.current_hit_points}/${snapshot.hit_points}`
+    : showExactMonster
+      ? `${c.current_hp}/${c.max_hp}`
+      : null
+
   const clickable = amGm && !!onTap
   const wrapperProps = clickable
     ? {
@@ -100,7 +118,7 @@ export default function CombatantRow({
       data-active={isActive ? 'true' : 'false'}
       data-dead={c.is_dead ? 'true' : 'false'}
       {...wrapperProps}
-      className={`rounded-lg border p-3 transition-all min-h-[44px]
+      className={`rounded-lg border ${collapsed ? 'px-3 py-2' : 'p-3'} transition-all min-h-[44px]
         ${c.is_dead ? 'opacity-50' : ''}
         ${isActive
           ? 'border-dnd-gold bg-dnd-surface-raised ring-2 ring-dnd-gold-bright/50 shadow-dnd-glow'
@@ -144,7 +162,7 @@ export default function CombatantRow({
             )}
           </div>
 
-          {showExactPc && snapshot && (
+          {!collapsed && showExactPc && snapshot && (
             <>
               <div className="mt-1 flex items-center gap-3 text-xs font-mono tabular-nums">
                 <span className="flex items-center gap-1">
@@ -159,9 +177,9 @@ export default function CombatantRow({
               <HpBar pct={pct(snapshot.current_hit_points, snapshot.hit_points)} bucket={null} />
             </>
           )}
-          {pcBucket && <HpBar pct={null} bucket={pcBucket} />}
+          {!collapsed && pcBucket && <HpBar pct={null} bucket={pcBucket} />}
 
-          {showExactMonster && (
+          {!collapsed && showExactMonster && (
             <>
               <div className="mt-1 flex items-center gap-3 text-xs font-mono tabular-nums">
                 <span className="flex items-center gap-1">
@@ -178,7 +196,7 @@ export default function CombatantRow({
               <HpBar pct={pct(c.current_hp, c.max_hp)} bucket={null} />
             </>
           )}
-          {monsterBucket && <HpBar pct={null} bucket={monsterBucket} />}
+          {!collapsed && monsterBucket && <HpBar pct={null} bucket={monsterBucket} />}
 
           {conds.length > 0 && (
             <div className="mt-1.5 flex flex-wrap gap-1.5" onClick={(e) => e.stopPropagation()}>
@@ -220,6 +238,14 @@ export default function CombatantRow({
             </div>
           ))}
         </div>
+        {collapsed && !c.is_dead && (hpSummary || bucket) && (
+          <span
+            className={`shrink-0 text-xs font-mono tabular-nums
+              ${hpSummary ? 'text-dnd-text' : BUCKET_TEXT[bucket!]}`}
+          >
+            {hpSummary ?? t(`session.hp_bucket.${bucket}`)}
+          </span>
+        )}
       </div>
     </div>
   )

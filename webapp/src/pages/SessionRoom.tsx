@@ -23,10 +23,12 @@ import { api, ApiError } from '@/api/client'
 import type { CharacterLiveSnapshot, SessionParticipant } from '@/types'
 import { canShareMessage, haptic, telegramConfirm } from '@/auth/telegram'
 import { useShareMessage } from '@/hooks/useShareMessage'
+import { useSessionLive } from '@/hooks/useSessionLive'
+import { useYourTurnToast } from '@/hooks/useYourTurnToast'
 import ParticipantIdentitySheet from '@/pages/session/ParticipantIdentitySheet'
 import SessionFeed from '@/pages/session/SessionFeed'
 import GrantItemModal from '@/pages/session/GrantItemModal'
-import CombatPanel from '@/pages/session/CombatPanel'
+import CombatEntryCard from '@/components/session/CombatEntryCard'
 import { dequeue, peek, pruneOlderThan, type Reward } from '@/lib/rewardQueue'
 import RewardPopup from '@/components/session/RewardPopup'
 import { notifyMutationError } from '@/lib/mutationError'
@@ -218,24 +220,8 @@ export default function SessionRoom() {
   })
   const myUserId = meInfo?.user_id ?? 0
 
-  const { data: live, isLoading, isError, error, refetch } = useQuery({
-    queryKey: ['session-live', sessionId],
-    queryFn: async () => {
-      // last_activity_at è il keep-alive del server: cambia a OGNI poll e
-      // nessun componente lo legge. Va scartato prima che il dato entri in
-      // cache: così i poll senza novità restano deep-equal, lo structural
-      // sharing riusa la stessa reference e la stanza non ri-renderizza
-      // a ogni tick da 2.5s.
-      const { last_activity_at: keepAlive, ...stable } = await api.sessions.live(sessionId)
-      void keepAlive
-      return stable
-    },
-    refetchInterval: (query) => {
-      const d = query.state.data
-      return d && d.status === 'active' ? 2500 : false
-    },
-    enabled: Number.isFinite(sessionId),
-  })
+  const { data: live, isLoading, isError, error, refetch } = useSessionLive(sessionId)
+  useYourTurnToast(live?.encounter, myUserId)
 
   const leaveMutation = useMutation({
     mutationFn: () => api.sessions.leave(sessionId),
@@ -402,12 +388,7 @@ export default function SessionRoom() {
         </Surface>
       )}
 
-      <CombatPanel
-        live={live}
-        sessionId={live.id}
-        amGm={amGm}
-        myUserId={myUserId}
-      />
+      <CombatEntryCard live={live} sessionId={live.id} amGm={amGm} />
 
       <SectionDivider>
         {t('session.players')}

@@ -87,6 +87,8 @@ class GameSessionRead(BaseModel):
     last_activity_at: str
     closed_at: Optional[str] = None
     participants: list[SessionParticipantRead] = []
+    # Popolato solo da GET /sessions/me: stato dell'incontro non terminato, se esiste.
+    encounter_status: Optional[Literal["setup", "active"]] = None
 
     model_config = {"from_attributes": True}
 

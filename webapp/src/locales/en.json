@@ -915,7 +915,9 @@
     },
     "inSession": {
       "label": "In active session",
-      "cta": "Return to session"
+      "cta": "Return to session",
+      "combat_active": "Combat in progress",
+      "combat_setup": "Combat being prepared"
     },
     "currency": {
       "title": "Currency",
@@ -1827,6 +1829,18 @@
       "source_label": "Source: {{name}}",
       "pending_save": "Saving throw pending",
       "end_turn_save_hint": "At end of turn: {{save}} — {{condition}}",
+      "entry_active": "Combat in progress",
+      "entry_setup": "Combat being prepared",
+      "entry_setup_player": "Go in and roll initiative",
+      "entry_setup_gm": "Add monsters and start",
+      "page_title": "Combat",
+      "menu": "Combat controls",
+      "open_my_turn": "Open my turn",
+      "turns_until_mine_one": "your turn in {{count}}",
+      "turns_until_mine_other": "your turn in {{count}}",
+      "next_turn": "Next turn",
+      "ended_toast": "Combat has ended",
+      "acting": "Acting now",
       "save_passed": "Passed",
       "save_failed": "Failed",
       "cond": {
@@ -3703,7 +3717,7 @@
       ]
     },
     "session_room": {
-      "summary": "This is the session room. Here the Game Master and the players see the party, write in the chat and manage the combat. Some functions are only for the Game Master.",
+      "summary": "This is the session room. Here the Game Master and the players see the party and write in the chat. The combat opens from here. Some functions are only for the Game Master.",
       "sections": [
         {
           "title": "Code, invite and exit",
@@ -3760,37 +3774,65 @@
           ]
         },
         {
-          "title": "Prepare the combat (Game Master)",
+          "title": "Combat",
           "items": [
-            "Tap \"Start combat\".",
-            "Select \"Light\" for initiative, turns and rounds only.",
-            "Select \"Full\" to also manage HP, AC and conditions of the monsters.",
-            "The app adds the characters of the players automatically.",
-            "To add monsters, tap \"Add monster\". Type the name, the count and the initiative modifier.",
-            "To add the characters that joined later, tap \"Sync PCs\".",
-            "Tap \"Start\". If some initiatives are missing, the app asks if it must roll them automatically."
+            "The Game Master taps \"Start combat\" and chooses the encounter type. The app opens the combat page.",
+            "During a combat, the session shows the \"Combat in progress\" box with the round and who is acting.",
+            "Tap the box to open the combat page.",
+            "From the character sheet, the banner at the top goes straight to the combat."
           ]
-        },
+        }
+      ]
+    },
+    "combat": {
+      "summary": "This is the combat page. It shows the turn order, who is acting and your character. You open it from the session or from the banner on the character sheet. Some functions are only for the Game Master.",
+      "sections": [
         {
-          "title": "Manage the combat (Game Master)",
+          "title": "How the page works",
           "items": [
-            "The app puts the participants in initiative order. The bar shows the round and whose turn it is.",
-            "To go to the next or previous turn, tap the arrows in the bar.",
-            "If you skip the turn of a character, the app asks for a confirmation.",
-            "Tap a participant to change initiative and order, or to mark it dead.",
-            "In \"Full\" mode, you can also apply damage and healing to the monsters.",
-            "If you go back to the previous turn just after an advance, the app undoes the expiries and the saving throws of that advance.",
-            "Tap \"End\" to finish the combat.",
-            "WARNING: \"Remove from combat\" removes the participant from the encounter."
+            "At the top you see the round. During setup you see \"Setup\".",
+            "Below the round is the turn ribbon: one box for each participant, in initiative order.",
+            "In the ribbon, the gold box is who is acting. Faded boxes have already acted this round. Your box has a blue border. Monsters have a red line at the bottom.",
+            "The \"Initiative\" section lists all participants. The row of who is acting is larger. Dead participants are at the bottom.",
+            "To go back to the session, tap the arrow at the top.",
+            "When the combat ends, the app takes you back to the session."
           ]
         },
         {
           "title": "Fight (player)",
           "items": [
-            "During the setup, tap \"Roll initiative!\". The app rolls a d20 and adds your modifier.",
-            "When it is your turn, the app shows \"Your turn!\" and sends a message in your private Telegram chat.",
-            "At the start of your turn, the app decreases the duration of conditions and concentration by one round.",
-            "At the end of your turn, tap \"End turn\"."
+            "During preparation, tap \"Roll initiative!\". The app rolls a d20 and adds your modifier.",
+            "During the combat, your card at the top shows hit points, AC and conditions.",
+            "The card also says how many turns until it is your turn.",
+            "If a condition asks for a saving throw at the end of your turn, the card shows it in amber.",
+            "Tap \"Open my turn\" to open the Turn page of your character: actions, durations and concentration.",
+            "When it is your turn, the card turns gold and the app shows \"Your turn!\".",
+            "At the end of your turn, tap \"End turn\" at the bottom. If you must make a saving throw, the app opens it at once."
+          ]
+        },
+        {
+          "title": "Prepare the combat (Game Master)",
+          "items": [
+            "In the session, tap \"Start combat\" and choose the encounter type. The app opens this page.",
+            "Choose \"Light\" for initiative, turns and rounds only. Choose \"Full\" to also manage HP, AC and conditions of monsters.",
+            "The app adds the player characters automatically.",
+            "Tap the \"⋯\" button at the top right to open \"Combat controls\".",
+            "To add monsters, tap \"Add monster\". Write name, quantity and initiative modifier.",
+            "To add characters who joined later, tap \"Sync PCs\".",
+            "Tap \"Start\" at the bottom. If initiatives are missing, the app asks whether to roll them automatically."
+          ]
+        },
+        {
+          "title": "Manage the combat (Game Master)",
+          "items": [
+            "Below the ribbon, the \"Acting now\" section shows whose turn it is.",
+            "To go to the next turn, tap \"Next turn\" at the bottom. To go back, tap the arrow on the left.",
+            "If you skip a character's turn, the app asks for a confirmation.",
+            "Tap a participant in the \"Initiative\" section to change initiative and order, or to mark it dead.",
+            "In \"Full\" mode, you can also apply damage and healing to monsters.",
+            "If you go back to the previous turn right after an advance, the app undoes the expirations and saving throws of that advance.",
+            "To end the combat, tap \"⋯\" and then \"End\".",
+            "WARNING: \"Remove from combat\" takes the participant out of the encounter."
           ]
         },
         {
