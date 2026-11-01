@@ -13,15 +13,23 @@ interface Props {
 /** Nastro del round: un segmento per combattente, in ordine d'iniziativa. */
 export default function RoundRibbon({ combatants, activeId, myUserId }: Props) {
   const activeIdx = combatants.findIndex((c) => c.id === activeId)
+  const ribbonRef = useRef<HTMLDivElement>(null)
   const activeRef = useRef<HTMLDivElement>(null)
 
-  // Con molti combattenti il segmento attivo può essere fuori vista: lo porto al centro.
+  // Con molti combattenti il segmento attivo può essere fuori vista: lo centro
+  // scorrendo SOLO il nastro (scrollIntoView sposterebbe anche la pagina).
   useEffect(() => {
-    activeRef.current?.scrollIntoView?.({ inline: 'center', block: 'nearest', behavior: 'smooth' })
+    const ribbon = ribbonRef.current
+    const seg = activeRef.current
+    if (!ribbon || !seg) return
+    ribbon.scrollTo?.({
+      left: seg.offsetLeft - (ribbon.clientWidth - seg.clientWidth) / 2,
+      behavior: 'smooth',
+    })
   }, [activeId])
 
   return (
-    <div data-testid="round-ribbon" className="flex gap-1 overflow-x-auto py-1 -mx-1 px-1">
+    <div ref={ribbonRef} data-testid="round-ribbon" className="relative flex gap-1 overflow-x-auto py-1 -mx-1 px-1">
       {combatants.map((c, i) => {
         const state: SegState = c.is_dead
           ? 'dead'

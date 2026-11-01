@@ -40,13 +40,16 @@ describe('RoundRibbon', () => {
     expect(screen.getByTestId('round-ribbon').className).toContain('overflow-x-auto')
   })
 
-  it('scrolls the active segment into view when the turn changes', () => {
-    const spy = vi.fn()
-    Element.prototype.scrollIntoView = spy
+  it('centers the active segment by scrolling only the ribbon, never the page', () => {
+    const intoView = vi.fn()
+    const scrollTo = vi.fn()
+    Element.prototype.scrollIntoView = intoView
+    HTMLElement.prototype.scrollTo = scrollTo as unknown as HTMLElement['scrollTo']
     const list = [mk(1), mk(2), mk(3)]
     const { rerender } = render(<RoundRibbon combatants={list} activeId={1} myUserId={9} />)
     rerender(<RoundRibbon combatants={list} activeId={3} myUserId={9} />)
-    expect(spy).toHaveBeenLastCalledWith(expect.objectContaining({ inline: 'center' }))
-    expect(spy.mock.contexts.at(-1)).toBe(segs()[2])
+    expect(intoView).not.toHaveBeenCalled()
+    expect(scrollTo.mock.contexts.at(-1)).toBe(screen.getByTestId('round-ribbon'))
+    expect(scrollTo).toHaveBeenLastCalledWith(expect.objectContaining({ behavior: 'smooth' }))
   })
 })
