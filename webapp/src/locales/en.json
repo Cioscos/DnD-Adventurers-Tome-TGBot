@@ -231,7 +231,8 @@
       "unconfigured_badge": "Needs setup",
       "delete_failed": "Delete failed. Please try again.",
       "import": "Import",
-      "import_failed": "Import failed."
+      "import_failed": "Import failed.",
+      "import_ddb": "Import from D&D Beyond"
     },
     "menu": {
       "hp": "Hit Points",
@@ -4416,5 +4417,61 @@
     "not_rerollable": "This save can't be re-rolled",
     "inspiration_unavailable": "Inspiration unavailable",
     "error": "Roll failed, try again"
+  },
+  "ddb_import": {
+    "title": "Import from D&D Beyond",
+    "step_public": "On D&D Beyond open the sheet settings and set Character Privacy to Public.",
+    "step_link": "Copy the sheet link and paste it below.",
+    "private_after": "You can set the sheet back to private after importing.",
+    "link_label": "Sheet link",
+    "placeholder": "https://www.dndbeyond.com/characters/…",
+    "submit": "Import",
+    "open": "Open character",
+    "summary_title": "Import complete",
+    "imported": "Imported",
+    "approximated": "Approximated",
+    "skipped": "Skipped",
+    "errors": {
+      "invalid_link": "That doesn't look like a D&D Beyond sheet. Copy the address of the sheet page.",
+      "ddb_private": "The sheet is private. Set it to Public on D&D Beyond and try again.",
+      "ddb_not_found": "Sheet not found. Check the link.",
+      "ddb_unreachable": "D&D Beyond isn't responding. Try again later.",
+      "ddb_invalid": "The sheet has no importable character (missing name or class)."
+    },
+    "sections": {
+      "classes": "Classes",
+      "ability_scores": "Ability scores",
+      "hp": "Hit points",
+      "identity": "Identity",
+      "proficiencies": "Proficiencies",
+      "notes": "Notes",
+      "items": "Items",
+      "spells": "Spells",
+      "spell_slots": "Spell slots",
+      "abilities": "Features",
+      "currency": "Coins",
+      "defenses": "Defenses",
+      "creatures": "Creatures",
+      "conditions": "Conditions",
+      "speed": "Speed",
+      "other": "Other"
+    },
+    "reasons": {
+      "ok": "imported",
+      "invalid": "invalid data, skipped",
+      "unknown_class": "class not in our system: imported with the D&D Beyond name, no automatic features",
+      "hp_recomputed": "HP recomputed: check the maximum",
+      "attunement_limit": "over the 3 attunement limit: imported unattuned",
+      "item_modifier": "item effect not recognised: add it by hand if needed",
+      "generic_item": "imported as a generic item",
+      "unknown_damage_type": "damage type not recognised",
+      "condition_immunity": "condition immunity: not tracked by the app, note it by hand",
+      "custom_action": "custom action: imported as a feature, with dice and damage in the description",
+      "half_proficiency": "half proficiency: not supported by the app, the skill is imported without proficiency",
+      "section_failed": "section unreadable, skipped",
+      "not_supported": "not supported yet",
+      "no_free_slot": "equipped but no free slot: not shown on the paper doll, fix it by hand",
+      "identity_partial": "some identity data was not imported"
+    }
   }
 }

@@ -19,6 +19,7 @@ import type {
 import type {
   Ability,
   CharacterFull,
+  DdbImportResult,
   ResolveChoiceBody,
   CharacterSummary,
   CombatantPatch,
@@ -345,6 +346,11 @@ export const api = {
     },
     duplicate: (id: number) =>
       request<CharacterFull>(`/characters/${id}/duplicate`, { method: 'POST' }),
+    importDdb: (url: string) =>
+      request<DdbImportResult>('/characters/import/ddb', {
+        method: 'POST',
+        body: JSON.stringify({ url }),
+      }),
 
     // HP
     updateHp: (

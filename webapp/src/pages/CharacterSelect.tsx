@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
-import { Plus, Pencil, SkipForward, ScrollText, Upload, BookOpen } from 'lucide-react'
+import { Plus, Pencil, SkipForward, ScrollText, Upload, BookOpen, Link2 } from 'lucide-react'
 import {
   GiSparkles as Sparkles, GiCheckedShield as Shield, GiHeartPlus as Heart,
   GiCrossedSwords as Swords,
@@ -19,6 +19,7 @@ import PageHelp from '@/components/PageHelp'
 import Input from '@/components/ui/Input'
 import ChipInput from '@/components/ui/ChipInput'
 import Sheet from '@/components/ui/Sheet'
+import DdbImportSheet from '@/components/character/DdbImportSheet'
 import WizardFooter from '@/components/ui/WizardFooter'
 import FancyHeader from '@/components/ui/FancyHeader'
 import Reveal from '@/components/ui/Reveal'
@@ -166,6 +167,7 @@ export default function CharacterSelect() {
   })
 
   const fileRef = useRef<HTMLInputElement>(null)
+  const [ddbOpen, setDdbOpen] = useState(false)
   const importMutation = useMutation({
     mutationFn: (file: File) => api.characters.import(file),
     onSuccess: (char) => {
@@ -426,6 +428,16 @@ export default function CharacterSelect() {
         >
           {t('character.select.import')}
         </Button>
+        <Button
+          variant="secondary"
+          size="md"
+          fullWidth
+          icon={<Link2 size={16} />}
+          onClick={() => setDdbOpen(true)}
+        >
+          {t('character.select.import_ddb')}
+        </Button>
+        <DdbImportSheet open={ddbOpen} onClose={() => setDdbOpen(false)} />
 
         {/* Version footer — opens the in-app changelog / release notes. */}
         <div className="pt-2 flex justify-center">
