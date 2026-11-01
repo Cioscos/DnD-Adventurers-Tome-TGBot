@@ -1,5 +1,11 @@
 #!/usr/bin/env node
-import { pathToFileURL } from 'node:url'
+import { pathToFileURL, fileURLToPath } from 'node:url'
+import { parseArgs, promisify } from 'node:util'
+import { execFile } from 'node:child_process'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import path from 'node:path'
+import { chromium } from '@playwright/test'
+import { scenarios } from './scenarios.mjs'
 
 const JANK_MS = 33
 const r1 = (n) => Math.round(n * 10) / 10
@@ -114,9 +120,263 @@ export function renderComparison(base, cur) {
   return lines.join('\n') + '\n'
 }
 
+// ── Device / sessione ───────────────────────────────────────────────────────
+
+const RESULTS_ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), 'results')
+const APP_URL = /cioscos\.github\.io|localhost|127\.0\.0\.1/
+const CDP_PORT = 9222
+const exec = promisify(execFile)
+const adb = async (...args) => (await exec('adb', args)).stdout
+
+async function webviewSockets(serial) {
+  const out = await adb('-s', serial, 'shell', 'cat /proc/net/unix')
+  return [...new Set(out.match(/webview_devtools_remote_\d+/g) ?? [])]
+}
+
+async function connectDevice() {
+  const serials = (await adb('devices'))
+    .split('\n')
+    .slice(1)
+    .map((l) => l.trim().split(/\s+/))
+    .filter(([, state]) => state === 'device')
+    .map(([s]) => s)
+  const serial = await pickDevice(serials, async (s) => (await webviewSockets(s)).length > 0)
+  const sockets = await webviewSockets(serial)
+  // Più WebView in debug: si prova dall'ultima (la più recente) finché una ospita la Mini App.
+  for (const socket of sockets.reverse()) {
+    await adb('-s', serial, 'forward', `tcp:${CDP_PORT}`, `localabstract:${socket}`)
+    const browser = await chromium
+      .connectOverCDP(`http://127.0.0.1:${CDP_PORT}`, { timeout: 10_000 })
+      .catch(() => null)
+    // WebView congelata (telefono bloccato / Telegram in background) o morta: prossimo socket.
+    if (!browser) continue
+    const page = browser.contexts().flatMap((c) => c.pages()).find((p) => APP_URL.test(p.url()))
+    if (page) return { browser, page, label: `${serial} · ${socket}` }
+    await browser.close()
+  }
+  throw new Error(
+    'WebView trovata ma non risponde o non ospita la Mini App: sblocca il telefono, ' +
+      'tieni la Mini App aperta in primo piano e riprova.',
+  )
+}
+
+async function launchLocal(url, throttle) {
+  if (!url) throw new Error('--mode local richiede --url (es. http://localhost:5173)')
+  const browser = await chromium.launch({ channel: 'chrome' }) // Chrome installato: niente download dei browser Playwright
+  const context = await browser.newContext({
+    viewport: { width: 375, height: 667 },
+    isMobile: true,
+    hasTouch: true,
+    deviceScaleFactor: 2,
+  })
+  const page = await context.newPage()
+  const cdp = await context.newCDPSession(page)
+  await cdp.send('Emulation.setCPUThrottlingRate', { rate: throttle })
+  await page.goto(url)
+  return { browser, page, label: `locale ${url} · CPU ${throttle}x` }
+}
+
+// ── Misura ──────────────────────────────────────────────────────────────────
+
+/** Installa in pagina il campionatore rAF + observer LoAF (window.__perf). */
+function installMeter() {
+  const st = { ts: [], loaf: null, on: true }
+  const loop = (t) => {
+    if (!st.on) return
+    st.ts.push(t)
+    requestAnimationFrame(loop)
+  }
+  requestAnimationFrame(loop)
+  let obs
+  const push = (list) => {
+    for (const e of list) {
+      st.loaf.push({
+        startTime: e.startTime,
+        duration: e.duration,
+        blockingDuration: e.blockingDuration,
+        styleAndLayoutStart: e.styleAndLayoutStart,
+        scripts: e.scripts.map((s) => ({ sourceURL: s.sourceURL, invoker: s.invoker, duration: s.duration })),
+      })
+    }
+  }
+  if (PerformanceObserver.supportedEntryTypes?.includes('long-animation-frame')) {
+    st.loaf = []
+    obs = new PerformanceObserver((l) => push(l.getEntries()))
+    obs.observe({ type: 'long-animation-frame' })
+  }
+  st.stop = () => {
+    st.on = false
+    if (obs) {
+      push(obs.takeRecords())
+      obs.disconnect()
+    }
+    return { ts: st.ts, loaf: st.loaf }
+  }
+  window.__perf = st
+}
+
+const TRACE_CATEGORIES = [
+  '-*',
+  'devtools.timeline',
+  'disabled-by-default-devtools.timeline',
+  'disabled-by-default-devtools.timeline.frame',
+  'blink.user_timing',
+]
+
+async function startTrace(page) {
+  const cdp = await page.context().newCDPSession(page)
+  await cdp.send('Tracing.start', {
+    traceConfig: { includedCategories: TRACE_CATEGORIES },
+    transferMode: 'ReturnAsStream',
+  })
+  return cdp
+}
+
+/** Ferma la trace e restituisce il JSON grezzo (si apre così com'è in DevTools → Performance). */
+async function stopTrace(cdp) {
+  const done = new Promise((resolve) => cdp.once('Tracing.tracingComplete', resolve))
+  await cdp.send('Tracing.end')
+  const { stream } = await done
+  const chunks = []
+  for (;;) {
+    const { data, base64Encoded, eof } = await cdp.send('IO.read', { handle: stream })
+    chunks.push(base64Encoded ? Buffer.from(data, 'base64').toString('utf8') : data)
+    if (eof) break
+  }
+  await cdp.send('IO.close', { handle: stream })
+  await cdp.detach()
+  return chunks.join('')
+}
+
+/** Helper passati agli scenari. Solo lettura: niente che modifichi i dati. */
+function makeCtx(page) {
+  let inflight = 0
+  page.on('request', () => inflight++)
+  page.on('requestfinished', () => inflight--)
+  page.on('requestfailed', () => inflight--)
+
+  const settle = async (quietMs = 500, maxMs = 5000) => {
+    const end = Date.now() + maxMs
+    let quietSince = Date.now()
+    while (Date.now() < end) {
+      if (inflight > 0) quietSince = Date.now()
+      else if (Date.now() - quietSince >= quietMs) return
+      await page.waitForTimeout(50)
+    }
+  }
+
+  return {
+    page,
+    settle,
+    go: async (hash) => {
+      await page.evaluate((h) => (location.hash = h), hash)
+      await settle()
+    },
+    charId: async () => {
+      const id = await page.evaluate(() => {
+        const m = location.hash.match(/#\/char\/(\d+)/)
+        if (m) return m[1]
+        try {
+          return String(JSON.parse(localStorage.getItem('dnd-character-store')).state.lastCharId ?? '')
+        } catch {
+          return ''
+        }
+      })
+      if (!id) throw new Error('Nessun personaggio: apri un personaggio nella Mini App e riprova.')
+      return id
+    },
+    swipe: async (dx) => {
+      const cdp = await page.context().newCDPSession(page)
+      const { w, h } = await page.evaluate(() => ({ w: innerWidth, h: innerHeight }))
+      const x0 = w / 2 - dx / 2
+      const y = h / 2
+      const touch = (type, x) =>
+        cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y }] })
+      await touch('touchStart', x0)
+      for (let i = 1; i <= 10; i++) {
+        await touch('touchMove', x0 + (dx * i) / 10)
+        await page.waitForTimeout(16)
+      }
+      await touch('touchEnd', x0 + dx)
+      await cdp.detach()
+    },
+  }
+}
+
+async function measure(dir, ctx, scenario) {
+  const { page } = ctx
+  try {
+    await page.evaluate(installMeter)
+    const cdp = await startTrace(page)
+    try {
+      await scenario.run(ctx)
+    } finally {
+      await writeFile(path.join(dir, `${scenario.id}.trace.json`), await stopTrace(cdp))
+    }
+    const { ts, loaf } = await page.evaluate(() => window.__perf.stop())
+    return { id: scenario.id, title: scenario.title, frames: frameStats(ts), loaf: summarizeLoaf(loaf) }
+  } catch (err) {
+    await page.evaluate(() => window.__perf?.stop()).catch(() => {})
+    return { id: scenario.id, title: scenario.title, error: String(err.message ?? err).split('\n')[0] }
+  }
+}
+
 // ── CLI ─────────────────────────────────────────────────────────────────────
 
-async function main() {}
+async function main() {
+  const { values, positionals } = parseArgs({
+    options: {
+      mode: { type: 'string', default: 'device' },
+      label: { type: 'string', default: 'run' },
+      scenario: { type: 'string', multiple: true },
+      url: { type: 'string' },
+      throttle: { type: 'string', default: '6' },
+      compare: { type: 'boolean', default: false },
+    },
+    allowPositionals: true,
+  })
+
+  if (values.compare) {
+    const [a, b] = positionals
+    if (!a || !b) throw new Error('Uso: node scripts/perf/run.mjs --compare <dirBase> <dirCorrente>')
+    const load = async (d) => JSON.parse(await readFile(path.join(d, 'run.json'), 'utf8'))
+    const md = renderComparison(await load(a), await load(b))
+    await writeFile(path.join(b, 'comparison.md'), md)
+    console.log(md)
+    return
+  }
+
+  const wanted = values.scenario?.length ? scenarios.filter((s) => values.scenario.includes(s.id)) : scenarios
+  if (wanted.length === 0) throw new Error(`Nessuno scenario valido. Disponibili: ${scenarios.map((s) => s.id).join(', ')}`)
+
+  const session =
+    values.mode === 'local' ? await launchLocal(values.url, Number(values.throttle)) : await connectDevice()
+  const { page } = session
+  console.log(`✓ Collegato: ${session.label}\n  ${page.url()}`)
+
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
+  const dir = path.join(RESULTS_ROOT, `${values.label}-${stamp}`)
+  await mkdir(dir, { recursive: true })
+  const viewport = await page.evaluate(() => ({ width: innerWidth, height: innerHeight }))
+  const meta = { label: values.label, mode: values.mode, date: new Date().toISOString(), viewport }
+  const results = []
+  const ctx = makeCtx(page)
+
+  try {
+    for (const s of wanted) {
+      process.stdout.write(`▶ ${s.title}… `)
+      const r = await measure(dir, ctx, s)
+      results.push(r)
+      console.log(r.error ? `ERRORE: ${r.error}` : `p95 ${r.frames.p95Ms} ms, scatti ${r.frames.jankFrames}`)
+    }
+  } finally {
+    await writeFile(path.join(dir, 'run.json'), JSON.stringify({ meta, results }, null, 2))
+    await writeFile(path.join(dir, 'report.md'), renderReport(meta, results))
+    console.log(`\n✓ Report: ${path.join(dir, 'report.md')}`)
+    // Device: close() stacca solo il CDP, la WebView resta aperta.
+    await session.browser.close()
+  }
+}
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   main().catch((err) => {
