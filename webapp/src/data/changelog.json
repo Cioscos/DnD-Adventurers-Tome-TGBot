@@ -10,10 +10,12 @@
       "added": {
         "it": [
           "Nuovo «Importa da D&D Beyond» nella schermata dei personaggi: incolla il link della scheda (impostata su Public) e il personaggio viene creato con classi, caratteristiche, punti ferita, oggetti equipaggiati, incantesimi, slot usati, privilegi con le loro cariche, monete, competenze e note.",
+          "Vengono riportate anche le personalizzazioni della scheda: condizioni e sfinimento, PF temporanei e modifiche al massimo, CA e velocità impostate a mano, competenze e maestrie forzate, azioni e oggetti personalizzati.",
           "A fine import un riepilogo mostra cosa è stato importato, cosa è stato approssimato e cosa è stato saltato, con il motivo."
         ],
         "en": [
           "New “Import from D&D Beyond” on the character screen: paste the sheet link (set to Public) and the character is created with classes, ability scores, hit points, equipped items, spells, used slots, features with their charges, coins, proficiencies and notes.",
+          "Sheet customizations come along too: conditions and exhaustion, temporary HP and max HP changes, manually set AC and speed, overridden proficiencies and expertise, custom actions and items.",
           "After importing, a summary shows what was imported, what was approximated and what was skipped, with the reason."
         ]
       }

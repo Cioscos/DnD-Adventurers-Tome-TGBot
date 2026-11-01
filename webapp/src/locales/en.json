@@ -4453,6 +4453,7 @@
       "defenses": "Defenses",
       "creatures": "Creatures",
       "conditions": "Conditions",
+      "speed": "Speed",
       "other": "Other"
     },
     "reasons": {
@@ -4464,6 +4465,9 @@
       "item_modifier": "item effect not recognised: add it by hand if needed",
       "generic_item": "imported as a generic item",
       "unknown_damage_type": "damage type not recognised",
+      "condition_immunity": "condition immunity: not tracked by the app, note it by hand",
+      "custom_action": "custom action: imported as a feature, with dice and damage in the description",
+      "half_proficiency": "half proficiency: not supported by the app, the skill is imported without proficiency",
       "section_failed": "section unreadable, skipped",
       "not_supported": "not supported yet",
       "no_free_slot": "equipped but no free slot: not shown on the paper doll, fix it by hand",

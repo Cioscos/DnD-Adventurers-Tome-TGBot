@@ -4452,6 +4452,7 @@
       "defenses": "Difese",
       "creatures": "Creature",
       "conditions": "Condizioni",
+      "speed": "Velocità",
       "other": "Altro"
     },
     "reasons": {
@@ -4463,6 +4464,9 @@
       "item_modifier": "effetto dell'oggetto non riconosciuto: riportalo a mano se serve",
       "generic_item": "importato come oggetto generico",
       "unknown_damage_type": "tipo di danno non riconosciuto",
+      "condition_immunity": "immunità a una condizione: l'app non la gestisce, annotala a mano",
+      "custom_action": "azione personalizzata: importata come privilegio, con dadi e danno nella descrizione",
+      "half_proficiency": "mezza competenza: l'app non la gestisce, l'abilità è importata senza competenza",
       "section_failed": "sezione non leggibile, saltata",
       "not_supported": "non ancora supportato",
       "no_free_slot": "equipaggiato ma senza slot libero: non compare sul manichino, sistemalo a mano",

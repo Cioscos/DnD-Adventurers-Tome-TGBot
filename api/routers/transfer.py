@@ -163,18 +163,31 @@ async def import_ddb_character(
     return DdbImportResult(character=await build_character_response(session, char), report=report)
 
 
+# nomi DDB 2024 diversi dalla chiave del nostro motore
+_DDB_ALIASES = {"focus_points": "ki_points"}
+
+
 async def _apply_feature_uses(session: AsyncSession, char, feature_uses: list[dict]) -> None:
     """Cariche usate DDB -> feature del nostro motore; il doppione generico del convertitore sparisce."""
     classes = sorted(char.classes, key=lambda c: c.id)  # stesso ordine di export.classes
+    best: dict[int, tuple] = {}
     for fu in feature_uses:
         if not 0 <= fu["class_index"] < len(classes):
             continue
         slug = re.sub(r"[^a-z0-9]+", "_", fu["name"].lower()).strip("_")
+        slug = _DDB_ALIASES.get(slug, slug)
         cls_id = classes[fu["class_index"]].id
+        # chiave come parole intere ovunque nel nome: "Font of Magic: Sorcery Points" -> sorcery_points
         feat = next((a for a in char.abilities if a.is_class_feature and a.source_class_id == cls_id
-                     and a.feature_key and slug.startswith(a.feature_key.split(".", 1)[-1])), None)
-        if feat is None:
-            continue
+                     and a.feature_key and f"_{a.feature_key.split('.', 1)[-1]}_" in f"_{slug}_"), None)
+        # più voci DDB per la stessa feature ("Rage (Enter)" 6, "Rage: Regain Expended Uses" 1):
+        # la riserva vera è quella con più cariche, le altre restano abilità a sé
+        # chiave = oggetto, non feat.id: le feature appena create dal motore non hanno ancora un id
+        if feat is not None and (id(feat) not in best or fu.get("max", 0) > best[id(feat)][1].get("max", 0)):
+            best[id(feat)] = (feat, fu)
+    for feat, fu in best.values():
+        if fu.get("max"):  # il massimo DDB vince: segue le regole della scheda (es. Ira 2024 = 6, non illimitata)
+            feat.max_uses = fu["max"]
         if feat.max_uses is not None:
             feat.uses = max(0, feat.max_uses - fu["used"])
         for dup in [a for a in char.abilities if not a.is_class_feature and a.name == fu["name"]]:

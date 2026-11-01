@@ -2,7 +2,7 @@
 
 Il JSON DDB contiene dati grezzi (non i valori calcolati dalla scheda): qui si ricavano
 solo gli input che la nostra app usa (caratteristiche finali, PF max, oggetti, ...);
-TS, abilità, CA e slot li ricalcola l'app. Ogni sezione è isolata: un dato inatteso
+TS, abilità e slot li ricalcola l'app; la CA base include la DES come su DDB. Ogni sezione è isolata: un dato inatteso
 finisce nel report, non fa fallire l'import.
 """
 from __future__ import annotations
@@ -21,6 +21,8 @@ from api.schemas.transfer import (
     ExportCurrency, ExportItem, ExportSpell, ExportSpellSlot,
 )
 from core.data.damage_types import canonical_damage_type
+from core.data.labels import CONDITION_LABELS_IT
+from core.game.item_bonuses import item_bonus_total
 from core.data.skills import SKILL_ABILITY_MAP
 from core.data.classes import class_table_key
 from core.data.spell_slots import normalize_class_name
@@ -40,10 +42,22 @@ ITEM_RECHARGE = {1: "short_rest", 2: "long_rest", 3: "dawn"}
 ARMOR_TYPE = {1: "light", 2: "medium", 3: "heavy"}  # armorTypeId 4 = scudo
 # characterValues typeId: 2 bonus magico CA, 3 bonus vario CA, 8 nome personalizzato oggetto
 CV_AC_BONUS, CV_ITEM_NAME = (2, 3), 8
+CV_SKILL_PROF, CV_SAVE_PROF = 26, 41  # "Skill/Saving Throw Proficiency Level"
+# abilitySkills della rule-data DDB
+DDB_SKILLS = {2: "athletics", 3: "acrobatics", 4: "sleight_of_hand", 5: "stealth", 6: "arcana", 7: "history",
+              8: "investigation", 9: "nature", 10: "religion", 11: "animal_handling", 12: "insight", 13: "medicine",
+              14: "perception", 15: "survival", 16: "deception", 17: "intimidation", 18: "performance",
+              19: "persuasion"}
+CV_AC_OVERRIDE, CV_AC_BASE_OVERRIDE = 1, 4  # "Override AC" (totale), "Override Base Armor + DEX"
 # activationType DDB
 ACTIVATION = {1: "action", 3: "bonus action", 4: "reaction", 6: "minute", 7: "hour"}
 SKIP_FEATURES = {"hit points", "proficiencies", "equipment", "ability score improvement",
-                 "ability score increase", "languages", "age", "size", "speed", "alignment"}
+                 "ability score increase", "ability score increases", "languages", "age", "size", "speed",
+                 "alignment", "creature type", "epic boon"}
+# voci-contenitore delle classi 2024 (es. "Core Sorcerer Traits", "Sorcerer Subclass", "Metamagic Options")
+_LEVEL_PREFIX_RE = re.compile(r"^\d+: ")  # "8: Ability Score Improvement"
+_STRUCTURAL_RE = re.compile(r"^(core .+ traits|\w+ subclass|.+ options|.*ability score improvements?)$")
+_UNCHOSEN_RE = re.compile(r"^(choose|select) ", re.I)
 NOTE_TITLES = {"backstory": "Backstory", "allies": "Allies", "organizations": "Organizations",
                "enemies": "Enemies", "personalPossessions": "Personal Possessions",
                "otherHoldings": "Other Holdings", "otherNotes": "Other Notes"}
@@ -108,10 +122,38 @@ def _slug(name: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
 
 
+def _inactive_item_ids(data: dict) -> set[int]:
+    """definition.id degli oggetti che non danno effetti: DDB elenca comunque i loro modificatori
+    in modifiers.item (anche se non equipaggiati o non sintonizzati), la scheda li scarta."""
+    out = set()
+    for it in _l(data.get("inventory")):
+        it = _d(it)
+        d = _d(it.get("definition"))
+        if not it.get("equipped") or (d.get("canAttune") and not it.get("isAttuned")):
+            out.add(_int(d.get("id")))
+    active = {_int(_d(_d(it).get("definition")).get("id")) for it in _l(data.get("inventory"))} - out
+    return out - active  # stesso oggetto due volte, una copia attiva: vale quella
+
+
+def _multiclass_feature_ids(data: dict) -> set[int]:
+    """Privilegi delle classi aggiunte (non iniziali): i loro modificatori con
+    availableToMulticlass=false (TS, alcune competenze) non valgono, come sulla scheda DDB."""
+    classes = [_d(c) for c in _l(data.get("classes"))]
+    if not any(c.get("isStartingClass") for c in classes):
+        return set()
+    return {_int(_d(_d(f).get("definition")).get("id")) for c in classes if not c.get("isStartingClass")
+            for f in _l(c.get("classFeatures"))}
+
+
 def _modifiers(data: dict, sources: tuple[str, ...] | None = None) -> list[dict]:
     mods = _d(data.get("modifiers"))
+    inactive = _inactive_item_ids(data) if sources is None or "item" in sources else set()
+    multi = _multiclass_feature_ids(data) if sources is None or "class" in sources else set()
     return [(m | {"_src": src}) for src, ms in mods.items()
-            if sources is None or src in sources for m in _l(ms) if isinstance(m, dict)]
+            if sources is None or src in sources for m in _l(ms) if isinstance(m, dict)
+            and not (src == "item" and _int(m.get("componentId")) in inactive)
+            and not (src == "class" and m.get("availableToMulticlass") is False
+                     and _int(m.get("componentId")) in multi)]
 
 
 class _Ctx:
@@ -220,13 +262,45 @@ def _hp(c: _Ctx) -> dict:
             "temp_hp": max(0, _int(d.get("temporaryHitPoints")))}
 
 
+MOVEMENT = {1: "walk", 2: "burrow", 3: "climb", 4: "fly", 5: "swim"}  # customSpeeds.movementId
+OTHER_SPEEDS = {f"innate-speed-{k}": v for k, v in
+                (("burrowing", "burrow"), ("climbing", "climb"), ("flying", "fly"), ("swimming", "swim"))}
+
+
+def _speed(c: _Ctx, walk: int) -> int:
+    """Velocità a piedi come la scheda DDB: base razza/lignaggio + bonus (l'app non li calcola)."""
+    armored = any(isinstance(it, dict) and it.get("equipped")
+                  and 1 <= _int(_d(it.get("definition")).get("armorTypeId")) <= 4  # 4 = scudo
+                  for it in _l(c.data.get("inventory")))
+    bonus, other = 0, {}
+    for m in _modifiers(c.data, ("race", "class", "background", "feat")):
+        sub, val = m.get("subType"), _int(m.get("value"))
+        if m.get("type") == "set" and sub == "innate-speed-walking":
+            walk = max(walk, val)
+        elif m.get("type") == "set" and sub in OTHER_SPEEDS:
+            other[OTHER_SPEEDS[sub]] = max(other.get(OTHER_SPEEDS[sub], 0), val)
+        elif m.get("type") == "bonus" and (sub in ("speed", "speed-walking")
+                                           or (sub == "unarmored-movement" and not armored)):
+            bonus += val
+    walk += _clamp(bonus, 0, 200)
+    for cs in _l(c.data.get("customSpeeds")):  # "Override speeds" della scheda: vince sul calcolato
+        kind, dist = MOVEMENT.get(_int(_d(cs).get("movementId"))), _int(_d(cs).get("distance"))
+        if kind == "walk" and dist > 0:
+            walk = dist
+        elif kind and dist > 0:
+            other[kind] = dist
+    for kind, dist in other.items():  # l'app ha solo la velocità a piedi
+        c.skip("speed", f"{kind} {dist}", "ddb.reason.not_supported")
+    return walk
+
+
 def _identity(c: _Ctx) -> dict:
     d = c.data
     bg = _d(d.get("background"))
     race = _d(d.get("race"))
     traits = _d(d.get("traits"))
-    speed = _int(_d(_d(race.get("weightSpeeds")).get("normal")).get("walk"), 30)
-    ds = _d(d.get("deathSaves"))
+    speed = _speed(c, _int(_d(_d(race.get("weightSpeeds")).get("normal")).get("walk"), 30))
+    ds =_d(d.get("deathSaves"))
     out = {
         "race": _str(race.get("fullName"), 100) or None,
         "gender": _str(d.get("gender"), 50) or None,
@@ -272,6 +346,8 @@ def _proficiencies(c: _Ctx) -> dict:
         if not isinstance(sub, str):
             continue
         label = _str(m.get("friendlySubtypeName"), 100) or sub
+        if _UNCHOSEN_RE.match(label):  # scelta lasciata aperta su DDB ("Choose a Gaming Set")
+            continue
         if t in ("proficiency", "expertise"):
             slug = sub.replace("-", "_")
             if slug in SKILL_ABILITY_MAP:
@@ -292,9 +368,26 @@ def _proficiencies(c: _Ctx) -> dict:
             slug = canonical_damage_type(sub)
             key = {"resistance": "resistances", "immunity": "immunities", "vulnerability": "vulnerabilities"}[t]
             if slug is None:
-                c.skip("defenses", label, "ddb.reason.unknown_damage_type")
+                c.skip("defenses", label, "ddb.reason.condition_immunity" if sub in CONDITION_LABELS_IT
+                       else "ddb.reason.unknown_damage_type")
             elif slug not in dmg[key]:
                 dmg[key].append(slug)
+    # livelli di competenza impostati a mano sulla scheda: 1 nessuna, 2 mezza, 3 competente, 4 maestria
+    for v in _l(c.data.get("characterValues")):
+        v = _d(v)
+        kind, level, ref = _int(v.get("typeId")), _int(v.get("value")), _int(v.get("valueId"))
+        if kind == CV_SKILL_PROF and ref in DDB_SKILLS:
+            slug, target = DDB_SKILLS[ref], skills
+        elif kind == CV_SAVE_PROF and 1 <= ref <= 6:
+            slug, target = ABILITIES[ref - 1], saves
+        else:
+            continue
+        if level >= 3:
+            target[slug] = "expert" if level == 4 and target is skills else True
+        else:
+            target.pop(slug, None)
+            if level == 2:  # l'app non ha la mezza competenza
+                c.approx("proficiencies", slug, "ddb.reason.half_proficiency")
     c.ok("proficiencies")
     return {"skills": skills, "saving_throws": saves, "general_proficiencies": general,
             "languages": langs[:20], "damage_modifiers": {k: v for k, v in dmg.items() if v}}
@@ -422,10 +515,11 @@ def _items(c: _Ctx) -> None:
         m = c.model(ExportItem, obj, "items", name)
         if m:
             out.append(m)
+    in_inventory = {_int(_d(_d(it).get("definition")).get("id")) for it in _l(c.data.get("inventory"))}
     for ci in _l(c.data.get("customItems")):
         ci = _d(ci)
         name = _str(ci.get("name"))
-        if not name:
+        if not name or _int(ci.get("id"), -1) in in_inventory:  # già importato da inventory
             continue
         obj = {"name": name, "description": _text(ci.get("description")) or _str(ci.get("notes"), 2000) or None,
                "weight": max(0.0, float(ci["weight"])) if isinstance(ci.get("weight"), (int, float)) else 0.0,
@@ -446,10 +540,37 @@ def _items(c: _Ctx) -> None:
     char = c.out["character"]
     armor = next((i for i in out if i.item_type == "armor" and i.equipment_slot == EquipmentSlot.BODY), None)
     shield = next((i for i in out if i.item_type == "shield" and i.equipment_slot is not None), None)
-    char["base_armor_class"] = armor.item_metadata.get("ac_value", 10) if armor else 10
+    # la base include già la DES come sulla scheda DDB: l'app non la somma da sola
+    dex = c.mod("dexterity")
+    if armor:
+        cap = {"light": dex, "medium": min(dex, 2)}.get(armor.item_metadata.get("armor_type"), 0)
+        char["base_armor_class"] = armor.item_metadata.get("ac_value", 10) + cap
+    else:
+        unarmored = next((m for m in _modifiers(c.data) if m.get("type") == "set"
+                          and m.get("subType") == "unarmored-armor-class"), None)
+        base = 10 + dex
+        if unarmored:
+            stat = _int(unarmored.get("statId"))
+            ability = ABILITIES[stat - 1] if 1 <= stat <= 6 else None
+            if ability in ("wisdom", "constitution"):  # Monaco / Barbaro: l'app la tiene in sync
+                char["unarmored_defense_ability"] = ability
+            # come la scheda DDB: mai peggio di 10 + DES (es. Resilienza draconica con CAR negativo)
+            base += max(0, (c.mod(ability) if ability else 0) + _clamp(_int(unarmored.get("value")), 0, 10))
+        char["base_armor_class"] = base
     char["shield_armor_class"] = shield.item_metadata.get("ac_bonus", 2) if shield else 0
-    char["magic_armor"] = sum(_int(v.get("value")) for v in _l(c.data.get("characterValues"))
-                              if isinstance(v, dict) and _int(v.get("typeId")) in CV_AC_BONUS)
+    values = [v for v in _l(c.data.get("characterValues")) if isinstance(v, dict) and v.get("value") is not None]
+    char["magic_armor"] = sum(_int(v.get("value")) for v in values if _int(v.get("typeId")) in CV_AC_BONUS)
+    over = {_int(v.get("typeId")): _clamp(_int(v.get("value")), 0, 100) for v in values
+            if _int(v.get("typeId")) in (CV_AC_OVERRIDE, CV_AC_BASE_OVERRIDE)}
+    if CV_AC_OVERRIDE in over:  # CA imposta a mano: scudo e bonus non si sommano più
+        # l'app somma da sé i bonus CA degli oggetti attivi (es. Anello di protezione): si scalano dalla base
+        char.update(base_armor_class=max(0, over[CV_AC_OVERRIDE] - item_bonus_total(out, "ac")),
+                    shield_armor_class=0, magic_armor=0,
+                    base_armor_class_override=True, shield_armor_class_override=True)
+        char.pop("unarmored_defense_ability", None)
+    elif CV_AC_BASE_OVERRIDE in over:
+        char.update(base_armor_class=over[CV_AC_BASE_OVERRIDE], base_armor_class_override=True)
+        char.pop("unarmored_defense_ability", None)
 
 
 def _spell_fields(d: dict) -> dict:
@@ -472,10 +593,17 @@ def _spell_fields(d: dict) -> dict:
 
 
 def _spells(c: _Ctx) -> None:
-    entries = [s for cs in _l(c.data.get("classSpells")) for s in _l(_d(cs).get("spells"))]
-    entries += [s for src in _d(c.data.get("spells")).values() for s in _l(src)]
+    # classi a incantesimi conosciuti (spellPrepareType nullo: bardo, stregone, warlock...): tutto è lanciabile
+    known = {_int(_d(cl).get("id")) for cl in _l(c.data.get("classes"))
+             if _d(_d(cl).get("definition")).get("spellPrepareType") is None}
+    entries = [(s, _int(_d(cs).get("characterClassId")) in known)
+               for cs in _l(c.data.get("classSpells")) for s in _l(_d(cs).get("spells"))]
+    entries += [(s, True) for src in _d(c.data.get("spells")).values() for s in _l(src)]
+    entries += [(s, True) for s in _l(c.data.get("_alwaysPrepared"))]  # aggiunti da fetch_ddb
     out, seen = [], set()
-    for sp in entries:
+    for sp, always in entries:
+        if isinstance(sp, dict) and not sp.get("definition") and not sp.get("id"):
+            continue  # segnaposto vuoto DDB (scelta d'incantesimo non ancora fatta)
         d = _d(_d(sp).get("definition"))
         name = _str(d.get("name"))
         if not name:
@@ -489,7 +617,7 @@ def _spells(c: _Ctx) -> None:
                "description": _text(d.get("description")), "is_concentration": bool(d.get("concentration")),
                "is_ritual": bool(d.get("ritual")), "school": _str(d.get("school"), 30).lower() or None,
                "srd_index": _slug(name)[:80] or None,
-               "is_prepared": bool(sp.get("prepared") or sp.get("alwaysPrepared") or level == 0),
+               "is_prepared": bool(always or sp.get("prepared") or sp.get("alwaysPrepared") or level == 0),
                **_spell_fields(d)}
         m = c.model(ExportSpell, obj, "spells", name)
         if m:
@@ -518,6 +646,10 @@ def _max_uses(c: _Ctx, lu: dict) -> int | None:
     return _clamp(total, 1, 1_000_000) if total > 0 else None
 
 
+DDB_DAMAGE_TYPES = {1: "Bludgeoning", 2: "Piercing", 3: "Slashing", 4: "Necrotic", 5: "Acid", 6: "Cold", 7: "Fire",
+                    8: "Lightning", 9: "Thunder", 10: "Poison", 11: "Psychic", 12: "Radiant", 13: "Force"}
+
+
 def _abilities(c: _Ctx) -> None:
     out: list[ExportAbility] = []
     uses_out: list[dict] = []
@@ -528,8 +660,8 @@ def _abilities(c: _Ctx) -> None:
                      if isinstance(f, dict)}
 
     def add(obj: dict, section: str) -> None:
-        key = obj["name"].lower()
-        if key in names or key in SKIP_FEATURES:
+        key = _LEVEL_PREFIX_RE.sub("", obj["name"].lower())  # "4: Weapon Mastery" = "Weapon Mastery"
+        if key in names or key in SKIP_FEATURES or _STRUCTURAL_RE.match(key):
             return
         m = c.model(ExportAbility, obj, section, obj["name"])
         if m:
@@ -547,10 +679,22 @@ def _abilities(c: _Ctx) -> None:
             used = max(0, _int(lu.get("numberUsed")))
             if mx is not None and src == "class" and raw_classes:
                 uses_out.append({"class_index": feature_owner.get(_int(a.get("componentId")), 0),
-                                 "name": name, "used": used})
+                                 "name": name, "used": used, "max": mx})
             add({"name": name, "description": _text(a.get("description") or a.get("snippet")),
                  "max_uses": mx, "uses": _clamp(mx - used, 0, mx) if mx else None, "is_passive": False,
                  "restoration_type": RESET.get(_int(lu.get("resetType")), "manual") if mx else "none"}, "abilities")
+    for ca in _l(c.data.get("customActions")):  # azioni "Manage Custom": l'app non ha attacchi liberi
+        ca = _d(ca)
+        name = _str(ca.get("name"))
+        if not name:
+            continue
+        dice = f"{_int(ca.get('diceCount'))}d{_int(ca.get('diceType'))}" if ca.get("diceCount") and ca.get("diceType") else ""
+        stat = _int(ca.get("statId"))
+        summary = " ".join(filter(None, (dice, DDB_DAMAGE_TYPES.get(_int(ca.get("damageTypeId")), ""),
+                                         f"({ABILITIES[stat - 1][:3].upper()})" if 1 <= stat <= 6 else "")))
+        desc = "\n\n".join(filter(None, (summary, _text(ca.get("description") or ca.get("snippet")))))
+        add({"name": name, "description": desc, "is_passive": False, "restoration_type": "none"}, "abilities")
+        c.approx("abilities", name, "ddb.reason.custom_action")
     passive = []
     for i, cl in enumerate(raw_classes):
         lvl = _int(_d(cl).get("level"), 1)
@@ -575,18 +719,50 @@ def _currency(c: _Ctx) -> None:
     c.ok("currency")
 
 
+# id fissi delle condizioni DDB (ordine alfabetico inglese, esaurimento incluso)
+DDB_CONDITIONS = {1: "blinded", 2: "charmed", 3: "deafened", 4: "exhaustion", 5: "frightened",
+                  6: "grappled", 7: "incapacitated", 8: "invisible", 9: "paralyzed", 10: "petrified",
+                  11: "poisoned", 12: "prone", 13: "restrained", 14: "stunned", 15: "unconscious"}
+
+
+# characterValues del PG che l'app non sa rappresentare (adjustmentTypes della rule-data DDB)
+CV_UNSUPPORTED = {5: "Override Passive Perception", 6: "Override Passive Investigation",
+                  7: "Override Passive Insight", 23: "Skill Override", 24: "Skill Misc Bonus",
+                  25: "Skill Magic Bonus", 27: "Skill Stat Override", 36: "Sense Override",
+                  38: "Saving Throw Override", 39: "Saving Throw Misc Bonus", 40: "Saving Throw Magic Bonus"}
+
+
 def _leftovers(c: _Ctx) -> None:
+    for v in _l(c.data.get("characterValues")):
+        v = _d(v)
+        label, ref = CV_UNSUPPORTED.get(_int(v.get("typeId"))), _int(v.get("valueId"))
+        if label and v.get("value") is not None:
+            target = (DDB_SKILLS.get(ref) if 23 <= _int(v.get("typeId")) <= 27
+                      else ABILITIES[ref - 1] if 38 <= _int(v.get("typeId")) <= 40 and 1 <= ref <= 6 else "")
+            val = _int(v.get("value"))
+            shown = f"{val:+d}" if "Bonus" in label else str(val)
+            c.skip("other", f"{label}: {target + ' ' if target else ''}{shown}", "ddb.reason.not_supported")
     for cr in _l(c.data.get("creatures")):
         c.skip("creatures", _str(_d(cr).get("name")) or _str(_d(_d(cr).get("definition")).get("name")),
                "ddb.reason.not_supported")
-    if _l(c.data.get("conditions")):
-        c.skip("conditions", "", "ddb.reason.not_supported")
+    conds: dict = {}
+    for cd in _l(c.data.get("conditions")):
+        slug = DDB_CONDITIONS.get(_int(_d(cd).get("id")))
+        if slug == "exhaustion":
+            conds[slug] = _clamp(_int(_d(cd).get("level"), 1), 1, 6)
+        elif slug:
+            conds[slug] = True
+        else:
+            c.skip("conditions", str(_d(cd).get("id")), "ddb.reason.not_supported")
+    if conds:
+        c.out["character"]["conditions"] = conds
 
 
 # --- recupero ----------------------------------------------------------------
 
 # Endpoint interno non ufficiale di DDB: solo PG pubblici (privati -> 403); può cambiare.
 DDB_URL = "https://character-service.dndbeyond.com/character/v5/character/{id}?includeCustomItems=true"
+ALWAYS_PREPARED_URL = "https://character-service.dndbeyond.com/character/v5/game-data/always-prepared-spells"
 _MAX_BYTES = 2_000_000
 _ID_RE = re.compile(r"characters/(\d{1,12})(?:\D|$)")
 _transport: httpx.AsyncBaseTransport | None = None  # None = rete reale
@@ -602,13 +778,38 @@ def parse_ddb_id(text: str) -> int | None:
     return int(m.group(1)) if m and any(h in t.lower() for h in ("dndbeyond.com", "ddb.ac")) else None
 
 
+async def _always_prepared(cl: httpx.AsyncClient, data: dict) -> list:
+    """Incantesimi sempre preparati di classi/sottoclassi (dominio, giuramento...): le sottoclassi 2024
+    non li scrivono nel JSON del PG. Best effort: un errore qui non blocca l'import."""
+    out: list = []
+    for cl_ in _l(data.get("classes"))[:4]:
+        cl_ = _d(cl_)
+        lvl = _clamp(_int(cl_.get("level"), 1), 1, 20)
+        for d in (_d(cl_.get("definition")), _d(cl_.get("subclassDefinition"))):
+            if not _int(d.get("id")):
+                continue
+            try:
+                r = await cl.get(ALWAYS_PREPARED_URL, params={"classId": _int(d["id"]), "classLevel": lvl})
+                if r.status_code == 200 and len(r.content) <= _MAX_BYTES:
+                    out += [s for s in _l(_d(r.json()).get("data")) if isinstance(s, dict)]
+            except (httpx.HTTPError, ValueError):
+                log.warning("ddb always-prepared %s non disponibile", d.get("id"))
+    return out
+
+
 async def fetch_ddb(char_id: int) -> dict:
     try:
         async with httpx.AsyncClient(timeout=10, transport=_transport, follow_redirects=True,
                                      headers={"User-Agent": "Mozilla/5.0", "Accept": "application/json"}) as cl:
             r = await cl.get(DDB_URL.format(id=char_id))
+            body = _parse_character(r)
+            body["data"]["_alwaysPrepared"] = await _always_prepared(cl, body["data"])
     except httpx.HTTPError:
         raise DdbImportError("ddb_unreachable")
+    return body
+
+
+def _parse_character(r: httpx.Response) -> dict:
     if r.status_code in (401, 403):
         raise DdbImportError("ddb_private")
     if r.status_code == 404:

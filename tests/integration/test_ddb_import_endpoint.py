@@ -136,3 +136,89 @@ async def test_fetch_ddb_network_error(monkeypatch):
     with pytest.raises(DdbImportError) as e:
         await fetch_ddb(1)
     assert e.value.code == "ddb_unreachable"
+
+
+async def test_import_ddb_sorcery_points_not_duplicated(client, monkeypatch):
+    sorc = Path(__file__).parents[1] / "fixtures" / "ddb" / "sorcerer5_2024.json"
+
+    async def fake(char_id: int) -> dict:
+        return json.loads(sorc.read_text(encoding="utf-8"))
+    monkeypatch.setattr(transfer, "fetch_ddb", fake)
+    ch = (await _post(client)).json()["character"]
+    sp = [a for a in ch["abilities"] if a.get("feature_key") == "sorcerer.sorcery_points"]
+    assert len(sp) == 1 and sp[0]["max_uses"] == 5 and sp[0]["uses"] == 5
+    assert not any(a["name"] == "Font of Magic: Sorcery Points" for a in ch["abilities"])
+    assert sum(ch["ac_breakdown"][k] for k in ("base", "shield", "magic", "items", "homebrew")) == 12
+
+
+async def test_import_ddb_monk_focus_points_not_duplicated(client, monkeypatch):
+    monk = Path(__file__).parents[1] / "fixtures" / "ddb" / "monk20_2024.json"
+
+    async def fake(char_id: int) -> dict:
+        return json.loads(monk.read_text(encoding="utf-8"))
+    monkeypatch.setattr(transfer, "fetch_ddb", fake)
+    ch = (await _post(client)).json()["character"]
+    ki = [a for a in ch["abilities"] if a.get("feature_key") == "monk.ki"]
+    assert len(ki) == 1 and ki[0]["max_uses"] == 20
+    assert not any(a["name"] == "Focus Points" for a in ch["abilities"])
+
+
+async def test_import_ddb_rage_uses_ddb_max_and_keeps_other_rage_actions(client, monkeypatch):
+    barb = Path(__file__).parents[1] / "fixtures" / "ddb" / "barbarian20_2024.json"
+
+    async def fake(char_id: int) -> dict:
+        return json.loads(barb.read_text(encoding="utf-8"))
+    monkeypatch.setattr(transfer, "fetch_ddb", fake)
+    ch = (await _post(client)).json()["character"]
+    rage = [a for a in ch["abilities"] if a.get("feature_key") == "barbarian.rage"]
+    assert len(rage) == 1 and rage[0]["max_uses"] == 6 and rage[0]["uses"] == 6  # regole 2024, non "illimitata"
+    names = {a["name"] for a in ch["abilities"]}
+    assert "Rage (Enter)" not in names and "Rage: Regain Expended Uses" in names
+
+
+def _char_with_subclass() -> dict:
+    return {"success": True, "data": {"name": "X", "classes": [
+        {"id": 5, "level": 20, "definition": {"id": 10}, "subclassDefinition": {"id": 20}}]}}
+
+
+async def test_fetch_ddb_adds_always_prepared_spells(monkeypatch):
+    seen = []
+
+    def handler(req):
+        seen.append(str(req.url))
+        if "/character/v5/character/" in str(req.url):
+            return httpx.Response(200, json=_char_with_subclass())
+        if req.url.params.get("classId") == "20":
+            return httpx.Response(200, json={"success": True, "data": [{"definition": {"name": "Bless", "level": 1}}]})
+        return httpx.Response(200, json={"success": True, "data": []})
+    monkeypatch.setattr(ddb_import, "_transport", httpx.MockTransport(handler))
+    body = await fetch_ddb(42)
+    assert [s["definition"]["name"] for s in body["data"]["_alwaysPrepared"]] == ["Bless"]
+    assert any("always-prepared-spells?classId=20&classLevel=20" in u for u in seen)
+
+
+async def test_fetch_ddb_always_prepared_failure_is_not_fatal(monkeypatch):
+    def handler(req):
+        if "/character/v5/character/" in str(req.url):
+            return httpx.Response(200, json=_char_with_subclass())
+        return httpx.Response(500)
+    monkeypatch.setattr(ddb_import, "_transport", httpx.MockTransport(handler))
+    body = await fetch_ddb(42)
+    assert body["data"]["name"] == "X" and body["data"]["_alwaysPrepared"] == []
+
+
+async def test_import_ddb_fighter_every_feature_deduplicated(client, monkeypatch):
+    fighter = Path(__file__).parents[1] / "fixtures" / "ddb" / "fighter20_2024.json"
+
+    async def fake(char_id: int) -> dict:
+        return json.loads(fighter.read_text(encoding="utf-8"))
+    monkeypatch.setattr(transfer, "fetch_ddb", fake)
+    ch = (await _post(client)).json()["character"]
+    by_key = {a["feature_key"]: a for a in ch["abilities"] if a.get("feature_key")}
+    assert by_key["fighter.action_surge"]["max_uses"] == 2  # massimo DDB (2024)
+    assert by_key["fighter.indomitable"]["max_uses"] == 3
+    assert by_key["fighter.second_wind"]["max_uses"] == 4
+    names = {a["name"] for a in ch["abilities"]}
+    assert not names & {"Action Surge", "Indomitable", "Second Wind"}
+    ac = ch["ac_breakdown"]
+    assert ac["base"] + ac["shield"] == 18
