@@ -22,16 +22,31 @@ async function toggleSheet(page, name, times = 5) {
   }
 }
 
-/** Scorre la pagina fino in fondo a passi da 300 px e torna su. */
+/** Swipe touch reale (CDP) sul contenitore della pagina — <main> di Layout, non il document — giù e su. */
 async function scrollList(page) {
-  const max = await page.evaluate(() => document.scrollingElement.scrollHeight - innerHeight)
-  for (let y = 0; y < max; y += 300) {
-    await page.mouse.wheel(0, 300)
-    await page.waitForTimeout(100)
-  }
-  for (let y = max; y > 0; y -= 300) {
-    await page.mouse.wheel(0, -300)
-    await page.waitForTimeout(100)
+  const { max, w, h } = await page.evaluate(() => {
+    const m = document.querySelector('main')
+    return { max: m ? m.scrollHeight - m.clientHeight : 0, w: innerWidth, h: innerHeight }
+  })
+  const cdp = await page.context().newCDPSession(page)
+  try {
+    const gesture = (yDistance) =>
+      cdp.send('Input.synthesizeScrollGesture', {
+        x: w / 2,
+        y: h / 2,
+        yDistance,
+        speed: 1500,
+        gestureSourceType: 'default', // touch su Android, mouse su Chrome desktop (lì il touch sintetico non scorre)
+        repeatCount: 0,
+      })
+    await gesture(-(max + 200))
+    await page.waitForTimeout(500)
+    const reached = await page.evaluate(() => document.querySelector('main')?.scrollTop ?? 0)
+    if (reached <= 0) throw new Error('la lista non è scorsa (pochi elementi o contenitore sbagliato)')
+    await gesture(max + 200)
+    await page.waitForTimeout(500)
+  } finally {
+    await cdp.detach().catch(() => {})
   }
 }
 
@@ -65,8 +80,15 @@ export const scenarios = [
   {
     id: 'hp-sheet-hub',
     title: 'Sheet rapido PF sull\'hub ×5',
-    run: async ({ page, go, charId }) => {
+    run: async ({ page, go, charId, swipe }) => {
       await go(`#/char/${await charId()}`)
+      // Il pulsante PF è sulla HeroScreen: activeScreen non si azzera riaprendo lo stesso PG,
+      // quindi due swipe verso destra per tornare alla schermata 0 (lì sono un no-op).
+      const w = await page.evaluate(() => innerWidth)
+      for (let i = 0; i < 2; i++) {
+        await swipe(0.6 * w)
+        await page.waitForTimeout(ANIM_MS)
+      }
       await toggleSheet(page, HP)
     },
   },

@@ -234,6 +234,15 @@ async function startTrace(page) {
 
 /** Ferma la trace e restituisce il JSON grezzo (si apre così com'è in DevTools → Performance). */
 async function stopTrace(cdp) {
+  try {
+    return await readTrace(cdp)
+  } finally {
+    // Sempre: una sessione lasciata attaccata terrebbe il tracing acceso e romperebbe gli scenari successivi.
+    await cdp.detach().catch(() => {})
+  }
+}
+
+async function readTrace(cdp) {
   const done = new Promise((resolve) => cdp.once('Tracing.tracingComplete', resolve))
   await cdp.send('Tracing.end')
   const { stream } = await done
@@ -244,7 +253,6 @@ async function stopTrace(cdp) {
     if (eof) break
   }
   await cdp.send('IO.close', { handle: stream })
-  await cdp.detach()
   return chunks.join('')
 }
 
@@ -308,20 +316,29 @@ function makeCtx(page) {
 
 async function measure(dir, ctx, scenario) {
   const { page } = ctx
+  const base = { id: scenario.id, title: scenario.title }
+  let cdp
+  let error
   try {
+    cdp = await startTrace(page)
     await page.evaluate(installMeter)
-    const cdp = await startTrace(page)
-    try {
-      await scenario.run(ctx)
-    } finally {
-      await writeFile(path.join(dir, `${scenario.id}.trace.json`), await stopTrace(cdp))
-    }
-    const { ts, loaf } = await page.evaluate(() => window.__perf.stop())
-    return { id: scenario.id, title: scenario.title, frames: frameStats(ts), loaf: summarizeLoaf(loaf) }
+    await scenario.run(ctx)
   } catch (err) {
-    await page.evaluate(() => window.__perf?.stop()).catch(() => {})
-    return { id: scenario.id, title: scenario.title, error: String(err.message ?? err).split('\n')[0] }
+    error = err
   }
+  // Misuratore fermato PRIMA della trace: chiuderla (stream via adb) blocca il renderer e sporcherebbe i frame.
+  const data = await page.evaluate(() => window.__perf?.stop()).catch(() => null)
+  if (cdp) {
+    try {
+      await writeFile(path.join(dir, `${scenario.id}.trace.json`), await stopTrace(cdp))
+    } catch (err) {
+      error ??= new Error(`trace: ${err.message ?? err}`)
+    }
+  }
+  if (error || !data) {
+    return { ...base, error: String(error?.message ?? error ?? 'misuratore assente').split('\n')[0] }
+  }
+  return { ...base, frames: frameStats(data.ts), loaf: summarizeLoaf(data.loaf) }
 }
 
 // ── CLI ─────────────────────────────────────────────────────────────────────
