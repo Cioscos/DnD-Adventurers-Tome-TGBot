@@ -14,7 +14,7 @@ export default function RoundRibbon({ combatants, activeId, myUserId }: Props) {
   const activeIdx = combatants.findIndex((c) => c.id === activeId)
 
   return (
-    <div data-testid="round-ribbon" className="flex gap-1 overflow-x-auto pb-1 -mx-1 px-1">
+    <div data-testid="round-ribbon" className="flex gap-1 overflow-x-auto py-1 -mx-1 px-1">
       {combatants.map((c, i) => {
         const state: SegState = c.is_dead
           ? 'dead'
@@ -39,7 +39,7 @@ export default function RoundRibbon({ combatants, activeId, myUserId }: Props) {
               ${c.kind === 'monster' ? 'border-b-2 border-b-dnd-crimson' : ''}
               ${state === 'done' || state === 'dead' ? 'opacity-50' : ''}`}
           >
-            <span className="w-full truncate text-center text-[11px] font-body">{c.name}</span>
+            <span className="w-full truncate text-center text-xs font-body">{c.name}</span>
             {state === 'dead' ? (
               <Skull size={12} className="text-dnd-text-muted" />
             ) : (

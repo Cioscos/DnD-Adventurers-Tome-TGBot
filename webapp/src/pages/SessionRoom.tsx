@@ -23,6 +23,7 @@ import { api, ApiError } from '@/api/client'
 import type { CharacterLiveSnapshot, SessionParticipant } from '@/types'
 import { canShareMessage, haptic, telegramConfirm } from '@/auth/telegram'
 import { useShareMessage } from '@/hooks/useShareMessage'
+import { useSessionLive } from '@/hooks/useSessionLive'
 import ParticipantIdentitySheet from '@/pages/session/ParticipantIdentitySheet'
 import SessionFeed from '@/pages/session/SessionFeed'
 import GrantItemModal from '@/pages/session/GrantItemModal'
@@ -218,24 +219,7 @@ export default function SessionRoom() {
   })
   const myUserId = meInfo?.user_id ?? 0
 
-  const { data: live, isLoading, isError, error, refetch } = useQuery({
-    queryKey: ['session-live', sessionId],
-    queryFn: async () => {
-      // last_activity_at è il keep-alive del server: cambia a OGNI poll e
-      // nessun componente lo legge. Va scartato prima che il dato entri in
-      // cache: così i poll senza novità restano deep-equal, lo structural
-      // sharing riusa la stessa reference e la stanza non ri-renderizza
-      // a ogni tick da 2.5s.
-      const { last_activity_at: keepAlive, ...stable } = await api.sessions.live(sessionId)
-      void keepAlive
-      return stable
-    },
-    refetchInterval: (query) => {
-      const d = query.state.data
-      return d && d.status === 'active' ? 2500 : false
-    },
-    enabled: Number.isFinite(sessionId),
-  })
+  const { data: live, isLoading, isError, error, refetch } = useSessionLive(sessionId)
 
   const leaveMutation = useMutation({
     mutationFn: () => api.sessions.leave(sessionId),

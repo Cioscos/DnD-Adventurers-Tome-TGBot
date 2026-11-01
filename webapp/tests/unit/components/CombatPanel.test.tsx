@@ -4,7 +4,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import CombatPanel from '@/pages/session/CombatPanel'
 import type { CombatantLive, EncounterLive, GameSessionLive } from '@/types'
 
-const { toastSpy, hapticSpy, nextTurnSpy, turnStateSpy } = vi.hoisted(() => ({
+const { toastSpy, hapticSpy, nextTurnSpy, turnStateSpy, navigateSpy } = vi.hoisted(() => ({
+  navigateSpy: vi.fn(),
   toastSpy: vi.fn(),
   hapticSpy: vi.fn(),
   nextTurnSpy: vi.fn(),
@@ -14,6 +15,10 @@ const { toastSpy, hapticSpy, nextTurnSpy, turnStateSpy } = vi.hoisted(() => ({
 vi.mock('react-i18next', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
   return { ...actual, useTranslation: () => ({ t: (k: string) => k, i18n: { language: 'it' } }) }
+})
+vi.mock('react-router-dom', async (orig) => {
+  const actual = (await orig()) as Record<string, unknown>
+  return { ...actual, useNavigate: () => navigateSpy }
 })
 vi.mock('sonner', () => ({ toast: { success: toastSpy, error: vi.fn() } }))
 vi.mock('@/auth/telegram', () => ({
@@ -104,33 +109,87 @@ beforeEach(() => {
   hapticSpy.mockReset()
   nextTurnSpy.mockReset().mockResolvedValue({})
   turnStateSpy.mockReset().mockResolvedValue({ pending_saves: [] })
+  navigateSpy.mockReset()
 })
 
 describe('CombatPanel', () => {
-  it('senza incontro: bottone start solo per il GM', () => {
-    const { unmount } = renderPanel(live(null), { amGm: true })
-    expect(screen.getByText('session.combat.start_encounter')).toBeInTheDocument()
-    unmount()
-    renderPanel(live(null), { amGm: false })
-    expect(screen.queryByText('session.combat.start_encounter')).not.toBeInTheDocument()
-  })
-
   it('setup, giocatore col proprio PG senza iniziativa: CTA visibile', () => {
     renderPanel(live(encounter({})))
     expect(screen.getByText('session.combat.roll_initiative')).toBeInTheDocument()
   })
 
-  it('setup, GM: controlli aggiungi/avvia visibili', () => {
+  it('setup, GM: «Avvia» nel dock e aggiungi mostro nel menu ⋯', () => {
     renderPanel(live(encounter({})), { amGm: true, myUserId: GM_ID })
-    expect(screen.getByText('session.combat.add_monster')).toBeInTheDocument()
     expect(screen.getByText('session.combat.start')).toBeInTheDocument()
+    expect(screen.queryByText('session.combat.add_monster')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'session.combat.menu' }))
+    expect(screen.getByText('session.combat.add_monster')).toBeInTheDocument()
+    expect(screen.getByText('session.combat.sync_pcs')).toBeInTheDocument()
+    expect(screen.queryByText('session.combat.end')).not.toBeInTheDocument()
   })
 
-  it('attivo: TurnBar con round e nome del combattente attivo', () => {
+  it('attivo: mostra il round e il nastro', () => {
     const c = combatant({ initiative: 17, sort_order: 10 })
     renderPanel(live(encounter({ status: 'active', round: 2, active_combatant_id: c.id, combatants: [c] })))
     expect(screen.getByText('session.combat.round_label')).toBeInTheDocument()
-    expect(screen.getByText('session.combat.turn_of')).toBeInTheDocument()
+    expect(screen.getByTestId('round-ribbon')).toBeInTheDocument()
+  })
+
+  describe('vista combattimento', () => {
+    const me = combatant({ id: 1, initiative: 15, sort_order: 20 })
+    const goblin = combatant({
+      id: 2, kind: 'monster', character_id: null, owner_user_id: null,
+      name: 'Goblin', initiative: 17, sort_order: 10, max_hp: 7, current_hp: 7, ac: 15,
+    })
+    const ally = combatant({ id: 3, character_id: 8, owner_user_id: 50, name: 'Elara', initiative: 12, sort_order: 30 })
+    const active = (activeId: number, combatants = [goblin, me, ally]) =>
+      live(encounter({ status: 'active', active_combatant_id: activeId, combatants }))
+
+    it('giocatore: «Apri il mio turno» porta alla pagina Turno del suo PG', () => {
+      renderPanel(active(2))
+      const card = screen.getByTestId('my-combatant-card')
+      expect(card).toHaveTextContent('session.combat.turns_until_mine')
+      fireEvent.click(screen.getByText('session.combat.open_my_turn'))
+      expect(navigateSpy).toHaveBeenCalledWith('/char/7/turn')
+    })
+
+    it('giocatore: «Termina turno» solo durante il proprio turno', () => {
+      const { unmount } = renderPanel(active(2))
+      expect(screen.queryByText('session.combat.end_my_turn')).not.toBeInTheDocument()
+      unmount()
+      renderPanel(active(1))
+      expect(screen.getByText('session.combat.end_my_turn')).toBeInTheDocument()
+    })
+
+    it('giocatore senza PG nel combattimento: niente card, nastro e tracciato sì', () => {
+      renderPanel(active(2, [goblin, ally]))
+      expect(screen.queryByTestId('my-combatant-card')).not.toBeInTheDocument()
+      expect(screen.getByTestId('round-ribbon')).toBeInTheDocument()
+      expect(screen.getAllByTestId('combatant-row')).toHaveLength(2)
+    })
+
+    it('GM: menu ⋯ con aggiungi mostro, sincronizza e termina', () => {
+      renderPanel(active(2), { amGm: true, myUserId: GM_ID })
+      fireEvent.click(screen.getByRole('button', { name: 'session.combat.menu' }))
+      expect(screen.getByText('session.combat.add_monster')).toBeInTheDocument()
+      expect(screen.getByText('session.combat.sync_pcs')).toBeInTheDocument()
+      expect(screen.getByText('session.combat.end')).toBeInTheDocument()
+    })
+
+    it('GM: la card di chi agisce non ha bottoni e il dock ha «Turno successivo»', () => {
+      renderPanel(active(2), { amGm: true, myUserId: GM_ID })
+      const card = screen.getByTestId('active-combatant-card')
+      expect(card).toHaveTextContent('Goblin')
+      expect(card.querySelectorAll('button')).toHaveLength(0)
+      expect(screen.getByText('session.combat.next_turn')).toBeInTheDocument()
+    })
+
+    it('i morti sono elencati dopo i vivi', () => {
+      const deadGob = { ...goblin, is_dead: true }
+      renderPanel(active(1, [deadGob, me, ally]))
+      const rows = screen.getAllByTestId('combatant-row')
+      expect(rows.map((r) => r.dataset.dead)).toEqual(['false', 'false', 'true'])
+    })
   })
 
   it('toast «tocca a te» quando il turno passa al mio PG', () => {
