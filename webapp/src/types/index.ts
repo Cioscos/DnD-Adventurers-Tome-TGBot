@@ -390,6 +390,8 @@ export interface GameSession {
   last_activity_at?: string
   closed_at?: string | null
   participants: SessionParticipant[]
+  /** Solo da GET /sessions/me: stato dell'incontro aperto, se c'è. */
+  encounter_status?: 'setup' | 'active' | null
 }
 
 export type HpBucket = 'healthy' | 'lightly_wounded' | 'badly_wounded' | 'dying' | 'dead'

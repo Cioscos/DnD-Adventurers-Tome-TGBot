@@ -248,8 +248,20 @@ async def _load_live_characters(
 async def my_active_session(
     user_id: Annotated[int, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
-) -> Optional[GameSession]:
-    return await _find_active_session_for_user(user_id, db)
+) -> Optional[GameSessionRead]:
+    session = await _find_active_session_for_user(user_id, db)
+    if session is None:
+        return None
+    enc_status = (
+        await db.execute(
+            select(Encounter.status).where(
+                Encounter.session_id == session.id, Encounter.status != "ended"
+            )
+        )
+    ).scalars().first()
+    return GameSessionRead.model_validate(session).model_copy(
+        update={"encounter_status": enc_status}
+    )
 
 
 async def active_encounter_row(db: AsyncSession, character_id: int):
