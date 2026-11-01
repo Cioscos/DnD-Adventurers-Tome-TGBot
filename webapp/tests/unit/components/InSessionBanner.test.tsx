@@ -3,13 +3,19 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import InSessionBanner from '@/components/ui/InSessionBanner'
 
-type Session = { id: number; status: string; title?: string; participants: { character_id: number }[] }
-const { sessionData, navigateSpy } = vi.hoisted(() => ({
+type Session = {
+  id: number; status: string; title?: string; participants: { character_id: number }[]
+  encounter_status?: 'setup' | 'active' | null
+}
+const { sessionData, navigateSpy, queryOpts } = vi.hoisted(() => ({
   sessionData: { value: null as Session | null },
+  queryOpts: { value: null as null | { refetchInterval: (q: unknown) => number | false } },
   navigateSpy: vi.fn(),
 }))
 
-vi.mock('@tanstack/react-query', () => ({ useQuery: () => ({ data: sessionData.value }) }))
+vi.mock('@tanstack/react-query', () => ({
+  useQuery: (opts: typeof queryOpts.value) => { queryOpts.value = opts; return { data: sessionData.value } },
+}))
 vi.mock('react-router-dom', () => ({ useNavigate: () => navigateSpy }))
 vi.mock('@/api/client', () => ({ api: { sessions: { me: vi.fn() } } }))
 vi.mock('react-i18next', async (orig) => {
@@ -59,5 +65,29 @@ describe('InSessionBanner', () => {
     expect(screen.getByText('La Cripta')).toBeInTheDocument()
     await userEvent.click(screen.getByLabelText('character.inSession.cta'))
     expect(navigateSpy).toHaveBeenCalledWith('/session/42')
+  })
+
+  it('navigates to the combat page when an encounter is active', async () => {
+    sessionData.value = { id: 42, status: 'active', participants: [{ character_id: 7 }], encounter_status: 'active' }
+    render(<InSessionBanner charId={7} />)
+    expect(screen.getByText('character.inSession.combat_active')).toBeInTheDocument()
+    await userEvent.click(screen.getByLabelText('character.inSession.cta'))
+    expect(navigateSpy).toHaveBeenCalledWith('/session/42/combat')
+  })
+
+  it('navigates to the combat page during setup', async () => {
+    sessionData.value = { id: 42, status: 'active', participants: [{ character_id: 7 }], encounter_status: 'setup' }
+    render(<InSessionBanner charId={7} />)
+    expect(screen.getByText('character.inSession.combat_setup')).toBeInTheDocument()
+    await userEvent.click(screen.getByLabelText('character.inSession.cta'))
+    expect(navigateSpy).toHaveBeenCalledWith('/session/42/combat')
+  })
+
+  it('polls /sessions/me every 10s only while the session is active', () => {
+    render(<InSessionBanner charId={7} />)
+    const every = queryOpts.value!.refetchInterval
+    expect(every({ state: { data: { status: 'active' } } })).toBe(10_000)
+    expect(every({ state: { data: { status: 'closed' } } })).toBe(false)
+    expect(every({ state: { data: null } })).toBe(false)
   })
 })

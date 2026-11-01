@@ -915,7 +915,9 @@
     },
     "inSession": {
       "label": "In active session",
-      "cta": "Return to session"
+      "cta": "Return to session",
+      "combat_active": "Combat in progress",
+      "combat_setup": "Combat being prepared"
     },
     "currency": {
       "title": "Currency",

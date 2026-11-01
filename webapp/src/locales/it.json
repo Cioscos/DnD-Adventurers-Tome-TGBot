@@ -914,7 +914,9 @@
     },
     "inSession": {
       "label": "Sei in sessione",
-      "cta": "Torna alla sessione"
+      "cta": "Torna alla sessione",
+      "combat_active": "Combattimento in corso",
+      "combat_setup": "Combattimento in preparazione"
     },
     "currency": {
       "title": "Monete",
