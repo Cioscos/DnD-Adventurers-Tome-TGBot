@@ -222,3 +222,25 @@ async def test_import_ddb_fighter_every_feature_deduplicated(client, monkeypatch
     assert not names & {"Action Surge", "Indomitable", "Second Wind"}
     ac = ch["ac_breakdown"]
     assert ac["base"] + ac["shield"] == 18
+
+
+async def test_import_ddb_creatures_as_companions(client, monkeypatch):
+    raw = _fixture()
+    creatures = json.loads((_FIXTURE.parent / "creatures.json").read_text(encoding="utf-8"))
+    creatures[3]["isActive"] = True  # Dire Wolf: forma selvatica attiva
+    raw["data"]["creatures"] = creatures
+
+    async def fake(char_id: int) -> dict:
+        return raw
+    monkeypatch.setattr(transfer, "fetch_ddb", fake)
+    r = await _post(client)
+    assert r.status_code == 201, r.text
+    ch = r.json()["character"]
+    comps = (await client.get(f"/characters/{ch['id']}/companions")).json()
+    assert [(c["kind"], c["name"]) for c in comps] == [
+        ("familiar", "Cat"), ("familiar", "Cat"), ("wild_shape", "Giant Wolf Spider"), ("wild_shape", "Dire Wolf")]
+    assert ch["active_form"]["name"] == "Dire Wolf" and ch["active_form"]["max_hp"] == 22
+    bite = comps[3]["statblock"]["actions"][0]
+    attack = await client.post(f"/characters/{ch['id']}/companions/{comps[3]['id']}/attack", json={"action_index": 0})
+    assert attack.status_code == 200, attack.text
+    assert bite["damage_dice"] == "1d10+3"

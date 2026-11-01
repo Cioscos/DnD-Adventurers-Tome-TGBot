@@ -433,19 +433,31 @@ def test_ac_override_base_keeps_shield_and_bonus():  # DDB "Override Base Armor 
     assert ch.base_armor_class_override and not ch.shield_armor_class_override
 
 
-def test_custom_speeds():  # DDB "Override speeds": movementId 1 a piedi; volo/nuoto/... l'app non li ha
+def test_custom_speeds():  # DDB "Override speeds": movementId 1 a piedi, le altre in settings.speeds
     raw = load()
     raw["data"]["customSpeeds"] = [{"movementId": 1, "distance": 40}, {"movementId": 4, "distance": 60}]
     exp, rep, _ = convert(raw)
     assert exp.character.speed == 40
-    assert [(s.section, s.name) for s in rep.skipped if s.section == "speed"] == [("speed", "fly 60")]
+    assert exp.character.settings["speeds"] == [{"type": "fly", "range_ft": 60}]
+    assert not [s for s in rep.skipped if s.section == "speed"]
 
 
-def test_innate_other_speeds_reported():  # es. volo da lignaggio: non gestito, ma va detto
+def test_innate_other_speeds():  # es. nuoto da lignaggio
     raw = load()
     raw["data"]["modifiers"]["race"].append({"type": "set", "subType": "innate-speed-swimming", "value": 30})
-    rep = convert(raw)[1]
-    assert ("speed", "swim 30") in [(s.section, s.name) for s in rep.skipped]
+    assert {"type": "swim", "range_ft": 30} in convert(raw)[0].character.settings["speeds"]
+
+
+def test_fly_speed_equal_to_walking():  # Stormborn (Tempesta 17): innate-speed-flying senza valore
+    assert convert(load())[0].character.settings["speeds"] == [{"type": "fly", "range_ft": 25}]
+
+
+def test_senses_from_species_and_overrides():  # scurovisione della specie + override "Senses" della scheda
+    raw = load()
+    assert convert(raw)[0].character.settings["senses"] == [{"type": "darkvision", "range_ft": 60}]
+    raw["data"]["customSenses"] = [{"senseId": 2, "distance": 90}, {"senseId": 4, "distance": 30}]
+    assert convert(raw)[0].character.settings["senses"] == [
+        {"type": "darkvision", "range_ft": 90}, {"type": "truesight", "range_ft": 30}]
 
 
 def test_custom_actions_become_abilities():  # "Manage Custom" della scheda: l'app non ha attacchi liberi
@@ -508,3 +520,63 @@ def test_unsupported_sheet_overrides_reported():  # bonus/valori fissi per abili
     assert [(e.section, e.name) for e in rep.skipped if e.section == "other"] == [
         ("other", "Skill Misc Bonus: stealth +2"), ("other", "Saving Throw Magic Bonus: dexterity +1"),
         ("other", "Override Passive Perception: 18")]
+
+
+_CREATURES = Path(__file__).parents[1] / "fixtures" / "ddb" / "creatures.json"
+
+
+def with_creatures() -> dict:
+    raw = load()
+    raw["data"]["creatures"] = json.loads(_CREATURES.read_text(encoding="utf-8"))
+    return raw
+
+
+def test_creatures_become_companions():  # famigli (gruppo 2) e forme selvatiche 2024 (gruppo 13)
+    exp, rep, _ = convert(with_creatures())
+    assert [(c.kind, c.name) for c in exp.companions] == [
+        ("familiar", "Cat"), ("familiar", "Cat"), ("wild_shape", "Giant Wolf Spider"), ("wild_shape", "Dire Wolf")]
+    assert not [e for e in rep.skipped if e.section == "creatures"]
+    # 2024: si tengono i propri PF; l'app usa i PF della forma (regola 2014) -> segnalato
+    assert [e.name for e in rep.approximated if e.reason == "ddb.reason.wild_shape_2024"] == [
+        "Giant Wolf Spider", "Dire Wolf"]
+
+
+def test_creature_statblock_2024():
+    wolf = convert(with_creatures())[0].companions[3]
+    assert (wolf.armor_class, wolf.max_hp, wolf.current_hp) == (14, 22, 22)
+    sb = wolf.statblock
+    assert sb["size"] == "large" and sb["type"] == "beast" and sb["challenge_rating"] == 1
+    assert sb["speed"] == {"walk_ft": 50}
+    assert set(sb["abilities"]) == {"str", "dex", "con", "int", "wis", "cha"}
+    bite = sb["actions"][0]
+    assert (bite["name"], bite["attack_bonus"], bite["damage_dice"], bite["damage_type"]) == ("Bite", 5, "1d10+3", "piercing")
+    assert "Prone" in bite["desc"]
+    assert sb["traits"][0]["name"] == "Pack Tactics"
+
+
+def test_creature_statblock_2014_and_flat_damage():
+    comps = convert(with_creatures())[0].companions
+    spider = comps[2].statblock
+    assert spider["speed"] == {"walk_ft": 40, "climb_ft": 40}
+    bite = spider["actions"][0]
+    assert (bite["attack_bonus"], bite["damage_dice"], bite["damage_type"]) == (3, "1d6+1", "piercing")
+    scratch = comps[0].statblock["actions"][0]  # danno fisso "1 Slashing": l'app vuole NdX
+    assert (scratch["attack_bonus"], scratch["damage_dice"], scratch["damage_type"]) == (4, "1d1", "slashing")
+
+
+def test_creature_custom_name_hp_and_active_form():
+    raw = with_creatures()
+    raw["data"]["creatures"][3] |= {"name": "Zanna", "removedHitPoints": 5, "temporaryHitPoints": 3, "isActive": True}
+    wolf = convert(raw)[0].companions[3]
+    assert (wolf.name, wolf.current_hp, wolf.temp_hp, wolf.is_active) == ("Zanna", 17, 3, True)
+
+
+def test_creature_other_groups_and_garbage():
+    raw = with_creatures()
+    cr = raw["data"]["creatures"]
+    cr[0]["groupId"], cr[1]["groupId"], cr[2]["groupId"] = 4, 6, 11  # cavalcatura, evocato, sidekick
+    cr.append({"groupId": 2, "definition": None})  # spazzatura: niente crash
+    exp, rep, _ = convert(raw)
+    assert [c.kind for c in exp.companions] == ["mount", "summon", "companion", "wild_shape"]
+    assert ("creatures", "Giant Wolf Spider", "ddb.reason.creature_group") in [
+        (e.section, e.name, e.reason) for e in rep.approximated]

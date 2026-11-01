@@ -383,6 +383,12 @@
       "unarmored_formula": "AC {{value}}",
       "unarmored_active_hint": "Base updates with ability scores; do not wear body armor."
     },
+    "speeds": {
+      "fly": "Fly",
+      "swim": "Swim",
+      "climb": "Climb",
+      "burrow": "Burrow"
+    },
     "senses": {
       "darkvision": "Darkvision",
       "blindsight": "Blindsight",
@@ -791,6 +797,7 @@
       "background": "Background",
       "alignment": "Alignment",
       "speed": "Speed",
+      "other_speeds": "Other speeds",
       "personality": "Personality traits",
       "ideals": "Ideals",
       "bonds": "Bonds",
@@ -4468,6 +4475,8 @@
       "condition_immunity": "condition immunity: not tracked by the app, note it by hand",
       "custom_action": "custom action: imported as a feature, with dice and damage in the description",
       "half_proficiency": "half proficiency: not supported by the app, the skill is imported without proficiency",
+      "creature_group": "creature from a group the app does not distinguish: imported as a generic companion",
+      "wild_shape_2024": "2024 wild shape: in the app the form has its own hit points, as in the 2014 rules",
       "section_failed": "section unreadable, skipped",
       "not_supported": "not supported yet",
       "no_free_slot": "equipped but no free slot: not shown on the paper doll, fix it by hand",

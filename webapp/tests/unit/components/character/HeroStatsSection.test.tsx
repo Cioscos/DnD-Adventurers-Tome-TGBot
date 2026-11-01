@@ -115,6 +115,12 @@ describe('HeroStatsSection', () => {
     expect(screen.getByText(/character\.senses\.darkvision 60 ft/)).toBeInTheDocument()
   })
 
+  it('lists the other speeds', () => {
+    renderHero(char({ settings: { speeds: [{ type: 'fly', range_ft: 60 }, { type: 'swim', range_ft: 0 }] } } as Partial<CharacterFull>))
+    expect(screen.getByText(/character\.speeds\.fly 60 ft/)).toBeInTheDocument()
+    expect(screen.queryByText(/character\.speeds\.swim/)).not.toBeInTheDocument()
+  })
+
   it('does not navigate when the initiative cell is tapped (it rolls instead)', async () => {
     diceResultSpy.mockResolvedValue({ notation: '1d20+2', rolls: [15], total: 17, modifier: 2, label: 'character.hero.initiative' })
     renderHero(char())

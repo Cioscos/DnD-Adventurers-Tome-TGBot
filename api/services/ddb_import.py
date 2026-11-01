@@ -18,7 +18,7 @@ from pydantic import BaseModel, Field
 
 from api.schemas.transfer import (
     CharacterExport, ExportAbility, ExportAbilityScore, ExportCharacter, ExportClass,
-    ExportCurrency, ExportItem, ExportSpell, ExportSpellSlot,
+    ExportCompanion, ExportCurrency, ExportItem, ExportSpell, ExportSpellSlot,
 )
 from core.data.damage_types import canonical_damage_type
 from core.data.labels import CONDITION_LABELS_IT
@@ -267,8 +267,25 @@ OTHER_SPEEDS = {f"innate-speed-{k}": v for k, v in
                 (("burrowing", "burrow"), ("climbing", "climb"), ("flying", "fly"), ("swimming", "swim"))}
 
 
-def _speed(c: _Ctx, walk: int) -> int:
-    """Velocità a piedi come la scheda DDB: base razza/lignaggio + bonus (l'app non li calcola)."""
+SENSES = {1: "blindsight", 2: "darkvision", 3: "tremorsense", 4: "truesight"}  # rule-data senses
+
+
+def _senses(c: _Ctx) -> list[dict]:
+    """Sensi della specie/privilegi ("set-base darkvision 60") + override "Senses" della scheda."""
+    found: dict[str, int] = {}
+    for m in _modifiers(c.data):
+        sub = m.get("subType")
+        if m.get("type") == "set-base" and sub in SENSES.values():
+            found[sub] = max(found.get(sub, 0), _int(m.get("value")))
+    for cs in _l(c.data.get("customSenses")):
+        kind, dist = SENSES.get(_int(_d(cs).get("senseId"))), _int(_d(cs).get("distance"))
+        if kind and dist > 0:
+            found[kind] = dist
+    return [{"type": k, "range_ft": _clamp(v, 0, 1000)} for k, v in found.items() if v > 0]
+
+
+def _speed(c: _Ctx, walk: int) -> tuple[int, list[dict]]:
+    """(a piedi, altre) come la scheda DDB: base razza/lignaggio + bonus (l'app non li calcola)."""
     armored = any(isinstance(it, dict) and it.get("equipped")
                   and 1 <= _int(_d(it.get("definition")).get("armorTypeId")) <= 4  # 4 = scudo
                   for it in _l(c.data.get("inventory")))
@@ -278,20 +295,21 @@ def _speed(c: _Ctx, walk: int) -> int:
         if m.get("type") == "set" and sub == "innate-speed-walking":
             walk = max(walk, val)
         elif m.get("type") == "set" and sub in OTHER_SPEEDS:
-            other[OTHER_SPEEDS[sub]] = max(other.get(OTHER_SPEEDS[sub], 0), val)
+            kind = OTHER_SPEEDS[sub]
+            # value null = "pari alla velocità a piedi" (es. Stormborn del Chierico della Tempesta)
+            other[kind] = None if m.get("value") is None else max(other.get(kind) or 0, val)
         elif m.get("type") == "bonus" and (sub in ("speed", "speed-walking")
                                            or (sub == "unarmored-movement" and not armored)):
             bonus += val
     walk += _clamp(bonus, 0, 200)
+    other = {k: walk if v is None else v for k, v in other.items()}
     for cs in _l(c.data.get("customSpeeds")):  # "Override speeds" della scheda: vince sul calcolato
         kind, dist = MOVEMENT.get(_int(_d(cs).get("movementId"))), _int(_d(cs).get("distance"))
         if kind == "walk" and dist > 0:
             walk = dist
         elif kind and dist > 0:
             other[kind] = dist
-    for kind, dist in other.items():  # l'app ha solo la velocità a piedi
-        c.skip("speed", f"{kind} {dist}", "ddb.reason.not_supported")
-    return walk
+    return walk, [{"type": k, "range_ft": _clamp(v, 0, 1000)} for k, v in other.items() if v > 0]
 
 
 def _identity(c: _Ctx) -> dict:
@@ -299,7 +317,8 @@ def _identity(c: _Ctx) -> dict:
     bg = _d(d.get("background"))
     race = _d(d.get("race"))
     traits = _d(d.get("traits"))
-    speed = _speed(c, _int(_d(_d(race.get("weightSpeeds")).get("normal")).get("walk"), 30))
+    speed, other_speeds = _speed(c, _int(_d(_d(race.get("weightSpeeds")).get("normal")).get("walk"), 30))
+    settings = {k: v for k, v in (("speeds", other_speeds), ("senses", _senses(c))) if v}
     ds =_d(d.get("deathSaves"))
     out = {
         "race": _str(race.get("fullName"), 100) or None,
@@ -310,6 +329,7 @@ def _identity(c: _Ctx) -> dict:
                        or _str(_d(bg.get("customBackground")).get("name"), 100) or None),
         "alignment": ALIGNMENTS.get(_int(d.get("alignmentId"))),
         "speed": _clamp(speed, 0, 1000) or 30,
+        **({"settings": settings} if settings else {}),
         "personality": {k: _str(traits.get(src), 5000) for k, src in
                         (("traits", "personalityTraits"), ("ideals", "ideals"), ("bonds", "bonds"),
                          ("flaws", "flaws")) if _str(traits.get(src), 5000)},
@@ -732,6 +752,81 @@ CV_UNSUPPORTED = {5: "Override Passive Perception", 6: "Override Passive Investi
                   38: "Saving Throw Override", 39: "Saving Throw Misc Bonus", 40: "Saving Throw Magic Bonus"}
 
 
+# lookup della rule-data DDB (creatureGroups, creatureSizes, monsterTypes)
+CREATURE_KIND = {1: "wild_shape", 13: "wild_shape", 2: "familiar", 3: "companion", 5: "companion",
+                 4: "mount", 6: "summon"}
+CREATURE_SIZE = {2: "tiny", 3: "small", 4: "medium", 5: "large", 6: "huge", 7: "gargantuan", 10: "medium"}
+CREATURE_TYPE = {1: "aberration", 2: "beast", 3: "celestial", 4: "construct", 6: "dragon", 7: "elemental",
+                 8: "fey", 9: "fiend", 10: "giant", 11: "humanoid", 13: "monstrosity", 14: "ooze", 15: "plant",
+                 16: "undead"}
+_ENTRY_RE = re.compile(r"^(?P<name>[^.]{1,80})\.\s*(?P<desc>.*)$", re.S)
+_TO_HIT_RE = re.compile(r"Attack(?: Roll)?:\s*([+-]\d+)")
+_HIT_DICE_RE = re.compile(r"Hit:\s*\d+\s*\((\d+d\d+)(?:\s*([+-])\s*(\d+))?\)\s*([A-Za-z]+) damage")
+_HIT_FLAT_RE = re.compile(r"Hit:\s*(\d+)\s+([A-Za-z]+) damage")
+
+
+def _cr(cr_id: int) -> float:
+    """challengeRatingId -> GS: 1..4 = 0, 1/8, 1/4, 1/2; poi interi (l'id 28 non esiste)."""
+    return {1: 0, 2: 0.125, 3: 0.25, 4: 0.5}.get(cr_id, float(cr_id - 4 if cr_id < 28 else cr_id - 5))
+
+
+def _stat_entries(html_text: Any, attacks: bool) -> list[dict]:
+    out = []
+    for para in _l(re.split(r"</p>", html_text) if isinstance(html_text, str) else []):
+        m = _ENTRY_RE.match(_text(para) or "")
+        if not m:
+            continue
+        e: dict = {"name": m["name"].strip(), "desc": m["desc"].strip()}
+        if attacks:
+            hit, dmg = _TO_HIT_RE.search(e["desc"]), _HIT_DICE_RE.search(e["desc"])
+            if hit:
+                e["attack_bonus"] = _clamp(int(hit[1]), -20, 30)
+            if dmg:
+                e["damage_dice"] = dmg[1] + (f"{dmg[2]}{dmg[3]}" if dmg[2] else "")
+                e["damage_type"] = dmg[4].lower()
+            elif flat := _HIT_FLAT_RE.search(e["desc"]):  # "Hit: 1 Slashing damage": l'app vuole NdX
+                e["damage_dice"], e["damage_type"] = f"{flat[1]}d1", flat[2].lower()
+        out.append(e)
+    return out
+
+
+def _creatures(c: _Ctx) -> None:
+    out = []
+    for cr in _l(c.data.get("creatures"))[:30]:
+        cr = _d(cr)
+        d = _d(cr.get("definition"))
+        name = _str(cr.get("name"), 100) or _str(d.get("name"), 100)
+        if not name:
+            continue
+        group = _int(cr.get("groupId"))
+        kind = CREATURE_KIND.get(group, "companion")
+        if group not in CREATURE_KIND:  # Battle Smith, sidekick, infusione...: generico
+            c.approx("creatures", name, "ddb.reason.creature_group")
+        elif group == 13:  # 2024: il druido tiene i suoi PF, l'app dà alla forma PF propri (2014)
+            c.approx("creatures", name, "ddb.reason.wild_shape_2024")
+        stats = {ABILITIES[_int(s.get("statId")) - 1][:3]: _clamp(_int(s.get("value"), 10), 1, 30)
+                 for s in map(_d, _l(d.get("stats"))) if 1 <= _int(s.get("statId")) <= 6}
+        speed = {f"{MOVEMENT[_int(m.get('movementId'))]}_ft": _clamp(_int(m.get("speed")), 0, 1000)
+                 for m in map(_d, _l(d.get("movements"))) if _int(m.get("movementId")) in MOVEMENT}
+        traits = _stat_entries(d.get("specialTraitsDescription"), False)
+        actions = [a for k in ("actionsDescription", "bonusActionsDescription", "reactionsDescription")
+                   for a in _stat_entries(d.get(k), True)]
+        mx = _clamp(_int(d.get("averageHitPoints"), 1), 1, 10_000)
+        statblock = {"size": CREATURE_SIZE.get(_int(d.get("sizeId"))), "type": CREATURE_TYPE.get(_int(d.get("typeId"))),
+                     "speed": speed, "abilities": stats, "challenge_rating": _cr(_int(d.get("challengeRatingId"), 1)),
+                     "traits": traits, "actions": actions}
+        m = c.model(ExportCompanion, {
+            "kind": kind, "name": name, "statblock": {k: v for k, v in statblock.items() if v is not None},
+            "max_hp": mx, "current_hp": _clamp(mx - _int(cr.get("removedHitPoints")), 0, mx),
+            "temp_hp": _clamp(_int(cr.get("temporaryHitPoints")), 0, 10_000),
+            "armor_class": _clamp(_int(d.get("armorClass"), 10), 0, 100),
+            "notes": _text(cr.get("description")), "is_active": bool(cr.get("isActive")) and kind == "wild_shape",
+        }, "creatures", name)
+        if m:
+            out.append(m)
+    c.out["companions"] = out
+
+
 def _leftovers(c: _Ctx) -> None:
     for v in _l(c.data.get("characterValues")):
         v = _d(v)
@@ -742,9 +837,6 @@ def _leftovers(c: _Ctx) -> None:
             val = _int(v.get("value"))
             shown = f"{val:+d}" if "Bonus" in label else str(val)
             c.skip("other", f"{label}: {target + ' ' if target else ''}{shown}", "ddb.reason.not_supported")
-    for cr in _l(c.data.get("creatures")):
-        c.skip("creatures", _str(_d(cr).get("name")) or _str(_d(_d(cr).get("definition")).get("name")),
-               "ddb.reason.not_supported")
     conds: dict = {}
     for cd in _l(c.data.get("conditions")):
         slug = DDB_CONDITIONS.get(_int(_d(cd).get("id")))
@@ -857,7 +949,8 @@ def convert(ddb: Any, lang: str = "it") -> tuple[CharacterExport, ImportReport, 
         char.update(_run(c, section, fn) or {})
     char["notes"] = _run(c, "notes", _notes) or {}
     for section, fn in (("items", _items), ("spells", _spells), ("spell_slots", _slots),
-                        ("abilities", _abilities), ("currency", _currency), ("other", _leftovers)):
+                        ("abilities", _abilities), ("currency", _currency), ("creatures", _creatures),
+                        ("other", _leftovers)):
         _run(c, section, fn)
     try:
         character = ExportCharacter.model_validate(char)
@@ -871,6 +964,6 @@ def convert(ddb: Any, lang: str = "it") -> tuple[CharacterExport, ImportReport, 
         classes=c.out["classes"], ability_scores=c.out.get("ability_scores", []),
         items=c.out.get("items", []), spells=c.out.get("spells", []),
         spell_slots=c.out.get("spell_slots", []), abilities=c.out.get("abilities", []),
-        currency=c.out.get("currency"),
+        currency=c.out.get("currency"), companions=c.out.get("companions", []),
     )
     return export, c.report, c.out.get("_feature_uses", [])

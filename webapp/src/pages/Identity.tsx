@@ -18,7 +18,7 @@ import { canonicalDamageType, damageTypeLabel } from '@/lib/damageModifier'
 import SectionDivider from '@/components/ui/SectionDivider'
 import { canShareMessage, haptic } from '@/auth/telegram'
 import { useShareMessage } from '@/hooks/useShareMessage'
-import { useUnitSettings, formatLength, oppositeSystem, feetToDisplay, displayToFeet, unitLabel } from '@/store/unitSettings'
+import { useUnitSettings, formatLength, oppositeSystem, feetToDisplay, displayToFeet, unitLabel, type UnitSystem } from '@/store/unitSettings'
 import languagesSrd from '@/data/languages-srd.json'
 import { DAMAGE_TYPES } from '@/pages/inventory/itemMetadata'
 import IdentitySkeleton from '@/components/skeletons/IdentitySkeleton'
@@ -59,6 +59,7 @@ type Draft = {
   alignment: string; speed: string
   // tipo -> distanza nell'unità scelta; assente = senso non posseduto
   senses: Record<string, string>
+  speeds: Record<string, string> // volo/nuoto/scalata/scavo, come i sensi
   personality_traits: string; ideals: string; bonds: string; flaws: string
   languages: string[]; general_proficiencies: Proficiencies
   appearance: Record<(typeof APPEARANCE_KEYS)[number], string>
@@ -72,6 +73,62 @@ const DMG_TONES: Record<keyof DamageModifiers, { text: string; icon: typeof Shie
 }
 
 const SENSE_TYPES = ['darkvision', 'blindsight', 'truesight', 'tremorsense'] as const
+const SPEED_TYPES = ['fly', 'swim', 'climb', 'burrow'] as const
+
+type Ranged = { type: string; range_ft: number }
+const toDraft = (list: Ranged[] | undefined, unit: UnitSystem) =>
+  Object.fromEntries((list ?? []).map((s) => [s.type, String(feetToDisplay(s.range_ft, unit))]))
+const fromDraft = (keys: readonly string[], d: Record<string, string>, unit: UnitSystem) =>
+  keys.filter((k) => d[k] !== undefined).map((k) => ({ type: k, range_ft: displayToFeet(Number(d[k]) || 0, unit) }))
+
+/** Toggle per tipo + distanza: usato per sensi e velocità extra. */
+function RangeToggles({ keys, labelKey, values, defaultFt, unitSystem, onChange }: {
+  keys: readonly string[]; labelKey: string; values: Record<string, string>; defaultFt: number
+  unitSystem: UnitSystem; onChange: (next: Record<string, string>) => void
+}) {
+  const { t } = useTranslation()
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+      {keys.map((k) => {
+        const on = values[k] !== undefined
+        const label = t(`${labelKey}.${k}`)
+        const toggle = () => {
+          const next = { ...values }
+          if (on) delete next[k]
+          else next[k] = String(feetToDisplay(defaultFt, unitSystem))
+          onChange(next)
+        }
+        return (
+          <div key={k} className="flex items-center gap-2">
+            <Pressable
+              type="button"
+              onClick={toggle}
+              aria-pressed={on}
+              className={`min-h-11 flex-1 px-3 rounded-xl border text-sm font-body text-left ${
+                on ? 'bg-dnd-gold/15 border-dnd-gold text-dnd-gold-bright' : 'bg-dnd-surface border-dnd-border text-dnd-text'
+              }`}
+            >
+              {label}
+            </Pressable>
+            {on && (
+              <div className="w-24 shrink-0">
+                <Input
+                  type="number"
+                  min={0}
+                  inputMode="decimal"
+                  aria-label={`${label} (${unitLabel(unitSystem)})`}
+                  value={values[k]}
+                  onChange={(v) => onChange({ ...values, [k]: v })}
+                  trailingAction={<span className="text-dnd-text-muted text-sm font-cinzel pr-1">{unitLabel(unitSystem)}</span>}
+                />
+              </div>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
 
 const DMG_KEYS: Array<keyof DamageModifiers> = ['resistances', 'immunities', 'vulnerabilities']
 const DMG_SLUGS = DAMAGE_TYPES.filter((d) => d !== 'dmg_other').map((d) => d.replace(/^dmg_/, ''))
@@ -111,10 +168,8 @@ export default function Identity() {
         background: char.background ?? '',
         alignment: char.alignment ?? '',
         speed: String(feetToDisplay(char.speed ?? 30, unitSystem)),
-        senses: Object.fromEntries(
-          ((char.settings?.senses as { type: string; range_ft: number }[] | undefined) ?? [])
-            .map((s) => [s.type, String(feetToDisplay(s.range_ft, unitSystem))]),
-        ),
+        senses: toDraft(char.settings?.senses as Ranged[] | undefined, unitSystem),
+        speeds: toDraft(char.settings?.speeds as Ranged[] | undefined, unitSystem),
         personality_traits: personality.traits ?? '',
         ideals: personality.ideals ?? '',
         bonds: personality.bonds ?? '',
@@ -161,10 +216,8 @@ export default function Identity() {
         // settings replaces the whole dict server-side: always merge.
         settings: {
           ...char?.settings,
-          senses: SENSE_TYPES.filter((k) => draft.senses[k] !== undefined).map((k) => ({
-            type: k,
-            range_ft: displayToFeet(Number(draft.senses[k]) || 0, unitSystem),
-          })),
+          senses: fromDraft(SENSE_TYPES, draft.senses, unitSystem),
+          speeds: fromDraft(SPEED_TYPES, draft.speeds, unitSystem),
         },
       })
     },
@@ -316,46 +369,21 @@ export default function Identity() {
         <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim">
           {t('character.identity.senses')}
         </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {SENSE_TYPES.map((k) => {
-            const on = draft.senses[k] !== undefined
-            const toggleSense = () =>
-              setDraft((d) => {
-                if (!d) return d
-                const next = { ...d.senses }
-                if (on) delete next[k]
-                else next[k] = String(feetToDisplay(60, unitSystem))
-                return { ...d, senses: next }
-              })
-            return (
-              <div key={k} className="flex items-center gap-2">
-                <Pressable
-                  type="button"
-                  onClick={toggleSense}
-                  aria-pressed={on}
-                  className={`min-h-11 flex-1 px-3 rounded-xl border text-sm font-body text-left ${
-                    on ? 'bg-dnd-gold/15 border-dnd-gold text-dnd-gold-bright' : 'bg-dnd-surface border-dnd-border text-dnd-text'
-                  }`}
-                >
-                  {t(`character.senses.${k}`)}
-                </Pressable>
-                {on && (
-                  <div className="w-24 shrink-0">
-                    <Input
-                      type="number"
-                      min={0}
-                      inputMode="decimal"
-                      aria-label={`${t(`character.senses.${k}`)} (${unitLabel(unitSystem)})`}
-                      value={draft.senses[k]}
-                      onChange={(v) => setDraft((d) => d ? { ...d, senses: { ...d.senses, [k]: v } } : d)}
-                      trailingAction={<span className="text-dnd-text-muted text-sm font-cinzel pr-1">{unitLabel(unitSystem)}</span>}
-                    />
-                  </div>
-                )}
-              </div>
-            )
-          })}
-        </div>
+        <RangeToggles
+          keys={SENSE_TYPES} labelKey="character.senses" values={draft.senses} defaultFt={60} unitSystem={unitSystem}
+          onChange={(senses) => setDraft((d) => d ? { ...d, senses } : d)}
+        />
+      </Surface>
+
+      {/* Other speeds */}
+      <Surface variant="elevated" className="mt-3 space-y-2">
+        <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim">
+          {t('character.identity.other_speeds')}
+        </p>
+        <RangeToggles
+          keys={SPEED_TYPES} labelKey="character.speeds" values={draft.speeds} defaultFt={30} unitSystem={unitSystem}
+          onChange={(speeds) => setDraft((d) => d ? { ...d, speeds } : d)}
+        />
       </Surface>
 
       {/* Personality */}

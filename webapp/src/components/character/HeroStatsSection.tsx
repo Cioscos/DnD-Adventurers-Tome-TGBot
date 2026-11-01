@@ -64,6 +64,8 @@ export default function HeroStatsSection({ char }: Props) {
     10 + abilityMod('wisdom') + (percLvl === 'expert' ? 2 * pb : percLvl ? pb : 0) + percHb
   const senses = ((char.settings?.senses as { type: string; range_ft: number }[] | undefined) ?? [])
     .filter((s) => s.range_ft > 0)
+  const otherSpeeds = ((char.settings?.speeds as { type: string; range_ft: number }[] | undefined) ?? [])
+    .filter((s) => s.range_ft > 0)
 
   const speedTotal = (char.speed ?? 30) + (char.speed_homebrew_modifier ?? 0) + (char.speed_items_modifier ?? 0) - (char.speed_encumbrance_penalty_ft ?? 0)
   const speedLabel = formatLength(speedTotal, unitSystem)
@@ -204,6 +206,14 @@ export default function HeroStatsSection({ char }: Props) {
           <span className="font-cinzel uppercase tracking-wide text-dnd-gold-dim">{t('character.hero.senses')}</span>
           {': '}
           {senses.map((s) => `${t(`character.senses.${s.type}`)} ${formatLength(s.range_ft, unitSystem)}`).join(' · ')}
+        </p>
+      )}
+
+      {otherSpeeds.length > 0 && (
+        <p className="mt-1.5 text-xs font-body text-dnd-text-muted text-center">
+          <span className="font-cinzel uppercase tracking-wide text-dnd-gold-dim">{t('character.identity.speed')}</span>
+          {': '}
+          {otherSpeeds.map((s) => `${t(`character.speeds.${s.type}`)} ${formatLength(s.range_ft, unitSystem)}`).join(' · ')}
         </p>
       )}
 

@@ -42,6 +42,24 @@ describe('Identity senses editor', () => {
   })
 })
 
+describe('Identity other speeds editor', () => {
+  it('adds a fly speed next to senses and keeps the other settings', async () => {
+    getChar.mockResolvedValue({ ...char, settings: { ...char.settings, speeds: [{ type: 'swim', range_ft: 30 }] } })
+    updateChar.mockResolvedValue(char)
+    updateChar.mockClear()
+    renderWithProviders(<Identity />)
+    await userEvent.click(await screen.findByRole('button', { name: /^(Volare|Fly)$/i }))
+    await userEvent.click(await screen.findByRole('button', { name: /Salva ora|Save now/i }))
+    await waitFor(() => expect(updateChar).toHaveBeenCalled())
+    const settings = updateChar.mock.calls[0][1].settings
+    expect(settings.senses).toEqual([{ type: 'darkvision', range_ft: 60 }])
+    expect(settings.speeds).toEqual([
+      { type: 'fly', range_ft: 30 },
+      { type: 'swim', range_ft: 30 },
+    ])
+  })
+})
+
 describe('Identity proficiencies and appearance', () => {
   it('reads a legacy list into "other" and saves categories + appearance keeping personality', async () => {
     const legacy = { ...char, general_proficiencies: ['Liuto'], personality: { traits: 'T', ideals: 'I', extra: 'keep' } }

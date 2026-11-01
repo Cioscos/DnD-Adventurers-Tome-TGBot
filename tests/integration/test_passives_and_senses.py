@@ -76,3 +76,14 @@ async def test_senses_saved_and_returned(client):
     assert (await client.get(f"/characters/{cid}")).json()["settings"]["senses"] == s
     r = await client.patch(f"/characters/{cid}", json={"settings": {"senses": [{"type": "x", "range_ft": 1}]}})
     assert r.status_code == 422
+
+
+async def test_other_speeds_saved_and_validated(client):  # volo/nuoto/scalata/scavo: settings.speeds
+    cid = await _char(client)
+    s = [{"type": "fly", "range_ft": 60}, {"type": "swim", "range_ft": 30}]
+    r = await client.patch(f"/characters/{cid}", json={"settings": {"speeds": s}})
+    assert r.status_code == 200, r.text
+    assert (await client.get(f"/characters/{cid}")).json()["settings"]["speeds"] == s
+    for bad in ([{"type": "walk", "range_ft": 30}], [{"type": "fly", "range_ft": -5}], "fly"):
+        r = await client.patch(f"/characters/{cid}", json={"settings": {"speeds": bad}})
+        assert r.status_code == 422, bad
