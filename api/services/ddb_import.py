@@ -13,6 +13,7 @@ import re
 from datetime import datetime, timezone
 from typing import Any, Callable
 
+import httpx
 from pydantic import BaseModel, Field
 
 from api.schemas.transfer import (
@@ -570,6 +571,46 @@ def _leftovers(c: _Ctx) -> None:
                "ddb.reason.not_supported")
     if _l(c.data.get("conditions")):
         c.skip("conditions", "", "ddb.reason.not_supported")
+
+
+# --- recupero ----------------------------------------------------------------
+
+# Endpoint interno non ufficiale di DDB: solo PG pubblici (privati -> 403); può cambiare.
+DDB_URL = "https://character-service.dndbeyond.com/character/v5/character/{id}?includeCustomItems=true"
+_MAX_BYTES = 2_000_000
+_ID_RE = re.compile(r"characters/(\d{1,12})(?:\D|$)")
+_transport: httpx.AsyncBaseTransport | None = None  # None = rete reale
+
+
+def parse_ddb_id(text: str) -> int | None:
+    """ID del PG da un link DDB (qualsiasi variante) o da un ID nudo."""
+    t = (text or "").strip()
+    if t.isdigit() and len(t) <= 12:
+        return int(t)
+    m = _ID_RE.search(t)
+    return int(m.group(1)) if m and "dndbeyond.com" in t.lower() else None
+
+
+async def fetch_ddb(char_id: int) -> dict:
+    try:
+        async with httpx.AsyncClient(timeout=10, transport=_transport, follow_redirects=True,
+                                     headers={"User-Agent": "Mozilla/5.0", "Accept": "application/json"}) as cl:
+            r = await cl.get(DDB_URL.format(id=char_id))
+    except httpx.HTTPError:
+        raise DdbImportError("ddb_unreachable")
+    if r.status_code in (401, 403):
+        raise DdbImportError("ddb_private")
+    if r.status_code == 404:
+        raise DdbImportError("ddb_not_found")
+    if r.status_code != 200 or len(r.content) > _MAX_BYTES:
+        raise DdbImportError("ddb_unreachable")
+    try:
+        body = r.json()
+    except ValueError:
+        raise DdbImportError("ddb_unreachable")
+    if not isinstance(body, dict) or not body.get("success") or not isinstance(body.get("data"), dict):
+        raise DdbImportError("ddb_unreachable")
+    return body
 
 
 # --- entry point --------------------------------------------------------------

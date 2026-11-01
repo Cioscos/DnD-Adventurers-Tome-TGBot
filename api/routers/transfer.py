@@ -14,10 +14,15 @@ from api.auth import get_current_lang, get_current_user
 from api.database import get_db
 from api.routers.characters import _refresh_char_full
 from api.schemas.character import CharacterFull
+from api.schemas.ddb_import import DdbImportRequest, DdbImportResult
 from api.schemas.transfer import CharacterExport
 from api.services.character_response import build_character_response
 from api.services.character_transfer import build_export, import_character, load_for_export
+from api.services.class_features import sync_class_feature_abilities
+from api.services.ddb_import import DdbImportError, convert, fetch_ddb, parse_ddb_id
+from api.services.spell_slots import recalc_spell_slots
 from api.services.telegram_notify import bot_token_configured, send_telegram_document
+from core.data.classes import class_table_key
 
 router = APIRouter(prefix="/characters", tags=["transfer"])
 
@@ -124,6 +129,57 @@ async def import_character_endpoint(
             status_code=422, detail=e.errors(include_url=False, include_context=False, include_input=False)
         )
     return await _create_from(session, user_id, data, _SUFFIX.get(lang, _SUFFIX["it"])["import"])
+
+
+_DDB_STATUS = {"ddb_unreachable": 502}
+
+
+def _ddb_error(code: str) -> HTTPException:
+    return HTTPException(status_code=_DDB_STATUS.get(code, 422), detail={"code": code})
+
+
+@router.post("/import/ddb", response_model=DdbImportResult, status_code=status.HTTP_201_CREATED)
+async def import_ddb_character(
+    body: DdbImportRequest,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+    lang: Annotated[str, Depends(get_current_lang)],
+) -> DdbImportResult:
+    ddb_id = parse_ddb_id(body.url)
+    if ddb_id is None:
+        raise _ddb_error("invalid_link")
+    try:
+        export, report, feature_uses = convert(await fetch_ddb(ddb_id))
+    except DdbImportError as e:
+        raise _ddb_error(e.code)
+    char = await import_character(session, user_id, export, name_suffix=_SUFFIX.get(lang, _SUFFIX["it"])["import"])
+    char = await _refresh_char_full(session, char.id, user_id)
+    for cls in char.classes:
+        if class_table_key(cls.class_name) is not None:
+            await sync_class_feature_abilities(session, char, cls, lang=lang)
+    await _apply_feature_uses(session, char, feature_uses)
+    await recalc_spell_slots(session, char)
+    char = await _refresh_char_full(session, char.id, user_id)
+    return DdbImportResult(character=await build_character_response(session, char), report=report)
+
+
+async def _apply_feature_uses(session: AsyncSession, char, feature_uses: list[dict]) -> None:
+    """Cariche usate DDB -> feature del nostro motore; il doppione generico del convertitore sparisce."""
+    classes = sorted(char.classes, key=lambda c: c.id)  # stesso ordine di export.classes
+    for fu in feature_uses:
+        if not 0 <= fu["class_index"] < len(classes):
+            continue
+        slug = re.sub(r"[^a-z0-9]+", "_", fu["name"].lower()).strip("_")
+        cls_id = classes[fu["class_index"]].id
+        feat = next((a for a in char.abilities if a.is_class_feature and a.source_class_id == cls_id
+                     and a.feature_key and slug.startswith(a.feature_key.split(".", 1)[-1])), None)
+        if feat is None:
+            continue
+        if feat.max_uses is not None:
+            feat.uses = max(0, feat.max_uses - fu["used"])
+        for dup in [a for a in char.abilities if not a.is_class_feature and a.name == fu["name"]]:
+            char.abilities.remove(dup)
+            await session.delete(dup)
 
 
 @router.post("/{char_id}/duplicate", response_model=CharacterFull, status_code=status.HTTP_201_CREATED)
