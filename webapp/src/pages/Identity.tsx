@@ -282,7 +282,7 @@ export default function Identity() {
       {dirty && (
         <Surface
           variant="elevated"
-          className="sticky top-2 z-20 flex items-center justify-between gap-3 !py-2.5 !px-3 !border-dnd-amber/60"
+          className="sticky top-[calc(var(--crumb-offset,0px)+0.5rem)] z-20 flex items-center justify-between gap-3 !py-2.5 !px-3 !border-dnd-amber/60"
         >
           <span className="text-xs font-body text-dnd-text">
             {t('character.identity.unsaved_changes')}

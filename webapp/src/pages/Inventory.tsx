@@ -447,7 +447,7 @@ export default function Inventory() {
           Nascosta del tutto se non ci sono oggetti (l'empty-state ha già la sua CTA). */}
       {hasItems && (
         <>
-          <div className="sticky top-2 z-20 flex pointer-events-none">
+          <div className="sticky top-[calc(var(--crumb-offset,0px)+0.5rem)] z-20 flex pointer-events-none">
             <m.div
               layout
               transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
@@ -589,7 +589,7 @@ export default function Inventory() {
             <div key={type} className={isSingle ? 'mb-2' : 'mb-4'}>
               <Pressable
                 onClick={() => toggleType(type)}
-                className={`sticky -top-4 z-[5] -mx-4 w-[calc(100%+2rem)] px-5 flex items-center gap-2 bg-dnd-bg/95 backdrop-blur-sm border-b border-dnd-border/40 text-left min-h-[44px] ${isSingle ? 'py-1' : 'py-2'} ${scrolled ? 'pr-24' : ''}`}
+                className={`sticky top-[calc(var(--crumb-offset,0px)-1rem)] z-[5] -mx-4 w-[calc(100%+2rem)] px-5 flex items-center gap-2 bg-dnd-bg/95 backdrop-blur-sm border-b border-dnd-border/40 text-left min-h-[44px] ${isSingle ? 'py-1' : 'py-2'} ${scrolled ? 'pr-24' : ''}`}
                 aria-expanded={!isCollapsed}
               >
                 <ChevronRight

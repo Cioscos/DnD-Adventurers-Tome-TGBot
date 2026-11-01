@@ -136,6 +136,17 @@ describe('Layout', () => {
     expect(goToPageSpy).toHaveBeenCalledWith('hp')
   })
 
+  // Perf (S22): il breadcrumb che si comprimeva DENTRO l'header ne animava l'altezza,
+  // ricalcolando tutta la pagina a ogni frame di scroll. Ora è una fascia sovrapposta
+  // fuori dall'header (che resta di altezza fissa) e gli sticky leggono --crumb-offset.
+  it('keeps the breadcrumb out of the header and exposes the sticky offset', () => {
+    groupInfo.value = { pages: ['hp', 'ac', 'saves', 'actions'], index: 1, total: 4 }
+    const { container } = render(<Layout title="T" group="combat" page="ac">x</Layout>)
+    expect(screen.getByText('character.menu.hp').closest('header')).toBeNull()
+    const main = container.querySelector('main')!
+    expect(main.style.getPropertyValue('--crumb-offset')).toBe('57px')
+  })
+
   it('omits the breadcrumb when there is no group info', () => {
     groupInfo.value = null
     render(<Layout title="T">x</Layout>)
