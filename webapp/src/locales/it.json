@@ -1825,6 +1825,7 @@
       "remove_condition": "Rimuovi {{name}}",
       "source_label": "Fonte: {{name}}",
       "pending_save": "Tiro salvezza in sospeso",
+      "end_turn_save_hint": "A fine turno: {{save}} — {{condition}}",
       "save_passed": "Superato",
       "save_failed": "Fallito",
       "cond": {
@@ -3804,7 +3805,7 @@
             "Se la fonte è un personaggio concentrato, puoi attivare \"Finisce se la fonte perde la concentrazione\". Prima il giocatore deve lanciare l'incantesimo.",
             "Tocca \"Applica condizione\".",
             "Durante l'incontro, l'app toglie la condizione alla scadenza. L'app chiede il tiro salvezza all'inizio o alla fine del turno del bersaglio.",
-            "Un pallino ambra sulla riga di un personaggio indica un tiro salvezza in sospeso. Il giocatore fa il tiro nella sua app.",
+            "Un'etichetta ambra sulla riga di un personaggio (es. «TS COS CD 13») indica un tiro salvezza in sospeso. Il giocatore fa il tiro nella sua app.",
             "Per un mostro, la riga mostra il tiro salvezza in sospeso. Fai il tiro al tavolo e tocca \"Superato\" o \"Fallito\". \"Superato\" toglie la condizione."
           ]
         }

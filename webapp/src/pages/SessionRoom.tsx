@@ -10,6 +10,7 @@ import {
   GiSparkles as Sparkles, GiSkullCrossedBones as XOctagon,
   GiPerspectiveDiceSixFacesRandom as Dices,
 } from 'react-icons/gi'
+import PendingSavesBanner from '@/components/PendingSavesBanner'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
 import EmptyState from '@/components/ui/EmptyState'
@@ -346,6 +347,7 @@ export default function SessionRoom() {
 
   return (
     <Layout help="session_room" title={t('session.room_title', { code: live.code })} backTo="/session">
+      {!amGm && myCharId && <PendingSavesBanner charId={myCharId} />}
       {amGm ? (
         <Surface variant="sigil" ornamented>
           <div className="text-center">

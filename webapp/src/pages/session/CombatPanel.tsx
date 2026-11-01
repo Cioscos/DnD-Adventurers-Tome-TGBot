@@ -13,9 +13,11 @@ import InitiativeCta from '@/pages/session/InitiativeCta'
 import EncounterCreateSheet from '@/pages/session/EncounterCreateSheet'
 import AddMonsterSheet from '@/pages/session/AddMonsterSheet'
 import CombatantSheet from '@/pages/session/CombatantSheet'
+import SaveRollSheet from '@/components/SaveRollSheet'
 import { api, ApiError } from '@/api/client'
+import { formatCondition } from '@/lib/conditions'
 import { haptic, telegramConfirm } from '@/auth/telegram'
-import type { CombatantLive, GameSessionLive } from '@/types'
+import type { CombatantLive, GameSessionLive, PendingSave } from '@/types'
 
 interface Props {
   live: GameSessionLive
@@ -32,6 +34,8 @@ export default function CombatPanel({ live, sessionId, amGm, myUserId }: Props) 
   const [showAddMonster, setShowAddMonster] = useState(false)
   const [sheetTarget, setSheetTarget] = useState<CombatantLive | null>(null)
   const [confirmSkip, setConfirmSkip] = useState(false)
+  // TS nati a fine del mio turno: si aprono subito dopo «Termina turno».
+  const [savesToRoll, setSavesToRoll] = useState<PendingSave[] | null>(null)
 
   const snapshotsById = useMemo(() => {
     const map = new Map<number, GameSessionLive['live_characters'][number]>()
@@ -95,6 +99,33 @@ export default function CombatPanel({ live, sessionId, amGm, myUserId }: Props) 
     },
   })
 
+  // Il TS di fine turno nasce solo quando il turno passa: lo leggo e lo apro subito.
+  const endMyTurnMutation = useMutation({
+    mutationFn: async (charId: number) => {
+      await api.sessions.encounter.nextTurn(sessionId)
+      return qc.fetchQuery({
+        queryKey: ['turn-state', charId],
+        queryFn: () => api.characters.turnState(charId),
+        staleTime: 0, // la cache del polling è di prima del cambio turno: serve il dato nuovo
+      })
+    },
+    onSuccess: (turn) => {
+      haptic.light()
+      invalidate()
+      const pending = (turn?.pending_saves ?? []).filter((s) => s.status === 'pending')
+      if (pending.length > 0) setSavesToRoll(pending)
+    },
+    onError: (err: unknown) => {
+      if (err instanceof ApiError && err.status === 403) {
+        haptic.warning()
+        toast.info(t('session.combat.turn_already_advanced'))
+        invalidate()
+        return
+      }
+      onError()
+    },
+  })
+
   const syncMutation = useMutation({
     mutationFn: () => api.sessions.encounter.syncPcs(sessionId),
     onSuccess: () => { haptic.light(); invalidate() },
@@ -147,6 +178,10 @@ export default function CombatPanel({ live, sessionId, amGm, myUserId }: Props) 
     !activeCombatant.is_dead
   const activeIsLivingPc =
     activeCombatant?.kind === 'pc' && !activeCombatant.is_dead
+  const mySnapshot = myCombatant?.character_id ? snapshotsById.get(myCombatant.character_id) : undefined
+  const endOfTurnSaves = (mySnapshot?.condition_effects ?? []).filter(
+    (e) => e.save_edge === 'end' && e.save_ability && e.save_dc != null,
+  )
   const monstersAllDown =
     enc.combatants.some((c) => c.kind === 'monster') &&
     enc.combatants.filter((c) => c.kind === 'monster').every((c) => c.is_dead)
@@ -186,17 +221,29 @@ export default function CombatPanel({ live, sessionId, amGm, myUserId }: Props) 
         />
       )}
 
-      {!amGm && isMyTurn && (
-        <Button
-          variant="primary"
-          size="md"
-          fullWidth
-          icon={<ChevronRight size={16} />}
-          loading={turnMutation.isPending}
-          onClick={() => turnMutation.mutate('next')}
-        >
-          {t('session.combat.end_my_turn')}
-        </Button>
+      {!amGm && isMyTurn && myCombatant?.character_id && (
+        <div className="space-y-1.5">
+          <Button
+            variant="primary"
+            size="md"
+            fullWidth
+            icon={<ChevronRight size={16} />}
+            loading={endMyTurnMutation.isPending}
+            onClick={() => endMyTurnMutation.mutate(myCombatant.character_id!)}
+          >
+            {t('session.combat.end_my_turn')}
+          </Button>
+          {endOfTurnSaves.map((e) => (
+            <p key={e.slug} data-testid="end-turn-save-hint" className="text-center text-sm text-dnd-amber font-body">
+              {t('session.combat.end_turn_save_hint', {
+                save: t('character.conditions.effect.save_any', {
+                  ability: t(`character.ability.${e.save_ability}_short`), dc: e.save_dc,
+                }),
+                condition: formatCondition(e.slug, true, t),
+              })}
+            </p>
+          ))}
+        </div>
       )}
 
       {enc.status === 'setup' && !amGm && myCombatant && (
@@ -279,6 +326,13 @@ export default function CombatPanel({ live, sessionId, amGm, myUserId }: Props) 
           combatant={enc.combatants.find((c) => c.id === sheetTarget.id) ?? sheetTarget}
           liveCharacters={live.live_characters}
           onClose={() => setSheetTarget(null)}
+        />
+      )}
+      {savesToRoll && myCombatant?.character_id && (
+        <SaveRollSheet
+          charId={myCombatant.character_id}
+          saves={savesToRoll}
+          onClose={() => setSavesToRoll(null)}
         />
       )}
       <ConfirmSheet
