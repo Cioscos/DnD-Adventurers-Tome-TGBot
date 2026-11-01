@@ -33,7 +33,7 @@ interface Props {
   /** GM: esito di un TS pendente di un mostro (tirato al tavolo). */
   onResolveSave?: (saveId: number, passed: boolean) => void
   resolvingSaveId?: number | null
-  /** Riga compatta del tracciato: PF in una riga; barra solo sulla riga attiva. */
+  /** Riga compatta del tracciato: PF in una riga, niente barra. */
   compact?: boolean
 }
 
@@ -89,7 +89,7 @@ export default function CombatantRow({
   const pct = (cur: number | null | undefined, max: number | null | undefined) =>
     max && max > 0 ? Math.max(0, Math.min(100, Math.round(((cur ?? 0) / max) * 100))) : 0
 
-  const collapsed = compact && !isActive
+  const collapsed = compact
   const bucket = pcBucket ?? monsterBucket
   const hpSummary = showExactPc && snapshot
     ? `${snapshot.current_hit_points}/${snapshot.hit_points}`
@@ -240,7 +240,7 @@ export default function CombatantRow({
         </div>
         {collapsed && (hpSummary || bucket) && (
           <span
-            className={`shrink-0 self-start pt-0.5 text-xs font-mono tabular-nums
+            className={`shrink-0 text-xs font-mono tabular-nums
               ${hpSummary ? 'text-dnd-text' : BUCKET_TEXT[bucket!]}`}
           >
             {hpSummary ?? t(`session.hp_bucket.${bucket}`)}

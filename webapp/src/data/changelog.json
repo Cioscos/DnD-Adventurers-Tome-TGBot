@@ -1,6 +1,40 @@
 {
   "entries": [
     {
+      "version": "2.26.0",
+      "date": "2026-11-01",
+      "title": {
+        "it": "Il combattimento ha la sua pagina",
+        "en": "Combat gets its own page"
+      },
+      "added": {
+        "it": [
+          "Nuova pagina Combattimento, separata dalla sessione: in alto il nastro dei turni mostra chi ha agito, chi agisce e chi viene dopo.",
+          "Il giocatore vede in primo piano il suo personaggio: punti ferita, CA, condizioni, tiri salvezza di fine turno e fra quanti turni tocca a lui.",
+          "«Apri il mio turno» porta dalla pagina Combattimento alla pagina Turno del personaggio.",
+          "Il banner della scheda personaggio porta direttamente al combattimento quando c'è un incontro, anche in preparazione."
+        ],
+        "en": [
+          "New Combat page, separate from the session: at the top, the turn ribbon shows who acted, who is acting and who comes next.",
+          "The player sees their character up front: hit points, AC, conditions, end-of-turn saving throws and how many turns until their turn.",
+          "“Open my turn” goes from the Combat page to the character's Turn page.",
+          "The banner on the character sheet goes straight to the combat when there is an encounter, even during setup."
+        ]
+      },
+      "improved": {
+        "it": [
+          "La stanza della sessione è più ordinata: al posto della lista dei combattenti c'è un solo riquadro che apre il combattimento.",
+          "Il GM ha «Turno successivo» sempre in basso e i comandi meno frequenti (aggiungi mostro, sincronizza, termina) nel menu «⋯».",
+          "Nella lista d'iniziativa i combattenti morti scendono in fondo e le righe sono più compatte."
+        ],
+        "en": [
+          "The session room is tidier: instead of the combatant list there is a single box that opens the combat.",
+          "The GM always has “Next turn” at the bottom and the less frequent controls (add monster, sync, end) in the “⋯” menu.",
+          "In the initiative list, dead combatants move to the bottom and rows are more compact."
+        ]
+      }
+    },
+    {
       "version": "2.25.1",
       "date": "2026-11-01",
       "title": {

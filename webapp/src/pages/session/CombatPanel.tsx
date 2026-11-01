@@ -306,7 +306,8 @@ export default function CombatPanel({ live, sessionId, amGm, myUserId }: Props) 
         {tracked.map((c) => (
           <CombatantRow
             key={c.id}
-            compact
+            // GM: i dettagli di chi agisce sono già nella card «Sta agendo».
+            compact={amGm || !(isActivePhase && c.id === enc.active_combatant_id)}
             combatant={c}
             snapshot={snapOf(c)}
             isActive={isActivePhase && c.id === enc.active_combatant_id}
@@ -326,7 +327,15 @@ export default function CombatPanel({ live, sessionId, amGm, myUserId }: Props) 
       )}
 
       {dock && (
-        <div className="sticky bottom-0 z-10 -mx-4 px-4 pt-3 pb-3 bg-dnd-bg border-t border-dnd-border">
+        // Il <main> di Layout ha un padding in basso: lo sticky si fermerebbe sopra.
+        // Il bottom negativo lo compensa e porta il dock al bordo dello schermo.
+        <div
+          className="sticky z-10 -mx-4 px-4 pt-3 bg-dnd-bg border-t border-dnd-border shadow-parchment-md"
+          style={{
+            bottom: 'calc(-1 * max(env(safe-area-inset-bottom), var(--tg-content-bottom, 0px), 6rem))',
+            paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom), var(--tg-content-bottom, 0px))',
+          }}
+        >
           {dock}
         </div>
       )}

@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import { GiDeathSkull as Skull } from 'react-icons/gi'
 import type { CombatantLive } from '@/types'
 
@@ -12,6 +13,12 @@ interface Props {
 /** Nastro del round: un segmento per combattente, in ordine d'iniziativa. */
 export default function RoundRibbon({ combatants, activeId, myUserId }: Props) {
   const activeIdx = combatants.findIndex((c) => c.id === activeId)
+  const activeRef = useRef<HTMLDivElement>(null)
+
+  // Con molti combattenti il segmento attivo può essere fuori vista: lo porto al centro.
+  useEffect(() => {
+    activeRef.current?.scrollIntoView?.({ inline: 'center', block: 'nearest', behavior: 'smooth' })
+  }, [activeId])
 
   return (
     <div data-testid="round-ribbon" className="flex gap-1 overflow-x-auto py-1 -mx-1 px-1">
@@ -27,6 +34,7 @@ export default function RoundRibbon({ combatants, activeId, myUserId }: Props) {
         return (
           <div
             key={c.id}
+            ref={state === 'active' ? activeRef : undefined}
             data-testid="ribbon-seg"
             data-state={state}
             data-kind={c.kind}

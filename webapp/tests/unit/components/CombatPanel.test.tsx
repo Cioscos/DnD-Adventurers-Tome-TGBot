@@ -184,6 +184,19 @@ describe('CombatPanel', () => {
       expect(screen.getByText('session.combat.next_turn')).toBeInTheDocument()
     })
 
+    it('GM: nel tracciato la riga di chi agisce resta compatta (i dettagli sono nella card)', () => {
+      renderPanel(active(2), { amGm: true, myUserId: GM_ID })
+      const tracked = screen.getAllByTestId('combatant-row').filter((r) => !r.closest('[data-testid="active-combatant-card"]'))
+      const activeRow = tracked.find((r) => r.dataset.active === 'true')!
+      expect(activeRow.querySelector('[data-testid="hp-bar"]')).toBeNull()
+    })
+
+    it('giocatore: la riga di chi agisce è espansa', () => {
+      renderPanel(active(2, [{ ...goblin, hp_bucket: 'healthy' }, me, ally]))
+      const activeRow = screen.getAllByTestId('combatant-row').find((r) => r.dataset.active === 'true')!
+      expect(activeRow.querySelector('[data-testid="hp-bucket-bar"]')).not.toBeNull()
+    })
+
     it('i morti sono elencati dopo i vivi', () => {
       const deadGob = { ...goblin, is_dead: true }
       renderPanel(active(1, [deadGob, me, ally]))

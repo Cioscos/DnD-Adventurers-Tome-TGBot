@@ -3716,7 +3716,7 @@
       ]
     },
     "session_room": {
-      "summary": "Questa è la stanza della sessione. Qui il Game Master e i giocatori vedono il party, scrivono in chat e gestiscono il combattimento. Alcune funzioni sono solo per il Game Master.",
+      "summary": "Questa è la stanza della sessione. Qui il Game Master e i giocatori vedono il party e scrivono in chat. Da qui si apre il combattimento. Alcune funzioni sono solo per il Game Master.",
       "sections": [
         {
           "title": "Codice, invito e uscita",
@@ -3773,37 +3773,65 @@
           ]
         },
         {
-          "title": "Preparare il combattimento (Game Master)",
+          "title": "Combattimento",
           "items": [
-            "Tocca \"Inizia combattimento\".",
-            "Scegli \"Light\" per avere solo iniziativa, turni e round.",
-            "Scegli \"Completa\" per gestire anche PF, CA e condizioni dei mostri.",
-            "L'app aggiunge in automatico i personaggi dei giocatori.",
-            "Per aggiungere mostri, tocca \"Aggiungi mostro\". Scrivi nome, quantità e modificatore di iniziativa.",
-            "Per aggiungere i personaggi che sono entrati dopo, tocca \"Sincronizza PG\".",
-            "Tocca \"Avvia\". Se mancano iniziative, l'app chiede se tirarle in automatico."
+            "Il Game Master tocca \"Inizia combattimento\" e sceglie il tipo di incontro. L'app apre la pagina del combattimento.",
+            "Durante un combattimento, la sessione mostra il riquadro \"Combattimento in corso\" con il round e chi sta agendo.",
+            "Tocca il riquadro per aprire la pagina del combattimento.",
+            "Dalla scheda del personaggio, il banner in alto porta direttamente al combattimento."
           ]
-        },
+        }
+      ]
+    },
+    "combat": {
+      "summary": "Questa è la pagina del combattimento. Mostra l'ordine dei turni, chi sta agendo e il tuo personaggio. Si apre dalla sessione o dal banner della scheda. Alcune funzioni sono solo per il Game Master.",
+      "sections": [
         {
-          "title": "Gestire il combattimento (Game Master)",
+          "title": "Come è fatta la pagina",
           "items": [
-            "L'app ordina i partecipanti per iniziativa. La barra mostra il round e di chi è il turno.",
-            "Per passare al turno successivo o precedente, tocca le frecce nella barra.",
-            "Se salti il turno di un personaggio, l'app chiede una conferma.",
-            "Tocca un partecipante per modificare iniziativa e ordine, o per segnarlo morto.",
-            "Nella modalità \"Completa\", puoi anche applicare danno e cura ai mostri.",
-            "Se torni al turno precedente subito dopo un avanzamento, l'app annulla le scadenze e i tiri salvezza di quell'avanzamento.",
-            "Tocca \"Termina\" per finire il combattimento.",
-            "ATTENZIONE: \"Rimuovi dal combattimento\" toglie il partecipante dall'incontro."
+            "In alto c'è il round. Durante la preparazione c'è la scritta \"Preparazione\".",
+            "Sotto il round c'è il nastro dei turni: un riquadro per ogni partecipante, in ordine di iniziativa.",
+            "Nel nastro, il riquadro dorato è chi sta agendo. I riquadri sbiaditi hanno già agito in questo round. Il tuo riquadro ha il bordo blu. I mostri hanno una riga rossa in basso.",
+            "La sezione \"Iniziativa\" elenca tutti i partecipanti. La riga di chi sta agendo è più grande. I morti sono in fondo.",
+            "Per tornare alla sessione, tocca la freccia in alto.",
+            "Quando il combattimento finisce, l'app ti riporta alla sessione."
           ]
         },
         {
           "title": "Combattere (giocatore)",
           "items": [
             "Durante la preparazione, tocca \"Tira iniziativa!\". L'app tira un d20 e aggiunge il tuo modificatore.",
-            "Quando è il tuo turno, l'app mostra \"Tocca a te!\" e invia un messaggio nella chat privata di Telegram.",
-            "All'inizio del tuo turno, l'app riduce di un round la durata di condizioni e concentrazione.",
-            "Alla fine del turno, tocca \"Termina turno\"."
+            "Durante il combattimento, la tua scheda in alto mostra punti ferita, CA e condizioni.",
+            "La scheda dice anche fra quanti turni tocca a te.",
+            "Se una condizione ti chiede un tiro salvezza a fine turno, la scheda lo mostra in ambra.",
+            "Tocca \"Apri il mio turno\" per aprire la pagina Turno del tuo personaggio: azioni, durate e concentrazione.",
+            "Quando è il tuo turno, la scheda diventa dorata e l'app mostra \"Tocca a te!\".",
+            "Alla fine del turno, tocca \"Termina turno\" in basso. Se devi fare un tiro salvezza, l'app lo apre subito."
+          ]
+        },
+        {
+          "title": "Preparare il combattimento (Game Master)",
+          "items": [
+            "Nella sessione, tocca \"Inizia combattimento\" e scegli il tipo di incontro. L'app apre questa pagina.",
+            "Scegli \"Light\" per avere solo iniziativa, turni e round. Scegli \"Completa\" per gestire anche PF, CA e condizioni dei mostri.",
+            "L'app aggiunge in automatico i personaggi dei giocatori.",
+            "Tocca il pulsante \"⋯\" in alto a destra per aprire \"Gestione combattimento\".",
+            "Per aggiungere mostri, tocca \"Aggiungi mostro\". Scrivi nome, quantità e modificatore di iniziativa.",
+            "Per aggiungere i personaggi che sono entrati dopo, tocca \"Sincronizza PG\".",
+            "Tocca \"Avvia\" in basso. Se mancano iniziative, l'app chiede se tirarle in automatico."
+          ]
+        },
+        {
+          "title": "Gestire il combattimento (Game Master)",
+          "items": [
+            "Sotto il nastro, la sezione \"Sta agendo\" mostra chi è di turno.",
+            "Per passare al turno successivo, tocca \"Turno successivo\" in basso. Per tornare indietro, tocca la freccia a sinistra.",
+            "Se salti il turno di un personaggio, l'app chiede una conferma.",
+            "Tocca un partecipante nella sezione \"Iniziativa\" per modificare iniziativa e ordine, o per segnarlo morto.",
+            "Nella modalità \"Completa\", puoi anche applicare danno e cura ai mostri.",
+            "Se torni al turno precedente subito dopo un avanzamento, l'app annulla le scadenze e i tiri salvezza di quell'avanzamento.",
+            "Per finire il combattimento, tocca \"⋯\" e poi \"Termina\".",
+            "ATTENZIONE: \"Rimuovi dal combattimento\" toglie il partecipante dall'incontro."
           ]
         },
         {
