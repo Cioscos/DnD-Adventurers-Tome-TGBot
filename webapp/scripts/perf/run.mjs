@@ -251,6 +251,7 @@ async function stopTrace(cdp) {
 /** Helper passati agli scenari. Solo lettura: niente che modifichi i dati. */
 function makeCtx(page) {
   let inflight = 0
+  let cachedId = ''
   page.on('request', () => inflight++)
   page.on('requestfinished', () => inflight--)
   page.on('requestfailed', () => inflight--)
@@ -273,6 +274,7 @@ function makeCtx(page) {
       await settle()
     },
     charId: async () => {
+      if (cachedId) return cachedId
       const id = await page.evaluate(() => {
         const m = location.hash.match(/#\/char\/(\d+)/)
         if (m) return m[1]
@@ -283,7 +285,7 @@ function makeCtx(page) {
         }
       })
       if (!id) throw new Error('Nessun personaggio: apri un personaggio nella Mini App e riprova.')
-      return id
+      return (cachedId = id)
     },
     swipe: async (dx) => {
       const cdp = await page.context().newCDPSession(page)
@@ -361,6 +363,8 @@ async function main() {
   const meta = { label: values.label, mode: values.mode, date: new Date().toISOString(), viewport }
   const results = []
   const ctx = makeCtx(page)
+  // Id letto PRIMA degli scenari: idle-home naviga in home e l'URL lo perderebbe.
+  await ctx.charId().catch(() => {})
 
   try {
     for (const s of wanted) {
