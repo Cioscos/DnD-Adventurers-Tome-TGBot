@@ -197,13 +197,21 @@ describe('CombatPanel', () => {
       expect(activeRow.querySelector('[data-testid="hp-bucket-bar"]')).not.toBeNull()
     })
 
-    it('round, menu ⋯ e nastro stanno in un unico blocco fisso in alto', () => {
+    it("scorre solo la lista d'iniziativa: blocco in alto e barra in basso restano fermi", () => {
       renderPanel(active(2), { amGm: true, myUserId: GM_ID })
-      const bar = screen.getByTestId('combat-topbar')
-      expect(bar.className).toContain('sticky')
-      expect(bar).toContainElement(screen.getByText('session.combat.round_label'))
-      expect(bar).toContainElement(screen.getByRole('button', { name: 'session.combat.menu' }))
-      expect(bar).toContainElement(screen.getByTestId('round-ribbon'))
+      const list = screen.getByTestId('combat-scroll')
+      expect(list.className).toContain('overflow-y-auto')
+      screen.getAllByTestId('combatant-row')
+        .filter((r) => !r.closest('[data-testid="active-combatant-card"]'))
+        .forEach((r) => expect(list).toContainElement(r))
+      const top = screen.getByTestId('combat-topbar')
+      expect(top).toContainElement(screen.getByText('session.combat.round_label'))
+      expect(top).toContainElement(screen.getByRole('button', { name: 'session.combat.menu' }))
+      expect(top).toContainElement(screen.getByTestId('round-ribbon'))
+      expect(top).toContainElement(screen.getByTestId('active-combatant-card'))
+      const dock = screen.getByTestId('combat-dock')
+      expect(dock).toContainElement(screen.getByText('session.combat.next_turn'))
+      expect(list).not.toContainElement(dock)
     })
 
     it('i morti sono elencati dopo i vivi', () => {

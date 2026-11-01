@@ -239,114 +239,113 @@ export default function CombatPanel({ live, sessionId, amGm, myUserId }: Props) 
 
   return (
     <>
-      {/* Round, menu e nastro restano visibili mentre scorri la lista. Il <main> di
-          Layout ha 1rem di padding in alto: top/margine negativi lo compensano. */}
-      <div
-        data-testid="combat-topbar"
-        className="sticky -top-4 z-10 -mx-4 -mt-4 px-4 pt-4 pb-2 space-y-1
-                   bg-dnd-bg border-b border-dnd-border shadow-parchment-md"
-      >
-        <div className="flex items-center justify-between gap-2 min-h-[44px]">
-          <p className="font-cinzel uppercase tracking-widest text-sm text-dnd-gold-dim">
-            {isActivePhase ? (
-              <span className="tabular-nums">{t('session.combat.round_label', { n: enc.round })}</span>
-            ) : (
-              t('session.combat.setup_title')
+      {/* Tre fasce: in alto round, nastro e card restano ferme; scorre solo la
+          lista d'iniziativa; in basso la barra dei comandi. Occupa tutto il <main>
+          di Layout (posizionato), così il suo padding e il suo scroll non entrano. */}
+      <div className="absolute inset-0 flex flex-col">
+        <div
+          data-testid="combat-topbar"
+          className="shrink-0 px-4 pt-4 pb-2 space-y-2 border-b border-dnd-border shadow-parchment-md"
+        >
+          <div className="flex items-center justify-between gap-2 min-h-[44px]">
+            <p className="font-cinzel uppercase tracking-widest text-sm text-dnd-gold-dim">
+              {isActivePhase ? (
+                <span className="tabular-nums">{t('session.combat.round_label', { n: enc.round })}</span>
+              ) : (
+                t('session.combat.setup_title')
+              )}
+            </p>
+            {amGm && (
+              <Pressable
+                onClick={() => setShowMenu(true)}
+                aria-label={t('session.combat.menu')}
+                className="w-11 h-11 inline-flex items-center justify-center rounded-full
+                           bg-dnd-surface border border-dnd-gold-dim/50 text-dnd-gold-bright active:scale-95"
+              >
+                <MoreHorizontal size={20} />
+              </Pressable>
             )}
+          </div>
+
+          {isActivePhase && (
+            <RoundRibbon
+              combatants={enc.combatants}
+              activeId={enc.active_combatant_id}
+              myUserId={myUserId}
+            />
+          )}
+          {!amGm && myCombatant && enc.status === 'setup' && (
+            <InitiativeCta sessionId={sessionId} combatant={myCombatant} />
+          )}
+          {!amGm && myCombatant && isActivePhase && (
+            <MyCombatantCard
+              combatant={myCombatant}
+              snapshot={snapOf(myCombatant)}
+              isMyTurn={isMyTurn}
+              turnsUntilMine={turnsUntilMine}
+              onOpenTurn={
+                myCombatant.character_id
+                  ? () => navigate(`/char/${myCombatant.character_id}/turn`)
+                  : undefined
+              }
+            />
+          )}
+
+          {amGm && isActivePhase && activeCombatant && (
+            <div data-testid="active-combatant-card" className="space-y-1">
+              <p className="font-cinzel uppercase tracking-widest text-xs text-dnd-gold-bright">
+                {t('session.combat.acting')}
+              </p>
+              <CombatantRow
+                combatant={activeCombatant}
+                snapshot={snapOf(activeCombatant)}
+                isActive
+                amGm
+                mode={enc.mode}
+              />
+            </div>
+          )}
+          <p className="font-cinzel uppercase tracking-widest text-xs text-dnd-gold-dim">
+            {t('session.combat.initiative')}
           </p>
-          {amGm && (
-            <Pressable
-              onClick={() => setShowMenu(true)}
-              aria-label={t('session.combat.menu')}
-              className="w-11 h-11 inline-flex items-center justify-center rounded-full
-                         bg-dnd-surface border border-dnd-gold-dim/50 text-dnd-gold-bright active:scale-95"
-            >
-              <MoreHorizontal size={20} />
-            </Pressable>
+        </div>
+
+        <div
+          data-testid="combat-scroll"
+          className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 py-3 space-y-1.5"
+        >
+          {tracked.map((c) => (
+            <CombatantRow
+              key={c.id}
+              // GM: i dettagli di chi agisce sono già nella card «Sta agendo».
+              compact={amGm || !(isActivePhase && c.id === enc.active_combatant_id)}
+              combatant={c}
+              snapshot={snapOf(c)}
+              isActive={isActivePhase && c.id === enc.active_combatant_id}
+              amGm={amGm}
+              mode={enc.mode}
+              onTap={amGm ? () => setSheetTarget(c) : undefined}
+              onResolveSave={amGm ? (saveId, passed) => resolveSaveMutation.mutate({ saveId, passed }) : undefined}
+              resolvingSaveId={resolveSaveMutation.isPending ? resolveSaveMutation.variables?.saveId : null}
+            />
+          ))}
+          {amGm && monstersAllDown && isActivePhase && (
+            <p className="text-center text-xs text-dnd-text-muted font-body italic">
+              {t('session.combat.all_monsters_down')}
+            </p>
           )}
         </div>
 
-        {isActivePhase && (
-          <RoundRibbon
-            combatants={enc.combatants}
-            activeId={enc.active_combatant_id}
-            myUserId={myUserId}
-          />
+        {dock && (
+          <div
+            data-testid="combat-dock"
+            className="shrink-0 px-4 pt-3 border-t border-dnd-border shadow-parchment-md"
+            style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom), var(--tg-content-bottom, 0px))' }}
+          >
+            {dock}
+          </div>
         )}
       </div>
-
-      {!amGm && myCombatant && enc.status === 'setup' && (
-        <InitiativeCta sessionId={sessionId} combatant={myCombatant} />
-      )}
-      {!amGm && myCombatant && isActivePhase && (
-        <MyCombatantCard
-          combatant={myCombatant}
-          snapshot={snapOf(myCombatant)}
-          isMyTurn={isMyTurn}
-          turnsUntilMine={turnsUntilMine}
-          onOpenTurn={
-            myCombatant.character_id
-              ? () => navigate(`/char/${myCombatant.character_id}/turn`)
-              : undefined
-          }
-        />
-      )}
-
-      {amGm && isActivePhase && activeCombatant && (
-        <div data-testid="active-combatant-card" className="space-y-1">
-          <p className="font-cinzel uppercase tracking-widest text-xs text-dnd-gold-bright">
-            {t('session.combat.acting')}
-          </p>
-          <CombatantRow
-            combatant={activeCombatant}
-            snapshot={snapOf(activeCombatant)}
-            isActive
-            amGm
-            mode={enc.mode}
-          />
-        </div>
-      )}
-
-      <div className="space-y-1.5">
-        <p className="font-cinzel uppercase tracking-widest text-xs text-dnd-gold-dim">
-          {t('session.combat.initiative')}
-        </p>
-        {tracked.map((c) => (
-          <CombatantRow
-            key={c.id}
-            // GM: i dettagli di chi agisce sono già nella card «Sta agendo».
-            compact={amGm || !(isActivePhase && c.id === enc.active_combatant_id)}
-            combatant={c}
-            snapshot={snapOf(c)}
-            isActive={isActivePhase && c.id === enc.active_combatant_id}
-            amGm={amGm}
-            mode={enc.mode}
-            onTap={amGm ? () => setSheetTarget(c) : undefined}
-            onResolveSave={amGm ? (saveId, passed) => resolveSaveMutation.mutate({ saveId, passed }) : undefined}
-            resolvingSaveId={resolveSaveMutation.isPending ? resolveSaveMutation.variables?.saveId : null}
-          />
-        ))}
-      </div>
-
-      {amGm && monstersAllDown && isActivePhase && (
-        <p className="text-center text-xs text-dnd-text-muted font-body italic">
-          {t('session.combat.all_monsters_down')}
-        </p>
-      )}
-
-      {dock && (
-        // Il <main> di Layout ha un padding in basso: lo sticky si fermerebbe sopra.
-        // Il bottom negativo lo compensa e porta il dock al bordo dello schermo.
-        <div
-          className="sticky z-10 -mx-4 px-4 pt-3 bg-dnd-bg border-t border-dnd-border shadow-parchment-md"
-          style={{
-            bottom: 'calc(-1 * max(env(safe-area-inset-bottom), var(--tg-content-bottom, 0px), 6rem))',
-            paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom), var(--tg-content-bottom, 0px))',
-          }}
-        >
-          {dock}
-        </div>
-      )}
 
       <Sheet open={showMenu} onClose={() => setShowMenu(false)} title={t('session.combat.menu')}>
         <div className="p-5 space-y-2">
