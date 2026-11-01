@@ -40,6 +40,8 @@ export function useLongPress({ onLongPress, onClick, thresholdMs = 500, onProgre
   const movedRef = useRef(false)
   const startRef = useRef({ x: 0, y: 0 })
   const pressingRef = useRef(false)
+  // The gesture ended in a tap or long press we handled: its touchend must be cancelled.
+  const handledRef = useRef(false)
 
   const clearTimers = useCallback(() => {
     if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null }
@@ -53,6 +55,7 @@ export function useLongPress({ onLongPress, onClick, thresholdMs = 500, onProgre
     if (pressingRef.current) return
     pressingRef.current = true
     triggeredRef.current = false
+    handledRef.current = false
     movedRef.current = false
     startRef.current = eventXY(e)
     clearTimers()
@@ -107,8 +110,20 @@ export function useLongPress({ onLongPress, onClick, thresholdMs = 500, onProgre
     // makes the dual pointer+touch delivery a harmless single onClick (no double-fire).
     const wasActive = pressingRef.current
     cancel()
-    if (wasActive && !triggeredRef.current && !movedRef.current && onClick) onClick()
+    if (triggeredRef.current) handledRef.current = true
+    if (wasActive && !triggeredRef.current && !movedRef.current && onClick) {
+      handledRef.current = true
+      onClick()
+    }
   }, [cancel, onClick])
+
+  // pointerup runs end() before touchend arrives. If that gesture was a handled tap/long
+  // press, cancelling touchend stops the browser's synthesized mousedown/click: otherwise
+  // they hit whatever the tap just opened (e.g. a sheet backdrop) and close it at once.
+  const touchEnd = useCallback((e?: React.TouchEvent) => {
+    end()
+    if (handledRef.current) e?.preventDefault()
+  }, [end])
 
   // Register BOTH Pointer and Touch move handlers: some Telegram in-app webviews
   // deliver only Touch events, others only Pointer. The pressingRef + movedRef
@@ -121,7 +136,7 @@ export function useLongPress({ onLongPress, onClick, thresholdMs = 500, onProgre
     onPointerCancel: cancel,
     onTouchStart: start,
     onTouchMove: move,
-    onTouchEnd: end,
+    onTouchEnd: touchEnd,
     onTouchCancel: cancel,
   }
 }

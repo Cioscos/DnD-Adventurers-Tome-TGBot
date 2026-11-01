@@ -15,6 +15,7 @@ import OfflineNotice from '@/components/ui/OfflineNotice'
 import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
 import Pressable from '@/components/ui/Pressable'
+import PageHelp from '@/components/PageHelp'
 import Input from '@/components/ui/Input'
 import ChipInput from '@/components/ui/ChipInput'
 import Sheet from '@/components/ui/Sheet'
@@ -282,15 +283,18 @@ export default function CharacterSelect() {
         <OfflineNotice query={charactersQuery} />
 
         {/* Session CTA (always available — GM does not need a character) */}
-        <Button
-          variant="secondary"
-          size="md"
-          fullWidth
-          icon={<Swords size={16} />}
-          onClick={() => navigate(hasActiveSession ? `/session/${activeSession!.id}` : '/session')}
-        >
-          {hasActiveSession ? t('session.resume') : t('session.title')}
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button
+            variant="secondary"
+            size="md"
+            className="flex-1"
+            icon={<Swords size={16} />}
+            onClick={() => navigate(hasActiveSession ? `/session/${activeSession!.id}` : '/session')}
+          >
+            {hasActiveSession ? t('session.resume') : t('session.title')}
+          </Button>
+          <PageHelp helpKey="home" title={t('character.select.title')} />
+        </div>
 
         {/* Character roster */}
         {characters.length === 0 ? (

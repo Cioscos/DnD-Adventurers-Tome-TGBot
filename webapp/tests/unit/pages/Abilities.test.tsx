@@ -236,6 +236,9 @@ describe('Abilities page', () => {
     renderWithProviders(<Abilities />)
     await userEvent.click(await screen.findByRole('button', { name: /Lucky/ }))   // expand
     await userEvent.click(screen.getByRole('button', { name: 'common.delete' }))
+    expect(removeSpy).not.toHaveBeenCalled()   // asks for confirmation first
+    const confirm = await screen.findAllByRole('button', { name: 'common.delete' })
+    await userEvent.click(confirm[confirm.length - 1])
     await waitFor(() => expect(removeSpy).toHaveBeenCalledWith(3, 2))
   })
 

@@ -6,6 +6,8 @@ import {
   GiDeathSkull as Skull,
 } from 'react-icons/gi'
 import ConditionBadge from '@/components/ui/ConditionBadge'
+import Pressable from '@/components/ui/Pressable'
+import { formatCondition } from '@/lib/conditions'
 import type {
   CharacterLiveSnapshot,
   CombatantLive,
@@ -28,6 +30,9 @@ interface Props {
   amGm: boolean
   mode: EncounterMode
   onTap?: () => void
+  /** GM: esito di un TS pendente di un mostro (tirato al tavolo). */
+  onResolveSave?: (saveId: number, passed: boolean) => void
+  resolvingSaveId?: number | null
 }
 
 function HpBar({ pct, bucket }: { pct: number | null; bucket: HpBucket | null }) {
@@ -49,13 +54,16 @@ function HpBar({ pct, bucket }: { pct: number | null; bucket: HpBucket | null })
 }
 
 export default function CombatantRow({
-  combatant: c, snapshot, isActive, amGm, mode, onTap,
+  combatant: c, snapshot, isActive, amGm, mode, onTap, onResolveSave, resolvingSaveId,
 }: Props) {
   const { t } = useTranslation()
   const isPc = c.kind === 'pc'
   const conds = Object.entries(
     (isPc ? snapshot?.conditions : c.conditions) ?? {},
   ).filter(([, v]) => Boolean(v))
+  const monsterSaves = !isPc && onResolveSave
+    ? (c.pending_saves ?? []).filter((p) => p.status === 'pending')
+    : []
 
   // PG: snapshot live (già redatto server-side). Mostro full: campi del combattente.
   const showExactPc = isPc && !!snapshot && snapshot.hit_points !== null
@@ -114,6 +122,13 @@ export default function CombatantRow({
             <p className="font-display font-bold text-dnd-text break-words">
               {c.name}
             </p>
+            {isPc && snapshot?.has_pending_save && (
+              <span
+                aria-label={t('session.combat.pending_save')}
+                title={t('session.combat.pending_save')}
+                className="h-2.5 w-2.5 shrink-0 rounded-full bg-dnd-amber"
+              />
+            )}
             {c.is_dead && (
               <span className="text-xs uppercase tracking-wider text-dnd-text-muted font-cinzel">
                 {t('session.combat.dead_label')}
@@ -164,6 +179,38 @@ export default function CombatantRow({
               ))}
             </div>
           )}
+
+          {monsterSaves.map((ps) => (
+            <div
+              key={ps.id}
+              className="mt-2 flex items-center gap-2"
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => e.stopPropagation()}
+            >
+              <p className="flex-1 min-w-0 text-xs text-dnd-amber break-words">
+                {t('character.conditions.effect.save_any', {
+                  ability: t(`character.ability.${ps.ability}_short`), dc: ps.dc,
+                })}
+                {' — '}{formatCondition(ps.slug, true, t)}
+              </p>
+              {([true, false] as const).map((passed) => (
+                <Pressable
+                  key={String(passed)}
+                  onClick={() => onResolveSave?.(ps.id, passed)}
+                  disabled={resolvingSaveId != null}
+                  pending={resolvingSaveId === ps.id}
+                  spinnerSize={12}
+                  className={`min-h-[44px] px-3 rounded-md border text-xs font-cinzel uppercase tracking-wider
+                    active:opacity-70 disabled:opacity-40
+                    ${passed
+                      ? 'border-dnd-emerald-bright/60 text-dnd-emerald-bright'
+                      : 'border-dnd-crimson-bright/60 text-dnd-crimson-bright'}`}
+                >
+                  {t(passed ? 'session.combat.save_passed' : 'session.combat.save_failed')}
+                </Pressable>
+              ))}
+            </div>
+          ))}
         </div>
       </div>
     </div>

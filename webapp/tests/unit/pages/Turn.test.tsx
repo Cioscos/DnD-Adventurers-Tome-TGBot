@@ -5,12 +5,14 @@ import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from '../utils/renderWithProviders'
 import Turn from '@/pages/Turn'
 
-const { getChar } = vi.hoisted(() => ({ getChar: vi.fn() }))
+const { getChar, turnState, sessionMe } = vi.hoisted(() => ({
+  getChar: vi.fn(), turnState: vi.fn(), sessionMe: vi.fn().mockResolvedValue(null),
+}))
 
 vi.mock('@/api/client', () => ({
   api: {
-    characters: { get: getChar, turnState: vi.fn(), tickRound: vi.fn() },
-    sessions: { me: vi.fn().mockResolvedValue(null) },
+    characters: { get: getChar, turnState, tickRound: vi.fn() },
+    sessions: { me: sessionMe },
     abilities: { update: vi.fn() },
   },
   ApiError: class ApiError extends Error {},
@@ -77,5 +79,21 @@ describe('Turn page', () => {
     expect(toggle).toHaveAttribute('aria-pressed', 'true')
     await userEvent.click(screen.getByText('character.turn.new_turn'))
     expect(toggle).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  it('shows "Fine round" outside an encounter', async () => {
+    getChar.mockResolvedValue(char)
+    renderWithProviders(<Turn />)
+    expect(await screen.findByText('character.turn.end_round')).toBeInTheDocument()
+    expect(screen.queryByText('character.conditions.duration.in_encounter')).not.toBeInTheDocument()
+  })
+
+  it('hides "Fine round" in an encounter and shows the note', async () => {
+    getChar.mockResolvedValue(char)
+    sessionMe.mockResolvedValue({ status: 'active', participants: [] })
+    turnState.mockResolvedValue({ in_encounter: true, is_my_turn: false, round: 1, session_id: 1 })
+    renderWithProviders(<Turn />)
+    expect(await screen.findByText('character.conditions.duration.in_encounter')).toBeInTheDocument()
+    expect(screen.queryByText('character.turn.end_round')).not.toBeInTheDocument()
   })
 })

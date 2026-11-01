@@ -171,6 +171,8 @@ def dice(d: str | None) -> str | None:
 
 
 HIGHER_RE = re.compile(r"(?:increases by|additional) (\d+d\d+) for each slot level above", re.I)
+# Upcast che il testo non esprime come dadi: un dardo in più (1d4+1) per livello.
+HIGHER_OVERRIDES = {"magic-missile": "1d4+1"}
 
 
 def build_spell(s: dict) -> dict:
@@ -180,6 +182,7 @@ def build_spell(s: dict) -> dict:
     inc = linear_increment(dmg["damage_at_slot_level"]) if dmg.get("damage_at_slot_level") else None
     if inc is None and base and (m := HIGHER_RE.search(text(s.get("higher_level")))):
         inc = m[1]  # "every two slot levels" / extra darts or rays do not match
+    inc = HIGHER_OVERRIDES.get(s["index"], inc)
     aoe = s.get("area_of_effect")
     return {
         "index": s["index"], "name": en(s["name"]), "level": s["level"], "school": s["school"]["index"],

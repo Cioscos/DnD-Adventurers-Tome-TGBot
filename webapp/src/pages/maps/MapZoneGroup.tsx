@@ -6,6 +6,7 @@ import { api } from '@/api/client'
 import type { CharacterFull, MapEntry } from '@/types'
 import { haptic } from '@/auth/telegram'
 import Pressable from '@/components/ui/Pressable'
+import { useLongPress } from '@/hooks/useLongPress'
 import { notifyMutationError } from '@/lib/mutationError'
 
 interface MapZoneGroupProps {
@@ -22,6 +23,25 @@ function sameIds(a: number[], b: number[]): boolean {
   if (a.length !== b.length) return false
   for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false
   return true
+}
+
+// Il drag HTML5 non parte col dito (Telegram Android): resta solo per il mouse.
+const FINE_POINTER = typeof window !== 'undefined' && window.matchMedia?.('(pointer: fine)').matches
+
+/** Overlay della miniatura: tap = anteprima, pressione lunga = prendi per spostare. */
+function ThumbPress({ label, onTap, onHold }: { label: string; onTap: () => void; onHold: () => void }) {
+  const press = useLongPress({ onLongPress: onHold, onClick: onTap })
+  return (
+    <div
+      {...press}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTap() } }}
+      onContextMenu={(e) => e.preventDefault()}
+      className="absolute inset-0 w-full h-full select-none cursor-pointer [-webkit-touch-callout:none]"
+      aria-label={label}
+    />
+  )
 }
 
 function MapZoneGroupInner({
@@ -41,6 +61,8 @@ function MapZoneGroupInner({
   const lastServerIdsRef = useRef<number[]>(serverIds)
   const dragIdRef = useRef<number | null>(null)
   const [draggingId, setDraggingId] = useState<number | null>(null)
+  // Miniatura presa con la pressione lunga: il prossimo tap su un'altra la sposta lì.
+  const [pickedId, setPickedId] = useState<number | null>(null)
 
   useEffect(() => {
     if (!sameIds(serverIds, lastServerIdsRef.current)) {
@@ -107,6 +129,10 @@ function MapZoneGroupInner({
     const fromId = dragIdRef.current
     dragIdRef.current = null
     setDraggingId(null)
+    moveTo(fromId, targetId)
+  }
+
+  const moveTo = (fromId: number | null, targetId: number) => {
     if (fromId === null || fromId === targetId) return
     const next = [...localOrder]
     const fromIdx = next.indexOf(fromId)
@@ -124,6 +150,13 @@ function MapZoneGroupInner({
   }
 
   const isReorderable = maps.length >= 2
+  const isDraggable = isReorderable && FINE_POINTER
+
+  const handleTap = (m: MapEntry) => {
+    if (pickedId === null) return onPreview(m)
+    if (pickedId !== m.id) moveTo(pickedId, m.id)
+    setPickedId(null)
+  }
 
   return (
     <div className="mb-4">
@@ -150,7 +183,7 @@ function MapZoneGroupInner({
 
       {isReorderable && (
         <p className="px-1 mb-1.5 text-xs uppercase tracking-widest text-dnd-text-faint italic">
-          {t('character.maps.reorder_hint')}
+          {t(pickedId === null ? 'character.maps.reorder_hint' : 'character.maps.reorder_pick_target')}
         </p>
       )}
 
@@ -158,14 +191,14 @@ function MapZoneGroupInner({
         {ordered.map((m) => (
           <div
             key={m.id}
-            draggable={isReorderable}
-            onDragStart={isReorderable ? handleDragStart(m.id) : undefined}
-            onDragOver={isReorderable ? handleDragOver : undefined}
-            onDrop={isReorderable ? handleDrop(m.id) : undefined}
-            onDragEnd={isReorderable ? handleDragEnd : undefined}
+            draggable={isDraggable}
+            onDragStart={isDraggable ? handleDragStart(m.id) : undefined}
+            onDragOver={isDraggable ? handleDragOver : undefined}
+            onDrop={isDraggable ? handleDrop(m.id) : undefined}
+            onDragEnd={isDraggable ? handleDragEnd : undefined}
             className={`relative aspect-square rounded-xl overflow-hidden bg-dnd-surface border border-dnd-gold-dim/40 shadow-parchment-md active:opacity-80 transition-all hover:border-dnd-gold/70 ${
               isReorderable ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'
-            } ${draggingId === m.id ? 'opacity-40' : ''}`}
+            } ${draggingId === m.id ? 'opacity-40' : ''} ${pickedId === m.id ? 'ring-2 ring-dnd-gold-bright' : ''}`}
           >
             {m.file_type === 'photo' ? (
               <img
@@ -182,12 +215,15 @@ function MapZoneGroupInner({
                 <span className="text-xs mt-1 uppercase opacity-60">{m.file_type}</span>
               </div>
             )}
-            {/* Click overlay (under delete button) — drag handlers live on the wrapper */}
-            <Pressable
-              type="button"
-              onClick={() => onPreview(m)}
-              className="absolute inset-0 w-full h-full"
-              aria-label={zoneName}
+            {/* Tap/hold overlay (under delete button) — mouse drag handlers live on the wrapper */}
+            <ThumbPress
+              label={zoneName}
+              onTap={() => handleTap(m)}
+              onHold={() => {
+                if (!isReorderable) return
+                setPickedId(m.id)
+                haptic.medium()
+              }}
             />
             <Pressable
               onClick={(e) => { e.stopPropagation(); onDeleteFile(m.id, zoneName) }}

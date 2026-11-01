@@ -87,11 +87,25 @@ describe('SpellDamageSheet', () => {
     expect(updateConc).not.toHaveBeenCalled()
   })
 
-  it('opens with the critical switch on after a natural 20', async () => {
+  it('rolls a critical after a natural 20 and says so, with no manual switch', async () => {
     rollDamage.mockResolvedValue(result)
     renderWithProviders(<SpellDamageSheet charId={7} spell={cantrip} slotLevel={0} slotAlreadyConsumed initialCritical onClose={() => {}} />)
-    expect(screen.getByRole('switch')).toHaveAttribute('aria-checked', 'true')
+    expect(screen.queryByRole('switch')).not.toBeInTheDocument()
+    expect(screen.getByText('character.spells.roll_damage.critical')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: /roll_button/ }))
     await waitFor(() => expect(rollDamage).toHaveBeenCalledWith(7, 1, expect.objectContaining({ is_critical: true })))
+  })
+
+  it('never offers a critical without the attack roll', () => {
+    renderWithProviders(<SpellDamageSheet charId={7} spell={cantrip} slotLevel={0} onClose={() => {}} />)
+    expect(screen.queryByRole('switch')).not.toBeInTheDocument()
+    expect(screen.queryByText('character.spells.roll_damage.critical')).not.toBeInTheDocument()
+  })
+
+  it('goes back to the slot step before rolling', async () => {
+    const onBack = vi.fn()
+    renderWithProviders(<SpellDamageSheet charId={7} spell={cantrip} slotLevel={0} onClose={() => {}} onBack={onBack} />)
+    await userEvent.click(screen.getByRole('button', { name: 'common.back' }))
+    expect(onBack).toHaveBeenCalledTimes(1)
   })
 })

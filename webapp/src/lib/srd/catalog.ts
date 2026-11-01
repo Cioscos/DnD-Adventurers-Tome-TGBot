@@ -191,7 +191,8 @@ export function upcastExtraDice(
   castingLevel: number,
   baseSides: number,
 ): number {
-  const m = /^(\d+)d(\d+)$/.exec(spell.higher_levels_dice?.trim() ?? '')
+  // Il bonus opzionale (Dardo incantato: 1d4+1) non cambia il numero di dadi.
+  const m = /^(\d+)d(\d+)([+-]\d+)?$/.exec(spell.higher_levels_dice?.trim() ?? '')
   if (!m || spell.level < 1 || NO_UPCAST_PREFILL.has(spell.srd_index ?? '') || Number(m[2]) !== baseSides) return 0
   return Number(m[1]) * Math.max(0, castingLevel - spell.level)
 }

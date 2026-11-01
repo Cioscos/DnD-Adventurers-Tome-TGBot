@@ -31,6 +31,13 @@ vi.mock('@/hooks/useD20Roll', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
   return { ...actual, useD20Roll: () => async (mode: string) => rollDice('d20', mode === 'normal' ? 1 : 2) }
 })
+vi.mock('@/components/ui/Sheet', async () => {
+  const React = await import('react')
+  return {
+    default: (p: { open: boolean; title?: string; children?: unknown }) =>
+      p.open ? React.createElement('div', { 'data-testid': 'cast-sheet', 'data-title': p.title }, p.children) : null,
+  }
+})
 vi.mock('@/components/ui/ConfirmSheet', async () => {
   const React = await import('react')
   return {
@@ -51,14 +58,14 @@ vi.mock('@/pages/spells/CastSpellModal', async () => {
 vi.mock('@/pages/spells/SpellDamageSheet', async () => {
   const React = await import('react')
   return {
-    default: (p: { spell: Spell | null; slotLevel: number | null; slotAlreadyConsumed?: boolean; initialCritical?: boolean }) =>
+    default: (p: { spell: Spell | null; slotLevel: number | null; slotAlreadyConsumed?: boolean; initialCritical?: boolean; onBack?: () => void }) =>
       p.spell
         ? React.createElement('div', {
             'data-testid': 'damage-sheet',
             'data-slot': String(p.slotLevel),
             'data-consumed': String(!!p.slotAlreadyConsumed),
             'data-critical': String(!!p.initialCritical),
-          })
+          }, p.onBack ? React.createElement('button', { onClick: p.onBack }, 'damage-back') : null)
         : null,
   }
 })
@@ -175,7 +182,7 @@ describe('useCastFlow attack spells', () => {
     expect(await screen.findByText('total:22')).toBeInTheDocument()
   })
 
-  it('keeps the manual critical for spells without a type', async () => {
+  it('rolls damage without a critical for spells without a type', async () => {
     renderFlow(thunder)
     await userEvent.click(screen.getByText('begin'))
     await userEvent.click(screen.getByText('cast-slot-3'))
@@ -184,6 +191,23 @@ describe('useCastFlow attack spells', () => {
     expect(sheet.dataset.critical).toBe('false')
     expect(attack).not.toHaveBeenCalled()
     expect(rollDice).not.toHaveBeenCalled()
+  })
+})
+
+describe('useCastFlow single cast sheet', () => {
+  it('moves from slot to damage inside one sheet and goes back to the slots', async () => {
+    renderFlow(thunder)
+    await userEvent.click(screen.getByText('begin'))
+    expect(screen.getByTestId('cast-sheet').dataset.title).toBe('character.spells.cast_slot_title')
+
+    await userEvent.click(screen.getByText('cast-slot-3'))
+    expect(screen.getAllByTestId('cast-sheet')).toHaveLength(1)
+    expect(screen.getByTestId('cast-sheet').dataset.title).toBe('character.spells.roll_damage.title(name=Onda Tonante)')
+    expect(await screen.findByTestId('damage-sheet')).toBeInTheDocument()
+
+    await userEvent.click(screen.getByText('damage-back'))
+    expect(await screen.findByText('cast-slot-3')).toBeInTheDocument()
+    expect(screen.queryByTestId('damage-sheet')).not.toBeInTheDocument()
   })
 })
 

@@ -137,6 +137,8 @@ _MIGRATIONS: list[tuple[str, str, str, str | None]] = [
     ("characters", "pending_choices", "JSON", None),
     # Hit dice tracking (spec 2026-07-17)
     ("character_classes", "hit_dice_used", "INTEGER NOT NULL", "0"),
+    # Snapshot per annullare l'ultimo avanzamento di turno
+    ("encounters", "last_advance_undo", "JSON", None),
 ]
 
 # Tables to drop if they exist (legacy feature cleanup)
@@ -431,6 +433,56 @@ def _backfill_ability_action_types(connection) -> None:
                 ), {"at": cfg.action_type, "fk": cfg.key})
 
 
+def _migrate_condition_state(connection) -> None:
+    """Condizioni ricche (idempotente).
+
+    1. ``settings.condition_durations`` -> ``condition_effects`` (owner/start/N),
+       poi la chiave viene rimossa.
+    2. Condizioni dei PG nel tracker (incontri non chiusi) -> ``Character.conditions``
+       (senza sovrascrivere), poi ``Combatant.conditions`` del PG si svuota.
+    """
+    from datetime import datetime, timezone
+
+    from sqlalchemy.orm import Session
+
+    from core.db.models import Character, Combatant, ConditionEffect, Encounter
+
+    now = datetime.now(timezone.utc).isoformat()
+    with Session(bind=connection) as s:
+        for char in s.query(Character).all():
+            settings = dict(char.settings or {})
+            durations = settings.pop("condition_durations", None)
+            if durations is None:
+                continue
+            active = char.conditions or {}
+            for slug, n in (durations or {}).items():
+                if not active.get(slug) or not isinstance(n, int) or n <= 0:
+                    continue
+                s.add(ConditionEffect(
+                    character_id=char.id, slug=slug, expiry_anchor="owner",
+                    expiry_edge="start", expiry_count=n, created_at=now,
+                ))
+            char.settings = settings
+
+        rows = (
+            s.query(Combatant, Character)
+            .join(Encounter, Encounter.id == Combatant.encounter_id)
+            .join(Character, Character.id == Combatant.character_id)
+            .filter(Combatant.kind == "pc", Encounter.status != "ended")
+            .all()
+        )
+        for cb, char in rows:
+            if not cb.conditions:
+                continue
+            merged = dict(char.conditions or {})
+            for slug, val in cb.conditions.items():
+                if val and slug not in merged:
+                    merged[slug] = val
+            char.conditions = merged
+            cb.conditions = {}
+        s.commit()
+
+
 async def init_db() -> None:
     """Create all tables and run schema + data migrations."""
     os.makedirs(os.path.dirname(_DB_PATH), exist_ok=True)
@@ -439,6 +491,7 @@ async def init_db() -> None:
         await conn.run_sync(_migrate_schema)
         await conn.run_sync(_migrate_class_resources_to_abilities)
         await conn.run_sync(_backfill_ability_action_types)
+        await conn.run_sync(_migrate_condition_state)
 
 
 @asynccontextmanager

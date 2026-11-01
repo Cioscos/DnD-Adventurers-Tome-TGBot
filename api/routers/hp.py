@@ -20,6 +20,7 @@ from api.services.dice_stats import record_dice
 from api.services.effects import apply_heal
 from api.services.item_charges import plan_item_recharges, set_item_charges
 from api.services.durations import end_concentration, is_concentrating
+from api.services.condition_effects import release_concentration_effects
 from api.services.wild_shape import absorb_damage, deactivate_other_forms, get_active_form
 from api.services.telegram_notify import notify_party_emergency
 from api.services.homebrew.dispatcher import dispatch
@@ -267,6 +268,7 @@ async def update_hp(
                 char, conc_damage, session,
                 "advantage" if (char.settings or {}).get("war_caster") else "normal",
             )
+        await release_concentration_effects(session, char)
 
         # Emit homebrew events: damage_taken (always) + dropped_to_zero (when HP crossed 0).
         # event.amount is the GROSS damage requested (applied, before temp-HP
@@ -395,6 +397,7 @@ async def undo_hp(
     if spell_id is not None and not any(s.id == spell_id for s in char.spells):
         spell_id = None
     char.concentrating_spell_id = spell_id
+    await release_concentration_effects(session, char)
     settings = dict(char.settings or {})
     for k in _CONC_SETTINGS:
         if before[k] is None:
@@ -569,6 +572,7 @@ async def rest(
         notifications.extend(collect_homebrew_notifications(firing))
     else:
         raise HTTPException(status_code=400, detail="rest_type must be 'long' or 'short'")
+    await release_concentration_effects(session, char)
 
     result = await build_character_response(session, char)
     if notifications:
@@ -829,5 +833,6 @@ async def revive(
         char.current_hit_points = 1
         char.death_saves = {"successes": 0, "failures": 0, "stable": False}
         end_concentration(char)
+        await release_concentration_effects(session, char)
         _add_history(session, char.id, "death_save", "Riportato in vita (1 PF)")
     return await build_character_response(session, char)

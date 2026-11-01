@@ -353,6 +353,7 @@
       "modifier": "Modificatore",
       "hp_recalc_toast": "HP massimi aggiornati: {{old}} → {{new}}",
       "edit_title": "Modifica {{ability}}",
+      "base_hint": "Valore base, senza i bonus degli oggetti (effettivo: {{effective}}).",
       "decrease": "Diminuisci",
       "increase": "Aumenta"
     },
@@ -535,7 +536,7 @@
         "increase_level": "Aumenta livello",
         "extra_dice": "Dadi extra",
         "extra_dice_placeholder": "es. 2d6",
-        "critical": "Critico (raddoppia i dadi)",
+        "critical": "Colpo critico: i dadi raddoppiano",
         "roll_button": "Rolla",
         "full_damage": "Pieno",
         "damage": "Danno",
@@ -600,6 +601,8 @@
       "used": "Usati",
       "total": "Totale",
       "available": "Disponibili",
+      "available_count_one": "{{count}} disponibile",
+      "available_count_other": "{{count}} disponibili",
       "reset_all": "Ripristina tutti",
       "add_level": "Aggiungi livello slot",
       "gem_aria": "Livello {{level}} slot {{index}}/{{total}} {{state}}",
@@ -692,7 +695,28 @@
         "input_aria": "Durata in round",
         "left": "{{n}} round",
         "tick": "Fine round (−1)",
-        "expired": "Scaduto: {{names}}"
+        "expired": "Scaduto: {{names}}",
+        "in_encounter": "In incontro i round scorrono a ogni tuo turno"
+      },
+      "effect": {
+          "until_end_owner_next": "fino alla fine del tuo prossimo turno",
+          "until_end_owner_nth": "fino alla fine del {{n}}° tuo turno",
+          "until_start_owner_next": "fino all'inizio del tuo prossimo turno",
+          "until_start_owner_nth": "fino all'inizio del {{n}}° tuo turno",
+          "until_end_source_next": "fino alla fine del prossimo turno di {{name}}",
+          "until_end_source_nth": "fino alla fine del {{n}}° turno di {{name}}",
+          "until_start_source_next": "fino all'inizio del prossimo turno di {{name}}",
+          "until_start_source_nth": "fino all'inizio del {{n}}° turno di {{name}}",
+          "source_unknown": "un altro combattente",
+          "rounds": "{{count}} round",
+          "while_concentrating": "finché {{name}} è concentrato",
+          "save_start": "TS {{ability}} CD {{dc}} all'inizio del tuo turno",
+          "save_end": "TS {{ability}} CD {{dc}} alla fine del tuo turno",
+          "save_start_of": "TS {{ability}} CD {{dc}} all'inizio del turno di {{name}}",
+          "save_end_of": "TS {{ability}} CD {{dc}} alla fine del turno di {{name}}",
+          "save_any": "TS {{ability}} CD {{dc}}",
+          "by_gm": "dal GM",
+          "active_title": "Effetti attivi"
       },
       "title": "Condizioni",
       "exhaustion": "Spossatezza (livello {{level}})",
@@ -939,6 +963,7 @@
       "legend": "Tu sei una leggenda"
     },
     "notes": {
+      "tag_suggestions": ["Organizzazioni", "Alleati", "Nemici", "Storia", "Luoghi"],
       "title": "Note",
       "new": "Nuova nota",
       "voice": "Nota vocale (registrata dal bot)",
@@ -980,7 +1005,8 @@
       "empty_title": "Nessuna mappa",
       "empty_hint": "Carica una mappa o un PDF della tua avventura: sarà sempre a portata di mano.",
       "zoom_hint": "Pizzica per zoomare",
-      "reorder_hint": "Trascina per riordinare",
+      "reorder_hint": "Tieni premuto o trascina per riordinare",
+      "reorder_pick_target": "Tocca la posizione di destinazione",
       "error_too_large": "{{name}} supera il limite di 10 MB",
       "dropzone_primary": "Trascina i file qui o tocca per selezionarli",
       "dropzone_accept": "PNG, JPG, PDF · max 10 MB",
@@ -1238,6 +1264,7 @@
       }
     },
     "abilities": {
+      "delete_confirm": "Eliminare l'abilità \"{{name}}\"? L'azione è irreversibile.",
       "title": "Abilità Speciali",
       "add": "Aggiungi abilità",
       "uses_left": "{{current}}/{{max}} usi",
@@ -1791,7 +1818,38 @@
       "remove": "Rimuovi dal combattimento",
       "remove_confirm": "Rimuovere {{name}} dal combattimento?",
       "dead_label": "Morto",
-      "action_failed": "Operazione non riuscita"
+      "action_failed": "Operazione non riuscita",
+      "active_conditions": "Condizioni attive",
+      "no_conditions": "Nessuna condizione attiva",
+      "add_condition": "Aggiungi condizione",
+      "remove_condition": "Rimuovi {{name}}",
+      "source_label": "Fonte: {{name}}",
+      "pending_save": "Tiro salvezza in sospeso",
+      "save_passed": "Superato",
+      "save_failed": "Fallito",
+      "cond": {
+        "condition": "Condizione",
+        "pick": "Scegli una condizione",
+        "duration": "Durata",
+        "dur_none": "Nessuna",
+        "dur_rounds": "N round",
+        "dur_start": "Fino all'inizio del prossimo turno",
+        "dur_end": "Fino alla fine del prossimo turno",
+        "rounds_label": "Round",
+        "of_label": "Turno di",
+        "of_target": "Bersaglio",
+        "of_source": "Fonte",
+        "save": "Tiro salvezza ripetuto",
+        "save_none": "Nessuno",
+        "save_dc": "CD",
+        "save_edge_start": "Inizio turno",
+        "save_edge_end": "Fine turno",
+        "source": "Fonte (facoltativa)",
+        "source_none": "Nessuna",
+        "concentration": "Finisce se la fonte perde la concentrazione",
+        "source_not_concentrating": "La fonte non è concentrata: prima deve lanciare l'incantesimo.",
+        "submit": "Applica condizione"
+      }
     }
   },
   "homebrew": {
@@ -2097,5 +2155,2222 @@
       "improved": "Migliorie",
       "fixed": "Correzioni"
     }
+  },
+  "help": {
+    "open": "Guida della pagina",
+    "title": "Guida: {{page}}",
+    "abilities": {
+      "summary": "Questa pagina mostra le abilità speciali del personaggio: abilità di classe, talenti e abilità personalizzate. Qui puoi consumare gli usi, aggiungere abilità e modificarle.",
+      "sections": [
+        {
+          "title": "Cosa vedi",
+          "items": [
+            "La sezione \"Abilità di classe\" contiene le abilità che l'app crea dalla classe e dal livello.",
+            "La sezione \"Abilità personalizzate\" contiene le abilità che aggiungi tu e i talenti.",
+            "Ogni riga mostra il nome, la classe di origine, \"Passiva\" o \"Attiva\" e gli usi rimasti.",
+            "Una riga più chiara indica un'abilità senza usi rimasti.",
+            "Tocca una riga per vedere la descrizione e i comandi. Tocca di nuovo per chiuderla."
+          ]
+        },
+        {
+          "title": "Consumare e recuperare gli usi",
+          "items": [
+            "Apri la riga dell'abilità.",
+            "Con 10 usi o meno vedi un pallino per ogni uso. Un pallino acceso è un uso consumato.",
+            "Tocca un pallino spento per consumare un uso. Tocca un pallino acceso per recuperarlo.",
+            "Con più di 10 usi vedi un contatore. Tocca \"-\" per consumare un uso e \"+\" per recuperarlo.",
+            "Per scrivere il numero esatto, tocca il numero degli usi e usa \"Imposta usi\".",
+            "\"Ripristino\" indica quando l'app recupera gli usi."
+          ]
+        },
+        {
+          "title": "Ripristino con i riposi",
+          "items": [
+            "Il riposo breve recupera gli usi delle abilità con \"Riposo breve\".",
+            "Il riposo lungo recupera gli usi delle abilità con \"Riposo lungo\" e \"Riposo breve\".",
+            "L'app non recupera mai gli usi delle abilità con \"Manuale\". Recuperali tu da questa pagina."
+          ]
+        },
+        {
+          "title": "Aggiungere un'abilità",
+          "items": [
+            "Tocca \"Aggiungi abilità\".",
+            "Scrivi il \"Nome\". Attiva \"Passiva\" se l'abilità non ha usi da consumare.",
+            "Tocca \"Avanti\".",
+            "Scrivi la \"Descrizione\" se vuoi.",
+            "Per un'abilità attiva, scrivi gli \"Usi massimi\" e scegli il \"Ripristino\".",
+            "L'app propone il \"Ripristino\" dal nome, per esempio \"Riposo breve\" per \"Azione Impetuosa\".",
+            "Scegli il \"Tipo di azione\" se vuoi. Poi tocca \"Aggiungi\"."
+          ]
+        },
+        {
+          "title": "Modificare o eliminare un'abilità",
+          "items": [
+            "Apri la riga di un'abilità personalizzata.",
+            "Tocca \"Modifica\" per cambiare i dati, poi tocca \"Salva\" nel secondo passo.",
+            "Per eliminare l'abilità, tocca \"Elimina\". Poi tocca \"Elimina\" nella finestra di conferma.",
+            "ATTENZIONE: dopo la conferma non puoi annullare l'eliminazione.",
+            "Per le abilità di classe puoi solo consumare gli usi e toccare \"Modifica descrizione\"."
+          ]
+        },
+        {
+          "title": "Rimuovere un talento",
+          "items": [
+            "Apri la riga del talento.",
+            "Tocca \"Rimuovi talento\". Poi tocca \"Conferma rimozione\".",
+            "ATTENZIONE: gli aumenti di caratteristica e la competenza nel tiro salvezza del talento non vengono annullati."
+          ]
+        },
+        {
+          "title": "Filtri",
+          "items": [
+            "I filtri appaiono quando una categoria ha almeno due valori diversi.",
+            "Puoi filtrare per \"Classe\", \"Tipo\" e \"Ripristino\". Il numero sul filtro indica quante abilità corrispondono.",
+            "Tocca un filtro per attivarlo. Tocca di nuovo per disattivarlo.",
+            "Filtri della stessa riga si sommano. Filtri di righe diverse si combinano.",
+            "Tocca \"Azzera filtri\" per vedere di nuovo tutte le abilità."
+          ]
+        },
+        {
+          "title": "Risorse personalizzate",
+          "items": [
+            "Se una regola homebrew crea una risorsa, la vedi in \"Risorse personalizzate\".",
+            "Tocca \"-\" o \"+\" per cambiare il valore di 1.",
+            "Tocca \"Recupera\" per riportare la risorsa al massimo."
+          ]
+        }
+      ]
+    },
+    "ac": {
+      "summary": "Questa pagina mostra e modifica la Classe Armatura del personaggio. La CA totale è la somma di Base, Scudo e Magia, più i bonus degli oggetti magici e delle regole homebrew.",
+      "sections": [
+        {
+          "title": "Cosa mostra la pagina",
+          "items": [
+            "Lo scudo grande mostra la CA \"Totale\".",
+            "Sotto lo scudo, la riga \"Base · Scudo · Magia\" mostra i tre valori.",
+            "La riga \"Oggetti magici\" mostra il bonus degli oggetti magici equipaggiati, se presente.",
+            "La riga \"Homebrew\" mostra il bonus delle regole homebrew, se presente.",
+            "I tre riquadri \"Base\", \"Scudo\" e \"Magia\" mostrano ogni valore separato."
+          ]
+        },
+        {
+          "title": "Calcolo automatico",
+          "items": [
+            "Quando equipaggi un'armatura sul corpo, l'app calcola la Base dall'armatura.",
+            "Quando equipaggi uno scudo, l'app calcola il valore Scudo dallo scudo.",
+            "L'etichetta \"Auto\" indica un valore calcolato dall'equipaggiamento.",
+            "Senza armatura, la Base è 10."
+          ]
+        },
+        {
+          "title": "Modificare i valori a mano",
+          "items": [
+            "Scrivi il nuovo valore nel campo sotto \"Base\", \"Scudo\" o \"Magia\".",
+            "L'etichetta \"Nuovo CA\" mostra il totale prima del salvataggio.",
+            "Tocca \"Salva\" in fondo alla pagina o \"Salva ora\" nella barra \"Modifiche non salvate\".",
+            "Un valore Base o Scudo scritto a mano riceve l'etichetta \"Manuale\".",
+            "I valori manuali restano uguali quando cambi l'equipaggiamento."
+          ]
+        },
+        {
+          "title": "Tornare al calcolo automatico",
+          "items": [
+            "Per eliminare i valori manuali, tocca \"Ripristina auto\".",
+            "L'app calcola di nuovo Base e Scudo dall'armatura e dallo scudo equipaggiati.",
+            "Il valore Magia non cambia."
+          ]
+        },
+        {
+          "title": "Difesa senza armatura",
+          "items": [
+            "La Difesa senza armatura calcola la Base come 10 + mod DES + mod della caratteristica scelta.",
+            "Per il Monaco, tocca \"SAG\". Per il Barbaro, tocca \"COS\".",
+            "Ogni pulsante mostra la CA che ottieni con quella scelta.",
+            "Quando la Difesa senza armatura è attiva, la Base riceve l'etichetta \"Senza armatura\" e non accetta valori a mano.",
+            "La Base cambia in automatico quando cambi le caratteristiche.",
+            "Non equipaggiare un'armatura sul corpo con questa funzione attiva.",
+            "Per disattivare la funzione, tocca \"Nessuna\". La Base torna al valore dell'armatura, o a 10."
+          ]
+        }
+      ]
+    },
+    "actions": {
+      "summary": "Questa pagina serve per attaccare. Mostra l'attacco a mano libera e le armi equipaggiate. L'app tira il d20 e il danno e mostra il risultato.",
+      "sections": [
+        {
+          "title": "Cosa mostra la pagina",
+          "items": [
+            "In alto, \"Attacchi per azione\" mostra quanti attacchi fai con una azione di Attacco.",
+            "Il riquadro \"Attacco a mano libera\" mostra il dado di danno del colpo senza armi.",
+            "Per un Monaco, il dado di danno segue il livello da Monaco.",
+            "La sezione \"Armi equipaggiate\" mostra solo le armi equipaggiate.",
+            "Se non hai armi equipaggiate, la sezione mostra \"Nessun'arma equipaggiata\". Per equipaggiare un'arma, usa l'inventario o l'equipaggiamento."
+          ]
+        },
+        {
+          "title": "Fare un attacco",
+          "items": [
+            "Per attaccare, tocca \"Attacca\" vicino all'arma o all'attacco a mano libera.",
+            "Per attaccare con vantaggio o svantaggio, tieni premuto \"Attacca\" e scegli la modalità.",
+            "L'app tira il d20 e aggiunge il bonus per colpire.",
+            "Il risultato mostra \"Per colpire\", il dado tirato e il totale.",
+            "Se colpisci, il risultato mostra anche il \"Danno\", i dadi tirati e il totale."
+          ]
+        },
+        {
+          "title": "Opzioni dell'arma",
+          "items": [
+            "Per un'arma versatile, scegli \"Una mano\" o \"Due mani\" prima di attaccare.",
+            "Per un'arma da lancio, scegli \"Mischia\" o \"Lancio\" prima di attaccare.",
+            "L'app ricorda la scelta per ogni arma. La scelta vale anche nella pagina Turno."
+          ]
+        },
+        {
+          "title": "Critici, fallimenti e avvisi",
+          "items": [
+            "Con un 20 naturale il risultato mostra \"Critico!\" e il danno è critico.",
+            "Con un 1 naturale il risultato mostra \"Fumble!\" e non mostra il danno.",
+            "\"Competenza non indicata\" significa che il personaggio non ha la competenza con questa arma.",
+            "Per un'arma con munizioni, l'app toglie una munizione equipaggiata e mostra le munizioni rimaste.",
+            "Se non hai munizioni equipaggiate, il risultato mostra un avviso. In questo caso, conta tu le munizioni."
+          ]
+        },
+        {
+          "title": "Ritirare con l'Ispirazione Eroica",
+          "items": [
+            "Se hai l'Ispirazione Eroica, il risultato mostra il pulsante \"Usa Ispirazione\".",
+            "Per ritirare il d20, tocca \"Usa Ispirazione\".",
+            "L'app usa l'Ispirazione Eroica e mostra il nuovo risultato con il segno \"Reroll ispirazione\".",
+            "Puoi ritirare una sola volta per ogni attacco."
+          ]
+        }
+      ]
+    },
+    "changelog": {
+      "summary": "Questa pagina mostra le note di versione dell'app. Ogni voce elenca le novità, le migliorie e le correzioni di una versione.",
+      "sections": [
+        {
+          "title": "Elenco delle versioni",
+          "items": [
+            "La versione più recente è in alto.",
+            "Ogni voce mostra il numero di versione e la data.",
+            "Il badge \"Attuale\" indica la versione che usi adesso.",
+            "La voce della versione attuale è già aperta."
+          ]
+        },
+        {
+          "title": "Leggere una versione",
+          "items": [
+            "Per aprire una voce, tocca la voce.",
+            "Per chiudere una voce aperta, tocca di nuovo la voce.",
+            "\"Nuove funzionalità\" elenca le funzioni aggiunte.",
+            "\"Migliorie\" elenca le funzioni che funzionano meglio.",
+            "\"Correzioni\" elenca gli errori corretti."
+          ]
+        },
+        {
+          "title": "Aprire e chiudere la pagina",
+          "items": [
+            "Per aprire questa pagina, tocca il numero di versione in fondo alla lista dei personaggi.",
+            "Per tornare alla lista dei personaggi, tocca la freccia indietro."
+          ]
+        }
+      ]
+    },
+    "character": {
+      "summary": "Questa è la scheda principale del personaggio. Ha tre schermate: \"Personaggio\", \"Equipaggiamento\" e \"Menu\". Da qui vedi i dati più importanti e apri tutte le altre pagine.",
+      "sections": [
+        {
+          "title": "Intestazione e schermate",
+          "items": [
+            "Per tornare alla lista dei personaggi, tocca la freccia a sinistra.",
+            "Per cercare incantesimi, oggetti, abilità, risorse e note, tocca la lente. Scrivi almeno 2 caratteri e tocca un risultato.",
+            "Per concedere o usare l'Ispirazione eroica, tocca il pulsante \"On\" / \"Off\".",
+            "Per aprire le \"Impostazioni\", tocca l'ingranaggio.",
+            "Quando mantieni la concentrazione, accanto al nome vedi il badge \"C\". Per aprire l'incantesimo, tocca il badge.",
+            "Per cambiare schermata, scorri a sinistra o a destra.",
+            "Per aprire direttamente una schermata, tocca uno dei pallini in basso.",
+            "Durante una sessione attiva, tocca il banner \"Sei in sessione\" per tornare alla sessione."
+          ]
+        },
+        {
+          "title": "Schermata Personaggio: riquadro principale",
+          "items": [
+            "Per aprire \"Identità\", tocca le classi e la razza in alto.",
+            "Per aprire \"Inventario\", tocca lo zaino in alto a destra. Il numero è il peso che porti. Il bordo ambra indica che superi la capacità di carico.",
+            "Per aprire \"Esperienza\", tocca la barra dei punti esperienza.",
+            "Per aprire \"Classe Armatura\", tocca lo scudo con la CA.",
+            "Per aprire \"Caratteristiche\", tocca uno dei sei punteggi in basso.",
+            "Per leggere un'abilità passiva o una condizione attiva, tocca il suo badge.",
+            "I badge di resistenze, immunità e vulnerabilità aprono \"Identità\", dove li modifichi.",
+            "In forma selvatica, i PF e la CA sono quelli della forma. Per tornare alla forma normale, tocca \"Termina forma\"."
+          ]
+        },
+        {
+          "title": "Danno e cura veloci",
+          "items": [
+            "Tocca la barra dei PF per aprire \"Danno / Cura\".",
+            "Tocca \"Danno\" oppure \"Cura\".",
+            "Per il danno, puoi scegliere il \"Tipo di danno (opzionale)\". L'app applica in automatico le resistenze, le immunità e le vulnerabilità del personaggio.",
+            "Per forzare un modificatore, tocca \"½ Resistenza\", \"×2 Vulnerabilità\", \"Immune\" o \"Pieno\".",
+            "Scrivi il valore e tocca \"Applica\".",
+            "Per annullare l'ultima modifica, tocca \"Annulla\" nel messaggio che appare.",
+            "Se il danno interrompe la concentrazione, l'app mostra \"Concentrazione persa!\".",
+            "Per i PF temporanei e i tiri salvezza contro la morte, tocca \"Pagina HP completa\". Se il personaggio è morto, la barra apre direttamente quella pagina."
+          ]
+        },
+        {
+          "title": "Avvisi nella schermata Personaggio",
+          "items": [
+            "Il banner \"È il tuo turno\" appare in sessione quando tocca a te. Per aprire la vista Turno, tocca il banner.",
+            "Il badge \"Scelte di livello\" appare quando devi scegliere un aumento di caratteristica o un talento.",
+            "Per fare la scelta, tocca il badge. Scegli \"Aumento caratteristiche\" e distribuisci 2 punti, oppure scegli un \"Talento\". Poi tocca \"Conferma\".",
+            "Il banner \"Morto\" appare quando il personaggio è morto. Per riportarlo in vita, tocca il banner.",
+            "Il banner \"Concentrazione\" mostra l'incantesimo che mantieni. Per aprire gli incantesimi, tocca il banner."
+          ]
+        },
+        {
+          "title": "Statistiche e slot",
+          "items": [
+            "La sezione \"Statistiche\" mostra Iniziativa, bonus di competenza, Percezione passiva e Velocità.",
+            "Per tirare l'iniziativa, tocca \"Iniziativa\". Per tirare con vantaggio o svantaggio, tieni premuto.",
+            "Per aprire la pagina collegata, tocca una delle altre statistiche.",
+            "Le schede \"Tiri Salvezza\" e \"Skills\" mostrano le tue competenze. Tocca una scheda per aprire la sua pagina.",
+            "La sezione \"Slot incantesimi\" mostra il numero totale di slot per ogni livello. Tocca la sezione per aprire gli slot.",
+            "Per cambiare l'ordine delle sezioni, tocca \"Personalizza schermata\" e usa le frecce.",
+            "Per mostrare o nascondere una sezione, tocca l'occhio."
+          ]
+        },
+        {
+          "title": "Azioni rapide",
+          "items": [
+            "Le \"Azioni rapide\" sono i tiri e i contatori che usi più spesso.",
+            "Per tirare un attacco, un tiro salvezza o un incantesimo d'attacco, tocca il suo pulsante. Per il vantaggio o lo svantaggio, tieni premuto.",
+            "Per un'abilità speciale, tocca il pulsante. L'app segna un uso e mostra \"Annulla\" per qualche secondo.",
+            "Per i contatori, usa \"-\" e \"+\". Per scrivere un valore, tocca il numero al centro.",
+            "Per spendere un dado vita o fare un riposo, tocca il suo pulsante e conferma.",
+            "Per scegliere le azioni, tocca \"+\". Puoi tenere al massimo 12 azioni.",
+            "Nell'editor, tocca una voce per aggiungerla o toglierla. Per cambiare l'ordine, trascina la maniglia della voce.",
+            "ATTENZIONE: \"Ripristina predefinite\" sostituisce la tua lista con quella calcolata dal personaggio."
+          ]
+        },
+        {
+          "title": "Schermata Equipaggiamento",
+          "items": [
+            "La figura mostra 11 slot: testa, collo, mantello, corpo, mani, due anelli, piedi, munizioni, mano principale e mano secondaria.",
+            "Per equipaggiare un oggetto, tocca uno slot vuoto e tocca un oggetto dell'inventario. La lista mostra solo gli oggetti adatti allo slot.",
+            "Se l'inventario non ha oggetti adatti, tocca \"Vai all'inventario\" per aggiungerne uno.",
+            "Per uno slot pieno, tocca lo slot e scegli \"Dettagli\", \"Sostituisci\" o \"Rimuovi\".",
+            "Un'arma a due mani occupa entrambe le mani. L'app chiede conferma prima di togliere l'altro oggetto.",
+            "Sotto la figura vedi la CA, i danni dell'arma in mano principale, il peso trasportato e la velocità.",
+            "Per usare una tua immagine, tocca \"Carica silhouette\". Per cambiarla o toglierla, tocca di nuovo il pulsante e scegli \"Cambia immagine\" o \"Rimuovi (torna a default)\"."
+          ]
+        },
+        {
+          "title": "Schermata Menu e riposo",
+          "items": [
+            "Il menu raccoglie tutte le pagine del personaggio in sei gruppi: \"Combattimento\", \"Magia\", \"Abilità\", \"Inventario & Monete\", \"Personaggio\" e \"Strumenti\".",
+            "Per aprire una pagina, tocca la sua icona.",
+            "Per riposare, tocca \"Riposo\" e scegli \"Riposo breve\" o \"Riposo lungo\".",
+            "Nel riposo breve, puoi spendere dadi vita per recuperare PF. Poi tocca \"Riposa\".",
+            "Il riposo lungo porta i PF al massimo, ripristina slot e abilità e interrompe la concentrazione. L'app chiede conferma.",
+            "Quando il personaggio è morto, il menu non mostra \"Riposo\"."
+          ]
+        }
+      ]
+    },
+    "class": {
+      "summary": "Questa pagina mostra le classi del personaggio e il loro livello. Qui puoi salire di livello, aggiungere o rimuovere classi e distribuire i livelli in multiclasse.",
+      "sections": [
+        {
+          "title": "Cosa vedi",
+          "items": [
+            "In alto vedi il \"Livello totale\" del personaggio.",
+            "Ogni scheda mostra una classe con la sottoclasse, il dado vita e l'abilità da incantatore.",
+            "Il numero a destra di \"Livello\" è il livello della classe.",
+            "Se gli XP danno più livelli di quelli assegnati, vedi per esempio \"3 distribuiti · 1 da assegnare\".",
+            "Se il personaggio non ha classi, tocca \"Aggiungi la tua prima classe\"."
+          ]
+        },
+        {
+          "title": "Salire di livello",
+          "items": [
+            "Quando c'è un livello da assegnare, appare \"Livello disponibile! Clicca per scegliere classe\".",
+            "Con l'avanzamento a milestone, questo pulsante è sempre disponibile fino al livello 20.",
+            "Tocca il pulsante per aprire \"Sali di livello\".",
+            "In \"Prossimi sblocchi\" vedi le capacità dei tre livelli successivi della classe scelta.",
+            "In \"Scegli la classe\", tocca la classe che riceve il nuovo livello.",
+            "Se usi i \"PF tirati\", tocca \"Tira 1dX per i PF\" prima di confermare.",
+            "Tocca \"Conferma\". L'app aggiunge un livello alla classe scelta.",
+            "Una classe al livello 20 non può salire di livello."
+          ]
+        },
+        {
+          "title": "Effetti del livello nuovo",
+          "items": [
+            "Se gli \"HP automatici\" sono attivi, l'app aggiunge i PF del livello nuovo.",
+            "L'app crea o aggiorna le abilità di classe del livello nuovo.",
+            "Se gli usi massimi di una risorsa aumentano, un messaggio mostra il valore vecchio e il nuovo.",
+            "L'app ricalcola gli slot incantesimo.",
+            "A un livello con aumento di caratteristica, l'app crea una scelta di livello in sospeso."
+          ]
+        },
+        {
+          "title": "Gestire le classi",
+          "items": [
+            "Tocca \"Gestisci classi\" per aprire \"Modifica classe\".",
+            "Scrivi il livello di ogni classe nel suo campo. Il livello deve essere tra 1 e 20.",
+            "\"Somma livelli\" deve essere uguale al livello degli XP.",
+            "Con l'avanzamento a milestone, la somma può essere al massimo 20.",
+            "Se la somma non è corretta, un messaggio in rosso ti dice quanti livelli aggiungere o togliere.",
+            "Tocca \"Conferma\" per salvare. Tocca \"Annulla\" per chiudere senza salvare."
+          ]
+        },
+        {
+          "title": "Aggiungere una classe",
+          "items": [
+            "In \"Modifica classe\", tocca \"Aggiungi classe\".",
+            "Tocca \"Nome classe\" e scegli una classe dalla lista.",
+            "Per una classe che non è nella lista, scegli \"Personalizzata\" e scrivi il \"Nome personalizzato\".",
+            "Scrivi la \"Sottoclasse\" se vuoi. Poi tocca \"Aggiungi\".",
+            "Se il personaggio non soddisfa i requisiti di multiclasse, vedi un avviso. Puoi continuare lo stesso.",
+            "La nuova classe ha l'etichetta \"NUOVA\". Tocca il cestino per toglierla prima di confermare.",
+            "Tocca \"Conferma\" per salvare la nuova classe."
+          ]
+        },
+        {
+          "title": "Rimuovere una classe",
+          "items": [
+            "Tocca la X sulla scheda della classe.",
+            "Tocca \"Elimina\" per confermare.",
+            "ATTENZIONE: l'app rimuove la classe e le risorse legate a essa. Non puoi annullare questa azione.",
+            "L'app ricalcola gli HP massimi e gli slot incantesimo con le classi che restano."
+          ]
+        },
+        {
+          "title": "Scelte di livello in sospeso",
+          "items": [
+            "Quando c'è una scelta in sospeso, nella scheda del personaggio appare \"Scelte di livello: N\".",
+            "Tocca il pulsante per aprire la prima scelta.",
+            "In \"Aumento caratteristiche\", distribuisci 2 punti con \"+\" e \"-\". Nessuna caratteristica può superare 20.",
+            "In \"Talento\", scegli un talento dalla lista. I talenti con \"Già scelto\" non sono disponibili.",
+            "Se il talento lo chiede, scegli la caratteristica da aumentare.",
+            "Per un talento non in lista, scegli \"Talento personalizzato\" e scrivi nome e descrizione.",
+            "Tocca \"Conferma\". L'app applica gli effetti, per esempio aggiorna gli HP se cambia la Costituzione.",
+            "Il talento appare nella pagina \"Abilità Speciali\"."
+          ]
+        }
+      ]
+    },
+    "conditions": {
+      "summary": "Questa pagina gestisce le condizioni del personaggio, come Accecato o Prono, e il livello di Spossatezza. Puoi dare una durata in round alle condizioni.",
+      "sections": [
+        {
+          "title": "Attivare e togliere una condizione",
+          "items": [
+            "Per attivare una condizione, tocca il suo nome nella griglia.",
+            "Una condizione attiva diventa rossa.",
+            "Per togliere la condizione, tocca di nuovo il suo nome.",
+            "Per leggere le regole della condizione, tocca l'icona \"i\" vicino al nome."
+          ]
+        },
+        {
+          "title": "Durata in round",
+          "items": [
+            "Prima di attivare una condizione, scegli la durata in \"Durata in round\".",
+            "Scrivi il numero di round o tocca \"1 round\" o \"1 minuto = 10\".",
+            "Per una condizione senza durata, tocca \"Fino a fine\".",
+            "La durata vale per le condizioni che attivi dopo la scelta.",
+            "Una condizione con durata mostra i round rimasti vicino al nome.",
+            "Per togliere un round a tutte le durate, tocca \"Fine round (−1)\". Il pulsante compare solo con una durata attiva.",
+            "Durante un incontro della sessione, \"Fine round (−1)\" non compare. I round scorrono a ogni tuo turno.",
+            "Quando una durata arriva a 0, l'app toglie la condizione e mostra \"Scaduto\"."
+          ]
+        },
+        {
+          "title": "Spossatezza",
+          "items": [
+            "La Spossatezza ha livelli da 0 a 6. I livelli sono cumulativi.",
+            "Per impostare il livello, tocca il numero corrispondente.",
+            "Per leggere gli effetti di ogni livello, tocca l'icona \"i\" vicino a \"Spossatezza\".",
+            "Il livello attuale è evidenziato nella lista degli effetti.",
+            "Un riposo lungo riduce la Spossatezza di 1 livello."
+          ]
+        },
+        {
+          "title": "Filtrare e azzerare",
+          "items": [
+            "Per vedere tutte le condizioni, tocca \"Tutte\".",
+            "Per vedere solo le condizioni attive, tocca \"Attive\". Il numero mostra quante condizioni sono attive.",
+            "Per togliere tutte le condizioni standard e la Spossatezza, tocca \"Ripristina tutte\" e poi \"Conferma\".",
+            "ATTENZIONE: \"Ripristina tutte\" toglie tutte le condizioni standard e azzera la Spossatezza.",
+            "\"Ripristina tutte\" non toglie le condizioni personalizzate."
+          ]
+        },
+        {
+          "title": "Condizioni personalizzate (homebrew)",
+          "items": [
+            "Le regole homebrew attive possono applicare condizioni personalizzate.",
+            "Per applicare una condizione di una regola, tocca il suo nome in \"Applica condizione\".",
+            "La sezione \"Personalizzate\" mostra le condizioni personalizzate attive.",
+            "Per togliere una condizione personalizzata, tocca l'icona del cestino nella sua scheda.",
+            "Con una condizione personalizzata attiva, compare il pulsante \"Inizio turno\".",
+            "All'inizio del tuo turno, tocca \"Inizio turno\". L'app attiva le regole homebrew di inizio turno, per esempio un danno ogni turno."
+          ]
+        },
+        {
+          "title": "Condizioni del Game Master",
+          "items": [
+            "Il Game Master può applicare una condizione dalla stanza della sessione.",
+            "La sezione \"Effetti attivi\" mostra queste condizioni con l'etichetta \"dal GM\".",
+            "Ogni condizione mostra quando finisce, per esempio \"fino alla fine del tuo prossimo turno\".",
+            "Una condizione può finire quando un altro personaggio perde la concentrazione. In questo caso vedi \"finché\" e il nome del personaggio.",
+            "Una condizione con tiro salvezza mostra caratteristica, CD e momento del tiro, per esempio \"TS COS CD 15 alla fine del tuo turno\".",
+            "Durante un incontro, l'app toglie la condizione quando arriva la scadenza.",
+            "Puoi togliere una condizione del Game Master. L'app scrive la modifica nello storico.",
+            "Non puoi cambiare la scadenza, il tiro salvezza o la fonte di una condizione del Game Master."
+          ]
+        },
+        {
+          "title": "Tiri salvezza in sospeso",
+          "items": [
+            "Quando devi fare un tiro salvezza per una condizione, una fascia ambra compare in alto nelle pagine del personaggio.",
+            "La fascia resta visibile finché non fai il tiro.",
+            "Quando è il tuo turno, la fascia diventa rossa e mostra \"Tocca a te\".",
+            "Tocca la fascia per aprire il tiro salvezza.",
+            "Scegli \"Normale\", \"Vantaggio\" o \"Svantaggio\".",
+            "Tocca \"Tira\". L'app mostra il totale contro la CD.",
+            "Se superi il tiro, l'app toglie la condizione.",
+            "Se fallisci il tiro, la condizione resta. Se hai l'Ispirazione, tocca \"Usa Ispirazione\" per ritirare.",
+            "Tocca \"OK\" per chiudere il risultato.",
+            "Con più tiri salvezza in sospeso, l'app li mostra uno alla volta."
+          ]
+        }
+      ]
+    },
+    "currency": {
+      "summary": "Questa pagina mostra le monete del personaggio e il loro valore totale in oro. Da qui aggiungi, togli e converti le monete.",
+      "sections": [
+        {
+          "title": "Leggere le monete",
+          "items": [
+            "Il riquadro \"Totale in oro\" mostra il valore di tutte le monete in monete d'oro.",
+            "Ogni riga mostra una moneta: Platino (PP), Oro (GP), Electrum (EP), Argento (SP) e Rame (CP).",
+            "Sotto il nome della moneta, \"attuale\" mostra la quantità attuale.",
+            "Valori: 1 PP vale 10 GP. 1 GP vale 2 EP, 10 SP o 100 CP.",
+            "Per mostrare o nascondere l'Electrum, usa \"Mostra Electrum\" nelle impostazioni."
+          ]
+        },
+        {
+          "title": "Aggiungere o togliere monete",
+          "items": [
+            "Tocca \"Aggiungi / Rimuovi\".",
+            "Scrivi nel campo della moneta la quantità da aggiungere.",
+            "Per togliere monete, scrivi un numero negativo, per esempio -5.",
+            "Il totale in oro mostra subito il risultato.",
+            "Tocca \"Salva\" per confermare.",
+            "Una moneta non scende mai sotto 0."
+          ]
+        },
+        {
+          "title": "Impostare una quantità",
+          "items": [
+            "Tocca \"Imposta\".",
+            "Scrivi nel campo della moneta la nuova quantità. Il campo vuoto mostra in grigio il valore attuale.",
+            "Un campo vuoto non cambia la moneta.",
+            "Tocca \"Salva\" per confermare.",
+            "Quando cambi modalità, l'app svuota i campi."
+          ]
+        },
+        {
+          "title": "Modifiche non salvate",
+          "items": [
+            "Quando scrivi in un campo, in alto appare la barra \"Modifiche non salvate\".",
+            "Tocca \"Salva ora\" per salvare le modifiche."
+          ]
+        },
+        {
+          "title": "Convertire le monete",
+          "items": [
+            "Tocca \"Converti\".",
+            "In \"Da\", scegli la moneta di partenza. In \"A\", scegli la moneta di arrivo.",
+            "Per scambiare le due monete, tocca il pulsante con le frecce.",
+            "Scrivi la quantità da convertire in \"Quantità\". L'app mostra il risultato della conversione.",
+            "Tocca \"Converti\" per confermare.",
+            "Se non hai abbastanza monete, l'app non esegue la conversione.",
+            "Se il risultato non è un numero intero, l'app aggiunge il resto in monete di rame."
+          ]
+        }
+      ]
+    },
+    "dice": {
+      "summary": "Questa pagina tira i dadi per il personaggio. L'app salva ogni tiro nella cronologia e nelle statistiche.",
+      "sections": [
+        {
+          "title": "Tirare i dadi",
+          "items": [
+            "Scegli quanti dadi tirare con \"-\" e \"+\" in \"Numero di dadi\". Il massimo è 10.",
+            "Tocca un dado: d4, d6, d8, d10, d12, d20 o d100.",
+            "Il risultato mostra la formula, il totale e il valore di ogni dado.",
+            "Questa pagina non ha vantaggio o svantaggio. Nelle altre pagine, tieni premuto il pulsante del tiro per sceglierli."
+          ]
+        },
+        {
+          "title": "Tiri rapidi",
+          "items": [
+            "Per tirare l'iniziativa, tocca \"Tira Iniziativa\". L'app tira 1d20 e aggiunge il modificatore di Destrezza.",
+            "Il pulsante \"Tira Iniziativa\" mostra il modificatore di Destrezza attuale.",
+            "Per tirare 2 o 3 dadi a sei facce, tocca \"2d6\" o \"3d6\".",
+            "Per tirare una caratteristica, tocca \"4d6kh3\". L'app tira 4d6 e scarta il dado più basso.",
+            "Il risultato mostra barrato il dado scartato."
+          ]
+        },
+        {
+          "title": "Animazione 3D e pacchetti dadi",
+          "items": [
+            "Se l'animazione 3D è attiva, i dadi rotolano sullo schermo.",
+            "Per vedere subito il risultato, tocca lo schermo durante l'animazione.",
+            "Per attivare o disattivare l'animazione, usa \"Animazione dadi 3D\" nelle impostazioni.",
+            "Per cambiare l'aspetto dei dadi, scegli un \"Pacchetto dadi\" nelle impostazioni.",
+            "Puoi scegliere il pacchetto dadi solo con l'animazione 3D attiva."
+          ]
+        },
+        {
+          "title": "Inviare il risultato al bot",
+          "items": [
+            "Sotto il risultato, tocca \"Manda al bot\".",
+            "Il bot invia il risultato nella tua chat privata Telegram.",
+            "\"Manda al bot\" appare solo quando apri l'app in Telegram."
+          ]
+        },
+        {
+          "title": "Cronologia",
+          "items": [
+            "La sezione \"Cronologia\" mostra gli ultimi 10 tiri.",
+            "Ogni riga mostra la formula, i dadi, il totale e quando hai tirato.",
+            "La cronologia contiene anche i tiri delle altre pagine. Un'etichetta mostra l'origine, per esempio \"Arma\" o \"Incantesimo\".",
+            "Per svuotare la cronologia, tocca \"Cancella cronologia\". Nella finestra di conferma, tocca \"Conferma\".",
+            "ATTENZIONE: l'app elimina tutta la cronologia dei tiri. Non puoi annullare questa azione.",
+            "Le statistiche dei tiri non cambiano quando svuoti la cronologia."
+          ]
+        },
+        {
+          "title": "Statistiche",
+          "items": [
+            "Per vedere i contatori di tutti i tiri, tocca \"Statistiche dei tiri\".",
+            "La pagina delle statistiche mostra i naturali 20, i naturali 1 e un grafico per ogni tipo di dado."
+          ]
+        }
+      ]
+    },
+    "dice_stats": {
+      "summary": "Questa pagina mostra i contatori di tutti i dadi tirati dal personaggio. I contatori aumentano da soli a ogni tiro.",
+      "sections": [
+        {
+          "title": "Riepilogo",
+          "items": [
+            "\"Naturali 20\" mostra quante volte il d20 ha dato 20.",
+            "\"Naturali 1\" mostra quante volte il d20 ha dato 1.",
+            "\"Tiri totali\" mostra il numero di tutti i dadi tirati."
+          ]
+        },
+        {
+          "title": "Schede per tipo di dado",
+          "items": [
+            "Ogni scheda mostra un tipo di dado, per esempio d20.",
+            "A destra trovi il numero di tiri e la media dei risultati.",
+            "Il grafico mostra quante volte è uscita ogni faccia. Una barra più alta indica più risultati.",
+            "Nel d20, la barra del 20 è verde e la barra dell'1 è rossa.",
+            "Per i dadi con molte facce, sotto il grafico appaiono solo alcuni numeri."
+          ]
+        },
+        {
+          "title": "Origine dei dati",
+          "items": [
+            "I contatori includono i tiri della pagina \"Tira Dadi\" e i tiri delle altre pagine, per esempio gli attacchi con le armi.",
+            "Se non ci sono tiri, la pagina mostra \"Nessun tiro registrato\".",
+            "Senza connessione, la pagina mostra \"Non disponibile offline\". Tocca \"Riprova\" per caricare di nuovo i dati."
+          ]
+        },
+        {
+          "title": "Azzerare le statistiche",
+          "items": [
+            "Tocca \"Azzera statistiche\" in fondo alla pagina.",
+            "Nella finestra di conferma, tocca \"Azzera statistiche\".",
+            "ATTENZIONE: tutti i contatori tornano a zero, anche i naturali 20 e 1. Non puoi annullare questa azione.",
+            "La cronologia dei tiri non cambia."
+          ]
+        }
+      ]
+    },
+    "extras": {
+      "summary": "Questa pagina gestisce le creature legate al personaggio: famigli, compagni, cavalcature, evocazioni e forme selvatiche. Per ogni creatura puoi seguire PF, CA e attacchi.",
+      "sections": [
+        {
+          "title": "Aggiungere una creatura",
+          "items": [
+            "Tocca \"Aggiungi\".",
+            "In \"Tipo\", scegli \"Famigli\", \"Compagni\", \"Cavalcature\", \"Evocazioni\" o \"Forme selvatiche\".",
+            "Per usare una creatura del catalogo, tocca \"Scegli dal catalogo mostri\" e scegli il mostro.",
+            "L'app scrive il nome, i \"PF massimi\", la \"CA\" e la scheda del mostro.",
+            "Per una creatura senza catalogo, scrivi \"Nome\", \"PF massimi\" e \"CA\".",
+            "Per dare un attacco alla creatura, scrivi \"Attacco\", \"Bonus\" e \"Danno\". Scrivi il danno nella forma 1d6+2.",
+            "Se vuoi, scrivi le \"Note\". Poi tocca \"Aggiungi\".",
+            "Puoi salvare al massimo 30 creature."
+          ]
+        },
+        {
+          "title": "Avvisi sulle regole",
+          "items": [
+            "Per un famiglio, l'app avvisa se il mostro non è una forma ammessa.",
+            "Per una forma selvatica, l'app avvisa se il mostro non è una bestia o se il GS supera il limite del tuo livello da druido.",
+            "L'app avvisa anche per la velocità di volo prima del livello 8 e di nuoto prima del livello 4.",
+            "Gli avvisi sono solo consigli. Puoi aggiungere la creatura lo stesso."
+          ]
+        },
+        {
+          "title": "Cosa mostra ogni scheda",
+          "items": [
+            "La pagina divide le creature per tipo.",
+            "Ogni scheda mostra il nome, le note, la CA e la barra dei PF.",
+            "A 0 PF la scheda mostra \"A terra (0 PF)\".",
+            "Per vedere tratti e azioni, tocca \"Scheda mostro\".",
+            "L'etichetta EN indica un testo del catalogo senza traduzione italiana."
+          ]
+        },
+        {
+          "title": "Danni e cure della creatura",
+          "items": [
+            "Scrivi il valore in \"Quantità\".",
+            "Per togliere PF alla creatura, tocca \"Danno\".",
+            "Per aggiungere PF alla creatura, tocca \"Cura\".",
+            "Queste operazioni cambiano solo i PF della creatura, non quelli del personaggio."
+          ]
+        },
+        {
+          "title": "Attacchi della creatura",
+          "items": [
+            "Ogni attacco mostra il bonus per colpire e il dado di danno.",
+            "Per attaccare, tocca \"Attacca\".",
+            "Per attaccare con vantaggio o svantaggio, tieni premuto \"Attacca\" e scegli la modalità.",
+            "Sotto gli attacchi, una riga mostra il tiro, il totale per colpire e il danno."
+          ]
+        },
+        {
+          "title": "Forma selvatica",
+          "items": [
+            "Per assumere una forma, tocca \"Attiva forma\". Il numero tra parentesi mostra gli usi di Forma Selvatica rimasti.",
+            "L'app toglie un uso di Forma Selvatica. La forma inizia con tutti i PF.",
+            "Puoi avere una sola forma attiva. Se attivi una forma, l'app termina l'altra.",
+            "Senza usi rimasti, l'app chiede una conferma. Per attivare la forma lo stesso, tocca \"Attiva comunque\".",
+            "Se il personaggio è a 0 PF, non puoi assumere una forma.",
+            "Con una forma attiva, i danni e le cure della pagina Punti Ferita vanno alla forma.",
+            "Per tornare alla forma normale, tocca \"Termina forma\". La forma termina anche quando arriva a 0 PF."
+          ]
+        },
+        {
+          "title": "Eliminare una creatura",
+          "items": [
+            "Tocca \"Elimina\" nella scheda della creatura.",
+            "Tocca \"Elimina\" di nuovo per confermare.",
+            "ATTENZIONE: l'app elimina la creatura e i suoi dati. Non puoi annullare questa operazione."
+          ]
+        }
+      ]
+    },
+    "history": {
+      "summary": "Questa pagina mostra la cronologia del personaggio. Ogni voce è un evento: un tiro, una modifica dei punti ferita, un riposo o un'altra azione.",
+      "sections": [
+        {
+          "title": "Leggere la cronologia",
+          "items": [
+            "Gli eventi sono su una linea verticale. L'evento più recente è in alto.",
+            "Ogni voce ha un'icona colorata. L'icona indica il tipo di evento, per esempio punti ferita, riposo, tiro o incantesimo.",
+            "Sotto ogni descrizione c'è la data relativa, per esempio \"Oggi\" o \"Ieri\".",
+            "Su computer, porta il puntatore sulla data per vedere data e ora esatte.",
+            "In alto a sinistra c'è il numero di voci."
+          ]
+        },
+        {
+          "title": "Cosa registra l'app",
+          "items": [
+            "L'app aggiunge una voce in automatico quando modifichi il personaggio o fai un tiro.",
+            "Alcuni esempi: punti ferita, classe armatura, livello, slot incantesimo, monete, zaino e condizioni.",
+            "L'app registra anche tiri di attacco, prove di abilità, tiri salvezza, tiri contro morte, dadi vita e riposi.",
+            "Se non ci sono eventi, la pagina mostra \"Nessun evento registrato\"."
+          ]
+        },
+        {
+          "title": "Cercare una voce",
+          "items": [
+            "Scrivi una parola nel campo \"Cerca nella cronologia…\".",
+            "La lista mostra solo le voci che contengono quella parola nella descrizione.",
+            "Il contatore mostra il numero di voci trovate.",
+            "Se nessuna voce corrisponde, la pagina mostra \"Nessuna voce corrispondente.\".",
+            "Per mostrare di nuovo tutte le voci, tocca la X nel campo di ricerca."
+          ]
+        },
+        {
+          "title": "Svuotare la cronologia",
+          "items": [
+            "Tocca \"Svuota cronologia\".",
+            "Nella finestra di conferma, tocca \"Conferma\".",
+            "ATTENZIONE: questa azione elimina tutte le voci. Non puoi annullarla."
+          ]
+        },
+        {
+          "title": "Senza connessione",
+          "items": [
+            "Se l'app non riesce a caricare la cronologia, la pagina mostra un messaggio di errore.",
+            "Per caricare di nuovo i dati, tocca \"Riprova\"."
+          ]
+        }
+      ]
+    },
+    "home": {
+      "summary": "Questa pagina mostra tutti i tuoi personaggi. Da qui apri una scheda, crei un personaggio nuovo, importi un personaggio o entri in una sessione di gioco.",
+      "sections": [
+        {
+          "title": "Lista dei personaggi",
+          "items": [
+            "Ogni scheda mostra nome, classi, razza, PF attuali e massimi, barra dei PF e Classe Armatura.",
+            "Per aprire un personaggio, tocca la sua scheda.",
+            "Il badge \"Incosciente\" indica che il personaggio ha 0 PF.",
+            "Il badge \"Morto\" indica che il personaggio è morto.",
+            "Il badge \"Da configurare\" indica che il personaggio non ha ancora PF massimi.",
+            "L'icona scintillante dorata indica che il personaggio ha l'Ispirazione eroica.",
+            "Se non hai personaggi, la pagina mostra il messaggio \"Nessun personaggio. Creane uno!\"."
+          ]
+        },
+        {
+          "title": "Sessione di gioco",
+          "items": [
+            "Per creare o unirti a una sessione, tocca \"Sessione di gioco\".",
+            "Non ti serve un personaggio per aprire la sessione come GM.",
+            "Se sei già in una sessione attiva, il pulsante diventa \"Riprendi sessione\".",
+            "Per tornare alla sessione attiva, tocca \"Riprendi sessione\"."
+          ]
+        },
+        {
+          "title": "Creare un personaggio: nome e classe",
+          "items": [
+            "Tocca \"Nuovo personaggio\".",
+            "Scrivi il nome del personaggio e tocca \"Avanti\".",
+            "Tocca una delle 12 classi. Sotto ogni classe vedi il suo dado vita.",
+            "Per una classe che non è nella lista, tocca \"Personalizzata\", scrivi il \"Nome classe\", scegli il \"Dado vita\" e tocca \"Conferma\".",
+            "Per creare il personaggio senza classe, tocca \"Senza classe\".",
+            "Tocca \"Avanti\" per passare al passo successivo.",
+            "Il personaggio inizia al livello 1 della classe che scegli."
+          ]
+        },
+        {
+          "title": "Creare un personaggio: specie",
+          "items": [
+            "Questo passo è facoltativo.",
+            "Per scegliere una specie, tocca \"Scegli dal catalogo\" e tocca una specie.",
+            "Se la specie ha sottospecie, tocca la sottospecie oppure \"Nessuna\".",
+            "Il riquadro mostra velocità, bonus alle caratteristiche, sensi e tratti della specie.",
+            "Per togliere la specie scelta, tocca \"Rimuovi specie\".",
+            "Senza una specie dal catalogo, puoi scrivere la specie nel campo \"Specie (testo libero)\".",
+            "Tocca \"Avanti\"."
+          ]
+        },
+        {
+          "title": "Creare un personaggio: punteggi caratteristica",
+          "items": [
+            "Scegli un metodo: \"Array standard\", \"Point buy\", \"Tira 4d6\" o \"Manuale\".",
+            "Con \"Array standard\", tocca un valore sotto ogni caratteristica. Se il valore è già in uso, le due caratteristiche si scambiano i valori.",
+            "Con \"Point buy\", usa \"-\" e \"+\". Hai 27 punti e ogni valore va da 8 a 15.",
+            "Con \"Tira 4d6\", tocca \"Tira 4d6 (scarta il più basso)\" e poi assegna i sei risultati. Per tirare di nuovo, tocca \"Ritira\".",
+            "Con \"Manuale\", usa \"-\" e \"+\" per impostare ogni valore da 3 a 20.",
+            "Il valore mostrato include già i bonus della specie.",
+            "Per lasciare tutti i punteggi a 10, tocca \"Salta: lascia tutti a 10\"."
+          ]
+        },
+        {
+          "title": "Creare un personaggio: identità",
+          "items": [
+            "Tutti i campi di questo passo sono facoltativi.",
+            "Scrivi razza, genere e allineamento.",
+            "Per scegliere un background, tocca \"Scegli background dal catalogo\". L'app aggiunge anche le sue competenze e lingue.",
+            "Per aggiungere una lingua, scrivila nel campo \"Lingue\" oppure tocca un suggerimento.",
+            "Per creare il personaggio, tocca \"Crea\".",
+            "Per creare il personaggio senza questi dati, tocca \"Salta: compili dopo\".",
+            "Per tornare al passo precedente, tocca \"Indietro\". Per chiudere la procedura, tocca \"Annulla\" nel primo passo."
+          ]
+        },
+        {
+          "title": "Importare un personaggio",
+          "items": [
+            "Tocca \"Importa\".",
+            "Scegli un file JSON che hai esportato prima dalle \"Impostazioni\" di un personaggio.",
+            "Se il file è valido, l'app crea il personaggio e apre la sua scheda.",
+            "Se il file non è valido, l'app mostra un messaggio di errore."
+          ]
+        },
+        {
+          "title": "Note di versione",
+          "items": [
+            "In fondo alla pagina vedi il numero della versione dell'app.",
+            "Per leggere le novità di ogni versione, tocca il numero della versione."
+          ]
+        }
+      ]
+    },
+    "homebrew": {
+      "summary": "Questa pagina contiene le regole homebrew del personaggio. Una regola homebrew è una regola della casa che l'app applica in automatico.",
+      "sections": [
+        {
+          "title": "Cosa fa una regola",
+          "items": [
+            "Una regola può dare un bonus o un malus fisso, per esempio +1 alla CA.",
+            "Una regola può reagire a un evento di gioco, per esempio un tiro per colpire o un riposo lungo.",
+            "Una regola può aggiungere caratteristiche agli oggetti e risorse personalizzate al personaggio.",
+            "L'app applica solo le regole attive."
+          ]
+        },
+        {
+          "title": "Leggere la lista",
+          "items": [
+            "\"Regole attive\" mostra le regole che l'app applica. Il numero indica quante sono.",
+            "\"Regole disattivate\" mostra le regole che l'app non applica.",
+            "Il badge \"Da template\" indica una regola installata da una ricetta.",
+            "Il badge \"Talento\" indica una regola che viene da un talento.",
+            "Se non hai regole, la pagina mostra \"Nessuna regola ancora. Installa un template per iniziare.\"."
+          ]
+        },
+        {
+          "title": "Installare una ricetta",
+          "items": [
+            "Scorri fino a \"Ricette pronte all'uso\".",
+            "Leggi il nome e la descrizione della ricetta.",
+            "Tocca \"Installa\". L'app aggiunge la regola alla lista.",
+            "Quando la ricetta è già installata, il pulsante mostra \"Installato\"."
+          ]
+        },
+        {
+          "title": "Attivare e disattivare una regola",
+          "items": [
+            "Tocca l'interruttore sulla regola.",
+            "Quando disattivi una regola, l'app la sposta in \"Regole disattivate\".",
+            "Quando attivi una regola, l'app la sposta in \"Regole attive\".",
+            "Se la regola contiene errori, l'app può disattivarla in automatico."
+          ]
+        },
+        {
+          "title": "Attivare una regola manualmente",
+          "items": [
+            "Alcune regole hanno l'evento \"Quando attivo manualmente la regola\".",
+            "Su queste regole attive c'è il pulsante con il fulmine \"Attiva ora\".",
+            "Tocca \"Attiva ora\" per eseguire subito la regola.",
+            "Se la regola non cambia niente, l'app mostra \"Attivazione manuale · nessuna regola ha reagito\"."
+          ]
+        },
+        {
+          "title": "Creare e modificare una regola",
+          "items": [
+            "Per creare una regola, tocca \"Nuova regola\".",
+            "Per modificare una regola, tocca la regola nella lista.",
+            "Non puoi modificare le regole con il badge \"Talento\". Gestiscile dalla scelta del talento al passaggio di livello."
+          ]
+        },
+        {
+          "title": "Eliminare una regola",
+          "items": [
+            "Tocca l'icona del cestino sulla regola.",
+            "Nella finestra di conferma, tocca \"Elimina\".",
+            "ATTENZIONE: questa azione elimina la regola. Non puoi annullarla."
+          ]
+        }
+      ]
+    },
+    "hp": {
+      "summary": "Questa pagina gestisce i Punti Ferita del personaggio. Qui applichi danni e cure, imposti i PF temporanei e fai i riposi. A 0 PF la pagina mostra i Tiri vs Morte.",
+      "sections": [
+        {
+          "title": "Cosa mostra la pagina",
+          "items": [
+            "Il numero grande mostra i PF attuali e i PF massimi.",
+            "Il colore del numero è verde sopra il 50%, oro fino al 25% e rosso sotto.",
+            "La barra mostra la percentuale dei PF rimasti.",
+            "Se hai PF temporanei, un'etichetta \"+N Temporanei\" compare sotto il numero.",
+            "Se una regola homebrew aumenta i PF massimi, la riga \"HP Max Homebrew\" mostra il bonus.",
+            "Se sei in concentrazione, il riquadro \"In concentrazione\" mostra il nome dell'incantesimo.",
+            "Se una forma selvatica è attiva, il numero e la barra mostrano i PF della forma."
+          ]
+        },
+        {
+          "title": "Applicare danni o cure",
+          "items": [
+            "Scegli l'operazione: \"DANNI\", \"CURA\", \"ATTUALI\", \"MASSIMO\" o \"Temporanei\".",
+            "Scrivi il valore nel campo numerico.",
+            "Tocca \"Conferma\" o premi Invio per applicare il valore.",
+            "Per applicare subito 1, 5, 10 o 20 punti, tocca il pulsante rapido corrispondente.",
+            "Con \"ATTUALI\" e \"MASSIMO\", i pulsanti rapidi scrivono solo il valore nel campo. Poi tocca \"Conferma\".",
+            "\"ATTUALI\" imposta i PF attuali. Il valore non supera i PF massimi.",
+            "\"MASSIMO\" imposta i PF massimi. Se i PF attuali sono più alti, l'app li abbassa al nuovo massimo.",
+            "Dopo ogni operazione compare un messaggio. Per annullare l'operazione, tocca \"Annulla\" nel messaggio."
+          ]
+        },
+        {
+          "title": "PF temporanei",
+          "items": [
+            "Per impostare i PF temporanei, scegli \"Temporanei\", scrivi il valore e tocca \"Conferma\".",
+            "Il nuovo valore sostituisce i PF temporanei precedenti. I due valori non si sommano.",
+            "Quando subisci danni, l'app toglie prima i PF temporanei e poi i PF attuali.",
+            "Un riposo lungo azzera i PF temporanei."
+          ]
+        },
+        {
+          "title": "Tipo di danno, resistenze e immunità",
+          "items": [
+            "Con \"DANNI\" attivo, puoi scegliere un \"Tipo di danno (opzionale)\".",
+            "Quando scegli un tipo, l'app seleziona il modificatore in base alle resistenze, vulnerabilità e immunità del personaggio.",
+            "Per cambiare il modificatore, tocca \"Pieno\", \"½ Resistenza\", \"×2 Vulnerabilità\" o \"Immune\".",
+            "Senza tipo di danno, puoi scegliere solo \"½ Resistenza\" o \"×2 Vulnerabilità\".",
+            "La resistenza dimezza il danno, la vulnerabilità lo raddoppia e l'immunità lo azzera.",
+            "Sotto il campo, un'anteprima mostra il danno scritto e il danno che l'app applica."
+          ]
+        },
+        {
+          "title": "Effetti automatici dei danni",
+          "items": [
+            "Se sei in concentrazione e subisci danni, l'app tira il tiro salvezza su Costituzione e mostra il risultato.",
+            "Se fallisci il tiro salvezza, l'app toglie la concentrazione e mostra \"Concentrazione persa!\".",
+            "Quando i PF scendono a 0, l'app toglie la concentrazione.",
+            "Se il danno in eccesso oltre lo 0 è uguale o più alto dei PF massimi, il personaggio muore subito.",
+            "Se una forma selvatica è attiva, la forma subisce il danno per prima. Il danno in eccesso passa al personaggio.",
+            "Quando la forma arriva a 0 PF, la forma termina."
+          ]
+        },
+        {
+          "title": "Tiri vs Morte (a 0 PF)",
+          "items": [
+            "A 0 PF la pagina mostra i pallini \"Successi\" e \"Fallimenti\".",
+            "Per tirare il tiro salvezza, tocca \"Tira d20\".",
+            "Per tirare con vantaggio o svantaggio, tieni premuto \"Tira d20\" e scegli la modalità.",
+            "Con 10 o più ottieni un successo. Con meno di 10 ottieni un fallimento.",
+            "Con un 20 naturale torni cosciente con 1 PF. Con un 1 naturale ottieni due fallimenti.",
+            "Con tre successi il personaggio è stabile. Con tre fallimenti il personaggio muore.",
+            "Per correggere i pallini a mano, tocca \"Successo\", \"Fallimento\", \"Stabilizza\" o \"Azzera\".",
+            "Se subisci danni a 0 PF, ottieni un fallimento. Per contare due fallimenti, attiva prima \"Colpo critico\"."
+          ]
+        },
+        {
+          "title": "Stabile, cura e morte",
+          "items": [
+            "Quando sei stabile a 0 PF, l'etichetta \"Stabilizzato · privo di sensi\" compare sotto i PF.",
+            "Quando i PF salgono sopra 0, l'app azzera i Tiri vs Morte.",
+            "Quando il personaggio è morto, la pagina mostra \"Morto\" e la causa.",
+            "Da morto, i danni, le cure e i riposi non hanno effetto.",
+            "Per riportare in vita il personaggio, tocca \"Riporta in vita\" e conferma.",
+            "Il personaggio torna con 1 PF e i Tiri vs Morte azzerati."
+          ]
+        },
+        {
+          "title": "Riposo breve e riposo lungo",
+          "items": [
+            "Per fare un riposo breve, tocca \"Riposo breve\".",
+            "Per spendere dadi vita, usa \"+\" e \"-\" vicino alla classe e poi tocca il pulsante del dado.",
+            "Ogni dado vita cura il risultato del dado più il modificatore di Costituzione, con un minimo di 1.",
+            "Per finire il riposo breve, tocca \"Riposa\".",
+            "Il riposo breve ripristina le capacità a riposo breve e gli slot del Patto. Toglie anche la concentrazione.",
+            "Per fare un riposo lungo, tocca \"Riposo lungo\" e poi \"Riposa\".",
+            "Il riposo lungo ripristina tutti i PF, gli slot, le capacità e metà dei dadi vita. Azzera i PF temporanei.",
+            "Il riposo lungo toglie la concentrazione e riduce la Spossatezza di 1 livello."
+          ]
+        }
+      ]
+    },
+    "identity": {
+      "summary": "In questa pagina modifichi l'identità del personaggio: nome, aspetto, sensi, personalità, lingue, competenze e modificatori del danno. Le modifiche restano solo sul telefono finché non tocchi \"Salva\".",
+      "sections": [
+        {
+          "title": "Salvare le modifiche",
+          "items": [
+            "Quando cambi un campo, in alto appare l'avviso \"Modifiche non salvate\".",
+            "Per salvare subito, tocca \"Salva ora\" nell'avviso.",
+            "Puoi anche toccare \"Salva\" in fondo alla pagina.",
+            "ATTENZIONE: se esci dalla pagina senza salvare, perdi le modifiche."
+          ]
+        },
+        {
+          "title": "Nome e fisicità",
+          "items": [
+            "Per cambiare il nome del personaggio, scrivi nel campo \"Nome\".",
+            "Scrivi \"Razza\", \"Genere\" e \"Allineamento\" come testo libero.",
+            "Scrivi la \"Velocità\" nell'unità di misura scelta nelle \"Impostazioni\".",
+            "Sotto la velocità vedi il valore convertito nell'altra unità di misura.",
+            "Nel riquadro \"Aspetto\", scrivi età, altezza, peso, occhi, capelli e pelle."
+          ]
+        },
+        {
+          "title": "Sensi",
+          "items": [
+            "Per dare un senso al personaggio, tocca \"Scurovisione\", \"Vista cieca\", \"Vista pura\" o \"Percezione tellurica\".",
+            "Quando attivi un senso, l'app imposta la distanza a 60 piedi (18 metri).",
+            "Per cambiare la distanza, scrivi il valore nel campo accanto al senso.",
+            "Per togliere un senso, tocca di nuovo il suo nome.",
+            "I sensi attivi appaiono nella sezione \"Statistiche\" della scheda principale."
+          ]
+        },
+        {
+          "title": "Personalità",
+          "items": [
+            "Scrivi \"Background\", \"Tratti caratteriali\", \"Ideali\", \"Legami\" e \"Difetti\".",
+            "Queste informazioni sono private. Solo tu le vedi.",
+            "Per mostrarle al GM e agli altri giocatori in sessione, attiva l'opzione nelle \"Impostazioni\", sezione \"Privacy\"."
+          ]
+        },
+        {
+          "title": "Lingue e competenze",
+          "items": [
+            "Per aggiungere una lingua, scrivila nel campo \"Lingue\" e conferma. Puoi anche toccare un suggerimento.",
+            "Per aggiungere più voci insieme, separale con una virgola.",
+            "Aggiungi le competenze nei campi \"Competenze: armature\", \"Competenze: armi\", \"Competenze: strumenti\" e \"Altre competenze\".",
+            "Per togliere una voce, tocca la sua x."
+          ]
+        },
+        {
+          "title": "Modificatori del danno",
+          "items": [
+            "Per ogni lista, tocca i tipi di danno: \"Resistenze\", \"Immunità\" e \"Vulnerabilità\".",
+            "Un tipo di danno sta in una sola lista. Se lo scegli in un'altra lista, l'app lo sposta.",
+            "Quando applichi un danno con il suo tipo, l'app usa queste liste in automatico.",
+            "Per un tipo homebrew, scrivilo nel campo \"Aggiungi personalizzato (homebrew)…\".",
+            "L'app non applica in automatico i tipi personalizzati.",
+            "I modificatori appaiono come badge nella scheda principale."
+          ]
+        },
+        {
+          "title": "Condividere la scheda",
+          "items": [
+            "Per inviare un riepilogo del personaggio in una chat Telegram, tocca \"Condividi nel gruppo\" e scegli la chat.",
+            "Il riepilogo mostra nome, razza, classi, PF, CA e numero di 20 naturali.",
+            "Il pulsante appare solo quando apri l'app dentro Telegram."
+          ]
+        }
+      ]
+    },
+    "inventory": {
+      "summary": "Questa pagina mostra gli oggetti del personaggio, divisi per tipo. Da qui aggiungi, equipaggi e usi gli oggetti e controlli il carico.",
+      "sections": [
+        {
+          "title": "Carico",
+          "items": [
+            "Il riquadro \"Carico\" mostra il peso totale e il carico massimo.",
+            "Il colore della barra cambia quando ti avvicini al limite.",
+            "L'app calcola il carico massimo dalla Forza.",
+            "Per impostare un valore manuale, tocca la matita. Scrivi il valore e tocca \"Salva\".",
+            "Per tornare al calcolo automatico, tocca \"Ripristina auto\"."
+          ]
+        },
+        {
+          "title": "Lista degli oggetti",
+          "items": [
+            "Gli oggetti sono divisi in gruppi per tipo, per esempio \"Arma\" e \"Armatura\".",
+            "Per chiudere o aprire un gruppo, tocca la sua intestazione.",
+            "In ogni gruppo, gli oggetti equipaggiati sono in alto.",
+            "Tocca un oggetto per vedere i dettagli e le azioni.",
+            "Il badge \"Equipaggiato\" indica un oggetto equipaggiato. Per armature e scudi appare anche il valore di CA.",
+            "Per cambiare la quantità, tocca \"-\" o \"+\" accanto a \"Quantità\".",
+            "Se una regola homebrew è attiva, l'oggetto mostra le sue proprietà. Puoi cambiarle nei dettagli."
+          ]
+        },
+        {
+          "title": "Aggiungere e modificare un oggetto",
+          "items": [
+            "Per aggiungere un oggetto, tocca \"Aggiungi oggetto\".",
+            "Passo 1: scrivi \"Nome oggetto\" e scegli il \"Tipo\".",
+            "Per copiare i dati dal manuale, tocca \"Equipaggiamento dal catalogo\" o \"Oggetto magico dal catalogo\".",
+            "Passo 2: inserisci quantità, peso e descrizione.",
+            "Passo 3: inserisci i dati del tipo, per esempio il danno dell'arma o la CA dell'armatura. Qui imposti anche i dati magici.",
+            "Tocca \"Avanti\" per andare al passo successivo. Tocca \"Aggiungi\" per salvare.",
+            "Per modificare, apri l'oggetto e tocca \"Modifica\". Al passo 3, tocca \"Salva\"."
+          ]
+        },
+        {
+          "title": "Equipaggiare un oggetto",
+          "items": [
+            "Il pulsante \"Equipaggia\" appare per armi, armature, scudi e accessori.",
+            "Apri l'oggetto e tocca \"Equipaggia\".",
+            "Se l'oggetto può andare in più slot, scegli lo slot nella finestra \"Scegli lo slot\".",
+            "Se lo slot è occupato, l'app toglie l'oggetto precedente.",
+            "Un'arma a due mani occupa entrambe le mani. L'app chiede conferma prima di togliere l'altro oggetto. Tocca \"Continua\".",
+            "Per togliere un oggetto equipaggiato, tocca \"Rimuovi\".",
+            "L'armatura e lo scudo equipaggiati cambiano la CA."
+          ]
+        },
+        {
+          "title": "Attaccare con un'arma",
+          "items": [
+            "Apri l'arma e tocca \"Attacca\".",
+            "Per vantaggio o svantaggio, tieni premuto \"Attacca\" e scegli la modalità.",
+            "Per un'arma versatile, scegli \"Una mano\" o \"Due mani\" prima dell'attacco.",
+            "Per un'arma da lancio, scegli \"Mischia\" o \"Lancio\" prima dell'attacco. L'app ricorda la tua scelta.",
+            "Il risultato mostra il tiro per colpire e il danno.",
+            "Se hai l'ispirazione, tocca \"Usa Ispirazione\" per ripetere il tiro per colpire.",
+            "Un'arma con munizioni usa 1 munizione a ogni attacco. L'app usa le munizioni equipaggiate."
+          ]
+        },
+        {
+          "title": "Usare un consumabile",
+          "items": [
+            "Il pulsante \"Usa\" appare per i consumabili con almeno un effetto.",
+            "Apri l'oggetto e tocca \"Usa\". Nella finestra di conferma, tocca \"Usa\".",
+            "L'app applica gli effetti: cura, aggiunta o rimozione di condizioni.",
+            "L'app toglie 1 dalla quantità.",
+            "Per aggiungere un effetto, modifica l'oggetto e tocca \"Aggiungi effetto\"."
+          ]
+        },
+        {
+          "title": "Oggetti magici",
+          "items": [
+            "La sezione \"Sintonia\" mostra gli oggetti in sintonia. Il limite è 3 oggetti.",
+            "Per sintonizzare un oggetto, tocca l'oggetto sotto \"Da sintonizzare\".",
+            "Per terminare la sintonia, tocca l'oggetto con la scritta \"Rimuovi sintonia\".",
+            "Per usare una carica, tocca \"-\" accanto a \"Cariche\". Per aggiungere una carica, tocca \"+\".",
+            "Un riposo ricarica le cariche secondo il campo \"Ricarica\" dell'oggetto.",
+            "Per lanciare un incantesimo dell'oggetto, tocca \"Lancia\". L'app toglie le cariche necessarie.",
+            "Se l'oggetto richiede sintonia, devi essere in sintonia per lanciare.",
+            "Se l'incantesimo è un attacco, tocca \"Tira per colpire\" nel risultato."
+          ]
+        },
+        {
+          "title": "Condividere ed eliminare",
+          "items": [
+            "Per inviare un oggetto in una chat Telegram, apri l'oggetto e tocca \"Condividi\".",
+            "\"Condividi\" appare solo nelle versioni di Telegram che lo supportano.",
+            "Per eliminare un oggetto, apri l'oggetto e tocca \"Elimina\". Nella finestra di conferma, tocca \"Elimina\".",
+            "ATTENZIONE: l'app elimina l'oggetto. Non puoi annullare questa azione."
+          ]
+        }
+      ]
+    },
+    "maps": {
+      "summary": "Questa pagina contiene le mappe del personaggio. Le mappe sono immagini o file PDF, divise in zone.",
+      "sections": [
+        {
+          "title": "Caricare una mappa",
+          "items": [
+            "Tocca \"Aggiungi mappa\".",
+            "Scrivi il nome nel campo \"Nome zona\", per esempio \"Dungeon livello 1\".",
+            "Per usare una zona che esiste già, tocca il suo nome sotto il campo.",
+            "Tocca l'area \"Trascina i file qui o tocca per selezionarli\" e scegli i file.",
+            "Puoi scegliere più file. Su computer, puoi anche trascinare i file nell'area.",
+            "Per togliere un file dalla lista, tocca la X vicino al file.",
+            "Tocca \"Carica\". La barra mostra l'avanzamento del caricamento."
+          ]
+        },
+        {
+          "title": "File accettati",
+          "items": [
+            "L'app accetta immagini e file PDF, per esempio PNG, JPG e PDF.",
+            "Ogni file deve essere di 10 MB o meno.",
+            "Se un file è troppo grande, l'app mostra un errore e non carica i file."
+          ]
+        },
+        {
+          "title": "Gestire una zona",
+          "items": [
+            "Ogni zona mostra il nome e le miniature dei suoi file.",
+            "Per aggiungere file a una zona, tocca \"+ Aggiungi\" nella zona.",
+            "Per cambiare l'ordine, tieni premuta una miniatura. Poi tocca la posizione di destinazione.",
+            "Su computer, puoi anche trascinare una miniatura nella nuova posizione.",
+            "L'app salva il nuovo ordine in automatico."
+          ]
+        },
+        {
+          "title": "Vedere una mappa",
+          "items": [
+            "Tocca una miniatura per aprire il file a schermo intero.",
+            "Per ingrandire un'immagine, pizzica lo schermo con due dita.",
+            "L'app mostra i PDF piccoli direttamente. Per i PDF più grandi, tocca \"Apri file\".",
+            "Per chiudere, tocca la X in alto a destra o tocca lo sfondo scuro."
+          ]
+        },
+        {
+          "title": "Eliminare file e zone",
+          "items": [
+            "Per eliminare un file, tocca il cestino sulla miniatura. Poi tocca \"Elimina\".",
+            "Per eliminare una zona, tocca \"Elimina zona\". Poi tocca \"Elimina\".",
+            "ATTENZIONE: \"Elimina zona\" elimina anche tutti i file della zona.",
+            "ATTENZIONE: non puoi annullare l'eliminazione di un file o di una zona."
+          ]
+        }
+      ]
+    },
+    "notes": {
+      "summary": "Questa pagina contiene le note del personaggio. Puoi scrivere note di testo, aggiungere tag e registrare note vocali.",
+      "sections": [
+        {
+          "title": "Creare una nota di testo",
+          "items": [
+            "Tocca \"Nuova nota\".",
+            "Scrivi il titolo nel campo \"Titolo\". Il titolo è obbligatorio.",
+            "Scrivi il testo nel campo \"Contenuto\".",
+            "Per aggiungere un tag, scrivilo nel campo \"Tag\".",
+            "Puoi anche toccare un tag suggerito, per esempio \"Alleati\" o \"Luoghi\".",
+            "Tocca \"Salva\"."
+          ]
+        },
+        {
+          "title": "Leggere una nota",
+          "items": [
+            "Ogni nota mostra il titolo, l'inizio del testo, i tag e la data.",
+            "La data indica quando hai creato o modificato la nota.",
+            "Tocca una nota di testo per aprirla e leggere tutto il testo.",
+            "Nella finestra della nota, puoi toccare \"Modifica\" o \"Elimina\"."
+          ]
+        },
+        {
+          "title": "Modificare una nota",
+          "items": [
+            "Tocca l'icona della matita sulla nota.",
+            "Cambia il contenuto o i tag.",
+            "Tocca \"Salva\".",
+            "Non puoi cambiare il titolo di una nota che esiste già."
+          ]
+        },
+        {
+          "title": "Registrare una nota vocale",
+          "items": [
+            "Tocca il pulsante del microfono, a destra di \"Nuova nota\".",
+            "Scrivi il titolo della nota vocale.",
+            "Tocca il pulsante di registrazione per iniziare. Il timer mostra la durata.",
+            "Tocca di nuovo il pulsante per fermare la registrazione.",
+            "Per registrare di nuovo, tocca \"Scarta e riregistra\".",
+            "Tocca \"Salva\". Il pulsante funziona solo se ci sono un titolo e una registrazione.",
+            "Le note vocali sono in fondo alla lista, con un lettore audio."
+          ]
+        },
+        {
+          "title": "Problemi con il microfono",
+          "items": [
+            "Se il microfono non è disponibile, il pulsante del microfono è barrato.",
+            "Tocca il pulsante barrato per leggere il motivo.",
+            "Se hai negato il permesso, abilita il microfono nelle impostazioni del browser."
+          ]
+        },
+        {
+          "title": "Condividere una nota",
+          "items": [
+            "Tocca l'icona \"Condividi\" sulla nota.",
+            "Scegli una chat di Telegram.",
+            "Questa funzione è disponibile solo nelle versioni di Telegram che la supportano."
+          ]
+        },
+        {
+          "title": "Eliminare una nota",
+          "items": [
+            "Tocca l'icona del cestino sulla nota.",
+            "Nella finestra di conferma, tocca \"Elimina\".",
+            "ATTENZIONE: questa azione elimina la nota. Non puoi annullarla."
+          ]
+        }
+      ]
+    },
+    "rule_editor": {
+      "summary": "In questa pagina crei o modifichi una regola homebrew. L'editor ha più sezioni. Tocca il titolo di una sezione per aprirla o chiuderla.",
+      "sections": [
+        {
+          "title": "Identità e oggetto della regola",
+          "items": [
+            "In \"Identità\", scrivi il \"Nome\" della regola. Il nome è obbligatorio.",
+            "Scrivi una \"Descrizione\" breve. La descrizione è facoltativa.",
+            "In \"A cosa si applica\", scegli \"Oggetti\", \"Personaggio\" o \"Capacità speciali\".",
+            "Se scegli \"Oggetti\", puoi scegliere i tipi in \"Solo questi tipi di oggetto\". Lascia vuoto per tutti gli oggetti.",
+            "Per limitare la regola ad alcuni oggetti, scrivi una parola in \"Solo se il nome contiene\"."
+          ]
+        },
+        {
+          "title": "Caratteristiche degli oggetti",
+          "items": [
+            "Una caratteristica è un valore personalizzato sugli oggetti, per esempio \"Qualità\".",
+            "Tocca \"Aggiungi caratteristica\".",
+            "Scrivi \"Etichetta (IT)\" e \"Etichetta (EN)\". Entrambe le etichette sono obbligatorie.",
+            "Scegli il \"Tipo\": \"elenco\", \"numero\", \"sì/no\" o \"testo\".",
+            "Per il tipo \"elenco\", scrivi i \"Valori possibili\" separati da virgole. Poi scegli il \"Valore di default\".",
+            "L'app aggiunge il valore di default agli oggetti che corrispondono alla regola.",
+            "Nell'Inventario, la caratteristica è un chip che puoi modificare."
+          ]
+        },
+        {
+          "title": "Tabelle (avanzato)",
+          "items": [
+            "Una tabella collega il risultato di un tiro a un valore di una caratteristica.",
+            "Prima di creare una tabella, aggiungi una caratteristica di tipo \"elenco\".",
+            "Tocca \"Aggiungi tabella\". Scegli la caratteristica in \"Riga (collegata a)\".",
+            "Scrivi la variabile in \"Colonna (variabile)\". Per ogni colonna, scrivi gli intervalli \"Da\" e \"A\".",
+            "Se due intervalli si sovrappongono, l'app mostra un avviso."
+          ]
+        },
+        {
+          "title": "Modificatori passivi",
+          "items": [
+            "Un modificatore passivo è un bonus o un malus fisso. L'app lo applica sempre quando la regola è attiva.",
+            "Tocca \"Aggiungi modificatore\".",
+            "In \"Cosa modifica\", scegli \"CA\", \"PF Massimi\", \"Velocità\", \"Abilità\" o \"Tiro salvezza\".",
+            "Per \"Abilità\" e \"Tiro salvezza\", scegli quale abilità o quale tiro salvezza.",
+            "In \"Bonus / malus\", scrivi un numero intero, positivo o negativo.",
+            "Il modificatore è una riga \"Homebrew\" nella pagina corrispondente e l'app lo aggiunge al totale."
+          ]
+        },
+        {
+          "title": "Risorse",
+          "items": [
+            "Una risorsa è un contatore personalizzato, per esempio \"Punti Fortuna\".",
+            "Tocca \"Aggiungi risorsa\". Scrivi il \"Nome\" e il \"Massimo\".",
+            "In \"Recupero\", scegli \"Riposo lungo\", \"Riposo breve\", \"Nessuno\" o \"Manuale\".",
+            "L'app ripristina la risorsa al riposo scelto. Un riposo lungo ripristina anche le risorse \"Riposo breve\".",
+            "Il contatore è in \"Abilità Speciali\", nelle risorse personalizzate."
+          ]
+        },
+        {
+          "title": "Trigger ed effetti",
+          "items": [
+            "Un trigger esegue una sequenza di passi quando succede un evento di gioco.",
+            "Tocca \"Aggiungi trigger\". Scegli l'\"Evento\", per esempio \"All'inizio del mio turno\".",
+            "Per limitare il trigger, tocca \"Aggiungi filtro\". Per esempio, \"Solo se tiro 20 (critico)\".",
+            "Tocca \"Aggiungi passo\". Scegli il tipo di passo, per esempio \"Tira un dado\" o \"Notifica\".",
+            "Compila i campi del passo e conferma.",
+            "Per cambiare l'ordine dei passi, tocca \"Sposta su\" o \"Sposta giù\".",
+            "Per modificare un passo, tocca la matita. Per eliminarlo, tocca il cestino.",
+            "Un modificatore permanente (\"Applica modificatore\") è permesso solo con l'evento \"Quando salgo di livello\"."
+          ]
+        },
+        {
+          "title": "Salvare la regola",
+          "items": [
+            "Tocca \"Salva\".",
+            "Se il nome è vuoto, l'app mostra un errore sul campo \"Nome\".",
+            "La regola deve avere almeno un trigger o un modificatore passivo. Se no, l'app non la salva.",
+            "Dopo il salvataggio, l'app torna alla lista delle regole.",
+            "Per uscire senza salvare, tocca \"Annulla\".",
+            "ATTENZIONE: se tocchi \"Annulla\", l'app non salva le modifiche."
+          ]
+        }
+      ]
+    },
+    "saves": {
+      "summary": "Questa pagina mostra i tiri salvezza delle sei caratteristiche. Qui puoi impostare la competenza, tirare il dado e scrivere note per i tiri.",
+      "sections": [
+        {
+          "title": "Cosa vedi",
+          "items": [
+            "In alto vedi il \"Bonus competenza\" del personaggio.",
+            "Ogni riga mostra una caratteristica e il suo tiro salvezza.",
+            "Sotto il nome vedi il modificatore della caratteristica e, se sei competente, il bonus con \"comp\".",
+            "Il numero grande a destra è il bonus totale del tiro salvezza.",
+            "Il totale include anche i bonus degli oggetti equipaggiati e delle regole homebrew.",
+            "Un totale negativo è in rosso."
+          ]
+        },
+        {
+          "title": "Impostare la competenza",
+          "items": [
+            "Tocca il cerchio a sinistra del nome.",
+            "Un cerchio con la spunta indica che sei competente.",
+            "Quando sei competente, l'app aggiunge il bonus competenza al totale.",
+            "Tocca di nuovo il cerchio per togliere la competenza."
+          ]
+        },
+        {
+          "title": "Tirare il dado",
+          "items": [
+            "Tocca la riga del tiro salvezza per tirare 1d20 più il bonus.",
+            "Puoi anche toccare il pulsante con il d20 a destra.",
+            "Per tirare con vantaggio o svantaggio, tieni premuto il pulsante con il d20.",
+            "Nel menu, tocca \"Vantaggio\", \"Normale\" o \"Svantaggio\".",
+            "Il risultato mostra il totale. Un 20 naturale è un critico, un 1 naturale è un fallimento critico.",
+            "Se le animazioni 3D dei dadi sono attive, l'app usa il valore dei dadi animati."
+          ]
+        },
+        {
+          "title": "Ritirare con l'Ispirazione",
+          "items": [
+            "Se il personaggio ha l'Ispirazione Eroica, il risultato mostra \"Usa Ispirazione\".",
+            "Tocca \"Usa Ispirazione\" per tirare di nuovo il d20.",
+            "L'app consuma l'Ispirazione e mostra \"Reroll ispirazione\" sul nuovo risultato.",
+            "Puoi ritirare solo una volta per ogni tiro."
+          ]
+        },
+        {
+          "title": "Note situazionali",
+          "items": [
+            "Tocca la matita accanto al d20 per aprire la nota del tiro salvezza.",
+            "Scrivi una nota breve, per esempio \"vantaggio contro charme\".",
+            "Tocca \"Salva\". La nota appare sotto la riga e nella finestra del risultato.",
+            "Per eliminare la nota, cancella il testo e tocca \"Salva\"."
+          ]
+        },
+        {
+          "title": "Bonus Homebrew",
+          "items": [
+            "Se una regola homebrew dà un bonus a un tiro salvezza, sotto la riga appare \"Bonus Homebrew\".",
+            "L'app include questo bonus nel totale."
+          ]
+        }
+      ]
+    },
+    "session": {
+      "summary": "Questa pagina è l'ingresso della sessione di gioco. In una sessione, il Game Master e i giocatori giocano insieme in tempo reale.",
+      "sections": [
+        {
+          "title": "Creare una sessione come Game Master",
+          "items": [
+            "Nel riquadro \"Crea come Game Master\", tocca \"Crea sessione\".",
+            "L'app crea la sessione e apre la stanza della sessione.",
+            "Nella stanza, l'app mostra un codice di 6 caratteri. Dai questo codice ai giocatori.",
+            "Per creare una sessione non ti serve un personaggio."
+          ]
+        },
+        {
+          "title": "Entrare come giocatore",
+          "items": [
+            "Nel riquadro \"Entra come Giocatore\", tocca \"Entra\".",
+            "Nella pagina successiva, scrivi il codice e scegli il personaggio.",
+            "Per entrare come giocatore ti serve almeno un personaggio.",
+            "Se non hai personaggi, il pulsante \"Entra\" non funziona. Puoi entrare solo come Game Master."
+          ]
+        },
+        {
+          "title": "Sessione già attiva",
+          "items": [
+            "Puoi essere in una sola sessione alla volta.",
+            "Se sei già in una sessione, la pagina mostra \"Sessione già attiva\".",
+            "Il riquadro mostra il nome della sessione e il tuo ruolo: \"Game Master\" o \"Giocatore\".",
+            "Per tornare nella stanza, tocca \"Riprendi sessione\"."
+          ]
+        },
+        {
+          "title": "Senza connessione",
+          "items": [
+            "Se l'app non riesce a caricare i personaggi, il riquadro del giocatore mostra un messaggio di errore.",
+            "Per caricare di nuovo i dati, tocca \"Riprova\"."
+          ]
+        }
+      ]
+    },
+    "session_join": {
+      "summary": "In questa pagina entri in una sessione come giocatore. Ti servono il codice della sessione e un personaggio.",
+      "sections": [
+        {
+          "title": "Scrivere il codice",
+          "items": [
+            "Chiedi il codice al Game Master. Il codice ha 6 caratteri, lettere e numeri.",
+            "Scrivi il codice nel campo \"Codice di accesso\". L'app scrive le lettere in maiuscolo.",
+            "Sotto il campo, il contatore mostra quanti caratteri hai scritto, per esempio \"4/6 caratteri\".",
+            "Per incollare un codice copiato, tocca \"Incolla\"."
+          ]
+        },
+        {
+          "title": "Scegliere il personaggio",
+          "items": [
+            "In \"Scegli il tuo personaggio\", tocca il personaggio che vuoi usare.",
+            "Se hai un solo personaggio, l'app lo sceglie in automatico e mostra \"Userai\" con il suo nome.",
+            "Se non hai personaggi, tocca \"Crea il tuo primo personaggio\"."
+          ]
+        },
+        {
+          "title": "Entrare nella sessione",
+          "items": [
+            "Tocca \"Entra\". Il pulsante funziona solo con un codice di 6 caratteri e un personaggio scelto.",
+            "L'app apre la stanza della sessione.",
+            "Se il codice non è corretto, l'app mostra un messaggio di errore."
+          ]
+        },
+        {
+          "title": "Entrare con un link di invito",
+          "items": [
+            "Se apri un link di invito, l'app scrive il codice in automatico.",
+            "Se hai un solo personaggio, l'app entra nella sessione in automatico.",
+            "Durante l'ingresso, la pagina mostra \"Entrando nella sessione…\"."
+          ]
+        },
+        {
+          "title": "Se sei già in un'altra sessione",
+          "items": [
+            "Puoi essere in una sola sessione alla volta.",
+            "Se sei in un'altra sessione, la pagina mostra \"Sei già in un'altra sessione attiva\".",
+            "Per tornare alla sessione attiva, tocca \"Riprendi sessione\".",
+            "Per entrare nella nuova sessione, esci prima dalla sessione attiva."
+          ]
+        }
+      ]
+    },
+    "session_room": {
+      "summary": "Questa è la stanza della sessione. Qui il Game Master e i giocatori vedono il party, scrivono in chat e gestiscono il combattimento. Alcune funzioni sono solo per il Game Master.",
+      "sections": [
+        {
+          "title": "Codice, invito e uscita",
+          "items": [
+            "In alto, il Game Master vede il \"Codice di accesso\" della sessione.",
+            "Per copiare il codice, tocca l'icona di copia vicino al codice.",
+            "Per inviare un invito in una chat di Telegram, tocca l'icona di condivisione.",
+            "Il giocatore che apre l'invito entra con il codice già scritto.",
+            "Il giocatore vede in alto il suo ruolo \"Giocatore\" e il nome della sessione.",
+            "Per uscire, il giocatore tocca \"Esci dalla sessione\" e conferma. Può rientrare con lo stesso codice.",
+            "ATTENZIONE: \"Chiudi sessione\" (Game Master) chiude la sessione per tutti. Non puoi annullare questa azione."
+          ]
+        },
+        {
+          "title": "Giocatori",
+          "items": [
+            "La sezione \"Giocatori\" mostra tutti i partecipanti. La tua riga ha l'etichetta \"Tu\".",
+            "Ogni riga mostra nome, classe, punti ferita, condizioni e ultimo tiro del personaggio.",
+            "Il Game Master vede i punti ferita esatti. Gli altri giocatori vedono solo lo stato, per esempio \"Lievemente ferito\".",
+            "Tocca la tua riga per aprire la scheda del tuo personaggio.",
+            "Tocca la riga di un altro partecipante per vedere stato e identità del suo personaggio.",
+            "Le informazioni private sono visibili solo se il proprietario le rende pubbliche."
+          ]
+        },
+        {
+          "title": "Chat e cronologia",
+          "items": [
+            "\"Chat e cronologia\" mostra i messaggi e gli eventi di gioco dei personaggi.",
+            "Gli eventi sono, per esempio, tiri, riposi, punti ferita, condizioni e tiri contro morte.",
+            "Per scrivere, usa il campo \"Scrivi un messaggio…\" e tocca \"Invia\".",
+            "Dopo un messaggio, aspetta qualche secondo prima di scriverne un altro. Il campo mostra il tempo di attesa.",
+            "Per vedere i messaggi più vecchi, tocca \"Carica precedenti\".",
+            "Per aprire la chat a schermo intero, tocca \"Apri a schermo intero\"."
+          ]
+        },
+        {
+          "title": "Sussurrare un messaggio",
+          "items": [
+            "Un sussurro è un messaggio privato. Solo tu e il destinatario lo vedete.",
+            "Tocca la riga del partecipante.",
+            "Tocca \"Sussurra a\" con il suo nome.",
+            "Sopra il campo di testo, l'app mostra \"Sussurro a\" con il nome. Scrivi e invia il messaggio.",
+            "Per tornare ai messaggi per tutti, tocca la X vicino a \"Sussurro a\"."
+          ]
+        },
+        {
+          "title": "Consegnare un oggetto (Game Master)",
+          "items": [
+            "Tocca \"Consegna oggetto\".",
+            "Compila i dati dell'oggetto e conferma.",
+            "In \"Destinatari\", tocca uno o più giocatori.",
+            "Tocca \"Consegna\". L'app aggiunge l'oggetto all'inventario di ogni destinatario.",
+            "Il giocatore riceve un avviso \"Hai ricevuto un oggetto!\". Per aprire l'oggetto, tocca \"Vedi nell'inventario\"."
+          ]
+        },
+        {
+          "title": "Preparare il combattimento (Game Master)",
+          "items": [
+            "Tocca \"Inizia combattimento\".",
+            "Scegli \"Light\" per avere solo iniziativa, turni e round.",
+            "Scegli \"Completa\" per gestire anche PF, CA e condizioni dei mostri.",
+            "L'app aggiunge in automatico i personaggi dei giocatori.",
+            "Per aggiungere mostri, tocca \"Aggiungi mostro\". Scrivi nome, quantità e modificatore di iniziativa.",
+            "Per aggiungere i personaggi che sono entrati dopo, tocca \"Sincronizza PG\".",
+            "Tocca \"Avvia\". Se mancano iniziative, l'app chiede se tirarle in automatico."
+          ]
+        },
+        {
+          "title": "Gestire il combattimento (Game Master)",
+          "items": [
+            "L'app ordina i partecipanti per iniziativa. La barra mostra il round e di chi è il turno.",
+            "Per passare al turno successivo o precedente, tocca le frecce nella barra.",
+            "Se salti il turno di un personaggio, l'app chiede una conferma.",
+            "Tocca un partecipante per modificare iniziativa e ordine, o per segnarlo morto.",
+            "Nella modalità \"Completa\", puoi anche applicare danno e cura ai mostri.",
+            "Se torni al turno precedente subito dopo un avanzamento, l'app annulla le scadenze e i tiri salvezza di quell'avanzamento.",
+            "Tocca \"Termina\" per finire il combattimento.",
+            "ATTENZIONE: \"Rimuovi dal combattimento\" toglie il partecipante dall'incontro."
+          ]
+        },
+        {
+          "title": "Combattere (giocatore)",
+          "items": [
+            "Durante la preparazione, tocca \"Tira iniziativa!\". L'app tira un d20 e aggiunge il tuo modificatore.",
+            "Quando è il tuo turno, l'app mostra \"Tocca a te!\" e invia un messaggio nella chat privata di Telegram.",
+            "All'inizio del tuo turno, l'app riduce di un round la durata di condizioni e concentrazione.",
+            "Alla fine del turno, tocca \"Termina turno\"."
+          ]
+        },
+        {
+          "title": "Condizioni (Game Master)",
+          "items": [
+            "Tocca un partecipante. La sezione \"Condizioni attive\" mostra le condizioni con scadenza, tiro salvezza e fonte.",
+            "Per togliere una condizione, tocca la X vicino al nome.",
+            "Per aggiungere una condizione, tocca \"Aggiungi condizione\" e scegli la condizione.",
+            "In \"Durata\", scegli \"Nessuna\", \"N round\", \"Fino all'inizio del prossimo turno\" o \"Fino alla fine del prossimo turno\".",
+            "Per una durata legata al turno, scegli in \"Turno di\" il \"Bersaglio\" o la \"Fonte\".",
+            "In \"Tiro salvezza ripetuto\", scegli la caratteristica, scrivi la CD e scegli \"Inizio turno\" o \"Fine turno\".",
+            "In \"Fonte (facoltativa)\", scegli il partecipante che causa la condizione.",
+            "Se la fonte è un personaggio concentrato, puoi attivare \"Finisce se la fonte perde la concentrazione\". Prima il giocatore deve lanciare l'incantesimo.",
+            "Tocca \"Applica condizione\".",
+            "Durante l'incontro, l'app toglie la condizione alla scadenza. L'app chiede il tiro salvezza all'inizio o alla fine del turno del bersaglio.",
+            "Un pallino ambra sulla riga di un personaggio indica un tiro salvezza in sospeso. Il giocatore fa il tiro nella sua app.",
+            "Per un mostro, la riga mostra il tiro salvezza in sospeso. Fai il tiro al tavolo e tocca \"Superato\" o \"Fallito\". \"Superato\" toglie la condizione."
+          ]
+        }
+      ]
+    },
+    "settings": {
+      "summary": "In questa pagina cambi le preferenze dell'app e le regole di gioco del personaggio. Qui esporti, duplichi ed elimini il personaggio.",
+      "sections": [
+        {
+          "title": "Preferenze dell'app",
+          "items": [
+            "Lingua, tema, animazione dei dadi, sistema di misura e pacchetto dadi valgono per tutta l'app su questo dispositivo.",
+            "Per cambiare lingua, tocca il pulsante \"Italiano\" / \"English\".",
+            "Per cambiare tema, tocca \"Auto\", \"Chiaro\" o \"Scuro\". \"Auto\" segue il tema di Telegram.",
+            "Per vedere i risultati dei dadi senza animazione, disattiva \"Animazione dadi 3D\".",
+            "Per cambiare unità di misura, tocca \"Piedi & libbre\" o \"Metri & chili\".",
+            "Per cambiare l'aspetto dei dadi 3D, scegli un pacchetto in \"Pacchetto dadi\". Questa opzione funziona solo con l'animazione 3D attiva."
+          ]
+        },
+        {
+          "title": "Notifiche Telegram",
+          "items": [
+            "Il bot ti invia messaggi in chat per gli eventi della sessione.",
+            "\"Emergenze di gruppo\": un compagno della sessione scende a 0 PF o muore.",
+            "\"Eventi del GM\": il GM ti consegna un oggetto o ti applica una condizione.",
+            "\"Livello\": l'esperienza supera la soglia del livello successivo.",
+            "\"Incontri\": il GM apre un incontro nella sessione.",
+            "Per non ricevere un tipo di notifica, disattiva il suo interruttore."
+          ]
+        },
+        {
+          "title": "Monete e cronologia",
+          "items": [
+            "Per nascondere le monete d'electrum nella pagina \"Monete\", disattiva \"Mostra Electrum\".",
+            "In \"Conservazione cronologia\", scegli \"Disattiva\", \"Ultimi 100 eventi\" o \"Ultimi 30 giorni\".",
+            "Sotto i pulsanti vedi quante voci hai e quante voci perderesti con ogni modalità.",
+            "ATTENZIONE: con una modalità attiva, l'app elimina le voci più vecchie quando registra un nuovo evento. Non puoi recuperarle."
+          ]
+        },
+        {
+          "title": "Punti ferita e avanzamento",
+          "items": [
+            "Con \"HP automatici\" attivo, l'app calcola i PF massimi da livelli di classe e modificatore di Costituzione.",
+            "Per ricalcolare subito i PF massimi, tocca \"Ricalcola HP dalla formula\" e poi \"Conferma\".",
+            "Con \"Avanzamento a milestone\" attivo, non tieni conto dei PE. Al posto del contatore PE vedi il pulsante per salire di livello.",
+            "Con \"PF tirati\" attivo, quando sali di livello tiri il dado vita invece di usare il valore fisso."
+          ]
+        },
+        {
+          "title": "Regole opzionali",
+          "items": [
+            "Con \"Vantaggio ai TS di concentrazione (Incantatore da guerra)\" attivo, tiri con vantaggio i TS su Costituzione per la concentrazione.",
+            "Con \"Ingombro dettagliato\" attivo, oltre FOR×5 la velocità scende di 10 piedi (3 metri).",
+            "Oltre FOR×10 la velocità scende di 20 piedi (6 metri). Hai anche svantaggio a prove, TS e attacchi con FOR, DES e COS.",
+            "Con \"Peso delle monete\" attivo, 50 monete pesano 1 libbra (0,5 kg) e contano nel carico.",
+            "Con \"Mostra info private a GM e altri player\" attivo, background, tratti, ideali, legami e difetti sono visibili in sessione."
+          ]
+        },
+        {
+          "title": "Slot e incantesimi preparati",
+          "items": [
+            "In \"Modalità slot incantesimi\", \"AUTO\" calcola gli slot dalle classi e dal livello.",
+            "Con \"MANUALE\" imposti tu gli slot.",
+            "ATTENZIONE: se passi da \"MANUALE\" ad \"AUTO\", il calcolo automatico sovrascrive gli slot manuali.",
+            "La sezione \"Tetto preparazione\" appare solo se hai una classe che prepara gli incantesimi.",
+            "Con \"AUTO\", l'app calcola dalle classi il numero massimo di incantesimi preparati.",
+            "Con \"MANUALE\", scrivi il numero e tocca \"Salva tetto\"."
+          ]
+        },
+        {
+          "title": "Esportare e duplicare",
+          "items": [
+            "Per salvare la scheda, tocca \"Esporta\".",
+            "Per ricevere il file nella chat del bot, tocca \"Invia in chat Telegram\".",
+            "Per salvare il file sul dispositivo, tocca \"Scarica file\".",
+            "Per creare un nuovo personaggio dal file, usa \"Importa\" nella lista dei personaggi.",
+            "Per creare una copia di questo personaggio, tocca \"Duplica\". L'app apre la copia."
+          ]
+        },
+        {
+          "title": "Zona pericolosa",
+          "items": [
+            "Per riportare le preferenze del personaggio ai valori predefiniti, tocca \"Reimposta impostazioni\" e poi \"Conferma\".",
+            "La reimpostazione non cambia milestone, PF tirati, Incantatore da guerra e i dati di gioco.",
+            "Per eliminare il personaggio, tocca \"Elimina personaggio\" e poi \"Elimina\".",
+            "ATTENZIONE: l'eliminazione cancella il personaggio e tutti i suoi dati. Non puoi annullarla."
+          ]
+        }
+      ]
+    },
+    "share_import": {
+      "summary": "Questa pagina si apre quando tocchi \"Aggiungi al tuo personaggio\" in un messaggio condiviso su Telegram. Da qui aggiungi l'oggetto o la nota condivisa a uno dei tuoi personaggi.",
+      "sections": [
+        {
+          "title": "Anteprima del contenuto",
+          "items": [
+            "In alto vedi il titolo dell'oggetto o della nota.",
+            "Sotto il titolo vedi il nome del personaggio che l'ha condiviso.",
+            "Per un oggetto vedi la descrizione e la quantità, se è più di 1.",
+            "Per una nota vocale vedi l'indicazione \"Nota vocale\"."
+          ]
+        },
+        {
+          "title": "Aggiungere il contenuto",
+          "items": [
+            "In \"Aggiungi a…\", tocca il personaggio che riceve il contenuto.",
+            "L'app seleziona già l'ultimo personaggio che hai usato, oppure il tuo unico personaggio.",
+            "Tocca \"Aggiungi a\" seguito dal nome del personaggio.",
+            "Dopo un oggetto, l'app apre l'inventario del personaggio. L'oggetto non è equipaggiato.",
+            "Dopo una nota, l'app apre le note del personaggio.",
+            "Se hai già una nota con lo stesso titolo, l'app aggiunge un numero al titolo."
+          ]
+        },
+        {
+          "title": "Se non hai personaggi",
+          "items": [
+            "Ti serve un personaggio per importare il contenuto.",
+            "Tocca \"Crea il tuo primo personaggio\" per andare alla lista dei personaggi.",
+            "Crea il personaggio e poi tocca di nuovo il pulsante nel messaggio Telegram."
+          ]
+        },
+        {
+          "title": "Condivisione non disponibile",
+          "items": [
+            "Una condivisione dura 30 giorni.",
+            "Dopo 30 giorni l'app mostra \"Questa condivisione è scaduta.\".",
+            "Se il contenuto non esiste più, l'app mostra \"Questa condivisione non è più disponibile.\".",
+            "Per tornare alla lista, tocca \"Vai ai tuoi personaggi\"."
+          ]
+        }
+      ]
+    },
+    "skills": {
+      "summary": "Questa pagina mostra le 18 abilità del personaggio con il loro bonus. Qui puoi impostare la competenza, tirare il dado e scrivere note per i tiri.",
+      "sections": [
+        {
+          "title": "Cosa vedi",
+          "items": [
+            "In alto vedi il \"Bonus competenza\" e tre valori passivi.",
+            "I valori passivi sono \"Percezione Passiva\", \"Intuizione Passiva\" e \"Indagare Passivo\".",
+            "Questa barra resta visibile quando scorri la pagina.",
+            "Le abilità sono in gruppi, uno per ogni caratteristica.",
+            "Il numero a destra del nome è il bonus totale dell'abilità.",
+            "Un bonus negativo è in rosso."
+          ]
+        },
+        {
+          "title": "Livelli di competenza",
+          "items": [
+            "Un cerchio vuoto indica nessuna competenza.",
+            "Un segno di spunta indica \"Competente\": l'app aggiunge il bonus competenza.",
+            "Una stella indica \"Esperto\": l'app aggiunge due volte il bonus competenza.",
+            "Il simbolo \"½\" indica Factotum: l'app aggiunge metà del bonus competenza, arrotondata per difetto.",
+            "Il bonus totale è: modificatore della caratteristica più competenza più gli altri bonus."
+          ]
+        },
+        {
+          "title": "Cambiare la competenza",
+          "items": [
+            "Tocca il nome dell'abilità per passare al livello successivo.",
+            "L'ordine è: nessuna competenza, \"Competente\", \"Esperto\", poi di nuovo nessuna competenza.",
+            "Per scegliere un livello preciso, tieni premuto il nome dell'abilità.",
+            "Un anello si riempie mentre tieni premuto. Quando è pieno, si apre \"Livello competenza\".",
+            "Il pannello mostra il calcolo del \"Bonus attuale\".",
+            "Tocca \"Nessuno\", \"Competente\" o \"Esperto\"."
+          ]
+        },
+        {
+          "title": "Tirare il dado",
+          "items": [
+            "Tocca il pulsante con i dadi per tirare 1d20 più il bonus dell'abilità.",
+            "Per tirare con vantaggio o svantaggio, tieni premuto il pulsante con i dadi.",
+            "Nel menu, tocca \"Vantaggio\", \"Normale\" o \"Svantaggio\".",
+            "Con vantaggio o svantaggio l'app tira due d20 e mostra barrato il dado scartato.",
+            "Il risultato mostra il totale. Un 20 naturale è un critico, un 1 naturale è un fallimento critico.",
+            "Se le animazioni 3D dei dadi sono attive, l'app usa il valore dei dadi animati."
+          ]
+        },
+        {
+          "title": "Ritirare con l'Ispirazione",
+          "items": [
+            "Se il personaggio ha l'Ispirazione Eroica, il risultato mostra \"Usa Ispirazione\".",
+            "Tocca \"Usa Ispirazione\" per tirare di nuovo il d20.",
+            "L'app consuma l'Ispirazione e mostra \"Reroll ispirazione\" sul nuovo risultato.",
+            "Puoi ritirare solo una volta per ogni tiro."
+          ]
+        },
+        {
+          "title": "Note situazionali",
+          "items": [
+            "Tocca la matita accanto al pulsante con i dadi per aprire la nota dell'abilità.",
+            "Scrivi una nota breve, per esempio \"vantaggio contro charme\".",
+            "Tocca \"Salva\". La nota appare sotto l'abilità e nella finestra del risultato.",
+            "Per eliminare la nota, cancella il testo e tocca \"Salva\"."
+          ]
+        },
+        {
+          "title": "Bonus Homebrew",
+          "items": [
+            "Se una regola homebrew dà un bonus a un'abilità, sotto l'abilità appare la riga \"Bonus Homebrew\".",
+            "L'app include questo bonus nel totale e nei valori passivi."
+          ]
+        }
+      ]
+    },
+    "slots": {
+      "summary": "Questa pagina mostra gli slot incantesimo per ogni livello. Da qui segni gli slot usati e li ripristini.",
+      "sections": [
+        {
+          "title": "Leggere gli slot",
+          "items": [
+            "Ogni scheda mostra un livello di slot, per esempio \"Livello 1\".",
+            "Il numero a destra mostra gli slot disponibili e il totale.",
+            "Un pallino dorato è uno slot usato. Un pallino vuoto è uno slot disponibile.",
+            "Il badge \"Patto\" indica gli slot della Magia del Patto del Warlock."
+          ]
+        },
+        {
+          "title": "Usare e recuperare uno slot",
+          "items": [
+            "Per usare uno slot, tocca un pallino vuoto.",
+            "Per recuperare uno slot, tocca un pallino dorato.",
+            "Quando lanci un incantesimo dalla pagina Incantesimi, l'app usa lo slot da sola."
+          ]
+        },
+        {
+          "title": "Ripristinare tutti gli slot",
+          "items": [
+            "Per ripristinare tutti gli slot, tocca \"Ripristina tutti\".",
+            "Nella finestra di conferma, tocca \"Conferma\".",
+            "Un riposo lungo ripristina tutti gli slot.",
+            "Un riposo breve ripristina solo gli slot \"Patto\"."
+          ]
+        },
+        {
+          "title": "Modalità Auto",
+          "items": [
+            "In modalità Auto, l'app calcola gli slot dalle classi e dal livello, con le regole D&D 5e 2014.",
+            "In modalità Auto non puoi cambiare il totale e non puoi aggiungere o rimuovere livelli.",
+            "Il riquadro \"Modalità Auto\" spiega questa regola. Tocca il riquadro per aprirlo o chiuderlo.",
+            "Per passare alla modalità manuale, tocca \"Vai a Impostazioni\"."
+          ]
+        },
+        {
+          "title": "Modalità manuale",
+          "items": [
+            "Per aggiungere un livello, tocca \"+ Livello N\" in \"Aggiungi nuovo livello\".",
+            "Per cambiare il totale, tocca \"-\" o \"+\" accanto a \"Totale\".",
+            "Tieni premuto \"-\" o \"+\" per cambiare il totale più velocemente.",
+            "Puoi anche scrivere il totale nel campo numerico. Il totale minimo è 1.",
+            "Per rimuovere un livello, tocca la X sulla scheda. Poi tocca \"Elimina\".",
+            "ATTENZIONE: la rimozione elimina il totale e gli slot usati di quel livello. Non puoi annullare questa azione."
+          ]
+        }
+      ]
+    },
+    "spells": {
+      "summary": "Questa pagina mostra gli incantesimi del personaggio, divisi per livello. Da qui lanci gli incantesimi, tiri i danni e gestisci concentrazione e preparazione.",
+      "sections": [
+        {
+          "title": "Panoramica della pagina",
+          "items": [
+            "In alto, una riga per ogni classe incantatrice mostra la caratteristica, la CD del tiro salvezza e il bonus di attacco.",
+            "Gli incantesimi sono divisi in gruppi: \"TRUCCHETTO\", \"LIVELLO 1\" e così via.",
+            "Per chiudere o aprire un gruppo, tocca l'intestazione del livello.",
+            "Accanto all'intestazione ci sono i pallini degli slot di quel livello. Un pallino dorato è uno slot usato.",
+            "Per usare uno slot, tocca un pallino vuoto. Per recuperarlo, tocca un pallino dorato.",
+            "Il badge \"C\" indica la concentrazione. Il badge \"R\" indica un rituale.",
+            "Tocca il nome di un incantesimo per vedere descrizione, dettagli e azioni."
+          ]
+        },
+        {
+          "title": "Cercare e filtrare",
+          "items": [
+            "Per cercare, scrivi il nome nel campo \"Cerca incantesimo...\".",
+            "Per svuotare la ricerca, tocca la X nel campo.",
+            "Per filtrare, tocca i chip nelle righe \"Livello\", \"Proprietà\" e \"Scuola\".",
+            "I chip della stessa riga si sommano. I chip di righe diverse restringono il risultato.",
+            "Una riga di filtri appare solo se è utile per i tuoi incantesimi.",
+            "Per rimuovere tutti i filtri, tocca \"Azzera filtri\"."
+          ]
+        },
+        {
+          "title": "Aggiungere e modificare un incantesimo",
+          "items": [
+            "Per aggiungere un incantesimo, tocca il pulsante \"+\" accanto alla ricerca.",
+            "Per copiare i dati dal manuale, tocca \"Aggiungi dal catalogo\" e scegli l'incantesimo.",
+            "Compila i campi \"Nome\", \"Livello\", \"Tempo lancio\", \"Gittata\", \"Durata\", \"Componenti\" e \"Descrizione\".",
+            "Se l'incantesimo fa danno, attiva \"Infligge danno\". Poi scegli \"Dado del danno\" e \"Tipo di danno\".",
+            "In \"Tipo\", scegli \"Attacco\", \"Tiro salvezza\" o \"Nessuno\".",
+            "Attiva \"Concentrazione\" o \"Rituale\" se servono. Una durata con concentrazione attiva \"Concentrazione\" da sola.",
+            "Tocca \"Aggiungi\" per salvare.",
+            "Per modificare, apri l'incantesimo, tocca il pulsante con i tre puntini e poi \"Modifica\". Tocca \"Salva\"."
+          ]
+        },
+        {
+          "title": "Lanciare un incantesimo",
+          "items": [
+            "Apri l'incantesimo e tocca \"Usa\".",
+            "Per un incantesimo di livello 1 o superiore, scegli lo slot nella finestra \"Scegli slot\". I pallini dorati sono gli slot usati.",
+            "Per scegliere un altro slot prima di tirare i danni, tocca \"Indietro\".",
+            "Se non hai slot liberi, tocca \"Crea slot livello N\". In modalità Auto, l'app passa alla gestione manuale degli slot.",
+            "Per lanciare un rituale senza slot, tocca \"Lancia come rituale\". Il tempo di lancio aumenta di 10 minuti.",
+            "\"Lancia come rituale\" appare solo se una tua classe può lanciare rituali.",
+            "Per un incantesimo di attacco, tieni premuto \"Usa\" per scegliere vantaggio o svantaggio.",
+            "Un incantesimo di attacco tira il d20 per colpire. Nel risultato, tocca \"Tira danni\" per tirare i danni.",
+            "Se hai l'ispirazione, tocca \"Usa Ispirazione\" per ripetere il tiro per colpire."
+          ]
+        },
+        {
+          "title": "Tirare i danni",
+          "items": [
+            "Per un incantesimo con danno, l'app apre la finestra \"Tiro danni\".",
+            "Tocca \"Rolla\" per tirare. Per un incantesimo di livello 1 o superiore, l'app usa lo slot in questo momento.",
+            "L'app aggiunge da sola i dadi dei livelli superiori. I dadi dei trucchetti aumentano con il livello del personaggio.",
+            "Per aggiungere altri dadi, scrivi la formula in \"Dadi extra\", per esempio 2d6.",
+            "Il critico viene solo dal tiro per colpire: dopo un 20 naturale l'app raddoppia i dadi del danno.",
+            "Per un incantesimo con tiro salvezza, il risultato mostra il danno \"Pieno\" e il danno \"Dimezzato\".",
+            "Per lanciare di nuovo, tocca \"Nuovo tiro\". L'app usa un altro slot dello stesso livello.",
+            "Se non hai più slot di quel livello, l'app mostra un avviso e non tira."
+          ]
+        },
+        {
+          "title": "Concentrazione",
+          "items": [
+            "Quando lanci un incantesimo con concentrazione con \"Usa\", la concentrazione inizia da sola.",
+            "Puoi concentrarti su un solo incantesimo. Un nuovo incantesimo con concentrazione sostituisce il precedente.",
+            "Il pannello \"Concentrazione\" in alto mostra l'incantesimo attivo.",
+            "Per terminare la concentrazione, tocca \"Interrompi concentrazione\".",
+            "Per attivare la concentrazione senza lanciare, apri l'incantesimo e tocca \"Concentrazione\".",
+            "Quando subisci danni, l'app tira da sola il tiro salvezza su Costituzione. Se fallisce, la concentrazione termina.",
+            "Un riposo breve o lungo termina la concentrazione."
+          ]
+        },
+        {
+          "title": "Preparare gli incantesimi",
+          "items": [
+            "Questa funzione appare solo se il personaggio ha una classe che prepara gli incantesimi.",
+            "Il contatore \"Preparati\" mostra gli incantesimi preparati e il limite.",
+            "Per preparare un incantesimo, tocca il segnalibro a sinistra del nome. Puoi anche aprire l'incantesimo e toccare \"Prepara\".",
+            "Per annullare la preparazione, tocca di nuovo il segnalibro.",
+            "Se raggiungi il limite, l'app non prepara l'incantesimo. Togli una preparazione o alza il limite nelle impostazioni.",
+            "Se lanci un incantesimo non preparato, l'app chiede conferma. Tocca \"Lancia comunque\" per continuare.",
+            "Il Mago può lanciare un rituale non preparato senza conferma."
+          ]
+        },
+        {
+          "title": "Dimenticare un incantesimo",
+          "items": [
+            "Apri l'incantesimo, tocca il pulsante con i tre puntini e poi \"Dimentica\".",
+            "Nella finestra di conferma, tocca \"Dimentica\".",
+            "ATTENZIONE: l'app elimina l'incantesimo e i suoi dettagli. Non puoi annullare questa azione."
+          ]
+        }
+      ]
+    },
+    "stats": {
+      "summary": "Questa pagina mostra le sei caratteristiche del personaggio. Qui puoi vedere ogni punteggio con il suo modificatore e cambiare il valore.",
+      "sections": [
+        {
+          "title": "Cosa vedi",
+          "items": [
+            "Ogni scheda mostra una caratteristica: Forza, Destrezza, Costituzione, Intelligenza, Saggezza e Carisma.",
+            "Il numero grande è il punteggio. Il numero accanto è il modificatore.",
+            "L'app calcola il modificatore così: punteggio meno 10, diviso 2, arrotondato per difetto.",
+            "Sugli schermi stretti il nome è abbreviato, per esempio \"FOR\" o \"COS\".",
+            "Un punteggio in oro indica che un oggetto equipaggiato cambia il valore."
+          ]
+        },
+        {
+          "title": "Cambiare un punteggio",
+          "items": [
+            "Tocca la matita sulla scheda della caratteristica.",
+            "Se la caratteristica non ha bonus da oggetti, puoi anche toccare la scheda.",
+            "Tocca \"-\" o \"+\" per cambiare il valore di 1, oppure scrivi il numero nel campo.",
+            "Il valore deve essere tra 1 e 30.",
+            "Sotto il numero vedi il nuovo \"Modificatore\".",
+            "Tocca \"Salva\" per confermare. Tocca \"Annulla\" per chiudere senza salvare."
+          ]
+        },
+        {
+          "title": "Vedere i bonus degli oggetti",
+          "items": [
+            "Una scheda con la freccia ha bonus da oggetti equipaggiati.",
+            "Tocca la scheda per aprire il dettaglio \"Sorgenti\".",
+            "\"Base\" è il valore che hai salvato. Ogni riga sotto è un oggetto con il suo bonus.",
+            "Un valore con \"=\" sostituisce il punteggio invece di aggiungere un bonus.",
+            "\"Effettivo\" è il valore finale che l'app usa per i calcoli.",
+            "Tocca di nuovo la scheda per chiudere il dettaglio."
+          ]
+        },
+        {
+          "title": "Effetti automatici",
+          "items": [
+            "Il valore che salvi è il valore base. L'app aggiunge sopra i bonus degli oggetti.",
+            "Se cambi la Costituzione e gli \"HP automatici\" sono attivi, l'app aggiorna gli HP massimi e attuali.",
+            "Un messaggio ti mostra i vecchi e i nuovi HP massimi.",
+            "Se cambi la Forza, l'app ricalcola la capacità di carico.",
+            "Con la Difesa senza armatura, l'app aggiorna la CA base quando cambi Destrezza o la seconda caratteristica.",
+            "I nuovi modificatori valgono subito per abilità, tiri salvezza e tiri di dado."
+          ]
+        }
+      ]
+    },
+    "turn": {
+      "summary": "Questa pagina mostra cosa puoi fare nel tuo turno. Divide armi, incantesimi e capacità in Azione, Azione bonus e Reazione. Puoi anche segnare cosa hai già usato.",
+      "sections": [
+        {
+          "title": "Cosa mostra la pagina",
+          "items": [
+            "In alto, \"Attacchi per azione\" mostra quanti attacchi fai con una azione di Attacco.",
+            "Durante un incontro della sessione, la riga mostra anche il numero del round.",
+            "Le sezioni \"Azione\", \"Azione bonus\" e \"Reazione\" mostrano le voci di ogni tipo.",
+            "Le armi equipaggiate e il \"Colpo senza armi\" sono nella sezione \"Azione\".",
+            "Gli incantesimi vanno nella sezione del loro tempo di lancio. La pagina mostra i trucchetti e gli incantesimi preparati.",
+            "Le capacità attive vanno nella sezione del loro tipo di azione. Le capacità passive non compaiono.",
+            "Ogni sezione mostra anche le azioni standard delle regole, con una breve descrizione."
+          ]
+        },
+        {
+          "title": "Attaccare",
+          "items": [
+            "Per attaccare, tocca \"Attacca\" vicino all'arma o al \"Colpo senza armi\".",
+            "Per attaccare con vantaggio o svantaggio, tieni premuto \"Attacca\" e scegli la modalità.",
+            "Per un'arma versatile o da lancio, scegli prima \"Una mano\" o \"Due mani\", \"Mischia\" o \"Lancio\".",
+            "Il risultato è uguale a quello della pagina Azioni."
+          ]
+        },
+        {
+          "title": "Lanciare incantesimi",
+          "items": [
+            "Per lanciare un incantesimo, tocca \"Lancia\".",
+            "Per un incantesimo d'attacco con vantaggio o svantaggio, tieni premuto \"Lancia\" e scegli la modalità.",
+            "Per un incantesimo di livello 1 o più, scegli lo slot da usare.",
+            "Il lancio funziona come nella pagina Incantesimi: l'app usa lo slot e gestisce la concentrazione."
+          ]
+        },
+        {
+          "title": "Usare le capacità",
+          "items": [
+            "Una capacità con usi limitati mostra gli usi rimasti tra parentesi.",
+            "Per usare la capacità, tocca \"Usa\". L'app toglie un uso.",
+            "Quando gli usi sono finiti, il pulsante mostra \"Usi esauriti\".",
+            "Per recuperare gli usi, fai un riposo nella pagina Punti Ferita."
+          ]
+        },
+        {
+          "title": "Segnare le azioni usate",
+          "items": [
+            "Per segnare una sezione come usata, tocca \"Usata\" nella sezione.",
+            "Una sezione usata diventa più chiara. Per togliere il segno, tocca di nuovo \"Usata\".",
+            "Per togliere tutti i segni, tocca \"Nuovo turno\".",
+            "Durante una sessione, l'app toglie tutti i segni quando inizia il tuo turno.",
+            "L'app non salva i segni. Quando esci dalla pagina, i segni spariscono."
+          ]
+        },
+        {
+          "title": "Fine round e voci \"Altro\"",
+          "items": [
+            "Per far avanzare il tempo di un round, tocca \"Fine round (−1)\".",
+            "L'app toglie un round alla durata delle condizioni e della concentrazione.",
+            "Quando una durata arriva a 0, l'app toglie l'effetto e mostra un messaggio \"Scaduto\".",
+            "Durante un incontro della sessione, \"Fine round (−1)\" non compare. I round scorrono a ogni tuo turno.",
+            "Per vedere le voci senza un tipo di azione, tocca \"Altro\".",
+            "La sezione \"Altro\" mostra, per esempio, incantesimi con tempo di lancio più lungo."
+          ]
+        },
+        {
+          "title": "Tiri salvezza in sospeso",
+          "items": [
+            "Quando devi fare un tiro salvezza per una condizione, una fascia ambra compare in alto.",
+            "Quando è il tuo turno, la fascia diventa rossa.",
+            "Tocca la fascia per fare il tiro. Per i dettagli, leggi la guida della pagina Condizioni."
+          ]
+        }
+      ]
+    },
+    "xp": {
+      "summary": "Questa pagina mostra il livello e i punti esperienza del personaggio. Qui puoi aggiungere o impostare gli XP, salire di livello e vedere la progressione della classe.",
+      "sections": [
+        {
+          "title": "Cosa vedi",
+          "items": [
+            "Il numero grande è il livello del personaggio. Sotto vedi gli XP attuali.",
+            "La pillola sopra la barra indica quanti XP mancano al livello successivo.",
+            "La barra e la percentuale mostrano il progresso verso il livello successivo.",
+            "Al livello 20 vedi \"Tu sei una leggenda\" e la barra non appare più.",
+            "Con una sola classe, il livello della classe segue gli XP in modo automatico."
+          ]
+        },
+        {
+          "title": "Aggiungere o impostare gli XP",
+          "items": [
+            "Tocca \"+ Aggiungi XP\" per sommare un valore agli XP attuali.",
+            "Tocca \"= Imposta\" per sostituire gli XP attuali con un valore nuovo.",
+            "Scrivi il numero nel campo.",
+            "Tocca \"Applica\".",
+            "Se il personaggio sale di livello, un messaggio mostra il livello nuovo.",
+            "Con una sola classe, se togli XP il livello della classe scende. Se gli \"HP automatici\" sono attivi, scendono anche gli HP massimi."
+          ]
+        },
+        {
+          "title": "Salire di livello in un tocco",
+          "items": [
+            "Tocca \"SALI DI LIVELLO\" per portare gli XP alla soglia del livello successivo.",
+            "Con una sola classe, l'app aggiunge subito il livello alla classe.",
+            "Se gli \"HP automatici\" sono attivi, l'app aggiunge i PF e mostra un messaggio con i PF guadagnati.",
+            "Se gli usi massimi di una risorsa aumentano, un messaggio mostra il valore vecchio e il nuovo."
+          ]
+        },
+        {
+          "title": "PF tirati",
+          "items": [
+            "Questa procedura vale con una sola classe, con \"PF tirati\" e \"HP automatici\" attivi.",
+            "Quando un cambio di XP fa salire di livello, appare il pulsante \"Tira 1dX per i PF\".",
+            "Tocca il pulsante per tirare il dado vita per ogni livello nuovo.",
+            "Il risultato mostra il tiro, il modificatore di Costituzione e i PF totali.",
+            "Tocca \"Conferma\" per salvare gli XP e i PF."
+          ]
+        },
+        {
+          "title": "Multiclasse",
+          "items": [
+            "Con più classi, gli XP non assegnano il livello a una classe in modo automatico.",
+            "Quando c'è un livello da assegnare, appare \"Livello disponibile! Vai nella pagina Classe per distribuire il livello.\".",
+            "Sotto il livello vedi quanti livelli sono distribuiti e quanti sono da assegnare.",
+            "Tocca l'avviso per aprire \"Sali di livello\" e scegliere la classe."
+          ]
+        },
+        {
+          "title": "Avanzamento a milestone",
+          "items": [
+            "Con l'\"Avanzamento a milestone\" attivo nelle impostazioni, la pagina non mostra gli XP.",
+            "Il livello è la somma dei livelli delle classi.",
+            "Tocca \"SALI DI LIVELLO\" per aprire \"Sali di livello\" e scegliere la classe."
+          ]
+        },
+        {
+          "title": "Progressione della classe",
+          "items": [
+            "In basso vedi la tabella \"Progressione\" della classe con i livelli vicini al livello attuale.",
+            "Il livello attuale è evidenziato in oro.",
+            "Con più classi, tocca il nome di una classe per vedere la sua progressione.",
+            "Tocca una riga per aprire la tabella completa."
+          ]
+        }
+      ]
+    }
+  },
+  "pendingSaves": {
+    "banner_one": "Tiro salvezza: {{ability}} CD {{dc}} — {{condition}}",
+    "banner_many": "{{count}} tiri salvezza in sospeso",
+    "banner_failed": "Fallito: {{condition}} — tocca per vedere",
+    "your_turn": "Tocca a te",
+    "title": "Tiro salvezza: {{ability}}",
+    "line": "{{condition}} · CD {{dc}}",
+    "source": "da {{name}}",
+    "progress": "{{n}} di {{total}}",
+    "roll": "Tira",
+    "ok": "OK",
+    "total_vs_dc": "{{total}} contro CD {{dc}}",
+    "passed": "Superato — sei libero da {{condition}}",
+    "failed": "Fallito — resti {{condition}}",
+    "gone": "Quella condizione è già terminata",
+    "not_rerollable": "Questo tiro non si può ritirare",
+    "inspiration_unavailable": "Ispirazione non disponibile",
+    "error": "Tiro non riuscito, riprova"
   }
 }

@@ -202,8 +202,40 @@ export interface SpellcastingInfo {
 
 // Il dettaglio backend non restituisce ac_homebrew_modifier (solo la lista): resta opzionale
 // e CharacterFull non è assegnabile a CharacterSummary, così effectiveAc non gira su di esso.
+export interface ConditionEffect {
+  slug: string
+  expiry_anchor?: 'owner' | 'source' | null
+  expiry_edge?: 'start' | 'end' | null
+  expiry_count?: number | null
+  save_ability?: string | null
+  save_dc?: number | null
+  save_edge?: 'start' | 'end' | null
+  source_name?: string | null
+  ends_with_concentration: boolean
+  applied_by_gm: boolean
+}
+
+export interface PendingSave {
+  id: number
+  slug: string
+  ability: string
+  dc: number
+  status: 'pending' | 'failed' | 'passed'
+  created_at: string
+  last_roll?: Record<string, unknown> | null
+}
+
+export interface PendingSaveRollResult {
+  save: PendingSave
+  roll: import('@/api/client').RollResult
+  passed: boolean
+  condition_removed: boolean
+}
+
 export interface CharacterFull extends Omit<CharacterSummary, 'ac_homebrew_modifier'> {
   ac_homebrew_modifier?: number
+  condition_effects?: ConditionEffect[]
+  pending_saves?: PendingSave[]
   background?: string
   alignment?: string
   speed: number
@@ -379,6 +411,9 @@ export interface CharacterLiveSnapshot {
   last_roll?: DiceRollResult | null
   hp_bucket: HpBucket | null
   armor_category: ArmorCategory | null
+  condition_effects?: ConditionEffect[]
+  has_pending_save?: boolean
+  is_concentrating?: boolean
 }
 
 export type EncounterMode = 'light' | 'full'
@@ -400,6 +435,17 @@ export interface CombatantLive {
   max_hp: number | null
   ac: number | null
   hp_bucket: HpBucket | null
+  condition_effects?: ConditionEffect[]
+  pending_saves?: PendingSave[]
+}
+
+export interface GmConditionApply {
+  slug: string
+  value?: boolean | number | Record<string, unknown>
+  expiry?: { anchor: 'owner' | 'source'; edge: 'start' | 'end'; count: number }
+  save?: { ability: string; dc: number; edge: 'start' | 'end' }
+  source_combatant_id?: number
+  ends_with_concentration?: boolean
 }
 
 export interface EncounterLive {
@@ -541,6 +587,7 @@ export interface TurnState {
   is_my_turn: boolean
   round: number | null
   session_id: number | null
+  pending_saves?: PendingSave[]
 }
 
 export interface ActiveForm {

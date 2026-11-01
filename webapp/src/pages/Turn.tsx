@@ -177,9 +177,13 @@ export default function Turn() {
           )}
         </p>
         <div className="flex gap-2">
-          <Button size="sm" variant="ghost" icon={<Clock size={14} />} loading={tick.isPending} onClick={() => tick.mutate()}>
-            {t('character.turn.end_round')}
-          </Button>
+          {turn?.in_encounter ? (
+            <p className="self-center text-xs text-dnd-text-muted font-body">{t('character.conditions.duration.in_encounter')}</p>
+          ) : (
+            <Button size="sm" variant="ghost" icon={<Clock size={14} />} loading={tick.isPending} onClick={() => tick.mutate()}>
+              {t('character.turn.end_round')}
+            </Button>
+          )}
           <Button size="sm" variant="secondary" icon={<RotateCcw size={14} />} onClick={() => setUsed(NONE_USED)}>
             {t('character.turn.new_turn')}
           </Button>

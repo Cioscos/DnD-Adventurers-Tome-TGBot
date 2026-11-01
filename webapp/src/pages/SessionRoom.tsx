@@ -281,7 +281,7 @@ export default function SessionRoom() {
 
   if (isLoading) {
     return (
-      <Layout title={t('session.title')} backTo="/session">
+      <Layout help="session_room" title={t('session.title')} backTo="/session">
         <Skeleton.Rect height="120px" />
         <Skeleton.Rect height="180px" delay={100} />
       </Layout>
@@ -293,7 +293,7 @@ export default function SessionRoom() {
   const notFound = error instanceof ApiError && (error.status === 404 || error.status === 403)
   if (!live && isError && !notFound) {
     return (
-      <Layout title={t('session.title')} backTo="/session">
+      <Layout help="session_room" title={t('session.title')} backTo="/session">
         <EmptyState
           icon={<WifiOff size={32} />}
           title={t('common.offline_unavailable')}
@@ -305,7 +305,7 @@ export default function SessionRoom() {
 
   if (!live) {
     return (
-      <Layout title={t('session.title')} backTo="/session">
+      <Layout help="session_room" title={t('session.title')} backTo="/session">
         <Surface variant="elevated">
           <p className="text-center text-dnd-text-muted font-body py-6">
             {t('session.not_found')}
@@ -317,7 +317,7 @@ export default function SessionRoom() {
 
   if (live.status !== 'active') {
     return (
-      <Layout title={t('session.title')} backTo="/session">
+      <Layout help="session_room" title={t('session.title')} backTo="/session">
         <Surface variant="ember">
           <p className="text-center font-display font-bold text-dnd-crimson-bright py-6">
             {t('session.closed_notice')}
@@ -345,7 +345,7 @@ export default function SessionRoom() {
     t('session.active_session_banner')
 
   return (
-    <Layout title={t('session.room_title', { code: live.code })} backTo="/session">
+    <Layout help="session_room" title={t('session.room_title', { code: live.code })} backTo="/session">
       {amGm ? (
         <Surface variant="sigil" ornamented>
           <div className="text-center">

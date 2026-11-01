@@ -1,6 +1,5 @@
 import { useTranslation } from 'react-i18next'
 import { Sparkles, BookOpen } from 'lucide-react'
-import Sheet from '@/components/ui/Sheet'
 import Button from '@/components/ui/Button'
 import type { Spell, SpellSlot } from '@/types'
 
@@ -30,8 +29,8 @@ export default function CastSpellModal({
 }: CastSpellModalProps) {
   const { t } = useTranslation()
 
+  // Corpo del primo passo dello sheet di lancio (lo sheet lo monta useCastFlow).
   return (
-    <Sheet open onClose={onCancel} title={t('character.spells.cast_slot_title')}>
       <div className="p-5 space-y-3">
         <p className="text-sm text-dnd-text-muted font-body italic">{spell.name}</p>
         <div className="space-y-2">
@@ -63,7 +62,18 @@ export default function CastSpellModal({
                 onClick={() => onCast(slot.level)}
                 disabled={isPending}
               >
-                {t('character.slots.level', { level: slot.level })} · <span className="font-mono tabular-nums">{slot.available}/{slot.total}</span>
+                <span className="flex-1 text-left">{t('character.slots.level', { level: slot.level })}</span>
+                {/* Stessa convenzione dei pallini nella pagina Incantesimi: dorato = usato. */}
+                <span className="flex gap-1" aria-hidden>
+                  {Array.from({ length: slot.total }).map((_, i) => (
+                    <span key={i} className={`w-3 h-3 rounded-full border ${i < slot.used
+                      ? 'bg-gradient-to-br from-dnd-gold-deep to-dnd-gold-bright border-dnd-gold-bright'
+                      : 'border-dnd-gold-dim/70'}`} />
+                  ))}
+                </span>
+                <span className="text-xs font-normal text-dnd-text-muted tabular-nums">
+                  {t('character.slots.available_count', { count: slot.available })}
+                </span>
               </Button>
             ))
           )}
@@ -89,6 +99,5 @@ export default function CastSpellModal({
           {t('common.cancel')}
         </Button>
       </div>
-    </Sheet>
   )
 }

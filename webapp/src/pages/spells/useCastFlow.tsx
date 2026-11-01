@@ -5,13 +5,22 @@ import { toast } from 'sonner'
 import { api, ApiError } from '@/api/client'
 import { haptic } from '@/auth/telegram'
 import { isAttackSpell } from '@/lib/spellType'
+import { m, AnimatePresence } from 'framer-motion'
 import ConfirmSheet from '@/components/ui/ConfirmSheet'
+import Sheet from '@/components/ui/Sheet'
 import { useAnimatedRoll } from '@/dice/useAnimatedRoll'
 import { useD20Roll, d20Arg, type RollMode } from '@/hooks/useD20Roll'
 import CastSpellModal from '@/pages/spells/CastSpellModal'
 import SpellAttackModal from '@/pages/spells/SpellAttackModal'
 import SpellDamageSheet from '@/pages/spells/SpellDamageSheet'
 import type { CharacterFull, Spell, SpellAttackResult, SpellSlot } from '@/types'
+
+// Avanti (slot → danni) il pannello entra da destra; indietro da sinistra.
+const STEP_VARIANTS = {
+  enter: (dir: number) => ({ opacity: 0, x: 32 * dir }),
+  center: { opacity: 1, x: 0 },
+  exit: (dir: number) => ({ opacity: 0, x: -32 * dir }),
+}
 
 type AttackCast = { spell: Spell; slotLevel: number | null; ritual: boolean; mode: RollMode }
 type AttackState = AttackCast & { result: SpellAttackResult; wasRerolled: boolean }
@@ -209,7 +218,6 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
       setPendingRitual(false)
       setPendingSlotLevel(slotLevel)
       setRollDamageSpell(spell)
-      setCastingSpell(null)
       return
     }
     castMutation.mutate({ spell, slotLevel })
@@ -224,7 +232,6 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
       setPendingRitual(true)
       setPendingSlotLevel(null)
       setRollDamageSpell(spell)
-      setCastingSpell(null)
       return
     }
     castRitualMutation.mutate(spell)
@@ -269,21 +276,68 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
     setAttackState(null)
   }
 
+  const closeDamage = () => {
+    setRollDamageSpell(null)
+    setPendingSlotLevel(null)
+    setPendingRitual(false)
+    setDamageAfterAttack(null)
+  }
+  const closeCastSheet = () => {
+    closeDamage()
+    setCastingSpell(null)
+  }
+
+  // Slot e danni sono due passi dello stesso sheet: il contenuto scorre, lo sheet resta.
+  const step = rollDamageSpell ? 'damage' : castingSpell ? 'slot' : null
+  const stepDir = step === 'damage' ? 1 : -1
   const elements = (
     <>
-      {castingSpell && (
-        <CastSpellModal
-          spell={castingSpell}
-          availableSlots={availableSlotsFor(castingSpell.level)}
-          canRitual={!!castingSpell.is_ritual && !!spellcasting?.has_ritual_caster}
-          onCast={handleCastSlot}
-          onCastRitual={handleCastRitual}
-          onCreateSlot={(level) => createSlotMutation.mutate(level)}
-          onCancel={() => setCastingSpell(null)}
-          isPending={castMutation.isPending || castRitualMutation.isPending}
-          isCreatingSlot={createSlotMutation.isPending}
-        />
-      )}
+      <Sheet
+        open={step !== null}
+        onClose={closeCastSheet}
+        title={rollDamageSpell
+          ? t('character.spells.roll_damage.title', { name: rollDamageSpell.name })
+          : t('character.spells.cast_slot_title')}
+      >
+        {/* custom: il pannello che esce legge la direzione nuova, non quella del suo ultimo render. */}
+        <AnimatePresence mode="wait" initial={false} custom={stepDir}>
+          <m.div
+            key={step ?? 'none'}
+            custom={stepDir}
+            variants={STEP_VARIANTS}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            transition={{ duration: 0.16, ease: 'easeOut' }}
+          >
+            {step === 'slot' && castingSpell && (
+              <CastSpellModal
+                spell={castingSpell}
+                availableSlots={availableSlotsFor(castingSpell.level)}
+                canRitual={!!castingSpell.is_ritual && !!spellcasting?.has_ritual_caster}
+                onCast={handleCastSlot}
+                onCastRitual={handleCastRitual}
+                onCreateSlot={(level) => createSlotMutation.mutate(level)}
+                onCancel={closeCastSheet}
+                isPending={castMutation.isPending || castRitualMutation.isPending}
+                isCreatingSlot={createSlotMutation.isPending}
+              />
+            )}
+            {step === 'damage' && (
+              <SpellDamageSheet
+                charId={charId}
+                spell={rollDamageSpell}
+                slotLevel={pendingSlotLevel}
+                asRitual={pendingRitual}
+                slotAlreadyConsumed={damageAfterAttack !== null}
+                initialCritical={damageAfterAttack?.critical ?? false}
+                onClose={closeCastSheet}
+                onBack={castingSpell ? closeDamage : undefined}
+              />
+            )}
+          </m.div>
+        </AnimatePresence>
+      </Sheet>
 
       <ConfirmSheet
         open={confirmCast !== null}
@@ -316,20 +370,6 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
         />
       )}
 
-      <SpellDamageSheet
-        charId={charId}
-        spell={rollDamageSpell}
-        slotLevel={pendingSlotLevel}
-        asRitual={pendingRitual}
-        slotAlreadyConsumed={damageAfterAttack !== null}
-        initialCritical={damageAfterAttack?.critical ?? false}
-        onClose={() => {
-          setRollDamageSpell(null)
-          setPendingSlotLevel(null)
-          setPendingRitual(false)
-          setDamageAfterAttack(null)
-        }}
-      />
     </>
   )
 

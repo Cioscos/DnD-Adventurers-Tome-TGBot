@@ -49,3 +49,15 @@ async def test_higher_levels_dice_validated(client):
     cid = (await client.post("/characters", json={"name": "Mago"})).json()["id"]
     r = await client.post(f"/characters/{cid}/spells", json={"name": "X", "higher_levels_dice": "lots"})
     assert r.status_code == 422
+
+
+async def test_magic_missile_upcast_adds_a_dart_per_level(client):
+    # Ogni livello oltre il 1° aggiunge un dardo da 1d4+1: dadi E bonus crescono insieme.
+    cid, sid = await _spell(client, name="Dardo incantato", level=1, damage_dice="3d4+3",
+                            damage_type="force", higher_levels_dice="1d4+1", srd_index="magic-missile")
+    r = await _roll(client, cid, sid, 3, [1] * 5)
+    assert r.status_code == 200, r.text
+    assert r.json()["scaled_dice"] == "5d4"
+    assert r.json()["total"] == 5 + 5
+    r = await _roll(client, cid, sid, 1, [2] * 3)
+    assert r.json()["total"] == 6 + 3

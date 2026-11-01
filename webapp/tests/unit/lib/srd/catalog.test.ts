@@ -58,5 +58,7 @@ describe('catalog', () => {
     expect(upcastExtraDice({ ...fb, srd_index: 'sleep' }, 5, 6)).toBe(0)
     expect(upcastExtraDice({ level: 0, higher_levels_dice: '1d6' }, 5, 6)).toBe(0)
     expect(upcastExtraDice({ level: 3 }, 5, 6)).toBe(0)
+    // Dardo incantato: un dardo (1d4+1) in più per livello, il bonus non conta come dado.
+    expect(upcastExtraDice({ level: 1, higher_levels_dice: '1d4+1', srd_index: 'magic-missile' }, 3, 4)).toBe(2)
   })
 })

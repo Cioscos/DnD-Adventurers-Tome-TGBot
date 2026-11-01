@@ -7,10 +7,8 @@ import {
 } from 'react-icons/gi'
 import { api } from '@/api/client'
 import type { Spell, RollDamageRequest, RollDamageResult, CharacterFull } from '@/types'
-import Sheet from '@/components/ui/Sheet'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
-import SwitchToggle from '@/components/ui/SwitchToggle'
 import { isAttackSpell } from '@/lib/spellType'
 import { haptic } from '@/auth/telegram'
 import { rollValues } from '@/dice/d100'
@@ -42,9 +40,11 @@ interface SpellDamageSheetProps {
   asRitual?: boolean
   /** Slot/rituale/concentrazione già consumati dal tiro per colpire: il Roll non li tocca. */
   slotAlreadyConsumed?: boolean
-  /** Apre lo sheet con l'interruttore del critico acceso (20 naturale al tiro per colpire). */
+  /** 20 naturale al tiro per colpire: i dadi raddoppiano. Il critico viene solo da lì (regole 5e). */
   initialCritical?: boolean
   onClose: () => void
+  /** Torna alla scelta dello slot; assente se non c'è un passo precedente. */
+  onBack?: () => void
 }
 
 export default function SpellDamageSheet({
@@ -55,29 +55,26 @@ export default function SpellDamageSheet({
   slotAlreadyConsumed = false,
   initialCritical = false,
   onClose,
+  onBack,
 }: SpellDamageSheetProps) {
   const { t } = useTranslation()
   const qc = useQueryClient()
   const [extraDice, setExtraDice] = useState('')
-  const [isCritical, setIsCritical] = useState(initialCritical)
+  const isCritical = initialCritical
   const [result, setResult] = useState<RollDamageResult | null>(null)
   const [slotConsumed, setSlotConsumed] = useState(false)
   const [showNoSlotWarning, setShowNoSlotWarning] = useState(false)
-  // Mentre i dadi 3D rotolano lo sheet si nasconde: altrimenti l'animazione
-  // resterebbe dietro la modale aperta.
-  const [rolling, setRolling] = useState(false)
 
   // Reset the form whenever a different spell is opened (identity tracked by id).
   const spellId = spell?.id
   useEffect(() => {
     if (spellId != null) {
       setExtraDice('')
-      setIsCritical(initialCritical)
       setResult(null)
       setSlotConsumed(slotAlreadyConsumed)
       setShowNoSlotWarning(false)
     }
-  }, [spellId, initialCritical, slotAlreadyConsumed])
+  }, [spellId, slotAlreadyConsumed])
 
   const dice = useDiceAnimation()
   const animate3d = useDiceSettings((s) => s.animate3d)
@@ -131,23 +128,19 @@ export default function SpellDamageSheet({
             extraCount = body.is_critical ? extra.count * 2 : extra.count
             groups.push({ kind: `d${extra.sides}` as DiceKind, count: extraCount })
           }
-          setRolling(true)
-          try {
-            const detected = await dice.playAndCollect(groups)
-            const valuesOf = (groupIndex: number) =>
-              rollValues(
-                groups[groupIndex].kind,
-                detected.filter((d) => d.groupIndex === groupIndex).map((d) => d.value),
-              )
-            main_rolls = valuesOf(0)
-            if (extraCount > 0) {
-              extra_rolls = valuesOf(1)
-            }
-            if (main_rolls.length !== mainCount) main_rolls = undefined
-            if (extra_rolls && extra_rolls.length !== extraCount) extra_rolls = undefined
-          } finally {
-            setRolling(false)
+          // I dadi 3D sono sopra gli sheet (z-[90]): lo sheet resta aperto sotto.
+          const detected = await dice.playAndCollect(groups)
+          const valuesOf = (groupIndex: number) =>
+            rollValues(
+              groups[groupIndex].kind,
+              detected.filter((d) => d.groupIndex === groupIndex).map((d) => d.value),
+            )
+          main_rolls = valuesOf(0)
+          if (extraCount > 0) {
+            extra_rolls = valuesOf(1)
           }
+          if (main_rolls.length !== mainCount) main_rolls = undefined
+          if (extra_rolls && extra_rolls.length !== extraCount) extra_rolls = undefined
         }
       }
 
@@ -181,7 +174,6 @@ export default function SpellDamageSheet({
   const reset = () => {
     setResult(null)
     setExtraDice('')
-    setIsCritical(initialCritical)
   }
 
   const handleReroll = () => {
@@ -211,12 +203,9 @@ export default function SpellDamageSheet({
     onClose()
   }
 
+  // Corpo del passo "danni" dello sheet di lancio (lo sheet lo monta useCastFlow).
   return (
-    <Sheet
-      open={!!spell && !rolling}
-      onClose={handleClose}
-      title={t('character.spells.roll_damage.title', { name: spell.name })}
-    >
+    <>
       {!result ? (
         <div className="space-y-4 p-5">
           {!isCantrip && (
@@ -232,7 +221,7 @@ export default function SpellDamageSheet({
 
           {autoExtra > 0 && (
             <p className="text-sm text-dnd-text-muted font-body italic text-center">
-              {t('character.spells.upcast_auto', { dice: `${autoExtra}d${autoUpcast?.sides}` })}
+              {t('character.spells.upcast_auto', { dice: spell.higher_levels_dice })}
             </p>
           )}
 
@@ -243,12 +232,10 @@ export default function SpellDamageSheet({
             placeholder={t('character.spells.roll_damage.extra_dice_placeholder')}
           />
 
-          {isAttack && (
-            <SwitchToggle
-              checked={isCritical}
-              onChange={setIsCritical}
-              label={t('character.spells.roll_damage.critical')}
-            />
+          {isCritical && (
+            <p className="text-sm text-center font-semibold text-dnd-crimson-bright">
+              {t('character.spells.roll_damage.critical')}
+            </p>
           )}
 
           <Button
@@ -261,6 +248,11 @@ export default function SpellDamageSheet({
           >
             {t('character.spells.roll_damage.roll_button')}
           </Button>
+          {onBack && (
+            <Button variant="ghost" fullWidth onClick={onBack} disabled={mutation.isPending}>
+              {t('common.back')}
+            </Button>
+          )}
         </div>
       ) : (
         <div className="space-y-4 p-5">
@@ -328,6 +320,6 @@ export default function SpellDamageSheet({
           </div>
         </div>
       )}
-    </Sheet>
+    </>
   )
 }

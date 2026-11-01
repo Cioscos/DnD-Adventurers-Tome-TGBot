@@ -235,7 +235,7 @@ export default function RuleEditor() {
 
   if (!isNew && isLoading) {
     return (
-      <Layout title={title}>
+      <Layout help="rule_editor" title={title}>
         <Skeleton.Rect height="72px" />
         <Skeleton.Rect height="120px" delay={80} />
         <Skeleton.Rect height="120px" delay={160} />
@@ -245,7 +245,7 @@ export default function RuleEditor() {
   }
 
   return (
-    <Layout title={title}>
+    <Layout help="rule_editor" title={title}>
       <div className="space-y-3">
         <CollapsiblePanel title={t('homebrew.editor.sections.identity')} defaultOpen>
           <IdentitySection

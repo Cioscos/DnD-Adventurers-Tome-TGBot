@@ -102,7 +102,7 @@ export default function SessionJoin() {
 
   if (isLoading) {
     return (
-      <Layout title={t('session.join_player')} backTo="/session">
+      <Layout help="session_join" title={t('session.join_player')} backTo="/session">
         <Skeleton.Rect height="120px" />
       </Layout>
     )
@@ -112,7 +112,7 @@ export default function SessionJoin() {
   // schermata d'attesa dedicata, niente flash del form.
   if (enteringActive || shouldAutoJoin) {
     return (
-      <Layout title={t('session.join_player')} backTo="/session">
+      <Layout help="session_join" title={t('session.join_player')} backTo="/session">
         <Surface variant="elevated" className="text-center">
           <p className="text-sm text-dnd-text font-body">{t('session.joining')}</p>
         </Surface>
@@ -123,7 +123,7 @@ export default function SessionJoin() {
   // Già in un'altra sessione attiva: non posso unirmi a questa.
   if (inAnotherSession) {
     return (
-      <Layout title={t('session.join_player')} backTo="/session">
+      <Layout help="session_join" title={t('session.join_player')} backTo="/session">
         <Surface variant="ember" className="text-center space-y-3">
           <p className="text-dnd-text text-sm font-body">{t('session.already_in_other')}</p>
           <Button
@@ -149,7 +149,7 @@ export default function SessionJoin() {
   const charactersUnavailable = charactersQuery.isError && charactersQuery.data === undefined
 
   return (
-    <Layout title={t('session.join_player')} backTo="/session">
+    <Layout help="session_join" title={t('session.join_player')} backTo="/session">
       <Surface variant="elevated">
         <Input
           label={t('session.code_label')}

@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.db.models import Character, CharacterHistory
 from core.data.labels import condition_label
+from api.services.condition_effects import clear_effects_for
 from api.services.homebrew.passive import get_passive_modifiers
 from api.services.homebrew.dispatcher import dispatch
 
@@ -94,4 +95,6 @@ async def apply_conditions(session: AsyncSession, char: Character,
             else:
                 _add_history(session, char.id, "condition_change",
                              f"Condizione rimossa: {condition_label(cond)}")
+    await clear_effects_for(session, ("character", char.id),
+                            [c for c, v in changes.items() if not v])
     return {"changed": changed}

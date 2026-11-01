@@ -4,9 +4,10 @@ from __future__ import annotations
 
 from typing import Any, Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from api.schemas.common import D20Dice, RollMode
+from api.schemas.condition_effects import ConditionEffectRead, PendingSaveRead
 
 EncounterMode = Literal["light", "full"]
 EncounterStatus = Literal["setup", "active", "ended"]
@@ -42,6 +43,42 @@ class CombatantPatchRequest(BaseModel):
     is_dead: Optional[bool] = None
 
 
+class ExpiryIn(BaseModel):
+    anchor: Literal["owner", "source"]
+    edge: Literal["start", "end"]
+    count: int = Field(ge=1, le=100)
+
+
+class SaveIn(BaseModel):
+    ability: Literal["strength", "dexterity", "constitution",
+                     "intelligence", "wisdom", "charisma"]
+    dc: int = Field(ge=1, le=40)
+    edge: Literal["start", "end"]
+
+
+class GmConditionApply(BaseModel):
+    """`value` set -> map only, no rich effect (required for exhaustion)."""
+    slug: str = Field(min_length=1, max_length=100)
+    value: bool | int | dict | None = None
+    expiry: Optional[ExpiryIn] = None
+    save: Optional[SaveIn] = None
+    source_combatant_id: Optional[int] = None
+    ends_with_concentration: bool = False
+
+    @model_validator(mode="after")
+    def _check(self) -> "GmConditionApply":
+        if self.slug == "exhaustion" and self.value is None:
+            raise ValueError("exhaustion requires value")
+        if self.value is not None and (self.expiry or self.save or self.source_combatant_id
+                                       or self.ends_with_concentration):
+            raise ValueError("value excludes expiry/save/source")
+        return self
+
+
+class PendingSaveResolve(BaseModel):
+    passed: bool
+
+
 class EncounterStartRequest(BaseModel):
     auto_roll_missing: bool = False
 
@@ -73,6 +110,8 @@ class CombatantLive(BaseModel):
     max_hp: Optional[int] = None
     ac: Optional[int] = None
     hp_bucket: Optional[str] = None
+    condition_effects: list[ConditionEffectRead] = []   # monsters only
+    pending_saves: list[PendingSaveRead] = []           # monsters, GM viewer only
 
 
 class EncounterLive(BaseModel):

@@ -9,6 +9,7 @@ from api.schemas.common import ConcentrationSaveResult, RollMode
 from api.services.d20 import d20_history_label, d20_records, resolve_d20
 from api.services.dice_stats import record_dice
 from api.services.durations import end_concentration, is_concentrating
+from api.services.condition_effects import release_concentration_effects
 from api.services.homebrew.passive import get_passive_modifiers
 from core.db.models import Character, CharacterHistory
 from core.game.item_bonuses import item_bonus_total
@@ -168,6 +169,7 @@ async def roll_concentration_save(
     lost_concentration = not success and is_concentrating(char)
     if lost_concentration:
         end_concentration(char)
+        await release_concentration_effects(session, char)
 
     _append_concentration_history(
         session, char.id, damage, dc, d20_history_label(outcome), con_mod, total, success, lost_concentration,

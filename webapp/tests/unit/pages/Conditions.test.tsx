@@ -4,8 +4,10 @@ import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from '../utils/renderWithProviders'
 import Conditions from '@/pages/Conditions'
 
-const { getChar, updateConditions, listRules, turnStart, toastInfo, toastError, showNotif } = vi.hoisted(() => ({
+const { getChar, updateConditions, listRules, turnStart, toastInfo, toastError, showNotif, sessionMe, turnState } = vi.hoisted(() => ({
   getChar: vi.fn(),
+  sessionMe: vi.fn(),
+  turnState: vi.fn(),
   updateConditions: vi.fn(),
   listRules: vi.fn(),
   turnStart: vi.fn(),
@@ -19,7 +21,8 @@ const { getChar, updateConditions, listRules, turnStart, toastInfo, toastError, 
 //  - api.homebrew.turnStart(id) → { notifications: [...] } (NOT homebrew_notifications)
 vi.mock('@/api/client', () => ({
   api: {
-    characters: { get: getChar, updateConditions },
+    characters: { get: getChar, updateConditions, turnState },
+    sessions: { me: sessionMe },
     homebrew: { listRules, turnStart },
   },
 }))
@@ -112,6 +115,8 @@ const bleedingRule = {
 }
 
 afterEach(() => {
+  sessionMe.mockReset()
+  turnState.mockReset()
   getChar.mockReset()
   updateConditions.mockReset()
   listRules.mockReset()
@@ -207,5 +212,39 @@ describe('Conditions page', () => {
     await waitFor(() =>
       expect(toastInfo).toHaveBeenCalledWith('character.conditions.turn_start.no_effect'),
     )
+  })
+
+  describe('effects and round tick', () => {
+    const withDuration = {
+      id: 5,
+      conditions: { poisoned: true },
+      condition_effects: [{
+        slug: 'poisoned', expiry_anchor: 'owner', expiry_edge: 'end', expiry_count: 1,
+        save_ability: 'constitution', save_dc: 13, save_edge: 'end',
+        ends_with_concentration: false, applied_by_gm: true,
+      }],
+    }
+
+    it('outside an encounter shows effects, the GM badge and the round tick', async () => {
+      sessionMe.mockResolvedValue(null)
+      getChar.mockResolvedValue(withDuration)
+      listRules.mockResolvedValue([])
+      renderWithProviders(<Conditions />)
+      expect(await screen.findByText('character.conditions.duration.tick')).toBeInTheDocument()
+      expect(screen.getByText('character.conditions.duration.left')).toBeInTheDocument()
+      expect(screen.getByText('character.conditions.effect.until_end_owner_next')).toBeInTheDocument()
+      expect(screen.getByText('character.conditions.effect.save_end')).toBeInTheDocument()
+      expect(screen.getByText('character.conditions.effect.by_gm')).toBeInTheDocument()
+    })
+
+    it('in an encounter hides the round tick and shows the note', async () => {
+      sessionMe.mockResolvedValue({ status: 'active', participants: [] })
+      turnState.mockResolvedValue({ in_encounter: true, is_my_turn: false, round: 2, session_id: 1 })
+      getChar.mockResolvedValue(withDuration)
+      listRules.mockResolvedValue([])
+      renderWithProviders(<Conditions />)
+      expect(await screen.findByText('character.conditions.duration.in_encounter')).toBeInTheDocument()
+      expect(screen.queryByText('character.conditions.duration.tick')).not.toBeInTheDocument()
+    })
   })
 })

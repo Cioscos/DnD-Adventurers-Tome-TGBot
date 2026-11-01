@@ -6,6 +6,7 @@ from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, Field
 
+from api.schemas.condition_effects import ConditionEffectRead, PendingSaveRead
 from api.schemas.encounter import EncounterLive
 from api.schemas.item import ItemCreate
 
@@ -60,6 +61,9 @@ class CharacterLiveSnapshot(BaseModel):
     last_roll: Optional[dict[str, Any]] = None
     hp_bucket: Optional[str] = None
     armor_category: Optional[str] = None
+    condition_effects: list[ConditionEffectRead] = []
+    has_pending_save: bool = False
+    is_concentrating: bool = False
 
 
 class SessionParticipantRead(BaseModel):
@@ -176,3 +180,4 @@ class TurnState(BaseModel):
     is_my_turn: bool
     round: Optional[int] = None
     session_id: Optional[int] = None
+    pending_saves: list[PendingSaveRead] = []

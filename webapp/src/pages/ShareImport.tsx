@@ -64,7 +64,7 @@ export default function ShareImport() {
 
   if (shareQuery.isLoading || charsLoading) {
     return (
-      <Layout title={t('share.import.title')} backTo="/">
+      <Layout help="share_import" title={t('share.import.title')} backTo="/">
         <Skeleton.Rect height="120px" />
       </Layout>
     )
@@ -75,7 +75,7 @@ export default function ShareImport() {
   if (shareQuery.isError || !shareQuery.data) {
     const status = shareQuery.error instanceof ApiError ? shareQuery.error.status : 0
     return (
-      <Layout title={t('share.import.title')} backTo="/">
+      <Layout help="share_import" title={t('share.import.title')} backTo="/">
         <Surface variant="ember" className="text-center space-y-3">
           <p className="text-dnd-text text-sm font-body">
             {status === 410 ? t('share.import.expired') : t('share.import.not_found')}
@@ -94,7 +94,7 @@ export default function ShareImport() {
   const charactersUnavailable = charactersQuery.isError && charactersQuery.data === undefined
 
   return (
-    <Layout title={t('share.import.title')} backTo="/">
+    <Layout help="share_import" title={t('share.import.title')} backTo="/">
       <Surface variant="elevated">
         <div className="flex items-center gap-2 mb-2">
           {preview.is_voice ? (

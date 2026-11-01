@@ -14,6 +14,7 @@ from sqlalchemy.orm.attributes import flag_modified
 from api.auth import get_current_user
 from api.database import get_db
 from api.routers._helpers import collect_homebrew_notifications
+from api.services.condition_effects import clear_effects_for
 from api.schemas.homebrew import (
     HomebrewResourceRead,
     HomebrewResourceUpdate,
@@ -339,6 +340,7 @@ async def delete_rule(
             conditions.pop(key, None)
         char.conditions = conditions
         flag_modified(char, "conditions")
+        await clear_effects_for(session, ("character", char.id), orphaned)
     await session.delete(rule)
 
 
