@@ -24,10 +24,11 @@ import type { CharacterLiveSnapshot, SessionParticipant } from '@/types'
 import { canShareMessage, haptic, telegramConfirm } from '@/auth/telegram'
 import { useShareMessage } from '@/hooks/useShareMessage'
 import { useSessionLive } from '@/hooks/useSessionLive'
+import { useYourTurnToast } from '@/hooks/useYourTurnToast'
 import ParticipantIdentitySheet from '@/pages/session/ParticipantIdentitySheet'
 import SessionFeed from '@/pages/session/SessionFeed'
 import GrantItemModal from '@/pages/session/GrantItemModal'
-import CombatPanel from '@/pages/session/CombatPanel'
+import CombatEntryCard from '@/components/session/CombatEntryCard'
 import { dequeue, peek, pruneOlderThan, type Reward } from '@/lib/rewardQueue'
 import RewardPopup from '@/components/session/RewardPopup'
 import { notifyMutationError } from '@/lib/mutationError'
@@ -220,6 +221,7 @@ export default function SessionRoom() {
   const myUserId = meInfo?.user_id ?? 0
 
   const { data: live, isLoading, isError, error, refetch } = useSessionLive(sessionId)
+  useYourTurnToast(live?.encounter, myUserId)
 
   const leaveMutation = useMutation({
     mutationFn: () => api.sessions.leave(sessionId),
@@ -386,12 +388,7 @@ export default function SessionRoom() {
         </Surface>
       )}
 
-      <CombatPanel
-        live={live}
-        sessionId={live.id}
-        amGm={amGm}
-        myUserId={myUserId}
-      />
+      <CombatEntryCard live={live} sessionId={live.id} amGm={amGm} />
 
       <SectionDivider>
         {t('session.players')}
