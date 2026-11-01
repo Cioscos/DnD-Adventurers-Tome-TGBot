@@ -55,6 +55,9 @@ it/en dei pulsanti usati (guida, PF, aggiungi oggetto), vanno aggiornati lì.
   consecutivi durante il gesto. A 120 Hz un frame pieno dura circa 8 ms, a 60 Hz
   circa 16 ms.
 - **Scatti**: frame oltre 33 ms, cioè uno scatto visibile. È il numero da far scendere.
+  Durante la misura un pixel quasi invisibile animato (in alto a sinistra) tiene il
+  display al refresh pieno: senza, i display adattivi (es. S22) a schermo statico
+  scendono a circa 24 Hz e ogni pausa conterebbe come scatto.
 - **LoAF**: frame bloccati per più di 50 ms (API `long-animation-frame`). Per i 3
   peggiori il report mostra la quota stile+layout e gli **script responsabili**:
   `invoker` e `sourceURL`. In produzione il bundle è minificato e i nomi non si
