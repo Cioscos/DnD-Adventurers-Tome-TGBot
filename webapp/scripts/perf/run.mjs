@@ -1,10 +1,8 @@
-#!/usr/bin/env node
 import { pathToFileURL, fileURLToPath } from 'node:url'
 import { parseArgs, promisify } from 'node:util'
 import { execFile } from 'node:child_process'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
-import { chromium } from '@playwright/test'
 import { scenarios } from './scenarios.mjs'
 
 const JANK_MS = 33
@@ -126,6 +124,8 @@ const RESULTS_ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), 're
 const APP_URL = /cioscos\.github\.io|localhost|127\.0\.0\.1/
 const CDP_PORT = 9222
 const exec = promisify(execFile)
+// Import pigro: i test (vitest) importano solo le funzioni pure senza caricare Playwright.
+const chromium = async () => (await import('@playwright/test')).chromium
 const adb = async (...args) => (await exec('adb', args)).stdout
 
 async function webviewSockets(serial) {
@@ -145,7 +145,7 @@ async function connectDevice() {
   // Più WebView in debug: si prova dall'ultima (la più recente) finché una ospita la Mini App.
   for (const socket of sockets.reverse()) {
     await adb('-s', serial, 'forward', `tcp:${CDP_PORT}`, `localabstract:${socket}`)
-    const browser = await chromium
+    const browser = await (await chromium())
       .connectOverCDP(`http://127.0.0.1:${CDP_PORT}`, { timeout: 10_000 })
       .catch(() => null)
     // WebView congelata (telefono bloccato / Telegram in background) o morta: prossimo socket.
@@ -162,7 +162,7 @@ async function connectDevice() {
 
 async function launchLocal(url, throttle) {
   if (!url) throw new Error('--mode local richiede --url (es. http://localhost:5173)')
-  const browser = await chromium.launch({ channel: 'chrome' }) // Chrome installato: niente download dei browser Playwright
+  const browser = await (await chromium()).launch({ channel: 'chrome' }) // Chrome installato: niente download dei browser Playwright
   const context = await browser.newContext({
     viewport: { width: 375, height: 667 },
     isMobile: true,
@@ -250,17 +250,18 @@ async function stopTrace(cdp) {
 
 /** Helper passati agli scenari. Solo lettura: niente che modifichi i dati. */
 function makeCtx(page) {
-  let inflight = 0
+  // Set e non contatore: le richieste partite prima dell'aggancio lo manderebbero sotto zero.
+  const inflight = new Set()
   let cachedId = ''
-  page.on('request', () => inflight++)
-  page.on('requestfinished', () => inflight--)
-  page.on('requestfailed', () => inflight--)
+  page.on('request', (r) => inflight.add(r))
+  page.on('requestfinished', (r) => inflight.delete(r))
+  page.on('requestfailed', (r) => inflight.delete(r))
 
   const settle = async (quietMs = 500, maxMs = 5000) => {
     const end = Date.now() + maxMs
     let quietSince = Date.now()
     while (Date.now() < end) {
-      if (inflight > 0) quietSince = Date.now()
+      if (inflight.size > 0) quietSince = Date.now()
       else if (Date.now() - quietSince >= quietMs) return
       await page.waitForTimeout(50)
     }
@@ -364,6 +365,7 @@ async function main() {
   const results = []
   const ctx = makeCtx(page)
   // Id letto PRIMA degli scenari: idle-home naviga in home e l'URL lo perderebbe.
+  await ctx.settle(1000, 15_000) // primo caricamento (dev server + CPU 6x è lento)
   await ctx.charId().catch(() => {})
 
   try {

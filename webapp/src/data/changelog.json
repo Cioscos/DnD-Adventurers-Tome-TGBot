@@ -1,6 +1,22 @@
 {
   "entries": [
     {
+      "version": "2.28.1",
+      "date": "2026-11-01",
+      "title": {
+        "it": "Strumenti per misurare la fluidità",
+        "en": "Tools to measure smoothness"
+      },
+      "improved": {
+        "it": [
+          "Nuovo strumento di sviluppo che misura in automatico la fluidità della Mini App sul telefono, per trovare e correggere gli scatti."
+        ],
+        "en": [
+          "New developer tool that automatically measures how smooth the Mini App runs on a phone, to find and fix stutters."
+        ]
+      }
+    },
+    {
       "version": "2.28.0",
       "date": "2026-11-01",
       "title": {

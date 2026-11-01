@@ -1,6 +1,7 @@
-import { test } from 'node:test'
+import { test } from 'vitest'
 import assert from 'node:assert/strict'
-import { frameStats, summarizeLoaf, pickDevice, renderReport, renderComparison } from './run.mjs'
+// @ts-expect-error — modulo .mjs dell'harness, senza dichiarazioni di tipo
+import { frameStats, summarizeLoaf, pickDevice, renderReport, renderComparison } from '../../../../scripts/perf/run.mjs'
 
 test('frameStats: intervalli fra rAF, scatti > 33 ms', () => {
   const s = frameStats([0, 16, 32, 100])
