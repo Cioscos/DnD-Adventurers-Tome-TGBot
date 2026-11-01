@@ -166,3 +166,19 @@ def test_accepts_bare_data():
         d["character"]["notes"] = sorted(d["character"]["notes"])
         return d
     assert norm(a) == norm(b)
+
+
+def test_shield_keeps_off_hand_when_weapons_listed_first():
+    d = data()
+    inv = d["inventory"]
+    shield = next(i for i in inv if i["definition"]["name"] == "Shield")
+    inv.remove(shield)
+    for i in inv:
+        if i["definition"]["name"] in ("Handaxe", "Warhammer"):
+            i["equipped"] = True
+    inv.append(shield)
+    exp, rep, _ = convert(d)
+    assert exp.character.shield_armor_class == 2
+    assert next(i for i in exp.items if i.name == "Shield").equipment_slot.value == "off_hand"
+    # le armi equipaggiate rimaste senza slot finiscono nel report
+    assert any(e.reason == "ddb.reason.no_free_slot" for e in rep.approximated)

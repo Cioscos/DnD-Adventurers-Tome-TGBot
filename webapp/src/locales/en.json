@@ -4466,6 +4466,7 @@
       "unknown_damage_type": "damage type not recognised",
       "section_failed": "section unreadable, skipped",
       "not_supported": "not supported yet",
+      "no_free_slot": "equipped but no free slot: not shown on the paper doll, fix it by hand",
       "identity_partial": "some identity data was not imported"
     }
   }

@@ -396,7 +396,7 @@ def _items(c: _Ctx) -> None:
     custom_names = {str(v.get("valueId")): _str(v.get("value"), 200)
                     for v in _l(c.data.get("characterValues"))
                     if isinstance(v, dict) and _int(v.get("typeId")) == CV_ITEM_NAME and _str(v.get("value"))}
-    out, taken, attuned = [], set(), [0]
+    out, attuned = [], [0]
     for it in _l(c.data.get("inventory")):
         if not isinstance(it, dict) or not isinstance(it.get("definition"), dict):
             c.skip("items", "", "ddb.reason.invalid")
@@ -414,14 +414,11 @@ def _items(c: _Ctx) -> None:
             item_type, meta = "generic", {}
             c.approx("items", name, "ddb.reason.generic_item")
         equipped = bool(it.get("equipped"))
-        slot = _pick_slot(item_type, name, taken) if equipped else None
-        if slot:
-            taken.add(slot)
         bundle = max(1, _int(d.get("bundleSize"), 1))
         obj = {"name": name, "description": _text(d.get("description")),
                "weight": round(max(0.0, float(d.get("weight") or 0) if isinstance(d.get("weight"), (int, float)) else 0.0) / bundle, 3),
                "quantity": _clamp(_int(it.get("quantity"), 1), 0, 1_000_000), "item_type": item_type,
-               "item_metadata": meta, "is_equipped": equipped, "equipment_slot": slot}
+               "item_metadata": meta, "is_equipped": equipped}
         m = c.model(ExportItem, obj, "items", name)
         if m:
             out.append(m)
@@ -436,6 +433,15 @@ def _items(c: _Ctx) -> None:
         m = c.model(ExportItem, obj, "items", name)
         if m:
             out.append(m)
+    # slot dopo: armatura e scudo hanno la precedenza, altrimenti due armi equipaggiate
+    # elencate prima occupano entrambe le mani e la CA dello scudo va persa
+    taken: set = set()
+    for m in sorted((m for m in out if m.is_equipped), key=lambda m: {"armor": 0, "shield": 1}.get(m.item_type, 2)):
+        m.equipment_slot = _pick_slot(m.item_type, m.name, taken)
+        if m.equipment_slot:
+            taken.add(m.equipment_slot)
+        elif m.item_type in EQUIPMENT_SLOT_COMPAT:
+            c.approx("items", m.name, "ddb.reason.no_free_slot")
     c.out["items"] = out[:500]
     char = c.out["character"]
     armor = next((i for i in out if i.item_type == "armor" and i.equipment_slot == EquipmentSlot.BODY), None)
@@ -592,7 +598,8 @@ def parse_ddb_id(text: str) -> int | None:
     if t.isdigit() and len(t) <= 12:
         return int(t)
     m = _ID_RE.search(t)
-    return int(m.group(1)) if m and "dndbeyond.com" in t.lower() else None
+    # ddb.ac = link breve del tasto Share di DDB
+    return int(m.group(1)) if m and any(h in t.lower() for h in ("dndbeyond.com", "ddb.ac")) else None
 
 
 async def fetch_ddb(char_id: int) -> dict:

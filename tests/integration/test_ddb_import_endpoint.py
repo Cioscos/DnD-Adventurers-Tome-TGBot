@@ -71,6 +71,7 @@ async def test_import_ddb_twice_gets_suffix(client, ddb_ok):
     ("https://www.dndbeyond.com/characters/95893448", 95893448),
     ("dndbeyond.com/characters/95893448/builder?x=1", 95893448),
     ("  95893448 ", 95893448),
+    ("https://ddb.ac/characters/95893448/AbCdEf", 95893448),
     ("https://www.dndbeyond.com/profile/x/characters/123", 123),
     ("ciao", None), ("", None), ("https://example.com/123abc", None),
 ])
