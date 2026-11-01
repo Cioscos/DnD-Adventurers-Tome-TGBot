@@ -1,6 +1,32 @@
 {
   "entries": [
     {
+      "version": "2.28.0",
+      "date": "2026-11-01",
+      "title": {
+        "it": "Compagni da D&D Beyond e altre velocità",
+        "en": "D&D Beyond companions and other speeds"
+      },
+      "added": {
+        "it": [
+          "Nuova sezione «Altre velocità» in Identità: volare, nuotare, scalare e scavare, mostrate accanto ai sensi nella scheda.",
+          "L'import da D&D Beyond porta anche famigli, compagni, cavalcature, evocazioni e forme selvatiche, con statistiche, tratti e attacchi pronti da tirare."
+        ],
+        "en": [
+          "New «Other speeds» section in Identity: fly, swim, climb and burrow, shown next to senses on the sheet.",
+          "D&D Beyond import now brings familiars, companions, mounts, summons and wild shapes too, with stats, traits and ready-to-roll attacks."
+        ]
+      },
+      "improved": {
+        "it": [
+          "L'import da D&D Beyond riporta i sensi (scurovisione e simili) e le velocità diverse da quella a piedi."
+        ],
+        "en": [
+          "D&D Beyond import now carries senses (darkvision and the like) and speeds other than walking."
+        ]
+      }
+    },
+    {
       "version": "2.27.0",
       "date": "2026-11-01",
       "title": {

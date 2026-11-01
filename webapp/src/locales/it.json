@@ -383,6 +383,12 @@
       "unarmored_formula": "CA {{value}}",
       "unarmored_active_hint": "La Base si aggiorna con le caratteristiche; non indossare armatura del corpo."
     },
+    "speeds": {
+      "fly": "Volare",
+      "swim": "Nuotare",
+      "climb": "Scalare",
+      "burrow": "Scavare"
+    },
     "senses": {
       "darkvision": "Scurovisione",
       "blindsight": "Vista cieca",
@@ -790,6 +796,7 @@
       "background": "Background",
       "alignment": "Allineamento",
       "speed": "Velocità",
+      "other_speeds": "Altre velocità",
       "personality": "Tratti caratteriali",
       "ideals": "Ideali",
       "bonds": "Legami",
@@ -4467,6 +4474,8 @@
       "condition_immunity": "immunità a una condizione: l'app non la gestisce, annotala a mano",
       "custom_action": "azione personalizzata: importata come privilegio, con dadi e danno nella descrizione",
       "half_proficiency": "mezza competenza: l'app non la gestisce, l'abilità è importata senza competenza",
+      "creature_group": "creatura di un gruppo che l'app non distingue: importata come compagno generico",
+      "wild_shape_2024": "forma selvatica 2024: nell'app la forma ha punti ferita propri, come nelle regole 2014",
       "section_failed": "sezione non leggibile, saltata",
       "not_supported": "non ancora supportato",
       "no_free_slot": "equipaggiato ma senza slot libero: non compare sul manichino, sistemalo a mano",

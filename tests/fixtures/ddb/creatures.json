@@ -1,0 +1,289 @@
+[
+ {
+  "id": 25970017,
+  "name": null,
+  "description": null,
+  "isActive": false,
+  "removedHitPoints": 0,
+  "temporaryHitPoints": null,
+  "groupId": 2,
+  "definition": {
+   "name": "Cat",
+   "armorClass": 12,
+   "averageHitPoints": 2,
+   "hitPointDice": {
+    "diceCount": 1,
+    "diceValue": 4,
+    "diceMultiplier": null,
+    "fixedValue": 0,
+    "diceString": "1d4"
+   },
+   "movements": [
+    {
+     "movementId": 1,
+     "speed": 40,
+     "notes": null
+    },
+    {
+     "movementId": 3,
+     "speed": 40,
+     "notes": null
+    }
+   ],
+   "stats": [
+    {
+     "statId": 1,
+     "name": null,
+     "value": 3
+    },
+    {
+     "statId": 2,
+     "name": null,
+     "value": 15
+    },
+    {
+     "statId": 3,
+     "name": null,
+     "value": 10
+    },
+    {
+     "statId": 4,
+     "name": null,
+     "value": 3
+    },
+    {
+     "statId": 5,
+     "name": null,
+     "value": 12
+    },
+    {
+     "statId": 6,
+     "name": null,
+     "value": 7
+    }
+   ],
+   "sizeId": 2,
+   "typeId": 2,
+   "challengeRatingId": 1,
+   "specialTraitsDescription": "<p><em><strong>Jumper.</strong></em> The cat's jump distance is determined using its Dexterity rather than its Strength.</p>",
+   "actionsDescription": "<p><em><strong>Scratch.</strong> Melee Attack Roll:</em> +4, reach 5 ft. <em>Hit:</em> 1 Slashing damage.</p>",
+   "bonusActionsDescription": "",
+   "reactionsDescription": "",
+   "slug": ""
+  }
+ },
+ {
+  "id": 25970018,
+  "name": null,
+  "description": null,
+  "isActive": false,
+  "removedHitPoints": 0,
+  "temporaryHitPoints": null,
+  "groupId": 2,
+  "definition": {
+   "name": "Cat",
+   "armorClass": 12,
+   "averageHitPoints": 2,
+   "hitPointDice": {
+    "diceCount": 1,
+    "diceValue": 4,
+    "diceMultiplier": null,
+    "fixedValue": 0,
+    "diceString": "1d4"
+   },
+   "movements": [
+    {
+     "movementId": 1,
+     "speed": 40,
+     "notes": ""
+    },
+    {
+     "movementId": 3,
+     "speed": 30,
+     "notes": ""
+    }
+   ],
+   "stats": [
+    {
+     "statId": 1,
+     "name": null,
+     "value": 3
+    },
+    {
+     "statId": 2,
+     "name": null,
+     "value": 15
+    },
+    {
+     "statId": 3,
+     "name": null,
+     "value": 10
+    },
+    {
+     "statId": 4,
+     "name": null,
+     "value": 3
+    },
+    {
+     "statId": 5,
+     "name": null,
+     "value": 12
+    },
+    {
+     "statId": 6,
+     "name": null,
+     "value": 7
+    }
+   ],
+   "sizeId": 2,
+   "typeId": 2,
+   "challengeRatingId": 1,
+   "specialTraitsDescription": "<p><em><strong>Keen Smell.</strong></em> The cat has advantage on Wisdom (Perception) checks that rely on smell.</p>",
+   "actionsDescription": "<p><em><strong>Claws.</strong> Melee Weapon Attack:</em> +0 to hit, reach 5 ft., one target. <em>Hit:</em> 1 slashing damage.</p>",
+   "bonusActionsDescription": "",
+   "reactionsDescription": "",
+   "slug": ""
+  }
+ },
+ {
+  "id": 25970022,
+  "name": null,
+  "description": null,
+  "isActive": false,
+  "removedHitPoints": 0,
+  "temporaryHitPoints": null,
+  "groupId": 13,
+  "definition": {
+   "name": "Giant Wolf Spider",
+   "armorClass": 13,
+   "averageHitPoints": 11,
+   "hitPointDice": {
+    "diceCount": 2,
+    "diceValue": 8,
+    "diceMultiplier": null,
+    "fixedValue": 2,
+    "diceString": "2d8 + 2"
+   },
+   "movements": [
+    {
+     "movementId": 1,
+     "speed": 40,
+     "notes": ""
+    },
+    {
+     "movementId": 3,
+     "speed": 40,
+     "notes": ""
+    }
+   ],
+   "stats": [
+    {
+     "statId": 1,
+     "name": null,
+     "value": 12
+    },
+    {
+     "statId": 2,
+     "name": null,
+     "value": 16
+    },
+    {
+     "statId": 3,
+     "name": null,
+     "value": 13
+    },
+    {
+     "statId": 4,
+     "name": null,
+     "value": 3
+    },
+    {
+     "statId": 5,
+     "name": null,
+     "value": 12
+    },
+    {
+     "statId": 6,
+     "name": null,
+     "value": 4
+    }
+   ],
+   "sizeId": 4,
+   "typeId": 2,
+   "challengeRatingId": 3,
+   "specialTraitsDescription": "<p><em><strong>Spider Climb.</strong></em> The spider can climb difficult surfaces, including upside down on ceilings, without needing to make an ability check.</p>\n<p><em><strong>Web Sense.</strong></em> While in contact with a web, the spider knows the exact location of any other creature in contact with the same web.</p>\n<p><em><strong>Web Walker.</strong></em> The spider ignores movement restrictions caused by webbing.</p>",
+   "actionsDescription": "<p><em><strong>Bite.</strong> Melee Weapon Attack:</em> +3 to hit, reach 5 ft., one creature. <em>Hit:</em> 4 (1d6 + 1) piercing damage, and the target must make a DC 11 Constitution saving throw, taking 7 (2d6) poison damage on a failed save, or half as much damage on a successful one. If the poison damage reduces the target to 0 hit points, the target is stable but poisoned for 1 hour, even after regaining hit points, and is paralyzed while poisoned in this way.</p>",
+   "bonusActionsDescription": "",
+   "reactionsDescription": "",
+   "slug": ""
+  }
+ },
+ {
+  "id": 25970023,
+  "name": null,
+  "description": null,
+  "isActive": false,
+  "removedHitPoints": 0,
+  "temporaryHitPoints": null,
+  "groupId": 13,
+  "definition": {
+   "name": "Dire Wolf",
+   "armorClass": 14,
+   "averageHitPoints": 22,
+   "hitPointDice": {
+    "diceCount": 3,
+    "diceValue": 10,
+    "diceMultiplier": null,
+    "fixedValue": 6,
+    "diceString": "3d10 + 6"
+   },
+   "movements": [
+    {
+     "movementId": 1,
+     "speed": 50,
+     "notes": null
+    }
+   ],
+   "stats": [
+    {
+     "statId": 1,
+     "name": null,
+     "value": 17
+    },
+    {
+     "statId": 2,
+     "name": null,
+     "value": 15
+    },
+    {
+     "statId": 3,
+     "name": null,
+     "value": 15
+    },
+    {
+     "statId": 4,
+     "name": null,
+     "value": 3
+    },
+    {
+     "statId": 5,
+     "name": null,
+     "value": 12
+    },
+    {
+     "statId": 6,
+     "name": null,
+     "value": 7
+    }
+   ],
+   "sizeId": 5,
+   "typeId": 2,
+   "challengeRatingId": 5,
+   "specialTraitsDescription": "<p><em><strong>Pack Tactics.</strong></em> The wolf has Advantage on an attack roll against a creature if at least one of the wolf’s allies is within 5 feet of the creature and the ally doesn’t have the Incapacitated condition.</p>",
+   "actionsDescription": "<p><em><strong>Bite.</strong> Melee Attack Roll:</em> +5, reach 5 ft. <em>Hit:</em> 8 (1d10 + 3) Piercing damage. If the target is a Large or smaller creature, it has the Prone condition.</p>",
+   "bonusActionsDescription": "",
+   "reactionsDescription": "",
+   "slug": ""
+  }
+ }
+]

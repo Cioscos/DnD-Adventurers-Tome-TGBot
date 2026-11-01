@@ -269,6 +269,12 @@ class SpeciesSense(BaseModel):
     range_ft: int = Field(ge=0, le=1000)
 
 
+class OtherSpeed(BaseModel):
+    """Velocità diverse da quella a piedi (che resta la colonna ``speed``), in settings.speeds."""
+    type: Literal["fly", "swim", "climb", "burrow"]
+    range_ft: int = Field(ge=0, le=1000)
+
+
 class SpeciesApply(BaseModel):
     """Species picked in the creation wizard; applied once by create_character.
 
@@ -325,6 +331,8 @@ class CharacterUpdate(BaseModel):
     def _validate_senses(cls, v: Optional[dict[str, Any]]) -> Optional[dict[str, Any]]:
         if v is not None and "senses" in v:
             TypeAdapter(list[SpeciesSense]).validate_python(v["senses"])
+        if v is not None and "speeds" in v:
+            TypeAdapter(list[OtherSpeed]).validate_python(v["speeds"])
         return v
 
 
