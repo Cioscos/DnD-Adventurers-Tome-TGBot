@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { m } from 'framer-motion'
+import { m, AnimatePresence } from 'framer-motion'
 import { ChevronLeft, RefreshCw, Search, Settings, UserX } from 'lucide-react'
 import { GiSparkles } from 'react-icons/gi'
 import { api, ApiError } from '@/api/client'
@@ -24,6 +24,10 @@ import MenuScreen from '@/pages/character/MenuScreen'
 import { usePageBack } from '@/hooks/useOverlayDismiss'
 import { isConcentrating } from '@/lib/concentration'
 
+// Ultimo PG di cui è stato mostrato l'hub: tornando da una sottopagina dello stesso PG niente animazioni
+// d'ingresso (header e riquadri partivano trasparenti → due frame quasi vuoti, sembrava un flash).
+let lastHubCharId: number | null = null
+
 export default function CharacterMain() {
   const { id } = useParams<{ id: string }>()
   const charId = Number(id)
@@ -32,11 +36,13 @@ export default function CharacterMain() {
   const qc = useQueryClient()
   const setActiveCharId = useCharacterStore((s) => s.setActiveCharId)
   const [searchOpen, setSearchOpen] = useState(false)
+  const [animateIn] = useState(() => lastHubCharId !== Number(id))
   // Back hardware/BackButton di Telegram: dal hub si torna alla lista personaggi.
   usePageBack(() => navigate('/'))
 
   useEffect(() => {
     if (!Number.isNaN(charId)) setActiveCharId(charId)
+    lastHubCharId = charId
   }, [charId, setActiveCharId])
 
   // Stessa politica del guard condiviso nel Layout (audit FE 2026-06-11, #10):
@@ -101,7 +107,10 @@ export default function CharacterMain() {
   }
 
   return (
+    // initial={false}: i motion discendenti partono già nello stato finale (vedi lastHubCharId).
+    <AnimatePresence initial={animateIn}>
     <div
+      key="hub"
       className="w-full flex flex-col"
       style={{ height: 'var(--tg-vh, 100vh)' }}
     >
@@ -208,5 +217,6 @@ export default function CharacterMain() {
 
       <SearchOverlay char={char} open={searchOpen} onClose={() => setSearchOpen(false)} />
     </div>
+    </AnimatePresence>
   )
 }

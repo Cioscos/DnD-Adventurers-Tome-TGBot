@@ -6,7 +6,7 @@ import { renderWithProviders } from '../utils/renderWithProviders'
 import CharacterMain from '@/pages/CharacterMain'
 import { ApiError } from '@/api/client'
 
-const { getChar, updateInspiration, navigateSpy } = vi.hoisted(() => ({ getChar: vi.fn(), updateInspiration: vi.fn(), navigateSpy: vi.fn() }))
+const { getChar, updateInspiration, navigateSpy, presenceInitial } = vi.hoisted(() => ({ getChar: vi.fn(), updateInspiration: vi.fn(), navigateSpy: vi.fn(), presenceInitial: [] as unknown[] }))
 
 vi.mock('@/api/client', () => {
   // Speculare alla classe reale: CharacterMain fa `instanceof ApiError` e
@@ -43,7 +43,7 @@ vi.mock('framer-motion', async () => {
   }
   return {
     m: new Proxy({}, { get: (_t: object, tag: string | symbol) => make(String(tag)) }),
-    AnimatePresence: (p: { children?: unknown }) => React.createElement(React.Fragment, null, p.children),
+    AnimatePresence: (p: { children?: { key?: unknown }; initial?: boolean }) => { if (p.children?.key === "hub") presenceInitial.push(p.initial); return React.createElement(React.Fragment, null, p.children as never) },
     // SearchOverlay monta Sheet, che usa il drag-to-dismiss dal giro r2.
     useDragControls: () => ({ start: () => {} }),
   }
@@ -138,5 +138,19 @@ describe('CharacterMain', () => {
     renderWithProviders(<CharacterMain />, { client: cachedClient() })
     expect(await screen.findByText('layout.char_error.not_found')).toBeInTheDocument()
     expect(screen.queryByText('common.stale_data_from')).not.toBeInTheDocument()
+  })
+})
+
+// Flash tornando sull'hub da una sottopagina: header e riquadri ripartivano trasparenti.
+describe("CharacterMain — ritorno sull'hub", () => {
+  it("rimontando l'hub dello stesso PG disattiva le animazioni d'ingresso", async () => {
+    getChar.mockResolvedValue({ id: 7, name: 'Kael', classes: [], settings: {} })
+    const first = renderWithProviders(<CharacterMain />)
+    await screen.findByTestId('swiper')
+    first.unmount()
+    presenceInitial.length = 0
+    renderWithProviders(<CharacterMain />)
+    await screen.findByTestId('swiper')
+    expect(presenceInitial.at(-1)).toBe(false)
   })
 })
