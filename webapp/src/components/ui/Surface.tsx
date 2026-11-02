@@ -59,9 +59,13 @@ function SurfaceInner({
     : ''
   const cls = `${base} ${variantStyles(variant)} ${interactiveClass} ${className}`
 
-  const content = (
-    <div className={ornamented ? 'relative z-[1] pt-3 px-2 pb-2' : 'contents'}>{children}</div>
-  )
+  // Senza ornamento i figli sono diretti: space-y/divide-y passati in className arrivano a loro
+  // (un wrapper `display: contents` li assorbiva tutti: spaziature a 0).
+  // Con ornamento c'è un wrapper vero: le classi di spaziatura dei figli vanno su di lui.
+  const childSpacing = className.split(/\s+/).filter((c) => /^(space-[xy]-|divide-)/.test(c)).join(' ')
+  const content = ornamented
+    ? <div className={`relative z-[1] pt-3 px-2 pb-2 ${childSpacing}`}>{children}</div>
+    : children
 
   if (asMotion || layoutId) {
     return (

@@ -376,7 +376,8 @@ export default function Conditions() {
             {currentExhaustion}<span className="text-sm text-dnd-text-muted">/6</span>
           </span>
         </div>
-        <div className="flex gap-1.5">
+        {/* 7 livelli in una riga a tutta larghezza: sotto i 412px sono larghi ~35px, ma alti 44 e senza vuoti tra loro. */}
+        <div className="flex gap-1.5" data-layout-ok="scala di spossatezza">
           {[0, 1, 2, 3, 4, 5, 6].map((level) => {
             const displayLevel = pendingExhaustion ?? currentExhaustion
             const isActive = displayLevel === level

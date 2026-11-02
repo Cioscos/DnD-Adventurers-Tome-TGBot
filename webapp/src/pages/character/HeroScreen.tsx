@@ -301,7 +301,7 @@ export default function HeroScreen({ char }: Props) {
         {char.ability_scores.length > 0 && (
           <div className="mt-4 pt-3 border-t border-dnd-gold-dim/30">
             <m.div
-              className="grid grid-cols-6 @max-[300px]:grid-cols-3 gap-1.5 text-center"
+              className="grid grid-cols-6 @max-[300px]:grid-cols-3 gap-0.5 xs:gap-1 text-center"
               initial="initial"
               animate="animate"
               variants={{

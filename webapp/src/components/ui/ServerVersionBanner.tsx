@@ -23,7 +23,7 @@ export default function ServerVersionBanner() {
   return (
     <div
       role="status"
-      className="shrink-0 flex items-center gap-2 border-b border-dnd-amber/40 bg-dnd-amber/10 px-4 py-1.5 text-xs font-body text-dnd-text"
+      className="shrink-0 flex items-center gap-2 border-b border-dnd-amber/40 bg-dnd-amber/10 pl-4 pr-1 py-1 text-xs font-body text-dnd-text"
     >
       <AlertTriangle size={14} className="shrink-0 text-dnd-amber" />
       <span className="min-w-0 flex-1">{t('layout.server_outdated')}</span>
@@ -34,7 +34,7 @@ export default function ServerVersionBanner() {
           sessionStorage.setItem(DISMISS_KEY, '1')
           setDismissed(true)
         }}
-        className="shrink-0 w-11 h-11 -my-2 -mr-3 flex items-center justify-center"
+        className="shrink-0 w-11 h-11 flex items-center justify-center"
       >
         <X size={16} />
       </button>

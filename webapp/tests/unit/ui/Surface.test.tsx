@@ -38,4 +38,16 @@ describe('Surface', () => {
     expect(container.firstChild).not.toBeNull()
     expect(screen.getByText('x')).toBeInTheDocument()
   })
+
+  // Bug visto su telefono (Monete): un wrapper `display: contents` assorbiva space-y → spaziatura 0.
+  it('space-y in className arriva ai figli: diretti senza ornamento, sul wrapper con ornamento', () => {
+    const { container, rerender } = render(<Surface className="space-y-3"><p>a</p><p>b</p></Surface>)
+    const surface = container.firstChild as HTMLElement
+    expect(surface.children).toHaveLength(2)
+    expect(surface).toHaveClass('space-y-3')
+    rerender(<Surface ornamented className="space-y-3 p-6"><p>a</p><p>b</p></Surface>)
+    const wrapper = screen.getByText('a').parentElement as HTMLElement
+    expect(wrapper).toHaveClass('space-y-3')
+    expect(wrapper).not.toHaveClass('p-6')
+  })
 })

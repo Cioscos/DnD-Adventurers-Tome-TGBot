@@ -225,23 +225,26 @@ export default function Currency() {
         </div>
         <div className="mt-2 flex items-center gap-2">
           <Coins size={18} className="shrink-0 text-dnd-gold-bright" />
-          <span className="text-xs font-cinzel uppercase whitespace-nowrap text-dnd-gold-dim">
-            {t('character.currency.total_gold')}
-          </span>
-          <m.span
-            key={totalGold}
-            initial={isFirstValue ? false : { scale: 0.85, opacity: 0.5 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={spring.elastic}
-            className="text-xl font-display font-black tabular-nums text-dnd-gold-bright"
-          >
-            {totalGold}
-          </m.span>
+          {/* Etichetta sopra il numero: in riga col pulsante sforava a 360px con totali a 4+ cifre. */}
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-cinzel uppercase text-dnd-gold-dim truncate">
+              {t('character.currency.total_gold')}
+            </p>
+            <m.p
+              key={totalGold}
+              initial={isFirstValue ? false : { scale: 0.85, opacity: 0.5 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={spring.elastic}
+              className="origin-left text-xl font-display font-black tabular-nums text-dnd-gold-bright truncate"
+            >
+              {totalGold}
+            </m.p>
+          </div>
           {/* Conversione: azione neutra, non magica — secondary (Semantic Triad). */}
           <Button
             variant="secondary"
             size="sm"
-            className="ml-auto shrink-0"
+            className="shrink-0"
             onClick={() => setShowConvert(true)}
             icon={<RefreshCw size={14} />}
           >

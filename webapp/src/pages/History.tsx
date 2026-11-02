@@ -164,7 +164,7 @@ export default function History() {
                       </div>
                       {/* Content */}
                       <div className="flex-1 min-w-0 pt-1">
-                        <p className="text-sm leading-snug font-body text-dnd-text">
+                        <p className="text-sm leading-snug font-body text-dnd-text [overflow-wrap:anywhere]">
                           {entry.description}
                         </p>
                         <p
