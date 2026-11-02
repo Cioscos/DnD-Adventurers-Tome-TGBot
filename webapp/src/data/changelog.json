@@ -1,6 +1,30 @@
 {
   "entries": [
     {
+      "version": "2.28.1",
+      "date": "2026-11-02",
+      "title": {
+        "it": "Animazioni più fluide sul telefono",
+        "en": "Smoother animations on phones"
+      },
+      "improved": {
+        "it": [
+          "Le schede che salgono dal basso (guida «?», punti ferita, aggiungi oggetto e le altre) si aprono senza scatti.",
+          "Lo scorrimento delle pagine con le schede in alto non ha più strappi quando la riga di navigazione si nasconde o ricompare.",
+          "Aprire il dettaglio di un incantesimo o di un oggetto è più leggero, anche con inventari lunghi.",
+          "Nelle schede con un campo da compilare la tastiera compare a scheda aperta, senza rallentarne l'animazione.",
+          "Nuovo strumento di sviluppo che misura in automatico la fluidità dell'app sul telefono."
+        ],
+        "en": [
+          "Bottom sheets (the «?» guide, hit points, add item and the others) open without stutter.",
+          "Scrolling pages with top tabs no longer jerks when the navigation row hides or reappears.",
+          "Opening a spell or item detail is lighter, even with long inventories.",
+          "In sheets with a field to fill in, the keyboard appears once the sheet is open, without slowing its animation.",
+          "New developer tool that automatically measures how smooth the app runs on a phone."
+        ]
+      }
+    },
+    {
       "version": "2.28.0",
       "date": "2026-11-01",
       "title": {
