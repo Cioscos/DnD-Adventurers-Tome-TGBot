@@ -1,10 +1,11 @@
+import type React from 'react'
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { useToast } from '@/hooks/useToast'
 import { m, AnimatePresence } from 'framer-motion'
-import { Plus, Weight, ChevronRight, Pencil, RotateCcw } from 'lucide-react'
+import { Plus, Weight, ChevronRight, Pencil, RotateCcw, FolderPlus, FolderInput, Trash2, ListChecks, Check } from 'lucide-react'
 import { GiKnapsack as Backpack } from 'react-icons/gi'
 import { api, ApiError } from '@/api/client'
 import { useAnimatedRoll } from '@/dice/useAnimatedRoll'
@@ -37,7 +38,9 @@ import { getItemTypeIcon } from '@/lib/itemIcons'
 import { itemGrantedSpells } from '@/lib/itemMagic'
 import type { Item } from '@/types'
 import ContainerCard from '@/pages/inventory/ContainerCard'
-import { containerPath, containerMeta, isContainer } from '@/lib/containers'
+import { containerPath, containerMeta, isContainer, movedWeight, type ContainerFormValue } from '@/lib/containers'
+import MoveSheet from '@/pages/inventory/MoveSheet'
+import ContainerForm from '@/pages/inventory/ContainerForm'
 import InventorySkeleton from '@/components/skeletons/InventorySkeleton'
 
 const COIN_KEYS = ['platinum', 'gold', 'electrum', 'silver', 'copper'] as const
@@ -63,6 +66,11 @@ export default function Inventory() {
   const [showAdd, setShowAdd] = useState(false)
   const [editingItem, setEditingItem] = useState<Item | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<number | null>(null)
+  const [moveTargets, setMoveTargets] = useState<Item[] | null>(null)
+  // Nuovo contenitore: da "+ Contenitore" oppure da "Sposta in…" (poi vi si spostano gli oggetti).
+  const [newBox, setNewBox] = useState<{ thenMove: Item[] | null } | null>(null)
+  const [selecting, setSelecting] = useState(false)
+  const [selected, setSelected] = useState<Set<number>>(new Set())
   const [useTarget, setUseTarget] = useState<Item | null>(null)
   type AttackState = {
     result: WeaponAttackResult
@@ -134,6 +142,7 @@ export default function Inventory() {
         weight: Number(form.weight) || 0,
         description: form.description.trim() || undefined,
         is_equipped: false,
+        container_id: containerId,
         item_metadata: buildItemMetadata(form),
       }),
     onSuccess: (updated) => {
@@ -260,11 +269,52 @@ export default function Inventory() {
     [qc, charId, setPropertyMutation],
   )
 
-  const deleteMutation = useMutation({
-    mutationFn: (itemId: number) => api.items.remove(charId, itemId),
+  const exitSelect = () => { setSelecting(false); setSelected(new Set()) }
+
+  const moveMutation = useMutation({
+    mutationFn: ({ ids, target, quantity }: { ids: number[]; target: number | null; quantity?: number }) =>
+      api.items.move(charId, { item_ids: ids, container_id: target, quantity }),
     onSuccess: (updated) => {
       qc.setQueryData(['character', charId], updated)
+      setMoveTargets(null)
+      exitSelect()
+      const names = updated.unequipped_item_names ?? []
+      if (names.length > 0) toast.info(t('character.inventory.containers.unequipped', { names: names.join(', ') }))
+      haptic.success()
+    },
+    onError: () => toast.error(t('common.action_failed')),
+  })
+
+  const addBoxMutation = useMutation({
+    mutationFn: async ({ name, weight, container, thenMove }: { name: string; weight: number; container: ContainerFormValue; thenMove: Item[] | null }) => {
+      const before = new Set((qc.getQueryData<typeof char>(['character', charId])?.items ?? []).map((i) => i.id))
+      const created = await api.items.add(charId, {
+        name, item_type: 'gear', quantity: 1, weight, is_equipped: false, container_id: containerId,
+        item_metadata: { container },
+      })
+      if (!thenMove) return created
+      const box = (created.items ?? []).filter((i) => !before.has(i.id) && isContainer(i)).sort((a, b) => b.id - a.id)[0]
+      return box ? api.items.move(charId, { item_ids: thenMove.map((i) => i.id), container_id: box.id }) : created
+    },
+    onSuccess: (updated) => {
+      qc.setQueryData(['character', charId], updated)
+      setNewBox(null)
+      setMoveTargets(null)
+      exitSelect()
+      haptic.success()
+    },
+    onError: () => toast.error(t('common.action_failed')),
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: (itemId: number) => api.items.remove(charId, itemId),
+    onSuccess: (updated, itemId) => {
+      qc.setQueryData(['character', charId], updated)
       setDeleteTarget(null)
+      if (itemId === containerId) {
+        const parent = path.at(-2)
+        navigate(parent ? `/char/${charId}/inventory/c/${parent.id}` : `/char/${charId}/inventory`, { replace: true })
+      }
       haptic.success()
     },
   })
@@ -472,6 +522,51 @@ export default function Inventory() {
   }
   const orderedTypes = TYPE_ORDER.filter((t) => grouped[t]?.length)
 
+  const pc = 'character.inventory.containers.'
+  const toggleSelected = (id: number) =>
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  // In modalità selezione un velo trasparente sopra la riga cattura il tocco.
+  const selectable = (id: number, node: React.ReactNode) =>
+    !selecting ? node : (
+      <div className="relative">
+        {node}
+        <Pressable
+          onClick={() => toggleSelected(id)}
+          aria-label={items.find((i) => i.id === id)?.name}
+          className={`absolute inset-0 z-10 rounded-xl border-2 flex items-start justify-end p-2 ${selected.has(id) ? 'border-dnd-gold bg-dnd-gold/10' : 'border-transparent'}`}
+        >
+          {selected.has(id) && <Check size={16} className="text-dnd-gold-bright" />}
+        </Pressable>
+      </div>
+    )
+
+  // Cosa succede ai figli se si elimina il contenitore: finiscono nel padre (o fuori).
+  const deleting = items.find((i) => i.id === deleteTarget)
+  const deleteBody = (() => {
+    if (!deleting || !isContainer(deleting)) return t('character.select.delete_confirm', { name: deleting?.name ?? '' })
+    const kids = items.filter((i) => i.container_id === deleting.id)
+    const parent = items.find((i) => i.id === deleting.container_id)
+    const pm = parent ? containerMeta(parent) : null
+    const after = (parent?.container_stats?.contents_weight ?? 0) - movedWeight(deleting) + kids.reduce((w, k) => w + movedWeight(k), 0)
+    const over = pm?.capacity_lb != null && after > pm.capacity_lb
+    return (
+      <>
+        <p>{t('character.select.delete_confirm', { name: deleting.name })}</p>
+        <p className="mt-2">{t(pc + 'delete_moves', { count: kids.length, dest: parent?.name ?? t(pc + 'outside_dest') })}</p>
+        {over && pm && (
+          <p className="mt-2 text-dnd-crimson-bright">
+            {t(pc + 'delete_over', { used: formatWeightValue(after, system), cap: formatWeight(pm.capacity_lb!, system) })}
+          </p>
+        )}
+      </>
+    )
+  })()
+
   return (
     <Layout title={t('character.inventory.title')} backTo={`/char/${charId}`} group="equipment" page="inventory">
       {/* Add button — barra sticky che si comprime in pill flottante su scroll.
@@ -501,12 +596,38 @@ export default function Inventory() {
         </>
       )}
 
+      <div className="flex gap-2 mb-2">
+        {selecting ? (
+          <>
+            <Button variant="secondary" size="sm" fullWidth onClick={exitSelect}>{t('common.cancel')}</Button>
+            <Button
+              variant="primary" size="sm" fullWidth icon={<FolderInput size={14} />}
+              disabled={selected.size === 0}
+              onClick={() => setMoveTargets(items.filter((i) => selected.has(i.id)))}
+            >
+              {t(pc + 'move')} ({selected.size})
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button variant="secondary" size="sm" fullWidth icon={<FolderPlus size={14} />} onClick={() => setNewBox({ thenMove: null })}>
+              {t(pc + 'new')}
+            </Button>
+            {levelItems.length > 0 && (
+              <Button variant="secondary" size="sm" fullWidth icon={<ListChecks size={14} />} onClick={() => setSelecting(true)}>
+                {t(pc + 'select')}
+              </Button>
+            )}
+          </>
+        )}
+      </div>
+
       {current && (
         <Surface variant="elevated" className="!py-2">
           <nav aria-label="breadcrumb" className="flex flex-wrap items-center gap-1 text-xs font-cinzel text-dnd-gold-dim">
             <Pressable
               onClick={() => navigate(`/char/${charId}/inventory`)}
-              className="min-h-[44px] px-1 flex items-center"
+              className="min-h-[44px] min-w-[44px] px-1 flex items-center justify-center"
             >
               {t('character.inventory.containers.root')}
             </Pressable>
@@ -518,7 +639,7 @@ export default function Inventory() {
                 ) : (
                   <Pressable
                     onClick={() => navigate(`/char/${charId}/inventory/c/${c.id}`)}
-                    className="min-h-[44px] px-1 flex items-center"
+                    className="min-h-[44px] min-w-[44px] px-1 flex items-center justify-center"
                   >
                     {c.name}
                   </Pressable>
@@ -545,6 +666,18 @@ export default function Inventory() {
                 .map((k) => `${currentMeta!.coins[k]} ${COIN_ABBR[k]}`).join(' · ')}
             </p>
           )}
+          <div className="flex justify-end gap-1 mt-1">
+            {([
+              [t(pc + 'move'), FolderInput, () => setMoveTargets([current])],
+              [t('common.edit'), Pencil, () => handleEdit(current)],
+              [t('common.delete'), Trash2, () => setDeleteTarget(current.id)],
+            ] as const).map(([label, Icon, run]) => (
+              <Pressable key={label} title={label} aria-label={label} onClick={run}
+                className="min-h-[44px] min-w-[44px] flex items-center justify-center text-dnd-gold-dim active:opacity-70">
+                <Icon size={16} />
+              </Pressable>
+            ))}
+          </div>
         </Surface>
       )}
 
@@ -656,6 +789,10 @@ export default function Inventory() {
         />
       )}
 
+      {current && levelItems.length === 0 && (
+        <EmptyState icon={<Backpack size={32} />} title={t(pc + 'empty')} />
+      )}
+
       {!current && <AttunementSection charId={charId} items={items} />}
 
       {childBoxes.length > 0 && (
@@ -664,7 +801,7 @@ export default function Inventory() {
             {t('character.inventory.containers.section')}
           </p>
           {childBoxes.map((b) => (
-            <ContainerCard key={b.id} item={b} onOpen={() => navigate(`/char/${charId}/inventory/c/${b.id}`)} />
+            <div key={b.id}>{selectable(b.id, <ContainerCard item={b} onOpen={() => navigate(`/char/${charId}/inventory/c/${b.id}`)} />)}</div>
           ))}
         </section>
       )}
@@ -713,7 +850,7 @@ export default function Inventory() {
                           ref={(el) => { itemRefs.current[item.id] = el }}
                           className={highlightId === item.id ? 'animate-pulse-glow' : undefined}
                         >
-                          <InventoryItem
+                          {selectable(item.id, <InventoryItem
                             item={item}
                             isExpanded={expanded === item.id}
                             onToggle={() => setExpanded(expanded === item.id ? null : item.id)}
@@ -739,7 +876,8 @@ export default function Inventory() {
                             onCastSpell={(i) => itemCast.mutate({ itemId: item.id, spellIndex: i, name: itemGrantedSpells(item)[i]?.name ?? '' })}
                             chargesPending={chargesMutation.isPending && chargesMutation.variables?.itemId === item.id}
                             castPending={itemCast.isPending && itemCast.variables?.itemId === item.id}
-                          />
+                            onMove={() => setMoveTargets([item])}
+                          />)}
                         </div>
                       ))}
                     </div>
@@ -757,6 +895,26 @@ export default function Inventory() {
           onSubmit={handleFormSubmit}
           onCancel={handleFormCancel}
           isPending={addMutation.isPending || updateMutation.isPending}
+        />
+      )}
+
+      {newBox && (
+        <ContainerForm
+          onSubmit={(v) => addBoxMutation.mutate({ ...v, thenMove: newBox.thenMove })}
+          onCancel={() => setNewBox(null)}
+          isPending={addBoxMutation.isPending}
+        />
+      )}
+
+      {moveTargets && !newBox && (
+        <MoveSheet
+          items={items}
+          moving={moveTargets}
+          currentId={moveTargets.every((i) => (i.container_id ?? null) === (moveTargets[0].container_id ?? null)) ? (moveTargets[0].container_id ?? null) : -1}
+          onMove={(target, quantity) => moveMutation.mutate({ ids: moveTargets.map((i) => i.id), target, quantity })}
+          onNewContainer={() => setNewBox({ thenMove: moveTargets })}
+          onClose={() => setMoveTargets(null)}
+          pending={moveMutation.isPending}
         />
       )}
 
@@ -779,9 +937,7 @@ export default function Inventory() {
         onClose={() => setDeleteTarget(null)}
         onConfirm={() => deleteTarget !== null && deleteMutation.mutate(deleteTarget)}
         title={t('common.confirm')}
-        body={t('character.select.delete_confirm', {
-          name: items.find((i) => i.id === deleteTarget)?.name ?? '',
-        })}
+        body={deleteBody}
         confirmLabel={t('common.delete')}
         loading={deleteMutation.isPending}
       />

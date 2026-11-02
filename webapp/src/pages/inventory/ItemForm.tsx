@@ -29,6 +29,8 @@ import {
   itemToFormData,
   type ItemFormData,
 } from './itemMetadata'
+import { ContainerFields } from './ContainerForm'
+import { defaultContainer, type ContainerFormValue } from '@/lib/containers'
 import type { Item } from '@/types'
 import { useUnitSettings, lbToDisplay, displayToLb, weightUnitLabel, formatWeight, oppositeSystem } from '@/store/unitSettings'
 
@@ -86,7 +88,13 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
     setPicker(null)
   }
 
-  const hidesQuantity = hasSingleQuantity(form.item_type)
+  const containerVal = form.extra_meta.container as ContainerFormValue | undefined
+  const setContainerVal = (c: ContainerFormValue | undefined) =>
+    setForm((f) => {
+      const { container: _drop, ...rest } = f.extra_meta
+      return { ...f, extra_meta: c ? { ...rest, container: c } : rest }
+    })
+  const hidesQuantity = hasSingleQuantity(form.item_type) || !!containerVal
 
   const canAdvanceFromType = form.name.trim().length > 0
 
@@ -190,6 +198,14 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
             ≈ {formatWeight(displayToLb(Number(form.weight) || 0, system), oppositeSystem(system))}
           </p>
         )}
+
+        <SwitchToggle
+          checked={!!containerVal}
+          onChange={(v) => setContainerVal(v ? defaultContainer : undefined)}
+          label={t('character.inventory.containers.is_container')}
+          aria-label={t('character.inventory.containers.is_container')}
+        />
+        {containerVal && <ContainerFields value={containerVal} onChange={setContainerVal} />}
 
         {/* Description */}
         <Input

@@ -32,3 +32,21 @@ export function containerTree(items: Item[]): { item: Item; depth: number }[] {
   visit(null, 0)
   return out
 }
+
+/** Peso che l'oggetto porta nel contenitore che lo ospita (con `quantity` opzionale per spostamenti parziali). */
+export function movedWeight(item: Item, quantity: number = item.quantity): number {
+  const inside = containerMeta(item)?.counts_weight ? (item.container_stats?.contents_weight ?? 0) : 0
+  return item.weight * quantity + inside
+}
+
+export type ContainerFormValue = Omit<ContainerMeta, 'coins'> & Partial<Pick<ContainerMeta, 'coins'>>
+
+export const PRESETS = [
+  { key: 'backpack', capacity_lb: 30, weight: 5, quick_access: false },
+  { key: 'sack', capacity_lb: 30, weight: 0.5, quick_access: false },
+  { key: 'pouch', capacity_lb: 6, weight: 1, quick_access: false },
+  { key: 'quiver', capacity_lb: null, weight: 1, quick_access: true },
+  { key: 'chest', capacity_lb: 300, weight: 25, quick_access: false },
+] as const
+
+export const defaultContainer: ContainerFormValue = { capacity_lb: null, counts_weight: true, quick_access: false }
