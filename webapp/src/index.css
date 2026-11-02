@@ -411,9 +411,6 @@ body::after {
 .ornament-line::before { left: 0; }
 .ornament-line::after  { right: 0; }
 
-/* Il browser salta il disegno delle card fuori schermo; "auto" ricorda l'altezza reale già vista. */
-.cv-auto { content-visibility: auto; contain-intrinsic-size: auto 72px; }
-
 /* Surface grain overlay for elevated cards */
 .surface-parchment {
   position: relative;

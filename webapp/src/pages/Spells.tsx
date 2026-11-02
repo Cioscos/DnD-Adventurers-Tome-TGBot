@@ -535,7 +535,6 @@ export default function Spells() {
                       {byLevel[level].map((spell) => (
                         <div
                           key={spell.id}
-                          className="cv-auto"
                           ref={(el) => {
                             if (el) spellRefs.current.set(spell.id, el)
                             else spellRefs.current.delete(spell.id)

@@ -619,7 +619,7 @@ export default function Inventory() {
                         <div
                           key={item.id}
                           ref={(el) => { itemRefs.current[item.id] = el }}
-                          className={highlightId === item.id ? 'cv-auto animate-pulse-glow' : 'cv-auto'}
+                          className={highlightId === item.id ? 'animate-pulse-glow' : undefined}
                         >
                           <InventoryItem
                             item={item}
