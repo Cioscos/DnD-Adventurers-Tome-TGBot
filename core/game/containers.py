@@ -159,3 +159,16 @@ def allocate(purse: dict, items, coin: str, delta: int) -> list[tuple[int | None
     if need > 0:
         raise ValueError("insufficient_funds")
     return out
+
+
+def trade_snapshot(items, root_id: int, quantity: int) -> dict:
+    """Name/quantity/coins tree of `root_id` (children in inventory order), for trade records."""
+    idx = children_index(items)
+    by_id = {i.id: i for i in items}
+
+    def node(item, qty) -> dict:
+        coins = {c: n for c, n in container_coins(item).items() if n > 0} if is_container(item) else {}
+        return {"name": item.name, "quantity": qty, "coins": coins or None,
+                "children": [node(c, c.quantity) for c in idx.get(item.id, [])]}
+
+    return node(by_id[root_id], quantity)
