@@ -5,20 +5,24 @@
       "date": "2026-11-02",
       "improved": {
         "it": [
-          "La finestra rapida Danno/Cura si apre fluida: la tastiera compare quando tocchi il campo dell'importo, non più da sola.",
+          "La finestra rapida Danno/Cura si apre fluida: su telefono la tastiera compare quando tocchi il campo dell'importo, non più da sola.",
           "Intestazioni dei gruppi di Incantesimi, Inventario e Abilità più leggere da disegnare durante lo scroll."
         ],
         "en": [
-          "The quick Damage/Heal sheet opens smoothly: the keyboard appears when you tap the amount field, no longer on its own.",
+          "The quick Damage/Heal sheet opens smoothly: on phones the keyboard appears when you tap the amount field, no longer on its own.",
           "Spells, Inventory and Skills group headers are lighter to draw while scrolling."
         ]
       },
       "fixed": {
         "it": [
-          "Nei pannelli dal basso il campo in cui scrivi resta visibile sopra la tastiera, invece di finirci sotto."
+          "Nei pannelli dal basso e nelle finestre il campo in cui scrivi resta visibile sopra la tastiera, invece di finirci sotto.",
+          "Tornando alla scheda del personaggio da una sottopagina lo schermo non lampeggia più (vuoto, poi Hero, poi la schermata giusta).",
+          "L'inventario scorre fino all'oggetto evidenziato quando ci arrivi dal feed della sessione."
         ],
         "en": [
-          "In bottom sheets the field you are typing in stays visible above the keyboard instead of ending up underneath it."
+          "In bottom sheets and dialogs the field you are typing in stays visible above the keyboard instead of ending up underneath it.",
+          "Going back to the character sheet from a subpage no longer flashes the screen (blank, then Hero, then the right screen).",
+          "The inventory scrolls to the highlighted item when you arrive from the session feed."
         ]
       }
     },
