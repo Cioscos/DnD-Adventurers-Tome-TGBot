@@ -937,15 +937,26 @@
       "convert_preview": "{{amount}} {{source}} = {{result}} {{target}}",
       "total_gold": "Totale in oro",
       "mode_set": "Imposta",
-      "mode_add": "Aggiungi / Rimuovi",
       "convert_from": "Da",
       "convert_to": "A",
       "convert_amount": "Quantità",
       "swap": "Scambia",
-      "current_value": "attuale: {{n}}",
-      "remove_preview": "Rimuoverai {{amount}} {{coin}}",
       "show_electrum_label": "Mostra Electrum",
-      "show_electrum_hint": "Mostra le monete d'electrum (EP). Sono usate raramente in 5e."
+      "show_electrum_hint": "Mostra le monete d'electrum (EP). Sono usate raramente in 5e.",
+      "spend": "Spendi",
+      "receive": "Ricevi",
+      "undo": "Annulla",
+      "backspace": "Cancella cifra",
+      "spent_toast": "−{{n}} {{coin}}",
+      "received_toast": "+{{n}} {{coin}}",
+      "set_toast": "{{coin}}: {{n}}",
+      "you_have": "Hai {{n}} {{coin}}",
+      "not_enough": "Hai solo {{n}} {{coin}}: converti o cambia moneta",
+      "set_title": "{{coin}}: valore esatto",
+      "set_label": "Quantità",
+      "save_error": "Monete non salvate, riprova",
+      "convert_rest": "(+ {{n}} rame di resto)",
+      "convert_error": "Conversione non riuscita: monete insufficienti?"
     },
     "xp": {
       "title": "Esperienza",
@@ -2673,50 +2684,41 @@
       ]
     },
     "currency": {
-      "summary": "Questa pagina mostra le monete del personaggio e il loro valore totale in oro. Da qui aggiungi, togli e converti le monete.",
+      "summary": "Questa pagina mostra la borsa del personaggio e il valore totale in oro. Da qui spendi, ricevi, imposti e converti le monete.",
       "sections": [
         {
-          "title": "Leggere le monete",
+          "title": "La borsa",
           "items": [
-            "Il riquadro \"Totale in oro\" mostra il valore di tutte le monete in monete d'oro.",
-            "Ogni riga mostra una moneta: Platino (PP), Oro (GP), Electrum (EP), Argento (SP) e Rame (CP).",
-            "Sotto il nome della moneta, \"attuale\" mostra la quantità attuale.",
+            "In alto vedi quante monete hai: Platino (PP), Oro (GP), Electrum (EP), Argento (SP) e Rame (CP).",
+            "\"Totale in oro\" mostra il valore di tutte le monete in monete d'oro.",
             "Valori: 1 PP vale 10 GP. 1 GP vale 2 EP, 10 SP o 100 CP.",
             "Per mostrare o nascondere l'Electrum, usa \"Mostra Electrum\" nelle impostazioni."
           ]
         },
         {
-          "title": "Aggiungere o togliere monete",
+          "title": "Spendere o ricevere",
           "items": [
-            "Tocca \"Aggiungi / Rimuovi\".",
-            "Scrivi nel campo della moneta la quantità da aggiungere.",
-            "Per togliere monete, scrivi un numero negativo, per esempio -5.",
-            "Il totale in oro mostra subito il risultato.",
-            "Tocca \"Salva\" per confermare.",
-            "Una moneta non scende mai sotto 0."
+            "Scegli la moneta con i pulsanti PP, GP, EP, SP o CP.",
+            "Scrivi l'importo col tastierino. Il tasto con la freccia cancella l'ultima cifra.",
+            "Tocca \"Spendi\" per togliere le monete o \"Ricevi\" per aggiungerle. La modifica si salva subito.",
+            "Se sbagli, tocca \"Annulla\" nell'avviso che compare in alto.",
+            "Se non hai abbastanza monete di quel tipo, \"Spendi\" resta disattivato.",
+            "Per una cifra mista, per esempio 5 GP e 3 SP, fai due operazioni: una per l'oro e una per l'argento.",
+            "Dopo un'operazione l'importo resta scritto: puoi cambiare moneta e ripetere, oppure scrivere una nuova cifra."
           ]
         },
         {
-          "title": "Impostare una quantità",
+          "title": "Impostare una quantità esatta",
           "items": [
-            "Tocca \"Imposta\".",
-            "Scrivi nel campo della moneta la nuova quantità. Il campo vuoto mostra in grigio il valore attuale.",
-            "Un campo vuoto non cambia la moneta.",
-            "Tocca \"Salva\" per confermare.",
-            "Quando cambi modalità, l'app svuota i campi."
-          ]
-        },
-        {
-          "title": "Modifiche non salvate",
-          "items": [
-            "Quando scrivi in un campo, in alto appare la barra \"Modifiche non salvate\".",
-            "Tocca \"Salva ora\" per salvare le modifiche."
+            "Tocca una moneta nella borsa.",
+            "Scrivi la nuova quantità. Il campo vuoto mostra in grigio il valore attuale.",
+            "Tocca \"Salva\". Anche questa modifica si può annullare dall'avviso."
           ]
         },
         {
           "title": "Convertire le monete",
           "items": [
-            "Tocca \"Converti\".",
+            "Tocca \"Converti\" nella borsa.",
             "In \"Da\", scegli la moneta di partenza. In \"A\", scegli la moneta di arrivo.",
             "Per scambiare le due monete, tocca il pulsante con le frecce.",
             "Scrivi la quantità da convertire in \"Quantità\". L'app mostra il risultato della conversione.",
