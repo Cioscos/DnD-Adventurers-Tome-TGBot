@@ -19,6 +19,7 @@ import type {
 import type {
   Ability,
   CharacterFull,
+  TradeRequest,
   DdbImportResult,
   ResolveChoiceBody,
   CharacterSummary,
@@ -986,6 +987,11 @@ export const api = {
         `/sessions/${encodeURIComponent(code)}/feed${q ? `?${q}` : ''}`
       )
     },
+    trade: (sessionId: number, body: TradeRequest) =>
+      request<CharacterFull>(`/sessions/${sessionId}/trade`, {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
     grantItem: (
       sessionId: number,
       payload: { recipient_user_ids: number[]; item: GrantItemPayload },

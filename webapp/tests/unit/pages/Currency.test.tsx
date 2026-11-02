@@ -4,7 +4,9 @@ import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from '../utils/renderWithProviders'
 import Currency from '@/pages/Currency'
 
-const { getChar, adjustSpy, moveSpy, convertSpy, undoSpy } = vi.hoisted(() => ({
+const { getChar, adjustSpy, moveSpy, convertSpy, undoSpy, tradeSpy, partnersSpy } = vi.hoisted(() => ({
+  tradeSpy: vi.fn(),
+  partnersSpy: vi.fn(),
   getChar: vi.fn(),
   adjustSpy: vi.fn(),
   moveSpy: vi.fn(),
@@ -12,12 +14,14 @@ const { getChar, adjustSpy, moveSpy, convertSpy, undoSpy } = vi.hoisted(() => ({
   undoSpy: vi.fn(),
 }))
 
+vi.mock('@/hooks/useTradePartners', () => ({ useTradePartners: partnersSpy }))
 vi.mock('@/components/ui/UndoToast', () => ({ showUndoToast: undoSpy }))
 
 vi.mock('@/api/client', () => ({
   api: {
     characters: { get: getChar },
     currency: { adjust: adjustSpy, move: moveSpy, convert: convertSpy },
+    sessions: { trade: tradeSpy },
   },
 }))
 
@@ -103,6 +107,8 @@ afterEach(() => {
   adjustSpy.mockReset()
   moveSpy.mockReset()
   convertSpy.mockReset()
+  tradeSpy.mockReset()
+  partnersSpy.mockReturnValue(null)
   undoSpy.mockReset()
 })
 
@@ -319,5 +325,32 @@ describe('Currency page — totale + transazione', () => {
     await userEvent.click(within(sheet).getByRole('button', { name: 'character.currency.convert' }))
     await waitFor(() => expect(convertSpy).toHaveBeenCalledWith(5, 'gold', 'silver', 2))
     await waitFor(() => expect(getChar.mock.calls.length).toBeGreaterThan(calls))
+  })
+})
+
+describe('Currency page — Dai a…', () => {
+  const trade = { sessionId: 9, partners: [{ user_id: 2, role: 'player', character_id: 20, display_name: 'Aldo', joined_at: '' }] }
+
+  it('senza compagni il pulsante non compare', async () => {
+    await loaded()
+    expect(screen.queryByRole('button', { name: 'character.inventory.give.action' })).toBeNull()
+  })
+
+  it('apre il foglio, limita al totale e conferma solo le monete > 0', async () => {
+    partnersSpy.mockReturnValue(trade)
+    tradeSpy.mockResolvedValue({ id: 5, coin_totals: {} })
+    await loaded()
+    await userEvent.click(screen.getByRole('button', { name: 'character.inventory.give.action' }))
+    const sheet = screen.getByTestId('sheet')
+    const inputs = within(sheet).getAllByPlaceholderText('0')
+    const confirm = within(sheet).getByRole('button', { name: 'character.inventory.give.confirm' })
+    await userEvent.click(within(sheet).getByRole('button', { name: /Aldo/ }))
+    // oro è la seconda moneta (platinum, gold, ...); totale posseduto 10
+    fireEvent.change(inputs[1], { target: { value: '11' } })
+    expect(confirm).toBeDisabled()
+    fireEvent.change(inputs[1], { target: { value: '10' } })
+    expect(confirm).toBeEnabled()
+    await userEvent.click(confirm)
+    await waitFor(() => expect(tradeSpy).toHaveBeenCalledWith(9, { from_character_id: 5, to_user_id: 2, coins: { gold: 10 } }))
   })
 })

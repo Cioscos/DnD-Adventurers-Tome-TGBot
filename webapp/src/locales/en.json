@@ -1070,6 +1070,22 @@
       "quantity_decrease": "Decrease quantity",
       "quantity_increase": "Increase quantity",
       "carry": "{{enc}} / {{cap}} lb",
+      "give": {
+        "action": "Give to…",
+        "title": "Give to…",
+        "to": "To",
+        "confirm": "Confirm",
+        "summary_one": "{{count}} item inside",
+        "summary_other": "{{count}} items inside",
+        "errors": {
+          "insufficient_funds": "Not enough coins",
+          "invalid_recipient": "Invalid recipient",
+          "nothing_to_give": "Nothing to give",
+          "invalid_quantity": "Invalid quantity",
+          "not_your_character": "Not your character",
+          "closed": "The session is closed"
+        }
+      },
       "containers": {
         "root": "Inventory",
         "section": "Containers",

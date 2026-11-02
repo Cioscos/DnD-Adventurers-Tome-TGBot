@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { useToast } from '@/hooks/useToast'
 import { m, AnimatePresence } from 'framer-motion'
-import { Plus, Weight, ChevronRight, Pencil, RotateCcw, FolderPlus, FolderInput, Trash2, ListChecks, Check } from 'lucide-react'
+import { Plus, Weight, ChevronRight, Pencil, RotateCcw, FolderPlus, FolderInput, HandHeart, Trash2, ListChecks, Check } from 'lucide-react'
 import { GiKnapsack as Backpack } from 'react-icons/gi'
 import { api, ApiError } from '@/api/client'
 import { useAnimatedRoll } from '@/dice/useAnimatedRoll'
@@ -41,6 +41,8 @@ import ContainerCard from '@/pages/inventory/ContainerCard'
 import CoinMoveSheet from '@/pages/currency/CoinMoveSheet'
 import { containerPath, containerMeta, isContainer, movedWeight, newBoxParent, type ContainerFormValue } from '@/lib/containers'
 import MoveSheet from '@/pages/inventory/MoveSheet'
+import GiveSheet from '@/pages/inventory/GiveSheet'
+import { useTradePartners } from '@/hooks/useTradePartners'
 import ContainerForm from '@/pages/inventory/ContainerForm'
 import InventorySkeleton from '@/components/skeletons/InventorySkeleton'
 
@@ -68,6 +70,8 @@ export default function Inventory() {
   const [editingItem, setEditingItem] = useState<Item | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<number | null>(null)
   const [moveTargets, setMoveTargets] = useState<Item[] | null>(null)
+  const [giveTarget, setGiveTarget] = useState<Item | null>(null)
+  const trade = useTradePartners(charId)
   const [coinMove, setCoinMove] = useState<{ coin: CoinKey; from: number } | null>(null)
   // Nuovo contenitore: da "+ Contenitore" oppure da "Sposta in…" (poi vi si spostano gli oggetti).
   const [newBox, setNewBox] = useState<{ thenMove: Item[] | null } | null>(null)
@@ -689,9 +693,10 @@ export default function Inventory() {
             </Button>
           )}
           {/* Etichette visibili: sul telefono non esiste il tooltip (DESIGN.md, Buttons). */}
-          <div className="grid grid-cols-3 gap-2 mt-2">
+          <div className={`grid ${trade ? 'grid-cols-2' : 'grid-cols-3'} gap-2 mt-2`}>
             {([
               [t(pc + 'move_short'), FolderInput, () => setMoveTargets([current]), 'secondary'],
+              ...(trade ? [[t('character.inventory.give.action'), HandHeart, () => setGiveTarget(current), 'secondary'] as const] : []),
               [t('common.edit'), Pencil, () => handleEdit(current), 'secondary'],
               [t('common.delete'), Trash2, () => setDeleteTarget(current.id), 'danger'],
             ] as const).map(([label, Icon, run, variant]) => (
@@ -899,6 +904,7 @@ export default function Inventory() {
                             chargesPending={chargesMutation.isPending && chargesMutation.variables?.itemId === item.id}
                             castPending={itemCast.isPending && itemCast.variables?.itemId === item.id}
                             onMove={() => setMoveTargets([item])}
+                            onGive={trade ? () => setGiveTarget(item) : undefined}
                           />)}
                         </div>
                       ))}
@@ -926,6 +932,10 @@ export default function Inventory() {
           onCancel={() => setNewBox(null)}
           isPending={addBoxMutation.isPending}
         />
+      )}
+
+      {giveTarget && trade && (
+        <GiveSheet charId={charId} sessionId={trade.sessionId} partners={trade.partners} item={giveTarget} items={items} onClose={() => setGiveTarget(null)} />
       )}
 
       {coinMove && (

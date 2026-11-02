@@ -1,10 +1,12 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { screen } from '@testing-library/react'
 import { Route, Routes } from 'react-router-dom'
 import { renderWithProviders } from '../../utils/renderWithProviders'
 import Inventory from '@/pages/Inventory'
 
-const { getChar } = vi.hoisted(() => ({ getChar: vi.fn() }))
+const { getChar, partners } = vi.hoisted(() => ({ getChar: vi.fn(), partners: vi.fn() }))
+vi.mock('@/hooks/useTradePartners', () => ({ useTradePartners: partners }))
+vi.mock('@/pages/inventory/GiveSheet', () => ({ default: () => null }))
 
 vi.mock('@/api/client', () => ({
   api: {
@@ -23,7 +25,10 @@ vi.mock('@/components/Layout', async () => {
 })
 vi.mock('@/pages/inventory/InventoryItem', async () => {
   const React = await import('react')
-  return { default: (p: { item: { name: string } }) => React.createElement('div', { 'data-testid': 'item' }, p.item.name) }
+  return {
+    default: (p: { item: { name: string }; onGive?: () => void }) =>
+      React.createElement('div', { 'data-testid': 'item' }, p.item.name, p.onGive && React.createElement('button', { onClick: p.onGive }, 'give-item')),
+  }
 })
 vi.mock('@/pages/inventory/AttunementSection', async () => {
   const React = await import('react')
@@ -62,7 +67,30 @@ function renderAt(route: string) {
   )
 }
 
+const trade = { sessionId: 9, partners: [{ user_id: 2, role: 'player', character_id: 20, display_name: 'Aldo', joined_at: '' }] }
+
+describe('Inventory: Dai a…', () => {
+  it('senza compagni il pulsante non compare (oggetto e contenitore)', async () => {
+    partners.mockReturnValue(null)
+    getChar.mockResolvedValue(char)
+    renderAt('/char/5/inventory/c/1')
+    await screen.findByText('Corda')
+    expect(screen.queryByText('give-item')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'character.inventory.give.action' })).toBeNull()
+  })
+
+  it('con compagni compare sull oggetto e nell header del contenitore', async () => {
+    partners.mockReturnValue(trade)
+    getChar.mockResolvedValue(char)
+    renderAt('/char/5/inventory/c/1')
+    await screen.findByText('Corda')
+    expect(screen.getByText('give-item')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'character.inventory.give.action' })).toBeInTheDocument()
+  })
+})
+
 describe('Inventory a cartelle', () => {
+  beforeEach(() => partners.mockReturnValue(null))
   it('alla radice: card contenitore e solo oggetti senza container_id', async () => {
     getChar.mockResolvedValue(char)
     renderAt('/char/5/inventory')

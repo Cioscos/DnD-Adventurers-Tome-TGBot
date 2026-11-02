@@ -1069,6 +1069,22 @@
       "quantity_decrease": "Riduci quantità",
       "quantity_increase": "Aumenta quantità",
       "carry": "{{enc}} / {{cap}} lb",
+      "give": {
+        "action": "Dai a…",
+        "title": "Dai a…",
+        "to": "A chi",
+        "confirm": "Conferma",
+        "summary_one": "{{count}} oggetto contenuto",
+        "summary_other": "{{count}} oggetti contenuti",
+        "errors": {
+          "insufficient_funds": "Monete insufficienti",
+          "invalid_recipient": "Destinatario non valido",
+          "nothing_to_give": "Niente da dare",
+          "invalid_quantity": "Quantità non valida",
+          "not_your_character": "Non è il tuo personaggio",
+          "closed": "La sessione è chiusa"
+        }
+      },
       "containers": {
         "root": "Inventario",
         "section": "Contenitori",

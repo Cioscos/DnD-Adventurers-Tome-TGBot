@@ -587,6 +587,28 @@ export interface RollDamageResult {
   extra_rolls: number[]
 }
 
+export interface TradeRequest {
+  from_character_id: number
+  to_user_id: number
+  item_id?: number
+  quantity?: number
+  coins?: Partial<Record<CoinKey, number>>
+}
+
+export interface TradeSnapshot {
+  name: string
+  quantity: number
+  coins: Record<string, number> | null
+  children: TradeSnapshot[]
+}
+
+export interface TradePayload {
+  from: { character_id: number; name: string }
+  to: { character_id: number; name: string }
+  items: TradeSnapshot[]
+  coins: Record<string, number>
+}
+
 export interface SessionFeedItem {
   type: 'message' | 'event'
   timestamp: string
@@ -611,6 +633,8 @@ export interface SessionFeedItem {
   event_type?: string | null
   description?: string | null
   op?: string | null
+  // scambio fra PG
+  trade?: TradePayload | null
 }
 
 export interface SessionFeedResponse {
