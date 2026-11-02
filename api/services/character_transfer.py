@@ -148,6 +148,7 @@ def _link_containers(specs, items) -> None:
         if t is not None and t is not it and is_container(t):
             parent[it] = t
             it.container_id = t.id
+            it.is_equipped, it.equipment_slot = False, None  # chi sta in un contenitore non e' mai equipaggiato
     for it in items:  # chi ritrova se stesso risalendo la catena e' in un ciclo
         cur, n = parent.get(it), 0
         while cur is not None and cur is not it and n <= len(items):
@@ -210,8 +211,12 @@ async def import_character(
     spells = [Spell(**sp.model_dump(exclude={"export_key"})) for sp in data.spells]
     seen_slots: set = set()
     items = []
+    refs = [s.ref for s in data.items if s.ref is not None]
+    boxes = {s.ref for s in data.items if s.ref is not None and refs.count(s.ref) == 1 and "container" in s.item_metadata}
     for it in data.items:
         slot, equipped = it.equipment_slot, it.is_equipped
+        if it.container_ref in boxes:  # finira' in un contenitore: non deve rubare lo slot a un oggetto indossato
+            slot, equipped = None, False
         if slot is not None and equipped:
             if slot in seen_slots:  # due oggetti equipaggiati sullo stesso slot: vince il primo
                 slot, equipped = None, False

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import html
 import logging
+import math
 import re
 from datetime import datetime, timezone
 from typing import Any, Callable
@@ -505,6 +506,13 @@ def _item_meta(c: _Ctx, d: dict, it: dict, item_type: str, name: str, attuned_co
     return meta
 
 
+def _cap(v: Any) -> float | None:
+    """capacityWeight -> libbre valide (0 o non numerico = nessun limite), entro il tetto dello schema."""
+    if isinstance(v, bool) or not isinstance(v, (int, float)) or not math.isfinite(v) or v <= 0:
+        return None
+    return float(min(v, 100_000))
+
+
 def _items(c: _Ctx) -> None:
     custom_names = {str(v.get("valueId")): _str(v.get("value"), 200)
                     for v in _l(c.data.get("characterValues"))
@@ -512,8 +520,8 @@ def _items(c: _Ctx) -> None:
     out, attuned = [], [0]
     inv = [it for it in _l(c.data.get("inventory")) if isinstance(it, dict) and isinstance(it.get("definition"), dict)]
     # i nostri contenitori hanno quantità 1: un contenitore DDB con più copie resta un oggetto semplice
-    box_ids = {_int(it.get("id")) for it in inv
-               if it["definition"].get("isContainer") and _int(it.get("quantity"), 1) == 1}
+    box_ids = {_int(it.get("id")) for it in inv if _int(it.get("id")) > 0
+               and it["definition"].get("isContainer") and _int(it.get("quantity"), 1) == 1}
     for it in _l(c.data.get("inventory")):
         if not isinstance(it, dict) or not isinstance(it.get("definition"), dict):
             c.skip("items", "", "ddb.reason.invalid")
@@ -539,7 +547,7 @@ def _items(c: _Ctx) -> None:
         iid = _int(it.get("id"))
         if iid in box_ids:
             cap = d.get("capacityWeight")
-            meta["container"] = {"capacity_lb": float(cap) if isinstance(cap, (int, float)) and cap > 0 else None,
+            meta["container"] = {"capacity_lb": _cap(cap),
                                  "counts_weight": d.get("weightMultiplier") != 0, "quick_access": False,
                                  "coins": {k: 0 for k in ("copper", "silver", "electrum", "gold", "platinum")}}
             obj["ref"] = iid
@@ -547,6 +555,7 @@ def _items(c: _Ctx) -> None:
             c.approx("items", name, "ddb.reason.container_quantity")
         if _int(it.get("containerEntityId")) in box_ids:  # sciolto: containerEntityId = id del personaggio
             obj["container_ref"] = _int(it.get("containerEntityId"))
+            obj["is_equipped"] = False  # dentro un contenitore non si indossa: niente slot né CA
         m = c.model(ExportItem, obj, "items", name)
         if m:
             out.append(m)

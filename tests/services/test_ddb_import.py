@@ -603,3 +603,31 @@ def test_container_with_quantity_stays_plain_item():
     assert "container" not in by_name["Backpack"].item_metadata and by_name["Backpack"].ref is None
     assert by_name["Torch"].container_ref is None
     assert any(a.name == "Backpack" and a.reason == "ddb.reason.container_quantity" for a in rep.approximated)
+
+
+def test_equipped_item_inside_container_is_unequipped_and_ignored_by_ac():
+    d = load()
+    base = convert(load())[0].character.base_armor_class
+    for it in d["data"]["inventory"]:
+        if it["definition"]["name"] == "Chain Mail":  # indossata nel fixture: la mettiamo nello zaino
+            it["containerEntityId"] = 446369977
+        if it["definition"]["name"] == "Backpack":
+            it["definition"]["capacityWeight"] = 10**9
+    exp, _, _ = convert(d)
+    by_name = {i.name: i for i in exp.items}
+    chain = by_name["Chain Mail"]
+    assert chain.container_ref == by_name["Backpack"].ref
+    assert not chain.is_equipped and chain.equipment_slot is None
+    assert exp.character.base_armor_class != base  # niente armatura: CA senza maglia
+    assert by_name["Backpack"].item_metadata["container"]["capacity_lb"] == 100_000
+
+
+def test_container_capacity_junk_and_id_zero():
+    d = load()
+    for it in d["data"]["inventory"]:
+        if it["definition"]["name"] == "Backpack":
+            it["definition"]["capacityWeight"] = float("inf")
+            it["id"] = 0
+    exp, _, _ = convert(d)
+    pack = next(i for i in exp.items if i.name == "Backpack")
+    assert "container" not in pack.item_metadata and pack.ref is None

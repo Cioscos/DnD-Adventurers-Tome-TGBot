@@ -273,3 +273,17 @@ async def test_import_bad_refs(client, test_session_factory):
     assert r.status_code == 201, r.text
     got = _shape(await _export(client, r.json()["id"]))
     assert all(v[0] is None for v in got.values()), got
+
+
+async def test_import_contained_item_is_unequipped(client, test_session_factory):
+    data = await _export(client, await _tree_char(test_session_factory))
+    for i in data["items"]:
+        i["ref"], i["container_ref"] = {"A": 1, "B": 2, "Obj": 3}[i["name"]], None
+    data["items"][0]["item_metadata"] = {"container": {}}
+    data["items"].append({"name": "Elmo", "ref": 9, "container_ref": 1, "item_type": "armor",
+                          "is_equipped": True, "equipment_slot": "head"})
+    r = await _import(client, data)
+    assert r.status_code == 201, r.text
+    async with test_session_factory() as s:
+        helm = (await s.execute(select(Item).where(Item.character_id == r.json()["id"], Item.name == "Elmo"))).scalar_one()
+    assert helm.container_id is not None and not helm.is_equipped and helm.equipment_slot is None
