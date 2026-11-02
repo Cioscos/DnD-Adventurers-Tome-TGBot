@@ -75,10 +75,10 @@ export default [
     languageOptions: { globals: { ...globals.node } },
   },
 
-  // Perf harness (scripts/perf/): oltre al codice Node, usa page.evaluate()
+  // Perf harness (scripts/perf/) e layout-check: oltre al codice Node, usa page.evaluate()
   // per callback eseguite nel contesto browser della WebView/Chrome tracciata.
   {
-    files: ['scripts/perf/**/*.mjs'],
+    files: ['scripts/perf/**/*.mjs', 'scripts/layout-check.mjs'],
     languageOptions: { globals: { ...globals.node, ...globals.browser } },
   },
 
