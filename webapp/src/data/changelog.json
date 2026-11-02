@@ -1,6 +1,22 @@
 {
   "entries": [
     {
+      "version": "2.29.1",
+      "date": "2026-11-02",
+      "fixed": {
+        "it": [
+          "Monete: il pulsante Converti non esce più dal bordo destro con totali lunghi, e il tastierino ha di nuovo spazio prima di Spendi e Ricevi.",
+          "Le spaziature interne di molti riquadri (Classe Armatura, Esperienza, Identità, Impostazioni, Note vocali e altri) ora vengono applicate: prima i contenuti risultavano attaccati.",
+          "Piccoli ritocchi alle aree da toccare: caratteristiche nella Hero, tiro delle abilità, carica silhouette e chiusura dell'avviso del server."
+        ],
+        "en": [
+          "Coins: the Convert button no longer runs past the right edge with long totals, and the keypad has room again before Spend and Receive.",
+          "Inner spacing of many panels (Armor Class, Experience, Identity, Settings, Voice notes and more) is now applied: their contents used to touch.",
+          "Small touch-area fixes: ability scores on the Hero screen, skill rolls, silhouette upload and closing the server notice."
+        ]
+      }
+    },
+    {
       "version": "2.29.0",
       "date": "2026-11-02",
       "added": {
