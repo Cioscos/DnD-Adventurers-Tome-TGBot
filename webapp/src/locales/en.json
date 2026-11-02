@@ -1060,6 +1060,18 @@
       "quantity_decrease": "Decrease quantity",
       "quantity_increase": "Increase quantity",
       "carry": "{{enc}} / {{cap}} lb",
+      "containers": {
+        "root": "Inventory",
+        "section": "Containers",
+        "no_weight": "no weight",
+        "over": "Over capacity",
+        "items": "{{count}} items",
+        "boxes": "{{count}} cont.",
+        "crumb": "Path",
+        "capacity": "Capacity",
+        "coins": "Coins in container",
+        "empty": "Empty container"
+      },
       "carry_label": "Carry",
       "carry_override_hint": "Carry capacity set manually.",
       "carry_reset_to_auto": "Reset to auto",

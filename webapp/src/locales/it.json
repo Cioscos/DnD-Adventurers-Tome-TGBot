@@ -1059,6 +1059,18 @@
       "quantity_decrease": "Riduci quantità",
       "quantity_increase": "Aumenta quantità",
       "carry": "{{enc}} / {{cap}} lb",
+      "containers": {
+        "root": "Inventario",
+        "section": "Contenitori",
+        "no_weight": "non pesa",
+        "over": "Capienza superata",
+        "items": "{{count}} ogg.",
+        "boxes": "{{count}} cont.",
+        "crumb": "Percorso",
+        "capacity": "Capienza",
+        "coins": "Monete nel contenitore",
+        "empty": "Contenitore vuoto"
+      },
       "carry_label": "Carico",
       "carry_override_hint": "Ingombro massimo impostato manualmente.",
       "carry_reset_to_auto": "Ripristina auto",

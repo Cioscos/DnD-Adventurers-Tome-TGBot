@@ -140,6 +140,37 @@ export interface Item {
   item_metadata?: Record<string, unknown>
   is_equipped: boolean
   equipment_slot?: EquipmentSlot | null
+  container_id?: number | null
+  /** Solo per i contenitori, nelle risposte CharacterFull. */
+  container_stats?: ContainerStats | null
+}
+
+export interface ContainerStats {
+  contents_weight: number
+  items_count: number
+  containers_count: number
+  over_capacity: boolean
+}
+
+export type CoinKey = 'copper' | 'silver' | 'electrum' | 'gold' | 'platinum'
+
+export interface ContainerMeta {
+  capacity_lb: number | null
+  counts_weight: boolean
+  quick_access: boolean
+  coins: Partial<Record<CoinKey, number>>
+}
+
+export interface CoinLocation {
+  container_id: number | null
+  name: string | null
+  coins: Partial<Record<CoinKey, number>>
+}
+
+export interface CurrencyOpResult {
+  coin_totals: Record<CoinKey, number>
+  purse: Record<string, number>
+  placements: { container_id: number | null; amount: number }[]
 }
 
 export interface CharacterSummary {
@@ -233,6 +264,9 @@ export interface PendingSaveRollResult {
 }
 
 export interface CharacterFull extends Omit<CharacterSummary, 'ac_homebrew_modifier'> {
+  coin_totals?: Record<CoinKey, number>
+  coin_breakdown?: CoinLocation[]
+  unequipped_item_names?: string[]
   ac_homebrew_modifier?: number
   condition_effects?: ConditionEffect[]
   pending_saves?: PendingSave[]

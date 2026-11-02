@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
-import { useLocation, useNavigate, useParams } from 'react-router-dom'
+import { Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { useToast } from '@/hooks/useToast'
@@ -36,11 +36,17 @@ import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import { getItemTypeIcon } from '@/lib/itemIcons'
 import { itemGrantedSpells } from '@/lib/itemMagic'
 import type { Item } from '@/types'
+import ContainerCard from '@/pages/inventory/ContainerCard'
+import { containerPath, containerMeta, isContainer } from '@/lib/containers'
 import InventorySkeleton from '@/components/skeletons/InventorySkeleton'
 
+const COIN_KEYS = ['platinum', 'gold', 'electrum', 'silver', 'copper'] as const
+const COIN_ABBR = { platinum: 'pp', gold: 'gp', electrum: 'ep', silver: 'sp', copper: 'cp' } as const
+
 export default function Inventory() {
-  const { id } = useParams<{ id: string }>()
+  const { id, containerId: containerParam } = useParams<{ id: string; containerId?: string }>()
   const charId = Number(id)
+  const containerId = containerParam != null ? Number(containerParam) : null
   const location = useLocation()
   const navigate = useNavigate()
   const initialHighlight =
@@ -441,8 +447,18 @@ export default function Inventory() {
   const items: Item[] = char.items ?? []
   const totalWeight = char.encumbrance_total ?? items.reduce((sum, i) => sum + i.weight * i.quantity, 0)
 
+  const path = containerPath(items, containerId)
+  if (containerId != null && path.length === 0) {
+    return <Navigate to={`/char/${charId}/inventory`} replace />
+  }
+  const current = path.at(-1) ?? null
+  const currentMeta = current ? containerMeta(current) : null
+  // Contenitori in ordine di id (= ordine di prelievo del backend); gli altri oggetti restano per tipo.
+  const levelItems = items.filter((i) => (i.container_id ?? null) === containerId)
+  const childBoxes = levelItems.filter(isContainer).sort((a, b) => a.id - b.id)
+
   const TYPE_ORDER: readonly string[] = INVENTORY_TYPE_ORDER
-  const grouped = items.reduce<Record<string, Item[]>>((acc, item) => {
+  const grouped = levelItems.filter((i) => !isContainer(i)).reduce<Record<string, Item[]>>((acc, item) => {
     const key = TYPE_ORDER.includes(item.item_type) ? item.item_type : 'generic'
     if (!acc[key]) acc[key] = []
     acc[key].push(item)
@@ -485,7 +501,55 @@ export default function Inventory() {
         </>
       )}
 
+      {current && (
+        <Surface variant="elevated" className="!py-2">
+          <nav aria-label="breadcrumb" className="flex flex-wrap items-center gap-1 text-xs font-cinzel text-dnd-gold-dim">
+            <Pressable
+              onClick={() => navigate(`/char/${charId}/inventory`)}
+              className="min-h-[44px] px-1 flex items-center"
+            >
+              {t('character.inventory.containers.root')}
+            </Pressable>
+            {path.map((c) => (
+              <span key={c.id} className="flex items-center gap-1">
+                <ChevronRight size={12} aria-hidden />
+                {c.id === current.id ? (
+                  <span className="text-dnd-gold-bright">{c.name}</span>
+                ) : (
+                  <Pressable
+                    onClick={() => navigate(`/char/${charId}/inventory/c/${c.id}`)}
+                    className="min-h-[44px] px-1 flex items-center"
+                  >
+                    {c.name}
+                  </Pressable>
+                )}
+              </span>
+            ))}
+          </nav>
+          {currentMeta?.capacity_lb != null ? (
+            <ProgressTriad
+              value={current.container_stats?.contents_weight ?? 0}
+              max={currentMeta.capacity_lb}
+              label={t('character.inventory.containers.capacity')}
+              display={`${formatWeightValue(current.container_stats?.contents_weight ?? 0, system)} / ${formatWeight(currentMeta.capacity_lb, system)}`}
+              showNumeric
+            />
+          ) : (
+            <p className="text-xs text-dnd-text-muted font-mono tabular-nums">
+              {formatWeight(current.container_stats?.contents_weight ?? 0, system)}
+            </p>
+          )}
+          {COIN_KEYS.some((k) => (currentMeta?.coins?.[k] ?? 0) > 0) && (
+            <p className="text-xs text-dnd-text-muted font-mono tabular-nums mt-1.5" aria-label={t('character.inventory.containers.coins')}>
+              {COIN_KEYS.filter((k) => (currentMeta?.coins?.[k] ?? 0) > 0)
+                .map((k) => `${currentMeta!.coins[k]} ${COIN_ABBR[k]}`).join(' · ')}
+            </p>
+          )}
+        </Surface>
+      )}
+
       {/* Carry capacity progress bar (Semantic Triad coloring) + manual override */}
+      {!current && (
       <Surface variant="elevated" className="!py-2">
         <div className="flex items-center gap-2 mb-1.5">
           <Weight size={13} className="text-dnd-gold-dim" />
@@ -577,6 +641,7 @@ export default function Inventory() {
           </p>
         )}
       </Surface>
+      )}
 
       {items.length === 0 && (
         <EmptyState
@@ -591,7 +656,18 @@ export default function Inventory() {
         />
       )}
 
-      <AttunementSection charId={charId} items={items} />
+      {!current && <AttunementSection charId={charId} items={items} />}
+
+      {childBoxes.length > 0 && (
+        <section className="space-y-2 mb-4">
+          <p className="font-cinzel uppercase tracking-widest text-xs text-dnd-gold-bright">
+            {t('character.inventory.containers.section')}
+          </p>
+          {childBoxes.map((b) => (
+            <ContainerCard key={b.id} item={b} onOpen={() => navigate(`/char/${charId}/inventory/c/${b.id}`)} />
+          ))}
+        </section>
+      )}
 
       <ScrollArea>
         {orderedTypes.map((type) => {

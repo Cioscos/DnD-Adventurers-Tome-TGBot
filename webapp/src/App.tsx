@@ -84,6 +84,7 @@ export default function App() {
             <Route path="/char/:id/spells" element={<Spells />} />
             <Route path="/char/:id/slots" element={<SpellSlots />} />
             <Route path="/char/:id/inventory" element={<Inventory />} />
+            <Route path="/char/:id/inventory/c/:containerId" element={<Inventory />} />
             <Route path="/char/:id/currency" element={<Currency />} />
             <Route path="/char/:id/abilities" element={<Abilities />} />
             <Route path="/char/:id/class" element={<Multiclass />} />
