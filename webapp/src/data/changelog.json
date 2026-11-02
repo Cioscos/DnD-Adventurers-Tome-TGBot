@@ -1,6 +1,22 @@
 {
   "entries": [
     {
+      "version": "2.28.5",
+      "date": "2026-11-02",
+      "improved": {
+        "it": [
+          "I campi per cambiare un valore partono vuoti e mostrano il valore attuale come suggerimento: scrivi subito il nuovo senza cancellare prima (usi delle abilità, punteggi delle caratteristiche, totale degli slot, capacità di carico, durata delle condizioni, tabelle homebrew).",
+          "Pulsanti più comodi da toccare col pollice: header della scheda, punti dello swiper, Punti Ferita ed Esperienza nella Hero, condizioni, chiusura dei pannelli e delle notifiche, menu degli incantesimi.",
+          "I collegamenti alle pagine vicine nella barra in alto e le frecce che aprono le card sono più visibili."
+        ],
+        "en": [
+          "Fields for changing a value start empty and show the current value as a hint: type the new one straight away without deleting first (ability uses, ability scores, slot totals, carrying capacity, condition duration, homebrew tables).",
+          "Buttons are easier to hit with your thumb: sheet header, swiper dots, Hit Points and Experience on the Hero screen, conditions, closing sheets and notifications, spell menu.",
+          "Links to nearby pages in the top bar and the arrows that open cards are easier to see."
+        ]
+      }
+    },
+    {
       "version": "2.28.4",
       "date": "2026-11-02",
       "improved": {

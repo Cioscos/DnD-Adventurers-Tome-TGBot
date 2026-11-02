@@ -227,7 +227,7 @@ function MapZoneGroupInner({
             />
             <Pressable
               onClick={(e) => { e.stopPropagation(); onDeleteFile(m.id, zoneName) }}
-              className="absolute top-1 right-1 w-10 h-10 rounded-full bg-dnd-ink/80 text-dnd-text flex items-center justify-center z-10"
+              className="absolute top-1 right-1 w-11 h-11 rounded-full bg-dnd-ink/80 text-dnd-text flex items-center justify-center z-10"
               aria-label={t('common.delete')}
             >
               <X size={16} />

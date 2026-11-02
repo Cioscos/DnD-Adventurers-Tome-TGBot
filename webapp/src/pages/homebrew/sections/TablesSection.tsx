@@ -456,7 +456,7 @@ function ColBinHeader({ bin, onChange, onRemove }: ColBinHeaderProps) {
           onBlur={() => (lo === '' ? setLo(String(bin[0])) : onChange('lo', lo))}
           placeholder={String(bin[0])}
           aria-label={t('homebrew.tables.col_bin_lo')}
-          className="w-12 px-1 py-1 min-h-[32px] rounded bg-dnd-surface text-dnd-text border border-dnd-border outline-none text-center font-mono text-[12px]"
+          className="w-12 px-1 py-1 min-h-[44px] rounded bg-dnd-surface text-dnd-text border border-dnd-border outline-none text-center font-mono text-[12px]"
         />
         <span className="text-dnd-text-muted text-xs">–</span>
         <input
@@ -468,7 +468,7 @@ function ColBinHeader({ bin, onChange, onRemove }: ColBinHeaderProps) {
           onBlur={() => (hi === '' ? setHi(String(bin[1])) : onChange('hi', hi))}
           placeholder={String(bin[1])}
           aria-label={t('homebrew.tables.col_bin_hi')}
-          className="w-12 px-1 py-1 min-h-[32px] rounded bg-dnd-surface text-dnd-text border border-dnd-border outline-none text-center font-mono text-[12px]"
+          className="w-12 px-1 py-1 min-h-[44px] rounded bg-dnd-surface text-dnd-text border border-dnd-border outline-none text-center font-mono text-[12px]"
         />
         {onRemove && (
           <Pressable

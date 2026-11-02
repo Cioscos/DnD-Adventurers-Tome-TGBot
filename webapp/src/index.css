@@ -473,6 +473,12 @@ body::after {
   border-color: var(--dnd-border-strong);
   color: var(--dnd-text);
 }
+/* La X del toast è 20px: area di tocco a 44px senza cambiarne l'aspetto. */
+[data-sonner-toast] [data-close-button].dnd-toast-close::before {
+  content: '';
+  position: absolute;
+  inset: -12px;
+}
 [data-sonner-toast] [data-close-button].dnd-toast-close:hover {
   background: var(--dnd-surface-lifted);
   border-color: var(--dnd-border-strong);

@@ -276,7 +276,7 @@ function SpellItemInner({
                   <Pressable
                     onClick={() => setMenuOpen((v) => !v)}
                     aria-expanded={menuOpen}
-                    className="flex items-center justify-center w-11 h-9 rounded-lg
+                    className="flex items-center justify-center w-11 h-11 rounded-lg
                                bg-dnd-surface-raised border border-dnd-border
                                text-dnd-text-muted hover:text-dnd-gold-bright active:opacity-60"
                     title={t('character.spells.more_actions', { defaultValue: 'Altre azioni' })}

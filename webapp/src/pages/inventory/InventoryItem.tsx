@@ -14,6 +14,7 @@ import type { Property } from '@/lib/homebrew/types'
 import PropertyBadge from '@/components/homebrew/PropertyBadge'
 import { useUnitSettings, formatWeight } from '@/store/unitSettings'
 import Pressable from '@/components/ui/Pressable'
+import ExpandChevron from '@/components/ui/ExpandChevron'
 import RollButton from '@/components/ui/RollButton'
 import RarityBadge from '@/components/ui/RarityBadge'
 import { itemCharges, itemGrantedSpells, itemRarity, isAttuned, requiresAttunement, type ItemBonus } from '@/lib/itemMagic'
@@ -396,9 +397,7 @@ function InventoryItemInner({
             {!hasSingleQuantity(item.item_type) && ` · ×${item.quantity}`}
           </p>
         </div>
-        <span className="text-dnd-text-muted text-xs shrink-0 ml-1">
-          {isExpanded ? '˄' : '˅'}
-        </span>
+        <ExpandChevron open={isExpanded} className="ml-1 text-dnd-gold-dim" />
       </Pressable>
 
       {/* Expanded detail panel */}

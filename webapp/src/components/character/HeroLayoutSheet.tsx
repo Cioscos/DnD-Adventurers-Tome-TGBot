@@ -69,7 +69,7 @@ export default function HeroLayoutSheet({ char, open, onClose }: HeroLayoutSheet
                 loading={mutation.isPending}
                 haptic="none"
                 aria-label={t('character.hero.move_up')}
-                className="w-9 h-9 rounded-lg bg-dnd-surface-raised border border-dnd-border disabled:opacity-30"
+                className="w-11 h-11 rounded-lg bg-dnd-surface-raised border border-dnd-border disabled:opacity-30"
               />
               <IconButton
                 icon={<ChevronDown size={14} />}
@@ -78,7 +78,7 @@ export default function HeroLayoutSheet({ char, open, onClose }: HeroLayoutSheet
                 loading={mutation.isPending}
                 haptic="none"
                 aria-label={t('character.hero.move_down')}
-                className="w-9 h-9 rounded-lg bg-dnd-surface-raised border border-dnd-border disabled:opacity-30"
+                className="w-11 h-11 rounded-lg bg-dnd-surface-raised border border-dnd-border disabled:opacity-30"
               />
               <IconButton
                 icon={isHidden ? <EyeOff size={14} /> : <Eye size={14} />}
@@ -86,7 +86,7 @@ export default function HeroLayoutSheet({ char, open, onClose }: HeroLayoutSheet
                 loading={mutation.isPending}
                 haptic="light"
                 aria-label={t('character.hero.toggle_visibility')}
-                className={`w-9 h-9 rounded-lg border ${isHidden
+                className={`w-11 h-11 rounded-lg border ${isHidden
                   ? 'bg-dnd-surface-raised border-dnd-border text-dnd-text-faint'
                   : 'bg-dnd-gold/15 border-dnd-gold text-dnd-gold-bright'}`}
               />

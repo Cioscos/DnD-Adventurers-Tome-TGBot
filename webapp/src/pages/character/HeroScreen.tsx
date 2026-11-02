@@ -101,7 +101,7 @@ export default function HeroScreen({ char }: Props) {
           whileTap={{ scale: 0.99 }}
           /* Reserve the second (race) line's height even when no race is set, so the
              AC shield row below stays clear of the absolutely-positioned bag button. */
-          className="block w-full text-left pr-14 min-h-[40px]"
+          className="block w-full text-left pr-14 min-h-[44px]"
           aria-label={t('character.identity.title', { defaultValue: 'Identity' })}
         >
           <p className="text-sm text-dnd-text-muted font-body italic mb-0.5">{char.class_summary}</p>
@@ -161,7 +161,7 @@ export default function HeroScreen({ char }: Props) {
                 else setHpSheetOpen(true)
               }}
               whileTap={{ scale: 0.99 }}
-              className="w-full text-left"
+              className="w-full min-h-[44px] text-left"
               aria-label={t('character.hp.title', { defaultValue: 'Hit Points' })}
             >
               <div className="flex items-center justify-between text-sm mb-1.5">
@@ -189,7 +189,7 @@ export default function HeroScreen({ char }: Props) {
               type="button"
               onClick={() => { haptic.light(); navigate(`/char/${char.id}/xp`) }}
               whileTap={{ scale: 0.99 }}
-              className="w-full text-left mt-1"
+              className="w-full min-h-[44px] flex flex-col justify-center text-left"
               aria-label={t('character.xp.title', { defaultValue: 'Experience' })}
             >
               <HeroXPBar
