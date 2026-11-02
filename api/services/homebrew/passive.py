@@ -46,7 +46,7 @@ async def _sum_modifiers(session: AsyncSession, char: Character, target_path: st
     items_res = await session.execute(
         select(Item).where(Item.character_id == char.id)
     )
-    all_items = list(items_res.scalars())
+    all_items = [i for i in items_res.scalars() if i.container_id is None]  # contained items give no bonus
 
     total = 0
     for rule in rules:

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { newBoxParent, roundLb, containerPath, containerTree, isContainer } from '@/lib/containers'
+import { movedWeight, newBoxParent, roundLb, containerPath, containerTree, isContainer } from '@/lib/containers'
 import type { Item } from '@/types'
 
 const c = (id: number, container_id: number | null = null): Item => ({
@@ -34,6 +34,12 @@ describe('containers lib', () => {
     expect(newBoxParent(items, 1, [1])).toBeNull() // dalla radice
     expect(newBoxParent(items, 3, [9])).toBe(3) // oggetto qualsiasi: resta nel livello
     expect(newBoxParent(items, null, [4])).toBeNull()
+  })
+  it('movedWeight include sempre il contenuto annidato, come la capacità del backend', () => {
+    const stats = { contents_weight: 7, items_count: 1, containers_count: 0, over_capacity: false }
+    const light = { ...c(1), weight: 1, item_metadata: { container: { capacity_lb: null, counts_weight: false, quick_access: false, coins: {} } }, container_stats: stats }
+    expect(movedWeight(light)).toBe(8)
+    expect(movedWeight({ ...plain(9), weight: 2, quantity: 5 }, 3)).toBe(6)
   })
   it('roundLb', () => {
     expect(roundLb(0.1 + 0.2)).toBe(0.3)

@@ -146,7 +146,7 @@ export default function Currency() {
         }))
 
   const setExact = (key: CoinKey, value: number) =>
-    run(key, value - current(key), () => t('character.currency.set_toast', { n: value, coin: coinName(key) }))
+    value !== current(key) ? run(key, value - current(key), () => t('character.currency.set_toast', { n: value, coin: coinName(key) })) : undefined
 
   const convertMutation = useMutation({
     scope,

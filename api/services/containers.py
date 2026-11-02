@@ -51,13 +51,16 @@ async def move_items(
             raise HTTPException(status_code=422, detail="not_a_container")
         if would_cycle(char.items, set(item_ids), container_id):
             raise HTTPException(status_code=422, detail="container_cycle")
-    if quantity is not None and not 1 <= quantity < by_id[item_ids[0]].quantity:
+    if quantity is not None and not 1 <= quantity <= by_id[item_ids[0]].quantity:
         raise HTTPException(status_code=422, detail="invalid_quantity")
+    if quantity == by_id[item_ids[0]].quantity:  # the whole stack: a plain move, no split
+        quantity = None
 
     unequipped: list[str] = []
     for iid in item_ids:
         item = by_id[iid]
-        if item.is_equipped and container_id is not None:
+        # On a split the staying row keeps its equip state; the moved row is created unequipped.
+        if item.is_equipped and container_id is not None and quantity is None:
             item.is_equipped, item.equipment_slot = False, None
             apply_equip_ac(char, item)
             unequipped.append(item.name)

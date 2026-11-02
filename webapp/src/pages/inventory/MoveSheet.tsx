@@ -37,7 +37,7 @@ export default function MoveSheet({ items, moving, currentId, onMove, onNewConta
     return false
   }
   const weight = moving.reduce((s, i) => s + movedWeight(i, i === single && stepper ? qty : undefined), 0)
-  const q = stepper ? qty : undefined
+  const q = stepper && single != null && qty < single.quantity ? qty : undefined
 
   const row = 'w-full min-h-[44px] flex items-center gap-2 p-3 rounded-xl border text-left disabled:opacity-40 bg-dnd-surface border-dnd-border'
   const stepBtn = 'min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl border border-dnd-border'

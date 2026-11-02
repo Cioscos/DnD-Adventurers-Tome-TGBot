@@ -19,6 +19,7 @@ from sqlalchemy.orm import selectinload
 
 from api.auth import TelegramUser, get_current_telegram_user, get_current_user
 from api.database import get_db
+from core.game.containers import is_container
 from api.schemas.session import (
     CharacterLiveSnapshot,
     GameSessionLiveRead,
@@ -756,6 +757,9 @@ async def gm_grant_item(
         raise HTTPException(status_code=status.HTTP_410_GONE, detail="Session is closed")
 
     metadata_str = json.dumps(body.item.item_metadata) if body.item.item_metadata else None
+    granting_box = isinstance((body.item.item_metadata or {}).get("container"), dict)
+    if granting_box and body.item.quantity != 1:
+        raise HTTPException(status_code=422, detail="container_quantity")
     now_iso = _now()
     results: list[GMGrantItemResult] = []
 
@@ -780,9 +784,11 @@ async def gm_grant_item(
 
         granted_item_id: Optional[int] = None
         merged = False
-        if body.item.item_type == "generic":
+        if body.item.item_type == "generic" and not granting_box:
             existing = next(
-                (it for it in char.items if it.item_type == "generic" and it.name == body.item.name),
+                (it for it in char.items
+                 if it.item_type == "generic" and it.name == body.item.name
+                 and it.container_id is None and not is_container(it)),
                 None,
             )
             if existing is not None:

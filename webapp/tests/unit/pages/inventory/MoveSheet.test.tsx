@@ -61,6 +61,13 @@ describe('MoveSheet', () => {
     expect(onMove).toHaveBeenCalledWith(1, 9)
   })
 
+  it('spostando tutta la pila non invia la quantità', () => {
+    const frecce = thing(9, 'Frecce', 20, 0.1)
+    const onMove = setup([frecce], [zaino, frecce])
+    fireEvent.click(screen.getByRole('button', { name: /Zaino/ }))
+    expect(onMove).toHaveBeenCalledWith(1, undefined)
+  })
+
   it('senza quantità multipla non mostra lo stepper', () => {
     setup([thing(9, 'Corda')], [zaino])
     expect(screen.queryByLabelText('character.inventory.containers.qty_minus')).toBeNull()

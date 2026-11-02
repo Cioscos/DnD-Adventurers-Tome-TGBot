@@ -261,6 +261,16 @@ describe('Currency page — totale + transazione', () => {
     await waitFor(() => expect(undoSpy).toHaveBeenCalledTimes(1))
   })
 
+  it('valore esatto uguale al totale: nessuna chiamata', async () => {
+    await loaded()
+    await userEvent.click(key('character.currency.gold: 10'))
+    await userEvent.click(within(await screen.findByTestId('sheet')).getByRole('button', { name: 'character.currency.set_exact' }))
+    fireEvent.change(within(await screen.findByTestId('sheet')).getByPlaceholderText('10'), { target: { value: '10' } })
+    await userEvent.click(screen.getByRole('button', { name: 'common.save' }))
+    await waitFor(() => expect(screen.queryByPlaceholderText('10')).toBeNull())
+    expect(adjustSpy).not.toHaveBeenCalled()
+  })
+
   it('Annulla del valore esatto annulla solo quel cambio, non le operazioni fatte dopo', async () => {
     await loaded()
     await userEvent.click(key('character.currency.gold: 10'))
