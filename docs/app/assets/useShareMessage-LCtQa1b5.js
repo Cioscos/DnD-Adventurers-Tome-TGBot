@@ -1,0 +1,1 @@
+import{u as n,c as u,h as r,bC as c,l as i}from"./index-Cvb7X3d-.js";function m(e){const a=i(),{t}=n();return u({mutationFn:async s=>{const{prepared_message_id:o}=await e(s);return c(o)},onSuccess:s=>{s&&r.success()},onError:()=>{r.error(),a.error(t("share.error"))}})}export{m as u};

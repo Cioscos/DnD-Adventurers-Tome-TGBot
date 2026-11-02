@@ -3,7 +3,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { ChevronLeft, RefreshCw, UserX } from 'lucide-react'
-import { m, AnimatePresence } from 'framer-motion'
+import { m } from 'framer-motion'
 import { useSwipeNavigation, getGroupInfo } from '@/hooks/useSwipeNavigation'
 import { usePageBack } from '@/hooks/useOverlayDismiss'
 import { pageSkeleton } from '@/components/skeletons/pageSkeletons'
@@ -40,6 +40,10 @@ interface LayoutProps {
   /** Chiave della guida "?" (`help.<key>` nei locale). Default: `page`. */
   help?: string
 }
+
+// Altezza della fascia breadcrumb: riga tappabile da 44 px + pb-3 + bordo.
+// shortcut: costante, non misurata — se cambia l'altezza della riga va aggiornata qui.
+const CRUMB_STRIP_PX = 57
 
 export default function Layout({ title, children, backTo, group, page, hideScrollbar = false, offlineQuery, help = page }: LayoutProps) {
   const navigate = useNavigate()
@@ -105,6 +109,7 @@ export default function Layout({ title, children, backTo, group, page, hideScrol
   useEffect(() => {
     crumbCollapsed = tablistCollapsed
   }, [tablistCollapsed])
+  const crumbsOpen = !!info && !tablistCollapsed
   // Arrivo da swipe: lo skeleton con cui la pagina è entrata sfuma nel contenuto.
   const [arrivalVisible, setArrivalVisible] = useState(!!swipe.arrivedBySwipe)
   const ArrivalSkeleton = pageSkeleton(page)
@@ -188,9 +193,9 @@ export default function Layout({ title, children, backTo, group, page, hideScrol
       style={{ height: 'var(--tg-vh, 100vh)' }}
     >
       <m.header
-        className="shrink-0 z-10 flex flex-col px-4 py-3 pt-safe
-                    bg-dnd-surface-raised
-                    border-b border-dnd-gold-dim/40 shadow-parchment-md"
+        className={`shrink-0 z-10 flex flex-col px-4 py-3 pt-safe
+                    bg-dnd-surface-raised border-b
+                    ${crumbsOpen ? 'border-transparent' : 'border-dnd-gold-dim/40 shadow-parchment-md'}`}
         initial={sameGroup ? false : { y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={spring.drift}
@@ -210,57 +215,54 @@ export default function Layout({ title, children, backTo, group, page, hideScrol
           </h1>
           {help && <PageHelp helpKey={help} title={title} />}
         </div>
-        {info && (() => {
-          return (
-            <AnimatePresence initial={false}>
-              {!tablistCollapsed && (
-                <m.div
-                  key="breadcrumb"
-                  initial={{ height: 0, opacity: 0, marginTop: 0 }}
-                  animate={{ height: 'auto', opacity: 1, marginTop: 8 }}
-                  exit={{ height: 0, opacity: 0, marginTop: 0 }}
-                  transition={{ duration: 0.18, ease: [0.25, 0.1, 0.25, 1] }}
-                  className="overflow-hidden"
-                >
-                  <div
-                    ref={crumbScrollRef}
-                    onScroll={(e) => { crumbScrollLeft = e.currentTarget.scrollLeft }}
-                    className="flex items-center overflow-x-auto scrollbar-hide touch-pan-x text-xs font-body whitespace-nowrap px-1"
-                  >
-                    {info.pages.map((pageKey, i) => (
-                      <span key={pageKey} className="flex items-center shrink-0">
-                        {i > 0 && (
-                          <span className="text-dnd-gold-dim/50 shrink-0 px-1">◈</span>
-                        )}
-                        {pageKey === activeKey ? (
-                          <span ref={activeCrumbRef} className="inline-flex items-center min-h-[44px] text-dnd-gold-bright font-semibold whitespace-nowrap px-2 py-1.5">
-                            {t(`character.menu.${pageKey}`)}
-                          </span>
-                        ) : (
-                          <Pressable
-                            type="button"
-                            onClick={() => swipe.goToPage(pageKey)}
-                            whileTap={{ scale: 0.95 }}
-                            aria-label={t('layout.nav.go_to', { page: t(`character.menu.${pageKey}`) })}
-                            className="text-dnd-text-muted opacity-70 whitespace-nowrap px-2 py-1.5 min-h-[44px] rounded hover:text-dnd-gold-bright hover:opacity-100 transition-colors"
-                          >
-                            {t(`character.menu.${pageKey}`)}
-                          </Pressable>
-                        )}
-                      </span>
-                    ))}
-                  </div>
-                </m.div>
-              )}
-            </AnimatePresence>
-          )
-        })()}
       </m.header>
 
       <ServerVersionBanner />
       {isCharRoute && charId > 0 && <PendingSavesBanner charId={charId} />}
 
-      <div className="relative flex-1 min-w-0 overflow-hidden">
+      <div className="relative isolate flex-1 min-w-0 overflow-hidden">
+        {/* Breadcrumb: fascia sovrapposta sotto l'header che scorre via con un transform.
+            Animarne l'altezza dentro l'header ricalcolava tutta la pagina a ogni frame
+            di scroll (S22: picchi da ~100 ms). Lo spazio sotto è riservato da uno spacer
+            in <main>; gli sticky delle pagine si spostano sotto la fascia con --crumb-offset. */}
+        {info && (
+          <m.div
+            className="absolute inset-x-0 top-0 z-30 px-4 pb-3 bg-dnd-surface-raised border-b border-dnd-gold-dim/40 shadow-parchment-md"
+            initial={false}
+            animate={crumbsOpen ? { y: 0, opacity: 1 } : { y: '-100%', opacity: 0 }}
+            transition={{ duration: 0.18, ease: [0.25, 0.1, 0.25, 1] }}
+            style={{ pointerEvents: crumbsOpen ? 'auto' : 'none' }}
+          >
+          <div
+            ref={crumbScrollRef}
+            onScroll={(e) => { crumbScrollLeft = e.currentTarget.scrollLeft }}
+            className="flex items-center overflow-x-auto scrollbar-hide touch-pan-x text-xs font-body whitespace-nowrap px-1"
+          >
+            {info.pages.map((pageKey, i) => (
+              <span key={pageKey} className="flex items-center shrink-0">
+                {i > 0 && (
+                  <span className="text-dnd-gold-dim/50 shrink-0 px-1">◈</span>
+                )}
+                {pageKey === activeKey ? (
+                  <span ref={activeCrumbRef} className="inline-flex items-center min-h-[44px] text-dnd-gold-bright font-semibold whitespace-nowrap px-2 py-1.5">
+                    {t(`character.menu.${pageKey}`)}
+                  </span>
+                ) : (
+                  <Pressable
+                    type="button"
+                    onClick={() => swipe.goToPage(pageKey)}
+                    whileTap={{ scale: 0.95 }}
+                    aria-label={t('layout.nav.go_to', { page: t(`character.menu.${pageKey}`) })}
+                    className="text-dnd-text-muted opacity-70 whitespace-nowrap px-2 py-1.5 min-h-[44px] rounded hover:text-dnd-gold-bright hover:opacity-100 transition-colors"
+                  >
+                    {t(`character.menu.${pageKey}`)}
+                  </Pressable>
+                )}
+              </span>
+            ))}
+          </div>
+          </m.div>
+        )}
         <main
           ref={swipe.contentRef}
           className={`absolute inset-0 overflow-y-auto overflow-x-hidden overscroll-contain p-4 pt-4 pb-[max(env(safe-area-inset-bottom),var(--tg-content-bottom,0px),6rem)] space-y-3${info ? ' touch-pan-y' : ''}${swipe.arrivedBySwipe ? '' : ' animate-fade-in'}${hideScrollbar ? ' scrollbar-hide' : ''}`}
@@ -269,7 +271,10 @@ export default function Layout({ title, children, backTo, group, page, hideScrol
           onTouchEnd={swipe.onTouchEnd}
           onTouchCancel={swipe.onTouchEnd}
           onScroll={handleMainScroll}
+          style={info ? ({ '--crumb-offset': crumbsOpen ? `${CRUMB_STRIP_PX}px` : '0px' } as React.CSSProperties) : undefined}
         >
+          {/* Riserva l'altezza della fascia breadcrumb (meno il gap di space-y-3 che segue). */}
+          {info && <div aria-hidden style={{ height: CRUMB_STRIP_PX - 12 }} />}
           {/* Prima il 404/403, che sconfessa anche una copia in cache; poi l'errore
               senza dati. Con dati in cache la pagina resta, segnalata dall'avviso. */}
           {charNotFound ? (

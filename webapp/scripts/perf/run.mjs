@@ -181,6 +181,17 @@ async function launchLocal(url, throttle) {
 /** Installa in pagina il campionatore rAF + observer LoAF (window.__perf). */
 function installMeter() {
   const st = { ts: [], loaf: null, on: true }
+  // Display adattivi (es. S22) abbassano il refresh a schermo statico: i rAF arriverebbero ogni
+  // ~42 ms e conterebbero come scatti. Un pixel quasi invisibile animato tiene il refresh pieno.
+  const keep = document.createElement('div')
+  keep.style.cssText =
+    // Serve un pixel che disegni davvero: con opacity e senza sfondo non c'è danno da ridisegnare.
+    'position:fixed;top:0;left:0;width:2px;height:2px;background:rgba(0,0,0,.02);pointer-events:none;z-index:2147483647'
+  document.body.append(keep)
+  const keepAnim = keep.animate([{ transform: 'none' }, { transform: 'translateX(3px)' }], {
+    duration: 1000,
+    iterations: Infinity,
+  })
   const loop = (t) => {
     if (!st.on) return
     st.ts.push(t)
@@ -206,6 +217,8 @@ function installMeter() {
   }
   st.stop = () => {
     st.on = false
+    keepAnim.cancel()
+    keep.remove()
     if (obs) {
       push(obs.takeRecords())
       obs.disconnect()

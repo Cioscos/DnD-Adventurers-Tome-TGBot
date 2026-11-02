@@ -304,7 +304,7 @@ export default function Skills() {
           -top-4 compensa il p-4 del contenitore di scroll del Layout (stesso pattern di
           Inventory/Spells): con top-0 la barra si fermava 16px sotto il bordo e il
           contenuto scorreva visibile sopra il pannello blurrato. */}
-      <div className="sticky -top-4 z-10 -mx-4 px-4 pt-2 pb-2 bg-dnd-bg/95 backdrop-blur-sm">
+      <div className="sticky top-[calc(var(--crumb-offset,0px)-1rem)] z-10 -mx-4 px-4 pt-2 pb-2 bg-dnd-bg/95 backdrop-blur-sm">
         <Surface variant="elevated" className="flex flex-col gap-2">
           <div className="flex items-center gap-2">
             <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim">

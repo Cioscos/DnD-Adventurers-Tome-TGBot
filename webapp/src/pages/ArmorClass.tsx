@@ -110,7 +110,7 @@ export default function ArmorClass() {
       {isDirty && (
         <Surface
           variant="ember"
-          className="sticky top-2 z-20 flex items-center justify-between gap-3 !py-2.5 !px-3"
+          className="sticky top-[calc(var(--crumb-offset,0px)+0.5rem)] z-20 flex items-center justify-between gap-3 !py-2.5 !px-3"
         >
           <span className="text-xs font-body text-dnd-text">
             {t('character.identity.unsaved_changes')}

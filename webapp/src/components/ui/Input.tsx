@@ -1,4 +1,5 @@
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useContext, useEffect, useRef } from 'react'
+import { SheetEnteredContext } from '@/components/ui/sheetContext'
 import { m, AnimatePresence } from 'framer-motion'
 
 type InputVariant = 'default' | 'inline' | 'textarea'
@@ -58,6 +59,14 @@ export default function Input({
   const [localError, setLocalError] = useState('')
   const [shake, setShake] = useState(0)
   const ref = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null)
+
+  // Dentro uno Sheet l'autofocus aspetta la fine dell'ingresso: la tastiera che sale
+  // mentre lo sheet anima fa ridimensionare il WebView a ogni frame (scatti su Android).
+  const sheetEntered = useContext(SheetEnteredContext)
+  const deferFocus = !!autoFocus && sheetEntered !== null
+  useEffect(() => {
+    if (deferFocus && sheetEntered) ref.current?.focus()
+  }, [deferFocus, sheetEntered])
 
   // Merge the internal ref with an optional forwarded ref so callers can
   // scroll/focus the field (e.g. RuleEditor scrolling to the name field on a
@@ -170,7 +179,7 @@ export default function Input({
             placeholder={placeholder}
             disabled={disabled}
             rows={rows}
-            autoFocus={autoFocus}
+            autoFocus={autoFocus && !deferFocus}
             className={`w-full px-3 py-2.5 min-h-[96px] rounded-lg bg-dnd-surface text-dnd-text
                         border-b-2 ${underlineColor} outline-none transition-all duration-200
                         placeholder:text-dnd-text-faint font-body text-ellipsis
@@ -189,7 +198,7 @@ export default function Input({
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
             disabled={disabled}
-            autoFocus={autoFocus}
+            autoFocus={autoFocus && !deferFocus}
             className={`w-full px-3 py-2.5 min-h-[48px] rounded-lg bg-dnd-surface text-dnd-text
                         border-b-2 ${underlineColor} outline-none transition-all duration-200
                         placeholder:text-dnd-text-faint font-body text-ellipsis

@@ -6,6 +6,7 @@ import { spring } from '@/styles/motion'
 import { useRegisterOverlay } from '@/store/overlayStore'
 import { useOverlayDismiss } from '@/hooks/useOverlayDismiss'
 import { useDeferredBlur } from '@/hooks/useDeferredBlur'
+import { SheetEnteredContext } from '@/components/ui/sheetContext'
 import { useTranslation } from 'react-i18next'
 
 interface SheetProps {
@@ -38,7 +39,7 @@ export default function Sheet({
 }: SheetProps) {
   const dragControls = useDragControls()
   const sheetRef = useRef<HTMLDivElement>(null)
-  const { blurStyle, onEntranceComplete } = useDeferredBlur(open)
+  const { blurStyle, onEntranceComplete, entered } = useDeferredBlur(open)
 
   const { t } = useTranslation()
   useRegisterOverlay(open)
@@ -80,13 +81,15 @@ export default function Sheet({
           onAnimationComplete={onEntranceComplete}
           onClick={dismissible ? onClose : undefined}
         >
+          {/* Ombra solo da md: su mobile cade fuori schermo sotto il velo, ma ridisegnarla
+              mentre il pannello scorre saturava la GPU (S22: ~45 → ~7 scatti su 5 aperture). */}
           <m.div
             ref={sheetRef}
             className={`
               relative w-full bg-gradient-parchment surface-parchment
               border-t border-dnd-border-strong md:border
               rounded-t-3xl md:rounded-3xl md:max-w-md
-              shadow-parchment-2xl
+              md:shadow-parchment-2xl
               max-h-[85vh] overflow-hidden
               ${centered ? 'md:self-center' : ''}
               ${className}
@@ -146,7 +149,7 @@ export default function Sheet({
                 farebbe comparire una barra orizzontale che alza lo sheet. */}
             <div className="overflow-y-auto overflow-x-hidden overscroll-contain pb-safe-lg"
                  style={{ maxHeight: 'calc(85vh - 60px)' }}>
-              {children}
+              <SheetEnteredContext.Provider value={entered}>{children}</SheetEnteredContext.Provider>
             </div>
           </m.div>
         </m.div>
