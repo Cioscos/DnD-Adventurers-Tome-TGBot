@@ -64,6 +64,7 @@ async def move_items(
         same = next((
             o for o in char.items
             if o is not item and o.item_type == "generic" and item.item_type == "generic"
+            and not is_container(o) and not is_container(item)
             and o.name == item.name and o.container_id == container_id
         ), None)
         if quantity is not None:

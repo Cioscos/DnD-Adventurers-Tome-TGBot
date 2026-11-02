@@ -54,6 +54,14 @@ def _apply_hp_delta(char, delta_hp: int) -> None:
     char.current_hit_points = max(0, min(char.current_hit_points + delta_hp, char.hit_points))
 
 
+def _apply_con_hp(char, old_con_mod: int) -> None:
+    """Auto-recompute HP when the effective CON modifier changed (equip/unequip/move)."""
+    if (char.settings or {}).get("hp_auto_calc", True):
+        delta = effective_con_mod(char) - old_con_mod
+        if delta != 0:
+            _apply_hp_delta(char, delta * char.total_level)
+
+
 _DICE_RE = re.compile(r"^(\d+)d(\d+)([+-]\d+)?$", re.IGNORECASE)
 
 
@@ -198,7 +206,7 @@ async def add_item(
         body.is_equipped, body.equipment_slot = False, None
 
     # Deduplication for generic items: merge with a same-name generic in the same container
-    if body.item_type == "generic":
+    if body.item_type == "generic" and not is_container_meta(body.item_metadata):
         existing_result = await session.execute(
             select(Item).where(
                 Item.character_id == char_id,
@@ -305,12 +313,7 @@ async def update_item(
         apply_equip_ac(char, item, displaced)
 
     # Auto-recompute HP when CON modifier changes due to equip/unequip
-    settings = char.settings or {}
-    if settings.get("hp_auto_calc", True):
-        new_con_mod = effective_con_mod(char)
-        delta = new_con_mod - old_con_mod
-        if delta != 0:
-            _apply_hp_delta(char, delta * char.total_level)
+    _apply_con_hp(char, old_con_mod)
 
     char.recalculate_encumbrance()
     # Flush + refresh so the post-update Character (and items) are visible to
@@ -356,12 +359,26 @@ async def move_items_endpoint(
     session: Annotated[AsyncSession, Depends(get_db)],
 ) -> CharacterFull:
     char = await _get_owned_full(char_id, user_id, session)
+    old_con_mod = effective_con_mod(char)
+    worn = [(i, i.equipment_slot) for i in char.items if i.id in body.item_ids and i.is_equipped]
     names = await move_items(session, char, body.item_ids, body.container_id, body.quantity)
+    _apply_con_hp(char, old_con_mod)
     char.recalculate_encumbrance()
     await session.flush()
     await session.refresh(char, attribute_names=["items"])
+    notifications: list[dict] = []
+    for it, slot in worn:
+        if not it.is_equipped:
+            firing = await dispatch(session, char, "item_unequipped", {
+                "item_id": it.id, "item_type": it.item_type,
+                "slot": slot.value if slot is not None else None,
+                "was_equipped": True, "is_equipped": False,
+            })
+            notifications += collect_homebrew_notifications(firing)
     response = await build_character_response(session, char)
     response.unequipped_item_names = names
+    if notifications:
+        response.homebrew_notifications = notifications
     return response
 
 

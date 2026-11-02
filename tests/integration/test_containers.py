@@ -255,3 +255,32 @@ async def test_container_quantity_must_be_one(client):
     bag = _item(r, "Zaino")["id"]
     r = await client.patch(f"/characters/{cid}/items/{bag}", json={"quantity": 2})
     assert r.status_code == 422
+
+
+async def test_same_name_bags_not_merged(client):
+    cid = await _char(client)
+    r = await _add(client, cid, name="Sacca", item_metadata=_bag())
+    outer = _item(r, "Sacca")["id"]
+    r = await _add(client, cid, name="Zaino", item_metadata=_bag(coins={"gold": 3}), container_id=outer)
+    r = await _add(client, cid, name="Zaino", item_metadata=_bag(coins={"gold": 4}), container_id=outer)
+    assert len([i for i in r.json()["items"] if i["name"] == "Zaino"]) == 2
+    r = await _add(client, cid, name="Zaino", item_metadata=_bag(coins={"gold": 5}))
+    loose = [i for i in r.json()["items"] if i["name"] == "Zaino" and i["container_id"] is None][0]["id"]
+    r = await _move(client, cid, [loose], outer)
+    bags = [i for i in r.json()["items"] if i["name"] == "Zaino"]
+    assert len(bags) == 3 and all(b["quantity"] == 1 for b in bags)
+    assert r.json()["coin_totals"]["gold"] == 12
+
+
+async def test_move_equipped_con_item_drops_hp(client):
+    cid = await _char(client, initial_class={"class_name": "Guerriero", "level": 1, "hit_die": 10})
+    r = await _add(client, cid, name="Zaino", item_metadata=_bag())
+    bag = _item(r, "Zaino")["id"]
+    meta = {"ability_modifiers": [{"ability": "constitution", "kind": "relative", "value": 4}]}
+    r = await _add(client, cid, name="Cintura", item_type="wondrous", item_metadata=meta,
+                   is_equipped=True)
+    belt = _item(r, "Cintura")["id"]
+    hp = r.json()["hit_points"]
+    r = await _move(client, cid, [belt], bag)
+    assert r.status_code == 200, r.text
+    assert hp == 10 and r.json()["hit_points"] == 8
