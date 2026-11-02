@@ -381,10 +381,18 @@ export default function Inventory() {
       return next
     })
 
-    // Scroll into view (dopo il prossimo frame, così il DOM ha avuto tempo di espandere)
-    const rafId = requestAnimationFrame(() => {
-      itemRefs.current[highlightId]?.scrollIntoView({ block: 'center', behavior: 'smooth' })
-    })
+    // Come in Incantesimi: al primo frame la riga può non essere montata (tipo appena de-collassato)
+    // e l'espansione della card (~350ms) sposta il layout fermando lo scroll a metà → riprova, poi
+    // un secondo passaggio a layout assestato.
+    const scrollToItem = () => itemRefs.current[highlightId]?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+    let attempts = 0
+    let rafId = 0
+    const tryScroll = () => {
+      if (itemRefs.current[highlightId]) scrollToItem()
+      else if (attempts++ < 10) rafId = requestAnimationFrame(tryScroll)
+    }
+    rafId = requestAnimationFrame(tryScroll)
+    const settleId = window.setTimeout(scrollToItem, 450)
 
     // Fade dopo 3s e clear della state
     const tid = window.setTimeout(() => {
@@ -394,6 +402,7 @@ export default function Inventory() {
 
     return () => {
       cancelAnimationFrame(rafId)
+      window.clearTimeout(settleId)
       window.clearTimeout(tid)
     }
   }, [highlightId, char, navigate, location.pathname])
