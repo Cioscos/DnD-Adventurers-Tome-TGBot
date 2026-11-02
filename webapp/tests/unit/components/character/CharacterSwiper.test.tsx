@@ -70,6 +70,17 @@ describe('CharacterSwiper', () => {
     expect(screen.getByTestId('dots')).toBeInTheDocument()
   })
 
+  // Flash al ritorno sull'hub: col solo ResizeObserver (asincrono) il primo disegno aveva schermate larghe 0.
+  it('ha la larghezza delle schermate già al primo render, senza aspettare il ResizeObserver', () => {
+    const spy = vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(375)
+    try {
+      render(<CharacterSwiper hero={<div>HERO</div>} equipment={<div>E</div>} menu={<div>M</div>} />)
+      expect(screen.getByText('HERO').parentElement!.style.width).toBe('375px')
+    } finally {
+      spy.mockRestore()
+    }
+  })
+
   it('selecting a dot sets the active screen', async () => {
     render(<CharacterSwiper hero={<div>H</div>} equipment={<div>E</div>} menu={<div>M</div>} />)
     await userEvent.click(screen.getByTestId('dot-2'))

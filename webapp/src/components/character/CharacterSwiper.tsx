@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { m, useMotionValue, animate, useReducedMotion, type PanInfo } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import { useCharacterStore, type CharacterScreen } from '@/store/characterStore'
@@ -37,10 +37,12 @@ export default function CharacterSwiper({ hero, equipment, menu }: Props) {
   // through pages 0/1 to reach page 2).
   const initialAppliedRef = useRef(false)
 
-  // Track container width via ResizeObserver
-  useEffect(() => {
+  // Larghezza misurata PRIMA del primo disegno: col solo ResizeObserver (asincrono) il primo frame
+  // aveva schermate larghe 0 e mostrava uno sfondo vuoto, poi Hero, poi la schermata attiva (flash al ritorno).
+  useLayoutEffect(() => {
     const el = containerRef.current
     if (!el) return
+    if (el.clientWidth > 0) setWidth(el.clientWidth)
     const ro = new ResizeObserver((entries) => {
       const w = entries[0]?.contentRect.width ?? 0
       if (w > 0) setWidth(w)
@@ -52,8 +54,9 @@ export default function CharacterSwiper({ hero, equipment, menu }: Props) {
   // Velocità di rilascio dell'ultimo drag, consumata dallo snap successivo.
   const releaseVelocityRef = useRef(0)
 
-  // Snap to current screen whenever activeScreen or width changes
-  useEffect(() => {
+  // Snap to current screen whenever activeScreen or width changes (layout effect: il primo
+  // posizionamento avviene prima del disegno, senza un frame sulla schermata 0).
+  useLayoutEffect(() => {
     if (width === 0) return
     const target = -activeScreen * width
     if (Math.abs(x.get() - target) < 1) {
