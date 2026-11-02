@@ -17,12 +17,14 @@
         "it": [
           "Nei pannelli dal basso e nelle finestre il campo in cui scrivi resta visibile sopra la tastiera, invece di finirci sotto.",
           "Tornando alla scheda del personaggio da una sottopagina lo schermo non lampeggia più (vuoto, poi Hero, poi la schermata giusta).",
-          "L'inventario scorre fino all'oggetto evidenziato quando ci arrivi dal feed della sessione."
+          "L'inventario scorre fino all'oggetto evidenziato quando ci arrivi dal feed della sessione.",
+          "In Incantesimi e Abilità speciali la pagina scorre anche se il dito parte dalla fila dei filtri."
         ],
         "en": [
           "In bottom sheets and dialogs the field you are typing in stays visible above the keyboard instead of ending up underneath it.",
           "Going back to the character sheet from a subpage no longer flashes the screen (blank, then Hero, then the right screen).",
-          "The inventory scrolls to the highlighted item when you arrive from the session feed."
+          "The inventory scrolls to the highlighted item when you arrive from the session feed.",
+          "In Spells and Special abilities the page scrolls even when your finger starts on the filter row."
         ]
       }
     },
