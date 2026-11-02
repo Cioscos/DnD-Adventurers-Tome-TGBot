@@ -20,6 +20,7 @@ from api.schemas.common import (
     RollMode,
 )
 from api.schemas.condition_effects import ConditionEffectRead, PendingSaveRead
+from api.schemas.container import CoinLocationRead
 from api.schemas.item import ItemRead
 from api.schemas.spell import SpellRead, SpellSlotRead
 
@@ -138,6 +139,10 @@ class CharacterFull(BaseModel):
     encumbrance_total: float = 0.0
     encumbrance_level: str = "none"
     speed_encumbrance_penalty_ft: int = 0
+    # Purse + container coins; breakdown lists only locations holding coins (purse first).
+    coin_totals: dict[str, int] = Field(default_factory=dict)
+    coin_breakdown: list[CoinLocationRead] = Field(default_factory=list)
+    unequipped_item_names: list[str] = []
 
     # Computed
     total_level: int = 0

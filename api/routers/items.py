@@ -22,6 +22,7 @@ from core.db.models import Character, CharacterClass, CharacterHistory, Equipmen
 from api.schemas.character import CharacterFull
 from api.schemas.item import AmmoState, ItemCreate, ItemRead, ItemUpdate, WeaponAttackResult
 from core.game.stats import effective_ability_score
+from core.game.containers import is_container
 from core.game.item_bonuses import attack_bonus_total, is_attuned, item_meta
 from core.game.attacks import unarmed_strike_profile
 from core.data.spell_slots import normalize_class_name
@@ -178,8 +179,15 @@ async def add_item(
 ) -> CharacterFull:
     char = await _get_owned_full(char_id, user_id, session)
 
-    # Deduplication for generic items: merge quantity if same name exists
-    if body.item_type == "generic":
+    if body.container_id is not None:
+        parent = next((i for i in char.items if i.id == body.container_id), None)
+        if parent is None:
+            raise HTTPException(status_code=404, detail="Container not found")
+        if not is_container(parent):
+            raise HTTPException(status_code=422, detail="not_a_container")
+
+    # Deduplication for generic items: merge quantity if same name exists (loose items only)
+    if body.item_type == "generic" and body.container_id is None:
         existing_result = await session.execute(
             select(Item).where(
                 Item.character_id == char_id,
@@ -207,6 +215,7 @@ async def add_item(
         item_metadata=metadata_str,
         is_equipped=body.is_equipped,
         equipment_slot=body.equipment_slot,
+        container_id=body.container_id,
     )
     session.add(item)
     await session.flush()

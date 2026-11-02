@@ -4,7 +4,7 @@ from types import SimpleNamespace as NS
 import pytest
 
 from core.game.containers import (
-    allocate, carried_weight, children_index, container_stats, would_cycle,
+    allocate, carried_weight, children_index, container_stats, descendant_ids, would_cycle,
 )
 
 
@@ -61,3 +61,20 @@ def test_allocate_order():
     assert allocate({"gold": 2}, items, "gold", 4) == [(None, 4)]
     with pytest.raises(ValueError, match="insufficient_funds"):
         allocate({"gold": 2}, items, "gold", -20)
+
+
+def test_cycle_does_not_hang_and_counts_items():
+    a, b = cont(1, 2, parent=2), cont(2, 3, parent=1)
+    items = [a, b, it(3, 1, parent=1)]
+    assert carried_weight(items, {}, False) == pytest.approx(6)
+    assert set(container_stats(items)) == {1, 2}
+    assert descendant_ids(items, 1) <= {1, 2, 3}
+
+
+def test_quantity_zero_weighs_nothing():
+    assert carried_weight([it(1, 5, qty=0)], {}, False) == 0
+
+
+def test_allocate_invalid_coin():
+    with pytest.raises(ValueError, match="invalid_coin"):
+        allocate({}, [], "bronze", -1)

@@ -26,6 +26,8 @@ def is_attuned(item) -> bool:
 
 
 def is_active_for_bonuses(item) -> bool:
+    if getattr(item, "container_id", None) is not None:
+        return False
     meta = item_meta(item)
     if meta.get("requires_attunement") and not meta.get("attuned"):
         return False

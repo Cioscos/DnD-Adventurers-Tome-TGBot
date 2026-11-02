@@ -9,6 +9,7 @@ from typing import Any, Optional
 from pydantic import BaseModel, ValidationInfo, field_validator
 
 from api.schemas.common import RollMode
+from api.schemas.container import ContainerStatsRead, validate_container_meta
 from api.schemas.item_magic import validate_magic_meta
 from core.db.models import EquipmentSlot
 from api.services.equipment import slot_allowed_for_type
@@ -123,6 +124,8 @@ class ItemRead(BaseModel):
     item_metadata: Optional[dict[str, Any]] = None
     is_equipped: bool = False
     equipment_slot: Optional[EquipmentSlot] = None
+    container_id: Optional[int] = None
+    container_stats: Optional[ContainerStatsRead] = None
 
     model_config = {"from_attributes": True}
 
@@ -146,6 +149,7 @@ class ItemCreate(BaseModel):
     item_metadata: Optional[dict[str, Any]] = None
     is_equipped: bool = False
     equipment_slot: Optional[EquipmentSlot] = None
+    container_id: Optional[int] = None
 
     @field_validator("item_metadata", mode="after")
     @classmethod
@@ -161,6 +165,7 @@ class ItemCreate(BaseModel):
                 )
             _validate_weapon_meta(v)
             validate_magic_meta(v)
+            validate_container_meta(v)
         return v
 
     @field_validator("equipment_slot", mode="after")
@@ -200,6 +205,7 @@ class ItemUpdate(BaseModel):
                 )
             _validate_weapon_meta(v)
             validate_magic_meta(v)
+            validate_container_meta(v)
         return v
 
 

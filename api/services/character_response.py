@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from api.schemas.container import CoinLocationRead, ContainerStatsRead
 from api.schemas.character import AcBreakdown, ActiveForm, CharacterFull
 from api.services.condition_effects import character_effect_payload
 from api.services.wild_shape import get_active_form
@@ -18,6 +19,7 @@ from api.services.spellcasting import build_spellcasting_info
 from core.data.skills import SKILL_ABILITY_MAP
 from core.db.models import ABILITY_NAMES, Character
 from core.game.actions import attacks_per_action
+from core.game.containers import COINS, carried_weight, coin_locations, container_coins, container_stats
 from core.game.item_bonuses import item_bonus_total
 from core.game.skills import PASSIVE_SKILLS, has_jack_of_all_trades, skill_proficiency_part
 from core.game.stats import effective_ability_score
@@ -75,6 +77,7 @@ async def build_character_response(
         + await get_passive_modifiers(session, char, "character.initiative")
     )
     _apply_encumbrance(char, response)
+    _apply_containers(char, response)
     response.pending_choices = list(char.pending_choices or [])
 
     response.jack_of_all_trades = has_jack_of_all_trades(char)
@@ -103,15 +106,35 @@ async def build_character_response(
     return response
 
 
+def _purse(char: Character) -> dict[str, int]:
+    cur = char.currency
+    return {c: getattr(cur, c) or 0 for c in COINS} if cur is not None else {}
+
+
+def _apply_containers(char: Character, response: CharacterFull) -> None:
+    """Per-container stats on the items, plus coin totals/breakdown across purse and containers."""
+    stats = container_stats(char.items)
+    for it in response.items:
+        s = stats.get(it.id)
+        if s is not None:
+            it.container_stats = ContainerStatsRead(**vars(s))
+    by_id = {i.id: i for i in char.items}
+    places = [(None, None, _purse(char))] + [
+        (cid, by_id[cid].name, container_coins(by_id[cid])) for cid in coin_locations(char.items)
+    ]
+    response.coin_totals = {c: sum(p[2].get(c, 0) for p in places) for c in COINS}
+    response.coin_breakdown = [
+        CoinLocationRead(container_id=cid, name=name, coins={c: coins.get(c, 0) for c in COINS})
+        for cid, name, coins in places if any(coins.get(c, 0) for c in COINS)
+    ]
+
+
 def _apply_encumbrance(char: Character, response: CharacterFull) -> None:
     """Total carried weight (+ coins at 50/lb if enabled) and the optional variant level."""
     cfg = char.settings or {}
     # Live sum: the stored column can lag when items were just added/changed in this request.
-    total = float(sum(i.weight * i.quantity for i in char.items))
-    response.encumbrance = total
-    cur = char.currency
-    if cfg.get("coin_weight") and cur is not None:
-        total += (cur.copper + cur.silver + cur.electrum + cur.gold + cur.platinum) / 50
+    response.encumbrance = float(carried_weight(char.items, {}, False))
+    total = float(carried_weight(char.items, _purse(char), bool(cfg.get("coin_weight"))))
     response.encumbrance_total = total
     if not cfg.get("encumbrance_variant"):
         return

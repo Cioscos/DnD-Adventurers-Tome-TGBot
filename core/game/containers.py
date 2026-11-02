@@ -20,9 +20,28 @@ def is_container(item) -> bool:
 def children_index(items) -> dict:
     container_ids = {i.id for i in items if is_container(i)}
     idx: dict = defaultdict(list)
-    for i in sorted(items, key=lambda i: i.id):
+    for i in sorted(items, key=lambda i: i.id or 0):
         parent = i.container_id if i.container_id in container_ids else None
         idx[parent].append(i)
+    # Corrupt data: members of an unreachable parent cycle are promoted to root so the index is a forest.
+    seen: set[int] = set()
+    stack = [None]
+
+    def mark() -> None:
+        while stack:
+            for c in idx.get(stack.pop(), []):
+                if id(c) not in seen:
+                    seen.add(id(c))
+                    stack.append(c.id)
+
+    mark()
+    for i in sorted(items, key=lambda i: i.id or 0):
+        if id(i) not in seen:
+            idx[i.container_id].remove(i)
+            idx[None].append(i)
+            seen.add(id(i))
+            stack.append(i.id)
+            mark()
     return idx
 
 
@@ -51,7 +70,7 @@ def container_coins(item) -> dict[str, int]:
 
 
 def _own(item) -> float:
-    return (item.weight or 0) * (item.quantity or 1)
+    return (item.weight or 0) * (1 if item.quantity is None else item.quantity)
 
 
 def carried_weight(items, purse_coins: dict, coin_weight: bool) -> float:
@@ -122,6 +141,8 @@ def coin_locations(items) -> list[int]:
 
 
 def allocate(purse: dict, items, coin: str, delta: int) -> list[tuple[int | None, int]]:
+    if coin not in COINS:
+        raise ValueError("invalid_coin")
     if delta >= 0:
         return [(None, delta)]
     by_id = {i.id: i for i in items}

@@ -7,6 +7,7 @@ from pydantic import AfterValidator, BaseModel, Field, ValidationInfo, field_val
 
 from api.schemas.companion import validate_statblock
 from api.schemas.item import _validate_weapon_meta
+from api.schemas.container import validate_container_meta
 from api.schemas.item_magic import validate_magic_meta
 from core.db.models import EquipmentSlot
 from core.game.actions import ActionType
@@ -112,6 +113,7 @@ class ExportItem(BaseModel):
         if not (info.context or {}).get("lenient"):
             _validate_weapon_meta(v)
             validate_magic_meta(v)
+            validate_container_meta(v)
         return v
 
 

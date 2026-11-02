@@ -257,7 +257,8 @@ class Character(Base):
         return " / ".join(parts)
 
     def recalculate_encumbrance(self) -> None:
-        self.encumbrance = sum(i.weight * i.quantity for i in self.items)
+        from core.game.containers import carried_weight
+        self.encumbrance = carried_weight(self.items, {}, False)
 
     def recalculate_carry_capacity(self) -> None:
         if self.carry_capacity_override:
@@ -429,6 +430,10 @@ class Item(Base):
         Enum(EquipmentSlot, native_enum=False, length=20),
         nullable=True,
         default=None,
+    )
+    # Parent container item (None = loose in the bag)
+    container_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("items.id", ondelete="SET NULL"), nullable=True, default=None
     )
 
     character: Mapped["Character"] = relationship(back_populates="items")
