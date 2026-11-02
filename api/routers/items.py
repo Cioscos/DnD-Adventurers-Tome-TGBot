@@ -27,6 +27,7 @@ from core.game.item_bonuses import attack_bonus_total, is_attuned, item_meta
 from core.game.attacks import unarmed_strike_profile
 from core.data.spell_slots import normalize_class_name
 from api.routers._helpers import (
+    apply_con_hp as _apply_con_hp,
     collect_homebrew_notifications,
     effective_ability_mod,
     effective_con_mod,
@@ -44,22 +45,6 @@ from api.services.effects import apply_heal, apply_conditions
 from api.schemas.common import ConsumableUseResult, D20Dice, RollMode, normalize_proficiencies
 
 router = APIRouter(prefix="/characters", tags=["items"])
-
-
-def _apply_hp_delta(char, delta_hp: int) -> None:
-    """Apply an integer HP delta to both max and current, floor at 0."""
-    if delta_hp == 0:
-        return
-    char.hit_points = max(0, char.hit_points + delta_hp)
-    char.current_hit_points = max(0, min(char.current_hit_points + delta_hp, char.hit_points))
-
-
-def _apply_con_hp(char, old_con_mod: int) -> None:
-    """Auto-recompute HP when the effective CON modifier changed (equip/unequip/move)."""
-    if (char.settings or {}).get("hp_auto_calc", True):
-        delta = effective_con_mod(char) - old_con_mod
-        if delta != 0:
-            _apply_hp_delta(char, delta * char.total_level)
 
 
 _DICE_RE = re.compile(r"^(\d+)d(\d+)([+-]\d+)?$", re.IGNORECASE)

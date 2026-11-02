@@ -95,6 +95,15 @@ def effective_ability_mod(char, ability: str) -> int:
     return (effective - 10) // 2
 
 
+def apply_con_hp(char, old_con_mod: int) -> None:
+    """Auto-recompute HP when the effective CON modifier changed (equip/unequip/move/trade)."""
+    if (char.settings or {}).get("hp_auto_calc", True):
+        delta = (effective_con_mod(char) - old_con_mod) * char.total_level
+        if delta != 0:
+            char.hit_points = max(0, char.hit_points + delta)
+            char.current_hit_points = max(0, min(char.current_hit_points + delta, char.hit_points))
+
+
 async def saving_throw_bonus(session: AsyncSession, char: Character, ability: str) -> int:
     """Saving throw bonus as the sheet shows it: effective modifier,
     proficiency and homebrew passive modifiers."""

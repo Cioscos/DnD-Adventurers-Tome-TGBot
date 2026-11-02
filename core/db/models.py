@@ -646,6 +646,8 @@ class SessionMessage(Base):
     item_quantity: Mapped[Optional[int]] = mapped_column(
         Integer, nullable=True
     )
+    # JSON snapshot of a PG-to-PG trade (public feed row); NULL for ordinary messages
+    trade_payload: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     session: Mapped["GameSession"] = relationship(back_populates="messages")
 
