@@ -1840,6 +1840,7 @@
       "item_not_found_toast": "Oggetto non più presente nel tuo inventario"
     },
     "feed": {
+      "trade": "{{from}} ha dato a {{to}}: {{what}}",
       "grant_chip": "Tocca per aprire nell'inventario",
       "grant_received": "Il GM ti ha consegnato: {{name}} (×{{qty}})",
       "grant_sent": "Hai consegnato a {{recipient}}: {{name}} (×{{qty}})"
