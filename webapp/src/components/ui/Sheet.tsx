@@ -46,6 +46,20 @@ export default function Sheet({
   // Escape e back/popstate chiudono solo lo sheet in cima allo stack condiviso.
   useOverlayDismiss(open, onClose, dismissible)
 
+  // Tastiera aperta: Telegram Android rimpicciolisce la WebView ma il browser non porta in vista
+  // il campo attivo dentro lo scroll dello sheet (restava sotto la tastiera). Lo facciamo noi.
+  useEffect(() => {
+    if (!open) return
+    const onResize = () => requestAnimationFrame(() => {
+      const el = document.activeElement
+      if (el instanceof HTMLElement && sheetRef.current?.contains(el) && el.matches('input, textarea')) {
+        el.scrollIntoView({ block: 'center' })
+      }
+    })
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [open])
+
   // Prevent body scroll when open
   useEffect(() => {
     if (!open) return
@@ -90,7 +104,7 @@ export default function Sheet({
               border-t border-dnd-border-strong md:border
               rounded-t-3xl md:rounded-3xl md:max-w-md
               md:shadow-parchment-2xl
-              max-h-[85vh] overflow-hidden
+              max-h-[calc(var(--tg-vh,100vh)*0.85)] overflow-hidden
               ${centered ? 'md:self-center' : ''}
               ${className}
             `}
@@ -148,7 +162,7 @@ export default function Sheet({
             {/* overflow-y-auto rende auto anche l'asse x: un contenuto che scorre di lato
                 farebbe comparire una barra orizzontale che alza lo sheet. */}
             <div className="overflow-y-auto overflow-x-hidden overscroll-contain pb-safe-lg"
-                 style={{ maxHeight: 'calc(85vh - 60px)' }}>
+                 style={{ maxHeight: 'calc(var(--tg-vh, 100vh) * 0.85 - 60px)' }}>
               <SheetEnteredContext.Provider value={entered}>{children}</SheetEnteredContext.Provider>
             </div>
           </m.div>

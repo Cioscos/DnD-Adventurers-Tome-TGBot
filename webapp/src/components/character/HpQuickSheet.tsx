@@ -166,7 +166,6 @@ export default function HpQuickSheet({ char, open, onClose }: HpQuickSheetProps)
           type="number"
           min={0}
           inputMode="numeric"
-          autoFocus
           placeholder="0"
         />
         {showPreview && (
