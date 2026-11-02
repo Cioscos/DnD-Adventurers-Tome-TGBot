@@ -614,10 +614,10 @@ export default function Inventory() {
                   >
                     <div className="space-y-2 mt-2">
                       {groupItems.map((item) => (
-                        <m.div
+                        // Niente `layout` per oggetto: framer rimisurava tutta la lista a ogni
+                        // render (anche solo aprendo un dettaglio); come negli incantesimi.
+                        <div
                           key={item.id}
-                          layout
-                          transition={{ duration: 0.18, ease: [0.25, 0.1, 0.25, 1] }}
                           ref={(el) => { itemRefs.current[item.id] = el }}
                           className={highlightId === item.id ? 'animate-pulse-glow' : undefined}
                         >
@@ -648,7 +648,7 @@ export default function Inventory() {
                             chargesPending={chargesMutation.isPending && chargesMutation.variables?.itemId === item.id}
                             castPending={itemCast.isPending && itemCast.variables?.itemId === item.id}
                           />
-                        </m.div>
+                        </div>
                       ))}
                     </div>
                   </m.div>
