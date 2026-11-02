@@ -86,17 +86,18 @@ export default function Currency() {
     )
 
   // Salva subito il nuovo valore di UNA moneta (PATCH parziale: le altre restano come sono sul server).
-  // shortcut: PATCH a valore assoluto; due tap ravvicinati sulla stessa moneta dipendono dall'ordine
-  // di arrivo al server. Se capita, passare a un endpoint a delta.
+  // Stesso scope = salvataggi e conversioni in fila: i PATCH a valore assoluto arrivano in ordine.
+  const scope = { id: `currency-${charId}` }
   const saveCoin = useMutation({
-    mutationKey: ['currency', charId],
-    mutationFn: ({ key, value }: { key: CoinKey; value: number; before: number }) =>
+    scope,
+    mutationFn: ({ key, value }: { key: CoinKey; value: number }) =>
       api.currency.update(charId, { [key]: value }),
     onMutate: ({ key, value }) => setCached({ [key]: value }),
-    // Una risposta vecchia non deve sovrascrivere il valore ottimistico di un'operazione ancora in volo.
-    onSuccess: (updated) => { if (qc.isMutating({ mutationKey: ['currency', charId] }) <= 1) setCached(updated) },
-    onError: (_e, { key, before }) => {
-      setCached({ [key]: before })
+    // Una risposta vecchia non deve sovrascrivere il valore ottimistico di un'operazione ancora in coda.
+    onSuccess: (updated) => { if (qc.isMutating({ predicate: (mu) => mu.options.scope?.id === scope.id }) <= 1) setCached(updated) },
+    // Dopo un errore la cache non è affidabile (altre operazioni in coda): si rilegge dal server.
+    onError: () => {
+      qc.invalidateQueries({ queryKey: ['character', charId] })
       haptic.error()
       toast.error(t('character.currency.save_error'))
     },
@@ -105,7 +106,7 @@ export default function Currency() {
   const apply = (key: CoinKey, delta: number, undoable = true) => {
     const before = current(key)
     const value = Math.max(0, before + delta)
-    saveCoin.mutate({ key, value, before })
+    saveCoin.mutate({ key, value })
     if (!undoable) return
     haptic.success()
     showUndoToast({
@@ -120,18 +121,20 @@ export default function Currency() {
 
   const setExact = (key: CoinKey, value: number) => {
     const before = current(key)
-    saveCoin.mutate({ key, value, before })
+    saveCoin.mutate({ key, value })
     haptic.success()
     showUndoToast({
       message: t('character.currency.set_toast', { n: value, coin: coinName(key) }),
       actionLabel: t('character.currency.undo'),
-      onUndo: () => apply(key, before - current(key), false),
+      // Inversa di questo cambio, non ritorno al valore di prima: tiene le operazioni fatte dopo.
+      onUndo: () => apply(key, before - value, false),
     })
   }
 
   const convertMutation = useMutation({
+    scope,
     mutationFn: () =>
-      api.currency.convert(charId, convertSource, convertTarget, Number(convertAmount) || 0),
+      api.currency.convert(charId, convertSource, convertTarget, Math.floor(Number(convertAmount)) || 0),
     onSuccess: (updated) => {
       setCached(updated)
       setConvertAmount('')
@@ -432,7 +435,7 @@ export default function Currency() {
               variant="primary"
               fullWidth
               onClick={() => convertMutation.mutate()}
-              disabled={!convertAmount || convertSource === convertTarget}
+              disabled={!(Math.floor(Number(convertAmount)) >= 1) || convertSource === convertTarget}
               loading={convertMutation.isPending}
               haptic="success"
             >

@@ -185,6 +185,19 @@ describe('Currency page — borsa + transazione', () => {
     expect(undoSpy).toHaveBeenCalledTimes(1)
   })
 
+  it('Annulla del valore esatto annulla solo quel cambio, non le operazioni fatte dopo', async () => {
+    await loaded()
+    await userEvent.click(key('character.currency.gold: 10'))
+    fireEvent.change(within(await screen.findByTestId('sheet')).getByPlaceholderText('10'), { target: { value: '50' } })
+    await userEvent.click(screen.getByRole('button', { name: 'common.save' }))
+    await waitFor(() => expect(updateSpy).toHaveBeenCalledWith(5, { gold: 50 }))
+    await userEvent.click(key('5'))
+    await userEvent.click(key('character.currency.receive'))
+    await waitFor(() => expect(updateSpy).toHaveBeenLastCalledWith(5, { gold: 55 }))
+    undoSpy.mock.calls[0][0].onUndo()
+    await waitFor(() => expect(updateSpy).toHaveBeenLastCalledWith(5, { gold: 15 }))
+  })
+
   it('nasconde l’electrum se disattivato nelle impostazioni', async () => {
     await loaded({ ...baseChar, settings: { hide_electrum: true } })
     expect(screen.queryByRole('button', { name: 'EP' })).not.toBeInTheDocument()

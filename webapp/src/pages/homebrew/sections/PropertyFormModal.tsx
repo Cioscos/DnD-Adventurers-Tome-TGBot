@@ -121,11 +121,14 @@ export default function PropertyFormModal({
     values?: string
     default?: string
   }>({})
+  // Testo del default numerico: lascia scrivere "0" e "0.5" (il valore numerico da solo li perderebbe).
+  const [defaultText, setDefaultText] = useState<string | null>(null)
 
   // Re-seed when the modal opens with new initial data.
   useEffect(() => {
     if (open) {
       setDraft(initial ? draftFromProperty(initial) : emptyDraft())
+      setDefaultText(null)
       setErrors({})
     }
   }, [open, initial])
@@ -404,8 +407,8 @@ export default function PropertyFormModal({
             label={t('homebrew.properties.default_label')}
             type="number"
             inputMode="numeric"
-            value={draft.defaultValue ? String(draft.defaultValue) : ''}
-            onChange={(v) => setDefaultValue(v === '' ? 0 : Number(v))}
+            value={defaultText ?? (draft.defaultValue ? String(draft.defaultValue) : '')}
+            onChange={(v) => { setDefaultText(v); setDefaultValue(v === '' ? 0 : Number(v)) }}
             placeholder="0"
           />
         )}
