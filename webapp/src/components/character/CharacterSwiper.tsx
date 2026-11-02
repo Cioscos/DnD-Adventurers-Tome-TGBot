@@ -42,7 +42,9 @@ export default function CharacterSwiper({ hero, equipment, menu }: Props) {
   useLayoutEffect(() => {
     const el = containerRef.current
     if (!el) return
-    if (el.clientWidth > 0) setWidth(el.clientWidth)
+    // Larghezza frazionaria come quella del ResizeObserver (clientWidth arrotonda → secondo render).
+    const w0 = el.getBoundingClientRect().width
+    if (w0 > 0) setWidth(w0)
     const ro = new ResizeObserver((entries) => {
       const w = entries[0]?.contentRect.width ?? 0
       if (w > 0) setWidth(w)

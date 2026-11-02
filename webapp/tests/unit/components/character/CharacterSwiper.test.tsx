@@ -72,7 +72,7 @@ describe('CharacterSwiper', () => {
 
   // Flash al ritorno sull'hub: col solo ResizeObserver (asincrono) il primo disegno aveva schermate larghe 0.
   it('ha la larghezza delle schermate già al primo render, senza aspettare il ResizeObserver', () => {
-    const spy = vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(375)
+    const spy = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({ width: 375 } as DOMRect)
     try {
       render(<CharacterSwiper hero={<div>HERO</div>} equipment={<div>E</div>} menu={<div>M</div>} />)
       expect(screen.getByText('HERO').parentElement!.style.width).toBe('375px')

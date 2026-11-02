@@ -5,6 +5,7 @@ import { QueryClient } from '@tanstack/react-query'
 import { renderWithProviders } from '../utils/renderWithProviders'
 import CharacterMain from '@/pages/CharacterMain'
 import { ApiError } from '@/api/client'
+import { resetHubReturn } from '@/lib/hubReturn'
 
 const { getChar, updateInspiration, navigateSpy, presenceInitial } = vi.hoisted(() => ({ getChar: vi.fn(), updateInspiration: vi.fn(), navigateSpy: vi.fn(), presenceInitial: [] as unknown[] }))
 
@@ -43,7 +44,9 @@ vi.mock('framer-motion', async () => {
   }
   return {
     m: new Proxy({}, { get: (_t: object, tag: string | symbol) => make(String(tag)) }),
-    AnimatePresence: (p: { children?: { key?: unknown }; initial?: boolean }) => { if (p.children?.key === "hub") presenceInitial.push(p.initial); return React.createElement(React.Fragment, null, p.children as never) },
+    AnimatePresence: (p: { children?: unknown }) => React.createElement(React.Fragment, null, p.children as never),
+    // Registra i valori del contesto di presenza dell'hub (blocco delle animazioni d'ingresso).
+    PresenceContext: { Provider: (p: { value: { initial?: boolean }; children?: unknown }) => { presenceInitial.push(p.value.initial); return React.createElement(React.Fragment, null, p.children as never) } },
     // SearchOverlay monta Sheet, che usa il drag-to-dismiss dal giro r2.
     useDragControls: () => ({ start: () => {} }),
   }
@@ -143,14 +146,27 @@ describe('CharacterMain', () => {
 
 // Flash tornando sull'hub da una sottopagina: header e riquadri ripartivano trasparenti.
 describe("CharacterMain — ritorno sull'hub", () => {
-  it("rimontando l'hub dello stesso PG disattiva le animazioni d'ingresso", async () => {
+  it("al ritorno blocca le animazioni d'ingresso solo al primo render; dalla lista le rifà", async () => {
     getChar.mockResolvedValue({ id: 7, name: 'Kael', classes: [], settings: {} })
+    resetHubReturn()
+    presenceInitial.length = 0
     const first = renderWithProviders(<CharacterMain />)
     await screen.findByTestId('swiper')
+    expect(presenceInitial[0]).toBeUndefined() // prima apertura: animazioni attive
     first.unmount()
+
+    presenceInitial.length = 0
+    const back = renderWithProviders(<CharacterMain />)
+    await screen.findByTestId('swiper')
+    expect(presenceInitial[0]).toBe(false) // ritorno: primo render senza ingresso
+    expect(screen.getByText('Kael')).toBeInTheDocument()
+    expect(presenceInitial.at(-1)).toBeUndefined() // poi sbloccato (es. banner del turno si anima)
+    back.unmount()
+
+    resetHubReturn() // la lista personaggi azzera
     presenceInitial.length = 0
     renderWithProviders(<CharacterMain />)
     await screen.findByTestId('swiper')
-    expect(presenceInitial.at(-1)).toBe(false)
+    expect(presenceInitial[0]).toBeUndefined()
   })
 })

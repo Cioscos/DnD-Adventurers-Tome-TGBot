@@ -13,9 +13,11 @@ export function useKeepFocusedFieldVisible(ref: RefObject<HTMLElement>, active: 
       const el = document.activeElement
       if (!(el instanceof HTMLElement) || !ref.current?.contains(el) || !el.matches('input, textarea')) return
       // Solo il contenitore che scorre davvero: scrollIntoView sposterebbe anche i pannelli overflow-hidden.
+      // overflow-x-auto rende "auto" anche overflowY: serve anche che scorra davvero in verticale.
+      const scrolls = (b: HTMLElement) => /(auto|scroll)/.test(getComputedStyle(b).overflowY) && b.scrollHeight > b.clientHeight
       let box = el.parentElement
-      while (box && box !== ref.current && !/(auto|scroll)/.test(getComputedStyle(box).overflowY)) box = box.parentElement
-      if (!box || !/(auto|scroll)/.test(getComputedStyle(box).overflowY)) return
+      while (box && box !== ref.current && !scrolls(box)) box = box.parentElement
+      if (!box || !scrolls(box)) return
       const b = box.getBoundingClientRect()
       const r = el.getBoundingClientRect()
       box.scrollTop += r.top + r.height / 2 - (b.top + b.height / 2)

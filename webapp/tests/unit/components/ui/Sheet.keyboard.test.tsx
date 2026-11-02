@@ -19,6 +19,9 @@ function renderSheet() {
   const box = screen.getByTestId('box')
   // Campo a y=600 dentro un contenitore centrato a y=200: va scrollato di 400px.
   box.getBoundingClientRect = () => ({ top: 100, height: 200 }) as DOMRect
+  // jsdom non fa layout: il contenitore "scorre davvero" (contenuto più alto della finestra).
+  Object.defineProperty(box, 'scrollHeight', { value: 1000, configurable: true })
+  Object.defineProperty(box, 'clientHeight', { value: 200, configurable: true })
   input.getBoundingClientRect = () => ({ top: 590, height: 20 }) as DOMRect
   return { input, box }
 }

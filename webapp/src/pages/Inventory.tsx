@@ -48,6 +48,7 @@ export default function Inventory() {
       ? ((location.state as { highlightItemId: number }).highlightItemId)
       : null
   const [highlightId, setHighlightId] = useState<number | null>(initialHighlight)
+  const highlightHandled = useRef<number | null>(null)
   const itemRefs = useRef<Record<number, HTMLDivElement | null>>({})
   const { t, i18n } = useTranslation()
   const qc = useQueryClient()
@@ -369,6 +370,11 @@ export default function Inventory() {
       return
     }
 
+    // Una volta sola per evidenziazione: un refetch di `char` nei 3s non deve riespandere né
+    // riportare lo scroll sull'oggetto mentre l'utente sta già scorrendo.
+    if (highlightHandled.current === highlightId) return
+    highlightHandled.current = highlightId
+
     // Espandi l'item
     setExpanded(highlightId)
 
@@ -385,27 +391,27 @@ export default function Inventory() {
     // e l'espansione della card (~350ms) sposta il layout fermando lo scroll a metà → riprova, poi
     // un secondo passaggio a layout assestato.
     const scrollToItem = () => itemRefs.current[highlightId]?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+    // Niente cleanup (come in Incantesimi): un rerun per refetch annullerebbe lo scroll già avviato.
     let attempts = 0
-    let rafId = 0
     const tryScroll = () => {
       if (itemRefs.current[highlightId]) scrollToItem()
-      else if (attempts++ < 10) rafId = requestAnimationFrame(tryScroll)
+      else if (attempts++ < 10) requestAnimationFrame(tryScroll)
     }
-    rafId = requestAnimationFrame(tryScroll)
-    const settleId = window.setTimeout(scrollToItem, 450)
+    requestAnimationFrame(tryScroll)
+    window.setTimeout(scrollToItem, 450)
+  }, [highlightId, char, navigate, location.pathname])
 
-    // Fade dopo 3s e clear della state
+  // Fade dopo 3s (da quando la scheda è caricata) e clear della state: separato, così i refetch di
+  // `char` non lo riavviano.
+  const charLoaded = !!char
+  useEffect(() => {
+    if (highlightId === null || !charLoaded) return
     const tid = window.setTimeout(() => {
       setHighlightId(null)
       navigate(location.pathname, { replace: true, state: null })
     }, 3000)
-
-    return () => {
-      cancelAnimationFrame(rafId)
-      window.clearTimeout(settleId)
-      window.clearTimeout(tid)
-    }
-  }, [highlightId, char, navigate, location.pathname])
+    return () => window.clearTimeout(tid)
+  }, [highlightId, charLoaded, navigate, location.pathname])
 
   // Pill flottante: quando la sentinella in cima esce dalla viewport (scroll),
   // il pulsante "Aggiungi" si comprime in pill in alto a destra. Stesso pattern

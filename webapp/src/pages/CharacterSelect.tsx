@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -26,6 +26,7 @@ import Reveal from '@/components/ui/Reveal'
 import Skeleton from '@/components/ui/Skeleton'
 import { WaxSeal } from '@/components/ui/Ornament'
 import { haptic } from '@/auth/telegram'
+import { resetHubReturn } from '@/lib/hubReturn'
 import { useToast } from '@/hooks/useToast'
 import { spring, stagger } from '@/styles/motion'
 import languagesSrd from '@/data/languages-srd.json'
@@ -86,6 +87,8 @@ function importErrorText(detail: unknown): string {
 }
 
 export default function CharacterSelect() {
+  // Riaprire un PG dalla lista rifà le animazioni d'ingresso dell'hub.
+  useEffect(() => { resetHubReturn() }, [])
   const { t, i18n } = useTranslation()
   const navigate = useNavigate()
   const qc = useQueryClient()
