@@ -24,8 +24,8 @@ vi.mock('@/components/ui/Sheet', async () => {
 vi.mock('@/components/ui/Input', async () => {
   const React = await import('react')
   return {
-    default: (p: { value: string; onChange: (v: string) => void }) =>
-      React.createElement('input', { 'data-testid': 'score-input', value: p.value, onChange: (e: { target: { value: string } }) => p.onChange(e.target.value) }),
+    default: (p: { value: string; placeholder?: string; onChange: (v: string) => void }) =>
+      React.createElement('input', { 'data-testid': 'score-input', value: p.value, placeholder: p.placeholder, onChange: (e: { target: { value: string } }) => p.onChange(e.target.value) }),
   }
 })
 vi.mock('@/components/ui/Button', async () => {
@@ -67,5 +67,17 @@ describe('AbilityScoreEditModal', () => {
     expect(screen.getByRole('button', { name: 'character.stats.decrease' })).toBeDisabled()
     rerender(<AbilityScoreEditModal open label="DEX" currentValue={30} onClose={() => {}} onSave={() => {}} />)
     expect(screen.getByRole('button', { name: 'character.stats.increase' })).toBeDisabled()
+  })
+
+  // Campo precompilato: bisognava cancellare il valore prima di scrivere quello nuovo.
+  it('il campo parte vuoto col valore attuale come suggerimento, e si scrive subito il nuovo', async () => {
+    const onSave = vi.fn()
+    render(<AbilityScoreEditModal open label="DEX" currentValue={14} onClose={() => {}} onSave={onSave} />)
+    const input = screen.getByTestId('score-input')
+    expect(input).toHaveValue('')
+    expect(input).toHaveAttribute('placeholder', '14')
+    await userEvent.type(input, '16')
+    await userEvent.click(screen.getByRole('button', { name: 'common.save' }))
+    expect(onSave).toHaveBeenCalledWith(16)
   })
 })

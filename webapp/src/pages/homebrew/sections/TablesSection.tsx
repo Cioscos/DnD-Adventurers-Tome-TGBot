@@ -452,7 +452,9 @@ function ColBinHeader({ bin, onChange, onRemove }: ColBinHeaderProps) {
           inputMode="numeric"
           value={lo}
           onChange={(e) => setLo(e.target.value)}
-          onBlur={() => onChange('lo', lo)}
+          onFocus={() => setLo('')}
+          onBlur={() => (lo === '' ? setLo(String(bin[0])) : onChange('lo', lo))}
+          placeholder={String(bin[0])}
           aria-label={t('homebrew.tables.col_bin_lo')}
           className="w-12 px-1 py-1 min-h-[32px] rounded bg-dnd-surface text-dnd-text border border-dnd-border outline-none text-center font-mono text-[12px]"
         />
@@ -462,7 +464,9 @@ function ColBinHeader({ bin, onChange, onRemove }: ColBinHeaderProps) {
           inputMode="numeric"
           value={hi}
           onChange={(e) => setHi(e.target.value)}
-          onBlur={() => onChange('hi', hi)}
+          onFocus={() => setHi('')}
+          onBlur={() => (hi === '' ? setHi(String(bin[1])) : onChange('hi', hi))}
+          placeholder={String(bin[1])}
           aria-label={t('homebrew.tables.col_bin_hi')}
           className="w-12 px-1 py-1 min-h-[32px] rounded bg-dnd-surface text-dnd-text border border-dnd-border outline-none text-center font-mono text-[12px]"
         />

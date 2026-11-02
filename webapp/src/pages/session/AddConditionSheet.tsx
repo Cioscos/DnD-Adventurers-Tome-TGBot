@@ -44,7 +44,7 @@ export default function AddConditionSheet({ sessionId, encounter, target, liveCh
   const [slug, setSlug] = useState('')
   const [level, setLevel] = useState(Math.max(1, currentExhaustion))
   const [duration, setDuration] = useState<Duration>('none')
-  const [rounds, setRounds] = useState('1')
+  const [rounds, setRounds] = useState('')
   const [of, setOf] = useState<'target' | 'source'>('target')
   const [ability, setAbility] = useState('none')
   const [dc, setDc] = useState('')
@@ -72,7 +72,7 @@ export default function AddConditionSheet({ sessionId, encounter, target, liveCh
       .map((c) => ({ value: String(c.id), label: c.name })),
   ]
 
-  const roundsN = Number(rounds)
+  const roundsN = rounds === '' ? 1 : Number(rounds)
   const dcN = Number(dc)
   const valid = slug !== '' && (isExhaustion || (
     (duration !== 'rounds' || (Number.isInteger(roundsN) && roundsN >= 1 && roundsN <= 100))
@@ -161,7 +161,7 @@ export default function AddConditionSheet({ sessionId, encounter, target, liveCh
             {duration === 'rounds' && (
               <Input
                 label={t(`${K}.rounds_label`)} type="number" inputMode="numeric"
-                min={1} max={100} value={rounds} onChange={setRounds} className="font-mono"
+                min={1} max={100} value={rounds} onChange={setRounds} placeholder="1" className="font-mono"
               />
             )}
             {(duration === 'start' || duration === 'end') && (

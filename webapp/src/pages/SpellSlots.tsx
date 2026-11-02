@@ -142,7 +142,8 @@ function TotalEditor({ total, label, decrementAria, incrementAria, pending, onCo
         min={1}
         inputMode="numeric"
         value={draft}
-        onFocus={() => setEditing(true)}
+        onFocus={() => { setEditing(true); setDraft('') }}
+        placeholder={String(total)}
         onChange={(e) => setDraft(e.target.value)}
         onBlur={commitDraft}
         onKeyDown={(e) => {
