@@ -1,6 +1,0 @@
-import{c as u}from"./gi-icon_GiCutDiamond-9E_T4MuN.js";/**
- * @license lucide-react v1.11.0 - ISC
- *
- * This source code is licensed under the ISC license.
- * See the LICENSE file in the root directory of this source tree.
- */const h=[["path",{d:"M10 11v6",key:"nco0om"}],["path",{d:"M14 11v6",key:"outv1u"}],["path",{d:"M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6",key:"miytrc"}],["path",{d:"M3 6h18",key:"d0wm0j"}],["path",{d:"M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2",key:"e791ji"}]],y=u("trash-2",h),r="character.conditions.effect";function l(n,a,o){const{expiry_anchor:e,expiry_edge:c,expiry_count:s}=n,t=[];if(s!=null&&s>0)if(e&&c){const i=`${r}.until_${c}_${e==="owner"&&!o?"owner":"source"}`,_=e==="owner"?o:n.source_name||a(`${r}.source_unknown`);t.push(a(s===1?`${i}_next`:`${i}_nth`,{n:s,name:_}))}else t.push(a(`${r}.rounds`,{count:s}));return n.ends_with_concentration&&n.source_name&&t.push(a(`${r}.while_concentrating`,{name:n.source_name})),t.join(" · ")}function v(n,a,o){if(!n.save_ability||n.save_dc==null)return null;const e=o&&n.save_edge?"_of":"";return a(`${r}.save_${n.save_edge??"any"}${e}`,{ability:a(`character.ability.${n.save_ability}_short`),dc:n.save_dc,name:o})}export{y as T,l as a,v as f};
