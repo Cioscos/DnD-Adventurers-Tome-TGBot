@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.services.equipment import apply_equip_ac
 from core.db.models import Currency, Item
-from core.game.containers import COINS, container_coins, is_container, would_cycle
+from core.game.containers import COINS, allocate, container_coins, is_container, would_cycle
 from core.game.item_bonuses import item_meta
 
 
@@ -84,3 +84,49 @@ async def move_items(
             item.container_id = container_id
     await session.flush()
     return unequipped
+
+
+def _coin_places(char) -> dict[int | None, dict]:
+    """Coin dicts by location: purse (None) plus every container."""
+    places: dict[int | None, dict] = {None: {c: getattr(char.currency, c) or 0 for c in COINS} if char.currency else dict.fromkeys(COINS, 0)}
+    places.update({i.id: container_coins(i) for i in char.items if is_container(i)})
+    return places
+
+
+def apply_coin_placements(char, coin: str, placements: list[tuple[int | None, int]]) -> list[tuple[int | None, int]]:
+    """Apply per-location coin changes all-or-nothing; returns the effective placements.
+
+    A positive amount for a location that no longer exists goes to the purse; a withdrawal
+    from one is insufficient_funds.
+    """
+    places = _coin_places(char)
+    eff: dict[int | None, int] = {}
+    for loc, amt in placements:
+        if loc not in places:
+            if amt < 0:
+                raise HTTPException(status_code=409, detail="insufficient_funds")
+            loc = None
+        eff[loc] = eff.get(loc, 0) + amt
+    if any(places[loc][coin] + amt < 0 for loc, amt in eff.items()):
+        raise HTTPException(status_code=409, detail="insufficient_funds")
+    by_id = {i.id: i for i in char.items}
+    for loc, amt in eff.items():
+        if loc is None:
+            if char.currency is None:
+                char.currency = Currency(character_id=char.id)
+            setattr(char.currency, coin, places[None][coin] + amt)
+        else:
+            md = item_meta(by_id[loc])
+            md["container"]["coins"] = {**places[loc], coin: places[loc][coin] + amt}
+            by_id[loc].item_metadata = json.dumps(md)
+    return [(loc, amt) for loc, amt in eff.items() if amt]
+
+
+def withdraw(char, coin: str, amount: int) -> list[tuple[int | None, int]]:
+    """Take coins from the purse then containers (409 insufficient_funds)."""
+    purse = {c: getattr(char.currency, c) or 0 for c in COINS} if char.currency else {}
+    try:
+        placements = allocate(purse, char.items, coin, -amount)
+    except ValueError:
+        raise HTTPException(status_code=409, detail="insufficient_funds")
+    return apply_coin_placements(char, coin, placements)

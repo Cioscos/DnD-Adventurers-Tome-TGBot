@@ -215,7 +215,7 @@ async def add_item(
                 Item.container_id == body.container_id,
             )
         )
-        existing = existing_result.scalars().first()
+        existing = next((e for e in existing_result.scalars() if not is_container(e)), None)
         if existing is not None:
             existing.quantity += body.quantity
             await session.flush()

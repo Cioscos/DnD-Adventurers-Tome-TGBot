@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Any, Optional
+from typing import Annotated, Any, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from api.schemas.common import CurrencyRead
 from core.game.containers import COINS
 
 Coin = Annotated[int, Field(ge=0, le=10_000_000)]
@@ -62,3 +63,44 @@ def validate_container_meta(v: dict[str, Any]) -> None:
     """Validate the ``container`` key if present; other keys pass through untouched."""
     if v.get("container") is not None:
         ContainerFields.model_validate(v["container"])  # ValidationError is a ValueError
+
+
+CoinName = Literal["copper", "silver", "electrum", "gold", "platinum"]
+
+
+class CoinPlacement(BaseModel):
+    container_id: Optional[int] = None
+    amount: int
+
+
+class CoinAdjustRequest(BaseModel):
+    coin: CoinName
+    delta: int = Field(ge=-10_000_000, le=10_000_000)
+    placements: Optional[list[CoinPlacement]] = None
+
+    @model_validator(mode="after")
+    def _check(self):
+        if self.delta == 0:
+            raise ValueError("delta must be non-zero")
+        if self.placements is not None and sum(p.amount for p in self.placements) != self.delta:
+            raise ValueError("placements must sum to delta")
+        return self
+
+
+class CoinMoveRequest(BaseModel):
+    coin: CoinName
+    amount: int = Field(ge=1, le=10_000_000)
+    from_container_id: Optional[int] = None
+    to_container_id: Optional[int] = None
+
+    @model_validator(mode="after")
+    def _check(self):
+        if self.from_container_id == self.to_container_id:
+            raise ValueError("from and to must differ")
+        return self
+
+
+class CoinAdjustResult(BaseModel):
+    coin_totals: dict[str, int]
+    purse: CurrencyRead
+    placements: list[CoinPlacement]
