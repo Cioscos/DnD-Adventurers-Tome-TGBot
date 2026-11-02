@@ -36,8 +36,9 @@ import { INVENTORY_TYPE_ORDER, buildItemMetadata, buildHomebrewMetadataPatch, ty
 import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import { getItemTypeIcon } from '@/lib/itemIcons'
 import { itemGrantedSpells } from '@/lib/itemMagic'
-import type { Item } from '@/types'
+import type { CoinKey, Item } from '@/types'
 import ContainerCard from '@/pages/inventory/ContainerCard'
+import CoinMoveSheet from '@/pages/currency/CoinMoveSheet'
 import { containerPath, containerMeta, isContainer, movedWeight, newBoxParent, type ContainerFormValue } from '@/lib/containers'
 import MoveSheet from '@/pages/inventory/MoveSheet'
 import ContainerForm from '@/pages/inventory/ContainerForm'
@@ -67,6 +68,7 @@ export default function Inventory() {
   const [editingItem, setEditingItem] = useState<Item | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<number | null>(null)
   const [moveTargets, setMoveTargets] = useState<Item[] | null>(null)
+  const [coinMove, setCoinMove] = useState<{ coin: CoinKey; from: number } | null>(null)
   // Nuovo contenitore: da "+ Contenitore" oppure da "Sposta in…" (poi vi si spostano gli oggetti).
   const [newBox, setNewBox] = useState<{ thenMove: Item[] | null } | null>(null)
   const [selecting, setSelecting] = useState(false)
@@ -680,6 +682,12 @@ export default function Inventory() {
                 .map((k) => `${currentMeta!.coins[k]} ${COIN_ABBR[k]}`).join(' · ')}
             </p>
           )}
+          {COIN_KEYS.some((k) => (currentMeta?.coins?.[k] ?? 0) > 0) && (
+            <Button variant="secondary" size="sm" className="mt-1.5"
+              onClick={() => setCoinMove({ coin: COIN_KEYS.find((k) => (currentMeta?.coins?.[k] ?? 0) > 0)!, from: current!.id })}>
+              {t('character.currency.move')}
+            </Button>
+          )}
           <div className="flex justify-end gap-1 mt-1">
             {([
               [t(pc + 'move'), FolderInput, () => setMoveTargets([current])],
@@ -918,6 +926,10 @@ export default function Inventory() {
           onCancel={() => setNewBox(null)}
           isPending={addBoxMutation.isPending}
         />
+      )}
+
+      {coinMove && (
+        <CoinMoveSheet charId={charId} items={items} breakdown={char.coin_breakdown ?? []} coin={coinMove.coin} from={coinMove.from} onClose={() => setCoinMove(null)} />
       )}
 
       {moveTargets && !newBox && (

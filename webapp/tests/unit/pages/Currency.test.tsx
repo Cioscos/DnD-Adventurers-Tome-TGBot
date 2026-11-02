@@ -4,9 +4,10 @@ import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from '../utils/renderWithProviders'
 import Currency from '@/pages/Currency'
 
-const { getChar, updateSpy, convertSpy, undoSpy } = vi.hoisted(() => ({
+const { getChar, adjustSpy, moveSpy, convertSpy, undoSpy } = vi.hoisted(() => ({
   getChar: vi.fn(),
-  updateSpy: vi.fn(),
+  adjustSpy: vi.fn(),
+  moveSpy: vi.fn(),
   convertSpy: vi.fn(),
   undoSpy: vi.fn(),
 }))
@@ -16,7 +17,7 @@ vi.mock('@/components/ui/UndoToast', () => ({ showUndoToast: undoSpy }))
 vi.mock('@/api/client', () => ({
   api: {
     characters: { get: getChar },
-    currency: { update: updateSpy, convert: convertSpy },
+    currency: { adjust: adjustSpy, move: moveSpy, convert: convertSpy },
   },
 }))
 
@@ -83,17 +84,24 @@ vi.mock('@/components/ui/Sheet', async () => {
   }
 })
 
-// CurrencyRead-shaped fixture (the exact BE serializer shape — id + 5 coin ints).
-// Keeping a single non-zero coin makes the total-gold assertion exact.
-const baseChar = {
+// Totale = borsa 4 + Zaino 6 oro: la pagina lavora sul totale, non sulla sola borsa.
+const makeChar = () => ({
   id: 5,
   settings: {},
-  currency: { id: 1, platinum: 0, gold: 10, electrum: 0, silver: 0, copper: 0 },
-}
+  currency: { id: 1, platinum: 0, gold: 4, electrum: 0, silver: 0, copper: 0 },
+  coin_totals: { platinum: 0, gold: 10, electrum: 0, silver: 0, copper: 0 },
+  coin_breakdown: [
+    { container_id: null, name: null, coins: { gold: 4 } },
+    { container_id: 7, name: 'Zaino', coins: { gold: 6 } },
+  ],
+  items: [{ id: 7, name: 'Zaino', container_id: null, item_metadata: { container: { coins: {} } } }],
+})
+let server = makeChar()
 
 afterEach(() => {
   getChar.mockReset()
-  updateSpy.mockReset()
+  adjustSpy.mockReset()
+  moveSpy.mockReset()
   convertSpy.mockReset()
   undoSpy.mockReset()
 })
@@ -101,37 +109,67 @@ afterEach(() => {
 const key = (k: string) => screen.getByRole('button', { name: k })
 const amount = () => screen.getByTestId('tx-amount')
 
-async function loaded(char: unknown = baseChar) {
-  getChar.mockResolvedValue(char)
-  updateSpy.mockImplementation(async (_id: number, data: Record<string, number>) => ({ ...baseChar.currency, ...data }))
+async function loaded(char: Record<string, unknown> = makeChar()) {
+  server = char as ReturnType<typeof makeChar>
+  getChar.mockImplementation(async () => structuredClone(server))
+  // Il server finto applica il delta e risponde con i piazzamenti effettivi (firmati).
+  adjustSpy.mockImplementation(async (_id: number, b: { coin: 'gold'; delta: number; placements?: { container_id: number | null; amount: number }[] }) => {
+    server.coin_totals = { ...server.coin_totals, [b.coin]: server.coin_totals[b.coin] + b.delta }
+    return { coin_totals: server.coin_totals, purse: {}, placements: b.placements ?? [{ container_id: null, amount: b.delta }] }
+  })
   renderWithProviders(<Currency />)
   await screen.findByText('10.00')
 }
 
-describe('Currency page — borsa + transazione', () => {
+describe('Currency page — totale + transazione', () => {
   it('shows the skeleton while the character query is pending', () => {
     getChar.mockReturnValue(new Promise(() => {}))
     renderWithProviders(<Currency />)
     expect(screen.getByTestId('currency-skeleton')).toBeInTheDocument()
   })
 
-  it('mostra il totale in oro e le monete della borsa (read contract)', async () => {
+  it('mostra monete e totale in oro dal totale (borsa + contenitori)', async () => {
     await loaded()
     expect(key('character.currency.gold: 10')).toBeInTheDocument()
   })
 
-  it('Spendi toglie l’importo dalla moneta scelta e salva subito, con Annulla', async () => {
+  it('Spendi chiama adjust con delta negativo e mostra Annulla', async () => {
     await loaded()
     await userEvent.click(key('5'))
     expect(amount()).toHaveTextContent('5')
     await userEvent.click(key('character.currency.spend'))
-    await waitFor(() => expect(updateSpy).toHaveBeenCalledWith(5, { gold: 5 }))
+    await waitFor(() => expect(adjustSpy).toHaveBeenCalledWith(5, { coin: 'gold', delta: -5 }))
     expect(await screen.findByText('5.00')).toBeInTheDocument()
-    expect(undoSpy).toHaveBeenCalledTimes(1)
+    await waitFor(() => expect(undoSpy).toHaveBeenCalledTimes(1))
+    expect(undoSpy.mock.calls[0][0].message).toBe('character.currency.spent_toast')
+  })
 
-    // Annulla = operazione inversa sul valore corrente (non ripristina una foto vecchia).
+  it('Annulla invia i piazzamenti effettivi negati, non una nuova ripartizione', async () => {
+    await loaded()
+    adjustSpy.mockResolvedValueOnce({
+      coin_totals: { ...server.coin_totals, gold: 5 }, purse: {},
+      placements: [{ container_id: null, amount: -2 }, { container_id: 7, amount: -3 }],
+    })
+    await userEvent.click(key('5'))
+    await userEvent.click(key('character.currency.spend'))
+    await waitFor(() => expect(undoSpy).toHaveBeenCalledTimes(1))
     undoSpy.mock.calls[0][0].onUndo()
-    await waitFor(() => expect(updateSpy).toHaveBeenLastCalledWith(5, { gold: 10 }))
+    await waitFor(() => expect(adjustSpy).toHaveBeenLastCalledWith(5, {
+      coin: 'gold', delta: 5, placements: [{ container_id: null, amount: 2 }, { container_id: 7, amount: 3 }],
+    }))
+    expect(undoSpy).toHaveBeenCalledTimes(1) // l'annullamento non è a sua volta annullabile
+  })
+
+  it('l’avviso dice da dove sono uscite le monete solo se più di un posto', async () => {
+    await loaded()
+    adjustSpy.mockResolvedValueOnce({
+      coin_totals: { ...server.coin_totals, gold: 5 }, purse: {},
+      placements: [{ container_id: null, amount: -2 }, { container_id: 7, amount: -3 }],
+    })
+    await userEvent.click(key('5'))
+    await userEvent.click(key('character.currency.spend'))
+    await waitFor(() => expect(undoSpy).toHaveBeenCalledTimes(1))
+    expect(undoSpy.mock.calls[0][0].message).toBe('character.currency.spent_from')
   })
 
   it('Ricevi aggiunge sulla moneta scelta (cambio moneta coi chip)', async () => {
@@ -140,10 +178,10 @@ describe('Currency page — borsa + transazione', () => {
     await userEvent.click(key('1'))
     await userEvent.click(key('2'))
     await userEvent.click(key('character.currency.receive'))
-    await waitFor(() => expect(updateSpy).toHaveBeenCalledWith(5, { silver: 12 }))
+    await waitFor(() => expect(adjustSpy).toHaveBeenCalledWith(5, { coin: 'silver', delta: 12 }))
   })
 
-  it('Spendi è disattivato se la moneta non basta, e lo dice', async () => {
+  it('Spendi è disattivato se il totale non basta, e lo dice', async () => {
     await loaded()
     await userEvent.click(key('2'))
     await userEvent.click(key('0'))
@@ -155,12 +193,11 @@ describe('Currency page — borsa + transazione', () => {
     await loaded()
     await userEvent.click(key('3'))
     await userEvent.click(key('character.currency.receive'))
-    await waitFor(() => expect(updateSpy).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(adjustSpy).toHaveBeenCalledTimes(1))
     expect(amount()).toHaveTextContent('3')
-    // Cifra mista: cambio moneta e ripremo, senza riscrivere.
     await userEvent.click(key('SP'))
     await userEvent.click(key('character.currency.receive'))
-    await waitFor(() => expect(updateSpy).toHaveBeenLastCalledWith(5, { silver: 3 }))
+    await waitFor(() => expect(adjustSpy).toHaveBeenLastCalledWith(5, { coin: 'silver', delta: 3 }))
     await userEvent.click(key('7'))
     expect(amount()).toHaveTextContent('7')
   })
@@ -173,44 +210,74 @@ describe('Currency page — borsa + transazione', () => {
     expect(key('character.currency.receive')).toBeDisabled()
   })
 
-  it('toccare una moneta della borsa apre il valore esatto: campo vuoto col valore attuale suggerito', async () => {
+  it('toccare una moneta mostra la suddivisione per posto', async () => {
     await loaded()
     await userEvent.click(key('character.currency.gold: 10'))
     const sheet = await screen.findByTestId('sheet')
+    expect(within(sheet).getByText('Zaino')).toBeInTheDocument()
+    expect(within(sheet).getByText('character.currency.purse')).toBeInTheDocument()
+  })
+
+  it('valore esatto: adjust con delta = valore − totale, senza placements', async () => {
+    await loaded()
+    await userEvent.click(key('character.currency.gold: 10'))
+    await userEvent.click(within(await screen.findByTestId('sheet')).getByRole('button', { name: 'character.currency.set_exact' }))
+    const sheet = await screen.findByTestId('sheet')
     const input = within(sheet).getByPlaceholderText('10')
-    expect(input).toHaveValue(null) // campo numerico vuoto
+    expect(input).toHaveValue(null)
     fireEvent.change(input, { target: { value: '7' } })
     await userEvent.click(within(sheet).getByRole('button', { name: 'common.save' }))
-    await waitFor(() => expect(updateSpy).toHaveBeenCalledWith(5, { gold: 7 }))
-    expect(undoSpy).toHaveBeenCalledTimes(1)
+    await waitFor(() => expect(adjustSpy).toHaveBeenCalledWith(5, { coin: 'gold', delta: -3 }))
+    await waitFor(() => expect(undoSpy).toHaveBeenCalledTimes(1))
   })
 
   it('Annulla del valore esatto annulla solo quel cambio, non le operazioni fatte dopo', async () => {
     await loaded()
     await userEvent.click(key('character.currency.gold: 10'))
+    await userEvent.click(within(await screen.findByTestId('sheet')).getByRole('button', { name: 'character.currency.set_exact' }))
     fireEvent.change(within(await screen.findByTestId('sheet')).getByPlaceholderText('10'), { target: { value: '50' } })
     await userEvent.click(screen.getByRole('button', { name: 'common.save' }))
-    await waitFor(() => expect(updateSpy).toHaveBeenCalledWith(5, { gold: 50 }))
+    await waitFor(() => expect(adjustSpy).toHaveBeenCalledWith(5, { coin: 'gold', delta: 40 }))
+    await waitFor(() => expect(undoSpy).toHaveBeenCalledTimes(1))
     await userEvent.click(key('5'))
     await userEvent.click(key('character.currency.receive'))
-    await waitFor(() => expect(updateSpy).toHaveBeenLastCalledWith(5, { gold: 55 }))
+    await waitFor(() => expect(adjustSpy).toHaveBeenLastCalledWith(5, { coin: 'gold', delta: 5 }))
     undoSpy.mock.calls[0][0].onUndo()
-    await waitFor(() => expect(updateSpy).toHaveBeenLastCalledWith(5, { gold: 15 }))
+    await waitFor(() => expect(adjustSpy).toHaveBeenLastCalledWith(5, {
+      coin: 'gold', delta: -40, placements: [{ container_id: null, amount: -40 }],
+    }))
   })
 
   it('nasconde l’electrum se disattivato nelle impostazioni', async () => {
-    await loaded({ ...baseChar, settings: { hide_electrum: true } })
+    await loaded({ ...makeChar(), settings: { hide_electrum: true } })
     expect(screen.queryByRole('button', { name: 'EP' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'character.currency.electrum: 0' })).not.toBeInTheDocument()
   })
 
-  it('convert posts (source, target, amount) to the convert endpoint', async () => {
+  it('Sposta monete: move con moneta, quantità, da e a', async () => {
     await loaded()
-    convertSpy.mockResolvedValue(baseChar.currency)
+    moveSpy.mockResolvedValue({ coin_totals: server.coin_totals, purse: {}, placements: [] })
+    await userEvent.click(key('character.currency.gold: 10'))
+    await userEvent.click(within(await screen.findByTestId('sheet')).getByRole('button', { name: 'character.currency.move' }))
+    const sheet = await screen.findByTestId('sheet')
+    // Da = borsa (prima con monete), A = Zaino.
+    await userEvent.click(within(sheet).getByRole('button', { name: 'Zaino' }))
+    fireEvent.change(within(sheet).getByPlaceholderText('0'), { target: { value: '3' } })
+    await userEvent.click(within(sheet).getByRole('button', { name: 'character.currency.move_confirm' }))
+    await waitFor(() => expect(moveSpy).toHaveBeenCalledWith(5, {
+      coin: 'gold', amount: 3, from_container_id: null, to_container_id: 7,
+    }))
+  })
+
+  it('convert posts (source, target, amount) and refreshes the character', async () => {
+    await loaded()
+    convertSpy.mockResolvedValue({})
     await userEvent.click(screen.getByRole('button', { name: 'character.currency.convert' }))
     const sheet = await screen.findByTestId('sheet')
     fireEvent.change(within(sheet).getByPlaceholderText('0'), { target: { value: '2' } })
+    const calls = getChar.mock.calls.length
     await userEvent.click(within(sheet).getByRole('button', { name: 'character.currency.convert' }))
     await waitFor(() => expect(convertSpy).toHaveBeenCalledWith(5, 'gold', 'silver', 2))
+    await waitFor(() => expect(getChar.mock.calls.length).toBeGreaterThan(calls))
   })
 })
