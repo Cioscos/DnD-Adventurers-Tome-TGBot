@@ -52,7 +52,7 @@ export default function ProgressionFullTableModal({ className, currentLevel, onC
         onClick={onClose}
       >
         <m.div
-          className="w-full max-w-md max-h-[85vh] flex flex-col bg-dnd-surface-raised border border-dnd-gold rounded-t-2xl sm:rounded-2xl overflow-hidden"
+          className="w-full max-w-md max-h-[calc(var(--tg-vh,100vh)*0.85)] flex flex-col bg-dnd-surface-raised border border-dnd-gold rounded-t-2xl sm:rounded-2xl overflow-hidden"
           initial={{ y: 40, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 40, opacity: 0 }}

@@ -5,8 +5,9 @@ import { QueryClient } from '@tanstack/react-query'
 import { renderWithProviders } from '../utils/renderWithProviders'
 import CharacterMain from '@/pages/CharacterMain'
 import { ApiError } from '@/api/client'
+import { resetHubReturn } from '@/lib/hubReturn'
 
-const { getChar, updateInspiration, navigateSpy } = vi.hoisted(() => ({ getChar: vi.fn(), updateInspiration: vi.fn(), navigateSpy: vi.fn() }))
+const { getChar, updateInspiration, navigateSpy, presenceInitial } = vi.hoisted(() => ({ getChar: vi.fn(), updateInspiration: vi.fn(), navigateSpy: vi.fn(), presenceInitial: [] as unknown[] }))
 
 vi.mock('@/api/client', () => {
   // Speculare alla classe reale: CharacterMain fa `instanceof ApiError` e
@@ -43,7 +44,9 @@ vi.mock('framer-motion', async () => {
   }
   return {
     m: new Proxy({}, { get: (_t: object, tag: string | symbol) => make(String(tag)) }),
-    AnimatePresence: (p: { children?: unknown }) => React.createElement(React.Fragment, null, p.children),
+    AnimatePresence: (p: { children?: unknown }) => React.createElement(React.Fragment, null, p.children as never),
+    // Registra i valori del contesto di presenza dell'hub (blocco delle animazioni d'ingresso).
+    PresenceContext: { Provider: (p: { value: { initial?: boolean }; children?: unknown }) => { presenceInitial.push(p.value.initial); return React.createElement(React.Fragment, null, p.children as never) } },
     // SearchOverlay monta Sheet, che usa il drag-to-dismiss dal giro r2.
     useDragControls: () => ({ start: () => {} }),
   }
@@ -138,5 +141,32 @@ describe('CharacterMain', () => {
     renderWithProviders(<CharacterMain />, { client: cachedClient() })
     expect(await screen.findByText('layout.char_error.not_found')).toBeInTheDocument()
     expect(screen.queryByText('common.stale_data_from')).not.toBeInTheDocument()
+  })
+})
+
+// Flash tornando sull'hub da una sottopagina: header e riquadri ripartivano trasparenti.
+describe("CharacterMain — ritorno sull'hub", () => {
+  it("al ritorno blocca le animazioni d'ingresso solo al primo render; dalla lista le rifà", async () => {
+    getChar.mockResolvedValue({ id: 7, name: 'Kael', classes: [], settings: {} })
+    resetHubReturn()
+    presenceInitial.length = 0
+    const first = renderWithProviders(<CharacterMain />)
+    await screen.findByTestId('swiper')
+    expect(presenceInitial[0]).toBeUndefined() // prima apertura: animazioni attive
+    first.unmount()
+
+    presenceInitial.length = 0
+    const back = renderWithProviders(<CharacterMain />)
+    await screen.findByTestId('swiper')
+    expect(presenceInitial[0]).toBe(false) // ritorno: primo render senza ingresso
+    expect(screen.getByText('Kael')).toBeInTheDocument()
+    expect(presenceInitial.at(-1)).toBeUndefined() // poi sbloccato (es. banner del turno si anima)
+    back.unmount()
+
+    resetHubReturn() // la lista personaggi azzera
+    presenceInitial.length = 0
+    renderWithProviders(<CharacterMain />)
+    await screen.findByTestId('swiper')
+    expect(presenceInitial[0]).toBeUndefined()
   })
 })

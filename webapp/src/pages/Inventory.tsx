@@ -48,6 +48,7 @@ export default function Inventory() {
       ? ((location.state as { highlightItemId: number }).highlightItemId)
       : null
   const [highlightId, setHighlightId] = useState<number | null>(initialHighlight)
+  const highlightHandled = useRef<number | null>(null)
   const itemRefs = useRef<Record<number, HTMLDivElement | null>>({})
   const { t, i18n } = useTranslation()
   const qc = useQueryClient()
@@ -369,6 +370,11 @@ export default function Inventory() {
       return
     }
 
+    // Una volta sola per evidenziazione: un refetch di `char` nei 3s non deve riespandere né
+    // riportare lo scroll sull'oggetto mentre l'utente sta già scorrendo.
+    if (highlightHandled.current === highlightId) return
+    highlightHandled.current = highlightId
+
     // Espandi l'item
     setExpanded(highlightId)
 
@@ -381,22 +387,31 @@ export default function Inventory() {
       return next
     })
 
-    // Scroll into view (dopo il prossimo frame, così il DOM ha avuto tempo di espandere)
-    const rafId = requestAnimationFrame(() => {
-      itemRefs.current[highlightId]?.scrollIntoView({ block: 'center', behavior: 'smooth' })
-    })
+    // Come in Incantesimi: al primo frame la riga può non essere montata (tipo appena de-collassato)
+    // e l'espansione della card (~350ms) sposta il layout fermando lo scroll a metà → riprova, poi
+    // un secondo passaggio a layout assestato.
+    const scrollToItem = () => itemRefs.current[highlightId]?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+    // Niente cleanup (come in Incantesimi): un rerun per refetch annullerebbe lo scroll già avviato.
+    let attempts = 0
+    const tryScroll = () => {
+      if (itemRefs.current[highlightId]) scrollToItem()
+      else if (attempts++ < 10) requestAnimationFrame(tryScroll)
+    }
+    requestAnimationFrame(tryScroll)
+    window.setTimeout(scrollToItem, 450)
+  }, [highlightId, char, navigate, location.pathname])
 
-    // Fade dopo 3s e clear della state
+  // Fade dopo 3s (da quando la scheda è caricata) e clear della state: separato, così i refetch di
+  // `char` non lo riavviano.
+  const charLoaded = !!char
+  useEffect(() => {
+    if (highlightId === null || !charLoaded) return
     const tid = window.setTimeout(() => {
       setHighlightId(null)
       navigate(location.pathname, { replace: true, state: null })
     }, 3000)
-
-    return () => {
-      cancelAnimationFrame(rafId)
-      window.clearTimeout(tid)
-    }
-  }, [highlightId, char, navigate, location.pathname])
+    return () => window.clearTimeout(tid)
+  }, [highlightId, charLoaded, navigate, location.pathname])
 
   // Pill flottante: quando la sentinella in cima esce dalla viewport (scroll),
   // il pulsante "Aggiungi" si comprime in pill in alto a destra. Stesso pattern
@@ -589,7 +604,7 @@ export default function Inventory() {
             <div key={type} className={isSingle ? 'mb-2' : 'mb-4'}>
               <Pressable
                 onClick={() => toggleType(type)}
-                className={`sticky top-[calc(var(--crumb-offset,0px)-1rem)] z-[5] -mx-4 w-[calc(100%+2rem)] px-5 flex items-center gap-2 bg-dnd-bg/95 backdrop-blur-sm border-b border-dnd-border/40 text-left min-h-[44px] ${isSingle ? 'py-1' : 'py-2'} ${scrolled ? 'pr-24' : ''}`}
+                className={`sticky top-[calc(var(--crumb-offset,0px)-1rem)] z-[5] -mx-4 w-[calc(100%+2rem)] px-5 flex items-center gap-2 bg-dnd-bg border-b border-dnd-border/40 text-left min-h-[44px] ${isSingle ? 'py-1' : 'py-2'} ${scrolled ? 'pr-24' : ''}`}
                 aria-expanded={!isCollapsed}
               >
                 <ChevronRight

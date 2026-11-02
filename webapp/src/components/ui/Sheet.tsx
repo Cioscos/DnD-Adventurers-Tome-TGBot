@@ -6,6 +6,7 @@ import { spring } from '@/styles/motion'
 import { useRegisterOverlay } from '@/store/overlayStore'
 import { useOverlayDismiss } from '@/hooks/useOverlayDismiss'
 import { useDeferredBlur } from '@/hooks/useDeferredBlur'
+import { useKeepFocusedFieldVisible } from '@/hooks/useKeepFocusedFieldVisible'
 import { SheetEnteredContext } from '@/components/ui/sheetContext'
 import { useTranslation } from 'react-i18next'
 
@@ -45,6 +46,8 @@ export default function Sheet({
   useRegisterOverlay(open)
   // Escape e back/popstate chiudono solo lo sheet in cima allo stack condiviso.
   useOverlayDismiss(open, onClose, dismissible)
+
+  useKeepFocusedFieldVisible(sheetRef, open)
 
   // Prevent body scroll when open
   useEffect(() => {
@@ -90,7 +93,7 @@ export default function Sheet({
               border-t border-dnd-border-strong md:border
               rounded-t-3xl md:rounded-3xl md:max-w-md
               md:shadow-parchment-2xl
-              max-h-[85vh] overflow-hidden
+              max-h-[calc(var(--tg-vh,100vh)*0.85)] overflow-hidden
               ${centered ? 'md:self-center' : ''}
               ${className}
             `}
@@ -148,7 +151,7 @@ export default function Sheet({
             {/* overflow-y-auto rende auto anche l'asse x: un contenuto che scorre di lato
                 farebbe comparire una barra orizzontale che alza lo sheet. */}
             <div className="overflow-y-auto overflow-x-hidden overscroll-contain pb-safe-lg"
-                 style={{ maxHeight: 'calc(85vh - 60px)' }}>
+                 style={{ maxHeight: 'calc(var(--tg-vh, 100vh) * 0.85 - 60px)' }}>
               <SheetEnteredContext.Provider value={entered}>{children}</SheetEnteredContext.Provider>
             </div>
           </m.div>

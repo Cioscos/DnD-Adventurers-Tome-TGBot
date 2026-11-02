@@ -119,3 +119,23 @@ describe('HpQuickSheet wild shape', () => {
     expect(screen.queryByTestId('form-hp-primary')).toBeNull()
   })
 })
+
+// Su telefono la tastiera automatica ridimensiona la WebView e fa scattare l'hub (S22): niente autofocus.
+// Con mouse/trackpad (Telegram Desktop) non c'è tastiera a schermo: il campo si attiva da solo.
+describe('HpQuickSheet autofocus', () => {
+  const stubPointer = (fine: boolean) =>
+    vi.stubGlobal('matchMedia', (q: string) => ({ matches: q === '(pointer: fine)' ? fine : false }))
+  afterEach(() => vi.unstubAllGlobals())
+
+  it('con puntatore preciso (desktop) il campo importo ha subito il focus', () => {
+    stubPointer(true)
+    renderWithProviders(<HpQuickSheet char={char} open onClose={() => {}} />)
+    expect(screen.getByPlaceholderText('0')).toHaveFocus()
+  })
+
+  it('su touch (telefono) il campo importo non prende il focus da solo', () => {
+    stubPointer(false)
+    renderWithProviders(<HpQuickSheet char={char} open onClose={() => {}} />)
+    expect(screen.getByPlaceholderText('0')).not.toHaveFocus()
+  })
+})

@@ -166,7 +166,8 @@ export default function HpQuickSheet({ char, open, onClose }: HpQuickSheetProps)
           type="number"
           min={0}
           inputMode="numeric"
-          autoFocus
+          // Solo con mouse/trackpad: su telefono la tastiera automatica ridimensiona la WebView e fa scattare l'hub.
+          autoFocus={window.matchMedia?.('(pointer: fine)').matches ?? false}
           placeholder="0"
         />
         {showPreview && (

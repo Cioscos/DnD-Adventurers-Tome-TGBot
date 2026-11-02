@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { m } from 'framer-motion'
+import { m, PresenceContext } from 'framer-motion'
 import { ChevronLeft, RefreshCw, Search, Settings, UserX } from 'lucide-react'
 import { GiSparkles } from 'react-icons/gi'
 import { api, ApiError } from '@/api/client'
@@ -23,6 +23,7 @@ import EquipmentScreen from '@/pages/character/EquipmentScreen'
 import MenuScreen from '@/pages/character/MenuScreen'
 import { usePageBack } from '@/hooks/useOverlayDismiss'
 import { isConcentrating } from '@/lib/concentration'
+import { isHubReturn, markHubShown } from '@/lib/hubReturn'
 
 export default function CharacterMain() {
   const { id } = useParams<{ id: string }>()
@@ -32,6 +33,14 @@ export default function CharacterMain() {
   const qc = useQueryClient()
   const setActiveCharId = useCharacterStore((s) => s.setActiveCharId)
   const [searchOpen, setSearchOpen] = useState(false)
+  // Ritorno da una sottopagina: header e riquadri ripartivano trasparenti (due frame quasi vuoti).
+  // Il blocco vale solo per gli elementi montati al primo render: dopo, ciò che compare (es. banner
+  // del turno) si anima. Il contesto resta sempre non nullo, come framer-motion richiede.
+  const [skipEntrance, setSkipEntrance] = useState(() => isHubReturn(Number(id)))
+  const presence = useMemo(
+    () => ({ id: 'hub', isPresent: true, initial: skipEntrance ? (false as const) : undefined, register: () => () => {} }),
+    [skipEntrance],
+  )
   // Back hardware/BackButton di Telegram: dal hub si torna alla lista personaggi.
   usePageBack(() => navigate('/'))
 
@@ -49,6 +58,13 @@ export default function CharacterMain() {
       !(err instanceof ApiError && (err.status === 404 || err.status === 403)) && failureCount < 3,
   })
   const { data: char, isLoading, error, refetch } = charQuery
+  // Sblocca dopo il primo render CON la scheda (non durante lo scheletro di caricamento).
+  const hubRendered = !!char
+  useEffect(() => {
+    if (!hubRendered) return
+    setSkipEntrance(false)
+    markHubShown(charId) // solo un hub davvero disegnato conta come "visto"
+  }, [hubRendered, charId])
   const charNotFound = error instanceof ApiError
     && (error.status === 404 || error.status === 403)
 
@@ -101,6 +117,7 @@ export default function CharacterMain() {
   }
 
   return (
+    <PresenceContext.Provider value={presence}>
     <div
       className="w-full flex flex-col"
       style={{ height: 'var(--tg-vh, 100vh)' }}
@@ -208,5 +225,6 @@ export default function CharacterMain() {
 
       <SearchOverlay char={char} open={searchOpen} onClose={() => setSearchOpen(false)} />
     </div>
+    </PresenceContext.Provider>
   )
 }

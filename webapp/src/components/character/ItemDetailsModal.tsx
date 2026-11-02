@@ -66,7 +66,7 @@ export default function ItemDetailsModal({ item, slot, onClose }: Props) {
         onClick={onClose}
       >
         <m.div
-          className="w-full max-w-md max-h-[85vh] flex flex-col bg-dnd-surface-raised border border-dnd-gold-dim/50 rounded-t-2xl pb-safe"
+          className="w-full max-w-md max-h-[calc(var(--tg-vh,100vh)*0.85)] flex flex-col bg-dnd-surface-raised border border-dnd-gold-dim/50 rounded-t-2xl pb-safe"
           initial={{ y: 100 }}
           animate={{ y: 0 }}
           exit={{ y: 100 }}
