@@ -6,6 +6,7 @@ import { spring } from '@/styles/motion'
 import { useRegisterOverlay } from '@/store/overlayStore'
 import { useOverlayDismiss } from '@/hooks/useOverlayDismiss'
 import { useDeferredBlur } from '@/hooks/useDeferredBlur'
+import { SheetEnteredContext } from '@/components/ui/sheetContext'
 import { useTranslation } from 'react-i18next'
 
 interface SheetProps {
@@ -38,7 +39,7 @@ export default function Sheet({
 }: SheetProps) {
   const dragControls = useDragControls()
   const sheetRef = useRef<HTMLDivElement>(null)
-  const { blurStyle, onEntranceComplete } = useDeferredBlur(open)
+  const { blurStyle, onEntranceComplete, entered } = useDeferredBlur(open)
 
   const { t } = useTranslation()
   useRegisterOverlay(open)
@@ -148,7 +149,7 @@ export default function Sheet({
                 farebbe comparire una barra orizzontale che alza lo sheet. */}
             <div className="overflow-y-auto overflow-x-hidden overscroll-contain pb-safe-lg"
                  style={{ maxHeight: 'calc(85vh - 60px)' }}>
-              {children}
+              <SheetEnteredContext.Provider value={entered}>{children}</SheetEnteredContext.Provider>
             </div>
           </m.div>
         </m.div>

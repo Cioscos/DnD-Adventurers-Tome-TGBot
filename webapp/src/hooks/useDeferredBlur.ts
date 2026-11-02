@@ -20,7 +20,7 @@ import type { CSSProperties } from 'react'
 export function useDeferredBlur(
   visible: boolean,
   radiusPx = 6,
-): { blurStyle: CSSProperties; onEntranceComplete: () => void } {
+): { blurStyle: CSSProperties; onEntranceComplete: () => void; entered: boolean } {
   const [entered, setEntered] = useState(false)
   const visibleRef = useRef(visible)
   visibleRef.current = visible
@@ -42,5 +42,6 @@ export function useDeferredBlur(
         }
       : {},
     onEntranceComplete,
+    entered: on,
   }
 }
