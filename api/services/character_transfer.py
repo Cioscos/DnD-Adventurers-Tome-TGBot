@@ -211,9 +211,9 @@ async def import_character(
     spells = [Spell(**sp.model_dump(exclude={"export_key"})) for sp in data.spells]
     seen_slots: set = set()
     items = []
-    for it in data.items:  # un contenitore e' sempre singolo: con quantita' != 1 resta un oggetto semplice
+    for it in data.items:  # un contenitore e' sempre singolo: la quantita' si normalizza a 1, il contenuto (monete incluse) resta
         if it.quantity != 1 and "container" in it.item_metadata:
-            it.item_metadata = {k: v for k, v in it.item_metadata.items() if k != "container"}
+            it.quantity = 1
     refs = [s.ref for s in data.items if s.ref is not None]
     boxes = {s.ref for s in data.items if s.ref is not None and refs.count(s.ref) == 1 and "container" in s.item_metadata}
     for it in data.items:

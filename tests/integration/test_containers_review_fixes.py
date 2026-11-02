@@ -114,16 +114,15 @@ async def test_homebrew_passive_ignores_items_in_containers(client):  # I5
     assert (await client.get(f"/characters/{cid}")).json()["ac_breakdown"]["homebrew"] == 0
 
 
-async def test_import_container_with_quantity_not_one_becomes_plain_item(client):  # m10
+async def test_import_container_with_quantity_not_one_keeps_meta_and_coins(client):  # m10
     d = {"exported_at": "x", "character": {"name": "Imp"}, "items": [
-        {"name": "Zaino", "quantity": 3, "ref": 1, "item_metadata": _bag(capacity_lb=30)},
+        {"name": "Zaino", "quantity": 3, "ref": 1, "item_metadata": _bag(capacity_lb=30, coins={"gold": 7})},
         {"name": "Corda", "ref": 2, "container_ref": 1},
-        {"name": "Sacca", "quantity": 1, "ref": 3, "item_metadata": _bag()},
     ]}
     r = await _import(client, d)
     assert r.status_code == 201, r.text
     items = (await client.get(f"/characters/{r.json()['id']}/items")).json()
     by = {i["name"]: i for i in items}
-    assert "container" not in (by["Zaino"]["item_metadata"] or {}) and by["Zaino"]["quantity"] == 3
-    assert by["Corda"]["container_id"] is None
-    assert "container" in by["Sacca"]["item_metadata"]
+    assert by["Zaino"]["quantity"] == 1
+    assert by["Zaino"]["item_metadata"]["container"]["coins"]["gold"] == 7
+    assert by["Corda"]["container_id"] == by["Zaino"]["id"]
