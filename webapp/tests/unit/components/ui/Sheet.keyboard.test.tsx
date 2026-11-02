@@ -34,6 +34,27 @@ describe('Sheet — tastiera su mobile', () => {
     expect(scroll).toHaveBeenCalledWith({ block: 'center' })
   })
 
+  it('riporta in vista il campo anche quando Telegram stabilizza l\'altezza (viewportChanged), dopo il resize', async () => {
+    const handlers: Array<(e?: { isStateStable?: boolean }) => void> = []
+    const tg = { onEvent: vi.fn((_: string, cb: () => void) => handlers.push(cb)), offEvent: vi.fn() }
+    ;(window as unknown as { Telegram: unknown }).Telegram = { WebApp: tg }
+    try {
+      const input = renderSheet()
+      const scroll = vi.fn()
+      input.scrollIntoView = scroll
+      input.focus()
+      expect(tg.onEvent).toHaveBeenCalledWith('viewportChanged', expect.any(Function))
+      handlers.forEach((h) => h({ isStateStable: false }))
+      await new Promise((r) => requestAnimationFrame(() => r(null)))
+      expect(scroll).not.toHaveBeenCalled()
+      handlers.forEach((h) => h({ isStateStable: true }))
+      await new Promise((r) => requestAnimationFrame(() => r(null)))
+      expect(scroll).toHaveBeenCalledWith({ block: 'center' })
+    } finally {
+      delete (window as unknown as { Telegram?: unknown }).Telegram
+    }
+  })
+
   it('non tocca lo scroll se il campo attivo è fuori dallo sheet', async () => {
     renderSheet()
     const outside = document.createElement('input')

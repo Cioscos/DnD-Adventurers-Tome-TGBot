@@ -56,8 +56,15 @@ export default function Sheet({
         el.scrollIntoView({ block: 'center' })
       }
     })
+    // --tg-vh (altezza massima dello sheet) può aggiornarsi solo col viewportChanged stabile, dopo il resize.
+    const onViewport = (e?: { isStateStable?: boolean }) => { if (e?.isStateStable !== false) onResize() }
+    const tg = window.Telegram?.WebApp
     window.addEventListener('resize', onResize)
-    return () => window.removeEventListener('resize', onResize)
+    tg?.onEvent?.('viewportChanged', onViewport)
+    return () => {
+      window.removeEventListener('resize', onResize)
+      tg?.offEvent?.('viewportChanged', onViewport)
+    }
   }, [open])
 
   // Prevent body scroll when open
