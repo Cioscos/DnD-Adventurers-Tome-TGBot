@@ -22,7 +22,7 @@ from core.db.models import Character, CharacterClass, CharacterHistory, Equipmen
 from api.schemas.character import CharacterFull
 from api.schemas.item import AmmoState, ItemCreate, ItemRead, ItemUpdate, WeaponAttackResult
 from core.game.stats import effective_ability_score
-from core.game.containers import is_container
+from core.game.containers import container_meta, is_container
 from core.game.item_bonuses import attack_bonus_total, is_attuned, item_meta
 from core.game.attacks import unarmed_strike_profile
 from core.data.spell_slots import normalize_class_name
@@ -622,8 +622,18 @@ async def attack_with_weapon(
             (i for i in char.items if i.equipment_slot == EquipmentSlot.AMMUNITION), None
         )
         if source is None:
-            candidates = [i for i in char.items if i.item_type == "ammunition"]
-            source = candidates[0] if len(candidates) == 1 else None
+            ammo = [i for i in char.items if i.item_type == "ammunition"]
+            quick_ids = {
+                c.id for c in char.items if (m := container_meta(c)) and m.get("quick_access")
+            }
+            # Quick-access quiver first, then loose stacks; other containers don't count.
+            for pool in (
+                [i for i in ammo if i.container_id in quick_ids],
+                [i for i in ammo if i.container_id is None],
+            ):
+                if len(pool) == 1:
+                    source = pool[0]
+                    break
         if source is None or source.quantity <= 0:
             ammo_missing = True
         elif not (body and body.with_inspiration):

@@ -127,3 +127,40 @@ async def test_ammunition_type_fits_ammunition_slot(client):
         json={"is_equipped": True, "equipment_slot": "ammunition"},
     )
     assert r.status_code == 200, r.text
+
+
+async def _quiver(client, cid, quick_access=True, name="Faretra") -> int:
+    meta = {"container": {"capacity_lb": 10, "counts_weight": True, "quick_access": quick_access}}
+    return await _add(client, cid, name, "generic", meta=meta)
+
+
+async def _put_arrows(client, cid, container_id, quantity=20) -> int:
+    r = await client.post(
+        f"/characters/{cid}/items",
+        json={"name": "Frecce", "item_type": "ammunition", "quantity": quantity,
+              "container_id": container_id},
+    )
+    assert r.status_code == 201, r.text
+    return next(i["id"] for i in r.json()["items"] if i["name"] == "Frecce")
+
+
+async def test_ammo_from_quick_access_quiver(client):
+    cid = await _char(client)
+    wid = await _bow(client, cid)
+    qid = await _quiver(client, cid)
+    aid = await _put_arrows(client, cid, qid)
+    r = await client.post(f"/characters/{cid}/items/{wid}/attack", json={"die": 10})
+    assert r.status_code == 200, r.text
+    assert r.json()["ammo"] == {"item_id": aid, "name": "Frecce", "remaining": 19}
+    assert await _qty(client, cid, aid) == 19
+
+
+async def test_ammo_in_backpack_not_usable(client):
+    cid = await _char(client)
+    wid = await _bow(client, cid)
+    bid = await _quiver(client, cid, quick_access=False, name="Zaino")
+    aid = await _put_arrows(client, cid, bid)
+    r = await client.post(f"/characters/{cid}/items/{wid}/attack", json={"die": 10})
+    assert r.status_code == 200, r.text
+    assert r.json()["ammo_missing"] is True
+    assert await _qty(client, cid, aid) == 20
