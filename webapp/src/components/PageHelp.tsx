@@ -13,10 +13,13 @@ interface HelpContent {
 export default function PageHelp({ helpKey, title, className = 'w-11 h-11' }: { helpKey: string; title: string; className?: string }) {
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
-  // Guida assente → t restituisce la chiave (stringa), non l'oggetto: niente pulsante.
-  const help = t(`help.${helpKey}`, { returnObjects: true }) as HelpContent | string
-  if (typeof help !== 'object') return null
-  const content = open ? help : null
+  // Perf: l'oggetto della guida (returnObjects) costa ~3-4 ms per render su mobile e
+  // PageHelp si ri-renderizza con tutta la pagina: lo si legge solo a guida aperta.
+  // Guida assente → t restituisce la chiave stessa: niente pulsante.
+  const summaryKey = `help.${helpKey}.summary`
+  if (t(summaryKey) === summaryKey) return null
+  const help = open ? (t(`help.${helpKey}`, { returnObjects: true }) as HelpContent | string) : null
+  const content = typeof help === 'object' ? help : null
 
   return (
     <>
