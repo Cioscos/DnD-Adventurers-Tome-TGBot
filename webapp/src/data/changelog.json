@@ -1,6 +1,18 @@
 {
   "entries": [
     {
+      "version": "2.31.0",
+      "date": "2026-11-03",
+      "added": {
+        "it": [
+          "In sessione puoi dare a un compagno oggetti, contenitori pieni e monete con «Dai a…»: passano subito e il master vede lo scambio nel feed, contenuto compreso."
+        ],
+        "en": [
+          "In a session you can give a companion items, full containers and coins with “Give to…”: they move right away and the GM sees the trade in the feed, contents included."
+        ]
+      }
+    },
+    {
       "version": "2.30.0",
       "date": "2026-11-02",
       "added": {
