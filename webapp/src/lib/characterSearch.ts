@@ -10,6 +10,8 @@ export interface SearchResult {
   /** Dati grezzi per il sottotitolo — la label i18n la costruisce il componente. */
   meta?: { spellLevel?: number; quantity?: number; resourceCurrent?: number; resourceMax?: number }
   route: string
+  /** Router state (Inventory evidenzia `highlightItemId`). */
+  state?: { highlightItemId: number }
 }
 
 export const MIN_QUERY_LENGTH = 2
@@ -70,7 +72,8 @@ export function searchCharacter(
       id: `item-${i.id}`,
       title: i.name,
       meta: i.quantity > 1 ? { quantity: i.quantity } : undefined,
-      route: `/char/${char.id}/inventory`,
+      route: `/char/${char.id}/inventory${i.container_id != null ? `/c/${i.container_id}` : ''}`,
+      state: { highlightItemId: i.id },
     })
   }
 

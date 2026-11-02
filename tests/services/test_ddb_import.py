@@ -580,3 +580,26 @@ def test_creature_other_groups_and_garbage():
     assert [c.kind for c in exp.companions] == ["mount", "summon", "companion", "wild_shape"]
     assert ("creatures", "Giant Wolf Spider", "ddb.reason.creature_group") in [
         (e.section, e.name, e.reason) for e in rep.approximated]
+
+
+def test_containers_map_to_refs():
+    exp, _, _ = convert(load())
+    by_name = {i.name: i for i in exp.items}
+    pack = by_name["Backpack"]
+    assert pack.item_metadata["container"] == {"capacity_lb": 30.0, "counts_weight": True, "quick_access": False,
+                                               "coins": {"copper": 0, "silver": 0, "electrum": 0, "gold": 0, "platinum": 0}}
+    assert pack.ref is not None and pack.container_ref is None
+    assert by_name["Torch"].container_ref == pack.ref
+    assert by_name["Shield"].container_ref is None  # sciolto: containerEntityId = id del personaggio
+
+
+def test_container_with_quantity_stays_plain_item():
+    d = load()
+    for it in d["data"]["inventory"]:
+        if it["definition"]["name"] == "Backpack":
+            it["quantity"] = 2
+    exp, rep, _ = convert(d)
+    by_name = {i.name: i for i in exp.items}
+    assert "container" not in by_name["Backpack"].item_metadata and by_name["Backpack"].ref is None
+    assert by_name["Torch"].container_ref is None
+    assert any(a.name == "Backpack" and a.reason == "ddb.reason.container_quantity" for a in rep.approximated)

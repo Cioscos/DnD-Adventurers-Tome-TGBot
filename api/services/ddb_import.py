@@ -510,6 +510,10 @@ def _items(c: _Ctx) -> None:
                     for v in _l(c.data.get("characterValues"))
                     if isinstance(v, dict) and _int(v.get("typeId")) == CV_ITEM_NAME and _str(v.get("value"))}
     out, attuned = [], [0]
+    inv = [it for it in _l(c.data.get("inventory")) if isinstance(it, dict) and isinstance(it.get("definition"), dict)]
+    # i nostri contenitori hanno quantità 1: un contenitore DDB con più copie resta un oggetto semplice
+    box_ids = {_int(it.get("id")) for it in inv
+               if it["definition"].get("isContainer") and _int(it.get("quantity"), 1) == 1}
     for it in _l(c.data.get("inventory")):
         if not isinstance(it, dict) or not isinstance(it.get("definition"), dict):
             c.skip("items", "", "ddb.reason.invalid")
@@ -532,6 +536,17 @@ def _items(c: _Ctx) -> None:
                "weight": round(max(0.0, float(d.get("weight") or 0) if isinstance(d.get("weight"), (int, float)) else 0.0) / bundle, 3),
                "quantity": _clamp(_int(it.get("quantity"), 1), 0, 1_000_000), "item_type": item_type,
                "item_metadata": meta, "is_equipped": equipped}
+        iid = _int(it.get("id"))
+        if iid in box_ids:
+            cap = d.get("capacityWeight")
+            meta["container"] = {"capacity_lb": float(cap) if isinstance(cap, (int, float)) and cap > 0 else None,
+                                 "counts_weight": d.get("weightMultiplier") != 0, "quick_access": False,
+                                 "coins": {k: 0 for k in ("copper", "silver", "electrum", "gold", "platinum")}}
+            obj["ref"] = iid
+        elif d.get("isContainer"):
+            c.approx("items", name, "ddb.reason.container_quantity")
+        if _int(it.get("containerEntityId")) in box_ids:  # sciolto: containerEntityId = id del personaggio
+            obj["container_ref"] = _int(it.get("containerEntityId"))
         m = c.model(ExportItem, obj, "items", name)
         if m:
             out.append(m)

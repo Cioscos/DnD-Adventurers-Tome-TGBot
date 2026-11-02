@@ -77,7 +77,7 @@ export default function SearchOverlay({ char, open, onClose }: SearchOverlayProp
     haptic.light()
     onClose()
     setQuery('')
-    navigate(r.route)
+    navigate(r.route, r.state ? { state: r.state } : undefined)
   }
 
   const close = () => {

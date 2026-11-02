@@ -149,4 +149,14 @@ describe('searchCharacter', () => {
       expect(r.title).toBe('Senza body')
     })
   })
+
+  it('routes an item inside a container into that container and highlights it', () => {
+    const char = makeChar({ items: [{ ...item(5, 'Corda'), container_id: 9 } as never, item(6, 'Torcia')] })
+    const [inBox] = searchCharacter(char, 'corda')
+    expect(inBox.route).toBe('/char/7/inventory/c/9')
+    expect(inBox.state).toEqual({ highlightItemId: 5 })
+    const [loose] = searchCharacter(char, 'torcia')
+    expect(loose.route).toBe('/char/7/inventory')
+    expect(loose.state).toEqual({ highlightItemId: 6 })
+  })
 })

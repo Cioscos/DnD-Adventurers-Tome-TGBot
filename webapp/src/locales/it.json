@@ -4523,6 +4523,7 @@
       "section_failed": "sezione non leggibile, saltata",
       "not_supported": "non ancora supportato",
       "no_free_slot": "equipaggiato ma senza slot libero: non compare sul manichino, sistemalo a mano",
+      "container_quantity": "un contenitore con più copie resta un oggetto semplice: crea il contenitore a mano",
       "identity_partial": "alcuni dati d'identità non sono stati importati"
     }
   }

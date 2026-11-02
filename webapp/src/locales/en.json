@@ -4524,6 +4524,7 @@
       "section_failed": "section unreadable, skipped",
       "not_supported": "not supported yet",
       "no_free_slot": "equipped but no free slot: not shown on the paper doll, fix it by hand",
+      "container_quantity": "a container with several copies stays a plain item: create the container by hand",
       "identity_partial": "some identity data was not imported"
     }
   }
