@@ -35,7 +35,9 @@ from api.services.durations import start_concentration
 from api.services.condition_effects import release_concentration_effects
 from api.services.item_charges import set_item_charges
 from core.game.actions import parse_duration_rounds
-from api.services.equipment import slot_allowed_for_type, swap_slot_occupant
+from api.services.equipment import apply_equip_ac, slot_allowed_for_type, swap_slot_occupant
+from api.services.containers import move_items, reparent_contents
+from api.schemas.container import ItemMoveRequest
 from api.services.homebrew.dispatcher import dispatch
 from api.services.character_response import build_character_response
 from api.services.effects import apply_heal, apply_conditions
@@ -162,6 +164,10 @@ async def _apply_item_property_defaults(
         item.item_metadata = json.dumps(md)
 
 
+def is_container_meta(meta: dict | None) -> bool:
+    return isinstance((meta or {}).get("container"), dict)
+
+
 def _check_attunement_limit(char, item, new_meta: dict | None) -> None:
     """409 when this write newly attunes an item and the character already has 3."""
     if not (new_meta or {}).get("attuned") or (item is not None and is_attuned(item)):
@@ -186,16 +192,22 @@ async def add_item(
         if not is_container(parent):
             raise HTTPException(status_code=422, detail="not_a_container")
 
-    # Deduplication for generic items: merge quantity if same name exists (loose items only)
-    if body.item_type == "generic" and body.container_id is None:
+    if is_container_meta(body.item_metadata) and body.quantity != 1:
+        raise HTTPException(status_code=422, detail="container_quantity")
+    if body.container_id is not None:  # contained items are never equipped
+        body.is_equipped, body.equipment_slot = False, None
+
+    # Deduplication for generic items: merge with a same-name generic in the same container
+    if body.item_type == "generic":
         existing_result = await session.execute(
             select(Item).where(
                 Item.character_id == char_id,
                 Item.item_type == "generic",
                 Item.name == body.name,
+                Item.container_id == body.container_id,
             )
         )
-        existing = existing_result.scalar_one_or_none()
+        existing = existing_result.scalars().first()
         if existing is not None:
             existing.quantity += body.quantity
             await session.flush()
@@ -265,6 +277,17 @@ async def update_item(
             detail=f"equipment_slot {new_slot.value!r} not allowed for item_type {new_type!r}",
         )
 
+    new_meta = (
+        json.loads(data["item_metadata"]) if data.get("item_metadata")
+        else None if "item_metadata" in data else item_meta(item)
+    )
+    if is_container_meta(new_meta) and data.get("quantity", item.quantity) != 1:
+        raise HTTPException(status_code=422, detail="container_quantity")
+    if is_container(item) and not is_container_meta(new_meta):
+        await reparent_contents(session, char, item)
+    if data.get("is_equipped") and item.container_id is not None:
+        item.container_id = None  # equipping pulls the item out of its container
+
     # Apply the partial update.
     for field, value in data.items():
         setattr(item, field, value)
@@ -278,28 +301,8 @@ async def update_item(
         if not item.is_equipped:
             item.equipment_slot = None
 
-    # Auto-update character AC when equipping/unequipping armor or shields.
-    # Skip the base when the user set a manual override OR Unarmored Defense is active
-    # (the latter owns the base AC and requires wearing no armor).
     if "is_equipped" in data or "equipment_slot" in data:
-        item_meta = json.loads(item.item_metadata) if item.item_metadata else {}
-        base_locked = char.base_armor_class_override or bool(char.unarmored_defense_ability)
-
-        # Neutralize the displaced occupant's AC contribution FIRST, then apply
-        # the newly-equipped item's. Order matters: on a same-slot armor/shield
-        # swap the displaced piece shares the new item's component (base/shield),
-        # so resetting it AFTER would clobber the value the new piece just set —
-        # leaving the character at base 10 / shield 0 (the new AC silently lost).
-        if displaced is not None:
-            if displaced.item_type == "armor" and not base_locked:
-                char.base_armor_class = 10
-            elif displaced.item_type == "shield" and not char.shield_armor_class_override:
-                char.shield_armor_class = 0
-
-        if item.item_type == "armor" and not base_locked:
-            char.base_armor_class = item_meta.get("ac_value", 10) if item.is_equipped else 10
-        elif item.item_type == "shield" and not char.shield_armor_class_override:
-            char.shield_armor_class = item_meta.get("ac_bonus", 2) if item.is_equipped else 0
+        apply_equip_ac(char, item, displaced)
 
     # Auto-recompute HP when CON modifier changes due to equip/unequip
     settings = char.settings or {}
@@ -345,6 +348,23 @@ async def update_item(
     return response
 
 
+@router.post("/{char_id}/items/move", response_model=CharacterFull)
+async def move_items_endpoint(
+    char_id: int,
+    body: ItemMoveRequest,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> CharacterFull:
+    char = await _get_owned_full(char_id, user_id, session)
+    names = await move_items(session, char, body.item_ids, body.container_id, body.quantity)
+    char.recalculate_encumbrance()
+    await session.flush()
+    await session.refresh(char, attribute_names=["items"])
+    response = await build_character_response(session, char)
+    response.unequipped_item_names = names
+    return response
+
+
 @router.delete("/{char_id}/items/{item_id}", response_model=CharacterFull)
 async def delete_item(
     char_id: int,
@@ -359,6 +379,8 @@ async def delete_item(
     item = result.scalar_one_or_none()
     if item is None:
         raise HTTPException(status_code=404, detail="Item not found")
+    if is_container(item):
+        await reparent_contents(session, char, item)
     await session.delete(item)
     await session.flush()
     char.recalculate_encumbrance()

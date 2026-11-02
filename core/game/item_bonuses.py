@@ -26,6 +26,7 @@ def is_attuned(item) -> bool:
 
 
 def is_active_for_bonuses(item) -> bool:
+    # Invariant: container_id never dangles (delete/un-container always re-parent), so non-null == contained.
     if getattr(item, "container_id", None) is not None:
         return False
     meta = item_meta(item)
