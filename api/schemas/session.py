@@ -71,6 +71,7 @@ class SessionParticipantRead(BaseModel):
     role: str
     character_id: Optional[int] = None
     display_name: Optional[str] = None
+    character_name: Optional[str] = None
     joined_at: str
 
     model_config = {"from_attributes": True}

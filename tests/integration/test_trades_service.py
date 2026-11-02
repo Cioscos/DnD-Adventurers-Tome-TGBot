@@ -212,3 +212,15 @@ async def test_give_coins_nothing_to_give_422(test_session_factory, coins):
         with pytest.raises(HTTPException) as e:
             give_coins(A, B, coins)
         assert (e.value.status_code, e.value.detail) == (422, "nothing_to_give")
+
+
+async def test_partial_split_of_container_stack_is_rejected(test_session_factory):
+    a, b, ids = await _setup(test_session_factory, [
+        dict(name="Zaino", quantity=2, item_metadata=_bag(coins={"gold": 35}))])
+    async with test_session_factory() as s:
+        A, B = await _load(s, a), await _load(s, b)
+        with pytest.raises(HTTPException) as e:
+            await give_item(s, A, B, ids["Zaino"], 1)
+        assert e.value.status_code == 422 and e.value.detail == "invalid_quantity"
+        snap, _ = await give_item(s, A, B, ids["Zaino"], 2)
+        assert snap["quantity"] == 2

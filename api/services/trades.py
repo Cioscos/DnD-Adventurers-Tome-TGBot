@@ -24,6 +24,8 @@ async def give_item(db, sender, recipient, item_id: int, quantity: int | None):
         raise HTTPException(status_code=422, detail="invalid_quantity")
     if quantity == item.quantity:
         quantity = None
+    if quantity is not None and is_container(item):  # lo split duplicherebbe le monete
+        raise HTTPException(status_code=422, detail="invalid_quantity")
     snapshot = trade_snapshot(sender.items, item.id, item.quantity if quantity is None else quantity)
 
     same = next((

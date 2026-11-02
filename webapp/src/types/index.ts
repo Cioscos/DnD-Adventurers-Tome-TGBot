@@ -408,6 +408,7 @@ export interface SessionParticipant {
   role: SessionRole
   character_id?: number | null
   display_name?: string | null
+  character_name?: string | null
   joined_at: string
 }
 

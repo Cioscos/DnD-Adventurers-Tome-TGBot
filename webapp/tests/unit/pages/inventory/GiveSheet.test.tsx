@@ -22,7 +22,7 @@ vi.mock('@/components/ui/Sheet', async () => {
 })
 
 const partners: SessionParticipant[] = [
-  { user_id: 2, role: 'player', character_id: 20, display_name: 'Aldo', joined_at: '' },
+  { user_id: 2, role: 'player', character_id: 20, display_name: 'Aldo', character_name: 'Thorin', joined_at: '' },
   { user_id: 3, role: 'player', character_id: 30, display_name: null, joined_at: '' },
 ]
 const it_ = (id: number, name: string, over: Record<string, unknown> = {}) =>
@@ -46,8 +46,14 @@ describe('GiveSheet', () => {
   it('elenca i compagni per display_name (fallback #user_id)', () => {
     const f = it_(1, 'Corda')
     setup(f, [f])
-    expect(screen.getByRole('button', { name: /Aldo/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Thorin.*Aldo/ })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /#3/ })).toBeInTheDocument()
+  })
+
+  it('contenitore in pila: niente stepper, si dà intero', () => {
+    const z = box(1, 'Zaino', null)
+    setup({ ...z, quantity: 2 } as Item, [z])
+    expect(screen.queryByLabelText('character.inventory.containers.qty_minus')).toBeNull()
   })
 
   it('pila x20: stepper 1..20, default 20, quantity omessa se intera', async () => {
@@ -55,7 +61,7 @@ describe('GiveSheet', () => {
     trade.mockResolvedValue({ id: 10, items: [] })
     const { onClose } = setup(f, [f])
     expect(screen.getByText('20 / 20')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: /Aldo/ }))
+    fireEvent.click(screen.getByRole('button', { name: /Thorin/ }))
     fireEvent.click(screen.getByRole('button', { name: 'character.inventory.give.confirm' }))
     await waitFor(() => expect(onClose).toHaveBeenCalled())
     expect(trade).toHaveBeenCalledWith(9, { from_character_id: 10, to_user_id: 2, item_id: 1 })
@@ -66,7 +72,7 @@ describe('GiveSheet', () => {
     trade.mockResolvedValue({ id: 10, items: [] })
     setup(f, [f])
     fireEvent.click(screen.getByLabelText('character.inventory.containers.qty_minus'))
-    fireEvent.click(screen.getByRole('button', { name: /Aldo/ }))
+    fireEvent.click(screen.getByRole('button', { name: /Thorin/ }))
     fireEvent.click(screen.getByRole('button', { name: 'character.inventory.give.confirm' }))
     await waitFor(() => expect(trade).toHaveBeenCalled())
     expect(trade).toHaveBeenCalledWith(9, { from_character_id: 10, to_user_id: 2, item_id: 1, quantity: 19 })
@@ -87,7 +93,7 @@ describe('GiveSheet', () => {
     const f = it_(1, 'Spada')
     trade.mockResolvedValue({ id: 10, items: [], unequipped_item_names: ['Spada'] })
     const { onClose, qc } = setup(f, [f])
-    fireEvent.click(screen.getByRole('button', { name: /Aldo/ }))
+    fireEvent.click(screen.getByRole('button', { name: /Thorin/ }))
     fireEvent.click(screen.getByRole('button', { name: 'character.inventory.give.confirm' }))
     await waitFor(() => expect(onClose).toHaveBeenCalled())
     expect(qc.getQueryData(['character', 10])).toMatchObject({ id: 10 })

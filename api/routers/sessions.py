@@ -128,7 +128,7 @@ def _now() -> str:
 async def _load_session(session_id: int, db: AsyncSession) -> GameSession:
     result = await db.execute(
         select(GameSession)
-        .options(selectinload(GameSession.participants))
+        .options(selectinload(GameSession.participants).selectinload(SessionParticipant.character))
         .where(GameSession.id == session_id)
     )
     obj = result.scalar_one_or_none()
@@ -140,7 +140,7 @@ async def _load_session(session_id: int, db: AsyncSession) -> GameSession:
 async def _load_session_by_code(code: str, db: AsyncSession) -> GameSession:
     result = await db.execute(
         select(GameSession)
-        .options(selectinload(GameSession.participants))
+        .options(selectinload(GameSession.participants).selectinload(SessionParticipant.character))
         .where(GameSession.code == code.upper())
     )
     obj = result.scalar_one_or_none()
@@ -161,7 +161,7 @@ async def _find_active_session_for_user(user_id: int, db: AsyncSession) -> Optio
     result = await db.execute(
         select(GameSession)
         .join(SessionParticipant, SessionParticipant.session_id == GameSession.id)
-        .options(selectinload(GameSession.participants))
+        .options(selectinload(GameSession.participants).selectinload(SessionParticipant.character))
         .where(
             GameSession.status == SessionStatus.ACTIVE,
             SessionParticipant.user_id == user_id,
@@ -405,6 +405,7 @@ async def join_session(
         user_id=user_id,
         role=SessionRole.PLAYER,
         character_id=char.id,
+        character=char,
         display_name=char.name,
         joined_at=_now(),
     ))
@@ -521,6 +522,7 @@ async def get_session_live(
                 "role": p.role.value if hasattr(p.role, "value") else str(p.role),
                 "character_id": p.character_id,
                 "display_name": p.display_name,
+                "character_name": p.character_name,
                 "joined_at": p.joined_at,
             }
             for p in session.participants

@@ -30,3 +30,11 @@ async def test_me_reports_setup_then_active_then_none(client, test_session_facto
     as_user(GM_ID)
     await client.post(f"/sessions/{sid}/encounter/end")
     assert await _status(client) is None
+
+
+async def test_me_participants_include_character_name(client, test_session_factory):
+    await seed_session(test_session_factory)
+    r = await client.get("/sessions/me")
+    parts = {p["user_id"]: p for p in r.json()["participants"]}
+    assert parts[PLAYER_ID]["character_name"] == "Eroe"
+    assert parts[GM_ID]["character_name"] is None

@@ -31,7 +31,7 @@ export default function GiveCoinsSheet({ charId, sessionId, partners, totals, on
   return (
     <Sheet open onClose={onClose} title={t('character.inventory.give.title')}>
       <div className="p-5 space-y-3">
-        <div className="grid grid-cols-2 gap-2">
+        <div className="space-y-2">
           {COIN_ORDER.map((k) => (
             <Input
               key={k}

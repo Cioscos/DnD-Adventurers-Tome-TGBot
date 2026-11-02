@@ -70,28 +70,36 @@ function TradeTree({ nodes, depth = 0 }: { nodes: TradeSnapshot[]; depth?: numbe
   )
 }
 
-function TradeRow({ trade, t }: { trade: TradePayload; t: (k: string, o?: Record<string, string>) => string }) {
+function TradeRow({ trade, timestamp, lang, t }: { trade: TradePayload; timestamp: string; lang: string; t: (k: string, o?: Record<string, string>) => string }) {
   const [open, setOpen] = useState(false)
   const expandable = tradeExpandable(trade)
   const head = (
-    <p className="whitespace-pre-wrap break-words">
-      <ArrowLeftRight size={12} className="inline -mt-0.5 mr-1 text-dnd-gold-bright" />
-      {t('session.feed.trade', { from: trade.from.name, to: trade.to.name, what: tradeWhat(trade) })}
-    </p>
+    <>
+      <ArrowLeftRight size={12} className="shrink-0 mt-1 text-dnd-gold-bright" />
+      <span className="flex-1 min-w-0 whitespace-pre-wrap break-words">
+        {t('session.feed.trade', { from: trade.from.name, to: trade.to.name, what: tradeWhat(trade) })}
+      </span>
+      <span className="shrink-0 mt-0.5 font-mono text-xs text-dnd-text-faint">{formatTime24(timestamp, lang)}</span>
+    </>
   )
-  const box = 'max-w-[80%] rounded-lg px-3 py-2 text-sm font-body text-left bg-dnd-surface border border-dnd-border text-dnd-text'
-  const detail = open && (
-    <div className="mt-1 text-xs text-dnd-text-muted">
-      <TradeTree nodes={trade.items} />
-      {trade.items.length > 0 && coinText(trade.coins) && <p>{coinText(trade.coins)}</p>}
-    </div>
-  )
-  if (!expandable) return <div className={box}>{head}</div>
+  const box = 'max-w-[80%] rounded-lg text-sm font-body text-left bg-dnd-surface border border-dnd-border text-dnd-text'
+  const row = 'w-full flex items-start gap-1.5 px-3 py-2 text-left'
   return (
-    <Pressable onClick={() => setOpen((o) => !o)} aria-expanded={open} className={`${box} block cursor-pointer`}>
-      {head}
-      {detail}
-    </Pressable>
+    <div className={box}>
+      {expandable ? (
+        <Pressable onClick={() => setOpen((o) => !o)} aria-expanded={open} className={`${row} min-h-[44px] cursor-pointer`}>
+          {head}
+        </Pressable>
+      ) : (
+        <div className={row}>{head}</div>
+      )}
+      {expandable && open && (
+        <div className="px-3 pb-2 text-xs text-dnd-text-muted">
+          <TradeTree nodes={trade.items} />
+          {trade.items.length > 0 && coinText(trade.coins) && <p>{coinText(trade.coins)}</p>}
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -391,7 +399,7 @@ export default function SessionFeed({
               )
             }
 
-            if (it.trade) return <TradeRow key={itemKey(it)} trade={it.trade} t={t} />
+            if (it.trade) return <TradeRow key={itemKey(it)} trade={it.trade} timestamp={it.timestamp} lang={i18n.language} t={t} />
 
             const mine = it.user_id === myUserId
             const isWhisper = !!it.recipient_user_id

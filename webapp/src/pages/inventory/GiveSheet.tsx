@@ -8,7 +8,9 @@ import { COIN_ORDER, COIN_ABBR, useTradeMutation } from '@/hooks/useTradeMutatio
 import { containerMeta } from '@/lib/containers'
 import type { CoinKey, Item, SessionParticipant } from '@/types'
 
-const partnerName = (p: SessionParticipant) => p.display_name || `#${p.user_id}`
+const partnerName = (p: SessionParticipant) => p.character_name || p.display_name || `#${p.user_id}`
+// Giocatore come etichetta secondaria, solo se diverso dal nome principale.
+const partnerPlayer = (p: SessionParticipant) => (p.character_name && p.display_name && p.display_name !== p.character_name ? p.display_name : null)
 
 export function PartnerPicker({ partners, value, onChange }: { partners: SessionParticipant[]; value: number | null; onChange: (id: number) => void }) {
   const { t } = useTranslation()
@@ -20,6 +22,7 @@ export function PartnerPicker({ partners, value, onChange }: { partners: Session
           className={`w-full min-h-[44px] flex items-center gap-2 px-3 rounded-xl border text-left text-sm font-cinzel ${value === p.user_id ? 'bg-dnd-gold/20 border-dnd-gold' : 'bg-dnd-surface border-dnd-border'}`}>
           <User size={16} className="text-dnd-gold shrink-0" />
           <span className="truncate">{partnerName(p)}</span>
+          {partnerPlayer(p) && <span className="truncate text-xs text-dnd-text-muted">· {partnerPlayer(p)}</span>}
         </Pressable>
       ))}
     </div>
@@ -40,7 +43,7 @@ export default function GiveSheet({ charId, sessionId, partners, item, items, on
   const { t } = useTranslation()
   const p = 'character.inventory.give.'
   const [to, setTo] = useState<number | null>(partners.length === 1 ? partners[0].user_id : null)
-  const stepper = item.quantity > 1
+  const stepper = item.quantity > 1 && !containerMeta(item) // un contenitore si dà intero
   const [qty, setQty] = useState(item.quantity)
   const give = useTradeMutation(charId, sessionId, onClose)
 
@@ -81,7 +84,7 @@ export default function GiveSheet({ charId, sessionId, partners, item, items, on
             <Pressable aria-label={t('character.inventory.containers.qty_minus')} onClick={() => setQty((v) => Math.max(1, v - 1))} className={stepBtn}>
               <Minus size={16} />
             </Pressable>
-            <span className="font-mono tabular-nums w-16 text-center">{qty} / {item.quantity}</span>
+            <span className="font-mono tabular-nums min-w-[5rem] whitespace-nowrap text-center">{qty} / {item.quantity}</span>
             <Pressable aria-label={t('character.inventory.containers.qty_plus')} onClick={() => setQty((v) => Math.min(item.quantity, v + 1))} className={stepBtn}>
               <Plus size={16} />
             </Pressable>
