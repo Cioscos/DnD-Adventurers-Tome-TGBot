@@ -95,12 +95,18 @@ export default function Currency() {
     scope,
     mutationFn: (v: { key: CoinKey; delta: number; placements?: Placement[] }) =>
       api.currency.adjust(charId, { coin: v.key, delta: v.delta, ...(v.placements && { placements: v.placements }) }),
-    onMutate: ({ key, delta }) => setTotals((old) => ({ ...old, [key]: Math.max(0, old[key] + delta) })),
+    onMutate: async ({ key, delta }) => {
+      await qc.cancelQueries({ queryKey: ['character', charId] }) // un refetch in volo non deve sovrascrivere l'ottimistico
+      setTotals((old) => ({ ...old, [key]: Math.max(0, old[key] + delta) }))
+    },
     onSuccess: (res) => {
       // Una risposta vecchia non deve sovrascrivere il valore ottimistico di un'operazione ancora in coda.
       if (qc.isMutating({ predicate: (mu) => mu.options.scope?.id === scope.id }) > 1) return
       setTotals(() => res.coin_totals)
-      qc.invalidateQueries({ queryKey: ['character', charId] }) // aggiorna la suddivisione per posto
+    },
+    // Ricarica (suddivisione per posto) solo quando la coda è vuota: niente sfarfallio fra un'operazione e l'altra.
+    onSettled: () => {
+      if (qc.isMutating({ predicate: (mu) => mu.options.scope?.id === scope.id }) <= 1) qc.invalidateQueries({ queryKey: ['character', charId] })
     },
     // Dopo un errore la cache non è affidabile (altre operazioni in coda): si rilegge dal server.
     onError: () => {
@@ -118,19 +124,19 @@ export default function Currency() {
 
   // Variazione sul totale; a risposta arrivata offre Annulla. L'inversa rimanda i piazzamenti
   // effettivi negati (non una nuova ripartizione): ogni moneta torna dov'era.
-  const run = (key: CoinKey, delta: number, message: (placements: Placement[]) => string) =>
-    adjust.mutate({ key, delta }, {
-      onSuccess: (res) => {
-        haptic.success()
-        showUndoToast({
-          message: message(res.placements),
-          actionLabel: t('character.currency.undo'),
-          onUndo: () => adjust.mutate({
-            key, delta: -delta, placements: res.placements.map((p) => ({ ...p, amount: -p.amount })),
-          }),
-        })
-      },
-    })
+  // mutateAsync (non i callback di mutate): ogni tocco in volo conserva il proprio Annulla.
+  const run = (key: CoinKey, delta: number, message: (placements: Placement[]) => string) => {
+    haptic.success()
+    adjust.mutateAsync({ key, delta }).then((res) =>
+      showUndoToast({
+        message: message(res.placements),
+        actionLabel: t('character.currency.undo'),
+        onUndo: () => adjust.mutate({
+          key, delta: -delta, placements: res.placements.map((p) => ({ ...p, amount: -p.amount })),
+        }),
+      }),
+    ).catch(() => {}) // l'errore è già gestito da onError
+  }
 
   const apply = (key: CoinKey, delta: number) =>
     run(key, delta, (placements) => delta < 0 && placements.length > 1

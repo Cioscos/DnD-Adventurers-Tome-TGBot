@@ -172,6 +172,36 @@ describe('Currency page — totale + transazione', () => {
     expect(undoSpy.mock.calls[0][0].message).toBe('character.currency.spent_from')
   })
 
+  it('più spese in volo: ogni tocco ha il suo Annulla coi propri piazzamenti', async () => {
+    await loaded()
+    const gates: ((v: unknown) => void)[] = []
+    adjustSpy.mockImplementation(() => new Promise((res) => { gates.push(res) }))
+    await userEvent.click(key('1'))
+    await userEvent.click(key('character.currency.spend'))
+    await userEvent.click(key('2'))
+    await userEvent.click(key('character.currency.spend'))
+    await userEvent.click(key('3'))
+    await userEvent.click(key('character.currency.spend'))
+    await waitFor(() => expect(gates.length).toBeGreaterThan(0))
+    // Le risposte arrivano in ordine (scope seriale): sblocco una alla volta.
+    const amounts = [1, 2, 3]
+    for (let i = 0; i < 3; i++) {
+      await waitFor(() => expect(gates.length).toBe(i + 1))
+      gates[i]({ coin_totals: server.coin_totals, purse: {}, placements: [{ container_id: 7, amount: -amounts[i] }] })
+    }
+    await waitFor(() => expect(undoSpy).toHaveBeenCalledTimes(3))
+    adjustSpy.mockReset()
+    adjustSpy.mockResolvedValue({ coin_totals: server.coin_totals, purse: {}, placements: [] })
+    undoSpy.mock.calls[0][0].onUndo()
+    await waitFor(() => expect(adjustSpy).toHaveBeenLastCalledWith(5, {
+      coin: 'gold', delta: 1, placements: [{ container_id: 7, amount: 1 }],
+    }))
+    undoSpy.mock.calls[1][0].onUndo()
+    await waitFor(() => expect(adjustSpy).toHaveBeenLastCalledWith(5, {
+      coin: 'gold', delta: 2, placements: [{ container_id: 7, amount: 2 }],
+    }))
+  })
+
   it('Ricevi aggiunge sulla moneta scelta (cambio moneta coi chip)', async () => {
     await loaded()
     await userEvent.click(key('SP'))

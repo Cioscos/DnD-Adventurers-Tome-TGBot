@@ -683,7 +683,7 @@ export default function Inventory() {
             </p>
           )}
           {COIN_KEYS.some((k) => (currentMeta?.coins?.[k] ?? 0) > 0) && (
-            <Button variant="secondary" size="sm" className="mt-1.5"
+            <Button variant="secondary" size="sm" className="mt-1.5 min-h-[44px] min-w-[44px]"
               onClick={() => setCoinMove({ coin: COIN_KEYS.find((k) => (currentMeta?.coins?.[k] ?? 0) > 0)!, from: current!.id })}>
               {t('character.currency.move')}
             </Button>
