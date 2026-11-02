@@ -34,9 +34,15 @@ from api.schemas.session import (
     SessionJoinRequest,
     SessionMessageCreate,
     SessionMessageRead,
+    TradeRequest,
     TurnState,
 )
+from api.routers._helpers import apply_con_hp, collect_homebrew_notifications, effective_con_mod
+from api.schemas.character import CharacterFull
 from api.services import telegram_notify
+from api.services.character_response import build_character_response
+from api.services.homebrew.dispatcher import dispatch
+from api.services.trades import give_coins, give_item
 from api.services.condition_effects import character_effect_payload
 from api.services.encounter_view import build_encounter_block
 from core.db.models import (
@@ -122,7 +128,7 @@ def _now() -> str:
 async def _load_session(session_id: int, db: AsyncSession) -> GameSession:
     result = await db.execute(
         select(GameSession)
-        .options(selectinload(GameSession.participants))
+        .options(selectinload(GameSession.participants).selectinload(SessionParticipant.character))
         .where(GameSession.id == session_id)
     )
     obj = result.scalar_one_or_none()
@@ -134,7 +140,7 @@ async def _load_session(session_id: int, db: AsyncSession) -> GameSession:
 async def _load_session_by_code(code: str, db: AsyncSession) -> GameSession:
     result = await db.execute(
         select(GameSession)
-        .options(selectinload(GameSession.participants))
+        .options(selectinload(GameSession.participants).selectinload(SessionParticipant.character))
         .where(GameSession.code == code.upper())
     )
     obj = result.scalar_one_or_none()
@@ -155,7 +161,7 @@ async def _find_active_session_for_user(user_id: int, db: AsyncSession) -> Optio
     result = await db.execute(
         select(GameSession)
         .join(SessionParticipant, SessionParticipant.session_id == GameSession.id)
-        .options(selectinload(GameSession.participants))
+        .options(selectinload(GameSession.participants).selectinload(SessionParticipant.character))
         .where(
             GameSession.status == SessionStatus.ACTIVE,
             SessionParticipant.user_id == user_id,
@@ -399,6 +405,7 @@ async def join_session(
         user_id=user_id,
         role=SessionRole.PLAYER,
         character_id=char.id,
+        character=char,
         display_name=char.name,
         joined_at=_now(),
     ))
@@ -515,6 +522,7 @@ async def get_session_live(
                 "role": p.role.value if hasattr(p.role, "value") else str(p.role),
                 "character_id": p.character_id,
                 "display_name": p.display_name,
+                "character_name": p.character_name,
                 "joined_at": p.joined_at,
             }
             for p in session.participants
@@ -848,6 +856,118 @@ async def gm_grant_item(
     return GMGrantItemResponse(results=results)
 
 
+_COIN_LABELS = {"copper": "rame", "silver": "argento", "electrum": "electrum", "gold": "oro", "platinum": "platino"}
+
+
+async def _load_char_full(db: AsyncSession, char_id: int) -> Character:
+    result = await db.execute(
+        select(Character)
+        .options(
+            selectinload(Character.classes),
+            selectinload(Character.ability_scores),
+            selectinload(Character.spells),
+            selectinload(Character.spell_slots),
+            selectinload(Character.items),
+            selectinload(Character.currency),
+            selectinload(Character.abilities),
+            selectinload(Character.maps),
+        )
+        .where(Character.id == char_id)
+    )
+    return result.scalar_one()
+
+
+@router.post("/{session_id}/trade", response_model=CharacterFull)
+async def trade(
+    session_id: int,
+    body: TradeRequest,
+    user_id: Annotated[int, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> CharacterFull:
+    """Player action: give an item/container/coins to another PG of the session.
+
+    Posts a public feed row (no item_* columns, so it is not read as a GM grant)
+    and notifies the recipient. Returns the sender's updated sheet.
+    """
+    session_obj = await _load_session(session_id, db)
+    if session_obj.status != SessionStatus.ACTIVE:
+        raise HTTPException(status_code=status.HTTP_410_GONE, detail="Session is closed")
+    me = _assert_participant(session_obj, user_id)
+    if me.role != SessionRole.PLAYER or me.character_id is None or me.character_id != body.from_character_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="not_your_character")
+    if (body.item_id is None) == (body.coins is None):
+        raise HTTPException(status_code=422, detail="nothing_to_give")
+    other = next((p for p in session_obj.participants if p.user_id == body.to_user_id), None)
+    if (other is None or other.role != SessionRole.PLAYER or other.character_id is None
+            or other.user_id == user_id):
+        raise HTTPException(status_code=422, detail="invalid_recipient")
+
+    sender = await _load_char_full(db, me.character_id)
+    recipient = await _load_char_full(db, other.character_id)
+    old_con_mod = effective_con_mod(sender)
+
+    snapshots: list[dict] = []
+    removed: list = []
+    coins_given: dict[str, int] = {}
+    if body.item_id is not None:
+        snap, taken = await give_item(db, sender, recipient, body.item_id, body.quantity)
+        # read what dispatch needs now: a merged-away root is deleted by the flush
+        removed = [(i.id, i.item_type, i.name, slot) for i, slot in taken]
+        snapshots = [snap]
+        what = f"{snap['name']} (×{snap['quantity']})"
+    else:
+        coins_given = give_coins(sender, recipient, body.coins)
+        what = ", ".join(f"{n} {_COIN_LABELS[c]}" for c, n in coins_given.items())
+
+    apply_con_hp(sender, old_con_mod)
+    await db.flush()
+    for c in (sender, recipient):
+        await db.refresh(c, attribute_names=["items"])
+        c.recalculate_encumbrance()
+    await db.flush()
+
+    notifications: list[dict] = []
+    for item_id, item_type, _name, slot in removed:
+        firing = await dispatch(db, sender, "item_unequipped", {
+            "item_id": item_id, "item_type": item_type,
+            "slot": slot.value if slot is not None else None,
+            "was_equipped": True, "is_equipped": False,
+        })
+        notifications += collect_homebrew_notifications(firing)
+
+    payload = {
+        "from": {"character_id": sender.id, "name": sender.name},
+        "to": {"character_id": recipient.id, "name": recipient.name},
+        "items": snapshots,
+        "coins": coins_given,
+    }
+    db.add(SessionMessage(
+        session_id=session_obj.id,
+        user_id=user_id,
+        role=SessionRole.PLAYER,
+        body=f"{sender.name} ha dato a {recipient.name}: {what}",
+        sent_at=_now(),
+        sender_display_name=me.display_name or sender.name,
+        trade_payload=json.dumps(payload),
+    ))
+    _touch(session_obj)
+    await db.flush()
+
+    if telegram_notify.notifications_enabled(recipient, "gm_events"):
+        await telegram_notify.send_telegram_message(
+            body.to_user_id,
+            f"🤝 {sender.name} ti ha dato: {what}",
+            button=("Apri l'inventario",
+                    telegram_notify.miniapp_url(f"/char/{recipient.id}/inventory")),
+        )
+
+    response = await build_character_response(db, sender)
+    response.unequipped_item_names = [name for _i, _t, name, _s in removed]
+    if notifications:
+        response.homebrew_notifications = notifications
+    return response
+
+
 @router.get(
     "/{code}/feed",
     response_model=SessionFeedResponse,
@@ -939,6 +1059,7 @@ async def get_session_feed(
             item_id=m.item_id,
             item_name=m.item_name,
             item_quantity=m.item_quantity,
+            trade=json.loads(m.trade_payload) if m.trade_payload else None,
         ))
 
     for e in events:

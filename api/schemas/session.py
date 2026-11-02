@@ -71,6 +71,7 @@ class SessionParticipantRead(BaseModel):
     role: str
     character_id: Optional[int] = None
     display_name: Optional[str] = None
+    character_name: Optional[str] = None
     joined_at: str
 
     model_config = {"from_attributes": True}
@@ -144,6 +145,9 @@ class SessionFeedItem(BaseModel):
     item_name: Optional[str] = None
     item_quantity: Optional[int] = None
 
+    # message-only — PG-to-PG trade snapshot
+    trade: Optional[dict] = None
+
     # event-only
     event_id: Optional[int] = None
     character_id: Optional[int] = None
@@ -164,6 +168,16 @@ class GMGrantItemRequest(BaseModel):
 
     recipient_user_ids: list[int] = Field(min_length=1)
     item: ItemCreate
+
+
+class TradeRequest(BaseModel):
+    """Player action: give an item (or loose coins) to another PG in the session."""
+
+    from_character_id: int
+    to_user_id: int
+    item_id: Optional[int] = None
+    quantity: Optional[int] = None
+    coins: Optional[dict[str, int]] = None
 
 
 class GMGrantItemResult(BaseModel):

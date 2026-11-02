@@ -1,0 +1,75 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import SessionFeed from '@/pages/session/SessionFeed'
+import itLocale from '@/locales/it.json'
+import type { SessionFeedItem, TradePayload } from '@/types'
+
+const { getFeed, enqueueSpy } = vi.hoisted(() => ({ getFeed: vi.fn(), enqueueSpy: vi.fn() }))
+
+vi.mock('@/api/client', () => ({
+  api: { sessions: { getFeed, sendMessage: vi.fn() } },
+  ApiError: class ApiError extends Error {},
+}))
+vi.mock('@/lib/rewardQueue', () => ({ enqueue: enqueueSpy }))
+vi.mock('@/auth/telegram', () => ({ haptic: new Proxy({}, { get: () => () => {} }) }))
+vi.mock('sonner', () => ({ toast: { error: vi.fn(), warning: vi.fn() } }))
+vi.mock('react-i18next', async (orig) => {
+  const actual = (await orig()) as Record<string, unknown>
+  const t = (k: string, o?: Record<string, string>) => {
+    const raw = k.split('.').reduce<unknown>((a, p) => (a as Record<string, unknown> | undefined)?.[p], itLocale) as string | undefined
+    return (raw ?? k).replace(/\{\{(\w+)\}\}/g, (_, n) => String(o?.[n] ?? ''))
+  }
+  return { ...actual, useTranslation: () => ({ t, i18n: { language: 'it' } }) }
+})
+
+const feedItem = (trade: TradePayload): SessionFeedItem => ({
+  type: 'message', message_id: 1, user_id: 1, role: 'player', display_name: 'Thorin',
+  body: 'x', recipient_user_id: null, item_id: null, item_name: null, item_quantity: null,
+  timestamp: '2026-01-01T10:00:00Z', trade,
+}) as SessionFeedItem
+
+const base = { from: { character_id: 1, name: 'Thorin' }, to: { character_id: 2, name: 'Lyra' } }
+
+function setup(trade: TradePayload) {
+  getFeed.mockResolvedValue({ items: [feedItem(trade)], has_more: false })
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <MemoryRouter>
+        <SessionFeed code="ABC" sessionId={1} gmUserId={9} myUserId={2} myCharId={2}
+          participants={[]} whisperTarget={null} onClearWhisperTarget={() => {}} />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  )
+}
+
+describe('SessionFeed trade row', () => {
+  beforeEach(() => { Element.prototype.scrollTo = vi.fn(); getFeed.mockReset(); enqueueSpy.mockReset() })
+
+  it('espande uno zaino con figli e monete, senza ricompensa né icona regalo', async () => {
+    setup({
+      ...base, coins: {},
+      items: [{ name: 'Zaino', quantity: 1, coins: { gold: 35 }, children: [{ name: 'Corda', quantity: 1, coins: null, children: [] }] }],
+    })
+    const row = await screen.findByRole('button', { name: /Thorin ha dato a Lyra: Zaino/ })
+    expect(screen.queryByText('Corda')).toBeNull()
+    await userEvent.click(row)
+    expect(screen.getByText('Corda')).toBeTruthy()
+    expect(screen.getByText(/35 GP/)).toBeTruthy()
+    expect(enqueueSpy).not.toHaveBeenCalled()
+    expect(document.querySelector('.lucide-gift')).toBeNull()
+  })
+
+  it('oggetto semplice non è espandibile', async () => {
+    setup({ ...base, coins: {}, items: [{ name: 'Spada', quantity: 2, coins: null, children: [] }] })
+    await screen.findByText(/Thorin ha dato a Lyra: Spada ×2/)
+    expect(screen.queryByRole('button', { name: /Spada/ })).toBeNull()
+  })
+
+  it('solo monete mostra gli importi', async () => {
+    setup({ ...base, items: [], coins: { gold: 1200, silver: 5 } })
+    await waitFor(() => expect(screen.getByText(/Thorin ha dato a Lyra: 1200 GP · 5 SP/)).toBeTruthy())
+  })
+})

@@ -617,6 +617,11 @@ class SessionParticipant(Base):
     session: Mapped["GameSession"] = relationship(back_populates="participants")
     character: Mapped[Optional["Character"]] = relationship()
 
+    @property
+    def character_name(self) -> Optional[str]:
+        # Richiede `character` già caricato (selectinload) negli endpoint async.
+        return self.character.name if self.character is not None else None
+
 
 class SessionMessage(Base):
     """A chat message exchanged inside a game session."""
@@ -646,6 +651,8 @@ class SessionMessage(Base):
     item_quantity: Mapped[Optional[int]] = mapped_column(
         Integer, nullable=True
     )
+    # JSON snapshot of a PG-to-PG trade (public feed row); NULL for ordinary messages
+    trade_payload: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     session: Mapped["GameSession"] = relationship(back_populates="messages")
 

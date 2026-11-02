@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Gift, Lock, Maximize2, Send, User as UserIcon, X } from 'lucide-react'
+import { ArrowLeftRight, Gift, Lock, Maximize2, Send, User as UserIcon, X } from 'lucide-react'
 import { GiCrown as Crown } from 'react-icons/gi'
 import { toast } from 'sonner'
 import { useNavigate } from 'react-router-dom'
@@ -10,7 +10,8 @@ import { api, ApiError } from '@/api/client'
 import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
 import Pressable from '@/components/ui/Pressable'
-import type { CharacterFull, SessionFeedItem, SessionFeedResponse, SessionParticipant } from '@/types'
+import type { CharacterFull, SessionFeedItem, SessionFeedResponse, SessionParticipant, TradePayload, TradeSnapshot } from '@/types'
+import { COIN_ORDER, COIN_ABBR } from '@/hooks/useTradeMutation'
 import { haptic } from '@/auth/telegram'
 import { useOverlayDismiss } from '@/hooks/useOverlayDismiss'
 import { EVENT_META } from '@/lib/eventMeta'
@@ -41,6 +42,66 @@ interface Props {
 
 const POLL_MS = 3000
 
+
+function coinText(coins: Record<string, number> | null | undefined): string {
+  return COIN_ORDER.filter((k) => coins?.[k]).map((k) => `${coins![k]} ${COIN_ABBR[k]}`).join(' · ')
+}
+
+function tradeWhat(trade: TradePayload): string {
+  if (trade.items.length === 0) return coinText(trade.coins)
+  return trade.items.map((i) => (i.quantity > 1 ? `${i.name} ×${i.quantity}` : i.name)).join(', ')
+}
+
+const tradeExpandable = (trade: TradePayload): boolean =>
+  trade.items.some((i) => i.children.length > 0 || !!coinText(i.coins)) ||
+  (trade.items.length > 0 && !!coinText(trade.coins))
+
+function TradeTree({ nodes, depth = 0 }: { nodes: TradeSnapshot[]; depth?: number }) {
+  return (
+    <ul>
+      {nodes.map((n, i) => (
+        <li key={i} style={{ paddingLeft: depth ? 12 : 0 }} className="break-words">
+          {n.quantity > 1 ? `${n.name} ×${n.quantity}` : n.name}
+          {coinText(n.coins) && <span className="text-dnd-gold-dim"> · {coinText(n.coins)}</span>}
+          {n.children.length > 0 && <TradeTree nodes={n.children} depth={depth + 1} />}
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+function TradeRow({ trade, timestamp, lang, t }: { trade: TradePayload; timestamp: string; lang: string; t: (k: string, o?: Record<string, string>) => string }) {
+  const [open, setOpen] = useState(false)
+  const expandable = tradeExpandable(trade)
+  const head = (
+    <>
+      <ArrowLeftRight size={12} className="shrink-0 mt-1 text-dnd-gold-bright" />
+      <span className="flex-1 min-w-0 whitespace-pre-wrap break-words">
+        {t('session.feed.trade', { from: trade.from.name, to: trade.to.name, what: tradeWhat(trade) })}
+      </span>
+      <span className="shrink-0 mt-0.5 font-mono text-xs text-dnd-text-faint">{formatTime24(timestamp, lang)}</span>
+    </>
+  )
+  const box = 'max-w-[80%] rounded-lg text-sm font-body text-left bg-dnd-surface border border-dnd-border text-dnd-text'
+  const row = 'w-full flex items-start gap-1.5 px-3 py-2 text-left'
+  return (
+    <div className={box}>
+      {expandable ? (
+        <Pressable onClick={() => setOpen((o) => !o)} aria-expanded={open} className={`${row} min-h-[44px] cursor-pointer`}>
+          {head}
+        </Pressable>
+      ) : (
+        <div className={row}>{head}</div>
+      )}
+      {expandable && open && (
+        <div className="px-3 pb-2 text-xs text-dnd-text-muted">
+          <TradeTree nodes={trade.items} />
+          {trade.items.length > 0 && coinText(trade.coins) && <p>{coinText(trade.coins)}</p>}
+        </div>
+      )}
+    </div>
+  )
+}
 
 function itemKey(it: SessionFeedItem): string {
   return it.type === 'message' ? `m:${it.message_id ?? ''}` : `e:${it.event_id ?? ''}`
@@ -337,6 +398,8 @@ export default function SessionFeed({
                 </div>
               )
             }
+
+            if (it.trade) return <TradeRow key={itemKey(it)} trade={it.trade} timestamp={it.timestamp} lang={i18n.language} t={t} />
 
             const mine = it.user_id === myUserId
             const isWhisper = !!it.recipient_user_id

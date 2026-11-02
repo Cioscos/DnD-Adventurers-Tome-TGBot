@@ -3,11 +3,13 @@ import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
-import { ArrowUpDown, RefreshCw, Delete, Minus, Plus } from 'lucide-react'
+import { ArrowUpDown, HandHeart, RefreshCw, Delete, Minus, Plus } from 'lucide-react'
 import { GiTwoCoins as Coins } from 'react-icons/gi'
 import { toast } from 'sonner'
 import { api } from '@/api/client'
 import CoinMoveSheet from '@/pages/currency/CoinMoveSheet'
+import GiveCoinsSheet from '@/pages/currency/GiveCoinsSheet'
+import { useTradePartners } from '@/hooks/useTradePartners'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
 import Input from '@/components/ui/Input'
@@ -73,6 +75,8 @@ export default function Currency() {
 
   // Dettaglio di una moneta (suddivisione per posto) e foglio per spostarla.
   const [detailCoin, setDetailCoin] = useState<CoinKey | null>(null)
+  const [giving, setGiving] = useState(false)
+  const trade = useTradePartners(charId)
   const [moving, setMoving] = useState<CoinKey | null>(null)
   const [exactCoin, setExactCoin] = useState<CoinKey | null>(null)
   const [exactDraft, setExactDraft] = useState('')
@@ -359,6 +363,11 @@ export default function Currency() {
             {t('character.currency.receive')}
           </Button>
         </div>
+        {trade && (
+          <Button variant="secondary" size="md" fullWidth icon={<HandHeart size={18} />} onClick={() => setGiving(true)}>
+            {t('character.inventory.give.action')}
+          </Button>
+        )}
       </Surface>
 
       {/* Dove stanno le monete di questa moneta, con Sposta e valore esatto. */}
@@ -388,6 +397,10 @@ export default function Currency() {
           </div>
         )}
       </Sheet>
+
+      {giving && trade && (
+        <GiveCoinsSheet charId={charId} sessionId={trade.sessionId} partners={trade.partners} totals={char.coin_totals ?? {}} onClose={() => setGiving(false)} />
+      )}
 
       {moving && (
         <CoinMoveSheet charId={charId} items={char.items ?? []} breakdown={char.coin_breakdown ?? []} coin={moving} onClose={() => setMoving(null)} />
