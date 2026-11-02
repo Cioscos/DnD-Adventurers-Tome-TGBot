@@ -3,11 +3,11 @@ import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { AlertTriangle, X } from 'lucide-react'
 import { api } from '@/api/client'
-import { currentVersion } from '@/lib/version'
 import { isServerBehind } from '@/lib/semver'
 
 const DISMISS_KEY = 'serverVersionBannerDismissed'
 
+// __APP_VERSION__ e non lib/version: quello importa tutto changelog.json (~90 KB) in ogni pagina.
 /** Avvisa se il server (Raspberry) gira una versione più vecchia della webapp. */
 export default function ServerVersionBanner() {
   const { t } = useTranslation()
@@ -18,7 +18,7 @@ export default function ServerVersionBanner() {
     staleTime: Infinity,
     refetchOnReconnect: true,
   })
-  if (dismissed || !isServerBehind(currentVersion(), data?.version ?? null)) return null
+  if (dismissed || !isServerBehind(__APP_VERSION__, data?.version ?? null)) return null
 
   return (
     <div

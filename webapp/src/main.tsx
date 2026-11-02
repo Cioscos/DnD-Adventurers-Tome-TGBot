@@ -2,7 +2,7 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { MutationCache, QueryClient } from '@tanstack/react-query'
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client'
-import { LazyMotion, MotionConfig, domMax } from 'framer-motion'
+import { LazyMotion, MotionConfig } from 'framer-motion'
 import App from './App'
 import AppErrorBoundary from './components/AppErrorBoundary'
 import RestoreGate from './components/RestoreGate'
@@ -18,7 +18,7 @@ import { notifyMutationError } from './lib/mutationError'
 import { parseStartParam } from './lib/startParam'
 import { CACHE_MAX_AGE_MS, OFFLINE_QUERY_DEFAULTS, createPersister, shouldPersistQuery } from './lib/queryPersist'
 import './index.css'
-import './i18n'
+import { i18nReady } from './i18n'
 
 // Signal Telegram that the Mini App is ready
 window.Telegram?.WebApp?.ready()
@@ -99,6 +99,10 @@ window.Telegram?.WebApp?.onEvent?.('fullscreenChanged', () => {
   syncSafeAreas()
 })
 
+// domMax (drag/layout incluso, serve a CharacterSwiper) caricato in async: finché
+// non arriva gli m.* si disegnano nello stato finale, senza animare.
+const loadMotionFeatures = () => import('./lib/motionFeatures').then((r) => r.default)
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -149,10 +153,12 @@ const persistOptions = {
   dehydrateOptions: { shouldDehydrateQuery: shouldPersistQuery },
 }
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
+// Le traduzioni sono un chunk a parte (solo la lingua attiva): senza attenderle
+// il primo render mostrerebbe le chiavi grezze.
+void i18nReady.then(() => ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <AppErrorBoundary>
-      <LazyMotion features={domMax} strict>
+      <LazyMotion features={loadMotionFeatures} strict>
         {/* reducedMotion="user": con "riduci movimento" di sistema framer salta
             transform/layout di TUTTE le animazioni JS (opacità e colori restano),
             senza dipendere dal gating manuale di ogni componente. */}
@@ -167,4 +173,4 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       </LazyMotion>
     </AppErrorBoundary>
   </React.StrictMode>
-)
+))

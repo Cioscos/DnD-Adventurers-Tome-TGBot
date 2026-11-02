@@ -1,6 +1,4 @@
 import { DAMAGE_TYPES } from '@/pages/inventory/itemMetadata'
-import it from '@/locales/it.json'
-import en from '@/locales/en.json'
 
 /** Moltiplicatore del danno: metà (resistenza), doppio (vulnerabilità), 0 (immunità).
  *  `null` = nessun override scelto dall'utente. */
@@ -14,14 +12,20 @@ export function applyDamageModifier(value: number, mod: DamageModifier): number 
   return value
 }
 
+// Etichette IT = `character.inventory.damage_types.*` in it.json (specchio di
+// LABELS_IT in core/data/damage_types.py). Quelle EN in minuscolo coincidono con lo slug.
+// Copiate qui per non importare i due locali interi nel bundle d'avvio.
+const LABELS_IT: Record<string, string> = {
+  slashing: 'Taglio', piercing: 'Perforazione', bludgeoning: 'Contundente',
+  fire: 'Fuoco', cold: 'Freddo', lightning: 'Fulmine', acid: 'Acido',
+  poison: 'Veleno', necrotic: 'Necrotico', radiant: 'Radiante',
+  force: 'Forza', psychic: 'Psichico', thunder: 'Tuono',
+}
 const SLUGS = DAMAGE_TYPES.filter((d) => d !== 'dmg_other').map((d) => d.replace(/^dmg_/, ''))
 const LOOKUP = new Map<string, string>()
 for (const slug of SLUGS) {
   LOOKUP.set(slug, slug)
-  for (const loc of [it, en]) {
-    const label = (loc.character.inventory.damage_types as Record<string, string>)[`dmg_${slug}`]
-    if (label) LOOKUP.set(label.toLowerCase(), slug)
-  }
+  if (LABELS_IT[slug]) LOOKUP.set(LABELS_IT[slug].toLowerCase(), slug)
 }
 // Sinonimi digitati a mano nelle vecchie liste (specchio di core/data/damage_types.py).
 LOOKUP.set('tagliente', 'slashing').set('perforante', 'piercing').set('radioso', 'radiant')

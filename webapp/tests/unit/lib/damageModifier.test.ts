@@ -3,6 +3,8 @@ import {
   applyDamageModifier, canonicalDamageType, damageMultiplier, damagePreviewText, damageTypeLabel,
   type DamageModifier,
 } from '@/lib/damageModifier'
+import itLocale from '@/locales/it.json'
+import enLocale from '@/locales/en.json'
 
 describe('applyDamageModifier', () => {
   it.each<[number, DamageModifier, number]>([
@@ -20,6 +22,14 @@ describe('applyDamageModifier', () => {
 describe('canonicalDamageType', () => {
   it.each(['Fuoco', 'fire', 'dmg_fire', ' FIRE ', 'Fire'])('%s -> fire', (v) => {
     expect(canonicalDamageType(v)).toBe('fire')
+  })
+  it('resolves every IT/EN label in the locale files (guards the copied table)', () => {
+    for (const loc of [itLocale, enLocale]) {
+      for (const [key, label] of Object.entries(loc.character.inventory.damage_types)) {
+        if (key === 'dmg_other') continue
+        expect(canonicalDamageType(label)).toBe(key.replace(/^dmg_/, ''))
+      }
+    }
   })
   it('maps Italian labels and rejects unknown', () => {
     expect(canonicalDamageType('Taglio')).toBe('slashing')

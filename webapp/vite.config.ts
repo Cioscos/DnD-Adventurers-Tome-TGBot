@@ -2,6 +2,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { readFileSync } from 'node:fs'
 import { generateSilhouetteManifest } from './scripts/generate-silhouette-manifest.mjs'
+import { splitGameIcons } from './scripts/split-game-icons.mjs'
 
 function silhouetteManifestPlugin() {
   return {
@@ -29,6 +30,9 @@ export default defineConfig(({ command }) => ({
     emptyOutDir: true,
     rollupOptions: {
       output: {
+        // Fonde i chunk minuscoli (icone, helper) nei vicini quando è sicuro: senza,
+        // la scheda personaggio scaricava ~70 file da 1-3 KB. Soglie più alte gonfiano l'entry.
+        experimentalMinChunkSize: 2_000,
         manualChunks(id) {
           // React in un chunk suo (vendor stabile fra i deploy, cache del
           // WebView); id con / o \ a seconda della piattaforma di build.
@@ -44,7 +48,7 @@ export default defineConfig(({ command }) => ({
       },
     },
   },
-  plugins: [react(), silhouetteManifestPlugin()],
+  plugins: [splitGameIcons(), react(), silhouetteManifestPlugin()],
   resolve: {
     alias: {
       '@': '/src',
