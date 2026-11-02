@@ -3,7 +3,9 @@ import { afterEach } from 'vitest'
 import { cleanup } from '@testing-library/react'
 // Inizializza i18next (side-effect import). getLanguageCode ha un fallback
 // sicuro a 'it' quando Telegram è assente, quindi non serve lo stub prima.
-import '@/i18n'
+import { i18nReady } from '@/i18n'
+
+await i18nReady
 
 // Stub minimale di Telegram WebApp letto da api/client.ts (getInitData) e
 // auth/telegram.ts, per i test di componenti che chiamano l'API.

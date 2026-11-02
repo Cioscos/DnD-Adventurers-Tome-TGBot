@@ -1,6 +1,26 @@
 {
   "entries": [
     {
+      "version": "2.28.2",
+      "date": "2026-11-02",
+      "title": {
+        "it": "App più leggera e più rapida ad aprirsi",
+        "en": "A lighter app that opens faster"
+      },
+      "improved": {
+        "it": [
+          "All'apertura l'app scarica circa un terzo di codice in meno: si carica solo la lingua in uso, non entrambe.",
+          "Animazioni, icone e note di versione arrivano solo quando servono, senza appesantire l'avvio.",
+          "La scheda del personaggio carica meno file separati, quindi si apre prima anche con rete lenta."
+        ],
+        "en": [
+          "On launch the app downloads about a third less code: only the language in use is loaded, not both.",
+          "Animations, icons and release notes load only when needed, without slowing down startup.",
+          "The character sheet loads fewer separate files, so it opens sooner even on a slow connection."
+        ]
+      }
+    },
+    {
       "version": "2.28.1",
       "date": "2026-11-02",
       "title": {

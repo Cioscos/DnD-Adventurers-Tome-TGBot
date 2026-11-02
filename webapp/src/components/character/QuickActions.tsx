@@ -1,8 +1,7 @@
-import { useRef, useState } from 'react'
+import { lazy, Suspense, useRef, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Reorder, useDragControls } from 'framer-motion'
-import { Plus, Check, Minus, GripVertical, RotateCcw } from 'lucide-react'
+import { Plus, Check, Minus, RotateCcw } from 'lucide-react'
 import {
   GiCrossedSwords, GiShieldEchoes, GiSpellBook, GiLightningStorm,
   GiLightningTrio, GiAbacus, GiPolarStar, GiArrowhead,
@@ -68,30 +67,7 @@ const TYPE_ICONS = {
   rest: GiNightSleep,
 } as const
 
-function OrderRow({ id, label, handleLabel, onDragEnd }: {
-  id: string; label: string; handleLabel: string; onDragEnd: () => void
-}) {
-  const controls = useDragControls()
-  return (
-    <Reorder.Item
-      value={id}
-      dragListener={false}
-      dragControls={controls}
-      onDragEnd={onDragEnd}
-      className="flex items-center gap-2 pl-3 rounded-xl border bg-dnd-surface border-dnd-border list-none"
-    >
-      <span className="flex-1 min-w-0 truncate text-sm font-body text-dnd-text">{label}</span>
-      <Pressable
-        type="button"
-        aria-label={handleLabel}
-        onPointerDown={(e) => controls.start(e)}
-        className="w-11 h-11 flex items-center justify-center shrink-0 text-dnd-text-muted touch-none cursor-grab"
-      >
-        <GripVertical size={18} />
-      </Pressable>
-    </Reorder.Item>
-  )
-}
+const QuickActionsOrderList = lazy(() => import('@/components/character/QuickActionsOrderList'))
 
 export default function QuickActions({ char }: Props) {
   const { t } = useTranslation()
@@ -736,27 +712,17 @@ export default function QuickActions({ char }: Props) {
             <p className="font-cinzel text-xs uppercase tracking-widest text-dnd-gold-dim mb-1 px-1">
               {t('character.quick_actions.group_order')}
             </p>
-            <Reorder.Group
-              axis="y"
-              as="ul"
-              values={orderDraft ?? resolved.map((a) => a.key)}
-              onReorder={(keys: string[]) => { orderRef.current = keys; setOrderDraft(keys) }}
-              className="space-y-1 p-0 m-0"
-            >
-              {(orderDraft ?? resolved.map((a) => a.key)).map((key) => {
-                const a = resolved.find((r) => r.key === key)
-                if (!a) return null
-                return (
-                  <OrderRow
-                    key={key}
-                    id={key}
-                    label={actionLabel(a)}
-                    handleLabel={t('character.quick_actions.drag_handle')}
-                    onDragEnd={commitOrder}
-                  />
-                )
-              })}
-            </Reorder.Group>
+            <Suspense fallback={null}>
+              <QuickActionsOrderList
+                items={(orderDraft ?? resolved.map((a) => a.key)).flatMap((key) => {
+                  const a = resolved.find((r) => r.key === key)
+                  return a ? [{ key, label: actionLabel(a) }] : []
+                })}
+                handleLabel={t('character.quick_actions.drag_handle')}
+                onReorder={(keys: string[]) => { orderRef.current = keys; setOrderDraft(keys) }}
+                onDragEnd={commitOrder}
+              />
+            </Suspense>
             {isCustom && (
             <Pressable
               type="button"
