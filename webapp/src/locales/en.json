@@ -1083,6 +1083,7 @@
         "new": "+ Container",
         "select": "Select",
         "move": "Move to…",
+        "move_short": "Move",
         "move_title": "Move to…",
         "outside": "Outside containers",
         "outside_dest": "outside containers",

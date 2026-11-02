@@ -1082,6 +1082,7 @@
         "new": "+ Contenitore",
         "select": "Seleziona",
         "move": "Sposta in…",
+        "move_short": "Sposta",
         "move_title": "Sposta in…",
         "outside": "Fuori dai contenitori",
         "outside_dest": "fuori dai contenitori",

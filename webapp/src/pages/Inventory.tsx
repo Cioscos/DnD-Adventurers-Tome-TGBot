@@ -688,16 +688,16 @@ export default function Inventory() {
               {t('character.currency.move')}
             </Button>
           )}
-          <div className="flex justify-end gap-1 mt-1">
+          {/* Etichette visibili: sul telefono non esiste il tooltip (DESIGN.md, Buttons). */}
+          <div className="grid grid-cols-3 gap-2 mt-2">
             {([
-              [t(pc + 'move'), FolderInput, () => setMoveTargets([current])],
-              [t('common.edit'), Pencil, () => handleEdit(current)],
-              [t('common.delete'), Trash2, () => setDeleteTarget(current.id)],
-            ] as const).map(([label, Icon, run]) => (
-              <Pressable key={label} title={label} aria-label={label} onClick={run}
-                className="min-h-[44px] min-w-[44px] flex items-center justify-center text-dnd-gold-dim active:opacity-70">
-                <Icon size={16} />
-              </Pressable>
+              [t(pc + 'move_short'), FolderInput, () => setMoveTargets([current]), 'secondary'],
+              [t('common.edit'), Pencil, () => handleEdit(current), 'secondary'],
+              [t('common.delete'), Trash2, () => setDeleteTarget(current.id), 'danger'],
+            ] as const).map(([label, Icon, run, variant]) => (
+              <Button key={label} variant={variant} size="sm" icon={<Icon size={14} />} onClick={run}>
+                {label}
+              </Button>
             ))}
           </div>
         </Surface>
