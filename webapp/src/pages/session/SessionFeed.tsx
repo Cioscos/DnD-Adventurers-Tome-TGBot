@@ -291,7 +291,7 @@ export default function SessionFeed({
             onClick={loadPrevious}
             pending={loadingPrev}
             spinnerSize={12}
-            className="min-h-[40px] text-xs font-cinzel uppercase tracking-wider text-dnd-gold-dim hover:text-dnd-gold-bright disabled:opacity-50 px-3 py-1 rounded-lg border border-dnd-border"
+            className="min-h-[44px] text-xs font-cinzel uppercase tracking-wider text-dnd-gold-dim hover:text-dnd-gold-bright disabled:opacity-50 px-3 py-1 rounded-lg border border-dnd-border"
           >
             {loadingPrev ? t('session.loading_previous') : t('session.load_previous')}
           </Pressable>
@@ -489,7 +489,7 @@ export default function SessionFeed({
             onClick={() => setFullscreen(false)}
             aria-label={t('session.chat_fullscreen_close')}
             title={t('session.chat_fullscreen_close')}
-            className="w-10 h-10 inline-flex items-center justify-center rounded-full text-dnd-gold-dim hover:text-dnd-gold-bright hover:bg-dnd-surface transition-colors"
+            className="w-11 h-11 inline-flex items-center justify-center rounded-full text-dnd-gold-dim hover:text-dnd-gold-bright hover:bg-dnd-surface transition-colors"
           >
             <X size={18} />
           </Pressable>
@@ -509,7 +509,7 @@ export default function SessionFeed({
           onClick={() => setFullscreen(true)}
           aria-label={t('session.chat_fullscreen_open')}
           title={t('session.chat_fullscreen_open')}
-          className="w-10 h-10 inline-flex items-center justify-center rounded-lg text-dnd-gold-dim hover:text-dnd-gold-bright hover:bg-dnd-surface-raised transition-colors"
+          className="w-11 h-11 inline-flex items-center justify-center rounded-lg text-dnd-gold-dim hover:text-dnd-gold-bright hover:bg-dnd-surface-raised transition-colors"
         >
           <Maximize2 size={14} />
         </Pressable>

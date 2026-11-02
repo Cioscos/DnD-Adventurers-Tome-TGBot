@@ -253,7 +253,7 @@ export default function Layout({ title, children, backTo, group, page, hideScrol
                     onClick={() => swipe.goToPage(pageKey)}
                     whileTap={{ scale: 0.95 }}
                     aria-label={t('layout.nav.go_to', { page: t(`character.menu.${pageKey}`) })}
-                    className="text-dnd-text-muted opacity-70 whitespace-nowrap px-2 py-1.5 min-h-[44px] rounded hover:text-dnd-gold-bright hover:opacity-100 transition-colors"
+                    className="text-dnd-gold-dim whitespace-nowrap px-2 py-1.5 min-h-[44px] min-w-[44px] rounded hover:text-dnd-gold-bright transition-colors"
                   >
                     {t(`character.menu.${pageKey}`)}
                   </Pressable>

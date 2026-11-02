@@ -496,7 +496,7 @@ export default function Inventory() {
             <Pressable
               title={t('character.inventory.carry_edit')}
               onClick={() => {
-                setCapDraft(String(lbToDisplay(char.carry_capacity, system)))
+                setCapDraft('')
                 setEditingCap(true)
                 haptic.light()
               }}
@@ -515,6 +515,7 @@ export default function Inventory() {
               min={0}
               value={capDraft}
               onChange={setCapDraft}
+              placeholder={String(lbToDisplay(char.carry_capacity, system))}
               inputMode="decimal"
               trailingAction={
                 <span className="text-dnd-text-muted text-sm font-cinzel pr-1">

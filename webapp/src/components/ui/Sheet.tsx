@@ -127,7 +127,7 @@ export default function Sheet({
                     type="button"
                     onClick={onClose}
                     aria-label={t('common.close')}
-                    className="absolute -top-1 right-2 w-10 h-10 flex items-center justify-center rounded-full text-dnd-gold-dim hover:text-dnd-gold-bright hover:bg-dnd-surface-raised transition-colors"
+                    className="absolute -top-1 right-2 w-11 h-11 flex items-center justify-center rounded-full text-dnd-gold-dim hover:text-dnd-gold-bright hover:bg-dnd-surface-raised transition-colors"
                   >
                     <X size={18} />
                   </button>
@@ -140,7 +140,7 @@ export default function Sheet({
                     type="button"
                     onClick={onClose}
                     aria-label={t('common.close')}
-                    className="w-10 h-10 flex items-center justify-center rounded-full text-dnd-gold-dim hover:text-dnd-gold-bright hover:bg-dnd-surface-raised transition-colors"
+                    className="w-11 h-11 flex items-center justify-center rounded-full text-dnd-gold-dim hover:text-dnd-gold-bright hover:bg-dnd-surface-raised transition-colors"
                   >
                     <X size={18} />
                   </button>

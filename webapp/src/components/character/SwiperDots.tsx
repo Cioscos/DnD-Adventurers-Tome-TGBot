@@ -19,7 +19,7 @@ export default function SwiperDots({ active, onSelect, labels }: Props) {
       className="absolute bottom-0 pb-safe-dots left-0 right-0 z-30 flex justify-center pt-3 pointer-events-none bg-gradient-to-t from-dnd-bg via-dnd-bg/85 to-transparent"
     >
       {/* Il pallino è il segnale visivo; il bottone attorno è l'area di tocco
-          (≥40px), invisibile, così i tre tab restano usabili col pollice. */}
+          (≥44px), invisibile, così i tre tab restano usabili col pollice. */}
       {[0, 1, 2].map((idx) => {
         const isActive = idx === active
         return (
@@ -30,7 +30,7 @@ export default function SwiperDots({ active, onSelect, labels }: Props) {
             aria-selected={isActive}
             aria-label={labels[idx]}
             onClick={() => onSelect(idx as CharacterScreen)}
-            className="min-w-[40px] min-h-[40px] flex items-center justify-center pointer-events-auto"
+            className="min-w-[44px] min-h-[44px] flex items-center justify-center pointer-events-auto"
             whileTap={{ scale: 0.9 }}
           >
             <m.span

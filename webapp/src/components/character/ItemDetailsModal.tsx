@@ -90,7 +90,7 @@ export default function ItemDetailsModal({ item, slot, onClose }: Props) {
               type="button"
               onClick={onClose}
               aria-label={t('common.close', { defaultValue: 'Close' })}
-              className="w-10 h-10 -mr-1 shrink-0 flex items-center justify-center rounded-full border border-dnd-gold-dim/40"
+              className="w-11 h-11 -mr-1 shrink-0 flex items-center justify-center rounded-full border border-dnd-gold-dim/40"
             >
               <X size={18} className="text-dnd-gold" />
             </Pressable>

@@ -404,7 +404,7 @@ export default function PropertyFormModal({
             label={t('homebrew.properties.default_label')}
             type="number"
             inputMode="numeric"
-            value={String(draft.defaultValue ?? 0)}
+            value={draft.defaultValue ? String(draft.defaultValue) : ''}
             onChange={(v) => setDefaultValue(v === '' ? 0 : Number(v))}
             placeholder="0"
           />

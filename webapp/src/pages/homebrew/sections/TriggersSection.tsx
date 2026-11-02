@@ -279,7 +279,7 @@ export default function TriggersSection({ triggers, tables, onChange }: Triggers
                     return (
                       <span
                         key={fi}
-                        className="inline-flex items-center gap-1.5 min-h-[36px] pl-3 pr-1 py-1 rounded-full bg-dnd-chip-bg border border-dnd-gold/60 text-dnd-gold-bright text-xs font-body"
+                        className="inline-flex items-center gap-1.5 min-h-[44px] pl-3 pr-1 py-1 rounded-full bg-dnd-chip-bg border border-dnd-gold/60 text-dnd-gold-bright text-xs font-body"
                       >
                         {label ? (
                           <span>{label}</span>
@@ -300,7 +300,7 @@ export default function TriggersSection({ triggers, tables, onChange }: Triggers
                   })}
                   <Pressable
                     onClick={() => setFilterPickerIndex(index)}
-                    className="inline-flex items-center gap-1 min-h-[36px] px-3 py-1 rounded-full bg-dnd-surface border border-dashed border-dnd-border text-dnd-text-muted hover:text-dnd-gold-bright hover:border-dnd-gold/60 text-xs font-body transition-colors"
+                    className="inline-flex items-center gap-1 min-h-[44px] px-3 py-1 rounded-full bg-dnd-surface border border-dashed border-dnd-border text-dnd-text-muted hover:text-dnd-gold-bright hover:border-dnd-gold/60 text-xs font-body transition-colors"
                   >
                     <Plus size={12} />
                     <span>{t('homebrew.triggers.add_filter')}</span>

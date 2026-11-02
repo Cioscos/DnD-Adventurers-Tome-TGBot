@@ -128,7 +128,7 @@ export default function DeathSaves({ deathSaves, onRoll, onAction, isRolling, pe
             pending={pendingAction === 'reset'}
             spinnerSize={12}
             className="inline-flex items-center justify-center
-                       min-h-[32px] px-2 rounded
+                       min-h-[44px] px-2 rounded
                        text-xs font-cinzel uppercase tracking-widest
                        text-dnd-text-muted hover:text-dnd-gold-bright
                        transition-colors"

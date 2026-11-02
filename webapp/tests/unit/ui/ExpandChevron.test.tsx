@@ -8,7 +8,7 @@ describe('ExpandChevron', () => {
     const wrapper = container.querySelector('span[aria-hidden]')
     expect(wrapper).not.toBeNull()
     expect(wrapper!.querySelector('svg')).not.toBeNull()
-    expect(wrapper!.className).toContain('text-dnd-text-faint')
+    expect(wrapper!.className).toContain('text-dnd-gold-dim')
   })
 
   it('applies custom size and className', () => {

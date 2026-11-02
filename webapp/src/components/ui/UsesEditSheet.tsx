@@ -25,11 +25,12 @@ export default function UsesEditSheet({
   open, title, value, max, onSave, onClose, isPending,
 }: UsesEditSheetProps) {
   const { t } = useTranslation()
-  const [draft, setDraft] = useState(String(value))
+  // Vuoto col valore attuale come suggerimento: si scrive subito il nuovo senza cancellare.
+  const [draft, setDraft] = useState('')
 
   useEffect(() => {
-    if (open) setDraft(String(value))
-  }, [open, value])
+    if (open) setDraft('')
+  }, [open])
 
   const parsed = parseCounterInput(draft, max)
 
@@ -42,6 +43,7 @@ export default function UsesEditSheet({
             : t('character.abilities.set_uses_hint_unbounded')}
           value={draft}
           onChange={setDraft}
+          placeholder={String(value)}
           type="number"
           min={0}
           inputMode="numeric"

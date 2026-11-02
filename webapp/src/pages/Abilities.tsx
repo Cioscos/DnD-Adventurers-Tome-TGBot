@@ -420,7 +420,7 @@ export default function Abilities() {
                           spinnerSize={12}
                           whileTap={{ scale: 0.85 }}
                           aria-pressed={isUsed}
-                          className={`w-7 h-7 rounded-full border-2 transition-all disabled:opacity-50 ${
+                          className={`hit-44 w-7 h-7 rounded-full border-2 transition-all disabled:opacity-50 ${
                             isUsed
                               ? 'bg-gradient-to-br from-dnd-gold-deep to-dnd-gold-bright border-dnd-gold-bright shadow-[0_0_10px_rgba(244,208,111,0.5)]'
                               : 'bg-transparent border-dnd-gold-dim/60 hover:border-dnd-gold-bright'

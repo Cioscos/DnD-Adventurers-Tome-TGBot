@@ -30,7 +30,7 @@ function NumField({ value, onChange, min, max, label, className = '' }: {
       placeholder="0"
       min={min}
       max={max}
-      value={draft ?? String(value)}
+      value={draft ?? (value === 0 ? '' : String(value))}
       onChange={(e) => {
         setDraft(e.target.value)
         const n = parseInt(e.target.value, 10)

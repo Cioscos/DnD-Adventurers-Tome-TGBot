@@ -142,7 +142,8 @@ function TotalEditor({ total, label, decrementAria, incrementAria, pending, onCo
         min={1}
         inputMode="numeric"
         value={draft}
-        onFocus={() => setEditing(true)}
+        onFocus={() => { setEditing(true); setDraft('') }}
+        placeholder={String(total)}
         onChange={(e) => setDraft(e.target.value)}
         onBlur={commitDraft}
         onKeyDown={(e) => {
@@ -151,7 +152,7 @@ function TotalEditor({ total, label, decrementAria, incrementAria, pending, onCo
             ;(e.target as HTMLInputElement).blur()
           }
         }}
-        className="w-14 h-9 text-center bg-dnd-surface border border-dnd-border rounded-lg
+        className="w-14 h-11 text-center bg-dnd-surface border border-dnd-border rounded-lg
                    font-mono font-bold text-dnd-gold-bright tabular-nums
                    focus:border-dnd-gold/60 focus:outline-none"
       />

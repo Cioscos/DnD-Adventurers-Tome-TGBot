@@ -59,7 +59,7 @@ function IconButtonInner({
       onClick={handleClick}
       disabled={isDisabled}
       aria-busy={loading || undefined}
-      className={`min-w-[40px] min-h-[40px] rounded-xl flex items-center justify-center transition-colors duration-150 disabled:opacity-40 disabled:pointer-events-none ${variantClasses(variant)} ${className}`}
+      className={`min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center transition-colors duration-150 disabled:opacity-40 disabled:pointer-events-none ${variantClasses(variant)} ${className}`}
       title={title}
       aria-label={ariaLabel}
       aria-pressed={ariaPressed}

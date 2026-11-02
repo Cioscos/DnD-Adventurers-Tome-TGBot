@@ -171,6 +171,22 @@ describe('SpellSlots page', () => {
     )
   })
 
+  // Il totale è sia display sia campo: al tocco si svuota (suggerendo il valore) invece di doverlo cancellare.
+  it('al focus il totale si svuota col valore come suggerimento; uscendo vuoto torna il valore', async () => {
+    getChar.mockResolvedValue(manualChar)
+    renderWithProviders(<SpellSlots />)
+    await screen.findByText('2/3')
+
+    const totalInput = screen.getByRole('spinbutton')
+    expect(totalInput).toHaveValue(3)
+    fireEvent.focus(totalInput)
+    expect(totalInput).toHaveValue(null)
+    expect(totalInput).toHaveAttribute('placeholder', '3')
+    fireEvent.blur(totalInput)
+    expect(totalInput).toHaveValue(3)
+    expect(updateSpy).not.toHaveBeenCalled()
+  })
+
   it('a press on + updates the draft and commits ONE PATCH on release', async () => {
     getChar.mockResolvedValue(manualChar)
     updateSpy.mockResolvedValue(slot)

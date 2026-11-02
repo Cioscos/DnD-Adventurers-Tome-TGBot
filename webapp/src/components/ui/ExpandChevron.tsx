@@ -16,8 +16,9 @@ interface ExpandChevronProps {
  */
 export default function ExpandChevron({
   open,
-  size = 14,
-  className = 'text-dnd-text-faint',
+  size = 16,
+  // gold-dim, non faint: il chevron è l'unico segnale che la card si apre.
+  className = 'text-dnd-gold-dim',
 }: ExpandChevronProps) {
   const reduceMotion = useReducedMotion()
   return (

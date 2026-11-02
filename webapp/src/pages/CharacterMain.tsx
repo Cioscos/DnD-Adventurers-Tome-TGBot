@@ -168,7 +168,7 @@ export default function CharacterMain() {
             haptic.light()
             setSearchOpen(true)
           }}
-          className="w-10 h-10 shrink-0 flex items-center justify-center rounded-full bg-dnd-surface border border-dnd-gold-dim/30"
+          className="w-11 h-11 shrink-0 flex items-center justify-center rounded-full bg-dnd-surface border border-dnd-gold-dim/30"
           whileTap={{ scale: 0.9 }}
           aria-label={t('character.search.title')}
         >
@@ -181,7 +181,7 @@ export default function CharacterMain() {
           title={char.heroic_inspiration
             ? t('character.inspiration.tap_to_spend')
             : t('character.inspiration.tap_to_grant')}
-          className={`relative h-10 min-w-[42px] shrink-0 px-1.5 flex flex-col items-center justify-center gap-0.5 rounded-xl transition-all
+          className={`relative h-11 min-w-[44px] shrink-0 px-1.5 flex flex-col items-center justify-center gap-0.5 rounded-xl transition-all
             ${char.heroic_inspiration
               ? 'bg-dnd-gold/20 border border-dnd-gold shadow-halo-gold'
               : 'bg-dnd-surface border border-dnd-gold-dim/60'}`}
@@ -203,13 +203,13 @@ export default function CharacterMain() {
 
         <Pressable
           onClick={() => navigate(`/char/${charId}/settings`)}
-          className="w-10 h-10 shrink-0 flex items-center justify-center rounded-full bg-dnd-surface border border-dnd-gold-dim/30"
+          className="w-11 h-11 shrink-0 flex items-center justify-center rounded-full bg-dnd-surface border border-dnd-gold-dim/30"
           whileTap={{ scale: 0.9 }}
           aria-label={t('character.menu.settings')}
         >
           <Settings size={18} className="text-dnd-gold-bright" />
         </Pressable>
-        <PageHelp helpKey="character" title={char.name} className="w-10 h-10" />
+        <PageHelp helpKey="character" title={char.name} className="w-11 h-11" />
       </m.header>
 
       <InSessionBanner charId={charId} />

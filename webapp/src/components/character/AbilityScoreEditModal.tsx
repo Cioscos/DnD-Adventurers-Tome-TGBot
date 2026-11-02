@@ -26,11 +26,12 @@ export default function AbilityScoreEditModal({
   open, label, currentValue, effectiveValue, saving = false, onClose, onSave,
 }: Props) {
   const { t } = useTranslation()
-  const [value, setValue] = useState<number>(currentValue)
+  // NaN = non toccato: il campo resta vuoto col valore attuale come suggerimento.
+  const [value, setValue] = useState<number>(NaN)
 
   // Re-seed whenever the modal (re)opens for a (possibly different) ability.
   useEffect(() => {
-    if (open) setValue(currentValue)
+    if (open) setValue(NaN)
   }, [open, currentValue])
 
   const clamp = (n: number) => Math.max(MIN, Math.min(MAX, n))
@@ -45,7 +46,7 @@ export default function AbilityScoreEditModal({
         <div className="flex items-center justify-center gap-4">
           <Pressable
             onClick={() => setValue((v) => clamp((Number.isFinite(v) ? v : currentValue) - 1))}
-            disabled={value <= MIN}
+            disabled={displayValue <= MIN}
             whileTap={{ scale: 0.9 }}
             aria-label={t('character.stats.decrease')}
             className="w-14 h-14 rounded-xl bg-dnd-surface text-dnd-gold-bright border border-dnd-border-strong flex items-center justify-center disabled:opacity-30"
@@ -64,7 +65,7 @@ export default function AbilityScoreEditModal({
 
           <Pressable
             onClick={() => setValue((v) => clamp((Number.isFinite(v) ? v : currentValue) + 1))}
-            disabled={value >= MAX}
+            disabled={displayValue >= MAX}
             whileTap={{ scale: 0.9 }}
             aria-label={t('character.stats.increase')}
             className="w-14 h-14 rounded-xl bg-dnd-surface text-dnd-gold-bright border border-dnd-border-strong flex items-center justify-center disabled:opacity-30"
@@ -82,6 +83,7 @@ export default function AbilityScoreEditModal({
         <Input
           value={String(Number.isFinite(value) ? value : '')}
           onChange={(v) => setValue(v === '' ? NaN : clamp(parseInt(v, 10)))}
+          placeholder={String(currentValue)}
           type="number"
           min={MIN}
           max={MAX}

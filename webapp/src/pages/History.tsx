@@ -113,7 +113,7 @@ export default function History() {
               search ? (
                 <Pressable
                   onClick={() => setSearch('')}
-                  className="w-10 h-10 rounded-full flex items-center justify-center text-dnd-text-faint hover:text-dnd-gold-bright"
+                  className="w-11 h-11 rounded-full flex items-center justify-center text-dnd-text-faint hover:text-dnd-gold-bright"
                   aria-label={t('common.cancel')}
                 >
                   <X size={14} />
