@@ -1,6 +1,36 @@
 {
   "entries": [
     {
+      "version": "2.30.0",
+      "date": "2026-11-02",
+      "added": {
+        "it": [
+          "Contenitori nell'inventario: zaini, sacche e borse con un nome, una capienza e un peso, anche uno dentro l'altro. Un contenitore può non pesare (come una borsa conservante) e segna quando supera la capienza.",
+          "«Sposta in…» e selezione multipla: scegli più oggetti insieme e portali in un contenitore, o di nuovo fuori, in un colpo solo.",
+          "Le monete possono stare nei contenitori: la pagina Monete mostra il totale di tutto e dove si trova ogni moneta, e quando spendi le monete vengono prelevate in automatico da dove servono.",
+          "Faretra e simili «a portata di mano»: il loro contenuto resta subito disponibile senza aprire il contenitore.",
+          "L'import da D&D Beyond porta anche i contenitori, con gli oggetti messi al loro posto."
+        ],
+        "en": [
+          "Containers in the inventory: backpacks, pouches and bags with a name, a capacity and a weight, even one inside another. A container can weigh nothing (like a bag of holding) and flags when it goes over capacity.",
+          "“Move to…” and multi-select: pick several items together and move them into a container, or back out, in one go.",
+          "Coins can live in containers: the Coins page shows the grand total and where each coin is kept, and when you spend, coins are taken automatically from wherever they are.",
+          "Quiver and the like “within reach”: their contents stay at hand without opening the container.",
+          "D&D Beyond import now brings containers too, with the items put in their place."
+        ]
+      },
+      "improved": {
+        "it": [
+          "La ricerca ti porta dentro il contenitore in cui si trova l'oggetto.",
+          "Esporta e duplica un personaggio mantengono i contenitori, con ciò che contengono."
+        ],
+        "en": [
+          "Search takes you inside the container that holds the item.",
+          "Exporting and duplicating a character keep the containers and what is inside them."
+        ]
+      }
+    },
+    {
       "version": "2.29.1",
       "date": "2026-11-02",
       "fixed": {
