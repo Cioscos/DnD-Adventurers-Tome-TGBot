@@ -132,7 +132,7 @@ export default function EquipItemPicker({ charId, slot, items, onClose }: Props)
         onClick={onClose}
       >
         <m.div
-          className="@container w-full max-w-md max-h-[85vh] overflow-y-auto bg-dnd-surface-raised border border-dnd-gold-dim/50 rounded-t-2xl sm:rounded-2xl"
+          className="@container w-full max-w-md max-h-[calc(var(--tg-vh,100vh)*0.85)] overflow-y-auto bg-dnd-surface-raised border border-dnd-gold-dim/50 rounded-t-2xl sm:rounded-2xl"
           initial={{ y: 40, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 40, opacity: 0 }}

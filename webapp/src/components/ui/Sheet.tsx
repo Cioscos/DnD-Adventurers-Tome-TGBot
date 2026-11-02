@@ -6,6 +6,7 @@ import { spring } from '@/styles/motion'
 import { useRegisterOverlay } from '@/store/overlayStore'
 import { useOverlayDismiss } from '@/hooks/useOverlayDismiss'
 import { useDeferredBlur } from '@/hooks/useDeferredBlur'
+import { useKeepFocusedFieldVisible } from '@/hooks/useKeepFocusedFieldVisible'
 import { SheetEnteredContext } from '@/components/ui/sheetContext'
 import { useTranslation } from 'react-i18next'
 
@@ -46,26 +47,7 @@ export default function Sheet({
   // Escape e back/popstate chiudono solo lo sheet in cima allo stack condiviso.
   useOverlayDismiss(open, onClose, dismissible)
 
-  // Tastiera aperta: Telegram Android rimpicciolisce la WebView ma il browser non porta in vista
-  // il campo attivo dentro lo scroll dello sheet (restava sotto la tastiera). Lo facciamo noi.
-  useEffect(() => {
-    if (!open) return
-    const onResize = () => requestAnimationFrame(() => {
-      const el = document.activeElement
-      if (el instanceof HTMLElement && sheetRef.current?.contains(el) && el.matches('input, textarea')) {
-        el.scrollIntoView({ block: 'center' })
-      }
-    })
-    // --tg-vh (altezza massima dello sheet) può aggiornarsi solo col viewportChanged stabile, dopo il resize.
-    const onViewport = (e?: { isStateStable?: boolean }) => { if (e?.isStateStable !== false) onResize() }
-    const tg = window.Telegram?.WebApp
-    window.addEventListener('resize', onResize)
-    tg?.onEvent?.('viewportChanged', onViewport)
-    return () => {
-      window.removeEventListener('resize', onResize)
-      tg?.offEvent?.('viewportChanged', onViewport)
-    }
-  }, [open])
+  useKeepFocusedFieldVisible(sheetRef, open)
 
   // Prevent body scroll when open
   useEffect(() => {

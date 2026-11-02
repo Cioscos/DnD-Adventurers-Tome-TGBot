@@ -1,9 +1,10 @@
-import { useState, useCallback, type ReactNode } from 'react'
+import { useState, useCallback, useRef, type ReactNode } from 'react'
 import { m, AnimatePresence, useDragControls, useIsPresent, type PanInfo } from 'framer-motion'
 import { spring } from '@/styles/motion'
 import { useRegisterOverlay } from '@/store/overlayStore'
 import { useOverlayDismiss } from '@/hooks/useOverlayDismiss'
 import { useDeferredBlur } from '@/hooks/useDeferredBlur'
+import { useKeepFocusedFieldVisible } from '@/hooks/useKeepFocusedFieldVisible'
 import { ModalContext, type ModalOptions } from './modalContext'
 
 function ModalShell({
@@ -18,6 +19,8 @@ function ModalShell({
   const dragControls = useDragControls()
   const isPresent = useIsPresent()
   const { blurStyle, onEntranceComplete } = useDeferredBlur(isPresent)
+  const cardRef = useRef<HTMLDivElement>(null)
+  useKeepFocusedFieldVisible(cardRef, isPresent)
   const dismissible = options.dismissible !== false
 
   // Escape e back/popstate chiudono il modale in cima (finding #7/#12 audit FE).
@@ -41,8 +44,9 @@ function ModalShell({
       onClick={dismissible ? onClose : undefined}
     >
       <m.div
+        ref={cardRef}
         className="relative rounded-3xl bg-gradient-parchment border border-dnd-border-strong surface-parchment
-                   max-h-[85vh] overflow-hidden w-full max-w-sm shadow-parchment-2xl"
+                   max-h-[calc(var(--tg-vh,100vh)*0.85)] overflow-hidden w-full max-w-sm shadow-parchment-2xl"
         initial={{ opacity: 0, scale: 0.9, y: 40 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.92, y: 20 }}
@@ -63,7 +67,7 @@ function ModalShell({
             <div className="w-10 h-1 rounded-full bg-dnd-gold-dim/50" />
           </div>
         )}
-        <div className="overflow-y-auto overscroll-contain max-h-[calc(85vh-2rem)]"
+        <div className="overflow-y-auto overscroll-contain max-h-[calc(var(--tg-vh,100vh)*0.85-2rem)]"
              style={{ WebkitOverflowScrolling: 'touch' }}>
           {options.content}
         </div>

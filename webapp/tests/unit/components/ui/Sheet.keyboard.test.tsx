@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { LazyMotion, domMax } from 'framer-motion'
 import Sheet from '@/components/ui/Sheet'
@@ -9,62 +9,79 @@ function renderSheet() {
   render(
     <LazyMotion features={domMax} strict>
       <Sheet open onClose={() => {}} title="Titolo">
-        <input aria-label="importo" />
+        <div data-testid="box" style={{ overflowY: 'auto' }}>
+          <input aria-label="importo" />
+        </div>
       </Sheet>
     </LazyMotion>,
   )
-  return screen.getByLabelText('importo')
+  const input = screen.getByLabelText('importo')
+  const box = screen.getByTestId('box')
+  // Campo a y=600 dentro un contenitore centrato a y=200: va scrollato di 400px.
+  box.getBoundingClientRect = () => ({ top: 100, height: 200 }) as DOMRect
+  input.getBoundingClientRect = () => ({ top: 590, height: 20 }) as DOMRect
+  return { input, box }
 }
+const frame = () => new Promise((r) => requestAnimationFrame(() => r(null)))
+const setHeight = (h: number) => Object.defineProperty(window, 'innerHeight', { value: h, configurable: true })
+
+afterEach(() => {
+  setHeight(780)
+  delete (window as unknown as { Telegram?: unknown }).Telegram
+})
 
 describe('Sheet — tastiera su mobile', () => {
   it('l\'altezza massima segue --tg-vh (che cala con la tastiera), non 85vh', () => {
-    const input = renderSheet()
+    const { input } = renderSheet()
     const panel = input.closest('.surface-parchment') as HTMLElement
     expect(panel.className).toContain('max-h-[calc(var(--tg-vh,100vh)*0.85)]')
     expect(panel.className).not.toContain('max-h-[85vh]')
   })
 
-  it('al resize della finestra porta in vista il campo attivo dello sheet', async () => {
-    const input = renderSheet()
-    const scroll = vi.fn()
-    input.scrollIntoView = scroll
+  it('quando l\'altezza cala centra il campo attivo scorrendo il suo contenitore', async () => {
+    setHeight(780)
+    const { input, box } = renderSheet()
     input.focus()
+    setHeight(428)
     window.dispatchEvent(new Event('resize'))
-    await new Promise((r) => requestAnimationFrame(() => r(null)))
-    expect(scroll).toHaveBeenCalledWith({ block: 'center' })
+    await frame()
+    expect(box.scrollTop).toBe(400)
   })
 
-  it('riporta in vista il campo anche quando Telegram stabilizza l\'altezza (viewportChanged), dopo il resize', async () => {
+  it('non scorre quando l\'altezza cresce (rotazione, finestra desktop)', async () => {
+    setHeight(428)
+    const { input, box } = renderSheet()
+    input.focus()
+    setHeight(780)
+    window.dispatchEvent(new Event('resize'))
+    await frame()
+    expect(box.scrollTop).toBe(0)
+  })
+
+  it('riporta in vista il campo quando Telegram stabilizza l\'altezza (viewportChanged), non prima', async () => {
     const handlers: Array<(e?: { isStateStable?: boolean }) => void> = []
     const tg = { onEvent: vi.fn((_: string, cb: () => void) => handlers.push(cb)), offEvent: vi.fn() }
     ;(window as unknown as { Telegram: unknown }).Telegram = { WebApp: tg }
-    try {
-      const input = renderSheet()
-      const scroll = vi.fn()
-      input.scrollIntoView = scroll
-      input.focus()
-      expect(tg.onEvent).toHaveBeenCalledWith('viewportChanged', expect.any(Function))
-      handlers.forEach((h) => h({ isStateStable: false }))
-      await new Promise((r) => requestAnimationFrame(() => r(null)))
-      expect(scroll).not.toHaveBeenCalled()
-      handlers.forEach((h) => h({ isStateStable: true }))
-      await new Promise((r) => requestAnimationFrame(() => r(null)))
-      expect(scroll).toHaveBeenCalledWith({ block: 'center' })
-    } finally {
-      delete (window as unknown as { Telegram?: unknown }).Telegram
-    }
+    const { input, box } = renderSheet()
+    input.focus()
+    handlers.forEach((h) => h({ isStateStable: false }))
+    await frame()
+    expect(box.scrollTop).toBe(0)
+    handlers.forEach((h) => h({ isStateStable: true }))
+    await frame()
+    expect(box.scrollTop).toBe(400)
   })
 
   it('non tocca lo scroll se il campo attivo è fuori dallo sheet', async () => {
-    renderSheet()
+    setHeight(780)
+    const { box } = renderSheet()
     const outside = document.createElement('input')
     document.body.appendChild(outside)
-    const scroll = vi.fn()
-    outside.scrollIntoView = scroll
     outside.focus()
+    setHeight(428)
     window.dispatchEvent(new Event('resize'))
-    await new Promise((r) => requestAnimationFrame(() => r(null)))
-    expect(scroll).not.toHaveBeenCalled()
+    await frame()
+    expect(box.scrollTop).toBe(0)
     outside.remove()
   })
 })
