@@ -9,7 +9,7 @@ export default function FilterRow({ label, children }: { label: string; children
       <span className="block px-1 text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim">
         {label}
       </span>
-      <div className="flex gap-2 overflow-x-auto scrollbar-hide touch-pan-x pb-0.5 [&>*]:shrink-0">
+      <div className="flex gap-2 overflow-x-auto scrollbar-hide touch-pan-x touch-pan-y pb-0.5 [&>*]:shrink-0">
         {children}
       </div>
     </div>
