@@ -14,6 +14,7 @@ from api.schemas.common import normalize_proficiencies
 from api.schemas.transfer import CharacterExport, ExportCharacter
 from api.services.homebrew.dsl import RuleDSL
 from api.version import APP_VERSION
+from core.game.containers import is_container
 from core.game.item_bonuses import is_attuned
 from core.db.models import (
     Ability, AbilityScore, Character, CharacterClass, Companion, Currency, HomebrewResource,
@@ -78,6 +79,8 @@ async def build_export(session: AsyncSession, char: Character) -> CharacterExpor
     spell_key = {s.id: f"s{i}" for i, s in enumerate(spells)}
     rules = sorted(char.homebrew_rules, key=lambda r: r.id)
     rule_index = {r.id: i for i, r in enumerate(rules)}
+    sorted_items = sorted(char.items, key=lambda i: i.id)
+    item_ref = {i.id: n for n, i in enumerate(sorted_items)}  # indici, non id: l'export resta stabile al reimport
 
     cols = {k: getattr(char, k) for k in ExportCharacter.model_fields if k != "notes"}
     cols["spell_slots_mode"] = _val(char.spell_slots_mode)
@@ -109,8 +112,9 @@ async def build_export(session: AsyncSession, char: Character) -> CharacterExpor
         "classes": [c.__dict__ for c in classes],
         "ability_scores": [a.__dict__ for a in char.ability_scores],
         "items": [
-            {**i.__dict__, "item_metadata": _meta(i.item_metadata), "equipment_slot": _val(i.equipment_slot)}
-            for i in sorted(char.items, key=lambda i: i.id)
+            {**i.__dict__, "item_metadata": _meta(i.item_metadata), "equipment_slot": _val(i.equipment_slot),
+             "ref": item_ref[i.id], "container_ref": item_ref.get(i.container_id)}
+            for i in sorted_items
         ],
         "spells": [{**s.__dict__, "export_key": spell_key[s.id]} for s in spells],
         "concentrating_spell_key": spell_key.get(char.concentrating_spell_id),
@@ -132,6 +136,24 @@ async def build_export(session: AsyncSession, char: Character) -> CharacterExpor
 
 def _unprocessable(msg: str) -> HTTPException:
     return HTTPException(status_code=422, detail=msg)
+
+
+def _link_containers(specs, items) -> None:
+    """Seconda passata: ref inesistenti/duplicati, non-contenitori, auto-riferimenti e cicli -> radice."""
+    refs = [s.ref for s in specs if s.ref is not None]
+    by_ref = {s.ref: it for s, it in zip(specs, items) if s.ref is not None and refs.count(s.ref) == 1}
+    parent = {}
+    for s, it in zip(specs, items):
+        t = by_ref.get(s.container_ref)
+        if t is not None and t is not it and is_container(t):
+            parent[it] = t
+            it.container_id = t.id
+    for it in items:  # chi ritrova se stesso risalendo la catena e' in un ciclo
+        cur, n = parent.get(it), 0
+        while cur is not None and cur is not it and n <= len(items):
+            cur, n = parent.get(cur), n + 1
+        if cur is it:
+            it.container_id = None
 
 
 async def import_character(
@@ -195,7 +217,7 @@ async def import_character(
                 slot, equipped = None, False
             seen_slots.add(slot)
         items.append(Item(
-            **it.model_dump(exclude={"item_metadata", "equipment_slot", "is_equipped"}),
+            **it.model_dump(exclude={"item_metadata", "equipment_slot", "is_equipped", "ref", "container_ref"}),
             item_metadata=json.dumps(it.item_metadata), equipment_slot=slot, is_equipped=equipped,
         ))
     char.classes = classes
@@ -206,6 +228,8 @@ async def import_character(
     char.currency = Currency(**(data.currency.model_dump() if data.currency else {}))
     session.add(char)
     await session.flush()  # assegna gli id nuovi
+
+    _link_containers(data.items, items)
 
     rolls = (char.settings or {}).get("hp_rolls")
     if isinstance(rolls, dict) and rolls:  # chiavi "c{i}" del file -> id nuovi; chiavi sconosciute scartate

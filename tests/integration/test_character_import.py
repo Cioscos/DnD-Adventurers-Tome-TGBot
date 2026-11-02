@@ -218,3 +218,58 @@ async def test_import_enforces_attunement_limit(client, test_session_factory):
     assert r.status_code == 422 and r.json()["detail"] == "attunement_limit"
     data["items"] = data["items"][:3]
     assert (await _import(client, data)).status_code == 201
+
+
+def _cont(coins=None, **kw):
+    return {"container": {"capacity_lb": 10, "counts_weight": True, "quick_access": False,
+                          "coins": coins or {}, **kw}}
+
+
+async def _tree_char(factory) -> int:
+    async with factory() as s:
+        c = Character(user_id=TEST_USER_ID, name="Tree")
+        a = Item(name="A", item_metadata=json.dumps(_cont()))
+        s.add_all([c, a]); c.items = [a]; await s.flush()
+        b = Item(character_id=c.id, name="B", container_id=a.id, item_metadata=json.dumps(_cont({"gold": 7})))
+        s.add(b); await s.flush()
+        s.add(Item(character_id=c.id, name="Obj", container_id=b.id))
+        await s.commit()
+        return c.id
+
+
+def _shape(d: dict) -> dict:
+    by = {i["ref"]: i for i in d["items"]}
+    return {i["name"]: (by[i["container_ref"]]["name"] if i["container_ref"] is not None else None,
+                        i["item_metadata"].get("container", {}).get("coins"))
+            for i in d["items"]}
+
+
+async def test_export_import_preserves_tree(client, test_session_factory):
+    cid = await _tree_char(test_session_factory)
+    first = await _export(client, cid)
+    expected = {"A": (None, {}), "B": ("A", {"gold": 7}), "Obj": ("B", None)}
+    assert _shape(first) == expected
+    r = await _import(client, first)
+    assert r.status_code == 201, r.text
+    assert _shape(await _export(client, r.json()["id"])) == expected
+    d = await client.post(f"/characters/{cid}/duplicate")
+    assert d.status_code == 201, d.text
+    assert _shape(await _export(client, d.json()["id"])) == expected
+
+
+async def test_import_bad_refs(client, test_session_factory):
+    cid = await _tree_char(test_session_factory)
+    data = await _export(client, cid)
+    items = data["items"]
+    for i in items:
+        i["ref"], i["container_ref"] = {"A": 1, "B": 2, "Obj": 3}[i["name"]], None
+    ia, ib, io = items
+    ia["container_ref"] = 2           # A -> B, B -> A: ciclo
+    ib["container_ref"] = 1
+    io["container_ref"] = 3           # self-ref
+    items.append({"name": "Orphan", "ref": 4, "container_ref": 99})
+    items.append({"name": "InObj", "ref": 5, "container_ref": 3})  # Obj non e' un contenitore
+    r = await _import(client, data)
+    assert r.status_code == 201, r.text
+    got = _shape(await _export(client, r.json()["id"]))
+    assert all(v[0] is None for v in got.values()), got

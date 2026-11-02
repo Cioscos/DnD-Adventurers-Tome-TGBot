@@ -97,6 +97,8 @@ class ExportAbilityScore(BaseModel):
 
 
 class ExportItem(BaseModel):
+    ref: Optional[int] = None  # chiave locale al file, mai un id DB
+    container_ref: Optional[int] = None
     name: str = Field(max_length=200)
     description: Optional[str] = None
     weight: Annotated[float, _rng(0, 1_000_000)] = 0.0

@@ -7,6 +7,7 @@ così la condivisione sopravvive alla cancellazione dell'originale.
 """
 from __future__ import annotations
 
+import json
 import secrets
 import shutil
 import uuid
@@ -38,6 +39,18 @@ def is_expired(share: ContentShare) -> bool:
     return share.expires_at < _now().isoformat()
 
 
+def _strip_coins(raw):
+    """Le monete di un contenitore non viaggiano con la copia (capacita' e flag si')."""
+    try:
+        meta = json.loads(raw) if isinstance(raw, str) else raw
+    except ValueError:
+        return raw
+    if isinstance(meta, dict) and isinstance(meta.get("container"), dict):
+        meta = {**meta, "container": {k: v for k, v in meta["container"].items() if k != "coins"}}
+        return json.dumps(meta) if isinstance(raw, str) else meta
+    return raw
+
+
 def create_item_share(item: Item, char: Character, user_id: int) -> ContentShare:
     now = _now()
     return ContentShare(
@@ -49,7 +62,7 @@ def create_item_share(item: Item, char: Character, user_id: int) -> ContentShare
             "weight": item.weight or 0.0,
             "quantity": item.quantity if item.quantity is not None else 1,
             "item_type": item.item_type or "generic",
-            "item_metadata": item.item_metadata,
+            "item_metadata": _strip_coins(item.item_metadata),
         },
         voice_file_path=None,
         created_by=user_id,

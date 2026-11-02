@@ -173,3 +173,13 @@ def test_create_note_share_accepts_legit_voice_path(tmp_path, monkeypatch):
     src.write_bytes(b"audio")
     share = cs.create_note_share("Memo", f"[VOICE:{src}]", [], _char(), user_id=1)
     assert share.voice_file_path is not None
+
+
+def test_share_container_strips_coins():
+    meta = '{"container": {"capacity_lb": 5, "counts_weight": true, "quick_access": true, "coins": {"gold": 9}}}'
+    item = Item(character_id=1, name="Borsa", item_metadata=meta, container_id=7)
+    share = cs.create_item_share(item, _char(), user_id=1)
+    import json
+    assert json.loads(share.payload["item_metadata"]) == {
+        "container": {"capacity_lb": 5, "counts_weight": True, "quick_access": True}}
+    assert cs.import_item(share, _char(id=2)).container_id is None
