@@ -40,7 +40,7 @@ async def give_item(db, sender, recipient, item_id: int, quantity: int | None):
             db.add(Item(
                 character_id=recipient.id, name=item.name, description=item.description,
                 weight=item.weight, quantity=quantity, item_type=item.item_type,
-                item_metadata=item.item_metadata,
+                item_metadata=json.dumps({**item_meta(item), "attuned": False}) if item_meta(item).get("attuned") else item.item_metadata,
             ))
         await db.flush()
         return snapshot, []

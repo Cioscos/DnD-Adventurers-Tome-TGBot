@@ -19,13 +19,14 @@ def _bag(**c) -> str:
     return json.dumps({"container": c})
 
 
-async def _setup(factory, a_items, b_items=(), a_purse=None):
+async def _setup(factory, a_items, b_items=(), a_purse=None, b_purse=True):
     async with factory() as s:
         a, b = Character(user_id=1, name="A"), Character(user_id=2, name="B")
         s.add_all([a, b])
         await s.flush()
         s.add(Currency(character_id=a.id, **(a_purse or {})))
-        s.add(Currency(character_id=b.id))
+        if b_purse:
+            s.add(Currency(character_id=b.id))
         await s.flush()
         ids = {}
         for owner, lst in ((a, a_items), (b, b_items)):
@@ -91,6 +92,27 @@ async def test_give_clears_equip_and_attunement_on_tree(test_session_factory):
         for n in ("Zaino", "Anello"):
             r = await s.get(Item, ids[n])
             assert not r.is_equipped and r.equipment_slot is None and not item_meta(r).get("attuned")
+
+
+async def test_give_split_clears_attunement_on_new_row(test_session_factory):
+    a, b, ids = await _setup(test_session_factory, [dict(
+        name="Frecce", quantity=10, item_metadata=json.dumps({"attuned": True}))])
+    async with test_session_factory() as s:
+        A, B = await _load(s, a), await _load(s, b)
+        await give_item(s, A, B, ids["Frecce"], 4)
+        await s.commit()
+        new = (await s.execute(select(Item).where(Item.character_id == b))).scalar_one()
+        assert new.quantity == 4 and not item_meta(new).get("attuned")
+        assert item_meta(await s.get(Item, ids["Frecce"])).get("attuned")
+
+
+async def test_give_coins_recipient_without_currency(test_session_factory):
+    a, b, _ = await _setup(test_session_factory, [], a_purse={"gold": 10}, b_purse=False)
+    async with test_session_factory() as s:
+        A, B = await _load(s, a), await _load(s, b)
+        assert B.currency is None
+        assert give_coins(A, B, {"gold": 4}) == {"gold": 4}
+        assert B.currency.gold == 4 and A.currency.gold == 6
 
 
 async def test_give_equipped_root_unequips_sender(test_session_factory):
