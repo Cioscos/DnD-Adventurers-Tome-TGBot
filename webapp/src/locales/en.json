@@ -1083,6 +1083,7 @@
         "is_container": "Is a container",
         "counts_weight": "Contents count toward weight",
         "quick_access": "Quick access",
+        "created_move_failed": "Container created, but the move failed.",
         "no_capacity": "No limit",
         "unequipped": "Unequipped: {{names}}",
         "delete_moves_one": "{{count}} item will end up in {{dest}}.",

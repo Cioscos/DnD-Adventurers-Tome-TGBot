@@ -34,6 +34,17 @@ export function containerTree(items: Item[]): { item: Item; depth: number }[] {
 }
 
 /** Peso che l'oggetto porta nel contenitore che lo ospita (con `quantity` opzionale per spostamenti parziali). */
+/** Dove creare un contenitore nuovo da cui poi spostare `movingIds`: mai dentro ciò che si sposta
+ *  (né in un suo discendente), quindi sopra il più alto contenitore spostato del percorso corrente. */
+export function newBoxParent(items: Item[], containerId: number | null, movingIds: number[]): number | null {
+  const path = containerPath(items, containerId)
+  const i = path.findIndex((c) => movingIds.includes(c.id))
+  return i < 0 ? containerId : (path[i - 1]?.id ?? null)
+}
+
+/** Lb con 2 decimali: niente 0.30000000000000004 da conversioni di unità. */
+export const roundLb = (n: number): number => Math.round(n * 100) / 100
+
 export function movedWeight(item: Item, quantity: number = item.quantity): number {
   const inside = containerMeta(item)?.counts_weight ? (item.container_stats?.contents_weight ?? 0) : 0
   return item.weight * quantity + inside

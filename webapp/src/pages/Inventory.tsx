@@ -38,7 +38,7 @@ import { getItemTypeIcon } from '@/lib/itemIcons'
 import { itemGrantedSpells } from '@/lib/itemMagic'
 import type { Item } from '@/types'
 import ContainerCard from '@/pages/inventory/ContainerCard'
-import { containerPath, containerMeta, isContainer, movedWeight, type ContainerFormValue } from '@/lib/containers'
+import { containerPath, containerMeta, isContainer, movedWeight, newBoxParent, type ContainerFormValue } from '@/lib/containers'
 import MoveSheet from '@/pages/inventory/MoveSheet'
 import ContainerForm from '@/pages/inventory/ContainerForm'
 import InventorySkeleton from '@/components/skeletons/InventorySkeleton'
@@ -287,14 +287,22 @@ export default function Inventory() {
 
   const addBoxMutation = useMutation({
     mutationFn: async ({ name, weight, container, thenMove }: { name: string; weight: number; container: ContainerFormValue; thenMove: Item[] | null }) => {
-      const before = new Set((qc.getQueryData<typeof char>(['character', charId])?.items ?? []).map((i) => i.id))
+      const cached = qc.getQueryData<typeof char>(['character', charId])?.items ?? []
+      const before = new Set(cached.map((i) => i.id))
       const created = await api.items.add(charId, {
-        name, item_type: 'gear', quantity: 1, weight, is_equipped: false, container_id: containerId,
+        name, item_type: 'gear', quantity: 1, weight, is_equipped: false,
+        container_id: thenMove ? newBoxParent(cached, containerId, thenMove.map((i) => i.id)) : containerId,
         item_metadata: { container },
       })
       if (!thenMove) return created
       const box = (created.items ?? []).filter((i) => !before.has(i.id) && isContainer(i)).sort((a, b) => b.id - a.id)[0]
-      return box ? api.items.move(charId, { item_ids: thenMove.map((i) => i.id), container_id: box.id }) : created
+      if (!box) return created
+      try {
+        return await api.items.move(charId, { item_ids: thenMove.map((i) => i.id), container_id: box.id })
+      } catch (e) {
+        qc.setQueryData(['character', charId], created) // il contenitore esiste: mostralo
+        throw Object.assign(e instanceof Error ? e : new Error('move'), { boxCreated: true })
+      }
     },
     onSuccess: (updated) => {
       qc.setQueryData(['character', charId], updated)
@@ -303,7 +311,13 @@ export default function Inventory() {
       exitSelect()
       haptic.success()
     },
-    onError: () => toast.error(t('common.action_failed')),
+    onError: (e) => {
+      if ((e as { boxCreated?: boolean }).boxCreated) {
+        setNewBox(null)
+        setMoveTargets(null)
+        toast.error(t('character.inventory.containers.created_move_failed'))
+      } else toast.error(t('common.action_failed'))
+    },
   })
 
   const deleteMutation = useMutation({

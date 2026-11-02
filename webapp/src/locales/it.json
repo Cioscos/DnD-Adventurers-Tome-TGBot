@@ -1082,6 +1082,7 @@
         "is_container": "È un contenitore",
         "counts_weight": "Il contenuto conta nel peso",
         "quick_access": "A portata di mano",
+        "created_move_failed": "Contenitore creato, ma lo spostamento non è riuscito.",
         "no_capacity": "Nessun limite",
         "unequipped": "Disequipaggiati: {{names}}",
         "delete_moves_one": "{{count}} oggetto finirà in {{dest}}.",

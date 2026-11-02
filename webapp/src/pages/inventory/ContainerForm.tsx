@@ -6,7 +6,7 @@ import Pressable from '@/components/ui/Pressable'
 import SwitchToggle from '@/components/ui/SwitchToggle'
 import WizardFooter from '@/components/ui/WizardFooter'
 import { useUnitSettings, lbToDisplay, displayToLb, weightUnitLabel } from '@/store/unitSettings'
-import { PRESETS, defaultContainer, type ContainerFormValue } from '@/lib/containers'
+import { PRESETS, roundLb, defaultContainer, type ContainerFormValue } from '@/lib/containers'
 
 /** Capienza (nell'unità dell'utente, salvata in lb) + i due interruttori. Condiviso con ItemForm. */
 export function ContainerFields({ value, onChange }: { value: ContainerFormValue; onChange: (v: ContainerFormValue) => void }) {
@@ -24,7 +24,7 @@ export function ContainerFields({ value, onChange }: { value: ContainerFormValue
         value={cap}
         onChange={(v) => {
           setCap(v)
-          onChange({ ...value, capacity_lb: v === '' ? null : displayToLb(Number(v) || 0, system) })
+          onChange({ ...value, capacity_lb: v === '' ? null : roundLb(displayToLb(Number(v) || 0, system)) })
         }}
         placeholder={t(p + 'no_capacity')}
       />
@@ -97,7 +97,7 @@ export default function ContainerForm({ onSubmit, onCancel, isPending }: Props) 
           secondaryLabel={t('common.cancel')}
           onSecondary={onCancel}
           primaryLabel={t('common.add')}
-          onPrimary={() => onSubmit({ name: name.trim(), weight: displayToLb(Number(weight) || 0, system), container })}
+          onPrimary={() => onSubmit({ name: name.trim(), weight: roundLb(displayToLb(Number(weight) || 0, system)), container })}
           primaryDisabled={name.trim() === ''}
           primaryLoading={isPending}
           primaryHaptic="success"

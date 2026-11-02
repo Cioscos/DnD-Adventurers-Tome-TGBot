@@ -30,7 +30,7 @@ import {
   type ItemFormData,
 } from './itemMetadata'
 import { ContainerFields } from './ContainerForm'
-import { defaultContainer, type ContainerFormValue } from '@/lib/containers'
+import { defaultContainer, roundLb, type ContainerFormValue } from '@/lib/containers'
 import type { Item } from '@/types'
 import { useUnitSettings, lbToDisplay, displayToLb, weightUnitLabel, formatWeight, oppositeSystem } from '@/store/unitSettings'
 
@@ -88,6 +88,12 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
     setPicker(null)
   }
 
+  // Il PATCH sostituisce tutto: le monete del contenitore esistente si rimandano così come sono, mai azzerate dal form.
+  const originalContainer = initialData?.item_metadata?.container as ContainerFormValue | undefined
+  const keepCoins = (meta: Record<string, unknown>) => {
+    const c = meta.container as ContainerFormValue | undefined
+    return c && originalContainer ? { ...meta, container: { ...c, coins: originalContainer.coins } } : meta
+  }
   const containerVal = form.extra_meta.container as ContainerFormValue | undefined
   const setContainerVal = (c: ContainerFormValue | undefined) =>
     setForm((f) => {
@@ -201,7 +207,7 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
 
         <SwitchToggle
           checked={!!containerVal}
-          onChange={(v) => setContainerVal(v ? defaultContainer : undefined)}
+          onChange={(v) => setContainerVal(v ? (originalContainer ?? defaultContainer) : undefined)}
           label={t('character.inventory.containers.is_container')}
           aria-label={t('character.inventory.containers.is_container')}
         />
@@ -462,7 +468,8 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
           onPrimary={() =>
             onSubmit({
               ...form,
-              weight: String(displayToLb(Number(form.weight) || 0, system)),
+              weight: String(roundLb(displayToLb(Number(form.weight) || 0, system))),
+              extra_meta: keepCoins(form.extra_meta),
               quantity: hidesQuantity && !isEditing ? '1' : form.quantity,
             })
           }
