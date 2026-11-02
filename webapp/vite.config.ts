@@ -33,6 +33,9 @@ export default defineConfig(({ command }) => ({
         // Fonde i chunk minuscoli (icone, helper) nei vicini quando è sicuro: senza,
         // la scheda personaggio scaricava ~70 file da 1-3 KB. Soglie più alte gonfiano l'entry.
         experimentalMinChunkSize: 2_000,
+        // docs/ è un sito Jekyll, che NON pubblica i file che iniziano con "_": i moduli
+        // virtuali (\0 → "_", es. le icone gi) davano 404 in produzione.
+        chunkFileNames: (chunk) => `assets/${chunk.name.replace(/^_+/, '')}-[hash].js`,
         manualChunks(id) {
           // React in un chunk suo (vendor stabile fra i deploy, cache del
           // WebView); id con / o \ a seconda della piattaforma di build.

@@ -4,7 +4,7 @@
 // Usage: npm run build:prod   (from the webapp/ directory)
 
 import { spawnSync } from 'node:child_process';
-import { writeFileSync } from 'node:fs';
+import { readdirSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -38,6 +38,11 @@ try {
 
   console.log('-> Building webapp...');
   run('npm', ['run', 'build'], WEBAPP_DIR);
+
+  // GitHub Pages passa da Jekyll, che scarta i file con "_" iniziale: un chunk così è 404
+  // in prod. Solo assets/: public/dice-packs/_templates è materiale di lavoro, escluso apposta.
+  const hidden = readdirSync(resolve(REPO_ROOT, 'docs/app/assets')).filter((f) => f.startsWith('_'));
+  if (hidden.length) throw new Error(`Jekyll non pubblica questi file: ${hidden.join(', ')}`);
 
   console.log('-> Staging docs/app/ ...');
   run('git', ['add', 'docs/app/'], REPO_ROOT);

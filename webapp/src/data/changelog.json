@@ -1,6 +1,18 @@
 {
   "entries": [
     {
+      "version": "2.28.3",
+      "date": "2026-11-02",
+      "fixed": {
+        "it": [
+          "L'app si apre di nuovo: dopo l'aggiornamento precedente mostrava «Qualcosa è andato storto» all'avvio."
+        ],
+        "en": [
+          "The app opens again: after the previous update it showed «Something went wrong» on launch."
+        ]
+      }
+    },
+    {
       "version": "2.28.2",
       "date": "2026-11-02",
       "title": {
