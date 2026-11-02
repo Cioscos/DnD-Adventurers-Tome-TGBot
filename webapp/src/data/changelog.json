@@ -1,6 +1,36 @@
 {
   "entries": [
     {
+      "version": "2.29.0",
+      "date": "2026-11-02",
+      "added": {
+        "it": [
+          "Pagina Monete rifatta come una borsa: in alto le monete che hai e il totale in oro, sotto un tastierino per spendere o ricevere una moneta alla volta. Ogni operazione si salva subito e si può annullare dall'avviso."
+        ],
+        "en": [
+          "Coins page redesigned as a purse: your coins and the gold total at the top, and below a keypad to spend or receive one coin at a time. Every operation saves immediately and can be undone from the notice."
+        ]
+      },
+      "improved": {
+        "it": [
+          "Toccando una moneta della borsa ne imposti la quantità esatta, con il valore attuale come suggerimento.",
+          "Il pulsante Converti sta nella borsa e l'anteprima mostra il resto in rame quando la conversione non è esatta."
+        ],
+        "en": [
+          "Tap a coin in the purse to set its exact amount, with the current value as a hint.",
+          "The Convert button lives in the purse and the preview shows the copper change when the conversion is not exact."
+        ]
+      },
+      "fixed": {
+        "it": [
+          "Una conversione senza monete sufficienti ora mostra un errore invece di non fare nulla."
+        ],
+        "en": [
+          "A conversion without enough coins now shows an error instead of doing nothing."
+        ]
+      }
+    },
+    {
       "version": "2.28.5",
       "date": "2026-11-02",
       "improved": {
