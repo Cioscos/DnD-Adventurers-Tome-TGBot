@@ -1092,7 +1092,7 @@
         "new_here": "+ New container here",
         "is_container": "Is a container",
         "counts_weight": "Contents count toward weight",
-        "quick_access": "Quick access",
+        "quick_access": "Ready-to-use ammo",
         "created_move_failed": "Container created, but the move failed.",
         "no_capacity": "No limit",
         "unequipped": "Unequipped: {{names}}",
