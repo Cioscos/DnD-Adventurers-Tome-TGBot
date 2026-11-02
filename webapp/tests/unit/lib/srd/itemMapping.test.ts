@@ -41,6 +41,14 @@ describe('item catalogue mapping', () => {
       bonuses: [{ target: 'ac', value: 1 }, { target: 'saves', value: 1 }],
     })
   })
+  it('contenitori magici del catalogo', async () => {
+    const c = async (i: string) => magicItemToForm(await mi(i), 'en').extra_meta?.container
+    expect(await c('bag-of-holding')).toMatchObject({ capacity_lb: 500, counts_weight: false })
+    expect(await c('handy-haversack')).toMatchObject({ capacity_lb: 120, counts_weight: false })
+    expect(await c('portable-hole')).toMatchObject({ capacity_lb: null, counts_weight: false })
+    expect(await c('efficient-quiver')).toMatchObject({ capacity_lb: null, counts_weight: false, quick_access: true })
+    expect(await c('cloak-of-protection')).toBeUndefined()
+  })
   it('wand of magic missiles', async () => {
     const spells = await loadCatalog('spells')
     const f = magicItemToForm(await mi('wand-of-magic-missiles'), 'en', spells)

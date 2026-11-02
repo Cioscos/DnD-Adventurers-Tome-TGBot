@@ -26,6 +26,8 @@ import type {
   GmConditionApply,
   ConcentrationSaveResult,
   Currency,
+  CoinKey,
+  CurrencyOpResult,
   DiceRollResult,
   EncounterLive,
   EncounterMode,
@@ -639,6 +641,11 @@ export const api = {
       request<CharacterFull>(`/characters/${charId}/items/${itemId}/use`, {
         method: 'POST',
       }),
+    move: (charId: number, body: { item_ids: number[]; container_id: number | null; quantity?: number }) =>
+      request<CharacterFull>(`/characters/${charId}/items/move`, {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
   },
 
   // ---------------------------------------------------------------------------
@@ -655,6 +662,22 @@ export const api = {
       request<Currency>(`/characters/${charId}/currency/convert`, {
         method: 'POST',
         body: JSON.stringify({ source, target, amount }),
+      }),
+    adjust: (
+      charId: number,
+      body: { coin: CoinKey; delta: number; placements?: { container_id: number | null; amount: number }[] },
+    ) =>
+      request<CurrencyOpResult>(`/characters/${charId}/currency/adjust`, {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+    move: (
+      charId: number,
+      body: { coin: CoinKey; amount: number; from_container_id: number | null; to_container_id: number | null },
+    ) =>
+      request<CurrencyOpResult>(`/characters/${charId}/currency/move`, {
+        method: 'POST',
+        body: JSON.stringify(body),
       }),
   },
 

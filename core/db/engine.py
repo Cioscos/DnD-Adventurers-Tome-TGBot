@@ -68,6 +68,7 @@ _MIGRATIONS: list[tuple[str, str, str, str | None]] = [
     ("items", "is_equipped", "BOOLEAN", "0"),
     # Equipment slot for paper-doll
     ("items", "equipment_slot", "VARCHAR(20)", None),
+    ("items", "container_id", "INTEGER", None),
     # Heroic Inspiration
     ("characters", "heroic_inspiration", "BOOLEAN", "0"),
     # Saving throw proficiencies

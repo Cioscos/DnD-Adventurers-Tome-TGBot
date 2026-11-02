@@ -1,6 +1,7 @@
 """Equipment slot business logic (compat mapping + atomic swap helper)."""
 from __future__ import annotations
 
+import json
 from typing import Optional
 
 from sqlalchemy import select
@@ -39,3 +40,27 @@ async def swap_slot_occupant(
         displaced.is_equipped = False
         displaced.equipment_slot = None
     return displaced
+
+
+def apply_equip_ac(char, item, displaced=None) -> None:
+    """Armor/shield AC bookkeeping after `item` was (un)equipped, optionally displacing another piece.
+
+    Skips the base when the user set a manual override OR Unarmored Defense is active
+    (the latter owns the base AC and requires wearing no armor).
+    """
+    meta = json.loads(item.item_metadata) if item.item_metadata else {}
+    base_locked = char.base_armor_class_override or bool(char.unarmored_defense_ability)
+
+    # Neutralize the displaced occupant's AC contribution FIRST, then apply the
+    # new item's: on a same-slot swap the displaced piece shares the component
+    # (base/shield), so resetting it AFTER would clobber the value just set.
+    if displaced is not None:
+        if displaced.item_type == "armor" and not base_locked:
+            char.base_armor_class = 10
+        elif displaced.item_type == "shield" and not char.shield_armor_class_override:
+            char.shield_armor_class = 0
+
+    if item.item_type == "armor" and not base_locked:
+        char.base_armor_class = meta.get("ac_value", 10) if item.is_equipped else 10
+    elif item.item_type == "shield" and not char.shield_armor_class_override:
+        char.shield_armor_class = meta.get("ac_bonus", 2) if item.is_equipped else 0

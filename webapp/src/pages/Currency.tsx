@@ -7,7 +7,7 @@ import { ArrowUpDown, RefreshCw, Delete, Minus, Plus } from 'lucide-react'
 import { GiTwoCoins as Coins } from 'react-icons/gi'
 import { toast } from 'sonner'
 import { api } from '@/api/client'
-import type { Currency as CurrencyData } from '@/types'
+import CoinMoveSheet from '@/pages/currency/CoinMoveSheet'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
 import Input from '@/components/ui/Input'
@@ -30,6 +30,7 @@ const COINS = [
 ] as const
 
 type CoinKey = typeof COINS[number]['key']
+type Placement = { container_id: number | null; amount: number }
 
 // Valori in rame, come il modello del server (Currency.RATES): la conversione dà
 // un intero della moneta di arrivo e il resto torna in rame.
@@ -70,6 +71,9 @@ export default function Currency() {
   // Dopo una transazione la cifra resta (per ripeterla su un'altra moneta); la prossima cifra la sostituisce.
   const [fresh, setFresh] = useState(false)
 
+  // Dettaglio di una moneta (suddivisione per posto) e foglio per spostarla.
+  const [detailCoin, setDetailCoin] = useState<CoinKey | null>(null)
+  const [moving, setMoving] = useState<CoinKey | null>(null)
   const [exactCoin, setExactCoin] = useState<CoinKey | null>(null)
   const [exactDraft, setExactDraft] = useState('')
 
@@ -79,22 +83,31 @@ export default function Currency() {
   const [convertAmount, setConvertAmount] = useState('')
 
   const coinName = (k: CoinKey) => t(`character.currency.${k}`)
-  const current = (k: CoinKey) => qc.getQueryData<{ currency?: CurrencyData }>(['character', charId])?.currency?.[k] ?? 0
-  const setCached = (updated: Partial<CurrencyData>) =>
+  const current = (k: CoinKey) => qc.getQueryData<{ coin_totals?: Record<CoinKey, number> }>(['character', charId])?.coin_totals?.[k] ?? 0
+  const setTotals = (updater: (old: Record<CoinKey, number>) => Record<CoinKey, number>) =>
     qc.setQueryData(['character', charId], (old: typeof char) =>
-      old ? { ...old, currency: { ...old.currency, ...updated } } : old,
+      old?.coin_totals ? { ...old, coin_totals: updater(old.coin_totals) } : old,
     )
 
-  // Salva subito il nuovo valore di UNA moneta (PATCH parziale: le altre restano come sono sul server).
-  // Stesso scope = salvataggi e conversioni in fila: i PATCH a valore assoluto arrivano in ordine.
+  // Stesso scope = operazioni sulle monete in fila (spese, conversioni, spostamenti arrivano in ordine).
   const scope = { id: `currency-${charId}` }
-  const saveCoin = useMutation({
+  const adjust = useMutation({
     scope,
-    mutationFn: ({ key, value }: { key: CoinKey; value: number }) =>
-      api.currency.update(charId, { [key]: value }),
-    onMutate: ({ key, value }) => setCached({ [key]: value }),
-    // Una risposta vecchia non deve sovrascrivere il valore ottimistico di un'operazione ancora in coda.
-    onSuccess: (updated) => { if (qc.isMutating({ predicate: (mu) => mu.options.scope?.id === scope.id }) <= 1) setCached(updated) },
+    mutationFn: (v: { key: CoinKey; delta: number; placements?: Placement[] }) =>
+      api.currency.adjust(charId, { coin: v.key, delta: v.delta, ...(v.placements && { placements: v.placements }) }),
+    onMutate: async ({ key, delta }) => {
+      await qc.cancelQueries({ queryKey: ['character', charId] }) // un refetch in volo non deve sovrascrivere l'ottimistico
+      setTotals((old) => ({ ...old, [key]: Math.max(0, old[key] + delta) }))
+    },
+    onSuccess: (res) => {
+      // Una risposta vecchia non deve sovrascrivere il valore ottimistico di un'operazione ancora in coda.
+      if (qc.isMutating({ predicate: (mu) => mu.options.scope?.id === scope.id }) > 1) return
+      setTotals(() => res.coin_totals)
+    },
+    // Ricarica (suddivisione per posto) solo quando la coda è vuota: niente sfarfallio fra un'operazione e l'altra.
+    onSettled: () => {
+      if (qc.isMutating({ predicate: (mu) => mu.options.scope?.id === scope.id }) <= 1) qc.invalidateQueries({ queryKey: ['character', charId] })
+    },
     // Dopo un errore la cache non è affidabile (altre operazioni in coda): si rilegge dal server.
     onError: () => {
       qc.invalidateQueries({ queryKey: ['character', charId] })
@@ -103,40 +116,44 @@ export default function Currency() {
     },
   })
 
-  const apply = (key: CoinKey, delta: number, undoable = true) => {
-    const before = current(key)
-    const value = Math.max(0, before + delta)
-    saveCoin.mutate({ key, value })
-    if (!undoable) return
+  // Da dove sono uscite le monete, solo se più di un posto: "2 dalla borsa, 3 da Zaino".
+  const provenance = (placements: Placement[]) =>
+    placements.map((p) => `${Math.abs(p.amount)} ${p.container_id == null
+      ? t('character.currency.from_purse')
+      : t('character.currency.from_container', { name: char?.items?.find((i) => i.id === p.container_id)?.name ?? '' })}`).join(', ')
+
+  // Variazione sul totale; a risposta arrivata offre Annulla. L'inversa rimanda i piazzamenti
+  // effettivi negati (non una nuova ripartizione): ogni moneta torna dov'era.
+  // mutateAsync (non i callback di mutate): ogni tocco in volo conserva il proprio Annulla.
+  const run = (key: CoinKey, delta: number, message: (placements: Placement[]) => string) => {
     haptic.success()
-    showUndoToast({
-      message: t(delta < 0 ? 'character.currency.spent_toast' : 'character.currency.received_toast', {
-        n: Math.abs(delta), coin: coinName(key),
+    adjust.mutateAsync({ key, delta }).then((res) =>
+      showUndoToast({
+        message: message(res.placements),
+        actionLabel: t('character.currency.undo'),
+        onUndo: () => adjust.mutate({
+          key, delta: -delta, placements: res.placements.map((p) => ({ ...p, amount: -p.amount })),
+        }),
       }),
-      actionLabel: t('character.currency.undo'),
-      // Inversa sul valore corrente: non cancella le transazioni fatte nel frattempo.
-      onUndo: () => apply(key, before - value, false),
-    })
+    ).catch(() => {}) // l'errore è già gestito da onError
   }
 
-  const setExact = (key: CoinKey, value: number) => {
-    const before = current(key)
-    saveCoin.mutate({ key, value })
-    haptic.success()
-    showUndoToast({
-      message: t('character.currency.set_toast', { n: value, coin: coinName(key) }),
-      actionLabel: t('character.currency.undo'),
-      // Inversa di questo cambio, non ritorno al valore di prima: tiene le operazioni fatte dopo.
-      onUndo: () => apply(key, before - value, false),
-    })
-  }
+  const apply = (key: CoinKey, delta: number) =>
+    run(key, delta, (placements) => delta < 0 && placements.length > 1
+      ? t('character.currency.spent_from', { n: Math.abs(delta), coin: coinName(key), parts: provenance(placements) })
+      : t(delta < 0 ? 'character.currency.spent_toast' : 'character.currency.received_toast', {
+          n: Math.abs(delta), coin: coinName(key),
+        }))
+
+  const setExact = (key: CoinKey, value: number) =>
+    value !== current(key) ? run(key, value - current(key), () => t('character.currency.set_toast', { n: value, coin: coinName(key) })) : undefined
 
   const convertMutation = useMutation({
     scope,
     mutationFn: () =>
       api.currency.convert(charId, convertSource, convertTarget, Math.floor(Number(convertAmount)) || 0),
-    onSuccess: (updated) => {
-      setCached(updated)
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['character', charId] })
       setConvertAmount('')
       setShowConvert(false)
       haptic.success()
@@ -169,7 +186,7 @@ export default function Currency() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null
-      if (target?.closest('input, textarea, [contenteditable]') || exactCoin || showConvert) return
+      if (target?.closest('input, textarea, [contenteditable]') || exactCoin || detailCoin || moving || showConvert) return
       if (/^[0-9]$/.test(e.key)) typeDigit(e.key)
       else if (e.key === 'Backspace') backspace()
     }
@@ -187,7 +204,7 @@ export default function Currency() {
 
   const settings = (char.settings as Record<string, unknown>) ?? {}
   const coins = COINS.filter(({ key }) => !(key === 'electrum' && settings.hide_electrum === true))
-  const have = (k: CoinKey) => char.currency?.[k] ?? 0
+  const have = (k: CoinKey) => char.coin_totals?.[k] ?? 0
   const totalGold = (coins.reduce((sum, { key }) => sum + have(key) * IN_COPPER[key], 0) / 100).toFixed(2)
   const notEnough = amount > have(coin)
 
@@ -211,7 +228,7 @@ export default function Currency() {
           {coins.map(({ key, label }) => (
             <Pressable
               key={key}
-              onClick={() => { haptic.light(); setExactDraft(''); setExactCoin(key) }}
+              onClick={() => { haptic.light(); setDetailCoin(key) }}
               whileTap={{ scale: 0.95 }}
               aria-label={`${coinName(key)}: ${have(key)}`}
               className="min-h-[64px] min-w-0 flex flex-col items-center justify-center gap-1 rounded-xl bg-dnd-surface/60 border border-dnd-border hover:border-dnd-gold/60 transition-colors"
@@ -343,6 +360,38 @@ export default function Currency() {
           </Button>
         </div>
       </Surface>
+
+      {/* Dove stanno le monete di questa moneta, con Sposta e valore esatto. */}
+      <Sheet
+        open={detailCoin !== null}
+        onClose={() => setDetailCoin(null)}
+        title={detailCoin ? `${coinName(detailCoin)}: ${have(detailCoin)}` : undefined}
+      >
+        {detailCoin && (
+          <div className="p-5 space-y-3">
+            <ul className="space-y-1.5">
+              {(char.coin_breakdown ?? []).filter((b) => (b.coins[detailCoin] ?? 0) > 0).map((b) => (
+                <li key={b.container_id ?? 'purse'} className="min-h-[44px] flex items-center justify-between gap-2 px-3 rounded-xl border border-dnd-border bg-dnd-surface text-sm font-cinzel">
+                  <span className="truncate">{b.container_id == null ? t('character.currency.purse') : b.name}</span>
+                  <span className="font-mono tabular-nums">{b.coins[detailCoin]}</span>
+                </li>
+              ))}
+            </ul>
+            <div className="flex gap-2 pt-1">
+              <Button variant="secondary" fullWidth onClick={() => { setExactDraft(''); setExactCoin(detailCoin); setDetailCoin(null) }}>
+                {t('character.currency.set_exact')}
+              </Button>
+              <Button variant="primary" fullWidth onClick={() => { setMoving(detailCoin); setDetailCoin(null) }}>
+                {t('character.currency.move')}
+              </Button>
+            </div>
+          </div>
+        )}
+      </Sheet>
+
+      {moving && (
+        <CoinMoveSheet charId={charId} items={char.items ?? []} breakdown={char.coin_breakdown ?? []} coin={moving} onClose={() => setMoving(null)} />
+      )}
 
       {/* Valore esatto di una moneta: campo vuoto col valore attuale suggerito. */}
       <Sheet

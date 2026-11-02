@@ -14,6 +14,9 @@ from api.database import get_db
 from core.db.models import Character, CharacterClass, Currency
 from api.schemas.character import CharacterFull
 from api.schemas.common import CurrencyConvert, CurrencyRead, CurrencyUpdate
+from api.schemas.container import CoinAdjustRequest, CoinAdjustResult, CoinMoveRequest, CoinPlacement
+from api.services.containers import _coin_places, apply_coin_placements, withdraw
+from core.game.containers import COINS, allocate
 
 router = APIRouter(prefix="/characters", tags=["currency"])
 
@@ -86,7 +89,7 @@ async def convert_currency(
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
 ) -> Currency:
-    await _get_owned_full(char_id, user_id, session)
+    char = await _get_owned_full(char_id, user_id, session)
     if body.source not in _VALID_COINS or body.target not in _VALID_COINS:
         raise HTTPException(status_code=400, detail="Invalid coin type")
     if body.source == body.target:
@@ -95,7 +98,61 @@ async def convert_currency(
         raise HTTPException(status_code=400, detail="Amount must be positive")
 
     currency = await _get_or_create_currency(char_id, session)
-    success = currency.convert(body.source, body.target, body.amount)
-    if not success:
+    await session.refresh(char, attribute_names=["currency"])
+    try:
+        withdraw(char, body.source, body.amount)
+    except HTTPException:
         raise HTTPException(status_code=400, detail="Insufficient funds")
+    # Same math as Currency.convert: floor in target, remainder in copper — results go to the purse.
+    copper = Currency.RATES[body.source] * body.amount
+    setattr(currency, body.target, getattr(currency, body.target) + copper // Currency.RATES[body.target])
+    currency.copper += copper % Currency.RATES[body.target]
     return currency
+
+
+async def _result(session: AsyncSession, char: Character, coin: str, placements) -> CoinAdjustResult:
+    await session.flush()
+    places = _coin_places(char)
+    return CoinAdjustResult(
+        coin_totals={c: sum(p[c] for p in places.values()) for c in COINS},
+        purse=CurrencyRead.model_validate(char.currency),
+        placements=[CoinPlacement(container_id=loc, amount=amt) for loc, amt in placements],
+    )
+
+
+@router.post("/{char_id}/currency/adjust", response_model=CoinAdjustResult)
+async def adjust_currency(
+    char_id: int,
+    body: CoinAdjustRequest,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> CoinAdjustResult:
+    char = await _get_owned_full(char_id, user_id, session)
+    await _get_or_create_currency(char_id, session)
+    await session.refresh(char, attribute_names=["currency"])
+    if body.placements is None:
+        purse = {c: getattr(char.currency, c) or 0 for c in COINS}
+        try:
+            plan = allocate(purse, char.items, body.coin, body.delta)
+        except ValueError:
+            raise HTTPException(status_code=409, detail="insufficient_funds")
+    else:
+        plan = [(p.container_id, p.amount) for p in body.placements]
+    return await _result(session, char, body.coin, apply_coin_placements(char, body.coin, plan))
+
+
+@router.post("/{char_id}/currency/move", response_model=CoinAdjustResult)
+async def move_currency(
+    char_id: int,
+    body: CoinMoveRequest,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> CoinAdjustResult:
+    char = await _get_owned_full(char_id, user_id, session)
+    await _get_or_create_currency(char_id, session)
+    await session.refresh(char, attribute_names=["currency"])
+    places = _coin_places(char)
+    if any(loc is not None and loc not in places for loc in (body.from_container_id, body.to_container_id)):
+        raise HTTPException(status_code=404, detail="Container not found")
+    plan = [(body.from_container_id, -body.amount), (body.to_container_id, body.amount)]
+    return await _result(session, char, body.coin, apply_coin_placements(char, body.coin, plan))

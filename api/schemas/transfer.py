@@ -7,6 +7,7 @@ from pydantic import AfterValidator, BaseModel, Field, ValidationInfo, field_val
 
 from api.schemas.companion import validate_statblock
 from api.schemas.item import _validate_weapon_meta
+from api.schemas.container import validate_container_meta
 from api.schemas.item_magic import validate_magic_meta
 from core.db.models import EquipmentSlot
 from core.game.actions import ActionType
@@ -96,6 +97,8 @@ class ExportAbilityScore(BaseModel):
 
 
 class ExportItem(BaseModel):
+    ref: Optional[int] = None  # chiave locale al file, mai un id DB
+    container_ref: Optional[int] = None
     name: str = Field(max_length=200)
     description: Optional[str] = None
     weight: Annotated[float, _rng(0, 1_000_000)] = 0.0
@@ -112,6 +115,7 @@ class ExportItem(BaseModel):
         if not (info.context or {}).get("lenient"):
             _validate_weapon_meta(v)
             validate_magic_meta(v)
+            validate_container_meta(v)
         return v
 
 

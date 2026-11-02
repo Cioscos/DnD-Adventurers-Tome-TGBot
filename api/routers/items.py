@@ -22,6 +22,7 @@ from core.db.models import Character, CharacterClass, CharacterHistory, Equipmen
 from api.schemas.character import CharacterFull
 from api.schemas.item import AmmoState, ItemCreate, ItemRead, ItemUpdate, WeaponAttackResult
 from core.game.stats import effective_ability_score
+from core.game.containers import container_meta, is_container
 from core.game.item_bonuses import attack_bonus_total, is_attuned, item_meta
 from core.game.attacks import unarmed_strike_profile
 from core.data.spell_slots import normalize_class_name
@@ -34,7 +35,9 @@ from api.services.durations import start_concentration
 from api.services.condition_effects import release_concentration_effects
 from api.services.item_charges import set_item_charges
 from core.game.actions import parse_duration_rounds
-from api.services.equipment import slot_allowed_for_type, swap_slot_occupant
+from api.services.equipment import apply_equip_ac, slot_allowed_for_type, swap_slot_occupant
+from api.services.containers import move_items, reparent_contents
+from api.schemas.container import ItemMoveRequest
 from api.services.homebrew.dispatcher import dispatch
 from api.services.character_response import build_character_response
 from api.services.effects import apply_heal, apply_conditions
@@ -49,6 +52,14 @@ def _apply_hp_delta(char, delta_hp: int) -> None:
         return
     char.hit_points = max(0, char.hit_points + delta_hp)
     char.current_hit_points = max(0, min(char.current_hit_points + delta_hp, char.hit_points))
+
+
+def _apply_con_hp(char, old_con_mod: int) -> None:
+    """Auto-recompute HP when the effective CON modifier changed (equip/unequip/move)."""
+    if (char.settings or {}).get("hp_auto_calc", True):
+        delta = effective_con_mod(char) - old_con_mod
+        if delta != 0:
+            _apply_hp_delta(char, delta * char.total_level)
 
 
 _DICE_RE = re.compile(r"^(\d+)d(\d+)([+-]\d+)?$", re.IGNORECASE)
@@ -161,6 +172,10 @@ async def _apply_item_property_defaults(
         item.item_metadata = json.dumps(md)
 
 
+def is_container_meta(meta: dict | None) -> bool:
+    return isinstance((meta or {}).get("container"), dict)
+
+
 def _check_attunement_limit(char, item, new_meta: dict | None) -> None:
     """409 when this write newly attunes an item and the character already has 3."""
     if not (new_meta or {}).get("attuned") or (item is not None and is_attuned(item)):
@@ -178,16 +193,29 @@ async def add_item(
 ) -> CharacterFull:
     char = await _get_owned_full(char_id, user_id, session)
 
-    # Deduplication for generic items: merge quantity if same name exists
-    if body.item_type == "generic":
+    if body.container_id is not None:
+        parent = next((i for i in char.items if i.id == body.container_id), None)
+        if parent is None:
+            raise HTTPException(status_code=404, detail="Container not found")
+        if not is_container(parent):
+            raise HTTPException(status_code=422, detail="not_a_container")
+
+    if is_container_meta(body.item_metadata) and body.quantity != 1:
+        raise HTTPException(status_code=422, detail="container_quantity")
+    if body.container_id is not None:  # contained items are never equipped
+        body.is_equipped, body.equipment_slot = False, None
+
+    # Deduplication for generic items: merge with a same-name generic in the same container
+    if body.item_type == "generic" and not is_container_meta(body.item_metadata):
         existing_result = await session.execute(
             select(Item).where(
                 Item.character_id == char_id,
                 Item.item_type == "generic",
                 Item.name == body.name,
+                Item.container_id == body.container_id,
             )
         )
-        existing = existing_result.scalar_one_or_none()
+        existing = next((e for e in existing_result.scalars() if not is_container(e)), None)
         if existing is not None:
             existing.quantity += body.quantity
             await session.flush()
@@ -207,6 +235,7 @@ async def add_item(
         item_metadata=metadata_str,
         is_equipped=body.is_equipped,
         equipment_slot=body.equipment_slot,
+        container_id=body.container_id,
     )
     session.add(item)
     await session.flush()
@@ -256,6 +285,17 @@ async def update_item(
             detail=f"equipment_slot {new_slot.value!r} not allowed for item_type {new_type!r}",
         )
 
+    new_meta = (
+        json.loads(data["item_metadata"]) if data.get("item_metadata")
+        else None if "item_metadata" in data else item_meta(item)
+    )
+    if is_container_meta(new_meta) and data.get("quantity", item.quantity) != 1:
+        raise HTTPException(status_code=422, detail="container_quantity")
+    if is_container(item) and not is_container_meta(new_meta):
+        await reparent_contents(session, char, item)
+    if data.get("is_equipped") and item.container_id is not None:
+        item.container_id = None  # equipping pulls the item out of its container
+
     # Apply the partial update.
     for field, value in data.items():
         setattr(item, field, value)
@@ -269,36 +309,11 @@ async def update_item(
         if not item.is_equipped:
             item.equipment_slot = None
 
-    # Auto-update character AC when equipping/unequipping armor or shields.
-    # Skip the base when the user set a manual override OR Unarmored Defense is active
-    # (the latter owns the base AC and requires wearing no armor).
     if "is_equipped" in data or "equipment_slot" in data:
-        item_meta = json.loads(item.item_metadata) if item.item_metadata else {}
-        base_locked = char.base_armor_class_override or bool(char.unarmored_defense_ability)
-
-        # Neutralize the displaced occupant's AC contribution FIRST, then apply
-        # the newly-equipped item's. Order matters: on a same-slot armor/shield
-        # swap the displaced piece shares the new item's component (base/shield),
-        # so resetting it AFTER would clobber the value the new piece just set —
-        # leaving the character at base 10 / shield 0 (the new AC silently lost).
-        if displaced is not None:
-            if displaced.item_type == "armor" and not base_locked:
-                char.base_armor_class = 10
-            elif displaced.item_type == "shield" and not char.shield_armor_class_override:
-                char.shield_armor_class = 0
-
-        if item.item_type == "armor" and not base_locked:
-            char.base_armor_class = item_meta.get("ac_value", 10) if item.is_equipped else 10
-        elif item.item_type == "shield" and not char.shield_armor_class_override:
-            char.shield_armor_class = item_meta.get("ac_bonus", 2) if item.is_equipped else 0
+        apply_equip_ac(char, item, displaced)
 
     # Auto-recompute HP when CON modifier changes due to equip/unequip
-    settings = char.settings or {}
-    if settings.get("hp_auto_calc", True):
-        new_con_mod = effective_con_mod(char)
-        delta = new_con_mod - old_con_mod
-        if delta != 0:
-            _apply_hp_delta(char, delta * char.total_level)
+    _apply_con_hp(char, old_con_mod)
 
     char.recalculate_encumbrance()
     # Flush + refresh so the post-update Character (and items) are visible to
@@ -336,6 +351,37 @@ async def update_item(
     return response
 
 
+@router.post("/{char_id}/items/move", response_model=CharacterFull)
+async def move_items_endpoint(
+    char_id: int,
+    body: ItemMoveRequest,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> CharacterFull:
+    char = await _get_owned_full(char_id, user_id, session)
+    old_con_mod = effective_con_mod(char)
+    worn = [(i, i.equipment_slot) for i in char.items if i.id in body.item_ids and i.is_equipped]
+    names = await move_items(session, char, body.item_ids, body.container_id, body.quantity)
+    _apply_con_hp(char, old_con_mod)
+    char.recalculate_encumbrance()
+    await session.flush()
+    await session.refresh(char, attribute_names=["items"])
+    notifications: list[dict] = []
+    for it, slot in worn:
+        if not it.is_equipped:
+            firing = await dispatch(session, char, "item_unequipped", {
+                "item_id": it.id, "item_type": it.item_type,
+                "slot": slot.value if slot is not None else None,
+                "was_equipped": True, "is_equipped": False,
+            })
+            notifications += collect_homebrew_notifications(firing)
+    response = await build_character_response(session, char)
+    response.unequipped_item_names = names
+    if notifications:
+        response.homebrew_notifications = notifications
+    return response
+
+
 @router.delete("/{char_id}/items/{item_id}", response_model=CharacterFull)
 async def delete_item(
     char_id: int,
@@ -350,6 +396,8 @@ async def delete_item(
     item = result.scalar_one_or_none()
     if item is None:
         raise HTTPException(status_code=404, detail="Item not found")
+    if is_container(item):
+        await reparent_contents(session, char, item)
     await session.delete(item)
     await session.flush()
     char.recalculate_encumbrance()
@@ -574,8 +622,23 @@ async def attack_with_weapon(
             (i for i in char.items if i.equipment_slot == EquipmentSlot.AMMUNITION), None
         )
         if source is None:
-            candidates = [i for i in char.items if i.item_type == "ammunition"]
-            source = candidates[0] if len(candidates) == 1 else None
+            ammo = [i for i in char.items if i.item_type == "ammunition"]
+            quick_ids = {
+                c.id for c in char.items if (m := container_meta(c)) and m.get("quick_access")
+            }
+            # Quick-access quiver first, then loose stacks; other containers don't count.
+            for pool in (
+                [i for i in ammo if i.container_id in quick_ids],
+                [i for i in ammo if i.container_id is None],
+            ):
+                # One stack, or several stacks of the same ammo: use the first (lowest id).
+                live = sorted((i for i in pool if i.quantity > 0), key=lambda i: i.id)
+                if len(pool) == 1:
+                    source = pool[0]
+                    break
+                if live and len({i.name.lower() for i in live}) == 1:
+                    source = live[0]
+                    break
         if source is None or source.quantity <= 0:
             ammo_missing = True
         elif not (body and body.with_inspiration):

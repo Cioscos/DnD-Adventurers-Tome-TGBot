@@ -243,6 +243,14 @@ const MAGIC_ITEM_TYPE: Record<string, ItemFormData['item_type']> = {
   ring: 'accessory', 'wondrous-items': 'accessory',
 }
 
+/** Contenitori magici del catalogo: capienza in lb (null = illimitata); il contenuto non pesa. */
+const MAGIC_CONTAINERS: Record<string, { capacity_lb: number | null; quick_access?: boolean }> = {
+  'bag-of-holding': { capacity_lb: 500 },
+  'handy-haversack': { capacity_lb: 120 },
+  'portable-hole': { capacity_lb: null },
+  'efficient-quiver': { capacity_lb: null, quick_access: true },
+}
+
 export function magicItemToForm(
   e: MagicItemEntry,
   lang: Lang,
@@ -283,6 +291,6 @@ export function magicItemToForm(
       ? { max: e.charges.max, current: e.charges.max, recharge: e.charges.recharge, recharge_amount: e.charges.recharge_dice ?? 'all' }
       : null,
     granted_spells,
-    extra_meta: { srd_index: e.index },
+    extra_meta: { srd_index: e.index, ...(MAGIC_CONTAINERS[e.index] ? { container: { counts_weight: false, quick_access: false, ...MAGIC_CONTAINERS[e.index] } } : {}) },
   }
 }
