@@ -1,6 +1,20 @@
 {
   "entries": [
     {
+      "version": "2.35.0",
+      "date": "2026-11-03",
+      "added": {
+        "it": [
+          "Atlante della campagna: il master carica le mappe e le mostra al gruppo; tutti segnano i luoghi con icone e tipi personalizzati, privati o condivisi, anche con sottomappe collegate.",
+          "Il riepilogo di fine serata elenca i luoghi scoperti e il feed della sessione apre la mappa sul luogo appena mostrato."
+        ],
+        "en": [
+          "Campaign atlas: the GM uploads maps and shows them to the party; everyone marks places with icons and custom types, private or shared, even with linked sub-maps.",
+          "The end-of-evening recap lists the places discovered, and the session feed opens the map on the place just revealed."
+        ]
+      }
+    },
+    {
       "version": "2.34.0",
       "date": "2026-11-03",
       "added": {

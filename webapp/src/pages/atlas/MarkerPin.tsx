@@ -25,6 +25,7 @@ export default function MarkerPin({ marker, scale, selected, isGm, onSelect }: P
     // Il div porta posizione e scala inversa; il Pressable dentro è l'area toccabile 44×44.
     <div
       data-pin={marker.id}
+      data-layout-ok="posizione scelta da chi segna il luogo: i marker vicini si separano con lo zoom"
       data-hidden={hidden}
       data-selected={selected}
       className={`absolute h-11 w-11 ${selected ? 'z-20' : 'z-10'} ${hidden ? 'opacity-[0.45]' : ''}`}

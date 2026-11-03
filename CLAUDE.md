@@ -230,6 +230,7 @@ The only callback handler is `bot.handlers.wiki.navigation_callback` — see `bo
 - **Release announcements**: only when `.env` has `ANNOUNCE_RELEASES=1` (set it on the Pi only — local APIs and tests must never message users), on startup the API (`api/services/release_announce.py`) compares `changelog.json` `entries[0].version` with `app_meta.last_announced_version`; if new, it records it first and then sends the notes in a private Telegram chat to `bot_users` (announcements on) ∪ character owners, minus opt-outs. A new release therefore goes out at the first API restart after the deploy.
 - **Campaign messages**: only when `.env` has `SEND_CAMPAIGN_MESSAGES=1` (Pi only — local APIs and tests must never set it), the API sends the end-of-evening recap and the 24h/1h evening reminders to Telegram.
 - **Lore files**: stored at `data/lore/{campaign_id}/` (images ≤10 MB, audio ≤5 MB), served via the `init_data` query param like maps.
+- **Atlas files**: `data/atlas/{campaign_id}/` (images ≤10 MB, downscaled client-side to 4096 px).
 - **Bot state**: `data/persistence.pkl` — stores `user_data` and the `arbitrary_callback_data` LRU cache across restarts.
 
 ## Notable API Endpoints
@@ -250,6 +251,7 @@ The only callback handler is `bot.handlers.wiki.navigation_callback` — see `bo
 | `POST` | `/characters/{id}/choices/{choice_id}/resolve` | Resolve a pending level choice (ASI or feat) |
 | `*` | `/characters/{id}/companions[...]` | Familiars, companions, summons and wild shape (CRUD, activate/deactivate, hp, attack) |
 | `*` | `/campaigns/{id}/lore[...]` | GM lore: GET/POST/PATCH/DELETE, reveal/hide, image/audio upload and file |
+| `*` | `/campaigns/{id}/atlas[...]` | Campaign atlas: maps (upload, rename, reveal/hide, image), markers (CRUD, visibility) and custom marker types |
 | `GET` | `/sessions/{id}/recap` | End-of-evening recap with statistics |
 | `POST` | `/share/recap/{session_id}` | GM shares the recap in the group chat |
 | `*` | `/campaigns/{id}/schedule[...]` | Calendar of real evenings (GET/POST/PATCH/DELETE) with Telegram reminders |
