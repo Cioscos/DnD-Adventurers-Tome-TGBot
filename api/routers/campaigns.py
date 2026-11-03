@@ -32,9 +32,10 @@ from api.schemas.common import CurrencyRead
 from api.schemas.item import ItemRead
 from api.routers.sessions import _find_active_session_for_user, _load_session, _touch, session_read
 from api.schemas.session import GameSessionRead
-from api.services.campaigns import create_campaign, generate_campaign_code
+from api.services.campaigns import create_campaign, generate_campaign_code, unlink_file
 from core.db.models import (
     Campaign,
+    CampaignLore,
     CampaignMember,
     Character,
     GameSession,
@@ -313,6 +314,10 @@ async def delete_campaign(
         update(GameSession).where(GameSession.campaign_id == camp.id).values(campaign_id=None)
     )
     stash = await db.get(Character, camp.stash_character_id)
+    for lore in (await db.execute(select(CampaignLore).where(CampaignLore.campaign_id == camp.id))).scalars():
+        unlink_file(lore.image_path)
+        unlink_file(lore.audio_path)
+        await db.delete(lore)
     await db.delete(camp)  # cascades campaign_members
     await db.flush()
     await db.delete(stash)  # cascades items and currency

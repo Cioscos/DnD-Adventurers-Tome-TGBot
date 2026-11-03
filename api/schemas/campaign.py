@@ -83,6 +83,19 @@ class CampaignSessionJoin(BaseModel):
     character_id: int
 
 
+class LoreRead(BaseModel):
+    id: int
+    title: str
+    body: str
+    tags: list[str]
+    has_image: bool
+    has_audio: bool
+    revealed: bool
+    revealed_at: Optional[str] = None
+    created_at: str
+    updated_at: str
+
+
 class ActiveCampaignSession(BaseModel):
     campaign_id: int
     campaign_name: str

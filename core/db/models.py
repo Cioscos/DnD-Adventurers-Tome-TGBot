@@ -610,6 +610,25 @@ class CampaignMember(Base):
     campaign: Mapped["Campaign"] = relationship(back_populates="members")
 
 
+class CampaignLore(Base):
+    """Master-authored lore entry; draft while revealed_at is NULL."""
+
+    __tablename__ = "campaign_lore"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    campaign_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("campaigns.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    title: Mapped[str] = mapped_column(String(120), nullable=False)
+    body: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    tags: Mapped[list] = mapped_column(JSON, default=list, nullable=False)
+    image_path: Mapped[Optional[str]] = mapped_column(String(300), nullable=True)
+    audio_path: Mapped[Optional[str]] = mapped_column(String(300), nullable=True)
+    revealed_at: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    created_at: Mapped[str] = mapped_column(String(50), nullable=False)
+    updated_at: Mapped[str] = mapped_column(String(50), nullable=False)
+
+
 class GameSession(Base):
     """A live game session hosted by a Game Master with invite-code access."""
 
