@@ -71,6 +71,7 @@ async def test_trade_item_moves_and_posts_public_message(client, test_session_fa
     assert msg.recipient_user_id is None and msg.user_id == PLAYER_ID
     assert msg.item_id is None and msg.item_name is None and msg.item_quantity is None
     payload = json.loads(msg.trade_payload)
+    assert payload["kind"] == "trade"
     assert payload["from"] == {"character_id": hero, "name": "Eroe"}
     assert payload["to"] == {"character_id": lyra, "name": "Lyra"}
     assert payload["coins"] == {} and payload["items"][0]["name"] == "Corda"

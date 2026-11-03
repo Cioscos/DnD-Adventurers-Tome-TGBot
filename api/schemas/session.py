@@ -183,6 +183,31 @@ class TradeRequest(BaseModel):
     coins: Optional[dict[str, int]] = None
 
 
+class StashPutRequest(BaseModel):
+    from_character_id: int
+    item_id: Optional[int] = None
+    quantity: Optional[int] = None
+    coins: Optional[dict[str, int]] = None
+
+
+class StashTakeRequest(BaseModel):
+    to_character_id: int
+    item_id: Optional[int] = None
+    quantity: Optional[int] = None
+    coins: Optional[dict[str, int]] = None
+
+
+class StashGMAddRequest(BaseModel):
+    item: Optional[ItemCreate] = None
+    coins: Optional[dict[str, int]] = None
+
+
+class StashGMRemoveRequest(BaseModel):
+    item_id: Optional[int] = None
+    quantity: Optional[int] = None
+    coins: Optional[dict[str, int]] = None
+
+
 class GMGrantItemResult(BaseModel):
     user_id: int
     character_id: Optional[int] = None
