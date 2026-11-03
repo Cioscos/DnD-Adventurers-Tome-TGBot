@@ -253,7 +253,7 @@
       "conditions": "Conditions",
       "rest": "Rest",
       "history": "History",
-      "notes": "Notes",
+      "notes": "Journal",
       "maps": "Maps",
       "dice": "Dice",
       "identity": "Identity",
@@ -672,14 +672,14 @@
     },
     "search": {
       "title": "Search",
-      "placeholder": "Spells, items, abilities, resources, notes…",
+      "placeholder": "Spells, items, abilities, resources, journal entries…",
       "hint": "Type at least 2 characters.",
       "no_results": "No results.",
       "type_spell": "Spells",
       "type_item": "Items",
       "type_ability": "Special abilities",
       "type_resource": "Resources",
-      "type_note": "Notes",
+      "type_note": "Journal",
       "cantrip": "cantrip",
       "spell_level": "lvl {{level}}"
     },
@@ -996,12 +996,16 @@
     },
     "notes": {
       "tag_suggestions": ["Organizations", "Allies", "Enemies", "Backstory", "Places"],
-      "title": "Notes",
-      "new": "New note",
+      "title": "Journal",
+      "new": "New entry",
       "voice": "Voice note (recorded via bot)",
       "title_label": "Title",
       "body_label": "Content",
-      "title_placeholder": "Note title...",
+      "title_placeholder": "Entry title...",
+      "filter_all": "All",
+      "filter_none": "No campaign",
+      "campaign_label": "Campaign",
+      "campaign_none": "None",
       "body_placeholder": "Write here...",
       "record_voice": "Voice note",
       "recording": "Recording...",
@@ -1010,9 +1014,9 @@
       "mic_denied_tooltip": "Microphone permission denied. Enable it in your browser settings.",
       "mic_missing": "Microphone not available in this browser",
       "delete_confirm": "Delete \"{{title}}\"?",
-      "empty_title": "No notes yet",
+      "empty_title": "No journal entries yet",
       "empty_hint": "Jot clues, NPCs, and ideas for your next session.",
-      "search_placeholder": "Search notes…",
+      "search_placeholder": "Search the journal…",
       "sort_recent": "Recent",
       "sort_alpha": "Alphabetical",
       "tags_label": "Tags",
@@ -1732,6 +1736,52 @@
     }
   },
   "campaign": {
+    "calendar": {
+      "title": "Calendar",
+      "schedule": "Schedule a night",
+      "move": "Move",
+      "cancel": "Cancel",
+      "cancel_title": "Cancel the night?",
+      "cancel_body": "The night disappears from the calendar and no reminders go out.",
+      "cancel_confirm": "Cancel the night",
+      "none": "No night on this day.",
+      "skipped": "Skipped",
+      "planned": "Planned",
+      "prev": "Previous month",
+      "next": "Next month",
+      "sheet_new": "Schedule a night",
+      "sheet_edit": "Move the night",
+      "date": "Day",
+      "time": "Time",
+      "note": "Note (optional)",
+      "err_past": "The night must be in the future.",
+      "err_generic": "Could not save. Try again."
+    },
+    "lore": {
+      "title": "Lore",
+      "empty_gm": "No entries yet. Add the first piece of story to reveal to your players.",
+      "empty_player": "The GM has not revealed anything yet.",
+      "add": "New entry",
+      "edit_title": "Edit entry",
+      "new_title": "New lore entry",
+      "draft": "Draft",
+      "reveal": "Reveal",
+      "hide": "Hide",
+      "all": "All",
+      "title_label": "Title",
+      "body_label": "Text",
+      "tags_label": "Tags",
+      "image": "Image",
+      "audio": "Audio",
+      "pick_image": "Choose image",
+      "pick_audio": "Choose audio",
+      "remove_file": "Remove",
+      "delete_title": "Delete this entry?",
+      "delete_body": "The entry and its files will be deleted for good.",
+      "delete_confirm": "Delete",
+      "unavailable": "This entry is no longer available.",
+      "err_file": "Invalid or too large file (image 10 MB, audio 5 MB)."
+    },
     "mine": "My campaigns",
     "members_count_one": "{{count}} PC",
     "members_count_other": "{{count}} PCs",
@@ -1761,6 +1811,7 @@
     "status_dead": "Dead",
     "remove_member": "Withdraw",
     "yours": "Yours",
+    "my_journal": "My journal",
     "manage": "Manage",
     "remove_member_title": "Withdraw {{name}}?",
     "remove_member_body": "The character leaves the campaign. It can enroll again with the code.",
@@ -1774,6 +1825,48 @@
     "stash_remove": "Remove",
     "stash_put": "Put in the party stash",
     "stash_put_coins": "Put coins in the stash",
+    "recap": {
+      "evening": "Evening {{n}}",
+      "unavailable": "Recap not available",
+      "share": "Share to the group",
+      "dice": "Dice",
+      "rolls": "Rolls",
+      "nat20": "Natural 20s",
+      "nat1": "Natural 1s",
+      "highest": "Highest",
+      "damage": "Damage taken",
+      "healed": "HP healed",
+      "downed": "Dropped to 0",
+      "ds": "Death saves",
+      "ds_s_one": "{{count}} success",
+      "ds_s_other": "{{count}} successes",
+      "ds_f_one": "{{count}} failure",
+      "ds_f_other": "{{count}} failures",
+      "spells": "Spells",
+      "slots": "Slots",
+      "rests": "Rests",
+      "rests_v": "{{s}} short · {{l}} long",
+      "conditions": "Conditions",
+      "players": "Characters",
+      "combat": "Combat",
+      "encounters": "Encounters",
+      "rounds": "Rounds",
+      "foes": "Foes",
+      "items": "Items and coins",
+      "grant": "GM to {{to}}: {{item}} ×{{q}}",
+      "trade": "{{from}} → {{to}}: {{what}}",
+      "stash_put": "{{who}} into the stash: {{what}}",
+      "stash_take": "{{who}} from the stash: {{what}}",
+      "gm_stash_add": "GM into the stash: {{what}}",
+      "gm_stash_remove": "GM from the stash: {{what}}",
+      "lore": "Lore revealed",
+      "highlights": "Highlights",
+      "hl_unluckiest": "Unluckiest with dice: {{name}} ({{v}}× natural 1)",
+      "hl_luckiest": "Luckiest with dice: {{name}} ({{v}}× natural 20)",
+      "hl_most_damage": "Took the most damage: {{name}} ({{v}})",
+      "hl_top_healer": "Top healer: {{name}} ({{v}} HP)"
+    },
+    "night_n": "Night {{n}}",
     "nights": "Nights",
     "nights_empty": "No nights yet.",
     "night_active": "in progress",
@@ -1788,6 +1881,7 @@
     "who_plays": "Who's playing tonight?",
     "no_playable": "None of your PCs can play: they are all dead or not enrolled.",
     "session_open": "session open",
+    "open_page": "Campaign page",
     "enroll_title": "Join the campaign",
     "enroll_pick": "Pick the PC to enroll.",
     "enroll_confirm": "Enroll",
@@ -1914,6 +2008,7 @@
       "stash_take": "{{name}} took from the party stash: {{what}}",
       "gm_stash_add": "The GM put in the party stash: {{what}}",
       "gm_stash_remove": "The GM removed from the party stash: {{what}}",
+      "lore_reveal": "The GM revealed: {{title}}",
       "trade": "{{from}} gave {{to}}: {{what}}",
       "grant_chip": "Tap to open in inventory",
       "grant_received": "The GM handed you: {{name}} (×{{qty}})",
@@ -2553,7 +2648,7 @@
           "title": "Header and screens",
           "items": [
             "To go back to the character list, tap the arrow on the left.",
-            "To search spells, items, abilities, resources and notes, tap the magnifier. Type at least 2 characters and tap a result.",
+            "To search spells, items, abilities, resources and journal entries, tap the magnifier. Type at least 2 characters and tap a result.",
             "To grant or spend Heroic Inspiration, tap the \"On\" / \"Off\" button.",
             "To open \"Settings\", tap the gear.",
             "When you maintain concentration, the \"C\" badge shows next to the name. To open the spell, tap the badge.",
@@ -3561,12 +3656,12 @@
       ]
     },
     "notes": {
-      "summary": "This page contains the notes of the character. You can write text notes, add tags and record voice notes.",
+      "summary": "This page contains the journal of the character. You can write text entries, add tags, link them to a campaign and record voice notes.",
       "sections": [
         {
-          "title": "Create a text note",
+          "title": "Create a text entry",
           "items": [
-            "Tap \"New note\".",
+            "Tap \"New entry\".",
             "Type the title in the \"Title\" field. The title is necessary.",
             "Type the text in the \"Content\" field.",
             "To add a tag, type it in the \"Tags\" field.",
@@ -3575,27 +3670,27 @@
           ]
         },
         {
-          "title": "Read a note",
+          "title": "Read an entry",
           "items": [
-            "Each note shows the title, the start of the text, the tags and the date.",
-            "The date shows when you created or edited the note.",
-            "Tap a text note to open it and read all the text.",
-            "In the note window, you can tap \"Edit\" or \"Delete\"."
+            "Each entry shows the title, the start of the text, the tags and the date.",
+            "The date shows when you created or edited the entry.",
+            "Tap a text entry to open it and read all the text.",
+            "In the entry window, you can tap \"Edit\" or \"Delete\"."
           ]
         },
         {
-          "title": "Edit a note",
+          "title": "Edit an entry",
           "items": [
-            "Tap the pencil icon on the note.",
+            "Tap the pencil icon on the entry.",
             "Change the content or the tags.",
             "Tap \"Save\".",
-            "You cannot change the title of a note that already exists."
+            "You cannot change the title of an entry that already exists."
           ]
         },
         {
           "title": "Record a voice note",
           "items": [
-            "Tap the microphone button, to the right of \"New note\".",
+            "Tap the microphone button, to the right of \"New entry\".",
             "Type the title of the voice note.",
             "Tap the record button to start. The timer shows the duration.",
             "Tap the button again to stop the recording.",
@@ -3613,19 +3708,19 @@
           ]
         },
         {
-          "title": "Share a note",
+          "title": "Share an entry",
           "items": [
-            "Tap the \"Share\" icon on the note.",
+            "Tap the \"Share\" icon on the entry.",
             "Select a Telegram chat.",
             "This function is available only in the Telegram versions that support it."
           ]
         },
         {
-          "title": "Delete a note",
+          "title": "Delete an entry",
           "items": [
-            "Tap the trash icon on the note.",
+            "Tap the trash icon on the entry.",
             "In the confirmation window, tap \"Delete\".",
-            "WARNING: this action deletes the note. You cannot undo it."
+            "WARNING: this action deletes the entry. You cannot undo it."
           ]
         }
       ]
@@ -4101,7 +4196,7 @@
             "The app already selects the last character that you used, or your only character.",
             "Tap \"Add to\" followed by the character name.",
             "After an item, the app opens the inventory of the character. The item is not equipped.",
-            "After a note, the app opens the notes of the character.",
+            "After an entry, the app opens the journal of the character.",
             "If you already have a note with the same title, the app adds a number to the title."
           ]
         },
@@ -4586,7 +4681,7 @@
       "hp": "Hit points",
       "identity": "Identity",
       "proficiencies": "Proficiencies",
-      "notes": "Notes",
+      "notes": "Journal",
       "items": "Items",
       "spells": "Spells",
       "spell_slots": "Spell slots",

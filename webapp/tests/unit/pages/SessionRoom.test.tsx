@@ -11,9 +11,10 @@ vi.mock('@/api/client', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
   return { ...actual, api: { me, sessions: { live }, share: { invite: vi.fn() } } }
 })
+const navigateSpy = vi.hoisted(() => vi.fn())
 vi.mock('react-router-dom', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
-  return { ...actual, useParams: () => ({ id: '12' }), useNavigate: () => vi.fn() }
+  return { ...actual, useParams: () => ({ id: '12' }), useNavigate: () => navigateSpy }
 })
 vi.mock('react-i18next', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
@@ -94,6 +95,14 @@ describe('SessionRoom in a campaign', () => {
     expect(await screen.findByRole('heading', { name: 'La Saga' })).toBeTruthy()
     expect(screen.queryByText('ABC123')).toBeNull()
     expect(screen.queryByRole('button', { name: 'common.copy' })).toBeNull()
+  })
+
+  it('campaign evening links to the campaign page', async () => {
+    me.mockResolvedValue({ user_id: 1 })
+    live.mockResolvedValue({ ...base, campaign_id: 3, campaign_name: 'La Saga' })
+    renderWithProviders(<SessionRoom />)
+    await userEvent.click(await screen.findByRole('button', { name: 'campaign.open_page' }))
+    expect(navigateSpy).toHaveBeenCalledWith('/campaign/3')
   })
 
   it('a single evening still shows the code', async () => {

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import secrets
 import string
+from pathlib import Path
 from datetime import datetime, timezone
 
 from sqlalchemy import select
@@ -36,3 +37,15 @@ async def create_campaign(db: AsyncSession, gm_user_id: int, name: str) -> Campa
     db.add(campaign)
     await db.flush()
     return campaign
+
+
+LORE_DIR = Path("data/lore")
+
+
+def unlink_file(path: str | None) -> None:
+    """Best-effort removal of an uploaded file."""
+    if path:
+        try:
+            Path(path).unlink(missing_ok=True)
+        except OSError:
+            pass

@@ -17,7 +17,8 @@ from sqlalchemy.orm import selectinload
 from api.auth import get_current_user
 from api.database import get_db
 from api.services import content_shares, telegram_notify
-from core.db.models import Campaign, Character, GameSession, SessionStatus
+from api.services.recap import format_recap_text
+from core.db.models import BotUser, Campaign, Character, GameSession, SessionStatus
 
 router = APIRouter(tags=["share"])
 
@@ -221,5 +222,29 @@ async def share_session_invite(
         parse_mode="Markdown",
         button=("Unisciti alla sessione",
                 f"https://t.me/{username}?startapp=join_{game_session.code}"),
+    )
+    return _prepared_or_502(prep_id)
+
+
+@router.post("/share/recap/{session_id}")
+async def share_recap(
+    session_id: int,
+    user_id: Annotated[int, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> dict:
+    """GM only: prepared message with the evening recap, to forward into the party chat."""
+    _require_token()
+    game_session = await db.get(GameSession, session_id)
+    if game_session is None or game_session.recap is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="recap_not_found")
+    if game_session.gm_user_id != user_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="gm_only")
+    lang = await db.scalar(select(BotUser.language_code).where(BotUser.user_id == user_id))
+    rec = game_session.recap
+    prep_id = await telegram_notify.save_prepared_message(
+        user_id,
+        title=rec.get("campaign_name") or game_session.title or "Sessione D&D",
+        text=format_recap_text(rec, lang or "it"),
+        parse_mode="MarkdownV2",
     )
     return _prepared_or_502(prep_id)

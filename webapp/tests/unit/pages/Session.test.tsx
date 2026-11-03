@@ -84,6 +84,18 @@ describe('Session', () => {
     expect(navigateSpy).toHaveBeenCalledWith('/campaign/4')
   })
 
+  it('keeps "my campaigns" reachable while a session is active', async () => {
+    me.mockResolvedValue({ id: 5, code: 'ABCDEF', gm_user_id: 1, title: 'La Cripta', participants: [{ role: 'game_master', user_id: 1 }] })
+    list.mockResolvedValue([])
+    campaignList.mockResolvedValue([
+      { id: 3, name: 'Coda del Vento', is_gm: true, member_count: 4, last_session_at: null, active_session_id: 5 },
+    ])
+    renderWithProviders(<Session />)
+    expect(await screen.findByRole('button', { name: 'session.resume' })).toBeInTheDocument()
+    await userEvent.click(await screen.findByRole('button', { name: /Coda del Vento/ }))
+    expect(navigateSpy).toHaveBeenCalledWith('/campaign/3')
+  })
+
   it('disables join when the player has no characters', async () => {
     me.mockResolvedValue(null)
     list.mockResolvedValue([])

@@ -210,7 +210,9 @@ async def update_hp(
         if form_overflow:
             desc += f" — forma assorbe {pre_form - form_overflow}, eccesso {form_overflow}"
         if not form_absorbed:
-            _add_history(session, char.id, "hp_change", desc, meta={"op": "DAMAGE"})
+            _add_history(session, char.id, "hp_change", desc,
+                         meta={"op": "DAMAGE", "amount": pre_form,
+                               "to_zero": old > 0 and char.current_hit_points == 0})
 
         # --- Morte & tiri salvezza (D&D 5e RAW) ---
         if char.current_hit_points == 0 and amount > 0 and not char.is_dead:
@@ -234,10 +236,12 @@ async def update_hp(
                 ds["stable"] = False
                 if ds["failures"] >= 3:
                     char.is_dead = True
-                    _add_history(session, char.id, "death_save", "Morto — 3 fallimenti (danno a 0 PF)")
+                    _add_history(session, char.id, "death_save", "Morto — 3 fallimenti (danno a 0 PF)",
+                                 meta={"ds": "failure", "n": inc})
                 else:
                     _add_history(session, char.id, "death_save",
-                                 f"Danno a 0 PF: +{inc} fallimento ({ds['failures']}/3)")
+                                 f"Danno a 0 PF: +{inc} fallimento ({ds['failures']}/3)",
+                                 meta={"ds": "failure", "n": inc})
                 char.death_saves = ds
             else:
                 # old>0 ridotto a 0 senza sforamento massiccio -> privo di sensi/
@@ -538,8 +542,10 @@ async def rest(
             conditions["exhaustion"] = new_exh
             char.conditions = conditions
             _add_history(session, char.id, "condition_change",
-                         f"Spossatezza: livello {old_exh} → {new_exh} (riposo lungo)")
-        _add_history(session, char.id, "rest", "Riposo lungo completato")
+                         f"Spossatezza: livello {old_exh} → {new_exh} (riposo lungo)",
+                         meta={"slug": "exhaustion", "active": new_exh > old_exh})
+        _add_history(session, char.id, "rest", "Riposo lungo completato",
+                     meta={"kind": "long"})
 
         firing = await dispatch(session, char, "long_rest_taken", {})
         notifications.extend(collect_homebrew_notifications(firing))
@@ -566,7 +572,8 @@ async def rest(
             if _restores_resource(resource, "short"):
                 resource.current = resource.max
         _add_history(session, char.id, "rest",
-                     f"Riposo breve completato (HP recuperati: {healed})")
+                     f"Riposo breve completato (HP recuperati: {healed})",
+                     meta={"kind": "short"})
 
         firing = await dispatch(session, char, "short_rest_taken", {})
         notifications.extend(collect_homebrew_notifications(firing))
@@ -636,7 +643,8 @@ async def spend_hit_dice(
 
     _add_history(session, char.id, "hit_dice",
                  f"Dado vita {body.count}d{hit_die}+{con_mod}: "
-                 f"tiri={rolls}, curati={actual_healed} HP ({old_hp} → {char.current_hit_points})")
+                 f"tiri={rolls}, curati={actual_healed} HP ({old_hp} → {char.current_hit_points})",
+                 meta={"healed": actual_healed})
     record_dice(char, [(f"d{hit_die}", r) for r in rolls])
 
     return HitDiceSpendResult(
@@ -663,15 +671,18 @@ async def update_death_saves(
         ds["successes"] = min(3, ds.get("successes", 0) + 1)
         if ds["successes"] >= 3:
             ds["stable"] = True
-            _add_history(session, char.id, "death_save", "Stabilizzato (3 successi)")
+            _add_history(session, char.id, "death_save", "Stabilizzato (3 successi)",
+                         meta={"ds": "success", "n": 1})
         else:
             _add_history(session, char.id, "death_save",
-                         f"Tiro morte: successo ({ds['successes']}/3)")
+                         f"Tiro morte: successo ({ds['successes']}/3)",
+                         meta={"ds": "success", "n": 1})
 
     elif body.action == DeathSaveAction.FAILURE:
         ds["failures"] = min(3, ds.get("failures", 0) + 1)
         _add_history(session, char.id, "death_save",
-                     f"Tiro morte: fallimento ({ds['failures']}/3)")
+                     f"Tiro morte: fallimento ({ds['failures']}/3)",
+                     meta={"ds": "failure", "n": 1})
         if ds["failures"] >= 3:
             char.is_dead = True
             _add_history(session, char.id, "death_save", "Morto — 3 fallimenti")
@@ -729,14 +740,16 @@ async def roll_death_save(
         revived = True
         outcome = "nat20"
         _add_history(session, char.id, "death_save",
-                     f"Tiro morte d20={die}: Naturale 20! Rianimato con 1 HP")
+                     f"Tiro morte d20={die}: Naturale 20! Rianimato con 1 HP",
+                     meta={"ds": "success", "n": 1})
 
     elif die == 1:
         # Natural 1: counts as 2 failures
         ds["failures"] = min(3, ds.get("failures", 0) + 2)
         outcome = "nat1"
         _add_history(session, char.id, "death_save",
-                     f"Tiro morte d20={die}: Naturale 1! 2 fallimenti ({ds['failures']}/3)")
+                     f"Tiro morte d20={die}: Naturale 1! 2 fallimenti ({ds['failures']}/3)",
+                     meta={"ds": "failure", "n": 2})
 
     elif die >= 10:
         # 10+: 1 success
@@ -745,17 +758,20 @@ async def roll_death_save(
         if ds["successes"] >= 3:
             ds["stable"] = True
             _add_history(session, char.id, "death_save",
-                         f"Tiro morte d20={die}: Successo! Stabilizzato (3/3)")
+                         f"Tiro morte d20={die}: Successo! Stabilizzato (3/3)",
+                         meta={"ds": "success", "n": 1})
         else:
             _add_history(session, char.id, "death_save",
-                         f"Tiro morte d20={die}: Successo ({ds['successes']}/3)")
+                         f"Tiro morte d20={die}: Successo ({ds['successes']}/3)",
+                         meta={"ds": "success", "n": 1})
 
     else:
         # 2-9: 1 failure
         ds["failures"] = min(3, ds.get("failures", 0) + 1)
         outcome = "failure"
         _add_history(session, char.id, "death_save",
-                     f"Tiro morte d20={die}: Fallimento ({ds['failures']}/3)")
+                     f"Tiro morte d20={die}: Fallimento ({ds['failures']}/3)",
+                     meta={"ds": "failure", "n": 1})
 
     char.death_saves = ds
 

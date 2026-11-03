@@ -48,6 +48,7 @@ from api.routers._helpers import apply_con_hp, collect_homebrew_notifications, e
 from api.schemas.character import CharacterFull
 from api.services import telegram_notify
 from api.services.character_response import build_character_response
+from api.services.recap import close_game_session, dice_baseline, record_departure
 from api.services.homebrew.dispatcher import dispatch
 from api.services.trades import add_coins, give_coins, give_item, remove_coins, remove_item
 from api.services.condition_effects import character_effect_payload
@@ -55,6 +56,7 @@ from api.services.encounter_view import build_encounter_block
 from core.db.models import (
     Campaign,
     CampaignMember,
+    CampaignSchedule,
     Character,
     CharacterHistory,
     Combatant,
@@ -384,6 +386,15 @@ async def create_session(
     )
     db.add(session)
     await db.flush()
+    if body.campaign_id is not None:  # link the nearest unlinked planned evening within ±12h
+        t0 = datetime.utcnow()
+        rows = (await db.execute(select(CampaignSchedule).where(
+            CampaignSchedule.campaign_id == body.campaign_id, CampaignSchedule.session_id.is_(None)
+        ))).scalars().all()
+        near = [(abs((datetime.fromisoformat(r.starts_at) - t0).total_seconds()), r.id, r) for r in rows]
+        near = [x for x in near if x[0] <= 12 * 3600]
+        if near:
+            min(near, key=lambda x: x[:2])[2].session_id = session.id
     db.add(SessionParticipant(
         session_id=session.id,
         user_id=user_id,
@@ -447,6 +458,7 @@ async def join_session(
         character=char,
         display_name=char.name,
         joined_at=_now(),
+        dice_stats_start=dice_baseline(session, char),
     ))
     _touch(session)
     await db.flush()
@@ -586,9 +598,9 @@ async def leave_session(
 
     # GM leaving closes the whole session
     if user_id == session.gm_user_id:
-        session.status = SessionStatus.CLOSED
-        session.closed_at = _now()
+        await close_game_session(db, session)
     else:
+        record_departure(session, participant)
         await db.delete(participant)
     _touch(session)
     return None
@@ -606,10 +618,29 @@ async def close_session(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only the Game Master can close the session",
         )
-    if session.status == SessionStatus.ACTIVE:
-        session.status = SessionStatus.CLOSED
-        session.closed_at = _now()
+    await close_game_session(db, session)
     return None
+
+
+@router.get("/{session_id}/recap")
+async def get_session_recap(
+    session_id: int,
+    user_id: Annotated[int, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> dict:
+    """End-of-evening snapshot: GM, participants or members of the session's campaign."""
+    session = await _load_session(session_id, db)
+    allowed = (user_id == session.gm_user_id or any(p.user_id == user_id for p in session.participants)
+               or any(d.get("user_id") == user_id for d in session.departed or []))
+    if not allowed and session.campaign_id is not None:
+        allowed = await db.scalar(select(CampaignMember.id).where(
+            CampaignMember.campaign_id == session.campaign_id, CampaignMember.user_id == user_id,
+        ).limit(1)) is not None
+    if not allowed:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not allowed")
+    if session.recap is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="recap_not_found")
+    return session.recap
 
 
 @router.get("/{session_id}/messages", response_model=list[SessionMessageRead])
@@ -672,6 +703,7 @@ async def post_message(
         select(SessionMessage)
         .where(SessionMessage.session_id == session_id)
         .where(SessionMessage.user_id == user_id)
+        .where(SessionMessage.trade_payload.is_(None))  # feed/system rows are not chat
         .order_by(SessionMessage.sent_at.desc())
         .limit(1)
     )

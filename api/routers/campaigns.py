@@ -4,7 +4,8 @@ The party stash is a hidden Character (user_id=0, see api/services/campaigns.py)
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+import shutil
+from datetime import datetime, timedelta, timezone
 from typing import Annotated, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
@@ -27,15 +28,22 @@ from api.schemas.campaign import (
     CampaignSessionJoin,
     InviteCodeRead,
     MemberStatusUpdate,
+    ScheduleCreate,
+    ScheduleRead,
+    ScheduleUpdate,
 )
 from api.schemas.common import CurrencyRead
 from api.schemas.item import ItemRead
 from api.routers.sessions import _find_active_session_for_user, _load_session, _touch, session_read
 from api.schemas.session import GameSessionRead
+from api.services import campaigns as svc
 from api.services.campaigns import create_campaign, generate_campaign_code
+from api.services.recap import dice_baseline
 from core.db.models import (
     Campaign,
+    CampaignLore,
     CampaignMember,
+    CampaignSchedule,
     Character,
     GameSession,
     SessionParticipant,
@@ -156,8 +164,11 @@ async def _detail(db: AsyncSession, camp: Campaign, user_id: int) -> CampaignDet
             CampaignSessionRead(
                 id=s.id, created_at=s.created_at,
                 duration_seconds=_duration(s.created_at, s.last_activity_at),
+                # newest first; at most one active session and it is the latest, so this
+                # matches the recap's rank among closed sessions
+                number=len(sessions) - i, has_recap=s.recap is not None,
             )
-            for s in sessions
+            for i, s in enumerate(sessions)
         ],
         my_last_character_id=my_last,
     )
@@ -313,9 +324,95 @@ async def delete_campaign(
         update(GameSession).where(GameSession.campaign_id == camp.id).values(campaign_id=None)
     )
     stash = await db.get(Character, camp.stash_character_id)
+    await db.execute(delete(CampaignLore).where(CampaignLore.campaign_id == camp.id))
+    await db.execute(delete(CampaignSchedule).where(CampaignSchedule.campaign_id == camp.id))
     await db.delete(camp)  # cascades campaign_members
     await db.flush()
     await db.delete(stash)  # cascades items and currency
+    await db.flush()
+    shutil.rmtree(svc.LORE_DIR / str(camp.id), ignore_errors=True)  # only after the DB delete went through
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+def _naive_now() -> str:
+    return datetime.utcnow().isoformat(timespec="seconds")
+
+
+def _schedule_read(row: CampaignSchedule) -> ScheduleRead:
+    # Skipped only once the ±12h link window (sessions.create_session) has passed.
+    late = (datetime.fromisoformat(row.starts_at) + timedelta(hours=12)).isoformat(timespec="seconds")
+    st = "done" if row.session_id is not None else ("skipped" if late < _naive_now() else "planned")
+    return ScheduleRead(id=row.id, starts_at=row.starts_at, note=row.note, session_id=row.session_id, status=st)
+
+
+async def _get_schedule(db: AsyncSession, campaign_id: int, sid: int) -> CampaignSchedule:
+    row = await db.get(CampaignSchedule, sid)
+    if row is None or row.campaign_id != campaign_id:
+        raise _err(404, "schedule_not_found")
+    return row
+
+
+@router.get("/{campaign_id}/schedule", response_model=list[ScheduleRead])
+async def list_schedule(
+    campaign_id: int,
+    user_id: Annotated[int, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> list[ScheduleRead]:
+    await _get_campaign(db, campaign_id, user_id)
+    rows = (await db.execute(
+        select(CampaignSchedule).where(CampaignSchedule.campaign_id == campaign_id)
+        .order_by(CampaignSchedule.starts_at, CampaignSchedule.id)
+    )).scalars().all()
+    return [_schedule_read(r) for r in rows]
+
+
+@router.post("/{campaign_id}/schedule", response_model=ScheduleRead, status_code=status.HTTP_201_CREATED)
+async def create_schedule(
+    campaign_id: int,
+    body: ScheduleCreate,
+    user_id: Annotated[int, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> ScheduleRead:
+    await _get_campaign(db, campaign_id, user_id, gm_only=True)
+    if body.starts_at <= _naive_now():
+        raise _err(422, "starts_at_in_past")
+    row = CampaignSchedule(campaign_id=campaign_id, starts_at=body.starts_at,
+                           note=body.note or None, created_at=_naive_now())
+    db.add(row)
+    await db.flush()
+    return _schedule_read(row)
+
+
+@router.patch("/{campaign_id}/schedule/{sid}", response_model=ScheduleRead)
+async def update_schedule(
+    campaign_id: int,
+    sid: int,
+    body: ScheduleUpdate,
+    user_id: Annotated[int, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> ScheduleRead:
+    await _get_campaign(db, campaign_id, user_id, gm_only=True)
+    row = await _get_schedule(db, campaign_id, sid)
+    if body.starts_at is not None and body.starts_at != row.starts_at:
+        if body.starts_at <= _naive_now():
+            raise _err(422, "starts_at_in_past")
+        row.starts_at = body.starts_at
+        row.reminded_day_at = row.reminded_hour_at = None
+    if "note" in body.model_fields_set:
+        row.note = body.note or None
+    await db.flush()
+    return _schedule_read(row)
+
+
+@router.delete("/{campaign_id}/schedule/{sid}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_schedule(
+    campaign_id: int,
+    sid: int,
+    user_id: Annotated[int, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> Response:
+    await _get_campaign(db, campaign_id, user_id, gm_only=True)
+    await db.delete(await _get_schedule(db, campaign_id, sid))
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
@@ -403,6 +500,7 @@ async def join_campaign_session(
     db.add(SessionParticipant(
         session_id=session.id, user_id=user_id, role=SessionRole.PLAYER,
         character_id=char.id, character=char, display_name=char.name, joined_at=_now(),
+        dice_stats_start=dice_baseline(session, char),
     ))
     _touch(session)
     await db.flush()

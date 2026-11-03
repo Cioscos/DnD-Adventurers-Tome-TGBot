@@ -253,7 +253,7 @@
       "conditions": "Condizioni",
       "rest": "Riposo",
       "history": "Cronologia",
-      "notes": "Note",
+      "notes": "Diario",
       "maps": "Mappe",
       "dice": "Dadi",
       "identity": "Identità",
@@ -672,14 +672,14 @@
     },
     "search": {
       "title": "Cerca",
-      "placeholder": "Incantesimi, oggetti, abilità, risorse, note…",
+      "placeholder": "Incantesimi, oggetti, abilità, risorse, voci del diario…",
       "hint": "Scrivi almeno 2 caratteri.",
       "no_results": "Nessun risultato.",
       "type_spell": "Incantesimi",
       "type_item": "Oggetti",
       "type_ability": "Abilità speciali",
       "type_resource": "Risorse",
-      "type_note": "Note",
+      "type_note": "Diario",
       "cantrip": "trucchetto",
       "spell_level": "liv. {{level}}"
     },
@@ -995,12 +995,16 @@
     },
     "notes": {
       "tag_suggestions": ["Organizzazioni", "Alleati", "Nemici", "Storia", "Luoghi"],
-      "title": "Note",
-      "new": "Nuova nota",
+      "title": "Diario",
+      "new": "Nuova voce",
       "voice": "Nota vocale (registrata dal bot)",
       "title_label": "Titolo",
       "body_label": "Contenuto",
-      "title_placeholder": "Titolo nota...",
+      "title_placeholder": "Titolo della voce...",
+      "filter_all": "Tutte",
+      "filter_none": "Senza campagna",
+      "campaign_label": "Campagna",
+      "campaign_none": "Nessuna",
       "body_placeholder": "Scrivi qui...",
       "record_voice": "Nota vocale",
       "recording": "Registrazione in corso...",
@@ -1009,9 +1013,9 @@
       "mic_denied_tooltip": "Permesso microfono negato. Abilitalo nelle impostazioni del browser.",
       "mic_missing": "Microfono non disponibile su questo browser",
       "delete_confirm": "Eliminare \"{{title}}\"?",
-      "empty_title": "Nessuna nota",
+      "empty_title": "Nessuna voce nel diario",
       "empty_hint": "Annota indizi, NPC e idee per la prossima sessione.",
-      "search_placeholder": "Cerca note…",
+      "search_placeholder": "Cerca nel diario…",
       "sort_recent": "Recenti",
       "sort_alpha": "Alfabetico",
       "tags_label": "Tag",
@@ -1731,6 +1735,52 @@
     }
   },
   "campaign": {
+    "calendar": {
+      "title": "Calendario",
+      "schedule": "Programma serata",
+      "move": "Sposta",
+      "cancel": "Annulla",
+      "cancel_title": "Annullare la serata?",
+      "cancel_body": "La serata sparisce dal calendario e i promemoria non partono.",
+      "cancel_confirm": "Annulla la serata",
+      "none": "Nessuna serata questo giorno.",
+      "skipped": "Saltata",
+      "planned": "Programmata",
+      "prev": "Mese precedente",
+      "next": "Mese successivo",
+      "sheet_new": "Programma una serata",
+      "sheet_edit": "Sposta la serata",
+      "date": "Giorno",
+      "time": "Ora",
+      "note": "Nota (facoltativa)",
+      "err_past": "La serata deve essere nel futuro.",
+      "err_generic": "Non sono riuscito a salvare. Riprova."
+    },
+    "lore": {
+      "title": "Lore",
+      "empty_gm": "Nessuna voce. Aggiungi il primo pezzo di storia da rivelare ai giocatori.",
+      "empty_player": "Il master non ha ancora rivelato nulla.",
+      "add": "Nuova voce",
+      "edit_title": "Modifica voce",
+      "new_title": "Nuova voce di lore",
+      "draft": "Bozza",
+      "reveal": "Rivela",
+      "hide": "Nascondi",
+      "all": "Tutte",
+      "title_label": "Titolo",
+      "body_label": "Testo",
+      "tags_label": "Tag",
+      "image": "Immagine",
+      "audio": "Audio",
+      "pick_image": "Scegli immagine",
+      "pick_audio": "Scegli audio",
+      "remove_file": "Rimuovi",
+      "delete_title": "Eliminare la voce?",
+      "delete_body": "La voce e i suoi file saranno eliminati per sempre.",
+      "delete_confirm": "Elimina",
+      "unavailable": "Questa voce non è più disponibile.",
+      "err_file": "File non valido o troppo grande (immagine 10 MB, audio 5 MB)."
+    },
     "mine": "Le mie campagne",
     "members_count_one": "{{count}} PG",
     "members_count_other": "{{count}} PG",
@@ -1760,6 +1810,7 @@
     "status_dead": "Morto",
     "remove_member": "Ritira",
     "yours": "Tuo",
+    "my_journal": "Il mio diario",
     "manage": "Gestisci",
     "remove_member_title": "Ritirare {{name}}?",
     "remove_member_body": "Il PG esce dalla campagna. Potrà iscriversi di nuovo con il codice.",
@@ -1773,6 +1824,48 @@
     "stash_remove": "Togli",
     "stash_put": "Metti nel deposito",
     "stash_put_coins": "Metti monete nel deposito",
+    "recap": {
+      "evening": "Serata {{n}}",
+      "unavailable": "Riepilogo non disponibile",
+      "share": "Condividi nel gruppo",
+      "dice": "Dadi",
+      "rolls": "Tiri",
+      "nat20": "20 naturali",
+      "nat1": "1 naturali",
+      "highest": "Massimo",
+      "damage": "Danni subiti",
+      "healed": "PF curati",
+      "downed": "A 0 PF",
+      "ds": "TS contro morte",
+      "ds_s_one": "{{count}} successo",
+      "ds_s_other": "{{count}} successi",
+      "ds_f_one": "{{count}} fallimento",
+      "ds_f_other": "{{count}} fallimenti",
+      "spells": "Incantesimi",
+      "slots": "Slot",
+      "rests": "Riposi",
+      "rests_v": "{{s}} brevi · {{l}} lunghi",
+      "conditions": "Condizioni",
+      "players": "Personaggi",
+      "combat": "Combattimenti",
+      "encounters": "Scontri",
+      "rounds": "Round",
+      "foes": "Avversari",
+      "items": "Oggetti e monete",
+      "grant": "Il master a {{to}}: {{item}} ×{{q}}",
+      "trade": "{{from}} → {{to}}: {{what}}",
+      "stash_put": "{{who}} nel deposito: {{what}}",
+      "stash_take": "{{who}} dal deposito: {{what}}",
+      "gm_stash_add": "Il master nel deposito: {{what}}",
+      "gm_stash_remove": "Il master dal deposito: {{what}}",
+      "lore": "Lore rivelata",
+      "highlights": "Curiosità",
+      "hl_unluckiest": "Il più sfortunato ai dadi: {{name}} ({{v}}× 1 naturale)",
+      "hl_luckiest": "Il più fortunato ai dadi: {{name}} ({{v}}× 20 naturale)",
+      "hl_most_damage": "Chi ha subito più danni: {{name}} ({{v}})",
+      "hl_top_healer": "Chi ha curato di più: {{name}} ({{v}} PF)"
+    },
+    "night_n": "Serata {{n}}",
     "nights": "Serate",
     "nights_empty": "Ancora nessuna serata.",
     "night_active": "in corso",
@@ -1787,6 +1880,7 @@
     "who_plays": "Chi gioca stasera?",
     "no_playable": "Nessun tuo PG può giocare: sono tutti morti o non iscritti.",
     "session_open": "sessione aperta",
+    "open_page": "Pagina della campagna",
     "enroll_title": "Iscriviti alla campagna",
     "enroll_pick": "Scegli il PG da iscrivere.",
     "enroll_confirm": "Iscrivi",
@@ -1913,6 +2007,7 @@
       "stash_take": "{{name}} ha preso dal deposito: {{what}}",
       "gm_stash_add": "Il master ha messo nel deposito: {{what}}",
       "gm_stash_remove": "Il master ha tolto dal deposito: {{what}}",
+      "lore_reveal": "Il master ha rivelato: {{title}}",
       "trade": "{{from}} ha dato a {{to}}: {{what}}",
       "grant_chip": "Tocca per aprire nell'inventario",
       "grant_received": "Il GM ti ha consegnato: {{name}} (×{{qty}})",
@@ -2552,7 +2647,7 @@
           "title": "Intestazione e schermate",
           "items": [
             "Per tornare alla lista dei personaggi, tocca la freccia a sinistra.",
-            "Per cercare incantesimi, oggetti, abilità, risorse e note, tocca la lente. Scrivi almeno 2 caratteri e tocca un risultato.",
+            "Per cercare incantesimi, oggetti, abilità, risorse e voci del diario, tocca la lente. Scrivi almeno 2 caratteri e tocca un risultato.",
             "Per concedere o usare l'Ispirazione eroica, tocca il pulsante \"On\" / \"Off\".",
             "Per aprire le \"Impostazioni\", tocca l'ingranaggio.",
             "Quando mantieni la concentrazione, accanto al nome vedi il badge \"C\". Per aprire l'incantesimo, tocca il badge.",
@@ -3560,12 +3655,12 @@
       ]
     },
     "notes": {
-      "summary": "Questa pagina contiene le note del personaggio. Puoi scrivere note di testo, aggiungere tag e registrare note vocali.",
+      "summary": "Questa pagina contiene il diario del personaggio. Puoi scrivere voci di testo, aggiungere tag, collegarle a una campagna e registrare note vocali.",
       "sections": [
         {
-          "title": "Creare una nota di testo",
+          "title": "Creare una voce di testo",
           "items": [
-            "Tocca \"Nuova nota\".",
+            "Tocca \"Nuova voce\".",
             "Scrivi il titolo nel campo \"Titolo\". Il titolo è obbligatorio.",
             "Scrivi il testo nel campo \"Contenuto\".",
             "Per aggiungere un tag, scrivilo nel campo \"Tag\".",
@@ -3574,27 +3669,27 @@
           ]
         },
         {
-          "title": "Leggere una nota",
+          "title": "Leggere una voce",
           "items": [
-            "Ogni nota mostra il titolo, l'inizio del testo, i tag e la data.",
-            "La data indica quando hai creato o modificato la nota.",
-            "Tocca una nota di testo per aprirla e leggere tutto il testo.",
-            "Nella finestra della nota, puoi toccare \"Modifica\" o \"Elimina\"."
+            "Ogni voce mostra il titolo, l'inizio del testo, i tag e la data.",
+            "La data indica quando hai creato o modificato la voce.",
+            "Tocca una voce di testo per aprirla e leggere tutto il testo.",
+            "Nella finestra della voce, puoi toccare \"Modifica\" o \"Elimina\"."
           ]
         },
         {
-          "title": "Modificare una nota",
+          "title": "Modificare una voce",
           "items": [
-            "Tocca l'icona della matita sulla nota.",
+            "Tocca l'icona della matita sulla voce.",
             "Cambia il contenuto o i tag.",
             "Tocca \"Salva\".",
-            "Non puoi cambiare il titolo di una nota che esiste già."
+            "Non puoi cambiare il titolo di una voce che esiste già."
           ]
         },
         {
           "title": "Registrare una nota vocale",
           "items": [
-            "Tocca il pulsante del microfono, a destra di \"Nuova nota\".",
+            "Tocca il pulsante del microfono, a destra di \"Nuova voce\".",
             "Scrivi il titolo della nota vocale.",
             "Tocca il pulsante di registrazione per iniziare. Il timer mostra la durata.",
             "Tocca di nuovo il pulsante per fermare la registrazione.",
@@ -3612,19 +3707,19 @@
           ]
         },
         {
-          "title": "Condividere una nota",
+          "title": "Condividere una voce",
           "items": [
-            "Tocca l'icona \"Condividi\" sulla nota.",
+            "Tocca l'icona \"Condividi\" sulla voce.",
             "Scegli una chat di Telegram.",
             "Questa funzione è disponibile solo nelle versioni di Telegram che la supportano."
           ]
         },
         {
-          "title": "Eliminare una nota",
+          "title": "Eliminare una voce",
           "items": [
-            "Tocca l'icona del cestino sulla nota.",
+            "Tocca l'icona del cestino sulla voce.",
             "Nella finestra di conferma, tocca \"Elimina\".",
-            "ATTENZIONE: questa azione elimina la nota. Non puoi annullarla."
+            "ATTENZIONE: questa azione elimina la voce. Non puoi annullarla."
           ]
         }
       ]
@@ -4100,8 +4195,8 @@
             "L'app seleziona già l'ultimo personaggio che hai usato, oppure il tuo unico personaggio.",
             "Tocca \"Aggiungi a\" seguito dal nome del personaggio.",
             "Dopo un oggetto, l'app apre l'inventario del personaggio. L'oggetto non è equipaggiato.",
-            "Dopo una nota, l'app apre le note del personaggio.",
-            "Se hai già una nota con lo stesso titolo, l'app aggiunge un numero al titolo."
+            "Dopo una voce, l'app apre il diario del personaggio.",
+            "Se hai già una voce con lo stesso titolo, l'app aggiunge un numero al titolo."
           ]
         },
         {
@@ -4585,7 +4680,7 @@
       "hp": "Punti ferita",
       "identity": "Identità",
       "proficiencies": "Competenze",
-      "notes": "Note",
+      "notes": "Diario",
       "items": "Oggetti",
       "spells": "Incantesimi",
       "spell_slots": "Slot incantesimo",

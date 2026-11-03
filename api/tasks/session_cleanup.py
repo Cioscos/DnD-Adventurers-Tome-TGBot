@@ -13,6 +13,7 @@ from datetime import datetime, timedelta
 from sqlalchemy import select
 
 from api.database import AsyncSessionLocal
+from api.services.recap import close_game_session
 from core.db.models import GameSession, SessionStatus
 
 logger = logging.getLogger(__name__)
@@ -33,11 +34,8 @@ async def _sweep_once() -> int:
             )
         )
         for session in result.scalars().all():
-            session.status = SessionStatus.CLOSED
-            session.closed_at = datetime.utcnow().isoformat(timespec="seconds")
+            await close_game_session(db, session)  # commits per session, then messages
             closed += 1
-        if closed:
-            await db.commit()
     return closed
 
 

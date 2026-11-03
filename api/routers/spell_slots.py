@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -14,7 +15,7 @@ from api.database import get_db
 from api.routers._helpers import collect_homebrew_notifications
 from api.services.homebrew.dispatcher import dispatch
 from api.services.character_response import build_character_response
-from core.db.models import Character, CharacterClass, SpellSlot
+from core.db.models import Character, CharacterClass, CharacterHistory, SpellSlot
 from api.schemas.character import CharacterFull
 from api.schemas.spell import SpellSlotCreate, SpellSlotRead, SpellSlotUpdate
 
@@ -89,6 +90,13 @@ async def update_spell_slot(
     # Only dispatch when `used` actually incremented — a refund (used decreased)
     # or no-op PATCH (e.g. updating only `total`) should not fire spell_cast.
     if slot.used > old_used:
+        k = slot.used - old_used
+        session.add(CharacterHistory(
+            character_id=char_id, timestamp=datetime.utcnow().isoformat(timespec="seconds"),
+            event_type="spell_slot_used",
+            description=f"Slot di livello {slot.level} usato" + (f" ×{k}" if k > 1 else ""),
+            meta={"slot_level": slot.level, "count": k},
+        ))
         firing = await dispatch(
             session,
             char,

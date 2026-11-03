@@ -1,6 +1,32 @@
 {
   "entries": [
     {
+      "version": "2.34.0",
+      "date": "2026-11-03",
+      "added": {
+        "it": [
+          "Il Diario (prima Note): ogni voce può essere legata a una campagna e puoi filtrare per campagna.",
+          "Lore del master: prepara testo, immagini e audio e rivelali al gruppo quando vuoi; appaiono nel feed della sessione.",
+          "Riepilogo di fine serata con le statistiche: arriva su Telegram e resta in una pagina della campagna; il master può condividerlo nel gruppo.",
+          "Calendario delle serate reali nella campagna, con promemoria su Telegram circa 24 ore e 1 ora prima."
+        ],
+        "en": [
+          "The Journal (formerly Notes): each entry can be linked to a campaign and you can filter by campaign.",
+          "GM lore: prepare text, images and audio and reveal them to the party whenever you want; they show up in the session feed.",
+          "End-of-evening recap with statistics: sent on Telegram and kept on a campaign page; the GM can share it in the group.",
+          "Calendar of real evenings in the campaign, with Telegram reminders about 24 hours and 1 hour before."
+        ]
+      },
+      "improved": {
+        "it": [
+          "Il master può scrivere in chat subito dopo un'azione sul deposito o una rivelazione: la modalità lenta non conta più le righe del feed."
+        ],
+        "en": [
+          "The GM can chat right after a stash action or reveal: slow mode no longer counts feed rows."
+        ]
+      }
+    },
+    {
       "version": "2.33.0",
       "date": "2026-11-03",
       "added": {

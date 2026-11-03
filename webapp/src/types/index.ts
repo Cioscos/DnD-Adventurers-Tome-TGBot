@@ -381,6 +381,14 @@ export interface Note {
   created_at?: string | null
   updated_at?: string | null
   tags?: string[]
+  campaign_id?: number | null
+  campaign_name?: string | null
+}
+
+export interface NoteCampaign {
+  id: number
+  name: string
+  current: boolean
 }
 
 export interface SharePreview {
@@ -469,6 +477,54 @@ export interface CampaignSessionEntry {
   id: number
   created_at: string
   duration_seconds: number
+  number: number
+  has_recap: boolean
+}
+
+export interface SessionRecapCharacter {
+  character_id: number
+  name: string
+  player_name: string | null
+  class_summary: string
+  level: number
+  dice: { rolls: number; nat20: number; nat1: number; highest: number | null }
+  damage_taken: number
+  healed: number
+  downed: number
+  death_saves: { successes: number; failures: number }
+  spells_cast: number
+  slots_used: Record<string, number>
+  rests: { short: number; long: number }
+  conditions: string[]
+}
+
+export interface SessionRecap {
+  version: number
+  session_id: number
+  campaign_id: number | null
+  campaign_name: string | null
+  number: number | null
+  started_at: string
+  ended_at: string
+  duration_seconds: number
+  characters: SessionRecapCharacter[]
+  combat: { encounters: number; rounds: number; monsters: string[] }
+  items: {
+    gm_grants: { to: string | null; item: string; quantity: number }[]
+    trades: { from: string; to: string; summary: string }[]
+    stash: { kind: 'stash_put' | 'stash_take' | 'gm_stash_add' | 'gm_stash_remove'; who: string | null; summary: string }[]
+  }
+  lore: { id: number; title: string }[]
+  highlights: { key: 'unluckiest' | 'luckiest' | 'most_damage' | 'top_healer'; character_id: number; name: string; value: number }[]
+}
+
+export interface ScheduleRead {
+  /** ISO UTC senza suffisso Z. */
+  starts_at: string
+  id: number
+  note: string | null
+  session_id: number | null
+  status: 'planned' | 'done' | 'skipped'
 }
 
 export interface CampaignDetail {
@@ -671,11 +727,27 @@ export interface TradeSnapshot {
   children: TradeSnapshot[]
 }
 
+export interface LoreRead {
+  id: number
+  title: string
+  body: string
+  tags: string[]
+  has_image: boolean
+  has_audio: boolean
+  revealed: boolean
+  revealed_at: string | null
+  created_at: string
+  updated_at: string
+}
+
 export type TradeKind = 'trade' | 'stash_put' | 'stash_take' | 'gm_stash_add' | 'gm_stash_remove'
 
 export interface TradePayload {
   /** Assente nelle righe vecchie: vale `trade`. Il lato deposito/master ha `character_id: null`. */
-  kind?: TradeKind
+  kind?: TradeKind | 'lore_reveal'
+  /** Solo kind='lore_reveal'. */
+  lore_id?: number
+  title?: string
   from: { character_id: number | null; name: string }
   to: { character_id: number | null; name: string }
   items: TradeSnapshot[]

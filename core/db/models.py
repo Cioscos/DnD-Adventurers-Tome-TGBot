@@ -610,6 +610,42 @@ class CampaignMember(Base):
     campaign: Mapped["Campaign"] = relationship(back_populates="members")
 
 
+class CampaignLore(Base):
+    """Master-authored lore entry; draft while revealed_at is NULL."""
+
+    __tablename__ = "campaign_lore"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    campaign_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("campaigns.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    title: Mapped[str] = mapped_column(String(120), nullable=False)
+    body: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    tags: Mapped[list] = mapped_column(JSON, default=list, nullable=False)
+    image_path: Mapped[Optional[str]] = mapped_column(String(300), nullable=True)
+    audio_path: Mapped[Optional[str]] = mapped_column(String(300), nullable=True)
+    revealed_at: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    created_at: Mapped[str] = mapped_column(String(50), nullable=False)
+    updated_at: Mapped[str] = mapped_column(String(50), nullable=False)
+
+
+class CampaignSchedule(Base):
+    """A planned evening; starts_at is naive-UTC ISO (YYYY-MM-DDTHH:MM:SS)."""
+
+    __tablename__ = "campaign_schedule"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    campaign_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("campaigns.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    starts_at: Mapped[str] = mapped_column(String(50), nullable=False)
+    note: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    reminded_day_at: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    reminded_hour_at: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    session_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    created_at: Mapped[str] = mapped_column(String(50), nullable=False)
+
+
 class GameSession(Base):
     """A live game session hosted by a Game Master with invite-code access."""
 
@@ -627,6 +663,10 @@ class GameSession(Base):
     last_activity_at: Mapped[str] = mapped_column(String(50), nullable=False)
     closed_at: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     campaign_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    # Fotografia del riepilogo di fine serata (api/services/recap.py); NULL = nessuno.
+    recap: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    # Giocatori usciti prima della chiusura: [{user_id, character_id, dice_stats_start}].
+    departed: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
 
     participants: Mapped[List["SessionParticipant"]] = relationship(
         back_populates="session", cascade="all, delete-orphan"
@@ -653,6 +693,8 @@ class SessionParticipant(Base):
     )
     display_name: Mapped[Optional[str]] = mapped_column(String(120), nullable=True)
     joined_at: Mapped[str] = mapped_column(String(50), nullable=False)
+    # Copia di Character.dice_stats all'ingresso: il riepilogo fa la differenza alla chiusura.
+    dice_stats_start: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
 
     session: Mapped["GameSession"] = relationship(back_populates="participants")
     character: Mapped[Optional["Character"]] = relationship()

@@ -128,6 +128,10 @@ async def import_character_endpoint(
         raise HTTPException(
             status_code=422, detail=e.errors(include_url=False, include_context=False, include_input=False)
         )
+    # Campaign ids belong to this server's DB: never trust them from a file.
+    for rec in data.character.notes.values():
+        if isinstance(rec, dict):
+            rec.pop("campaign_id", None)
     return await _create_from(session, user_id, data, _SUFFIX.get(lang, _SUFFIX["it"])["import"])
 
 

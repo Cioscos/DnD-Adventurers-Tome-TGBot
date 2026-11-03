@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Copy, Share2, RefreshCw, Play, Trash2, UserMinus, Pencil } from 'lucide-react'
+import { Copy, Share2, RefreshCw, Play, Trash2, UserMinus, Pencil, BookOpen } from 'lucide-react'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
@@ -15,22 +15,19 @@ import Sheet from '@/components/ui/Sheet'
 import Input from '@/components/ui/Input'
 import JoinCampaignSessionSheet from '@/pages/campaign/JoinCampaignSessionSheet'
 import StashTree from '@/pages/campaign/StashTree'
+import LoreSection from '@/pages/campaign/LoreSection'
+import CampaignCalendar from '@/pages/campaign/CampaignCalendar'
 import { api, ApiError } from '@/api/client'
 import { canShareMessage, haptic } from '@/auth/telegram'
 import { useShareMessage } from '@/hooks/useShareMessage'
 import { useToast } from '@/hooks/useToast'
 import { notifyMutationError } from '@/lib/mutationError'
 import { dayHeader } from '@/lib/relativeTime'
+import { fromServer } from '@/lib/calendarDates'
+import { formatDuration } from '@/lib/duration'
 import type { CampaignDetail, CampaignMember, CampaignMemberStatus } from '@/types'
 
 const STATUSES: CampaignMemberStatus[] = ['active', 'reserve', 'dead']
-
-/** 13200 → "3h 40m"; sotto l'ora "25m". Uguale in it/en. */
-function formatDuration(seconds: number): string {
-  const h = Math.floor(seconds / 3600)
-  const m = Math.floor((seconds % 3600) / 60)
-  return h > 0 ? (m > 0 ? `${h}h ${String(m).padStart(2, '0')}m` : `${h}h`) : `${m}m`
-}
 
 type Confirm = { kind: 'regen' } | { kind: 'delete' } | { kind: 'member'; member: CampaignMember } | null
 
@@ -222,7 +219,7 @@ export default function Campaign() {
                   <p className="font-display font-bold text-dnd-gold-bright break-words">
                     {mem.character_name}
                     {mem.is_mine && (
-                      <span className="ml-2 align-middle inline-block rounded-full border border-dnd-gold px-2 py-0.5 text-[10px] font-cinzel uppercase tracking-wider text-dnd-gold-bright">
+                      <span className="ml-2 align-middle inline-block rounded-full border border-dnd-gold px-2 py-0.5 text-xs font-cinzel uppercase tracking-wider text-dnd-gold-bright">
                         {t('campaign.yours')}
                       </span>
                     )}
@@ -231,6 +228,17 @@ export default function Campaign() {
                     {[mem.player_name, mem.class_summary].filter(Boolean).join(' · ')}
                   </p>
                   <p className="mt-1 text-xs font-cinzel uppercase text-dnd-gold-dim">{t(`campaign.status_${mem.status}`)}</p>
+                  {mem.is_mine && (
+                    <Button
+                      className="mt-2"
+                      variant="secondary"
+                      size="sm"
+                      icon={<BookOpen size={14} />}
+                      onClick={() => navigate(`/char/${mem.character_id}/notes?campaign=${camp.id}`, { state: { from: `/campaign/${camp.id}` } })}
+                    >
+                      {t('campaign.my_journal')}
+                    </Button>
+                  )}
                 </div>
                 {manage && (
                   <Button
@@ -276,17 +284,37 @@ export default function Campaign() {
         <StashTree items={camp.stash.items} currency={camp.stash.currency} />
       </Surface>
 
+      <LoreSection campaignId={camp.id} isGm={camp.is_gm} />
+
+      <CampaignCalendar campaignId={camp.id} isGm={camp.is_gm} sessions={camp.sessions} />
+
       <SectionDivider>{t('campaign.nights')}</SectionDivider>
       {camp.sessions.length === 0 ? (
         <p className="text-sm text-dnd-text-muted italic">{t('campaign.nights_empty')}</p>
       ) : (
         <ul className="space-y-1">
-          {camp.sessions.map((s) => (
-            <li key={s.id} className="flex items-baseline justify-between gap-3 text-sm font-body">
-              <span className="min-w-0 break-words">{dayHeader(s.created_at, locale)}</span>
-              <span className="shrink-0 font-mono tabular-nums text-dnd-text-muted">{formatDuration(s.duration_seconds)}</span>
-            </li>
-          ))}
+          {camp.sessions.map((s) => {
+            const row = (
+              <>
+                <span className="min-w-0 break-words">
+                  {t('campaign.night_n', { n: s.number })} · {dayHeader(fromServer(s.created_at), locale)}
+                </span>
+                <span className="shrink-0 font-mono tabular-nums text-dnd-text-muted">{formatDuration(s.duration_seconds)}</span>
+              </>
+            )
+            const cls = 'flex w-full items-baseline justify-between gap-3 text-sm font-body'
+            return (
+              <li key={s.id}>
+                {s.has_recap ? (
+                  <Pressable className={`${cls} min-h-11 items-center text-left`} onClick={() => navigate(`/campaign/${camp.id}/recap/${s.id}`)}>
+                    {row}
+                  </Pressable>
+                ) : (
+                  <div className={cls}>{row}</div>
+                )}
+              </li>
+            )
+          })}
         </ul>
       )}
 

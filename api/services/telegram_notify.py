@@ -34,6 +34,11 @@ def bot_token_configured() -> bool:
     return bool(_BOT_TOKEN)
 
 
+def recipient_lang(code: str | None) -> str:
+    """Message language from bot_users.language_code: en* -> en, else it."""
+    return "en" if (code or "").lower().startswith("en") else "it"
+
+
 def miniapp_url(route: str) -> str:
     """Deep link nella Mini App: base URL + route hash (HashRouter)."""
     return f"{_MINIAPP_BASE_URL.rstrip('/')}/#{route}"

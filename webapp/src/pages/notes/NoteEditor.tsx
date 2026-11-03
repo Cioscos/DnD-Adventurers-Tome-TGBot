@@ -4,21 +4,30 @@ import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
 import ChipInput from '@/components/ui/ChipInput'
 import Pressable from '@/components/ui/Pressable'
+import type { NoteCampaign } from '@/types'
 
 interface NoteEditorProps {
-  initialNote?: { title: string; body: string; tags?: string[] } | null
-  onSave: (title: string, body: string, tags: string[]) => void
+  initialNote?: { title: string; body: string; tags?: string[]; campaign_id?: number | null } | null
+  campaigns?: NoteCampaign[]
+  /** Campagna preselezionata per una voce nuova (quella attuale del PG). */
+  defaultCampaignId?: number | null
+  /** campaignId undefined = editing and the user never touched the campaign chips (keep it). */
+  onSave: (title: string, body: string, tags: string[], campaignId: number | null | undefined) => void
   onCancel: () => void
   isPending: boolean
 }
 
-export default function NoteEditor({ initialNote, onSave, onCancel, isPending }: NoteEditorProps) {
+export default function NoteEditor({ initialNote, campaigns = [], defaultCampaignId = null, onSave, onCancel, isPending }: NoteEditorProps) {
   const { t } = useTranslation()
   const isEdit = !!initialNote
 
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
   const [tags, setTags] = useState<string[]>([])
+  const [campaignId, setCampaignId] = useState<number | null>(defaultCampaignId)
+  // In modifica la campagna si cambia solo con un tocco esplicito: una campagna cancellata o
+  // la lista non ancora caricata mostrano «Nessuna» ma non devono scollegare la voce.
+  const [picked, setPicked] = useState(false)
 
   useEffect(() => {
     if (initialNote) {
@@ -32,8 +41,17 @@ export default function NoteEditor({ initialNote, onSave, onCancel, isPending }:
     }
   }, [initialNote])
 
+  // Campagna a parte: un default che arriva in ritardo non deve azzerare titolo/testo.
+  // Un id non più tra le campagne (cancellata) vale «Nessuna».
+  const campaignIds = campaigns.map((c) => c.id).join(',') // chiave stabile: `campaigns` cambia identità a ogni render
+  useEffect(() => {
+    const id = initialNote ? initialNote.campaign_id ?? null : defaultCampaignId
+    setCampaignId(id !== null && campaignIds.split(',').includes(String(id)) ? id : null)
+  }, [initialNote, defaultCampaignId, campaignIds])
+  useEffect(() => setPicked(false), [initialNote])
+
   const handleSave = () => {
-    onSave(title.trim(), body.trim(), tags)
+    onSave(title.trim(), body.trim(), tags, isEdit && !picked ? undefined : campaignId)
   }
 
   const rawSuggestions = t('character.notes.tag_suggestions', { returnObjects: true })
@@ -80,6 +98,30 @@ export default function NoteEditor({ initialNote, onSave, onCancel, isPending }:
               + {s}
             </Pressable>
           ))}
+        </div>
+      )}
+      {campaigns.length > 0 && (
+        <div>
+          <span className="block text-xs uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
+            {t('character.notes.campaign_label')}
+          </span>
+          <div className="flex flex-wrap gap-2">
+            {[{ id: null, name: t('character.notes.campaign_none') }, ...campaigns].map((c) => (
+              <Pressable
+                key={c.id ?? 'none'}
+                type="button"
+                aria-pressed={campaignId === c.id}
+                onClick={() => { setCampaignId(c.id); setPicked(true) }}
+                className={`min-h-11 px-3 rounded-xl border text-sm font-body ${
+                  campaignId === c.id
+                    ? 'bg-dnd-gold/20 border-dnd-gold text-dnd-gold-bright'
+                    : 'bg-dnd-surface-raised border-dnd-border text-dnd-text'
+                }`}
+              >
+                {c.name}
+              </Pressable>
+            ))}
+          </div>
         </div>
       )}
       <div className="flex gap-2">

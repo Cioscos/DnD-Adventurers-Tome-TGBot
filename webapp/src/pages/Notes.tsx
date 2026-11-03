@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams } from 'react-router-dom'
+import { useLocation, useParams, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
@@ -8,6 +8,7 @@ import { GiQuillInk as NotebookPen } from 'react-icons/gi'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
 import Button from '@/components/ui/Button'
+import Pressable from '@/components/ui/Pressable'
 import Sheet from '@/components/ui/Sheet'
 import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import ScrollArea from '@/components/ScrollArea'
@@ -37,11 +38,20 @@ export default function Notes() {
   const toast = useToast()
   const reduceMotion = useReducedMotion()
   const [mode, setMode] = useState<Mode>('list')
-  const [editNote, setEditNote] = useState<{ title: string; body: string; tags?: string[] } | null>(null)
+  const [editNote, setEditNote] = useState<{ title: string; body: string; tags?: string[]; campaign_id?: number | null } | null>(null)
   const [originalTitle, setOriginalTitle] = useState('')
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
   const [viewNote, setViewNote] = useState<Note | null>(null)
   const [micStatus, setMicStatus] = useState<MicStatus>('unknown')
+  // Filtro campagna: 'all' | 'none' | id. `?campaign=<id|none>` lo preseleziona.
+  const [searchParams] = useSearchParams()
+  // Arrivati dalla campagna («Il mio diario»): la freccia indietro torna lì, non alla scheda.
+  const backFrom = (useLocation().state as { from?: string } | null)?.from
+  const [campaignFilter, setCampaignFilter] = useState<'all' | 'none' | number>(() => {
+    const q = searchParams.get('campaign')
+    if (q === 'none') return 'none'
+    return q && Number.isInteger(Number(q)) ? Number(q) : 'all'
+  })
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -71,13 +81,28 @@ export default function Notes() {
     queryFn: () => api.notes.list(charId),
   })
   const { isLoading } = notesQuery
-  const notes = notesQuery.data ?? []
+  const campaignsQuery = useQuery({
+    queryKey: ['note-campaigns', charId],
+    queryFn: () => api.notes.campaigns(charId),
+  })
+  const campaigns = campaignsQuery.data ?? []
+  const currentCampaignId = campaigns.find((c) => c.current)?.id ?? null
+  // ?campaign=<id> di una campagna che non è tra i chip → «Tutte».
+  const activeFilter = typeof campaignFilter === 'number' && campaignsQuery.data && !campaigns.some((c) => c.id === campaignFilter)
+    ? 'all'
+    : campaignFilter
+  // Campagna cancellata: il BE tiene campaign_id ma campaign_name è null → «Senza campagna».
+  const notes = (notesQuery.data ?? []).filter((n) =>
+    activeFilter === 'all' ? true
+      : activeFilter === 'none' ? !n.campaign_name
+        : n.campaign_id === activeFilter,
+  )
   // Un fetch fallito non è "nessuna nota".
   const unavailable = notesQuery.isError && notesQuery.data === undefined
 
   const addMutation = useMutation({
-    mutationFn: ({ title, body, tags }: { title: string; body: string; tags: string[] }) =>
-      api.notes.add(charId, title, body, tags),
+    mutationFn: ({ title, body, tags, campaignId }: { title: string; body: string; tags: string[]; campaignId: number | null }) =>
+      api.notes.add(charId, title, body, tags, campaignId),
     onSuccess: (updated) => {
       qc.setQueryData(['notes', charId], updated)
       setMode('list')
@@ -86,8 +111,8 @@ export default function Notes() {
   })
 
   const updateMutation = useMutation({
-    mutationFn: ({ body, tags }: { body: string; tags: string[] }) =>
-      api.notes.update(charId, originalTitle, body, tags),
+    mutationFn: ({ body, tags, campaignId }: { body: string; tags: string[]; campaignId: number | null | undefined }) =>
+      api.notes.update(charId, originalTitle, body, tags, campaignId),
     onSuccess: (updated) => {
       qc.setQueryData(['notes', charId], updated)
       setMode('list')
@@ -106,7 +131,7 @@ export default function Notes() {
 
   const voiceUploadMutation = useMutation({
     mutationFn: ({ blob, title }: { blob: Blob; title: string }) =>
-      api.notes.uploadVoice(charId, title, blob),
+      api.notes.uploadVoice(charId, title, blob, currentCampaignId),
     onSuccess: (updated) => {
       qc.setQueryData(['notes', charId], updated)
       setMode('list')
@@ -118,15 +143,15 @@ export default function Notes() {
 
   const startEdit = (title: string, body: string, tags: string[]) => {
     setOriginalTitle(title)
-    setEditNote({ title, body, tags })
+    setEditNote({ title, body, tags, campaign_id: notesQuery.data?.find((n) => n.title === title)?.campaign_id ?? null })
     setMode('edit')
   }
 
-  const handleEditorSave = (title: string, body: string, tags: string[]) => {
+  const handleEditorSave = (title: string, body: string, tags: string[], campaignId: number | null | undefined) => {
     if (mode === 'edit') {
-      updateMutation.mutate({ body, tags })
+      updateMutation.mutate({ body, tags, campaignId })
     } else {
-      addMutation.mutate({ title, body, tags })
+      addMutation.mutate({ title, body, tags, campaignId: campaignId ?? null })
     }
   }
 
@@ -151,7 +176,7 @@ export default function Notes() {
   const voiceNotes = notes.filter((n) => n.is_voice)
 
   return (
-    <Layout title={t('character.notes.title')} backTo={`/char/${charId}`} group="tools" page="notes" offlineQuery={notesQuery}>
+    <Layout title={t('character.notes.title')} backTo={backFrom ?? `/char/${charId}`} group="tools" page="notes" offlineQuery={notesQuery}>
       <div className="flex gap-2">
         <Button
           variant="primary"
@@ -194,6 +219,30 @@ export default function Notes() {
         />
       </div>
 
+      {campaigns.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {([
+            { key: 'all', value: 'all' as const, label: t('character.notes.filter_all') },
+            { key: 'none', value: 'none' as const, label: t('character.notes.filter_none') },
+            ...campaigns.map((c) => ({ key: String(c.id), value: c.id, label: c.name })),
+          ]).map((f) => (
+            <Pressable
+              key={f.key}
+              type="button"
+              aria-pressed={activeFilter === f.value}
+              onClick={() => setCampaignFilter(f.value)}
+              className={`min-h-11 px-3 rounded-xl border text-sm font-body ${
+                activeFilter === f.value
+                  ? 'bg-dnd-gold/20 border-dnd-gold text-dnd-gold-bright'
+                  : 'bg-dnd-surface-raised border-dnd-border text-dnd-text'
+              }`}
+            >
+              {f.label}
+            </Pressable>
+          ))}
+        </div>
+      )}
+
       {unavailable && (
         <EmptyState
           icon={<WifiOff size={32} />}
@@ -202,7 +251,7 @@ export default function Notes() {
         />
       )}
 
-      {!isLoading && !unavailable && notes.length === 0 && (
+      {!isLoading && !unavailable && notesQuery.data !== undefined && notes.length === 0 && (
         <EmptyState
           icon={<NotebookPen size={32} />}
           title={t('character.notes.empty_title')}
@@ -279,6 +328,8 @@ export default function Notes() {
         <div className="p-5">
           <NoteEditor
             initialNote={mode === 'edit' ? editNote : null}
+            campaigns={campaigns}
+            defaultCampaignId={currentCampaignId}
             onSave={handleEditorSave}
             onCancel={() => setMode('list')}
             isPending={mode === 'edit' ? updateMutation.isPending : addMutation.isPending}

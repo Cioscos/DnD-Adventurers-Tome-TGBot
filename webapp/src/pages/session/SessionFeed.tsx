@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { ArrowLeftRight, Gift, Lock, Maximize2, Send, User as UserIcon, X } from 'lucide-react'
+import { ArrowLeftRight, BookOpen, Gift, Lock, Maximize2, Send, User as UserIcon, X } from 'lucide-react'
 import { GiCrown as Crown } from 'react-icons/gi'
 import { toast } from 'sonner'
 import { useNavigate } from 'react-router-dom'
@@ -10,6 +10,7 @@ import { api, ApiError } from '@/api/client'
 import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
 import Pressable from '@/components/ui/Pressable'
+import LoreViewModal from '@/pages/campaign/LoreViewModal'
 import type { CharacterFull, SessionFeedItem, SessionFeedResponse, SessionParticipant, TradePayload, TradeSnapshot } from '@/types'
 import { COIN_ORDER, COIN_ABBR } from '@/hooks/useTradeMutation'
 import { haptic } from '@/auth/telegram'
@@ -31,6 +32,8 @@ function extractRetryAfterMs(detail: unknown): number | null {
 interface Props {
   code: string
   sessionId: number
+  /** Campagna della serata: serve ad aprire le voci di lore rivelate nel feed. */
+  campaignId?: number | null
   gmUserId: number | null
   myUserId: number
   myCharId: number | null
@@ -124,6 +127,7 @@ function itemKey(it: SessionFeedItem): string {
 export default function SessionFeed({
   code,
   sessionId,
+  campaignId = null,
   gmUserId,
   myUserId,
   myCharId,
@@ -144,6 +148,13 @@ export default function SessionFeed({
   const [, setNowTick] = useState(0)
   const [fullscreen, setFullscreen] = useState(false)
   const whisperTo = whisperTarget?.user_id ?? null
+  const [loreId, setLoreId] = useState<number | null>(null)
+  // Nessun GET singolo: la voce si legge dalla lista, solo quando se ne apre una.
+  const loreQuery = useQuery({
+    queryKey: ['lore', campaignId],
+    queryFn: () => api.lore.list(campaignId as number),
+    enabled: campaignId != null && loreId !== null,
+  })
 
   const scrollerRef = useRef<HTMLDivElement | null>(null)
   const initialisedRef = useRef(false)
@@ -413,6 +424,19 @@ export default function SessionFeed({
               )
             }
 
+            if (it.trade?.kind === 'lore_reveal') {
+              return (
+                <Pressable
+                  key={itemKey(it)}
+                  onClick={() => setLoreId(it.trade?.lore_id ?? null)}
+                  className="max-w-[80%] min-h-[44px] flex items-start gap-1.5 px-3 py-2 rounded-lg text-sm font-body text-left bg-dnd-surface border border-dnd-gold-dim text-dnd-text"
+                >
+                  <BookOpen size={12} className="shrink-0 mt-1 text-dnd-gold-bright" />
+                  <span className="flex-1 min-w-0 break-words">{t('session.feed.lore_reveal', { title: it.trade.title ?? '' })}</span>
+                  <span className="shrink-0 mt-0.5 font-mono text-xs text-dnd-text-faint">{formatTime24(it.timestamp, i18n.language)}</span>
+                </Pressable>
+              )
+            }
             if (it.trade) return <TradeRow key={itemKey(it)} trade={it.trade} timestamp={it.timestamp} lang={i18n.language} t={t} />
 
             const mine = it.user_id === myUserId
@@ -552,6 +576,16 @@ export default function SessionFeed({
           {onCooldown ? `${cooldownRemaining}s` : t('session.send')}
         </Button>
       </div>
+      {campaignId != null && (
+        <LoreViewModal
+          open={loreId !== null}
+          campaignId={campaignId}
+          lore={loreQuery.data?.find((l) => l.id === loreId) ?? null}
+          loading={loreQuery.isFetching && !loreQuery.data?.some((l) => l.id === loreId)}
+          zClassName={fullscreen ? 'z-[70]' : undefined}
+          onClose={() => setLoreId(null)}
+        />
+      )}
     </>
   )
 
