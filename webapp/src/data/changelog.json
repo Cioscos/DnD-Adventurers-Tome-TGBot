@@ -1,6 +1,40 @@
 {
   "entries": [
     {
+      "version": "2.36.0",
+      "date": "2026-11-04",
+      "added": {
+        "it": [
+          "A 0 PF puoi tirare contro la morte direttamente dalla schermata del personaggio, con successi e fallimenti sempre in vista.",
+          "I valori rapidi −1, −5, −10 e −20 (e quelli di cura) ora ci sono anche nel foglio rapido dei PF."
+        ],
+        "en": [
+          "At 0 HP you can roll death saves right from the character screen, with successes and failures always in view.",
+          "The quick values −1, −5, −10 and −20 (and the healing ones) are now in the quick HP sheet too."
+        ]
+      },
+      "improved": {
+        "it": [
+          "Nella schermata del personaggio PF e CA sono i numeri più grandi, e per le caratteristiche spicca il modificatore, cioè il numero che tiri.",
+          "Danni più veloci: il tipo di danno resta chiuso finché non serve e il pulsante dice cosa fa, per esempio \"Applica 6 danni\" con una resistenza."
+        ],
+        "en": [
+          "On the character screen HP and AC are the biggest numbers, and ability scores lead with the modifier, the number you actually roll.",
+          "Faster damage: the damage type stays closed until you need it and the button says what it does, for example \"Apply 6 damage\" with a resistance."
+        ]
+      },
+      "fixed": {
+        "it": [
+          "In Telegram a schermo intero il pulsante dei dadi non copre più i comandi in fondo alle pagine.",
+          "A 360 px i pallini dei tiri contro la morte restano su una riga."
+        ],
+        "en": [
+          "In full-screen Telegram the dice button no longer covers the controls at the bottom of pages.",
+          "At 360 px the death save pips stay on one line."
+        ]
+      }
+    },
+    {
       "version": "2.35.0",
       "date": "2026-11-03",
       "added": {
