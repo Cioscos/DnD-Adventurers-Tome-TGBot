@@ -898,3 +898,27 @@ class Companion(Base):
     created_at: Mapped[str] = mapped_column(String(50), nullable=False)
 
     character: Mapped["Character"] = relationship(back_populates="companions")
+
+
+class BotUser(Base):
+    """Utente che ha premuto /start (o si è (dis)iscritto agli annunci).
+
+    Unica tabella scritta dal bot. ``announcements`` = riceve gli annunci delle
+    nuove versioni; /start non lo riattiva, solo /subscribe.
+    """
+
+    __tablename__ = "bot_users"
+
+    user_id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=False)
+    language_code: Mapped[Optional[str]] = mapped_column(String(16))
+    announcements: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    created_at: Mapped[str] = mapped_column(String(50), nullable=False)
+
+
+class AppMeta(Base):
+    """Key/value di stato dell'app (es. ``last_announced_version``)."""
+
+    __tablename__ = "app_meta"
+
+    key: Mapped[str] = mapped_column(String(64), primary_key=True)
+    value: Mapped[str] = mapped_column(String(64), nullable=False)

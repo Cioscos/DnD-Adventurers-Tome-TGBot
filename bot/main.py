@@ -35,7 +35,12 @@ from telegram.ext import (
 )
 from telegram.warnings import PTBUserWarning
 
-from bot.handlers.start import about_command, start_command
+from bot.handlers.start import (
+    about_command,
+    start_command,
+    subscribe_command,
+    unsubscribe_command,
+)
 from bot.handlers.wiki import navigation_callback
 from bot.schema.registry import registry
 from bot.utils.i18n import get_lang, translator
@@ -180,6 +185,8 @@ def main() -> None:
     application.add_handler(CommandHandler("start", start_command))
     application.add_handler(CommandHandler("about", about_command))
     application.add_handler(CommandHandler("stop", stop_command))
+    application.add_handler(CommandHandler("unsubscribe", unsubscribe_command))
+    application.add_handler(CommandHandler("subscribe", subscribe_command))
 
     # Wiki callback-query handler
     application.add_handler(CallbackQueryHandler(navigation_callback))
