@@ -49,8 +49,8 @@ const minus = itLocale.character.inventory.containers.qty_minus
 const goldInput = () => screen.getByText(/^Oro/).parentElement!.querySelector('input')!
 const last = (name: string) => screen.getAllByRole('button', { name }).at(-1)!
 
-function setup(isGm: boolean, myCharId: number | null = 14) {
-  m.stash.mockResolvedValue(stash)
+function setup(isGm: boolean, myCharId: number | null = 14, data: typeof stash = stash) {
+  m.stash.mockResolvedValue(data)
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   const inv = vi.spyOn(qc, 'invalidateQueries')
   renderWithProviders(<StashSheet sessionId={5} isGm={isGm} myCharId={myCharId} participants={[]} gmUserId={1} onClose={vi.fn()} />, { client: qc })
@@ -101,6 +101,27 @@ describe('StashSheet giocatore', () => {
     await screen.findByText(/Frecce/)
     expect(screen.queryByRole('button', { name: 'Metti nel deposito' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Togli' })).toBeNull()
+  })
+})
+
+describe('StashSheet cassa', () => {
+  it('cassa vuota: niente Prendi/Togli sulla riga monete', async () => {
+    const empty = { ...stash, currency: { ...stash.currency, gold: 0 } }
+    setup(false, 14, empty)
+    await screen.findByText(/Frecce/)
+    expect(screen.getAllByRole('button', { name: 'Prendi' })).toHaveLength(2) // solo le due righe oggetto
+    expect(m.stash).toHaveBeenCalled()
+  })
+
+  it('prendi/togli elenca solo le monete presenti, con migliaia formattate', async () => {
+    const rich = { ...stash, currency: { ...stash.currency, gold: 12400, silver: 85 } }
+    setup(false, 14, rich)
+    await screen.findByText(/Frecce/)
+    fireEvent.click(screen.getAllByRole('button', { name: 'Prendi' })[0])
+    expect(screen.getByText(/^Oro \(12\.400\)/)).toBeInTheDocument()
+    expect(screen.getByText(/^Argento \(85\)/)).toBeInTheDocument()
+    expect(screen.queryByText(/^Rame/)).toBeNull()
+    expect(screen.queryByText(/^Platino/)).toBeNull()
   })
 })
 

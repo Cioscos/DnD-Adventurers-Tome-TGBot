@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, afterEach } from 'vitest'
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient } from '@tanstack/react-query'
@@ -6,12 +6,12 @@ import { renderWithProviders } from '../../utils/renderWithProviders'
 import JoinCampaignSessionSheet from '@/pages/campaign/JoinCampaignSessionSheet'
 import CampaignSessionBanner from '@/components/ui/CampaignSessionBanner'
 
-const { get, joinSession, activeForMe, navigateSpy, toastError } = vi.hoisted(() => ({
-  get: vi.fn(), joinSession: vi.fn(), activeForMe: vi.fn(), navigateSpy: vi.fn(), toastError: vi.fn(),
+const { get, list, joinSession, activeForMe, navigateSpy, toastError } = vi.hoisted(() => ({
+  get: vi.fn(), list: vi.fn(), joinSession: vi.fn(), activeForMe: vi.fn(), navigateSpy: vi.fn(), toastError: vi.fn(),
 }))
 
 vi.mock('@/api/client', () => ({
-  api: { campaigns: { get, joinSession, activeForMe } },
+  api: { campaigns: { get, list, joinSession, activeForMe } },
   ApiError: class ApiError extends Error {
     constructor(public status: number, public detail: unknown) { super('e') }
   },
@@ -87,6 +87,7 @@ describe('JoinCampaignSessionSheet', () => {
 })
 
 describe('CampaignSessionBanner', () => {
+  beforeEach(() => list.mockResolvedValue([{ id: 5, name: 'Coda' }]))
   it('renders nothing when there is no open campaign session', async () => {
     activeForMe.mockResolvedValue([])
     const { container } = renderWithProviders(<CampaignSessionBanner />)

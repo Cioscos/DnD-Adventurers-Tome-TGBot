@@ -1744,6 +1744,8 @@
     "new_name_placeholder": "Campaign name",
     "start_go": "Start",
     "start_session": "Start the session",
+    "rename": "Rename",
+    "rename_title": "Rename the campaign",
     "go_to_session": "Go to the session",
     "start_error": "Could not start the session. Try again.",
     "code": "Campaign code",

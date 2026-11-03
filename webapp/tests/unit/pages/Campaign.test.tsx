@@ -4,21 +4,23 @@ import userEvent from '@testing-library/user-event'
 import { Route, Routes } from 'react-router-dom'
 import { renderWithProviders } from '../utils/renderWithProviders'
 import Campaign from '@/pages/Campaign'
+import { ApiError } from '@/api/client'
 import type { CampaignDetail } from '@/types'
 
-const { get, setStatus, removeMember, regen, remove, createSession, share, navigateSpy } = vi.hoisted(() => ({
-  get: vi.fn(), setStatus: vi.fn(), removeMember: vi.fn(), regen: vi.fn(), remove: vi.fn(),
+const { get, rename, me, toastError, setStatus, removeMember, regen, remove, createSession, share, navigateSpy } = vi.hoisted(() => ({
+  get: vi.fn(), rename: vi.fn(), me: vi.fn(), toastError: vi.fn(), setStatus: vi.fn(), removeMember: vi.fn(), regen: vi.fn(), remove: vi.fn(),
   createSession: vi.fn(), share: vi.fn(), navigateSpy: vi.fn(),
 }))
 
 vi.mock('@/api/client', () => ({
   api: {
-    campaigns: { get, setMemberStatus: setStatus, removeMember, regenerateCode: regen, remove },
-    sessions: { create: createSession },
+    campaigns: { get, rename, setMemberStatus: setStatus, removeMember, regenerateCode: regen, remove },
+    sessions: { create: createSession, me },
     share: { campaignInvite: share },
   },
-  ApiError: class ApiError extends Error {},
+  ApiError: class ApiError extends Error { constructor(public status: number, public detail: unknown) { super('x') } },
 }))
+vi.mock('@/hooks/useToast', () => ({ useToast: () => ({ info: vi.fn(), error: toastError, success: vi.fn() }) }))
 vi.mock('react-router-dom', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
   return { ...actual, useNavigate: () => navigateSpy }
@@ -145,6 +147,58 @@ describe('Campaign page', () => {
     expect(screen.getAllByRole('button', { name: 'campaign.status_reserve' })).toHaveLength(1)
     expect(screen.getAllByRole('button', { name: 'campaign.remove_member' })).toHaveLength(1)
     expect(within(screen.getByTestId('members')).getByText('Lyra')).toBeInTheDocument()
+  })
+
+  const playerView = (over: Partial<CampaignDetail> = {}) => detail({
+    is_gm: false, invite_code: null, active_session_id: 31, my_last_character_id: 10,
+    members: [{ character_id: 10, character_name: 'Thorin', class_summary: 'Guerriero 5', total_level: 5, user_id: 2, player_name: 'Aldo', status: 'active', is_mine: true }],
+    ...over,
+  })
+
+  it('player not yet in the live session gets Entra, which opens the join sheet', async () => {
+    get.mockResolvedValue(playerView())
+    me.mockResolvedValue(null)
+    renderPage()
+    await userEvent.click(await screen.findByRole('button', { name: 'campaign.enter' }))
+    // seconda «Entra»: quella di conferma dentro lo sheet di scelta del PG
+    await waitFor(() => expect(screen.getAllByRole('button', { name: 'campaign.enter' })).toHaveLength(2))
+    expect(screen.queryByRole('button', { name: 'campaign.go_to_session' })).not.toBeInTheDocument()
+  })
+
+  it('player already in the live session gets Vai alla sessione', async () => {
+    get.mockResolvedValue(playerView())
+    me.mockResolvedValue({ id: 31, status: 'active' })
+    renderPage()
+    await userEvent.click(await screen.findByRole('button', { name: 'campaign.go_to_session' }))
+    expect(navigateSpy).toHaveBeenCalledWith('/session/31')
+    expect(screen.queryByRole('button', { name: 'campaign.enter' })).not.toBeInTheDocument()
+  })
+
+  it('player sees no session button when no session is live', async () => {
+    get.mockResolvedValue(playerView({ active_session_id: null }))
+    renderPage()
+    await screen.findByText('Thorin')
+    expect(screen.queryByRole('button', { name: 'campaign.enter' })).not.toBeInTheDocument()
+  })
+
+  it('GM renames the campaign from the labelled action', async () => {
+    get.mockResolvedValue(detail())
+    rename.mockResolvedValue({ id: 5, name: 'Nuovo nome', invite_code: 'WIND4242', is_gm: true })
+    renderPage()
+    await userEvent.click(await screen.findByRole('button', { name: 'campaign.rename' }))
+    const input = screen.getByRole('textbox')
+    await userEvent.clear(input)
+    await userEvent.type(input, '  Nuovo nome ')
+    await userEvent.click(screen.getByRole('button', { name: 'common.save' }))
+    await waitFor(() => expect(rename).toHaveBeenCalledWith(5, 'Nuovo nome'))
+  })
+
+  it('a 409 on start-session toasts that you are in another session', async () => {
+    get.mockResolvedValue(detail())
+    createSession.mockRejectedValue(new ApiError(409, 'You already have an active session'))
+    renderPage()
+    await userEvent.click(await screen.findByRole('button', { name: 'campaign.start_session' }))
+    await waitFor(() => expect(toastError).toHaveBeenCalledWith('session.already_in_other'))
   })
 
   it('a generic load error offers a retry', async () => {

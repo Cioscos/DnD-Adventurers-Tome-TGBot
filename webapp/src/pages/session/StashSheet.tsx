@@ -14,6 +14,7 @@ import { haptic } from '@/auth/telegram'
 import { useToast } from '@/hooks/useToast'
 import { COIN_ORDER } from '@/hooks/useTradeMutation'
 import { containerMeta } from '@/lib/containers'
+import { formatInt } from '@/lib/format'
 import type { CampaignStash, CharacterFull, CoinKey, Currency, Item, SessionParticipant, StashMoveRequest } from '@/types'
 
 type CoinAmounts = Partial<Record<CoinKey, number>>
@@ -34,7 +35,7 @@ interface Props {
 function CoinsPanel({ title, confirm, max, pending, onSubmit, onClose }: {
   title: string; confirm: string; max?: Currency; pending: boolean; onSubmit: (c: CoinAmounts) => void; onClose: () => void
 }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const [draft, setDraft] = useState<Partial<Record<CoinKey, string>>>({})
   const amount = (k: CoinKey) => Math.floor(Number(draft[k])) || 0
   const over = (k: CoinKey) => max !== undefined && amount(k) > max[k]
@@ -43,10 +44,11 @@ function CoinsPanel({ title, confirm, max, pending, onSubmit, onClose }: {
   return (
     <Sheet open onClose={onClose} title={title} zClassName="z-[60]">
       <div className="p-5 space-y-3">
-        {COIN_ORDER.map((k) => (
+        {/* prendi/togli: solo le monete che la cassa ha */}
+        {COIN_ORDER.filter((k) => max === undefined || max[k] > 0).map((k) => (
           <Input
             key={k}
-            label={max ? `${t(`character.currency.${k}`)} (${max[k]})` : t(`character.currency.${k}`)}
+            label={max ? `${t(`character.currency.${k}`)} (${formatInt(max[k], i18n.language)})` : t(`character.currency.${k}`)}
             type="number"
             min={0}
             inputMode="numeric"
@@ -102,7 +104,7 @@ export default function StashSheet({ sessionId, isGm, myCharId, participants, gm
   const qc = useQueryClient()
   const toast = useToast()
   const [panel, setPanel] = useState<Panel | null>(null)
-  const { data, isLoading } = useQuery({ queryKey: ['session-stash', sessionId], queryFn: () => api.sessions.stash(sessionId) })
+  const { data, isLoading } = useQuery({ queryKey: ['session-stash', sessionId], queryFn: () => api.sessions.stash(sessionId), refetchInterval: 10_000 })
 
   const act = useMutation({
     mutationFn: ({ kind, body }: Job): Promise<CharacterFull | CampaignStash> => {
@@ -127,6 +129,7 @@ export default function StashSheet({ sessionId, isGm, myCharId, participants, gm
   })
 
   const canTake = !isGm && myCharId != null
+  const hasCoins = !!data && COIN_ORDER.some((k) => data.currency[k] > 0)
   const verb = t(isGm ? 'campaign.stash_remove' : 'campaign.stash_take')
   const mode = isGm ? 'remove' : 'take'
   const rowBtn = (onClick: () => void) => (
@@ -143,7 +146,7 @@ export default function StashSheet({ sessionId, isGm, myCharId, participants, gm
             <StashTree
               items={data.items}
               currency={data.currency}
-              coinsAction={isGm || canTake ? rowBtn(() => setPanel({ kind: 'coins', mode })) : undefined}
+              coinsAction={(isGm || canTake) && hasCoins ? rowBtn(() => setPanel({ kind: 'coins', mode })) : undefined}
               renderAction={isGm || canTake ? (item) => rowBtn(() => setPanel({ kind: 'item', mode, item })) : undefined}
             />
           )}

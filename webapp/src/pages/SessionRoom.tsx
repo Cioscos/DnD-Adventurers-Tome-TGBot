@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
-import { LogOut, User, Gift, Copy, Share2, WifiOff, Vault } from 'lucide-react'
+import { LogOut, User, Gift, Copy, Share2, WifiOff, Package } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   GiCrown as Crown, GiHeartPlus as Heart, GiCheckedShield as Shield,
@@ -328,15 +328,17 @@ export default function SessionRoom() {
     })
   }
 
+  const inCampaign = live.campaign_id != null
   const sessionName =
     live.gm_display_name?.trim() ||
     live.title?.trim() ||
     t('session.active_session_banner')
 
   return (
-    <Layout help="session_room" title={t('session.room_title', { code: live.code })} backTo="/session">
+    <Layout help="session_room" title={inCampaign ? (live.campaign_name || sessionName) : t('session.room_title', { code: live.code })} backTo="/session">
       {!amGm && myCharId && <PendingSavesBanner charId={myCharId} />}
-      {amGm ? (
+      {/* Sessione di campagna: l'accesso è per iscrizione, il codice non c'è. */}
+      {amGm && !inCampaign ? (
         <Surface variant="sigil" ornamented>
           <div className="text-center">
             <p className="text-xs uppercase tracking-widest text-dnd-gold-dim font-cinzel">
@@ -381,7 +383,7 @@ export default function SessionRoom() {
         <Surface variant="sigil" ornamented>
           <div className="text-center">
             <p className="text-xs uppercase tracking-widest text-dnd-gold-dim font-cinzel">
-              {t('session.role_player')}
+              {t(amGm ? 'session.role_game_master' : 'session.role_player')}
             </p>
             <p className="font-display font-bold text-xl text-dnd-gold-bright mt-1">
               {sessionName}
@@ -430,7 +432,7 @@ export default function SessionRoom() {
       )}
 
       {live.campaign_id != null && (
-        <Button variant="secondary" size="md" fullWidth icon={<Vault size={16} />} onClick={() => setShowStash(true)}>
+        <Button variant="secondary" size="md" fullWidth icon={<Package size={16} />} onClick={() => setShowStash(true)}>
           {t('campaign.stash')}
         </Button>
       )}

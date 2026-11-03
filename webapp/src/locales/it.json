@@ -1743,6 +1743,8 @@
     "new_name_placeholder": "Nome della campagna",
     "start_go": "Inizia",
     "start_session": "Inizia la sessione",
+    "rename": "Rinomina",
+    "rename_title": "Rinomina la campagna",
     "go_to_session": "Vai alla sessione",
     "start_error": "Non sono riuscito ad avviare la sessione. Riprova.",
     "code": "Codice campagna",

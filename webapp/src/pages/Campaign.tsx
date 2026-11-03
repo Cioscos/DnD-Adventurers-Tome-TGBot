@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Copy, Share2, RefreshCw, Play, Trash2, UserMinus } from 'lucide-react'
+import { Copy, Share2, RefreshCw, Play, Trash2, UserMinus, Pencil } from 'lucide-react'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
@@ -11,6 +11,9 @@ import EmptyState from '@/components/ui/EmptyState'
 import Skeleton from '@/components/ui/Skeleton'
 import SectionDivider from '@/components/ui/SectionDivider'
 import ConfirmSheet from '@/components/ui/ConfirmSheet'
+import Sheet from '@/components/ui/Sheet'
+import Input from '@/components/ui/Input'
+import JoinCampaignSessionSheet from '@/pages/campaign/JoinCampaignSessionSheet'
 import StashTree from '@/pages/campaign/StashTree'
 import { api, ApiError } from '@/api/client'
 import { canShareMessage, haptic } from '@/auth/telegram'
@@ -39,12 +42,20 @@ export default function Campaign() {
   const qc = useQueryClient()
   const toast = useToast()
   const [confirm, setConfirm] = useState<Confirm>(null)
+  const [joining, setJoining] = useState(false)
+  const [renaming, setRenaming] = useState<string | null>(null)
   const key = ['campaign', campId]
 
   const { data: camp, isLoading, isError, error, refetch } = useQuery({
     queryKey: key,
     queryFn: () => api.campaigns.get(campId),
     enabled: Number.isFinite(campId),
+  })
+  // Per il giocatore: sono già dentro la sessione aperta o devo entrarci?
+  const { data: myLive } = useQuery({
+    queryKey: ['session-me'],
+    queryFn: () => api.sessions.me(),
+    enabled: !!camp && !camp.is_gm && camp.active_session_id != null,
   })
 
   const setDetail = (d: CampaignDetail) => {
@@ -61,9 +72,18 @@ export default function Campaign() {
       navigate(`/session/${s.id}`)
     },
     // Es. 409: la sessione esiste già, ricarica così il bottone diventa «Vai alla sessione».
-    onError: () => {
+    onError: (e) => {
       qc.invalidateQueries({ queryKey: key })
-      notifyMutationError()
+      if (e instanceof ApiError && e.status === 409 && e.detail === 'You already have an active session') toast.error(t('session.already_in_other'))
+      else notifyMutationError()
+    },
+  })
+  const renameMut = useMutation({
+    mutationFn: (name: string) => api.campaigns.rename(campId, name),
+    onSuccess: (r) => {
+      setRenaming(null)
+      qc.setQueryData<CampaignDetail>(key, (d) => (d ? { ...d, name: r.name } : d))
+      qc.invalidateQueries({ queryKey: ['campaigns'] })
     },
   })
   const setStatus = useMutation({
@@ -135,6 +155,13 @@ export default function Campaign() {
     <Layout title={camp.name} backTo="/session">
       <Surface variant="sigil" ornamented>
         <h2 className="font-display font-bold text-xl text-dnd-gold-bright text-center break-words">{camp.name}</h2>
+        {camp.is_gm && (
+          <div className="mt-2 flex justify-center">
+            <Button variant="secondary" size="sm" icon={<Pencil size={14} />} onClick={() => setRenaming(camp.name)}>
+              {t('campaign.rename')}
+            </Button>
+          </div>
+        )}
         {camp.is_gm && camp.invite_code && (
           <div className="mt-3 text-center">
             <p className="text-xs uppercase tracking-widest text-dnd-gold-dim font-cinzel">{t('campaign.code')}</p>
@@ -161,6 +188,19 @@ export default function Campaign() {
             ) : (
               <Button variant="primary" size="lg" fullWidth icon={<Play size={18} />} loading={start.isPending} onClick={() => start.mutate()}>
                 {t('campaign.start_session')}
+              </Button>
+            )}
+          </div>
+        )}
+        {!camp.is_gm && camp.active_session_id != null && (
+          <div className="mt-4">
+            {myLive?.id === camp.active_session_id ? (
+              <Button variant="primary" size="lg" fullWidth icon={<Play size={18} />} onClick={() => navigate(`/session/${camp.active_session_id}`)}>
+                {t('campaign.go_to_session')}
+              </Button>
+            ) : (
+              <Button variant="primary" size="lg" fullWidth icon={<Play size={18} />} onClick={() => setJoining(true)}>
+                {t('campaign.enter')}
               </Button>
             )}
           </div>
@@ -235,6 +275,30 @@ export default function Campaign() {
         </div>
       )}
 
+      {joining && camp.active_session_id != null && (
+        <JoinCampaignSessionSheet
+          open
+          onClose={() => setJoining(false)}
+          item={{ campaign_id: camp.id, campaign_name: camp.name, session_id: camp.active_session_id, my_last_character_id: camp.my_last_character_id }}
+        />
+      )}
+      <Sheet open={renaming !== null} onClose={() => setRenaming(null)} title={t('campaign.rename_title')}>
+        <div className="p-5 space-y-3">
+          <Input label={t('campaign.new_name_placeholder')} value={renaming ?? ''} onChange={setRenaming} />
+          <div className="flex gap-2 pt-1">
+            <Button variant="secondary" fullWidth onClick={() => setRenaming(null)}>{t('common.cancel')}</Button>
+            <Button
+              variant="primary"
+              fullWidth
+              disabled={!renaming?.trim()}
+              loading={renameMut.isPending}
+              onClick={() => renameMut.mutate((renaming ?? '').trim())}
+            >
+              {t('common.save')}
+            </Button>
+          </div>
+        </div>
+      </Sheet>
       <ConfirmSheet
         open={confirm?.kind === 'regen'}
         onClose={() => setConfirm(null)}

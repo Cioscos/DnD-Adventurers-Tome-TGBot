@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Minus, Plus, User, Vault } from 'lucide-react'
+import { Minus, Plus, User, Package } from 'lucide-react'
 import Sheet from '@/components/ui/Sheet'
 import Pressable from '@/components/ui/Pressable'
 import Button from '@/components/ui/Button'
@@ -28,7 +28,7 @@ export function PartnerPicker({ partners, stash, value, onChange }: { partners: 
       {stash && (
         <Pressable aria-pressed={value === STASH_TARGET} onClick={() => onChange(STASH_TARGET)}
           className={`w-full min-h-[44px] flex items-center gap-2 px-3 rounded-xl border text-left text-sm font-cinzel ${value === STASH_TARGET ? 'bg-dnd-gold/20 border-dnd-gold' : 'bg-dnd-surface border-dnd-border'}`}>
-          <Vault size={16} className="text-dnd-gold shrink-0" />
+          <Package size={16} className="text-dnd-gold shrink-0" />
           <span className="truncate">{t('campaign.stash')}</span>
         </Pressable>
       )}

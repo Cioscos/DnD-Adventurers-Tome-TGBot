@@ -10,12 +10,15 @@ import type { ActiveCampaignSession } from '@/types'
 export default function CampaignSessionBanner() {
   const { t } = useTranslation()
   const [open, setOpen] = useState<ActiveCampaignSession | null>(null)
+  // Niente polling per chi non ha campagne (la maggioranza).
+  const { data: mine = [] } = useQuery({ queryKey: ['campaigns'], queryFn: () => api.campaigns.list() })
   const { data = [] } = useQuery({
     queryKey: ['campaign-active-for-me'],
     queryFn: () => api.campaigns.activeForMe(),
     retry: false,
     // Il master può aprire la serata mentre sei sulla home: va rilevata.
-    refetchInterval: 15_000,
+    refetchInterval: mine.length > 0 ? 15_000 : false,
+    enabled: mine.length > 0,
   })
   if (data.length === 0) return null
 

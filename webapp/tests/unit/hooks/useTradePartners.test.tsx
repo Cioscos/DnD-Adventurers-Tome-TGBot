@@ -27,6 +27,10 @@ describe('useTradePartners', () => {
   it('null se il PG non partecipa', async () => expect(await run(sess(), 99)).toBeNull())
   it('null senza compagni con PG', async () =>
     expect(await run(sess({ participants: [P(1, 10), P(3, null), P(4, 40, 'gm')] }))).toBeNull())
+  it('in campagna senza altri compagni resta non null (il deposito è un destinatario)', async () => {
+    const r = await run(sess({ campaign_id: 3, participants: [P(1, 10), P(4, 40, 'gm')] }))
+    expect(r).toMatchObject({ sessionId: 9, partners: [], stash: true })
+  })
   it('ritorna solo gli altri giocatori con PG', async () => {
     const r = await run(sess())
     expect(r?.sessionId).toBe(9)
