@@ -4,36 +4,43 @@ import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
 import ChipInput from '@/components/ui/ChipInput'
 import Pressable from '@/components/ui/Pressable'
+import type { NoteCampaign } from '@/types'
 
 interface NoteEditorProps {
-  initialNote?: { title: string; body: string; tags?: string[] } | null
-  onSave: (title: string, body: string, tags: string[]) => void
+  initialNote?: { title: string; body: string; tags?: string[]; campaign_id?: number | null } | null
+  campaigns?: NoteCampaign[]
+  /** Campagna preselezionata per una voce nuova (quella attuale del PG). */
+  defaultCampaignId?: number | null
+  onSave: (title: string, body: string, tags: string[], campaignId: number | null) => void
   onCancel: () => void
   isPending: boolean
 }
 
-export default function NoteEditor({ initialNote, onSave, onCancel, isPending }: NoteEditorProps) {
+export default function NoteEditor({ initialNote, campaigns = [], defaultCampaignId = null, onSave, onCancel, isPending }: NoteEditorProps) {
   const { t } = useTranslation()
   const isEdit = !!initialNote
 
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
   const [tags, setTags] = useState<string[]>([])
+  const [campaignId, setCampaignId] = useState<number | null>(defaultCampaignId)
 
   useEffect(() => {
     if (initialNote) {
       setTitle(initialNote.title)
       setBody(initialNote.body)
       setTags(initialNote.tags ?? [])
+      setCampaignId(initialNote.campaign_id ?? null)
     } else {
       setTitle('')
       setBody('')
       setTags([])
+      setCampaignId(defaultCampaignId)
     }
-  }, [initialNote])
+  }, [initialNote, defaultCampaignId])
 
   const handleSave = () => {
-    onSave(title.trim(), body.trim(), tags)
+    onSave(title.trim(), body.trim(), tags, campaignId)
   }
 
   const rawSuggestions = t('character.notes.tag_suggestions', { returnObjects: true })
@@ -80,6 +87,30 @@ export default function NoteEditor({ initialNote, onSave, onCancel, isPending }:
               + {s}
             </Pressable>
           ))}
+        </div>
+      )}
+      {campaigns.length > 0 && (
+        <div>
+          <span className="block text-xs uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">
+            {t('character.notes.campaign_label')}
+          </span>
+          <div className="flex flex-wrap gap-2">
+            {[{ id: null, name: t('character.notes.campaign_none') }, ...campaigns].map((c) => (
+              <Pressable
+                key={c.id ?? 'none'}
+                type="button"
+                aria-pressed={campaignId === c.id}
+                onClick={() => setCampaignId(c.id)}
+                className={`min-h-11 px-3 rounded-xl border text-sm font-body ${
+                  campaignId === c.id
+                    ? 'bg-dnd-gold/20 border-dnd-gold text-dnd-gold-bright'
+                    : 'bg-dnd-surface-raised border-dnd-border text-dnd-text'
+                }`}
+              >
+                {c.name}
+              </Pressable>
+            ))}
+          </div>
         </div>
       )}
       <div className="flex gap-2">

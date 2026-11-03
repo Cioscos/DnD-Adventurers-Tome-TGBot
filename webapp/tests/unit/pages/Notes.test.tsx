@@ -1,17 +1,17 @@
-import { describe, it, expect, vi, afterEach } from 'vitest'
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient } from '@tanstack/react-query'
 import { renderWithProviders } from '../utils/renderWithProviders'
 import Notes from '@/pages/Notes'
 
-const { list } = vi.hoisted(() => ({ list: vi.fn() }))
+const { list, campaigns } = vi.hoisted(() => ({ list: vi.fn(), campaigns: vi.fn() }))
 
 vi.mock('@/api/client', () => {
   class ApiError extends Error {
     constructor(public status: number, public detail: unknown) { super(`API ${status}`) }
   }
-  return { api: { notes: { list, voiceUrl: () => '' }, share: { note: vi.fn() } }, ApiError }
+  return { api: { notes: { list, campaigns, voiceUrl: () => '' }, share: { note: vi.fn() } }, ApiError }
 })
 vi.mock('react-router-dom', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
@@ -58,7 +58,8 @@ vi.mock('@/pages/notes/NoteItem', async () => {
 })
 vi.mock('@/components/skeletons/NotesSkeleton', () => ({ default: () => null }))
 
-afterEach(() => { list.mockReset() })
+afterEach(() => { list.mockReset(); campaigns.mockReset() })
+beforeEach(() => { campaigns.mockResolvedValue([]) })
 
 describe('Notes', () => {
   it('shows the empty state when there really are no notes', async () => {
@@ -91,5 +92,51 @@ describe('Notes', () => {
     renderWithProviders(<Notes />, { client })
     expect(screen.getByText('Taverna')).toBeInTheDocument()
     expect(await screen.findByText('common.offline_data_from')).toBeInTheDocument()
+  })
+})
+
+const n = (title: string, campaign_id: number | null, campaign_name: string | null) =>
+  ({ title, body: 'x', is_voice: false, tags: [], campaign_id, campaign_name })
+
+describe('Notes campaign filter', () => {
+  beforeEach(() => {
+    campaigns.mockResolvedValue([{ id: 7, name: 'Coda', current: true }, { id: 8, name: 'Altra', current: false }])
+    list.mockResolvedValue([n('Taverna', 7, 'Coda'), n('Faro', 8, 'Altra'), n('Libera', null, null)])
+  })
+
+  it('uses the Diario title and shows all entries by default', async () => {
+    renderWithProviders(<Notes />)
+    expect(await screen.findByText('Taverna')).toBeInTheDocument()
+    expect(screen.getByText('Faro')).toBeInTheDocument()
+    expect(screen.getByText('Libera')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'character.notes.filter_all' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'character.notes.filter_none' })).toBeInTheDocument()
+  })
+
+  it('choosing a campaign shows only its entries', async () => {
+    renderWithProviders(<Notes />)
+    await userEvent.click(await screen.findByRole('button', { name: 'Altra' }))
+    expect(screen.getByText('Faro')).toBeInTheDocument()
+    expect(screen.queryByText('Taverna')).not.toBeInTheDocument()
+    expect(screen.queryByText('Libera')).not.toBeInTheDocument()
+  })
+
+  it('entries without campaign appear under "no campaign"', async () => {
+    renderWithProviders(<Notes />)
+    await userEvent.click(await screen.findByRole('button', { name: 'character.notes.filter_none' }))
+    expect(screen.getByText('Libera')).toBeInTheDocument()
+    expect(screen.queryByText('Taverna')).not.toBeInTheDocument()
+  })
+
+  it('?campaign=7 preselects that campaign', async () => {
+    renderWithProviders(<Notes />, { route: '/?campaign=7' })
+    expect(await screen.findByText('Taverna')).toBeInTheDocument()
+    expect(screen.queryByText('Faro')).not.toBeInTheDocument()
+  })
+
+  it('?campaign=none preselects "no campaign"', async () => {
+    renderWithProviders(<Notes />, { route: '/?campaign=none' })
+    expect(await screen.findByText('Libera')).toBeInTheDocument()
+    expect(screen.queryByText('Taverna')).not.toBeInTheDocument()
   })
 })

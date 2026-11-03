@@ -31,7 +31,7 @@ describe('NoteEditor', () => {
     fireEvent.change(screen.getByPlaceholderText('character.notes.body_placeholder'), { target: { value: 'corpo' } })
     expect(save).toBeEnabled()
     await userEvent.click(save)
-    expect(onSave).toHaveBeenCalledWith('Cripta', 'corpo', [])
+    expect(onSave).toHaveBeenCalledWith('Cripta', 'corpo', [], null)
   })
 
   it('edit mode hides the title input', () => {

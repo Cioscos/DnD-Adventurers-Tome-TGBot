@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Copy, Share2, RefreshCw, Play, Trash2, UserMinus, Pencil } from 'lucide-react'
+import { Copy, Share2, RefreshCw, Play, Trash2, UserMinus, Pencil, BookOpen } from 'lucide-react'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
@@ -231,6 +231,17 @@ export default function Campaign() {
                     {[mem.player_name, mem.class_summary].filter(Boolean).join(' · ')}
                   </p>
                   <p className="mt-1 text-xs font-cinzel uppercase text-dnd-gold-dim">{t(`campaign.status_${mem.status}`)}</p>
+                  {mem.is_mine && (
+                    <Button
+                      className="mt-2"
+                      variant="secondary"
+                      size="sm"
+                      icon={<BookOpen size={14} />}
+                      onClick={() => navigate(`/char/${mem.character_id}/notes?campaign=${camp.id}`)}
+                    >
+                      {t('campaign.my_journal')}
+                    </Button>
+                  )}
                 </div>
                 {manage && (
                   <Button

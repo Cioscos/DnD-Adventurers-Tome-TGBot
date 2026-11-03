@@ -381,6 +381,14 @@ export interface Note {
   created_at?: string | null
   updated_at?: string | null
   tags?: string[]
+  campaign_id?: number | null
+  campaign_name?: string | null
+}
+
+export interface NoteCampaign {
+  id: number
+  name: string
+  current: boolean
 }
 
 export interface SharePreview {

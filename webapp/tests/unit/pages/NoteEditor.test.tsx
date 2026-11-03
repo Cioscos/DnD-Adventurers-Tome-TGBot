@@ -1,0 +1,37 @@
+import { describe, it, expect, vi } from 'vitest'
+import { screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { renderWithProviders } from '../utils/renderWithProviders'
+import NoteEditor from '@/pages/notes/NoteEditor'
+
+vi.mock('react-i18next', async (orig) => {
+  const actual = (await orig()) as Record<string, unknown>
+  return { ...actual, useTranslation: () => ({ t: (k: string) => k, i18n: { language: 'it' } }) }
+})
+
+describe('NoteEditor campaign', () => {
+  const camps = [{ id: 7, name: 'Coda', current: true }, { id: 8, name: 'Altra', current: false }]
+
+  it('new entry preselects the current campaign and can be saved with it', async () => {
+    const onSave = vi.fn()
+    renderWithProviders(<NoteEditor onSave={onSave} onCancel={() => {}} isPending={false} campaigns={camps} defaultCampaignId={7} />)
+    expect(screen.getByRole('button', { name: 'Coda' })).toHaveAttribute('aria-pressed', 'true')
+    await userEvent.type(screen.getByPlaceholderText('character.notes.title_placeholder'), 'T')
+    await userEvent.click(screen.getByRole('button', { name: 'common.save' }))
+    await waitFor(() => expect(onSave).toHaveBeenCalledWith('T', '', [], 7))
+  })
+
+  it('"none" saves with a null campaign', async () => {
+    const onSave = vi.fn()
+    renderWithProviders(<NoteEditor onSave={onSave} onCancel={() => {}} isPending={false} campaigns={camps} defaultCampaignId={7} />)
+    await userEvent.click(screen.getByRole('button', { name: 'character.notes.campaign_none' }))
+    await userEvent.type(screen.getByPlaceholderText('character.notes.title_placeholder'), 'T')
+    await userEvent.click(screen.getByRole('button', { name: 'common.save' }))
+    await waitFor(() => expect(onSave).toHaveBeenCalledWith('T', '', [], null))
+  })
+
+  it('editing starts from the entry campaign, not the default', () => {
+    renderWithProviders(<NoteEditor initialNote={{ title: 'A', body: 'b', tags: [], campaign_id: 8 }} onSave={() => {}} onCancel={() => {}} isPending={false} campaigns={camps} defaultCampaignId={7} />)
+    expect(screen.getByRole('button', { name: 'Altra' })).toHaveAttribute('aria-pressed', 'true')
+  })
+})

@@ -48,6 +48,7 @@ import type {
   Item,
   MapEntry,
   Note,
+  NoteCampaign,
   ParticipantIdentity,
   RollDamageRequest,
   RollDamageResult,
@@ -802,23 +803,30 @@ export const api = {
   // ---------------------------------------------------------------------------
   notes: {
     list: (charId: number) => request<Note[]>(`/characters/${charId}/notes`),
-    add: (charId: number, title: string, body: string, tags?: string[]) =>
+    campaigns: (charId: number) => request<NoteCampaign[]>(`/characters/${charId}/notes/campaigns`),
+    add: (charId: number, title: string, body: string, tags?: string[], campaignId?: number | null) =>
       request<Note[]>(`/characters/${charId}/notes`, {
         method: 'POST',
-        body: JSON.stringify({ title, body, tags: tags ?? [] }),
+        body: JSON.stringify({ title, body, tags: tags ?? [], ...(campaignId != null ? { campaign_id: campaignId } : {}) }),
       }),
-    update: (charId: number, title: string, body: string, tags?: string[]) =>
+    // campaignId: undefined = invariata, null = rimuovi, number = assegna.
+    update: (charId: number, title: string, body: string, tags?: string[], campaignId?: number | null) =>
       request<Note[]>(`/characters/${charId}/notes/${encodeURIComponent(title)}`, {
         method: 'PATCH',
-        body: JSON.stringify({ body, ...(tags !== undefined ? { tags } : {}) }),
+        body: JSON.stringify({
+          body,
+          ...(tags !== undefined ? { tags } : {}),
+          ...(campaignId === null ? { clear_campaign: true } : campaignId !== undefined ? { campaign_id: campaignId } : {}),
+        }),
       }),
     remove: (charId: number, title: string) =>
       request<Note[]>(`/characters/${charId}/notes/${encodeURIComponent(title)}`, {
         method: 'DELETE',
       }),
-    uploadVoice: (charId: number, title: string, audioBlob: Blob) => {
+    uploadVoice: (charId: number, title: string, audioBlob: Blob, campaignId?: number | null) => {
       const fd = new FormData()
       fd.append('title', title)
+      if (campaignId != null) fd.append('campaign_id', String(campaignId))
       fd.append('file', audioBlob, 'voice.webm')
       return requestFormData<Note[]>(`/characters/${charId}/notes/voice`, fd)
     },

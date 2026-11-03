@@ -141,8 +141,13 @@ function NoteItemInner({ note, onEdit, onDelete, onView, onShare, sharePending =
           </Pressable>
         </div>
       </div>
-      {tags.length > 0 && (
+      {(tags.length > 0 || note.campaign_name) && (
         <div className="flex flex-wrap gap-1 mb-1.5">
+          {note.campaign_name && (
+            <span className="text-xs font-cinzel uppercase tracking-wider px-1.5 py-px rounded-full border border-dnd-gold text-dnd-gold-bright">
+              {note.campaign_name}
+            </span>
+          )}
           {tags.map((tag) => (
             <span
               key={tag}

@@ -215,4 +215,18 @@ describe('Campaign page', () => {
     await userEvent.click(screen.getByRole('button', { name: 'common.retry' }))
     expect(await screen.findByText('Thorin')).toBeInTheDocument()
   })
+
+  it('"my journal" on my character opens the notes filtered by this campaign', async () => {
+    get.mockResolvedValue(playerView())
+    renderPage()
+    await userEvent.click(await screen.findByRole('button', { name: 'campaign.my_journal' }))
+    expect(navigateSpy).toHaveBeenCalledWith('/char/10/notes?campaign=5')
+  })
+
+  it('no journal link on other players characters', async () => {
+    get.mockResolvedValue(detail())
+    renderPage()
+    await screen.findByText('Thorin')
+    expect(screen.queryByRole('button', { name: 'campaign.my_journal' })).not.toBeInTheDocument()
+  })
 })
