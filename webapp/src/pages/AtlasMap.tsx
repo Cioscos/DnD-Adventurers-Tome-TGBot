@@ -190,7 +190,7 @@ function AtlasMapView() {
             markers={visible}
             selectedId={selectedId}
             isGm={isGm}
-            onSelect={setSelectedId}
+            onSelect={mode === 'view' ? setSelectedId : () => {}}
             onTransform={mode === 'view' ? undefined : readCenter}
           />
         ) : (

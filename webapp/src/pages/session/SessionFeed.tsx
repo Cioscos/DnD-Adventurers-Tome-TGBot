@@ -2,10 +2,10 @@ import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { ArrowLeftRight, BookOpen, Gift, Lock, Maximize2, Send, User as UserIcon, X } from 'lucide-react'
+import { ArrowLeftRight, BookOpen, Gift, Lock, Map as MapIcon, Maximize2, Send, User as UserIcon, X } from 'lucide-react'
 import { GiCrown as Crown } from 'react-icons/gi'
 import { toast } from 'sonner'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { api, ApiError } from '@/api/client'
 import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
@@ -139,6 +139,7 @@ export default function SessionFeed({
   const { t, i18n } = useTranslation()
   const qc = useQueryClient()
   const navigate = useNavigate()
+  const location = useLocation()
 
   const [items, setItems] = useState<SessionFeedItem[]>([])
   const [hasMoreBefore, setHasMoreBefore] = useState(false)
@@ -433,6 +434,23 @@ export default function SessionFeed({
                 >
                   <BookOpen size={12} className="shrink-0 mt-1 text-dnd-gold-bright" />
                   <span className="flex-1 min-w-0 break-words">{t('session.feed.lore_reveal', { title: it.trade.title ?? '' })}</span>
+                  <span className="shrink-0 mt-0.5 font-mono text-xs text-dnd-text-faint">{formatTime24(it.timestamp, i18n.language)}</span>
+                </Pressable>
+              )
+            }
+            if (it.trade?.kind === 'atlas_reveal') {
+              const { map_id, marker_id } = it.trade
+              return (
+                <Pressable
+                  key={itemKey(it)}
+                  onClick={() => navigate(
+                    `/campaign/${campaignId}/atlas/${map_id}` + (marker_id ? `?marker=${marker_id}` : ''),
+                    { state: { from: location.pathname + location.search } },
+                  )}
+                  className="max-w-[80%] min-h-[44px] flex items-start gap-1.5 px-3 py-2 rounded-lg text-sm font-body text-left bg-dnd-surface border border-dnd-gold-dim text-dnd-text"
+                >
+                  <MapIcon size={12} className="shrink-0 mt-1 text-dnd-gold-bright" />
+                  <span className="flex-1 min-w-0 break-words">{t('session.feed.atlas_reveal', { title: it.trade.title ?? '' })}</span>
                   <span className="shrink-0 mt-0.5 font-mono text-xs text-dnd-text-faint">{formatTime24(it.timestamp, i18n.language)}</span>
                 </Pressable>
               )

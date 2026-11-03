@@ -105,6 +105,23 @@ describe('CampaignRecap', () => {
     expect(shareTelegramMessage).toHaveBeenCalledWith('pm1')
   })
 
+  it('renders places block', async () => {
+    recap.mockResolvedValue({ ...RECAP, places: [{ map_id: 4, marker_id: 12, title: 'Porto Grigio' }, { map_id: 5, marker_id: null, title: 'Costa Nord' }] })
+    campaignGet.mockResolvedValue({ id: 5, is_gm: false })
+    renderPage()
+    expect(await screen.findByText('campaign.recap.places')).toBeInTheDocument()
+    expect(screen.getByText('Porto Grigio')).toBeInTheDocument()
+    expect(screen.getByText('Costa Nord')).toBeInTheDocument()
+  })
+
+  it('old recap without places renders without crash', async () => {
+    recap.mockResolvedValue(RECAP)
+    campaignGet.mockResolvedValue({ id: 5, is_gm: false })
+    renderPage()
+    await screen.findByText(/campaign\.recap\.evening/)
+    expect(screen.queryByText('campaign.recap.places')).toBeNull()
+  })
+
   it('shows the empty state on 404', async () => {
     recap.mockRejectedValue(new ApiError(404, 'recap_not_found'))
     campaignGet.mockResolvedValue({ id: 5, is_gm: false })
