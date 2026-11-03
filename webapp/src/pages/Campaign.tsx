@@ -26,7 +26,7 @@ const STATUSES: CampaignMemberStatus[] = ['active', 'reserve', 'dead']
 function formatDuration(seconds: number): string {
   const h = Math.floor(seconds / 3600)
   const m = Math.floor((seconds % 3600) / 60)
-  return h > 0 ? `${h}h ${m}m` : `${m}m`
+  return h > 0 ? (m > 0 ? `${h}h ${String(m).padStart(2, '0')}m` : `${h}h`) : `${m}m`
 }
 
 type Confirm = { kind: 'regen' } | { kind: 'delete' } | { kind: 'member'; member: CampaignMember } | null
@@ -41,7 +41,7 @@ export default function Campaign() {
   const [confirm, setConfirm] = useState<Confirm>(null)
   const key = ['campaign', campId]
 
-  const { data: camp, isLoading, isError } = useQuery({
+  const { data: camp, isLoading, isError, error, refetch } = useQuery({
     queryKey: key,
     queryFn: () => api.campaigns.get(campId),
     enabled: Number.isFinite(campId),
@@ -59,6 +59,11 @@ export default function Campaign() {
       qc.setQueryData(['session-me'], s)
       haptic.success()
       navigate(`/session/${s.id}`)
+    },
+    // Es. 409: la sessione esiste già, ricarica così il bottone diventa «Vai alla sessione».
+    onError: () => {
+      qc.invalidateQueries({ queryKey: key })
+      notifyMutationError()
     },
   })
   const setStatus = useMutation({
@@ -104,9 +109,13 @@ export default function Campaign() {
     )
   }
   if (isError || !camp) {
+    const gone = error instanceof ApiError && (error.status === 404 || error.status === 403)
     return (
       <Layout title={t('campaign.mine')} backTo="/session">
-        <EmptyState title={t('campaign.not_found')} />
+        <EmptyState
+          title={t(gone ? 'campaign.not_found' : 'campaign.load_error')}
+          action={gone ? undefined : { label: t('common.retry'), onClick: () => refetch() }}
+        />
       </Layout>
     )
   }
@@ -176,6 +185,7 @@ export default function Campaign() {
                       <Pressable
                         key={s}
                         aria-pressed={mem.status === s}
+                        pending={setStatus.isPending && setStatus.variables?.characterId === mem.character_id && setStatus.variables.status === s}
                         disabled={setStatus.isPending}
                         onClick={() => mem.status !== s && setStatus.mutate({ characterId: mem.character_id, status: s })}
                         className={`min-h-[44px] rounded-lg border text-xs font-cinzel ${mem.status === s ? 'bg-dnd-gold/20 border-dnd-gold text-dnd-gold-bright' : 'bg-dnd-surface border-dnd-border text-dnd-text-muted'}`}

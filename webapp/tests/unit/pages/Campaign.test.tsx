@@ -50,7 +50,7 @@ const detail = (over: Partial<CampaignDetail> = {}): CampaignDetail => ({
     items: [{ id: 1, name: 'Carro', weight: 0, quantity: 1, item_type: 'container', is_equipped: false, item_metadata: { container: { capacity_lb: null, counts_weight: false, quick_access: false } } }],
     currency: { id: 1, copper: 0, silver: 85, electrum: 0, gold: 12400, platinum: 0 },
   },
-  sessions: [{ id: 8, created_at: '2026-10-28T20:00:00+00:00', duration_seconds: 13200 }],
+  sessions: [{ id: 8, created_at: '2026-10-28T20:00:00+00:00', duration_seconds: 13200 }, { id: 9, created_at: '2026-10-21T20:00:00+00:00', duration_seconds: 14700 }, { id: 10, created_at: '2026-10-14T20:00:00+00:00', duration_seconds: 18000 }],
   my_last_character_id: null,
   ...over,
 } as CampaignDetail)
@@ -78,6 +78,8 @@ describe('Campaign page', () => {
     expect(screen.getByText(/12\.400/)).toBeInTheDocument()
     expect(screen.getByText(/Carro/)).toBeInTheDocument()
     expect(screen.getByText(/3h 40m/)).toBeInTheDocument()
+    expect(screen.getByText('4h 05m')).toBeInTheDocument()
+    expect(screen.getByText('5h')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'campaign.delete' })).toBeInTheDocument()
   })
 
@@ -143,5 +145,13 @@ describe('Campaign page', () => {
     expect(screen.getAllByRole('button', { name: 'campaign.status_reserve' })).toHaveLength(1)
     expect(screen.getAllByRole('button', { name: 'campaign.remove_member' })).toHaveLength(1)
     expect(within(screen.getByTestId('members')).getByText('Lyra')).toBeInTheDocument()
+  })
+
+  it('a generic load error offers a retry', async () => {
+    get.mockRejectedValueOnce(new Error('offline')).mockResolvedValue(detail())
+    renderPage()
+    expect(await screen.findByText('campaign.load_error')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'common.retry' }))
+    expect(await screen.findByText('Thorin')).toBeInTheDocument()
   })
 })

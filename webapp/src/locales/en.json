@@ -1764,7 +1764,8 @@
     "stash": "Party stash",
     "stash_empty": "The stash is empty.",
     "stash_coins": "Coffer",
-    "stash_items": "{{count}} items",
+    "stash_items_one": "{{count}} item",
+    "stash_items_other": "{{count}} items",
     "nights": "Nights",
     "nights_empty": "No nights yet.",
     "night_active": "in progress",
@@ -1774,9 +1775,7 @@
     "delete_confirm": "Yes, delete",
     "delete_blocked": "Close the running session first.",
     "not_found": "Campaign not found.",
-    "load_error": "Could not load the campaign.",
-    "action_error": "Action failed. Try again.",
-    "player": "Player"
+    "load_error": "Could not load the campaign."
   },
   "session": {
     "title": "Game session",
@@ -1801,7 +1800,7 @@
     "already_in_other": "You're already in another active session. Leave it to join this one.",
     "join_needs_character": "Create a character to join the session.",
     "join_button": "Join",
-    "create_button": "Create session",
+    "create_button": "Start session",
     "room_title": "Session {{code}}",
     "chat": "Chat",
     "chat_and_history": "Chat & History",

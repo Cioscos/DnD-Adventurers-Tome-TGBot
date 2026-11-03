@@ -46,6 +46,8 @@ export default function StartSessionSheet({ open, onClose }: { open: boolean; on
       if (selected === 'none') return api.sessions.create()
       if (selected === 'new') {
         const camp = await api.campaigns.create(name.trim())
+        // Se la sessione fallisce, il retry usa questa campagna invece di crearne un'altra.
+        setChoice(camp.id)
         qc.invalidateQueries({ queryKey: ['campaigns'] })
         return api.sessions.create(undefined, camp.id)
       }

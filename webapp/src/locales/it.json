@@ -1763,7 +1763,8 @@
     "stash": "Deposito di gruppo",
     "stash_empty": "Il deposito è vuoto.",
     "stash_coins": "Cassa",
-    "stash_items": "{{count}} oggetti",
+    "stash_items_one": "{{count}} oggetto",
+    "stash_items_other": "{{count}} oggetti",
     "nights": "Serate",
     "nights_empty": "Ancora nessuna serata.",
     "night_active": "in corso",
@@ -1773,9 +1774,7 @@
     "delete_confirm": "Sì, elimina",
     "delete_blocked": "Chiudi prima la sessione in corso.",
     "not_found": "Campagna non trovata.",
-    "load_error": "Non riesco a caricare la campagna.",
-    "action_error": "Operazione non riuscita. Riprova.",
-    "player": "Giocatore"
+    "load_error": "Non riesco a caricare la campagna."
   },
   "session": {
     "title": "Sessione di gioco",
@@ -1800,7 +1799,7 @@
     "already_in_other": "Sei già in un'altra sessione attiva. Esci da quella per unirti a questa.",
     "join_needs_character": "Crea un personaggio per unirti alla sessione.",
     "join_button": "Entra",
-    "create_button": "Crea sessione",
+    "create_button": "Avvia sessione",
     "room_title": "Sessione {{code}}",
     "chat": "Chat",
     "chat_and_history": "Chat e cronologia",

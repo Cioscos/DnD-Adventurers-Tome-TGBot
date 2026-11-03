@@ -21,7 +21,7 @@ function descendantCount(items: Item[], id: number): number {
     .reduce((n, c) => n + 1 + descendantCount(items, c.id), 0)
 }
 
-function Node({ item, items, depth, renderAction }: { item: Item; items: Item[]; depth: number; renderAction?: Props['renderAction'] }) {
+function Node({ item, items, renderAction }: { item: Item; items: Item[]; renderAction?: Props['renderAction'] }) {
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const children = items.filter((i) => i.container_id === item.id).sort((a, b) => a.id - b.id)
@@ -35,7 +35,7 @@ function Node({ item, items, depth, renderAction }: { item: Item; items: Item[];
   )
   return (
     <li>
-      <div className="flex items-center gap-2 min-h-[44px]" style={{ paddingLeft: depth * 14 }}>
+      <div className="flex items-center gap-2 min-h-[44px]">
         {box ? (
           <Pressable onClick={() => setOpen((o) => !o)} aria-expanded={open} className="flex-1 min-w-0 min-h-[44px] flex items-center gap-2 text-left">
             <Package size={16} className="shrink-0 text-dnd-gold" />
@@ -43,12 +43,15 @@ function Node({ item, items, depth, renderAction }: { item: Item; items: Item[];
             <ExpandChevron open={open} className="text-dnd-gold-dim" />
           </Pressable>
         ) : (
-          label
+          <>
+            <span className="w-4 shrink-0" aria-hidden />
+            {label}
+          </>
         )}
         {renderAction && <div className="shrink-0">{renderAction(item)}</div>}
       </div>
       {box && open && children.length > 0 && (
-        <ul className="space-y-1 mt-1">{children.map((c) => <Node key={c.id} item={c} items={items} depth={depth + 1} renderAction={renderAction} />)}</ul>
+        <ul className="space-y-1 mt-1 ml-2 pl-3 border-l border-dnd-gold-dim/40">{children.map((c) => <Node key={c.id} item={c} items={items} renderAction={renderAction} />)}</ul>
       )}
     </li>
   )
@@ -63,16 +66,16 @@ export default function StashTree({ items, currency, renderAction }: Props) {
     <div className="space-y-1">
       <div className="flex items-baseline justify-between gap-3 min-h-[44px]">
         <span className="font-cinzel text-sm text-dnd-text shrink-0">{t('campaign.stash_coins')}</span>
-        <span className="min-w-0 text-right font-mono tabular-nums text-sm text-dnd-gold-bright break-words">
+        <span className="min-w-0 flex flex-wrap justify-end gap-x-2 font-mono tabular-nums text-sm text-dnd-gold-bright">
           {coins.length > 0
-            ? coins.map((k) => `${formatInt(currency[k], i18n.language)} ${COIN_ABBR[k]}`).join(' · ')
+            ? coins.map((k) => <span key={k} className="whitespace-nowrap">{formatInt(currency[k], i18n.language)} {COIN_ABBR[k]}</span>)
             : '0'}
         </span>
       </div>
       {roots.length === 0 ? (
         <p className="text-sm text-dnd-text-muted italic">{t('campaign.stash_empty')}</p>
       ) : (
-        <ul className="space-y-1">{roots.map((i) => <Node key={i.id} item={i} items={items} depth={0} renderAction={renderAction} />)}</ul>
+        <ul className="space-y-1">{roots.map((i) => <Node key={i.id} item={i} items={items} renderAction={renderAction} />)}</ul>
       )}
     </div>
   )
