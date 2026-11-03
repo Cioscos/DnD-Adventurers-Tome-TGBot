@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { ChevronLeft, MapPinPlus, Settings2 } from 'lucide-react'
 import Pressable from '@/components/ui/Pressable'
@@ -9,6 +9,10 @@ import FilterChip from '@/components/ui/FilterChip'
 import Skeleton from '@/components/ui/Skeleton'
 import MapCanvas, { type MapCanvasHandle } from '@/pages/atlas/MapCanvas'
 import MapManageSheet from '@/pages/atlas/MapManageSheet'
+import MarkerSheet from '@/pages/atlas/MarkerSheet'
+import MarkerFormSheet from '@/pages/atlas/MarkerFormSheet'
+import PlaceOverlay from '@/pages/atlas/PlaceOverlay'
+import { useToast } from '@/hooks/useToast'
 import { usePageBack } from '@/hooks/useOverlayDismiss'
 import { api, ApiError } from '@/api/client'
 import type { AtlasMarker } from '@/types'
@@ -50,6 +54,12 @@ function AtlasMapView() {
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [mode, setMode] = useState<AtlasMode>('view')
   const [managing, setManaging] = useState(false)
+  /** Punto dell'immagine sotto il mirino, null se fuori: ricalcolato a ogni trasformazione. */
+  const [center, setCenter] = useState<{ x: number; y: number } | null>(null)
+  const [formPoint, setFormPoint] = useState<{ x: number; y: number } | null>(null)
+  const [editing, setEditing] = useState<AtlasMarker | null>(null)
+  const qc = useQueryClient()
+  const toast = useToast()
 
   const { data: camp } = useQuery({ queryKey: ['campaign', campId], queryFn: () => api.campaigns.get(campId) })
   const isGm = !!camp?.is_gm
@@ -64,6 +74,37 @@ function AtlasMapView() {
   const unavailable = notFound(markersQ.error) || (mapsQ.isSuccess && !map)
   // Errore diverso da 404/403 (rete, 500): senza elenco mappe resterebbe lo skeleton per sempre.
   const failed = !unavailable && mapsQ.isError
+
+  const selected = markersQ.data?.find((m) => m.id === selectedId) ?? null
+  const movingId = typeof mode === 'object' ? mode.move : null
+
+  const readCenter = () => setCenter(canvas.current?.getCenterPoint() ?? null)
+  useEffect(() => {
+    if (mode === 'view') return
+    // Spostando, il mirino parte dal marker; per un nuovo punto dal centro della vista attuale.
+    const target = movingId != null ? markersQ.data?.find((m) => m.id === movingId) : null
+    if (target) canvas.current?.centerOn({ x: target.x, y: target.y })
+    readCenter()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode])
+
+  const move = useMutation({
+    mutationFn: (p: { x: number; y: number }) => api.atlas.updateMarker(campId, movingId!, p),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['atlas-markers', campId, mId] })
+      setMode('view')
+      setSelectedId(null)
+    },
+    onError: () => toast.error(t('common.action_failed')),
+  })
+  const place = () => {
+    const p = canvas.current?.getCenterPoint()
+    if (!p) return
+    if (movingId != null) move.mutate(p)
+    else { setFormPoint(p); setMode('view') }
+  }
+  const openLink = (target: number) =>
+    navigate(`/campaign/${campId}/atlas/${target}`, { state: { trail: [...trail, { id: mId, name: map?.name ?? '' }], from: state.from } })
 
   const visible = useMemo(() => (markersQ.data ?? []).filter(FILTERS[filter]), [markersQ.data, filter])
 
@@ -150,6 +191,7 @@ function AtlasMapView() {
             selectedId={selectedId}
             isGm={isGm}
             onSelect={setSelectedId}
+            onTransform={mode === 'view' ? undefined : readCenter}
           />
         ) : (
           <Skeleton.Rect height="100%" />
@@ -163,8 +205,37 @@ function AtlasMapView() {
             <MapPinPlus size={24} />
           </Pressable>
         )}
+        {map && mode !== 'view' && (
+          <PlaceOverlay canPlace={center !== null} pending={move.isPending} onCancel={() => setMode('view')} onPlace={place} />
+        )}
       </div>
 
+      {selected && (
+        <MarkerSheet
+          open={mode === 'view' && !editing && !formPoint}
+          campaignId={campId}
+          marker={selected}
+          isGm={isGm}
+          linkName={mapsQ.data?.find((m) => m.id === selected.link_map_id)?.name ?? null}
+          onClose={() => setSelectedId(null)}
+          onOpenLink={openLink}
+          onEdit={() => setEditing(selected)}
+          onMove={() => setMode({ move: selected.id })}
+        />
+      )}
+      {map && (
+        <MarkerFormSheet
+          open={!!formPoint || !!editing}
+          campaignId={campId}
+          mapId={mId}
+          isGm={isGm}
+          maps={mapsQ.data ?? []}
+          point={formPoint}
+          marker={editing}
+          onClose={() => { setFormPoint(null); setEditing(null) }}
+          onSaved={() => { setFormPoint(null); setEditing(null) }}
+        />
+      )}
       {isGm && map && <MapManageSheet open={managing} campaignId={campId} map={map} onClose={() => setManaging(false)} />}
     </div>
   )

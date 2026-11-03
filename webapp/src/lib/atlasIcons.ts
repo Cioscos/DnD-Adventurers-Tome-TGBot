@@ -1,4 +1,4 @@
-import type { MarkerType } from '@/types'
+import type { MarkerType, MarkerVisibility } from '@/types'
 import {
   Anchor, Beer, Bone, BookOpen, Castle, Church, Compass, Coins, Crown, Eye, Flag, Flame, Gem, Ghost,
   Hammer, House, Key, Landmark, MapPin, Mountain, Moon, Scroll, Ship, Shield, Skull, Sparkles, Store,
@@ -39,3 +39,10 @@ export function resolveType(t: MarkerType) {
     label: (tr: (key: string) => string) => (t.builtin ? tr(`atlas.types.${t.key ?? t.name}`) : t.name),
   }
 }
+
+/** Etichetta di visibilità: il «privato» del master è «Nascosto» ai giocatori. */
+export const visibilityKey = (isGm: boolean, v: MarkerVisibility) =>
+  v === 'public' ? 'atlas.vis_public' : isGm ? 'atlas.vis_hidden' : 'atlas.vis_private'
+
+/** Valore del tipo nei picker: «b:<key>» per i base, «c:<id>» per i personalizzati. */
+export const typeValue = (t: MarkerType) => (t.builtin ? `b:${t.key}` : `c:${t.id}`)
