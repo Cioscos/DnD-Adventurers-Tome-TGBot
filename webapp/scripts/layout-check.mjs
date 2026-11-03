@@ -6,7 +6,8 @@
 // Segnala ciò che i test jsdom non vedono (nessun layout) e che è sfuggito sul telefono:
 //  - SFORA: un elemento esce dal box del genitore (es. "Converti" oltre il bordo a 360px);
 //  - ATTACCATI: due comandi di gruppi diversi a meno di 4px (es. tastierino incollato a Spendi/Ricevi);
-//  - PICCOLO: area di tocco sotto 44×44 (anche contando ::before e i contenitori che danno il focus).
+//  - PICCOLO: area di tocco sotto 44×44 (anche contando ::before e i contenitori che danno il focus);
+//  - COPERTO: a fine pagina un comando resta sotto il FAB dei dadi e non si può toccare.
 // Gira a 360 e 412px (i telefoni Android più comuni) e in tema scuro (quello di Telegram).
 import { chromium } from 'playwright'
 
@@ -78,6 +79,42 @@ function audit() {
   return [...new Set(out)]
 }
 
+// COPERTO: il FAB dei dadi galleggia sulle liste e copre per forza qualcosa durante lo
+// scorrimento; è un difetto solo se a fine pagina un comando resta sotto e non si può più toccare.
+async function coveredAtEnd(page) {
+  await page.evaluate(() => {
+    // Inset come in Telegram a schermo intero: il FAB si alza di tanto, e fuori da Telegram varrebbe 0.
+    document.documentElement.style.setProperty('--tg-content-bottom', '74px')
+    for (const el of document.querySelectorAll('*')) {
+      if (/(auto|scroll)/.test(getComputedStyle(el).overflowY) && el.scrollHeight > el.clientHeight) el.scrollTop = el.scrollHeight
+    }
+  })
+  await page.waitForTimeout(300)
+  return page.evaluate(() => {
+    const fab = document.querySelector('.bottom-safe-fab')?.getBoundingClientRect()
+    if (!fab) return []
+    const out = []
+    for (const el of document.querySelectorAll('button, a[href], [role=button], [role=tab], [role=switch], input:not([type=hidden]), select, textarea')) {
+      if (el.closest('.fixed, .bottom-safe-fab, [data-sonner-toaster], [data-layout-ok]')) continue
+      const r = el.getBoundingClientRect()
+      if (r.width === 0 || r.height === 0) continue
+      const x = Math.min(r.right, fab.right) - Math.max(r.left, fab.left)
+      const y = Math.min(r.bottom, fab.bottom) - Math.max(r.top, fab.top)
+      if (x > 8 && y > 8) out.push(`COPERTO ${Math.round(y)}px  "${(el.getAttribute('aria-label') || el.textContent || el.tagName).trim().replace(/\s+/g, ' ').slice(0, 30)}"`)
+    }
+    return out
+  })
+}
+
+// Le altre due schermate dell'hub non hanno una route: ci si arriva col gesto.
+async function swipeLeft(page, width) {
+  await page.mouse.move(width - 20, 400)
+  await page.mouse.down()
+  await page.mouse.move(20, 400, { steps: 8 })
+  await page.mouse.up()
+  await page.waitForTimeout(600)
+}
+
 const browser = await chromium.launch({ channel: 'chrome' })
 let problems = 0
 for (const width of WIDTHS) {
@@ -89,6 +126,13 @@ for (const width of WIDTHS) {
     await page.waitForTimeout(1500)
     const found = await page.evaluate(audit)
     if (process.env.SHOTS) await page.screenshot({ path: `${process.env.SHOTS}/${width}${r.replace(/\//g, '_')}.png`, fullPage: true })
+    found.push(...await coveredAtEnd(page))
+    if (r === C) {
+      for (const screen of ['equipaggiamento', 'menu']) {
+        await swipeLeft(page, width)
+        found.push(...(await coveredAtEnd(page)).map((f) => `${f} (hub: ${screen})`))
+      }
+    }
     if (!found.length) continue
     problems += found.length
     console.log(`\n## ${width}px ${r}`)

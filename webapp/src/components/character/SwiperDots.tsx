@@ -13,6 +13,7 @@ export default function SwiperDots({ active, onSelect, labels }: Props) {
     <div
       role="tablist"
       aria-label="Character screens"
+      data-layout-ok="galleggia sul contenuto che scorre: la distanza dai comandi sotto cambia con lo scroll"
       // Scrim sotto i pallini: il contenuto che scorre sotto (es. CA dell'equipaggiamento) non si mescola con loro.
       // Ancorato a bottom-0 con l'inset come padding: con bottom-safe, in Telegram fullscreen
       // restava una fascia scoperta sotto lo scrim dove il contenuto spuntava tagliato.
