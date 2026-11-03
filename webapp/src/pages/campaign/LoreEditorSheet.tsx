@@ -29,11 +29,11 @@ function FilePick({ label, pick, accept, file, existing, removed, onFile, onRemo
     <div>
       <span className="block text-xs uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim">{label}</span>
       <div className="flex flex-wrap items-center gap-2">
-        <input ref={ref} type="file" accept={accept} className="hidden" onChange={(e) => onFile(e.target.files?.[0] ?? null)} />
+        <input ref={ref} type="file" accept={accept} className="hidden" onChange={(e) => { onFile(e.target.files?.[0] ?? null); e.target.value = '' }} />
         <Button variant="secondary" size="sm" onClick={() => ref.current?.click()}>{pick}</Button>
         {has && <span className="min-w-0 break-all text-xs text-dnd-text-muted font-body">{file?.name ?? '✓'}</span>}
         {has && (
-          <Button variant="secondary" size="sm" onClick={() => { onFile(null); onRemove() }}>{t('campaign.lore.remove_file')}</Button>
+          <Button variant="secondary" size="sm" onClick={() => (file ? onFile(null) : onRemove())}>{t('campaign.lore.remove_file')}</Button>
         )}
       </div>
     </div>

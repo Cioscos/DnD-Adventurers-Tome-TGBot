@@ -11,13 +11,15 @@ interface Props {
   /** null con open=true: voce non trovata (nascosta o eliminata) oppure ancora in caricamento. */
   lore: LoreRead | null
   loading?: boolean
+  /** Es. 'z-[70]' quando si apre sopra un overlay a schermo intero. */
+  zClassName?: string
   onClose: () => void
 }
 
-export default function LoreViewModal({ open, campaignId, lore, loading = false, onClose }: Props) {
+export default function LoreViewModal({ open, campaignId, lore, loading = false, zClassName, onClose }: Props) {
   const { t } = useTranslation()
   return (
-    <Sheet open={open} onClose={onClose} title={lore?.title ?? t('campaign.lore.title')}>
+    <Sheet open={open} onClose={onClose} zClassName={zClassName} title={lore?.title ?? t('campaign.lore.title')}>
       <div className="p-5 space-y-4">
         {!lore ? (
           loading ? (

@@ -129,4 +129,15 @@ describe('SessionFeed lore_reveal row', () => {
     await userEvent.click(await screen.findByRole('button', { name: /Il master ha rivelato/ }))
     await waitFor(() => expect(screen.getByText(itLocale.campaign.lore.unavailable)).toBeTruthy())
   })
+
+  it('da fullscreen la modale sta sopra l overlay (z-[70])', async () => {
+    getFeed.mockResolvedValue({ items: [loreRow], has_more: false })
+    loreList.mockResolvedValue([{ id: 3, title: 'La torre', body: 'Corpo della voce', tags: [], has_image: false, has_audio: false, revealed: true }])
+    mount()
+    await screen.findByRole('button', { name: /Il master ha rivelato/ })
+    await userEvent.click(screen.getByRole('button', { name: itLocale.session.chat_fullscreen_open }))
+    await userEvent.click(await screen.findByRole('button', { name: /Il master ha rivelato/ }))
+    await waitFor(() => expect(screen.getByText('Corpo della voce')).toBeTruthy())
+    expect(document.querySelector('[class*="z-[70]"]')).toBeTruthy()
+  })
 })

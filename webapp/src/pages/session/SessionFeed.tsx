@@ -581,7 +581,8 @@ export default function SessionFeed({
           open={loreId !== null}
           campaignId={campaignId}
           lore={loreQuery.data?.find((l) => l.id === loreId) ?? null}
-          loading={loreQuery.isLoading}
+          loading={loreQuery.isFetching && !loreQuery.data?.some((l) => l.id === loreId)}
+          zClassName={fullscreen ? 'z-[70]' : undefined}
           onClose={() => setLoreId(null)}
         />
       )}
