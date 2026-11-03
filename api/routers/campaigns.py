@@ -4,6 +4,7 @@ The party stash is a hidden Character (user_id=0, see api/services/campaigns.py)
 """
 from __future__ import annotations
 
+import shutil
 from datetime import datetime, timezone
 from typing import Annotated, Optional
 
@@ -32,7 +33,8 @@ from api.schemas.common import CurrencyRead
 from api.schemas.item import ItemRead
 from api.routers.sessions import _find_active_session_for_user, _load_session, _touch, session_read
 from api.schemas.session import GameSessionRead
-from api.services.campaigns import create_campaign, generate_campaign_code, unlink_file
+from api.services import campaigns as svc
+from api.services.campaigns import create_campaign, generate_campaign_code
 from core.db.models import (
     Campaign,
     CampaignLore,
@@ -314,13 +316,12 @@ async def delete_campaign(
         update(GameSession).where(GameSession.campaign_id == camp.id).values(campaign_id=None)
     )
     stash = await db.get(Character, camp.stash_character_id)
-    for lore in (await db.execute(select(CampaignLore).where(CampaignLore.campaign_id == camp.id))).scalars():
-        unlink_file(lore.image_path)
-        unlink_file(lore.audio_path)
-        await db.delete(lore)
+    await db.execute(delete(CampaignLore).where(CampaignLore.campaign_id == camp.id))
     await db.delete(camp)  # cascades campaign_members
     await db.flush()
     await db.delete(stash)  # cascades items and currency
+    await db.flush()
+    shutil.rmtree(svc.LORE_DIR / str(camp.id), ignore_errors=True)  # only after the DB delete went through
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

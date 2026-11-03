@@ -39,6 +39,9 @@ async def create_campaign(db: AsyncSession, gm_user_id: int, name: str) -> Campa
     return campaign
 
 
+LORE_DIR = Path("data/lore")
+
+
 def unlink_file(path: str | None) -> None:
     """Best-effort removal of an uploaded file."""
     if path:

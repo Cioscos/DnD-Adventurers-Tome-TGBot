@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import json
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
 from typing import Annotated, Optional
 
@@ -15,13 +15,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from api.auth import DEV_USER_ID, get_current_user, verify_init_data
 from api.database import get_db
 from api.routers.campaigns import _active_session_id
+from api.routers.sessions import _touch
 from api.schemas.campaign import LoreRead
+from api.services import campaigns as svc
 from api.services.campaigns import unlink_file
-from core.db.models import Campaign, CampaignLore, CampaignMember, SessionMessage, SessionRole
+from core.db.models import Campaign, CampaignLore, CampaignMember, GameSession, SessionMessage, SessionRole
 
 router = APIRouter(prefix="/campaigns/{campaign_id}/lore", tags=["lore"])
 
-LORE_DIR = Path("data/lore")
 _IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".webp", ".gif"}
 _AUDIO_EXTS = {".webm", ".ogg", ".mp3", ".wav", ".m4a", ".aac"}
 _MAX_IMAGE = 10 * 1024 * 1024
@@ -34,7 +35,7 @@ _MEDIA = {
 
 
 def _now() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+    return datetime.utcnow().isoformat(timespec="seconds")  # naive UTC, like sessions._now()
 
 
 def _read(lore: CampaignLore) -> LoreRead:
@@ -75,6 +76,13 @@ async def _gm_lore(db: AsyncSession, campaign_id: int, lore_id: int, user_id: in
     return await _lore(db, campaign_id, lore_id)
 
 
+def _title(raw: str) -> str:
+    title = raw.strip()
+    if not title:
+        raise HTTPException(status_code=422, detail="invalid_title")
+    return title
+
+
 def _tags(raw: Optional[str]) -> list[str]:
     try:
         tags = json.loads(raw or "[]")
@@ -92,7 +100,7 @@ async def _save(campaign_id: int, file: UploadFile, exts: set[str], max_size: in
     content = await file.read()
     if len(content) > max_size:
         raise HTTPException(status_code=400, detail=f"File too large (max {max_size // (1024 * 1024)} MB)")
-    folder = LORE_DIR / str(campaign_id)
+    folder = svc.LORE_DIR / str(campaign_id)
     folder.mkdir(parents=True, exist_ok=True)
     path = folder / f"{uuid.uuid4().hex}{suffix}"
     path.write_bytes(content)
@@ -146,7 +154,7 @@ async def create_lore(
     new_image, new_audio = await _save_both(campaign_id, image, audio)
     now = _now()
     lore = CampaignLore(
-        campaign_id=campaign_id, title=title.strip(), body=body, tags=tag_list,
+        campaign_id=campaign_id, title=_title(title), body=body, tags=tag_list,
         image_path=new_image, audio_path=new_audio, created_at=now, updated_at=now,
     )
     db.add(lore)
@@ -179,7 +187,7 @@ async def update_lore(
         stale.append(lore.audio_path)
         lore.audio_path = new_audio
     if title is not None:
-        lore.title = title.strip()
+        lore.title = _title(title)
     if body is not None:
         lore.body = body
     if tag_list is not None:
@@ -199,9 +207,11 @@ async def delete_lore(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> Response:
     lore = await _gm_lore(db, campaign_id, lore_id, user_id)
-    unlink_file(lore.image_path)
-    unlink_file(lore.audio_path)
+    paths = [lore.image_path, lore.audio_path]
     await db.delete(lore)
+    await db.flush()
+    for p in paths:
+        unlink_file(p)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
@@ -217,6 +227,7 @@ async def reveal_lore(
         lore.revealed_at = lore.updated_at = _now()
         session_id = await _active_session_id(db, campaign_id)
         if session_id is not None:
+            _touch(await db.get(GameSession, session_id))
             db.add(SessionMessage(
                 session_id=session_id, user_id=user_id, role=SessionRole.GAME_MASTER,
                 body=f"Il master ha rivelato: {lore.title}", sent_at=lore.revealed_at,
@@ -257,6 +268,8 @@ async def _serve(campaign_id: int, lore_id: int, db: AsyncSession, header: str, 
     if (not is_gm and lore.revealed_at is None) or not stored or not Path(stored).exists():
         raise HTTPException(status_code=404, detail="file_not_found")
     path = Path(stored)
+    if not path.resolve().is_relative_to(svc.LORE_DIR.resolve()):
+        raise HTTPException(status_code=400, detail="Invalid path")
     return FileResponse(path, media_type=_MEDIA.get(path.suffix.lower(), "application/octet-stream"))
 
 
