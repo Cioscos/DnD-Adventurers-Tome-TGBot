@@ -50,9 +50,30 @@ afterEach(() => {
 async function applyDamage() {
   renderWithProviders(<HpQuickSheet char={char} open onClose={() => {}} />)
   await userEvent.type(screen.getByPlaceholderText('0'), '4')
-  await userEvent.click(screen.getByRole('button', { name: 'character.hp.quick_apply' }))
+  await userEvent.click(screen.getByRole('button', { name: 'character.hp.apply_damage' }))
   await waitFor(() => expect(updateHpSpy).toHaveBeenCalled())
 }
+
+describe('HpQuickSheet quick values', () => {
+  it('a chip applies at once, with the same undo as a typed value', async () => {
+    updateHpSpy.mockResolvedValue({ ...char, hp_undo_id: 'abc' })
+    const onClose = vi.fn()
+    renderWithProviders(<HpQuickSheet char={char} open onClose={onClose} />)
+    await userEvent.click(screen.getByRole('button', { name: '−5' }))
+    await waitFor(() => expect(updateHpSpy).toHaveBeenCalledWith(42, 'damage', 5))
+    await waitFor(() => expect(showUndoToastSpy).toHaveBeenCalled())
+    expect(onClose).toHaveBeenCalled()
+  })
+
+  it('heal chips heal, and the optional damage controls start closed', async () => {
+    updateHpSpy.mockResolvedValue({ ...char })
+    renderWithProviders(<HpQuickSheet char={char} open onClose={() => {}} />)
+    expect(screen.getByRole('button', { name: 'character.hp.damage_type' })).toHaveAttribute('aria-expanded', 'false')
+    await userEvent.click(screen.getByText('character.hp.quick_heal'))
+    await userEvent.click(screen.getByRole('button', { name: '+10' }))
+    await waitFor(() => expect(updateHpSpy).toHaveBeenCalledWith(42, 'heal', 10))
+  })
+})
 
 describe('HpQuickSheet undo', () => {
   it('undo calls undoHp with the op id', async () => {
