@@ -57,6 +57,7 @@ from api.services.encounter_view import build_encounter_block
 from core.db.models import (
     Campaign,
     CampaignMember,
+    CampaignSchedule,
     Character,
     CharacterHistory,
     Combatant,
@@ -386,6 +387,15 @@ async def create_session(
     )
     db.add(session)
     await db.flush()
+    if body.campaign_id is not None:  # link the nearest unlinked planned evening within ±12h
+        t0 = datetime.utcnow()
+        rows = (await db.execute(select(CampaignSchedule).where(
+            CampaignSchedule.campaign_id == body.campaign_id, CampaignSchedule.session_id.is_(None)
+        ))).scalars().all()
+        near = [(abs((datetime.fromisoformat(r.starts_at) - t0).total_seconds()), r.id, r) for r in rows]
+        near = [x for x in near if x[0] <= 12 * 3600]
+        if near:
+            min(near, key=lambda x: x[:2])[2].session_id = session.id
     db.add(SessionParticipant(
         session_id=session.id,
         user_id=user_id,

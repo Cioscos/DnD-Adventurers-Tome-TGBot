@@ -1,9 +1,10 @@
 """Pydantic schemas for the campaigns API."""
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from typing import Annotated, Literal, Optional
 
-from pydantic import BaseModel, StringConstraints
+from pydantic import AfterValidator, BaseModel, StringConstraints
 
 from api.schemas.common import CurrencyRead
 from api.schemas.item import ItemRead
@@ -96,6 +97,39 @@ class LoreRead(BaseModel):
     revealed_at: Optional[str] = None
     created_at: str
     updated_at: str
+
+
+def _utc_naive(value: str) -> str:
+    """ISO with offset/'Z' -> naive UTC 'YYYY-MM-DDTHH:MM:SS'; naive input is ambiguous."""
+    try:
+        dt = datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise ValueError("invalid_starts_at") from exc
+    if dt.tzinfo is None:
+        raise ValueError("starts_at_needs_offset")
+    return dt.astimezone(timezone.utc).replace(tzinfo=None).isoformat(timespec="seconds")
+
+
+StartsAt = Annotated[str, AfterValidator(_utc_naive)]
+ScheduleNote = Annotated[Optional[str], StringConstraints(strip_whitespace=True, max_length=200)]
+
+
+class ScheduleCreate(BaseModel):
+    starts_at: StartsAt
+    note: ScheduleNote = None
+
+
+class ScheduleUpdate(BaseModel):
+    starts_at: Optional[StartsAt] = None
+    note: ScheduleNote = None
+
+
+class ScheduleRead(BaseModel):
+    id: int
+    starts_at: str
+    note: Optional[str] = None
+    session_id: Optional[int] = None
+    status: Literal["planned", "done", "skipped"]
 
 
 class ActiveCampaignSession(BaseModel):

@@ -629,6 +629,23 @@ class CampaignLore(Base):
     updated_at: Mapped[str] = mapped_column(String(50), nullable=False)
 
 
+class CampaignSchedule(Base):
+    """A planned evening; starts_at is naive-UTC ISO (YYYY-MM-DDTHH:MM:SS)."""
+
+    __tablename__ = "campaign_schedule"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    campaign_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("campaigns.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    starts_at: Mapped[str] = mapped_column(String(50), nullable=False)
+    note: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    reminded_day_at: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    reminded_hour_at: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    session_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    created_at: Mapped[str] = mapped_column(String(50), nullable=False)
+
+
 class GameSession(Base):
     """A live game session hosted by a Game Master with invite-code access."""
 

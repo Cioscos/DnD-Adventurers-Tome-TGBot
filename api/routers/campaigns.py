@@ -29,6 +29,9 @@ from api.schemas.campaign import (
     CampaignSessionJoin,
     InviteCodeRead,
     MemberStatusUpdate,
+    ScheduleCreate,
+    ScheduleRead,
+    ScheduleUpdate,
 )
 from api.schemas.common import CurrencyRead
 from api.schemas.item import ItemRead
@@ -40,6 +43,7 @@ from core.db.models import (
     Campaign,
     CampaignLore,
     CampaignMember,
+    CampaignSchedule,
     Character,
     GameSession,
     SessionParticipant,
@@ -321,6 +325,7 @@ async def delete_campaign(
     )
     stash = await db.get(Character, camp.stash_character_id)
     await db.execute(delete(CampaignLore).where(CampaignLore.campaign_id == camp.id))
+    await db.execute(delete(CampaignSchedule).where(CampaignSchedule.campaign_id == camp.id))
     await db.delete(camp)  # cascades campaign_members
     await db.flush()
     await db.delete(stash)  # cascades items and currency
@@ -329,7 +334,87 @@ async def delete_campaign(
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-@router.post("/{campaign_id}/invite-code", response_model=InviteCodeRead)
+def _naive_now() -> str:
+    return datetime.utcnow().isoformat(timespec="seconds")
+
+
+def _schedule_read(row: CampaignSchedule) -> ScheduleRead:
+    st = "done" if row.session_id is not None else ("skipped" if row.starts_at <= _naive_now() else "planned")
+    return ScheduleRead(id=row.id, starts_at=row.starts_at, note=row.note, session_id=row.session_id, status=st)
+
+
+async def _get_schedule(db: AsyncSession, campaign_id: int, sid: int) -> CampaignSchedule:
+    row = await db.get(CampaignSchedule, sid)
+    if row is None or row.campaign_id != campaign_id:
+        raise _err(404, "schedule_not_found")
+    return row
+
+
+@router.get("/{campaign_id}/schedule", response_model=list[ScheduleRead])
+async def list_schedule(
+    campaign_id: int,
+    user_id: Annotated[int, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> list[ScheduleRead]:
+    await _get_campaign(db, campaign_id, user_id)
+    rows = (await db.execute(
+        select(CampaignSchedule).where(CampaignSchedule.campaign_id == campaign_id)
+        .order_by(CampaignSchedule.starts_at, CampaignSchedule.id)
+    )).scalars().all()
+    return [_schedule_read(r) for r in rows]
+
+
+@router.post("/{campaign_id}/schedule", response_model=ScheduleRead, status_code=status.HTTP_201_CREATED)
+async def create_schedule(
+    campaign_id: int,
+    body: ScheduleCreate,
+    user_id: Annotated[int, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> ScheduleRead:
+    await _get_campaign(db, campaign_id, user_id, gm_only=True)
+    if body.starts_at <= _naive_now():
+        raise _err(422, "starts_at_in_past")
+    row = CampaignSchedule(campaign_id=campaign_id, starts_at=body.starts_at,
+                           note=body.note or None, created_at=_now())
+    db.add(row)
+    await db.flush()
+    return _schedule_read(row)
+
+
+@router.patch("/{campaign_id}/schedule/{sid}", response_model=ScheduleRead)
+async def update_schedule(
+    campaign_id: int,
+    sid: int,
+    body: ScheduleUpdate,
+    user_id: Annotated[int, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> ScheduleRead:
+    await _get_campaign(db, campaign_id, user_id, gm_only=True)
+    row = await _get_schedule(db, campaign_id, sid)
+    if body.starts_at is not None and body.starts_at != row.starts_at:
+        if body.starts_at <= _naive_now():
+            raise _err(422, "starts_at_in_past")
+        row.starts_at = body.starts_at
+        row.reminded_day_at = row.reminded_hour_at = None
+    if "note" in body.model_fields_set:
+        row.note = body.note or None
+    await db.flush()
+    return _schedule_read(row)
+
+
+@router.delete("/{campaign_id}/schedule/{sid}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_schedule(
+    campaign_id: int,
+    sid: int,
+    user_id: Annotated[int, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> Response:
+    await _get_campaign(db, campaign_id, user_id, gm_only=True)
+    await db.delete(await _get_schedule(db, campaign_id, sid))
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/{campaign_id}/invite-code",response_model=InviteCodeRead)
 async def regenerate_invite_code(
     campaign_id: int,
     user_id: Annotated[int, Depends(get_current_user)],

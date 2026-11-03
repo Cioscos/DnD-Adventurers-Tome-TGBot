@@ -49,6 +49,7 @@ from api.routers import (
     stats,
     transfer,
 )
+from api.tasks.campaign_reminders import run_campaign_reminders
 from api.tasks.session_cleanup import run_session_cleanup
 
 logging.basicConfig(level=logging.INFO)
@@ -95,6 +96,7 @@ async def lifespan(_app: FastAPI):
         logger.warning("content share cleanup failed (non-fatal): %s", exc)
 
     cleanup_task = asyncio.create_task(run_session_cleanup())
+    reminders_task = asyncio.create_task(run_campaign_reminders())
 
     # Annuncio Telegram della nuova versione (background, non blocca l'avvio)
     from api.database import AsyncSessionLocal
@@ -109,10 +111,12 @@ async def lifespan(_app: FastAPI):
         if announce_task is not None:
             announce_task.cancel()
         cleanup_task.cancel()
-        try:
-            await cleanup_task
-        except asyncio.CancelledError:
-            pass
+        reminders_task.cancel()
+        for t in (cleanup_task, reminders_task):
+            try:
+                await t
+            except asyncio.CancelledError:
+                pass
 
 
 # ---------------------------------------------------------------------------
