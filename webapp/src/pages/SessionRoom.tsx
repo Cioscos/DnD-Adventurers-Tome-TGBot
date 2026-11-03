@@ -444,6 +444,7 @@ export default function SessionRoom() {
       <SessionFeed
         code={live.code}
         sessionId={live.id}
+        campaignId={live.campaign_id ?? null}
         gmUserId={gmUserId}
         myUserId={myUserId}
         myCharId={myCharId}

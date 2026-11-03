@@ -36,6 +36,7 @@ import type {
   GameSession,
   CampaignRead,
   CampaignSummary,
+  LoreRead,
   CampaignDetail,
   CampaignMemberStatus,
   ActiveCampaignSession,
@@ -229,9 +230,10 @@ async function request<T>(
 async function requestFormData<T>(
   path: string,
   formData: FormData,
+  method: 'POST' | 'PATCH' = 'POST',
 ): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {
-    method: 'POST',
+    method,
     headers: authHeaders(),
     body: formData,
   })
@@ -958,6 +960,20 @@ export const api = {
   // ---------------------------------------------------------------------------
   // Campaigns
   // ---------------------------------------------------------------------------
+  lore: {
+    list: (campId: number) => request<LoreRead[]>(`/campaigns/${campId}/lore`),
+    create: (campId: number, fd: FormData) => requestFormData<LoreRead>(`/campaigns/${campId}/lore`, fd),
+    update: (campId: number, id: number, fd: FormData) =>
+      requestFormData<LoreRead>(`/campaigns/${campId}/lore/${id}`, fd, 'PATCH'),
+    remove: (campId: number, id: number) => request<void>(`/campaigns/${campId}/lore/${id}`, { method: 'DELETE' }),
+    reveal: (campId: number, id: number) => request<LoreRead>(`/campaigns/${campId}/lore/${id}/reveal`, { method: 'POST' }),
+    hide: (campId: number, id: number) => request<LoreRead>(`/campaigns/${campId}/lore/${id}/hide`, { method: 'POST' }),
+    imageUrl: (campId: number, id: number) =>
+      `${BASE_URL}/campaigns/${campId}/lore/${id}/image?init_data=${encodeURIComponent(getInitData())}`,
+    audioUrl: (campId: number, id: number) =>
+      `${BASE_URL}/campaigns/${campId}/lore/${id}/audio?init_data=${encodeURIComponent(getInitData())}`,
+  },
+
   campaigns: {
     list: () => request<CampaignSummary[]>('/campaigns'),
     create: (name: string) =>

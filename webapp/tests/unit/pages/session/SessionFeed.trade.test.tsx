@@ -7,10 +7,10 @@ import SessionFeed from '@/pages/session/SessionFeed'
 import itLocale from '@/locales/it.json'
 import type { SessionFeedItem, TradePayload } from '@/types'
 
-const { getFeed, enqueueSpy } = vi.hoisted(() => ({ getFeed: vi.fn(), enqueueSpy: vi.fn() }))
+const { getFeed, enqueueSpy, loreList } = vi.hoisted(() => ({ getFeed: vi.fn(), enqueueSpy: vi.fn(), loreList: vi.fn() }))
 
 vi.mock('@/api/client', () => ({
-  api: { sessions: { getFeed, sendMessage: vi.fn() } },
+  api: { sessions: { getFeed, sendMessage: vi.fn() }, lore: { list: loreList, imageUrl: () => '', audioUrl: () => '' } },
   ApiError: class ApiError extends Error {},
 }))
 vi.mock('@/lib/rewardQueue', () => ({ enqueue: enqueueSpy }))
@@ -93,5 +93,40 @@ describe('SessionFeed trade row', () => {
     } as TradePayload)
     await userEvent.click(await screen.findByRole('button', { name: /Thorin ha messo nel deposito: Zaino/ }))
     expect(screen.getByText('Corda')).toBeTruthy()
+  })
+})
+
+describe('SessionFeed lore_reveal row', () => {
+  beforeEach(() => { Element.prototype.scrollTo = vi.fn(); getFeed.mockReset() })
+  const loreRow = {
+    type: 'message', message_id: 5, user_id: 9, role: 'game_master', display_name: 'GM',
+    body: 'testo italiano del server', timestamp: '2026-01-01T10:00:00Z',
+    trade: { kind: 'lore_reveal', lore_id: 3, title: 'La torre' },
+  } as unknown as SessionFeedItem
+  const mount = () => render(
+    <QueryClientProvider client={new QueryClient()}>
+      <MemoryRouter>
+        <SessionFeed code="ABC" sessionId={1} campaignId={7} gmUserId={9} myUserId={2} myCharId={2}
+          participants={[]} whisperTarget={null} onClearWhisperTarget={() => {}} />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  )
+
+  it('mostra il testo da i18n e al tocco apre la voce', async () => {
+    getFeed.mockResolvedValue({ items: [loreRow], has_more: false })
+    loreList.mockResolvedValue([{ id: 3, title: 'La torre', body: 'Corpo della voce', tags: [], has_image: false, has_audio: false, revealed: true }])
+    mount()
+    const row = await screen.findByRole('button', { name: /Il master ha rivelato: La torre/ })
+    expect(screen.queryByText(/testo italiano/)).toBeNull()
+    await userEvent.click(row)
+    await waitFor(() => expect(screen.getByText('Corpo della voce')).toBeTruthy())
+  })
+
+  it('voce non più disponibile', async () => {
+    getFeed.mockResolvedValue({ items: [loreRow], has_more: false })
+    loreList.mockResolvedValue([])
+    mount()
+    await userEvent.click(await screen.findByRole('button', { name: /Il master ha rivelato/ }))
+    await waitFor(() => expect(screen.getByText(itLocale.campaign.lore.unavailable)).toBeTruthy())
   })
 })

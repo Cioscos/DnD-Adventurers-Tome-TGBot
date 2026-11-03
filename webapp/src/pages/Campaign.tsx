@@ -15,6 +15,7 @@ import Sheet from '@/components/ui/Sheet'
 import Input from '@/components/ui/Input'
 import JoinCampaignSessionSheet from '@/pages/campaign/JoinCampaignSessionSheet'
 import StashTree from '@/pages/campaign/StashTree'
+import LoreSection from '@/pages/campaign/LoreSection'
 import { api, ApiError } from '@/api/client'
 import { canShareMessage, haptic } from '@/auth/telegram'
 import { useShareMessage } from '@/hooks/useShareMessage'
@@ -286,6 +287,8 @@ export default function Campaign() {
       <Surface variant="elevated">
         <StashTree items={camp.stash.items} currency={camp.stash.currency} />
       </Surface>
+
+      <LoreSection campaignId={camp.id} isGm={camp.is_gm} />
 
       <SectionDivider>{t('campaign.nights')}</SectionDivider>
       {camp.sessions.length === 0 ? (

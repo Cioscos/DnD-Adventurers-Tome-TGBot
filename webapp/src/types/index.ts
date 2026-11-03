@@ -679,11 +679,27 @@ export interface TradeSnapshot {
   children: TradeSnapshot[]
 }
 
+export interface LoreRead {
+  id: number
+  title: string
+  body: string
+  tags: string[]
+  has_image: boolean
+  has_audio: boolean
+  revealed: boolean
+  revealed_at: string | null
+  created_at: string
+  updated_at: string
+}
+
 export type TradeKind = 'trade' | 'stash_put' | 'stash_take' | 'gm_stash_add' | 'gm_stash_remove'
 
 export interface TradePayload {
   /** Assente nelle righe vecchie: vale `trade`. Il lato deposito/master ha `character_id: null`. */
-  kind?: TradeKind
+  kind?: TradeKind | 'lore_reveal'
+  /** Solo kind='lore_reveal'. */
+  lore_id?: number
+  title?: string
   from: { character_id: number | null; name: string }
   to: { character_id: number | null; name: string }
   items: TradeSnapshot[]
