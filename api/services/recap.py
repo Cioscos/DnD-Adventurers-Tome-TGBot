@@ -206,8 +206,9 @@ async def build_recap(db: AsyncSession, gs: GameSession, ended_at: str) -> dict:
             if name and name not in monsters:
                 monsters.append(name)
 
-    gm_grants, trades, stash, lore = [], [], [], []
+    gm_grants, trades, stash, lore, places = [], [], [], [], []
     lore_seen: set = set()
+    place_seen: set = set()
     for m in (await db.execute(
         select(SessionMessage).where(SessionMessage.session_id == gs.id).order_by(SessionMessage.id)
     )).scalars():
@@ -223,6 +224,12 @@ async def build_recap(db: AsyncSession, gs: GameSession, ended_at: str) -> dict:
                     continue
                 lore_seen.add(pl.get("lore_id"))
                 lore.append({"id": pl.get("lore_id"), "title": pl.get("title")})
+            elif kind == "atlas_reveal":
+                key = (pl.get("map_id"), pl.get("marker_id"))
+                if key in place_seen:  # same map/marker revealed again in one evening: list it once
+                    continue
+                place_seen.add(key)
+                places.append({"map_id": pl.get("map_id"), "marker_id": pl.get("marker_id"), "title": pl.get("title")})
             elif kind == "trade":
                 trades.append({"from": frm, "to": to, "summary": _summary(pl.get("items"), pl.get("coins"))})
             elif kind in ("stash_put", "stash_take", "gm_stash_add", "gm_stash_remove"):
@@ -241,6 +248,7 @@ async def build_recap(db: AsyncSession, gs: GameSession, ended_at: str) -> dict:
         "combat": {"encounters": len(encs), "rounds": sum(e.round or 0 for e in encs), "monsters": monsters},
         "items": {"gm_grants": gm_grants, "trades": trades, "stash": stash},
         "lore": lore,
+        "places": places,
         "highlights": _highlights(characters),
     }
 
@@ -284,7 +292,7 @@ _T = {
         "items": "🎁 Oggetti e monete", "grant": "Il master a {to}: {what}", "trade": "{frm} → {to}: {what}",
         "stash_put": "{who} nel deposito: {what}", "stash_take": "{who} dal deposito: {what}",
         "gm_stash_add": "Il master nel deposito: {what}", "gm_stash_remove": "Il master dal deposito: {what}",
-        "lore": "📜 Lore rivelata", "highlights": "🏆 Curiosità",
+        "lore": "📜 Lore rivelata", "places": "🗺 Luoghi scoperti", "highlights": "🏆 Curiosità",
         "unluckiest": "Il più sfortunato ai dadi: {name} ({v}× 1 naturale)",
         "luckiest": "Il più fortunato ai dadi: {name} ({v}× 20 naturale)",
         "most_damage": "Chi ha subito più danni: {name} ({v})",
@@ -303,7 +311,7 @@ _T = {
         "items": "🎁 Items and coins", "grant": "GM to {to}: {what}", "trade": "{frm} → {to}: {what}",
         "stash_put": "{who} into the stash: {what}", "stash_take": "{who} from the stash: {what}",
         "gm_stash_add": "GM into the stash: {what}", "gm_stash_remove": "GM from the stash: {what}",
-        "lore": "📜 Lore revealed", "highlights": "🏆 Highlights",
+        "lore": "📜 Lore revealed", "places": "🗺 Places discovered", "highlights": "🏆 Highlights",
         "unluckiest": "Unluckiest with dice: {name} ({v}× natural 1)",
         "luckiest": "Luckiest with dice: {name} ({v}× natural 20)",
         "most_damage": "Took the most damage: {name} ({v})",
@@ -388,6 +396,8 @@ def format_recap_text(recap: dict, lang: str) -> str:
         blocks.append([f"*{tr('items')}*"] + [_esc("• ") + ln for ln in item_lines])
     if recap.get("lore"):
         blocks.append([f"*{tr('lore')}*"] + [_esc(f"• {x.get('title')}") for x in recap["lore"]])
+    if recap.get("places"):  # missing key on pre-Task-3 recaps: simply no block
+        blocks.append([f"*{tr('places')}*"] + [_esc(f"• {x.get('title')}") for x in recap["places"]])
     if recap.get("highlights"):
         blocks.append([f"*{tr('highlights')}*"] + [
             tr(x["key"], name=x["name"], v=x["value"]) for x in recap["highlights"] if x.get("key") in t])

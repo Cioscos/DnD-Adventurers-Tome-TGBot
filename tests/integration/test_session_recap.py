@@ -9,7 +9,7 @@ from api.services import campaigns as svc
 from api.services import recap as recap_svc
 from api.tasks import session_cleanup
 from core.db.models import (
-    Combatant, Encounter, GameSession, SessionParticipant, SessionRole, SessionStatus,
+    Combatant, Encounter, GameSession, SessionMessage, SessionParticipant, SessionRole, SessionStatus,
 )
 from tests.integration._encounter_helpers import GM_ID, PLAYER_ID
 from tests.integration._telegram_stub import install_fake_telegram
@@ -330,6 +330,26 @@ async def test_recap_lore_deduped(client, test_session_factory):
         assert (await client.post(f"/campaigns/{camp['id']}/lore/{lore_id}/{path}")).status_code == 200
     await _close(client, sid)
     assert (await _gs(test_session_factory, sid)).recap["lore"] == [{"id": lore_id, "title": "Il tempio"}]
+
+
+async def test_recap_lists_places_once(client, test_session_factory):
+    camp, _ = await _enrolled(client, test_session_factory)
+    sid = await _start(client, camp["id"])
+    rows = [("atlas_reveal", {"map_id": 1, "marker_id": 5, "title": "Tesoro"}),
+            ("atlas_reveal", {"map_id": 1, "marker_id": None, "title": "Mondo"}),
+            ("atlas_reveal", {"map_id": 1, "marker_id": 5, "title": "Tesoro"})]
+    async with test_session_factory() as s:
+        for _, pl in rows:
+            s.add(SessionMessage(session_id=sid, user_id=GM_ID, role=SessionRole.GAME_MASTER,
+                                 body="x", sent_at="2026-06-08T21:00:00", sender_display_name="__GM__",
+                                 trade_payload=json.dumps({"kind": "atlas_reveal", **pl})))
+        await s.commit()
+    await _close(client, sid)
+    rec = (await _gs(test_session_factory, sid)).recap
+    assert rec["places"] == [{"map_id": 1, "marker_id": 5, "title": "Tesoro"},
+                             {"map_id": 1, "marker_id": None, "title": "Mondo"}]
+    assert "Luoghi scoperti" in recap_svc.format_recap_text(rec, "it")
+    assert "Places discovered" in recap_svc.format_recap_text(rec, "en")
 
 
 async def test_recap_text_labels_coins_and_conditions():
