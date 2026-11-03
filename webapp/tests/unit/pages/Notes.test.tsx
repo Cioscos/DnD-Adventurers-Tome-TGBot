@@ -139,4 +139,20 @@ describe('Notes campaign filter', () => {
     expect(await screen.findByText('Libera')).toBeInTheDocument()
     expect(screen.queryByText('Taverna')).not.toBeInTheDocument()
   })
+
+  it('an entry of a deleted campaign (id kept, name null) is under "no campaign" only', async () => {
+    list.mockResolvedValue([n('Orfana', 99, null), n('Taverna', 7, 'Coda')])
+    renderWithProviders(<Notes />)
+    await userEvent.click(await screen.findByRole('button', { name: 'character.notes.filter_none' }))
+    expect(screen.getByText('Orfana')).toBeInTheDocument()
+    expect(screen.queryByText('Taverna')).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Coda' }))
+    expect(screen.queryByText('Orfana')).not.toBeInTheDocument()
+  })
+
+  it('?campaign=<unknown id> falls back to all', async () => {
+    renderWithProviders(<Notes />, { route: '/?campaign=55' })
+    expect(await screen.findByText('Taverna')).toBeInTheDocument()
+    expect(screen.getByText('Faro')).toBeInTheDocument()
+  })
 })

@@ -679,7 +679,7 @@
       "type_item": "Oggetti",
       "type_ability": "Abilità speciali",
       "type_resource": "Risorse",
-      "type_note": "Note",
+      "type_note": "Diario",
       "cantrip": "trucchetto",
       "spell_level": "liv. {{level}}"
     },
@@ -2557,7 +2557,7 @@
           "title": "Intestazione e schermate",
           "items": [
             "Per tornare alla lista dei personaggi, tocca la freccia a sinistra.",
-            "Per cercare incantesimi, oggetti, abilità, risorse e note, tocca la lente. Scrivi almeno 2 caratteri e tocca un risultato.",
+            "Per cercare incantesimi, oggetti, abilità, risorse e voci del diario, tocca la lente. Scrivi almeno 2 caratteri e tocca un risultato.",
             "Per concedere o usare l'Ispirazione eroica, tocca il pulsante \"On\" / \"Off\".",
             "Per aprire le \"Impostazioni\", tocca l'ingranaggio.",
             "Quando mantieni la concentrazione, accanto al nome vedi il badge \"C\". Per aprire l'incantesimo, tocca il badge.",
@@ -3565,12 +3565,12 @@
       ]
     },
     "notes": {
-      "summary": "Questa pagina contiene le note del personaggio. Puoi scrivere note di testo, aggiungere tag e registrare note vocali.",
+      "summary": "Questa pagina contiene il diario del personaggio. Puoi scrivere voci di testo, aggiungere tag, collegarle a una campagna e registrare note vocali.",
       "sections": [
         {
-          "title": "Creare una nota di testo",
+          "title": "Creare una voce di testo",
           "items": [
-            "Tocca \"Nuova nota\".",
+            "Tocca \"Nuova voce\".",
             "Scrivi il titolo nel campo \"Titolo\". Il titolo è obbligatorio.",
             "Scrivi il testo nel campo \"Contenuto\".",
             "Per aggiungere un tag, scrivilo nel campo \"Tag\".",
@@ -3579,27 +3579,27 @@
           ]
         },
         {
-          "title": "Leggere una nota",
+          "title": "Leggere una voce",
           "items": [
-            "Ogni nota mostra il titolo, l'inizio del testo, i tag e la data.",
-            "La data indica quando hai creato o modificato la nota.",
-            "Tocca una nota di testo per aprirla e leggere tutto il testo.",
-            "Nella finestra della nota, puoi toccare \"Modifica\" o \"Elimina\"."
+            "Ogni voce mostra il titolo, l'inizio del testo, i tag e la data.",
+            "La data indica quando hai creato o modificato la voce.",
+            "Tocca una voce di testo per aprirla e leggere tutto il testo.",
+            "Nella finestra della voce, puoi toccare \"Modifica\" o \"Elimina\"."
           ]
         },
         {
-          "title": "Modificare una nota",
+          "title": "Modificare una voce",
           "items": [
-            "Tocca l'icona della matita sulla nota.",
+            "Tocca l'icona della matita sulla voce.",
             "Cambia il contenuto o i tag.",
             "Tocca \"Salva\".",
-            "Non puoi cambiare il titolo di una nota che esiste già."
+            "Non puoi cambiare il titolo di una voce che esiste già."
           ]
         },
         {
           "title": "Registrare una nota vocale",
           "items": [
-            "Tocca il pulsante del microfono, a destra di \"Nuova nota\".",
+            "Tocca il pulsante del microfono, a destra di \"Nuova voce\".",
             "Scrivi il titolo della nota vocale.",
             "Tocca il pulsante di registrazione per iniziare. Il timer mostra la durata.",
             "Tocca di nuovo il pulsante per fermare la registrazione.",
@@ -3617,19 +3617,19 @@
           ]
         },
         {
-          "title": "Condividere una nota",
+          "title": "Condividere una voce",
           "items": [
-            "Tocca l'icona \"Condividi\" sulla nota.",
+            "Tocca l'icona \"Condividi\" sulla voce.",
             "Scegli una chat di Telegram.",
             "Questa funzione è disponibile solo nelle versioni di Telegram che la supportano."
           ]
         },
         {
-          "title": "Eliminare una nota",
+          "title": "Eliminare una voce",
           "items": [
-            "Tocca l'icona del cestino sulla nota.",
+            "Tocca l'icona del cestino sulla voce.",
             "Nella finestra di conferma, tocca \"Elimina\".",
-            "ATTENZIONE: questa azione elimina la nota. Non puoi annullarla."
+            "ATTENZIONE: questa azione elimina la voce. Non puoi annullarla."
           ]
         }
       ]
@@ -4105,8 +4105,8 @@
             "L'app seleziona già l'ultimo personaggio che hai usato, oppure il tuo unico personaggio.",
             "Tocca \"Aggiungi a\" seguito dal nome del personaggio.",
             "Dopo un oggetto, l'app apre l'inventario del personaggio. L'oggetto non è equipaggiato.",
-            "Dopo una nota, l'app apre le note del personaggio.",
-            "Se hai già una nota con lo stesso titolo, l'app aggiunge un numero al titolo."
+            "Dopo una voce, l'app apre il diario del personaggio.",
+            "Se hai già una voce con lo stesso titolo, l'app aggiunge un numero al titolo."
           ]
         },
         {
@@ -4590,7 +4590,7 @@
       "hp": "Punti ferita",
       "identity": "Identità",
       "proficiencies": "Competenze",
-      "notes": "Note",
+      "notes": "Diario",
       "items": "Oggetti",
       "spells": "Incantesimi",
       "spell_slots": "Slot incantesimo",

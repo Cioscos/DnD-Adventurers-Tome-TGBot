@@ -85,10 +85,15 @@ export default function Notes() {
   })
   const campaigns = campaignsQuery.data ?? []
   const currentCampaignId = campaigns.find((c) => c.current)?.id ?? null
+  // ?campaign=<id> di una campagna che non è tra i chip → «Tutte».
+  const activeFilter = typeof campaignFilter === 'number' && campaignsQuery.data && !campaigns.some((c) => c.id === campaignFilter)
+    ? 'all'
+    : campaignFilter
+  // Campagna cancellata: il BE tiene campaign_id ma campaign_name è null → «Senza campagna».
   const notes = (notesQuery.data ?? []).filter((n) =>
-    campaignFilter === 'all' ? true
-      : campaignFilter === 'none' ? n.campaign_id == null
-        : n.campaign_id === campaignFilter,
+    activeFilter === 'all' ? true
+      : activeFilter === 'none' ? !n.campaign_name
+        : n.campaign_id === activeFilter,
   )
   // Un fetch fallito non è "nessuna nota".
   const unavailable = notesQuery.isError && notesQuery.data === undefined
@@ -222,10 +227,10 @@ export default function Notes() {
             <Pressable
               key={f.key}
               type="button"
-              aria-pressed={campaignFilter === f.value}
+              aria-pressed={activeFilter === f.value}
               onClick={() => setCampaignFilter(f.value)}
               className={`min-h-11 px-3 rounded-xl border text-sm font-body ${
-                campaignFilter === f.value
+                activeFilter === f.value
                   ? 'bg-dnd-gold/20 border-dnd-gold text-dnd-gold-bright'
                   : 'bg-dnd-surface-raised border-dnd-border text-dnd-text'
               }`}

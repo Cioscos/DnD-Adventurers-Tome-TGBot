@@ -222,7 +222,7 @@ export default function Campaign() {
                   <p className="font-display font-bold text-dnd-gold-bright break-words">
                     {mem.character_name}
                     {mem.is_mine && (
-                      <span className="ml-2 align-middle inline-block rounded-full border border-dnd-gold px-2 py-0.5 text-[10px] font-cinzel uppercase tracking-wider text-dnd-gold-bright">
+                      <span className="ml-2 align-middle inline-block rounded-full border border-dnd-gold px-2 py-0.5 text-xs font-cinzel uppercase tracking-wider text-dnd-gold-bright">
                         {t('campaign.yours')}
                       </span>
                     )}

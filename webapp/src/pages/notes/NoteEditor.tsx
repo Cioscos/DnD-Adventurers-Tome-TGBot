@@ -30,14 +30,20 @@ export default function NoteEditor({ initialNote, campaigns = [], defaultCampaig
       setTitle(initialNote.title)
       setBody(initialNote.body)
       setTags(initialNote.tags ?? [])
-      setCampaignId(initialNote.campaign_id ?? null)
     } else {
       setTitle('')
       setBody('')
       setTags([])
-      setCampaignId(defaultCampaignId)
     }
-  }, [initialNote, defaultCampaignId])
+  }, [initialNote])
+
+  // Campagna a parte: un default che arriva in ritardo non deve azzerare titolo/testo.
+  // Un id non più tra le campagne (cancellata) vale «Nessuna».
+  const campaignIds = campaigns.map((c) => c.id).join(',') // chiave stabile: `campaigns` cambia identità a ogni render
+  useEffect(() => {
+    const id = initialNote ? initialNote.campaign_id ?? null : defaultCampaignId
+    setCampaignId(id !== null && campaignIds.split(',').includes(String(id)) ? id : null)
+  }, [initialNote, defaultCampaignId, campaignIds])
 
   const handleSave = () => {
     onSave(title.trim(), body.trim(), tags, campaignId)
