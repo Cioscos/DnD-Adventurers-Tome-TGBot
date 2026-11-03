@@ -797,7 +797,7 @@ function CasesEditor({
                 icon={<Trash2 size={14} />}
                 onClick={() => removeCase(k)}
                 haptic="none"
-                className="w-11 h-11 rounded-lg text-dnd-crimson hover:text-dnd-crimson-bright hover:bg-dnd-crimson/10"
+                className="w-11 h-11 rounded-lg text-dnd-crimson-bright hover:bg-dnd-crimson/10"
                 aria-label={t('common.delete')}
               />
             </li>

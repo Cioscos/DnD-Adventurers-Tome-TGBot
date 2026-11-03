@@ -16,7 +16,7 @@
   /* Gold ink — metallic, multi-stop for gradient shine */
   --dnd-gold: #d4a847;
   --dnd-gold-bright: #f0c970;
-  --dnd-gold-dim: #8b7335;
+  --dnd-gold-dim: #a48c4e;
   --dnd-gold-deep: #5a4820;
   --dnd-gold-glow: rgba(240, 201, 112, 0.22);
 
@@ -24,12 +24,12 @@
   --dnd-parchment: #f4e8c1;
   --dnd-text: #ebdfbf;
   --dnd-text-muted: #b5a482;
-  --dnd-text-faint: #857761;
+  --dnd-text-faint: #9a8c75;
   --dnd-text-secondary: var(--dnd-text-muted); /* legacy alias */
 
   /* Semantic (richer, with deep + bright variants) */
   --dnd-crimson: #b33a3a;
-  --dnd-crimson-bright: #e85050;
+  --dnd-crimson-bright: #fa615f;
   --dnd-crimson-deep: #7a1f1f;
   --dnd-danger: var(--dnd-crimson); /* legacy alias */
   --dnd-emerald: #3fa66a;
@@ -93,7 +93,7 @@
   --gradient-hero-halo: radial-gradient(ellipse 80% 60% at 50% 0%, var(--dnd-gold-glow) 0%, transparent 70%);
   --gradient-gold: linear-gradient(170deg, var(--dnd-gold-bright) 0%, var(--dnd-gold) 50%, var(--dnd-gold-deep) 100%);
   --gradient-arcane-mist: radial-gradient(circle at 30% 20%, rgba(197, 137, 232, 0.18) 0%, transparent 60%), linear-gradient(135deg, var(--dnd-surface) 0%, var(--dnd-arcane-deep) 100%);
-  --gradient-ember: linear-gradient(90deg, var(--dnd-crimson-deep) 0%, var(--dnd-crimson) 50%, var(--dnd-crimson-bright) 100%);
+  --gradient-ember: linear-gradient(90deg, var(--dnd-crimson-deep) 0%, var(--dnd-crimson) 100%);
   --gradient-flourish: linear-gradient(90deg, transparent 0%, var(--dnd-gold-dim) 20%, var(--dnd-gold) 50%, var(--dnd-gold-dim) 80%, transparent 100%);
 
   /* Grain overlay (inline SVG turbulence noise) */
@@ -129,45 +129,45 @@
 .light {
   --dnd-ink: #f9efcf;
   --dnd-bg: #f2e4b9;
-  --dnd-surface: #ead8a0;
-  --dnd-surface-raised: #e0cb8c;
+  --dnd-surface: #efe0b2;
+  --dnd-surface-raised: #e8d7a2;
   --dnd-surface-lifted: #fff9e3;
   --dnd-surface-elevated: var(--dnd-surface-raised);
   --dnd-border: #c9a85e;
   --dnd-border-strong: #8a6f2c;
 
-  --dnd-gold: #8a6a1e;
-  /* Scuriti per leggibilità su pergamena (prima ~1.6:1 / 2.2:1 su surface-raised) */
-  --dnd-gold-bright: #96701a;
-  --dnd-gold-dim: #8a7034;
+  /* Inchiostri di testo: almeno 4.5:1 su bg, surface e surface-raised. */
+  --dnd-gold: #765600;
+  --dnd-gold-bright: #785500;
+  --dnd-gold-dim: #745b1c;
   --dnd-gold-deep: #5a4412;
   --dnd-gold-glow: rgba(138, 106, 30, 0.18);
 
   --dnd-parchment: #fff9e3;
   --dnd-text: #2e2410;
-  --dnd-text-muted: #6b583a;
-  --dnd-text-faint: #9b8660;
+  --dnd-text-muted: #5a4a30;
+  --dnd-text-faint: #6f5b37;
   --dnd-text-secondary: var(--dnd-text-muted);
 
   --dnd-crimson: #9b2b2b;
-  --dnd-crimson-bright: #c03a3a;
+  --dnd-crimson-bright: #a51c24;
   --dnd-crimson-deep: #5a1515;
   --dnd-danger: var(--dnd-crimson);
-  --dnd-emerald: #1f7a42;
-  --dnd-emerald-bright: #2e9a55;
+  --dnd-emerald: #076d36;
+  --dnd-emerald-bright: #005f1c;
   --dnd-emerald-deep: #0e4f26;
   --dnd-success: var(--dnd-emerald);
   --dnd-success-text: var(--dnd-emerald-bright);
   --dnd-arcane: #6e3a8a;
-  --dnd-arcane-bright: #9458b8;
+  --dnd-arcane-bright: #7f44a2;
   --dnd-arcane-deep: #3f1e55;
   --dnd-arcane-text: var(--dnd-arcane-bright);
   --dnd-cobalt: #1f5f8b;
-  --dnd-cobalt-bright: #4088b8;
+  --dnd-cobalt-bright: #146391;
   --dnd-cobalt-deep: #0f3252;
   --dnd-info: var(--dnd-cobalt);
   --dnd-info-text: var(--dnd-cobalt-bright);
-  --dnd-amber: #b8741c;
+  --dnd-amber: #8f4e00;
   --dnd-highlight: var(--dnd-amber);
 
   /* Coin metals — light mode (more saturated for aged-parchment contrast) */

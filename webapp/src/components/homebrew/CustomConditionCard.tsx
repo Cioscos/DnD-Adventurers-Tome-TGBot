@@ -79,7 +79,7 @@ export default function CustomConditionCard({
         disabled={disabled}
         haptic="none"
         aria-label={t('character.conditions.custom_remove_aria', { name: title })}
-        className="shrink-0 w-11 h-11 rounded-lg text-dnd-crimson hover:text-dnd-crimson-bright
+        className="shrink-0 w-11 h-11 rounded-lg text-dnd-crimson-bright
                    hover:bg-dnd-crimson/15 disabled:opacity-50"
       />
     </div>

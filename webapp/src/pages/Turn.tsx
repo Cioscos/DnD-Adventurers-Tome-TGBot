@@ -87,7 +87,7 @@ export default function Turn() {
     let extra: ReactNode = null
     let label = e.label
     if (e.kind === 'weapon') {
-      const crimson = `${BTN} bg-dnd-crimson/20 text-dnd-crimson-bright border-dnd-crimson/30`
+      const crimson = `${BTN} bg-dnd-crimson/10 text-dnd-crimson-bright border-dnd-crimson/30`
       if (e.id === 'unarmed') {
         label = t('character.turn.unarmed')
         control = (

@@ -299,7 +299,7 @@ function TableCard({
           icon={<Trash2 size={16} />}
           onClick={onRequestDelete}
           haptic="none"
-          className="shrink-0 mt-6 p-1.5 rounded-lg text-dnd-crimson hover:text-dnd-crimson-bright hover:bg-dnd-crimson/10 min-w-[44px] min-h-[44px]"
+          className="shrink-0 mt-6 p-1.5 rounded-lg text-dnd-crimson-bright hover:bg-dnd-crimson/10 min-w-[44px] min-h-[44px]"
           aria-label={t('common.delete')}
         />
       </div>
@@ -473,7 +473,7 @@ function ColBinHeader({ bin, onChange, onRemove }: ColBinHeaderProps) {
         {onRemove && (
           <Pressable
             onClick={onRemove}
-            className="hit-44 ml-auto p-1 rounded text-dnd-crimson/70 hover:text-dnd-crimson-bright hover:bg-dnd-crimson/10 transition-colors min-w-[28px] min-h-[28px] flex items-center justify-center"
+            className="hit-44 ml-auto p-1 rounded text-dnd-crimson-bright hover:bg-dnd-crimson/10 transition-colors min-w-[28px] min-h-[28px] flex items-center justify-center"
             aria-label={t('common.remove')}
           >
             <X size={12} />

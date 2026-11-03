@@ -12,13 +12,13 @@ colors:
   parchment: "#f4e8c1"
   text: "#ebdfbf"
   text-muted: "#b5a482"
-  text-faint: "#857761"
+  text-faint: "#9a8c75"
   gold: "#d4a847"
   gold-bright: "#f0c970"
-  gold-dim: "#8b7335"
+  gold-dim: "#a48c4e"
   gold-deep: "#5a4820"
   crimson: "#b33a3a"
-  crimson-bright: "#e85050"
+  crimson-bright: "#fa615f"
   crimson-deep: "#7a1f1f"
   emerald: "#3fa66a"
   emerald-bright: "#6fd195"
@@ -188,11 +188,11 @@ The palette is a single warm-brown family with five semantic accents. Every neut
 ### Primary
 - **Gold Leaf** (`#d4a847`): the only color reserved for primary affordance — primary buttons, the active-page sigil, the focus-visible halo, the page-header underline. Its rarity is the point.
 - **Gold Bright** (`#f0c970`): hover state of primary, ink-spread highlight, dialog accent border on success-feeling outcomes (good roll, level-up).
-- **Gold Dim** (`#8b7335`): inactive ornament, secondary-button border resting state, label color for de-emphasized form fields.
+- **Gold Dim** (`#a48c4e`): inactive ornament, secondary-button border resting state, label color for de-emphasized form fields.
 - **Gold Deep** (`#5a4820`): bottom of the metallic gradient, only inside `--gradient-gold`.
 
 ### Secondary (semantic, not visual hierarchy)
-- **Dragon Crimson** (`#b33a3a` / bright `#e85050` / deep `#7a1f1f`): damage, danger, HP threshold ≤25%, destructive actions, death saves. Never used decoratively.
+- **Dragon Crimson** (`#b33a3a` / bright `#fa615f` / deep `#7a1f1f`): damage, danger, HP threshold ≤25%, destructive actions, death saves. Never used decoratively.
 - **Druid Emerald** (`#3fa66a` / bright `#6fd195` / deep `#1f6b3f`): healing, success states, HP threshold ≥75%, save passed. Never used decoratively.
 - **Arcane Amethyst** (`#9b59b6` / bright `#c589e8` / deep `#4a2858`): magic — spell slots, concentration, spellcasting buttons, arcane dialog accent.
 - **Cobalt Sigil** (`#3a7ca5` / bright `#6fa8cf` / deep `#1e4060`): information, neutral metadata, tooltips, info dialogs.
@@ -206,10 +206,10 @@ The palette is a single warm-brown family with five semantic accents. Every neut
 - **Surface Lifted** (`#3b3026`): top-of-stack popovers, drag-active states.
 - **Border** (`#4a3d30`) / **Border Strong** (`#6b5841`): rules and frames; never colored stripes.
 - **Parchment** (`#f4e8c1`): button text on gradients, light-mode page surface, button-arcane label.
-- **Manuscript Text** (`#ebdfbf` / muted `#b5a482` / faint `#857761`): three-step text hierarchy on dark surfaces.
+- **Manuscript Text** (`#ebdfbf` / muted `#b5a482` / faint `#9a8c75`): three-step text hierarchy on dark surfaces.
 
 ### Light mode (aged parchment)
-Light mode is a deliberate alternative palette, not a derivation. Background is `#f2e4b9` (aged paper); ink darkens to `#2e2410`; gold darkens to `#8a6a1e` so it still reads as metallic on bright cream. Both modes pass the same contrast and signal bar.
+Light mode is a deliberate alternative palette, not a derivation. Background is `#f2e4b9` (aged paper); ink darkens to `#2e2410`; gold darkens to `#765600` so it still reads as metallic on bright cream; surfaces stay pale (`#efe0b2` / `#e8d7a2`) so the inks do not collapse into one brown. Every text token reaches 4.5:1 on `bg`, `surface` and `surface-raised` in both modes; check tinted grounds too, since a semantic tint above 10% usually drops its own bright ink below that bar.
 
 ### Named Rules
 - **The Gold Leaf Rule.** Gold is the primary affordance and the focus halo. It must not exceed 10% of any rendered screen and must not appear as a decorative gradient on text. If you need to draw the eye somewhere and gold is already used elsewhere on the screen, you have placed the wrong element first — rebuild the hierarchy, do not double-up gold.
@@ -274,7 +274,7 @@ Buttons read as inscribed plates pressed into the page. Primary is gold leaf wit
 - **Sizes:** sm `min-h-44px`, md `min-h-48px`, lg `min-h-56px`. Never below 44px on a phone (touch target).
 - **Primary:** `bg-gradient-gold`, `text-dnd-ink`, `shadow-engrave`. Hover: brighten gradient (no scale). Press: `scale 0.97`, ink-spread ripple at click coordinate (320ms ease-out).
 - **Secondary:** `bg-dnd-surface-raised`, `text-dnd-text`, `border border-dnd-gold-dim/30`. Hover: border warms to `border-dnd-gold/70`.
-- **Danger:** crimson tint at 15% on surface, crimson-bright text, crimson border at 40%. No solid red fill — danger reads as warning ink, not as alarm.
+- **Danger:** crimson tint at 10% on surface, crimson-bright text, crimson border at 40%. No solid red fill — danger reads as warning ink, not as alarm.
 - **Arcane:** gradient `arcane-deep → arcane`, parchment-white text, halo-arcane shadow. Reserved for explicit magic actions (cast, concentrate).
 - **Ghost:** transparent, gold text, no border at rest. Hover: gold-bright text only.
 - **Loading:** spinner (current-color, 4px stroke) replaces leading icon; label remains visible.
