@@ -26,8 +26,15 @@ const FILTERS: Record<Filter, (m: AtlasMarker) => boolean> = {
 }
 const notFound = (e: unknown) => e instanceof ApiError && (e.status === 404 || e.status === 403)
 
-/** Schermo della mappa dell'atlante: pan/zoom, marker, filtri, percorso tra sottomappe. */
+/** Una istanza per mappa: aprendo una sottomappa cambia solo il param, e zoom, selezione,
+ *  filtro, modo e deep link della mappa precedente non devono restare. */
 export default function AtlasMap() {
+  const { mapId } = useParams<{ mapId: string }>()
+  return <AtlasMapView key={mapId} />
+}
+
+/** Schermo della mappa dell'atlante: pan/zoom, marker, filtri, percorso tra sottomappe. */
+function AtlasMapView() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const { id, mapId } = useParams<{ id: string; mapId: string }>()
@@ -55,6 +62,8 @@ export default function AtlasMap() {
     retry: (n, e) => !notFound(e) && n < 3,
   })
   const unavailable = notFound(markersQ.error) || (mapsQ.isSuccess && !map)
+  // Errore diverso da 404/403 (rete, 500): senza elenco mappe resterebbe lo skeleton per sempre.
+  const failed = !unavailable && mapsQ.isError
 
   const visible = useMemo(() => (markersQ.data ?? []).filter(FILTERS[filter]), [markersQ.data, filter])
 
@@ -86,12 +95,13 @@ export default function AtlasMap() {
     </Pressable>
   )
 
-  if (unavailable) {
+  if (unavailable || failed) {
     return (
       <div className="flex w-full flex-col items-center justify-center gap-4 bg-dnd-bg p-6 text-center" style={{ height: 'var(--tg-vh, 100vh)' }}>
-        <p className="font-display text-lg font-bold text-dnd-gold-bright">{t('atlas.unavailable')}</p>
-        <p className="text-sm font-body text-dnd-text-muted">{t('atlas.unavailable_body')}</p>
-        <Button onClick={() => navigate(`/campaign/${campId}`)}>{t('atlas.back_to_campaign')}</Button>
+        <p className="font-display text-lg font-bold text-dnd-gold-bright">{t(failed ? 'common.error' : 'atlas.unavailable')}</p>
+        <p className="text-sm font-body text-dnd-text-muted">{t(failed ? 'common.action_failed' : 'atlas.unavailable_body')}</p>
+        {failed && <Button onClick={() => mapsQ.refetch()}>{t('common.retry')}</Button>}
+        <Button variant={failed ? 'secondary' : 'primary'} onClick={() => navigate(`/campaign/${campId}`)}>{t('atlas.back_to_campaign')}</Button>
       </div>
     )
   }

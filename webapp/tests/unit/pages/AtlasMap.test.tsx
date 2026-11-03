@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Link } from 'react-router-dom'
 import { renderWithProviders } from '../utils/renderWithProviders'
 import AtlasMap from '@/pages/AtlasMap'
 
@@ -124,5 +124,42 @@ describe('AtlasMap', () => {
     setup({ route: { pathname: '/campaign/3/atlas/9', search: '?marker=2' } })
     await waitFor(() => expect(document.querySelector('[data-pin="2"]')?.getAttribute('data-selected')).toBe('true'))
     expect(document.querySelector('[data-pin="1"]')?.getAttribute('data-selected')).toBe('false')
+  })
+
+  it('opening another map resets state and honours ?marker there', async () => {
+    maps.mockResolvedValue([theMap, { ...theMap, id: 10, name: 'Vael' }])
+    markers.mockImplementation(async (_c: number, m: number) =>
+      m === 9 ? [mk(1), mk(3, { author_role: 'player', mine: true })] : [mk(5, { map_id: 10 }), mk(6, { map_id: 10 })])
+    getCampaign.mockResolvedValue({ id: 3, name: 'C', is_gm: false })
+    renderWithProviders(
+      <>
+        {/* Link usa il navigate interno del router (useNavigate è mockato). */}
+        <Link to="/campaign/3/atlas/10?marker=5">go</Link>
+        <Routes><Route path="/campaign/:id/atlas/:mapId" element={<AtlasMap />} /></Routes>
+      </>,
+      { route: { pathname: '/campaign/3/atlas/9', search: '?marker=1' } },
+    )
+    await waitFor(() => expect(document.querySelector('[data-pin="1"]')?.getAttribute('data-selected')).toBe('true'))
+    await userEvent.click(screen.getByRole('button', { name: 'atlas.filter_gm' }))
+    expect(pins()).toHaveLength(1)
+    await userEvent.click(screen.getByText('go'))
+    expect(await screen.findByText('Vael')).toBeTruthy()
+    await waitFor(() => expect(document.querySelector('[data-pin="5"]')?.getAttribute('data-selected')).toBe('true'))
+    expect(document.querySelector('[data-pin="6"]')?.getAttribute('data-selected')).toBe('false')
+    expect(pins()).toHaveLength(2)
+  })
+
+  it('maps network error shows error state with retry', async () => {
+    maps.mockRejectedValue(new Error('net'))
+    markers.mockResolvedValue([])
+    getCampaign.mockResolvedValue({ id: 3, name: 'C', is_gm: false })
+    renderWithProviders(
+      <Routes><Route path="/campaign/:id/atlas/:mapId" element={<AtlasMap />} /></Routes>,
+      { route: '/campaign/3/atlas/9' },
+    )
+    expect(await screen.findByText('common.error')).toBeTruthy()
+    maps.mockResolvedValue([theMap])
+    await userEvent.click(screen.getByRole('button', { name: 'common.retry' }))
+    expect(await screen.findByText('Faerûn')).toBeTruthy()
   })
 })
