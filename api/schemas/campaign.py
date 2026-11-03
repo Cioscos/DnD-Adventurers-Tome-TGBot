@@ -64,6 +64,8 @@ class CampaignSessionRead(BaseModel):
     id: int
     created_at: str
     duration_seconds: int
+    number: int  # position among the campaign's sessions by created_at (1 = first)
+    has_recap: bool
 
 
 class CampaignDetail(BaseModel):

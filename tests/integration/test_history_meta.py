@@ -149,3 +149,32 @@ async def test_migration_adds_dice_stats_start():
         await conn.run_sync(_migrate_schema)
         cols = {r[1] for r in await conn.execute(text("PRAGMA table_info(session_participants)"))}
     assert "dice_stats_start" in cols
+
+
+async def test_slot_patch_logs_spell_slot_used(client, test_session_factory):
+    cid = await _new(client)
+    slot = (await client.post(f"/characters/{cid}/spell_slots", json={"level": 3, "total": 4})).json()
+    for used in (1, 3, 2):  # +1, +2, refund (no row)
+        r = await client.patch(f"/characters/{cid}/spell_slots/{slot['id']}", json={"used": used})
+        assert r.status_code == 200, r.text
+    async with test_session_factory() as s:
+        rows = (await s.execute(select(CharacterHistory).where(
+            CharacterHistory.character_id == cid, CharacterHistory.event_type == "spell_slot_used"
+        ).order_by(CharacterHistory.id))).scalars().all()
+    assert [(x.description, x.meta) for x in rows] == [
+        ("Slot di livello 3 usato", {"slot_level": 3, "count": 1}),
+        ("Slot di livello 3 usato ×2", {"slot_level": 3, "count": 2}),
+    ]
+
+
+async def test_hit_dice_meta_healed(client, test_session_factory):
+    cid = await _new(client)
+    r = await client.post(f"/characters/{cid}/classes",
+                          json={"class_name": "fighter", "level": 3, "hit_die": 10})
+    class_id = r.json()["classes"][0]["id"]
+    await _hp(client, cid, "set_max", 50)
+    await _hp(client, cid, "set_current", 45)
+    r = await client.post(f"/characters/{cid}/hit_dice/spend",
+                          json={"class_id": class_id, "count": 1, "rolls": [9]})
+    assert r.status_code == 200, r.text
+    assert await _rows(test_session_factory, cid, "hit_dice") == [{"healed": r.json()["healed"]}]

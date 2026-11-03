@@ -49,6 +49,7 @@ from api.routers._helpers import apply_con_hp, collect_homebrew_notifications, e
 from api.schemas.character import CharacterFull
 from api.services import telegram_notify
 from api.services.character_response import build_character_response
+from api.services.recap import close_game_session
 from api.services.homebrew.dispatcher import dispatch
 from api.services.trades import add_coins, give_coins, give_item, remove_coins, remove_item
 from api.services.condition_effects import character_effect_payload
@@ -588,8 +589,7 @@ async def leave_session(
 
     # GM leaving closes the whole session
     if user_id == session.gm_user_id:
-        session.status = SessionStatus.CLOSED
-        session.closed_at = _now()
+        await close_game_session(db, session)
     else:
         await db.delete(participant)
     _touch(session)
@@ -608,10 +608,28 @@ async def close_session(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only the Game Master can close the session",
         )
-    if session.status == SessionStatus.ACTIVE:
-        session.status = SessionStatus.CLOSED
-        session.closed_at = _now()
+    await close_game_session(db, session)
     return None
+
+
+@router.get("/{session_id}/recap")
+async def get_session_recap(
+    session_id: int,
+    user_id: Annotated[int, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> dict:
+    """End-of-evening snapshot: GM, participants or members of the session's campaign."""
+    session = await _load_session(session_id, db)
+    allowed = user_id == session.gm_user_id or any(p.user_id == user_id for p in session.participants)
+    if not allowed and session.campaign_id is not None:
+        allowed = await db.scalar(select(CampaignMember.id).where(
+            CampaignMember.campaign_id == session.campaign_id, CampaignMember.user_id == user_id,
+        ).limit(1)) is not None
+    if not allowed:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not allowed")
+    if session.recap is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="recap_not_found")
+    return session.recap
 
 
 @router.get("/{session_id}/messages", response_model=list[SessionMessageRead])

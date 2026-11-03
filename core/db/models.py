@@ -646,6 +646,8 @@ class GameSession(Base):
     last_activity_at: Mapped[str] = mapped_column(String(50), nullable=False)
     closed_at: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     campaign_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    # Fotografia del riepilogo di fine serata (api/services/recap.py); NULL = nessuno.
+    recap: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
 
     participants: Mapped[List["SessionParticipant"]] = relationship(
         back_populates="session", cascade="all, delete-orphan"

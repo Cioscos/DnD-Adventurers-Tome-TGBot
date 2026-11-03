@@ -160,8 +160,11 @@ async def _detail(db: AsyncSession, camp: Campaign, user_id: int) -> CampaignDet
             CampaignSessionRead(
                 id=s.id, created_at=s.created_at,
                 duration_seconds=_duration(s.created_at, s.last_activity_at),
+                # newest first; at most one active session and it is the latest, so this
+                # matches the recap's rank among closed sessions
+                number=len(sessions) - i, has_recap=s.recap is not None,
             )
-            for s in sessions
+            for i, s in enumerate(sessions)
         ],
         my_last_character_id=my_last,
     )

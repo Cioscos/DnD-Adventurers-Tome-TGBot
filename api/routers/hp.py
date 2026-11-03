@@ -643,7 +643,8 @@ async def spend_hit_dice(
 
     _add_history(session, char.id, "hit_dice",
                  f"Dado vita {body.count}d{hit_die}+{con_mod}: "
-                 f"tiri={rolls}, curati={actual_healed} HP ({old_hp} → {char.current_hit_points})")
+                 f"tiri={rolls}, curati={actual_healed} HP ({old_hp} → {char.current_hit_points})",
+                 meta={"healed": actual_healed})
     record_dice(char, [(f"d{hit_die}", r) for r in rolls])
 
     return HitDiceSpendResult(
