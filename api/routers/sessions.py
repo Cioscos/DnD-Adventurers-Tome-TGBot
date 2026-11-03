@@ -672,6 +672,7 @@ async def post_message(
         select(SessionMessage)
         .where(SessionMessage.session_id == session_id)
         .where(SessionMessage.user_id == user_id)
+        .where(SessionMessage.trade_payload.is_(None))  # feed/system rows are not chat
         .order_by(SessionMessage.sent_at.desc())
         .limit(1)
     )

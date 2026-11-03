@@ -8,7 +8,6 @@ import pytest
 from sqlalchemy import select
 
 from api.routers import lore as lore_router
-from api.routers import sessions as sessions_router
 from api.services import campaigns as svc
 from core.db.models import CampaignLore, CampaignMember, GameSession, SessionParticipant, SessionRole, SessionMessage, SessionStatus
 from tests.integration._encounter_helpers import GM_ID, PLAYER_ID
@@ -220,9 +219,8 @@ async def test_blank_title_422(client, test_session_factory):
     assert (await client.patch(_url(camp, lid), data={"title": "  "})).status_code == 422
 
 
-async def test_reveal_in_session_then_gm_chat_ok(client, test_session_factory, monkeypatch):
+async def test_reveal_in_session_then_gm_chat_ok(client, test_session_factory):
     camp, _ = await _enrolled(client, test_session_factory)
-    monkeypatch.setattr(sessions_router, "_SLOW_MODE_SECONDS", 0)
     async with test_session_factory() as s:
         sess = GameSession(
             code="LORE02", gm_user_id=GM_ID, status=SessionStatus.ACTIVE, campaign_id=camp["id"],
@@ -242,3 +240,22 @@ async def test_reveal_in_session_then_gm_chat_ok(client, test_session_factory, m
     assert r.status_code == 201, r.text
     async with test_session_factory() as s:
         assert (await s.get(GameSession, sid)).last_activity_at != "2026-11-03T10:00:00"
+
+
+async def test_stash_feed_row_does_not_trigger_slow_mode(client, test_session_factory):
+    camp, _ = await _enrolled(client, test_session_factory)
+    async with test_session_factory() as s:
+        sess = GameSession(
+            code="LORE03", gm_user_id=GM_ID, status=SessionStatus.ACTIVE, campaign_id=camp["id"],
+            created_at="2026-11-03T10:00:00", last_activity_at="2026-11-03T10:00:00",
+        )
+        s.add(sess)
+        await s.flush()
+        s.add(SessionParticipant(session_id=sess.id, user_id=GM_ID, role=SessionRole.GAME_MASTER,
+                                 joined_at="2026-11-03T10:00:00"))
+        await s.commit()
+        sid = sess.id
+    act(GM_ID)
+    r = await client.post(f"/sessions/{sid}/stash/gm-add", json={"coins": {"gold": 5}})
+    assert r.status_code == 200, r.text
+    assert (await client.post(f"/sessions/{sid}/messages", json={"body": "ciao"})).status_code == 201
