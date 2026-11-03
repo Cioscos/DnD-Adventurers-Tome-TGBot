@@ -1745,7 +1745,6 @@
       "cancel_confirm": "Annulla la serata",
       "none": "Nessuna serata questo giorno.",
       "skipped": "Saltata",
-      "done": "Giocata",
       "planned": "Programmata",
       "prev": "Mese precedente",
       "next": "Mese successivo",
@@ -1755,8 +1754,7 @@
       "time": "Ora",
       "note": "Nota (facoltativa)",
       "err_past": "La serata deve essere nel futuro.",
-      "err_generic": "Non sono riuscito a salvare. Riprova.",
-      "at": "alle {{time}}"
+      "err_generic": "Non sono riuscito a salvare. Riprova."
     },
     "lore": {
       "title": "Lore",

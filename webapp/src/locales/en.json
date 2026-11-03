@@ -1746,7 +1746,6 @@
       "cancel_confirm": "Cancel the night",
       "none": "No night on this day.",
       "skipped": "Skipped",
-      "done": "Played",
       "planned": "Planned",
       "prev": "Previous month",
       "next": "Next month",
@@ -1756,8 +1755,7 @@
       "time": "Time",
       "note": "Note (optional)",
       "err_past": "The night must be in the future.",
-      "err_generic": "Could not save. Try again.",
-      "at": "at {{time}}"
+      "err_generic": "Could not save. Try again."
     },
     "lore": {
       "title": "Lore",

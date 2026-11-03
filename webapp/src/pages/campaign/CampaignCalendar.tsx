@@ -84,12 +84,12 @@ export default function CampaignCalendar({ campaignId, isGm, sessions }: { campa
           <p className="font-display font-bold text-dnd-gold-bright capitalize text-center">{fmt({ month: 'long', year: 'numeric' }, first)}</p>
           <Button variant="secondary" size="sm" className="min-w-11" aria-label={t('campaign.calendar.next')} icon={<ChevronRight size={16} />} onClick={() => move(1)} />
         </div>
-        <div className="mt-2 grid grid-cols-7 gap-0.5 text-center">
+        <div className="-mx-3 mt-2 grid grid-cols-7 gap-0.5 text-center">
           {heads.map((h) => (
             <span key={h} data-testid="weekday" className="text-xs font-cinzel uppercase text-dnd-text-muted">{h}</span>
           ))}
         </div>
-        <div className="mt-1 grid grid-cols-7 gap-0.5" data-testid="grid" data-layout-ok="celle del calendario: 7 colonne a 2px, ciascuna ≥44px">
+        <div className="-mx-3 mt-1 grid grid-cols-7 gap-0.5" data-testid="grid">
           {Array.from({ length: daysInMonth }, (_, i) => {
             const d = new Date(cursor.y, cursor.m, i + 1)
             const k = dateKey(d)

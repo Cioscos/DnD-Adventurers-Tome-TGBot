@@ -5,8 +5,8 @@ import { renderWithProviders } from '../../utils/renderWithProviders'
 import CampaignCalendar from '@/pages/campaign/CampaignCalendar'
 import type { CampaignSessionEntry, ScheduleRead } from '@/types'
 
-const { list, create, update, remove, navigateSpy } = vi.hoisted(() => ({
-  list: vi.fn(), create: vi.fn(), update: vi.fn(), remove: vi.fn(), navigateSpy: vi.fn(),
+const { list, create, update, remove, navigateSpy, lang } = vi.hoisted(() => ({
+  lang: { v: 'it' }, list: vi.fn(), create: vi.fn(), update: vi.fn(), remove: vi.fn(), navigateSpy: vi.fn(),
 }))
 
 vi.mock('@/api/client', () => ({
@@ -23,7 +23,7 @@ vi.mock('react-i18next', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
   return {
     ...actual,
-    useTranslation: () => ({ t: (k: string, o?: Record<string, unknown>) => (o?.time ? `${k} ${o.time}` : o?.n ? `${k} ${o.n}` : k), i18n: { language: 'it' } }),
+    useTranslation: () => ({ t: (k: string, o?: Record<string, unknown>) => (o?.time ? `${k} ${o.time}` : o?.n ? `${k} ${o.n}` : k), i18n: { language: lang.v } }),
   }
 })
 vi.mock('@/components/ui/Sheet', () => ({
@@ -32,7 +32,7 @@ vi.mock('@/components/ui/Sheet', () => ({
 
 // Mercoledì 18 novembre 2026, mezzogiorno locale.
 beforeEach(() => { vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date(2026, 10, 18, 12, 0, 0)) })
-afterEach(() => { vi.useRealTimers(); list.mockReset(); create.mockReset(); update.mockReset(); remove.mockReset(); navigateSpy.mockReset() })
+afterEach(() => { lang.v = 'it'; vi.useRealTimers(); list.mockReset(); create.mockReset(); update.mockReset(); remove.mockReset(); navigateSpy.mockReset() })
 
 // created_at / starts_at arrivano come UTC naive: ore 12 UTC restano nello stesso giorno ovunque (±12h).
 const sessions: CampaignSessionEntry[] = [
@@ -61,6 +61,14 @@ describe('CampaignCalendar', () => {
     await userEvent.click(screen.getByRole('button', { name: 'campaign.calendar.prev' }))
     await userEvent.click(screen.getByRole('button', { name: 'campaign.calendar.prev' }))
     expect(screen.getAllByRole('button', { name: /^\d+ / })).toHaveLength(31) // ottobre
+  })
+
+  it('en: settimana da domenica, 1 novembre in prima colonna', async () => {
+    lang.v = 'en'
+    show(false)
+    await screen.findAllByRole('button', { name: /^\d+ / })
+    expect(screen.getAllByTestId('weekday')[0].textContent?.toLowerCase()).toMatch(/^sun/)
+    expect((screen.getByTestId('grid').children[0] as HTMLElement).style.gridColumnStart).toBe('1')
   })
 
   it('serata passata marcata e al tocco porta al riepilogo', async () => {

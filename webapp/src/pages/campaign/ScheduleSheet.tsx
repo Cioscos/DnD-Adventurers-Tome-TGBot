@@ -9,7 +9,6 @@ import { haptic } from '@/auth/telegram'
 import { pad, dateKey, fromServer } from '@/lib/calendarDates'
 import type { ScheduleRead } from '@/types'
 
-
 interface Props {
   open: boolean
   campaignId: number
