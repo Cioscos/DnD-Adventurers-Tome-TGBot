@@ -658,6 +658,12 @@ export interface TradeRequest {
   coins?: Partial<Record<CoinKey, number>>
 }
 
+export interface StashMoveRequest {
+  item_id?: number
+  quantity?: number
+  coins?: Partial<Record<CoinKey, number>>
+}
+
 export interface TradeSnapshot {
   name: string
   quantity: number
@@ -665,9 +671,13 @@ export interface TradeSnapshot {
   children: TradeSnapshot[]
 }
 
+export type TradeKind = 'trade' | 'stash_put' | 'stash_take' | 'gm_stash_add' | 'gm_stash_remove'
+
 export interface TradePayload {
-  from: { character_id: number; name: string }
-  to: { character_id: number; name: string }
+  /** Assente nelle righe vecchie: vale `trade`. Il lato deposito/master ha `character_id: null`. */
+  kind?: TradeKind
+  from: { character_id: number | null; name: string }
+  to: { character_id: number | null; name: string }
   items: TradeSnapshot[]
   coins: Record<string, number>
 }

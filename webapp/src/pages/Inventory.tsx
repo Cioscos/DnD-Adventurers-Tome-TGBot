@@ -935,7 +935,7 @@ export default function Inventory() {
       )}
 
       {giveTarget && trade && (
-        <GiveSheet charId={charId} sessionId={trade.sessionId} partners={trade.partners} item={giveTarget} items={items} onClose={() => setGiveTarget(null)} />
+        <GiveSheet charId={charId} sessionId={trade.sessionId} partners={trade.partners} stash={trade.stash} item={giveTarget} items={items} onClose={() => setGiveTarget(null)} />
       )}
 
       {coinMove && (

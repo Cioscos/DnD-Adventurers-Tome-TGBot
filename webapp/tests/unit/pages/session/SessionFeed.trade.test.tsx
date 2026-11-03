@@ -72,4 +72,26 @@ describe('SessionFeed trade row', () => {
     setup({ ...base, items: [], coins: { gold: 1200, silver: 5 } })
     await waitFor(() => expect(screen.getByText(/Thorin ha dato a Lyra: 1200 GP · 5 SP/)).toBeTruthy())
   })
+
+  const stashSide = { character_id: null, name: 'stash' }
+  const gmSide = { character_id: null, name: 'gm' }
+  const rows: [string, Partial<TradePayload>, RegExp][] = [
+    ['stash_put', { from: base.from, to: stashSide }, /Thorin ha messo nel deposito: Spada/],
+    ['stash_take', { from: stashSide, to: base.to }, /Lyra ha preso dal deposito: Spada/],
+    ['gm_stash_add', { from: gmSide, to: stashSide }, /Il master ha messo nel deposito: Spada/],
+    ['gm_stash_remove', { from: stashSide, to: gmSide }, /Il master ha tolto dal deposito: Spada/],
+  ]
+  it.each(rows)('riga %s con la copia fissata', async (kind, sides, re) => {
+    setup({ ...base, ...sides, kind, coins: {}, items: [{ name: 'Spada', quantity: 1, coins: null, children: [] }] } as TradePayload)
+    await waitFor(() => expect(screen.getByText(re)).toBeTruthy())
+  })
+
+  it('riga di deposito espandibile come uno scambio', async () => {
+    setup({
+      ...base, to: stashSide, kind: 'stash_put', coins: {},
+      items: [{ name: 'Zaino', quantity: 1, coins: null, children: [{ name: 'Corda', quantity: 1, coins: null, children: [] }] }],
+    } as TradePayload)
+    await userEvent.click(await screen.findByRole('button', { name: /Thorin ha messo nel deposito: Zaino/ }))
+    expect(screen.getByText('Corda')).toBeTruthy()
+  })
 })

@@ -56,6 +56,20 @@ const tradeExpandable = (trade: TradePayload): boolean =>
   trade.items.some((i) => i.children.length > 0 || !!coinText(i.coins)) ||
   (trade.items.length > 0 && !!coinText(trade.coins))
 
+type TFn = (k: string, o?: Record<string, string>) => string
+
+// Righe di deposito: il nome è quello del PG (mittente se mette, destinatario se prende); il master è anonimo.
+function tradeCopy(trade: TradePayload, t: TFn): string {
+  const what = tradeWhat(trade)
+  switch (trade.kind) {
+    case 'stash_put': return t('session.feed.stash_put', { name: trade.from.name, what })
+    case 'stash_take': return t('session.feed.stash_take', { name: trade.to.name, what })
+    case 'gm_stash_add': return t('session.feed.gm_stash_add', { what })
+    case 'gm_stash_remove': return t('session.feed.gm_stash_remove', { what })
+    default: return t('session.feed.trade', { from: trade.from.name, to: trade.to.name, what })
+  }
+}
+
 function TradeTree({ nodes, depth = 0 }: { nodes: TradeSnapshot[]; depth?: number }) {
   return (
     <ul>
@@ -70,14 +84,14 @@ function TradeTree({ nodes, depth = 0 }: { nodes: TradeSnapshot[]; depth?: numbe
   )
 }
 
-function TradeRow({ trade, timestamp, lang, t }: { trade: TradePayload; timestamp: string; lang: string; t: (k: string, o?: Record<string, string>) => string }) {
+function TradeRow({ trade, timestamp, lang, t }: { trade: TradePayload; timestamp: string; lang: string; t: TFn }) {
   const [open, setOpen] = useState(false)
   const expandable = tradeExpandable(trade)
   const head = (
     <>
       <ArrowLeftRight size={12} className="shrink-0 mt-1 text-dnd-gold-bright" />
       <span className="flex-1 min-w-0 whitespace-pre-wrap break-words">
-        {t('session.feed.trade', { from: trade.from.name, to: trade.to.name, what: tradeWhat(trade) })}
+        {tradeCopy(trade, t)}
       </span>
       <span className="shrink-0 mt-0.5 font-mono text-xs text-dnd-text-faint">{formatTime24(timestamp, lang)}</span>
     </>

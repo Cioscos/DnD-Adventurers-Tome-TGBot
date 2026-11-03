@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
-import { LogOut, User, Gift, Copy, Share2, WifiOff } from 'lucide-react'
+import { LogOut, User, Gift, Copy, Share2, WifiOff, Vault } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   GiCrown as Crown, GiHeartPlus as Heart, GiCheckedShield as Shield,
@@ -28,6 +28,7 @@ import { useYourTurnToast } from '@/hooks/useYourTurnToast'
 import ParticipantIdentitySheet from '@/pages/session/ParticipantIdentitySheet'
 import SessionFeed from '@/pages/session/SessionFeed'
 import GrantItemModal from '@/pages/session/GrantItemModal'
+import StashSheet from '@/pages/session/StashSheet'
 import CombatEntryCard from '@/components/session/CombatEntryCard'
 import { dequeue, peek, pruneOlderThan, type Reward } from '@/lib/rewardQueue'
 import RewardPopup from '@/components/session/RewardPopup'
@@ -202,6 +203,7 @@ export default function SessionRoom() {
   const [identityTarget, setIdentityTarget] = useState<SessionParticipant | null>(null)
   const [whisperTarget, setWhisperTarget] = useState<SessionParticipant | null>(null)
   const [showGrantItem, setShowGrantItem] = useState(false)
+  const [showStash, setShowStash] = useState(false)
   const [currentReward, setCurrentReward] = useState<Reward | null>(null)
 
   useEffect(() => {
@@ -427,6 +429,12 @@ export default function SessionRoom() {
         </Button>
       )}
 
+      {live.campaign_id != null && (
+        <Button variant="secondary" size="md" fullWidth icon={<Vault size={16} />} onClick={() => setShowStash(true)}>
+          {t('campaign.stash')}
+        </Button>
+      )}
+
       <SectionDivider>
         {t('session.chat_and_history')}
       </SectionDivider>
@@ -473,6 +481,17 @@ export default function SessionRoom() {
           participants={live.participants}
           gmUserId={gmUserId}
           onClose={() => setShowGrantItem(false)}
+        />
+      )}
+
+      {showStash && live.campaign_id != null && (
+        <StashSheet
+          sessionId={live.id}
+          isGm={amGm}
+          myCharId={myCharId}
+          participants={live.participants}
+          gmUserId={gmUserId}
+          onClose={() => setShowStash(false)}
         />
       )}
 

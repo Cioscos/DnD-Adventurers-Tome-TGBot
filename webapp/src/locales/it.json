@@ -1765,6 +1765,10 @@
     "stash_coins": "Cassa",
     "stash_items_one": "{{count}} oggetto",
     "stash_items_other": "{{count}} oggetti",
+    "stash_take": "Prendi",
+    "stash_remove": "Togli",
+    "stash_put": "Metti nel deposito",
+    "stash_put_coins": "Metti monete nel deposito",
     "nights": "Serate",
     "nights_empty": "Ancora nessuna serata.",
     "night_active": "in corso",
@@ -1901,6 +1905,10 @@
       "item_not_found_toast": "Oggetto non più presente nel tuo inventario"
     },
     "feed": {
+      "stash_put": "{{name}} ha messo nel deposito: {{what}}",
+      "stash_take": "{{name}} ha preso dal deposito: {{what}}",
+      "gm_stash_add": "Il master ha messo nel deposito: {{what}}",
+      "gm_stash_remove": "Il master ha tolto dal deposito: {{what}}",
       "trade": "{{from}} ha dato a {{to}}: {{what}}",
       "grant_chip": "Tocca per aprire nell'inventario",
       "grant_received": "Il GM ti ha consegnato: {{name}} (×{{qty}})",

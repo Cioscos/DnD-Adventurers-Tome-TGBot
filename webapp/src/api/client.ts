@@ -20,6 +20,7 @@ import type {
   Ability,
   CharacterFull,
   TradeRequest,
+  StashMoveRequest,
   DdbImportResult,
   ResolveChoiceBody,
   CharacterSummary,
@@ -1039,6 +1040,14 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(body),
       }),
+    stashPut: (sessionId: number, body: StashMoveRequest & { from_character_id: number }) =>
+      request<CharacterFull>(`/sessions/${sessionId}/stash/put`, { method: 'POST', body: JSON.stringify(body) }),
+    stashTake: (sessionId: number, body: StashMoveRequest & { to_character_id: number }) =>
+      request<CharacterFull>(`/sessions/${sessionId}/stash/take`, { method: 'POST', body: JSON.stringify(body) }),
+    stashGmAdd: (sessionId: number, body: { item?: GrantItemPayload; coins?: StashMoveRequest['coins'] }) =>
+      request<CampaignStash>(`/sessions/${sessionId}/stash/gm-add`, { method: 'POST', body: JSON.stringify(body) }),
+    stashGmRemove: (sessionId: number, body: StashMoveRequest) =>
+      request<CampaignStash>(`/sessions/${sessionId}/stash/gm-remove`, { method: 'POST', body: JSON.stringify(body) }),
     grantItem: (
       sessionId: number,
       payload: { recipient_user_ids: number[]; item: GrantItemPayload },

@@ -13,6 +13,8 @@ interface Props {
   currency: Currency
   /** Azione opzionale per riga (es. «Prendi»); il contenitore la riceve come ogni oggetto. */
   renderAction?: (item: Item) => ReactNode
+  /** Azione sulla cassa (es. «Prendi» le monete). */
+  coinsAction?: ReactNode
 }
 
 function descendantCount(items: Item[], id: number): number {
@@ -58,7 +60,7 @@ function Node({ item, items, renderAction }: { item: Item; items: Item[]; render
 }
 
 /** Albero di contenitori + cassa del deposito di gruppo. Sola lettura salvo `renderAction`. */
-export default function StashTree({ items, currency, renderAction }: Props) {
+export default function StashTree({ items, currency, renderAction, coinsAction }: Props) {
   const { t, i18n } = useTranslation()
   const roots = items.filter((i) => i.container_id == null).sort((a, b) => a.id - b.id)
   const coins = COIN_ORDER.filter((k) => currency[k] > 0)
@@ -71,6 +73,7 @@ export default function StashTree({ items, currency, renderAction }: Props) {
             ? coins.map((k) => <span key={k} className="whitespace-nowrap">{formatInt(currency[k], i18n.language)} {COIN_ABBR[k]}</span>)
             : '0'}
         </span>
+        {coinsAction && <div className="shrink-0">{coinsAction}</div>}
       </div>
       {roots.length === 0 ? (
         <p className="text-sm text-dnd-text-muted italic">{t('campaign.stash_empty')}</p>

@@ -5,9 +5,9 @@ import { renderWithProviders } from '../../utils/renderWithProviders'
 import GiveSheet from '@/pages/inventory/GiveSheet'
 import type { Item, SessionParticipant } from '@/types'
 
-const { trade, toastInfo } = vi.hoisted(() => ({ trade: vi.fn(), toastInfo: vi.fn() }))
+const { trade, stashPut, toastInfo } = vi.hoisted(() => ({ trade: vi.fn(), stashPut: vi.fn(), toastInfo: vi.fn() }))
 vi.mock('@/api/client', () => ({
-  api: { sessions: { trade } },
+  api: { sessions: { trade, stashPut } },
   ApiError: class extends Error { constructor(public status: number, public detail: unknown) { super('x') } },
 }))
 vi.mock('@/hooks/useToast', () => ({ useToast: () => ({ info: toastInfo, error: vi.fn(), success: vi.fn() }) }))
@@ -30,13 +30,13 @@ const it_ = (id: number, name: string, over: Record<string, unknown> = {}) =>
 const box = (id: number, name: string, parent: number | null, coins = {}) =>
   it_(id, name, { container_id: parent, item_metadata: { container: { capacity_lb: null, counts_weight: true, quick_access: false, coins } } })
 
-beforeEach(() => { trade.mockReset(); toastInfo.mockReset() })
+beforeEach(() => { trade.mockReset(); stashPut.mockReset(); toastInfo.mockReset() })
 
-function setup(item: Item, items: Item[]) {
+function setup(item: Item, items: Item[], opts: { stash?: boolean; partners?: SessionParticipant[] } = {}) {
   const onClose = vi.fn()
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   renderWithProviders(
-    <GiveSheet charId={10} sessionId={9} partners={partners} item={item} items={items} onClose={onClose} />,
+    <GiveSheet charId={10} sessionId={9} partners={opts.partners ?? partners} stash={opts.stash} item={item} items={items} onClose={onClose} />,
     { client: qc },
   )
   return { onClose, qc }
@@ -98,5 +98,23 @@ describe('GiveSheet', () => {
     await waitFor(() => expect(onClose).toHaveBeenCalled())
     expect(qc.getQueryData(['character', 10])).toMatchObject({ id: 10 })
     expect(toastInfo).toHaveBeenCalled()
+  })
+
+  it('sessione di campagna: «Deposito di gruppo» tra i partner, anche senza compagni → stash/put', async () => {
+    const f = it_(1, 'Frecce', { quantity: 20 })
+    stashPut.mockResolvedValue({ id: 10, items: [] })
+    const { onClose, qc } = setup(f, [f], { stash: true, partners: [] })
+    fireEvent.click(screen.getByRole('button', { name: /campaign.stash/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'character.inventory.give.confirm' }))
+    await waitFor(() => expect(onClose).toHaveBeenCalled())
+    expect(stashPut).toHaveBeenCalledWith(9, { from_character_id: 10, item_id: 1 })
+    expect(trade).not.toHaveBeenCalled()
+    expect(qc.getQueryData(['character', 10])).toMatchObject({ id: 10 })
+  })
+
+  it('senza stash il deposito non compare', () => {
+    const f = it_(1, 'Corda')
+    setup(f, [f])
+    expect(screen.queryByRole('button', { name: /campaign.stash/ })).toBeNull()
   })
 })

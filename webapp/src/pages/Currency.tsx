@@ -399,7 +399,7 @@ export default function Currency() {
       </Sheet>
 
       {giving && trade && (
-        <GiveCoinsSheet charId={charId} sessionId={trade.sessionId} partners={trade.partners} totals={char.coin_totals ?? {}} onClose={() => setGiving(false)} />
+        <GiveCoinsSheet charId={charId} sessionId={trade.sessionId} partners={trade.partners} stash={trade.stash} totals={char.coin_totals ?? {}} onClose={() => setGiving(false)} />
       )}
 
       {moving && (
