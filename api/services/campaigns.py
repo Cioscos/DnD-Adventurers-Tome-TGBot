@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core.db.models import Campaign, Character
+from core.db.models import Campaign, Character, Currency
 
 STASH_USER_ID = 0  # owner of stash characters: never a real Telegram user
 _ALPHABET = string.ascii_uppercase + string.digits
@@ -23,7 +23,7 @@ async def generate_campaign_code(db: AsyncSession) -> str:
 
 
 async def create_campaign(db: AsyncSession, gm_user_id: int, name: str) -> Campaign:
-    stash = Character(user_id=STASH_USER_ID, name=name)
+    stash = Character(user_id=STASH_USER_ID, name=name, currency=Currency())
     db.add(stash)
     await db.flush()
     campaign = Campaign(

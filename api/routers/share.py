@@ -16,7 +16,7 @@ from sqlalchemy.orm import selectinload
 from api.auth import get_current_user
 from api.database import get_db
 from api.services import content_shares, telegram_notify
-from core.db.models import Character, GameSession, SessionStatus
+from core.db.models import Campaign, Character, GameSession, SessionStatus
 
 router = APIRouter(tags=["share"])
 
@@ -151,6 +151,35 @@ async def share_note(
 
     prep_id = await telegram_notify.save_prepared_message(
         user_id, title=title, text=text, parse_mode="Markdown", button=button)
+    return _prepared_or_502(prep_id)
+
+
+@router.post("/share/campaign-invite/{campaign_id}")
+async def share_campaign_invite(
+    campaign_id: int,
+    user_id: Annotated[int, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> dict:
+    _require_token()
+    camp = await db.get(Campaign, campaign_id)
+    if camp is None or camp.gm_user_id != user_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="campaign_not_found")
+    username = await telegram_notify.get_bot_username()
+    if not username:
+        raise HTTPException(status_code=502, detail="Bot username unavailable")
+    text = (
+        f"🗡 *{camp.name}*\n"
+        f"Iscriviti alla campagna con il codice *{camp.invite_code}* "
+        f"oppure tocca il bottone qui sotto."
+    )
+    prep_id = await telegram_notify.save_prepared_message(
+        user_id,
+        title=camp.name,
+        text=text,
+        parse_mode="Markdown",
+        button=("Iscriviti alla campagna",
+                f"https://t.me/{username}?startapp=camp_{camp.invite_code}"),
+    )
     return _prepared_or_502(prep_id)
 
 
