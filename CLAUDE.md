@@ -228,6 +228,8 @@ The only callback handler is `bot.handlers.wiki.navigation_callback` — see `bo
 - **Map files**: Uploaded via the webapp are stored locally at `data/maps/{char_id}/{uuid}.{ext}` (up to 10 MB, image/PDF formats). The `Map` model stores the path in `local_file_path`; Telegram-sourced maps use `file_id` instead. The `data/maps/` directory is created automatically on first upload.
 - **Silhouette files**: Custom paper-doll silhouettes uploaded via the webapp are stored at `data/silhouettes/{char_id}/{uuid}.{ext}` (images only — png/jpg/webp/gif, ≤10 MB, no conversion). The `Character.silhouette_path` column stores the path (one per character; replaced on re-upload); `CharacterFull.has_custom_silhouette` exposes its presence. Served via `GET /characters/{id}/silhouette/file` (auth via `init_data` query param for `<img>`, mirroring maps). Resolution priority in the webapp: custom → class/race/gender manifest → SVG fallback.
 - **Release announcements**: only when `.env` has `ANNOUNCE_RELEASES=1` (set it on the Pi only — local APIs and tests must never message users), on startup the API (`api/services/release_announce.py`) compares `changelog.json` `entries[0].version` with `app_meta.last_announced_version`; if new, it records it first and then sends the notes in a private Telegram chat to `bot_users` (announcements on) ∪ character owners, minus opt-outs. A new release therefore goes out at the first API restart after the deploy.
+- **Campaign messages**: only when `.env` has `SEND_CAMPAIGN_MESSAGES=1` (Pi only — local APIs and tests must never set it), the API sends the end-of-evening recap and the 24h/1h evening reminders to Telegram.
+- **Lore files**: stored at `data/lore/{campaign_id}/` (images ≤10 MB, audio ≤5 MB), served via the `init_data` query param like maps.
 - **Bot state**: `data/persistence.pkl` — stores `user_data` and the `arbitrary_callback_data` LRU cache across restarts.
 
 ## Notable API Endpoints
@@ -247,6 +249,11 @@ The only callback handler is `bot.handlers.wiki.navigation_callback` — see `bo
 | `POST` | `/characters/{id}/items/{item_id}/cast` | Cast a spell granted by an item (consumes charges) |
 | `POST` | `/characters/{id}/choices/{choice_id}/resolve` | Resolve a pending level choice (ASI or feat) |
 | `*` | `/characters/{id}/companions[...]` | Familiars, companions, summons and wild shape (CRUD, activate/deactivate, hp, attack) |
+| `*` | `/campaigns/{id}/lore[...]` | GM lore: GET/POST/PATCH/DELETE, reveal/hide, image/audio upload and file |
+| `GET` | `/sessions/{id}/recap` | End-of-evening recap with statistics |
+| `POST` | `/share/recap/{session_id}` | GM shares the recap in the group chat |
+| `*` | `/campaigns/{id}/schedule[...]` | Calendar of real evenings (GET/POST/PATCH/DELETE) with Telegram reminders |
+| `GET` | `/characters/{id}/notes/campaigns` | Campaigns usable to link/filter journal entries |
 
 ### D&D 5e Rule Compliance Notes
 - **Death save roll**: nat 20 → revive with 1 HP + reset saves; nat 1 → 2 failures; 10+ → 1 success; 2-9 → 1 failure
