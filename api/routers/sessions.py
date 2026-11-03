@@ -46,6 +46,7 @@ from api.services.trades import give_coins, give_item
 from api.services.condition_effects import character_effect_payload
 from api.services.encounter_view import build_encounter_block
 from core.db.models import (
+    Campaign,
     Character,
     CharacterHistory,
     Combatant,
@@ -182,6 +183,14 @@ async def _generate_unique_code(db: AsyncSession) -> str:
     )
 
 
+async def session_read(db: AsyncSession, session: GameSession) -> GameSessionRead:
+    """GameSessionRead with campaign_name (explicit query: no async lazy-load)."""
+    name = None
+    if session.campaign_id is not None:
+        name = await db.scalar(select(Campaign.name).where(Campaign.id == session.campaign_id))
+    return GameSessionRead.model_validate(session).model_copy(update={"campaign_name": name})
+
+
 def _touch(session: GameSession) -> None:
     session.last_activity_at = _now()
 
@@ -266,9 +275,7 @@ async def my_active_session(
             )
         )
     ).scalars().first()
-    return GameSessionRead.model_validate(session).model_copy(
-        update={"encounter_status": enc_status}
-    )
+    return (await session_read(db, session)).model_copy(update={"encounter_status": enc_status})
 
 
 async def active_encounter_row(db: AsyncSession, character_id: int):
@@ -332,7 +339,7 @@ async def create_session(
     body: SessionCreateRequest,
     tg_user: Annotated[TelegramUser, Depends(get_current_telegram_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
-) -> GameSession:
+) -> GameSessionRead:
     user_id = tg_user.id
     # Users can only be in one active session at a time (regardless of role)
     existing = await _find_active_session_for_user(user_id, db)
@@ -342,14 +349,27 @@ async def create_session(
             detail="You already have an active session",
         )
 
+    title = body.title
+    if body.campaign_id is not None:
+        camp = await db.get(Campaign, body.campaign_id)
+        if camp is None or camp.gm_user_id != user_id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="gm_only")
+        active = await db.scalar(select(GameSession.id).where(
+            GameSession.campaign_id == camp.id, GameSession.status == SessionStatus.ACTIVE
+        ))
+        if active is not None:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="campaign_session_active")
+        title = title or camp.name
+
     code = await _generate_unique_code(db)
     now = _now()
-    gm_display_name = _compute_gm_display_name(tg_user, body.title)
+    gm_display_name = _compute_gm_display_name(tg_user, title)
     session = GameSession(
+        campaign_id=body.campaign_id,
         code=code,
         gm_user_id=user_id,
         status=SessionStatus.ACTIVE,
-        title=body.title,
+        title=title,
         gm_display_name=gm_display_name,
         created_at=now,
         last_activity_at=now,
@@ -365,7 +385,7 @@ async def create_session(
     ))
     await db.flush()
     await db.refresh(session, attribute_names=["participants"])
-    return session
+    return await session_read(db, session)
 
 
 @router.post("/join", response_model=GameSessionRead)
@@ -373,7 +393,7 @@ async def join_session(
     body: SessionJoinRequest,
     user_id: Annotated[int, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
-) -> GameSession:
+) -> GameSessionRead:
     # Users can only be in one active session at a time
     existing = await _find_active_session_for_user(user_id, db)
     if existing is not None:
@@ -412,7 +432,7 @@ async def join_session(
     _touch(session)
     await db.flush()
     await db.refresh(session, attribute_names=["participants"])
-    return session
+    return await session_read(db, session)
 
 
 @router.get("/{session_id}", response_model=GameSessionRead)
@@ -420,10 +440,10 @@ async def get_session(
     session_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
-) -> GameSession:
+) -> GameSessionRead:
     session = await _load_session(session_id, db)
     _assert_participant(session, user_id)
-    return session
+    return await session_read(db, session)
 
 
 @router.get("/{session_id}/live", response_model=GameSessionLiveRead)
@@ -516,6 +536,8 @@ async def get_session_live(
         created_at=session.created_at,
         last_activity_at=session.last_activity_at,
         closed_at=session.closed_at,
+        campaign_id=session.campaign_id,
+        campaign_name=(await session_read(db, session)).campaign_name,
         participants=[
             {
                 "user_id": p.user_id,

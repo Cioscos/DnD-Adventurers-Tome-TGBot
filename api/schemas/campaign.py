@@ -77,3 +77,14 @@ class CampaignDetail(BaseModel):
     stash: CampaignStash
     sessions: list[CampaignSessionRead]
     my_last_character_id: Optional[int] = None
+
+
+class CampaignSessionJoin(BaseModel):
+    character_id: int
+
+
+class ActiveCampaignSession(BaseModel):
+    campaign_id: int
+    campaign_name: str
+    session_id: int
+    my_last_character_id: Optional[int] = None

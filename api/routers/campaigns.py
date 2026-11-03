@@ -23,11 +23,15 @@ from api.schemas.campaign import (
     CampaignSessionRead,
     CampaignStash,
     CampaignSummary,
+    ActiveCampaignSession,
+    CampaignSessionJoin,
     InviteCodeRead,
     MemberStatusUpdate,
 )
 from api.schemas.common import CurrencyRead
 from api.schemas.item import ItemRead
+from api.routers.sessions import _find_active_session_for_user, _load_session, _touch, session_read
+from api.schemas.session import GameSessionRead
 from api.services.campaigns import create_campaign, generate_campaign_code
 from core.db.models import (
     Campaign,
@@ -35,6 +39,7 @@ from core.db.models import (
     Character,
     GameSession,
     SessionParticipant,
+    SessionRole,
     SessionStatus,
 )
 
@@ -69,6 +74,20 @@ async def _active_session_id(db: AsyncSession, campaign_id: int) -> Optional[int
         select(GameSession.id).where(
             GameSession.campaign_id == campaign_id, GameSession.status == SessionStatus.ACTIVE
         )
+    )).scalars().first()
+
+
+async def _my_last_character_id(db: AsyncSession, campaign_id: int, user_id: int) -> Optional[int]:
+    """The caller's PG in the most recent campaign session where they had one."""
+    return (await db.execute(
+        select(SessionParticipant.character_id)
+        .join(GameSession, GameSession.id == SessionParticipant.session_id)
+        .where(
+            GameSession.campaign_id == campaign_id,
+            SessionParticipant.user_id == user_id,
+            SessionParticipant.character_id.is_not(None),
+        )
+        .order_by(GameSession.created_at.desc(), GameSession.id.desc())
     )).scalars().first()
 
 
@@ -114,15 +133,7 @@ async def _detail(db: AsyncSession, camp: Campaign, user_id: int) -> CampaignDet
         select(GameSession).where(GameSession.campaign_id == camp.id)
         .order_by(GameSession.created_at.desc(), GameSession.id.desc())
     )).scalars().all()
-    mine = (await db.execute(
-        select(SessionParticipant.session_id, SessionParticipant.character_id).where(
-            SessionParticipant.user_id == user_id,
-            SessionParticipant.character_id.is_not(None),
-            SessionParticipant.session_id.in_([s.id for s in sessions]),
-        )
-    )).all() if sessions else []
-    char_by_session = dict(mine)
-    my_last = next((char_by_session[s.id] for s in sessions if s.id in char_by_session), None)
+    my_last = await _my_last_character_id(db, camp.id, user_id)
 
     return CampaignDetail(
         id=camp.id,
@@ -229,6 +240,37 @@ async def enroll(
     return await _detail(db, camp, user_id)
 
 
+@router.get("/active-for-me", response_model=list[ActiveCampaignSession])
+async def active_for_me(
+    user_id: Annotated[int, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> list[ActiveCampaignSession]:
+    """Campaigns with a live session the caller can join (drives the player banner)."""
+    rows = (await db.execute(
+        select(Campaign.id, Campaign.name, GameSession.id)
+        .join(GameSession, GameSession.campaign_id == Campaign.id)
+        .where(
+            GameSession.status == SessionStatus.ACTIVE,
+            Campaign.id.in_(
+                select(CampaignMember.campaign_id).where(
+                    CampaignMember.user_id == user_id, CampaignMember.status != "dead"
+                )
+            ),
+            ~GameSession.id.in_(
+                select(SessionParticipant.session_id).where(SessionParticipant.user_id == user_id)
+            ),
+        )
+        .order_by(GameSession.id)
+    )).all()
+    return [
+        ActiveCampaignSession(
+            campaign_id=cid, campaign_name=name, session_id=sid,
+            my_last_character_id=await _my_last_character_id(db, cid, user_id),
+        )
+        for cid, name, sid in rows
+    ]
+
+
 @router.get("/{campaign_id}", response_model=CampaignDetail)
 async def get_campaign(
     campaign_id: int,
@@ -320,3 +362,36 @@ async def remove_member(
     member = await _get_member(db, campaign_id, character_id, user_id)
     await db.delete(member)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/{campaign_id}/session/join", response_model=GameSessionRead)
+async def join_campaign_session(
+    campaign_id: int,
+    body: CampaignSessionJoin,
+    user_id: Annotated[int, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> GameSessionRead:
+    """One-tap join of the campaign's active session with a chosen enrolled PG."""
+    camp = await _get_campaign(db, campaign_id, user_id)
+    char = await db.get(Character, body.character_id)
+    if char is None or char.user_id != user_id:
+        raise _err(403, "not_your_character")
+    member = next((m for m in camp.members if m.character_id == char.id), None)
+    if member is None:
+        raise _err(422, "not_a_member")
+    if member.status == "dead":
+        raise _err(422, "character_dead")
+    session_id = await _active_session_id(db, camp.id)
+    if session_id is None:
+        raise _err(404, "no_active_session")
+    if await _find_active_session_for_user(user_id, db) is not None:
+        raise _err(409, "You already have an active session")
+    session = await _load_session(session_id, db)
+    db.add(SessionParticipant(
+        session_id=session.id, user_id=user_id, role=SessionRole.PLAYER,
+        character_id=char.id, character=char, display_name=char.name, joined_at=_now(),
+    ))
+    _touch(session)
+    await db.flush()
+    await db.refresh(session, attribute_names=["participants"])
+    return await session_read(db, session)
