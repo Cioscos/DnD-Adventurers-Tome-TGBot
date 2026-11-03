@@ -36,6 +36,7 @@ import HPSkeleton from '@/components/skeletons/HPSkeleton'
 import { useIsFirstValue } from '@/hooks/useIsFirstValue'
 import { notifyMutationError } from '@/lib/mutationError'
 import { isConcentrating, concentrationLabel } from '@/lib/concentration'
+import { hpNumeralTone } from '@/lib/hpTone'
 import { applyDamageModifier, damageMultiplier, type DamageModifier } from '@/lib/damageModifier'
 
 type HPOp = 'damage' | 'heal' | 'set_max' | 'set_current' | 'set_temp'
@@ -267,18 +268,6 @@ export default function HP() {
   const shownTemp = form ? form.temp_hp : char.temp_hp
   const hpPct = shownMax > 0 ? (shownHp / shownMax) * 100 : 0
 
-  // Color scale for HP number
-  const hpColor = hpPct > 50
-    ? 'text-dnd-emerald-bright'
-    : hpPct > 25
-      ? 'text-dnd-gold-bright'
-      : 'text-dnd-crimson-bright'
-  const hpGlowClass = hpPct > 50
-    ? 'hp-glow-emerald'
-    : hpPct > 25
-      ? 'hp-glow-gold'
-      : 'hp-glow-crimson'
-
   return (
     <Layout title={t('character.hp.title')} backTo={`/char/${charId}`} group="combat" page="hp">
       {/* First section: alive → hero PF centrato | dying → tiri salvezza | dead → seam (futura epica) */}
@@ -310,7 +299,7 @@ export default function HP() {
                       initial={isFirstValue ? false : { scale: 0.85, opacity: 0.4 }}
                       animate={{ scale: 1, opacity: 1 }}
                       transition={spring.elastic}
-                      className={`font-display font-black leading-none text-[5rem] ${hpColor} ${hpGlowClass}`}
+                      className={`font-display font-black leading-none text-[5rem] ${hpNumeralTone(hpPct)}`}
                     >
                       {shownHp}
                     </m.span>

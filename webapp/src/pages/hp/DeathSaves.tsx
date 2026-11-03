@@ -77,28 +77,22 @@ function PipGroup({ label, count, tone, icon, urgent = false }: PipGroupProps) {
   )
 }
 
-export default function DeathSaves({ deathSaves, onRoll, onAction, isRolling, pendingAction }: DeathSavesProps) {
+/** Pallini e pulsante di tiro: condivisi tra la pagina HP e l'hub. */
+export function DeathSaveTracker({ deathSaves, onRoll, isRolling }: Pick<DeathSavesProps, 'deathSaves' | 'onRoll' | 'isRolling'>) {
   const { t } = useTranslation()
   const successes = deathSaves.successes ?? 0
   const failures = deathSaves.failures ?? 0
 
   return (
-    <Surface variant="ember" ornamented className="flex flex-col gap-5">
-      <div className="flex items-center gap-2">
-        <Skull size={18} className="text-dnd-crimson-bright" />
-        <h3 className="font-display font-bold text-dnd-crimson-bright text-base tracking-wide">
-          {t('character.death_saves.title')}
-        </h3>
-      </div>
-
-      <div className="flex items-center justify-center gap-7">
+    <>
+      <div className="flex flex-wrap items-center justify-center gap-x-3 min-[400px]:gap-x-7 gap-y-3">
         <PipGroup
           label={t('character.death_saves.successes')}
           count={successes}
           tone="emerald"
           icon={<Check size={16} strokeWidth={3} />}
         />
-        <div className="h-14 w-px bg-dnd-border" aria-hidden />
+        <div className="h-14 w-px bg-dnd-border max-[340px]:hidden" aria-hidden />
         <PipGroup
           label={t('character.death_saves.failures')}
           count={failures}
@@ -112,11 +106,30 @@ export default function DeathSaves({ deathSaves, onRoll, onAction, isRolling, pe
         onRoll={onRoll}
         pending={isRolling}
         ariaLabel={t('character.death_saves.roll')}
-        className="mt-5 w-full min-h-[56px] px-5 py-3.5 rounded-xl flex items-center justify-center gap-2 text-base font-bold bg-gradient-gold text-dnd-ink shadow-engrave"
+        className="w-full min-h-[56px] px-5 py-3.5 rounded-xl flex items-center justify-center gap-2 text-base font-bold bg-gradient-gold text-dnd-ink shadow-engrave"
       >
         <Dice1 size={18} />
         {t('character.death_saves.roll')}
       </RollButton>
+    </>
+  )
+}
+
+export default function DeathSaves({ deathSaves, onRoll, onAction, isRolling, pendingAction }: DeathSavesProps) {
+  const { t } = useTranslation()
+
+  return (
+    <Surface variant="ember" ornamented className="flex flex-col gap-5">
+      <div className="flex items-center gap-2">
+        <Skull size={18} className="text-dnd-crimson-bright" />
+        <h3 className="font-display font-bold text-dnd-crimson-bright text-base tracking-wide">
+          {t('character.death_saves.title')}
+        </h3>
+      </div>
+
+      <div className="flex flex-col gap-5">
+        <DeathSaveTracker deathSaves={deathSaves} onRoll={onRoll} isRolling={isRolling} />
+      </div>
 
       <div className="flex flex-col gap-3 pt-4 border-t border-dnd-border/40">
         <div className="flex items-center justify-between gap-3">
