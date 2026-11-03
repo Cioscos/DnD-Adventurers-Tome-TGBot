@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { m } from 'framer-motion'
-import { CircleDot, SlidersHorizontal } from 'lucide-react'
+import { CircleDot, HeartPulse, SlidersHorizontal } from 'lucide-react'
 import {
   GiCheckedShield, GiFlame, GiHeartPlus, GiKnapsack, GiLightningTrio,
   GiPotionBall, GiSkullCrossedBones,
@@ -27,8 +28,14 @@ import QuickActions from '@/components/character/QuickActions'
 import ActiveFormBanner from '@/components/character/ActiveFormBanner'
 import HpQuickSheet from '@/components/character/HpQuickSheet'
 import HeroLayoutSheet from '@/components/character/HeroLayoutSheet'
+import { DeathSaveTracker } from '@/pages/hp/DeathSaves'
+import DeathSaveResultDialog from '@/pages/hp/DeathSaveResultDialog'
+import { api, type DeathSaveRollResult } from '@/api/client'
+import { useD20Roll, d20Arg, type RollMode } from '@/hooks/useD20Roll'
+import { useIsFirstValue } from '@/hooks/useIsFirstValue'
 import { isConcentrating, concentrationLabel } from '@/lib/concentration'
 import { readHeroLayout, type HeroSectionKey } from '@/lib/heroLayout'
+import { hpNumeralTone } from '@/lib/hpTone'
 import type { Ability, CharacterFull } from '@/types'
 import { useUnitSettings, formatWeightValue, weightUnitLabel } from '@/store/unitSettings'
 
@@ -57,6 +64,24 @@ export default function HeroScreen({ char }: Props) {
   const [detailAbility, setDetailAbility] = useState<Ability | null>(null)
   const [hpSheetOpen, setHpSheetOpen] = useState(false)
   const [layoutSheetOpen, setLayoutSheetOpen] = useState(false)
+  const [deathRollResult, setDeathRollResult] = useState<DeathSaveRollResult | null>(null)
+
+  const qc = useQueryClient()
+  const rollD20 = useD20Roll()
+  const deathRollMutation = useMutation({
+    mutationFn: async (mode: RollMode) =>
+      api.characters.rollDeathSave(char.id, d20Arg(mode, await rollD20(mode))),
+    onSuccess: (result) => {
+      setDeathRollResult(result)
+      qc.invalidateQueries({ queryKey: ['character', char.id] })
+      haptic.success()
+    },
+  })
+
+  // Stessa definizione della pagina HP: a 0 PF stabile o da morto non si tira.
+  const deathSaves = char.death_saves ?? { successes: 0, failures: 0, stable: false }
+  const atZero = char.current_hit_points === 0
+  const isDying = atZero && !deathSaves.stable && !char.is_dead
 
   const form = char.active_form ?? null
   // In forma selvatica la barra PF e la CA mostrano quelle della forma.
@@ -72,6 +97,8 @@ export default function HeroScreen({ char }: Props) {
   const hpPct = hpMax > 0
     ? Math.round((hpCurrent / hpMax) * 100)
     : 0
+  // Pop del numero solo quando cambia, non all'ingresso nell'hub.
+  const isFirstHp = useIsFirstValue(hpCurrent)
 
   const passiveAbilities = char.abilities?.filter((a) => a.is_passive) ?? []
   const activeConditions = char.conditions
@@ -91,7 +118,7 @@ export default function HeroScreen({ char }: Props) {
       <PendingChoicesBadge char={char} />
       {/* Hero card */}
       <Surface
-        variant="tome"
+        variant={isDying ? 'ember' : 'tome'}
         ornamented
         className="relative overflow-hidden"
       >
@@ -164,17 +191,22 @@ export default function HeroScreen({ char }: Props) {
               className="w-full min-h-[44px] text-left"
               aria-label={t('character.hp.title', { defaultValue: 'Hit Points' })}
             >
-              <div className="flex items-center justify-between text-sm mb-1.5">
-                <span className="inline-flex items-center gap-1.5 font-mono">
-                  <GiHeartPlus size={14} className="text-dnd-crimson-bright" />
-                  <span className="text-dnd-text font-bold">
-                    {hpCurrent}/{hpMax}
-                  </span>
-                  {tempHp > 0 && (
-                    <span className="text-dnd-cobalt-bright">(+{tempHp} temp)</span>
-                  )}
-                </span>
-                <span className="text-dnd-text-muted font-mono text-xs">{hpPct}%</span>
+              <div className="flex flex-wrap items-baseline gap-x-1.5 mb-2">
+                <GiHeartPlus size={16} aria-hidden className="self-center shrink-0 text-dnd-crimson-bright" />
+                <m.span
+                  key={hpCurrent}
+                  initial={isFirstHp ? false : { scale: 0.85, opacity: 0.4 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={spring.elastic}
+                  data-testid="hero-hp-current"
+                  className={`font-display font-black leading-none text-[3.5rem] ${hpNumeralTone(hpPct)}`}
+                >
+                  {hpCurrent}
+                </m.span>
+                <span className="font-mono text-base tabular-nums text-dnd-text-muted">/{hpMax}</span>
+                {tempHp > 0 && (
+                  <span className="font-mono text-sm tabular-nums whitespace-nowrap text-dnd-cobalt-bright">(+{tempHp} temp)</span>
+                )}
               </div>
               <HPGauge
                 current={hpCurrent}
@@ -196,7 +228,7 @@ export default function HeroScreen({ char }: Props) {
                 currentXP={char.experience_points}
                 totalClassLevel={char.total_level}
                 milestone={char.settings?.advancement === 'milestone'}
-                suppressHalo={hpPct > 0 && hpPct <= 25}
+                suppressHalo={hpPct <= 25}
               />
             </Pressable>
           </div>
@@ -205,12 +237,12 @@ export default function HeroScreen({ char }: Props) {
             type="button"
             onClick={() => { haptic.light(); navigate(`/char/${char.id}/ac`) }}
             whileTap={{ scale: 0.95 }}
-            className="shrink-0 relative opacity-90"
+            className="shrink-0 relative"
             aria-label={t('character.ac.title', { defaultValue: 'Armor Class' })}
           >
-            <ShieldEmblem size={90} />
+            <ShieldEmblem size={104} />
             <span className="absolute inset-0 flex flex-col items-center justify-center pb-1">
-              <span className="text-2xl font-display font-black text-dnd-gold-bright leading-none"
+              <span className="text-4xl font-display font-black text-dnd-gold-bright leading-none"
                     style={{ textShadow: '0 1px 3px rgba(var(--dnd-shadow-color), 0.6)' }}>
                 {acTotal}
               </span>
@@ -220,6 +252,29 @@ export default function HeroScreen({ char }: Props) {
             </span>
           </Pressable>
         </div>
+
+        {isDying && (
+          <div className="mt-4 flex flex-col gap-4">
+            <p className="flex items-center justify-center gap-2 font-display font-bold text-base tracking-wide text-dnd-crimson-bright">
+              <GiSkullCrossedBones size={18} aria-hidden />
+              {t('character.death_saves.title')}
+            </p>
+            <DeathSaveTracker
+              deathSaves={deathSaves}
+              onRoll={(mode) => deathRollMutation.mutate(mode)}
+              isRolling={deathRollMutation.isPending}
+            />
+          </div>
+        )}
+
+        {atZero && deathSaves.stable && !char.is_dead && (
+          <p className="mt-3 flex items-center justify-center gap-1.5 rounded-lg px-3 py-1.5
+                        text-xs font-cinzel font-bold uppercase tracking-wider
+                        bg-dnd-cobalt/15 border border-dnd-cobalt/40 text-dnd-cobalt-bright">
+            <HeartPulse size={13} aria-hidden />
+            {t('character.death_saves.stabilized_badge')}
+          </p>
+        )}
 
         {isConcentrating(char) && (() => {
           const spellName = concentrationLabel(char)
@@ -330,9 +385,10 @@ export default function HeroScreen({ char }: Props) {
                     <span className="text-xs font-cinzel uppercase tracking-wider opacity-80">
                       {shortLabel}
                     </span>
-                    <span className="text-xl font-mono font-bold tabular-nums leading-none mt-0.5">{score.value}</span>
-                    <span className="text-xs font-mono font-bold mt-0.5 px-1.5 py-0.5 rounded-full bg-dnd-ink/25">
-                      {modStr}
+                    {/* Il modificatore è il numero che si tira: guida lui, il punteggio accompagna. */}
+                    <span className="text-xl font-mono font-bold tabular-nums leading-none mt-0.5">{modStr}</span>
+                    <span className="text-xs font-mono tabular-nums mt-0.5 px-1.5 py-0.5 rounded-full bg-dnd-ink/25 text-dnd-text-muted">
+                      {score.value}
                     </span>
                   </Pressable>
                 )
@@ -384,6 +440,9 @@ export default function HeroScreen({ char }: Props) {
           charId={char.id}
           onClose={() => setDetailAbility(null)}
         />
+      )}
+      {deathRollResult && (
+        <DeathSaveResultDialog result={deathRollResult} onClose={() => setDeathRollResult(null)} />
       )}
       <HpQuickSheet char={char} open={hpSheetOpen} onClose={() => setHpSheetOpen(false)} />
       <HeroLayoutSheet char={char} open={layoutSheetOpen} onClose={() => setLayoutSheetOpen(false)} />

@@ -81,9 +81,11 @@ describe('Hero wild shape view', () => {
       active_form: { companion_id: 2, name: 'Lupo', current_hp: 9, max_hp: 11, temp_hp: 0, armor_class: 13 },
     } as unknown as CharacterFull
     renderWithProviders(<HeroScreen char={c} />)
-    expect(screen.getByText('9/11')).toBeInTheDocument()
+    expect(screen.getByText('9')).toBeInTheDocument()
+    expect(screen.getByText('/11')).toBeInTheDocument()
     expect(screen.getByText('13')).toBeInTheDocument()
     expect(screen.getByText('character.extras.in_form_of')).toBeInTheDocument()
-    expect(screen.queryByText('30/40')).toBeNull()
+    expect(screen.queryByText('30')).toBeNull()
+    expect(screen.queryByText('/40')).toBeNull()
   })
 })

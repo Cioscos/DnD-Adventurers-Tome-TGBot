@@ -265,7 +265,7 @@ export default function Layout({ title, children, backTo, group, page, hideScrol
         )}
         <main
           ref={swipe.contentRef}
-          className={`absolute inset-0 overflow-y-auto overflow-x-hidden overscroll-contain p-4 pt-4 pb-[max(env(safe-area-inset-bottom),var(--tg-content-bottom,0px),6rem)] space-y-3${info ? ' touch-pan-y' : ''}${swipe.arrivedBySwipe ? '' : ' animate-fade-in'}${hideScrollbar ? ' scrollbar-hide' : ''}`}
+          className={`absolute inset-0 overflow-y-auto overflow-x-hidden overscroll-contain p-4 pt-4 pb-safe-fab space-y-3${info ? ' touch-pan-y' : ''}${swipe.arrivedBySwipe ? '' : ' animate-fade-in'}${hideScrollbar ? ' scrollbar-hide' : ''}`}
           onTouchStart={swipe.onTouchStart}
           onTouchMove={swipe.onTouchMove}
           onTouchEnd={swipe.onTouchEnd}

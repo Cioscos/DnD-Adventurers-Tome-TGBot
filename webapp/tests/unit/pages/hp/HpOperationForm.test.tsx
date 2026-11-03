@@ -29,6 +29,7 @@ vi.mock('framer-motion', async () => {
   }
   const cache = new Map<string, ReturnType<typeof make>>()
   return {
+    useReducedMotion: () => false,
     m: new Proxy({}, {
       get: (_t: object, tag: string | symbol) => {
         const key = String(tag)
@@ -129,8 +130,27 @@ describe('HpOperationForm', () => {
     expect(hpMutate).toHaveBeenCalledWith({ op: 'damage', val: 10 })
   })
 
+  it('keeps the optional damage controls closed until asked for, ahead of the quick values', async () => {
+    render(<Harness />)
+    expect(screen.queryByRole('button', { name: 'character.hp.modifier_half' })).not.toBeInTheDocument()
+    const disclosure = screen.getByRole('button', { name: 'character.hp.damage_type' })
+    expect(disclosure).toHaveAttribute('aria-expanded', 'false')
+    expect(disclosure.compareDocumentPosition(screen.getByText(`${MINUS}5`)) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    await userEvent.click(disclosure)
+    expect(screen.getByRole('button', { name: 'character.hp.modifier_half' })).toBeInTheDocument()
+  })
+
+  it('names the operation on the apply button once a value is typed', async () => {
+    render(<Harness />)
+    await userEvent.type(screen.getByTestId('hp-input'), '12')
+    expect(screen.getByRole('button', { name: 'character.hp.apply_damage' })).toBeEnabled()
+    await userEvent.click(screen.getByText('character.hp.heal_short'))
+    expect(screen.getByRole('button', { name: 'character.hp.apply_heal' })).toBeEnabled()
+  })
+
   it('shows the half/double toggles only on the damage tab, mutually exclusive', async () => {
     render(<Harness />)
+    await userEvent.click(screen.getByRole('button', { name: 'character.hp.damage_type' }))
     const half = screen.getByRole('button', { name: 'character.hp.modifier_half' })
     const dbl = screen.getByRole('button', { name: 'character.hp.modifier_double' })
     await userEvent.click(half)
@@ -148,6 +168,7 @@ describe('HpOperationForm', () => {
     render(<Harness />)
     await userEvent.type(screen.getByTestId('hp-input'), '15')
     expect(screen.queryByText('15 → 7')).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'character.hp.damage_type' }))
     await userEvent.click(screen.getByRole('button', { name: 'character.hp.modifier_half' }))
     expect(screen.getByText('15 → 7')).toBeInTheDocument()
   })
@@ -180,8 +201,9 @@ describe('HpOperationForm', () => {
     const confirm = screen.getByRole('button', { name: 'common.confirm' })
     expect(confirm).toBeDisabled()
     await userEvent.type(screen.getByTestId('hp-input'), '7')
-    expect(confirm).toBeEnabled()
-    await userEvent.click(confirm)
+    const apply = screen.getByRole('button', { name: 'character.hp.apply_damage' })
+    expect(apply).toBeEnabled()
+    await userEvent.click(apply)
     expect(onApply).toHaveBeenCalledTimes(1)
   })
 

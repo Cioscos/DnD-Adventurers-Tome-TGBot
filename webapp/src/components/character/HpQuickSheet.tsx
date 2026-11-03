@@ -11,6 +11,7 @@ import ChipSelect from '@/components/ui/ChipSelect'
 import DamageTypeControls from '@/components/ui/DamageTypeControls'
 import HPGauge from '@/components/ui/HPGauge'
 import CharacterHpSecondary from '@/components/character/CharacterHpSecondary'
+import HpQuickChips from '@/components/character/HpQuickChips'
 import {
   applyDamageModifier, damageMultiplier, damagePreviewText, type DamageModifier,
 } from '@/lib/damageModifier'
@@ -40,6 +41,7 @@ export default function HpQuickSheet({ char, open, onClose }: HpQuickSheetProps)
   const [amount, setAmount] = useState('')
   const [damageType, setDamageType] = useState('')
   const [damageModifier, setDamageModifier] = useState<DamageModifier>(null)
+  const [pendingChip, setPendingChip] = useState<number | null>(null)
 
   const hpMutation = useMutation({
     mutationFn: ({ op, value, modifier }: {
@@ -79,9 +81,11 @@ export default function HpQuickSheet({ char, open, onClose }: HpQuickSheetProps)
   const effective: DamageModifier = damageModifier ?? (damageType ? proposedModifier : null)
   const showPreview = op === 'damage' && !!effective && effective !== 'none' && !isAmountInvalid
 
-  const apply = () => {
-    const n = parsedAmount
+  // Il chip si comporta come il valore scritto a mano: stesso modificatore, stesso annulla.
+  const apply = (n: number | null) => {
+    if (hpMutation.isPending) return
     if (n === null || n === 0) { haptic.error(); return }
+    setPendingChip(n)
     // Come in HP.tsx: l'override dell'utente viaggia esplicito (valore già applicato),
     // altrimenti il server applica le resistenze al tipo.
     const type = op === 'damage' && damageType ? { damage_type: damageType } : {}
@@ -159,6 +163,11 @@ export default function HpQuickSheet({ char, open, onClose }: HpQuickSheetProps)
             proposedModifier={proposedModifier}
           />
         )}
+        <HpQuickChips
+          sign={op === 'damage' ? '−' : '+'}
+          pendingVal={hpMutation.isPending ? pendingChip ?? undefined : undefined}
+          onPick={(n) => { haptic.light(); apply(n) }}
+        />
         <Input
           label={t('character.hp.quick_apply')}
           value={amount}
@@ -186,10 +195,12 @@ export default function HpQuickSheet({ char, open, onClose }: HpQuickSheetProps)
           icon={op === 'damage' ? <GiCrossedSwords size={16} /> : <GiHeartPlus size={16} />}
           loading={hpMutation.isPending}
           disabled={isAmountInvalid}
-          onClick={apply}
+          onClick={() => apply(parsedAmount)}
           haptic="medium"
         >
-          {t('character.hp.quick_apply')}
+          {isAmountInvalid
+            ? t('character.hp.quick_apply')
+            : t(`character.hp.apply_${op}`, { count: op === 'damage' ? applyDamageModifier(parsedAmount, effective) : parsedAmount })}
         </Button>
         <Button
           variant="ghost"

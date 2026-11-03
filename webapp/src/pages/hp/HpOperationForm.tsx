@@ -10,6 +10,7 @@ import Input from '@/components/ui/Input'
 import Pressable from '@/components/ui/Pressable'
 import { haptic } from '@/auth/telegram'
 import DamageTypeControls from '@/components/ui/DamageTypeControls'
+import HpQuickChips from '@/components/character/HpQuickChips'
 import { applyDamageModifier, damagePreviewText, type DamageModifier, type DamageMultiplier } from '@/lib/damageModifier'
 
 type HPOp = 'damage' | 'heal' | 'set_max' | 'set_current' | 'set_temp'
@@ -117,18 +118,52 @@ export default function HpOperationForm({
         </div>
       </Surface>
 
+      {/* Prima ciò che modifica il colpo (vale anche per i chip), poi i chip che lo applicano. */}
+      {activeOp === 'damage' && (
+        <div className="flex flex-col gap-3">
+          <DamageTypeControls
+            damageType={damageType}
+            setDamageType={setDamageType}
+            damageModifier={damageModifier}
+            setDamageModifier={setDamageModifier}
+            proposedModifier={proposedModifier}
+          />
+          {atZero && (
+            <Pressable
+              onClick={() => { setCrit(!crit); haptic.selection() }}
+              aria-pressed={crit}
+              className={`flex items-center justify-center gap-2 min-h-[44px] rounded-xl border font-cinzel text-xs uppercase tracking-wider transition-colors
+                ${crit
+                  ? '!bg-gradient-ember !text-dnd-parchment !border-transparent'
+                  : 'bg-transparent text-dnd-text-muted border-dnd-border'}`}
+            >
+              <Skull size={16} />
+              {t('character.hp.critical_hit')}
+            </Pressable>
+          )}
+        </div>
+      )}
+
+      {/* Quick shortcuts. Applicano al volo solo le op incrementali (danno/cura/temp);
+          per "Imposta attuali/max" riempiono il campo: un tap su "5" non deve fissare
+          i PF massimi a 5. */}
+      <HpQuickChips
+        sign={activeOp === 'damage' ? '−' : activeOp === 'heal' ? '+' : ''}
+        pendingVal={pendingQuickVal}
+        onPick={(n) => {
+          if (activeOp === 'set_max' || activeOp === 'set_current') {
+            setValue(String(n))
+            haptic.selection()
+            return
+          }
+          hpMutate({ op: activeOp, val: n })
+          haptic.light()
+        }}
+      />
+
       {/* Number input + apply */}
       <Surface variant="elevated">
         <div className="flex flex-col gap-3">
-          {activeOp === 'damage' && (
-            <DamageTypeControls
-              damageType={damageType}
-              setDamageType={setDamageType}
-              damageModifier={damageModifier}
-              setDamageModifier={setDamageModifier}
-              proposedModifier={proposedModifier}
-            />
-          )}
           <Input
             type="number"
             min={0}
@@ -152,19 +187,6 @@ export default function HpOperationForm({
               )}
             </p>
           )}
-          {activeOp === 'damage' && atZero && (
-            <Pressable
-              onClick={() => { setCrit(!crit); haptic.selection() }}
-              aria-pressed={crit}
-              className={`flex items-center justify-center gap-2 min-h-[44px] rounded-xl border font-cinzel text-xs uppercase tracking-wider transition-colors
-                ${crit
-                  ? '!bg-gradient-ember !text-dnd-parchment !border-transparent'
-                  : 'bg-transparent text-dnd-text-muted border-dnd-border'}`}
-            >
-              <Skull size={16} />
-              {t('character.hp.critical_hit')}
-            </Pressable>
-          )}
           <Button
             variant="primary"
             size="lg"
@@ -175,38 +197,12 @@ export default function HpOperationForm({
             icon={<Check size={20} />}
             haptic="medium"
           >
-            {t('common.confirm')}
+            {rawTyped > 0
+              ? t(`character.hp.apply_${activeOp}`, { count: activeOp === 'damage' ? applyDamageModifier(rawTyped, effective) : rawTyped })
+              : t('common.confirm')}
           </Button>
         </div>
       </Surface>
-
-      {/* Quick shortcuts — at least 52px min-height. Applicano al volo solo le
-          op incrementali (danno/cura/temp); per "Imposta attuali/max" riempiono
-          il campo: un tap su "5" non deve fissare i PF massimi a 5. */}
-      <div className="grid grid-cols-4 gap-2">
-        {[1, 5, 10, 20].map((n) => (
-          <Pressable
-            key={n}
-            onClick={() => {
-              if (activeOp === 'set_max' || activeOp === 'set_current') {
-                setValue(String(n))
-                haptic.selection()
-                return
-              }
-              hpMutate({ op: activeOp, val: n })
-              haptic.light()
-            }}
-            pending={pendingQuickVal === n}
-            spinnerSize={16}
-            className="min-h-[52px] rounded-2xl bg-dnd-surface border border-dnd-border
-                       text-dnd-gold-bright font-mono font-bold text-base
-                       hover:border-dnd-gold/70 transition-colors"
-            whileTap={{ scale: 0.94 }}
-          >
-            {activeOp === 'damage' ? `−${n}` : activeOp === 'heal' ? `+${n}` : `${n}`}
-          </Pressable>
-        ))}
-      </div>
     </>
   )
 }
