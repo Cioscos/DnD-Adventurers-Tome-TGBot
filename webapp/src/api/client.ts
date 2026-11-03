@@ -973,10 +973,11 @@ export const api = {
     remove: (campId: number, id: number) => request<void>(`/campaigns/${campId}/lore/${id}`, { method: 'DELETE' }),
     reveal: (campId: number, id: number) => request<LoreRead>(`/campaigns/${campId}/lore/${id}/reveal`, { method: 'POST' }),
     hide: (campId: number, id: number) => request<LoreRead>(`/campaigns/${campId}/lore/${id}/hide`, { method: 'POST' }),
-    imageUrl: (campId: number, id: number) =>
-      `${BASE_URL}/campaigns/${campId}/lore/${id}/image?init_data=${encodeURIComponent(getInitData())}`,
-    audioUrl: (campId: number, id: number) =>
-      `${BASE_URL}/campaigns/${campId}/lore/${id}/audio?init_data=${encodeURIComponent(getInitData())}`,
+    // v = updated_at: a replaced file gets a new URL, so the browser cache never shows the old one.
+    imageUrl: (campId: number, id: number, v: string) =>
+      `${BASE_URL}/campaigns/${campId}/lore/${id}/image?init_data=${encodeURIComponent(getInitData())}&v=${encodeURIComponent(v)}`,
+    audioUrl: (campId: number, id: number, v: string) =>
+      `${BASE_URL}/campaigns/${campId}/lore/${id}/audio?init_data=${encodeURIComponent(getInitData())}&v=${encodeURIComponent(v)}`,
   },
 
   campaigns: {

@@ -23,6 +23,7 @@ import { useShareMessage } from '@/hooks/useShareMessage'
 import { useToast } from '@/hooks/useToast'
 import { notifyMutationError } from '@/lib/mutationError'
 import { dayHeader } from '@/lib/relativeTime'
+import { fromServer } from '@/lib/calendarDates'
 import { formatDuration } from '@/lib/duration'
 import type { CampaignDetail, CampaignMember, CampaignMemberStatus } from '@/types'
 
@@ -296,7 +297,7 @@ export default function Campaign() {
             const row = (
               <>
                 <span className="min-w-0 break-words">
-                  {t('campaign.night_n', { n: s.number })} · {dayHeader(s.created_at, locale)}
+                  {t('campaign.night_n', { n: s.number })} · {dayHeader(fromServer(s.created_at), locale)}
                 </span>
                 <span className="shrink-0 font-mono tabular-nums text-dnd-text-muted">{formatDuration(s.duration_seconds)}</span>
               </>

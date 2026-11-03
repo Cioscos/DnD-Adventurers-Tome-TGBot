@@ -11,7 +11,8 @@ interface NoteEditorProps {
   campaigns?: NoteCampaign[]
   /** Campagna preselezionata per una voce nuova (quella attuale del PG). */
   defaultCampaignId?: number | null
-  onSave: (title: string, body: string, tags: string[], campaignId: number | null) => void
+  /** campaignId undefined = editing and the user never touched the campaign chips (keep it). */
+  onSave: (title: string, body: string, tags: string[], campaignId: number | null | undefined) => void
   onCancel: () => void
   isPending: boolean
 }
@@ -24,6 +25,9 @@ export default function NoteEditor({ initialNote, campaigns = [], defaultCampaig
   const [body, setBody] = useState('')
   const [tags, setTags] = useState<string[]>([])
   const [campaignId, setCampaignId] = useState<number | null>(defaultCampaignId)
+  // In modifica la campagna si cambia solo con un tocco esplicito: una campagna cancellata o
+  // la lista non ancora caricata mostrano «Nessuna» ma non devono scollegare la voce.
+  const [picked, setPicked] = useState(false)
 
   useEffect(() => {
     if (initialNote) {
@@ -44,9 +48,10 @@ export default function NoteEditor({ initialNote, campaigns = [], defaultCampaig
     const id = initialNote ? initialNote.campaign_id ?? null : defaultCampaignId
     setCampaignId(id !== null && campaignIds.split(',').includes(String(id)) ? id : null)
   }, [initialNote, defaultCampaignId, campaignIds])
+  useEffect(() => setPicked(false), [initialNote])
 
   const handleSave = () => {
-    onSave(title.trim(), body.trim(), tags, campaignId)
+    onSave(title.trim(), body.trim(), tags, isEdit && !picked ? undefined : campaignId)
   }
 
   const rawSuggestions = t('character.notes.tag_suggestions', { returnObjects: true })
@@ -106,7 +111,7 @@ export default function NoteEditor({ initialNote, campaigns = [], defaultCampaig
                 key={c.id ?? 'none'}
                 type="button"
                 aria-pressed={campaignId === c.id}
-                onClick={() => setCampaignId(c.id)}
+                onClick={() => { setCampaignId(c.id); setPicked(true) }}
                 className={`min-h-11 px-3 rounded-xl border text-sm font-body ${
                   campaignId === c.id
                     ? 'bg-dnd-gold/20 border-dnd-gold text-dnd-gold-bright'

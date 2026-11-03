@@ -124,6 +124,25 @@ describe('CampaignCalendar', () => {
     await waitFor(() => expect(remove).toHaveBeenCalledWith(5, 1))
   })
 
+  it('master: serata saltata si annulla ma non si sposta', async () => {
+    show(true, [row({ status: 'skipped', starts_at: '2026-11-10T12:00:00' })])
+    await waitFor(() => expect(day(10).querySelector('[data-mark=skipped]')).not.toBeNull())
+    await userEvent.click(day(10))
+    expect(screen.queryByRole('button', { name: 'campaign.calendar.move' })).toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: 'campaign.calendar.cancel' }))
+    remove.mockResolvedValue(undefined)
+    await userEvent.click(screen.getByRole('button', { name: 'campaign.calendar.cancel_confirm' }))
+    await waitFor(() => expect(remove).toHaveBeenCalledWith(5, 1))
+  })
+
+  it('toccando oggi, Programma serata precompila la data di oggi', async () => {
+    show(true)
+    await screen.findAllByRole('button', { name: /^\d+ / })
+    await userEvent.click(day(18))
+    await userEvent.click(screen.getByRole('button', { name: 'campaign.calendar.schedule' }))
+    expect((document.querySelector('input[type=date]') as HTMLInputElement).value).toBe('2026-11-18')
+  })
+
   it('la sheet invia starts_at ISO con offset da data e ora locali', async () => {
     create.mockResolvedValue(row({}))
     show(true)

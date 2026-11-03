@@ -43,12 +43,12 @@ export default function LoreViewModal({ open, campaignId, lore, loading = false,
             )}
             {lore.has_image && (
               <img
-                src={api.lore.imageUrl(campaignId, lore.id)}
+                src={api.lore.imageUrl(campaignId, lore.id, lore.updated_at)}
                 alt={lore.title}
                 className="w-full max-h-[50vh] object-contain rounded-lg border border-dnd-border"
               />
             )}
-            {lore.has_audio && <audio controls className="w-full" src={api.lore.audioUrl(campaignId, lore.id)} />}
+            {lore.has_audio && <audio controls className="w-full" src={api.lore.audioUrl(campaignId, lore.id, lore.updated_at)} />}
             <div className="text-sm text-dnd-text whitespace-pre-wrap break-words leading-relaxed">
               {renderInlineMarkdown(lore.body)}
             </div>

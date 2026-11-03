@@ -42,7 +42,7 @@ const RECAP = {
     character_id: 10, name: 'Thorin', player_name: 'Aldo', class_summary: 'Guerriero 5', level: 5,
     dice: { rolls: 31, nat20: 2, nat1: 1, highest: 27 }, damage_taken: 44, healed: 12, downed: 1,
     death_saves: { successes: 2, failures: 1 }, spells_cast: 3, slots_used: { '1': 2, '3': 1 },
-    rests: { short: 1, long: 0 }, conditions: ['poisoned'],
+    rests: { short: 1, long: 0 }, conditions: ['poisoned', 'custom:Sanguinamento'],
   }],
   combat: { encounters: 2, rounds: 9, monsters: ['Goblin', 'Orco'] },
   items: {
@@ -70,6 +70,8 @@ describe('CampaignRecap', () => {
     expect(screen.getByText('Thorin', { selector: 'h3' })).toBeInTheDocument()
     expect(screen.getByText('44')).toBeInTheDocument()
     expect(screen.getByText(/character.conditions.poisoned/)).toBeInTheDocument()
+    expect(screen.getByText('Sanguinamento')).toBeInTheDocument()
+    expect(screen.getByText('campaign.recap.ds_s:{"count":2} · campaign.recap.ds_f:{"count":1}')).toBeInTheDocument()
     expect(screen.getByText(/Goblin, Orco/)).toBeInTheDocument()
     expect(screen.getByText(/Spada lunga/)).toBeInTheDocument()
     expect(screen.getByText(/Pozione ×2/)).toBeInTheDocument()

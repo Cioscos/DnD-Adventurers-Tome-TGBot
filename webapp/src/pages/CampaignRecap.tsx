@@ -13,6 +13,7 @@ import { canShareMessage } from '@/auth/telegram'
 import { useShareMessage } from '@/hooks/useShareMessage'
 import { dayHeader } from '@/lib/relativeTime'
 import { formatDuration } from '@/lib/duration'
+import { fromServer } from '@/lib/calendarDates'
 import type { SessionRecapCharacter } from '@/types'
 
 const P = 'campaign.recap.'
@@ -52,7 +53,7 @@ function CharacterCard({ c }: { c: SessionRecapCharacter }) {
         <Stat label={t(`${P}healed`)} value={c.healed} />
         {c.downed > 0 && <Stat label={t(`${P}downed`)} value={c.downed} />}
         {(c.death_saves.successes > 0 || c.death_saves.failures > 0) && (
-          <Stat label={t(`${P}ds`)} value={`${c.death_saves.successes} / ${c.death_saves.failures}`} />
+          <Stat label={t(`${P}ds`)} value={`${t(`${P}ds_s`, { count: c.death_saves.successes })} · ${t(`${P}ds_f`, { count: c.death_saves.failures })}`} />
         )}
         {(c.spells_cast > 0 || slots.length > 0) && <Stat label={t(`${P}spells`)} value={c.spells_cast} />}
         {slots.length > 0 && <Stat label={t(`${P}slots`)} value={slots.map(([l, n]) => `${l}°×${n}`).join(' ')} />}
@@ -64,7 +65,7 @@ function CharacterCard({ c }: { c: SessionRecapCharacter }) {
         <div className="mt-2 flex flex-wrap gap-1.5">
           {c.conditions.map((slug) => (
             <span key={slug} className="rounded-full border border-dnd-border px-2 py-0.5 text-xs text-dnd-text-muted">
-              {t(`character.conditions.${slug}`, { defaultValue: slug })}
+              {slug.startsWith('custom:') ? slug.slice(7) : t(`character.conditions.${slug}`, { defaultValue: slug })}
             </span>
           ))}
         </div>
@@ -111,7 +112,6 @@ export default function CampaignRecap() {
   }
 
   // timestamp naive in UTC: senza "Z" il browser li leggerebbe come ora locale
-  const started = /[zZ]|[+-]\d\d:\d\d$/.test(recap.started_at) ? recap.started_at : `${recap.started_at}Z`
   const title = recap.number ? t(`${P}evening`, { n: recap.number }) : t('campaign.nights')
   const { items, combat } = recap
   const itemLines = [
@@ -126,7 +126,7 @@ export default function CampaignRecap() {
         <h2 className="font-display font-bold text-xl text-dnd-gold-bright text-center break-words">{title}</h2>
         {recap.campaign_name && <p className="text-center text-sm text-dnd-text-muted break-words">{recap.campaign_name}</p>}
         <p className="mt-1 flex flex-wrap items-baseline justify-center gap-x-3 text-sm font-body">
-          <span>{dayHeader(started, locale)}</span>
+          <span>{dayHeader(fromServer(recap.started_at), locale)}</span>
           <span className="font-mono tabular-nums text-dnd-text-muted">{formatDuration(recap.duration_seconds)}</span>
         </p>
         {camp?.is_gm && canShareMessage() && (

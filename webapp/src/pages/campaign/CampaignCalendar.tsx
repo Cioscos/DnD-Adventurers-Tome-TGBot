@@ -139,9 +139,9 @@ export default function CampaignCalendar({ campaignId, isGm, sessions }: { campa
                     <span className="text-dnd-text-muted">{t(r.status === 'skipped' ? 'campaign.calendar.skipped' : 'campaign.calendar.planned')}</span>
                   </p>
                   {r.note && <p className="mt-1 break-words text-dnd-text-muted">{r.note}</p>}
-                  {isGm && r.status === 'planned' && (
+                  {isGm && (
                     <div className="mt-2 flex flex-wrap gap-2">
-                      <Button variant="secondary" size="sm" onClick={() => setEditing(r)}>{t('campaign.calendar.move')}</Button>
+                      {r.status === 'planned' && <Button variant="secondary" size="sm" onClick={() => setEditing(r)}>{t('campaign.calendar.move')}</Button>}
                       <Button variant="danger" size="sm" onClick={() => setCancelling(r)}>{t('campaign.calendar.cancel')}</Button>
                     </div>
                   )}
@@ -164,7 +164,7 @@ export default function CampaignCalendar({ campaignId, isGm, sessions }: { campa
         open={editing !== null}
         campaignId={campaignId}
         row={editing === 'new' ? null : editing}
-        defaultDate={selected && selected > todayKey ? selected : ''}
+        defaultDate={selected && selected >= todayKey ? selected : ''}
         onClose={() => setEditing(null)}
       />
       <ConfirmSheet

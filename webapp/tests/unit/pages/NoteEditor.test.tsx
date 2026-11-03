@@ -41,6 +41,26 @@ describe('NoteEditor campaign', () => {
     expect(screen.getByRole('button', { name: 'character.notes.campaign_none' })).toHaveAttribute('aria-pressed', 'true')
   })
 
+  it('editing without touching the chips keeps the campaign (dead id or list not loaded)', async () => {
+    const onSave = vi.fn()
+    const note = { title: 'A', body: 'b', tags: [], campaign_id: 99 }
+    const { unmount } = renderWithProviders(<NoteEditor initialNote={note} onSave={onSave} onCancel={() => {}} isPending={false} campaigns={camps} />)
+    await userEvent.click(screen.getByRole('button', { name: 'common.save' }))
+    expect(onSave).toHaveBeenLastCalledWith('A', 'b', [], undefined)
+    unmount()
+    renderWithProviders(<NoteEditor initialNote={{ ...note, campaign_id: 8 }} onSave={onSave} onCancel={() => {}} isPending={false} campaigns={[]} />)
+    await userEvent.click(screen.getByRole('button', { name: 'common.save' }))
+    expect(onSave).toHaveBeenLastCalledWith('A', 'b', [], undefined)
+  })
+
+  it('editing and explicitly picking «none» clears the campaign', async () => {
+    const onSave = vi.fn()
+    renderWithProviders(<NoteEditor initialNote={{ title: 'A', body: 'b', tags: [], campaign_id: 8 }} onSave={onSave} onCancel={() => {}} isPending={false} campaigns={camps} />)
+    await userEvent.click(screen.getByRole('button', { name: 'character.notes.campaign_none' }))
+    await userEvent.click(screen.getByRole('button', { name: 'common.save' }))
+    expect(onSave).toHaveBeenLastCalledWith('A', 'b', [], null)
+  })
+
   it('a default arriving late does not wipe typed title', async () => {
     let arrive: () => void = () => {}
     function Host() {

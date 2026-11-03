@@ -109,7 +109,7 @@ export default function Notes() {
   })
 
   const updateMutation = useMutation({
-    mutationFn: ({ body, tags, campaignId }: { body: string; tags: string[]; campaignId: number | null }) =>
+    mutationFn: ({ body, tags, campaignId }: { body: string; tags: string[]; campaignId: number | null | undefined }) =>
       api.notes.update(charId, originalTitle, body, tags, campaignId),
     onSuccess: (updated) => {
       qc.setQueryData(['notes', charId], updated)
@@ -145,11 +145,11 @@ export default function Notes() {
     setMode('edit')
   }
 
-  const handleEditorSave = (title: string, body: string, tags: string[], campaignId: number | null) => {
+  const handleEditorSave = (title: string, body: string, tags: string[], campaignId: number | null | undefined) => {
     if (mode === 'edit') {
       updateMutation.mutate({ body, tags, campaignId })
     } else {
-      addMutation.mutate({ title, body, tags, campaignId })
+      addMutation.mutate({ title, body, tags, campaignId: campaignId ?? null })
     }
   }
 
