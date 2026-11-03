@@ -19,6 +19,9 @@ start:
   menu_character: "⚔️ Il mio personaggio"
   character_shortcut: "Usa il pulsante qui sotto per aprire la scheda del personaggio:"
   stop_no_op: "✋ Nessuna operazione in corso da interrompere\\."
+  unsubscribed: "🔕 Non riceverai più gli annunci delle nuove versioni\\. Usa /subscribe per riattivarli\\."
+  subscribed: "🔔 Riceverai gli annunci delle nuove versioni\\. Usa /unsubscribe per disattivarli\\."
+  announce_error: "⚠️ Non sono riuscito a salvare la preferenza, riprova più tardi\\."
   about_text: "ℹ️ *D&D Adventurers Tome Bot*\n\nIl tuo compagno digitale per le avventure in D&D 5e\\!\n\nGestisci il tuo personaggio, consulta la Wiki del Manuale del Giocatore e coordina il tuo gruppo — tutto da Telegram\\.\n\nVisita il sito web per ulteriori informazioni:"
   about_btn: "🌐 Sito Web"
 

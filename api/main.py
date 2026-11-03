@@ -93,9 +93,19 @@ async def lifespan(_app: FastAPI):
         logger.warning("content share cleanup failed (non-fatal): %s", exc)
 
     cleanup_task = asyncio.create_task(run_session_cleanup())
+
+    # Annuncio Telegram della nuova versione (background, non blocca l'avvio)
+    from api.database import AsyncSessionLocal
+    from api.services.release_announce import announce_latest_release, announcements_enabled
+    announce_task = (
+        asyncio.create_task(announce_latest_release(AsyncSessionLocal))
+        if announcements_enabled() else None
+    )
     try:
         yield
     finally:
+        if announce_task is not None:
+            announce_task.cancel()
         cleanup_task.cancel()
         try:
             await cleanup_task
