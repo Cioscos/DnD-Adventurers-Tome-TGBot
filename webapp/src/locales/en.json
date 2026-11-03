@@ -1775,7 +1775,18 @@
     "delete_confirm": "Yes, delete",
     "delete_blocked": "Close the running session first.",
     "not_found": "Campaign not found.",
-    "load_error": "Could not load the campaign."
+    "load_error": "Could not load the campaign.",
+    "enter": "Join",
+    "who_plays": "Who's playing tonight?",
+    "no_playable": "None of your PCs can play: they are all dead or not enrolled.",
+    "session_open": "session open",
+    "enroll_title": "Join the campaign",
+    "enroll_pick": "Pick the PC to enroll.",
+    "enroll_confirm": "Enroll",
+    "enroll_cta": "Enroll a PC",
+    "enroll_err_already": "This PC is already in a campaign.",
+    "enroll_err_gm": "You are this campaign's GM: you can't enroll PCs.",
+    "enroll_err_not_found": "Invalid campaign code."
   },
   "session": {
     "title": "Game session",
@@ -1816,7 +1827,7 @@
     "exit_confirm_body": "You can re-join with the same code.",
     "code_copied": "Code copied",
     "code_paste": "Paste code",
-    "code_format_hint": "{{count}}/6 chars",
+    "code_format_hint": "{{count}} chars (6 session, 8 campaign)",
     "uptime": "Active for {{time}}",
     "create_first_character": "Create your first character",
     "grant_item": {

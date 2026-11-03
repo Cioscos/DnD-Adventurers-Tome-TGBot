@@ -73,6 +73,16 @@ describe('SessionJoin', () => {
     await waitFor(() => expect(join).toHaveBeenCalledWith('ABCDEF', 8))
   })
 
+  it('an 8-char campaign code swaps the join button for the enroll CTA', async () => {
+    list.mockResolvedValue([{ id: 7, name: 'Aragorn', class_summary: 'Ranger' }, { id: 8, name: 'Gimli', class_summary: 'Fighter' }])
+    renderWithProviders(<SessionJoin />)
+    await screen.findByRole('button', { name: 'session.join_button' })
+    fireEvent.change(screen.getByLabelText('session.code_label'), { target: { value: 'ab12cd34' } })
+    expect(await screen.findByRole('button', { name: 'campaign.enroll_cta' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'session.join_button' })).not.toBeInTheDocument()
+    expect(join).not.toHaveBeenCalled()
+  })
+
   it('failed character fetch shows offline unavailable, not "create a character"', async () => {
     list.mockRejectedValue(new TypeError('Failed to fetch'))
     renderWithProviders(<SessionJoin />)

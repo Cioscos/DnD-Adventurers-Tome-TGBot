@@ -1774,7 +1774,18 @@
     "delete_confirm": "Sì, elimina",
     "delete_blocked": "Chiudi prima la sessione in corso.",
     "not_found": "Campagna non trovata.",
-    "load_error": "Non riesco a caricare la campagna."
+    "load_error": "Non riesco a caricare la campagna.",
+    "enter": "Entra",
+    "who_plays": "Chi gioca stasera?",
+    "no_playable": "Nessun tuo PG può giocare: sono tutti morti o non iscritti.",
+    "session_open": "sessione aperta",
+    "enroll_title": "Iscriviti alla campagna",
+    "enroll_pick": "Scegli il PG da iscrivere.",
+    "enroll_confirm": "Iscrivi",
+    "enroll_cta": "Iscrivi un PG",
+    "enroll_err_already": "Questo PG è già in una campagna.",
+    "enroll_err_gm": "Sei il master di questa campagna: non puoi iscrivere PG.",
+    "enroll_err_not_found": "Codice campagna non valido."
   },
   "session": {
     "title": "Sessione di gioco",
@@ -1815,7 +1826,7 @@
     "exit_confirm_body": "Potrai rientrare con lo stesso codice.",
     "code_copied": "Codice copiato",
     "code_paste": "Incolla codice",
-    "code_format_hint": "{{count}}/6 caratteri",
+    "code_format_hint": "{{count}} caratteri (6 sessione, 8 campagna)",
     "uptime": "Sessione attiva da {{time}}",
     "create_first_character": "Crea il tuo primo personaggio",
     "grant_item": {

@@ -10,6 +10,7 @@ import EmptyState from '@/components/ui/EmptyState'
 import Input from '@/components/ui/Input'
 import Skeleton from '@/components/ui/Skeleton'
 import Pressable from '@/components/ui/Pressable'
+import EnrollSheet from '@/pages/campaign/EnrollSheet'
 import { api, ApiError } from '@/api/client'
 import { haptic } from '@/auth/telegram'
 
@@ -23,6 +24,8 @@ export default function SessionJoin() {
   const [code, setCode] = useState((searchParams.get('code') ?? '').toUpperCase())
   const [selectedCharId, setSelectedCharId] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // Codice campagna (8 caratteri): da deep link camp_ si apre subito l'iscrizione.
+  const [enrollOpen, setEnrollOpen] = useState(() => (searchParams.get('code') ?? '').length === 8)
 
   const charactersQuery = useQuery({
     queryKey: ['characters'],
@@ -49,6 +52,7 @@ export default function SessionJoin() {
 
   const effectiveCharId = selectedCharId ?? autoChar?.id ?? null
   const normalizedCode = code.trim().toUpperCase()
+  const isCampaignCode = normalizedCode.length === 8
   const canJoin = normalizedCode.length === 6 && effectiveCharId !== null
 
   const joinMutation = useMutation({
@@ -78,7 +82,7 @@ export default function SessionJoin() {
   // senza codice): entro diretto. Se invece è UN'ALTRA sessione, non posso
   // unirmi a questa (darebbe 409) → messaggio bloccante.
   const enteringActive =
-    !!activeSession && (normalizedCode.length !== 6 || activeSession.code === normalizedCode)
+    !!activeSession && !isCampaignCode && (normalizedCode.length !== 6 || activeSession.code === normalizedCode)
   const inAnotherSession =
     !!activeSession && normalizedCode.length === 6 && activeSession.code !== normalizedCode
 
@@ -154,7 +158,7 @@ export default function SessionJoin() {
         <Input
           label={t('session.code_label')}
           value={code}
-          onChange={(v) => setCode(v.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6))}
+          onChange={(v) => setCode(v.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8))}
           placeholder={t('session.code_placeholder')}
           leadingIcon={<Hash size={16} />}
           inputMode="text"
@@ -164,14 +168,14 @@ export default function SessionJoin() {
             {t('session.code_format_hint', { count: code.length })}
           </span>
           <div className="flex items-center gap-2">
-            {code.length === 6 && /^[A-Z0-9]{6}$/.test(code) && (
+            {(code.length === 6 || code.length === 8) && (
               <Check size={14} className="text-dnd-emerald-bright" />
             )}
             <Pressable
               onClick={async () => {
                 try {
                   const text = await navigator.clipboard.readText()
-                  setCode(text.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6))
+                  setCode(text.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8))
                   haptic.light()
                 } catch {
                   /* clipboard read can fail (permission denied / unsupported) — silent */
@@ -186,6 +190,7 @@ export default function SessionJoin() {
         </div>
       </Surface>
 
+      {!isCampaignCode && (
       <Surface variant="elevated">
         <div className="flex items-center gap-2 mb-3">
           <Users size={16} className="text-dnd-gold-bright" />
@@ -240,6 +245,7 @@ export default function SessionJoin() {
           </div>
         )}
       </Surface>
+      )}
 
       {error && (
         <Surface variant="ember" className="text-center">
@@ -249,7 +255,13 @@ export default function SessionJoin() {
         </Surface>
       )}
 
-      {hasCharacters && (
+      {isCampaignCode && (
+        <Button variant="primary" size="lg" fullWidth onClick={() => setEnrollOpen(true)}>
+          {t('campaign.enroll_cta')}
+        </Button>
+      )}
+
+      {hasCharacters && !isCampaignCode && (
         <Button
           variant="primary"
           size="lg"
@@ -261,6 +273,7 @@ export default function SessionJoin() {
           {t('session.join_button')}
         </Button>
       )}
+      <EnrollSheet open={enrollOpen && isCampaignCode} onClose={() => setEnrollOpen(false)} code={normalizedCode} />
     </Layout>
   )
 }
