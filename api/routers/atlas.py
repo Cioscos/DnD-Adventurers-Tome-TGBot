@@ -34,12 +34,12 @@ def _now() -> str:
     return datetime.utcnow().isoformat(timespec="seconds")  # naive UTC, like lore._now()
 
 
-async def _read(db: AsyncSession, m: CampaignMap, user_id: int) -> AtlasMapRead:
-    # Own + public markers, for the GM too: player-private ones never count.
-    count = (await db.execute(
-        select(func.count()).select_from(CampaignMapMarker)
-        .where(CampaignMapMarker.map_id == m.id, marker_visible(user_id))
-    )).scalar_one()
+async def _read(db: AsyncSession, m: CampaignMap, user_id: int, is_gm: bool = True) -> AtlasMapRead:
+    # GM: total (a bare count, no content, matches deleted_markers); players: only what they can see.
+    q = select(func.count()).select_from(CampaignMapMarker).where(CampaignMapMarker.map_id == m.id)
+    if not is_gm:
+        q = q.where(marker_visible(user_id))
+    count = (await db.execute(q)).scalar_one()
     return AtlasMapRead(
         id=m.id, name=m.name, revealed=m.revealed_at is not None, revealed_at=m.revealed_at,
         updated_at=m.updated_at, marker_count=count,
@@ -84,7 +84,7 @@ async def list_maps(
         select(CampaignMap).where(CampaignMap.campaign_id == campaign_id)
         .order_by(CampaignMap.created_at, CampaignMap.id)
     )).scalars().all()
-    return [await _read(db, m, user_id) for m in rows if map_visible(m, is_gm)]
+    return [await _read(db, m, user_id, is_gm) for m in rows if map_visible(m, is_gm)]
 
 
 @router.post("/maps", response_model=AtlasMapRead, status_code=201)

@@ -9,7 +9,7 @@ from sqlalchemy import select
 
 from api.routers import atlas as atlas_router
 from api.services import campaigns as svc
-from core.db.models import SessionMessage, SessionStatus
+from core.db.models import CampaignMapMarker, SessionMessage, SessionStatus
 from tests.integration._encounter_helpers import GM_ID, PLAYER_ID
 from tests.integration.test_campaigns_api import STRANGER_ID, _enrolled, _session, act
 
@@ -143,3 +143,21 @@ async def test_non_member_403(client, test_session_factory):
     act(STRANGER_ID)
     assert (await client.get(_url(camp))).status_code == 403
     assert (await _image(client, camp, 1, STRANGER_ID)).status_code == 403
+
+
+async def test_gm_marker_count_is_total_and_matches_deleted(client, test_session_factory):
+    camp, _ = await _enrolled(client, test_session_factory)
+    act(GM_ID)
+    mid = (await _create(client, camp)).json()["id"]
+    await client.post(_url(camp, f"/{mid}/reveal"))
+    async with test_session_factory() as s:
+        s.add(CampaignMapMarker(
+            campaign_id=camp["id"], map_id=mid, author_user_id=PLAYER_ID, name="segreto", x=0.5, y=0.5,
+            visibility="private", created_at="2026-01-01T00:00:00", updated_at="2026-01-01T00:00:00"))
+        await s.commit()
+    assert (await client.get(_url(camp))).json()[0]["marker_count"] == 1
+    act(PLAYER_ID)
+    assert (await client.get(_url(camp))).json()[0]["marker_count"] == 1  # own marker
+    act(GM_ID)
+    r = await client.delete(_url(camp, f"/{mid}"))
+    assert r.json() == {"deleted_markers": 1}
