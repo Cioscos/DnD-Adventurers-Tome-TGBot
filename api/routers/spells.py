@@ -53,12 +53,14 @@ def _now() -> str:
     return datetime.utcnow().isoformat(timespec="seconds")
 
 
-def _add_history(session, char_id: int, event_type: str, description: str) -> None:
+def _add_history(session, char_id: int, event_type: str, description: str,
+                 meta: dict | None = None) -> None:
     session.add(CharacterHistory(
         character_id=char_id,
         timestamp=_now(),
         event_type=event_type,
         description=description,
+        meta=meta,
     ))
 
 
@@ -122,6 +124,7 @@ def _consume_cast(
         _add_history(
             session, char.id, "spell_ritual_cast",
             f"Lancio rituale: {spell.name}",
+            meta={"ritual": True},
         )
     else:
         if slot_level is None:
@@ -132,6 +135,9 @@ def _consume_cast(
         if slot.available == 0:
             raise HTTPException(status_code=400, detail=f"No slots available at level {slot_level}")
         slot.use_slot()
+        _add_history(session, char.id, "spell_cast",
+                     f"Lanciato {spell.name} (slot {slot_level})",
+                     meta={"slot_level": slot_level})
 
     if spell.is_concentration:
         start_concentration(char, spell.id, parse_duration_rounds(spell.duration))

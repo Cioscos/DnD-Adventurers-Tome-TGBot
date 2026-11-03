@@ -7,6 +7,7 @@ for HP/AC/conditions snapshots and `/messages` for the in-session chat.
 
 from __future__ import annotations
 
+import copy
 import json
 import logging
 from datetime import datetime
@@ -447,6 +448,7 @@ async def join_session(
         character=char,
         display_name=char.name,
         joined_at=_now(),
+        dice_stats_start=copy.deepcopy(char.dice_stats or {}),
     ))
     _touch(session)
     await db.flush()

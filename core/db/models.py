@@ -672,6 +672,8 @@ class SessionParticipant(Base):
     )
     display_name: Mapped[Optional[str]] = mapped_column(String(120), nullable=True)
     joined_at: Mapped[str] = mapped_column(String(50), nullable=False)
+    # Copia di Character.dice_stats all'ingresso: il riepilogo fa la differenza alla chiusura.
+    dice_stats_start: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
 
     session: Mapped["GameSession"] = relationship(back_populates="participants")
     character: Mapped[Optional["Character"]] = relationship()

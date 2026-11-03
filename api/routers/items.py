@@ -54,12 +54,14 @@ def _now() -> str:
     return datetime.utcnow().isoformat(timespec="seconds")
 
 
-def _add_history(session, char_id: int, event_type: str, description: str) -> None:
+def _add_history(session, char_id: int, event_type: str, description: str,
+                 meta: dict | None = None) -> None:
     session.add(CharacterHistory(
         character_id=char_id,
         timestamp=_now(),
         event_type=event_type,
         description=description,
+        meta=meta,
     ))
 
 
@@ -848,7 +850,8 @@ async def cast_from_item(
         await release_concentration_effects(session, char)
 
     _add_history(session, char.id, "spell_cast",
-                 f"Lanciato {spell['name']} da {item.name} ({cost} cariche)")
+                 f"Lanciato {spell['name']} da {item.name} ({cost} cariche)",
+                 meta={"item_id": item.id})
     await session.flush()
     await session.refresh(char, attribute_names=["items"])
     return await build_character_response(session, char)

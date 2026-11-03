@@ -4,6 +4,7 @@ The party stash is a hidden Character (user_id=0, see api/services/campaigns.py)
 """
 from __future__ import annotations
 
+import copy
 import shutil
 from datetime import datetime, timezone
 from typing import Annotated, Optional
@@ -409,6 +410,7 @@ async def join_campaign_session(
     db.add(SessionParticipant(
         session_id=session.id, user_id=user_id, role=SessionRole.PLAYER,
         character_id=char.id, character=char, display_name=char.name, joined_at=_now(),
+        dice_stats_start=copy.deepcopy(char.dice_stats or {}),
     ))
     _touch(session)
     await db.flush()
