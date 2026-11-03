@@ -1,6 +1,18 @@
 {
   "entries": [
     {
+      "version": "2.33.0",
+      "date": "2026-11-03",
+      "added": {
+        "it": [
+          "Campagne: il master crea il gruppo una volta, condivide il codice e avvia ogni serata con due tocchi; i giocatori entrano con il PG scelto. Nuovo deposito di gruppo con oggetti, contenitori e cassa, da usare a sessione aperta."
+        ],
+        "en": [
+          "Campaigns: the GM creates the group once, shares the code and starts each night in two taps; players join with the character they pick. New party stash with items, containers and coin purse, usable while the session is open."
+        ]
+      }
+    },
+    {
       "version": "2.32.0",
       "date": "2026-11-03",
       "added": {
