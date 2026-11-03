@@ -139,6 +139,7 @@ Four-package system:
 - `/start` — private chat; welcome message with an inline button into the wiki (Mini App is opened via the BotFather menu button)
 - `/about` — private chat; bot info + website link
 - `/stop` — no-op response (kept for UX symmetry when users type it mid-interaction)
+- `/unsubscribe` / `/subscribe` — private chat; turn new-version announcements off/on (`bot_users.announcements`). `/start` never re-enables them
 - Wiki navigation — inline `CallbackQueryHandler` over `NavAction` payloads; no `/wiki` command, the user enters via the `/start` button
 
 ### Mini App URL
@@ -200,7 +201,7 @@ The only callback handler is `bot.handlers.wiki.navigation_callback` — see `bo
 - **Async only** — use the python-telegram-bot v20+ async API throughout.
 - **GraphQL queries** — always generated dynamically via `bot/dnd5e/query_builder.py`; never hardcode query strings.
 - **HTTP client** — use the `DnDClient` singleton from `bot/dnd5e/client.py` (`httpx.AsyncClient`).
-- **No direct DB access** — the bot does not open SQLite sessions. If you need character data in a future bot feature, go through the API rather than importing from `core/db/`.
+- **No direct DB access** — the bot does not open SQLite sessions. If you need character data in a future bot feature, go through the API rather than importing from `core/db/`. **Single exception:** the bot writes the `bot_users` table (registration on `/start`, `/unsubscribe`, `/subscribe`) only via `core/db/bot_users.py`.
 - **MarkdownV2 escaping** — use `_esc()` from `bot/handlers/wiki_formatters.py` for wiki output.
 - **Plain text surfaces** — inline keyboard button labels and `callback_query.answer()` toast messages are **plain text only**.
 - **i18n** — call `lang = get_lang(update)` at the top of every handler. Use `translator.t("key", lang=lang)` for all strings; never hardcode text. Default language is `"it"`.
@@ -226,6 +227,7 @@ The only callback handler is `bot.handlers.wiki.navigation_callback` — see `bo
 - **Character DB**: SQLite at `data/dnd_bot.db` (override via `DB_PATH`). Owned by the API. Schema migrations run idempotently via `ALTER TABLE` in `_migrate_schema()` in `core/db/engine.py` and are triggered from the API's `lifespan` hook (`api/main.py`). Always add new columns to `_MIGRATIONS` in `core/db/engine.py` — never rely solely on `create_all`. The Telegram bot does not open a DB connection.
 - **Map files**: Uploaded via the webapp are stored locally at `data/maps/{char_id}/{uuid}.{ext}` (up to 10 MB, image/PDF formats). The `Map` model stores the path in `local_file_path`; Telegram-sourced maps use `file_id` instead. The `data/maps/` directory is created automatically on first upload.
 - **Silhouette files**: Custom paper-doll silhouettes uploaded via the webapp are stored at `data/silhouettes/{char_id}/{uuid}.{ext}` (images only — png/jpg/webp/gif, ≤10 MB, no conversion). The `Character.silhouette_path` column stores the path (one per character; replaced on re-upload); `CharacterFull.has_custom_silhouette` exposes its presence. Served via `GET /characters/{id}/silhouette/file` (auth via `init_data` query param for `<img>`, mirroring maps). Resolution priority in the webapp: custom → class/race/gender manifest → SVG fallback.
+- **Release announcements**: on startup the API (`api/services/release_announce.py`) compares `changelog.json` `entries[0].version` with `app_meta.last_announced_version`; if new, it records it first and then sends the notes in a private Telegram chat to `bot_users` (announcements on) ∪ character owners, minus opt-outs. A new release therefore goes out at the first API restart after the deploy.
 - **Bot state**: `data/persistence.pkl` — stores `user_data` and the `arbitrary_callback_data` LRU cache across restarts.
 
 ## Notable API Endpoints
