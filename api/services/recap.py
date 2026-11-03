@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from api.services import telegram_notify
+from api.services.telegram_notify import recipient_lang
 from api.services.campaigns import STASH_USER_ID
 from core.db.models import (
     BotUser, Campaign, CampaignMember, Character, CharacterHistory, Combatant, Encounter,
@@ -284,13 +285,9 @@ def _esc(value: object) -> str:
     return _V2_SPECIAL.sub(r"\\\1", str(value))
 
 
-def _lang(code: str | None) -> str:
-    return "en" if (code or "").lower().startswith("en") else "it"
-
-
 def format_recap_text(recap: dict, lang: str) -> str:
     """MarkdownV2 text, ≤ 4096 chars: cut at a line boundary (markup stays balanced) + «…»."""
-    t = _T[_lang(lang)]
+    t = _T[recipient_lang(lang)]
 
     def tr(key: str, **kw) -> str:  # translated template with escaped values
         return _esc(t[key].format(**kw))
@@ -382,7 +379,7 @@ async def send_recap_messages(db: AsyncSession, gs: GameSession) -> int:
     )).all()) if recipients else {}
     sent = 0
     for uid in recipients:
-        lang = _lang(langs.get(uid))
+        lang = recipient_lang(langs.get(uid))
         button = None
         if gs.campaign_id is not None:
             button = (_T[lang]["button"], telegram_notify.miniapp_url(f"/campaign/{gs.campaign_id}/recap/{gs.id}"))

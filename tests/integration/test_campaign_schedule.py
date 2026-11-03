@@ -149,8 +149,8 @@ async def test_day_reminder_once(client, test_session_factory, monkeypatch):
     sends = _sends(captured)
     assert sorted(p["chat_id"] for p in sends) == sorted([GM_ID, PLAYER_ID])
     by_chat = {p["chat_id"]: p for p in sends}
-    assert by_chat[GM_ID]["text"].startswith("📅 Domani") and "Porta il vino" in by_chat[GM_ID]["text"]
-    assert by_chat[PLAYER_ID]["text"].startswith("📅 Tomorrow")
+    assert by_chat[GM_ID]["text"].startswith("📅 Fra circa 10 ore") and "Porta il vino" in by_chat[GM_ID]["text"]
+    assert by_chat[PLAYER_ID]["text"].startswith("📅 Game in about 10 hours")
     url = by_chat[GM_ID]["reply_markup"]["inline_keyboard"][0][0]["web_app"]["url"]
     assert url.endswith(f"/campaign/{camp['id']}")
 
@@ -249,3 +249,19 @@ async def test_delete_campaign_removes_schedule(client, test_session_factory):
     assert (await client.delete(f"/campaigns/{camp['id']}")).status_code == 204
     async with test_session_factory() as s:
         assert (await s.execute(select(CampaignSchedule))).first() is None
+
+
+async def test_player_with_two_pgs_gets_one_reminder(client, test_session_factory, monkeypatch):
+    camp, _ = await _enrolled(client, test_session_factory)
+    f = test_session_factory
+    second = await _char(f, PLAYER_ID, "Secondo")
+    async with f() as s:
+        s.add(CampaignMember(campaign_id=camp["id"], character_id=second, user_id=PLAYER_ID,
+                             status="active", joined_at="2026-01-01T00:00:00"))
+        await s.commit()
+    captured = install_fake_telegram(monkeypatch)
+    monkeypatch.setenv("SEND_CAMPAIGN_MESSAGES", "1")
+    now = datetime.utcnow()
+    await _insert(f, camp["id"], now + timedelta(hours=10))
+    await _remind_once(now, f)
+    assert sorted(p["chat_id"] for p in _sends(captured)) == sorted([GM_ID, PLAYER_ID])

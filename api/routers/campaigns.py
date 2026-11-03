@@ -375,7 +375,7 @@ async def create_schedule(
     if body.starts_at <= _naive_now():
         raise _err(422, "starts_at_in_past")
     row = CampaignSchedule(campaign_id=campaign_id, starts_at=body.starts_at,
-                           note=body.note or None, created_at=_now())
+                           note=body.note or None, created_at=_naive_now())
     db.add(row)
     await db.flush()
     return _schedule_read(row)
@@ -414,7 +414,7 @@ async def delete_schedule(
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-@router.post("/{campaign_id}/invite-code",response_model=InviteCodeRead)
+@router.post("/{campaign_id}/invite-code", response_model=InviteCodeRead)
 async def regenerate_invite_code(
     campaign_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
