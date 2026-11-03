@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from typing import Annotated, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
-from sqlalchemy import func, or_, select, update
+from sqlalchemy import and_, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -78,10 +78,15 @@ async def _active_session_id(db: AsyncSession, campaign_id: int) -> Optional[int
 
 
 async def _my_last_character_id(db: AsyncSession, campaign_id: int, user_id: int) -> Optional[int]:
-    """The caller's PG in the most recent campaign session where they had one."""
+    """The caller's PG from the most recent campaign session, if still an enrolled non-dead member."""
     return (await db.execute(
         select(SessionParticipant.character_id)
         .join(GameSession, GameSession.id == SessionParticipant.session_id)
+        .join(CampaignMember, and_(
+            CampaignMember.character_id == SessionParticipant.character_id,
+            CampaignMember.campaign_id == campaign_id,
+            CampaignMember.status != "dead",
+        ))
         .where(
             GameSession.campaign_id == campaign_id,
             SessionParticipant.user_id == user_id,

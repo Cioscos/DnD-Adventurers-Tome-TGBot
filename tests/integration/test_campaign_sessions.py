@@ -43,15 +43,18 @@ async def test_create_in_campaign(client, test_session_factory):
 
 async def test_second_active_session_409(client, test_session_factory):
     camp, _ = await _enrolled(client, test_session_factory)
+    # Active campaign session with no GM participant row, so the per-user rule
+    # cannot fire and only the per-campaign check is exercised.
+    async with test_session_factory() as s:
+        s.add(GameSession(
+            campaign_id=camp["id"], code="ZZZZZZ", gm_user_id=GM_ID,
+            status=SessionStatus.ACTIVE, created_at="2026-01-01T00:00:00",
+            last_activity_at="2026-01-01T00:00:00",
+        ))
+        await s.commit()
     act(GM_ID)
-    assert (await _start(client, camp["id"])).status_code == 201
-    # GM is already in a session -> the per-user rule fires first; close it and
-    # start a session from another path is impossible, so check via a 2nd GM-less call
-    sid = (await client.get("/sessions/me")).json()["id"]
-    await client.post(f"/sessions/{sid}/close")
-    assert (await _start(client, camp["id"])).status_code == 201
     r = await _start(client, camp["id"])
-    assert r.status_code == 409
+    assert r.status_code == 409 and r.json()["detail"] == "campaign_session_active"
 
 
 async def test_join_and_preselection(client, test_session_factory):
@@ -138,3 +141,29 @@ async def test_sweep_closes_campaign_sessions(client, test_session_factory, monk
     assert await session_cleanup._sweep_once() == 1
     async with test_session_factory() as s:
         assert (await s.get(GameSession, sid)).status == SessionStatus.CLOSED
+
+
+async def test_preselection_skips_dead_or_unenrolled(client, test_session_factory):
+    camp, cid = await _enrolled(client, test_session_factory)
+    act(GM_ID)
+    s1 = (await _start(client, camp["id"])).json()
+    act(PLAYER_ID)
+    await client.post(f"/campaigns/{camp['id']}/session/join", json={"character_id": cid})
+    act(GM_ID)
+    await client.post(f"/sessions/{s1['id']}/close")
+    await _start(client, camp["id"])
+    act(PLAYER_ID)
+    assert (await client.get("/campaigns/active-for-me")).json()[0]["my_last_character_id"] == cid
+    async with test_session_factory() as s:
+        m = (await s.execute(select(CampaignMember).where(CampaignMember.character_id == cid))).scalar_one()
+        m.status = "dead"
+        await s.commit()
+    # the only PG is dead: nothing to offer (and no banner at all)
+    assert (await client.get("/campaigns/active-for-me")).json() == []
+    async with test_session_factory() as s:
+        m = (await s.execute(select(CampaignMember).where(CampaignMember.character_id == cid))).scalar_one()
+        m.status = "active"
+        await s.commit()
+    r = await client.delete(f"/campaigns/{camp['id']}/members/{cid}")
+    assert r.status_code == 204
+    assert (await client.get("/campaigns/active-for-me")).json() == []
