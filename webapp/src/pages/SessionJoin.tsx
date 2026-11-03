@@ -24,6 +24,8 @@ export default function SessionJoin() {
   const [code, setCode] = useState((searchParams.get('code') ?? '').toUpperCase())
   const [selectedCharId, setSelectedCharId] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // Arrivo senza codice: solo allora si va diretti alla sessione attiva; modificare il codice non rimbalza.
+  const [arrivedBare] = useState(() => !searchParams.get('code'))
   // Codice campagna (8 caratteri): da deep link camp_ si apre subito l'iscrizione.
   const [enrollOpen, setEnrollOpen] = useState(() => (searchParams.get('code') ?? '').length === 8)
 
@@ -82,7 +84,8 @@ export default function SessionJoin() {
   // senza codice): entro diretto. Se invece è UN'ALTRA sessione, non posso
   // unirmi a questa (darebbe 409) → messaggio bloccante.
   const enteringActive =
-    !!activeSession && !isCampaignCode && (normalizedCode.length !== 6 || activeSession.code === normalizedCode)
+    !!activeSession &&
+    ((arrivedBare && normalizedCode.length === 0) || (normalizedCode.length === 6 && activeSession.code === normalizedCode))
   const inAnotherSession =
     !!activeSession && normalizedCode.length === 6 && activeSession.code !== normalizedCode
 
@@ -158,7 +161,7 @@ export default function SessionJoin() {
         <Input
           label={t('session.code_label')}
           value={code}
-          onChange={(v) => setCode(v.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8))}
+          onChange={(v) => { setError(null); setCode(v.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8)) }}
           placeholder={t('session.code_placeholder')}
           leadingIcon={<Hash size={16} />}
           inputMode="text"
@@ -175,6 +178,7 @@ export default function SessionJoin() {
               onClick={async () => {
                 try {
                   const text = await navigator.clipboard.readText()
+                  setError(null)
                   setCode(text.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8))
                   haptic.light()
                 } catch {

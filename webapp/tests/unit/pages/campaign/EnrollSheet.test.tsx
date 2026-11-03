@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { QueryClient } from '@tanstack/react-query'
 import { renderWithProviders } from '../../utils/renderWithProviders'
 import EnrollSheet from '@/pages/campaign/EnrollSheet'
 
@@ -36,6 +37,27 @@ const chars = [
 ]
 
 describe('EnrollSheet', () => {
+  it('invalidates the banner and campaigns queries on success', async () => {
+    list.mockResolvedValue(chars)
+    enroll.mockResolvedValue({ id: 5 })
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const spy = vi.spyOn(client, 'invalidateQueries')
+    renderWithProviders(<EnrollSheet open onClose={() => {}} code="AB12CD34" />, { client })
+    await userEvent.click(await screen.findByText('Lyra'))
+    await userEvent.click(screen.getByRole('button', { name: 'campaign.enroll_confirm' }))
+    await waitFor(() => expect(spy).toHaveBeenCalledWith({ queryKey: ['campaign-active-for-me'] }))
+    expect(spy).toHaveBeenCalledWith({ queryKey: ['campaigns'] })
+  })
+
+  it('with no characters explains and offers to create one', async () => {
+    list.mockResolvedValue([])
+    renderWithProviders(<EnrollSheet open onClose={() => {}} code="AB12CD34" />)
+    expect(await screen.findByText('campaign.enroll_no_characters')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'campaign.enroll_confirm' })).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'campaign.enroll_create' }))
+    expect(navigateSpy).toHaveBeenCalledWith('/')
+  })
+
   it('enrolls the picked character and opens the campaign page', async () => {
     list.mockResolvedValue(chars)
     enroll.mockResolvedValue({ id: 5 })

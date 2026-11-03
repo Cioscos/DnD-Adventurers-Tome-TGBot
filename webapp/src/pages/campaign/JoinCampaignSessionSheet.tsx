@@ -6,7 +6,7 @@ import Sheet from '@/components/ui/Sheet'
 import Button from '@/components/ui/Button'
 import Pressable from '@/components/ui/Pressable'
 import Skeleton from '@/components/ui/Skeleton'
-import { api } from '@/api/client'
+import { api, ApiError } from '@/api/client'
 import { haptic } from '@/auth/telegram'
 import { useToast } from '@/hooks/useToast'
 import type { ActiveCampaignSession } from '@/types'
@@ -38,15 +38,25 @@ export default function JoinCampaignSessionSheet({ open, onClose, item }: Props)
     mutationFn: () => api.campaigns.joinSession(item.campaign_id, charId as number),
     onSuccess: (session) => {
       qc.setQueryData(['session-me'], session)
+      qc.invalidateQueries({ queryKey: ['campaign-active-for-me'] })
       haptic.success()
       navigate(`/session/${session.id}`, { replace: true })
     },
-    onError: () => toast.error(t('common.action_failed')),
+    onError: (err) => {
+      const d = err instanceof ApiError && typeof err.detail === 'string' ? err.detail : ''
+      const key = err instanceof ApiError && err.status === 409 ? 'session.already_in_other'
+        : d === 'character_dead' ? 'campaign.join_err_dead'
+        : d === 'no_active_session' ? 'campaign.join_err_no_session'
+        : 'common.action_failed'
+      toast.error(t(key))
+      if (d === 'no_active_session') qc.invalidateQueries({ queryKey: ['campaign-active-for-me'] })
+    },
   })
 
   return (
     <Sheet open={open} onClose={onClose} title={t('campaign.who_plays')}>
       <div className="space-y-3 px-4 pb-4">
+        <p className="text-sm text-dnd-text-muted font-body break-words">{item.campaign_name}</p>
         {isLoading ? (
           <Skeleton.Rect height="64px" />
         ) : mine.length === 0 ? (

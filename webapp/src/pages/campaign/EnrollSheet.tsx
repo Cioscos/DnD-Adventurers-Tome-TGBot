@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import Sheet from '@/components/ui/Sheet'
 import Button from '@/components/ui/Button'
@@ -29,6 +29,7 @@ export default function EnrollSheet({ open, onClose, code }: EnrollSheetProps) {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const toast = useToast()
+  const qc = useQueryClient()
   const [charId, setCharId] = useState<number | null>(null)
 
   const { data: characters = [], isLoading } = useQuery({
@@ -41,6 +42,8 @@ export default function EnrollSheet({ open, onClose, code }: EnrollSheetProps) {
     mutationFn: () => api.campaigns.enroll(code, charId as number),
     onSuccess: (camp) => {
       haptic.success()
+      qc.invalidateQueries({ queryKey: ['campaign-active-for-me'] })
+      qc.invalidateQueries({ queryKey: ['campaigns'] })
       navigate(`/campaign/${camp.id}`, { replace: true })
     },
     onError: (err) => {
@@ -55,6 +58,13 @@ export default function EnrollSheet({ open, onClose, code }: EnrollSheetProps) {
         <p className="text-sm text-dnd-text-muted font-body">{t('campaign.enroll_pick')}</p>
         {isLoading ? (
           <Skeleton.Rect height="96px" />
+        ) : characters.length === 0 ? (
+          <div className="space-y-3">
+            <p className="text-sm text-dnd-text-muted font-body italic">{t('campaign.enroll_no_characters')}</p>
+            <Button variant="secondary" fullWidth onClick={() => navigate('/')}>
+              {t('campaign.enroll_create')}
+            </Button>
+          </div>
         ) : (
           <div className="space-y-2">
             {characters.map((c) => (
@@ -76,6 +86,7 @@ export default function EnrollSheet({ open, onClose, code }: EnrollSheetProps) {
             ))}
           </div>
         )}
+        {characters.length > 0 && (
         <Button
           variant="primary"
           size="lg"
@@ -86,6 +97,7 @@ export default function EnrollSheet({ open, onClose, code }: EnrollSheetProps) {
         >
           {t('campaign.enroll_confirm')}
         </Button>
+        )}
       </div>
     </Sheet>
   )

@@ -1785,7 +1785,11 @@
     "enroll_cta": "Iscrivi un PG",
     "enroll_err_already": "Questo PG è già in una campagna.",
     "enroll_err_gm": "Sei il master di questa campagna: non puoi iscrivere PG.",
-    "enroll_err_not_found": "Codice campagna non valido."
+    "enroll_err_not_found": "Codice campagna non valido.",
+    "join_err_dead": "Questo PG è morto: scegline un altro.",
+    "join_err_no_session": "La sessione non è più aperta.",
+    "enroll_no_characters": "Non hai ancora personaggi da iscrivere: creane uno e torna con il codice.",
+    "enroll_create": "Crea un personaggio"
   },
   "session": {
     "title": "Sessione di gioco",

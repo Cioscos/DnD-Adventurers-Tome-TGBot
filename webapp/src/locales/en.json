@@ -1786,7 +1786,11 @@
     "enroll_cta": "Enroll a PC",
     "enroll_err_already": "This PC is already in a campaign.",
     "enroll_err_gm": "You are this campaign's GM: you can't enroll PCs.",
-    "enroll_err_not_found": "Invalid campaign code."
+    "enroll_err_not_found": "Invalid campaign code.",
+    "join_err_dead": "This PC is dead: pick another one.",
+    "join_err_no_session": "The session is no longer open.",
+    "enroll_no_characters": "You have no characters to enroll yet: create one and come back with the code.",
+    "enroll_create": "Create a character"
   },
   "session": {
     "title": "Game session",

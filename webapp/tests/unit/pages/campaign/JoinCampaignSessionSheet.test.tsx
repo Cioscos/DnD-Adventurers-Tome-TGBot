@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { QueryClient } from '@tanstack/react-query'
 import { renderWithProviders } from '../../utils/renderWithProviders'
 import JoinCampaignSessionSheet from '@/pages/campaign/JoinCampaignSessionSheet'
 import CampaignSessionBanner from '@/components/ui/CampaignSessionBanner'
@@ -37,6 +38,32 @@ const member = (id: number, name: string, status: string, is_mine = true) => ({
 const item = { campaign_id: 5, campaign_name: 'Coda', session_id: 9, my_last_character_id: 8 }
 
 describe('JoinCampaignSessionSheet', () => {
+  it('invalidates the banner query after joining and shows the campaign name', async () => {
+    get.mockResolvedValue({ id: 5, members: [member(7, 'Lyra', 'active')] })
+    joinSession.mockResolvedValue({ id: 9 })
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const spy = vi.spyOn(client, 'invalidateQueries')
+    renderWithProviders(<JoinCampaignSessionSheet open onClose={() => {}} item={item} />, { client })
+    expect(screen.getByText('Coda')).toBeInTheDocument()
+    await screen.findByText('Lyra')
+    await userEvent.click(screen.getByRole('button', { name: 'campaign.enter' }))
+    await waitFor(() => expect(spy).toHaveBeenCalledWith({ queryKey: ['campaign-active-for-me'] }))
+  })
+
+  it.each([
+    [409, 'already_active', 'session.already_in_other'],
+    [422, 'character_dead', 'campaign.join_err_dead'],
+    [404, 'no_active_session', 'campaign.join_err_no_session'],
+  ])('maps %i %s to its toast', async (status, detail, key) => {
+    const { ApiError } = await import('@/api/client')
+    get.mockResolvedValue({ id: 5, members: [member(7, 'Lyra', 'active')] })
+    joinSession.mockRejectedValue(new (ApiError as unknown as new (s: number, d: unknown) => Error)(status, detail))
+    renderWithProviders(<JoinCampaignSessionSheet open onClose={() => {}} item={item} />)
+    await screen.findByText('Lyra')
+    await userEvent.click(screen.getByRole('button', { name: 'campaign.enter' }))
+    await waitFor(() => expect(toastError).toHaveBeenCalledWith(key))
+  })
+
   it('lists only my non-dead PGs, preselects the last one and joins', async () => {
     get.mockResolvedValue({ id: 5, members: [member(7, 'Lyra', 'active'), member(8, 'Fenn', 'reserve'), member(9, 'Morto', 'dead'), member(10, 'Altrui', 'active', false)] })
     joinSession.mockResolvedValue({ id: 9 })
