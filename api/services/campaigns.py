@@ -40,6 +40,7 @@ async def create_campaign(db: AsyncSession, gm_user_id: int, name: str) -> Campa
 
 
 LORE_DIR = Path("data/lore")
+ATLAS_DIR = Path("data/atlas")
 
 
 def unlink_file(path: str | None) -> None:

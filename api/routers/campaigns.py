@@ -331,6 +331,7 @@ async def delete_campaign(
     await db.delete(stash)  # cascades items and currency
     await db.flush()
     shutil.rmtree(svc.LORE_DIR / str(camp.id), ignore_errors=True)  # only after the DB delete went through
+    shutil.rmtree(svc.ATLAS_DIR / str(camp.id), ignore_errors=True)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

@@ -646,6 +646,70 @@ class CampaignSchedule(Base):
     created_at: Mapped[str] = mapped_column(String(50), nullable=False)
 
 
+class CampaignMap(Base):
+    """Atlas map uploaded by the GM; hidden while revealed_at is NULL."""
+
+    __tablename__ = "campaign_maps"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    campaign_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("campaigns.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    name: Mapped[str] = mapped_column(String(80), nullable=False)
+    image_path: Mapped[str] = mapped_column(String(300), nullable=False)
+    revealed_at: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    created_at: Mapped[str] = mapped_column(String(50), nullable=False)
+    updated_at: Mapped[str] = mapped_column(String(50), nullable=False)
+
+
+class CampaignMarkerType(Base):
+    """Custom marker type of a campaign (builtin types live in api/services/atlas.py)."""
+
+    __tablename__ = "campaign_marker_types"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    campaign_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("campaigns.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    name: Mapped[str] = mapped_column(String(40), nullable=False)
+    icon: Mapped[str] = mapped_column(String(40), nullable=False)
+    color: Mapped[str] = mapped_column(String(20), nullable=False)
+    created_by: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    created_at: Mapped[str] = mapped_column(String(50), nullable=False)
+
+
+class CampaignMapMarker(Base):
+    """Marker on an atlas map; x/y are fractions in [0, 1]; visibility private|public."""
+
+    __tablename__ = "campaign_map_markers"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    campaign_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("campaigns.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    map_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("campaign_maps.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    author_user_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    author_character_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    author_name: Mapped[Optional[str]] = mapped_column(String(120), nullable=True)  # NULL for the GM
+    type_key: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    custom_type_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("campaign_marker_types.id", ondelete="SET NULL"), nullable=True
+    )
+    name: Mapped[str] = mapped_column(String(80), nullable=False)
+    description: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    x: Mapped[float] = mapped_column(Float, nullable=False)
+    y: Mapped[float] = mapped_column(Float, nullable=False)
+    visibility: Mapped[str] = mapped_column(String(10), default="private", nullable=False)
+    link_map_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("campaign_maps.id", ondelete="SET NULL"), nullable=True
+    )
+    revealed_at: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    created_at: Mapped[str] = mapped_column(String(50), nullable=False)
+    updated_at: Mapped[str] = mapped_column(String(50), nullable=False)
+
+
 class GameSession(Base):
     """A live game session hosted by a Game Master with invite-code access."""
 
