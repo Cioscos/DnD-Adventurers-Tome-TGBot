@@ -1,6 +1,18 @@
 {
   "entries": [
     {
+      "version": "2.32.0",
+      "date": "2026-11-03",
+      "added": {
+        "it": [
+          "Il bot ti scrive in privato quando esce una nuova versione, con le novità. Non ti interessa? Scrivi /unsubscribe (e /subscribe per riattivarlo)."
+        ],
+        "en": [
+          "The bot messages you privately when a new version is out, with what's new. Not interested? Send /unsubscribe (and /subscribe to turn it back on)."
+        ]
+      }
+    },
+    {
       "version": "2.31.0",
       "date": "2026-11-03",
       "added": {
