@@ -93,3 +93,13 @@ async def test_announce_skips_when_already_announced(factory, changelog, sent):
     await ra.announce_latest_release(factory, changelog, delay=0)
     assert await ra.announce_latest_release(factory, changelog, delay=0) == 0
     assert len(sent) == 2
+
+
+def test_announce_disabled_without_explicit_flag(monkeypatch):
+    monkeypatch.setattr(ra, "bot_token_configured", lambda: True)
+    monkeypatch.delenv("ANNOUNCE_RELEASES", raising=False)
+    assert ra.announcements_enabled() is False
+    monkeypatch.setenv("ANNOUNCE_RELEASES", "1")
+    assert ra.announcements_enabled() is True
+    monkeypatch.setattr(ra, "bot_token_configured", lambda: False)
+    assert ra.announcements_enabled() is False

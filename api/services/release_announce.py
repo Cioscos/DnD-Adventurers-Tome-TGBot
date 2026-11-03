@@ -11,12 +11,13 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import os
 from pathlib import Path
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from api.services.telegram_notify import miniapp_url, send_telegram_message
+from api.services.telegram_notify import bot_token_configured, miniapp_url, send_telegram_message
 from core.db.models import AppMeta, BotUser, Character
 
 logger = logging.getLogger(__name__)
@@ -42,6 +43,11 @@ _TEXT = {
         "button": "Open release notes",
     },
 }
+
+
+def announcements_enabled() -> bool:
+    """Solo con ANNOUNCE_RELEASES=1 (il .env del Pi): API locali e test non scrivono mai agli utenti."""
+    return os.environ.get("ANNOUNCE_RELEASES") == "1" and bot_token_configured()
 
 
 def format_announcement(entry: dict, lang: str) -> str:

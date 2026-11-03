@@ -96,11 +96,10 @@ async def lifespan(_app: FastAPI):
 
     # Annuncio Telegram della nuova versione (background, non blocca l'avvio)
     from api.database import AsyncSessionLocal
-    from api.services.release_announce import announce_latest_release
-    from api.services.telegram_notify import bot_token_configured
+    from api.services.release_announce import announce_latest_release, announcements_enabled
     announce_task = (
         asyncio.create_task(announce_latest_release(AsyncSessionLocal))
-        if bot_token_configured() else None
+        if announcements_enabled() else None
     )
     try:
         yield

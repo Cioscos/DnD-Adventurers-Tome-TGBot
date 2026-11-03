@@ -5,8 +5,8 @@ Loads configuration from ``.env``, builds the ``Application`` with
 :class:`~bot.schema.registry.SchemaRegistry` via introspection,
 registers handlers, and starts long-polling.
 
-The bot does not touch the SQLite database; character persistence is
-owned by the FastAPI backend (``api/``).
+The bot only writes the ``bot_users`` table (``/start``, ``/unsubscribe``,
+``/subscribe``); character persistence is owned by the FastAPI backend (``api/``).
 """
 
 from __future__ import annotations
@@ -35,7 +35,10 @@ from telegram.ext import (
 )
 from telegram.warnings import PTBUserWarning
 
-from bot.handlers.start import (
+# Prima degli import bot.*: core.db.engine legge DB_PATH all'import.
+load_dotenv()
+
+from bot.handlers.start import (  # noqa: E402
     about_command,
     start_command,
     subscribe_command,
