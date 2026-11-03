@@ -108,6 +108,9 @@ describe('Campaign page', () => {
     removeMember.mockResolvedValue(undefined)
     renderPage()
     await screen.findByText('Thorin')
+    // controlli chiusi finché non si tocca «Gestisci»
+    expect(screen.queryByRole('button', { name: 'campaign.status_reserve' })).not.toBeInTheDocument()
+    await userEvent.click(screen.getAllByRole('button', { name: 'campaign.manage' })[0])
     await userEvent.click(screen.getAllByRole('button', { name: 'campaign.status_reserve' })[0])
     await waitFor(() => expect(setStatus).toHaveBeenCalledWith(5, 10, 'reserve'))
     await userEvent.click(screen.getAllByRole('button', { name: 'campaign.remove_member' })[0])
@@ -144,6 +147,10 @@ describe('Campaign page', () => {
     expect(screen.queryByText('WIND4242')).not.toBeInTheDocument()
     for (const k of ['campaign.start_session', 'campaign.regenerate', 'campaign.delete', 'share.action'])
       expect(screen.queryByRole('button', { name: k })).not.toBeInTheDocument()
+    // solo il proprio PG è gestibile ed è etichettato «Tuo»
+    expect(screen.getAllByText('campaign.yours')).toHaveLength(1)
+    expect(screen.getAllByRole('button', { name: 'campaign.manage' })).toHaveLength(1)
+    await userEvent.click(screen.getByRole('button', { name: 'campaign.manage' }))
     expect(screen.getAllByRole('button', { name: 'campaign.status_reserve' })).toHaveLength(1)
     expect(screen.getAllByRole('button', { name: 'campaign.remove_member' })).toHaveLength(1)
     expect(within(screen.getByTestId('members')).getByText('Lyra')).toBeInTheDocument()

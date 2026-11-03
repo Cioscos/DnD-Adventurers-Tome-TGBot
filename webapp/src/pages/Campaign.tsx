@@ -43,6 +43,8 @@ export default function Campaign() {
   const toast = useToast()
   const [confirm, setConfirm] = useState<Confirm>(null)
   const [joining, setJoining] = useState(false)
+  // un PG gestibile alla volta: di norma ne gioca uno, gli altri restano chiusi
+  const [openMember, setOpenMember] = useState<number | null>(null)
   const [renaming, setRenaming] = useState<string | null>(null)
   const key = ['campaign', campId]
 
@@ -212,13 +214,36 @@ export default function Campaign() {
         {camp.members.length === 0 && <p className="text-sm text-dnd-text-muted italic">{t('campaign.no_members')}</p>}
         {camp.members.map((mem) => {
           const manage = camp.is_gm || mem.is_mine
+          const open = openMember === mem.character_id
           return (
             <Surface key={mem.character_id} variant="elevated" className={mem.status === 'dead' ? 'opacity-70' : ''}>
-              <p className="font-display font-bold text-dnd-gold-bright break-words">{mem.character_name}</p>
-              <p className="text-xs text-dnd-text-muted font-body break-words">
-                {[mem.player_name, mem.class_summary].filter(Boolean).join(' · ')}
-              </p>
-              {manage ? (
+              <div className="flex items-start gap-2">
+                <div className="min-w-0 flex-1">
+                  <p className="font-display font-bold text-dnd-gold-bright break-words">
+                    {mem.character_name}
+                    {mem.is_mine && (
+                      <span className="ml-2 align-middle inline-block rounded-full border border-dnd-gold px-2 py-0.5 text-[10px] font-cinzel uppercase tracking-wider text-dnd-gold-bright">
+                        {t('campaign.yours')}
+                      </span>
+                    )}
+                  </p>
+                  <p className="text-xs text-dnd-text-muted font-body break-words">
+                    {[mem.player_name, mem.class_summary].filter(Boolean).join(' · ')}
+                  </p>
+                  <p className="mt-1 text-xs font-cinzel uppercase text-dnd-gold-dim">{t(`campaign.status_${mem.status}`)}</p>
+                </div>
+                {manage && (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    icon={<Pencil size={14} />}
+                    onClick={() => setOpenMember(open ? null : mem.character_id)}
+                  >
+                    {t('campaign.manage')}
+                  </Button>
+                )}
+              </div>
+              {manage && open && (
                 <>
                   <div className="mt-2 grid grid-cols-3 gap-1">
                     {STATUSES.map((s) => (
@@ -240,8 +265,6 @@ export default function Campaign() {
                     </Button>
                   </div>
                 </>
-              ) : (
-                <p className="mt-1 text-xs font-cinzel uppercase text-dnd-gold-dim">{t(`campaign.status_${mem.status}`)}</p>
               )}
             </Surface>
           )

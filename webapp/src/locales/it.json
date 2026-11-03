@@ -1759,6 +1759,8 @@
     "status_reserve": "Riserva",
     "status_dead": "Morto",
     "remove_member": "Ritira",
+    "yours": "Tuo",
+    "manage": "Gestisci",
     "remove_member_title": "Ritirare {{name}}?",
     "remove_member_body": "Il PG esce dalla campagna. Potrà iscriversi di nuovo con il codice.",
     "remove_member_confirm": "Sì, ritira",

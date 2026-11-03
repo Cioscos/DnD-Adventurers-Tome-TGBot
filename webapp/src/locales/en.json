@@ -1760,6 +1760,8 @@
     "status_reserve": "Reserve",
     "status_dead": "Dead",
     "remove_member": "Withdraw",
+    "yours": "Yours",
+    "manage": "Manage",
     "remove_member_title": "Withdraw {{name}}?",
     "remove_member_body": "The character leaves the campaign. It can enroll again with the code.",
     "remove_member_confirm": "Yes, withdraw",
