@@ -427,6 +427,68 @@ export interface GameSession {
   participants: SessionParticipant[]
   /** Solo da GET /sessions/me: stato dell'incontro aperto, se c'è. */
   encounter_status?: 'setup' | 'active' | null
+  campaign_id?: number | null
+  campaign_name?: string | null
+}
+
+export type CampaignMemberStatus = 'active' | 'reserve' | 'dead'
+
+export interface CampaignRead {
+  id: number
+  name: string
+  invite_code?: string | null
+  is_gm: boolean
+}
+
+export interface CampaignSummary {
+  id: number
+  name: string
+  is_gm: boolean
+  member_count: number
+  last_session_at?: string | null
+  active_session_id?: number | null
+}
+
+export interface CampaignMember {
+  character_id: number
+  character_name: string
+  class_summary: string
+  total_level: number
+  user_id: number
+  player_name?: string | null
+  status: CampaignMemberStatus
+  is_mine: boolean
+}
+
+export interface CampaignStash {
+  items: Item[]
+  currency: Currency
+}
+
+export interface CampaignSessionEntry {
+  id: number
+  created_at: string
+  duration_seconds: number
+}
+
+export interface CampaignDetail {
+  id: number
+  name: string
+  invite_code?: string | null
+  is_gm: boolean
+  gm_user_id: number
+  active_session_id?: number | null
+  members: CampaignMember[]
+  stash: CampaignStash
+  sessions: CampaignSessionEntry[]
+  my_last_character_id?: number | null
+}
+
+export interface ActiveCampaignSession {
+  campaign_id: number
+  campaign_name: string
+  session_id: number
+  my_last_character_id?: number | null
 }
 
 export type HpBucket = 'healthy' | 'lightly_wounded' | 'badly_wounded' | 'dying' | 'dead'

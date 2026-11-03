@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { UserPlus } from 'lucide-react'
 import { GiCrown as Crown, GiCrossedSwords as Swords } from 'react-icons/gi'
@@ -9,14 +10,16 @@ import Button from '@/components/ui/Button'
 import FancyHeader from '@/components/ui/FancyHeader'
 import Reveal from '@/components/ui/Reveal'
 import Skeleton from '@/components/ui/Skeleton'
+import Pressable from '@/components/ui/Pressable'
+import SectionDivider from '@/components/ui/SectionDivider'
+import StartSessionSheet from '@/pages/session/StartSessionSheet'
 import { api } from '@/api/client'
-import { haptic } from '@/auth/telegram'
 import { getMyRole } from '@/lib/sessionHelpers'
 
 export default function Session() {
   const navigate = useNavigate()
   const { t } = useTranslation()
-  const qc = useQueryClient()
+  const [startOpen, setStartOpen] = useState(false)
 
   const { data: active, isLoading } = useQuery({
     queryKey: ['session-me'],
@@ -37,14 +40,7 @@ export default function Session() {
   // Un fetch fallito non è "nessun personaggio": il bottone diventa un riprova.
   const charactersUnavailable = charactersQuery.isError && charactersQuery.data === undefined
 
-  const createMutation = useMutation({
-    mutationFn: () => api.sessions.create(),
-    onSuccess: (session) => {
-      qc.setQueryData(['session-me'], session)
-      haptic.success()
-      navigate(`/session/${session.id}`)
-    },
-  })
+  const campaigns = useQuery({ queryKey: ['campaigns'], queryFn: () => api.campaigns.list() }).data ?? []
 
   if (isLoading) {
     return (
@@ -116,8 +112,7 @@ export default function Session() {
                   variant="primary"
                   size="md"
                   fullWidth
-                  loading={createMutation.isPending}
-                  onClick={() => createMutation.mutate()}
+                  onClick={() => setStartOpen(true)}
                 >
                   {t('session.create_button')}
                 </Button>
@@ -157,6 +152,28 @@ export default function Session() {
           </div>
         </Surface>
       </Reveal.Stagger>
+
+      {campaigns.length > 0 && (
+        <>
+          <SectionDivider>{t('campaign.mine')}</SectionDivider>
+          <div className="space-y-2">
+            {campaigns.map((c) => (
+              <Pressable
+                key={c.id}
+                onClick={() => navigate(`/campaign/${c.id}`)}
+                className="w-full min-h-[44px] px-3 py-2 rounded-xl border bg-dnd-surface border-dnd-border text-left"
+              >
+                <span className="block font-cinzel text-sm text-dnd-text break-words">{c.name}</span>
+                <span className="block text-xs font-body text-dnd-text-muted">
+                  {t('campaign.members_count', { count: c.member_count })}
+                  {c.active_session_id != null && ` · ${t('campaign.night_active')}`}
+                </span>
+              </Pressable>
+            ))}
+          </div>
+        </>
+      )}
+      <StartSessionSheet open={startOpen} onClose={() => setStartOpen(false)} />
     </Layout>
   )
 }
