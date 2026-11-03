@@ -124,6 +124,7 @@ async def test_upload_rejects_gif_and_oversize(client, test_session_factory, atl
     assert (await _create(client, camp, filename="m.gif")).status_code == 400
     assert (await _create(client, camp, content=b"0" * (10 * 1024 * 1024 + 1))).status_code == 400
     assert (await _create(client, camp, name="x" * 81)).status_code == 422
+    assert (await _create(client, camp, name="   ")).status_code == 422
     assert _files(atlas_dir) == []
 
 
@@ -161,3 +162,12 @@ async def test_gm_marker_count_is_total_and_matches_deleted(client, test_session
     act(GM_ID)
     r = await client.delete(_url(camp, f"/{mid}"))
     assert r.json() == {"deleted_markers": 1}
+
+
+async def test_rename_rejects_blank_and_strips(client, test_session_factory):
+    camp, _ = await _enrolled(client, test_session_factory)
+    act(GM_ID)
+    mid = (await _create(client, camp)).json()["id"]
+    assert (await client.patch(_url(camp, f"/{mid}"), json={"name": "   "})).status_code == 422
+    r = await client.patch(_url(camp, f"/{mid}"), json={"name": "  Vael  "})
+    assert r.status_code == 200 and r.json()["name"] == "Vael"

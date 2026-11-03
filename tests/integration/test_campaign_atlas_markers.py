@@ -8,7 +8,7 @@ from sqlalchemy import select
 
 from api.routers import atlas as atlas_router
 from api.services import campaigns as svc
-from core.db.models import CampaignMapMarker, SessionMessage, SessionStatus
+from core.db.models import CampaignMap, CampaignMapMarker, CampaignMarkerType, SessionMessage, SessionStatus
 from tests.integration._encounter_helpers import GM_ID, PLAYER_ID
 from tests.integration.test_campaign_atlas_maps import PNG
 from tests.integration.test_campaigns_api import _char, _enrolled, _session, act
@@ -259,3 +259,30 @@ async def test_delete_map_nulls_links_from_other_maps(client, test_session_facto
     assert (await client.delete(f"{_base(camp)}/maps/{other}")).status_code == 200
     async with test_session_factory() as s:
         assert (await s.get(CampaignMapMarker, k)).link_map_id is None
+
+
+async def test_marker_on_hidden_map_answers_like_missing_id(client, test_session_factory):
+    camp, mid = await _setup(client, test_session_factory)
+    act(GM_ID)
+    k = (await _mk(client, camp, mid, visibility="public")).json()["id"]
+    await client.post(f"{_base(camp)}/maps/{mid}/hide")
+    act(PLAYER_ID)
+    hidden = await client.patch(f"{_base(camp)}/markers/{k}", json={"name": "x"})
+    missing = await client.patch(f"{_base(camp)}/markers/999999", json={"name": "x"})
+    assert hidden.status_code == missing.status_code == 404
+    assert hidden.json()["detail"] == missing.json()["detail"] == "marker_not_found"
+
+
+async def test_delete_campaign_removes_atlas_rows_and_folder(client, test_session_factory, atlas_dir):
+    camp, mid = await _setup(client, test_session_factory)
+    act(PLAYER_ID)
+    tid = (await client.post(f"{_base(camp)}/marker-types", json={"name": "Taverna", "icon": "beer", "color": "amber"})).json()["id"]
+    assert (await _mk(client, camp, mid, type_key=None, custom_type_id=tid)).status_code == 201
+    folder = atlas_dir / str(camp["id"])
+    (folder / "orphan.bin").write_bytes(b"x")
+    act(GM_ID)
+    assert (await client.delete(f"/campaigns/{camp['id']}")).status_code == 204
+    assert not folder.exists()
+    async with test_session_factory() as s:
+        for model in (CampaignMap, CampaignMapMarker, CampaignMarkerType):
+            assert (await s.execute(select(model))).scalars().all() == []

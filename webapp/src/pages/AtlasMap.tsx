@@ -73,7 +73,7 @@ function AtlasMapView() {
   })
   const unavailable = notFound(markersQ.error) || (mapsQ.isSuccess && !map)
   // Errore diverso da 404/403 (rete, 500): senza elenco mappe resterebbe lo skeleton per sempre.
-  const failed = !unavailable && mapsQ.isError
+  const failed = !unavailable && (mapsQ.isError || (markersQ.isError && !markersQ.data))
 
   const selected = markersQ.data?.find((m) => m.id === selectedId) ?? null
   const movingId = typeof mode === 'object' ? mode.move : null
@@ -123,7 +123,8 @@ function AtlasMapView() {
     if (trail.length > 0) navigate(-1)
     else navigate(state.from ?? `/campaign/${campId}`)
   }
-  usePageBack(goBack)
+  // Col mirino attivo il back di Telegram annulla il posizionamento invece di lasciare la pagina.
+  usePageBack(mode !== 'view' ? () => setMode('view') : goBack)
 
   const backButton = (
     <Pressable
@@ -141,7 +142,7 @@ function AtlasMapView() {
       <div className="flex w-full flex-col items-center justify-center gap-4 bg-dnd-bg p-6 text-center" style={{ height: 'var(--tg-vh, 100vh)' }}>
         <p className="font-display text-lg font-bold text-dnd-gold-bright">{t(failed ? 'common.error' : 'atlas.unavailable')}</p>
         <p className="text-sm font-body text-dnd-text-muted">{t(failed ? 'common.action_failed' : 'atlas.unavailable_body')}</p>
-        {failed && <Button onClick={() => mapsQ.refetch()}>{t('common.retry')}</Button>}
+        {failed && <Button onClick={() => { mapsQ.refetch(); markersQ.refetch() }}>{t('common.retry')}</Button>}
         <Button variant={failed ? 'secondary' : 'primary'} onClick={() => navigate(`/campaign/${campId}`)}>{t('atlas.back_to_campaign')}</Button>
       </div>
     )
@@ -192,6 +193,7 @@ function AtlasMapView() {
             isGm={isGm}
             onSelect={mode === 'view' ? setSelectedId : () => {}}
             onTransform={mode === 'view' ? undefined : readCenter}
+            free={mode !== 'view'}
           />
         ) : (
           <Skeleton.Rect height="100%" />

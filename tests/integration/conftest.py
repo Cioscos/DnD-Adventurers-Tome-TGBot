@@ -6,6 +6,7 @@ depend on env vars or production DB.
 """
 from __future__ import annotations
 
+import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -13,9 +14,17 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from api.auth import get_current_user, get_current_lang
 from api.database import get_db
 from api.main import app
+from api.services import campaigns as campaign_svc
 from core.db.models import Base
 
 TEST_USER_ID = 1234
+
+
+@pytest.fixture(autouse=True)
+def _isolate_campaign_files(tmp_path, monkeypatch):
+    """Campaign delete rmtree's data/lore/{id} and data/atlas/{id}: never let a test hit the dev data folder."""
+    monkeypatch.setattr(campaign_svc, "LORE_DIR", tmp_path / "lore")
+    monkeypatch.setattr(campaign_svc, "ATLAS_DIR", tmp_path / "atlas")
 
 
 @pytest_asyncio.fixture

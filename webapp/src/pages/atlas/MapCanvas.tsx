@@ -22,13 +22,15 @@ interface Props {
   isGm: boolean
   onSelect: (id: number) => void
   onTransform?: (scale: number) => void
+  /** Pan libero oltre i bordi (mirino): con i limiti il centro non raggiunge mai il bordo dell'immagine. */
+  free?: boolean
 }
 
 type Size = { width: number; height: number }
 
 /** Mappa a schermo intero con pan/zoom; i marker sono figli assoluti dell'immagine adattata (contain). */
 const MapCanvas = forwardRef<MapCanvasHandle, Props>(function MapCanvas(
-  { src, alt, markers, selectedId, isGm, onSelect, onTransform }, ref,
+  { src, alt, markers, selectedId, isGm, onSelect, onTransform, free = false }, ref,
 ) {
   const { t } = useTranslation()
   const zoom = useRef<ReactZoomPanPinchContentRef>(null)
@@ -75,6 +77,20 @@ const MapCanvas = forwardRef<MapCanvasHandle, Props>(function MapCanvas(
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fit?.width, fit?.height])
+  // Uscendo dal mirino la mappa torna dentro i limiti (bounds già ricalcolati dall'update del wrapper).
+  // Solo sulla transizione free → false: al mount un'animazione qui rovinerebbe il centerOnInit.
+  const wasFree = useRef(free)
+  useEffect(() => {
+    const z = zoom.current
+    const b = z?.instance.bounds
+    const leaving = wasFree.current && !free
+    wasFree.current = free
+    if (!leaving || !z || !b) return
+    const { positionX, positionY, scale: s } = z.instance.transformState
+    const x = Math.min(Math.max(positionX, b.minPositionX), b.maxPositionX)
+    const y = Math.min(Math.max(positionY, b.minPositionY), b.maxPositionY)
+    if (x !== positionX || y !== positionY) z.setTransform(x, y, s, 300)
+  }, [free])
 
   return (
     <div ref={box} className="relative h-full w-full overflow-hidden">
@@ -83,7 +99,7 @@ const MapCanvas = forwardRef<MapCanvasHandle, Props>(function MapCanvas(
         minScale={1}
         maxScale={8}
         centerOnInit
-        limitToBounds
+        limitToBounds={!free}
         doubleClick={{ disabled: true }}
         onTransformed={(_, st) => {
           // Al massimo un aggiornamento per frame: il pinch emette molti eventi.

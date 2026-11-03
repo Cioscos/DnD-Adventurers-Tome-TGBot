@@ -12,6 +12,7 @@ const h = vi.hoisted(() => ({
   types: vi.fn(), createType: vi.fn(), deleteType: vi.fn(),
   center: vi.fn(), centerOn: vi.fn(),
   onTransform: null as null | ((s: number) => void),
+  pageBack: null as null | (() => void),
   ApiError: class ApiError extends Error { constructor(public status: number, public detail: unknown) { super('x') } },
 }))
 
@@ -45,6 +46,10 @@ vi.mock('react-router-dom', async (orig) => {
 vi.mock('react-i18next', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
   return { ...actual, useTranslation: () => ({ t: (k: string) => k, i18n: { language: 'it' } }) }
+})
+vi.mock('@/hooks/useOverlayDismiss', async (orig) => {
+  const actual = (await orig()) as Record<string, unknown>
+  return { ...actual, usePageBack: (fn: (() => void) | null) => { h.pageBack = fn } }
 })
 vi.mock('@/auth/telegram', () => ({ haptic: new Proxy({}, { get: () => () => {} }) }))
 
@@ -198,5 +203,16 @@ describe('Atlas markers', () => {
     await waitFor(() => expect(h.updateMarker).toHaveBeenCalledWith(3, 1, { x: 0.1, y: 0.2 }))
     expect(screen.queryByText('atlas.marker_name')).toBeNull()
     await waitFor(() => expect(screen.queryByRole('button', { name: 'atlas.place_here' })).toBeNull())
+  })
+
+  it('Telegram back in crosshair mode cancels it instead of leaving the page', async () => {
+    setup()
+    await userEvent.click(await btn('atlas.new_marker'))
+    await btn('atlas.place_here')
+    act(() => h.pageBack?.())
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'atlas.place_here' })).toBeNull())
+    expect(h.navigateSpy).not.toHaveBeenCalled()
+    act(() => h.pageBack?.())
+    expect(h.navigateSpy).toHaveBeenCalledWith('/campaign/3')
   })
 })

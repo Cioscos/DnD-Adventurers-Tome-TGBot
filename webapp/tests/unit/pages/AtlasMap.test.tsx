@@ -5,8 +5,9 @@ import { Routes, Route, Link } from 'react-router-dom'
 import { renderWithProviders } from '../utils/renderWithProviders'
 import AtlasMap from '@/pages/AtlasMap'
 
-const { maps, markers, getCampaign, navigateSpy, setTransform, ApiError } = vi.hoisted(() => ({
+const { maps, markers, getCampaign, navigateSpy, setTransform, ApiError, wrapper } = vi.hoisted(() => ({
   maps: vi.fn(), markers: vi.fn(), getCampaign: vi.fn(), navigateSpy: vi.fn(), setTransform: vi.fn(),
+  wrapper: { limitToBounds: undefined as boolean | undefined },
   ApiError: class ApiError extends Error { constructor(public status: number, public detail: unknown) { super('x') } },
 }))
 
@@ -20,7 +21,8 @@ vi.mock('@/api/client', () => ({
 vi.mock('react-zoom-pan-pinch', async () => {
   const React = await import('react')
   return {
-    TransformWrapper: React.forwardRef((p: { children?: React.ReactNode }, ref) => {
+    TransformWrapper: React.forwardRef((p: { children?: React.ReactNode; limitToBounds?: boolean }, ref) => {
+      wrapper.limitToBounds = p.limitToBounds
       React.useImperativeHandle(ref, () => ({
         setTransform, zoomIn: vi.fn(), zoomOut: vi.fn(),
         instance: { transformState: { positionX: 0, positionY: 0, scale: 1 } },
@@ -161,5 +163,29 @@ describe('AtlasMap', () => {
     maps.mockResolvedValue([theMap])
     await userEvent.click(screen.getByRole('button', { name: 'common.retry' }))
     expect(await screen.findByText('Faerûn')).toBeTruthy()
+  })
+
+  it('markers network error shows error state with retry, not an empty map', async () => {
+    maps.mockResolvedValue([theMap])
+    markers.mockRejectedValue(new Error('net'))
+    getCampaign.mockResolvedValue({ id: 3, name: 'C', is_gm: false })
+    renderWithProviders(
+      <Routes><Route path="/campaign/:id/atlas/:mapId" element={<AtlasMap />} /></Routes>,
+      { route: '/campaign/3/atlas/9' },
+    )
+    expect(await screen.findByText('common.error')).toBeTruthy()
+    markers.mockResolvedValue([mk(1)])
+    await userEvent.click(screen.getByRole('button', { name: 'common.retry' }))
+    await waitFor(() => expect(pins()).toHaveLength(1))
+  })
+
+  it('crosshair mode pans freely past the edges, view mode keeps the bounds', async () => {
+    setup()
+    await waitFor(() => expect(pins()).toHaveLength(3))
+    expect(wrapper.limitToBounds).toBe(true)
+    await userEvent.click(screen.getByRole('button', { name: 'atlas.new_marker' }))
+    expect(wrapper.limitToBounds).toBe(false)
+    await userEvent.click(screen.getByRole('button', { name: 'common.cancel' }))
+    expect(wrapper.limitToBounds).toBe(true)
   })
 })

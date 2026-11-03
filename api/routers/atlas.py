@@ -275,7 +275,11 @@ async def _marker(db: AsyncSession, campaign_id: int, marker_id: int, user_id: i
     mk = await db.get(CampaignMapMarker, marker_id)
     if mk is None or mk.campaign_id != campaign_id or not marker_visible(mk, user_id):
         raise HTTPException(status_code=404, detail="marker_not_found")
-    await _map(db, campaign_id, mk.map_id, is_gm)  # player on a hidden map: 404 map_not_found
+    try:
+        await _map(db, campaign_id, mk.map_id, is_gm)
+    except HTTPException:
+        # Player on a hidden map: same answer as a missing id, so the error can't probe existence.
+        raise HTTPException(status_code=404, detail="marker_not_found") from None
     return mk
 
 

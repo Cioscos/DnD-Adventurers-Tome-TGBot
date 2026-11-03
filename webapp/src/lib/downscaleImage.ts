@@ -1,8 +1,9 @@
-/** Shrinks an image whose longest side exceeds maxSide (webp, jpeg fallback); otherwise returns the same file. */
+/** Shrinks an image whose longest side exceeds maxSide, or re-encodes it when over the 10 MB upload cap
+ *  (webp, jpeg fallback); otherwise returns the same file. */
 export async function downscaleImage(file: File, maxSide = 4096): Promise<File> {
   const bmp = await createImageBitmap(file)
   const k = Math.min(1, maxSide / Math.max(bmp.width, bmp.height))
-  if (k === 1) {
+  if (k === 1 && file.size <= 10 * 1024 * 1024) {
     bmp.close()
     return file
   }

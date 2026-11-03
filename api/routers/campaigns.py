@@ -42,6 +42,9 @@ from api.services.recap import dice_baseline
 from core.db.models import (
     Campaign,
     CampaignLore,
+    CampaignMap,
+    CampaignMapMarker,
+    CampaignMarkerType,
     CampaignMember,
     CampaignSchedule,
     Character,
@@ -326,6 +329,9 @@ async def delete_campaign(
     stash = await db.get(Character, camp.stash_character_id)
     await db.execute(delete(CampaignLore).where(CampaignLore.campaign_id == camp.id))
     await db.execute(delete(CampaignSchedule).where(CampaignSchedule.campaign_id == camp.id))
+    # Explicit like lore: don't depend on PRAGMA foreign_keys for the atlas cascade. Markers first (FK to maps/types).
+    for model in (CampaignMapMarker, CampaignMarkerType, CampaignMap):
+        await db.execute(delete(model).where(model.campaign_id == camp.id))
     await db.delete(camp)  # cascades campaign_members
     await db.flush()
     await db.delete(stash)  # cascades items and currency

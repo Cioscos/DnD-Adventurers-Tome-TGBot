@@ -7,6 +7,9 @@ from pydantic import BaseModel, Field, StringConstraints, model_validator
 from api.services.atlas import COLORS, ICONS
 
 
+MarkerName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=80)]
+
+
 class AtlasMapRead(BaseModel):
     id: int
     name: str
@@ -17,7 +20,7 @@ class AtlasMapRead(BaseModel):
 
 
 class AtlasMapRename(BaseModel):
-    name: str = Field(min_length=1, max_length=80)
+    name: MarkerName
 
 
 class AtlasMapDeleted(BaseModel):
@@ -25,7 +28,6 @@ class AtlasMapDeleted(BaseModel):
 
 
 Visibility = Literal["private", "public"]
-MarkerName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=80)]
 Coord = Annotated[float, Field(ge=0, le=1)]
 
 

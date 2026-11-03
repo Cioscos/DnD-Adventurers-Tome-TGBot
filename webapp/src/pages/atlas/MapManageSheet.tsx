@@ -91,7 +91,7 @@ export default function MapManageSheet({ open, campaignId, map, onClose }: Props
         onClose={() => setConfirmDelete(false)}
         onConfirm={() => remove.mutate()}
         title={t('atlas.delete_title')}
-        body={t('atlas.delete_body', { count: map.marker_count })}
+        body={map.marker_count > 0 ? t('atlas.delete_body', { count: map.marker_count }) : undefined}
         confirmLabel={t('common.delete')}
         loading={remove.isPending}
       />
