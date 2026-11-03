@@ -4,9 +4,8 @@ The party stash is a hidden Character (user_id=0, see api/services/campaigns.py)
 """
 from __future__ import annotations
 
-import copy
 import shutil
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Annotated, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
@@ -39,6 +38,7 @@ from api.routers.sessions import _find_active_session_for_user, _load_session, _
 from api.schemas.session import GameSessionRead
 from api.services import campaigns as svc
 from api.services.campaigns import create_campaign, generate_campaign_code
+from api.services.recap import dice_baseline
 from core.db.models import (
     Campaign,
     CampaignLore,
@@ -339,7 +339,9 @@ def _naive_now() -> str:
 
 
 def _schedule_read(row: CampaignSchedule) -> ScheduleRead:
-    st = "done" if row.session_id is not None else ("skipped" if row.starts_at <= _naive_now() else "planned")
+    # Skipped only once the ±12h link window (sessions.create_session) has passed.
+    late = (datetime.fromisoformat(row.starts_at) + timedelta(hours=12)).isoformat(timespec="seconds")
+    st = "done" if row.session_id is not None else ("skipped" if late < _naive_now() else "planned")
     return ScheduleRead(id=row.id, starts_at=row.starts_at, note=row.note, session_id=row.session_id, status=st)
 
 
@@ -498,7 +500,7 @@ async def join_campaign_session(
     db.add(SessionParticipant(
         session_id=session.id, user_id=user_id, role=SessionRole.PLAYER,
         character_id=char.id, character=char, display_name=char.name, joined_at=_now(),
-        dice_stats_start=copy.deepcopy(char.dice_stats or {}),
+        dice_stats_start=dice_baseline(session, char),
     ))
     _touch(session)
     await db.flush()

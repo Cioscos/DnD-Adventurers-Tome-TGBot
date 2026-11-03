@@ -105,11 +105,12 @@ async def test_status_planned_done_skipped(client, test_session_factory):
     camp, _ = await _enrolled(client, test_session_factory)
     f = test_session_factory
     planned = await _insert(f, camp["id"], _in(days=1))
-    skipped = await _insert(f, camp["id"], _in(days=-1))
+    late = await _insert(f, camp["id"], _in(hours=-3))  # still linkable (±12h): planned
+    skipped = await _insert(f, camp["id"], _in(hours=-13))
     done = await _insert(f, camp["id"], _in(days=-2), session_id=5)
     act(GM_ID)
     got = {x["id"]: x["status"] for x in (await client.get(f"/campaigns/{camp['id']}/schedule")).json()}
-    assert got == {planned: "planned", skipped: "skipped", done: "done"}
+    assert got == {planned: "planned", late: "planned", skipped: "skipped", done: "done"}
 
 
 async def test_session_create_links_nearest_within_12h(client, test_session_factory):

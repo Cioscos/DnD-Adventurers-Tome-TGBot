@@ -162,6 +162,17 @@ async def test_reject_bad_ext_and_oversize(client, test_session_factory, monkeyp
     assert not lore_dir.exists() or not list(lore_dir.rglob("*.*"))
 
 
+async def test_blank_title_leaves_no_orphan_file(client, test_session_factory, lore_dir):
+    camp, _ = await _enrolled(client, test_session_factory)
+    act(GM_ID)
+    r = await _create(client, camp, title="   ", files={"image": ("a.png", PNG, "image/png")})
+    assert r.status_code == 422
+    lid = (await _create(client, camp)).json()["id"]
+    r = await client.patch(_url(camp, lid), data={"title": "  "}, files={"image": ("a.png", PNG, "image/png")})
+    assert r.status_code == 422
+    assert not lore_dir.exists() or not list(lore_dir.rglob("*.*"))
+
+
 async def test_patch_replaces_and_removes_files(client, test_session_factory):
     camp, _ = await _enrolled(client, test_session_factory)
     act(GM_ID)

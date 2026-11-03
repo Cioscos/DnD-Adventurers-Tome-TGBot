@@ -43,7 +43,7 @@ async def _remind_once(now: datetime | None = None, session_factory=None) -> int
     now = now or datetime.utcnow()
     now_iso = now.isoformat(timespec="seconds")
     factory = session_factory or AsyncSessionLocal
-    due: list[tuple[int, str, str | None, int]] = []  # (campaign_id, kind, note)
+    due: list[tuple[int, str, str | None, int]] = []  # (campaign_id, kind, note, hours)
     async with factory() as db:
         rows = (await db.execute(
             select(CampaignSchedule).where(

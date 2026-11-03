@@ -7,7 +7,6 @@ for HP/AC/conditions snapshots and `/messages` for the in-session chat.
 
 from __future__ import annotations
 
-import copy
 import json
 import logging
 from datetime import datetime
@@ -49,7 +48,7 @@ from api.routers._helpers import apply_con_hp, collect_homebrew_notifications, e
 from api.schemas.character import CharacterFull
 from api.services import telegram_notify
 from api.services.character_response import build_character_response
-from api.services.recap import close_game_session
+from api.services.recap import close_game_session, dice_baseline, record_departure
 from api.services.homebrew.dispatcher import dispatch
 from api.services.trades import add_coins, give_coins, give_item, remove_coins, remove_item
 from api.services.condition_effects import character_effect_payload
@@ -459,7 +458,7 @@ async def join_session(
         character=char,
         display_name=char.name,
         joined_at=_now(),
-        dice_stats_start=copy.deepcopy(char.dice_stats or {}),
+        dice_stats_start=dice_baseline(session, char),
     ))
     _touch(session)
     await db.flush()
@@ -601,6 +600,7 @@ async def leave_session(
     if user_id == session.gm_user_id:
         await close_game_session(db, session)
     else:
+        record_departure(session, participant)
         await db.delete(participant)
     _touch(session)
     return None
@@ -630,7 +630,8 @@ async def get_session_recap(
 ) -> dict:
     """End-of-evening snapshot: GM, participants or members of the session's campaign."""
     session = await _load_session(session_id, db)
-    allowed = user_id == session.gm_user_id or any(p.user_id == user_id for p in session.participants)
+    allowed = (user_id == session.gm_user_id or any(p.user_id == user_id for p in session.participants)
+               or any(d.get("user_id") == user_id for d in session.departed or []))
     if not allowed and session.campaign_id is not None:
         allowed = await db.scalar(select(CampaignMember.id).where(
             CampaignMember.campaign_id == session.campaign_id, CampaignMember.user_id == user_id,

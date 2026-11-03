@@ -126,6 +126,8 @@ _MIGRATIONS: list[tuple[str, str, str, str | None]] = [
     ("characters", "silhouette_path", "VARCHAR(500)", None),
     ("session_participants", "dice_stats_start", "JSON", None),
     ("game_sessions", "recap", "JSON", None),
+    # Giocatori usciti prima della chiusura: restano nel riepilogo (api/services/recap.py)
+    ("game_sessions", "departed", "JSON", None),
     # Risorse di classe assorbite in Ability (refactor risorse → abilità)
     ("abilities", "source_class_id", "INTEGER REFERENCES character_classes(id) ON DELETE CASCADE", None),
     ("abilities", "is_class_feature", "BOOLEAN", "0"),

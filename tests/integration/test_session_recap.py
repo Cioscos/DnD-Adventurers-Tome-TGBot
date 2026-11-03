@@ -261,3 +261,82 @@ async def test_share_recap_gm_only(client, test_session_factory, monkeypatch):
     call = next(c for c in captured if "savePreparedInlineMessage" in c["url"])
     content = call["json"]["result"]["input_message_content"]
     assert content["parse_mode"] == "MarkdownV2" and "Saga" in content["message_text"]
+
+
+async def _roll(client, uid, cid, value=20):
+    act(uid)
+    r = await client.post(f"/characters/{cid}/dice/result",
+                          json={"rolls": [{"kind": "d20", "value": value}], "modifier": 0})
+    assert r.status_code == 200, r.text
+
+
+async def test_player_who_left_stays_in_recap_and_gets_message(client, test_session_factory, monkeypatch):
+    f = test_session_factory
+    camp, cid = await _enrolled(client, f)
+    captured = install_fake_telegram(monkeypatch)
+    monkeypatch.setenv("SEND_CAMPAIGN_MESSAGES", "1")
+    sid = await _start(client, camp["id"])
+    await _join(client, camp["id"], PLAYER_ID, cid)
+    await _roll(client, PLAYER_ID, cid)
+    act(PLAYER_ID)
+    assert (await client.post(f"/sessions/{sid}/leave")).status_code == 204
+    await _close(client, sid)
+    rec = (await _gs(f, sid)).recap
+    eroe = next(c for c in rec["characters"] if c["character_id"] == cid)
+    assert eroe["dice"]["rolls"] == 1 and eroe["dice"]["nat20"] == 1
+    sends = [c["json"]["chat_id"] for c in captured if "sendMessage" in c["url"]]
+    assert sorted(sends) == sorted([GM_ID, PLAYER_ID])
+    act(PLAYER_ID)
+    assert (await client.get(f"/sessions/{sid}/recap")).status_code == 200
+
+
+async def test_leave_and_rejoin_keeps_earlier_dice_baseline(client, test_session_factory):
+    f = test_session_factory
+    camp, cid = await _enrolled(client, f)
+    sid = await _start(client, camp["id"])
+    await _join(client, camp["id"], PLAYER_ID, cid)
+    await _roll(client, PLAYER_ID, cid, 20)
+    act(PLAYER_ID)
+    assert (await client.post(f"/sessions/{sid}/leave")).status_code == 204
+    await _join(client, camp["id"], PLAYER_ID, cid)
+    await _roll(client, PLAYER_ID, cid, 1)
+    act(PLAYER_ID)
+    assert (await client.post(f"/sessions/{sid}/leave")).status_code == 204
+    await _join(client, camp["id"], PLAYER_ID, cid)
+    await _close(client, sid)
+    rec = (await _gs(f, sid)).recap
+    assert [c["character_id"] for c in rec["characters"]] == [cid]  # no duplicate
+    assert rec["characters"][0]["dice"]["rolls"] == 2
+    assert rec["characters"][0]["dice"]["nat20"] == 1 and rec["characters"][0]["dice"]["nat1"] == 1
+
+
+async def test_null_dice_baseline_counts_no_rolls(client, test_session_factory):
+    f = test_session_factory
+    camp, cid = await _enrolled(client, f)
+    await _roll(client, PLAYER_ID, cid, 20)  # lifetime stats before the evening
+    sid = await _session(f, camp["id"], status=SessionStatus.ACTIVE, created="2026-11-03T20:00:00",
+                         last="2026-11-03T21:00:00", uid=PLAYER_ID, char_id=cid)  # dice_stats_start NULL
+    await _close(client, sid)
+    eroe = (await _gs(f, sid)).recap["characters"][0]
+    assert (eroe["dice"]["rolls"], eroe["dice"]["nat20"], eroe["dice"]["nat1"]) == (0, 0, 0)
+
+
+async def test_recap_lore_deduped(client, test_session_factory):
+    camp, _ = await _enrolled(client, test_session_factory)
+    sid = await _start(client, camp["id"])
+    act(GM_ID)
+    lore_id = (await client.post(f"/campaigns/{camp['id']}/lore", data={"title": "Il tempio"})).json()["id"]
+    for path in ("reveal", "hide", "reveal"):  # hide + reveal again = two reveal messages
+        assert (await client.post(f"/campaigns/{camp['id']}/lore/{lore_id}/{path}")).status_code == 200
+    await _close(client, sid)
+    assert (await _gs(test_session_factory, sid)).recap["lore"] == [{"id": lore_id, "title": "Il tempio"}]
+
+
+async def test_recap_text_labels_coins_and_conditions():
+    rec = _big_recap(1)
+    rec["characters"][0] = {**rec["characters"][0], "conditions": ["poisoned", "custom:fuoco_nero"]}
+    rec["items"]["trades"] = [{"from": "A", "to": "B", "summary": recap_svc._summary([], {"gold": 15})}]
+    it, en = recap_svc.format_recap_text(rec, "it"), recap_svc.format_recap_text(rec, "en")
+    assert "15 GP" in it and "15 GP" in en
+    assert "Avvelenato" in it and "custom" not in it and "Fuoco Nero" in it
+    assert "Poisoned" in en and "Fuoco nero" in en and "custom" not in en

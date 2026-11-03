@@ -150,11 +150,11 @@ async def create_lore(
 ) -> LoreRead:
     if not await _access(db, campaign_id, user_id):
         raise HTTPException(status_code=403, detail="gm_only")
-    tag_list = _tags(tags)
+    tag_list, clean_title = _tags(tags), _title(title)  # validate before writing any file
     new_image, new_audio = await _save_both(campaign_id, image, audio)
     now = _now()
     lore = CampaignLore(
-        campaign_id=campaign_id, title=_title(title), body=body, tags=tag_list,
+        campaign_id=campaign_id, title=clean_title, body=body, tags=tag_list,
         image_path=new_image, audio_path=new_audio, created_at=now, updated_at=now,
     )
     db.add(lore)
@@ -178,6 +178,7 @@ async def update_lore(
 ) -> LoreRead:
     lore = await _gm_lore(db, campaign_id, lore_id, user_id)
     tag_list = _tags(tags) if tags is not None else None
+    clean_title = _title(title) if title is not None else None  # validate before writing any file
     new_image, new_audio = await _save_both(campaign_id, image, audio)
     stale: list[Optional[str]] = []
     if new_image or remove_image:
@@ -186,8 +187,8 @@ async def update_lore(
     if new_audio or remove_audio:
         stale.append(lore.audio_path)
         lore.audio_path = new_audio
-    if title is not None:
-        lore.title = _title(title)
+    if clean_title is not None:
+        lore.title = clean_title
     if body is not None:
         lore.body = body
     if tag_list is not None:

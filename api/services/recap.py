@@ -7,6 +7,7 @@ Spec: docs/superpowers/specs/2026-11-03-diario-lore-riepilogo-calendario-design.
 """
 from __future__ import annotations
 
+import copy
 import json
 import logging
 import os
@@ -20,6 +21,7 @@ from sqlalchemy.orm import selectinload
 from api.services import telegram_notify
 from api.services.telegram_notify import recipient_lang
 from api.services.campaigns import STASH_USER_ID
+from core.data.labels import condition_label
 from core.db.models import (
     BotUser, Campaign, CampaignMember, Character, CharacterHistory, Combatant, Encounter,
     GameSession, SessionMessage, SessionParticipant, SessionStatus,
@@ -27,7 +29,8 @@ from core.db.models import (
 
 logger = logging.getLogger(__name__)
 
-_COIN_ABBR = {"copper": "mr", "silver": "ma", "electrum": "me", "gold": "mo", "platinum": "mp"}
+# Same abbreviations as the webapp (webapp/src/hooks/useTradeMutation.ts), both languages.
+_COIN_ABBR = {"copper": "CP", "silver": "SP", "electrum": "EP", "gold": "GP", "platinum": "PP"}
 _MAX_TEXT = 4096
 
 
@@ -42,8 +45,26 @@ def _duration(created: str, last: str) -> int:
         return 0
 
 
+def dice_baseline(gs: GameSession, char: Character) -> dict:
+    """dice_stats_start for a (re)joining PG: the earlier snapshot if it already left this evening."""
+    prev = next((d for d in gs.departed or [] if d.get("character_id") == char.id), None)
+    if prev is not None and prev.get("dice_stats_start") is not None:
+        return copy.deepcopy(prev["dice_stats_start"])
+    return copy.deepcopy(char.dice_stats or {})
+
+
+def record_departure(gs: GameSession, p: SessionParticipant) -> None:
+    """Keep a leaving player in the recap: first baseline wins (rejoin reuses it, see dice_baseline)."""
+    if p.character_id is None:
+        return
+    rest = [d for d in gs.departed or [] if d.get("character_id") != p.character_id]
+    prev = next((d for d in gs.departed or [] if d.get("character_id") == p.character_id), None)
+    start = p.dice_stats_start if prev is None or prev.get("dice_stats_start") is None else prev["dice_stats_start"]
+    gs.departed = rest + [{"user_id": p.user_id, "character_id": p.character_id, "dice_stats_start": start}]
+
+
 def _summary(items: list[dict], coins: dict) -> str:
-    """'Pozione ×2, Corda, 15 mo' from a feed payload's item snapshots + coins."""
+    """'Pozione ×2, Corda, 15 GP' from a feed payload's item snapshots + coins."""
     parts = [f"{i.get('name')} ×{i['quantity']}" if (i.get("quantity") or 1) > 1 else str(i.get("name"))
              for i in items or []]
     parts += [f"{n} {_COIN_ABBR.get(c, c)}" for c, n in (coins or {}).items() if n]
@@ -51,8 +72,13 @@ def _summary(items: list[dict], coins: dict) -> str:
 
 
 def _dice(start: dict | None, now: dict | None) -> tuple[int, int, int]:
-    """(rolls, nat20, nat1) from the dice_stats diff (clamped: stats may be reset mid-evening)."""
-    start, now = start or {}, now or {}
+    """(rolls, nat20, nat1) from the dice_stats diff (clamped: stats may be reset mid-evening).
+
+    start None = joined before the snapshot existed: no baseline, so no dice stats (not a lifetime diff).
+    """
+    if start is None:
+        return 0, 0, 0
+    now = now or {}
     diff = {
         kind: {face: max(0, int(n) - int((start.get(kind) or {}).get(face, 0))) for face, n in faces.items()}
         for kind, faces in now.items()
@@ -137,8 +163,12 @@ async def build_recap(db: AsyncSession, gs: GameSession, ended_at: str) -> dict:
         select(SessionParticipant).where(SessionParticipant.session_id == gs.id)
         .order_by(SessionParticipant.id)
     )).scalars().all()
-    pcs = [p for p in parts if p.character_id is not None]
-    ids = [p.character_id for p in pcs]
+    # (character_id, dice_stats_start): players still at the table, then those who left early.
+    pcs = [(p.character_id, p.dice_stats_start) for p in parts if p.character_id is not None]
+    present = {cid for cid, _ in pcs}
+    pcs += [(d["character_id"], d.get("dice_stats_start")) for d in gs.departed or []
+            if d.get("character_id") is not None and d["character_id"] not in present]
+    ids = [cid for cid, _ in pcs]
     chars = {c.id: c for c in (await db.execute(
         select(Character).options(selectinload(Character.classes)).where(Character.id.in_(ids))
     )).scalars()} if ids else {}
@@ -158,11 +188,10 @@ async def build_recap(db: AsyncSession, gs: GameSession, ended_at: str) -> dict:
         )).scalars():
             rows_by_char.setdefault(r.character_id, []).append(r)
     characters = [
-        _char_stats(chars[p.character_id], p.dice_stats_start, rows_by_char.get(p.character_id, []),
-                    window, player_names.get(p.character_id))
-        for p in pcs if p.character_id in chars
+        _char_stats(chars[cid], start, rows_by_char.get(cid, []), window, player_names.get(cid))
+        for cid, start in pcs if cid in chars
     ]
-    name_by_user = {p.user_id: chars[p.character_id].name for p in pcs if p.character_id in chars}
+    name_by_user = {c.user_id: c.name for c in chars.values()}
 
     encs = (await db.execute(
         select(Encounter).options(selectinload(Encounter.combatants))
@@ -178,6 +207,7 @@ async def build_recap(db: AsyncSession, gs: GameSession, ended_at: str) -> dict:
                 monsters.append(name)
 
     gm_grants, trades, stash, lore = [], [], [], []
+    lore_seen: set = set()
     for m in (await db.execute(
         select(SessionMessage).where(SessionMessage.session_id == gs.id).order_by(SessionMessage.id)
     )).scalars():
@@ -189,6 +219,9 @@ async def build_recap(db: AsyncSession, gs: GameSession, ended_at: str) -> dict:
             kind = pl.get("kind")
             frm, to = (pl.get("from") or {}).get("name"), (pl.get("to") or {}).get("name")
             if kind == "lore_reveal":
+                if pl.get("lore_id") in lore_seen:  # revealed twice in one evening: list it once
+                    continue
+                lore_seen.add(pl.get("lore_id"))
                 lore.append({"id": pl.get("lore_id"), "title": pl.get("title")})
             elif kind == "trade":
                 trades.append({"from": frm, "to": to, "summary": _summary(pl.get("items"), pl.get("coins"))})
@@ -285,6 +318,12 @@ def _esc(value: object) -> str:
     return _V2_SPECIAL.sub(r"\\\1", str(value))
 
 
+def _cond_label(slug: str, lang: str) -> str:
+    if recipient_lang(lang) == "it":
+        return condition_label(slug)
+    return slug.removeprefix("custom:").replace("_", " ").capitalize()
+
+
 def format_recap_text(recap: dict, lang: str) -> str:
     """MarkdownV2 text, ≤ 4096 chars: cut at a line boundary (markup stays balanced) + «…»."""
     t = _T[recipient_lang(lang)]
@@ -328,7 +367,7 @@ def format_recap_text(recap: dict, lang: str) -> str:
         if c["rests"]["short"] or c["rests"]["long"]:
             lines.append(tr("rests", s=c["rests"]["short"], l=c["rests"]["long"]))
         if c["conditions"]:
-            lines.append(tr("conds", c=", ".join(c["conditions"])))
+            lines.append(tr("conds", c=", ".join(_cond_label(x, lang) for x in c["conditions"])))
         blocks.append(lines)
 
     combat = recap.get("combat") or {}
@@ -370,9 +409,10 @@ async def send_recap_messages(db: AsyncSession, gs: GameSession) -> int:
         return 0
     if not gs.recap:
         return 0
-    users = (await db.execute(
+    users = list((await db.execute(
         select(SessionParticipant.user_id).where(SessionParticipant.session_id == gs.id)
-    )).scalars().all()
+    )).scalars())
+    users += [d["user_id"] for d in gs.departed or [] if d.get("user_id") is not None]
     recipients = [u for u in dict.fromkeys([gs.gm_user_id, *users]) if u != STASH_USER_ID]
     langs = dict((await db.execute(
         select(BotUser.user_id, BotUser.language_code).where(BotUser.user_id.in_(recipients))
