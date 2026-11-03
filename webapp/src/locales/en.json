@@ -1881,6 +1881,7 @@
     "who_plays": "Who's playing tonight?",
     "no_playable": "None of your PCs can play: they are all dead or not enrolled.",
     "session_open": "session open",
+    "open_page": "Campaign page",
     "enroll_title": "Join the campaign",
     "enroll_pick": "Pick the PC to enroll.",
     "enroll_confirm": "Enroll",

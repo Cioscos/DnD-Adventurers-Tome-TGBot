@@ -42,6 +42,28 @@ export default function Session() {
 
   const campaigns = useQuery({ queryKey: ['campaigns'], queryFn: () => api.campaigns.list() }).data ?? []
 
+  // Le campagne restano raggiungibili anche a sessione aperta (pagina, diario, lore, calendario).
+  const campaignList = campaigns.length > 0 && (
+    <>
+      <SectionDivider>{t('campaign.mine')}</SectionDivider>
+      <div className="space-y-2">
+        {campaigns.map((c) => (
+          <Pressable
+            key={c.id}
+            onClick={() => navigate(`/campaign/${c.id}`)}
+            className="w-full min-h-[44px] px-3 py-2 rounded-xl border bg-dnd-surface border-dnd-border text-left"
+          >
+            <span className="block font-cinzel text-sm text-dnd-text break-words">{c.name}</span>
+            <span className="block text-xs font-body text-dnd-text-muted">
+              {t('campaign.members_count', { count: c.member_count })}
+              {c.active_session_id != null && ` · ${t('campaign.night_active')}`}
+            </span>
+          </Pressable>
+        ))}
+      </div>
+    </>
+  )
+
   if (isLoading) {
     return (
       <Layout help="session" title={t('session.title')} backTo="/">
@@ -84,6 +106,7 @@ export default function Session() {
             </Button>
           </div>
         </Surface>
+        {campaignList}
       </Layout>
     )
   }
@@ -153,26 +176,7 @@ export default function Session() {
         </Surface>
       </Reveal.Stagger>
 
-      {campaigns.length > 0 && (
-        <>
-          <SectionDivider>{t('campaign.mine')}</SectionDivider>
-          <div className="space-y-2">
-            {campaigns.map((c) => (
-              <Pressable
-                key={c.id}
-                onClick={() => navigate(`/campaign/${c.id}`)}
-                className="w-full min-h-[44px] px-3 py-2 rounded-xl border bg-dnd-surface border-dnd-border text-left"
-              >
-                <span className="block font-cinzel text-sm text-dnd-text break-words">{c.name}</span>
-                <span className="block text-xs font-body text-dnd-text-muted">
-                  {t('campaign.members_count', { count: c.member_count })}
-                  {c.active_session_id != null && ` · ${t('campaign.night_active')}`}
-                </span>
-              </Pressable>
-            ))}
-          </div>
-        </>
-      )}
+      {campaignList}
       <StartSessionSheet open={startOpen} onClose={() => setStartOpen(false)} />
     </Layout>
   )
