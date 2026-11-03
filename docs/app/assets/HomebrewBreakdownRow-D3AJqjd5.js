@@ -1,0 +1,6 @@
+import{j as e}from"./react-vendor-BGC0LuHo.js";import{u as o}from"./index-CoLqm00d.js";import{c as l}from"./format-boyaa2Px.js";/**
+ * @license lucide-react v1.11.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */const c=[["path",{d:"M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z",key:"1s2grr"}],["path",{d:"M20 2v4",key:"1rf3ol"}],["path",{d:"M22 4h-4",key:"gwowj6"}],["circle",{cx:"4",cy:"20",r:"2",key:"6kqj1y"}]],d=l("sparkles",c);function x({value:t,label:s,display:a}){const{t:n}=o();if(t===0)return null;const r=s??n("homebrew.breakdown.label");return e.jsxs("div",{className:"flex items-center justify-between gap-2 px-2 py-1 text-sm",children:[e.jsxs("span",{className:"flex items-center gap-1.5 text-xs font-cinzel uppercase tracking-[0.3em] text-dnd-gold-dim",children:[e.jsx(d,{size:14,className:"text-dnd-gold-dim"}),r]}),e.jsx("span",{className:"font-mono font-bold tabular-nums text-dnd-gold-bright",children:a??`+${t}`})]})}export{x as H,d as S};
