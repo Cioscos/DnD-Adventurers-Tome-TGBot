@@ -1893,6 +1893,19 @@
     "enroll_no_characters": "Non hai ancora personaggi da iscrivere: creane uno e torna con il codice.",
     "enroll_create": "Crea un personaggio"
   },
+  "atlas": {
+    "title": "Atlante",
+    "upload": "Carica mappa",
+    "empty_gm": "Carica la prima mappa",
+    "empty_player": "Il master non ha ancora mostrato mappe",
+    "hidden": "Nascosta",
+    "markers": "{{count}} luoghi",
+    "new_title": "Nuova mappa",
+    "name_label": "Nome",
+    "pick_image": "Scegli immagine",
+    "err_image": "Non riesco a leggere questa immagine. Prova un PNG, JPG o WebP.",
+    "err_upload": "Caricamento non riuscito. Usa un PNG, JPG o WebP fino a 10 MB."
+  },
   "session": {
     "title": "Sessione di gioco",
     "landing_subtitle": "Gioca in tempo reale con il tuo party",

@@ -1894,6 +1894,19 @@
     "enroll_no_characters": "You have no characters to enroll yet: create one and come back with the code.",
     "enroll_create": "Create a character"
   },
+  "atlas": {
+    "title": "Atlas",
+    "upload": "Upload map",
+    "empty_gm": "Upload the first map",
+    "empty_player": "The GM hasn't shown any maps yet",
+    "hidden": "Hidden",
+    "markers": "{{count}} places",
+    "new_title": "New map",
+    "name_label": "Name",
+    "pick_image": "Choose image",
+    "err_image": "I can't read this image. Try a PNG, JPG or WebP.",
+    "err_upload": "Upload failed. Use a PNG, JPG or WebP up to 10 MB."
+  },
   "session": {
     "title": "Game session",
     "landing_subtitle": "Play in real time with your party",

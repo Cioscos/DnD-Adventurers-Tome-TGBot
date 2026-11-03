@@ -105,6 +105,14 @@ describe('SessionRoom in a campaign', () => {
     expect(navigateSpy).toHaveBeenCalledWith('/campaign/3')
   })
 
+  it('campaign session shows Atlante button', async () => {
+    me.mockResolvedValue({ user_id: 1 })
+    live.mockResolvedValue({ ...base, campaign_id: 3, campaign_name: 'La Saga' })
+    renderWithProviders(<SessionRoom />)
+    await userEvent.click(await screen.findByRole('button', { name: 'atlas.title' }))
+    expect(navigateSpy).toHaveBeenCalledWith('/campaign/3', { state: { scrollTo: 'atlas' } })
+  })
+
   it('a single evening still shows the code', async () => {
     me.mockResolvedValue({ user_id: 1 })
     live.mockResolvedValue({ ...base, campaign_id: null, campaign_name: null })

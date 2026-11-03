@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Copy, Share2, RefreshCw, Play, Trash2, UserMinus, Pencil, BookOpen } from 'lucide-react'
@@ -16,6 +16,7 @@ import Input from '@/components/ui/Input'
 import JoinCampaignSessionSheet from '@/pages/campaign/JoinCampaignSessionSheet'
 import StashTree from '@/pages/campaign/StashTree'
 import LoreSection from '@/pages/campaign/LoreSection'
+import AtlasSection from '@/pages/campaign/AtlasSection'
 import CampaignCalendar from '@/pages/campaign/CampaignCalendar'
 import { api, ApiError } from '@/api/client'
 import { canShareMessage, haptic } from '@/auth/telegram'
@@ -35,6 +36,7 @@ export default function Campaign() {
   const { id } = useParams()
   const campId = Number(id)
   const navigate = useNavigate()
+  const location = useLocation()
   const { t, i18n } = useTranslation()
   const qc = useQueryClient()
   const toast = useToast()
@@ -56,6 +58,12 @@ export default function Campaign() {
     queryFn: () => api.sessions.me(),
     enabled: !!camp && !camp.is_gm && camp.active_session_id != null,
   })
+
+  // Dalla stanza di sessione: porta l'Atlante in vista (con HashRouter un #ancora non funziona).
+  const wantAtlas = (location.state as { scrollTo?: string } | null)?.scrollTo === 'atlas'
+  useEffect(() => {
+    if (wantAtlas && camp) document.getElementById('atlas')?.scrollIntoView?.({ block: 'start' })
+  }, [wantAtlas, camp])
 
   const setDetail = (d: CampaignDetail) => {
     qc.setQueryData(key, d)
@@ -285,6 +293,7 @@ export default function Campaign() {
       </Surface>
 
       <LoreSection campaignId={camp.id} isGm={camp.is_gm} />
+      <AtlasSection campaignId={camp.id} isGm={camp.is_gm} />
 
       <CampaignCalendar campaignId={camp.id} isGm={camp.is_gm} sessions={camp.sessions} />
 

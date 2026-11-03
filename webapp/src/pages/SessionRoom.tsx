@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
-import { LogOut, User, Gift, Copy, Share2, WifiOff, Package, BookOpen } from 'lucide-react'
+import { LogOut, User, Gift, Copy, Share2, WifiOff, Package, BookOpen, Map as MapIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   GiCrown as Crown, GiHeartPlus as Heart, GiCheckedShield as Shield,
@@ -439,6 +439,9 @@ export default function SessionRoom() {
           {/* Lore, calendario e diario stanno nella pagina campagna: raggiungibile anche a serata in corso. */}
           <Button variant="secondary" size="md" fullWidth icon={<BookOpen size={16} />} onClick={() => navigate(`/campaign/${live.campaign_id}`)}>
             {t('campaign.open_page')}
+          </Button>
+          <Button variant="secondary" size="md" fullWidth icon={<MapIcon size={16} />} onClick={() => navigate(`/campaign/${live.campaign_id}`, { state: { scrollTo: 'atlas' } })}>
+            {t('atlas.title')}
           </Button>
         </>
       )}
