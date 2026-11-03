@@ -20,6 +20,7 @@ import type {
   Ability,
   CharacterFull,
   TradeRequest,
+  StashMoveRequest,
   DdbImportResult,
   ResolveChoiceBody,
   CharacterSummary,
@@ -33,6 +34,12 @@ import type {
   EncounterLive,
   EncounterMode,
   GameSession,
+  CampaignRead,
+  CampaignSummary,
+  CampaignDetail,
+  CampaignMemberStatus,
+  ActiveCampaignSession,
+  CampaignStash,
   TurnState,
   PendingSaveRollResult,
   GameSessionLive,
@@ -916,6 +923,9 @@ export const api = {
     invite: (sessionId: number) =>
       request<{ prepared_message_id: string }>(
         `/sessions/${sessionId}/share/invite`, { method: 'POST' }),
+    campaignInvite: (campaignId: number) =>
+      request<{ prepared_message_id: string }>(
+        `/share/campaign-invite/${campaignId}`, { method: 'POST' }),
     get: (token: string) => request<SharePreview>(`/shares/${token}`),
     import: (token: string, charId: number) =>
       request<ShareImportResult>(`/shares/${token}/import`, {
@@ -938,15 +948,53 @@ export const api = {
   },
 
   // ---------------------------------------------------------------------------
+  // Campaigns
+  // ---------------------------------------------------------------------------
+  campaigns: {
+    list: () => request<CampaignSummary[]>('/campaigns'),
+    create: (name: string) =>
+      request<CampaignRead>('/campaigns', { method: 'POST', body: JSON.stringify({ name }) }),
+    get: (id: number) => request<CampaignDetail>(`/campaigns/${id}`),
+    rename: (id: number, name: string) =>
+      request<CampaignRead>(`/campaigns/${id}`, { method: 'PATCH', body: JSON.stringify({ name }) }),
+    remove: (id: number) => request<void>(`/campaigns/${id}`, { method: 'DELETE' }),
+    regenerateCode: (id: number) =>
+      request<{ invite_code: string }>(`/campaigns/${id}/invite-code`, { method: 'POST' }),
+    enroll: (code: string, characterId: number) =>
+      request<CampaignDetail>('/campaigns/enroll', {
+        method: 'POST',
+        body: JSON.stringify({ code, character_id: characterId }),
+      }),
+    activeForMe: () => request<ActiveCampaignSession[]>('/campaigns/active-for-me'),
+    setMemberStatus: (id: number, characterId: number, status: CampaignMemberStatus) =>
+      request<CampaignDetail>(`/campaigns/${id}/members/${characterId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status }),
+      }),
+    removeMember: (id: number, characterId: number) =>
+      request<void>(`/campaigns/${id}/members/${characterId}`, { method: 'DELETE' }),
+    joinSession: (id: number, characterId: number) =>
+      request<GameSession>(`/campaigns/${id}/session/join`, {
+        method: 'POST',
+        body: JSON.stringify({ character_id: characterId }),
+      }),
+  },
+
+  // ---------------------------------------------------------------------------
   // Sessions (invite-code live game sessions)
   // ---------------------------------------------------------------------------
   sessions: {
     me: () => request<GameSession | null>('/sessions/me'),
-    create: (title?: string) =>
+    create: (title?: string, campaignId?: number) =>
       request<GameSession>('/sessions', {
         method: 'POST',
-        body: JSON.stringify({ title: title ?? null }),
+        body: JSON.stringify(
+          campaignId === undefined
+            ? { title: title ?? null }
+            : { title: title ?? null, campaign_id: campaignId },
+        ),
       }),
+    stash: (id: number) => request<CampaignStash>(`/sessions/${id}/stash`),
     join: (code: string, characterId: number) =>
       request<GameSession>('/sessions/join', {
         method: 'POST',
@@ -992,6 +1040,14 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(body),
       }),
+    stashPut: (sessionId: number, body: StashMoveRequest & { from_character_id: number }) =>
+      request<CharacterFull>(`/sessions/${sessionId}/stash/put`, { method: 'POST', body: JSON.stringify(body) }),
+    stashTake: (sessionId: number, body: StashMoveRequest & { to_character_id: number }) =>
+      request<CharacterFull>(`/sessions/${sessionId}/stash/take`, { method: 'POST', body: JSON.stringify(body) }),
+    stashGmAdd: (sessionId: number, body: { item?: GrantItemPayload; coins?: StashMoveRequest['coins'] }) =>
+      request<CampaignStash>(`/sessions/${sessionId}/stash/gm-add`, { method: 'POST', body: JSON.stringify(body) }),
+    stashGmRemove: (sessionId: number, body: StashMoveRequest) =>
+      request<CampaignStash>(`/sessions/${sessionId}/stash/gm-remove`, { method: 'POST', body: JSON.stringify(body) }),
     grantItem: (
       sessionId: number,
       payload: { recipient_user_ids: number[]; item: GrantItemPayload },

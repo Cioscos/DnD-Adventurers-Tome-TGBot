@@ -571,6 +571,45 @@ class CharacterHistory(Base):
 # Game session (invite-code based, managed by the webapp)
 # ---------------------------------------------------------------------------
 
+class Campaign(Base):
+    """Persistent campaign; the party stash is a hidden Character (user_id=0)."""
+
+    __tablename__ = "campaigns"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    invite_code: Mapped[str] = mapped_column(String(8), unique=True, index=True, nullable=False)
+    gm_user_id: Mapped[int] = mapped_column(BigInteger, nullable=False, index=True)
+    stash_character_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("characters.id"), nullable=False
+    )
+    created_at: Mapped[str] = mapped_column(String(50), nullable=False)
+
+    members: Mapped[List["CampaignMember"]] = relationship(
+        back_populates="campaign", cascade="all, delete-orphan"
+    )
+
+
+class CampaignMember(Base):
+    """A character enrolled in a campaign (one campaign per character)."""
+
+    __tablename__ = "campaign_members"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    campaign_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("campaigns.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    character_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("characters.id"), nullable=False, unique=True
+    )
+    user_id: Mapped[int] = mapped_column(BigInteger, nullable=False, index=True)
+    player_name: Mapped[Optional[str]] = mapped_column(String(120), nullable=True)
+    status: Mapped[str] = mapped_column(String(10), default="active", nullable=False)  # active|reserve|dead
+    joined_at: Mapped[str] = mapped_column(String(50), nullable=False)
+
+    campaign: Mapped["Campaign"] = relationship(back_populates="members")
+
+
 class GameSession(Base):
     """A live game session hosted by a Game Master with invite-code access."""
 
@@ -587,6 +626,7 @@ class GameSession(Base):
     created_at: Mapped[str] = mapped_column(String(50), nullable=False)
     last_activity_at: Mapped[str] = mapped_column(String(50), nullable=False)
     closed_at: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    campaign_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
 
     participants: Mapped[List["SessionParticipant"]] = relationship(
         back_populates="session", cascade="all, delete-orphan"

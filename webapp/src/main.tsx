@@ -33,7 +33,7 @@ window.Telegram?.WebApp?.expand()
 // Sicuro: l'initData per l'auth è letto dall'oggetto WebApp dell'SDK, non dal
 // fragment dell'URL, quindi rimuovere tgWebAppData dall'hash non rompe l'auth.
 const startAction = parseStartParam(getStartParam())
-if (startAction?.kind === 'join') {
+if (startAction?.kind === 'join' || startAction?.kind === 'campaign') {
   window.location.hash = `/session/join?code=${startAction.code}`
 } else if (startAction?.kind === 'share') {
   window.location.hash = `/share/${startAction.token}`

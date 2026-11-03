@@ -19,7 +19,7 @@ from sqlalchemy.orm import selectinload
 
 from api.auth import TelegramUser, get_current_telegram_user, get_current_user
 from api.database import get_db
-from core.game.containers import is_container
+from core.game.containers import is_container, trade_snapshot
 from api.schemas.session import (
     CharacterLiveSnapshot,
     GameSessionLiveRead,
@@ -34,18 +34,27 @@ from api.schemas.session import (
     SessionJoinRequest,
     SessionMessageCreate,
     SessionMessageRead,
+    StashGMAddRequest,
+    StashGMRemoveRequest,
+    StashPutRequest,
+    StashTakeRequest,
     TradeRequest,
     TurnState,
 )
+from api.schemas.campaign import CampaignStash
+from api.schemas.common import CurrencyRead
+from api.schemas.item import ItemRead
 from api.routers._helpers import apply_con_hp, collect_homebrew_notifications, effective_con_mod
 from api.schemas.character import CharacterFull
 from api.services import telegram_notify
 from api.services.character_response import build_character_response
 from api.services.homebrew.dispatcher import dispatch
-from api.services.trades import give_coins, give_item
+from api.services.trades import add_coins, give_coins, give_item, remove_coins, remove_item
 from api.services.condition_effects import character_effect_payload
 from api.services.encounter_view import build_encounter_block
 from core.db.models import (
+    Campaign,
+    CampaignMember,
     Character,
     CharacterHistory,
     Combatant,
@@ -182,6 +191,14 @@ async def _generate_unique_code(db: AsyncSession) -> str:
     )
 
 
+async def session_read(db: AsyncSession, session: GameSession) -> GameSessionRead:
+    """GameSessionRead with campaign_name (explicit query: no async lazy-load)."""
+    name = None
+    if session.campaign_id is not None:
+        name = await db.scalar(select(Campaign.name).where(Campaign.id == session.campaign_id))
+    return GameSessionRead.model_validate(session).model_copy(update={"campaign_name": name})
+
+
 def _touch(session: GameSession) -> None:
     session.last_activity_at = _now()
 
@@ -266,9 +283,7 @@ async def my_active_session(
             )
         )
     ).scalars().first()
-    return GameSessionRead.model_validate(session).model_copy(
-        update={"encounter_status": enc_status}
-    )
+    return (await session_read(db, session)).model_copy(update={"encounter_status": enc_status})
 
 
 async def active_encounter_row(db: AsyncSession, character_id: int):
@@ -332,7 +347,7 @@ async def create_session(
     body: SessionCreateRequest,
     tg_user: Annotated[TelegramUser, Depends(get_current_telegram_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
-) -> GameSession:
+) -> GameSessionRead:
     user_id = tg_user.id
     # Users can only be in one active session at a time (regardless of role)
     existing = await _find_active_session_for_user(user_id, db)
@@ -342,14 +357,27 @@ async def create_session(
             detail="You already have an active session",
         )
 
+    title = body.title
+    if body.campaign_id is not None:
+        camp = await db.get(Campaign, body.campaign_id)
+        if camp is None or camp.gm_user_id != user_id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="gm_only")
+        active = await db.scalar(select(GameSession.id).where(
+            GameSession.campaign_id == camp.id, GameSession.status == SessionStatus.ACTIVE
+        ))
+        if active is not None:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="campaign_session_active")
+        title = title or camp.name
+
     code = await _generate_unique_code(db)
     now = _now()
-    gm_display_name = _compute_gm_display_name(tg_user, body.title)
+    gm_display_name = _compute_gm_display_name(tg_user, title)
     session = GameSession(
+        campaign_id=body.campaign_id,
         code=code,
         gm_user_id=user_id,
         status=SessionStatus.ACTIVE,
-        title=body.title,
+        title=title,
         gm_display_name=gm_display_name,
         created_at=now,
         last_activity_at=now,
@@ -365,7 +393,7 @@ async def create_session(
     ))
     await db.flush()
     await db.refresh(session, attribute_names=["participants"])
-    return session
+    return await session_read(db, session)
 
 
 @router.post("/join", response_model=GameSessionRead)
@@ -373,7 +401,7 @@ async def join_session(
     body: SessionJoinRequest,
     user_id: Annotated[int, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
-) -> GameSession:
+) -> GameSessionRead:
     # Users can only be in one active session at a time
     existing = await _find_active_session_for_user(user_id, db)
     if existing is not None:
@@ -400,6 +428,17 @@ async def join_session(
             detail="Character not found or not yours",
         )
 
+    # Campaign sessions expose the party stash: the code must not bypass membership.
+    if session.campaign_id is not None:
+        member = await db.scalar(select(CampaignMember).where(
+            CampaignMember.campaign_id == session.campaign_id,
+            CampaignMember.character_id == char.id,
+        ))
+        if member is None:
+            raise HTTPException(status_code=422, detail="not_a_member")
+        if member.status == "dead":
+            raise HTTPException(status_code=422, detail="character_dead")
+
     db.add(SessionParticipant(
         session_id=session.id,
         user_id=user_id,
@@ -412,7 +451,7 @@ async def join_session(
     _touch(session)
     await db.flush()
     await db.refresh(session, attribute_names=["participants"])
-    return session
+    return await session_read(db, session)
 
 
 @router.get("/{session_id}", response_model=GameSessionRead)
@@ -420,10 +459,10 @@ async def get_session(
     session_id: int,
     user_id: Annotated[int, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
-) -> GameSession:
+) -> GameSessionRead:
     session = await _load_session(session_id, db)
     _assert_participant(session, user_id)
-    return session
+    return await session_read(db, session)
 
 
 @router.get("/{session_id}/live", response_model=GameSessionLiveRead)
@@ -516,6 +555,8 @@ async def get_session_live(
         created_at=session.created_at,
         last_activity_at=session.last_activity_at,
         closed_at=session.closed_at,
+        campaign_id=session.campaign_id,
+        campaign_name=(await session_read(db, session)).campaign_name,
         participants=[
             {
                 "user_id": p.user_id,
@@ -739,6 +780,30 @@ async def get_participant_identity(
     )
 
 
+async def _create_or_merge_item(db: AsyncSession, char: Character, new, *, is_equipped: bool) -> Item:
+    """Put an ItemCreate in `char`'s inventory: stack onto a same-name generic root, else create."""
+    is_box = isinstance((new.item_metadata or {}).get("container"), dict)
+    if new.item_type == "generic" and not is_box:
+        existing = next(
+            (it for it in char.items
+             if it.item_type == "generic" and it.name == new.name
+             and it.container_id is None and not is_container(it)),
+            None,
+        )
+        if existing is not None:
+            existing.quantity += new.quantity
+            return existing
+    row = Item(
+        character_id=char.id, name=new.name, description=new.description,
+        weight=new.weight, quantity=new.quantity, item_type=new.item_type,
+        item_metadata=json.dumps(new.item_metadata) if new.item_metadata else None,
+        is_equipped=is_equipped,
+    )
+    db.add(row)
+    await db.flush()
+    return row
+
+
 @router.post(
     "/{session_id}/gm/grant_item",
     response_model=GMGrantItemResponse,
@@ -764,7 +829,6 @@ async def gm_grant_item(
     if session_obj.status != SessionStatus.ACTIVE:
         raise HTTPException(status_code=status.HTTP_410_GONE, detail="Session is closed")
 
-    metadata_str = json.dumps(body.item.item_metadata) if body.item.item_metadata else None
     granting_box = isinstance((body.item.item_metadata or {}).get("container"), dict)
     if granting_box and body.item.quantity != 1:
         raise HTTPException(status_code=422, detail="container_quantity")
@@ -790,34 +854,9 @@ async def gm_grant_item(
             results.append(GMGrantItemResult(user_id=rid, status="character_not_found"))
             continue
 
-        granted_item_id: Optional[int] = None
-        merged = False
-        if body.item.item_type == "generic" and not granting_box:
-            existing = next(
-                (it for it in char.items
-                 if it.item_type == "generic" and it.name == body.item.name
-                 and it.container_id is None and not is_container(it)),
-                None,
-            )
-            if existing is not None:
-                existing.quantity += body.item.quantity
-                granted_item_id = existing.id
-                merged = True
-
-        if not merged:
-            new_item = Item(
-                character_id=char.id,
-                name=body.item.name,
-                description=body.item.description,
-                weight=body.item.weight,
-                quantity=body.item.quantity,
-                item_type=body.item.item_type,
-                item_metadata=metadata_str,
-                is_equipped=body.item.is_equipped,
-            )
-            db.add(new_item)
-            await db.flush()
-            granted_item_id = new_item.id
+        granted_item_id = (
+            await _create_or_merge_item(db, char, body.item, is_equipped=body.item.is_equipped)
+        ).id
 
         char.recalculate_encumbrance()
 
@@ -877,6 +916,36 @@ async def _load_char_full(db: AsyncSession, char_id: int) -> Character:
     return result.scalar_one()
 
 
+async def _settle_move(db, actor: Character, other: Character, old_con_mod, removed: list) -> list[dict]:
+    """After an item/coin move out of `actor`: CON-HP, encumbrance of both, item_unequipped dispatch.
+
+    `removed` = (id, type, name, slot) of rows taken off the actor's paper-doll. Returns notifications.
+    """
+    apply_con_hp(actor, old_con_mod)
+    await db.flush()
+    for c in (actor, other):
+        await db.refresh(c, attribute_names=["items"])
+        c.recalculate_encumbrance()
+    await db.flush()
+    notifications: list[dict] = []
+    for item_id, item_type, _name, slot in removed:
+        firing = await dispatch(db, actor, "item_unequipped", {
+            "item_id": item_id, "item_type": item_type,
+            "slot": slot.value if slot is not None else None,
+            "was_equipped": True, "is_equipped": False,
+        })
+        notifications += collect_homebrew_notifications(firing)
+    return notifications
+
+
+async def _move_response(db, actor: Character, removed: list, notifications: list[dict]) -> CharacterFull:
+    response = await build_character_response(db, actor)
+    response.unequipped_item_names = [name for _i, _t, name, _s in removed]
+    if notifications:
+        response.homebrew_notifications = notifications
+    return response
+
+
 @router.post("/{session_id}/trade", response_model=CharacterFull)
 async def trade(
     session_id: int,
@@ -917,25 +986,12 @@ async def trade(
         what = f"{snap['name']} (×{snap['quantity']})"
     else:
         coins_given = give_coins(sender, recipient, body.coins)
-        what = ", ".join(f"{n} {_COIN_LABELS[c]}" for c, n in coins_given.items())
+        what = _coins_text(coins_given)
 
-    apply_con_hp(sender, old_con_mod)
-    await db.flush()
-    for c in (sender, recipient):
-        await db.refresh(c, attribute_names=["items"])
-        c.recalculate_encumbrance()
-    await db.flush()
-
-    notifications: list[dict] = []
-    for item_id, item_type, _name, slot in removed:
-        firing = await dispatch(db, sender, "item_unequipped", {
-            "item_id": item_id, "item_type": item_type,
-            "slot": slot.value if slot is not None else None,
-            "was_equipped": True, "is_equipped": False,
-        })
-        notifications += collect_homebrew_notifications(firing)
+    notifications = await _settle_move(db, sender, recipient, old_con_mod, removed)
 
     payload = {
+        "kind": "trade",
         "from": {"character_id": sender.id, "name": sender.name},
         "to": {"character_id": recipient.id, "name": recipient.name},
         "items": snapshots,
@@ -961,11 +1017,199 @@ async def trade(
                     telegram_notify.miniapp_url(f"/char/{recipient.id}/inventory")),
         )
 
-    response = await build_character_response(db, sender)
-    response.unequipped_item_names = [name for _i, _t, name, _s in removed]
-    if notifications:
-        response.homebrew_notifications = notifications
-    return response
+    return await _move_response(db, sender, removed, notifications)
+
+
+_STASH = {"character_id": None, "name": "stash"}
+_GM = {"character_id": None, "name": "gm"}
+
+
+async def _stash_ctx(session_id: int, user_id: int, db: AsyncSession, *, mutate: bool = True):
+    """Session + caller's participant row + the campaign's stash (items and currency only)."""
+    session_obj = await _load_session(session_id, db)
+    me = _assert_participant(session_obj, user_id)
+    if session_obj.campaign_id is None:
+        raise HTTPException(status_code=422, detail="no_campaign")
+    if mutate and session_obj.status != SessionStatus.ACTIVE:
+        raise HTTPException(status_code=status.HTTP_410_GONE, detail="Session is closed")
+    camp = await db.get(Campaign, session_obj.campaign_id)
+    return session_obj, me, await _load_stash(db, camp.stash_character_id)
+
+
+async def _load_stash(db: AsyncSession, stash_id: int) -> Character:
+    return (await db.execute(
+        select(Character)
+        .options(selectinload(Character.items), selectinload(Character.currency))
+        .where(Character.id == stash_id)
+    )).scalar_one()
+
+
+async def _stash_read(db: AsyncSession, stash: Character) -> CampaignStash:
+    await db.refresh(stash, attribute_names=["items", "currency"])
+    return CampaignStash(
+        items=[ItemRead.model_validate(i) for i in sorted(stash.items, key=lambda i: i.id)],
+        currency=CurrencyRead.model_validate(stash.currency),
+    )
+
+
+def _coins_text(coins: dict[str, int]) -> str:
+    return ", ".join(f"{n} {_COIN_LABELS[c]}" for c, n in coins.items())
+
+
+def _post_stash_message(db, session_obj, user_id, role, display_name, body, kind, frm, to, snaps, coins):
+    db.add(SessionMessage(
+        session_id=session_obj.id, user_id=user_id, role=role, body=body,
+        sent_at=_now(), sender_display_name=display_name,
+        trade_payload=json.dumps({"kind": kind, "from": frm, "to": to, "items": snaps, "coins": coins}),
+    ))
+    _touch(session_obj)
+
+
+@router.get("/{session_id}/stash", response_model=CampaignStash)
+async def get_stash(
+    session_id: int,
+    user_id: Annotated[int, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> CampaignStash:
+    _s, _me, stash = await _stash_ctx(session_id, user_id, db, mutate=False)
+    return await _stash_read(db, stash)
+
+
+async def _player_stash_move(session_id, user_id, db, char_id, item_id, quantity, coins, putting: bool):
+    """Shared body of put (PG -> stash) and take (stash -> PG)."""
+    session_obj, me, stash = await _stash_ctx(session_id, user_id, db)
+    if me.role != SessionRole.PLAYER or me.character_id is None or me.character_id != char_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="not_your_character")
+    if (item_id is None) == (coins is None):
+        raise HTTPException(status_code=422, detail="nothing_to_give")
+    pg = await _load_char_full(db, me.character_id)
+    old_con_mod = effective_con_mod(pg)
+    src, dst = (pg, stash) if putting else (stash, pg)
+
+    snapshots: list[dict] = []
+    removed: list = []
+    moved: dict[str, int] = {}
+    if item_id is not None:
+        snap, taken = await give_item(db, src, dst, item_id, quantity)
+        if putting:  # only the PG has a paper-doll; read before the flush
+            removed = [(i.id, i.item_type, i.name, slot) for i, slot in taken]
+        snapshots = [snap]
+        what = f"{snap['name']} (×{snap['quantity']})"
+    else:
+        moved = give_coins(src, dst, coins)
+        what = _coins_text(moved)
+
+    # on take the PG's CON can't change: apply_con_hp is a no-op there
+    notifications = await _settle_move(db, pg, stash, old_con_mod, removed)
+
+    me_ref = {"character_id": pg.id, "name": pg.name}
+    verb = "messo nel" if putting else "preso dal"
+    _post_stash_message(
+        db, session_obj, user_id, SessionRole.PLAYER, me.display_name or pg.name,
+        f"{pg.name} ha {verb} deposito: {what}",
+        "stash_put" if putting else "stash_take",
+        me_ref if putting else _STASH, _STASH if putting else me_ref, snapshots, moved,
+    )
+    await db.flush()
+    return await _move_response(db, pg, removed, notifications)
+
+
+@router.post("/{session_id}/stash/put", response_model=CharacterFull)
+async def stash_put(
+    session_id: int,
+    body: StashPutRequest,
+    user_id: Annotated[int, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> CharacterFull:
+    """Player: move an item/container/coins from their PG into the party stash."""
+    return await _player_stash_move(
+        session_id, user_id, db, body.from_character_id, body.item_id, body.quantity, body.coins, True)
+
+
+@router.post("/{session_id}/stash/take", response_model=CharacterFull)
+async def stash_take(
+    session_id: int,
+    body: StashTakeRequest,
+    user_id: Annotated[int, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> CharacterFull:
+    """Player: move an item/container/coins from the party stash to their PG."""
+    return await _player_stash_move(
+        session_id, user_id, db, body.to_character_id, body.item_id, body.quantity, body.coins, False)
+
+
+async def _gm_stash_ctx(session_id, user_id, db):
+    ctx = await _stash_ctx(session_id, user_id, db)
+    if ctx[0].gm_user_id != user_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="gm_only")
+    return ctx
+
+
+@router.post("/{session_id}/stash/gm-add", response_model=CampaignStash)
+async def stash_gm_add(
+    session_id: int,
+    body: StashGMAddRequest,
+    user_id: Annotated[int, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> CampaignStash:
+    """GM: create an item or coins straight into the party stash."""
+    session_obj, _me, stash = await _gm_stash_ctx(session_id, user_id, db)
+    if (body.item is None) == (body.coins is None):
+        raise HTTPException(status_code=422, detail="nothing_to_give")
+    snapshots: list[dict] = []
+    added: dict[str, int] = {}
+    if body.item is not None:
+        new = body.item
+        is_box = isinstance((new.item_metadata or {}).get("container"), dict)
+        if is_box and new.quantity != 1:
+            raise HTTPException(status_code=422, detail="container_quantity")
+        if new.quantity < 1:
+            raise HTTPException(status_code=422, detail="invalid_quantity")
+        row = await _create_or_merge_item(db, stash, new, is_equipped=False)
+        await db.flush()
+        await db.refresh(stash, attribute_names=["items"])
+        snapshots = [trade_snapshot(stash.items, row.id, new.quantity)]
+        what = f"{snapshots[0]['name']} (×{snapshots[0]['quantity']})"
+    else:
+        added = add_coins(stash, body.coins)
+        what = _coins_text(added)
+    await db.refresh(stash, attribute_names=["items"])
+    stash.recalculate_encumbrance()
+    _post_stash_message(
+        db, session_obj, user_id, SessionRole.GAME_MASTER, "__GM__",
+        f"Il master ha messo nel deposito: {what}", "gm_stash_add", _GM, _STASH, snapshots, added)
+    await db.flush()
+    return await _stash_read(db, stash)
+
+
+@router.post("/{session_id}/stash/gm-remove", response_model=CampaignStash)
+async def stash_gm_remove(
+    session_id: int,
+    body: StashGMRemoveRequest,
+    user_id: Annotated[int, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> CampaignStash:
+    """GM: destroy an item (or part of a stack) or coins from the party stash."""
+    session_obj, _me, stash = await _gm_stash_ctx(session_id, user_id, db)
+    if (body.item_id is None) == (body.coins is None):
+        raise HTTPException(status_code=422, detail="nothing_to_give")
+    snapshots: list[dict] = []
+    removed: dict[str, int] = {}
+    if body.item_id is not None:
+        snap = await remove_item(db, stash, body.item_id, body.quantity)
+        snapshots = [snap]
+        what = f"{snap['name']} (×{snap['quantity']})"
+    else:
+        removed = remove_coins(stash, body.coins)
+        what = _coins_text(removed)
+    await db.flush()
+    await db.refresh(stash, attribute_names=["items"])
+    stash.recalculate_encumbrance()
+    _post_stash_message(
+        db, session_obj, user_id, SessionRole.GAME_MASTER, "__GM__",
+        f"Il master ha tolto dal deposito: {what}", "gm_stash_remove", _STASH, _GM, snapshots, removed)
+    await db.flush()
+    return await _stash_read(db, stash)
 
 
 @router.get(

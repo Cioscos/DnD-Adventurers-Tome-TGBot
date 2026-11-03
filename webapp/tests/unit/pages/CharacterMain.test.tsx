@@ -57,6 +57,10 @@ vi.mock('@/components/ui/Skeleton', async () => {
   return { default: { Line: S, Rect: S, Circle: S } }
 })
 vi.mock('@/components/ui/InSessionBanner', () => ({ default: () => null }))
+vi.mock('@/components/ui/CampaignSessionBanner', async () => {
+  const React = await import('react')
+  return { default: () => React.createElement('div', { 'data-testid': 'campaign-banner' }) }
+})
 vi.mock('@/components/PendingSavesBanner', () => ({ default: () => null }))
 vi.mock('@/components/character/CharacterSwiper', async () => {
   const React = await import('react')
@@ -77,6 +81,12 @@ describe('CharacterMain', () => {
     renderWithProviders(<CharacterMain />)
     expect(await screen.findByText('Aragorn')).toBeInTheDocument()
     expect(screen.getByTestId('swiper')).toBeInTheDocument()
+  })
+
+  it('mounts the campaign session banner on the character hub', async () => {
+    getChar.mockResolvedValue({ id: 7, name: 'Aragorn', heroic_inspiration: false })
+    renderWithProviders(<CharacterMain />)
+    expect(await screen.findByTestId('campaign-banner')).toBeInTheDocument()
   })
 
   it('toggles heroic inspiration through the API', async () => {

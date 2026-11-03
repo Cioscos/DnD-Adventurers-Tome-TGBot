@@ -10,10 +10,23 @@ import ItemForm from '@/pages/inventory/ItemForm'
 import { buildItemMetadata, type ItemFormData } from '@/pages/inventory/itemMetadata'
 import { api } from '@/api/client'
 import { haptic } from '@/auth/telegram'
+import { useToast } from '@/hooks/useToast'
 import type { SessionParticipant } from '@/types'
+
+const toPayload = (f: ItemFormData) => ({
+  name: f.name.trim(),
+  description: f.description.trim() || undefined,
+  weight: Number(f.weight) || 0,
+  quantity: Number(f.quantity) || 1,
+  item_type: f.item_type,
+  item_metadata: buildItemMetadata(f),
+  is_equipped: false,
+})
 
 interface GrantItemModalProps {
   sessionId: number
+  /** Destinazione deposito di gruppo: dopo il form l'oggetto va dritto nel deposito, senza scegliere i destinatari. */
+  stash?: boolean
   participants: SessionParticipant[]
   gmUserId: number | null
   onClose: () => void
@@ -21,12 +34,14 @@ interface GrantItemModalProps {
 
 export default function GrantItemModal({
   sessionId,
+  stash,
   participants,
   gmUserId,
   onClose,
 }: GrantItemModalProps) {
   const { t } = useTranslation()
   const qc = useQueryClient()
+  const toast = useToast()
   const [step, setStep] = useState<'form' | 'recipients'>('form')
   const [pendingForm, setPendingForm] = useState<ItemFormData | null>(null)
   const [selected, setSelected] = useState<Set<number>>(new Set())
@@ -49,15 +64,7 @@ export default function GrantItemModal({
       if (!pendingForm) throw new Error('no item')
       return api.sessions.grantItem(sessionId, {
         recipient_user_ids: Array.from(selected),
-        item: {
-          name: pendingForm.name.trim(),
-          description: pendingForm.description.trim() || undefined,
-          weight: Number(pendingForm.weight) || 0,
-          quantity: Number(pendingForm.quantity) || 1,
-          item_type: pendingForm.item_type,
-          item_metadata: buildItemMetadata(pendingForm),
-          is_equipped: false,
-        },
+        item: toPayload(pendingForm),
       })
     },
     onSuccess: () => {
@@ -68,10 +75,22 @@ export default function GrantItemModal({
     },
   })
 
+  const stashMutation = useMutation({
+    mutationFn: (data: ItemFormData) => api.sessions.stashGmAdd(sessionId, { item: toPayload(data) }),
+    onSuccess: () => {
+      haptic.success()
+      qc.invalidateQueries({ queryKey: ['session-stash', sessionId] })
+      qc.invalidateQueries({ queryKey: ['session-feed'] })
+      onClose()
+    },
+    onError: () => toast.error(t('common.action_failed')),
+  })
+
   const handleFormSubmit = useCallback((data: ItemFormData) => {
+    if (stash) return stashMutation.mutate(data)
     setPendingForm(data)
     setStep('recipients')
-  }, [])
+  }, [stash, stashMutation])
 
   if (step === 'form') {
     return (
@@ -79,7 +98,7 @@ export default function GrantItemModal({
         initialData={null}
         onSubmit={handleFormSubmit}
         onCancel={onClose}
-        isPending={false}
+        isPending={stashMutation.isPending}
       />
     )
   }

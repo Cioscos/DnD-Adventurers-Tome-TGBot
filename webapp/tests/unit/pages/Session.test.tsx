@@ -4,9 +4,9 @@ import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from '../utils/renderWithProviders'
 import Session from '@/pages/Session'
 
-const { me, list, create, navigateSpy } = vi.hoisted(() => ({ me: vi.fn(), list: vi.fn(), create: vi.fn(), navigateSpy: vi.fn() }))
+const { me, list, create, navigateSpy, campaignList } = vi.hoisted(() => ({ me: vi.fn(), list: vi.fn(), create: vi.fn(), navigateSpy: vi.fn(), campaignList: vi.fn() }))
 
-vi.mock('@/api/client', () => ({ api: { sessions: { me, create }, characters: { list } } }))
+vi.mock('@/api/client', () => ({ api: { sessions: { me, create }, characters: { list }, campaigns: { list: campaignList, create: vi.fn() } } }))
 vi.mock('react-router-dom', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
   return { ...actual, useNavigate: () => navigateSpy }
@@ -42,7 +42,11 @@ vi.mock('@/components/ui/Button', async () => {
   return { default: (p: { onClick?: () => void; disabled?: boolean; loading?: boolean; children?: unknown }) => React.createElement('button', { onClick: p.onClick, disabled: p.disabled || p.loading }, p.children) }
 })
 
-afterEach(() => { me.mockReset(); list.mockReset(); create.mockReset(); navigateSpy.mockReset() })
+vi.mock('@/components/ui/Sheet', () => ({
+  default: ({ open, title, children }: { open: boolean; title?: string; children: React.ReactNode }) => (open ? <div><h2>{title}</h2>{children}</div> : null),
+}))
+
+afterEach(() => { campaignList.mockReset(); me.mockReset(); list.mockReset(); create.mockReset(); navigateSpy.mockReset() })
 
 describe('Session', () => {
   it('resumes an active session', async () => {
@@ -56,12 +60,28 @@ describe('Session', () => {
   it('offers create + join on the landing when there is no active session', async () => {
     me.mockResolvedValue(null)
     list.mockResolvedValue([{ id: 7, name: 'Aragorn', class_summary: 'Ranger' }])
+    campaignList.mockResolvedValue([])
     create.mockResolvedValue({ id: 9 })
     renderWithProviders(<Session />)
     const createBtn = await screen.findByRole('button', { name: 'session.create_button' })
     expect(screen.getByRole('button', { name: 'session.join_button' })).toBeEnabled()
     await userEvent.click(createBtn)
+    expect(await screen.findByText('campaign.start_title')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'campaign.start_go' }))
     await waitFor(() => expect(create).toHaveBeenCalledTimes(1))
+  })
+
+  it('lists "my campaigns" with links to the campaign page', async () => {
+    me.mockResolvedValue(null)
+    list.mockResolvedValue([])
+    campaignList.mockResolvedValue([
+      { id: 3, name: 'Coda del Vento', is_gm: true, member_count: 4, last_session_at: null, active_session_id: null },
+      { id: 4, name: 'Phandalin', is_gm: false, member_count: 3, last_session_at: null, active_session_id: null },
+    ])
+    renderWithProviders(<Session />)
+    expect(await screen.findByText('campaign.mine')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: /Phandalin/ }))
+    expect(navigateSpy).toHaveBeenCalledWith('/campaign/4')
   })
 
   it('disables join when the player has no characters', async () => {

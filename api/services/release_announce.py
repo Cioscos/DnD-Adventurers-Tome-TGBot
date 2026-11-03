@@ -17,6 +17,7 @@ from pathlib import Path
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from api.services.campaigns import STASH_USER_ID
 from api.services.telegram_notify import bot_token_configured, miniapp_url, send_telegram_message
 from core.db.models import AppMeta, BotUser, Character
 
@@ -66,7 +67,7 @@ async def recipients(session: AsyncSession) -> dict[int, str]:
     users = (await session.execute(select(BotUser))).scalars().all()
     opted_out = {u.user_id for u in users if not u.announcements}
     langs = {u.user_id: u.language_code for u in users if u.announcements}
-    owners = (await session.execute(select(Character.user_id).distinct())).scalars().all()
+    owners = (await session.execute(select(Character.user_id).where(Character.user_id != STASH_USER_ID).distinct())).scalars().all()
     for uid in owners:
         if uid not in opted_out:
             langs.setdefault(uid, None)

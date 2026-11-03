@@ -4,22 +4,23 @@ import Sheet from '@/components/ui/Sheet'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import { PartnerPicker } from '@/pages/inventory/GiveSheet'
-import { COIN_ORDER, useTradeMutation } from '@/hooks/useTradeMutation'
+import { COIN_ORDER, initialTarget, useTradeMutation } from '@/hooks/useTradeMutation'
 import type { CoinKey, SessionParticipant } from '@/types'
 
 interface Props {
   charId: number
   sessionId: number
   partners: SessionParticipant[]
+  stash?: boolean
   /** Totale posseduto per moneta (borsa + contenitori). */
   totals: Partial<Record<CoinKey, number>>
   onClose: () => void
 }
 
 /** «Dai a…» per monete sciolte: importo per moneta, limitato al totale posseduto. */
-export default function GiveCoinsSheet({ charId, sessionId, partners, totals, onClose }: Props) {
+export default function GiveCoinsSheet({ charId, sessionId, partners, stash, totals, onClose }: Props) {
   const { t } = useTranslation()
-  const [to, setTo] = useState<number | null>(partners.length === 1 ? partners[0].user_id : null)
+  const [to, setTo] = useState<number | null>(initialTarget(partners, stash))
   const [draft, setDraft] = useState<Partial<Record<CoinKey, string>>>({})
   const give = useTradeMutation(charId, sessionId, onClose)
 
@@ -46,7 +47,7 @@ export default function GiveCoinsSheet({ charId, sessionId, partners, totals, on
             />
           ))}
         </div>
-        <PartnerPicker partners={partners} value={to} onChange={setTo} />
+        <PartnerPicker partners={partners} stash={stash} value={to} onChange={setTo} />
         <div className="flex gap-2 pt-1">
           <Button variant="secondary" fullWidth onClick={onClose}>{t('common.cancel')}</Button>
           <Button variant="primary" fullWidth disabled={!ok} loading={give.isPending}

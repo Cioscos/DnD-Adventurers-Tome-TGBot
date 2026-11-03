@@ -26,7 +26,7 @@ vi.mock('@/auth/telegram', () => ({
 }))
 vi.mock('@/components/Layout', async () => {
   const React = await import('react')
-  return { default: (p: { children?: unknown }) => React.createElement('div', null, p.children) }
+  return { default: (p: { title?: string; children?: unknown }) => React.createElement('div', null, React.createElement('h1', null, p.title), p.children) }
 })
 
 afterEach(() => { live.mockReset(); me.mockReset() })
@@ -78,5 +78,28 @@ describe('SessionRoom with an encounter', () => {
     renderWithProviders(<SessionRoom />)
     expect(await screen.findByTestId('combat-entry-card')).toBeTruthy()
     expect(screen.queryByTestId('combatant-row')).toBeNull()
+  })
+})
+
+describe('SessionRoom in a campaign', () => {
+  const base = {
+    id: 12, code: 'ABC123', gm_user_id: 1, gm_display_name: 'GM', status: 'active', title: 'Saga',
+    created_at: '', last_activity_at: '', closed_at: null, participants: [], live_characters: [], encounter: null,
+  }
+
+  it('shows the campaign name instead of the session code', async () => {
+    me.mockResolvedValue({ user_id: 1 })
+    live.mockResolvedValue({ ...base, campaign_id: 3, campaign_name: 'La Saga' })
+    renderWithProviders(<SessionRoom />)
+    expect(await screen.findByRole('heading', { name: 'La Saga' })).toBeTruthy()
+    expect(screen.queryByText('ABC123')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'common.copy' })).toBeNull()
+  })
+
+  it('a single evening still shows the code', async () => {
+    me.mockResolvedValue({ user_id: 1 })
+    live.mockResolvedValue({ ...base, campaign_id: null, campaign_name: null })
+    renderWithProviders(<SessionRoom />)
+    expect(await screen.findByText('ABC123')).toBeTruthy()
   })
 })

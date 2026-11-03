@@ -8,6 +8,13 @@ describe('parseStartParam', () => {
     expect(parseStartParam('  join_XY12Z9  ')).toEqual({ kind: 'join', code: 'XY12Z9' })
   })
 
+  it('parses camp_<CODE> into a campaign action with uppercase 8-char code', () => {
+    expect(parseStartParam('camp_ab12cd34')).toEqual({ kind: 'campaign', code: 'AB12CD34' })
+    expect(parseStartParam('camp_AB12CD3')).toBeNull()
+    expect(parseStartParam('camp_AB12CD345')).toBeNull()
+    expect(parseStartParam('join_ABC123')).toEqual({ kind: 'join', code: 'ABC123' })
+  })
+
   it('parses shr_<token> into a share action preserving case', () => {
     expect(parseStartParam('shr_Ab1-_x9Zq2w')).toEqual({ kind: 'share', token: 'Ab1-_x9Zq2w' })
     expect(parseStartParam('  shr_abcdefgh  ')).toEqual({ kind: 'share', token: 'abcdefgh' })

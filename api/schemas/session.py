@@ -13,6 +13,7 @@ from api.schemas.item import ItemCreate
 
 class SessionCreateRequest(BaseModel):
     title: Optional[str] = Field(default=None, max_length=120)
+    campaign_id: Optional[int] = None
 
 
 class SessionJoinRequest(BaseModel):
@@ -88,6 +89,8 @@ class GameSessionRead(BaseModel):
     last_activity_at: str
     closed_at: Optional[str] = None
     participants: list[SessionParticipantRead] = []
+    campaign_id: Optional[int] = None
+    campaign_name: Optional[str] = None
     # Popolato solo da GET /sessions/me: stato dell'incontro non terminato, se esiste.
     encounter_status: Optional[Literal["setup", "active"]] = None
 
@@ -175,6 +178,31 @@ class TradeRequest(BaseModel):
 
     from_character_id: int
     to_user_id: int
+    item_id: Optional[int] = None
+    quantity: Optional[int] = None
+    coins: Optional[dict[str, int]] = None
+
+
+class StashPutRequest(BaseModel):
+    from_character_id: int
+    item_id: Optional[int] = None
+    quantity: Optional[int] = None
+    coins: Optional[dict[str, int]] = None
+
+
+class StashTakeRequest(BaseModel):
+    to_character_id: int
+    item_id: Optional[int] = None
+    quantity: Optional[int] = None
+    coins: Optional[dict[str, int]] = None
+
+
+class StashGMAddRequest(BaseModel):
+    item: Optional[ItemCreate] = None
+    coins: Optional[dict[str, int]] = None
+
+
+class StashGMRemoveRequest(BaseModel):
     item_id: Optional[int] = None
     quantity: Optional[int] = None
     coins: Optional[dict[str, int]] = None

@@ -11,6 +11,7 @@ import {
 import { api, ApiError } from '@/api/client'
 import { cardStatus, effectiveAc, effectiveHpMax } from '@/lib/characterStatus'
 import HPGauge from '@/components/ui/HPGauge'
+import CampaignSessionBanner from '@/components/ui/CampaignSessionBanner'
 import OfflineNotice from '@/components/ui/OfflineNotice'
 import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
@@ -286,6 +287,8 @@ export default function CharacterSelect() {
         </div>
 
         <OfflineNotice query={charactersQuery} />
+
+        <CampaignSessionBanner />
 
         {/* Session CTA (always available — GM does not need a character) */}
         <div className="flex items-center gap-3">

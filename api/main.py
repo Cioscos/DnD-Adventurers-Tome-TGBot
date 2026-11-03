@@ -25,6 +25,7 @@ load_dotenv()
 from api.database import engine
 from api.routers import (
     abilities,
+    campaigns,
     characters,
     choices,
     classes,
@@ -178,6 +179,7 @@ app.include_router(maps.router)
 app.include_router(silhouette.router)
 app.include_router(dice.router)
 app.include_router(history.router)
+app.include_router(campaigns.router)
 app.include_router(sessions.router)
 app.include_router(sessions.character_turn_router)
 app.include_router(encounters.router)

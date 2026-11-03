@@ -2,9 +2,11 @@
 
 export type StartParamAction =
   | { kind: 'join'; code: string }
+  | { kind: 'campaign'; code: string }
   | { kind: 'share'; token: string }
 
 const JOIN_RE = /^join_([a-z0-9]{6})$/i
+const CAMP_RE = /^camp_([a-z0-9]{8})$/i
 // Token generato con secrets.token_urlsafe lato API: [A-Za-z0-9_-], case-sensitive
 const SHARE_RE = /^shr_([A-Za-z0-9_-]{8,64})$/
 
@@ -13,6 +15,8 @@ export function parseStartParam(param: string | null | undefined): StartParamAct
   const trimmed = param.trim()
   const join = JOIN_RE.exec(trimmed)
   if (join) return { kind: 'join', code: join[1].toUpperCase() }
+  const camp = CAMP_RE.exec(trimmed)
+  if (camp) return { kind: 'campaign', code: camp[1].toUpperCase() }
   const share = SHARE_RE.exec(trimmed)
   if (share) return { kind: 'share', token: share[1] }
   return null

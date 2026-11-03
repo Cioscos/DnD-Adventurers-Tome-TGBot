@@ -7,7 +7,7 @@ from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Body, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -24,6 +24,7 @@ from core.db.models import (
     Currency,
     PendingSave,
     GameSession,
+    CampaignMember,
     SessionParticipant,
     SessionStatus,
 )
@@ -386,6 +387,7 @@ async def delete_character(
         if game_session is not None:
             game_session.last_activity_at = _now()
 
+    await session.execute(delete(CampaignMember).where(CampaignMember.character_id == char.id))
     await session.delete(char)
 
 
