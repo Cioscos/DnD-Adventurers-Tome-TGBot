@@ -14,8 +14,11 @@ BUILTIN_TYPES: dict[str, tuple[str, str]] = {
     "npc": ("user", "emerald"),
     "quest": ("scroll", "amber"),
 }
-# shortcut: provisional icon list, Task 4 finalises it to match the frontend ATLAS_ICONS.
-ICONS: frozenset[str] = frozenset({icon for icon, _ in BUILTIN_TYPES.values()} | {"beer"})
+ICONS: frozenset[str] = frozenset({
+    "castle", "skull", "landmark", "triangle-alert", "user", "scroll", "beer", "tent", "mountain", "tree-pine",
+    "waves", "anchor", "ship", "swords", "shield", "crown", "gem", "coins", "key", "flame", "moon", "ghost", "bone",
+    "church", "house", "store", "flag", "eye", "compass", "map-pin", "sparkles", "wheat", "hammer", "book-open",
+})  # identical to webapp/src/lib/atlasIcons.ts ATLAS_ICONS keys
 COLORS: frozenset[str] = frozenset({"gold", "crimson", "emerald", "arcane", "cobalt", "amber", "parchment"})
 
 

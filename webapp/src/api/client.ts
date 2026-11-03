@@ -37,6 +37,12 @@ import type {
   CampaignRead,
   CampaignSummary,
   LoreRead,
+  AtlasMap,
+  AtlasMarker,
+  AtlasMarkerCreate,
+  AtlasMarkerUpdate,
+  MarkerType,
+  MarkerVisibility,
   ScheduleRead,
   CampaignDetail,
   CampaignMemberStatus,
@@ -232,7 +238,7 @@ async function request<T>(
 async function requestFormData<T>(
   path: string,
   formData: FormData,
-  method: 'POST' | 'PATCH' = 'POST',
+  method: 'POST' | 'PATCH' | 'PUT' = 'POST',
 ): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {
     method,
@@ -978,6 +984,42 @@ export const api = {
       `${BASE_URL}/campaigns/${campId}/lore/${id}/image?init_data=${encodeURIComponent(getInitData())}&v=${encodeURIComponent(v)}`,
     audioUrl: (campId: number, id: number, v: string) =>
       `${BASE_URL}/campaigns/${campId}/lore/${id}/audio?init_data=${encodeURIComponent(getInitData())}&v=${encodeURIComponent(v)}`,
+  },
+
+  atlas: {
+    maps: (campId: number) => request<AtlasMap[]>(`/campaigns/${campId}/atlas/maps`),
+    uploadMap: (campId: number, fd: FormData) => requestFormData<AtlasMap>(`/campaigns/${campId}/atlas/maps`, fd),
+    renameMap: (campId: number, mapId: number, name: string) =>
+      request<AtlasMap>(`/campaigns/${campId}/atlas/maps/${mapId}`, { method: 'PATCH', body: JSON.stringify({ name }) }),
+    replaceImage: (campId: number, mapId: number, fd: FormData) =>
+      requestFormData<AtlasMap>(`/campaigns/${campId}/atlas/maps/${mapId}/image`, fd, 'PUT'),
+    revealMap: (campId: number, mapId: number) =>
+      request<AtlasMap>(`/campaigns/${campId}/atlas/maps/${mapId}/reveal`, { method: 'POST' }),
+    hideMap: (campId: number, mapId: number) =>
+      request<AtlasMap>(`/campaigns/${campId}/atlas/maps/${mapId}/hide`, { method: 'POST' }),
+    deleteMap: (campId: number, mapId: number) =>
+      request<{ deleted_markers: number }>(`/campaigns/${campId}/atlas/maps/${mapId}`, { method: 'DELETE' }),
+    // v = updated_at: a replaced image gets a new URL, so the browser cache never shows the old one.
+    mapImageUrl: (campId: number, mapId: number, v: string) =>
+      `${BASE_URL}/campaigns/${campId}/atlas/maps/${mapId}/image?init_data=${encodeURIComponent(getInitData())}&v=${encodeURIComponent(v)}`,
+    markers: (campId: number, mapId: number) =>
+      request<AtlasMarker[]>(`/campaigns/${campId}/atlas/maps/${mapId}/markers`),
+    createMarker: (campId: number, mapId: number, body: AtlasMarkerCreate) =>
+      request<AtlasMarker>(`/campaigns/${campId}/atlas/maps/${mapId}/markers`, { method: 'POST', body: JSON.stringify(body) }),
+    updateMarker: (campId: number, markerId: number, body: AtlasMarkerUpdate) =>
+      request<AtlasMarker>(`/campaigns/${campId}/atlas/markers/${markerId}`, { method: 'PATCH', body: JSON.stringify(body) }),
+    setVisibility: (campId: number, markerId: number, visibility: MarkerVisibility) =>
+      request<AtlasMarker>(`/campaigns/${campId}/atlas/markers/${markerId}/visibility`, {
+        method: 'POST',
+        body: JSON.stringify({ visibility }),
+      }),
+    deleteMarker: (campId: number, markerId: number) =>
+      request<void>(`/campaigns/${campId}/atlas/markers/${markerId}`, { method: 'DELETE' }),
+    types: (campId: number) => request<MarkerType[]>(`/campaigns/${campId}/atlas/marker-types`),
+    createType: (campId: number, body: { name: string; icon: string; color: string }) =>
+      request<MarkerType>(`/campaigns/${campId}/atlas/marker-types`, { method: 'POST', body: JSON.stringify(body) }),
+    deleteType: (campId: number, typeId: number) =>
+      request<void>(`/campaigns/${campId}/atlas/marker-types/${typeId}`, { method: 'DELETE' }),
   },
 
   campaigns: {
