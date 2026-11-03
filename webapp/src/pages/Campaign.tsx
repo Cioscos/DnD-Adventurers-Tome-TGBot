@@ -22,16 +22,10 @@ import { useShareMessage } from '@/hooks/useShareMessage'
 import { useToast } from '@/hooks/useToast'
 import { notifyMutationError } from '@/lib/mutationError'
 import { dayHeader } from '@/lib/relativeTime'
+import { formatDuration } from '@/lib/duration'
 import type { CampaignDetail, CampaignMember, CampaignMemberStatus } from '@/types'
 
 const STATUSES: CampaignMemberStatus[] = ['active', 'reserve', 'dead']
-
-/** 13200 → "3h 40m"; sotto l'ora "25m". Uguale in it/en. */
-function formatDuration(seconds: number): string {
-  const h = Math.floor(seconds / 3600)
-  const m = Math.floor((seconds % 3600) / 60)
-  return h > 0 ? (m > 0 ? `${h}h ${String(m).padStart(2, '0')}m` : `${h}h`) : `${m}m`
-}
 
 type Confirm = { kind: 'regen' } | { kind: 'delete' } | { kind: 'member'; member: CampaignMember } | null
 
@@ -295,12 +289,28 @@ export default function Campaign() {
         <p className="text-sm text-dnd-text-muted italic">{t('campaign.nights_empty')}</p>
       ) : (
         <ul className="space-y-1">
-          {camp.sessions.map((s) => (
-            <li key={s.id} className="flex items-baseline justify-between gap-3 text-sm font-body">
-              <span className="min-w-0 break-words">{dayHeader(s.created_at, locale)}</span>
-              <span className="shrink-0 font-mono tabular-nums text-dnd-text-muted">{formatDuration(s.duration_seconds)}</span>
-            </li>
-          ))}
+          {camp.sessions.map((s) => {
+            const row = (
+              <>
+                <span className="min-w-0 break-words">
+                  {t('campaign.night_n', { n: s.number })} · {dayHeader(s.created_at, locale)}
+                </span>
+                <span className="shrink-0 font-mono tabular-nums text-dnd-text-muted">{formatDuration(s.duration_seconds)}</span>
+              </>
+            )
+            const cls = 'flex w-full items-baseline justify-between gap-3 text-sm font-body'
+            return (
+              <li key={s.id}>
+                {s.has_recap ? (
+                  <Pressable className={`${cls} min-h-11 items-center text-left`} onClick={() => navigate(`/campaign/${camp.id}/recap/${s.id}`)}>
+                    {row}
+                  </Pressable>
+                ) : (
+                  <div className={cls}>{row}</div>
+                )}
+              </li>
+            )
+          })}
         </ul>
       )}
 

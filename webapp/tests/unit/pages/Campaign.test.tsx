@@ -53,7 +53,7 @@ const detail = (over: Partial<CampaignDetail> = {}): CampaignDetail => ({
     items: [{ id: 1, name: 'Carro', weight: 0, quantity: 1, item_type: 'container', is_equipped: false, item_metadata: { container: { capacity_lb: null, counts_weight: false, quick_access: false } } }],
     currency: { id: 1, copper: 0, silver: 85, electrum: 0, gold: 12400, platinum: 0 },
   },
-  sessions: [{ id: 8, created_at: '2026-10-28T20:00:00+00:00', duration_seconds: 13200 }, { id: 9, created_at: '2026-10-21T20:00:00+00:00', duration_seconds: 14700 }, { id: 10, created_at: '2026-10-14T20:00:00+00:00', duration_seconds: 18000 }],
+  sessions: [{ id: 8, created_at: '2026-10-28T20:00:00+00:00', duration_seconds: 13200, number: 3, has_recap: true }, { id: 9, created_at: '2026-10-21T20:00:00+00:00', duration_seconds: 14700, number: 2, has_recap: false }, { id: 10, created_at: '2026-10-14T20:00:00+00:00', duration_seconds: 18000, number: 1, has_recap: false }],
   my_last_character_id: null,
   ...over,
 } as CampaignDetail)
@@ -68,6 +68,14 @@ beforeEach(() => {
 afterEach(() => { vi.clearAllMocks() })
 
 describe('Campaign page', () => {
+  it('opens the recap of a night that has one, not of one without', async () => {
+    get.mockResolvedValue(detail())
+    renderPage()
+    await userEvent.click(await screen.findByRole('button', { name: /campaign\.night_n/ }))
+    expect(navigateSpy).toHaveBeenCalledWith('/campaign/5/recap/8')
+    expect(screen.getAllByRole('button', { name: /campaign\.night_n/ })).toHaveLength(1)
+  })
+
   it('shows the GM view: code, members, stash, sessions with formatted duration', async () => {
     get.mockResolvedValue(detail())
     renderPage()

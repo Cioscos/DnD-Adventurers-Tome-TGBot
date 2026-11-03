@@ -40,6 +40,7 @@ import type {
   CampaignDetail,
   CampaignMemberStatus,
   ActiveCampaignSession,
+  SessionRecap,
   CampaignStash,
   TurnState,
   PendingSaveRollResult,
@@ -933,6 +934,9 @@ export const api = {
     invite: (sessionId: number) =>
       request<{ prepared_message_id: string }>(
         `/sessions/${sessionId}/share/invite`, { method: 'POST' }),
+    recap: (sessionId: number) =>
+      request<{ prepared_message_id: string }>(
+        `/share/recap/${sessionId}`, { method: 'POST' }),
     campaignInvite: (campaignId: number) =>
       request<{ prepared_message_id: string }>(
         `/share/campaign-invite/${campaignId}`, { method: 'POST' }),
@@ -1026,6 +1030,7 @@ export const api = {
       }),
     get: (id: number) => request<GameSession>(`/sessions/${id}`),
     live: (id: number) => request<GameSessionLive>(`/sessions/${id}/live`),
+    recap: (id: number) => request<SessionRecap>(`/sessions/${id}/recap`),
     leave: (id: number) =>
       request<void>(`/sessions/${id}/leave`, { method: 'POST' }),
     close: (id: number) =>

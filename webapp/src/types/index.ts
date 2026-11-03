@@ -477,6 +477,45 @@ export interface CampaignSessionEntry {
   id: number
   created_at: string
   duration_seconds: number
+  number: number
+  has_recap: boolean
+}
+
+export interface SessionRecapCharacter {
+  character_id: number
+  name: string
+  player_name: string | null
+  class_summary: string
+  level: number
+  dice: { rolls: number; nat20: number; nat1: number; highest: number | null }
+  damage_taken: number
+  healed: number
+  downed: number
+  death_saves: { successes: number; failures: number }
+  spells_cast: number
+  slots_used: Record<string, number>
+  rests: { short: number; long: number }
+  conditions: string[]
+}
+
+export interface SessionRecap {
+  version: number
+  session_id: number
+  campaign_id: number | null
+  campaign_name: string | null
+  number: number | null
+  started_at: string
+  ended_at: string
+  duration_seconds: number
+  characters: SessionRecapCharacter[]
+  combat: { encounters: number; rounds: number; monsters: string[] }
+  items: {
+    gm_grants: { to: string | null; item: string; quantity: number }[]
+    trades: { from: string; to: string; summary: string }[]
+    stash: { kind: 'stash_put' | 'stash_take' | 'gm_stash_add' | 'gm_stash_remove'; who: string | null; summary: string }[]
+  }
+  lore: { id: number; title: string }[]
+  highlights: { key: 'unluckiest' | 'luckiest' | 'most_damage' | 'top_healer'; character_id: number; name: string; value: number }[]
 }
 
 export interface CampaignDetail {

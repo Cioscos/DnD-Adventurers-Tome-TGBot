@@ -34,6 +34,7 @@ const Identity = lazy(() => import('./pages/Identity'))
 const Settings = lazy(() => import('./pages/Settings'))
 const Session = lazy(() => import('./pages/Session'))
 const Campaign = lazy(() => import('./pages/Campaign'))
+const CampaignRecap = lazy(() => import('./pages/CampaignRecap'))
 const SessionJoin = lazy(() => import('./pages/SessionJoin'))
 const SessionRoom = lazy(() => import('./pages/SessionRoom'))
 const Combat = lazy(() => import('./pages/Combat'))
@@ -104,6 +105,7 @@ export default function App() {
             <Route path="/changelog" element={<Changelog />} />
             <Route path="/session" element={<Session />} />
             <Route path="/campaign/:id" element={<Campaign />} />
+            <Route path="/campaign/:id/recap/:sessionId" element={<CampaignRecap />} />
             <Route path="/session/join" element={<SessionJoin />} />
             <Route path="/session/:id" element={<SessionRoom />} />
             <Route path="/session/:id/combat" element={<Combat />} />
