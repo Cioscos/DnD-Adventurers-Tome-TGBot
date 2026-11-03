@@ -6,6 +6,7 @@ docs/superpowers/specs/2026-06-10-group-sharing-design.md
 """
 from __future__ import annotations
 
+import re
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -167,8 +168,9 @@ async def share_campaign_invite(
     username = await telegram_notify.get_bot_username()
     if not username:
         raise HTTPException(status_code=502, detail="Bot username unavailable")
+    name = re.sub(r"([_*`\[])", r"\\\1", camp.name)  # legacy Markdown escapes
     text = (
-        f"🗡 *{camp.name}*\n"
+        f"🗡 *{name}*\n"
         f"Iscriviti alla campagna con il codice *{camp.invite_code}* "
         f"oppure tocca il bottone qui sotto."
     )

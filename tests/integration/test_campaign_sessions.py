@@ -6,7 +6,7 @@ from sqlalchemy import select
 from api.tasks import session_cleanup
 from core.db.models import CampaignMember, GameSession, SessionParticipant, SessionStatus
 from tests.integration._encounter_helpers import GM_ID, PLAYER_ID
-from tests.integration.test_campaigns_api import STRANGER_ID, _char, _enrolled, act
+from tests.integration.test_campaigns_api import STRANGER_ID, _char, _enrolled, _new_campaign, act
 
 
 async def _start(client, camp_id, title=None):
@@ -167,3 +167,48 @@ async def test_preselection_skips_dead_or_unenrolled(client, test_session_factor
     r = await client.delete(f"/campaigns/{camp['id']}/members/{cid}")
     assert r.status_code == 204
     assert (await client.get("/campaigns/active-for-me")).json() == []
+
+
+async def test_join_by_code_enforces_membership(client, test_session_factory):
+    camp, cid = await _enrolled(client, test_session_factory)
+    act(GM_ID)
+    s = (await _start(client, camp["id"])).json()
+    code = s["code"]
+    act(GM_ID + 1)
+    other_camp = await _new_campaign(client, "Altra")
+    act(PLAYER_ID)
+    outsider = await _char(test_session_factory, PLAYER_ID, "Fuori")
+    foreign = await _char(test_session_factory, PLAYER_ID, "Altrove")
+    r = await client.post("/campaigns/enroll", json={"code": other_camp["invite_code"], "character_id": foreign})
+    assert r.status_code == 200
+    for bad in (outsider, foreign):
+        r = await client.post("/sessions/join", json={"code": code, "character_id": bad})
+        assert r.status_code == 422 and r.json()["detail"] == "not_a_member"
+    async with test_session_factory() as db:
+        m = (await db.execute(select(CampaignMember).where(CampaignMember.character_id == cid))).scalar_one()
+        m.status = "dead"
+        await db.commit()
+    r = await client.post("/sessions/join", json={"code": code, "character_id": cid})
+    assert r.status_code == 422 and r.json()["detail"] == "character_dead"
+    async with test_session_factory() as db:
+        m = (await db.execute(select(CampaignMember).where(CampaignMember.character_id == cid))).scalar_one()
+        m.status = "active"
+        await db.commit()
+    r = await client.post("/sessions/join", json={"code": code, "character_id": cid})
+    assert r.status_code == 200
+
+
+async def test_remove_member_leaves_live_session(client, test_session_factory):
+    camp, cid = await _enrolled(client, test_session_factory)
+    act(GM_ID)
+    s = (await _start(client, camp["id"])).json()
+    act(PLAYER_ID)
+    await client.post(f"/campaigns/{camp['id']}/session/join", json={"character_id": cid})
+    act(GM_ID)
+    assert (await client.delete(f"/campaigns/{camp['id']}/members/{cid}")).status_code == 204
+    async with test_session_factory() as db:
+        rows = (await db.execute(select(SessionParticipant).where(
+            SessionParticipant.session_id == s["id"], SessionParticipant.character_id == cid))).all()
+        assert rows == []
+    act(PLAYER_ID)
+    assert (await client.get(f"/sessions/{s['id']}")).status_code in (403, 404)

@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from typing import Annotated, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
-from sqlalchemy import and_, func, or_, select, update
+from sqlalchemy import and_, delete, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -365,6 +365,14 @@ async def remove_member(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> Response:
     member = await _get_member(db, campaign_id, character_id, user_id)
+    # also drop the PG from the campaign's live session (it would keep stash access)
+    live = select(GameSession.id).where(
+        GameSession.campaign_id == campaign_id, GameSession.status == SessionStatus.ACTIVE
+    )
+    await db.execute(delete(SessionParticipant).where(
+        SessionParticipant.character_id == character_id,
+        SessionParticipant.session_id.in_(live),
+    ))
     await db.delete(member)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 

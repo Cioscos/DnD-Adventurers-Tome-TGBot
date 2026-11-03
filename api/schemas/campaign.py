@@ -1,9 +1,9 @@
 """Pydantic schemas for the campaigns API."""
 from __future__ import annotations
 
-from typing import Literal, Optional
+from typing import Annotated, Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, StringConstraints
 
 from api.schemas.common import CurrencyRead
 from api.schemas.item import ItemRead
@@ -12,7 +12,7 @@ MemberStatus = Literal["active", "reserve", "dead"]
 
 
 class CampaignCreate(BaseModel):
-    name: str = Field(min_length=1, max_length=120)
+    name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=120)]
 
 
 class CampaignEnroll(BaseModel):

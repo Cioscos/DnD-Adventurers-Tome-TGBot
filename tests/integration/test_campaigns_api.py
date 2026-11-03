@@ -229,3 +229,23 @@ async def test_share_campaign_invite(client, test_session_factory, monkeypatch):
     assert r.status_code == 200 and r.json()["prepared_message_id"] == "prep-1"
     blob = str(captured)
     assert f"startapp=camp_{camp['invite_code']}" in blob
+
+
+async def test_blank_name_rejected_and_trimmed(client):
+    act(GM_ID)
+    assert (await client.post("/campaigns", json={"name": "   "})).status_code == 422
+    camp = await _new_campaign(client, "  Saga  ")
+    assert camp["name"] == "Saga"
+    assert (await client.patch(f"/campaigns/{camp['id']}", json={"name": "  "})).status_code == 422
+    assert (await client.patch(f"/campaigns/{camp['id']}", json={"name": " Nuova "})).json()["name"] == "Nuova"
+
+
+async def test_share_campaign_invite_escapes_markdown(client, monkeypatch):
+    captured = install_fake_telegram(monkeypatch)
+    act(GM_ID)
+    camp = await _new_campaign(client, "Il_regno *rosso*")
+    r = await client.post(f"/share/campaign-invite/{camp['id']}")
+    assert r.status_code == 200
+    call = next(c for c in captured if "savePreparedInlineMessage" in c["url"])
+    text = call["json"]["result"]["input_message_content"]["message_text"]
+    assert r"*Il\_regno \*rosso\**" in text

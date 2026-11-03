@@ -54,6 +54,7 @@ from api.services.condition_effects import character_effect_payload
 from api.services.encounter_view import build_encounter_block
 from core.db.models import (
     Campaign,
+    CampaignMember,
     Character,
     CharacterHistory,
     Combatant,
@@ -426,6 +427,17 @@ async def join_session(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Character not found or not yours",
         )
+
+    # Campaign sessions expose the party stash: the code must not bypass membership.
+    if session.campaign_id is not None:
+        member = await db.scalar(select(CampaignMember).where(
+            CampaignMember.campaign_id == session.campaign_id,
+            CampaignMember.character_id == char.id,
+        ))
+        if member is None:
+            raise HTTPException(status_code=422, detail="not_a_member")
+        if member.status == "dead":
+            raise HTTPException(status_code=422, detail="character_dead")
 
     db.add(SessionParticipant(
         session_id=session.id,
