@@ -23,6 +23,10 @@ def map_visible(m: CampaignMap, is_gm: bool) -> bool:
     return is_gm or m.revealed_at is not None
 
 
-def marker_visible(user_id: int):
+def marker_clause(user_id: int):
     """SQL clause: own markers plus public ones (for the GM too: player-private never leaks)."""
     return or_(CampaignMapMarker.author_user_id == user_id, CampaignMapMarker.visibility == "public")
+
+
+def marker_visible(mk: CampaignMapMarker, user_id: int) -> bool:
+    return mk.author_user_id == user_id or mk.visibility == "public"
