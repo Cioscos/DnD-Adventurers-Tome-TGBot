@@ -201,6 +201,7 @@ async def test_gm_add_and_remove(client, test_session_factory):
     kinds = [json.loads(m.trade_payload)["kind"] for m in msgs]
     assert kinds[0] == "gm_stash_add" and kinds[-1] == "gm_stash_remove"
     assert msgs[0].body == "Il master ha messo nel deposito: Torcia (×3)"
+    assert msgs[0].sender_display_name == "__GM__" and msgs[-1].sender_display_name == "__GM__"
     assert msgs[-1].body == "Il master ha tolto dal deposito: Torcia (×3)"
     p = json.loads(msgs[0].trade_payload)
     assert p["from"] == {"character_id": None, "name": "gm"}
@@ -232,3 +233,73 @@ async def test_gm_remove_errors_leave_stash(client, test_session_factory):
     assert (await client.post(url, json={"item_id": 999999})).status_code == 404
     assert (await client.post(url, json={})).status_code == 422
     assert await _stash_state(f, stash_id) == before
+
+
+async def _second_player(client, factory, sid, name="Lyra"):
+    """STRANGER enrolls a PG in the session's campaign and joins the live session."""
+    from tests.integration.test_campaigns_api import _char
+    async with factory() as s:
+        camp = (await s.execute(select(Campaign))).scalar_one()
+        cid_camp, code = camp.id, camp.invite_code
+    pg2 = await _char(factory, STRANGER_ID, name)
+    act(STRANGER_ID)
+    r = await client.post("/campaigns/enroll", json={"code": code, "character_id": pg2})
+    assert r.status_code == 200, r.text
+    r = await client.post(f"/campaigns/{cid_camp}/session/join", json={"character_id": pg2})
+    assert r.status_code == 200, r.text
+    return pg2
+
+
+async def test_take_already_taken_by_second_player(client, test_session_factory):
+    f = test_session_factory
+    sid, pg, stash_id, ids = await _setup(client, f)
+    pg2 = await _second_player(client, f, sid)
+    act(PLAYER_ID)
+    await client.post(f"/sessions/{sid}/stash/put", json={"from_character_id": pg, "item_id": ids["sword"]})
+    act(STRANGER_ID)
+    r = await client.post(f"/sessions/{sid}/stash/take", json={"to_character_id": pg2, "item_id": ids["sword"]})
+    assert r.status_code == 200, r.text
+    act(PLAYER_ID)
+    r = await client.post(f"/sessions/{sid}/stash/take", json={"to_character_id": pg, "item_id": ids["sword"]})
+    assert r.status_code == 404
+    async with f() as s:
+        assert (await s.get(Item, ids["sword"])).character_id == pg2
+    assert (await _stash_state(f, stash_id)) == ([], 0)
+    assert len(await _kinds(f)) == 2
+
+
+async def test_put_equipped_attuned_item_unequips(client, test_session_factory):
+    from core.db.models import AbilityScore, CharacterClass, Character, EquipmentSlot
+    f = test_session_factory
+    sid, pg, stash_id, ids = await _setup(client, f)
+    meta = {"attuned": True, "ability_modifiers": [{"ability": "constitution", "kind": "relative", "value": 2}]}
+    async with f() as s:
+        s.add(AbilityScore(character_id=pg, name="constitution", value=10))
+        s.add(CharacterClass(character_id=pg, class_name="fighter", level=2, hit_die=10))
+        ring = Item(character_id=pg, name="Anello", item_type="accessory", item_metadata=json.dumps(meta),
+                    is_equipped=True, equipment_slot=EquipmentSlot.RING1)
+        s.add(ring)
+        await s.commit()
+        ring_id = ring.id
+    act(PLAYER_ID)
+    r = await client.post(f"/sessions/{sid}/stash/put", json={"from_character_id": pg, "item_id": ring_id})
+    assert r.status_code == 200, r.text
+    assert r.json()["unequipped_item_names"] == ["Anello"]
+    async with f() as s:
+        row = await s.get(Item, ring_id)
+    assert row.character_id == stash_id and not row.is_equipped and row.equipment_slot is None
+    assert json.loads(row.item_metadata)["attuned"] is False
+
+
+async def test_closed_session_410(client, test_session_factory):
+    f = test_session_factory
+    sid, pg, stash_id, ids = await _setup(client, f)
+    act(GM_ID)
+    assert (await client.post(f"/sessions/{sid}/close")).status_code == 204
+    r = await client.post(f"/sessions/{sid}/stash/gm-add", json={"coins": {"gold": 1}})
+    assert r.status_code == 410
+    act(PLAYER_ID)
+    r = await client.post(f"/sessions/{sid}/stash/put", json={"from_character_id": pg, "item_id": ids["sword"]})
+    assert r.status_code == 410
+    assert (await client.get(f"/sessions/{sid}/stash")).status_code == 200
+    assert (await _stash_state(f, stash_id)) == ([], 0)
