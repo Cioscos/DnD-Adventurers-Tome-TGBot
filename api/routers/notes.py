@@ -26,7 +26,7 @@ from sqlalchemy.orm import selectinload
 
 from api.auth import DEV_USER_ID, get_current_user, verify_init_data
 from api.database import get_db
-from core.db.models import Character, CharacterClass
+from core.db.models import Campaign, CampaignMember, Character, CharacterClass
 
 router = APIRouter(prefix="/characters", tags=["notes"])
 
@@ -47,8 +47,9 @@ def _unpack(value) -> dict:
             "created_at": value.get("created_at"),
             "updated_at": value.get("updated_at"),
             "tags": list(value.get("tags") or []),
+            "campaign_id": value.get("campaign_id"),
         }
-    return {"body": str(value or ""), "created_at": None, "updated_at": None, "tags": []}
+    return {"body": str(value or ""), "created_at": None, "updated_at": None, "tags": [], "campaign_id": None}
 
 
 class NoteRead(BaseModel):
@@ -58,17 +59,28 @@ class NoteRead(BaseModel):
     created_at: str | None = None
     updated_at: str | None = None
     tags: list[str] = Field(default_factory=list)
+    campaign_id: int | None = None
+    campaign_name: str | None = None
 
 
 class NoteCreate(BaseModel):
     title: str
     body: str
     tags: list[str] = Field(default_factory=list)
+    campaign_id: int | None = None
 
 
 class NoteUpdate(BaseModel):
     body: str
     tags: list[str] | None = None
+    campaign_id: int | None = None
+    clear_campaign: bool = False
+
+
+class NoteCampaign(BaseModel):
+    id: int
+    name: str
+    current: bool
 
 
 async def _get_owned(char_id: int, user_id: int, session: AsyncSession) -> Character:
@@ -83,22 +95,63 @@ async def _get_owned(char_id: int, user_id: int, session: AsyncSession) -> Chara
     return char
 
 
-def _notes_list(char: Character) -> list[NoteRead]:
+async def _current_campaign_id(char: Character, session: AsyncSession) -> int | None:
+    return (await session.execute(
+        select(CampaignMember.campaign_id).where(CampaignMember.character_id == char.id)
+    )).scalar_one_or_none()
+
+
+async def _check_campaign(char: Character, campaign_id: int | None, notes: dict, session: AsyncSession) -> None:
+    """A note may point to the campaign the PG is enrolled in, or one already used by its notes."""
+    if campaign_id is None:
+        return
+    if campaign_id == await _current_campaign_id(char, session):
+        return
+    if any(_unpack(v)["campaign_id"] == campaign_id for v in notes.values()):
+        return
+    raise HTTPException(status_code=422, detail="campaign_not_allowed")
+
+
+async def _campaign_names(ids: set[int], session: AsyncSession) -> dict[int, str]:
+    if not ids:
+        return {}
+    rows = await session.execute(select(Campaign.id, Campaign.name).where(Campaign.id.in_(ids)))
+    return {i: n for i, n in rows.all()}
+
+
+async def _notes_list(char: Character, session: AsyncSession) -> list[NoteRead]:
     notes = char.notes or {}
-    out: list[NoteRead] = []
-    for title, value in notes.items():
-        rec = _unpack(value)
-        out.append(
-            NoteRead(
-                title=title,
-                body=rec["body"],
-                is_voice=rec["body"].startswith("[VOICE:"),
-                created_at=rec["created_at"],
-                updated_at=rec["updated_at"],
-                tags=rec["tags"],
-            )
+    recs = {title: _unpack(value) for title, value in notes.items()}
+    names = await _campaign_names({r["campaign_id"] for r in recs.values() if r["campaign_id"] is not None}, session)
+    return [
+        NoteRead(
+            title=title,
+            body=rec["body"],
+            is_voice=rec["body"].startswith("[VOICE:"),
+            created_at=rec["created_at"],
+            updated_at=rec["updated_at"],
+            tags=rec["tags"],
+            campaign_id=rec["campaign_id"],
+            campaign_name=names.get(rec["campaign_id"]),
         )
-    return out
+        for title, rec in recs.items()
+    ]
+
+
+@router.get("/{char_id}/notes/campaigns", response_model=list[NoteCampaign])
+async def list_note_campaigns(
+    char_id: int,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> list[NoteCampaign]:
+    """Current campaign plus every still-existing campaign referenced by the notes."""
+    char = await _get_owned(char_id, user_id, session)
+    current = await _current_campaign_id(char, session)
+    ids = {_unpack(v)["campaign_id"] for v in (char.notes or {}).values()} - {None}
+    if current is not None:
+        ids.add(current)
+    names = await _campaign_names(ids, session)
+    return [NoteCampaign(id=i, name=n, current=i == current) for i, n in sorted(names.items())]
 
 
 @router.get("/{char_id}/notes", response_model=list[NoteRead])
@@ -108,7 +161,7 @@ async def list_notes(
     session: Annotated[AsyncSession, Depends(get_db)],
 ) -> list[NoteRead]:
     char = await _get_owned(char_id, user_id, session)
-    return _notes_list(char)
+    return await _notes_list(char, session)
 
 
 @router.post("/{char_id}/notes", response_model=list[NoteRead], status_code=201)
@@ -122,13 +175,15 @@ async def add_note(
     notes = dict(char.notes or {})
     if body.title in notes:
         raise HTTPException(status_code=409, detail="A note with this title already exists")
+    await _check_campaign(char, body.campaign_id, notes, session)
     notes[body.title] = {
         "body": body.body,
         "created_at": _now_iso(),
         "tags": list(body.tags or []),
+        "campaign_id": body.campaign_id,
     }
     char.notes = notes
-    return _notes_list(char)
+    return await _notes_list(char, session)
 
 
 @router.patch("/{char_id}/notes/{title}", response_model=list[NoteRead])
@@ -144,14 +199,21 @@ async def update_note(
     if title not in notes:
         raise HTTPException(status_code=404, detail="Note not found")
     existing = _unpack(notes[title])
+    campaign_id = existing["campaign_id"]
+    if body.clear_campaign:
+        campaign_id = None
+    elif body.campaign_id is not None:
+        await _check_campaign(char, body.campaign_id, notes, session)
+        campaign_id = body.campaign_id
     notes[title] = {
         "body": body.body,
         "created_at": existing["created_at"],
         "updated_at": _now_iso(),
         "tags": list(body.tags) if body.tags is not None else existing["tags"],
+        "campaign_id": campaign_id,
     }
     char.notes = notes
-    return _notes_list(char)
+    return await _notes_list(char, session)
 
 
 @router.delete("/{char_id}/notes/{title}", response_model=list[NoteRead])
@@ -173,7 +235,7 @@ async def delete_note(
             file_path.unlink()
     del notes[title]
     char.notes = notes
-    return _notes_list(char)
+    return await _notes_list(char, session)
 
 
 # ---------------------------------------------------------------------------
@@ -187,6 +249,7 @@ async def upload_voice_note(
     session: Annotated[AsyncSession, Depends(get_db)],
     title: str = Form(...),
     file: UploadFile = File(...),
+    campaign_id: int | None = Form(None),
 ) -> list[NoteRead]:
     """Upload a voice note (audio file) and associate it with the character."""
     char = await _get_owned(char_id, user_id, session)
@@ -194,6 +257,7 @@ async def upload_voice_note(
     notes = dict(char.notes or {})
     if title in notes:
         raise HTTPException(status_code=409, detail="A note with this title already exists")
+    await _check_campaign(char, campaign_id, notes, session)
 
     # Validate file extension
     original_name = file.filename or "voice.webm"
@@ -221,9 +285,10 @@ async def upload_voice_note(
         "body": f"[VOICE:{file_path}]",
         "created_at": _now_iso(),
         "tags": [],
+        "campaign_id": campaign_id,
     }
     char.notes = notes
-    return _notes_list(char)
+    return await _notes_list(char, session)
 
 
 @router.get("/{char_id}/notes/voice/{filename}", response_model=None)

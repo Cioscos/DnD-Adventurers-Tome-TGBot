@@ -48,6 +48,7 @@ def _export_notes(notes: dict | None) -> dict:
             "updated_at": rec.get("updated_at"),
             "tags": list(rec.get("tags") or []),
             "was_voice": was_voice,
+            "campaign_id": rec.get("campaign_id"),
         }
     return out
 
