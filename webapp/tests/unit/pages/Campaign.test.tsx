@@ -21,6 +21,7 @@ vi.mock('@/api/client', () => ({
   ApiError: class ApiError extends Error { constructor(public status: number, public detail: unknown) { super('x') } },
 }))
 vi.mock('@/pages/campaign/LoreSection', () => ({ default: () => null }))
+vi.mock('@/pages/campaign/AtlasSection', () => ({ default: () => null }))
 vi.mock('@/pages/campaign/CampaignCalendar', () => ({ default: () => null }))
 vi.mock('@/hooks/useToast', () => ({ useToast: () => ({ info: vi.fn(), error: toastError, success: vi.fn() }) }))
 vi.mock('react-router-dom', async (orig) => {

@@ -515,6 +515,8 @@ export interface SessionRecap {
     stash: { kind: 'stash_put' | 'stash_take' | 'gm_stash_add' | 'gm_stash_remove'; who: string | null; summary: string }[]
   }
   lore: { id: number; title: string }[]
+  /** Assente nei recap vecchi. */
+  places?: { map_id: number; marker_id: number | null; title: string }[]
   highlights: { key: 'unluckiest' | 'luckiest' | 'most_damage' | 'top_healer'; character_id: number; name: string; value: number }[]
 }
 
@@ -744,9 +746,12 @@ export type TradeKind = 'trade' | 'stash_put' | 'stash_take' | 'gm_stash_add' | 
 
 export interface TradePayload {
   /** Assente nelle righe vecchie: vale `trade`. Il lato deposito/master ha `character_id: null`. */
-  kind?: TradeKind | 'lore_reveal'
+  kind?: TradeKind | 'lore_reveal' | 'atlas_reveal'
   /** Solo kind='lore_reveal'. */
   lore_id?: number
+  /** Solo kind='atlas_reveal'. */
+  map_id?: number
+  marker_id?: number | null
   title?: string
   from: { character_id: number | null; name: string }
   to: { character_id: number | null; name: string }
@@ -876,3 +881,56 @@ export interface DdbImportResult {
   character: CharacterFull
   report: DdbImportReport
 }
+
+// Campaign atlas (mirror of api/schemas/atlas.py)
+export interface AtlasMap {
+  id: number
+  name: string
+  revealed: boolean
+  revealed_at: string | null
+  updated_at: string
+  marker_count: number
+}
+
+export interface MarkerType {
+  id: number | null
+  key: string | null
+  name: string
+  icon: string
+  color: string
+  builtin: boolean
+  can_delete: boolean
+}
+
+export type MarkerVisibility = 'private' | 'public'
+
+export interface AtlasMarker {
+  id: number
+  map_id: number
+  name: string
+  description: string
+  x: number
+  y: number
+  visibility: MarkerVisibility
+  type: MarkerType
+  author_role: 'gm' | 'player'
+  author_name: string | null
+  mine: boolean
+  link_map_id: number | null
+  can_edit: boolean
+  can_delete: boolean
+  updated_at: string
+}
+
+export interface AtlasMarkerCreate {
+  name: string
+  description?: string
+  x: number
+  y: number
+  type_key?: string | null
+  custom_type_id?: number | null
+  visibility?: MarkerVisibility
+  link_map_id?: number | null
+}
+
+export type AtlasMarkerUpdate = Partial<Omit<AtlasMarkerCreate, 'visibility'>>

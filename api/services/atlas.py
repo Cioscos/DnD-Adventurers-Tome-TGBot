@@ -1,0 +1,35 @@
+"""Campaign atlas: constants and visibility rules shared by the map and marker routes."""
+from __future__ import annotations
+
+from sqlalchemy import or_
+
+from core.db.models import CampaignMap, CampaignMapMarker
+
+# key -> (lucide icon, color)
+BUILTIN_TYPES: dict[str, tuple[str, str]] = {
+    "city": ("castle", "gold"),
+    "dungeon": ("skull", "arcane"),
+    "poi": ("landmark", "cobalt"),
+    "danger": ("triangle-alert", "crimson"),
+    "npc": ("user", "emerald"),
+    "quest": ("scroll", "amber"),
+}
+ICONS: frozenset[str] = frozenset({
+    "castle", "skull", "landmark", "triangle-alert", "user", "scroll", "beer", "tent", "mountain", "tree-pine",
+    "waves", "anchor", "ship", "swords", "shield", "crown", "gem", "coins", "key", "flame", "moon", "ghost", "bone",
+    "church", "house", "store", "flag", "eye", "compass", "map-pin", "sparkles", "wheat", "hammer", "book-open",
+})  # identical to webapp/src/lib/atlasIcons.ts ATLAS_ICONS keys
+COLORS: frozenset[str] = frozenset({"gold", "crimson", "emerald", "arcane", "cobalt", "amber", "parchment"})
+
+
+def map_visible(m: CampaignMap, is_gm: bool) -> bool:
+    return is_gm or m.revealed_at is not None
+
+
+def marker_clause(user_id: int):
+    """SQL clause: own markers plus public ones (for the GM too: player-private never leaks)."""
+    return or_(CampaignMapMarker.author_user_id == user_id, CampaignMapMarker.visibility == "public")
+
+
+def marker_visible(mk: CampaignMapMarker, user_id: int) -> bool:
+    return mk.author_user_id == user_id or mk.visibility == "public"

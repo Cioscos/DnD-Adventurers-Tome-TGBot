@@ -114,6 +114,7 @@ export default function CampaignRecap() {
   // timestamp naive in UTC: senza "Z" il browser li leggerebbe come ora locale
   const title = recap.number ? t(`${P}evening`, { n: recap.number }) : t('campaign.nights')
   const { items, combat } = recap
+  const places = recap.places ?? [] // assente nei riepiloghi precedenti alla 2.35.0
   const itemLines = [
     ...items.gm_grants.map((g) => t(`${P}grant`, { to: g.to ?? '?', item: g.item, q: g.quantity })),
     ...items.trades.map((x) => t(`${P}trade`, { from: x.from, to: x.to, what: x.summary })),
@@ -171,6 +172,14 @@ export default function CampaignRecap() {
         <Block title={t(`${P}lore`)}>
           <ul className="space-y-1 text-sm font-body">
             {recap.lore.map((l) => <li key={l.id} className="break-words">{l.title}</li>)}
+          </ul>
+        </Block>
+      )}
+
+      {places.length > 0 && (
+        <Block title={t(`${P}places`)}>
+          <ul className="space-y-1 text-sm font-body">
+            {places.map((p) => <li key={`${p.map_id}-${p.marker_id}`} className="break-words">{p.title}</li>)}
           </ul>
         </Block>
       )}

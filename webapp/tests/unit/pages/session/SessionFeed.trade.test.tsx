@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import SessionFeed from '@/pages/session/SessionFeed'
 import itLocale from '@/locales/it.json'
@@ -139,5 +139,36 @@ describe('SessionFeed lore_reveal row', () => {
     await userEvent.click(await screen.findByRole('button', { name: /Il master ha rivelato/ }))
     await waitFor(() => expect(screen.getByText('Corpo della voce')).toBeTruthy())
     expect(document.querySelector('[class*="z-[70]"]')).toBeTruthy()
+  })
+})
+
+describe('SessionFeed atlas_reveal row', () => {
+  beforeEach(() => { Element.prototype.scrollTo = vi.fn(); getFeed.mockReset() })
+  function Where() {
+    const loc = useLocation()
+    return <p>{`at:${loc.pathname}${loc.search} from:${(loc.state as { from?: string } | null)?.from}`}</p>
+  }
+
+  it('atlas_reveal row navigates to map with marker query', async () => {
+    getFeed.mockResolvedValue({ items: [{
+      type: 'message', message_id: 6, user_id: 9, role: 'game_master', display_name: 'GM',
+      body: 'x', timestamp: '2026-01-01T10:00:00Z',
+      trade: { kind: 'atlas_reveal', map_id: 4, marker_id: 12, title: 'Porto Grigio' },
+    } as unknown as SessionFeedItem], has_more: false })
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter initialEntries={['/session/ABC']}>
+          <Routes>
+            <Route path="/session/:code" element={
+              <SessionFeed code="ABC" sessionId={1} campaignId={7} gmUserId={9} myUserId={2} myCharId={2}
+                participants={[]} whisperTarget={null} onClearWhisperTarget={() => {}} />
+            } />
+            <Route path="/campaign/:id/atlas/:mapId" element={<Where />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
+    await userEvent.click(await screen.findByRole('button', { name: /Il master ha mostrato sulla mappa: Porto Grigio/ }))
+    expect(await screen.findByText('at:/campaign/7/atlas/4?marker=12 from:/session/ABC')).toBeTruthy()
   })
 })
