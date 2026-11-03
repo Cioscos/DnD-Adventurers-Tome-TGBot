@@ -37,6 +37,7 @@ import type {
   CampaignRead,
   CampaignSummary,
   LoreRead,
+  ScheduleRead,
   CampaignDetail,
   CampaignMemberStatus,
   ActiveCampaignSession,
@@ -1001,6 +1002,14 @@ export const api = {
       }),
     removeMember: (id: number, characterId: number) =>
       request<void>(`/campaigns/${id}/members/${characterId}`, { method: 'DELETE' }),
+    schedule: {
+      list: (id: number) => request<ScheduleRead[]>(`/campaigns/${id}/schedule`),
+      create: (id: number, body: { starts_at: string; note?: string | null }) =>
+        request<ScheduleRead>(`/campaigns/${id}/schedule`, { method: 'POST', body: JSON.stringify(body) }),
+      update: (id: number, sid: number, body: { starts_at?: string; note?: string | null }) =>
+        request<ScheduleRead>(`/campaigns/${id}/schedule/${sid}`, { method: 'PATCH', body: JSON.stringify(body) }),
+      remove: (id: number, sid: number) => request<void>(`/campaigns/${id}/schedule/${sid}`, { method: 'DELETE' }),
+    },
     joinSession: (id: number, characterId: number) =>
       request<GameSession>(`/campaigns/${id}/session/join`, {
         method: 'POST',

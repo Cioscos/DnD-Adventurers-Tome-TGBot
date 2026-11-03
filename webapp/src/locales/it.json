@@ -1735,6 +1735,29 @@
     }
   },
   "campaign": {
+    "calendar": {
+      "title": "Calendario",
+      "schedule": "Programma serata",
+      "move": "Sposta",
+      "cancel": "Annulla",
+      "cancel_title": "Annullare la serata?",
+      "cancel_body": "La serata sparisce dal calendario e i promemoria non partono.",
+      "cancel_confirm": "Annulla la serata",
+      "none": "Nessuna serata questo giorno.",
+      "skipped": "Saltata",
+      "done": "Giocata",
+      "planned": "Programmata",
+      "prev": "Mese precedente",
+      "next": "Mese successivo",
+      "sheet_new": "Programma una serata",
+      "sheet_edit": "Sposta la serata",
+      "date": "Giorno",
+      "time": "Ora",
+      "note": "Nota (facoltativa)",
+      "err_past": "La serata deve essere nel futuro.",
+      "err_generic": "Non sono riuscito a salvare. Riprova.",
+      "at": "alle {{time}}"
+    },
     "lore": {
       "title": "Lore",
       "empty_gm": "Nessuna voce. Aggiungi il primo pezzo di storia da rivelare ai giocatori.",

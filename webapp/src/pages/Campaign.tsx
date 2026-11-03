@@ -16,6 +16,7 @@ import Input from '@/components/ui/Input'
 import JoinCampaignSessionSheet from '@/pages/campaign/JoinCampaignSessionSheet'
 import StashTree from '@/pages/campaign/StashTree'
 import LoreSection from '@/pages/campaign/LoreSection'
+import CampaignCalendar from '@/pages/campaign/CampaignCalendar'
 import { api, ApiError } from '@/api/client'
 import { canShareMessage, haptic } from '@/auth/telegram'
 import { useShareMessage } from '@/hooks/useShareMessage'
@@ -283,6 +284,8 @@ export default function Campaign() {
       </Surface>
 
       <LoreSection campaignId={camp.id} isGm={camp.is_gm} />
+
+      <CampaignCalendar campaignId={camp.id} isGm={camp.is_gm} sessions={camp.sessions} />
 
       <SectionDivider>{t('campaign.nights')}</SectionDivider>
       {camp.sessions.length === 0 ? (

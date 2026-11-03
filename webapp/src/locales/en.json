@@ -1736,6 +1736,29 @@
     }
   },
   "campaign": {
+    "calendar": {
+      "title": "Calendar",
+      "schedule": "Schedule a night",
+      "move": "Move",
+      "cancel": "Cancel",
+      "cancel_title": "Cancel the night?",
+      "cancel_body": "The night disappears from the calendar and no reminders go out.",
+      "cancel_confirm": "Cancel the night",
+      "none": "No night on this day.",
+      "skipped": "Skipped",
+      "done": "Played",
+      "planned": "Planned",
+      "prev": "Previous month",
+      "next": "Next month",
+      "sheet_new": "Schedule a night",
+      "sheet_edit": "Move the night",
+      "date": "Day",
+      "time": "Time",
+      "note": "Note (optional)",
+      "err_past": "The night must be in the future.",
+      "err_generic": "Could not save. Try again.",
+      "at": "at {{time}}"
+    },
     "lore": {
       "title": "Lore",
       "empty_gm": "No entries yet. Add the first piece of story to reveal to your players.",

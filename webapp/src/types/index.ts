@@ -518,6 +518,15 @@ export interface SessionRecap {
   highlights: { key: 'unluckiest' | 'luckiest' | 'most_damage' | 'top_healer'; character_id: number; name: string; value: number }[]
 }
 
+export interface ScheduleRead {
+  /** ISO UTC senza suffisso Z. */
+  starts_at: string
+  id: number
+  note: string | null
+  session_id: number | null
+  status: 'planned' | 'done' | 'skipped'
+}
+
 export interface CampaignDetail {
   id: number
   name: string
