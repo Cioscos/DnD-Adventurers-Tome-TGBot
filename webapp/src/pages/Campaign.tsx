@@ -234,7 +234,7 @@ export default function Campaign() {
                       variant="secondary"
                       size="sm"
                       icon={<BookOpen size={14} />}
-                      onClick={() => navigate(`/char/${mem.character_id}/notes?campaign=${camp.id}`)}
+                      onClick={() => navigate(`/char/${mem.character_id}/notes?campaign=${camp.id}`, { state: { from: `/campaign/${camp.id}` } })}
                     >
                       {t('campaign.my_journal')}
                     </Button>

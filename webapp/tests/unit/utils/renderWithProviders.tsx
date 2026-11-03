@@ -9,7 +9,7 @@ import { MemoryRouter } from 'react-router-dom'
  */
 export function renderWithProviders(
   ui: ReactElement,
-  { route = '/', client }: { route?: string; client?: QueryClient } = {},
+  { route = '/', client }: { route?: string | { pathname: string; search?: string; state?: unknown }; client?: QueryClient } = {},
 ) {
   // retryDelay 0: i componenti che impostano una propria politica `retry`
   // (es. il guard 404 di Layout/CharacterMain) esauriscono i tentativi

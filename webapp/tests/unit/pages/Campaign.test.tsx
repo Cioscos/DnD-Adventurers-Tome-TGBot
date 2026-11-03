@@ -230,7 +230,7 @@ describe('Campaign page', () => {
     get.mockResolvedValue(playerView())
     renderPage()
     await userEvent.click(await screen.findByRole('button', { name: 'campaign.my_journal' }))
-    expect(navigateSpy).toHaveBeenCalledWith('/char/10/notes?campaign=5')
+    expect(navigateSpy).toHaveBeenCalledWith('/char/10/notes?campaign=5', { state: { from: '/campaign/5' } })
   })
 
   it('no journal link on other players characters', async () => {

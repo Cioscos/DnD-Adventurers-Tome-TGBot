@@ -41,8 +41,8 @@ vi.mock('@/components/Layout', async () => {
   const React = await import('react')
   const { default: OfflineNotice } = await import('@/components/ui/OfflineNotice')
   return {
-    default: (p: { children?: unknown; offlineQuery?: never }) =>
-      React.createElement('div', null, p.offlineQuery ? React.createElement(OfflineNotice, { query: p.offlineQuery }) : null, p.children),
+    default: (p: { children?: unknown; offlineQuery?: never; backTo?: string }) =>
+      React.createElement('div', { 'data-testid': 'layout', 'data-back': p.backTo }, p.offlineQuery ? React.createElement(OfflineNotice, { query: p.offlineQuery }) : null, p.children),
   }
 })
 vi.mock('@/components/ScrollArea', async () => {
@@ -126,6 +126,16 @@ describe('Notes campaign filter', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'character.notes.filter_none' }))
     expect(screen.getByText('Libera')).toBeInTheDocument()
     expect(screen.queryByText('Taverna')).not.toBeInTheDocument()
+  })
+
+  it('back arrow returns to the campaign when opened from it', () => {
+    renderWithProviders(<Notes />, { route: { pathname: '/', search: '?campaign=7', state: { from: '/campaign/7' } } })
+    expect(screen.getAllByTestId('layout').at(-1)).toHaveAttribute('data-back', '/campaign/7')
+  })
+
+  it('back arrow returns to the sheet by default', () => {
+    renderWithProviders(<Notes />)
+    expect(screen.getAllByTestId('layout').at(-1)).toHaveAttribute('data-back', '/char/7')
   })
 
   it('?campaign=7 preselects that campaign', async () => {

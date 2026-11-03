@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams, useSearchParams } from 'react-router-dom'
+import { useLocation, useParams, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
@@ -45,6 +45,8 @@ export default function Notes() {
   const [micStatus, setMicStatus] = useState<MicStatus>('unknown')
   // Filtro campagna: 'all' | 'none' | id. `?campaign=<id|none>` lo preseleziona.
   const [searchParams] = useSearchParams()
+  // Arrivati dalla campagna («Il mio diario»): la freccia indietro torna lì, non alla scheda.
+  const backFrom = (useLocation().state as { from?: string } | null)?.from
   const [campaignFilter, setCampaignFilter] = useState<'all' | 'none' | number>(() => {
     const q = searchParams.get('campaign')
     if (q === 'none') return 'none'
@@ -174,7 +176,7 @@ export default function Notes() {
   const voiceNotes = notes.filter((n) => n.is_voice)
 
   return (
-    <Layout title={t('character.notes.title')} backTo={`/char/${charId}`} group="tools" page="notes" offlineQuery={notesQuery}>
+    <Layout title={t('character.notes.title')} backTo={backFrom ?? `/char/${charId}`} group="tools" page="notes" offlineQuery={notesQuery}>
       <div className="flex gap-2">
         <Button
           variant="primary"
