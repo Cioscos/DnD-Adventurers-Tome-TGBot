@@ -41,6 +41,7 @@ def _norm(d: dict) -> dict:
     d = json.loads(json.dumps(d))
     d.pop("exported_at")
     d["character"].pop("name")
+    d["character"]["settings"].pop("ac_migrated", None)  # il personaggio di prova nasce senza passare dalla migrazione
     return d
 
 

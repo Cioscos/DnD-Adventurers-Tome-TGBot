@@ -19,6 +19,10 @@ ABILITY_NAMES = (
 
 ModifierKind = Literal["absolute", "relative"]
 
+AC_MIGRATED_FLAG = "ac_migrated"
+# Valore massimo senza bonus magici: oltre, `ac_value` può già comprendere la Destrezza.
+_MAX_PLAIN_ARMOR = {"light": 12, "medium": 15}
+
 
 @dataclass(frozen=True)
 class AppliedModifier:
@@ -67,14 +71,6 @@ def cantrip_dice_multiplier(total_level: int) -> int:
     if total_level >= 11:
         return 3
     return 2 if total_level >= 5 else 1
-
-
-def unarmored_defense_ac(dex_mod: int, second_mod: int) -> int:
-    """Unarmored Defense base AC: ``10 + DEX mod + second ability mod``.
-
-    Second ability is Wisdom (Monk) or Constitution (Barbarian).
-    """
-    return 10 + dex_mod + second_mod
 
 
 def total_base_hp(
@@ -188,27 +184,115 @@ def effective_ability_mod(char, ability: str) -> int:
     return (effective - 10) // 2
 
 
+def _worn(char, item_type: str):
+    """Oggetto indossato di quel tipo; quelli senza slot sono dati legacy, ma contano ancora come indossati."""
+    worn = [i for i in char.items or () if i.is_equipped and i.item_type == item_type]
+    return min(worn, key=lambda i: i.equipment_slot is None, default=None)
+
+
+def _armor_value(armor) -> int:
+    try:
+        return int(_item_meta(armor).get("ac_value", 10))
+    except (TypeError, ValueError):  # si ricalcola a ogni lettura: un dato sporco non deve rompere la scheda
+        return 10
+
+
+def _unarmored_options(char) -> list:
+    """Formule senza armatura valide adesso: privilegi dell'edizione e interruttore manuale."""
+    from core.rules.catalog import active_features  # i moduli del catalogo possono usare questo file
+    from core.rules.types import UnarmoredAc
+
+    if _worn(char, "armor") is not None:
+        return []
+    options = [spec.unarmored for spec, _row in active_features(char) if spec.unarmored]
+    if char.unarmored_defense_ability:
+        options.append(UnarmoredAc(("dexterity", char.unarmored_defense_ability),
+                                   no_shield=char.unarmored_defense_ability == "wisdom"))
+    if _worn(char, "shield") is not None:
+        options = [o for o in options if not o.no_shield]
+    return options
+
+
+def _unarmored_value(char, option) -> int:
+    return option.base + sum(effective_ability_mod(char, a) for a in option.abilities)
+
+
+def unarmored_formula(char) -> tuple[str, ...] | None:
+    """Caratteristiche della migliore formula senza armatura in vigore, ``None`` se nessuna vale."""
+    best = max(_unarmored_options(char), key=lambda o: _unarmored_value(char, o), default=None)
+    return best.abilities if best else None
+
+
+def computed_base_ac(char) -> int:
+    """CA base secondo armatura e caratteristiche effettive; un override manuale resta com'è."""
+    if char.base_armor_class_override:
+        return char.base_armor_class
+    dex = effective_ability_mod(char, "dexterity")
+    armor = _worn(char, "armor")
+    if armor is None:
+        return max([10 + dex] + [_unarmored_value(char, o) for o in _unarmored_options(char)])
+    bonus = {"light": dex, "medium": min(dex, 2)}.get(_item_meta(armor).get("armor_type"), 0)
+    return _armor_value(armor) + bonus
+
+
+def sync_base_ac(char) -> None:
+    char.base_armor_class = computed_base_ac(char)
+
+
+def _ac_was_derived(char) -> bool:
+    """La base salvata viene con certezza dalla vecchia logica, senza Destrezza inserita a mano?"""
+    if (char.settings or {}).get("import_source"):
+        return False
+    if char.unarmored_defense_ability:
+        # Vecchia logica: la formula valeva anche con armatura o scudo addosso. Solo se vale ancora è ricalcolabile.
+        return unarmored_formula(char) is not None
+    armor = _worn(char, "armor")
+    if armor is None:
+        return char.base_armor_class == 10
+    value = _armor_value(armor)
+    plain_max = _MAX_PLAIN_ARMOR.get(_item_meta(armor).get("armor_type"), value)
+    return char.base_armor_class == value and value <= plain_max
+
+
+def migrate_character_ac(char) -> None:
+    """Una tantum (`settings.ac_migrated`): la base copiata dalla vecchia logica passa al calcolo nuovo.
+
+    Ogni altro valore (manuale, importato, con la Destrezza già inclusa) diventa override: la CA mostrata non cambia.
+    """
+    settings = char.settings or {}
+    if settings.get(AC_MIGRATED_FLAG):
+        return
+    char.settings = {**settings, AC_MIGRATED_FLAG: True}
+    if char.base_armor_class_override:
+        return
+    new_value = computed_base_ac(char)
+    if char.base_armor_class == new_value:
+        return
+    if _ac_was_derived(char):
+        char.base_armor_class = new_value
+    else:
+        char.base_armor_class_override = True
+
+
+def _item_meta(item: "_ItemLike") -> dict:
+    """Parsed item metadata. Defensive: empty dict on any parse / structure error."""
+    import json as _json
+
+    raw = item.item_metadata
+    if isinstance(raw, str):
+        try:
+            raw = _json.loads(raw)
+        except (ValueError, TypeError):
+            return {}
+    return raw if isinstance(raw, dict) else {}
+
+
 def _extract_ability_modifiers(item: "_ItemLike") -> list[dict]:
     """Read `ability_modifiers` from an item's metadata (parsed JSON).
 
     Defensive: returns empty list on any parse / structure error.
     """
-    import json as _json
-
-    raw = item.item_metadata
-    if raw is None:
-        return []
-    if isinstance(raw, str):
-        try:
-            parsed = _json.loads(raw)
-        except (ValueError, TypeError):
-            return []
-    else:
-        parsed = raw
-
-    if not isinstance(parsed, dict):
-        return []
-    mods = parsed.get("ability_modifiers")
+    mods = _item_meta(item).get("ability_modifiers")
     if not isinstance(mods, list):
         return []
     return [m for m in mods if isinstance(m, dict)]

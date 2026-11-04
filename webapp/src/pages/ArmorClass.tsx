@@ -108,8 +108,15 @@ export default function ArmorClass() {
     const v = char.ability_scores?.find((a) => a.name === name)?.value ?? 10
     return Math.floor((v - 10) / 2)
   }
+  // Come il backend: mai peggio di 10 + DES, anche con la seconda caratteristica negativa.
   const unarmoredPreview = (ability: 'wisdom' | 'constitution') =>
-    10 + abilityMod('dexterity') + abilityMod(ability)
+    10 + abilityMod('dexterity') + Math.max(0, abilityMod(ability))
+
+  const baseHint = char.base_armor_class_override
+    ? null
+    : equippedBodyArmor
+      ? t('character.ac.auto_from_armor_hint', { name: equippedBodyArmor.name })
+      : char.unarmored_formula ? null : t('character.ac.auto_no_armor_hint')
 
   const isDirty = base !== '' || shield !== '' || magic !== ''
   const hbAc = char.ac_breakdown?.homebrew ?? 0
@@ -192,18 +199,16 @@ export default function ArmorClass() {
           {
             key: 'base',
             label: t('character.ac.base'),
-            title: t('character.ac.base_help', {
-              defaultValue: 'Base = 10 + bonus DEX (con cap se armatura media/pesante) oppure valore armatura equipaggiata.',
-            }),
+            title: t('character.ac.base_help'),
             current: char.base_armor_class,
             draft: base,
             setDraft: setBase,
-            disabled: unarmoredActive,
-            badge: unarmoredActive
-              ? { text: t('character.ac.unarmored_badge'), tone: AC_BADGE_GOLD }
-              : char.base_armor_class_override
-                ? { text: t('character.ac.manual_override'), tone: AC_BADGE_AMBER }
-                : equippedBodyArmor ? { text: t('character.ac.auto_from_armor'), tone: AC_BADGE_GOLD } : null,
+            disabled: unarmoredActive && !char.base_armor_class_override,
+            badge: char.base_armor_class_override
+              ? { text: t('character.ac.manual_override'), tone: AC_BADGE_AMBER }
+              : char.unarmored_formula
+                ? { text: t('character.ac.unarmored_badge'), tone: AC_BADGE_GOLD }
+                : { text: t('character.ac.auto_from_armor'), tone: AC_BADGE_GOLD },
           },
           {
             key: 'shield',
@@ -243,10 +248,8 @@ export default function ArmorClass() {
         ))}
       </m.div>
 
-      {equippedBodyArmor && !char.base_armor_class_override && (
-        <p className="text-xs text-dnd-text-faint font-body italic px-2 -mt-1">
-          {t('character.ac.auto_from_armor_hint', { name: equippedBodyArmor.name })}
-        </p>
+      {baseHint && (
+        <p className="text-xs text-dnd-text-faint font-body italic px-2 -mt-1">{baseHint}</p>
       )}
 
       {(char.base_armor_class_override || char.shield_armor_class_override) && (

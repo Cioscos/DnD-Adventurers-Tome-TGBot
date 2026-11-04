@@ -15,7 +15,6 @@ from core.game.stats import (
     effective_ability_score,
     hit_points_for_level,
     total_base_hp,
-    unarmored_defense_ac,
 )
 
 
@@ -61,18 +60,6 @@ def test_hp_rejects_bad_inputs():
         hit_points_for_level(10, 0, 0)
     with pytest.raises(ValueError):
         hit_points_for_level(0, 0, 1)
-
-
-# --- unarmored_defense_ac ---------------------------------------------------
-
-@pytest.mark.parametrize("dex,second,expected", [
-    (0, 0, 10),
-    (3, 2, 15),     # Barbarian DEX+3 CON+2
-    (4, 3, 17),     # Monk DEX+4 WIS+3
-    (-1, 4, 13),
-])
-def test_unarmored_defense_ac(dex, second, expected):
-    assert unarmored_defense_ac(dex, second) == expected
 
 
 # --- total_base_hp ----------------------------------------------------------

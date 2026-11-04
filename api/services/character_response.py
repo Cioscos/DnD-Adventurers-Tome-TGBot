@@ -23,7 +23,7 @@ from core.game.actions import attacks_per_action
 from core.game.containers import COINS, carried_weight, coin_locations, container_coins, container_stats
 from core.game.item_bonuses import item_bonus_total
 from core.game.skills import PASSIVE_SKILLS, has_jack_of_all_trades, skill_proficiency_part
-from core.game.stats import effective_ability_score
+from core.game.stats import effective_ability_score, migrate_character_ac, sync_base_ac, unarmored_formula
 from api.routers._helpers import effective_ability_mod
 
 
@@ -31,6 +31,10 @@ async def build_character_response(
     session: AsyncSession, char: Character,
 ) -> CharacterFull:
     """Build a CharacterFull response with homebrew breakdown populated."""
+    # Copre ogni percorso che cambia caratteristiche o oggetti senza passare da `apply_equip_ac`.
+    migrate_character_ac(char)
+    sync_base_ac(char)
+
     # Flush any pending mutations on `char` BEFORE serializing. CharacterFull.model_validate
     # reads ORM attributes synchronously; if the session is still dirty, that access can
     # trigger an autoflush from inside pydantic (a sync context) and blow up with
@@ -46,6 +50,8 @@ async def build_character_response(
     response = CharacterFull.model_validate(char)
     response.condition_effects, response.pending_saves = await character_effect_payload(
         session, char.id)
+    formula = unarmored_formula(char)
+    response.unarmored_formula = list(formula) if formula else None
     response.has_custom_silhouette = bool(getattr(char, "silhouette_path", None))
     response.spellcasting = build_spellcasting_info(char)
     response.attacks_per_action = attacks_per_action(char.classes)

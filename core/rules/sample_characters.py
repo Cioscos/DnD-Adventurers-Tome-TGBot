@@ -42,8 +42,9 @@ SAMPLE_SPECS: list[dict] = [
     _spec("Multiclasse Mago/Warlock", [("Mago", 17, None, 6), ("warlock", 3, None, 8)]),
     _spec("Ladro sottoclasse ignota", [("Ladro", 5, "Ladro Acrobata", 8)]),
     _spec("Guerriero CA manuale", [("Guerriero", 5, None, 10)], base_ac=18, ac_override=True),
-    # la CA importata da Beyond include già la Destrezza: l'app non deve sommarla di nuovo
-    _spec("Ladro CA da Beyond", [("Ladro", 5, None, 8)], base_ac=15, settings={"import_source": "dndbeyond"}),
+    # la CA importata da Beyond include già la Destrezza: 17, né 17 + 4 (doppia somma) né 10 + 4 (calcolo)
+    _spec("Ladro CA da Beyond", [("Ladro", 5, None, 8)], base_ac=17, scores={"dexterity": 18},
+          settings={"import_source": "dndbeyond"}),
     _spec("Proficienze vuote", [("Guerriero", 5, None, 10)], proficiencies=[]),
     _spec("Usi spesi", [("Barbaro", 5, "Cammino del Berserker", 12)], spent_uses=("barbarian.rage", "Ira", 3, 1)),
     _spec("Classe custom", [("Cacciatore di Taglie", 5, None, None)]),
@@ -60,7 +61,7 @@ async def build_rules_character(session: AsyncSession, spec: dict, user_id: int)
     )
     # Relazioni assegnate prima del flush: il sync le legge senza lazy-load in contesto async.
     char.ability_scores = [
-        AbilityScore(name=ab, value=14)
+        AbilityScore(name=ab, value=spec.get("scores", {}).get(ab, 14))
         for ab in ("strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma")
     ]
     char.items, char.abilities, char.classes = [], [], []

@@ -44,7 +44,8 @@ async def _setup(factory, a_items, b_items=(), a_purse=None, b_purse=True):
 async def _load(s, cid):
     return (await s.execute(
         select(Character).where(Character.id == cid)
-        .options(selectinload(Character.items), selectinload(Character.currency))
+        .options(selectinload(Character.items), selectinload(Character.currency),
+                 selectinload(Character.ability_scores), selectinload(Character.classes))
     )).scalar_one()
 
 

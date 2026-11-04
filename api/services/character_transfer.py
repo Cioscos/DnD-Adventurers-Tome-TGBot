@@ -15,6 +15,7 @@ from api.schemas.transfer import CharacterExport, ExportCharacter
 from api.services.homebrew.dsl import RuleDSL
 from api.version import APP_VERSION
 from core.game.containers import is_container
+from core.game.stats import migrate_character_ac
 from core.rules.feature_sync import ARCHIVED_FEATURES, clean_archive
 from core.rules.subclasses import sync_subclass_keys
 from core.game.item_bonuses import is_attuned
@@ -285,5 +286,6 @@ async def import_character(
         ))
     if data.concentrating_spell_key is not None:
         char.concentrating_spell_id = spells[spell_keys.index(data.concentrating_spell_key)].id
+    migrate_character_ac(char)  # file vecchi: valore del file, Destrezza già inclusa, altra scheda
     await session.flush()
     return char

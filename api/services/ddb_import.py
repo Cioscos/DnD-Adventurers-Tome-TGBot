@@ -584,7 +584,8 @@ def _items(c: _Ctx) -> None:
     char = c.out["character"]
     armor = next((i for i in out if i.item_type == "armor" and i.equipment_slot == EquipmentSlot.BODY), None)
     shield = next((i for i in out if i.item_type == "shield" and i.equipment_slot is not None), None)
-    # la base include già la DES come sulla scheda DDB: l'app non la somma da sola
+    # stessa formula di `computed_base_ac` (DES inclusa come sulla scheda DDB): se il valore
+    # non coincide (es. CA 13 + DES di Resilienza Draconica) l'import lo fissa come override
     dex = c.mod("dexterity")
     if armor:
         cap = {"light": dex, "medium": min(dex, 2)}.get(armor.item_metadata.get("armor_type"), 0)

@@ -32,6 +32,14 @@ class ChoiceSpec:
 
 
 @dataclass(frozen=True)
+class UnarmoredAc:
+    """CA senza armatura: ``base`` + modificatori di ``abilities``. ``no_shield``: lo scudo la annulla (Monaco)."""
+    abilities: tuple[str, ...]
+    base: int = 10
+    no_shield: bool = False
+
+
+@dataclass(frozen=True)
 class FeatureSpec:
     key: str
     class_key: str
@@ -56,6 +64,7 @@ class FeatureSpec:
     target_effect: Any = None
     # categoria (`armor`/`weapons`/`tools`) -> id di `core.rules.proficiencies.LABELS`, concesse una volta sola
     proficiency_grants: dict[str, tuple[str, ...]] | None = None
+    unarmored: UnarmoredAc | None = None
 
 
 @dataclass(frozen=True)

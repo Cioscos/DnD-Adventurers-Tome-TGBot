@@ -532,6 +532,19 @@ def _seed_proficiencies(connection) -> None:
         s.commit()
 
 
+def _migrate_armor_class(connection) -> None:
+    """Una tantum (`settings.ac_migrated`): la CA mostrata non cambia salvo le basi copiate dalla vecchia logica."""
+    from sqlalchemy.orm import Session
+
+    from core.db.models import Character
+    from core.game.stats import migrate_character_ac
+
+    with Session(bind=connection) as s:
+        for char in s.query(Character).all():
+            migrate_character_ac(char)
+        s.commit()
+
+
 async def init_db() -> None:
     """Create all tables and run schema + data migrations."""
     os.makedirs(os.path.dirname(_DB_PATH), exist_ok=True)
@@ -542,6 +555,7 @@ async def init_db() -> None:
         await conn.run_sync(_backfill_ability_action_types)
         await conn.run_sync(_migrate_condition_state)
         await conn.run_sync(_seed_proficiencies)
+        await conn.run_sync(_migrate_armor_class)
 
 
 @asynccontextmanager

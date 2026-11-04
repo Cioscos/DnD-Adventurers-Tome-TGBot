@@ -115,6 +115,8 @@ class CharacterFull(BaseModel):
     shield_armor_class_override: bool = False
     # Unarmored Defense second ability ('wisdom'/'constitution'); None = disabled.
     unarmored_defense_ability: Optional[str] = None
+    # Caratteristiche della formula senza armatura in vigore (privilegio o interruttore).
+    unarmored_formula: Optional[list[str]] = None
     ac: int
 
     # Homebrew passive-modifier breakdown (populated by router after model_validate)

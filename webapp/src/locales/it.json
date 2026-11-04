@@ -387,7 +387,7 @@
       "title": "Classe Armatura",
       "short": "CA",
       "base": "Base",
-      "base_help": "Base = 10 + bonus DES (con cap se armatura media/pesante) oppure valore CA dell'armatura equipaggiata.",
+      "base_help": "Senza armatura: 10 + DES. Armatura leggera: valore + DES. Media: valore + DES (massimo 2). Pesante: valore.",
       "shield": "Scudo",
       "magic": "Magia",
       "legend": "Base · Scudo · Magia",
@@ -398,7 +398,8 @@
       "show_modifiers": "Modificatori",
       "hide_modifiers": "Nascondi modificatori",
       "auto_from_armor": "Auto",
-      "auto_from_armor_hint": "Base derivata da {{name}} equipaggiata.",
+      "auto_from_armor_hint": "Base calcolata da {{name}} e dalla Destrezza, secondo il tipo di armatura.",
+      "auto_no_armor_hint": "Senza armatura: 10 + Destrezza.",
       "manual_override": "Manuale",
       "reset_to_auto": "Ripristina auto",
       "manual_override_hint": "Valori manuali attivi: non verranno sovrascritti al cambio di equipaggiamento.",
@@ -407,7 +408,7 @@
       "unarmored_off": "Nessuna",
       "unarmored_badge": "Senza armatura",
       "unarmored_formula": "CA {{value}}",
-      "unarmored_active_hint": "La Base si aggiorna con le caratteristiche; non indossare armatura del corpo."
+      "unarmored_active_hint": "La Base si aggiorna con le caratteristiche e vale solo senza armatura indossata."
     },
     "speeds": {
       "fly": "Volare",
@@ -2637,10 +2638,10 @@
         {
           "title": "Calcolo automatico",
           "items": [
-            "Quando equipaggi un'armatura sul corpo, l'app calcola la Base dall'armatura.",
+            "Quando equipaggi un'armatura sul corpo, l'app calcola la Base: leggera valore + DES, media valore + DES (massimo 2), pesante solo il valore.",
             "Quando equipaggi uno scudo, l'app calcola il valore Scudo dallo scudo.",
             "L'etichetta \"Auto\" indica un valore calcolato dall'equipaggiamento.",
-            "Senza armatura, la Base è 10."
+            "Senza armatura, la Base è 10 + DES."
           ]
         },
         {
@@ -2669,8 +2670,8 @@
             "Ogni pulsante mostra la CA che ottieni con quella scelta.",
             "Quando la Difesa senza armatura è attiva, la Base riceve l'etichetta \"Senza armatura\" e non accetta valori a mano.",
             "La Base cambia in automatico quando cambi le caratteristiche.",
-            "Non equipaggiare un'armatura sul corpo con questa funzione attiva.",
-            "Per disattivare la funzione, tocca \"Nessuna\". La Base torna al valore dell'armatura, o a 10."
+            "Con un'armatura indossata vale l'armatura. Per la Saggezza (Monaco) anche lo scudo annulla questa formula.",
+            "Per disattivare la funzione, tocca \"Nessuna\". La Base torna al calcolo dall'armatura, o a 10 + DES."
           ]
         }
       ]

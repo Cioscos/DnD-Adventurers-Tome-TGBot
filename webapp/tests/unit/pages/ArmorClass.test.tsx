@@ -171,6 +171,22 @@ describe('ArmorClass page', () => {
     await waitFor(() => expect(setUnarmoredSpy).toHaveBeenCalledWith(7, null))
   })
 
+  it('shows the unarmored badge when a class feature provides the formula, leaving the base editable', async () => {
+    getChar.mockResolvedValue({ ...acChar, unarmored_formula: ['dexterity', 'wisdom'] })
+    renderWithProviders(<ArmorClass />)
+    await screen.findByText('17')
+    expect(screen.getByText('character.ac.unarmored_badge')).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('14')).toBeEnabled()
+  })
+
+  it('a kept manual value wins over the unarmored toggle: base editable, manual badge', async () => {
+    getChar.mockResolvedValue({ ...acChar, unarmored_defense_ability: 'wisdom', base_armor_class_override: true })
+    renderWithProviders(<ArmorClass />)
+    await screen.findByText('17')
+    expect(screen.getAllByText('character.ac.manual_override').length).toBeGreaterThan(0)
+    expect(screen.getByPlaceholderText('14')).toBeEnabled()
+  })
+
   it('disables the base input while unarmored defense is active', async () => {
     getChar.mockResolvedValue({ ...acChar, unarmored_defense_ability: 'wisdom' })
     renderWithProviders(<ArmorClass />)

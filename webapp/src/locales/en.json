@@ -387,7 +387,7 @@
       "title": "Armor Class",
       "short": "AC",
       "base": "Base",
-      "base_help": "Base = 10 + DEX bonus (capped for medium/heavy armor) or the equipped armor's AC value.",
+      "base_help": "No armor: 10 + DEX. Light armor: value + DEX. Medium: value + DEX (max 2). Heavy: value.",
       "shield": "Shield",
       "magic": "Magic",
       "legend": "Base · Shield · Magic",
@@ -398,7 +398,8 @@
       "show_modifiers": "Modifiers",
       "hide_modifiers": "Hide modifiers",
       "auto_from_armor": "Auto",
-      "auto_from_armor_hint": "Base derived from equipped {{name}}.",
+      "auto_from_armor_hint": "Base calculated from {{name}} and Dexterity, according to the armor type.",
+      "auto_no_armor_hint": "No armor: 10 + Dexterity.",
       "manual_override": "Manual",
       "reset_to_auto": "Reset to auto",
       "manual_override_hint": "Manual values active: equipment changes will not override them.",
@@ -407,7 +408,7 @@
       "unarmored_off": "Off",
       "unarmored_badge": "Unarmored",
       "unarmored_formula": "AC {{value}}",
-      "unarmored_active_hint": "Base updates with ability scores; do not wear body armor."
+      "unarmored_active_hint": "Base updates with ability scores and only applies while wearing no armor."
     },
     "speeds": {
       "fly": "Fly",
@@ -2638,10 +2639,10 @@
         {
           "title": "Automatic calculation",
           "items": [
-            "When you equip body armor, the app calculates the Base from the armor.",
+            "When you equip body armor, the app calculates the Base: light value + DEX, medium value + DEX (max 2), heavy the value only.",
             "When you equip a shield, the app calculates the Shield value from the shield.",
             "The \"Auto\" label shows a value that comes from the equipment.",
-            "Without armor, the Base is 10."
+            "Without armor, the Base is 10 + DEX."
           ]
         },
         {
@@ -2670,8 +2671,8 @@
             "Each button shows the AC that you get with that option.",
             "When Unarmored Defense is on, the Base gets the \"Unarmored\" label and does not accept manual values.",
             "The Base changes automatically when you change the ability scores.",
-            "Do not equip body armor when this function is on.",
-            "To turn off the function, tap \"Off\". The Base goes back to the armor value, or to 10."
+            "While wearing armor, the armor applies. With Wisdom (Monk) a shield also cancels this formula.",
+            "To turn off the function, tap \"Off\". The Base goes back to the armor calculation, or to 10 + DEX."
           ]
         }
       ]

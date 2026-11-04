@@ -65,7 +65,7 @@ async def test_enable_clears_manual_base_override(client):
     assert body["ac_breakdown"]["base"] == 10            # recomputed, override discarded
 
 
-async def test_disable_reverts_base_to_ten_when_unarmored(client):
+async def test_disable_reverts_base_to_ten_plus_dex_when_unarmored(client):
     cid = await _barbarian(client)
     await _set_ability(client, cid, "dexterity", 16)
     await _set_ability(client, cid, "constitution", 14)
@@ -76,7 +76,7 @@ async def test_disable_reverts_base_to_ten_when_unarmored(client):
     assert r.status_code == 200, r.text
     body = r.json()
     assert body["unarmored_defense_ability"] is None
-    assert body["ac_breakdown"]["base"] == 10            # no armor → 10
+    assert body["ac_breakdown"]["base"] == 13            # no armor → 10 + DEX
 
 
 async def test_invalid_second_ability_is_400(client):

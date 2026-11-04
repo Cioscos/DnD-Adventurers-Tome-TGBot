@@ -301,6 +301,7 @@ export interface CharacterFull extends Omit<CharacterSummary, 'ac_homebrew_modif
   base_armor_class_override: boolean
   shield_armor_class_override: boolean
   unarmored_defense_ability?: 'wisdom' | 'constitution' | null
+  unarmored_formula?: string[] | null
   ac_breakdown?: AcBreakdown | null
   speed_homebrew_modifier?: number
   speed_items_modifier?: number
