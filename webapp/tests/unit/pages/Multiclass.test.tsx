@@ -138,7 +138,7 @@ describe('Multiclass page', () => {
     // total level = levelFromXp(900) = 3
     expect(await screen.findByText('3')).toBeInTheDocument()
     expect(screen.getByText('wizard')).toBeInTheDocument()
-    expect(screen.getByText('(Evocation)')).toBeInTheDocument()
+    expect(screen.getByText('Evocation')).toBeInTheDocument()
     expect(screen.getByText('d6')).toBeInTheDocument()
     // class level badge (read-only) = 2
     expect(screen.getByText('2')).toBeInTheDocument()

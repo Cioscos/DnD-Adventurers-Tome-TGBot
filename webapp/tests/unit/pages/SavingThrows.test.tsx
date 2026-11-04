@@ -64,21 +64,10 @@ vi.mock('@/components/Layout', async () => {
   const React = await import('react')
   return { default: (p: { children?: unknown }) => React.createElement('div', null, p.children) }
 })
-vi.mock('@/components/ui/Surface', async () => {
-  const React = await import('react')
-  return {
-    default: (p: { onClick?: () => void; children?: unknown }) =>
-      React.createElement('div', { onClick: p.onClick }, p.children),
-  }
-})
 vi.mock('@/components/ui/Reveal', async () => {
   const React = await import('react')
   const C = (p: { children?: unknown }) => React.createElement('div', null, p.children)
   return { default: { Stagger: C, Item: C } }
-})
-vi.mock('@/components/ui/StatPill', async () => {
-  const React = await import('react')
-  return { default: (p: { value: unknown }) => React.createElement('span', { 'data-testid': 'pb' }, String(p.value)) }
 })
 vi.mock('@/components/ui/DiceIcon', async () => ({ default: () => null }))
 vi.mock('@/components/homebrew/HomebrewBreakdownRow', async () => ({ default: () => null }))

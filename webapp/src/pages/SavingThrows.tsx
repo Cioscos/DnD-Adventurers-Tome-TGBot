@@ -2,18 +2,16 @@ import { useState, Fragment } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Check } from 'lucide-react'
-import { GiShieldEchoes as ShieldAlert } from 'react-icons/gi'
 import { api, ApiError } from '@/api/client'
 import Layout from '@/components/Layout'
-import Surface from '@/components/ui/Surface'
-import StatPill from '@/components/ui/StatPill'
+import ProficiencyMark from '@/components/ui/ProficiencyMark'
 import Reveal from '@/components/ui/Reveal'
 import Pressable from '@/components/ui/Pressable'
 import DiceIcon from '@/components/ui/DiceIcon'
 import RollResultModal, { type RollResult } from '@/components/RollResultModal'
 import { haptic } from '@/auth/telegram'
 import { stagger } from '@/styles/motion'
+import { LEDGER_LABEL } from '@/styles/ledger'
 import { useDiceAnimation } from '@/dice/useDiceAnimation'
 import { useDiceSettings } from '@/store/diceSettings'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
@@ -129,17 +127,12 @@ export default function SavingThrows() {
 
   return (
     <Layout title={t('character.saves.title')} backTo={`/char/${charId}`} group="combat" page="saves">
-      <Surface variant="elevated" className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-dnd-gold">
-          <ShieldAlert size={16} />
-          <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim">
-            {t('character.skills.prof_bonus')}
-          </p>
-        </div>
-        <StatPill tone="gold" value={`+${pb}`} />
-      </Surface>
+      <div className="flex min-h-[48px] items-center justify-between gap-3 px-1">
+        <p className={LEDGER_LABEL}>{t('character.skills.prof_bonus')}</p>
+        <span data-testid="pb" className="font-mono text-lg font-bold tabular-nums text-dnd-text">+{pb}</span>
+      </div>
 
-      <Reveal.Stagger stagger={stagger.list} className="flex flex-col gap-1.5">
+      <Reveal.Stagger stagger={stagger.list} className="border-y border-dnd-border divide-y divide-dnd-border/60">
         {ABILITIES.map((ability) => {
           const isProficient = saves[ability] ?? false
           const score = char.ability_scores.find((s) => s.name === ability)
@@ -149,14 +142,11 @@ export default function SavingThrows() {
           return (
             <Fragment key={ability}>
               <Reveal.Item>
-                <Surface
-                  variant={isProficient ? 'elevated' : 'flat'}
-                  interactive
+                <div
                   onClick={() => rollMutation.mutate({ ability, mode: 'normal' })}
-                  className={`relative !p-2 cursor-pointer
-                    ${isProficient ? 'border-dnd-gold/50' : ''}`}
+                  className="cursor-pointer py-1 hover:bg-dnd-surface/60 transition-colors"
                 >
-                  <div className="flex items-center gap-3 min-h-[44px]">
+                  <div className="flex items-center gap-1.5 min-h-[44px]">
                     <Pressable
                       onClick={(e) => {
                         e.stopPropagation()
@@ -168,31 +158,26 @@ export default function SavingThrows() {
                       whileTap={{ scale: 0.85 }}
                       aria-label="Proficiency"
                     >
-                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors
-                        ${isProficient
-                          ? 'bg-dnd-gold border-dnd-gold-bright shadow-[0_0_6px_var(--dnd-gold-glow)]'
-                          : 'border-dnd-border'}`}>
-                        {isProficient && <Check size={12} className="text-dnd-ink" strokeWidth={3} />}
-                      </div>
+                      <ProficiencyMark level={isProficient} />
                     </Pressable>
 
                     <div className="flex-1 min-w-0">
                       <p
-                        className="text-xs font-cinzel uppercase tracking-[0.18em] text-dnd-text leading-tight truncate"
+                        className={`truncate ${LEDGER_LABEL}`}
                         title={t(`character.stats.${ability}`)}
                       >
                         {/* Sotto 375px il nome intero non sta accanto al totale: sigla */}
                         <span className="max-xs:hidden">{t(`character.stats.${ability}`)}</span>
                         <span className="xs:hidden">{t(`character.ability.${ability}_short`)}</span>
                       </p>
-                      <p className="text-xs text-dnd-text-faint font-mono leading-tight mt-0.5">
+                      <p className="text-xs text-dnd-text-muted font-mono tabular-nums leading-tight mt-0.5">
                         {abilMod >= 0 ? '+' : ''}{abilMod}
                         {isProficient ? ` +${pb} ${t('character.saves.ts_short')}` : ''}
                       </p>
                     </div>
 
                     {/* Negativo in crimson come in Skills: stesso vocabolario. */}
-                    <p className={`shrink-0 text-3xl font-mono font-bold leading-none tabular-nums ${total >= 0 ? 'text-dnd-text' : 'text-dnd-crimson-bright'}`}>
+                    <p className={`shrink-0 text-2xl font-mono font-bold leading-none tabular-nums ${total < 0 ? 'text-dnd-crimson-bright' : isProficient ? 'text-dnd-gold-bright' : 'text-dnd-text'}`}>
                       {total >= 0 ? '+' : ''}{total}
                     </p>
                     <span onClick={(e) => e.stopPropagation()} className="shrink-0">
@@ -202,15 +187,15 @@ export default function SavingThrows() {
                       onRoll={(mode) => rollMutation.mutate({ ability, mode })}
                       pending={rollMutation.isPending && rollMutation.variables?.ability === ability}
                       ariaLabel={t('character.skills.roll')}
-                      className="w-11 h-11 -mr-1 flex items-center justify-center shrink-0"
+                      className="w-11 h-11 flex items-center justify-center shrink-0"
                     >
-                      <DiceIcon sides={20} size={28} className="text-dnd-gold/80" />
+                      <DiceIcon sides={20} size={28} className="text-dnd-gold" />
                     </RollButton>
                   </div>
                   {rollNoteOf(char, `save.${ability}`) && (
                     <p className="text-xs text-dnd-text-muted font-body italic pl-14 pb-1">{rollNoteOf(char, `save.${ability}`)}</p>
                   )}
-                </Surface>
+                </div>
               </Reveal.Item>
               <HomebrewBreakdownRow
                 value={char.saves_homebrew_modifiers?.[ability] ?? 0}
