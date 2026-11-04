@@ -11,7 +11,6 @@ const CharacterSelect = lazy(() => import('./pages/CharacterSelect'))
 const CharacterMain = lazy(() => import('./pages/CharacterMain'))
 const HP = lazy(() => import('./pages/HP'))
 const ArmorClass = lazy(() => import('./pages/ArmorClass'))
-const Actions = lazy(() => import('./pages/Actions'))
 const Turn = lazy(() => import('./pages/Turn'))
 const Extras = lazy(() => import('./pages/Extras'))
 const AbilityScores = lazy(() => import('./pages/AbilityScores'))
@@ -78,7 +77,7 @@ export default function App() {
             <Route path="/char/:id" element={<CharacterMain />} />
             <Route path="/char/:id/hp" element={<HP />} />
             <Route path="/char/:id/ac" element={<ArmorClass />} />
-            <Route path="/char/:id/actions" element={<Actions />} />
+            <Route path="/char/:id/actions" element={<Navigate to="../turn" relative="path" replace />} />
             <Route path="/char/:id/turn" element={<Turn />} />
             <Route path="/char/:id/extras" element={<Extras />} />
             <Route path="/char/:id/stats" element={<AbilityScores />} />

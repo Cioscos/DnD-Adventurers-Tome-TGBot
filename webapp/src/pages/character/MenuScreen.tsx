@@ -10,7 +10,7 @@ import {
   GiArcheryTarget, GiLightningTrio, GiTwoCoins,
   GiScrollUnfurled, GiPolarStar, GiPerspectiveDiceSixFacesRandom,
   GiQuillInk, GiTreasureMap, GiOpenBook, GiCauldron,
-  GiFist, GiKnapsack, GiNightSleep, GiHourglass, GiPawPrint,
+  GiKnapsack, GiNightSleep, GiHourglass, GiPawPrint,
 } from 'react-icons/gi'
 import type { ComponentType, SVGAttributes } from 'react'
 import Pressable from '@/components/ui/Pressable'
@@ -41,7 +41,6 @@ const MENU_SECTIONS: MenuSection[] = [
       { key: 'ac',      icon: GiCheckedShield, path: 'ac' },
       { key: 'saves',   icon: GiShieldEchoes,  path: 'saves' },
       { key: 'turn',    icon: GiHourglass,     path: 'turn' },
-      { key: 'actions', icon: GiFist,          path: 'actions' },
       { key: 'conditions', icon: CircleDot,     path: 'conditions' },
       { key: 'rest',    icon: GiNightSleep,    action: 'rest' },
     ],

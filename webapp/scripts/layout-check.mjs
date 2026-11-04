@@ -14,7 +14,7 @@ import { chromium } from 'playwright'
 const CHAR = process.env.CHAR ?? '4'
 const BASE = process.env.BASE ?? 'http://localhost:5173'
 const C = `/char/${CHAR}`
-const ALL = ['/', C, ...['hp', 'ac', 'actions', 'turn', 'extras', 'stats', 'skills', 'saves', 'spells', 'slots',
+const ALL = ['/', C, ...['hp', 'ac', 'turn', 'extras', 'stats', 'skills', 'saves', 'spells', 'slots',
   'inventory', 'currency', 'abilities', 'class', 'xp', 'conditions', 'history', 'notes', 'maps', 'dice',
   'dice/stats', 'identity', 'settings', 'homebrew', 'homebrew/new'].map((p) => `${C}/${p}`), '/session', '/session/join']
 const routes = process.argv.slice(2).length ? process.argv.slice(2) : ALL

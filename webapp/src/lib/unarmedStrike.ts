@@ -1,6 +1,6 @@
 /**
  * Frontend mirror of the backend unarmed-strike damage logic
- * (`core/game/attacks.py`). Kept in sync so the Actions page can describe the
+ * (`core/game/attacks.py`). Kept in sync so the Turn page can describe the
  * *actual* damage the backend will roll instead of a hardcoded "1 + mod".
  */
 

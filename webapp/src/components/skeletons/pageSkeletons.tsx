@@ -30,7 +30,7 @@ const REGISTRY: Record<string, ComponentType> = {
   hp: HPSkeleton,
   ac: ArmorClassSkeleton,
   saves: SavingThrowsSkeleton,
-  actions: ActionsSkeleton,
+  turn: ActionsSkeleton,
   // magic
   spells: SpellsSkeleton,
   slots: SpellSlotsSkeleton,

@@ -10,11 +10,11 @@ vi.mock('@/auth/telegram', () => ({ haptic: new Proxy({}, { get: () => () => {} 
 
 describe('getGroupInfo', () => {
   it('conditions is the last page of combat', () => {
-    expect(getGroupInfo('combat', 'conditions')?.pages).toEqual(['hp', 'ac', 'saves', 'turn', 'actions', 'conditions'])
+    expect(getGroupInfo('combat', 'conditions')?.pages).toEqual(['hp', 'ac', 'saves', 'turn', 'conditions'])
   })
 
   it('resolves a page within its group to {index, total}', () => {
-    expect(getGroupInfo('combat', 'hp')).toEqual({ pages: ['hp', 'ac', 'saves', 'turn', 'actions', 'conditions'], index: 0, total: 6 })
+    expect(getGroupInfo('combat', 'hp')).toEqual({ pages: ['hp', 'ac', 'saves', 'turn', 'conditions'], index: 0, total: 5 })
     expect(getGroupInfo('combat', 'saves')?.index).toBe(2)
   })
 
@@ -127,17 +127,17 @@ describe('useSwipeNavigation — rilascio del gesto', () => {
 
   it('un breadcrumb fa la slide verso la pagina scelta e naviga a slide finita', () => {
     const { hook } = setup('hp')
-    act(() => hook.result.current.goToPage('actions'))
+    act(() => hook.result.current.goToPage('turn'))
     // Pagina non adiacente: il ghost deve essere quella scelta, verso destra.
-    expect(hook.result.current.slideTarget).toBe('actions')
+    expect(hook.result.current.slideTarget).toBe('turn')
     expect(hook.result.current.ghostDir).toBe(1)
     expect(navigateSpy).not.toHaveBeenCalled()
     act(() => { vi.advanceTimersByTime(400) })
-    expect(navigateSpy).toHaveBeenCalledWith('/char/7/actions', { replace: true })
+    expect(navigateSpy).toHaveBeenCalledWith('/char/7/turn', { replace: true })
   })
 
   it('un breadcrumb precedente fa la slide nel verso opposto', () => {
-    const { hook } = setup('actions')
+    const { hook } = setup('turn')
     act(() => hook.result.current.goToPage('hp'))
     expect(hook.result.current.ghostDir).toBe(-1)
   })

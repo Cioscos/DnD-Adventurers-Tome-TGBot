@@ -239,7 +239,6 @@
       "stats": "Caratteristiche",
       "skills": "Abilità",
       "saves": "Tiri Salvezza",
-      "actions": "Azioni",
       "turn": "Turno",
       "spells": "Incantesimi",
       "slots": "Slot Incantesimi",
@@ -445,15 +444,6 @@
       "ts_short": "comp",
       "tap_to_roll": "Tocca per tirare",
       "homebrew_label": "Bonus Homebrew"
-    },
-    "actions": {
-      "attacks_per_action": "Attacchi per azione: {{n}}",
-      "title": "Azioni",
-      "unarmed": "Attacco a mano libera",
-      "unarmed_desc": "Colpo senza armi ({{damage}} + mod, contundente)",
-      "weapons_section": "Armi equipaggiate",
-      "no_weapons": "Nessun'arma equipaggiata",
-      "attack": "Attacca"
     },
     "attack": {
       "ammo_missing": "Munizioni esaurite o non equipaggiate: scala tu le munizioni",
@@ -2655,58 +2645,6 @@
         }
       ]
     },
-    "actions": {
-      "summary": "Questa pagina serve per attaccare. Mostra l'attacco a mano libera e le armi equipaggiate. L'app tira il d20 e il danno e mostra il risultato.",
-      "sections": [
-        {
-          "title": "Cosa mostra la pagina",
-          "items": [
-            "In alto, \"Attacchi per azione\" mostra quanti attacchi fai con una azione di Attacco.",
-            "Il riquadro \"Attacco a mano libera\" mostra il dado di danno del colpo senza armi.",
-            "Per un Monaco, il dado di danno segue il livello da Monaco.",
-            "La sezione \"Armi equipaggiate\" mostra solo le armi equipaggiate.",
-            "Se non hai armi equipaggiate, la sezione mostra \"Nessun'arma equipaggiata\". Per equipaggiare un'arma, usa l'inventario o l'equipaggiamento."
-          ]
-        },
-        {
-          "title": "Fare un attacco",
-          "items": [
-            "Per attaccare, tocca \"Attacca\" vicino all'arma o all'attacco a mano libera.",
-            "Per attaccare con vantaggio o svantaggio, tieni premuto \"Attacca\" e scegli la modalità.",
-            "L'app tira il d20 e aggiunge il bonus per colpire.",
-            "Il risultato mostra \"Per colpire\", il dado tirato e il totale.",
-            "Se colpisci, il risultato mostra anche il \"Danno\", i dadi tirati e il totale."
-          ]
-        },
-        {
-          "title": "Opzioni dell'arma",
-          "items": [
-            "Per un'arma versatile, scegli \"Una mano\" o \"Due mani\" prima di attaccare.",
-            "Per un'arma da lancio, scegli \"Mischia\" o \"Lancio\" prima di attaccare.",
-            "L'app ricorda la scelta per ogni arma. La scelta vale anche nella pagina Turno."
-          ]
-        },
-        {
-          "title": "Critici, fallimenti e avvisi",
-          "items": [
-            "Con un 20 naturale il risultato mostra \"Critico!\" e il danno è critico.",
-            "Con un 1 naturale il risultato mostra \"Fumble!\" e non mostra il danno.",
-            "\"Competenza non indicata\" significa che il personaggio non ha la competenza con questa arma.",
-            "Per un'arma con munizioni, l'app toglie una munizione equipaggiata e mostra le munizioni rimaste.",
-            "Se non hai munizioni equipaggiate, il risultato mostra un avviso. In questo caso, conta tu le munizioni."
-          ]
-        },
-        {
-          "title": "Ritirare con l'Ispirazione Eroica",
-          "items": [
-            "Se hai l'Ispirazione Eroica, il risultato mostra il pulsante \"Usa Ispirazione\".",
-            "Per ritirare il d20, tocca \"Usa Ispirazione\".",
-            "L'app usa l'Ispirazione Eroica e mostra il nuovo risultato con il segno \"Reroll ispirazione\".",
-            "Puoi ritirare una sola volta per ogni attacco."
-          ]
-        }
-      ]
-    },
     "changelog": {
       "summary": "Questa pagina mostra le note di versione dell'app. Ogni voce elenca le novità, le migliorie e le correzioni di una versione.",
       "sections": [
@@ -4591,7 +4529,7 @@
       ]
     },
     "turn": {
-      "summary": "Questa pagina mostra cosa puoi fare nel tuo turno. Divide armi, incantesimi e capacità in Azione, Azione bonus e Reazione. Puoi anche segnare cosa hai già usato.",
+      "summary": "Questa pagina mostra cosa puoi fare nel tuo turno. Gli attacchi sono sempre in cima, gli incantesimi e le capacità sono divisi in Azione, Azione bonus e Reazione. Puoi anche segnare cosa hai già usato.",
       "sections": [
         {
           "title": "Cosa mostra la pagina",
@@ -4599,7 +4537,7 @@
             "In alto, \"Attacchi per azione\" mostra quanti attacchi fai con una azione di Attacco.",
             "Durante un incontro della sessione, la riga mostra anche il numero del round.",
             "Le sezioni \"Azione\", \"Azione bonus\" e \"Reazione\" mostrano le voci di ogni tipo.",
-            "Le armi equipaggiate e il \"Colpo senza armi\" sono nella sezione \"Azione\".",
+            "Le armi equipaggiate e il \"Colpo senza armi\" sono nella sezione \"Attacchi\", sempre aperta: puoi usarla anche per un attacco di opportunità o con l'altra mano.",
             "Gli incantesimi vanno nella sezione del loro tempo di lancio. La pagina mostra i trucchetti e gli incantesimi preparati.",
             "Le capacità attive vanno nella sezione del loro tipo di azione. Le capacità passive non compaiono.",
             "In fondo a ogni sezione, \"Azioni standard\" apre le azioni delle regole con una breve descrizione.",
@@ -4610,9 +4548,29 @@
           "title": "Attaccare",
           "items": [
             "Per attaccare, tocca \"Attacca\" vicino all'arma o al \"Colpo senza armi\".",
+            "Il \"Colpo senza armi\" mostra il dado di danno. Per un Monaco, il dado segue il livello da Monaco.",
             "Per attaccare con vantaggio o svantaggio, tieni premuto \"Attacca\" e scegli la modalità.",
             "Per un'arma versatile o da lancio, scegli prima \"Una mano\" o \"Due mani\", \"Mischia\" o \"Lancio\".",
-            "Il risultato è uguale a quello della pagina Azioni."
+            "L'app tira il d20 e il danno e mostra il risultato. Ricorda la scelta fatta per ogni arma."
+          ]
+        },
+        {
+          "title": "Critici, fallimenti e avvisi",
+          "items": [
+            "Con un 20 naturale il risultato mostra \"Critico!\" e il danno è critico.",
+            "Con un 1 naturale il risultato mostra \"Fumble!\" e non mostra il danno.",
+            "\"Competenza non indicata\" significa che il personaggio non ha la competenza con questa arma.",
+            "Per un'arma con munizioni, l'app toglie una munizione equipaggiata e mostra le munizioni rimaste.",
+            "Se non hai munizioni equipaggiate, il risultato mostra un avviso. In questo caso, conta tu le munizioni."
+          ]
+        },
+        {
+          "title": "Ritirare con l'Ispirazione Eroica",
+          "items": [
+            "Se hai l'Ispirazione Eroica, il risultato mostra il pulsante \"Usa Ispirazione\".",
+            "Per ritirare il d20, tocca \"Usa Ispirazione\".",
+            "L'app usa l'Ispirazione Eroica e mostra il nuovo risultato con il segno \"Reroll ispirazione\".",
+            "Puoi ritirare una sola volta per ogni attacco."
           ]
         },
         {
@@ -4637,7 +4595,7 @@
           "title": "Segnare le azioni usate",
           "items": [
             "Per segnare una sezione come usata, tocca \"Usata\" nella sezione.",
-            "Una sezione usata diventa più chiara. Per togliere il segno, tocca di nuovo \"Usata\".",
+            "Una sezione usata si richiude. La sezione \"Attacchi\" resta sempre aperta. Per togliere il segno, tocca di nuovo \"Usata\".",
             "Per togliere tutti i segni, tocca \"Nuovo turno\".",
             "Durante una sessione, l'app toglie tutti i segni quando inizia il tuo turno.",
             "L'app non salva i segni. Quando esci dalla pagina, i segni spariscono."
