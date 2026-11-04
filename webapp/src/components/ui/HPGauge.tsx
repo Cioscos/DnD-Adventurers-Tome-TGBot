@@ -32,7 +32,7 @@ function HPGaugeInner({ current, max, temp = 0, size = 'md', segmented = true, c
   let glowRgba: string
   let pulse = false
 
-  if (pct > 50) {
+  if (pct >= 75) {
     colorVarA = 'var(--dnd-emerald-deep)'
     colorVarB = 'var(--dnd-emerald-bright)'
     glowRgba = 'rgba(63, 166, 106, 0.42)'

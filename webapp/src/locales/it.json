@@ -300,7 +300,7 @@
       "max_short": "MASSIMO",
       "temp_short": "Temporanei",
       "long_rest_confirm_title": "Riposo lungo",
-      "long_rest_confirm_body": "Sei sicuro? Le regole D&D 5e ammettono un solo riposo lungo ogni 24 ore.",
+      "long_rest_confirm_body": "Le regole D&D 5e ammettono un solo riposo lungo ogni 24 ore.",
       "long_rest_confirm_action": "Riposa",
       "quick_damage_undo": "Inflitti {{n}} danni",
       "quick_heal_undo": "Curati {{n}} HP",
@@ -1001,7 +1001,7 @@
         "level_up": "LEVEL UP",
         "max": "MAX"
       },
-      "legend": "Tu sei una leggenda"
+      "legend": "Livello massimo"
     },
     "notes": {
       "tag_suggestions": ["Organizzazioni", "Alleati", "Nemici", "Storia", "Luoghi"],
@@ -1048,7 +1048,7 @@
       "delete_zone_confirm": "Eliminare tutta la zona {{zone}} con tutti i suoi file?",
       "open_file": "Apri file",
       "empty_title": "Nessuna mappa",
-      "empty_hint": "Carica una mappa o un PDF della tua avventura: sarà sempre a portata di mano.",
+      "empty_hint": "Carica una mappa o un PDF della tua avventura.",
       "zoom_hint": "Pizzica per zoomare",
       "reorder_hint": "Tieni premuto o trascina per riordinare",
       "reorder_pick_target": "Tocca la posizione di destinazione",
@@ -3441,7 +3441,7 @@
           "title": "Applicare danni o cure",
           "items": [
             "Scegli l'operazione: \"DANNI\", \"CURA\", \"ATTUALI\", \"MASSIMO\" o \"Temporanei\".",
-            "Scrivi il valore nel campo numerico.",
+            "Scrivi il valore.",
             "Tocca \"Conferma\" o premi Invio per applicare il valore.",
             "Per applicare subito 1, 5, 10 o 20 punti, tocca il pulsante rapido corrispondente.",
             "Con \"ATTUALI\" e \"MASSIMO\", i pulsanti rapidi scrivono solo il valore nel campo. Poi tocca \"Conferma\".",
@@ -4657,7 +4657,7 @@
             "Il numero grande è il livello del personaggio. Sotto vedi gli XP attuali.",
             "La pillola sopra la barra indica quanti XP mancano al livello successivo.",
             "La barra e la percentuale mostrano il progresso verso il livello successivo.",
-            "Al livello 20 vedi \"Tu sei una leggenda\" e la barra non appare più.",
+            "Al livello 20 vedi \"Livello massimo\" e la barra non appare più.",
             "Con una sola classe, il livello della classe segue gli XP in modo automatico."
           ]
         },
