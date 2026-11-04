@@ -4,7 +4,7 @@ export default function IdentitySkeleton() {
   return (
     <div className="space-y-4" aria-hidden>
       {/* Name / race / background fields */}
-      <div className="rounded-2xl border border-dnd-border bg-dnd-surface p-4 space-y-3">
+      <div className="border-b border-dnd-border/60 px-1 py-4 space-y-3">
         <Skeleton.Line width="60px" height="10px" />
         <Skeleton.Rect height="44px" rounded="rounded-xl" delay={40} />
         <Skeleton.Line width="60px" height="10px" delay={60} />
@@ -13,12 +13,12 @@ export default function IdentitySkeleton() {
         <Skeleton.Rect height="44px" rounded="rounded-xl" delay={120} />
       </div>
       {/* Personality traits block */}
-      <div className="rounded-2xl border border-dnd-border bg-dnd-surface p-4 space-y-3">
+      <div className="border-b border-dnd-border/60 px-1 py-4 space-y-3">
         <Skeleton.Line width="120px" height="10px" delay={140} />
         <Skeleton.Rect height="72px" rounded="rounded-xl" delay={160} />
       </div>
       {/* Languages / proficiencies chips */}
-      <div className="rounded-2xl border border-dnd-border bg-dnd-surface p-4 space-y-3">
+      <div className="border-b border-dnd-border/60 px-1 py-4 space-y-3">
         <Skeleton.Line width="80px" height="10px" delay={180} />
         <div className="flex gap-2 flex-wrap">
           {Array.from({ length: 4 }).map((_, i) => (

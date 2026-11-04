@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { m, AnimatePresence } from 'framer-motion'
-import { Sparkles, Wrench, Bug, ScrollText } from 'lucide-react'
+import { Plus, Wrench, Bug, ScrollText } from 'lucide-react'
 import Layout from '@/components/Layout'
-import Surface from '@/components/ui/Surface'
+import { ledgerEntry } from '@/styles/ledger'
 import Pressable from '@/components/ui/Pressable'
 import EmptyState from '@/components/ui/EmptyState'
 import ExpandChevron from '@/components/ui/ExpandChevron'
@@ -13,8 +13,8 @@ import { changelog, localizedLines, localizedTitle, type ChangelogEntry } from '
 
 type CategoryKey = 'added' | 'improved' | 'fixed'
 
-const CATEGORIES: { key: CategoryKey; Icon: typeof Sparkles }[] = [
-  { key: 'added', Icon: Sparkles },
+const CATEGORIES: { key: CategoryKey; Icon: typeof Plus }[] = [
+  { key: 'added', Icon: Plus },
   { key: 'improved', Icon: Wrench },
   { key: 'fixed', Icon: Bug },
 ]
@@ -32,12 +32,11 @@ function EntryCard({ entry, isCurrent, defaultOpen }: { entry: ChangelogEntry; i
     .filter((s) => s.lines.length > 0)
 
   return (
-    // Padding sul bottone, non sulla card: tutta la card è area di tocco.
-    <Surface variant="elevated" className="!p-0">
+    <div className={ledgerEntry(open)}>
       <Pressable
         type="button"
         onClick={() => { haptic.light(); setOpen((o) => !o) }}
-        className="w-full flex items-center gap-3 text-left p-4"
+        className={`w-full flex items-center gap-3 text-left ${open ? 'p-4' : 'px-1 py-3'}`}
         aria-expanded={open}
       >
         <div className="flex-1 min-w-0">
@@ -81,7 +80,7 @@ function EntryCard({ entry, isCurrent, defaultOpen }: { entry: ChangelogEntry; i
                   <ul className="space-y-1.5 pl-1">
                     {lines.map((line, i) => (
                       <li key={i} className="flex gap-2 text-sm font-body text-dnd-text leading-snug">
-                        <span className="text-dnd-gold-dim/60 shrink-0 mt-0.5">◈</span>
+                        <span className="text-dnd-gold-dim shrink-0">·</span>
                         <span className="min-w-0">{line}</span>
                       </li>
                     ))}
@@ -92,7 +91,7 @@ function EntryCard({ entry, isCurrent, defaultOpen }: { entry: ChangelogEntry; i
           </m.div>
         )}
       </AnimatePresence>
-    </Surface>
+    </div>
   )
 }
 

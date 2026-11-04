@@ -224,22 +224,22 @@ export default function Dice() {
       </div>
 
       {/* Dice count stepper */}
-      <Surface variant="elevated">
-        <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim mb-2">
+      <div className="flex items-center justify-between gap-3 border-b border-dnd-border/60 px-1 py-2">
+        <p className="text-xs font-cinzel font-bold uppercase tracking-wider text-dnd-text-muted">
           {t('character.dice.count')}
         </p>
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
           <Pressable
             onClick={() => setCount((c) => Math.max(1, c - 1))}
             disabled={count <= 1}
-            className="w-12 h-12 rounded-2xl bg-dnd-surface border border-dnd-border flex items-center justify-center text-dnd-gold disabled:opacity-30"
+            className="w-11 h-11 rounded-lg border border-dnd-border flex items-center justify-center text-dnd-text disabled:opacity-30"
             whileTap={{ scale: 0.9 }}
           >
             <Minus size={18} />
           </Pressable>
           <m.span
             key={count}
-            className="text-4xl font-display font-black text-dnd-gold-bright min-w-[3rem] text-center"
+            className="text-3xl font-display font-black text-dnd-gold-bright min-w-[2.5rem] text-center"
             initial={{ scale: 0.8 }}
             animate={{ scale: 1 }}
             transition={spring.snappy}
@@ -249,13 +249,13 @@ export default function Dice() {
           <Pressable
             onClick={() => setCount((c) => Math.min(10, c + 1))}
             disabled={count >= 10}
-            className="w-12 h-12 rounded-2xl bg-dnd-surface border border-dnd-border flex items-center justify-center text-dnd-gold disabled:opacity-30"
+            className="w-11 h-11 rounded-lg border border-dnd-border flex items-center justify-center text-dnd-text disabled:opacity-30"
             whileTap={{ scale: 0.9 }}
           >
             <Plus size={18} />
           </Pressable>
         </div>
-      </Surface>
+      </div>
 
       {/* Dice tray */}
       <Surface variant="tome" className="relative !p-4">
@@ -295,7 +295,7 @@ export default function Dice() {
             exit={{ opacity: 0, y: -10 }}
             transition={spring.elastic}
           >
-            <Surface variant="elevated" ornamented className="text-center">
+            <Surface variant="elevated" className="text-center">
               <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim mb-1 flex items-center justify-center gap-1.5">
                 <Swords size={12} /> {t('character.dice.initiative')}
               </p>
@@ -324,7 +324,7 @@ export default function Dice() {
             exit={{ opacity: 0, y: -10 }}
             transition={spring.elastic}
           >
-            <Surface variant="elevated" ornamented className="text-center">
+            <Surface variant="elevated" className="text-center">
               <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim mb-1">
                 {lastResult.notation}
               </p>
@@ -388,7 +388,7 @@ export default function Dice() {
       {/* Statistiche cumulative */}
       <Link
         to={`/char/${charId}/dice/stats`}
-        className="flex items-center justify-center gap-2 min-h-[44px] px-3 py-2 rounded-xl bg-dnd-surface border border-dnd-border text-dnd-gold font-cinzel text-xs uppercase tracking-widest"
+        className="flex items-center gap-2 min-h-[48px] px-1 py-2 border-b border-dnd-border/60 text-dnd-text font-cinzel text-xs font-bold uppercase tracking-wider"
         onClick={() => haptic.light()}
       >
         <BarChart3 size={14} />
@@ -420,7 +420,7 @@ export default function Dice() {
             </Button>
           </div>
           <ScrollArea>
-            <div className="space-y-1">
+            <div>
               {history.slice(0, 10).map((entry, i) => {
                 const ts = entry.timestamp
                 const rel = ts
@@ -441,7 +441,7 @@ export default function Dice() {
                     initial={{ opacity: 0, x: -8 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: i * 0.03 }}
-                    className="flex justify-between items-center gap-2 px-3 py-2 rounded-xl bg-dnd-surface border border-dnd-border"
+                    className="flex justify-between items-center gap-2 px-1 py-2 border-b border-dnd-border/60"
                     title={abs ?? undefined}
                   >
                     <div className="flex flex-col min-w-0 flex-1">
@@ -465,7 +465,7 @@ export default function Dice() {
                         </div>
                       )}
                     </div>
-                    <span className="font-display font-black text-dnd-gold-bright text-lg shrink-0">{entry.total}</span>
+                    <span className="font-mono font-bold tabular-nums text-dnd-gold-bright text-lg shrink-0">{entry.total}</span>
                   </m.div>
                 )
               })}

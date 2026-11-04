@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next'
 import { GiLinkedRings } from 'react-icons/gi'
 import { api, ApiError } from '@/api/client'
 import { haptic } from '@/auth/telegram'
-import Surface from '@/components/ui/Surface'
 import Pressable from '@/components/ui/Pressable'
 import { MAX_ATTUNED, isAttuned, requiresAttunement } from '@/lib/itemMagic'
 import type { Item } from '@/types'
@@ -47,7 +46,7 @@ export default function AttunementSection({ charId, items }: Props) {
   const rowCls = 'w-full min-h-[44px] flex items-center gap-2 px-3 py-2 rounded-xl border text-left text-sm font-body'
 
   return (
-    <Surface variant="elevated" className="!py-2 space-y-2">
+    <div className="space-y-2 border-b border-dnd-border/60 px-1 py-2">
       <div className="flex items-center gap-2 text-dnd-gold">
         <GiLinkedRings size={14} aria-hidden />
         <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim flex-1">
@@ -102,6 +101,6 @@ export default function AttunementSection({ charId, items }: Props) {
       )}
 
       {error && <p role="alert" className="text-xs text-dnd-crimson-bright font-body">{error}</p>}
-    </Surface>
+    </div>
   )
 }

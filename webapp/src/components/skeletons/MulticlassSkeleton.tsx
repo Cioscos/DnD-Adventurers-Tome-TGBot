@@ -7,7 +7,7 @@ export default function MulticlassSkeleton() {
       {Array.from({ length: 2 }).map((_, i) => (
         <div
           key={i}
-          className="rounded-2xl border border-dnd-border bg-dnd-surface p-4 space-y-3"
+          className="border-b border-dnd-border/60 px-1 py-4 space-y-3"
         >
           <div className="flex items-center justify-between">
             <div className="space-y-1.5">
