@@ -112,6 +112,7 @@ class CompanionAttackResult(BaseModel):
     to_hit_total: int
     dice: list[int]
     mode: RollMode
+    notes: list[str] = []
     is_critical: bool
     damage_rolls: list[int]
     damage_total: int

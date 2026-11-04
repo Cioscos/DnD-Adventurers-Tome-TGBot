@@ -1,3 +1,4 @@
+import RollNotes from '@/components/rules/RollNotes'
 import { m } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import {
@@ -82,6 +83,7 @@ export default function WeaponAttackModal({
         </p>
       )}
 
+      <RollNotes notes={result.notes} />
       <m.div
         className="rounded-2xl bg-dnd-surface/80 border border-dnd-border p-3"
         initial={{ opacity: 0, y: 10 }}

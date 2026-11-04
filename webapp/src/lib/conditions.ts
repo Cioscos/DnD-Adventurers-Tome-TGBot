@@ -38,9 +38,10 @@ export function formatCondition(
   key: string,
   val: unknown,
   t: TFunction,
+  edition?: string,
 ): string {
   if (key === 'exhaustion' && typeof val === 'number' && val > 0) {
-    return t('character.conditions.exhaustion', { level: val })
+    return t('character.conditions.exhaustion', { level: val, context: edition })
   }
   return t(`character.conditions.${key}`)
 }

@@ -391,6 +391,7 @@
       "shield": "Shield",
       "magic": "Magic",
       "legend": "Base · Shield · Magic",
+      "rules_label": "Class rules and training",
       "items_label": "Magic items",
       "total": "Total",
       "new_total": "New AC",
@@ -711,6 +712,10 @@
       "result_title": "Result",
       "pool_cap_reached": "Maximum dice limit reached"
     },
+    "roll_notes": {
+      "auto_fail": "Automatic failure",
+      "armor_untrained": "Armor without training"
+    },
     "conditions": {
       "duration": {
         "label": "Duration in rounds",
@@ -746,12 +751,14 @@
       },
       "title": "Conditions",
       "exhaustion": "Exhaustion (level {{level}})",
+      "exhaustion_2024": "Exhaustion (level {{level}})",
       "exhaustion_level": "Exhaustion level",
       "none_active": "No active conditions",
       "blinded": "Blinded",
       "charmed": "Charmed",
       "deafened": "Deafened",
       "exhaustion_condition": "Exhaustion",
+      "exhaustion_condition_2024": "Exhaustion",
       "exhaustion_caption": "Levels (cumulative)",
       "frightened": "Frightened",
       "grappled": "Grappled",
@@ -785,7 +792,21 @@
         "blinded": "A blinded creature can't see and automatically fails any ability check that requires sight. Attack rolls against the creature have advantage, and the creature's attack rolls have disadvantage.",
         "charmed": "A charmed creature can't attack the charmer or target the charmer with harmful abilities or magical effects. The charmer has advantage on any ability check to interact socially with the creature.",
         "deafened": "A deafened creature can't hear and automatically fails any ability check that requires hearing.",
-        "exhaustion": "Exhaustion is measured in six progressive levels. Each level adds a cumulative effect on top of the previous ones.",
+        "exhaustion": "Exhaustion is measured in six levels. Each level adds its effect to the previous ones.",
+        "exhaustion_2024": "Exhaustion is measured in six levels. Each level takes 2 off every d20 test and 5 feet off your speed.",
+        "exhaustion_levels_2024": [
+          "Level 1: −2 to d20 tests, speed −5 feet.",
+          "Level 2: −4 to d20 tests, speed −10 feet.",
+          "Level 3: −6 to d20 tests, speed −15 feet.",
+          "Level 4: −8 to d20 tests, speed −20 feet.",
+          "Level 5: −10 to d20 tests, speed −25 feet.",
+          "Level 6: Death."
+        ],
+        "grappled_2024": "Speed 0, no bonuses. Disadvantage on attack rolls against anyone but the grappler. When attacking the grappler, pick Advantage to cancel the automatic disadvantage.",
+        "incapacitated_2024": "No actions, bonus actions or reactions. You can't speak, your concentration breaks and you have disadvantage on initiative.",
+        "invisible_2024": "Advantage on initiative and on your attack rolls, disadvantage on attacks against you. A creature that can see you cancels these benefits.",
+        "stunned_2024": "You are Incapacitated. You fail Strength and Dexterity saves and attacks against you have advantage. Your speed does not change.",
+        "petrified_2024": "Turned to stone and Incapacitated, speed 0. You fail Strength and Dexterity saves, attacks against you have advantage. Resistance to all damage, immune to the Poisoned condition.",
         "exhaustion_levels": [
           "Level 1: Disadvantage on ability checks.",
           "Level 2: Speed halved.",
@@ -944,6 +965,7 @@
       "used": "Used",
       "mark_used": "Mark as used",
       "standard_actions": "Standard actions ({{n}})",
+      "incapacitated": "You are incapacitated: no actions, bonus actions or reactions.",
       "new_turn": "New turn",
       "end_round": "End of round (−1)",
       "empty": "Nothing here",

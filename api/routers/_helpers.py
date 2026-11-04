@@ -6,7 +6,7 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.schemas.common import ConcentrationSaveResult, RollMode
-from api.services.d20 import d20_history_label, d20_records, resolve_d20
+from api.services.d20 import d20_history_label, d20_records, resolve_applied
 from api.services.dice_stats import record_dice
 from api.services.durations import end_concentration, is_concentrating
 from api.services.condition_effects import release_concentration_effects
@@ -14,6 +14,7 @@ from api.services.homebrew.passive import get_passive_modifiers
 from core.db.models import Character, CharacterHistory
 from core.game.item_bonuses import item_bonus_total
 from core.game.stats import effective_ability_mod
+from core.rules.modifiers import modifiers_for
 
 logger = logging.getLogger(__name__)
 
@@ -93,15 +94,16 @@ def apply_con_hp(char, old_con_mod: int) -> None:
             char.current_hit_points = max(0, min(char.current_hit_points + delta, char.hit_points))
 
 
-async def saving_throw_bonus(session: AsyncSession, char: Character, ability: str) -> int:
+async def saving_throw_bonus(session: AsyncSession, char: Character, ability: str, roll: str = "save") -> int:
     """Saving throw bonus as the sheet shows it: effective modifier,
-    proficiency and homebrew passive modifiers."""
+    proficiency, homebrew passive modifiers and rule modifiers."""
     proficient = bool((char.saving_throws or {}).get(ability, False))
     return (
         effective_ability_mod(char, ability)
         + (char.proficiency_bonus if proficient else 0)
         + await get_passive_modifiers(session, char, f"character.saving_throw.{ability}")
         + item_bonus_total(char.items, f"save.{ability}")
+        + modifiers_for(char, roll, ability=ability).flat
     )
 
 
@@ -154,15 +156,16 @@ async def roll_concentration_save(
     is_fumble, description, dc, success, lost_concentration.
     """
     dc = max(10, damage // 2)
-    con_mod = await saving_throw_bonus(session, char, "constitution")
+    con_mod = await saving_throw_bonus(session, char, "constitution", "concentration")
 
-    outcome = resolve_d20(mode, dice, None)
+    applied = modifiers_for(char, "concentration", ability="constitution")
+    outcome = resolve_applied(mode, dice, None, applied)
     die = outcome.kept
     record_dice(char, d20_records(outcome))
     total = die + con_mod
     is_crit = die == 20
     is_fumble = die == 1
-    success = total >= dc
+    success = total >= dc and not applied.auto_fail
 
     lost_concentration = not success and is_concentrating(char)
     if lost_concentration:
@@ -177,6 +180,9 @@ async def roll_concentration_save(
         die=die,
         dice=outcome.dice,
         mode=outcome.mode,
+        mode_applied=outcome.mode,
+        notes=applied.notes,
+        auto_fail=applied.auto_fail,
         bonus=con_mod,
         total=total,
         is_critical=is_crit,

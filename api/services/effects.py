@@ -12,9 +12,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.db.models import Character, CharacterHistory
 from core.data.labels import condition_label
-from api.services.condition_effects import clear_effects_for
+from api.services.condition_effects import clear_effects_for, release_concentration_effects
 from api.services.homebrew.passive import get_passive_modifiers
 from api.services.homebrew.dispatcher import dispatch
+from core.rules.modifiers import INCAPACITATING, effective_hp_max, exhaustion_level, modifiers_for
 
 
 def _now() -> str:
@@ -43,7 +44,7 @@ async def apply_heal(session: AsyncSession, char: Character, amount: int) -> dic
     was_at_zero = char.current_hit_points == 0
     old = char.current_hit_points
     hb_hp_bonus = await get_passive_modifiers(session, char, "character.hit_points_max")
-    effective_max = char.hit_points + hb_hp_bonus
+    effective_max = effective_hp_max(char, hb_hp_bonus)
     char.current_hit_points = min(effective_max, char.current_hit_points + amount)
     healed = char.current_hit_points - old
     _add_history(session, char.id, "hp_change",
@@ -74,7 +75,12 @@ async def apply_conditions(session: AsyncSession, char: Character,
     current.update(changes)
     char.conditions = current
     from api.services.rules_states import on_conditions  # import locale: rules_states usa apply_heal
+    from api.services.durations import end_concentration, is_concentrating  # import locale: durations importa effects
     on_conditions(char, changes)
+    # Solo le appena attivate: la webapp rimanda tutta la mappa a ogni modifica.
+    if is_concentrating(char) and any(changes.get(c) and not old_conditions.get(c) for c in INCAPACITATING):
+        end_concentration(char)
+        await release_concentration_effects(session, char)
 
     changed = False
     for cond, new_val in changes.items():
@@ -102,4 +108,14 @@ async def apply_conditions(session: AsyncSession, char: Character,
                              meta={"slug": cond, "active": False})
     await clear_effects_for(session, ("character", char.id),
                             [c for c, v in changes.items() if not v])
+    if "exhaustion" in changes:
+        if exhaustion_level(char) >= 6 and not char.is_dead:
+            char.is_dead = True
+            _add_history(session, char.id, "death_save", "Morto — spossatezza al 6° livello")
+            return {"changed": changed}
+        # I chiamanti non caricano sempre le relazioni (GM, scadenze): qui servono per i privilegi.
+        await session.refresh(char, attribute_names=["classes", "items"])
+        if modifiers_for(char, "hp_max").hp_half:
+            bonus = await get_passive_modifiers(session, char, "character.hit_points_max")
+            char.current_hit_points = min(char.current_hit_points, effective_hp_max(char, bonus))
     return {"changed": changed}

@@ -19,6 +19,7 @@ from api.services.rules_turn import spend
 from api.services.class_features import sync_cataloged_features
 from api.database import get_db
 from api.services.d20 import D20Outcome, d20_history_label, d20_records, resolve_body
+from core.rules.modifiers import modifiers_for
 from api.services.dice_stats import record_dice
 from core.db.models import Character, CharacterClass, CharacterHistory, EquipmentSlot, HomebrewRule, Item
 from api.schemas.character import CharacterFull
@@ -566,11 +567,13 @@ async def attack_with_weapon(
     pb = char.proficiency_bonus if proficient else 0
 
     # To-hit roll
-    outcome = resolve_body(body)
+    ability = "strength" if ability_mod == str_mod and not is_ranged else "dexterity"
+    applied = modifiers_for(char, "attack", ability=ability, item=item)
+    outcome = resolve_body(body, applied)
     to_hit_die = outcome.kept
-    to_hit_bonus = ability_mod + pb + magic_bonus + attack_bonus_total(char.items, item, "attack")
+    to_hit_bonus = ability_mod + pb + magic_bonus + attack_bonus_total(char.items, item, "attack") + applied.flat
     to_hit_total = to_hit_die + to_hit_bonus
-    is_critical = to_hit_die == 20
+    is_critical = to_hit_die >= applied.crit_min
     is_fumble = to_hit_die == 1
 
     # Damage roll
@@ -585,7 +588,8 @@ async def attack_with_weapon(
         damage_bonus = 0
         damage_total = 0
     else:
-        damage_bonus = ability_mod + magic_bonus + attack_bonus_total(char.items, item, "damage") + dice_bonus
+        damage_bonus = (ability_mod + magic_bonus + attack_bonus_total(char.items, item, "damage") + dice_bonus
+                        + modifiers_for(char, "damage", ability=ability, item=item).flat)
         damage_total = max(0, sum(damage_rolls) + damage_bonus)
 
     result_str = (
@@ -658,6 +662,8 @@ async def attack_with_weapon(
         to_hit_die=to_hit_die,
         dice=outcome.dice,
         mode=outcome.mode,
+        mode_applied=outcome.mode,
+        notes=applied.notes,
         to_hit_bonus=to_hit_bonus,
         to_hit_total=to_hit_total,
         is_critical=is_critical,
@@ -698,11 +704,13 @@ async def attack_unarmed(
     ability_mod, damage_dice_str = unarmed_strike_profile(str_mod, dex_mod, monk_level)
     pb = char.proficiency_bonus
 
-    outcome = resolve_body(body)
+    ability = "strength" if ability_mod == str_mod else "dexterity"
+    applied = modifiers_for(char, "attack", ability=ability)
+    outcome = resolve_body(body, applied)
     to_hit_die = outcome.kept
-    to_hit_bonus = ability_mod + pb + attack_bonus_total(char.items, None, "attack")
+    to_hit_bonus = ability_mod + pb + attack_bonus_total(char.items, None, "attack") + applied.flat
     to_hit_total = to_hit_die + to_hit_bonus
-    is_critical = to_hit_die == 20
+    is_critical = to_hit_die >= applied.crit_min
     is_fumble = to_hit_die == 1
 
     dice_bonus = 0
@@ -721,7 +729,8 @@ async def attack_unarmed(
         damage_bonus = 0
         damage_total = 0
     else:
-        damage_bonus = ability_mod + attack_bonus_total(char.items, None, "damage") + dice_bonus
+        damage_bonus = (ability_mod + attack_bonus_total(char.items, None, "damage") + dice_bonus
+                        + modifiers_for(char, "damage", ability=ability).flat)
         damage_total = max(0, sum(damage_rolls) + damage_bonus)
 
     weapon_name = "Attacco a mano libera"
@@ -755,6 +764,8 @@ async def attack_unarmed(
         to_hit_die=to_hit_die,
         dice=outcome.dice,
         mode=outcome.mode,
+        mode_applied=outcome.mode,
+        notes=applied.notes,
         to_hit_bonus=to_hit_bonus,
         to_hit_total=to_hit_total,
         is_critical=is_critical,

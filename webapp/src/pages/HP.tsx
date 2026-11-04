@@ -38,7 +38,7 @@ import { useIsFirstValue } from '@/hooks/useIsFirstValue'
 import { notifyMutationError } from '@/lib/mutationError'
 import { isConcentrating, concentrationLabel } from '@/lib/concentration'
 import { hpNumeralTone } from '@/lib/hpTone'
-import { applyDamageModifier, damageMultiplier, type DamageModifier } from '@/lib/damageModifier'
+import { applyDamageModifier, damageMultiplier, effectiveDamageMods, type DamageModifier } from '@/lib/damageModifier'
 
 type HPOp = 'damage' | 'heal' | 'set_max' | 'set_current' | 'set_temp'
 
@@ -267,7 +267,7 @@ export default function HP() {
   const concentrationName = concentrationLabel(char)
   const classes = char.classes ?? []
   const hbHp = char.hp_max_homebrew_modifier ?? 0
-  const hpMax = char.hit_points + hbHp
+  const hpMax = char.computed?.hp_max_effective ?? char.hit_points + hbHp
   // In forma selvatica il numero grande e la barra sono quelli della forma (come in Eroe).
   const form = char.active_form ?? null
   const shownHp = form ? form.current_hp : char.current_hit_points
@@ -419,7 +419,7 @@ export default function HP() {
           setDamageModifier={setDamageModifier}
           damageType={damageType}
           setDamageType={setDamageType}
-          proposedModifier={damageMultiplier(char.damage_modifiers, damageType)}
+          proposedModifier={damageMultiplier(effectiveDamageMods(char), damageType)}
         />
       )}
 

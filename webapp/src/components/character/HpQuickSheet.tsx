@@ -13,7 +13,7 @@ import HPGauge from '@/components/ui/HPGauge'
 import CharacterHpSecondary from '@/components/character/CharacterHpSecondary'
 import HpQuickChips from '@/components/character/HpQuickChips'
 import {
-  applyDamageModifier, damageMultiplier, damagePreviewText, type DamageModifier,
+  applyDamageModifier, damageMultiplier, damagePreviewText, effectiveDamageMods, type DamageModifier,
 } from '@/lib/damageModifier'
 import { showUndoToast } from '@/components/ui/UndoToast'
 import { useToast } from '@/hooks/useToast'
@@ -77,7 +77,7 @@ export default function HpQuickSheet({ char, open, onClose }: HpQuickSheetProps)
   const parsedAmount = parseCounterInput(amount, null)
   const isAmountInvalid = parsedAmount === null || parsedAmount === 0
 
-  const proposedModifier = damageMultiplier(char.damage_modifiers, damageType)
+  const proposedModifier = damageMultiplier(effectiveDamageMods(char), damageType)
   const effective: DamageModifier = damageModifier ?? (damageType ? proposedModifier : null)
   const showPreview = op === 'damage' && !!effective && effective !== 'none' && !isAmountInvalid
 

@@ -34,6 +34,7 @@ from core.game.actions import parse_duration_rounds
 from api.routers._helpers import collect_homebrew_notifications, roll_concentration_save
 from api.services.character_response import build_character_response
 from api.services.d20 import d20_records, d20_history_label, resolve_body
+from core.rules.modifiers import modifiers_for
 from api.services.dice_stats import record_dice
 from api.services.homebrew.dispatcher import dispatch
 from api.services.spellcasting import best_caster, build_spellcasting_info
@@ -276,11 +277,12 @@ async def spell_attack(
     await release_concentration_effects(session, char)
 
     caster = best_caster(char)
-    bonus = caster.attack_bonus if caster else char.proficiency_bonus
-    outcome = resolve_body(body)
+    applied = modifiers_for(char, "attack", spell=spell)
+    bonus = (caster.attack_bonus if caster else char.proficiency_bonus) + applied.flat
+    outcome = resolve_body(body, applied)
     die = outcome.kept
     total = die + bonus
-    is_critical = die == 20
+    is_critical = die >= applied.crit_min
     is_fumble = die == 1
 
     text = f"Attacco incantesimo {spell.name}: {d20_history_label(outcome)}+{bonus}={total}" + (
@@ -308,6 +310,8 @@ async def spell_attack(
         to_hit_die=die,
         dice=outcome.dice,
         mode=outcome.mode,
+        mode_applied=outcome.mode,
+        notes=applied.notes,
         to_hit_bonus=bonus,
         to_hit_total=total,
         is_critical=is_critical,

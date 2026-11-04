@@ -114,7 +114,13 @@ class CombatantLive(BaseModel):
     pending_saves: list[PendingSaveRead] = []           # monsters, GM viewer only
 
 
+class InitiativeRollInfo(BaseModel):
+    mode_applied: RollMode = "normal"
+    notes: list[str] = []
+
+
 class EncounterLive(BaseModel):
+    initiative_roll: Optional[InitiativeRollInfo] = None  # solo in risposta al tiro di iniziativa
     id: int
     mode: EncounterMode
     status: EncounterStatus

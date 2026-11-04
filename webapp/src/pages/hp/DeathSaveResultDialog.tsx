@@ -1,3 +1,4 @@
+import RollNotes from '@/components/rules/RollNotes'
 import { m } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import { spring } from '@/styles/motion'
@@ -54,6 +55,7 @@ export default function DeathSaveResultDialog({ result, onClose }: Props) {
         {die}
       </m.p>
 
+      <RollNotes notes={result.notes} />
       <p className={`font-bold font-cinzel uppercase tracking-wider ${verdictColor}`}>
         {isSuccess
           ? t('character.death_saves.success')

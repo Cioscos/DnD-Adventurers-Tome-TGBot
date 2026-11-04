@@ -39,12 +39,21 @@ export function canonicalDamageType(value: string | null | undefined): string | 
 
 export type DamageModifiersMap = Record<string, string[] | undefined> | null | undefined
 
+/** Quelle salvate più le temporanee di condizioni e privilegi (`computed`, `all` = ogni tipo). */
+export function effectiveDamageMods(char: {
+  damage_modifiers?: DamageModifiersMap
+  computed?: { resistances: string[]; immunities: string[] }
+}): DamageModifiersMap {
+  if (!char.computed) return char.damage_modifiers
+  return { ...char.damage_modifiers, resistances: char.computed.resistances, immunities: char.computed.immunities }
+}
+
 /** Specchio di `damage_multiplier` lato server: l'immunità prevale,
  *  resistenza + vulnerabilità si annullano. */
 export function damageMultiplier(mods: DamageModifiersMap, type: string | null | undefined): DamageMultiplier {
   const slug = canonicalDamageType(type)
   if (!slug || !mods) return 'none'
-  const has = (key: string) => (mods[key] ?? []).some((v) => canonicalDamageType(v) === slug)
+  const has = (key: string) => (mods[key] ?? []).some((v) => v === 'all' || canonicalDamageType(v) === slug)
   if (has('immunities')) return 'immune'
   const res = has('resistances')
   const vul = has('vulnerabilities')

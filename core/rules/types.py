@@ -77,6 +77,21 @@ class OnUse:
 
 
 @dataclass(frozen=True)
+class Modifier:
+    """Effetto su un tiro o su un valore derivato. Vedi ``core.rules.modifiers.collect_modifiers``.
+
+    ``target``: ``attack``, ``damage``, ``ac``, ``speed``, ``initiative``, ``save``, ``skill``, ``passive``,
+    ``hp_max`` (somme); ``advantage``, ``disadvantage``, ``auto_fail``, ``note`` (segnali, ``value`` ignorato);
+    ``min_d20``, ``crit_min`` (soglie); ``resistance:<tipo>``, ``immunity:<tipo>`` (``all`` = ogni tipo);
+    ``half_prof``; ``speed_zero``, ``speed_half``, ``hp_max_half``.
+    ``when`` limita l'effetto (di solito su ``ctx.roll``); senza, vale sempre."""
+    target: str
+    value: "Callable[[RuleContext], int] | int"
+    when: "Callable[[RuleContext], bool] | None" = None
+    source: str = ""
+
+
+@dataclass(frozen=True)
 class FeatureSpec:
     key: str
     class_key: str

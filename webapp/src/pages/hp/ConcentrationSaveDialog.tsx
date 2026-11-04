@@ -1,3 +1,4 @@
+import RollNotes from '@/components/rules/RollNotes'
 import { m } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import { spring } from '@/styles/motion'
@@ -49,6 +50,7 @@ export default function ConcentrationSaveDialog({ result, onClose }: Props) {
         d20 ({die}) {bonus >= 0 ? '+' : ''}{bonus}
       </p>
 
+      <RollNotes notes={result.notes} autoFail={result.auto_fail} />
       <p className={`font-bold font-cinzel uppercase tracking-wider ${numberColor}`}>
         {success
           ? t('character.spells.conc_save_success')

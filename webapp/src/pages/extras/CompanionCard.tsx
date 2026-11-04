@@ -1,3 +1,4 @@
+import RollNotes from '@/components/rules/RollNotes'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
@@ -164,6 +165,7 @@ export default function CompanionCard({ charId, comp, wildShapeUses }: Props) {
           {result.name}: {result.r.to_hit_die}{result.r.to_hit_bonus >= 0 ? '+' : ''}{result.r.to_hit_bonus} = {result.r.to_hit_total}
           {result.r.is_critical && ` · ${t('character.extras.critical')}`}
           {' · '}{result.r.damage_total} {result.r.damage_type ?? ''}
+          <RollNotes notes={result.r.notes} className="mt-1" />
         </p>
       )}
 

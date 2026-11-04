@@ -317,7 +317,9 @@ async def execute_heal_character(action, ctx, rfr, session, char, **kw):
     # Use effective max HP (base + passive homebrew modifier) as the heal cap.
     from api.services.homebrew.passive import get_passive_modifiers
     hb_hp_bonus = await get_passive_modifiers(session, char, "character.hit_points_max")
-    effective_max = char.hit_points + hb_hp_bonus
+    from core.rules.modifiers import effective_hp_max
+    await session.refresh(char, attribute_names=["classes", "items"])  # /turn-start non carica le relazioni
+    effective_max = effective_hp_max(char, hb_hp_bonus)
     char.current_hit_points = min(effective_max, char.current_hit_points + amount)
     actual = char.current_hit_points - before
 

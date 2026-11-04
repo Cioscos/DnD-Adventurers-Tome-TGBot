@@ -8,7 +8,6 @@ Spec: docs/superpowers/specs/2026-06-09-combat-tracker-design.md
 from __future__ import annotations
 
 import logging
-import random
 from typing import Annotated, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -25,6 +24,7 @@ from api.schemas.encounter import (
     CombatantPatchRequest,
     EncounterCreateRequest,
     EncounterLive,
+    InitiativeRollInfo,
     EncounterStartRequest,
     GmConditionApply,
     InitiativeRollRequest,
@@ -34,6 +34,7 @@ from api.schemas.encounter import (
 from api.services import telegram_notify
 from api.services.homebrew.passive import get_passive_modifiers
 from api.services.d20 import resolve_body
+from core.rules.modifiers import Applied, modifiers_for
 from api.services.condition_effects import (
     ExpirySpec, SaveSpec, UndoLog, clear_effects_for, undo_last_advance, upsert_effect,
 )
@@ -351,12 +352,15 @@ async def roll_initiative(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail="Initiative already rolled",
         )
-    die = resolve_body(body).kept
-    comb.initiative_die = die
-    comb.initiative = die + comb.initiative_mod
+    applied = await _pc_initiative_modifiers(db, comb)
+    outcome = resolve_body(body, applied)
+    comb.initiative_die = outcome.kept
+    comb.initiative = outcome.kept + comb.initiative_mod + applied.flat
     _touch(session)
     await db.flush()
-    return await build_encounter_block(db, enc, viewer_is_gm=is_gm)
+    live = await build_encounter_block(db, enc, viewer_is_gm=is_gm)
+    live.initiative_roll = InitiativeRollInfo(mode_applied=outcome.mode, notes=applied.notes)
+    return live
 
 
 @router.post("/{session_id}/encounter/sync-pcs", response_model=EncounterLive)
@@ -406,8 +410,9 @@ async def start_encounter(
             detail={"code": "missing_initiative", "names": [c.name for c in missing]},
         )
     for c in missing:
-        c.initiative_die = random.randint(1, 20)
-        c.initiative = c.initiative_die + c.initiative_mod
+        applied = await _pc_initiative_modifiers(db, c)
+        c.initiative_die = resolve_body(None, applied).kept
+        c.initiative = c.initiative_die + c.initiative_mod + applied.flat
     ordered = sorted(
         enc.combatants, key=lambda c: (-(c.initiative or 0), -c.initiative_mod, c.id),
     )
@@ -581,6 +586,17 @@ async def _gm_combatant(
     if comb is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Combatant not found")
     return session, enc, comb
+
+
+async def _pc_initiative_modifiers(db: AsyncSession, comb: Combatant) -> Applied:
+    """Modificatori dell'iniziativa di un PG; un mostro non ha edizione né scheda (D7)."""
+    if comb.character_id is None:
+        return Applied()
+    char = (await db.execute(
+        select(Character).options(selectinload(Character.classes), selectinload(Character.items))
+        .where(Character.id == comb.character_id)
+    )).scalar_one_or_none()
+    return Applied() if char is None else modifiers_for(char, "initiative", ability="dexterity")
 
 
 async def _pc_char(db: AsyncSession, comb: Combatant) -> Character:

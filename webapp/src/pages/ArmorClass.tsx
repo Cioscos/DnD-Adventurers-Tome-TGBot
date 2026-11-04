@@ -122,7 +122,8 @@ export default function ArmorClass() {
   const previewBase = base !== '' ? Number(base) : char.base_armor_class
   const previewShield = shield !== '' ? Number(shield) : char.shield_armor_class
   const previewMagic = magic !== '' ? Number(magic) : char.magic_armor
-  const previewTotal = previewBase + previewShield + previewMagic + hbAc + itemsAc
+  const rulesAc = char.ac_breakdown?.rules ?? 0  // già in `char.ac`, non nell'anteprima dei tre campi
+  const previewTotal = previewBase + previewShield + previewMagic + hbAc + itemsAc + rulesAc
 
   return (
     <Layout title={t('character.ac.title')} backTo={`/char/${charId}`} group="combat" page="ac">
@@ -183,6 +184,7 @@ export default function ArmorClass() {
         </div>
         <HomebrewBreakdownRow value={char.ac_breakdown?.homebrew ?? 0} />
         <HomebrewBreakdownRow value={itemsAc} label={t('character.ac.items_label')} />
+        <HomebrewBreakdownRow value={rulesAc} label={t('character.ac.rules_label')} />
       </div>
 
       {/* Registro: voce e stato a sinistra, valore e correzione a destra. */}

@@ -391,6 +391,7 @@
       "shield": "Scudo",
       "magic": "Magia",
       "legend": "Base · Scudo · Magia",
+      "rules_label": "Regole di classe e addestramento",
       "items_label": "Oggetti magici",
       "total": "Totale",
       "new_total": "Nuovo CA",
@@ -711,6 +712,10 @@
       "result_title": "Risultato",
       "pool_cap_reached": "Limite massimo dadi raggiunto"
     },
+    "roll_notes": {
+      "auto_fail": "Fallimento automatico",
+      "armor_untrained": "Armatura senza addestramento"
+    },
     "conditions": {
       "duration": {
         "label": "Durata in round",
@@ -744,13 +749,15 @@
           "active_title": "Effetti attivi"
       },
       "title": "Condizioni",
-      "exhaustion": "Spossatezza (livello {{level}})",
-      "exhaustion_level": "Livello spossatezza",
+      "exhaustion": "Indebolimento (livello {{level}})",
+      "exhaustion_2024": "Esaurimento (livello {{level}})",
+      "exhaustion_level": "Livello",
       "none_active": "Nessuna condizione attiva",
       "blinded": "Accecato",
       "charmed": "Affascinato",
       "deafened": "Assordato",
-      "exhaustion_condition": "Spossatezza",
+      "exhaustion_condition": "Indebolimento",
+      "exhaustion_condition_2024": "Esaurimento",
       "exhaustion_caption": "Livelli (cumulativi)",
       "frightened": "Spaventato",
       "grappled": "Afferrato",
@@ -762,7 +769,7 @@
       "prone": "Prono",
       "restrained": "Trattenuto",
       "stunned": "Stordito",
-      "unconscious": "Inconscio",
+      "unconscious": "Privo di Sensi",
       "filter_all": "Tutte",
       "filter_active": "Attive",
       "reset_all": "Ripristina tutte",
@@ -784,7 +791,21 @@
         "blinded": "Un personaggio accecato non può vedere e fallisce automaticamente ogni prova di caratteristica che richiede la vista. I tiri per colpire contro di lui hanno vantaggio, i suoi hanno svantaggio.",
         "charmed": "Un personaggio affascinato non può attaccare chi lo affascina né prenderlo come bersaglio di capacità dannose o effetti magici. Chi lo affascina ha vantaggio nelle prove di caratteristica sociali.",
         "deafened": "Un personaggio assordato non può sentire e fallisce automaticamente ogni prova di caratteristica che richiede l'udito.",
-        "exhaustion": "L'affaticamento si misura in sei livelli progressivi. Ogni livello aggiunge un effetto cumulativo ai precedenti.",
+        "exhaustion": "L'indebolimento si misura in sei livelli. Ogni livello aggiunge il suo effetto a quelli precedenti.",
+        "exhaustion_2024": "L'esaurimento si misura in sei livelli. Ogni livello toglie 2 a tutte le prove di d20 e 5 piedi alla velocità.",
+        "exhaustion_levels_2024": [
+          "Livello 1: −2 alle prove di d20, velocità −5 piedi.",
+          "Livello 2: −4 alle prove di d20, velocità −10 piedi.",
+          "Livello 3: −6 alle prove di d20, velocità −15 piedi.",
+          "Livello 4: −8 alle prove di d20, velocità −20 piedi.",
+          "Livello 5: −10 alle prove di d20, velocità −25 piedi.",
+          "Livello 6: Morte."
+        ],
+        "grappled_2024": "Velocità 0, senza bonus. Svantaggio ai tiri per colpire contro chiunque non sia chi ti afferra. Se attacchi chi ti afferra, scegli Vantaggio per annullare lo svantaggio automatico.",
+        "incapacitated_2024": "Niente azioni, azioni bonus né reazioni. Non puoi parlare, la concentrazione si interrompe e hai svantaggio all'iniziativa.",
+        "invisible_2024": "Vantaggio all'iniziativa e ai tuoi tiri per colpire, svantaggio a quelli contro di te. Chi riesce a vederti annulla questi benefici.",
+        "stunned_2024": "Sei Incapacitato. Fallisci i tiri salvezza su Forza e Destrezza e i tiri per colpire contro di te hanno vantaggio. La velocità non cambia.",
+        "petrified_2024": "Trasformato in pietra e Incapacitato, velocità 0. Fallisci i tiri salvezza su Forza e Destrezza, i tiri per colpire contro di te hanno vantaggio. Resistenza a tutti i danni, immune alla condizione Avvelenato.",
         "exhaustion_levels": [
           "Livello 1: Svantaggio alle prove di caratteristica.",
           "Livello 2: Velocità dimezzata.",
@@ -943,6 +964,7 @@
       "used": "Usata",
       "mark_used": "Segna come usata",
       "standard_actions": "Azioni standard ({{n}})",
+      "incapacitated": "Sei incapacitato: niente azioni, azioni bonus né reazioni.",
       "new_turn": "Nuovo turno",
       "end_round": "Fine round (−1)",
       "empty": "Nessuna voce",

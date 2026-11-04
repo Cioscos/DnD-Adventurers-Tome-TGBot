@@ -86,7 +86,7 @@ export default function HeroScreen({ char }: Props) {
 
   const form = char.active_form ?? null
   // In forma selvatica la barra PF e la CA mostrano quelle della forma.
-  const hpMax = form ? form.max_hp : char.hit_points + (char.hp_max_homebrew_modifier ?? 0)
+  const hpMax = form ? form.max_hp : char.computed?.hp_max_effective ?? char.hit_points + (char.hp_max_homebrew_modifier ?? 0)
   const hpCurrent = form ? form.current_hp : char.current_hit_points
   const tempHp = form ? form.temp_hp : char.temp_hp
   const acTotal = form ? form.armor_class : char.ac + (char.ac_breakdown?.homebrew ?? 0) + (char.ac_breakdown?.items ?? 0)
@@ -324,7 +324,7 @@ export default function HeroScreen({ char }: Props) {
                 <StatPill
                   key={key}
                   icon={<Icon size={14} />}
-                  value={formatCondition(key, val, t)}
+                  value={formatCondition(key, val, t, char.rules_edition)}
                   tone="crimson"
                   size="sm"
                   expandHitArea
@@ -433,6 +433,7 @@ export default function HeroScreen({ char }: Props) {
               ? ((char.conditions as Record<string, unknown>)['exhaustion'] as number)
               : 0
           }
+          edition={char.rules_edition}
           onClose={() => setDetailCondKey(null)}
         />
       )}

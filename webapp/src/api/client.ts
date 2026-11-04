@@ -92,6 +92,8 @@ export type RollResult = {
   die: number
   dice?: number[]
   mode?: RollMode
+  notes?: string[]
+  auto_fail?: boolean
   bonus: number
   total: number
   is_critical: boolean
@@ -125,6 +127,7 @@ export type WeaponAttackResult = {
   to_hit_die: number
   dice?: number[]
   mode?: RollMode
+  notes?: string[]
   to_hit_bonus: number
   to_hit_total: number
   is_critical: boolean
@@ -163,6 +166,7 @@ export type DeathSaveRollResult = {
   die: number
   dice?: number[]
   mode?: RollMode
+  notes?: string[]
   outcome: 'nat20' | 'nat1' | 'success' | 'failure'
   successes: number
   failures: number

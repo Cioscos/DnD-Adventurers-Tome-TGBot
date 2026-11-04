@@ -15,7 +15,8 @@ from api.schemas.companion import (
     DICE_RE, MAX_COMPANIONS, CompanionActivate, CompanionAttack, CompanionAttackResult, CompanionCreate,
     CompanionHp, CompanionRead, CompanionUpdate,
 )
-from api.services.d20 import d20_history_label, d20_records, resolve_d20
+from api.services.d20 import d20_history_label, d20_records, resolve_applied
+from core.rules.modifiers import Applied, modifiers_for
 from api.services.dice_stats import record_dice
 from api.services.wild_shape import deactivate_other_forms
 from core.db.models import Ability, Character, CharacterHistory, Companion
@@ -216,8 +217,13 @@ async def companion_attack(
     if action.get("attack_bonus") is None:
         raise HTTPException(status_code=422, detail="action_not_attack")
 
-    outcome = resolve_d20(body.mode, body.dice, None)
-    bonus = int(action["attack_bonus"])
+    # In Forma Selvatica attacca il personaggio: le sue condizioni restano; un compagno è un altro combattente.
+    applied = Applied()
+    if comp.kind == "wild_shape" and comp.is_active:
+        await session.refresh(char, attribute_names=["classes", "items"])
+        applied = modifiers_for(char, "attack", ability="strength")
+    outcome = resolve_applied(body.mode, body.dice, None, applied)
+    bonus = int(action["attack_bonus"]) + applied.flat
     is_critical = outcome.kept == 20
     is_fumble = outcome.kept == 1
 
@@ -249,6 +255,6 @@ async def companion_attack(
     record_dice(char, d20_records(outcome) + ([(f"d{m.group(2)}", r) for r in rolls] if m and not is_fumble else []))
     return CompanionAttackResult(
         to_hit_die=outcome.kept, to_hit_bonus=bonus, to_hit_total=outcome.kept + bonus,
-        dice=outcome.dice, mode=outcome.mode, is_critical=is_critical, damage_rolls=rolls,
+        dice=outcome.dice, mode=outcome.mode, notes=applied.notes, is_critical=is_critical, damage_rolls=rolls,
         damage_total=total, damage_type=action.get("damage_type"),
     )

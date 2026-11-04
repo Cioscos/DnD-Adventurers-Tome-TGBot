@@ -2,7 +2,7 @@ import type { CharacterFull } from '@/types'
 
 /** In forma selvatica: PF del personaggio in piccolo, sotto quelli della forma. */
 export default function CharacterHpSecondary({ char, className = '' }: { char: CharacterFull; className?: string }) {
-  const max = char.hit_points + (char.hp_max_homebrew_modifier ?? 0)
+  const max = char.computed?.hp_max_effective ?? char.hit_points + (char.hp_max_homebrew_modifier ?? 0)
   return (
     <p data-testid="character-hp-secondary" className={`text-xs font-body text-dnd-text-muted ${className}`}>
       <span>{char.name}</span>{' · '}

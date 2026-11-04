@@ -349,7 +349,7 @@ export default function Conditions() {
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <span className={LEDGER_LABEL}>
-              {t('character.conditions.exhaustion_condition')}
+              {t('character.conditions.exhaustion_condition', { context: char.rules_edition })}
             </span>
             <Pressable
               aria-label={t('character.conditions.detail_aria')}
@@ -398,9 +398,10 @@ export default function Conditions() {
         </div>
         {/* Exhaustion details — intro + 6 level descriptions, toggled by Info button */}
         {showExhaustionDetails && (() => {
-          const intro = t('character.conditions.desc.exhaustion') as string
+          const intro = t('character.conditions.desc.exhaustion', { context: char.rules_edition }) as string
           const levels = t('character.conditions.desc.exhaustion_levels', {
             returnObjects: true,
+            context: char.rules_edition,
           }) as string[]
           return (
             <div className="mt-4 space-y-2">
@@ -578,6 +579,7 @@ export default function Conditions() {
         <ConditionDetailModal
           condKey={detailKey}
           exhaustionLevel={currentExhaustion}
+          edition={char.rules_edition}
           onClose={() => setDetailKey(null)}
         />
       )}

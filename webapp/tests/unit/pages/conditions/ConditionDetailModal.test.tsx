@@ -2,14 +2,16 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import ConditionDetailModal from '@/pages/conditions/ConditionDetailModal'
+import itLocale from '@/locales/it.json'
+import enLocale from '@/locales/en.json'
 
 vi.mock('react-i18next', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
   return {
     ...actual,
     useTranslation: () => ({
-      t: (k: string, opts?: { returnObjects?: boolean }) =>
-        opts?.returnObjects ? ['Svantaggio alle prove', 'Velocità dimezzata'] : k,
+      t: (k: string, opts?: { returnObjects?: boolean; context?: string }) =>
+        opts?.returnObjects ? ['Svantaggio alle prove', 'Velocità dimezzata'] : opts?.context ? `${k}:${opts.context}` : k,
       i18n: { language: 'it' },
     }),
   }
@@ -37,5 +39,21 @@ describe('ConditionDetailModal', () => {
     render(<ConditionDetailModal condKey="exhaustion" exhaustionLevel={2} onClose={() => {}} />)
     expect(screen.getByText('Svantaggio alle prove')).toBeInTheDocument()
     expect(screen.getByText('Velocità dimezzata')).toBeInTheDocument()
+  })
+
+  it('asks for the texts of the character edition', () => {
+    render(<ConditionDetailModal condKey="stunned" edition="2024" onClose={() => {}} />)
+    expect(screen.getByText('character.conditions.desc.stunned:2024')).toBeInTheDocument()
+  })
+
+  it('2024 has its own exhaustion ladder and fine print in both locales', () => {
+    for (const loc of [itLocale, enLocale]) {
+      const { conditions } = loc.character
+      expect(conditions.desc.exhaustion_levels_2024).toHaveLength(6)
+      expect(conditions.exhaustion_condition_2024).toBeTruthy()
+      expect(conditions.desc.stunned_2024).toBeTruthy()
+    }
+    expect(itLocale.character.conditions.exhaustion_condition).toBe('Indebolimento')
+    expect(itLocale.character.conditions.exhaustion_condition_2024).toBe('Esaurimento')
   })
 })

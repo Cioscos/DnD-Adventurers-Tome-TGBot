@@ -341,6 +341,8 @@ class DeathSaveRollResult(BaseModel):
     die: int
     dice: list[int] = []
     mode: RollMode = "normal"
+    mode_applied: RollMode = "normal"
+    notes: list[str] = []
     outcome: str  # "nat20" | "nat1" | "success" | "failure"
     successes: int
     failures: int
@@ -390,6 +392,10 @@ class RollResult(BaseModel):
     die: int = 20
     dice: list[int] = []
     mode: RollMode = "normal"
+    # Modo finale dopo gli automatismi e perché: `condition:<slug>`, `armor:untrained`, `feature:<key>`.
+    mode_applied: RollMode = "normal"
+    notes: list[str] = []
+    auto_fail: bool = False
     bonus: int
     total: int
     is_critical: bool = False

@@ -268,6 +268,13 @@ export default function Turn() {
 
       <ActiveStatesBar char={char} />
 
+      {char.computed?.incapacitated && (
+        <p role="status" className="px-1 text-sm font-body text-dnd-crimson-bright">{t('character.turn.incapacitated')}</p>
+      )}
+
+      {/* `fieldset disabled` spegne ogni pulsante delle azioni. */}
+      <fieldset disabled={!!char.computed?.incapacitated}
+        className={`min-w-0 space-y-3 ${char.computed?.incapacitated ? '[&_button]:opacity-50' : ''}`}>
       {/* Sempre aperta: un attacco può servire anche fuori dall'azione (opportunità, altra mano). */}
       <section>
         <h2 className={`flex min-h-11 items-center border-b border-dnd-border pl-1 ${LEDGER_TITLE}`}>{t('character.turn.section_attacks')}</h2>
@@ -279,6 +286,7 @@ export default function Turn() {
       {BUCKETS.map((b) => (
         <div key={b}>{section(t(`character.turn.section_${b}`), groups[b], b)}</div>
       ))}
+      </fieldset>
 
       <section>
         <Pressable

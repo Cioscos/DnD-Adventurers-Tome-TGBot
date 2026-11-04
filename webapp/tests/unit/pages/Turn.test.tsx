@@ -114,6 +114,21 @@ describe('Turn page', () => {
     await waitFor(() => expect(toggle).toHaveAttribute('aria-pressed', 'false'))
   })
 
+  it('disables every action while incapacitated but keeps the new turn button', async () => {
+    getChar.mockResolvedValue({ ...char, computed: { incapacitated: true } })
+    renderWithProviders(<Turn />)
+    expect(await screen.findByText('character.turn.incapacitated')).toBeInTheDocument()
+    expect(screen.getByLabelText('character.turn.mark_used: character.turn.section_action')).toBeDisabled()
+    expect(screen.getByText('character.turn.new_turn').closest('button')).toBeEnabled()
+  })
+
+  it('leaves actions enabled when not incapacitated', async () => {
+    getChar.mockResolvedValue({ ...char, computed: { incapacitated: false } })
+    renderWithProviders(<Turn />)
+    expect(await screen.findByLabelText('character.turn.mark_used: character.turn.section_action')).toBeEnabled()
+    expect(screen.queryByText('character.turn.incapacitated')).toBeNull()
+  })
+
   it('shows the action as used after a reload, because the state comes from the server', async () => {
     server.block = { ...NEW_BLOCK, bonus_used: true }
     getChar.mockResolvedValue(char)

@@ -55,6 +55,7 @@ from core.game.item_bonuses import item_bonus_total
 from api.routers._helpers import effective_ability_mod, effective_con_mod, prune_history, saving_throw_bonus
 from api.services import telegram_notify
 from api.services.d20 import d20_history_label, d20_records, resolve_body
+from core.rules.modifiers import effective_hp_max, modifiers_for
 from api.services.dice_stats import record_dice
 from api.services.character_response import build_character_response
 from api.services.effects import apply_conditions
@@ -205,6 +206,8 @@ async def list_characters(
             session, c, "character.ac"
         )
         summary.ac_items_modifier = item_bonus_total(c.items, "ac")
+        summary.ac += modifiers_for(c, "ac").flat
+        summary.hp_max_effective = effective_hp_max(c, summary.hp_max_homebrew_modifier)
         summaries.append(summary)
     return summaries
 
@@ -627,7 +630,8 @@ async def roll_skill(
 
     bonus = await skill_bonus(session, char, skill_name)
 
-    outcome = resolve_body(body)
+    applied = modifiers_for(char, "skill", skill=skill_name, ability=_SKILL_ABILITY[skill_name])
+    outcome = resolve_body(body, applied)
     die = outcome.kept
     total = die + bonus
     is_crit = die == 20
@@ -647,6 +651,9 @@ async def roll_skill(
         die=die,
         dice=outcome.dice,
         mode=outcome.mode,
+        mode_applied=outcome.mode,
+        notes=applied.notes,
+        auto_fail=applied.auto_fail,
         bonus=bonus,
         total=total,
         is_critical=is_crit,
@@ -678,7 +685,8 @@ async def roll_saving_throw(
 
     bonus = await saving_throw_bonus(session, char, ability)
 
-    outcome = resolve_body(body)
+    applied = modifiers_for(char, "save", ability=ability)
+    outcome = resolve_body(body, applied)
     die = outcome.kept
     total = die + bonus
     is_crit = die == 20
@@ -687,6 +695,7 @@ async def roll_saving_throw(
     history_msg = (
         f"TS {ability_label(ability)}: {d20_history_label(outcome)} {'+ ' if bonus >= 0 else ''}{bonus} = {total}"
         + (" (CRITICO)" if is_crit else " (FUMBLE)" if is_fumble else "")
+        + (" (fallimento automatico)" if applied.auto_fail else "")
     )
     if body and body.with_inspiration:
         history_msg = f"Reroll ispirazione: {history_msg}"
@@ -698,6 +707,9 @@ async def roll_saving_throw(
         die=die,
         dice=outcome.dice,
         mode=outcome.mode,
+        mode_applied=outcome.mode,
+        notes=applied.notes,
+        auto_fail=applied.auto_fail,
         bonus=bonus,
         total=total,
         is_critical=is_crit,
@@ -748,15 +760,17 @@ async def roll_pending_save(
         char.heroic_inspiration = False
 
     bonus = await saving_throw_bonus(session, char, ps.ability)
-    outcome = resolve_body(body)
+    applied = modifiers_for(char, "save", ability=ps.ability)
+    outcome = resolve_body(body, applied)
     die = outcome.kept
     total = die + bonus
-    passed = total >= ps.dc
+    passed = total >= ps.dc and not applied.auto_fail
     is_crit, is_fumble = die == 20, die == 1
 
     history_msg = (
         f"TS {ability_label(ps.ability)} per {condition_label(effect.slug)}: "
         f"{d20_history_label(outcome)} {'+ ' if bonus >= 0 else ''}{bonus} = {total} (CD {ps.dc})"
+        + (" (fallimento automatico)" if applied.auto_fail else "")
     )
     if reroll:
         history_msg = f"Reroll ispirazione: {history_msg}"
@@ -777,7 +791,8 @@ async def roll_pending_save(
 
     return PendingSaveRollResult(
         save=save_read, passed=passed, condition_removed=passed,
-        roll=RollResult(die=die, dice=outcome.dice, mode=outcome.mode, bonus=bonus, total=total,
+        roll=RollResult(die=die, dice=outcome.dice, mode=outcome.mode, mode_applied=outcome.mode,
+                        notes=applied.notes, auto_fail=applied.auto_fail, bonus=bonus, total=total,
                         is_critical=is_crit, is_fumble=is_fumble, description=ps.ability),
     )
 

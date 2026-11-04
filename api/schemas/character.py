@@ -34,6 +34,18 @@ class AcBreakdown(BaseModel):
     magic: int
     homebrew: int
     items: int = 0
+    rules: int = 0
+
+
+class ComputedStats(BaseModel):
+    """Valori derivati dalle regole (condizioni, privilegi) sommati a homebrew e oggetti."""
+
+    speed: int = 30
+    hp_max_effective: int = 0
+    resistances: list[str] = []
+    immunities: list[str] = []
+    incapacitated: bool = False
+    save_flat: dict[str, int] = {}
 
 
 class SpellCasterStats(BaseModel):
@@ -59,6 +71,7 @@ class SpellcastingInfo(BaseModel):
 
 
 class CharacterSummary(BaseModel):
+    hp_max_effective: Optional[int] = None
     """Lightweight model returned in the character list."""
 
     id: int
@@ -126,6 +139,7 @@ class CharacterFull(BaseModel):
     speed_items_modifier: int = 0
     # DEX effective mod + item initiative bonus (+ homebrew initiative, Task 21)
     initiative_bonus: int = 0
+    computed: ComputedStats = ComputedStats()
     skills_homebrew_modifiers: dict[str, int] = Field(default_factory=dict)
     saves_homebrew_modifiers: dict[str, int] = Field(default_factory=dict)
     # Server-computed totals shared by rolls and the sheet (skill_bonus / passive_score).
@@ -394,6 +408,8 @@ class SpellAttackResult(BaseModel):
     to_hit_die: int
     dice: list[int] = []
     mode: RollMode = "normal"
+    mode_applied: RollMode = "normal"
+    notes: list[str] = []
     to_hit_bonus: int
     to_hit_total: int
     is_critical: bool

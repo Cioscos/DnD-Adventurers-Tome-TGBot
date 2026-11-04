@@ -6,6 +6,7 @@ import { api } from '@/api/client'
 import { haptic } from '@/auth/telegram'
 import { useD20Roll, d20Arg, type RollMode } from '@/hooks/useD20Roll'
 import RollButton from '@/components/ui/RollButton'
+import { useRollNoteLabels } from '@/hooks/useRollNoteLabels'
 import type { CombatantLive } from '@/types'
 
 interface Props {
@@ -17,12 +18,14 @@ export default function InitiativeCta({ sessionId, combatant }: Props) {
   const { t } = useTranslation()
   const qc = useQueryClient()
   const rollD20 = useD20Roll()
+  const noteLabels = useRollNoteLabels()
 
   const rollMutation = useMutation({
     mutationFn: async (mode: RollMode) =>
       api.sessions.encounter.rollInitiative(sessionId, combatant.id, d20Arg(mode, await rollD20(mode))),
-    onSuccess: () => {
+    onSuccess: (live) => {
       haptic.success()
+      if (live.initiative_roll?.notes.length) toast.info(noteLabels(live.initiative_roll.notes).join(' · '))
       qc.invalidateQueries({ queryKey: ['session-live', sessionId] })
     },
     onError: () => {

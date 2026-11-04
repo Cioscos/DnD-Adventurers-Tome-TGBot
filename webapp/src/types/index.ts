@@ -227,12 +227,15 @@ export interface CharacterSummary {
   heroic_inspiration: boolean
   experience_points: number
   hp_max_homebrew_modifier: number
+  hp_max_effective?: number | null
   ac_homebrew_modifier: number
   ac_items_modifier?: number
   is_dead: boolean
 }
 
 export interface ConcentrationSaveResult {
+  notes?: string[]
+  auto_fail?: boolean
   die: number
   bonus: number
   total: number
@@ -258,6 +261,18 @@ export interface AcBreakdown {
   homebrew: number
   /** Bonus CA da oggetti magici attivi (equipaggiati/sintonizzati). */
   items?: number
+  /** Già compreso in `ac`: privilegi, scudo senza addestramento 2024. */
+  rules?: number
+}
+
+/** Valori derivati dalle regole (condizioni, privilegi) sommati a homebrew e oggetti. */
+export interface ComputedStats {
+  speed: number
+  hp_max_effective: number
+  resistances: string[]
+  immunities: string[]
+  incapacitated: boolean
+  save_flat: Record<string, number>
 }
 
 /** Blocco derivato dal BE: preparazione incantesimi + capacità rituali. */
@@ -304,6 +319,7 @@ export interface PendingSaveRollResult {
 }
 
 export interface CharacterFull extends Omit<CharacterSummary, 'ac_homebrew_modifier'> {
+  computed?: ComputedStats
   coin_totals?: Record<CoinKey, number>
   coin_breakdown?: CoinLocation[]
   unequipped_item_names?: string[]
@@ -649,6 +665,8 @@ export interface GmConditionApply {
 }
 
 export interface EncounterLive {
+  /** Solo in risposta al tiro di iniziativa. */
+  initiative_roll?: { mode_applied: 'normal' | 'advantage' | 'disadvantage'; notes: string[] } | null
   id: number
   mode: EncounterMode
   status: EncounterStatus
@@ -714,6 +732,7 @@ export interface RollDamageRequest {
 
 /** Esito di POST /characters/{id}/spells/{spell_id}/attack. */
 export interface SpellAttackResult {
+  notes?: string[]
   spell_name: string
   to_hit_die: number
   dice?: number[]
@@ -913,6 +932,7 @@ export type CompanionPayload = Partial<Pick<Companion,
   'kind' | 'name' | 'srd_index' | 'statblock' | 'max_hp' | 'current_hp' | 'temp_hp' | 'armor_class' | 'notes' | 'is_active'>>
 
 export interface CompanionAttackResult {
+  notes?: string[]
   to_hit_die: number
   to_hit_bonus: number
   to_hit_total: number

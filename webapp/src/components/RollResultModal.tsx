@@ -1,3 +1,4 @@
+import RollNotes from '@/components/rules/RollNotes'
 import { m } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import { GiPolarStar as Star, GiSkullCrossedBones as Skull } from 'react-icons/gi'
@@ -10,6 +11,8 @@ export type RollResult = {
   die: number
   dice?: number[]
   mode?: RollMode
+  notes?: string[]
+  auto_fail?: boolean
   bonus: number
   total: number
   is_critical: boolean
@@ -129,6 +132,7 @@ export default function RollResultModal({
         )}
       </p>
 
+      <RollNotes notes={result.notes} autoFail={result.auto_fail} />
       {note && <p className="text-xs text-dnd-text font-body">{note}</p>}
 
       {result.description && (

@@ -220,6 +220,8 @@ class WeaponAttackResult(BaseModel):
     to_hit_die: int
     dice: list[int] = []
     mode: RollMode = "normal"
+    mode_applied: RollMode = "normal"
+    notes: list[str] = []
     to_hit_bonus: int
     to_hit_total: int
     is_critical: bool

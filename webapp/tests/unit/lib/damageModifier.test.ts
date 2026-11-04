@@ -1,10 +1,23 @@
 import { describe, it, expect } from 'vitest'
 import {
   applyDamageModifier, canonicalDamageType, damageMultiplier, damagePreviewText, damageTypeLabel,
-  type DamageModifier,
+  effectiveDamageMods, type DamageModifier,
 } from '@/lib/damageModifier'
 import itLocale from '@/locales/it.json'
 import enLocale from '@/locales/en.json'
+
+describe('effectiveDamageMods', () => {
+  it('uses the temporary resistances of conditions without losing vulnerabilities', () => {
+    const char = {
+      damage_modifiers: { vulnerabilities: ['fire'], resistances: [] },
+      computed: { resistances: ['all'], immunities: ['poison'] },
+    }
+    expect(damageMultiplier(effectiveDamageMods(char), 'slashing')).toBe('half')
+    expect(damageMultiplier(effectiveDamageMods(char), 'poison')).toBe('immune')
+    expect(damageMultiplier(effectiveDamageMods(char), 'fire')).toBe('none')
+    expect(effectiveDamageMods({ damage_modifiers: { resistances: ['fire'] } })).toEqual({ resistances: ['fire'] })
+  })
+})
 
 describe('applyDamageModifier', () => {
   it.each<[number, DamageModifier, number]>([

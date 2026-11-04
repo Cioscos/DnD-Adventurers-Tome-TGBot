@@ -65,7 +65,7 @@ export default function HeroStatsSection({ char }: Props) {
   const otherSpeeds = ((char.settings?.speeds as { type: string; range_ft: number }[] | undefined) ?? [])
     .filter((s) => s.range_ft > 0)
 
-  const speedTotal = (char.speed ?? 30) + (char.speed_homebrew_modifier ?? 0) + (char.speed_items_modifier ?? 0) - (char.speed_encumbrance_penalty_ft ?? 0)
+  const speedTotal = char.computed?.speed ?? (char.speed ?? 30) + (char.speed_homebrew_modifier ?? 0) + (char.speed_items_modifier ?? 0) - (char.speed_encumbrance_penalty_ft ?? 0)
   const speedLabel = formatLength(speedTotal, unitSystem)
 
   // Proficient saving throws with their total bonus (same math as SavingThrows.tsx).
@@ -73,7 +73,7 @@ export default function HeroStatsSection({ char }: Props) {
   const profSaves = ABILITY_ORDER.filter((a) => saves[a]).map((a) => ({
     key: a,
     label: t(`character.ability.${a}_short`, { defaultValue: a.slice(0, 3).toUpperCase() }),
-    bonus: abilityMod(a) + pb + (char.saves_homebrew_modifiers?.[a] ?? 0) + (char.saves_items_modifiers?.[a] ?? 0),
+    bonus: abilityMod(a) + pb + (char.saves_homebrew_modifiers?.[a] ?? 0) + (char.saves_items_modifiers?.[a] ?? 0) + (char.computed?.save_flat?.[a] ?? 0),
   }))
 
   // Skill proficiency counts (only keys actually set on the character).

@@ -41,10 +41,11 @@ from api.schemas.common import (
     RestPreview,
     RestRequest,
 )
-from core.data.damage_types import LABELS_IT, canonical_damage_type, damage_multiplier
+from core.data.damage_types import LABELS_IT, canonical_damage_type
 from api.services.hp_rolls import stored_rolls
 from core.game.stats import total_base_hp
 from core.rules.edition import character_edition
+from core.rules.modifiers import damage_taken_mode, effective_hp_max, exhaustion_level, modifiers_for
 from api.routers._helpers import collect_homebrew_notifications, effective_con_mod, roll_concentration_save
 from api.schemas.common import ConcentrationSaveResult
 from api.services.character_response import build_character_response
@@ -169,10 +170,12 @@ async def update_hp(
         mod = body.damage_modifier
         raw = body.raw_value if body.raw_value is not None else body.value
         applied = body.value
-        if mod is None and slug is not None:
-            mod = damage_multiplier(char.damage_modifiers, slug)
-            raw = body.value
-            applied = {"half": raw // 2, "double": raw * 2, "immune": 0}.get(mod, raw)
+        if mod is None:
+            # Senza tipo conta solo una resistenza a tutti i danni (Pietrificato).
+            mod = damage_taken_mode(char, slug)
+            if slug is not None or mod != "none":
+                raw = body.value
+                applied = {"half": raw // 2, "double": raw * 2, "immune": 0}.get(mod, raw)
         elif mod == "immune":
             applied = 0
         # Wild shape: the form soaks the (already resistance-adjusted, using the
@@ -227,7 +230,7 @@ async def update_hp(
         # --- Morte & tiri salvezza (D&D 5e RAW) ---
         if char.current_hit_points == 0 and amount > 0 and not char.is_dead:
             hb_max_bonus = await get_passive_modifiers(session, char, "character.hit_points_max")
-            effective_max = char.hit_points + hb_max_bonus
+            effective_max = effective_hp_max(char, hb_max_bonus)
             # sforamento = danno oltre quello che porta a 0
             overflow = (amount - old) if old > 0 else amount
             ds = dict(char.death_saves or {"successes": 0, "failures": 0, "stable": False})
@@ -334,7 +337,8 @@ async def update_hp(
 
     elif body.op == HPOp.SET_CURRENT:
         old = char.current_hit_points
-        char.current_hit_points = max(0, min(char.hit_points, body.value))
+        hb_max_bonus = await get_passive_modifiers(session, char, "character.hit_points_max")
+        char.current_hit_points = max(0, min(effective_hp_max(char, hb_max_bonus), body.value))
         _add_history(session, char.id, "hp_change",
                      f"HP correnti impostati: {old} → {char.current_hit_points}",
                      meta={"op": "SET_CURRENT"})
@@ -467,7 +471,6 @@ def compute_rest_effects(char: Character, rest_type: str, hp_max_bonus: int = 0,
     fx.ends_concentration = long and is_concentrating(char)  # D8: solo il riposo lungo
     fx.pact_slots = sum(s.used for s in char.spell_slots if s.is_pact and s.used > 0)
     if long:
-        fx.hp_gain = max(0, char.hit_points + hp_max_bonus - char.current_hit_points)
         for s in char.spell_slots:
             if not s.is_pact and s.used > 0:
                 fx.slots[s.level] = fx.slots.get(s.level, 0) + s.used
@@ -488,6 +491,9 @@ def compute_rest_effects(char: Character, rest_type: str, hp_max_bonus: int = 0,
         fed = ate_and_drank or character_edition(char) == "2024"
         if fed and isinstance(exh, int) and not isinstance(exh, bool) and exh > 0:
             fx.exhaustion_change = -1
+        # Il massimo vale per il livello di spossatezza a riposo finito.
+        hp_max = effective_hp_max(char, hp_max_bonus, exhaustion_level(char) + fx.exhaustion_change)
+        fx.hp_gain = max(0, hp_max - char.current_hit_points)
     fx.abilities = [a.name for a in char.abilities
                     if _restores_ability(a, rest_type) and a.uses != a.max_uses]
     fx.homebrew_resources = [r.name for r in char.homebrew_resources
@@ -554,8 +560,6 @@ async def rest(
 
     if rest_type == "long":
         char.last_long_rest_at = _now()
-        # Restore to effective max HP (base + passive homebrew modifier).
-        char.current_hit_points = char.hit_points + hb_hp_bonus
         char.temp_hp = 0
         # Break concentration
         end_concentration(char)
@@ -592,6 +596,8 @@ async def rest(
             _add_history(session, char.id, "condition_change",
                          f"Spossatezza: livello {old_exh} → {new_exh} (riposo lungo)",
                          meta={"slug": "exhaustion", "active": new_exh > old_exh})
+        # Dopo la spossatezza: il massimo effettivo dipende dal livello appena sceso.
+        char.current_hit_points = effective_hp_max(char, hb_hp_bonus)
         _add_history(session, char.id, "rest", "Riposo lungo completato",
                      meta={"kind": "long"})
 
@@ -771,7 +777,8 @@ async def roll_death_save(
         )
     ds = dict(char.death_saves or {"successes": 0, "failures": 0, "stable": False})
 
-    d20 = resolve_body(body)
+    applied = modifiers_for(char, "death_save")
+    d20 = resolve_body(body, applied)
     die = d20.kept
     record_dice(char, d20_records(d20))
     revived = False
@@ -794,8 +801,8 @@ async def roll_death_save(
                      f"Tiro morte d20={die}: Naturale 1! 2 fallimenti ({ds['failures']}/3)",
                      meta={"ds": "failure", "n": 2})
 
-    elif die >= 10:
-        # 10+: 1 success
+    elif die + applied.flat >= 10:
+        # 10+: 1 success (Esaurimento 2024 e bonus di classe contano; 20 e 1 naturali no)
         ds["successes"] = min(3, ds.get("successes", 0) + 1)
         outcome = "success"
         if ds["successes"] >= 3:
@@ -827,6 +834,8 @@ async def roll_death_save(
         die=die,
         dice=d20.dice,
         mode=d20.mode,
+        mode_applied=d20.mode,
+        notes=applied.notes,
         outcome=outcome,
         successes=ds["successes"],
         failures=ds["failures"],
@@ -891,6 +900,8 @@ async def revive(
         char.is_dead = False
         char.current_hit_points = 1
         char.death_saves = {"successes": 0, "failures": 0, "stable": False}
+        if exhaustion_level(char) >= 6:  # altrimenti resterebbe al livello che uccide
+            char.conditions = {**(char.conditions or {}), "exhaustion": 5}
         end_concentration(char)
         await release_concentration_effects(session, char)
         _add_history(session, char.id, "death_save", "Riportato in vita (1 PF)")

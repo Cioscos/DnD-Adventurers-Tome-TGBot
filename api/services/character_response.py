@@ -11,7 +11,7 @@ from __future__ import annotations
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.schemas.container import CoinLocationRead, ContainerStatsRead
-from api.schemas.character import AcBreakdown, ActiveForm, CharacterFull
+from api.schemas.character import AcBreakdown, ActiveForm, CharacterFull, ComputedStats
 from api.services.choices import option_catalog
 from api.services.condition_effects import character_effect_payload
 from api.services.wild_shape import get_active_form
@@ -24,6 +24,9 @@ from core.game.containers import COINS, carried_weight, coin_locations, containe
 from core.game.item_bonuses import item_bonus_total
 from core.game.skills import PASSIVE_SKILLS, has_jack_of_all_trades, skill_proficiency_part
 from core.rules.catalog import active_features
+from core.rules.modifiers import (
+    effective_hp_max, effective_speed, is_incapacitated, modifiers_for, passive_adjustment,
+)
 from core.game.stats import effective_ability_score, migrate_character_ac, sync_base_ac, unarmored_formula
 from api.routers._helpers import effective_ability_mod
 
@@ -69,7 +72,9 @@ async def build_character_response(
         magic=char.magic_armor,
         homebrew=hb_ac,
         items=item_bonus_total(char.items, "ac"),
+        rules=modifiers_for(char, "ac").flat,
     )
+    response.ac += response.ac_breakdown.rules
 
     response.hp_max_homebrew_modifier = await get_passive_modifiers(
         session, char, "character.hit_points_max"
@@ -83,6 +88,7 @@ async def build_character_response(
         effective_ability_mod(char, "dexterity")
         + item_bonus_total(char.items, "initiative")
         + await get_passive_modifiers(session, char, "character.initiative")
+        + modifiers_for(char, "initiative", ability="dexterity").flat
     )
     _apply_encumbrance(char, response)
     _apply_containers(char, response)
@@ -103,10 +109,12 @@ async def build_character_response(
             response.skills_homebrew_modifiers[slug] = val
         response.skill_bonuses[slug] = (
             effective_ability_mod(char, ability) + skill_proficiency_part(char, slug) + val
+            + modifiers_for(char, "skill", skill=slug, ability=ability).flat
         )
     for slug in PASSIVE_SKILLS:
         response.passives[slug] = (
             10 + response.skill_bonuses[slug] + await passive_modifier(session, char, slug)
+            + passive_adjustment(char, slug)
         )
 
     for slug in ABILITY_NAMES:
@@ -117,6 +125,19 @@ async def build_character_response(
         if item_val:
             response.saves_items_modifiers[slug] = item_val
 
+    rule_damage = modifiers_for(char, None)
+    stored = char.damage_modifiers if isinstance(char.damage_modifiers, dict) else {}
+    response.computed = ComputedStats(
+        speed=effective_speed(char, (
+            char.speed + response.speed_homebrew_modifier + response.speed_items_modifier
+            - response.speed_encumbrance_penalty_ft
+        )),
+        hp_max_effective=effective_hp_max(char, response.hp_max_homebrew_modifier),
+        resistances=sorted({*(stored.get("resistances") or []), *rule_damage.resistances}),
+        immunities=sorted({*(stored.get("immunities") or []), *rule_damage.immunities}),
+        incapacitated=is_incapacitated(char),
+        save_flat={a: modifiers_for(char, "save", ability=a).flat for a in ABILITY_NAMES},
+    )
     return response
 
 
