@@ -219,7 +219,6 @@
     },
     "select": {
       "title": "I tuoi personaggi",
-      "subtitle": "Scegli un eroe per la tua avventura",
       "new": "Nuovo personaggio",
       "empty": "Nessun personaggio. Creane uno!",
       "delete_confirm": "Eliminare {{name}}? L'azione è irreversibile.",

@@ -220,6 +220,8 @@ body,
    the floating native controls that env() alone does not account for. */
 .pb-safe { padding-bottom: calc(1rem + max(env(safe-area-inset-bottom, 0px), var(--tg-safe-bottom, 0px) + var(--tg-content-bottom, 0px))); }
 /* Fondo delle pagine: il FAB dei dadi si alza di tutto l'inset, quindi l'inset si somma ai 6rem che lo scavalcano. */
+/* Pulsante fisso in fondo alla home: sopra l'inset di Telegram e del sistema. */
+.pb-safe-cta { padding-bottom: calc(0.75rem + max(env(safe-area-inset-bottom, 0px), var(--tg-safe-bottom, 0px) + var(--tg-content-bottom, 0px))); }
 .pb-safe-fab { padding-bottom: calc(6rem + max(env(safe-area-inset-bottom, 0px), var(--tg-safe-bottom, 0px) + var(--tg-content-bottom, 0px))); }
 .pt-safe { padding-top: calc(0.75rem + max(env(safe-area-inset-top, 0px), var(--tg-safe-top, 0px) + var(--tg-content-top, 0px))); }
 .px-safe {

@@ -219,7 +219,6 @@
     },
     "select": {
       "title": "Your characters",
-      "subtitle": "Choose a hero for your adventure",
       "new": "New character",
       "empty": "No characters yet. Create one!",
       "delete_confirm": "Delete {{name}}? This action is irreversible.",

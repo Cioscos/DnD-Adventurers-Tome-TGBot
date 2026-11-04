@@ -12,7 +12,8 @@
           "Azioni rapide e sezioni del Turno seguono lo stesso schema a righe della scheda.",
           "Il riepilogo degli slot nella schermata del personaggio mostra quanti ne restano, solo per i livelli che hai.",
           "Caratteristiche, Abilità, Tiri salvezza, Classe Armatura, Monete, Esperienza e Classe si leggono come righe di una scheda, con più contenuto a colpo d'occhio.",
-          "Incantesimi, Inventario, Abilità speciali, Slot, Azioni, Condizioni e Cronologia sono elenchi a righe: la card compare solo aprendo una voce."
+          "Incantesimi, Inventario, Abilità speciali, Slot, Azioni, Condizioni e Cronologia sono elenchi a righe: la card compare solo aprendo una voce.",
+          "La home è un elenco dei tuoi personaggi con PF e CA in vista, e il pulsante Nuovo personaggio resta sempre in basso, a portata di pollice."
         ],
         "en": [
           "Easier reading in low light: labels and secondary text have more contrast in the dark theme.",
@@ -22,7 +23,8 @@
           "Quick actions and Turn sections follow the same row layout as the character sheet.",
           "The spell slot summary on the character screen shows how many you have left, only for the levels you have.",
           "Ability Scores, Skills, Saving Throws, Armor Class, Coins, Experience and Class read as rows of a sheet, with more in view at a glance.",
-          "Spells, Inventory, Special Abilities, Slots, Actions, Conditions and History are lists of rows: a card only appears when you open an entry."
+          "Spells, Inventory, Special Abilities, Slots, Actions, Conditions and History are lists of rows: a card only appears when you open an entry.",
+          "The home screen lists your characters with HP and AC in view, and the New character button always stays at the bottom, within thumb reach."
         ]
       },
       "fixed": {
