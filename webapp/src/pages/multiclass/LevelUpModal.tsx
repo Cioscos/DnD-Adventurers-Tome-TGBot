@@ -70,12 +70,10 @@ export default function LevelUpModal({ char, xpLevel, onClose }: LevelUpModalPro
       const newTotal = classes.reduce((sum, c) => sum + c.level, 0) + 1
       toast.success(t('character.xp.level_up_toast', { level: newTotal }), {
         duration: 3500,
-        icon: '✨',
       })
       if (updated.hp_gained && updated.hp_gained > 0) {
         toast.success(t('character.xp.hp_gained_toast', { hp: updated.hp_gained }), {
           duration: 2000,
-          icon: '❤',
         })
       }
       onClose()

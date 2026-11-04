@@ -270,7 +270,7 @@ export default function HeroScreen({ char }: Props) {
         {atZero && deathSaves.stable && !char.is_dead && (
           <p className="mt-3 flex items-center justify-center gap-1.5 rounded-lg px-3 py-1.5
                         text-xs font-cinzel font-bold uppercase tracking-wider
-                        bg-dnd-cobalt/15 border border-dnd-cobalt/40 text-dnd-cobalt-bright">
+                        bg-dnd-cobalt/10 border border-dnd-cobalt/40 text-dnd-cobalt-bright">
             <HeartPulse size={13} aria-hidden />
             {t('character.death_saves.stabilized_badge')}
           </p>

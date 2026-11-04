@@ -32,14 +32,14 @@ export default function LevelUpBanner({
       transition={spring.elastic}
       whileTap={{ scale: 0.97 }}
       aria-label={label}
-      className={`w-full rounded-2xl bg-dnd-amber/15 border border-dnd-amber
+      className={`w-full rounded-2xl bg-dnd-amber/10 border border-dnd-amber
                   text-dnd-amber
                   px-4 py-3 text-sm font-cinzel uppercase tracking-wider
                   flex items-center justify-center gap-2 shadow-parchment-md
-                  hover:bg-dnd-amber/25
+                  hover:bg-dnd-amber/20
                   transition ${className}`}
     >
-      <Sparkles size={16} className="animate-shimmer" />
+      <Sparkles size={16} />
       {label}
     </Pressable>
   )

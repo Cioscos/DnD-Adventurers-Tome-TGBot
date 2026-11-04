@@ -148,7 +148,7 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
                   onClick={() => setForm((f) => ({ ...f, item_type: type }))}
                   className={`min-h-[46px] flex items-center gap-2 px-3 rounded-xl text-sm font-medium transition-colors ${lastSpan}
                     ${active
-                      ? 'bg-dnd-gold text-dnd-ink shadow-halo-gold'
+                      ? 'border bg-dnd-gold/20 border-dnd-gold text-dnd-gold-bright'
                       : 'bg-dnd-surface-raised text-dnd-text border border-dnd-border'}`}
                 >
                   <Icon size={18} className="shrink-0" />
@@ -283,7 +283,7 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
                       onClick={() => toggleProperty(prop)}
                       className={`min-h-[44px] px-3 py-2 rounded-lg text-xs font-medium transition-colors
                         ${active
-                          ? 'bg-dnd-gold text-dnd-ink shadow-engrave'
+                          ? 'border bg-dnd-gold/20 border-dnd-gold text-dnd-gold-bright'
                           : 'bg-dnd-surface-raised text-dnd-text border border-dnd-border'}`}
                     >
                       {active ? '✓ ' : ''}{t(`character.inventory.weapon_properties.${prop}`)}
@@ -417,7 +417,7 @@ export default function ItemForm({ initialData, onSubmit, onCancel, isPending }:
                       onClick={() => setForm((f) => ({ ...f, subtype: st }))}
                       className={`min-h-[44px] px-3 rounded-xl text-sm font-medium transition-colors ${lastSpan}
                         ${active
-                          ? 'bg-dnd-gold text-dnd-ink shadow-halo-gold'
+                          ? 'border bg-dnd-gold/20 border-dnd-gold text-dnd-gold-bright'
                           : 'bg-dnd-surface-raised text-dnd-text border border-dnd-border'}`}
                     >
                       {t(`character.inventory.subtypes.${st}`)}

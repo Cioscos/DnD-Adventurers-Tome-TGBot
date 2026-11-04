@@ -47,7 +47,7 @@ export default function ItemDetailsModal({ item, slot, onClose }: Props) {
 
   const slotLabel = t(`character.equipment.slots.${slot}`, { defaultValue: slot })
   const typeLabel = t(`character.inventory.types.${item.item_type}`, { defaultValue: item.item_type })
-  const typeIcon = TYPE_ICON[item.item_type] ?? TYPE_ICON.generic
+  const TypeIcon = TYPE_ICON[item.item_type] ?? TYPE_ICON.generic
 
   const meta = item.item_metadata ?? {}
   const properties = Array.isArray(meta.properties) ? meta.properties as string[] : []
@@ -79,7 +79,7 @@ export default function ItemDetailsModal({ item, slot, onClose }: Props) {
                 {slotLabel}
               </p>
               <h2 className="text-base font-bold text-dnd-gold-bright leading-tight">
-                <span className="mr-1.5" aria-hidden>{typeIcon}</span>
+                <TypeIcon size={16} aria-hidden className="mr-1.5 inline-block align-[-2px]" />
                 {item.name}
               </h2>
               <p className="text-xs font-body italic text-dnd-text-faint mt-0.5">
@@ -236,7 +236,7 @@ export default function ItemDetailsModal({ item, slot, onClose }: Props) {
                       ? t('character.inventory.use_confirm.heal', { amount: e.amount, defaultValue: `Cura ${e.amount}` })
                       : t(`character.conditions.${e.condition}`, { defaultValue: e.condition })
                     return (
-                      <span key={i} className="px-2 py-0.5 rounded-full bg-dnd-emerald/15 border border-dnd-emerald/40 text-xs font-body text-dnd-emerald-bright">
+                      <span key={i} className="px-2 py-0.5 rounded-full bg-dnd-emerald/10 border border-dnd-emerald/40 text-xs font-body text-dnd-emerald-bright">
                         {label}
                       </span>
                     )

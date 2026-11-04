@@ -26,7 +26,7 @@ vi.mock('@/store/unitSettings', () => ({
   useUnitSettings: (sel: (s: { system: string }) => unknown) => sel({ system: 'imperial' }),
   formatWeight: (v: number) => `${v} lb`,
 }))
-vi.mock('@/pages/inventory/itemMetadata', () => ({ TYPE_ICON: new Proxy({}, { get: () => '🗡' }) }))
+vi.mock('@/pages/inventory/itemMetadata', () => ({ TYPE_ICON: new Proxy({}, { get: () => () => null }) }))
 
 const mk = (over: Partial<Item>): Item =>
   ({ id: 1, name: 'Item', item_type: 'generic', is_equipped: true, weight: 1, quantity: 1, ...over } as Item)

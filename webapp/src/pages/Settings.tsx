@@ -58,7 +58,7 @@ type SettingKey =
   | 'prep_cap_value'
   | 'reset'
 
-function D20Thumb({ body, accent, active }: { body: string; accent: string; active: boolean }) {
+function D20Thumb({ body, accent }: { body: string; accent: string }) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -66,11 +66,7 @@ function D20Thumb({ body, accent, active }: { body: string; accent: string; acti
       height="32"
       aria-hidden
       className="shrink-0"
-      style={{
-        filter: active
-          ? 'drop-shadow(0 0 4px var(--dnd-gold-glow))'
-          : 'drop-shadow(0 1px 2px rgba(26,16,8,0.35))',
-      }}
+      
     >
       <polygon
         points="12,2 22,8 22,16 12,22 2,16 2,8"
@@ -335,7 +331,7 @@ export default function Settings() {
               }}
               className={`min-h-[44px] rounded-xl font-cinzel text-xs uppercase tracking-widest transition-colors
                 ${themeMode === mode
-                  ? 'bg-gradient-gold text-dnd-ink shadow-engrave'
+                  ? 'border bg-dnd-gold/20 border-dnd-gold text-dnd-gold-bright'
                   : 'bg-dnd-surface border border-dnd-border text-dnd-text-muted'}`}
               whileTap={{ scale: 0.96 }}
               transition={spring.press}
@@ -381,7 +377,7 @@ export default function Settings() {
               }}
               className={`min-h-[44px] rounded-xl font-cinzel text-xs uppercase tracking-widest transition-colors
                 ${unitSystem === mode
-                  ? 'bg-gradient-gold text-dnd-ink shadow-engrave'
+                  ? 'border bg-dnd-gold/20 border-dnd-gold text-dnd-gold-bright'
                   : 'bg-dnd-surface border border-dnd-border text-dnd-text-muted'}`}
               whileTap={{ scale: 0.96 }}
               transition={spring.press}
@@ -434,12 +430,12 @@ export default function Settings() {
                     aria-hidden
                     className={`relative w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors
                       ${selected
-                        ? 'bg-dnd-gold border-dnd-gold-bright shadow-[0_0_6px_var(--dnd-gold-glow)]'
+                        ? 'bg-dnd-gold border-dnd-gold-bright'
                         : 'border-dnd-border'}`}
                   >
                     {selected && <span className="w-2 h-2 rounded-full bg-dnd-ink" />}
                   </span>
-                  <D20Thumb body={preview.body} accent={preview.accent} active={selected} />
+                  <D20Thumb body={preview.body} accent={preview.accent} />
                   <span>{packNames?.[id] ?? id}</span>
                 </label>
               )
@@ -535,7 +531,7 @@ export default function Settings() {
                 pending={updateMutation.isPending && activeSetting === `retention:${mode}`}
                 className={`min-h-[44px] rounded-xl px-2 font-cinzel text-xs uppercase tracking-normal transition-colors
                   ${selected
-                    ? 'bg-gradient-gold text-dnd-ink shadow-engrave'
+                    ? 'border bg-dnd-gold/20 border-dnd-gold text-dnd-gold-bright'
                     : 'bg-dnd-surface border border-dnd-border text-dnd-text-muted'}`}
                 whileTap={{ scale: 0.96 }}
                 transition={spring.press}
@@ -715,7 +711,7 @@ export default function Settings() {
               pending={updateMutation.isPending && activeSetting === `slot_mode:${mode}`}
               className={`min-h-[44px] rounded-xl font-cinzel text-xs uppercase tracking-widest transition-colors
                 ${slotsMode === mode
-                  ? 'bg-gradient-gold text-dnd-ink shadow-engrave'
+                  ? 'border bg-dnd-gold/20 border-dnd-gold text-dnd-gold-bright'
                   : 'bg-dnd-surface border border-dnd-border text-dnd-text-muted'}`}
               whileTap={{ scale: 0.96 }}
               transition={spring.press}
@@ -753,7 +749,7 @@ export default function Settings() {
                   pending={updateMutation.isPending && activeSetting === `prep_cap_mode:${mode}`}
                   className={`min-h-[44px] rounded-xl font-cinzel text-xs uppercase tracking-widest transition-colors
                     ${prepCapMode === mode
-                      ? 'bg-gradient-gold text-dnd-ink shadow-engrave'
+                      ? 'border bg-dnd-gold/20 border-dnd-gold text-dnd-gold-bright'
                       : 'bg-dnd-surface border border-dnd-border text-dnd-text-muted'}`}
                   whileTap={{ scale: 0.96 }}
                   transition={spring.press}

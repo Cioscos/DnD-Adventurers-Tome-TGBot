@@ -55,7 +55,7 @@ function HpBar({ pct, bucket }: { pct: number | null; bucket: HpBucket | null })
         <div className={`h-full ${BUCKET_BAR[bucket]}`} style={{ width: '100%' }} />
       ) : (
         <div
-          className="h-full bg-gradient-to-r from-dnd-crimson via-dnd-amber to-dnd-emerald-bright"
+          className={`h-full ${(pct ?? 0) > 50 ? 'bg-dnd-emerald-bright' : (pct ?? 0) > 25 ? 'bg-dnd-amber' : 'bg-dnd-crimson'}`}
           style={{ width: `${pct ?? 0}%` }}
         />
       )}
@@ -144,7 +144,7 @@ export default function CombatantRow({
             {isPc && snapshot?.has_pending_save && (
               <span
                 aria-label={t('session.combat.pending_save')}
-                className="shrink-0 rounded-full border border-dnd-amber/60 bg-dnd-amber/15 px-2 py-0.5 text-xs font-body text-dnd-amber tabular-nums whitespace-nowrap"
+                className="shrink-0 rounded-full border border-dnd-amber/60 bg-dnd-amber/10 px-2 py-0.5 text-xs font-body text-dnd-amber tabular-nums whitespace-nowrap"
               >
                 {pcSave
                   ? t('character.conditions.effect.save_any', {

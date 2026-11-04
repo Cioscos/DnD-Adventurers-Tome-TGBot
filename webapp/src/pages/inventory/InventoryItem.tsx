@@ -8,7 +8,7 @@ import {
   GiBiceps as Biceps,
   GiBackpack as Backpack,
 } from 'react-icons/gi'
-import { TYPE_ICON, consumableEmoji, hasSingleQuantity } from './itemMetadata'
+import { TYPE_ICON, consumableIcon, hasSingleQuantity } from './itemMetadata'
 import type { Item } from '@/types'
 import type { Property } from '@/lib/homebrew/types'
 import PropertyBadge from '@/components/homebrew/PropertyBadge'
@@ -354,9 +354,9 @@ function InventoryItemInner({
   const { t } = useTranslation()
   const system = useUnitSettings((s) => s.system)
   const meta = item.item_metadata as Record<string, unknown> | undefined
-  const icon = item.item_type === 'consumable'
-    ? consumableEmoji(meta?.subtype as string | undefined)
-    : (TYPE_ICON[item.item_type] ?? '📦')
+  const TypeIcon = item.item_type === 'consumable'
+    ? consumableIcon(meta?.subtype as string | undefined)
+    : (TYPE_ICON[item.item_type] ?? TYPE_ICON.generic)
   const canEquip = ['armor', 'shield', 'weapon', 'accessory'].includes(item.item_type)
   const effects = Array.isArray(meta?.effects) ? (meta.effects as unknown[]) : []
   const canUse = item.item_type === 'consumable' && effects.length > 0
@@ -370,13 +370,13 @@ function InventoryItemInner({
         className={`my-[3px] w-full min-h-[48px] flex items-center gap-2 py-2 text-left active:opacity-70 ${isExpanded ? 'px-3' : 'px-1'}`}
         onClick={onToggle}
       >
-        <span className="text-lg shrink-0">{icon}</span>
+        <TypeIcon size={18} aria-hidden className="shrink-0 text-dnd-gold-dim" />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="font-body font-semibold text-sm text-dnd-text">{item.name}</span>
             {itemRarity(item) && <RarityBadge rarity={itemRarity(item)!} />}
             {requiresAttunement(item) && (
-              <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-md border ${isAttuned(item) ? 'bg-dnd-gold/15 text-dnd-gold-bright border-dnd-gold/40' : 'bg-dnd-chip-bg text-dnd-text-muted border-dnd-border'}`}>
+              <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-md border ${isAttuned(item) ? 'bg-dnd-gold/10 text-dnd-gold-bright border-dnd-gold/40' : 'bg-dnd-chip-bg text-dnd-text-muted border-dnd-border'}`}>
                 {t(isAttuned(item) ? 'character.inventory.magic.attuned' : 'character.inventory.magic.not_attuned')}
               </span>
             )}
@@ -386,12 +386,12 @@ function InventoryItemInner({
               </span>
             )}
             {item.is_equipped && item.item_type === 'armor' && meta?.ac_value != null && (
-              <span className="text-xs font-semibold px-1.5 py-0.5 rounded-md bg-dnd-info/20 text-dnd-info-text border border-dnd-info/30">
+              <span className="text-xs font-semibold px-1.5 py-0.5 rounded-md bg-dnd-info/10 text-dnd-info-text border border-dnd-info/30">
                 CA {String(meta.ac_value)}
               </span>
             )}
             {item.is_equipped && item.item_type === 'shield' && meta?.ac_bonus != null && (
-              <span className="text-xs font-semibold px-1.5 py-0.5 rounded-md bg-dnd-info/20 text-dnd-info-text border border-dnd-info/30">
+              <span className="text-xs font-semibold px-1.5 py-0.5 rounded-md bg-dnd-info/10 text-dnd-info-text border border-dnd-info/30">
                 +{String(meta.ac_bonus)} CA
               </span>
             )}
@@ -478,8 +478,8 @@ function InventoryItemInner({
                 spinnerSize={12}
                 className={`flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg border active:opacity-60 disabled:opacity-30
                   ${item.is_equipped
-                    ? 'bg-dnd-amber/15 text-dnd-amber border-dnd-amber/30'
-                    : 'bg-dnd-emerald/20 text-dnd-emerald-bright border-dnd-emerald/30'
+                    ? 'bg-dnd-amber/10 text-dnd-amber border-dnd-amber/30'
+                    : 'bg-dnd-emerald/10 text-dnd-emerald-bright border-dnd-emerald/30'
                   }`}
               >
                 {item.is_equipped ? <ArrowLeftRight size={12} /> : <Swords size={12} />}
@@ -549,7 +549,7 @@ function InventoryItemInner({
             <Pressable
               onClick={onEdit}
               className="flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg
-                         bg-dnd-info/20 text-dnd-info-text border border-dnd-info/30
+                         bg-dnd-info/10 text-dnd-info-text border border-dnd-info/30
                          active:opacity-60"
             >
               <Pencil size={12} />

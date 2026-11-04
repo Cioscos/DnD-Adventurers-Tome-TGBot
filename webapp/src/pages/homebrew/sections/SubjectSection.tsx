@@ -1,4 +1,6 @@
 import { useTranslation } from 'react-i18next'
+import { User } from 'lucide-react'
+import { GiBroadsword } from 'react-icons/gi'
 import Pressable from '@/components/ui/Pressable'
 import FilterChip from '@/components/ui/FilterChip'
 import Input from '@/components/ui/Input'
@@ -9,9 +11,9 @@ export interface SubjectSectionProps {
   onChange: (subject: Subject) => void
 }
 
-const SUBJECT_TYPES: readonly { value: SubjectType; emoji: string }[] = [
-  { value: 'item', emoji: '⚔️' },
-  { value: 'character', emoji: '👤' },
+const SUBJECT_TYPES: readonly { value: SubjectType; Icon: typeof User }[] = [
+  { value: 'item', Icon: GiBroadsword as typeof User },
+  { value: 'character', Icon: User },
 ]
 
 const ITEM_TYPES = [
@@ -66,10 +68,10 @@ export default function SubjectSection({ subject, onChange }: SubjectSectionProp
     <div className="space-y-4">
       {/* Region 1 — Subject type radio cards */}
       <div className="grid grid-cols-2 gap-2">
-        {SUBJECT_TYPES.map(({ value, emoji }) => {
+        {SUBJECT_TYPES.map(({ value, Icon }) => {
           const selected = subject.type === value
           const styles = selected
-            ? 'bg-dnd-chip-bg border-dnd-gold/70 text-dnd-gold-bright shadow-halo-gold'
+            ? 'bg-dnd-gold/20 border-dnd-gold text-dnd-gold-bright'
             : 'bg-dnd-surface border-dnd-border text-dnd-text-muted hover:text-dnd-gold-bright/80'
           return (
             <Pressable
@@ -79,9 +81,7 @@ export default function SubjectSection({ subject, onChange }: SubjectSectionProp
               aria-pressed={selected}
               className={`flex flex-col items-center justify-center gap-1 min-h-[64px] px-2 py-2 rounded-xl border font-cinzel uppercase text-xs tracking-widest transition-colors ${styles}`}
             >
-              <span className="text-xl leading-none" aria-hidden>
-                {emoji}
-              </span>
+              <Icon size={20} aria-hidden />
               <span className="text-center leading-tight">
                 {t(`homebrew.subject.types.${value}`)}
               </span>

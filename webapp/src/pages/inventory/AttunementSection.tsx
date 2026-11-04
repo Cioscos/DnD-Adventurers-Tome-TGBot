@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Sparkles } from 'lucide-react'
+import { GiLinkedRings } from 'react-icons/gi'
 import { api, ApiError } from '@/api/client'
 import { haptic } from '@/auth/telegram'
 import Surface from '@/components/ui/Surface'
@@ -49,7 +49,7 @@ export default function AttunementSection({ charId, items }: Props) {
   return (
     <Surface variant="elevated" className="!py-2 space-y-2">
       <div className="flex items-center gap-2 text-dnd-gold">
-        <Sparkles size={13} />
+        <GiLinkedRings size={14} aria-hidden />
         <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim flex-1">
           {t('character.inventory.magic.attunement_title')}
         </p>

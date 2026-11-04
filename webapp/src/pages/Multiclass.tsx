@@ -128,7 +128,7 @@ export default function Multiclass() {
               {/* Livello in sola lettura: si cambia dai modali. */}
               <span
                 aria-label={`${t('character.multiclass.level')} ${cls.level}`}
-                className="font-mono text-2xl font-bold tabular-nums leading-none text-dnd-gold-bright"
+                className="font-display text-2xl font-black tabular-nums leading-none text-dnd-gold-bright"
               >
                 {cls.level}
               </span>

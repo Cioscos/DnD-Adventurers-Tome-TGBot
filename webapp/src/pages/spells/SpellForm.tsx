@@ -239,7 +239,7 @@ export default function SpellForm({ initialData, onSubmit, onCancel, isPending }
                     whileTap={{ scale: 0.95 }}
                     className={`min-h-[44px] min-w-[56px] px-3 rounded-xl text-sm font-bold transition-colors
                       ${active
-                        ? 'bg-dnd-gold text-dnd-ink shadow-engrave'
+                        ? 'border bg-dnd-gold/20 border-dnd-gold text-dnd-gold-bright'
                         : 'bg-dnd-surface-raised text-dnd-text border border-dnd-border'}`}
                   >
                     {token}

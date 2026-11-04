@@ -135,7 +135,7 @@ export default function DiceStats() {
               <p className="font-cinzel text-xs uppercase tracking-widest text-dnd-emerald-bright">
                 {t('character.dice_stats.nat20')}
               </p>
-              <p className="text-3xl font-mono font-bold tabular-nums text-dnd-emerald-bright mt-1">
+              <p className="text-3xl font-display font-black tabular-nums text-dnd-emerald-bright mt-1">
                 {nat20}
               </p>
             </Surface>
@@ -143,7 +143,7 @@ export default function DiceStats() {
               <p className="font-cinzel text-xs uppercase tracking-widest text-dnd-crimson-bright">
                 {t('character.dice_stats.nat1')}
               </p>
-              <p className="text-3xl font-mono font-bold tabular-nums text-dnd-crimson-bright mt-1">
+              <p className="text-3xl font-display font-black tabular-nums text-dnd-crimson-bright mt-1">
                 {nat1}
               </p>
             </Surface>

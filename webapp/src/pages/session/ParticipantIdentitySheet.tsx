@@ -170,7 +170,7 @@ export default function ParticipantIdentitySheet({
                   )}
                   <div className="mt-2 h-1.5 w-full rounded-full bg-dnd-surface overflow-hidden">
                     <div
-                      className="h-full bg-gradient-to-r from-dnd-crimson via-dnd-amber to-dnd-emerald-bright"
+                      className={`h-full ${(hpPct) > 50 ? 'bg-dnd-emerald-bright' : (hpPct) > 25 ? 'bg-dnd-amber' : 'bg-dnd-crimson'}`}
                       style={{ width: `${hpPct}%` }}
                     />
                   </div>

@@ -237,7 +237,7 @@ export default function DiceAnimationProvider({ children }: { children: ReactNod
             {settledValues ? (
               <p
                 data-testid="dice-values"
-                className="absolute inset-x-4 bottom-8 text-center text-3xl font-mono font-bold tabular-nums text-dnd-parchment pointer-events-none"
+                className="absolute inset-x-4 bottom-8 text-center text-3xl font-display font-black tabular-nums text-dnd-parchment pointer-events-none"
               >
                 {settledValues}
               </p>

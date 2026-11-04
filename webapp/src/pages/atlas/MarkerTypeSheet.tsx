@@ -14,7 +14,7 @@ interface Props { open: boolean; campaignId: number; onClose: () => void; onCrea
 
 const LABEL = 'block text-xs uppercase tracking-wider mb-1.5 font-cinzel font-bold text-dnd-gold-dim'
 const cell = (on: boolean) =>
-  `flex h-11 w-11 items-center justify-center rounded-xl border ${on ? 'border-dnd-gold bg-dnd-surface-lifted shadow-halo-gold' : 'border-dnd-border bg-dnd-surface'}`
+  `flex h-11 w-11 items-center justify-center rounded-xl border ${on ? 'border-dnd-gold bg-dnd-gold/20' : 'border-dnd-border bg-dnd-surface'}`
 
 /** Nuovo tipo di marker: nome, icona dalla libreria curata, colore della palette. */
 export default function MarkerTypeSheet({ open, campaignId, onClose, onCreated }: Props) {

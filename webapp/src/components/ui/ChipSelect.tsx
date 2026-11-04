@@ -78,7 +78,7 @@ export default function ChipSelect({
                 inline-flex items-center justify-center gap-1.5 ${orphanSpan}
                 disabled:opacity-40 disabled:cursor-not-allowed
                 ${active
-                  ? 'bg-dnd-gold text-dnd-ink shadow-halo-gold'
+                  ? 'border bg-dnd-gold/20 border-dnd-gold text-dnd-gold-bright'
                   : 'bg-dnd-surface-raised text-dnd-text border border-dnd-border'}`}
             >
               {opt.icon && <span className="shrink-0">{opt.icon}</span>}
