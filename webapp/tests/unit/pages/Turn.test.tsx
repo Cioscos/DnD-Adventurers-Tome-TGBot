@@ -23,7 +23,13 @@ vi.mock('react-router-dom', async (orig) => {
 })
 vi.mock('react-i18next', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
-  return { ...actual, useTranslation: () => ({ t: (k: string) => k, i18n: { language: 'it' } }) }
+  return {
+    ...actual,
+    useTranslation: () => ({
+      t: (k: string, o?: { damage?: string }) => (o?.damage ? `${k}:${o.damage}` : k),
+      i18n: { language: 'it' },
+    }),
+  }
 })
 vi.mock('@/pages/spells/useCastFlow', () => ({
   useCastFlow: () => ({ beginCast: vi.fn(), isSpellPending: () => false, elements: null }),
@@ -95,11 +101,32 @@ describe('Turn page', () => {
   it('a section marked as used closes, and new turn reopens it', async () => {
     getChar.mockResolvedValue(char)
     renderWithProviders(<Turn />)
-    expect(await screen.findByText('character.turn.unarmed')).toBeInTheDocument()
+    await screen.findByText('character.turn.unarmed')
+    const rows = () => screen.getAllByRole('button', { name: 'character.turn.standard_actions' })
+    expect(rows()).toHaveLength(2)
     await userEvent.click(screen.getByLabelText('character.turn.mark_used: character.turn.section_action'))
-    expect(screen.queryByText('character.turn.unarmed')).not.toBeInTheDocument()
+    expect(rows()).toHaveLength(1)
     await userEvent.click(screen.getByText('character.turn.new_turn'))
+    expect(rows()).toHaveLength(2)
+  })
+
+  it('attacks stay reachable after the action is marked as used', async () => {
+    getChar.mockResolvedValue({
+      ...char,
+      items: [{ id: 1, name: 'Spada', item_type: 'weapon', is_equipped: true }],
+    })
+    renderWithProviders(<Turn />)
+    expect(await screen.findByText('character.turn.section_attacks')).toBeInTheDocument()
+    await userEvent.click(screen.getByLabelText('character.turn.mark_used: character.turn.section_action'))
+    expect(screen.getByText('Spada')).toBeInTheDocument()
     expect(screen.getByText('character.turn.unarmed')).toBeInTheDocument()
+    expect(screen.queryByLabelText('character.turn.mark_used: character.turn.section_attacks')).not.toBeInTheDocument()
+  })
+
+  it('shows the unarmed damage die, following the monk level', async () => {
+    getChar.mockResolvedValue({ ...char, classes: [{ class_name: 'monk', level: 5 }] })
+    renderWithProviders(<Turn />)
+    expect(await screen.findByText('character.turn.unarmed_desc:1d6')).toBeInTheDocument()
   })
 
   it('shows "Fine round" outside an encounter', async () => {

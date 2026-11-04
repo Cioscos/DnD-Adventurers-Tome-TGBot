@@ -17,6 +17,7 @@ import { useTurnState } from '@/hooks/useTurnState'
 import { useCastFlow } from '@/pages/spells/useCastFlow'
 import { useWeaponChoices, choiceOf } from '@/store/weaponChoiceStore'
 import { groupForTurn, type TurnEntry } from '@/lib/turnGrouping'
+import { unarmedDamageDice } from '@/lib/unarmedStrike'
 import { STANDARD_ACTIONS } from '@/data/standardActions'
 import { LEDGER_TITLE } from '@/styles/ledger'
 import type { CharacterFull } from '@/types'
@@ -92,6 +93,7 @@ export default function Turn() {
       const crimson = `${BTN} bg-dnd-crimson/10 text-dnd-crimson-bright border-dnd-crimson/30`
       if (e.id === 'unarmed') {
         label = t('character.turn.unarmed')
+        extra = <p className="text-xs text-dnd-text-muted">{t('character.turn.unarmed_desc', { damage: unarmedDamageDice(c.classes) })}</p>
         control = (
           <RollButton onRoll={weaponFlow.attackUnarmed} pending={weaponFlow.isUnarmedPending}
             ariaLabel={`${t('character.turn.attack')} ${label}`} className={crimson}>
@@ -217,6 +219,14 @@ export default function Turn() {
           </Button>
         </div>
       </div>
+
+      {/* Sempre aperta: un attacco può servire anche fuori dall'azione (opportunità, altra mano). */}
+      <section>
+        <h2 className={`border-b border-dnd-border pb-1 pl-1 ${LEDGER_TITLE}`}>{t('character.turn.section_attacks')}</h2>
+        <ul className="divide-y divide-dnd-border/60 border-b border-dnd-border/60">
+          {groups.attacks.map((e) => renderEntry(e, char))}
+        </ul>
+      </section>
 
       {BUCKETS.map((b) => (
         <div key={b}>{section(t(`character.turn.section_${b}`), groups[b], b)}</div>
