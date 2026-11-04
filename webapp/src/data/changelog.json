@@ -43,10 +43,12 @@
       },
       "fixed": {
         "it": [
-          "Si leggono meglio il pulsante Attacca, la scheda Danni selezionata e i livelli di Spossatezza già raggiunti."
+          "Si leggono meglio il pulsante Attacca, la scheda Danni selezionata e i livelli di Spossatezza già raggiunti.",
+          "Aprendo la scelta di un oggetto da equipaggiare, l'iniziale non attraversa più lo schermo e non compare più una barra di scorrimento orizzontale."
         ],
         "en": [
-          "The Attack button, the selected Damage tab and the Exhaustion levels already reached are easier to read."
+          "The Attack button, the selected Damage tab and the Exhaustion levels already reached are easier to read.",
+          "When you open the item picker for an equipment slot, the initial no longer crosses the screen and no horizontal scrollbar appears."
         ]
       }
     },

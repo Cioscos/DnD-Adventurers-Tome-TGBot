@@ -132,7 +132,7 @@ export default function EquipItemPicker({ charId, slot, items, onClose }: Props)
         onClick={onClose}
       >
         <m.div
-          className="@container w-full max-w-md max-h-[calc(var(--tg-vh,100vh)*0.85)] overflow-y-auto bg-dnd-surface-raised border border-dnd-gold-dim/50 rounded-t-2xl sm:rounded-2xl"
+          className="@container w-full max-w-md max-h-[calc(var(--tg-vh,100vh)*0.85)] overflow-y-auto overflow-x-hidden bg-dnd-surface-raised border border-dnd-gold-dim/50 rounded-t-2xl sm:rounded-2xl"
           initial={{ y: 40, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 40, opacity: 0 }}
@@ -205,7 +205,8 @@ export default function EquipItemPicker({ charId, slot, items, onClose }: Props)
                       className="w-full text-left px-4 py-3 hover:bg-dnd-surface focus-visible:outline-none focus-visible:bg-dnd-surface focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-dnd-gold flex items-center gap-3 disabled:opacity-60"
                     >
                       <m.span
-                        layoutId={`equip-icon-${it.id}`}
+                        // Solo durante l'equipaggiamento: sempre attivo, all'apertura l'iniziale arrivava da destra e faceva sbordare il pannello.
+                        layoutId={equip.isPending && equip.variables?.itemId === it.id ? `equip-icon-${it.id}` : undefined}
                         className="shrink-0 w-9 h-9 rounded-md border border-dnd-gold-dim/60 bg-dnd-surface flex items-center justify-center font-cinzel font-bold text-base text-dnd-gold-bright"
                         aria-hidden="true"
                       >
