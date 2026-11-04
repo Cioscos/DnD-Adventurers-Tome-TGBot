@@ -369,20 +369,6 @@ body::after {
   animation: shimmerBg 1.5s infinite;
 }
 
-@keyframes goldShimmer {
-  0%   { background-position: 0% 50%; }
-  50%  { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-.animate-gold-shimmer {
-  background: linear-gradient(90deg, var(--dnd-gold-dim) 0%, var(--dnd-gold-bright) 50%, var(--dnd-gold-dim) 100%);
-  background-size: 200% 100%;
-  animation: goldShimmer 3s ease-in-out infinite;
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-
 /* Title glow — page header h1 */
 .title-glow {
   text-shadow: 0 1px 4px var(--dnd-gold-glow);
