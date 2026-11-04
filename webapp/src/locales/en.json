@@ -1481,6 +1481,14 @@
       "mode_auto_hint": "Derived from classes and level",
       "mode_manual_hint": "Manual slot control",
       "manual_to_auto_warn_title": "Switch to Auto?",
+      "rules_edition": {
+        "title": "Rules edition",
+        "hint": "Decides which class rules this character follows.",
+        "2014": "2014",
+        "2024": "2024",
+        "confirm_title": "Change edition?",
+        "confirm_body": "Class features will be recalculated for the {{edition}} edition. Your data is kept, but feature maximums and uses may change."
+      },
       "manual_to_auto_warn_body": "Manual slots will be overwritten by the automatic calculation.",
       "prepared_cap": "Preparation cap",
       "prepared_cap_auto_hint": "Computed from classes: {{cap}} preparable spells",

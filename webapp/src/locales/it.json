@@ -1480,6 +1480,14 @@
       "mode_auto_hint": "Dedotto dalle classi e dal livello",
       "mode_manual_hint": "Controllo manuale degli slot",
       "manual_to_auto_warn_title": "Passare a Auto?",
+      "rules_edition": {
+        "title": "Edizione delle regole",
+        "hint": "Decide quali regole di classe segue questo personaggio.",
+        "2014": "2014",
+        "2024": "2024",
+        "confirm_title": "Cambiare edizione?",
+        "confirm_body": "I privilegi di classe verranno ricalcolati secondo l'edizione {{edition}}. I tuoi dati restano, ma massimi e usi dei privilegi possono cambiare."
+      },
       "manual_to_auto_warn_body": "Gli slot manuali verranno sovrascritti dal calcolo automatico.",
       "prepared_cap": "Tetto preparazione",
       "prepared_cap_auto_hint": "Calcolato dalle classi: {{cap}} incantesimi preparabili",

@@ -306,6 +306,7 @@ export interface CharacterFull extends Omit<CharacterSummary, 'ac_homebrew_modif
   encumbrance_level?: 'none' | 'encumbered' | 'heavily'
   speed_encumbrance_penalty_ft?: number
   spell_slots_mode: string
+  rules_edition: '2014' | '2024'
   spellcasting?: SpellcastingInfo | null
   concentrating_spell_id?: number
   hp_gained?: number

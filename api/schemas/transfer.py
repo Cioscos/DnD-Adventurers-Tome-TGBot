@@ -10,6 +10,7 @@ from api.schemas.item import _validate_weapon_meta
 from api.schemas.container import validate_container_meta
 from api.schemas.item_magic import validate_magic_meta
 from core.db.models import EquipmentSlot
+from core.rules.edition import EDITIONS
 from core.game.actions import ActionType
 
 
@@ -46,6 +47,11 @@ class ExportChoice(BaseModel):
 
 
 class ExportCharacter(BaseModel):
+    @field_validator("rules_edition", mode="before")
+    @classmethod
+    def _edition(cls, v):
+        return v if v in EDITIONS else "2014"
+
     name: str = Field(min_length=1, max_length=100)
     race: Optional[str] = Field(None, max_length=100)
     gender: Optional[str] = Field(None, max_length=50)
@@ -61,6 +67,7 @@ class ExportCharacter(BaseModel):
     carry_capacity: Int0 = 150
     carry_capacity_override: bool = False
     spell_slots_mode: Literal["automatic", "manual"] = "manual"
+    rules_edition: str = "2014"
     heroic_inspiration: bool = False
     experience_points: Int0 = 0
     is_dead: bool = False

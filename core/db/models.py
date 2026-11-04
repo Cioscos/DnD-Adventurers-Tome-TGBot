@@ -104,6 +104,9 @@ class Character(Base):
     # base AC is kept in sync as 10 + DEX mod + this ability's mod. NULL = disabled.
     unarmored_defense_ability: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
 
+    # Edizione delle regole seguita dal personaggio ("2014" | "2024")
+    rules_edition: Mapped[str] = mapped_column(String(4), default="2014", server_default="2014")
+
     # Encumbrance
     carry_capacity: Mapped[int] = mapped_column(Integer, default=150)
     encumbrance: Mapped[float] = mapped_column(Float, default=0.0)

@@ -19,6 +19,7 @@ from api.schemas.common import (
     MapRead,
     RollMode,
 )
+from core.rules.types import Edition
 from api.schemas.condition_effects import ConditionEffectRead, PendingSaveRead
 from api.schemas.container import CoinLocationRead
 from api.schemas.item import ItemRead
@@ -154,6 +155,7 @@ class CharacterFull(BaseModel):
     experience_points: int = 0
     heroic_inspiration: bool = False
     spell_slots_mode: str = "manual"
+    rules_edition: Edition = "2014"
     concentrating_spell_id: Optional[int] = None
 
     # Populated only by PATCH /xp when a level-up occurs
@@ -322,6 +324,7 @@ class CharacterUpdate(BaseModel):
     general_proficiencies: Optional[list[str] | dict[str, list[str]]] = None
     damage_modifiers: Optional[dict[str, Any]] = None
     spell_slots_mode: Optional[str] = None
+    rules_edition: Optional[Edition] = None
     settings: Optional[dict[str, Any]] = None
 
     @field_validator("name")
