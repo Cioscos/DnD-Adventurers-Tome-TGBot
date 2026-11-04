@@ -17,6 +17,21 @@ import { haptic } from '@/auth/telegram'
 import { spring } from '@/styles/motion'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { useIsFirstValue } from '@/hooks/useIsFirstValue'
+import { LEDGER_LABEL, LEDGER_TITLE } from '@/styles/ledger'
+
+const AC_BADGE_GOLD = 'border-dnd-chip-border bg-dnd-chip-bg text-dnd-gold-bright'
+const AC_BADGE_AMBER = 'border-dnd-amber/50 bg-dnd-amber/10 text-dnd-amber'
+
+type AcRow = {
+  key: string
+  label: string
+  title?: string
+  current: number
+  draft: string
+  setDraft: (v: string) => void
+  disabled?: boolean
+  badge?: { text: string; tone: string } | null
+}
 
 export default function ArmorClass() {
   const { id } = useParams<{ id: string }>()
@@ -129,12 +144,8 @@ export default function ArmorClass() {
       )}
 
       {/* Hero AC */}
-      <Surface variant="tome" ornamented className="relative overflow-hidden">
-        <div className="flex flex-col items-center py-4">
-          <p className="text-xs font-cinzel uppercase tracking-[0.3em] text-dnd-gold-dim mb-2">
-            {t('character.ac.total')}
-          </p>
-
+      <div>
+        <div className="flex flex-col items-center pb-1">
           <div className="relative flex items-center justify-center">
             <m.div
               initial={reduceMotion ? false : { rotate: -3, opacity: 0.6 }}
@@ -142,16 +153,16 @@ export default function ArmorClass() {
               transition={reduceMotion ? undefined : { duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
               className="drop-shadow-[0_8px_24px_var(--dnd-gold-glow)]"
             >
-              <ShieldEmblem size={200} />
+              <ShieldEmblem size={150} />
             </m.div>
             <m.span
               key={acTotal}
               initial={isFirstValue ? false : { scale: 0.6, opacity: 0 }}
               animate={{ scale: [0.6, 1.15, 1], opacity: 1 }}
               transition={spring.elastic}
-              className="absolute font-display font-black text-dnd-gold-bright leading-none"
+              className="absolute pb-2 font-display font-black text-dnd-gold-bright leading-none"
               style={{
-                fontSize: '4rem',
+                fontSize: '3.5rem',
                 textShadow: '0 2px 8px var(--dnd-gold-glow), 0 0 2px rgba(0,0,0,0.6)',
               }}
             >
@@ -159,107 +170,77 @@ export default function ArmorClass() {
             </m.span>
           </div>
 
-          <p className="text-sm text-dnd-text-muted font-mono mt-3">
+          <p className="text-sm text-dnd-text-muted font-mono tabular-nums mt-1">
             {char.base_armor_class} + {char.shield_armor_class} + {char.magic_armor}
           </p>
-          <p className="text-xs text-dnd-text-faint font-cinzel uppercase tracking-wider mt-0.5">
+          <p className="text-xs text-dnd-text-muted font-cinzel uppercase tracking-wider mt-0.5">
             {t('character.ac.legend')}
           </p>
         </div>
         <HomebrewBreakdownRow value={char.ac_breakdown?.homebrew ?? 0} />
         <HomebrewBreakdownRow value={itemsAc} label={t('character.ac.items_label')} />
-      </Surface>
+      </div>
 
-      {/* Single-row 3-col: Base · Shield · Magic */}
+      {/* Registro: voce e stato a sinistra, valore e correzione a destra. */}
       <m.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ ...spring.drift, delay: 0.10 }}
-        className="grid grid-cols-3 gap-2"
+        className="border-y border-dnd-border divide-y divide-dnd-border/60"
       >
-        <Surface variant="elevated" className="max-xs:!p-2.5">
-          <div className="flex items-center gap-1 flex-wrap">
-            <p
-              className="font-cinzel text-xs uppercase tracking-widest text-dnd-gold-dim cursor-help"
-              title={t('character.ac.base_help', {
-                defaultValue: 'Base = 10 + bonus DEX (con cap se armatura media/pesante) oppure valore armatura equipaggiata.',
-              })}
-            >
-              {t('character.ac.base')}
-            </p>
-            {unarmoredActive ? (
-              <span className="max-xs:hidden max-w-full truncate text-xs font-cinzel uppercase tracking-wider px-1 py-px rounded-full bg-dnd-gold/20 text-dnd-gold-bright border border-dnd-gold/50">
-                {t('character.ac.unarmored_badge')}
-              </span>
-            ) : char.base_armor_class_override ? (
-              <span className="max-xs:hidden max-w-full truncate text-xs font-cinzel uppercase tracking-wider px-1 py-px rounded-full bg-dnd-crimson-deep/30 text-dnd-crimson-bright border border-dnd-crimson/50">
-                {t('character.ac.manual_override')}
-              </span>
-            ) : equippedBodyArmor && (
-              <span className="max-xs:hidden max-w-full truncate text-xs font-cinzel uppercase tracking-wider px-1 py-px rounded-full bg-dnd-gold/20 text-dnd-gold-bright border border-dnd-gold/50">
-                {t('character.ac.auto_from_armor')}
-              </span>
-            )}
+        {([
+          {
+            key: 'base',
+            label: t('character.ac.base'),
+            title: t('character.ac.base_help', {
+              defaultValue: 'Base = 10 + bonus DEX (con cap se armatura media/pesante) oppure valore armatura equipaggiata.',
+            }),
+            current: char.base_armor_class,
+            draft: base,
+            setDraft: setBase,
+            disabled: unarmoredActive,
+            badge: unarmoredActive
+              ? { text: t('character.ac.unarmored_badge'), tone: AC_BADGE_GOLD }
+              : char.base_armor_class_override
+                ? { text: t('character.ac.manual_override'), tone: AC_BADGE_AMBER }
+                : equippedBodyArmor ? { text: t('character.ac.auto_from_armor'), tone: AC_BADGE_GOLD } : null,
+          },
+          {
+            key: 'shield',
+            label: t('character.ac.shield'),
+            current: char.shield_armor_class,
+            draft: shield,
+            setDraft: setShield,
+            badge: char.shield_armor_class_override
+              ? { text: t('character.ac.manual_override'), tone: AC_BADGE_AMBER }
+              : equippedShield ? { text: t('character.ac.auto_from_armor'), tone: AC_BADGE_GOLD } : null,
+          },
+          {
+            key: 'magic',
+            label: t('character.ac.magic'),
+            current: char.magic_armor,
+            draft: magic,
+            setDraft: setMagic,
+          },
+        ] as AcRow[]).map((row) => (
+          <div key={row.key} className="flex min-h-[60px] items-center gap-3 px-1 py-2">
+            <div className="min-w-0 flex-1">
+              <p className={LEDGER_LABEL} title={row.title}>{row.label}</p>
+              {row.badge && <span className={`mt-1 inline-block max-w-full truncate rounded-lg border px-1.5 py-px text-xs font-cinzel uppercase tracking-wider ${row.badge.tone}`}>{row.badge.text}</span>}
+            </div>
+            <span className="font-mono text-lg font-bold tabular-nums text-dnd-text">{row.current}</span>
+            <Input
+              type="number"
+              min={0}
+              value={row.draft}
+              onChange={row.setDraft}
+              placeholder={String(row.current)}
+              inputMode="numeric"
+              disabled={row.disabled}
+              className="w-20 shrink-0 [&_input]:text-base [&_input]:font-mono [&_input]:tabular-nums [&_input]:font-bold [&_input]:text-center"
+            />
           </div>
-          <p className="text-2xl font-display font-black text-dnd-gold-bright mt-0.5">
-            {char.base_armor_class}
-          </p>
-          <Input
-            type="number"
-            min={0}
-            value={base}
-            onChange={setBase}
-            placeholder={String(char.base_armor_class)}
-            inputMode="numeric"
-            disabled={unarmoredActive}
-            className="mt-2 w-full [&_input]:text-base [&_input]:font-mono [&_input]:tabular-nums [&_input]:font-bold [&_input]:text-center"
-          />
-        </Surface>
-        <Surface variant="elevated" className="max-xs:!p-2.5">
-          <div className="flex items-center gap-1 flex-wrap">
-            <p className="font-cinzel text-xs uppercase tracking-widest text-dnd-gold-dim">
-              {t('character.ac.shield')}
-            </p>
-            {char.shield_armor_class_override ? (
-              <span className="max-xs:hidden max-w-full truncate text-xs font-cinzel uppercase tracking-wider px-1 py-px rounded-full bg-dnd-crimson-deep/30 text-dnd-crimson-bright border border-dnd-crimson/50">
-                {t('character.ac.manual_override')}
-              </span>
-            ) : equippedShield && (
-              <span className="max-xs:hidden max-w-full truncate text-xs font-cinzel uppercase tracking-wider px-1 py-px rounded-full bg-dnd-gold/20 text-dnd-gold-bright border border-dnd-gold/50">
-                {t('character.ac.auto_from_armor')}
-              </span>
-            )}
-          </div>
-          <p className="text-2xl font-display font-black text-dnd-gold-bright mt-0.5">
-            {char.shield_armor_class}
-          </p>
-          <Input
-            type="number"
-            min={0}
-            value={shield}
-            onChange={setShield}
-            placeholder={String(char.shield_armor_class)}
-            inputMode="numeric"
-            className="mt-2 w-full [&_input]:text-base [&_input]:font-mono [&_input]:tabular-nums [&_input]:font-bold [&_input]:text-center"
-          />
-        </Surface>
-        <Surface variant="elevated" className="max-xs:!p-2.5">
-          <p className="font-cinzel text-xs uppercase tracking-widest text-dnd-gold-dim">
-            {t('character.ac.magic')}
-          </p>
-          <p className="text-2xl font-display font-black text-dnd-gold-bright mt-0.5">
-            {char.magic_armor}
-          </p>
-          <Input
-            type="number"
-            min={0}
-            value={magic}
-            onChange={setMagic}
-            placeholder={String(char.magic_armor)}
-            inputMode="numeric"
-            className="mt-2 w-full [&_input]:text-base [&_input]:font-mono [&_input]:tabular-nums [&_input]:font-bold [&_input]:text-center"
-          />
-        </Surface>
+        ))}
       </m.div>
 
       {equippedBodyArmor && !char.base_armor_class_override && (
@@ -270,7 +251,7 @@ export default function ArmorClass() {
 
       {(char.base_armor_class_override || char.shield_armor_class_override) && (
         <div className="flex max-xs:flex-col max-xs:items-start items-center justify-between gap-2 px-2 -mt-1">
-          <p className="text-xs text-dnd-crimson-bright font-body italic flex-1">
+          <p className="text-xs text-dnd-amber font-body italic flex-1">
             {t('character.ac.manual_override_hint')}
           </p>
           <Button
@@ -287,10 +268,10 @@ export default function ArmorClass() {
       )}
 
       {/* Unarmored Defense (Monk: WIS, Barbarian: CON) */}
-      <Surface variant="elevated" className="space-y-2.5">
-        <p className="font-cinzel text-xs uppercase tracking-widest text-dnd-gold-dim">
+      <section className="space-y-2.5 px-1">
+        <h2 className={LEDGER_TITLE}>
           {t('character.ac.unarmored_title')}
-        </p>
+        </h2>
         <p className="text-xs text-dnd-text-muted font-body">
           {t('character.ac.unarmored_hint')}
         </p>
@@ -329,7 +310,7 @@ export default function ArmorClass() {
             {t('character.ac.unarmored_active_hint')}
           </p>
         )}
-      </Surface>
+      </section>
 
       {isDirty && previewTotal !== acTotal && (
         <m.div

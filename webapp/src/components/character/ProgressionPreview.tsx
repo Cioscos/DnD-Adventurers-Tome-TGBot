@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import Surface from '@/components/ui/Surface'
 import Pressable from '@/components/ui/Pressable'
 import { progressionRows, localizeFeatures } from '@/lib/classProgression'
+import { LEDGER_TITLE } from '@/styles/ledger'
 import ProgressionFullTableModal from './ProgressionFullTableModal'
 
 interface Props {
@@ -34,31 +34,29 @@ export default function ProgressionPreview({ className, currentLevel, isMulticla
 
   if (!rows) {
     return (
-      <Surface variant="tome" className="!p-3">
-        <p className="text-xs text-dnd-text-muted italic">
-          {t('character.equipment.progression.no_data', {
-            className,
-            defaultValue: `Progression data not available for ${className}`,
-          })}
-        </p>
-      </Surface>
+      <p className="px-1 text-xs text-dnd-text-muted italic">
+        {t('character.equipment.progression.no_data', {
+          className,
+          defaultValue: `Progression data not available for ${className}`,
+        })}
+      </p>
     )
   }
 
   return (
     <>
-      <Surface variant="tome" className="@container !p-2.5">
-        <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5 mb-1.5">
-          <div className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim">
+      <section className="@container">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5 pb-1 pl-1">
+          <h2 className={LEDGER_TITLE}>
             {t('character.equipment.progression.title', { defaultValue: 'Progression' })}
-          </div>
+          </h2>
           <div className="text-xs text-dnd-text-muted italic">
             {t('character.equipment.progression.tap_full_table', {
               defaultValue: 'Tap row for full table',
             })}
           </div>
         </div>
-        <div className="space-y-0.5">
+        <div className="border-y border-dnd-border divide-y divide-dnd-border/60">
           {windowLevels.map((lv) => {
             const row = rows[lv - 1]
             const isCurrent = lv === currentLevel
@@ -72,23 +70,23 @@ export default function ProgressionPreview({ className, currentLevel, isMulticla
                   isMulticlass
                     ? 'grid-cols-[28px_1fr]'
                     : 'grid-cols-[28px_36px_1fr] @max-[300px]:grid-cols-[28px_1fr]'
-                } gap-2 items-center rounded-md px-1.5 py-1 text-left transition-colors ${
+                } gap-2 items-center px-1 py-1 text-left transition-colors ${
                   isCurrent
-                    ? 'bg-dnd-gold/15 border border-dnd-gold text-dnd-gold-bright'
-                    : 'border border-transparent text-dnd-text-muted hover:bg-dnd-surface'
+                    ? 'bg-dnd-gold/10 text-dnd-gold-bright font-bold'
+                    : 'text-dnd-text-muted hover:bg-dnd-surface/60'
                 }`}
                 aria-current={isCurrent ? 'true' : undefined}
               >
-                <span className="font-mono text-xs font-bold text-center">L{lv}</span>
+                <span className="font-mono text-xs font-bold tabular-nums text-center">L{lv}</span>
                 {!isMulticlass && (
                   <span className="font-mono text-xs text-center @max-[300px]:hidden">+{row?.proficiency_bonus ?? '?'}</span>
                 )}
-                <span className="text-xs truncate">{row?.features ? localizeFeatures(row.features, i18n.language) : '—'}</span>
+                <span className="text-sm font-body truncate">{row?.features ? localizeFeatures(row.features, i18n.language) : '—'}</span>
               </Pressable>
             )
           })}
         </div>
-      </Surface>
+      </section>
       {showFull && (
         <ProgressionFullTableModal
           className={className}
