@@ -48,12 +48,12 @@ describe('SpellSlotsSummary', () => {
   it('sums per spell level and shows what is left (Warlock multiclass: two level-1 rows → combined count)', () => {
     const { container } = render(<SpellSlotsSummary slots={[slot(1, 2, 1), slot(1, 1, 1)]} />)
     expect(container.querySelector('.text-dnd-gold-bright')?.textContent).toBe('2')
-    expect(screen.getByRole('button')).toHaveTextContent('1° 2/3')
   })
 
-  it('only lists the levels the character has', () => {
-    render(<SpellSlotsSummary slots={[slot(2, 3), slot(1, 4, 0), slot(3, 0)]} />)
-    expect(screen.getByRole('button').textContent).toMatch(/1° 0\/4\s*2° 3\/3$/)
+  it('always shows all nine levels, with what is left in each', () => {
+    const { container } = render(<SpellSlotsSummary slots={[slot(2, 3), slot(1, 4, 0), slot(3, 0)]} />)
+    const cells = [...container.querySelectorAll('.grid > div')].map((c) => c.textContent)
+    expect(cells).toEqual(['10', '23', '3–', '4–', '5–', '6–', '7–', '8–', '9–'])
   })
 
   it('navigates to the slots page when tapped', async () => {
