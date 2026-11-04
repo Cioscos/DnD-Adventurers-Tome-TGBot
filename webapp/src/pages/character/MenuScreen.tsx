@@ -18,6 +18,7 @@ import PendingChoicesBadge from '@/components/character/PendingChoicesBadge'
 import RestSheet from '@/components/character/RestSheet'
 import { haptic } from '@/auth/telegram'
 import { spring } from '@/styles/motion'
+import { LEDGER_INDEX_ROW, LEDGER_TITLE } from '@/styles/ledger'
 import type { CharacterFull } from '@/types'
 
 type IconCmp = ComponentType<SVGAttributes<SVGElement> & { size?: number | string }>
@@ -107,7 +108,7 @@ export default function MenuScreen({ char }: Props) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ ...spring.drift, delay: 0.05 + sIdx * 0.06 }}
         >
-          <h2 className="px-1 pb-1.5 font-cinzel text-xs font-bold uppercase tracking-widest text-dnd-gold-dim">
+          <h2 className={`px-1 pb-1.5 ${LEDGER_TITLE}`}>
             {t(section.labelKey)}
           </h2>
           {/* Indice del codice: righe a filetto a due colonne, non tessere. */}
@@ -124,8 +125,7 @@ export default function MenuScreen({ char }: Props) {
                         if ('action' in item) setRestOpen(true)
                         else navigate(`/char/${char.id}/${item.path}`)
                       }}
-                      className="my-0.5 flex w-full min-h-[48px] items-center gap-2.5 px-1 py-1 text-left text-dnd-text
-                                 hover:text-dnd-gold-bright transition-colors"
+                      className={`${LEDGER_INDEX_ROW} text-dnd-text hover:text-dnd-gold-bright transition-colors`}
                       whileTap={{ scale: 0.97 }}
                     >
                       <Icon size={20} strokeWidth={2} aria-hidden className="shrink-0 text-dnd-gold" />

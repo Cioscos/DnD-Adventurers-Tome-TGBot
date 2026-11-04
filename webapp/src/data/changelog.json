@@ -8,13 +8,17 @@
           "Testi più leggibili in penombra: etichette e testi secondari sono più contrastati nel tema scuro.",
           "Il tema pergamena è più chiaro e meno giallo, con inchiostri più scuri su tutte le pagine.",
           "Il menu del personaggio è un indice a righe e le statistiche sono un registro: etichetta a sinistra, valore a destra.",
-          "Nel Turno vedi subito cosa puoi ancora fare: le azioni standard si aprono a richiesta e una sezione usata si richiude."
+          "Nel Turno vedi subito cosa puoi ancora fare: le azioni standard si aprono a richiesta e una sezione usata si richiude.",
+          "Azioni rapide e sezioni del Turno seguono lo stesso schema a righe della scheda.",
+          "Il riepilogo degli slot nella schermata del personaggio mostra quanti ne restano, solo per i livelli che hai."
         ],
         "en": [
           "Easier reading in low light: labels and secondary text have more contrast in the dark theme.",
           "The parchment theme is lighter and less yellow, with darker inks on every page.",
           "The character menu is an index of rows and the stats are a ledger: label on the left, value on the right.",
-          "The Turn page shows what you can still do: standard actions open on request and a used section closes."
+          "The Turn page shows what you can still do: standard actions open on request and a used section closes.",
+          "Quick actions and Turn sections follow the same row layout as the character sheet.",
+          "The spell slot summary on the character screen shows how many you have left, only for the levels you have."
         ]
       },
       "fixed": {

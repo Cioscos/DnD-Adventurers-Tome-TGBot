@@ -58,7 +58,6 @@ const passthrough = vi.hoisted(() => async () => {
   return { default: (p: { children?: ReactNode }) => React.createElement('div', null, p.children) }
 })
 vi.mock('@/components/Layout', passthrough)
-vi.mock('@/components/ui/Surface', passthrough)
 
 const char = {
   id: 7, attacks_per_action: 2, items: [], abilities: [], spells: [], classes: [], spellcasting: null,
