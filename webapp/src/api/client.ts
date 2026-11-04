@@ -140,6 +140,7 @@ export type HitDiceSpendResult = {
   con_bonus: number
   healed: number
   new_current_hp: number
+  homebrew_notifications?: Array<Record<string, unknown>> | null
 }
 
 export type RestPreview = {

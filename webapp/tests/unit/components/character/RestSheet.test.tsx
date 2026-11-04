@@ -109,7 +109,7 @@ describe('RestSheet short rest', () => {
 
   it('a refused rest at 0 HP warns instead of the generic error', async () => {
     const { ApiError } = await import('@/api/client')
-    rest.mockRejectedValue(new ApiError(409, 'long_rest_needs_hp'))
+    rest.mockRejectedValue(new ApiError(409, 'rest_needs_hp'))
     setup()
     await openShortRest()
     await userEvent.click(screen.getByText('rest'))

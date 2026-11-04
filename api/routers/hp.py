@@ -60,6 +60,7 @@ class HitDiceSpendResult(BaseModel):
     con_bonus: int
     healed: int
     new_current_hp: int
+    homebrew_notifications: Optional[list[dict]] = None
 
 router = APIRouter(prefix="/characters", tags=["hp"])
 
@@ -520,10 +521,10 @@ async def rest(
         return await build_character_response(session, char)
     edition = character_edition(char)
     rest_type = body.rest_type
-    if rest_type == "long":
+    if rest_type == "long" or edition == "2024":
         # Un personaggio senza massimo (nessuna classe) non è «a 0 PF»: non c'è nulla da proteggere.
         if char.current_hit_points <= 0 and char.hit_points > 0:
-            raise HTTPException(status_code=409, detail="long_rest_needs_hp")
+            raise HTTPException(status_code=409, detail="rest_needs_hp")
     if body.interrupted and (rest_type == "long" or edition == "2024"):
         if rest_type == "short" or edition == "2014":
             # Nessun beneficio (2014: lungo da ricominciare; 2024: breve interrotto).
@@ -677,11 +678,13 @@ async def spend_hit_dice(
                  meta={"healed": actual_healed})
     record_dice(char, [(f"d{hit_die}", r) for r in rolls])
 
+    notifications = collect_homebrew_notifications(healed["firing"])
     return HitDiceSpendResult(
         rolls=rolls,
         con_bonus=con_mod,
         healed=actual_healed,
         new_current_hp=char.current_hit_points,
+        homebrew_notifications=notifications or None,
     )
 
 

@@ -102,14 +102,16 @@ def total_base_hp(
     first_level_consumed = False
 
     for cls in sorted_classes:
+        if not cls.hit_die:  # classe personalizzata senza dado vita: nessun PF
+            continue
         for level_within_class in range(1, cls.level + 1):
             if not first_level_consumed:
-                total += hit_points_for_level(cls.hit_die or 8, con_mod, 1)
+                total += hit_points_for_level(cls.hit_die, con_mod, 1)
                 first_level_consumed = True
             elif rolled := (rolls or {}).get(cls.id, {}).get(level_within_class):
                 total += max(1, rolled + con_mod)
             else:
-                total += hit_points_for_level(cls.hit_die or 8, con_mod, 2)
+                total += hit_points_for_level(cls.hit_die, con_mod, 2)
 
     return total
 

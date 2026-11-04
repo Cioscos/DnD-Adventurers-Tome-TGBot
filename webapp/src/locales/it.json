@@ -232,7 +232,7 @@
       "rest_too_soon_title": "Riposo lungo ravvicinato",
       "rest_too_soon_body": "Dall'ultimo riposo lungo sono passate meno di {{hours}} ore. Procedere comunque?",
       "rest_too_soon_use_menu": "Ultimo riposo lungo troppo recente: conferma dal menu Riposo.",
-      "rest_needs_hp": "A 0 PF non si può fare un riposo lungo."
+      "rest_needs_hp": "Servono almeno 1 PF per iniziare il riposo."
     },
     "select": {
       "title": "I tuoi personaggi",

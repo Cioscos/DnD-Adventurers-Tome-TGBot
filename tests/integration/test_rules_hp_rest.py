@@ -114,7 +114,7 @@ async def test_long_rest_at_zero_hp_refused(client):
     await _hp(client, cid, 20, 0)
     r = await client.post(f"/characters/{cid}/rest", json={"rest_type": "long"})
     assert r.status_code == 409
-    assert r.json()["detail"] == "long_rest_needs_hp"
+    assert r.json()["detail"] == "rest_needs_hp"
     assert (await _get(client, cid))["current_hit_points"] == 0
 
 
@@ -201,3 +201,43 @@ async def test_hit_die_healing_resets_death_saves(client):
     body = await _get(client, cid)
     assert body["current_hit_points"] == 6
     assert body["death_saves"]["failures"] == 0
+
+
+async def test_short_rest_at_zero_hp_refused_2024_allowed_2014(client):
+    cid, _ = await _char(client, edition="2024")
+    await _hp(client, cid, 20, 0)
+    r = await client.post(f"/characters/{cid}/rest", json={"rest_type": "short"})
+    assert r.status_code == 409 and r.json()["detail"] == "rest_needs_hp"
+    cid, _ = await _char(client, edition="2014")
+    await _hp(client, cid, 20, 0)
+    assert (await client.post(f"/characters/{cid}/rest", json={"rest_type": "short"})).status_code == 200
+
+
+async def test_hit_die_spend_returns_homebrew_notifications(client):
+    from tests.integration.homebrew.conftest import notify_rule
+    cid, cls = await _char(client, level=2)
+    await _hp(client, cid, 30, 1)
+    r = await client.post(f"/characters/{cid}/homebrew/rules",
+                          json=notify_rule("hp_healed", "Curato!", name="Cura"))
+    assert r.status_code == 201, r.text
+    r = await client.post(f"/characters/{cid}/hit_dice/spend",
+                          json={"class_id": cls, "count": 1, "rolls": [6]})
+    assert any("Curato!" in n["message"] for n in r.json()["homebrew_notifications"])
+
+
+async def test_class_without_hit_die_adds_no_hp(client):
+    cid, _ = await _char(client)
+    r = await client.post(f"/characters/{cid}/classes",
+                          json={"class_name": "Artefice Strano", "level": 3})
+    assert r.status_code == 201, r.text
+    assert r.json()["hit_points"] == 10
+
+
+async def test_add_class_keeps_saved_hp_rolls(client):
+    cid, _ = await _char(client)
+    r = await client.patch(f"/characters/{cid}/xp", json={"set": 300, "hp_rolls": [10]})
+    assert r.status_code == 200, r.text
+    assert r.json()["hit_points"] == 20  # 10 + tiro salvato 10
+    r = await client.post(f"/characters/{cid}/classes",
+                          json={"class_name": "wizard", "level": 1, "hit_die": 6})
+    assert r.json()["hit_points"] == 24  # il tiro salvato resta, +4 del mago
