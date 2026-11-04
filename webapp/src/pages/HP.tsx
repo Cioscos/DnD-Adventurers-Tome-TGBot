@@ -283,7 +283,7 @@ export default function HP() {
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.2 }}
               >
-                <Surface variant="tome" ornamented className="relative text-center">
+                <div className="relative py-2 text-center">
                   <p className="text-xs font-cinzel uppercase tracking-[0.25em] text-dnd-gold-dim mb-2">
                     <Heart size={10} className="inline mr-1 text-dnd-crimson-bright" />
                     {form ? form.name : t('character.hp.title')}
@@ -334,7 +334,7 @@ export default function HP() {
                     </p>
                   )}
                   <HomebrewBreakdownRow value={char.hp_max_homebrew_modifier ?? 0} label={t('character.hp.homebrew_max_bonus_label')} />
-                </Surface>
+                </div>
               </m.div>
             )}
 

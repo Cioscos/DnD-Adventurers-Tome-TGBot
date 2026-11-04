@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { User, Globe2, Save, Lock, Share2 } from 'lucide-react'
+import { Save, Lock, Share2 } from 'lucide-react'
 import {
-  GiFeather as Feather, GiCheckedShield as Shield, GiLightningTrio as Zap,
+  GiCheckedShield as Shield, GiLightningTrio as Zap,
   GiFlame as Flame,
 } from 'react-icons/gi'
 import { api } from '@/api/client'
@@ -301,31 +301,31 @@ export default function Identity() {
       )}
 
       {/* Hero name */}
-      <Surface variant="tome" ornamented>
+      <div>
         <Input
           label={t('character.identity.name')}
           value={draft.name}
           onChange={set('name')}
           className="[&_input]:text-xl [&_input]:font-display [&_input]:font-bold"
         />
-      </Surface>
+      </div>
 
       {/* Physicality */}
-      <SectionDivider icon={<User size={11} />} align="center">
+      <SectionDivider>
         {t('character.identity.physicality')}
       </SectionDivider>
 
       <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-        <Surface variant="elevated" className="!p-3">
+        <div>
           <Input label={t('character.identity.race')} value={draft.race} onChange={set('race')} placeholder={t('character.identity.placeholder_race')} />
-        </Surface>
-        <Surface variant="elevated" className="!p-3">
+        </div>
+        <div>
           <Input label={t('character.identity.gender')} value={draft.gender} onChange={set('gender')} placeholder={t('character.identity.placeholder_gender')} />
-        </Surface>
-        <Surface variant="elevated" className="!p-3 max-xs:col-span-2">
+        </div>
+        <div className="max-xs:col-span-2">
           <Input label={t('character.identity.alignment')} value={draft.alignment} onChange={set('alignment')} placeholder={t('character.identity.placeholder_alignment')} />
-        </Surface>
-        <Surface variant="elevated" className="!p-3 max-xs:col-span-2">
+        </div>
+        <div className="max-xs:col-span-2">
           <Input
             label={t('character.identity.speed')}
             type="number"
@@ -344,11 +344,11 @@ export default function Identity() {
               ≈ {formatLength(displayToFeet(Number(draft.speed) || 0, unitSystem), oppositeSystem(unitSystem))}
             </p>
           )}
-        </Surface>
+        </div>
       </div>
 
       {/* Appearance */}
-      <Surface variant="elevated" className="mt-3 space-y-3">
+      <div className="mt-3 space-y-3">
         <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim">
           {t('character.identity.appearance')}
         </p>
@@ -362,10 +362,10 @@ export default function Identity() {
             />
           ))}
         </div>
-      </Surface>
+      </div>
 
       {/* Senses */}
-      <Surface variant="elevated" className="mt-3 space-y-2">
+      <div className="mt-3 space-y-2">
         <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim">
           {t('character.identity.senses')}
         </p>
@@ -373,10 +373,10 @@ export default function Identity() {
           keys={SENSE_TYPES} labelKey="character.senses" values={draft.senses} defaultFt={60} unitSystem={unitSystem}
           onChange={(senses) => setDraft((d) => d ? { ...d, senses } : d)}
         />
-      </Surface>
+      </div>
 
       {/* Other speeds */}
-      <Surface variant="elevated" className="mt-3 space-y-2">
+      <div className="mt-3 space-y-2">
         <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim">
           {t('character.identity.other_speeds')}
         </p>
@@ -384,61 +384,52 @@ export default function Identity() {
           keys={SPEED_TYPES} labelKey="character.speeds" values={draft.speeds} defaultFt={30} unitSystem={unitSystem}
           onChange={(speeds) => setDraft((d) => d ? { ...d, speeds } : d)}
         />
-      </Surface>
+      </div>
 
       {/* Personality */}
-      <SectionDivider icon={<Feather size={11} />} align="center">
+      <SectionDivider>
         {t('character.identity.personality')}
       </SectionDivider>
 
-      <div className="flex flex-col items-center gap-1 -mt-2 mb-3 text-dnd-gold-dim">
+      <div className="flex flex-col gap-1 px-1 text-dnd-gold-dim">
         <div className="flex items-center gap-1">
           <Lock size={10} />
           <span className="text-xs font-cinzel uppercase tracking-wider">
             {t('character.identity.private_badge')}
           </span>
         </div>
-        <p className="text-xs text-dnd-text-faint font-body italic max-w-[300px] text-center">
+        <p className="text-xs text-dnd-text-faint font-body italic">
           {t('character.identity.private_hint')}
         </p>
       </div>
 
-      <Surface variant="parchment" className="!pt-5 !px-4 !pb-4 relative !mt-8 !mb-6">
-        <span className="absolute -top-2.5 left-4 px-2 bg-dnd-surface-raised text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim rounded">
-          {t('character.identity.background')}
-        </span>
-        <Input
-          value={draft.background}
-          onChange={set('background')}
-          placeholder={t('character.identity.placeholder_background')}
-          className="[&_input]:!border-transparent [&_input]:!bg-transparent"
-        />
-      </Surface>
+      <Input
+        label={t('character.identity.background')}
+        value={draft.background}
+        onChange={set('background')}
+        placeholder={t('character.identity.placeholder_background')}
+      />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 !mt-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {personalitySections.map(({ key, label }) => (
-          <Surface key={key} variant="parchment" className="!pt-5 !px-4 !pb-4 relative">
-            <span className="absolute -top-2.5 left-4 px-2 bg-dnd-surface-raised text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim rounded">
-              {label}
-            </span>
-            <Input
-              variant="textarea"
-              value={draft[key] as string}
-              onChange={set(key)}
-              rows={3}
-              placeholder={t(`character.identity.placeholder_${key}`)}
-              className="[&_textarea]:!border-transparent [&_textarea]:!bg-transparent [&_textarea]:italic"
-            />
-          </Surface>
+          <Input
+            key={key}
+            label={label}
+            variant="textarea"
+            value={draft[key] as string}
+            onChange={set(key)}
+            rows={3}
+            placeholder={t(`character.identity.placeholder_${key}`)}
+          />
         ))}
       </div>
 
       {/* Culture */}
-      <SectionDivider icon={<Globe2 size={11} />} align="center">
+      <SectionDivider>
         {t('character.identity.culture')}
       </SectionDivider>
 
-      <Surface variant="elevated">
+      <div>
         <ChipInput
           label={t('character.identity.languages')}
           values={draft.languages}
@@ -447,9 +438,9 @@ export default function Identity() {
           splitOnComma
           suggestions={LANGUAGE_SUGGESTIONS}
         />
-      </Surface>
+      </div>
       {PROF_KEYS.map((k) => (
-        <Surface key={k} variant="elevated">
+        <div key={k}>
           <ChipInput
             label={t(`character.identity.proficiencies_${k}`)}
             values={draft.general_proficiencies[k]}
@@ -458,19 +449,19 @@ export default function Identity() {
             splitOnComma
             suggestions={k === 'other' ? undefined : profSuggestions[k]}
           />
-        </Surface>
+        </div>
       ))}
 
       {/* Damage Modifiers */}
-      <SectionDivider icon={<Shield size={11} />} align="center">
+      <SectionDivider>
         {t('character.identity.damage_modifiers')}
       </SectionDivider>
 
-      <p className="text-xs uppercase tracking-widest text-dnd-text-faint italic text-center -mt-2 mb-2">
+      <p className="px-1 text-xs text-dnd-text-faint italic">
         {t('character.identity.damage_vuln_wins_hint')}
       </p>
 
-      <Surface variant="elevated">
+      <div>
         <div className="space-y-4">
           {DMG_KEYS.map((key) => {
             const customs = draft.damageModifiers[key].filter((v) => !DMG_SLUGS.includes(v))
@@ -513,7 +504,7 @@ export default function Identity() {
             )
           })}
         </div>
-      </Surface>
+      </div>
 
       <Button
         variant="primary"

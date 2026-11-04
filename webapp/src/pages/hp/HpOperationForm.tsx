@@ -3,7 +3,6 @@ import { Minus, Plus, Heart, HeartPulse, Check, ShieldPlus } from 'lucide-react'
 import { GiSkullCrossedBones as Skull } from 'react-icons/gi'
 import type { ComponentType, SVGAttributes } from 'react'
 type IconCmp = ComponentType<SVGAttributes<SVGElement> & { size?: number | string }>
-import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import Pressable from '@/components/ui/Pressable'
@@ -72,7 +71,7 @@ export default function HpOperationForm({
   return (
     <>
       {/* Op selector — segmented control, 2-row (3+2) so labels stay readable at 390px */}
-      <Surface variant="flat" className="!p-1.5 space-y-1">
+      <div className="space-y-1">
         <div className="grid grid-cols-3 gap-1">
           {ops.slice(0, 3).map((op) => {
             const Icon = op.icon
@@ -115,7 +114,7 @@ export default function HpOperationForm({
             )
           })}
         </div>
-      </Surface>
+      </div>
 
       {/* Prima ciò che modifica il colpo (vale anche per i chip), poi i chip che lo applicano. */}
       {activeOp === 'damage' && (
@@ -133,7 +132,7 @@ export default function HpOperationForm({
               aria-pressed={crit}
               className={`flex items-center justify-center gap-2 min-h-[44px] rounded-xl border font-cinzel text-xs uppercase tracking-wider transition-colors
                 ${crit
-                  ? '!bg-gradient-ember !text-dnd-parchment !border-transparent'
+                  ? '!bg-dnd-crimson/10 !text-dnd-crimson-bright !border-dnd-crimson/60'
                   : 'bg-transparent text-dnd-text-muted border-dnd-border'}`}
             >
               <Skull size={16} />
@@ -161,7 +160,7 @@ export default function HpOperationForm({
       />
 
       {/* Number input + apply */}
-      <Surface variant="elevated">
+      <div>
         <div className="flex flex-col gap-3">
           <Input
             type="number"
@@ -201,7 +200,7 @@ export default function HpOperationForm({
               : t('common.confirm')}
           </Button>
         </div>
-      </Surface>
+      </div>
     </>
   )
 }

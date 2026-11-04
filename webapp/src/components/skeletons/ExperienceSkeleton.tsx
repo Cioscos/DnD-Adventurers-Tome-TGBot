@@ -4,7 +4,7 @@ export default function ExperienceSkeleton() {
   return (
     <div className="space-y-3" aria-hidden>
       {/* XP hero card */}
-      <div className="rounded-2xl border border-dnd-border bg-dnd-surface p-4 space-y-3">
+      <div className="border-b border-dnd-border/60 px-1 py-4 space-y-3">
         <div className="flex items-center justify-between">
           <div className="space-y-1.5">
             <Skeleton.Line width="80px" height="10px" />
@@ -25,7 +25,7 @@ export default function ExperienceSkeleton() {
         ))}
       </div>
       {/* Add XP input row */}
-      <div className="rounded-2xl border border-dnd-border bg-dnd-surface p-4 flex gap-2 items-end">
+      <div className="border-b border-dnd-border/60 px-1 py-4 flex gap-2 items-end">
         <Skeleton.Rect className="flex-1" height="44px" rounded="rounded-xl" delay={240} />
         <Skeleton.Rect width="80px" height="44px" rounded="rounded-xl" delay={280} />
       </div>
