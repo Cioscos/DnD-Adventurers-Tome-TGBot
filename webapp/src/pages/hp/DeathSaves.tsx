@@ -106,7 +106,7 @@ export function DeathSaveTracker({ deathSaves, onRoll, isRolling }: Pick<DeathSa
         onRoll={onRoll}
         pending={isRolling}
         ariaLabel={t('character.death_saves.roll')}
-        className="w-full min-h-[56px] px-5 py-3.5 rounded-xl flex items-center justify-center gap-2 text-base font-bold bg-gradient-gold text-dnd-ink shadow-engrave"
+        className="w-full min-h-[56px] px-5 py-3.5 rounded-xl flex items-center justify-center gap-2 text-base font-bold bg-dnd-gold text-dnd-ink"
       >
         <Dice1 size={18} />
         {t('character.death_saves.roll')}

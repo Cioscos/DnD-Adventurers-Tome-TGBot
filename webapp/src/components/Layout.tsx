@@ -39,13 +39,15 @@ interface LayoutProps {
   offlineQuery?: OfflineNoticeQuery
   /** Chiave della guida "?" (`help.<key>` nei locale). Default: `page`. */
   help?: string
+  /** Azione principale fissa in basso, a sinistra del pulsante dei dadi. */
+  bottomAction?: React.ReactNode
 }
 
 // Altezza della fascia breadcrumb: riga tappabile da 44 px + pb-3 + bordo.
 // shortcut: costante, non misurata — se cambia l'altezza della riga va aggiornata qui.
 const CRUMB_STRIP_PX = 57
 
-export default function Layout({ title, children, backTo, group, page, hideScrollbar = false, offlineQuery, help = page }: LayoutProps) {
+export default function Layout({ title, children, backTo, group, page, hideScrollbar = false, offlineQuery, help = page, bottomAction }: LayoutProps) {
   const navigate = useNavigate()
   const { t } = useTranslation()
   const swipe = useSwipeNavigation(group, page)
@@ -303,6 +305,10 @@ export default function Layout({ title, children, backTo, group, page, hideScrol
             </>
           )}
         </main>
+
+        {bottomAction && !charNotFound && (
+          <div className="absolute left-4 right-20 bottom-safe-fab z-20">{bottomAction}</div>
+        )}
 
         {/* touch-pan-y su <main>: l'orizzontale è dello swipe di pagina, non del
             browser (che farebbe il suo back o annullerebbe il tocco a metà gesto). */}

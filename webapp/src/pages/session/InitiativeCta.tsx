@@ -56,7 +56,7 @@ export default function InitiativeCta({ sessionId, combatant }: Props) {
         onRoll={(mode) => rollMutation.mutate(mode)}
         pending={rollMutation.isPending}
         ariaLabel={t('session.combat.roll_initiative')}
-        className="w-full min-h-[48px] px-4 py-3 rounded-xl flex items-center justify-center gap-2 text-sm font-bold bg-gradient-gold text-dnd-ink shadow-engrave"
+        className="w-full min-h-[48px] px-4 py-3 rounded-xl flex items-center justify-center gap-2 text-sm font-bold bg-dnd-gold text-dnd-ink"
       >
         <Dices size={18} />
         {t('session.combat.roll_initiative')}

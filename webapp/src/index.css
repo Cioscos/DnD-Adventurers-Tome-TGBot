@@ -83,7 +83,6 @@
   --shadow-3: 0 6px 14px rgba(var(--dnd-shadow-color), 0.35), 0 2px 4px rgba(var(--dnd-shadow-color), 0.20);
   --shadow-4: 0 14px 28px rgba(var(--dnd-shadow-color), 0.40), 0 6px 10px rgba(var(--dnd-shadow-color), 0.25);
   --shadow-5: 0 24px 48px rgba(var(--dnd-shadow-color), 0.45), 0 10px 20px rgba(var(--dnd-shadow-color), 0.30);
-  --shadow-engrave: inset 0 1px 0 rgba(255, 220, 140, 0.25), inset 0 -1px 2px rgba(0, 0, 0, 0.35);
   --halo-gold: 0 0 0 2px rgba(212, 168, 71, 0.35), 0 0 18px var(--dnd-gold-glow);
   --halo-arcane: 0 0 0 2px rgba(155, 89, 182, 0.35), 0 0 22px rgba(155, 89, 182, 0.25);
   --halo-danger: 0 0 0 2px rgba(179, 58, 58, 0.35), 0 0 14px rgba(179, 58, 58, 0.25);

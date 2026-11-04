@@ -189,7 +189,7 @@ The palette is a single warm-brown family with five semantic accents. Every neut
 - **Gold Leaf** (`#d4a847`): the only color reserved for primary affordance — primary buttons, the active-page sigil, the focus-visible halo, the page-header underline. Its rarity is the point.
 - **Gold Bright** (`#f0c970`): hover state of primary, ink-spread highlight, dialog accent border on success-feeling outcomes (good roll, level-up).
 - **Gold Dim** (`#a48c4e`): inactive ornament, secondary-button border resting state, label color for de-emphasized form fields.
-- **Gold Deep** (`#5a4820`): bottom of the metallic gradient, only inside `--gradient-gold`.
+- **Gold Deep** (`#5a4820`): bottom of `--gradient-gold`, used only by progress bars (XP, upload), never by buttons.
 
 ### Secondary (semantic, not visual hierarchy)
 - **Dragon Crimson** (`#b33a3a` / bright `#fa615f` / deep `#7a1f1f`): damage, danger, HP threshold ≤25%, destructive actions, death saves. Never used decoratively.
@@ -199,13 +199,13 @@ The palette is a single warm-brown family with five semantic accents. Every neut
 - **Candle Amber** (`#e8a547`): rare-warning highlight (concentration banner pulse, level-up call-out). Adjacent to gold but desaturated; never substituted for gold in primary affordance.
 
 ### Neutral (warm-brown, dark mode default)
-- **Lampblack Ink** (`#0d0a08`): deepest surface — page background under all chrome, primary-button text on gold gradient.
+- **Lampblack Ink** (`#0d0a08`): deepest surface — page background under all chrome, primary-button text on gold.
 - **Tome Background** (`#1a1512`): body background; the candlelit page.
 - **Tome Surface** (`#241d18`): default card / surface fill.
 - **Surface Raised** (`#2f261f`): elevated card fill, dialog body, secondary button.
 - **Surface Lifted** (`#3b3026`): top-of-stack popovers, drag-active states.
 - **Border** (`#4a3d30`) / **Border Strong** (`#6b5841`): rules and frames; never colored stripes.
-- **Parchment** (`#f4e8c1`): button text on gradients, light-mode page surface, button-arcane label.
+- **Parchment** (`#f4e8c1`): button text on the arcane gradient, light-mode page surface, button-arcane label.
 - **Manuscript Text** (`#ebdfbf` / muted `#b5a482` / faint `#9a8c75`): three-step text hierarchy on dark surfaces.
 
 ### Light mode (aged parchment)
@@ -253,7 +253,6 @@ Halos are a separate vocabulary. They are not for elevation — they are for **r
 - **shadow-3** (`0 6px 14px / 0 2px 4px`): elevated card, popover.
 - **shadow-4** (`0 14px 28px / 0 6px 10px`): modal sheet, drag-active.
 - **shadow-5** (`0 24px 48px / 0 10px 20px`): result dialog at center stage.
-- **shadow-engrave** (`inset 0 1px 0 rgba(255,220,140,.25), inset 0 -1px 2px rgba(0,0,0,.35)`): metallic-pressed inset on gold primary buttons. Sells the "stamped" feel.
 
 ### Halo Vocabulary (signal, not elevation)
 
@@ -268,11 +267,11 @@ Halos are a separate vocabulary. They are not for elevation — they are for **r
 ## 5. Components
 
 ### Buttons
-Buttons read as inscribed plates pressed into the page. Primary is gold leaf with shadow-engrave inset and an ink-spread ripple on press; secondary is a raised parchment surface with a gold-dim hairline border that warms to gold on hover; ghost is a transparent gold-text affordance for tertiary navigation.
+Buttons read as inscribed plates pressed into the page. Primary is flat solid gold, no gradient and no bevel, with an ink-spread ripple on press; secondary is a raised parchment surface with a gold-dim hairline border that warms to gold on hover; ghost is a transparent gold-text affordance for tertiary navigation.
 
 - **Shape:** rounded `12px` (`rounded-xl`). Never sharp; never pill.
 - **Sizes:** sm `min-h-44px`, md `min-h-48px`, lg `min-h-56px`. Never below 44px on a phone (touch target).
-- **Primary:** `bg-gradient-gold`, `text-dnd-ink`, `shadow-engrave`. Hover: brighten gradient (no scale). Press: `scale 0.97`, ink-spread ripple at click coordinate (320ms ease-out).
+- **Primary:** `bg-dnd-gold`, `text-dnd-ink`. Hover: `bg-dnd-gold-bright` (no scale). Press: `scale 0.97`, ink-spread ripple at click coordinate (320ms ease-out).
 - **Secondary:** `bg-dnd-surface-raised`, `text-dnd-text`, `border border-dnd-gold-dim/30`. Hover: border warms to `border-dnd-gold/70`.
 - **Danger:** crimson tint at 10% on surface, crimson-bright text, crimson border at 40%. No solid red fill — danger reads as warning ink, not as alarm.
 - **Arcane:** gradient `arcane-deep → arcane`, parchment-white text, halo-arcane shadow. Reserved for explicit magic actions (cast, concentrate).
@@ -343,6 +342,8 @@ HP, AC, dice totals, XP — the values the player checks first. The hero value i
 - `hp-glow-gold` for wounded (25–75%)
 - `hp-glow-crimson` for critical (≤25%)
 The glow itself is signal — hue and intensity together communicate state at a glance from across the table. On value change the number pops in with `spring.elastic` (scale 0.85 → 1): the one sanctioned elastic gesture outside the dice roller.
+
+The HP bar (`HPGauge`) is a deliberate exception to the flat look of the rest of the app: it keeps its threshold-coloured gradient and glow, like the numeral it sits under.
 
 ### Ornaments (signature)
 - **Corner flourishes**: 4 SVG sigils on dialog corners, gold-dim, decorative-only.
