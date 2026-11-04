@@ -1,3 +1,5 @@
+import type { OptionResult, RollChoice } from '@/api/client'
+
 /** TypeScript types mirroring the FastAPI Pydantic schemas. */
 
 export type AbilityName =
@@ -395,6 +397,7 @@ export interface CharacterFull extends Omit<CharacterSummary, 'ac_homebrew_modif
   spell_slots: SpellSlot[]
   items: Item[]
   consumable_use?: ConsumableUse | null
+  option_result?: OptionResult
   currency?: Currency
   abilities: Ability[]
   maps: MapEntry[]
@@ -666,7 +669,7 @@ export interface GmConditionApply {
 
 export interface EncounterLive {
   /** Solo in risposta al tiro di iniziativa. */
-  initiative_roll?: { mode_applied: 'normal' | 'advantage' | 'disadvantage'; notes: string[] } | null
+  initiative_roll?: { mode_applied: 'normal' | 'advantage' | 'disadvantage'; notes: string[]; option_result?: OptionResult } | null
   id: number
   mode: EncounterMode
   status: EncounterStatus
@@ -722,7 +725,7 @@ export interface ParticipantIdentity {
   show_private: boolean
 }
 
-export interface RollDamageRequest {
+export interface RollDamageRequest extends Partial<RollChoice> {
   casting_level?: number
   extra_dice?: string
   is_critical?: boolean
@@ -746,7 +749,7 @@ export interface SpellAttackResult {
   homebrew_notifications?: Array<Record<string, unknown>> | null
 }
 
-export interface SpellAttackRequest {
+export interface SpellAttackRequest extends Partial<RollChoice> {
   slot_level: number | null
   ritual?: boolean
   die?: number
@@ -756,6 +759,7 @@ export interface SpellAttackRequest {
 }
 
 export interface RollDamageResult {
+  option_result?: OptionResult
   rolls: number[]
   total: number
   half_damage: number

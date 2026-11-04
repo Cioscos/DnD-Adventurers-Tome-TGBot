@@ -35,6 +35,8 @@ from api.routers._helpers import collect_homebrew_notifications, roll_concentrat
 from api.services.character_response import build_character_response
 from api.services.d20 import d20_records, d20_history_label, resolve_body
 from core.rules.modifiers import modifiers_for
+from core.rules.roll_options import scale_damage
+from api.services.rules_options import merge_options, option_result, roll_option_dice, use_options
 from api.services.dice_stats import record_dice
 from api.services.homebrew.dispatcher import dispatch
 from api.services.spellcasting import best_caster, build_spellcasting_info
@@ -278,12 +280,14 @@ async def spell_attack(
 
     caster = best_caster(char)
     applied = modifiers_for(char, "attack", spell=spell)
-    bonus = (caster.attack_bonus if caster else char.proficiency_bonus) + applied.flat
+    opts = use_options(session, char, "attack", body, spell=spell)
+    merge_options(applied, opts)
+    bonus = (caster.attack_bonus if caster else char.proficiency_bonus) + applied.flat + opts.bonus
     outcome = resolve_body(body, applied)
     die = outcome.kept
     total = die + bonus
-    is_critical = die >= applied.crit_min
     is_fumble = die == 1
+    is_critical = die >= applied.crit_min or (opts.force_crit and not is_fumble)
 
     text = f"Attacco incantesimo {spell.name}: {d20_history_label(outcome)}+{bonus}={total}" + (
         " (CRITICO!)" if is_critical else " (FUMBLE!)" if is_fumble else ""
@@ -450,7 +454,10 @@ async def roll_spell_damage(
             else:
                 extra_rolls = [random.randint(1, extra_sides) for _ in range(extra_dice_count)]
 
-    total = sum(main_rolls) + sum(extra_rolls) + base_bonus + extra_bonus
+    opts = use_options(session, char, "spell_damage", body, spell=spell)
+    option_rolls, option_total = roll_option_dice(char, opts, body.is_critical)
+    total = sum(main_rolls) + sum(extra_rolls) + base_bonus + extra_bonus + option_total + opts.bonus
+    total = scale_damage(total, opts.multiplier)
     half_damage = (total + 1) // 2  # round up half damage (D&D 5e)
 
     breakdown_parts = [f"{dice_count}d{sides}={main_rolls}"]
@@ -460,6 +467,8 @@ async def roll_spell_damage(
         breakdown_parts.append(f"{'+' if base_bonus >= 0 else ''}{base_bonus}")
     if extra_bonus:
         breakdown_parts.append(f"{'+' if extra_bonus >= 0 else ''}{extra_bonus}")
+    if opts.keys:
+        breakdown_parts.append(f"+{option_rolls}{opts.bonus:+d}" if option_rolls else f"{opts.bonus:+d}")
     breakdown = " ".join(breakdown_parts) + f" = {total}"
 
     record_dice(
@@ -496,6 +505,7 @@ async def roll_spell_damage(
         scaled_dice=f"{base_count}d{sides}",
         main_kind=main_kind,
         main_rolls=main_rolls,
+        option_result=option_result(opts, option_rolls, option_total),
         extra_kind=extra_kind,
         extra_rolls=extra_rolls,
     )

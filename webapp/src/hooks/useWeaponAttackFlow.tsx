@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { api, ApiError } from '@/api/client'
+import { api, ApiError, type D20Roll } from '@/api/client'
 import { useAnimatedRoll } from '@/dice/useAnimatedRoll'
 import { useD20Roll, d20Arg, type RollMode } from '@/hooks/useD20Roll'
 import { useToast } from '@/hooks/useToast'
@@ -9,6 +9,8 @@ import { haptic } from '@/auth/telegram'
 import type { WeaponChoice } from '@/lib/weaponOptions'
 import { useWeaponChoices, choiceOf } from '@/store/weaponChoiceStore'
 import WeaponAttackModal from '@/components/WeaponAttackModal'
+import { askRollOptions } from '@/lib/rollOptions'
+import type { RollOptionsQuery } from '@/api/client'
 import type { WeaponAttackResult } from '@/components/WeaponAttackModal'
 import type { CharacterFull } from '@/types'
 
@@ -24,6 +26,35 @@ export interface WeaponAttackFlow {
   elements: ReactNode
 }
 
+/** L'attacco con la conferma al tiro: opzioni prima del d20 e, se ce ne sono dopo il colpo, secondo tempo del danno.
+ *  `null`: il giocatore ha dichiarato il mancato. */
+export function useAttackRoll() {
+  const { t } = useTranslation()
+  const rollD20 = useD20Roll()
+  return async (
+    charId: number, itemId: number | null, mode: RollMode, inspiration: boolean, choice?: WeaponChoice,
+  ): Promise<WeaponAttackResult | null> => {
+    const query: RollOptionsQuery = itemId === null ? { roll: 'attack' } : { roll: 'attack', item_id: itemId }
+    const post = (reroll: boolean, roll: D20Roll | undefined) => (itemId === null
+      ? api.items.attackUnarmed(charId, reroll, roll)
+      : api.items.attack(charId, itemId, reroll, roll, choice))
+    const before = await askRollOptions(charId, query)
+    let result = await post(false, d20Arg(mode, await rollD20(mode), before))
+    let canReroll = inspiration
+    while (result.attack_id) {
+      const summary = t('character.roll_options.summary', {
+        total: result.to_hit_total, die: result.to_hit_die, bonus: result.to_hit_bonus,
+      }) + (result.is_critical ? ` · ${t('character.dice.critical_banner')}` : '')
+      const after = await askRollOptions(charId, query, 'after_hit', { summary, canReroll })
+      if (after.outcome === 'miss') return null
+      if (after.outcome !== 'reroll') return api.items.attackDamage(charId, result.attack_id, after)
+      canReroll = false
+      result = await post(true, { dice: await rollD20('normal'), mode: 'normal', defer_damage: true })
+    }
+    return result
+  }
+}
+
 /** Flusso di attacco condiviso fra Azioni e vista Turno: tiro d20, esito, reroll con ispirazione. */
 export function useWeaponAttackFlow(charId: number, char: CharacterFull | undefined): WeaponAttackFlow {
   const { t } = useTranslation()
@@ -32,17 +63,18 @@ export function useWeaponAttackFlow(charId: number, char: CharacterFull | undefi
   const [attackState, setAttackState] = useState<AttackState | null>(null)
   const choices = useWeaponChoices((s) => s.choices)
   const rollDice = useAnimatedRoll()
-  const rollD20 = useD20Roll()
+  const attackRoll = useAttackRoll()
+  const inspiration = !!char?.heroic_inspiration
 
   const weaponAttack = useMutation({
-    mutationFn: async ({ itemId, mode }: { itemId: number; mode: RollMode }) => {
-      const choice = choiceOf(choices, itemId)
-      return api.items.attack(charId, itemId, false, d20Arg(mode, await rollD20(mode)), choice)
-    },
+    mutationFn: ({ itemId, mode }: { itemId: number; mode: RollMode }) =>
+      attackRoll(charId, itemId, mode, inspiration, choiceOf(choices, itemId)),
     onSuccess: (result, { itemId }) => {
-      setAttackState({
-        result, source: { type: 'weapon', itemId, choice: choiceOf(choices, itemId) }, wasRerolled: false,
-      })
+      if (result) {
+        setAttackState({
+          result, source: { type: 'weapon', itemId, choice: choiceOf(choices, itemId) }, wasRerolled: false,
+        })
+      }
       qc.invalidateQueries({ queryKey: ['character', charId] })
       qc.invalidateQueries({ queryKey: ['turn-state', charId] })
       haptic.success()
@@ -50,10 +82,9 @@ export function useWeaponAttackFlow(charId: number, char: CharacterFull | undefi
   })
 
   const unarmedAttack = useMutation({
-    mutationFn: async (mode: RollMode) =>
-      api.items.attackUnarmed(charId, false, d20Arg(mode, await rollD20(mode))),
+    mutationFn: (mode: RollMode) => attackRoll(charId, null, mode, inspiration),
     onSuccess: (result) => {
-      setAttackState({ result, source: { type: 'unarmed' }, wasRerolled: false })
+      if (result) setAttackState({ result, source: { type: 'unarmed' }, wasRerolled: false })
       qc.invalidateQueries({ queryKey: ['character', charId] })
       qc.invalidateQueries({ queryKey: ['turn-state', charId] })
       haptic.success()

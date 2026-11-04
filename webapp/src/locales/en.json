@@ -716,6 +716,26 @@
       "auto_fail": "Automatic failure",
       "armor_untrained": "Armor without training"
     },
+    "roll_options": {
+        "title_before": "Before the roll",
+        "title_after_hit": "Did the attack hit?",
+        "title_damage_in": "Before the damage",
+        "roll": "Roll",
+        "damage": "Roll damage",
+        "apply": "Apply damage",
+        "miss": "Missed",
+        "reroll": "Reroll with Inspiration",
+        "summary": "To hit: {{die}} {{bonus}} = {{total}}",
+        "extra_dice": "Extra dice",
+        "once_per_turn": "Once per turn",
+        "slot_action": "Action",
+        "slot_bonus": "Bonus action",
+        "slot_reaction": "Reaction",
+        "uses_one": "{{count}} use",
+        "uses_other": "{{count}} uses",
+        "slot_choice": "Lv {{level}} ({{available}})",
+        "damage_changed": "Damage {{before}} → {{after}}"
+    },
     "conditions": {
       "duration": {
         "label": "Duration in rounds",

@@ -716,6 +716,26 @@
       "auto_fail": "Fallimento automatico",
       "armor_untrained": "Armatura senza addestramento"
     },
+    "roll_options": {
+        "title_before": "Prima del tiro",
+        "title_after_hit": "Il colpo va a segno?",
+        "title_damage_in": "Prima del danno",
+        "roll": "Tira",
+        "damage": "Tira il danno",
+        "apply": "Applica il danno",
+        "miss": "Mancato",
+        "reroll": "Ritira con Ispirazione",
+        "summary": "Colpire: {{die}} {{bonus}} = {{total}}",
+        "extra_dice": "Dadi extra",
+        "once_per_turn": "Una volta per turno",
+        "slot_action": "Azione",
+        "slot_bonus": "Azione bonus",
+        "slot_reaction": "Reazione",
+        "uses_one": "{{count}} uso",
+        "uses_other": "{{count}} usi",
+        "slot_choice": "{{level}}° ({{available}})",
+        "damage_changed": "Danno {{before}} → {{after}}"
+    },
     "conditions": {
       "duration": {
         "label": "Durata in round",

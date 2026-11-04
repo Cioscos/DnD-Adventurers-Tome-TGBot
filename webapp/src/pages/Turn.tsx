@@ -1,3 +1,4 @@
+import { askRollOptions, refreshAfterOptions } from '@/lib/rollOptions'
 import { useState, type ReactNode } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -64,9 +65,14 @@ export default function Turn() {
   const newTurn = useMutation({ mutationFn: () => api.characters.turnNew(charId), onSuccess: setBlock })
   const rollD20 = useD20Roll()
   const skillMutation = useMutation({
-    mutationFn: async ({ skill, mode }: { skill: string; mode: RollMode }) =>
-      ({ result: await api.characters.rollSkill(charId, skill, d20Arg(mode, await rollD20(mode))), skill }),
-    onSuccess: ({ result, skill }) => setSkillRoll({ result: { ...result, description: undefined }, skill }),
+    mutationFn: async ({ skill, mode }: { skill: string; mode: RollMode }) => {
+      const choice = await askRollOptions(charId, { roll: 'skill', skill })
+      return { result: await api.characters.rollSkill(charId, skill, d20Arg(mode, await rollD20(mode), choice)), skill }
+    },
+    onSuccess: ({ result, skill }) => {
+      refreshAfterOptions(qc, charId, result.option_result)
+      setSkillRoll({ result: { ...result, description: undefined }, skill })
+    },
   })
 
   const weaponFlow = useWeaponAttackFlow(charId, char)

@@ -1,3 +1,4 @@
+import { askRollOptions, refreshAfterOptions } from '@/lib/rollOptions'
 import { useState, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -100,15 +101,26 @@ export default function HP() {
   }
 
   const hpMutation = useMutation({
-    mutationFn: ({ op, val, wasCritical, modifier }: {
+    mutationFn: async ({ op, val, wasCritical, modifier }: {
       op: HPOp; val: number; wasCritical?: boolean
       modifier?: { damage_modifier?: 'half' | 'double' | 'none' | 'immune'; raw_value?: number; damage_type?: string }
-    }) =>
-      modifier
-        ? api.characters.updateHp(charId, op, val, wasCritical ?? false, modifier)
-        : api.characters.updateHp(charId, op, val, wasCritical ?? false),
+    }) => {
+      const choice = op === 'damage'
+        ? await askRollOptions(charId, { roll: 'damage_taken', damage_type: modifier?.damage_type }, 'damage_in')
+        : undefined
+      const withOptions = choice?.options.length ? { ...modifier, ...choice } : modifier
+      return withOptions
+        ? api.characters.updateHp(charId, op, val, wasCritical ?? false, withOptions)
+        : api.characters.updateHp(charId, op, val, wasCritical ?? false)
+    },
     onSuccess: (updated, { op, val }) => {
       qc.setQueryData(['character', charId], updated)
+      if (updated.option_result) {
+        refreshAfterOptions(qc, charId, updated.option_result)
+        toast.info(t('character.roll_options.damage_changed', {
+          before: updated.option_result.damage_before, after: updated.option_result.damage_after,
+        }))
+      }
       // HP events (damage/heal) can drive homebrew change_resource rules (#18).
       qc.invalidateQueries({ queryKey: ['homebrew-resources', charId] })
       setValue('')

@@ -7,7 +7,7 @@ from typing import Optional
 
 from pydantic import BaseModel, Field, field_validator
 
-from api.schemas.common import D20Dice, RollMode
+from api.schemas.common import D20Dice, OptionResult, RollMode, RollOptionsBody, absent_when_none
 
 _EXTRA_DICE_RE = re.compile(r"^(\d+)d(\d+)([+-]\d+)?$", re.IGNORECASE)
 
@@ -89,7 +89,7 @@ class SpellUseRequest(BaseModel):
     as_ritual: bool = False
 
 
-class SpellAttackRequest(BaseModel):
+class SpellAttackRequest(RollOptionsBody):
     slot_level: int | None = None
     ritual: bool = False
     die: int | None = Field(None, ge=1, le=20)
@@ -130,7 +130,7 @@ class ConcentrationUpdate(BaseModel):
     rounds: Optional[int] = None
 
 
-class RollDamageRequest(BaseModel):
+class RollDamageRequest(RollOptionsBody):
     casting_level: int | None = None
     extra_dice: str | None = None
     is_critical: bool = False
@@ -166,4 +166,5 @@ class RollDamageResult(BaseModel):
     main_rolls: list[int]    # only main dice (not extras)
     extra_kind: str | None = None   # "d4" or None
     extra_rolls: list[int] = []     # [] if no extra_dice
+    option_result: OptionResult | None = absent_when_none()
     model_config = {"from_attributes": True}

@@ -5,16 +5,8 @@ from fastapi import HTTPException, status
 
 from core.game.actions import attacks_per_action
 from core.rules.catalog import active_features
+from core.rules.types import TURN_FLAGS as _FLAGS
 
-# slot di turno -> chiave booleana dello stato
-_FLAGS = {
-    "action": "action_used",
-    "bonus": "bonus_used",
-    "reaction": "reaction_used",
-    "free_interaction": "free_interaction_used",
-    "spell_slot": "spell_slot_cast",
-    "bonus_spell": "bonus_spell_cast",
-}
 SLOTS = (*_FLAGS, "attack")
 
 

@@ -40,7 +40,7 @@ export default function WeaponAttackModal({
 
   const accent = is_critical ? 'gold' : is_fumble ? 'crimson' : 'emerald'
   const showInspirationButton =
-    inspirationAvailable && !wasRerolled && onInspirationReroll != null
+    inspirationAvailable && !wasRerolled && onInspirationReroll != null && !result.attack_id
 
   const toHitColor = is_critical
     ? 'text-dnd-gold-bright'
@@ -83,7 +83,7 @@ export default function WeaponAttackModal({
         </p>
       )}
 
-      <RollNotes notes={result.notes} />
+      <RollNotes notes={result.notes} optionResult={result.option_result} />
       <m.div
         className="rounded-2xl bg-dnd-surface/80 border border-dnd-border p-3"
         initial={{ opacity: 0, y: 10 }}

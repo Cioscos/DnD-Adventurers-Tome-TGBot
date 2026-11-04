@@ -1,3 +1,5 @@
+import { askRollOptions } from '@/lib/rollOptions'
+import { useAttackRoll } from '@/hooks/useWeaponAttackFlow'
 import { lazy, Suspense, useRef, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -79,6 +81,7 @@ export default function QuickActions({ char }: Props) {
   const toast = useToast()
   const rollDice = useAnimatedRoll()
   const rollD20 = useD20Roll()
+  const attackRoll = useAttackRoll()
   const weaponChoices = useWeaponChoices((s) => s.choices)
   const setWeaponChoice = useWeaponChoices((s) => s.setChoice)
   const castFlow = useCastFlow(char.id, char)
@@ -125,12 +128,10 @@ export default function QuickActions({ char }: Props) {
   })
 
   const attackMutation = useMutation({
-    mutationFn: async ({ itemId, mode }: { itemId: number; mode: RollMode }) =>
-      api.items.attack(
-        char.id, itemId, false, d20Arg(mode, await rollD20(mode)), choiceOf(weaponChoices, itemId),
-      ),
+    mutationFn: ({ itemId, mode }: { itemId: number; mode: RollMode }) =>
+      attackRoll(char.id, itemId, mode, !!char.heroic_inspiration, choiceOf(weaponChoices, itemId)),
     onSuccess: (result, { itemId }) => {
-      setAttackState({ result, itemId, wasRerolled: false })
+      if (result) setAttackState({ result, itemId, wasRerolled: false })
       qc.invalidateQueries({ queryKey: ['character', char.id] })
       haptic.success()
     },
@@ -158,7 +159,8 @@ export default function QuickActions({ char }: Props) {
 
   const saveMutation = useMutation({
     mutationFn: async ({ ability, mode }: { ability: string; mode: RollMode }) => {
-      const result = await api.characters.rollSavingThrow(char.id, ability, d20Arg(mode, await rollD20(mode)))
+      const choice = await askRollOptions(char.id, { roll: 'save', ability })
+      const result = await api.characters.rollSavingThrow(char.id, ability, d20Arg(mode, await rollD20(mode), choice))
       return { result, ability }
     },
     onSuccess: ({ result, ability }) => {

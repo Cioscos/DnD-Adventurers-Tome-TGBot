@@ -1,3 +1,4 @@
+import { askRollOptions, refreshAfterOptions } from '@/lib/rollOptions'
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
@@ -108,6 +109,7 @@ export default function SpellDamageSheet({
         setSlotConsumed(true)
       }
 
+      const choice = await askRollOptions(charId, { roll: 'spell_damage', spell_id: spell.id })
       const useAnimation = animate3d && !reducedMotion
       let main_rolls: number[] | undefined
       let extra_rolls: number[] | undefined
@@ -148,10 +150,12 @@ export default function SpellDamageSheet({
         ...body,
         main_rolls,
         extra_rolls,
+        ...(choice.options.length > 0 ? choice : {}),
       })
     },
     onSuccess: (data) => {
       haptic.success()
+      refreshAfterOptions(qc, charId, data.option_result)
       setResult(data)
     },
   })

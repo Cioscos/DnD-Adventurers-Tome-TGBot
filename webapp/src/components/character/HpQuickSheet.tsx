@@ -1,3 +1,4 @@
+import { askRollOptions, refreshAfterOptions } from '@/lib/rollOptions'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
@@ -44,13 +45,25 @@ export default function HpQuickSheet({ char, open, onClose }: HpQuickSheetProps)
   const [pendingChip, setPendingChip] = useState<number | null>(null)
 
   const hpMutation = useMutation({
-    mutationFn: ({ op, value, modifier }: {
+    mutationFn: async ({ op, value, modifier }: {
       op: 'damage' | 'heal'; value: number
       modifier?: { damage_modifier?: 'half' | 'double' | 'none' | 'immune'; raw_value?: number; damage_type?: string }
-    }) =>
-      modifier
-        ? api.characters.updateHp(char.id, op, value, false, modifier)
-        : api.characters.updateHp(char.id, op, value),
+    }) => {
+      const choice = op === 'damage'
+        ? await askRollOptions(char.id, { roll: 'damage_taken', damage_type: modifier?.damage_type }, 'damage_in')
+        : undefined
+      const withOptions = choice?.options.length ? { ...modifier, ...choice } : modifier
+      const updated = await (withOptions
+        ? api.characters.updateHp(char.id, op, value, false, withOptions)
+        : api.characters.updateHp(char.id, op, value))
+      if (updated.option_result) {
+        refreshAfterOptions(qc, char.id, updated.option_result)
+        toast.info(t('character.roll_options.damage_changed', {
+          before: updated.option_result.damage_before, after: updated.option_result.damage_after,
+        }))
+      }
+      return updated
+    },
   })
 
   // Annulla tramite lo snapshot del server (mai set_current dal client). 409 = i PF

@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import random
 import re
+import uuid
 from datetime import datetime
 from typing import Annotated, Literal, Optional
 
@@ -15,7 +16,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from api.auth import get_current_lang, get_current_user
-from api.services.rules_turn import spend
+from api.services.rules_options import merge_options, option_result, roll_option_dice, use_options
+from api.services.rules_turn import get_turn, spend
 from api.services.class_features import sync_cataloged_features
 from api.database import get_db
 from api.services.d20 import D20Outcome, d20_history_label, d20_records, resolve_body
@@ -45,8 +47,9 @@ from api.schemas.container import ItemMoveRequest
 from api.services.homebrew.dispatcher import dispatch
 from api.services.character_response import build_character_response
 from api.services.effects import apply_heal, apply_conditions
-from api.schemas.common import ConsumableUseResult, D20Dice, RollMode
+from api.schemas.common import ConsumableUseResult, D20Dice, RollMode, RollOptionsBody
 from core.rules.proficiencies import is_weapon_proficient
+from core.rules.roll_options import AppliedOptions, scale_damage
 
 router = APIRouter(prefix="/characters", tags=["items"])
 
@@ -494,14 +497,75 @@ async def use_consumable(
 # Weapon attack roll
 # ---------------------------------------------------------------------------
 
-class AttackSubmission(BaseModel):
-    """Optional payload for attacks: inspiration flag and the d20 read by the 3D dice."""
+class AttackSubmission(RollOptionsBody):
+    """Optional payload for attacks: inspiration flag and the d20 read by the 3D dice.
+
+    ``defer_damage``: il danno finale aspetta le opzioni ``after_hit`` di ``/attack/{attack_id}/damage``."""
+    defer_damage: bool = False
     with_inspiration: bool = False
     die: int | None = Field(default=None, ge=1, le=20)
     mode: RollMode = "normal"
     dice: D20Dice | None = None
     grip: Literal["one", "two"] = "one"
     attack_mode: Literal["melee", "thrown"] = "melee"
+
+
+def _set_pending_attack(char: Character, pending: dict | None) -> None:
+    """Un solo attacco in sospeso: ogni nuovo attacco sostituisce il precedente (R8)."""
+    turn = get_turn(char)
+    turn.pop("pending_attack", None)
+    if pending:
+        turn["pending_attack"] = pending
+    char.turn_state = turn
+
+
+def _settle_attack(
+    char: Character, body: AttackSubmission | None, result: WeaponAttackResult, item_id: int | None, ability: str,
+) -> WeaponAttackResult:
+    """Tiene da parte l'attacco se il danno finale aspetta le opzioni. Un 1 naturale non ha danno da aspettare."""
+    pending = None
+    if body and body.defer_damage and not result.is_fumble:
+        result.attack_id = uuid.uuid4().hex
+        pending = {"attack_id": result.attack_id, "item_id": item_id, "ability": ability,
+                   "result": result.model_dump(mode="json")}
+    _set_pending_attack(char, pending)
+    return result
+
+
+def _option_damage(char: Character, opts: AppliedOptions, is_critical: bool, damage: int) -> tuple[list[int], int, int]:
+    """Dadi delle opzioni al danno: (valori, loro totale, danno finale)."""
+    rolls, total = roll_option_dice(char, opts, is_critical)
+    return rolls, total, scale_damage(damage + total, opts.multiplier)
+
+
+@router.post("/{char_id}/attack/{attack_id}/damage", response_model=WeaponAttackResult)
+async def deferred_attack_damage(
+    char_id: int,
+    attack_id: str,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+    body: Annotated[RollOptionsBody | None, Body()] = None,
+) -> WeaponAttackResult:
+    """Secondo tempo dell'attacco: opzioni ``after_hit`` confermate sul danno già tirato."""
+    char = await _get_owned_full(char_id, user_id, session)
+    pending = get_turn(char).get("pending_attack")
+    if not pending or pending["attack_id"] != attack_id:
+        raise HTTPException(status_code=404, detail={"code": "attack_not_found"})
+    item = next((i for i in char.items if i.id == pending["item_id"]), None)
+    if pending["item_id"] is not None and item is None:
+        raise HTTPException(status_code=404, detail={"code": "attack_not_found"})
+    opts = use_options(session, char, "attack", body, phase="after_hit", ability=pending["ability"], item=item)
+    result = WeaponAttackResult(**pending["result"])
+    result.homebrew_notifications = None  # già consegnate col tiro per colpire
+    rolls, extra, result.damage_total = _option_damage(char, opts, result.is_critical, result.damage_total + opts.bonus)
+    result.damage_bonus += opts.bonus
+    result.option_result = option_result(opts, rolls, extra, previous=result.option_result)
+    result.notes = [*result.notes, *(n for n in opts.notes if n not in result.notes)]
+    _set_pending_attack(char, None)
+    if opts.keys:
+        _add_history(session, char.id, "attack_roll",
+                     f"Danno {result.weapon_name} con {', '.join(opts.keys)}: {result.damage_total}")
+    return result
 
 
 @router.post("/{char_id}/items/{item_id}/attack", response_model=WeaponAttackResult)
@@ -569,12 +633,15 @@ async def attack_with_weapon(
     # To-hit roll
     ability = "strength" if ability_mod == str_mod and not is_ranged else "dexterity"
     applied = modifiers_for(char, "attack", ability=ability, item=item)
+    opts = use_options(session, char, "attack", body, ability=ability, item=item)
+    merge_options(applied, opts)
     outcome = resolve_body(body, applied)
     to_hit_die = outcome.kept
-    to_hit_bonus = ability_mod + pb + magic_bonus + attack_bonus_total(char.items, item, "attack") + applied.flat
+    to_hit_bonus = (ability_mod + pb + magic_bonus + attack_bonus_total(char.items, item, "attack") + applied.flat
+                    + opts.bonus)
     to_hit_total = to_hit_die + to_hit_bonus
-    is_critical = to_hit_die >= applied.crit_min
     is_fumble = to_hit_die == 1
+    is_critical = to_hit_die >= applied.crit_min or (opts.force_crit and not is_fumble)
 
     # Damage roll
     damage_rolls, dice_bonus = _roll_dice(damage_dice_str)
@@ -582,6 +649,8 @@ async def attack_with_weapon(
         # Double the dice on crit
         extra_rolls, _ = _roll_dice(damage_dice_str)
         damage_rolls = damage_rolls + extra_rolls
+    option_rolls: list[int] = []
+    option_total = 0
     if is_fumble:
         damage_rolls = [0]
         dice_bonus = 0
@@ -590,7 +659,8 @@ async def attack_with_weapon(
     else:
         damage_bonus = (ability_mod + magic_bonus + attack_bonus_total(char.items, item, "damage") + dice_bonus
                         + modifiers_for(char, "damage", ability=ability, item=item).flat)
-        damage_total = max(0, sum(damage_rolls) + damage_bonus)
+        option_rolls, option_total, damage_total = _option_damage(
+            char, opts, is_critical, max(0, sum(damage_rolls) + damage_bonus))
 
     result_str = (
         f"Attacco {item.name}: colpire {d20_history_label(outcome)}+{to_hit_bonus}={to_hit_total}"
@@ -653,7 +723,7 @@ async def attack_with_weapon(
     )
     notifications = collect_homebrew_notifications(firing_results)
 
-    return WeaponAttackResult(
+    return _settle_attack(char, body, WeaponAttackResult(
         ammo=ammo_state,
         ammo_missing=ammo_missing,
         magic_bonus=magic_bonus,
@@ -673,7 +743,8 @@ async def attack_with_weapon(
         damage_bonus=damage_bonus if not is_fumble else 0,
         damage_total=damage_total,
         homebrew_notifications=notifications if notifications else None,
-    )
+        option_result=option_result(opts, option_rolls, option_total),
+    ), item.id, ability)
 
 
 # ---------------------------------------------------------------------------
@@ -706,12 +777,14 @@ async def attack_unarmed(
 
     ability = "strength" if ability_mod == str_mod else "dexterity"
     applied = modifiers_for(char, "attack", ability=ability)
+    opts = use_options(session, char, "attack", body, ability=ability)
+    merge_options(applied, opts)
     outcome = resolve_body(body, applied)
     to_hit_die = outcome.kept
-    to_hit_bonus = ability_mod + pb + attack_bonus_total(char.items, None, "attack") + applied.flat
+    to_hit_bonus = ability_mod + pb + attack_bonus_total(char.items, None, "attack") + applied.flat + opts.bonus
     to_hit_total = to_hit_die + to_hit_bonus
-    is_critical = to_hit_die >= applied.crit_min
     is_fumble = to_hit_die == 1
+    is_critical = to_hit_die >= applied.crit_min or (opts.force_crit and not is_fumble)
 
     dice_bonus = 0
     if damage_dice_str == "1":
@@ -724,6 +797,8 @@ async def attack_unarmed(
             extra_rolls, _ = _roll_dice(damage_dice_str)
             damage_rolls = damage_rolls + extra_rolls
 
+    option_rolls: list[int] = []
+    option_total = 0
     if is_fumble:
         damage_rolls = [0]
         damage_bonus = 0
@@ -731,7 +806,8 @@ async def attack_unarmed(
     else:
         damage_bonus = (ability_mod + attack_bonus_total(char.items, None, "damage") + dice_bonus
                         + modifiers_for(char, "damage", ability=ability).flat)
-        damage_total = max(0, sum(damage_rolls) + damage_bonus)
+        option_rolls, option_total, damage_total = _option_damage(
+            char, opts, is_critical, max(0, sum(damage_rolls) + damage_bonus))
 
     weapon_name = "Attacco a mano libera"
     result_str = (
@@ -759,7 +835,7 @@ async def attack_unarmed(
     )
     notifications = collect_homebrew_notifications(firing_results)
 
-    return WeaponAttackResult(
+    return _settle_attack(char, body, WeaponAttackResult(
         weapon_name=weapon_name,
         to_hit_die=to_hit_die,
         dice=outcome.dice,
@@ -775,7 +851,8 @@ async def attack_unarmed(
         damage_bonus=damage_bonus if not is_fumble else 0,
         damage_total=damage_total,
         homebrew_notifications=notifications if notifications else None,
-    )
+        option_result=option_result(opts, option_rolls, option_total),
+    ), None, ability)
 
 
 # ---------------------------------------------------------------------------

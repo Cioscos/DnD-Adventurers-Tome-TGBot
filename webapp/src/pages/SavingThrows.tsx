@@ -1,3 +1,4 @@
+import { askRollOptions, refreshAfterOptions } from '@/lib/rollOptions'
 import { useState, Fragment } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -61,10 +62,12 @@ export default function SavingThrows() {
 
   const rollMutation = useMutation({
     mutationFn: async ({ ability, mode }: { ability: string; mode: RollMode }) => {
-      const result = await api.characters.rollSavingThrow(charId, ability, d20Arg(mode, await rollD20(mode)))
+      const choice = await askRollOptions(charId, { roll: 'save', ability })
+      const result = await api.characters.rollSavingThrow(charId, ability, d20Arg(mode, await rollD20(mode), choice))
       return { result, ability }
     },
     onSuccess: ({ result, ability }) => {
+      refreshAfterOptions(qc, charId, result.option_result)
       setRollState({
         // description è la chiave raw dell'ability ("intelligence"): il titolo
         // localizzato la copre già, mostrarla duplicherebbe in inglese grezzo.

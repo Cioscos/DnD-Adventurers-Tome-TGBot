@@ -35,11 +35,13 @@ from api.services import telegram_notify
 from api.services.homebrew.passive import get_passive_modifiers
 from api.services.d20 import resolve_body
 from core.rules.modifiers import Applied, modifiers_for
+from core.rules.roll_options import AppliedOptions
 from api.services.condition_effects import (
     ExpirySpec, SaveSpec, UndoLog, clear_effects_for, undo_last_advance, upsert_effect,
 )
 from api.services.effects import apply_conditions
 from api.services.durations import process_edge
+from api.services.rules_options import merge_options, option_result, roll_option_dice, use_options
 from api.services.rules_turn import reset_turn
 from api.services.encounter_view import build_encounter_block
 from core.db.models import (
@@ -352,14 +354,21 @@ async def roll_initiative(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail="Initiative already rolled",
         )
-    applied = await _pc_initiative_modifiers(db, comb)
+    char = await _pc_for_initiative(db, comb)
+    if char is None and body.options:
+        raise HTTPException(status.HTTP_409_CONFLICT, detail={"code": "option_unavailable", "key": body.options[0]})
+    applied = Applied() if char is None else modifiers_for(char, "initiative", ability="dexterity")
+    opts = AppliedOptions() if char is None else use_options(db, char, "initiative", body, ability="dexterity")
+    merge_options(applied, opts)
     outcome = resolve_body(body, applied)
+    option_rolls, option_total = ([], 0) if char is None else roll_option_dice(char, opts)
     comb.initiative_die = outcome.kept
-    comb.initiative = outcome.kept + comb.initiative_mod + applied.flat
+    comb.initiative = outcome.kept + comb.initiative_mod + applied.flat + opts.bonus + option_total
     _touch(session)
     await db.flush()
     live = await build_encounter_block(db, enc, viewer_is_gm=is_gm)
-    live.initiative_roll = InitiativeRollInfo(mode_applied=outcome.mode, notes=applied.notes)
+    live.initiative_roll = InitiativeRollInfo(mode_applied=outcome.mode, notes=applied.notes,
+                                              option_result=option_result(opts, option_rolls, option_total))
     return live
 
 
@@ -588,14 +597,19 @@ async def _gm_combatant(
     return session, enc, comb
 
 
-async def _pc_initiative_modifiers(db: AsyncSession, comb: Combatant) -> Applied:
-    """Modificatori dell'iniziativa di un PG; un mostro non ha edizione né scheda (D7)."""
+async def _pc_for_initiative(db: AsyncSession, comb: Combatant) -> Character | None:
+    """Il PG del combattente; un mostro non ha edizione né scheda (D7)."""
     if comb.character_id is None:
-        return Applied()
-    char = (await db.execute(
-        select(Character).options(selectinload(Character.classes), selectinload(Character.items))
+        return None
+    return (await db.execute(
+        select(Character).options(selectinload(Character.classes), selectinload(Character.items),
+                                  selectinload(Character.abilities), selectinload(Character.spell_slots))
         .where(Character.id == comb.character_id)
     )).scalar_one_or_none()
+
+
+async def _pc_initiative_modifiers(db: AsyncSession, comb: Combatant) -> Applied:
+    char = await _pc_for_initiative(db, comb)
     return Applied() if char is None else modifiers_for(char, "initiative", ability="dexterity")
 
 

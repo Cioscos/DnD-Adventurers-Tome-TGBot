@@ -1,3 +1,4 @@
+import type { OptionResult } from '@/api/client'
 import RollNotes from '@/components/rules/RollNotes'
 import { m } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
@@ -13,6 +14,7 @@ export type RollResult = {
   mode?: RollMode
   notes?: string[]
   auto_fail?: boolean
+  option_result?: OptionResult
   bonus: number
   total: number
   is_critical: boolean
@@ -138,7 +140,7 @@ export default function RollResultModal({
         )}
       </p>
 
-      <RollNotes notes={result.notes} />
+      <RollNotes notes={result.notes} optionResult={result.option_result} />
       {note && <p className="text-xs text-dnd-text font-body">{note}</p>}
 
       {result.description && (

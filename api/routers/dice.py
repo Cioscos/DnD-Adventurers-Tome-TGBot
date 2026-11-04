@@ -19,9 +19,12 @@ from api.services import telegram_notify
 from api.routers._helpers import initiative_bonus
 from api.services.d20 import d20_records, resolve_body, resolve_d20
 from api.services.dice_stats import record_dice
+from api.services.rules_options import merge_options, option_result, roll_option_dice, use_options
 from core.db.models import Character, CharacterHistory
 from core.rules.modifiers import modifiers_for
-from api.schemas.common import D20Dice, DiceResultEntry, DiceResultRequest, DiceRollResult, RollMode, RollResult
+from api.schemas.common import (
+    D20Dice, DiceResultEntry, DiceResultRequest, DiceRollResult, RollMode, RollOptionsBody, RollResult,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -85,7 +88,7 @@ def _log_roll(session: AsyncSession, char: Character, notation: str, rolls: list
     ))
 
 
-class InitiativeSubmission(BaseModel):
+class InitiativeSubmission(RollOptionsBody):
     """Facce lette dai dadi 3D (senza, tira il server) ed etichetta tradotta per lo storico."""
     die: int | None = Field(default=None, ge=1, le=20)
     mode: RollMode = "normal"
@@ -104,15 +107,19 @@ async def roll_character_initiative(
     await _get_owned(char_id, user_id, session)
     char = (await session.execute(
         select(Character)
-        .options(selectinload(Character.classes), selectinload(Character.items), selectinload(Character.ability_scores))
+        .options(selectinload(Character.classes), selectinload(Character.items), selectinload(Character.ability_scores),
+                 selectinload(Character.abilities), selectinload(Character.spell_slots))
         .where(Character.id == char_id)
         .execution_options(populate_existing=True)
     )).scalar_one()
     applied = modifiers_for(char, "initiative", ability="dexterity")
-    bonus = await initiative_bonus(session, char)
+    opts = use_options(session, char, "initiative", body, ability="dexterity")
+    merge_options(applied, opts)
+    bonus = await initiative_bonus(session, char) + opts.bonus
     outcome = resolve_body(body, applied)
     die = outcome.kept
-    total = die + bonus
+    option_rolls, option_total = roll_option_dice(char, opts)
+    total = die + bonus + option_total
     keep = {"advantage": "kh1", "disadvantage": "kl1"}.get(outcome.mode, "")
     record_dice(char, d20_records(outcome))
     _log_roll(session, char, f"{len(outcome.dice)}d20{keep}{bonus:+d}", outcome.dice, total, bonus, "init",
@@ -122,6 +129,7 @@ async def roll_character_initiative(
         die=die, dice=outcome.dice, mode=outcome.mode, mode_applied=outcome.mode, notes=applied.notes,
         auto_fail=applied.auto_fail, bonus=bonus, total=total,
         is_critical=die == 20 and not applied.auto_fail, is_fumble=die == 1, description="initiative",
+        option_result=option_result(opts, option_rolls, option_total),
     )
 
 

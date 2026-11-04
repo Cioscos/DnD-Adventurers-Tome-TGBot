@@ -55,6 +55,7 @@ from core.game.item_bonuses import item_bonus_total
 from api.routers._helpers import effective_ability_mod, effective_con_mod, prune_history, saving_throw_bonus
 from api.services import telegram_notify
 from api.services.d20 import d20_history_label, d20_records, resolve_body
+from api.services.rules_options import merge_options, option_result, roll_option_dice, use_options
 from api.services.effects import cap_current_hp
 from core.rules.modifiers import effective_hp_max, modifiers_for
 from api.services.dice_stats import record_dice
@@ -633,15 +634,20 @@ async def roll_skill(
     bonus = await skill_bonus(session, char, skill_name)
 
     applied = modifiers_for(char, "skill", skill=skill_name, ability=_SKILL_ABILITY[skill_name])
+    opts = use_options(session, char, "skill", body, skill=skill_name, ability=_SKILL_ABILITY[skill_name])
+    merge_options(applied, opts)
     outcome = resolve_body(body, applied)
     die = outcome.kept
-    total = die + bonus
+    option_rolls, option_total = roll_option_dice(char, opts)
+    bonus += opts.bonus
+    total = die + bonus + option_total
     is_crit = die == 20 and not applied.auto_fail
     is_fumble = die == 1
 
     history_msg = (
         f"Abilità {skill_label(skill_name)}: {d20_history_label(outcome)} {'+ ' if bonus >= 0 else ''}{bonus} = {total}"
         + (" (CRITICO)" if is_crit else " (FUMBLE)" if is_fumble else "")
+        + (" (fallimento automatico)" if applied.auto_fail else "")
     )
     if body and body.with_inspiration:
         history_msg = f"Reroll ispirazione: {history_msg}"
@@ -661,6 +667,7 @@ async def roll_skill(
         is_critical=is_crit,
         is_fumble=is_fumble,
         description=skill_name,
+        option_result=option_result(opts, option_rolls, option_total),
     )
 
 
@@ -688,9 +695,13 @@ async def roll_saving_throw(
     bonus = await saving_throw_bonus(session, char, ability)
 
     applied = modifiers_for(char, "save", ability=ability)
+    opts = use_options(session, char, "save", body, ability=ability)
+    merge_options(applied, opts)
     outcome = resolve_body(body, applied)
     die = outcome.kept
-    total = die + bonus
+    option_rolls, option_total = roll_option_dice(char, opts)
+    bonus += opts.bonus
+    total = die + bonus + option_total
     is_crit = die == 20 and not applied.auto_fail
     is_fumble = die == 1
 
@@ -717,6 +728,7 @@ async def roll_saving_throw(
         is_critical=is_crit,
         is_fumble=is_fumble,
         description=ability,
+        option_result=option_result(opts, option_rolls, option_total),
     )
 
 
@@ -763,9 +775,13 @@ async def roll_pending_save(
 
     bonus = await saving_throw_bonus(session, char, ps.ability)
     applied = modifiers_for(char, "save", ability=ps.ability)
+    opts = use_options(session, char, "save", body, ability=ps.ability)
+    merge_options(applied, opts)
     outcome = resolve_body(body, applied)
     die = outcome.kept
-    total = die + bonus
+    option_rolls, option_total = roll_option_dice(char, opts)
+    bonus += opts.bonus
+    total = die + bonus + option_total
     passed = total >= ps.dc and not applied.auto_fail
     is_crit, is_fumble = die == 20 and not applied.auto_fail, die == 1
 
@@ -796,7 +812,8 @@ async def roll_pending_save(
         save=save_read, passed=passed, condition_removed=passed,
         roll=RollResult(die=die, dice=outcome.dice, mode=outcome.mode, mode_applied=outcome.mode,
                         notes=applied.notes, auto_fail=applied.auto_fail, bonus=bonus, total=total,
-                        is_critical=is_crit, is_fumble=is_fumble, description=ps.ability),
+                        is_critical=is_crit, is_fumble=is_fumble, description=ps.ability,
+                        option_result=option_result(opts, option_rolls, option_total)),
     )
 
 

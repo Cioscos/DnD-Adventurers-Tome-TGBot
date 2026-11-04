@@ -1,3 +1,4 @@
+import { askRollOptions } from '@/lib/rollOptions'
 import { useState, useCallback, type ReactNode } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -110,10 +111,11 @@ export function useCastFlow(charId: number, char: CharacterFull | undefined): Ca
   // Tiro per colpire: il BE consuma slot/rituale e attiva la concentrazione come /use.
   const attackMutation = useMutation({
     mutationFn: async (cast: AttackCast) => {
-      const roll = d20Arg(cast.mode, await rollD20(cast.mode))
+      const choice = await askRollOptions(charId, { roll: 'attack', spell_id: cast.spell.id })
+      const roll = d20Arg(cast.mode, await rollD20(cast.mode), choice)
       const result = await api.spells.attack(charId, cast.spell.id, {
         slot_level: cast.slotLevel, ritual: cast.ritual,
-        ...(typeof roll === 'object' ? { dice: roll.dice, mode: roll.mode } : { die: roll }),
+        ...(typeof roll === 'object' ? roll : { die: roll }),
       })
       return { cast, result }
     },

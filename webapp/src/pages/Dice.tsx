@@ -1,3 +1,4 @@
+import { askRollOptions, refreshAfterOptions } from '@/lib/rollOptions'
 import { useD20Roll, d20Arg, type RollMode } from '@/hooks/useD20Roll'
 import RollButton from '@/components/ui/RollButton'
 import D20Faces from '@/components/ui/D20Faces'
@@ -140,7 +141,10 @@ export default function Dice() {
   const handleInitiative = async (mode: RollMode) => {
     setInitiativeRolling(true)
     try {
-      setInitiativeResult(await api.dice.initiative(charId, d20Arg(mode, await rollD20(mode)), t('character.dice.initiative')))
+      const choice = await askRollOptions(charId, { roll: 'initiative' })
+      const result = await api.dice.initiative(charId, d20Arg(mode, await rollD20(mode), choice), t('character.dice.initiative'))
+      setInitiativeResult(result)
+      refreshAfterOptions(qc, charId, result.option_result)
       qc.invalidateQueries({ queryKey: ['dice-history', charId] })
       qc.invalidateQueries({ queryKey: ['history', charId] })
       setLastResult(null)

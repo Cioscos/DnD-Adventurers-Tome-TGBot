@@ -14,7 +14,10 @@ from api.routers.hp import _get_owned_full
 from api.services.rules_states import remove_state, use_feature
 from api.services.rules_turn import release, reset_turn, spend
 from core.db.models import Character
-from api.schemas.rules import ProficiencyGrantRead, SubclassRead
+from api.schemas.rules import ProficiencyGrantRead, RollOptionRead, SubclassRead
+from api.services.rules_options import list_options
+from core.data.damage_types import canonical_damage_type
+from core.data.skills import SKILL_ABILITY_MAP
 from core.data.spell_slots import normalize_class_name
 from core.rules.proficiencies import class_proficiencies, grant_to_dict
 from core.rules.subclasses import subclasses_for
@@ -77,6 +80,31 @@ async def turn_new(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> dict:
     return reset_turn(await _owned_char(db, char_id, user_id))
+
+
+@turn_router.get("/{char_id}/roll-options", response_model=list[RollOptionRead])
+async def roll_options(
+    char_id: int,
+    roll: Literal["attack", "spell_damage", "skill", "save", "initiative", "damage_taken"],
+    user_id: Annotated[int, Depends(get_current_user)],
+    lang: Annotated[str, Depends(get_current_lang)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    item_id: int | None = None,
+    spell_id: int | None = None,
+    ability: str | None = None,
+    skill: str | None = None,
+    damage_type: str | None = None,
+) -> list[RollOptionRead]:
+    """Opzioni da chiedere al giocatore per questo tiro. Sola lettura: il server le riconvalida al tiro."""
+    char = await _get_owned_full(char_id, user_id, db)
+    item = next((i for i in char.items if i.id == item_id), None)
+    spell = next((s for s in char.spells if s.id == spell_id), None)
+    if (item_id is not None and item is None) or (spell_id is not None and spell is None):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Not found")
+    if roll == "initiative":
+        ability = "dexterity"
+    return list_options(char, roll, lang, item=item, spell=spell, skill=skill,
+                        ability=ability or SKILL_ABILITY_MAP.get(skill), damage_type=canonical_damage_type(damage_type))
 
 
 # ---------------------------------------------------------------------------

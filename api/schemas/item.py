@@ -8,7 +8,7 @@ from typing import Any, Optional
 
 from pydantic import BaseModel, ValidationInfo, field_validator
 
-from api.schemas.common import RollMode
+from api.schemas.common import OptionResult, RollMode, absent_when_none
 from api.schemas.container import ContainerStatsRead, validate_container_meta
 from api.schemas.item_magic import validate_magic_meta
 from core.db.models import EquipmentSlot
@@ -235,3 +235,5 @@ class WeaponAttackResult(BaseModel):
     ammo_missing: bool = False
     magic_bonus: int = 0
     proficiency_warning: bool = False
+    option_result: OptionResult | None = absent_when_none()
+    attack_id: str | None = absent_when_none()  # attacco in sospeso: il danno finale passa da /attack/{id}/damage

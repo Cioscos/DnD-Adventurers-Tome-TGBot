@@ -270,6 +270,29 @@ class MapRead(BaseModel):
 # HP operations
 # ---------------------------------------------------------------------------
 
+class RollOptionsBody(BaseModel):
+    """Conferma al tiro: opzioni scelte e, per chiave, gli input (``{"slot_level": 2}``). Il server riconvalida."""
+    options: list[str] = Field(default_factory=list, max_length=30)
+    option_inputs: dict[str, dict[str, int]] = Field(default_factory=dict)
+
+
+class OptionResult(BaseModel):
+    """Cosa hanno prodotto le opzioni confermate. Assente nelle risposte senza opzioni."""
+    keys: list[str] = []
+    extra_rolls: list[int] = []
+    extra_total: int = 0  # dadi + eventuale fisso nell'espressione dei dadi
+    bonus: int = 0
+    multiplier: float = 1
+    spent: list[str] = []
+    damage_before: int | None = None  # solo danno subito
+    damage_after: int | None = None
+
+
+def absent_when_none() -> Any:
+    """Campo che sparisce dal JSON quando vale None: chi non usa le opzioni vede la risposta di prima."""
+    return Field(default=None, exclude_if=lambda v: v is None)
+
+
 class HPOp(str, Enum):
     DAMAGE = "damage"
     HEAL = "heal"
@@ -278,7 +301,7 @@ class HPOp(str, Enum):
     SET_TEMP = "set_temp"
 
 
-class HPUpdate(BaseModel):
+class HPUpdate(RollOptionsBody):
     op: HPOp
     value: int
     was_critical_hit: bool = False
@@ -401,9 +424,10 @@ class RollResult(BaseModel):
     is_critical: bool = False
     is_fumble: bool = False
     description: str = ""
+    option_result: OptionResult | None = absent_when_none()
 
 
-class D20RollSubmission(BaseModel):
+class D20RollSubmission(RollOptionsBody):
     """Optional client-supplied d20 value (from 3D physics face detection)."""
     die: Optional[int] = Field(default=None, ge=1, le=20)
     with_inspiration: bool = False

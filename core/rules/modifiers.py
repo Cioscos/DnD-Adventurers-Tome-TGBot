@@ -74,16 +74,13 @@ def compute_condition_effects(char: Any, edition: Edition, ctx: RuleContext) -> 
         out.extend(Modifier(target, value, source=f"condition:{s}") for s in slugs)
 
     if roll == "attack":
-        add("disadvantage", *sorted(on & {"blinded", "frightened", "poisoned", "prone", "restrained"}))
+        add("disadvantage", *sorted(on & {"blinded", "poisoned", "prone", "restrained"}))
         if "invisible" in on:
             add("advantage", "invisible")
-        if is_2024 and "grappled" in on:  # shortcut: anche contro chi afferra; la conferma arriva col Task 12
-            add("disadvantage", "grappled")
-    if roll in _CHECKS:
-        add("disadvantage", *sorted(on & {"frightened", "poisoned"}))
-    if roll == "skill" and ctx.skill == "perception":
-        # La vista o l'udito servono secondo la prova: si avvisa, il fallimento lo decide il tavolo.
-        add("note", *sorted(on & {"blinded", "deafened"}))
+    if roll in _CHECKS and "poisoned" in on:
+        add("disadvantage", "poisoned")
+    # Spaventato, Afferrato 2024, Accecato e Assordato sulle prove dipendono da ciò che l'app non vede:
+    # sono conferme al tiro in core.rules.roll_options.
     if roll == "initiative" and is_2024:
         if "invisible" in on:
             add("advantage", "invisible")

@@ -1,3 +1,4 @@
+import { askRollOptions } from '@/lib/rollOptions'
 import { useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -59,7 +60,8 @@ export default function SaveRollSheet({ charId, saves: live, onClose }: Props) {
   const roll = useMutation({
     mutationFn: async ({ save, reroll }: { save: PendingSave; reroll: boolean }) => {
       const m = reroll ? 'normal' : mode
-      const res = await api.characters.pendingSaves.roll(charId, save.id, d20Arg(m, await rollD20(m)), reroll)
+      const choice = reroll ? undefined : await askRollOptions(charId, { roll: 'save', ability: save.ability })
+      const res = await api.characters.pendingSaves.roll(charId, save.id, d20Arg(m, await rollD20(m), choice), reroll)
       return { save, res }
     },
     onSuccess: (r) => {
@@ -155,7 +157,7 @@ export default function SaveRollSheet({ charId, saves: live, onClose }: Props) {
             >
               {t(view.res.passed ? 'pendingSaves.passed' : 'pendingSaves.failed', { condition: cond })}
             </p>
-            <RollNotes notes={view.res.roll.notes} autoFail={view.res.roll.auto_fail} className="text-center" charId={charId} />
+            <RollNotes notes={view.res.roll.notes} autoFail={view.res.roll.auto_fail} className="text-center" charId={charId} optionResult={view.res.roll.option_result} />
             {!view.res.passed && (
               <InspirationRerollButton
                 available={!!char?.heroic_inspiration}

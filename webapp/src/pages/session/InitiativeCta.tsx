@@ -1,3 +1,4 @@
+import { askRollOptions, refreshAfterOptions } from '@/lib/rollOptions'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -21,11 +22,16 @@ export default function InitiativeCta({ sessionId, combatant }: Props) {
   const noteLabels = useRollNoteLabels(combatant.character_id ?? undefined)
 
   const rollMutation = useMutation({
-    mutationFn: async (mode: RollMode) =>
-      api.sessions.encounter.rollInitiative(sessionId, combatant.id, d20Arg(mode, await rollD20(mode))),
+    mutationFn: async (mode: RollMode) => {
+      const choice = combatant.character_id == null
+        ? undefined
+        : await askRollOptions(combatant.character_id, { roll: 'initiative' })
+      return api.sessions.encounter.rollInitiative(sessionId, combatant.id, d20Arg(mode, await rollD20(mode), choice))
+    },
     onSuccess: (live) => {
       haptic.success()
       if (live.initiative_roll?.notes.length) toast.info(noteLabels(live.initiative_roll.notes).join(' · '))
+      if (combatant.character_id != null) refreshAfterOptions(qc, combatant.character_id, live.initiative_roll?.option_result)
       qc.invalidateQueries({ queryKey: ['session-live', sessionId] })
     },
     onError: () => {

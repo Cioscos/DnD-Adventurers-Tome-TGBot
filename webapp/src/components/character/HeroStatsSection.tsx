@@ -1,3 +1,4 @@
+import { askRollOptions, refreshAfterOptions } from '@/lib/rollOptions'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useState } from 'react'
@@ -93,9 +94,11 @@ export default function HeroStatsSection({ char }: Props) {
   const initiativeMutation = useMutation({
     mutationFn: async (mode: RollMode) => {
       // Facce dai dadi 3D se attivi; modo finale, bonus e storico li decide il server.
-      return api.dice.initiative(char.id, d20Arg(mode, await rollD20(mode)), t('character.hero.initiative'))
+      const choice = await askRollOptions(char.id, { roll: 'initiative' })
+      return api.dice.initiative(char.id, d20Arg(mode, await rollD20(mode), choice), t('character.hero.initiative'))
     },
     onSuccess: (result) => {
+      refreshAfterOptions(qc, char.id, result.option_result)
       qc.invalidateQueries({ queryKey: ['character', char.id] })
       qc.invalidateQueries({ queryKey: ['dice-history', char.id] })
       qc.invalidateQueries({ queryKey: ['history', char.id] })

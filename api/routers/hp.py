@@ -46,6 +46,8 @@ from api.services.hp_rolls import stored_rolls
 from core.game.stats import total_base_hp
 from core.rules.edition import character_edition
 from core.rules.modifiers import damage_taken_mode, effective_hp_max, exhaustion_level, modifiers_for
+from core.rules.roll_options import scale_damage
+from api.services.rules_options import option_result, roll_option_dice, use_options
 from api.routers._helpers import collect_homebrew_notifications, effective_con_mod, roll_concentration_save
 from api.schemas.common import ConcentrationSaveResult
 from api.services.character_response import build_character_response
@@ -156,8 +158,11 @@ async def update_hp(
     # Da morto ogni operazione PF è inerte (solo /revive riporta in vita).
     if char.is_dead:
         return await build_character_response(session, char)
+    if body.options and body.op != HPOp.DAMAGE:
+        raise HTTPException(status_code=422, detail={"code": "options_only_on_damage"})
     form = await get_active_form(session, char.id)  # the form involved in this op, if any
     before = _hp_state(char, form)
+    option_block = None
     conc_result: ConcentrationSaveResult | None = None
     notifications: list[dict] = []
 
@@ -170,11 +175,21 @@ async def update_hp(
         mod = body.damage_modifier
         raw = body.raw_value if body.raw_value is not None else body.value
         applied = body.value
+        if body.options:
+            # Moltiplicatori e riduzioni vengono prima di resistenza e vulnerabilità (ordine del manuale).
+            opts = use_options(session, char, "damage_taken", body, phase="damage_in", damage_type=slug)
+            rolls, reduction = roll_option_dice(char, opts)
+            option_after = max(0, scale_damage(raw, opts.multiplier) - reduction - opts.bonus)
+            option_block = option_result(opts, rolls, reduction, damage_before=raw, damage_after=option_after)
+            # L'annotazione del client (`value` già dimezzato o raddoppiato) si ricalcola sul nuovo danno.
+            raw = option_after
+            applied = {"half": raw // 2, "double": raw * 2}.get(mod, raw)
         if mod is None:
             # Senza tipo conta solo una resistenza a tutti i danni (Pietrificato).
             mod = damage_taken_mode(char, slug)
             if slug is not None or mod != "none":
-                raw = body.value
+                if not body.options:
+                    raw = body.value
                 applied = {"half": raw // 2, "double": raw * 2, "immune": 0}.get(mod, raw)
         elif mod == "immune":
             applied = 0
@@ -371,6 +386,7 @@ async def update_hp(
 
     result = await build_character_response(session, char)
     result.hp_undo_id = op_id
+    result.option_result = option_block
     if conc_result is not None:
         result.concentration_save = conc_result
     if notifications:

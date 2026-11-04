@@ -1,3 +1,4 @@
+import { askRollOptions, refreshAfterOptions } from '@/lib/rollOptions'
 import { useState, Fragment } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -206,7 +207,8 @@ export default function Skills() {
 
   const rollMutation = useMutation({
     mutationFn: async ({ skillName, mode }: { skillName: string; mode: RollMode }) => {
-      const result = await api.characters.rollSkill(charId, skillName, d20Arg(mode, await rollD20(mode)))
+      const choice = await askRollOptions(charId, { roll: 'skill', skill: skillName })
+      const result = await api.characters.rollSkill(charId, skillName, d20Arg(mode, await rollD20(mode), choice))
       return { result, skillName }
     },
     onSuccess: ({ result, skillName }) => {
@@ -214,6 +216,7 @@ export default function Skills() {
       // description; it's redundant with the localized modal title and would
       // surface an untranslated EN key, so drop it.
       setRollState({ result: { ...result, description: undefined }, skillName, wasRerolled: false })
+      refreshAfterOptions(qc, charId, result.option_result)
       haptic.success()
     },
   })

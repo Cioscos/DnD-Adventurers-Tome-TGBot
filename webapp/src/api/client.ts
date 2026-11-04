@@ -82,10 +82,59 @@ import type {
 export type RollMode = 'normal' | 'advantage' | 'disadvantage'
 
 /** Legacy single die (number) or the new `{dice, mode}` pair; omit values and the server rolls. */
-export type D20Roll = number | { dice?: number[]; mode?: RollMode }
+export type D20Roll = number | ({ dice?: number[]; mode?: RollMode } & Partial<RollChoice>)
 
 function d20Fields(roll: D20Roll | undefined): Record<string, unknown> {
-  return typeof roll === 'object' ? { dice: roll.dice, mode: roll.mode } : { die: roll }
+  return typeof roll === 'object' ? { ...roll } : { die: roll }
+}
+
+// Conferma al tiro (GET /characters/{id}/roll-options)
+export type RollOptionPhase = 'before' | 'after_hit' | 'damage_in'
+
+export type RollOption = {
+  key: string
+  phase: RollOptionPhase
+  label: string
+  source: string
+  dice: string | null
+  bonus: number | null
+  mode: 'advantage' | 'disadvantage' | null
+  multiplier: number | null
+  once_per_turn: boolean
+  slot: string | null
+  needs: string | null
+  requires_input: 'slot' | null
+  input_options: { level: number; available: number; dice: string | null }[]
+  auto_fail: boolean
+  cost: { feature_key: string | null; amount: number; spell_slot_min: number | null } | null
+}
+
+export type RollOptionsQuery = {
+  roll: 'attack' | 'spell_damage' | 'skill' | 'save' | 'initiative' | 'damage_taken'
+  item_id?: number
+  spell_id?: number
+  ability?: string
+  skill?: string
+  damage_type?: string
+}
+
+export type RollChoice = {
+  options: string[]
+  option_inputs: Record<string, { slot_level: number }>
+  defer_damage?: boolean
+  /** Solo dopo il tiro per colpire: il giocatore dichiara il mancato o ritira con l'ispirazione. */
+  outcome?: 'miss' | 'reroll'
+}
+
+export type OptionResult = {
+  keys: string[]
+  extra_rolls: number[]
+  extra_total: number
+  bonus: number
+  multiplier: number
+  spent: string[]
+  damage_before?: number | null
+  damage_after?: number | null
 }
 
 export type RollResult = {
@@ -99,6 +148,7 @@ export type RollResult = {
   is_critical: boolean
   is_fumble: boolean
   description?: string
+  option_result?: OptionResult
 }
 
 export type GrantItemPayload = {
@@ -140,6 +190,9 @@ export type WeaponAttackResult = {
   damage_total: number
   ammo?: { item_id: number; name: string; remaining: number } | null
   ammo_missing?: boolean
+  option_result?: OptionResult
+  /** Attacco in sospeso: il danno finale passa da `attackDamage`. */
+  attack_id?: string
 }
 
 export type HitDiceSpendResult = {
@@ -390,7 +443,7 @@ export const api = {
       op: string,
       value: number,
       wasCritical = false,
-      modifier?: { damage_modifier?: 'half' | 'double' | 'none' | 'immune'; raw_value?: number; damage_type?: string },
+      modifier?: { damage_modifier?: 'half' | 'double' | 'none' | 'immune'; raw_value?: number; damage_type?: string } & Partial<RollChoice>,
     ) =>
       request<CharacterFull>(`/characters/${id}/hp`, {
         method: 'PATCH',
@@ -474,6 +527,12 @@ export const api = {
       request<TurnState>(`/characters/${id}/turn-state`),
     turnUse: (id: number, slot: TurnSlot, used: boolean = true) =>
       request<TurnBlock>(`/characters/${id}/turn/use`, { method: 'POST', body: JSON.stringify({ slot, used }) }),
+    rollOptions: (id: number, query: RollOptionsQuery) =>
+      request<RollOption[]>(
+        `/characters/${id}/roll-options?${new URLSearchParams(
+          Object.entries(query).filter(([, v]) => v !== undefined && v !== '').map(([k, v]) => [k, String(v)]),
+        )}`,
+      ),
     featureUse: (id: number, featureKey: string, amount: number = 1) =>
       request<FeatureUseResult>(`/characters/${id}/features/${encodeURIComponent(featureKey)}/use`, {
         method: 'POST', body: JSON.stringify({ amount }),
@@ -692,6 +751,11 @@ export const api = {
       request<WeaponAttackResult>(`/characters/${charId}/items/${itemId}/attack`, {
         method: 'POST',
         body: attackBody(withInspiration, die, choice),
+      }),
+    attackDamage: (charId: number, attackId: string, choice: RollChoice) =>
+      request<WeaponAttackResult>(`/characters/${charId}/attack/${attackId}/damage`, {
+        method: 'POST',
+        body: JSON.stringify({ options: choice.options, option_inputs: choice.option_inputs }),
       }),
     attackUnarmed: (charId: number, withInspiration: boolean = false, die?: D20Roll) =>
       request<WeaponAttackResult>(`/characters/${charId}/attack/unarmed`, {

@@ -91,6 +91,72 @@ class Modifier:
     source: str = ""
 
 
+# slot di turno -> chiave booleana in ``Character.turn_state``
+TURN_FLAGS = {
+    "action": "action_used",
+    "bonus": "bonus_used",
+    "reaction": "reaction_used",
+    "free_interaction": "free_interaction_used",
+    "spell_slot": "spell_slot_cast",
+    "bonus_spell": "bonus_spell_cast",
+}
+
+
+@dataclass(frozen=True)
+class Cost:
+    """Costo di un'opzione al tiro: usi della riga ``feature_key`` e/o uno slot di livello almeno ``spell_slot_min``."""
+    feature_key: str | None = None
+    amount: int = 1
+    spell_slot_min: int | None = None
+
+
+@dataclass(frozen=True)
+class RollOptionSpec:
+    """Conferma al tiro: ciò che l'app non vede lo dichiara il giocatore, il calcolo resta al server.
+
+    ``phase``: ``before`` (prima del d20 o del danno da incantesimo), ``after_hit`` (dopo il colpo, solo attacchi),
+    ``damage_in`` (danno subito). ``rolls``: ``attack``, ``spell_damage``, ``skill``, ``save``, ``initiative``,
+    ``damage_taken``. ``available(ctx)``: ciò che l'app sa già (arma, livello, stati).
+
+    ``extra_dice(ctx, inputs) -> "2d6"`` e ``bonus(ctx, inputs) -> int``, dove ``inputs`` è ciò che il giocatore ha
+    scelto per l'opzione. Effetto per fase: ``before`` su un attacco, ``bonus`` al colpire e dadi al danno, che
+    raddoppiano al critico; ``before`` sugli altri d20, entrambi al totale; ``before`` su ``spell_damage`` e
+    ``after_hit``, entrambi al danno; ``damage_in``, entrambi riducono il danno. ``multiplier`` agisce sul danno,
+    per difetto; sul danno subito viene prima di resistenza e vulnerabilità.
+
+    ``requires_input="slot"``: il giocatore sceglie ``slot_level`` (con ``cost.spell_slot_min``). ``needs``: un'altra
+    opzione da scegliere insieme (+1d8 di Punizione Divina). ``auto_fail``: fallimento automatico confermato.
+    ``force_crit``: il colpo a segno è critico (solo ``before``)."""
+    key: str
+    phase: Literal["before", "after_hit", "damage_in"]
+    rolls: tuple[str, ...]
+    label: dict[str, str]
+    available: "Callable[[RuleContext], bool]" = lambda _ctx: True
+    extra_dice: "Callable[[RuleContext, dict], str] | None" = None
+    bonus: "Callable[[RuleContext, dict], int] | None" = None
+    mode: Literal["advantage", "disadvantage"] | None = None
+    cost: Cost | None = None
+    once_per_turn: bool = False
+    slot: str | None = None
+    multiplier: float | None = None
+    requires_input: Literal["slot"] | None = None
+    needs: str | None = None
+    auto_fail: bool = False
+    force_crit: bool = False
+
+    def __post_init__(self) -> None:
+        if self.phase not in ("before", "after_hit", "damage_in"):
+            raise ValueError(f"fase sconosciuta: {self.phase}")
+        if self.slot is not None and self.slot not in TURN_FLAGS:
+            raise ValueError(f"slot sconosciuto: {self.slot}")
+        if self.requires_input not in (None, "slot"):
+            raise ValueError(f"input sconosciuto: {self.requires_input}")
+        if self.force_crit and self.phase != "before":
+            raise ValueError("force_crit vale solo prima del tiro")
+        if self.cost and self.cost.spell_slot_min is not None and self.requires_input != "slot":
+            raise ValueError("uno slot come costo richiede requires_input='slot'")
+
+
 @dataclass(frozen=True)
 class FeatureSpec:
     key: str
@@ -131,3 +197,4 @@ class RuleContext:
     item: Any = None
     spell: Any = None
     turn: Any = None
+    damage_type: Any = None

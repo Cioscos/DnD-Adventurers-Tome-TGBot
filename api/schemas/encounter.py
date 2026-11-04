@@ -6,7 +6,7 @@ from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, Field, model_validator
 
-from api.schemas.common import D20Dice, RollMode
+from api.schemas.common import D20Dice, OptionResult, RollMode, RollOptionsBody, absent_when_none
 from api.schemas.condition_effects import ConditionEffectRead, PendingSaveRead
 
 EncounterMode = Literal["light", "full"]
@@ -25,7 +25,7 @@ class CombatantAddRequest(BaseModel):
     ac: Optional[int] = Field(default=None, ge=1, le=30)
 
 
-class InitiativeRollRequest(BaseModel):
+class InitiativeRollRequest(RollOptionsBody):
     """die is the 3D-dice detected face; None -> the server rolls."""
     die: Optional[int] = Field(default=None, ge=1, le=20)
     mode: RollMode = "normal"
@@ -117,6 +117,7 @@ class CombatantLive(BaseModel):
 class InitiativeRollInfo(BaseModel):
     mode_applied: RollMode = "normal"
     notes: list[str] = []
+    option_result: OptionResult | None = absent_when_none()
 
 
 class EncounterLive(BaseModel):

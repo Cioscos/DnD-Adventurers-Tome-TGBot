@@ -1,3 +1,4 @@
+import { useAttackRoll } from '@/hooks/useWeaponAttackFlow'
 import type React from 'react'
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
@@ -9,7 +10,7 @@ import { Plus, ChevronRight, Pencil, RotateCcw, FolderPlus, FolderInput, HandHea
 import { GiKnapsack as Backpack } from 'react-icons/gi'
 import { api, ApiError } from '@/api/client'
 import { useAnimatedRoll } from '@/dice/useAnimatedRoll'
-import { useD20Roll, d20Arg, type RollMode } from '@/hooks/useD20Roll'
+import type { RollMode } from '@/hooks/useD20Roll'
 import type { WeaponChoice } from '@/lib/weaponOptions'
 import { useWeaponChoices, choiceOf } from '@/store/weaponChoiceStore'
 import Layout from '@/components/Layout'
@@ -350,18 +351,18 @@ export default function Inventory() {
   const shareItem = useShareMessage((itemId: number) => api.share.item(charId, itemId))
 
   const rollDice = useAnimatedRoll()
-  const rollD20 = useD20Roll()
+  const attackRoll = useAttackRoll()
 
   const attackMutation = useMutation({
-    mutationFn: async ({ itemId, mode }: { itemId: number; mode: RollMode }) =>
-      api.items.attack(
-        charId, itemId, false, d20Arg(mode, await rollD20(mode)),
-        choiceOf(weaponChoices, itemId),
-      ),
+    mutationFn: ({ itemId, mode }: { itemId: number; mode: RollMode }) =>
+      attackRoll(charId, itemId, mode, !!char?.heroic_inspiration, choiceOf(weaponChoices, itemId)),
     onSuccess: (result, { itemId }) => {
-      setAttackState({
-        result, itemId, choice: choiceOf(weaponChoices, itemId), wasRerolled: false,
-      })
+      if (result) {
+        setAttackState({
+          result, itemId, choice: choiceOf(weaponChoices, itemId), wasRerolled: false,
+        })
+      }
+      qc.invalidateQueries({ queryKey: ['character', charId] })
       haptic.success()
     },
   })

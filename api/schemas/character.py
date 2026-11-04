@@ -15,6 +15,8 @@ from api.schemas.common import (
     CharacterClassRead,
     ConcentrationSaveResult,
     ConsumableUseResult,
+    OptionResult,
+    absent_when_none,
     CurrencyRead,
     MapRead,
     RollMode,
@@ -199,6 +201,7 @@ class CharacterFull(BaseModel):
 
     # Populated only by POST /items/{id}/use (consumable use result).
     consumable_use: Optional[ConsumableUseResult] = None
+    option_result: OptionResult | None = absent_when_none()
 
     has_custom_silhouette: bool = False
 

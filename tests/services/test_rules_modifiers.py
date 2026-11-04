@@ -159,18 +159,15 @@ def test_condition_list_depends_on_the_roll():
 
 def test_blinded_and_frightened_and_restrained():
     assert modifiers_for(_char({"blinded": True}), "attack").disadvantage
-    assert modifiers_for(_char({"frightened": True}), "attack").disadvantage
-    assert modifiers_for(_char({"frightened": True}), "skill", skill="stealth", ability="dexterity").disadvantage
     assert modifiers_for(_char({"prone": True}), "attack").disadvantage
     assert modifiers_for(_char({"restrained": True}), "attack").disadvantage
     assert modifiers_for(_char({"restrained": True}), "save", ability="dexterity").disadvantage
     assert not modifiers_for(_char({"restrained": True}), "save", ability="wisdom").disadvantage
-    # afferrato: svantaggio all'attacco solo nel 2024
+    # Spaventato, Afferrato e i sensi passano dalla conferma al tiro: test_rules_roll_options
     assert not modifiers_for(_char({"grappled": True}), "attack").disadvantage
-    assert modifiers_for(_char({"grappled": True}, edition="2024"), "attack").disadvantage
-    # la vista non si deduce: Percezione mostra la nota, senza fallimento automatico
+    assert not modifiers_for(_char({"grappled": True}, edition="2024"), "attack").disadvantage
     blind = modifiers_for(_char({"blinded": True}), "skill", skill="perception", ability="wisdom")
-    assert blind.notes == ["condition:blinded"] and not blind.auto_fail
+    assert blind.notes == [] and not blind.auto_fail
 
 
 def test_falsy_and_custom_conditions_are_ignored():
