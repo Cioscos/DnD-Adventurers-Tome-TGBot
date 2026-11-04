@@ -72,3 +72,19 @@ async def test_migration_backfills_key_without_touching_text(test_session_factor
             await s.run_sync(lambda sync: _migrate_schema(sync.connection()))
         rows = (await s.execute(text("SELECT class_name, subclass, subclass_key FROM character_classes"))).all()
         assert sorted(rows) == [("Ladro", "Ladro Acrobata", None), ("Mago", "Scuola di Abiurazione", "abjuration")]
+
+
+async def test_blank_subclass_is_normalised_to_none(client):
+    cid = await _char(client, "Cammino del Berserker")
+    cls_id = (await client.get(f"/characters/{cid}")).json()["classes"][0]["id"]
+    for blank in ("", "   "):
+        await client.patch(f"/characters/{cid}/classes/{cls_id}", json={"subclass": "Cammino del Berserker"})
+        cls = (await client.patch(f"/characters/{cid}/classes/{cls_id}", json={"subclass": blank})).json()["classes"][0]
+        assert cls["subclass"] is None and cls["subclass_key"] is None
+    r = await client.post(f"/characters/{cid}/classes", json={"class_name": "Mago", "subclass": "  "})
+    assert [c["subclass"] for c in r.json()["classes"] if c["class_name"] == "Mago"] == [None]
+
+
+async def test_catalog_accepts_italian_class_name(client):
+    r = await client.get("/rules/subclasses", params={"edition": "2014", "class_key": "Mago"})
+    assert len(r.json()) == 8

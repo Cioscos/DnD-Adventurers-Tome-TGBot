@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m } from 'framer-motion'
 import { AlertTriangle, Check, Plus, Trash2, X } from 'lucide-react'
@@ -13,6 +13,7 @@ import Pressable from '@/components/ui/Pressable'
 import Input from '@/components/ui/Input'
 import { haptic } from '@/auth/telegram'
 import SelectSheet from '@/components/ui/SelectSheet'
+import SubclassSelect from '@/pages/multiclass/SubclassSelect'
 import { PREDEFINED_CLASSES, CUSTOM_KEY, classOptions } from '@/pages/multiclass/addClass.utils'
 import { unmetPrereqGroups, type AbilityKey } from '@/data/multiclassPrereqs'
 import { diffResourceMaxes } from '@/lib/resourceDiff'
@@ -20,8 +21,6 @@ import { useRegisterOverlay } from '@/store/overlayStore'
 import { useOverlayDismiss } from '@/hooks/useOverlayDismiss'
 import { useDeferredBlur } from '@/hooks/useDeferredBlur'
 import type { CharacterFull } from '@/types'
-
-const OTHER_SUBCLASS = '__other__'
 
 type ExistingEntry = {
   kind: 'existing'
@@ -59,7 +58,7 @@ function makeTempId(): string {
 }
 
 export default function EditClassesModal({ char, targetLevel, milestone = false, onClose }: Props) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const qc = useQueryClient()
   useRegisterOverlay(true)
   // Backdrop statico (nessuna animazione di opacità propria): il blur si
@@ -84,16 +83,6 @@ export default function EditClassesModal({ char, targetLevel, milestone = false,
   const [pickerKey, setPickerKey] = useState<string>('')
   const [pickerCustomName, setPickerCustomName] = useState('')
   const [pickerSubclass, setPickerSubclass] = useState('')
-  // '' = nessuna scelta, OTHER_SUBCLASS = testo libero, altrimenti la chiave di catalogo
-  const [pickerSubclassKey, setPickerSubclassKey] = useState('')
-  const lang = i18n.language.startsWith('en') ? 'en' : 'it'
-  const catalogClass = pickerKey && pickerKey !== CUSTOM_KEY ? pickerKey : null
-  const { data: subclassCatalog = [] } = useQuery({
-    queryKey: ['rules', 'subclasses', char.rules_edition, catalogClass],
-    queryFn: () => api.rules.subclasses(char.rules_edition, catalogClass as string),
-    enabled: catalogClass !== null,
-    staleTime: Infinity,
-  })
   // Il picker annidato ha un toggle reale (showPicker): il blur si spegne
   // subito quando il picker si chiude, coerentemente col resto del pattern.
   const pickerBlur = useDeferredBlur(showPicker)
@@ -103,7 +92,6 @@ export default function EditClassesModal({ char, targetLevel, milestone = false,
     setPickerKey('')
     setPickerCustomName('')
     setPickerSubclass('')
-    setPickerSubclassKey('')
   }
 
   // ESC/back coerenti: il picker annidato sta in cima allo stack, poi il modale.
@@ -118,9 +106,13 @@ export default function EditClassesModal({ char, targetLevel, milestone = false,
   const isValid = entries.length > 0 && allLevelsValid && (milestone ? currentSum <= targetLevel : currentSum === targetLevel)
 
   const isDirty = useMemo(() => {
-    const initial = new Map((char.classes ?? []).map((c) => [c.id, c.level]))
+    const initial = new Map((char.classes ?? []).map((c) => [c.id, c]))
     if (entries.some((e) => e.kind === 'new')) return true
-    return entries.some((e) => e.kind === 'existing' && initial.get(e.classId) !== e.level)
+    return entries.some(
+      (e) =>
+        e.kind === 'existing' &&
+        (initial.get(e.classId)?.level !== e.level || (initial.get(e.classId)?.subclass ?? '') !== (e.subclass ?? '')),
+    )
   }, [entries, char.classes])
 
   // Accetta la stringa grezza così il campo può essere svuotato durante la
@@ -198,6 +190,13 @@ export default function EditClassesModal({ char, targetLevel, milestone = false,
         const newId = updatedChar.classes.find((c) => !previousIds.has(c.id))?.id
         if (newId == null) throw new Error('new class id missing after add')
         newIdByTempId.set(ne.tempId, newId)
+      }
+
+      for (const e of entries) {
+        const before = (char.classes ?? []).find((c) => c.id === (e.kind === 'existing' ? e.classId : -1))
+        if (e.kind === 'existing' && (before?.subclass ?? '') !== (e.subclass ?? '')) {
+          await api.classes.update(char.id, e.classId, { subclass: (e.subclass ?? '').trim() || null })
+        }
       }
 
       const payload = entries.map((e) => {
@@ -304,7 +303,7 @@ export default function EditClassesModal({ char, targetLevel, milestone = false,
               {t('character.multiclass.edit.classes_label')}
             </p>
             {entries.map((e) => (
-              <Surface key={e.tempId} variant="elevated" className="flex items-center gap-4 !py-3 !px-4">
+              <Surface key={e.tempId} variant="elevated" className="flex flex-wrap items-center gap-x-4 gap-y-2 !py-3 !px-4">
                 <div className="flex-1 min-w-0">
                   <p className="font-display font-bold text-dnd-gold-bright truncate">
                     {e.className}
@@ -314,7 +313,7 @@ export default function EditClassesModal({ char, targetLevel, milestone = false,
                       </span>
                     )}
                   </p>
-                  {e.subclass && (
+                  {e.kind === 'new' && e.subclass && (
                     <p className="text-xs text-dnd-text-muted italic truncate">{e.subclass}</p>
                   )}
                 </div>
@@ -337,6 +336,18 @@ export default function EditClassesModal({ char, targetLevel, milestone = false,
                   >
                     <Trash2 size={14} />
                   </Pressable>
+                )}
+                {e.kind === 'existing' && (
+                  <div className="basis-full order-last">
+                    <SubclassSelect
+                      edition={char.rules_edition}
+                      className={e.className}
+                      value={e.subclass ?? ''}
+                      onChange={(text) =>
+                        setEntries((es) => es.map((x) => (x.tempId === e.tempId ? { ...x, subclass: text } : x)))
+                      }
+                    />
+                  </div>
                 )}
               </Surface>
             ))}
@@ -420,37 +431,13 @@ export default function EditClassesModal({ char, targetLevel, milestone = false,
                   />
                 )}
 
-                {catalogClass && (
-                  <SelectSheet
-                    title={t('character.multiclass.subclass')}
-                    options={[
-                      ...subclassCatalog.map((s) => ({ value: s.key, label: s.name[lang] ?? s.name.it })),
-                      { value: OTHER_SUBCLASS, label: t('character.multiclass.subclass_other') },
-                    ]}
-                    value={pickerSubclassKey}
-                    onChange={(k) => {
-                      setPickerSubclassKey(k)
-                      const hit = subclassCatalog.find((s) => s.key === k)
-                      setPickerSubclass(hit ? (hit.name[lang] ?? hit.name.it) : '')
-                    }}
-                    placeholder={t('character.multiclass.subclass')}
-                    zClassName="z-[70]"
-                  />
-                )}
-                {(!catalogClass || pickerSubclassKey === OTHER_SUBCLASS) && (
-                  <>
-                    <Input
-                      value={pickerSubclass}
-                      onChange={setPickerSubclass}
-                      placeholder={t('character.multiclass.subclass')}
-                    />
-                    {catalogClass && (
-                      <p className="text-xs text-dnd-text-muted font-body">
-                        {t('character.multiclass.subclass_other_hint')}
-                      </p>
-                    )}
-                  </>
-                )}
+                <SubclassSelect
+                  edition={char.rules_edition}
+                  className={pickerKey && pickerKey !== CUSTOM_KEY ? pickerKey : null}
+                  value={pickerSubclass}
+                  onChange={setPickerSubclass}
+                  zClassName="z-[70]"
+                />
 
                 {pickerUnmet.length > 0 && (
                   <Surface variant="elevated" className="!p-3 border border-dnd-amber/50 space-y-1.5">

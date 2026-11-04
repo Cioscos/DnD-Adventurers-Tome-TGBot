@@ -117,12 +117,18 @@ class CharacterClassRead(BaseModel):
     model_config = {"from_attributes": True}
 
 
+def _blank_to_none(v: Optional[str]) -> Optional[str]:
+    return (v.strip() or None) if isinstance(v, str) else v
+
+
 class CharacterClassCreate(BaseModel):
     class_name: str
     level: int = 1
     subclass: Optional[str] = None
     spellcasting_ability: Optional[str] = None
     hit_die: Optional[int] = None
+
+    _subclass_blank = field_validator("subclass")(_blank_to_none)
 
 
 class CharacterClassUpdate(BaseModel):
@@ -132,6 +138,8 @@ class CharacterClassUpdate(BaseModel):
     hit_die: Optional[int] = None
     hit_dice_used: Optional[int] = None
     hp_rolls: Optional[list[int]] = None  # one die roll per gained level (not a column)
+
+    _subclass_blank = field_validator("subclass")(_blank_to_none)
 
 
 class ClassLevelEntry(BaseModel):
