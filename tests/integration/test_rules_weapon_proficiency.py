@@ -133,3 +133,19 @@ async def test_rules_endpoint_returns_grant(client):
     assert r.status_code == 200, r.text
     body = r.json()
     assert body["armor"] == ["Armature leggere"] and body["skills_count"] == 1 and body["saves"] == []
+
+
+async def test_custom_class_created_after_migration_keeps_pb(client):
+    cid = (await _new(client, "Cacciatore di Taglie"))["id"]
+    await client.patch(f"/characters/{cid}", json={"general_proficiencies": {}})
+    wid = await _weapon(client, cid, name="Spadone", weapon_category="martial")
+    body = (await _attack(client, cid, wid)).json()
+    assert body["proficiency_warning"] is False and body["to_hit_bonus"] == 2
+
+
+async def test_custom_plus_wizard_keeps_pb_on_martial_weapon(client):
+    cid = (await _new(client, "wizard"))["id"]
+    assert (await _add(client, cid, "Cacciatore di Taglie")).status_code == 201
+    wid = await _weapon(client, cid, name="Spadone", weapon_category="martial")
+    body = (await _attack(client, cid, wid)).json()
+    assert body["proficiency_warning"] is False and body["to_hit_bonus"] == 2

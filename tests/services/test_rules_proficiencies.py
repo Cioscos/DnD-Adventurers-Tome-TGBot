@@ -84,3 +84,14 @@ def test_armor_and_shield():
     assert is_armor_proficient(char, NS(item_type="armor", item_metadata={}))
     char.general_proficiencies = {"armor": ["Armature leggere"]}
     assert not is_armor_proficient(char, NS(item_type="shield", item_metadata={}))
+
+
+def test_custom_class_keeps_bonus_even_when_seeded_and_empty():
+    martial = NS(name="Spadone", item_metadata={"weapon_category": "martial"})
+    custom = NS(class_name="Cacciatore di Taglie")
+    wizard = NS(class_name="Mago")
+    only = NS(general_proficiencies={}, settings=SEEDED, classes=[custom])
+    mixed = NS(general_proficiencies={"weapons": ["Pugnale"]}, settings=SEEDED, classes=[custom, wizard])
+    assert is_weapon_proficient(only, martial) and is_weapon_proficient(mixed, martial)
+    assert is_armor_proficient(mixed, NS(item_type="armor", item_metadata={"armor_type": "heavy"}))
+    assert not is_weapon_proficient(NS(general_proficiencies={}, settings=SEEDED, classes=[wizard]), martial)

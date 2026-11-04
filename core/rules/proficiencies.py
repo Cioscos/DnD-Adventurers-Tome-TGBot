@@ -260,7 +260,13 @@ def _profs(char: Any, *cats: str) -> set[str]:
 
 
 def _unseeded_empty(char: Any, profs: set[str]) -> bool:
-    """Personaggio mai seminato e senza elenco: non si toglie nulla finché non ha competenze proprie."""
+    """Non si toglie nulla se l'app non può sapere le competenze del personaggio.
+
+    Vale per chi ha una classe custom (competenze ignote) e per chi non è mai stato seminato
+    e ha l'elenco vuoto.
+    """
+    if any(row_class_key(c) is None for c in getattr(char, "classes", None) or ()):
+        return True
     return not profs and not (getattr(char, "settings", None) or {}).get(SEEDED_FLAG)
 
 
