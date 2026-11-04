@@ -28,7 +28,7 @@ interface ButtonProps {
 function variantClasses(variant: ButtonVariant): string {
   switch (variant) {
     case 'primary':
-      return 'bg-gradient-gold text-dnd-ink shadow-engrave'
+      return 'bg-dnd-gold text-dnd-ink hover:bg-dnd-gold-bright'
     case 'secondary':
       return 'bg-dnd-surface-raised text-dnd-text border border-dnd-gold-dim/30 hover:border-dnd-gold/70'
     case 'danger':

@@ -91,7 +91,6 @@ export default {
         'halo-gold': 'var(--halo-gold)',
         'halo-arcane': 'var(--halo-arcane)',
         'halo-danger': 'var(--halo-danger)',
-        engrave: 'var(--shadow-engrave)',
       },
       backgroundImage: {
         'gradient-parchment': 'var(--gradient-parchment)',

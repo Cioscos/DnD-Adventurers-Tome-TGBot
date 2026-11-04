@@ -152,7 +152,7 @@ export default function LevelUpModal({ char, xpLevel, onClose }: LevelUpModalPro
                     className={`flex gap-4 items-start ${idx > 0 ? 'pt-4 border-t border-dnd-border/50' : ''}`}
                   >
                     {/* Level badge */}
-                    <div className="flex-shrink-0 w-14 h-14 rounded-xl bg-gradient-gold flex flex-col items-center justify-center shadow-engrave">
+                    <div className="flex-shrink-0 w-14 h-14 rounded-xl bg-dnd-gold flex flex-col items-center justify-center">
                       <span className="text-xs font-cinzel uppercase tracking-wider text-dnd-ink/70 leading-none">
                         {t('character.equipment.progression.level_header')}
                       </span>
@@ -200,7 +200,7 @@ export default function LevelUpModal({ char, xpLevel, onClose }: LevelUpModalPro
                     onClick={() => { setSelectedClassId(cls.id); setHpRoll(null) }}
                     className={`min-h-[52px] px-4 py-2 rounded-xl font-cinzel text-xs uppercase tracking-widest flex-1 min-w-[120px] transition-all
                       ${active
-                        ? 'bg-gradient-gold text-dnd-ink shadow-engrave border-2 border-dnd-gold scale-[1.02]'
+                        ? 'bg-dnd-gold text-dnd-ink border-2 border-dnd-gold scale-[1.02]'
                         : 'bg-dnd-surface text-dnd-text border border-dnd-border hover:border-dnd-gold/60'}`}
                   >
                     <span className="block">{cls.class_name}</span>

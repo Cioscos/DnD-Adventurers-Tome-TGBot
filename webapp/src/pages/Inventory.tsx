@@ -96,8 +96,6 @@ export default function Inventory() {
   const system = useUnitSettings((s) => s.system)
   const [editingCap, setEditingCap] = useState(false)
   const [capDraft, setCapDraft] = useState('')
-  const [scrolled, setScrolled] = useState(false)
-  const topSentinelRef = useRef<HTMLDivElement>(null)
 
   const toggleType = (type: string) => {
     setCollapsedTypes((prev) => {
@@ -489,23 +487,6 @@ export default function Inventory() {
     return () => window.clearTimeout(tid)
   }, [highlightId, charLoaded, navigate, location.pathname])
 
-  // Pill flottante: quando la sentinella in cima esce dalla viewport (scroll),
-  // il pulsante "Aggiungi" si comprime in pill in alto a destra. Stesso pattern
-  // sentinella + IntersectionObserver usato da ScrollArea.
-  useEffect(() => {
-    const el = topSentinelRef.current
-    if (!el) {
-      setScrolled(false)
-      return
-    }
-    const io = new IntersectionObserver(
-      ([entry]) => setScrolled(!entry.isIntersecting),
-      { threshold: 0 },
-    )
-    io.observe(el)
-    return () => io.disconnect()
-  }, [hasItems])
-
   if (!char) {
     return (
       <Layout title={t('character.inventory.title')} backTo={`/char/${charId}`} group="equipment" page="inventory">
@@ -588,34 +569,18 @@ export default function Inventory() {
   })()
 
   return (
-    <Layout title={t('character.inventory.title')} backTo={`/char/${charId}`} group="equipment" page="inventory">
-      {/* Add button — barra sticky che si comprime in pill flottante su scroll.
-          Nascosta del tutto se non ci sono oggetti (l'empty-state ha già la sua CTA). */}
-      {hasItems && (
-        <>
-          <div className="sticky top-[calc(var(--crumb-offset,0px)+0.5rem)] z-20 flex pointer-events-none">
-            <m.div
-              layout
-              transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
-              className={scrolled ? 'ml-auto pointer-events-auto' : 'w-full pointer-events-auto'}
-            >
-              <Button
-                variant="primary"
-                size="md"
-                fullWidth={!scrolled}
-                onClick={() => setShowAdd(true)}
-                icon={<Plus size={18} />}
-                haptic="medium"
-                className={scrolled ? '!rounded-full' : ''}
-              >
-                {scrolled ? t('character.inventory.add_short') : t('character.inventory.add')}
-              </Button>
-            </m.div>
-          </div>
-          <div ref={topSentinelRef} className="h-px" aria-hidden />
-        </>
-      )}
-
+    <Layout
+      title={t('character.inventory.title')}
+      backTo={`/char/${charId}`}
+      group="equipment"
+      page="inventory"
+      // Senza oggetti l'EmptyState ha già il suo invito ad aggiungere.
+      bottomAction={hasItems ? (
+        <Button variant="primary" size="lg" fullWidth onClick={() => setShowAdd(true)} icon={<Plus size={20} />} haptic="medium">
+          {t('character.inventory.add')}
+        </Button>
+      ) : undefined}
+    >
       <div className="flex gap-2 mb-2">
         {selecting ? (
           <>
@@ -844,7 +809,7 @@ export default function Inventory() {
             <div key={type} className={isSingle ? 'mb-2' : 'mb-4'}>
               <Pressable
                 onClick={() => toggleType(type)}
-                className={`sticky top-[calc(var(--crumb-offset,0px)-1rem)] z-[5] -mx-4 w-[calc(100%+2rem)] px-5 flex items-center gap-2 mb-px bg-dnd-bg border-b border-dnd-border text-left min-h-[44px] ${isSingle ? 'py-1' : 'py-2'} ${scrolled ? 'pr-24' : ''}`}
+                className={`sticky top-[calc(var(--crumb-offset,0px)-1rem)] z-[5] -mx-4 w-[calc(100%+2rem)] px-5 flex items-center gap-2 mb-px bg-dnd-bg border-b border-dnd-border text-left min-h-[44px] ${isSingle ? 'py-1' : 'py-2'}`}
                 aria-expanded={!isCollapsed}
               >
                 <ChevronRight

@@ -44,8 +44,8 @@ export default class AppErrorBoundary extends Component<Props, State> {
         <button
           type="button"
           onClick={() => window.location.reload()}
-          className="min-h-[48px] px-6 py-3 rounded-xl bg-gradient-gold text-dnd-ink
-                     font-cinzel text-sm shadow-engrave"
+          className="min-h-[48px] px-6 py-3 rounded-xl bg-dnd-gold text-dnd-ink
+                     font-cinzel text-sm"
         >
           {i18n.t('common.error_boundary.reload')}
         </button>
