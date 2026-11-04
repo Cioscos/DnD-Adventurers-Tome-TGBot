@@ -10,11 +10,12 @@ from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.services.homebrew.dsl import RuleDSL
-from core.data.classes import ASI_LEVELS, ASI_LEVELS_DEFAULT, class_table_key
+from core.data.classes import class_table_key
 from core.data.feats import ALL_ABILITIES
 from core.data.feats_2024 import ALL_FEATS as FEATS
 from core.db.models import Ability, Character, CharacterClass, CharacterHistory, HomebrewRule, RestorationType
 from core.rules.catalog import features_for
+from core.rules.level_choices import active_choice_specs, mark_resolved, pending_key, sync_level_choices  # noqa: F401
 from core.rules.edition import character_edition, class_key
 from core.rules.types import RuleContext
 
@@ -29,91 +30,63 @@ def _bad(msg: str) -> HTTPException:
     return HTTPException(422, msg)
 
 
-RESOLVED_KEY = "resolved_choice_levels"  # settings: {class_key: ["asi:4", "class_option:trick:3", ...]}
-
-
-def _token(c: dict) -> str:
-    """Identità di una scelta: tipo, livello e (per le opzioni di classe) gruppo."""
-    if c.get("kind") == "class_option":
-        return f"class_option:{c.get('group')}:{c['level']}"
-    return f"{c.get('kind', 'asi')}:{c['level']}"
-
-
-def mark_resolved(char: Character, choice: dict) -> None:
-    done = dict((char.settings or {}).get(RESOLVED_KEY) or {})
-    done[choice["class_key"]] = sorted({*done.get(choice["class_key"], []), _token(choice)})
-    char.settings = {**(char.settings or {}), RESOLVED_KEY: done}
-
-
-def add_asi_choices(char: Character, cls: CharacterClass, old_level: int, new_level: int) -> None:
-    """Crea le scelte dei livelli attraversati (ASI, Dono Epico 2024, opzioni di classe), mai duplicate né
-    già risolte; scendendo di livello toglie quelle in sospeso oltre il nuovo livello."""
-    key = class_table_key(cls.class_name) or cls.class_name
-    edition = character_edition(char)
-    choices = [c for c in (char.pending_choices or [])
-               if not (c.get("class_key") == key and c.get("level", 0) > new_level)]
-    resolved = (char.settings or {}).get(RESOLVED_KEY) or {}
-    done = set(resolved.get(key, [])) if isinstance(resolved, dict) else set()
-
-    def add(**entry) -> None:
-        entry = {"id": uuid.uuid4().hex, "class_key": key, "created_at": _now(), **entry}
-        if _token(entry) not in done and not any(
-                c.get("class_key") == key and _token(c) == _token(entry) for c in choices):
-            choices.append(entry)
-
-    if new_level > old_level:
-        for lvl in ASI_LEVELS.get(key, ASI_LEVELS_DEFAULT):
-            if old_level < lvl <= new_level and (edition == "2014" or lvl != 19):
-                add(kind="asi", level=lvl)
-        if edition == "2024" and old_level < 19 <= new_level:
-            add(kind="epic_boon", level=19)
-        for spec in features_for(edition, class_key(cls)):
-            if spec.subclass is not None and spec.subclass != cls.subclass_key:
-                continue
-            for ch in spec.choices:
-                known = 0
-                for lvl in sorted(ch.levels):
-                    if old_level < lvl <= new_level:
-                        add(kind="class_option", level=lvl, group=ch.group, count=ch.levels[lvl] - known)
-                    known = ch.levels[lvl]
-    char.pending_choices = choices
-
-
 def _class_by_key(char: Character, key: str | None) -> CharacterClass | None:
-    return next((c for c in char.classes if (class_table_key(c.class_name) or c.class_name) == key), None)
+    return next((c for c in char.classes if pending_key(c) == key), None)
 
 
 def _choice_spec(char: Character, cls: CharacterClass, group: str | None):
-    for spec in features_for(character_edition(char), class_key(cls)):
-        if spec.subclass is not None and spec.subclass != cls.subclass_key:
-            continue
-        for ch in spec.choices:
-            if ch.group == group:
-                return ch
-    return None
+    return next((ch for ch in active_choice_specs(char, cls) if ch.group == group), None)
+
+
+def _entries(char: Character, cls: CharacterClass, group: str, keys: list[str]) -> list[dict]:
+    specs = {s.option_key: s for s in features_for(character_edition(char), class_key(cls)) if s.option_group == group}
+    return [{"key": k, "name": specs[k].name if k in specs else {"it": k, "en": k},
+             "summary": specs[k].summary if k in specs else {"it": "", "en": ""}} for k in keys]
+
+
+def _available(char: Character, cls: CharacterClass, ch) -> list[str]:
+    ctx = RuleContext(char=char, edition=character_edition(char), class_row=cls, class_level=cls.level)
+    chosen = (cls.options or {}).get(ch.group, [])
+    return [k for k in ch.options(ctx) if k not in chosen]
 
 
 def option_catalog(char: Character, choice: dict) -> list[dict]:
     """Opzioni ancora scegliibili di una scelta `class_option`: `{key, name, summary}` bilingui."""
     cls = _class_by_key(char, choice.get("class_key"))
     ch = _choice_spec(char, cls, choice.get("group")) if cls else None
+    return _entries(char, cls, ch.group, _available(char, cls, ch)) if ch else []
+
+
+def class_options_state(char: Character, cls: CharacterClass, group: str) -> dict:
+    ch = _choice_spec(char, cls, group)
     if ch is None:
-        return []
-    edition = character_edition(char)
-    chosen = (cls.options or {}).get(ch.group, [])
-    keys = [k for k in ch.options(RuleContext(char=char, edition=edition, class_row=cls, class_level=cls.level))
-            if k not in chosen]
-    specs = {s.option_key: s for s in features_for(edition, class_key(cls)) if s.option_group == ch.group}
-    return [{"key": k, "name": specs[k].name if k in specs else {"it": k, "en": k},
-             "summary": specs[k].summary if k in specs else {"it": "", "en": ""}} for k in keys]
+        raise HTTPException(404, "Option group not found")
+    return {"replaceable": ch.replaceable,
+            "chosen": _entries(char, cls, group, list((cls.options or {}).get(group, []))),
+            "available": _entries(char, cls, group, _available(char, cls, ch))}
+
+
+def replace_class_option(session: AsyncSession, char: Character, cls: CharacterClass,
+                         group: str, old_key: str, new_key: str) -> None:
+    """Sostituisce un'opzione scelta con un'altra del catalogo; solo se la ChoiceSpec è `replaceable`."""
+    ch = _choice_spec(char, cls, group)
+    chosen = list((cls.options or {}).get(group, []))
+    if ch is None or not ch.replaceable:
+        raise _bad("option_not_replaceable")
+    if old_key not in chosen or new_key not in _available(char, cls, ch):
+        raise _bad("invalid_replacement")
+    chosen[chosen.index(old_key)] = new_key
+    cls.options = {**(cls.options or {}), group: chosen}
+    _history(session, char, f"{group}: {old_key} -> {new_key}")
 
 
 def resolve_class_option(session: AsyncSession, char: Character, choice: dict, picked: list[str]) -> None:
-    cls = _class_by_key(char, choice["class_key"])
+    cls = _class_by_key(char, choice.get("class_key"))
+    group, count = choice.get("group"), choice.get("count")
     valid = {o["key"] for o in option_catalog(char, choice)}
-    if cls is None or len(picked) != choice["count"] or len(set(picked)) != len(picked) or not set(picked) <= valid:
-        raise _bad(f"Pick exactly {choice['count']} distinct valid options")
-    group = choice["group"]
+    if (cls is None or not group or not count or len(picked) != count
+            or len(set(picked)) != len(picked) or not set(picked) <= valid):
+        raise _bad(f"Pick exactly {count} distinct valid options")
     cls.options = {**(cls.options or {}), group: [*(cls.options or {}).get(group, []), *picked]}
     _history(session, char, f"{group}: {', '.join(picked)}")
 

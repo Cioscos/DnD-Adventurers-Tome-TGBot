@@ -23,6 +23,7 @@ import type {
   StashMoveRequest,
   DdbImportResult,
   ResolveChoiceBody,
+  ClassOptionsState,
   CharacterSummary,
   CombatantPatch,
   GmConditionApply,
@@ -749,6 +750,13 @@ export const api = {
   choices: {
     resolve: (charId: number, choiceId: string, body: ResolveChoiceBody) =>
       request<CharacterFull>(`/characters/${charId}/choices/${choiceId}/resolve`, {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+    classOptions: (charId: number, classId: number, group: string) =>
+      request<ClassOptionsState>(`/characters/${charId}/classes/${classId}/options/${group}`),
+    replaceOption: (charId: number, classId: number, body: { group: string; old_key: string; new_key: string }) =>
+      request<CharacterFull>(`/characters/${charId}/classes/${classId}/options/replace`, {
         method: 'POST',
         body: JSON.stringify(body),
       }),

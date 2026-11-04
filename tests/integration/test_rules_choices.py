@@ -31,12 +31,12 @@ async def _resolve(client, body: dict, kind: str, payload: dict):
     return await client.post(f"/characters/{body['id']}/choices/{cid}/resolve", json={"kind": kind, **payload})
 
 
-def _trick(ctx_options=("a", "b", "c", "d")) -> tuple[FeatureSpec, ...]:
+def _trick(ctx_options=("a", "b", "c", "d"), replaceable=False) -> tuple[FeatureSpec, ...]:
     def spec(key, **kw):
         return FeatureSpec(key=f"barbarian.{key}", class_key="barbarian", edition="2014", level=3,
                            source_title=key, name={"it": key, "en": key}, summary={"it": key, "en": key},
                            action_type=None, **kw)
-    return (spec("trick", choices=(ChoiceSpec("trick", {3: 2, 5: 3}, lambda ctx: list(ctx_options)),)),
+    return (spec("trick", choices=(ChoiceSpec("trick", {3: 2, 5: 3}, lambda ctx: list(ctx_options), replaceable),)),
             *(spec(f"trick_{o}", option_group="trick", option_key=o) for o in ctx_options))
 
 
@@ -154,6 +154,99 @@ async def test_class_option_survives_export_import(client, rules_catalog):
     exported["character"]["pending_choices"] = [pending, {**pending, "id": "p2", "kind": "class_option",
                                                           "group": "trick", "count": 2}]
     assert (await client.post("/characters/import", json=exported)).status_code in (200, 201)
+
+
+def _groups(body: dict) -> list[tuple]:
+    return [(c["group"], c["count"], c["level"]) for c in body["pending_choices"] if c["kind"] == "class_option"]
+
+
+async def test_existing_character_gets_options_when_catalog_arrives(client, rules_catalog):
+    body = await _char(client, "Barbaro", xp=900)  # catalogo ancora vuoto: nessuna scelta
+    assert _groups(body) == []
+    rules_catalog(*_trick())
+    cls_id = body["classes"][0]["id"]
+    r = await client.patch(f"/characters/{body['id']}/classes/{cls_id}", json={})  # nessun cambio di livello
+    assert _groups(r.json()) == [("trick", 2, 3)]
+    r = await client.patch(f"/characters/{body['id']}/classes/{cls_id}", json={})
+    assert _groups(r.json()) == [("trick", 2, 3)]  # idempotente
+
+
+async def test_subclass_choice_appears_when_subclass_is_set_and_is_pruned_when_lost(client, rules_catalog):
+    def spec(**kw):
+        return FeatureSpec(key="barbarian.sub", class_key="barbarian", edition="2014", level=3, source_title="s",
+                           name={"it": "s", "en": "s"}, summary={"it": "s", "en": "s"}, action_type=None,
+                           subclass="berserker", choices=(ChoiceSpec("sub", {3: 1}, lambda ctx: ["x", "y"]),), **kw)
+    rules_catalog(spec())
+    body = await _char(client, "Barbaro", xp=900)
+    assert _groups(body) == []
+    cls_id = body["classes"][0]["id"]
+    r = await client.patch(f"/characters/{body['id']}/classes/{cls_id}", json={"subclass": "Cammino del Berserker"})
+    assert _groups(r.json()) == [("sub", 1, 3)]
+    r = await client.patch(f"/characters/{body['id']}/classes/{cls_id}", json={"subclass": "Cammino del Combattente Totemico"})
+    assert _groups(r.json()) == []  # senza spec attiva la scelta non resta irrisolvibile
+
+
+async def test_class_option_level_down_shrinks_pending(client, rules_catalog):
+    rules_catalog(*_trick())
+    body = await _char(client, "Barbaro", xp=6500)  # livello 5: 3 opzioni
+    assert _groups(body) == [("trick", 3, 5)]
+    r = await client.patch(f"/characters/{body['id']}/xp", json={"set": 900})
+    assert _groups(r.json()) == [("trick", 2, 3)]
+    r = await client.patch(f"/characters/{body['id']}/xp", json={"set": 300})  # livello 2
+    assert _groups(r.json()) == []
+
+
+async def test_edition_change_reconciles_choices(client, rules_catalog):
+    rules_catalog(*_trick())
+    body = await _char(client, "Barbaro", xp=900)
+    assert _groups(body) == [("trick", 2, 3)]
+    r = await client.patch(f"/characters/{body['id']}", json={"rules_edition": "2024"})
+    assert _groups(r.json()) == []  # il catalogo di prova esiste solo per il 2014
+    r = await client.patch(f"/characters/{body['id']}", json={"rules_edition": "2014"})
+    assert _groups(r.json()) == [("trick", 2, 3)]
+    old = await _char(client, xp=305000)  # guerriero 2014 a 19: nessun Dono
+    r = await client.patch(f"/characters/{old['id']}", json={"rules_edition": "2024"})
+    assert ("epic_boon", 19) in _pending(r.json())
+    r = await client.patch(f"/characters/{old['id']}", json={"rules_edition": "2014"})
+    assert ("epic_boon", 19) not in _pending(r.json())
+
+
+async def test_replace_class_option(client, rules_catalog):
+    rules_catalog(*_trick(replaceable=True))
+    body = await _char(client, "Barbaro", xp=900)
+    cid = body["classes"][0]["id"]
+    await _resolve(client, body, "class_option", {"options": ["a", "b"]})
+    url = f"/characters/{body['id']}/classes/{cid}/options"
+    state = (await client.get(f"{url}/trick")).json()
+    assert state["replaceable"] and [o["key"] for o in state["chosen"]] == ["a", "b"]
+    assert [o["key"] for o in state["available"]] == ["c", "d"]
+    for bad in ({"old_key": "c", "new_key": "d"}, {"old_key": "a", "new_key": "b"}, {"old_key": "a", "new_key": "zzz"}):
+        assert (await client.post(f"{url}/replace", json={"group": "trick", **bad})).status_code == 422
+    r = await client.post(f"{url}/replace", json={"group": "trick", "old_key": "a", "new_key": "d"})
+    assert r.status_code == 200, r.text
+    assert r.json()["classes"][0]["options"] == {"trick": ["d", "b"]}
+    keys = {a["feature_key"] for a in r.json()["abilities"]}
+    assert "barbarian.trick_d" in keys and "barbarian.trick_a" not in keys
+
+
+async def test_replace_refused_when_not_replaceable(client, rules_catalog):
+    rules_catalog(*_trick())
+    body = await _char(client, "Barbaro", xp=900)
+    await _resolve(client, body, "class_option", {"options": ["a", "b"]})
+    r = await client.post(f"/characters/{body['id']}/classes/{body['classes'][0]['id']}/options/replace",
+                          json={"group": "trick", "old_key": "a", "new_key": "c"})
+    assert r.status_code == 422
+
+
+async def test_import_drops_incomplete_class_option(client):
+    body = await _char(client)
+    exported = (await client.get(f"/characters/{body['id']}/export")).json()
+    exported["character"]["pending_choices"] = [
+        {"id": "p1", "kind": "class_option", "class_key": "Guerriero", "level": 3},
+        {"id": "p2", "kind": "asi", "class_key": "Guerriero", "level": 4}]
+    r = await client.post("/characters/import", json=exported)
+    assert r.status_code in (200, 201), r.text
+    assert [c["id"] for c in r.json()["pending_choices"]] == ["p2"]
 
 
 def test_2024_feat_catalog_is_text_only_and_bounded():

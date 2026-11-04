@@ -65,6 +65,12 @@ export interface ClassOptionEntry {
   summary: { it: string; en: string }
 }
 
+export interface ClassOptionsState {
+  replaceable: boolean
+  chosen: ClassOptionEntry[]
+  available: ClassOptionEntry[]
+}
+
 export interface PendingChoice {
   id: string
   kind: 'asi' | 'feat' | 'class_option' | 'epic_boon'

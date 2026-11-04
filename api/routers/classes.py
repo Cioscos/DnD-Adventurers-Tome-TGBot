@@ -27,7 +27,7 @@ from core.data.classes import (
     class_table_key,
     get_saving_throw_proficiencies,
 )
-from api.services.choices import add_asi_choices
+from core.rules.level_choices import sync_level_choices
 from api.services.hp_rolls import record_rolls, stored_rolls
 from api.services.class_features import sync_cataloged_features, sync_class_feature_abilities
 from core.data.xp_thresholds import xp_to_level
@@ -139,7 +139,7 @@ async def create_class_for_character(
     # cls deve essere visibile in char.classes per coerenza del sync.
     if cls not in char.classes:
         char.classes.append(cls)
-    add_asi_choices(char, cls, 0, cls.level)  # classe nata sopra il livello 1: scelte dei livelli già raggiunti
+    sync_level_choices(char, cls, 0, cls.level)  # classe nata sopra il livello 1: scelte dei livelli già raggiunti
     await sync_class_feature_abilities(session, char, cls, lang=lang)
 
     # Seed saving throw proficiencies from the *starting* class only (D&D 5e:
@@ -261,8 +261,9 @@ async def distribute_class_levels(
             (rolls_left[:gained], rolls_left[gained:]) if rolls_left is not None else (None, None)
         )
         record_rolls(char, cls, cls.level, new_level, mine)
-        add_asi_choices(char, cls, cls.level, new_level)
+        prev_level = cls.level
         cls.level = new_level
+        sync_level_choices(char, cls, prev_level, new_level)
         await sync_class_feature_abilities(session, char, cls, lang=lang)
 
     # HP recalc (respecting hp_auto_calc); populate hp_gained for toast parity with PATCH /xp
@@ -311,7 +312,7 @@ async def update_class(
         setattr(cls, field, value)
     if "subclass" in data:
         cls.subclass_key = match_subclass(cls.subclass, class_key(cls), character_edition(char))
-    add_asi_choices(char, cls, old_level, cls.level)
+    sync_level_choices(char, cls, old_level, cls.level)
 
     # When level changes, sync class-feature abilities and recalc max HP like distribute.
     level_changed = body.level is not None and body.level != old_level

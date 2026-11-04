@@ -13,6 +13,7 @@ from core.data.classes import CLASS_RESOURCES, class_table_key, get_class_featur
 from core.db.models import Ability, Character, CharacterClass, RestorationType
 from core.rules.catalog import active_features, features_for
 from core.rules.edition import EDITIONS, character_edition, class_key
+from core.rules.level_choices import reconcile_choices
 from core.rules.types import FeatureSpec, RuleContext
 from core.rules.uses import max_uses
 
@@ -40,6 +41,7 @@ async def sync_class_feature_abilities(
     for other in char.classes:
         if other is not cls and features_for(edition, class_key(other)):
             _sync_from_catalog(session, char, other, lang)
+    reconcile_choices(char)
 
 
 async def sync_cataloged_features(session: AsyncSession, char: Character, lang: str = "it") -> None:
@@ -48,6 +50,7 @@ async def sync_cataloged_features(session: AsyncSession, char: Character, lang: 
     for cls in char.classes:
         if features_for(edition, class_key(cls)):
             _sync_from_catalog(session, char, cls, lang)
+    reconcile_choices(char)
     await session.flush()
 
 

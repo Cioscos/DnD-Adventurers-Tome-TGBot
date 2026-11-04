@@ -61,7 +61,7 @@ from api.services.effects import apply_conditions
 from api.services.condition_effects import ExpirySpec, effects_for_character, pending_read, upsert_effect
 from api.services.durations import tick_rounds
 from api.services.spell_slots import recalc_spell_slots
-from api.services.choices import add_asi_choices
+from core.rules.level_choices import sync_level_choices
 from api.services.hp_rolls import record_rolls, stored_rolls
 from api.services.homebrew.passive import get_passive_modifiers
 
@@ -545,7 +545,7 @@ async def update_xp(
             # Validates hp_rolls (count/range -> 422) and drops stale rolls. Omitted rolls in
             # rolled mode fall back to the fixed value so older clients keep working.
             record_rolls(char, cls, old_level, new_level, body.hp_rolls)
-            add_asi_choices(char, cls, old_level, new_level)
+            sync_level_choices(char, cls, old_level, new_level)
             await sync_class_feature_abilities(session, char, cls, lang=lang)
 
             con_row = next(

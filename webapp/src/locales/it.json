@@ -84,6 +84,9 @@
   },
   "character": {
     "level_choice": {
+      "replace_title": "Sostituisci opzione",
+      "replace_old": "Opzione da sostituire",
+      "replace_new": "Nuova opzione",
       "epic_boon": "Dono Epico",
       "prerequisites_unmet": "Requisiti non soddisfatti",
       "class_option_title": "Opzioni di classe",

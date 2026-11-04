@@ -16,7 +16,9 @@ from api.routers.stats import apply_ability_change
 from api.schemas.character import CharacterFull
 from api.services.character_response import build_character_response
 from api.services.class_features import sync_cataloged_features
-from api.services.choices import mark_resolved, remove_feat, resolve_asi, resolve_class_option, resolve_feat
+from api.services.choices import (
+    class_options_state, mark_resolved, remove_feat, replace_class_option, resolve_asi, resolve_class_option,
+    resolve_feat)
 from core.db.models import HomebrewRule
 
 router = APIRouter(prefix="/characters", tags=["choices"])
@@ -126,3 +128,40 @@ async def delete_feat(
     session: Annotated[AsyncSession, Depends(get_db)],
 ) -> CharacterFull:
     return await _remove(char_id, user_id, session, ability_id)
+
+
+class OptionReplace(BaseModel):
+    group: str = Field(max_length=50)
+    old_key: str = Field(max_length=50)
+    new_key: str = Field(max_length=50)
+
+
+def _class_of(char, class_id: int):
+    cls = next((c for c in char.classes if c.id == class_id), None)
+    if cls is None:
+        raise HTTPException(404, "Class not found")
+    return cls
+
+
+@router.get("/{char_id}/classes/{class_id}/options/{group}")
+async def class_options(
+    char_id: int, class_id: int, group: str,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> dict:
+    char = await _get_owned_full(char_id, user_id, session)
+    return class_options_state(char, _class_of(char, class_id), group)
+
+
+@router.post("/{char_id}/classes/{class_id}/options/replace", response_model=CharacterFull)
+async def replace_option(
+    char_id: int, class_id: int, body: OptionReplace,
+    user_id: Annotated[int, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+    lang: Annotated[str, Depends(get_current_lang)],
+) -> CharacterFull:
+    char = await _get_owned_full(char_id, user_id, session)
+    replace_class_option(session, char, _class_of(char, class_id), body.group, body.old_key, body.new_key)
+    await sync_cataloged_features(session, char, lang)
+    char = await _refresh_char_full(char_id, user_id, session)
+    return await build_character_response(session, char)

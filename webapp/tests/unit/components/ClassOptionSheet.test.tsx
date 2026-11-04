@@ -3,10 +3,12 @@ import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from '../utils/renderWithProviders'
 import PendingChoicesBadge from '@/components/character/PendingChoicesBadge'
+import { ReplaceOptionSheet } from '@/components/rules/ClassOptionSheet'
 import type { CharacterFull } from '@/types'
 
 const { resolve } = vi.hoisted(() => ({ resolve: vi.fn() }))
-vi.mock('@/api/client', () => ({ api: { choices: { resolve } } }))
+const { classOptions, replaceOption } = vi.hoisted(() => ({ classOptions: vi.fn(), replaceOption: vi.fn() }))
+vi.mock('@/api/client', () => ({ api: { choices: { resolve, classOptions, replaceOption } } }))
 vi.mock('@/components/ui/Sheet', async () => {
   const React = await import('react')
   return { default: (p: { open: boolean; children?: unknown }) => (p.open ? React.createElement('div', null, p.children) : null) }
@@ -39,5 +41,17 @@ describe('ClassOptionSheet', () => {
     expect(screen.getByText('Nome b').closest('button')).toBeDisabled() // limite raggiunto
     await userEvent.click(confirm)
     await waitFor(() => expect(resolve).toHaveBeenCalledWith(7, 'opt1', { kind: 'class_option', options: ['a', 'c'] }))
+  })
+
+  it('replaces a chosen option with an available one', async () => {
+    classOptions.mockResolvedValue({ replaceable: true, chosen: [opt('a')], available: [opt('z')] })
+    replaceOption.mockResolvedValue({ id: 7 })
+    renderWithProviders(<ReplaceOptionSheet char={char} classId={3} group="metamagic" open onClose={() => {}} />)
+    const confirm = screen.getByText('character.level_choice.confirm')
+    await userEvent.click(await screen.findByText('Nome a'))
+    expect(confirm).toBeDisabled()
+    await userEvent.click(screen.getByText('Nome z'))
+    await userEvent.click(confirm)
+    await waitFor(() => expect(replaceOption).toHaveBeenCalledWith(7, 3, { group: 'metamagic', old_key: 'a', new_key: 'z' }))
   })
 })

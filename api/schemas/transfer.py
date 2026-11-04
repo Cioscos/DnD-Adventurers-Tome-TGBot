@@ -92,6 +92,13 @@ class ExportCharacter(BaseModel):
     general_proficiencies: list | dict = Field(default_factory=list)
     damage_modifiers: dict = Field(default_factory=dict)
     pending_choices: list[ExportChoice] = Field(default_factory=list, max_length=40)
+
+    @field_validator("pending_choices", mode="before")
+    @classmethod
+    def _drop_incomplete_options(cls, v):
+        # una class_option senza gruppo o conteggio non è risolvibile: va scartata
+        return [c for c in v if not (isinstance(c, dict) and c.get("kind") == "class_option"
+                                     and not (c.get("group") and c.get("count")))] if isinstance(v, list) else v
     # {titolo: {body, created_at, updated_at, tags, was_voice}}; le note vocali hanno body ""
     notes: dict = Field(default_factory=dict)
 

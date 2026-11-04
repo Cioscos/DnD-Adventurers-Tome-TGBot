@@ -84,6 +84,9 @@
   },
   "character": {
     "level_choice": {
+      "replace_title": "Replace option",
+      "replace_old": "Option to replace",
+      "replace_new": "New option",
       "epic_boon": "Epic Boon",
       "prerequisites_unmet": "Prerequisites not met",
       "class_option_title": "Class options",

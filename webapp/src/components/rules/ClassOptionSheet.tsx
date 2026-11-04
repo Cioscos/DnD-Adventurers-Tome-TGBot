@@ -1,12 +1,12 @@
 import { useState } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import Sheet from '@/components/ui/Sheet'
 import Pressable from '@/components/ui/Pressable'
 import { api } from '@/api/client'
 import { haptic } from '@/auth/telegram'
 import { CLASS_NAME_TO_PROGRESSION_KEY } from '@/lib/classProgression'
-import type { CharacterFull, PendingChoice } from '@/types'
+import type { CharacterFull, ClassOptionEntry, PendingChoice } from '@/types'
 
 interface Props {
   char: CharacterFull
@@ -69,6 +69,70 @@ export default function ClassOptionSheet({ char, choice, open, onClose }: Props)
         <Pressable
           onClick={() => mutation.mutate()}
           disabled={picked.length !== count}
+          pending={mutation.isPending}
+          className="w-full min-h-[44px] rounded-xl bg-dnd-gold/15 border border-dnd-gold text-sm font-body text-dnd-gold-bright disabled:opacity-40"
+        >
+          {t('character.level_choice.confirm')}
+        </Pressable>
+      </div>
+    </Sheet>
+  )
+}
+
+interface ReplaceProps {
+  char: CharacterFull
+  classId: number
+  group: string
+  open: boolean
+  onClose: () => void
+}
+
+/** Sostituisce un'opzione già scelta con un'altra (solo gruppi `replaceable`, deciso dal catalogo). */
+export function ReplaceOptionSheet({ char, classId, group, open, onClose }: ReplaceProps) {
+  const { t, i18n } = useTranslation()
+  const lang = i18n.language?.startsWith('en') ? 'en' : 'it'
+  const qc = useQueryClient()
+  const [oldKey, setOldKey] = useState('')
+  const [newKey, setNewKey] = useState('')
+  const state = useQuery({
+    queryKey: ['class-options', char.id, classId, group],
+    queryFn: () => api.choices.classOptions(char.id, classId, group),
+    enabled: open,
+  })
+  const mutation = useMutation({
+    mutationFn: () => api.choices.replaceOption(char.id, classId, { group, old_key: oldKey, new_key: newKey }),
+    onSuccess: (updated) => {
+      qc.setQueryData(['character', char.id], updated)
+      qc.invalidateQueries({ queryKey: ['class-options', char.id, classId, group] })
+      haptic.success()
+      onClose()
+    },
+    onError: () => haptic.error(),
+  })
+  const list = (entries: ClassOptionEntry[], current: string, set: (k: string) => void) => entries.map((o) => (
+    <Pressable
+      key={o.key}
+      onClick={() => set(o.key)}
+      className={`w-full min-h-[44px] px-3 py-2 rounded-xl border text-left ${
+        current === o.key ? 'bg-dnd-gold/15 border-dnd-gold' : 'border-dnd-border'
+      }`}
+    >
+      <span className="block text-sm font-body text-dnd-text">{o.name[lang]}</span>
+    </Pressable>
+  ))
+  return (
+    <Sheet open={open} onClose={onClose} title={t('character.level_choice.replace_title')}>
+      <div className="p-5 space-y-3">
+        <p className="text-xs font-body text-dnd-text-muted">{t('character.level_choice.replace_old')}</p>
+        {list(state.data?.chosen ?? [], oldKey, setOldKey)}
+        <p className="text-xs font-body text-dnd-text-muted">{t('character.level_choice.replace_new')}</p>
+        {list(state.data?.available ?? [], newKey, setNewKey)}
+        {mutation.isError && (
+          <p className="text-xs font-body text-dnd-crimson-bright">{t('character.level_choice.error')}</p>
+        )}
+        <Pressable
+          onClick={() => mutation.mutate()}
+          disabled={!oldKey || !newKey || !state.data?.replaceable}
           pending={mutation.isPending}
           className="w-full min-h-[44px] rounded-xl bg-dnd-gold/15 border border-dnd-gold text-sm font-body text-dnd-gold-bright disabled:opacity-40"
         >
