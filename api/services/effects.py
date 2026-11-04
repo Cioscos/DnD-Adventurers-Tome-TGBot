@@ -73,6 +73,8 @@ async def apply_conditions(session: AsyncSession, char: Character,
     current = dict(old_conditions)
     current.update(changes)
     char.conditions = current
+    from api.services.rules_states import on_conditions  # import locale: rules_states usa apply_heal
+    on_conditions(char, changes)
 
     changed = False
     for cond, new_val in changes.items():

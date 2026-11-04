@@ -8,8 +8,7 @@ from dataclasses import dataclass, field
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.services.effects import apply_heal
-from api.services.rules_turn import grant_action, spend
+from api.services.rules_turn import grant_action, set_damaged, spend
 from core.rules.catalog import active_features
 from core.rules.edition import character_edition
 from core.rules.types import RuleContext, StateSpec
@@ -47,6 +46,34 @@ def tick_states(char) -> list[str]:
     if any(s["rounds_left"] is not None for s in get_states(char)):
         char.active_states = states
     return expired
+
+
+def on_damage(char, applied: int) -> None:
+    """Unico punto per il danno ai PF (`update_hp`, homebrew): segna il danno e chiude gli stati a 0 PF."""
+    if applied > 0:
+        set_damaged(char)
+    if char.current_hit_points == 0:
+        end_states(char, "unconscious", "incapacitated")
+
+
+_INCAPACITATING = {"incapacitated", "paralyzed", "stunned", "petrified"}
+
+
+def on_conditions(char, changes: dict) -> None:
+    """Unico punto per le condizioni impostate (`apply_conditions`): chiude gli stati che non reggono."""
+    on = {c for c, v in changes.items() if v}
+    if "unconscious" in on:
+        end_states(char, "unconscious", "incapacitated")
+    elif on & _INCAPACITATING:
+        end_states(char, "incapacitated")
+
+
+def extend_state(char, key: str, rounds: int) -> None:
+    """Riporta `rounds_left` a `rounds` senza spendere usi (prolungamento a fine turno, Ira 2024)."""
+    states = get_states(char)
+    if all(s["key"] != key for s in states):
+        raise _err(status.HTTP_404_NOT_FOUND, "state_not_found")
+    char.active_states = [{**s, "rounds_left": rounds} if s["key"] == key else s for s in states]
 
 
 def remove_state(char, key: str) -> None:
@@ -97,6 +124,7 @@ async def use_feature(session: AsyncSession, char, feature_key: str, amount: int
         m = _DICE.match(on_use.rolls)
         result.rolls = [random.randint(1, int(m[2])) for _ in range(int(m[1]))]
     if on_use.heal:
+        from api.services.effects import apply_heal  # import locale: effects richiama on_conditions
         ctx = RuleContext(char=char, edition=character_edition(char), class_row=row, class_level=row.level)
         amount_hp = max(0, on_use.heal(ctx, sum(result.rolls)))
         result.healed = (await apply_heal(session, char, amount_hp))["healed"]

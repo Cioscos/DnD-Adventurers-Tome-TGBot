@@ -229,6 +229,7 @@ class TurnBlock(BaseModel):
     spell_slot_cast: bool = False
     bonus_spell_cast: bool = False
     free_interaction_used: bool = False
+    damaged: bool = False
     pending_attack: Optional[dict] = None
 
 

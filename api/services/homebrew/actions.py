@@ -286,6 +286,8 @@ async def execute_damage_character(action, ctx, rfr, session, char, **kw):
 
     before = char.current_hit_points
     char.current_hit_points = max(0, char.current_hit_points - amount)
+    from api.services.rules_states import on_damage  # import locale: evita il ciclo fra servizi
+    on_damage(char, gross)
     await session.flush()
 
     # Re-emit events with depth+1; existing stack + this rule's id.

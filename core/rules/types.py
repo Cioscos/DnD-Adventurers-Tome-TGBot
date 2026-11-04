@@ -39,16 +39,27 @@ class UnarmoredAc:
     no_shield: bool = False
 
 
+ENDS_ON = frozenset({
+    "rest_short", "rest_long", "unconscious", "incapacitated", "turn_end_inactive", "concentration_end", "manual",
+})
+
+
 @dataclass(frozen=True)
 class StateSpec:
     """Stato attivo avviato da un privilegio (Ira, Forma Selvatica...).
 
-    ``ends_on``: ``rest_short``, ``rest_long``, ``unconscious``, ``turn_end_no_attack``,
-    ``concentration_end``, ``manual``. ``rounds``: durata in round, ``None`` = senza scadenza."""
+    ``ends_on`` (insieme chiuso ``ENDS_ON``): ``turn_end_inactive`` = a fine turno senza aver attaccato né subito
+    danno dall'ultimo turno (Ira 2014); ``incapacitated`` = condizione che toglie le azioni o 0 PF.
+    ``rounds``: durata in round, ``None`` = senza scadenza."""
     key: str
     rounds: int | None = None
     ends_on: tuple[str, ...] = ("manual",)
     data: dict = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        unknown = set(self.ends_on) - ENDS_ON
+        if unknown:
+            raise ValueError(f"ends_on sconosciuto: {sorted(unknown)}")
 
 
 @dataclass(frozen=True)

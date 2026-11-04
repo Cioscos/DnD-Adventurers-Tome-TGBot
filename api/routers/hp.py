@@ -20,7 +20,8 @@ from api.services.dice_stats import record_dice
 from api.services.effects import apply_heal
 from api.services.item_charges import plan_item_recharges, set_item_charges
 from api.services.durations import end_concentration, is_concentrating
-from api.services.rules_states import end_states
+from api.services.rules_states import end_states, on_damage
+from api.services.rules_turn import get_turn, set_damaged
 from api.services.condition_effects import release_concentration_effects
 from api.services.wild_shape import absorb_damage, deactivate_other_forms, get_active_form
 from api.services.telegram_notify import notify_party_emergency
@@ -133,6 +134,8 @@ def _hp_state(char: Character, form=None) -> dict:
         "death_saves": dict(char.death_saves or {}),
         "is_dead": char.is_dead,
         "concentrating_spell_id": char.concentrating_spell_id,
+        "active_states": list(char.active_states or []),
+        "damaged": get_turn(char)["damaged"],
         **{k: (char.settings or {}).get(k) for k in _CONC_SETTINGS},
     }
 
@@ -268,7 +271,8 @@ async def update_hp(
         # Privo di sensi (0 PF) => fine concentrazione (RAW)
         if char.current_hit_points == 0:
             end_concentration(char)
-            end_states(char, "unconscious")
+
+        on_damage(char, applied)
 
         # Auto concentration save — only if still conscious and concentrating
         if (
@@ -409,6 +413,8 @@ async def undo_hp(
     if spell_id is not None and not any(s.id == spell_id for s in char.spells):
         spell_id = None
     char.concentrating_spell_id = spell_id
+    char.active_states = list(before.get("active_states") or [])
+    set_damaged(char, before.get("damaged", False))
     await release_concentration_effects(session, char)
     settings = dict(char.settings or {})
     for k in _CONC_SETTINGS:

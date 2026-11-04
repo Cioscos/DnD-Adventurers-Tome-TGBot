@@ -23,6 +23,7 @@ def _default() -> dict:
         "action_used": False, "bonus_used": False, "reaction_used": False,
         "attacks_made": 0, "extra_actions": 0, "once_per_turn": [],
         "spell_slot_cast": False, "bonus_spell_cast": False, "free_interaction_used": False,
+        "damaged": False,
     }
 
 
@@ -88,9 +89,18 @@ def mark_once(char, key: str) -> bool:
 
 
 def reset_turn(char) -> dict:
-    """Nuovo turno: tutto a zero (anche reazione, azioni extra e attacco in sospeso)."""
-    _save(char, _default())
+    """Nuovo turno: tutto a zero (anche reazione, azioni extra e attacco in sospeso).
+
+    ``damaged`` resta: il danno preso fra un turno e l'altro conta a fine turno (Ira 2014)."""
+    _save(char, {**_default(), "damaged": get_turn(char)["damaged"]})
     return char.turn_state
+
+
+def set_damaged(char, value: bool = True) -> None:
+    """Segna (o azzera, dopo la valutazione di fine turno) il danno subito dall'ultimo turno."""
+    st = get_turn(char)
+    if st["damaged"] != value:
+        _save(char, {**st, "damaged": value})
 
 
 def attacks_allowed(char) -> int:

@@ -14,6 +14,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.data.labels import condition_label
+from api.services.rules_turn import set_damaged
 from api.schemas.condition_effects import ConditionEffectRead, PendingSaveRead
 from core.db.models import (
     Character, Combatant, ConditionEffect, Encounter, PendingSave,
@@ -54,6 +55,8 @@ class UndoLog:
     skip_cleared: list[int] = field(default_factory=list)  # effect ids whose save_skip_once was consumed
     # {char_id, prev_rounds, prev_spell_id, prev_item_spell, released_effects: [snapshot]}
     concentration: dict | None = None
+    # {char_id: {active_states, damaged}} dei PG toccati, snapshot prima dell'avanzamento
+    char_states: dict[str, dict] = field(default_factory=dict)
 
     def to_json(self) -> dict:
         return asdict(self)
@@ -118,6 +121,11 @@ async def undo_last_advance(db: AsyncSession, enc: Encounter) -> None:
                 s["concentration_item_spell"] = c["prev_item_spell"]
             char.settings = s
             await _restore_released(db, c.get("released_effects", []), created, new_ids)
+    for cid, snap in log.char_states.items():
+        pc = await db.get(Character, int(cid))
+        if pc is not None:
+            pc.active_states = list(snap["active_states"])
+            set_damaged(pc, snap["damaged"])
     for eid in log.skip_cleared:
         eff = await db.get(ConditionEffect, new_ids.get(eid, eid))
         if eff is not None:

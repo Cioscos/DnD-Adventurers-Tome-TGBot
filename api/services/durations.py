@@ -14,7 +14,7 @@ from api.services.condition_effects import (
 )
 from api.services.effects import _add_history
 from api.services.rules_states import end_states, tick_states
-from api.services.rules_turn import get_turn, reset_turn
+from api.services.rules_turn import get_turn, reset_turn, set_damaged
 
 
 def is_concentrating(char: Character) -> bool:
@@ -121,6 +121,10 @@ async def process_edge(db: AsyncSession, enc: Encounter, combatant: Combatant,
         # owner, or a source that left the fight: falls back to the target's own turn
         return (eff.character_id == char.id) if char is not None else eff.combatant_id == combatant.id
 
+    if char is not None:  # prima di ogni modifica: l'annullamento li rimette com'erano
+        undo.char_states.setdefault(str(char.id), {
+            "active_states": list(char.active_states or []), "damaged": get_turn(char)["damaged"]})
+
     expired: list[str] = []
     rows = (await db.execute(select(ConditionEffect).where(
         ConditionEffect.expiry_edge == edge, ConditionEffect.expiry_count.is_not(None),
@@ -146,8 +150,11 @@ async def process_edge(db: AsyncSession, enc: Encounter, combatant: Combatant,
             expired += await release_concentration_effects(
                 db, char, entry["released_effects"])
 
-    if char is not None and edge == "end" and not get_turn(char)["attacks_made"]:
-        end_states(char, "turn_end_no_attack")
+    if char is not None and edge == "end":
+        st = get_turn(char)
+        if not st["attacks_made"] and not st["damaged"]:
+            end_states(char, "turn_end_inactive")
+        set_damaged(char, False)  # il danno conta una sola valutazione
 
     saves = (await db.execute(select(ConditionEffect).where(
         on_x, ConditionEffect.save_edge == edge, ConditionEffect.save_ability.is_not(None),
