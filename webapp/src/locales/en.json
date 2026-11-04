@@ -815,7 +815,8 @@
       "languages": "Languages",
       "proficiencies": "Proficiencies",
       "damage_modifiers": "Damage Modifiers",
-      "physicality": "Physicality",
+      "movement_senses": "Movement and senses",
+      "biography": "Biography",
       "senses": "Senses",
       "culture": "Culture",
       "resistances": "Resistances",
@@ -831,7 +832,7 @@
       "placeholder_bonds": "Describe your bonds...",
       "placeholder_flaws": "Describe your flaws...",
       "private_badge": "Private info",
-      "private_hint": "Background, ideals, bonds, flaws: visible to the player only.",
+      "private_hint": "Background, traits, ideals, bonds and flaws are visible only to you, unless you show them from Settings.",
       "language_placeholder": "Add language…",
       "proficiencies_armor": "Proficiencies: armor",
       "proficiencies_weapons": "Proficiencies: weapons",
@@ -847,8 +848,19 @@
       "proficiency_placeholder": "Add proficiency…",
       "unsaved_changes": "Unsaved changes",
       "save_now": "Save now",
-      "damage_already_in": "{{type}} is already in another list",
-      "damage_vuln_wins_hint": "A damage type lives in one list only. On the HP page, picking the type applies resistances and immunities automatically.",
+      "damage_vuln_wins_hint": "Res. halves the damage, Imm. removes it, Vul. doubles it. On the Hit Points page, picking the type applies them automatically.",
+      "damage_none": "No modifiers: every type deals normal damage.",
+      "damage_normal": "normal",
+      "damage_custom_title": "Custom types (homebrew)",
+      "save_changes": "Save changes",
+      "name_required": "Your character needs a name.",
+      "distance_invalid": "Enter a number from 0 up.",
+      "draft_restored": "Unsaved changes found.",
+      "draft_discard": "Discard",
+      "leave_title": "Unsaved changes",
+      "leave_body": "If you leave without saving, you lose them.",
+      "leave_save": "Save and leave",
+      "leave_discard": "Leave without saving",
       "damage_custom_placeholder": "Add custom (homebrew)…",
       "damage_custom_hint": "Custom entries: not applied automatically to damage calculation.",
       "resistances_short": "Res.",
@@ -3527,36 +3539,38 @@
         {
           "title": "Save the changes",
           "items": [
-            "When you change a field, the \"Unsaved changes\" alert appears at the top.",
-            "To save immediately, tap \"Save now\" in the alert.",
-            "You can also tap \"Save\" at the bottom of the page.",
-            "WARNING: if you leave the page without saving, you lose the changes."
+            "When you change a field, the \"Save changes\" button appears at the bottom.",
+            "If you leave with unsaved changes, the app asks whether to save or leave without saving.",
+            "If the app closes suddenly, you find your changes the next time you open the page. You can keep them or tap \"Discard\".",
+            "With unsaved changes you cannot swipe to another page: save first, or tap the page name at the top."
           ]
         },
         {
-          "title": "Name and physicality",
+          "title": "Name and movement",
           "items": [
             "To change the character name, type in the \"Name\" field.",
             "Type \"Race\", \"Gender\" and \"Alignment\" as free text.",
             "Type the \"Speed\" in the unit system that you selected in \"Settings\".",
             "Below the speed you see the value converted to the other unit system.",
-            "In the \"Appearance\" box, type age, height, weight, eyes, hair and skin."
+            "To add fly, swim, climb or burrow, turn on its switch and type the distance.",
+            "The name is required and distances start from 0: if a value is not valid, the app takes you to the field to fix."
           ]
         },
         {
           "title": "Senses",
           "items": [
-            "To give a sense to the character, tap \"Darkvision\", \"Blindsight\", \"Truesight\" or \"Tremorsense\".",
+            "To give a sense to the character, turn on the switch of \"Darkvision\", \"Blindsight\", \"Truesight\" or \"Tremorsense\".",
             "When you turn on a sense, the app sets the range to 60 feet (18 meters).",
             "To change the range, type the value in the field next to the sense.",
-            "To remove a sense, tap its name again.",
+            "To remove a sense, turn off its switch.",
             "The active senses appear in the \"Statistics\" section of the main sheet."
           ]
         },
         {
-          "title": "Personality",
+          "title": "Biography",
           "items": [
             "Type \"Background\", \"Personality traits\", \"Ideals\", \"Bonds\" and \"Flaws\".",
+            "Tap \"Appearance\" to open age, height, weight, eyes, hair and skin.",
             "This information is private. Only you see it.",
             "To show it to the GM and the other players in a session, turn on the option in \"Settings\", section \"Privacy\"."
           ]
@@ -3573,10 +3587,10 @@
         {
           "title": "Damage modifiers",
           "items": [
-            "For each list, tap the damage types: \"Resistances\", \"Immunities\" and \"Vulnerabilities\".",
-            "A damage type stays in one list only. If you select it in a different list, the app moves it.",
+            "Each damage type has a row. Tap \"Res.\" for resistance, \"Imm.\" for immunity, \"Vul.\" for vulnerability, or the dash for normal damage.",
+            "Above the rows you see a summary of what is active.",
             "When you apply damage with its type, the app uses these lists automatically.",
-            "For a homebrew type, type it in the \"Add custom (homebrew)…\" field.",
+            "For a homebrew type, open \"Custom types (homebrew)\" and type it in the right list.",
             "The app does not apply custom types automatically.",
             "The modifiers appear as badges on the main sheet."
           ]

@@ -316,13 +316,23 @@ class CharacterUpdate(BaseModel):
     gender: Optional[str] = None
     background: Optional[str] = None
     alignment: Optional[str] = None
-    speed: Optional[int] = None
+    speed: Optional[int] = Field(default=None, ge=0)
     personality: Optional[dict[str, Any]] = None
     languages: Optional[list[str]] = None
     general_proficiencies: Optional[list[str] | dict[str, list[str]]] = None
     damage_modifiers: Optional[dict[str, Any]] = None
     spell_slots_mode: Optional[str] = None
     settings: Optional[dict[str, Any]] = None
+
+    @field_validator("name")
+    @classmethod
+    def _name_not_blank(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        v = v.strip()
+        if not v:
+            raise ValueError("name must not be blank")
+        return v
 
     @field_validator("general_proficiencies")
     @classmethod
