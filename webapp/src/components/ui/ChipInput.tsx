@@ -160,7 +160,7 @@ export default function ChipInput({
                 commit(s)
                 inputRef.current?.focus()
               }}
-              className="px-2 py-1 rounded-full text-xs font-body
+              className="min-h-11 px-3 rounded-full text-xs font-body
                          bg-dnd-chip-bg border border-dnd-gold-dim/30
                          text-dnd-text-muted hover:text-dnd-gold-bright hover:border-dnd-gold/60"
             >

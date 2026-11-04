@@ -43,7 +43,7 @@ export function getGroupInfo(group?: string, page?: string) {
   return { pages, index, total: pages.length }
 }
 
-export function useSwipeNavigation(group?: string, page?: string) {
+export function useSwipeNavigation(group?: string, page?: string, gesturesEnabled = true) {
   const navigate = useNavigate()
   const { id } = useParams<{ id: string }>()
   const { isModalOpen } = useModal()
@@ -77,12 +77,12 @@ export function useSwipeNavigation(group?: string, page?: string) {
     // Gli eventi React risalgono anche dai portal: un drag dentro uno Sheet
     // aperto (figlio di Layout nell'albero) navigava alla pagina accanto.
     const target = e.target as Element | null
-    const blocked = isAnyOverlayOpen() || !!target?.closest?.(NO_PAGE_SWIPE)
+    const blocked = !gesturesEnabled || isAnyOverlayOpen() || !!target?.closest?.(NO_PAGE_SWIPE)
     touchRef.current = {
       startX: touch.clientX, startY: touch.clientY, swiping: false, locked: blocked,
       dragX: 0, translate: 0, dir: 0, lastX: touch.clientX, lastT: performance.now(), velocity: 0,
     }
-  }, [isModalOpen, info])
+  }, [isModalOpen, info, gesturesEnabled])
 
   const onTouchMove = useCallback((e: React.TouchEvent) => {
     if (isModalOpen || !info || settleTimerRef.current) return

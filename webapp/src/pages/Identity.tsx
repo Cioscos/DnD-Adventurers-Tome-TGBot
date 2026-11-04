@@ -1,21 +1,20 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, type ReactNode } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Save, Lock, Share2 } from 'lucide-react'
-import {
-  GiCheckedShield as Shield, GiLightningTrio as Zap,
-  GiFlame as Flame,
-} from 'react-icons/gi'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
-import Surface from '@/components/ui/Surface'
+import Sheet from '@/components/ui/Sheet'
+import SwitchToggle from '@/components/ui/SwitchToggle'
+import ExpandChevron from '@/components/ui/ExpandChevron'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
 import ChipInput from '@/components/ui/ChipInput'
 import Pressable from '@/components/ui/Pressable'
 import { canonicalDamageType, damageTypeLabel } from '@/lib/damageModifier'
 import SectionDivider from '@/components/ui/SectionDivider'
+import { LEDGER_LABEL, LEDGER_ROW } from '@/styles/ledger'
 import { canShareMessage, haptic } from '@/auth/telegram'
 import { useShareMessage } from '@/hooks/useShareMessage'
 import { useUnitSettings, formatLength, oppositeSystem, feetToDisplay, displayToFeet, unitLabel, type UnitSystem } from '@/store/unitSettings'
@@ -66,10 +65,17 @@ type Draft = {
   damageModifiers: DamageModifiers
 }
 
-const DMG_TONES: Record<keyof DamageModifiers, { text: string; icon: typeof Shield }> = {
-  resistances: { text: 'text-dnd-cobalt-bright', icon: Shield },
-  immunities: { text: 'text-dnd-gold-bright', icon: Zap },
-  vulnerabilities: { text: 'text-dnd-crimson-bright', icon: Flame },
+// Stesso significato della Semantic Triad: l'oro è il selezionato neutro, il cobalto
+// protegge, il cremisi è il pericolo. Classi intere perché Tailwind le mantenga.
+const DMG_TEXT: Record<keyof DamageModifiers, string> = {
+  resistances: 'text-dnd-cobalt-bright',
+  immunities: 'text-dnd-gold-bright',
+  vulnerabilities: 'text-dnd-crimson-bright',
+}
+const DMG_TONES: Record<keyof DamageModifiers, string> = {
+  resistances: 'bg-dnd-cobalt/5 border-dnd-cobalt',
+  immunities: 'bg-dnd-gold/20 border-dnd-gold',
+  vulnerabilities: 'bg-dnd-crimson/10 border-dnd-crimson',
 }
 
 const SENSE_TYPES = ['darkvision', 'blindsight', 'truesight', 'tremorsense'] as const
@@ -81,35 +87,28 @@ const toDraft = (list: Ranged[] | undefined, unit: UnitSystem) =>
 const fromDraft = (keys: readonly string[], d: Record<string, string>, unit: UnitSystem) =>
   keys.filter((k) => d[k] !== undefined).map((k) => ({ type: k, range_ft: displayToFeet(Number(d[k]) || 0, unit) }))
 
-/** Toggle per tipo + distanza: usato per sensi e velocità extra. */
-function RangeToggles({ keys, labelKey, values, defaultFt, unitSystem, onChange }: {
-  keys: readonly string[]; labelKey: string; values: Record<string, string>; defaultFt: number
-  unitSystem: UnitSystem; onChange: (next: Record<string, string>) => void
+/** Righe interruttore + distanza: usate per sensi e velocità extra. */
+function RangeToggles({ keys, labelKey, field, values, errors, defaultFt, unitSystem, onChange }: {
+  keys: readonly string[]; labelKey: string; field: string; values: Record<string, string>; errors: Record<string, string>
+  defaultFt: number; unitSystem: UnitSystem; onChange: (next: Record<string, string>) => void
 }) {
   const { t } = useTranslation()
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+    <div className="divide-y divide-dnd-border/60 border-b border-dnd-border/60">
       {keys.map((k) => {
         const on = values[k] !== undefined
         const label = t(`${labelKey}.${k}`)
-        const toggle = () => {
-          const next = { ...values }
-          if (on) delete next[k]
-          else next[k] = String(feetToDisplay(defaultFt, unitSystem))
-          onChange(next)
+        const set = (next: boolean) => {
+          const nextValues = { ...values }
+          if (next) nextValues[k] = String(feetToDisplay(defaultFt, unitSystem))
+          else delete nextValues[k]
+          onChange(nextValues)
         }
         return (
-          <div key={k} className="flex items-center gap-2">
-            <Pressable
-              type="button"
-              onClick={toggle}
-              aria-pressed={on}
-              className={`min-h-11 flex-1 px-3 rounded-xl border text-sm font-body text-left ${
-                on ? 'bg-dnd-gold/20 border-dnd-gold text-dnd-gold-bright' : 'bg-dnd-surface border-dnd-border text-dnd-text'
-              }`}
-            >
-              {label}
-            </Pressable>
+          <div key={k} data-field={`${field}.${k}`} className="flex items-center gap-3 py-1.5">
+            <div className="flex-1 min-w-0">
+              <SwitchToggle checked={on} onChange={set} label={<span className="font-normal text-sm">{label}</span>} aria-label={label} />
+            </div>
             {on && (
               <div className="w-24 shrink-0">
                 <Input
@@ -118,6 +117,7 @@ function RangeToggles({ keys, labelKey, values, defaultFt, unitSystem, onChange 
                   inputMode="decimal"
                   aria-label={`${label} (${unitLabel(unitSystem)})`}
                   value={values[k]}
+                  error={errors[`${field}.${k}`]}
                   onChange={(v) => onChange({ ...values, [k]: v })}
                   trailingAction={<span className="text-dnd-text-muted text-sm font-cinzel pr-1">{unitLabel(unitSystem)}</span>}
                 />
@@ -126,6 +126,25 @@ function RangeToggles({ keys, labelKey, values, defaultFt, unitSystem, onChange 
           </div>
         )
       })}
+    </div>
+  )
+}
+
+/** Riga che apre un gruppo di campi usato di rado. */
+function Disclosure({ title, defaultOpen, children }: { title: string; defaultOpen: boolean; children: ReactNode }) {
+  const [open, setOpen] = useState(defaultOpen)
+  return (
+    <div>
+      <Pressable
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className={`${LEDGER_ROW} !px-0 border-b border-dnd-border/60`}
+      >
+        <span className={LEDGER_LABEL}>{title}</span>
+        <ExpandChevron open={open} />
+      </Pressable>
+      {open && <div className="mt-3 space-y-3">{children}</div>}
     </div>
   )
 }
@@ -142,6 +161,30 @@ function snapshot(d: Draft): string {
   return JSON.stringify(d)
 }
 
+// La bozza sopravvive se Telegram chiude la Mini App a metà modifica. Le distanze sono
+// nell'unità corrente: con un'altra unità la bozza non vale più.
+const draftKey = (charId: number) => `identity-draft-${charId}`
+
+function readStoredDraft(charId: number, unit: UnitSystem): Partial<Draft> | null {
+  try {
+    const stored = JSON.parse(localStorage.getItem(draftKey(charId)) ?? 'null')
+    return stored?.unit === unit ? stored.draft : null
+  } catch {
+    return null
+  }
+}
+
+function writeStoredDraft(charId: number, unit: UnitSystem, draft: Draft | null) {
+  try {
+    if (draft) localStorage.setItem(draftKey(charId), JSON.stringify({ unit, draft }))
+    else localStorage.removeItem(draftKey(charId))
+  } catch {
+    // Storage pieno o negato: si perde solo la protezione dalle interruzioni.
+  }
+}
+
+const invalidDistance = (v: string) => v.trim() === '' || !(Number(v) >= 0)
+
 export default function Identity() {
   const { id } = useParams<{ id: string }>()
   const charId = Number(id)
@@ -150,6 +193,10 @@ export default function Identity() {
   const qc = useQueryClient()
   const [draft, setDraft] = useState<Draft | null>(null)
   const [pristine, setPristine] = useState<string>('')
+  const [restored, setRestored] = useState(false)
+  // Gli errori compaiono al primo tentativo di salvare, poi seguono la bozza.
+  const [showErrors, setShowErrors] = useState(false)
+  const [leaving, setLeaving] = useState<(() => void) | null>(null)
   const unitSystem = useUnitSettings((s) => s.system)
 
   const { data: char } = useQuery({
@@ -183,11 +230,18 @@ export default function Identity() {
           vulnerabilities: normalizeDmg(raw.vulnerabilities),
         },
       }
-      setDraft(initial)
+      const stored = readStoredDraft(charId, unitSystem)
+      const start = stored ? { ...initial, ...stored } : initial
+      setDraft(start)
       setPristine(snapshot(initial))
+      setRestored(snapshot(start) !== snapshot(initial))
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [char])
+
+  useEffect(() => {
+    if (draft) writeStoredDraft(charId, unitSystem, snapshot(draft) !== pristine ? draft : null)
+  }, [draft, pristine, charId, unitSystem])
 
   const shareCard = useShareMessage(() => api.share.card(charId))
 
@@ -200,7 +254,7 @@ export default function Identity() {
         gender: draft.gender.trim() || null,
         background: draft.background.trim() || null,
         alignment: draft.alignment.trim() || null,
-        speed: displayToFeet(Number(draft.speed) || 0, unitSystem) || 30,
+        speed: displayToFeet(Number(draft.speed), unitSystem),
         // personality is replaced server-side: keep every existing key.
         personality: {
           ...char?.personality,
@@ -225,6 +279,7 @@ export default function Identity() {
       qc.setQueryData(['character', charId], updated)
       haptic.success()
       if (draft) setPristine(snapshot(draft))
+      setShowErrors(false)
     },
   })
 
@@ -238,17 +293,58 @@ export default function Identity() {
 
   const dirty = snapshot(draft) !== pristine
 
+  const findErrors = (d: Draft): Record<string, string> => {
+    const found: Record<string, string> = {}
+    if (!d.name.trim()) found.name = t('character.identity.name_required')
+    if (invalidDistance(d.speed)) found.speed = t('character.identity.distance_invalid')
+    for (const [field, values] of [['speeds', d.speeds], ['senses', d.senses]] as const) {
+      for (const [k, v] of Object.entries(values)) {
+        if (invalidDistance(v)) found[`${field}.${k}`] = t('character.identity.distance_invalid')
+      }
+    }
+    return found
+  }
+  const errors = showErrors ? findErrors(draft) : {}
+
+  const save = (then?: () => void) => {
+    const firstInvalid = Object.keys(findErrors(draft))[0]
+    if (firstInvalid) {
+      setShowErrors(true)
+      setLeaving(null)
+      // Dopo il render, quando l'errore è in pagina.
+      requestAnimationFrame(() => {
+        const field = document.querySelector(`[data-field="${firstInvalid}"]`)
+        field?.scrollIntoView({ block: 'center' })
+        field?.querySelector('input')?.focus({ preventScroll: true })
+      })
+      return
+    }
+    mutation.mutate(undefined, { onSuccess: () => then?.() })
+  }
+
+  const discard = () => {
+    setDraft(JSON.parse(pristine) as Draft)
+    setRestored(false)
+    setShowErrors(false)
+  }
+
+  const leaveWithoutSaving = () => {
+    const proceed = leaving
+    writeStoredDraft(charId, unitSystem, null)
+    setLeaving(null)
+    proceed?.()
+  }
+
   const set = (key: keyof Draft) => (v: string) =>
     setDraft((d) => d ? { ...d, [key]: v } : d)
 
-  // Un tipo sta in una sola lista: sceglierlo altrove lo sposta.
-  const toggleDmg = (key: keyof DamageModifiers, slug: string) =>
+  // null = nessuna lista. Una riga per tipo: non può stare in due liste.
+  const setDmg = (slug: string, key: keyof DamageModifiers | null) =>
     setDraft((d) => {
       if (!d) return d
-      const had = d.damageModifiers[key].includes(slug)
       const next = { ...d.damageModifiers }
       for (const k of DMG_KEYS) next[k] = next[k].filter((v) => v !== slug)
-      if (!had) next[key] = [...next[key], slug]
+      if (key) next[key] = [...next[key], slug]
       return { ...d, damageModifiers: next }
     })
 
@@ -275,133 +371,197 @@ export default function Identity() {
     { key: 'flaws' as const, label: t('character.identity.flaws') },
   ]
 
+  const sectionTitle = '!pl-0 !text-sm !text-dnd-gold-bright'
+  const hasCustomDmg = DMG_KEYS.some((k) => draft.damageModifiers[k].some((v) => !DMG_SLUGS.includes(v)))
+  const activeDmg = DMG_KEYS.filter((k) => draft.damageModifiers[k].length > 0)
+
   return (
-    <Layout title={t('character.identity.title')} backTo={`/char/${charId}`} group="character" page="identity">
-      {/* Avviso, non pericolo: ambra (Candle Amber), non la variante ember che
-          il giocatore legge come crisi HP (Semantic Triad). */}
-      {dirty && (
-        <Surface
-          variant="elevated"
-          className="sticky top-[calc(var(--crumb-offset,0px)+0.5rem)] z-20 flex items-center justify-between gap-3 !py-2.5 !px-3 !border-dnd-amber/60"
+    <Layout
+      title={t('character.identity.title')}
+      backTo={`/char/${charId}`}
+      group="character"
+      page="identity"
+      leaveGuard={dirty ? (proceed) => setLeaving(() => proceed) : undefined}
+      bottomAction={dirty ? (
+        <Button
+          variant="primary"
+          size="lg"
+          fullWidth
+          onClick={() => save()}
+          loading={mutation.isPending}
+          icon={<Save size={20} />}
+          haptic="success"
         >
-          <span className="text-xs font-body text-dnd-text">
-            {t('character.identity.unsaved_changes')}
-          </span>
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={() => mutation.mutate()}
-            loading={mutation.isPending}
-            icon={<Save size={14} />}
-            haptic="success"
-          >
-            {t('character.identity.save_now')}
-          </Button>
-        </Surface>
+          {t('character.identity.save_changes')}
+        </Button>
+      ) : undefined}
+    >
+      {restored && dirty && (
+        <div className="flex items-center justify-between gap-3 border-b border-dnd-amber/60 pb-2">
+          <span className="text-sm font-body text-dnd-text">{t('character.identity.draft_restored')}</span>
+          <Button variant="ghost" size="sm" onClick={discard}>{t('character.identity.draft_discard')}</Button>
+        </div>
       )}
 
-      {/* Hero name */}
-      <div>
+      <div data-field="name">
         <Input
           label={t('character.identity.name')}
           value={draft.name}
           onChange={set('name')}
+          error={errors.name}
           className="[&_input]:text-xl [&_input]:font-display [&_input]:font-bold"
         />
       </div>
 
-      {/* Physicality */}
-      <SectionDivider>
-        {t('character.identity.physicality')}
-      </SectionDivider>
-
-      <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-        <div>
-          <Input label={t('character.identity.race')} value={draft.race} onChange={set('race')} placeholder={t('character.identity.placeholder_race')} />
-        </div>
-        <div>
-          <Input label={t('character.identity.gender')} value={draft.gender} onChange={set('gender')} placeholder={t('character.identity.placeholder_gender')} />
-        </div>
-        <div className="max-xs:col-span-2">
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
+        <Input label={t('character.identity.race')} value={draft.race} onChange={set('race')} placeholder={t('character.identity.placeholder_race')} />
+        <Input label={t('character.identity.gender')} value={draft.gender} onChange={set('gender')} placeholder={t('character.identity.placeholder_gender')} />
+        <div className="col-span-2 md:col-span-1">
           <Input label={t('character.identity.alignment')} value={draft.alignment} onChange={set('alignment')} placeholder={t('character.identity.placeholder_alignment')} />
         </div>
-        <div className="max-xs:col-span-2">
-          <Input
-            label={t('character.identity.speed')}
-            type="number"
-            min={0}
-            value={draft.speed}
-            onChange={set('speed')}
-            inputMode="decimal"
-            trailingAction={
-              <span className="text-dnd-text-muted text-sm font-cinzel pr-1">
-                {unitLabel(unitSystem)}
-              </span>
-            }
-          />
-          {Number(draft.speed) > 0 && (
-            <p className="mt-1 text-xs font-mono text-dnd-text-faint tabular-nums">
-              ≈ {formatLength(displayToFeet(Number(draft.speed) || 0, unitSystem), oppositeSystem(unitSystem))}
-            </p>
-          )}
-        </div>
       </div>
 
-      {/* Appearance */}
-      <div className="mt-3 space-y-3">
-        <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim">
-          {t('character.identity.appearance')}
-        </p>
-        <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
-          {APPEARANCE_KEYS.map((k) => (
-            <Input
-              key={k}
-              label={t(`character.identity.appearance_${k}`)}
-              value={draft.appearance[k]}
-              onChange={(v) => setDraft((d) => d ? { ...d, appearance: { ...d.appearance, [k]: v } } : d)}
-            />
-          ))}
-        </div>
-      </div>
-
-      {/* Senses */}
-      <div className="mt-3 space-y-2">
-        <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim">
-          {t('character.identity.senses')}
-        </p>
-        <RangeToggles
-          keys={SENSE_TYPES} labelKey="character.senses" values={draft.senses} defaultFt={60} unitSystem={unitSystem}
-          onChange={(senses) => setDraft((d) => d ? { ...d, senses } : d)}
-        />
-      </div>
-
-      {/* Other speeds */}
-      <div className="mt-3 space-y-2">
-        <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim">
-          {t('character.identity.other_speeds')}
-        </p>
-        <RangeToggles
-          keys={SPEED_TYPES} labelKey="character.speeds" values={draft.speeds} defaultFt={30} unitSystem={unitSystem}
-          onChange={(speeds) => setDraft((d) => d ? { ...d, speeds } : d)}
-        />
-      </div>
-
-      {/* Personality */}
-      <SectionDivider>
-        {t('character.identity.personality')}
+      {/* In gioco: movimento e sensi */}
+      <SectionDivider className={sectionTitle}>
+        {t('character.identity.movement_senses')}
       </SectionDivider>
 
-      <div className="flex flex-col gap-1 px-1 text-dnd-gold-dim">
-        <div className="flex items-center gap-1">
-          <Lock size={10} />
-          <span className="text-xs font-cinzel uppercase tracking-wider">
-            {t('character.identity.private_badge')}
-          </span>
-        </div>
-        <p className="text-xs text-dnd-text-faint font-body italic">
-          {t('character.identity.private_hint')}
-        </p>
+      <div data-field="speed">
+        <Input
+          label={t('character.identity.speed')}
+          type="number"
+          min={0}
+          value={draft.speed}
+          onChange={set('speed')}
+          error={errors.speed}
+          inputMode="decimal"
+          trailingAction={
+            <span className="text-dnd-text-muted text-sm font-cinzel pr-1">
+              {unitLabel(unitSystem)}
+            </span>
+          }
+        />
+        {Number(draft.speed) > 0 && (
+          <p className="mt-1 text-xs font-mono text-dnd-text-faint tabular-nums">
+            ≈ {formatLength(displayToFeet(Number(draft.speed) || 0, unitSystem), oppositeSystem(unitSystem))}
+          </p>
+        )}
       </div>
+
+      <RangeToggles
+        keys={SPEED_TYPES} labelKey="character.speeds" field="speeds" values={draft.speeds} errors={errors} defaultFt={30} unitSystem={unitSystem}
+        onChange={(speeds) => setDraft((d) => d ? { ...d, speeds } : d)}
+      />
+
+      <p className={`mt-4 ${LEDGER_LABEL}`}>{t('character.identity.senses')}</p>
+      <RangeToggles
+        keys={SENSE_TYPES} labelKey="character.senses" field="senses" values={draft.senses} errors={errors} defaultFt={60} unitSystem={unitSystem}
+        onChange={(senses) => setDraft((d) => d ? { ...d, senses } : d)}
+      />
+
+      {/* In gioco: modificatori del danno */}
+      <SectionDivider className={sectionTitle}>
+        {t('character.identity.damage_modifiers')}
+      </SectionDivider>
+
+      <p className="text-sm font-body text-dnd-text">
+        {activeDmg.length === 0 ? t('character.identity.damage_none') : activeDmg.map((k) => (
+          <span key={k} className="block">
+            <span className={`font-semibold ${DMG_TEXT[k]}`}>{t(`character.identity.${k}`)}: </span>
+            {draft.damageModifiers[k].map((v) => (DMG_SLUGS.includes(v) ? damageTypeLabel(t, v) : v)).join(', ')}
+          </span>
+        ))}
+      </p>
+      <p className="text-xs text-dnd-text-faint italic">{t('character.identity.damage_vuln_wins_hint')}</p>
+
+      <div className="divide-y divide-dnd-border/60 border-y border-dnd-border/60">
+        {DMG_SLUGS.map((slug) => {
+          const label = damageTypeLabel(t, slug)
+          const current = DMG_KEYS.find((k) => draft.damageModifiers[k].includes(slug)) ?? null
+          const choose = (key: keyof DamageModifiers | null) => { setDmg(slug, key); haptic.selection() }
+          const cell = 'h-11 w-11 shrink-0 rounded-lg border text-xs font-cinzel transition-colors'
+          const idle = 'border-dnd-border text-dnd-text-muted'
+          return (
+            <div key={slug} className="flex items-center justify-between gap-2 py-0.5">
+              <span className="min-w-0 text-sm font-body text-dnd-text">{label}</span>
+              <div className="flex gap-1 shrink-0" role="group" aria-label={label}>
+                <Pressable
+                  type="button"
+                  onClick={() => choose(null)}
+                  aria-pressed={current === null}
+                  aria-label={`${label}: ${t('character.identity.damage_normal')}`}
+                  className={`${cell} ${current === null ? 'border-dnd-border-strong bg-dnd-surface-raised text-dnd-text' : idle}`}
+                >
+                  –
+                </Pressable>
+                {DMG_KEYS.map((key) => (
+                  <Pressable
+                    key={key}
+                    type="button"
+                    onClick={() => choose(key)}
+                    aria-pressed={current === key}
+                    aria-label={`${label}: ${t(`character.identity.${key}`)}`}
+                    className={`${cell} ${current === key ? `${DMG_TONES[key]} ${DMG_TEXT[key]}` : idle}`}
+                  >
+                    {t(`character.identity.${key}_short`)}
+                  </Pressable>
+                ))}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      <Disclosure title={t('character.identity.damage_custom_title')} defaultOpen={hasCustomDmg}>
+        {DMG_KEYS.map((key) => {
+          const customs = draft.damageModifiers[key].filter((v) => !DMG_SLUGS.includes(v))
+          return (
+            <ChipInput
+              key={key}
+              label={t(`character.identity.${key}`)}
+              values={customs}
+              onChange={(next) => setCustomDmg(key, next)}
+              placeholder={t('character.identity.damage_custom_placeholder')}
+              hint={customs.length ? t('character.identity.damage_custom_hint') : undefined}
+            />
+          )
+        })}
+      </Disclosure>
+
+      {/* Culture */}
+      <SectionDivider className={sectionTitle}>
+        {t('character.identity.culture')}
+      </SectionDivider>
+
+      <ChipInput
+        label={t('character.identity.languages')}
+        values={draft.languages}
+        onChange={(next) => setDraft((d) => d ? { ...d, languages: next } : d)}
+        placeholder={t('character.identity.language_placeholder')}
+        splitOnComma
+        suggestions={LANGUAGE_SUGGESTIONS}
+      />
+      {PROF_KEYS.map((k) => (
+        <ChipInput
+          key={k}
+          label={t(`character.identity.proficiencies_${k}`)}
+          values={draft.general_proficiencies[k]}
+          onChange={(next) => setDraft((d) => d ? { ...d, general_proficiencies: { ...d.general_proficiencies, [k]: next } } : d)}
+          placeholder={t('character.identity.proficiency_placeholder')}
+          splitOnComma
+          suggestions={k === 'other' ? undefined : profSuggestions[k]}
+        />
+      ))}
+
+      {/* Biografia */}
+      <SectionDivider className={sectionTitle}>
+        {t('character.identity.biography')}
+      </SectionDivider>
+
+      <p className="flex items-start gap-1.5 text-xs text-dnd-text-faint font-body italic">
+        <Lock size={12} className="mt-0.5 shrink-0" />
+        {t('character.identity.private_hint')}
+      </p>
 
       <Input
         label={t('character.identity.background')}
@@ -418,120 +578,54 @@ export default function Identity() {
             variant="textarea"
             value={draft[key] as string}
             onChange={set(key)}
-            rows={3}
+            rows={2}
             placeholder={t(`character.identity.placeholder_${key}`)}
+            // Parte bassa e cresce col testo; dove field-sizing non c'è resta ridimensionabile a mano.
+            className="[&_textarea]:min-h-[72px] [&_textarea]:[field-sizing:content]"
           />
         ))}
       </div>
 
-      {/* Culture */}
-      <SectionDivider>
-        {t('character.identity.culture')}
-      </SectionDivider>
-
-      <div>
-        <ChipInput
-          label={t('character.identity.languages')}
-          values={draft.languages}
-          onChange={(next) => setDraft((d) => d ? { ...d, languages: next } : d)}
-          placeholder={t('character.identity.language_placeholder')}
-          splitOnComma
-          suggestions={LANGUAGE_SUGGESTIONS}
-        />
-      </div>
-      {PROF_KEYS.map((k) => (
-        <div key={k}>
-          <ChipInput
-            label={t(`character.identity.proficiencies_${k}`)}
-            values={draft.general_proficiencies[k]}
-            onChange={(next) => setDraft((d) => d ? { ...d, general_proficiencies: { ...d.general_proficiencies, [k]: next } } : d)}
-            placeholder={t('character.identity.proficiency_placeholder')}
-            splitOnComma
-            suggestions={k === 'other' ? undefined : profSuggestions[k]}
-          />
-        </div>
-      ))}
-
-      {/* Damage Modifiers */}
-      <SectionDivider>
-        {t('character.identity.damage_modifiers')}
-      </SectionDivider>
-
-      <p className="px-1 text-xs text-dnd-text-faint italic">
-        {t('character.identity.damage_vuln_wins_hint')}
-      </p>
-
-      <div>
-        <div className="space-y-4">
-          {DMG_KEYS.map((key) => {
-            const customs = draft.damageModifiers[key].filter((v) => !DMG_SLUGS.includes(v))
-            const tone = DMG_TONES[key]
-            const ToneIcon = tone.icon
-            return (
-              <div key={key}>
-                <div className="flex items-center gap-2 mb-2">
-                  <ToneIcon size={12} className={tone.text} />
-                  <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim">
-                    {t(`character.identity.${key}`)}
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {DMG_SLUGS.map((slug) => {
-                    const on = draft.damageModifiers[key].includes(slug)
-                    return (
-                      <Pressable
-                        key={slug}
-                        onClick={() => { toggleDmg(key, slug); haptic.selection() }}
-                        aria-pressed={on}
-                        className={`min-h-[44px] px-3 rounded-xl border text-sm font-medium transition-colors
-                          ${on
-                            ? 'bg-dnd-gold/20 border-dnd-gold text-dnd-gold-bright'
-                            : 'bg-dnd-surface-raised text-dnd-text border-dnd-border'}`}
-                      >
-                        {damageTypeLabel(t, slug)}
-                      </Pressable>
-                    )
-                  })}
-                </div>
-                <ChipInput
-                  className="mt-2"
-                  values={customs}
-                  onChange={(next) => setCustomDmg(key, next)}
-                  placeholder={t('character.identity.damage_custom_placeholder')}
-                  hint={customs.length ? t('character.identity.damage_custom_hint') : undefined}
-                />
-              </div>
-            )
-          })}
-        </div>
-      </div>
-
-      <Button
-        variant="primary"
-        size="lg"
-        fullWidth
-        onClick={() => mutation.mutate()}
-        loading={mutation.isPending}
-        disabled={!dirty}
-        icon={<Save size={18} />}
-        haptic="success"
+      <Disclosure
+        title={t('character.identity.appearance')}
+        defaultOpen={APPEARANCE_KEYS.some((k) => draft.appearance[k].trim() !== '')}
       >
-        {t('common.save')}
-      </Button>
+        <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
+          {APPEARANCE_KEYS.map((k) => (
+            <Input
+              key={k}
+              label={t(`character.identity.appearance_${k}`)}
+              value={draft.appearance[k]}
+              onChange={(v) => setDraft((d) => d ? { ...d, appearance: { ...d.appearance, [k]: v } } : d)}
+            />
+          ))}
+        </div>
+      </Disclosure>
 
       {canShareMessage() && (
         <Button
-          variant="secondary"
-          size="lg"
+          variant="ghost"
           fullWidth
           onClick={() => shareCard.mutate()}
           loading={shareCard.isPending}
-          icon={<Share2 size={18} />}
+          icon={<Share2 size={16} />}
           haptic="light"
         >
           {t('share.card')}
         </Button>
       )}
+
+      <Sheet open={leaving !== null} onClose={() => setLeaving(null)} title={t('character.identity.leave_title')}>
+        <div className="p-5 space-y-3">
+          <p className="text-center font-body text-dnd-text">{t('character.identity.leave_body')}</p>
+          <Button variant="primary" size="lg" fullWidth loading={mutation.isPending} icon={<Save size={20} />} haptic="success" onClick={() => save(leaveWithoutSaving)}>
+            {t('character.identity.leave_save')}
+          </Button>
+          <Button variant="danger" fullWidth disabled={mutation.isPending} onClick={leaveWithoutSaving}>
+            {t('character.identity.leave_discard')}
+          </Button>
+        </div>
+      </Sheet>
     </Layout>
   )
 }

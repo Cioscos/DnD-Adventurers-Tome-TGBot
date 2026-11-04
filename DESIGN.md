@@ -314,6 +314,7 @@ The default for reference data and navigation lists: the page reads like a chara
 - **Depleted:** a spent row drops to `text-dnd-text-faint`. Never lower its opacity: that pushes the text under the contrast floor.
 - **Classes:** `webapp/src/styles/ledger.ts` holds the shared row, label and title classes.
 - **Affordance:** a row that does something other than open a page says so with a glyph (the die on Initiative rolls).
+- **Identity edits as ruled rows:** mechanics come before biography. Each damage type is one row with a `– / Res / Imm / Vul` selector; senses and extra speeds are switch rows. Form inputs keep their fields, and rarely used groups stay behind a row that opens them.
 - **The history timeline is not a ledger:** Cronologia keeps its gold line and icon medallions, a choice made by the owner. It is the one list where sequence is the content, and the line is its signature.
 - **The hub's spell slot summary is a ruled grid:** nine columns, level above and slots left below, a layout chosen by the owner. Rules only, no frame or fill.
 - **Where a frame stays:** an opened spell or item, the result of a roll, the dice tray, the combatant card, dialogs and sheets, and states that need attention (dying, dead, concentration, unsaved changes). Everything else is rows.
