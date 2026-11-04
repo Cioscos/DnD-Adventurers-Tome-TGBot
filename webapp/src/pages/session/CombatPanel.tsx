@@ -312,7 +312,7 @@ export default function CombatPanel({ live, sessionId, amGm, myUserId }: Props) 
 
         <div
           data-testid="combat-scroll"
-          className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 py-3 space-y-1.5"
+          className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 py-3"
         >
           {tracked.map((c) => (
             <CombatantRow

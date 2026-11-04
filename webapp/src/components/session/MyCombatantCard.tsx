@@ -1,3 +1,4 @@
+import HPGauge from '@/components/ui/HPGauge'
 import { useTranslation } from 'react-i18next'
 import { ChevronRight } from 'lucide-react'
 import {
@@ -24,7 +25,6 @@ export default function MyCombatantCard({ combatant: c, snapshot: s, isMyTurn, t
   const { t } = useTranslation()
   const max = s?.hit_points ?? null
   const cur = s?.current_hit_points ?? null
-  const pct = max && max > 0 ? Math.max(0, Math.min(100, Math.round(((cur ?? 0) / max) * 100))) : 0
   const down = c.is_dead || (max !== null && (cur ?? 0) <= 0)
   const endOfTurnSaves = (s?.condition_effects ?? []).filter(
     (e) => e.save_edge === 'end' && e.save_ability && e.save_dc != null,
@@ -37,7 +37,7 @@ export default function MyCombatantCard({ combatant: c, snapshot: s, isMyTurn, t
       className={`rounded-xl border p-3.5 bg-dnd-surface-raised transition-all
         ${isMyTurn
           ? 'border-dnd-gold ring-2 ring-dnd-gold-bright/40 shadow-dnd-glow'
-          : 'border-dnd-cobalt-bright/70'}`}
+          : 'border-dnd-border'}`}
     >
       <div className="flex items-baseline justify-between gap-2">
         <p className="min-w-0 font-display font-bold text-lg text-dnd-text break-words">
@@ -75,11 +75,8 @@ export default function MyCombatantCard({ combatant: c, snapshot: s, isMyTurn, t
               </span>
             )}
           </div>
-          <div className="mt-1.5 h-1.5 w-full rounded-full bg-dnd-surface overflow-hidden">
-            <div
-              className="h-full bg-gradient-to-r from-dnd-crimson via-dnd-amber to-dnd-emerald-bright"
-              style={{ width: `${pct}%` }}
-            />
+          <div className="mt-1.5">
+            <HPGauge current={cur ?? 0} max={max} temp={s?.temp_hp ?? 0} size="md" />
           </div>
         </>
       ) : null}

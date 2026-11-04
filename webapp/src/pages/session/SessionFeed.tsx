@@ -7,7 +7,6 @@ import { GiCrown as Crown } from 'react-icons/gi'
 import { toast } from 'sonner'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { api, ApiError } from '@/api/client'
-import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
 import Pressable from '@/components/ui/Pressable'
 import LoreViewModal from '@/pages/campaign/LoreViewModal'
@@ -508,7 +507,7 @@ export default function SessionFeed({
               ${isWhisper
                 ? 'bg-dnd-amber/15 border border-dnd-amber/40 italic'
                 : mine
-                  ? 'ml-auto bg-gradient-gold text-dnd-ink'
+                  ? 'ml-auto bg-dnd-gold/20 border border-dnd-gold-dim text-dnd-text'
                   : 'bg-dnd-surface border border-dnd-border text-dnd-text'}
               ${mine && isWhisper ? 'ml-auto' : ''}`
 
@@ -632,7 +631,7 @@ export default function SessionFeed({
   }
 
   return (
-    <Surface variant="elevated" className="relative">
+    <div className="relative">
       <div className="flex items-center justify-end mb-1">
         <Pressable
           onClick={() => setFullscreen(true)}
@@ -644,6 +643,6 @@ export default function SessionFeed({
         </Pressable>
       </div>
       {chatBody}
-    </Surface>
+    </div>
   )
 }

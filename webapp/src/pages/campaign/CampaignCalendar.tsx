@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Check, CalendarClock, Ban, ChevronLeft, ChevronRight, Plus } from 'lucide-react'
-import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
 import Pressable from '@/components/ui/Pressable'
 import SectionDivider from '@/components/ui/SectionDivider'
@@ -78,7 +77,7 @@ export default function CampaignCalendar({ campaignId, isGm, sessions }: { campa
   return (
     <>
       <SectionDivider>{t('campaign.calendar.title')}</SectionDivider>
-      <Surface variant="elevated">
+      <section>
         <div className="flex items-center justify-between gap-2">
           <Button variant="secondary" size="sm" className="min-w-11" aria-label={t('campaign.calendar.prev')} icon={<ChevronLeft size={16} />} onClick={() => move(-1)} />
           <p className="font-display font-bold text-dnd-gold-bright capitalize text-center">{fmt({ month: 'long', year: 'numeric' }, first)}</p>
@@ -158,7 +157,7 @@ export default function CampaignCalendar({ campaignId, isGm, sessions }: { campa
             </Button>
           </div>
         )}
-      </Surface>
+      </section>
 
       <ScheduleSheet
         open={editing !== null}
