@@ -153,6 +153,18 @@ describe('Conditions page', () => {
     await waitFor(() => expect(updateConditions).toHaveBeenCalledWith(5, { exhaustion: 3 }))
   })
 
+  it('the lethal exhaustion level asks for confirmation before the PATCH', async () => {
+    getChar.mockResolvedValue({ id: 5, conditions: { exhaustion: 5 } })
+    listRules.mockResolvedValue([])
+    updateConditions.mockResolvedValue({ id: 5, conditions: { exhaustion: 6 } })
+    renderWithProviders(<Conditions />)
+    await screen.findByText('character.conditions.blinded')
+    await userEvent.click(screen.getByRole('button', { name: '6' }))
+    expect(updateConditions).not.toHaveBeenCalled()
+    await userEvent.click(await screen.findByText('character.conditions.exhaustion_lethal_confirm'))
+    await waitFor(() => expect(updateConditions).toHaveBeenCalledWith(5, { exhaustion: 6 }))
+  })
+
   it('reset-all clears the 14 standard conditions + exhaustion via the confirm sheet', async () => {
     getChar.mockResolvedValue({ id: 5, conditions: { blinded: true } })
     listRules.mockResolvedValue([])

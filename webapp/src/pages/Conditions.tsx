@@ -107,6 +107,7 @@ export default function Conditions() {
   const [showExhaustionDetails, setShowExhaustionDetails] = useState(false)
   const [filterActive, setFilterActive] = useState(false)
   const [confirmResetOpen, setConfirmResetOpen] = useState(false)
+  const [confirmLethalOpen, setConfirmLethalOpen] = useState(false)
   // Durata in round assegnata alle prossime condizioni attivate (null = fino a fine).
   const [nextDuration, setNextDuration] = useState<number | null>(null)
   const tick = useTickRound(charId)
@@ -216,6 +217,12 @@ export default function Conditions() {
   }
 
   const setExhaustion = (level: number) => {
+    // Il livello 6 uccide: un tocco sbagliato non deve costare il personaggio.
+    if (level === 6 && currentExhaustion < 6 && !confirmLethalOpen) {
+      setConfirmLethalOpen(true)
+      return
+    }
+    setConfirmLethalOpen(false)
     setPendingExhaustion(level)
     mutation.mutate({ conditions: { ...conditions, exhaustion: level } })
   }
@@ -583,6 +590,17 @@ export default function Conditions() {
           onClose={() => setDetailKey(null)}
         />
       )}
+
+      <ConfirmSheet
+        open={confirmLethalOpen}
+        onClose={() => setConfirmLethalOpen(false)}
+        title={t('character.conditions.exhaustion_condition', { context: char.rules_edition })}
+        body={t('character.conditions.exhaustion_lethal_body')}
+        confirmLabel={t('character.conditions.exhaustion_lethal_confirm')}
+        cancelLabel={t('common.cancel')}
+        onConfirm={() => setExhaustion(6)}
+        loading={mutation.isPending}
+      />
 
       <ConfirmSheet
         open={confirmResetOpen}

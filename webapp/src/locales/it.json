@@ -773,6 +773,8 @@
       "filter_all": "Tutte",
       "filter_active": "Attive",
       "reset_all": "Ripristina tutte",
+      "exhaustion_lethal_body": "Il livello 6 uccide il personaggio. Potrai riportarlo in vita dalla pagina dei PF.",
+      "exhaustion_lethal_confirm": "Conferma la morte",
       "reset_all_confirm": "Azzerare tutte le condizioni e l'affaticamento?",
       "empty_hint": "Tocca una condizione per attivarla.",
       "detail_aria": "Mostra dettagli condizione",

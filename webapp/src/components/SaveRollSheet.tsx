@@ -155,7 +155,7 @@ export default function SaveRollSheet({ charId, saves: live, onClose }: Props) {
             >
               {t(view.res.passed ? 'pendingSaves.passed' : 'pendingSaves.failed', { condition: cond })}
             </p>
-            <RollNotes notes={view.res.roll.notes} autoFail={view.res.roll.auto_fail} className="text-center" />
+            <RollNotes notes={view.res.roll.notes} autoFail={view.res.roll.auto_fail} className="text-center" charId={charId} />
             {!view.res.passed && (
               <InspirationRerollButton
                 available={!!char?.heroic_inspiration}

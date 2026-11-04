@@ -774,6 +774,8 @@
       "filter_all": "All",
       "filter_active": "Active",
       "reset_all": "Reset all",
+      "exhaustion_lethal_body": "Level 6 kills the character. You can bring them back from the HP page.",
+      "exhaustion_lethal_confirm": "Confirm death",
       "reset_all_confirm": "Reset every condition and exhaustion level?",
       "empty_hint": "Tap a condition to activate it.",
       "detail_aria": "Show condition details",

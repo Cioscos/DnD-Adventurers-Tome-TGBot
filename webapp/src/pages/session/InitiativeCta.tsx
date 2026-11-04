@@ -18,7 +18,7 @@ export default function InitiativeCta({ sessionId, combatant }: Props) {
   const { t } = useTranslation()
   const qc = useQueryClient()
   const rollD20 = useD20Roll()
-  const noteLabels = useRollNoteLabels()
+  const noteLabels = useRollNoteLabels(combatant.character_id ?? undefined)
 
   const rollMutation = useMutation({
     mutationFn: async (mode: RollMode) =>
