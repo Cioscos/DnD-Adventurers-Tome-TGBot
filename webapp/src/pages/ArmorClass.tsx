@@ -95,19 +95,16 @@ export default function ArmorClass() {
     )
   }
 
-  const equippedBodyArmor = char.items?.find(
-    (i) => i.is_equipped && i.equipment_slot === 'body' && i.item_type === 'armor',
-  ) ?? null
+  // Come `_worn` del backend: un'armatura legacy senza slot conta ancora come indossata.
+  const wornArmor = char.items?.filter((i) => i.is_equipped && i.item_type === 'armor') ?? []
+  const equippedBodyArmor = wornArmor.find((i) => i.equipment_slot) ?? wornArmor[0] ?? null
   const equippedShield = char.items?.find(
     (i) => i.is_equipped && i.equipment_slot === 'off_hand' && i.item_type === 'shield',
   ) ?? null
 
   const unarmoredAbility = char.unarmored_defense_ability ?? null
   const unarmoredActive = unarmoredAbility !== null
-  const abilityMod = (name: string) => {
-    const v = char.ability_scores?.find((a) => a.name === name)?.value ?? 10
-    return Math.floor((v - 10) / 2)
-  }
+  const abilityMod = (name: string) => char.ability_scores?.find((a) => a.name === name)?.modifier ?? 0
   // Come il backend: mai peggio di 10 + DES, anche con la seconda caratteristica negativa.
   const unarmoredPreview = (ability: 'wisdom' | 'constitution') =>
     10 + abilityMod('dexterity') + Math.max(0, abilityMod(ability))

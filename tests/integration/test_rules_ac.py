@@ -6,10 +6,13 @@ import json
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
+from api.services.character_transfer import import_character
+from api.services.ddb_import import convert
 from core.db.engine import _migrate_armor_class
 from core.db.models import AbilityScore, Character, EquipmentSlot, Item
 from core.rules.sample_characters import SAMPLE_SPECS, _spec, build_rules_character
 from core.rules.types import FeatureSpec, UnarmoredAc
+from tests.services.test_ddb_import import sorc
 
 
 async def _new(client, class_name: str | None = None, **scores) -> int:
@@ -79,6 +82,16 @@ async def test_armor_without_type_or_with_bad_value_never_breaks_the_sheet(clien
     assert (await _equip(client, cid, **_armor(None, 16)))["ac_breakdown"]["base"] == 16
     body = await _equip(client, cid, name="Rotta", item_type="armor", item_metadata={"ac_value": "boh", "armor_type": "heavy"})
     assert body["ac_breakdown"]["base"] == 10
+
+
+async def test_legacy_armor_without_slot_still_counts(client, test_session_factory):
+    cid = await _new(client, dexterity=18)
+    async with test_session_factory() as s:
+        s.add(Item(character_id=cid, name="Vecchia", item_type="armor", is_equipped=True,
+                   item_metadata=json.dumps({"ac_value": 11, "armor_type": "light"})))
+        await s.commit()
+    r = (await client.get(f"/characters/{cid}")).json()
+    assert r["ac_breakdown"]["base"] == 15 and r["unarmored_formula"] is None
 
 
 async def test_no_armor_is_ten_plus_dex(client):
@@ -266,9 +279,32 @@ async def test_migration_toggle_with_armor_keeps_displayed_ac(test_session_facto
 
 
 async def test_migration_toggle_without_armor_stays_automatic(test_session_factory):
-    cid = await _character(test_session_factory, base=12, dex=14, unarmored_defense_ability="wisdom")
+    """La vecchia formula usava i punteggi base: 12 con DES 10 e SAG 14, ora l'anello porta la DES a 18."""
+    ring = dict(name="Anello", item_type="accessory", is_equipped=True, equipment_slot=EquipmentSlot.RING1,
+                item_metadata=json.dumps({"ability_modifiers": [{"ability": "dexterity", "kind": "absolute", "value": 18}]}))
+    cid = await _character(test_session_factory, base=12, dex=10, items=[ring], unarmored_defense_ability="wisdom")
     char = await _migrated(test_session_factory, cid)
-    assert char.base_armor_class == 14 and char.base_armor_class_override is False  # 10 + 2 + SAG 14 (+2)
+    assert char.base_armor_class == 16 and char.base_armor_class_override is False  # 10 + 4 + SAG 14 (+2)
+
+
+async def test_migration_toggle_with_value_outside_old_formula_is_kept(test_session_factory):
+    """Formula DDB con bonus già importata: la base non è la vecchia formula, quindi non si ricalcola."""
+    cid = await _character(test_session_factory, base=15, dex=14, unarmored_defense_ability="wisdom")
+    char = await _migrated(test_session_factory, cid)
+    assert char.base_armor_class == 15 and char.base_armor_class_override is True
+    assert char.unarmored_defense_ability == "wisdom"
+
+
+async def test_ddb_import_keeps_unarmored_flat_bonus(test_session_factory):
+    d = sorc()
+    d["modifiers"]["class"].append({"type": "set", "subType": "unarmored-armor-class", "statId": 3, "value": 1})
+    export = convert(d)[0]
+    assert export.character.base_armor_class == 15  # 10 + DES 2 + COS 2 + 1
+    async with test_session_factory() as s:
+        char = await import_character(s, 1, export, name_suffix=" (importato)")
+        await s.commit()
+        assert char.base_armor_class == 15 and char.base_armor_class_override is True
+        assert char.unarmored_defense_ability == "constitution"
 
 
 async def test_migration_is_one_shot(test_session_factory):

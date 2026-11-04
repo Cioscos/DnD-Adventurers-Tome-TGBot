@@ -402,7 +402,7 @@
       "auto_no_armor_hint": "Senza armatura: 10 + Destrezza.",
       "manual_override": "Manuale",
       "reset_to_auto": "Ripristina auto",
-      "manual_override_hint": "Valori manuali attivi: non verranno sovrascritti al cambio di equipaggiamento.",
+      "manual_override_hint": "Valori conservati dall'aggiornamento o scritti a mano: non seguono armatura, scudo né Destrezza. Tocca «Ripristina auto» per tornare al calcolo.",
       "unarmored_title": "Difesa senza armatura",
       "unarmored_hint": "CA = 10 + mod DES + mod della caratteristica scelta (Monaco: Saggezza, Barbaro: Costituzione).",
       "unarmored_off": "Nessuna",
@@ -2650,8 +2650,8 @@
             "Scrivi il nuovo valore nel campo sotto \"Base\", \"Scudo\" o \"Magia\".",
             "L'etichetta \"Nuovo CA\" mostra il totale prima del salvataggio.",
             "Tocca \"Salva\" in fondo alla pagina o \"Salva ora\" nella barra \"Modifiche non salvate\".",
-            "Un valore Base o Scudo scritto a mano riceve l'etichetta \"Manuale\".",
-            "I valori manuali restano uguali quando cambi l'equipaggiamento."
+            "Un valore Base o Scudo scritto a mano, o conservato da un aggiornamento dell'app, riceve l'etichetta \"Manuale\".",
+            "I valori manuali restano uguali quando cambi l'equipaggiamento o la Destrezza."
           ]
         },
         {
@@ -2668,7 +2668,8 @@
             "La Difesa senza armatura calcola la Base come 10 + mod DES + mod della caratteristica scelta.",
             "Per il Monaco, tocca \"SAG\". Per il Barbaro, tocca \"COS\".",
             "Ogni pulsante mostra la CA che ottieni con quella scelta.",
-            "Quando la Difesa senza armatura è attiva, la Base riceve l'etichetta \"Senza armatura\" e non accetta valori a mano.",
+            "Mentre la formula vale, la Base riceve l'etichetta \"Senza armatura\". Con un'armatura, o con uno scudo che la annulla, riceve \"Auto\".",
+            "Con questa funzione attiva la Base non accetta valori a mano, salvo che abbia già un valore \"Manuale\".",
             "La Base cambia in automatico quando cambi le caratteristiche.",
             "Con un'armatura indossata vale l'armatura. Per la Saggezza (Monaco) anche lo scudo annulla questa formula.",
             "Per disattivare la funzione, tocca \"Nessuna\". La Base torna al calcolo dall'armatura, o a 10 + DES."

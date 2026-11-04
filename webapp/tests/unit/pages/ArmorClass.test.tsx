@@ -29,7 +29,7 @@ vi.mock('react-router-dom', async (orig) => {
 
 vi.mock('react-i18next', async (orig) => {
   const actual = (await orig()) as Record<string, unknown>
-  return { ...actual, useTranslation: () => ({ t: (k: string) => k, i18n: { language: 'it' } }) }
+  return { ...actual, useTranslation: () => ({ t: (k: string, o?: { value?: number }) => (o?.value === undefined ? k : `${k}:${o.value}`), i18n: { language: 'it' } }) }
 })
 
 vi.mock('framer-motion', async () => {
@@ -96,9 +96,9 @@ const acChar = {
   shield_armor_class_override: false,
   unarmored_defense_ability: null as 'wisdom' | 'constitution' | null,
   ability_scores: [
-    { name: 'dexterity', value: 14 },
-    { name: 'wisdom', value: 16 },
-    { name: 'constitution', value: 12 },
+    { name: 'dexterity', value: 14, modifier: 2 },
+    { name: 'wisdom', value: 16, modifier: 3 },
+    { name: 'constitution', value: 12, modifier: 1 },
   ],
   items: [],
 }
@@ -185,6 +185,33 @@ describe('ArmorClass page', () => {
     await screen.findByText('17')
     expect(screen.getAllByText('character.ac.manual_override').length).toBeGreaterThan(0)
     expect(screen.getByPlaceholderText('14')).toBeEnabled()
+  })
+
+  it('unarmored previews use the effective modifier, like the backend', async () => {
+    // `value` e `modifier` volutamente discordi: un oggetto porta il modificatore DES a +4.
+    getChar.mockResolvedValue({
+      ...acChar,
+      ability_scores: [
+        { name: 'dexterity', value: 10, modifier: 4 },
+        { name: 'wisdom', value: 14, modifier: 2 },
+        { name: 'constitution', value: 8, modifier: -1 },
+      ],
+    })
+    renderWithProviders(<ArmorClass />)
+    await screen.findByText('17')
+    expect(screen.getByRole('button', { name: /wisdom_short/ })).toHaveTextContent('unarmored_formula:16')
+    expect(screen.getByRole('button', { name: /constitution_short/ })).toHaveTextContent('unarmored_formula:14')
+  })
+
+  it('legacy armor (equipped, no slot) counts as worn: armor hint, no unarmored wording', async () => {
+    getChar.mockResolvedValue({
+      ...acChar,
+      items: [{ id: 1, name: 'Vecchia', item_type: 'armor', is_equipped: true, equipment_slot: null }],
+    })
+    renderWithProviders(<ArmorClass />)
+    await screen.findByText('17')
+    expect(screen.getByText(/auto_from_armor_hint/)).toBeInTheDocument()
+    expect(screen.queryByText('character.ac.auto_no_armor_hint')).not.toBeInTheDocument()
   })
 
   it('disables the base input while unarmored defense is active', async () => {

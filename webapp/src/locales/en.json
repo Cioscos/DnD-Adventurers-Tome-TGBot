@@ -402,7 +402,7 @@
       "auto_no_armor_hint": "No armor: 10 + Dexterity.",
       "manual_override": "Manual",
       "reset_to_auto": "Reset to auto",
-      "manual_override_hint": "Manual values active: equipment changes will not override them.",
+      "manual_override_hint": "Values kept from the update or typed by hand: they do not follow armor, shield or Dexterity. Tap “Reset to auto” to go back to the calculation.",
       "unarmored_title": "Unarmored Defense",
       "unarmored_hint": "AC = 10 + DEX mod + the chosen ability's mod (Monk: Wisdom, Barbarian: Constitution).",
       "unarmored_off": "Off",
@@ -2651,8 +2651,8 @@
             "Type the new value in the field below \"Base\", \"Shield\" or \"Magic\".",
             "The \"New AC\" label shows the total before you save.",
             "Tap \"Save\" at the bottom of the page or \"Save now\" in the \"Unsaved changes\" bar.",
-            "A Base or Shield value that you type gets the \"Manual\" label.",
-            "Manual values do not change when you change the equipment."
+            "A Base or Shield value that you type, or that an app update kept, gets the \"Manual\" label.",
+            "Manual values do not change when you change the equipment or Dexterity."
           ]
         },
         {
@@ -2669,7 +2669,8 @@
             "Unarmored Defense calculates the Base as 10 + DEX mod + the mod of the selected ability.",
             "For a Monk, tap \"WIS\". For a Barbarian, tap \"CON\".",
             "Each button shows the AC that you get with that option.",
-            "When Unarmored Defense is on, the Base gets the \"Unarmored\" label and does not accept manual values.",
+            "While the formula applies, the Base gets the \"Unarmored\" label. With armor, or with a shield that cancels it, it gets \"Auto\".",
+            "When this function is on, the Base does not accept manual values, unless it already has a \"Manual\" value.",
             "The Base changes automatically when you change the ability scores.",
             "While wearing armor, the armor applies. With Wisdom (Monk) a shield also cancels this formula.",
             "To turn off the function, tap \"Off\". The Base goes back to the armor calculation, or to 10 + DEX."

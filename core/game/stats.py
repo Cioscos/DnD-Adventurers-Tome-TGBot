@@ -244,8 +244,11 @@ def _ac_was_derived(char) -> bool:
     if (char.settings or {}).get("import_source"):
         return False
     if char.unarmored_defense_ability:
-        # Vecchia logica: la formula valeva anche con armatura o scudo addosso. Solo se vale ancora è ricalcolabile.
-        return unarmored_formula(char) is not None
+        # Vecchia logica: formula sui punteggi base, anche con armatura o scudo addosso. Ricalcolabile solo se
+        # vale ancora e la base è proprio quella (la formula DDB può avere un bonus in più).
+        scores = {a.name: a.value for a in char.ability_scores}
+        old = 10 + sum(ability_modifier(scores.get(a, 10)) for a in ("dexterity", char.unarmored_defense_ability))
+        return unarmored_formula(char) is not None and char.base_armor_class == old
     armor = _worn(char, "armor")
     if armor is None:
         return char.base_armor_class == 10
