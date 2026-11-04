@@ -27,6 +27,7 @@ import { useCastFlow } from '@/pages/spells/useCastFlow'
 import type { Spell, SpellSlot } from '@/types'
 import SpellsSkeleton from '@/components/skeletons/SpellsSkeleton'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
+import { LEDGER_TITLE, gemClass } from '@/styles/ledger'
 
 type SpellProp = 'concentration' | 'ritual' | 'prepared'
 
@@ -473,7 +474,7 @@ export default function Spells() {
               {/* -top-4 compensa il p-4 del contenitore di scroll del Layout
                   (stesso pattern di Inventory): con top-0 l'header si fermava
                   16px sotto il bordo visivo della pagina. */}
-              <div className="sticky top-[calc(var(--crumb-offset,0px)-1rem)] z-[5] -mx-4 w-[calc(100%+2rem)] px-5 py-0.5 flex items-center gap-2 bg-dnd-bg border-b border-dnd-border/40">
+              <div className="sticky top-[calc(var(--crumb-offset,0px)-1rem)] z-[5] -mx-4 w-[calc(100%+2rem)] px-5 py-0.5 flex items-center gap-2 bg-dnd-bg border-b border-dnd-border">
                 <Pressable
                   onClick={() => toggleLevel(level)}
                   className="flex items-center gap-2 flex-1 min-w-0 min-h-[44px] text-left"
@@ -483,7 +484,7 @@ export default function Spells() {
                     size={14}
                     className={`text-dnd-gold-bright transition-transform ${!collapsedLevels.has(level) ? 'rotate-90' : ''}`}
                   />
-                  <span className="font-cinzel uppercase tracking-widest text-xs text-dnd-gold-bright truncate">
+                  <span className={`truncate ${LEDGER_TITLE}`}>
                     {level === 0 ? t('character.spells.cantrip_label') : t('character.spells.level_label', { level })}
                   </span>
                 </Pressable>
@@ -503,11 +504,7 @@ export default function Spells() {
                             useSlotMutation.mutate({ slotId: slot.id, newUsed: Math.min(slot.total, slot.used + 1) })
                           }
                         }}
-                        className={`hit-44 w-7 h-7 rounded-full border-2 transition-all disabled:opacity-40 ${
-                          i < slot.used
-                            ? 'bg-gradient-to-br from-dnd-gold-deep to-dnd-gold-bright border-dnd-gold-bright shadow-[0_0_8px_rgba(244,208,111,0.5)]'
-                            : 'bg-transparent border-dnd-gold-dim/60 hover:border-dnd-gold-bright'
-                        }`}
+                        className={`${gemClass(i < slot.used)} disabled:opacity-40`}
                         whileTap={{ scale: 0.85 }}
                         aria-label={t('character.slots.gem_aria', {
                           level: slot.level,
@@ -531,7 +528,7 @@ export default function Spells() {
                     exit={{ opacity: 0, height: 0 }}
                     className="overflow-hidden"
                   >
-                    <div className="space-y-1.5 mt-2">
+                    <div>
                       {byLevel[level].map((spell) => (
                         <div
                           key={spell.id}

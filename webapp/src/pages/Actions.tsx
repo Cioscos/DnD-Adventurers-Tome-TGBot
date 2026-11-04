@@ -6,13 +6,12 @@ import { Target } from 'lucide-react'
 import { api } from '@/api/client'
 import { unarmedDamageDice } from '@/lib/unarmedStrike'
 import Layout from '@/components/Layout'
-import Surface from '@/components/ui/Surface'
-import SectionDivider from '@/components/ui/SectionDivider'
 import RollButton from '@/components/ui/RollButton'
 import WeaponChoiceRow from '@/components/WeaponChoiceRow'
 import { useWeaponChoices, choiceOf } from '@/store/weaponChoiceStore'
 import { useWeaponAttackFlow } from '@/hooks/useWeaponAttackFlow'
 import ActionsSkeleton from '@/components/skeletons/ActionsSkeleton'
+import { LEDGER_TITLE } from '@/styles/ledger'
 
 export default function Actions() {
   const { id } = useParams<{ id: string }>()
@@ -46,12 +45,12 @@ export default function Actions() {
         {t('character.actions.attacks_per_action', { n: char.attacks_per_action ?? 1 })}
       </p>
 
-      <Surface variant="elevated" ornamented>
+      <div className="border-y border-dnd-border px-1 py-2">
         {/* Sotto 375px "Attacca" va a capo a tutta larghezza invece di schiacciare titolo e descrizione */}
         <div className="flex flex-wrap items-center gap-3">
-          <GiFist size={28} className="text-dnd-gold-bright shrink-0" />
+          <GiFist size={22} aria-hidden className="text-dnd-gold shrink-0" />
           <div className="flex-1 min-w-0">
-            <p className="font-cinzel text-dnd-gold">{t('character.actions.unarmed')}</p>
+            <p className="font-body text-sm font-semibold text-dnd-text">{t('character.actions.unarmed')}</p>
             <p className="text-xs text-dnd-text-muted">{t('character.actions.unarmed_desc', { damage: unarmedDamage })}</p>
           </div>
           <RollButton
@@ -64,21 +63,21 @@ export default function Actions() {
             {t('character.actions.attack')}
           </RollButton>
         </div>
-      </Surface>
+      </div>
 
-      <SectionDivider icon={<GiCrossedSwords size={11} />} align="center">
+      <h2 className={`-mb-2 mt-1 pl-1 ${LEDGER_TITLE}`}>
         {t('character.actions.weapons_section')}
-      </SectionDivider>
+      </h2>
 
       {weapons.length === 0 ? (
         <p className="text-center text-sm text-dnd-text-muted py-2">{t('character.actions.no_weapons')}</p>
       ) : (
-        <div className="space-y-2">
+        <div className="border-y border-dnd-border divide-y divide-dnd-border/60">
           {weapons.map((w) => (
-            <Surface key={w.id} variant="elevated">
+            <div key={w.id} className="px-1 py-2">
               <div className="flex items-center gap-3">
-                <GiCrossedSwords size={22} className="text-dnd-gold shrink-0" />
-                <span className="flex-1 min-w-0 truncate">{w.name}</span>
+                <GiCrossedSwords size={22} aria-hidden className="text-dnd-gold shrink-0" />
+                <span className="flex-1 min-w-0 truncate font-body text-sm font-semibold text-dnd-text">{w.name}</span>
                 <RollButton
                   onRoll={(mode) => flow.attackWeapon(w.id, mode)}
                   pending={flow.isWeaponPending(w.id)}
@@ -94,7 +93,7 @@ export default function Actions() {
                 choice={choiceOf(choices, w.id)}
                 onChange={(c) => setChoice(w.id, c)}
               />
-            </Surface>
+            </div>
           ))}
         </div>
       )}

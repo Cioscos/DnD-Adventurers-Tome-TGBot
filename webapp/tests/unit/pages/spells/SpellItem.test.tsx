@@ -67,16 +67,16 @@ describe('SpellItem', () => {
     expect(container.querySelector('span[aria-hidden] svg')).not.toBeNull()
   })
 
-  it('uses the parchment variant when castable and the flat variant when unprepared', () => {
+  it('dims the name of an unprepared spell', () => {
     const preparing = { showPreparedToggle: true, onPreparedToggle: () => {}, preparedPending: false }
     const { container, rerender } = render(
       <SpellItem spell={spell({ is_prepared: false })} isExpanded={false} {...base} {...preparing} />,
     )
-    expect((container.firstChild as HTMLElement).className).toContain('bg-dnd-surface')
+    expect(container.querySelector('.text-dnd-text-faint.truncate')).toBeInTheDocument()
     rerender(
       <SpellItem spell={spell({ is_prepared: true })} isExpanded={false} {...base} {...preparing} />,
     )
-    expect((container.firstChild as HTMLElement).className).toContain('bg-gradient-parchment')
+    expect(container.querySelector('.text-dnd-text.truncate')).toBeInTheDocument()
   })
 
   it('shows the translated attack/save label, not the raw code', () => {

@@ -4,10 +4,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Minus, Plus, RotateCcw, X } from 'lucide-react'
-import { GiCutDiamond as Gem, GiSparkles as Sparkles } from 'react-icons/gi'
+import { GiCutDiamond as Gem } from 'react-icons/gi'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
-import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
 import Pressable from '@/components/ui/Pressable'
 import Reveal from '@/components/ui/Reveal'
@@ -15,7 +14,7 @@ import EmptyState from '@/components/ui/EmptyState'
 import ConfirmSheet from '@/components/ui/ConfirmSheet'
 import { haptic } from '@/auth/telegram'
 import { stagger } from '@/styles/motion'
-import { toRoman } from '@/lib/roman'
+import { LEDGER_LABEL, LEDGER_TITLE, gemClass } from '@/styles/ledger'
 import type { CharacterFull, SpellSlot } from '@/types'
 import SpellSlotsSkeleton from '@/components/skeletons/SpellSlotsSkeleton'
 import AutoModeBanner from '@/components/character/AutoModeBanner'
@@ -277,7 +276,7 @@ export default function SpellSlots() {
 
       {slots.length > 0 && (
         <Button
-          variant="arcane"
+          variant="secondary"
           fullWidth
           onClick={() => setConfirmResetOpen(true)}
           loading={resetAll.isPending}
@@ -296,27 +295,23 @@ export default function SpellSlots() {
         />
       )}
 
-      <Reveal.Stagger stagger={stagger.list} className="space-y-2">
+      <Reveal.Stagger stagger={stagger.list} className="border-y border-dnd-border divide-y divide-dnd-border/60">
         {slots.map((slot) => (
           <Reveal.Item key={slot.id}>
-            <Surface variant="elevated" ornamented>
-              {/* Level banner + meta */}
-              <div className="flex items-center justify-between mb-3">
+            <div className="px-1 py-2.5">
+              <div className="flex min-h-[28px] items-center justify-between mb-2.5">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-gradient-arcane-mist border border-dnd-arcane-bright flex items-center justify-center text-dnd-arcane-bright font-cinzel font-black text-sm">
-                    {toRoman(slot.level)}
-                  </div>
-                  <span className="font-display font-bold text-dnd-gold-bright">
+                  <span className={LEDGER_LABEL}>
                     {t('character.slots.level', { level: slot.level })}
                   </span>
                   {slot.is_pact && (
-                    <span className="px-1.5 py-0.5 rounded-full border border-dnd-arcane/60 bg-dnd-arcane-mist/30 text-dnd-arcane-bright font-cinzel text-xs uppercase tracking-widest">
+                    <span className="px-1.5 py-0.5 rounded-lg border border-dnd-arcane/60 text-dnd-arcane-bright font-cinzel text-xs uppercase tracking-wider">
                       {t('character.slots.pact_badge')}
                     </span>
                   )}
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className={`text-sm font-mono font-bold tabular-nums ${slot.available > 0 ? 'text-dnd-emerald-bright' : 'text-dnd-text-faint'}`}>
+                  <span className={`text-base font-mono font-bold tabular-nums ${slot.available > 0 ? 'text-dnd-text' : 'text-dnd-text-faint'}`}>
                     {slot.available}/{slot.total}
                   </span>
                   {slotsMode !== 'auto' && (
@@ -333,7 +328,7 @@ export default function SpellSlots() {
               </div>
 
               {/* Slot gems */}
-              <div className="flex gap-2 flex-wrap mb-3">
+              <div className="flex gap-2 flex-wrap">
                 {Array.from({ length: slot.total }).map((_, i) => (
                   <Pressable
                     key={i}
@@ -356,11 +351,7 @@ export default function SpellSlots() {
                         : t('character.slots.state_available'),
                     })}
                     aria-pressed={i < slot.used}
-                    className={`hit-44 w-7 h-7 rounded-full border-2 transition-all ${
-                      i < slot.used
-                        ? 'bg-gradient-to-br from-dnd-gold-deep to-dnd-gold-bright border-dnd-gold-bright shadow-[0_0_10px_rgba(244,208,111,0.5)]'
-                        : 'bg-transparent border-dnd-gold-dim/60 hover:border-dnd-gold-bright'
-                    }`}
+                    className={gemClass(i < slot.used)}
                   />
                 ))}
               </div>
@@ -377,20 +368,17 @@ export default function SpellSlots() {
                   onCommit={(next) => updateTotal.mutate({ slotId: slot.id, total: next })}
                 />
               )}
-            </Surface>
+            </div>
           </Reveal.Item>
         ))}
       </Reveal.Stagger>
 
       {/* Manual creation of slot levels — hidden in Auto mode. */}
       {slotsMode !== 'auto' && missingLevels.length > 0 && (
-        <Surface variant="flat" className="mt-3">
-          <div className="flex items-center gap-2 mb-2">
-            <Sparkles size={14} className="text-dnd-arcane-bright" />
-            <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim">
-              {t('character.slots.add_new_level')}
-            </p>
-          </div>
+        <section className="mt-3">
+          <h2 className={`mb-2 pl-1 ${LEDGER_TITLE}`}>
+            {t('character.slots.add_new_level')}
+          </h2>
           <div className="grid grid-cols-2 xs:grid-cols-3 gap-2">
             {missingLevels.map((level) => (
               <Pressable
@@ -398,16 +386,16 @@ export default function SpellSlots() {
                 pending={addSlot.isPending && addSlot.variables === level}
                 spinnerSize={12}
                 onClick={() => addSlot.mutate(level)}
-                className="min-h-[44px] px-3 py-1.5 rounded-lg bg-dnd-surface border border-dnd-arcane/60
-                           text-dnd-arcane-bright font-cinzel text-xs uppercase tracking-wider
-                           hover:border-dnd-arcane hover:shadow-halo-arcane transition-[border-color,box-shadow] duration-200"
+                className="min-h-[44px] px-3 py-1.5 rounded-lg border border-dnd-border
+                           text-dnd-text-muted font-cinzel text-xs uppercase tracking-wider
+                           hover:border-dnd-gold-dim transition-colors"
                 whileTap={{ scale: 0.92 }}
               >
                 + {t('character.slots.level', { level })}
               </Pressable>
             ))}
           </div>
-        </Surface>
+        </section>
       )}
 
       <ConfirmSheet

@@ -16,6 +16,7 @@ import Skeleton from '@/components/ui/Skeleton'
 import EmptyState from '@/components/ui/EmptyState'
 import { haptic } from '@/auth/telegram'
 import { EVENT_META } from '@/lib/eventMeta'
+import { LEDGER_TITLE } from '@/styles/ledger'
 import { formatRelative, formatAbsolute } from '@/lib/relativeTime'
 
 export default function History() {
@@ -58,9 +59,9 @@ export default function History() {
   return (
     <Layout title={t('character.history.title')} backTo={`/char/${charId}`} group="tools" page="history" hideScrollbar offlineQuery={historyQuery}>
       {isLoading ? (
-        <div className="space-y-2">
+        <div>
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="flex gap-3 px-4 py-3 rounded-xl bg-dnd-surface border border-dnd-border">
+            <div key={i} className="flex gap-3 px-1 py-3 border-b border-dnd-border/60">
               <Skeleton.Circle width="32px" delay={i * 80} />
               <div className="flex-1 space-y-2">
                 <Skeleton.Line width="80%" height="14px" delay={i * 80} />
@@ -86,7 +87,7 @@ export default function History() {
         <>
           {/* Top-of-page action bar — clear button always reachable without scrolling. */}
           <div className="flex items-center justify-between gap-2">
-            <span className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim">
+            <span className={LEDGER_TITLE}>
               {t('character.history.entries_count', {
                 count: search ? filteredEntries.length : entries.length,
               })}
@@ -123,26 +124,10 @@ export default function History() {
           />
 
           <ScrollArea>
-            <div className="relative">
-              {/* Vertical timeline line — gold gradient + glow + inner highlight */}
-              <div
-                className="absolute left-[23px] top-2 bottom-2 w-1 rounded-full"
-                style={{
-                  background:
-                    'linear-gradient(to bottom, transparent 0%, var(--dnd-gold-deep) 6%, var(--dnd-gold) 25%, var(--dnd-gold-bright) 50%, var(--dnd-gold) 75%, var(--dnd-gold-deep) 94%, transparent 100%)',
-                  boxShadow: '0 0 6px var(--dnd-gold-glow), 0 0 12px var(--dnd-gold-glow)',
-                }}
-              />
-              <div
-                className="absolute left-[24.5px] top-2 bottom-2 w-px opacity-80"
-                style={{
-                  background:
-                    'linear-gradient(to bottom, transparent 0%, color-mix(in srgb, var(--dnd-gold-bright) 70%, transparent) 30%, color-mix(in srgb, var(--dnd-gold-bright) 90%, transparent) 50%, color-mix(in srgb, var(--dnd-gold-bright) 70%, transparent) 70%, transparent 100%)',
-                }}
-              />
-              <div className="space-y-3">
+            <div>
+              <div className="border-y border-dnd-border divide-y divide-dnd-border/60">
                 {filteredEntries.length === 0 && search && (
-                  <p className="ml-[60px] text-sm italic text-dnd-text-muted font-body py-4">
+                  <p className="px-1 text-sm italic text-dnd-text-muted font-body py-4">
                     {t('character.history.no_match')}
                   </p>
                 )}
@@ -153,17 +138,16 @@ export default function History() {
                   return (
                     <m.div
                       key={entry.id}
-                      className="relative flex gap-3 items-start"
+                      className="flex gap-3 items-start px-1 py-2.5"
                       initial={{ opacity: 0, x: -8 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: idx * 0.03 }}
                     >
-                      {/* Icon pill (on the timeline) */}
-                      <div className={`w-12 h-12 rounded-full flex items-center justify-center border-2 ${meta.tone} shadow-parchment-md shrink-0 z-10 relative`}>
-                        <Icon size={18} />
-                      </div>
-                      {/* Content */}
-                      <div className="flex-1 min-w-0 pt-1">
+                      {/* Il colore dice il tipo di evento: l'icona basta, senza cerchio. */}
+                      <span className={`mt-0.5 shrink-0 ${meta.tone} !bg-transparent`}>
+                        <Icon size={18} aria-hidden />
+                      </span>
+                      <div className="flex-1 min-w-0">
                         <p className="text-sm leading-snug font-body text-dnd-text [overflow-wrap:anywhere]">
                           {entry.description}
                         </p>
