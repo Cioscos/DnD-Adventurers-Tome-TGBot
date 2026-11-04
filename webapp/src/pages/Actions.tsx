@@ -58,7 +58,7 @@ export default function Actions() {
             onRoll={(mode) => flow.attackUnarmed(mode)}
             pending={flow.isUnarmedPending}
             ariaLabel={t('character.actions.unarmed')}
-            className="max-xs:w-full justify-center flex items-center gap-1 text-sm font-medium px-4 h-11 rounded-lg bg-dnd-crimson/20 text-dnd-crimson-bright border border-dnd-crimson/30 active:scale-95 transition-transform"
+            className="max-xs:w-full justify-center flex items-center gap-1 text-sm font-medium px-4 h-11 rounded-lg bg-dnd-crimson/10 text-dnd-crimson-bright border border-dnd-crimson/30 active:scale-95 transition-transform"
           >
             <Target size={14} />
             {t('character.actions.attack')}
@@ -83,7 +83,7 @@ export default function Actions() {
                   onRoll={(mode) => flow.attackWeapon(w.id, mode)}
                   pending={flow.isWeaponPending(w.id)}
                   ariaLabel={`${t('character.actions.attack')} ${w.name}`}
-                  className="flex items-center gap-1 text-sm font-medium px-4 h-11 rounded-lg bg-dnd-crimson/20 text-dnd-crimson-bright border border-dnd-crimson/30 active:scale-95 transition-transform"
+                  className="flex items-center gap-1 text-sm font-medium px-4 h-11 rounded-lg bg-dnd-crimson/10 text-dnd-crimson-bright border border-dnd-crimson/30 active:scale-95 transition-transform"
                 >
                   <Target size={14} />
                   {t('character.actions.attack')}

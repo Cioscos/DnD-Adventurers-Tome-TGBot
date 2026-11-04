@@ -32,12 +32,12 @@ const TONE_STYLES: Record<
     off: 'bg-dnd-surface border-dnd-border text-dnd-text-muted',
   },
   danger: {
-    on: 'bg-dnd-crimson/15 border-dnd-crimson/70 text-dnd-crimson-bright',
-    off: 'bg-dnd-surface border-dnd-border text-dnd-crimson/70 hover:text-dnd-crimson-bright',
+    on: 'bg-dnd-crimson/10 border-dnd-crimson/70 text-dnd-crimson-bright',
+    off: 'bg-dnd-surface border-dnd-border text-dnd-crimson-bright',
   },
   success: {
     on: 'bg-dnd-emerald/15 border-dnd-emerald/70 text-dnd-emerald-bright',
-    off: 'bg-dnd-surface border-dnd-border text-dnd-emerald/70 hover:text-dnd-emerald-bright',
+    off: 'bg-dnd-surface border-dnd-border text-dnd-emerald-bright',
   },
 }
 

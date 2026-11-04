@@ -393,7 +393,7 @@ export default function Conditions() {
                   ${isActive
                     ? 'bg-gradient-ember text-dnd-parchment shadow-parchment-md'
                     : isFilled
-                      ? 'bg-dnd-amber/40 text-dnd-amber'
+                      ? 'bg-dnd-amber/40 text-dnd-text'
                       : 'bg-dnd-surface border border-dnd-border text-dnd-text-faint'}`}
                 whileTap={{ scale: 0.92 }}
                 transition={spring.press}

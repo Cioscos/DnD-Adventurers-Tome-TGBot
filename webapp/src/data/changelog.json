@@ -1,6 +1,28 @@
 {
   "entries": [
     {
+      "version": "2.37.0",
+      "date": "2026-11-04",
+      "improved": {
+        "it": [
+          "Testi più leggibili in penombra: etichette e testi secondari sono più contrastati nel tema scuro.",
+          "Il tema pergamena è più chiaro e meno giallo, con inchiostri più scuri su tutte le pagine."
+        ],
+        "en": [
+          "Easier reading in low light: labels and secondary text have more contrast in the dark theme.",
+          "The parchment theme is lighter and less yellow, with darker inks on every page."
+        ]
+      },
+      "fixed": {
+        "it": [
+          "Si leggono meglio il pulsante Attacca, la scheda Danni selezionata e i livelli di Spossatezza già raggiunti."
+        ],
+        "en": [
+          "The Attack button, the selected Damage tab and the Exhaustion levels already reached are easier to read."
+        ]
+      }
+    },
+    {
       "version": "2.36.0",
       "date": "2026-11-04",
       "added": {
