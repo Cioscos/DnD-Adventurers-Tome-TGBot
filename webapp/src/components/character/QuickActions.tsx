@@ -3,12 +3,11 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Plus, Check, Minus, RotateCcw } from 'lucide-react'
 import {
-  GiCrossedSwords, GiShieldEchoes, GiSpellBook, GiLightningStorm,
+  GiCrossedSwords, GiShieldEchoes, GiSpellBook,
   GiLightningTrio, GiAbacus, GiPolarStar, GiArrowhead,
   GiDiceSixFacesOne, GiNightSleep, GiCampfire, GiMagicSwirl,
 } from 'react-icons/gi'
 import { api, ApiError } from '@/api/client'
-import Surface from '@/components/ui/Surface'
 import Sheet from '@/components/ui/Sheet'
 import Pressable from '@/components/ui/Pressable'
 import IconButton from '@/components/ui/IconButton'
@@ -36,14 +35,19 @@ import {
   hasCustomQuickActions,
   resolveQuickActions,
   isAmmunitionItem,
+  quickActionFullRows,
   quickActionKey,
   QUICK_ACTIONS_MAX,
   SAVE_ABILITIES,
   type QuickActionEntry,
   type ResolvedQuickAction,
 } from '@/lib/quickActions'
+import { LEDGER_INDEX_ROW, LEDGER_TITLE } from '@/styles/ledger'
 import type { HitDiceSpendResult } from '@/api/client'
 import type { CharacterFull, Ability, CharacterClass, Item } from '@/types'
+
+const COUNTER_ROW = 'flex min-h-[52px] items-center gap-2 px-1 py-1'
+const STEP_BUTTON = 'rounded-lg border border-dnd-border'
 
 interface Props {
   char: CharacterFull
@@ -95,6 +99,7 @@ export default function QuickActions({ char }: Props) {
   const entries = effectiveQuickActions(char)
   const isCustom = hasCustomQuickActions(settings)
   const resolved = resolveQuickActions(char, entries)
+  const fullRows = quickActionFullRows(resolved)
 
   const settingsMutation = useMutation({
     mutationFn: (next: QuickActionEntry[]) =>
@@ -490,66 +495,55 @@ export default function QuickActions({ char }: Props) {
 
   return (
     <>
-      <Surface variant="elevated">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2 text-dnd-gold">
-            <GiLightningStorm size={16} />
-            <p className="text-xs font-cinzel uppercase tracking-widest text-dnd-gold-dim">
-              {t('character.quick_actions.title')}
-            </p>
-          </div>
+      <section>
+        <div className="flex items-center justify-between pb-0.5 pl-1">
+          <h2 className={LEDGER_TITLE}>{t('character.quick_actions.title')}</h2>
           <Pressable
             type="button"
             onClick={() => { haptic.light(); setEditorOpen(true) }}
             whileTap={{ scale: 0.9 }}
             aria-label={t('character.quick_actions.edit')}
-            className="w-11 h-11 flex items-center justify-center rounded-full bg-dnd-surface border border-dnd-gold-dim/40 text-dnd-gold-bright"
+            className="w-11 h-11 flex items-center justify-center text-dnd-gold-bright"
           >
-            <Plus size={16} />
+            <Plus size={18} />
           </Pressable>
         </div>
 
         {resolved.length === 0 ? (
-          <p className="text-xs text-dnd-text-muted font-body italic">
+          <p className="border-t border-dnd-border px-1 py-3 text-xs text-dnd-text-muted font-body italic">
             {t('character.quick_actions.empty_hint')}
           </p>
         ) : (
-          <div className="grid grid-cols-2 gap-2">
-            {resolved.map((a, i) => {
-              const spanFull = resolved.length % 2 === 1 && i === resolved.length - 1
+          <div className="grid grid-cols-2 gap-x-4 border-t border-dnd-border">
+            {resolved.map((a) => {
+              const cellClass = `min-w-0 border-b border-dnd-border/60 ${fullRows.has(a.key) ? 'col-span-2' : ''}`
               if (a.type === 'counter_inspiration') {
                 return (
-                  <Pressable
-                    key={a.key}
-                    type="button"
-                    pending={inspirationMutation.isPending}
-                    onClick={() => inspirationMutation.mutate(!a.active)}
-                    whileTap={{ scale: 0.96 }}
-                    aria-pressed={a.active}
-                    className={`min-h-[44px] flex items-center gap-2 px-3 py-2 rounded-xl border text-left
-                      ${a.active
-                        ? 'bg-dnd-gold/15 border-dnd-gold text-dnd-gold-bright'
-                        : 'bg-dnd-surface border-dnd-border text-dnd-text-muted'}
-                      ${spanFull ? 'col-span-2' : ''}`}
-                  >
-                    <GiPolarStar size={16} className="shrink-0" />
-                    <span className="flex-1 min-w-0 line-clamp-2 leading-tight text-sm font-body">
-                      {actionLabel(a)}
-                    </span>
-                    <Check size={14} className={`shrink-0 ${a.active ? '' : 'opacity-0'}`} />
-                  </Pressable>
+                  <div key={a.key} className={cellClass}>
+                    <Pressable
+                      type="button"
+                      pending={inspirationMutation.isPending}
+                      onClick={() => inspirationMutation.mutate(!a.active)}
+                      whileTap={{ scale: 0.96 }}
+                      aria-pressed={a.active}
+                      className={`${LEDGER_INDEX_ROW} ${a.active ? 'text-dnd-gold-bright' : 'text-dnd-text-muted'}`}
+                    >
+                      <GiPolarStar size={18} aria-hidden className="shrink-0" />
+                      <span className="flex-1 min-w-0 line-clamp-2 leading-tight text-sm font-body">
+                        {actionLabel(a)}
+                      </span>
+                      <Check size={14} className={`shrink-0 ${a.active ? '' : 'opacity-0'}`} />
+                    </Pressable>
+                  </div>
                 )
               }
               if (a.type === 'item_charges') {
                 const c = itemCharges(a.item)!
                 const bump = (delta: number) => chargesMutation.mutate({ itemId: a.item.id, delta })
                 return (
-                  <div
-                    key={a.key}
-                    className="min-h-[44px] flex items-center gap-1.5 px-2 py-1.5 rounded-xl bg-dnd-surface border border-dnd-border col-span-2"
-                  >
-                    <GiMagicSwirl size={14} className="text-dnd-gold shrink-0" />
-                    <span className="flex-1 min-w-0 line-clamp-2 leading-tight text-xs text-dnd-text font-body">
+                  <div key={a.key} className={`${cellClass} ${COUNTER_ROW}`}>
+                    <GiMagicSwirl size={18} aria-hidden className="text-dnd-gold shrink-0" />
+                    <span className="flex-1 min-w-0 line-clamp-2 leading-tight text-sm text-dnd-text font-body">
                       {actionLabel(a)}
                     </span>
                     <IconButton
@@ -558,7 +552,7 @@ export default function QuickActions({ char }: Props) {
                       disabled={c.current <= 0 || chargesMutation.isPending}
                       haptic="light"
                       aria-label={`${actionLabel(a)} -1`}
-                      className="w-11 h-11 rounded-lg bg-dnd-crimson/15 text-dnd-crimson-bright border border-dnd-crimson/30 disabled:opacity-30"
+                      className={STEP_BUTTON}
                     />
                     <span className="min-w-[44px] text-center font-mono font-bold tabular-nums text-sm text-dnd-gold-bright">
                       {c.current}<span className="text-dnd-text-muted text-xs">/{c.max}</span>
@@ -569,7 +563,7 @@ export default function QuickActions({ char }: Props) {
                       disabled={c.current >= c.max || chargesMutation.isPending}
                       haptic="light"
                       aria-label={`${actionLabel(a)} +1`}
-                      className="w-11 h-11 rounded-lg bg-dnd-emerald/15 text-dnd-emerald-bright border border-dnd-emerald/30 disabled:opacity-30"
+                      className={STEP_BUTTON}
                     />
                   </div>
                 )
@@ -584,13 +578,9 @@ export default function QuickActions({ char }: Props) {
                 }
                 const Icon = TYPE_ICONS[a.type]
                 return (
-                  <div
-                    key={a.key}
-                    className="min-h-[44px] flex items-center gap-1.5 px-2 py-1.5 rounded-xl
-                                bg-dnd-surface border border-dnd-border col-span-2"
-                  >
-                    <Icon size={14} className="text-dnd-gold shrink-0" />
-                    <span className="flex-1 min-w-0 line-clamp-2 leading-tight text-xs text-dnd-text font-body">
+                  <div key={a.key} className={`${cellClass} ${COUNTER_ROW}`}>
+                    <Icon size={18} aria-hidden className="text-dnd-gold shrink-0" />
+                    <span className="flex-1 min-w-0 line-clamp-2 leading-tight text-sm text-dnd-text font-body">
                       {actionLabel(a)}
                     </span>
                     <IconButton
@@ -599,14 +589,14 @@ export default function QuickActions({ char }: Props) {
                       disabled={current <= 0}
                       haptic="light"
                       aria-label={`${actionLabel(a)} -1`}
-                      className="w-11 h-11 rounded-lg bg-dnd-crimson/15 text-dnd-crimson-bright border border-dnd-crimson/30 disabled:opacity-30"
+                      className={STEP_BUTTON}
                     />
                     <Pressable
                       type="button"
                       onClick={() => setCounterEdit(isAbility ? { kind: 'ability', ability: a.ability } : { kind: 'ammo', item: a.item })}
                       whileTap={{ scale: 0.92 }}
                       aria-label={t('character.abilities.set_uses_title')}
-                      className="min-w-[44px] text-center font-mono font-bold tabular-nums text-sm text-dnd-gold-bright"
+                      className="min-w-[44px] min-h-[44px] text-center font-mono font-bold tabular-nums text-sm text-dnd-gold-bright"
                     >
                       {current}{max != null ? <span className="text-dnd-text-muted text-xs">/{max}</span> : null}
                     </Pressable>
@@ -616,7 +606,7 @@ export default function QuickActions({ char }: Props) {
                       disabled={max != null && current >= max}
                       haptic="light"
                       aria-label={`${actionLabel(a)} +1`}
-                      className="w-11 h-11 rounded-lg bg-dnd-emerald/15 text-dnd-emerald-bright border border-dnd-emerald/30 disabled:opacity-30"
+                      className={STEP_BUTTON}
                     />
                   </div>
                 )
@@ -626,70 +616,67 @@ export default function QuickActions({ char }: Props) {
               const depleted =
                 (a.type === 'ability' && (a.ability.uses ?? 0) <= 0) ||
                 (a.type === 'hit_die' && a.remaining <= 0)
-              const tileClass = `min-h-[44px] flex items-center gap-2 px-3 py-2 rounded-xl
-                              bg-dnd-surface border border-dnd-border text-left
-                              disabled:opacity-60 ${depleted ? 'opacity-50' : ''} ${spanFull ? 'col-span-2' : ''}`
+              // Esaurita si legge dal tono, non da un'opacità che farebbe calare il contrasto.
+              const rowClass = `${LEDGER_INDEX_ROW} ${depleted ? 'text-dnd-text-faint' : 'text-dnd-text'} disabled:opacity-60`
+              const iconClass = `shrink-0 ${depleted ? '' : 'text-dnd-gold'}`
               if (a.type === 'weapon' || a.type === 'save' || (a.type === 'spell' && isAttackSpell(a.spell))) {
                 // d20 rolls: long press opens the advantage/disadvantage menu.
-                const tile = (
-                  <RollButton
-                    key={a.key}
-                    onRoll={(mode) => run(a, mode)}
-                    pending={isActionPending(a)}
-                    ariaLabel={actionLabel(a)}
-                    className={tileClass}
-                  >
-                    <RestIcon size={16} className="text-dnd-gold shrink-0" />
-                    <span className="flex-1 min-w-0 line-clamp-2 leading-tight text-sm text-dnd-text font-body">
-                      {actionLabel(a)}
-                    </span>
-                  </RollButton>
-                )
-                if (a.type !== 'weapon') return tile
-                // Versatile/thrown weapons: choice row right under the tile.
-                const row = (
-                  <WeaponChoiceRow
-                    item={a.item}
-                    choice={choiceOf(weaponChoices, a.item.id)}
-                    onChange={(c) => setWeaponChoice(a.item.id, c)}
-                  />
-                )
                 return (
-                  <div key={a.key} className={`flex flex-col ${spanFull ? 'col-span-2' : ''}`}>
-                    {tile}
-                    {row}
+                  <div key={a.key} className={cellClass}>
+                    <RollButton
+                      onRoll={(mode) => run(a, mode)}
+                      pending={isActionPending(a)}
+                      ariaLabel={actionLabel(a)}
+                      className={rowClass}
+                    >
+                      <RestIcon size={18} aria-hidden className={iconClass} />
+                      <span className="flex-1 min-w-0 line-clamp-2 leading-tight text-sm font-body">
+                        {actionLabel(a)}
+                      </span>
+                    </RollButton>
+                    {/* Versatile/thrown weapons: choice row right under the row. */}
+                    {a.type === 'weapon' && (
+                      <div className="pb-2 empty:hidden">
+                        <WeaponChoiceRow
+                          item={a.item}
+                          choice={choiceOf(weaponChoices, a.item.id)}
+                          onChange={(c) => setWeaponChoice(a.item.id, c)}
+                        />
+                      </div>
+                    )}
                   </div>
                 )
               }
               return (
-                <Pressable
-                  key={a.key}
-                  type="button"
-                  pending={isActionPending(a)}
-                  onClick={() => run(a)}
-                  whileTap={{ scale: 0.96 }}
-                  className={tileClass}
-                >
-                  <RestIcon size={16} className="text-dnd-gold shrink-0" />
-                  <span className="flex-1 min-w-0 line-clamp-2 leading-tight text-sm text-dnd-text font-body">
-                    {actionLabel(a)}
-                  </span>
-                  {a.type === 'ability' && (
-                    <span className="text-xs font-mono tabular-nums text-dnd-text-muted shrink-0">
-                      {a.ability.uses ?? 0}/{a.ability.max_uses ?? 0}
+                <div key={a.key} className={cellClass}>
+                  <Pressable
+                    type="button"
+                    pending={isActionPending(a)}
+                    onClick={() => run(a)}
+                    whileTap={{ scale: 0.96 }}
+                    className={rowClass}
+                  >
+                    <RestIcon size={18} aria-hidden className={iconClass} />
+                    <span className="flex-1 min-w-0 line-clamp-2 leading-tight text-sm font-body">
+                      {actionLabel(a)}
                     </span>
-                  )}
-                  {a.type === 'hit_die' && (
-                    <span className="text-xs font-mono tabular-nums text-dnd-text-muted shrink-0">
-                      {a.remaining}/{a.cls.level}
-                    </span>
-                  )}
-                </Pressable>
+                    {a.type === 'ability' && (
+                      <span className="text-xs font-mono tabular-nums text-dnd-text-muted shrink-0">
+                        {a.ability.uses ?? 0}/{a.ability.max_uses ?? 0}
+                      </span>
+                    )}
+                    {a.type === 'hit_die' && (
+                      <span className="text-xs font-mono tabular-nums text-dnd-text-muted shrink-0">
+                        {a.remaining}/{a.cls.level}
+                      </span>
+                    )}
+                  </Pressable>
+                </div>
               )
             })}
           </div>
         )}
-      </Surface>
+      </section>
 
       {/* Editor */}
       <Sheet

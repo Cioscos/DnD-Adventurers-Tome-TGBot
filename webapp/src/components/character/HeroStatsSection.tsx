@@ -12,6 +12,7 @@ import { useUnitSettings, formatLength } from '@/store/unitSettings'
 import { useD20Roll, type RollMode } from '@/hooks/useD20Roll'
 import RollButton from '@/components/ui/RollButton'
 import { api } from '@/api/client'
+import { LEDGER_LABEL, LEDGER_ROW } from '@/styles/ledger'
 import type { CharacterFull } from '@/types'
 
 // Canonical D&D 5e ability order (mirrors the local const in HeroScreen.tsx /
@@ -19,9 +20,6 @@ import type { CharacterFull } from '@/types'
 const ABILITY_ORDER = [
   'strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma',
 ]
-
-const LEDGER_ROW = 'flex w-full min-h-[48px] items-center justify-between gap-3 px-1 py-2 text-left hover:bg-dnd-surface/60 transition-colors'
-const LEDGER_LABEL = 'min-w-0 font-cinzel text-xs font-bold uppercase tracking-wider leading-tight text-dnd-text-muted'
 
 type SkillLvl = false | true | 'expert'
 

@@ -311,6 +311,9 @@ The default for reference data and navigation lists: the page reads like a chara
 - **Shape:** hairline rules (`border-dnd-border`, `/60` between rows), no fill, no radius. Never nested inside a card.
 - **Value rows:** Cinzel label on the left, value on the right. Numbers follow The Tabular Numerics Rule. Min height 48px.
 - **Index rows:** one ink for every icon (`text-dnd-gold`), body-font label, two columns on a phone. Section titles are plain Cinzel labels, without ornament. Keep at least 4px between neighbouring touch targets.
+- **Counter rows:** span both columns, with bordered neutral steppers. Adding or spending a use is not a danger, so the steppers carry no semantic tint.
+- **Depleted:** a spent row drops to `text-dnd-text-faint`. Never lower its opacity: that pushes the text under the contrast floor.
+- **Classes:** `webapp/src/styles/ledger.ts` holds the shared row, label and title classes.
 - **Affordance:** a row that does something other than open a page says so with a glyph (the die on Initiative rolls).
 
 ### Chips / Pills

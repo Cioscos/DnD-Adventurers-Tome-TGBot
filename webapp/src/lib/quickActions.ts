@@ -1,4 +1,5 @@
 import { itemCharges } from '@/lib/itemMagic'
+import { weaponOptions } from '@/lib/weaponOptions'
 import type { CharacterFull, Item, Spell, Ability, CharacterClass } from '@/types'
 
 export const QUICK_ACTIONS_MAX = 12
@@ -164,4 +165,30 @@ export function resolveQuickActions(
     }
   }
   return resolved
+}
+
+/**
+ * Voci che occupano tutta la riga nel registro a due colonne: i contatori e le
+ * armi con scelta, più ogni voce rimasta sola sulla sua riga, così i filetti
+ * non restano spezzati da un buco.
+ */
+export function quickActionFullRows(actions: ResolvedQuickAction[]): Set<string> {
+  const full = new Set<string>()
+  let alone: string | null = null
+  const flush = () => { if (alone) full.add(alone); alone = null }
+  for (const a of actions) {
+    const wide =
+      a.type === 'counter_ability' || a.type === 'counter_ammo' || a.type === 'item_charges' ||
+      (a.type === 'weapon' && hasWeaponChoice(a.item))
+    if (wide) { flush(); full.add(a.key) }
+    else if (alone) alone = null
+    else alone = a.key
+  }
+  flush()
+  return full
+}
+
+function hasWeaponChoice(item: Item): boolean {
+  const { versatile, thrown } = weaponOptions(item)
+  return versatile || thrown
 }

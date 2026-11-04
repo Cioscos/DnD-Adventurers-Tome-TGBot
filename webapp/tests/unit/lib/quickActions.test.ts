@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   quickActionKey,
+  quickActionFullRows,
   resolveQuickActions,
   readQuickActions,
   defaultQuickActions,
@@ -30,6 +31,26 @@ const char = {
     { id: 40, class_name: 'fighter', level: 5, hit_die: 10, hit_dice_used: 2 },
   ],
 } as unknown as CharacterFull
+
+describe('quickActionFullRows', () => {
+  const half = (key: string) => ({ type: 'save', key, ability: 'strength' }) as const
+  const wide = (key: string) => ({ type: 'counter_ammo', key, item: {} as Item }) as const
+
+  it('pairs half rows and leaves them at half width', () => {
+    expect([...quickActionFullRows([half('a'), half('b')])]).toEqual([])
+  })
+  it('widens a half row left alone before a full row, or at the end', () => {
+    expect([...quickActionFullRows([half('a'), wide('c'), half('b'), half('d'), half('e')])].sort())
+      .toEqual(['a', 'c', 'e'])
+  })
+  it('widens a weapon with a grip choice but not a plain one', () => {
+    const versatile = { type: 'weapon', key: 'v', item: { item_metadata: { properties: ['prop_versatile'], versatile_dice: '1d10' } } as unknown as Item } as const
+    const plain = { type: 'weapon', key: 'p', item: {} as Item } as const
+    const res = quickActionFullRows([plain, half('a'), versatile])
+    expect(res.has('p')).toBe(false)
+    expect(res.has('v')).toBe(true)
+  })
+})
 
 describe('quickActionKey', () => {
   it('genera chiavi univoche per ogni tipo', () => {
