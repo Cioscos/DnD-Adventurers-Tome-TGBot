@@ -59,6 +59,7 @@ _MIGRATIONS: list[tuple[str, str, str, str | None]] = [
     # CharacterClass subclass
     ("character_classes", "subclass", "VARCHAR(100)", None),
     ("character_classes", "subclass_key", "VARCHAR(50)", None),
+    ("character_classes", "options", "JSON", None),
     # Conditions feature
     ("characters", "conditions", "TEXT", None),
     # Skills feature

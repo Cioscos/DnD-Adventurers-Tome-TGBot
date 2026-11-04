@@ -139,6 +139,7 @@ async def create_class_for_character(
     # cls deve essere visibile in char.classes per coerenza del sync.
     if cls not in char.classes:
         char.classes.append(cls)
+    add_asi_choices(char, cls, 0, cls.level)  # classe nata sopra il livello 1: scelte dei livelli già raggiunti
     await sync_class_feature_abilities(session, char, cls, lang=lang)
 
     # Seed saving throw proficiencies from the *starting* class only (D&D 5e:
@@ -260,7 +261,7 @@ async def distribute_class_levels(
             (rolls_left[:gained], rolls_left[gained:]) if rolls_left is not None else (None, None)
         )
         record_rolls(char, cls, cls.level, new_level, mine)
-        add_asi_choices(char, cls.class_name, cls.level, new_level)
+        add_asi_choices(char, cls, cls.level, new_level)
         cls.level = new_level
         await sync_class_feature_abilities(session, char, cls, lang=lang)
 
@@ -310,7 +311,7 @@ async def update_class(
         setattr(cls, field, value)
     if "subclass" in data:
         cls.subclass_key = match_subclass(cls.subclass, class_key(cls), character_edition(char))
-    add_asi_choices(char, cls.class_name, old_level, cls.level)
+    add_asi_choices(char, cls, old_level, cls.level)
 
     # When level changes, sync class-feature abilities and recalc max HP like distribute.
     level_changed = body.level is not None and body.level != old_level

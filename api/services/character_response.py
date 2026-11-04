@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.schemas.container import CoinLocationRead, ContainerStatsRead
 from api.schemas.character import AcBreakdown, ActiveForm, CharacterFull
+from api.services.choices import option_catalog
 from api.services.condition_effects import character_effect_payload
 from api.services.wild_shape import get_active_form
 from api.services.homebrew.passive import get_passive_modifiers, passive_modifier
@@ -78,7 +79,9 @@ async def build_character_response(
     )
     _apply_encumbrance(char, response)
     _apply_containers(char, response)
-    response.pending_choices = list(char.pending_choices or [])
+    response.pending_choices = [
+        {**c, "options": option_catalog(char, c)} if c.get("kind") == "class_option" else c
+        for c in (char.pending_choices or [])]
 
     response.jack_of_all_trades = has_jack_of_all_trades(char)
     # Same formula as api.services.skills.skill_bonus / passive_score, reusing the

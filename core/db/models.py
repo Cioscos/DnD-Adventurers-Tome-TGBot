@@ -289,6 +289,8 @@ class CharacterClass(Base):
     subclass: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     # Chiave di catalogo (core/rules/subclasses.py) riconosciuta dal testo; None se testo libero
     subclass_key: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    # Opzioni di classe scelte: {gruppo: [chiave_opzione]} (core/rules/types.py::ChoiceSpec)
+    options: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True, default=dict)
     # Spellcasting ability for this class (e.g. "intelligence", "wisdom", "charisma")
     spellcasting_ability: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     # Hit die size for this class (e.g. 6, 8, 10, 12)

@@ -58,12 +58,13 @@ async def test_fighter_has_extra_asi_at_6(client):
     assert [c["level"] for c in r.json()["pending_choices"]] == [4, 6]
 
 
-async def test_no_choice_on_creation_or_add_class(client):
+async def test_choices_offered_on_creation_and_add_class_above_level_1(client):
+    # Task 5: una classe nata sopra il livello 1 offre gli ASI dei livelli già raggiunti.
     ch = await _fighter(client, level=8)
-    assert ch["pending_choices"] == []
+    assert [c["level"] for c in ch["pending_choices"]] == [4, 6, 8]
     r = await client.post(f"/characters/{ch['id']}/classes",
                           json={"class_name": "Ladro", "level": 8, "hit_die": 8})
-    assert r.json()["pending_choices"] == []
+    assert [(c["class_key"], c["level"]) for c in r.json()["pending_choices"]][3:] == [("Ladro", 4), ("Ladro", 8)]
 
 
 async def test_resolve_asi_caps_20(client):

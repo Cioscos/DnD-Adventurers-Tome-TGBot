@@ -40,6 +40,8 @@ export interface CharacterClass {
   subclass?: string
   /** Chiave di catalogo riconosciuta dal testo; null per testo libero. */
   subclass_key?: string | null
+  /** Opzioni di classe scelte: {gruppo: [chiave]}. */
+  options?: Record<string, string[]>
   spellcasting_ability?: string
   hit_die?: number
   /** Dadi vita spesi (residui = level - hit_dice_used). */
@@ -57,17 +59,29 @@ export interface Currency {
 
 export type ActionType = 'action' | 'bonus_action' | 'reaction' | 'free' | 'special'
 
+export interface ClassOptionEntry {
+  key: string
+  name: { it: string; en: string }
+  summary: { it: string; en: string }
+}
+
 export interface PendingChoice {
   id: string
-  kind: 'asi'
+  kind: 'asi' | 'feat' | 'class_option' | 'epic_boon'
   class_key: string
   level: number
   created_at: string
+  /** Solo class_option: gruppo, quante opzioni scegliere e quelle ancora disponibili. */
+  group?: string
+  count?: number
+  options?: ClassOptionEntry[]
 }
 
 export type ResolveChoiceBody =
   | { kind: 'asi'; increases: Record<string, number> }
   | { kind: 'feat'; feat_key: string; ability?: string | null; custom_name?: string | null; custom_text?: string | null }
+  | { kind: 'epic_boon'; feat_key: string; ability?: string | null }
+  | { kind: 'class_option'; options: string[] }
 
 export interface Ability {
   id: number

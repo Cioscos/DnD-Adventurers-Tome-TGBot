@@ -67,4 +67,33 @@ describe('PendingChoicesBadge / ResolveChoiceSheet', () => {
       kind: 'feat', feat_key: 'observant', ability: 'wisdom',
     }))
   })
+
+  it('posts an epic boon (no tabs, boons only) with a +1 up to 30', async () => {
+    resolve.mockResolvedValue({ id: 7 })
+    const char = {
+      ...mkChar(), rules_edition: '2024', total_level: 19, classes: [],
+      pending_choices: [{ id: 'boon', kind: 'epic_boon', class_key: 'Guerriero', level: 19, created_at: '' }],
+    } as unknown as CharacterFull
+    renderWithProviders(<PendingChoicesBadge char={char} />)
+    await userEvent.click(screen.getByText('character.level_choice.badge'))
+    expect(screen.queryByText('character.level_choice.asi')).toBeNull()
+    expect(screen.queryByText('Attore')).toBeNull()
+    // il Dono che richiede incantesimi resta disabilitato per chi non lancia
+    expect(screen.getByText('Dono del Richiamo degli incantesimi').closest('button')).toBeDisabled()
+    await userEvent.click(screen.getByText('Dono del Fato'))
+    await userEvent.selectOptions(screen.getByLabelText('character.level_choice.pick_ability'), 'strength')
+    await userEvent.click(screen.getByText('character.level_choice.confirm'))
+    await waitFor(() => expect(resolve).toHaveBeenLastCalledWith(7, 'boon', {
+      kind: 'epic_boon', feat_key: '2024_boon_fate', ability: 'strength',
+    }))
+  })
+
+  it('lists 2024 general feats and blocks unmet prerequisites', async () => {
+    const char = { ...mkChar(), rules_edition: '2024', total_level: 4, classes: [] } as unknown as CharacterFull
+    renderWithProviders(<PendingChoicesBadge char={char} />)
+    await userEvent.click(screen.getByText('character.level_choice.badge'))
+    await userEvent.click(screen.getByText('character.level_choice.feat'))
+    expect(screen.getByText('Atletico').closest('button')).not.toBeDisabled() // FOR 19
+    expect(screen.getByText('Attore').closest('button')).toBeDisabled() // Carisma 10 < 13
+  })
 })

@@ -84,6 +84,10 @@
   },
   "character": {
     "level_choice": {
+      "epic_boon": "Epic Boon",
+      "prerequisites_unmet": "Prerequisites not met",
+      "class_option_title": "Class options",
+      "options_left": "Options left to pick: {{n}}",
       "remove": "Remove feat",
       "remove_confirm": "Confirm removal",
       "remove_warning": "Ability score increases and saving-throw proficiency are not reverted.",

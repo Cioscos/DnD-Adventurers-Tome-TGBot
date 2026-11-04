@@ -11,8 +11,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.services.homebrew.dsl import RuleDSL
 from core.data.classes import ASI_LEVELS, ASI_LEVELS_DEFAULT, class_table_key
-from core.data.feats import ALL_ABILITIES, FEATS
-from core.db.models import Ability, Character, CharacterHistory, HomebrewRule, RestorationType
+from core.data.feats import ALL_ABILITIES
+from core.data.feats_2024 import ALL_FEATS as FEATS
+from core.db.models import Ability, Character, CharacterClass, CharacterHistory, HomebrewRule, RestorationType
+from core.rules.catalog import features_for
+from core.rules.edition import character_edition, class_key
+from core.rules.types import RuleContext
 
 _WHEN = {"path": "$character.id", "op": "gt", "value": 0}
 
@@ -25,19 +29,109 @@ def _bad(msg: str) -> HTTPException:
     return HTTPException(422, msg)
 
 
-def add_asi_choices(char: Character, class_name: str, old_level: int, new_level: int) -> None:
-    """Crea una scelta per ogni livello ASI attraversato verso l'alto (mai duplicata)."""
-    if new_level <= old_level:
-        return
-    key = class_table_key(class_name) or class_name
-    choices = list(char.pending_choices or [])
-    for lvl in ASI_LEVELS.get(key, ASI_LEVELS_DEFAULT):
-        if old_level < lvl <= new_level and not any(
-            c["class_key"] == key and c["level"] == lvl for c in choices
-        ):
-            choices.append({"id": uuid.uuid4().hex, "kind": "asi", "class_key": key,
-                            "level": lvl, "created_at": _now()})
+RESOLVED_KEY = "resolved_choice_levels"  # settings: {class_key: ["asi:4", "class_option:trick:3", ...]}
+
+
+def _token(c: dict) -> str:
+    """Identità di una scelta: tipo, livello e (per le opzioni di classe) gruppo."""
+    if c.get("kind") == "class_option":
+        return f"class_option:{c.get('group')}:{c['level']}"
+    return f"{c.get('kind', 'asi')}:{c['level']}"
+
+
+def mark_resolved(char: Character, choice: dict) -> None:
+    done = dict((char.settings or {}).get(RESOLVED_KEY) or {})
+    done[choice["class_key"]] = sorted({*done.get(choice["class_key"], []), _token(choice)})
+    char.settings = {**(char.settings or {}), RESOLVED_KEY: done}
+
+
+def add_asi_choices(char: Character, cls: CharacterClass, old_level: int, new_level: int) -> None:
+    """Crea le scelte dei livelli attraversati (ASI, Dono Epico 2024, opzioni di classe), mai duplicate né
+    già risolte; scendendo di livello toglie quelle in sospeso oltre il nuovo livello."""
+    key = class_table_key(cls.class_name) or cls.class_name
+    edition = character_edition(char)
+    choices = [c for c in (char.pending_choices or [])
+               if not (c.get("class_key") == key and c.get("level", 0) > new_level)]
+    resolved = (char.settings or {}).get(RESOLVED_KEY) or {}
+    done = set(resolved.get(key, [])) if isinstance(resolved, dict) else set()
+
+    def add(**entry) -> None:
+        entry = {"id": uuid.uuid4().hex, "class_key": key, "created_at": _now(), **entry}
+        if _token(entry) not in done and not any(
+                c.get("class_key") == key and _token(c) == _token(entry) for c in choices):
+            choices.append(entry)
+
+    if new_level > old_level:
+        for lvl in ASI_LEVELS.get(key, ASI_LEVELS_DEFAULT):
+            if old_level < lvl <= new_level and (edition == "2014" or lvl != 19):
+                add(kind="asi", level=lvl)
+        if edition == "2024" and old_level < 19 <= new_level:
+            add(kind="epic_boon", level=19)
+        for spec in features_for(edition, class_key(cls)):
+            if spec.subclass is not None and spec.subclass != cls.subclass_key:
+                continue
+            for ch in spec.choices:
+                known = 0
+                for lvl in sorted(ch.levels):
+                    if old_level < lvl <= new_level:
+                        add(kind="class_option", level=lvl, group=ch.group, count=ch.levels[lvl] - known)
+                    known = ch.levels[lvl]
     char.pending_choices = choices
+
+
+def _class_by_key(char: Character, key: str | None) -> CharacterClass | None:
+    return next((c for c in char.classes if (class_table_key(c.class_name) or c.class_name) == key), None)
+
+
+def _choice_spec(char: Character, cls: CharacterClass, group: str | None):
+    for spec in features_for(character_edition(char), class_key(cls)):
+        if spec.subclass is not None and spec.subclass != cls.subclass_key:
+            continue
+        for ch in spec.choices:
+            if ch.group == group:
+                return ch
+    return None
+
+
+def option_catalog(char: Character, choice: dict) -> list[dict]:
+    """Opzioni ancora scegliibili di una scelta `class_option`: `{key, name, summary}` bilingui."""
+    cls = _class_by_key(char, choice.get("class_key"))
+    ch = _choice_spec(char, cls, choice.get("group")) if cls else None
+    if ch is None:
+        return []
+    edition = character_edition(char)
+    chosen = (cls.options or {}).get(ch.group, [])
+    keys = [k for k in ch.options(RuleContext(char=char, edition=edition, class_row=cls, class_level=cls.level))
+            if k not in chosen]
+    specs = {s.option_key: s for s in features_for(edition, class_key(cls)) if s.option_group == ch.group}
+    return [{"key": k, "name": specs[k].name if k in specs else {"it": k, "en": k},
+             "summary": specs[k].summary if k in specs else {"it": "", "en": ""}} for k in keys]
+
+
+def resolve_class_option(session: AsyncSession, char: Character, choice: dict, picked: list[str]) -> None:
+    cls = _class_by_key(char, choice["class_key"])
+    valid = {o["key"] for o in option_catalog(char, choice)}
+    if cls is None or len(picked) != choice["count"] or len(set(picked)) != len(picked) or not set(picked) <= valid:
+        raise _bad(f"Pick exactly {choice['count']} distinct valid options")
+    group = choice["group"]
+    cls.options = {**(cls.options or {}), group: [*(cls.options or {}).get(group, []), *picked]}
+    _history(session, char, f"{group}: {', '.join(picked)}")
+
+
+def _check_feat(char: Character, spec, boon: bool) -> None:
+    """Edizione, categoria e prerequisiti (livello, caratteristica, incantesimi) di un talento."""
+    if spec.edition != character_edition(char):
+        raise _bad("feat_wrong_edition")
+    if (spec.category == "epic_boon") != boon:
+        raise _bad("feat_wrong_category")
+    if char.total_level < spec.min_level:
+        raise _bad("feat_prerequisite_level")
+    if spec.prereq_abilities:
+        names, minimum = spec.prereq_abilities
+        if not any(_score_row(char, n).value >= minimum for n in names):
+            raise _bad("feat_prerequisite_ability")
+    if spec.needs_spellcasting and not any(c.spellcasting_ability for c in char.classes):
+        raise _bad("feat_prerequisite_spellcasting")
 
 
 def _score_row(char: Character, ability: str):
@@ -47,10 +141,10 @@ def _score_row(char: Character, ability: str):
     return row
 
 
-def _bump(char: Character, ability: str, amount: int) -> None:
+def _bump(char: Character, ability: str, amount: int, cap: int = 20) -> None:
     row = _score_row(char, ability)
-    if row.value + amount > 20:
-        raise _bad(f"{ability} cannot exceed 20")
+    if row.value + amount > cap:
+        raise _bad(f"{ability} cannot exceed {cap}")
     row.value += amount
 
 
@@ -70,7 +164,7 @@ def resolve_asi(session: AsyncSession, char: Character, increases: dict[str, int
 
 def resolve_feat(
     session: AsyncSession, char: Character, feat_key: str, ability: Optional[str],
-    custom_name: Optional[str], custom_text: Optional[str], lang: str,
+    custom_name: Optional[str], custom_text: Optional[str], lang: str, boon: bool = False,
 ) -> None:
     now = _now()
     if feat_key == "custom":
@@ -84,12 +178,15 @@ def resolve_feat(
     spec = FEATS.get(feat_key)
     if spec is None:
         raise _bad(f"Unknown feat '{feat_key}'")
+    _check_feat(char, spec, boon)
     if any(a.feature_key == f"feat.{feat_key}" for a in char.abilities):
         raise _bad("feat_already_taken")
     if spec.ability_increase:
         if ability not in spec.ability_increase:
             raise _bad(f"ability must be one of {spec.ability_increase}")
-        _bump(char, ability, 1)
+        if spec.edition == "2024" and spec.save_proficiency_from_increase and (char.saving_throws or {}).get(ability):
+            raise _bad("save_already_proficient")
+        _bump(char, ability, 1, spec.max_score)
         if spec.save_proficiency_from_increase:
             saves = dict(char.saving_throws or {})
             saves[ability] = True

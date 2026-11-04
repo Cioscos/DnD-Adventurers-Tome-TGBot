@@ -84,6 +84,10 @@
   },
   "character": {
     "level_choice": {
+      "epic_boon": "Dono Epico",
+      "prerequisites_unmet": "Requisiti non soddisfatti",
+      "class_option_title": "Opzioni di classe",
+      "options_left": "Opzioni da scegliere: {{n}}",
       "remove": "Rimuovi talento",
       "remove_confirm": "Conferma rimozione",
       "remove_warning": "Gli aumenti di caratteristica e la competenza nel TS non vengono annullati.",

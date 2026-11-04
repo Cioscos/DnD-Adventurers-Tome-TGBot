@@ -16,7 +16,7 @@ from api.routers.stats import apply_ability_change
 from api.schemas.character import CharacterFull
 from api.services.character_response import build_character_response
 from api.services.class_features import sync_cataloged_features
-from api.services.choices import remove_feat, resolve_asi, resolve_feat
+from api.services.choices import mark_resolved, remove_feat, resolve_asi, resolve_class_option, resolve_feat
 from core.db.models import HomebrewRule
 
 router = APIRouter(prefix="/characters", tags=["choices"])
@@ -35,23 +35,48 @@ class FeatResolve(BaseModel):
     custom_text: Optional[str] = Field(None, max_length=2000)
 
 
+class EpicBoonResolve(BaseModel):
+    kind: Literal["epic_boon"]
+    feat_key: str = Field(max_length=50)
+    ability: Optional[str] = Field(None, max_length=20)
+
+
+class ClassOptionResolve(BaseModel):
+    kind: Literal["class_option"]
+    options: list[Annotated[str, Field(max_length=50)]] = Field(max_length=20)
+
+
+# kind della scelta in sospeso -> kind di risposta ammessi
+_ALLOWED = {"asi": ("asi", "feat"), "epic_boon": ("epic_boon",), "class_option": ("class_option",)}
+
+
 @router.post("/{char_id}/choices/{choice_id}/resolve", response_model=CharacterFull)
 async def resolve_choice(
     char_id: int,
     choice_id: str,
-    body: Annotated[Union[AsiResolve, FeatResolve], Field(discriminator="kind")],
+    body: Annotated[Union[AsiResolve, FeatResolve, EpicBoonResolve, ClassOptionResolve], Field(discriminator="kind")],
     user_id: Annotated[int, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
     lang: Annotated[str, Depends(get_current_lang)],
 ) -> CharacterFull:
     char = await _get_owned_full(char_id, user_id, session)
     choices = list(char.pending_choices or [])
-    if not any(c["id"] == choice_id for c in choices):
+    choice = next((c for c in choices if c["id"] == choice_id), None)
+    if choice is None:
         raise HTTPException(404, "Choice not found")
+    if body.kind not in _ALLOWED.get(choice.get("kind", "asi"), ()):
+        raise HTTPException(422, "choice_kind_mismatch")
     old_con_mod = effective_con_mod(char)
     if isinstance(body, AsiResolve):
         resolve_asi(session, char, body.increases)
         changed = list(body.increases)
+    elif isinstance(body, ClassOptionResolve):
+        resolve_class_option(session, char, choice, body.options)
+        changed = []
+        await sync_cataloged_features(session, char, lang)
+    elif isinstance(body, EpicBoonResolve):
+        resolve_feat(session, char, body.feat_key, body.ability, None, None, lang, boon=True)
+        changed = [body.ability] if body.ability else []
     else:
         resolve_feat(session, char, body.feat_key, body.ability,
                      body.custom_name, body.custom_text, lang)
@@ -60,6 +85,7 @@ async def resolve_choice(
         apply_ability_change(char, ability, old_con_mod)
     if changed:
         await sync_cataloged_features(session, char, lang)
+    mark_resolved(char, choice)
     char.pending_choices = [c for c in choices if c["id"] != choice_id]
     char = await _refresh_char_full(char_id, user_id, session)
     return await build_character_response(session, char)

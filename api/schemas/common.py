@@ -110,9 +110,15 @@ class CharacterClassRead(BaseModel):
     level: int
     subclass: Optional[str] = None
     subclass_key: Optional[str] = None
+    options: dict[str, list[str]] = Field(default_factory=dict)
     spellcasting_ability: Optional[str] = None
     hit_die: Optional[int] = None
     hit_dice_used: int = 0
+
+    @field_validator("options", mode="before")
+    @classmethod
+    def _options(cls, v):
+        return v or {}
 
     model_config = {"from_attributes": True}
 

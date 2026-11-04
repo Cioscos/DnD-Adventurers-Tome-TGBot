@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Literal
+from typing import Any, Callable, Literal
 
 Edition = Literal["2014", "2024"]
 
@@ -16,6 +16,19 @@ class Uses:
     per_level: int = 0
     proficiency: bool = False
     unlimited_from: int | None = None
+
+
+@dataclass(frozen=True)
+class ChoiceSpec:
+    """Opzioni di classe da scegliere salendo di livello (Metamagia, Invocazioni, Stili...).
+
+    ``levels``: livello di classe minimo -> totale delle opzioni conosciute a quel livello.
+    ``options(ctx)``: chiavi scegliibili (``ctx.class_row.options[group]`` contiene già le scelte).
+    """
+    group: str
+    levels: dict[int, int]
+    options: Callable[["RuleContext"], list[str]]
+    replaceable: bool = False
 
 
 @dataclass(frozen=True)
