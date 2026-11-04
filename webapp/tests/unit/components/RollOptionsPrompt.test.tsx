@@ -5,9 +5,11 @@ import { renderWithProviders } from '../utils/renderWithProviders'
 import { RollOptionsHost } from '@/components/rules/RollOptionsPrompt'
 import { askRollOptions } from '@/lib/rollOptions'
 import { d20Arg } from '@/hooks/useD20Roll'
+import RollNotes from '@/components/rules/RollNotes'
 import type { RollOption } from '@/api/client'
 
-const { rollOptions } = vi.hoisted(() => ({ rollOptions: vi.fn() }))
+const { rollOptions, toastWarning } = vi.hoisted(() => ({ rollOptions: vi.fn(), toastWarning: vi.fn() }))
+vi.mock('sonner', () => ({ toast: { warning: toastWarning } }))
 vi.mock('@/api/client', () => ({ api: { characters: { rollOptions } } }))
 vi.mock('@/components/ui/Sheet', async () => {
   const React = await import('react')
@@ -23,7 +25,7 @@ vi.mock('@/dice/useDiceAnimation', () => ({ useDiceAnimation: () => ({ playAndCo
 const option = (over: Partial<RollOption> = {}): RollOption => ({
   key: 'sneak', phase: 'before', label: 'Applica Attacco Furtivo?', source: 'feature:x', dice: null, bonus: null,
   mode: null, multiplier: null, once_per_turn: false, slot: null, needs: null, requires_input: null,
-  input_options: [], auto_fail: false, cost: null, ...over,
+  input_options: [], auto_fail: false, cost: null, group: null, dice_cost: 0, ...over,
 })
 const SMITE = option({
   key: 'smite', label: 'Punizione?', requires_input: 'slot', phase: 'after_hit',
@@ -31,8 +33,17 @@ const SMITE = option({
 })
 const UNDEAD = option({ key: 'undead', label: 'Non morto?', phase: 'after_hit', needs: 'smite' })
 
+describe('RollNotes', () => {
+  it('keeps separate damage apart from the extra dice', () => {
+    renderWithProviders(<RollNotes optionResult={{
+      keys: ['x'], extra_rolls: [], extra_total: 0, bonus: 0, multiplier: 1, spent: [], separate_rolls: [4, 2], separate_total: 6,
+    }} />)
+    expect(screen.getByTestId('roll-option-separate')).toHaveTextContent('[4, 2] = 6')
+  })
+})
+
 describe('askRollOptions', () => {
-  beforeEach(() => { rollOptions.mockReset() })
+  beforeEach(() => { rollOptions.mockReset(); toastWarning.mockReset() })
 
   it('resolves at once, without a prompt, when there are no options', async () => {
     rollOptions.mockResolvedValue([])
@@ -45,6 +56,18 @@ describe('askRollOptions', () => {
   it('a failed list does not block the roll: the server revalidates anyway', async () => {
     rollOptions.mockRejectedValue(new Error('boom'))
     await expect(askRollOptions(1, { roll: 'skill' })).resolves.toEqual({ options: [], option_inputs: {} })
+  })
+
+  it('a server error on the list warns: a confirmation is being skipped', async () => {
+    rollOptions.mockRejectedValue(Object.assign(new Error('boom'), { status: 500 }))
+    await askRollOptions(1, { roll: 'skill' })
+    expect(toastWarning).toHaveBeenCalledTimes(1)
+  })
+
+  it('the GM on a player character gets 403: nothing to warn about', async () => {
+    rollOptions.mockRejectedValue(Object.assign(new Error('no'), { status: 403 }))
+    await askRollOptions(1, { roll: 'initiative' })
+    expect(toastWarning).not.toHaveBeenCalled()
   })
 
   it('only options of the asked phase open the prompt, but after_hit ones ask to defer the damage', async () => {
@@ -103,6 +126,49 @@ describe('askRollOptions', () => {
     await userEvent.click(screen.getByRole('switch', { name: 'Punizione?' }))
     await userEvent.click(screen.getByText('character.roll_options.damage'))
     await expect(answer).resolves.toEqual({ options: [], option_inputs: {} })
+  })
+
+  it('only one option of a group stays on', async () => {
+    rollOptions.mockResolvedValue([
+      option({ key: 'm1', label: 'Manovra 1', group: 'maneuver' }), option({ key: 'm2', label: 'Manovra 2', group: 'maneuver' }),
+    ])
+    renderWithProviders(<RollOptionsHost />)
+    const answer = askRollOptions(1, { roll: 'attack', item_id: 3 })
+    await userEvent.click(await screen.findByRole('switch', { name: 'Manovra 1' }))
+    await userEvent.click(screen.getByRole('switch', { name: 'Manovra 2' }))
+    await userEvent.click(screen.getByText('character.roll_options.roll'))
+    await expect(answer).resolves.toEqual({ options: ['m2'], option_inputs: {} })
+  })
+
+  it('leaving a group also turns off what depended on the option left', async () => {
+    rollOptions.mockResolvedValue([
+      option({ key: 'm1', label: 'Manovra 1', group: 'maneuver' }), option({ key: 'm2', label: 'Manovra 2', group: 'maneuver' }),
+      option({ key: 'dep', label: 'Dipende', needs: 'm1' }),
+    ])
+    renderWithProviders(<RollOptionsHost />)
+    const answer = askRollOptions(1, { roll: 'attack', item_id: 3 })
+    await userEvent.click(await screen.findByRole('switch', { name: 'Manovra 1' }))
+    await userEvent.click(screen.getByRole('switch', { name: 'Dipende' }))
+    await userEvent.click(screen.getByRole('switch', { name: 'Manovra 2' }))
+    await userEvent.click(screen.getByText('character.roll_options.roll'))
+    await expect(answer).resolves.toEqual({ options: ['m2'], option_inputs: {} })
+  })
+
+  it('an option needing one of another phase, not confirmed, is not offered', async () => {
+    rollOptions.mockResolvedValue([
+      option({ key: 'reckless', phase: 'before' }), option({ key: 'brutal', phase: 'after_hit', needs: 'reckless' }),
+    ])
+    renderWithProviders(<RollOptionsHost />)
+    await expect(askRollOptions(1, { roll: 'attack', item_id: 3 }, 'after_hit', {})).resolves.toEqual({ options: [], option_inputs: {} })
+  })
+
+  it('says how many dice an option takes from the other one', async () => {
+    rollOptions.mockResolvedValue([option(), option({ key: 'poison', label: 'Veleno', needs: 'sneak', dice_cost: 2 })])
+    renderWithProviders(<RollOptionsHost />)
+    const answer = askRollOptions(1, { roll: 'attack', item_id: 3 })
+    expect(await screen.findByText('character.roll_options.dice_cost')).toBeInTheDocument()
+    await userEvent.click(screen.getByText('character.roll_options.roll'))
+    await answer
   })
 
   it('after the roll the player can say it missed', async () => {

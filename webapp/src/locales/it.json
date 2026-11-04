@@ -734,6 +734,11 @@
         "uses_one": "{{count}} uso",
         "uses_other": "{{count}} usi",
         "slot_choice": "{{level}}° ({{available}})",
+        "dice_cost_one": "{{count}} dado in meno",
+        "dice_cost_other": "{{count}} dadi in meno",
+        "separate_dice": "Danno a parte",
+        "damage_failed": "Opzioni non applicate: resta il danno base",
+        "list_failed": "Opzioni del tiro non disponibili: tiro senza conferme",
         "damage_changed": "Danno {{before}} → {{after}}"
     },
     "conditions": {
@@ -988,6 +993,7 @@
       "standard_actions": "Azioni standard ({{n}})",
       "incapacitated": "Sei incapacitato: niente azioni, azioni bonus né reazioni.",
       "new_turn": "Nuovo turno",
+      "other_turn": "Turno di un altro",
       "end_round": "Fine round (−1)",
       "empty": "Nessuna voce",
       "unarmed": "Colpo senza armi",

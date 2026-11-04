@@ -10,7 +10,7 @@ const NEW_BLOCK = {
   once_per_turn: [], spell_slot_cast: false, bonus_spell_cast: false, free_interaction_used: false,
 }
 // Il server finto tiene lo stato del turno fra una richiesta e l'altra, come quello vero.
-const { getChar, turnState, sessionMe, server, turnUse, turnNew, featureUse, endActiveState } = vi.hoisted(() => {
+const { getChar, turnState, sessionMe, server, turnUse, turnNew, turnOther, featureUse, endActiveState } = vi.hoisted(() => {
   const server = { block: {} as Record<string, unknown>, extra: {} as Record<string, unknown> }
   const flag: Record<string, string> = { action: 'action_used', bonus: 'bonus_used', reaction: 'reaction_used', free_interaction: 'free_interaction_used' }
   return {
@@ -26,6 +26,7 @@ const { getChar, turnState, sessionMe, server, turnUse, turnNew, featureUse, end
       return server.block
     }),
     turnNew: vi.fn(async () => (server.block = {})),
+    turnOther: vi.fn(async () => (server.block = { ...server.block, once_per_turn: [] })),
     featureUse: vi.fn().mockResolvedValue({ rolls: [], healed: 0, state: null, notes: [] }),
     endActiveState: vi.fn().mockResolvedValue([]),
   }
@@ -38,7 +39,7 @@ vi.mock('@/hooks/useD20Roll', () => ({ useD20Roll: () => vi.fn(), d20Arg: vi.fn(
 
 vi.mock('@/api/client', () => ({
   api: {
-    characters: { get: getChar, turnState, turnUse, turnNew, featureUse, endActiveState, tickRound: vi.fn(), rollSkill: vi.fn() },
+    characters: { get: getChar, turnState, turnUse, turnNew, turnOther, featureUse, endActiveState, tickRound: vi.fn(), rollSkill: vi.fn() },
     sessions: { me: sessionMe },
     abilities: { update: vi.fn() },
   },
@@ -248,5 +249,31 @@ describe('Turn page', () => {
     expect(screen.getByText('character.turn.state_rounds_left')).toBeInTheDocument()
     await userEvent.click(screen.getByText('character.turn.end_state'))
     await waitFor(() => expect(endActiveState).toHaveBeenCalledWith(7, 'rage'))
+  })
+
+  describe('another character turn', () => {
+    it('clears once-per-turn effects outside an encounter and leaves the reaction alone', async () => {
+      turnNew.mockClear()
+      server.block = { ...NEW_BLOCK, once_per_turn: ['sneak'], reaction_used: true }
+      getChar.mockResolvedValue(char)
+      renderWithProviders(<Turn />)
+      await userEvent.click(await screen.findByText('character.turn.other_turn'))
+      await waitFor(() => expect(turnOther).toHaveBeenCalledWith(7))
+      await waitFor(() => expect(screen.queryByText('character.turn.other_turn')).toBeNull())
+      expect(turnNew).not.toHaveBeenCalled()
+    })
+
+    it('is hidden with nothing to clear and inside an encounter, where turns do it', async () => {
+      getChar.mockResolvedValue(char)
+      const { unmount } = renderWithProviders(<Turn />)
+      await screen.findByText('character.turn.new_turn')
+      expect(screen.queryByText('character.turn.other_turn')).toBeNull()
+      unmount()
+      server.block = { ...NEW_BLOCK, once_per_turn: ['sneak'] }
+      server.extra = { in_encounter: true, round: 1 }
+      renderWithProviders(<Turn />)
+      await screen.findByText('character.turn.new_turn')
+      expect(screen.queryByText('character.turn.other_turn')).toBeNull()
+    })
   })
 })

@@ -81,7 +81,7 @@ export default function QuickActions({ char }: Props) {
   const toast = useToast()
   const rollDice = useAnimatedRoll()
   const rollD20 = useD20Roll()
-  const attackRoll = useAttackRoll()
+  const attack = useAttackRoll()
   const weaponChoices = useWeaponChoices((s) => s.choices)
   const setWeaponChoice = useWeaponChoices((s) => s.setChoice)
   const castFlow = useCastFlow(char.id, char)
@@ -129,22 +129,21 @@ export default function QuickActions({ char }: Props) {
 
   const attackMutation = useMutation({
     mutationFn: ({ itemId, mode }: { itemId: number; mode: RollMode }) =>
-      attackRoll(char.id, itemId, mode, !!char.heroic_inspiration, choiceOf(weaponChoices, itemId)),
+      attack.roll(char.id, itemId, mode, !!char.heroic_inspiration, choiceOf(weaponChoices, itemId)),
     onSuccess: (result, { itemId }) => {
       if (result) setAttackState({ result, itemId, wasRerolled: false })
       qc.invalidateQueries({ queryKey: ['character', char.id] })
+      qc.invalidateQueries({ queryKey: ['turn-state', char.id] })
       haptic.success()
     },
   })
 
   const attackRerollMutation = useMutation({
-    mutationFn: async (itemId: number) => {
-      const die = (await rollDice('d20', 1))?.[0]
-      return api.items.attack(char.id, itemId, true, die, choiceOf(weaponChoices, itemId))
-    },
+    mutationFn: (itemId: number) => attack.reroll(char.id, itemId, choiceOf(weaponChoices, itemId)),
     onSuccess: (result) => {
-      setAttackState((prev) => prev && { ...prev, result, wasRerolled: true })
+      setAttackState((prev) => (result && prev ? { ...prev, result, wasRerolled: true } : null))
       qc.invalidateQueries({ queryKey: ['character', char.id] })
+      qc.invalidateQueries({ queryKey: ['turn-state', char.id] })
       haptic.success()
     },
     onError: (err) => {

@@ -14,7 +14,7 @@ from api.services.condition_effects import (
 )
 from api.services.effects import _add_history
 from api.services.rules_states import end_states, tick_states
-from api.services.rules_turn import get_turn, reset_turn, set_damaged
+from api.services.rules_turn import clear_once_per_turn, get_turn, reset_turn, set_damaged
 
 
 def is_concentrating(char: Character) -> bool:
@@ -120,6 +120,15 @@ async def process_edge(db: AsyncSession, enc: Encounter, combatant: Combatant,
                 return src.id == combatant.id
         # owner, or a source that left the fight: falls back to the target's own turn
         return (eff.character_id == char.id) if char is not None else eff.combatant_id == combatant.id
+
+    if edge == "start":
+        # Ogni turno è un turno nuovo per «una volta per turno», anche sugli attacchi di opportunità.
+        pcs = (await db.execute(select(Character).join(Combatant, Combatant.character_id == Character.id).where(
+            Combatant.encounter_id == enc.id, Combatant.kind == "pc"))).scalars().all()
+        for pc in pcs:
+            used = clear_once_per_turn(pc)
+            if used:
+                undo.once_per_turn[str(pc.id)] = used
 
     if char is not None:  # prima di ogni modifica: l'annullamento li rimette com'erano
         undo.char_states.setdefault(str(char.id), {

@@ -25,7 +25,9 @@ from core.rules.types import RuleContext
 
 
 def roll_context(char: Any, roll: str, **kw: Any) -> RuleContext:
-    return RuleContext(char=char, edition=character_edition(char), roll=roll, turn=char.turn_state or {}, **kw)
+    turn = char.turn_state or {}
+    confirmed = tuple((turn.get("pending_attack") or {}).get("options", [])) if roll == "attack" else ()
+    return RuleContext(char=char, edition=character_edition(char), roll=roll, turn=turn, confirmed=confirmed, **kw)
 
 
 def use_options(session: Any, char: Any, roll: str, body: Any, phase: str = "before", **kw: Any) -> AppliedOptions:
@@ -62,9 +64,17 @@ def merge_options(applied: Applied, opts: AppliedOptions) -> None:
 def roll_option_dice(char: Any, opts: AppliedOptions, critical: bool = False) -> tuple[list[int], int]:
     """Tira i dadi delle opzioni e li registra nelle statistiche: (valori, totale con il fisso dell'espressione)."""
     rolled, flat = roll_extra(opts.extra_dice, critical)
+    fixed, fixed_flat = roll_extra(opts.fixed_dice)
+    rolled += fixed
+    opts.separate_rolls, opts.separate_total = [], 0
+    for expr, doubles in opts.separate_dice:
+        apart, apart_flat = roll_extra([expr], critical and doubles)
+        record_dice(char, apart)
+        opts.separate_rolls += [v for _, v in apart]
+        opts.separate_total += sum(v for _, v in apart) + apart_flat
     record_dice(char, rolled)
     values = [v for _, v in rolled]
-    return values, sum(values) + flat
+    return values, sum(values) + flat + fixed_flat
 
 
 def option_result(opts: AppliedOptions, rolls: list[int], total: int, previous: OptionResult | None = None,
@@ -76,6 +86,8 @@ def option_result(opts: AppliedOptions, rolls: list[int], total: int, previous: 
     return OptionResult(
         keys=[*before.keys, *opts.keys], extra_rolls=[*before.extra_rolls, *rolls],
         extra_total=before.extra_total + total, bonus=before.bonus + opts.bonus,
+        separate_rolls=[*before.separate_rolls, *opts.separate_rolls],
+        separate_total=before.separate_total + opts.separate_total,
         multiplier=before.multiplier * opts.multiplier, spent=[*before.spent, *opts.spent], **extra,
     )
 
@@ -93,7 +105,8 @@ def option_read(option: RollOption, lang: str) -> RollOptionRead:
         key=spec.key, phase=spec.phase, label=spec.label.get(lang) or spec.label["it"], source=option.source,
         dice=spec.extra_dice(ctx, {}) if fixed and spec.extra_dice else None,
         bonus=spec.bonus(ctx, {}) if fixed and spec.bonus else None,
-        mode=spec.mode, multiplier=spec.multiplier, once_per_turn=spec.once_per_turn, slot=spec.slot, needs=spec.needs,
+        mode=spec.mode, multiplier=spec.multiplier, once_per_turn=spec.once_per_turn, slot=spec.slot,
+        needs=None if spec.needs in ctx.confirmed else spec.needs, group=spec.group, dice_cost=spec.dice_cost,
         requires_input=spec.requires_input, input_options=slots, auto_fail=spec.auto_fail,
         cost=RollOptionCost(feature_key=spec.cost.feature_key, amount=spec.cost.amount,
                             spell_slot_min=spec.cost.spell_slot_min) if spec.cost else None,

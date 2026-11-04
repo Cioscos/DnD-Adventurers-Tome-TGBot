@@ -20,14 +20,18 @@ function RollOptionsPrompt({ request }: { request: PromptRequest }) {
   const [chosen, setChosen] = useState<string[]>([])
   const [slots, setSlots] = useState<Record<string, number>>({})
 
+  // Spegne un'opzione e chi dipende da lei.
+  const without = (keys: string[], gone: string) =>
+    keys.filter((k) => k !== gone && options.find((o) => o.key === k)?.needs !== gone)
+
   const setOn = (option: RollOption, on: boolean) => {
     if (on) {
-      setChosen((c) => [...c, option.key])
+      const rivals = options.filter((o) => o.group && o.group === option.group).map((o) => o.key)
+      setChosen((c) => [...rivals.reduce(without, c), option.key])
       const lowest = option.input_options[0]?.level
       if (lowest !== undefined) setSlots((s) => ({ [option.key]: lowest, ...s }))
     } else {
-      // Spegne anche chi dipende da questa opzione.
-      setChosen((c) => c.filter((k) => k !== option.key && options.find((o) => o.key === k)?.needs !== option.key))
+      setChosen((c) => without(c, option.key))
     }
   }
 
@@ -96,6 +100,7 @@ function OptionRow({ option, on, blocked, slot, onToggle, onSlot }: {
     option.slot ? t(`character.roll_options.slot_${option.slot}`) : null,
     option.once_per_turn ? t('character.roll_options.once_per_turn') : null,
     option.cost?.feature_key ? t('character.roll_options.uses', { count: option.cost.amount }) : null,
+    option.dice_cost ? t('character.roll_options.dice_cost', { count: option.dice_cost }) : null,
   ].filter(Boolean)
   return (
     <div className="rounded-xl border border-dnd-border bg-dnd-surface/80 p-3 space-y-2">

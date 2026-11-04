@@ -7,20 +7,22 @@ type Props = { notes?: string[]; autoFail?: boolean; className?: string; charId?
 /** Perché il tiro ha quel modo o quel bonus: condizioni, armatura, privilegi. */
 export default function RollNotes({ notes = [], autoFail = false, className = '', charId, optionResult }: Props) {
   const extra = optionResult?.extra_rolls ?? []
-  if (notes.length === 0 && !autoFail && extra.length === 0) return null
+  const separate = optionResult?.separate_rolls ?? []
+  if (notes.length === 0 && !autoFail && extra.length === 0 && separate.length === 0) return null
   return (
     <>
       {(notes.length > 0 || autoFail) && <Line notes={notes} autoFail={autoFail} className={className} charId={charId} />}
-      {extra.length > 0 && <ExtraDice rolls={extra} total={optionResult!.extra_total} className={className} />}
+      {extra.length > 0 && <ExtraDice testId="roll-option-dice" label="extra_dice" rolls={extra} total={optionResult!.extra_total} className={className} />}
+      {separate.length > 0 && <ExtraDice testId="roll-option-separate" label="separate_dice" rolls={separate} total={optionResult!.separate_total ?? 0} className={className} />}
     </>
   )
 }
 
-function ExtraDice({ rolls, total, className }: { rolls: number[]; total: number; className: string }) {
+function ExtraDice({ testId, label, rolls, total, className }: { testId: string; label: string; rolls: number[]; total: number; className: string }) {
   const { t } = useTranslation()
   return (
-    <span data-testid="roll-option-dice" className={`block text-xs font-mono tabular-nums text-dnd-text-muted ${className}`}>
-      {t('character.roll_options.extra_dice')}: [{rolls.join(', ')}] = {total}
+    <span data-testid={testId} className={`block text-xs font-mono tabular-nums text-dnd-text-muted ${className}`}>
+      {t(`character.roll_options.${label}`)}: [{rolls.join(', ')}] = {total}
     </span>
   )
 }

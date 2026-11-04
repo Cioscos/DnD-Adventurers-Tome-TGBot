@@ -46,8 +46,8 @@ from api.services.hp_rolls import stored_rolls
 from core.game.stats import total_base_hp
 from core.rules.edition import character_edition
 from core.rules.modifiers import damage_taken_mode, effective_hp_max, exhaustion_level, modifiers_for
-from core.rules.roll_options import scale_damage
-from api.services.rules_options import option_result, roll_option_dice, use_options
+from core.rules.roll_options import refund_spent, scale_damage
+from api.services.rules_options import merge_options, option_result, roll_option_dice, use_options
 from api.routers._helpers import collect_homebrew_notifications, effective_con_mod, roll_concentration_save
 from api.schemas.common import ConcentrationSaveResult
 from api.services.character_response import build_character_response
@@ -382,7 +382,8 @@ async def update_hp(
 
     # Nuovo dict (non mutazione in place): la colonna JSON non è tracciata.
     op_id = uuid.uuid4().hex
-    char.hp_undo = {"op_id": op_id, "before": before, "after": _hp_state(char, form)}
+    char.hp_undo = {"op_id": op_id, "before": before, "after": _hp_state(char, form),
+                    "spent": option_block.spent if option_block else []}
 
     result = await build_character_response(session, char)
     result.hp_undo_id = op_id
@@ -438,6 +439,7 @@ async def undo_hp(
     char.active_states = list(before.get("active_states") or [])
     set_damaged(char, before.get("damaged", False))
     await release_concentration_effects(session, char)
+    refund_spent(char, snap.get("spent") or [])
     settings = dict(char.settings or {})
     for k in _CONC_SETTINGS:
         if before[k] is None:
@@ -796,9 +798,12 @@ async def roll_death_save(
     ds = dict(char.death_saves or {"successes": 0, "failures": 0, "stable": False})
 
     applied = modifiers_for(char, "death_save")
+    opts = use_options(session, char, "death_save", body)
+    merge_options(applied, opts)
     d20 = resolve_body(body, applied)
     die = d20.kept
     record_dice(char, d20_records(d20))
+    option_rolls, option_total = roll_option_dice(char, opts)
     revived = False
 
     if die == 20:
@@ -819,7 +824,7 @@ async def roll_death_save(
                      f"Tiro morte d20={die}: Naturale 1! 2 fallimenti ({ds['failures']}/3)",
                      meta={"ds": "failure", "n": 2})
 
-    elif die + applied.flat >= 10:
+    elif die + applied.flat + opts.bonus + option_total >= 10:
         # 10+: 1 success (Esaurimento 2024 e bonus di classe contano; 20 e 1 naturali no)
         ds["successes"] = min(3, ds.get("successes", 0) + 1)
         outcome = "success"
@@ -860,6 +865,7 @@ async def roll_death_save(
         stable=ds.get("stable", False),
         revived=revived,
         current_hp=char.current_hit_points,
+        option_result=option_result(opts, option_rolls, option_total),
     )
 
 

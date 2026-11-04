@@ -107,11 +107,17 @@ export type RollOption = {
   input_options: { level: number; available: number; dice: string | null }[]
   auto_fail: boolean
   cost: { feature_key: string | null; amount: number; spell_slot_min: number | null } | null
+  /** Una sola opzione del gruppo per richiesta. */
+  group: string | null
+  /** Dadi tolti all'opzione indicata da `needs`. */
+  dice_cost: number
 }
 
 export type RollOptionsQuery = {
-  roll: 'attack' | 'spell_damage' | 'skill' | 'save' | 'initiative' | 'damage_taken'
+  roll: 'attack' | 'spell_damage' | 'skill' | 'save' | 'initiative' | 'damage_taken' | 'death_save'
   item_id?: number
+  attack_mode?: string
+  grip?: string
   spell_id?: number
   ability?: string
   skill?: string
@@ -133,6 +139,9 @@ export type OptionResult = {
   bonus: number
   multiplier: number
   spent: string[]
+  /** Danno a parte: non scala col moltiplicatore e non si somma ai dadi extra. */
+  separate_rolls?: number[]
+  separate_total?: number
   damage_before?: number | null
   damage_after?: number | null
 }
@@ -226,6 +235,7 @@ export type DeathSaveRollResult = {
   stable: boolean
   revived: boolean
   current_hp: number
+  option_result?: OptionResult
 }
 
 export type DiceResultEntryBody = {
@@ -541,6 +551,8 @@ export const api = {
       request<ActiveState[]>(`/characters/${id}/active-states/${encodeURIComponent(key)}`, { method: 'DELETE' }),
     turnNew: (id: number) =>
       request<TurnBlock>(`/characters/${id}/turn/new`, { method: 'POST' }),
+    turnOther: (id: number) =>
+      request<TurnBlock>(`/characters/${id}/turn/other`, { method: 'POST' }),
     pendingSaves: {
       roll: (id: number, saveId: number, die?: D20Roll, withInspiration: boolean = false) =>
         request<PendingSaveRollResult>(`/characters/${id}/pending-saves/${saveId}/roll`, {

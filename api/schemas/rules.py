@@ -41,6 +41,8 @@ class RollOptionRead(BaseModel):
     once_per_turn: bool = False
     slot: str | None = None
     needs: str | None = None
+    group: str | None = None
+    dice_cost: int = 0
     requires_input: str | None = None
     input_options: list[RollOptionSlot] = []
     auto_fail: bool = False

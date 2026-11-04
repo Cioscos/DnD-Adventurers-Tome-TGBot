@@ -7,7 +7,7 @@ import HP from '@/pages/HP'
 // Spies hoisted so the vi.mock factories can close over them.
 const {
   getChar, updateHpSpy, restSpy, reviveSpy, updateDeathSavesSpy,
-  rollDeathSaveSpy, spendHitDiceSpy, undoHpSpy, showUndoToastSpy, toastWarning, playAndCollect,
+  rollDeathSaveSpy, rollOptionsSpy, spendHitDiceSpy, undoHpSpy, showUndoToastSpy, toastWarning, playAndCollect,
 } = vi.hoisted(() => ({
   getChar: vi.fn(),
   updateHpSpy: vi.fn(),
@@ -15,6 +15,7 @@ const {
   reviveSpy: vi.fn(),
   updateDeathSavesSpy: vi.fn(),
   rollDeathSaveSpy: vi.fn(),
+  rollOptionsSpy: vi.fn(),
   spendHitDiceSpy: vi.fn(),
   undoHpSpy: vi.fn(),
   showUndoToastSpy: vi.fn(),
@@ -31,6 +32,7 @@ vi.mock('@/api/client', () => ({
       revive: reviveSpy,
       updateDeathSaves: updateDeathSavesSpy,
       rollDeathSave: rollDeathSaveSpy,
+      rollOptions: rollOptionsSpy,
       spendHitDice: spendHitDiceSpy,
       undoHp: undoHpSpy,
     },
@@ -384,6 +386,7 @@ describe('HP page', () => {
     await userEvent.click(screen.getByTestId('ds-roll'))
     // reducedMotion=true → no 3D animation → die left undefined (server rolls)
     await waitFor(() => expect(rollDeathSaveSpy).toHaveBeenCalledWith(7, undefined))
+    expect(rollOptionsSpy).toHaveBeenCalledWith(7, { roll: 'death_save' })
 
     await userEvent.click(screen.getByTestId('ds-action'))
     await waitFor(() => expect(updateDeathSavesSpy).toHaveBeenCalledWith(7, 'mark_success'))

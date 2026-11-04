@@ -29,13 +29,12 @@ from api.schemas.item import AmmoState, ItemCreate, ItemRead, ItemUpdate, Weapon
 from core.game.stats import effective_ability_score
 from core.game.containers import container_meta, is_container
 from core.game.item_bonuses import attack_bonus_total, is_attuned, item_meta
-from core.game.attacks import unarmed_strike_profile
-from core.data.spell_slots import normalize_class_name
 from api.routers._helpers import (
     apply_con_hp as _apply_con_hp,
     collect_homebrew_notifications,
-    effective_ability_mod,
     effective_con_mod,
+    unarmed_attack_profile,
+    weapon_attack_profile,
 )
 from api.services.durations import start_concentration
 from api.services.condition_effects import release_concentration_effects
@@ -521,12 +520,15 @@ def _set_pending_attack(char: Character, pending: dict | None) -> None:
 
 def _settle_attack(
     char: Character, body: AttackSubmission | None, result: WeaponAttackResult, item_id: int | None, ability: str,
+    attack_mode: str, grip: str,
 ) -> WeaponAttackResult:
     """Tiene da parte l'attacco se il danno finale aspetta le opzioni. Un 1 naturale non ha danno da aspettare."""
     pending = None
     if body and body.defer_damage and not result.is_fumble:
         result.attack_id = uuid.uuid4().hex
         pending = {"attack_id": result.attack_id, "item_id": item_id, "ability": ability,
+                   "attack_mode": attack_mode, "grip": grip,
+                   "options": result.option_result.keys if result.option_result else [],
                    "result": result.model_dump(mode="json")}
     _set_pending_attack(char, pending)
     return result
@@ -554,7 +556,8 @@ async def deferred_attack_damage(
     item = next((i for i in char.items if i.id == pending["item_id"]), None)
     if pending["item_id"] is not None and item is None:
         raise HTTPException(status_code=404, detail={"code": "attack_not_found"})
-    opts = use_options(session, char, "attack", body, phase="after_hit", ability=pending["ability"], item=item)
+    opts = use_options(session, char, "attack", body, phase="after_hit", ability=pending["ability"], item=item,
+                       attack_mode=pending["attack_mode"], grip=pending["grip"])
     result = WeaponAttackResult(**pending["result"])
     result.homebrew_notifications = None  # già consegnate col tiro per colpire
     rolls, extra, result.damage_total = _option_damage(char, opts, result.is_critical, result.damage_total + opts.bonus)
@@ -588,12 +591,10 @@ async def attack_with_weapon(
 
     meta = json.loads(item.item_metadata) if item.item_metadata else {}
     damage_dice_str: str = meta.get("damage_dice", "1d4")
-    weapon_type: str = meta.get("weapon_type", "melee")
     properties: list[str] = meta.get("properties", [])
     magic_bonus = int(meta.get("magic_bonus") or 0)
 
     has_prop = lambda name: any(name in p.lower() for p in properties)  # noqa: E731
-    is_finesse = has_prop("finesse")
     grip = body.grip if body else "one"
     attack_mode = body.attack_mode if body else "melee"
 
@@ -614,26 +615,15 @@ async def attack_with_weapon(
         char.heroic_inspiration = False
 
     # Determine ability modifier (effective: equipped-item bonuses included)
-    str_mod = effective_ability_mod(char, "strength")
-    dex_mod = effective_ability_mod(char, "dexterity")
-
-    is_ranged = weapon_type == "ranged" and attack_mode != "thrown"
-
-    if is_finesse:
-        ability_mod = max(str_mod, dex_mod)
-    elif is_ranged:
-        ability_mod = dex_mod
-    else:
-        ability_mod = str_mod
+    ability_mod, ability, resolved_mode = weapon_attack_profile(char, item, attack_mode)
 
     # Bonus di competenza solo con un'arma in cui si è competenti (core.rules.proficiencies).
     proficient = is_weapon_proficient(char, item)
     pb = char.proficiency_bonus if proficient else 0
 
     # To-hit roll
-    ability = "strength" if ability_mod == str_mod and not is_ranged else "dexterity"
     applied = modifiers_for(char, "attack", ability=ability, item=item)
-    opts = use_options(session, char, "attack", body, ability=ability, item=item)
+    opts = use_options(session, char, "attack", body, ability=ability, item=item, attack_mode=resolved_mode, grip=grip)
     merge_options(applied, opts)
     outcome = resolve_body(body, applied)
     to_hit_die = outcome.kept
@@ -744,7 +734,7 @@ async def attack_with_weapon(
         damage_total=damage_total,
         homebrew_notifications=notifications if notifications else None,
         option_result=option_result(opts, option_rolls, option_total),
-    ), item.id, ability)
+    ), item.id, ability, resolved_mode, grip)
 
 
 # ---------------------------------------------------------------------------
@@ -766,18 +756,11 @@ async def attack_unarmed(
             raise HTTPException(status_code=409, detail="Ispirazione non disponibile")
         char.heroic_inspiration = False
 
-    str_mod = effective_ability_mod(char, "strength")
-    dex_mod = effective_ability_mod(char, "dexterity")
-    monk_level = next(
-        (c.level for c in char.classes if normalize_class_name(c.class_name) == "monk"), 0
-    )
-
-    ability_mod, damage_dice_str = unarmed_strike_profile(str_mod, dex_mod, monk_level)
+    ability_mod, damage_dice_str, ability = unarmed_attack_profile(char)
     pb = char.proficiency_bonus
 
-    ability = "strength" if ability_mod == str_mod else "dexterity"
     applied = modifiers_for(char, "attack", ability=ability)
-    opts = use_options(session, char, "attack", body, ability=ability)
+    opts = use_options(session, char, "attack", body, ability=ability, attack_mode="melee", grip="one")
     merge_options(applied, opts)
     outcome = resolve_body(body, applied)
     to_hit_die = outcome.kept
@@ -852,7 +835,7 @@ async def attack_unarmed(
         damage_total=damage_total,
         homebrew_notifications=notifications if notifications else None,
         option_result=option_result(opts, option_rolls, option_total),
-    ), None, ability)
+    ), None, ability, "melee", "one")
 
 
 # ---------------------------------------------------------------------------

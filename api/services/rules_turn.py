@@ -80,6 +80,15 @@ def mark_once(char, key: str) -> bool:
     return True
 
 
+def clear_once_per_turn(char) -> list[str]:
+    """Comincia il turno di un altro: tornano gli effetti «una volta per turno», reazione esclusa.
+    Restituisce la lista svuotata."""
+    used = get_turn(char)["once_per_turn"]
+    if used:
+        _save(char, {**get_turn(char), "once_per_turn": []})
+    return used
+
+
 def reset_turn(char) -> dict:
     """Nuovo turno: tutto a zero (anche reazione, azioni extra e attacco in sospeso).
 

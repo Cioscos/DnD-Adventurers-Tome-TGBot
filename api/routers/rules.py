@@ -10,9 +10,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from api.auth import get_current_lang, get_current_user
 from api.database import get_db
 from api.schemas.session import TurnBlock
+from api.routers._helpers import unarmed_attack_profile, weapon_attack_profile
 from api.routers.hp import _get_owned_full
 from api.services.rules_states import remove_state, use_feature
-from api.services.rules_turn import release, reset_turn, spend
+from api.services.rules_turn import clear_once_per_turn, get_turn, release, reset_turn, spend
 from core.db.models import Character
 from api.schemas.rules import ProficiencyGrantRead, RollOptionRead, SubclassRead
 from api.services.rules_options import list_options
@@ -82,10 +83,21 @@ async def turn_new(
     return reset_turn(await _owned_char(db, char_id, user_id))
 
 
+@turn_router.post("/{char_id}/turn/other", response_model=TurnBlock)
+async def turn_other(
+    char_id: int, user_id: Annotated[int, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> dict:
+    """Fuori da un incontro: è il turno di un altro, tornano gli effetti «una volta per turno»."""
+    char = await _owned_char(db, char_id, user_id)
+    clear_once_per_turn(char)
+    return get_turn(char)
+
+
 @turn_router.get("/{char_id}/roll-options", response_model=list[RollOptionRead])
 async def roll_options(
     char_id: int,
-    roll: Literal["attack", "spell_damage", "skill", "save", "initiative", "damage_taken"],
+    roll: Literal["attack", "spell_damage", "skill", "save", "initiative", "death_save", "damage_taken"],
     user_id: Annotated[int, Depends(get_current_user)],
     lang: Annotated[str, Depends(get_current_lang)],
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -94,6 +106,8 @@ async def roll_options(
     ability: str | None = None,
     skill: str | None = None,
     damage_type: str | None = None,
+    attack_mode: Literal["melee", "thrown"] = "melee",
+    grip: Literal["one", "two"] = "one",
 ) -> list[RollOptionRead]:
     """Opzioni da chiedere al giocatore per questo tiro. Sola lettura: il server le riconvalida al tiro."""
     char = await _get_owned_full(char_id, user_id, db)
@@ -103,7 +117,16 @@ async def roll_options(
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Not found")
     if roll == "initiative":
         ability = "dexterity"
-    return list_options(char, roll, lang, item=item, spell=spell, skill=skill,
+    # Stesso contesto del tiro: un'opzione legata a caratteristica o modalità non deve sparire solo dall'elenco.
+    attack: dict = {}
+    if roll == "attack" and spell is None:
+        if item is None:
+            _, _, ability = unarmed_attack_profile(char)
+            attack = {"attack_mode": "melee", "grip": "one"}
+        else:
+            _, ability, resolved_mode = weapon_attack_profile(char, item, attack_mode)
+            attack = {"attack_mode": resolved_mode, "grip": grip}
+    return list_options(char, roll, lang, item=item, spell=spell, skill=skill, **attack,
                         ability=ability or SKILL_ABILITY_MAP.get(skill), damage_type=canonical_damage_type(damage_type))
 
 

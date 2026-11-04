@@ -357,6 +357,8 @@ async def roll_initiative(
     char = await _pc_for_initiative(db, comb)
     if char is None and body.options:
         raise HTTPException(status.HTTP_409_CONFLICT, detail={"code": "option_unavailable", "key": body.options[0]})
+    if body.options and comb.owner_user_id != user_id:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Not your combatant")
     applied = Applied() if char is None else modifiers_for(char, "initiative", ability="dexterity")
     opts = AppliedOptions() if char is None else use_options(db, char, "initiative", body, ability="dexterity")
     merge_options(applied, opts)

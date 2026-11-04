@@ -4,11 +4,13 @@ from __future__ import annotations
 import random
 
 import pytest
+from sqlalchemy import select
 
 from api.services.condition_effects import SaveSpec, upsert_effect
-from core.db.models import Character, PendingSave
+from core.db.models import AbilityScore, Character, PendingSave
 from core.rules.types import Cost, FeatureSpec, RollOptionSpec, Uses
-from tests.integration._encounter_helpers import GM_ID, PLAYER_ID, as_user, seed_session
+from tests.integration._encounter_helpers import GM_ID, PLAYER_ID, as_user, seed_session, setup_full_encounter
+from tests.integration._telegram_stub import install_fake_telegram
 
 _LABEL = {"it": "Applica?", "en": "Apply?"}
 
@@ -328,7 +330,8 @@ async def test_list_is_localized_and_describes_the_option(client, rules_catalog)
     assert r.json() == [{
         "key": "focus", "phase": "before", "label": "Applica?", "source": "feature:fighter.prova",
         "dice": None, "bonus": None, "mode": "advantage", "multiplier": None, "once_per_turn": False, "slot": None,
-        "needs": None, "requires_input": None, "input_options": [], "auto_fail": False,
+        "needs": None, "group": None, "dice_cost": 0, "requires_input": None, "input_options": [],
+        "auto_fail": False,
         "cost": {"feature_key": "fighter.prova", "amount": 1, "spell_slot_min": None},
     }]
     guide = await client.get(f"/characters/{cid}/roll-options", params={"roll": "skill", "skill": "stealth"})
@@ -528,3 +531,278 @@ async def test_encounter_initiative_with_confirmed_frightened(client, test_sessi
     assert enc["initiative_roll"]["mode_applied"] == "disadvantage"
     assert enc["initiative_roll"]["notes"] == ["condition:frightened"]
     assert next(c for c in enc["combatants"] if c["id"] == pc["id"])["initiative_die"] == 3
+
+
+# --- Revisione: caratteristica e modalità sull'elenco (I2) -----------------------------------------------------------
+
+def _keys(listed) -> list[str]:
+    assert listed.status_code == 200, listed.text
+    return [o["key"] for o in listed.json()]
+
+
+async def _scores(factory, cid, **scores) -> None:
+    async with factory() as s:
+        rows = (await s.execute(select(AbilityScore).where(AbilityScore.character_id == cid))).scalars().all()
+        for row in rows:
+            row.value = scores.get(row.name, row.value)
+        await s.commit()
+
+
+async def _thrown_finesse(client, cid) -> int:
+    return await _weapon(client, cid, properties=("finesse", "thrown"))
+
+
+STR_ONLY = RollOptionSpec(key="reckless", phase="before", rolls=("attack",), label=_LABEL,
+                          available=lambda ctx: ctx.ability == "strength")
+MELEE_ONLY = RollOptionSpec(key="smite", phase="after_hit", rolls=("attack",), label=_LABEL,
+                            available=lambda ctx: ctx.attack_mode == "melee", extra_dice=lambda _c, _i: "1d8")
+TWO_HANDS = RollOptionSpec(key="gwf", phase="before", rolls=("attack",), label=_LABEL,
+                           available=lambda ctx: ctx.grip == "two")
+
+
+async def test_list_knows_the_ability_of_the_attack_like_the_roll(client, rules_catalog, test_session_factory):
+    rules_catalog(_feature(STR_ONLY))
+    cid = await _char(client)
+    await _scores(test_session_factory, cid, strength=10, dexterity=18)
+    finesse = await _weapon(client, cid)
+    params = {"roll": "attack", "item_id": finesse}
+    assert _keys(await client.get(f"/characters/{cid}/roll-options", params=params)) == []
+    r = await client.post(f"/characters/{cid}/items/{finesse}/attack", json={"die": 10, "options": ["reckless"]})
+    assert r.status_code == 409
+    await _scores(test_session_factory, cid, strength=18, dexterity=10)
+    assert _keys(await client.get(f"/characters/{cid}/roll-options", params=params)) == ["reckless"]
+    r = await client.post(f"/characters/{cid}/items/{finesse}/attack", json={"die": 10, "options": ["reckless"]})
+    assert r.status_code == 200, r.text
+
+
+async def test_list_knows_the_ability_of_an_unarmed_strike(client, rules_catalog, test_session_factory):
+    rules_catalog(_feature(STR_ONLY))
+    cid = await _char(client)
+    await _scores(test_session_factory, cid, strength=18, dexterity=10)
+    assert _keys(await client.get(f"/characters/{cid}/roll-options", params={"roll": "attack"})) == ["reckless"]
+
+
+async def test_attack_mode_separates_melee_thrown_and_ranged(client, rules_catalog):
+    rules_catalog(_feature(MELEE_ONLY))
+    cid = await _char(client)
+    dagger = await _thrown_finesse(client, cid)
+    base = {"roll": "attack", "item_id": dagger}
+    url = f"/characters/{cid}/roll-options"
+    assert _keys(await client.get(url, params=base)) == ["smite"]
+    assert _keys(await client.get(url, params={**base, "attack_mode": "thrown"})) == []
+    # il server legge la stessa modalità nel secondo tempo
+    hit = await _deferred(client, cid, dagger, attack_mode="thrown")
+    r = await client.post(f"/characters/{cid}/attack/{hit['attack_id']}/damage", json={"options": ["smite"]})
+    assert r.status_code == 409 and _code(r) == "option_unavailable"
+    hit = await _deferred(client, cid, dagger)
+    r = await client.post(f"/characters/{cid}/attack/{hit['attack_id']}/damage", json={"options": ["smite"]})
+    assert r.status_code == 200, r.text
+    r = await client.post(f"/characters/{cid}/items", json={
+        "name": "Arco", "item_type": "weapon",
+        "item_metadata": {"damage_dice": "1d8", "weapon_type": "ranged", "properties": []}})
+    bow = next(i["id"] for i in r.json()["items"] if i["name"] == "Arco")
+    assert _keys(await client.get(url, params={"roll": "attack", "item_id": bow})) == []
+
+
+async def test_grip_reaches_the_context(client, rules_catalog):
+    rules_catalog(_feature(TWO_HANDS))
+    cid = await _char(client)
+    item = await _weapon(client, cid)
+    url = f"/characters/{cid}/roll-options"
+    assert _keys(await client.get(url, params={"roll": "attack", "item_id": item})) == []
+    assert _keys(await client.get(url, params={"roll": "attack", "item_id": item, "grip": "two"})) == ["gwf"]
+    r = await client.post(f"/characters/{cid}/items/{item}/attack", json={"die": 10, "grip": "two", "options": ["gwf"]})
+    assert r.status_code == 200, r.text
+
+
+# --- Revisione: once_per_turn fuori dal proprio turno (I3) ------------------------------------------------------------
+
+async def _once_used(factory, cid, reaction=True) -> None:
+    async with factory() as s:
+        (await s.get(Character, cid)).turn_state = {"once_per_turn": ["sneak"], "reaction_used": reaction}
+        await s.commit()
+
+
+async def _turn(factory, cid) -> dict:
+    async with factory() as s:
+        return dict((await s.get(Character, cid)).turn_state or {})
+
+
+async def test_every_turn_start_clears_once_per_turn_of_all_pcs(client, test_session_factory, monkeypatch):
+    install_fake_telegram(monkeypatch)
+    sid, _ = await setup_full_encounter(client, test_session_factory)
+    enc = (await client.post(f"/sessions/{sid}/encounter/start", json={})).json()
+    cid = next(c["character_id"] for c in enc["combatants"] if c["kind"] == "pc")
+    await _once_used(test_session_factory, cid)
+
+    assert (await client.post(f"/sessions/{sid}/encounter/next-turn")).status_code == 200  # tocca a un mostro
+    turn = await _turn(test_session_factory, cid)
+    assert turn["once_per_turn"] == [] and turn["reaction_used"] is True
+
+    # l'annullamento dell'avanzamento rimette la lista com'era
+    assert (await client.post(f"/sessions/{sid}/encounter/prev-turn")).status_code == 200
+    assert (await _turn(test_session_factory, cid))["once_per_turn"] == ["sneak"]
+
+
+async def test_other_turn_command_clears_only_once_per_turn(client, rules_catalog, test_session_factory):
+    rules_catalog(_feature(SNEAK))
+    cid = await _char(client)
+    item = await _weapon(client, cid)
+    await _once_used(test_session_factory, cid)
+    url = f"/characters/{cid}/roll-options"
+    assert _keys(await client.get(url, params={"roll": "attack", "item_id": item})) == []
+    r = await client.post(f"/characters/{cid}/turn/other")
+    assert r.status_code == 200, r.text
+    assert r.json()["once_per_turn"] == [] and r.json()["reaction_used"] is True
+    assert _keys(await client.get(url, params={"roll": "attack", "item_id": item})) == ["sneak"]
+
+
+# --- Revisione: /hp/undo rimborsa (I4) --------------------------------------------------------------------------------
+
+async def test_hp_undo_gives_back_what_the_option_paid(client, rules_catalog):
+    paid = RollOptionSpec(key="dodge", phase="damage_in", rolls=("damage_taken",), label=_LABEL, slot="reaction",
+                          once_per_turn=True, multiplier=0.5, cost=Cost(feature_key="fighter.prova"))
+    rules_catalog(_feature(paid, uses=Uses(table={1: 1})))
+    cid = await _char(client)
+    r = await client.patch(f"/characters/{cid}/hp", json={"op": "damage", "value": 15, "options": ["dodge"]})
+    assert r.status_code == 200, r.text
+    assert await _uses(client, cid) == 0
+    r = await client.post(f"/characters/{cid}/hp/undo", json={"op_id": r.json()["hp_undo_id"]})
+    assert r.status_code == 200, r.text
+    assert r.json()["current_hit_points"] == 50 and await _uses(client, cid) == 1
+    assert (await client.get(f"/characters/{cid}/turn-state")).json()["turn"]["reaction_used"] is False
+    # si ribatte il danno: l'opzione c'è ancora
+    r = await client.patch(f"/characters/{cid}/hp", json={"op": "damage", "value": 9, "options": ["dodge"]})
+    assert r.status_code == 200 and r.json()["current_hit_points"] == 50 - 4
+
+
+async def test_hp_undo_gives_back_the_spell_slot(client, rules_catalog):
+    slot_option = RollOptionSpec(key="shield", phase="damage_in", rolls=("damage_taken",), label=_LABEL,
+                                 requires_input="slot", cost=Cost(spell_slot_min=1), multiplier=0)
+    rules_catalog(_feature(slot_option))
+    cid = await _char(client)
+    await _slot(client, cid, 1)
+    r = await client.patch(f"/characters/{cid}/hp", json={
+        "op": "damage", "value": 5, "options": ["shield"], "option_inputs": {"shield": {"slot_level": 1}}})
+    assert r.status_code == 200, r.text
+    assert r.json()["spell_slots"][0]["used"] == 1
+    r = await client.post(f"/characters/{cid}/hp/undo", json={"op_id": r.json()["hp_undo_id"]})
+    assert r.json()["spell_slots"][0]["used"] == 0
+
+
+async def test_hp_undo_without_options_touches_nothing_else(client, rules_catalog, test_session_factory):
+    cid = await _char(client)
+    await _once_used(test_session_factory, cid)
+    r = await client.patch(f"/characters/{cid}/hp", json={"op": "damage", "value": 5})
+    await client.post(f"/characters/{cid}/hp/undo", json={"op_id": r.json()["hp_undo_id"]})
+    turn = await _turn(test_session_factory, cid)
+    assert turn["reaction_used"] is True and turn["once_per_turn"] == ["sneak"]
+
+
+# --- Revisione: forme del catalogo ------------------------------------------------------------------------------------
+
+async def test_group_is_one_option_per_request_through_the_api(client, rules_catalog):
+    rules_catalog(_feature(
+        RollOptionSpec(key="m1", phase="before", rolls=("attack",), label=_LABEL, group="maneuver"),
+        RollOptionSpec(key="m2", phase="before", rolls=("attack",), label=_LABEL, group="maneuver"),
+    ))
+    cid = await _char(client)
+    item = await _weapon(client, cid)
+    listed = (await client.get(f"/characters/{cid}/roll-options", params={"roll": "attack", "item_id": item})).json()
+    assert [o["group"] for o in listed] == ["maneuver", "maneuver"]
+    r = await client.post(f"/characters/{cid}/items/{item}/attack", json={"options": ["m1", "m2"]})
+    assert r.status_code == 409
+
+
+async def test_needs_across_phases_reads_the_pending_attack(client, rules_catalog):
+    rules_catalog(_feature(
+        RollOptionSpec(key="reckless", phase="before", rolls=("attack",), label=_LABEL),
+        RollOptionSpec(key="brutal", phase="after_hit", rolls=("attack",), label=_LABEL, needs="reckless",
+                       extra_dice=lambda _c, _i: "1d10"),
+    ))
+    cid = await _char(client)
+    item = await _weapon(client, cid)
+    url = f"/characters/{cid}/roll-options"
+    plain = await _deferred(client, cid, item)
+    r = await client.post(f"/characters/{cid}/attack/{plain['attack_id']}/damage", json={"options": ["brutal"]})
+    assert r.status_code == 409
+
+    hit = await _deferred(client, cid, item, options=["reckless"])
+    # confermata al primo tempo: il prompt del secondo non la chiede più come dipendenza
+    listed = (await client.get(url, params={"roll": "attack", "item_id": item})).json()
+    assert next(o for o in listed if o["key"] == "brutal")["needs"] is None
+    r = await client.post(f"/characters/{cid}/attack/{hit['attack_id']}/damage", json={"options": ["brutal"]})
+    assert r.status_code == 200, r.text
+    assert len(r.json()["option_result"]["extra_rolls"]) == 1
+
+
+async def test_dice_cost_through_the_second_step(client, rules_catalog):
+    rules_catalog(_feature(
+        RollOptionSpec(key="sneak", phase="after_hit", rolls=("attack",), label=_LABEL, extra_dice=lambda _c, _i: "3d6"),
+        RollOptionSpec(key="poison", phase="after_hit", rolls=("attack",), label=_LABEL, needs="sneak", dice_cost=1),
+    ))
+    cid = await _char(client)
+    item = await _weapon(client, cid)
+    hit = await _deferred(client, cid, item)
+    r = await client.post(f"/characters/{cid}/attack/{hit['attack_id']}/damage", json={"options": ["sneak", "poison"]})
+    assert r.status_code == 200, r.text
+    assert len(r.json()["option_result"]["extra_rolls"]) == 2
+
+
+async def test_dice_outside_crit_and_outside_the_total(client, rules_catalog):
+    rules_catalog(_feature(
+        RollOptionSpec(key="hellish", phase="after_hit", rolls=("attack",), label=_LABEL, crit_doubles=False,
+                       extra_dice=lambda _c, _i: "2d6"),
+        RollOptionSpec(key="sweep", phase="after_hit", rolls=("attack",), label=_LABEL, crit_doubles=False,
+                       separate_damage=True, extra_dice=lambda _c, _i: "1d8"),
+    ))
+    cid = await _char(client)
+    item = await _weapon(client, cid)
+    crit = await _deferred(client, cid, item, die=20)
+    r = await client.post(f"/characters/{cid}/attack/{crit['attack_id']}/damage", json={"options": ["hellish", "sweep"]})
+    assert r.status_code == 200, r.text
+    body = r.json()
+    result = body["option_result"]
+    assert len(result["extra_rolls"]) == 2  # niente raddoppio
+    assert len(result["separate_rolls"]) == 1 and result["separate_total"] == result["separate_rolls"][0]
+    assert body["damage_total"] == crit["damage_total"] + sum(result["extra_rolls"])
+
+
+async def test_on_confirm_runs_in_the_same_transaction(client, rules_catalog):
+    def set_temp(_session, ctx, _inputs) -> None:
+        ctx.char.temp_hp = ctx.class_level
+
+    rules_catalog(_feature(RollOptionSpec(key="blessing", phase="before", rolls=("skill",), label=_LABEL,
+                                          on_confirm=set_temp)))
+    cid = await _char(client)
+    r = await client.post(f"/characters/{cid}/skills/arcana/roll", json={"die": 10, "options": ["blessing"]})
+    assert r.status_code == 200, r.text
+    assert (await client.get(f"/characters/{cid}")).json()["temp_hp"] == 5
+
+
+async def test_death_save_accepts_options(client, rules_catalog):
+    rules_catalog(_feature(RollOptionSpec(key="vengeance", phase="before", rolls=("death_save",), label=_LABEL,
+                                          bonus=lambda _c, _i: 5)))
+    cid = await _char(client)
+    await client.patch(f"/characters/{cid}/hp", json={"op": "set_current", "value": 0})
+    assert _keys(await client.get(f"/characters/{cid}/roll-options", params={"roll": "death_save"})) == ["vengeance"]
+    r = await client.post(f"/characters/{cid}/death_saves/roll", json={"die": 6})
+    assert r.json()["outcome"] == "failure" and "option_result" not in r.json()
+    r = await client.post(f"/characters/{cid}/death_saves/roll", json={"die": 6, "options": ["vengeance"]})
+    assert r.status_code == 200, r.text
+    assert r.json()["outcome"] == "success" and r.json()["option_result"]["keys"] == ["vengeance"]
+
+
+async def test_gm_cannot_spend_the_options_of_a_player(client, test_session_factory):
+    sid, cid = await seed_session(test_session_factory)
+    async with test_session_factory() as s:
+        (await s.get(Character, cid)).conditions = {"frightened": True}
+        await s.commit()
+    as_user(GM_ID)
+    pc = next(c for c in (await client.post(f"/sessions/{sid}/encounter", json={"mode": "full"})).json()["combatants"]
+              if c["kind"] == "pc")
+    r = await client.post(f"/sessions/{sid}/encounter/combatants/{pc['id']}/initiative",
+                          json={"die": 12, "options": ["condition:frightened"]})
+    assert r.status_code == 403
+    r = await client.post(f"/sessions/{sid}/encounter/combatants/{pc['id']}/initiative", json={"die": 12})
+    assert r.status_code == 200, r.text

@@ -1,3 +1,4 @@
+import { askRollOptions, refreshAfterOptions } from '@/lib/rollOptions'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
@@ -70,11 +71,14 @@ export default function HeroScreen({ char }: Props) {
   const qc = useQueryClient()
   const rollD20 = useD20Roll()
   const deathRollMutation = useMutation({
-    mutationFn: async (mode: RollMode) =>
-      api.characters.rollDeathSave(char.id, d20Arg(mode, await rollD20(mode))),
+    mutationFn: async (mode: RollMode) => {
+      const choice = await askRollOptions(char.id, { roll: 'death_save' })
+      return api.characters.rollDeathSave(char.id, d20Arg(mode, await rollD20(mode), choice))
+    },
     onSuccess: (result) => {
       setDeathRollResult(result)
       qc.invalidateQueries({ queryKey: ['character', char.id] })
+      refreshAfterOptions(qc, char.id, result.option_result)
       haptic.success()
     },
   })

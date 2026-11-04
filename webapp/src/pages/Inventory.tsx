@@ -9,7 +9,6 @@ import { m, AnimatePresence } from 'framer-motion'
 import { Plus, ChevronRight, Pencil, RotateCcw, FolderPlus, FolderInput, HandHeart, Trash2, ListChecks, Check } from 'lucide-react'
 import { GiKnapsack as Backpack } from 'react-icons/gi'
 import { api, ApiError } from '@/api/client'
-import { useAnimatedRoll } from '@/dice/useAnimatedRoll'
 import type { RollMode } from '@/hooks/useD20Roll'
 import type { WeaponChoice } from '@/lib/weaponOptions'
 import { useWeaponChoices, choiceOf } from '@/store/weaponChoiceStore'
@@ -350,12 +349,11 @@ export default function Inventory() {
 
   const shareItem = useShareMessage((itemId: number) => api.share.item(charId, itemId))
 
-  const rollDice = useAnimatedRoll()
-  const attackRoll = useAttackRoll()
+  const attack = useAttackRoll()
 
   const attackMutation = useMutation({
     mutationFn: ({ itemId, mode }: { itemId: number; mode: RollMode }) =>
-      attackRoll(charId, itemId, mode, !!char?.heroic_inspiration, choiceOf(weaponChoices, itemId)),
+      attack.roll(charId, itemId, mode, !!char?.heroic_inspiration, choiceOf(weaponChoices, itemId)),
     onSuccess: (result, { itemId }) => {
       if (result) {
         setAttackState({
@@ -363,18 +361,17 @@ export default function Inventory() {
         })
       }
       qc.invalidateQueries({ queryKey: ['character', charId] })
+      qc.invalidateQueries({ queryKey: ['turn-state', charId] })
       haptic.success()
     },
   })
 
   const attackRerollMutation = useMutation({
-    mutationFn: async ({ itemId, choice }: { itemId: number; choice: WeaponChoice }) => {
-      const die = (await rollDice('d20', 1))?.[0]
-      return api.items.attack(charId, itemId, true, die, choice)
-    },
+    mutationFn: ({ itemId, choice }: { itemId: number; choice: WeaponChoice }) => attack.reroll(charId, itemId, choice),
     onSuccess: (result) => {
-      setAttackState((prev) => prev && { ...prev, result, wasRerolled: true })
+      setAttackState((prev) => (result && prev ? { ...prev, result, wasRerolled: true } : null))
       qc.invalidateQueries({ queryKey: ['character', charId] })
+      qc.invalidateQueries({ queryKey: ['turn-state', charId] })
       haptic.success()
     },
     onError: (err) => {

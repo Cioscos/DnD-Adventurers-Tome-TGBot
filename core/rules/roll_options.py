@@ -61,7 +61,11 @@ class RollOption:
 @dataclass
 class AppliedOptions:
     keys: list[str] = field(default_factory=list)
-    extra_dice: list[str] = field(default_factory=list)
+    extra_dice: list[str] = field(default_factory=list)  # raddoppiano al critico
+    fixed_dice: list[str] = field(default_factory=list)  # nel totale, senza raddoppio
+    separate_dice: list[list] = field(default_factory=list)  # [espressione, raddoppia], fuori dal totale
+    separate_rolls: list[int] = field(default_factory=list)
+    separate_total: int = 0
     bonus: int = 0
     modes: list[str] = field(default_factory=list)
     multiplier: float = 1
@@ -102,8 +106,12 @@ def _slot_free(char: Any, slot: str) -> bool:
     return not turn.get(TURN_FLAGS[slot]) or (slot == "action" and turn.get("extra_actions", 0) > 0)
 
 
+def _once_key(spec: RollOptionSpec) -> str:
+    return spec.group or spec.key
+
+
 def _affordable(char: Any, spec: RollOptionSpec) -> bool:
-    if spec.once_per_turn and spec.key in _turn(char).get("once_per_turn", []):
+    if spec.once_per_turn and _once_key(spec) in _turn(char).get("once_per_turn", []):
         return False
     if spec.slot and not _slot_free(char, spec.slot):
         return False
@@ -131,20 +139,25 @@ def _slot_level(char: Any, spec: RollOptionSpec, inputs: dict) -> int:
     return level
 
 
-def _spend(session: Any, char: Any, spec: RollOptionSpec, inputs: dict) -> list[str]:
-    """Paga l'opzione. Ricontrolla ogni risorsa: due opzioni possono contendersi l'ultima."""
+def _spend(session: Any, option: RollOption, inputs: dict) -> list[str]:
+    """Paga l'opzione e ne applica l'effetto collaterale. Ricontrolla ogni risorsa: due opzioni possono contendersi
+    l'ultima. I gettoni restituiti sono quelli che ``refund_spent`` sa rimborsare."""
+    spec, char = option.spec, option.ctx.char
     if not _affordable(char, spec):
         raise OptionUnavailable(spec.key)
     spent: list[str] = []
     turn = _turn(char)
     if spec.once_per_turn:
-        turn["once_per_turn"] = [*turn.get("once_per_turn", []), spec.key]
+        turn["once_per_turn"] = [*turn.get("once_per_turn", []), _once_key(spec)]
+        spent.append(f"once:{_once_key(spec)}")
     if spec.slot:
         flag = TURN_FLAGS[spec.slot]
         if turn.get(flag):  # solo l'azione arriva qui già usata: consuma l'azione extra
             turn["extra_actions"] -= 1
-        turn[flag] = True
-        spent.append(f"turn:{spec.slot}")
+            spent.append("turn:extra_action")
+        else:
+            turn[flag] = True
+            spent.append(f"turn:{spec.slot}")
     char.turn_state = turn  # nuovo dict: SQLAlchemy non vede le mutazioni in place
     cost = spec.cost
     if cost and cost.feature_key:
@@ -154,14 +167,25 @@ def _spend(session: Any, char: Any, spec: RollOptionSpec, inputs: dict) -> list[
         spent.append(f"feature:{cost.feature_key}:{cost.amount}")
     if spec.requires_input == "slot":
         level = _slot_level(char, spec, inputs)
-        next(s for s in char.spell_slots if s.level == level and s.available > 0).use_slot()
-        spent.append(f"slot:{level}")
+        slot = next(s for s in char.spell_slots if s.level == level and s.available > 0)
+        slot.use_slot()
+        spent.append(f"slot:{level}:pact" if slot.is_pact else f"slot:{level}")
     if spent:
         session.add(CharacterHistory(
             character_id=char.id, timestamp=datetime.utcnow().isoformat(timespec="seconds"),
             event_type="roll_option", description=f"{spec.label['it']} ({', '.join(spent)})",
         ))
+    if spec.on_confirm:
+        spec.on_confirm(session, option.ctx, inputs)
     return spent
+
+
+def _take_dice(expr: str, cost: int) -> str | None:
+    """``expr`` con ``cost`` dadi in meno; ``None`` se non ne restano abbastanza."""
+    match = _DICE.match(expr)
+    if match is None or int(match[1]) < cost:
+        return None
+    return f"{int(match[1]) - cost}d{match[2]}{match[3] or ''}"
 
 
 def apply_options(session: Any, ctx: RuleContext, keys: list[str], inputs: dict | None = None,
@@ -170,18 +194,26 @@ def apply_options(session: Any, ctx: RuleContext, keys: list[str], inputs: dict 
     inputs = inputs or {}
     keys = list(dict.fromkeys(keys))
     usable = {o.spec.key: o for o in roll_options_for(ctx) if o.spec.phase == phase}
+    confirmed = ctx.confirmed if phase != "before" else ()
     out = AppliedOptions()
+    dice: dict[str, str] = {}
+    groups: set[str] = set()
     for key in keys:
         option = usable.get(key)
-        if option is None or (option.spec.needs and option.spec.needs not in keys):
+        if option is None or (option.spec.needs and option.spec.needs not in keys
+                              and option.spec.needs not in confirmed):
             raise OptionUnavailable(key)
         spec, given = option.spec, inputs.get(key) or {}
+        if spec.group:
+            if spec.group in groups:
+                raise OptionUnavailable(key)
+            groups.add(spec.group)
         if spec.requires_input == "slot":
             _slot_level(ctx.char, spec, given)  # i dadi dipendono dallo slot: va controllato prima di calcolarli
-        out.spent += _spend(session, ctx.char, spec, given)
+        out.spent += _spend(session, option, given)
         out.keys.append(key)
         if spec.extra_dice:
-            out.extra_dice.append(spec.extra_dice(option.ctx, given))
+            dice[key] = spec.extra_dice(option.ctx, given)
         if spec.bonus:
             out.bonus += spec.bonus(option.ctx, given)
         if spec.mode:
@@ -192,7 +224,48 @@ def apply_options(session: Any, ctx: RuleContext, keys: list[str], inputs: dict 
         out.force_crit = out.force_crit or spec.force_crit
         if option.source not in out.notes:
             out.notes.append(option.source)
+    for key in keys:
+        spec = usable[key].spec
+        if spec.dice_cost:
+            left = _take_dice(dice.get(spec.needs, ""), spec.dice_cost)
+            if left is None:
+                raise OptionUnavailable(key)
+            dice[spec.needs] = left
+    for key, expr in dice.items():
+        if expr.startswith("0d") and "+" not in expr and "-" not in expr:
+            continue
+        spec = usable[key].spec
+        if spec.separate_damage:
+            out.separate_dice.append([expr, spec.crit_doubles])
+        else:
+            (out.extra_dice if spec.crit_doubles else out.fixed_dice).append(expr)
     return out
+
+
+def refund_spent(char: Any, spent: list[str]) -> None:
+    """Restituisce ciò che ``_spend`` ha pagato, a partire dai suoi gettoni."""
+    turn = _turn(char)
+    for token in spent:
+        kind, _, rest = token.partition(":")
+        if kind == "once":
+            turn["once_per_turn"] = [k for k in turn.get("once_per_turn", []) if k != rest]
+        elif kind == "turn" and rest == "extra_action":
+            turn["extra_actions"] = turn.get("extra_actions", 0) + 1
+        elif kind == "turn":
+            turn[TURN_FLAGS[rest]] = False
+        elif kind == "feature":
+            feature_key, _, amount = rest.rpartition(":")
+            row = next((a for a in char.abilities if a.feature_key == feature_key
+                        and a.max_uses is not None and (a.uses or 0) < a.max_uses), None)
+            if row is not None:
+                row.uses = min(row.max_uses, (row.uses or 0) + int(amount))
+        elif kind == "slot":
+            level, _, pact = rest.partition(":")
+            slot = next((s for s in char.spell_slots
+                         if s.level == int(level) and bool(s.is_pact) == bool(pact) and s.used > 0), None)
+            if slot is not None:
+                slot.used -= 1
+    char.turn_state = turn
 
 
 def roll_extra(dice: list[str], critical: bool = False) -> tuple[list[tuple[str, int]], int]:

@@ -126,7 +126,14 @@ class RollOptionSpec:
 
     ``requires_input="slot"``: il giocatore sceglie ``slot_level`` (con ``cost.spell_slot_min``). ``needs``: un'altra
     opzione da scegliere insieme (+1d8 di Punizione Divina). ``auto_fail``: fallimento automatico confermato.
-    ``force_crit``: il colpo a segno è critico (solo ``before``)."""
+    ``force_crit``: il colpo a segno è critico (solo ``before``).
+
+    ``group``: una sola opzione del gruppo per richiesta; con ``once_per_turn`` si registra il gruppo, non la chiave.
+    ``dice_cost``: dadi tolti all'opzione ``needs`` della stessa richiesta (Colpo Astuto su Attacco Furtivo).
+    ``needs`` vale anche per un'opzione confermata prima del tiro di questo attacco (``RuleContext.confirmed``).
+    ``crit_doubles=False``: i dadi non raddoppiano al critico. ``separate_damage``: dadi riportati a parte, fuori dal
+    totale (seconda creatura). ``on_confirm(session, ctx, inputs)``: effetto collaterale dopo il pagamento, nella
+    stessa transazione; è sincrono e ``/hp/undo`` non lo annulla."""
     key: str
     phase: Literal["before", "after_hit", "damage_in"]
     rolls: tuple[str, ...]
@@ -143,6 +150,11 @@ class RollOptionSpec:
     needs: str | None = None
     auto_fail: bool = False
     force_crit: bool = False
+    group: str | None = None
+    dice_cost: int = 0
+    crit_doubles: bool = True
+    separate_damage: bool = False
+    on_confirm: "Callable[[Any, RuleContext, dict], None] | None" = None
 
     def __post_init__(self) -> None:
         if self.phase not in ("before", "after_hit", "damage_in"):
@@ -155,6 +167,8 @@ class RollOptionSpec:
             raise ValueError("force_crit vale solo prima del tiro")
         if self.cost and self.cost.spell_slot_min is not None and self.requires_input != "slot":
             raise ValueError("uno slot come costo richiede requires_input='slot'")
+        if self.dice_cost and not self.needs:
+            raise ValueError("dice_cost toglie dadi all'opzione indicata da needs")
 
 
 @dataclass(frozen=True)
@@ -198,3 +212,6 @@ class RuleContext:
     spell: Any = None
     turn: Any = None
     damage_type: Any = None
+    attack_mode: Any = None  # solo attacchi: `melee`, `thrown` o `ranged`
+    grip: Any = None  # solo attacchi: `one` o `two`
+    confirmed: tuple = ()  # opzioni già confermate per questo attacco, nel primo tempo

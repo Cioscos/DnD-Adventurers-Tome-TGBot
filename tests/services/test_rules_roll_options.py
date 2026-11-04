@@ -5,9 +5,12 @@ from types import SimpleNamespace
 
 import pytest
 
+from core.db.models import SpellSlot
 from core.rules import catalog
 from core.rules.modifiers import modifiers_for
-from core.rules.roll_options import OptionUnavailable, apply_options, roll_extra, roll_options_for, scale_damage
+from core.rules.roll_options import (
+    OptionUnavailable, apply_options, refund_spent, roll_extra, roll_options_for, scale_damage,
+)
 from core.rules.types import Cost, FeatureSpec, RollOptionSpec, RuleContext
 
 _FINESSE = '{"properties": ["finesse"], "weapon_type": "melee"}'
@@ -57,14 +60,7 @@ def registry(monkeypatch):
 
 
 def _slot(level, total=2, used=0, is_pact=False):
-    slot = SimpleNamespace(level=level, total=total, used=used, is_pact=is_pact)
-    slot.available = total - used
-
-    def use_slot():
-        slot.used += 1
-        slot.available -= 1
-    slot.use_slot = use_slot
-    return slot
+    return SpellSlot(level=level, total=total, used=used, is_pact=is_pact)
 
 
 _LABEL = {"it": "Prova?", "en": "Test?"}
@@ -154,7 +150,7 @@ def test_stunning_strike_spends_focus_once_per_turn(registry):
     ctx = _ctx(char, "attack")
     assert _keys(ctx) == ["stun"]
     applied = apply_options(_Session(), ctx, ["stun"], {}, phase="after_hit")
-    assert ki.uses == 0 and applied.spent == ["feature:monk.ki:1"]
+    assert ki.uses == 0 and applied.spent == ["once:stun", "feature:monk.ki:1"]
 
 
 def test_no_uses_or_missing_row_hides_the_option(registry):
@@ -296,3 +292,122 @@ def test_roll_extra_doubles_dice_not_the_flat_bonus():
     assert len(rolled) == 4 and flat == 3 and all(kind == "d6" and 1 <= v <= 6 for kind, v in rolled)
     rolled, flat = roll_extra(["2d6+3", "1d8"])
     assert [kind for kind, _ in rolled] == ["d6", "d6", "d8"] and flat == 3
+
+
+# --- Forme del catalogo (revisione del Task 12) ---------------------------------------------------------------------
+
+def _opt(key, **kw):
+    return RollOptionSpec(key=key, phase=kw.pop("phase", "after_hit"), rolls=("attack",), label=_LABEL, **kw)
+
+
+def test_group_allows_one_option_per_request(registry):
+    registry(_opt("a", group="maneuver"), _opt("b", group="maneuver"), _opt("c"))
+    ctx = _ctx(_char(), "attack")
+    assert apply_options(_Session(), ctx, ["a", "c"], {}, phase="after_hit").keys == ["a", "c"]
+    with pytest.raises(OptionUnavailable):
+        apply_options(_Session(), ctx, ["a", "b"], {}, phase="after_hit")
+
+
+def test_once_per_turn_registers_the_group(registry):
+    registry(_opt("a", group="wrath", once_per_turn=True), _opt("b", group="wrath", once_per_turn=True))
+    char = _char()
+    ctx = _ctx(char, "attack")
+    assert apply_options(_Session(), ctx, ["a"], {}, phase="after_hit").spent == ["once:wrath"]
+    assert char.turn_state["once_per_turn"] == ["wrath"]
+    assert _keys(ctx) == []
+
+
+def test_dice_cost_takes_dice_from_the_needed_option(registry):
+    sneak = _opt("sneak", extra_dice=lambda _c, _i: "3d6")
+    registry(sneak, _opt("poison", needs="sneak", dice_cost=1), _opt("trip", needs="sneak", dice_cost=2))
+    ctx = _ctx(_char(), "attack")
+    assert apply_options(_Session(), ctx, ["poison", "sneak"], {}, phase="after_hit").extra_dice == ["2d6"]
+    assert apply_options(_Session(), ctx, ["sneak", "poison", "trip"], {}, phase="after_hit").extra_dice == []
+
+
+def test_dice_cost_above_the_dice_left_is_rejected(registry):
+    registry(_opt("sneak", extra_dice=lambda _c, _i: "1d6"), _opt("ko", needs="sneak", dice_cost=2),
+             _opt("plain"), _opt("bad", needs="plain", dice_cost=1))
+    ctx = _ctx(_char(), "attack")
+    with pytest.raises(OptionUnavailable):
+        apply_options(_Session(), ctx, ["sneak", "ko"], {}, phase="after_hit")
+    with pytest.raises(OptionUnavailable):
+        apply_options(_Session(), ctx, ["plain", "bad"], {}, phase="after_hit")
+
+
+def test_dice_cost_without_needs_is_a_catalog_error():
+    with pytest.raises(ValueError):
+        _opt("x", dice_cost=1)
+
+
+def test_needs_is_satisfied_by_an_option_confirmed_in_an_earlier_phase(registry):
+    registry(_opt("reckless", phase="before"), _opt("brutal", needs="reckless", extra_dice=lambda _c, _i: "1d10"))
+    char = _char()
+    with pytest.raises(OptionUnavailable):
+        apply_options(_Session(), _ctx(char, "attack"), ["brutal"], {}, phase="after_hit")
+    ctx = _ctx(char, "attack", confirmed=("reckless",))
+    assert apply_options(_Session(), ctx, ["brutal"], {}, phase="after_hit").extra_dice == ["1d10"]
+
+
+def test_confirmed_does_not_satisfy_needs_before_the_roll(registry):
+    registry(_opt("x", phase="before"), _opt("y", phase="before", needs="x"))
+    ctx = _ctx(_char(), "attack", confirmed=("x",))
+    with pytest.raises(OptionUnavailable):
+        apply_options(_Session(), ctx, ["y"])
+
+
+def test_dice_that_do_not_double_and_separate_dice_have_their_own_lists(registry):
+    registry(_opt("hellish", extra_dice=lambda _c, _i: "2d6", crit_doubles=False),
+             _opt("sweep", extra_dice=lambda _c, _i: "1d8", crit_doubles=False, separate_damage=True),
+             _opt("sneak", extra_dice=lambda _c, _i: "1d6"))
+    applied = apply_options(_Session(), _ctx(_char(), "attack"), ["hellish", "sweep", "sneak"], {}, phase="after_hit")
+    assert applied.extra_dice == ["1d6"] and applied.fixed_dice == ["2d6"] and applied.separate_dice == [["1d8", False]]
+
+
+def test_on_confirm_receives_the_owner_context_and_inputs(registry):
+    calls = []
+    registry(_opt("smite", requires_input="slot", cost=Cost(spell_slot_min=1),
+                  on_confirm=lambda session, ctx, inputs: calls.append((session, ctx.class_level, inputs))))
+    session = _Session()
+    apply_options(session, _ctx(_char(spell_slots=[_slot(1)]), "attack"), ["smite"], {"smite": {"slot_level": 1}},
+                  phase="after_hit")
+    assert calls == [(session, 5, {"slot_level": 1})]
+
+
+def test_on_confirm_is_not_called_when_the_option_cannot_be_paid(registry):
+    calls = []
+    registry(_opt("smite", requires_input="slot", cost=Cost(spell_slot_min=1), on_confirm=lambda *a: calls.append(a)))
+    with pytest.raises(OptionUnavailable):
+        apply_options(_Session(), _ctx(_char(spell_slots=[_slot(1)]), "attack"), ["smite"], {"smite": {"slot_level": 3}},
+                      phase="after_hit")
+    assert calls == []
+
+
+def test_refund_spent_gives_back_every_token(registry):
+    registry(_opt("all", once_per_turn=True, slot="reaction", requires_input="slot",
+                  cost=Cost(feature_key="monk.ki", amount=2, spell_slot_min=1)))
+    ki = SimpleNamespace(feature_key="monk.ki", uses=3, max_uses=5)
+    regular, pact = _slot(2, used=2), _slot(2, is_pact=True)
+    char = _char(abilities=[ki], spell_slots=[regular, pact])
+    spent = apply_options(_Session(), _ctx(char, "attack"), ["all"], {"all": {"slot_level": 2}}, phase="after_hit").spent
+    assert spent == ["once:all", "turn:reaction", "feature:monk.ki:2", "slot:2:pact"]
+    assert (ki.uses, pact.used, char.turn_state["reaction_used"]) == (1, 1, True)
+    refund_spent(char, spent)
+    assert (ki.uses, pact.used, regular.used) == (3, 0, 2)
+    assert char.turn_state["reaction_used"] is False and char.turn_state["once_per_turn"] == []
+
+
+def test_refund_gives_back_the_extra_action_not_the_action(registry):
+    registry(_opt("act", slot="action"))
+    char = _char(turn_state={"action_used": True, "extra_actions": 1})
+    spent = apply_options(_Session(), _ctx(char, "attack"), ["act"], {}, phase="after_hit").spent
+    assert spent == ["turn:extra_action"] and char.turn_state["extra_actions"] == 0
+    refund_spent(char, spent)
+    assert char.turn_state == {"action_used": True, "extra_actions": 1}
+
+
+def test_refund_never_exceeds_the_maximum():
+    ki = SimpleNamespace(feature_key="monk.ki", uses=5, max_uses=5)
+    char = _char(abilities=[ki])
+    refund_spent(char, ["feature:monk.ki:2"])
+    assert ki.uses == 5

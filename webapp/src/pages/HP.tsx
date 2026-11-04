@@ -201,11 +201,14 @@ export default function HP() {
   })
 
   const deathRollMutation = useMutation({
-    mutationFn: async (mode: RollMode) =>
-      api.characters.rollDeathSave(charId, d20Arg(mode, await rollD20(mode))),
+    mutationFn: async (mode: RollMode) => {
+      const choice = await askRollOptions(charId, { roll: 'death_save' })
+      return api.characters.rollDeathSave(charId, d20Arg(mode, await rollD20(mode), choice))
+    },
     onSuccess: (result) => {
       setDeathRollResult(result)
       qc.invalidateQueries({ queryKey: ['character', charId] })
+      refreshAfterOptions(qc, charId, result.option_result)
       haptic.success()
     },
   })

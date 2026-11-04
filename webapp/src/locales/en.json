@@ -734,6 +734,11 @@
         "uses_one": "{{count}} use",
         "uses_other": "{{count}} uses",
         "slot_choice": "Lv {{level}} ({{available}})",
+        "dice_cost_one": "{{count}} die less",
+        "dice_cost_other": "{{count}} dice less",
+        "separate_dice": "Separate damage",
+        "damage_failed": "Options not applied: base damage stands",
+        "list_failed": "Roll options unavailable: rolling without them",
         "damage_changed": "Damage {{before}} → {{after}}"
     },
     "conditions": {
@@ -989,6 +994,7 @@
       "standard_actions": "Standard actions ({{n}})",
       "incapacitated": "You are incapacitated: no actions, bonus actions or reactions.",
       "new_turn": "New turn",
+      "other_turn": "Someone else's turn",
       "end_round": "End of round (−1)",
       "empty": "Nothing here",
       "unarmed": "Unarmed strike",

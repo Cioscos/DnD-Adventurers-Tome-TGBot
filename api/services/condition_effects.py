@@ -14,7 +14,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.data.labels import condition_label
-from api.services.rules_turn import set_damaged
+from api.services.rules_turn import get_turn, set_damaged
 from api.schemas.condition_effects import ConditionEffectRead, PendingSaveRead
 from core.db.models import (
     Character, Combatant, ConditionEffect, Encounter, PendingSave,
@@ -57,6 +57,8 @@ class UndoLog:
     concentration: dict | None = None
     # {char_id: {active_states, damaged}} dei PG toccati, snapshot prima dell'avanzamento
     char_states: dict[str, dict] = field(default_factory=dict)
+    # {char_id: lista} dei PG a cui l'avanzamento ha svuotato gli effetti «una volta per turno»
+    once_per_turn: dict[str, list[str]] = field(default_factory=dict)
 
     def to_json(self) -> dict:
         return asdict(self)
@@ -126,6 +128,10 @@ async def undo_last_advance(db: AsyncSession, enc: Encounter) -> None:
         if pc is not None:
             pc.active_states = list(snap["active_states"])
             set_damaged(pc, snap["damaged"])
+    for char_id, used in log.once_per_turn.items():
+        pc = await db.get(Character, int(char_id))
+        if pc is not None:
+            pc.turn_state = {**get_turn(pc), "once_per_turn": used}
     for eid in log.skip_cleared:
         eff = await db.get(ConditionEffect, new_ids.get(eid, eid))
         if eff is not None:

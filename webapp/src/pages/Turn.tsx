@@ -63,6 +63,7 @@ export default function Turn() {
     onError: () => qc.invalidateQueries({ queryKey: ['turn-state', charId] }),
   })
   const newTurn = useMutation({ mutationFn: () => api.characters.turnNew(charId), onSuccess: setBlock })
+  const otherTurn = useMutation({ mutationFn: () => api.characters.turnOther(charId), onSuccess: setBlock })
   const rollD20 = useD20Roll()
   const skillMutation = useMutation({
     mutationFn: async ({ skill, mode }: { skill: string; mode: RollMode }) => {
@@ -258,7 +259,12 @@ export default function Turn() {
             <span className="ml-3 text-dnd-text-muted">{t('character.turn.round', { n: turn.round })}</span>
           )}
         </p>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap justify-end gap-2">
+          {!turn?.in_encounter && !!block?.once_per_turn?.length && (
+            <Button size="sm" variant="ghost" loading={otherTurn.isPending} onClick={() => otherTurn.mutate()}>
+              {t('character.turn.other_turn')}
+            </Button>
+          )}
           {turn?.in_encounter ? (
             <p className="self-center text-xs text-dnd-text-muted font-body">{t('character.conditions.duration.in_encounter')}</p>
           ) : (

@@ -281,6 +281,8 @@ class OptionResult(BaseModel):
     keys: list[str] = []
     extra_rolls: list[int] = []
     extra_total: int = 0  # dadi + eventuale fisso nell'espressione dei dadi
+    separate_rolls: list[int] = []  # danno a parte, fuori dal totale
+    separate_total: int = 0
     bonus: int = 0
     multiplier: float = 1
     spent: list[str] = []
@@ -372,6 +374,7 @@ class DeathSaveRollResult(BaseModel):
     stable: bool
     revived: bool = False
     current_hp: int
+    option_result: OptionResult | None = absent_when_none()
 
 
 # ---------------------------------------------------------------------------
