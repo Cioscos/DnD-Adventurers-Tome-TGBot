@@ -39,6 +39,10 @@ vi.mock('@/components/Layout', async () => {
   const React = await import('react')
   return { default: (p: { children?: ReactNode }) => React.createElement('div', null, p.children) }
 })
+vi.mock('@/pages/extras/CompanionForm', async () => {
+  const React = await import('react')
+  return { default: (p: { druidLevel: number; isMoon: boolean }) => React.createElement('div', null, `druid:${p.druidLevel} moon:${p.isMoon}`) }
+})
 // HeroScreen children unrelated to the form view.
 vi.mock('@/components/character/SpellSlotsSummary', () => ({ default: () => null }))
 vi.mock('@/components/character/HeroStatsSection', () => ({ default: () => null }))
@@ -70,6 +74,16 @@ describe('Extras page', () => {
     expect(screen.getAllByText('Artigli')).toHaveLength(2)
     await userEvent.click(screen.getByText('character.extras.activate (2)'))
     await waitFor(() => expect(activate).toHaveBeenCalledWith(7, 2, false))
+  })
+})
+
+describe('Extras con nomi di classe italiani', () => {
+  it('Druido / Circolo della Luna danno gli stessi valori di druid / Moon', async () => {
+    getChar.mockResolvedValue({ ...char, classes: [{ id: 1, class_name: 'Druido', level: 6, subclass: 'Circolo della Luna' }] })
+    listComp.mockResolvedValue([])
+    renderWithProviders(<Extras />)
+    await userEvent.click(await screen.findByText('character.extras.add'))
+    expect(screen.getByText('druid:6 moon:true')).toBeInTheDocument()
   })
 })
 

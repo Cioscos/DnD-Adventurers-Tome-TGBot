@@ -31,6 +31,16 @@ export const CLASS_NAME_TO_PROGRESSION_KEY: Record<string, string> = {
   warlock: 'Warlock',
 }
 
+const NAME_TO_KEY: Record<string, string> = {
+  ...Object.fromEntries(Object.keys(CLASS_NAME_TO_PROGRESSION_KEY).map((k) => [k, k])),
+  ...Object.fromEntries(Object.entries(CLASS_NAME_TO_PROGRESSION_KEY).map(([k, it]) => [it.toLowerCase(), k])),
+}
+
+/** Chiave inglese della classe (`Mago`/`wizard`/`Wizard` -> `wizard`); null se custom. Specchio di `class_key` in core/rules/edition.py. */
+export function classKey(name: string): string | null {
+  return NAME_TO_KEY[name.trim().toLowerCase()] ?? null
+}
+
 /** Resolve a stored class_name to the JSON key. Falls back to the original
  *  string for custom user-defined classes that may have been authored to
  *  match the JSON directly. */

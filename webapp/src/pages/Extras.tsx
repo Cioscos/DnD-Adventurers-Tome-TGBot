@@ -10,6 +10,7 @@ import EmptyState from '@/components/ui/EmptyState'
 import ActionsSkeleton from '@/components/skeletons/ActionsSkeleton'
 import CompanionCard from '@/pages/extras/CompanionCard'
 import CompanionForm from '@/pages/extras/CompanionForm'
+import { classKey } from '@/lib/classProgression'
 import { KINDS } from '@/lib/companionRules'
 import { useToast } from '@/hooks/useToast'
 import { notifyMutationError } from '@/lib/mutationError'
@@ -41,7 +42,7 @@ export default function Extras() {
     return <Layout title={title} backTo={`/char/${charId}`} group="character" page="extras"><ActionsSkeleton /></Layout>
   }
 
-  const druid = char.classes.find((c) => c.class_name.toLowerCase() === 'druid')
+  const druid = char.classes.find((c) => classKey(c.class_name) === 'druid')
   const druidLevel = druid?.level ?? 0
   const isMoon = /moon|luna/i.test(druid?.subclass ?? '')
   const ws = char.abilities.find((a) => a.feature_key === 'druid.wild_shape')
