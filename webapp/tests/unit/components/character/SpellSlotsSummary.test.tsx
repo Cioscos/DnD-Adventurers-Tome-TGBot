@@ -24,10 +24,6 @@ vi.mock('framer-motion', async () => {
   }
   return { m: new Proxy({}, { get: (_t: object, tag: string | symbol) => make(String(tag)) }) }
 })
-vi.mock('@/components/ui/Surface', async () => {
-  const React = await import('react')
-  return { default: (p: { children?: unknown }) => React.createElement('div', null, p.children) }
-})
 vi.mock('@/auth/telegram', () => ({ haptic: new Proxy({}, { get: () => () => {} }) }))
 
 const slot = (level: number, total: number, available = total): SpellSlot => ({ level, total, available } as unknown as SpellSlot)
