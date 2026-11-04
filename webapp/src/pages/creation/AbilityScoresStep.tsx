@@ -66,8 +66,8 @@ export default function AbilityScoresStep({ mode, scores, pool, bonuses, onChang
           <Pressable
             key={m}
             onClick={() => setMode(m)}
-            className={`min-h-[44px] rounded-xl border text-[13px] font-display font-bold
-              ${mode === m ? '!border-dnd-gold shadow-halo-gold text-dnd-gold-bright' : 'border-dnd-border text-dnd-text'}`}
+            className={`min-h-[44px] rounded-xl border text-sm font-body font-semibold
+              ${mode === m ? '!border-dnd-gold bg-dnd-gold/20 text-dnd-gold-bright' : 'border-dnd-border text-dnd-text'}`}
           >
             {t(`character.create.scores_mode_${m}`)}
           </Pressable>
@@ -115,7 +115,7 @@ export default function AbilityScoresStep({ mode, scores, pool, bonuses, onChang
                       key={i}
                       onClick={() => onChange(mode, assignFromArray(scores, a, v), pool)}
                       className={`min-w-[44px] min-h-[44px] rounded-lg border font-mono tabular-nums text-sm
-                        ${scores[a] === v ? '!border-dnd-gold shadow-halo-gold text-dnd-gold-bright' : 'border-dnd-border text-dnd-text'}`}
+                        ${scores[a] === v ? '!border-dnd-gold bg-dnd-gold/20 text-dnd-gold-bright' : 'border-dnd-border text-dnd-text'}`}
                     >
                       {v}
                     </Pressable>

@@ -45,9 +45,9 @@ export default function SpeciesStep({ choice, onChoice, freeText, onFreeText }: 
             <Pressable
               key={s?.index ?? 'none'}
               onClick={() => onChoice({ race, sub: s })}
-              className={`min-h-[44px] px-3 rounded-xl border text-[13px] font-display font-bold
+              className={`min-h-[44px] px-3 rounded-xl border text-sm font-body font-semibold
                 ${(sub?.index ?? null) === (s?.index ?? null)
-                  ? '!border-dnd-gold shadow-halo-gold text-dnd-gold-bright' : 'border-dnd-border text-dnd-text'}`}
+                  ? '!border-dnd-gold bg-dnd-gold/20 text-dnd-gold-bright' : 'border-dnd-border text-dnd-text'}`}
             >
               {s ? localized(s.name, lang).text : t('character.create.subrace_none')}
             </Pressable>
@@ -73,7 +73,7 @@ export default function SpeciesStep({ choice, onChoice, freeText, onFreeText }: 
           </p>
           <Pressable
             onClick={() => onChoice({ race: null, sub: null })}
-            className="min-h-[44px] text-[12px] text-dnd-gold-dim underline underline-offset-2"
+            className="min-h-[44px] text-xs text-dnd-gold-dim underline underline-offset-2"
           >
             {t('character.create.species_clear')}
           </Pressable>
