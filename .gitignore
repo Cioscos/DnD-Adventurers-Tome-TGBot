@@ -76,3 +76,7 @@ docs/superpowers/
 
 # Perf harness — output dei run (mai committare)
 webapp/scripts/perf/results/
+
+# Manuali PDF (protetti da copyright, mai versionati)
+manuals/
+Manuals/
