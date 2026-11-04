@@ -222,7 +222,7 @@ export default function Turn() {
 
       {/* Sempre aperta: un attacco può servire anche fuori dall'azione (opportunità, altra mano). */}
       <section>
-        <h2 className={`border-b border-dnd-border pb-1 pl-1 ${LEDGER_TITLE}`}>{t('character.turn.section_attacks')}</h2>
+        <h2 className={`flex min-h-11 items-center border-b border-dnd-border pl-1 ${LEDGER_TITLE}`}>{t('character.turn.section_attacks')}</h2>
         <ul className="divide-y divide-dnd-border/60 border-b border-dnd-border/60">
           {groups.attacks.map((e) => renderEntry(e, char))}
         </ul>
