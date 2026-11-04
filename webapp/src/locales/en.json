@@ -300,7 +300,7 @@
       "max_short": "MAX",
       "temp_short": "Temporary",
       "long_rest_confirm_title": "Long rest",
-      "long_rest_confirm_body": "Are you sure? D&D 5e rules allow only one long rest every 24 hours.",
+      "long_rest_confirm_body": "D&D 5e rules allow only one long rest every 24 hours.",
       "long_rest_confirm_action": "Rest",
       "quick_damage_undo": "{{n}} damage dealt",
       "quick_heal_undo": "Healed {{n}} HP",
@@ -1002,7 +1002,7 @@
         "level_up": "LEVEL UP",
         "max": "MAX"
       },
-      "legend": "You are a legend"
+      "legend": "Maximum level"
     },
     "notes": {
       "tag_suggestions": ["Organizations", "Allies", "Enemies", "Backstory", "Places"],
@@ -1049,7 +1049,7 @@
       "delete_zone_confirm": "Delete entire zone {{zone}} with all its files?",
       "open_file": "Open file",
       "empty_title": "No maps",
-      "empty_hint": "Upload a dungeon map or adventure PDF: always at your fingertips.",
+      "empty_hint": "Upload a dungeon map or adventure PDF.",
       "zoom_hint": "Pinch to zoom",
       "reorder_hint": "Hold or drag to reorder",
       "reorder_pick_target": "Tap the destination position",
@@ -3442,7 +3442,7 @@
           "title": "Apply damage or healing",
           "items": [
             "Select the operation: \"DMG\", \"HEAL\", \"CURR\", \"MAX\" or \"Temporary\".",
-            "Type the value in the number field.",
+            "Type the value.",
             "Tap \"Confirm\" or press Enter to apply the value.",
             "To apply 1, 5, 10 or 20 points immediately, tap the related quick button.",
             "With \"CURR\" and \"MAX\", the quick buttons only write the value in the field. Then tap \"Confirm\".",
@@ -4658,7 +4658,7 @@
             "The large number is the character level. Below it you see the current XP.",
             "The pill above the bar tells how much XP you need for the next level.",
             "The bar and the percentage show the progress to the next level.",
-            "At level 20 you see \"You are a legend\" and the bar does not show.",
+            "At level 20 you see \"Maximum level\" and the bar does not show.",
             "With one class, the class level follows the XP automatically."
           ]
         },

@@ -17,6 +17,7 @@ import CharacterHpSecondary from '@/components/character/CharacterHpSecondary'
 import Button from '@/components/ui/Button'
 import StatPill from '@/components/ui/StatPill'
 import ConfirmSheet from '@/components/ui/ConfirmSheet'
+import RestPreviewList from '@/components/character/RestPreviewList'
 import { showUndoToast } from '@/components/ui/UndoToast'
 import { haptic } from '@/auth/telegram'
 import { spring } from '@/styles/motion'
@@ -452,7 +453,12 @@ export default function HP() {
           restMutation.mutate('long')
         }}
         title={t('character.hp.long_rest_confirm_title')}
-        body={t('character.hp.long_rest_confirm_body')}
+        body={
+          <div className="space-y-3">
+            <p>{t('character.hp.long_rest_confirm_body')}</p>
+            {showLongRestConfirm && <RestPreviewList charId={charId} restType="long" />}
+          </div>
+        }
         confirmLabel={t('character.hp.long_rest_confirm_action')}
         confirmVariant="primary"
         loading={restMutation.isPending}

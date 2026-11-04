@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
-import { Sparkles, Trash2 } from 'lucide-react'
+import { Trash2 } from 'lucide-react'
+import { GiCauldron } from 'react-icons/gi'
 import IconButton from '@/components/ui/IconButton'
 
 interface CustomConditionCardProps {
@@ -59,7 +60,7 @@ export default function CustomConditionCard({
     >
       <span className="shrink-0 inline-flex w-9 h-9 items-center justify-center
                        rounded-lg bg-dnd-crimson/10 text-dnd-crimson-bright">
-        <Sparkles size={18} />
+        <GiCauldron size={18} />
       </span>
       <div className="min-w-0 flex-1">
         <div className="font-body text-sm font-semibold text-dnd-text truncate">

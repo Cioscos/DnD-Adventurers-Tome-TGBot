@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { m, AnimatePresence } from 'framer-motion'
 import { Plus, Minus, Pencil, Trash2, RotateCcw, FilterX } from 'lucide-react'
-import { GiLightningTrio as Zap, GiSparkles as Sparkles } from 'react-icons/gi'
+import { GiLightningTrio as Zap, GiAura } from 'react-icons/gi'
 import { api } from '@/api/client'
 import Layout from '@/components/Layout'
 import Sheet from '@/components/ui/Sheet'
@@ -729,7 +729,7 @@ export default function Abilities() {
                   checked={form.is_passive}
                   onChange={(v) => setForm((f) => ({ ...f, is_passive: v }))}
                   label={t('character.abilities.passive')}
-                  icon={<Sparkles size={14} />}
+                  icon={<GiAura size={14} />}
                   aria-label={t('character.abilities.passive')}
                 />
               </div>

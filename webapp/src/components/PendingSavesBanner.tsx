@@ -43,11 +43,11 @@ export default function PendingSavesBanner({ charId }: { charId: number }) {
         animate={{ y: 0, opacity: 1 }}
         data-testid="pending-saves-banner"
         data-strong={strong}
-        className="sticky top-0 z-30 w-full"
+        className="sticky top-0 z-30 w-full bg-dnd-surface-raised"
       >
         <Pressable
           onClick={onTap}
-          className={`relative w-full min-h-[44px] flex items-center gap-2 px-3 py-2 border-y backdrop-blur-sm shadow-parchment-md text-left ${
+          className={`relative w-full min-h-[44px] flex items-center gap-2 px-3 py-2 border-y shadow-parchment-md text-left ${
             strong
               ? 'bg-dnd-crimson/25 border-dnd-crimson/70 text-dnd-crimson-bright'
               : 'bg-dnd-amber/15 border-dnd-amber/60 text-dnd-amber'

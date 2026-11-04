@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { GiSparkles as Sparkles } from 'react-icons/gi'
+import { GiUpgrade } from 'react-icons/gi'
 import { spring } from '@/styles/motion'
 import { haptic } from '@/auth/telegram'
 import Pressable from '@/components/ui/Pressable'
@@ -39,7 +39,7 @@ export default function LevelUpBanner({
                   hover:bg-dnd-amber/20
                   transition ${className}`}
     >
-      <Sparkles size={16} />
+      <GiUpgrade size={16} />
       {label}
     </Pressable>
   )

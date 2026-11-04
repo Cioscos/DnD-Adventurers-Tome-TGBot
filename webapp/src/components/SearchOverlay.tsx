@@ -2,8 +2,8 @@ import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { SearchX, Wand2, Backpack, Sparkles, StickyNote } from 'lucide-react'
-import { GiCrystalBall } from 'react-icons/gi'
+import { SearchX, Wand2, Backpack, StickyNote } from 'lucide-react'
+import { GiCrystalBall, GiLightningTrio } from 'react-icons/gi'
 import Sheet from '@/components/ui/Sheet'
 import Input from '@/components/ui/Input'
 import Pressable from '@/components/ui/Pressable'
@@ -22,7 +22,7 @@ const TYPE_ORDER: readonly SearchResultType[] = ['spell', 'item', 'ability', 're
 const TYPE_ICONS: Record<SearchResultType, React.ReactNode> = {
   spell: <Wand2 size={14} />,
   item: <Backpack size={14} />,
-  ability: <Sparkles size={14} />,
+  ability: <GiLightningTrio size={14} />,
   // Stessa icona di CustomResourceCounter: vocabolario coerente.
   resource: <GiCrystalBall size={14} />,
   note: <StickyNote size={14} />,

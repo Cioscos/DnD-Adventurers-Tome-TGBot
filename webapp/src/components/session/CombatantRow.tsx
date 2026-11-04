@@ -55,7 +55,7 @@ function HpBar({ pct, bucket }: { pct: number | null; bucket: HpBucket | null })
         <div className={`h-full ${BUCKET_BAR[bucket]}`} style={{ width: '100%' }} />
       ) : (
         <div
-          className={`h-full ${(pct ?? 0) > 50 ? 'bg-dnd-emerald-bright' : (pct ?? 0) > 25 ? 'bg-dnd-amber' : 'bg-dnd-crimson'}`}
+          className={`h-full ${(pct ?? 0) >= 75 ? 'bg-dnd-emerald-bright' : (pct ?? 0) > 25 ? 'bg-dnd-amber' : 'bg-dnd-crimson'}`}
           style={{ width: `${pct ?? 0}%` }}
         />
       )}
