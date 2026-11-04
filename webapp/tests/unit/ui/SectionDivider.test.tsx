@@ -1,25 +1,15 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import SectionDivider from '@/components/ui/SectionDivider'
 
-vi.mock('@/components/ui/Ornament', async () => {
-  const React = await import('react')
-  return { FlourishDivider: () => React.createElement('div', { 'data-testid': 'flourish' }) }
-})
-
 describe('SectionDivider', () => {
-  it('renders its children', () => {
+  it('renders its children as a section title', () => {
     render(<SectionDivider>Sezione</SectionDivider>)
-    expect(screen.getByText('Sezione')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Sezione' })).toBeInTheDocument()
   })
 
-  it('left alignment renders a single flourish', () => {
-    render(<SectionDivider align="left">A</SectionDivider>)
-    expect(screen.getAllByTestId('flourish')).toHaveLength(1)
-  })
-
-  it('center alignment renders flanking flourishes', () => {
+  it('center alignment centers the title', () => {
     render(<SectionDivider align="center">A</SectionDivider>)
-    expect(screen.getAllByTestId('flourish')).toHaveLength(2)
+    expect(screen.getByRole('heading', { name: 'A' }).className).toContain('justify-center')
   })
 })

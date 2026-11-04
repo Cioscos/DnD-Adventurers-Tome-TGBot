@@ -73,7 +73,7 @@ export default function EnrollSheet({ open, onClose, code }: EnrollSheetProps) {
                 onClick={() => setCharId(c.id)}
                 className={`w-full text-left px-3 py-2.5 rounded-lg border transition-colors min-h-[44px]
                   ${charId === c.id
-                    ? 'bg-gradient-gold text-dnd-ink border-dnd-gold shadow-engrave'
+                    ? 'bg-dnd-gold/20 text-dnd-gold-bright border-dnd-gold'
                     : 'bg-dnd-surface border-dnd-border text-dnd-text hover:border-dnd-gold-dim'}`}
               >
                 <div className="flex max-xs:flex-col max-xs:items-start items-center justify-between gap-x-3 gap-y-0.5">

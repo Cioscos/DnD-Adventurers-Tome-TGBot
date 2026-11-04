@@ -4,7 +4,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Copy, Share2, RefreshCw, Play, Trash2, UserMinus, Pencil, BookOpen } from 'lucide-react'
 import Layout from '@/components/Layout'
-import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
 import Pressable from '@/components/ui/Pressable'
 import EmptyState from '@/components/ui/EmptyState'
@@ -160,8 +159,9 @@ export default function Campaign() {
 
   return (
     <Layout title={camp.name} backTo="/session">
-      <Surface variant="sigil" ornamented>
-        <h2 className="font-display font-bold text-xl text-dnd-gold-bright text-center break-words">{camp.name}</h2>
+      <section>
+        {/* Il titolo in testata viene troncato: qui il nome si legge per intero. */}
+        <h2 className="px-1 font-display text-xl font-bold text-dnd-text break-words">{camp.name}</h2>
         {camp.is_gm && (
           <div className="mt-2 flex justify-center">
             <Button variant="secondary" size="sm" icon={<Pencil size={14} />} onClick={() => setRenaming(camp.name)}>
@@ -212,22 +212,22 @@ export default function Campaign() {
             )}
           </div>
         )}
-      </Surface>
+      </section>
 
       <SectionDivider>{t('campaign.group')}</SectionDivider>
-      <div className="space-y-2" data-testid="members">
+      <div className="divide-y divide-dnd-border/60 border-b border-dnd-border/60" data-testid="members">
         {camp.members.length === 0 && <p className="text-sm text-dnd-text-muted italic">{t('campaign.no_members')}</p>}
         {camp.members.map((mem) => {
           const manage = camp.is_gm || mem.is_mine
           const open = openMember === mem.character_id
           return (
-            <Surface key={mem.character_id} variant="elevated" className={mem.status === 'dead' ? 'opacity-70' : ''}>
+            <div key={mem.character_id} className="px-1 py-2.5">
               <div className="flex items-start gap-2">
                 <div className="min-w-0 flex-1">
-                  <p className="font-display font-bold text-dnd-gold-bright break-words">
+                  <p className={`font-display font-bold break-words ${mem.status === 'dead' ? 'text-dnd-text-faint' : 'text-dnd-text'}`}>
                     {mem.character_name}
                     {mem.is_mine && (
-                      <span className="ml-2 align-middle inline-block rounded-full border border-dnd-gold px-2 py-0.5 text-xs font-cinzel uppercase tracking-wider text-dnd-gold-bright">
+                      <span className="ml-2 align-middle inline-block rounded-lg border border-dnd-chip-border px-2 py-0.5 text-xs font-cinzel uppercase tracking-wider text-dnd-gold-bright">
                         {t('campaign.yours')}
                       </span>
                     )}
@@ -282,15 +282,15 @@ export default function Campaign() {
                   </div>
                 </>
               )}
-            </Surface>
+            </div>
           )
         })}
       </div>
 
       <SectionDivider>{t('campaign.stash')}</SectionDivider>
-      <Surface variant="elevated">
+      <div className="px-1">
         <StashTree items={camp.stash.items} currency={camp.stash.currency} />
-      </Surface>
+      </div>
 
       <LoreSection campaignId={camp.id} isGm={camp.is_gm} />
       <AtlasSection campaignId={camp.id} isGm={camp.is_gm} />
@@ -301,7 +301,7 @@ export default function Campaign() {
       {camp.sessions.length === 0 ? (
         <p className="text-sm text-dnd-text-muted italic">{t('campaign.nights_empty')}</p>
       ) : (
-        <ul className="space-y-1">
+        <ul className="divide-y divide-dnd-border/60 border-b border-dnd-border/60">
           {camp.sessions.map((s) => {
             const row = (
               <>
@@ -311,11 +311,11 @@ export default function Campaign() {
                 <span className="shrink-0 font-mono tabular-nums text-dnd-text-muted">{formatDuration(s.duration_seconds)}</span>
               </>
             )
-            const cls = 'flex w-full items-baseline justify-between gap-3 text-sm font-body'
+            const cls = 'flex w-full min-h-[44px] items-center justify-between gap-3 px-1 py-1.5 text-sm font-body'
             return (
               <li key={s.id}>
                 {s.has_recap ? (
-                  <Pressable className={`${cls} min-h-11 items-center text-left`} onClick={() => navigate(`/campaign/${camp.id}/recap/${s.id}`)}>
+                  <Pressable className={`${cls} my-0.5 text-left`} onClick={() => navigate(`/campaign/${camp.id}/recap/${s.id}`)}>
                     {row}
                   </Pressable>
                 ) : (

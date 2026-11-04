@@ -2,9 +2,10 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Hash, Users, ClipboardCheck, Check, UserPlus, WifiOff } from 'lucide-react'
+import { Hash, ClipboardCheck, Check, UserPlus, WifiOff } from 'lucide-react'
 import Layout from '@/components/Layout'
 import Surface from '@/components/ui/Surface'
+import { LEDGER_TITLE } from '@/styles/ledger'
 import Button from '@/components/ui/Button'
 import EmptyState from '@/components/ui/EmptyState'
 import Input from '@/components/ui/Input'
@@ -120,9 +121,7 @@ export default function SessionJoin() {
   if (enteringActive || shouldAutoJoin) {
     return (
       <Layout help="session_join" title={t('session.join_player')} backTo="/session">
-        <Surface variant="elevated" className="text-center">
-          <p className="text-sm text-dnd-text font-body">{t('session.joining')}</p>
-        </Surface>
+        <p className="text-center text-sm text-dnd-text font-body">{t('session.joining')}</p>
       </Layout>
     )
   }
@@ -157,7 +156,7 @@ export default function SessionJoin() {
 
   return (
     <Layout help="session_join" title={t('session.join_player')} backTo="/session">
-      <Surface variant="elevated">
+      <section>
         <Input
           label={t('session.code_label')}
           value={code}
@@ -192,16 +191,13 @@ export default function SessionJoin() {
             </Pressable>
           </div>
         </div>
-      </Surface>
+      </section>
 
       {!isCampaignCode && (
-      <Surface variant="elevated">
-        <div className="flex items-center gap-2 mb-3">
-          <Users size={16} className="text-dnd-gold-bright" />
-          <p className="font-display font-bold text-dnd-gold-bright text-sm">
-            {t('session.select_character')}
-          </p>
-        </div>
+      <section>
+        <h2 className={`mb-1 border-b border-dnd-border pb-1 pl-1 ${LEDGER_TITLE}`}>
+          {t('session.select_character')}
+        </h2>
 
         {charactersUnavailable ? (
           <EmptyState
@@ -228,19 +224,19 @@ export default function SessionJoin() {
             {t('session.single_char_auto', { name: autoChar.name })}
           </p>
         ) : (
-          <div className="space-y-2">
+          <div className="divide-y divide-dnd-border/60">
             {characters.map((c) => (
               <Pressable
                 key={c.id}
                 onClick={() => setSelectedCharId(c.id)}
-                className={`w-full text-left px-3 py-2.5 rounded-lg border transition-colors
+                className={`my-0.5 w-full min-h-[48px] text-left px-2 py-2 rounded-lg border transition-colors
                   ${selectedCharId === c.id
-                    ? 'bg-gradient-gold text-dnd-ink border-dnd-gold shadow-engrave'
-                    : 'bg-dnd-surface border-dnd-border text-dnd-text hover:border-dnd-gold-dim'}`}
+                    ? 'bg-dnd-gold/20 text-dnd-gold-bright border-dnd-gold'
+                    : 'border-transparent text-dnd-text hover:bg-dnd-surface/60'}`}
               >
                 <div className="flex max-xs:flex-col max-xs:items-start items-center justify-between gap-x-3 gap-y-0.5">
                   <span className="min-w-0 break-words font-display font-bold">{c.name}</span>
-                  <span className="shrink-0 max-w-[50%] max-xs:max-w-full text-right max-xs:text-left text-xs opacity-80 font-body">
+                  <span className="shrink-0 max-w-[50%] max-xs:max-w-full text-right max-xs:text-left text-xs text-dnd-text-muted font-body">
                     {c.class_summary || t('character.select.new')}
                   </span>
                 </div>
@@ -248,7 +244,7 @@ export default function SessionJoin() {
             ))}
           </div>
         )}
-      </Surface>
+      </section>
       )}
 
       {error && (

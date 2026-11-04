@@ -5,9 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { UserPlus } from 'lucide-react'
 import { GiCrown as Crown, GiCrossedSwords as Swords } from 'react-icons/gi'
 import Layout from '@/components/Layout'
-import Surface from '@/components/ui/Surface'
 import Button from '@/components/ui/Button'
-import FancyHeader from '@/components/ui/FancyHeader'
 import Reveal from '@/components/ui/Reveal'
 import Skeleton from '@/components/ui/Skeleton'
 import Pressable from '@/components/ui/Pressable'
@@ -46,14 +44,14 @@ export default function Session() {
   const campaignList = campaigns.length > 0 && (
     <>
       <SectionDivider>{t('campaign.mine')}</SectionDivider>
-      <div className="space-y-2">
+      <div className="divide-y divide-dnd-border/60 border-b border-dnd-border/60">
         {campaigns.map((c) => (
           <Pressable
             key={c.id}
             onClick={() => navigate(`/campaign/${c.id}`)}
-            className="w-full min-h-[44px] px-3 py-2 rounded-xl border bg-dnd-surface border-dnd-border text-left"
+            className="my-0.5 w-full min-h-[48px] px-1 py-1.5 text-left hover:bg-dnd-surface/60 transition-colors"
           >
-            <span className="block font-cinzel text-sm text-dnd-text break-words">{c.name}</span>
+            <span className="block font-body font-semibold text-sm text-dnd-text break-words">{c.name}</span>
             <span className="block text-xs font-body text-dnd-text-muted">
               {t('campaign.members_count', { count: c.member_count })}
               {c.active_session_id != null && ` · ${t('campaign.night_active')}`}
@@ -81,17 +79,15 @@ export default function Session() {
     const myRole = getMyRole(active, meInfo?.user_id)
     return (
       <Layout help="session" title={t('session.title')} backTo="/">
-        <Surface variant="sigil" ornamented>
-          <FancyHeader
-            title={t('session.active_session_banner')}
-            subtitle={sessionName}
-          />
-          <div className="mt-4 space-y-2">
-            <p className="text-center text-xs uppercase tracking-widest font-cinzel text-dnd-gold-dim">
+        <section className="px-1">
+          <h2 className="font-display text-xl font-bold text-dnd-text break-words">{sessionName}</h2>
+          <p className="text-sm font-body text-dnd-text-muted">{t('session.active_session_banner')}</p>
+          <div className="mt-3 space-y-2">
+            <p className="text-xs uppercase tracking-widest font-cinzel text-dnd-gold-dim">
               {t('session.code_label')}: <span className="text-dnd-gold-bright">{active.code}</span>
             </p>
             {myRole !== 'none' && (
-              <p className="text-sm text-dnd-text-muted font-body text-center">
+              <p className="text-sm text-dnd-text-muted font-body">
                 {t(`session.role_${myRole === 'gm' ? 'game_master' : 'player'}`)}
               </p>
             )}
@@ -105,7 +101,7 @@ export default function Session() {
               {t('session.resume')}
             </Button>
           </div>
-        </Surface>
+        </section>
         {campaignList}
       </Layout>
     )
@@ -115,16 +111,14 @@ export default function Session() {
 
   return (
     <Layout help="session" title={t('session.title')} backTo="/">
-      <FancyHeader title={t('session.title')} subtitle={t('session.landing_subtitle')} />
+      <p className="px-1 text-sm font-body text-dnd-text-muted">{t('session.landing_subtitle')}</p>
 
-      <Reveal.Stagger className="space-y-3">
-        <Surface variant="elevated">
+      <Reveal.Stagger className="border-y border-dnd-border divide-y divide-dnd-border/60">
+        <div className="px-1 py-4">
           <div className="flex items-start gap-3">
-            <div className="shrink-0 w-11 h-11 rounded-xl bg-gradient-gold flex items-center justify-center">
-              <Crown size={20} className="text-dnd-ink" />
-            </div>
+            <Crown size={22} aria-hidden className="mt-0.5 shrink-0 text-dnd-gold" />
             <div className="flex-1 min-w-0">
-              <p className="font-display font-bold text-dnd-gold-bright">
+              <p className="font-display font-bold text-dnd-text">
                 {t('session.create_gm')}
               </p>
               <p className="text-xs text-dnd-text-muted font-body italic mt-1">
@@ -142,15 +136,13 @@ export default function Session() {
               </div>
             </div>
           </div>
-        </Surface>
+        </div>
 
-        <Surface variant="elevated">
+        <div className="px-1 py-4">
           <div className="flex items-start gap-3">
-            <div className="shrink-0 w-11 h-11 rounded-xl bg-dnd-arcane/20 border border-dnd-arcane/50 flex items-center justify-center">
-              <UserPlus size={20} className="text-dnd-arcane-bright" />
-            </div>
+            <UserPlus size={22} aria-hidden className="mt-0.5 shrink-0 text-dnd-gold" />
             <div className="flex-1 min-w-0">
-              <p className="font-display font-bold text-dnd-gold-bright">
+              <p className="font-display font-bold text-dnd-text">
                 {t('session.join_player')}
               </p>
               <p className="text-xs text-dnd-text-muted font-body italic mt-1">
@@ -173,7 +165,7 @@ export default function Session() {
               </div>
             </div>
           </div>
-        </Surface>
+        </div>
       </Reveal.Stagger>
 
       {campaignList}

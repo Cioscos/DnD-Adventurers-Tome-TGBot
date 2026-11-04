@@ -30,7 +30,7 @@ export default function ConditionBadge({ conditionKey, value, size = 'sm' }: Con
       <button
         type="button"
         aria-label={label}
-        className="inline-flex items-center justify-center rounded-full bg-dnd-surface
+        className="hit-44 inline-flex items-center justify-center rounded-full bg-dnd-surface
                    border border-dnd-amber/70 text-dnd-amber transition-colors
                    hover:border-dnd-amber active:scale-95"
         style={{ width: dimPx, height: dimPx }}

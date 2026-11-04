@@ -7,7 +7,7 @@ import { LogOut, User, Gift, Copy, Share2, WifiOff, Package, BookOpen, Map as Ma
 import { toast } from 'sonner'
 import {
   GiCrown as Crown, GiHeartPlus as Heart, GiCheckedShield as Shield,
-  GiSparkles as Sparkles, GiSkullCrossedBones as XOctagon,
+  GiPolarStar as Sparkles, GiSkullCrossedBones as XOctagon,
   GiPerspectiveDiceSixFacesRandom as Dices,
 } from 'react-icons/gi'
 import PendingSavesBanner from '@/components/PendingSavesBanner'
@@ -18,6 +18,8 @@ import Button from '@/components/ui/Button'
 import Skeleton from '@/components/ui/Skeleton'
 import Pressable from '@/components/ui/Pressable'
 import SectionDivider from '@/components/ui/SectionDivider'
+import HPGauge from '@/components/ui/HPGauge'
+import { LEDGER_INDEX_ROW } from '@/styles/ledger'
 import ConditionBadge from '@/components/ui/ConditionBadge'
 import { api, ApiError } from '@/api/client'
 import type { CharacterLiveSnapshot, SessionParticipant } from '@/types'
@@ -65,11 +67,6 @@ function ParticipantRow({
     : <User size={14} className="text-dnd-text-muted" />
 
   const redacted = !!snapshot && snapshot.hit_points === null
-  const hpPct = snapshot && !redacted && (snapshot.hit_points ?? 0) > 0
-    ? Math.max(0, Math.min(100, Math.round(
-        ((snapshot.current_hit_points ?? 0) / (snapshot.hit_points ?? 1)) * 100
-      )))
-    : 0
   const conds = conditionEntries(snapshot?.conditions)
 
   const bucketColorClass: Record<string, string> = {
@@ -106,14 +103,14 @@ function ParticipantRow({
 
   return (
     <div {...wrapperProps}>
-      <div className={`rounded-lg border p-3 transition-colors
-        ${isMe ? 'border-dnd-gold bg-dnd-surface-raised' : 'border-dnd-border bg-dnd-surface'}
-        ${isClickable ? 'hover:border-dnd-gold-bright' : ''}`}>
+      <div className={`px-1 py-2.5 transition-colors
+        ${isMe ? 'bg-dnd-gold/10' : ''}
+        ${isClickable ? 'hover:bg-dnd-surface/60' : ''}`}>
 
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
             {roleIcon}
-            <p className="font-display font-bold text-dnd-gold-bright truncate">
+            <p className="font-display font-bold text-dnd-text truncate">
               {isGm ? t('session.game_master') : (snapshot?.name ?? participant.display_name ?? `#${participant.user_id}`)}
             </p>
             {isMe && (
@@ -123,7 +120,7 @@ function ParticipantRow({
             )}
           </div>
           {snapshot?.heroic_inspiration && (
-            <Sparkles size={14} className="text-dnd-amber animate-shimmer shrink-0" />
+            <Sparkles size={14} aria-hidden className="text-dnd-amber shrink-0" />
           )}
         </div>
 
@@ -162,11 +159,8 @@ function ParticipantRow({
                     <span>{snapshot.ac}</span>
                   </div>
                 </div>
-                <div className="mt-1.5 h-1.5 w-full rounded-full bg-dnd-surface overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-dnd-crimson via-dnd-amber to-dnd-emerald-bright"
-                    style={{ width: `${hpPct}%` }}
-                  />
+                <div className="mt-1.5">
+                  <HPGauge current={snapshot.current_hit_points ?? 0} max={snapshot.hit_points ?? 0} temp={snapshot.temp_hp ?? 0} size="md" />
                 </div>
               </>
             )}
@@ -295,11 +289,9 @@ export default function SessionRoom() {
   if (!live) {
     return (
       <Layout help="session_room" title={t('session.title')} backTo="/session">
-        <Surface variant="elevated">
-          <p className="text-center text-dnd-text-muted font-body py-6">
-            {t('session.not_found')}
-          </p>
-        </Surface>
+        <p className="text-center text-dnd-text-muted font-body py-6">
+          {t('session.not_found')}
+        </p>
       </Layout>
     )
   }
@@ -339,7 +331,7 @@ export default function SessionRoom() {
       {!amGm && myCharId && <PendingSavesBanner charId={myCharId} />}
       {/* Sessione di campagna: l'accesso è per iscrizione, il codice non c'è. */}
       {amGm && !inCampaign ? (
-        <Surface variant="sigil" ornamented>
+        <section>
           <div className="text-center">
             <p className="text-xs uppercase tracking-widest text-dnd-gold-dim font-cinzel">
               {t('session.code_label')}
@@ -378,18 +370,16 @@ export default function SessionRoom() {
               {sessionName}
             </p>
           </div>
-        </Surface>
+        </section>
       ) : (
-        <Surface variant="sigil" ornamented>
-          <div className="text-center">
-            <p className="text-xs uppercase tracking-widest text-dnd-gold-dim font-cinzel">
-              {t(amGm ? 'session.role_game_master' : 'session.role_player')}
-            </p>
-            <p className="font-display font-bold text-xl text-dnd-gold-bright mt-1">
-              {sessionName}
-            </p>
-          </div>
-        </Surface>
+        <section className="px-1">
+          <p className="text-xs uppercase tracking-widest text-dnd-gold-dim font-cinzel">
+            {t(amGm ? 'session.role_game_master' : 'session.role_player')}
+          </p>
+          <p className="font-display font-bold text-xl text-dnd-text mt-0.5">
+            {sessionName}
+          </p>
+        </section>
       )}
 
       <CombatEntryCard live={live} sessionId={live.id} amGm={amGm} />
@@ -398,7 +388,7 @@ export default function SessionRoom() {
         {t('session.players')}
       </SectionDivider>
 
-      <div className="space-y-2">
+      <div className="divide-y divide-dnd-border/60 border-b border-dnd-border/60">
         {live.participants.map((p) => {
           const isMe = p.user_id === myUserId
           const snap = p.character_id ? snapshotsById.get(p.character_id) : undefined
@@ -419,31 +409,26 @@ export default function SessionRoom() {
         })}
       </div>
 
-      {amGm && (
-        <Button
-          variant="secondary"
-          size="md"
-          fullWidth
-          icon={<Gift size={16} />}
-          onClick={() => setShowGrantItem(true)}
-        >
-          {t('session.grant_item.button')}
-        </Button>
-      )}
-
-      {live.campaign_id != null && (
-        <>
-          <Button variant="secondary" size="md" fullWidth icon={<Package size={16} />} onClick={() => setShowStash(true)}>
-            {t('campaign.stash')}
-          </Button>
-          {/* Lore, calendario e diario stanno nella pagina campagna: raggiungibile anche a serata in corso. */}
-          <Button variant="secondary" size="md" fullWidth icon={<BookOpen size={16} />} onClick={() => navigate(`/campaign/${live.campaign_id}`)}>
-            {t('campaign.open_page')}
-          </Button>
-          <Button variant="secondary" size="md" fullWidth icon={<MapIcon size={16} />} onClick={() => navigate(`/campaign/${live.campaign_id}`, { state: { scrollTo: 'atlas' } })}>
-            {t('atlas.title')}
-          </Button>
-        </>
+      {/* Indice della serata: stesse righe del menu del personaggio. */}
+      {(amGm || live.campaign_id != null) && (
+        <ul className="grid grid-cols-2 gap-x-4 border-t border-dnd-border">
+          {[
+            ...(amGm ? [{ key: 'grant', Icon: Gift, label: t('session.grant_item.button'), run: () => setShowGrantItem(true) }] : []),
+            ...(live.campaign_id != null ? [
+              { key: 'stash', Icon: Package, label: t('campaign.stash'), run: () => setShowStash(true) },
+              // Lore, calendario e diario stanno nella pagina campagna: raggiungibile anche a serata in corso.
+              { key: 'page', Icon: BookOpen, label: t('campaign.open_page'), run: () => navigate(`/campaign/${live.campaign_id}`) },
+              { key: 'atlas', Icon: MapIcon, label: t('atlas.title'), run: () => navigate(`/campaign/${live.campaign_id}`, { state: { scrollTo: 'atlas' } }) },
+            ] : []),
+          ].map(({ key, Icon, label, run }) => (
+            <li key={key} className="min-w-0 border-b border-dnd-border/60">
+              <Pressable onClick={run} className={`${LEDGER_INDEX_ROW} text-dnd-text hover:text-dnd-gold-bright transition-colors`}>
+                <Icon size={18} aria-hidden className="shrink-0 text-dnd-gold" />
+                <span className="min-w-0 break-words font-body text-sm leading-tight">{label}</span>
+              </Pressable>
+            </li>
+          ))}
+        </ul>
       )}
 
       <SectionDivider>
